@@ -3009,7 +3009,13 @@ export default {
     fieldQrLabel: 'Texte sous le QR code',
     fieldTitre: 'Titre',
     fieldTitreAccent: 'Accroche',
-    generating: 'Génération du visuel…',
+    // S07 : « Génération du visuel… » ne disait pas combien de temps il restait, et
+    // une attente muette ressemble à une panne. Le nombre vient d'une ESTIMATION
+    // (renderProgress.js) — d'où « environ », qui n'est pas décoratif.
+    generating: 'Ton affiche se fabrique — encore {{seconds}} s environ.',
+    // 🔒 S07 : la phrase du DÉPASSEMENT. Elle remplace le compteur au lieu de le
+    // laisser se figer sur « 0 s », et elle reste vraie à la 60e seconde.
+    generatingLonger: 'Ton affiche se fabrique toujours — c’est plus long que prévu.',
     later: 'Plus tard',
     // R05 : sur Android, « ouvrir avec » ne transporte que l'image — le texte est
     // mis dans le presse-papiers. On le DIT, sinon personne ne pense à le coller.

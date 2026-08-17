@@ -33,6 +33,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { getEventShowcaseShareIntro } from '@/domains/visuals/eventShowcaseTemplate';
+import { getRenderProgress } from '@/domains/visuals/renderProgress';
 import useVisualShowcase, { SHOWCASE_TEMPLATES } from '@/domains/visuals/useEventShowcase';
 import useTheme from '@/theme/themeContext';
 
@@ -223,6 +224,20 @@ export default function EventPublishedShowcase({ navigation, route }) {
     }
   };
 
+  // CE QU'ON ATTEND, ET COMBIEN DE TEMPS ÇA DEMANDE. Deux attentes distinctes
+  // mènent ici, et c'était la MÊME attente muette : fabriquer l'aperçu
+  // (`isLoading`) et retélécharger un format pour l'enregistrer ou le partager
+  // (`busyAction` — un aller-retour serveur complet, constat figé dans
+  // EventPublishedShowcase.test.js « enregistrer le format déjà affiché repaie un
+  // aller-retour »). Le format décide du coût : `story` fait rendre 8,3 Mpx au
+  // serveur contre 5,8 pour l'aperçu — voir renderProgress.js pour les mesures.
+  const formats = templateConfig.formats || {};
+  const waitingFormat = isLoading
+    ? formats.preview
+    : formats[BUSY_ACTION_FORMAT_SLOTS[busyAction]];
+  const elapsedMs = useElapsedMs(waitingFormat);
+  const progress = getRenderProgress({ elapsedMs, format: waitingFormat });
+
   // Tant qu'aucune affiche n'existe (première génération, ou génération en échec),
   // le bouton principal n'aurait rien à envoyer : il est GRISÉ, pas muet. En
   // régénération l'aperçu précédent est toujours là, donc il reste actif.
@@ -300,9 +315,12 @@ export default function EventPublishedShowcase({ navigation, route }) {
                 <View style={styles.skeletonQr} />
                 <View style={styles.skeletonFooter} />
               </SkeletonLoader>
-              <Text style={styles.previewLoadingText}>
-                {t('showcase.generating', 'Génération du visuel…')}
-              </Text>
+              <GenerationProgress
+                progress={progress}
+                reduceMotion={reduceMotion}
+                styles={styles}
+                t={t}
+              />
             </View>
           ) : null}
           {isLoading && previewUri ? (
@@ -312,7 +330,12 @@ export default function EventPublishedShowcase({ navigation, route }) {
               style={[styles.previewLoading, styles.previewOverlay]}
               testID="showcase-preview-veil"
             >
-              <ActivityIndicator color={Colors.primary500} />
+              <GenerationProgress
+                progress={progress}
+                reduceMotion={reduceMotion}
+                styles={styles}
+                t={t}
+              />
             </View>
           ) : null}
           {!isLoading && !previewUri && error ? (
@@ -429,6 +452,19 @@ export default function EventPublishedShowcase({ navigation, route }) {
             styles={styles}
             variant="secondary"
           />
+
+          {/* Enregistrer ou partager refabrique l'image côté serveur : la même
+              attente, donc le même repère. Il vit ICI, sous les boutons, là où se
+              lisent déjà le résultat (« C'est enregistré… ») et l'échec — et il
+              disparaît avec `busyAction`, y compris quand ça rate. */}
+          {busyAction && !isLoading ? (
+            <GenerationProgress
+              progress={progress}
+              reduceMotion={reduceMotion}
+              styles={styles}
+              t={t}
+            />
+          ) : null}
 
           {downloadNotice ? (
             <Text accessibilityLiveRegion="polite" style={styles.downloadNoticeText}>
@@ -547,6 +583,99 @@ const useReduceMotion = () => {
 
   return reduceMotion;
 };
+
+/** Cadence du repère d'attente : 4 pas par seconde — assez fin pour ne pas saccader. */
+const PROGRESS_TICK_MS = 250;
+
+/**
+ * Quel format chaque geste retélécharge. Les clés sont celles de `busyAction`,
+ * les valeurs celles de `templateConfig.formats` (useEventShowcase.js) — pas des
+ * formats serveur en dur, sinon un gabarit qui change ses formats mentirait ici.
+ */
+const BUSY_ACTION_FORMAT_SLOTS = {
+  poster: 'poster', save: 'preview', share: 'preview', story: 'story',
+};
+
+/**
+ * Millisecondes écoulées depuis le début de l'attente en cours.
+ * `activeKey` dit CE QU'ON ATTEND (le format demandé) : il change, le compteur
+ * repart de zéro ; il devient vide, tout s'arrête — aucun minuteur ne survit à
+ * l'attente qu'il mesurait.
+ * @param {string} [activeKey] - Format attendu, ou rien si l'écran n'attend pas.
+ * @returns {number}
+ */
+const useElapsedMs = (activeKey) => {
+  const [elapsedMs, setElapsedMs] = useState(0);
+
+  useEffect(() => {
+    setElapsedMs(0);
+    if (!activeKey) return undefined;
+    const startedAt = Date.now();
+    const id = setInterval(() => setElapsedMs(Date.now() - startedAt), PROGRESS_TICK_MS);
+    return () => clearInterval(id);
+  }, [activeKey]);
+
+  return elapsedMs;
+};
+
+/**
+ * LE REPÈRE D'ATTENTE — ce qui remplace l'attente muette (S07, demande d'Adel du
+ * 2026-08-16). Une attente sans repère se ressent deux fois plus longue, et une
+ * attente MUETTE ressemble à une panne : c'est ce qui pousse à appuyer deux fois.
+ *
+ * Trois garde-fous, et chacun ferme un mensonge possible :
+ *   · la barre s'arrête AVANT le bout (`PROGRESS_CAP`, renderProgress.js) — le
+ *     bout est réservé à l'affiche qui existe. Et l'arrivée de l'image fait
+ *     DISPARAÎTRE ce bloc au lieu de le faire courir jusqu'à 100 % : rien ne
+ *     clignote quand c'est plus rapide que prévu ;
+ *   · passé l'estimation, la PHRASE change au lieu de se figer sur « 0 s » — un
+ *     compteur bloqué à zéro transforme une attente normale en panne apparente ;
+ *   · « réduire les animations » retire la barre et GARDE le texte : c'est
+ *     l'information qui compte, pas le mouvement.
+ * @param {object} props
+ * @param {{ overrun: boolean, ratio: number, remainingSeconds: number|null }} props.progress
+ * @param {boolean} props.reduceMotion - Réglage système « réduire les animations ».
+ * @param {Record<string, object>} props.styles
+ * @param {(key: string, fallback: string, vars?: object) => string} props.t
+ * @returns {import('react').ReactElement}
+ */
+function GenerationProgress({
+  progress, reduceMotion, styles, t,
+}) {
+  const message = progress.overrun
+    ? t(
+      'showcase.generatingLonger',
+      'Ton affiche se fabrique toujours — c’est plus long que prévu.',
+    )
+    : t(
+      'showcase.generating',
+      'Ton affiche se fabrique — encore {{seconds}} s environ.',
+      { seconds: progress.remainingSeconds },
+    );
+
+  return (
+    <View style={styles.progressBlock}>
+      {reduceMotion ? null : (
+        <View
+          accessibilityRole="progressbar"
+          accessibilityValue={{ max: 100, min: 0, now: Math.round(progress.ratio * 100) }}
+          style={styles.progressTrack}
+        >
+          <View style={[styles.progressFill, { width: `${progress.ratio * 100}%` }]} />
+        </View>
+      )}
+      {/* La zone vive n'est ARMÉE qu'au dépassement : le compte à rebours change
+          chaque seconde, et un lecteur d'écran qui le relit chaque seconde
+          couvrirait tout le reste. Ainsi, une seule annonce — celle qui compte. */}
+      <Text
+        accessibilityLiveRegion={progress.overrun ? 'polite' : 'none'}
+        style={styles.progressText}
+      >
+        {message}
+      </Text>
+    </View>
+  );
+}
 
 /** Clés de style par niveau de hiérarchie : un seul `primary` par écran. */
 const ACTION_STYLE_KEYS = {
@@ -670,8 +799,6 @@ const makeStyles = (Colors) => StyleSheet.create({
   },
   previewImage: { height: '100%', width: '100%' },
   previewLoading: { alignItems: 'center', gap: 8 },
-  // Sur fond primary800 (cadre d'apercu sombre) : neutral300 = ~6,7:1.
-  previewLoadingText: { color: Colors.neutral300, fontSize: 13 },
   previewOverlay: {
     backgroundColor: `${Colors.primary900}CC`,
     bottom: 0,
@@ -705,6 +832,25 @@ const makeStyles = (Colors) => StyleSheet.create({
     color: Colors.primary900, fontSize: 12, lineHeight: 16, opacity: 0.8, textAlign: 'center',
   },
   primaryBtnText: { color: Colors.primary900, fontSize: 16, fontWeight: '700' },
+  progressBlock: {
+    alignItems: 'center', gap: 8, paddingHorizontal: 16, width: '100%',
+  },
+  // Le remplissage : primary500, la meme encre que les actions de l'ecran.
+  progressFill: { backgroundColor: Colors.primary500, borderRadius: 999, height: '100%' },
+  // Sur fond primary800 (cadre d'apercu) comme sur primary900 (bas d'ecran) :
+  // neutral300 reste au-dessus de 6,7:1.
+  progressText: {
+    color: Colors.neutral300, fontSize: 13, lineHeight: 18, textAlign: 'center',
+  },
+  // Le rail : primary700 sur primary800 — visible sans attirer l'oeil plus que
+  // l'affiche elle-meme. 8 pt de haut : lisible sans devenir un element de plus.
+  progressTrack: {
+    backgroundColor: Colors.primary700,
+    borderRadius: 999,
+    height: 8,
+    overflow: 'hidden',
+    width: '100%',
+  },
   resetBtn: { alignItems: 'center', paddingVertical: 8 },
   // Sur fond sombre primary900 : primary500 = ~7,3:1.
   resetBtnText: { color: Colors.primary500, fontWeight: '600' },
