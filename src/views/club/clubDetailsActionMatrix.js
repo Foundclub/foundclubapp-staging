@@ -81,7 +81,30 @@ export const resolveClubDetailsActionMatrix = ({
     && !(hasParentMultisportClub && isMultisportAdmin),
   );
 
+  // S02 — LA SECONDE PORTE d'un club sans equipe.
+  //
+  // Les deux boutons ne disent pas la meme chose, et c'est tout l'enjeu :
+  //   · la porte primaire ci-dessus = « j'y suis deja, faites-moi entrer » ;
+  //   · celle-ci                    = « je n'y suis pas encore, prevenez-moi ».
+  // Un seul bouton forçait tout le monde dans la premiere case, alors que
+  // 222 287 clubs sur 222 294 n'ont AUCUNE equipe (mesure prod du 2026-08-13) :
+  // tomber sur un club absent de l'app est le cas NORMAL, pas le cas limite.
+  //
+  // 🔒 `!clubHasTeams` est la garantie structurelle de la non-regression : sur un
+  // club QUI A une equipe, ce drapeau vaut faux quoi qu'il arrive, donc aucun de
+  // ces ecrans ne bouge. `showClubInterestAction` (l'interet POUR UNE EQUIPE)
+  // reste, lui, reserve aux clubs qui en ont une — les deux ne se croisent
+  // jamais.
+  const showClubArrivalInterestAction = Boolean(
+    canShowAffiliationAction
+    && !clubHasTeams
+    && !canEdit
+    && !isUserAlreadyAttachedToViewedClub
+    && !(hasParentMultisportClub && isMultisportAdmin),
+  );
+
   return {
+    showClubArrivalInterestAction,
     showClubInterestAction,
     showClubPartneringAction,
     showContactAdminClaimAction,

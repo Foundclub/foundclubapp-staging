@@ -244,8 +244,18 @@ export default {
   },
   clubDetails: {
     actions: {
-      bringClubOver: 'Me prévenir dès qu’une équipe existe',
+      // S02 — la VALEUR change, la clef reste (aucune clef n'est supprimee de ce
+      // fichier). « Me prévenir dès qu’une équipe existe » decrivait ce que fait
+      // l'AUTRE bouton : ce bouton-ci, lui, ouvre le formulaire « je suis deja
+      // dans ce club, faites-le venir ». Les deux disaient la meme chose, et
+      // c'est ce que « très nul » designait (Adel, 2026-08-16).
+      bringClubOver: 'C’est mon club',
       claimClub: "C'est mon club",
+      // S02 — la SECONDE porte. Elle dit ce que la personne OBTIENT (on la
+      // previent), pas ce qu'elle declare : c'est ce qui la rend impossible a
+      // confondre avec « C’est mon club » juste au-dessus.
+      clubArrivalInterest: 'Prévenez-moi quand ce club arrive',
+      clubArrivalInterestPending: 'Tu seras prévenu·e',
       contactTrainers: 'Contacter les entraîneur·e·s',
       delete: 'Supprimer',
       editInfo: 'Modifier',
@@ -258,6 +268,18 @@ export default {
       requestPending: 'Demande en attente',
     },
     alerts: {
+      // S02 — la 2e porte parle de CE QU'ON FAIT DE L'INTERET : on previent la
+      // personne, et le club voit combien de gens l'attendent. Rien n'est promis
+      // d'autre : elle n'est rattachee a rien, et le texte le dit.
+      clubArrivalInterest: {
+        alreadySentDescription: 'On sait déjà que tu attends ce club.'
+          + ' On te prévient dès qu’il arrive.',
+        alreadySentTitle: 'Tu es déjà sur la liste',
+        description: 'On te prévient dès que ce club arrive sur FoundClub.'
+          + ' Tu n’es rattaché·e à rien pour le moment.',
+        error: 'Impossible d’enregistrer ton intérêt pour le moment.',
+        title: 'C’est noté',
+      },
       deleteSponsor: {
         actions: {
           cancel: 'Annuler',
@@ -324,7 +346,10 @@ export default {
         coachName: 'Nom de ton coach ou dirigeant',
         coachNamePlaceholder: 'Ex: Karim Benali',
       },
-      submit: 'Me prévenir dès qu’une équipe existe',
+      // S02 — meme motif que `actions.bringClubOver` : ce bouton VALIDE le
+      // formulaire de « C’est mon club ». Promettre ici « je te préviens » le
+      // rendait indiscernable de la seconde porte.
+      submit: 'Envoyer ma demande',
       title: 'Ce club n’a pas encore d’équipe sur FoundClub',
     },
     titles: {

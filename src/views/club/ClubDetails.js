@@ -1197,10 +1197,14 @@ function ClubDetails({ navigation, route }) {
     || (userData?.trainedTeams || []).some((team) => (team?.club?.documentId || team?.club?.id) === clubId)
   ), [canEdit, clubId, isMember, isPlayerAlreadyInViewedClub, userData?.trainedTeams]);
 
+  // S02 — la meme requete sert desormais les DEUX portes. Elle etait limitee aux
+  // clubs qui ont une equipe (`clubTeamIds.length > 0`) ; or la 2e porte vit
+  // justement sur les clubs qui n'en ont AUCUNE. Le serveur filtre deja par
+  // club (`/club-interest-requests/mine?clubId=`), il n'y a rien a ajouter.
   const myClubInterestRequestsQuery = useGetMyClubInterestRequests(
     { clubId },
     {
-      enabled: Boolean(isAuthenticated && clubId && clubTeamIds.length > 0 && !isUserAlreadyAttachedToViewedClub),
+      enabled: Boolean(isAuthenticated && clubId && !isUserAlreadyAttachedToViewedClub),
       retry: 0,
     },
   );
@@ -1302,6 +1306,66 @@ function ClubDetails({ navigation, route }) {
     },
   });
 
+  // S02 — LA SECONDE PORTE : « prevenez-moi quand ce club arrive ».
+  //
+  // Elle vit dans la MEME collection que l'interet pour une equipe
+  // (`club-interest-request`) : la seule difference est que celle-ci n'a PAS
+  // d'equipe. C'est ce qui la rend reconnaissable ici comme cote serveur, et ce
+  // qui permet au super-admin de compter « N personnes interessees par ce club »
+  // sans inventer une seconde table.
+  const hasPendingClubArrivalInterest = useMemo(() => (
+    (myClubInterestRequestsQuery?.data?.data || []).some((request) => (
+      request?.status === 'pending' && !getTeamIdentity(request?.team)
+    ))
+  ), [myClubInterestRequestsQuery?.data?.data]);
+
+  const createClubArrivalInterestMutation = useMutation({
+    mutationFn: () => createClubInterestRequest({ club: clubId }),
+    onError: (mutationError) => {
+      const rawMessage = String(
+        mutationError?.response?.data?.error?.message
+        || mutationError?.message
+        || '',
+      ).toLowerCase();
+
+      // Le serveur dedoublonne : un 2e envoi pour le meme club rend une erreur.
+      // Ce n'est PAS un echec pour la personne — elle EST sur la liste. On le
+      // lui dit ainsi plutot que de lui montrer un mur rouge.
+      if (rawMessage.includes('already pending')) {
+        myClubInterestRequestsQuery.refetch();
+        Alert.alert(
+          t('clubDetails.alerts.clubArrivalInterest.alreadySentTitle', 'Tu es déjà sur la liste'),
+          t(
+            'clubDetails.alerts.clubArrivalInterest.alreadySentDescription',
+            'On sait déjà que tu attends ce club. On te prévient dès qu’il arrive.',
+          ),
+        );
+        return;
+      }
+
+      Alert.alert(
+        t('common.error', 'Erreur'),
+        t(
+          'clubDetails.alerts.clubArrivalInterest.error',
+          'Impossible d’enregistrer ton intérêt pour le moment.',
+        ),
+      );
+    },
+    onSuccess: () => {
+      myClubInterestRequestsQuery.refetch();
+
+      Alert.alert(
+        t('clubDetails.alerts.clubArrivalInterest.title', 'C’est noté'),
+        t(
+          'clubDetails.alerts.clubArrivalInterest.description',
+          'On te prévient dès que ce club arrive sur FoundClub.'
+          + ' Tu n’es rattaché·e à rien pour le moment.',
+        ),
+        [{ text: t('common.actions.ok', 'OK') }],
+      );
+    },
+  });
+
   const isParentClubAdmin = useMemo(() => {
     // Check if user is admin of the parent multisport club
     if (!club?.parentMultisport) return false;
@@ -1339,6 +1403,7 @@ function ClubDetails({ navigation, route }) {
       && (currentRole === USER_ROLES.coach || currentRole === USER_ROLES.president);
   }, [USER_ROLES.coach, USER_ROLES.president, clubId, hasClubAccess, userData?.role?.name]);
   const {
+    showClubArrivalInterestAction,
     showClubInterestAction,
     showClubPartneringAction,
     showContactAdminClaimAction,
@@ -1437,6 +1502,9 @@ function ClubDetails({ navigation, route }) {
     navigation.navigate(RouteNames.Club, params);
   }, [clubId, navigation]);
 
+  const clubArrivalInterestIsBusy = hasPendingClubArrivalInterest
+    || createClubArrivalInterestMutation.isPending;
+
   const floatingClubActionsCount = [
     showPublicPlayerLogin,
     showPublicClaimLogin,
@@ -1445,6 +1513,7 @@ function ClubDetails({ navigation, route }) {
     showClubPartneringAction,
     showEmptyClubClaimAction,
     showClubInterestAction,
+    showClubArrivalInterestAction,
   ].filter(Boolean).length;
   const hasFloatingClubActions = floatingClubActionsCount > 0;
   const floatingClubActionsBottomInset = Math.max(insets.bottom, 12);
@@ -1672,6 +1741,25 @@ function ClubDetails({ navigation, route }) {
     playerNoTeamForm,
     t,
     userData?.role?.name,
+  ]);
+
+  // S02 — la 2e porte ne demande RIEN. Un appui, un interet enregistre : c'est
+  // exactement ce qui la distingue de « C'est mon club », qui ouvre un
+  // formulaire parce qu'elle affirme un lien qu'il faut pouvoir verifier.
+  const handlePressClubArrivalInterest = useCallback(() => {
+    if (!isAuthenticated) {
+      openClubAuthFlow('club-arrival-interest-login');
+      return;
+    }
+    if (hasPendingClubArrivalInterest || createClubArrivalInterestMutation.isPending) {
+      return;
+    }
+    createClubArrivalInterestMutation.mutate();
+  }, [
+    createClubArrivalInterestMutation,
+    hasPendingClubArrivalInterest,
+    isAuthenticated,
+    openClubAuthFlow,
   ]);
 
   const handleOpenPlayerTeamPicker = useCallback(() => {
@@ -3189,7 +3277,7 @@ function ClubDetails({ navigation, route }) {
             onPress={handleSubmitPlayerNoTeamRequest}
             title={t(
               'clubDetails.playerNoTeamRequest.submit',
-              'Me prévenir dès qu’une équipe existe',
+              'Envoyer ma demande',
             )}
             variant="Primary"
           />
@@ -3525,10 +3613,7 @@ function ClubDetails({ navigation, route }) {
               ]}
               title={hasPendingPlayerNoTeamRequest
                 ? t('clubDetails.actions.requestPending', 'Demande en attente')
-                : t(
-                  'clubDetails.actions.bringClubOver',
-                  'Me prévenir dès qu’une équipe existe',
-                )}
+                : t('clubDetails.actions.bringClubOver', 'C’est mon club')}
               variant="Primary"
             />
           ) : null}
@@ -3579,6 +3664,29 @@ function ClubDetails({ navigation, route }) {
               title={hasPendingViewedClubInterestRequest
                 ? t('clubDetails.clubInterest.alreadySentShort', 'Intérêt déjà envoyé')
                 : t('clubDetails.clubInterest.button', 'Intéressé par le club')}
+              variant="Secondary"
+            />
+          ) : null}
+
+          {/* S02 — LA SECONDE PORTE, toujours en dernier et en Secondary : elle
+              est le repli de celui qui ne peut pas signer la premiere. « C'est
+              mon club » dit ce qu'on DECLARE ; celle-ci dit ce qu'on OBTIENT. */}
+          {showClubArrivalInterestAction ? (
+            <Button
+              disabled={clubArrivalInterestIsBusy}
+              isLoading={createClubArrivalInterestMutation.isPending}
+              onPress={handlePressClubArrivalInterest}
+              style={[
+                floatingClubActionButtonStyle,
+                floatingClubInterestButtonStyle,
+                hasPendingClubArrivalInterest ? { opacity: 0.7 } : null,
+              ]}
+              title={hasPendingClubArrivalInterest
+                ? t('clubDetails.actions.clubArrivalInterestPending', 'Tu seras prévenu·e')
+                : t(
+                  'clubDetails.actions.clubArrivalInterest',
+                  'Prévenez-moi quand ce club arrive',
+                )}
               variant="Secondary"
             />
           ) : null}

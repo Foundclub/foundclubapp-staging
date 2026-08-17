@@ -1,5 +1,11 @@
-import { annotateWaitingPlayersPerClub } from '@/services/admin/adminWaitingPlayers';
+import {
+  annotateWaitingPlayersPerClub,
+  buildClubArrivalInterestRows,
+} from '@/services/admin/adminWaitingPlayers';
 import client from '@/services/client';
+import {
+  getPendingClubArrivalInterests,
+} from '@/services/clubInterestRequest/clubInterestRequestService';
 import {
   getClubRequestById,
   getPendingAffiliationHelpRequests,
@@ -470,7 +476,7 @@ export const getClubClaimsRequestList = async (params = {}) => {
   const page = params?.pagination?.page || 1;
   const pageSize = params?.pagination?.pageSize || 25;
 
-  const [claimsResult, helpResult] = await Promise.all([
+  const [claimsResult, helpResult, arrivalInterestsResult] = await Promise.all([
     fetchPendingClaimRequests({
       pagination: {
         page: 1,
@@ -484,9 +490,15 @@ export const getClubClaimsRequestList = async (params = {}) => {
         pageSize: 200,
       },
     }),
+    // S02 — la seconde porte de la fiche club. Elle n'a ni entraineur ni
+    // dirigeant pour la lire (le club n'est pas sur l'application) : le super
+    // admin est son SEUL destinataire. Un echec ici ne doit pas emporter la
+    // liste des demandes a traiter, qui est le vrai travail de cet onglet.
+    getPendingClubArrivalInterests().catch(() => ({ data: [] })),
   ]);
 
   const claimItems = (claimsResult?.data || []).map(mapClaimRequestToAdminItem);
+  const arrivalInterestRows = buildClubArrivalInterestRows(arrivalInterestsResult?.data || []);
   // ponytail: le compteur « N joueurs attendent ce club » est calcule sur la
   // page deja chargee (plafond 200 demandes en attente, voir pageSize ci-dessus)
   // plutot que par une agregation serveur. Au-dela de 200 demandes en attente
@@ -496,7 +508,13 @@ export const getClubClaimsRequestList = async (params = {}) => {
     (helpResult?.data || []).map(mapHelpRequestToAdminItem),
   );
 
-  const merged = [...claimItems, ...helpItems].sort(sortByCreatedAtDesc);
+  // S02 — les lignes d'interet passent EN TETE, devant les demandes triees par
+  // date : ce sont elles qui disent quels clubs appeler, et elles n'attendent
+  // rien de personne. Les demandes a traiter gardent leur ordre d'avant.
+  const merged = [
+    ...arrivalInterestRows,
+    ...[...claimItems, ...helpItems].sort(sortByCreatedAtDesc),
+  ];
   const total = merged.length;
   const pageCount = total > 0 ? Math.ceil(total / pageSize) : 0;
   const start = (page - 1) * pageSize;
@@ -508,6 +526,7 @@ export const getClubClaimsRequestList = async (params = {}) => {
       counts: {
         affiliationHelp: helpItems.length,
         claims: claimItems.length,
+        clubArrivalInterests: arrivalInterestRows.length,
       },
       pagination: {
         page,
