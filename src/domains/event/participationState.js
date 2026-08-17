@@ -34,9 +34,11 @@ const compareParticipationsByRecency = (left, right) => {
   );
 };
 
+const KNOWN_PARTICIPATION_STATUSES = ['accepted', 'pending', 'missing', 'declined'];
+
 const normalizeParticipationStatus = (value) => {
   const status = String(value || '').trim().toLowerCase();
-  if (status === 'accepted' || status === 'pending' || status === 'missing' || status === 'declined') {
+  if (KNOWN_PARTICIPATION_STATUSES.includes(status)) {
     return status;
   }
   return null;

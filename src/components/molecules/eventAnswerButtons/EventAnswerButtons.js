@@ -211,7 +211,7 @@ function EventAnswerButtons({
       }
 
       return (
-        <View style={[Alignments.fullWidth, Spaces.gap[10]]}>
+        <View style={[Alignments.fullWidth, Spaces.gap[12]]}>
           <Button
             disabled={!resolvedParticipationFlow?.canAct || !canEventBeJoined({
               capacity: event?.capacity,
