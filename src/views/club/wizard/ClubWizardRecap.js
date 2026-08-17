@@ -68,13 +68,24 @@ function ClubWizardRecap({ navigation, route }) {
       .map((activity) => activity.name);
   }, [activities, state.activityDocumentIds]);
 
-  const resumeAfterSuccess = (createdClub) => {
+  const resumeAfterSuccess = async (createdClub) => {
     dispatch({ type: 'RESET' });
-    queryClient.invalidateQueries({ queryKey: ['app-bootstrap'] });
-    queryClient.invalidateQueries({ queryKey: ['get-me'] });
-    queryClient.invalidateQueries({ queryKey: ['clubs'] });
-    if (typeof refetchUserData === 'function') {
-      refetchUserData();
+
+    // T10 — LA NAVIGATION ATTEND LE PROFIL, elle ne part plus devant.
+    // Ces quatre rafraichissements partaient sans `await` : l'ecran suivant se
+    // montait sur l'ANCIEN profil, celui d'avant la creation, et annoncait donc
+    // le contraire de ce qui venait de se passer. Un echec de rafraichissement
+    // ne doit pas retenir quelqu'un dans un tunnel dont le club est deja cree :
+    // on repart quand meme, avec l'identifiant qu'on tient (T10 ① ci-dessous).
+    try {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['app-bootstrap'] }),
+        queryClient.invalidateQueries({ queryKey: ['get-me'] }),
+        queryClient.invalidateQueries({ queryKey: ['clubs'] }),
+        typeof refetchUserData === 'function' ? refetchUserData() : null,
+      ]);
+    } catch {
+      // Le club EST cree : on continue, l'ecran suivant se rafraichira seul.
     }
 
     const clubDocumentId = createdClub?.documentId;

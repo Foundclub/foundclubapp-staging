@@ -42,6 +42,11 @@ import ClubWizardRecap from '../ClubWizardRecap';
 // `ClubStack` sont des SOEURS d'une meme pile (PrivateNavigator.js:260 et
 // 861-897), c'est ce qui rend `navigation.getParent()` significatif.
 
+// Le premier temoin paie le chargement des modules (l'ecran reel « equipes
+// entrainees », le vrai theme) : mesure du 2026-08-17, 3,7 s contre 0,3 s pour
+// les suivants. Sous 5 s par defaut, il rougit par la marge, pas par la logique.
+jest.setTimeout(30000);
+
 /** @type {any[]} */
 const mockProprietesEtape = [];
 const mockClubCree = { club: { documentId: 'club-neuf' } };
@@ -336,7 +341,9 @@ const monterLeTunnelDInscription = () => {
           component: UserTrainedTeams, key: 'equipes', name: 'UserTrainedTeams',
         }),
         createElement(Racine.Screen, { component: PileClub, key: 'pile-club', name: 'ClubStack' }),
-        createElement(Racine.Screen, { component: Ecran('HomeTab'), key: 'accueil', name: 'HomeTab' }),
+        createElement(Racine.Screen, {
+          component: Ecran('HomeTab'), key: 'accueil', name: 'HomeTab',
+        }),
       ),
     ));
   });
@@ -485,7 +492,7 @@ afterEach(() => {
 });
 
 describe('T10 — creer son club pendant l inscription mene a SON club', () => {
-  it('apres avoir cree son club pendant l inscription, l etape suivante parle DE CE club', async () => {
+  it('apres avoir cree son club, l etape suivante parle DE CE club', async () => {
     monterLeTunnelDInscription();
     consulterUnClubPuisRevenir();
     entrerDansLeTunnelDeCreation();
@@ -499,7 +506,7 @@ describe('T10 — creer son club pendant l inscription mene a SON club', () => {
     expect(clubsInterroges).toContain('club-neuf');
   });
 
-  it('un club seulement CONSULTE pendant la recherche ne devient jamais le club courant', async () => {
+  it('un club seulement CONSULTE ne devient jamais le club courant', async () => {
     monterLeTunnelDInscription();
     consulterUnClubPuisRevenir();
     entrerDansLeTunnelDeCreation();
@@ -515,7 +522,7 @@ describe('T10 — creer son club pendant l inscription mene a SON club', () => {
     expect(clubsInterroges).not.toContain('club-consulte');
   });
 
-  it('l etape suivante sait quel est le club : elle ne reste pas muette faute d en connaitre un', async () => {
+  it('l etape suivante sait quel est le club, elle ne reste pas muette', async () => {
     monterLeTunnelDInscription();
     entrerDansLeTunnelDeCreation();
 
@@ -546,5 +553,19 @@ describe('T10 — creer son club pendant l inscription mene a SON club', () => {
     act(() => conteneur.goBack());
     expect(ecranCourant()).not.toBe('UserTrainedTeams');
     expect(pileClub().some((nom) => nom.startsWith('ClubWizard'))).toBe(false);
+  });
+
+  it('la navigation ATTEND le rafraichissement du profil, elle ne part pas avant', async () => {
+    monterLeTunnelDInscription();
+    entrerDansLeTunnelDeCreation();
+
+    await creerLeClub();
+
+    // Le profil n'a pas encore repondu : on est toujours dans le tunnel.
+    expect(ecranCourant()).toBe('ClubStack');
+
+    await laisserLeProfilSeRafraichir();
+
+    expect(ecranCourant()).toBe('UserTrainedTeams');
   });
 });
