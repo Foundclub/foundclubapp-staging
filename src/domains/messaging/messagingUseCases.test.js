@@ -1,6 +1,7 @@
 import { storage } from '@/store/appContext';
 
 import {
+  getChatMessagePreview,
   getConversationName,
   getLastReadMessageKey,
   getUnreadStatus,
@@ -168,6 +169,57 @@ describe('messagingUseCases', () => {
       expect(getConversationName({ chatType: 'club' })).toBe('');
       expect(getConversationName({ chatType: 'team' })).toBe('');
       expect(getConversationName({ chatType: 'whisper' })).toBe('');
+    });
+  });
+
+  // Filet E6 posé par le lot S03 : cette fonction n'avait AUCUN test, et le lot
+  // devait la toucher. On décrit d'abord ce qu'elle fait déjà, puis ce qu'elle
+  // doit faire en plus.
+  //
+  // 🧨 POURQUOI IL A FALLU LA TOUCHER — une mesure a démenti une hypothèse.
+  // La liste des conversations n'affiche JAMAIS le texte d'un message porteur
+  // d'une charge : elle affiche l'étiquette de sa famille. En donnant enfin une
+  // charge à la proposition d'amical (S03), on faisait donc passer la ligne de
+  // « AS Candidats U15 propose un match. » à « Proposition » — c'est-à-dire
+  // qu'on RECULAIT sur le constat d'Adel du 13/08 (« on ne voit pas le contenu
+  // des messages », lot R06). La ligne dit donc de quel match il s'agit.
+  describe('getChatMessagePreview', () => {
+    test('un message ordinaire s affiche tel quel, et un message vide ne dit rien', () => {
+      expect(getChatMessagePreview({ message: 'On se voit samedi ?' })).toBe('On se voit samedi ?');
+      expect(getChatMessagePreview(null)).toBe('');
+      expect(getChatMessagePreview({})).toBe('');
+    });
+
+    test('les charges connues gardent leur etiquette (non-regression)', () => {
+      expect(getChatMessagePreview({ composition: { type: 'poll' } })).toBe('Sondage');
+      expect(getChatMessagePreview({ composition: { type: 'voice_note' } })).toBe('Note vocale');
+      expect(getChatMessagePreview({ composition: { type: 'location_share' } }))
+        .toBe('Localisation');
+      // Une proposition LEAGUE reste « Proposition » : elle n a pas de date a
+      // montrer dans la liste, et son fil porte deja le nom du match.
+      expect(getChatMessagePreview({ composition: { matchId: 'm-1', type: 'proposal' } }))
+        .toBe('Proposition');
+    });
+
+    test('S03 — une proposition de match amical dit DE QUEL match il s agit', () => {
+      expect(getChatMessagePreview({
+        composition: {
+          dateLabel: 'jeudi 12 novembre',
+          kind: 'friendly_match',
+          teamName: 'AS Candidats U15',
+          type: 'proposal',
+        },
+      })).toBe('AS Candidats U15 propose un match — jeudi 12 novembre');
+    });
+
+    test('S03 — et elle ne raconte que ce qu elle sait', () => {
+      // Sans nom d equipe ni date, on retombe sur l etiquette : ⛔ jamais un
+      // tiret orphelin ni un nom inventé.
+      expect(getChatMessagePreview({ composition: { kind: 'friendly_match', type: 'proposal' } }))
+        .toBe('Proposition de match');
+      expect(getChatMessagePreview({
+        composition: { kind: 'friendly_match', teamName: 'AS Candidats U15', type: 'proposal' },
+      })).toBe('AS Candidats U15 propose un match');
     });
   });
 });

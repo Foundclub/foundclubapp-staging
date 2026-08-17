@@ -78,6 +78,12 @@ import JoinEventModal from '@/components/organisms/joinEventModal/JoinEventModal
 import PollCreationModal from '@/components/organisms/pollCreationModal/PollCreationModal';
 import GlobalPromptModal from '@/components/organisms/popup/GlobalPromptModal';
 import VenueProposalModal from '@/components/organisms/venueProposalModal/VenueProposalModal';
+import {
+  buildFriendlyProposalConfirmation,
+  canAcceptFriendlyProposal,
+  isFriendlyProposal,
+  respondToFriendlyProposal,
+} from '@/views/friendlyMatch/friendlyProposalInChat';
 import { buildProposalDefaultsFromMatch } from '@/views/league/match/utils/proposalDefaults';
 import {
   buildCanonicalLeagueProposalPayload,
@@ -3168,6 +3174,107 @@ function Conversation({ navigation, route }) {
     }
   };
 
+  /**
+   * S03 — répondre à une proposition de match AMICAL depuis le fil.
+   *
+   * Constat d'Adel (16/08) : « il doit y avoir, pour l'entraîneur qui reçoit la
+   * proposition, un BOUTON POUR ACCEPTER ». Sans ça, il fallait ressortir du fil,
+   * retrouver l'annonce, ouvrir la liste des candidatures — pour un clic.
+   *
+   * ⛔ Ce n'est PAS une seconde règle d'acceptation : `respondToFriendlyProposal`
+   * appelle exactement le service qu'appelle déjà le bouton « Accepter ce match »
+   * de l'écran de l'annonce. Le serveur reste seul juge de qui a le droit.
+   * @param {any} message - Le message porteur de la bulle.
+   * @param {'accept' | 'decline'} action - Ce qu'on répond.
+   * @returns {Promise<void>}
+   */
+  const submitFriendlyProposalResponse = async (message, action) => {
+    const proposalMessageId = String(
+      message?.documentId || message?._id || message?.id || '',
+    ).trim();
+    // La bulle passe tout de suite dans son état d'arrivée : le staff voit sa
+    // réponse prise en compte sans attendre l'aller-retour, et le serveur
+    // reposera le même verdict dans la charge du message.
+    const nextStatus = action === 'accept' ? 'accepted' : 'declined';
+    const messagesKey = { queryKey: ['chat-messages', chatId] };
+    queryClient.setQueriesData(messagesKey, (/** @type {any} */ oldData) => {
+      if (!oldData?.pages) return oldData;
+      return {
+        ...oldData,
+        pages: oldData.pages.map((/** @type {any} */ page) => ({
+          ...page,
+          data: page.data.map((/** @type {any} */ msg) => {
+            const msgId = String(msg.documentId || msg._id || msg.id || '');
+            return msgId === proposalMessageId
+              ? { ...msg, composition: { ...msg.composition, status: nextStatus } }
+              : msg;
+          }),
+        })),
+      };
+    });
+
+    try {
+      setIsProposalResponseSubmitting(true);
+      await respondToFriendlyProposal(message?.composition, action);
+      showSuccessBanner(
+        action === 'accept'
+          ? 'Le match est créé : il apparaît dans le planning des deux équipes.'
+          : 'Ton refus a été envoyé.',
+        action === 'accept' ? 'Match confirmé' : 'Proposition refusée',
+      );
+      queryClient.invalidateQueries({ queryKey: ['chat-messages', chatId] });
+      queryClient.invalidateQueries({ queryKey: ['friendly-match-ads'] });
+      queryClient.invalidateQueries({ queryKey: ['events'] });
+    } catch (error) {
+      conversationLogger.error('Friendly proposal action failed', error);
+      // Le message du serveur est LISIBLE (« Cette candidature n est plus en
+      // attente », « Only the ad staff… ») : on le montre plutôt que de le
+      // remplacer par un « Accès refusé » qui n'explique rien.
+      showErrorBanner(
+        /** @type {any} */ (error)?.message || 'Une erreur est survenue lors de la réponse.',
+      );
+      // La bulle reprend l'état que le serveur, lui, connaît.
+      queryClient.invalidateQueries({ queryKey: ['chat-messages', chatId] });
+    } finally {
+      setIsProposalResponseSubmitting(false);
+    }
+  };
+
+  /**
+   * Accepter est un geste LOURD et irréversible côté serveur : il crée le match,
+   * le pose dans le planning des deux équipes et refuse les autres candidatures
+   * (Q6). Il passe donc par une confirmation qui dit ce qui va se produire.
+   * @param {any} message - Le message porteur de la bulle.
+   * @param {'accept' | 'decline'} action - Ce qu'on répond.
+   * @returns {void}
+   */
+  const handleRespondFriendlyProposal = (message, action) => {
+    if (isProposalResponseSubmitting) return;
+
+    if (action === 'decline') {
+      submitFriendlyProposalResponse(message, 'decline');
+      return;
+    }
+
+    const confirmation = buildFriendlyProposalConfirmation();
+    openConversationPrompt({
+      body: confirmation.body,
+      primaryAction: {
+        label: 'Accepter',
+        onPress: () => {
+          closeConversationPrompt();
+          submitFriendlyProposalResponse(message, 'accept');
+        },
+      },
+      secondaryAction: {
+        label: 'Annuler',
+        onPress: closeConversationPrompt,
+        variant: 'Secondary',
+      },
+      title: confirmation.title,
+    });
+  };
+
   const handleCancelMatch = async () => {
     const matchId = getEntityDocumentId(chatData?.league_match);
     if (!matchId) return;
@@ -4723,6 +4830,31 @@ function Conversation({ navigation, route }) {
                 onVote={(optionId) => handleVoteOnPoll(currentMessage, optionId)}
                 poll={currentMessage.composition}
                 resolveVoterName={resolveVoterName}
+              />
+            </View>
+          ),
+        );
+      }
+
+      // S03 — la proposition de match AMICAL. Même bulle que son jumeau LEAGUE
+      // (on n'invente pas un troisième format), mais deux différences qui
+      // comptent : les boutons appellent le workflow amical, et c'est le
+      // SERVEUR qui a désigné dans la charge du message qui peut accepter.
+      if (isFriendlyProposal(currentMessage.composition)) {
+        const jePeuxAccepter = canAcceptFriendlyProposal(
+          currentMessage.composition,
+          userData?.documentId,
+        );
+
+        return wrapWithMessageInteractions(
+          currentMessage, (
+            <View style={{ marginBottom, marginTop }}>
+              <ProposalMessageBubble
+                allowResponseActions
+                isMe={!jePeuxAccepter}
+                onAccept={() => handleRespondFriendlyProposal(currentMessage, 'accept')}
+                onDecline={() => handleRespondFriendlyProposal(currentMessage, 'decline')}
+                proposal={currentMessage.composition}
               />
             </View>
           ),

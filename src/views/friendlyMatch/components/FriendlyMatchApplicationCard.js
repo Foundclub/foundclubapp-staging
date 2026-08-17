@@ -11,6 +11,7 @@ import { respondToFriendlyMatchApplication } from '@/services/friendlyMatch/frie
 import { createLogger } from '@/utils/logger/logger';
 
 import { getSlotHoursLabel, toReadableDay } from '../friendlyMatchDateLabels';
+import { FRIENDLY_ACCEPT_CONSEQUENCE } from '../friendlyProposalInChat';
 import FriendlyMatchTermsSheet from './FriendlyMatchTermsSheet';
 
 const logger = createLogger('friendly-match-application');
@@ -109,7 +110,9 @@ function FriendlyMatchApplicationCard({
     Alert.alert(
       'Accepter cette équipe ?',
       [
-        'Le match sera créé et apparaîtra dans le planning des deux équipes.',
+        // S03 — la MEME phrase que la confirmation du fil de discussion : c'est
+        // le meme geste, deux formulations feraient croire a deux gestes.
+        FRIENDLY_ACCEPT_CONSEQUENCE,
         otherCount > 0 ? buildOtherApplicationsWarning(otherCount) : '',
       ].filter(Boolean).join('\n\n'),
       [

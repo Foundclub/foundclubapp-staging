@@ -131,8 +131,20 @@ export const getChatMessagePreview = (message) => {
       return 'Localisation';
     case 'poll':
       return 'Sondage';
-    case 'proposal':
-      return 'Proposition';
+    case 'proposal': {
+      // S03 — une proposition de match amical porte de quoi se nommer ; une
+      // proposition LEAGUE, non. Sans ces deux lignes, donner enfin une charge
+      // à la proposition d'amical FERAIT RECULER la liste : elle passerait du
+      // texte du message (« AS Candidats U15 propose un match. ») au générique
+      // « Proposition ». ⛔ Rien n'est inventé : ce qui manque est simplement
+      // absent de la ligne.
+      const { dateLabel, kind, teamName } = message?.composition || {};
+      if (kind !== 'friendly_match') return 'Proposition';
+      const equipe = String(teamName || '').trim();
+      const quand = String(dateLabel || '').trim();
+      if (!equipe) return 'Proposition de match';
+      return quand ? `${equipe} propose un match — ${quand}` : `${equipe} propose un match`;
+    }
     case 'voice_note':
       return 'Note vocale';
     default:
