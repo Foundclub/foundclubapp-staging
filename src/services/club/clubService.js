@@ -5,9 +5,12 @@ import { Platform } from 'react-native';
 import { getAuthTokens } from '@/domains/auth/authUseCases';
 import { getUploadEndpoint } from '@/config/runtimeUrls';
 import { buildPreservedApiError } from '@/utils/errors/apiError';
+import { createLogger } from '@/utils/logger/logger';
 
 import client from '../client';
 /* eslint-enable perfectionist/sort-imports */
+
+const clubListLogger = createLogger('club-list');
 
 /**
  * Club validation schema
@@ -30,7 +33,10 @@ const activitySchema = Joi.object({
 });
 
 const sponsorSchema = Joi.object({
-  link: Joi.string().optional(),
+  // `link` est `required: false` cote serveur (composant sponsor.sponsor) : un
+  // sponsor sans site web arrive donc a `null`, et sans cette tolerance il
+  // emportait TOUTE la fiche du club. Meme famille que `address`, voir T11.
+  link: Joi.string().allow('', null).optional(),
   logo: Joi.object({
     url: Joi.string().optional(),
   }).allow(null).required(),
@@ -70,7 +76,10 @@ const normalizeClubGovernanceSettings = (club) => {
 
 const clubSchema = Joi.object({
   activites: Joi.array().items(activitySchema).optional(),
-  address: Joi.object().required(),
+  // `address` est `required: false` cote serveur (admin, club/schema.json) : un
+  // club sans adresse est un club NORMAL, pas une erreur. La cle reste exigee,
+  // seule la valeur `null` devient acceptable — on ne supprime pas la validation.
+  address: Joi.object().allow(null).required(),
   clubMembersPublicVisibility: Joi.boolean().optional(),
   clubPartner: Joi.boolean().allow(null).optional().default(false),
   clubVerified: Joi.boolean().allow(null).optional().default(false),
@@ -91,7 +100,10 @@ const clubSchema = Joi.object({
 const clubListSchema = Joi.object({
   _type: Joi.string().valid('club', 'multisport').optional(), // Type indicator
   activites: Joi.array().items(activitySchema).optional(),
-  address: Joi.object().optional(), // Optional for multisport clubs
+  // 🚨 T11 : `.optional()` accepte que la CLE soit absente mais REFUSE `null` —
+  // et le serveur envoie bien `null` (3 clubs en production le 2026-08-17).
+  // C'est cette ligne qui faisait disparaitre TOUTE la liste de recherche.
+  address: Joi.object().allow(null).optional(),
   clubPartner: Joi.boolean().allow(null).optional().default(false),
   clubVerified: Joi.boolean().allow(null).optional().default(false),
   documentId: Joi.string().optional(),
@@ -99,30 +111,77 @@ const clubListSchema = Joi.object({
   geohash: Joi.string().allow('', null).optional(),
   id: Joi.number().required(),
   isCustomer: Joi.boolean().allow(null).optional().default(false), // Optional for multisport
-  maxSectionNumber: Joi.number().optional(), // For multisport clubs
-  maxTeamNumber: Joi.number().optional(), // Optional - multisport uses maxSectionNumber
+  // Les deux compteurs sont `required: true` cote serveur, mais les imports en
+  // masse (SIRENE) ecrivent en base sans passer par la validation de Strapi.
+  // `clubSchema` tolerait deja `null` sur `maxTeamNumber` — la liste, non.
+  maxSectionNumber: Joi.number().allow(null).optional(), // For multisport clubs
+  maxTeamNumber: Joi.number().allow(null).optional(), // Optional - multisport uses maxSectionNumber
   name: Joi.string().required(),
   phoneNumber: Joi.string().allow('', null).optional(),
   sectionsCount: Joi.number().optional(), // For multisport clubs
 }).required();
 
-const validateClubListPayload = async (data, meta) => {
-  const schema = Joi.object({
-    data: Joi.array().items(clubListSchema).empty(Joi.array().length(0)),
-    meta: Joi.object({
-      pagination: Joi.object({
-        page: Joi.number().required(),
-        pageCount: Joi.number().required(),
-        pageSize: Joi.number().required(),
-        total: Joi.number().required(),
-      }).required(),
+/**
+ * L'ENVELOPPE seule : la forme du lot et sa pagination. Elle reste stricte —
+ * on ne devine pas une pagination, une enveloppe cassee est une erreur.
+ * `.empty(Joi.array().length(0))` est conserve tel quel : une liste vide rend
+ * `data: undefined`, comportement d'origine dont les appelants dependent.
+ */
+const clubListEnvelopeSchema = Joi.object({
+  data: Joi.array().empty(Joi.array().length(0)),
+  meta: Joi.object({
+    pagination: Joi.object({
+      page: Joi.number().required(),
+      pageCount: Joi.number().required(),
+      pageSize: Joi.number().required(),
+      total: Joi.number().required(),
     }).required(),
-  }).required();
+  }).required(),
+}).required();
 
-  return schema.validateAsync(
+/**
+ * T11 — la validation se fait LIGNE PAR LIGNE, jamais sur le lot entier.
+ *
+ * En bloc, UN club illisible faisait tomber les sept autres de la page : la
+ * recherche rendait « "data[0].address" must be of type object » et plus aucun
+ * club ne s'affichait. Meme defaut, meme correctif que S01 (`327cb34`) sur les
+ * demandes d'adhesion — le club sain reste lisible, celui qui ne l'est pas est
+ * ECARTE et NOMME (logger maison, pas `console`).
+ *
+ * L'ordre du tableau est celui du serveur : `Promise.all` le preserve quel que
+ * soit l'ordre de resolution, et le tri (clubPartner desc, name asc) survit.
+ * @param {any} data - Les clubs renvoyes par le serveur.
+ * @param {any} meta - L'enveloppe, pagination comprise.
+ * @returns {Promise<{data: any[] | undefined, meta: any}>} - Le lot validé.
+ */
+const validateClubListPayload = async (data, meta) => {
+  const envelope = await clubListEnvelopeSchema.validateAsync(
     { data, meta },
     { allowUnknown: true },
   );
+
+  const entries = Array.isArray(envelope.data) ? envelope.data : [];
+  const outcomes = await Promise.all(entries.map(async (/** @type {any} */ entry) => {
+    try {
+      return { club: await clubListSchema.validateAsync(entry, { allowUnknown: true }) };
+    } catch {
+      return { rejectedId: String(entry?.documentId || entry?.id || 'sans-identifiant') };
+    }
+  }));
+
+  const rejectedIds = outcomes
+    .filter((outcome) => outcome.rejectedId)
+    .map((outcome) => outcome.rejectedId);
+  if (rejectedIds.length) {
+    clubListLogger.warn('club(s) illisible(s) ecarte(s) de la liste', {
+      clubs: rejectedIds,
+      rejected: rejectedIds.length,
+    });
+  }
+
+  const clubs = outcomes.filter((outcome) => outcome.club).map((outcome) => outcome.club);
+
+  return { ...envelope, data: clubs.length ? clubs : undefined };
 };
 
 const buildClubListParams = (params = {}) => {
@@ -579,7 +638,10 @@ export const updateClub = async (clubData) => {
       data: clubSchema.required(),
     }).required();
 
-    const validationResult = await schema.validateAsync(response.data, {
+    const validationResult = await schema.validateAsync({
+      ...response.data,
+      data: normalizeClubGovernanceSettings(response.data?.data),
+    }, {
       allowUnknown: true,
     });
 
@@ -723,7 +785,15 @@ export const updateClubInfo = async (clubData) => {
       data: clubSchema.required(),
     }).required();
 
-    const validationResult = await schema.validateAsync(response.data, {
+    // Le controleur ne normalise PAS la gouvernance sur cette route : 86 689
+    // clubs de production ont `clubMembersPublicVisibility` et
+    // `membershipRequestManagementMode` a `null`, et le schema les refusait —
+    // l'app affichait une erreur sur un enregistrement REUSSI. Meme
+    // normalisation que `getClubById`, pas une seconde façon de faire.
+    const validationResult = await schema.validateAsync({
+      ...response.data,
+      data: normalizeClubGovernanceSettings(response.data?.data),
+    }, {
       allowUnknown: true,
     });
 
