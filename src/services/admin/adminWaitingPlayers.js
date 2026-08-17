@@ -14,6 +14,14 @@
 export const TEAM_NOT_FOUND_KIND = 'team_not_found';
 
 /**
+ * S02 — le type de ligne de la SECONDE porte. Ce n'est pas une demande a
+ * traiter : c'est un CHIFFRE que le super admin lit. Elle n'a donc ni
+ * « Traiter » ni « Refuser » — un bouton qui ne fait rien vaut moins que pas de
+ * bouton du tout.
+ */
+export const CLUB_ARRIVAL_INTEREST_KIND = 'club_arrival_interest';
+
+/**
  * La clef qui identifie « le meme club » entre deux demandes.
  * L'identifiant prime ; le nom normalise n'est le repli que s'il n'y en a pas
  * (les demandes venues de l'onboarding sont une recherche en texte libre).
@@ -59,4 +67,67 @@ export const annotateWaitingPlayersPerClub = (items = []) => {
       __waitingPlayersCount: clubKey ? (requestersByClub.get(clubKey)?.size || 1) : 1,
     };
   });
+};
+
+/**
+ * La clef qui identifie « la meme personne » entre deux interets. Un compte sans
+ * identifiant lisible compte quand meme pour 1 : on retombe sur l'identifiant de
+ * l'interet, jamais sur 0.
+ * @param {any} interest
+ * @returns {string}
+ */
+const buildInterestedPersonKey = (interest = {}) => String(
+  interest?.user?.documentId
+  || interest?.user?.id
+  || `interest:${interest?.documentId || ''}`,
+);
+
+/**
+ * S02 — « N personnes sont interessees par votre club ».
+ *
+ * 💰 C'est l'appel qui se decroche : « une personne a demande » ne l'est pas.
+ * ⚠️ On compte donc des PERSONNES DISTINCTES, pas des interets — appuyer cinq
+ * fois ne fait pas cinq personnes. Meme regle, meme motif que
+ * `annotateWaitingPlayersPerClub` ci-dessus, et une seule LIGNE PAR CLUB : le
+ * super admin veut savoir quels clubs appeler, pas relire 12 fois le meme.
+ * @param {any[]} interests interets bruts, tels que rendus par le serveur
+ * @returns {any[]} une ligne par club, la plus fournie en premier
+ */
+export const buildClubArrivalInterestRows = (interests = []) => {
+  /** @type {Map<string, any>} */
+  const rowsByClub = new Map();
+
+  interests.forEach((interest) => {
+    const club = interest?.club || {};
+    const clubKey = String(club?.documentId || club?.id || '').trim();
+    if (!clubKey) return;
+
+    if (!rowsByClub.has(clubKey)) {
+      rowsByClub.set(clubKey, {
+        __interestedPeople: new Set(),
+        club,
+        clubName: club?.name || '',
+        createdAt: interest?.createdAt || null,
+        // Une ligne de club, jamais une ligne de demande : son identifiant doit
+        // etre stable et ne peut pas etre celui d'un interet en particulier.
+        documentId: `club-arrival-interest:${clubKey}`,
+      });
+    }
+
+    const row = rowsByClub.get(clubKey);
+    row.__interestedPeople.add(buildInterestedPersonKey(interest));
+    if (!row.createdAt || String(interest?.createdAt || '') > String(row.createdAt)) {
+      row.createdAt = interest?.createdAt || row.createdAt;
+    }
+  });
+
+  return [...rowsByClub.values()]
+    .map(({ __interestedPeople, ...row }) => ({
+      ...row,
+      __interestedPeopleCount: __interestedPeople.size,
+      __isAffiliationHelp: false,
+      __requestType: CLUB_ARRIVAL_INTEREST_KIND,
+      __typeLabel: 'INTÉRÊTS',
+    }))
+    .sort((a, b) => b.__interestedPeopleCount - a.__interestedPeopleCount);
 };

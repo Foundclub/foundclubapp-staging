@@ -151,6 +151,7 @@ describe('resolveClubDetailsActionMatrix', () => {
       isPlayerRole: true,
       ownerCount: 3,
     })).toEqual({
+      showClubArrivalInterestAction: false,
       showClubInterestAction: false,
       showClubPartneringAction: false,
       showContactAdminClaimAction: false,
@@ -164,9 +165,88 @@ describe('resolveClubDetailsActionMatrix', () => {
     });
   });
 
+  // ---------------------------------------------------------------------------
+  // S02 — « Moi je veux DEUX BOUTONS » (Adel, 2026-08-16).
+  //
+  // Le defaut repare ici : sur un club SANS equipe, la fiche n'offrait qu'UNE
+  // porte, et elle disait la meme chose a tout le monde — « j'y suis deja ».
+  // Or presque tout visiteur tombe sur un club absent de l'app (222 287 clubs
+  // sur 222 294 n'ont aucune equipe, mesure prod du 2026-08-13) : celui qui n'y
+  // est PAS ENCORE n'avait nulle part ou se declarer, et repartait.
+  // ---------------------------------------------------------------------------
+  describe('S02 · les deux portes d\'un club sans equipe', () => {
+    // Temoin principal.
+    it('shows BOTH doors when a player opens a club without any team', () => {
+      expect(resolveClubDetailsActionMatrix({
+        canPlayerSignalMissingTeam: true,
+        clubHasTeams: false,
+        isAuthenticated: true,
+        isPlayerRole: true,
+      })).toMatchObject({
+        showClubArrivalInterestAction: true,
+        showPlayerNoTeamAction: true,
+      });
+    });
+
+    // Le compte SANS ROLE est le profil le plus courant apres le visiteur
+    // anonyme (40 comptes sur 118 en prod, 2026-08-13). Il n'avait strictement
+    // que « Je dirige ce club », une phrase qu'il ne peut pas signer.
+    it('shows the arrival door to a signed-in account without any role', () => {
+      expect(resolveClubDetailsActionMatrix({
+        clubHasTeams: false,
+        isAuthenticated: true,
+      })).toMatchObject({
+        showClubArrivalInterestAction: true,
+        showEmptyClubClaimAction: true,
+      });
+    });
+
+    // 🔒 LA NON-REGRESSION QUI COMPTE. Sur un club QUI A une equipe, la seconde
+    // porte reste eteinte : c'est `showClubInterestAction` (l'interet pour une
+    // EQUIPE precise) qui continue de jouer ce role, inchange.
+    it('leaves a club WITH teams without any arrival door', () => {
+      expect(resolveClubDetailsActionMatrix({
+        clubHasTeams: true,
+        isAuthenticated: true,
+        ownerCount: 1,
+      })).toMatchObject({
+        showClubArrivalInterestAction: false,
+        showClubInterestAction: true,
+      });
+    });
+
+    // Aucune action d'ENVOI sans compte : la 2e porte enregistre un interet
+    // nominatif, elle ne peut donc pas s'allumer pour un visiteur anonyme.
+    it('never offers the arrival door to an anonymous visitor', () => {
+      expect(resolveClubDetailsActionMatrix({
+        clubHasTeams: false,
+        isAuthenticated: false,
+      })).toMatchObject({
+        showClubArrivalInterestAction: false,
+      });
+    });
+
+    // Un dirigeant de CE club n'a rien a attendre : il y est.
+    it('never offers the arrival door to someone already in the club', () => {
+      expect(resolveClubDetailsActionMatrix({
+        canEdit: true,
+        clubHasTeams: false,
+        isAuthenticated: true,
+        isUserAlreadyAttachedToViewedClub: true,
+      })).toMatchObject({
+        showClubArrivalInterestAction: false,
+      });
+    });
+  });
+
   // D98 — temoin 2, LE TEMOIN QUI COMPTE. Un visiteur CONNECTE ne voit rien
   // changer. `toEqual` compare l'objet ENTIER : si D98 allumait ou eteignait quoi
   // que ce soit pour un compte connecte, ces 4 profils le diraient.
+  //
+  // ⚠️ S02 a AJOUTE une clef a l'objet rendu (`showClubArrivalInterestAction`) et
+  // ces 4 profils la portent donc desormais. Elle vaut `false` partout ou le club
+  // a une equipe — les 2 profils « sans equipe » sont les seuls a changer, et
+  // c'est exactement le lot.
   describe('D98 · temoin 2 — un visiteur connecte ne voit RIEN changer', () => {
     it('leaves a player on a club with teams untouched', () => {
       expect(resolveClubDetailsActionMatrix({
@@ -175,6 +255,7 @@ describe('resolveClubDetailsActionMatrix', () => {
         isAuthenticated: true,
         isPlayerRole: true,
       })).toEqual({
+        showClubArrivalInterestAction: false,
         showClubInterestAction: false,
         showClubPartneringAction: false,
         showContactAdminClaimAction: false,
@@ -188,6 +269,8 @@ describe('resolveClubDetailsActionMatrix', () => {
       });
     });
 
+    // ⚠️ S02 — ce profil CHANGE, et c'est voulu : le joueur d'un club sans equipe
+    // gagne la 2e porte. Tout le reste de sa ligne est identique a D98.
     it('leaves a player on a club without any team untouched', () => {
       expect(resolveClubDetailsActionMatrix({
         canPlayerSignalMissingTeam: true,
@@ -195,6 +278,7 @@ describe('resolveClubDetailsActionMatrix', () => {
         isAuthenticated: true,
         isPlayerRole: true,
       })).toEqual({
+        showClubArrivalInterestAction: true,
         showClubInterestAction: false,
         showClubPartneringAction: false,
         showContactAdminClaimAction: false,
@@ -216,6 +300,7 @@ describe('resolveClubDetailsActionMatrix', () => {
         isAuthenticated: true,
         ownerCount: 1,
       })).toEqual({
+        showClubArrivalInterestAction: false,
         showClubInterestAction: false,
         showClubPartneringAction: false,
         showContactAdminClaimAction: false,
@@ -229,12 +314,15 @@ describe('resolveClubDetailsActionMatrix', () => {
       });
     });
 
+    // ⚠️ S02 — ce profil CHANGE lui aussi, et de la meme facon : « Je dirige ce
+    // club » reste sa porte primaire, la 2e s'ajoute a cote.
     it('leaves a coach on a partner club without teams untouched', () => {
       expect(resolveClubDetailsActionMatrix({
         canUseClubPartneringFlow: true,
         clubHasTeams: false,
         isAuthenticated: true,
       })).toEqual({
+        showClubArrivalInterestAction: true,
         showClubInterestAction: false,
         showClubPartneringAction: true,
         showContactAdminClaimAction: false,

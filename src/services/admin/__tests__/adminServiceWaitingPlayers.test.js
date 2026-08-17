@@ -2,6 +2,8 @@
 
 import {
   annotateWaitingPlayersPerClub,
+  buildClubArrivalInterestRows,
+  CLUB_ARRIVAL_INTEREST_KIND,
   TEAM_NOT_FOUND_KIND,
 } from '@/services/admin/adminWaitingPlayers';
 
@@ -91,5 +93,111 @@ describe('annotateWaitingPlayersPerClub', () => {
     ]);
 
     expect(annotated.map((item) => item.__waitingPlayersCount)).toEqual([2, 2]);
+  });
+});
+
+// S02 — le compteur de la SECONDE porte. Adel, 2026-08-16 : « que NOUS on puisse
+// savoir combien de personnes sont intéressées par tel club ».
+// 💰 « 12 personnes sont interessees par votre club » est un appel qui se
+// decroche ; « une personne a demande » ne l'est pas. ⇒ le compteur EST la
+// moitie de la valeur du bouton, et un compteur faux vaut moins que rien.
+const buildArrivalInterest = ({
+  clubId, clubName, interestId, userId,
+}) => ({
+  club: clubId ? { documentId: clubId, name: clubName } : undefined,
+  createdAt: '2026-08-16T10:00:00.000Z',
+  documentId: interestId,
+  status: 'pending',
+  user: userId ? { documentId: userId } : undefined,
+});
+
+describe('buildClubArrivalInterestRows', () => {
+  // LE TEMOIN DU LOT.
+  it('deux personnes comptent pour 2, la meme personne deux fois pour 1', () => {
+    const rows = buildClubArrivalInterestRows([
+      buildArrivalInterest({
+        clubId: 'club-1', clubName: 'AS Test', interestId: 'i1', userId: 'u1',
+      }),
+      buildArrivalInterest({
+        clubId: 'club-1', clubName: 'AS Test', interestId: 'i2', userId: 'u2',
+      }),
+      buildArrivalInterest({
+        clubId: 'club-2', clubName: 'FC Autre', interestId: 'i3', userId: 'u3',
+      }),
+      // Le meme compte, deux fois, sur le club 2 : il ne fait pas deux personnes.
+      buildArrivalInterest({
+        clubId: 'club-2', clubName: 'FC Autre', interestId: 'i4', userId: 'u3',
+      }),
+    ]);
+
+    expect(rows.map((row) => [row.clubName, row.__interestedPeopleCount])).toEqual([
+      ['AS Test', 2],
+      ['FC Autre', 1],
+    ]);
+  });
+
+  it('rend UNE ligne par club, jamais une par personne', () => {
+    const rows = buildClubArrivalInterestRows([
+      buildArrivalInterest({
+        clubId: 'club-1', clubName: 'AS Test', interestId: 'i1', userId: 'u1',
+      }),
+      buildArrivalInterest({
+        clubId: 'club-1', clubName: 'AS Test', interestId: 'i2', userId: 'u2',
+      }),
+      buildArrivalInterest({
+        clubId: 'club-1', clubName: 'AS Test', interestId: 'i3', userId: 'u3',
+      }),
+    ]);
+
+    expect(rows).toHaveLength(1);
+    expect(rows[0].documentId).toBe('club-arrival-interest:club-1');
+    expect(rows[0].__requestType).toBe(CLUB_ARRIVAL_INTEREST_KIND);
+  });
+
+  it('classe les clubs les plus attendus en premier', () => {
+    const rows = buildClubArrivalInterestRows([
+      buildArrivalInterest({
+        clubId: 'club-1', clubName: 'Un seul', interestId: 'i1', userId: 'u1',
+      }),
+      buildArrivalInterest({
+        clubId: 'club-2', clubName: 'Trois', interestId: 'i2', userId: 'u2',
+      }),
+      buildArrivalInterest({
+        clubId: 'club-2', clubName: 'Trois', interestId: 'i3', userId: 'u3',
+      }),
+      buildArrivalInterest({
+        clubId: 'club-2', clubName: 'Trois', interestId: 'i4', userId: 'u4',
+      }),
+    ]);
+
+    expect(rows.map((row) => row.clubName)).toEqual(['Trois', 'Un seul']);
+  });
+
+  it('un compte sans identifiant lisible compte quand meme pour 1', () => {
+    const rows = buildClubArrivalInterestRows([
+      buildArrivalInterest({ clubId: 'club-1', clubName: 'AS Test', interestId: 'i1' }),
+      buildArrivalInterest({ clubId: 'club-1', clubName: 'AS Test', interestId: 'i2' }),
+    ]);
+
+    expect(rows[0].__interestedPeopleCount).toBe(2);
+  });
+
+  it('un interet sans club n\'invente pas de ligne', () => {
+    expect(buildClubArrivalInterestRows([
+      buildArrivalInterest({ interestId: 'i1', userId: 'u1' }),
+    ])).toEqual([]);
+  });
+
+  // 🔒 Non-regression : ces lignes ne sont pas des demandes, donc l'ecran ne
+  // doit surtout pas leur poser « Traiter » / « Refuser ».
+  it('ne se fait jamais passer pour une demande a traiter', () => {
+    const rows = buildClubArrivalInterestRows([
+      buildArrivalInterest({
+        clubId: 'club-1', clubName: 'AS Test', interestId: 'i1', userId: 'u1',
+      }),
+    ]);
+
+    expect(rows[0].__isAffiliationHelp).toBe(false);
+    expect(rows[0].__requestType).not.toBe(TEAM_NOT_FOUND_KIND);
   });
 });

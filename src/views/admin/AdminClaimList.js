@@ -16,6 +16,7 @@ import ScreenContainer from '@/components/templates/ScreenContainer';
 
 import { RouteNames } from '@/navigation/routeNames';
 
+import { CLUB_ARRIVAL_INTEREST_KIND } from '@/services/admin/adminWaitingPlayers';
 import {
   useApproveClubClaim,
   useGetClubClaimsRequestList,
@@ -114,7 +115,66 @@ function AdminClaimList() {
     return refuseClaimMutation.isPending && refuseClaimMutation.variables === item.documentId;
   };
 
+  // S02 — « N personnes intéressées par ce club ».
+  //
+  // 💰 C'est le chiffre qui rend l'appel décrochable : « 12 personnes sont
+  // intéressées par votre club » ouvre une conversation, « une personne a
+  // demandé » non. Il compte des PERSONNES DISTINCTES, pas des demandes.
+  //
+  // ⛔ Cette carte n'a NI « Traiter » NI « Refuser », et c'est voulu : il n'y a
+  // rien à trancher, c'est une mesure. Un bouton qui ne ferait rien vaudrait
+  // moins que pas de bouton du tout.
+  const renderClubArrivalInterest = (item) => {
+    const peopleCount = Number(item?.__interestedPeopleCount || 0);
+
+    return (
+      <View
+        style={[
+          ApplicationStyle.card,
+          Spaces.padding[16],
+          Spaces.marginBottom[16],
+          {
+            borderLeftColor: Colors.primary200,
+            borderLeftWidth: 4,
+          },
+        ]}
+      >
+        <View style={[Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween, Spaces.gap[12]]}>
+          <Text numberOfLines={2} style={[Fonts.h4Black, { color: Colors.neutral00, flex: 1 }]}>
+            {item?.clubName || 'Club inconnu'}
+          </Text>
+          <View
+            style={{
+              borderColor: Colors.primary200,
+              borderRadius: 999,
+              borderWidth: 1,
+              paddingHorizontal: 10,
+              paddingVertical: 4,
+            }}
+          >
+            <Text style={[Fonts.p3Bold, { color: Colors.primary200 }]}>
+              {item?.__typeLabel || 'INTÉRÊTS'}
+            </Text>
+          </View>
+        </View>
+
+        <Text style={[Fonts.p2, { color: Colors.neutral200 }, Spaces.marginTop[8]]}>
+          {peopleCount > 1
+            ? `${peopleCount} personnes intéressées par ce club`
+            : '1 personne intéressée par ce club'}
+        </Text>
+        <Text style={[Fonts.p3, { color: Colors.neutral300 }, Spaces.marginTop[4]]}>
+          Ce club n’est pas encore sur FoundClub. Personne n’a rien à traiter ici.
+        </Text>
+      </View>
+    );
+  };
+
   const renderItem = ({ item }) => {
+    if (item?.__requestType === CLUB_ARRIVAL_INTEREST_KIND) {
+      return renderClubArrivalInterest(item);
+    }
+
     const user = item?.user || {};
     const fullName = [user?.firstname, user?.lastname].filter(Boolean).join(' ').trim()
             || [item?.holderFirstname, item?.holderLastname].filter(Boolean).join(' ').trim()

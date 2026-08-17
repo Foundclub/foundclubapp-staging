@@ -103,6 +103,7 @@ const normalizeListParams = ({
   pageSize = 50,
   teamId = '',
   teamIds = [],
+  withoutTeam = false,
 } = {}) => {
   const filters = {};
   const normalizedClubId = String(clubId || '').trim();
@@ -115,7 +116,12 @@ const normalizeListParams = ({
     filters.club = { documentId: normalizedClubId };
   }
 
-  if (normalizedTeamId) {
+  // S02 — l'ABSENCE d'equipe est ce qui distingue « j'attends ce club » de
+  // « je vise cette equipe ». C'est donc le seul filtre qui isole la seconde
+  // porte, celle dont le super admin compte les personnes.
+  if (withoutTeam) {
+    filters.team = { id: { $null: true } };
+  } else if (normalizedTeamId) {
     filters.team = { documentId: normalizedTeamId };
   } else if (normalizedTeamIds.length > 0) {
     filters.team = {
@@ -135,9 +141,23 @@ const normalizeListParams = ({
   };
 };
 
-export const createClubInterestRequest = async ({ team }) => {
+/**
+ * S02 — le meme envoi couvre desormais DEUX cas :
+ *   · `{ team }`  : l'interet pour une equipe precise (existant, inchange) ;
+ *   · `{ club }`  : « prevenez-moi quand ce club arrive », sur un club qui n'a
+ *                   encore AUCUNE equipe — 222 287 clubs sur 222 294.
+ * ⛔ On n'envoie JAMAIS la clef absente : le serveur distingue les deux cas par
+ * la presence de `team`, une clef `team: undefined` serialisee en `null` par
+ * axios le ferait retomber dans le mauvais.
+ * @param {{ club?: string, team?: string }} params
+ * @returns {Promise<any>}
+ */
+export const createClubInterestRequest = async ({ club, team } = {}) => {
+  const normalizedTeam = String(team || '').trim();
+  const normalizedClub = String(club || '').trim();
+
   const response = await client.post('/club-interest-requests', {
-    data: { team },
+    data: normalizedTeam ? { team: normalizedTeam } : { club: normalizedClub },
   });
   return response.data;
 };
@@ -148,6 +168,16 @@ export const getClubInterestRequests = async (params = {}) => {
   });
   return validatePaginatedResponse(response.data);
 };
+
+/**
+ * S02 — les interets « prevenez-moi quand ce club arrive », pour le super admin.
+ * Ce sont les seuls qui n'ont AUCUNE equipe : c'est ce qui les isole.
+ * @param {{ page?: number, pageSize?: number }} [params]
+ * @returns {Promise<any>}
+ */
+export const getPendingClubArrivalInterests = async (params = {}) => (
+  getClubInterestRequests({ page: 1, pageSize: 200, ...params, withoutTeam: true })
+);
 
 export const getMyClubInterestRequests = async (params = {}) => {
   const {
