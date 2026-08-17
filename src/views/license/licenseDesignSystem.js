@@ -1,4 +1,4 @@
-import { Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 
 import useTheme from '@/theme/themeContext';
 
@@ -175,6 +175,78 @@ export const getLicenseStatusTone = (Colors, status) => ({
   webhook_pending: Colors.warning500,
   webhook_stale: Colors.warning500,
 }[status] || Colors.primary500);
+
+/**
+ * T03 — LA PASTILLE DE SELECTION DES COTISATIONS, ECRITE UNE SEULE FOIS.
+ *
+ * Adel, recette du 2026-08-17 : « il faut regler les textes dans les boutons de
+ * l ecran filtres — "tous", "en attente", etc. — ils ne sont pas centres dans
+ * les boutons ».
+ *
+ * Le meme bouton etait recopie a QUATRE endroits, avec la meme palette et les
+ * memes marges : `SelectionChip` (ClubLicenseCampaignSettings.js:1050), la
+ * rangee de filtres rapides du hub, et les deux pastilles de la feuille
+ * « Filtrer les membres ». Aucun ne centrait. Corriger a un seul endroit aurait
+ * laisse trois defauts identiques derriere — d ou cette brique, posee la ou
+ * vivent deja `LicenseCard` et `LicenseStatusChip`.
+ *
+ * Deux reglages ne sont PAS negociables et c est pourquoi ils vivent ici :
+ * · `alignItems` + `justifyContent` a `center` — sans eux, une pastille etiree
+ *   par une voisine plus haute garde son texte colle en haut (rangee de filtres
+ *   rapides : `ScrollView horizontal`, donc `alignItems: 'stretch'` par defaut ;
+ *   feuille de filtres : `flexWrap`, donc etirement de toute la ligne) ;
+ * · `minHeight: 44` — la cible tactile accessible, la meme que `FilterTrigger`
+ *   et que `ChoiceChipGroup` (molecules/choiceChipGroup). C est elle qui rend
+ *   l etirement inoffensif au lieu de le subir.
+ *
+ * `variant` ne fait que porter les DEUX palettes deja en place : `solid` pour
+ * les filtres rapides et le tunnel, `soft` pour la feuille de filtres. Aucune
+ * couleur ne change — Adel a demande un centrage, pas une nouvelle peinture.
+ * @param {object} root0
+ * @param {string} root0.label - Le libelle affiche.
+ * @param {() => void} root0.onPress
+ * @param {boolean} root0.selected
+ * @param {'soft' | 'solid'} [root0.variant]
+ * @returns {import('react').ReactElement}
+ */
+export function LicenseSelectionChip({
+  label,
+  onPress,
+  selected,
+  variant = 'solid',
+}) {
+  const { Colors, Fonts } = useTheme();
+  const isSoft = variant === 'soft';
+  let backgroundColor = selected ? Colors.primary500 : Colors.primary800;
+  let borderColor = selected ? Colors.primary500 : `${Colors.primary500}55`;
+  let textStyle = selected ? Fonts.neutral900 : Fonts.neutral200;
+  if (isSoft) {
+    backgroundColor = selected ? 'rgba(1, 179, 244, 0.14)' : Colors.primary700;
+    borderColor = selected ? Colors.primary500 : 'rgba(1, 179, 244, 0.24)';
+    textStyle = selected ? Fonts.primary500 : Fonts.neutral00;
+  }
+
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityState={{ selected: Boolean(selected) }}
+      onPress={onPress}
+      style={{
+        alignItems: 'center',
+        backgroundColor,
+        borderColor,
+        borderRadius: licenseRadius.pill,
+        borderWidth: 1,
+        justifyContent: 'center',
+        minHeight: 44,
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+      }}
+    >
+      <Text style={[Fonts.p3Bold, textStyle]}>{label}</Text>
+    </Pressable>
+  );
+}
 
 /**
  *

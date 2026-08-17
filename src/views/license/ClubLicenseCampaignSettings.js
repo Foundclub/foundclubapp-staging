@@ -32,6 +32,7 @@ import {
   deleteLicenseDocumentRequest,
   deleteLicensePricingRule,
   updateLicenseCampaign,
+  uploadLicenseDocumentRequestTemplate,
   upsertLicenseDocumentRequest,
   upsertLicensePricingRule,
   useCurrentLicenseCampaign,
@@ -51,10 +52,17 @@ import {
   isHelloAssoReadyForCampaign,
   LicenseEmptyState,
   licenseRadius,
+  LicenseSelectionChip,
   licenseSpacing,
   normalizePaymentModes,
   paymentModeLabels,
 } from './licenseDesignSystem';
+// `import/order` veut cet alias AVANT les imports relatifs, `perfectionist/
+// sort-imports` le veut APRES : les deux regles se contredisent sur ce chemin.
+// C est pour ca que le fichier voisin (ClubLicenseMemberDetail.js:1) desactive la
+// seconde POUR TOUT LE FICHIER ; ici on n en desactive qu une ligne.
+// eslint-disable-next-line import/order
+import MediaPlatform from '@/platform/media';
 
 const euroToCents = (value) => Math.round(Number(String(value || '0').replace(',', '.')) * 100);
 const centsToEuro = (value) => String(((value || 0) / 100).toFixed(2)).replace('.', ',');
@@ -248,6 +256,9 @@ const defaultPaymentModes = {
   helloasso: false,
   stripe: false,
 };
+const isPickerCancelError = (error) => String(error?.code || error?.message || '')
+  .toLowerCase()
+  .includes('cancel');
 const createDocumentRequestDraft = (documentRequest = {}) => ({
   acceptedMimeTypesText: Array.isArray(documentRequest.acceptedMimeTypes)
     ? documentRequest.acceptedMimeTypes.join(', ')
@@ -261,9 +272,17 @@ const createDocumentRequestDraft = (documentRequest = {}) => ({
     || `doc-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
   ),
   name: documentRequest.name || '',
+  // T03 — LE MODELE PARTAGE, celui que les membres telechargent.
+  // `pickedTemplateFile` est le fichier choisi mais PAS ENCORE envoye : une
+  // demande neuve n a pas d identifiant tant que la campagne n est pas
+  // enregistree, on ne peut donc rien y accrocher avant. `templateRemoved` porte
+  // le geste inverse.
+  pickedTemplateFile: null,
+  removedTemplate: false,
   required: documentRequest.required !== false,
   requiresManualValidation: documentRequest.requiresManualValidation !== false,
   requiresSignature: documentRequest.requiresSignature === true,
+  templateFileName: documentRequest.templateFile?.name || '',
 });
 const referenceKey = (value) => String(value?.documentId || value?.id || value || '');
 const createPricingRuleDraft = (pricingRule = {}) => ({
@@ -317,8 +336,31 @@ const createTargetConfigDraft = (campaign) => {
   const teamIds = Array.isArray(config.teamIds || config.teams)
     ? (config.teamIds || config.teams).map(referenceKey).filter(Boolean)
     : [];
+  // T03 — « QUAND ON CREE UNE CAMPAGNE, TOUT LE CLUB DOIT ETRE COCHE DE BASE »
+  // (Adel, recette du 2026-08-17).
+  //
+  // Ce n etait pas un oubli, c etait une INCOHERENCE : le serveur recoit deja
+  // « tout le club » des qu aucun filtre n est choisi — `normalizeTargetConfigPayload`
+  // (l. 596) et `buildTargetSummaryPayload` (l. 569) envoient l un comme l autre
+  // `includeAllMembers: !hasScopedFilters`. Seul CE brouillon disait le
+  // contraire, en posant `false` en dur. L interrupteur affichait donc « non »
+  // pendant que la charge utile envoyee disait « oui ».
+  //
+  // 🔒 ET RIEN NE S ELARGIT — c est le point sensible, parce que cocher engage
+  // de l argent pour tout le monde : la valeur STOCKEE gagne toujours, et une
+  // campagne qui porte des filtres (roles, equipes, categories, sections,
+  // niveaux) garde exactement les siens. Le defaut a `true` ne s applique qu a
+  // une cible VIDE — c est-a-dire a une campagne neuve, ou a une campagne dont
+  // le serveur considere deja que tout le club est concerne.
   const hasStoredIncludeAllMembers = typeof config.includeAllMembers === 'boolean';
-  let includeAllMembers = false;
+  const hasScopedFilters = Boolean(
+    roles.length
+    || teamIds.length
+    || categoryIds.length
+    || sectionIds.length
+    || levelIds.length,
+  );
+  let includeAllMembers = !hasScopedFilters;
 
   if (hasStoredIncludeAllMembers) {
     includeAllMembers = config.includeAllMembers;
@@ -1040,34 +1082,15 @@ function WizardSheet({
   );
 }
 
-/**
- *
- * @param root0
- * @param root0.label
- * @param root0.onPress
- * @param root0.selected
- */
-function SelectionChip({ label, onPress, selected }) {
-  const {
-    Colors, Fonts,
-  } = useTheme();
-
-  return (
-    <Pressable
-      onPress={onPress}
-      style={{
-        backgroundColor: selected ? Colors.primary500 : Colors.primary800,
-        borderColor: selected ? Colors.primary500 : `${Colors.primary500}44`,
-        borderRadius: licenseRadius.pill,
-        borderWidth: 1,
-        paddingHorizontal: 12,
-        paddingVertical: 8,
-      }}
-    >
-      <Text style={[Fonts.p3Bold, selected ? Fonts.neutral900 : Fonts.neutral200]}>{label}</Text>
-    </Pressable>
-  );
-}
+// T03 — LA QUATRIEME COPIE DE LA MEME PASTILLE.
+//
+// Elle etait identique a celles du hub (palette, 12/8 de marge, `Fonts.p3Bold`)
+// et souffrait du meme defaut : aucun centrage, aucune cible tactile de 44 pt.
+// Elle pointe desormais sur la brique partagee, dans `licenseDesignSystem.js` —
+// un centrage corrige une fois vaut pour les quatre. Le nom local reste : c est
+// lui que lisent les 3 endroits de ce tunnel (roles cibles, statuts a relancer,
+// et les pastilles de la feuille de cadence).
+const SelectionChip = LicenseSelectionChip;
 
 /**
  *
@@ -1150,6 +1173,68 @@ function SelectionGroup({
 }
 
 /**
+ * T03 — L ESPACE « MODELE A TELECHARGER » d un document demande.
+ *
+ * 🔒 Le fichier depose ici est visible par TOUS les membres du club. Il ne doit
+ * donc jamais pouvoir etre confondu avec la piece qu un joueur depose : c est
+ * pourquoi il vit dans les REGLAGES du document (ici), et pas dans la liste des
+ * depots — et pourquoi le libelle rappelle, a l ecran, qui va le voir.
+ *
+ * Le fichier choisi est GARDE ici tant que la campagne n est pas enregistree :
+ * une demande neuve n a pas encore d identifiant cote serveur, on ne peut donc
+ * rien y accrocher. `persistCampaign` l envoie juste apres, en le disant.
+ * @param {object} root0
+ * @param {any} root0.item - Le brouillon du document demande.
+ * @param {(patch: any) => void} root0.onChange
+ * @returns {import('react').ReactElement}
+ */
+function TemplateFileRow({ item, onChange }) {
+  const { Colors, Fonts, Spaces } = useTheme();
+  const nomDuModele = item.pickedTemplateFile?.name
+    || (item.removedTemplate ? '' : item.templateFileName);
+
+  const choisirLeModele = useCallback(async () => {
+    try {
+      const picked = await MediaPlatform.pickDocument({ accept: '*/*', mode: 'open', type: ['*/*'] });
+      const file = Array.isArray(picked) ? picked[0] : picked;
+      if (!file) return;
+      onChange({ pickedTemplateFile: file, removedTemplate: false });
+    } catch (error) {
+      if (isPickerCancelError(error)) return;
+      Alert.alert('Modèle indisponible', error?.message || 'Ce fichier n a pas pu être lu.');
+    }
+  }, [onChange]);
+
+  return (
+    <View style={Spaces.gap[8]}>
+      <Text style={[Fonts.p3Bold, Fonts.neutral200]}>MODÈLE À TÉLÉCHARGER</Text>
+      <Text style={[Fonts.p3, Fonts.neutral300]}>
+        Facultatif. Ce fichier est visible et téléchargeable par tous les membres
+        concernés par la campagne — n y mets aucune pièce personnelle.
+      </Text>
+      <Text
+        style={[Fonts.p3, nomDuModele ? { color: Colors.primary500 } : Fonts.neutral300]}
+        testID="license-modele-nom"
+      >
+        {nomDuModele || 'Aucun modèle'}
+      </Text>
+      <Button
+        onPress={choisirLeModele}
+        title={nomDuModele ? 'Remplacer le modèle' : 'Ajouter un modèle'}
+        variant="Secondary"
+      />
+      {nomDuModele ? (
+        <Button
+          onPress={() => onChange({ pickedTemplateFile: null, removedTemplate: true })}
+          title="Retirer le modèle"
+          variant="Secondary"
+        />
+      ) : null}
+    </View>
+  );
+}
+
+/**
  *
  * @param root0
  * @param root0.canRemove
@@ -1215,6 +1300,17 @@ function DocumentRequestEditor({
         enabled={item.requiresSignature}
         label="Signature demandée"
         onChange={(value) => onChange({ requiresSignature: value })}
+      />
+      {/*
+        T03 — « UN ESPACE TELECHARGER LE MODELE » (Adel, recette du 2026-08-17).
+        🔒 Ce fichier est vu par TOUS les membres du club : le libelle le dit, et
+        il est pose sous les reglages du document, jamais a cote d un depot de
+        joueur. Cote serveur, il vit sur une AUTRE table que les pieces
+        personnelles (voir uploadDocumentRequestTemplate).
+      */}
+      <TemplateFileRow
+        item={item}
+        onChange={onChange}
       />
       {canRemove ? <Button onPress={onRemove} title="Retirer ce document" variant="Secondary" /> : null}
     </View>
@@ -1939,9 +2035,20 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
   // passeraient tous les deux avant le re-rendu qui desactive le bouton.
   const [isSubmitting, setIsSubmitting] = useState(false);
   const isSubmittingRef = useRef(false);
+  // T03 — CE QUE L ECRAN DIT PENDANT QU IL TRAVAILLE.
+  //
+  // Adel, recette du 2026-08-17 (point 7) : « qu'est-ce que c'est LONG pour se
+  // creer ». S06 avait ferme le bouton ; il restait la fenetre MUETTE. Un geste
+  // qui met une seconde sans rien dire fait appuyer une seconde fois — c est
+  // exactement ce qui creait les doublons.
+  // ⛔ Ce n est PAS une animation posee sur une lenteur evitable : la file a
+  //    d abord ete supprimee (voir `persistCampaign`). Ce qui reste annonce est
+  //    du reseau irreductible — deux allers-retours mesures a ~305 ms piece.
+  const [etapeEnvoi, setEtapeEnvoi] = useState('');
   const finirEnvoi = useCallback(() => {
     isSubmittingRef.current = false;
     setIsSubmitting(false);
+    setEtapeEnvoi('');
   }, []);
 
   const syncSavedCampaignParams = useCallback((savedCampaignId) => {
@@ -2000,6 +2107,7 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
     }
     isSubmittingRef.current = true;
     setIsSubmitting(true);
+    setEtapeEnvoi('Enregistrement de la campagne...');
     saveMutation.mutate({ status: requestedStatus }, {
       onError: (error) => {
         finirEnvoi();
@@ -2015,19 +2123,27 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
       },
       onSuccess: async (saved) => {
         const savedCampaignId = saved?.documentId || saved?.id || campaignId;
-        const activeDocumentRequests = documentRequests
+        // T03 — le MODELE voyage a cote de la charge utile, jamais dedans : c est
+        // un fichier, la remontee du document est du JSON. Les deux restent
+        // alignes parce qu ils sortent du MEME filtre.
+        const documentsAEnvoyer = documentRequests
           .map((item, index) => ({
-            acceptedMimeTypes: parseAcceptedMimeTypes(item.acceptedMimeTypesText),
-            description: item.description.trim(),
-            dueDate: item.dueDate.trim() || null,
-            id: item.documentId,
-            name: item.name.trim(),
-            required: item.required !== false,
-            requiresManualValidation: item.requiresManualValidation !== false,
-            requiresSignature: item.requiresSignature === true,
-            sortOrder: index + 1,
+            modele: item.pickedTemplateFile || null,
+            modeleRetire: item.removedTemplate === true,
+            payload: {
+              acceptedMimeTypes: parseAcceptedMimeTypes(item.acceptedMimeTypesText),
+              description: item.description.trim(),
+              dueDate: item.dueDate.trim() || null,
+              id: item.documentId,
+              name: item.name.trim(),
+              required: item.required !== false,
+              requiresManualValidation: item.requiresManualValidation !== false,
+              requiresSignature: item.requiresSignature === true,
+              sortOrder: index + 1,
+            },
           }))
-          .filter((item) => item.name);
+          .filter((item) => item.payload.name);
+        const activeDocumentRequests = documentsAEnvoyer.map((item) => item.payload);
         const activePricingRules = pricingRules
           .map((item) => ({
             amountCents: euroToCents(item.amount),
@@ -2055,13 +2171,66 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
 
         try {
           if (savedCampaignId) {
-            await Promise.all(removedDocumentRequestIds.map((documentRequestId) => deleteLicenseDocumentRequest(documentRequestId)));
-            await Promise.all(activeDocumentRequests.map((item) => upsertLicenseDocumentRequest(savedCampaignId, item)));
-            await Promise.all(removedPricingRuleIds.map((pricingRuleId) => deleteLicensePricingRule(pricingRuleId)));
-            await Promise.all(activePricingRules.map((item) => upsertLicensePricingRule(savedCampaignId, item)));
+            setEtapeEnvoi('Documents et tarifs en cours d envoi...');
+            // T03 — LA FILE ETAIT GRATUITE, ON LA SUPPRIME AVANT DE PARLER
+            // D ANIMATION.
+            //
+            // 📏 Mesure (ClubLicenseCampaignSettings.attenteCreation.test.js) :
+            // ces quatre lots partaient l un APRES l autre. Profondeur relevee
+            // **3 vagues** dans le cas courant (creation, puis documents, puis
+            // regles), **5** quand un document ET une regle avaient ete retires.
+            // A ~305 ms l aller-retour (`curl -w` sur `api-staging`, 12 tirs,
+            // mediane 305 ms), c est 0,9 s a 1,5 s de silence apres que la
+            // campagne a deja repondu.
+            //
+            // Or aucun de ces quatre lots ne lit le resultat d un autre :
+            // `removedDocumentRequestIds` et `activeDocumentRequests` sont
+            // DISJOINTS par construction (`removeDocumentRequest`, l. 1589-1602 :
+            // l identifiant sort de la liste au moment ou il entre dans les
+            // retires), et les regles tarifaires sont une autre collection.
+            // ⇒ un seul lot, une seule vague : profondeur **2**, quoi qu il
+            //   arrive. Ce qui reste est le minimum incompressible — il faut
+            //   l identifiant de la campagne pour y accrocher ses annexes.
+            // Les `Promise.all` imbriques partent TOUS dans la meme vague : le
+            // niveau du dessus ne fait que garder les documents remontes a part,
+            // parce que ce sont eux qui portent l identifiant auquel accrocher un
+            // modele.
+            const [documentsRemontes] = await Promise.all([
+              Promise.all(activeDocumentRequests.map((item) => upsertLicenseDocumentRequest(savedCampaignId, item))),
+              Promise.all(removedDocumentRequestIds.map((documentRequestId) => deleteLicenseDocumentRequest(documentRequestId))),
+              Promise.all(removedPricingRuleIds.map((pricingRuleId) => deleteLicensePricingRule(pricingRuleId))),
+              Promise.all(activePricingRules.map((item) => upsertLicensePricingRule(savedCampaignId, item))),
+            ]);
+
+            // T03 — LE MODELE PARTAGE, en DERNIER et seulement s il y en a un.
+            //
+            // Cette vague-la est INCOMPRESSIBLE, pas de la file gratuite : une
+            // demande neuve n a pas d identifiant tant qu elle n est pas
+            // remontee, on ne peut donc rien y accrocher avant. Elle ne part que
+            // si un modele a ete choisi ou retire — une campagne sans modele
+            // garde exactement sa profondeur 2.
+            const modeles = documentsAEnvoyer
+              .map((item, index) => ({
+                fichier: item.modele,
+                identifiant: documentsRemontes[index]?.documentId
+                  || documentsRemontes[index]?.id
+                  || item.payload.id,
+                retire: item.modeleRetire,
+              }))
+              .filter((item) => item.identifiant && (item.fichier || item.retire));
+            if (modeles.length) {
+              setEtapeEnvoi('Envoi du modèle à télécharger...');
+              await Promise.all(modeles.map((item) => uploadLicenseDocumentRequestTemplate(
+                item.identifiant,
+                item.fichier ? { file: item.fichier } : {},
+              )));
+            }
           }
           await providerMutation.mutateAsync();
         } catch (error) {
+          // Le bouton reste ferme (la campagne EXISTE) ; seule l annonce d etape
+          // s efface, parce qu il n y a plus d etape en cours.
+          setEtapeEnvoi('');
           goToCampaignOperations(savedCampaignId);
           Alert.alert(
             'Campagne enregistrée partiellement',
@@ -2090,6 +2259,7 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
         // cas ou l'utilisateur pourrait rester devant un formulaire verrouille —
         // le rejet de la fenetre par un appui a cote sur Android. Meme reglage
         // que `ClubWizardRecap`.
+        setEtapeEnvoi('');
         Alert.alert(successTitle, successMessage, [
           {
             onPress: () => goToCampaignOperations(savedCampaignId),
@@ -3034,6 +3204,26 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
         title={activeWizardStepTitle}
       >
         <View style={Spaces.gap[licenseSpacing.sectionGap]}>
+          {/*
+            T03 — L ATTENTE PORTE UN NOM. Le bouton, lui, ne montre qu un
+            tourniquet : `Button` remplace son titre par le `Loader` des que
+            `isLoading` est vrai (Button.js:111). Sans cette ligne, la seule
+            chose visible pendant la chaine serait un rond qui tourne — et un
+            rond ne dit pas si ca a marche.
+            `accessibilityLiveRegion` la fait annoncer a voix haute au moment ou
+            elle change : l attente est aussi longue pour qui ne voit pas l ecran.
+          */}
+          {etapeEnvoi ? (
+            <View style={secondaryStepCardStyle}>
+              <Text
+                accessibilityLiveRegion="polite"
+                style={[Fonts.p3Bold, { color: Colors.primary500 }]}
+                testID="license-campagne-etape-envoi"
+              >
+                {etapeEnvoi}
+              </Text>
+            </View>
+          ) : null}
           {stepContent}
 
           <View style={{ paddingBottom: Math.max(insets.bottom + 8, 16) }} />

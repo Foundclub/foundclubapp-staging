@@ -232,6 +232,18 @@ function MyLicense({ navigation, route }) {
     await LinksPlatform.openUrl(url);
   }, []);
 
+  // T03 — le MODELE que le club met a disposition. Il vient de la DEMANDE
+  // (`templateFile`), pas d un depot : c est le meme fichier pour tout le club,
+  // et il ne passe jamais par `documentSubmissions`.
+  const openTemplateFile = useCallback(async (request) => {
+    const url = resolveMediaUrl(request?.templateFile?.url || '');
+    if (!url) {
+      Alert.alert('Modèle indisponible', 'Le club n a pas encore déposé de modèle pour cette pièce.');
+      return;
+    }
+    await LinksPlatform.openUrl(url);
+  }, []);
+
   const generateReceiptForPayment = useCallback((paymentId) => {
     receiptMutation.mutate(paymentId, {
       onSuccess: () => {
@@ -427,6 +439,22 @@ function MyLicense({ navigation, route }) {
                     <Text style={[Fonts.p3, Fonts.neutral200]}>
                       {submission ? `Dernier dépôt ${documentDate(submission) || '-'}` : 'Aucun fichier envoyé'}
                     </Text>
+                    {/*
+                      T03 — LE MODELE QUE LE CLUB A DEPOSE, s il y en a un.
+                      Adel : « il faut pouvoir uploader un fichier que les membres
+                      vont pouvoir visualiser et telecharger ».
+                      🔒 Ce fichier vient de la DEMANDE (`templateFile`), pas d un
+                      depot : c est le meme pour tout le monde. Le libelle le dit,
+                      pour qu on ne le confonde jamais avec sa propre piece — que
+                      le bouton « Deposer » juste en dessous envoie ailleurs.
+                    */}
+                    {request?.templateFile?.url ? (
+                      <Button
+                        onPress={() => openTemplateFile(request)}
+                        title="Télécharger le modèle"
+                        variant="Secondary"
+                      />
+                    ) : null}
                     <View style={{ flexDirection: 'row', gap: licenseSpacing.actionGap }}>
                       <Button
                         isLoading={documentMutation.isPending}
