@@ -328,6 +328,21 @@ describe('D19 — le cout de « Creer », mesure en millisecondes', () => {
       RouteNames.EventPublishedShowcase,
     ]);
     expect(reset[0].index).toBe(1);
+
+    // S05 (2026-08-16) — LE TROU QUE CE FICHIER LAISSAIT, DE LA MEME FAMILLE QUE
+    // D28 : les temoins verifiaient le GABARIT et l'IDENTIFIANT, jamais le TYPE.
+    // Or depuis D94/C2 c'est le TYPE qui decide le TEXTE du partage. Cette porte
+    // pouvait donc cesser de l'emettre — ou le renommer — sans qu'aucune suite ne
+    // devienne rouge, et un match serait reparti avec la phrase neutre. La porte
+    // soeur (menu « Gerer ») avait deja son temoin
+    // (EventDetailsBottomActions.test.js) ; celle-ci, la plus DISCRETE des deux
+    // puisque l'ecran s'y ouvre tout seul apres publication, n'en avait pas.
+    // ⚠️ Greffe sur un montage EXISTANT, et c'est mesure : ajouter un 12e test a
+    // ce fichier fait passer « l ecran change sans attendre le menage du cache »
+    // de 59 a 61 ms, au-dessus de son seuil de 60. Le filet complet du texte de
+    // partage vit dans `EventShowcaseShareIntroPortes.test.js`.
+    const [, ecranAffiche] = reset[0].routes;
+    expect(ecranAffiche.params.eventTypeName).toBe(nomDuType);
   });
 
   test('les six caches sont rafraichis, aucun n est perdu en route', async () => {
