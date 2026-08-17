@@ -160,9 +160,32 @@ const styles = StyleSheet.create({
 });
 
 /**
+ * La charge d'une bulle de proposition, telle que le serveur la pose.
+ *
+ * Les champs du haut sont ceux de LEAGUE ; ceux du bas ont été ajoutés par le
+ * lot S03 pour le match amical, et restent absents ailleurs — d'où le `?`.
+ * Les nommer ici est ce qui permet de les lire sans que le contrôle de types
+ * proteste : `{object}` refusait TOUTE clé, y compris les cinq d'origine.
+ * @typedef {{
+ *   address?: any,
+ *   addressObject?: any,
+ *   date?: string,
+ *   endDate?: string,
+ *   status?: string,
+ *   venue?: any,
+ *   categoryLabel?: string,
+ *   dateLabel?: string,
+ *   hostTeamName?: string,
+ *   levelLabel?: string,
+ *   sectionLabel?: string,
+ *   timeLabel?: string,
+ * }} ProposalBubblePayload
+ */
+
+/**
  * Bubble to display a Match Proposal in chat.
  * @param {object} props
- * @param {object} props.proposal
+ * @param {ProposalBubblePayload} props.proposal
  * @param {boolean} [props.isHighlighted]
  * @param {boolean} [props.isMe]
  * @param {boolean} [props.allowResponseActions]
@@ -191,9 +214,15 @@ function ProposalMessageBubble({
 
   const {
     address,
+    categoryLabel,
     date,
+    dateLabel,
     endDate,
+    hostTeamName,
+    levelLabel,
+    sectionLabel,
     status = 'pending',
+    timeLabel,
     venue = 'Lieu à définir',
   } = proposal;
 
@@ -203,12 +232,34 @@ function ProposalMessageBubble({
   const venueLabel = getProposalLocationLabel(venue) || 'Lieu à définir';
   const addressLabel = resolveAddressLabel(address) || getProposalLocationLabel(proposal?.addressObject);
 
-  const formattedDate = date
-    ? dayjs(date).locale('fr').format('dddd D MMMM')
-    : 'Date à définir';
+  // S03 — quand le serveur envoie DÉJÀ la phrase (proposition de match amical),
+  // c'est elle qui parle. Sinon on retombe sur le calcul d'origine, celui de
+  // LEAGUE, qui reste inchangé.
+  //
+  // ⚠️ Ce n'est pas cosmétique : une proposition d'amical peut n'avoir AUCUNE
+  // heure (le créneau est facultatif, §4.1). Le calcul de LEAGUE afficherait
+  // alors « 00:00 -> --:-- », une heure qui n'existe pas. Le serveur, lui, dit
+  // « horaire à convenir » — ce qui est la vérité.
+  const formattedDate = dateLabel
+    || (date ? dayjs(date).locale('fr').format('dddd D MMMM') : 'Date à définir');
   const formattedStartTime = date ? dayjs(date).format('HH:mm') : '--:--';
   const formattedEndTime = endDate ? dayjs(endDate).format('HH:mm') : '--:--';
-  const timeRange = `${formattedStartTime} -> ${formattedEndTime}`;
+  const timeRange = timeLabel || `${formattedStartTime} -> ${formattedEndTime}`;
+  // Les lignes que seule une proposition d'amical porte. Absentes ailleurs :
+  // rien ne s'affiche, et LEAGUE ne bouge pas d'un pixel.
+  const extraRows = [
+    // ⚠️ On nomme l'équipe qui reçoit, jamais « vous » : la bulle est lue par
+    // les DEUX camps, et « chez vous » désignerait quelqu'un d'autre selon qui
+    // regarde.
+    { label: 'Qui reçoit', value: hostTeamName },
+    { label: 'Niveau', value: levelLabel },
+    { label: 'Catégorie', value: categoryLabel },
+    { label: 'Section', value: sectionLabel },
+  ].filter((row) => Boolean(row.value));
+  // « Catégorie » est plus large que « Date » : sans une gouttière commune, les
+  // valeurs partent en escalier. Appliquée SEULEMENT quand les lignes en plus
+  // existent — une proposition LEAGUE garde exactement sa mise en page.
+  const labelStyle = extraRows.length > 0 ? { minWidth: 76 } : null;
 
   const handleAction = async (actionFn) => {
     if (!actionFn || loading) return;
@@ -285,21 +336,27 @@ function ProposalMessageBubble({
 
       <View style={styles.content}>
         <View style={styles.fieldRow}>
-          <Text style={[Fonts.p3, styles.fieldLabel, { color: Colors.neutral300 }]}>Date</Text>
+          <Text style={[Fonts.p3, styles.fieldLabel, labelStyle, { color: Colors.neutral300 }]}>
+            Date
+          </Text>
           <Text style={[Fonts.p2Bold, styles.fieldValue, { color: Colors.neutral00 }]}>
             {formattedDate}
           </Text>
         </View>
 
         <View style={styles.fieldRow}>
-          <Text style={[Fonts.p3, styles.fieldLabel, { color: Colors.neutral300 }]}>Heure</Text>
+          <Text style={[Fonts.p3, styles.fieldLabel, labelStyle, { color: Colors.neutral300 }]}>
+            Heure
+          </Text>
           <Text style={[Fonts.p2Bold, styles.fieldValue, { color: Colors.primary500 }]}>
             {timeRange}
           </Text>
         </View>
 
         <View style={styles.fieldRow}>
-          <Text style={[Fonts.p3, styles.fieldLabel, { color: Colors.neutral300 }]}>Lieu</Text>
+          <Text style={[Fonts.p3, styles.fieldLabel, labelStyle, { color: Colors.neutral300 }]}>
+            Lieu
+          </Text>
           <Text
             numberOfLines={2}
             style={[Fonts.p2Bold, styles.fieldValue, { color: Colors.neutral00 }]}
@@ -307,6 +364,17 @@ function ProposalMessageBubble({
             {venueLabel}
           </Text>
         </View>
+
+        {extraRows.map((row) => (
+          <View key={row.label} style={styles.fieldRow}>
+            <Text style={[Fonts.p3, styles.fieldLabel, labelStyle, { color: Colors.neutral300 }]}>
+              {row.label}
+            </Text>
+            <Text style={[Fonts.p2Bold, styles.fieldValue, { color: Colors.neutral00 }]}>
+              {row.value}
+            </Text>
+          </View>
+        ))}
 
         {addressLabel ? (
           <TouchableOpacity activeOpacity={0.85} onPress={openMaps} style={styles.addressRow}>
