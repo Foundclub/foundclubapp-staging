@@ -2,7 +2,11 @@ import Joi from 'joi';
 
 import { celebrate } from '@/services/celebrations/celebrationRuntime';
 
+import { createLogger } from '@/utils/logger/logger';
+
 import client from '../client';
+
+const teamMembershipRequestLogger = createLogger('team-membership-request');
 
 const teamMembershipRequestSchema = Joi.object({
   decisionSource: Joi.string().allow('', null).optional(),
@@ -17,6 +21,82 @@ const teamMembershipRequestSchema = Joi.object({
   team: Joi.object().required(),
   user: Joi.object().required(),
 }).required();
+
+const teamMembershipRequestsMetaSchema = Joi.object({
+  pagination: Joi.object({
+    page: Joi.number().required(),
+    pageCount: Joi.number().required(),
+    pageSize: Joi.number().required(),
+    total: Joi.number().required(),
+  }).required(),
+}).required();
+
+/**
+ * S01 — la validation se fait LIGNE PAR LIGNE, jamais sur le lot entier.
+ *
+ * `team` et `user` sont NULLABLES cote serveur (content-types/team-membership-
+ * request/schema.json : aucune n'est `required`, et la suppression de compte
+ * laisse `user: null`). Valider la reponse d'un bloc faisait donc echouer TOUTE
+ * la section « Équipe » de l'ecran « Demandes » pour une seule ligne abimee —
+ * avec un 200 cote serveur, donc sans la moindre trace dans son journal.
+ * Constat d'Adel en recette le 2026-08-16 : « Équipe indisponible ».
+ *
+ * Une enveloppe illisible (`meta` absente) reste une erreur : on ne devine pas
+ * une pagination.
+ * @param {any} responseData
+ * @returns {Promise<{ data: any[], meta: any }>}
+ */
+const selectValidTeamMembershipRequests = async (responseData) => {
+  const meta = await teamMembershipRequestsMetaSchema.validateAsync(responseData?.meta, {
+    allowUnknown: true,
+  });
+
+  const entries = Array.isArray(responseData?.data) ? responseData.data : [];
+  /** @type {any[]} */
+  const data = [];
+  /** @type {string[]} */
+  const rejectedIds = [];
+
+  await Promise.all(entries.map(async (/** @type {any} */ entry) => {
+    try {
+      data.push(await teamMembershipRequestSchema.validateAsync(entry, { allowUnknown: true }));
+    } catch {
+      rejectedIds.push(String(entry?.documentId || 'sans-identifiant'));
+    }
+  }));
+
+  if (rejectedIds.length) {
+    // On NOMME ce qui est ecarte : une demande qui disparait sans explication est
+    // exactement le defaut que ce filet remplace.
+    teamMembershipRequestLogger.warn('demande(s) illisible(s) ecartee(s)', {
+      documentIds: rejectedIds,
+      rejected: rejectedIds.length,
+    });
+  }
+
+  return { data, meta };
+};
+
+/**
+ * Traduit une erreur HTTP en erreur lisible QUI GARDE SON STATUT — sans lui,
+ * l'ecran ne peut plus distinguer un refus (403) d'un incident (500) et retombe
+ * sur un message fourre-tout. Meme motif que friendlyMatchService.toReadableError.
+ * @param {any} error
+ * @param {string} fallbackMessage
+ * @returns {Error & { status: number | null }}
+ */
+const toReadableError = (error, fallbackMessage) => {
+  const requestError = /** @type {any} */ (error);
+  const responseError = requestError?.response?.data?.error;
+  const nextError = /** @type {any} */ (new Error(
+    responseError?.message
+    || requestError?.response?.data?.message
+    || requestError?.message
+    || fallbackMessage,
+  ));
+  nextError.status = Number(requestError?.response?.status || requestError?.status || 0) || null;
+  return nextError;
+};
 
 /**
  * Create a new team membership request
@@ -81,30 +161,30 @@ export const getTeamMembershipRequests = async (teamIds, params = {}) => {
       page: page || 1,
       pageSize: pageSize || 10,
     },
-    populate: ['user', 'user.avatar', 'team'],
+    // ⛔ AUCUN `populate` ici, et c'est deliberé : le controleur serveur
+    // (team-membership-request.ts:127-172) appelle `validateQuery(ctx)` — donc il
+    // VALIDE ce que l'app demande — puis remplace le populate par le sien.
+    // Le parametre ne servait donc qu'a se faire refuser : nommer la relation
+    // `user` exige `plugin::users-permissions.user.find`, action qu'AUCUN role ne
+    // declare (elle ne survit en production que par heritage, hors manifeste), et
+    // Strapi 5 rend alors 400 « Invalid key user » (validate/index.js:266,
+    // throw-restricted-relations.js — ACTIONS_TO_VERIFY = ['find']).
     ...(includeHistory ? { includeHistory: true } : {}),
   };
 
-  const response = await client.get('/team-membership-requests', { params: filters });
+  let response;
   try {
-    const schema = Joi.object({
-      data: Joi.array().items(teamMembershipRequestSchema).empty(Joi.array().length(0)),
-      meta: Joi.object({
-        pagination: Joi.object({
-          page: Joi.number().required(),
-          pageCount: Joi.number().required(),
-          pageSize: Joi.number().required(),
-          total: Joi.number().required(),
-        }).required(),
-      }).required(),
-    }).required();
-
-    const validationResult = await schema.validateAsync(response.data, {
-      allowUnknown: true,
-    });
-    return validationResult;
+    response = await client.get('/team-membership-requests', { params: filters });
   } catch (error) {
-    const errorToDisplay = error && typeof error === 'object' && 'message' in error ? error.message : error;
+    throw toReadableError(error, 'Failed to fetch team membership requests');
+  }
+
+  try {
+    return await selectValidTeamMembershipRequests(response.data);
+  } catch (error) {
+    const errorToDisplay = error && typeof error === 'object' && 'message' in error
+      ? error.message
+      : error;
     throw new Error(`Failed to fetch team membership requests: ${errorToDisplay}`);
   }
 };
