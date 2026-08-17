@@ -1939,9 +1939,20 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
   // passeraient tous les deux avant le re-rendu qui desactive le bouton.
   const [isSubmitting, setIsSubmitting] = useState(false);
   const isSubmittingRef = useRef(false);
+  // T03 — CE QUE L ECRAN DIT PENDANT QU IL TRAVAILLE.
+  //
+  // Adel, recette du 2026-08-17 (point 7) : « qu'est-ce que c'est LONG pour se
+  // creer ». S06 avait ferme le bouton ; il restait la fenetre MUETTE. Un geste
+  // qui met une seconde sans rien dire fait appuyer une seconde fois — c est
+  // exactement ce qui creait les doublons.
+  // ⛔ Ce n est PAS une animation posee sur une lenteur evitable : la file a
+  //    d abord ete supprimee (voir `persistCampaign`). Ce qui reste annonce est
+  //    du reseau irreductible — deux allers-retours mesures a ~305 ms piece.
+  const [etapeEnvoi, setEtapeEnvoi] = useState('');
   const finirEnvoi = useCallback(() => {
     isSubmittingRef.current = false;
     setIsSubmitting(false);
+    setEtapeEnvoi('');
   }, []);
 
   const syncSavedCampaignParams = useCallback((savedCampaignId) => {
@@ -2000,6 +2011,7 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
     }
     isSubmittingRef.current = true;
     setIsSubmitting(true);
+    setEtapeEnvoi('Enregistrement de la campagne...');
     saveMutation.mutate({ status: requestedStatus }, {
       onError: (error) => {
         finirEnvoi();
@@ -2055,13 +2067,38 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
 
         try {
           if (savedCampaignId) {
-            await Promise.all(removedDocumentRequestIds.map((documentRequestId) => deleteLicenseDocumentRequest(documentRequestId)));
-            await Promise.all(activeDocumentRequests.map((item) => upsertLicenseDocumentRequest(savedCampaignId, item)));
-            await Promise.all(removedPricingRuleIds.map((pricingRuleId) => deleteLicensePricingRule(pricingRuleId)));
-            await Promise.all(activePricingRules.map((item) => upsertLicensePricingRule(savedCampaignId, item)));
+            setEtapeEnvoi('Documents et tarifs en cours d envoi...');
+            // T03 — LA FILE ETAIT GRATUITE, ON LA SUPPRIME AVANT DE PARLER
+            // D ANIMATION.
+            //
+            // 📏 Mesure (ClubLicenseCampaignSettings.attenteCreation.test.js) :
+            // ces quatre lots partaient l un APRES l autre. Profondeur relevee
+            // **3 vagues** dans le cas courant (creation, puis documents, puis
+            // regles), **5** quand un document ET une regle avaient ete retires.
+            // A ~305 ms l aller-retour (`curl -w` sur `api-staging`, 12 tirs,
+            // mediane 305 ms), c est 0,9 s a 1,5 s de silence apres que la
+            // campagne a deja repondu.
+            //
+            // Or aucun de ces quatre lots ne lit le resultat d un autre :
+            // `removedDocumentRequestIds` et `activeDocumentRequests` sont
+            // DISJOINTS par construction (`removeDocumentRequest`, l. 1589-1602 :
+            // l identifiant sort de la liste au moment ou il entre dans les
+            // retires), et les regles tarifaires sont une autre collection.
+            // ⇒ un seul lot, une seule vague : profondeur **2**, quoi qu il
+            //   arrive. Ce qui reste est le minimum incompressible — il faut
+            //   l identifiant de la campagne pour y accrocher ses annexes.
+            await Promise.all([
+              ...removedDocumentRequestIds.map((documentRequestId) => deleteLicenseDocumentRequest(documentRequestId)),
+              ...activeDocumentRequests.map((item) => upsertLicenseDocumentRequest(savedCampaignId, item)),
+              ...removedPricingRuleIds.map((pricingRuleId) => deleteLicensePricingRule(pricingRuleId)),
+              ...activePricingRules.map((item) => upsertLicensePricingRule(savedCampaignId, item)),
+            ]);
           }
           await providerMutation.mutateAsync();
         } catch (error) {
+          // Le bouton reste ferme (la campagne EXISTE) ; seule l annonce d etape
+          // s efface, parce qu il n y a plus d etape en cours.
+          setEtapeEnvoi('');
           goToCampaignOperations(savedCampaignId);
           Alert.alert(
             'Campagne enregistrée partiellement',
@@ -2090,6 +2127,7 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
         // cas ou l'utilisateur pourrait rester devant un formulaire verrouille —
         // le rejet de la fenetre par un appui a cote sur Android. Meme reglage
         // que `ClubWizardRecap`.
+        setEtapeEnvoi('');
         Alert.alert(successTitle, successMessage, [
           {
             onPress: () => goToCampaignOperations(savedCampaignId),
@@ -3034,6 +3072,26 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
         title={activeWizardStepTitle}
       >
         <View style={Spaces.gap[licenseSpacing.sectionGap]}>
+          {/*
+            T03 — L ATTENTE PORTE UN NOM. Le bouton, lui, ne montre qu un
+            tourniquet : `Button` remplace son titre par le `Loader` des que
+            `isLoading` est vrai (Button.js:111). Sans cette ligne, la seule
+            chose visible pendant la chaine serait un rond qui tourne — et un
+            rond ne dit pas si ca a marche.
+            `accessibilityLiveRegion` la fait annoncer a voix haute au moment ou
+            elle change : l attente est aussi longue pour qui ne voit pas l ecran.
+          */}
+          {etapeEnvoi ? (
+            <View style={secondaryStepCardStyle}>
+              <Text
+                accessibilityLiveRegion="polite"
+                style={[Fonts.p3Bold, { color: Colors.primary500 }]}
+                testID="license-campagne-etape-envoi"
+              >
+                {etapeEnvoi}
+              </Text>
+            </View>
+          ) : null}
           {stepContent}
 
           <View style={{ paddingBottom: Math.max(insets.bottom + 8, 16) }} />

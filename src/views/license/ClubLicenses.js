@@ -692,6 +692,7 @@ function AssignmentSignalCard({
  * @param {string} props.valueColor
  * @param props.isSelected
  * @param props.item
+ * @param props.libelleGesteEnCours
  * @param props.onOpenActions
  * @param props.onPress
  * @returns {import('react').ReactElement}
@@ -699,6 +700,7 @@ function AssignmentSignalCard({
 function CampaignCard({
   isSelected = false,
   item,
+  libelleGesteEnCours = '',
   onOpenActions,
   onPress,
 }) {
@@ -798,6 +800,22 @@ function CampaignCard({
         ) : null}
       </View>
 
+      {/*
+        T03 — LA LIGNE QUI MANQUAIT. Elle n apparait que sur la campagne dont le
+        geste est en vol, et elle NOMME ce geste. `accessibilityLiveRegion` la
+        fait annoncer a voix haute : l attente est la meme pour qui ne voit pas
+        l ecran.
+      */}
+      {libelleGesteEnCours ? (
+        <Text
+          accessibilityLiveRegion="polite"
+          style={[Fonts.p3Bold, { color: Colors.primary500 }]}
+          testID="license-campagne-geste-en-cours"
+        >
+          {libelleGesteEnCours}
+        </Text>
+      ) : null}
+
       <View style={{ alignItems: 'center', flexDirection: 'row', gap: licenseSpacing.actionGap }}>
         <View style={{ flex: 1 }}>
           <Button onPress={onPress} title={isSelected ? 'Campagne ouverte' : 'Voir le détail'} />
@@ -811,6 +829,9 @@ function CampaignCard({
           accessibilityHint="Dupliquer, mettre en pause ou modifier cette campagne."
           accessibilityLabel={`Autres actions pour la campagne ${item?.name || 'sans nom'}`}
           accessibilityRole="button"
+          // ⛔ Un geste deja en vol ferme la porte du suivant : c est le meme
+          // reflexe que le verrou du bouton final du tunnel (S06, 8c19cff).
+          disabled={Boolean(libelleGesteEnCours)}
           onPress={onOpenActions}
           style={({ pressed }) => [{
             alignItems: 'center',
@@ -987,6 +1008,20 @@ function ClubLicenses({ navigation, route }) {
   // Campagne dont la feuille « … » est ouverte, ou `null`. C'est elle qui
   // remplace les boutons secondaires tronques de l'ancienne carte.
   const [campaignActionsFor, setCampaignActionsFor] = useState(null);
+  // T03 — LE GESTE EN VOL, ET SUR QUELLE CAMPAGNE.
+  //
+  // Adel, recette du 2026-08-17 (point 8) : « quand on appuie sur REPRENDRE,
+  // c est trop long avant de rouvrir la campagne, donc on a l impression que ca
+  // n a pas marche pendant quelques secondes ».
+  //
+  // Le voyant EXISTAIT (`isLoading={transitionMutation.isPending}`, l. 2425 et
+  // 2588) — mais sur des boutons qui vivent DANS la feuille « … », et
+  // `fermerPuis` la referme avant de lancer le geste. On regardait donc un
+  // bouton demonte. `isPending` seul ne suffit pas non plus : il est vrai pour
+  // TOUTE campagne, et allumerait la mauvaise carte.
+  // ⇒ on retient le couple { campagne, libelle }, et la carte concernee — elle
+  //   seule — dit ce qu elle est en train de faire.
+  const [gesteEnCours, setGesteEnCours] = useState(null);
   const [isHelloAssoSheetOpen, setIsHelloAssoSheetOpen] = useState(false);
   const [helloAssoConfig, setHelloAssoConfig] = useState(() => createHelloAssoDraft(null));
   const [helloAssoSnapshot, setHelloAssoSnapshot] = useState(null);
@@ -1514,26 +1549,39 @@ function ClubLicenses({ navigation, route }) {
     Alert.alert('Dupliquer la campagne', 'Créer une copie en brouillon avec les mêmes réglages ?', [
       { style: 'cancel', text: 'Annuler' },
       {
-        onPress: () => duplicateMutation.mutate(
-          {
-            id: item.documentId || item.id,
-            payload: { name: nomDeLaCopie, seasonLabel: nextSeason },
-          },
-          {
-            onError: (error) => Alert.alert(
-              'Duplication impossible',
-              error?.message || 'La copie n\'a pas pu être créée.',
-            ),
-            // S06 — ce que ca change vraiment : une copie EN BROUILLON, et
-            // l'originale intacte. Les deux valent d'etre dits : c'est ce qui
-            // evite de chercher la copie parmi les campagnes ouvertes.
-            onSuccess: () => Alert.alert(
-              'Copie créée',
-              `« ${nomDeLaCopie} » t'attend en brouillon, à ouvrir quand tu veux. `
-              + `« ${nom} » n'a pas bougé.`,
-            ),
-          },
-        ),
+        onPress: () => {
+          const identifiantCampagne = item.documentId || item.id;
+          // T03 — meme regle que le cycle de vie : dupliquer recopie les
+          // documents et les regles une par une cote serveur, ca n est pas
+          // instantane.
+          setGesteEnCours({ campagneId: identifiantCampagne, libelle: 'Duplication en cours...' });
+          duplicateMutation.mutate(
+            {
+              id: identifiantCampagne,
+              payload: { name: nomDeLaCopie, seasonLabel: nextSeason },
+            },
+            {
+              onError: (error) => {
+                setGesteEnCours(null);
+                Alert.alert(
+                  'Duplication impossible',
+                  error?.message || 'La copie n\'a pas pu être créée.',
+                );
+              },
+              // S06 — ce que ca change vraiment : une copie EN BROUILLON, et
+              // l'originale intacte. Les deux valent d'etre dits : c'est ce qui
+              // evite de chercher la copie parmi les campagnes ouvertes.
+              onSuccess: () => {
+                setGesteEnCours(null);
+                Alert.alert(
+                  'Copie créée',
+                  `« ${nomDeLaCopie} » t'attend en brouillon, à ouvrir quand tu veux. `
+                  + `« ${nom} » n'a pas bougé.`,
+                );
+              },
+            },
+          );
+        },
         text: 'Dupliquer',
       },
     ]);
@@ -1555,6 +1603,8 @@ function ClubLicenses({ navigation, route }) {
     // serveur — jamais « c'est fait », toujours l'effet reel sur les joueurs.
     // `failedTitle` : l'echec, sous le nom du geste tente, avec le message du
     // serveur en corps (c'est lui qui sait ce qui bloque).
+    // T03 ajoute un QUATRIEME texte, `pendingLabel` : ce qui se passe PENDANT.
+    // Il manquait, et c est lui qu Adel a cherche pendant « quelques secondes ».
     const copyByAction = {
       archive: {
         confirm: 'Archiver',
@@ -1563,6 +1613,7 @@ function ClubLicenses({ navigation, route }) {
           + 'dans les archives.',
         doneTitle: 'Campagne archivée',
         failedTitle: 'Archivage impossible',
+        pendingLabel: 'Archivage en cours...',
         title: 'Archiver la campagne',
       },
       close: {
@@ -1572,6 +1623,7 @@ function ClubLicenses({ navigation, route }) {
           + 'les paiements déjà encaissés et les relances restent consultables.',
         doneTitle: 'Campagne close',
         failedTitle: 'Clôture impossible',
+        pendingLabel: 'Clôture en cours...',
         title: 'Clore la campagne',
       },
       launch: {
@@ -1581,6 +1633,11 @@ function ClubLicenses({ navigation, route }) {
           + 'y sont ajoutés automatiquement.',
         doneTitle: 'Campagne ouverte',
         failedTitle: 'Ouverture impossible',
+        // Ces trois-la nomment le TRAVAIL, pas le geste : `launch`, `resume` et
+        // `reopen` declenchent cote serveur une synchronisation membre par
+        // membre (license.ts:2562). C est la qu on attend le plus longtemps,
+        // donc c est la qu il faut dire pourquoi.
+        pendingLabel: 'Ouverture en cours, les membres sont ajoutés...',
         title: 'Ouvrir la campagne',
       },
       pause: {
@@ -1591,6 +1648,7 @@ function ClubLicenses({ navigation, route }) {
           + 'Tu peux la reprendre quand tu veux.',
         doneTitle: 'Campagne en pause',
         failedTitle: 'Mise en pause impossible',
+        pendingLabel: 'Mise en pause en cours...',
         title: 'Mettre la campagne en pause',
       },
       reopen: {
@@ -1600,6 +1658,7 @@ function ClubLicenses({ navigation, route }) {
           + 'concernés y sont rajoutés automatiquement.',
         doneTitle: 'Campagne réouverte',
         failedTitle: 'Réouverture impossible',
+        pendingLabel: 'Réouverture en cours, les membres sont ajoutés...',
         title: 'Reouvrir la campagne',
       },
       resume: {
@@ -1609,24 +1668,37 @@ function ClubLicenses({ navigation, route }) {
           + 'éligibles y sont rajoutés automatiquement.',
         doneTitle: 'Campagne reprise',
         failedTitle: 'Reprise impossible',
+        pendingLabel: 'Reprise en cours...',
         title: 'Reprendre la campagne',
       },
     };
     const copy = copyByAction[lifecycle.action];
     const nom = item?.name || 'Cette campagne';
+    const identifiantCampagne = item.documentId || item.id;
     Alert.alert(copy.title, copy.description, [
       { style: 'cancel', text: 'Annuler' },
       {
-        onPress: () => transitionMutation.mutate(
-          { action: lifecycle.action, id: item.documentId || item.id },
-          {
-            onError: (error) => Alert.alert(
-              copy.failedTitle,
-              error?.message || 'Le serveur a refusé ce changement.',
-            ),
-            onSuccess: () => Alert.alert(copy.doneTitle, `« ${nom} » ${copy.doneDescription}`),
-          },
-        ),
+        onPress: () => {
+          // ⛔ Pose AVANT l envoi, effacee dans LES DEUX issues : une carte qui
+          // resterait figee sur « en cours » serait pire que le silence.
+          setGesteEnCours({ campagneId: identifiantCampagne, libelle: copy.pendingLabel });
+          transitionMutation.mutate(
+            { action: lifecycle.action, id: identifiantCampagne },
+            {
+              onError: (error) => {
+                setGesteEnCours(null);
+                Alert.alert(
+                  copy.failedTitle,
+                  error?.message || 'Le serveur a refusé ce changement.',
+                );
+              },
+              onSuccess: () => {
+                setGesteEnCours(null);
+                Alert.alert(copy.doneTitle, `« ${nom} » ${copy.doneDescription}`);
+              },
+            },
+          );
+        },
         text: copy.confirm,
       },
     ]);
@@ -2339,6 +2411,11 @@ function ClubLicenses({ navigation, route }) {
               isSelected={campaignId === (item.documentId || item.id)}
               item={item}
               key={item.documentId || item.id}
+              // Le libelle ne descend QUE sur la campagne concernee : une seule
+              // carte parle a la fois.
+              libelleGesteEnCours={gesteEnCours?.campagneId === (item.documentId || item.id)
+                ? gesteEnCours.libelle
+                : ''}
               onOpenActions={() => setCampaignActionsFor(item)}
               onPress={() => handleOpenCampaignDashboard(item)}
             />
@@ -2420,6 +2497,21 @@ function ClubLicenses({ navigation, route }) {
               {isHelloAssoReadyForCampaign(clubHelloAssoSnapshot) ? 'Connecté ✓' : 'À connecter'}
             </Text>
           </Pressable>
+          {/*
+            T03 — la campagne OUVERTE n est pas dans la liste (elle en est
+            filtree, l. 2348), sa carte ne peut donc pas parler pour elle. Le
+            bouton ci-dessous portait deja un tourniquet ; il lui manquait le
+            NOM du geste, exactement comme aux cartes.
+          */}
+          {gesteEnCours?.campagneId === campaignId ? (
+            <Text
+              accessibilityLiveRegion="polite"
+              style={[Fonts.p3Bold, { color: Colors.primary500 }]}
+              testID="license-campagne-geste-en-cours"
+            >
+              {gesteEnCours.libelle}
+            </Text>
+          ) : null}
           {campaign ? (
             <Button
               isLoading={transitionMutation.isPending}
