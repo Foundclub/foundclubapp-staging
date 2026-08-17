@@ -23,8 +23,6 @@ import ScreenContainer from '@/components/templates/ScreenContainer';
 
 import { RouteNames } from '@/navigation/routeNames';
 
-import MediaPlatform from '@/platform/media';
-
 import { useGetCategories } from '@/services/category/categoryQueries';
 import { compareCategories } from '@/services/category/categoryService';
 import { useGetClub } from '@/services/club/clubQueries';
@@ -59,6 +57,12 @@ import {
   normalizePaymentModes,
   paymentModeLabels,
 } from './licenseDesignSystem';
+// `import/order` veut cet alias AVANT les imports relatifs, `perfectionist/
+// sort-imports` le veut APRES : les deux regles se contredisent sur ce chemin.
+// C est pour ca que le fichier voisin (ClubLicenseMemberDetail.js:1) desactive la
+// seconde POUR TOUT LE FICHIER ; ici on n en desactive qu une ligne.
+// eslint-disable-next-line import/order
+import MediaPlatform from '@/platform/media';
 
 const euroToCents = (value) => Math.round(Number(String(value || '0').replace(',', '.')) * 100);
 const centsToEuro = (value) => String(((value || 0) / 100).toFixed(2)).replace('.', ',');

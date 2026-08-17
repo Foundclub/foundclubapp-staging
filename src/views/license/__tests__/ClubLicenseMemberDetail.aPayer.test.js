@@ -123,6 +123,8 @@ jest.mock('@/components/atoms/button/Button', () => function ButtonMock(/** @typ
   return null;
 });
 
+const { unwaiveLicenseAssignment } = require('@/services/license/licenseQueries');
+
 /**
  * Une cotisation de fiche joueur, dans le statut voulu.
  * @param {string} status - Le statut de la cotisation.
@@ -155,7 +157,9 @@ let arbreCourant = null;
  * @returns {any[]} Les props des boutons rendus.
  */
 const monterLaFiche = (cotisation) => {
-  mockCotisationRequete = { data: cotisation, isError: false, isLoading: false, refetch: jest.fn() };
+  mockCotisationRequete = {
+    data: cotisation, isError: false, isLoading: false, refetch: jest.fn(),
+  };
   mockBoutons.length = 0;
 
   /** @type {any} */
@@ -267,7 +271,6 @@ describe('T03 — « A payer » sur la fiche joueur', () => {
 
   it('temoin 6 — c est bien la route « unwaive » qui est appelee, pas une autre', async () => {
     monterLaFiche(cotisationAu('waived'));
-    const { unwaiveLicenseAssignment } = require('@/services/license/licenseQueries');
 
     // La derniere mutation declaree par l ecran est celle du geste ajoute.
     await mockDerniereFonctionDeMutation({});

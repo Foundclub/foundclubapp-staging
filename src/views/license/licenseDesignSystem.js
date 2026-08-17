@@ -217,14 +217,14 @@ export function LicenseSelectionChip({
 }) {
   const { Colors, Fonts } = useTheme();
   const isSoft = variant === 'soft';
-  const backgroundColor = isSoft
-    ? (selected ? 'rgba(1, 179, 244, 0.14)' : Colors.primary700)
-    : (selected ? Colors.primary500 : Colors.primary800);
-  const borderColor = isSoft
-    ? (selected ? Colors.primary500 : 'rgba(1, 179, 244, 0.24)')
-    : (selected ? Colors.primary500 : `${Colors.primary500}55`);
+  let backgroundColor = selected ? Colors.primary500 : Colors.primary800;
+  let borderColor = selected ? Colors.primary500 : `${Colors.primary500}55`;
   let textStyle = selected ? Fonts.neutral900 : Fonts.neutral200;
-  if (isSoft) textStyle = selected ? Fonts.primary500 : Fonts.neutral00;
+  if (isSoft) {
+    backgroundColor = selected ? 'rgba(1, 179, 244, 0.14)' : Colors.primary700;
+    borderColor = selected ? Colors.primary500 : 'rgba(1, 179, 244, 0.24)';
+    textStyle = selected ? Fonts.primary500 : Fonts.neutral00;
+  }
 
   return (
     <Pressable

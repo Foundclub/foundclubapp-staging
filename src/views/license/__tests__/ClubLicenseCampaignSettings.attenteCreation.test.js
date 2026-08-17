@@ -267,6 +267,14 @@ const monterSurLaDerniereEtape = async () => {
   return arbre;
 };
 
+// Les doublures du service, prises UNE fois au niveau module : un require()
+// dans un test declenche `global-require`, et le cliquet de lint compte chaque
+// alerte.
+const {
+  uploadLicenseDocumentRequestTemplate,
+  upsertLicenseDocumentRequest,
+} = require('@/services/license/licenseQueries');
+
 /**
  * Cherche l annonce d etape, en ne gardant que les noeuds HOTES : un `<Text>`
  * de React Native rend un composite ET un hote qui portent le meme `testID`,
@@ -329,7 +337,6 @@ describe('T03 — l attente de la creation, mesuree en allers-retours', () => {
     // etait muette : la campagne a repondu, le reste part encore.
     let libererLaSuite = () => {};
     const attente = new Promise((resolve) => { libererLaSuite = () => resolve(true); });
-    const { upsertLicenseDocumentRequest } = require('@/services/license/licenseQueries');
     upsertLicenseDocumentRequest.mockImplementationOnce(() => attente);
 
     await act(async () => {
@@ -363,7 +370,6 @@ describe('T03 — le modele a telecharger ne rallonge que ceux qui en posent un'
 
   it('temoin 3 — sans modele, aucun appel de televersement ne part', async () => {
     const arbre = await monterSurLaDerniereEtape();
-    const { uploadLicenseDocumentRequestTemplate } = require('@/services/license/licenseQueries');
     uploadLicenseDocumentRequestTemplate.mockClear();
 
     await act(async () => {
