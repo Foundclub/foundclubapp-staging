@@ -47,6 +47,7 @@ import {
   isHelloAssoReadyForCampaign,
   LicenseEmptyState,
   licenseRadius,
+  LicenseSelectionChip,
   licenseSpacing,
   LicenseStatusChip,
   paymentModeLabels,
@@ -2149,28 +2150,17 @@ function ClubLicenses({ navigation, route }) {
                     label={activeMemberFilterCount ? `Filtres (${activeMemberFilterCount})` : 'Filtres'}
                     onPress={() => setMemberFilterMenuKey('filters')}
                   />
-                  {statusFilters.map((filter) => {
-                    const selected = statusFilter === filter.value;
-                    return (
-                      <Pressable
-                        key={filter.value || 'all'}
-                        onPress={() => {
-                          setMemberQuickFilter('');
-                          setStatusFilter(filter.value);
-                        }}
-                        style={{
-                          backgroundColor: selected ? Colors.primary500 : Colors.primary800,
-                          borderColor: selected ? Colors.primary500 : `${Colors.primary500}55`,
-                          borderRadius: licenseRadius.pill,
-                          borderWidth: 1,
-                          paddingHorizontal: 12,
-                          paddingVertical: 8,
-                        }}
-                      >
-                        <Text style={[Fonts.p3Bold, selected ? Fonts.neutral900 : Fonts.neutral200]}>{filter.label}</Text>
-                      </Pressable>
-                    );
-                  })}
+                  {statusFilters.map((filter) => (
+                    <LicenseSelectionChip
+                      key={filter.value || 'all'}
+                      label={filter.label}
+                      onPress={() => {
+                        setMemberQuickFilter('');
+                        setStatusFilter(filter.value);
+                      }}
+                      selected={statusFilter === filter.value}
+                    />
+                  ))}
                 </ScrollView>
                 {activeMemberFilterPills.length ? (
                   <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
@@ -2729,38 +2719,24 @@ function ClubLicenses({ navigation, route }) {
                   <View key={definition.key} style={Spaces.gap[8]}>
                     <Text style={[Fonts.p3Bold, Fonts.neutral00]}>{definition.label}</Text>
                     <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-                      <Pressable
+                      <LicenseSelectionChip
+                        label="Tous"
                         onPress={() => updateMemberFilter(definition.key, '')}
-                        style={{
-                          backgroundColor: !selectedValue ? 'rgba(1, 179, 244, 0.14)' : Colors.primary700,
-                          borderColor: !selectedValue ? Colors.primary500 : 'rgba(1, 179, 244, 0.24)',
-                          borderRadius: licenseRadius.pill,
-                          borderWidth: 1,
-                          paddingHorizontal: 12,
-                          paddingVertical: 10,
-                        }}
-                      >
-                        <Text style={[Fonts.p3Bold, !selectedValue ? Fonts.primary500 : Fonts.neutral00]}>Tous</Text>
-                      </Pressable>
-                      {definition.options.map((option) => {
-                        const selected = selectedValue === option.value;
-                        return (
-                          <Pressable
-                            key={option.value}
-                            onPress={() => updateMemberFilter(definition.key, selected ? '' : option.value)}
-                            style={{
-                              backgroundColor: selected ? 'rgba(1, 179, 244, 0.14)' : Colors.primary700,
-                              borderColor: selected ? Colors.primary500 : 'rgba(1, 179, 244, 0.24)',
-                              borderRadius: licenseRadius.pill,
-                              borderWidth: 1,
-                              paddingHorizontal: 12,
-                              paddingVertical: 10,
-                            }}
-                          >
-                            <Text style={[Fonts.p3Bold, selected ? Fonts.primary500 : Fonts.neutral00]}>{option.label}</Text>
-                          </Pressable>
-                        );
-                      })}
+                        selected={!selectedValue}
+                        variant="soft"
+                      />
+                      {definition.options.map((option) => (
+                        <LicenseSelectionChip
+                          key={option.value}
+                          label={option.label}
+                          onPress={() => updateMemberFilter(
+                            definition.key,
+                            selectedValue === option.value ? '' : option.value,
+                          )}
+                          selected={selectedValue === option.value}
+                          variant="soft"
+                        />
+                      ))}
                     </View>
                   </View>
                 );

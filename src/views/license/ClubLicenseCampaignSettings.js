@@ -51,6 +51,7 @@ import {
   isHelloAssoReadyForCampaign,
   LicenseEmptyState,
   licenseRadius,
+  LicenseSelectionChip,
   licenseSpacing,
   normalizePaymentModes,
   paymentModeLabels,
@@ -317,8 +318,31 @@ const createTargetConfigDraft = (campaign) => {
   const teamIds = Array.isArray(config.teamIds || config.teams)
     ? (config.teamIds || config.teams).map(referenceKey).filter(Boolean)
     : [];
+  // T03 — « QUAND ON CREE UNE CAMPAGNE, TOUT LE CLUB DOIT ETRE COCHE DE BASE »
+  // (Adel, recette du 2026-08-17).
+  //
+  // Ce n etait pas un oubli, c etait une INCOHERENCE : le serveur recoit deja
+  // « tout le club » des qu aucun filtre n est choisi — `normalizeTargetConfigPayload`
+  // (l. 596) et `buildTargetSummaryPayload` (l. 569) envoient l un comme l autre
+  // `includeAllMembers: !hasScopedFilters`. Seul CE brouillon disait le
+  // contraire, en posant `false` en dur. L interrupteur affichait donc « non »
+  // pendant que la charge utile envoyee disait « oui ».
+  //
+  // 🔒 ET RIEN NE S ELARGIT — c est le point sensible, parce que cocher engage
+  // de l argent pour tout le monde : la valeur STOCKEE gagne toujours, et une
+  // campagne qui porte des filtres (roles, equipes, categories, sections,
+  // niveaux) garde exactement les siens. Le defaut a `true` ne s applique qu a
+  // une cible VIDE — c est-a-dire a une campagne neuve, ou a une campagne dont
+  // le serveur considere deja que tout le club est concerne.
   const hasStoredIncludeAllMembers = typeof config.includeAllMembers === 'boolean';
-  let includeAllMembers = false;
+  const hasScopedFilters = Boolean(
+    roles.length
+    || teamIds.length
+    || categoryIds.length
+    || sectionIds.length
+    || levelIds.length,
+  );
+  let includeAllMembers = !hasScopedFilters;
 
   if (hasStoredIncludeAllMembers) {
     includeAllMembers = config.includeAllMembers;
@@ -1040,34 +1064,15 @@ function WizardSheet({
   );
 }
 
-/**
- *
- * @param root0
- * @param root0.label
- * @param root0.onPress
- * @param root0.selected
- */
-function SelectionChip({ label, onPress, selected }) {
-  const {
-    Colors, Fonts,
-  } = useTheme();
-
-  return (
-    <Pressable
-      onPress={onPress}
-      style={{
-        backgroundColor: selected ? Colors.primary500 : Colors.primary800,
-        borderColor: selected ? Colors.primary500 : `${Colors.primary500}44`,
-        borderRadius: licenseRadius.pill,
-        borderWidth: 1,
-        paddingHorizontal: 12,
-        paddingVertical: 8,
-      }}
-    >
-      <Text style={[Fonts.p3Bold, selected ? Fonts.neutral900 : Fonts.neutral200]}>{label}</Text>
-    </Pressable>
-  );
-}
+// T03 — LA QUATRIEME COPIE DE LA MEME PASTILLE.
+//
+// Elle etait identique a celles du hub (palette, 12/8 de marge, `Fonts.p3Bold`)
+// et souffrait du meme defaut : aucun centrage, aucune cible tactile de 44 pt.
+// Elle pointe desormais sur la brique partagee, dans `licenseDesignSystem.js` —
+// un centrage corrige une fois vaut pour les quatre. Le nom local reste : c est
+// lui que lisent les 3 endroits de ce tunnel (roles cibles, statuts a relancer,
+// et les pastilles de la feuille de cadence).
+const SelectionChip = LicenseSelectionChip;
 
 /**
  *
