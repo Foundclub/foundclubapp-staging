@@ -73,6 +73,7 @@ import {
 
 import { LEAGUE_LEGAL_SCOPES } from '@/constants/leagueLegalAcceptance';
 import useLeagueLegalAcceptance from '@/hooks/useLeagueLegalAcceptance';
+import { PHOTO_PICKER_LIMITS } from '@/platform/media/photoLimits';
 import SharePlatform from '@/platform/share';
 
 const slotDayLabels = {
@@ -990,12 +991,12 @@ function SquadDetailsScreen({ navigation, route }) {
     try {
       const cameraOptions = /** @type {import('react-native-image-picker').CameraOptions} */ ({
         mediaType: 'photo',
-        quality: 0.8,
         saveToPhotos: true,
+        ...PHOTO_PICKER_LIMITS,
       });
       const libraryOptions = /** @type {import('react-native-image-picker').ImageLibraryOptions} */ ({
         mediaType: 'photo',
-        quality: 0.8,
+        ...PHOTO_PICKER_LIMITS,
       });
 
       const result = source === 'camera'

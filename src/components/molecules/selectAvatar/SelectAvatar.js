@@ -10,27 +10,38 @@ import useTheme from '@/theme/themeContext';
 import Button from '@/components/atoms/button/Button';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 
-import { capturePhoto, pickImage } from '@/platform/media';
+import { capturePhoto, getLocalFileSize, pickImage } from '@/platform/media';
+import {
+  CAPTURE_EXTENSION, CAPTURE_FORMAT, CAPTURE_MIME, checkImageSize, PHOTO_QUALITY,
+} from '@/platform/media/photoLimits';
 import { getImageUrl } from '@/utils/imageUrl';
 
 /**
- * D36 — la capture C01 réécrit toujours la photo en PNG (`format: 'png'`).
- * Sans ce recalage, la charge continuait d'annoncer le `image/jpeg` et le nom
- * `.jpg` de la photo d'origine : l'app envoyait un PNG étiqueté JPEG, avec en
- * prime la taille d'un fichier qui n'existait plus.
+ * D36 — la capture C01 réécrit la photo : la charge doit décrire le fichier
+ * PRODUIT, pas celui de départ. Sans ce recalage, elle annonçait encore le type
+ * et le nom de la photo d'origine.
+ *
+ * 🎯 Y01 — et elle le réécrit désormais dans le MÊME format compressé que
+ * l'original. En PNG sans perte, une photo de 237 Ko ressortait à ~2,5 Mo, et
+ * jusqu'à 22,8 Mo sur un écran x3 (mesuré le 2026-08-19, facteur x11) : c'est
+ * ce gonflement qui faisait refuser la photo prise à la caméra alors que la
+ * même image choisie dans la galerie passait.
  * @param {any} asset Asset rendu par la caméra.
  * @param {string} uri Chemin du fichier produit par la capture.
+ * @param {number | undefined} tailleMesuree Taille RÉELLE du fichier produit.
  * @returns {any} L'asset dé-miroité, décrit pour ce qu'il est.
  */
-const decrireLaCapture = (asset, uri) => {
+const decrireLaCapture = (asset, uri, tailleMesuree) => {
   const nomSansExtension = String(asset?.fileName || 'avatar').replace(/\.[^./\\]+$/, '');
 
   return {
     ...asset,
-    fileName: `${nomSansExtension}.png`,
-    fileSize: undefined,
+    fileName: `${nomSansExtension}.${CAPTURE_EXTENSION}`,
+    // ⛔ Jamais la taille de la photo d'origine : elle ne décrit plus rien.
+    // Remesurée sur le fichier produit, ou absente si elle n'a pas pu l'être.
+    fileSize: tailleMesuree,
     path: uri,
-    type: 'image/png',
+    type: CAPTURE_MIME,
     uri,
   };
 };
@@ -144,6 +155,15 @@ function SelectAvatar({
       return;
     }
 
+    // 🚫 Y01 — un fichier VRAIMENT trop gros est refusé AVANT l'envoi, et le
+    // refus dit le plafond. Une taille inconnue ne déclenche rien : on ne
+    // refuse pas ce qu'on n'a pas mesuré.
+    const refusDeTaille = checkImageSize(asset.fileSize);
+    if (refusDeTaille) {
+      Alert.alert(t('common.error'), refusDeTaille);
+      return;
+    }
+
     // Map to format expected by Upload Service (path, mime, filename)
     const mappedImage = {
       filename: asset.fileName,
@@ -176,14 +196,20 @@ function SelectAvatar({
     let settled = false;
     /** @type {any} */
     let minuterie = null;
-    const finish = (uri) => {
+    /**
+     * Clôt le dé-miroir, une seule fois.
+     * @param {string | null} uri Fichier produit, ou null si la capture a échoué.
+     * @param {number | undefined} [tailleMesuree] Taille réelle du fichier produit.
+     * @returns {void} Rien — la promesse du dé-miroir est résolue.
+     */
+    const finish = (uri, tailleMesuree) => {
       if (settled) return;
       settled = true;
       if (minuterie) clearTimeout(minuterie);
       flipResolveRef.current = null;
       setFlipSource(null);
       // uri renseignée = capture réussie ; sinon repli sur l'original (miroir conservé).
-      resolve(uri ? decrireLaCapture(asset, uri) : asset);
+      resolve(uri ? decrireLaCapture(asset, uri, tailleMesuree) : asset);
     };
     flipResolveRef.current = finish;
     // Garde-fou : si onLoad/capture ne répond pas, on retombe sur l'original.
@@ -194,14 +220,21 @@ function SelectAvatar({
   const handleFlipImageReady = async () => {
     if (!flipSource) return;
     try {
+      // 🎯 Y01 — MÊME format et MÊME compression que la photo d'origine.
+      // `format: 'png'` + `quality: 1` re-fabriquaient l'image sans perte : la
+      // caméra rendait 237 Ko, la re-capture ressortait à 2,5 Mo (x11 mesuré),
+      // et jusqu'à 22,8 Mo sur un écran x3 où la vue de 1000 px est capturée à
+      // 3000 px. On garde le dé-miroir, on change ce qu'il produit.
       const uri = await captureRef(flipViewRef, {
-        format: 'png',
+        format: CAPTURE_FORMAT,
         height: flipSource.height,
-        quality: 1,
+        quality: PHOTO_QUALITY,
         result: 'tmpfile',
         width: flipSource.width,
       });
-      flipResolveRef.current?.(uri);
+      // La taille annoncée par l'appareil ne décrit plus le fichier : on la
+      // remesure. Sans elle, aucun garde-fou de taille n'a de quoi comparer.
+      flipResolveRef.current?.(uri, await getLocalFileSize(uri));
     } catch (error) {
       console.warn('Avatar flip failed, using original:', error?.message);
       flipResolveRef.current?.(null);

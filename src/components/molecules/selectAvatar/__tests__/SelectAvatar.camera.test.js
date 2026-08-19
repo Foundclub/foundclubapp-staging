@@ -43,6 +43,14 @@ jest.mock('react-native-image-picker', () => ({
 
 jest.mock('@react-native-documents/picker', () => ({ pick: jest.fn() }));
 
+// Y01 — `platform/media` remesure la taille du fichier produit par la capture
+// (`getLocalFileSize`). La bibliotheque de systeme de fichiers est doublee : on
+// observe ce que le composant FAIT de la taille, pas comment elle est lue.
+jest.mock('react-native-blob-util', () => ({
+  __esModule: true,
+  default: { fs: { stat: jest.fn() } },
+}));
+
 // La feuille du bas est doublee : on n'observe pas l'animation, on observe ce
 // que les deux boutons declenchent.
 jest.mock('@/components/molecules/bottomModal/BottomModal', () => {
@@ -95,6 +103,12 @@ jest.mock('@/theme/themeContext', () => {
 });
 
 const { launchCamera, launchImageLibrary } = jest.requireMock('react-native-image-picker');
+const ReactNativeBlobUtil = jest.requireMock('react-native-blob-util').default;
+
+// Y01 — la taille RÉELLE du fichier rendu par la re-capture, telle que le
+// système de fichiers la rapporte. Mesuré le 2026-08-19 : une image de
+// 1000x1000 pèse ~237 Ko en JPEG q0.8 et ~2,53 Mo en PNG sans perte (x11).
+const TAILLE_CAPTURE_JPEG = 242_688;
 
 // La charge que rend react-native-image-picker 7.2.3 sur iOS — IDENTIQUE en
 // forme pour la camera et pour la galerie (mesure : ImagePickerManager.mm,
@@ -121,10 +135,11 @@ const CHARGE_GALERIE = {
   }],
 };
 
-// Ce que `captureRef` rend reellement : un fichier temporaire PNG. Sur iOS un
+// Ce que `captureRef` rend reellement : un fichier temporaire. Sur iOS un
 // chemin NU (RNViewShot.mm l.173 `res = path`), sur Android une URL `file://`
-// (ViewShot.java l.243 `Uri.fromFile`). Le format, lui, est PNG des deux cotes.
-const URI_CAPTURE = '/var/mobile/tmp/ReactNative/capture-flip.png';
+// (ViewShot.java l.243 `Uri.fromFile`). Y01 : l'extension suit le format
+// demande, desormais `jpg` et non plus `png`.
+const URI_CAPTURE = '/var/mobile/tmp/ReactNative/capture-flip.jpg';
 
 /**
  * Aplatit un style RN (tableau, valeurs nulles) en un seul objet.
@@ -225,6 +240,7 @@ beforeEach(() => {
   launchCamera.mockResolvedValue(CHARGE_CAMERA);
   launchImageLibrary.mockResolvedValue(CHARGE_GALERIE);
   captureRef.mockResolvedValue(URI_CAPTURE);
+  ReactNativeBlobUtil.fs.stat.mockResolvedValue({ size: TAILLE_CAPTURE_JPEG });
 });
 
 afterEach(() => {
@@ -236,9 +252,17 @@ afterEach(() => {
 
 describe('D36 — la photo prise a la CAMERA', () => {
   // 🥇 TEMOIN D'ARRET N°1 : une photo prise a la camera doit arriver, et
-  // arriver en se decrivant HONNETEMENT. Le de-miroir C01 reecrit le fichier en
-  // PNG mais laissait la charge annoncer `image/jpeg` et un nom en `.jpg` :
-  // l'app envoyait alors un PNG etiquete JPEG.
+  // arriver en se decrivant HONNETEMENT. Le de-miroir C01 reecrit le fichier :
+  // la charge doit decrire le fichier PRODUIT, pas celui de depart.
+  //
+  // 🔄 Y01 — CE QUE CE TEMOIN ATTEND A CHANGE, ET POURQUOI. D36 avait rendu la
+  // description honnete : la capture sortait en PNG, la charge disait PNG.
+  // Elle etait honnete, mais le PNG etait le DEFAUT : sans perte, il multipliait
+  // le poids par 11 (mesure du 2026-08-19), et c'est ce qui faisait refuser la
+  // photo prise a la camera alors que la galerie passait. Y01 change ce que la
+  // capture PRODUIT — du JPEG compresse — donc la description honnete devient
+  // « JPEG ». ⛔ L'exigence de D36 n'est pas levee : elle est appliquee au
+  // nouveau fichier.
   it('remonte la photo capturee, decrite pour ce qu elle est', async () => {
     monterEtOuvrirLaFeuille();
     await appuyerSur('common.actions.photoFromCamera');
@@ -249,11 +273,59 @@ describe('D36 — la photo prise a la CAMERA', () => {
     const envoye = avatarChoisi.mock.calls[0][0];
     expect(envoye.path).toBe(URI_CAPTURE);
     expect(envoye.uri).toBe(URI_CAPTURE);
-    // Le fichier capture est un PNG : la charge doit le dire.
-    expect(envoye.mime).toBe('image/png');
-    expect(envoye.filename).toMatch(/\.png$/);
-    // La taille de la photo D'ORIGINE ne decrit plus le fichier envoye.
-    expect(envoye.size).toBeUndefined();
+    // Le fichier capture est un JPEG compresse : la charge doit le dire.
+    expect(envoye.mime).toBe('image/jpeg');
+    expect(envoye.filename).toMatch(/\.jpg$/);
+    // La taille n'est plus EFFACEE : elle est remesuree sur le fichier produit.
+    // ⛔ Effacer la taille rendait tout garde-fou de taille aveugle.
+    expect(envoye.size).toBe(TAILLE_CAPTURE_JPEG);
+  });
+
+  // 🥇 TEMOIN Y01 : la re-capture demande le MEME format compresse que la photo
+  // d'origine. `format: 'png'` + `quality: 1` re-fabriquaient l'image sans
+  // perte — 237 Ko en entree, 2,53 Mo en sortie sur une vue de 1000 px, et
+  // jusqu'a 22,80 Mo sur un ecran x3 ou la vue est capturee a 3000 px.
+  it('recapture en JPEG compresse, jamais en PNG sans perte', async () => {
+    monterEtOuvrirLaFeuille();
+    await appuyerSur('common.actions.photoFromCamera');
+    await laisserLaCaptureSeFaire();
+
+    expect(captureRef).toHaveBeenCalledTimes(1);
+    const consignes = captureRef.mock.calls[0][1];
+    expect(consignes.format).toBe('jpg');
+    expect(consignes.quality).toBeLessThan(1);
+    // 🔒 …mais on compresse, on ne detruit pas : un ecusson doit rester lisible.
+    expect(consignes.quality).toBeGreaterThanOrEqual(0.7);
+  });
+
+  // 🚫 TEMOIN Y01 : un fichier VRAIMENT trop gros est refuse AVANT l'envoi, et
+  // le refus NOMME la taille maximale. Sans ce garde-fou, la seule reponse etait
+  // celle du serveur, arrivee apres une montee inutile de plusieurs mega-octets.
+  it('refuse une photo vraiment trop grosse en disant le plafond', async () => {
+    launchImageLibrary.mockResolvedValue({
+      assets: [{ ...CHARGE_GALERIE.assets[0], fileSize: 40 * 1024 * 1024 }],
+    });
+
+    monterEtOuvrirLaFeuille();
+    await appuyerSur('common.actions.photoFromGallery');
+
+    expect(avatarChoisi).not.toHaveBeenCalled();
+    expect(alerte).toHaveBeenCalledTimes(1);
+    expect(String(alerte.mock.calls[0][1])).toContain('15 Mo');
+  });
+
+  // 🛟 On ne refuse JAMAIS ce qu'on n'a pas mesure : une charge sans `fileSize`
+  // passe. Sinon, une taille illisible bloquerait toutes les photos.
+  it('laisse passer une photo dont la taille est inconnue', async () => {
+    launchImageLibrary.mockResolvedValue({
+      assets: [{ ...CHARGE_GALERIE.assets[0], fileSize: undefined }],
+    });
+
+    monterEtOuvrirLaFeuille();
+    await appuyerSur('common.actions.photoFromGallery');
+
+    expect(alerte).not.toHaveBeenCalled();
+    expect(avatarChoisi).toHaveBeenCalledTimes(1);
   });
 
   // 🥇 TEMOIN D'ARRET N°2 : la GALERIE doit continuer de marcher a l'identique,

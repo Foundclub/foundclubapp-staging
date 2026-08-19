@@ -132,6 +132,9 @@ import useAudioPlayback from '@/hooks/useAudioPlayback';
 import useLeagueLegalAcceptance from '@/hooks/useLeagueLegalAcceptance';
 import useSafeTimers from '@/hooks/useSafeTimers';
 import { EVENTS } from '@/hooks/useSocket';
+import {
+  buildFileTooLargeMessage, BYTES_PER_MB, MAX_UPLOAD_IMAGE_BYTES, PHOTO_PICKER_LIMITS,
+} from '@/platform/media/photoLimits';
 import shareApi from '@/platform/share';
 
 const conversationLogger = createLogger('conversation');
@@ -332,11 +335,14 @@ function MicrophoneGlyph({ color = '#ffffff' }) {
     </Svg>
   );
 }
-const BYTES_PER_MB = 1024 * 1024;
+// Y01 — le plafond des IMAGES et sa phrase viennent desormais de
+// `@/platform/media/photoLimits` : c'etait la seule verite du depot sur la
+// taille d'une photo, et elle etait recopiee ici. Les trois autres plafonds
+// (son, video, divers) restent propres a la messagerie.
 const MAX_ATTACHMENT_BYTES = {
   audio: 20 * BYTES_PER_MB,
   default: 25 * BYTES_PER_MB,
-  image: 15 * BYTES_PER_MB,
+  image: MAX_UPLOAD_IMAGE_BYTES,
   video: 80 * BYTES_PER_MB,
 };
 
@@ -692,10 +698,9 @@ function Conversation({ navigation, route }) {
 
     const maxBytes = getAttachmentSizeLimit(normalizedType);
     if (normalizedSize > 0 && normalizedSize > maxBytes) {
-      const maxMb = Math.round(maxBytes / BYTES_PER_MB);
       return {
         reason: 'file_too_large',
-        userMessage: `Fichier trop volumineux (max ${maxMb} Mo).`,
+        userMessage: buildFileTooLargeMessage(maxBytes),
       };
     }
 
@@ -1896,8 +1901,8 @@ function Conversation({ navigation, route }) {
       const response = await launchImageLibrary({
         includeBase64: false,
         mediaType: 'mixed',
-        quality: 0.8,
         selectionLimit: 1,
+        ...PHOTO_PICKER_LIMITS,
       });
 
       if (response.didCancel) {
@@ -1986,8 +1991,8 @@ function Conversation({ navigation, route }) {
         cameraType: 'back',
         includeBase64: false,
         mediaType: 'photo',
-        quality: 0.8,
         saveToPhotos: false,
+        ...PHOTO_PICKER_LIMITS,
       });
 
       if (response.didCancel) {
@@ -2130,8 +2135,8 @@ function Conversation({ navigation, route }) {
       const response = await launchImageLibrary({
         includeBase64: false,
         mediaType: 'mixed',
-        quality: 0.8,
         selectionLimit: 1,
+        ...PHOTO_PICKER_LIMITS,
       });
 
       if (response.didCancel) return;
@@ -2158,8 +2163,8 @@ function Conversation({ navigation, route }) {
         cameraType: 'back',
         includeBase64: false,
         mediaType: 'photo',
-        quality: 0.8,
         saveToPhotos: false,
+        ...PHOTO_PICKER_LIMITS,
       });
 
       if (response.didCancel) return;

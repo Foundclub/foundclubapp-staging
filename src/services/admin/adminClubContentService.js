@@ -19,6 +19,12 @@ import {
   searchSuperadminRelations,
   updateSuperadminEntry,
 } from './superadminService';
+// Y01 — les deux regles d'import du depot se CONTREDISENT sur ce fichier : `import/order`
+// veut l'alias `@/` avant les freres `./`, `perfectionist/sort-imports` le veut apres.
+// Aucune position ne satisfait les deux ; on suit perfectionist (la regle propre au depot)
+// et on tait l'autre sur CETTE ligne uniquement.
+// eslint-disable-next-line import/order
+import { PHOTO_PICKER_LIMITS } from '@/platform/media/photoLimits';
 
 const SORTS = {
   alpha: ['name:asc'],
@@ -143,8 +149,8 @@ export const pickAndUploadAdminClubLogo = async () => {
   const pickerResponse = await launchImageLibrary({
     includeBase64: false,
     mediaType: 'photo',
-    quality: 0.85,
     selectionLimit: 1,
+    ...PHOTO_PICKER_LIMITS,
   });
 
   if (pickerResponse?.didCancel) return null;

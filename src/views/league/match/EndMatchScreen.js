@@ -60,6 +60,7 @@ import {
   POPUP_IDS,
 } from '@/constants/popupRegistry';
 import { usePopupManager } from '@/context/PopupManagerContext';
+import { PHOTO_PICKER_LIMITS } from '@/platform/media/photoLimits';
 
 /**
  * @typedef {{ uri: string, name: string, type: string, source: 'gallery' | 'camera' }} ProofPayload
@@ -654,8 +655,8 @@ function EndMatchScreen() {
     /** @type {import('react-native-image-picker').ImageLibraryOptions} */
     const options = {
       mediaType: 'photo',
-      quality: 0.7,
       selectionLimit: 1,
+      ...PHOTO_PICKER_LIMITS,
     };
 
     launchImageLibrary(options, (response) => {
@@ -677,8 +678,8 @@ function EndMatchScreen() {
     const options = {
       includeExtra: true,
       mediaType: 'photo',
-      quality: 0.7,
       saveToPhotos: false,
+      ...PHOTO_PICKER_LIMITS,
     };
 
     launchCamera(options, (response) => {
