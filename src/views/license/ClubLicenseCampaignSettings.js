@@ -63,6 +63,11 @@ import {
 // seconde POUR TOUT LE FICHIER ; ici on n en desactive qu une ligne.
 // eslint-disable-next-line import/order
 import MediaPlatform from '@/platform/media';
+// U06 — la MEME liste de formats sur les trois ecrans de depot, et dans la langue
+// de la plateforme (UTI sur iOS, type MIME sur Android). Meme contradiction de
+// regles que la ligne au-dessus, meme derogation d une seule ligne.
+// eslint-disable-next-line import/order
+import { getDocumentPickerOptions } from '@/platform/media/documentUploadFormats';
 
 const euroToCents = (value) => Math.round(Number(String(value || '0').replace(',', '.')) * 100);
 const centsToEuro = (value) => String(((value || 0) / 100).toFixed(2)).replace('.', ',');
@@ -1195,7 +1200,7 @@ function TemplateFileRow({ item, onChange }) {
 
   const choisirLeModele = useCallback(async () => {
     try {
-      const picked = await MediaPlatform.pickDocument({ accept: '*/*', mode: 'open', type: ['*/*'] });
+      const picked = await MediaPlatform.pickDocument(getDocumentPickerOptions());
       const file = Array.isArray(picked) ? picked[0] : picked;
       if (!file) return;
       onChange({ pickedTemplateFile: file, removedTemplate: false });

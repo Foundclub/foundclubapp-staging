@@ -186,3 +186,57 @@ describe('notificationNavigation', () => {
     });
   });
 });
+
+/**
+ * U06 — TEMOIN 6 : « l'ecran des demandes d'adhesion a une porte ».
+ *
+ * 🧨 Mesure du 18/08 : `TeamMembershipRequestList` est construit, branche dans
+ * `TeamStack` sous `RouteNames.TeamMembershipRequests`, expose sur le web en
+ * `/teams/:teamId/requests` — et **AUCUN appelant dans tout `app/src`**. Zero.
+ * Meme la notification qui annonce la demande envoyait vers la fiche de
+ * l'equipe, ou rien ne parle des demandes en attente.
+ *
+ * La porte posee ici est le MIROIR exact de celle du club
+ * (`CLUB_MEMBERSHIP_REQUEST` + `requestType === 'claim'`, l. ~600).
+ * ⚠️ Sans `teamId`, l'ecran n'a rien a afficher : on retombe alors sur la fiche
+ * de l'equipe plutot que d'ouvrir une page vide.
+ */
+describe('U06 — la demande d adhesion a une equipe a enfin une porte', () => {
+  test('temoin 6 — la notification ouvre la LISTE DES DEMANDES de l equipe', () => {
+    const destination = resolveNotificationDestination({
+      teamId: 'team-7',
+      type: NOTIFICATION_TYPES.TEAM_MEMBERSHIP_REQUEST,
+    });
+
+    expect(destination).toEqual({
+      params: {
+        params: { teamId: 'team-7' },
+        screen: RouteNames.TeamMembershipRequests,
+      },
+      route: RouteNames.TeamStack,
+    });
+  });
+
+  test('sans identifiant d equipe, on retombe sur la fiche plutot que sur une page vide', () => {
+    const destination = resolveNotificationDestination({
+      type: NOTIFICATION_TYPES.TEAM_MEMBERSHIP_REQUEST,
+    });
+
+    expect(destination?.params?.screen).not.toBe(RouteNames.TeamMembershipRequests);
+  });
+
+  test('les autres notifications d equipe continuent d ouvrir la fiche', () => {
+    const destination = resolveNotificationDestination({
+      teamId: 'team-7',
+      type: NOTIFICATION_TYPES.ADD_TO_TEAM,
+    });
+
+    expect(destination).toEqual({
+      params: {
+        params: { teamId: 'team-7' },
+        screen: RouteNames.TeamDetails,
+      },
+      route: RouteNames.TeamStack,
+    });
+  });
+});

@@ -22,6 +22,7 @@ const MINI_TOKEN_SIZE = 24;
  * @typedef {{ id?: string; documentId?: string; firstname?: string; lastname?: string }} CompositionPlayer
  * @typedef {{ playerId?: string; positionX?: number; positionY?: number }} CompositionPlacement
  * @typedef {{
+ *   eventAddress?: string;
  *   eventId?: string;
  *   eventDate?: string;
  *   eventName?: string;
@@ -42,6 +43,20 @@ const MINI_TOKEN_SIZE = 24;
 
 const getPlayerId = (player) => String(player?.documentId || player?.id || '').trim();
 
+/**
+ * U06 — le lieu, tel qu'il arrive du serveur.
+ *
+ * ⛔ Un lieu absent est DIT, jamais invente : la carte ecrit « Lieu non precise »
+ * plutot que de laisser un trou que le lecteur comblerait tout seul.
+ * ⚠️ Le DEBALLAGE d'une adresse emballee en JSON se fait UNE fois, cote serveur
+ * (`extractHumanAddressLabel`, `event-composition.ts`). Ici on ne garde que le
+ * garde-fou : tout ce qui n'est pas une chaine non vide vaut « absent », pour
+ * qu'aucun objet brut n'arrive a l'ecran.
+ * @param {unknown} value
+ * @returns {string}
+ */
+const readableAddress = (value) => (typeof value === 'string' ? value.trim() : '');
+
 const getPlayerInitials = (player) => `${player?.firstname?.charAt(0) || ''}${player?.lastname?.charAt(0) || ''}`.toUpperCase() || '?';
 
 /**
@@ -58,6 +73,7 @@ function CompositionMessageBubble({ composition, isMe = false }) {
   if (!composition) return null;
 
   const {
+    eventAddress,
     eventDate,
     eventId,
     eventName,
@@ -81,7 +97,18 @@ function CompositionMessageBubble({ composition, isMe = false }) {
 
   const allPlayers = [...teamPlayers, ...manualPlayers, ...reservePlayers, ...snapshotPlayers];
 
-  const formattedDate = eventDate ? dayjs(eventDate).locale('fr').format('DD/MM/YYYY') : '';
+  // U06 — l'heure etait DEJA dans `eventDate` (champ `datetime` cote serveur) et
+  // partait a la poubelle : la carte n'en gardait que le jour.
+  const eventMoment = eventDate ? dayjs(eventDate).locale('fr') : null;
+  const formattedDate = eventMoment ? eventMoment.format('DD/MM/YYYY') : '';
+  const formattedTime = eventMoment ? eventMoment.format('HH:mm') : '';
+  const whenLine = [formattedDate, formattedTime].filter(Boolean).join(' · ');
+  const addressLine = readableAddress(eventAddress) || 'Lieu non précisé';
+  const teamLine = `${teamName || 'Equipe'}${publishedVersion ? ` · v${publishedVersion}` : ''}`;
+  // Une carte de composition SANS evenement rattache (partage libre) n'a ni
+  // quand ni ou a annoncer : on ne lui colle pas un « Lieu non precise » qui ne
+  // repond a aucune question.
+  const hasEventContext = Boolean(eventName || whenLine);
 
   const handlePress = () => {
     navigation.navigate(RouteNames.EventStack, {
@@ -158,14 +185,12 @@ function CompositionMessageBubble({ composition, isMe = false }) {
       ]}
     >
       <View style={[styles.header, { borderBottomColor: Colors.neutral700 }]}>
-        <Text style={[Fonts.p2Bold, { color: Colors.neutral00 }]}>
+        {/* U06 — l'intitule tient desormais sur UNE ligne. A 250 px de large, il
+            partageait sa rangee avec la date : les deux se coupaient. Le nom du
+            match, le quand et le ou descendent dans le pied de carte. */}
+        <Text numberOfLines={1} style={[Fonts.p2Bold, { color: Colors.neutral00 }]}>
           {type === 'lineup_share' ? "Composition d'équipes publiée" : 'Composition du match'}
         </Text>
-        {formattedDate ? (
-          <Text style={[Fonts.p3, { color: Colors.neutral00 }]}>
-            {formattedDate}
-          </Text>
-        ) : null}
       </View>
 
       <RenderedTacticalField sport={sport} style={styles.miniField}>
@@ -180,10 +205,25 @@ function CompositionMessageBubble({ composition, isMe = false }) {
       </RenderedTacticalField>
 
       <View style={[styles.footer, { backgroundColor: Colors.neutral900 }]}>
-        <Text style={[Fonts.p4, { color: Colors.primary500 }]}>
-          {type === 'lineup_share'
-            ? `${teamName || 'Equipe'}${publishedVersion ? ` · v${publishedVersion}` : ''}`
-            : 'Appuyer pour voir la composition'}
+        {hasEventContext ? (
+          <>
+            {eventName ? (
+              <Text numberOfLines={2} style={[Fonts.p3Bold, { color: Colors.neutral00 }]}>
+                {eventName}
+              </Text>
+            ) : null}
+            {whenLine ? (
+              <Text numberOfLines={1} style={[Fonts.p4, { color: Colors.neutral200 }]}>
+                {whenLine}
+              </Text>
+            ) : null}
+            <Text numberOfLines={2} style={[Fonts.p4, { color: Colors.neutral200 }]}>
+              {addressLine}
+            </Text>
+          </>
+        ) : null}
+        <Text numberOfLines={1} style={[Fonts.p4, { color: Colors.primary500 }]}>
+          {type === 'lineup_share' ? teamLine : 'Appuyer pour voir la composition'}
         </Text>
       </View>
     </TouchableOpacity>
@@ -207,14 +247,13 @@ const styles = StyleSheet.create({
     top: 6,
   },
   footer: {
-    alignItems: 'center',
+    alignItems: 'flex-start',
+    gap: 2,
+    paddingHorizontal: 12,
     paddingVertical: 8,
   },
   header: {
-    alignItems: 'center',
     borderBottomWidth: 1,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
     paddingHorizontal: 12,
     paddingVertical: 10,
   },

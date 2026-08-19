@@ -1,7 +1,37 @@
+import { QueryClientContext } from '@tanstack/react-query';
+import { useCallback, useContext } from 'react';
 import { View } from 'react-native';
 
 import ErrorWrapper from '@/components/atoms/errorWrapper/ErrorWrapper';
 import SkeletonLoader from '@/components/atoms/skeletonLoader/SkeletonLoader';
+
+/**
+ * U06 — LE PAVE ROUGE PROPOSE ENFIN DE REESSAYER.
+ *
+ * 🧨 Le defaut mesure : `ErrorWrapper` sait rendre un bouton « Reessayer » depuis
+ * toujours (prop `onRetry`), mais ce composant — le SEUL chemin emprunte par les
+ * 30 fichiers d'ecran qui affichent un etat d'erreur — ne la lui passait jamais.
+ * Un hoquet reseau de 2 secondes devenait donc un cul-de-sac.
+ *
+ * La correction est ici, UNE fois (§1 bis), et pas ecran par ecran. Deux niveaux :
+ *   1. l'ecran fournit `onRetry` — il sait exactement quoi relancer, il gagne ;
+ *   2. sinon, on relance les requetes react-query REELLEMENT en echec.
+ *
+ * ⛔ AUCUN BOUTON INERTE : sans `onRetry` et sans requete en echec dans le cache,
+ * aucun bouton n'est rendu — il n'aurait rien a relancer.
+ *
+ * ⚠️ `QueryClientContext` plutot que `useQueryClient()` : ce dernier LEVE une
+ * exception hors d'un `QueryClientProvider`, et ce composant est monte par des
+ * dizaines de tests qui n'en posent pas. Le contexte nu rend `undefined`.
+ */
+
+/**
+ * Une requete react-query qui a REELLEMENT echoue — la seule qu'il vaille la
+ * peine de relancer.
+ * @param {import('@tanstack/react-query').Query} query - La requete du cache.
+ * @returns {boolean} Est-elle en echec ?
+ */
+const isFailedQuery = (query) => query?.state?.status === 'error';
 
 /**
  * Content wrapper component that handles loading and error states.
@@ -10,6 +40,8 @@ import SkeletonLoader from '@/components/atoms/skeletonLoader/SkeletonLoader';
  * @param {boolean} props.isLoading
  * @param {unknown} [props.error]
  * @param {string} [props.backgroundColor]
+ * @param {() => void} [props.onRetry] - Relance choisie par l'ecran. Prioritaire.
+ * @param {string} [props.retryLabel]
  * @param {Array<import('react-native').ViewStyle>} [props.wrapperStyle]
  * @returns {import('react').ReactElement}
  */
@@ -18,8 +50,21 @@ function WithDataWrapper({
   children,
   error,
   isLoading,
+  onRetry = undefined,
+  retryLabel = 'Réessayer',
   wrapperStyle,
 }) {
+  const queryClient = useContext(QueryClientContext);
+
+  const retryFailedQueries = useCallback(() => {
+    queryClient?.refetchQueries({ predicate: isFailedQuery });
+  }, [queryClient]);
+
+  const hasFailedQuery = Boolean(
+    queryClient?.getQueryCache().getAll().some(isFailedQuery),
+  );
+  const handleRetry = onRetry || (hasFailedQuery ? retryFailedQueries : undefined);
+
   if (isLoading) {
     return (
       <SkeletonLoader
@@ -36,6 +81,8 @@ function WithDataWrapper({
     return (
       <ErrorWrapper
         error={error}
+        onRetry={handleRetry}
+        retryLabel={retryLabel}
         wrapperStyle={wrapperStyle}
       >
         {children}

@@ -218,21 +218,54 @@ describe('L20 — un refus se dit, il ne se tait pas', () => {
   });
 });
 
-describe('TEMOIN POSITIF — iOS ne change pas', () => {
-  it('le fichier part toujours par la feuille de partage native, avec son message', async () => {
+// ⚠️ CE BLOC A CHANGE DE VERDICT LE 2026-08-18 (U06), ET C EST MESURE.
+//
+// 🗣️ Adel, sur iPhone : « quand je selectionne enregistrer l'image, ça marque
+// echec du telechargement. Par contre enregistrer dans Fichiers fonctionne, mais
+// ça me telecharge le PDF ET un autre fichier texte. »
+//
+// 🧨 LA CAUSE, ET ELLE EST UNIQUE : `Share.share({ message, url })` construit sur
+// iOS DEUX elements a partager — une NSString et une NSURL. « Enregistrer
+// l'image » n'accepte que des images : la chaine fait echouer TOUT le geste, d ou
+// « echec du telechargement ». « Enregistrer dans Fichiers », lui, accepte les
+// deux et ecrit donc le fichier ET la chaine, cette derniere en `.txt`. LE
+// SECOND FICHIER, C EST LE MESSAGE.
+//
+// ⇒ Sur un partage de FICHIER, iOS ne recoit plus que le fichier, et la phrase
+// part au presse-papiers — exactement la solution deja retenue pour Android
+// (R05). Un partage de LIEN, lui, ne passe pas par ici et garde son message.
+describe('U06 — iOS ne partage plus QU UN SEUL element : le fichier', () => {
+  it('temoin 5 — la charge iOS ne porte que le fichier, jamais un second element texte', async () => {
     const result = await downloadAndShareRender(PNG_PARAMS);
 
-    expect(Share.share).toHaveBeenCalledWith({
-      message: PNG_PARAMS.message,
-      url: `file://${PNG_PATH}`,
-    });
+    expect(Share.share).toHaveBeenCalledWith({ url: `file://${PNG_PATH}` });
+    expect(Share.share.mock.calls[0][0]).not.toHaveProperty('message');
     expect(result.outcome).toBe('shareSheet');
   });
 
-  it('sans message a joindre, la charge reste reduite au fichier (comportement livre)', async () => {
-    await downloadAndShareRender({ ...PNG_PARAMS, message: undefined });
+  it('la phrase n est pas perdue : elle part au presse-papiers, et ça se dit', async () => {
+    const result = await downloadAndShareRender(PNG_PARAMS);
+
+    expect(Clipboard.setString).toHaveBeenCalledWith(PNG_PARAMS.message);
+    expect(result.messageCopied).toBe(true);
+  });
+
+  it('sans message a joindre, rien n est copie et rien n est promis', async () => {
+    const result = await downloadAndShareRender({ ...PNG_PARAMS, message: undefined });
 
     expect(Share.share).toHaveBeenCalledWith({ url: `file://${PNG_PATH}` });
+    expect(Clipboard.setString).not.toHaveBeenCalled();
+    expect(result.messageCopied).toBe(false);
+  });
+
+  it('un PDF part avec le type PDF, une image avec le type image', async () => {
+    ReactNativeBlobUtil.fetch.mockResolvedValue(renderResponse('application/pdf'));
+
+    await downloadAndShareRender({ ...PNG_PARAMS, format: 'print' });
+
+    // Le nom du fichier porte l extension : c est elle qu iOS lit pour decider
+    // quelles actions proposer dans la feuille de partage.
+    expect(String(Share.share.mock.calls[0][0].url)).toMatch(/\.pdf$/);
   });
 
   it('aucune ecriture Android n est declenchee sur iOS', async () => {
@@ -372,11 +405,17 @@ describe('R05 — sur Android, la phrase de partage atteint l utilisateur', () =
     expect(result).toMatchObject({ messageCopied: false, outcome: 'gallery' });
   });
 
-  it('rien n est copie sur iOS — la feuille de partage porte deja le texte', async () => {
+  // ⚠️ VERDICT INVERSE LE 2026-08-18 (U06) — mesure, pas confort.
+  // R05 partait du principe que « la feuille de partage porte deja le texte ».
+  // C'est vrai, mais elle le porte comme un SECOND ELEMENT A PARTAGER : c'est lui
+  // qui faisait echouer « Enregistrer l'image » et qui deposait un `.txt` inutile
+  // a cote du PDF. iOS ne recoit plus que le fichier ; le presse-papiers prend
+  // donc la phrase, exactement comme sur Android.
+  it('U06 — sur iOS AUSSI la phrase passe desormais par le presse-papiers', async () => {
     Platform.OS = 'ios';
 
     await downloadAndShareRender(PNG_PARAMS);
 
-    expect(Clipboard.setString).not.toHaveBeenCalled();
+    expect(Clipboard.setString).toHaveBeenCalledWith(PNG_PARAMS.message);
   });
 });

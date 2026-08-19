@@ -578,9 +578,26 @@ export const resolveNotificationDestination = (rawPayload = {}) => {
     case NOTIFICATION_TYPES.ADD_TO_TEAM:
     case NOTIFICATION_TYPES.NEW_TEAM:
     case NOTIFICATION_TYPES.TEAM_EXTERNAL_SOURCE_UPDATED:
-
-    case NOTIFICATION_TYPES.TEAM_MEMBERSHIP_REQUEST:
+    case NOTIFICATION_TYPES.TEAM_MEMBERSHIP_REQUEST: {
+      // U06 — LA PORTE QUI MANQUAIT. `TeamMembershipRequestList` etait construit,
+      // branche dans `TeamStack` et expose sur le web (`/teams/:teamId/requests`),
+      // avec ZERO appelant dans tout `app/src` : meme CETTE notification-ci
+      // renvoyait vers la fiche de l equipe, ou rien ne parle des demandes en
+      // attente. Miroir exact de la porte du club (`CLUB_MEMBERSHIP_REQUEST` +
+      // `requestType === 'claim'`, plus bas).
+      // ⚠️ Sans `teamId` l ecran n a rien a lister : on retombe sur la fiche.
+      const requestTeamId = normalizeEntityId(payload.teamId);
+      if (type === NOTIFICATION_TYPES.TEAM_MEMBERSHIP_REQUEST && requestTeamId) {
+        return adaptDestinationForCurrentPlatform(payload, {
+          params: {
+            params: { teamId: requestTeamId },
+            screen: RouteNames.TeamMembershipRequests,
+          },
+          route: RouteNames.TeamStack,
+        });
+      }
       return adaptDestinationForCurrentPlatform(payload, teamDetailsDestination(payload.teamId));
+    }
 
     case NOTIFICATION_TYPES.AFFILIATION_HELP_REQUEST:
       return adaptDestinationForCurrentPlatform(payload, {
