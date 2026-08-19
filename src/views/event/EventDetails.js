@@ -28,6 +28,7 @@ import { getCurrentUserEventParticipationState } from '@/domains/event/participa
 import useMessaging from '@/domains/messaging/useMessaging';
 import {
   getParticipationErrorMessage,
+  resolveClientSourceTeamForUser,
   resolveParticipationFlow,
 } from '@/domains/participation/participationFlow';
 import { getSubscriptionQuotaItem, hasActiveClubOffer } from '@/domains/subscription/subscriptionDecision';
@@ -1601,6 +1602,15 @@ function EventDetails({ navigation, route }) {
     participationState: currentUserParticipationState,
     user: userData,
   }), [currentUserParticipationState, detectionSlots.length, event, userData]);
+  // W01 — MEMBRE D'UNE EQUIPE CONVIEE, au sens EXACT du serveur : figurer dans
+  // `players` OU dans `trainers` (`event-audience.ts:253 getTeamMembers`). On
+  // appelle la fonction partagee plutot que `isTeamMember` de cet ecran, qui ne
+  // regarde que l'evenement : le profil d'un encadrant porte aussi ses equipes,
+  // et deux definitions de « membre » dans la meme app finiraient par diverger.
+  const isConvenedTeamMember = useMemo(
+    () => Boolean(resolveClientSourceTeamForUser(event, userData)),
+    [event, userData],
+  );
   const tournamentAwareParticipationFlow = useMemo(() => {
     if (!isTournamentEvent || isStageDayEvent || userData?.role?.name !== USER_ROLES.player) {
       return currentParticipationFlow;
@@ -4606,11 +4616,25 @@ function EventDetails({ navigation, route }) {
     // la condition, sinon un organisateur sans cotisation basculerait dans la
     // branche du bas et recevrait les boutons de participation qu'il n'a jamais
     // eus.
+    // W01 — UN ORGANISATEUR QUI FAIT PARTIE DE L'EQUIPE REPOND AUSSI.
+    //
+    // `canEdit` a longtemps suffi a retirer les boutons de reponse : un
+    // organisateur « ne repond pas, il organise ». Le lot U02 a change la regle
+    // du serveur — un entraineur ou un dirigeant MEMBRE de l'equipe est
+    // desormais accepte — et c'est exactement le compte d'Adel : il entraine
+    // l'equipe, donc `canEdit` est vrai, donc l'ecran ne montait meme pas le
+    // composant. Le bouton n'etait pas gris, il etait ABSENT.
+    //
+    // 🔒 L'organisateur qui n'est membre d'aucune equipe conviee (le club qui
+    // pilote un evenement d'une autre equipe) garde l'ecran d'avant : sans
+    // equipe source, le serveur refuserait sa reponse.
+    const canAnswerWhileManaging = !canEdit || isConvenedTeamMember;
+
     if (hasManageActions || eventLicenseCampaignActionsNode) {
       return (
         <View style={[Spaces.gap[12]]}>
           {eventLicenseCampaignActionsNode}
-          {!canEdit ? eventAnswerButtonsNode : null}
+          {canAnswerWhileManaging ? eventAnswerButtonsNode : null}
           {pendingFeaturedActionNode}
         </View>
       );

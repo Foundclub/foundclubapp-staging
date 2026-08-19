@@ -677,6 +677,45 @@ describe('EventDetails — bas de page : ce qui est atteignable (invariant D21)'
   });
 });
 
+describe('W01 — l encadrant MEMBRE peut repondre depuis la fiche', () => {
+  // Le serveur (lot U02, admin `91da36c`) accepte la reponse de qui figure dans
+  // `players` OU `trainers` d une equipe conviee — le role n entre nulle part.
+  // Sur la fiche, l entraineur de l equipe a `canManageEvent` vrai, et l ecran
+  // ne montait alors MEME PAS les boutons de reponse : le bouton d Adel n etait
+  // pas gris, il etait absent.
+  const eventWithCoach = () => buildEvent({
+    team: {
+      club: { documentId: CLUB_ID },
+      documentId: TEAM_ID,
+      name: 'U15',
+      players: [{ documentId: 'joueur-1' }],
+      trainers: [{ documentId: 'user-1' }],
+    },
+  });
+
+  test('W01 · temoin 1 — entraineur MEMBRE et organisateur : il garde son menu ET recoit les boutons de reponse', () => {
+    const root = asOrganiser({ event: eventWithCoach() });
+
+    expect(hasText(root, 'DOUBLURE_EventAnswerButtons')).toBe(true);
+    expect(bottomActionInventory(root)).toContain('edit');
+  });
+
+  test('W01 · temoin 3 🔒 — organisateur NON membre : aucun bouton de reponse, comme avant', () => {
+    // `buildEvent` ne declare ni joueurs ni encadrants : l organisateur n est
+    // membre d aucune equipe conviee, donc le serveur refuserait sa reponse.
+    const root = asOrganiser();
+
+    expect(hasText(root, 'DOUBLURE_EventAnswerButtons')).toBe(false);
+  });
+
+  test('W01 · temoin 4 🔒 — le participant simple ne change pas : il a toujours ses boutons', () => {
+    const root = mountScreen({ event: eventWithCoach() });
+
+    expect(hasText(root, 'DOUBLURE_EventAnswerButtons')).toBe(true);
+    expect(bottomActionInventory(root)).toEqual([]);
+  });
+});
+
 describe('EventDetails — bas de page : etat LIVRE avant D21 (caracterisation)', () => {
   test('TEMOIN NEGATIF : sans suggestion et sans campagne, AUCUN geste de cotisation', () => {
     const root = asClubManager();

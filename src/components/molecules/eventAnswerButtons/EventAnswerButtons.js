@@ -5,7 +5,7 @@ import { USER_ROLES } from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
 import { getCurrentUserEventParticipationState, resolveRsvpAnswer } from '@/domains/event/participationState';
 import useEvent from '@/domains/event/useEvent';
-import { resolveParticipationFlow } from '@/domains/participation/participationFlow';
+import { resolveClientSourceTeamForUser, resolveParticipationFlow } from '@/domains/participation/participationFlow';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -90,8 +90,24 @@ function EventAnswerButtons({
     isParticipating: alreadyJoined,
   });
 
-  // If user is a player, show appropriate participation buttons
-  if (userData?.role?.name === USER_ROLES.player) {
+  // W01 — QUI VOIT « PRESENT » / « ABSENT » : QUI FAIT PARTIE DE L EQUIPE.
+  //
+  // Le serveur accepte la reponse d un entraineur ou d un dirigeant MEMBRE
+  // depuis le lot U02 ; ce composant, lui, ouvrait la rangee de reponse au seul
+  // intitule `player`. Un encadrant convoque n avait donc AUCUN bouton — le
+  // « bouton gris » du constat d Adel. On reutilise la meme fonction que la
+  // regle partagee (`resolveClientSourceTeamForUser`) : une seule definition de
+  // « membre » dans l app, celle que le serveur applique.
+  //
+  // ⛔ Un organisateur garde ses commandes : quand l appelant fournit
+  // `onEdit` ET `onCancel`, c est qu il monte ce composant pour PILOTER
+  // l evenement, pas pour y repondre. La branche du bas reste la sienne.
+  const isConvenedMember = Boolean(resolveClientSourceTeamForUser(event, userData));
+  const showsOrganizerActions = Boolean(onEdit && onCancel);
+  const canAnswerAsMember = isConvenedMember && !showsOrganizerActions;
+
+  // If user is a player — or a member of a convened team — show the answer buttons
+  if (userData?.role?.name === USER_ROLES.player || canAnswerAsMember) {
     if (isStageDayEvent && dailyRsvpStatus) {
       let statusLabel = '';
       if (dailyRsvpStatus === 'present') statusLabel = t('eventList.info.alreadyJoined');
