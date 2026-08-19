@@ -11,6 +11,10 @@ import useTheme from '@/theme/themeContext';
 import Button from '@/components/atoms/button/Button';
 import WizardStepLayout from '@/components/molecules/wizardStepLayout/WizardStepLayout';
 import { useTeamWizard } from '@/views/team/wizard/TeamWizardContext';
+import TeamWizardEmptyReferential, {
+  getStepFooterProps,
+  isReferentialEmpty,
+} from '@/views/team/wizard/TeamWizardEmptyReferential';
 import useTeamWizardExit from '@/views/team/wizard/useTeamWizardExit';
 
 import { RouteNames } from '@/navigation/routeNames';
@@ -49,10 +53,26 @@ function TeamWizardCategory({ navigation }) {
     });
   })();
 
+  // W06 — le referentiel a repondu, et il n'a rien a proposer : voir
+  // `TeamWizardEmptyReferential` pour la mesure qui exclut le filtre et la panne.
+  // ⚠️ On interroge la liste DEDOUBLONNEE, pas la reponse brute : c'est elle que
+  // l'ecran affiche, et elle seule dit s'il reste une tuile a toucher.
+  const isListEmpty = isReferentialEmpty({
+    ...categoriesQuery,
+    data: dedupedCategories,
+  });
+  const footer = getStepFooterProps({
+    hasSelection: Boolean(state.category),
+    isBlocked: isLoading || hasError,
+    isEmpty: isListEmpty,
+    nextLabel: t('common.next', 'Suivant'),
+    skipLabel: t('teamWizard.steps.category.skipEmpty', 'Continuer sans catégorie'),
+  });
+
   return (
     <WizardStepLayout
-      isNextDisabled={!state.category || isLoading || hasError}
-      nextLabel={t('common.next', 'Suivant')}
+      isNextDisabled={footer.isNextDisabled}
+      nextLabel={footer.nextLabel}
       onBack={() => navigation.navigate(RouteNames.TeamWizardActivity)}
       onClose={handleExitWizard}
       onNext={() => navigation.navigate(RouteNames.TeamWizardLevel)}
@@ -78,6 +98,10 @@ function TeamWizardCategory({ navigation }) {
             </Text>
             <Button onPress={() => categoriesQuery.refetch()} title="Réessayer" variant="Secondary" />
           </View>
+        ) : null}
+
+        {isListEmpty ? (
+          <TeamWizardEmptyReferential missing="Aucune catégorie d’âge n’est proposée pour le moment." />
         ) : null}
 
         <View

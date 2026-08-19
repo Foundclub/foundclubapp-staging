@@ -14,6 +14,10 @@ import Input from '@/components/molecules/input/Input';
 import WizardOptionCard from '@/components/molecules/wizardOptionCard/WizardOptionCard';
 import WizardStepLayout from '@/components/molecules/wizardStepLayout/WizardStepLayout';
 import { useTeamWizard } from '@/views/team/wizard/TeamWizardContext';
+import TeamWizardEmptyReferential, {
+  getStepFooterProps,
+  isReferentialEmpty,
+} from '@/views/team/wizard/TeamWizardEmptyReferential';
 import useTeamWizardExit from '@/views/team/wizard/useTeamWizardExit';
 
 import { RouteNames } from '@/navigation/routeNames';
@@ -89,6 +93,22 @@ function TeamWizardActivity({ navigation }) {
     }
   }, [allActivities, dispatch, state.activities]);
 
+  // W06 — le referentiel a repondu, et il n'a rien a proposer : voir
+  // `TeamWizardEmptyReferential` pour la mesure qui exclut le filtre et la panne.
+  // ⚠️ On interroge `allActivities`, JAMAIS la liste filtree : une recherche qui
+  // ne trouve rien n'est PAS un referentiel vide, elle a deja sa phrase a elle
+  // et son issue (effacer la recherche).
+  const isListEmpty = isReferentialEmpty({ ...activitiesQuery, data: allActivities });
+  const footer = getStepFooterProps({
+    hasSelection: Boolean(state.activities),
+    isBlocked: isLoading || hasError || isClubMissing,
+    // ⛔ Sans club, le tunnel n'a rien a creer : passer l'etape ne sauverait
+    // rien, et l'ecran garde son aiguillage « reviens a la liste des equipes ».
+    isEmpty: isListEmpty && !isClubMissing,
+    nextLabel: t('common.next', 'Suivant'),
+    skipLabel: t('teamWizard.steps.activity.skipEmpty', 'Continuer sans sport'),
+  });
+
   const handleSelectActivity = (/** @type {string} */ activityDocumentId) => {
     dispatch({ payload: activityDocumentId, type: 'SET_ACTIVITY' });
     navigation.navigate(RouteNames.TeamWizardCategory);
@@ -96,8 +116,8 @@ function TeamWizardActivity({ navigation }) {
 
   return (
     <WizardStepLayout
-      isNextDisabled={!state.activities || isLoading || hasError || isClubMissing}
-      nextLabel={t('common.next', 'Suivant')}
+      isNextDisabled={footer.isNextDisabled}
+      nextLabel={footer.nextLabel}
       onBack={() => navigation.navigate(RouteNames.TeamWizardSection)}
       onClose={handleExitWizard}
       onNext={() => navigation.navigate(RouteNames.TeamWizardCategory)}
@@ -219,12 +239,14 @@ function TeamWizardActivity({ navigation }) {
               </>
             ) : null}
 
-            {filteredActivities.length === 0 ? (
+            {filteredActivities.length > 0 || !normalizedSearch ? null : (
               <Text style={[Fonts.p2, Fonts.neutral300, Spaces.marginTop[8]]}>
-                {normalizedSearch
-                  ? 'Aucun sport ne correspond à ta recherche.'
-                  : 'Aucun sport n’est disponible pour le moment.'}
+                Aucun sport ne correspond à ta recherche.
               </Text>
+            )}
+
+            {isListEmpty ? (
+              <TeamWizardEmptyReferential missing="Aucun sport n’est proposé pour le moment." />
             ) : null}
           </>
         ) : null}

@@ -21,6 +21,7 @@ import Button from '@/components/atoms/button/Button';
 import SubscriptionPaywallSheet from '@/components/molecules/subscriptionPaywallSheet/SubscriptionPaywallSheet';
 import WizardStepLayout from '@/components/molecules/wizardStepLayout/WizardStepLayout';
 import { useTeamWizard } from '@/views/team/wizard/TeamWizardContext';
+import { isReferentialEmpty } from '@/views/team/wizard/TeamWizardEmptyReferential';
 import useTeamWizardExit from '@/views/team/wizard/useTeamWizardExit';
 
 import { RouteNames } from '@/navigation/routeNames';
@@ -167,17 +168,34 @@ function TeamWizardRecap({ navigation }) {
     },
   });
 
+  // W06 — UNE ETAPE PASSEE FAUTE DE REFERENTIEL NE DOIT PAS REBLOQUER ICI.
+  // Les etapes 3 a 6 laissent desormais continuer quand leur liste globale est
+  // vide (voir `TeamWizardEmptyReferential`). Sans ces quatre echappatoires, le
+  // cul-de-sac ne serait pas repare : il se contenterait de se DEPLACER a la
+  // derniere marche, apres huit ecrans remplis pour rien.
+  // ⚠️ C'est bien une exigence de l'APP, pas du serveur : `section`, `category`,
+  // `level` et `activities` sont des relations OPTIONNELLES du content-type
+  // `team`, et `handleSubmit` poste deja `undefined` pour une valeur absente.
+  const isActivityOptional = isReferentialEmpty(activitiesQuery);
+  const isCategoryOptional = isReferentialEmpty(categoriesQuery);
+  const isLevelOptional = isReferentialEmpty(levelsQuery);
+  const isSectionOptional = isReferentialEmpty(sectionsQuery);
+
   const isRecapReady = useMemo(
     () => Boolean(
       selectedOverview.name
-      && selectedOverview.section
-      && selectedOverview.activity
-      && selectedOverview.category
-      && selectedOverview.level
+      && (selectedOverview.section || isSectionOptional)
+      && (selectedOverview.activity || isActivityOptional)
+      && (selectedOverview.category || isCategoryOptional)
+      && (selectedOverview.level || isLevelOptional)
       && selectedOverview.trainers.length > 0
       && selectedOverview.clubId,
     ),
     [
+      isActivityOptional,
+      isCategoryOptional,
+      isLevelOptional,
+      isSectionOptional,
       selectedOverview.activity,
       selectedOverview.category,
       selectedOverview.clubId,

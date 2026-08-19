@@ -11,6 +11,10 @@ import Button from '@/components/atoms/button/Button';
 import WizardOptionCard from '@/components/molecules/wizardOptionCard/WizardOptionCard';
 import WizardStepLayout from '@/components/molecules/wizardStepLayout/WizardStepLayout';
 import { useTeamWizard } from '@/views/team/wizard/TeamWizardContext';
+import TeamWizardEmptyReferential, {
+  getStepFooterProps,
+  isReferentialEmpty,
+} from '@/views/team/wizard/TeamWizardEmptyReferential';
 import useTeamWizardExit from '@/views/team/wizard/useTeamWizardExit';
 
 import { RouteNames } from '@/navigation/routeNames';
@@ -32,6 +36,16 @@ function TeamWizardLevel({ navigation }) {
   const { data: levels } = levelsQuery;
   const { isLoading } = levelsQuery;
   const hasError = Boolean(levelsQuery.error);
+  // W06 — le referentiel a repondu, et il n'a rien a proposer : voir
+  // `TeamWizardEmptyReferential` pour la mesure qui exclut le filtre et la panne.
+  const isListEmpty = isReferentialEmpty(levelsQuery);
+  const footer = getStepFooterProps({
+    hasSelection: Boolean(state.level),
+    isBlocked: isLoading || hasError,
+    isEmpty: isListEmpty,
+    nextLabel: t('common.next', 'Suivant'),
+    skipLabel: t('teamWizard.steps.level.skipEmpty', 'Continuer sans niveau'),
+  });
 
   const handleSelectLevel = (/** @type {string} */ levelDocumentId) => {
     dispatch({ payload: levelDocumentId, type: 'SET_LEVEL' });
@@ -40,8 +54,8 @@ function TeamWizardLevel({ navigation }) {
 
   return (
     <WizardStepLayout
-      isNextDisabled={!state.level || isLoading || hasError}
-      nextLabel={t('common.next', 'Suivant')}
+      isNextDisabled={footer.isNextDisabled}
+      nextLabel={footer.nextLabel}
       onBack={() => navigation.navigate(RouteNames.TeamWizardCategory)}
       onClose={handleExitWizard}
       onNext={() => navigation.navigate(RouteNames.TeamWizardTrainers)}
@@ -67,6 +81,10 @@ function TeamWizardLevel({ navigation }) {
             </Text>
             <Button onPress={() => levelsQuery.refetch()} title="Réessayer" variant="Secondary" />
           </View>
+        ) : null}
+
+        {isListEmpty ? (
+          <TeamWizardEmptyReferential missing="Aucun niveau n’est proposé pour le moment." />
         ) : null}
 
         {(levels || []).map((level) => {
