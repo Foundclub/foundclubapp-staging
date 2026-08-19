@@ -3053,6 +3053,12 @@ export default {
     customizeHint: 'Modifie les textes avant de télécharger. Laisse vide pour garder le texte proposé.',
     downloadError: 'Le téléchargement a échoué. Vérifie ta connexion et réessaie.',
     error: 'Le visuel n\'a pas pu être généré.',
+    // X01 : le titre héros des gabarits Tournoi et Neutre. Le serveur ne PEUT PAS
+    // connaître le titre d'un événement (`event.name` est réécrit en « Type - date
+    // - Équipe » à chaque enregistrement) : c'est ici que l'organisateur l'écrit.
+    evenement: {
+      placeholderTitre: 'Notre événement',
+    },
     fieldEquipe: 'Équipe',
     fieldLieu: 'Lieu',
     fieldNiveau: 'Niveau',

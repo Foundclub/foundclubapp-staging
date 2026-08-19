@@ -38,15 +38,19 @@ import {
 } from '@/domains/event/eventUseCases';
 
 /**
- * Le gabarit servi aux types qui n'ont pas encore le leur.
+ * Le gabarit servi aux types qui n'ont pas le leur.
  *
- * Ce n'est pas un defaut technique, c'est une DECISION : tant que le studio n'a
- * pas dessine l'affiche du match / de l'entrainement / du tournoi / du stage,
- * ces evenements gardent celle de la detection plutot que de n'avoir aucune
- * affiche a partager. Sa promesse est fausse pour eux — c'est le prix assume,
- * et c'est le premier point du brief design.
+ * 🎯 X01 (2026-08-19) — CE REPLI A CHANGE DE NATURE. Jusqu'ici il valait
+ * `affiche-detection` : un match, un tournoi, un stage recevaient l'affiche
+ * d'une detection, avec sa promesse « Viens montrer ce que tu vaux ». Le studio
+ * a livre le gabarit NEUTRE, qui ne promet rien qu'on ne tienne pas et n'emploie
+ * AUCUN vocabulaire sportif — il sert « Autre », « Stage », et tout type que le
+ * serveur ajoutera demain.
+ *
+ * ⇒ Un type inconnu ne recoit plus l'affiche de quelqu'un d'autre : il recoit
+ * une affiche qui ne dit que ce qui est vrai.
  */
-export const EVENT_SHOWCASE_FALLBACK_TEMPLATE = 'affiche-detection';
+export const EVENT_SHOWCASE_FALLBACK_TEMPLATE = 'affiche-evenement';
 
 /**
  * Le gabarit d'affiche d'un evenement, decide par son type.
@@ -61,10 +65,20 @@ export const EVENT_SHOWCASE_FALLBACK_TEMPLATE = 'affiche-detection';
 export const getEventShowcaseTemplate = (typeName) => {
   // La detection a SON gabarit : elle le demande nommement, elle ne compte plus
   // sur le repli. C'est toute la difference entre un choix et un accident.
+  // 🔒 Il n'a PAS bouge avec X01 : c'etait le seul qui marchait.
   if (isDetectionEventType(typeName)) return 'affiche-detection';
 
-  // Match · Entrainement · Tournoi · Stage · Autre · Reservation, et tout type
-  // que le serveur ajouterait demain : aucun gabarit dedie n'existe encore.
+  // G1 · le seul type a deux camps : on dit qui recoit qui, aux supporters des
+  // deux equipes.
+  if (isMatchEventType(typeName)) return 'affiche-match';
+
+  // G2 · une journee entiere, adressee a des SPECTATEURS — pas a des
+  // participants. C'est le seul type dans ce cas.
+  if (isTournamentEventType(typeName)) return 'affiche-tournoi';
+
+  // G3 · « Autre », « Stage », l'entrainement (dont la porte est fermee par
+  // `isEventShowcaseOffered`), la reservation (type grise), un type absent, et
+  // tout type futur : le gabarit neutre, sans vocabulaire sportif.
   return EVENT_SHOWCASE_FALLBACK_TEMPLATE;
 };
 

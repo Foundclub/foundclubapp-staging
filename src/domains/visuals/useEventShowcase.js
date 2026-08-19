@@ -270,7 +270,64 @@ const RECHERCHE_FIELDS = [
 ];
 
 /**
- * Catalogue des gabarits d'affiche servis par le showcase généralisé.
+ * Champs texte editables des 3 gabarits d'evenement (X01).
+ *
+ * 🎯 POURQUOI `titre` EST EDITABLE, ET CE QUE CA REPARE : mesure du 2026-08-19,
+ * `event.name` est REECRIT a chaque enregistrement par le serveur sous la forme
+ * machine « Type - jj/mm/aaaa - Equipe », et le tunnel de creation ne propose
+ * AUCUN champ titre. Le serveur ne peut donc pas connaitre le titre d'un
+ * evenement. Le gabarit porte un titre neutre qui n'affirme rien de faux, et
+ * c'est ICI que l'organisateur le remplace mot pour mot.
+ *
+ * ⛔ `adversaire` n'est pas editable : un adversaire saisi a la main sur une
+ * affiche publique serait exactement l'affirmation inventee que D94 a retiree.
+ */
+const EVENEMENT_FIELDS = [
+  {
+    key: 'titre',
+    labelDefault: 'Titre',
+    labelKey: 'showcase.fieldTitre',
+    maxLength: 80,
+    placeholder: { default: 'Notre événement', key: 'showcase.evenement.placeholderTitre' },
+  },
+  {
+    key: 'accroche',
+    labelDefault: 'Accroche',
+    labelKey: 'showcase.fieldTitreAccent',
+    maxLength: 80,
+  },
+  {
+    key: 'lieu', labelDefault: 'Lieu', labelKey: 'showcase.fieldLieu', maxLength: 80,
+  },
+  {
+    key: 'niveau', labelDefault: 'Niveau', labelKey: 'showcase.fieldNiveau', maxLength: 80,
+  },
+  {
+    key: 'qrLabel',
+    labelDefault: 'Texte sous le QR code',
+    labelKey: 'showcase.fieldQrLabel',
+    maxLength: 60,
+  },
+];
+
+/** G1 · Match : pas de titre heros (le heros est le duel), mais une accroche. */
+const MATCH_FIELDS = EVENEMENT_FIELDS.filter((field) => field.key !== 'titre');
+
+/**
+ * Textes d'ecran communs aux 3 gabarits d'evenement : ce sont les MEMES que ceux
+ * de la detection (« Ton evenement est en ligne »), qui parlent deja de
+ * l'evenement et pas de son type. Le message de partage, lui, suit le type via
+ * `getEventShowcaseShareIntro` (D94/C2) — l'ecran le prefere a `shareIntro`.
+ */
+const EVENEMENT_TEXTS = {
+  shareIntro: { default: 'Voici notre prochain événement !', key: 'showcase.shareIntroByType.neutre' },
+  shareLinkLabel: { default: 'Voir l’événement', key: 'showcase.shareLabel' },
+  subtitle: { default: 'Fais-le voir. Plus il est vu, plus tu remplis.', key: 'showcase.subtitle' },
+  title: { default: 'Ton événement est en ligne', key: 'showcase.title' },
+};
+
+/**
+ * Catalogue des gabarits d'affiche servis par le showcase generalise.
  * Clé = slug de template serveur. Chaque entrée résout le sujet, les variantes
  * (chips de style), les champs éditables, les formats de rendu et les textes d'écran
  * (libellés FR par défaut). DÉFAUT du showcase = 'affiche-detection' (comportement event).
@@ -299,6 +356,36 @@ export const SHOWCASE_TEMPLATES = {
       title: { default: 'Ton événement est en ligne', key: 'showcase.title' },
     },
     variants: DETECTION_VARIANTS,
+  },
+  // X01 — les 3 gabarits d'evenement. ⚠️ `variants: []` est VOULU : le studio a
+  // arrete « 3 gabarits x 1 style ». L'ecran n'affiche donc aucune puce de style,
+  // et le serveur retombe sur l'unique variante du gabarit.
+  'affiche-evenement': {
+    editableFields: EVENEMENT_FIELDS,
+    formats: DEFAULT_FORMATS,
+    subjectType: 'event',
+    texts: EVENEMENT_TEXTS,
+    variants: [],
+  },
+  'affiche-match': {
+    editableFields: MATCH_FIELDS,
+    formats: DEFAULT_FORMATS,
+    subjectType: 'event',
+    texts: {
+      ...EVENEMENT_TEXTS,
+      shareIntro: { default: 'Viens nous encourager pour ce match !', key: 'showcase.shareIntroByType.match' },
+    },
+    variants: [],
+  },
+  'affiche-tournoi': {
+    editableFields: EVENEMENT_FIELDS,
+    formats: DEFAULT_FORMATS,
+    subjectType: 'event',
+    texts: {
+      ...EVENEMENT_TEXTS,
+      shareIntro: { default: 'Viens vivre notre tournoi !', key: 'showcase.shareIntroByType.tournoi' },
+    },
+    variants: [],
   },
   'avis-de-recherche': {
     editableFields: RECHERCHE_FIELDS,
