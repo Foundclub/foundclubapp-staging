@@ -199,6 +199,36 @@ describe('requestMappers', () => {
     }));
   });
 
+  // V01 (2026-08-18) — l'interet porte AU CLUB, sans equipe nommee. Il
+  // n'existait qu'en theorie tant que le serveur le refusait des qu'un club
+  // avait une equipe ; il arrive desormais chez les dirigeants, et le repli
+  // « Equipe » leur mentait : personne n'a nomme d'equipe.
+  test('V01 — un interet AU CLUB nomme le club, jamais une equipe fantome', () => {
+    const item = mapClubInterestRequestToHubItem({
+      club: {
+        documentId: 'club-1',
+        name: 'FC Test',
+      },
+      createdAt: '2026-08-18T09:00:00.000Z',
+      documentId: 'interest-2',
+      status: 'pending',
+      user: {
+        documentId: 'user-2',
+        firstname: 'Mina',
+        lastname: 'Diallo',
+      },
+    });
+
+    expect(item.subtitle).toBe('Mina Diallo est intéressé par le club FC Test.');
+    // 🔒 Aucune equipe inventee dans les metadonnees non plus : c'est cette
+    // absence qui distingue les deux intentions, ici comme cote serveur.
+    expect(item.meta.teamId).toBe('');
+    expect(item.meta.teamName).toBe('');
+    // La conversation reste atteignable : elle ne depend que du demandeur.
+    expect(item.actions).toEqual({ primary: 'respond', secondary: 'chat' });
+    expect(item.meta.requesterId).toBe('user-2');
+  });
+
   test('returns the team filter for training-team contexts', () => {
     // D92 — « friendly » entre ici : une proposition de match amical se recoit
     // et s envoie d equipe a equipe, jamais au nom d un club seul.

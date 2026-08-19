@@ -352,6 +352,13 @@ export default {
         error: "Impossible d'envoyer ta demande pour le moment.",
         title: 'Demande envoyée',
       },
+      // V01 — le même geste sur un club QUI EST déjà là. On ne peut pas lui
+      // promettre « on te prévient quand il arrive » : il est arrivé. Ce qui
+      // l'attend, ce sont des dirigeants qui vont lire son intérêt.
+      wholeClubInterest: {
+        description: 'Les dirigeants du club ont reçu ton intérêt et pourront te répondre.'
+          + ' Tu n’es rattaché·e à rien pour le moment.',
+      },
     },
     playerNoTeamRequest: {
       clubLabel: 'Club que tu attends',

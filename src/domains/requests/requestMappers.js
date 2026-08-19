@@ -231,7 +231,11 @@ export const mapClubMembershipRequestToHubItem = (request = {}, options = {}) =>
  */
 export const mapClubInterestRequestToHubItem = (request = {}) => {
   const requestId = String(request?.documentId || request?.id || '');
-  const teamName = normalizeString(request?.team?.name) || 'Equipe';
+  // V01 — un interet peut viser LE CLUB et ne nommer aucune equipe. Le repli
+  // « Equipe » racontait alors une equipe qui n'existe pas : le dirigeant lisait
+  // « X est interesse par Equipe ». L'absence d'equipe se dit, elle ne se
+  // remplace pas.
+  const teamName = normalizeString(request?.team?.name);
   const clubName = normalizeString(request?.club?.name || request?.team?.club?.name) || 'Club';
   const requester = request?.user || {};
   const requesterName = resolveRequesterName(requester);
@@ -253,7 +257,9 @@ export const mapClubInterestRequestToHubItem = (request = {}) => {
       teamName,
     },
     status: 'pending',
-    subtitle: `${requesterName} est intéressé par ${teamName}.`,
+    subtitle: teamName
+      ? `${requesterName} est intéressé par ${teamName}.`
+      : `${requesterName} est intéressé par le club ${clubName}.`,
     title: 'Intérêt club',
     type: 'interest',
   };

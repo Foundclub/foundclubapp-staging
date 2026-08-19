@@ -1333,6 +1333,7 @@ function ClubDetails({ navigation, route }) {
       // lui dit ainsi plutot que de lui montrer un mur rouge.
       if (rawMessage.includes('already pending')) {
         myClubInterestRequestsQuery.refetch();
+        setIsClubInterestTeamPickerVisible(false);
         Alert.alert(
           t('clubDetails.alerts.clubArrivalInterest.alreadySentTitle', 'Tu es déjà sur la liste'),
           t(
@@ -1353,14 +1354,26 @@ function ClubDetails({ navigation, route }) {
     },
     onSuccess: () => {
       myClubInterestRequestsQuery.refetch();
+      // V01 — la meme porte sert desormais deux situations, et elles ne
+      // promettent pas la meme chose : un club ABSENT de l'app previendra quand
+      // il arrive ; un club DEJA la a des dirigeants qui vont lire le signal.
+      // Dire « on te previent quand ce club arrive » sur un club present serait
+      // faux, et l'attente creee ne serait jamais tenue.
+      setIsClubInterestTeamPickerVisible(false);
 
       Alert.alert(
         t('clubDetails.alerts.clubArrivalInterest.title', 'C’est noté'),
-        t(
-          'clubDetails.alerts.clubArrivalInterest.description',
-          'On te prévient dès que ce club arrive sur FoundClub.'
-          + ' Tu n’es rattaché·e à rien pour le moment.',
-        ),
+        clubTeamIds.length > 0
+          ? t(
+            'clubDetails.alerts.wholeClubInterest.description',
+            'Les dirigeants du club ont reçu ton intérêt et pourront te répondre.'
+            + ' Tu n’es rattaché·e à rien pour le moment.',
+          )
+          : t(
+            'clubDetails.alerts.clubArrivalInterest.description',
+            'On te prévient dès que ce club arrive sur FoundClub.'
+            + ' Tu n’es rattaché·e à rien pour le moment.',
+          ),
         [{ text: t('common.actions.ok', 'OK') }],
       );
     },
@@ -1504,6 +1517,13 @@ function ClubDetails({ navigation, route }) {
 
   const clubArrivalInterestIsBusy = hasPendingClubArrivalInterest
     || createClubArrivalInterestMutation.isPending;
+
+  // V01 — la porte d'interet ne se ferme que si TOUTES ses options sont deja
+  // parties : chaque equipe, ET « le club en general ». Une seule encore
+  // disponible et le bouton doit rester vivant, sinon on eteint une action
+  // que la personne peut encore faire.
+  const hasPendingEveryClubInterestOption = hasPendingViewedClubInterestRequest
+    && hasPendingClubArrivalInterest;
 
   const floatingClubActionsCount = [
     showPublicPlayerLogin,
@@ -3467,7 +3487,7 @@ function ClubDetails({ navigation, route }) {
         headerComponent={(
           <View style={[Alignments.row, Alignments.alignCenter]}>
             <Text numberOfLines={1} style={[Fonts.h3Bold, Fonts.neutral00, Spaces.marginRight[16], { flex: 1 }]}>
-              {t('clubDetails.clubInterest.pickerTitle', "Quelle équipe t'intéresse ?")}
+              {t('clubDetails.clubInterest.pickerTitle', 'Qu’est-ce qui t’intéresse ?')}
             </Text>
           </View>
         )}
@@ -3480,9 +3500,55 @@ function ClubDetails({ navigation, route }) {
           <Text style={[Fonts.p2, Fonts.neutral200]}>
             {t(
               'clubDetails.clubInterest.pickerDescription',
-              "Sélectionne une équipe pour signaler ton intérêt au staff, sans créer de demande d'adhésion.",
+              'Sélectionne une équipe, ou le club en général, pour signaler ton intérêt'
+              + ' sans créer de demande d’adhésion.',
             )}
           </Text>
+
+          {/* V01 — « le club en general », EN PREMIER et en Secondary : c'est
+              le choix de celui qui ne vise aucune equipe precise, et il part
+              chez les DIRIGEANTS. Il emprunte la meme action que la porte du
+              club sans equipe : cote serveur, l'absence d'equipe EST le signal. */}
+          <TouchableOpacity
+            disabled={clubArrivalInterestIsBusy}
+            onPress={handlePressClubArrivalInterest}
+            style={[
+              ApplicationStyle.borderRadius24,
+              ApplicationStyle.backgroundColor.primary700,
+              Alignments.row,
+              Alignments.alignCenter,
+              Alignments.justifySpaceBetween,
+              Spaces.padding[16],
+              Spaces.gap[12],
+              {
+                opacity: clubArrivalInterestIsBusy ? 0.65 : 1,
+              },
+            ]}
+          >
+            <View style={{ flex: 1 }}>
+              <Text numberOfLines={1} style={[Fonts.p1Bold, Fonts.neutral00]}>
+                {t('clubDetails.clubInterest.wholeClubOption', 'Le club en général')}
+              </Text>
+              <Text numberOfLines={3} style={[Fonts.p4, Fonts.primary200, Spaces.marginTop[4]]}>
+                {t(
+                  'clubDetails.clubInterest.wholeClubHint',
+                  'Les dirigeants du club recevront ton intérêt et pourront te répondre'
+                  + ' ou ouvrir une conversation.',
+                )}
+              </Text>
+            </View>
+
+            <Button
+              disabled={clubArrivalInterestIsBusy}
+              isLoading={createClubArrivalInterestMutation.isPending}
+              onPress={handlePressClubArrivalInterest}
+              size="small"
+              title={hasPendingClubArrivalInterest
+                ? t('clubDetails.clubInterest.alreadySentShort', 'Intérêt déjà envoyé')
+                : t('clubDetails.clubInterest.sendAction', 'Envoyer mon intérêt')}
+              variant={hasPendingClubArrivalInterest ? 'Secondary' : 'Primary'}
+            />
+          </TouchableOpacity>
 
           <View style={[Spaces.gap[12], Spaces.paddingBottom[8]]}>
             {sortedClubTeams.map((teamItem) => {
@@ -3650,18 +3716,23 @@ function ClubDetails({ navigation, route }) {
             />
           ) : null}
 
+          {/* V01 — LA SECONDE PORTE d'un club QUI A des equipes. Elle vit a
+              cote de la porte primaire, jamais a sa place : « je fais partie de
+              ce club » et « interesse par le club » ne sont pas la meme phrase,
+              et personne ne doit avoir a signer la premiere pour dire la
+              seconde. */}
           {showClubInterestAction ? (
             <Button
-              disabled={hasPendingViewedClubInterestRequest || createClubInterestRequestMutation.isPending}
+              disabled={hasPendingEveryClubInterestOption || createClubInterestRequestMutation.isPending}
               onPress={handleOpenClubInterestTeamPicker}
               style={[
                 floatingClubActionButtonStyle,
                 floatingClubInterestButtonStyle,
-                (hasPendingViewedClubInterestRequest || createClubInterestRequestMutation.isPending)
+                (hasPendingEveryClubInterestOption || createClubInterestRequestMutation.isPending)
                   ? { opacity: 0.7 }
                   : null,
               ]}
-              title={hasPendingViewedClubInterestRequest
+              title={hasPendingEveryClubInterestOption
                 ? t('clubDetails.clubInterest.alreadySentShort', 'Intérêt déjà envoyé')
                 : t('clubDetails.clubInterest.button', 'Intéressé par le club')}
               variant="Secondary"

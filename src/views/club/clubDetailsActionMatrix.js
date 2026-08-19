@@ -64,18 +64,25 @@ export const resolveClubDetailsActionMatrix = ({
     && !isPlayerRole,
   );
 
-  const hasPrimaryAffiliationAction = [
-    showPlayerClubAction,
-    showPlayerNoTeamAction,
-    showJoinClubAction,
-    showContactAdminClaimAction,
-    showClubPartneringAction,
-    showEmptyClubClaimAction,
-  ].some(Boolean);
-
+  // V01 — LA SECONDE PORTE d'un club QUI A des equipes (Adel, 2026-08-18).
+  //
+  // Ce qui a change ici tient en une ligne supprimee. Un drapeau
+  // `hasPrimaryAffiliationAction` regroupait les 6 actions d'affiliation, et
+  // l'interet ne s'allumait QUE si aucune d'elles ne s'allumait : c'etait un
+  // repli, pas une porte. Le joueur de passage n'avait donc qu'un seul geste
+  // possible, « Je fais partie de ce club » — une appartenance qu'il n'a pas.
+  //
+  // Les deux boutons ne disent pas la meme chose, et c'est tout l'enjeu :
+  //   · la porte primaire = « j'y suis deja, faites-moi entrer » ;
+  //   · celle-ci          = « je n'y suis pas, je me signale ».
+  // S02 avait deja fait cohabiter ces deux intentions sur un club SANS equipe ;
+  // V01 pose la meme regle sur un club qui EN A. C'est la moitie qui manquait.
+  //
+  // 🔒 `clubHasTeams` reste, et c'est ce qui garantit que les deux portes
+  // d'interet ne s'allument JAMAIS ensemble : celle-ci exige des equipes,
+  // `showClubArrivalInterestAction` exige qu'il n'y en ait aucune.
   const showClubInterestAction = Boolean(
     canShowAffiliationAction
-    && !hasPrimaryAffiliationAction
     && !isUserAlreadyAttachedToViewedClub
     && clubHasTeams
     && !(hasParentMultisportClub && isMultisportAdmin),
