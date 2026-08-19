@@ -242,13 +242,16 @@ describe('TEMOIN POSITIF — la plateforme qui marchait ne bouge pas', () => {
     expect(resultat).toMatchObject({ outcome: FILE_SHARE_OUTCOMES.SHARE_SHEET });
   });
 
-  it('iOS : le message ET le titre voyagent avec l image', async () => {
+  // ⚠️ VERDICT CHANGE LE 2026-08-18 (U06). Le `message` etait un SECOND element
+  // a partager pour iOS : « Enregistrer l'image » echouait a cause de lui, et
+  // « Enregistrer dans Fichiers » deposait un `.txt` a cote de l'image. Le titre,
+  // lui, reste — il n'est pas un element, et le web s'en sert.
+  it('U06 — iOS : le TITRE voyage, le message NON (il devenait un fichier texte)', async () => {
     const { shareCard } = monterHook();
 
     await executer(() => shareCard(CHARGE));
 
     expect(Share.share).toHaveBeenCalledWith({
-      message: CHARGE.message,
       title: CHARGE.title,
       url: FICHIER_CAPTURE,
     });

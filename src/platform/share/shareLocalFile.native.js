@@ -5,8 +5,8 @@
  * La fonction qui FAIT ce que `getFileShareCapability()` annonce, pour un fichier
  * deja ecrit sur le telephone. Un seul appelant possible par plateforme :
  *
- *   - `share-sheet` (iOS) : `Share.share({ message, url })` — INCHANGE. La feuille
- *     de partage iOS transporte le fichier ET le texte dans le meme appel.
+ *   - `share-sheet` (iOS) : `Share.share({ url })` — LE FICHIER SEUL. La phrase
+ *     part au presse-papiers, comme sur Android (voir U06 plus bas).
  *   - `save-then-open` (Android) : le fichier est d'abord MIS A L'ABRI (galerie
  *     pour une image, telechargements pour le reste), puis une application est
  *     proposee pour l'ouvrir. L'ordre compte : le selecteur peut echouer, pas
@@ -179,19 +179,29 @@ export const shareLocalFile = async ({
   dialogTitle, fileName, fileUri, message, mimeType, title,
 }) => {
   if (getFileShareCapability() !== FILE_SHARE_CAPABILITIES.SAVE_THEN_OPEN) {
-    // iOS : charge identique a celle livree avant L20 — `message` reste optionnel.
-    // `title` est optionnel LUI AUSSI, et pour une raison mesuree : iOS ne le lit
-    // pas (Share.js l.113-141 n'envoie que message/url/options.subject), mais le
-    // WEB, si (`share.web.js` -> `navigator.share({ title })`). Le laisser tomber
-    // couterait le titre du partage sur le site — pas sur le telephone.
+    // 🍏 U06 — LE FICHIER SEUL, ET C'EST UNE CORRECTION, PAS UN APPAUVRISSEMENT.
+    //
+    // 🧨 Mesure (recette du 18/08, iPhone) : `Share.share({ message, url })`
+    // construit sur iOS DEUX elements a partager — une NSString et une NSURL.
+    //   · « Enregistrer l'image » n'accepte que des images : la chaine fait
+    //     echouer TOUT le geste -> « echec du telechargement » ;
+    //   · « Enregistrer dans Fichiers » accepte les deux, et ecrit donc le
+    //     fichier PLUS la chaine, cette derniere en `.txt`.
+    //     ⇒ LE SECOND FICHIER INUTILE, C'ETAIT LE MESSAGE.
+    //
+    // La phrase n'est pas perdue pour autant : elle part au presse-papiers,
+    // exactement la voie deja retenue pour Android (R05). Un partage de LIEN ne
+    // passe pas par ici et garde son `message`.
+    //
+    // `title` reste transmis, et pour une raison mesuree : iOS ne le lit pas
+    // (Share.js l.113-141 n'envoie que message/url/options.subject) mais le WEB,
+    // si (`share.web.js` -> `navigator.share({ title })`).
+    const messageCopied = copyMessageToClipboard(message);
     await SharePlatform.share({
-      ...(message ? { message } : {}),
       ...(title ? { title } : {}),
       url: fileUri,
     });
-    // `messageCopied: false` et c'est VOULU : la feuille de partage transporte
-    // deja le texte, doubler par le presse-papiers ne ferait qu'ajouter du bruit.
-    return { messageCopied: false, opened: true, outcome: FILE_SHARE_OUTCOMES.SHARE_SHEET };
+    return { messageCopied, opened: true, outcome: FILE_SHARE_OUTCOMES.SHARE_SHEET };
   }
 
   const path = stripFileScheme(fileUri);

@@ -29,6 +29,7 @@ import {
   sendBulkLicenseReminder,
   sendLicenseReminder,
   transitionLicenseCampaign,
+  unwaiveLicenseAssignment,
   useCurrentLicenseCampaign,
   useLicenseAssignments,
   useLicenseCampaign,
@@ -279,6 +280,10 @@ const sortByReminderPriority = (left, right) => {
 const getAssignmentMemberName = (item) => [item?.user?.firstname, item?.user?.lastname].filter(Boolean).join(' ') || item?.user?.username || 'Membre';
 const getAssignmentMemberAvatarUrl = (item) => item?.user?.avatar?.url || item?.user?.avatarUrl || item?.avatar?.url || item?.avatarUrl || '';
 const canAssignmentBeReminded = (item) => reminderEligibleStatuses.includes(String(item?.status || '')) && Number(item?.amountRemainingCents || 0) > 0;
+// U06 — « À payer » ne veut dire quelque chose que sur une cotisation EXEMPTEE :
+// c est l exact retour en arriere d « Exempter la cotisation ». Une cotisation en
+// attente est deja a payer, et le serveur refuserait le geste.
+const canAssignmentBeSetBackToDue = (item) => String(item?.status || '') === 'waived';
 const normalizeFilterValue = (value) => String(value || '').trim();
 const getAssignmentTeamId = (item) => normalizeFilterValue(item?.team?.documentId || item?.team?.id);
 const getAssignmentRoleKey = (item) => normalizeFilterValue(item?.roleName || item?.user?.role?.name || item?.user?.role?.type).toLowerCase();
@@ -552,20 +557,27 @@ function CampaignSummary({
 }
 
 /**
- *
- * @param root0
- * @param root0.item
- * @param root0.onPress
- * @param {boolean} [root0.canRemind]
- * @param {boolean} [root0.isReminding]
- * @param {() => void} [root0.onRemind]
+ * La carte d'un membre dans la liste des cotisations d'une campagne.
+ * @param {object} root0 - Les proprietes de la carte.
+ * @param {any} root0.item - L'affectation servie par le serveur.
+ * @param {() => void} root0.onPress - Ouvre la fiche du membre.
+ * @param {boolean} [root0.canRemind] - Une relance a-t-elle un sens ?
+ * @param {boolean} [root0.canSetBackToDue] - U06 : cotisation EXEMPTEE uniquement.
+ * @param {boolean} [root0.isReminding] - Relance en cours pour CE membre.
+ * @param {boolean} [root0.isSettingBackToDue] - Retour a payer en cours pour CE membre.
+ * @param {() => void} [root0.onRemind] - Envoie la relance individuelle.
+ * @param {() => void} [root0.onSetBackToDue] - Retire l'exemption.
+ * @returns {import('react').ReactElement} La carte.
  */
 function AssignmentCard({
   canRemind,
+  canSetBackToDue,
   isReminding,
+  isSettingBackToDue,
   item,
   onPress,
   onRemind,
+  onSetBackToDue,
 }) {
   const {
     ApplicationStyle, Colors, Fonts, Spaces,
@@ -607,15 +619,35 @@ function AssignmentCard({
           </View>
         </View>
       </Pressable>
-      {canRemind && onRemind ? (
-        <View style={[Spaces.marginTop[12], { alignItems: 'flex-end' }]}>
-          <Button
-            isLoading={isReminding}
-            onPress={onRemind}
-            size="sm"
-            title="Relancer"
-            variant="Secondary"
-          />
+      {(canRemind && onRemind) || (canSetBackToDue && onSetBackToDue) ? (
+        <View style={[Spaces.marginTop[12], {
+          alignItems: 'center',
+          flexDirection: 'row',
+          gap: licenseSpacing.actionGap,
+          justifyContent: 'flex-end',
+        }]}
+        >
+          {canRemind && onRemind ? (
+            <Button
+              isLoading={isReminding}
+              onPress={onRemind}
+              size="sm"
+              title="Relancer"
+              variant="Secondary"
+            />
+          ) : null}
+          {/* U06 — « À payer », juste a cote de « Relancer », exactement la ou
+              Adel le cherchait. Il n apparait que sur une cotisation EXEMPTEE :
+              ailleurs il serait inerte. */}
+          {canSetBackToDue && onSetBackToDue ? (
+            <Button
+              isLoading={isSettingBackToDue}
+              onPress={onSetBackToDue}
+              size="sm"
+              title="À payer"
+              variant="Secondary"
+            />
+          ) : null}
         </View>
       ) : null}
     </View>
@@ -1005,6 +1037,7 @@ function ClubLicenses({ navigation, route }) {
   const [detailTab, setDetailTab] = useState(routeCampaignId ? (routeInitialDetailTab || 'members') : 'overview');
   const [setupFooterHeight, setSetupFooterHeight] = useState(0);
   const [pendingReminderAssignmentId, setPendingReminderAssignmentId] = useState(null);
+  const [pendingUnwaiveAssignmentId, setPendingUnwaiveAssignmentId] = useState(null);
   const [memberFilterMenuKey, setMemberFilterMenuKey] = useState(null);
   // Campagne dont la feuille « … » est ouverte, ou `null`. C'est elle qui
   // remplace les boutons secondaires tronques de l'ancienne carte.
@@ -1068,6 +1101,14 @@ function ClubLicenses({ navigation, route }) {
   const paymentReviewsQuery = useLicensePaymentReviews(campaignId, { pageSize: 20 }, { enabled: managerViewEnabled && Boolean(campaignId) && isFocusedCampaignView && detailTab === 'payments' });
   const reminderMutation = useLicenseMutation((payload) => sendBulkLicenseReminder(campaignId, payload), campaignId);
   const singleReminderMutation = useLicenseMutation(({ assignmentId, ...payload }) => sendLicenseReminder(assignmentId, payload), campaignId);
+  // U06 — « À payer », le miroir d « Exempter la cotisation ». Le lot T03 l avait
+  // pose sur la FICHE d un joueur ; Adel, lui, le cherchait la ou vit
+  // « Relancer » : sur chaque carte de CETTE liste. Meme geste serveur, meme
+  // garde-fou (uniquement sur une cotisation EXEMPTEE).
+  const unwaiveMutation = useLicenseMutation(
+    ({ assignmentId }) => unwaiveLicenseAssignment(assignmentId),
+    campaignId,
+  );
   const duplicateMutation = useLicenseMutation(({ id, payload }) => duplicateLicenseCampaign(id, payload), campaignId);
   const transitionMutation = useLicenseMutation(({ action, id }) => transitionLicenseCampaign(id, action), campaignId);
   const deleteMutation = useLicenseMutation((id) => deleteDraftLicenseCampaign(id), campaignId);
@@ -1542,6 +1583,51 @@ function ClubLicenses({ navigation, route }) {
       ],
     );
   }, [canManageLicenses, singleReminderMutation]);
+
+  // U06 — le retour en arriere d une exemption, depuis la LISTE. Meme confirmation
+  // que sur la fiche : remettre une cotisation a payer engage de l argent pour
+  // quelqu un, ça ne se fait pas sur un appui distrait.
+  const handleSetBackToDue = useCallback((item) => {
+    const assignmentId = item?.documentId || item?.id;
+    if (!assignmentId) return;
+
+    if (!canManageLicenses) {
+      Alert.alert(
+        'Action réservée',
+        'Seuls les dirigeants peuvent remettre une cotisation à payer.',
+      );
+      return;
+    }
+
+    const memberName = getAssignmentMemberName(item);
+    Alert.alert(
+      'Remettre à payer',
+      `${memberName} devra de nouveau régler cette cotisation. L exemption sera retirée.`,
+      [
+        { style: 'cancel', text: 'Annuler' },
+        {
+          onPress: () => {
+            setPendingUnwaiveAssignmentId(String(assignmentId));
+            unwaiveMutation.mutate(
+              { assignmentId },
+              {
+                onError: (error) => Alert.alert(
+                  'Geste impossible',
+                  error?.message || 'La cotisation n a pas pu être remise à payer.',
+                ),
+                onSettled: () => setPendingUnwaiveAssignmentId(null),
+                onSuccess: () => Alert.alert(
+                  'Cotisation à payer',
+                  `${memberName} doit de nouveau régler sa cotisation.`,
+                ),
+              },
+            );
+          },
+          text: 'À payer',
+        },
+      ],
+    );
+  }, [canManageLicenses, unwaiveMutation]);
 
   const handleDuplicateCampaign = useCallback((item) => {
     const nextSeason = `${new Date().getFullYear()}-${new Date().getFullYear() + 1}`;
@@ -2563,10 +2649,14 @@ function ClubLicenses({ navigation, route }) {
   const renderAssignmentItem = ({ item }) => (
     <AssignmentCard
       canRemind={canManageLicenses && canAssignmentBeReminded(item)}
+      canSetBackToDue={canManageLicenses && canAssignmentBeSetBackToDue(item)}
       isReminding={singleReminderMutation.isPending && pendingReminderAssignmentId === String(item?.documentId || item?.id)}
+      isSettingBackToDue={unwaiveMutation.isPending
+        && pendingUnwaiveAssignmentId === String(item?.documentId || item?.id)}
       item={item}
       onPress={() => openAssignmentDetail(item)}
       onRemind={() => handleSingleReminder(item)}
+      onSetBackToDue={() => handleSetBackToDue(item)}
     />
   );
   /**

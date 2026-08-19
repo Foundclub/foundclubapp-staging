@@ -29,6 +29,9 @@ import {
 } from '@/services/license/licenseQueries';
 import LinksPlatform from '@/platform/links';
 import MediaPlatform from '@/platform/media';
+// U06 — la MEME liste de formats sur les trois ecrans de depot, et dans la
+// langue de la plateforme (UTI sur iOS, type MIME sur Android).
+import { getDocumentPickerOptions } from '@/platform/media/documentUploadFormats';
 import { resolveMediaUrl } from '@/utils/mediaUrl';
 
 import {
@@ -414,7 +417,7 @@ function ClubLicenseMemberDetail({ route }) {
         {
           onPress: async () => {
             try {
-              await submitOfficialLicenseFile(await MediaPlatform.pickDocument({ accept: '*/*', mode: 'open', type: ['*/*'] }));
+              await submitOfficialLicenseFile(await MediaPlatform.pickDocument(getDocumentPickerOptions()));
             } catch (error) {
               if (!isPickerCancelError(error)) {
                 Alert.alert('Upload impossible', error?.message || 'Le fichier n a pas pu être choisi.');
