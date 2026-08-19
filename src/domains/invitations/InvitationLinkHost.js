@@ -173,7 +173,10 @@ function InvitationLinkHost() {
   }, [handleIncomingUrl]);
 
   const handleDismiss = useCallback(() => {
-    // « Plus tard » : on GARDE l'invitation rangee, elle sera reproposee.
+    // « Plus tard » est une REPONSE : on efface l'invitation rangee, sinon la
+    // fenetre revient a chaque demarrage pendant 7 jours. Rien n'est perdu :
+    // le lien reste dans le message recu, il suffit de le rouvrir.
+    clearPendingInvite();
     setPendingInvite(null);
     setProblem(null);
   }, []);

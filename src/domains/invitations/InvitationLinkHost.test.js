@@ -225,7 +225,7 @@ describe('InvitationLinkHost — la fenetre d invitation', () => {
       expect(lastModalProps.visible).toBe(false);
     });
 
-    it('« plus tard » ferme la fenetre, ne navigue pas, et GARDE l invitation', async () => {
+    it('« plus tard » ferme la fenetre et ne navigue nulle part', async () => {
       mockGetInitialURL.mockResolvedValue('https://foundclub.app/i/team/t-1');
 
       await renderHost();
@@ -234,8 +234,18 @@ describe('InvitationLinkHost — la fenetre d invitation', () => {
       });
 
       expect(mockNavigate).not.toHaveBeenCalled();
-      expect(mockClearPendingInvite).not.toHaveBeenCalled();
       expect(lastModalProps.visible).toBe(false);
+    });
+
+    it('« plus tard » est une REPONSE : rien ne revient au demarrage', async () => {
+      mockGetInitialURL.mockResolvedValue('https://foundclub.app/i/team/t-1');
+
+      await renderHost();
+      await act(async () => {
+        lastModalProps.secondaryAction.onPress();
+      });
+
+      expect(mockClearPendingInvite).toHaveBeenCalled();
     });
   });
 
