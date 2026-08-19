@@ -11,6 +11,10 @@ import Button from '@/components/atoms/button/Button';
 import WizardOptionCard from '@/components/molecules/wizardOptionCard/WizardOptionCard';
 import WizardStepLayout from '@/components/molecules/wizardStepLayout/WizardStepLayout';
 import { useTeamWizard } from '@/views/team/wizard/TeamWizardContext';
+import TeamWizardEmptyReferential, {
+  getStepFooterProps,
+  isReferentialEmpty,
+} from '@/views/team/wizard/TeamWizardEmptyReferential';
 import useTeamWizardExit from '@/views/team/wizard/useTeamWizardExit';
 
 import { RouteNames } from '@/navigation/routeNames';
@@ -38,6 +42,16 @@ function TeamWizardSection({ navigation }) {
   const { data: sections } = sectionsQuery;
   const { isLoading } = sectionsQuery;
   const hasError = Boolean(sectionsQuery.error);
+  // W06 — le referentiel a repondu, et il n'a rien a proposer : voir
+  // `TeamWizardEmptyReferential` pour la mesure qui exclut le filtre et la panne.
+  const isListEmpty = isReferentialEmpty(sectionsQuery);
+  const footer = getStepFooterProps({
+    hasSelection: Boolean(state.section),
+    isBlocked: isLoading || hasError,
+    isEmpty: isListEmpty,
+    nextLabel: t('common.next', 'Suivant'),
+    skipLabel: t('teamWizard.steps.section.skipEmpty', 'Continuer sans section'),
+  });
 
   const handleSelectSection = (/** @type {string} */ sectionDocumentId) => {
     dispatch({ payload: sectionDocumentId, type: 'SET_SECTION' });
@@ -46,8 +60,8 @@ function TeamWizardSection({ navigation }) {
 
   return (
     <WizardStepLayout
-      isNextDisabled={!state.section || isLoading || hasError}
-      nextLabel={t('common.next', 'Suivant')}
+      isNextDisabled={footer.isNextDisabled}
+      nextLabel={footer.nextLabel}
       onBack={() => navigation.navigate(RouteNames.TeamWizardDescription)}
       onClose={handleExitWizard}
       onNext={() => navigation.navigate(RouteNames.TeamWizardActivity)}
@@ -73,6 +87,10 @@ function TeamWizardSection({ navigation }) {
             </Text>
             <Button onPress={() => sectionsQuery.refetch()} title="Réessayer" variant="Secondary" />
           </View>
+        ) : null}
+
+        {isListEmpty ? (
+          <TeamWizardEmptyReferential missing="Aucune section n’est proposée pour le moment." />
         ) : null}
 
         {(sections || []).map((section) => {
