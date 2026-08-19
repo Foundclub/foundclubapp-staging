@@ -3,7 +3,6 @@ import {
   useCallback,
   useEffect,
   useMemo,
-  useRef,
   useState,
 } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -34,6 +33,7 @@ import EventWizardTeamCard from '@/views/event/wizard/components/EventWizardTeam
 import { RouteNames } from '@/navigation/routeNames';
 
 import { useGetActivities } from '@/services/activity/activityQueries';
+import { getClubs } from '@/services/club/clubService';
 import { getTeams } from '@/services/team/teamService';
 
 import { useEventWizard } from './EventWizardContext';
@@ -53,18 +53,10 @@ const normalizeSearchText = (value) => String(value || '')
   .trim()
   .toLowerCase();
 
-const buildExternalClubSearchHaystack = (club) => [
-  club?.name,
-  club?.address,
-  club?.city,
-  club?.postalCode,
-  club?.section?.name,
-  ...(Array.isArray(club?.activities) ? club.activities.map((activity) => activity?.name) : []),
-  ...(Array.isArray(club?.activites) ? club.activites.map((activity) => activity?.name) : []),
-]
-  .map((value) => normalizeSearchText(value))
-  .filter(Boolean)
-  .join(' ');
+// W07 — la recherche de club externe interroge le serveur, une page a la fois.
+// Meme taille que `useSearchClubs` (`clubQueries.js:75`) : on lit la meme
+// grammaire de recherche que le reste de l'application.
+const EXTERNAL_CLUB_PAGE_SIZE = 10;
 
 const buildExternalTeamSearchHaystack = (team) => [
   team?.name,
@@ -154,69 +146,6 @@ const formatExternalClubLocationLabel = (filters = {}) => {
   return `${filters.city.label} - ${radius} km`;
 };
 
-const mergeClubActivities = (club = {}, team = {}) => {
-  let existingActivities = [];
-  if (Array.isArray(club?.activities)) {
-    existingActivities = club.activities;
-  } else if (Array.isArray(club?.activites)) {
-    existingActivities = club.activites;
-  }
-  const teamActivities = Array.isArray(team?.activities) ? team.activities : [];
-  const byId = new Map();
-
-  [...existingActivities, ...teamActivities].forEach((activity) => {
-    const activityId = getDocumentId(activity);
-    if (!activityId || byId.has(activityId)) return;
-    byId.set(activityId, activity);
-  });
-
-  return Array.from(byId.values());
-};
-
-const buildInviteableClubFromTeam = (team) => {
-  const club = team?.club;
-  const clubId = getDocumentId(club);
-  if (!clubId) return null;
-
-  const mergedActivities = mergeClubActivities(club, team);
-
-  return {
-    ...club,
-    activites: mergedActivities,
-    activities: mergedActivities,
-    documentId: clubId,
-  };
-};
-
-const clubMatchesExternalFilters = (club, filters = {}) => {
-  if (!club) return false;
-
-  if (filters?.activity) {
-    const clubActivityIds = [
-      ...(Array.isArray(club?.activities) ? club.activities : []),
-      ...(Array.isArray(club?.activites) ? club.activites : []),
-    ]
-      .map((activity) => getDocumentId(activity))
-      .filter(Boolean);
-
-    if (!clubActivityIds.includes(filters.activity)) {
-      return false;
-    }
-  }
-
-  const searchGeohash = String(filters?.geohash || '').trim();
-  if (searchGeohash) {
-    const clubGeohash = String(club?.geohash || '').trim();
-    const geohashMatches = clubGeohash
-      && (clubGeohash.startsWith(searchGeohash) || searchGeohash.startsWith(clubGeohash));
-    if (!geohashMatches) {
-      return false;
-    }
-  }
-
-  return true;
-};
-
 const MODE_CARD_CONTENT = {
   external: {
     description: 'Recherche un club externe, ouvre ses équipes et ajoute celles que tu veux inviter.',
@@ -275,7 +204,6 @@ function EventWizardInvites({ navigation }) {
   const [hasExternalClubSearchError, setHasExternalClubSearchError] = useState(false);
   const [selectedExternalClub, setSelectedExternalClub] = useState(null);
   const [externalClubTeams, setExternalClubTeams] = useState([]);
-  const [inviteableExternalClubsPool, setInviteableExternalClubsPool] = useState([]);
   const [externalTeamSearch, setExternalTeamSearch] = useState('');
   const [isLoadingExternalTeams, setIsLoadingExternalTeams] = useState(false);
   const [hasExternalTeamsError, setHasExternalTeamsError] = useState(false);
@@ -283,7 +211,6 @@ function EventWizardInvites({ navigation }) {
   const [externalClubFiltersDraft, setExternalClubFiltersDraft] = useState(
     createDefaultExternalClubFilters(state.externalClubFilters),
   );
-  const inviteableExternalClubsLoadedRef = useRef(false);
 
   const selectedOrganizerTeamId = getDocumentId(state.team);
   const clubId = getDocumentId(state.team?.club) || getDocumentId(userData?.club);
@@ -386,57 +313,22 @@ function EventWizardInvites({ navigation }) {
     }
   }, []);
 
-  const loadInviteableExternalClubs = useCallback(async () => {
-    if (inviteableExternalClubsLoadedRef.current) {
-      return inviteableExternalClubsPool;
-    }
-
-    const uniqueClubs = new Map();
-    const ingestTeams = (teams = []) => {
-      teams.forEach((team) => {
-        const inviteableClub = buildInviteableClubFromTeam(team);
-        const externalClubId = getDocumentId(inviteableClub);
-        if (!inviteableClub || !externalClubId || externalClubId === getDocumentId(clubId)) {
-          return;
-        }
-
-        const existingClub = uniqueClubs.get(externalClubId);
-        if (!existingClub) {
-          uniqueClubs.set(externalClubId, inviteableClub);
-          return;
-        }
-
-        const mergedActivities = mergeClubActivities(existingClub, team);
-        uniqueClubs.set(externalClubId, {
-          ...existingClub,
-          activites: mergedActivities,
-          activities: mergedActivities,
-        });
-      });
-    };
-
-    const firstPageResponse = await getTeams({ page: 1, pageSize: 100 });
-    ingestTeams(Array.isArray(firstPageResponse?.data) ? firstPageResponse.data : []);
-
-    const pageCount = Number(firstPageResponse?.meta?.pagination?.pageCount) || 1;
-    if (pageCount > 1) {
-      const remainingResponses = await Promise.all(
-        Array.from({ length: pageCount - 1 }, (_, index) => getTeams({ page: index + 2, pageSize: 100 })),
-      );
-      remainingResponses.forEach((response) => {
-        ingestTeams(Array.isArray(response?.data) ? response.data : []);
-      });
-    }
-
-    const clubs = Array.from(uniqueClubs.values()).sort((left, right) => (
-      String(left?.name || '').localeCompare(String(right?.name || ''), 'fr', { sensitivity: 'base' })
-    ));
-
-    inviteableExternalClubsLoadedRef.current = true;
-    setInviteableExternalClubsPool(clubs);
-    return clubs;
-  }, [clubId, inviteableExternalClubsPool]);
-
+  // W07 — CE QUE CET ECRAN CHERCHE : un CLUB, n'importe lequel en France, pour
+  // ensuite ouvrir SES equipes. Il ne cherche pas des equipes ici : il n'y a
+  // donc pas de filtre a poser, il faut une RECHERCHE, et le serveur en a deja
+  // une (`getClubs` : nom en `$containsi`, sport, geohash), celle que
+  // `HistoryWizardSingle` utilise pour sa liste de clubs.
+  //
+  // 🔴 AVANT : `getTeams({ page: 1, pageSize: 100 })` SANS filtre, puis toutes
+  // les pages restantes d'un coup dans un `Promise.all`, pour n'en garder que
+  // les clubs distincts. Le nom tape et les filtres etaient ensuite appliques
+  // EN MEMOIRE. Mesure du filet : 40 requetes a l'ouverture de la section,
+  // meme quand le serveur n'avait AUCUNE equipe a rendre.
+  //
+  // Par defaut, avant que l'utilisateur ait tape quoi que ce soit : la premiere
+  // page de clubs, dans l'ordre du reste de l'application (clubs partenaires
+  // puis alphabetique), deja restreinte aux filtres poses. Un champ vide devant
+  // une liste vide n'aiderait personne.
   useEffect(() => {
     let cancelled = false;
 
@@ -450,17 +342,20 @@ function EventWizardInvites({ navigation }) {
       setIsLoadingExternalClubs(true);
       setHasExternalClubSearchError(false);
       try {
-        const clubs = await loadInviteableExternalClubs();
+        const response = await getClubs({
+          activity: externalClubFilters.activity || undefined,
+          geohash: externalClubFilters.geohash || undefined,
+          // Une equipe appartient a un `club`, jamais a un club multisport :
+          // les inclure ajouterait une seconde requete et des resultats dont on
+          // ne peut inviter personne.
+          includeMultisport: false,
+          name: hasExternalClubSearchQuery ? externalClubSearchQuery : undefined,
+          pageSize: EXTERNAL_CLUB_PAGE_SIZE,
+        });
         if (cancelled) return;
 
-        const normalizedQuery = normalizeSearchText(externalClubSearchQuery);
-        const filteredClubs = clubs
-          .filter((club) => clubMatchesExternalFilters(club, externalClubFilters))
-          .filter((club) => {
-            if (!normalizedQuery) return true;
-            return buildExternalClubSearchHaystack(club).includes(normalizedQuery);
-          });
-        setExternalClubResults(filteredClubs);
+        const clubs = Array.isArray(response?.data) ? response.data : [];
+        setExternalClubResults(clubs.filter((club) => getDocumentId(club) !== clubId));
       } catch (_error) {
         if (cancelled) return;
         setExternalClubResults([]);
@@ -478,12 +373,12 @@ function EventWizardInvites({ navigation }) {
     };
   }, [
     clubId,
-    externalClubFilters,
+    externalClubFilters.activity,
+    externalClubFilters.geohash,
     externalClubSearchQuery,
     externalClubSearchNonce,
     hasExternalClubSearchQuery,
     isExternalSectionOpen,
-    loadInviteableExternalClubs,
     selectedExternalClub,
   ]);
 
@@ -561,9 +456,6 @@ function EventWizardInvites({ navigation }) {
     externalClubEmptyMessage = 'Aucun club externe trouve pour cette recherche.';
   } else if (hasActiveExternalClubFilters) {
     externalClubEmptyMessage = 'Aucun club externe ne correspond à ces filtres pour le moment.';
-  }
-  if (!hasExternalClubSearchQuery && !hasActiveExternalClubFilters) {
-    externalClubEmptyMessage = 'Aucun club externe avec équipe disponible pour le moment.';
   }
 
   const syncAudiences = useCallback((nextInternalAudiences, nextExternalAudiences) => {
