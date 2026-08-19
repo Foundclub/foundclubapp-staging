@@ -22,7 +22,7 @@ import {
   getSubscriptionEntryPointLock,
   getSubscriptionQuotaItem,
 } from '@/domains/subscription/subscriptionDecision';
-import { isMyTeam } from '@/domains/team/teamMembership';
+import { getProfileTeamIds, isMyTeam } from '@/domains/team/teamMembership';
 import { useAppContext } from '@/store/appContext';
 import { withAlpha } from '@/theme/colors';
 import useTheme from '@/theme/themeContext';
@@ -151,6 +151,24 @@ function TeamListContent({
     return () => clearTimeout(timer);
   }, [searchValue]);
 
+  // U03 — DANS CE MODE, L'ECRAN N'A PAS DE CLUB A FILTRER, et il ne demandait
+  // donc RIEN : `teamService.buildClubFilter` rend `undefined` sans `clubId`, et
+  // `GET /teams` renvoyait alors la table ENTIERE, dix lignes par page et sans
+  // tri. Tant que l'equipe du joueur n'etait pas dans les dix premieres, l'onglet
+  // affichait « aucune equipe » alors qu'il en avait une.
+  // La bonne question n'est pas « quel filtre poser » mais « de quoi cet ecran
+  // a-t-il besoin ? » : d'un joueur, il lui faut SES equipes. Or elles sont deja
+  // nommees dans son profil (`myTeams` + `trainedTeams`) et `getProfileTeamIds`
+  // les lit deja pour `isMyTeam` — on demande donc exactement celles-la.
+  // 🧊 La chaine est FIGEE avant la liste : `getProfileTeamIds` rend un tableau
+  // neuf a chaque appel, qui relancerait la requete a chaque rendu.
+  const myProfileTeamIdsKey = getProfileTeamIds(userData).join(',');
+  const myProfileTeamIds = useMemo(
+    () => (myProfileTeamIdsKey ? myProfileTeamIdsKey.split(',') : []),
+    [myProfileTeamIdsKey],
+  );
+  const scopeToMyTeams = showOnlyMyTeams && !isLeagueMode;
+
   const classicTeamQueryParams = useMemo(() => ({
     activities: teamFilters?.activities || undefined,
     category: Array.isArray(teamFilters?.category) && teamFilters?.category?.length
@@ -161,10 +179,16 @@ function TeamListContent({
       ? teamFilters?.level
       : undefined,
     name: debouncedSearch || teamFilters?.name?.trim() || undefined,
+    // Une page taillee sur la selection : il n'y a rien d'autre a aller
+    // chercher, donc rien a paginer.
+    pageSize: scopeToMyTeams ? Math.max(myProfileTeamIds.length, 1) : undefined,
     section: teamFilters?.section || undefined,
+    teamIds: scopeToMyTeams ? myProfileTeamIds : undefined,
   }), [
     clubId,
     debouncedSearch,
+    myProfileTeamIds,
+    scopeToMyTeams,
     teamFilters?.activities,
     teamFilters?.category,
     teamFilters?.level,
@@ -201,7 +225,10 @@ function TeamListContent({
     isLoading: isLoadingClassic,
     refetch: refetchClassic,
   } = useGetTeams(classicTeamQueryParams, {
-    enabled: !isLeagueMode,
+    // Un compte dont le profil ne declare aucune equipe n'a rien a demander :
+    // la liste est vide, et c'est une reponse juste. Partir quand meme
+    // ramenerait la table entiere.
+    enabled: !isLeagueMode && (!scopeToMyTeams || myProfileTeamIds.length > 0),
   });
 
   const {
@@ -344,10 +371,20 @@ function TeamListContent({
   }, [invitedLeagueData, isLeagueMode, pendingLeagueData, scopedClassicTeams, showOnlyMyTeams, teams, userData]);
 
   const handleEndReached = useCallback(() => {
+    // U03 — dans ce mode, « Autres equipes » est structurellement VIDE (le tri
+    // ci-dessus ne remplit `other` que si `!showOnlyMyTeams`). La liste rendue
+    // est donc toujours au bout d'elle-meme, et flash-list relance
+    // `onEndReached` a chaque fois que l'identite de `data` change
+    // (`useBoundDetection.ts:149-154` remet son verrou a zero, et
+    // `RecyclerView.tsx:609` rappelle la detection a chaque commit).
+    // 🧨 Mesure du lot : sans ce garde-fou, une page vide en redemandait une
+    // autre — 3 pages tirees pour une liste qui n'en affichait aucune, et sur la
+    // vraie base ca ne s'arrete qu'a la DERNIERE page de la table.
+    if (scopeToMyTeams) return;
     if (hasNextPage && !isFetchingNextPage) {
       fetchNextPage();
     }
-  }, [fetchNextPage, hasNextPage, isFetchingNextPage]);
+  }, [fetchNextPage, hasNextPage, isFetchingNextPage, scopeToMyTeams]);
 
   const handleTeamSelect = useCallback((/** @type {Team} */ team) => {
     if (team.type === 'club') {
