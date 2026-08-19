@@ -30,6 +30,7 @@ import AppProvidersNative from '@/app/AppProviders.native';
 import BootGate from '@/app/BootGate';
 import LeaguePlatformGate from '@/app/LeaguePlatformGate';
 import buildFoundClubQueryClient from '@/app/queryClient';
+import { startQueryRefreshBridge } from '@/app/queryRefreshOnReturn';
 import { getRuntimeEndpointsLog } from '@/config/runtimeUrls';
 import { POPUP_IDS } from '@/constants/popupRegistry';
 import { APP_RUNTIME_ENV, NOTIFICATIONS_RUNTIME_CONFIG } from '@/constants/runtimeFlags';
@@ -380,6 +381,12 @@ function DeferredStartupHosts() {
  * @returns {import('react').ReactElement} App root component.
  */
 function App() {
+  // Y05 — LA DETECTION « L'APP EST REVENUE » N'EXISTAIT NULLE PART.
+  // react-query l'attend d'un evenement de navigateur que le telephone n'emet
+  // jamais : sans ce branchement, revenir dans FoundClub ne relisait RIEN, et il
+  // fallait la fermer completement pour voir les demandes arriver.
+  useEffect(() => startQueryRefreshBridge(queryClient), []);
+
   return (
     <AppProvidersNative queryClient={queryClient}>
       <AppShell />

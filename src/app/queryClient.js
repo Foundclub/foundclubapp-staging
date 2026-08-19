@@ -111,6 +111,23 @@ export const createFoundClubQueryClient = (options = {}) => {
   return new QueryClient({
     defaultOptions: {
       queries: {
+        // Y05 — CES DEUX DEFAUTS RESTENT FERMES, ET C'EST VOLONTAIRE.
+        //
+        // La detection « l'app est revenue » et « le reseau est revenu » est
+        // desormais branchee (`app/queryRefreshOnReturn.js`, `focusManager` et
+        // `onlineManager`). Les ouvrir ici ferait repartir, a chaque retour,
+        // TOUTES les requetes montees d'un coup : mesure du 2026-08-20, l'app
+        // declare 169 requetes sur 67 fichiers, et le serveur de recette a deja
+        // ete tue par un plafond memoire trop bas (D16).
+        //
+        // Ce qui se relit vraiment passe donc par une LISTE BLANCHE de familles
+        // (`getReturnRefreshQueryKeys`), heritee du registre du lot U05.
+        // ⚠️ `refetchOnReconnect` etait sans effet jusqu'ici — le `onlineManager`
+        // par defaut de la v5 ne s'abonne a rien en React Native et restait
+        // eternellement « en ligne ». Maintenant qu'il bascule pour de vrai, le
+        // laisser a `true` (son defaut) rouvrirait exactement la rafale que ce
+        // lot doit eviter.
+        refetchOnReconnect: false,
         refetchOnWindowFocus: false,
         retry: shouldRetryQuery,
         retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 4000),
