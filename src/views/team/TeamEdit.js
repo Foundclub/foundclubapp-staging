@@ -49,6 +49,9 @@ const defaultValues = {
   activities: '',
   address: null,
   authorizedMembershipManagers: /** @type {string[]} */ ([]),
+  // W02 — les entraineurs a qui le dirigeant confie l encaissement des
+  // cotisations de CETTE equipe. Vide par defaut : une delegation se donne.
+  authorizedPaymentValidators: /** @type {string[]} */ ([]),
   category: '',
   city: '',
   description: '',
@@ -64,6 +67,7 @@ const teamSchema = Joi.object({
   activities: Joi.string().allow('', null).optional(),
   address: Joi.object().allow(null).optional(),
   authorizedMembershipManagers: Joi.array().items(Joi.string()).optional(),
+  authorizedPaymentValidators: Joi.array().items(Joi.string()).optional(),
   category: Joi.string().required(),
   city: Joi.string().allow('', null).optional(),
   description: Joi.string().allow('', null).optional(),
@@ -236,6 +240,8 @@ function TeamEdit({ navigation, route }) {
         activities: teamData.activities?.[0]?.documentId || '',
         address: teamAddress || null,
         authorizedMembershipManagers: teamData.authorizedMembershipManagers?.map((manager) => manager.documentId) || [],
+        authorizedPaymentValidators: teamData.authorizedPaymentValidators
+          ?.map((validator) => validator.documentId) || [],
         category: teamData.category?.documentId || '',
         city: teamData.city || teamData.club?.city || clubData?.city || '',
         description: teamData.description || '',
@@ -342,6 +348,11 @@ function TeamEdit({ navigation, route }) {
     defaultValue: [],
     name: 'authorizedMembershipManagers',
   });
+  const watchedAuthorizedPaymentValidators = useWatch({
+    control,
+    defaultValue: [],
+    name: 'authorizedPaymentValidators',
+  });
   const selectedTrainerIds = useMemo(
     () => (Array.isArray(watchedTrainerIds) ? watchedTrainerIds : []),
     [watchedTrainerIds],
@@ -350,11 +361,24 @@ function TeamEdit({ navigation, route }) {
     () => (Array.isArray(watchedAuthorizedMembershipManagers) ? watchedAuthorizedMembershipManagers : []),
     [watchedAuthorizedMembershipManagers],
   );
+  const authorizedPaymentValidators = useMemo(
+    () => (Array.isArray(watchedAuthorizedPaymentValidators)
+      ? watchedAuthorizedPaymentValidators
+      : []),
+    [watchedAuthorizedPaymentValidators],
+  );
   const selectedTrainerOptions = useMemo(
     () => trainerOptions.filter((option) => selectedTrainerIds.includes(option.value)),
     [selectedTrainerIds, trainerOptions],
   );
   const clubUsesOwnerOnlyMembershipApproval = clubData?.membershipRequestManagementMode === 'CLUB_OWNER_ONLY';
+  // W02 — SEUL LE DIRIGEANT DELEGUE LA CAISSE. Cet ecran est aussi ouvert a
+  // l entraineur de l equipe (policy `is-team-staff`, cote serveur) : sans ce
+  // filtre, il verrait le reglage qui l autorise lui-meme.
+  // ⚠️ Ce n est que l affichage. La vraie garde est cote serveur
+  // (admin/src/api/team/controllers/team.ts, `canDelegatePaymentValidation`) :
+  // le champ y est ignore pour quiconque n est pas dirigeant du club.
+  const canDelegatePaymentValidation = userData?.role?.name === USER_ROLES.president;
 
   useEffect(() => {
     if (teamId || !preselectedTrainerId || preselectionAppliedRef.current) return;
@@ -376,6 +400,21 @@ function TeamEdit({ navigation, route }) {
     const nextManagers = currentManagers.filter((managerId) => selectedTrainerIds.includes(managerId));
     if (nextManagers.length !== currentManagers.length) {
       setValue('authorizedMembershipManagers', nextManagers, {
+        shouldDirty: true,
+        shouldValidate: true,
+      });
+    }
+  }, [getValues, selectedTrainerIds, setValue]);
+
+  // W02 — retirer quelqu un du staff de l equipe lui retire aussi la caisse.
+  // Sans cet elagage, un entraineur sorti de l equipe resterait dans la liste des
+  // validateurs, et y reviendrait avec ses droits s il etait re-ajoute plus tard.
+  useEffect(() => {
+    const currentValidators = getValues('authorizedPaymentValidators') || [];
+    const nextValidators = currentValidators
+      .filter((validatorId) => selectedTrainerIds.includes(validatorId));
+    if (nextValidators.length !== currentValidators.length) {
+      setValue('authorizedPaymentValidators', nextValidators, {
         shouldDirty: true,
         shouldValidate: true,
       });
@@ -430,6 +469,14 @@ function TeamEdit({ navigation, route }) {
       authorizedMembershipManagers: Array.isArray(data.authorizedMembershipManagers)
         ? data.authorizedMembershipManagers.filter(Boolean)
         : [],
+      // W02 — le champ ne part QUE du formulaire d un dirigeant. Un entraineur
+      // qui enregistre son equipe ne renvoie donc rien sur ce point, et la
+      // delegation posee par le club reste telle quelle.
+      ...(canDelegatePaymentValidation ? {
+        authorizedPaymentValidators: Array.isArray(data.authorizedPaymentValidators)
+          ? data.authorizedPaymentValidators.filter(Boolean)
+          : [],
+      } : {}),
       category: data.category || undefined,
       city: data.address?.city || data.city,
       geohash: data.address?.geohash || data.geohash,
@@ -882,6 +929,98 @@ function TeamEdit({ navigation, route }) {
                 </>
               ) : null}
             </View>
+
+            {/*
+              W02 — DELEGUER LA VALIDATION DES PAIEMENTS.
+
+              Adel, 2026-08-19 : « le dirigeant doit pouvoir laisser le choix aux
+              coachs de pouvoir valider les paiements pour LEURS equipes ».
+
+              Le reglage se tient juste sous celui des demandes d adhesion : c est
+              la meme question — « qu est-ce que je confie a mes entraineurs ? » —
+              et le meme composant. Trois differences, toutes voulues :
+                · il n a PAS d interrupteur « autoriser les entraineurs » : la
+                  liste vide vaut deja « personne », et un interrupteur de plus
+                  ferait croire qu il ouvre a tous ;
+                · une liste VIDE ne veut jamais dire « tous » (l inverse de la
+                  delegation d adhesion) — c est de l argent ;
+                · il n est visible QUE pour le dirigeant.
+            */}
+            {canDelegatePaymentValidation ? (
+              <View
+                style={[
+                  ApplicationStyle.card,
+                  Spaces.padding[16],
+                  Spaces.gap[12],
+                  {
+                    backgroundColor: 'rgba(4, 31, 44, 0.82)',
+                    borderColor: 'rgba(1, 179, 244, 0.24)',
+                    borderWidth: 1,
+                  },
+                ]}
+              >
+                <Text style={[Fonts.h4Black, Fonts.neutral00]}>
+                  {t('teamEdit.paymentValidation.title', 'Encaissement des cotisations')}
+                </Text>
+                <Text style={[Fonts.p3, Fonts.neutral200]}>
+                  {t(
+                    'teamEdit.paymentValidation.description',
+                    'Choisis les entraîneurs qui pourront marquer une cotisation '
+                    + 'comme payée pour cette équipe. Ils ne verront jamais l’argent '
+                    + 'des autres équipes.',
+                  )}
+                </Text>
+
+                <Controller
+                  control={control}
+                  name="authorizedPaymentValidators"
+                  render={({
+                    field: {
+                      name, onBlur, onChange, ref, value,
+                    },
+                  }) => (
+                    <AutocompleteSelect
+                      error={getFieldError({ errors: formErrors, fieldName: name })}
+                      isMulti
+                      label={t(
+                        'teamEdit.paymentValidation.authorizedValidators',
+                        'Entraîneurs autorisés à encaisser',
+                      )}
+                      onBlur={onBlur}
+                      options={selectedTrainerOptions}
+                      placeholder={t(
+                        'teamEdit.paymentValidation.authorizedValidatorsPlaceholder',
+                        'Personne pour le moment',
+                      )}
+                      ref={ref}
+                      setValue={(/** @type {Option[] | null} */ options) => onChange(
+                        options?.map((opt) => opt.value) || [],
+                      )}
+                      value={(Array.isArray(value) ? value : [])
+                        .map((validatorId) => selectedTrainerOptions
+                          .find((option) => option.value === validatorId)?.label)
+                        .filter(Boolean)
+                        .join(', ')}
+                    />
+                  )}
+                />
+
+                <Text style={[Fonts.p3, Fonts.neutral200]}>
+                  {authorizedPaymentValidators.length > 0
+                    ? t(
+                      'teamEdit.paymentValidation.authorizedValidatorsHint',
+                      'Ces entraîneurs pourront enregistrer un paiement reçu pour '
+                      + 'cette équipe uniquement. Tu gardes tous tes droits, et tu peux '
+                      + 'retirer cette autorisation à tout moment.',
+                    )
+                    : t(
+                      'teamEdit.paymentValidation.noneHint',
+                      'Personne n’est autorisé : toi seul peux enregistrer '
+                      + 'un paiement reçu pour cette équipe.',
+                    )}
+                </Text>
+              </View>
+            ) : null}
           </View>
         </ScrollView>
 
