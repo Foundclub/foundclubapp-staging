@@ -17,6 +17,7 @@ import {
 import useAuth from '@/domains/auth/useAuth';
 import { emitGuidanceAction, emitGuidanceInteraction } from '@/domains/guidance/guidanceRuntime';
 import useMessaging from '@/domains/messaging/useMessaging';
+import { invalidateAfterAction } from '@/domains/refresh/afterAction';
 import {
   getAvailableRequestHubFilters,
   REQUEST_HUB_FILTERS,
@@ -53,7 +54,6 @@ import {
   refuseFacilityOverrideRequest,
 } from '@/services/facility/facilityService';
 import {
-  getRequestsHubQueryKey,
   useRequestsHubData,
 } from '@/services/requests/requestsHubQueries';
 import {
@@ -210,19 +210,17 @@ function RequestsHub({ navigation, route }) {
     );
   }, [activeFilter, requestsQuery?.data?.items]);
 
-  const invalidateRequests = useCallback(async () => {
-    await Promise.all([
-      queryClient.invalidateQueries({ queryKey: ['requestsHub'] }),
-      queryClient.invalidateQueries({ queryKey: getRequestsHubQueryKey(context) }),
-      queryClient.invalidateQueries({ queryKey: ['teamMembershipRequests'] }),
-      queryClient.invalidateQueries({ queryKey: ['clubMembershipRequests'] }),
-      queryClient.invalidateQueries({ queryKey: ['pendingEvents'] }),
-      queryClient.invalidateQueries({ queryKey: ['pending-featured-requests'] }),
-      queryClient.invalidateQueries({ queryKey: ['facility-override-requests'] }),
-      queryClient.invalidateQueries({ queryKey: ['clubInterestRequests'] }),
-      queryClient.invalidateQueries({ queryKey: ['events'] }),
-    ]);
-  }, [context, queryClient]);
+  // U05 — BRANCHE SUR LE MODULE. Cet ecran declarait NEUF rubriques a la main et
+  // en oubliait QUATRE : `teams`, `team`, `planning` et `home-summary`. C'est
+  // le defaut qu'Adel decrit — « quand on est accepte, c'est hyper long » : la
+  // demande disparaissait bien de la liste, mais l'equipe rejointe n'apparaissait
+  // nulle part avant la prochaine relecture spontanee.
+  // ⚠️ `getRequestsHubQueryKey(context)` n'a pas ete perdu : react-query fait une
+  // correspondance PREFIXEE, et cette cle commence par `requestsHub`.
+  const invalidateRequests = useCallback(
+    () => invalidateAfterAction(queryClient, 'acceptRequest'),
+    [queryClient],
+  );
 
   const closeInstallationRefusalModal = useCallback(() => {
     setInstallationRefusalItem(null);

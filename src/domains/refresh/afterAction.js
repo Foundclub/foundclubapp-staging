@@ -53,6 +53,13 @@ export const AFTER_ACTION_CACHES = Object.freeze({
     ['clubMembershipRequests'],
     ['clubInterestRequests'],
     ['pendingEvents'],
+    // U05 — LES DEUX RACINES QUI MANQUAIENT, mesurees sur le SEUL ecran qui
+    // traite reellement les sept familles de demandes (`RequestsHub`, la
+    // fonction `invalidateRequests`) : « a la une » et « installation » y sont
+    // acceptees comme les autres. Sans elles, brancher cet ecran sur le module
+    // lui RETIRERAIT deux rafraichissements qu'il faisait deja.
+    ['pending-featured-requests'],
+    ['facility-override-requests'],
     ['teams'],
     ['team'],
     ['events'],
@@ -145,6 +152,37 @@ export const AFTER_ACTION_CACHES = Object.freeze({
     ['home-summary'],
   ],
 
+  /**
+   * U05 — L'ACTION QUI N'EXISTAIT PAS, ET C'EST CELLE QU'ADEL DECRIT.
+   *
+   * « Quand on est accepte, c'est hyper long alors que ca doit etre immediat. »
+   * Sur l'appareil de la personne ACCEPTEE, aucune action n'a eu lieu : c'est
+   * une notification qui arrive. L'app n'en rafraichissait que la CLOCHE
+   * (`useNotifications`, `invalidateNotificationQueries` : deux cles, les
+   * notifications et le compteur non-lus). Rien ne relisait l'appartenance.
+   *
+   * C'est le miroir de `acceptRequest`, avec UNE difference qui compte :
+   * ici l'IDENTITE change (`myTeams` / `trainedTeams` / `clubs` gagnent une
+   * entree), alors que sur l'appareil qui accepte elle ne bouge pas. D'ou
+   * `app-bootstrap` et `get-me`, absents de `acceptRequest`.
+   *
+   * ⛔ NE SE DECLENCHE QUE SUR LES TYPES D'APPARTENANCE (`teamMembershipRequest`,
+   * `clubMembershipRequest`, `addToTeam`). Le brancher sur toutes les
+   * notifications ferait payer dix requetes a chaque message de discussion.
+   */
+  membershipChanged: [
+    ['requestsHub'],
+    ['teamMembershipRequests'],
+    ['clubMembershipRequests'],
+    ['teams'],
+    ['team'],
+    ['events'],
+    ['planning'],
+    ['app-bootstrap'],
+    ['get-me'],
+    ['home-summary'],
+  ],
+
   /** Publier une compo / une convocation. */
   publishComposition: [
     ['event'],
@@ -166,6 +204,47 @@ export const AFTER_ACTION_CACHES = Object.freeze({
     ['get-me'],
   ],
 });
+
+/**
+ * U05 — LES SEULS TYPES DE NOTIFICATION QUI CHANGENT L'APPARTENANCE.
+ *
+ * Les valeurs viennent de `NOTIFICATION_TYPES` (`domains/auth/authUseCases.js`),
+ * et le serveur les emet ici :
+ *  · `teamMembershipRequest` — reponse a MA demande d'equipe
+ *    (admin/src/api/team-membership-request/services/notification.ts:97) ;
+ *  · `clubMembershipRequest` — reponse a MA demande de club ;
+ *  · `addToTeam` — on m'a ajoute comme encadrant
+ *    (admin/src/api/team/services/notification.ts:88).
+ *
+ * ⛔ `teamRequest` et `clubRequest` n'y sont PAS : ce sont les demandes qui
+ * ARRIVENT chez un encadrant. Elles ne changent aucune appartenance, seulement
+ * une liste a traiter — et cette liste, `RequestsHub` la relit deja.
+ *
+ * ⚠️ Pas d'annotation `@type` ici : `Object.freeze` infere `readonly string[]`,
+ * et l'ecrire a la main fait tomber la porte des types (TS4104) sans rien
+ * apporter — l'inference est deja exacte.
+ */
+export const MEMBERSHIP_NOTIFICATION_TYPES = Object.freeze([
+  'addToTeam',
+  'clubMembershipRequest',
+  'teamMembershipRequest',
+]);
+
+/**
+ * Quelle action du module une notification recue rend-elle necessaire ?
+ *
+ * ⚠️ Rend `''` pour tout le reste, et c'est le coeur de la mesure : la grande
+ * majorite des notifications (messages, rappels, convocations) ne change AUCUNE
+ * donnee au-dela de la cloche. Les brancher ferait payer dix requetes reseau a
+ * chaque notification recue — la lenteur que ce lot doit eviter, pas creer.
+ * @param {string} [notificationType] Le type porte par la notification.
+ * @returns {string} La cle de `AFTER_ACTION_CACHES`, ou '' s'il n'y a rien a faire.
+ */
+export const resolveNotificationRefreshAction = (notificationType) => (
+  MEMBERSHIP_NOTIFICATION_TYPES.includes(String(notificationType || '').trim())
+    ? 'membershipChanged'
+    : ''
+);
 
 /**
  * Marque perimes les caches devenus faux apres une action reussie.

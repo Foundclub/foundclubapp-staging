@@ -40,7 +40,7 @@ const mockChrono = { depart: 0 };
 const LATENCE_RESEAU = 30;
 
 /** Le nombre de caches que l'ecran rafraichit apres une creation reussie. */
-const NOMBRE_DE_CACHES = 6;
+const NOMBRE_DE_CACHES = 7;
 
 const maintenant = () => Date.now() - mockChrono.depart;
 
@@ -345,7 +345,10 @@ describe('D19 — le cout de « Creer », mesure en millisecondes', () => {
     expect(ecranAffiche.params.eventTypeName).toBe(nomDuType);
   });
 
-  test('les six caches sont rafraichis, aucun n est perdu en route', async () => {
+  // U05 — SEPT depuis que la liste vit dans `domains/refresh/afterAction.js` :
+  // `home-summary` s'y ajoute, et l'ecran l'oubliait. L'accueil annonce le
+  // prochain evenement ; le creer le rendait faux sans que rien ne le relise.
+  test('les sept caches sont rafraichis, aucun n est perdu en route', async () => {
     await chronometrerLaCreation();
 
     expect(mockJournalDesCaches.map((ligne) => ligne.cle).sort()).toEqual([
@@ -353,17 +356,18 @@ describe('D19 — le cout de « Creer », mesure en millisecondes', () => {
       'club-planning',
       'events',
       'get-me',
+      'home-summary',
       'pending-featured-requests',
       'planning',
     ]);
   });
 
-  // 🧨 LE TEMOIN DU LOT. Avant D19, les six invalidations etaient attendues
+  // 🧨 LE TEMOIN DU LOT. Avant D19, les invalidations etaient attendues
   // UNE PAR UNE : la sixieme ne partait qu'apres l'arrivee de la cinquieme.
   // Avec une latence de 30 ms, l'ecart entre le premier depart et le dernier
   // valait donc 5 x 30 = 150 ms de file indienne — un temps mort pendant lequel
   // l'ecran reste fige sur « c'est cree », sans rien montrer.
-  test('les six caches partent ENSEMBLE, pas en file indienne', async () => {
+  test('les sept caches partent ENSEMBLE, pas en file indienne', async () => {
     await chronometrerLaCreation();
 
     const departs = mockJournalDesCaches.map((ligne) => ligne.depart);

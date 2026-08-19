@@ -855,6 +855,55 @@ export const formatBirthdateToSend = (value) => {
   return `${year}-${month}-${day}`;
 };
 
+/**
+ * U05 — FAUT-IL (ENCORE) LIRE LE PROFIL COMPLET ?
+ *
+ * 🧨 LE DEFAUT QUE CETTE FONCTION REPARE, et c'est celui qui masquait tous les
+ * autres. `useAuth` lit l'identite ainsi :
+ *   `userData = fullUserData || bootstrapData?.userSummary || auth?.user`
+ * `fullUserData` est la reponse de `GET /firebase-auth/me`, portee par la query
+ * `['get-me', token]`. Cette query n'etait ACTIVE qu'au demarrage, le temps que
+ * le bootstrap reponde ; ensuite elle passait `enabled: false`.
+ *
+ * Or `invalidateQueries` ne re-lit que les queries ACTIVES
+ * (query-core/queryClient.js:157 — `type: filters?.refetchType ?? 'active'` ;
+ * query.js:77 — `isActive()` est faux quand tous les observateurs sont
+ * desactives). Consequence mesuree : des qu'UNE chose remplissait `['get-me']`
+ * — `refetchUserData()` a l'envoi d'une demande, ou le `setQueryData` des trois
+ * ecrans de profil — l'identite se figeait sur cet instantane. Elle recouvrait
+ * alors la version du bootstrap, qui, elle, continuait d'etre rafraichie : les
+ * rafraichissements qui fonctionnaient devenaient invisibles, jusqu'a la
+ * fermeture de l'application.
+ *
+ * La regle ajoutee tient en une ligne : **si le profil complet EST la source
+ * lue, il reste rafraichissable.** Elle ne declenche AUCUNE requete de plus au
+ * demarrage — elle ne devient vraie qu'apres que la donnee existe deja, et une
+ * query qui redevient active avec une donnee fraiche (`staleTime` 5 min) n'est
+ * pas re-lue. Elle rend simplement `['get-me']` obeissant a l'invalidation.
+ * @param {object} params Les conditions, telles que `useAuth` les connait.
+ * @param {boolean} params.hasBootstrapError Le bootstrap a echoue.
+ * @param {boolean} params.hasBootstrapUser Le bootstrap a rendu un profil resume utilisable.
+ * @param {boolean} params.hasFullUser Le profil complet est deja en cache.
+ * @param {boolean} params.isAddingAccount On est en train d'ajouter un compte.
+ * @param {boolean} params.isBootstrapDisabled Le bootstrap est coupe.
+ * @param {boolean} params.isDelayElapsed Le delai anti-rafale du demarrage est passe.
+ * @param {boolean} params.isSignedIn Il y a un jeton.
+ * @returns {boolean} true si la query du profil complet doit rester active.
+ */
+export const shouldFetchFullUser = ({
+  hasBootstrapError,
+  hasBootstrapUser,
+  hasFullUser,
+  isAddingAccount,
+  isBootstrapDisabled,
+  isDelayElapsed,
+  isSignedIn,
+}) => {
+  if (!isSignedIn || isAddingAccount || !isDelayElapsed) return false;
+  if (hasFullUser) return true;
+  return Boolean(isBootstrapDisabled || hasBootstrapError || !hasBootstrapUser);
+};
+
 export const NOTIFICATION_TYPES = {
   // Users
   ADD_TO_TEAM: 'addToTeam',
