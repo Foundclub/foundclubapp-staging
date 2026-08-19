@@ -196,6 +196,9 @@ jest.mock('@/components/tactical/DraggableToken', () => {
   return {
     __esModule: true,
     default: (/** @type {any} */ { player }) => <TexteRN>{`JETON:${player?.lastname}`}</TexteRN>,
+    // La taille DESSINEE du jeton fait partie du contrat : l'ecran s'en sert
+    // pour mettre le doigt au centre de l'apercu (V03).
+    GHOST_TOKEN_SIZE: jest.requireActual('@/components/tactical/DraggableToken').GHOST_TOKEN_SIZE,
   };
 });
 
