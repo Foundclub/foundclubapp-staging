@@ -857,15 +857,26 @@ describe('D28 — chaque type d evenement obtient une affiche, et on sait laquel
     }));
   });
 
-  // L'ETAT DU JOUR, ecrit noir sur blanc : un seul gabarit de sujet `event`
-  // existe. Ce test n'est pas un doublon du precedent — il FIGE le manque, pour
-  // que le jour ou le studio livre une affiche « match », son absence de
-  // branchement se voie ici plutot qu'a la recette.
-  it('AUJOURD HUI : la detection le demande, les 6 autres tombent sur le repli', () => {
+  // 🎯 CE TEST A FAIT SON TRAVAIL, ET C'EST POURQUOI IL CHANGE ICI. D28 FIGEAIT
+  // LE MANQUE : « un seul gabarit de sujet `event` existe, les 6 autres types
+  // tombent sur le repli » — pour que le jour ou le studio livrerait l'affiche
+  // du match, son absence de branchement se voie ICI plutot qu'a la recette.
+  // Ce jour est le 2026-08-19 (X01) : le studio a livre les 3 gabarits, ils sont
+  // branches, et le temoin dit desormais la nouvelle verite — meme role, meme
+  // exhaustivite sur les 7 types du serveur.
+  it('chaque type mene a SON gabarit, et la detection ne bouge pas', () => {
+    // 🔒 Le seul qui marchait avant X01. Il n'a pas bouge.
     expect(getEventShowcaseTemplate("Détection / Séance d'essai")).toBe('affiche-detection');
-    ['Entraînement', 'Stage', 'Tournoi', 'Match', 'Autre', 'Réservation'].forEach((typeName) => {
+    // Les deux types qui ont recu leur propre dessin.
+    expect(getEventShowcaseTemplate('Match')).toBe('affiche-match');
+    expect(getEventShowcaseTemplate('Tournoi')).toBe('affiche-tournoi');
+    // Et le gabarit NEUTRE, sans vocabulaire sportif, pour tout le reste —
+    // y compris l'entrainement (dont la porte est fermee par D99) et la
+    // reservation (type grise). Ce n'est plus l'affiche de quelqu'un d'autre.
+    ['Entraînement', 'Stage', 'Autre', 'Réservation'].forEach((typeName) => {
       expect(getEventShowcaseTemplate(typeName)).toBe(EVENT_SHOWCASE_FALLBACK_TEMPLATE);
     });
+    expect(EVENT_SHOWCASE_FALLBACK_TEMPLATE).toBe('affiche-evenement');
   });
 
   // ⛔ NE JAMAIS CASSER LA GENERATION : un type absent, vide, ou servi demain
