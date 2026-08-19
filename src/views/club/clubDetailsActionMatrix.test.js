@@ -1,13 +1,18 @@
 import { resolveClubDetailsActionMatrix } from './clubDetailsActionMatrix';
 
 describe('resolveClubDetailsActionMatrix', () => {
-  it('shows join for an unattached coach without the interest fallback', () => {
+  // V01 (2026-08-18) — REECRIT. Ce test disait « sans le repli d'interet » : il
+  // verrouillait la regle d'avant, ou l'interet n'apparaissait QUE si aucune
+  // action d'affiliation ne s'allumait. Adel demande l'inverse : « je dois voir
+  // DEUX boutons ». Les deux intentions ne se remplacent pas, elles coexistent —
+  // « je rejoins » n'est pas « je me signale ».
+  it('shows join AND the interest door together for an unattached coach', () => {
     expect(resolveClubDetailsActionMatrix({
       canJoinClub: true,
       clubHasTeams: true,
       isAuthenticated: true,
     })).toMatchObject({
-      showClubInterestAction: false,
+      showClubInterestAction: true,
       showJoinClubAction: true,
     });
   });
@@ -26,14 +31,19 @@ describe('resolveClubDetailsActionMatrix', () => {
     });
   });
 
-  it('shows player affiliation instead of the interest fallback', () => {
+  // V01 (2026-08-18) — REECRIT. Il disait « a la place du repli d'interet ».
+  // « Je fais partie de ce club » et « Interesse par le club » repondent a deux
+  // situations differentes : j'y suis deja / je n'y suis pas encore. Forcer la
+  // seconde a disparaitre des que la premiere s'allume oblige le joueur a
+  // affirmer une appartenance qu'il n'a pas.
+  it('shows player affiliation AND the interest door side by side', () => {
     expect(resolveClubDetailsActionMatrix({
       canPlayerSignalClubTeam: true,
       clubHasTeams: true,
       isAuthenticated: true,
       isPlayerRole: true,
     })).toMatchObject({
-      showClubInterestAction: false,
+      showClubInterestAction: true,
       showPlayerClubAction: true,
     });
   });
@@ -79,8 +89,13 @@ describe('resolveClubDetailsActionMatrix', () => {
     });
   });
 
-  // D95 — non-regression. Un club QUI A une equipe ne bouge pas d'un pixel.
-  it('leaves a club with teams exactly as it was for a player', () => {
+  // D95 — non-regression, REECRITE par V01 (2026-08-18).
+  //
+  // Ce que D95 protegeait est INTACT : sur un club qui a une equipe, le joueur
+  // garde « Je fais partie de ce club » et n'attrape ni « C'est mon club » ni
+  // « Je dirige ce club ». Ce qui change, et seulement cela : l'interet cesse
+  // d'etre un repli et s'affiche A COTE.
+  it('keeps the player affiliation on a club with teams, and adds the interest door', () => {
     expect(resolveClubDetailsActionMatrix({
       canPlayerSignalClubTeam: true,
       canPlayerSignalMissingTeam: false,
@@ -88,7 +103,7 @@ describe('resolveClubDetailsActionMatrix', () => {
       isAuthenticated: true,
       isPlayerRole: true,
     })).toMatchObject({
-      showClubInterestAction: false,
+      showClubInterestAction: true,
       showClubPartneringAction: false,
       showPlayerClubAction: true,
       showPlayerNoTeamAction: false,
@@ -248,7 +263,10 @@ describe('resolveClubDetailsActionMatrix', () => {
   // a une equipe — les 2 profils « sans equipe » sont les seuls a changer, et
   // c'est exactement le lot.
   describe('D98 · temoin 2 — un visiteur connecte ne voit RIEN changer', () => {
-    it('leaves a player on a club with teams untouched', () => {
+    // ⚠️ V01 — ce profil CHANGE, et c'est EXACTEMENT la demande d'Adel : le
+    // joueur qui ouvre un club qui n'est pas le sien voit desormais les deux
+    // boutons. Toute la reste de sa ligne est identique a D98.
+    it('gives a player on a club with teams the second door, and nothing else changes', () => {
       expect(resolveClubDetailsActionMatrix({
         canPlayerSignalClubTeam: true,
         clubHasTeams: true,
@@ -256,7 +274,7 @@ describe('resolveClubDetailsActionMatrix', () => {
         isPlayerRole: true,
       })).toEqual({
         showClubArrivalInterestAction: false,
-        showClubInterestAction: false,
+        showClubInterestAction: true,
         showClubPartneringAction: false,
         showContactAdminClaimAction: false,
         showEmptyClubClaimAction: false,
@@ -334,6 +352,87 @@ describe('resolveClubDetailsActionMatrix', () => {
         showPublicClaimLogin: false,
         showPublicPlayerLogin: false,
       });
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // V01 — « je dois voir DEUX boutons » (Adel, 2026-08-18).
+  //
+  // Le defaut repare ici : sur un club QUI A une equipe, le drapeau
+  // `hasPrimaryAffiliationAction` eteignait l'interet des qu'une action
+  // d'affiliation s'allumait. Le joueur de passage n'avait donc qu'un seul
+  // geste possible, et il affirmait une appartenance : « Je fais partie de ce
+  // club ». Celui qui n'y est PAS ENCORE ne pouvait rien dire.
+  //
+  // S02 avait deja fait cohabiter les deux portes sur un club SANS equipe. V01
+  // fait la meme chose sur un club qui EN A — c'est la moitie qui manquait.
+  // ---------------------------------------------------------------------------
+  describe("V01 · les deux portes d'un club AVEC equipes", () => {
+    // LE TEMOIN PRINCIPAL.
+    it('shows BOTH doors when a player opens a club with teams', () => {
+      expect(resolveClubDetailsActionMatrix({
+        canPlayerSignalClubTeam: true,
+        clubHasTeams: true,
+        isAuthenticated: true,
+        isPlayerRole: true,
+      })).toMatchObject({
+        showClubInterestAction: true,
+        showPlayerClubAction: true,
+      });
+    });
+
+    // 🔒 NON-REGRESSION — un joueur DEJA dans ce club n'y a plus rien a
+    // demander : ni « je fais partie de ce club », ni « interesse ». C'est
+    // `canPlayerSignalClubTeam` qui s'eteint en amont, et
+    // `isUserAlreadyAttachedToViewedClub` qui ferme la seconde porte ici.
+    it('never shows either door to a player already in the club', () => {
+      expect(resolveClubDetailsActionMatrix({
+        canPlayerSignalClubTeam: false,
+        clubHasTeams: true,
+        isAuthenticated: true,
+        isPlayerRole: true,
+        isUserAlreadyAttachedToViewedClub: true,
+      })).toMatchObject({
+        showClubInterestAction: false,
+        showPlayerClubAction: false,
+      });
+    });
+
+    // 🔒 NON-REGRESSION — un dirigeant de CE club garde « Quitter le club » et
+    // rien d'autre : `canShowAffiliationAction` exige `!showLeaveClubAction`.
+    it('never shows the interest door to a dirigeant of the viewed club', () => {
+      expect(resolveClubDetailsActionMatrix({
+        canEdit: true,
+        canLeaveClub: true,
+        clubHasTeams: true,
+        isAuthenticated: true,
+        isUserAlreadyAttachedToViewedClub: true,
+        ownerCount: 1,
+      })).toMatchObject({
+        showClubInterestAction: false,
+        showLeaveClubAction: true,
+      });
+    });
+
+    // 🔒 NON-REGRESSION — les deux portes ne se marchent JAMAIS dessus :
+    // `showClubInterestAction` exige des equipes, `showClubArrivalInterestAction`
+    // exige qu'il n'y en ait aucune. Un club ne peut pas etre dans les deux cas.
+    it('never lights the two interest doors at the same time', () => {
+      const avecEquipes = resolveClubDetailsActionMatrix({
+        canPlayerSignalClubTeam: true,
+        clubHasTeams: true,
+        isAuthenticated: true,
+        isPlayerRole: true,
+      });
+      const sansEquipe = resolveClubDetailsActionMatrix({
+        canPlayerSignalMissingTeam: true,
+        clubHasTeams: false,
+        isAuthenticated: true,
+        isPlayerRole: true,
+      });
+
+      expect(avecEquipes.showClubArrivalInterestAction).toBe(false);
+      expect(sansEquipe.showClubInterestAction).toBe(false);
     });
   });
 });
