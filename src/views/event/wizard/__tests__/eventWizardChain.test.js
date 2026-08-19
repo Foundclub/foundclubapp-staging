@@ -174,6 +174,21 @@ jest.mock('@/domains/places/usePlaces', () => ({
 // la suite entiere meurt au chargement.
 jest.mock('@/services/team/teamService', () => ({ getTeams: () => Promise.resolve([]) }));
 
+// W07 — `EventWizardInvites` cherche desormais les clubs externes par la
+// recherche serveur `getClubs`. Comme `teamService` juste au-dessus, ce service
+// est double : sans lui, son `client` reclamerait une API_URL au chargement du
+// module et la suite entiere refuserait de demarrer.
+jest.mock('@/services/club/clubService', () => ({
+  getClubs: () => Promise.resolve({
+    data: [],
+    meta: {
+      pagination: {
+        page: 1, pageCount: 0, pageSize: 10, total: 0,
+      },
+    },
+  }),
+}));
+
 jest.mock('@/services/event/eventQueries', () => ({
   useGetEventTypes: () => ({
     data: mockDonnees.types, error: null, isLoading: false, refetch: () => {},
