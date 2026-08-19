@@ -249,3 +249,49 @@ describe('W02 — « A payé » et la delegation aux coachs', () => {
     ]));
   });
 });
+
+// Y06 — LA LISTE OUVRE CETTE FENETRE-CI, elle n en recopie pas une seconde.
+// La carte d un membre porte desormais « A payé » (`ClubLicenses.js`) ; elle
+// emmene ici avec `openPaymentModal`. C est le seul formulaire d encaissement
+// du depot — deux formulaires pour le meme geste d argent, ce sont deux verites
+// qui divergent.
+describe('Y06 — arriver depuis la liste avec la fenetre d encaissement ouverte', () => {
+  beforeEach(() => {
+    mockBoutons.length = 0;
+  });
+
+  afterEach(() => {
+    if (!arbreCourant) return;
+    act(() => arbreCourant.unmount());
+    arbreCourant = null;
+  });
+
+  it('temoin 1c — le parametre ouvre la fenetre sans un appui de plus', () => {
+    const titres = intitules(monterLaFiche(
+      cotisation(),
+      { ...EN_DIRIGEANT, openPaymentModal: true },
+    ));
+
+    // Les deux boutons de la fenetre : elle est bien montee.
+    expect(titres).toContain('Annuler');
+    expect(titres).toContain('Valider');
+  });
+
+  it('sans le parametre, aucune fenetre ne s ouvre toute seule', () => {
+    const titres = intitules(monterLaFiche(cotisation(), EN_DIRIGEANT));
+
+    expect(titres).not.toContain('Annuler');
+  });
+
+  it('🔒 temoin 2c — un coach SANS delegation n ouvre rien, meme avec le parametre', () => {
+    // 💰 Fail-closed : le parametre de navigation ne donne AUCUN droit. Le rendu
+    // de la fenetre reste garde par le verdict du serveur.
+    const titres = intitules(monterLaFiche(
+      cotisation({ canValidatePayments: false }),
+      { ...EN_COACH, openPaymentModal: true },
+    ));
+
+    expect(titres).not.toContain('Annuler');
+    expect(titres).not.toContain('A payé');
+  });
+});

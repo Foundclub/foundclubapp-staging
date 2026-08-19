@@ -145,6 +145,22 @@ export const getEnabledManualPaymentMethods = (raw = {}) => {
     .map((mode) => ({ label: paymentModeLabels[mode], mode }));
 };
 
+// W02 / Y06 — LA SEULE REGLE DE DROIT DE L ENCAISSEMENT DU DEPOT.
+//
+// Elle est partagee par les DEUX endroits qui montrent « A payé » : la fiche d un
+// membre (`ClubLicenseMemberDetail`) et la carte de la liste (`ClubLicenses`).
+// ⛔ Ne jamais en ecrire une seconde : deux regles de droit qui divergent, c est
+// une faille, et ici c est de l argent.
+//
+// 🚨 C EST LE SERVEUR QUI TRANCHE, PAS L ECRAN. `canValidatePayments` voyage avec
+// la fiche (admin, `canValidatePaymentsFor`) et vaut la MEME regle que celle qui
+// refusera l appel. Une fiche muette — vieux serveur, ou liste qui ne porte pas
+// encore ce verdict — vaut NON : on n affiche jamais un bouton qui repondrait
+// « acces refuse ».
+export const canValidateAssignmentPayment = (assignment, canUseSensitiveActions) => (
+  canUseSensitiveActions === true || assignment?.canValidatePayments === true
+);
+
 export const getLicenseStatusTone = (Colors, status) => ({
   active: Colors.success500,
   checkout_failed: Colors.error500,

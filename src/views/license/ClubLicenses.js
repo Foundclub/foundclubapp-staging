@@ -41,6 +41,7 @@ import {
 import { connectLicenseHelloAsso } from '@/services/license/licenseService';
 
 import {
+  canValidateAssignmentPayment,
   createHelloAssoDraft,
   describeHelloAssoReadiness,
   formatLicenseMoney,
@@ -563,21 +564,25 @@ function CampaignSummary({
  * @param {() => void} root0.onPress - Ouvre la fiche du membre.
  * @param {boolean} [root0.canRemind] - Une relance a-t-elle un sens ?
  * @param {boolean} [root0.canSetBackToDue] - U06 : cotisation EXEMPTEE uniquement.
+ * @param {boolean} [root0.canValidatePayment] - Y06 : encaisser a-t-il un sens, et le droit ?
  * @param {boolean} [root0.isReminding] - Relance en cours pour CE membre.
  * @param {boolean} [root0.isSettingBackToDue] - Retour a payer en cours pour CE membre.
  * @param {() => void} [root0.onRemind] - Envoie la relance individuelle.
  * @param {() => void} [root0.onSetBackToDue] - Retire l'exemption.
+ * @param {() => void} [root0.onValidatePayment] - Y06 : ouvre la fenetre d'encaissement.
  * @returns {import('react').ReactElement} La carte.
  */
 function AssignmentCard({
   canRemind,
   canSetBackToDue,
+  canValidatePayment,
   isReminding,
   isSettingBackToDue,
   item,
   onPress,
   onRemind,
   onSetBackToDue,
+  onValidatePayment,
 }) {
   const {
     ApplicationStyle, Colors, Fonts, Spaces,
@@ -585,6 +590,11 @@ function AssignmentCard({
   const tone = statusTone(Colors, item?.status);
   const name = getAssignmentMemberName(item);
   const avatarUrl = getAssignmentMemberAvatarUrl(item);
+  // La rangee du bas n existe que si elle porte au moins un geste : une bande
+  // vide sous chaque carte serait du bruit sur une liste de 100 membres.
+  const aDesActions = (canRemind && onRemind)
+    || (canValidatePayment && onValidatePayment)
+    || (canSetBackToDue && onSetBackToDue);
   return (
     <View style={[ApplicationStyle.card, Spaces.marginBottom[12], {
       backgroundColor: Colors.primary700,
@@ -619,7 +629,7 @@ function AssignmentCard({
           </View>
         </View>
       </Pressable>
-      {(canRemind && onRemind) || (canSetBackToDue && onSetBackToDue) ? (
+      {aDesActions ? (
         <View style={[Spaces.marginTop[12], {
           alignItems: 'center',
           flexDirection: 'row',
@@ -634,6 +644,21 @@ function AssignmentCard({
               size="sm"
               title="Relancer"
               variant="Secondary"
+            />
+          ) : null}
+          {/* Y06 — « A payé », le geste qu Adel a cherche TROIS fois. Le lot W02
+              l avait pose sur la fiche d un membre ; sa capture du 19/08 montre
+              la LISTE. Il est donc ici, juste a cote de « Relancer ».
+              💰 Le droit vient de `canValidateAssignmentPayment` — la MEME regle
+              que la fiche, jamais une seconde.
+              🧨 Et il ne cotoie JAMAIS « À payer » (une lettre d ecart, le geste
+              contraire) : l un ne sort que sur une cotisation EXEMPTEE, l autre
+              que sur une cotisation ou il reste quelque chose a encaisser. */}
+          {canValidatePayment && onValidatePayment ? (
+            <Button
+              onPress={onValidatePayment}
+              size="sm"
+              title="A payé"
             />
           ) : null}
           {/* U06 — « À payer », juste a cote de « Relancer », exactement la ou
@@ -1907,14 +1932,36 @@ function ClubLicenses({ navigation, route }) {
     }
   }, [assignmentsQuery, campaignId, campaignQuery, campaignsQuery, dashboardQuery, paymentReviewsQuery]);
 
-  const openAssignmentDetail = useCallback((item) => {
+  // Y06 — `extraParams` sert au geste « A payé » de la carte : la liste emmene
+  // sur la fiche AVEC la fenetre d encaissement deja ouverte. ⛔ On ne recopie
+  // pas ce formulaire ici : il n existe qu un seul endroit ou l argent s encaisse.
+  const openAssignmentDetail = useCallback((item, extraParams) => {
     navigation.navigate(RouteNames.ClubLicenseMemberDetail, {
       assignmentId: item?.documentId || item?.id,
       campaignId,
       canManageLicenses,
       scope,
+      ...extraParams,
     });
   }, [campaignId, canManageLicenses, navigation, scope]);
+
+  // Y06 — LE CHEMIN VERS LA DELEGATION, PAS UNE COPIE DU REGLAGE.
+  //
+  // 🗣️ Adel, 19/08 : « ou ça, je peux ajouter cette option ? ». Le reglage
+  // existe (lot W02) et il vit dans « Modifier mon equipe »
+  // (`TeamEdit.js`, `authorizedPaymentValidators`). Adel, lui, le cherchait la
+  // ou vit l argent : dans les cotisations.
+  //
+  // ⛔ ON N Y RECOPIE PAS LE FORMULAIRE. Deux endroits pour poser le meme droit,
+  // ce sont deux verites qui divergent — et ici c est la caisse du club.
+  const openTeamPaymentDelegation = useCallback((team) => {
+    const teamId = normalizeFilterValue(team?.value);
+    if (!teamId) return;
+    navigation.navigate(RouteNames.TeamStack, {
+      params: { clubId, teamId },
+      screen: RouteNames.TeamEdit,
+    });
+  }, [clubId, navigation]);
 
   const handleSelectClub = useCallback(async (club) => {
     const selectedClubId = String(club?.documentId || club?.id || '').trim();
@@ -2291,6 +2338,45 @@ function ClubLicenses({ navigation, route }) {
                       variant="Secondary"
                     />
                   </View>
+                  {/*
+                    Y06 — LE RENVOI VERS LA DELEGATION.
+                    ⚠️ UNE CAMPAGNE COUVRE PLUSIEURS EQUIPES : elle appartient a un
+                    CLUB (schema `license-campaign`, relation `club`), pas a une
+                    equipe. La delegation, elle, se donne equipe par equipe. Un
+                    renvoi vers UNE seule equipe serait donc faux : on nomme
+                    toutes celles que les cotisations chargées font apparaitre.
+                    🔒 Ce bloc ne s affiche que dans la vue dirigeant : seul le
+                    dirigeant du club peut poser cette delegation (admin,
+                    `canDelegatePaymentValidation`).
+                  */}
+                  <View style={Spaces.gap[8]}>
+                    <Text style={[Fonts.p3Bold, Fonts.neutral00]}>
+                      Qui peut valider les paiements ?
+                    </Text>
+                    <Text style={[Fonts.p3, Fonts.neutral200]}>
+                      Toi, toujours. Tu peux aussi confier l encaissement a un
+                      entraîneur, équipe par équipe : le réglage vit dans la fiche
+                      de l équipe, section « Encaissement des cotisations ».
+                    </Text>
+                    {memberTeamOptions.length ? memberTeamOptions.map((team) => (
+                      <Button
+                        key={team.value}
+                        onPress={() => openTeamPaymentDelegation(team)}
+                        title={`Régler pour ${team.label}`}
+                        variant="Secondary"
+                      />
+                    )) : (
+                      <Text style={[Fonts.p3, Fonts.neutral200]}>
+                        Aucune équipe n apparaît encore dans cette campagne.
+                      </Text>
+                    )}
+                    {assignmentsTotalCount > assignments.length ? (
+                      <Text style={[Fonts.p3, Fonts.neutral200]}>
+                        {`Seuls les ${assignments.length} premiers membres sont `
+                        + 'chargés : d autres équipes peuvent exister.'}
+                      </Text>
+                    ) : null}
+                  </View>
                 </View>
               </CampaignDetailSection>
               <CampaignDetailSection
@@ -2650,6 +2736,13 @@ function ClubLicenses({ navigation, route }) {
     <AssignmentCard
       canRemind={canManageLicenses && canAssignmentBeReminded(item)}
       canSetBackToDue={canManageLicenses && canAssignmentBeSetBackToDue(item)}
+      // Y06 — DEUX conditions, et elles disent deux choses differentes :
+      //   · le DROIT — la regle partagee avec la fiche (`canValidateAssignmentPayment`) ;
+      //   · le SENS — `canAssignmentBeReminded` mesure deja « il reste quelque
+      //     chose a encaisser » (statut utile ET reste a payer > 0). Une
+      //     cotisation soldee ou exemptee n a rien a encaisser : pas de bouton.
+      canValidatePayment={canValidateAssignmentPayment(item, canManageLicenses)
+        && canAssignmentBeReminded(item)}
       isReminding={singleReminderMutation.isPending && pendingReminderAssignmentId === String(item?.documentId || item?.id)}
       isSettingBackToDue={unwaiveMutation.isPending
         && pendingUnwaiveAssignmentId === String(item?.documentId || item?.id)}
@@ -2657,6 +2750,7 @@ function ClubLicenses({ navigation, route }) {
       onPress={() => openAssignmentDetail(item)}
       onRemind={() => handleSingleReminder(item)}
       onSetBackToDue={() => handleSetBackToDue(item)}
+      onValidatePayment={() => openAssignmentDetail(item, { openPaymentModal: true })}
     />
   );
   /**

@@ -1,4 +1,10 @@
 /* eslint-disable perfectionist/sort-objects */
+// Y06 — `perfectionist/sort-imports` et `import/order` se CONTREDISENT sur les
+// alias `@/platform/*` et `@/utils/*` : l un les veut avant les imports
+// relatifs, l autre apres. Le fichier voisin (ClubLicenseMemberDetail.js:1)
+// tranche de la meme facon depuis W02 — on suit `import/order`, la regle qui
+// decrit la structure du depot, et on tait la seconde POUR CE FICHIER.
+/* eslint-disable perfectionist/sort-imports */
 import { useQueryClient } from '@tanstack/react-query';
 import { format, isValid, parse } from 'date-fns';
 import {
@@ -40,6 +46,14 @@ import {
   useLicenseMutation,
 } from '@/services/license/licenseQueries';
 import { useGetSections } from '@/services/section/sectionQueries';
+// Y06 — `@/platform/links` et `@/utils/mediaUrl` ouvrent le modele deja
+// enregistre, par le MEME chemin que le membre (`MyLicense.js`).
+import { resolveMediaUrl } from '@/utils/mediaUrl';
+import LinksPlatform from '@/platform/links';
+import MediaPlatform from '@/platform/media';
+// U06 — la MEME liste de formats sur les trois ecrans de depot, et dans la
+// langue de la plateforme (UTI sur iOS, type MIME sur Android).
+import { getDocumentPickerOptions } from '@/platform/media/documentUploadFormats';
 
 import {
   buildEventCampaignDefaults,
@@ -57,17 +71,6 @@ import {
   normalizePaymentModes,
   paymentModeLabels,
 } from './licenseDesignSystem';
-// `import/order` veut cet alias AVANT les imports relatifs, `perfectionist/
-// sort-imports` le veut APRES : les deux regles se contredisent sur ce chemin.
-// C est pour ca que le fichier voisin (ClubLicenseMemberDetail.js:1) desactive la
-// seconde POUR TOUT LE FICHIER ; ici on n en desactive qu une ligne.
-// eslint-disable-next-line import/order
-import MediaPlatform from '@/platform/media';
-// U06 — la MEME liste de formats sur les trois ecrans de depot, et dans la langue
-// de la plateforme (UTI sur iOS, type MIME sur Android). Meme contradiction de
-// regles que la ligne au-dessus, meme derogation d une seule ligne.
-// eslint-disable-next-line import/order
-import { getDocumentPickerOptions } from '@/platform/media/documentUploadFormats';
 
 const euroToCents = (value) => Math.round(Number(String(value || '0').replace(',', '.')) * 100);
 const centsToEuro = (value) => String(((value || 0) / 100).toFixed(2)).replace('.', ',');
@@ -288,6 +291,12 @@ const createDocumentRequestDraft = (documentRequest = {}) => ({
   requiresManualValidation: documentRequest.requiresManualValidation !== false,
   requiresSignature: documentRequest.requiresSignature === true,
   templateFileName: documentRequest.templateFile?.name || '',
+  // Y06 — L ADRESSE du modele deja enregistre. Sans elle, le createur voyait le
+  // NOM de son fichier sans pouvoir l ouvrir : « visible et telechargeable par
+  // tous les membres », sauf par celui qui l a depose.
+  // ⛔ Elle ne concerne QUE le fichier deja parti : `pickedTemplateFile` n a
+  // aucune adresse tant que la campagne n est pas enregistree.
+  templateFileUrl: documentRequest.templateFile?.url || '',
 });
 const referenceKey = (value) => String(value?.documentId || value?.id || value || '');
 const createPricingRuleDraft = (pricingRule = {}) => ({
@@ -1198,6 +1207,19 @@ function TemplateFileRow({ item, onChange }) {
   const nomDuModele = item.pickedTemplateFile?.name
     || (item.removedTemplate ? '' : item.templateFileName);
 
+  // Y06 — ON N OUVRE QUE CE QUI EST ENREGISTRE.
+  // Un fichier choisi (`pickedTemplateFile`) n est pas encore parti : il n a pas
+  // d adresse, et un modele retire non plus. Dans ces deux cas, aucun bouton —
+  // ⛔ un bouton qui ouvrirait le vide est pire que pas de bouton.
+  const adresseDuModeleEnregistre = (!item.pickedTemplateFile && !item.removedTemplate)
+    ? resolveMediaUrl(item.templateFileUrl || '')
+    : '';
+
+  const ouvrirLeModele = useCallback(async () => {
+    if (!adresseDuModeleEnregistre) return;
+    await LinksPlatform.openUrl(adresseDuModeleEnregistre);
+  }, [adresseDuModeleEnregistre]);
+
   const choisirLeModele = useCallback(async () => {
     try {
       const picked = await MediaPlatform.pickDocument(getDocumentPickerOptions());
@@ -1223,6 +1245,13 @@ function TemplateFileRow({ item, onChange }) {
       >
         {nomDuModele || 'Aucun modèle'}
       </Text>
+      {adresseDuModeleEnregistre ? (
+        <Button
+          onPress={ouvrirLeModele}
+          title="Voir le modèle"
+          variant="Secondary"
+        />
+      ) : null}
       <Button
         onPress={choisirLeModele}
         title={nomDuModele ? 'Remplacer le modèle' : 'Ajouter un modèle'}
