@@ -69,6 +69,37 @@ export const getActiveClubId = (/** @type {any} */ userData) => (
 );
 
 /**
+ * MON CLUB, Y COMPRIS QUAND L'ADHÉSION N'EST ENCORE QU'UNE DEMANDE — V02.
+ *
+ * `getActiveClubId` ci-dessus répond « quel club m'a déjà accepté ». Ça ne
+ * suffit pas au tout début : un entraîneur qui vient de CRÉER son club n'est
+ * pas encore affilié, son rattachement est une `club-membership-request` à
+ * l'état `pending` (voir `ClubWizardRecap`, qui enchaîne dessus). Pendant ce
+ * laps de temps, l'app doit quand même savoir de quel club on parle.
+ *
+ * Deux écrans voisins ne répondaient PAS la même chose à cette question :
+ * `UserTrainedTeams` lisait trois sources, `TeamWizardName` une seule — donc le
+ * même entraîneur voyait les équipes de son club sur un écran, et « il te faut
+ * d'abord un club » sur l'écran suivant (constat d'Adel du 2026-08-18). La
+ * réponse vit ici, une fois, pour les deux.
+ *
+ * ⚠️ Une demande `pending` est un rattachement PRÉSUMÉ, pas un droit : cette
+ * fonction sert à AFFICHER et à AIGUILLER, jamais à autoriser. Pour les droits,
+ * `hasClubAccess` / `isClubMember` restent les seuls juges.
+ * @param {any} userData - Le profil, tel que `sanitizeUser` le rend.
+ * @returns {string | null} L'identifiant du club, ou `null`.
+ */
+export const resolveMyClubDocumentId = (/** @type {any} */ userData) => (
+  getActiveClubId(userData)
+  || String(
+    (Array.isArray(userData?.clubMembershipRequests) ? userData.clubMembershipRequests : [])
+      .find((/** @type {any} */ request) => request?.state === 'pending')?.club?.documentId
+      || '',
+  ).trim()
+  || null
+);
+
+/**
  * LES CLUBS DE RATTACHEMENT ADMINISTRATIF — a ne pas confondre avec
  * `getMemberClubIds` ci-dessous, et la confusion coute cher.
  *

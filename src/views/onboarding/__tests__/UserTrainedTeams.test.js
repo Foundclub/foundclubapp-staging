@@ -326,4 +326,71 @@ describe('UserTrainedTeams — « Quelles equipes entraines-tu ? » (D16)', () =
     expect(rangees(tree)).toHaveLength(0);
     expect(textes(tree).some((/** @type {string} */ v) => v.includes('Aucune équipe'))).toBe(true);
   });
+
+  // FILET V02 — L'ECRAN SANS ISSUE.
+  //
+  // Constat d'Adel du 2026-08-18 : « il y a un ecran "quelle equipe
+  // entraines-tu ?" alors que c'est un club qui vient d'etre cree et il n'y a
+  // meme pas de bouton pour creer l'equipe ». C'est le TOUT PREMIER parcours
+  // d'un entraineur : `ClubWizardRecap` l'envoie ici avec le club qu'il vient
+  // de creer, ce club n'a evidemment AUCUNE equipe, et la seule sortie etait un
+  // petit lien « passer cette etape » qu'il fallait deviner - le bouton du bas
+  // restant gris. Deux ecrans plus loin, le tour guide lui propose enfin de
+  // creer son equipe.
+  it('un club sans equipe propose de creer la premiere', () => {
+    mockUseGetTeams.mockReturnValue(teamsQuery([]));
+    const { navigation, tree } = rendre();
+
+    const bouton = pressableIntitule(tree, 'Créer ma première équipe');
+    expect(bouton).toBeDefined();
+    expect(bouton.props.disabled).toBeFalsy();
+
+    act(() => { bouton.props.onPress(); });
+
+    expect(navigation.navigate).toHaveBeenCalledWith('TeamStack', {
+      params: { clubId: 'club-1' },
+      screen: 'TeamWizardName',
+    });
+  });
+
+  // Le club NOMME par la navigation passe devant les devinettes du profil
+  // (T10) : le tunnel doit s'ouvrir sur le club qu'on vient de creer, pas sur
+  // celui que le profil laisse encore trainer.
+  it('le bouton de creation ouvre le tunnel sur le club NOMME par la navigation', () => {
+    mockUseGetTeams.mockReturnValue(teamsQuery([]));
+    const navigation = { navigate: jest.fn() };
+    let arbre;
+    act(() => {
+      arbre = renderer.create(
+        <UserTrainedTeams
+          navigation={/** @type {any} */ (navigation)}
+          route={/** @type {any} */ ({ params: { clubId: 'club-tout-neuf' } })}
+        />,
+      );
+    });
+
+    act(() => {
+      pressableIntitule(/** @type {any} */ (arbre), 'Créer ma première équipe').props.onPress();
+    });
+
+    expect(navigation.navigate).toHaveBeenCalledWith('TeamStack', {
+      params: { clubId: 'club-tout-neuf' },
+      screen: 'TeamWizardName',
+    });
+  });
+
+  // LA REGLE, PAS LE SYMPTOME : un ecran d'inscription dont TOUS les boutons
+  // sont morts est le pire defaut du parcours - la personne ferme l'app et ne
+  // revient pas. Le lien « Passer » ne compte pas : il faut le deviner.
+  it('aucune etape du parcours ne laisse l utilisateur sans action possible', () => {
+    mockUseGetTeams.mockReturnValue(teamsQuery([]));
+    const { tree } = rendre();
+
+    const boutons = tree.root
+      .findAllByType(TouchableOpacity)
+      .filter((/** @type {any} */ node) => node.props.accessibilityRole === 'button');
+    const actifs = boutons.filter((/** @type {any} */ node) => !node.props.disabled);
+
+    expect(actifs.length).toBeGreaterThan(1);
+  });
 });

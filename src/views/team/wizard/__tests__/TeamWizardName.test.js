@@ -257,6 +257,9 @@ afterEach(() => {
   mockReseau.club = null;
   mockReseau.clubRecu = true;
   mockCompte.club = { documentId: 'club-1', name: 'FC Test' };
+  delete (/** @type {any} */ (mockCompte)).clubs;
+  delete (/** @type {any} */ (mockCompte)).clubAffiliations;
+  delete (/** @type {any} */ (mockCompte)).clubMembershipRequests;
 });
 
 describe('D25 — etape 1/8 « Nom de l equipe »', () => {
@@ -332,5 +335,46 @@ describe('D25 — etape 1/8 « Nom de l equipe »', () => {
     const { textes } = afficherLEcran();
 
     expect(textes).toContain('Sans entraîneur·e — reprends-la');
+  });
+
+  // FILET V02 — DEUX ECRANS VOISINS NE CONNAISSAIENT PAS LE MEME NOMBRE DE
+  // CLUBS. `UserTrainedTeams` (l'etape d'a cote) lisait TROIS sources ; cet
+  // ecran-ci n'en lisait qu'une, `userData.club`. Un entraineur multi-clubs, ou
+  // dont l'adhesion n'est encore qu'une demande `pending` (le cas de TOUT
+  // nouveau club, `createClubMembershipRequest` ne s'applique pas tout seul),
+  // tombait sur « Il te faut d'abord un club » et se voyait proposer de creer
+  // un club qu'il possedait deja.
+  //
+  // ⚠️ Le juge est desormais PARTAGE (`resolveMyClubDocumentId`) : ces trois
+  // temoins tombent ensemble si quelqu'un le retouche.
+  test('le tunnel de creation trouve le club par les trois sources', () => {
+    // Source 1 — le club du compte.
+    mockCompte.club = { documentId: 'club-1', name: 'FC Test' };
+    expect(afficherLEcran({ params: {} }).champ).not.toBeNull();
+
+    // Source 2 — le premier des clubs multiples.
+    if (arbre) act(() => arbre.unmount());
+    mockCompte.club = null;
+    (/** @type {any} */ (mockCompte)).clubs = [{ documentId: 'club-2' }];
+    expect(afficherLEcran({ params: {} }).champ).not.toBeNull();
+
+    // Source 3 — l'adhesion encore en attente : le cas du club tout juste cree.
+    if (arbre) act(() => arbre.unmount());
+    (/** @type {any} */ (mockCompte)).clubs = [];
+    (/** @type {any} */ (mockCompte)).clubMembershipRequests = [
+      { club: { documentId: 'club-3' }, state: 'pending' },
+    ];
+    expect(afficherLEcran({ params: {} }).champ).not.toBeNull();
+  });
+
+  test('une demande d adhesion refusee ne vaut PAS un club', () => {
+    mockCompte.club = null;
+    (/** @type {any} */ (mockCompte)).clubMembershipRequests = [
+      { club: { documentId: 'club-4' }, state: 'refused' },
+    ];
+    const { champ, textes } = afficherLEcran({ params: {} });
+
+    expect(champ).toBeNull();
+    expect(textes).toContain('Rechercher mon club');
   });
 });

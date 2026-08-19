@@ -6,6 +6,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { resolveMyClubDocumentId } from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
 import useTheme from '@/theme/themeContext';
 
@@ -73,16 +74,13 @@ function UserTrainedTeams({ navigation, route }) {
 
   // Le club de l'entraineur n'est PAS encore une adhesion a ce stade : il vient
   // d'envoyer une demande au club (`createClubMembershipRequest`), qui reste
-  // `pending` jusqu'a validation. On lit donc les trois sources, de la plus
-  // sure a la plus recente.
+  // `pending` jusqu'a validation. La reponse vit dans `resolveMyClubDocumentId`
+  // (V02) : l'etape voisine `TeamWizardName` ne connaissait qu'UNE source, donc
+  // le meme entraineur voyait ses equipes ici et « il te faut d'abord un club »
+  // deux ecrans plus loin.
   const clubId = useMemo(() => (
-    namedClubId
-    || userData?.club?.documentId
-    || userData?.clubs?.[0]?.documentId
-    || (userData?.clubMembershipRequests || [])
-      .find((request) => request?.state === 'pending')?.club?.documentId
-    || undefined
-  ), [namedClubId, userData?.club, userData?.clubs, userData?.clubMembershipRequests]);
+    namedClubId || resolveMyClubDocumentId(userData) || undefined
+  ), [namedClubId, userData]);
 
   const teamsQuery = useGetTeams({ clubId, pageSize: 50 }, { enabled: !!clubId });
   const teams = useMemo(() => (
@@ -105,6 +103,18 @@ function UserTrainedTeams({ navigation, route }) {
     navigation.navigate(
       getNextOnboardingRoute(RouteNames.UserTrainedTeams) || getPostOnboardingHomeRoute(),
     );
+  };
+
+  // V02 — L'ECRAN SANS ISSUE. Un club qui vient d'etre cree n'a AUCUNE equipe :
+  // la liste etait vide, le bouton du bas gris, et la seule sortie un petit lien
+  // « passer cette etape » qu'il fallait deviner. On ouvre le tunnel de creation
+  // d'ici, avec le club NOMME (T10) plutot que devine. Meme geste que
+  // `UserAffiliationGuide`, qui pousse deja `TeamStack` depuis le tunnel.
+  const goToTeamWizard = () => {
+    /** @type {any} */ (navigation).navigate(RouteNames.TeamStack, {
+      params: { clubId },
+      screen: RouteNames.TeamWizardName,
+    });
   };
 
   const sendRequestsMutation = useMutation({
@@ -226,7 +236,7 @@ function UserTrainedTeams({ navigation, route }) {
             {t(
               'onboarding.trainedTeams.empty',
               'Aucune équipe n\'est encore déclarée dans ton club. '
-                + 'Tu pourras les créer une fois ton accès validé.',
+                + 'Crée la première : tu en seras l\'entraîneur·e.',
             )}
           </Text>
         ) : (
@@ -315,16 +325,27 @@ function UserTrainedTeams({ navigation, route }) {
       </View>
 
       <OnboardingStickyFooter>
-        <Button
-          disabled={selectedTeamIds.length === 0}
-          isLoading={sendRequestsMutation.isPending}
-          onPress={handleSend}
-          title={t(
-            'onboarding.trainedTeams.submit',
-            'Envoyer ma demande ({{count}})',
-          ).replace('{{count}}', String(selectedTeamIds.length))}
-          variant="Primary"
-        />
+        {/* V02 — un bouton, PAS une phrase de plus : sans equipe a cocher, le
+            bouton d'envoi n'a rien a envoyer. Il cede sa place a la seule
+            action qui fait avancer. */}
+        {teams.length === 0 ? (
+          <Button
+            onPress={goToTeamWizard}
+            title={t('onboarding.trainedTeams.createFirst', 'Créer ma première équipe')}
+            variant="Primary"
+          />
+        ) : (
+          <Button
+            disabled={selectedTeamIds.length === 0}
+            isLoading={sendRequestsMutation.isPending}
+            onPress={handleSend}
+            title={t(
+              'onboarding.trainedTeams.submit',
+              'Envoyer ma demande ({{count}})',
+            ).replace('{{count}}', String(selectedTeamIds.length))}
+            variant="Primary"
+          />
+        )}
         <OnboardingSkipLink onPress={goToNextStep} />
       </OnboardingStickyFooter>
     </FormScreenContainer>

@@ -7,6 +7,7 @@ import {
   Alert, Text, TouchableOpacity, View,
 } from 'react-native';
 
+import { resolveMyClubDocumentId } from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
 import { emitGuidanceAction } from '@/domains/guidance/guidanceRuntime';
 import { extractSubscriptionDecisionFromError } from '@/domains/subscription/subscriptionDecision';
@@ -74,7 +75,13 @@ function TeamWizardName({ navigation, route }) {
   const [claimPaywallDecision, setClaimPaywallDecision] = useState(/** @type {any} */ (null));
   const routeClubId = sanitizeRouteParam(route?.params?.clubId);
   const routePreselectedTrainerId = sanitizeRouteParam(route?.params?.preselectedTrainerId);
-  const accountClubId = sanitizeRouteParam(userData?.club?.documentId || userData?.club?.id);
+  // V02 — CET ECRAN NE CONNAISSAIT QU'UNE façon de trouver le club, l'etape
+  // d'a cote en connaissait TROIS. Un entraineur multi-clubs, ou dont
+  // l'adhesion n'est encore qu'une demande `pending` — le cas de TOUT club
+  // fraichement cree — tombait sur « Il te faut d'abord un club » et se voyait
+  // proposer de creer un club qu'il possedait deja. Le juge est desormais
+  // partage avec `UserTrainedTeams` : `resolveMyClubDocumentId`.
+  const accountClubId = sanitizeRouteParam(resolveMyClubDocumentId(userData));
   const hasClubContext = Boolean(state.clubId || routeClubId || accountClubId);
   const clubQuery = useGetClub(state.clubId, { enabled: Boolean(state.clubId) });
   const clubName = clubQuery.data?.name || userData?.club?.name || '';
