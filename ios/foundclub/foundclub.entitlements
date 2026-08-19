@@ -4,5 +4,13 @@
 <dict>
 	<key>aps-environment</key>
 	<string>$(APS_ENVIRONMENT)</string>
+	<key>com.apple.developer.associated-domains</key>
+	<array>
+		<string>applinks:foundclub.app</string>
+		<string>applinks:www.foundclub.app</string>
+		<string>applinks:staging.foundclub.app</string>
+		<string>applinks:api.foundclubpro.com</string>
+		<string>applinks:api-staging.foundclubpro.com</string>
+	</array>
 </dict>
 </plist>

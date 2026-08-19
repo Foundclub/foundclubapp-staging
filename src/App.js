@@ -34,6 +34,7 @@ import { getRuntimeEndpointsLog } from '@/config/runtimeUrls';
 import { POPUP_IDS } from '@/constants/popupRegistry';
 import { APP_RUNTIME_ENV, NOTIFICATIONS_RUNTIME_CONFIG } from '@/constants/runtimeFlags';
 import useAuth from '@/domains/auth/useAuth';
+import InvitationLinkHost from '@/domains/invitations/InvitationLinkHost';
 import { emitGuidanceRouteVisit } from '@/domains/guidance/guidanceRuntime';
 import { syncRevenueCatIdentity } from '@/domains/subscription/subscriptionRevenueCat';
 import {
@@ -300,6 +301,7 @@ function AppShell() {
               }}
             />
             <ClubScopeSwitchHost />
+            <InvitationLinkHost />
             {isDeferredStartupReady ? <DeferredStartupHosts /> : null}
           </LeaguePlatformGate>
         </BootGate>

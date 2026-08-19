@@ -44,6 +44,22 @@
         <category android:name="android.intent.category.BROWSABLE"/>
         <data android:scheme="foundclub"/>
       </intent-filter>
+      <!-- Y03 : liens d'invitation en https. autoVerify exige que CHAQUE hote
+           serve /.well-known/assetlinks.json en application/json, sans redirection.
+           Tant qu'un hote ne le sert pas, Android n'ouvre pas l'app tout seul :
+           il propose le choix. Rien ne casse, la verification est simplement KO. -->
+      <intent-filter android:autoVerify="true">
+        <action android:name="android.intent.action.VIEW"/>
+        <category android:name="android.intent.category.DEFAULT"/>
+        <category android:name="android.intent.category.BROWSABLE"/>
+        <data android:scheme="https" android:host="foundclub.app"/>
+        <data android:scheme="https" android:host="www.foundclub.app"/>
+        <data android:scheme="https" android:host="staging.foundclub.app"/>
+        <data android:scheme="https" android:host="api.foundclubpro.com"/>
+        <data android:scheme="https" android:host="api-staging.foundclubpro.com"/>
+        <data android:pathPrefix="/i/"/>
+        <data android:pathPrefix="/install.html"/>
+      </intent-filter>
     </activity>
   </application>
 </manifest>
