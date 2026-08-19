@@ -71,6 +71,10 @@ const normalizeTeamGovernanceSettings = (team) => {
     authorizedMembershipManagers: Array.isArray(team.authorizedMembershipManagers)
       ? team.authorizedMembershipManagers
       : [],
+    // W02 — la delegation d encaissement. Absente = liste vide = PERSONNE.
+    authorizedPaymentValidators: Array.isArray(team.authorizedPaymentValidators)
+      ? team.authorizedPaymentValidators
+      : [],
     teamMembershipApprovalEnabledForCoaches,
   };
 };
@@ -78,6 +82,7 @@ const normalizeTeamGovernanceSettings = (team) => {
 const teamSchema = Joi.object({
   activities: Joi.any().allow(null).optional(), // Relaxed validation for Strapi v5 connect syntax
   authorizedMembershipManagers: Joi.any().allow(null).optional(),
+  authorizedPaymentValidators: Joi.any().allow(null).optional(),
   category: Joi.any().allow(null).optional(),
   club: Joi.any().allow(null).optional(),
   description: Joi.string().allow('', null).optional(),
@@ -311,6 +316,7 @@ export const getTeamById = async (teamId) => {
         authorizedMembershipManagers: {
           populate: '*',
         },
+        authorizedPaymentValidators: true,
         category: {
           populate: '*',
         },

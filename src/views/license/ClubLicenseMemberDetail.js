@@ -204,6 +204,21 @@ function ClubLicenseMemberDetail({ route }) {
   const scope = routeScope || permissionQuery.data?.scope;
   const canManageLicenses = resolveCanManageLicenses(scope, routeCanManageLicenses);
   const canUseSensitiveActions = canManageLicenses && scope !== 'coach';
+  // W02 — ENCAISSER UN PAIEMENT N EST PLUS RESERVE AU DIRIGEANT.
+  //
+  // Adel, 2026-08-19 : « le dirigeant doit pouvoir laisser le choix aux coachs de
+  // pouvoir valider les paiements pour LEURS equipes ».
+  //
+  // 🚨 C EST LE SERVEUR QUI TRANCHE, PAS CET ECRAN. `canValidatePayments` arrive
+  // avec la fiche (admin, license.ts `getAssignment`) et vaut la MEME regle que
+  // celle qui refusera l appel : dirigeant du club, ou coach nomme par le club
+  // sur CETTE equipe. Une fiche muette — vieux serveur — vaut NON : on n affiche
+  // jamais un bouton qui repondrait « acces refuse ».
+  //
+  // ⛔ Et la delegation ne donne QUE l encaissement. Modifier le montant,
+  // exempter, rembourser restent des decisions de club : ils continuent de
+  // dependre de `canUseSensitiveActions`, et le serveur les refuse au coach.
+  const canValidatePayment = canUseSensitiveActions || assignment?.canValidatePayments === true;
   const [modal, setModal] = useState(null);
   const manualPaymentMutation = useLicenseMutation((payload) => addManualLicensePayment(assignmentId, payload), campaignId);
   const approvePaymentMutation = useLicenseMutation(({ paymentId, ...payload }) => approveExternalLicensePayment(paymentId, payload), campaignId);
@@ -261,7 +276,9 @@ function ClubLicenseMemberDetail({ route }) {
   const hasError = query.isError || permissionQuery.isError;
 
   const submitModal = useCallback((payload) => {
-    if (!canUseSensitiveActions) return;
+    // W02 — encaisser suit `canValidatePayment` (le coach delegue y a droit) ;
+    // tout le reste reste au dirigeant.
+    if (modalType === 'payment' ? !canValidatePayment : !canUseSensitiveActions) return;
     const common = { onSuccess: () => { setModal(null); query.refetch(); } };
     if (modalType === 'payment') manualPaymentMutation.mutate(payload, common);
     if (modalType === 'amount') amountMutation.mutate({ amountDueCents: payload.amountCents, note: payload.note }, common);
@@ -276,7 +293,7 @@ function ClubLicenseMemberDetail({ route }) {
         submissionId: modal.submissionId,
       }, common);
     }
-  }, [amountMutation, canUseSensitiveActions, manualPaymentMutation, modal, modalType, query, rejectPaymentMutation, refundMutation, reviewDocumentMutation, waiveMutation]);
+  }, [amountMutation, canUseSensitiveActions, canValidatePayment, manualPaymentMutation, modal, modalType, query, rejectPaymentMutation, refundMutation, reviewDocumentMutation, waiveMutation]);
 
   const remind = useCallback(() => {
     reminderMutation.mutate({}, { onSuccess: () => Alert.alert('Relance envoyée') });
@@ -708,13 +725,27 @@ function ClubLicenseMemberDetail({ route }) {
             title="Aucun reçu"
           />
         )}
-        {canSendReminder || canUseSensitiveActions ? (
+        {canSendReminder || canValidatePayment || canUseSensitiveActions ? (
           <>
             <LicenseSectionHeader title="Actions" />
             {canSendReminder ? <Button isLoading={reminderMutation.isPending} onPress={remind} title="Relancer" variant="Secondary" /> : null}
             {/*
-              T03 — « A payer », le miroir d « Exempter la cotisation », et il se
-              tient juste a cote de « Relancer » comme Adel l a demande.
+              W02 — « A payé », le geste qu Adel a cherche deux fois. Il s appelait
+              « Valider un paiement » et se tenait en bas de la pile ; il est
+              renomme et remonte JUSTE a cote de « Relancer ».
+
+              ⚠️ LE COUPLE DE LIBELLES : la fiche porte deja « À payer » (T03,
+              annuler une exemption). Cote a cote ils se confondraient — ils sont
+              donc MUTUELLEMENT EXCLUSIFS : « À payer » ne sort que sur une
+              cotisation exemptee, « A payé » ne sort JAMAIS sur une exemptee
+              (encaisser sur une exemption n a aucun sens, et le serveur la
+              laisserait « waived » de toute facon).
+            */}
+            {canValidatePayment && assignment?.status !== 'waived' ? (
+              <Button onPress={() => setModal({ type: 'payment' })} title="A payé" />
+            ) : null}
+            {/*
+              T03 — le miroir d « Exempter la cotisation ».
               ⛔ AUCUN BOUTON INERTE : il n apparait que sur une cotisation
               EXEMPTEE. Ailleurs il n aurait rien a faire — une cotisation en
               attente est deja a payer — et le serveur refuserait.
@@ -729,7 +760,6 @@ function ClubLicenseMemberDetail({ route }) {
             ) : null}
             {canUseSensitiveActions ? (
               <>
-                <Button onPress={() => setModal({ type: 'payment' })} title="Valider un paiement" />
                 <Button onPress={() => setModal({ type: 'amount' })} title="Modifier le montant" variant="Secondary" />
                 <Button onPress={() => setModal({ type: 'waive' })} title="Exempter la cotisation" variant="Secondary" />
               </>
@@ -737,7 +767,7 @@ function ClubLicenseMemberDetail({ route }) {
           </>
         ) : null}
       </ScrollView>
-      {modal && canUseSensitiveActions ? (
+      {modal && (canUseSensitiveActions || (modalType === 'payment' && canValidatePayment)) ? (
         <ActionModal
           methodOptions={manualMethodOptions}
           onClose={() => setModal(null)}
