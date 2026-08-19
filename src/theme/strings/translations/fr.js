@@ -147,6 +147,7 @@ export default {
 
     // Event errors
     EVENT_ALREADY_MISSING: 'Tu as déjà répondu absent à cet événement.',
+    EVENT_AUDIENCE_NOT_TARGETED: "Cet événement ne convie qu'une partie de ton équipe.",
     EVENT_CANCEL_ERROR: "Erreur lors de l'annulation de l'événement.",
     EVENT_CAPACITY_ERROR: "La capacité maximale de l'événement est atteinte.",
     EVENT_CREATE_ERROR: "Erreur lors de la création de l'événement.",
