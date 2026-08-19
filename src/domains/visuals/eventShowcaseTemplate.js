@@ -137,10 +137,16 @@ export const getEventShowcaseShareIntro = (typeName) => {
     return { default: 'Viens participer à notre détection / séance d’essai !', key: 'showcase.shareIntroByType.detection' };
   }
   if (isMatchEventType(typeName)) {
-    return { default: 'Viens nous encourager pour ce match !', key: 'showcase.shareIntroByType.match' };
+    return {
+      default: 'Viens nous encourager pour ce match !',
+      key: 'showcase.shareIntroByType.match',
+    };
   }
   if (isTrainingEventType(typeName)) {
-    return { default: 'Rendez-vous à l’entraînement !', key: 'showcase.shareIntroByType.entrainement' };
+    return {
+      default: 'Rendez-vous à l’entraînement !',
+      key: 'showcase.shareIntroByType.entrainement',
+    };
   }
   if (isTournamentEventType(typeName)) {
     return { default: 'Viens vivre notre tournoi !', key: 'showcase.shareIntroByType.tournoi' };

@@ -312,7 +312,9 @@ describe('EventAnswerButtons — qui a le droit de repondre (caracterisation)', 
   });
 
   it('W01 · temoin 3 🔒 — un encadrant NON membre n a AUCUN bouton de reponse', () => {
-    mockUserData.mockReturnValue({ documentId: 'coach-etranger', role: { name: USER_ROLES.coach } });
+    mockUserData.mockReturnValue({
+      documentId: 'coach-etranger', role: { name: USER_ROLES.coach },
+    });
 
     const tree = render({
       event: buildEvent(),

@@ -320,7 +320,10 @@ const MATCH_FIELDS = EVENEMENT_FIELDS.filter((field) => field.key !== 'titre');
  * `getEventShowcaseShareIntro` (D94/C2) — l'ecran le prefere a `shareIntro`.
  */
 const EVENEMENT_TEXTS = {
-  shareIntro: { default: 'Voici notre prochain événement !', key: 'showcase.shareIntroByType.neutre' },
+  shareIntro: {
+    default: 'Voici notre prochain événement !',
+    key: 'showcase.shareIntroByType.neutre',
+  },
   shareLinkLabel: { default: 'Voir l’événement', key: 'showcase.shareLabel' },
   subtitle: { default: 'Fais-le voir. Plus il est vu, plus tu remplis.', key: 'showcase.subtitle' },
   title: { default: 'Ton événement est en ligne', key: 'showcase.title' },
@@ -423,7 +426,9 @@ export default function useVisualShowcase({
   // Config dérivée du gabarit (source de vérité = catalogue), surchargée par les params.
   const templateConfig = SHOWCASE_TEMPLATES[template] || SHOWCASE_TEMPLATES['affiche-detection'];
   const variantCatalog = variants || templateConfig.variants || DETECTION_VARIANTS;
-  const { poster: posterFormat, preview: previewFormat, story: storyFormat } = templateConfig.formats
+  const {
+    poster: posterFormat, preview: previewFormat, story: storyFormat,
+  } = templateConfig.formats
     || DEFAULT_FORMATS;
   // subjectId retombe sur eventId (retro-compat du flux événement qui ne passe qu'eventId).
   const resolvedSubjectId = subjectId ?? eventId;
@@ -520,7 +525,10 @@ export default function useVisualShowcase({
       })
       .finally(() => { if (!cancelled) setIsLoading(false); });
     return () => { cancelled = true; };
-  }, [resolvedSubjectId, subject, variant, debouncedOverrides, retryToken, template, previewFormat]);
+  }, [
+    resolvedSubjectId, subject, variant, debouncedOverrides,
+    retryToken, template, previewFormat,
+  ]);
 
   const shareFile = useCallback(async ({
     dialogTitle, format, message, template: tpl, variant: v,

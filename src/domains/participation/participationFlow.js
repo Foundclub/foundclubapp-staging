@@ -99,7 +99,8 @@ const buildReservationFlow = (entity, context) => {
   );
   const missingPlayers = Number(entity?.missingPlayers || 0);
   const isRecruiting = String(entity?.reservationMode || '').trim().toUpperCase() === 'RECRUITING';
-  const isShared = String(entity?.bookingStatus || '').trim().toLowerCase() === 'shared' || isRecruiting;
+  const bookingLabel = String(entity?.bookingStatus || '').trim().toLowerCase();
+  const isShared = bookingLabel === 'shared' || isRecruiting;
   const isPlayer = user?.role?.name === USER_ROLES.player;
 
   let blockedReason = '';
@@ -176,7 +177,9 @@ const buildEventFlow = (entity, context) => {
   const isTrainingEvent = trainingOpenConfig?.isTraining === true;
   const isExternalTrainingParticipant = isTrainingEvent && !sourceTeam;
   const capacity = Number(entity?.capacity || 0);
-  const participationsCount = Array.isArray(entity?.participations) ? entity.participations.length : 0;
+  const participationsCount = Array.isArray(entity?.participations)
+    ? entity.participations.length
+    : 0;
   const externalParticipationRequests = Array.isArray(entity?.participationRequests)
     ? entity.participationRequests.filter((request) => (
       request?.isActive !== false
@@ -254,7 +257,8 @@ const buildEventFlow = (entity, context) => {
 const buildRecruitmentFlow = (entity, context) => {
   const audienceType = String(entity?.audienceType || '').trim().toLowerCase() === 'coach' ? 'coach' : 'player';
   const normalizedStatus = normalizeStatus(context?.applicationState?.status);
-  const isDetectionLinked = normalizeEventTypeLabel(entity?.event?.type?.name).includes('detection');
+  const isDetectionLinked = normalizeEventTypeLabel(entity?.event?.type?.name)
+    .includes('detection');
   const isOwner = Boolean(context?.isOwner);
   const canWithdraw = Boolean(
     !isOwner
