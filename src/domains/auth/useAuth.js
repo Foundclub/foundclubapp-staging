@@ -56,6 +56,7 @@ import {
   profileFieldToDisplay,
   resolveNextOnboardingRoute,
   resolveOnboardingExitRoute,
+  shouldFetchFullUser,
   USER_ROLES,
 } from './authUseCases';
 
@@ -319,14 +320,24 @@ const useAuth = () => {
     };
   }, [auth?.token, isAddingAccount]);
 
-  const shouldEnableFullUserFetch = Boolean(auth?.token)
-    && !isAddingAccount
-    && isFullUserFetchReady
-    && (
-      disableAppBootstrap
-      || Boolean(bootstrapError)
-      || !bootstrapData?.userSummary?.documentId
-    );
+  // U05 — Le profil complet est deja en cache ? Alors il EST l'identite lue
+  // (`userData` le prefere au resume du bootstrap, plus bas), et il doit rester
+  // rafraichissable. Lecture synchrone du cache : l'observateur de la query
+  // ci-dessous nous re-rend des que cette donnee apparait.
+  const hasCachedFullUser = Boolean(
+    /** @type {any} */ (queryClient.getQueryData(['get-me', auth?.token || 'no-token']))
+      ?.documentId,
+  );
+
+  const shouldEnableFullUserFetch = shouldFetchFullUser({
+    hasBootstrapError: Boolean(bootstrapError),
+    hasBootstrapUser: Boolean(bootstrapData?.userSummary?.documentId),
+    hasFullUser: hasCachedFullUser,
+    isAddingAccount: Boolean(isAddingAccount),
+    isBootstrapDisabled: Boolean(disableAppBootstrap),
+    isDelayElapsed: Boolean(isFullUserFetchReady),
+    isSignedIn: Boolean(auth?.token),
+  });
 
   const {
     data: fullUserData,

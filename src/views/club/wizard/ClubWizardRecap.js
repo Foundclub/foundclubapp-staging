@@ -5,6 +5,7 @@ import { Alert, Text, View } from 'react-native';
 
 import { markOnboardingComplete } from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
+import { invalidateAfterAction } from '@/domains/refresh/afterAction';
 import useTheme from '@/theme/themeContext';
 
 import WizardOptionCard from '@/components/molecules/wizardOptionCard/WizardOptionCard';
@@ -75,9 +76,10 @@ function ClubWizardRecap({ navigation, route }) {
     // les requetes perimees de facon SYNCHRONE, et le `queryClient` est un
     // singleton qui survit a cet ecran. Attendre ne ferait que faire patienter
     // — decision mesuree au lot D19 (`EventWizardRecap.creation.test.js`).
-    queryClient.invalidateQueries({ queryKey: ['app-bootstrap'] });
-    queryClient.invalidateQueries({ queryKey: ['get-me'] });
-    queryClient.invalidateQueries({ queryKey: ['clubs'] });
+    // U05 — la liste ecrite a la main (trois cles) est remplacee par la
+    // declaration du module : creer un club change aussi la fiche du club, la
+    // liste des equipes et le resume d'accueil.
+    invalidateAfterAction(queryClient, 'createClub').catch(() => {});
 
     // T10 — MAIS LE PROFIL, SI : la navigation ne part plus devant lui.
     // `refetchUserData()` partait sans `await`, donc l'etape suivante se montait

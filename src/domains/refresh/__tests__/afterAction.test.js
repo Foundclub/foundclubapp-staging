@@ -28,9 +28,21 @@ const RACINE_SOURCES = path.resolve(__dirname, '../../..');
 /**
  * Toutes les racines de cle reellement posees par une query de l'app.
  *
- * Les deux formes comptent, et la seconde n'est pas theorique : `home-summary`
- * n'existe QUE sous forme de constante (`HOME_SUMMARY_QUERY_KEY`). Ne lire que
- * les litteraux ferait declarer ce temoin vert en ratant la moitie du terrain.
+ * Les QUATRE formes comptent, et aucune n'est theorique :
+ *  · `queryKey: ['racine'` — le cas courant ;
+ *  · `export const HOME_SUMMARY_QUERY_KEY = ['home-summary']` — `home-summary`
+ *    n'existe QUE sous cette forme ;
+ *  · `buildNormalizedQueryKey(['racine', id], params)` — la forme de
+ *    `clubMembershipRequests` et `teamMembershipRequests` ;
+ *  · `export const getXQueryKey = (…) => ['racine', …]` — celle de
+ *    `clubInterestRequests` et de `requestsHub`.
+ *
+ * 🧨 U05 — POURQUOI LES DEUX DERNIERES ONT ETE AJOUTEES, et c'est un vrai piege
+ * de mesure : ce temoin passait au vert en lisant les `queryKey:` ecrits dans
+ * les APPELS A `invalidateQueries`, pas dans les queries elles-memes. Brancher
+ * un ecran sur le module retire ces litteraux — et le temoin s'est mis a
+ * declarer introuvables des racines parfaitement reelles. Il mesurait
+ * « quelqu'un invalide cette cle », pas « cette cle existe ».
  * @returns {Set<string>} Les racines trouvees sur le disque.
  */
 const lireRacinesDeClesReelles = () => {
@@ -38,6 +50,8 @@ const lireRacinesDeClesReelles = () => {
   const racines = new Set();
   const litteral = /queryKey:\s*\[\s*'([^']+)'/g;
   const constante = /^export const [A-Z0-9_]+\s*=\s*\[+\s*'([^']+)'/gm;
+  const normalisee = /buildNormalizedQueryKey\(\s*\[\s*'([^']+)'/g;
+  const fabrique = /^export const get[A-Za-z]*QueryKey\s*=\s*\([^)]*\)\s*=>\s*\[\s*'([^']+)'/gm;
 
   /** @param {string} repertoire */
   const parcourir = (repertoire) => {
@@ -50,8 +64,9 @@ const lireRacinesDeClesReelles = () => {
       if (!entree.name.endsWith('.js') && !entree.name.endsWith('.ts')) return;
 
       const contenu = fs.readFileSync(chemin, 'utf8');
-      Array.from(contenu.matchAll(litteral)).forEach((r) => racines.add(r[1]));
-      Array.from(contenu.matchAll(constante)).forEach((r) => racines.add(r[1]));
+      [litteral, constante, normalisee, fabrique].forEach((motif) => {
+        Array.from(contenu.matchAll(motif)).forEach((r) => racines.add(r[1]));
+      });
     });
   };
 
@@ -184,7 +199,11 @@ describe('T08 — ce qui devient faux apres une action', () => {
     expect(introuvables).toEqual([]);
   });
 
-  it('les 10 actions demandees sont couvertes', () => {
+  it('les actions demandees sont couvertes', () => {
+    // U05 — `membershipChanged` s'ajoute aux dix de T08. Ce n'est pas une action
+    // de l'utilisateur mais une notification RECUE (« ta demande est acceptee ») :
+    // sur cet appareil-la, rien n'a ete presse, et pourtant l'appartenance a
+    // change. C'est le cas qu'Adel decrit comme « hyper long ».
     expect(Object.keys(AFTER_ACTION_CACHES).sort()).toEqual([
       'acceptRequest',
       'answerEvent',
@@ -194,6 +213,7 @@ describe('T08 — ce qui devient faux apres une action', () => {
       'joinEvent',
       'joinTeam',
       'leaveTeam',
+      'membershipChanged',
       'publishComposition',
       'subscribe',
     ]);

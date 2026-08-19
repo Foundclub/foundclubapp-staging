@@ -27,6 +27,10 @@ import {
   activateSessionByDocumentId,
 } from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
+import {
+  invalidateAfterAction,
+  resolveNotificationRefreshAction,
+} from '@/domains/refresh/afterAction';
 import { useAppContext } from '@/store/appContext';
 
 import { RouteNames } from '@/navigation/routeNames';
@@ -331,9 +335,27 @@ const useNotifications = ({ navigate, onSmartNotification }) => {
     },
   );
 
-  const invalidateNotificationQueries = useCallback(() => {
+  /**
+   * U05 — LA CLOCHE, ET CE QUE LA NOTIFICATION REND FAUX EN PLUS.
+   *
+   * Avant : ces deux cles, et rien d'autre. Une notification « ta demande a ete
+   * acceptee » ne faisait donc relire QUE la cloche — l'appartenance aux equipes
+   * restait celle d'avant, jusqu'a la prochaine relecture spontanee. C'est
+   * exactement ce qu'Adel decrit : « quand on est accepte, c'est hyper long ».
+   *
+   * ⛔ Le fan-out ne part QUE sur les trois types d'appartenance
+   * (`resolveNotificationRefreshAction`). Sans type, ou sur un type ordinaire,
+   * cette fonction fait exactement ce qu'elle faisait hier : deux invalidations.
+   * @param {string} [notificationType] Le type porte par la notification recue.
+   * @returns {void}
+   */
+  const invalidateNotificationQueries = useCallback((notificationType) => {
     queryClient.invalidateQueries({ queryKey: NOTIFICATIONS_QUERY_KEY });
     queryClient.invalidateQueries({ queryKey: UNREAD_COUNT_QUERY_KEY });
+
+    const refreshAction = resolveNotificationRefreshAction(notificationType);
+    if (!refreshAction) return;
+    invalidateAfterAction(queryClient, refreshAction).catch(() => {});
   }, [queryClient]);
 
   useEffect(() => {
@@ -686,7 +708,7 @@ const useNotifications = ({ navigate, onSmartNotification }) => {
     const handled = tryNavigate(destination.route, destination.params || {});
     if (handled) {
       markHandled();
-      invalidateNotificationQueries();
+      invalidateNotificationQueries(notificationData.type);
     }
     notificationsLogger.debug(`[NOTIF_OPENED] type=${notificationData.type} route=${destination.route} handled=${Boolean(handled)}`);
     return handled;
@@ -731,7 +753,7 @@ const useNotifications = ({ navigate, onSmartNotification }) => {
 
     const unsubscribe = onMessage(messagingInstance, async (remoteMessage) => {
       const normalizedData = normalizeNotificationPayload(remoteMessage.data || {});
-      invalidateNotificationQueries();
+      invalidateNotificationQueries(normalizedData?.type);
 
       const messageType = normalizedData?.type;
       if (!messageType && !remoteMessage?.notification?.title && !remoteMessage?.notification?.body) {
@@ -822,8 +844,8 @@ const useNotifications = ({ navigate, onSmartNotification }) => {
       }
 
       if (type === EventType.PRESS && detail.notification?.data?.type) {
-        invalidateNotificationQueries();
         const normalizedData = normalizeNotificationPayload(detail.notification.data);
+        invalidateNotificationQueries(normalizedData?.type);
         const handled = handleNavigateOnOpen(normalizedData);
         if (!handled) {
           dispatch({
@@ -890,9 +912,10 @@ const useNotifications = ({ navigate, onSmartNotification }) => {
     if (typeof messagingInstance.getInitialNotification === 'function') {
       messagingInstance.getInitialNotification().then((remoteMessage) => {
         if (!remoteMessage) return;
-        invalidateNotificationQueries();
+        const normalizedData = normalizeNotificationPayload(remoteMessage.data || {});
+        invalidateNotificationQueries(normalizedData?.type);
         notificationsLogger.debug('[FCM] App opened from QUIT state by notification:', remoteMessage);
-        queuePendingNotification(normalizeNotificationPayload(remoteMessage.data || {}), 'fcm');
+        queuePendingNotification(normalizedData, 'fcm');
       }).catch((error) => {
         notificationsLogger.warn('[FCM] getInitialNotification failed:', error);
       });
@@ -902,8 +925,8 @@ const useNotifications = ({ navigate, onSmartNotification }) => {
       messagingInstance,
       (remoteMessage) => {
         if (!remoteMessage) return;
-        invalidateNotificationQueries();
         const normalizedData = normalizeNotificationPayload(remoteMessage.data || {});
+        invalidateNotificationQueries(normalizedData?.type);
         if (normalizedData?.type) {
           notificationsLogger.debug(`[NOTIF_OPENED] type=${normalizedData.type} source=background_push`);
         }

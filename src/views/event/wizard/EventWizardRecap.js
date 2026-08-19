@@ -18,6 +18,7 @@ import {
   resolveTrainingOpenConfig,
 } from '@/domains/event/eventUseCases';
 import useEvent from '@/domains/event/useEvent';
+import { invalidateAfterAction } from '@/domains/refresh/afterAction';
 import {
   extractSubscriptionDecisionFromError,
   getSubscriptionQuotaItem,
@@ -87,23 +88,7 @@ const delay = (durationMs) => new Promise((resolve) => {
 });
 
 /**
- * Les six caches devenus faux des qu'un evenement est cree.
- * @type {string[][]}
- */
-const CACHES_A_RAFRAICHIR = [
-  ['events'],
-  // Prefixe large : couvre ['planning','personal'] mais aussi les vues
-  // fullscreen, club et CM qui n'etaient jamais invalidees (planning perime
-  // pendant ~60 s).
-  ['planning'],
-  ['club-planning'],
-  ['pending-featured-requests'],
-  ['app-bootstrap'],
-  ['get-me'],
-];
-
-/**
- * Rafraichit les six caches SANS retenir l'ecran.
+ * Rafraichit SANS retenir l'ecran les caches devenus faux a la creation.
  *
  * 🧨 Defaut trouve a la recette du 2026-08-07 — « appuyer sur Creer met un peu
  * de temps ». Ce n'etait pas la creation : elle part deja a trois de front et
@@ -125,9 +110,10 @@ const CACHES_A_RAFRAICHIR = [
  * @param {any} queryClient Le client de cache de l'application.
  */
 const refreshCachesAfterEventCreation = (queryClient) => {
-  Promise.all(
-    CACHES_A_RAFRAICHIR.map((queryKey) => queryClient.invalidateQueries({ queryKey })),
-  ).catch(() => {});
+  // U05 — la liste vit desormais dans `domains/refresh/afterAction.js`, avec
+  // les neuf autres actions. Elle y gagne `home-summary`, que cet ecran
+  // oubliait : l'accueil annonce le prochain evenement.
+  invalidateAfterAction(queryClient, 'createEvent').catch(() => {});
 };
 
 const getCreatedEventSnapshot = (createdItem) => {
