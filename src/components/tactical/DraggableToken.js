@@ -15,6 +15,15 @@ import { getImageUrl } from '@/utils/imageUrl';
  */
 
 /**
+ * La taille DESSINEE du jeton fantome, publiee parce que c'est elle qui met le
+ * doigt au centre de l'apercu : qui pilote le fantome doit retrancher sa moitie
+ * a la position du doigt. Les ecrans la recopiaient a la main (`GHOST_SIZE = 64`
+ * alors que le jeton fait 70 x 88), et l'apercu tombait a cote de 3 px en
+ * largeur et 12 px en hauteur.
+ */
+export const GHOST_TOKEN_SIZE = Object.freeze({ height: 88, width: 70 });
+
+/**
  * DraggableToken - Player token for tactical board
  * Stateless component - position controlled by parent via Animated style
  * @param {object} props
@@ -223,13 +232,13 @@ const styles = StyleSheet.create({
     borderRadius: 35,
     borderWidth: 3,
     elevation: 30,
-    height: 88,
+    height: GHOST_TOKEN_SIZE.height,
     paddingTop: 6,
     position: 'absolute',
     shadowOffset: { height: 12, width: 0 },
     shadowOpacity: 0.6,
     shadowRadius: 24,
-    width: 70,
+    width: GHOST_TOKEN_SIZE.width,
   },
 
   // === FIELD TOKEN (On pitch) ===

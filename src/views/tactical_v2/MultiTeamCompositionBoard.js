@@ -23,9 +23,8 @@ import {
   View,
 } from 'react-native';
 import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
-import Animated, {
+import {
   runOnJS,
-  useAnimatedStyle,
   useSharedValue,
   withSpring,
   withTiming,
@@ -48,7 +47,7 @@ import {
   publishEventConvocation,
   saveEventCompositionDraft,
 } from '@/services/event/eventService';
-import DraggableToken from '@/components/tactical/DraggableToken';
+import DraggableToken, { GHOST_TOKEN_SIZE } from '@/components/tactical/DraggableToken';
 
 import {
   MAX_COMPOSITION_TEAMS,
@@ -99,8 +98,6 @@ const STEP_FIELD = 'field';
 const clampPercent = (value) => Math.max(0, Math.min(100, Number(value) || 0));
 
 // Ghost (jeton fantôme qui suit le doigt pendant le drag).
-const GHOST_W = 64;
-const GHOST_H = 64;
 const DRAG_SPRING = { damping: 18, stiffness: 220 };
 // Rayon d'accroche (en % de terrain) au poste libre le plus proche en mode « sur postes ».
 const SNAP_RADIUS = 14;
@@ -813,8 +810,8 @@ function MultiTeamCompositionBoard({ routeParams = null }) {
       'worklet';
 
       if (readOnly) return;
-      ghostX.value = event.absoluteX - (GHOST_W / 2);
-      ghostY.value = event.absoluteY - (GHOST_H / 2);
+      ghostX.value = event.absoluteX - (GHOST_TOKEN_SIZE.width / 2);
+      ghostY.value = event.absoluteY - (GHOST_TOKEN_SIZE.height / 2);
       ghostScale.value = withSpring(1, DRAG_SPRING);
       ghostOpacity.value = withTiming(1, { duration: 90 });
       runOnJS(beginDrag)(player);
@@ -823,8 +820,8 @@ function MultiTeamCompositionBoard({ routeParams = null }) {
       'worklet';
 
       if (readOnly) return;
-      ghostX.value = event.absoluteX - (GHOST_W / 2);
-      ghostY.value = event.absoluteY - (GHOST_H / 2);
+      ghostX.value = event.absoluteX - (GHOST_TOKEN_SIZE.width / 2);
+      ghostY.value = event.absoluteY - (GHOST_TOKEN_SIZE.height / 2);
     })
     .onEnd((event) => {
       'worklet';
@@ -847,15 +844,6 @@ function MultiTeamCompositionBoard({ routeParams = null }) {
     ghostY,
     readOnly,
   ]);
-
-  const ghostAnimatedStyle = useAnimatedStyle(() => ({
-    opacity: ghostOpacity.value,
-    transform: [
-      { translateX: ghostX.value },
-      { translateY: ghostY.value },
-      { scale: ghostScale.value },
-    ],
-  }));
 
   const handleRenameTeam = useCallback((teamIdToRename, nextName) => {
     if (readOnly) return;
@@ -1799,11 +1787,24 @@ function MultiTeamCompositionBoard({ routeParams = null }) {
       </ImageBackground>
 
       {/* Jeton fantôme qui suit le doigt pendant le drag (au-dessus de tout).
-          🧨 T01 — le contenant reste monté : né avec `activeDragPlayer`, il
-          apparaissait au coin haut-gauche le temps que le fil JS réponde. */}
-      <Animated.View pointerEvents="none" style={[styles.dragGhost, ghostAnimatedStyle]}>
-        {activeDragPlayer ? <DraggableToken isGhost player={activeDragPlayer} /> : null}
-      </Animated.View>
+          🧨 T01 — le calque reste monté : né avec `activeDragPlayer`, il
+          apparaissait au coin haut-gauche le temps que le fil JS réponde.
+          🧨 V03 — ET IL NE BOUGE PLUS. Il portait la position sans déclarer
+          AUCUNE dimension : un calque sans boîte ne donne aucun repère au jeton
+          absolu qu'il contient. On reprend le motif de `TacticalBoard.js` —
+          calque plein écran immobile, et le JETON qui porte la position. */}
+      <View pointerEvents="none" style={styles.dragGhostLayer}>
+        {activeDragPlayer ? (
+          <DraggableToken
+            isGhost
+            opacity={ghostOpacity}
+            player={activeDragPlayer}
+            scale={ghostScale}
+            translateX={ghostX}
+            translateY={ghostY}
+          />
+        ) : null}
+      </View>
     </GestureHandlerRootView>
   );
 }
@@ -1862,9 +1863,11 @@ const styles = StyleSheet.create({
   rootFlex: {
     flex: 1,
   },
-  dragGhost: {
+  dragGhostLayer: {
+    bottom: 0,
     left: 0,
     position: 'absolute',
+    right: 0,
     top: 0,
     zIndex: 9999,
   },

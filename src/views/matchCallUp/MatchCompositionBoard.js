@@ -18,9 +18,8 @@ import {
   View,
 } from 'react-native';
 import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
-import Animated, {
+import {
   runOnJS,
-  useAnimatedStyle,
   useSharedValue,
   withSpring,
   withTiming,
@@ -36,7 +35,7 @@ import Button from '@/components/atoms/button/Button';
 import HeaderBackButton from '@/components/atoms/headerBackButton/HeaderBackButton';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 import SubscriptionPaywallSheet from '@/components/molecules/subscriptionPaywallSheet/SubscriptionPaywallSheet';
-import DraggableToken from '@/components/tactical/DraggableToken';
+import DraggableToken, { GHOST_TOKEN_SIZE } from '@/components/tactical/DraggableToken';
 import RenderedTacticalField from '@/components/tactical/RenderedTacticalField';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
@@ -85,7 +84,6 @@ import {
 /** @type {any[]} */
 const EMPTY_LIST = Object.freeze([]);
 
-const GHOST_SIZE = 64;
 const DRAG_SPRING = { damping: 18, stiffness: 220 };
 const LONG_PRESS_MS = 120;
 
@@ -235,8 +233,8 @@ function MatchCompositionBoard() {
 
         // La position d'abord, sur ce fil-ci : l'apercu est sous le doigt des la
         // premiere image, meme si le fil JS met du temps a repondre.
-        ghostX.value = event.absoluteX - (GHOST_SIZE / 2);
-        ghostY.value = event.absoluteY - (GHOST_SIZE / 2);
+        ghostX.value = event.absoluteX - (GHOST_TOKEN_SIZE.width / 2);
+        ghostY.value = event.absoluteY - (GHOST_TOKEN_SIZE.height / 2);
         ghostScale.value = withSpring(1, DRAG_SPRING);
         ghostOpacity.value = withTiming(1, { duration: 90 });
         runOnJS(beginDrag)(player);
@@ -244,8 +242,8 @@ function MatchCompositionBoard() {
       .onUpdate((event) => {
         'worklet';
 
-        ghostX.value = event.absoluteX - (GHOST_SIZE / 2);
-        ghostY.value = event.absoluteY - (GHOST_SIZE / 2);
+        ghostX.value = event.absoluteX - (GHOST_TOKEN_SIZE.width / 2);
+        ghostY.value = event.absoluteY - (GHOST_TOKEN_SIZE.height / 2);
       })
       .onEnd((event) => {
         'worklet';
@@ -268,15 +266,6 @@ function MatchCompositionBoard() {
     ghostX,
     ghostY,
   ]);
-
-  const ghostStyle = useAnimatedStyle(() => ({
-    opacity: ghostOpacity.value,
-    transform: [
-      { translateX: ghostX.value },
-      { translateY: ghostY.value },
-      { scale: ghostScale.value },
-    ],
-  }));
 
   // --- Enregistrer / publier.
   const buildPack = useCallback(() => buildMatchCompositionPack({
@@ -681,16 +670,29 @@ function MatchCompositionBoard() {
       </BottomModal>
 
       {/* Jeton fantome qui suit le doigt, au-dessus de tout.
-          🧨 T01 — LE CONTENANT RESTE MONTE, TOUJOURS. Avant, il naissait avec
-          `activeDragPlayer`, qui arrive par le fil JS : le temps qu'il arrive, le
-          doigt avait deja parcouru la moitie de l'ecran et l'apercu apparaissait
-          a `top: 0, left: 0` — le coin en haut a gauche qu'Adel a vu. Monte des
-          le depart, il est deplace par le fil UI sans attendre personne.
-          Il ne coute rien tant qu'il est vide : `opacity` vaut 0 et
-          `pointerEvents="none"` l'empeche d'intercepter le moindre appui. */}
-      <Animated.View pointerEvents="none" style={[styles.dragGhost, ghostStyle]}>
-        {activeDragPlayer ? <DraggableToken isGhost player={activeDragPlayer} /> : null}
-      </Animated.View>
+          🧨 T01 — LE CALQUE RESTE MONTE, TOUJOURS : ne le faire naitre qu'avec
+          `activeDragPlayer`, qui arrive par le fil JS, le faisait apparaitre en
+          retard a `top: 0, left: 0`.
+          🧨 V03 — ET IL NE BOUGE PLUS. Il portait la position, alors qu'il ne
+          declarait AUCUNE dimension : un calque sans boite ne donne aucun repere
+          a l'enfant absolu qu'il contient (`styles.ghostToken`), et le seul
+          apercu du depot qui tient debout — `tactical_v2/TacticalBoard.js` — fait
+          l'inverse depuis toujours : un calque plein ecran immobile, et le JETON
+          qui porte la position. C'est ce motif-la qui est repris ici, tel quel.
+          Il ne coute rien tant qu'il est vide, et `pointerEvents="none"`
+          l'empeche d'intercepter le moindre appui. */}
+      <View pointerEvents="none" style={styles.dragGhostLayer}>
+        {activeDragPlayer ? (
+          <DraggableToken
+            isGhost
+            opacity={ghostOpacity}
+            player={activeDragPlayer}
+            scale={ghostScale}
+            translateX={ghostX}
+            translateY={ghostY}
+          />
+        ) : null}
+      </View>
 
       {/* C-A — le mur payant. Le club vient de la decision elle-meme : le
           serveur le joint a son refus, cet ecran ne le recoit pas en parametre. */}
@@ -744,9 +746,11 @@ const styles = StyleSheet.create({
   chipSpacer: {
     flex: 1,
   },
-  dragGhost: {
+  dragGhostLayer: {
+    bottom: 0,
     left: 0,
     position: 'absolute',
+    right: 0,
     top: 0,
     zIndex: 9999,
   },

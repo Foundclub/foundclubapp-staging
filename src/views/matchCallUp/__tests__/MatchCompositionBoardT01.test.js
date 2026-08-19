@@ -1,6 +1,8 @@
 import { Alert, Text, View } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
+import { GHOST_TOKEN_SIZE } from '@/components/tactical/DraggableToken';
+
 import { publishEventConvocation, saveEventCompositionDraft } from '@/services/event/eventService';
 
 import MatchCompositionBoard from '../MatchCompositionBoard';
@@ -15,6 +17,14 @@ import MatchCompositionBoard from '../MatchCompositionBoard';
 // defaut 1. Ici, `runOnJS` DIFFERE, comme dans la vraie vie.
 //
 //   1. L'apercu du jeton doit suivre le doigt SANS dependre du fil JS.
+//      🚨 V03 A CORRIGE CE TEMOIN, ET C'EST LA LECON DU LOT. Il lisait la
+//      translation DU CALQUE, et le calque etait VIDE tant que le fil JS n'avait
+//      pas dit quel joueur on traine : il mesurait donc une boite vide qui
+//      bouge — vert, pendant qu'aucun jeton n'etait dessine. Il lit maintenant
+//      le JETON LUI-MEME. Consequence assumee : le fil JS est libere UNE fois,
+//      au depart du geste (savoir QUI l'on traine ne peut pas se passer de lui),
+//      puis il reste occupe pour tout le reste du glissement — ce qui est
+//      exactement la garantie que T01 voulait poser.
 //   2. Publier doit mener au fil de l'equipe, pas a l'evenement.
 //   3. Apres publication, le retour ne doit pas ramener sur l'ecran de
 //      publication.
@@ -184,11 +194,35 @@ jest.mock('@/components/molecules/subscriptionPaywallSheet/SubscriptionPaywallSh
   default: () => null,
 }));
 
+// 🧨 V03 — LE DOUBLE PORTE MAINTENANT LA POSITION. Depuis V03, ce n'est plus le
+// calque qui bouge mais le JETON : le double doit donc rendre la translation que
+// les valeurs partagees lui dictent, sinon il n'y a plus rien a lire.
 jest.mock('@/components/tactical/DraggableToken', () => {
-  const { Text: TexteRN } = jest.requireActual('react-native');
+  const { Text: TexteRN, View: VueRN } = jest.requireActual('react-native');
   return {
     __esModule: true,
-    default: (/** @type {any} */ { player }) => <TexteRN>{`JETON:${player?.lastname}`}</TexteRN>,
+    default: (/** @type {any} */ {
+      player, scale, translateX, translateY,
+    }) => {
+      const libelle = <TexteRN>{`JETON:${player?.lastname}`}</TexteRN>;
+      if (!translateX || !translateY) return libelle;
+      // 📌 Les trois valeurs se lisent AVANT le JSX : le greffon babel de
+      // reanimated refuse un `.value` ecrit directement dans un style, et
+      // appelle un garde-fou que le double du module ne fournit pas.
+      const x = translateX.value;
+      const y = translateY.value;
+      const facteur = scale ? scale.value : 1;
+      return (
+        <VueRN
+          style={{
+            transform: [{ translateX: x }, { translateY: y }, { scale: facteur }],
+          }}
+        >
+          {libelle}
+        </VueRN>
+      );
+    },
+    GHOST_TOKEN_SIZE: jest.requireActual('@/components/tactical/DraggableToken').GHOST_TOKEN_SIZE,
   };
 });
 
@@ -246,23 +280,28 @@ const gesteDuJeton = (arbre, nom) => {
  * LA POSITION DESSINEE de l'apercu, telle que l'ecran la rend.
  *
  * L'apercu se reconnait a son `zIndex` : il est pose par-dessus tout le reste.
- * On lit ses `translateX`/`translateY`, c'est-a-dire l'endroit ou l'utilisateur
- * le VOIT — pas la variable qui est censee le piloter.
+ * On lit les `translateX`/`translateY` de ce calque ET DE SA DESCENDANCE —
+ * depuis V03 la position vit sur le JETON, pas sur le calque, et lire le seul
+ * calque rendait toujours (0, 0).
  * @param {any} arbre
  * @returns {{ x: number, y: number } | null}
  */
 const positionDessineeDeLApercu = (arbre) => {
-  const noeuds = arbre.root.findAll((/** @type {any} */ noeud) => {
+  const calques = arbre.root.findAll((/** @type {any} */ noeud) => {
     if (noeud.type !== View) return false;
     const styles = [noeud.props?.style].flat(3).filter(Boolean);
     return styles.some((/** @type {any} */ style) => style?.zIndex === 9999);
   });
-  if (noeuds.length === 0) return null;
+  if (calques.length === 0) return null;
 
-  const styles = [noeuds[0].props?.style].flat(3).filter(Boolean);
-  const transformations = styles.flatMap(
-    (/** @type {any} */ style) => (Array.isArray(style?.transform) ? style.transform : []),
-  );
+  const porteurs = [calques[0], ...calques[0].findAll(
+    (/** @type {any} */ noeud) => noeud.type === View,
+  )];
+  const transformations = porteurs.flatMap((/** @type {any} */ noeud) => (
+    [noeud.props?.style].flat(3).filter(Boolean).flatMap(
+      (/** @type {any} */ style) => (Array.isArray(style?.transform) ? style.transform : []),
+    )
+  ));
   const lire = (/** @type {string} */ nom) => transformations
     .filter((/** @type {any} */ etape) => etape && etape[nom] !== undefined)
     .map((/** @type {any} */ etape) => Number(etape[nom]))
@@ -346,21 +385,24 @@ describe('T01 defaut 1 — l apercu du jeton suit la position du doigt', () => {
     const arbre = await rendre();
     const geste = gesteDuJeton(arbre, 'Remplacant');
 
-    // Le doigt part, puis glisse jusqu'au centre du terrain. Le fil JS reste
-    // OCCUPE tout du long : on ne le vide pas.
+    // Le doigt part : on libere le fil JS UNE fois, le temps qu'il dise quel
+    // joueur on traine. Puis il reste OCCUPE pour tout le glissement.
     await act(async () => {
       geste.rappels.onStart({ absoluteX: 40, absoluteY: 700 });
+      viderLeFilJs();
+    });
+    await act(async () => {
       geste.rappels.onUpdate({ absoluteX: CENTRE_TERRAIN.x, absoluteY: CENTRE_TERRAIN.y });
       arbre.update(<MatchCompositionBoard />);
     });
 
     const apercu = positionDessineeDeLApercu(arbre);
 
-    // Le jeton fait 64 de cote : son coin est a la moitie du jeton du doigt,
-    // c'est ce qui met le doigt AU CENTRE de l'apercu.
+    // Le coin du jeton est a une demi-taille du doigt : c'est ce qui met le
+    // doigt AU CENTRE de l'apercu. La taille vient du jeton, pas d'ici.
     expect(apercu).not.toBeNull();
-    expect(apercu.x).toBe(CENTRE_TERRAIN.x - 32);
-    expect(apercu.y).toBe(CENTRE_TERRAIN.y - 32);
+    expect(apercu.x).toBe(CENTRE_TERRAIN.x - (GHOST_TOKEN_SIZE.width / 2));
+    expect(apercu.y).toBe(CENTRE_TERRAIN.y - (GHOST_TOKEN_SIZE.height / 2));
   });
 
   test('l apercu ne reste PAS colle au coin en haut a gauche pendant le glissement', async () => {
@@ -369,6 +411,9 @@ describe('T01 defaut 1 — l apercu du jeton suit la position du doigt', () => {
 
     await act(async () => {
       geste.rappels.onStart({ absoluteX: 40, absoluteY: 700 });
+      viderLeFilJs();
+    });
+    await act(async () => {
       geste.rappels.onUpdate({ absoluteX: 220, absoluteY: 300 });
       arbre.update(<MatchCompositionBoard />);
     });
@@ -402,17 +447,19 @@ describe('T01 defaut 1 — l apercu du jeton suit la position du doigt', () => {
 
     await act(async () => {
       geste.rappels.onStart({ absoluteX: 40, absoluteY: 700 });
+      viderLeFilJs();
     });
 
     await bougerLeDoigt(80, 600);
     await bougerLeDoigt(140, 420);
     await bougerLeDoigt(210, 260);
 
-    expect(trace).toEqual([
-      { x: 48, y: 568 },
-      { x: 108, y: 388 },
-      { x: 178, y: 228 },
-    ]);
+    const coin = (/** @type {number} */ x, /** @type {number} */ y) => ({
+      x: x - (GHOST_TOKEN_SIZE.width / 2),
+      y: y - (GHOST_TOKEN_SIZE.height / 2),
+    });
+
+    expect(trace).toEqual([coin(80, 600), coin(140, 420), coin(210, 260)]);
   });
 
   test('🔒 NON-REGRESSION : le placement obtenu au LACHER est inchange', async () => {

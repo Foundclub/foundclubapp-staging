@@ -935,3 +935,31 @@ describe('D44 — un MATCH ne montre plus les commandes de la DETECTION', () => 
     expect(rendusDuDernierMontage()).toBeLessThan(10);
   });
 });
+
+describe('V03 - le calque de l apercu porte un repere a lui', () => {
+  // 🧨 Meme defaut que `MatchCompositionBoard` (V03) : le calque du jeton
+  // fantome portait la position alors qu'il ne declarait AUCUNE dimension. Un
+  // calque sans boite ne donne aucun repere a l'enfant absolu qu'il contient
+  // (`styles.ghostToken`), et l'apercu se retrouve plaque au coin haut-gauche.
+  // Le motif qui tient est celui de `tactical_v2/TacticalBoard.js` : calque
+  // plein ecran IMMOBILE, et le JETON qui porte la position.
+  const calqueDeLApercu = (arbre) => arbre.root.findAll(
+    (noeud) => noeud.props?.pointerEvents === 'none' && noeud.props?.style,
+  )[0] || null;
+
+  const aplatirStyle = (style) => [style].flat(6).filter(Boolean).reduce(
+    (accumule, morceau) => (typeof morceau === 'object' ? { ...accumule, ...morceau } : accumule),
+    {},
+  );
+
+  test('il est monte, absolu, et il couvre l ecran', () => {
+    const arbre = monter(parametresEdition());
+    const calque = calqueDeLApercu(arbre);
+
+    expect(calque).not.toBeNull();
+
+    const style = aplatirStyle(calque.props.style);
+    expect(style.position).toBe('absolute');
+    expect([style.top, style.left, style.right, style.bottom]).toEqual([0, 0, 0, 0]);
+  });
+});
