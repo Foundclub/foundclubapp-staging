@@ -263,6 +263,68 @@ describe('EventAnswerButtons — qui a le droit de repondre (caracterisation)', 
     ]);
   });
 
+  // W01 — le serveur (lot U02, admin `91da36c`) accepte desormais la reponse de
+  // QUI FAIT DEJA PARTIE de l equipe, encadrant compris : etre dans `players`
+  // OU dans `trainers` d une equipe conviee. Le role n entre nulle part dans sa
+  // regle. L ecran doit donc suivre l appartenance, pas l intitule du compte.
+  it('W01 · temoin 1 — un entraineur MEMBRE de l equipe voit present et absent', () => {
+    mockUserData.mockReturnValue({ documentId: 'user-coach', role: { name: USER_ROLES.coach } });
+
+    const tree = render({
+      event: buildEvent({
+        team: {
+          documentId: 'team-1',
+          name: 'Senior A',
+          players: [{ documentId: ME }],
+          trainers: [{ documentId: 'user-coach' }],
+        },
+      }),
+      onDecline: jest.fn(),
+      onParticipate: jest.fn(),
+    });
+
+    expect(buttonTitles(tree)).toEqual([
+      'eventList.actions.present',
+      'eventList.actions.absent',
+    ]);
+  });
+
+  it('W01 · temoin 2 — un dirigeant MEMBRE de l equipe aussi', () => {
+    mockUserData.mockReturnValue({ documentId: 'user-boss', role: { name: USER_ROLES.president } });
+
+    const tree = render({
+      event: buildEvent({
+        team: {
+          documentId: 'team-1',
+          name: 'Senior A',
+          players: [{ documentId: ME }],
+          trainers: [{ documentId: 'user-boss' }],
+        },
+      }),
+      onDecline: jest.fn(),
+      onParticipate: jest.fn(),
+    });
+
+    expect(buttonTitles(tree)).toEqual([
+      'eventList.actions.present',
+      'eventList.actions.absent',
+    ]);
+  });
+
+  it('W01 · temoin 3 🔒 — un encadrant NON membre n a AUCUN bouton de reponse', () => {
+    mockUserData.mockReturnValue({ documentId: 'coach-etranger', role: { name: USER_ROLES.coach } });
+
+    const tree = render({
+      event: buildEvent(),
+      onAbout: jest.fn(),
+      onDecline: jest.fn(),
+      onParticipate: jest.fn(),
+    });
+
+    expect(buttonTitles(tree)).not.toContain('eventList.actions.present');
+    expect(buttonTitles(tree)).not.toContain('eventList.actions.absent');
+  });
+
   it('un visiteur non connecte voit uniquement l invitation a se connecter', () => {
     mockUserData.mockReturnValue(null);
 

@@ -164,7 +164,13 @@ export default {
     EVENT_SLOT_CONFLICT: 'Un conflit de créneau a été détecté pour ce lieu.',
     EVENT_UPDATE_ERROR: "Erreur lors de la mise à jour de l'événement.",
     EVENT_USER_ALREADY_IN_EVENT_ERROR: "L'utilisateur est déjà inscrit à cet événement.",
-    EVENT_USER_NOT_PLAYER_OF_TEAM_ERROR: "L'utilisateur n'est pas joueur de l'équipe.",
+    // W01 — le serveur n envoie ce code que pour UNE raison : ne faire partie
+    // d aucune des equipes conviees (`event-rsvp.ts:101`, `event.ts:3052`,
+    // `event-participation.ts:436`). Depuis le lot U02 un encadrant MEMBRE est
+    // accepte : lui dire « pas joueur de l equipe » nommait son role au lieu de
+    // son appartenance, et lui faisait croire que son compte lui interdisait de
+    // repondre. Meme cle, meme place — seule la phrase change.
+    EVENT_USER_NOT_PLAYER_OF_TEAM_ERROR: "Cet événement est réservé aux équipes conviées, et tu n'es membre d'aucune d'elles.",
 
     // Event participation request errors
     EVENT_PARTICIPATION_ALREADY_HAS_A_REQUEST_POLICY_ERROR: 'Une demande de participation existe déjà pour cet événement.',

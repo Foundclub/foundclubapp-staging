@@ -56,16 +56,29 @@ export const isReservationParticipationEntity = (entity) => {
     && ['booked', 'cancelled', 'open', 'shared'].includes(bookingStatus);
 };
 
+/**
+ * Les membres d une equipe : ses joueurs ET ses encadrants.
+ *
+ * W01 — copie fidele de `getTeamMembers` cote serveur (`event-audience.ts:253`),
+ * que `resolveSourceTeamForUser` consulte depuis le lot U02. Ne lire que
+ * `players` ecartait de sa propre equipe l encadrant qui n y est pas inscrit
+ * comme joueur — a commencer par le createur de l equipe.
+ * @param {any} team
+ * @returns {any[]} Joueurs et encadrants, dans cet ordre.
+ */
+const getTeamMemberEntities = (team) => [
+  ...(Array.isArray(team?.players) ? team.players : []),
+  ...(Array.isArray(team?.trainers) ? team.trainers : []),
+];
+
 export const resolveClientSourceTeamForUser = (event, user) => {
   const userDocumentId = getUserDocumentId(user);
   if (!userDocumentId) return null;
   const userTeamIds = new Set(getUserTeamBuckets(user).flatMap(getEntityIdentifiers));
 
   return getTeamBuckets(event).find((team) => (
-    (
-      Array.isArray(team?.players)
-      && team.players.some((player) => String(player?.documentId || '').trim() === userDocumentId)
-    )
+    getTeamMemberEntities(team)
+      .some((member) => String(member?.documentId || '').trim() === userDocumentId)
     || getEntityIdentifiers(team).some((teamId) => userTeamIds.has(teamId))
   )) || null;
 };
@@ -175,15 +188,30 @@ const buildEventFlow = (entity, context) => {
     ? externalParticipationRequests.length
     : 0;
 
+  // W01 — CE QUI OUVRE LE DROIT DE REPONDRE, C EST L APPARTENANCE, PAS LE ROLE.
+  //
+  // Le serveur ne lit `user.role.name` NULLE PART sur ce chemin : il demande
+  // `resolveSourceTeamForUser` (`event-audience.ts:612`), c est-a-dire « figure
+  // dans `players` ou dans `trainers` d une equipe conviee ». Depuis le lot U02
+  // il accepte donc la reponse d un entraineur ou d un dirigeant membre — et
+  // l app, elle, continuait a griser son bouton sur le seul intitule du compte.
+  //
+  // 🔒 Un encadrant ETRANGER a toutes les equipes conviees reste bloque : sans
+  // equipe source, la porte suivante le refuse, exactement comme le serveur.
+  const isConvenedMember = Boolean(sourceTeam);
+
   let blockedReason = '';
-  if (!isPlayer) {
+  // Le motif de l evenement ferme passe AVANT celui du role : c est la phrase
+  // que le serveur renverrait (`EVENT_USER_NOT_PLAYER_OF_TEAM_ERROR`), et un
+  // non-membre doit lire pourquoi il est dehors, pas ce qu il est.
+  if (isClosed && !sourceTeam) {
+    blockedReason = 'Cet événement fermé est réservé aux équipes concernées.';
+  } else if (!isPlayer && !isConvenedMember) {
     blockedReason = 'Seuls les joueurs peuvent participer à cet événement.';
   } else if (alreadyHandled) {
     blockedReason = 'Tu as déjà répondu à cet événement.';
   } else if (!isFutureDatedEntity(entity) && !entity?.league_match) {
     blockedReason = 'Cet événement est déjà passe.';
-  } else if (isClosed && !sourceTeam) {
-    blockedReason = 'Cet événement fermé est réservé aux équipes concernées.';
   } else if (
     isExternalTrainingParticipant
     && Number(trainingOpenConfig?.externalParticipantLimit || 0) < 1

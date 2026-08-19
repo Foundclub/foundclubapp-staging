@@ -34,8 +34,12 @@ const rejectedByInterceptor = {
 
 describe('getParticipationErrorMessage — le refus arrive en francais', () => {
   it('le code machine du refus est traduit par fr.js', () => {
+    // W01 — la PHRASE a change, pas le contrat : ce code ne signifie qu une
+    // chose cote serveur (« membre d aucune des equipes conviees »), et depuis
+    // le lot U02 un encadrant MEMBRE est accepte. Nommer son role au lieu de son
+    // appartenance lui faisait croire que son compte lui interdisait de repondre.
     expect(getParticipationErrorMessage(rejectedByInterceptor)).toBe(
-      "L'utilisateur n'est pas joueur de l'équipe.",
+      "Cet événement est réservé aux équipes conviées, et tu n'es membre d'aucune d'elles.",
     );
   });
 
