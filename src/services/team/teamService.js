@@ -109,6 +109,7 @@ const teamSchema = Joi.object({
  *   category?: string[];
  *   activities?: string;
  *   summary?: boolean;
+ *   teamIds?: string[];
  * }} [params]
  * @returns {Promise<{data: Team[], meta: {
  * pagination: { page: number; pageSize: number; pageCount: number; total: number; } }}>}
@@ -126,10 +127,38 @@ export const getTeams = async (params = {}) => {
     parentMultisportId,
     section,
     summary = false,
+    teamIds,
   } = params;
 
   // Strapi rejects relation filters on `players` / `trainers` here.
   // We keep "Mes équipes" filtering client-side from the populated team payload.
+
+  // U03 — demander SES equipes nommement, par leurs identifiants. C'est la seule
+  // forme que le serveur accepte sans modification : Strapi garde explicitement
+  // `documentId` dans les filtres d'une liste (verifie dans le paquet installe,
+  // `@strapi/utils/dist/sanitize/sanitizers.js:44-49`), la ou il jette toute
+  // clef qui n'est pas un attribut.
+  const normalizedTeamIds = Array.isArray(teamIds)
+    ? teamIds.map((value) => String(value || '').trim()).filter(Boolean)
+    : null;
+
+  // 🚨 Une selection VIDE est une REPONSE, pas une absence : elle veut dire
+  // « ce compte n'a aucune equipe ». La laisser tomber dans `buildRequestParams`
+  // produirait une requete SANS AUCUN filtre — c'est-a-dire la table entiere,
+  // dix lignes par page. On rend donc la page vide sur place, sans reseau.
+  if (normalizedTeamIds && normalizedTeamIds.length === 0) {
+    return {
+      data: [],
+      meta: {
+        pagination: {
+          page: page || 1,
+          pageCount: 0,
+          pageSize: pageSize || 10,
+          total: 0,
+        },
+      },
+    };
+  }
 
   try {
     const populate = summary ? {
@@ -202,6 +231,9 @@ export const getTeams = async (params = {}) => {
           parentMultisportId,
           useLegacyClubId,
         }),
+        documentId: normalizedTeamIds ? {
+          $in: normalizedTeamIds,
+        } : undefined,
         level: level?.length ? {
           documentId: {
             $in: level,
