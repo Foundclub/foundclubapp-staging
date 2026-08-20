@@ -41,7 +41,11 @@ export const getAvailableRequestHubFilters = (context = {}) => {
   }
   // D92 — les matchs amicaux se proposent d equipe a equipe : le filtre n a de
   // sens que pour qui en encadre au moins une.
-  if (Array.isArray(teamIds) && teamIds.length > 0) {
+  // Y04 — « encadrer » ne veut pas dire « entrainer ». Un dirigeant gere les
+  // equipes de son club sans en entrainer aucune : sans `clubId`, ses
+  // propositions arrivaient bien dans « Toutes » mais aucun onglet « Amicaux »
+  // ne permettait de les isoler. Meme porte que la source du meme nom.
+  if ((Array.isArray(teamIds) && teamIds.length > 0) || clubId) {
     filters.push('friendly');
   }
   if (clubId) {

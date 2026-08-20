@@ -307,7 +307,13 @@ describe('D92 — les propositions de match amical arrivent dans « Demandes »'
   });
 
   test('une source amicale en panne n efface pas le reste des demandes', async () => {
+    // ⚠️ Y04 — LES DEUX MOITIES TOMBENT ICI, ET C EST EXPRES. Depuis ce lot, une
+    // seule moitie en echec ne rend plus d erreur (l autre est servie). Ce
+    // temoin-la parle d autre chose : quand la source amicale tombe pour de
+    // bon, les demandes d equipe restent a l ecran.
     getMyFriendlyMatchAds.mockRejectedValue(Object.assign(new Error('boom'), { status: 500 }));
+    getMyFriendlyMatchApplications
+      .mockRejectedValue(Object.assign(new Error('boom'), { status: 500 }));
     getTeamMembershipRequests.mockResolvedValue({
       ...emptyPaginatedResponse,
       data: [{

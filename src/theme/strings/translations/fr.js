@@ -3042,6 +3042,26 @@ export default {
   requestsHub: {
     actionError: 'Impossible de traiter la demande.',
     assignNow: 'Assigner maintenant',
+    // Y04 — LA FENETRE QUI DIT CE QUI VIENT DE CHANGER, demande d'Adel du
+    // 2026-08-19. Une phrase par type de demande : « acceptée » ne dit pas si
+    // quelqu'un est entré dans une équipe, si un match est confirmé, ou si un
+    // créneau est accordé. La table qui les choisit vit dans
+    // services/requests/requestAcceptanceCelebration.js.
+    // ⚠️ `{{name}}` est remplacé À LA MAIN par l'écran : le repli passé en
+    // second argument de `t` n'est pas interpolé par i18next.
+    celebration: {
+      close: 'Super',
+      club: '{{name}} rejoint le club.',
+      event: 'La participation est validée.',
+      featured: "L'événement passe à la une.",
+      friendly: 'Le match est confirmé.',
+      installation: 'La place supplémentaire est accordée.',
+      interest: 'Ta réponse est partie.',
+      someone: 'Un nouveau membre',
+      team: "{{name}} rejoint l'équipe.",
+      title: 'Félicitations',
+      unknown: 'La demande est acceptée.',
+    },
     clubAssignedMessage: "{{name}} a été ajouté au club. Veux-tu l'assigner à une équipe maintenant ?",
     clubAssignedTitle: 'Entraîneur ajouté',
     clubClaimAssignedMessage: '{{name}} a été ajouté comme dirigeant du club.',
@@ -3058,6 +3078,10 @@ export default {
     migratedBannerAction: "Ouvrir l'onglet Demandes",
     migratedBannerTitle: 'Ce flux a été migré vers Demandes.',
     partialError: 'Source indisponible',
+    // Y04 — la bannière d'erreur n'avait AUCUN bouton : elle nommait la panne et
+    // s'arrêtait là. Un 403 n'y arrive jamais (le service le laisse tomber en
+    // silence), donc ce qui reste affiché est toujours réessayable.
+    partialErrorRetry: 'Réessayer',
     rejectEventMessage: 'L\'événement sera annulé.',
     rejectEventTitle: 'Refuser la demande ?',
     rejectFeaturedMessage: 'Le demandeur sera notifié du refus.',
