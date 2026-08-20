@@ -1,6 +1,6 @@
 import { useQueryClient } from '@tanstack/react-query';
 import {
-  useCallback, useEffect, useMemo, useState,
+  useCallback, useEffect, useMemo, useRef, useState,
 } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -53,6 +53,9 @@ import {
   approveFacilityOverrideRequest,
   refuseFacilityOverrideRequest,
 } from '@/services/facility/facilityService';
+import {
+  buildRequestAcceptanceCelebration,
+} from '@/services/requests/requestAcceptanceCelebration';
 import {
   useRequestsHubData,
 } from '@/services/requests/requestsHubQueries';
@@ -148,6 +151,11 @@ function RequestsHub({ navigation, route }) {
   const [processingItemId, setProcessingItemId] = useState('');
   const [subscriptionPaywallDecision, setSubscriptionPaywallDecision] = useState(null);
   const [subscriptionPaywallClubId, setSubscriptionPaywallClubId] = useState('');
+  // Y04 — les demandes deja tranchees SUR CET APPAREIL, retirees de la liste
+  // sans attendre la relecture. C'est la moitie visible de « rends la main tout
+  // de suite » : la ligne part au moment du geste, pas au retour du reseau.
+  const [settledItemIds, setSettledItemIds] = useState(/** @type {string[]} */ ([]));
+  const [celebration, setCelebration] = useState(/** @type {any | null} */ (null));
 
   useEffect(() => {
     const nextFilter = normalizeFilter(route?.params?.initialFilter);
@@ -203,12 +211,49 @@ function RequestsHub({ navigation, route }) {
 
   const filteredItems = useMemo(() => {
     const items = requestsQuery?.data?.items || [];
+    const settled = new Set(settledItemIds);
+    const visibleItems = settled.size > 0
+      ? items.filter((item) => !settled.has(item?.id))
+      : items;
     return (
       activeFilter === 'all'
-        ? items
-        : items.filter((item) => item?.type === activeFilter)
+        ? visibleItems
+        : visibleItems.filter((item) => item?.type === activeFilter)
     );
-  }, [activeFilter, requestsQuery?.data?.items]);
+  }, [activeFilter, requestsQuery?.data?.items, settledItemIds]);
+
+  // Y04 — la liste des demandes deja tranchees ne grandit pas indefiniment :
+  // des que la relecture les a fait disparaitre de la reponse, on les oublie.
+  // Sans ce menage, un identifiant reutilise par le serveur resterait invisible.
+  useEffect(() => {
+    const items = requestsQuery?.data?.items;
+    if (!Array.isArray(items)) return;
+    setSettledItemIds((current) => {
+      if (current.length === 0) return current;
+      const stillThere = new Set(items.map((item) => item?.id));
+      const next = current.filter((id) => stillThere.has(id));
+      return next.length === current.length ? current : next;
+    });
+  }, [requestsQuery?.data?.items]);
+
+  // 🧊 Y04 — CE QUI DOIT SE RELIRE QUAND ON REVIENT SUR CET ECRAN.
+  // Adel : « il faut toujours recharger la page avec un refresh pour voir
+  // apparaitre les demandes ». `staleTime: 30_000` fige la liste, et l'onglet
+  // reste MONTE quand on navigue ailleurs : ni le montage ni le tirer-pour-
+  // rafraichir ne se declenchent au retour. On relit donc a chaque prise de
+  // focus. ⛔ La cause commune a toute l'app n'est pas ici (lot Y05) : cette
+  // ligne ne traite que le cas de cet ecran.
+  // ⚠️ Par une REFERENCE, pas par la dependance : `requestsQuery` est un objet
+  // neuf a chaque rendu, s'y abonner reposerait l'ecouteur en boucle.
+  const refetchRequestsRef = useRef(requestsQuery.refetch);
+  refetchRequestsRef.current = requestsQuery.refetch;
+
+  useEffect(() => {
+    if (typeof navigation?.addListener !== 'function') return undefined;
+    return navigation.addListener('focus', () => {
+      refetchRequestsRef.current?.();
+    });
+  }, [navigation]);
 
   // U05 — BRANCHE SUR LE MODULE. Cet ecran declarait NEUF rubriques a la main et
   // en oubliait QUATRE : `teams`, `team`, `planning` et `home-summary`. C'est
@@ -221,6 +266,46 @@ function RequestsHub({ navigation, route }) {
     () => invalidateAfterAction(queryClient, 'acceptRequest'),
     [queryClient],
   );
+
+  /**
+   * ⏱️ Y04 — LA RELECTURE PART DERRIERE, ON NE L'ATTEND PLUS.
+   *
+   * MESURE, pas supposition : `invalidateQueries` marque les caches de facon
+   * SYNCHRONE, mais la promesse qu'elle rend n'est tenue qu'une fois toutes les
+   * requetes ACTIVES relues (@tanstack/query-core 5.85.9,
+   * queryClient.js:149-165 — `refetchType` vaut `active` par defaut, et
+   * `refetchQueries` attend chaque `fetch`). `acceptRequest` declare DOUZE
+   * racines ; l'une d'elles est `requestsHub` lui-meme, dont une relecture
+   * coute a elle seule une dizaine d'aller-retours (sept sources, chacune
+   * paginee). C'est CA, « c'est tres long quand on appuie sur accepter » — pas
+   * l'acceptation, qui est un seul POST.
+   *
+   * ⛔ Ne rien attendre ne perd RIEN : le marquage est deja fait au retour de
+   * l'appel, et le `queryClient` est un singleton qui survit au demontage de
+   * l'ecran. On avale l'echec de relecture — il ne remet pas en cause
+   * l'acceptation, qui, elle, a bien eu lieu.
+   */
+  const invalidateRequestsInBackground = useCallback(() => {
+    invalidateRequests().catch(() => {});
+  }, [invalidateRequests]);
+
+  const closeCelebration = useCallback(() => setCelebration(null), []);
+
+  const handleRetrySources = useCallback(() => {
+    refetchRequestsRef.current?.();
+  }, []);
+
+  /**
+   * ⛔ N'EST APPELEE QUE DEPUIS LE CHEMIN DE SUCCES. Une felicitation sur un
+   * echec est pire que pas de fenetre du tout : elle fait croire que c'est fait.
+   * @param {any} item La demande acceptee.
+   */
+  const celebrateAcceptance = useCallback((item) => {
+    setCelebration(buildRequestAcceptanceCelebration(item, t));
+    setSettledItemIds((current) => (
+      item?.id && !current.includes(item.id) ? [...current, item.id] : current
+    ));
+  }, [t]);
 
   const closeInstallationRefusalModal = useCallback(() => {
     setInstallationRefusalItem(null);
@@ -372,7 +457,7 @@ function RequestsHub({ navigation, route }) {
             chatDocumentId,
             responseType: 'chat',
           });
-          await invalidateRequests();
+          invalidateRequestsInBackground();
           emitGuidanceAction('requests.processed', {
             requestType: item?.type || 'unknown',
           });
@@ -437,7 +522,14 @@ function RequestsHub({ navigation, route }) {
         }
       }
 
-      await invalidateRequests();
+      // 🎉 Y04 — L'ORDRE COMPTE. On est ici SEULEMENT si aucun `await` n'a leve :
+      // la demande est reellement tranchee cote serveur. La fenetre s'affiche
+      // donc maintenant, la ligne part, et la relecture des autres rubriques
+      // court derriere. ⛔ Un refus ne se felicite pas.
+      if (action === 'accept' || action === 'validate') {
+        celebrateAcceptance(item);
+      }
+      invalidateRequestsInBackground();
       emitGuidanceAction('requests.processed', {
         requestType: item?.type || 'unknown',
       });
@@ -457,7 +549,7 @@ function RequestsHub({ navigation, route }) {
     } finally {
       setProcessingItemId('');
     }
-  }, [closeInstallationRefusalModal, handleClubAssignPrompt, invalidateRequests, navigation, openSubscriptionPaywall, startWhisperChat, t]);
+  }, [celebrateAcceptance, closeInstallationRefusalModal, handleClubAssignPrompt, invalidateRequestsInBackground, navigation, openSubscriptionPaywall, startWhisperChat, t]);
 
   const handlePrimaryPress = useCallback((item) => {
     runItemAction(item, 'primary');
@@ -507,7 +599,8 @@ function RequestsHub({ navigation, route }) {
         presetKey: selectedPreset.key,
         responseType: 'preset',
       });
-      await invalidateRequests();
+      celebrateAcceptance(interestResponseItem);
+      invalidateRequestsInBackground();
       emitGuidanceAction('requests.processed', {
         requestType: 'interest',
       });
@@ -526,7 +619,7 @@ function RequestsHub({ navigation, route }) {
     } finally {
       setProcessingItemId('');
     }
-  }, [interestResponseItem, interestResponsePresetKey, invalidateRequests, openSubscriptionPaywall, t]);
+  }, [celebrateAcceptance, interestResponseItem, interestResponsePresetKey, invalidateRequestsInBackground, openSubscriptionPaywall, t]);
 
   const handleRequesterPress = useCallback((item) => {
     const requesterId = String(item?.meta?.requesterId || '').trim();
@@ -852,6 +945,19 @@ function RequestsHub({ navigation, route }) {
                 <Text style={[Fonts.p3, Fonts.neutral200]}>
                   {getSourceErrorDescription(sourceError, t)}
                 </Text>
+                {/* Y04 — UNE SECTION EN PANNE PROPOSE UNE SORTIE. La banniere
+                    disait « indisponible » et s'arretait la : aucun geste, donc
+                    aucun espoir hors de quitter l'ecran. C'est le defaut deja
+                    paye 31 fois ailleurs (lot U03). Un 403 n'arrive JAMAIS ici
+                    (le service le laisse tomber en silence) : ce qui reste est
+                    reessayable. */}
+                <Button
+                  disabled={Boolean(requestsQuery.isRefetching)}
+                  onPress={handleRetrySources}
+                  size="sm"
+                  title={t('requestsHub.partialErrorRetry', 'Réessayer')}
+                  variant="Secondary"
+                />
               </View>
             ))}
           </View>
@@ -901,6 +1007,55 @@ function RequestsHub({ navigation, route }) {
           showsVerticalScrollIndicator={false}
         />
       </WithDataWrapper>
+
+      {/* 🎉 Y04 — LA FENETRE QU'ADEL DEMANDE. Elle ne BLOQUE pas : un appui a
+          cote la ferme (`onPress` du fond), le bouton systeme aussi
+          (`onRequestClose`), et le bouton « Super » la ferme sans rien
+          declencher d'autre. La demande est deja tranchee quand elle
+          apparait. */}
+      <Modal
+        animationType="fade"
+        onRequestClose={closeCelebration}
+        transparent
+        visible={Boolean(celebration)}
+      >
+        <TouchableOpacity
+          activeOpacity={1}
+          onPress={closeCelebration}
+          style={[
+            Alignments.fill,
+            Alignments.justifyCenter,
+            Spaces.padding[24],
+            { backgroundColor: 'rgba(0, 0, 0, 0.55)' },
+          ]}
+        >
+          <View
+            style={[
+              ApplicationStyle.backgroundColor.primary700,
+              ApplicationStyle.borderRadius16,
+              ApplicationStyle.borderWidth1,
+              Spaces.padding[24],
+              Spaces.gap[12],
+              Alignments.alignCenter,
+              {
+                borderColor: `${Colors.primary500}44`,
+              },
+            ]}
+          >
+            <Text style={[Fonts.h4Bold, Fonts.neutral00, Fonts.textCenter]}>
+              {celebration?.title}
+            </Text>
+            <Text style={[Fonts.p2, Fonts.neutral200, Fonts.textCenter]}>
+              {celebration?.message}
+            </Text>
+            <Button
+              onPress={closeCelebration}
+              title={t('requestsHub.celebration.close', 'Super')}
+              variant="Primary"
+            />
+          </View>
+        </TouchableOpacity>
+      </Modal>
 
       <SubscriptionPaywallSheet
         close={closeSubscriptionPaywall}
