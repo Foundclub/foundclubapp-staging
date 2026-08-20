@@ -4497,13 +4497,32 @@ function TeamDetails({ navigation, route }) {
         </WithDataWrapper>
       </ScrollView>
       {hasTeamActionsPanel ? (
-        <View style={[Spaces.marginTop[12], Spaces.paddingBottom[24], Spaces.paddingHorizontal[16], Spaces.gap[12]]}>
+        <View
+          style={[
+            Spaces.marginTop[12],
+            Spaces.paddingBottom[24],
+            Spaces.paddingHorizontal[16],
+            Spaces.gap[12],
+            // AA06 - ce panneau est un FRERE de la zone defilante de la page,
+            // pas un enfant : il doit le rester, sinon le bouton « C'est mon
+            // equipe » (ouvert d'office pour un visiteur, l. 1746) passerait
+            // sous la ligne de flottaison. Restait a le borner. Sans ce
+            // `flexShrink`, PERSONNE ne retrecissait : la zone defilante de la
+            // page a `flex: 1` donc `flexBasis: 0`, donc un poids de
+            // retrecissement NUL, et la valeur par defaut de `flexShrink` vaut
+            // 0 sur React Native (et non 1 comme sur le web). Le panneau
+            // ouvert - jusqu'a 10 actions de 52 pt - debordait par le bas,
+            // hors d'atteinte.
+            isTeamActionsPanelOpen ? { flexShrink: 1 } : null,
+          ]}
+        >
           <View
             style={[
               ApplicationStyle.backgroundColor.primary700,
               ApplicationStyle.borderRadius24,
               Spaces.paddingHorizontal[16],
               { borderColor: `${Colors.primary500}44`, borderWidth: 1, overflow: 'hidden' },
+              isTeamActionsPanelOpen ? Alignments.fill : null,
             ]}
           >
             <TouchableOpacity
@@ -4538,7 +4557,15 @@ function TeamDetails({ navigation, route }) {
             </TouchableOpacity>
 
             {isTeamActionsPanelOpen ? (
-              <View style={[Spaces.gap[8], Spaces.paddingBottom[16]]}>
+              // AA06 - la zone qui defile prend la place LAISSEE par l'entete
+              // (`flex: 1`), jamais une fraction de l'ECRAN : c'est la regle
+              // que `BottomModal.debordement.test.js` (lot D19) a etablie, et
+              // le plafond en fraction d'ecran est precisement ce qu'il
+              // condamne.
+              <ScrollView
+                contentContainerStyle={[Spaces.gap[8], Spaces.paddingBottom[16]]}
+                style={Alignments.fill}
+              >
                 {showJoinAction ? (
                   <Button
                     disabled={!!pendingRequest}
@@ -4659,7 +4686,7 @@ function TeamDetails({ navigation, route }) {
                   </View>
                 ) : null}
 
-              </View>
+              </ScrollView>
             ) : null}
           </View>
         </View>
