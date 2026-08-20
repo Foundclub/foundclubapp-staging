@@ -345,10 +345,11 @@ describe('S05 ④ sur iOS, le texte part AVEC le fichier', () => {
     expect(phrase).toContain('/events/evt-1');
   });
 
-  // TEMOIN NEGATIF : « Dans mes photos » n'envoie volontairement AUCUN texte
-  // (`EventPublishedShowcase.js:487`). Un lot qui y joindrait la phrase par
-  // symetrie collerait une invitation dans un simple enregistrement.
-  it('TEMOIN NEGATIF : « Dans mes photos » ne joint aucun texte', async () => {
+  // TEMOIN NEGATIF, REECRIT le 2026-08-20 (AA08). AVANT il visait « Dans mes
+  // photos », qui a quitte l'ecran. Ce qu'il protege reste entier : l'affiche
+  // A IMPRIMER ne doit porter AUCUN texte de partage — un lot qui y joindrait
+  // la phrase par symetrie collerait une invitation dans un fichier PDF.
+  it('TEMOIN NEGATIF : l affiche A4 a imprimer ne joint aucun texte', async () => {
     await act(async () => {
       mounted = renderer.create(
         <EventPublishedShowcase
@@ -363,9 +364,9 @@ describe('S05 ④ sur iOS, le texte part AVEC le fichier', () => {
         && typeof node.props.onPress === 'function',
     )[0];
 
-    await act(async () => { await presser('Enregistrer l’image').props.onPress(); });
-    await act(async () => { await presser('Dans mes photos').props.onPress(); });
+    await act(async () => { await presser('Affiche A4 à imprimer').props.onPress(); });
 
+    expect(mockDownloadAndShareRender.mock.calls[0][0].format).toBe('a4');
     expect(mockDownloadAndShareRender.mock.calls[0][0].message).toBeUndefined();
   });
 });

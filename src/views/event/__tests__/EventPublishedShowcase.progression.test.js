@@ -319,7 +319,7 @@ describe('T04 — ① l attente dit qu elle travaille, sans promettre de durée'
   it('story et A4 annoncent leur attente, et disent que c est une autre image', async () => {
     mockDownloadAndShareRender.mockReturnValue(new Promise(() => {}));
     const tree = await renderScreen(clubParams());
-    await pressSansAttendre(tree, 'Enregistrer l’image');
+    // AA08 : plus de feuille a ouvrir, le format est a l'ecran.
     await pressSansAttendre(tree, 'Version story 9:16');
 
     expect(reperes(tree).length).toBeGreaterThan(0);

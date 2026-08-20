@@ -15,6 +15,7 @@ import ReactNativeBlobUtil from 'react-native-blob-util';
 
 import { getAuthTokens } from '@/domains/auth/authUseCases';
 import { getApiBaseUrl } from '@/config/runtimeUrls';
+import { FILE_SHARE_FAILURES } from '@/platform/share/fileShareContract';
 // Suffixe de plateforme VOULU : il fait échouer bruyamment une importation depuis
 // le web, qui n'a pas react-native-blob-util. Metro et Jest résolvent
 // shareLocalFile.native.js ; le résolveur du linter, lui, ne connaît pas ce suffixe.
@@ -24,6 +25,19 @@ import { shareLocalFile } from '@/platform/share/shareLocalFile';
 // getApiBaseUrl() inclut déjà « /api » : le chemin ne doit PAS le répéter
 // (sinon POST .../api/api/visual-assets/render -> 405). Même bug corrigé côté web.
 const RENDER_PATH = '/visual-assets/render';
+
+/**
+ * AA08 — erreur porteuse du rendu serveur. Meme motif que `fileShareError` de
+ * `shareLocalFile.native.js` : `reason` traverse jusqu'a l'ecran, qui en tire
+ * une phrase juste au lieu du message generique de connexion.
+ * @param {string} message
+ * @returns {Error}
+ */
+const renderError = (message) => {
+  const error = new Error(message);
+  error.reason = FILE_SHARE_FAILURES.RENDER_FAILED;
+  return error;
+};
 
 const buildRenderBody = ({
   format, overrides, subjectId, subjectType, template, variant,
@@ -53,7 +67,10 @@ export const fetchRenderBase64 = async (params) => {
   );
   const { status } = res.info();
   if (status >= 400) {
-    throw new Error(`render ${params.template}/${params.format} -> HTTP ${status}`);
+    // AA08 : l'erreur PORTE sa cause, comme celles de `shareLocalFile`. Sans ce
+    // champ, l'ecran retombait sur « Verifie ta connexion » pour un serveur de
+    // rendu en panne — et l'utilisateur allait regarder son wifi pour rien.
+    throw renderError(`render ${params.template}/${params.format} -> HTTP ${status}`);
   }
   const contentType = res.info().headers['Content-Type'] || res.info().headers['content-type'] || 'image/png';
   return { base64: res.base64(), contentType };
