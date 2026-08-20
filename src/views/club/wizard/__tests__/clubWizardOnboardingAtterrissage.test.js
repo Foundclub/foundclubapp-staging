@@ -63,7 +63,13 @@ const mockRafraichissement = {
 const rafraichirProfil = jest.fn(() => new Promise((resolve) => {
   mockRafraichissement.resoudre = () => resolve({ data: mockAuthentification.userData });
 }));
-const mockClientRequete = { invalidateQueries: jest.fn(async () => undefined) };
+// AA04 — la doublure du cache apprend `setQueriesData` : c'est par la que le
+// club fraichement cree entre dans le profil de l'app (le serveur, lui, sert
+// `/firebase-auth/me` depuis un cache de 60 s a 4 min qu'il n'invalide pas).
+const mockClientRequete = {
+  invalidateQueries: jest.fn(async () => undefined),
+  setQueriesData: jest.fn(),
+};
 
 // Objet FIGE : un contexte neuf a chaque rendu relance les effets qui en
 // dependent et fait tourner Jest en boucle infinie, sans message.
@@ -128,6 +134,11 @@ jest.mock('@/domains/auth/useAuth', () => ({
 }));
 
 jest.mock('@/domains/auth/authUseCases', () => ({
+  // Le rattachement est mesure ailleurs (`parcoursNouveauDirigeant`) : ici on
+  // garde la VRAIE fonction, pour ne pas rendre ce filet aveugle a une
+  // regression de sa signature.
+  attachCreatedClubToProfile: jest.requireActual('@/domains/auth/authUseCases')
+    .attachCreatedClubToProfile,
   markOnboardingComplete: jest.fn(),
 }));
 

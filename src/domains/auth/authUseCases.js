@@ -100,6 +100,56 @@ export const resolveMyClubDocumentId = (/** @type {any} */ userData) => (
 );
 
 /**
+ * CELUI QUI CREE UN CLUB EN FAIT PARTIE — AA04 ② (Adel, 2026-08-20) :
+ * « j'ai cree un club, sauf qu'au lieu de m'affilier directement dans le club,
+ * ca m'a mis sur la page details du club ou j'ai du dire "je fais partie de ce
+ * club" ».
+ *
+ * L'affiliation, elle, est bien faite : `POST /clubs/self-onboard` ecrit
+ * `user.club` et l'enregistrement d'affiliation dans la foulee
+ * (`admin/src/api/club/services/club-self-onboard.ts`, etape 2b). Ce qui
+ * manque, c'est que l'app le SACHE : le profil est servi depuis un cache
+ * serveur (`meProfileRuntimeCache`, 60 s de fraicheur, 4 min de sursis) que la
+ * creation de club N'INVALIDE PAS. Le `refetchUserData()` qui suit la creation
+ * relit donc, mot pour mot, le profil d'AVANT le club.
+ *
+ * Consequences en chaine, toutes les trois constatees le meme jour :
+ *  · la fiche du club ne reconnait pas son createur (`isClubMember` -> faux) et
+ *    lui propose « Je fais partie de ce club » ;
+ *  · `resolveMyClubDocumentId` rend `null`, donc « creer mon equipe » tombe sur
+ *    « Il te faut d'abord un club » et renvoie chercher un club (constat ③) ;
+ *  · l'onglet Equipes reste celui de quelqu'un sans club.
+ *
+ * On recolle donc le profil sur ce que le serveur VIENT de faire, sans rien
+ * inventer.
+ *
+ * 🔒 CE QUE CETTE FONCTION NE FAIT JAMAIS, et c'est sa raison d'etre :
+ *  · elle n'attache que le club rendu par la creation, jamais un club consulte ;
+ *  · elle ne touche PAS un profil qui a deja un club — aucun rattachement n'est
+ *    remplace, aucun club existant n'est revendique sans verification ;
+ *  · elle ne rend aucun droit : `canUserEditClub` continue d'exiger le role, que
+ *    seul le serveur attribue.
+ * @param {any} profile - Le profil tel que `/firebase-auth/me` le rend.
+ * @param {any} createdClub - Le club rendu par `POST /clubs/self-onboard`.
+ * @returns {any} Le profil, rattache au club qu'il vient de creer.
+ */
+export const attachCreatedClubToProfile = (
+  /** @type {any} */ profile,
+  /** @type {any} */ createdClub,
+) => {
+  if (!profile || typeof profile !== 'object') return profile;
+
+  const createdClubId = String(createdClub?.documentId || '').trim();
+  if (!createdClubId) return profile;
+
+  // Un profil qui connait deja un club de rattachement n'est pas corrige ici :
+  // c'est la garantie qu'aucun club existant ne peut etre substitue au sien.
+  if (getActiveClubId(profile)) return profile;
+
+  return { ...profile, club: createdClub };
+};
+
+/**
  * LES CLUBS DE RATTACHEMENT ADMINISTRATIF — a ne pas confondre avec
  * `getMemberClubIds` ci-dessous, et la confusion coute cher.
  *

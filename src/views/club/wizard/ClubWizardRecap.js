@@ -3,7 +3,7 @@ import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Alert, Text, View } from 'react-native';
 
-import { markOnboardingComplete } from '@/domains/auth/authUseCases';
+import { attachCreatedClubToProfile, markOnboardingComplete } from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
 import { invalidateAfterAction } from '@/domains/refresh/afterAction';
 import useTheme from '@/theme/themeContext';
@@ -95,6 +95,27 @@ function ClubWizardRecap({ navigation, route }) {
         // Le club est cree : on continue, l'ecran suivant se rafraichira seul.
       }
     }
+
+    // AA04 ② — ET LE PROFIL RELU NE CONNAIT TOUJOURS PAS LE CLUB. Le serveur a
+    // bien affilie son createur (`club-self-onboard.ts`, etape 2b), mais il sert
+    // `/firebase-auth/me` depuis un cache que la creation n'invalide pas
+    // (`meProfileRuntimeCache` : 60 s de fraicheur, 4 min de sursis). Attendre
+    // ne sert a rien — le cache ne bougera pas — et c'est ce trou de quelques
+    // minutes qui produit les trois constats d'Adel : la fiche du club propose
+    // « Je fais partie de ce club » a celui qui vient de le creer, et « creer
+    // mon equipe » repond « il te faut d'abord un club ».
+    //
+    // On pose donc dans le cache de l'app ce que le serveur VIENT de faire.
+    // `attachCreatedClubToProfile` refuse de toucher un profil qui a deja un
+    // club : rien ne peut se substituer a un rattachement existant.
+    // ⚠️ APRES le `refetch` ci-dessus, jamais avant : la reponse perimee
+    // ecraserait la correction.
+    queryClient.setQueriesData(
+      { queryKey: ['get-me'] },
+      (/** @type {any} */ previousProfile) => (
+        attachCreatedClubToProfile(previousProfile, createdClub)
+      ),
+    );
 
     const clubDocumentId = createdClub?.documentId;
 

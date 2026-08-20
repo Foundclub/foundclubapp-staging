@@ -24,6 +24,7 @@ import {
   getTabScreenCommonOptions,
 } from '../commonOptions';
 import { RouteNames } from '../routeNames';
+import { createFocusedTabResetListener } from '../tabRootReset';
 import SearchStack from './stacks/SearchStack';
 
 const Tab = createBottomTabNavigator();
@@ -130,6 +131,7 @@ function PrivateTabNavigator() {
     >
       <Tab.Screen
         component={SearchStack}
+        listeners={createFocusedTabResetListener}
         name={RouteNames.Search}
         options={{
           headerShown: false,
@@ -146,6 +148,7 @@ function PrivateTabNavigator() {
       />
       <Tab.Screen
         getComponent={() => require('@/views/event/MyEventList').default}
+        listeners={createFocusedTabResetListener}
         name={RouteNames.MyEventList}
         options={{
           headerShown: false,
@@ -168,6 +171,7 @@ function PrivateTabNavigator() {
             cmId: activeMultisportClubId,
             playerId: userData?.documentId,
           }}
+          listeners={createFocusedTabResetListener}
           name={RouteNames.MyTeamList}
           options={{
             headerShown: false,
@@ -188,6 +192,7 @@ function PrivateTabNavigator() {
       <Tab.Screen
         getComponent={() => require('@/views/Messaging').default}
         initialParams={{ chatScope: 'classic' }}
+        listeners={createFocusedTabResetListener}
         name={RouteNames.Chat}
         options={{
           headerShown: false,
