@@ -62,7 +62,7 @@ import { resolveFacilityPlanningColor } from '@/utils/facilityPlanningColor';
 import safeJsonParse from '@/utils/safeJsonParse';
 import { buildPublicWebUrl } from '@/utils/shareLinks';
 
-import { resolveClubDetailsActionMatrix } from './clubDetailsActionMatrix';
+import { canCreateTeamInClub, resolveClubDetailsActionMatrix } from './clubDetailsActionMatrix';
 import ClubPlanning from './ClubPlanningScreen';
 import { ClubHubGroup, ClubHubRow } from './components/ClubHubRow';
 
@@ -1033,6 +1033,17 @@ function ClubDetails({ navigation, route }) {
   // suffit a eteindre la porte « prevenez-moi quand ce club arrive », qui est
   // celle de quelqu'un qui ATTEND le club au lieu de pouvoir le faire venir.
   const isClubStaffRole = isCoachRole || userData?.role?.name === USER_ROLES.president;
+
+  // AA04 ③ — la porte vers la premiere equipe, sur SON club. Le juge vit dans
+  // `clubDetailsActionMatrix.js`, avec le reste des decisions de cette fiche.
+  const canCreateClubTeam = useMemo(
+    () => canCreateTeamInClub({
+      canEdit,
+      hasAdministrativeClubAccess: Boolean(clubId) && hasClubAccess(clubId),
+      isClubStaffRole,
+    }),
+    [canEdit, clubId, hasClubAccess, isClubStaffRole],
+  );
   // D95 — le JOUEUR sort de ce parcours. Il y entrait par la ligne
   // `(isPlayerRole || isCoachRole)` et tombait sur un bouton « Je dirige ce club »
   // qui lui demandait le telephone de son dirigeant : ce n'est ni ce qu'il vient
@@ -2773,7 +2784,7 @@ function ClubDetails({ navigation, route }) {
               {/* D34 ecran 11 : la section apparait aussi quand le club n'a */}
               {/* AUCUNE equipe, sinon un dirigeant qui debute n'a nulle part */}
               {/* ou en creer une depuis son club. */}
-              {showsClubSection('teams') && (sortedClubTeams.length || canEdit) ? (
+              {showsClubSection('teams') && (sortedClubTeams.length || canCreateClubTeam) ? (
                 <View style={[Spaces.gap[16]]}>
                   <View style={[Alignments.row,
                     Alignments.alignCenter, Alignments.scrollSpaceBetween, Spaces.gap[16]]}
@@ -2842,7 +2853,7 @@ function ClubDetails({ navigation, route }) {
                         </TouchableOpacity>
                       ))
                     }
-                    {canEdit ? (
+                    {canCreateClubTeam ? (
                       <TouchableOpacity
                         accessibilityLabel={t('clubDetails.actions.createTeam', 'Créer une équipe')}
                         accessibilityRole="button"

@@ -1,3 +1,33 @@
+/**
+ * AA04 ③ — LA PORTE VERS LA PREMIERE EQUIPE, sur SON club.
+ *
+ * La section « Equipes » de la fiche, et sa carte « + Creer une equipe »,
+ * n'existaient que pour `canEdit` — c'est-a-dire pour le seul role `president`
+ * (`canUserEditClub`). Or un ENTRAINEUR qui vient de creer son club reste
+ * `Entraineur` tant qu'il n'a pas coche « je suis aussi dirigeant »
+ * (`admin`, `club-self-onboard.ts`, `resolveCreatorRoleTarget`) : il arrivait
+ * sur la fiche de SON club sans aucune porte vers une equipe, alors que l'app
+ * le laisse deja en creer une depuis l'onglet Equipes (`canManageTeam` =
+ * entraineur OU dirigeant).
+ *
+ * 🔒 `hasAdministrativeClubAccess` et non « est membre » : c'est le
+ * rattachement ADMINISTRATIF (`hasClubAccess`, donc `user.club` / `clubs` /
+ * `clubAffiliations`), jamais l'appartenance deduite d'une equipe. Un
+ * entraineur qui joue dans l'equipe d'un AUTRE club n'ouvre donc rien chez ce
+ * club-la. Et la creation reste de toute facon arbitree par le serveur : cette
+ * fonction decide d'une PORTE, pas d'un droit.
+ * @param {object} params - Ce que la fiche sait de la personne et du club.
+ * @param {boolean} [params.canEdit] - Elle dirige ce club (role `president`).
+ * @param {boolean} [params.hasAdministrativeClubAccess] - Ce club est SON club.
+ * @param {boolean} [params.isClubStaffRole] - Elle encadre : entraineur ou dirigeant.
+ * @returns {boolean} La fiche propose-t-elle de creer une equipe ?
+ */
+export const canCreateTeamInClub = ({
+  canEdit = false,
+  hasAdministrativeClubAccess = false,
+  isClubStaffRole = false,
+}) => Boolean(canEdit || (isClubStaffRole && hasAdministrativeClubAccess));
+
 export const resolveClubDetailsActionMatrix = ({
   areClubMembersHidden = false,
   canContactAdmin = false,
