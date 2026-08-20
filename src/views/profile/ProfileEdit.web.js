@@ -28,7 +28,12 @@ import AutocompleteAddressInput from '@/components/organisms/autocompleteAddress
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
 import { updateMe } from '@/services/auth/authService';
+import { emitCelebrationBanner } from '@/services/celebrations/celebrationRuntime';
 import { useGetLevels } from '@/services/level/levelQueries';
+import {
+  buildProfileSaveConfirmation,
+  listChangedProfileFields,
+} from '@/services/profile/profileSaveConfirmation';
 import { useGetSections } from '@/services/section/sectionQueries';
 
 import {
@@ -163,6 +168,11 @@ function ProfileEditWeb({ navigation, route }) {
     value: level.name,
   })) || [];
 
+  // AA11 — CE QUI VIENT DE CHANGER, pose juste avant l'envoi et lu seulement
+  // apres un succes. Le site monte la MEME banniere que l'app
+  // (`web/src/bridge/WebDeferredHosts.tsx`) : une seule phrase, deux surfaces.
+  const pendingChangedFieldsRef = useRef(/** @type {string[]} */ ([]));
+
   const updateUserMutation = useMutation({
     mutationFn: updateMe,
     onError: (error) => {
@@ -171,6 +181,20 @@ function ProfileEditWeb({ navigation, route }) {
     onSuccess: async () => {
       setSubmitErrorMessage('');
       await refetchUserData?.();
+      // 🎉 AA11 — on n'est ici que si `updateMe` n'a pas leve.
+      // ⛔ Rien de tout ceci dans `onError` : on ne felicite jamais un echec.
+      const confirmation = buildProfileSaveConfirmation(pendingChangedFieldsRef.current, t);
+      pendingChangedFieldsRef.current = [];
+      if (confirmation) {
+        emitCelebrationBanner({
+          body: confirmation.body,
+          dedupeKey: `profile-save:${confirmation.body}`,
+          eyebrow: confirmation.eyebrow,
+          title: confirmation.title,
+          tone: 'success',
+          variant: 'banner',
+        });
+      }
       navigation.goBack();
     },
   });
@@ -284,6 +308,13 @@ function ProfileEditWeb({ navigation, route }) {
       }
     }
 
+    // AA11 — la charge qui PART, comparee aux memes champs tels qu'ils etaient
+    // charges : c'est ce qui permet de NOMMER ce qui a change sur un
+    // formulaire qui reposte tout.
+    pendingChangedFieldsRef.current = listChangedProfileFields(
+      { ...buildProfileFormValues(userData, formatBirthdateToDisplay), avatar: userData?.avatar },
+      { ...formValues, avatar },
+    );
     updateUserMutation.mutate({
       address: formValues.address,
       avatar,

@@ -185,6 +185,94 @@ export const getMemberClubIds = (/** @type {any} */ userData) => {
 };
 
 /**
+ * MES CLUBS, AVEC LEUR NOM ET LEUR ECUSSON — de quoi les AFFICHER.
+ *
+ * AA11 (D-26), constat d'Adel du 2026-08-20 : « le joueur dans deux clubs, ca
+ * marche. Mais quand je regarde dans mon profil, je ne vois que le premier
+ * club. »
+ *
+ * 🎯 CE N'EST PAS UN DEFAUT SERVEUR, et c'est ce qu'il fallait mesurer avant de
+ * toucher l'ecran. `GET /firebase-auth/me` rend deja un TABLEAU :
+ * `sanitizeAppUserProfile` (admin, `firebase-auth.ts:516`) appelle
+ * `sanitizeClubSummaries(clubSummarySource, safeUser.club)` qui empile le club
+ * principal PUIS chaque `clubAffiliations[].club`, en dedoublonnant sur
+ * `documentId` (l. 370-402). Le schema de l'app le declare au pluriel
+ * (`authService.js:157`) et `useAuth` l'expose (`useAuth.js:564`). Seuls les
+ * ECRANS n'en lisaient qu'un.
+ *
+ * 🧩 `getMemberClubIds` juste au-dessus repond a la meme question, mais en
+ * IDENTIFIANTS : on ne peut pas dessiner un ecusson avec un identifiant. Cette
+ * fonction-ci garde les OBJETS, et suit exactement les memes sources, dans le
+ * meme ordre — le rattachement d'abord, les equipes ensuite.
+ *
+ * ⚠️ La source par les EQUIPES n'est pas un confort, c'est ce qui fait marcher
+ * la fonction en production : `club_affiliations` y a ete mesuree VIDE le
+ * 2026-08-13, et `user.club` est vide pour les joueurs (ils entrent par
+ * l'equipe). Sans `myTeams[].club`, la liste serait vide pour presque tout le
+ * monde.
+ * @param {any} userData - Le profil, tel que `sanitizeUser` le rend.
+ * @returns {any[]} Les clubs, dedoublonnes, le rattachement en tete.
+ */
+export const getProfileClubs = (/** @type {any} */ userData) => {
+  /** @type {any[]} */
+  const clubs = [];
+  const seen = new Set();
+
+  const push = (/** @type {any} */ club) => {
+    if (!club) return;
+    const id = String(club?.documentId || club?.id || '').trim();
+    const name = String(club?.name || '').trim();
+    if (!id && !name) return;
+    const key = id || name.toLowerCase();
+    if (seen.has(key)) return;
+    seen.add(key);
+    clubs.push(club);
+  };
+
+  push(userData?.club);
+  (Array.isArray(userData?.clubs) ? userData.clubs : []).forEach(push);
+  (Array.isArray(userData?.clubAffiliations) ? userData.clubAffiliations : [])
+    .forEach((/** @type {any} */ affiliation) => push(affiliation?.club));
+  [
+    ...(Array.isArray(userData?.myTeams) ? userData.myTeams : []),
+    ...(Array.isArray(userData?.trainedTeams) ? userData.trainedTeams : []),
+    ...(Array.isArray(userData?.teams) ? userData.teams : []),
+  ].forEach((/** @type {any} */ team) => push(team?.club));
+
+  return clubs;
+};
+
+/**
+ * QUEL ROLE DANS CE CLUB-LA ? — le cas limite d'AA11 : joueur ici, dirigeant la.
+ *
+ * 🔴 CE QUE LE SERVEUR N'ENVOIE PAS : la table `club_affiliations` ne porte que
+ * `user` et `club` (`admin/src/api/club-affiliation/.../schema.json`) — aucun
+ * champ de role. Il n'y a donc RIEN a lire : le role par club se DEDUIT de ce
+ * que la charge contient deja. Un club ou l'utilisateur entraine une equipe le
+ * dit « entraineur » ; un club ou il joue le dit « joueur » ; partout ailleurs
+ * on retombe sur le role du COMPTE, qui est ce que l'ecran affichait avant.
+ *
+ * ⚠️ L'ordre compte : entrainer est un role d'autorite, jouer non. Quelqu'un
+ * qui fait les deux dans le meme club est annonce entraineur.
+ * @param {any} userData - Le profil, tel que `sanitizeUser` le rend.
+ * @param {any} club - Le club regarde.
+ * @returns {string} Une clef de `profile.identity.roles.*`.
+ */
+export const getClubRoleKey = (/** @type {any} */ userData, /** @type {any} */ club) => {
+  const clubId = String(club?.documentId || club?.id || '').trim();
+  const belongsTo = (/** @type {any[]} */ teams) => (Array.isArray(teams) ? teams : []).some(
+    (/** @type {any} */ team) => String(team?.club?.documentId || team?.club?.id || '').trim() === clubId,
+  );
+
+  if (clubId) {
+    if (belongsTo(userData?.trainedTeams)) return 'coach';
+    if (belongsTo(userData?.myTeams)) return 'player';
+  }
+
+  return getUserRoleKey(userData?.role?.type || userData?.role?.name);
+};
+
+/**
  * CE CLUB FAIT-IL PARTIE DES MIENS ? — la question d'APPARTENANCE, celle qui
  * n'accorde aucun droit.
  *

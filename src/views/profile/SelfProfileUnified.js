@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Alert,
@@ -12,7 +12,12 @@ import {
   View,
 } from 'react-native';
 
-import { getUserRoleKey, profileFieldToDisplay } from '@/domains/auth/authUseCases';
+import {
+  getClubRoleKey,
+  getProfileClubs,
+  getUserRoleKey,
+  profileFieldToDisplay,
+} from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
 import usePlaces from '@/domains/places/usePlaces';
 import { withAlpha } from '@/theme/colors';
@@ -30,6 +35,8 @@ import ScreenContainer from '@/components/templates/ScreenContainer';
 import { RouteNames } from '@/navigation/routeNames';
 
 import { updateMe } from '@/services/auth/authService';
+import { emitCelebrationBanner } from '@/services/celebrations/celebrationRuntime';
+import { buildProfileSaveConfirmation } from '@/services/profile/profileSaveConfirmation';
 import { useGetMyHistories } from '@/services/userHistory/userHistoryQueries';
 
 import safeJsonParse from '@/utils/safeJsonParse';
@@ -204,6 +211,10 @@ function SelfProfileUnified({ navigation }) {
 
   /** @type {[any, Function]} */
   const [editedField, setEditedField] = useState(null);
+  // AA11 — le champ qu'on vient d'envoyer, pose avant l'appel et lu seulement
+  // apres un succes. Un `ref` et pas un `state` : ecrire un etat ici
+  // relancerait un rendu au moment de l'envoi.
+  const savedFieldsRef = useRef(/** @type {string[]} */ ([]));
   /** @type {[any, Function]} */
   const [draftValue, setDraftValue] = useState('');
 
@@ -239,9 +250,31 @@ function SelfProfileUnified({ navigation }) {
         ),
       });
       setEditedField(null);
+      // 🎉 AA11 — CE QUI VIENT D'ETRE ENREGISTRE, NOMME. Ici c'est facile : la
+      // sheet n'envoie qu'UN champ a la fois, on connait donc son nom sans
+      // rien comparer.
+      // ⛔ Rien de tout ceci dans `onError` : on ne felicite jamais un echec.
+      // La banniere s'efface toute seule — on modifie trois champs d'affilee
+      // sans jamais fermer une fenetre.
+      const confirmation = buildProfileSaveConfirmation(savedFieldsRef.current, t);
+      savedFieldsRef.current = [];
+      if (confirmation) {
+        emitCelebrationBanner({
+          body: confirmation.body,
+          dedupeKey: `profile-save:${confirmation.body}`,
+          eyebrow: confirmation.eyebrow,
+          title: confirmation.title,
+          tone: 'success',
+          variant: 'banner',
+        });
+      }
     },
   });
 
+  // AA11 (D-26) — TOUS les clubs, pas seulement le premier. Meme source que
+  // `getMemberClubIds`, mais elle garde les OBJETS : on ne dessine pas un
+  // ecusson avec un identifiant.
+  const profileClubs = useMemo(() => getProfileClubs(userData), [userData]);
   const fullName = `${userData?.firstname || ''} ${userData?.lastname || ''}`.trim();
   // Meme lecture du role que `Profile.js:84` : la chip suit le role reel, elle
   // n'est jamais figee sur « Dirigeant » — cet ecran sert aussi les joueurs et
@@ -286,10 +319,12 @@ function SelfProfileUnified({ navigation }) {
           0.001,
         );
       }
+      savedFieldsRef.current = ['address'];
       updateUserMutation.mutate({ address: draftValue, geohash });
       return;
     }
 
+    savedFieldsRef.current = [editedField.key];
     updateUserMutation.mutate({ [editedField.key]: draftValue });
   };
 
@@ -299,6 +334,7 @@ function SelfProfileUnified({ navigation }) {
    * @returns {void}
    */
   const toggleVisibility = (nextValue) => {
+    savedFieldsRef.current = ['isLookingForClub'];
     updateUserMutation.mutate({ isLookingForClub: nextValue });
   };
 
@@ -535,20 +571,29 @@ function SelfProfileUnified({ navigation }) {
             </View>
           </View>
 
-          {userData?.club ? (
-            <View style={[
-              Alignments.row,
-              Alignments.alignCenter,
-              {
-                borderTopColor: surfaces.divider,
-                borderTopWidth: 1,
-                gap: 10,
-                marginTop: 14,
-                paddingTop: 12,
-              },
-            ]}
+          {/* AA11 (D-26) — TOUS les clubs, plus seulement `userData.club`.
+              « le joueur dans deux clubs, ca marche. Mais quand je regarde
+              dans mon profil, je ne vois que le premier club. »
+              Avec UN SEUL club, cette liste rend exactement la meme rangee
+              qu'avant : c'est la meme rangee, parcourue une fois.
+              Le role n'apparait qu'a partir de deux clubs — sur un seul, il
+              est deja dit par la pastille de role juste au-dessus. */}
+          {profileClubs.map((club, index) => (
+            <View
+              key={String(club?.documentId || club?.id || club?.name)}
+              style={[
+                Alignments.row,
+                Alignments.alignCenter,
+                {
+                  borderTopColor: surfaces.divider,
+                  borderTopWidth: 1,
+                  gap: 10,
+                  marginTop: index === 0 ? 14 : 8,
+                  paddingTop: 12,
+                },
+              ]}
             >
-              <ClubLogoMark club={userData.club} name={userData.club?.name} size={ICON_TILE} />
+              <ClubLogoMark club={club} name={club?.name} size={ICON_TILE} />
               {/* Le nom complet du club, JAMAIS tronque : ni `numberOfLines`,
                   ni ellipse, ni capitales. Il passe a la ligne. */}
               <Text style={{
@@ -559,15 +604,27 @@ function SelfProfileUnified({ navigation }) {
                 lineHeight: 17,
               }}
               >
-                {userData.club.name}
+                {club?.name}
               </Text>
-              {isCurrentClubVerified
+              {profileClubs.length > 1
+                ? renderChip({
+                  chip: t(
+                    `profile.identity.roles.${getClubRoleKey(userData, club)}`,
+                    t('profile.identity.roles.new'),
+                  ),
+                  tone: 'role',
+                })
+                : null}
+              {/* ⚠️ `isCurrentClubVerified` ne parle que du club COURANT : les
+                  clubs suivants portent leur propre `clubVerified`, envoye par
+                  `CLUB_SUMMARY_POPULATE`. */}
+              {(index === 0 ? isCurrentClubVerified : Boolean(club?.clubVerified))
                 ? renderChip({
                   chip: t('profile.identity.verified', 'Certifié'), tone: 'verified',
                 })
                 : null}
             </View>
-          ) : null}
+          ))}
         </View>
 
         {/* D65 — « Voir mon profil comme les autres ». Le bouton existait pour
