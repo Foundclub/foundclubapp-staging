@@ -12,6 +12,7 @@ import useAuth from '@/domains/auth/useAuth';
 import { emitGuidanceAction } from '@/domains/guidance/guidanceRuntime';
 import { extractSubscriptionDecisionFromError } from '@/domains/subscription/subscriptionDecision';
 import { isMyTeam } from '@/domains/team/teamMembership';
+import { isDeletedAccount } from '@/domains/user/deletedAccount';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -32,21 +33,6 @@ import { claimTeamAsCoach } from '@/services/team/teamService';
 
 // Suggestions de noms du handoff (chips « choisir = toucher », tunnel 1/8).
 const NAME_SUGGESTIONS = ['Seniors A', 'U15 Filles', 'Loisir mixte'];
-
-/**
- * Un compte entraineur supprime (RGPD) est anonymise et bloque : il ne compte
- * pas comme entraineur actif (aligne sur le backend claimCoach).
- * @param {any} trainer
- * @returns {boolean}
- */
-const isDeletedTrainer = (trainer) => {
-  if (!trainer?.blocked) {
-    return false;
-  }
-  const username = String(trainer?.username || '');
-  const email = String(trainer?.email || '').toLowerCase();
-  return username.startsWith('deleted_user_') || email.endsWith('@deleted.com');
-};
 
 const sanitizeRouteParam = (/** @type {any} */ value) => {
   const normalizedValue = String(value || '').trim();
@@ -374,7 +360,7 @@ function TeamWizardName({ navigation, route }) {
             {clubTeams.map((/** @type {any} */ team) => {
               const isMine = isMyTeam(team, userData);
               const activeTrainers = (Array.isArray(team?.trainers) ? team.trainers : [])
-                .filter((/** @type {any} */ trainer) => !isDeletedTrainer(trainer));
+                .filter((/** @type {any} */ trainer) => !isDeletedAccount(trainer));
               // Orpheline seulement si ce n'est pas mon equipe et qu'aucun
               // entraineur actif n'est presente par l'API.
               const isOrphan = !isMine && activeTrainers.length === 0;

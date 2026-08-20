@@ -10,6 +10,7 @@ import useAuth from '@/domains/auth/useAuth';
 import { resolveEventDisplayName } from '@/domains/event/eventDisplayName';
 import { isDetectionEventType, resolveTrainingOpenConfig } from '@/domains/event/eventUseCases';
 import { getCurrentUserEventParticipationState } from '@/domains/event/participationState';
+import { withoutDeletedAccountEntries, withoutDeletedAccounts } from '@/domains/user/deletedAccount';
 import useTheme from '@/theme/themeContext';
 
 import ScreenContainer from '@/components/templates/ScreenContainer';
@@ -727,10 +728,14 @@ function EventDetails({ navigation, route }) {
     }
   }, [reviewTournamentTeamMutation]);
 
-  const participants = Array.isArray(event?.participations) ? event.participations : [];
-  const participationRequests = Array.isArray(event?.participationRequests) ? event.participationRequests : [];
+  // AA02 — les TROIS listes de personnes de la page web passent par le meme
+  // tri que l'application mobile : `web` compile les sources de `app`, donc la
+  // fonction partagee est litteralement la meme. Un compte supprime est
+  // anonymise et bloque cote serveur, pas efface : sans ce tri il reste ici.
+  const participants = withoutDeletedAccounts(event?.participations);
+  const participationRequests = withoutDeletedAccountEntries(event?.participationRequests);
   const invitedTeams = Array.isArray(event?.invitedTeams) ? event.invitedTeams : [];
-  const detectedPlayers = Array.isArray(event?.missings) ? event.missings : [];
+  const detectedPlayers = withoutDeletedAccounts(event?.missings);
   const participantIdentitiesHidden = event?.participantIdentitiesHidden === true;
 
   const renderParticipantsSection = () => {
