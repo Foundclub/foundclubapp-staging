@@ -1,7 +1,7 @@
 import { createElement } from 'react';
 import { Alert } from 'react-native';
-import renderer, { act } from 'react-test-renderer';
 import { captureRef } from 'react-native-view-shot';
+import renderer, { act } from 'react-test-renderer';
 
 import SelectAvatar from '../SelectAvatar';
 

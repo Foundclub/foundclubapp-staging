@@ -319,7 +319,6 @@ jest.mock('../ClubPlanningScreen', () => function ClubPlanningMock() {
   return null;
 });
 
-
 /** Le club du cas NORMAL : il existe, et personne n'y a cree d'equipe. */
 const CLUB_SANS_EQUIPE = {
   activites: [],
