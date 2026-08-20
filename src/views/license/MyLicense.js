@@ -49,7 +49,6 @@ import MediaPlatform from '@/platform/media';
 import { getDocumentPickerOptions } from '@/platform/media/documentUploadFormats';
 // AA07 / K2 — « on doit pouvoir telecharger le document » (Adel, 20/08).
 // Jumeaux `.native` / `.web` : Metro resout le premier, Vite le second.
-// eslint-disable-next-line import/extensions, import/no-unresolved -- cf. ci-dessus
 import { downloadRemoteFile } from '@/platform/media/downloadRemoteFile';
 import SharePlatform from '@/platform/share';
 import { resolveMediaUrl } from '@/utils/mediaUrl';
@@ -424,7 +423,9 @@ function MyLicense({ navigation, route }) {
                         <View style={[Spaces.gap[4], { flex: 1 }]}>
                           <Text style={[Fonts.p1Bold, Fonts.neutral00]}>{itemClub}</Text>
                           <Text style={[Fonts.p3, Fonts.neutral200]}>
-                            {item?.campaign?.seasonLabel || item?.campaign?.name || 'Saison en cours'}
+                            {item?.campaign?.seasonLabel
+                              || item?.campaign?.name
+                              || 'Saison en cours'}
                           </Text>
                         </View>
                         <LicenseStatusChip status={item.status} />

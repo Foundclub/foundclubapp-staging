@@ -32,8 +32,13 @@ import MediaPlatform from '@/platform/media';
 // U06 — la MEME liste de formats sur les trois ecrans de depot, et dans la
 // langue de la plateforme (UTI sur iOS, type MIME sur Android).
 import { getDocumentPickerOptions } from '@/platform/media/documentUploadFormats';
-// AA07 / K2 — jumeaux `.native` / `.web` : Metro resout le premier, Vite le second.
-// eslint-disable-next-line import/extensions, import/no-unresolved -- cf. ci-dessus
+// AA07 / K2 — jumeaux `.native` / `.web` : Metro resout le premier, Vite le
+// second. TypeScript, lui, ne connait pas les suffixes de plateforme et ne
+// voit aucun fichier a ce chemin exact — le meme motif ailleurs dans le
+// projet (`useShareCard.js`, `visualRender.native.js`) l esquive avec un
+// `@ts-nocheck` sur TOUT le fichier. Ici on ne le neutralise QUE sur cette
+// ligne : le reste de l ecran garde ses controles de type.
+// @ts-ignore -- resolution par suffixe de plateforme, cf. ci-dessus
 import { downloadRemoteFile } from '@/platform/media/downloadRemoteFile';
 import { resolveMediaUrl } from '@/utils/mediaUrl';
 
@@ -179,7 +184,10 @@ function ActionModal({
           placeholder={needsReason ? 'Motif obligatoire' : 'Note optionnelle'}
           placeholderTextColor={Colors.neutral400}
           style={{
-            borderBottomColor: motifManquant ? '#fda4af' : Colors.neutral200, borderBottomWidth: 1, color: Colors.neutral00, paddingVertical: 12,
+            borderBottomColor: motifManquant ? '#fda4af' : Colors.neutral200,
+            borderBottomWidth: 1,
+            color: Colors.neutral00,
+            paddingVertical: 12,
           }}
           value={note}
         />
@@ -440,14 +448,14 @@ function ClubLicenseMemberDetail({ route }) {
   // et agissait sur `officialLicenseDocument.SUBMISSION.file.url` : deux
   // chemins pour un seul bouton. §1 bis — on corrige les DEUX appelants, pas
   // seulement celui cite par le constat, sinon le frere reste casse.
-  const fileUrlOf = useCallback((source) => resolveMediaUrl(
+  const fileUrlOf = useCallback((/** @type {any} */ source) => resolveMediaUrl(
     source?.file?.url
     || source?.submission?.file?.url
     || source?.file?.formats?.thumbnail?.url
     || '',
   ), []);
 
-  const openUploadedDocument = useCallback(async (source) => {
+  const openUploadedDocument = useCallback(async (/** @type {any} */ source) => {
     const url = fileUrlOf(source);
     if (!url) {
       Alert.alert('Document indisponible', 'Aucun fichier exploitable n est rattaché à ce dépôt.');
@@ -458,7 +466,7 @@ function ClubLicenseMemberDetail({ route }) {
 
   // AA07 / K2 — « on doit pouvoir telecharger le document » (Adel, 20/08).
   // Le club aussi : c est lui qui archive les certificats medicaux.
-  const downloadDocument = useCallback(async (source, fileName) => {
+  const downloadDocument = useCallback(async (/** @type {any} */ source, /** @type {any} */ fileName) => {
     const url = fileUrlOf(source);
     if (!url) {
       Alert.alert('Document indisponible', 'Aucun fichier exploitable n est rattaché à ce dépôt.');
@@ -650,8 +658,16 @@ function ClubLicenseMemberDetail({ route }) {
             ) : null}
             {fileUrlOf(officialLicenseDocument) ? (
               <>
-                <Button onPress={() => openUploadedDocument(officialLicenseDocument)} title="Ouvrir la licence" variant="Secondary" />
-                <Button onPress={() => downloadDocument(officialLicenseDocument, 'licence-officielle')} title="Télécharger la licence" variant="Secondary" />
+                <Button
+                  onPress={() => openUploadedDocument(officialLicenseDocument)}
+                  title="Ouvrir la licence"
+                  variant="Secondary"
+                />
+                <Button
+                  onPress={() => downloadDocument(officialLicenseDocument, 'licence-officielle')}
+                  title="Télécharger la licence"
+                  variant="Secondary"
+                />
               </>
             ) : null}
             {canUseSensitiveActions ? (
@@ -711,13 +727,27 @@ function ClubLicenseMemberDetail({ route }) {
                     */}
                     {fileUrlOf(submission) ? (
                       <View style={{ flexDirection: 'row', gap: licenseSpacing.actionGap }}>
-                        <Button onPress={() => openUploadedDocument(submission)} style={{ flex: 1 }} title="Ouvrir le document" variant="Secondary" />
-                        <Button onPress={() => downloadDocument(submission, request?.name || undefined)} style={{ flex: 1 }} title="Télécharger" variant="Secondary" />
+                        <Button
+                          onPress={() => openUploadedDocument(submission)}
+                          style={{ flex: 1 }}
+                          title="Ouvrir le document"
+                          variant="Secondary"
+                        />
+                        <Button
+                          onPress={() => downloadDocument(submission, request?.name)}
+                          style={{ flex: 1 }}
+                          title="Télécharger"
+                          variant="Secondary"
+                        />
                       </View>
                     ) : null}
                     {canUseSensitiveActions && submission ? (
                       <View style={{ flexDirection: 'row', gap: licenseSpacing.actionGap }}>
-                        <Button onPress={() => approveDocument(submission.documentId || submission.id)} style={{ flex: 1 }} title="Accepter ce document" />
+                        <Button
+                          onPress={() => approveDocument(submission.documentId || submission.id)}
+                          style={{ flex: 1 }}
+                          title="Accepter ce document"
+                        />
                         <Button
                           onPress={() => setModal({
                             reviewStatus: 'to_replace',

@@ -38,6 +38,7 @@ const mockBoutons = [];
 /** @type {any} */
 let mockCotisationRequete;
 const mockRequeteVide = { data: null, isError: false, isLoading: false };
+const mockOuvrirUrl = jest.fn();
 const mockTelecharger = jest.fn(() => Promise.resolve({ opened: true, outcome: 'downloads' }));
 const mockMutationFigee = { isPending: false, mutate: jest.fn(), mutateAsync: jest.fn() };
 
@@ -79,7 +80,10 @@ jest.mock('@/services/license/licenseQueries', () => ({
   waiveLicenseAssignment: jest.fn(),
 }));
 
-jest.mock('@/platform/links', () => ({ __esModule: true, default: { openUrl: jest.fn() } }));
+jest.mock('@/platform/links', () => ({
+  __esModule: true,
+  default: { openUrl: (/** @type {any} */ ...args) => mockOuvrirUrl(...args) },
+}));
 jest.mock('@/platform/media', () => ({ __esModule: true, default: { pickDocument: jest.fn() } }));
 jest.mock('@/platform/media/downloadRemoteFile', () => ({
   __esModule: true,
@@ -179,6 +183,7 @@ const monter = (donnees) => {
 };
 
 /**
+ * Retrouve un bouton rendu par un morceau de son libelle.
  * @param {string} morceau texte cherche dans le titre
  * @returns {any} le bouton correspondant
  */
@@ -210,7 +215,6 @@ describe('AA07 / K2 — cote club : des boutons qui disent ce qu ils font', () =
   });
 
   it('« la licence » s ouvre meme quand le serveur ne remplit que `file`', async () => {
-    const ouvrirUrl = require('@/platform/links').default.openUrl;
     monter(cotisation({
       officialLicenseDocument: {
         file: { url: '/uploads/licence.pdf' },
@@ -223,7 +227,7 @@ describe('AA07 / K2 — cote club : des boutons qui disent ce qu ils font', () =
     expect(voir).toBeTruthy();
 
     await act(async () => { await voir.onPress(); });
-    expect(ouvrirUrl).toHaveBeenCalledWith('/uploads/licence.pdf');
+    expect(mockOuvrirUrl).toHaveBeenCalledWith('/uploads/licence.pdf');
   });
 });
 

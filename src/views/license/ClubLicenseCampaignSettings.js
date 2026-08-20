@@ -720,15 +720,18 @@ const renderReminderPreview = ({
  * ouvraient donc le clavier de lettres. Une recherche de `<TextInput>` ne
  * pouvait pas le voir — c est l enveloppe qui masquait le probleme, pas le
  * champ. ⇒ On corrige l enveloppe UNE fois plutot que chaque appelant.
- *
- * @param root0
- * @param root0.inputMode
- * @param root0.keyboardType
- * @param root0.label
- * @param root0.onChangeText
- * @param root0.placeholder
- * @param root0.value
- * @param root0.multiline
+ * ⚠️ TOUTES les etiquettes sont typees, et les facultatives entre crochets.
+ * Mesure : les laisser sans type, ou n en typer qu une partie, rend le contrat
+ * authoritatif pour TypeScript sans lui dire ce qui est optionnel — il exige
+ * alors `multiline` a chacun des 18 appels (+21 erreurs mesurees).
+ * @param {object} root0 les proprietes du champ
+ * @param {import('react-native').InputModeOptions} [root0.inputMode] mode de saisie
+ * @param {import('react-native').KeyboardTypeOptions} [root0.keyboardType] clavier a ouvrir
+ * @param {string} root0.label le libelle affiche au-dessus
+ * @param {boolean} [root0.multiline] vrai pour un champ de plusieurs lignes
+ * @param {(value: string) => void} root0.onChangeText appele a chaque frappe
+ * @param {string} [root0.placeholder] l invite affichee a vide
+ * @param {string} root0.value la valeur courante
  */
 function Field({
   inputMode, keyboardType, label, multiline = false, onChangeText, placeholder, value,

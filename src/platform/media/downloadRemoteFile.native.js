@@ -24,11 +24,9 @@
  */
 
 /**
- * `shareLocalFile` et `react-native-blob-util`, charges A LA DEMANDE — MEME motif que le
- * presse-papiers de `shareLocalFile.native.js:50` et que `Conversation.js:300`.
- *
- * — MEME motif que le presse-papiers de `shareLocalFile.native.js:50` et que
- * `Conversation.js:300`, qui le font deja pour la meme raison.
+ * `react-native-blob-util`, charge A LA DEMANDE — MEME motif que le
+ * presse-papiers de `shareLocalFile.native.js:50` et que `Conversation.js:300`,
+ * qui le font deja pour la meme raison.
  *
  * 🔬 POURQUOI, ET C EST MESURE : `react-native-blob-util` n est pas dans les
  * `transformIgnorePatterns` du projet, et 9 suites le mockent deja une par une.
@@ -51,13 +49,17 @@ const blobUtil = () => {
 };
 
 /**
- * @returns {(params: any) => Promise<any>} la remise du fichier a la plateforme
+ * La remise du fichier a la plateforme, chargee a la demande pour la meme
+ * raison que `blobUtil` ci-dessus : `shareLocalFile.native.js` importe lui aussi
+ * `react-native-blob-util` en tete.
+ * @returns {(params: any) => Promise<any>} la fonction de remise
  */
 const getShareLocalFile = () => {
   // Meme suffixe de plateforme que `share/index.js` : Metro et Jest resolvent
   // le jumeau `.native`, le resolveur du linter non.
-  // eslint-disable-next-line global-require, import/extensions, import/no-unresolved -- cf. ci-dessus
-  return require('@/platform/share/shareLocalFile').shareLocalFile;
+  // eslint-disable-next-line global-require -- cf. ci-dessus
+  const module = require('@/platform/share/shareLocalFile');
+  return module.shareLocalFile;
 };
 
 /** Ce qui a empeche le telechargement — porte par `error.reason`, jamais un silence. */

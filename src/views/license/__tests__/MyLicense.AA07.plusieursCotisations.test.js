@@ -127,8 +127,12 @@ afterEach(() => {
  */
 const monter = (liste) => {
   mockBoutons.length = 0;
-  mockMesCotisations = { data: liste, isError: false, isLoading: false, refetch: jest.fn() };
-  mockCotisationCiblee = { data: null, isError: false, isLoading: false, refetch: jest.fn() };
+  mockMesCotisations = {
+    data: liste, isError: false, isLoading: false, refetch: jest.fn(),
+  };
+  mockCotisationCiblee = {
+    data: null, isError: false, isLoading: false, refetch: jest.fn(),
+  };
 
   act(() => {
     arbre = renderer.create(

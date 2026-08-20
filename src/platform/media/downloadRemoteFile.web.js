@@ -23,7 +23,7 @@ import { FILE_SHARE_OUTCOMES } from '@/platform/share/fileShareContract';
 
 // Meme suffixe de plateforme que les autres modules de `src/platform/` : Vite
 // resout le jumeau `.web`, le resolveur du linter non.
-// eslint-disable-next-line import/extensions, import/no-unresolved -- cf. ci-dessus
+
 import LinksPlatform from '@/platform/links';
 
 /** Meme vocabulaire d echec que le jumeau natif. */
