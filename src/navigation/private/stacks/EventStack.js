@@ -20,6 +20,7 @@ import EventWizardDescription from '@/views/event/wizard/EventWizardDescription'
 import EventWizardInvites from '@/views/event/wizard/EventWizardInvites';
 import EventWizardLocation from '@/views/event/wizard/EventWizardLocation';
 import EventWizardLogistics from '@/views/event/wizard/EventWizardLogistics';
+import EventWizardOpponent from '@/views/event/wizard/EventWizardOpponent';
 import EventWizardParticipants from '@/views/event/wizard/EventWizardParticipants';
 import EventWizardRecap from '@/views/event/wizard/EventWizardRecap';
 import EventWizardStageProgram from '@/views/event/wizard/EventWizardStageProgram';
@@ -267,6 +268,15 @@ function EventStack() {
         <Stack.Screen
           component={EventWizardAccess}
           name={RouteNames.EventWizardAccess}
+          options={{ headerShown: false }}
+        />
+        {/* Y02 : « Contre qui ? ». L'ecran est toujours ENREGISTRE ; c'est la
+            chaine (`getEventWizardStepRoutes`) qui ne le traverse que pour un
+            match. Un ecran enregistre mais hors chaine reste atteignable depuis
+            le recapitulatif, comme `EventWizardInvites`. */}
+        <Stack.Screen
+          component={EventWizardOpponent}
+          name={RouteNames.EventWizardOpponent}
           options={{ headerShown: false }}
         />
         <Stack.Screen

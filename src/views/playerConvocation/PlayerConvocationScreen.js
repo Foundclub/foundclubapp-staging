@@ -13,6 +13,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import useAuth from '@/domains/auth/useAuth';
+import { resolveEventDisplayName } from '@/domains/event/eventDisplayName';
 import { withAlpha } from '@/theme/colors';
 import useTheme from '@/theme/themeContext';
 
@@ -159,7 +160,18 @@ function PlayerConvocationScreen() {
   const kickOff = formatConvocationTime(event?.startTime || convocation?.event?.date);
   const place = String(event?.location || event?.facility?.name || '').trim();
 
+  // Y02 — LA CONVOCATION DIT ENFIN DE QUOI IL S'AGIT. Constat d'Adel du
+  // 2026-08-19, point 8 : « il manque le nom du type d'evenement ». La carte
+  // n'annoncait que l'equipe et l'heure — un joueur convoque ne savait pas s'il
+  // etait attendu pour un match ou pour un entrainement.
+  // Un match dont on connait l'adversaire s'annonce « Match vs X ».
+  const eventDisplayName = resolveEventDisplayName(
+    event || convocation?.event,
+    '',
+  );
+
   const subtitle = [
+    eventDisplayName || null,
     view.teamName,
     formatConvocationTime(convocation?.event?.date) || null,
   ].filter(Boolean).join(' · ');

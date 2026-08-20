@@ -96,6 +96,7 @@ const WEB_ROUTE_PATTERNS = {
   [RouteNames.EventWizardStageProgram]: '/events/wizard/stage-program',
   [RouteNames.EventWizardTournamentSettings]: '/events/wizard/tournament/settings',
   [RouteNames.EventWizardTournamentStructure]: '/events/wizard/tournament/structure',
+  [RouteNames.EventWizardOpponent]: '/events/wizard/opponent',
   [RouteNames.EventWizardLocation]: '/events/wizard/location',
   [RouteNames.EventWizardAccess]: '/events/wizard/access',
   [RouteNames.EventWizardParticipants]: '/events/wizard/participants',

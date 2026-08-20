@@ -1,3 +1,5 @@
+import { resolveEventOpponentName } from '@/domains/event/eventDisplayName';
+
 const normalizeText = (value) => {
   if (value === null || value === undefined) return '';
   return String(value).trim();
@@ -153,6 +155,19 @@ const getMatchDistance = (eventLike, match) => {
 export const resolveExternalMatchDisplay = (eventLike) => {
   const titleFromFields = extractMatchTitle(eventLike?.name, eventLike?.description);
   const contextFromFields = extractMatchContextLabel(eventLike?.name, eventLike?.description);
+
+  // Y02 — L'ADVERSAIRE EST DEVENU UNE DONNEE, il passe donc devant tout le reste.
+  // Avant ce lot, l'adversaire ne pouvait etre que RECONSTRUIT : on relisait la
+  // chaine « VS X » dans `name`/`description`, ou on rapprochait l'evenement du
+  // calendrier de l'equipe a moins de 10 minutes pres. Ces deux chemins restent
+  // dessous pour l'ancien parc ; ils ne sont simplement plus le premier recours.
+  const opponentFromData = resolveEventOpponentName(eventLike);
+  if (opponentFromData) {
+    return {
+      contextLabel: contextFromFields,
+      title: `VS ${opponentFromData}`,
+    };
+  }
 
   if (titleFromFields) {
     return {

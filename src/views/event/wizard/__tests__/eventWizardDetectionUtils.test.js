@@ -4,6 +4,7 @@ import {
   getEventWizardDescriptionStepIndex,
   getEventWizardLocationStepIndex,
   getEventWizardLogisticsStepIndex,
+  getEventWizardOpponentStepIndex,
   getEventWizardParticipantsStepIndex,
   getEventWizardRecapStepIndex,
   getEventWizardSportName,
@@ -93,8 +94,15 @@ describe('D08 — reconnaissance du type d evenement', () => {
 
 describe('D08 — getEventWizardStepCount : combien d etapes, par parcours', () => {
   test('un evenement standard compte 8 etapes', () => {
-    expect(getEventWizardStepCount({ type: typeMatch })).toBe(8);
     expect(getEventWizardStepCount({ type: typeEntrainement })).toBe(8);
+    expect(getEventWizardStepCount({ type: typeAutre })).toBe(8);
+  });
+
+  // 🎯 LA LIGNE QUE Y02 FAIT BOUGER, et la SEULE : 8 → 9, pour le match seul.
+  // L'etape neuve est « Contre qui ? » (idee d'Adel du 2026-08-19). Aucun autre
+  // parcours ne la traverse — c'est la non-regression du lot.
+  test('un match compte 9 etapes depuis Y02 : il a une etape « Contre qui ? »', () => {
+    expect(getEventWizardStepCount({ type: typeMatch })).toBe(9);
   });
 
   test('un stage compte 8 etapes : il garde son programme, il gagne la fusion', () => {
@@ -161,7 +169,7 @@ const etatDetectionSansPostes = { ...etatDetectionAvecCreneaux, team: equipeSans
 
 describe('D58 — le compteur d etapes, un cas par type d evenement', () => {
   test.each([
-    ['match officiel', { type: typeMatch }, 8],
+    ['match officiel', { type: typeMatch }, 9],
     ['entrainement ouvert', { type: typeEntrainement }, 8],
     ['entrainement prive', etatEntrainementFerme, 7],
     ['stage', { type: typeStage }, 8],
@@ -181,9 +189,8 @@ describe('D58 — le compteur d etapes, un cas par type d evenement', () => {
     expect(getEventWizardStepCount(etatDetectionAvecCreneaux)).toBe(8);
   });
 
-  test('le tournoi est le seul parcours a depasser 8 etapes', () => {
+  test('hors match et tournoi, aucun parcours ne depasse 8 etapes', () => {
     const parcoursA8Maximum = [
-      { type: typeMatch },
       { type: typeEntrainement },
       etatEntrainementFerme,
       { type: typeStage },
@@ -196,13 +203,16 @@ describe('D58 — le compteur d etapes, un cas par type d evenement', () => {
     parcoursA8Maximum.forEach(
       (etat) => expect(getEventWizardStepCount(etat)).toBeLessThanOrEqual(8),
     );
+    // Les deux seuls a depasser 8, et chacun pour une raison nommee :
+    // le tournoi pour ses deux ecrans de reglages, le match pour son adversaire.
     expect(getEventWizardStepCount({ type: typeTournoi })).toBe(10);
+    expect(getEventWizardStepCount({ type: typeMatch })).toBe(9);
   });
 });
 
 describe('D08 — la chaine est ecrite une seule fois, tout en decoule', () => {
   test('l evenement simple traverse 8 ecrans, dans cet ordre', () => {
-    expect(getEventWizardStepRoutes({ type: typeMatch })).toEqual([
+    expect(getEventWizardStepRoutes({ type: typeEntrainement })).toEqual([
       'EventWizardType',
       'EventWizardTeam',
       'EventWizardLogistics',
@@ -212,6 +222,29 @@ describe('D08 — la chaine est ecrite une seule fois, tout en decoule', () => {
       'EventWizardDescription',
       'EventWizardRecap',
     ]);
+  });
+
+  // Y02 : le match, c'est le meme parcours PLUS un ecran, glisse entre la date
+  // et le lieu. Savoir qui l'on recoit aide a choisir ou l'on joue.
+  test('un match traverse 9 ecrans : « Contre qui ? » s intercale avant le lieu', () => {
+    expect(getEventWizardStepRoutes({ type: typeMatch })).toEqual([
+      'EventWizardType',
+      'EventWizardTeam',
+      'EventWizardLogistics',
+      'EventWizardOpponent',
+      'EventWizardLocation',
+      'EventWizardParticipants',
+      'EventWizardAccess',
+      'EventWizardDescription',
+      'EventWizardRecap',
+    ]);
+  });
+
+  test('AUCUN autre type ne traverse « Contre qui ? »', () => {
+    [typeStage, typeTournoi, typeEntrainement, typeDetection, typeAutre]
+      .forEach((type) => {
+        expect(getEventWizardStepRoutes({ type })).not.toContain('EventWizardOpponent');
+      });
   });
 
   test('EventWizardInvites n appartient a AUCUN parcours', () => {
@@ -241,40 +274,49 @@ describe('D08 — a quelle place se trouve chaque ecran (index 1-BASE)', () => {
   // n'appartient pas a ce parcours.
   const parcours = {
     detection: etatDetectionAvecCreneaux,
+    // Y02 : « standard » n'est plus represente par un match — le match a
+    // desormais une etape de plus, il a donc sa propre colonne.
+    match: { type: typeMatch },
     stage: { type: typeStage },
-    standard: { type: typeMatch },
+    standard: { type: typeEntrainement },
     tournoi: { type: typeTournoi },
   };
 
+  // Y02 : la colonne `match` est decalee de +1 a partir du LIEU, parce que
+  // « Contre qui ? » s'intercale en 4e position. Les colonnes des autres
+  // parcours n'ont pas bouge d'un chiffre.
   const attendu = {
     access: {
-      detection: 6, stage: 6, standard: 6, tournoi: 8,
+      detection: 6, match: 7, stage: 6, standard: 6, tournoi: 8,
     },
     description: {
-      detection: 7, stage: 7, standard: 7, tournoi: 9,
+      detection: 7, match: 8, stage: 7, standard: 7, tournoi: 9,
     },
     location: {
-      detection: 4, stage: 4, standard: 4, tournoi: 4,
+      detection: 4, match: 5, stage: 4, standard: 4, tournoi: 4,
     },
     logistics: {
       // 0 pour le stage, et c'est un progres : avant D08 cette fonction rendait
       // 4 pour un stage, alors que le stage n'a jamais eu d'etape Logistique.
-      detection: 3, stage: 0, standard: 3, tournoi: 3,
+      detection: 3, match: 3, stage: 0, standard: 3, tournoi: 3,
+    },
+    opponent: {
+      detection: 0, match: 4, stage: 0, standard: 0, tournoi: 0,
     },
     participants: {
-      detection: 5, stage: 5, standard: 5, tournoi: 7,
+      detection: 5, match: 6, stage: 5, standard: 5, tournoi: 7,
     },
     recap: {
-      detection: 8, stage: 8, standard: 8, tournoi: 10,
+      detection: 8, match: 9, stage: 8, standard: 8, tournoi: 10,
     },
     stageProgram: {
-      detection: 0, stage: 3, standard: 0, tournoi: 0,
+      detection: 0, match: 0, stage: 3, standard: 0, tournoi: 0,
     },
     tournamentSettings: {
-      detection: 0, stage: 0, standard: 0, tournoi: 5,
+      detection: 0, match: 0, stage: 0, standard: 0, tournoi: 5,
     },
     tournamentStructure: {
-      detection: 0, stage: 0, standard: 0, tournoi: 6,
+      detection: 0, match: 0, stage: 0, standard: 0, tournoi: 6,
     },
   };
 
@@ -283,6 +325,7 @@ describe('D08 — a quelle place se trouve chaque ecran (index 1-BASE)', () => {
     description: getEventWizardDescriptionStepIndex,
     location: getEventWizardLocationStepIndex,
     logistics: getEventWizardLogisticsStepIndex,
+    opponent: getEventWizardOpponentStepIndex,
     participants: getEventWizardParticipantsStepIndex,
     recap: getEventWizardRecapStepIndex,
     stageProgram: getEventWizardStageProgramStepIndex,

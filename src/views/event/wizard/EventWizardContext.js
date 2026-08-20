@@ -24,6 +24,7 @@ const normalizeTypeLabel = (value = '') => String(value || '')
 
 const isStageTypeName = (typeName = '') => normalizeTypeLabel(typeName).includes('stage');
 const isTournamentTypeName = (typeName = '') => normalizeTypeLabel(typeName).includes('tournoi');
+const isMatchTypeName = (typeName = '') => normalizeTypeLabel(typeName).includes('match');
 
 const createInitialState = () => {
   const { end, start } = createDefaultTimeRange();
@@ -78,7 +79,11 @@ const createInitialState = () => {
 
     // Step 7+: Meta
     description: '',
+    // Y02 : l'adversaire d'un match, saisi a l'etape « Contre qui ? ».
+    // Il vit avec les metas parce que `SET_META` est deja le reducteur des
+    // champs libres — aucune nouvelle action a inventer.
     eventTasks: [],
+    opponentName: '',
     participantIdentityVisibility: 'VISIBLE',
     sessionStatus: 'open',
     tournamentAllowCrossClubPlayers: false,
@@ -203,9 +208,15 @@ function eventWizardReducer(state, action) {
     case 'SET_TYPE': {
       const isStage = isStageTypeName(action.payload?.name);
       const isTournament = isTournamentTypeName(action.payload?.name);
+      const isMatch = isMatchTypeName(action.payload?.name);
       const nextState = {
         ...state,
         detectionSlots: [],
+        // Y02 : changer de type pour autre chose qu'un match efface l'adversaire.
+        // Sinon un adversaire saisi puis abandonne (« finalement c'est un
+        // entrainement ») resterait accroche a l'evenement sans qu'aucun ecran
+        // ne le montre plus.
+        opponentName: isMatch ? state.opponentName : '',
         type: action.payload,
       };
 

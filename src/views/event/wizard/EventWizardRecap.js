@@ -50,6 +50,7 @@ import {
   getEventWizardRecapStepIndex,
   getEventWizardStepCount,
   hasCompletePerDayLocations,
+  isMatchEventType,
   isStageEventType,
   isTournamentEventType,
   shouldSkipEventWizardParticipantsStep,
@@ -239,6 +240,12 @@ const buildWizardFormData = (wizardState) => {
     isMultiDayTournament: wizardState.isMultiDayTournament === true,
     isRecurrent: Boolean(wizardState.isRecurrent),
     location: wizardState.location,
+    // Y02 : l'adversaire part au serveur. `null` plutot que `''` quand il est
+    // inconnu — le lifecycle range les deux au meme endroit, mais `null` dit
+    // « pas d'adversaire » sans ambiguite dans la colonne.
+    opponentName: isMatchEventType(wizardState?.type?.name)
+      ? (String(wizardState.opponentName || '').trim() || null)
+      : null,
     participantIdentityVisibility: wizardState.participantIdentityVisibility || 'VISIBLE',
     pricePerPerson: wizardState.pricePerPerson ?? null,
     recurrenceDays: Array.isArray(wizardState.recurrenceDays) ? wizardState.recurrenceDays : [],
@@ -364,6 +371,7 @@ function EventWizardRecap({ navigation }) {
     .replace(/[\u0300-\u036f]/g, '')
     .includes('reservation');
   const isTraining = isTrainingEventType(state.type?.name);
+  const isMatch = isMatchEventType(state.type?.name);
   const isStage = isStageEventType(state.type?.name);
   const isTournament = isTournamentEventType(state.type?.name);
   const isMultiDayProgram = isStage || (isTournament && state.isMultiDayTournament === true);
@@ -558,6 +566,11 @@ function EventWizardRecap({ navigation }) {
   // une option doit quand meme dire ce qu'elle contient : sinon l'organisateur
   // publie sans savoir ce qu'il emporte.
   const advancedNone = t('eventWizard.recap.advanced.none', 'Aucune');
+  // Y02 — l'adversaire, dit en toutes lettres avant de publier. ⛔ Il n'entre PAS
+  // dans `quickOverviewItems` : ces 5 rangees decident de `isRecapReady`, et un
+  // match sans adversaire connu doit rester publiable (l'etape est sautable).
+  const opponentSummary = String(state.opponentName || '').trim()
+    || t('eventWizard.recap.advanced.opponentNone', 'Pas encore connu');
   const invitesSummary = teamAudiences.length
     ? t('eventWizard.recap.advanced.invitesCount', '{{count}} equipe(s)', {
       count: teamAudiences.length,
@@ -1495,11 +1508,19 @@ function EventWizardRecap({ navigation }) {
               {t('eventWizard.recap.advanced.title', 'Options avancées')}
             </Text>
 
+            {/* Y02 : l'adversaire n'apparait que pour un match, et il mene a
+                l'etape « Contre qui ? » — y compris quand elle a ete sautee. */}
+            {isMatch ? renderAdvancedRow({
+              isFirst: true,
+              label: t('eventWizard.recap.advanced.opponent', 'Adversaire'),
+              onPress: () => openStepFromRecap(RouteNames.EventWizardOpponent),
+              value: opponentSummary,
+            }) : null}
             {/* D08 : les invitations ne sont plus une etape du tunnel. Cette
                 rangee est le SEUL chemin vers `EventWizardInvites` — la
                 retirer rendrait l'ecran (1 474 lignes) injoignable. */}
             {renderAdvancedRow({
-              isFirst: true,
+              isFirst: !isMatch,
               label: t('eventWizard.recap.advanced.invites', 'Invitations'),
               onPress: () => openStepFromRecap(RouteNames.EventWizardInvites),
               value: invitesSummary,

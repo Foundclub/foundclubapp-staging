@@ -1400,6 +1400,14 @@ export default {
         subtitle: "Configure date, horaires et règles d'accès.",
         title: 'Logistique',
       },
+      // Y02 — l'etape « Contre qui ? » du tunnel, posee uniquement pour un match.
+      // Idee d'Adel du 2026-08-19 : l'evenement doit s'appeler « Match vs X ».
+      opponent: {
+        hint: 'Tu ne le connais pas encore ? Passe cette étape, tu pourras l’ajouter plus tard.',
+        placeholder: 'Ex. : US Blaisoise U15',
+        subtitle: 'Le match s’appellera « Match vs » suivi de ce nom.',
+        title: 'Contre qui ?',
+      },
       participants: {
         fixed: 'Capacité fixe',
         hint: 'Tu pourras encore modifier ces valeurs avant la création finale.',
