@@ -38,6 +38,14 @@ export const FILE_SHARE_OUTCOMES = {
 /** Pourquoi ca n'a pas marche — porte par `error.reason`, jamais un silence. */
 export const FILE_SHARE_FAILURES = {
   PERMISSION_DENIED: 'permission_denied',
+  /**
+   * AA08 : le SERVEUR de rendu n'a pas rendu le fichier (HTTP >= 400).
+   * 🧨 Pourquoi cette cause manquait : sans elle, un rendu A4 refuse retombait
+   * sur le message generique « Verifie ta connexion » — alors que l'apercu
+   * venait d'arriver par le MEME reseau et le MEME jeton. On envoyait
+   * l'utilisateur regarder son wifi pendant que la panne etait ailleurs.
+   */
+  RENDER_FAILED: 'render_failed',
   SAVE_FAILED: 'save_failed',
 };
 

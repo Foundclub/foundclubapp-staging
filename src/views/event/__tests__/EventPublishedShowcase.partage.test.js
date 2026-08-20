@@ -204,22 +204,16 @@ describe('T04 — ③ 🔒 partager une affiche DÉJÀ à l écran ne la refabri
     });
   });
 
-  it('🔒 « Dans mes photos » non plus — c est le MÊME format que l aperçu', async () => {
-    const tree = await ecranAvecAfficheAffichee(clubParams());
-    await press(tree, 'Enregistrer l’image');
-    await press(tree, 'Dans mes photos');
-
-    expect(mockDownloadAndShareRender.mock.calls[0][0]).toMatchObject({
-      cachedBase64: APERCU_BASE64,
-      format: 'post',
-    });
-  });
+  // SUPPRIME le 2026-08-20 (AA08) AVEC SON SUJET : « Dans mes photos » a
+  // quitte l'ecran (constat d'Adel : « ça ne sert pas »). Ce qu'il mesurait
+  // — le format de l'apercu reutilise sans aller-retour — est deja verrouille
+  // par le temoin juste au-dessus, sur « Partager l'affiche » : c'etait le
+  // MEME appel de toute facon.
 
   // ⚠️ LE PENDANT INDISPENSABLE : story et A4 sont d'AUTRES images. Les servir
   // depuis l'aperçu serait un bug bien pire — on partagerait le mauvais fichier.
   it('story et A4 demandent bien le serveur : ce sont d autres formats', async () => {
     const tree = await ecranAvecAfficheAffichee(clubParams());
-    await press(tree, 'Enregistrer l’image');
     await press(tree, 'Version story 9:16');
 
     const envoye = mockDownloadAndShareRender.mock.calls[0][0];

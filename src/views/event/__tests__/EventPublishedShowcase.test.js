@@ -219,12 +219,9 @@ const press = async (tree, label) => {
   });
 };
 
-/**
- * Ouvre le choix de format (D20) : c'est le bouton principal de l'ecran.
- * @param {any} tree
- * @returns {Promise<void>}
- */
-const openFormatSheet = (tree) => press(tree, 'Enregistrer l’image');
+// AA08 (2026-08-20) : `openFormatSheet` a disparu avec la feuille. Les trois
+// formats sont a l'ecran, a un seul appui — c'est la demande d'Adel
+// (« enlever enregistrer l'image », et le PDF doit rester atteignable).
 
 /**
  * Puces de style (accessibilityRole radio) reellement pressables.
@@ -301,15 +298,26 @@ describe('D20 — ⑦ l ecran reserve la barre d etat et la barre gestuelle', ()
 });
 
 describe('D20 — ⑦ l ecran propose TROIS gestes, dans l ordre voulu par Adel', () => {
-  // INVERSE le 2026-08-07 (decision d'Adel). AVANT : 5 gestes au meme niveau.
-  it('exactement 3 gestes a l ecran : enregistrer, partager, plus tard', async () => {
+  // INVERSE le 2026-08-07, puis RE-INVERSE le 2026-08-20 (AA08, decision
+  // d'Adel). Motif : « Enregistrer l'image » ouvrait une feuille dont la 1re
+  // entree doublait « Partager » — deux appuis pour rien. Elle tombe, et les
+  // deux vrais formats (story, A4) remontent au meme niveau, sinon le PDF
+  // deviendrait inatteignable. La croix, elle, est nouvelle : l'ecran est
+  // `headerShown: false` et n'avait aucune sortie visible en haut.
+  it('exactement 5 gestes : partager, story, A4, plus tard, fermer', async () => {
     const tree = await renderScreen(eventParams());
     const labels = tree.root
       .findAllByType(TouchableOpacity)
       .map((/** @type {any} */ node) => node.props.accessibilityLabel)
       .filter((/** @type {any} */ label) => label && label !== 'Personnaliser le texte'
         && !String(label).startsWith('Choisir le style'));
-    expect(labels).toEqual(['Enregistrer l’image', 'Partager l’affiche', 'Plus tard']);
+    expect(labels).toEqual([
+      'Partager l’affiche',
+      'Version story 9:16',
+      'Affiche A4 à imprimer',
+      'Plus tard',
+      'Fermer',
+    ]);
   });
 
   // SUPPRIME avec son sujet, motif ecrit ici : « Envoyer dans une conversation »
@@ -327,53 +335,43 @@ describe('D20 — ⑦ l ecran propose TROIS gestes, dans l ordre voulu par Adel'
     )).toHaveLength(0);
   });
 
-  it('les formats ne sont plus a l ecran : ils vivent dans le choix de format', async () => {
+  // INVERSE le 2026-08-20 (AA08). AVANT : les formats vivaient dans une
+  // feuille, derriere « Enregistrer l'image ». Cette porte est retiree : ils
+  // seraient morts avec elle.
+  it('les formats sont A L ECRAN, et plus aucune feuille ne les cache', async () => {
     const tree = await renderScreen(eventParams());
-    expect(renderedText(tree)).not.toContain('9:16');
-    expect(renderedText(tree)).not.toContain('A4');
-
-    await openFormatSheet(tree);
     const text = renderedText(tree);
-    expect(text).toContain('Dans mes photos');
     expect(text).toContain('9:16');
     expect(text).toContain('A4');
+    expect(text).not.toContain('Dans mes photos');
+    expect(text).not.toContain('Sous quel format ?');
   });
 
-  // La demande d'Adel, mot pour mot : « le premier propose est l'enregistrement
-  // dans les photos du telephone ».
-  it('le PREMIER format propose est l enregistrement dans les photos', async () => {
-    const FORMATS = ['Affiche A4 à imprimer', 'Dans mes photos', 'Version story 9:16'];
+  // INVERSE le 2026-08-20 (AA08). La demande du 07/08 (« le premier propose
+  // est l'enregistrement dans les photos ») est annulee par celle du 20/08 :
+  // ce geste-la ne servait a rien, il faisait la MEME chose que « Partager ».
+  // L'ordre reste ce qui compte — on montre, on poste, on imprime.
+  it('le PREMIER geste est le partage, et « Dans mes photos » n existe plus', async () => {
+    const FORMATS = [
+      'Affiche A4 à imprimer', 'Dans mes photos', 'Partager l’affiche', 'Version story 9:16',
+    ];
     const tree = await renderScreen(eventParams());
-    await openFormatSheet(tree);
     const labels = tree.root
       .findAllByType(TouchableOpacity)
       .map((/** @type {any} */ node) => node.props.accessibilityLabel)
       .filter((/** @type {any} */ label) => FORMATS.includes(label));
-    // L'ORDRE compte : c'est la demande d'Adel, mot pour mot.
-    expect(labels).toEqual(['Dans mes photos', 'Version story 9:16', 'Affiche A4 à imprimer']);
+    expect(labels).toEqual([
+      'Partager l’affiche', 'Version story 9:16', 'Affiche A4 à imprimer',
+    ]);
   });
 
-  it('« Dans mes photos » enregistre l image TELLE QU AFFICHEE (post 4:5)', async () => {
-    const tree = await renderScreen(clubParams());
-    await openFormatSheet(tree);
-    await press(tree, 'Dans mes photos');
-    expect(mockDownloadAndShareRender).toHaveBeenCalledWith(expect.objectContaining({
-      format: 'post', subjectId: 'club-1', template: 'affiche-club', variant: 'ecusson',
-    }));
-    // Enregistrer, ce n'est pas partager : aucun texte de partage n'accompagne
-    // le fichier (le lien voyage avec « Partager l'affiche », pas ici).
-    expect(mockDownloadAndShareRender.mock.calls[0][0].message).toBeUndefined();
-  });
-
-  // Le choix de format masquerait l'indicateur d'attente et le message de
-  // resultat : il se referme des que le travail demarre.
-  it('choisir un format referme la feuille pour laisser voir l attente', async () => {
-    const tree = await renderScreen(clubParams());
-    await openFormatSheet(tree);
-    expect(renderedText(tree)).toContain('Dans mes photos');
-    await press(tree, 'Version story 9:16');
-    expect(renderedText(tree)).not.toContain('Dans mes photos');
-  });
+  // SUPPRIMES le 2026-08-20 (AA08), motif ecrit ici :
+  //  · « Dans mes photos » envoyait `shareVisual(undefined)` — le format de
+  //    l'apercu, sans message. C'est le geste de « Partager l'affiche » au
+  //    message pres, et le format post 4:5 reste verrouille par le temoin
+  //    « envoie le FICHIER de l'affiche au format affiche » (L16, plus bas).
+  //  · « choisir un format referme la feuille » n'a plus d'objet : il n'y a
+  //    plus de feuille a refermer, donc plus rien qui masque l'attente.
 });
 
 describe('D20 — ⑥ ce que coute une fabrication d affiche', () => {
@@ -482,7 +480,6 @@ describe('EventPublishedShowcase — comportement livre (caracterisation E6)', (
   // ENVOIENT n'a pas change d'un octet — c'est le temoin de non-regression.
   it('« Version story 9:16 » envoie le PNG 9:16 (temoin de non-regression)', async () => {
     const tree = await renderScreen(clubParams());
-    await openFormatSheet(tree);
     await press(tree, 'Version story 9:16');
     expect(mockDownloadAndShareRender).toHaveBeenCalledWith(expect.objectContaining({
       format: 'story',
@@ -494,7 +491,6 @@ describe('EventPublishedShowcase — comportement livre (caracterisation E6)', (
 
   it('« Affiche A4 a imprimer » envoie le PDF A4 (temoin de non-regression)', async () => {
     const tree = await renderScreen(clubParams());
-    await openFormatSheet(tree);
     await press(tree, 'Affiche A4 à imprimer');
     expect(mockDownloadAndShareRender).toHaveBeenCalledWith(expect.objectContaining({
       format: 'a4',
@@ -558,20 +554,23 @@ describe('EventPublishedShowcase — L16, le bouton principal envoie l affiche',
     }));
   });
 
-  it('tant qu aucune affiche n existe, les DEUX boutons sont GRISES et non muets', async () => {
+  // AA08 : ils sont TROIS depuis que les formats sont remontes a l'ecran.
+  // ⛔ La croix, elle, n'est JAMAIS grisee — c'est la sortie (temoin dedie
+  // dans EventPublishedShowcase.AA08.test.js).
+  it('tant qu aucune affiche n existe, les TROIS envois sont GRISES et non muets', async () => {
     mockFetchRenderBase64.mockReturnValue(new Promise(() => {}));
     const tree = await renderScreen(clubParams());
-    ['Enregistrer l’image', 'Partager l’affiche'].forEach((label) => {
+    ['Partager l’affiche', 'Version story 9:16', 'Affiche A4 à imprimer'].forEach((label) => {
       const node = findPressable(tree, label);
       expect(node.props.disabled).toBe(true);
       expect(node.props.accessibilityState.disabled).toBe(true);
     });
+    expect(findPressable(tree, 'Fermer').props.disabled).toBeFalsy();
   });
 
   it('chaque bouton dit ce qu on obtient, et que l image est enregistrable', async () => {
     const tree = await renderScreen(clubParams());
     expect(renderedText(tree)).toContain('enregistrer');
-    await openFormatSheet(tree);
     const text = renderedText(tree);
     expect(text).toContain('9:16');
     expect(text).toContain('A4');
@@ -616,31 +615,33 @@ describe('EventPublishedShowcase — L16, le chargement montre la forme de l aff
 });
 
 describe('EventPublishedShowcase — hierarchie et etats', () => {
-  // INVERSE le 2026-08-07 (D20). AVANT : les 2 formats etaient a l'ecran, sous le
-  // bouton principal. Ils sont maintenant DANS le choix de format — la hierarchie
-  // n'a pas disparu, elle a change de niveau.
-  it('un seul bouton principal, et les deux formats sont dans son choix', async () => {
+  // RE-INVERSE le 2026-08-20 (AA08). Les formats reviennent a l'ecran, mais
+  // la hierarchie tient toujours : UN SEUL geste principal, et c'est le
+  // partage — le seul qu'Adel a demande de garder.
+  it('un seul bouton principal, et c est le partage', async () => {
     const tree = await renderScreen(clubParams());
     const labels = tree.root
       .findAllByType(TouchableOpacity)
       .map((/** @type {any} */ node) => node.props.accessibilityLabel);
-    expect(labels).toContain('Enregistrer l’image');
     expect(labels).toContain('Partager l’affiche');
+    expect(labels).toContain('Version story 9:16');
+    expect(labels).toContain('Affiche A4 à imprimer');
     expect(labels).toContain('Plus tard');
-    expect(labels).not.toContain('Version story 9:16');
+    expect(labels).not.toContain('Enregistrer l’image');
 
-    await openFormatSheet(tree);
-    const dansLaFeuille = tree.root
-      .findAllByType(TouchableOpacity)
-      .map((/** @type {any} */ node) => node.props.accessibilityLabel);
-    expect(dansLaFeuille).toContain('Version story 9:16');
-    expect(dansLaFeuille).toContain('Affiche A4 à imprimer');
+    // Le rang se lit dans l'ORDRE : le geste principal vient en tete, les
+    // deux autres formats derriere lui. (Le style `primary` lui-meme n'est
+    // pas observable ici : le double de theme rend toutes les feuilles de
+    // style identiques.)
+    const gestes = labels.filter((/** @type {any} */ label) => [
+      'Affiche A4 à imprimer', 'Partager l’affiche', 'Version story 9:16',
+    ].includes(label));
+    expect(gestes[0]).toBe('Partager l’affiche');
   });
 
   it('un echec de partage se dit a l ecran', async () => {
     mockDownloadAndShareRender.mockRejectedValue(new Error('reseau'));
     const tree = await renderScreen(clubParams());
-    await openFormatSheet(tree);
     await press(tree, 'Version story 9:16');
     expect(renderedText(tree)).toContain('Le téléchargement a échoué');
     expect(tree.root.findAllByType(Text).length).toBeGreaterThan(0);
@@ -668,17 +669,16 @@ describe('EventPublishedShowcase — L20, Android enregistre et le dit', () => {
 
   it('les formats story et A4 disent OU le fichier atterrit', async () => {
     const tree = await renderScreen(clubParams());
-    await openFormatSheet(tree);
     const text = renderedText(tree);
     expect(text).toContain('enregistrée dans ta galerie');
     expect(text).toContain('enregistré dans tes téléchargements');
   });
 
   // Sans titre de selecteur, Android ouvre l application par defaut : plus de choix.
+  // AA08 : mesure sur « Partager », qui a repris le geste de « Dans mes photos ».
   it('le selecteur d application est titre', async () => {
     const tree = await renderScreen(clubParams());
-    await openFormatSheet(tree);
-    await press(tree, 'Dans mes photos');
+    await press(tree, 'Partager l’affiche');
     expect(mockDownloadAndShareRender).toHaveBeenCalledWith(expect.objectContaining({
       dialogTitle: 'Ouvrir l’affiche avec…',
       format: 'post',
@@ -691,8 +691,7 @@ describe('EventPublishedShowcase — L20, Android enregistre et le dit', () => {
       fileUri: 'file:///cache/affiche.png', opened: true, outcome: 'gallery',
     });
     const tree = await renderScreen(clubParams());
-    await openFormatSheet(tree);
-    await press(tree, 'Dans mes photos');
+    await press(tree, 'Partager l’affiche');
     expect(renderedText(tree)).toContain('C’est enregistré dans ta galerie photo.');
   });
 
@@ -728,7 +727,6 @@ describe('EventPublishedShowcase — L20, Android enregistre et le dit', () => {
       fileUri: 'file:///cache/affiche.pdf', opened: false, outcome: 'downloads',
     });
     const tree = await renderScreen(clubParams());
-    await openFormatSheet(tree);
     await press(tree, 'Affiche A4 à imprimer');
     expect(renderedText(tree)).toContain('C’est enregistré dans tes téléchargements.');
   });

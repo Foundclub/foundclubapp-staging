@@ -38,7 +38,6 @@ import useVisualShowcase, { SHOWCASE_TEMPLATES } from '@/domains/visuals/useEven
 import useTheme from '@/theme/themeContext';
 
 import SkeletonLoader from '@/components/atoms/skeletonLoader/SkeletonLoader';
-import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 import Input from '@/components/molecules/input/Input';
 
 import { celebrate } from '@/services/celebrations/celebrationRuntime';
@@ -80,9 +79,18 @@ export default function EventPublishedShowcase({ navigation, route }) {
   const subjectId = params.subjectId ?? eventId;
   const editableFields = editableFieldsParam || templateConfig.editableFields;
 
-  // D20 : le choix de format vit dans une feuille, pas en pile de boutons.
-  // 'save' = enregistrer l'image telle qu'affichée · 'story' · 'poster' · 'share'.
-  const [formatSheetOpen, setFormatSheetOpen] = useState(false);
+  // AA08 (2026-08-20) — LA FEUILLE DE FORMAT TOMBE AVEC SA PORTE.
+  // 🧨 Constat d'Adel : « l'affiche propose “enregistrer l'image”, qui ne sert
+  // pas ». Il avait raison deux fois. « Dans mes photos » — la PREMIÈRE entrée
+  // de la feuille — appelait `shareVisual(undefined)`, EXACTEMENT le geste du
+  // bouton « Partager » d'à côté, au message près : sur iOS les deux ouvraient
+  // la même feuille système, sur Android les deux enregistraient le même
+  // fichier. Un bouton principal qui ouvre un panneau dont la première ligne
+  // double le bouton suivant : deux appuis pour rien.
+  // ⇒ La feuille tombe, mais PAS ce qu'elle contenait de vrai : story et A4
+  //   remontent à l'écran. Sans ça, le PDF qu'Adel demande de réparer
+  //   deviendrait INATTEIGNABLE.
+  // Il reste 'story' · 'poster' · 'share' — il n'y a plus de 'save'.
   const [busyAction, setBusyAction] = useState(null);
   const [editorOpen, setEditorOpen] = useState(false);
   const [downloadError, setDownloadError] = useState(null);
@@ -203,6 +211,17 @@ export default function EventPublishedShowcase({ navigation, route }) {
         + 'Autorise-le dans les réglages, puis réessaie.',
       );
     }
+    // AA08 : le serveur de rendu a refusé de fabriquer le fichier. L'aperçu
+    // vient d'arriver par le MÊME réseau et le MÊME jeton — parler de connexion
+    // ici enverrait l'utilisateur regarder son wifi pendant que la panne est
+    // ailleurs. C'est le cas de l'A4, seul PDF de l'écran, et le seul format
+    // que l'aperçu n'a jamais fabriqué avant qu'on le demande.
+    if (failure?.reason === FILE_SHARE_FAILURES.RENDER_FAILED) {
+      return t(
+        'showcase.renderError',
+        'L’affiche n’a pas pu être fabriquée par le serveur. Réessaie dans un instant.',
+      );
+    }
     if (failure?.reason === FILE_SHARE_FAILURES.SAVE_FAILED) {
       return t(
         'showcase.saveError',
@@ -218,10 +237,6 @@ export default function EventPublishedShowcase({ navigation, route }) {
   // useEventShowcase.shareFile journalise puis RE-LEVE l'erreur : sans ce catch, un
   // telechargement echoue en silence (spinner qui s'arrete, aucun retour a l'ecran).
   const runDownload = async (key, fn) => {
-    // La feuille se referme AVANT le travail : l'attente (indicateur) et son
-    // résultat (« C'est enregistré dans ta galerie ») se lisent sur l'écran, pas
-    // derrière un panneau qui les masque.
-    setFormatSheetOpen(false);
     setBusyAction(key);
     setDownloadError(null);
     setDownloadNotice(null);
@@ -259,6 +274,11 @@ export default function EventPublishedShowcase({ navigation, route }) {
   // le bouton principal n'aurait rien à envoyer : il est GRISÉ, pas muet. En
   // régénération l'aperçu précédent est toujours là, donc il reste actif.
   const posterUnavailable = !previewUri && (isLoading || !!error);
+  // AA08 — LA SORTIE, nommée UNE fois : la croix et « Plus tard » font le même
+  // geste. La pile posée après publication est [EventDetails,
+  // EventPublishedShowcase] (EventWizardRecap) ⇒ reculer découvre le détail,
+  // déjà préchargé, de l'événement qu'on vient de créer.
+  const closeScreen = () => navigation.goBack();
   const styles = makeStyles(Colors);
 
   // Champs texte éditables du gabarit courant (résolus depuis editableFields). Les
@@ -429,31 +449,16 @@ export default function EventPublishedShowcase({ navigation, route }) {
         </View>
 
         <View style={styles.actions}>
-          {/* D20 (⑦) — TROIS gestes, dans l'ordre décidé par Adel le 2026-08-07 :
-              enregistrer (qui ouvre le choix de format), partager, plus tard.
-              Les formats ne sont plus des boutons empilés : ils vivent dans la
-              feuille ci-dessous, dont la PREMIÈRE entrée est l'enregistrement
-              dans les photos du téléphone. */}
-          <ShowcaseAction
-            busy={busyAction === 'save' || busyAction === 'story' || busyAction === 'poster'}
-            busyColor={Colors.primary900}
-            disabled={busyAction != null || posterUnavailable}
-            hint={t(
-              'showcase.saveImageHint',
-              'Tu choisis le format : dans tes photos, en story, ou en affiche à imprimer.',
-            )}
-            label={t('showcase.saveImage', 'Enregistrer l’image')}
-            onPress={() => setFormatSheetOpen(true)}
-            styles={styles}
-            variant="primary"
-          />
-
-          {/* Le partage système. Le libellé reste « Partager », mais la ligne
+          {/* AA08 (2026-08-20) — LES TROIS FORMATS À PLAT, plus aucune feuille.
+              L'ordre suit ce qu'on fait d'une affiche : on la montre (partager),
+              on la poste (story), on l'imprime (A4).
+              ⚠️ « Partager » garde son libellé ET son rang de geste principal :
+              c'est le seul qu'Adel a demandé de garder tel quel. Sa ligne
               d'explication dit ce que la plateforme fait VRAIMENT (leçon L20 :
               sur Android le fichier est enregistré puis ouvert, pas envoyé). */}
           <ShowcaseAction
             busy={busyAction === 'share'}
-            busyColor={Colors.primary500}
+            busyColor={Colors.primary900}
             disabled={busyAction != null || posterUnavailable}
             hint={saveThenOpen
               ? t(
@@ -468,6 +473,44 @@ export default function EventPublishedShowcase({ navigation, route }) {
               )}
             label={t('showcase.sharePoster', 'Partager l’affiche')}
             onPress={() => runDownload('share', () => shareVisual(shareMessage, chooserTitle))}
+            styles={styles}
+            variant="primary"
+          />
+
+          {/* Les deux AUTRES images — celles que la feuille cachait. Elles sont
+              désormais à UN appui, dont l'affiche A4, seul PDF de l'écran. */}
+          <ShowcaseAction
+            busy={busyAction === 'story'}
+            busyColor={Colors.primary500}
+            disabled={busyAction != null || posterUnavailable}
+            hint={saveThenOpen
+              ? t(
+                'showcase.storyHintSave',
+                'Image verticale plein écran, enregistrée dans ta galerie, '
+                + 'pour Instagram, WhatsApp ou Snap.',
+              )
+              : t(
+                'showcase.storyHint',
+                'Image verticale plein écran, pour Instagram, WhatsApp ou Snap.',
+              )}
+            label={t('showcase.story', 'Version story 9:16')}
+            onPress={() => runDownload('story', () => downloadStory(chooserTitle))}
+            styles={styles}
+            variant="secondary"
+          />
+          <ShowcaseAction
+            busy={busyAction === 'poster'}
+            busyColor={Colors.primary500}
+            disabled={busyAction != null || posterUnavailable}
+            hint={saveThenOpen
+              ? t(
+                'showcase.posterHintSave',
+                'Fichier PDF enregistré dans tes téléchargements, '
+                + 'prêt pour l’imprimante du club.',
+              )
+              : t('showcase.posterHint', 'Fichier PDF, prêt pour l’imprimante du club.')}
+            label={t('showcase.poster', 'Affiche A4 à imprimer')}
+            onPress={() => runDownload('poster', () => downloadPoster(chooserTitle))}
             styles={styles}
             variant="secondary"
           />
@@ -507,77 +550,39 @@ export default function EventPublishedShowcase({ navigation, route }) {
             </Text>
           ) : null}
 
+          {/* AA08 : le MÊME geste que la croix — une seule façon de sortir,
+              deux endroits où la trouver. */}
           <TouchableOpacity
             accessibilityLabel={t('showcase.later', 'Plus tard')}
             accessibilityRole="button"
             hitSlop={ApplicationStyle.hitSlop.min44From32}
-            onPress={() => navigation.goBack()}
+            onPress={closeScreen}
           >
             <Text style={styles.later}>{t('showcase.later', 'Plus tard')}</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
 
-      {/* Le choix de format, FRÈRE du ScrollView et non son contenu — une feuille
-          n'est pas de la matière à faire défiler. `BottomModal` est le gabarit
-          maison des feuilles de l'app (24 écrans l'utilisent) : il gère déjà le
-          retrait bas et la fermeture au glissé. PREMIÈRE entrée = les photos. */}
-      <BottomModal
-        close={() => setFormatSheetOpen(false)}
-        isVisible={formatSheetOpen}
-        snapPoints={['52%']}
+      {/* AA08 — LA SORTIE, ET ELLE EST HORS DU DÉFILEMENT.
+          🧨 Le défaut d'Adel (« on ne peut pas quitter la page ») n'est PAS une
+          sortie absente : « Plus tard » existait. Elle était INTROUVABLE.
+          L'écran est enregistré `headerShown: false` (EventStack.js,
+          PrivateNavigator.js) — donc aucune flèche de retour au-dessus de lui —
+          et la seule sortie vivait tout en bas d'un ScrollView, sous l'aperçu,
+          l'éditeur de textes et les boutons.
+          ⇒ FRÈRE du ScrollView, jamais son contenu : elle ne défile pas.
+          ⇒ JAMAIS grisée, contrairement aux trois gestes d'envoi : une affiche
+            qui ne se fabrique pas ne doit pas retenir l'utilisateur dedans. */}
+      <TouchableOpacity
+        accessibilityLabel={t('showcase.close', 'Fermer')}
+        accessibilityRole="button"
+        activeOpacity={0.7}
+        hitSlop={ApplicationStyle.hitSlop.min44From32}
+        onPress={closeScreen}
+        style={[styles.closeBtn, { right: SCREEN_PADDING, top: insets.top + 8 }]}
       >
-        <View style={styles.sheet}>
-          <Text style={styles.sheetTitle}>
-            {t('showcase.chooseFormat', 'Sous quel format ?')}
-          </Text>
-
-          <ShowcaseAction
-            busyColor={Colors.primary900}
-            hint={saveThenOpen
-              ? t(
-                'showcase.saveHint',
-                'Elle part dans ta galerie photo, telle que tu la vois. '
-                + 'Tu choisis ensuite l’application qui l’ouvre.',
-              )
-              : t(
-                'showcase.saveToPhotosHintSheet',
-                'La fenêtre de partage s’ouvre : choisis « Enregistrer l’image ».',
-              )}
-            label={t('showcase.saveToPhotos', 'Dans mes photos')}
-            onPress={() => runDownload('save', () => shareVisual(undefined, chooserTitle))}
-            styles={styles}
-            variant="primary"
-          />
-          <ShowcaseAction
-            hint={saveThenOpen
-              ? t(
-                'showcase.storyHintSave',
-                'Image verticale plein écran, enregistrée dans ta galerie, '
-                + 'pour Instagram, WhatsApp ou Snap.',
-              )
-              : t(
-                'showcase.storyHint',
-                'Image verticale plein écran, pour Instagram, WhatsApp ou Snap.',
-              )}
-            label={t('showcase.story', 'Version story 9:16')}
-            onPress={() => runDownload('story', () => downloadStory(chooserTitle))}
-            styles={styles}
-          />
-          <ShowcaseAction
-            hint={saveThenOpen
-              ? t(
-                'showcase.posterHintSave',
-                'Fichier PDF enregistré dans tes téléchargements, '
-                + 'prêt pour l’imprimante du club.',
-              )
-              : t('showcase.posterHint', 'Fichier PDF, prêt pour l’imprimante du club.')}
-            label={t('showcase.poster', 'Affiche A4 à imprimer')}
-            onPress={() => runDownload('poster', () => downloadPoster(chooserTitle))}
-            styles={styles}
-          />
-        </View>
-      </BottomModal>
+        <Text style={styles.closeBtnText}>×</Text>
+      </TouchableOpacity>
     </KeyboardAvoidingView>
   );
 }
@@ -618,7 +623,7 @@ const PROGRESS_TICK_MS = 250;
  * formats serveur en dur, sinon un gabarit qui change ses formats mentirait ici.
  */
 const BUSY_ACTION_FORMAT_SLOTS = {
-  poster: 'poster', save: 'preview', share: 'preview', story: 'story',
+  poster: 'poster', share: 'preview', story: 'story',
 };
 
 /**
@@ -766,6 +771,25 @@ const makeStyles = (Colors) => StyleSheet.create({
   actions: { gap: 10 },
   // Opacité 0.5 : la cible reste lisible mais visiblement hors service (Material).
   btnDisabled: { opacity: 0.5 },
+  // AA08 — la croix. Posée en absolu SUR le contenu (elle est frère du
+  // ScrollView) ; `top` et `right` sont donnés au rendu, car `top` dépend du
+  // retrait système de l'appareil. Pastille sombre translucide : l'aperçu de
+  // l'affiche passe dessous et un × nu s'y perdrait selon la photo du club.
+  closeBtn: {
+    alignItems: 'center',
+    backgroundColor: Colors.primary800,
+    borderRadius: 18,
+    height: 36,
+    justifyContent: 'center',
+    position: 'absolute',
+    width: 36,
+    zIndex: 2,
+  },
+  // neutral00 sur primary800 : ~14:1 (AAA). Hauteur de ligne alignée sur la
+  // pastille pour que le × soit centré et non posé sur sa ligne de base.
+  closeBtnText: {
+    color: Colors.neutral00, fontSize: 24, lineHeight: 28, textAlign: 'center',
+  },
   container: {
     backgroundColor: Colors.primary900, flexGrow: 1, gap: 16, padding: SCREEN_PADDING,
   },

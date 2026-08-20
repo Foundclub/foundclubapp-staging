@@ -3113,6 +3113,9 @@ export default {
   // L16 — chaque bouton dit CE QU'ON OBTIENT (un fichier, un format), jamais un
   // verbe abstrait. `share` porte desormais le geste principal : envoyer l'AFFICHE.
   showcase: {
+    // AA08 : la croix de sortie, en haut a droite. L'ecran est `headerShown: false`
+    // et n'avait aucune sortie visible en haut (constat d'Adel du 2026-08-20).
+    close: 'Fermer',
     customize: 'Personnaliser le texte',
     customizeHint: 'Modifie les textes avant de télécharger. Laisse vide pour garder le texte proposé.',
     downloadError: 'Le téléchargement a échoué. Vérifie ta connexion et réessaie.',
@@ -3160,6 +3163,11 @@ export default {
     // régénération inutile de ce qu'on a déjà sous les yeux, donc à un bug.
     preparingOtherFormat: 'On prépare la version à partager — '
       + 'c’est une autre image que celle à l’écran.',
+    // AA08 : le serveur de rendu a refuse de fabriquer le fichier (HTTP >= 400).
+    // ⛔ Ne JAMAIS retomber ici sur « verifie ta connexion » : l'apercu vient
+    // d'arriver par le meme reseau, la panne est ailleurs.
+    renderError: 'L’affiche n’a pas pu être fabriquée par le serveur. '
+      + 'Réessaie dans un instant.',
     reset: 'Réinitialiser',
     retry: 'Réessayer',
     save: 'Enregistrer l’affiche',

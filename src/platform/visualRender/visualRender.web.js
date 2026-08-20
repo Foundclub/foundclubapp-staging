@@ -11,6 +11,7 @@
 
 import { getAuthTokens } from '@/domains/auth/authUseCases';
 import { getApiBaseUrl } from '@/config/runtimeUrls';
+import { FILE_SHARE_FAILURES } from '@/platform/share/fileShareContract';
 
 // getApiBaseUrl() inclut déjà « /api » : le chemin ne doit PAS le répéter
 // (sinon POST .../api/api/visual-assets/render -> 405). Cf. axios client (chemins /xxx).
@@ -50,7 +51,10 @@ const requestRender = async (params) => {
     method: 'POST',
   });
   if (!res.ok) {
-    throw new Error(`render ${params.template}/${params.format} -> HTTP ${res.status}`);
+    // AA08 : meme erreur porteuse que le natif — la cause voyage jusqu'a l'ecran.
+    const error = new Error(`render ${params.template}/${params.format} -> HTTP ${res.status}`);
+    error.reason = FILE_SHARE_FAILURES.RENDER_FAILED;
+    throw error;
   }
   const contentType = res.headers.get('Content-Type') || res.headers.get('content-type') || 'image/png';
   const blob = await res.blob();
