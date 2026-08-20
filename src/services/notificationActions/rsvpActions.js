@@ -70,6 +70,16 @@ const toSafeString = (value) => {
  * @param {unknown} rawData
  * @returns {boolean}
  */
+// Y07 (GO Adel du 2026-08-20) — « seuls les JOUEURS repondent Present / Absent ».
+// ⛔ NE PAS AJOUTER DE CONTROLE DE ROLE ICI. La regle est appliquee A LA SOURCE :
+// le seul emetteur vivant de `eventReminder` vise `unansweredEligiblePlayers`,
+// c est-a-dire `team.players` SEULS (`event-governance.ts:557`). Un encadrant ne
+// recoit donc jamais cette notification. Verrouille par le temoin serveur
+// `tests/authz/event-encadrant-ne-repond-plus-y07.test.js`.
+// Deux garde-fous pour une regle = deux endroits a maintenir — et ici, au moment
+// ou la notification arrive, l app ne connait pas l effectif de l equipe.
+// 🔒 Filet : si une telle notification arrivait quand meme, le serveur REFUSE le
+// clic (`EVENT_STAFF_DOES_NOT_RSVP`) et sa phrase s affiche telle quelle.
 export const isEventRsvpActionablePayload = (rawData) => {
   const data = normalizeNotificationPayload(rawData || {});
   const hasContext = data.actionContext === EVENT_RSVP_ACTION_CONTEXT;

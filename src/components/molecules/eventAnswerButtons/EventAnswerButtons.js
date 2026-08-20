@@ -5,7 +5,7 @@ import { USER_ROLES } from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
 import { getCurrentUserEventParticipationState, resolveRsvpAnswer } from '@/domains/event/participationState';
 import useEvent from '@/domains/event/useEvent';
-import { resolveClientSourceTeamForUser, resolveParticipationFlow } from '@/domains/participation/participationFlow';
+import { resolveClientResponderDecision, resolveParticipationFlow } from '@/domains/participation/participationFlow';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -102,12 +102,56 @@ function EventAnswerButtons({
   // ⛔ Un organisateur garde ses commandes : quand l appelant fournit
   // `onEdit` ET `onCancel`, c est qu il monte ce composant pour PILOTER
   // l evenement, pas pour y repondre. La branche du bas reste la sienne.
-  const isConvenedMember = Boolean(resolveClientSourceTeamForUser(event, userData));
+  //
+  // Y07 (GO Adel du 2026-08-20) — MEMBRE, OUI ; REPONDEUR, NON.
+  // Seuls les JOUEURS repondent. `resolveClientResponderDecision` est le miroir
+  // du serveur (`event-audience.ts:819`) : `isStaffOnly` veut dire « d une
+  // equipe conviee, mais pas joueur ». Le coach-joueur, lui, est dans
+  // `team.players` : il repond comme avant, sans exception ecrite nulle part.
+  //
+  // ⚠️ `showsOrganizerActions` N A JAMAIS RIEN GARDE : aucun des appelants de
+  // production ne passe `onEdit` ET `onCancel` (EventDetails.js:4591,
+  // EventCardNew.js:606, EventCard.js:224 — seul un test le fournit). On ne
+  // s appuie pas dessus, on le laisse tel quel : ce n est pas le sujet de Y07.
+  const { isStaffOnly, sourceTeam } = resolveClientResponderDecision(event, userData);
+  const isConvenedMember = Boolean(sourceTeam);
   const showsOrganizerActions = Boolean(onEdit && onCancel);
   const canAnswerAsMember = isConvenedMember && !showsOrganizerActions;
 
   // If user is a player — or a member of a convened team — show the answer buttons
   if (userData?.role?.name === USER_ROLES.player || canAnswerAsMember) {
+    // Y07 — UN ENCADRANT LIT UNE PHRASE. ⛔ Jamais un bouton eteint, jamais rien.
+    //
+    // Le defaut d origine — « le bouton gris » du constat d Adel — se fabriquait
+    // 120 lignes plus bas : `disabled` y appelle `canEventBeJoined` SANS lui
+    // passer `type`, or cette fonction exige le role Joueur des que
+    // `capacity > 0` ; et la phrase d a-cote exige `!canAct`, qui valait `true`.
+    // Un bouton eteint, et muet. On sort AVANT d y arriver.
+    //
+    // 🔒 Le garde-fou de la sortie : une reponse DEJA ENREGISTREE continue de
+    // s afficher. Y07 retire le droit de repondre, il n efface aucune reponse
+    // posee avant lui — l encadrant qui avait dit « present » le voit toujours.
+    const hasOwnAnswer = Boolean(
+      alreadyJoined || alreadyMissing || hasAcceptedRequest || hasPendingRequest,
+    );
+    if (isStaffOnly && !hasOwnAnswer) {
+      return (
+        <View style={[Alignments.fullWidth, Spaces.gap[12]]}>
+          <Text style={[Fonts.p4, Fonts.neutral300]}>
+            {t('eventList.info.staffDoesNotRsvp')}
+          </Text>
+          {onAbout ? (
+            <Button
+              onPress={onAbout}
+              style={Alignments.fullWidth}
+              title={t('common.actions.seeMore', 'Voir le detail')}
+              variant="SecondaryLight"
+            />
+          ) : null}
+        </View>
+      );
+    }
+
     if (isStageDayEvent && dailyRsvpStatus) {
       let statusLabel = '';
       if (dailyRsvpStatus === 'present') statusLabel = t('eventList.info.alreadyJoined');
