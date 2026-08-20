@@ -1028,6 +1028,11 @@ function ClubDetails({ navigation, route }) {
 
   const isPlayerRole = userData?.role?.name === USER_ROLES.player;
   const isCoachRole = userData?.role?.name === USER_ROLES.coach;
+  // Z01 — l'encadrement du club : dirigeant OU entraineur. Ce drapeau ne dit
+  // rien de CE club-ci, seulement de ce que la personne est. C'est ce qui
+  // suffit a eteindre la porte « prevenez-moi quand ce club arrive », qui est
+  // celle de quelqu'un qui ATTEND le club au lieu de pouvoir le faire venir.
+  const isClubStaffRole = isCoachRole || userData?.role?.name === USER_ROLES.president;
   // D95 — le JOUEUR sort de ce parcours. Il y entrait par la ligne
   // `(isPlayerRole || isCoachRole)` et tombait sur un bouton « Je dirige ce club »
   // qui lui demandait le telephone de son dirigeant : ce n'est ni ce qu'il vient
@@ -1439,6 +1444,7 @@ function ClubDetails({ navigation, route }) {
     clubHasTeams: clubTeamIds.length > 0,
     hasParentMultisportClub,
     isAuthenticated,
+    isClubStaffRole,
     isMultisportAdmin,
     isParentClubAdmin,
     isPlayerRole,
@@ -1456,6 +1462,7 @@ function ClubDetails({ navigation, route }) {
     clubTeamIds.length,
     hasParentMultisportClub,
     isAuthenticated,
+    isClubStaffRole,
     isMultisportAdmin,
     isParentClubAdmin,
     isPlayerRole,
@@ -1525,12 +1532,19 @@ function ClubDetails({ navigation, route }) {
   const hasPendingEveryClubInterestOption = hasPendingViewedClubInterestRequest
     && hasPendingClubArrivalInterest;
 
+  // Z01 — cette liste doit contenir TOUS les boutons du pied de page, sans
+  // exception : c'est elle qui reserve leur place en bas du defilement. Il en
+  // manquait DEUX (`showJoinClubAction` et `showContactAdminClaimAction`),
+  // parce qu'ils vivaient dans un SECOND pied de page, ailleurs dans le
+  // fichier. Ils ont rejoint le pied unique ; ils rejoignent donc le compteur.
   const floatingClubActionsCount = [
     showPublicPlayerLogin,
     showPublicClaimLogin,
     showPlayerClubAction,
     showPlayerNoTeamAction,
     showClubPartneringAction,
+    showJoinClubAction,
+    showContactAdminClaimAction,
     showEmptyClubClaimAction,
     showClubInterestAction,
     showClubArrivalInterestAction,
@@ -3078,45 +3092,12 @@ function ClubDetails({ navigation, route }) {
           )}
         </WithDataWrapper>
       </ScrollView>
-      {
-        showJoinClubAction ? (
-          <Button
-            disabled={hasPendingClubRequest || joinRequestPending || createClubMembershipRequestMutation.isPending}
-            onPress={handleAskToJoinClub}
-            style={[
-              Spaces.marginTop[12],
-              (hasPendingClubRequest || joinRequestPending || createClubMembershipRequestMutation.isPending)
-                ? { opacity: 0.7 }
-                : null,
-            ]}
-            title={(() => {
-              if (hasPendingClubRequest || joinRequestPending) {
-                return t('clubDetails.actions.requestPending', 'Demande en attente');
-              }
-              if (isClubWithoutVisibleOwner) {
-                return t('clubDetails.actions.joinAsMyClub', "C'est mon club !");
-              }
-              return t('clubDetails.actions.requestJoin', 'Demander à rejoindre ce club');
-            })()}
-            variant="Primary"
-          />
-        ) : null
-      }
-      {
-        showContactAdminClaimAction ? (
-          <Button
-            disabled={hasPendingClubRequest}
-            onPress={handleClaimClub}
-            style={[Spaces.marginTop[12], hasPendingClubRequest ? { opacity: 0.6 } : null]}
-            title={
-              hasPendingClubRequest
-                ? t('clubDetails.actions.requestPending', 'Demande en attente')
-                : t('clubDetails.actions.join')
-            }
-            variant="Primary"
-          />
-        ) : null
-      }
+      {/* Z01 : « C'est mon club ! » et son jumeau du dirigeant ont quitte CE */}
+      {/* pied de page — ils vivent desormais dans le pied flottant unique, */}
+      {/* plus bas. Ils etaient ici, dans le flux normal, pendant que l'autre */}
+      {/* pied se posait en absolu : un element absolu ne prend AUCUNE place, */}
+      {/* il se dessinait donc PAR-DESSUS eux. Deux pieds de page finissent */}
+      {/* toujours par se rencontrer ; un seul pied ne le peut pas. */}
       {/* D62 : « Contacter les entraineur·e·s » a quitte ce pied collant a son */}
       {/* tour — il vit desormais dans la sous-page Staff, voir plus haut. */}
       {/* D34 ecran 01 : « Quitter le club » a quitte ce pied collant — il vit */}
@@ -3626,6 +3607,7 @@ function ClubDetails({ navigation, route }) {
               zIndex: 24,
             },
           ]}
+          testID="club-details-actions-footer"
         >
           {/* D98 — le joueur passe EN PREMIER et en Primary : c'est le cas
               majoritaire d'une fiche club trouvee depuis Google. « Je dirige ce
@@ -3697,6 +3679,49 @@ function ClubDetails({ navigation, route }) {
               title={hasPendingClubPartneringRequest
                 ? t('clubDetails.actions.requestPending', 'Demande en attente')
                 : t('clubDetails.actions.manageClub', 'Je dirige ce club')}
+              variant="Primary"
+            />
+          ) : null}
+
+          {/* Z01 — les deux portes primaires arrivees du pied du flux. Elles
+              se rangent avec les autres portes « je m'attache a ce club »,
+              avant les portes d'interet qui, elles, restent en Secondary. */}
+          {showJoinClubAction ? (
+            <Button
+              disabled={hasPendingClubRequest || joinRequestPending || createClubMembershipRequestMutation.isPending}
+              onPress={handleAskToJoinClub}
+              style={[
+                floatingClubActionButtonStyle,
+                (hasPendingClubRequest || joinRequestPending || createClubMembershipRequestMutation.isPending)
+                  ? { opacity: 0.7 }
+                  : null,
+              ]}
+              title={(() => {
+                if (hasPendingClubRequest || joinRequestPending) {
+                  return t('clubDetails.actions.requestPending', 'Demande en attente');
+                }
+                if (isClubWithoutVisibleOwner) {
+                  return t('clubDetails.actions.joinAsMyClub', "C'est mon club !");
+                }
+                return t('clubDetails.actions.requestJoin', 'Demander à rejoindre ce club');
+              })()}
+              variant="Primary"
+            />
+          ) : null}
+
+          {showContactAdminClaimAction ? (
+            <Button
+              disabled={hasPendingClubRequest}
+              onPress={handleClaimClub}
+              style={[
+                floatingClubActionButtonStyle,
+                hasPendingClubRequest ? { opacity: 0.6 } : null,
+              ]}
+              title={
+                hasPendingClubRequest
+                  ? t('clubDetails.actions.requestPending', 'Demande en attente')
+                  : t('clubDetails.actions.join')
+              }
               variant="Primary"
             />
           ) : null}

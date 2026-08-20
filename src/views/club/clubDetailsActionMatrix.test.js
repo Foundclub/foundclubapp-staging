@@ -435,4 +435,179 @@ describe('resolveClubDetailsActionMatrix', () => {
       expect(sansEquipe.showClubInterestAction).toBe(false);
     });
   });
+  // ---------------------------------------------------------------------------
+  // Z01 — « les dirigeants et entraineurs voient les deux boutons "me prevenir
+  // quand le club arrive" alors qu'eux doivent juste avoir le bouton "C'est mon
+  // club" » (Adel, 2026-08-20, capture a l'appui).
+  //
+  // Ce que la regle dit, et rien de plus : la porte « prevenez-moi quand ce club
+  // arrive » est celle de quelqu'un qui ATTEND le club. Un dirigeant ou un
+  // entraineur n'attend pas : il peut le faire venir lui-meme, et c'est
+  // exactement ce que dit sa propre porte. Les deux ensemble se contredisent.
+  //
+  // 🔒 Le joueur et le visiteur deconnecte ne bougent PAS : Adel a valide leur
+  // cas au tour precedent (« sur la fiche d'un club qui n'est pas le tien : les
+  // deux boutons cohabitent » → « oui », 2026-08-18). C'est pour ca que le
+  // drapeau s'appelle `isClubStaffRole` et non `!isPlayerRole` : le compte SANS
+  // ROLE (40 comptes sur 118 en production au 2026-08-13) garde ses deux portes.
+  // ---------------------------------------------------------------------------
+  describe('Z01 · un encadrant ne voit pas la porte de celui qui attend', () => {
+    // 🎯 TEMOIN 1 — le cas d'Adel, cote dirigeant. `toEqual` compare l'objet
+    // ENTIER : « et RIEN d'autre » est donc verifie, pas seulement suppose.
+    it('gives a dirigeant on an unclaimed club his claim door and NOTHING else', () => {
+      expect(resolveClubDetailsActionMatrix({
+        canContactAdmin: true,
+        clubHasTeams: false,
+        isAuthenticated: true,
+        isClubStaffRole: true,
+        ownerCount: 0,
+      })).toEqual({
+        showClubArrivalInterestAction: false,
+        showClubInterestAction: false,
+        showClubPartneringAction: false,
+        showContactAdminClaimAction: false,
+        showEmptyClubClaimAction: true,
+        showJoinClubAction: false,
+        showLeaveClubAction: false,
+        showPlayerClubAction: false,
+        showPlayerNoTeamAction: false,
+        showPublicClaimLogin: false,
+        showPublicPlayerLogin: false,
+      });
+    });
+
+    // 🎯 TEMOIN 2 — le meme club, cote entraineur. C'est CE profil qui est sur la
+    // capture d'Adel : `canJoinClub` vaut `coach` (useAuth.js:626) et son bouton
+    // s'intitule « C'est mon club ! » des que le club n'a aucun dirigeant visible.
+    it('gives a coach on the same club his join door and NOTHING else', () => {
+      expect(resolveClubDetailsActionMatrix({
+        canJoinClub: true,
+        clubHasTeams: false,
+        isAuthenticated: true,
+        isClubStaffRole: true,
+        ownerCount: 0,
+      })).toEqual({
+        showClubArrivalInterestAction: false,
+        showClubInterestAction: false,
+        showClubPartneringAction: false,
+        showContactAdminClaimAction: false,
+        showEmptyClubClaimAction: false,
+        showJoinClubAction: true,
+        showLeaveClubAction: false,
+        showPlayerClubAction: false,
+        showPlayerNoTeamAction: false,
+        showPublicClaimLogin: false,
+        showPublicPlayerLogin: false,
+      });
+    });
+
+    // 🔒 TEMOIN 3 — LA NON-REGRESSION VALIDEE PAR ADEL. Le joueur garde
+    // EXACTEMENT ses deux portes sur ce meme club. `toEqual` : si Z01 en eteint
+    // une seule, cette ligne le dit.
+    it('keeps EXACTLY both doors for a player on the same club', () => {
+      expect(resolveClubDetailsActionMatrix({
+        canPlayerSignalMissingTeam: true,
+        clubHasTeams: false,
+        isAuthenticated: true,
+        isPlayerRole: true,
+        ownerCount: 0,
+      })).toEqual({
+        showClubArrivalInterestAction: true,
+        showClubInterestAction: false,
+        showClubPartneringAction: false,
+        showContactAdminClaimAction: false,
+        showEmptyClubClaimAction: false,
+        showJoinClubAction: false,
+        showLeaveClubAction: false,
+        showPlayerClubAction: false,
+        showPlayerNoTeamAction: true,
+        showPublicClaimLogin: false,
+        showPublicPlayerLogin: false,
+      });
+    });
+
+    // 🔒 TEMOIN 3 bis — le compte SANS ROLE n'est ni dirigeant ni entraineur : il
+    // garde lui aussi ses deux portes. C'est ce qui distingue `isClubStaffRole`
+    // d'un simple `!isPlayerRole`, qui aurait emporte ce profil au passage.
+    it('keeps both doors for a signed-in account without any role', () => {
+      expect(resolveClubDetailsActionMatrix({
+        clubHasTeams: false,
+        isAuthenticated: true,
+        ownerCount: 0,
+      })).toMatchObject({
+        showClubArrivalInterestAction: true,
+        showEmptyClubClaimAction: true,
+      });
+    });
+
+    // 🔒 TEMOIN 4 — le visiteur deconnecte ne change pas, et le drapeau d'Z01 ne
+    // fuit pas jusqu'a lui : meme en le forçant, ses deux portes de connexion
+    // restent les seules allumees.
+    it('leaves an anonymous visitor untouched, even when flagged as staff', () => {
+      expect(resolveClubDetailsActionMatrix({
+        clubHasTeams: false,
+        isAuthenticated: false,
+        isClubStaffRole: true,
+        ownerCount: 0,
+      })).toEqual({
+        showClubArrivalInterestAction: false,
+        showClubInterestAction: false,
+        showClubPartneringAction: false,
+        showContactAdminClaimAction: false,
+        showEmptyClubClaimAction: false,
+        showJoinClubAction: false,
+        showLeaveClubAction: false,
+        showPlayerClubAction: false,
+        showPlayerNoTeamAction: false,
+        showPublicClaimLogin: true,
+        showPublicPlayerLogin: true,
+      });
+    });
+
+    // 🔒 TEMOIN 7 — le dirigeant de SON PROPRE club ne voit apparaitre aucune de
+    // ces portes : `canShowAffiliationAction` exige `!showLeaveClubAction`, et il
+    // les eteint donc toutes en amont. Z01 ne doit rien y changer.
+    it('never opens any of these doors for a dirigeant of his OWN club', () => {
+      expect(resolveClubDetailsActionMatrix({
+        canContactAdmin: true,
+        canEdit: true,
+        canLeaveClub: true,
+        clubHasTeams: false,
+        isAuthenticated: true,
+        isClubStaffRole: true,
+        isUserAlreadyAttachedToViewedClub: true,
+        ownerCount: 1,
+      })).toEqual({
+        showClubArrivalInterestAction: false,
+        showClubInterestAction: false,
+        showClubPartneringAction: false,
+        showContactAdminClaimAction: false,
+        showEmptyClubClaimAction: false,
+        showJoinClubAction: false,
+        showLeaveClubAction: true,
+        showPlayerClubAction: false,
+        showPlayerNoTeamAction: false,
+        showPublicClaimLogin: false,
+        showPublicPlayerLogin: false,
+      });
+    });
+
+    // 🔒 TEMOIN 7 bis — le meme controle pour l'entraineur de son propre club.
+    it('never opens any of these doors for a coach of his OWN club', () => {
+      expect(resolveClubDetailsActionMatrix({
+        canJoinClub: true,
+        canLeaveClub: true,
+        clubHasTeams: true,
+        isAuthenticated: true,
+        isClubStaffRole: true,
+        isUserAlreadyAttachedToViewedClub: true,
+        ownerCount: 1,
+      })).toMatchObject({
+        showClubArrivalInterestAction: false,
+        showClubInterestAction: false,
+        showJoinClubAction: false,
+        showLeaveClubAction: true,
+      });
+    });
+  });
 });
