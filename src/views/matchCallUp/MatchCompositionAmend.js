@@ -1,4 +1,5 @@
 import { useNavigation, useRoute } from '@react-navigation/native';
+import { useQueryClient } from '@tanstack/react-query';
 import { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -6,6 +7,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { invalidateAfterAction } from '@/domains/refresh/afterAction';
 import { extractSubscriptionDecisionFromError } from '@/domains/subscription/subscriptionDecision';
 import { withAlpha } from '@/theme/colors';
 import useTheme from '@/theme/themeContext';
@@ -68,6 +70,7 @@ function MatchCompositionAmend() {
   const navigation = useNavigation();
   const route = useRoute();
   const insets = useSafeAreaInsets();
+  const queryClient = useQueryClient();
 
   // 🧨 Fige les parametres : `route?.params || {}` fabrique un objet NEUF a
   // chaque rendu et relancerait tout `useCallback` qui en depend.
@@ -146,6 +149,16 @@ function MatchCompositionAmend() {
       await saveEventCompositionDraft(eventId, { draft: pack, teamId });
       await publishEventConvocation(eventId, { teamId });
 
+      // 🧨 AB03 — MEME CAUSE QUE `MatchCompositionBoard`, meme correctif. Ce
+      // dossier ne perimait AUCUN cache : le remplacement partait au serveur,
+      // puis `goBack()` reposait le coach sur un ecran qui affichait encore la
+      // composition d'AVANT — `EventDetails` monte ses requetes avec
+      // `refetchOnMount: false` et desarme son rafraichissement de focus quand
+      // la donnee a moins de 30 s (`EVENT_DETAILS_STALE_MS`).
+      // ⚠️ Non attendu : le marquage est SYNCHRONE, la relecture se termine
+      //    apres le depart de cet ecran, et le `queryClient` est un singleton.
+      invalidateAfterAction(queryClient, 'publishComposition').catch(() => {});
+
       Alert.alert(
         t('matchConvocation.amend.alerts.republished.title'),
         t('matchConvocation.amend.alerts.republished.message'),
@@ -157,8 +170,8 @@ function MatchCompositionAmend() {
       setIsBusy(false);
     }
   }, [
-    eventId, handleActionError, isBusy, navigation, published, replacements,
-    resolvedTeamName, roster, sport, t, teamId,
+    eventId, handleActionError, isBusy, navigation, published, queryClient,
+    replacements, resolvedTeamName, roster, sport, t, teamId,
   ]);
 
   const renderMoveRow = (/** @type {any} */ pair, /** @type {boolean} */ isLeaving) => {

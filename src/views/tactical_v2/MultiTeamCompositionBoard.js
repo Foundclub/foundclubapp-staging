@@ -476,14 +476,26 @@ function MultiTeamCompositionBoard({ routeParams = null }) {
     [playerMap, selectedPlayerId],
   );
 
-  const invalidateQueries = useCallback(async () => {
+  // ⏱️ AB03 — ON MARQUE, ON N'ATTEND PAS. La promesse rendue par
+  // `invalidateQueries` n'est tenue qu'une fois toutes les requetes ACTIVES
+  // RELUES (@tanstack/query-core, `refetchType` vaut `active` par defaut) : les
+  // trois gestes de cet ecran — enregistrer, publier, generer — restaient donc
+  // muets pendant QUATRE relectures avant d'afficher leur reussite, dont
+  // `['event', eventId]` et `['eventComposition', eventId]` que cet ecran et
+  // `EventDetails` montent tous les deux.
+  // ⚠️ Ne pas attendre ne perd RIEN : le marquage est SYNCHRONE, seule la
+  //    relecture ne l'est pas, et le `queryClient` est un singleton qui survit
+  //    au demontage de l'ecran. Meme raisonnement, mesure a l'appui, que le lot
+  //    Y04 sur `RequestsHub` (300 ms -> 17 ms) et que le lot D19 sur la creation
+  //    d'evenement.
+  const invalidateQueries = useCallback(() => {
     if (!eventId) return;
-    await Promise.all([
+    Promise.all([
       queryClient.invalidateQueries({ queryKey: ['event', eventId] }),
       queryClient.invalidateQueries({ queryKey: ['eventComposition', eventId] }),
       queryClient.invalidateQueries({ queryKey: ['eventConvocation', eventId] }),
       queryClient.invalidateQueries({ queryKey: ['events'] }),
-    ]);
+    ]).catch(() => {});
   }, [eventId, queryClient]);
 
   const updateDraftPack = useCallback((updater) => {
@@ -936,7 +948,7 @@ function MultiTeamCompositionBoard({ routeParams = null }) {
           sportContext: response?.draft?.sportContext || draftPack?.sportContext || sport,
         }));
       }
-      await invalidateQueries();
+      invalidateQueries();
       showAlert('Succès', 'Brouillon de composition enregistre.');
     } catch (error) {
       const subscriptionDecision = extractSubscriptionDecisionFromError(error);
@@ -966,7 +978,7 @@ function MultiTeamCompositionBoard({ routeParams = null }) {
           sportContext: response?.published?.sportContext || draftPack?.sportContext || sport,
         }));
       }
-      await invalidateQueries();
+      invalidateQueries();
       showAlert('Succès', 'Composition d\'équipes publiée.', [
         {
           onPress: () => navigation.navigate(RouteNames.EventDetails, { eventId }),
@@ -1009,7 +1021,7 @@ function MultiTeamCompositionBoard({ routeParams = null }) {
       // La generation REMPLACE tout le pack : on emmene le coach voir le
       // resultat sur le terrain, c'est la seule facon de le verifier.
       setCompositionStep(STEP_FIELD);
-      await invalidateQueries();
+      invalidateQueries();
       showAlert('Succès', 'Brouillon génère automatiquement. Tu peux maintenant ajuster les équipes à la main.');
     } catch (error) {
       const subscriptionDecision = extractSubscriptionDecisionFromError(error);

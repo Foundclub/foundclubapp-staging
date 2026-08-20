@@ -45,6 +45,15 @@ const viderLeFilJs = () => {
 /** @type {{ rendus: number }} */
 const mockCompteur = { rendus: 0 };
 
+// AB03 — l'ecran perime desormais les caches de composition apres publication
+// (`invalidateAfterAction`). Sans ce double, `useQueryClient()` leve
+// « No QueryClient set » et la suite tombe AVANT le premier rendu.
+const mockClientRequeteFige = { invalidateQueries: jest.fn() };
+
+jest.mock('@tanstack/react-query', () => ({
+  useQueryClient: () => mockClientRequeteFige,
+}));
+
 jest.mock('@react-navigation/native', () => ({
   useNavigation: () => ({ goBack: mockGoBack, navigate: mockNavigate, popTo: mockPopTo }),
   useRoute: () => ({ params: mockRouteParams }),

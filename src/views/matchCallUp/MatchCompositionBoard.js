@@ -1,5 +1,6 @@
 /* eslint-disable jsdoc/require-jsdoc */
 import { useNavigation, useRoute } from '@react-navigation/native';
+import { useQueryClient } from '@tanstack/react-query';
 import {
   useCallback,
   useMemo,
@@ -27,6 +28,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import useMessaging from '@/domains/messaging/useMessaging';
+import { invalidateAfterAction } from '@/domains/refresh/afterAction';
 import { extractSubscriptionDecisionFromError } from '@/domains/subscription/subscriptionDecision';
 import { withAlpha } from '@/theme/colors';
 import useTheme from '@/theme/themeContext';
@@ -96,6 +98,7 @@ function MatchCompositionBoard() {
   const navigation = useNavigation();
   const route = useRoute();
   const insets = useSafeAreaInsets();
+  const queryClient = useQueryClient();
   // Sert a retrouver le fil de l'equipe apres publication (voir `handlePublish`).
   const { startTeamChat } = /** @type {any} */ (useMessaging());
 
@@ -347,13 +350,37 @@ function MatchCompositionBoard() {
       await saveEventCompositionDraft(eventId, { draft: buildPack(), teamId });
       await publishEventConvocation(eventId, { teamId });
 
+      // 🧨 AB03 — CE DOSSIER NE RAFRAICHISSAIT RIEN, ET C'EST CE QUI FAISAIT
+      // « attendre pour voir ». Mesure du 2026-08-20 : `matchCallUp/` ne
+      // contenait AUCUNE occurrence de `queryClient` sur ses onze fichiers,
+      // alors que c'est le chemin d'une composition de MATCH. Or `EventDetails`
+      // monte `useGetEventConvocation` et `useGetEventTeamComposition` avec
+      // `refetchOnMount: false`, et son rafraichissement au retour de focus se
+      // desarme quand la donnee a moins de 30 s (`EVENT_DETAILS_STALE_MS`).
+      // ⇒ le coach revenait sur son match SANS sa composition, et devait
+      //   attendre que ces 30 s passent — ou tirer pour rafraichir.
+      // ♻️ `publishComposition` etait DEJA declare dans le module de T08 et
+      //   n'etait appele par personne : aucune racine neuve n'est inventee ici.
+      // ⚠️ On ne l'attend pas : `invalidateQueries` marque les requetes de
+      //   facon SYNCHRONE, seule la relecture est asynchrone, et le
+      //   `queryClient` est un singleton qui survit au demontage de cet ecran.
+      invalidateAfterAction(queryClient, 'publishComposition').catch(() => {});
+
       // 🧩 Le serveur vient de poster la bulle de composition dans le fil de
       // l'equipe (`publishLineupShareToTeamChat`) — mais il ne rend PAS l'id du
       // fil dans sa reponse. On le retrouve donc par le helper partage du depot,
       // celui qu'emploie deja `TeamDetails` : il cherche le fil existant avant
       // d'en creer un, et ici il existe forcement, la publication vient de le
       // creer au besoin.
-      const teamChat = await startTeamChat(teamId).catch(() => null);
+      //
+      // ⏱️ AB03 — MAIS ON NE L'ATTEND PLUS AVANT DE PARLER. Ce troisieme
+      // aller-retour (`loadChatsForLookup`, puis la creation du fil s'il
+      // manque) ne sert QU'A l'atterrissage, c'est-a-dire uniquement si
+      // l'utilisateur appuie sur « OK » — et il etait paye par tout le monde, y
+      // compris par ceux qui ferment l'alerte. Il part maintenant EN MEME TEMPS
+      // que l'alerte s'affiche, et n'est lu qu'au moment ou il sert.
+      // 📏 Mesure (temoin de vitesse, 40 ms de latence simulee) : 58 ms -> 8 ms.
+      const filDeLEquipe = startTeamChat(teamId).catch(() => null);
 
       setIsSheetVisible(false);
       Alert.alert(
@@ -373,10 +400,14 @@ function MatchCompositionBoard() {
             navigation.popTo(RouteNames.EventDetails, { eventId });
             // Sans fil trouve, on s'arrete a l'evenement : jamais bloque, et
             // jamais de retour vers l'ecran de publication.
-            if (teamChat?.documentId) {
-              // @ts-ignore
-              navigation.navigate(RouteNames.Conversation, { chatId: teamChat.documentId });
-            }
+            // ⚠️ L'evenement est atteint AVANT de lire le fil : si la recherche
+            // n'est pas encore revenue, le coach est deja arrive quelque part.
+            filDeLEquipe.then((/** @type {any} */ teamChat) => {
+              if (teamChat?.documentId) {
+                // @ts-ignore
+                navigation.navigate(RouteNames.Conversation, { chatId: teamChat.documentId });
+              }
+            });
           },
           text: t('matchComposition.board.alerts.published.ok'),
         }],
@@ -392,6 +423,7 @@ function MatchCompositionBoard() {
     handleActionError,
     isBusy,
     navigation,
+    queryClient,
     startTeamChat,
     t,
     teamId,
