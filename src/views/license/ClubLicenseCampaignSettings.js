@@ -423,6 +423,13 @@ const normalizeAmountInput = (value) => {
   const decimals = cleaned.slice(firstCommaIndex + 1).replace(/,/g, '').slice(0, 2);
   return `${integerPart}${decimals}`;
 };
+// AA07 / K3 — LES NOMBRES ENTIERS SAISIS AU CLAVIER (priorite, delais de relance).
+//
+// 🧨 Pourquoi nettoyer EN PLUS de poser le bon clavier : un clavier de chiffres
+// est une SUGGESTION, pas une barriere. Un clavier materiel, un copier-coller
+// ou une dictee vocale laissent passer des lettres — et `Number('abc')` vaut
+// NaN, que `JSON.stringify` envoie au serveur en `null`.
+const normalizeWholeNumberInput = (value) => String(value ?? '').replace(/[^0-9]/g, '');
 const seasonStartMonthIndex = 7;
 const formatSeasonLabel = (startYear, endYear) => `${startYear}-${endYear}`;
 const getSeasonRangeFromDate = (date) => {
@@ -706,8 +713,17 @@ const renderReminderPreview = ({
 };
 
 /**
+ * AA07 / K3 — `Field` sait desormais annoncer un clavier.
+ *
+ * 🎯 C EST ICI QUE VIVAIT LE DEFAUT D ADEL. Cette enveloppe n exposait aucun
+ * `keyboardType` : les quatre champs de l ecran qui attendent un NOMBRE
+ * ouvraient donc le clavier de lettres. Une recherche de `<TextInput>` ne
+ * pouvait pas le voir — c est l enveloppe qui masquait le probleme, pas le
+ * champ. ⇒ On corrige l enveloppe UNE fois plutot que chaque appelant.
  *
  * @param root0
+ * @param root0.inputMode
+ * @param root0.keyboardType
  * @param root0.label
  * @param root0.onChangeText
  * @param root0.placeholder
@@ -715,13 +731,15 @@ const renderReminderPreview = ({
  * @param root0.multiline
  */
 function Field({
-  label, multiline = false, onChangeText, placeholder, value,
+  inputMode, keyboardType, label, multiline = false, onChangeText, placeholder, value,
 }) {
   const { Colors, Fonts, Spaces } = useTheme();
   return (
     <View style={Spaces.gap[8]}>
       <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{label}</Text>
       <TextInput
+        inputMode={inputMode}
+        keyboardType={keyboardType}
         multiline={multiline}
         onChangeText={onChangeText}
         placeholder={placeholder}
@@ -1452,14 +1470,18 @@ function PricingRuleEditor({
         />
       ) : null}
       <Field
+        inputMode="decimal"
+        keyboardType="decimal-pad"
         label="Montant (EUR)"
-        onChangeText={(value) => onChange({ amount: value })}
+        onChangeText={(value) => onChange({ amount: normalizeAmountInput(value) })}
         placeholder="180"
         value={item.amount}
       />
       <Field
+        inputMode="numeric"
+        keyboardType="number-pad"
         label="Priorite"
-        onChangeText={(value) => onChange({ priority: value })}
+        onChangeText={(value) => onChange({ priority: normalizeWholeNumberInput(value) })}
         placeholder="10"
         value={item.priority}
       />
@@ -3473,14 +3495,18 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
           ))}
         </View>
         <Field
+          inputMode="numeric"
+          keyboardType="number-pad"
           label="Commencer X jours avant l échéance"
-          onChangeText={setReminderBeforeDueDays}
+          onChangeText={(value) => setReminderBeforeDueDays(normalizeWholeNumberInput(value))}
           placeholder="5"
           value={reminderBeforeDueDays}
         />
         <Field
+          inputMode="numeric"
+          keyboardType="number-pad"
           label="Reprendre X jours après l échéance"
-          onChangeText={setReminderAfterDueDays}
+          onChangeText={(value) => setReminderAfterDueDays(normalizeWholeNumberInput(value))}
           placeholder="7"
           value={reminderAfterDueDays}
         />
