@@ -1,4 +1,5 @@
 import { useNavigation, useRoute } from '@react-navigation/native';
+import { useQueryClient } from '@tanstack/react-query';
 import { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -7,6 +8,7 @@ import {
 import LinearGradient from 'react-native-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { invalidateAfterAction } from '@/domains/refresh/afterAction';
 import { extractSubscriptionDecisionFromError } from '@/domains/subscription/subscriptionDecision';
 import { withAlpha } from '@/theme/colors';
 import useTheme from '@/theme/themeContext';
@@ -63,6 +65,7 @@ function MatchConvocationPublished() {
   const navigation = useNavigation();
   const route = useRoute();
   const insets = useSafeAreaInsets();
+  const queryClient = useQueryClient();
 
   // 🧨 Fige les parametres de route : `route?.params || {}` fabrique un objet
   // NEUF a chaque rendu, ce qui relance tout `useCallback` qui en depend.
@@ -121,6 +124,15 @@ function MatchConvocationPublished() {
     setIsBusy(true);
     try {
       await publishEventConvocation(eventId, { teamId });
+
+      // 🧨 AB03 — MEME CAUSE QUE SES DEUX ECRANS FRERES. Renvoyer la convocation
+      // change `publishedAt` et remet les reponses a zero cote serveur : sans
+      // cette ligne, l'ecran continuait d'afficher l'ancienne date d'envoi et
+      // les anciennes reponses, ici comme sur `EventDetails`.
+      // ⚠️ Non attendu : le marquage est SYNCHRONE, seule la relecture ne l'est
+      //    pas — et l'ecran reste monte pour la recevoir.
+      invalidateAfterAction(queryClient, 'publishComposition').catch(() => {});
+
       Alert.alert(
         t('matchConvocation.published.alerts.resent.title'),
         t('matchConvocation.published.alerts.resent.message'),
@@ -130,7 +142,7 @@ function MatchConvocationPublished() {
     } finally {
       setIsBusy(false);
     }
-  }, [eventId, handleActionError, isBusy, t, teamId]);
+  }, [eventId, handleActionError, isBusy, queryClient, t, teamId]);
 
   const handleResend = useCallback(() => {
     Alert.alert(
