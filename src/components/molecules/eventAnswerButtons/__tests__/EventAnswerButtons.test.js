@@ -172,7 +172,16 @@ describe('EventAnswerButtons — changer d avis (caracterisation)', () => {
     });
 
     expect(tagTexts(tree)).toEqual(['eventList.info.alreadyJoined']);
-    expect(buttonTitles(tree)).toEqual(['eventDetails.actions.cancelResponse']);
+    // AA01 (2026-08-20) — « Je serai absent·e » s ajoute ici. Le sujet de ce
+    // temoin est l ETIQUETTE (ligne au-dessus) ; la liste des boutons decrit
+    // l etat, et cet etat a change volontairement : un membre deja present
+    // pouvait seulement ANNULER sa reponse, donc se declarer absent lui
+    // demandait DEUX gestes et effacait sa reponse entre les deux.
+    // Verrouille par `EventAnswerButtonsBasculeAA01.test.js`.
+    expect(buttonTitles(tree)).toEqual([
+      'eventDetails.actions.cancelResponse',
+      'eventList.actions.absent',
+    ]);
   });
 });
 
@@ -185,7 +194,12 @@ describe('EventAnswerButtons — validation manuelle (caracterisation)', () => {
     });
 
     expect(tagTexts(tree)).toEqual(['eventList.info.pendingRequest']);
-    expect(buttonTitles(tree)).toEqual(['eventDetails.actions.cancelResponse']);
+    // AA01 — meme raison qu au temoin precedent : un membre dont la demande est
+    // en attente peut desormais se declarer absent en un geste.
+    expect(buttonTitles(tree)).toEqual([
+      'eventDetails.actions.cancelResponse',
+      'eventList.actions.absent',
+    ]);
   });
 
   it('demande REFUSEE : le joueur VOIT le refus, et il voit le MOTIF', () => {

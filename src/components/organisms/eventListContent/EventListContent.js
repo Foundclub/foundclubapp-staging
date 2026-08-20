@@ -42,6 +42,7 @@ import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrap
 import EventFiltersSheet from '@/components/organisms/filtersSheet/EventFiltersSheet';
 import FeaturedEvents from '@/components/organisms/featuredEvents/FeaturedEvents';
 import SearchComponent from '@/components/organisms/searchComponent/searchComponent';
+import { OwnAnswerAction, resolveOwnAnswerAction } from '@/views/event/ownAnswerAction';
 
 import { openPublicAuthFlow } from '@/navigation/public/publicAuthNavigation';
 import { RouteNames } from '@/navigation/routeNames';
@@ -780,7 +781,9 @@ function EventListContent({
   });
 
   const respondToEventRsvpMutation = useMutation({
-    mutationFn: ({ answer, eventId }) => respondToEventRsvp(eventId, answer),
+    mutationFn: (
+      /** @type {{ answer: 'present' | 'absent', eventId: string }} */ { answer, eventId },
+    ) => respondToEventRsvp(eventId, answer),
     onError: (mutationError) => {
       Alert.alert(
         t('common.error', 'Erreur'),
@@ -872,10 +875,21 @@ function EventListContent({
       return;
     }
 
+    // AA01 — un membre d une equipe conviee REPOND, il ne demande pas : pas de
+    // declaration de responsabilite, et la porte des reponses. Motif complet
+    // dans `participationFlow.js`.
+    if (participationFlow?.submitMode === 'rsvpPresent' && event?.documentId) {
+      respondToEventRsvpMutation.mutate({
+        answer: 'present',
+        eventId: event.documentId,
+      });
+      return;
+    }
+
     setJoinModalError('');
     setSelectedEvent(event);
     setIsJoinModalVisible(true);
-  }, [handleEventSelect, t, userData]);
+  }, [handleEventSelect, respondToEventRsvpMutation, t, userData]);
 
   const handleParticipateToEvent = useCallback(async (/** @type {FCEvent} */ event) => {
     const isStageDayEvent = String(event?.eventFormat || '').toLowerCase() === 'stage_day';
@@ -911,6 +925,20 @@ function EventListContent({
       return;
     }
 
+    // AA01 — meme regle que `handleJoinEvent` : la reponse d un membre passe par
+    // la porte des reponses, en un geste.
+    if (participationFlow?.submitMode === 'rsvpPresent' && event?.documentId) {
+      try {
+        await respondToEventRsvpMutation.mutateAsync({
+          answer: 'present',
+          eventId: event.documentId,
+        });
+      } catch {
+        // Error feedback is handled by the mutation.
+      }
+      return;
+    }
+
     if (!event?.documentId || !userDocumentId) {
       return;
     }
@@ -935,6 +963,37 @@ function EventListContent({
     userData,
     userDocumentId,
   ]);
+
+  // AA01 — LA BASCULE DEPUIS UNE CARTE DE LISTE.
+  //
+  // Mesure du 2026-08-20 : la liste ne passait AUCUN `onDeleteParticipation` a
+  // ses cartes. Un joueur qui avait repondu « absent » y lisait donc l etiquette
+  // « Je serai absent·e » et n avait plus AUCUN bouton — la bascule n existait
+  // que sur la fiche. Le bouton « Modifier ma reponse » de la fiche et celui-ci
+  // partagent maintenant la meme decision pure (`resolveOwnAnswerAction`) : une
+  // seule regle, deux surfaces.
+  const handleEditAnswer = useCallback((/** @type {FCEvent} */ event) => {
+    const { kind } = resolveOwnAnswerAction({
+      // `participationRequests` n est pas declare sur `FCEvent` alors que l API
+      // le rend : le meme acces existe deja dans `EventAnswerButtons`.
+      activeEventParticipations: /** @type {any} */ (event)?.participationRequests,
+      event,
+      user: userData,
+    });
+
+    if (kind === OwnAnswerAction.switchToPresent && event?.documentId) {
+      respondToEventRsvpMutation.mutate({
+        answer: 'present',
+        eventId: event.documentId,
+      });
+      return;
+    }
+
+    // Annuler une participation demande une confirmation et la suppression de la
+    // ligne : tout cela vit deja sur la fiche. On y emmene plutot que d en
+    // ecrire une seconde version ici.
+    handleEventSelect(event);
+  }, [handleEventSelect, respondToEventRsvpMutation, userData]);
 
   const handleDeclineEvent = useCallback((/** @type {FCEvent} */ event) => {
     if (!event?.documentId) return;
@@ -1197,6 +1256,7 @@ function EventListContent({
       <EventCardNew
         item={item}
         onDecline={() => handleDeclineEvent(item)}
+        onEditAnswer={() => handleEditAnswer(item)}
         onJoin={() => handleJoinEvent(item)}
         onLogin={handleGoLogin}
         onParticipate={() => handleParticipateToEvent(item)}

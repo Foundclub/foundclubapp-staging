@@ -345,6 +345,9 @@ const resolveCapacityGauge = (eventItem, { isReservation, isTournamentEvent }) =
  * @param {Function} props.onJoin
  * @param {Function} props.onDecline
  * @param {Function} props.onParticipate
+ * @param {(item: any) => void} [props.onEditAnswer] - AA01 : changer une reponse deja donnee
+ *   depuis la carte (« Modifier ma reponse » / « Annuler ma participation »).
+ *   Sans lui, la carte n offre AUCUN bouton a qui a repondu « absent ».
  * @param {Function} props.onLogin
  * @param {string} [props.actionLabel] - Custom label for the action button (used in reservations)
  * @param {Function} [props.onRefuse]
@@ -361,6 +364,7 @@ function EventCardNew({
   item,
   mode = 'default',
   onDecline,
+  onEditAnswer,
   onJoin,
   onLogin,
   onParticipate,
@@ -609,6 +613,7 @@ function EventCardNew({
           hasPendingRequest={hasPendingRequest}
           onAbout={() => onPress?.(item)}
           onDecline={() => onDecline?.(item)}
+          onDeleteParticipation={onEditAnswer ? () => onEditAnswer(item) : undefined}
           onJoin={() => onJoin?.(item)}
           onLogin={onLogin}
           onParticipate={() => onParticipate?.(item)}
