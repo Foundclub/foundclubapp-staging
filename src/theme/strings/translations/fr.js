@@ -200,10 +200,23 @@ export default {
     INVALID_FILE_TYPE: 'Type de fichier invalide.',
 
     // Policy errors
-    CHAT_MESSAGE_NOT_FOUND_POLICY_ERROR: 'CHAT_MESSAGE_NOT_FOUND_POLICY_ERROR',
-    CHAT_MESSAGE_REPORT_NOT_FOUND_POLICY_ERROR: 'CHAT_MESSAGE_REPORT_NOT_FOUND_POLICY_ERROR',
-    CHAT_NOT_FOUND_POLICY_ERROR: 'CHAT_NOT_FOUND_POLICY_ERROR',
-    CLUB_MANAGER_CREATE_POLICY_ERROR: 'CLUB_MANAGER_CREATE_POLICY_ERROR',
+    // AB05 — CES QUATRE-LÀ AFFICHAIENT LEUR PROPRE CODE À L'ÉCRAN.
+    // Leur « traduction » était le nom de la constante, en majuscules :
+    // `CHAT_NOT_FOUND_POLICY_ERROR` s'affichait tel quel dans la fenêtre
+    // d'erreur. Ce n'est pas une phrase, c'est une fuite de plomberie —
+    // et c'est la seule famille de messages creux que ce lot répare, parce
+    // qu'elle est la seule qui ne demande aucune enquête par appelant.
+    // Chaque phrase dit ce qui manque, côté serveur, à l'endroit exact où le
+    // refus est posé.
+    //   `is-message-sender.ts` : le message n'existe pas, OU il n'est pas de toi
+    CHAT_MESSAGE_NOT_FOUND_POLICY_ERROR: 'Ce message n’existe plus, ou il n’est pas de toi.',
+    //   `can-report-message.ts` : le message signalé est introuvable
+    CHAT_MESSAGE_REPORT_NOT_FOUND_POLICY_ERROR: 'Ce message n’existe plus : il a peut-être été supprimé.',
+    //   `can-access-chat.ts` : la conversation est introuvable ou fermée pour toi
+    CHAT_NOT_FOUND_POLICY_ERROR: 'Cette conversation n’existe plus, ou tu n’en fais plus partie.',
+    //   `is-club-manager-create.ts` : la demande est partie SANS club (le code
+    //   n'est posé que dans ce cas-là — le refus de droit, lui, sort en 403 nu)
+    CLUB_MANAGER_CREATE_POLICY_ERROR: 'Cette action n’a pas pu identifier le club concerné. Réessaie depuis la fiche du club.',
     CLUB_MANAGER_POLICY_ERROR: 'Violation de la politique concernant les dirigeant·e·s du club.',
     CLUB_MEMBER_POLICY_ERROR: 'Violation de la politique concernant les membres du club.',
     CLUB_STAFF_CREATE_POLICY_ERROR: 'Violation de la politique de création de personnel du club.',
