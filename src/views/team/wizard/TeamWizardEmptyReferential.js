@@ -62,22 +62,43 @@ export const isReferentialEmpty = (query) => {
  * rien a cocher, le bouton principal N'ATTEND PLUS un choix, il CEDE SA PLACE a
  * la seule action qui fait avancer. ⛔ Surtout pas un petit lien « passer cette
  * etape » qu'il faut deviner — c'est exactement ce que V02 a retire.
+ *
+ * 🧨 AA03 — LE DEFAUT QUE CETTE FONCTION PORTAIT, ET QUI SE CORRIGEAIT ICI OU
+ * NULLE PART. Constat d'Adel du 2026-08-20 : « on ne peut pas creer d'equipe
+ * sans niveau, le bouton reste grise ». La cause tient dans le nom de la seule
+ * echappatoire que W06 avait posee — `isEmpty` : le code ne connaissait qu'une
+ * raison de ne rien choisir, « IL N'Y A RIEN A CHOISIR ». Il ne connaissait pas
+ * « JE NE VEUX RIEN CHOISIR ». Les deux menent pourtant au meme etat de donnees
+ * (le champ part `undefined`) et doivent mener au meme bouton.
+ *
+ * ✅ `isOptional` nomme la seconde raison. Il est porte par CHAQUE ETAPE, jamais
+ * decide ici : c'est l'etape qui sait si SON champ est facultatif. ⛔ Une etape
+ * qui ne le passe pas garde exactement le comportement d'avant.
  * @param {object} params Les entrees de la decision.
  * @param {boolean} params.hasSelection L'utilisateur a-t-il deja choisi une valeur ?
  * @param {boolean} params.isBlocked Chargement, erreur ou club manquant.
  * @param {boolean} params.isEmpty Sortie de `isReferentialEmpty`.
+ * @param {boolean} [params.isOptional] Le champ de CETTE etape est-il facultatif ?
  * @param {string} params.nextLabel Libelle normal du bouton.
- * @param {string} params.skipLabel Libelle quand il n'y a rien a choisir.
+ * @param {string} params.skipLabel Libelle quand on avance sans rien choisir.
  * @returns {{ isNextDisabled: boolean, nextLabel: string }} Les proprietes du gabarit.
  */
 export const getStepFooterProps = ({
   hasSelection,
   isBlocked,
   isEmpty,
+  isOptional = false,
   nextLabel,
   skipLabel,
 }) => {
   if (isEmpty) {
+    return { isNextDisabled: false, nextLabel: skipLabel };
+  }
+  // ⚠️ `isBlocked` reste au-dessus de `isOptional` : tant que la liste charge ou
+  // qu'elle a echoue, on ne sait pas encore ce qu'il y avait a choisir. Proposer
+  // « continuer sans » a cet instant ferait clignoter le bouton a chaque
+  // ouverture d'ecran, et ferait passer une panne pour un choix.
+  if (isOptional && !hasSelection && !isBlocked) {
     return { isNextDisabled: false, nextLabel: skipLabel };
   }
   return { isNextDisabled: !hasSelection || isBlocked, nextLabel };

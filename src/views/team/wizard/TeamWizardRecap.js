@@ -170,7 +170,7 @@ function TeamWizardRecap({ navigation }) {
 
   // W06 — UNE ETAPE PASSEE FAUTE DE REFERENTIEL NE DOIT PAS REBLOQUER ICI.
   // Les etapes 3 a 6 laissent desormais continuer quand leur liste globale est
-  // vide (voir `TeamWizardEmptyReferential`). Sans ces quatre echappatoires, le
+  // vide (voir `TeamWizardEmptyReferential`). Sans ces echappatoires, le
   // cul-de-sac ne serait pas repare : il se contenterait de se DEPLACER a la
   // derniere marche, apres huit ecrans remplis pour rien.
   // ⚠️ C'est bien une exigence de l'APP, pas du serveur : `section`, `category`,
@@ -178,28 +178,32 @@ function TeamWizardRecap({ navigation }) {
   // `team`, et `handleSubmit` poste deja `undefined` pour une valeur absente.
   const isActivityOptional = isReferentialEmpty(activitiesQuery);
   const isCategoryOptional = isReferentialEmpty(categoriesQuery);
-  const isLevelOptional = isReferentialEmpty(levelsQuery);
   const isSectionOptional = isReferentialEmpty(sectionsQuery);
 
+  // AA03 — LE NIVEAU A DISPARU DE CETTE LISTE, et c'est le vrai piege du lot :
+  // ouvrir l'etape 6/8 sans toucher a cette ligne n'aurait rien repare, ca
+  // aurait DEPLACE le mur de la 6e a la 8e marche — bouton « Creer l'equipe »
+  // gris, apres huit ecrans remplis pour rien. C'est exactement ce que W06
+  // decrivait deja pour le cas « referentiel vide ».
+  // ⛔ Les trois autres referentiels gardent leur regle : facultatifs SEULEMENT
+  // quand leur liste est vide, exiges sinon. Elles restent alignees, etape par
+  // etape, sur ce que `TeamWizardSection` / `Activity` / `Category` autorisent.
   const isRecapReady = useMemo(
     () => Boolean(
       selectedOverview.name
       && (selectedOverview.section || isSectionOptional)
       && (selectedOverview.activity || isActivityOptional)
       && (selectedOverview.category || isCategoryOptional)
-      && (selectedOverview.level || isLevelOptional)
       && selectedOverview.trainers.length > 0
       && selectedOverview.clubId,
     ),
     [
       isActivityOptional,
       isCategoryOptional,
-      isLevelOptional,
       isSectionOptional,
       selectedOverview.activity,
       selectedOverview.category,
       selectedOverview.clubId,
-      selectedOverview.level,
       selectedOverview.name,
       selectedOverview.section,
       selectedOverview.trainers.length,
