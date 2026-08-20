@@ -1996,6 +1996,30 @@ export default {
       },
     },
   },
+  invitationLink: {
+    club: {
+      body: 'Tu as reçu une invitation à rejoindre ce club. Envoyer ta demande ?',
+      primary: 'Voir le club',
+      title: 'Invitation à rejoindre un club',
+    },
+    event: {
+      body: "Tu as reçu une invitation pour un événement. Veux-tu l'ouvrir ?",
+      primary: "Voir l'événement",
+      title: 'Invitation à un événement',
+    },
+    eyebrow: 'Invitation',
+    invalid: {
+      body: "Ce lien d'invitation est incomplet ou périmé. Demande-en un nouveau.",
+      primary: "J'ai compris",
+      title: "Lien d'invitation invalide",
+    },
+    later: 'Plus tard',
+    team: {
+      body: 'Tu as reçu une invitation à rejoindre cette équipe. Envoyer ta demande ?',
+      primary: 'Envoyer ma demande',
+      title: 'Invitation à rejoindre une équipe',
+    },
+  },
   login: {
     actions: {
       login: 'Se connecter',
