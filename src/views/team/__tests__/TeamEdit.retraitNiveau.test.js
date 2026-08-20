@@ -20,9 +20,11 @@ import TeamEdit from '../TeamEdit';
 // lisaient `option.value` sans garde. Un seul d'entre eux a ete signale ; les
 // trois plantaient.
 //
-// ⚠️ CE QU'IL NE PROUVE PAS : que le formulaire ACCEPTE d'etre enregistre sans
-// niveau. Le schema Joi de l'ecran declare `level` obligatoire — c'est une
-// question de produit, pas un crash, et elle est remontee a part.
+// 🔓 MISE A JOUR AA03 (2026-08-20) — LA QUESTION LAISSEE OUVERTE ICI A ETE
+// TRANCHEE. R03 s'arretait a « le formulaire refuse d'etre enregistre sans
+// niveau, c'est une question de produit ». Adel l'a tranchee en recette D-20 :
+// une equipe a le droit de n'avoir aucun niveau. Le schema Joi de l'ecran ne
+// l'exige donc plus, et c'est le temoin 6 qui a change — comme annonce.
 
 const mockMutate = jest.fn();
 const mockInvalidateQueries = jest.fn();
@@ -336,21 +338,38 @@ describe('R03 · TeamEdit — retirer le niveau de l equipe', () => {
     expect(valeurAfficheeDu(champ)).toBe('');
   });
 
-  // ⚠️ CE QUE CES DEUX TEMOINS CONSTATENT — ils ne le corrigent pas.
+  // 🔓 AA03 A RETOURNE CE TEMOIN, ET C'EST VOULU.
   //
-  // Le crash repare, « retirer le niveau » ne ferme plus l'app, mais le retrait
-  // ne s'ENREGISTRE toujours pas : le schema Joi de l'ecran declare `level`
-  // obligatoire, donc le formulaire refuse d'envoyer. C'est une question de
-  // produit (« une equipe a-t-elle le droit de n'avoir aucun niveau ? »), pas un
-  // crash — elle est remontee au chef d'orchestre, pas tranchee ici.
+  // R03 l'avait ecrit a l'envers en toutes lettres : « ces deux temoins figent
+  // l'etat REEL du jour ; si quelqu'un ouvre la question, c'est le temoin 6 qui
+  // devra changer, et on verra pourquoi ». Le voici, et voici pourquoi.
   //
-  // Ces deux temoins figent l'etat REEL du jour. Si quelqu'un ouvre la question,
-  // c'est le temoin 6 qui devra changer, et on verra pourquoi.
-  it('temoin 6 — sans niveau, « Enregistrer » n envoie RIEN (Joi l exige)', async () => {
+  // Sans ce retournement, AA03 aurait creuse un trou : le tunnel laisserait
+  // creer une equipe sans niveau, et cet ecran-la refuserait ensuite TOUT
+  // enregistrement de cette equipe — pas meme un changement de nom. La
+  // validation Joi est en BLOC : une seule ligne rouge refuse le formulaire
+  // entier.
+  it('temoin 6 — sans niveau, « Enregistrer » ENVOIE, et sans le niveau', async () => {
     const arbre = monter();
 
     act(() => {
       setValueDu('level')(undefined);
+    });
+    await appuyerSurEnregistrer(arbre);
+
+    expect(mockMutate).toHaveBeenCalledTimes(1);
+    const envoi = mockMutate.mock.calls[0][0];
+    // ⛔ Ni chaine vide ni `null` : `undefined`, donc la clef disparait du corps
+    // envoye — c'est la forme que le serveur attend pour une relation absente.
+    expect(envoi.level).toBeUndefined();
+    expect(envoi).toMatchObject({ documentId: 'equipe-1', name: 'Seniors A' });
+  });
+
+  it('temoin 6 bis — 🔒 la categorie, elle, reste exigee (non-regression)', async () => {
+    const arbre = monter();
+
+    act(() => {
+      setValueDu('category')(undefined);
     });
     await appuyerSurEnregistrer(arbre);
 

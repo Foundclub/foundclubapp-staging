@@ -72,7 +72,16 @@ const teamSchema = Joi.object({
   city: Joi.string().allow('', null).optional(),
   description: Joi.string().allow('', null).optional(),
   geohash: Joi.string().allow('', null).optional(),
-  level: Joi.string().required(),
+  // AA03 — LE NIVEAU N'EST PLUS EXIGE ICI, et il fallait le faire dans le meme
+  // lot que le tunnel : sans ca, une equipe creee sans niveau n'aurait plus
+  // JAMAIS pu etre enregistree depuis cet ecran — pas meme pour corriger son
+  // nom. La validation Joi est en BLOC, une seule ligne rouge refuse tout le
+  // formulaire (« liste validee en bloc », 3 occurrences deja payees).
+  // Le lot R03 avait laisse la question ouverte noir sur blanc dans
+  // `TeamEdit.retraitNiveau.test.js` (temoin 6) : « si quelqu'un ouvre la
+  // question, c'est le temoin 6 qui devra changer ». AA03 l'ouvre, il change.
+  // ⛔ `category` et `section` restent exiges : eux n'ont pas ete ouverts.
+  level: Joi.string().allow('', null).optional(),
   name: Joi.string().required(),
   section: Joi.string().required(),
   teamMembershipApprovalEnabledForCoaches: Joi.boolean().required(),

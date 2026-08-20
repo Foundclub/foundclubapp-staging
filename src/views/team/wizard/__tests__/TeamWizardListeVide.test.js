@@ -253,6 +253,8 @@ const ETAPES = [
     cle: 'levels',
     Ecran: TeamWizardLevel,
     exemple: { documentId: 'niv-1', name: 'Loisir' },
+    // 🔓 AA03 — LA SEULE ETAPE OUVERTE : liste pleine ou vide, on peut passer.
+    facultative: true,
     numero: '6/8',
     passer: 'Continuer sans niveau',
     titre: 'Niveau',
@@ -356,13 +358,24 @@ describe('W06 — liste vide : l ecran propose une issue', () => {
 
 describe('W06 — liste pleine : rien ne change (non-regression)', () => {
   ETAPES.forEach(({
-    choix, Ecran, exemple, numero, titre,
+    choix, Ecran, exemple, facultative, numero, titre,
   }) => {
-    test(`etape ${numero} « ${titre} » — sans choix le bouton reste « Suivant » et GRIS`, () => {
+    // ⚠️ AA03 A FAIT BOUGER CE TEMOIN, VOLONTAIREMENT, POUR LA SEULE ETAPE
+    // « Niveau ». W06 figeait ici « sans choix = gris » pour les quatre etapes :
+    // c'etait l'etat du jour, pas une regle. Le constat d'Adel du 2026-08-20 dit
+    // que c'en etait le defaut. Les TROIS AUTRES etapes gardent la ligne d'avant,
+    // mot pour mot — c'est elle, la non-regression.
+    const attendu = facultative
+      ? { grise: false, libelle: 'Continuer sans niveau' }
+      : { grise: true, libelle: 'Suivant' };
+
+    const etat = attendu.grise ? 'GRIS' : 'ACTIF';
+
+    test(`etape ${numero} « ${titre} » — sans choix : « ${attendu.libelle} », ${etat}`, () => {
       const { gabarit, textes } = afficherLEtape(Ecran);
 
-      expect(gabarit.nextLabel).toBe('Suivant');
-      expect(gabarit.isNextDisabled).toBe(true);
+      expect(gabarit.nextLabel).toBe(attendu.libelle);
+      expect(gabarit.isNextDisabled).toBe(attendu.grise);
       expect(textes.join(' | ')).toContain(exemple.name);
     });
 

@@ -43,7 +43,20 @@ function TeamWizardLevel({ navigation }) {
     hasSelection: Boolean(state.level),
     isBlocked: isLoading || hasError,
     isEmpty: isListEmpty,
+    // AA03 — LA SEULE DES QUATRE ETAPES DE REFERENTIEL QUI S'OUVRE, et c'est
+    // mesure, pas suppose : `admin/src/api/team/content-types/team/schema.json`
+    // declare `level` en relation OPTIONNELLE (seul `name` porte
+    // `required: true`), et une equipe peut tres bien n'avoir aucun niveau de
+    // competition — un groupe loisir, une equipe qui vient de naitre, une
+    // section qui ne joue pas en championnat.
+    // ⛔ Section, Sport et Categorie NE sont PAS ouvertes ici : elles sont elles
+    // aussi facultatives au schema, mais elles IDENTIFIENT l'equipe, et les
+    // ouvrir est un choix de produit que personne n'a demande (§1 ter cas 3).
+    // Elles gardent donc, mot pour mot, le comportement d'avant.
+    isOptional: true,
     nextLabel: t('common.next', 'Suivant'),
+    // 🗝️ La clef garde son nom `skipEmpty` de W06 : elle porte deja le bon
+    // texte, et renommer une clef de traduction, c'est en supprimer une.
     skipLabel: t('teamWizard.steps.level.skipEmpty', 'Continuer sans niveau'),
   });
 
