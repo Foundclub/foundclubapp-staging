@@ -308,6 +308,25 @@ const buildEventFlow = (entity, context) => {
     blockedReason = 'Tu participes déjà à cet événement.';
   }
 
+  // AA01 (constat d Adel du 2026-08-20) — REPONDRE A SON EQUIPE N EST PAS
+  // DEMANDER A ENTRER.
+  //
+  // Un membre d une equipe conviee ne demande rien : il repond a une
+  // convocation. Sa reponse passe donc par la porte des REPONSES
+  // (`POST /events/:id/rsvp`), en UN geste, sans declaration de responsabilite —
+  // exactement ce que le bandeau de l accueil fait deja (`useHomeEventAnswer.js`,
+  // lot T02). `POST /event-participations`, lui, est la porte des DEMANDES : sur
+  // un evenement a validation manuelle il rendait la reponse « en attente », et
+  // « en attente » n entre ni dans `participations` ni dans `missings` cote
+  // serveur — a l ecran, « sans reponse ».
+  //
+  // 🔒 CE QUI GARDE LA DECHARGE, ET POURQUOI : tout le reste. Une DETECTION est
+  // nommee ici. Un evenement public et une seance d essai (joueur externe a un
+  // entrainement) n ont pas d equipe source, donc `isConvenedMember` y est deja
+  // faux. La declaration de responsabilite y est une protection juridique, pas
+  // une formalite : elle ne bouge pas.
+  const answersAsConvenedMember = isConvenedMember && !isDetection;
+
   let actionLabel = isClosed ? 'Present' : 'Participer';
   let confirmLabel = isClosed ? 'Confirmer ma présence' : 'Participer';
   if (isDetection) {
@@ -321,8 +340,8 @@ const buildEventFlow = (entity, context) => {
     canAct: !blockedReason,
     confirmLabel,
     kind: isClosed ? ParticipationFlowKind.eventClosed : ParticipationFlowKind.eventOpen,
-    submitMode: 'createEventParticipation',
-    usesConfirmationModal: true,
+    submitMode: answersAsConvenedMember ? 'rsvpPresent' : 'createEventParticipation',
+    usesConfirmationModal: !answersAsConvenedMember,
   };
 };
 

@@ -2291,11 +2291,25 @@ function EventDetails({ navigation, route }) {
       return;
     }
 
+    // AA01 — un membre d une equipe conviee REPOND, il ne demande pas : pas de
+    // declaration de responsabilite, et la porte des reponses. Voir le motif
+    // complet dans `participationFlow.js`.
+    if (currentParticipationFlow?.submitMode === 'rsvpPresent' && event?.documentId) {
+      // @ts-ignore: FIXME: Baseline TS regression
+      mutations.respondToEventRsvpMutation.mutate({
+        answer: 'present',
+        eventId: event.documentId,
+      });
+      return;
+    }
+
     setJoinModalError('');
     setIsJoinModalVisible(true);
   }, [
     currentParticipationFlow,
+    event?.documentId,
     event?.parentEvent?.documentId,
+    mutations.respondToEventRsvpMutation,
     handleBlockedParticipationFlow,
     handleOpenTournamentParticipationOptions,
     handleOpenTournamentTeam,
@@ -2465,10 +2479,26 @@ function EventDetails({ navigation, route }) {
           { style: 'cancel', text: t('eventDetails.modals.actions.cancel') },
           {
             onPress: () => {
-              if (!event?.documentId || !userData?.documentId) return;
-              mutations.createEventParticipationMutation.mutate({
-                event: event.documentId,
-                user: userData.documentId,
+              if (!event?.documentId) return;
+              // 🥇 AA01 — LA BASCULE DU CONSTAT D ADEL (2026-08-20).
+              //
+              // Cette ligne appelait `POST /event-participations`, la porte des
+              // DEMANDES : sur un evenement a validation manuelle, la reponse
+              // naissait « en attente », et « en attente » n entre ni dans
+              // `participations` ni dans `missings` cote serveur
+              // (`event-audience.ts:917`). L ecran affichait donc « sans
+              // reponse » — la reponse donnee etait perdue.
+              //
+              // 🎯 Une bascule est UN geste, par la porte des REPONSES.
+              // `applyRsvp` desactive l ancienne reponse AVANT d en creer une
+              // nouvelle et resynchronise les relations : il ne reste jamais
+              // absent ET present. ⛔ Surtout pas un rattrapage cote app
+              // (supprimer puis recreer) — deux appels, deux occasions de finir
+              // a moitie.
+              // @ts-ignore: FIXME: Baseline TS regression
+              mutations.respondToEventRsvpMutation.mutate({
+                answer: 'present',
+                eventId: event.documentId,
               });
               setIsJoinModalVisible(false);
             },

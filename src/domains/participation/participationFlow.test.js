@@ -170,6 +170,14 @@ describe('participationFlow', () => {
     const flow = resolveParticipationFlow(event, { user: internalUser });
 
     expect(flow.canAct).toBe(true);
-    expect(flow.submitMode).toBe('createEventParticipation');
+    // AA01 (2026-08-20) — cette ligne attendait `createEventParticipation`.
+    // Le sujet de ce temoin est l ELIGIBILITE du membre malgre le quota externe
+    // (`canAct`, ligne au-dessus) ; la porte n etait qu un detail de passage.
+    // Depuis AA01, un membre d une equipe conviee repond par la porte des
+    // REPONSES et sans declaration de responsabilite — il ne demande rien, il
+    // repond. Le detail est verrouille par
+    // `__tests__/basculeReponseAA01.test.js`.
+    expect(flow.submitMode).toBe('rsvpPresent');
+    expect(flow.usesConfirmationModal).toBe(false);
   });
 });

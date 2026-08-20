@@ -204,6 +204,23 @@ function EventAnswerButtons({
               variant="SecondaryLight"
             />
           )}
+          {/* AA01 — LE RETOUR DE LA BASCULE, DANS L AUTRE SENS.
+              Un membre qui avait dit « present » n avait plus qu un bouton :
+              « Annuler ma participation », qui le ramene a « sans reponse ».
+              Pour se declarer absent il fallait DEUX gestes, et le premier
+              effacait sa reponse entre-temps — exactement ce que le constat
+              d Adel du 2026-08-20 reproche a l autre sens.
+              🔒 Reserve au MEMBRE d une equipe conviee : `POST /events/:id/missing`
+              exige une equipe source (`event.ts:3068`) et refuserait un
+              participant venu du dehors. */}
+          {canAnswerAsMember ? (
+            <Button
+              onPress={onDecline}
+              style={Alignments.fullWidth}
+              title={t('eventList.actions.absent')}
+              variant="Secondary"
+            />
+          ) : null}
         </View>
       );
     }
