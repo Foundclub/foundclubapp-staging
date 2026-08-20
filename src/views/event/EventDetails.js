@@ -37,6 +37,7 @@ import {
   resolveParticipationFlow,
 } from '@/domains/participation/participationFlow';
 import { getSubscriptionQuotaItem, hasActiveClubOffer } from '@/domains/subscription/subscriptionDecision';
+import { hasLivingUser, withoutDeletedAccounts } from '@/domains/user/deletedAccount';
 import { getEventShowcaseTemplate, isEventShowcaseOffered } from '@/domains/visuals/eventShowcaseTemplate';
 import { withAlpha } from '@/theme/colors';
 import useTheme from '@/theme/themeContext';
@@ -387,12 +388,19 @@ const getUserKey = (user) => {
 };
 
 /**
+ * AA02 — LE POINT DE PASSAGE UNIQUE des listes de personnes de cet ecran.
+ *
+ * Presents, absents, sans reponse, joueurs d'equipe, participants externes,
+ * historique, candidats a la compo : TOUT remonte ici. Le tri des comptes
+ * supprimes est donc pose a UN seul endroit, pas recopie huit fois.
+ * `withoutDeletedAccounts` ecarte les deux trous possibles — la relation vide
+ * (`null`) et le fantome (compte anonymise et bloque par `deleteAccount`).
  * @param {User[]} [users]
  * @returns {User[]}
  */
 const uniqueUsers = (users = []) => {
   const map = new Map();
-  users.forEach((user) => {
+  withoutDeletedAccounts(users).forEach((user) => {
     const key = getUserKey(user);
     if (!key || map.has(key)) return;
     map.set(key, user);
@@ -1513,7 +1521,13 @@ function EventDetails({ navigation, route }) {
         deduped.set(key, participation);
       });
     });
-    return /** @type {EventParticipation[]} */ (Array.from(deduped.values()));
+    // AA02 — le SECOND point de passage unique : toutes les listes bati es sur
+    // une DEMANDE (`{ user }`) descendent d'ici — en attente, historique,
+    // reponse du joueur connecte. Une demande dont la personne n'existe plus
+    // n'a plus rien a montrer, et c'est vrai quel que soit son statut.
+    return /** @type {EventParticipation[]} */ (
+      Array.from(deduped.values()).filter((participation) => hasLivingUser(participation?.user))
+    );
   }, [event?.participationRequests, eventParticipations?.pages]);
 
   const activeEventParticipations = useMemo(
