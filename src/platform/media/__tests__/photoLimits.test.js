@@ -16,7 +16,9 @@ import {
 // | Cas                                        | JPEG q0.8 | PNG sans perte | Facteur |
 // | photo brute 4032x3024 (12 Mpx)             |  2,81 Mo  |    30,85 Mo    |   x11   |
 // | avatar réduit à 1000x1000                  |   237 Ko  |     2,53 Mo    |   x11   |
-// | re-capture view-shot, écran x3 (3000x3000) |  2,08 Mo  |    22,80 Mo    |   x11   |
+// | re-capture view-shot, iPhone x3 (3000x3000)|  2,08 Mo  |    22,80 Mo    |   x11   |
+// ⚠️ L'amplification x3 est propre à iOS (RNViewShot.mm l.113 capture à
+// l'échelle de l'écran) ; Android rend la taille demandée (ViewShot.java l.440).
 //
 // 🎯 CE QUE CE FICHIER GARDE, et pourquoi ce n'est PAS un test de constante :
 // aucun plafond du SERVEUR n'est atteignable par une photo (mesuré : greffon
@@ -102,9 +104,9 @@ describe('Y01 — la taille d une photo avant l envoi', () => {
   // 🚫 TÉMOIN N°4 : un fichier VRAIMENT trop gros est toujours refusé, et le
   // message dit la taille maximale.
   it('refuse un fichier vraiment trop gros en nommant le plafond', () => {
-    const recaptirePngEcranX3 = Math.round(22.8 * 1024 * 1024); // mesuré, cf. tableau
+    const recapturePngIphoneX3 = Math.round(22.8 * 1024 * 1024); // mesuré, cf. tableau
 
-    const refus = checkImageSize(recaptirePngEcranX3);
+    const refus = checkImageSize(recapturePngIphoneX3);
     expect(refus).not.toBe('');
     expect(refus).toContain('15 Mo');
     expect(refus).toBe(buildFileTooLargeMessage(MAX_UPLOAD_IMAGE_BYTES));

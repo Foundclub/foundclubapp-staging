@@ -22,10 +22,11 @@ import { getImageUrl } from '@/utils/imageUrl';
  * et le nom de la photo d'origine.
  *
  * 🎯 Y01 — et elle le réécrit désormais dans le MÊME format compressé que
- * l'original. En PNG sans perte, une photo de 237 Ko ressortait à ~2,5 Mo, et
- * jusqu'à 22,8 Mo sur un écran x3 (mesuré le 2026-08-19, facteur x11) : c'est
- * ce gonflement qui faisait refuser la photo prise à la caméra alors que la
- * même image choisie dans la galerie passait.
+ * l'original. En PNG sans perte, une photo de 237 Ko ressortait à ~2,5 Mo
+ * (facteur x11 mesuré le 2026-08-19), et jusqu'à 22,8 Mo sur un iPhone x3, où
+ * la capture se fait à l'échelle de l'écran. C'est ce gonflement qui faisait
+ * refuser la photo prise à la caméra alors que la même image choisie dans la
+ * galerie passait. Détail des mesures : `@/platform/media/photoLimits`.
  * @param {any} asset Asset rendu par la caméra.
  * @param {string} uri Chemin du fichier produit par la capture.
  * @param {number | undefined} tailleMesuree Taille RÉELLE du fichier produit.
@@ -222,9 +223,10 @@ function SelectAvatar({
     try {
       // 🎯 Y01 — MÊME format et MÊME compression que la photo d'origine.
       // `format: 'png'` + `quality: 1` re-fabriquaient l'image sans perte : la
-      // caméra rendait 237 Ko, la re-capture ressortait à 2,5 Mo (x11 mesuré),
-      // et jusqu'à 22,8 Mo sur un écran x3 où la vue de 1000 px est capturée à
-      // 3000 px. On garde le dé-miroir, on change ce qu'il produit.
+      // caméra rendait 237 Ko, la re-capture ressortait à 2,5 Mo (x11 mesuré).
+      // ⚠️ Sur iOS c'est bien pire : `RNViewShot.mm:113` capture À L'ÉCHELLE DE
+      // L'ÉCRAN, donc 1000 points deviennent 3000 pixels — 22,8 Mo mesurés.
+      // On garde le dé-miroir, on change ce qu'il produit.
       const uri = await captureRef(flipViewRef, {
         format: CAPTURE_FORMAT,
         height: flipSource.height,

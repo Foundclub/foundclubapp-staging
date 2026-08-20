@@ -283,8 +283,11 @@ describe('D36 — la photo prise a la CAMERA', () => {
 
   // 🥇 TEMOIN Y01 : la re-capture demande le MEME format compresse que la photo
   // d'origine. `format: 'png'` + `quality: 1` re-fabriquaient l'image sans
-  // perte — 237 Ko en entree, 2,53 Mo en sortie sur une vue de 1000 px, et
-  // jusqu'a 22,80 Mo sur un ecran x3 ou la vue est capturee a 3000 px.
+  // perte — 237 Ko en entree, 2,53 Mo en sortie sur une vue de 1000 px.
+  // ⚠️ Sur iOS c'est pire : RNViewShot.mm l.113 capture A L'ECHELLE DE L'ECRAN
+  // (`UIGraphicsBeginImageContextWithOptions(size, NO, 0)`), donc 1000 points
+  // deviennent 3000 pixels — 22,80 Mo mesures. Android ne fait pas cela
+  // (ViewShot.java l.440 : la taille demandee EST la taille finale).
   it('recapture en JPEG compresse, jamais en PNG sans perte', async () => {
     monterEtOuvrirLaFeuille();
     await appuyerSur('common.actions.photoFromCamera');

@@ -7,8 +7,15 @@
  * 📏 Ce qui a été MESURÉ le 2026-08-19 (sharp 0.34, image photo-réaliste) :
  *   - photo brute d'un téléphone récent, 4032x3024 : 2,81 Mo en JPEG q0.8 ;
  *   - la MÊME image en PNG sans perte : 30,85 Mo, soit **x11** ;
- *   - une re-capture `react-native-view-shot` d'une vue de 1000x1000 sur un
- *     écran x3 rend 3000x3000 : 2,08 Mo en JPEG q0.8, **22,80 Mo en PNG**.
+ *   - la re-capture `react-native-view-shot` d'une vue de 1000x1000 :
+ *     2,53 Mo en PNG sur Android, et **22,80 Mo sur un iPhone x3**.
+ *
+ * ⚠️ L'amplification x3 est PROPRE A iOS, et elle est vérifiée :
+ * `RNViewShot.mm:113` appelle `UIGraphicsBeginImageContextWithOptions(size, NO, 0)`
+ * — le `0` veut dire « à l'échelle de l'écran », donc 1000 points deviennent
+ * 3000 pixels. Android ne fait PAS cela : `ViewShot.java:440` appelle
+ * `Bitmap.createScaledBitmap(bitmap, width, height, true)`, où la taille
+ * demandée EST la taille finale.
  *
  * ⇒ Un avatar de 237 Ko ressortait à ~22 Mo parce que le dé-miroir C01 le
  * ré-encodait en PNG sans perte. AUCUN autre chemin ne redimensionnait avant
