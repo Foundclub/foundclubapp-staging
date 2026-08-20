@@ -31,6 +31,8 @@ import {
 import { getErrorMessage } from '@/utils/errors/displayError';
 import { resolveMediaUrl } from '@/utils/mediaUrl';
 
+import { PHOTO_PICKER_LIMITS } from '@/platform/media/photoLimits';
+
 const TEMPLATE_OPTIONS = ['standard_modal', 'hero_image_modal', 'critical_modal'];
 const TONE_OPTIONS = ['primary', 'league', 'critical'];
 const TRIGGER_OPTIONS = ['app_open', 'app_foreground', 'both'];
@@ -253,8 +255,8 @@ function AdminPopupCampaignForm() {
       const response = await launchImageLibrary({
         includeBase64: false,
         mediaType: 'photo',
-        quality: 0.8,
         selectionLimit: 1,
+        ...PHOTO_PICKER_LIMITS,
       });
 
       if (response?.didCancel) return;

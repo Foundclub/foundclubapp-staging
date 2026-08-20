@@ -26,6 +26,13 @@ export const pickDocument = async (options = {}) => selectFile(options.accept ||
 
 export const capturePhoto = async () => selectFile('image/*', { capture: 'environment' });
 
+/**
+ * Y01 — parité d'API avec le natif. Le navigateur ne fabrique aucun fichier
+ * temporaire : un `File` porte déjà sa taille, il n'y a rien à remesurer.
+ * @returns {Promise<undefined>} Toujours `undefined` : non mesuré.
+ */
+export const getLocalFileSize = async () => undefined;
+
 const getSupportedVoiceMimeType = () => {
   if (typeof MediaRecorder === 'undefined') return '';
 
@@ -134,6 +141,7 @@ export const recordVoiceNote = async () => {
 
 export default {
   capturePhoto,
+  getLocalFileSize,
   pickDocument,
   pickImage,
   recordVoiceNote,

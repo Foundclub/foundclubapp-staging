@@ -31,6 +31,8 @@ import client from '@/services/client';
 
 import { getErrorMessage } from '@/utils/errors/displayError';
 
+import { PHOTO_PICKER_LIMITS } from '@/platform/media/photoLimits';
+
 const SYSTEM_KEYS = new Set([
   'createdAt',
   'createdBy',
@@ -724,8 +726,8 @@ function SuperAdminEntryForm({ navigation, route }) {
       const response = await launchImageLibrary({
         includeBase64: false,
         mediaType: 'mixed',
-        quality: 0.8,
         selectionLimit: 1,
+        ...PHOTO_PICKER_LIMITS,
       });
 
       if (response?.didCancel) return;
@@ -756,7 +758,7 @@ function SuperAdminEntryForm({ navigation, route }) {
         cameraType: 'back',
         includeBase64: false,
         mediaType: 'photo',
-        quality: 0.8,
+        ...PHOTO_PICKER_LIMITS,
       });
 
       if (response?.didCancel) return;
