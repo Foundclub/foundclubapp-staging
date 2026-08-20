@@ -47,6 +47,7 @@ import EventTasksEditor from '../components/EventTasksEditor';
 import { useEventWizard } from './EventWizardContext';
 import {
   EVENT_WIZARD_RETURN_TO_RECAP,
+  getDefaultSessionStatusForEventType,
   getEventWizardRecapStepIndex,
   getEventWizardStepCount,
   hasCompletePerDayLocations,
@@ -258,7 +259,10 @@ const buildWizardFormData = (wizardState) => {
       ? format(new Date(wizardState.recurrenceStartDate), 'dd/MM/yyyy')
       : '',
     reservationMode: wizardState.reservationMode || 'FULL_GROUP',
-    sessionStatus: wizardState.sessionStatus || 'open',
+    // 🔒 AA10 ③ — le repli de la DERNIERE ligne avant le serveur suit le type,
+    // il ne rouvre pas l'evenement : un brouillon incomplet part prive.
+    sessionStatus: wizardState.sessionStatus
+      || getDefaultSessionStatusForEventType(wizardState?.type?.name),
     stageDefaultEndTime: wizardState.stageDefaultEndTime
       ? format(new Date(wizardState.stageDefaultEndTime), 'HH:mm')
       : '',
@@ -1516,9 +1520,14 @@ function EventWizardRecap({ navigation }) {
               onPress: () => openStepFromRecap(RouteNames.EventWizardOpponent),
               value: opponentSummary,
             }) : null}
-            {/* D08 : les invitations ne sont plus une etape du tunnel. Cette
+            {/* D08 : les invitations ne sont pas une etape du tunnel. Cette
                 rangee est le SEUL chemin vers `EventWizardInvites` — la
-                retirer rendrait l'ecran (1 474 lignes) injoignable. */}
+                retirer rendrait l'ecran (1 474 lignes) injoignable.
+                ⚠️ AA10 ② : « seul chemin » reste vrai pour tous les types SAUF
+                le match, ou l'ecran est devenu une etape numerotee. La rangee
+                ne bouge pas pour autant — elle reste le raccourci de tout le
+                monde, et le retour au Recap est assure par le billet
+                `EVENT_WIZARD_RETURN_TO_RECAP` que `push` depose. */}
             {renderAdvancedRow({
               isFirst: !isMatch,
               label: t('eventWizard.recap.advanced.invites', 'Invitations'),

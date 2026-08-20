@@ -2,6 +2,7 @@ import {
   getActiveStageScheduleDays,
   getEventWizardAccessStepIndex,
   getEventWizardDescriptionStepIndex,
+  getEventWizardInvitesStepIndex,
   getEventWizardLocationStepIndex,
   getEventWizardLogisticsStepIndex,
   getEventWizardOpponentStepIndex,
@@ -101,8 +102,10 @@ describe('D08 — getEventWizardStepCount : combien d etapes, par parcours', () 
   // 🎯 LA LIGNE QUE Y02 FAIT BOUGER, et la SEULE : 8 → 9, pour le match seul.
   // L'etape neuve est « Contre qui ? » (idee d'Adel du 2026-08-19). Aucun autre
   // parcours ne la traverse — c'est la non-regression du lot.
-  test('un match compte 9 etapes depuis Y02 : il a une etape « Contre qui ? »', () => {
-    expect(getEventWizardStepCount({ type: typeMatch })).toBe(9);
+  // 🔁 AA10 : 9 → 10. L'etape « Invitations », que D08 avait sortie de la chaine,
+  // y revient POUR LE MATCH SEUL (constat ② d'Adel du 2026-08-20).
+  test('un match compte 10 etapes depuis AA10 : « Contre qui ? » et « Invitations »', () => {
+    expect(getEventWizardStepCount({ type: typeMatch })).toBe(10);
   });
 
   test('un stage compte 8 etapes : il garde son programme, il gagne la fusion', () => {
@@ -169,7 +172,7 @@ const etatDetectionSansPostes = { ...etatDetectionAvecCreneaux, team: equipeSans
 
 describe('D58 — le compteur d etapes, un cas par type d evenement', () => {
   test.each([
-    ['match officiel', { type: typeMatch }, 9],
+    ['match officiel', { type: typeMatch }, 10],
     ['entrainement ouvert', { type: typeEntrainement }, 8],
     ['entrainement prive', etatEntrainementFerme, 7],
     ['stage', { type: typeStage }, 8],
@@ -203,10 +206,11 @@ describe('D58 — le compteur d etapes, un cas par type d evenement', () => {
     parcoursA8Maximum.forEach(
       (etat) => expect(getEventWizardStepCount(etat)).toBeLessThanOrEqual(8),
     );
-    // Les deux seuls a depasser 8, et chacun pour une raison nommee :
-    // le tournoi pour ses deux ecrans de reglages, le match pour son adversaire.
+    // Les deux seuls a depasser 8, et chacun pour une raison nommee : le
+    // tournoi pour ses deux ecrans de reglages, le match pour son adversaire
+    // (Y02) ET ses invitations (AA10).
     expect(getEventWizardStepCount({ type: typeTournoi })).toBe(10);
-    expect(getEventWizardStepCount({ type: typeMatch })).toBe(9);
+    expect(getEventWizardStepCount({ type: typeMatch })).toBe(10);
   });
 });
 
@@ -226,7 +230,7 @@ describe('D08 — la chaine est ecrite une seule fois, tout en decoule', () => {
 
   // Y02 : le match, c'est le meme parcours PLUS un ecran, glisse entre la date
   // et le lieu. Savoir qui l'on recoit aide a choisir ou l'on joue.
-  test('un match traverse 9 ecrans : « Contre qui ? » s intercale avant le lieu', () => {
+  test('un match traverse 10 ecrans : « Contre qui ? » puis « Invitations »', () => {
     expect(getEventWizardStepRoutes({ type: typeMatch })).toEqual([
       'EventWizardType',
       'EventWizardTeam',
@@ -234,6 +238,8 @@ describe('D08 — la chaine est ecrite une seule fois, tout en decoule', () => {
       'EventWizardOpponent',
       'EventWizardLocation',
       'EventWizardParticipants',
+      // AA10 ② : juste apres les participants, la ou se pense « qui vient ».
+      'EventWizardInvites',
       'EventWizardAccess',
       'EventWizardDescription',
       'EventWizardRecap',
@@ -247,13 +253,16 @@ describe('D08 — la chaine est ecrite une seule fois, tout en decoule', () => {
       });
   });
 
-  test('EventWizardInvites n appartient a AUCUN parcours', () => {
-    // Il reste enregistre et joignable depuis le Recap : c'est justement ce que
-    // prouve `eventWizardChain.test.js`. Il n'a simplement plus de numero.
-    [typeMatch, typeStage, typeTournoi, typeEntrainement, typeDetection]
+  // 🔁 AA10 a rouvert cette porte, mais POUR LE MATCH SEULEMENT. Partout
+  // ailleurs la regle de D08 tient : l'ecran reste enregistre et joignable
+  // depuis le Recap, sans numero d'etape.
+  test('EventWizardInvites n appartient qu au parcours MATCH', () => {
+    [typeStage, typeTournoi, typeEntrainement, typeDetection, typeAutre]
       .forEach((type) => {
         expect(getEventWizardStepRoutes({ type })).not.toContain('EventWizardInvites');
       });
+
+    expect(getEventWizardStepRoutes({ type: typeMatch })).toContain('EventWizardInvites');
   });
 
   test('le nombre d etapes est la longueur de la chaine, par construction', () => {
@@ -283,14 +292,19 @@ describe('D08 — a quelle place se trouve chaque ecran (index 1-BASE)', () => {
   };
 
   // Y02 : la colonne `match` est decalee de +1 a partir du LIEU, parce que
-  // « Contre qui ? » s'intercale en 4e position. Les colonnes des autres
-  // parcours n'ont pas bouge d'un chiffre.
+  // « Contre qui ? » s'intercale en 4e position.
+  // AA10 : elle est decalee de +1 DE PLUS a partir de l'ACCES, parce que
+  // « Invitations » s'intercale juste apres les participants. Les colonnes des
+  // autres parcours n'ont toujours pas bouge d'un chiffre.
   const attendu = {
     access: {
-      detection: 6, match: 7, stage: 6, standard: 6, tournoi: 8,
+      detection: 6, match: 8, stage: 6, standard: 6, tournoi: 8,
     },
     description: {
-      detection: 7, match: 8, stage: 7, standard: 7, tournoi: 9,
+      detection: 7, match: 9, stage: 7, standard: 7, tournoi: 9,
+    },
+    invites: {
+      detection: 0, match: 7, stage: 0, standard: 0, tournoi: 0,
     },
     location: {
       detection: 4, match: 5, stage: 4, standard: 4, tournoi: 4,
@@ -307,7 +321,7 @@ describe('D08 — a quelle place se trouve chaque ecran (index 1-BASE)', () => {
       detection: 5, match: 6, stage: 5, standard: 5, tournoi: 7,
     },
     recap: {
-      detection: 8, match: 9, stage: 8, standard: 8, tournoi: 10,
+      detection: 8, match: 10, stage: 8, standard: 8, tournoi: 10,
     },
     stageProgram: {
       detection: 0, match: 0, stage: 3, standard: 0, tournoi: 0,
@@ -323,6 +337,7 @@ describe('D08 — a quelle place se trouve chaque ecran (index 1-BASE)', () => {
   const fonctions = {
     access: getEventWizardAccessStepIndex,
     description: getEventWizardDescriptionStepIndex,
+    invites: getEventWizardInvitesStepIndex,
     location: getEventWizardLocationStepIndex,
     logistics: getEventWizardLogisticsStepIndex,
     opponent: getEventWizardOpponentStepIndex,

@@ -99,6 +99,41 @@ export const shouldSkipEventWizardParticipantsStep = (/** @type {any} */ state =
 );
 
 /**
+ * LA VISIBILITE DE DEPART D'UN EVENEMENT, TYPE PAR TYPE — AA10 (constat ③
+ * d'Adel du 2026-08-20 : « acces et visibilite : ca doit etre prive de base »).
+ *
+ * 🔒 Jusqu'a ce lot, TOUT evenement naissait `open`, c'est-a-dire DECOUVRABLE
+ * PAR TOUS (`admin/src/api/event/utils/event-visibility.js` :
+ * `buildPublicEventFilter` ne retient que `sessionStatus != closed`). Un match
+ * d'equipe cree sans y penser exposait donc sa composition et les noms de ses
+ * joueurs. Ce n'etait pas du confort, c'etait un reglage de confidentialite
+ * laisse ouvert.
+ *
+ * Le defaut est donc `closed` — SAUF pour deux types, et les deux exceptions
+ * sont mesurees, pas de principe :
+ *
+ * 1. DETECTION / SEANCE D'ESSAI. Son objet meme est d'attirer des joueurs qui
+ *    ne sont pas encore du club. Une detection privee ne trouve personne : le
+ *    reglage ne la protegerait pas, il la rendrait inutile.
+ * 2. TOURNOI. 🚨 Cote serveur, `assertCompetitionMutable`
+ *    (`admin/src/api/event/services/tournament-competition.js:307`) traite
+ *    `sessionStatus === 'closed'` comme « le tournoi est CLOTURE » et refuse
+ *    toute modification de la competition. Un tournoi prive des sa creation
+ *    naitrait donc fige, poules et tableau compris. Ce n'est pas une preference
+ *    d'affichage : c'est un blocage fonctionnel.
+ *
+ * ⛔ Ce defaut ne s'applique qu'a la CREATION. Il ne touche aucun evenement
+ * deja enregistre, et l'etape « Acces » reste le dernier mot de l'organisateur.
+ * @param {string} typeName Nom du type, tel que le serveur le rend.
+ * @returns {'open' | 'closed'} La visibilite de depart.
+ */
+export const getDefaultSessionStatusForEventType = (typeName = '') => {
+  if (isDetectionEventType(typeName)) return 'open';
+  if (isTournamentEventType(typeName)) return 'open';
+  return 'closed';
+};
+
+/**
  * LA CHAINE DU TUNNEL, ecrite UNE SEULE FOIS (D08).
  *
  * Avant ce lot, l'ordre des ecrans etait encode DEUX fois : ici sous forme de
@@ -107,9 +142,12 @@ export const shouldSkipEventWizardParticipantsStep = (/** @type {any} */ state =
  * de ce fichier — le nombre d'etapes, la place de chaque ecran, l'ecran suivant
  * — se deduit desormais de cette seule liste.
  *
- * `EventWizardInvites` n'y figure volontairement pas : il est sorti de la
- * chaine par D08 et se rejoint depuis le Recap. Il reste enregistre et
- * atteignable ; il n'a simplement plus de numero d'etape.
+ * `EventWizardInvites` n'y figure QUE POUR UN MATCH depuis AA10 (constat ② du
+ * 2026-08-20 : « il faut ici rajouter la case invitation […] ca existe deja
+ * dans le code, il faut juste le mettre au bon endroit »). Pour tous les autres
+ * types il reste ce qu'en avait fait D08 : hors chaine, sans numero d'etape,
+ * rejoint depuis le Recap. C'est la CHAINE qui le rend joignable, jamais un
+ * `navigate` ecrit a la main — sinon on recree le defaut que D08 a supprime.
  * @param {any} state Etat courant du tunnel.
  * @returns {string[]} Les ecrans traverses, dans l'ordre.
  */
@@ -140,6 +178,14 @@ export const getEventWizardStepRoutes = (state = {}) => {
 
   if (!shouldSkipEventWizardParticipantsStep(state)) {
     routes.push(RouteNames.EventWizardParticipants);
+  }
+
+  // AA10 ② — LES INVITATIONS, JUSTE APRES LES PARTICIPANTS, ET SEULEMENT POUR
+  // UN MATCH. C'est la que se pense « qui vient » : l'equipe d'abord, puis les
+  // autres equipes du club et leurs joueurs un par un. L'ecran existait deja et
+  // n'etait joignable que depuis le Recap, c'est-a-dire APRES avoir tout regle.
+  if (isMatchEventType(state?.type?.name)) {
+    routes.push(RouteNames.EventWizardInvites);
   }
 
   routes.push(
@@ -239,6 +285,19 @@ export const getEventWizardTournamentStructureStepIndex = (/** @type {any} */ st
 
 export const getEventWizardParticipantsStepIndex = (/** @type {any} */ state = {}) => (
   getEventWizardStepIndex(RouteNames.EventWizardParticipants, state)
+);
+
+/**
+ * La place de l'ecran « Invitations » — AA10.
+ *
+ * ⚠️ Il rend `0` quand l'ecran n'appartient pas au parcours courant (tout type
+ * autre qu'un match, ou l'ecran est ouvert depuis le Recap). L'appelant ne doit
+ * alors PAS afficher de compteur : « Étape 0/8 » serait un mensonge.
+ * @param {any} state Etat courant du tunnel.
+ * @returns {number} Le rang de l'ecran, ou 0 s'il est hors chaine.
+ */
+export const getEventWizardInvitesStepIndex = (state = {}) => (
+  getEventWizardStepIndex(RouteNames.EventWizardInvites, state)
 );
 
 export const getEventWizardStageProgramStepIndex = (/** @type {any} */ state = {}) => (

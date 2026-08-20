@@ -317,6 +317,12 @@ describe('D10 — etape 5 · Participants', () => {
   const ETAT_DETECTION = {
     date: new Date('2026-08-12T15:00:00.000Z'),
     endTime: new Date('2026-08-12T16:00:00.000Z'),
+    // 🔒 AA10 ③ — depuis ce lot, un evenement naît PRIVE et c'est `SET_TYPE` qui
+    // rouvre les deux types qui en ont besoin. Ce filet seme l'etat d'un seul
+    // coup (`SET_META`), il doit donc poser lui-meme ce que `SET_TYPE` aurait
+    // pose pour une detection : `open`. Sans cette ligne, on testerait un
+    // parcours qui n'existe pas dans l'application.
+    sessionStatus: 'open',
     startTime: new Date('2026-08-12T15:00:00.000Z'),
     team: EQUIPE,
     type: { documentId: 'type-detection', name: 'Detection' },
@@ -474,6 +480,12 @@ describe('D10 — etape 5 · Participants', () => {
 
 describe('D10 — etape 6 · Acces', () => {
   const ETAT_DETECTION = {
+    // 🔒 AA10 ③ — un evenement naît desormais PRIVE, et c'est `SET_TYPE` qui
+    // rouvre la detection (une detection privee ne trouverait personne). Ce
+    // filet seme d'un seul coup avec `SET_META` : il pose donc lui-meme ce que
+    // `SET_TYPE` aurait pose. Le temoin ci-dessous continue ainsi de decrire le
+    // parcours REEL d'une detection, defauts du pack compris.
+    sessionStatus: 'open',
     team: EQUIPE,
     type: { documentId: 'type-detection', name: 'Detection' },
   };

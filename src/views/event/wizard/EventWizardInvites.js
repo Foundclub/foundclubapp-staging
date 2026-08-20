@@ -37,7 +37,12 @@ import { getClubs } from '@/services/club/clubService';
 import { getTeams } from '@/services/team/teamService';
 
 import { useEventWizard } from './EventWizardContext';
-import { getEventWizardNextRoute } from './eventWizardDetectionUtils';
+import {
+  getEventWizardExitRoute,
+  getEventWizardInvitesStepIndex,
+  getEventWizardNextRoute,
+  getEventWizardStepCount,
+} from './eventWizardDetectionUtils';
 
 const getDocumentId = (value) => String(value?.documentId || value?.id || value || '').trim();
 
@@ -158,11 +163,18 @@ const MODE_CARD_CONTENT = {
 };
 
 /**
+ * L'etape « Invitations ».
  *
- * @param root0
- * @param root0.navigation
+ * AA10 ② — elle a DEUX vies depuis ce lot, et c'est la chaine qui tranche :
+ * pour un MATCH elle est une etape numerotee, juste apres les participants ;
+ * pour tout autre type elle reste ce qu'en avait fait D08, un ecran hors chaine
+ * ouvert depuis le Recap. D'ou le billet de retour et le compteur conditionnel
+ * ci-dessous : les deux se deduisent de `getEventWizardStepRoutes`, jamais d'un
+ * `navigate` ecrit a la main.
+ * @param {{ navigation: any, route: any }} props Proprietes d'ecran.
+ * @returns {import('react').ReactElement} L'etape rendue.
  */
-function EventWizardInvites({ navigation }) {
+function EventWizardInvites({ navigation, route }) {
   const {
     Alignments,
     ApplicationStyle,
@@ -624,15 +636,30 @@ function EventWizardInvites({ navigation }) {
     ]);
   };
 
+  // AA10 ② — le compteur ne s'affiche QUE quand l'ecran est une etape. Hors
+  // chaine, `getEventWizardInvitesStepIndex` rend 0 : passer 0 au gabarit
+  // afficherait « Étape 0/8 », c'est-a-dire un mensonge. `undefined` l'eteint.
+  const rangDansLaChaine = getEventWizardInvitesStepIndex(state);
+
+  // AA10 ② — la sortie de l'ecran. Hors chaine, `getEventWizardNextRoute` rend
+  // deja le Recap ; dans la chaine d'un match elle rend l'etape suivante, et
+  // c'est le billet de retour qui ramene au Recap quand c'est lui qui a ouvert.
+  const quitterVersLaSuite = () => {
+    navigation.navigate(getEventWizardExitRoute(
+      getEventWizardNextRoute(RouteNames.EventWizardInvites, state),
+      route?.params,
+    ));
+  };
+
   const handleNext = () => {
     dispatch({ payload: getInternalInvitedTeamIdsFromAudiences(internalAudiences), type: 'SET_INVITES' });
-    navigation.navigate(getEventWizardNextRoute(RouteNames.EventWizardInvites, state));
+    quitterVersLaSuite();
   };
 
   const handleSkip = () => {
     dispatch({ payload: [], type: 'SET_INVITES' });
     dispatch({ payload: [], type: 'SET_TEAM_AUDIENCES' });
-    navigation.navigate(getEventWizardNextRoute(RouteNames.EventWizardInvites, state));
+    quitterVersLaSuite();
   };
 
   const renderInviteModeCard = (mode, {
@@ -782,6 +809,8 @@ function EventWizardInvites({ navigation }) {
       onNext={handleNext}
       onSkip={handleSkip}
       showSkip={false}
+      stepCount={rangDansLaChaine > 0 ? getEventWizardStepCount(state) : undefined}
+      stepIndex={rangDansLaChaine > 0 ? rangDansLaChaine : undefined}
       subtitle={t(
         'eventWizard.steps.invites.subtitle',
         'Tu peux inviter des membres de ton club, une ou plusieurs équipes externes, ou les deux.',

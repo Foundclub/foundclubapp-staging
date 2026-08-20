@@ -13,6 +13,7 @@ import { RouteNames } from '@/navigation/routeNames';
 
 import { useEventWizard } from './EventWizardContext';
 import {
+  getDefaultSessionStatusForEventType,
   getEventWizardAccessStepIndex,
   getEventWizardExitRoute,
   getEventWizardNextRoute,
@@ -107,7 +108,11 @@ function EventWizardAccess({ navigation, route }) {
   const [participantIdentityVisibility, setParticipantIdentityVisibility] = useState(
     state.participantIdentityVisibility || 'VISIBLE',
   );
-  const [sessionStatus, setSessionStatus] = useState(state.sessionStatus || 'open');
+  // 🔒 AA10 ③ — le repli suit le TYPE, il ne rouvre pas l'evenement. Un
+  // `|| 'open'` ici annulerait le defaut prive au premier etat incomplet.
+  const [sessionStatus, setSessionStatus] = useState(
+    state.sessionStatus || getDefaultSessionStatusForEventType(state.type?.name),
+  );
   const [validationMode, setValidationMode] = useState(state.validationMode || 'auto');
   const [externalParticipantValidationMode, setExternalParticipantValidationMode] = useState(
     state.externalParticipantValidationMode || 'manual',
