@@ -47,6 +47,10 @@ import MediaPlatform from '@/platform/media';
 // U06 — la MEME liste de formats sur les trois ecrans de depot, et dans la
 // langue de la plateforme (UTI sur iOS, type MIME sur Android).
 import { getDocumentPickerOptions } from '@/platform/media/documentUploadFormats';
+// AA07 / K2 — « on doit pouvoir telecharger le document » (Adel, 20/08).
+// Jumeaux `.native` / `.web` : Metro resout le premier, Vite le second.
+// eslint-disable-next-line import/extensions, import/no-unresolved -- cf. ci-dessus
+import { downloadRemoteFile } from '@/platform/media/downloadRemoteFile';
 import SharePlatform from '@/platform/share';
 import { resolveMediaUrl } from '@/utils/mediaUrl';
 
@@ -253,25 +257,73 @@ function MyLicense({ navigation, route }) {
     }
   }, [assignmentId, documentMutation, refreshCurrent]);
 
-  const openUploadedDocument = useCallback(async (submission) => {
-    const url = resolveMediaUrl(submission?.file?.url || submission?.file?.formats?.thumbnail?.url || '');
+  // AA07 / K2 — UN SEUL ENDROIT QUI SAIT TROUVER LE FICHIER D UN DEPOT.
+  //
+  // 🧨 LE DEFAUT QUE CELA SUPPRIME : « Voir ma licence » s affichait sur
+  // `officialLicenseDocument.file.url` mais AGISSAIT sur
+  // `officialLicenseDocument.submission.file.url`. Deux chemins pour un seul
+  // bouton ⇒ des que le serveur remplit l un sans l autre, le bouton apparait
+  // et repond « Document indisponible ». C est la forme exacte du defaut
+  // rapporte par Adel : un bouton visible qui rend une erreur.
+  // ⇒ La condition d affichage et le geste lisent desormais LA MEME chose.
+  const fileUrlOf = useCallback((source) => resolveMediaUrl(
+    source?.file?.url
+    || source?.submission?.file?.url
+    || source?.file?.formats?.thumbnail?.url
+    || '',
+  ), []);
+
+  const openUploadedDocument = useCallback(async (source) => {
+    const url = fileUrlOf(source);
     if (!url) {
       Alert.alert('Document indisponible', 'Aucun fichier exploitable n est rattaché à ce dépôt.');
       return;
     }
     await LinksPlatform.openUrl(url);
-  }, []);
+  }, [fileUrlOf]);
+
+  // AA07 / K2 — LE TELECHARGEMENT, DEMANDE EXPLICITEMENT PAR ADEL.
+  // ⛔ Ce n est PAS un doublon d « Ouvrir » : ouvrir affiche le fichier dans le
+  // navigateur, telecharger le POSE dans le telephone (galerie ou
+  // telechargements sur Android, feuille de partage sur iOS). Les deux gestes
+  // portent donc deux libelles differents, parce qu ils font deux choses.
+  const downloadDocument = useCallback(async (source, fileName) => {
+    const url = fileUrlOf(source);
+    if (!url) {
+      Alert.alert('Document indisponible', 'Aucun fichier exploitable n est rattaché à ce dépôt.');
+      return;
+    }
+    try {
+      await downloadRemoteFile({ fileName, url });
+    } catch (error) {
+      // 🗣️ On NOMME la cause plutot que d afficher « une erreur ». Un refus
+      // muet est ce qu Adel a decrit : « ça rend une erreur ».
+      Alert.alert(
+        'Téléchargement impossible',
+        error?.message || 'Le document n a pas pu être enregistré sur ton téléphone.',
+      );
+    }
+  }, [fileUrlOf]);
 
   // T03 — le MODELE que le club met a disposition. Il vient de la DEMANDE
   // (`templateFile`), pas d un depot : c est le meme fichier pour tout le club,
   // et il ne passe jamais par `documentSubmissions`.
+  // AA07 / K2 — et il se TELECHARGE vraiment : le bouton s appelait deja
+  // « Telecharger le modele », mais il se contentait de l ouvrir.
   const openTemplateFile = useCallback(async (request) => {
     const url = resolveMediaUrl(request?.templateFile?.url || '');
     if (!url) {
       Alert.alert('Modèle indisponible', 'Le club n a pas encore déposé de modèle pour cette pièce.');
       return;
     }
-    await LinksPlatform.openUrl(url);
+    try {
+      await downloadRemoteFile({ fileName: request?.templateFile?.name || undefined, url });
+    } catch (error) {
+      Alert.alert(
+        'Téléchargement impossible',
+        error?.message || 'Le modèle n a pas pu être enregistré sur ton téléphone.',
+      );
+    }
   }, []);
 
   const generateReceiptForPayment = useCallback((paymentId) => {
@@ -470,7 +522,7 @@ function MyLicense({ navigation, route }) {
             <Text style={[Fonts.p1Bold, Fonts.neutral00]}>
               {officialLicenseDocument?.request?.name || 'Licence officielle'}
             </Text>
-            {officialLicenseDocument?.file?.url ? (
+            {fileUrlOf(officialLicenseDocument) ? (
               <>
                 <Text style={[Fonts.p2, Fonts.neutral200]}>
                   {officialLicenseDocument?.uploadedAt
@@ -478,8 +530,13 @@ function MyLicense({ navigation, route }) {
                     : 'Document disponible'}
                 </Text>
                 <Button
-                  onPress={() => openUploadedDocument(officialLicenseDocument.submission)}
-                  title="Voir ma licence"
+                  onPress={() => openUploadedDocument(officialLicenseDocument)}
+                  title="Ouvrir ma licence"
+                  variant="Secondary"
+                />
+                <Button
+                  onPress={() => downloadDocument(officialLicenseDocument, 'ma-licence')}
+                  title="Télécharger ma licence"
                   variant="Secondary"
                 />
               </>
@@ -537,22 +594,38 @@ function MyLicense({ navigation, route }) {
                         variant="Secondary"
                       />
                     ) : null}
+                    {/*
+                      AA07 / K2 — CHAQUE BOUTON DIT CE QU IL FAIT.
+                      Adel : « voir / valider / remplacer ne sont ni clairs ni
+                      comprehensibles ». « Ouvrir » tout court ne disait pas
+                      QUOI on ouvre, et « Deposer » ne disait pas OU ça va.
+                      ⛔ « Ouvrir » et « Telecharger » ne font pas la meme
+                      chose : le premier AFFICHE, le second POSE le fichier
+                      dans le telephone. Deux gestes, deux libelles.
+                    */}
                     <View style={{ flexDirection: 'row', gap: licenseSpacing.actionGap }}>
                       <Button
                         isLoading={documentMutation.isPending}
                         onPress={() => uploadDocument(request)}
                         style={{ flex: 1 }}
-                        title={submission ? 'Remplacer' : 'Deposer'}
+                        title={submission ? 'Remplacer mon fichier' : 'Envoyer mon fichier'}
                       />
-                      {submission?.file?.url ? (
+                      {fileUrlOf(submission) ? (
                         <Button
                           onPress={() => openUploadedDocument(submission)}
                           style={{ flex: 1 }}
-                          title="Ouvrir"
+                          title="Ouvrir le document"
                           variant="Secondary"
                         />
                       ) : null}
                     </View>
+                    {fileUrlOf(submission) ? (
+                      <Button
+                        onPress={() => downloadDocument(submission, request?.name || undefined)}
+                        title="Télécharger le document"
+                        variant="Secondary"
+                      />
+                    ) : null}
                   </View>
                 </LicenseCard>
               );

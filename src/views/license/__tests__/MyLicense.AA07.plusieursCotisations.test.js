@@ -74,6 +74,18 @@ jest.mock('@/components/atoms/button/Button', () => function ButtonMock(/** @typ
   return null;
 });
 
+// AA07 / K2 — `MyLicense` importe desormais le telechargement, dont le jumeau
+// natif charge `react-native-blob-util`. Ce paquet n est pas dans les
+// `transformIgnorePatterns` du projet : chaque test qui l atteint le mocke
+// lui-meme, exactement comme les 9 suites qui le faisaient deja
+// (useShareCard, visualRender, EventDetails*, SelectAvatar...).
+// ⛔ Motif prefere a un elargissement de `jest.config.js` : ce fichier sert les
+// 303 suites, et le toucher pour une seule serait un risque sans mesure.
+jest.mock('react-native-blob-util', () => ({
+  __esModule: true,
+  default: { config: jest.fn(), fs: { dirs: { CacheDir: '/cache' }, stat: jest.fn() } },
+}));
+
 jest.mock('@/platform/links', () => ({ __esModule: true, default: { openUrl: jest.fn() } }));
 jest.mock('@/platform/media', () => ({ __esModule: true, default: { pickDocument: jest.fn() } }));
 jest.mock('@/platform/share', () => ({ __esModule: true, default: { share: jest.fn() } }));
