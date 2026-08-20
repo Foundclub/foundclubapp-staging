@@ -10,6 +10,7 @@ export const resolveClubDetailsActionMatrix = ({
   clubHasTeams = false,
   hasParentMultisportClub = false,
   isAuthenticated = false,
+  isClubStaffRole = false,
   isMultisportAdmin = false,
   isParentClubAdmin = false,
   isPlayerRole = false,
@@ -102,10 +103,20 @@ export const resolveClubDetailsActionMatrix = ({
   // ces ecrans ne bouge. `showClubInterestAction` (l'interet POUR UNE EQUIPE)
   // reste, lui, reserve aux clubs qui en ont une — les deux ne se croisent
   // jamais.
+  //
+  // 🔒 Z01 (Adel, 2026-08-20) — `!isClubStaffRole` : cette porte est celle de
+  // quelqu'un qui ATTEND le club. Un dirigeant ou un entraineur ne l'attend pas,
+  // il peut le faire venir lui-meme — et c'est exactement ce que dit sa propre
+  // porte, juste au-dessus. Les deux ensemble se contredisaient.
+  // Le drapeau nomme le ROLE et non `!isPlayerRole`, parce que le compte SANS
+  // ROLE (40 comptes sur 118 en production au 2026-08-13) n'est ni l'un ni
+  // l'autre : lui garde ses deux portes, comme le joueur et comme le visiteur
+  // anonyme — Adel a valide leur cas le 2026-08-18.
   const showClubArrivalInterestAction = Boolean(
     canShowAffiliationAction
     && !clubHasTeams
     && !canEdit
+    && !isClubStaffRole
     && !isUserAlreadyAttachedToViewedClub
     && !(hasParentMultisportClub && isMultisportAdmin),
   );
