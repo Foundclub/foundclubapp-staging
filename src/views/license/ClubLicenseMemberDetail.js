@@ -32,6 +32,14 @@ import MediaPlatform from '@/platform/media';
 // U06 — la MEME liste de formats sur les trois ecrans de depot, et dans la
 // langue de la plateforme (UTI sur iOS, type MIME sur Android).
 import { getDocumentPickerOptions } from '@/platform/media/documentUploadFormats';
+// AA07 / K2 — jumeaux `.native` / `.web` : Metro resout le premier, Vite le
+// second. TypeScript, lui, ne connait pas les suffixes de plateforme et ne
+// voit aucun fichier a ce chemin exact — le meme motif ailleurs dans le
+// projet (`useShareCard.js`, `visualRender.native.js`) l esquive avec un
+// `@ts-nocheck` sur TOUT le fichier. Ici on ne le neutralise QUE sur cette
+// ligne : le reste de l ecran garde ses controles de type.
+// @ts-ignore -- resolution par suffixe de plateforme, cf. ci-dessus
+import { downloadRemoteFile } from '@/platform/media/downloadRemoteFile';
 import { resolveMediaUrl } from '@/utils/mediaUrl';
 
 import {
@@ -107,8 +115,21 @@ function ActionModal({
   const [amount, setAmount] = useState('');
   const [method, setMethod] = useState(methodOptions[0]?.mode || 'cash');
   const [note, setNote] = useState('');
+  const [motifManquant, setMotifManquant] = useState(false);
   const needsAmount = ['amount', 'payment', 'refund'].includes(type);
   const needsMethod = type === 'payment';
+  // AA07 / K2 — LE MOTIF ETAIT « OBLIGATOIRE » SANS L ETRE.
+  //
+  // 🎯 C EST TRES PROBABLEMENT « L ERREUR » D ADEL SUR « A remplacer ». Le
+  // serveur REFUSE la demande sans motif — `license.ts:2970` :
+  //   if ((nextStatus === 'refused' || 'to_replace') && !s(payload.reason))
+  //     throw new ValidationError('reason is required')
+  // …et l ecran affichait deja « Motif obligatoire » en invite, mais laissait
+  // valider a vide. Le geste partait, le serveur le rejetait, et l alerte
+  // GENERIQUE du client (`App.js:onMutationError`) affichait « une erreur »
+  // sans jamais dire laquelle. ⇒ On refuse AVANT l aller-retour, et on DIT
+  // pourquoi. Les 4 gestes concernes partagent la meme regle.
+  const needsReason = ['document-review', 'refund', 'reject', 'waive'].includes(type);
   return (
     <BottomModal
       close={onClose}
@@ -159,20 +180,34 @@ function ActionModal({
           </View>
         ) : null}
         <TextInput
-          onChangeText={setNote}
-          placeholder={['document-review', 'refund', 'reject', 'waive'].includes(type) ? 'Motif obligatoire' : 'Note optionnelle'}
+          onChangeText={(value) => { setNote(value); if (value.trim()) setMotifManquant(false); }}
+          placeholder={needsReason ? 'Motif obligatoire' : 'Note optionnelle'}
           placeholderTextColor={Colors.neutral400}
           style={{
-            borderBottomColor: Colors.neutral200, borderBottomWidth: 1, color: Colors.neutral00, paddingVertical: 12,
+            borderBottomColor: motifManquant ? '#fda4af' : Colors.neutral200,
+            borderBottomWidth: 1,
+            color: Colors.neutral00,
+            paddingVertical: 12,
           }}
           value={note}
         />
+        {motifManquant ? (
+          <Text style={[Fonts.p3, { color: '#fda4af' }]}>
+            Explique en un mot ce qui ne va pas : le membre recevra ce motif.
+          </Text>
+        ) : null}
         <View style={[Spaces.marginTop[8], { flexDirection: 'row', gap: licenseSpacing.actionGap }]}>
           <Button onPress={onClose} style={{ flex: 1 }} title="Annuler" variant="Secondary" />
           <Button
-            onPress={() => onSubmit({
-              amountCents: euroToCents(amount), method, note, reason: note,
-            })}
+            onPress={() => {
+              if (needsReason && !note.trim()) {
+                setMotifManquant(true);
+                return;
+              }
+              onSubmit({
+                amountCents: euroToCents(amount), method, note, reason: note,
+              });
+            }}
             style={{ flex: 1 }}
             title="Valider"
           />
@@ -301,7 +336,14 @@ function ClubLicenseMemberDetail({ route }) {
         reason: payload.reason,
         status: modal.reviewStatus || 'to_replace',
         submissionId: modal.submissionId,
-      }, common);
+      }, {
+        ...common,
+        // AA07 / K2 — la cause NOMMEE plutot que l alerte generique.
+        onError: (error) => Alert.alert(
+          'Demande non envoyée',
+          error?.message || 'Le serveur a refusé cette demande de remplacement.',
+        ),
+      });
     }
   }, [amountMutation, canUseSensitiveActions, canValidatePayment, manualPaymentMutation, modal, modalType, query, rejectPaymentMutation, refundMutation, reviewDocumentMutation, waiveMutation]);
 
@@ -370,13 +412,23 @@ function ClubLicenseMemberDetail({ route }) {
 
   const approveDocument = useCallback((submissionId) => {
     if (!canUseSensitiveActions) return;
-    Alert.alert('Valider le document', 'Confirmer que ce document est conforme ?', [
+    Alert.alert('Accepter ce document', 'Confirmer que ce document est conforme ?', [
       { style: 'cancel', text: 'Annuler' },
       {
         onPress: () => reviewDocumentMutation.mutate({ status: 'validated', submissionId }, {
-          onSuccess: () => query.refetch(),
+          // AA07 / K2 — un refus DIT sa cause. Sans ce `onError`, l alerte
+          // generique de `App.js` affichait « une erreur » et le dirigeant ne
+          // pouvait rien en faire — c est ce qu Adel a decrit.
+          onError: (error) => Alert.alert(
+            'Document non accepté',
+            error?.message || 'Le serveur a refusé cette acceptation. Réessaie dans un instant.',
+          ),
+          onSuccess: () => {
+            query.refetch();
+            Alert.alert('Document accepté', 'Le membre est prévenu que sa pièce est conforme.');
+          },
         }),
-        text: 'Valider',
+        text: 'Accepter',
       },
     ]);
   }, [canUseSensitiveActions, query, reviewDocumentMutation]);
@@ -390,14 +442,45 @@ function ClubLicenseMemberDetail({ route }) {
     });
   }, [query, receiptMutation]);
 
-  const openUploadedDocument = useCallback(async (submission) => {
-    const url = resolveMediaUrl(submission?.file?.url || submission?.file?.formats?.thumbnail?.url || '');
+  // AA07 / K2 — LE MEME DEFAUT QUE SUR `MyLicense`, ET C EST L ECRAN QU ADEL
+  // DECRIT (« voir / valider / remplacer », avec « ouvrir » qui marche).
+  // Le bouton « Voir la licence » s affichait sur `officialLicenseDocument.file.url`
+  // et agissait sur `officialLicenseDocument.SUBMISSION.file.url` : deux
+  // chemins pour un seul bouton. §1 bis — on corrige les DEUX appelants, pas
+  // seulement celui cite par le constat, sinon le frere reste casse.
+  const fileUrlOf = useCallback((/** @type {any} */ source) => resolveMediaUrl(
+    source?.file?.url
+    || source?.submission?.file?.url
+    || source?.file?.formats?.thumbnail?.url
+    || '',
+  ), []);
+
+  const openUploadedDocument = useCallback(async (/** @type {any} */ source) => {
+    const url = fileUrlOf(source);
     if (!url) {
       Alert.alert('Document indisponible', 'Aucun fichier exploitable n est rattaché à ce dépôt.');
       return;
     }
     await LinksPlatform.openUrl(url);
-  }, []);
+  }, [fileUrlOf]);
+
+  // AA07 / K2 — « on doit pouvoir telecharger le document » (Adel, 20/08).
+  // Le club aussi : c est lui qui archive les certificats medicaux.
+  const downloadDocument = useCallback(async (/** @type {any} */ source, /** @type {any} */ fileName) => {
+    const url = fileUrlOf(source);
+    if (!url) {
+      Alert.alert('Document indisponible', 'Aucun fichier exploitable n est rattaché à ce dépôt.');
+      return;
+    }
+    try {
+      await downloadRemoteFile({ fileName, url });
+    } catch (error) {
+      Alert.alert(
+        'Téléchargement impossible',
+        error?.message || 'Le document n a pas pu être enregistré sur ton téléphone.',
+      );
+    }
+  }, [fileUrlOf]);
 
   const submitOfficialLicenseFile = useCallback(async (picked) => {
     if (!canUseSensitiveActions || !assignmentId) return;
@@ -573,8 +656,19 @@ function ClubLicenseMemberDetail({ route }) {
             {officialLicenseDocument?.submission?.status ? (
               <LicenseStatusChip status={officialLicenseDocument.submission.status} />
             ) : null}
-            {officialLicenseDocument?.file?.url ? (
-              <Button onPress={() => openUploadedDocument(officialLicenseDocument.submission)} title="Voir la licence" variant="Secondary" />
+            {fileUrlOf(officialLicenseDocument) ? (
+              <>
+                <Button
+                  onPress={() => openUploadedDocument(officialLicenseDocument)}
+                  title="Ouvrir la licence"
+                  variant="Secondary"
+                />
+                <Button
+                  onPress={() => downloadDocument(officialLicenseDocument, 'licence-officielle')}
+                  title="Télécharger la licence"
+                  variant="Secondary"
+                />
+              </>
             ) : null}
             {canUseSensitiveActions ? (
               <Button
@@ -623,12 +717,37 @@ function ClubLicenseMemberDetail({ route }) {
                     <Text style={[Fonts.p3, Fonts.neutral200]}>
                       {submission ? `Dernière mise à jour ${documentDate(submission) || '-'}` : 'Aucun document déposé'}
                     </Text>
-                    {submission?.file?.url ? (
-                      <Button onPress={() => openUploadedDocument(submission)} title="Ouvrir le document" variant="Secondary" />
+                    {/*
+                      AA07 / K2 — CHAQUE BOUTON DIT CE QU IL FAIT.
+                      Adel : « voir / valider / remplacer ne sont ni clairs ni
+                      comprehensibles ». « Valider » ne disait pas valider QUOI
+                      (le document ? le paiement ? la cotisation ?) sur un ecran
+                      qui porte AUSSI un bouton « Valider » pour les paiements.
+                      « A remplacer » ne disait pas que ça previent le membre.
+                    */}
+                    {fileUrlOf(submission) ? (
+                      <View style={{ flexDirection: 'row', gap: licenseSpacing.actionGap }}>
+                        <Button
+                          onPress={() => openUploadedDocument(submission)}
+                          style={{ flex: 1 }}
+                          title="Ouvrir le document"
+                          variant="Secondary"
+                        />
+                        <Button
+                          onPress={() => downloadDocument(submission, request?.name)}
+                          style={{ flex: 1 }}
+                          title="Télécharger"
+                          variant="Secondary"
+                        />
+                      </View>
                     ) : null}
                     {canUseSensitiveActions && submission ? (
                       <View style={{ flexDirection: 'row', gap: licenseSpacing.actionGap }}>
-                        <Button onPress={() => approveDocument(submission.documentId || submission.id)} style={{ flex: 1 }} title="Valider" />
+                        <Button
+                          onPress={() => approveDocument(submission.documentId || submission.id)}
+                          style={{ flex: 1 }}
+                          title="Accepter ce document"
+                        />
                         <Button
                           onPress={() => setModal({
                             reviewStatus: 'to_replace',
@@ -636,7 +755,7 @@ function ClubLicenseMemberDetail({ route }) {
                             type: 'document-review',
                           })}
                           style={{ flex: 1 }}
-                          title="A remplacer"
+                          title="Demander un remplacement"
                           variant="Secondary"
                         />
                       </View>

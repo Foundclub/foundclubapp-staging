@@ -1818,8 +1818,10 @@ export default {
           title: 'Messagerie',
         },
         license: {
-          subtitle: 'Ton statut et ton reste à payer.',
-          title: 'Ma cotisation',
+          // AA07 / K1 — le PLURIEL, parce qu on peut cotiser dans plusieurs clubs
+          // et qu au singulier la case laissait croire qu il n y en avait qu une.
+          subtitle: 'Tes statuts et ton reste à payer.',
+          title: 'Mes cotisations',
         },
         planning: {
           subtitle: 'Retrouve tes événements à venir.',

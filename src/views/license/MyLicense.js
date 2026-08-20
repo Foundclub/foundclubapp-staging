@@ -47,6 +47,9 @@ import MediaPlatform from '@/platform/media';
 // U06 — la MEME liste de formats sur les trois ecrans de depot, et dans la
 // langue de la plateforme (UTI sur iOS, type MIME sur Android).
 import { getDocumentPickerOptions } from '@/platform/media/documentUploadFormats';
+// AA07 / K2 — « on doit pouvoir telecharger le document » (Adel, 20/08).
+// Jumeaux `.native` / `.web` : Metro resout le premier, Vite le second.
+import { downloadRemoteFile } from '@/platform/media/downloadRemoteFile';
 import SharePlatform from '@/platform/share';
 import { resolveMediaUrl } from '@/utils/mediaUrl';
 
@@ -117,7 +120,34 @@ function MyLicense({ navigation, route }) {
       || assignments[0],
     [assignments],
   );
-  const current = assignmentQuery.data || fallbackAssignment;
+  // AA07 / K1 — QUAND ON COTISE DANS PLUSIEURS CLUBS.
+  //
+  // 🗣️ Adel, recette du 20/08 : « si on en a plusieurs on n en voit qu une —
+  // impossible d atteindre l autre ». C etait exact : l ecran retenait
+  // `fallbackAssignment` et rien ne menait aux suivantes.
+  //
+  // 💡 CE QUI EXISTAIT DEJA, ET QU ON REUTILISE (§1 bis, barreau 2) : `/licenses/me`
+  // rend les affectations DEJA PEUPLEES (campagne, club, echeances, paiements,
+  // documents, recus — `license.ts:3382`). Basculer d une cotisation a l autre ne
+  // coute donc AUCUN appel reseau : c est un choix local dans une liste deja en
+  // main. ⛔ Ne pas rajouter de requete par cotisation.
+  const [selectedAssignmentId, setSelectedAssignmentId] = useState(null);
+  const selectedAssignment = useMemo(() => {
+    if (!selectedAssignmentId) return null;
+    return assignments.find(
+      (item) => String(item?.documentId || item?.id || '') === String(selectedAssignmentId),
+    ) || null;
+  }, [assignments, selectedAssignmentId]);
+  const current = selectedAssignment || assignmentQuery.data || fallbackAssignment;
+  const currentKey = String(current?.documentId || current?.id || '');
+  // ⛔ Le selecteur n apparait QUE s il y a vraiment un choix : une seule
+  // cotisation ne doit pas gagner une liste a un seul element.
+  const otherAssignments = useMemo(
+    () => assignments.filter(
+      (item) => String(item?.documentId || item?.id || '') !== currentKey,
+    ),
+    [assignments, currentKey],
+  );
   const assignmentId = current?.documentId || current?.id;
   const checkoutMutation = useLicenseMutation((provider) => createLicenseCheckout(assignmentId, { provider }), current?.campaign?.documentId || current?.campaign?.id);
   const declareMutation = useLicenseMutation((method) => declareExternalLicensePayment(assignmentId, { amountCents: current?.amountRemainingCents, method }), current?.campaign?.documentId || current?.campaign?.id);
@@ -226,25 +256,73 @@ function MyLicense({ navigation, route }) {
     }
   }, [assignmentId, documentMutation, refreshCurrent]);
 
-  const openUploadedDocument = useCallback(async (submission) => {
-    const url = resolveMediaUrl(submission?.file?.url || submission?.file?.formats?.thumbnail?.url || '');
+  // AA07 / K2 — UN SEUL ENDROIT QUI SAIT TROUVER LE FICHIER D UN DEPOT.
+  //
+  // 🧨 LE DEFAUT QUE CELA SUPPRIME : « Voir ma licence » s affichait sur
+  // `officialLicenseDocument.file.url` mais AGISSAIT sur
+  // `officialLicenseDocument.submission.file.url`. Deux chemins pour un seul
+  // bouton ⇒ des que le serveur remplit l un sans l autre, le bouton apparait
+  // et repond « Document indisponible ». C est la forme exacte du defaut
+  // rapporte par Adel : un bouton visible qui rend une erreur.
+  // ⇒ La condition d affichage et le geste lisent desormais LA MEME chose.
+  const fileUrlOf = useCallback((source) => resolveMediaUrl(
+    source?.file?.url
+    || source?.submission?.file?.url
+    || source?.file?.formats?.thumbnail?.url
+    || '',
+  ), []);
+
+  const openUploadedDocument = useCallback(async (source) => {
+    const url = fileUrlOf(source);
     if (!url) {
       Alert.alert('Document indisponible', 'Aucun fichier exploitable n est rattaché à ce dépôt.');
       return;
     }
     await LinksPlatform.openUrl(url);
-  }, []);
+  }, [fileUrlOf]);
+
+  // AA07 / K2 — LE TELECHARGEMENT, DEMANDE EXPLICITEMENT PAR ADEL.
+  // ⛔ Ce n est PAS un doublon d « Ouvrir » : ouvrir affiche le fichier dans le
+  // navigateur, telecharger le POSE dans le telephone (galerie ou
+  // telechargements sur Android, feuille de partage sur iOS). Les deux gestes
+  // portent donc deux libelles differents, parce qu ils font deux choses.
+  const downloadDocument = useCallback(async (source, fileName) => {
+    const url = fileUrlOf(source);
+    if (!url) {
+      Alert.alert('Document indisponible', 'Aucun fichier exploitable n est rattaché à ce dépôt.');
+      return;
+    }
+    try {
+      await downloadRemoteFile({ fileName, url });
+    } catch (error) {
+      // 🗣️ On NOMME la cause plutot que d afficher « une erreur ». Un refus
+      // muet est ce qu Adel a decrit : « ça rend une erreur ».
+      Alert.alert(
+        'Téléchargement impossible',
+        error?.message || 'Le document n a pas pu être enregistré sur ton téléphone.',
+      );
+    }
+  }, [fileUrlOf]);
 
   // T03 — le MODELE que le club met a disposition. Il vient de la DEMANDE
   // (`templateFile`), pas d un depot : c est le meme fichier pour tout le club,
   // et il ne passe jamais par `documentSubmissions`.
+  // AA07 / K2 — et il se TELECHARGE vraiment : le bouton s appelait deja
+  // « Telecharger le modele », mais il se contentait de l ouvrir.
   const openTemplateFile = useCallback(async (request) => {
     const url = resolveMediaUrl(request?.templateFile?.url || '');
     if (!url) {
       Alert.alert('Modèle indisponible', 'Le club n a pas encore déposé de modèle pour cette pièce.');
       return;
     }
-    await LinksPlatform.openUrl(url);
+    try {
+      await downloadRemoteFile({ fileName: request?.templateFile?.name || undefined, url });
+    } catch (error) {
+      Alert.alert(
+        'Téléchargement impossible',
+        error?.message || 'Le modèle n a pas pu être enregistré sur ton téléphone.',
+      );
+    }
   }, []);
 
   const generateReceiptForPayment = useCallback((paymentId) => {
@@ -315,6 +393,60 @@ function MyLicense({ navigation, route }) {
             {current?.campaign?.seasonLabel}
           </Text>
         </View>
+        {/*
+          AA07 / K1 — LES AUTRES COTISATIONS, NOMMEES ET ATTEIGNABLES.
+          Une carte par cotisation restante : le club qui la reclame, la saison,
+          son statut et le reste a payer. Le bouton DIT ou il mene (« Voir la
+          cotisation FC Nord ») plutot qu un « Voir » qui ne dit rien.
+        */}
+        {otherAssignments.length ? (
+          <>
+            <LicenseSectionHeader
+              description="Tu cotises dans plusieurs clubs. Choisis celle que tu veux consulter."
+              title="Mes cotisations"
+            />
+            <View style={Spaces.gap[licenseSpacing.listGap]}>
+              {otherAssignments.map((item) => {
+                const itemKey = String(item?.documentId || item?.id || '');
+                const itemClub = item?.club?.name || item?.campaign?.club?.name || 'Ton club';
+                const itemCurrency = item.currency || item?.campaign?.currency || 'EUR';
+                return (
+                  <LicenseCard key={itemKey} variant="muted">
+                    <View style={Spaces.gap[licenseSpacing.actionGap]}>
+                      <View style={{
+                        alignItems: 'flex-start',
+                        flexDirection: 'row',
+                        gap: licenseSpacing.actionGap,
+                        justifyContent: 'space-between',
+                      }}
+                      >
+                        <View style={[Spaces.gap[4], { flex: 1 }]}>
+                          <Text style={[Fonts.p1Bold, Fonts.neutral00]}>{itemClub}</Text>
+                          <Text style={[Fonts.p3, Fonts.neutral200]}>
+                            {item?.campaign?.seasonLabel
+                              || item?.campaign?.name
+                              || 'Saison en cours'}
+                          </Text>
+                        </View>
+                        <LicenseStatusChip status={item.status} />
+                      </View>
+                      <Text style={[Fonts.p3, Fonts.neutral200]}>
+                        Reste à payer:
+                        {' '}
+                        {formatLicenseMoney(item.amountRemainingCents, itemCurrency)}
+                      </Text>
+                      <Button
+                        onPress={() => setSelectedAssignmentId(itemKey)}
+                        title={`Voir la cotisation ${itemClub}`}
+                        variant="Secondary"
+                      />
+                    </View>
+                  </LicenseCard>
+                );
+              })}
+            </View>
+          </>
+        ) : null}
         <LicenseCard>
           <LicenseMetricRow
             items={[
@@ -391,7 +523,7 @@ function MyLicense({ navigation, route }) {
             <Text style={[Fonts.p1Bold, Fonts.neutral00]}>
               {officialLicenseDocument?.request?.name || 'Licence officielle'}
             </Text>
-            {officialLicenseDocument?.file?.url ? (
+            {fileUrlOf(officialLicenseDocument) ? (
               <>
                 <Text style={[Fonts.p2, Fonts.neutral200]}>
                   {officialLicenseDocument?.uploadedAt
@@ -399,8 +531,13 @@ function MyLicense({ navigation, route }) {
                     : 'Document disponible'}
                 </Text>
                 <Button
-                  onPress={() => openUploadedDocument(officialLicenseDocument.submission)}
-                  title="Voir ma licence"
+                  onPress={() => openUploadedDocument(officialLicenseDocument)}
+                  title="Ouvrir ma licence"
+                  variant="Secondary"
+                />
+                <Button
+                  onPress={() => downloadDocument(officialLicenseDocument, 'ma-licence')}
+                  title="Télécharger ma licence"
                   variant="Secondary"
                 />
               </>
@@ -458,22 +595,38 @@ function MyLicense({ navigation, route }) {
                         variant="Secondary"
                       />
                     ) : null}
+                    {/*
+                      AA07 / K2 — CHAQUE BOUTON DIT CE QU IL FAIT.
+                      Adel : « voir / valider / remplacer ne sont ni clairs ni
+                      comprehensibles ». « Ouvrir » tout court ne disait pas
+                      QUOI on ouvre, et « Deposer » ne disait pas OU ça va.
+                      ⛔ « Ouvrir » et « Telecharger » ne font pas la meme
+                      chose : le premier AFFICHE, le second POSE le fichier
+                      dans le telephone. Deux gestes, deux libelles.
+                    */}
                     <View style={{ flexDirection: 'row', gap: licenseSpacing.actionGap }}>
                       <Button
                         isLoading={documentMutation.isPending}
                         onPress={() => uploadDocument(request)}
                         style={{ flex: 1 }}
-                        title={submission ? 'Remplacer' : 'Deposer'}
+                        title={submission ? 'Remplacer mon fichier' : 'Envoyer mon fichier'}
                       />
-                      {submission?.file?.url ? (
+                      {fileUrlOf(submission) ? (
                         <Button
                           onPress={() => openUploadedDocument(submission)}
                           style={{ flex: 1 }}
-                          title="Ouvrir"
+                          title="Ouvrir le document"
                           variant="Secondary"
                         />
                       ) : null}
                     </View>
+                    {fileUrlOf(submission) ? (
+                      <Button
+                        onPress={() => downloadDocument(submission, request?.name || undefined)}
+                        title="Télécharger le document"
+                        variant="Secondary"
+                      />
+                    ) : null}
                   </View>
                 </LicenseCard>
               );

@@ -2302,8 +2302,10 @@ function HomeHubContent({ auth, navigation, route }) {
         icon: 'euroCircle',
         key: 'profile-license',
         onPress: handleOpenMyLicense,
-        subtitle: t('homeHub.cards.quick.license.subtitle', 'Ton statut et ton reste à payer.'),
-        title: t('homeHub.cards.quick.license.title', 'Ma cotisation'),
+        // AA07 / K1 — au PLURIEL : on peut cotiser dans plusieurs clubs, et
+        // « Ma cotisation » laissait croire qu il n y en avait qu une.
+        subtitle: t('homeHub.cards.quick.license.subtitle', 'Tes statuts et ton reste à payer.'),
+        title: t('homeHub.cards.quick.license.title', 'Mes cotisations'),
       });
     }
 
