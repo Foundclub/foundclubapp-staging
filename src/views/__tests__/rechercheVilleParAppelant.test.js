@@ -22,9 +22,11 @@ import SquadLocationStep from '@/views/team/createSquad/steps/SquadLocationStep'
 const mockSearchPlaces = jest.fn();
 const mockUpdateMe = jest.fn();
 
-// Mesure et non supposition : `profile.fields.city` n'existe PAS dans `fr.js`
-// (verifie en resolvant le module), donc c'est le repli passe a t() qui
-// s'affiche. Le texte reellement a l'ecran est bien celui qu'Adel a cite.
+// Mesure et non supposition : le texte a l'ecran est bien celui qu'Adel a cite.
+// ⚠️ AA11 (2026-08-20) a remonte `profile.fields.city.placeholder` dans `fr.js`
+// — il n'y etait pas, c'etait le repli passe a t() qui s'affichait. La valeur
+// est identique AU CARACTERE PRES, donc l'ecran n'a pas bouge ; ce commentaire
+// est corrige plutot que supprime, pour qu'il ne mente plus.
 const PLACEHOLDER_PROFIL = 'Rechercher une ville';
 const PLACEHOLDER_EQUIPE = 'Rechercher une ville...';
 const PLACEHOLDER_RECHERCHE = 'Rechercher...';
@@ -167,9 +169,20 @@ jest.mock('@/domains/auth/useAuth', () => ({
   }),
 }));
 
+// AA11 — cette doublure ne rendait que trois exports, et `ProfileEdit` tire
+// desormais la banniere de confirmation d'enregistrement. La chaine
+// `celebrationRuntime` -> `celebrationCatalog` -> `notificationTypes` lit
+// `NOTIFICATION_TYPES` A LA CHARGE DU MODULE (`notificationTypes.js:7`) : un
+// export manquant ne rate pas un test, il empeche la suite entiere de se
+// charger. On rend donc le VRAI catalogue de types, et rien d'autre ne change.
 jest.mock('@/domains/auth/authUseCases', () => ({
   getAuthTokens: () => ({ token: 'jeton' }),
+  getClubRoleKey: () => 'player',
+  getProfileClubs: (/** @type {any} */ utilisateur) => (
+    utilisateur?.club ? [utilisateur.club] : []
+  ),
   getUserRoleKey: () => 'player',
+  NOTIFICATION_TYPES: jest.requireActual('@/domains/auth/authUseCases').NOTIFICATION_TYPES,
   profileFieldToDisplay: () => [],
 }));
 

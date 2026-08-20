@@ -9,7 +9,12 @@ import {
   Alert, Image, ScrollView, Switch, Text, TouchableOpacity, View,
 } from 'react-native';
 
-import { getUserRoleKey, profileFieldToDisplay } from '@/domains/auth/authUseCases';
+import {
+  getClubRoleKey,
+  getProfileClubs,
+  getUserRoleKey,
+  profileFieldToDisplay,
+} from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
 import usePlaces from '@/domains/places/usePlaces';
 import { withAlpha } from '@/theme/colors';
@@ -17,6 +22,7 @@ import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
 import AutocompleteSelect from '@/components/molecules/autocompleteSelect/AutocompleteSelect';
+import ClubLogoMark from '@/components/molecules/clubLogoMark/ClubLogoMark';
 import Input from '@/components/molecules/input/Input';
 import SelectAvatar from '@/components/molecules/selectAvatar/SelectAvatar';
 // eslint-disable-next-line max-len
@@ -32,8 +38,13 @@ import {
 import { RouteNames } from '@/navigation/routeNames';
 
 import { updateMe } from '@/services/auth/authService';
+import { emitCelebrationBanner } from '@/services/celebrations/celebrationRuntime';
 import { useGetLevels } from '@/services/level/levelQueries';
 import { useGetPersonalStats } from '@/services/matchStats/matchStatsQueries';
+import {
+  buildProfileSaveConfirmation,
+  listChangedProfileFields,
+} from '@/services/profile/profileSaveConfirmation';
 import { useGetSections } from '@/services/section/sectionQueries';
 import { useGetMyHistories } from '@/services/userHistory/userHistoryQueries';
 
@@ -245,6 +256,10 @@ function SelfProfilePlayerCoach({ navigation }) {
   const { data: personalStats } = useGetPersonalStats(userId, { enabled: Boolean(userId) });
 
   const [avatar, setAvatar] = useState(/** @type {any} */ (undefined));
+  // AA11 — CE QUI VIENT DE CHANGER, pose juste avant l'envoi et lu seulement
+  // apres un succes. Un `ref` et pas un `state` : ecrire un etat ici
+  // relancerait un rendu du formulaire au moment ou on le soumet.
+  const pendingChangedFieldsRef = useRef(/** @type {string[]} */ ([]));
   const hydratedUserKeyRef = useRef(null);
   const hydratedSignatureRef = useRef('');
 
@@ -315,6 +330,24 @@ function SelfProfilePlayerCoach({ navigation }) {
           Array.isArray(query.queryKey) && query.queryKey[0] === 'app-bootstrap'
         ),
       });
+      // 🎉 AA11 — L'ORDRE COMPTE, exactement comme dans Y04 : on n'est ici que
+      // si `updateMe` n'a pas leve, donc le profil est REELLEMENT enregistre.
+      // ⛔ Rien de tout ceci n'existe dans `onError` : une felicitation sur un
+      // echec fait croire que c'est fait alors que ca ne l'est pas.
+      // La banniere s'efface toute seule (`AppFeedbackContext`) : on peut
+      // modifier trois champs d'affilee sans jamais fermer une fenetre.
+      const confirmation = buildProfileSaveConfirmation(pendingChangedFieldsRef.current, t);
+      pendingChangedFieldsRef.current = [];
+      if (confirmation) {
+        emitCelebrationBanner({
+          body: confirmation.body,
+          dedupeKey: `profile-save:${confirmation.body}`,
+          eyebrow: confirmation.eyebrow,
+          title: confirmation.title,
+          tone: 'success',
+          variant: 'banner',
+        });
+      }
     },
   });
 
@@ -360,6 +393,10 @@ function SelfProfilePlayerCoach({ navigation }) {
 
   // Sous-ligne du pack : « Seniors A · Stade Marseillais UC ». L'equipe implique
   // le club — fini « Aucun club renseigne » contredit par la carte Equipes.
+  // AA11 (D-26) — TOUS les clubs, pas seulement le premier. La liste vient de
+  // `getProfileClubs` : c'est la meme source que `getMemberClubIds`, mais elle
+  // garde les OBJETS, seul moyen de dessiner un ecusson et d'ecrire un nom.
+  const profileClubs = useMemo(() => getProfileClubs(userData), [userData]);
   const identitySubtitle = useMemo(() => {
     const teamName = (isPlayer ? playerTeams : coachedTeams)[0]?.name || '';
     const clubName = userData?.club?.name || '';
@@ -450,6 +487,14 @@ function SelfProfilePlayerCoach({ navigation }) {
         : Number.parseInt(data.jerseyNumber, 10);
     }
 
+    // AA11 — on compare la charge qui PART aux memes champs tels qu'ils etaient
+    // charges. C'est la seule facon de NOMMER ce qui a change sur un ecran qui
+    // reposte tout le formulaire a chaque enregistrement (fige par
+    // `ProfileEdit.caracterisation.test.js`, premier temoin).
+    pendingChangedFieldsRef.current = listChangedProfileFields(
+      { ...buildProfileFormValues(userData, formatBirthdateToDisplay), avatar: userData?.avatar },
+      { ...payload, birthdate: data.birthdate },
+    );
     updateUserMutation.mutate(payload);
   };
 
@@ -601,6 +646,47 @@ function SelfProfilePlayerCoach({ navigation }) {
               </View>
             ) : null}
           </View>
+
+          {/* ── AA11 (D-26) : MES CLUBS ─────────────────────────────────
+              « le joueur dans deux clubs, ca marche. Mais quand je regarde
+              dans mon profil, je ne vois que le premier club. »
+              ⚠️ A PARTIR DE DEUX, et c'est voulu : avec un seul club la
+              sous-ligne d'identite le nomme deja deux lignes plus haut, et
+              une liste d'un seul element ne serait que du bruit.
+              Le role est celui DE CE CLUB-LA (joueur ici, entraineur la) :
+              il se deduit des equipes, le serveur n'en envoie aucun. */}
+          {profileClubs.length > 1 ? (
+            <View style={{ gap: 8 }}>
+              <Text style={labelStyle}>{t('profile.clubs.title', 'Mes clubs')}</Text>
+              {profileClubs.map((club) => (
+                <View
+                  key={String(club?.documentId || club?.id || club?.name)}
+                  style={[Alignments.row, Alignments.alignCenter, { gap: 8 }]}
+                >
+                  <ClubLogoMark club={club} name={club?.name} size={28} />
+                  {/* Nom du club JAMAIS tronque, meme regle qu'au-dessus. */}
+                  <Text style={{
+                    color: Colors.neutral00,
+                    flex: 1,
+                    fontFamily: 'Montserrat-Bold',
+                    fontSize: 12.5,
+                  }}
+                  >
+                    {club?.name}
+                  </Text>
+                  <Text style={{
+                    color: Colors.neutral300, fontFamily: 'Montserrat-Bold', fontSize: 11,
+                  }}
+                  >
+                    {t(
+                      `profile.identity.roles.${getClubRoleKey(userData, club)}`,
+                      t('profile.identity.roles.new'),
+                    )}
+                  </Text>
+                </View>
+              ))}
+            </View>
+          ) : null}
         </View>
 
         {/* ── Voir mon profil comme les autres ───────────────────────── */}

@@ -2912,10 +2912,39 @@ export default {
         title: 'Limite atteinte',
       },
     },
+    // AA11 (D-26) — « le joueur dans deux clubs, ca marche. Mais quand je
+    // regarde dans mon profil, je ne vois que le premier club. » Ce bloc
+    // n'apparait qu'a partir de DEUX clubs : avec un seul, la sous-ligne
+    // d'identite le nomme deja, et une liste d'un element serait du bruit.
+    clubs: {
+      title: 'Mes clubs',
+    },
     fields: {
+      // AA11 — ces six libelles vivaient en REPLI dans le code des ecrans
+      // (`ProfileEdit.js`, `SelfProfilePlayerCoach.js`). Ils sont remontes ici
+      // sans changer d'un caractere : la confirmation d'enregistrement les
+      // nomme, et un mot d'ecran ne peut pas vivre a deux endroits.
+      avatar: {
+        label: 'Photo de profil',
+      },
+      bestLevel: {
+        label: 'Meilleur niveau',
+        placeholder: 'Sélectionner un niveau',
+      },
       birthdate: {
         label: 'Date de naissance',
         placeholder: 'JJ/MM/AAAA',
+      },
+      category: {
+        label: 'Catégorie',
+        placeholder: 'Sélectionner une catégorie',
+      },
+      city: {
+        label: 'Ville',
+        placeholder: 'Rechercher une ville',
+      },
+      email: {
+        label: 'Email',
       },
       firstname: {
         label: 'Prénom',
@@ -2924,6 +2953,10 @@ export default {
       height: {
         label: 'Taille (m)',
         placeholder: '1,80',
+      },
+      isLookingForClub: {
+        helper: 'Ton profil apparaît dans la recherche des clubs et des coachs.',
+        label: 'Profil visible',
       },
       jerseyNumber: {
         label: 'Numéro de maillot',
@@ -2945,6 +2978,10 @@ export default {
         label: 'Poste',
         placeholder: 'Ailier',
       },
+      preferredSport: {
+        label: 'Sport de préférence',
+        placeholder: 'Sélectionner un sport',
+      },
       section: {
         label: 'Section',
         placeholder: 'Sélectionner une section',
@@ -2952,6 +2989,9 @@ export default {
       sections: {
         female: 'Féminine',
         male: 'Masculine',
+      },
+      sportsHistory: {
+        label: 'Historique sportif',
       },
       types: {
         coach: 'Entraîneur·e',
@@ -2972,6 +3012,21 @@ export default {
         superAdmin: 'Administrateur',
       },
       roleWithClub: '{{role}} · {{club}}',
+    },
+    // AA11 — LA PHRASE QU'ADEL DEMANDE (« felicitations, votre (info) a ete
+    // modifiee »), et elle NOMME toujours ce qui a change. Le libelle insere
+    // vient de `profile.fields.*.label` ci-dessus : c'est le mot que la
+    // personne vient de lire au-dessus de sa saisie, jamais un synonyme.
+    // ⚠️ La tournure est volontairement IMPERSONNELLE (« la modification est
+    // bien enregistree ») : « ton » ou « ta » devant un libelle oblige a
+    // connaitre son genre, et « ton date de naissance » serait faux.
+    // Table des champs : `services/profile/profileSaveConfirmation.js`.
+    saveConfirmation: {
+      eyebrow: 'PROFIL',
+      many: '{{count}} informations de ton profil sont bien enregistrées.',
+      one: '{{field}} : la modification est bien enregistrée.',
+      title: 'C’est enregistré',
+      two: '{{first}} et {{second}} : les modifications sont bien enregistrées.',
     },
     sections: {
       account: 'Compte',

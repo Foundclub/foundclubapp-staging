@@ -29,7 +29,12 @@ import {
 } from '@/views/profile/profileFormContract';
 
 import { updateMe } from '@/services/auth/authService';
+import { emitCelebrationBanner } from '@/services/celebrations/celebrationRuntime';
 import { useGetLevels } from '@/services/level/levelQueries';
+import {
+  buildProfileSaveConfirmation,
+  listChangedProfileFields,
+} from '@/services/profile/profileSaveConfirmation';
 import { useGetSections } from '@/services/section/sectionQueries';
 
 import { getFieldError } from '@/utils/form/formUtils';
@@ -93,6 +98,11 @@ function ProfileEdit({ navigation, route }) {
     value: level.name,
   })) || [];
 
+  // AA11 — CE QUI VIENT DE CHANGER, pose juste avant l'envoi et lu seulement
+  // apres un succes. Un `ref` et pas un `state` : ecrire un etat ici
+  // relancerait un rendu du formulaire au moment ou on le soumet.
+  const pendingChangedFieldsRef = useRef(/** @type {string[]} */ ([]));
+
   const updateUserMutation = useMutation({
     mutationFn: updateMe,
     onError: () => {
@@ -115,6 +125,23 @@ function ProfileEdit({ navigation, route }) {
       await queryClient.invalidateQueries({
         predicate: (query) => Array.isArray(query.queryKey) && query.queryKey[0] === 'app-bootstrap',
       });
+      // 🎉 AA11 — CE QUI VIENT D'ETRE ENREGISTRE, NOMME. On n'est ici que si
+      // `updateMe` n'a pas leve : le profil est REELLEMENT a jour.
+      // ⛔ Rien de tout ceci dans `onError` : on ne felicite jamais un echec.
+      // La banniere est GLOBALE et survit au `goBack` ci-dessous — elle
+      // s'affiche donc sur l'ecran d'arrivee, la ou on regarde.
+      const confirmation = buildProfileSaveConfirmation(pendingChangedFieldsRef.current, t);
+      pendingChangedFieldsRef.current = [];
+      if (confirmation) {
+        emitCelebrationBanner({
+          body: confirmation.body,
+          dedupeKey: `profile-save:${confirmation.body}`,
+          eyebrow: confirmation.eyebrow,
+          title: confirmation.title,
+          tone: 'success',
+          variant: 'banner',
+        });
+      }
       navigation.goBack();
     },
   });
@@ -200,6 +227,14 @@ function ProfileEdit({ navigation, route }) {
         }
       }
 
+      // AA11 — on compare la charge qui PART aux memes champs tels qu'ils
+      // etaient charges : c'est la seule facon de NOMMER ce qui a change sur un
+      // formulaire qui reposte TOUT a chaque enregistrement (fige par
+      // `ProfileEdit.caracterisation.test.js`, premier temoin).
+      pendingChangedFieldsRef.current = listChangedProfileFields(
+        { ...buildProfileFormValues(userData, formatBirthdateToDisplay), avatar: userData?.avatar },
+        { ...data, avatar },
+      );
       updateUserMutation.mutate({
         address: data.address,
         avatar,
