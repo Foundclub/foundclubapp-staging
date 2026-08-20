@@ -35,6 +35,7 @@ import { getDocumentPickerOptions } from '@/platform/media/documentUploadFormats
 import { resolveMediaUrl } from '@/utils/mediaUrl';
 
 import {
+  canValidateAssignmentPayment,
   formatLicenseMoney,
   getEnabledManualPaymentMethods,
   LicenseCard,
@@ -218,8 +219,17 @@ function ClubLicenseMemberDetail({ route }) {
   // ⛔ Et la delegation ne donne QUE l encaissement. Modifier le montant,
   // exempter, rembourser restent des decisions de club : ils continuent de
   // dependre de `canUseSensitiveActions`, et le serveur les refuse au coach.
-  const canValidatePayment = canUseSensitiveActions || assignment?.canValidatePayments === true;
-  const [modal, setModal] = useState(null);
+  //
+  // Y06 — la regle a demenage dans `licenseDesignSystem` : la LISTE porte
+  // desormais le meme bouton, et elle doit obeir au MEME verdict.
+  const canValidatePayment = canValidateAssignmentPayment(assignment, canUseSensitiveActions);
+  // Y06 — LA LISTE OUVRE CETTE FENETRE-CI. Elle ne recopie pas le formulaire
+  // d encaissement : il n en existe qu un dans le depot, c est celui-la.
+  // ⛔ L etat initial ne donne aucun droit : le rendu de la fenetre reste garde
+  // par `canValidatePayment` plus bas — un lien fabrique a la main n ouvre rien.
+  const [modal, setModal] = useState(
+    route?.params?.openPaymentModal ? { type: 'payment' } : null,
+  );
   const manualPaymentMutation = useLicenseMutation((payload) => addManualLicensePayment(assignmentId, payload), campaignId);
   const approvePaymentMutation = useLicenseMutation(({ paymentId, ...payload }) => approveExternalLicensePayment(paymentId, payload), campaignId);
   const rejectPaymentMutation = useLicenseMutation(({ paymentId, ...payload }) => rejectExternalLicensePayment(paymentId, payload), campaignId);
