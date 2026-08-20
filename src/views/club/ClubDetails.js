@@ -51,6 +51,7 @@ import { createClubMembershipRequest } from '@/services/clubMembershipRequest/cl
 import { createClubRequest, getPendingClubCreationRequests } from '@/services/clubRequest/clubRequestService';
 import { useClubFacilityContext } from '@/services/facility/facilityQueries';
 import { getFacilitySections } from '@/services/facility/facilityService';
+import { resolveClubAffiliationRefusal } from '@/services/requests/clubAffiliationRefusal';
 import { createTeamMembershipRequest } from '@/services/teamMembershipRequest/teamMembershipRequestService';
 
 import {
@@ -391,9 +392,19 @@ function ClubDetails({ navigation, route }) {
   ), [userData?.clubMembershipRequests, clubId]);
 
   const createClubMembershipRequestMutation = useMutation({
+    // AB05 — même raison que pour `claimClubMutation` : un seul message par
+    // geste, et c'est celui qui dit pourquoi.
+    meta: { preventToastError: true },
     mutationFn: createClubMembershipRequest,
-    onError: () => {
+    onError: (err) => {
       setJoinRequestPending(false);
+      // 🔴 Avant ce lot, cette fonction ne faisait QUE la ligne du dessus :
+      // l'écran restait muet et laissait le filet global dire « Accès refusé. ».
+      Alert.alert(
+        t('common.error', 'Erreur'),
+        resolveClubAffiliationRefusal(err, t).message,
+        [{ text: t('common.ok', 'OK') }],
+      );
     },
     onSuccess: async () => {
       setJoinRequestPending(true);
@@ -578,12 +589,19 @@ function ClubDetails({ navigation, route }) {
   });
 
   const claimClubMutation = useMutation({
+    // AB05 — 🔇 le filet global de `queryClient.js` se tait sur ce geste : il
+    // fabriquait « Accès refusé. » pour tout 403, en PLUS de la fenêtre
+    // ci-dessous. Deux fenêtres pour un appui, et c'est la sienne — la moins
+    // informative des deux — qu'Adel a prise en photo le 2026-08-20.
+    meta: { preventToastError: true },
     mutationFn: claimClub,
     onError: (err) => {
+      // ⛔ Plus jamais `err.message` : le serveur envoie « Forbidden », en
+      // anglais, et ce n'est pas une raison — c'est le nom du mur.
       Alert.alert(
         t('common.error', 'Erreur'),
-        err.message || t('clubDetails.alerts.claimClub.error', 'Une erreur est survenue.'),
-        [{ text: 'OK' }],
+        resolveClubAffiliationRefusal(err, t).message,
+        [{ text: t('common.ok', 'OK') }],
       );
     },
     onSuccess: () => {

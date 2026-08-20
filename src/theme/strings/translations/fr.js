@@ -384,6 +384,22 @@ export default {
       submit: 'Envoyer ma demande',
       title: 'Ce club n’a pas encore d’équipe sur FoundClub',
     },
+    // AB05 — CE QUE DIT LA FENETRE QUAND « C’EST MON CLUB » EST REFUSÉ.
+    // Adel, 2026-08-20 : « il y a écrit "Accès refusé" sans expliquer pourquoi ».
+    // « Accès refusé » est un statut HTTP traduit, pas un motif : le filet global
+    // le fabrique pour TOUT 403, donc il ne peut rien apprendre à personne.
+    // Chaque phrase ci-dessous dit la RAISON puis la SORTIE, et jamais un code.
+    // La table qui les choisit vit dans `services/requests/clubAffiliationRefusal.js`.
+    refusal: {
+      alreadyAsked: 'Tu as déjà demandé ce club. Un administrateur FoundClub est en train de regarder ta demande.',
+      clubGone: 'Ce club n’existe plus. Reviens à la recherche pour en trouver un autre.',
+      noRole: 'Ton compte n’a pas encore de rôle. Termine ton inscription pour pouvoir dire qu’un club est le tien.',
+      sessionExpired: 'Ta session a expiré. Reconnecte-toi, puis renvoie ta demande.',
+      // ⛔ Le repli ne PRÉTEND RIEN SAVOIR : il dit ce qui s’est passé (rien
+      // n’est parti) et quoi faire. « Une erreur est survenue » ne fait ni l’un
+      // ni l’autre.
+      unknown: 'Ta demande n’est pas partie. Réessaie dans un instant.',
+    },
     titles: {
       activities: 'Sports',
       coachs: 'Nos entraîneur·e·s',

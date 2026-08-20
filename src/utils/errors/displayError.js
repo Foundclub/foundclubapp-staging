@@ -120,6 +120,31 @@ const resolveApiError = (errorInput) => {
 };
 
 /**
+ * Le CODE que le serveur a explicitement envoye, ou chaine vide.
+ *
+ * AB05 — ouvert a la lecture parce qu'un ecran qui veut dire POURQUOI a besoin
+ * de separer les deux : un code explicite est un motif, un statut HTTP n'est
+ * qu'un mur. `getApiErrorTranslation` fusionne les deux volontairement (un 403
+ * nu doit bien finir par dire quelque chose) ; qui veut trancher lit ce code-ci
+ * d'abord. ⛔ Aucun comportement ne change : c'est le meme lecteur qu'avant,
+ * simplement nomme.
+ * @param {any} errorInput
+ * @returns {string} Le code serveur, ou '' s'il n'y en a pas.
+ */
+export const getServerErrorCode = (errorInput) => extractErrorCode(errorInput);
+
+/**
+ * Le statut HTTP porte par l'erreur, ou `null`.
+ *
+ * AB05 — meme motif : l'ecran qui redige un refus a besoin de savoir s'il parle
+ * d'un 403 (droit manquant), d'un 404 (l'objet a disparu) ou d'un 401 (session
+ * finie). Ces trois-la ne se disent pas de la meme facon.
+ * @param {any} errorInput
+ * @returns {number | null} Le statut, ou null.
+ */
+export const getErrorStatus = (errorInput) => extractErrorStatus(errorInput);
+
+/**
  * Traduction francaise d'une erreur API, ou chaine VIDE si aucune ne correspond.
  *
  * A preferer a `getErrorMessage` partout ou l'appelant dispose deja d'un repli
