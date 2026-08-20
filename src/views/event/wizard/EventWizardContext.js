@@ -4,6 +4,8 @@ import {
 
 import safeJsonParse from '@/utils/safeJsonParse';
 
+import { getDefaultSessionStatusForEventType } from './eventWizardDetectionUtils';
+
 const EventWizardContext = createContext();
 const EVENT_WIZARD_STORAGE_KEY = 'fc:web:event-wizard';
 
@@ -85,7 +87,11 @@ const createInitialState = () => {
     eventTasks: [],
     opponentName: '',
     participantIdentityVisibility: 'VISIBLE',
-    sessionStatus: 'open',
+    // 🔒 AA10 ③ — UN BROUILLON D'EVENEMENT NAIT PRIVE. Le type n'est pas encore
+    // choisi a cet instant : on part donc du cote qui n'expose personne, et
+    // c'est `SET_TYPE` qui rouvre ensuite les deux types qui en ont besoin
+    // (detection, tournoi — voir `getDefaultSessionStatusForEventType`).
+    sessionStatus: 'closed',
     tournamentAllowCrossClubPlayers: false,
     tournamentAllowCustomTeams: true,
     tournamentBestThirdPlacesCount: 0,
@@ -209,6 +215,13 @@ function eventWizardReducer(state, action) {
       const isStage = isStageTypeName(action.payload?.name);
       const isTournament = isTournamentTypeName(action.payload?.name);
       const isMatch = isMatchTypeName(action.payload?.name);
+      // 🔒 AA10 ③ — la visibilite de depart suit le TYPE, et elle ne se
+      // recalcule que si le type a REELLEMENT change. Sans ce garde-fou,
+      // repasser par l'etape 1 sans rien y changer — ce que fait le Recap avec
+      // son lien « modifier » — effacerait un « Public » choisi a la main.
+      // Meme regle que `opponentName` juste en dessous.
+      const hasTypeChanged = String(action.payload?.documentId || '')
+        !== String(state?.type?.documentId || '');
       const nextState = {
         ...state,
         detectionSlots: [],
@@ -217,6 +230,9 @@ function eventWizardReducer(state, action) {
         // entrainement ») resterait accroche a l'evenement sans qu'aucun ecran
         // ne le montre plus.
         opponentName: isMatch ? state.opponentName : '',
+        sessionStatus: hasTypeChanged
+          ? getDefaultSessionStatusForEventType(action.payload?.name)
+          : state.sessionStatus,
         type: action.payload,
       };
 

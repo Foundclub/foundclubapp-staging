@@ -73,6 +73,40 @@ const getTypeDescription = (normalized) => {
 const CLE_MATCH_AMICAL = 'porte-match-amical';
 
 /**
+ * LE TYPE SERVEUR HOMONYME DE LA PORTE — masque depuis AA10 (constat ① d'Adel
+ * du 2026-08-20 : « il y a deux "Match amical", il faut garder celui des
+ * annonces »).
+ *
+ * 🎯 D'OU VIENT CE DOUBLON, exactement. Il n'est PAS au catalogue : les sept
+ * types semes au demarrage (`admin/src/data/event-types.json`) sont Detection,
+ * Entrainement, Stage, Tournoi, Match, Autre, Reservation. Celui-ci est
+ * FABRIQUE PAR LE SERVEUR, a la volee, la premiere fois qu'une annonce d'amical
+ * est acceptee — `resolveEventType`
+ * (`admin/src/api/friendly-match-ad/services/friendly-match-workflow.ts:144`)
+ * cherche un type nomme « Match amical » et le CREE s'il n'existe pas. C'est
+ * une ETIQUETTE de rangement, jamais un choix a proposer.
+ *
+ * 🧨 Et sa description etait fausse par accident : « match amical » CONTIENT
+ * « match », et `getTypeDescription` lit par contenance — la rangee heritait
+ * donc de « Rencontre de championnat ou de coupe ». C'est ce que montre la
+ * capture d'Adel.
+ *
+ * ⛔ POURQUOI ON MASQUE PLUTOT QUE DE SUPPRIMER COTE SERVEUR — et ce n'est pas
+ * de la prudence, c'est mesure :
+ *   1. Les evenements deja crees par une annonce acceptee POINTENT sur ce type.
+ *      Le supprimer les priverait de leur nom de type.
+ *   2. Il reviendrait tout seul : `resolveEventType` le recree a la premiere
+ *      annonce acceptee suivante, et le demarrage
+ *      (`admin/src/bootstrap/maintenance.js:764`) n'efface jamais un type.
+ * ⇒ Masquer la RANGEE ne retire donc rien a personne : le type existe toujours,
+ * les evenements gardent leur nom, seule la porte de creation se ferme.
+ *
+ * ⚠️ Egalite STRICTE, pas contenance : on ferme exactement cette rangee-la, et
+ * jamais un futur type que le serveur nommerait autrement.
+ */
+const TYPE_SERVEUR_MATCH_AMICAL = 'match amical';
+
+/**
  * Une rangee de l'etape 1 : soit un type servi par le serveur, soit la porte
  * « Match amical », qui n'en est pas un.
  * @typedef {object} RangeeDeType
@@ -189,6 +223,9 @@ function EventWizardType({ navigation, route }) {
 
     (eventTypes || []).forEach((type) => {
       const normalized = normalizeTypeLabel(type?.name);
+      // AA10 ① — le type serveur homonyme ne s'affiche pas : c'est la PORTE
+      // ci-dessus qu'Adel garde. Voir `TYPE_SERVEUR_MATCH_AMICAL`.
+      if (normalized === TYPE_SERVEUR_MATCH_AMICAL) return;
       rows.push({
         description: getTypeDescription(normalized),
         // Le pack grise « Reservation » : la capacite existe cote serveur, mais

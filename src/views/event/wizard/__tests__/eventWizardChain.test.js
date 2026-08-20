@@ -536,7 +536,12 @@ const destinationsDesLiensModifier = () => {
 };
 
 describe('D08 — la chaine reelle du tunnel, type par type', () => {
-  test('evenement standard : 8 ecrans, sans Invites, acces fusionne', () => {
+  // 🔒 AA10 ③ — 8 → 7 ECRANS, et c'est une CONSEQUENCE, pas un but : un
+  // entrainement naît desormais PRIVE, et la regle de D08
+  // (`shouldSkipEventWizardParticipantsStep`) saute l'etape Participants d'un
+  // entrainement prive. Le temoin juste en dessous garde l'autre moitie : repasse
+  // en Public, l'entrainement retrouve son etape.
+  test('evenement standard : 7 ecrans, prive par defaut depuis AA10', () => {
     // Y02 : le representant du parcours « standard » n'est plus le match — il a
     // desormais une etape de plus. Le test qui suit couvre le match a part.
     const marche = marcherDansLeTunnel({ nomDuType: 'Entrainement' });
@@ -547,18 +552,17 @@ describe('D08 — la chaine reelle du tunnel, type par type', () => {
       RouteNames.EventWizardTeam,
       RouteNames.EventWizardLogistics,
       RouteNames.EventWizardLocation,
-      RouteNames.EventWizardParticipants,
       RouteNames.EventWizardAccess,
       RouteNames.EventWizardDescription,
       RouteNames.EventWizardRecap,
     ]);
     expect(chaine).not.toContain(RouteNames.EventWizardInvites);
     expect(chaine).not.toContain(RouteNames.EventWizardOpponent);
-    expect(totalAnnonceALaFin(marche)).toBe(8);
+    expect(totalAnnonceALaFin(marche)).toBe(7);
   });
 
   // 🎯 Y02 — le parcours qui change de forme, marche pour de vrai.
-  test('match : 9 ecrans, avec « Contre qui ? » entre la date et le lieu', () => {
+  test('match : 10 ecrans — « Contre qui ? » puis « Invitations »', () => {
     const marche = marcherDansLeTunnel({ nomDuType: 'Match' });
     const { chaine } = marche;
 
@@ -569,11 +573,13 @@ describe('D08 — la chaine reelle du tunnel, type par type', () => {
       RouteNames.EventWizardOpponent,
       RouteNames.EventWizardLocation,
       RouteNames.EventWizardParticipants,
+      // AA10 ② — les invitations sont entrees dans la chaine, pour le match seul.
+      RouteNames.EventWizardInvites,
       RouteNames.EventWizardAccess,
       RouteNames.EventWizardDescription,
       RouteNames.EventWizardRecap,
     ]);
-    expect(totalAnnonceALaFin(marche)).toBe(9);
+    expect(totalAnnonceALaFin(marche)).toBe(10);
   });
 
   test('stage : 8 ecrans, et il GARDE son programme de stage', () => {
@@ -670,8 +676,10 @@ describe('D08 — la chaine reelle du tunnel, type par type', () => {
 // ---------------------------------------------------------------------------
 describe('D58 — chaque type traverse son parcours, et annonce son compte', () => {
   test.each([
-    ['Match', 9],
-    ['Entrainement', 8],
+    // AA10 : le match gagne « Invitations » (9 → 10), l'entrainement perd
+    // « Participants » parce qu'il naît prive (8 → 7).
+    ['Match', 10],
+    ['Entrainement', 7],
     ['Stage', 8],
     ['Tournoi', 10],
     ['Autre', 8],
@@ -685,7 +693,16 @@ describe('D58 — chaque type traverse son parcours, et annonce son compte', () 
   test('un entrainement OUVERT garde son etape Participants', () => {
     // Son jumeau ferme la saute (`shouldSkipEventWizardParticipantsStep`) : sans
     // ce cas, rien ne distinguait « saute a bon escient » de « saute toujours ».
-    const { chaine } = marcherDansLeTunnel({ nomDuType: 'Entrainement' });
+    // 🔒 AA10 : depuis que le defaut est PRIVE, c'est ce parcours-la qui doit
+    // etre seme a la main. C'est aussi le temoin qui prouve que l'etape n'a pas
+    // ete supprimee — seulement sautee quand elle n'a rien a demander.
+    const { chaine } = marcherDansLeTunnel({
+      avantDeMarcher: (dispatch) => dispatch({
+        payload: { sessionStatus: 'open' },
+        type: 'SET_META',
+      }),
+      nomDuType: 'Entrainement',
+    });
 
     expect(chaine).toContain(RouteNames.EventWizardParticipants);
   });
@@ -737,9 +754,10 @@ describe('D08 — les ecrans hors chemin standard restent ATTEIGNABLES', () => {
     expect(marcherDansLeTunnel({ nomDuType }).chaine).toContain(ecran);
   });
 
-  test('le Recap mene aux invitations — le SEUL chemin restant', () => {
+  test('le Recap mene aux invitations — le seul chemin hors match', () => {
     // D08 a sorti `EventWizardInvites` de la chaine. Si ce lien disparait,
-    // l'ecran (1 474 lignes) devient injoignable : c'est exactement la pire
+    // l'ecran (1 474 lignes) devient injoignable pour tous les types SAUF le
+    // match, ou AA10 en a refait une etape : c'est exactement la pire
     // regression du projet, du code que plus rien n'atteint.
     expect(destinationsDesLiensModifier()).toContain(RouteNames.EventWizardInvites);
   });
@@ -754,7 +772,7 @@ describe('D08 — les ecrans hors chemin standard restent ATTEIGNABLES', () => {
 
 describe('D08 — les positions annoncees a l ecran suivent la chaine reelle', () => {
   test.each([
-    ['Match', 9],
+    ['Match', 10],
     ['Stage', 8],
     ['Tournoi', 10],
     ['Detection', 8],
