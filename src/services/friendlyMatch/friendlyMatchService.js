@@ -146,17 +146,25 @@ const normalizeFriendlyMatchCollection = (items) => (
 
 /**
  * La candidature de MES equipes sur une annonce donnee, s il y en a une.
+ *
+ * Y04 — `scope.clubId` ouvre le meme calcul au staff d un CLUB. Un dirigeant
+ * qui n entraine aucune equipe n a aucun `teamId` : sans cette seconde porte,
+ * sa propre candidature ne se reconnait pas et disparait. La relation
+ * `applications.team.club` est deja peuplee par AD_OWNER_POPULATE.
  * @param {any} ad
  * @param {any} teamIds
+ * @param {{ clubId?: string }} [scope]
  * @returns {any | null}
  */
-export const findMyApplicationOnAd = (ad, teamIds) => {
+export const findMyApplicationOnAd = (ad, teamIds, scope = {}) => {
   const wantedTeamIds = new Set(normalizeDocumentIds(teamIds));
-  if (wantedTeamIds.size === 0) return null;
+  const wantedClubId = String(scope?.clubId || '').trim();
+  if (wantedTeamIds.size === 0 && !wantedClubId) return null;
 
   const applications = Array.isArray(ad?.applications) ? ad.applications : [];
   return applications.find((/** @type {any} */ application) => (
     wantedTeamIds.has(getDocumentKey(application?.team))
+    || (Boolean(wantedClubId) && getDocumentKey(application?.team?.club) === wantedClubId)
   )) || null;
 };
 
@@ -236,18 +244,33 @@ export const getFriendlyMatchAd = async (adId) => {
 
 /**
  * Les annonces publiees par mes equipes, actives ou non.
- * @param {{ authorDocumentId?: string, teamIds?: any }} [filters]
+ * @param {{ authorDocumentId?: string, clubId?: string, teamIds?: any }} [filters]
  * @returns {Promise<any[]>}
  */
 export const getMyFriendlyMatchAds = async (filters = {}) => {
   const teamIds = normalizeDocumentIds(filters.teamIds);
+  const clubId = String(filters.clubId || '').trim();
   const authorDocumentId = String(filters.authorDocumentId || '').trim();
   const requestFilters = /** @type {any} */ ({});
 
+  // Y04 — LES DEUX PORTES, et le `$or` n est pas du confort. `teamIds` porte les
+  // equipes qu on ENTRAINE ; `clubId` porte celles qu on GERE. Un dirigeant qui
+  // n entraine rien n avait aucune des deux, et R02 avait mesure le resultat :
+  // source coupee avant tout appel, zero annonce, zero erreur, zero trace.
+  // Une equipe entrainee peut appartenir a un AUTRE club que le sien : les deux
+  // conditions s additionnent, elles ne se remplacent pas.
+  const teamConditions = [];
   if (teamIds.length > 0) {
-    requestFilters.team = {
-      documentId: teamIds.length === 1 ? teamIds[0] : { $in: teamIds },
-    };
+    teamConditions.push({ documentId: teamIds.length === 1 ? teamIds[0] : { $in: teamIds } });
+  }
+  if (clubId) {
+    teamConditions.push({ club: { documentId: clubId } });
+  }
+
+  if (teamConditions.length === 1) {
+    [requestFilters.team] = teamConditions;
+  } else if (teamConditions.length > 1) {
+    requestFilters.$or = teamConditions.map((condition) => ({ team: condition }));
   } else if (authorDocumentId) {
     requestFilters.author = { documentId: authorDocumentId };
   } else {
@@ -274,24 +297,45 @@ export const getMyFriendlyMatchAds = async (filters = {}) => {
  * (friendly-match-ad-custom.applications). On interroge donc les annonces par
  * leurs candidatures — meme mecanisme que le repli de getMyApplications dans
  * recruitmentService.
+ * ⚠️ Y04 — CE FILTRE TRAVERSE `applications`, ET C EST CE QUI LE FAISAIT ECHOUER.
+ * Strapi 5 exige l action `<cible>.find` du role des qu une requete AUTHENTIFIEE
+ * traverse une relation EN FILTRES (@strapi/utils 5.38,
+ * validate/index.js:159-162 -> visitors/throw-restricted-relations.js). Sans
+ * `api::friendly-match-application.friendly-match-application.find`, la reponse
+ * est un **400 « Invalid key applications »**, jamais un 403 — et comme cet
+ * appel partageait un `Promise.all` avec `getMyFriendlyMatchAds`, il emportait
+ * AUSSI les propositions RECUES. Droit accorde cote serveur par S01 (admin
+ * b2261de). Le `populate`, lui, n a jamais leve : `validateQuery` appelle
+ * `validatePopulate` SANS `auth` (:169) — une relation interdite y est
+ * silencieusement retiree de la reponse, elle ne la refuse pas.
  * @param {any} teamIds
+ * @param {{ clubId?: string }} [scope]
  * @returns {Promise<any[]>}
  */
-export const getMyFriendlyMatchApplications = async (teamIds) => {
+export const getMyFriendlyMatchApplications = async (teamIds, scope = {}) => {
   const normalizedTeamIds = normalizeDocumentIds(teamIds);
-  if (normalizedTeamIds.length === 0) return [];
+  const clubId = String(scope?.clubId || '').trim();
+  if (normalizedTeamIds.length === 0 && !clubId) return [];
+
+  const teamConditions = [];
+  if (normalizedTeamIds.length > 0) {
+    teamConditions.push({
+      documentId: normalizedTeamIds.length === 1
+        ? normalizedTeamIds[0]
+        : { $in: normalizedTeamIds },
+    });
+  }
+  if (clubId) {
+    teamConditions.push({ club: { documentId: clubId } });
+  }
+
+  const applicationsFilter = teamConditions.length === 1
+    ? { applications: { team: teamConditions[0] } }
+    : { $or: teamConditions.map((condition) => ({ applications: { team: condition } })) };
 
   const response = await client.get('/friendly-match-ads', {
     params: {
-      filters: {
-        applications: {
-          team: {
-            documentId: normalizedTeamIds.length === 1
-              ? normalizedTeamIds[0]
-              : { $in: normalizedTeamIds },
-          },
-        },
-      },
+      filters: applicationsFilter,
       pagination: { page: 1, pageSize: 50 },
       populate: AD_OWNER_POPULATE,
       sort: ['createdAt:desc'],
@@ -300,7 +344,7 @@ export const getMyFriendlyMatchApplications = async (teamIds) => {
 
   return normalizeFriendlyMatchCollection(response.data?.data)
     .map((ad) => {
-      const myApplication = findMyApplicationOnAd(ad, normalizedTeamIds);
+      const myApplication = findMyApplicationOnAd(ad, normalizedTeamIds, { clubId });
       return {
         ...ad,
         applicationStatus: myApplication?.status || null,

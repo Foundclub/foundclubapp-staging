@@ -190,21 +190,46 @@ const fetchFacilityRequests = async (clubId) => {
  * par AD_OWNER_POPULATE) — inutile d appeler la route `/applications`, elle est
  * reservee au staff de CHAQUE annonce et couterait un appel par annonce.
  * Cote ENVOYE : les annonces des autres sur lesquelles mes equipes ont repondu.
- * @param {{ teamIds?: string[] }} params
- * @returns {Promise<{ received: any[], sent: any[] }>}
+ *
+ * 🧨 Y04 — LES DEUX MOITIES NE SE TIENNENT PLUS PAR LA MAIN.
+ *
+ * C etait un `Promise.all` : la moitie ENVOYEE en echec emportait la moitie
+ * RECUE avec elle, et l ecran affichait « Match amical indisponible » alors que
+ * les propositions a trancher, elles, etaient arrivees. C est le defaut qu Adel
+ * decrit — la banniere disait vrai, mais elle cachait du travail faisable.
+ *
+ * Les deux cotes ne courent pas le meme risque : le cote RECU filtre sur `team`
+ * (portee accordee a tous), le cote ENVOYE traverse `applications` (portee
+ * accordee a Entraineur/Dirigeant seulement, cf. getMyFriendlyMatchApplications).
+ * Un seul des deux peut donc tomber — et il ne doit pas tout emporter.
+ *
+ * ⛔ On ne rend une erreur que si les DEUX tombent : une moitie vivante vaut
+ * mieux qu une banniere.
+ * @param {{ teamIds?: string[], clubId?: string }} params
+ * @returns {Promise<{ received: any[], sent: any[], failures: any[] }>}
  */
-const fetchFriendlyMatchProposals = async ({ teamIds = [] }) => {
-  if (!teamIds.length) return { received: [], sent: [] };
+const fetchFriendlyMatchProposals = async ({ clubId = '', teamIds = [] }) => {
+  if (!teamIds.length && !clubId) return { failures: [], received: [], sent: [] };
 
-  const [myAds, myApplications] = await Promise.all([
-    getMyFriendlyMatchAds({ teamIds }),
-    getMyFriendlyMatchApplications(teamIds),
+  const [myAds, myApplications] = await Promise.allSettled([
+    getMyFriendlyMatchAds({ clubId, teamIds }),
+    getMyFriendlyMatchApplications(teamIds, { clubId }),
   ]);
 
-  return {
-    received: Array.isArray(myAds) ? myAds : [],
-    sent: Array.isArray(myApplications) ? myApplications : [],
-  };
+  const failures = [myAds, myApplications]
+    .filter((result) => result.status === 'rejected')
+    .map((result) => /** @type {PromiseRejectedResult} */ (result).reason);
+
+  if (failures.length === 2) {
+    throw failures[0];
+  }
+
+  const received = myAds.status === 'fulfilled' && Array.isArray(myAds.value) ? myAds.value : [];
+  const sent = myApplications.status === 'fulfilled' && Array.isArray(myApplications.value)
+    ? myApplications.value
+    : [];
+
+  return { failures, received, sent };
 };
 
 const getPendingParticipationRequests = (event) => (
@@ -287,8 +312,20 @@ export const getRequestsHubData = async (rawContext = {}) => {
       key: 'interest',
     },
     {
-      enabled: context.teamIds.length > 0,
-      fetcher: () => fetchFriendlyMatchProposals({ teamIds: context.teamIds }),
+      // 🎁 Y04 — LE TEMOIN QUE R02 A LAISSE, PASSE AU VERT. `teamIds` ne porte
+      // que les equipes qu on ENTRAINE : un dirigeant qui gere son club sans en
+      // entrainer aucune avait `teamIds: []`, la source etait coupee AVANT tout
+      // appel reseau, et l ecran ne pouvait meme pas s en plaindre. Le serveur,
+      // lui, l autorise (admin, team/services/auth.ts:92-112).
+      // ⚠️ `teamIds` n est PAS elargi — c est le piege que R02 avait refuse de
+      // prendre : il est partage avec `team` et `interest`. C est `clubId`, deja
+      // present dans le contexte, qui passe en SECONDE porte, et il ne voyage
+      // que jusqu a cette source.
+      enabled: context.teamIds.length > 0 || Boolean(context.clubId),
+      fetcher: () => fetchFriendlyMatchProposals({
+        clubId: context.clubId,
+        teamIds: context.teamIds,
+      }),
       key: 'friendly',
     },
   ];
@@ -302,7 +339,14 @@ export const getRequestsHubData = async (rawContext = {}) => {
   settled.forEach((result, index) => {
     const source = enabledSources[index];
     if (result.status === 'rejected') {
-      if (source.key === 'installation' && toErrorStatus(result.reason) === 403) {
+      // 🔒 Y04 — UN DROIT QUI MANQUE N EST PAS UNE PANNE. Un 403 veut dire « ce
+      // compte n a pas acces a cette rubrique » : l annoncer « indisponible »
+      // promet a l utilisateur un retour qui n arrivera jamais, et l invite a
+      // reessayer pour rien. La regle existait deja, mais pour la SEULE source
+      // `installation` ; elle vaut pour les sept.
+      // ⚠️ Elle ne couvre QUE 403. Un 400 (requete refusee) et un 5xx (serveur
+      // tombe) restent annonces : ceux-la, un « Reessayer » peut les resoudre.
+      if (toErrorStatus(result.reason) === 403) {
         return;
       }
       errors.push({

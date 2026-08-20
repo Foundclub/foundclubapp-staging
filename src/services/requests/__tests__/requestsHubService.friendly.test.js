@@ -1,29 +1,29 @@
 import { getRequestsHubData } from '../requestsHubService';
 
 /**
- * R02 — pourquoi les propositions de match amical n'apparaissent pas dans
- * « Demandes », et pourquoi ce N'EST PAS le 403 de `club-request`.
+ * Y04 — LA SOURCE « MATCH AMICAL » DE L ECRAN DEMANDES, ET SES DEUX PANNES.
  *
- * 🔎 CE QUE CE FILET ETABLIT, ET QUI SE LISAIT NULLE PART :
+ * 🎁 Ce fichier reprend les trois temoins poses par R02. Ils decrivaient un
+ * DEFAUT et etaient verts a ce titre ; ce lot les retourne, comme R02 l avait
+ * annonce (« il le verrouille pour que le lot qui s en chargera parte d un
+ * rouge »).
  *
- * `getRequestsHubData` agrege SEPT sources. Aucune n'appelle `/club-requests` —
- * la banniere « Certaines demandes n'ont pas pu etre chargees » ne peut donc pas
- * venir de ce 403. C'est un defaut a part.
+ * 🚨 LES DEUX PANNES SONT DIFFERENTES, ET CORRIGER L UNE NE CORRIGE PAS L AUTRE.
  *
- * La source `friendly` (D92) est conditionnee a `teamIds.length > 0`, et
- * `RequestsHub.js:152-155` alimente `teamIds` avec `userData.trainedTeams` —
- * les equipes qu'on ENTRAINE. Un dirigeant qui gere son club sans entrainer
- * d'equipe a donc `teamIds: []`, et la source est coupee AVANT tout appel
- * reseau : zero proposition a l'ecran, zero erreur, zero trace.
+ * 1. LA PANNE SILENCIEUSE (R02) — un dirigeant qui gere son club sans entrainer
+ *    d equipe avait `teamIds: []` : la source etait coupee AVANT tout appel
+ *    reseau. Zero proposition, zero erreur, zero trace. Le serveur, lui,
+ *    l autorise (admin, team/services/auth.ts:92-112). L app etait plus stricte
+ *    que le serveur. ⇒ temoins 2 et 3 ci-dessous.
  *
- * ⚠️ Or le serveur, lui, l'autorise : `team/services/auth.ts:92-112` accorde la
- * gestion d'une equipe au staff `dirigeant`/`president` du club, pas seulement a
- * ses entraineurs. L'app est donc plus stricte que le serveur — et c'est l'app
- * qui prive le dirigeant, pas une permission manquante.
- *
- * ⛔ Ce lot ne CORRIGE pas cet ecart : elargir le perimetre des equipes changerait
- * aussi les sources `team` et `interest`, qui partagent `teamIds`. Il le mesure
- * et le verrouille pour que le lot qui s'en chargera parte d'un temoin rouge.
+ * 2. LA PANNE BRUYANTE (constat d Adel, 2026-08-19) — pour un entraineur qui a
+ *    bien des equipes, la source s activait puis ECHOUAIT, et l ecran affichait
+ *    « Match amical indisponible ». La cause est un 400 « Invalid key
+ *    applications » sur la moitie ENVOYEE : elle filtre sur `applications`, et
+ *    Strapi 5 exige l action `<cible>.find` du role des qu une requete
+ *    authentifiee traverse une relation EN FILTRES. Droit accorde cote serveur
+ *    par S01 (admin b2261de). ⇒ temoin 1 : cote app, une moitie qui tombe ne
+ *    doit plus emporter l autre.
  */
 
 jest.mock('@/services/clubInterestRequest/clubInterestRequestService', () => ({
@@ -67,47 +67,90 @@ const AD_WITH_PENDING_APPLICATION = {
   team: { documentId: 'team-1', name: 'U15 Maison' },
 };
 
-describe('R02 — la source « match amical » de l ecran Demandes', () => {
+/** Le 400 exact que le serveur rendait sur la moitie ENVOYEE. */
+const INVALID_KEY_APPLICATIONS = Object.assign(
+  new Error('Invalid key applications'),
+  { status: 400 },
+);
+
+const friendlyItems = (data) => data.items.filter((item) => item.type === 'friendly');
+
+describe('Y04 — la source « match amical » de l ecran Demandes', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockGetMyFriendlyMatchAds.mockResolvedValue([AD_WITH_PENDING_APPLICATION]);
     mockGetMyFriendlyMatchApplications.mockResolvedValue([]);
   });
 
-  it('temoin — sans equipe entrainee : aucune proposition, rien demande', async () => {
-    const data = await getRequestsHubData({
-      clubId: 'club-1',
-      teamIds: [],
-    });
+  it('temoin 1 — la moitie ENVOYEE en panne ne rend plus d erreur', async () => {
+    mockGetMyFriendlyMatchApplications.mockRejectedValue(INVALID_KEY_APPLICATIONS);
+
+    const data = await getRequestsHubData({ clubId: 'club-1', teamIds: ['team-1'] });
+
+    // ⛔ Plus de banniere « Match amical indisponible »...
+    expect(data.errors).toHaveLength(0);
+    // ...et surtout, les propositions RECUES sont bien la : c est le travail
+    // faisable que le `Promise.all` d avant jetait avec l eau du bain.
+    expect(friendlyItems(data)).toHaveLength(1);
+  });
+
+  it('temoin 1 bis — les DEUX moities en panne restent annoncees', async () => {
+    mockGetMyFriendlyMatchAds.mockRejectedValue(INVALID_KEY_APPLICATIONS);
+    mockGetMyFriendlyMatchApplications.mockRejectedValue(INVALID_KEY_APPLICATIONS);
+
+    const data = await getRequestsHubData({ clubId: 'club-1', teamIds: ['team-1'] });
+
+    expect(data.errors).toHaveLength(1);
+    expect(data.errors[0].source).toBe('friendly');
+    expect(data.errors[0].status).toBe(400);
+  });
+
+  it('temoin 2 — un dirigeant sans equipe entrainee voit ses matchs amicaux', async () => {
+    const data = await getRequestsHubData({ clubId: 'club-1', teamIds: [] });
+
+    // R02 mesurait exactement l inverse : « aucune proposition, rien demande ».
+    expect(mockGetMyFriendlyMatchAds).toHaveBeenCalledWith({ clubId: 'club-1', teamIds: [] });
+    expect(mockGetMyFriendlyMatchApplications).toHaveBeenCalledWith([], { clubId: 'club-1' });
+    expect(friendlyItems(data)).toHaveLength(1);
+  });
+
+  it('temoin 2 bis — sans club NI equipe, la source reste coupee', async () => {
+    const data = await getRequestsHubData({ cmId: 'cm-1', teamIds: [] });
 
     expect(mockGetMyFriendlyMatchAds).not.toHaveBeenCalled();
-    expect(mockGetMyFriendlyMatchApplications).not.toHaveBeenCalled();
-    expect(data.items.filter((item) => item.type === 'friendly')).toHaveLength(0);
-    // 🔑 Et surtout : AUCUNE erreur. L'ecran ne peut donc rien signaler.
+    expect(friendlyItems(data)).toHaveLength(0);
     expect(data.errors).toHaveLength(0);
   });
 
   it('temoin de controle — avec une equipe entrainee, la proposition arrive', async () => {
-    const data = await getRequestsHubData({
-      clubId: 'club-1',
-      teamIds: ['team-1'],
-    });
+    const data = await getRequestsHubData({ clubId: 'club-1', teamIds: ['team-1'] });
 
     expect(mockGetMyFriendlyMatchAds).toHaveBeenCalled();
-    expect(data.items.filter((item) => item.type === 'friendly')).toHaveLength(1);
+    expect(friendlyItems(data)).toHaveLength(1);
   });
 
-  it('temoin — une source en echec est nommee par sa clef', async () => {
-    const failure = Object.assign(new Error('Forbidden'), { status: 403 });
-    mockGetMyFriendlyMatchAds.mockRejectedValue(failure);
+  it('temoin — un droit qui manque (403) ne s annonce PAS comme une panne', async () => {
+    // 🔒 Une section qu on n a pas le droit de voir ne se dit pas « indisponible » :
+    // ce serait promettre un retour qui n arrivera jamais, et inviter a reessayer
+    // pour rien. Avant ce lot, la regle ne valait que pour `installation`.
+    const forbidden = Object.assign(new Error('Forbidden'), { status: 403 });
+    mockGetMyFriendlyMatchAds.mockRejectedValue(forbidden);
+    mockGetMyFriendlyMatchApplications.mockRejectedValue(forbidden);
 
-    const data = await getRequestsHubData({
-      clubId: 'club-1',
-      teamIds: ['team-1'],
-    });
+    const data = await getRequestsHubData({ clubId: 'club-1', teamIds: ['team-1'] });
+
+    expect(data.errors).toHaveLength(0);
+    expect(friendlyItems(data)).toHaveLength(0);
+  });
+
+  it('temoin — un 500 reste annonce : lui, un « Reessayer » peut le resoudre', async () => {
+    const boom = Object.assign(new Error('boom'), { status: 500 });
+    mockGetMyFriendlyMatchAds.mockRejectedValue(boom);
+    mockGetMyFriendlyMatchApplications.mockRejectedValue(boom);
+
+    const data = await getRequestsHubData({ clubId: 'club-1', teamIds: ['team-1'] });
 
     expect(data.errors).toHaveLength(1);
-    expect(data.errors[0].source).toBe('friendly');
-    expect(data.errors[0].status).toBe(403);
+    expect(data.errors[0].status).toBe(500);
   });
 });

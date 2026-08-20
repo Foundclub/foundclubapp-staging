@@ -237,14 +237,20 @@ describe('requestMappers', () => {
     })).toEqual(['all', 'team', 'interest', 'friendly']);
   });
 
-  test('D92 — sans equipe encadree, pas de filtre amical', () => {
-    expect(getAvailableRequestHubFilters({ clubId: 'club-1' })).not.toContain('friendly');
+  // 🎁 Y04 — LE TEMOIN QUE R02 A LAISSE, RETOURNE. Il disait « sans equipe
+  // ENTRAINEE, pas de filtre amical » et decrivait le defaut : un dirigeant qui
+  // gere son club sans en entrainer aucune n avait aucun onglet « Amicaux »,
+  // alors que le serveur lui accorde la gestion de ces equipes.
+  test('Y04 — un dirigeant sans equipe entrainee a bien le filtre amical', () => {
+    expect(getAvailableRequestHubFilters({ clubId: 'club-1' })).toContain('friendly');
+    // Le contre-temoin : sans club NI equipe, il n y a toujours rien a filtrer.
+    expect(getAvailableRequestHubFilters({ cmId: 'cm-1' })).not.toContain('friendly');
   });
 
   test('returns club and event filters only when a club context exists', () => {
     expect(getAvailableRequestHubFilters({
       clubId: 'club-1',
-    })).toEqual(['all', 'team', 'interest', 'club', 'event', 'featured']);
+    })).toEqual(['all', 'team', 'interest', 'friendly', 'club', 'event', 'featured']);
     expect(getAvailableRequestHubFilters({
       cmId: 'cm-1',
     })).toEqual(['all', 'featured']);
