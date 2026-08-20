@@ -97,7 +97,6 @@ export const resolveClientSourceTeamForUser = (event, user) => {
  * `event.findOne`) : quand il l a dite, on lui obeit au lieu de recalculer. Les
  * listes et le planning ne portent pas encore ce drapeau, d ou le repli — qui
  * est la MEME regle, ecrite une seule fois, ici.
- *
  * @param {any} event
  * @param {any} user
  * @returns {{ isStaffOnly: boolean, sourceTeam: any }} `isStaffOnly` vrai veut
@@ -113,10 +112,35 @@ export const resolveClientResponderDecision = (event, user) => {
   if (!sourceTeam) return { isStaffOnly: false, sourceTeam: null };
 
   const userDocumentId = getUserDocumentId(user);
-  const isPlayerOfSourceTeam = (Array.isArray(sourceTeam?.players) ? sourceTeam.players : [])
-    .some((player) => String(player?.documentId || '').trim() === userDocumentId);
+  const isListedIn = (collection) => (Array.isArray(collection) ? collection : [])
+    .some((member) => String(member?.documentId || '').trim() === userDocumentId);
+  const sourceTeamIds = getEntityIdentifiers(sourceTeam);
+  const ownsSourceTeamIn = (bucket) => (Array.isArray(bucket) ? bucket : [])
+    .flatMap(getEntityIdentifiers)
+    .some((teamId) => sourceTeamIds.includes(teamId));
 
-  return { isStaffOnly: !isPlayerOfSourceTeam, sourceTeam };
+  // JOUEUSE — les deux faces de la MEME relation Strapi : `team.players` est
+  // declare `inversedBy: 'myTeams'` (`admin/src/api/team/.../schema.json`).
+  // Lire le profil n est donc pas une approximation, c est le meme fait vu de
+  // l autre bout — et c est le SEUL bout disponible sur les listes.
+  // 🎯 Teste EN PREMIER : le coach-joueur figure dans les deux, il repond.
+  if (isListedIn(sourceTeam?.players) || ownsSourceTeamIn(user?.myTeams)) {
+    return { isStaffOnly: false, sourceTeam };
+  }
+
+  // ENCADRANTE — l autre relation (`team.trainers` inversedBy `trainedTeams`).
+  if (isListedIn(sourceTeam?.trainers) || ownsSourceTeamIn(user?.trainedTeams)) {
+    return { isStaffOnly: true, sourceTeam };
+  }
+
+  // ⛔ AUCUNE PREUVE : on ne fait PAS taire la personne. Ne lire que
+  // `sourceTeam.players` faisait dire « tu encadres » a TOUS LES JOUEURS des
+  // que la charge utile ne portait pas la liste — or le peuplement des cartes
+  // (`buildCompactEventCardPopulate`, `eventService.js:674`) ne descend NI
+  // `players` NI `trainers`, et `viewerCanRespond` n existe que sur la fiche
+  // (`event.ts:1695`). Toutes les listes tombaient donc dans ce trou.
+  // La porte qui tranche vraiment reste le serveur (`assertUserCanRespond`).
+  return { isStaffOnly: false, sourceTeam };
 };
 
 const buildReservationFlow = (entity, context) => {
@@ -246,12 +270,16 @@ const buildEventFlow = (entity, context) => {
   // non-membre doit lire pourquoi il est dehors, pas ce qu il est.
   if (isClosed && !sourceTeam) {
     blockedReason = 'Cet événement fermé est réservé aux équipes concernées.';
-  } else if (isStaffOnly) {
+  } else if (isStaffOnly && !alreadyHandled) {
     // Y07 : la phrase que le serveur renverrait (`EVENT_STAFF_DOES_NOT_RSVP`).
     // ⛔ Elle ne doit JAMAIS accompagner un bouton eteint : les surfaces qui
     // montent la rangee de reponse rendent la phrase SEULE (voir
     // `EventAnswerButtons`). Elle vit ici pour que le motif soit dit au meme
     // endroit que tous les autres, pas pour griser quoi que ce soit.
+    // 🔒 `&& !alreadyHandled` : une reponse DEJA ENREGISTREE garde son motif
+    // (« tu as deja repondu »), comme `hasOwnAnswer` cote `EventAnswerButtons`.
+    // Y07 retire le droit de repondre, il n efface aucune reponse posee avant
+    // lui — un encadrant coche dans la compo publiee a repondu, ca reste vrai.
     blockedReason = 'Tu encadres cet événement : ce sont les joueurs qui répondent.';
   } else if (!isPlayer && !isConvenedMember) {
     blockedReason = 'Seuls les joueurs peuvent participer à cet événement.';

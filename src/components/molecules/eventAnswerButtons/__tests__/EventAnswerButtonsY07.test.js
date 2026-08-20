@@ -153,6 +153,69 @@ test('Y07/2 — sur une CARTE de liste (planning compris), il n en voit pas dava
 });
 
 // ---------------------------------------------------------------------------
+// 3 & 4 — LA CHARGE UTILE REELLE DES LISTES : NI `players`, NI `trainers`
+// ---------------------------------------------------------------------------
+//
+// 🧨 LE TROU QUE CES DEUX TEMOINS BOUCHENT, ET IL VALAIT CHER.
+// Les temoins 1 et 2 ci-dessus montent un evenement dont l equipe porte
+// `players` et `trainers`. C est la forme de la FICHE — et la fiche est
+// justement la seule surface ou le serveur pose `viewerCanRespond`
+// (`event.ts:1695`). Ils ne pouvaient donc pas voir le defaut.
+//
+// Les CARTES, elles, sont peuplees par `buildCompactEventCardPopulate`
+// (`services/event/eventService.js:674`) : `team` n y descend que
+// `documentId`, `name`, `activities`, `category`, `club`, `level`, `section`.
+// ⛔ NI `players`, NI `trainers`. L appartenance ne peut alors se lire que
+// sur le PROFIL — `myTeams` pour la joueuse, `trainedTeams` pour l encadrante,
+// qui sont les deux faces des memes relations Strapi (`team.players` est
+// declare `inversedBy: 'myTeams'`).
+//
+// Une premiere version de la regle ne lisait que `sourceTeam.players` : sur ces
+// cartes elle repondait « pas dans players » pour TOUT LE MONDE, et disait donc
+// « tu encadres cet evenement » a CHAQUE JOUEUR de chaque liste. Le temoin 3
+// est ce joueur-la.
+const buildCardEvent = (overrides = {}) => buildEvent({
+  team: { documentId: 'team-1', name: 'Senior A' },
+  ...overrides,
+});
+
+test('Y07/3 🔒 — sur une carte SANS `players`, le JOUEUR garde ses boutons', () => {
+  mockUserData.mockReturnValue({ ...playerUser, myTeams: [{ documentId: 'team-1' }] });
+
+  const tree = render({
+    event: buildCardEvent(),
+    onAbout: () => {},
+    onDecline: () => {},
+    onJoin: () => {},
+    onLogin: () => {},
+    onParticipate: () => {},
+  });
+
+  const titles = titlesOf(tree);
+  expect(titles).toContain('eventList.actions.present');
+  expect(titles).toContain('eventList.actions.absent');
+  expect(textsOf(tree)).not.toContain('eventList.info.staffDoesNotRsvp');
+});
+
+test('Y07/4 — sur cette meme carte, l ENCADRANTE lit bien la phrase', () => {
+  mockUserData.mockReturnValue({ ...coach, trainedTeams: [{ documentId: 'team-1' }] });
+
+  const tree = render({
+    event: buildCardEvent(),
+    onAbout: () => {},
+    onDecline: () => {},
+    onJoin: () => {},
+    onLogin: () => {},
+    onParticipate: () => {},
+  });
+
+  const titles = titlesOf(tree);
+  expect(titles).not.toContain('eventList.actions.present');
+  expect(titles).not.toContain('eventList.actions.absent');
+  expect(textsOf(tree)).toContain('eventList.info.staffDoesNotRsvp');
+});
+
+// ---------------------------------------------------------------------------
 // 5 & 6 — CE QUI NE DOIT PAS BOUGER
 // ---------------------------------------------------------------------------
 
