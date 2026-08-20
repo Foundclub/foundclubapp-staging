@@ -1260,6 +1260,7 @@ export default {
       alreadyMissing: 'Je serai absent·e',
       declinedRequest: 'Demande refusée',
       pendingRequest: 'Demande en attente',
+      staffDoesNotRsvp: 'Tu encadres cet événement : ce sont les joueurs qui répondent.',
     },
     joinModal: {
       actions: {

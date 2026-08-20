@@ -83,6 +83,42 @@ export const resolveClientSourceTeamForUser = (event, user) => {
   )) || null;
 };
 
+/**
+ * « Cette personne doit-elle repondre Present / Absent ? »
+ *
+ * Y07 (GO Adel du 2026-08-20) — le miroir EXACT de `resolveResponderDecision`
+ * cote serveur (`event-audience.ts:819`) : seuls les JOUEURS repondent.
+ *
+ * ⛔ `getTeamMemberEntities` ci-dessus ne bouge PAS : etre MEMBRE (voir
+ * l evenement, en recevoir les notifications, rester rattache a son equipe) et
+ * devoir REPONDRE sont deux questions differentes. Y07 ne ferme que la seconde.
+ *
+ * Le serveur DIT deja la reponse sur la fiche (`viewerCanRespond`, pose par
+ * `event.findOne`) : quand il l a dite, on lui obeit au lieu de recalculer. Les
+ * listes et le planning ne portent pas encore ce drapeau, d ou le repli — qui
+ * est la MEME regle, ecrite une seule fois, ici.
+ *
+ * @param {any} event
+ * @param {any} user
+ * @returns {{ isStaffOnly: boolean, sourceTeam: any }} `isStaffOnly` vrai veut
+ *   dire une chose et une seule : membre d une equipe conviee, mais pas joueur.
+ */
+export const resolveClientResponderDecision = (event, user) => {
+  const sourceTeam = resolveClientSourceTeamForUser(event, user);
+
+  if (typeof event?.viewerCanRespond === 'boolean') {
+    return { isStaffOnly: event.viewerCanRespond === false, sourceTeam };
+  }
+
+  if (!sourceTeam) return { isStaffOnly: false, sourceTeam: null };
+
+  const userDocumentId = getUserDocumentId(user);
+  const isPlayerOfSourceTeam = (Array.isArray(sourceTeam?.players) ? sourceTeam.players : [])
+    .some((player) => String(player?.documentId || '').trim() === userDocumentId);
+
+  return { isStaffOnly: !isPlayerOfSourceTeam, sourceTeam };
+};
+
 const buildReservationFlow = (entity, context) => {
   const user = context?.user;
   const participationState = context?.participationState
@@ -172,7 +208,8 @@ const buildEventFlow = (entity, context) => {
   const sessionStatus = normalizeStatus(entity?.sessionStatus);
   const isClosed = sessionStatus === 'closed';
   const isDetection = normalizeEventTypeLabel(entity?.type?.name).includes('detection');
-  const sourceTeam = resolveClientSourceTeamForUser(entity, user);
+  // Y07 : la MEME lecture rend l equipe source ET « doit-elle repondre ? ».
+  const { isStaffOnly, sourceTeam } = resolveClientResponderDecision(entity, user);
   const trainingOpenConfig = resolveTrainingOpenConfig(entity);
   const isTrainingEvent = trainingOpenConfig?.isTraining === true;
   const isExternalTrainingParticipant = isTrainingEvent && !sourceTeam;
@@ -209,6 +246,13 @@ const buildEventFlow = (entity, context) => {
   // non-membre doit lire pourquoi il est dehors, pas ce qu il est.
   if (isClosed && !sourceTeam) {
     blockedReason = 'Cet événement fermé est réservé aux équipes concernées.';
+  } else if (isStaffOnly) {
+    // Y07 : la phrase que le serveur renverrait (`EVENT_STAFF_DOES_NOT_RSVP`).
+    // ⛔ Elle ne doit JAMAIS accompagner un bouton eteint : les surfaces qui
+    // montent la rangee de reponse rendent la phrase SEULE (voir
+    // `EventAnswerButtons`). Elle vit ici pour que le motif soit dit au meme
+    // endroit que tous les autres, pas pour griser quoi que ce soit.
+    blockedReason = 'Tu encadres cet événement : ce sont les joueurs qui répondent.';
   } else if (!isPlayer && !isConvenedMember) {
     blockedReason = 'Seuls les joueurs peuvent participer à cet événement.';
   } else if (alreadyHandled) {
