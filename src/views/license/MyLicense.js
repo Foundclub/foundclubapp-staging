@@ -117,7 +117,34 @@ function MyLicense({ navigation, route }) {
       || assignments[0],
     [assignments],
   );
-  const current = assignmentQuery.data || fallbackAssignment;
+  // AA07 / K1 — QUAND ON COTISE DANS PLUSIEURS CLUBS.
+  //
+  // 🗣️ Adel, recette du 20/08 : « si on en a plusieurs on n en voit qu une —
+  // impossible d atteindre l autre ». C etait exact : l ecran retenait
+  // `fallbackAssignment` et rien ne menait aux suivantes.
+  //
+  // 💡 CE QUI EXISTAIT DEJA, ET QU ON REUTILISE (§1 bis, barreau 2) : `/licenses/me`
+  // rend les affectations DEJA PEUPLEES (campagne, club, echeances, paiements,
+  // documents, recus — `license.ts:3382`). Basculer d une cotisation a l autre ne
+  // coute donc AUCUN appel reseau : c est un choix local dans une liste deja en
+  // main. ⛔ Ne pas rajouter de requete par cotisation.
+  const [selectedAssignmentId, setSelectedAssignmentId] = useState(null);
+  const selectedAssignment = useMemo(() => {
+    if (!selectedAssignmentId) return null;
+    return assignments.find(
+      (item) => String(item?.documentId || item?.id || '') === String(selectedAssignmentId),
+    ) || null;
+  }, [assignments, selectedAssignmentId]);
+  const current = selectedAssignment || assignmentQuery.data || fallbackAssignment;
+  const currentKey = String(current?.documentId || current?.id || '');
+  // ⛔ Le selecteur n apparait QUE s il y a vraiment un choix : une seule
+  // cotisation ne doit pas gagner une liste a un seul element.
+  const otherAssignments = useMemo(
+    () => assignments.filter(
+      (item) => String(item?.documentId || item?.id || '') !== currentKey,
+    ),
+    [assignments, currentKey],
+  );
   const assignmentId = current?.documentId || current?.id;
   const checkoutMutation = useLicenseMutation((provider) => createLicenseCheckout(assignmentId, { provider }), current?.campaign?.documentId || current?.campaign?.id);
   const declareMutation = useLicenseMutation((method) => declareExternalLicensePayment(assignmentId, { amountCents: current?.amountRemainingCents, method }), current?.campaign?.documentId || current?.campaign?.id);
@@ -315,6 +342,58 @@ function MyLicense({ navigation, route }) {
             {current?.campaign?.seasonLabel}
           </Text>
         </View>
+        {/*
+          AA07 / K1 — LES AUTRES COTISATIONS, NOMMEES ET ATTEIGNABLES.
+          Une carte par cotisation restante : le club qui la reclame, la saison,
+          son statut et le reste a payer. Le bouton DIT ou il mene (« Voir la
+          cotisation FC Nord ») plutot qu un « Voir » qui ne dit rien.
+        */}
+        {otherAssignments.length ? (
+          <>
+            <LicenseSectionHeader
+              description="Tu cotises dans plusieurs clubs. Choisis celle que tu veux consulter."
+              title="Mes cotisations"
+            />
+            <View style={Spaces.gap[licenseSpacing.listGap]}>
+              {otherAssignments.map((item) => {
+                const itemKey = String(item?.documentId || item?.id || '');
+                const itemClub = item?.club?.name || item?.campaign?.club?.name || 'Ton club';
+                const itemCurrency = item.currency || item?.campaign?.currency || 'EUR';
+                return (
+                  <LicenseCard key={itemKey} variant="muted">
+                    <View style={Spaces.gap[licenseSpacing.actionGap]}>
+                      <View style={{
+                        alignItems: 'flex-start',
+                        flexDirection: 'row',
+                        gap: licenseSpacing.actionGap,
+                        justifyContent: 'space-between',
+                      }}
+                      >
+                        <View style={[Spaces.gap[4], { flex: 1 }]}>
+                          <Text style={[Fonts.p1Bold, Fonts.neutral00]}>{itemClub}</Text>
+                          <Text style={[Fonts.p3, Fonts.neutral200]}>
+                            {item?.campaign?.seasonLabel || item?.campaign?.name || 'Saison en cours'}
+                          </Text>
+                        </View>
+                        <LicenseStatusChip status={item.status} />
+                      </View>
+                      <Text style={[Fonts.p3, Fonts.neutral200]}>
+                        Reste à payer:
+                        {' '}
+                        {formatLicenseMoney(item.amountRemainingCents, itemCurrency)}
+                      </Text>
+                      <Button
+                        onPress={() => setSelectedAssignmentId(itemKey)}
+                        title={`Voir la cotisation ${itemClub}`}
+                        variant="Secondary"
+                      />
+                    </View>
+                  </LicenseCard>
+                );
+              })}
+            </View>
+          </>
+        ) : null}
         <LicenseCard>
           <LicenseMetricRow
             items={[
