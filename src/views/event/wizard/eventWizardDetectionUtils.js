@@ -12,6 +12,10 @@ export const isDetectionEventType = (typeName = '') => normalizeTypeLabel(typeNa
 export const isStageEventType = (typeName = '') => normalizeTypeLabel(typeName).includes('stage');
 export const isTournamentEventType = (typeName = '') => normalizeTypeLabel(typeName).includes('tournoi');
 export const isTrainingEventType = (typeName = '') => normalizeTypeLabel(typeName).includes('entrainement');
+// Y02 — un match, et donc le seul parcours qui traverse « Contre qui ? ».
+// ⚠️ `includes('match')` attrape aussi « Match amical », et c'est voulu : lui
+// aussi a un adversaire.
+export const isMatchEventType = (typeName = '') => normalizeTypeLabel(typeName).includes('match');
 
 const hasNonEmptyValue = (/** @type {any} */ value) => {
   if (!value) return false;
@@ -118,6 +122,13 @@ export const getEventWizardStepRoutes = (state = {}) => {
     routes.push(RouteNames.EventWizardLogistics);
   }
 
+  // Y02 — « Contre qui ? », UNIQUEMENT pour un match. Elle est placee juste
+  // apres l'equipe et la date parce que c'est la qu'on pense a l'adversaire,
+  // et avant le lieu : savoir qui l'on recoit aide a choisir ou l'on joue.
+  if (isMatchEventType(state?.type?.name)) {
+    routes.push(RouteNames.EventWizardOpponent);
+  }
+
   routes.push(RouteNames.EventWizardLocation);
 
   if (isTournamentEventType(state?.type?.name)) {
@@ -208,6 +219,10 @@ export const getEventWizardExitRoute = (nextRouteName, routeParams = {}) => (
 
 export const getEventWizardLogisticsStepIndex = (/** @type {any} */ state = {}) => (
   getEventWizardStepIndex(RouteNames.EventWizardLogistics, state)
+);
+
+export const getEventWizardOpponentStepIndex = (/** @type {any} */ state = {}) => (
+  getEventWizardStepIndex(RouteNames.EventWizardOpponent, state)
 );
 
 export const getEventWizardLocationStepIndex = (/** @type {any} */ state = {}) => (

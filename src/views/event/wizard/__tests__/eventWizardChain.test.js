@@ -14,6 +14,7 @@ import {
 import EventWizardInvites from '../EventWizardInvites';
 import EventWizardLocation from '../EventWizardLocation';
 import EventWizardLogistics from '../EventWizardLogistics';
+import EventWizardOpponent from '../EventWizardOpponent';
 import EventWizardParticipants from '../EventWizardParticipants';
 import EventWizardRecap from '../EventWizardRecap';
 import EventWizardStageProgram from '../EventWizardStageProgram';
@@ -303,6 +304,7 @@ const ECRANS = {
   [RouteNames.EventWizardInvites]: EventWizardInvites,
   [RouteNames.EventWizardLocation]: EventWizardLocation,
   [RouteNames.EventWizardLogistics]: EventWizardLogistics,
+  [RouteNames.EventWizardOpponent]: EventWizardOpponent,
   [RouteNames.EventWizardParticipants]: EventWizardParticipants,
   [RouteNames.EventWizardRecap]: EventWizardRecap,
   [RouteNames.EventWizardStageProgram]: EventWizardStageProgram,
@@ -535,7 +537,9 @@ const destinationsDesLiensModifier = () => {
 
 describe('D08 — la chaine reelle du tunnel, type par type', () => {
   test('evenement standard : 8 ecrans, sans Invites, acces fusionne', () => {
-    const marche = marcherDansLeTunnel({ nomDuType: 'Match' });
+    // Y02 : le representant du parcours « standard » n'est plus le match — il a
+    // desormais une etape de plus. Le test qui suit couvre le match a part.
+    const marche = marcherDansLeTunnel({ nomDuType: 'Entrainement' });
     const { chaine } = marche;
 
     expect(chaine).toEqual([
@@ -549,7 +553,27 @@ describe('D08 — la chaine reelle du tunnel, type par type', () => {
       RouteNames.EventWizardRecap,
     ]);
     expect(chaine).not.toContain(RouteNames.EventWizardInvites);
+    expect(chaine).not.toContain(RouteNames.EventWizardOpponent);
     expect(totalAnnonceALaFin(marche)).toBe(8);
+  });
+
+  // 🎯 Y02 — le parcours qui change de forme, marche pour de vrai.
+  test('match : 9 ecrans, avec « Contre qui ? » entre la date et le lieu', () => {
+    const marche = marcherDansLeTunnel({ nomDuType: 'Match' });
+    const { chaine } = marche;
+
+    expect(chaine).toEqual([
+      RouteNames.EventWizardType,
+      RouteNames.EventWizardTeam,
+      RouteNames.EventWizardLogistics,
+      RouteNames.EventWizardOpponent,
+      RouteNames.EventWizardLocation,
+      RouteNames.EventWizardParticipants,
+      RouteNames.EventWizardAccess,
+      RouteNames.EventWizardDescription,
+      RouteNames.EventWizardRecap,
+    ]);
+    expect(totalAnnonceALaFin(marche)).toBe(9);
   });
 
   test('stage : 8 ecrans, et il GARDE son programme de stage', () => {
@@ -646,7 +670,7 @@ describe('D08 — la chaine reelle du tunnel, type par type', () => {
 // ---------------------------------------------------------------------------
 describe('D58 — chaque type traverse son parcours, et annonce son compte', () => {
   test.each([
-    ['Match', 8],
+    ['Match', 9],
     ['Entrainement', 8],
     ['Stage', 8],
     ['Tournoi', 10],
@@ -730,7 +754,7 @@ describe('D08 — les ecrans hors chemin standard restent ATTEIGNABLES', () => {
 
 describe('D08 — les positions annoncees a l ecran suivent la chaine reelle', () => {
   test.each([
-    ['Match', 8],
+    ['Match', 9],
     ['Stage', 8],
     ['Tournoi', 10],
     ['Detection', 8],

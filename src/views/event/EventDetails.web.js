@@ -7,6 +7,7 @@ import {
 import { useWindowDimensions } from 'react-native';
 
 import useAuth from '@/domains/auth/useAuth';
+import { resolveEventDisplayName } from '@/domains/event/eventDisplayName';
 import { isDetectionEventType, resolveTrainingOpenConfig } from '@/domains/event/eventUseCases';
 import { getCurrentUserEventParticipationState } from '@/domains/event/participationState';
 import useTheme from '@/theme/themeContext';
@@ -332,9 +333,13 @@ function EventDetails({ navigation, route }) {
     () => compositionEditorTeam?.activities?.[0]?.name || event?.team?.activities?.[0]?.name || 'football',
     [compositionEditorTeam?.activities, event?.team?.activities],
   );
+  // Y02 — meme regle que la version native : un match dont on connait
+  // l'adversaire s'appelle « Match vs X », tout le reste garde son nom d'avant.
+  // ⚠️ Les deux ecrans doivent dire la MEME chose : c'est ce nom que porte la
+  // carte de compo envoyee dans le tchat, lisible depuis les deux.
   const compositionEventLabel = useMemo(
-    () => String(event?.name || event?.description || event?.type?.name || 'Evenement').trim() || 'Evenement',
-    [event?.description, event?.name, event?.type?.name],
+    () => resolveEventDisplayName(event, 'Evenement'),
+    [event],
   );
   const {
     data: staffCompositionPayload,

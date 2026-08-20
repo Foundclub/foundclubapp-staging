@@ -23,6 +23,11 @@ import ReactNativeBlobUtil from 'react-native-blob-util';
 
 import { USER_ROLES } from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
+import {
+  isMatchTypeName,
+  resolveEventDisplayName,
+  resolveEventOpponentName,
+} from '@/domains/event/eventDisplayName';
 import { resolveTrainingOpenConfig } from '@/domains/event/eventUseCases';
 import { getCurrentUserEventParticipationState } from '@/domains/event/participationState';
 import useMessaging from '@/domains/messaging/useMessaging';
@@ -2670,6 +2675,12 @@ function EventDetails({ navigation, route }) {
     const typeName = String(event?.type?.name || '').trim().toLowerCase();
     return typeName.includes('match');
   }, [event?.type?.name]);
+  // Y02 : l'adversaire, resolu UNE fois pour tout l'ecran (champ `opponentName`,
+  // puis equipe invitee, puis match de League). Chaine vide s'il est inconnu.
+  const matchOpponentName = useMemo(
+    () => (isMatchEvent ? resolveEventOpponentName(event) : ''),
+    [event, isMatchEvent],
+  );
   const supportsEventComposition = Boolean(event?.team?.documentId || (event?.invitedTeams || []).length > 0);
   const eventActionsToggleLabel = isEventActionsOpen
     ? 'Fermer les actions événement'
@@ -2732,9 +2743,14 @@ function EventDetails({ navigation, route }) {
     [compositionEditorTeam?.activities, event?.team?.activities],
   );
 
+  // Y02 — LE NOM DE L'EVENEMENT, ecrit UNE SEULE FOIS pour tout l'ecran.
+  // C'est lui que portent la convocation, la carte de compo du tchat, le libelle
+  // du match et le bandeau de composition. Un match dont on connait l'adversaire
+  // s'appelle « Match vs X » ; tout le reste garde exactement son nom d'avant.
   const compositionEventLabel = useMemo(() => {
-    if (externalMatchDisplay?.title) {
-      return `Match ${externalMatchDisplay.title}`;
+    const nomAvecAdversaire = resolveEventDisplayName(event, '');
+    if (nomAvecAdversaire && isMatchTypeName(event?.type?.name) && / vs /i.test(nomAvecAdversaire)) {
+      return nomAvecAdversaire;
     }
 
     const preferredLabel = [eventDescriptionText, event?.name, event?.description]
@@ -2745,7 +2761,7 @@ function EventDetails({ navigation, route }) {
     }
 
     return event?.type?.name || 'Evenement';
-  }, [event?.description, event?.name, event?.type?.name, eventDescriptionText, externalMatchDisplay?.title]);
+  }, [event, eventDescriptionText]);
 
   const {
     data: staffCompositionPayload,
@@ -4821,6 +4837,14 @@ function EventDetails({ navigation, route }) {
     <ScreenContainer bgImage="bg2" contentContainerStyle={[Spaces.gap[32], Alignments.fill]} gradient={null} withHeaderPadding>
       <View style={[Spaces.gap[8], Alignments.alignCenter]}>
         <Tag style={{}} text={event?.type?.name?.toUpperCase() || ''} textStyle={Fonts.p2} />
+        {/* Y02 : le nom de l'adversaire, sous la pastille de type. ⛔ La ligne
+            n'est MONTEE que si l'adversaire est connu — jamais un « vs » suivi
+            d'un blanc, et rien ne change pour les autres types d'evenement. */}
+        {matchOpponentName ? (
+          <Text style={[Fonts.h4, Fonts.neutral00]}>
+            {t('eventDetails.opponentLine', 'vs {{opponent}}', { opponent: matchOpponentName })}
+          </Text>
+        ) : null}
       </View>
 
       {/* D64 : ce cadre ne contient plus que la liste, et c'est le geste du lot.
