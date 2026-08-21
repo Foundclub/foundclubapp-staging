@@ -54,6 +54,10 @@ import RefuseParticipationModal from '@/components/organisms/refuseParticipation
 import ReportEventModal from '@/components/organisms/reportEventModal/ReportEventModal';
 import ShareEventModal from '@/components/organisms/shareEventModal/ShareEventModal';
 import ScreenContainer from '@/components/templates/ScreenContainer';
+import {
+  CONVOCATION_ROLE_STARTER,
+  getViewerConvocationRole,
+} from '@/views/playerConvocation/playerConvocationUtils';
 
 import { hasRouteInNavigationTree } from '@/navigation/navigationAvailability';
 import { openPublicAuthFlow } from '@/navigation/public/publicAuthNavigation';
@@ -3107,6 +3111,33 @@ function EventDetails({ navigation, route }) {
     ), 0),
     [convocationBranches],
   );
+
+  // AC08 — « SUIS-JE CONVOQUE ? », enfin repondu SUR LA PAGE.
+  //
+  // 🚨 Jusqu'ici, convoque et non-convoque lisaient exactement le meme bloc —
+  // « 1 branche(s) visible(s) » — et le meme bouton les envoyait tous les deux
+  // sur le tableau du coach desactive. La convocation vit dans une AUTRE requete
+  // que l'evenement (`['eventConvocation', eventId, teamId]`) : c'est pour ça
+  // que la page ne savait pas le dire. Elle a la charge sous la main, elle ne
+  // s'en servait pas.
+  const viewerConvocationRole = useMemo(
+    () => getViewerConvocationRole(
+      convocationPayload,
+      userData?.documentId || userData?.id,
+    ),
+    [convocationPayload, userData?.documentId, userData?.id],
+  );
+
+  const viewerConvocationLine = useMemo(() => {
+    if (viewerConvocationRole === CONVOCATION_ROLE_STARTER) return 'Tu es convoqué · Titulaire';
+    if (viewerConvocationRole) return 'Tu es convoqué · Remplaçant';
+    return 'Tu n’es pas dans la composition publiée.';
+  }, [viewerConvocationRole]);
+
+  const publishedCompositionCtaTitle = useMemo(() => {
+    if (canEdit) return t('matchConvocation.published.openCta');
+    return viewerConvocationRole ? 'Voir ma convocation' : "Voir la composition d'équipes";
+  }, [canEdit, t, viewerConvocationRole]);
   // ==========================================================================
   // C2 — LE RAPPEL DE COMPO. Un bandeau, jamais une fenetre.
   //
@@ -3433,6 +3464,19 @@ function EventDetails({ navigation, route }) {
   const openPublishedConvocation = useCallback(() => {
     if (!eventId || !compositionTeamId) return;
 
+    // 🥇 AC08 — LA PORTE. Un joueur CONVOQUE atteint son terrain en un appui.
+    // L'ecran existait entier depuis le 15/08 et une notification poussee etait
+    // le SEUL chemin qui y menait : effacee, il devenait inatteignable.
+    // ⛔ Un non-convoque n'est pas envoye la-bas : il y serait repose aussitot,
+    // et ce serait un aller-retour pour rien. Il garde la vue en lecture seule.
+    if (!canEdit && viewerConvocationRole) {
+      navigation.navigate(RouteNames.PlayerConvocation, {
+        eventId,
+        teamId: compositionTeamId,
+      });
+      return;
+    }
+
     if (!canEdit) {
       openCompositionBoard(convocationBranches[0]?.published || null, {
         aggregateBranches: convocationBranches,
@@ -3466,6 +3510,7 @@ function EventDetails({ navigation, route }) {
     getCompositionSourceLabel,
     navigation,
     openCompositionBoard,
+    viewerConvocationRole,
   ]);
 
   const handleManageComposition = useCallback(() => {
@@ -5626,6 +5671,19 @@ function EventDetails({ navigation, route }) {
                   </Text>
                   {hasPublishedComposition ? (
                     <View style={[Spaces.gap[8]]}>
+                      {/* AC08 — LA LIGNE D'ETAT. Convoque, remplacant ou non
+                          retenu : trois phrases differentes la ou il n'y en
+                          avait qu'une, identique pour tout le monde. */}
+                      {canEdit ? null : (
+                        <Text
+                          style={[
+                            Fonts.p2Bold,
+                            viewerConvocationRole ? Fonts.primary500 : Fonts.neutral300,
+                          ]}
+                        >
+                          {viewerConvocationLine}
+                        </Text>
+                      )}
                       <Text style={[Fonts.p2, Fonts.neutral300]}>
                         {publishedCompositionTeamCount > 0
                           ? `${publishedCompositionTeamCount} équipe(s) publiée(s)`
@@ -5647,10 +5705,8 @@ function EventDetails({ navigation, route }) {
                       {publishedCompositionTeamCount > 0 ? (
                         <Button
                           onPress={openPublishedConvocation}
-                          title={canEdit
-                            ? t('matchConvocation.published.openCta')
-                            : "Voir la composition d'équipes"}
-                          variant="Secondary"
+                          title={publishedCompositionCtaTitle}
+                          variant={viewerConvocationRole && !canEdit ? 'Primary' : 'Secondary'}
                         />
                       ) : null}
                     </View>

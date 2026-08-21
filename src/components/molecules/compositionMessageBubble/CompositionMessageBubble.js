@@ -7,9 +7,11 @@ import {
 } from 'react-native';
 import 'dayjs/locale/fr';
 
+import { getAuthRuntimeSnapshot } from '@/store/authRuntime';
 import useTheme from '@/theme/themeContext';
 
 import RenderedTacticalField from '@/components/tactical/RenderedTacticalField';
+import { getViewerConvocationRole } from '@/views/playerConvocation/playerConvocationUtils';
 
 import { RouteNames } from '@/navigation/routeNames';
 
@@ -110,7 +112,34 @@ function CompositionMessageBubble({ composition, isMe = false }) {
   // repond a aucune question.
   const hasEventContext = Boolean(eventName || whenLine);
 
+  // 🥇 AC08 — LA BULLE MENE ENFIN AU BON ECRAN (constat D-23 d'Adel : « quand on
+  // clique pour ouvrir la compo, c'est nul »). Elle envoyait TOUT LE MONDE sur le
+  // tableau du coach desactive. Un convoque va desormais sur SON terrain ; les
+  // autres gardent la vue d'ensemble en lecture seule, telle quelle.
+  //
+  // ♻️ L'identite se lit dans l'instantane d'authentification — le MEME que
+  // `client.native.js` interroge avant chaque requete. `useAuth` tirerait tout le
+  // client HTTP dans une carte de tchat qui n'appelle rien.
   const handlePress = () => {
+    const { auth } = getAuthRuntimeSnapshot();
+    const viewerConvocationRole = getViewerConvocationRole(
+      {
+        published: {
+          reservePlayerIds: reservePlayers.map((player) => getPlayerId(player)).filter(Boolean),
+          teams: isMultiTeamComposition ? teams : [{ placements }],
+        },
+      },
+      auth?.user?.documentId || auth?.user?.id,
+    );
+
+    if (eventId && viewerConvocationRole) {
+      navigation.navigate(RouteNames.EventStack, {
+        params: { eventId },
+        screen: RouteNames.PlayerConvocation,
+      });
+      return;
+    }
+
     navigation.navigate(RouteNames.EventStack, {
       params: {
         canEdit: false,
