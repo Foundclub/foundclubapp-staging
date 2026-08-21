@@ -59,6 +59,9 @@ export const images = {
   division08: createAssetSource('../assets/league/divisions/Div-5.png'),
   division09: createAssetSource('../assets/league/divisions/Div-5.png'),
   division10: createAssetSource('../assets/league/divisions/Div-5.png'),
+  // AD07 — meme constat que `images.js` : `chart` est l'entonnoir de
+  // `filter.png`. ⛔ NE PAS SUPPRIMER : la carte « Dashboard complet » de
+  // l'accueil admin l'affiche encore (hors perimetre AD07).
   chart: createAssetSource('../assets/icons/filter.png'),
   trophy: createAssetSource('../assets/icons/flag.png'),
   whistle: createAssetSource('../assets/icons/stadium.png'),

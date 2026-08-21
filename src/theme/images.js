@@ -61,7 +61,15 @@ export const images = {
   division09: require('../assets/league/divisions/Div-5.png'),
   division10: require('../assets/league/divisions/Div-5.png'),
   // League Icons (Mapped to existing until assets are added)
-  chart: require('../assets/icons/filter.png'), // Temp mapping
+  // AD07 — `chart` NE DESIGNE PAS un histogramme : c'est l'entonnoir de
+  // `filter.png`, pose en « Temp mapping » du lot LEAGUE.
+  // ⛔ NE PAS SUPPRIMER CETTE CLEF : elle a encore UN afficheur, hors
+  // perimetre AD07 — la carte « Dashboard complet » de l'accueil admin
+  // (HomeHub.js `icon: 'chart'` -> `Images[icon]` dans HomeActionCard.js),
+  // qui montre donc toujours un entonnoir de 18 px. « Comparer les offres »
+  // (SubscriptionOverview), lui, est passe au glyphe vectoriel `chartColumn`.
+  // Meme maladie chez les deux voisines : trophy x7, whistle x1.
+  chart: require('../assets/icons/filter.png'),
   trophy: require('../assets/icons/flag.png'), // Temp mapping
   whistle: require('../assets/icons/stadium.png'), // Temp mapping
   // D75 — illustrations de fond des cartes d'accueil, une par famille d'icone.
