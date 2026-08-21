@@ -2866,6 +2866,15 @@ export default {
       place: 'Lieu',
     },
     compositionTitle: 'La composition',
+    empty: {
+      // AC08 — ⛔ plus de cul-de-sac : quand la charge n'apporte aucune
+      // convocation, on le DIT, et le bouton retour est deja la.
+      message: 'Aucune composition publiée ne te concerne sur cet événement.',
+      title: 'La composition',
+    },
+    reserve: {
+      title: 'Remplaçants',
+    },
     roles: {
       starter: 'Titulaire',
       substitute: 'Remplaçant',

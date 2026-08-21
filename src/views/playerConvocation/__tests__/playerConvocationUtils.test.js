@@ -1,10 +1,12 @@
 import {
   buildConvocationFieldTokens,
+  buildConvocationReserveList,
   buildPlayerConvocationView,
   CONVOCATION_ROLE_STARTER,
   CONVOCATION_ROLE_SUBSTITUTE,
   formatConvocationTime,
   getPlayerConvocationResponse,
+  getViewerConvocationRole,
 } from '../playerConvocationUtils';
 
 // C-C — ECRAN 10 du pack composition, la partie qui se DECIDE sans rendu.
@@ -142,5 +144,120 @@ describe('formatConvocationTime', () => {
     expect(formatConvocationTime('')).toBe('');
     expect(formatConvocationTime(null)).toBe('');
     expect(formatConvocationTime('pas une date')).toBe('');
+  });
+});
+
+// ==========================================================================
+// AC08 — LA CHARGE TELLE QUE LE SERVEUR L'ENVOIE VRAIMENT.
+//
+// 🧨 Mesure du 2026-08-21 : `getPlayerConvocationView` (`event-composition.ts`,
+// forme `branches` depuis le 2026-07-07) ne met AUCUN `published` a la racine.
+// L'ecran, ecrit le 2026-08-15 contre l'ancienne forme, lisait donc toujours
+// `undefined` — et reposait TOUT LE MONDE sur la page de l'evenement, y compris
+// le joueur convoque venu par la notification. L'ecran n'etait pas seulement
+// sans porte : il etait sans contenu.
+// ==========================================================================
+
+const chargeServeur = (/** @type {any} */ pack, /** @type {any} */ responses = undefined) => ({
+  branches: [{
+    published: pack,
+    responses: responses || { byPlayerId: {}, counts: { absent: 0, pending: 1, present: 0 } },
+    team: { documentId: 'team-1', name: 'Senior 1' },
+    viewer: { inReserve: false, teamEntryIds: [] },
+  }],
+  event: { date: '2026-08-15T15:00:00.000Z', documentId: 'evt-1', name: 'Match' },
+  eventKind: 'event',
+  schemaVersion: 3,
+});
+
+describe('AC08 — la forme « branches » du serveur', () => {
+  test('🥇 un joueur PLACE y est reconnu titulaire — c est ce qui manquait', () => {
+    const vue = buildPlayerConvocationView({
+      convocation: chargeServeur(packAvec({
+        publishedBy: { firstname: 'Coach', lastname: 'Karim' },
+      })),
+      userId: 'joueur-1',
+    });
+
+    expect(vue).not.toBeNull();
+    expect(vue?.role).toBe(CONVOCATION_ROLE_STARTER);
+    expect(vue?.teamName).toBe('Senior 1');
+    expect(vue?.publishedByName).toBe('Coach Karim');
+  });
+
+  test('un remplacant y est reconnu remplacant', () => {
+    expect(buildPlayerConvocationView({
+      convocation: chargeServeur(packAvec({ reservePlayerIds: ['joueur-2'] })),
+      userId: 'joueur-2',
+    })?.role).toBe(CONVOCATION_ROLE_SUBSTITUTE);
+  });
+
+  test('🔒 un non-convoque n en tire toujours rien', () => {
+    expect(buildPlayerConvocationView({
+      convocation: chargeServeur(packAvec()),
+      userId: 'coach-1',
+    })).toBeNull();
+  });
+
+  test('la BONNE branche est retenue quand l evenement en porte plusieurs', () => {
+    const charge = chargeServeur(packAvec());
+    charge.branches = [
+      {
+        published: packAvec({
+          snapshotPlayers: [],
+          teams: [{ id: 'team_9', name: 'Adverse', placements: [] }],
+        }),
+        responses: { byPlayerId: {} },
+        team: { documentId: 'team-9', name: 'Adverse' },
+      },
+      charge.branches[0],
+    ];
+
+    expect(buildPlayerConvocationView({ convocation: charge, userId: 'joueur-1' })?.teamName)
+      .toBe('Senior 1');
+  });
+
+  test('la reponse deja donnee se lit DANS la branche du lecteur', () => {
+    const charge = chargeServeur(packAvec(), { byPlayerId: { 'joueur-1': 'present' } });
+
+    expect(getPlayerConvocationResponse(charge, 'joueur-1')).toBe('present');
+  });
+});
+
+describe('AC08 — getViewerConvocationRole, la reponse a « suis-je convoque ? »', () => {
+  test('titulaire, remplacant, ou rien du tout', () => {
+    const charge = chargeServeur(packAvec({ reservePlayerIds: ['joueur-2'] }));
+
+    expect(getViewerConvocationRole(charge, 'joueur-1')).toBe(CONVOCATION_ROLE_STARTER);
+    expect(getViewerConvocationRole(charge, 'joueur-2')).toBe(CONVOCATION_ROLE_SUBSTITUTE);
+    expect(getViewerConvocationRole(charge, 'coach-1')).toBeNull();
+    expect(getViewerConvocationRole(charge, '')).toBeNull();
+    expect(getViewerConvocationRole(null, 'joueur-1')).toBeNull();
+  });
+
+  test('il lit AUSSI la forme a plat — celle de la carte du tchat', () => {
+    expect(getViewerConvocationRole(
+      { published: packAvec() },
+      'joueur-1',
+    )).toBe(CONVOCATION_ROLE_STARTER);
+  });
+});
+
+describe('AC08 — buildConvocationReserveList, le banc que personne ne voyait', () => {
+  test('il rend les remplacants dans l ordre voulu par le coach', () => {
+    const banc = buildConvocationReserveList(packAvec({
+      reservePlayerIds: ['joueur-2', 'joueur-1'],
+      reserveSnapshotPlayers: [
+        { documentId: 'joueur-2', firstname: 'Leo', lastname: 'Diarra' },
+      ],
+    }));
+
+    expect(banc.map((/** @type {any} */ entree) => entree.id)).toEqual(['joueur-2', 'joueur-1']);
+    expect(banc[0].player.firstname).toBe('Leo');
+  });
+
+  test('⛔ un identifiant sans personne connue n est PAS affiche', () => {
+    expect(buildConvocationReserveList(packAvec({ reservePlayerIds: ['fantome'] }))).toEqual([]);
+    expect(buildConvocationReserveList(null)).toEqual([]);
   });
 });

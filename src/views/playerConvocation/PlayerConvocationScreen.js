@@ -136,6 +136,11 @@ function PlayerConvocationScreen() {
     },
   });
 
+  // AC08 — LE VOYANT SUR LE BON BOUTON. Il se lisait sur `answer`, qui est la
+  // reponse DEJA enregistree : sans reponse anterieure, appuyer sur « Absent »
+  // faisait tourner « Present ». Ce qui doit clignoter, c'est le geste en cours.
+  const pendingAnswer = rsvpMutation.isPending ? rsvpMutation.variables : null;
+
   const handleAnswer = useCallback((/** @type {'present' | 'absent'} */ nextAnswer) => {
     if (!eventId || rsvpMutation.isPending) return;
     rsvpMutation.mutate(nextAnswer);
@@ -143,14 +148,33 @@ function PlayerConvocationScreen() {
 
   const fieldTokens = useMemo(() => buildConvocationFieldTokens({
     placements: view?.placements,
-    snapshotPlayers: convocation?.published?.snapshotPlayers,
-  }), [convocation?.published?.snapshotPlayers, view?.placements]);
+    snapshotPlayers: view?.snapshotPlayers,
+  }), [view?.placements, view?.snapshotPlayers]);
 
+  // AC08 — ⛔ PLUS DE CUL-DE-SAC. L'ecran d'attente n'avait qu'un rond qui
+  // tourne : quand la charge arrivait vide (aucune composition publiee, requete
+  // en erreur, reseau coupe), la redirection ne partait jamais et le joueur
+  // restait enferme, sans bouton, sans geste de retour. Le retour existe
+  // desormais DES la premiere image.
   if (!view) {
     return (
       <ScreenContainer bgImage="bg2" bottomInsetMode="edge-to-edge" style={[styles.screen]}>
+        <View style={styles.header}>
+          <HeaderBackButton onPress={() => navigation.goBack()} />
+          <View style={styles.headerTexts}>
+            {/* ⛔ JAMAIS « Tu es convoque » ici : tant qu'on ne sait pas, on ne
+                le promet pas — et quand on sait que non, on le dit. */}
+            <Text style={[Fonts.h4Bold, { color: Colors.neutral00 }]}>
+              {t('playerConvocation.empty.title')}
+            </Text>
+          </View>
+        </View>
         <View style={styles.loaderBox}>
-          <Loader />
+          {isSettled ? (
+            <Text style={[Fonts.p2, { color: Colors.neutral300 }]}>
+              {t('playerConvocation.empty.message')}
+            </Text>
+          ) : <Loader />}
         </View>
       </ScreenContainer>
     );
@@ -300,20 +324,68 @@ function PlayerConvocationScreen() {
             );
           })}
         </RenderedTacticalField>
+
+        {/* AC08 — LE BANC. Mesure du 2026-08-21 : `reservePlayerIds` et
+            `reserveSnapshotPlayers` voyagent dans la charge depuis toujours, et
+            AUCUN ecran ne les montrait — un remplacant n'avait nulle part ou se
+            voir. Aucune donnee neuve : seulement celle qui dormait. */}
+        {view.reservePlayers.length ? (
+          <>
+            <Text style={[Fonts.p4, styles.sectionTitle, { color: Colors.neutral300 }]}>
+              {t('playerConvocation.reserve.title').toUpperCase()}
+            </Text>
+            <View style={styles.reserveList}>
+              {view.reservePlayers.map((/** @type {any} */ { id, player }) => {
+                const isMine = id === view.playerId;
+                return (
+                  <View
+                    key={id}
+                    style={[
+                      styles.reserveRow,
+                      {
+                        backgroundColor: withAlpha(Colors.primary500, isMine ? 0.16 : 0.06),
+                        borderColor: withAlpha(Colors.primary500, isMine ? 0.45 : 0.16),
+                      },
+                    ]}
+                  >
+                    <ProfileAvatar
+                      enablePreview={false}
+                      imageUrl={getImageUrl(player?.avatar?.url || player?.avatar)}
+                      name={[player?.firstname, player?.lastname].filter(Boolean).join(' ')}
+                      size={32}
+                    />
+                    <Text
+                      numberOfLines={1}
+                      style={[Fonts.p3Bold, styles.reserveName, { color: Colors.neutral00 }]}
+                    >
+                      {[player?.firstname, player?.lastname].filter(Boolean).join(' ')
+                        || getCompositionPlayerInitials(player)}
+                    </Text>
+                    {player?.number === 0 || player?.number ? (
+                      <Text style={[Fonts.p3, { color: Colors.neutral300 }]}>
+                        {t('playerConvocation.card.number', { number: String(player.number) })}
+                      </Text>
+                    ) : null}
+                  </View>
+                );
+              })}
+            </View>
+          </>
+        ) : null}
       </ScrollView>
 
       {/* Barre presence / absence. Elle porte la reponse DEJA donnee — le serveur
           la calcule (`responses.byPlayerId`), l'app ne la recalcule pas. */}
       <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 12) }]}>
         <Button
-          isLoading={rsvpMutation.isPending && answer !== 'present'}
+          isLoading={pendingAnswer === 'present'}
           onPress={() => handleAnswer('present')}
           style={styles.footerCta}
           title={t('playerConvocation.actions.present')}
           variant={answer === 'present' ? 'Primary' : 'Secondary'}
         />
         <Button
-          isLoading={rsvpMutation.isPending && answer === 'present'}
+          isLoading={pendingAnswer === 'absent'}
           onPress={() => handleAnswer('absent')}
           style={styles.footerCta}
           title={t('playerConvocation.actions.absent')}
@@ -388,6 +460,21 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     flex: 1,
     justifyContent: 'center',
+  },
+  reserveList: {
+    gap: 8,
+  },
+  reserveName: {
+    flex: 1,
+  },
+  reserveRow: {
+    alignItems: 'center',
+    borderRadius: 12,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
   },
   roleChip: {
     borderRadius: 999,

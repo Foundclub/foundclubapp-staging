@@ -162,10 +162,10 @@ const buildEvent = (/** @type {any} */ overrides = {}) => ({
 /** @type {any} */
 let mounted = null;
 
-const mountScreen = (/** @type {any} */ { convocation = null, event } = {}) => {
+const mountScreen = (/** @type {any} */ { auth, convocation = null, event } = {}) => {
   mockEventQuery.data = event === undefined ? buildEvent() : event;
   mockConvocationQuery.data = convocation;
-  mockUseAuth.mockReturnValue({
+  mockUseAuth.mockReturnValue(auth || {
     canEditClub: () => true,
     canEditEvent: () => true,
     canManageEvent: () => true,
@@ -399,5 +399,87 @@ describe('C-A — depuis le site, la page d un match mene au NOUVEAU terrain', (
       teamId: TEAM_ID,
     }));
     expect(Array.isArray(lastCallUpParams()?.players)).toBe(true);
+  });
+});
+
+// ==========================================================================
+// AC08 — LA PORTE DU JOUEUR, SUR LE SITE AUSSI.
+//
+// 🧨 `web` compile PHYSIQUEMENT les sources de `app`, mais un fichier `.web.js`
+// REMPLACE son jumeau sans suffixe : poser la porte dans `EventDetails.js` seul
+// aurait laisse ici un appelant frere casse. C'est la 5e fois que ce motif est
+// verrouille dans ce fichier (D08, D22, D40, D48).
+// ==========================================================================
+
+const JOUEUR = 'joueur-1';
+
+const authJoueur = () => ({
+  canEditClub: () => false,
+  canEditEvent: () => false,
+  canManageEvent: () => false,
+  freeUsageSummary: null,
+  subscriptionAccessLevel: 'FREE',
+  userData: { documentId: JOUEUR, role: { name: 'Joueur' } },
+});
+
+// La charge telle que le serveur l'envoie : `branches`, aucun `published` a la
+// racine (`getPlayerConvocationView`, `event-composition.ts`).
+const convocationAvecJoueurPlace = () => ({
+  branches: [{
+    published: {
+      reservePlayerIds: [],
+      schemaVersion: 3,
+      snapshotPlayers: [{ documentId: JOUEUR, firstname: 'Karim' }],
+      sportContext: 'football',
+      teams: [{
+        id: 'team_1',
+        name: 'U15',
+        placements: [{ playerId: JOUEUR, positionX: 50, positionY: 90 }],
+      }],
+    },
+    responses: { byPlayerId: {} },
+    team: { documentId: TEAM_ID, name: 'U15' },
+  }],
+  schemaVersion: 3,
+});
+
+// 🔑 `team.players` est ce qui ouvre le bloc composition a un joueur
+// (`isTeamMember`) : sans cette liste, le site ne l'affiche meme pas.
+const matchAvecEffectif = () => buildEvent({
+  team: {
+    club: { documentId: CLUB_ID },
+    documentId: TEAM_ID,
+    name: 'U15',
+    players: [{ documentId: JOUEUR }, { documentId: 'spectateur-9' }],
+    trainers: [],
+  },
+});
+
+describe('AC08 — le site mene le convoque a SON ecran', () => {
+  test('🥇 un joueur convoque part sur « PlayerConvocation », en un appui', () => {
+    const root = mountScreen({
+      auth: authJoueur(),
+      convocation: convocationAvecJoueurPlace(),
+      event: matchAvecEffectif(),
+    });
+
+    click(root, 'Voir ma convocation');
+
+    expect(lastRoute()).toBe('PlayerConvocation');
+  });
+
+  test('🔒 un non-convoque garde l ancien terrain en lecture seule', () => {
+    const root = mountScreen({
+      auth: {
+        ...authJoueur(),
+        userData: { documentId: 'spectateur-9', role: { name: 'Joueur' } },
+      },
+      convocation: convocationAvecJoueurPlace(),
+      event: matchAvecEffectif(),
+    });
+
+    click(root, 'Voir la composition publiée');
+
+    expect(lastRoute()).toBe('TacticalBoardV2');
   });
 });

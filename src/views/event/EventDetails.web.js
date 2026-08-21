@@ -22,6 +22,7 @@ import {
   isTournamentTeamNonCompliant,
   normalizeTournamentText,
 } from '@/views/event/tournamentUtils';
+import { getViewerConvocationRole } from '@/views/playerConvocation/playerConvocationUtils';
 
 import { RouteNames } from '@/navigation/routeNames';
 
@@ -379,6 +380,14 @@ function EventDetails({ navigation, route }) {
   const publishedCompositionReserveCount = useMemo(
     () => convocationBranches.reduce((total, branch) => total + (Array.isArray(branch?.published?.reservePlayerIds) ? branch.published.reservePlayerIds.length : 0), 0),
     [convocationBranches],
+  );
+  // 🥇 AC08 — LE SITE SUIT LE TELEPHONE. `web` compile PHYSIQUEMENT les sources
+  // de `app`, mais un fichier `.web.js` REMPLACE son jumeau : ne poser la porte
+  // que dans `EventDetails.js` laisserait ici un appelant frere casse — le motif
+  // a deja coute 4 correctifs (D08, D22, D40, D48).
+  const viewerConvocationRole = useMemo(
+    () => getViewerConvocationRole(convocationPayload, userData?.documentId || userData?.id),
+    [convocationPayload, userData?.documentId, userData?.id],
   );
   const compositionEligiblePlayerCount = Array.isArray(staffCompositionPayload?.eligiblePlayers)
     ? staffCompositionPayload.eligiblePlayers.length
@@ -1309,7 +1318,20 @@ function EventDetails({ navigation, route }) {
                       </button>
                     ) : null}
 
-                    {convocationBranches.length > 0 ? (
+                    {convocationBranches.length > 0 && viewerConvocationRole ? (
+                      <button
+                        onClick={() => navigation.navigate(RouteNames.PlayerConvocation, {
+                          eventId,
+                          teamId: compositionTeamId,
+                        })}
+                        style={outlineButtonStyle}
+                        type="button"
+                      >
+                        Voir ma convocation
+                      </button>
+                    ) : null}
+
+                    {convocationBranches.length > 0 && !viewerConvocationRole ? (
                       <button
                         onClick={() => navigation.navigate(RouteNames.TacticalBoardV2, {
                           aggregateBranches: convocationBranches,
