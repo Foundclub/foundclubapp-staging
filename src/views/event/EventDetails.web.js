@@ -1155,7 +1155,7 @@ function EventDetails({ navigation, route }) {
               background: sectionBackground, border: `1px solid ${borderColor}`, borderRadius: 24, display: 'grid', gap: 18, padding: 22,
             }}
             >
-              {Array.isArray(event?.eventTasks) && event.eventTasks.length > 0 ? (
+              {canViewParticipantNames && Array.isArray(event?.eventTasks) && event.eventTasks.length > 0 ? (
                 <div>
                   <EventTasksSection
                     canManageEvent={canEdit}
@@ -1811,7 +1811,7 @@ function EventDetails({ navigation, route }) {
                 )}
               </div>
 
-              {detectedPlayers.length > 0 ? (
+              {canViewParticipantNames && detectedPlayers.length > 0 ? (
                 <div style={{
                   background: sectionBackground, border: `1px solid ${borderColor}`, borderRadius: 24, display: 'grid', gap: 14, padding: 22,
                 }}
