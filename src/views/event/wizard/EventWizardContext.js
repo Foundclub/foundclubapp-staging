@@ -72,8 +72,18 @@ const createInitialState = () => {
     startTime: start,
     // Step 5: Participants
     capacity: null,
+    // AC04 — `null` veut dire « l'organisateur n'a pas encore tranche », et
+    // c'est ce qui laisse `getDefaultCapacityModeForEventType` decider. Sans ce
+    // troisieme etat, un match ne pourrait pas s'ouvrir sur « Illimite » sans
+    // ecraser un « Capacite fixe » choisi a la main.
+    capacityMode: null,
     detectionSlots: [],
     externalParticipantLimit: null,
+    // AC04 — LES CONVOQUES D'UN MATCH, coches a l'etape Participants.
+    // ⛔ Ils ne partent PAS dans la charge de creation : une convocation se pose
+    // SUR un evenement, et l'evenement n'existe pas encore. Le Recap les rejoue
+    // apres coup (`saveEventCompositionDraft`).
+    matchCallUpPlayerIds: [],
     totalPlayers: null,
     // Step 6: Validation mode
     externalParticipantValidationMode: 'manual',
@@ -85,6 +95,12 @@ const createInitialState = () => {
     // Il vit avec les metas parce que `SET_META` est deja le reducteur des
     // champs libres — aucune nouvelle action a inventer.
     eventTasks: [],
+    // AC04 — le club trouve par la recherche, quand l'adversaire EST dans
+    // FoundClub. ⛔ Il ne part pas au serveur : `event` ne porte que
+    // `opponentName` (schema Strapi). Il sert a re-montrer le club choisi quand
+    // on revient sur l'etape, et il prepare l'ecusson (voir la migration nommee
+    // dans le compte rendu du lot).
+    opponentClubId: null,
     opponentName: '',
     participantIdentityVisibility: 'VISIBLE',
     // 🔒 AA10 ③ — UN BROUILLON D'EVENEMENT NAIT PRIVE. Le type n'est pas encore
@@ -171,6 +187,11 @@ function eventWizardReducer(state, action) {
         ...action.payload,
         detectionSlots: action.payload?.isRecurrent ? [] : state.detectionSlots,
       };
+    case 'SET_MATCH_CALL_UP':
+      return {
+        ...state,
+        matchCallUpPlayerIds: Array.isArray(action.payload) ? action.payload : [],
+      };
     case 'SET_META':
       return { ...state, ...action.payload };
     case 'SET_PARTICIPANTS':
@@ -185,6 +206,9 @@ function eventWizardReducer(state, action) {
         ...state,
         detectionSlots: [],
         invitedTeams: [],
+        // AC04 — changer d'equipe change l'effectif : garder des identifiants
+        // de joueurs d'une AUTRE equipe fabriquerait une convocation fantome.
+        matchCallUpPlayerIds: [],
         team: action.payload,
       };
     case 'SET_TEAM_AUDIENCES':
@@ -195,6 +219,7 @@ function eventWizardReducer(state, action) {
         club: action.payload?.club || null,
         detectionSlots: [],
         invitedTeams: [],
+        matchCallUpPlayerIds: [],
         team: action.payload?.team || null,
         tournamentActivity: action.payload?.tournamentActivity || null,
         tournamentCategory: action.payload?.tournamentCategory || null,
@@ -224,7 +249,16 @@ function eventWizardReducer(state, action) {
         !== String(state?.type?.documentId || '');
       const nextState = {
         ...state,
+        // AC04 — le mode de capacite se REDEMANDE quand le type change
+        // vraiment : c'est le type qui porte le defaut. Un type inchange (le
+        // lien « modifier » du Recap) ne touche a rien, meme regle que
+        // `sessionStatus` juste en dessous.
+        capacityMode: hasTypeChanged ? null : state.capacityMode,
         detectionSlots: [],
+        // AC04 : meme raison que `opponentName` — une convocation n'a de sens
+        // que sur un match.
+        matchCallUpPlayerIds: isMatch ? state.matchCallUpPlayerIds : [],
+        opponentClubId: isMatch ? state.opponentClubId : null,
         // Y02 : changer de type pour autre chose qu'un match efface l'adversaire.
         // Sinon un adversaire saisi puis abandonne (« finalement c'est un
         // entrainement ») resterait accroche a l'evenement sans qu'aucun ecran

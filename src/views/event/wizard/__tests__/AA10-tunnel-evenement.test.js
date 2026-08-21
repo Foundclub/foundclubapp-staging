@@ -533,18 +533,41 @@ describe('AA10 ② — les invitations, a leur place, pour un match', () => {
       });
   });
 
-  // ⛔ PAS FAIT, ET DIT FRANCHEMENT (§2 quinquies). La moitie « liste des
-  // joueurs de l'equipe de base a cocher » demande d'ecrire une audience sur
-  // l'equipe ORGANISATRICE. Or `syncEventTeamAudiencesForEvent`
+  // ✅ FAIT PAR AC04 (2026-08-21) — ET LE PIEGE DECRIT ICI RESTE VRAI.
+  //
+  // AA10 avait laisse ce temoin en attente parce qu'il n'imaginait qu'un seul
+  // chemin : ecrire une AUDIENCE sur l'equipe organisatrice. Ce chemin est bien
+  // toujours condamne — `syncEventTeamAudiencesForEvent`
   // (`admin/src/api/event-team-audience/services/event-team-audience.ts:343`)
-  // appelle `connectInvitedTeam` pour toute audience ACCEPTED : l'equipe
+  // appelle `connectInvitedTeam` pour toute audience ACCEPTED, l'equipe
   // organisatrice atterrirait dans `invitedTeams`, et la carte d'evenement
-  // (`EventCardNew.js:504`) afficherait « U15 A vs U15 A ». Le garde-fou est
-  // cote `admin`, hors perimetre de ce lot.
-  test.todo(
-    'temoin 6 — sur un match, l etape Participants montre les joueurs de l equipe'
-    + ' (BLOQUE : connectInvitedTeam doit ignorer l equipe organisatrice, cote admin)',
-  );
+  // (`EventCardNew.js:504`) afficherait « U15 A vs U15 A ».
+  //
+  // 🎯 AC04 passe A COTE du piege plutot que de le desamorcer : convoquer, dans
+  // ce depot, c'est un BROUILLON DE COMPOSITION (`selectedPlayerIds`), pas une
+  // audience. Aucune ligne d'invitation n'est ecrite, donc `invitedTeams` ne
+  // bouge pas. Les temoins vivent dans `AC04-convocation-et-adversaire.test.js`.
+  test('temoin 6 — la convocation d un match ne touche PAS aux invitations', () => {
+    const chargeAttendue = { invitedTeams: [], teamAudiences: [] };
+
+    // Le garde-fou en une ligne : l'etat du tunnel apres un choix de convocation
+    // laisse les deux listes d'invitation intactes.
+    act(() => {
+      renderer.create(createElement(
+        EventWizardProvider,
+        null,
+        createElement(PriseDeCourant),
+      ));
+    });
+    act(() => semer({ payload: { documentId: 'type-match', name: 'Match' }, type: 'SET_TYPE' }));
+    act(() => semer({ payload: ['j1', 'j3'], type: 'SET_MATCH_CALL_UP' }));
+
+    expect(PriseDeCourant.etat.matchCallUpPlayerIds).toEqual(['j1', 'j3']);
+    expect({
+      invitedTeams: PriseDeCourant.etat.invitedTeams,
+      teamAudiences: PriseDeCourant.etat.teamAudiences,
+    }).toEqual(chargeAttendue);
+  });
 });
 
 describe('AA10 — le compteur d etapes, avant et apres', () => {

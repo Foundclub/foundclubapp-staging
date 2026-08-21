@@ -99,6 +99,51 @@ export const shouldSkipEventWizardParticipantsStep = (/** @type {any} */ state =
 );
 
 /**
+ * LE MODE DE CAPACITE DE DEPART, TYPE PAR TYPE — AC04 (precision d'Adel du
+ * 2026-08-21 : « l'etape des participants doit etre ILLIMITEE »).
+ *
+ * ⛔ Le mecanisme ne change pas : l'etape Participants offre depuis toujours
+ * les deux modes (`unlimited` / `fixed`) et `capacity: null` veut deja dire
+ * « aucun plafond ». Seul le DEFAUT bascule, et pour un MATCH seulement.
+ *
+ * 🎯 Le pourquoi tient en une phrase : un match ne se remplit pas par
+ * inscriptions, il se CONVOQUE. Demander « combien de places ? » a un
+ * organisateur qui coche son effectif juste en dessous est une question sans
+ * objet — et un plafond a 12 y couperait la convocation d'une equipe a 14.
+ *
+ * ⚠️ EFFET DE BORD MESURE, et il DESSERRE au lieu de serrer :
+ * `canEventBeJoined` (`domains/event/eventUseCases.js:717`) rend `true` pour
+ * TOUT LE MONDE quand `capacity` est vide, alors qu'un plafond chiffre le
+ * reserve aux joueurs. Un match sans plafond laisse donc le bouton
+ * « Participer » actif pour n'importe quel role. La portee reelle reste
+ * etroite : depuis AA10 ③, un match naît `sessionStatus: 'closed'`, donc
+ * introuvable pour qui n'y est pas convie.
+ * @param {string} typeName Nom du type, tel que le serveur le rend.
+ * @returns {'fixed' | 'unlimited'} Le mode de depart.
+ */
+export const getDefaultCapacityModeForEventType = (typeName = '') => (
+  isMatchEventType(typeName) ? 'unlimited' : 'fixed'
+);
+
+/**
+ * L'etape Participants doit-elle porter la CONVOCATION ? — AC04 (constat ① du
+ * 2026-08-20 : « les participants doivent etre plutot la liste pour faire les
+ * convocations, avec les joueurs de l'equipe de base »).
+ *
+ * Trois conditions, et les trois sont necessaires :
+ *  1. c'est un MATCH — seul type ou « qui joue » se decide a l'avance ;
+ *  2. l'etape est traversee (elle se saute pour un entrainement ferme) ;
+ *  3. une equipe ORGANISATRICE est choisie — sans effectif, rien a cocher.
+ * @param {any} state Etat courant du tunnel.
+ * @returns {boolean} Vrai si la section « Convocation » doit etre offerte.
+ */
+export const shouldOfferMatchCallUp = (state = {}) => (
+  isMatchEventType(state?.type?.name)
+  && !shouldSkipEventWizardParticipantsStep(state)
+  && Boolean(state?.team?.documentId || state?.team?.id)
+);
+
+/**
  * LA VISIBILITE DE DEPART D'UN EVENEMENT, TYPE PAR TYPE — AA10 (constat ③
  * d'Adel du 2026-08-20 : « acces et visibilite : ca doit etre prive de base »).
  *

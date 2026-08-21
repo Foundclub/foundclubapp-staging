@@ -79,7 +79,12 @@ jest.mock('@/components/molecules/wizardStepLayout/WizardStepLayout', () => func
   return props.children;
 });
 
+// AC04 — l'etape Participants rappelle l'effectif de l'equipe (`useGetTeam`)
+// pour porter la convocation d'un match. Ce fichier mesure le CONTENU des
+// etapes 5 a 8 sur des types qui ne sont pas des matchs : la doublure rend donc
+// « rien trouve », et aucune de ses mesures ne bouge.
 jest.mock('@tanstack/react-query', () => ({
+  useQuery: () => ({ data: undefined, isLoading: false }),
   useQueryClient: () => ({ invalidateQueries: () => {} }),
 }));
 
@@ -106,6 +111,15 @@ jest.mock('@/domains/event/useEvent', () => ({
 }));
 
 jest.mock('@/services/celebrations/celebrationRuntime', () => ({ celebrate: () => {} }));
+
+// AC04 — l'etape Participants rappelle l'effectif de l'equipe pour porter la
+// convocation d'un match. ⛔ La doublure est OBLIGATOIRE, pas confortable :
+// `teamQueries` tire le client HTTP, qui exige `API_URL` et fait mourir la
+// suite entiere au CHARGEMENT. Vide : ce fichier mesure des types qui ne sont
+// pas des matchs.
+jest.mock('@/services/team/teamQueries', () => ({
+  useGetTeam: () => ({ data: undefined, isLoading: false }),
+}));
 
 // ⛔ Jamais `requireActual` sur un service : le client HTTP exige `API_URL` et
 // la suite entiere meurt au chargement.
