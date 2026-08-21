@@ -397,6 +397,33 @@ describe('AD06 · temoin 4 — les deux boutons des demandes font 44', () => {
       expect(hauteurs[hauteurs.length - 1]).toBe(44);
     });
   });
+
+  test('en revanche les DEUX boutons coach d une ligne ne font que 39 px', () => {
+    // 📏 CONSTAT POSE POUR UN LOT SUIVANT, PAS UNE REGRESSION D AD06 :
+    // « Pointer l arrivee » et « Modifier » portent `size="sm"`, qui vaut 39 px
+    // (Button.js:61-72) — sous la cible tactile de 44. Le temoin fige la mesure
+    // pour qu on n ait pas a la redecouvrir ; le jour ou un lot les passe a 44,
+    // c est CE chiffre qu il change.
+    const arbre = monter({
+      teamParticipationSections: [section({ participating: [P_ARRIVE] })],
+    });
+
+    const boutonsCoach = arbre.root
+      .findAllByType(Button)
+      .filter((/** @type {any} */ noeud) => [
+        'Modifier',
+        'Pointer l\'arrivée',
+      ].includes(noeud.props.title));
+
+    expect(boutonsCoach.length).toBe(2);
+    boutonsCoach.forEach((/** @type {any} */ noeud) => {
+      expect(noeud.props.size).toBe('sm');
+      const hauteurs = aplatir(noeud.findAllByType(TouchableOpacity)[0].props.style)
+        .filter((/** @type {any} */ st) => typeof st.height === 'number')
+        .map((/** @type {any} */ st) => st.height);
+      expect(hauteurs[hauteurs.length - 1]).toBe(39);
+    });
+  });
 });
 
 describe('AD06 · temoin 5 — trois tuiles, meme a zero', () => {
