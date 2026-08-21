@@ -140,6 +140,24 @@ jest.mock('@/components/atoms/button/Button', () => {
   };
 });
 
+// AC09 — la fenetre de prevention. On garde le double le plus betement fidele
+// possible : elle n'existe dans l'arbre QUE quand elle est ouverte, et son pied
+// (les 2 boutons) est rendu avec elle.
+jest.mock('@/components/molecules/bottomModal/BottomModal', () => {
+  const { View: VueRN } = jest.requireActual('react-native');
+  return {
+    __esModule: true,
+    default: (/** @type {any} */ { children, footerComponent, isVisible }) => (
+      isVisible ? (
+        <VueRN>
+          {children}
+          {footerComponent}
+        </VueRN>
+      ) : null
+    ),
+  };
+});
+
 const couleursReelles = jest.requireActual('@/theme/colors').default();
 
 /**
@@ -731,5 +749,276 @@ describe('D84 — la barre du bas reste atteignable, quel que soit l effectif', 
     // La barre suit sur le 3e onglet : meme compteur, meme CTA.
     expect(texteVisible(arbre)).toContain('2 convoqués');
     expect(texteVisible(arbre)).toContain('Suivant');
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// AC09 — « On convoque a l'aveugle. » (Adel, 2026-08-20)
+//
+// « Pour les compositions, quand on fait les convocations, il faut marquer le
+//   statut des participants — s'ils ont repondu absent ou present — comme ca on
+//   sait AVANT de convoquer qui on convoque, en laissant la possibilite de
+//   convoquer les absents. Et si on selectionne des joueurs absents, mettre un
+//   pop-up de prevention. »
+//
+// 🔒 LES DEUX REGLES QUE CE BLOC TIENT, ET QUI NE SE NEGOCIENT PAS :
+//   1. Les QUATRE etats se lisent SANS LA COULEUR (present · absent · en
+//      attente · sans reponse). Un daltonien doit pouvoir convoquer.
+//   2. La fenetre PREVIENT, elle n'INTERDIT PAS. Adel est explicite.
+// ═══════════════════════════════════════════════════════════════════════════
+describe('AC09 — voir qui a repondu avant de convoquer', () => {
+  const SANS_REPONSE = joueur('p4', 'Sami', 'Baki', { number: 4, position: 'MC' });
+  const EFFECTIF_AC09 = [...EFFECTIF, SANS_REPONSE];
+
+  /**
+   * La charge de l'evenement, avec les 3 relations qui portent les reponses.
+   * p1 present · p2 absent · p3 demande en attente · p4 n'a rien repondu.
+   * @returns {any}
+   */
+  const evenementAvecReponses = () => ({
+    missings: [{ documentId: 'p2' }],
+    participationRequests: [{
+      documentId: 'req_p3',
+      isActive: true,
+      participationStatus: 'pending',
+      user: { documentId: 'p3' },
+    }],
+    participations: [{ documentId: 'p1' }],
+    team: { club: { documentId: 'club_1' }, documentId: 'team_1' },
+  });
+
+  /**
+   * Le texte de l'etiquette d'etat portee par la rangee de ce joueur.
+   * @param {any} arbre
+   * @param {string} nom
+   * @returns {string}
+   */
+  const etiquetteEtat = (arbre, nom) => {
+    const rangee = rangeeJoueur(arbre, nom);
+    const etiquettes = rangee.findAllByType(Text)
+      .map((/** @type {any} */ noeud) => aplatirTexte(noeud.props.children))
+      .filter((/** @type {string} */ texte) => /Présent|Absent|En attente|Sans réponse/.test(texte));
+    return etiquettes[0] || '';
+  };
+
+  beforeEach(() => {
+    mockEvent = evenementAvecReponses();
+  });
+
+  test('🥇 TEMOIN 1 — chaque joueur de la liste porte son statut', async () => {
+    const arbre = await rendre({ players: EFFECTIF_AC09 });
+
+    expect(etiquetteEtat(arbre, 'Moussa Diallo')).toContain('Présent');
+    expect(etiquetteEtat(arbre, 'Hugo Fofana')).toContain('Absent');
+    expect(etiquetteEtat(arbre, 'Théo Marchal')).toContain('En attente');
+    expect(etiquetteEtat(arbre, 'Sami Baki')).toContain('Sans réponse');
+  });
+
+  test('TEMOIN 2 — les QUATRE etats sont distingues, « en attente » n est pas « sans reponse »', async () => {
+    const arbre = await rendre({ players: EFFECTIF_AC09 });
+
+    const etats = [
+      etiquetteEtat(arbre, 'Moussa Diallo'),
+      etiquetteEtat(arbre, 'Hugo Fofana'),
+      etiquetteEtat(arbre, 'Théo Marchal'),
+      etiquetteEtat(arbre, 'Sami Baki'),
+    ];
+
+    expect(etats.every((etat) => etat.length > 0)).toBe(true);
+    expect(new Set(etats).size).toBe(4);
+    // ⛔ Le 4e etat n'est PAS ecrase en « sans reponse » : une demande en
+    // attente, ce n'est pas un silence.
+    expect(etats[2]).not.toEqual(etats[3]);
+  });
+
+  test('🚨 TEMOIN 3 — l etat se lit SANS LA COULEUR : un mot, et un signe distinct', async () => {
+    const arbre = await rendre({ players: EFFECTIF_AC09 });
+
+    const etats = ['Moussa Diallo', 'Hugo Fofana', 'Théo Marchal', 'Sami Baki']
+      .map((nom) => etiquetteEtat(arbre, nom));
+
+    // Le MOT porte l'etat a lui seul.
+    etats.forEach((etat) => {
+      expect(etat.replace(/[^A-Za-zÀ-ÿ]/g, '').length).toBeGreaterThan(2);
+    });
+
+    // Et le signe qui precede le mot differe d'un etat a l'autre : meme sans
+    // lire, meme en niveaux de gris, les 4 rangees ne se ressemblent pas.
+    const signes = etats.map((etat) => etat.trim().charAt(0));
+    expect(new Set(signes).size).toBe(4);
+  });
+
+  test('⛔ un joueur HORS APP ne porte aucun statut : il ne peut pas repondre', async () => {
+    const arbre = await rendre({
+      pendingManualPlayer: {
+        documentId: 'manual_1700000000001',
+        firstname: 'Yanis',
+        id: 'manual_1700000000001',
+        isManual: true,
+        lastname: 'Bertrand',
+      },
+      players: EFFECTIF_AC09,
+    });
+
+    expect(etiquetteEtat(arbre, 'Yanis Bertrand')).toBe('');
+    expect(texteVisible(arbre)).toContain('Préviens-le toi-même');
+  });
+
+  test('🕳️ sans charge d evenement, AUCUN etat n est affiche — on ne dit pas du faux', async () => {
+    mockEvent = undefined;
+    const arbre = await rendre({ players: EFFECTIF_AC09 });
+
+    expect(etiquetteEtat(arbre, 'Moussa Diallo')).toBe('');
+    expect(etiquetteEtat(arbre, 'Sami Baki')).toBe('');
+  });
+
+  test('🥇 TEMOIN 4 — cocher un ABSENT declenche la fenetre de prevention, qui le NOMME', async () => {
+    const arbre = await rendre({ players: EFFECTIF_AC09 });
+    await act(async () => {
+      rangeeJoueur(arbre, 'Hugo Fofana').props.onPress();
+    });
+    await appuyerSur(arbre, 'Suivant');
+
+    const texte = texteVisible(arbre);
+    expect(texte).toContain('1 joueur a dit ABSENT');
+    expect(texte).toContain('Hugo Fofana');
+    // ⛔ Rien n'est parti : on previent AVANT.
+    expect(mockNavigate).not.toHaveBeenCalled();
+  });
+
+  test('la fenetre compte et nomme TOUS les absents coches', async () => {
+    mockEvent = {
+      ...evenementAvecReponses(),
+      missings: [{ documentId: 'p2' }, { documentId: 'p5' }],
+    };
+    const arbre = await rendre({
+      players: [...EFFECTIF_AC09, joueur('p5', 'Ilan', 'Ravel', { number: 5 })],
+    });
+
+    await act(async () => {
+      rangeeJoueur(arbre, 'Hugo Fofana').props.onPress();
+    });
+    await act(async () => {
+      rangeeJoueur(arbre, 'Ilan Ravel').props.onPress();
+    });
+    await appuyerSur(arbre, 'Suivant');
+
+    const texte = texteVisible(arbre);
+    expect(texte).toContain('2 joueurs ont dit ABSENT');
+    expect(texte).toContain('Hugo Fofana');
+    expect(texte).toContain('Ilan Ravel');
+  });
+
+  test('🔒 TEMOIN 5 — la fenetre PREVIENT et LAISSE PASSER : elle n interdit pas', async () => {
+    const arbre = await rendre({ players: EFFECTIF_AC09 });
+    await act(async () => {
+      rangeeJoueur(arbre, 'Moussa Diallo').props.onPress();
+    });
+    await act(async () => {
+      rangeeJoueur(arbre, 'Hugo Fofana').props.onPress();
+    });
+    await appuyerSur(arbre, 'Suivant');
+    expect(mockNavigate).not.toHaveBeenCalled();
+
+    await appuyerSur(arbre, 'Convoquer quand même');
+
+    // 🔒 L'ABSENT PART AVEC LES AUTRES. C'est la demande d'Adel, mot pour mot :
+    // « en laissant la possibilite de convoquer les absents ».
+    expect(mockNavigate).toHaveBeenCalledTimes(1);
+    const [, parametres] = mockNavigate.mock.calls[0];
+    expect(parametres.selectedPlayers.map((/** @type {any} */ j) => j.documentId).sort())
+      .toEqual(['p1', 'p2']);
+  });
+
+  test('« Revoir ma selection » referme la fenetre et ne convoque personne', async () => {
+    const arbre = await rendre({ players: EFFECTIF_AC09 });
+    await act(async () => {
+      rangeeJoueur(arbre, 'Hugo Fofana').props.onPress();
+    });
+    await appuyerSur(arbre, 'Suivant');
+    await appuyerSur(arbre, 'Revoir ma sélection');
+
+    expect(mockNavigate).not.toHaveBeenCalled();
+    expect(texteVisible(arbre)).not.toContain('joueur a dit ABSENT');
+    // La selection est intacte : on revient la corriger, on ne la perd pas.
+    expect(rangeeJoueur(arbre, 'Hugo Fofana').props.accessibilityState.selected).toBe(true);
+  });
+
+  test('TEMOIN 6 — ne cocher que des PRESENTS ne declenche AUCUNE fenetre', async () => {
+    const arbre = await rendre({ players: EFFECTIF_AC09 });
+    await act(async () => {
+      rangeeJoueur(arbre, 'Moussa Diallo').props.onPress();
+    });
+    await appuyerSur(arbre, 'Suivant');
+
+    expect(texteVisible(arbre)).not.toContain('ABSENT');
+    expect(mockNavigate).toHaveBeenCalledTimes(1);
+  });
+
+  test('un « en attente » et un « sans reponse » ne declenchent RIEN non plus', async () => {
+    const arbre = await rendre({ players: EFFECTIF_AC09 });
+    await act(async () => {
+      rangeeJoueur(arbre, 'Théo Marchal').props.onPress();
+    });
+    await act(async () => {
+      rangeeJoueur(arbre, 'Sami Baki').props.onPress();
+    });
+    await appuyerSur(arbre, 'Suivant');
+
+    expect(mockNavigate).toHaveBeenCalledTimes(1);
+    expect(texteVisible(arbre)).not.toContain('ABSENT');
+  });
+
+  test('🔒 TEMOIN 7 — NON-REGRESSION : la convocation part exactement comme avant', async () => {
+    const arbre = await rendre({ players: EFFECTIF_AC09 });
+    await act(async () => {
+      rangeeJoueur(arbre, 'Moussa Diallo').props.onPress();
+    });
+    await appuyerSur(arbre, 'Suivant');
+
+    expect(mockNavigate).toHaveBeenCalledTimes(1);
+    const [nomEcran, parametres] = mockNavigate.mock.calls[0];
+    expect(nomEcran).toBe('MatchCompositionStart');
+    expect(parametres.selectedPlayers).toHaveLength(1);
+    expect(parametres.selectedPlayers[0].documentId).toBe('p1');
+    expect(parametres.eventId).toBe('evt_1');
+    expect(parametres.teamId).toBe('team_1');
+    expect(parametres.pendingManualPlayer).toBeUndefined();
+  });
+
+  test('🔒 et un ABSENT confirme voyage par le MEME chemin qu avant (terrain deja pose)', async () => {
+    const arbre = await rendre({
+      existingComposition: {
+        schemaVersion: 3,
+        selectedPlayerIds: ['p1'],
+        teams: [{
+          id: 'team_1',
+          placements: [{
+            playerId: 'p1', positionX: 50, positionY: 93, slotId: 'team_1:slot_1',
+          }],
+        }],
+      },
+      players: EFFECTIF_AC09,
+    });
+    await act(async () => {
+      rangeeJoueur(arbre, 'Hugo Fofana').props.onPress();
+    });
+    await appuyerSur(arbre, 'Suivant');
+    await appuyerSur(arbre, 'Convoquer quand même');
+
+    const [nomEcran, parametres] = mockNavigate.mock.calls[0];
+    expect(nomEcran).toBe('MatchCompositionBoard');
+    expect(parametres.startPlacements).toEqual([{
+      playerId: 'p1', positionX: 50, positionY: 93, slotId: 'team_1:slot_1',
+    }]);
+  });
+
+  test('⛔ « Suivant » sans personne coche avertit TOUJOURS, avant toute fenetre d absents', async () => {
+    const arbre = await rendre({ players: EFFECTIF_AC09 });
+    await appuyerSur(arbre, 'Suivant');
+
+    expect(mockAlert).toHaveBeenCalledWith('Attention', 'Sélectionne au moins un joueur.');
+    expect(texteVisible(arbre)).not.toContain('ABSENT');
+    expect(mockNavigate).not.toHaveBeenCalled();
   });
 });

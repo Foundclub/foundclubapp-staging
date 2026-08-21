@@ -1,5 +1,7 @@
 import {
   buildManualCallUpPlayer,
+  buildRsvpAnswersByPlayerId,
+  CALL_UP_RSVP_NONE,
   getCallUpCounters,
   getMatchSquadSizes,
   getPlayerUnavailability,
@@ -156,5 +158,98 @@ describe('matchCallUpUtils — compteurs de la barre du bas', () => {
     expect(compteurs.calledUp).toBe(2);
     expect(compteurs.starters).toBe(0);
     expect(compteurs.bench).toBe(2);
+  });
+});
+
+// AC09 — la reponse de chaque joueur, calculee AVANT de convoquer.
+// 🧩 Ce bloc verrouille la SEULE chose que la fonction a le droit de faire :
+// deleguer aux deux briques de `@/domains/event/participationState`. Si un jour
+// quelqu'un y recopie une regle « a la main », le premier temoin tombe.
+describe('AC09 — buildRsvpAnswersByPlayerId', () => {
+  const EVENEMENT = {
+    missings: [{ documentId: 'p2' }],
+    participationRequests: [{
+      documentId: 'req_p3',
+      isActive: true,
+      participationStatus: 'pending',
+      user: { documentId: 'p3' },
+    }],
+    participations: [{ documentId: 'p1' }],
+  };
+
+  const JOUEURS = [
+    { documentId: 'p1', firstname: 'Moussa', lastname: 'Diallo' },
+    { documentId: 'p2', firstname: 'Hugo', lastname: 'Fofana' },
+    { documentId: 'p3', firstname: 'Théo', lastname: 'Marchal' },
+    { documentId: 'p4', firstname: 'Sami', lastname: 'Baki' },
+  ];
+
+  test('les 4 etats sortent, et « sans reponse » est nomme, pas absent de la table', () => {
+    const table = buildRsvpAnswersByPlayerId({ event: EVENEMENT, players: JOUEURS });
+
+    expect(table.get('p1')).toBe('present');
+    expect(table.get('p2')).toBe('absent');
+    expect(table.get('p3')).toBe('pending');
+    expect(table.get('p4')).toBe(CALL_UP_RSVP_NONE);
+    expect(table.size).toBe(4);
+  });
+
+  // ⚠️ L'ORDRE VIENT DE `resolveRsvpAnswer`, ET C'EST LUI QUI COMPTE : le
+  // serveur resynchronise `participations` APRES coup, un joueur qui vient de
+  // repondre « absent » peut donc rester liste dans les deux. Sa DERNIERE
+  // reponse gagne. Ce temoin echouerait si on recopiait la regle a l'envers.
+  test('🔒 un joueur a la fois « participant » et « absent » est ABSENT', () => {
+    const table = buildRsvpAnswersByPlayerId({
+      event: { missings: [{ documentId: 'p1' }], participations: [{ documentId: 'p1' }] },
+      players: [JOUEURS[0]],
+    });
+
+    expect(table.get('p1')).toBe('absent');
+  });
+
+  test('⛔ un joueur HORS APP n a pas de ligne : il ne peut pas repondre', () => {
+    const table = buildRsvpAnswersByPlayerId({
+      event: EVENEMENT,
+      players: [...JOUEURS, buildManualCallUpPlayer({
+        firstname: 'Yanis', lastname: 'Bertrand', now: 1700000000000,
+      })],
+    });
+
+    expect(table.has('manual_1700000000000')).toBe(false);
+    expect(table.size).toBe(4);
+  });
+
+  test('🕳️ sans charge d evenement, la table est VIDE — on ne dit pas « sans reponse »', () => {
+    expect(buildRsvpAnswersByPlayerId({ event: null, players: JOUEURS }).size).toBe(0);
+    expect(buildRsvpAnswersByPlayerId({ event: undefined, players: JOUEURS }).size).toBe(0);
+  });
+
+  test('une charge sans aucune relation rend « sans reponse » pour tout le monde', () => {
+    const table = buildRsvpAnswersByPlayerId({ event: { documentId: 'evt_1' }, players: JOUEURS });
+
+    expect([...table.values()]).toEqual([
+      CALL_UP_RSVP_NONE, CALL_UP_RSVP_NONE, CALL_UP_RSVP_NONE, CALL_UP_RSVP_NONE,
+    ]);
+  });
+
+  test('ni joueurs, ni entrees bancales ne la font tomber', () => {
+    expect(buildRsvpAnswersByPlayerId({ event: EVENEMENT }).size).toBe(0);
+    expect(buildRsvpAnswersByPlayerId({ event: EVENEMENT, players: [null, {}] }).size).toBe(0);
+  });
+
+  test('une demande ANNULEE (isActive: false) ne compte pas comme une reponse', () => {
+    const table = buildRsvpAnswersByPlayerId({
+      event: {
+        participationRequests: [{
+          documentId: 'req_p3',
+          isActive: false,
+          participationStatus: 'accepted',
+          user: { documentId: 'p3' },
+        }],
+      },
+      players: [JOUEURS[2]],
+    });
+
+    expect(table.get('p3')).toBe(CALL_UP_RSVP_NONE);
   });
 });

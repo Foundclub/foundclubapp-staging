@@ -27,6 +27,7 @@ import Button from '@/components/atoms/button/Button';
 import Checkbox from '@/components/atoms/checkbox/Checkbox';
 import HeaderBackButton from '@/components/atoms/headerBackButton/HeaderBackButton';
 import Tag from '@/components/atoms/tag/Tag';
+import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
@@ -41,6 +42,7 @@ import {
 } from '@/utils/compositionPlayer';
 
 import {
+  buildRsvpAnswersByPlayerId,
   getCallUpCounters,
   getPlayerUnavailability,
   hasSilentCallUp,
@@ -67,6 +69,24 @@ const TAB_OFF_APP = 'offApp';
 
 /** @type {any[]} */
 const EMPTY_LIST = [];
+
+/**
+ * AC09 — comment chacun des 4 etats se montre.
+ *
+ * 🚨 `sign` N'EST PAS UNE DECORATION. La couleur seule laisserait un daltonien
+ * (8 % des hommes) convoquer un absent sans le voir : chaque etat porte donc un
+ * MOT (le libelle traduit) ET un signe qui n'appartient qu'a lui. L'etat reste
+ * lisible en niveaux de gris, et meme sans lire le mot.
+ * @type {Readonly<Record<string, {
+ *   color: import('@/theme/types').ColorNames, sign: string,
+ * }>>}
+ */
+const RSVP_BADGES = Object.freeze({
+  absent: { color: 'error500', sign: '\u2715' },
+  none: { color: 'neutral400', sign: '\u2013' },
+  pending: { color: 'warning500', sign: '\u2026' },
+  present: { color: 'success500', sign: '\u2713' },
+});
 
 const capitalizeFirst = (/** @type {any} */ value) => {
   const text = String(value || '');
@@ -120,10 +140,22 @@ function MatchCallUpSelection() {
     teamName = '',
   } = params;
 
-  const shouldHydrateFromEvent = Boolean(eventId)
-    && (!Array.isArray(playersParam) || playersParam.length === 0 || !clubIdParam);
+  // AC09 — 🚨 CETTE REQUETE N'EST PLUS CONDITIONNELLE, ET C'EST TOUT LE LOT.
+  //
+  // Elle ne partait qu'a defaut : quand l'appelant ne passait ni `players` ni
+  // `clubId`. Or l'appelant reel (`EventDetails.js:3402`) passe TOUJOURS les
+  // deux — l'ecran n'avait donc, dans le vrai parcours, QUE la liste des
+  // joueurs. Aucune reponse. On convoquait a l'aveugle faute d'avoir demande.
+  //
+  // 🧩 La donnee existait deja : `getEventById` peuple `missings`,
+  // `participations` et `participationRequests.user` (`eventService.js:307-310`).
+  // ⛔ AUCUNE correction serveur n'etait necessaire.
+  //
+  // 💸 Et ca ne coute pas un appel de plus : la fiche de l'evenement d'ou l'on
+  // arrive interroge la MEME clef react-query (`['event', eventId]`,
+  // `eventQueries.js:43`) avec 30 s de fraicheur. Le cache repond.
   const { data: eventFromApi } = useGetEvent(eventId || '', {
-    enabled: shouldHydrateFromEvent,
+    enabled: Boolean(eventId),
   });
 
   const clubId = clubIdParam || eventFromApi?.team?.club?.documentId || '';
@@ -140,6 +172,9 @@ function MatchCallUpSelection() {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState(TAB_SQUAD);
   const [bootstrapped, setBootstrapped] = useState(false);
+  // AC09 — les absents coches en attente de confirmation. `null` = fenetre
+  // fermee. On garde les JOUEURS, pas un booleen : la fenetre les nomme.
+  const [absentsToConfirm, setAbsentsToConfirm] = useState(/** @type {any[] | null} */ (null));
 
   const squadPlayers = useMemo(() => {
     /** @type {any[]} */
@@ -164,6 +199,18 @@ function MatchCallUpSelection() {
       .filter(Boolean)
       .filter((player) => !squadIds.has(getCompositionPlayerId(player)));
   }, [clubTeamsPages?.pages, squadPlayers, teamId]);
+
+  // AC09 — LA REPONSE DE CHACUN, calculee UNE fois pour toute la liste.
+  // ⛔ Aucune echelle neuve : `buildRsvpAnswersByPlayerId` ne fait qu'appeler
+  // `getCurrentUserEventParticipationState` puis `resolveRsvpAnswer`, les deux
+  // memes briques que les boutons de reponse et le bandeau de l'accueil.
+  const rsvpAnswers = useMemo(
+    () => buildRsvpAnswersByPlayerId({
+      event: eventFromApi,
+      players: [...squadPlayers, ...reinforcementPlayers],
+    }),
+    [eventFromApi, reinforcementPlayers, squadPlayers],
+  );
 
   // Pre-cochage depuis la composition existante : meme lecture que
   // `TacticalSelection` (placements + selectedPlayerIds + reservePlayerIds),
@@ -240,17 +287,14 @@ function MatchCallUpSelection() {
     });
   }, [navigation, params, teamName]);
 
-  const handleNext = useCallback(() => {
-    if (selectedIds.size === 0) {
-      Alert.alert(
-        t('matchCallUp.selection.alerts.noneSelected.title'),
-        t('matchCallUp.selection.alerts.noneSelected.message'),
-      );
-      return;
-    }
+  const selectedPlayers = useMemo(
+    () => [...squadPlayers, ...reinforcementPlayers, ...manualPlayers]
+      .filter((player) => selectedIds.has(getCompositionPlayerId(player))),
+    [manualPlayers, reinforcementPlayers, selectedIds, squadPlayers],
+  );
 
-    const selectedPlayers = [...squadPlayers, ...reinforcementPlayers, ...manualPlayers]
-      .filter((player) => selectedIds.has(getCompositionPlayerId(player)));
+  const goToComposition = useCallback(() => {
+    setAbsentsToConfirm(null);
 
     // S04 — 🎯 UNE COMPO DEJA PLACEE NE REPASSE PAS PAR « Partir de… ».
     // Redemander « d'ou veux-tu partir ? » a quelqu'un qui a deja pose ses
@@ -277,16 +321,43 @@ function MatchCallUpSelection() {
         ...(shouldResume ? { startPlacements: placements } : {}),
       },
     );
-  }, [
-    existingComposition,
-    manualPlayers,
-    navigation,
-    params,
-    reinforcementPlayers,
-    selectedIds,
-    squadPlayers,
-    t,
-  ]);
+  }, [existingComposition, navigation, params, selectedPlayers]);
+
+  // AC09 — LA FENETRE DE PREVENTION, ET LE MOMENT OU ELLE S'OUVRE.
+  //
+  // 🎯 UNE SEULE FOIS, A LA VALIDATION — pas a chaque case cochee. Un coach qui
+  // compose avec 3 absents fermerait 3 fenetres pendant qu'il reflechit : au 3e
+  // clic il ne lit plus, il ferme. Une fenetre qu'on ferme sans lire ne previent
+  // personne. Ici elle arrive une fois, au dernier moment utile, et elle nomme
+  // exactement qui pose probleme.
+  //
+  // 🔒 ELLE PREVIENT, ELLE N'INTERDIT PAS : « Convoquer quand meme » part avec
+  // la selection INTACTE, absents compris. C'est la demande d'Adel, mot pour
+  // mot — « en laissant la possibilite de convoquer les absents ».
+  const handleNext = useCallback(() => {
+    if (selectedIds.size === 0) {
+      Alert.alert(
+        t('matchCallUp.selection.alerts.noneSelected.title'),
+        t('matchCallUp.selection.alerts.noneSelected.message'),
+      );
+      return;
+    }
+
+    const absents = selectedPlayers.filter(
+      (player) => rsvpAnswers.get(getCompositionPlayerId(player)) === 'absent',
+    );
+    if (absents.length > 0) {
+      setAbsentsToConfirm(absents);
+      return;
+    }
+
+    goToComposition();
+  }, [goToComposition, rsvpAnswers, selectedIds.size, selectedPlayers, t]);
+
+  const absentNames = useMemo(
+    () => (absentsToConfirm || EMPTY_LIST).map(getCompositionPlayerLabel).join(', '),
+    [absentsToConfirm],
+  );
 
   const subtitle = useMemo(() => [
     eventTypeLabel || t('matchCallUp.selection.defaultEventType'),
@@ -341,6 +412,32 @@ function MatchCallUpSelection() {
     );
   };
 
+  // AC09 — l'etiquette d'etat de la rangee. `null` dans deux cas, et les deux
+  // sont des refus de dire du faux :
+  //   · joueur HORS APP — il ne peut pas repondre, son etiquette
+  //     « Previens-le toi-meme » dit deja tout ;
+  //   · charge d'evenement pas encore la — la table est vide, on n'affiche rien
+  //     plutot que d'annoncer « sans reponse » a tout le monde.
+  const renderRsvpBadge = (/** @type {any} */ player) => {
+    const answer = rsvpAnswers.get(getCompositionPlayerId(player));
+    const badge = answer ? RSVP_BADGES[answer] : null;
+    if (!badge) return null;
+
+    const tone = Colors[badge.color];
+    return (
+      <View
+        style={[
+          styles.rsvpBadge,
+          { backgroundColor: withAlpha(tone, 0.12), borderColor: withAlpha(tone, 0.45) },
+        ]}
+      >
+        <Text numberOfLines={1} style={[Fonts.p4, { color: tone }]}>
+          {`${badge.sign} ${t(`matchCallUp.selection.rsvp.${answer}`)}`}
+        </Text>
+      </View>
+    );
+  };
+
   const renderPlayerRow = (/** @type {any} */ player) => {
     const playerId = getCompositionPlayerId(player);
     const isSelected = selectedIds.has(playerId);
@@ -386,6 +483,7 @@ function MatchCallUpSelection() {
               <Tag text={t('matchCallUp.selection.offAppTag')} />
             ) : null}
             {player?.fromTeamName ? <Tag text={player.fromTeamName} /> : null}
+            {renderRsvpBadge(player)}
           </View>
           {renderMeta(player)}
         </View>
@@ -607,6 +705,52 @@ function MatchCallUpSelection() {
           variant="Primary"
         />
       </View>
+
+      {/* AC09 — la fenetre de prevention.
+          🌐 C'est `BottomModal` et PAS `Alert.alert` : cet ecran est AUSSI
+          compile par le site (`web/src/routes/screenRegistry.tsx:66`), et
+          `react-native-web` livre un `Alert.alert()` qui ne fait RIEN. Une
+          alerte muette rendrait « Suivant » mort sur le site des qu'un absent
+          est coche. `BottomModal` a sa moitie web (`BottomModal.web.js`). */}
+      <BottomModal
+        close={() => setAbsentsToConfirm(null)}
+        footerComponent={(
+          <View style={styles.warningFooter}>
+            <Button
+              onPress={() => setAbsentsToConfirm(null)}
+              style={styles.warningButton}
+              title={t('matchCallUp.selection.absentWarning.cancel')}
+              variant="Secondary"
+            />
+            <Button
+              onPress={goToComposition}
+              style={styles.warningButton}
+              title={t('matchCallUp.selection.absentWarning.confirm')}
+              variant="Primary"
+            />
+          </View>
+        )}
+        isVisible={Boolean(absentsToConfirm)}
+        snapPoints={['42%']}
+        webPresentation="dialog"
+      >
+        <View style={styles.warningBody}>
+          <Text style={[Fonts.h4Bold, { color: Colors.neutral00 }]}>
+            {t('matchCallUp.selection.absentWarning.title', {
+              count: (absentsToConfirm || EMPTY_LIST).length,
+            })}
+          </Text>
+          <Text style={[Fonts.p2, { color: Colors.neutral300 }]}>
+            {t('matchCallUp.selection.absentWarning.message', {
+              count: (absentsToConfirm || EMPTY_LIST).length,
+              names: absentNames,
+            })}
+          </Text>
+          <Text style={[Fonts.p3, { color: Colors.neutral300 }]}>
+            {t('matchCallUp.selection.absentWarning.note')}
+          </Text>
+        </View>
+      </BottomModal>
     </ScreenContainer>
   );
 }
@@ -722,6 +866,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 11,
   },
+  rsvpBadge: {
+    borderRadius: 8,
+    borderWidth: 1,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
   searchWrapper: {
     paddingBottom: 12,
     paddingHorizontal: 16,
@@ -745,6 +895,21 @@ const styles = StyleSheet.create({
     gap: 8,
     paddingBottom: 12,
     paddingHorizontal: 16,
+  },
+  warningBody: {
+    gap: 12,
+    paddingHorizontal: 16,
+    paddingTop: 8,
+  },
+  warningButton: {
+    flex: 1,
+  },
+  warningFooter: {
+    flexDirection: 'row',
+    gap: 12,
+    paddingBottom: 16,
+    paddingHorizontal: 16,
+    paddingTop: 12,
   },
 });
 
