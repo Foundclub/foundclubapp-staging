@@ -5,14 +5,24 @@ import fr from '@/theme/strings/translations/fr';
 // accents, qu'AUCUNE clef n'a été renommée ou perdue au passage, et qu'aucun
 // outil d'écriture n'a mangé les accents du fichier entier.
 
-const read = (path) => path.split('.').reduce((node, part) => (node == null ? node : node[part]), fr);
+function leaves(noeud, prefixe = []) {
+  return Object.entries(noeud).flatMap(([clef, valeur]) => {
+    const chemin = prefixe.concat(clef);
+    if (valeur !== null && typeof valeur === 'object') {
+      return leaves(valeur, chemin);
+    }
+    return [[chemin.join('.'), valeur]];
+  });
+}
 
-const leaves = (node, prefix = []) =>
-  Object.entries(node).flatMap(([key, value]) =>
-    value !== null && typeof value === 'object'
-      ? leaves(value, prefix.concat(key))
-      : [[prefix.concat(key).join('.'), value]],
-  );
+function read(chemin) {
+  return chemin.split('.').reduce((noeud, part) => {
+    if (noeud === null || noeud === undefined) {
+      return undefined;
+    }
+    return noeud[part];
+  }, fr);
+}
 
 // Les 20 valeurs auxquelles ce lot ajoute un accent, chemin de clef inchangé.
 const CORRIGEES = [
