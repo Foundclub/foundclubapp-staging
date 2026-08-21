@@ -640,7 +640,7 @@ const buildCompactEventCardPopulate = (viewerDocumentId) => ({
     },
   },
   facility: {
-    fields: ['documentId', 'name'],
+    fields: ['documentId', 'name', 'planningColor'],
   },
   invitedTeams: {
     fields: ['documentId', 'name'],
