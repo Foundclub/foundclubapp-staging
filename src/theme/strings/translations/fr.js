@@ -1027,6 +1027,11 @@ export default {
     compositionSource: {
       defaultComposition: 'Composition type',
     },
+    emptyStates: {
+      allAnswered: 'Tout le monde a répondu.',
+      noAbsence: 'Aucune absence signalée.',
+      noConfirmation: 'Personne n\'a encore confirmé sa présence.',
+    },
     fields: {
       description: 'À propos',
       participationRequests: 'Demandes de participation',

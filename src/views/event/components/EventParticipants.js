@@ -353,7 +353,25 @@ function EventParticipants({
   );
 
   const renderStatusGroup = (title, players, options = {}) => {
-    if (!players?.length) return null;
+    // AD06 (L6-F) : un groupe vide rendait `null`, TITRE COMPRIS — un trou
+    // dans l ecran. Il garde desormais son titre et dit POURQUOI il est
+    // vide, en UNE ligne (pas `EmptyState`, qui est un bloc de page :
+    // icone 80 px et 24 de marge, beaucoup trop gros dans une carte).
+    // Sans message fourni, on garde le silence d avant : c est ce qui
+    // laisse l historique invisible quand il est vide.
+    if (!players?.length) {
+      if (!options.emptyMessage) return null;
+      return (
+        <>
+          <Text style={[Fonts.h4Bold, Fonts.primary500]}>
+            {title}
+          </Text>
+          <Text style={[Fonts.p3, Fonts.neutral300]}>
+            {options.emptyMessage}
+          </Text>
+        </>
+      );
+    }
     return (
       <>
         <Text style={[Fonts.h4Bold, Fonts.primary500]}>
@@ -428,6 +446,7 @@ function EventParticipants({
           section.participating,
           {
             allowLiveLate: true,
+            emptyMessage: t('eventDetails.emptyStates.noConfirmation'),
             keyPrefix: `${section.key}-present`,
             showCoachActions: section.allowCoachActions ?? canEdit,
             statusKind: 'participating',
@@ -439,6 +458,7 @@ function EventParticipants({
           section.missing,
           {
             allowLiveLate: false,
+            emptyMessage: t('eventDetails.emptyStates.noAbsence'),
             keyPrefix: `${section.key}-missing`,
             statusKind: 'missing',
             statusLabel: t('eventDetails.participationStatus.missing'),
@@ -463,6 +483,12 @@ function EventParticipants({
             }))}
           </>
         ) : null}
+
+        {section.notAnswered?.length ? null : renderStatusGroup(
+          t('eventDetails.participationStatus.notAnswered'),
+          [],
+          { emptyMessage: t('eventDetails.emptyStates.allAnswered') },
+        )}
 
         {hasHistorical ? (
           <View style={[Spaces.gap[8], Spaces.marginTop[8]]}>
@@ -659,6 +685,7 @@ function EventParticipants({
             participationsByStatus.participating || [],
             {
               allowLiveLate: true,
+              emptyMessage: t('eventDetails.emptyStates.noConfirmation'),
               keyPrefix: 'legacy-present',
               showCoachActions: canEdit,
               statusKind: 'participating',
@@ -669,6 +696,7 @@ function EventParticipants({
             participationsByStatus.missing || [],
             {
               allowLiveLate: false,
+              emptyMessage: t('eventDetails.emptyStates.noAbsence'),
               keyPrefix: 'legacy-missing',
               statusKind: 'missing',
               statusLabel: t('eventDetails.participationStatus.missing'),
@@ -691,6 +719,11 @@ function EventParticipants({
                 statusLabel: t('eventDetails.participationStatus.notAnswered'),
               }))}
             </>
+          )}
+          {(participationsByStatus.notAnswered || []).length > 0 ? null : renderStatusGroup(
+            t('eventDetails.participationStatus.notAnswered'),
+            [],
+            { emptyMessage: t('eventDetails.emptyStates.allAnswered') },
           )}
         </>
       );
