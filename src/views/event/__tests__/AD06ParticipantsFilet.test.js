@@ -89,13 +89,15 @@ const NOW_MS = Date.parse('2026-08-20T18:00:00.000Z');
 // futur, et le diff tient en 5 lignes.
 const PASTILLE = {
   absent: 'Absent',
-  arrive: 'Arrive',
+  arrive: 'Arrivé',
   attente: 'En attente',
-  nonPointe: 'Non pointe',
-  retardAnnonce: 'Retard annonce',
+  nonPointe: 'Non pointé',
+  retardAnnonce: 'Retard annoncé',
   sansReponse: 'Sans réponse',
 };
-const COULEUR_ABSENT = COULEURS.error500;
+// L3-B : un absent a REPONDU, ce n est pas une alerte. Il passe donc du
+// rouge vif `error500` au rouge doux `error300` (colors.js:3).
+const COULEUR_ABSENT = COULEURS.error300;
 
 /**
  * Fabrique un joueur minimal.
@@ -290,11 +292,13 @@ describe('AD06 · temoin 1 — les 8 sorties de la pastille', () => {
     expect(pastilles(arbre)).toEqual([
       // 1. `no_show` gagne sur tout le reste.
       { couleur: COULEURS.error500, texte: PASTILLE.nonPointe },
-      // 4. arrive EN RETARD : le retard reel s affiche sous le titre.
+      // 4. arrive EN RETARD : le retard reel, puis l HEURE (L3-B).
       { couleur: COULEURS.warning500, texte: PASTILLE.arrive },
       { couleur: COULEURS.warning500, texte: '+7 min' },
-      // 5. arrive a l heure.
+      { couleur: COULEURS.warning500, texte: '14:32' },
+      // 5. arrive a l heure, et on lit a quelle heure.
       { couleur: COULEURS.success500, texte: PASTILLE.arrive },
+      { couleur: COULEURS.success500, texte: '14:32' },
       // 6. retard ANNONCE a l avance.
       { couleur: COULEURS.warning500, texte: PASTILLE.retardAnnonce },
       { couleur: COULEURS.warning500, texte: '+5 min' },

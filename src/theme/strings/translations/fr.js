@@ -1018,6 +1018,12 @@ export default {
       refuse: 'Refuser',
       remind: 'Relancer',
     },
+    attendanceBadge: {
+      arrived: 'Arrivé',
+      declaredLate: 'Retard annoncé',
+      notMarked: 'Non pointé',
+      selfArrived: 'Je suis arrivé·e',
+    },
     compositionSource: {
       defaultComposition: 'Composition type',
     },

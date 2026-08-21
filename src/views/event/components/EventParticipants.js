@@ -123,6 +123,22 @@ const getStaffDisplayName = (user) => {
   return [firstname, lastname].filter(Boolean).join(' ').trim() || 'Staff';
 };
 
+/**
+ * AD06 (L3-B) : l heure d arrivee existait dans la reponse du serveur et
+ * n etait affichee NULLE PART. On la rend en heure LOCALE courte (14:32).
+ * Une valeur illisible rend une chaine vide : jamais « Invalid Date ».
+ * @param {string | null | undefined} arrivedAt
+ * @returns {string}
+ */
+const formatArrivalTime = (arrivedAt) => {
+  if (!arrivedAt) return '';
+  const date = new Date(arrivedAt);
+  if (Number.isNaN(date.getTime())) return '';
+  const heures = String(date.getHours()).padStart(2, '0');
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+  return `${heures}:${minutes}`;
+};
+
 const resolveAttendanceBadge = ({
   allowLiveLate = false,
   attendance,
@@ -130,6 +146,7 @@ const resolveAttendanceBadge = ({
   eventStartAt,
   nowMs,
   statusKind = 'participating',
+  t = (/** @type {string} */ clef, /** @type {any} */ valeurParDefaut) => valeurParDefaut,
 }) => {
   const normalizedAttendanceStatus = String(
     attendance?.attendanceStatus || attendance?.finalState || '',
@@ -152,7 +169,7 @@ const resolveAttendanceBadge = ({
       backgroundColor: `${colors.error500}18`,
       borderColor: `${colors.error500}36`,
       textColor: colors.error500,
-      title: 'Non pointe',
+      title: t('eventDetails.attendanceBadge.notMarked', 'Non pointé'),
       value: null,
     };
   }
@@ -161,7 +178,7 @@ const resolveAttendanceBadge = ({
     return {
       backgroundColor: `${colors.error500}18`,
       borderColor: `${colors.error500}36`,
-      textColor: colors.error500,
+      textColor: colors.error300,
       title: 'Absent',
       value: null,
     };
@@ -183,7 +200,7 @@ const resolveAttendanceBadge = ({
         backgroundColor: `${colors.warning500}18`,
         borderColor: `${colors.warning500}36`,
         textColor: colors.warning500,
-        title: 'Arrive',
+        title: t('eventDetails.attendanceBadge.arrived', 'Arrivé'),
         value: `+${lateMinutes} min`,
       };
     }
@@ -192,7 +209,7 @@ const resolveAttendanceBadge = ({
       backgroundColor: `${colors.success500}18`,
       borderColor: `${colors.success500}36`,
       textColor: colors.success500,
-      title: 'Arrive',
+      title: t('eventDetails.attendanceBadge.arrived', 'Arrivé'),
       value: null,
     };
   }
@@ -202,7 +219,7 @@ const resolveAttendanceBadge = ({
       backgroundColor: `${colors.warning500}18`,
       borderColor: `${colors.warning500}36`,
       textColor: colors.warning500,
-      title: 'Retard annonce',
+      title: t('eventDetails.attendanceBadge.declaredLate', 'Retard annoncé'),
       value: `+${declaredLateMinutes} min`,
     };
   }
@@ -279,6 +296,7 @@ function EventParticipants({
         styles={{
           Alignments, ApplicationStyle, Colors, Fonts, Spaces,
         }}
+        t={t}
       />
     );
   };
@@ -752,7 +770,8 @@ function EventParticipants({
  * onMarkArrival?: (user?: User) => void,
  * onEditLate?: (user?: User) => void,
  * statusKind?: 'participating' | 'missing' | 'not_answered',
- * styles: any
+ * styles: any,
+ * t: (clef: string, valeurParDefaut?: string) => string
  * }} props
  */
 function ParticipantItem({
@@ -767,6 +786,7 @@ function ParticipantItem({
   player,
   statusKind = 'participating',
   styles,
+  t,
 }) {
   const {
     Alignments, ApplicationStyle, Colors, Fonts, Spaces,
@@ -778,7 +798,9 @@ function ParticipantItem({
     eventStartAt,
     nowMs,
     statusKind,
+    t,
   });
+  const arrivalTime = formatArrivalTime(attendance?.arrivedAt);
   const hasStaffMeta = canEdit && (attendance?.note || attendance?.manualOverride || attendance?.updatedBy);
   const primaryCoachActionTitle = attendance?.arrivedAt ? 'Corriger' : 'Pointer l\'arrivée';
 
@@ -831,12 +853,17 @@ function ParticipantItem({
             },
           ]}
         >
-          <Text style={[Fonts.p4, { color: badge.textColor, textAlign: 'center' }]}>
+          <Text style={[Fonts.p3, { color: badge.textColor, textAlign: 'center' }]}>
             {badge.title}
           </Text>
           {badge.value ? (
-            <Text style={[Fonts.p4Bold, { color: badge.textColor, marginTop: 2, textAlign: 'center' }]}>
+            <Text style={[Fonts.p3Bold, { color: badge.textColor, marginTop: 2, textAlign: 'center' }]}>
               {badge.value}
+            </Text>
+          ) : null}
+          {arrivalTime ? (
+            <Text style={[Fonts.p4, { color: badge.textColor, marginTop: 2, textAlign: 'center' }]}>
+              {arrivalTime}
             </Text>
           ) : null}
         </View>
