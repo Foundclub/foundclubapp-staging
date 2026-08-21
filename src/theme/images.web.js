@@ -15,6 +15,8 @@ export const images = {
   eventCardTraining: createAssetSource('../assets/background-card-event/card-entrainement.png'),
   eventCardMatch: createAssetSource('../assets/background-card-event/card-match.png'),
   eventCardReservation: createAssetSource('../assets/background-card-event/card-reservation.png'),
+  eventCardStage: createAssetSource('../assets/background-card-event/card-stage.png'),
+  eventCardTournament: createAssetSource('../assets/background-card-event/card-tournoi.png'),
   logo: createAssetSource('../assets/pictures/logo.png'),
   roundAvatar: createAssetSource('../assets/pictures/avatar-round.png'),
   arrowLeft: createAssetSource('../assets/icons/arrowLeft.png'),
