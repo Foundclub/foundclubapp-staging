@@ -1,37 +1,30 @@
-import { ScrollView, Text } from 'react-native';
+import { ScrollView, Text, View } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
 import TeamDetails from '../TeamDetails';
 
-// AA06 (E6) — LE MENU « ACTIONS D'EQUIPE » NE DEFILE PAS.
+// AC01 (E6) — LES ACTIONS D'EQUIPE QUITTENT LE BAS DE L'ECRAN.
 //
-// Constat d'Adel, 2026-08-20 (point 13, repris en P3) : « sur la page details
-// d'une equipe, le menu deroulant ne peut pas se faire defiler — donc ce qui
-// depasse est inatteignable ».
+// Constat d'Adel, 2026-08-20 : « le bouton "actions d'équipe" est complètement
+// bugué, et en plus son padding est trop gros. Enlève-le en bas et remplace-le
+// par trois petits points en haut à droite. »
 //
-// `TeamDetails.js` fait 5 486 lignes et n'avait AUCUN test.
+// ⚠️ CE FILET REMPLACE `TeamDetails.menuActionsDefile.test.js` (lot AA06). Ce
+// dernier mesurait le DEFILEMENT du panneau depliant pose en bas de page —
+// exactement le dessin qu'Adel retire ici. Son temoin de fond (« ce qui depasse
+// doit rester atteignable ») n'est pas perdu : il est desormais porte par la
+// feuille maison `BottomModal`, et prouve chez elle par
+// `bottomModal/__tests__/BottomModal.debordement.test.js` (lot D19).
 //
-// CE QUE LA CARTE A MONTRE : le menu n'est pas une fenetre flottante. C'est un
-// panneau depliant pose APRES la fermeture de la zone defilante de la page — un
-// FRERE, pas un enfant. Son contenu tenait dans un `<View>` nu : ni defilement,
-// ni `maxHeight`, ni `flex`. Et l'arithmetique de Yoga explique le symptome
-// exactement : la zone defilante de la page a `flex: 1` (donc `flexBasis: 0`,
-// donc un poids de retrecissement NUL) et le panneau n'avait pas de
-// `flexShrink` (dont la valeur par defaut vaut 0 sur React Native, et non 1
-// comme sur le web). Poids total nul ⇒ PERSONNE ne retrecit ⇒ le panneau
-// deborde par le bas, et comme il est hors de la zone defilante, rien ne peut
-// aller le chercher.
+// 🚨 LE PIEGE QUE CE FILET GARDE : le bouton « C'est mon équipe » est L'ENTREE
+// DU TUNNEL D'INSCRIPTION. L'ancien panneau s'ouvrait TOUT SEUL pour le
+// visiteur, justement pour la lui montrer. Le ranger derriere les trois points
+// la rendrait introuvable : deux tests ci-dessous verrouillent le fait qu'elle
+// reste visible SANS ouvrir le menu.
 //
-// LA REGLE APPLIQUEE EST DEJA ECRITE ET DEJA PROUVEE dans ce depot, par
-// `bottomModal/__tests__/BottomModal.debordement.test.js` (lot D19) : une zone
-// defilante plafonnee a une fraction de l'ECRAN laisse deborder ce qui vient en
-// dernier ; la bonne mise en page est celle qui « prend exactement la place
-// LAISSEE » — `flex: 1`, sans `maxHeight`.
-//
-// ⚠️ CE QUE CE FILET NE PROUVE PAS, et il faut le dire : Jest n'a pas de moteur
-// de mise en page, il ne mesure AUCUN pixel. Il lit les CONTRAINTES posees sur
-// l'arbre rendu. C'est suffisant ici parce que le defaut EST une contrainte
-// manquante. Le defilement reel se constate sur un telephone, a la recette.
+// ⚠️ CE QUE CE FILET NE PROUVE PAS : Jest n'a pas de moteur de mise en page, il
+// ne mesure AUCUN pixel. Il lit les CONTRAINTES posees sur l'arbre rendu et la
+// PARENTE des noeuds. Le rendu reel se constate a la recette.
 
 const CLUB = { documentId: 'club-1', name: 'FC Test' };
 
@@ -72,7 +65,9 @@ const mockReponseEquipe = enveloppe(EQUIPE);
 const mockReponseClub = enveloppe(CLUB);
 const mockReponseVide = enveloppe(null);
 
-const mockEtatAuth = Object.freeze({
+// Le dirigeant du club : c'est le cas qui affiche TOUTES les actions, donc
+// celui sur lequel se compte « aucune action n'a disparu ».
+const AUTH_DIRIGEANT = Object.freeze({
   canEditClub: () => true,
   canJoinTeam: () => false,
   canManageTeam: true,
@@ -85,6 +80,52 @@ const mockEtatAuth = Object.freeze({
   USER_ROLES: { admin: 'Dirigeant', coach: 'Entraineur', player: 'Joueur' },
   userData: UTILISATEUR,
 });
+
+// 🔒 Le visiteur NON CONNECTE : `userData` vaut `null`, donc `isAuthenticated`
+// est faux, donc `showJoinAction` est vrai. C'est LUI que l'ancien panneau
+// ouvrait d'office.
+const AUTH_VISITEUR = Object.freeze({
+  canEditClub: () => false,
+  canJoinTeam: () => false,
+  canManageTeam: false,
+  entitlementsSummary: [],
+  getNextOnboardingRoute: () => null,
+  getPostOnboardingHomeRoute: () => null,
+  inviteTeamPlayers: jest.fn(),
+  refetchUserData: jest.fn(),
+  subscriptionAccessLevel: 'none',
+  USER_ROLES: { admin: 'Dirigeant', coach: 'Entraineur', player: 'Joueur' },
+  userData: null,
+});
+
+// 🧭 L'ENTRAINEUR DU CLUB QUI REGARDE UNE EQUIPE VOISINE. Ce cas existe parce
+// que « Contacter l'entraîneur·e » exige `role === coach && isMyClub &&
+// !isMyTeam` : il est donc MUTUELLEMENT EXCLUSIF du cas dirigeant ci-dessus.
+// Aucun ecran ne montre les 10 actions a la fois — l'inventaire se compte donc
+// sur DEUX scenes, pas une.
+const AUTH_ENTRAINEUR_DU_CLUB = Object.freeze({
+  canEditClub: () => false,
+  canJoinTeam: () => false,
+  canManageTeam: false,
+  entitlementsSummary: [],
+  getNextOnboardingRoute: () => null,
+  getPostOnboardingHomeRoute: () => null,
+  inviteTeamPlayers: jest.fn(),
+  refetchUserData: jest.fn(),
+  subscriptionAccessLevel: 'none',
+  USER_ROLES: { admin: 'Dirigeant', coach: 'Entraineur', player: 'Joueur' },
+  userData: {
+    club: CLUB,
+    documentId: 'entraineur-voisin',
+    myTeams: [],
+    role: { name: 'Entraineur' },
+    teamMembershipRequests: [],
+    trainedTeams: [],
+  },
+});
+
+let mockAuthCourant = AUTH_DIRIGEANT;
+let mockEstMonEquipe = true;
 
 jest.mock('@react-navigation/native', () => ({
   useFocusEffect: () => {},
@@ -105,9 +146,9 @@ jest.mock('react-i18next', () => ({
   }),
 }));
 
-// Le vrai theme, pas un Proxy : ce filet LIT des valeurs de style (`flex`,
-// `maxHeight`), donc il lui faut les vraies rampes. Seul `Images` est stube,
-// pour ne pas dependre de la resolution des assets.
+// Le vrai theme, pas un Proxy : ce filet LIT des valeurs de style (`position`,
+// `width`, `height`), donc il lui faut les vraies rampes. Seul `Images` est
+// stube, pour ne pas dependre de la resolution des assets.
 jest.mock('@/theme/themeContext', () => {
   const genererCouleurs = jest.requireActual('@/theme/colors').default;
   const genererPolices = jest.requireActual('@/theme/fonts').default;
@@ -131,7 +172,7 @@ jest.mock('@/theme/themeContext', () => {
 
 jest.mock('@/domains/auth/useAuth', () => ({
   __esModule: true,
-  default: () => mockEtatAuth,
+  default: () => mockAuthCourant,
 }));
 
 jest.mock('@/domains/auth/authUseCases', () => ({
@@ -155,10 +196,8 @@ jest.mock('@/domains/subscription/subscriptionDecision', () => ({
   hasActiveClubOffer: () => false,
 }));
 
-// `isMyTeam` est le juge partage : on le fige a « oui », c'est le cas qui
-// affiche le menu le plus long, donc celui qui deborde.
 jest.mock('@/domains/team/teamMembership', () => ({
-  isMyTeam: () => true,
+  isMyTeam: () => mockEstMonEquipe,
 }));
 
 jest.mock('@/services/team/teamQueries', () => ({
@@ -202,7 +241,8 @@ jest.mock('@/utils/errors/displayError', () => ({ getErrorMessage: () => 'erreur
 jest.mock('@/utils/imageUrl', () => ({ getImageUrl: () => null }));
 
 // Le conteneur d'ecran rend ses enfants tels quels : ce filet observe la
-// PARENTE des noeuds (le panneau est-il dedans ou dehors ?), pas le decor.
+// PARENTE des noeuds (l'action est-elle dans la feuille ou dehors ?), pas le
+// decor.
 jest.mock('@/components/templates/ScreenContainer', () => {
   const { View: VueRN } = jest.requireActual('react-native');
   const reactActuel = jest.requireActual('react');
@@ -220,6 +260,26 @@ jest.mock('@/components/molecules/withDataWrapper/WithDataWrapper', () => {
 
   return function WithDataWrapperMock(/** @type {any} */ props) {
     return reactActuel.createElement(VueRN, null, props.children);
+  };
+});
+
+// 🔑 LA COUTURE DE CE LOT. La vraie feuille maison ne rend RIEN tant qu'elle
+// n'a jamais ete demandee ; sa doublure fait pareil, et n'expose son contenu
+// que lorsqu'on la dit visible. C'est ce qui permet de distinguer « visible
+// SANS ouvrir le menu » de « visible DANS le menu ».
+jest.mock('@/components/molecules/bottomModal/BottomModal', () => {
+  const { View: VueRN } = jest.requireActual('react-native');
+  const reactActuel = jest.requireActual('react');
+
+  return function BottomModalMock(/** @type {any} */ props) {
+    if (!props.isVisible) return null;
+
+    return reactActuel.createElement(
+      VueRN,
+      { testID: 'feuille-actions-equipe' },
+      props.headerComponent,
+      props.children,
+    );
   };
 });
 
@@ -251,9 +311,6 @@ jest.mock('@/components/atoms/SvgIcon/SvgIcon', () => function SvgIconMock() {
   return null;
 });
 jest.mock('@/components/atoms/teamShield/TeamShield', () => function TeamShieldMock() {
-  return null;
-});
-jest.mock('@/components/molecules/bottomModal/BottomModal', () => function BottomModalMock() {
   return null;
 });
 jest.mock('@/components/molecules/clubLogoMark/ClubLogoMark', () => function ClubLogoMarkMock() {
@@ -290,8 +347,34 @@ jest.mock(
   },
 );
 
-const LIBELLE_DERNIERE_ACTION = "Quitter l'équipe";
+const ID_BOUTON_TROIS_POINTS = 'team-actions-menu-button';
+const ID_FEUILLE = 'feuille-actions-equipe';
 const LIBELLE_ENTETE_MENU = "Actions d'équipe";
+const LIBELLE_PORTE_VISITEUR = "C'est mon équipe";
+
+// 📋 L'INVENTAIRE D'AVANT, RELEVE SUR LE PANNEAU DU BAS : 10 rangees et
+// 2 en-tetes de groupe. C'est lui qui prouve « aucune action retiree ».
+//
+// ⚠️ IL SE COMPTE SUR DEUX SCENES, et ce n'est pas un contournement : les
+// conditions d'affichage du code le rendent IMPOSSIBLE a compter sur une seule.
+// « Contacter l'entraîneur·e » exige `!isMyTeam` ; les 9 autres exigent
+// `isMyTeam` ou `canManageTeam`. Un inventaire pris sur la seule scene du
+// dirigeant afficherait 9, et ferait croire a une action perdue.
+const ACTIONS_DU_DIRIGEANT = [
+  "Modifier l'équipe",
+  'Inviter des joueur·se·s',
+  "Discussion d'équipe",
+  'Composition type',
+  'Convocations',
+  "Cotisation de l'équipe",
+  'Installations',
+  'Sponsors & partenaires',
+  "Quitter l'équipe",
+];
+
+const ACTION_DE_L_ENTRAINEUR_VOISIN = "Contacter l'entraîneur·e";
+
+const ENTETES_DE_GROUPE_ATTENDUES = ["Avec l'offre Équipe", "Avec l'offre Club"];
 
 /** @type {any} */
 let arbre;
@@ -343,25 +426,15 @@ const textesPortant = (racine, libelle) => racine.findAll(
 );
 
 /**
- * Ouvre le menu d'actions. ⚠️ IDEMPOTENT : appuyer deux fois sur une bascule la
- * REFERME, et l'inventaire reviendrait vide — ce qui se lirait comme une
- * regression du code alors que c'est le filet qui se serait trompe.
+ * Rend le premier noeud portant ce `testID`, ou `null`.
  * @param {any} racine La racine de l'arbre.
- * @returns {void}
+ * @param {string} id Le `testID` cherche.
+ * @returns {any} Le noeud trouve, ou `null`.
  */
-const ouvrirLeMenu = (racine) => {
-  if (textesPortant(racine, LIBELLE_DERNIERE_ACTION).length > 0) return;
-
-  const entete = textesPortant(racine, LIBELLE_ENTETE_MENU)[0];
-  let pressable = entete.parent;
-  while (pressable && typeof pressable.props?.onPress !== 'function') {
-    pressable = pressable.parent;
-  }
-
-  act(() => {
-    pressable.props.onPress();
-  });
-};
+const noeudParId = (racine, id) => racine.findAll(
+  (/** @type {any} */ noeud) => noeud.props?.testID === id,
+  { deep: true },
+)[0] || null;
 
 /**
  * Remonte les ancetres d'un noeud jusqu'au premier qui satisfait le predicat.
@@ -379,25 +452,30 @@ const ancetreQui = (noeud, predicat) => {
 };
 
 /**
- * Rend la zone defilante qui contient la derniere action du menu.
+ * Dit si ce libelle est rendu A L'INTERIEUR de la feuille.
  * @param {any} racine La racine de l'arbre.
- * @returns {any} Le noeud `ScrollView`, ou `null` s'il n'y en a aucun.
+ * @param {string} libelle Le texte cherche.
+ * @returns {boolean} Vrai si un `Text` portant ce libelle vit dans la feuille.
  */
-const zoneDefilanteDuMenu = (racine) => {
-  const derniereAction = textesPortant(racine, LIBELLE_DERNIERE_ACTION)[0];
-
-  return ancetreQui(derniereAction, (candidat) => candidat.type === ScrollView);
-};
+const estDansLaFeuille = (racine, libelle) => textesPortant(racine, libelle).some(
+  (/** @type {any} */ noeud) => ancetreQui(
+    noeud,
+    (/** @type {any} */ candidat) => candidat.props?.testID === ID_FEUILLE,
+  ) !== null,
+);
 
 /**
- * Rend la zone defilante de la PAGE — celle qui porte le `refreshControl`.
+ * Appuie sur les trois points.
  * @param {any} racine La racine de l'arbre.
- * @returns {any} Le noeud `ScrollView` de la page.
+ * @returns {void}
  */
-const zoneDefilanteDeLaPage = (racine) => racine.findAll(
-  (/** @type {any} */ noeud) => noeud.type === ScrollView && Boolean(noeud.props?.refreshControl),
-  { deep: true },
-)[0];
+const ouvrirLeMenu = (racine) => {
+  const bouton = noeudParId(racine, ID_BOUTON_TROIS_POINTS);
+
+  act(() => {
+    bouton.props.onPress();
+  });
+};
 
 afterEach(() => {
   // Un arbre laisse monte fait tomber le processus Jest ENTIER apres le test :
@@ -407,66 +485,123 @@ afterEach(() => {
     act(() => arbre.unmount());
   }
   arbre = null;
+  mockAuthCourant = AUTH_DIRIGEANT;
+  mockEstMonEquipe = true;
 });
 
-describe("AA06 — le menu « actions d'équipe » de la fiche d'équipe", () => {
-  test("l'entête du menu est là, et il s'ouvre", () => {
+describe("AC01 — les actions d'équipe passent en trois points, en haut à droite", () => {
+  // 🥇 LE TEMOIN D'ADEL.
+  test('un bouton trois points existe en HAUT À DROITE, et sa cible fait 44 pt', () => {
+    const racine = monterLaFiche();
+    const bouton = noeudParId(racine, ID_BOUTON_TROIS_POINTS);
+
+    expect(bouton).not.toBeNull();
+
+    const style = styleAplati(bouton.props.style);
+
+    expect(style.position).toBe('absolute');
+    expect(style.top).toBe(0);
+    expect(style.right).toBe(0);
+    expect(style.height).toBeGreaterThanOrEqual(44);
+    expect(style.width).toBeGreaterThanOrEqual(44);
+
+    // « TROIS petits points » : trois pastilles, pas une de plus.
+    const pastilles = bouton.findAll(
+      (/** @type {any} */ noeud) => noeud.type === View
+        && styleAplati(noeud.props?.style).borderRadius === 999,
+      { deep: true },
+    );
+
+    expect(pastilles).toHaveLength(3);
+  });
+
+  test('il ouvre une feuille qui porte les actions', () => {
     const racine = monterLaFiche();
 
-    expect(textesPortant(racine, LIBELLE_ENTETE_MENU)).toHaveLength(1);
-    expect(textesPortant(racine, LIBELLE_DERNIERE_ACTION)).toHaveLength(0);
+    expect(noeudParId(racine, ID_FEUILLE)).toBeNull();
 
     ouvrirLeMenu(racine);
 
-    expect(textesPortant(racine, LIBELLE_DERNIERE_ACTION)).toHaveLength(1);
+    expect(noeudParId(racine, ID_FEUILLE)).not.toBeNull();
+    expect(estDansLaFeuille(racine, LIBELLE_ENTETE_MENU)).toBe(true);
+    expect(estDansLaFeuille(racine, "Quitter l'équipe")).toBe(true);
   });
 
-  // 🥇 LE TEMOIN D'ADEL : ce qui dépasse doit pouvoir être atteint.
-  test('ouvert, ses actions vivent dans une zone qui DÉFILE', () => {
+  // 🔒 AUCUNE ACTION PERDUE — 9 sur la scène du dirigeant...
+  test('aucune action du dirigeant n’a disparu : 9 rangées et 2 en-têtes', () => {
     const racine = monterLaFiche();
     ouvrirLeMenu(racine);
 
-    expect(zoneDefilanteDuMenu(racine)).not.toBeNull();
+    const manquantes = ACTIONS_DU_DIRIGEANT.filter(
+      (libelle) => !estDansLaFeuille(racine, libelle),
+    );
+    const entetesManquantes = ENTETES_DE_GROUPE_ATTENDUES.filter(
+      (libelle) => !estDansLaFeuille(racine, libelle),
+    );
+
+    expect(manquantes).toEqual([]);
+    expect(entetesManquantes).toEqual([]);
+    expect(ACTIONS_DU_DIRIGEANT).toHaveLength(9);
   });
 
-  // La règle de la maison, déjà prouvée par le lot D19 : la zone défilante doit
-  // être bornée par la place LAISSÉE, jamais par une fraction de l'écran.
-  test('et cette zone prend la place LAISSÉE, sans plafond en dur', () => {
+  // ... et la 10ᵉ sur celle de l'entraîneur voisin, la seule qui la montre.
+  test('la 10ᵉ action, « Contacter l’entraîneur·e », est là elle aussi', () => {
+    mockAuthCourant = AUTH_ENTRAINEUR_DU_CLUB;
+    mockEstMonEquipe = false;
+
     const racine = monterLaFiche();
     ouvrirLeMenu(racine);
 
-    const style = styleAplati(zoneDefilanteDuMenu(racine).props.style);
-
-    expect(style.flex).toBe(1);
-    expect(style.maxHeight).toBeUndefined();
+    expect(estDansLaFeuille(racine, ACTION_DE_L_ENTRAINEUR_VOISIN)).toBe(true);
+    // Et sa porte d'entree a lui reste DEHORS du menu, comme celle du visiteur.
+    expect(estDansLaFeuille(racine, "Demander à rejoindre l'équipe")).toBe(false);
+    expect(textesPortant(racine, "Demander à rejoindre l'équipe")).toHaveLength(1);
   });
 
-  // 🔒 LE GARDE-FOU QUI PROTÈGE LE TUNNEL D'INSCRIPTION : le panneau s'ouvre
-  // tout seul pour le visiteur qui peut rejoindre l'équipe, et son bouton
-  // « C'est mon équipe » doit rester visible SANS défiler. Le déménager dans la
-  // zone défilante de la page le passerait sous la ligne de flottaison.
-  test('le panneau reste DEHORS de la zone défilante de la page', () => {
+  // 🔒 LE TUNNEL D'INSCRIPTION — le garde-fou le plus important de ce lot.
+  test("« C'est mon équipe » reste visible SANS ouvrir le menu", () => {
+    mockAuthCourant = AUTH_VISITEUR;
+    mockEstMonEquipe = false;
+
     const racine = monterLaFiche();
-    ouvrirLeMenu(racine);
 
-    const derniereAction = textesPortant(racine, LIBELLE_DERNIERE_ACTION)[0];
-    const pageDefilante = zoneDefilanteDeLaPage(racine);
-
-    expect(pageDefilante).toBeDefined();
-    expect(ancetreQui(derniereAction, (candidat) => candidat === pageDefilante)).toBeNull();
+    // La feuille est FERMEE...
+    expect(noeudParId(racine, ID_FEUILLE)).toBeNull();
+    // ... et la porte d'entree est pourtant deja a l'ecran.
+    expect(textesPortant(racine, LIBELLE_PORTE_VISITEUR)).toHaveLength(1);
   });
 
-  // Le panneau FERMÉ ne doit rien gagner : pas de zone défilante, donc aucune
-  // chance d'avoir changé la hauteur de la page dans l'état le plus courant.
-  test('fermé, il ne crée aucune zone défilante de plus', () => {
+  // 🔒 ET ELLE N'EST PAS DANS LE MENU, meme une fois le menu ouvert.
+  test('un visiteur non connecté voit toujours sa porte d’entrée, hors du menu', () => {
+    mockAuthCourant = AUTH_VISITEUR;
+    mockEstMonEquipe = false;
+
+    const racine = monterLaFiche();
+    const porte = textesPortant(racine, LIBELLE_PORTE_VISITEUR)[0];
+
+    expect(porte).toBeDefined();
+    expect(estDansLaFeuille(racine, LIBELLE_PORTE_VISITEUR)).toBe(false);
+    // Elle reste DEHORS de la zone defilante de la page : sans cela, elle
+    // passerait sous la ligne de flottaison — c'est la raison d'etre de
+    // l'ancienne ouverture automatique du panneau.
+    expect(ancetreQui(porte, (/** @type {any} */ candidat) => candidat.type === ScrollView))
+      .toBeNull();
+  });
+
+  // Le panneau depliant du bas n'existe plus : son entete-bascule a disparu de
+  // l'ecran, et l'ecran ne porte plus qu'UNE zone defilante — celle de la page.
+  test("le panneau du bas n'existe plus", () => {
     const racine = monterLaFiche();
 
-    const zonesFermees = racine.findAll(
+    expect(textesPortant(racine, LIBELLE_ENTETE_MENU)).toHaveLength(0);
+    expect(textesPortant(racine, 'Ouvrir')).toHaveLength(0);
+
+    const zones = racine.findAll(
       (/** @type {any} */ noeud) => noeud.type === ScrollView,
       { deep: true },
     );
 
-    expect(zonesFermees).toHaveLength(1);
-    expect(zonesFermees[0].props.refreshControl).toBeTruthy();
+    expect(zones).toHaveLength(1);
+    expect(zones[0].props.refreshControl).toBeTruthy();
   });
 });
