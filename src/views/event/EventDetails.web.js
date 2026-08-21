@@ -24,6 +24,7 @@ import {
 } from '@/views/event/tournamentUtils';
 import { getViewerConvocationRole } from '@/views/playerConvocation/playerConvocationUtils';
 
+import { openPublicAuthFlow } from '@/navigation/public/publicAuthNavigation';
 import { RouteNames } from '@/navigation/routeNames';
 
 import { celebrate } from '@/services/celebrations/celebrationRuntime';
@@ -240,6 +241,29 @@ function EventDetails({ navigation, route }) {
     const effectiveStatus = String(participationState?.effectiveStatus || '').trim().toLowerCase();
     return canEdit || isTeamMember || effectiveStatus === 'accepted' || effectiveStatus === 'missing';
   }, [canEdit, isTeamMember, participationState?.effectiveStatus]);
+  // AD02 — la page d'un evenement est PUBLIQUE sur le site (arbitrage d'Adel :
+  // `web/src/routes/screenRegistry.tsx` la declare `access: 'public'`), donc un
+  // inconnu y arrive par un simple lien de partage.
+  //
+  // Cette garde DOUBLE volontairement le serveur. Mesure du 2026-08-21, sans
+  // aucun jeton : `GET /api/events?populate=*` rend encore 10 "firstname" et
+  // 10 "lastname" a un anonyme. Tant que la reponse serveur n'est pas fermee,
+  // c'est la SEULE protection en service sur le site ; une fois qu'elle le sera,
+  // elle reste la deuxieme ligne de defense le jour ou le serveur se remettrait
+  // a parler trop.
+  //
+  // UNE SEULE regle pour les TROIS surfaces nominatives de cet ecran
+  // (participants, absences/manques, taches confiees) : deux conditions qui se
+  // ressemblent finiraient par raconter deux histoires le jour ou l'une bouge.
+  const isSignedIn = Boolean(userData?.documentId);
+  const canViewParticipantNames = isSignedIn;
+  // ⚠️ Les deux constantes valent la meme chose AUJOURD'HUI, et ce ne sont pas
+  // la meme question. `isSignedIn` = « cette personne a-t-elle un compte ? » et
+  // commande le bouton de participation. `canViewParticipantNames` = « a-t-elle
+  // le droit de lire QUI vient ? ». Si un jour la seconde se resserre a
+  // « connecte ET concerne » (arbitrage d'Adel, hors de ce lot), le bouton de
+  // participation ne doit PAS se transformer en porte de connexion pour un
+  // utilisateur deja connecte. Les fusionner recreerait ce defaut.
   const compositionTeamId = useMemo(() => {
     const teams = [event?.team, ...(Array.isArray(event?.invitedTeams) ? event.invitedTeams : [])].filter(Boolean);
     if (!teams.length) return null;
@@ -613,14 +637,37 @@ function EventDetails({ navigation, route }) {
     padding: '10px 16px',
   };
 
+  // AD02 — un visiteur satisfait les trois conditions d'affichage du bouton
+  // (pas gestionnaire, pas participant, pas de demande en attente) : il le voyait
+  // donc toujours. Le bouton reste a sa place et garde `primaryButtonStyle` ;
+  // seul son libelle dit la verite sur ce qu'il va faire.
+  const joinButtonLabel = isSignedIn ? 'Participer' : 'Se connecter pour participer';
+  const statusHeadingLabel = isSignedIn ? 'Mon statut' : 'Rejoindre cet événement';
+  const statusDetailLabel = (isSignedIn
+    ? participationLabel
+    : 'Connecte-toi pour répondre à cet événement.');
+
   const handleJoin = useCallback(async () => {
     setActionError('');
+    // AD02 — la cause racine du « bouton muet » : `createParticipationMutation`
+    // part avec `user: userData?.documentId || ''`. Sans compte, la demande
+    // partait donc avec un identifiant VIDE et le visiteur recevait un message
+    // d'erreur technique au lieu d'une porte. On n'appelle plus le serveur du
+    // tout : on ouvre le tunnel de connexion, comme le fait deja le telephone
+    // (EventDetails.js:4708).
+    if (!isSignedIn) {
+      openPublicAuthFlow(navigation, {
+        origin: RouteNames.EventDetails,
+        source: 'event-details-login',
+      });
+      return;
+    }
     try {
       await createParticipationMutation.mutateAsync();
     } catch (joinError) {
       setActionError(joinError?.message || 'Impossible de rejoindre cet événement.');
     }
-  }, [createParticipationMutation]);
+  }, [createParticipationMutation, isSignedIn, navigation]);
 
   const handleCancelParticipation = useCallback(async () => {
     if (!activeParticipationRequestId) return;
@@ -746,13 +793,16 @@ function EventDetails({ navigation, route }) {
   const invitedTeams = Array.isArray(event?.invitedTeams) ? event.invitedTeams : [];
   const detectedPlayers = withoutDeletedAccounts(event?.missings);
   const participantIdentitiesHidden = event?.participantIdentitiesHidden === true;
+  const hasVisibleEventTasks = canViewParticipantNames
+    && Array.isArray(event?.eventTasks)
+    && event.eventTasks.length > 0;
 
   const renderParticipantsSection = () => {
     if (participants.length === 0) {
       return <div style={{ color: mutedTextColor }}>Aucun participant confirme pour le moment.</div>;
     }
 
-    if (participantIdentitiesHidden) {
+    if (participantIdentitiesHidden || !canViewParticipantNames) {
       return (
         <div style={{
           background: softSurfaceColor,
@@ -791,7 +841,9 @@ function EventDetails({ navigation, route }) {
             ))}
           </div>
           <div style={{ color: mutedTextColor, fontSize: 13, lineHeight: 1.5 }}>
-            Les identités des participants sont masquees par l organisateur.
+            {participantIdentitiesHidden
+              ? 'Les identités des participants sont masquees par l organisateur.'
+              : 'Connecte-toi pour voir qui participe.'}
           </div>
         </div>
       );
@@ -1014,9 +1066,9 @@ function EventDetails({ navigation, route }) {
                   padding: isTablet ? 32 : 22,
                 }}
               >
-                <div style={{ color: textColor, fontFamily: 'Montserrat-Bold, sans-serif', fontSize: 15 }}>Mon statut</div>
+                <div style={{ color: textColor, fontFamily: 'Montserrat-Bold, sans-serif', fontSize: 15 }}>{statusHeadingLabel}</div>
                 <div style={{ color: mutedTextColor, fontSize: 14, lineHeight: 1.5 }}>
-                  {participationLabel}
+                  {statusDetailLabel}
                 </div>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
                   {!canEdit && !participationState?.isParticipating && !participationState?.hasPendingRequest ? (
@@ -1031,7 +1083,7 @@ function EventDetails({ navigation, route }) {
                       }}
                       type="button"
                     >
-                      {createParticipationMutation.isPending ? 'Envoi...' : 'Participer'}
+                      {createParticipationMutation.isPending ? 'Envoi...' : joinButtonLabel}
                     </button>
                   ) : null}
                   {!canEdit && activeParticipationRequestId ? (
@@ -1138,7 +1190,7 @@ function EventDetails({ navigation, route }) {
               background: sectionBackground, border: `1px solid ${borderColor}`, borderRadius: 24, display: 'grid', gap: 18, padding: 22,
             }}
             >
-              {Array.isArray(event?.eventTasks) && event.eventTasks.length > 0 ? (
+              {hasVisibleEventTasks ? (
                 <div>
                   <EventTasksSection
                     canManageEvent={canEdit}
@@ -1794,7 +1846,7 @@ function EventDetails({ navigation, route }) {
                 )}
               </div>
 
-              {detectedPlayers.length > 0 ? (
+              {canViewParticipantNames && detectedPlayers.length > 0 ? (
                 <div style={{
                   background: sectionBackground, border: `1px solid ${borderColor}`, borderRadius: 24, display: 'grid', gap: 14, padding: 22,
                 }}
