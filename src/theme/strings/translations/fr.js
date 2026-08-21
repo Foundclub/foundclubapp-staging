@@ -531,14 +531,19 @@ export default {
     chat: 'Conversation',
     close: 'Fermer',
     error: 'Erreur',
+    errorOccurred: 'Une erreur est survenue.',
     finish: 'Terminer',
     ignore: 'Ignorer',
+    loading: 'Chargement...',
+    member: 'Membre',
     messages: {
       noData: 'Aucune donnée disponible',
     },
     next: 'Suivant',
     previous: 'Précédent',
     skip: 'Passer',
+    success: 'Succès',
+    teams: 'Équipes',
     view: 'Voir',
   },
   // C-C — ECRAN 11 du pack composition : la compo type d'une équipe.
@@ -653,8 +658,19 @@ export default {
     messagePlaceholder: 'Message',
     modals: {
       actions: {
+        cancel: 'Annuler',
         report: 'Signaler le message',
         seeUser: 'Voir le profil',
+      },
+      reportMessage: {
+        description: 'Dis-nous ce qui ne va pas. Notre équipe relira ce message.',
+        fields: {
+          reason: {
+            label: 'Motif du signalement',
+            placeholder: 'Explique en quelques mots ce qui pose problème.',
+          },
+        },
+        title: 'Signaler ce message',
       },
       reportSuccess: {
         description: 'Merci de ton retour, nous allons traiter ta demande dans les plus brefs délais.',
@@ -1032,6 +1048,31 @@ export default {
       noAbsence: 'Aucune absence signalée.',
       noConfirmation: 'Personne n\'a encore confirmé sa présence.',
     },
+    export: {
+      cancel: 'Annuler',
+      columns: {
+        email: 'E-mail',
+        firstname: 'Prénom',
+        lastname: 'Nom',
+        phone: 'Téléphone',
+        position: 'Poste',
+        scope: 'Portée',
+        status: 'Statut',
+        team: 'Équipe',
+      },
+      columnsTitle: 'Ce que le fichier contient',
+      confirm: 'Télécharger le fichier',
+      count: 'Le fichier contiendra {{count}} personnes.',
+      personalDataWarning: 'Ce fichier contient des données personnelles',
+      removeContacts: 'Retirer e-mails et téléphones',
+      title: 'Exporter la liste',
+    },
+    exportError: 'Impossible de sortir la liste des participants.',
+    exporting: 'Nous préparons la liste des participants...',
+    exportSuccess: 'La liste des participants est téléchargée.',
+    featuredRequest: {
+      error: 'Impossible d’envoyer la demande de mise à la une.',
+    },
     fields: {
       description: 'À propos',
       participationRequests: 'Demandes de participation',
@@ -1124,6 +1165,7 @@ export default {
       notAnswered: 'Sans réponse',
       participating: 'Présent·e·s',
     },
+    participationSuccess: 'Ta participation est enregistrée.',
   },
   eventEdit: {
     actions: {
@@ -3181,6 +3223,12 @@ export default {
     subtitle: 'Renseigne ton numéro de téléphone.',
     title: 'Crée ton compte',
   },
+  requests: {
+    approvedSuccess: 'La demande est validée.',
+    rejectConfirmMessage: 'Cette demande sera refusée et la personne prévenue.',
+    rejectConfirmTitle: 'Refuser cette demande ?',
+    rejectedSuccess: 'La demande est refusée.',
+  },
   requestsHub: {
     actionError: 'Impossible de traiter la demande.',
     assignNow: 'Assigner maintenant',
@@ -3594,6 +3642,9 @@ export default {
       participate: 'Réserver',
       requestFeatured: 'Demander la mise à la une',
     },
+    bookFull: {
+      error: 'Impossible de réserver le créneau entier.',
+    },
     card: {
       missingPlayers: 'Il manque {{count}} joueur',
       missingPlayers_plural: 'Il manque {{count}} joueurs',
@@ -3615,6 +3666,7 @@ export default {
       openTrainings: 'Entraînements ouverts',
       tournaments: 'Tournois',
     },
+    joinError: 'Impossible de rejoindre cette réservation.',
     mode: {
       fullGroup: 'J\'ai déjà mon groupe complet',
       invalidPlayerCount: 'Merci de entrer un nombre validé',
@@ -3625,6 +3677,12 @@ export default {
       tooManyPlayers: 'Le nombre doit être inférieur au total',
     },
     noData: 'Aucune réservation trouvée.',
+    openForPlayers: {
+      error: 'Impossible d’ouvrir ce créneau aux joueurs.',
+    },
+    sosAlert: {
+      error: 'Impossible d’envoyer l’alerte SOS.',
+    },
     title: 'Événements :',
   },
   searchTypeSwitcher: {

@@ -99,9 +99,18 @@ function EventHeader({ event, matchScoreSummary = null }) {
 
   const backgroundImage = getBackgroundImage(event?.type?.name);
   // La couleur appartient au LIEU, pas au type : deux evenements au meme
-  // endroit portent le meme accent. Sans installation, on garde le cyan
-  // d'avant AD09, donc un evenement sans lieu ne change pas d'apparence.
-  const accentColor = resolveFacilityPlanningColor(event?.facility) || Colors.primary500;
+  // endroit portent le meme accent. Sans installation, l'icone GPS et la
+  // pastille de section gardent le cyan d'avant AD09.
+  // AD10 — le LISERE, lui, ne se pose plus du tout sans lieu. Mesure du
+  // 2026-08-21 : le trait etait applique sans condition, donc un evenement
+  // sans lieu portait 4 px de cyan `primary500` qu'il n'avait jamais eus
+  // avant AD09 (`c60763e` a INTRODUIT `borderLeftWidth`). Le commentaire
+  // disait pourtant « ne change pas d'apparence » : il decrivait l'intention,
+  // pas le code. Un lisere qui code la couleur d'un lieu ABSENT est un
+  // mensonge visuel — et la carte fait deja le bon geste (`EventCardNew.js`,
+  // `containerAccentStyle` n'existe que s'il y a une couleur de lieu).
+  const facilityAccentColor = resolveFacilityPlanningColor(event?.facility);
+  const accentColor = facilityAccentColor || Colors.primary500;
   const normalizedTypeName = String(event?.type?.name || '')
     .toLowerCase()
     .normalize('NFD')
@@ -223,7 +232,10 @@ function EventHeader({ event, matchScoreSummary = null }) {
         // Lisere gauche : la couleur du lieu reste lisible meme quand le fond
         // photo la mange. 4 est une LARGEUR DE BORD, pas un espacement : elle
         // ne passe pas par la rampe Spaces (cf. { height: 45, width: 1 } plus bas).
-        { borderLeftColor: accentColor, borderLeftWidth: 4 },
+        // AD10 : PAS de lieu, PAS de lisere (voir le commentaire plus haut).
+        facilityAccentColor
+          ? { borderLeftColor: facilityAccentColor, borderLeftWidth: 4 }
+          : null,
       ]}
     >
       {/* Header: Logo + Main label */}

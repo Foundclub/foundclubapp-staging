@@ -113,7 +113,7 @@ export const useEventMutations = (eventId, refetch, refetchParticipations) => {
     onError: (error) => {
       Alert.alert(
         t('common.error'),
-        getParticipationErrorMessage(error, t('errors.EVENT_PARTICIPATION_DELETE_ERROR')),
+        getParticipationErrorMessage(error, t('APIerrors.EVENT_PARTICIPATION_DELETE_ERROR')),
       );
     },
     onSuccess: () => {

@@ -119,11 +119,11 @@ function RequestsDashboard({ navigation, route }) {
       t('requests.rejectConfirmTitle'),
       t('requests.rejectConfirmMessage'),
       [
-        { style: 'cancel', text: t('common.cancel') },
+        { style: 'cancel', text: t('common.actions.cancel') },
         {
           onPress: () => cancelMutation.mutate(event.documentId),
           style: 'destructive',
-          text: t('common.confirm'),
+          text: t('common.actions.confirm'),
         },
       ],
     );
