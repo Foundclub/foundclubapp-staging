@@ -189,7 +189,6 @@ function TeamDetails({ navigation, route }) {
   const [isTeamActionsPanelOpen, setIsTeamActionsPanelOpen] = useState(false);
   const [trainerSearch, setTrainerSearch] = useState('');
   const [subscriptionPaywallDecision, setSubscriptionPaywallDecision] = useState(null);
-  const autoOpenedTeamActionsKeyRef = useRef(/** @type {string | null} */ (null));
 
   // FFBB Modal states
   const [showFFBBUrlModal, setShowFFBBUrlModal] = useState(false);
@@ -1729,28 +1728,21 @@ function TeamDetails({ navigation, route }) {
 
     return t('teamDetails.actions.join');
   })();
+  // AC01 - `showJoinAction` ne compte PLUS ici : la porte d'entree du
+  // visiteur est devenue un bouton a part, toujours visible. Le compter
+  // afficherait les trois points a un visiteur pour qui la feuille serait
+  // vide.
   const hasTeamActionsPanel = showEditAction
     || showTeamChatAction
     || showContactTrainersAction
     || showDefaultCompositionAction
-    || showLeaveAction
-    || showJoinAction;
+    || showLeaveAction;
 
   useEffect(() => {
     if (!hasTeamActionsPanel) {
       setIsTeamActionsPanelOpen(false);
     }
   }, [hasTeamActionsPanel]);
-
-  useEffect(() => {
-    if (!showJoinAction || !teamId) return;
-
-    const autoOpenKey = `${teamId}:${canCoachRequestJoinViewedTeam ? 'coach' : 'player'}`;
-    if (autoOpenedTeamActionsKeyRef.current === autoOpenKey) return;
-
-    autoOpenedTeamActionsKeyRef.current = autoOpenKey;
-    setIsTeamActionsPanelOpen(true);
-  }, [canCoachRequestJoinViewedTeam, showJoinAction, teamId]);
 
   const handleDeleteTrainer = (/** @type {string} */ trainerId) => {
     Alert.alert(
@@ -2574,8 +2566,51 @@ function TeamDetails({ navigation, route }) {
         Alignments.fill,
       ]}
     >
+      {/* AC01 - LES TROIS POINTS. Ils sont poses en surimpression plutot
+          qu'en rangee au-dessus du titre : une rangee de plus decalerait vers
+          le bas toute la mise en page de cet ecran de 5 500 lignes. Le retrait
+          du haut (encoche) est deja applique par `ScreenContainer`
+          (`paddingTop = hauteur d'en-tete || insets.top`), donc `top: 0` est
+          deja SOUS l'encoche. Le titre voisin reserve 44 pt de chaque cote pour
+          ne jamais passer dessous. */}
+      {hasTeamActionsPanel ? (
+        <TouchableOpacity
+          accessibilityLabel={t('teamDetails.actions.panelTitle', "Actions d'équipe")}
+          accessibilityRole="button"
+          activeOpacity={0.7}
+          onPress={() => setIsTeamActionsPanelOpen(true)}
+          style={[
+            Alignments.alignCenter,
+            Alignments.justifyCenter,
+            Spaces.gap[4],
+            {
+              height: 44,
+              position: 'absolute',
+              right: 0,
+              top: 0,
+              width: 44,
+              zIndex: 30,
+            },
+          ]}
+          testID="team-actions-menu-button"
+        >
+          {['haut', 'milieu', 'bas'].map((rang) => (
+            <View
+              key={`team-actions-dot-${rang}`}
+              style={{
+                backgroundColor: Colors.neutral00,
+                borderRadius: 999,
+                height: 4,
+                width: 4,
+              }}
+            />
+          ))}
+        </TouchableOpacity>
+      ) : null}
+
       <View style={[
         Spaces.gap[8],
+        Spaces.paddingHorizontal[44],
         Alignments.justifyCenter,
         Alignments.alignCenter]}
       >
@@ -4496,200 +4531,160 @@ function TeamDetails({ navigation, route }) {
 
         </WithDataWrapper>
       </ScrollView>
-      {hasTeamActionsPanel ? (
+      {/* AC01 - LE TUNNEL D'INSCRIPTION NE PART PAS DANS LE MENU. Ce bouton
+          est la porte d'entree du visiteur qui peut rejoindre l'equipe : le
+          ranger derriere les trois points le rendrait introuvable. Il reste,
+          comme le panneau qu'il remplace, un FRERE de la zone defilante de la
+          page - donc toujours au-dessus de la ligne de flottaison, sans avoir
+          a defiler. */}
+      {showJoinAction ? (
         <View
           style={[
             Spaces.marginTop[12],
             Spaces.paddingBottom[24],
             Spaces.paddingHorizontal[16],
-            Spaces.gap[12],
-            // AA06 - ce panneau est un FRERE de la zone defilante de la page,
-            // pas un enfant : il doit le rester, sinon le bouton « C'est mon
-            // equipe » (ouvert d'office pour un visiteur, l. 1746) passerait
-            // sous la ligne de flottaison. Restait a le borner. Sans ce
-            // `flexShrink`, PERSONNE ne retrecissait : la zone defilante de la
-            // page a `flex: 1` donc `flexBasis: 0`, donc un poids de
-            // retrecissement NUL, et la valeur par defaut de `flexShrink` vaut
-            // 0 sur React Native (et non 1 comme sur le web). Le panneau
-            // ouvert - jusqu'a 10 actions de 52 pt - debordait par le bas,
-            // hors d'atteinte.
-            isTeamActionsPanelOpen ? { flexShrink: 1 } : null,
           ]}
         >
-          <View
-            style={[
-              ApplicationStyle.backgroundColor.primary700,
-              ApplicationStyle.borderRadius24,
-              Spaces.paddingHorizontal[16],
-              { borderColor: `${Colors.primary500}44`, borderWidth: 1, overflow: 'hidden' },
-              isTeamActionsPanelOpen ? Alignments.fill : null,
-            ]}
-          >
-            <TouchableOpacity
-              activeOpacity={0.9}
-              onPress={() => setIsTeamActionsPanelOpen((previousValue) => !previousValue)}
-              style={[
-                Spaces.paddingTop[8],
-                Spaces.paddingBottom[12],
-                Spaces.gap[8],
-              ]}
-            >
-              <View style={[Alignments.alignCenter]}>
-                <View
-                  style={{
-                    backgroundColor: `${Colors.neutral00}55`,
-                    borderRadius: 999,
-                    height: 4,
-                    width: 48,
-                  }}
-                />
+          <Button
+            disabled={!!pendingRequest}
+            onPress={pendingRequest ? undefined : handleJoinTeam}
+            title={joinActionTitle}
+            variant={pendingRequest ? 'Secondary' : 'Primary'}
+          />
+        </View>
+      ) : null}
+
+      {/* AC01 - les actions d'equipe quittent le bas de l'ecran. Elles vivent
+          maintenant dans la feuille maison `BottomModal`, ouverte par les trois
+          points en haut a droite. AUCUNE action n'a ete retiree : 10 rangees et
+          2 en-tetes de groupe, a l'identique.
+          `snapPoints` reste ABSENT a dessein : la feuille porte un en-tete et
+          AUCUN pied, cas ou le dimensionnement dynamique de `BottomModal`
+          suffit. C'est l'association en-tete + pied qui exige des `snapPoints`
+          (piege paye au lot D19). */}
+      {hasTeamActionsPanel ? (
+        <BottomModal
+          close={() => setIsTeamActionsPanelOpen(false)}
+          headerComponent={(
+            <Text style={[Fonts.h5Bold, Fonts.neutral00]}>
+              {t('teamDetails.actions.panelTitle', "Actions d'équipe")}
+            </Text>
+          )}
+          isVisible={isTeamActionsPanelOpen}
+        >
+          <View style={[Spaces.gap[8]]}>
+            {(showEditAction || canManageTeam || showTeamChatAction || showContactTrainersAction) ? (
+              <View style={teamActionsListStyle}>
+                {showEditAction ? renderTeamActionRow({
+                  icon: 'edit',
+                  label: t('teamDetails.actions.edit', "Modifier l'équipe"),
+                  onPress: handleEditTeam,
+                }) : null}
+                {canManageTeam ? renderTeamActionRow({
+                  icon: 'share',
+                  label: t('teamDetails.actions.invitePlayers', 'Inviter des joueur·se·s'),
+                  onPress: () => inviteTeamPlayers({
+                    clubName: team?.club?.name,
+                    teamId: team?.documentId || teamId,
+                    teamName: team?.name,
+                  }),
+                }) : null}
+                {showTeamChatAction ? renderTeamActionRow({
+                  icon: 'envelope',
+                  label: t('teamDetails.actions.teamChatFull', "Discussion d'équipe"),
+                  onPress: handleStartChat,
+                }) : null}
+                {showContactTrainersAction ? renderTeamActionRow({
+                  icon: 'envelope',
+                  label: trainerContactIds.length > 1
+                    ? t('teamDetails.actions.contactTrainers', 'Contacter les entraîneur·e·s')
+                    : t('teamDetails.actions.contactTrainer', "Contacter l'entraîneur·e"),
+                  last: true,
+                  onPress: handleContactTeamTrainers,
+                }) : null}
               </View>
-              <View style={[Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween, Spaces.gap[12]]}>
-                <Text style={[Fonts.p2Bold, Fonts.neutral00, { flex: 1 }]}>
-                  {t('teamDetails.actions.panelTitle', "Actions d'équipe")}
-                </Text>
-                <Text style={[Fonts.p3Bold, Fonts.primary500]}>
-                  {isTeamActionsPanelOpen
-                    ? t('common.close', 'Fermer')
-                    : t('teamDetails.actions.openPanel', 'Ouvrir')}
-                </Text>
+            ) : null}
+
+            {canManageTeam ? (
+              <>
+                {renderTeamActionsGroupHead({
+                  actionLabel: isTeamOfferUnlocked ? null : 'Débloquer →',
+                  label: "Avec l'offre Équipe",
+                  onActionPress: openTeamOfferUnlockSheet,
+                })}
+                <View style={teamActionsListStyle}>
+                  {renderTeamActionRow({
+                    icon: 'users',
+                    label: t('teamDetails.actions.defaultComposition', 'Composition type'),
+                    lock: isTeamOfferUnlocked ? null : 'team',
+                    onPress: isTeamOfferUnlocked
+                      ? handleManageDefaultComposition
+                      : openTeamOfferUnlockSheet,
+                  })}
+                  {renderTeamActionRow({
+                    icon: 'send',
+                    label: t('teamDetails.actions.convocations', 'Convocations'),
+                    lock: isTeamOfferUnlocked ? null : 'team',
+                    onPress: isTeamOfferUnlocked
+                      ? () => setActiveTab('calendar')
+                      : openTeamOfferUnlockSheet,
+                  })}
+                  {renderTeamActionRow({
+                    icon: 'euroCircle',
+                    label: t('teamDetails.actions.teamDues', "Cotisation de l'équipe"),
+                    last: true,
+                    lock: isTeamOfferUnlocked ? null : 'team',
+                    onPress: isTeamOfferUnlocked
+                      ? () => navigation.navigate(RouteNames.ClubLicenses)
+                      : openTeamOfferUnlockSheet,
+                  })}
+                </View>
+
+                {renderTeamActionsGroupHead({
+                  actionLabel: isClubOfferUnlocked ? null : "Voir l'offre →",
+                  label: "Avec l'offre Club",
+                  onActionPress: openClubOfferRecap,
+                })}
+                <View style={teamActionsListStyle}>
+                  {renderTeamActionRow({
+                    icon: 'stadium',
+                    label: t('teamDetails.actions.facilities', 'Installations'),
+                    lock: isClubOfferUnlocked ? null : 'club',
+                    onPress: isClubOfferUnlocked
+                      ? () => navigation.navigate(RouteNames.FacilityList, {
+                        clubId: team?.club?.documentId,
+                      })
+                      : openClubOfferRecap,
+                  })}
+                  {renderTeamActionRow({
+                    icon: 'trophy',
+                    label: t('teamDetails.actions.sponsors', 'Sponsors & partenaires'),
+                    last: true,
+                    lock: isClubOfferUnlocked ? null : 'club',
+                    onPress: isClubOfferUnlocked && team?.club?.documentId
+                      ? () => navigation.navigate(RouteNames.ClubStack, {
+                        params: { clubId: team.club.documentId },
+                        screen: RouteNames.Club,
+                      })
+                      : openClubOfferRecap,
+                  })}
+                </View>
+              </>
+            ) : null}
+
+            {showLeaveAction ? (
+              <View style={[teamActionsListStyle, Spaces.marginTop[8]]}>
+                {renderTeamActionRow({
+                  destructive: true,
+                  icon: 'close',
+                  label: t('teamDetails.actions.leave', "Quitter l'équipe"),
+                  last: true,
+                  onPress: handleAskToLeave,
+                })}
               </View>
-            </TouchableOpacity>
-
-            {isTeamActionsPanelOpen ? (
-              // AA06 - la zone qui defile prend la place LAISSEE par l'entete
-              // (`flex: 1`), jamais une fraction de l'ECRAN : c'est la regle
-              // que `BottomModal.debordement.test.js` (lot D19) a etablie, et
-              // le plafond en fraction d'ecran est precisement ce qu'il
-              // condamne.
-              <ScrollView
-                contentContainerStyle={[Spaces.gap[8], Spaces.paddingBottom[16]]}
-                style={Alignments.fill}
-              >
-                {showJoinAction ? (
-                  <Button
-                    disabled={!!pendingRequest}
-                    onPress={pendingRequest ? undefined : handleJoinTeam}
-                    title={joinActionTitle}
-                    variant={pendingRequest ? 'Secondary' : 'Primary'}
-                  />
-                ) : null}
-
-                {(showEditAction || canManageTeam || showTeamChatAction || showContactTrainersAction) ? (
-                  <View style={teamActionsListStyle}>
-                    {showEditAction ? renderTeamActionRow({
-                      icon: 'edit',
-                      label: t('teamDetails.actions.edit', "Modifier l'équipe"),
-                      onPress: handleEditTeam,
-                    }) : null}
-                    {canManageTeam ? renderTeamActionRow({
-                      icon: 'share',
-                      label: t('teamDetails.actions.invitePlayers', 'Inviter des joueur·se·s'),
-                      onPress: () => inviteTeamPlayers({
-                        clubName: team?.club?.name,
-                        teamId: team?.documentId || teamId,
-                        teamName: team?.name,
-                      }),
-                    }) : null}
-                    {showTeamChatAction ? renderTeamActionRow({
-                      icon: 'envelope',
-                      label: t('teamDetails.actions.teamChatFull', "Discussion d'équipe"),
-                      onPress: handleStartChat,
-                    }) : null}
-                    {showContactTrainersAction ? renderTeamActionRow({
-                      icon: 'envelope',
-                      label: trainerContactIds.length > 1
-                        ? t('teamDetails.actions.contactTrainers', 'Contacter les entraîneur·e·s')
-                        : t('teamDetails.actions.contactTrainer', "Contacter l'entraîneur·e"),
-                      last: true,
-                      onPress: handleContactTeamTrainers,
-                    }) : null}
-                  </View>
-                ) : null}
-
-                {canManageTeam ? (
-                  <>
-                    {renderTeamActionsGroupHead({
-                      actionLabel: isTeamOfferUnlocked ? null : 'Débloquer →',
-                      label: "Avec l'offre Équipe",
-                      onActionPress: openTeamOfferUnlockSheet,
-                    })}
-                    <View style={teamActionsListStyle}>
-                      {renderTeamActionRow({
-                        icon: 'users',
-                        label: t('teamDetails.actions.defaultComposition', 'Composition type'),
-                        lock: isTeamOfferUnlocked ? null : 'team',
-                        onPress: isTeamOfferUnlocked
-                          ? handleManageDefaultComposition
-                          : openTeamOfferUnlockSheet,
-                      })}
-                      {renderTeamActionRow({
-                        icon: 'send',
-                        label: t('teamDetails.actions.convocations', 'Convocations'),
-                        lock: isTeamOfferUnlocked ? null : 'team',
-                        onPress: isTeamOfferUnlocked
-                          ? () => setActiveTab('calendar')
-                          : openTeamOfferUnlockSheet,
-                      })}
-                      {renderTeamActionRow({
-                        icon: 'euroCircle',
-                        label: t('teamDetails.actions.teamDues', "Cotisation de l'équipe"),
-                        last: true,
-                        lock: isTeamOfferUnlocked ? null : 'team',
-                        onPress: isTeamOfferUnlocked
-                          ? () => navigation.navigate(RouteNames.ClubLicenses)
-                          : openTeamOfferUnlockSheet,
-                      })}
-                    </View>
-
-                    {renderTeamActionsGroupHead({
-                      actionLabel: isClubOfferUnlocked ? null : "Voir l'offre →",
-                      label: "Avec l'offre Club",
-                      onActionPress: openClubOfferRecap,
-                    })}
-                    <View style={teamActionsListStyle}>
-                      {renderTeamActionRow({
-                        icon: 'stadium',
-                        label: t('teamDetails.actions.facilities', 'Installations'),
-                        lock: isClubOfferUnlocked ? null : 'club',
-                        onPress: isClubOfferUnlocked
-                          ? () => navigation.navigate(RouteNames.FacilityList, {
-                            clubId: team?.club?.documentId,
-                          })
-                          : openClubOfferRecap,
-                      })}
-                      {renderTeamActionRow({
-                        icon: 'trophy',
-                        label: t('teamDetails.actions.sponsors', 'Sponsors & partenaires'),
-                        last: true,
-                        lock: isClubOfferUnlocked ? null : 'club',
-                        onPress: isClubOfferUnlocked && team?.club?.documentId
-                          ? () => navigation.navigate(RouteNames.ClubStack, {
-                            params: { clubId: team.club.documentId },
-                            screen: RouteNames.Club,
-                          })
-                          : openClubOfferRecap,
-                      })}
-                    </View>
-                  </>
-                ) : null}
-
-                {showLeaveAction ? (
-                  <View style={[teamActionsListStyle, Spaces.marginTop[8]]}>
-                    {renderTeamActionRow({
-                      destructive: true,
-                      icon: 'close',
-                      label: t('teamDetails.actions.leave', "Quitter l'équipe"),
-                      last: true,
-                      onPress: handleAskToLeave,
-                    })}
-                  </View>
-                ) : null}
-
-              </ScrollView>
             ) : null}
           </View>
-        </View>
+        </BottomModal>
       ) : null}
 
       <Modal
