@@ -5,6 +5,10 @@ import PlayerConvocationScreen from '../PlayerConvocationScreen';
 // ==========================================================================
 // AD08 — LE BANC, SUR L'ECRAN DU JOUEUR : les deux lignes que rien ne gardait.
 //
+//   T3. 🎽 LA CARTE DU HAUT. C'est la seule ligne de l'ecran qui parle du
+//       LECTEUR lui-meme, et c'est exactement la plainte d'origine (« il n'y
+//       est pas »). Un remplacant que seule `reserveSnapshotPlayers` connait
+//       n'y lisait ni son poste ni son numero : la carte etait vide.
 //   T4. 🖍️ SA LIGNE SUR LE BANC. Le code la distingue deja (teinte et bordure
 //       plus fortes, `PlayerConvocationScreen.js` : `isMine`), mais AUCUN
 //       temoin ne le figeait — un lot suivant pouvait retirer la teinte sans
@@ -240,6 +244,37 @@ beforeEach(() => {
   jest.clearAllMocks();
   mockUserData = { documentId: 'joueur-2' };
   mockQueryState = { data: CHARGE_SERVEUR, isError: false, isLoading: false };
+});
+
+describe('AD08 · TEMOIN 3 — 🎽 la carte du haut parle enfin du remplacant', () => {
+  test('il lit son POSTE et son NUMERO dans sa propre carte', () => {
+    const texte = texteVisible(rendre());
+
+    // Une seule ligne de l'ecran peut produire cette phrase : `identityLine`.
+    expect(texte).toContain('Poste : Ailier · N°7');
+    expect(texte).toContain('Remplaçant');
+    expect(mockReplace).not.toHaveBeenCalled();
+  });
+
+  test('et l avatar de SA carte porte son nom, au lieu d un rond anonyme', () => {
+    // ⚠️ Le banc porte le meme avatar quelques lignes plus bas : chercher le nom
+    // dans tout l ecran ne prouverait RIEN. Le premier avatar de l arbre est
+    // celui de la carte du haut — c est lui, et lui seul, qu on interroge.
+    const { Text: TexteRN } = jest.requireActual('react-native');
+    const avatars = rendre().root.findAllByType(TexteRN)
+      .map((/** @type {any} */ noeud) => aplatirTexte(noeud.props.children))
+      .filter((/** @type {string} */ texte) => texte.startsWith('AVATAR:'));
+
+    expect(avatars[0]).toBe('AVATAR:Leo Diarra');
+  });
+
+  test('⛔ le titulaire garde la sienne, inchangee', () => {
+    mockUserData = { documentId: 'joueur-1' };
+    const texte = texteVisible(rendre());
+
+    expect(texte).toContain('Poste : GB · N°1');
+    expect(texte).toContain('Titulaire');
+  });
 });
 
 describe('AD08 · TEMOIN 4 — 🖍️ sa ligne sur le banc ne ressemble pas aux autres', () => {
