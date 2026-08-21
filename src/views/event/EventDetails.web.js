@@ -240,6 +240,21 @@ function EventDetails({ navigation, route }) {
     const effectiveStatus = String(participationState?.effectiveStatus || '').trim().toLowerCase();
     return canEdit || isTeamMember || effectiveStatus === 'accepted' || effectiveStatus === 'missing';
   }, [canEdit, isTeamMember, participationState?.effectiveStatus]);
+  // AD02 — la page d'un evenement est PUBLIQUE sur le site (arbitrage d'Adel :
+  // `web/src/routes/screenRegistry.tsx` la declare `access: 'public'`), donc un
+  // inconnu y arrive par un simple lien de partage.
+  //
+  // Cette garde DOUBLE volontairement le serveur. Mesure du 2026-08-21, sans
+  // aucun jeton : `GET /api/events?populate=*` rend encore 10 "firstname" et
+  // 10 "lastname" a un anonyme. Tant que la reponse serveur n'est pas fermee,
+  // c'est la SEULE protection en service sur le site ; une fois qu'elle le sera,
+  // elle reste la deuxieme ligne de defense le jour ou le serveur se remettrait
+  // a parler trop.
+  //
+  // UNE SEULE regle pour les TROIS surfaces nominatives de cet ecran
+  // (participants, absences/manques, taches confiees) : deux conditions qui se
+  // ressemblent finiraient par raconter deux histoires le jour ou l'une bouge.
+  const canViewParticipantNames = Boolean(userData?.documentId);
   const compositionTeamId = useMemo(() => {
     const teams = [event?.team, ...(Array.isArray(event?.invitedTeams) ? event.invitedTeams : [])].filter(Boolean);
     if (!teams.length) return null;
@@ -752,7 +767,7 @@ function EventDetails({ navigation, route }) {
       return <div style={{ color: mutedTextColor }}>Aucun participant confirme pour le moment.</div>;
     }
 
-    if (participantIdentitiesHidden) {
+    if (participantIdentitiesHidden || !canViewParticipantNames) {
       return (
         <div style={{
           background: softSurfaceColor,
@@ -791,7 +806,9 @@ function EventDetails({ navigation, route }) {
             ))}
           </div>
           <div style={{ color: mutedTextColor, fontSize: 13, lineHeight: 1.5 }}>
-            Les identités des participants sont masquees par l organisateur.
+            {participantIdentitiesHidden
+              ? 'Les identités des participants sont masquees par l organisateur.'
+              : 'Connecte-toi pour voir qui participe.'}
           </div>
         </div>
       );
