@@ -111,7 +111,15 @@ jest.mock('@/services/event/eventQueries', () => ({
     isLoading: false,
     refetch: jest.fn(),
   }),
-  useGetEventAttendance: () => emptyQuery(),
+  // AC10 : depuis que « le match est fini » se decide sur l horloge du SERVEUR
+  // et non sur celle du telephone, l ecran a besoin qu on la lui donne. Sans
+  // elle il repond « pas fini », par securite. On rend donc l heure courante :
+  // les evenements dates 2020 restent passes, ceux dates 2099 restent a venir,
+  // et chaque temoin garde exactement le sens qu il avait.
+  useGetEventAttendance: () => ({
+    ...emptyQuery(),
+    data: { data: { serverNow: new Date().toISOString() } },
+  }),
   useGetEventConvocation: () => emptyQuery(),
   useGetEventTeamComposition: () => ({
     ...emptyQuery(),

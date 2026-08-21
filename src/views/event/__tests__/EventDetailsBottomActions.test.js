@@ -24,6 +24,8 @@ const mockEventQuery = { data: null };
 const mockCampaignsQuery = { data: { data: [] }, isLoading: false };
 const mockMatchStatsQuery = { data: null, isFetching: false };
 const mockRouteParams = { params: { eventId: 'event-1' } };
+// AC10 : l heure du SERVEUR, pilotable temoin par temoin.
+const mockAttendanceQuery = { serverNow: /** @type {string | null} */ (null) };
 
 jest.mock('react-i18next', () => ({
   ...jest.requireActual('react-i18next'),
@@ -105,7 +107,17 @@ jest.mock('@/services/event/eventQueries', () => ({
     isLoading: false,
     refetch: jest.fn(),
   }),
-  useGetEventAttendance: () => emptyQuery(),
+  // AC10 : depuis que « le match est fini » se decide sur l horloge du SERVEUR
+  // et non sur celle du telephone, l ecran a besoin qu on la lui donne. Sans
+  // elle il repond « pas fini », par securite. Le defaut est l heure courante :
+  // les evenements dates 2020 restent passes, ceux dates 2099 restent a venir,
+  // et chaque temoin ecrit avant AC10 garde exactement le sens qu il avait.
+  useGetEventAttendance: () => ({
+    ...emptyQuery(),
+    data: mockAttendanceQuery.serverNow
+      ? { data: { serverNow: mockAttendanceQuery.serverNow } }
+      : null,
+  }),
   useGetEventConvocation: () => emptyQuery(),
   useGetEventTeamComposition: () => emptyQuery(),
 }));
@@ -372,9 +384,10 @@ const EVENT_STACK_ROUTES = [
 ];
 
 const mountScreen = (/** @type {any} */ {
-  auth, campaigns, event, matchStats, params, routeNames,
+  auth, campaigns, event, matchStats, params, routeNames, serverNow,
 } = {}) => {
   mockEventQuery.data = event === undefined ? buildEvent() : event;
+  mockAttendanceQuery.serverNow = serverNow === undefined ? new Date().toISOString() : serverNow;
   mockCampaignsQuery.data = { data: campaigns || [] };
   mockCampaignsQuery.isLoading = false;
   mockMatchStatsQuery.data = matchStats || null;
@@ -1505,5 +1518,127 @@ describe('D71 — les stats du match quittent le pied de page pour le menu', () 
       && Boolean(node.props?.contentContainerStyle));
     expect(managePanelPosition(root)).not.toBe('absolute');
     expect(isUnder(panneau, scroll)).toBe(true);
+  });
+});
+
+// AC10 — VAGUE 0 : « reparer ce qui ment ».
+//
+// L'ecran decidait qu'un match etait fini en lisant l'horloge du TELEPHONE
+// (`EventDetails.js:1083` avant le lot). Un telephone en avance — ou simplement
+// dans un autre fuseau — ouvrait les statistiques d'apres-match AVANT le coup
+// d'envoi ; un telephone en retard les cachait a quelqu'un dont le match etait
+// fini depuis une heure. La seule horloge qui fait foi est celle du SERVEUR.
+//
+// La chip « Stats du match » est le temoin visible de cette decision : grisee
+// tant que le match n'est pas fini, active des qu'il l'est. Les temoins ci-
+// dessous PILOTENT les deux horloges separement, ce qui est la seule facon de
+// montrer laquelle des deux est ecoutee.
+describe('AC10 — le match est fini quand le SERVEUR le dit, pas le telephone', () => {
+  const FIN_DU_MATCH = '2026-08-20T20:00:00.000Z';
+  const FIN_DU_MATCH_MS = Date.parse(FIN_DU_MATCH);
+  const TROIS_HEURES = 3 * 60 * 60 * 1000;
+
+  const MATCH = { endDate: FIN_DU_MATCH, type: { name: 'Match' } };
+
+  /** @type {any} */
+  let telephone = null;
+
+  const reglerLeTelephoneSur = (/** @type {number} */ instant) => {
+    telephone = jest.spyOn(Date, 'now').mockReturnValue(instant);
+  };
+
+  afterEach(() => {
+    if (telephone) telephone.mockRestore();
+    telephone = null;
+  });
+
+  const chipStats = (/** @type {any} */ root) => byTestId(root, 'event-manage-chip')
+    .find((/** @type {any} */ node) => node
+      .findAllByType(Text)
+      .some((/** @type {any} */ item) => /stats du match/i.test(textOf(item))));
+
+  const chipStatsEstGrisee = (/** @type {any} */ root) => {
+    const chip = chipStats(root);
+    if (!chip) throw new Error('La chip « Stats du match » n est pas dans le menu');
+    const [bouton] = chip.findAllByType(TouchableOpacity);
+    return Boolean(bouton.props.disabled);
+  };
+
+  const monterLeMatch = (/** @type {string | null} */ serverNow) => {
+    const root = mountScreen({
+      auth: {
+        canEditClub: () => true,
+        canEditEvent: () => true,
+        canManageEvent: () => true,
+        userData: { documentId: 'user-1', role: { name: 'Entraineur' } },
+      },
+      event: buildEvent(MATCH),
+      matchStats: {
+        permissions: { canManage: true, canView: true },
+        score: { available: true },
+      },
+      serverNow,
+    });
+    openManagePanel(root);
+    return root;
+  };
+
+  // 🥇 LE TEMOIN DE L'AUDIT.
+  test('un telephone en AVANCE de 3 h n ouvre pas les statistiques', () => {
+    // Le telephone se croit 3 h APRES la fin du match...
+    reglerLeTelephoneSur(FIN_DU_MATCH_MS + TROIS_HEURES);
+    // ...alors que le serveur dit qu il reste 1 h a jouer.
+    const root = monterLeMatch(new Date(FIN_DU_MATCH_MS - (60 * 60 * 1000)).toISOString());
+
+    expect(chipStatsEstGrisee(root)).toBe(true);
+    expect(hasText(root, 'Les stats seront disponibles à la fin du match.')).toBe(true);
+  });
+
+  test('un telephone en RETARD de 3 h les ouvre si le serveur dit fini', () => {
+    // Le telephone se croit encore 3 h AVANT la fin...
+    reglerLeTelephoneSur(FIN_DU_MATCH_MS - TROIS_HEURES);
+    // ...alors que le serveur dit que c est fini depuis une minute.
+    const root = monterLeMatch(new Date(FIN_DU_MATCH_MS + 60000).toISOString());
+
+    expect(chipStatsEstGrisee(root)).toBe(false);
+    press(root, 'Saisir les stats du match');
+    expect(mockNavigate).toHaveBeenCalledWith('MatchStatsEditor', expect.objectContaining({
+      eventId: 'event-1',
+      sourceType: 'event',
+    }));
+  });
+
+  // 🔒 LE REPLI SUR. Ouvrir des statistiques d apres-match trop tot est pire que
+  // les ouvrir trop tard : trop tot, on demande son ressenti a quelqu un dont le
+  // match n a pas commence.
+  test('sans horloge serveur, le match est considere comme NON fini', () => {
+    // Le telephone jure que le match est fini depuis 3 h. On ne le croit pas.
+    reglerLeTelephoneSur(FIN_DU_MATCH_MS + TROIS_HEURES);
+    const root = monterLeMatch(null);
+
+    expect(chipStatsEstGrisee(root)).toBe(true);
+  });
+
+  // 🚨 NON-REGRESSION : les temps RELATIFS restent sur l horloge locale.
+  // C est la deuxieme famille de l audit, et elle ne doit PAS bouger : ce compte
+  // a rebours raconte le temps du LECTEUR, pas celui du serveur, et il doit
+  // continuer de s afficher meme quand le serveur n a rien dit.
+  test('le compte a rebours d arrivee continue de lire l horloge locale', () => {
+    const debut = new Date(FIN_DU_MATCH_MS + (30 * 60 * 1000)).toISOString();
+    reglerLeTelephoneSur(FIN_DU_MATCH_MS);
+
+    const root = mountScreen({
+      auth: {
+        userData: { documentId: 'user-1', role: { name: 'Joueur' } },
+      },
+      event: buildEvent({
+        date: debut,
+        participations: [{ documentId: 'user-1' }],
+        type: { name: 'Match' },
+      }),
+      serverNow: null,
+    });
+
+    expect(hasText(root, 'pour signaler ton arrivée ou ton retard.')).toBe(true);
   });
 });
