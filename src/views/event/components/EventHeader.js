@@ -4,6 +4,7 @@ import {
   Image, ImageBackground, Linking, Platform, Text, TouchableOpacity, View,
 } from 'react-native';
 
+import { withAlpha } from '@/theme/colors';
 import useTheme from '@/theme/themeContext';
 
 import ClubLogoMark from '@/components/molecules/clubLogoMark/ClubLogoMark';
@@ -13,6 +14,7 @@ import {
   resolveExternalMatchDisplay,
   resolveExternalMatchLocation,
 } from '@/utils/externalMatchDisplay';
+import { resolveFacilityPlanningColor } from '@/utils/facilityPlanningColor';
 import {
   normalizeLocationInput,
   getLocationCoordinates as resolveLocationCoordinates,
@@ -96,6 +98,10 @@ function EventHeader({ event, matchScoreSummary = null }) {
   const { t } = useTranslation();
 
   const backgroundImage = getBackgroundImage(event?.type?.name);
+  // La couleur appartient au LIEU, pas au type : deux evenements au meme
+  // endroit portent le meme accent. Sans installation, on garde le cyan
+  // d'avant AD09, donc un evenement sans lieu ne change pas d'apparence.
+  const accentColor = resolveFacilityPlanningColor(event?.facility) || Colors.primary500;
   const normalizedTypeName = String(event?.type?.name || '')
     .toLowerCase()
     .normalize('NFD')
@@ -112,6 +118,8 @@ function EventHeader({ event, matchScoreSummary = null }) {
   const eventClub = event?.team?.club || event?.club;
   const logoUrl = eventClub?.logo?.url;
   const locationDetails = event?.locationDetails;
+  // Le nom du lieu est une DONNEE, pas un libelle : aucune clef de traduction.
+  const facilityName = toDisplayText(event?.facility?.name);
   const isImportedExternalMatch = (
     event?.externalAutoSource === 'external_competition'
     || Array.isArray(event?.team?.externalCalendarData)
@@ -212,6 +220,10 @@ function EventHeader({ event, matchScoreSummary = null }) {
         Spaces.gap[8],
         Spaces.paddingHorizontal[24],
         Spaces.paddingVertical[32],
+        // Lisere gauche : la couleur du lieu reste lisible meme quand le fond
+        // photo la mange. 4 est une LARGEUR DE BORD, pas un espacement : elle
+        // ne passe pas par la rampe Spaces (cf. { height: 45, width: 1 } plus bas).
+        { borderLeftColor: accentColor, borderLeftWidth: 4 },
       ]}
     >
       {/* Header: Logo + Main label */}
@@ -243,6 +255,21 @@ function EventHeader({ event, matchScoreSummary = null }) {
               {headerSecondaryTitle}
             </Text>
           ) : null}
+          {facilityName ? (
+            <View
+              style={[
+                ApplicationStyle.borderRadius100,
+                Alignments.selfStart,
+                Spaces.paddingHorizontal[8],
+                Spaces.paddingVertical[4],
+                { backgroundColor: withAlpha(accentColor, 0.14) },
+              ]}
+            >
+              <Text style={[Fonts.p4, Fonts.neutral00]}>
+                {facilityName}
+              </Text>
+            </View>
+          ) : null}
         </View>
       </View>
 
@@ -255,8 +282,8 @@ function EventHeader({ event, matchScoreSummary = null }) {
             SpacesAny.paddingHorizontal[18],
             Spaces.gap[8],
             {
-              backgroundColor: `${Colors.primary500}18`,
-              borderColor: `${Colors.primary500}55`,
+              backgroundColor: withAlpha(accentColor, 0.09),
+              borderColor: withAlpha(accentColor, 0.33),
               borderWidth: 1,
               minWidth: 172,
             },
@@ -278,10 +305,10 @@ function EventHeader({ event, matchScoreSummary = null }) {
 
       {/* Section Name */}
       <View style={[Alignments.fullWidth, Spaces.gap[8], Spaces.marginBottom[12]]}>
-        <Text style={[Fonts.p2Bold, Fonts.primary500, Fonts.textRight, Alignments.fullWidth]}>
+        <Text style={[Fonts.p2Bold, Fonts.textRight, Alignments.fullWidth, { color: accentColor }]}>
           {sectionName}
         </Text>
-        <View style={[Alignments.fullWidth, ApplicationStyle.separator, ApplicationStyle.backgroundColor.primary500]} />
+        <View style={[Alignments.fullWidth, ApplicationStyle.separator, { backgroundColor: accentColor }]} />
       </View>
 
       {/* Info: Location, Date, Time, Team Category */}
@@ -301,7 +328,7 @@ function EventHeader({ event, matchScoreSummary = null }) {
                 {getLocationText()}
               </Text>
             </View>
-            <Text style={[Fonts.p4, Fonts.primary500, Fonts.textCenter]}>
+            <Text style={[Fonts.p4, Fonts.textCenter, { color: accentColor }]}>
               {t('common.openInGps', 'Ouvrir dans le GPS')}
             </Text>
           </TouchableOpacity>
@@ -352,7 +379,7 @@ function EventHeader({ event, matchScoreSummary = null }) {
 
         {invitedTeamNames.length > 0 && (
           <View style={[Spaces.gap[4]]}>
-            <Text style={[Fonts.p3Bold, Fonts.primary500]}>
+            <Text style={[Fonts.p3Bold, { color: accentColor }]}>
               Équipes invitées
             </Text>
             <Text style={[Fonts.p2, Fonts.primary100]}>
