@@ -140,7 +140,14 @@ function DetectionTeamsAuto() {
       Alert.alert(
         t('detection.alerts.saved.title'),
         t('detection.alerts.saved.message'),
-        [{ onPress: () => navigation.goBack(), text: t('detection.alerts.ok') }],
+        // AD01 (🚪) — MEME SUITE QUE L'ECRAN 14 : apres avoir genere les
+        // equipes, on va les PLACER. `DetectionTeamsBoard` attendait derriere
+        // sans un seul appelant. Seule la DESTINATION change ici.
+        [{
+          // @ts-ignore — `navigate` est bien la sur un ecran de pile.
+          onPress: () => navigation.navigate(RouteNames.DetectionTeamsBoard, params),
+          text: t('detection.alerts.ok'),
+        }],
       );
     } catch (error) {
       Alert.alert(
@@ -151,7 +158,7 @@ function DetectionTeamsAuto() {
       setIsBusy(false);
     }
   }, [
-    checkInFirst, eventId, isBusy, memberMode, navigation, players, presentIds,
+    checkInFirst, eventId, isBusy, memberMode, navigation, params, players, presentIds,
     preview.teams, splitBy, storedSplit?.rounds, t, teamComposition?.draft, teamCount, teamId,
   ]);
 

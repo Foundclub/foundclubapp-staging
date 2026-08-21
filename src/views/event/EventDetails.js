@@ -3139,6 +3139,25 @@ function EventDetails({ navigation, route }) {
     return 'Tu n’es pas dans la composition publiée.';
   }, [viewerConvocationRole]);
 
+  // AD01 — LA MEME PHRASE, MAIS EN HAUT DE LA PAGE.
+  //
+  // 🥇 AC08 a repondu a « suis-je convoque ? » — mais la reponse vit dans le
+  // DERNIER bloc du defilement (« Composition d'equipes », `:5672`), au bas
+  // d'une fiche de 6 496 lignes. Un joueur devait faire defiler l'evenement
+  // ENTIER pour apprendre s'il jouait. C'est un DEPLACEMENT, pas une
+  // construction : `viewerConvocationLine` (`:3136`) reste la seule source,
+  // aucune requete de plus, aucun second calcul.
+  //
+  // 🗣️ ET AVANT PUBLICATION, LA PAGE PARLE AU LIEU DE SE TAIRE. Le silence,
+  // le lecteur le lit comme « je ne joue pas » — c'est le defaut n°3 de la
+  // matrice d'audit. Une 4e phrase honnete coute une ligne et supprime le
+  // contresens.
+  const viewerConvocationHeadline = useMemo(() => (
+    hasPublishedComposition
+      ? viewerConvocationLine
+      : t('eventDetails.convocation.notPublished', 'La composition n’est pas encore publiée.')
+  ), [hasPublishedComposition, t, viewerConvocationLine]);
+
   const publishedCompositionCtaTitle = useMemo(() => {
     if (canEdit) return t('matchConvocation.published.openCta');
     return viewerConvocationRole ? 'Voir ma convocation' : "Voir la composition d'équipes";
@@ -3249,8 +3268,12 @@ function EventDetails({ navigation, route }) {
         title: 'Saisir les stats du match',
       };
     }
+    // AD01 (✍️) — LE SEUL CAS QUE LA FEUILLE COURTE DETOURNE. Ce drapeau vit
+    // ici, et nulle part ailleurs : recopier la condition a cote serait un
+    // second juge, qui divergerait au premier changement de regle.
     return {
       disabled: false,
+      isScoreEntry: true,
       subtitle: 'Commence par enregistrer le score du match.',
       title: 'Enregistrer le score',
     };
@@ -3604,6 +3627,122 @@ function EventDetails({ navigation, route }) {
     navigation,
   ]);
 
+  // AD01 (✍️) — ECRIRE « 3-1 » SANS OUVRIR 1 615 LIGNES.
+  //
+  // Le tuyau court existe de bout en bout — `saveEventMatchResult`
+  // (`matchStatsService.js:62`, `PUT /events/:id/match-result`), sa route
+  // serveur et sa regle metier — et il n'avait AUCUN appelant. Pour ecrire deux
+  // chiffres, un coach devait ouvrir `MatchStatsEditor` : 1 615 lignes.
+  //
+  // ⛔ CE N'EST PAS UN REMPLACEMENT. La feuille detourne UN SEUL cas, le dernier
+  // de `matchStatsPrimaryAction` (« Enregistrer le score »). Tous les autres
+  // ouvrent toujours l'editeur complet — il reste la porte longue, intacte.
+  //
+  // 🔒 CE QUE LE SERVEUR REFUSE, LA FEUILLE LE DIT AVANT D'ENVOYER
+  // (`match-stats-report.ts:1921-1937`) : match non fini (la chip est deja
+  // grisee en amont), score verrouille par une source externe, et « Both scores
+  // are required » — les DEUX sont obligatoires. Sans ce garde-fou, le coach
+  // attend un aller-retour pour se voir refuser en anglais.
+  //
+  // 💡 Le score courant est DEJA dans la charge de la page
+  // (`matchStatsPayload.score`) : la feuille se pre-remplit sans une requete
+  // de plus.
+  const [isMatchScoreSheetVisible, setIsMatchScoreSheetVisible] = useState(false);
+  const [matchScoreForDraft, setMatchScoreForDraft] = useState('');
+  const [matchScoreAgainstDraft, setMatchScoreAgainstDraft] = useState('');
+  const [isMatchScoreSaving, setIsMatchScoreSaving] = useState(false);
+
+  const isMatchScoreLocked = Boolean(matchStatsPayload?.score?.locked);
+  const isMatchScoreComplete = matchScoreForDraft.trim() !== ''
+    && matchScoreAgainstDraft.trim() !== '';
+
+  const openMatchScoreSheet = useCallback(() => {
+    const asDraft = (/** @type {any} */ value) => (
+      value === null || value === undefined ? '' : String(value)
+    );
+
+    setMatchScoreForDraft(asDraft(matchStatsPayload?.score?.scoreFor));
+    setMatchScoreAgainstDraft(asDraft(matchStatsPayload?.score?.scoreAgainst));
+    setIsMatchScoreSheetVisible(true);
+  }, [matchStatsPayload?.score?.scoreAgainst, matchStatsPayload?.score?.scoreFor]);
+
+  const handleSaveMatchScore = useCallback(async () => {
+    if (!eventId || !compositionTeamId) return;
+    if (isMatchScoreLocked || !isMatchScoreComplete || isMatchScoreSaving) return;
+
+    setIsMatchScoreSaving(true);
+    try {
+      await mutations.saveMatchResultMutation.mutateAsync({
+        eventId,
+        scoreAgainst: Number(matchScoreAgainstDraft),
+        scoreFor: Number(matchScoreForDraft),
+        teamId: compositionTeamId,
+      });
+      setIsMatchScoreSheetVisible(false);
+      // Le meme rafraichissement que le reste de la page (`:4775`) : sans lui,
+      // l'entete continuerait d'afficher « Score en attente ».
+      refetchMatchStats();
+      Alert.alert(
+        t('eventDetails.matchScore.savedTitle', 'Score enregistré'),
+        t('eventDetails.matchScore.savedMessage', 'Le score du match est enregistré.'),
+      );
+    } catch (scoreError) {
+      Alert.alert(
+        t('common.error'),
+        t('eventDetails.matchScore.error', 'Le score n’a pas pu être enregistré. Réessaie.'),
+      );
+    } finally {
+      setIsMatchScoreSaving(false);
+    }
+  }, [
+    compositionTeamId,
+    eventId,
+    isMatchScoreComplete,
+    isMatchScoreLocked,
+    isMatchScoreSaving,
+    matchScoreAgainstDraft,
+    matchScoreForDraft,
+    mutations.saveMatchResultMutation,
+    refetchMatchStats,
+    t,
+  ]);
+
+  // AD01 (🚪) — LA PORTE DU TERRAIN DE DETECTION.
+  //
+  // `DetectionTeamsBoard` (850 lignes) et `DetectionRotationBoard` (697 lignes)
+  // sont ecrits, testes, et declares dans les QUATRE fichiers de routes
+  // (routeNames:273, webRoutes:215, EventStack:189-196, screenRegistry:976-987).
+  // Et pourtant : ZERO appelant. Les deux ecrans qui devaient y mener finissent
+  // par un `navigation.goBack()` (DetectionTeamsManual:177, DetectionTeamsAuto).
+  // 1 547 lignes qu'aucun bouton n'atteignait — un ecran qu'aucun bouton
+  // n'atteint n'existe pas. Il ne manquait QUE ce bouton.
+  //
+  // 🔑 `eventId` et `teamId` SUFFISENT : l'ecran relit lui-meme la charge
+  // serveur (`DetectionTeamsBoard:145`, exactement la requete de cette page).
+  // Le reste n'est qu'un demarrage a chaud, pour lui eviter un premier rendu
+  // vide — et `sport`, sans quoi il retombe sur « football » par defaut.
+  const detectionSplit = staffCompositionPayload?.detectionSplit || null;
+  const hasDetectionTeams = Boolean(detectionSplit?.teams?.length);
+
+  const openDetectionTeamsBoard = useCallback(() => {
+    if (!eventId || !compositionTeamId) return;
+
+    navigation.navigate(RouteNames.DetectionTeamsBoard, {
+      eventId,
+      memberMode: detectionSplit?.memberMode || undefined,
+      players: compositionEditorPlayers,
+      sport: compositionSport,
+      teamId: compositionTeamId,
+    });
+  }, [
+    compositionEditorPlayers,
+    compositionSport,
+    compositionTeamId,
+    detectionSplit?.memberMode,
+    eventId,
+    navigation,
+  ]);
+
   const openMyMatchResponse = useCallback(() => {
     if (!eventId || !compositionTeamId) return;
 
@@ -3879,6 +4018,30 @@ function EventDetails({ navigation, route }) {
       });
     }
 
+    // AD01 (🚪) — LE TERRAIN DE DETECTION CESSE D'ETRE INATTEIGNABLE.
+    // ⚠️ GRISEE, JAMAIS ABSENTE tant que la repartition n'existe pas : une
+    // porte qui disparait ne s'explique pas, alors qu'une porte fermee qui DIT
+    // pourquoi se comprend. Meme motif que la chip `matchStats` juste dessous.
+    // 🖼️ Icone `stadium` : elle existe deja (`images.js` et `images.web.js`,
+    // et 3 ecrans l'utilisent) — aucune image nouvelle n'est livree ici.
+    if (canEdit && isDetectionEvent && supportsEventComposition && compositionTeamId) {
+      chips.push({
+        disabled: !hasDetectionTeams || isStaffCompositionFetching,
+        fullWidth: true,
+        icon: 'stadium',
+        key: 'detectionTeamsBoard',
+        label: t(
+          'eventDetails.managePanel.detectionTeamsBoard',
+          'Placer les équipes sur les terrains',
+        ),
+        note: hasDetectionTeams ? null : t(
+          'eventDetails.managePanel.detectionTeamsBoardHint',
+          'Répartis d’abord les équipes depuis « Compo ».',
+        ),
+        onPress: openDetectionTeamsBoard,
+      });
+    }
+
     // D71 : les statistiques du match quittent le pied d'ecran pour ce menu.
     // Demande d'Adel du 2026-08-11 : le bas de la page n'est plus un endroit ou
     // l'on pose une action d'organisation — il n'y en a qu'un seul, et c'est
@@ -3902,7 +4065,12 @@ function EventDetails({ navigation, route }) {
         key: 'matchStats',
         label: isMatchStatsFetching ? 'Chargement...' : matchStatsPrimaryAction.title,
         note: matchStatsPrimaryAction.subtitle,
-        onPress: openMatchStatsEditor,
+        // AD01 (✍️) — LE DETOURNEMENT D'UN SEUL CAS. « Enregistrer le score »
+        // ouvre desormais deux champs ; tous les autres etats de cette meme
+        // chip ouvrent toujours `MatchStatsEditor`, inchange.
+        onPress: matchStatsPrimaryAction.isScoreEntry
+          ? openMatchScoreSheet
+          : openMatchStatsEditor,
       });
     }
 
@@ -4093,6 +4261,35 @@ function EventDetails({ navigation, route }) {
               : t('eventDetails.compoReminder.offerAction', 'Voir l’offre Équipe')}
           </Text>
         </TouchableOpacity>
+      </View>
+    );
+  };
+
+  // AD01 — LA LIGNE COMPACTE, EN HAUT DU CORPS DE LA PAGE.
+  //
+  // 🔒 Elle parait EXACTEMENT la ou le bloc du bas paraissait deja pour ce
+  // lecteur (`:5672`) : meme garde `supportsEventComposition`, meme garde
+  // `canViewPublishedComposition`, meme exclusion de l'organisateur
+  // (`:5682` — le coach ne lit pas « Tu es convoque », ce n'est pas son ecran).
+  // ⇒ Aucune surface nouvelle : la phrase change de PLACE, pas de public.
+  const renderViewerConvocationLine = () => {
+    if (canEdit || !supportsEventComposition || !canViewPublishedComposition) return null;
+
+    const estRetenu = Boolean(hasPublishedComposition && viewerConvocationRole);
+
+    return (
+      <View
+        style={[
+          ApplicationStyle.borderRadius16,
+          ApplicationStyle.borderWidth1,
+          Spaces.paddingHorizontal[16],
+          Spaces.paddingVertical[12],
+          { borderColor: withAlpha(estRetenu ? Colors.primary500 : Colors.neutral300, 0.45) },
+        ]}
+      >
+        <Text style={[Fonts.p2Bold, estRetenu ? Fonts.primary500 : Fonts.neutral300]}>
+          {viewerConvocationHeadline}
+        </Text>
       </View>
     );
   };
@@ -4973,6 +5170,7 @@ function EventDetails({ navigation, route }) {
             {renderTournamentActionsPanel()}
             {renderManagePanel()}
             {renderCompoReminder()}
+            {renderViewerConvocationLine()}
             <View style={[Spaces.gap[24]]}>
 
               {isStageParentEvent ? (
@@ -6257,6 +6455,97 @@ function EventDetails({ navigation, route }) {
             title="Plus tard"
             variant="Secondary"
           />
+        </View>
+      </BottomModal>
+
+      {/* AD01 (✍️) — LA FEUILLE DU SCORE : deux champs, et c'est tout.
+          ⚠️ `snapPoints` est OBLIGATOIRE : sans lui, une `BottomModal` ne peut
+          pas porter a la fois un en-tete et un pied (piege D19, deja paye). */}
+      <BottomModal
+        close={() => setIsMatchScoreSheetVisible(false)}
+        isVisible={isMatchScoreSheetVisible}
+        snapPoints={['52%']}
+      >
+        <View style={[Spaces.gap[16], Spaces.paddingBottom[12]]}>
+          <View style={[Spaces.gap[4]]}>
+            <Text style={[Fonts.h3Bold, Fonts.neutral00]}>
+              {t('eventDetails.matchScore.title', 'Score du match')}
+            </Text>
+            <Text style={[Fonts.p2, Fonts.neutral100]}>
+              {compositionEditorTeam?.name || matchStatsPayload?.team?.name || 'Ton équipe'}
+            </Text>
+          </View>
+
+          <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[16]]}>
+            {[
+              {
+                key: 'for',
+                label: t('eventDetails.matchScore.us', 'Nous'),
+                onChangeText: setMatchScoreForDraft,
+                value: matchScoreForDraft,
+              },
+              {
+                key: 'against',
+                label: t('eventDetails.matchScore.them', 'Eux'),
+                onChangeText: setMatchScoreAgainstDraft,
+                value: matchScoreAgainstDraft,
+              },
+            ].map((champ) => (
+              <View key={champ.key} style={[Spaces.gap[8], { flex: 1 }]}>
+                <Text style={[Fonts.p3Bold, Fonts.neutral300]}>{champ.label}</Text>
+                <TextInput
+                  editable={!isMatchScoreLocked}
+                  keyboardType={Platform.OS === 'ios' ? 'number-pad' : 'numeric'}
+                  maxLength={3}
+                  onChangeText={(value) => champ.onChangeText(value.replace(/[^0-9]/g, ''))}
+                  placeholder="0"
+                  placeholderTextColor={Colors.neutral400}
+                  selectionColor={Colors.primary500}
+                  style={[
+                    ApplicationStyle.input,
+                    ApplicationStyle.backgroundColor.neutral800,
+                    ApplicationStyle.borderColor.neutral600,
+                    Fonts.h3Bold,
+                    Fonts.neutral00,
+                    { textAlign: 'center' },
+                  ]}
+                  value={champ.value}
+                />
+              </View>
+            ))}
+          </View>
+
+          {/* 🗣️ Une porte fermee DIT pourquoi. Le serveur refuserait de toute
+              facon (`match-stats-report.ts:1921-1937`) — autant l'ecrire ici,
+              en francais, avant l'aller-retour. */}
+          {isMatchScoreLocked ? (
+            <Text style={[Fonts.p3, Fonts.gold500]}>
+              {t(
+                'eventDetails.matchScore.lockedHint',
+                'Ce score vient de la source officielle : il ne se modifie pas ici.',
+              )}
+            </Text>
+          ) : null}
+          {!isMatchScoreLocked && !isMatchScoreComplete ? (
+            <Text style={[Fonts.p3, Fonts.neutral300]}>
+              {t('eventDetails.matchScore.bothRequired', 'Les deux scores sont obligatoires.')}
+            </Text>
+          ) : null}
+
+          <View style={[Spaces.gap[12]]}>
+            <Button
+              disabled={isMatchScoreLocked || !isMatchScoreComplete || isMatchScoreSaving}
+              isLoading={isMatchScoreSaving}
+              onPress={handleSaveMatchScore}
+              title={t('eventDetails.matchScore.submit', 'Valider le score')}
+              variant="Primary"
+            />
+            <Button
+              onPress={() => setIsMatchScoreSheetVisible(false)}
+              title={t('common.cancel', 'Annuler')}
+              variant="Secondary"
+            />
+          </View>
         </View>
       </BottomModal>
 
