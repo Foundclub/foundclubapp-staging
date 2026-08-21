@@ -218,6 +218,10 @@ function EventHeader({ event, matchScoreSummary = null }) {
         Spaces.gap[8],
         Spaces.paddingHorizontal[24],
         Spaces.paddingVertical[32],
+        // Lisere gauche : la couleur du lieu reste lisible meme quand le fond
+        // photo la mange. 4 est une LARGEUR DE BORD, pas un espacement : elle
+        // ne passe pas par la rampe Spaces (cf. { height: 45, width: 1 } plus bas).
+        { borderLeftColor: accentColor, borderLeftWidth: 4 },
       ]}
     >
       {/* Header: Logo + Main label */}

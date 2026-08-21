@@ -243,6 +243,19 @@ describe('AD09 - la couleur de l installation dans l entete de la fiche evenemen
   });
 
   // eslint-disable-next-line max-len -- titre de temoin impose mot pour mot par le lot AD09
+  test('AD09 · temoin 8 — le lisere gauche de 4 px porte lui aussi la couleur du lieu', () => {
+    const withFacility = flattenStyle(renderHeader(makeEvent({
+      facility: { documentId: 'f1', name: 'Terrain A', planningColor: ORANGE_TERRAIN_A },
+    })).props?.style);
+    const withoutFacility = flattenStyle(renderHeader(makeEvent({ facility: null })).props?.style);
+
+    expect(withFacility.borderLeftWidth).toBe(4);
+    expect(withFacility.borderLeftColor).toBe(ORANGE_TERRAIN_A);
+    // Sans lieu, le lisere existe mais reste de la couleur d'avant AD09.
+    expect(withoutFacility.borderLeftColor).toBe(CYAN_OF_TODAY);
+  });
+
+  // eslint-disable-next-line max-len -- titre de temoin impose mot pour mot par le lot AD09
   test('AD09 · temoin 5 — une installation sans planningColor prend son repli deterministe, jamais du cyan', () => {
     const facility = { documentId: 'f-legacy', name: 'Terrain historique' };
 
