@@ -1463,7 +1463,7 @@ export default {
         autoDesc: 'Les participants peuvent confirmer automatiquement leur présence.',
         autoRuleOne: 'Check-in simplifié pour les joueurs',
         autoRuleTwo: 'Idéal pour les sessions ouvertes',
-        manualDesc: 'Le coach validé manuellement les participants.',
+        manualDesc: 'Le coach valide manuellement les participants.',
         manualRuleOne: 'Contrôle total par le staff',
         manualRuleTwo: 'Recommandé pour les groupes fermés',
         optionLabel: 'Mode {{title}}',

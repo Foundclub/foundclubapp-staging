@@ -61,6 +61,13 @@ describe('AC11 — les accents de fr.js', () => {
     expect(phrase).toContain('irréversible');
   });
 
+  it("retire l'accent posé sur le verbe du mode de validation manuel", () => {
+    // « Le coach validé manuellement » : accent EN TROP, c'est le présent du verbe.
+    expect(read('eventWizard.steps.validation.manualDesc')).toBe(
+      'Le coach valide manuellement les participants.',
+    );
+  });
+
   it("n'ajoute pas d'accent aux mots qui n'en portent pas", () => {
     const textes = leaves(fr)
       .map(([, value]) => value)
