@@ -306,10 +306,17 @@ describe('ECRAN 11 — la compo type d une equipe', () => {
       bouton(arbre, 'Enregistrer la compo type').props.onPress();
     });
 
+    // 🧾 AC06 — `position` s'est AJOUTE a la charge : le serveur garde ce champ
+    // (D73) et jette `slotId`, donc sans lui le poste du jeton etait perdu des
+    // le rechargement. Aucun champ n'a disparu.
     expect(mockSave).toHaveBeenCalledWith('team-1', {
       composition: expect.objectContaining({
         placements: [{
-          playerId: 'joueur-1', positionX: 50, positionY: 93, slotId: 'team_1:slot_1',
+          playerId: 'joueur-1',
+          position: 'GB',
+          positionX: 50,
+          positionY: 93,
+          slotId: 'team_1:slot_1',
         }],
         sportContext: 'football',
       }),

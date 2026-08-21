@@ -27,6 +27,35 @@ import { getTacticalSportKey } from '@/utils/tacticalField';
 const ensureList = (/** @type {any} */ value) => (Array.isArray(value) ? value : []);
 
 /**
+ * Re-attache le POSTE que le serveur a garde.
+ *
+ * 🧨 MESURE (2026-08-21, `admin/src/api/team/controllers/team.ts`,
+ * `normalizeCompositionPlacements`) : le serveur range `playerId`, `position`,
+ * `positionX`, `positionY` — et JETTE `slotId`. Or `readPlacementsFromPack` ne
+ * lit QUE `slotId`. Consequence : une compo type rechargee revenait sans aucun
+ * repere, et sa pastille de poste disparaissait.
+ * @param {any[]} placements Les placements deja normalises.
+ * @param {any} [pack] Le pack brut rendu par le serveur.
+ * @returns {any[]}
+ */
+const withStoredPositions = (placements, pack) => {
+  /** @type {Map<string, string>} */
+  const stored = new Map();
+  ensureList(pack?.placements).forEach((/** @type {any} */ placement) => {
+    const playerId = String(placement?.playerId || '');
+    const label = String(placement?.position || '').trim();
+    if (playerId && label) stored.set(playerId, label);
+  });
+  if (stored.size === 0) return placements;
+
+  return placements.map((/** @type {any} */ placement) => (
+    stored.has(placement.playerId)
+      ? { ...placement, position: stored.get(placement.playerId) }
+      : placement
+  ));
+};
+
+/**
  * TEMOIN 2 — ou mene la porte « Composition type » d'une fiche equipe.
  *
  * 🔒 POURQUOI CETTE DECISION VIT ICI ET PAS DANS L'ECRAN : `TeamDetails.js` fait
@@ -90,8 +119,9 @@ export const buildCompoTemplateSources = ({
   players = [],
   sport,
 } = {}) => {
+  const templatePack = defaultComposition?.composition || defaultComposition;
   const templatePlacements = keepPlacementsOfCalledUpPlayers(
-    readPlacementsFromPack(defaultComposition?.composition || defaultComposition),
+    withStoredPositions(readPlacementsFromPack(templatePack), templatePack),
     players,
   );
   const lastPlacements = keepPlacementsOfCalledUpPlayers(
@@ -146,8 +176,11 @@ export const getDefaultCompoSourceKey = (sources) => (
  */
 export const getPlacementPositionLabel = (placement, sport) => {
   const matched = String(placement?.slotId || '').match(/slot_(\d+)$/);
-  if (!matched) return '';
-  return String(getMatchPositionLabels(sport)[Number(matched[1]) - 1] || '');
+  if (matched) return String(getMatchPositionLabels(sport)[Number(matched[1]) - 1] || '');
+  // Le serveur ne garde pas `slotId` : au rechargement, le poste ne vit plus
+  // que dans `position`. On le relit, on ne le devine pas a partir des
+  // coordonnees.
+  return String(placement?.position || '').trim();
 };
 
 /**
@@ -173,6 +206,10 @@ export const buildTeamDefaultCompositionPayload = ({
     placements: ensureList(placements)
       .map((/** @type {any} */ placement) => ({
         playerId: String(placement?.playerId || ''),
+        // 🔒 Le serveur garde `position` et JETTE `slotId` : sans ce champ, le
+        // poste du jeton est perdu des le rechargement. Le champ existe deja
+        // cote serveur (D73), on ne cree aucun mecanisme.
+        position: getPlacementPositionLabel(placement, sport) || null,
         positionX: Number(placement?.positionX) || 0,
         positionY: Number(placement?.positionY) || 0,
         slotId: placement?.slotId || null,

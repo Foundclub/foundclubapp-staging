@@ -139,8 +139,14 @@ describe('buildTeamDefaultCompositionPayload', () => {
       sport: 'football',
     });
 
+    // 🧾 AC06 — `position` s'est AJOUTE : c'est le seul champ de poste que le
+    // serveur conserve (`normalizeCompositionPlacements` jette `slotId`).
     expect(charge.placements).toEqual([{
-      playerId: 'joueur-1', positionX: 50, positionY: 93, slotId: 'team_1:slot_1',
+      playerId: 'joueur-1',
+      position: 'GB',
+      positionX: 50,
+      positionY: 93,
+      slotId: 'team_1:slot_1',
     }]);
     expect(charge.sportContext).toBe('football');
     expect(charge.slots).toHaveLength(11);

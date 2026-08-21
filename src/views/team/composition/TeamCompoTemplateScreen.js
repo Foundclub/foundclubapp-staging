@@ -17,9 +17,8 @@ import {
   View,
 } from 'react-native';
 import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
-import Animated, {
+import {
   runOnJS,
-  useAnimatedStyle,
   useSharedValue,
   withSpring,
   withTiming,
@@ -33,7 +32,7 @@ import useTheme from '@/theme/themeContext';
 import Button from '@/components/atoms/button/Button';
 import HeaderBackButton from '@/components/atoms/headerBackButton/HeaderBackButton';
 import SegmentedControl from '@/components/molecules/segmentedControl/SegmentedControl';
-import DraggableToken from '@/components/tactical/DraggableToken';
+import DraggableToken, { GHOST_TOKEN_SIZE } from '@/components/tactical/DraggableToken';
 import RenderedTacticalField from '@/components/tactical/RenderedTacticalField';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 import {
@@ -83,8 +82,6 @@ import {
  * facon les pieces partagees vers un endroit neutre ; ce geste part avec elles.
  */
 
-/** Le jeton fantome qui suit le doigt. Memes valeurs que l'ecran 5. */
-const GHOST_SIZE = 56;
 const LONG_PRESS_MS = 120;
 const DRAG_SPRING = { damping: 18, stiffness: 220 };
 const SOURCE_BENCH = 'bench';
@@ -176,31 +173,27 @@ function TeamCompoTemplateScreen() {
     });
   }, []);
 
-  const startDrag = useCallback((
-    /** @type {any} */ player,
-    /** @type {number} */ pageX,
-    /** @type {number} */ pageY,
-  ) => {
+  // 🧵 AC06 / T01 — CE QUI RESTE SUR LE FIL JS, ET CE QUI N'Y VA PLUS.
+  //
+  // Cet ecran est une copie de l'ecran 5 prise AVANT que T01 ne le repare : la
+  // position de l'apercu faisait l'aller-retour fil UI -> `runOnJS` -> fil JS ->
+  // fil UI a CHAQUE mouvement de doigt. Or ce meme geste declenche
+  // `setActiveDragPlayer`, donc un rendu de tout l'ecran : le fil JS est occupe
+  // exactement quand le doigt bouge, et l'apercu ne recoit jamais sa position.
+  //
+  // ⇒ La position vit maintenant DANS le worklet (fil UI), la ou le doigt est
+  // deja. Ne reste sur le fil JS que ce qui en a vraiment besoin : mesurer le
+  // terrain, vibrer, et dire QUI l'on traine.
+  const beginDrag = useCallback((/** @type {any} */ player) => {
     if (!player) return;
     measureField();
     Vibration.vibrate(8);
     setActiveDragPlayer(player);
-    ghostX.value = pageX - (GHOST_SIZE / 2);
-    ghostY.value = pageY - (GHOST_SIZE / 2);
-    ghostScale.value = withSpring(1, DRAG_SPRING);
-    ghostOpacity.value = withTiming(1, { duration: 90 });
-  }, [ghostOpacity, ghostScale, ghostX, ghostY, measureField]);
+  }, [measureField]);
 
-  const updateDrag = useCallback((/** @type {number} */ pageX, /** @type {number} */ pageY) => {
-    ghostX.value = pageX - (GHOST_SIZE / 2);
-    ghostY.value = pageY - (GHOST_SIZE / 2);
-  }, [ghostX, ghostY]);
-
-  const resetGhost = useCallback(() => {
-    ghostScale.value = withSpring(0, DRAG_SPRING);
-    ghostOpacity.value = withTiming(0, { duration: 140 });
+  const clearDragPlayer = useCallback(() => {
     setActiveDragPlayer(null);
-  }, [ghostOpacity, ghostScale]);
+  }, []);
 
   const endDrag = useCallback((
     /** @type {any} */ player,
@@ -248,12 +241,19 @@ function TeamCompoTemplateScreen() {
       .onStart((event) => {
         'worklet';
 
-        runOnJS(/** @type {any} */ (startDrag))(player, event.absoluteX, event.absoluteY);
+        // La taille vient du jeton lui-meme (`GHOST_TOKEN_SIZE`), jamais d'une
+        // valeur recopiee : c'est elle qui met le doigt AU CENTRE de l'apercu.
+        ghostX.value = event.absoluteX - (GHOST_TOKEN_SIZE.width / 2);
+        ghostY.value = event.absoluteY - (GHOST_TOKEN_SIZE.height / 2);
+        ghostScale.value = withSpring(1, DRAG_SPRING);
+        ghostOpacity.value = withTiming(1, { duration: 90 });
+        runOnJS(/** @type {any} */ (beginDrag))(player);
       })
       .onUpdate((event) => {
         'worklet';
 
-        runOnJS(/** @type {any} */ (updateDrag))(event.absoluteX, event.absoluteY);
+        ghostX.value = event.absoluteX - (GHOST_TOKEN_SIZE.width / 2);
+        ghostY.value = event.absoluteY - (GHOST_TOKEN_SIZE.height / 2);
       })
       .onEnd((event) => {
         'worklet';
@@ -263,18 +263,19 @@ function TeamCompoTemplateScreen() {
       .onFinalize(() => {
         'worklet';
 
-        runOnJS(/** @type {any} */ (resetGhost))();
+        ghostScale.value = withSpring(0, DRAG_SPRING);
+        ghostOpacity.value = withTiming(0, { duration: 140 });
+        runOnJS(/** @type {any} */ (clearDragPlayer))();
       })
-  ), [endDrag, resetGhost, startDrag, updateDrag]);
-
-  const ghostStyle = useAnimatedStyle(() => ({
-    opacity: ghostOpacity.value,
-    transform: [
-      { translateX: ghostX.value },
-      { translateY: ghostY.value },
-      { scale: ghostScale.value },
-    ],
-  }));
+  ), [
+    beginDrag,
+    clearDragPlayer,
+    endDrag,
+    ghostOpacity,
+    ghostScale,
+    ghostX,
+    ghostY,
+  ]);
 
   // --- Enregistrer.
   const saveMutation = useMutation({
@@ -496,12 +497,26 @@ function TeamCompoTemplateScreen() {
           />
         </View>
 
-        {/* Le jeton fantome suit le doigt, par-dessus tout le reste. */}
-        {activeDragPlayer ? (
-          <Animated.View pointerEvents="none" style={[styles.ghost, ghostStyle]}>
-            <DraggableToken isGhost={false} isOnField player={activeDragPlayer} />
-          </Animated.View>
-        ) : null}
+        {/* Le jeton fantome suit le doigt, par-dessus tout le reste.
+            🧨 V03 — LE CALQUE RESTE MONTE, TOUJOURS, ET IL NE BOUGE PAS : c'est
+            le JETON qui porte la position. Ne faire naitre le calque qu'avec
+            `activeDragPlayer` — qui arrive par le fil JS — le faisait apparaitre
+            en retard a `top: 0, left: 0` ; et un calque sans boite ne donne
+            aucun repere a l'enfant absolu qu'il contient. Il ne coute rien tant
+            qu'il est vide, et `pointerEvents="none"` l'empeche d'intercepter le
+            moindre appui. */}
+        <View pointerEvents="none" style={styles.dragGhostLayer}>
+          {activeDragPlayer ? (
+            <DraggableToken
+              isGhost
+              opacity={ghostOpacity}
+              player={activeDragPlayer}
+              scale={ghostScale}
+              translateX={ghostX}
+              translateY={ghostY}
+            />
+          ) : null}
+        </View>
       </ScreenContainer>
     </GestureHandlerRootView>
   );
@@ -539,27 +554,48 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 4,
   },
+  dragGhostLayer: {
+    bottom: 0,
+    left: 0,
+    position: 'absolute',
+    right: 0,
+    top: 0,
+    zIndex: 9999,
+  },
   fieldEmpty: {
     paddingHorizontal: 16,
     paddingTop: 12,
     textAlign: 'center',
   },
   fieldFill: {
-    height: '100%',
-    width: '100%',
+    borderRadius: 16,
+    flex: 1,
   },
+  // 🪧 AC06 / R07 — LE TERRAIN NE S'IMPOSE PLUS SA HAUTEUR.
+  // `width: '100%'` + `aspectRatio` valait une hauteur de 1,5 x la largeur de
+  // l'ecran, quelle que soit la place restante : sur un telephone de 390 pt de
+  // large, le terrain reclamait 543 pt a lui seul, et le banc, la carte et le
+  // bouton « Enregistrer » partaient dessous — hors d'atteinte du doigt.
+  // C'est `fieldWrapper` (flex: 1) qui borne desormais, exactement comme
+  // l'ecran 5 : la contrainte vient de la PLACE LAISSEE, jamais de la taille de
+  // l'ecran.
   fieldSurface: {
     alignSelf: 'center',
     borderRadius: 16,
+    maxWidth: '100%',
     overflow: 'hidden',
-    width: '100%',
   },
+  // La moitie du jeton de terrain, qui fait 58 x 72 (`DraggableToken`) : c'est
+  // ce qui pose le jeton LA OU le doigt l'a lache. Les valeurs recopiees a la
+  // main (`-22 / -22`) le decalaient de 7 px a droite et 14 px vers le bas.
   fieldToken: {
-    marginLeft: -22,
-    marginTop: -22,
+    marginLeft: -29,
+    marginTop: -36,
     position: 'absolute',
   },
   fieldWrapper: {
+    flex: 1,
+    justifyContent: 'center',
     paddingHorizontal: 14,
   },
   footer: {
@@ -573,13 +609,6 @@ const styles = StyleSheet.create({
   },
   footerSave: {
     flex: 1,
-  },
-  ghost: {
-    left: 0,
-    pointerEvents: 'none',
-    position: 'absolute',
-    top: 0,
-    zIndex: 20,
   },
   header: {
     alignItems: 'center',
