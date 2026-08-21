@@ -28,3 +28,27 @@ export const formatDateWithDayPrefix = (value, options) => {
   const formatted = `${day}/${month}/${year}`;
   return `${weekday} ${formatted}`;
 };
+
+/**
+ * Format a date WITH its time, French day prefix included
+ * (e.g., "mer 20/08/2026 a 18h32").
+ *
+ * AC07 : la relance doit dire QUAND la precedente est partie. Un jour seul ne
+ * suffit pas — l anti-spam se compte en heures, et « deja relance mercredi »
+ * laisse croire qu on peut reessayer le jeudi matin.
+ * @param {string | Date | null | undefined} value - The date to format
+ * @param {object} [options] - Options
+ * @param {string} [options.fallback] - Fallback string if date is invalid
+ * @returns {string} - The formatted date and time string
+ */
+export const formatDateTimeWithDayPrefix = (value, options) => {
+  const day = formatDateWithDayPrefix(value, options);
+  if (!day || !value) return day;
+
+  const date = typeof value === 'string' ? new Date(value) : value;
+  if (Number.isNaN(date.getTime())) return day;
+
+  const hours = String(date.getHours()).padStart(2, '0');
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+  return `${day} a ${hours}h${minutes}`;
+};

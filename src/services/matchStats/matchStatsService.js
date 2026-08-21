@@ -3,6 +3,46 @@ import client from '@/services/client';
 const unwrapResponse = (response) => response?.data?.data || response?.data;
 
 /**
+ * @typedef {object} MatchStatsPayload
+ * @property {any[]} [coachPlayerReviews] - Le retour du coach, joueur par joueur.
+ * @property {string | null} [collectiveComment] - Son commentaire sur le collectif.
+ * @property {number | null} [collectiveRating] - Sa note du collectif.
+ * @property {any[]} [playerLines] - Les lignes de statistiques.
+ * @property {number} [scoreAgainst] - Buts encaisses.
+ * @property {number} [scoreFor] - Buts marques.
+ * @property {string} [teamId] - L equipe concernee.
+ */
+
+/**
+ * AC07 : le retour du coach part vraiment.
+ *
+ * Les quatre envois de stats recopiaient leurs clefs UNE PAR UNE et n avaient
+ * jamais recopie ces trois-la. Le serveur les attendait pourtant deja
+ * (`upsertReport`) : l ecran acceptait la saisie, disait « enregistre », et la
+ * jetait au passage du service.
+ *
+ * ⚠️ On ne recopie que les clefs PRESENTES : cote serveur, un champ absent
+ * conserve la valeur enregistree, tandis qu un champ a `null` l efface. Etaler
+ * le payload entier ferait entrer des clefs parasites dans la charge.
+ * @param {MatchStatsPayload | null | undefined} payload - La charge construite par l ecran.
+ * @returns {Record<string, any>} - Les seuls champs de retour du coach presents.
+ */
+const pickCoachFeedback = (payload) => {
+  /** @type {Record<string, any>} */
+  const feedback = {};
+  if (payload?.coachPlayerReviews !== undefined) {
+    feedback.coachPlayerReviews = payload.coachPlayerReviews;
+  }
+  if (payload?.collectiveComment !== undefined) {
+    feedback.collectiveComment = payload.collectiveComment;
+  }
+  if (payload?.collectiveRating !== undefined) {
+    feedback.collectiveRating = payload.collectiveRating;
+  }
+  return feedback;
+};
+
+/**
  * @param {string} eventId
  * @param {string | undefined} teamId
  * @returns {Promise<any>}
@@ -71,12 +111,13 @@ export const saveEventMyMatchResponse = async (eventId, payload) => {
 
 /**
  * @param {string} eventId
- * @param {{ teamId?: string, scoreFor?: number, scoreAgainst?: number, playerLines?: any[] }} payload
+ * @param {MatchStatsPayload} payload
  * @returns {Promise<any>}
  */
 export const saveEventMatchStatsDraft = async (eventId, payload) => {
   const response = await client.post(`/events/${eventId}/match-stats/draft`, {
     data: {
+      ...pickCoachFeedback(payload),
       playerLines: Array.isArray(payload?.playerLines) ? payload.playerLines : [],
       scoreAgainst: payload?.scoreAgainst,
       scoreFor: payload?.scoreFor,
@@ -88,12 +129,13 @@ export const saveEventMatchStatsDraft = async (eventId, payload) => {
 
 /**
  * @param {string} eventId
- * @param {{ teamId?: string, scoreFor?: number, scoreAgainst?: number, playerLines?: any[] }} payload
+ * @param {MatchStatsPayload} payload
  * @returns {Promise<any>}
  */
 export const submitEventMatchStats = async (eventId, payload) => {
   const response = await client.post(`/events/${eventId}/match-stats/submit`, {
     data: {
+      ...pickCoachFeedback(payload),
       playerLines: Array.isArray(payload?.playerLines) ? payload.playerLines : [],
       scoreAgainst: payload?.scoreAgainst,
       scoreFor: payload?.scoreFor,
@@ -159,12 +201,13 @@ export const saveLeagueMyMatchResponse = async (matchId, payload) => {
 
 /**
  * @param {string} matchId
- * @param {{ teamId?: string, playerLines?: any[] }} payload
+ * @param {MatchStatsPayload} payload
  * @returns {Promise<any>}
  */
 export const saveLeagueMatchStatsDraft = async (matchId, payload) => {
   const response = await client.post(`/league-matches/${matchId}/match-stats/draft`, {
     data: {
+      ...pickCoachFeedback(payload),
       playerLines: Array.isArray(payload?.playerLines) ? payload.playerLines : [],
       teamId: payload?.teamId || null,
     },
@@ -174,12 +217,13 @@ export const saveLeagueMatchStatsDraft = async (matchId, payload) => {
 
 /**
  * @param {string} matchId
- * @param {{ teamId?: string, playerLines?: any[] }} payload
+ * @param {MatchStatsPayload} payload
  * @returns {Promise<any>}
  */
 export const submitLeagueMatchStats = async (matchId, payload) => {
   const response = await client.post(`/league-matches/${matchId}/match-stats/submit`, {
     data: {
+      ...pickCoachFeedback(payload),
       playerLines: Array.isArray(payload?.playerLines) ? payload.playerLines : [],
       teamId: payload?.teamId || null,
     },
