@@ -261,3 +261,76 @@ describe('AC08 — buildConvocationReserveList, le banc que personne ne voyait',
     expect(buildConvocationReserveList(null)).toEqual([]);
   });
 });
+
+// ==========================================================================
+// AD08 — LE REMPLACANT QUE SEULE `reserveSnapshotPlayers` CONNAIT.
+//
+// 🧨 Mesure du 2026-08-21 : la MEME personne etait cherchee de DEUX facons
+// dans ce fichier. `buildConvocationReserveList` fusionne `snapshotPlayers` ET
+// `reserveSnapshotPlayers` ; `buildPlayerConvocationView` ne regardait que
+// `snapshotPlayers`. Sur une charge ou le remplacant n'est QUE dans
+// `reserveSnapshotPlayers` — celle du temoin d'ecran AC08, et celle de la
+// carte de compo du tchat (forme a plat, conservee volontairement) — il lisait
+// son nom sur le banc, mais sa PROPRE carte ne le connaissait pas : pas
+// d'avatar, pas de poste, et pas de numero alors qu'il porte le 7.
+// ==========================================================================
+
+const packBancSeul = () => ({
+  reservePlayerIds: ['joueur-2'],
+  reserveSnapshotPlayers: [{
+    documentId: 'joueur-2', firstname: 'Leo', lastname: 'Diarra', number: 7, position: 'Ailier',
+  }],
+  snapshotPlayers: [
+    { documentId: 'joueur-1', firstname: 'Karim', lastname: 'Sylla', number: 1 },
+  ],
+  sportContext: 'football',
+  teams: [{
+    id: 'team_1',
+    name: 'Senior 1',
+    placements: [{
+      playerId: 'joueur-1', positionX: 50, positionY: 93, slotId: 'team_1:slot_1',
+    }],
+  }],
+});
+
+describe('AD08 — le remplacant a droit a sa propre carte d identite', () => {
+  test('T1 · il est reconnu, alors qu il n est QUE dans `reserveSnapshotPlayers`', () => {
+    const vue = buildPlayerConvocationView({
+      convocation: chargeServeur(packBancSeul()),
+      userId: 'joueur-2',
+    });
+
+    expect(vue?.role).toBe(CONVOCATION_ROLE_SUBSTITUTE);
+    expect(vue?.viewerPlayer).not.toBeNull();
+    expect(vue?.viewerPlayer?.firstname).toBe('Leo');
+  });
+
+  test('T2 · il lit son NUMERO et son POSTE, pas deux chaines vides', () => {
+    const vue = buildPlayerConvocationView({
+      convocation: chargeServeur(packBancSeul()),
+      userId: 'joueur-2',
+    });
+
+    expect(vue?.jerseyNumber).toBe('7');
+    // Sans repere sur le terrain, le poste vient du poste DECLARE — jamais
+    // d'un poste invente.
+    expect(vue?.positionLabel).toBe('Ailier');
+  });
+
+  test('⛔ et rien ne change pour un titulaire : sa fiche vient toujours de `snapshotPlayers`', () => {
+    const vue = buildPlayerConvocationView({
+      convocation: chargeServeur(packBancSeul()),
+      userId: 'joueur-1',
+    });
+
+    expect(vue?.jerseyNumber).toBe('1');
+    expect(vue?.role).toBe(CONVOCATION_ROLE_STARTER);
+  });
+
+  test('🔒 le garde-fou ne bouge pas : un non-convoque n en tire toujours rien', () => {
+    expect(buildPlayerConvocationView({
+      convocation: chargeServeur(packBancSeul()),
+      userId: 'coach-1',
+    })).toBeNull();
+  });
+});
