@@ -245,25 +245,20 @@ function EventDetails({ navigation, route }) {
   // `web/src/routes/screenRegistry.tsx` la declare `access: 'public'`), donc un
   // inconnu y arrive par un simple lien de partage.
   //
-  // Cette garde DOUBLE volontairement le serveur. Mesure du 2026-08-21, sans
-  // aucun jeton : `GET /api/events?populate=*` rend encore 10 "firstname" et
-  // 10 "lastname" a un anonyme. Tant que la reponse serveur n'est pas fermee,
-  // c'est la SEULE protection en service sur le site ; une fois qu'elle le sera,
-  // elle reste la deuxieme ligne de defense le jour ou le serveur se remettrait
-  // a parler trop.
+  // AD11 — decision D20 d'Adel du 2026-08-22 (DEROGATIONS.md) : « visible veut
+  // dire public, c'est le choix de l'organisateur ». Elle remplace Q14=A du
+  // 20/08. Seul le REGLAGE DE L'EVENEMENT decide donc qui lit les noms — avoir
+  // un compte n'entre plus dans cette question-la.
   //
   // UNE SEULE regle pour les TROIS surfaces nominatives de cet ecran
   // (participants, absences/manques, taches confiees) : deux conditions qui se
   // ressemblent finiraient par raconter deux histoires le jour ou l'une bouge.
   const isSignedIn = Boolean(userData?.documentId);
-  const canViewParticipantNames = isSignedIn;
-  // ⚠️ Les deux constantes valent la meme chose AUJOURD'HUI, et ce ne sont pas
-  // la meme question. `isSignedIn` = « cette personne a-t-elle un compte ? » et
-  // commande le bouton de participation. `canViewParticipantNames` = « a-t-elle
-  // le droit de lire QUI vient ? ». Si un jour la seconde se resserre a
-  // « connecte ET concerne » (arbitrage d'Adel, hors de ce lot), le bouton de
-  // participation ne doit PAS se transformer en porte de connexion pour un
-  // utilisateur deja connecte. Les fusionner recreerait ce defaut.
+  const canViewParticipantNames = event?.participantIdentitiesHidden !== true;
+  // ⚠️ Deux questions differentes, ne jamais les fusionner. `isSignedIn` =
+  // « cette personne peut-elle AGIR ? » et commande le bouton de participation
+  // (AD02). `canViewParticipantNames` = « a-t-elle le droit de lire QUI
+  // vient ? » et ne depend QUE du reglage de l'organisateur (D20).
   const compositionTeamId = useMemo(() => {
     const teams = [event?.team, ...(Array.isArray(event?.invitedTeams) ? event.invitedTeams : [])].filter(Boolean);
     if (!teams.length) return null;
@@ -792,7 +787,6 @@ function EventDetails({ navigation, route }) {
   const participationRequests = withoutDeletedAccountEntries(event?.participationRequests);
   const invitedTeams = Array.isArray(event?.invitedTeams) ? event.invitedTeams : [];
   const detectedPlayers = withoutDeletedAccounts(event?.missings);
-  const participantIdentitiesHidden = event?.participantIdentitiesHidden === true;
   const hasVisibleEventTasks = canViewParticipantNames
     && Array.isArray(event?.eventTasks)
     && event.eventTasks.length > 0;
@@ -802,7 +796,7 @@ function EventDetails({ navigation, route }) {
       return <div style={{ color: mutedTextColor }}>Aucun participant confirme pour le moment.</div>;
     }
 
-    if (participantIdentitiesHidden || !canViewParticipantNames) {
+    if (!canViewParticipantNames) {
       return (
         <div style={{
           background: softSurfaceColor,
@@ -841,9 +835,7 @@ function EventDetails({ navigation, route }) {
             ))}
           </div>
           <div style={{ color: mutedTextColor, fontSize: 13, lineHeight: 1.5 }}>
-            {participantIdentitiesHidden
-              ? 'Les identités des participants sont masquees par l organisateur.'
-              : 'Connecte-toi pour voir qui participe.'}
+            {'Les identités des participants sont masquees par l organisateur.'}
           </div>
         </div>
       );

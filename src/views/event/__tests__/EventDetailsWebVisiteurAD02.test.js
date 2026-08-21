@@ -4,17 +4,21 @@ import { openPublicAuthFlow } from '@/navigation/public/publicAuthNavigation';
 
 import { createEventParticipation } from '@/services/eventParticipation/eventParticipationService';
 
-// AD02 (E6) : la page d'un evenement est PUBLIQUE sur le site (arbitrage d'Adel,
-// `web/src/routes/screenRegistry.tsx` la declare `access: 'public'`). Un inconnu
-// pouvait donc y lire des prenoms et des noms, et taper sur un bouton
-// « Participer » qui partait avec `user: ''`.
+// AD02 (E6) puis AD11 — lire ceci AVANT de « reparer » quoi que ce soit.
 //
-// Mesure du 2026-08-21 sur la recette, sans aucun jeton :
-//   GET https://api-staging.foundclubpro.com/api/events?populate=*
-//   -> 200 · 10 "firstname" · 10 "lastname"
-// Le SERVEUR envoie encore des noms a un inconnu ⇒ cette garde d'affichage est
-// la seule protection en service sur le site. Ce n'est pas une ceinture derriere
-// une bretelle : c'est la bretelle.
+// ⚖️ DECISION D20 D'ADEL DU 2026-08-22 (DEROGATIONS.md ; elle REMPLACE Q14=A
+// du 20/08) : « visible veut dire public, c'est le choix de l'organisateur ».
+// Et le meme jour, sur la question du site : « le site suit la decision D20 :
+// sur un evenement non masque, les noms s'affichent meme sans etre connecte. »
+//
+// Ce que ce fichier prouve donc depuis AD11 :
+//   - seul le reglage `participantIdentitiesHidden` decide qui LIT les noms
+//     (temoins 1, 3, 4 : un visiteur les lit ; temoin 8 : masque = personne,
+//     meme sans compte) ;
+//   - avoir un compte reste la condition pour AGIR (temoins 5 et 6, poses par
+//     AD02 : « Se connecter pour participer », et l'appui n'envoie RIEN).
+// ⛔ Un agent qui re-cacherait les noms aux visiteurs ne « reparerait » rien :
+// il annulerait une decision d'Adel, datee et consignee.
 //
 // Ce fichier est NEUF : `EventDetailsWebComposition.test.js` garde ses 11 temoins
 // verts comme preuve d'innocence du lot. Son en-tete de mocks est COPIE ici, avec
@@ -243,11 +247,12 @@ const mountScreen = (/** @type {any} */ { auth, convocation = null, event } = {}
 
 /**
  * Un inconnu : pas de compte, donc `userData` a null. L'ecran ne lit que ces deux clefs.
+ * @param {any} eventOverrides - Surcharges de l'evenement (ex. `participantIdentitiesHidden`).
  * @returns {any} - La racine du rendu.
  */
-const mountAsVisitor = () => mountScreen({
+const mountAsVisitor = (eventOverrides = {}) => mountScreen({
   auth: { canManageEvent: () => false, userData: null },
-  event: buildEvent(),
+  event: buildEvent(eventOverrides),
 });
 
 /**
@@ -339,13 +344,14 @@ afterEach(() => {
 });
 
 describe('AD02 · la page publique d un evenement face a un visiteur sans compte', () => {
-  test('temoin 1 · un visiteur sans compte ne lit AUCUN nom de participant', () => {
+  test('temoin 1 · un visiteur sans compte LIT les noms d un evenement non masque', () => {
+    // Inverse par AD11 (decision D20 du 2026-08-22) : il ne lisait AUCUN nom.
     mountAsVisitor();
     const text = screenText();
 
     PARTICIPANTS.forEach((participant) => {
-      expect(text).not.toContain(participant.firstname);
-      expect(text).not.toContain(participant.lastname);
+      expect(text).toContain(participant.firstname);
+      expect(text).toContain(participant.lastname);
     });
   });
 
@@ -353,24 +359,29 @@ describe('AD02 · la page publique d un evenement face a un visiteur sans compte
     // On MASQUE, on ne vide jamais : la page doit continuer a dire combien de
     // personnes viennent. (Le rendu decoupe le compte et le mot en deux noeuds,
     // d'ou « 3 participant » et non « 3 participants ».)
-    mountAsVisitor();
+    // Depuis AD11, le bloc-compteur anonyme ne se rend plus que sur un evenement
+    // MASQUE (un visiteur d'un evenement non masque voit la liste nominative,
+    // temoin 1) : le montage suit, l'intention du temoin ne bouge pas.
+    mountAsVisitor({ participantIdentitiesHidden: true });
     expect(screenText()).toContain('3 participant');
   });
 
-  test('temoin 3 · un visiteur ne sait pas QUI est signale absent', () => {
+  test('temoin 3 · un visiteur sait QUI est signale absent sur un evenement non masque', () => {
+    // Inverse par AD11 (decision D20 du 2026-08-22) : c'etait cache.
     mountAsVisitor();
     const text = screenText();
 
-    expect(text).not.toContain(MISSING_PLAYER.firstname);
-    expect(text).not.toContain(MISSING_PLAYER.lastname);
+    expect(text).toContain(MISSING_PLAYER.firstname);
+    expect(text).toContain(MISSING_PLAYER.lastname);
   });
 
-  test('temoin 4 · un visiteur ne sait pas A QUI une tache est confiee', () => {
+  test('temoin 4 · un visiteur voit A QUI une tache est confiee (evenement non masque)', () => {
+    // Inverse par AD11 (decision D20 du 2026-08-22) : c'etait cache.
     mountAsVisitor();
     const text = screenText();
 
-    expect(text).not.toContain(TASK_ASSIGNEE.firstname);
-    expect(text).not.toContain(TASK_ASSIGNEE.lastname);
+    expect(text).toContain(TASK_ASSIGNEE.firstname);
+    expect(text).toContain(TASK_ASSIGNEE.lastname);
   });
 
   test('temoin 5 · un visiteur voit une porte vers la connexion, pas « Participer »', () => {
@@ -397,6 +408,19 @@ describe('AD02 · la page publique d un evenement face a un visiteur sans compte
 
     ALL_NAMES.forEach((name) => {
       expect(text).toContain(name);
+    });
+  });
+
+  test('temoin 8 · un evenement MASQUE ne montre aucun nom, MEME a un visiteur sans compte', () => {
+    // LE temoin du lot AD11 : le seul qui prouve qu'on a ALIGNE une regle
+    // (« seul le reglage de l'organisateur decide », D20) et non SUPPRIME une
+    // protection. Les trois surfaces nominatives (participants, absences,
+    // taches) doivent se taire ensemble quand l'organisateur masque.
+    mountAsVisitor({ participantIdentitiesHidden: true });
+    const text = screenText();
+
+    ALL_NAMES.forEach((name) => {
+      expect(text).not.toContain(name);
     });
   });
 });
