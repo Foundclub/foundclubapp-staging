@@ -2388,7 +2388,29 @@ export default {
   },
   messaging: {
     noData: 'Aucune conversation trouvée.',
+    preview: {
+      attachment: 'Pièce jointe',
+      contactShare: 'Contact partagé',
+      eventShare: 'Événement partagé',
+      eventShareNamed: 'Événement : {{name}}',
+      fallback: 'Nouveau message',
+      file: 'Fichier',
+      lineupShare: 'Composition publiée',
+      lineupShareNamed: 'Composition : {{team}}',
+      locationShare: 'Localisation',
+      photo: 'Photo',
+      poll: 'Sondage',
+      pollNamed: 'Sondage : {{question}}',
+      proposal: 'Proposition',
+      proposalMatch: 'Proposition de match',
+      proposalTeam: '{{team}} propose un match',
+      proposalWhen: '{{team}} propose un match — {{when}}',
+      voiceNote: 'Note vocale',
+    },
     title: 'Messages privés',
+    unread: {
+      badge: 'Non lu',
+    },
   },
   modals: {
     actions: {

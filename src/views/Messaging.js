@@ -1,6 +1,4 @@
 import { FlashList } from '@shopify/flash-list';
-import { formatDistanceToNow } from 'date-fns';
-import { fr } from 'date-fns/locale';
 import {
   useEffect,
   useMemo,
@@ -15,8 +13,11 @@ import { Swipeable } from 'react-native-gesture-handler';
 
 import useAuth from '@/domains/auth/useAuth';
 import {
+  formatChatTimestamp,
+  getChatLastMessage,
   getChatMessagePreview,
   isLeagueChat,
+  resolveFriendlyMatchOpponent,
 } from '@/domains/messaging/messagingUseCases';
 import useMessaging from '@/domains/messaging/useMessaging';
 import { TutorialIds } from '@/domains/tutorial/tutorialIds';
@@ -236,6 +237,23 @@ function Messaging({ navigation, route }) {
             size={48}
           />
         );
+      case 'friendly_match': {
+        // AC05 constat 3 — « ça doit afficher le logo adverse ou l'écusson
+        // adverse ». Le fil d'amical n'a AUCUNE équipe attachée côté serveur
+        // (friendly-match-workflow.ts:591) : le camp d'en face se lit dans le
+        // titre « Match amical : A vs B », et se dessine alors en initiales.
+        // Quand on ne sait pas lequel des deux camps est l'adversaire, on garde
+        // le repli neutre — jamais un écusson qui ferait croire à un vrai club.
+        const opponent = resolveFriendlyMatchOpponent({ chat, myTeams: allMyTeams });
+        if (!opponent) return <ProfileAvatar enablePreview={false} size={48} />;
+        return (
+          <ClubLogoMark
+            logoUrl={opponent.logoUrl}
+            name={opponent.name}
+            size={48}
+          />
+        );
+      }
       case 'group':
       case 'whisper': {
         const participant = chat.participants?.find(
@@ -594,7 +612,9 @@ function Messaging({ navigation, route }) {
    */
   const renderChat = ({ item: chat }) => {
     const chatIsLeague = isLeagueChat(chat);
-    const lastMessage = chat.messages?.[0];
+    // AC05 — le message le PLUS RÉCENT, choisi sur sa date : `messages[0]`
+    // supposait un ordre que le contrat serveur ne promet pas.
+    const lastMessage = getChatLastMessage(chat);
     const isMyMessage = lastMessage?.sender?.documentId === userData?.documentId;
     const hasUnread = !isMyMessage && (lastMessage && getUnreadStatus(
       chat.documentId,
@@ -689,14 +709,28 @@ function Messaging({ navigation, route }) {
                       Alignments.fill,
                     ]}
                   >
-                    {getChatMessagePreview(lastMessage)}
+                    {getChatMessagePreview(lastMessage, t)}
                   </Text>
-                  <Text style={[Fonts.p3Bold, hasUnread ? Fonts.neutral00 : Fonts.neutral500]}>
-                    {formatDistanceToNow(new Date(lastMessage.createdAt), {
-                      addSuffix: false,
-                      locale: fr,
-                    })}
+                  {/* AC05 — l'heure quand c'est aujourd'hui, le jour sinon.
+                      En surbrillance tant que la conversation n'est pas lue. */}
+                  <Text style={[
+                    Fonts.p3Bold,
+                    hasUnread ? { color: Colors.error500 } : Fonts.neutral500,
+                  ]}
+                  >
+                    {formatChatTimestamp(lastMessage.createdAt)}
                   </Text>
+                  {hasUnread ? (
+                    <View
+                      accessibilityLabel={t('messaging.unread.badge', 'Non lu')}
+                      style={{
+                        backgroundColor: Colors.error500,
+                        borderRadius: 999,
+                        height: 8,
+                        width: 8,
+                      }}
+                    />
+                  ) : null}
                 </View>
               )}
             </View>

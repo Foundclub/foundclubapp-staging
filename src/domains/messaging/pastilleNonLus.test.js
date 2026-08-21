@@ -1,0 +1,151 @@
+import fs from 'fs';
+import path from 'path';
+
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { createElement } from 'react';
+import renderer, { act } from 'react-test-renderer';
+
+import { getChats } from '@/services/chat/chatService';
+
+import useUnreadMessages from './useUnreadMessages';
+
+// AC05 temoin 7 — « il manque une pastille rouge avec le NOMBRE de messages non
+// ouverts sur l'icone Messages. Ca y est partiellement mais ca bugue. »
+//
+// 📏 CE QUI BUGUAIT, NOMME : la pastille existe bel et bien
+// (PrivateTabNavigator.js, `badge: unreadCount`) et elle affiche un nombre.
+// Mais `useUnreadMessages` ne lisait QUE le cache react-query `['chats']` —
+// « Avoids spinning up extra messaging queries from global navigators », disait
+// son commentaire. Or ce cache reste VIDE tant que l'ecran Messagerie n'a pas
+// ete ouvert : au demarrage de l'app, la pastille valait donc toujours zero.
+//
+// Ce temoin monte le compteur SEUL, sans jamais monter l'ecran Messagerie.
+
+jest.mock('@/store/appContext', () => ({
+  storage: {
+    getString: jest.fn(() => undefined),
+    set: jest.fn(),
+  },
+}));
+
+jest.mock('@/services/chat/chatService', () => ({
+  getChats: jest.fn(),
+}));
+
+jest.mock('@/domains/auth/useAuth', () => ({
+  __esModule: true,
+  default: () => ({
+    allMyTeams: [{ documentId: 't-1', name: 'U15 A' }],
+    userData: { club: { documentId: 'c-1' }, documentId: 'moi' },
+  }),
+}));
+
+const SOURCE_NAVIGATEUR = fs.readFileSync(
+  path.resolve(__dirname, '..', '..', 'navigation', 'private', 'PrivateTabNavigator.js'),
+  'utf8',
+);
+
+const REPONSE_SERVEUR = {
+  data: [
+    {
+      documentId: 'chat-1',
+      messages: [{
+        createdAt: '2026-08-20T10:00:00.000Z',
+        documentId: 'm-1',
+        message: 'Salut',
+        sender: { documentId: 'quelqu-un-d-autre' },
+      }],
+      type: 'team',
+    },
+    {
+      documentId: 'chat-2',
+      messages: [{
+        composition: { teamName: 'U15 A', type: 'lineup_share' },
+        createdAt: '2026-08-20T11:00:00.000Z',
+        documentId: 'm-2',
+        message: '',
+        sender: { documentId: 'le-coach' },
+      }],
+      type: 'team',
+    },
+    {
+      // Mon propre message : il ne compte jamais comme non lu.
+      documentId: 'chat-3',
+      messages: [{
+        createdAt: '2026-08-20T12:00:00.000Z',
+        documentId: 'm-3',
+        message: 'A samedi',
+        sender: { documentId: 'moi' },
+      }],
+      type: 'whisper',
+    },
+  ],
+  meta: { pagination: { page: 1, pageCount: 1, total: 3 } },
+};
+
+/**
+ * Monte le compteur seul et rend sa valeur.
+ * @returns {Promise<{ valeur: number, arbre: any }>}
+ */
+const monterLeCompteur = async () => {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { gcTime: 0, retry: false } },
+  });
+  const vu = { valeur: -1 };
+
+  /**
+   * Sonde : rejoue exactement ce que fait la barre d'onglets.
+   * @returns {null} Rien a peindre.
+   */
+  function Sonde() {
+    const { unreadCount } = useUnreadMessages();
+    vu.valeur = unreadCount;
+    return null;
+  }
+
+  let arbre;
+  await act(async () => {
+    arbre = renderer.create(
+      createElement(QueryClientProvider, { client: queryClient }, createElement(Sonde)),
+    );
+  });
+  await act(async () => {
+    await Promise.resolve();
+  });
+
+  return { arbre, valeur: vu.valeur };
+};
+
+describe('AC05 temoin 7 — la pastille de l icone Messages porte un NOMBRE', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  test('le compteur se remplit SANS que l ecran Messagerie ait ete ouvert', async () => {
+    getChats.mockResolvedValue(REPONSE_SERVEUR);
+
+    const { arbre, valeur } = await monterLeCompteur();
+
+    // 2 conversations non lues : la troisieme est mon propre message.
+    expect(valeur).toBe(2);
+    // Le compteur va CHERCHER la liste : c'est tout le correctif.
+    expect(getChats).toHaveBeenCalled();
+    arbre.unmount();
+  });
+
+  test('un serveur muet laisse la pastille eteinte, sans casser la barre', async () => {
+    getChats.mockRejectedValue(new Error('reseau coupe'));
+
+    const { arbre, valeur } = await monterLeCompteur();
+
+    expect(valeur).toBe(0);
+    arbre.unmount();
+  });
+
+  test('la barre d onglets branche bien ce nombre sur l icone Messages', () => {
+    expect(SOURCE_NAVIGATEUR).toContain('const { unreadCount } = useUnreadMessages();');
+    expect(SOURCE_NAVIGATEUR).toContain('badge: unreadCount,');
+    // La pastille affiche le nombre, pas un simple point.
+    expect(SOURCE_NAVIGATEUR).toContain('{badge}');
+  });
+});
