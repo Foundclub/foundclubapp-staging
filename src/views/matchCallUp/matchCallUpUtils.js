@@ -10,6 +10,11 @@
  * `MultiTeamCompositionBoard` fabriquent deja, et que le serveur lit deja.
  */
 
+import {
+  getCurrentUserEventParticipationState,
+  resolveRsvpAnswer,
+} from '@/domains/event/participationState';
+
 import { getCompositionPlayerId } from '@/utils/compositionPlayer';
 
 /**
@@ -119,6 +124,66 @@ export const buildManualCallUpPlayer = ({
     lastname: normalizeText(lastname),
     number: normalizeText(jerseyNumber) || undefined,
   };
+};
+
+/**
+ * AC09 — l'etat « personne n'a rien repondu ». Les 3 autres sont ceux de
+ * `RsvpAnswer` (`absent`, `pending`, `present`) : ⛔ AUCUNE echelle neuve ici.
+ * @type {string}
+ */
+export const CALL_UP_RSVP_NONE = 'none';
+
+/**
+ * AC09 — la reponse de CHAQUE joueur convocable a cet evenement.
+ *
+ * 🧩 Rien de neuf n'est calcule : la fonction appelle les DEUX briques qui
+ * existent deja (`getCurrentUserEventParticipationState` puis
+ * `resolveRsvpAnswer`, `@/domains/event/participationState`), celles que les
+ * boutons de reponse et le bandeau de l'accueil appellent aussi. Ecrire une
+ * 2e regle ici, c'est garantir qu'un jour l'ecran de convocation dira
+ * « present » quand la fiche de l'evenement dit « absent ».
+ *
+ * ⚠️ `user` n'est PAS l'utilisateur connecte : ces deux fonctions comparent une
+ * ENTITE a des relations d'evenement (`documentId`, sinon `id`). On leur passe
+ * donc le joueur de la liste, un par un.
+ *
+ * 🕳️ Sans charge d'evenement, la table rendue est VIDE — et l'ecran n'affiche
+ * alors AUCUN etat. Afficher « sans reponse » pendant le chargement dirait
+ * quelque chose de faux a la place de ne rien dire.
+ *
+ * ⛔ Un joueur hors app ne peut pas repondre : il n'a pas de ligne ici, son
+ * etiquette « Previens-le toi-meme » dit deja tout.
+ * @param {object} input
+ * @param {any} [input.event] La charge de `GET /events/:id` (`missings`,
+ *   `participations`, `participationRequests`).
+ * @param {any[]} [input.players] Les joueurs de la liste de selection.
+ * @returns {Map<string, string>} identifiant du joueur -> `absent` | `present` |
+ *   `pending` | `none`.
+ */
+export const buildRsvpAnswersByPlayerId = ({ event, players = [] }) => {
+  /** @type {Map<string, string>} */
+  const answers = new Map();
+  if (!event) return answers;
+
+  const missings = event?.missings;
+  const participationRequests = event?.participationRequests;
+  const participations = event?.participations;
+
+  (Array.isArray(players) ? players : []).forEach((player) => {
+    if (!player || isManualCallUpPlayer(player)) return;
+    const playerId = getCompositionPlayerId(player);
+    if (!playerId || answers.has(playerId)) return;
+
+    const answer = resolveRsvpAnswer(getCurrentUserEventParticipationState({
+      missings,
+      participationRequests,
+      participations,
+      user: player,
+    }));
+    answers.set(playerId, answer || CALL_UP_RSVP_NONE);
+  });
+
+  return answers;
 };
 
 /**

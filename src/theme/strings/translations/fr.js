@@ -2097,6 +2097,15 @@ export default {
       },
     },
     selection: {
+      absentWarning: {
+        cancel: 'Revoir ma sélection',
+        confirm: 'Convoquer quand même',
+        message_one: '{{names}} a répondu qu’il ne serait pas là.',
+        message_other: '{{names}} ont répondu qu’ils ne seraient pas là.',
+        note: 'Rien ne t’en empêche : la convocation partira quand même.',
+        title_one: '1 joueur a dit ABSENT',
+        title_other: '{{count}} joueurs ont dit ABSENT',
+      },
       addPlayer: {
         subtitle: "Nom, prénom et numéro, pour un joueur sans l'app",
         title: 'Ajouter un joueur',
@@ -2129,6 +2138,12 @@ export default {
       noSms: 'Préviens-le toi-même',
       offAppTag: 'Hors app',
       progress: '{{current}}/{{total}}',
+      rsvp: {
+        absent: 'Absent',
+        none: 'Sans réponse',
+        pending: 'En attente',
+        present: 'Présent',
+      },
       search: 'Rechercher un joueur',
       sections: {
         offApp: 'Déjà ajoutés · {{count}}',
