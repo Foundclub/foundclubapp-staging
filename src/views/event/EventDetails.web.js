@@ -642,6 +642,10 @@ function EventDetails({ navigation, route }) {
   // donc toujours. Le bouton reste a sa place et garde `primaryButtonStyle` ;
   // seul son libelle dit la verite sur ce qu'il va faire.
   const joinButtonLabel = isSignedIn ? 'Participer' : 'Se connecter pour participer';
+  const statusHeadingLabel = isSignedIn ? 'Mon statut' : 'Rejoindre cet événement';
+  const statusDetailLabel = (isSignedIn
+    ? participationLabel
+    : 'Connecte-toi pour répondre à cet événement.');
 
   const handleJoin = useCallback(async () => {
     setActionError('');
@@ -789,6 +793,9 @@ function EventDetails({ navigation, route }) {
   const invitedTeams = Array.isArray(event?.invitedTeams) ? event.invitedTeams : [];
   const detectedPlayers = withoutDeletedAccounts(event?.missings);
   const participantIdentitiesHidden = event?.participantIdentitiesHidden === true;
+  const hasVisibleEventTasks = canViewParticipantNames
+    && Array.isArray(event?.eventTasks)
+    && event.eventTasks.length > 0;
 
   const renderParticipantsSection = () => {
     if (participants.length === 0) {
@@ -1059,9 +1066,9 @@ function EventDetails({ navigation, route }) {
                   padding: isTablet ? 32 : 22,
                 }}
               >
-                <div style={{ color: textColor, fontFamily: 'Montserrat-Bold, sans-serif', fontSize: 15 }}>{isSignedIn ? 'Mon statut' : 'Rejoindre cet événement'}</div>
+                <div style={{ color: textColor, fontFamily: 'Montserrat-Bold, sans-serif', fontSize: 15 }}>{statusHeadingLabel}</div>
                 <div style={{ color: mutedTextColor, fontSize: 14, lineHeight: 1.5 }}>
-                  {isSignedIn ? participationLabel : 'Connecte-toi pour répondre à cet événement.'}
+                  {statusDetailLabel}
                 </div>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
                   {!canEdit && !participationState?.isParticipating && !participationState?.hasPendingRequest ? (
@@ -1183,7 +1190,7 @@ function EventDetails({ navigation, route }) {
               background: sectionBackground, border: `1px solid ${borderColor}`, borderRadius: 24, display: 'grid', gap: 18, padding: 22,
             }}
             >
-              {canViewParticipantNames && Array.isArray(event?.eventTasks) && event.eventTasks.length > 0 ? (
+              {hasVisibleEventTasks ? (
                 <div>
                   <EventTasksSection
                     canManageEvent={canEdit}

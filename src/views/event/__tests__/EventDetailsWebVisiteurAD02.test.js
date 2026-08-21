@@ -1,8 +1,8 @@
 import renderer, { act } from 'react-test-renderer';
 
-import { createEventParticipation } from '@/services/eventParticipation/eventParticipationService';
-
 import { openPublicAuthFlow } from '@/navigation/public/publicAuthNavigation';
+
+import { createEventParticipation } from '@/services/eventParticipation/eventParticipationService';
 
 // AD02 (E6) : la page d'un evenement est PUBLIQUE sur le site (arbitrage d'Adel,
 // `web/src/routes/screenRegistry.tsx` la declare `access: 'public'`). Un inconnu
@@ -241,13 +241,19 @@ const mountScreen = (/** @type {any} */ { auth, convocation = null, event } = {}
   return mounted.root;
 };
 
-/** Un inconnu : pas de compte, donc `userData` a null. L'ecran ne lit que ces deux clefs. */
+/**
+ * Un inconnu : pas de compte, donc `userData` a null. L'ecran ne lit que ces deux clefs.
+ * @returns {any} - La racine du rendu.
+ */
 const mountAsVisitor = () => mountScreen({
   auth: { canManageEvent: () => false, userData: null },
   event: buildEvent(),
 });
 
-/** Un dirigeant du club : il a le droit de lire la page en entier. */
+/**
+ * Un dirigeant du club : il a le droit de lire la page en entier.
+ * @returns {any} - La racine du rendu.
+ */
 const mountAsManager = () => mountScreen({
   auth: {
     canManageEvent: () => true,
