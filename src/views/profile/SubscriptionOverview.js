@@ -25,6 +25,7 @@ import {
 import { withAlpha } from '@/theme/colors';
 import useTheme from '@/theme/themeContext';
 
+import GlyphIcon from '@/components/atoms/glyphIcon/GlyphIcon';
 import LegalFooter from '@/components/molecules/legalFooter/LegalFooter';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 import SubscriptionCoveredHero from '@/views/profile/SubscriptionCoveredHero';
@@ -376,11 +377,13 @@ function SubscriptionOverview({ navigation }) {
 
   /**
    * Rangee d'action : bouton pleine largeur d'au moins 52 pt.
-   * @param {{ icon: string; label: string; onPress: () => void; right?: string; withDivider?: boolean }} props
+   * `glyph` prend le pas sur `icon` : AD07 y a pose le SEUL dessin vectoriel
+   * de l'ecran (rangee « Comparer les offres »). Les 5 autres restent en PNG.
+   * @param {{ glyph?: string; icon?: string; label: string; onPress: () => void; right?: string; withDivider?: boolean }} props
    * @returns {import('react').ReactElement}
    */
   const renderActionRow = ({
-    icon, label, onPress, right = '', withDivider = false,
+    glyph = '', icon = '', label, onPress, right = '', withDivider = false,
   }) => (
     <TouchableOpacity
       accessibilityRole="button"
@@ -406,10 +409,14 @@ function SubscriptionOverview({ navigation }) {
           width: 30,
         }}
       >
-        <Image
-          source={Images[icon]}
-          style={{ height: 14, tintColor: Colors.primary500, width: 14 }}
-        />
+        {glyph ? (
+          <GlyphIcon color={Colors.primary500} name={glyph} size={14} />
+        ) : (
+          <Image
+            source={Images[icon]}
+            style={{ height: 14, tintColor: Colors.primary500, width: 14 }}
+          />
+        )}
       </View>
       <Text style={[Alignments.fill, Fonts.p2Bold, Fonts.neutral100]}>{label}</Text>
       {right ? <Text style={[Fonts.p4, Fonts.neutral400]}>{right}</Text> : null}
@@ -536,7 +543,7 @@ function SubscriptionOverview({ navigation }) {
                 onPress: () => navigation.navigate(RouteNames.SubscriptionOffers),
               })}
               {renderActionRow({
-                icon: 'chart',
+                glyph: 'chartColumn',
                 label: t('profile.subscription.actions.compareOffers', 'Comparer les offres'),
                 onPress: () => navigation.navigate(RouteNames.SubscriptionCompare),
                 withDivider: true,
