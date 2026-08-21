@@ -174,7 +174,14 @@ function DetectionTeamsManual() {
       Alert.alert(
         t('detection.alerts.saved.title'),
         t('detection.alerts.saved.message'),
-        [{ onPress: () => navigation.goBack(), text: t('detection.alerts.ok') }],
+        // AD01 (🚪) — LA SUITE NATURELLE, ENFIN BRANCHEE. Ce bouton s'appelle
+        // `detection.teams.manual.actions.field` — « le terrain ». Il promettait
+        // un ecran qui n'arrivait jamais : `DetectionTeamsBoard` (850 lignes)
+        // n'avait AUCUN appelant. Seule la DESTINATION change ici.
+        [{
+          onPress: () => navigation.navigate(RouteNames.DetectionTeamsBoard, params),
+          text: t('detection.alerts.ok'),
+        }],
       );
     } catch (error) {
       Alert.alert(
@@ -185,7 +192,7 @@ function DetectionTeamsManual() {
       setIsBusy(false);
     }
   }, [
-    assignments, checkInFirst, eventId, isBusy, memberMode, navigation, players,
+    assignments, checkInFirst, eventId, isBusy, memberMode, navigation, params, players,
     presentIds, t, teamComposition?.detectionSplit?.rounds, teamComposition?.draft, teamId,
   ]);
 

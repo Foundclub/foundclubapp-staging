@@ -3623,6 +3623,42 @@ function EventDetails({ navigation, route }) {
     navigation,
   ]);
 
+  // AD01 (🚪) — LA PORTE DU TERRAIN DE DETECTION.
+  //
+  // `DetectionTeamsBoard` (850 lignes) et `DetectionRotationBoard` (697 lignes)
+  // sont ecrits, testes, et declares dans les QUATRE fichiers de routes
+  // (routeNames:273, webRoutes:215, EventStack:189-196, screenRegistry:976-987).
+  // Et pourtant : ZERO appelant. Les deux ecrans qui devaient y mener finissent
+  // par un `navigation.goBack()` (DetectionTeamsManual:177, DetectionTeamsAuto).
+  // 1 547 lignes qu'aucun bouton n'atteignait — un ecran qu'aucun bouton
+  // n'atteint n'existe pas. Il ne manquait QUE ce bouton.
+  //
+  // 🔑 `eventId` et `teamId` SUFFISENT : l'ecran relit lui-meme la charge
+  // serveur (`DetectionTeamsBoard:145`, exactement la requete de cette page).
+  // Le reste n'est qu'un demarrage a chaud, pour lui eviter un premier rendu
+  // vide — et `sport`, sans quoi il retombe sur « football » par defaut.
+  const detectionSplit = staffCompositionPayload?.detectionSplit || null;
+  const hasDetectionTeams = Boolean(detectionSplit?.teams?.length);
+
+  const openDetectionTeamsBoard = useCallback(() => {
+    if (!eventId || !compositionTeamId) return;
+
+    navigation.navigate(RouteNames.DetectionTeamsBoard, {
+      eventId,
+      memberMode: detectionSplit?.memberMode || undefined,
+      players: compositionEditorPlayers,
+      sport: compositionSport,
+      teamId: compositionTeamId,
+    });
+  }, [
+    compositionEditorPlayers,
+    compositionSport,
+    compositionTeamId,
+    detectionSplit?.memberMode,
+    eventId,
+    navigation,
+  ]);
+
   const openMyMatchResponse = useCallback(() => {
     if (!eventId || !compositionTeamId) return;
 
@@ -3895,6 +3931,26 @@ function EventDetails({ navigation, route }) {
         key: 'lineup',
         label: t('eventDetails.managePanel.lineup', 'Compo'),
         onPress: handleManageComposition,
+      });
+    }
+
+    // AD01 (🚪) — LE TERRAIN DE DETECTION CESSE D'ETRE INATTEIGNABLE.
+    // ⚠️ GRISEE, JAMAIS ABSENTE tant que la repartition n'existe pas : une
+    // porte qui disparait ne s'explique pas, alors qu'une porte fermee qui DIT
+    // pourquoi se comprend. Meme motif que la chip `matchStats` juste dessous.
+    // 🖼️ Icone `stadium` : elle existe deja (`images.js` et `images.web.js`,
+    // et 3 ecrans l'utilisent) — aucune image nouvelle n'est livree ici.
+    if (canEdit && isDetectionEvent && supportsEventComposition && compositionTeamId) {
+      chips.push({
+        disabled: !hasDetectionTeams || isStaffCompositionFetching,
+        fullWidth: true,
+        icon: 'stadium',
+        key: 'detectionTeamsBoard',
+        label: 'Placer les équipes sur les terrains',
+        note: hasDetectionTeams
+          ? null
+          : 'Répartis d’abord les équipes depuis « Compo ».',
+        onPress: openDetectionTeamsBoard,
       });
     }
 
