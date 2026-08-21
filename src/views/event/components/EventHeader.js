@@ -118,6 +118,8 @@ function EventHeader({ event, matchScoreSummary = null }) {
   const eventClub = event?.team?.club || event?.club;
   const logoUrl = eventClub?.logo?.url;
   const locationDetails = event?.locationDetails;
+  // Le nom du lieu est une DONNEE, pas un libelle : aucune clef de traduction.
+  const facilityName = toDisplayText(event?.facility?.name);
   const isImportedExternalMatch = (
     event?.externalAutoSource === 'external_competition'
     || Array.isArray(event?.team?.externalCalendarData)
@@ -252,6 +254,21 @@ function EventHeader({ event, matchScoreSummary = null }) {
             <Text style={[Fonts.p2, Fonts.primary100]}>
               {headerSecondaryTitle}
             </Text>
+          ) : null}
+          {facilityName ? (
+            <View
+              style={[
+                ApplicationStyle.borderRadius100,
+                Alignments.selfStart,
+                Spaces.paddingHorizontal[8],
+                Spaces.paddingVertical[4],
+                { backgroundColor: withAlpha(accentColor, 0.14) },
+              ]}
+            >
+              <Text style={[Fonts.p4, Fonts.neutral00]}>
+                {facilityName}
+              </Text>
+            </View>
           ) : null}
         </View>
       </View>

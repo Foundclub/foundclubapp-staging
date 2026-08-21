@@ -242,7 +242,6 @@ describe('AD09 - la couleur de l installation dans l entete de la fiche evenemen
     expect(accentA).not.toBe(accentB);
   });
 
-  // eslint-disable-next-line max-len -- titre de temoin impose mot pour mot par le lot AD09
   test('AD09 · temoin 8 — le lisere gauche de 4 px porte lui aussi la couleur du lieu', () => {
     const withFacility = flattenStyle(renderHeader(makeEvent({
       facility: { documentId: 'f1', name: 'Terrain A', planningColor: ORANGE_TERRAIN_A },
@@ -253,6 +252,20 @@ describe('AD09 - la couleur de l installation dans l entete de la fiche evenemen
     expect(withFacility.borderLeftColor).toBe(ORANGE_TERRAIN_A);
     // Sans lieu, le lisere existe mais reste de la couleur d'avant AD09.
     expect(withoutFacility.borderLeftColor).toBe(CYAN_OF_TODAY);
+  });
+
+  test('AD09 · temoin 9 — la pastille affiche le nom du lieu, et disparait sans nom', () => {
+    const avecNom = renderHeader(makeEvent({
+      facility: { documentId: 'f1', name: 'Terrain A', planningColor: ORANGE_TERRAIN_A },
+    }));
+    expect(findTextNodeByContent(avecNom, 'Terrain A')).not.toBeNull();
+
+    // Une installation sans nom ne doit produire AUCUNE pastille vide.
+    const sansNom = renderHeader(makeEvent({
+      facility: { documentId: 'f2', planningColor: VIOLET_GYMNASE },
+    }));
+    expect(textContentOf(sansNom).join('|')).not.toContain('||');
+    expect(findTextNodeByContent(sansNom, '')).toBeNull();
   });
 
   // eslint-disable-next-line max-len -- titre de temoin impose mot pour mot par le lot AD09
