@@ -201,8 +201,16 @@ export const buildPlayerConvocationView = ({ convocation = null, userId = '' } =
   const myPlacement = placements
     .find((/** @type {any} */ placement) => toId(placement?.playerId) === viewerId) || null;
 
-  const viewerPlayer = ensureList(published?.snapshotPlayers)
-    .find((/** @type {any} */ player) => getConvocationPersonId(player) === viewerId) || null;
+  // AD08 — UNE SEULE FACON DE RECONNAITRE UNE PERSONNE. `buildConvocationReserveList`
+  // fusionne les deux listes 45 lignes plus haut ; ici on ne lisait que
+  // `snapshotPlayers`. Sur une charge ou le remplacant n'est QUE dans
+  // `reserveSnapshotPlayers` — la forme a plat de la carte de compo du tchat, et
+  // toute charge partielle — il lisait son nom sur le banc mais sa PROPRE carte
+  // ne le connaissait pas : ni avatar, ni poste, ni numero.
+  const viewerPlayer = [
+    ...ensureList(published?.snapshotPlayers),
+    ...ensureList(published?.reserveSnapshotPlayers),
+  ].find((/** @type {any} */ player) => getConvocationPersonId(player) === viewerId) || null;
 
   const sport = getTacticalSportKey(published?.sportContext);
 
