@@ -167,6 +167,16 @@ jest.mock('@/services/section/sectionQueries', () => ({
   }),
 }));
 
+// AC03 — le sport et la categorie viennent desormais des listes du SERVEUR.
+// Sans ces doublures, l'ecran tire le vrai client HTTP et la suite ne se charge
+// meme pas (« API_URL is missing »), comme pour les niveaux et les sections.
+jest.mock('@/services/activity/activityQueries', () => ({
+  useGetActivities: () => ({ data: [{ documentId: 'act-1', name: 'Football' }] }),
+}));
+jest.mock('@/services/category/categoryQueries', () => ({
+  useGetCategories: () => ({ data: [{ documentId: 'cat-1', name: 'U13 (13 ans)' }] }),
+}));
+
 jest.mock('react-native-safe-area-context', () => ({
   useSafeAreaInsets: () => ({
     bottom: 0, left: 0, right: 0, top: 0,

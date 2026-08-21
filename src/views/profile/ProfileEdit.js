@@ -23,12 +23,16 @@ import TutorialFlowBoundary from '@/components/molecules/tutorial/TutorialFlowBo
 import AutocompleteAddressInput from '@/components/organisms/autocompleteAddressInput/autocompleteAddressInput';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 import {
+  buildChoiceOptions,
   buildProfileFormValues,
   defaultValues,
   profileSchema,
+  resolveChoiceValues,
 } from '@/views/profile/profileFormContract';
 
+import { useGetActivities } from '@/services/activity/activityQueries';
 import { updateMe } from '@/services/auth/authService';
+import { useGetCategories } from '@/services/category/categoryQueries';
 import { emitCelebrationBanner } from '@/services/celebrations/celebrationRuntime';
 import { useGetLevels } from '@/services/level/levelQueries';
 import {
@@ -63,6 +67,11 @@ function ProfileEdit({ navigation, route }) {
   const queryClient = useQueryClient();
   const { data: sections } = useGetSections();
   const { data: levels } = useGetLevels();
+  // AC03 — les listes de reference viennent du SERVEUR, comme a l'inscription
+  // (`UserSport`) et dans le tunnel d'equipe (`TeamWizardActivity`,
+  // `TeamWizardCategory`). Aucune liste n'est plus ecrite ici.
+  const { data: activities } = useGetActivities();
+  const { data: categories } = useGetCategories();
   const {
     formatBirthdateToDisplay,
     formatBirthdateToSend,
@@ -85,6 +94,8 @@ function ProfileEdit({ navigation, route }) {
     (undefined),
   );
   const [parentalDeclarationChecked, setParentalDeclarationChecked] = useState(false);
+  const [sportSearch, setSportSearch] = useState('');
+  const [categorySearch, setCategorySearch] = useState('');
   const hydratedUserKeyRef = useRef(null);
   const hydratedSignatureRef = useRef('');
 
@@ -265,25 +276,6 @@ function ProfileEdit({ navigation, route }) {
         weight: data.weight,
       });
     }
-  };
-
-  const getSportOptions = () => {
-    const defaultSports = [
-      { label: 'Football', value: 'football' },
-      { label: 'Basketball', value: 'basketball' },
-      { label: 'Handball', value: 'handball' },
-      { label: 'Volleyball', value: 'volleyball' },
-      { label: 'Autre', value: 'other' },
-    ];
-
-    // Add current user sport if not in list
-    if (userData?.preferredSport && !defaultSports.find((s) => s.value === userData.preferredSport)) {
-      // Format label (capitalize first letter)
-      const label = userData.preferredSport.charAt(0).toUpperCase() + userData.preferredSport.slice(1);
-      defaultSports.unshift({ label, value: userData.preferredSport });
-    }
-
-    return defaultSports;
   };
 
   return (
@@ -520,36 +512,20 @@ function ProfileEdit({ navigation, route }) {
                     <AutocompleteSelect
                       error={getFieldError({ errors: formErrors, fieldName: name })}
                       isMulti
+                      isSearchable
                       label={t('profile.fields.category.label', 'Catégorie')}
                       onBlur={onBlur}
-                      options={[
-                        { label: 'U7', value: 'U7' },
-                        { label: 'U8', value: 'U8' },
-                        { label: 'U9', value: 'U9' },
-                        { label: 'U10', value: 'U10' },
-                        { label: 'U11', value: 'U11' },
-                        { label: 'U12', value: 'U12' },
-                        { label: 'U13', value: 'U13' },
-                        { label: 'U14', value: 'U14' },
-                        { label: 'U15', value: 'U15' },
-                        { label: 'U16', value: 'U16' },
-                        { label: 'U17', value: 'U17' },
-                        { label: 'U18', value: 'U18' },
-                        { label: 'U19', value: 'U19' },
-                        { label: 'U20', value: 'U20' },
-                        { label: 'U21', value: 'U21' },
-                        { label: 'U23', value: 'U23' },
-                        { label: 'Senior', value: 'Senior' },
-                        { label: 'Vétéran', value: 'Veteran' },
-                      ]}
+                      options={buildChoiceOptions(categories, value, categorySearch)}
                       placeholder={t('profile.fields.category.placeholder', 'Sélectionner une catégorie')}
                       ref={ref}
+                      searchValue={categorySearch}
+                      setSearchValue={setCategorySearch}
                       setValue={
                     (/** @type {{value: string, label: string}[]} */options) => {
                       onChange(options?.map((o) => o.value).join(', ') || '');
                     }
                   }
-                      value={value ? value.split(', ') : []}
+                      value={resolveChoiceValues(categories, value)}
                     />
                   )}
                 />
@@ -590,18 +566,21 @@ function ProfileEdit({ navigation, route }) {
                   }) => (
                     <AutocompleteSelect
                       error={getFieldError({ errors: formErrors, fieldName: name })}
+                      isSearchable
                       label={t('profile.fields.preferredSport.label', 'Sport de préférence')}
                       onBlur={onBlur}
-                      options={getSportOptions()}
+                      options={buildChoiceOptions(activities, value, sportSearch)}
                       placeholder={t('profile.fields.preferredSport.placeholder', 'Sélectionner un sport')}
                       ref={ref}
+                      searchValue={sportSearch}
+                      setSearchValue={setSportSearch}
                       setValue={
                     (/** @type {{value: string, label: string}} */option) => {
                       onChange(option?.value || '');
                       setValue('position', '');
                     }
                   }
-                      value={value}
+                      value={resolveChoiceValues(activities, value)[0] || ''}
                     />
                   )}
                 />

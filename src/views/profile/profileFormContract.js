@@ -102,3 +102,96 @@ export const getAgeFromDisplayedBirthdate = (displayedBirthdate) => {
 
   return age >= 0 && age < 130 ? age : null;
 };
+
+// AC03 — « la categorie et le sport se CHERCHENT et se CHOISISSENT ».
+// Les trois ecrans d'edition du profil (`ProfileEdit`, `ProfileEdit.web` et
+// `SelfProfilePlayerCoach`) portaient chacun leur PROPRE liste ecrite en dur :
+// six listes au total, qui divergeaient deja de celles du serveur
+// (`/activities` et `/categories`) que l'inscription et les tunnels d'equipe
+// utilisent, eux, depuis toujours. Ces deux fonctions sont la seule chose que
+// les trois ecrans partagent desormais — elles ne connaissent ni React ni le
+// reseau, donc elles se testent sans monter un ecran.
+
+/**
+ * Compare deux libelles sans se laisser piéger par la casse ni les accents :
+ * l'inscription enregistre « Football », un vieux profil porte « football », et
+ * le serveur nomme « Sénior (+18 ans) ».
+ * @param {unknown} value
+ * @returns {string}
+ */
+const normalizeChoice = (value) => String(value ?? '')
+  .normalize('NFD')
+  .replace(/[\u0300-\u036f]/g, '')
+  .trim()
+  .toLowerCase();
+
+/**
+ * Les libelles de la liste de reference, tels que le serveur les nomme.
+ * @param {Array<{name?: string}> | undefined | null} referenceItems
+ * @returns {string[]}
+ */
+const referenceNames = (referenceItems) => (Array.isArray(referenceItems) ? referenceItems : [])
+  .map((item) => String(item?.name ?? '').trim())
+  .filter(Boolean);
+
+/**
+ * Decoupe la valeur enregistree en choix.
+ * ⚠️ `category` est UNE CHAINE a virgules (« U13, U15 ») et pas une liste :
+ * c'est la forme que le serveur attend (`user.category` est un `string`), et ce
+ * lot ne la change pas.
+ * @param {unknown} rawValue
+ * @returns {string[]}
+ */
+export const splitChoiceValue = (rawValue) => String(rawValue ?? '')
+  .split(',')
+  .map((part) => part.trim())
+  .filter(Boolean);
+
+/**
+ * Les options d'un champ de profil, baties sur la LISTE DU SERVEUR.
+ *
+ * 🔒 Le garde-fou du lot : une valeur deja enregistree qui ne figure PAS dans
+ * la liste est ajoutee en tete au lieu de disparaitre. Personne ne perd ce
+ * qu'il avait ecrit du temps de la saisie libre ; il le remplace quand il veut.
+ * @param {Array<{name?: string}> | undefined | null} referenceItems
+ * @param {unknown} rawValue - La valeur enregistree (« U13, U15 » ou « football »).
+ * @param {string} [search] - Ce que la personne tape dans la barre de recherche.
+ * @returns {Array<{label: string, value: string}>}
+ */
+export const buildChoiceOptions = (referenceItems, rawValue, search = '') => {
+  const known = referenceNames(referenceItems);
+  const knownKeys = new Set(known.map(normalizeChoice));
+  const seen = new Set();
+  const orphans = splitChoiceValue(rawValue).filter((token) => {
+    const key = normalizeChoice(token);
+    if (knownKeys.has(key) || seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+  const needle = normalizeChoice(search);
+
+  return [...orphans, ...known]
+    .filter((name) => !needle || normalizeChoice(name).includes(needle))
+    .map((name) => ({ label: name, value: name }));
+};
+
+/**
+ * Les choix a montrer comme COCHES dans la liste.
+ *
+ * La liste deroulante compare les libelles caractere pour caractere : un profil
+ * qui porte « football » ne se verrait pas coche en face de « Football ». On
+ * rend donc le libelle du serveur des qu'il designe la meme chose, et la valeur
+ * brute sinon.
+ * ⚠️ Rien n'est ENREGISTRE ici : tant que la personne ne rechoisit pas
+ * elle-meme, le profil garde exactement ce qu'il portait.
+ * @param {Array<{name?: string}> | undefined | null} referenceItems
+ * @param {unknown} rawValue
+ * @returns {string[]}
+ */
+export const resolveChoiceValues = (referenceItems, rawValue) => {
+  const byKey = new Map(
+    referenceNames(referenceItems).map((name) => [normalizeChoice(name), name]),
+  );
+
+  return splitChoiceValue(rawValue).map((token) => byKey.get(normalizeChoice(token)) || token);
+};
