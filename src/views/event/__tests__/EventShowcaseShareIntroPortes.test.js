@@ -364,6 +364,13 @@ describe('S05 ④ sur iOS, le texte part AVEC le fichier', () => {
         && typeof node.props.onPress === 'function',
     )[0];
 
+    // AC02 (2026-08-21) — l'A4 est RANGE derriere le depliant « Autres formats »
+    // (decision d'Adel : « je ne veux que le bouton partager »). Geste 1.
+    await act(async () => {
+      await presser('Autres formats : story, A4 à imprimer').props.onPress();
+    });
+    // Geste 2 : le format lui-meme. Ce que ce temoin protege est INCHANGE — un
+    // PDF a imprimer ne doit joindre AUCUN texte de partage.
     await act(async () => { await presser('Affiche A4 à imprimer').props.onPress(); });
 
     expect(mockDownloadAndShareRender.mock.calls[0][0].format).toBe('a4');

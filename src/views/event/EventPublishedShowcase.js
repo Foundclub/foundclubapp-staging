@@ -7,7 +7,9 @@
  *
  * Réutilise les patterns EXISTANTS de l'app :
  *   - useTheme (Colors.primary500 / Colors.primary700)
- *   - BottomModal (le gabarit maison des feuilles) pour le choix de format
+ *   - le dépliant maison de l'écran (chevron + / −) pour ranger ce qui est
+ *     secondaire — AA08 a retiré la feuille BottomModal qui vivait ici, et
+ *     AC02 n'en a PAS refabriqué une : ⛔ il n'y a plus aucune feuille
  *   - useSafeAreaInsets, comme ScreenContainer : l'écran est `headerShown: false`
  *   - buildShareMessageWithUrl / buildPublicEventUrl (@/utils/shareLinks)
  *   - celebrate() pour rejouer la célébration de création
@@ -93,6 +95,22 @@ export default function EventPublishedShowcase({ navigation, route }) {
   // Il reste 'story' · 'poster' · 'share' — il n'y a plus de 'save'.
   const [busyAction, setBusyAction] = useState(null);
   const [editorOpen, setEditorOpen] = useState(false);
+  // AC02 (2026-08-21) — UN SEUL BOUTON VISIBLE, DECISION D'ADEL.
+  // 🧨 Son constat, capture a l'appui (20/08) : « il y a plusieurs boutons alors
+  // que je ne veux que le bouton partager ». AA08 avait mis les trois formats a
+  // plat pour sauver le PDF ; le resultat est une colonne de trois boutons ou
+  // rien ne dit lequel compte.
+  // ⇒ « Partager l'affiche » reste SEUL a l'ecran. Story et A4 ne disparaissent
+  //   PAS (decision d'Adel du 21/08) : ils passent DERRIERE ce depliant.
+  // 🧩 Pourquoi un depliant et pas une feuille : la feuille de format n'existe
+  //   plus (AA08 l'a retiree avec sa seule porte), et en refabriquer une
+  //   remettrait le defaut qu'AA08 venait de reparer. Ce motif-ci vit deja
+  //   40 lignes plus bas, dans CE fichier — `editorOpen` / « Personnaliser le
+  //   texte ». On reutilise, on n'invente pas.
+  // 📏 DEUX GESTES au maximum, toujours : ouvrir, puis choisir. Le depliant
+  //   NOMME ce qu'il contient (« story, A4 a imprimer »), donc un club qui veut
+  //   imprimer ne part pas a la chasse.
+  const [formatsOpen, setFormatsOpen] = useState(false);
   const [downloadError, setDownloadError] = useState(null);
   const [downloadNotice, setDownloadNotice] = useState(null);
   const reduceMotion = useReduceMotion();
@@ -477,12 +495,38 @@ export default function EventPublishedShowcase({ navigation, route }) {
             variant="primary"
           />
 
-          {/* Les deux AUTRES images — celles que la feuille cachait. Elles sont
-              désormais à UN appui, dont l'affiche A4, seul PDF de l'écran. */}
+          {/* AC02 — LE DÉPLIANT. Toujours visible, y compris quand l'affiche
+              n'a pas pu être fabriquée : c'est lui qui garantit que les deux
+              autres formats restent TROUVABLES. Il porte leurs noms, donc on
+              sait ce qu'on ouvre avant de l'ouvrir. Même motif que
+              « Personnaliser le texte » ci-dessus (chevron + / −), sans cadre
+              ni fond : un lien, pas un quatrième bouton. */}
+          <TouchableOpacity
+            accessibilityLabel={t('showcase.otherFormats', 'Autres formats : story, A4 à imprimer')}
+            accessibilityRole="button"
+            accessibilityState={{ expanded: formatsOpen }}
+            activeOpacity={0.85}
+            hitSlop={ApplicationStyle.hitSlop.min44From32}
+            onPress={() => setFormatsOpen((open) => !open)}
+            style={styles.formatsToggle}
+          >
+            <Text style={styles.formatsToggleText}>
+              {t('showcase.otherFormats', 'Autres formats : story, A4 à imprimer')}
+            </Text>
+            <Text style={styles.editorToggleChevron}>{formatsOpen ? '−' : '+'}</Text>
+          </TouchableOpacity>
+
+          {/* Les deux AUTRES images. AA08 les avait remontées à plat pour que le
+              PDF cesse d'être inatteignable ; AC02 les range derrière le
+              dépliant ci-dessus — toujours à DEUX gestes, jamais supprimées.
+              ⚠️ `hidden` plutôt qu'une condition qui les enveloppe : envelopper
+              ré-indenterait 42 lignes de JSX et ferait basculer des lignes en
+              `max-len` (leçon du lot D21). Le diff reste d'une ligne par bloc. */}
           <ShowcaseAction
             busy={busyAction === 'story'}
             busyColor={Colors.primary500}
             disabled={busyAction != null || posterUnavailable}
+            hidden={!formatsOpen}
             hint={saveThenOpen
               ? t(
                 'showcase.storyHintSave',
@@ -502,6 +546,7 @@ export default function EventPublishedShowcase({ navigation, route }) {
             busy={busyAction === 'poster'}
             busyColor={Colors.primary500}
             disabled={busyAction != null || posterUnavailable}
+            hidden={!formatsOpen}
             hint={saveThenOpen
               ? t(
                 'showcase.posterHintSave',
@@ -729,6 +774,9 @@ const ACTION_STYLE_KEYS = {
  * @param {boolean} [props.busy] - Action en cours : indicateur à la place du texte.
  * @param {string} props.busyColor - Couleur de l'indicateur, lisible sur ce fond.
  * @param {boolean} [props.disabled]
+ * @param {boolean} [props.hidden] - Rangé derrière le dépliant : rien à rendre.
+ *   AC02 : un `if` ici plutôt qu'une condition autour de l'appel, pour ne pas
+ *   ré-indenter les blocs JSX existants (leçon du lot D21 sur la porte lint).
  * @param {string} props.hint - Ce que le bouton produit, en une phrase.
  * @param {string} props.label
  * @param {() => void} props.onPress
@@ -737,9 +785,13 @@ const ACTION_STYLE_KEYS = {
  * @returns {import('react').ReactElement}
  */
 function ShowcaseAction({
-  busy, busyColor, disabled, hint, label, onPress, styles, variant = 'ghost',
+  busy, busyColor, disabled, hidden, hint, label, onPress, styles, variant = 'ghost',
 }) {
   const styleKeys = ACTION_STYLE_KEYS[variant] || ACTION_STYLE_KEYS.ghost;
+  // ⛔ Rendu à VIDE, pas masqué : un bouton encore dans l'arbre resterait
+  // atteignable au lecteur d'écran et au clavier web, et l'écran mentirait
+  // exactement là où Adel demande qu'il ne reste qu'un geste.
+  if (hidden) return null;
   return (
     <TouchableOpacity
       accessibilityHint={hint}
@@ -824,6 +876,18 @@ const makeStyles = (Colors) => StyleSheet.create({
   editorToggleChevron: { color: Colors.primary500, fontSize: 22, fontWeight: '700' },
   editorToggleText: { color: Colors.primary500, fontSize: 16, fontWeight: '700' },
   flex: { flex: 1 },
+  // AC02 — le dépliant des autres formats. Aucun cadre, aucun fond : il ne doit
+  // pas se lire comme un bouton de plus, seulement comme une porte.
+  formatsToggle: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'center',
+    paddingVertical: 8,
+  },
+  // Sur fond sombre primary900 : primary500 = ~7,3:1, comme le dépliant du texte.
+  formatsToggleText: {
+    color: Colors.primary500, fontSize: 14, fontWeight: '600', marginRight: 8,
+  },
   ghostBtn: {
     alignItems: 'center',
     backgroundColor: Colors.primary800,
