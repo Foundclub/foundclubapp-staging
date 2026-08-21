@@ -166,6 +166,35 @@ const press = async (tree, label) => {
   await act(async () => { await node.props.onPress(); });
 };
 
+/** AC02 — le libelle du depliant qui range story et A4 derriere le partage. */
+const DEPLIANT_FORMATS = 'Autres formats : story, A4 à imprimer';
+
+/**
+ * AC02 (2026-08-21) — OUVRE LE DEPLIANT « Autres formats ».
+ * Story et A4 ne sont PLUS a l'ecran : decision d'Adel du 21/08, « je ne veux
+ * que le bouton partager ». Ils ne sont pas supprimes, ils sont a DEUX gestes.
+ * Tout temoin qui les presse ouvre donc d'abord — et c'est CE helper qui mesure
+ * les deux gestes.
+ * 🧨 IDEMPOTENT : le depliant est une BASCULE. Appele deux fois, il refermerait
+ * le panneau et l'inventaire reviendrait vide — ca se lirait comme une
+ * regression du code alors que c'est le helper qui l'aurait fabriquee.
+ * @param {any} tree
+ * @returns {Promise<void>}
+ */
+const ouvrirAutresFormats = async (tree) => {
+  const dejaOuvert = tree.root.findAll(
+    (/** @type {any} */ n) => n.props && n.props.accessibilityLabel === 'Version story 9:16',
+  ).length > 0;
+  if (dejaOuvert) return;
+  const depliant = tree.root.findAll(
+    (/** @type {any} */ n) => n.props
+      && n.props.accessibilityLabel === DEPLIANT_FORMATS
+      && typeof n.props.onPress === 'function',
+  )[0];
+  expect(depliant).toBeTruthy();
+  await act(async () => { await depliant.props.onPress(); });
+};
+
 beforeEach(() => {
   jest.clearAllMocks();
   mockFetchRenderBase64.mockResolvedValue({ base64: APERCU_BASE64, contentType: 'image/png' });
@@ -214,6 +243,7 @@ describe('T04 — ③ 🔒 partager une affiche DÉJÀ à l écran ne la refabri
   // depuis l'aperçu serait un bug bien pire — on partagerait le mauvais fichier.
   it('story et A4 demandent bien le serveur : ce sont d autres formats', async () => {
     const tree = await ecranAvecAfficheAffichee(clubParams());
+    await ouvrirAutresFormats(tree);
     await press(tree, 'Version story 9:16');
 
     const envoye = mockDownloadAndShareRender.mock.calls[0][0];

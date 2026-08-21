@@ -183,6 +183,35 @@ const press = async (tree, label) => {
   });
 };
 
+/** AC02 — le libelle du depliant qui range story et A4 derriere le partage. */
+const DEPLIANT_FORMATS = 'Autres formats : story, A4 à imprimer';
+
+/**
+ * AC02 (2026-08-21) — OUVRE LE DEPLIANT « Autres formats ».
+ * Story et A4 ne sont PLUS a l'ecran : decision d'Adel du 21/08, « je ne veux
+ * que le bouton partager ». Ils ne sont pas supprimes, ils sont a DEUX gestes.
+ * Tout temoin qui les presse ouvre donc d'abord — et c'est CE helper qui mesure
+ * les deux gestes.
+ * 🧨 IDEMPOTENT : le depliant est une BASCULE. Appele deux fois, il refermerait
+ * le panneau et l'inventaire reviendrait vide — ca se lirait comme une
+ * regression du code alors que c'est le helper qui l'aurait fabriquee.
+ * @param {any} tree
+ * @returns {Promise<void>}
+ */
+const ouvrirAutresFormats = async (tree) => {
+  const dejaOuvert = tree.root.findAll(
+    (/** @type {any} */ n) => n.props && n.props.accessibilityLabel === 'Version story 9:16',
+  ).length > 0;
+  if (dejaOuvert) return;
+  const depliant = tree.root.findAll(
+    (/** @type {any} */ n) => n.props
+      && n.props.accessibilityLabel === DEPLIANT_FORMATS
+      && typeof n.props.onPress === 'function',
+  )[0];
+  expect(depliant).toBeTruthy();
+  await act(async () => { await depliant.props.onPress(); });
+};
+
 /**
  * Serialise l arbre rendu pour verifier la presence (ou l absence) d un texte.
  * @param {any} tree
@@ -245,17 +274,28 @@ describe('AA08 — ② « Partager » reste, et envoie toujours l affiche affich
   });
 });
 
-describe('AA08 — ③ le PDF reste atteignable, et EN UN SEUL geste', () => {
-  it('🐛 « Affiche A4 a imprimer » est a l ecran, sans passer par une feuille', async () => {
+// ⚠️ RE-INTITULE le 2026-08-21 (AC02, decision d'Adel). AA08 mesurait ici
+// « EN UN SEUL geste », parce qu'il venait de retirer la feuille qui cachait les
+// formats. Adel a tranche le 21/08 : « je ne veux que le bouton partager », et
+// « les deux autres formats passent DERRIERE ».
+// ⛔ CE QUE CE BLOC PROTEGE N'A PAS BOUGE D'UN POUCE : le PDF et la story
+//   restent ATTEIGNABLES, et rien ne les cache derriere une feuille. Seul le
+//   COMPTE de gestes change : 1 -> 2, et le temoin le mesure explicitement.
+describe('AA08/AC02 — ③ le PDF reste atteignable, en DEUX gestes au plus', () => {
+  it('🐛 « Affiche A4 a imprimer » s atteint en 2 gestes, sans aucune feuille', async () => {
     const tree = await renderScreen(eventParams());
+    // Geste 1 : le depliant. Geste 2 : le format. Jamais un troisieme.
+    await ouvrirAutresFormats(tree);
     const bouton = findPressable(tree, 'Affiche A4 à imprimer');
     expect(bouton).toBeTruthy();
     await act(async () => { await bouton.props.onPress(); });
     expect(dernierFormatDemande()).toBe('a4');
+    expect(renderedText(tree)).not.toContain('Sous quel format ?');
   });
 
-  it('la version story aussi, au meme niveau', async () => {
+  it('la version story aussi, derriere le meme depliant', async () => {
     const tree = await renderScreen(eventParams());
+    await ouvrirAutresFormats(tree);
     const bouton = findPressable(tree, 'Version story 9:16');
     expect(bouton).toBeTruthy();
     await act(async () => { await bouton.props.onPress(); });
@@ -269,6 +309,7 @@ describe('AA08 — ③ le PDF reste atteignable, et EN UN SEUL geste', () => {
     panne.reason = 'render_failed';
     mockDownloadAndShareRender.mockRejectedValueOnce(panne);
     const tree = await renderScreen(eventParams());
+    await ouvrirAutresFormats(tree);
     await press(tree, 'Affiche A4 à imprimer');
     const texte = renderedText(tree);
     expect(texte).not.toContain('Vérifie ta connexion');

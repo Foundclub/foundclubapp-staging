@@ -219,6 +219,35 @@ const press = async (tree, label) => {
   });
 };
 
+/** AC02 — le libelle du depliant qui range story et A4 derriere le partage. */
+const DEPLIANT_FORMATS = 'Autres formats : story, A4 à imprimer';
+
+/**
+ * AC02 (2026-08-21) — OUVRE LE DEPLIANT « Autres formats ».
+ * Story et A4 ne sont PLUS a l'ecran : decision d'Adel du 21/08, « je ne veux
+ * que le bouton partager ». Ils ne sont pas supprimes, ils sont a DEUX gestes.
+ * Tout temoin qui les presse ouvre donc d'abord — et c'est CE helper qui mesure
+ * les deux gestes.
+ * 🧨 IDEMPOTENT : le depliant est une BASCULE. Appele deux fois, il refermerait
+ * le panneau et l'inventaire reviendrait vide — ca se lirait comme une
+ * regression du code alors que c'est le helper qui l'aurait fabriquee.
+ * @param {any} tree
+ * @returns {Promise<void>}
+ */
+const ouvrirAutresFormats = async (tree) => {
+  const dejaOuvert = tree.root.findAll(
+    (/** @type {any} */ n) => n.props && n.props.accessibilityLabel === 'Version story 9:16',
+  ).length > 0;
+  if (dejaOuvert) return;
+  const depliant = tree.root.findAll(
+    (/** @type {any} */ n) => n.props
+      && n.props.accessibilityLabel === DEPLIANT_FORMATS
+      && typeof n.props.onPress === 'function',
+  )[0];
+  expect(depliant).toBeTruthy();
+  await act(async () => { await depliant.props.onPress(); });
+};
+
 // AA08 (2026-08-20) : `openFormatSheet` a disparu avec la feuille. Les trois
 // formats sont a l'ecran, a un seul appui — c'est la demande d'Adel
 // (« enlever enregistrer l'image », et le PDF doit rester atteignable).
@@ -304,7 +333,11 @@ describe('D20 — ⑦ l ecran propose TROIS gestes, dans l ordre voulu par Adel'
   // deux vrais formats (story, A4) remontent au meme niveau, sinon le PDF
   // deviendrait inatteignable. La croix, elle, est nouvelle : l'ecran est
   // `headerShown: false` et n'avait aucune sortie visible en haut.
-  it('exactement 5 gestes : partager, story, A4, plus tard, fermer', async () => {
+  // RE-INVERSE le 2026-08-21 (AC02, decision d'Adel, capture a l'appui) :
+  // « il y a plusieurs boutons alors que je ne veux que le bouton partager ».
+  // ✅ A L'OUVERTURE : un seul geste d'envoi, le partage. Le depliant et les
+  //   deux sorties ne sont pas des envois.
+  it('a l ouverture : UN SEUL envoi visible, et c est le partage', async () => {
     const tree = await renderScreen(eventParams());
     const labels = tree.root
       .findAllByType(TouchableOpacity)
@@ -313,6 +346,24 @@ describe('D20 — ⑦ l ecran propose TROIS gestes, dans l ordre voulu par Adel'
         && !String(label).startsWith('Choisir le style'));
     expect(labels).toEqual([
       'Partager l’affiche',
+      DEPLIANT_FORMATS,
+      'Plus tard',
+      'Fermer',
+    ]);
+  });
+
+  // 🔒 L'AUTRE MOITIE DE LA MEME DECISION : « derriere », pas « supprime ».
+  it('🔒 le depliant ouvert, les DEUX formats sont la, et rien d autre', async () => {
+    const tree = await renderScreen(eventParams());
+    await ouvrirAutresFormats(tree);
+    const labels = tree.root
+      .findAllByType(TouchableOpacity)
+      .map((/** @type {any} */ node) => node.props.accessibilityLabel)
+      .filter((/** @type {any} */ label) => label && label !== 'Personnaliser le texte'
+        && !String(label).startsWith('Choisir le style'));
+    expect(labels).toEqual([
+      'Partager l’affiche',
+      DEPLIANT_FORMATS,
       'Version story 9:16',
       'Affiche A4 à imprimer',
       'Plus tard',
@@ -338,13 +389,27 @@ describe('D20 — ⑦ l ecran propose TROIS gestes, dans l ordre voulu par Adel'
   // INVERSE le 2026-08-20 (AA08). AVANT : les formats vivaient dans une
   // feuille, derriere « Enregistrer l'image ». Cette porte est retiree : ils
   // seraient morts avec elle.
-  it('les formats sont A L ECRAN, et plus aucune feuille ne les cache', async () => {
+  // RE-INVERSE le 2026-08-21 (AC02). Les formats sont RANGES, pas supprimes, et
+  // ⛔ toujours AUCUNE feuille : c'est un depliant, dans l'ecran, comme celui
+  // de « Personnaliser le texte » 40 lignes plus haut.
+  it('les formats sont DERRIERE le depliant, et toujours aucune feuille', async () => {
     const tree = await renderScreen(eventParams());
+    expect(renderedText(tree)).not.toContain('9:16');
+
+    await ouvrirAutresFormats(tree);
     const text = renderedText(tree);
     expect(text).toContain('9:16');
     expect(text).toContain('A4');
     expect(text).not.toContain('Dans mes photos');
     expect(text).not.toContain('Sous quel format ?');
+  });
+
+  // 🧭 CE QUI EMPECHE LA CHASSE AU TRESOR : le depliant NOMME ce qu'il range.
+  // Un president de club qui veut imprimer lit « A4 a imprimer » sans l'ouvrir.
+  it('🧭 le depliant DIT ce qu il contient, avant qu on l ouvre', async () => {
+    const tree = await renderScreen(eventParams());
+    expect(renderedText(tree)).toContain('A4 à imprimer');
+    expect(findPressable(tree, DEPLIANT_FORMATS)).toBeTruthy();
   });
 
   // INVERSE le 2026-08-20 (AA08). La demande du 07/08 (« le premier propose
@@ -356,6 +421,7 @@ describe('D20 — ⑦ l ecran propose TROIS gestes, dans l ordre voulu par Adel'
       'Affiche A4 à imprimer', 'Dans mes photos', 'Partager l’affiche', 'Version story 9:16',
     ];
     const tree = await renderScreen(eventParams());
+    await ouvrirAutresFormats(tree);
     const labels = tree.root
       .findAllByType(TouchableOpacity)
       .map((/** @type {any} */ node) => node.props.accessibilityLabel)
@@ -480,6 +546,7 @@ describe('EventPublishedShowcase — comportement livre (caracterisation E6)', (
   // ENVOIENT n'a pas change d'un octet — c'est le temoin de non-regression.
   it('« Version story 9:16 » envoie le PNG 9:16 (temoin de non-regression)', async () => {
     const tree = await renderScreen(clubParams());
+    await ouvrirAutresFormats(tree);
     await press(tree, 'Version story 9:16');
     expect(mockDownloadAndShareRender).toHaveBeenCalledWith(expect.objectContaining({
       format: 'story',
@@ -491,6 +558,7 @@ describe('EventPublishedShowcase — comportement livre (caracterisation E6)', (
 
   it('« Affiche A4 a imprimer » envoie le PDF A4 (temoin de non-regression)', async () => {
     const tree = await renderScreen(clubParams());
+    await ouvrirAutresFormats(tree);
     await press(tree, 'Affiche A4 à imprimer');
     expect(mockDownloadAndShareRender).toHaveBeenCalledWith(expect.objectContaining({
       format: 'a4',
@@ -557,9 +625,14 @@ describe('EventPublishedShowcase — L16, le bouton principal envoie l affiche',
   // AA08 : ils sont TROIS depuis que les formats sont remontes a l'ecran.
   // ⛔ La croix, elle, n'est JAMAIS grisee — c'est la sortie (temoin dedie
   // dans EventPublishedShowcase.AA08.test.js).
+  // AC02 : les trois envois existent toujours, deux d'entre eux derriere le
+  // depliant. ⛔ Le depliant, LUI, ne se grise jamais : sinon une affiche qui
+  // rate emporterait avec elle la seule porte vers l'A4.
   it('tant qu aucune affiche n existe, les TROIS envois sont GRISES et non muets', async () => {
     mockFetchRenderBase64.mockReturnValue(new Promise(() => {}));
     const tree = await renderScreen(clubParams());
+    expect(findPressable(tree, DEPLIANT_FORMATS).props.disabled).toBeFalsy();
+    await ouvrirAutresFormats(tree);
     ['Partager l’affiche', 'Version story 9:16', 'Affiche A4 à imprimer'].forEach((label) => {
       const node = findPressable(tree, label);
       expect(node.props.disabled).toBe(true);
@@ -570,6 +643,7 @@ describe('EventPublishedShowcase — L16, le bouton principal envoie l affiche',
 
   it('chaque bouton dit ce qu on obtient, et que l image est enregistrable', async () => {
     const tree = await renderScreen(clubParams());
+    await ouvrirAutresFormats(tree);
     expect(renderedText(tree)).toContain('enregistrer');
     const text = renderedText(tree);
     expect(text).toContain('9:16');
@@ -620,6 +694,15 @@ describe('EventPublishedShowcase — hierarchie et etats', () => {
   // partage — le seul qu'Adel a demande de garder.
   it('un seul bouton principal, et c est le partage', async () => {
     const tree = await renderScreen(clubParams());
+    const auDepart = tree.root
+      .findAllByType(TouchableOpacity)
+      .map((/** @type {any} */ node) => node.props.accessibilityLabel);
+    // 🥇 LE TEMOIN D'ADEL, mot pour mot : « je ne veux que le bouton partager ».
+    expect(auDepart).toContain('Partager l’affiche');
+    expect(auDepart).not.toContain('Version story 9:16');
+    expect(auDepart).not.toContain('Affiche A4 à imprimer');
+
+    await ouvrirAutresFormats(tree);
     const labels = tree.root
       .findAllByType(TouchableOpacity)
       .map((/** @type {any} */ node) => node.props.accessibilityLabel);
@@ -642,6 +725,7 @@ describe('EventPublishedShowcase — hierarchie et etats', () => {
   it('un echec de partage se dit a l ecran', async () => {
     mockDownloadAndShareRender.mockRejectedValue(new Error('reseau'));
     const tree = await renderScreen(clubParams());
+    await ouvrirAutresFormats(tree);
     await press(tree, 'Version story 9:16');
     expect(renderedText(tree)).toContain('Le téléchargement a échoué');
     expect(tree.root.findAllByType(Text).length).toBeGreaterThan(0);
@@ -669,6 +753,7 @@ describe('EventPublishedShowcase — L20, Android enregistre et le dit', () => {
 
   it('les formats story et A4 disent OU le fichier atterrit', async () => {
     const tree = await renderScreen(clubParams());
+    await ouvrirAutresFormats(tree);
     const text = renderedText(tree);
     expect(text).toContain('enregistrée dans ta galerie');
     expect(text).toContain('enregistré dans tes téléchargements');
@@ -727,6 +812,7 @@ describe('EventPublishedShowcase — L20, Android enregistre et le dit', () => {
       fileUri: 'file:///cache/affiche.pdf', opened: false, outcome: 'downloads',
     });
     const tree = await renderScreen(clubParams());
+    await ouvrirAutresFormats(tree);
     await press(tree, 'Affiche A4 à imprimer');
     expect(renderedText(tree)).toContain('C’est enregistré dans tes téléchargements.');
   });

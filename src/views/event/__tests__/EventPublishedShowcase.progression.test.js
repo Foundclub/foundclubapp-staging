@@ -204,6 +204,35 @@ const press = async (tree, label) => {
   await act(async () => { await node.props.onPress(); });
 };
 
+/** AC02 — le libelle du depliant qui range story et A4 derriere le partage. */
+const DEPLIANT_FORMATS = 'Autres formats : story, A4 à imprimer';
+
+/**
+ * AC02 (2026-08-21) — OUVRE LE DEPLIANT « Autres formats ».
+ * Story et A4 ne sont PLUS a l'ecran : decision d'Adel du 21/08, « je ne veux
+ * que le bouton partager ». Ils ne sont pas supprimes, ils sont a DEUX gestes.
+ * Tout temoin qui les presse ouvre donc d'abord — et c'est CE helper qui mesure
+ * les deux gestes.
+ * 🧨 IDEMPOTENT : le depliant est une BASCULE. Appele deux fois, il refermerait
+ * le panneau et l'inventaire reviendrait vide — ca se lirait comme une
+ * regression du code alors que c'est le helper qui l'aurait fabriquee.
+ * @param {any} tree
+ * @returns {Promise<void>}
+ */
+const ouvrirAutresFormats = async (tree) => {
+  const dejaOuvert = tree.root.findAll(
+    (/** @type {any} */ n) => n.props && n.props.accessibilityLabel === 'Version story 9:16',
+  ).length > 0;
+  if (dejaOuvert) return;
+  const depliant = tree.root.findAll(
+    (/** @type {any} */ n) => n.props
+      && n.props.accessibilityLabel === DEPLIANT_FORMATS
+      && typeof n.props.onPress === 'function',
+  )[0];
+  expect(depliant).toBeTruthy();
+  await act(async () => { await depliant.props.onPress(); });
+};
+
 /**
  * Presse un bouton SANS attendre la fin de son travail.
  * 🧨 Piège payé : `await onPress()` sur un téléchargement qui ne répond jamais
@@ -319,7 +348,9 @@ describe('T04 — ① l attente dit qu elle travaille, sans promettre de durée'
   it('story et A4 annoncent leur attente, et disent que c est une autre image', async () => {
     mockDownloadAndShareRender.mockReturnValue(new Promise(() => {}));
     const tree = await renderScreen(clubParams());
-    // AA08 : plus de feuille a ouvrir, le format est a l'ecran.
+    // AA08 : plus aucune feuille. AC02 : un depliant, a DEUX gestes — et
+    // l'attente s'annonce toujours au meme endroit, sous les boutons.
+    await ouvrirAutresFormats(tree);
     await pressSansAttendre(tree, 'Version story 9:16');
 
     expect(reperes(tree).length).toBeGreaterThan(0);
