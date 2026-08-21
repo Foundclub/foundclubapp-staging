@@ -27,7 +27,10 @@ import SHARE_ICON from '@/assets/icons/share2.png';
  *   avatar?: { url?: string };
  * }} User
  */
-/** @typedef {{ documentId?: string; user: User; sourceTeam?: { documentId?: string; name?: string }; participationStatus?: string; isActive?: boolean }} PendingParticipation */
+/**
+ * @typedef {{ documentId?: string; user: User; sourceTeam?: { documentId?: string;
+ *   name?: string }; participationStatus?: string; isActive?: boolean }} PendingParticipation
+ */
 /**
  * @typedef {object} ParticipationsByStatus
  * @property {User[]} participating
@@ -890,12 +893,16 @@ function ParticipantItem({
             {badge.title}
           </Text>
           {badge.value ? (
-            <Text style={[Fonts.p3Bold, { color: badge.textColor, marginTop: 2, textAlign: 'center' }]}>
+            <Text
+              style={[Fonts.p3Bold, { color: badge.textColor, marginTop: 2, textAlign: 'center' }]}
+            >
               {badge.value}
             </Text>
           ) : null}
           {arrivalTime ? (
-            <Text style={[Fonts.p4, { color: badge.textColor, marginTop: 2, textAlign: 'center' }]}>
+            <Text
+              style={[Fonts.p4, { color: badge.textColor, marginTop: 2, textAlign: 'center' }]}
+            >
               {arrivalTime}
             </Text>
           ) : null}

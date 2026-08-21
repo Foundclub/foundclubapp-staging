@@ -35,6 +35,8 @@ export const eventSchema = Joi.object({
   description: Joi.string().allow('', null),
   documentId: Joi.string(),
   eventFormat: Joi.string().allow('', null).optional(),
+  externalParticipantLimit: Joi.number().allow(null).optional(),
+  externalParticipantValidationMode: Joi.string().valid('auto', 'manual').allow(null).optional(),
   facility: Joi.object({
     documentId: Joi.string().allow(null).optional(),
     name: Joi.string().allow(null).optional(),
@@ -47,8 +49,6 @@ export const eventSchema = Joi.object({
   geohash: Joi.string().allow('', null).optional(),
   invitedTeams: Joi.array().items(Joi.object().unknown(true)).allow(null).optional(),
   isFeatured: Joi.boolean().allow(null).optional(),
-  externalParticipantLimit: Joi.number().allow(null).optional(),
-  externalParticipantValidationMode: Joi.string().valid('auto', 'manual').allow(null).optional(),
   location: Joi.object({
     lat: Joi.number().allow(null).optional(),
     lng: Joi.number().allow(null).optional(),
@@ -260,6 +260,7 @@ export const rollbackEventsByCancel = async (documentIds = []) => {
 /**
  * Get an event by ID
  * @param {string} documentId - The event ID
+ * @param params
  * @returns {Promise<FCEvent>} The event
  */
 const getEventByIdResponse = async (documentId, params = {}) => {
@@ -1480,7 +1481,8 @@ export const exportEventParticipants = async (eventId, eventName, options = {}) 
   // Android il atterrit dans le dossier Telechargements public, ou son seul nom
   // dira s il porte ou non le carnet d adresses de l equipe.
   const suffix = withoutContacts ? '_sans_coordonnees' : '';
-  const fileName = `participants_${eventName ? eventName.replace(/[^a-zA-Z0-9]/g, '_') : 'event'}${suffix}.xlsx`;
+  const safeName = eventName ? eventName.replace(/[^a-zA-Z0-9]/g, '_') : 'event';
+  const fileName = `participants_${safeName}${suffix}.xlsx`;
 
   const path = Platform.select({
     android: `${dirs.DownloadDir}/${fileName}`,
