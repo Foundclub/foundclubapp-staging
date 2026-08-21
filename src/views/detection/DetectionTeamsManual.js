@@ -179,6 +179,7 @@ function DetectionTeamsManual() {
         // un ecran qui n'arrivait jamais : `DetectionTeamsBoard` (850 lignes)
         // n'avait AUCUN appelant. Seule la DESTINATION change ici.
         [{
+          // @ts-ignore — `navigate` est bien la sur un ecran de pile.
           onPress: () => navigation.navigate(RouteNames.DetectionTeamsBoard, params),
           text: t('detection.alerts.ok'),
         }],

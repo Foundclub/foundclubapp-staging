@@ -61,6 +61,14 @@ jest.mock('@/services/eventReport/eventReportService', () => ({
   createEventReport: jest.fn(),
 }));
 
+// AD01 — la 5e doublure de service, pour la meme raison que les quatre autres :
+// ce fichier monte le VRAI `useEventMutations`, et tout module de service
+// reellement charge tire `@/services/client`, qui refuse de demarrer sans
+// `API_URL`. `saveMatchResultMutation` y est entree, sa doublure suit.
+jest.mock('@/services/matchStats/matchStatsService', () => ({
+  saveEventMatchResult: jest.fn(),
+}));
+
 jest.mock('@/services/reservation/reservationService', () => ({
   bookFullReservation: jest.fn(),
   joinReservation: jest.fn(),

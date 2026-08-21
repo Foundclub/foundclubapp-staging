@@ -144,6 +144,7 @@ function DetectionTeamsAuto() {
         // equipes, on va les PLACER. `DetectionTeamsBoard` attendait derriere
         // sans un seul appelant. Seule la DESTINATION change ici.
         [{
+          // @ts-ignore — `navigate` est bien la sur un ecran de pile.
           onPress: () => navigation.navigate(RouteNames.DetectionTeamsBoard, params),
           text: t('detection.alerts.ok'),
         }],

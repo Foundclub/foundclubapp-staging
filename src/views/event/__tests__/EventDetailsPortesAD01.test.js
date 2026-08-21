@@ -1,4 +1,4 @@
-import { Text, TextInput } from 'react-native';
+import { Alert, Text, TextInput } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
 // ==========================================================================
@@ -134,10 +134,6 @@ jest.mock('@/services/matchStats/matchStatsQueries', () => ({
   useGetEventMyMatchResponse: () => emptyQuery(),
 }));
 
-jest.mock('@/services/matchStats/matchStatsService', () => ({
-  saveEventMatchResult: (/** @type {any} */ ...args) => mockSaveEventMatchResult(...args),
-}));
-
 jest.mock('@/services/event/eventService', () => ({
   approveFeatured: jest.fn(),
   exportEventParticipants: jest.fn(),
@@ -186,6 +182,11 @@ jest.mock('../hooks/useEventMutations', () => {
       requestFeaturedMutation: idleMutation(),
       resetAttendanceMutation: idleMutation(),
       respondToEventRsvpMutation: idleMutation(),
+      saveMatchResultMutation: {
+        isPending: false,
+        mutate: jest.fn(),
+        mutateAsync: (/** @type {any} */ charge) => mockSaveEventMatchResult(charge),
+      },
       selfArrivalMutation: idleMutation(),
       selfLateMutation: idleMutation(),
       sosAlertMutation: idleMutation(),
@@ -373,8 +374,12 @@ const authPour = (/** @type {string} */ documentId, /** @type {boolean} */ peutG
   userData: { documentId, role: { name: peutGerer ? 'Dirigeant' : 'Joueur' } },
 });
 
-/** @type {any} */
-let mounted = null;
+// 🧹 Un test peut monter PLUSIEURS ecrans (trois lecteurs, trois phrases). On
+// les garde TOUS pour les demonter : l'horloge serveur d'`EventDetails` pose un
+// `setInterval` (`:1107`) qu'un ecran orphelin laisse tourner apres la fin du
+// fichier — jest ne rend alors jamais la main.
+/** @type {any[]} */
+const montes = [];
 
 const monter = (/** @type {any} */ options = {}) => {
   const {
@@ -393,8 +398,10 @@ const monter = (/** @type {any} */ options = {}) => {
   mockAttendanceQuery.data = attendance;
   mockUseAuth.mockReturnValue(auth || authPour(JOUEUR));
 
+  /** @type {any} */
+  let monte = null;
   act(() => {
-    mounted = renderer.create(
+    monte = renderer.create(
       <EventDetails
         navigation={{
           addListener: () => () => {},
@@ -407,7 +414,8 @@ const monter = (/** @type {any} */ options = {}) => {
     );
   });
 
-  return mounted.root;
+  montes.push(monte);
+  return monte.root;
 };
 
 const textOf = (/** @type {any} */ node) => {
@@ -462,13 +470,26 @@ const ouvrirLeMenu = (/** @type {any} */ root) => {
   appuyer(root, "Gérer l'événement");
 };
 
-const saisir = (/** @type {any} */ root, /** @type {number} */ rang, /** @type {string} */ valeur) => {
+const saisir = (
+  /** @type {any} */ root,
+  /** @type {number} */ rang,
+  /** @type {string} */ valeur,
+) => {
   const champs = root.findAllByType(TextInput);
   if (champs.length <= rang) {
     throw new Error(`La feuille ne porte que ${champs.length} champ(s), rang ${rang} demande.`);
   }
   act(() => {
     champs[rang].props.onChangeText(valeur);
+  });
+};
+
+// L'envoi du score est asynchrone : la feuille ne se referme qu'au tour
+// suivant. Sans ce vidage, React se plaint d'une mise a jour hors `act`.
+const viderLaFile = async () => {
+  await act(async () => {
+    await Promise.resolve();
+    await Promise.resolve();
   });
 };
 
@@ -480,6 +501,7 @@ const appelVers = (/** @type {string} */ route) => [...mockNavigate.mock.calls]
 
 beforeEach(() => {
   jest.clearAllMocks();
+  jest.spyOn(Alert, 'alert').mockImplementation(() => {});
   mockEventQuery.data = null;
   mockConvocationQuery.data = null;
   mockCompositionQuery.data = null;
@@ -489,12 +511,11 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-  if (mounted) {
-    act(() => {
-      mounted.unmount();
-    });
-    mounted = null;
-  }
+  act(() => {
+    montes.forEach((monte) => monte.unmount());
+  });
+  montes.length = 0;
+  jest.restoreAllMocks();
 });
 
 // ==========================================================================
@@ -543,7 +564,7 @@ describe('AD01 · TEMOIN 2 — trois lecteurs, trois phrases, et JAMAIS le silen
       event: buildEvent({ team: equipeSans(SPECTATEUR) }),
     });
 
-    expect(new Set([titulaire, remplacant, nonRetenu]).size).toBe(3);
+    expect(new Set([nonRetenu, remplacant, titulaire]).size).toBe(3);
   });
 
   test('sans composition publiee, la page le DIT — le silence se lit « je ne joue pas »', () => {
@@ -584,7 +605,7 @@ const detectionMontee = (/** @type {any} */ composition) => monter({
 });
 
 describe('AD01 · TEMOIN 4 — 🚪 les 1 547 lignes du terrain cessent d etre inatteignables', () => {
-  test('detection + repartition rangee : un appui ouvre le terrain, avec evenement et equipe', () => {
+  test('detection + repartition rangee : un appui ouvre le terrain', () => {
     const root = detectionMontee({
       availablePresets: [],
       detectionSplit: DETECTION_SPLIT,
@@ -681,7 +702,7 @@ const coachDevantUnMatchFini = (/** @type {any} */ matchStats) => monter({
 });
 
 describe('AD01 · TEMOIN 6 — ✍️ deux champs suffisent a ecrire 3-1', () => {
-  test('saisir 3 et 1 puis valider envoie le score — sans ouvrir les 1 615 lignes', () => {
+  test('saisir 3 et 1 puis valider envoie le score — sans ouvrir les 1 615 lignes', async () => {
     const root = coachDevantUnMatchFini(statsSansScore());
 
     ouvrirLeMenu(root);
@@ -690,12 +711,21 @@ describe('AD01 · TEMOIN 6 — ✍️ deux champs suffisent a ecrire 3-1', () =>
     saisir(root, 0, '3');
     saisir(root, 1, '1');
     appuyer(root, 'Valider le score');
+    await viderLaFile();
 
-    expect(mockSaveEventMatchResult).toHaveBeenCalledWith(
-      'event-1',
-      { scoreAgainst: 1, scoreFor: 3, teamId: TEAM_ID },
-    );
+    expect(mockSaveEventMatchResult).toHaveBeenCalledWith({
+      eventId: 'event-1',
+      scoreAgainst: 1,
+      scoreFor: 3,
+      teamId: TEAM_ID,
+    });
     expect(routesEmpruntees()).not.toContain('MatchStatsEditor');
+    // ⛔ Pas de silence apres coup : la feuille se referme, la page relit le
+    // score, et l'ecran le DIT.
+    expect(root.findAllByType(TextInput)).toHaveLength(0);
+    expect(mockRefetchMatchStats).toHaveBeenCalled();
+    expect(jest.mocked(Alert.alert).mock.calls.map((appel) => appel[0]))
+      .toContain('Score enregistré');
   });
 
   test('un seul champ rempli : le bouton reste ferme, et il DIT pourquoi', () => {
@@ -725,7 +755,7 @@ describe('AD01 · TEMOIN 6 — ✍️ deux champs suffisent a ecrire 3-1', () =>
 });
 
 describe('AD01 · TEMOIN 7 — 🔒 un score verrouille ne se reecrit pas', () => {
-  test('la feuille s ouvre en lecture seule, le bouton est ferme, et le motif est a l ecran', () => {
+  test('feuille en lecture seule, bouton ferme, et le motif est a l ecran', () => {
     const root = coachDevantUnMatchFini(statsSansScore({ locked: true, source: 'external_sync' }));
 
     ouvrirLeMenu(root);

@@ -26,6 +26,7 @@ import {
   deleteEventParticipation,
 } from '@/services/eventParticipation/eventParticipationService';
 import { createEventReport } from '@/services/eventReport/eventReportService';
+import { saveEventMatchResult } from '@/services/matchStats/matchStatsService';
 import {
   bookFullReservation,
   joinReservation,
@@ -135,6 +136,29 @@ export const useEventMutations = (eventId, refetch, refetchParticipations) => {
       refetch();
       refetchParticipations();
     },
+  });
+
+  // AD01 (✍️) — LE SCORE EN DEUX CHIFFRES.
+  //
+  // `saveEventMatchResult` existait de bout en bout — service, route serveur,
+  // regle metier — avec ZERO appelant : pour ecrire « 3-1 », un coach devait
+  // ouvrir `MatchStatsEditor` et ses 1 615 lignes.
+  //
+  // 🏠 Il entre ici, et pas en import direct dans `EventDetails.js`, parce que
+  // c'est ici que vivent TOUTES les ecritures de cet ecran. Le detail compte :
+  // chaque module de service importe par `EventDetails` doit etre double dans
+  // CHACUN de ses 16 fichiers de temoins, faute de quoi le vrai
+  // `@/services/client` se charge et refuse de demarrer sans `API_URL`. Ce hook
+  // est deja double partout ⇒ un appelant de plus ne coute rien a personne.
+  //
+  // ⛔ Le rafraichissement est laisse a l'appelant (`refetchMatchStats`) : c'est
+  // la requete des stats qui porte le score, pas celle de l'evenement.
+  const saveMatchResultMutation = useMutation({
+    mutationFn: (/** @type {any} */ variables) => saveEventMatchResult(variables?.eventId, {
+      scoreAgainst: variables?.scoreAgainst,
+      scoreFor: variables?.scoreFor,
+      teamId: variables?.teamId,
+    }),
   });
 
   const respondToEventRsvpMutation = useMutation({
@@ -442,6 +466,7 @@ export const useEventMutations = (eventId, refetch, refetchParticipations) => {
     requestFeaturedMutation,
     resetAttendanceMutation,
     respondToEventRsvpMutation,
+    saveMatchResultMutation,
     selfArrivalMutation,
     selfLateMutation,
     sosAlertMutation,
