@@ -41,6 +41,7 @@ import {
   getEventById,
   requestFeatured,
   rollbackEventsByCancel,
+  saveEventCompositionDraft,
 } from '@/services/event/eventService';
 
 import EventTasksEditor from '../components/EventTasksEditor';
@@ -692,6 +693,65 @@ function EventWizardRecap({ navigation }) {
       .filter((item) => item.result.status === 'rejected');
   };
 
+  /**
+   * AC04 — LA CONVOCATION, REJOUEE UNE FOIS L'EVENEMENT NE.
+   *
+   * 🎯 C'est le point dur du lot, et il n'a qu'une reponse honnete : une
+   * convocation se pose SUR un evenement, or a l'etape Participants l'evenement
+   * n'existe pas encore. Les joueurs coches voyagent donc dans le tunnel
+   * (`matchCallUpPlayerIds`), et c'est ICI — le premier instant ou un
+   * `documentId` existe — qu'ils deviennent un vrai brouillon de composition,
+   * par la route que `MatchCallUpSelection` emprunte deja.
+   *
+   * ⛔ CE GESTE NE PEUT PAS FAIRE ECHOUER LA CREATION. Deux raisons mesurees :
+   *  1. la route est derriere un mur d'abonnement — `composition.manage`,
+   *     offres Equipe/Club (`admin/src/api/event/controllers/event.ts:519`) :
+   *     un organisateur GRATUIT recevra un 403, et son match doit exister quand
+   *     meme ;
+   *  2. l'evenement est deja cree quand on arrive ici. Remonter l'erreur
+   *     declencherait la bannière d'echec sur un succes.
+   * ⇒ `allSettled`, et on ne regarde meme pas le resultat. La convocation se
+   * reprend depuis la fiche du match, ou elle vit normalement.
+   *
+   * 📌 Un BROUILLON, pas une publication : personne n'est prevenu tant que
+   * l'organisateur n'a pas appuye sur « Publier la convocation ».
+   * @param {any[]} created Les evenements rendus par le serveur.
+   * @returns {Promise<void>} Rien — les echecs sont volontairement avales.
+   */
+  const saveCallUpForCreatedEvents = async (created = []) => {
+    if (!isMatchEventType(state?.type?.name)) return;
+
+    const calledUpIds = Array.isArray(state?.matchCallUpPlayerIds)
+      ? state.matchCallUpPlayerIds.map((value) => String(value || '').trim()).filter(Boolean)
+      : [];
+    if (calledUpIds.length === 0) return;
+
+    const teamId = String(state?.team?.documentId || state?.team?.id || '');
+    const createdEventIds = Array.from(new Set(
+      created.map((item) => String(item?.documentId || '').trim()).filter(Boolean),
+    ));
+    if (!teamId || createdEventIds.length === 0) return;
+
+    await Promise.allSettled(createdEventIds.map((eventId) => saveEventCompositionDraft(eventId, {
+      // ⛔ Aucun mecanisme neuf : c'est la forme que `buildMatchCompositionPack`
+      // produit deja, reduite a ce qu'une convocation SANS placement contient.
+      // Le terrain, les postes et les remplacants se remplissent plus tard,
+      // depuis la fiche du match.
+      draft: {
+        manualPlayers: [],
+        mode: 'manual',
+        placementMode: 'free',
+        requireResponse: true,
+        reservePlayerIds: [],
+        schemaVersion: 3,
+        selectedPlayerIds: calledUpIds,
+        teams: [],
+        visibility: 'team',
+      },
+      teamId,
+    })));
+  };
+
   const finalizeSuccess = async (created) => {
     const firstCreatedId = created.find((item) => item.documentId)?.documentId;
     const eventQuotaSnapshot = eventPublishQuotaItem
@@ -702,6 +762,9 @@ function EventWizardRecap({ navigation }) {
       }
       : null;
     const featuredFailures = await requestFeaturedForCreatedEvents(created);
+    // AC04 — avant le `RESET` du tunnel, sinon les joueurs coches auraient
+    // deja disparu de l'etat au moment de les envoyer.
+    await saveCallUpForCreatedEvents(created);
     // Lance les six d'un coup et n'attend rien : voir le pourquoi chiffre sur
     // `refreshCachesAfterEventCreation`.
     refreshCachesAfterEventCreation(queryClient);

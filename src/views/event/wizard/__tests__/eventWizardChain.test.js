@@ -146,7 +146,15 @@ jest.mock('@/domains/auth/useAuth', () => {
 // Le Recap tire six dependances de plus que les autres ecrans. On les remplace
 // pour pouvoir le RENDRE : c'est la seule facon de prouver que son lien
 // « Modifier » mene bien aux invitations.
-jest.mock('@tanstack/react-query', () => ({ useQueryClient: () => ({ invalidateQueries: () => {} }) }));
+// AC04 — deux etapes lisent desormais le serveur : « Contre qui ? » cherche des
+// clubs (`useSearchClubs`) et « Participants » rappelle l'effectif de l'equipe
+// (`useGetTeam`). Ce fichier mesure la CHAINE, pas les donnees : la doublure
+// rend donc « rien trouve », ce qui laisse les deux ecrans identiques a
+// eux-memes.
+jest.mock('@tanstack/react-query', () => ({
+  useQuery: () => ({ data: undefined, isLoading: false }),
+  useQueryClient: () => ({ invalidateQueries: () => {} }),
+}));
 
 jest.mock('@/domains/event/useEvent', () => ({
   __esModule: true,
@@ -200,6 +208,9 @@ jest.mock('@/services/event/eventQueries', () => ({
 // Rendre le tableau d'equipes directement donne une liste VIDE sans la moindre
 // erreur — l'ecran affiche alors « Créer une équipe » et le tunnel s'arrete.
 jest.mock('@/services/team/teamQueries', () => ({
+  // AC04 — l'effectif complet, rappele par l'etape Participants pour porter la
+  // convocation d'un match. Vide ici : ce fichier mesure la CHAINE.
+  useGetTeam: () => ({ data: undefined, isLoading: false }),
   useGetTeams: () => ({
     data: { pages: [{ data: mockDonnees.equipes }] },
     error: null,

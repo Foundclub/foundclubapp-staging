@@ -10,15 +10,25 @@ import {
 
 import useTheme from '@/theme/themeContext';
 
+import Checkbox from '@/components/atoms/checkbox/Checkbox';
+import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 import SegmentedControl from '@/components/molecules/segmentedControl/SegmentedControl';
 import WizardStepLayout from '@/components/molecules/wizardStepLayout/WizardStepLayout';
 import PositionSelectionList from '@/components/organisms/positionSelectionList/PositionSelectionList';
 
 import { RouteNames } from '@/navigation/routeNames';
 
+import { useGetTeam } from '@/services/team/teamQueries';
+
+import {
+  getCompositionPlayerId,
+  getCompositionPlayerLabel,
+} from '@/utils/compositionPlayer';
+
 import { getPositionValuesForSport } from '@/constants/positions';
 import { useEventWizard } from './EventWizardContext';
 import {
+  getDefaultCapacityModeForEventType,
   getEventWizardExitRoute,
   getEventWizardNextRoute,
   getEventWizardParticipantsStepIndex,
@@ -26,6 +36,7 @@ import {
   getEventWizardStepCount,
   shouldExplainDetectionSlotsDisabled,
   shouldOfferDetectionSlots,
+  shouldOfferMatchCallUp,
   shouldSkipEventWizardParticipantsStep,
 } from './eventWizardDetectionUtils';
 
@@ -104,9 +115,15 @@ function EventWizardParticipants({ navigation, route }) {
   // l'organisateur et rouvrirait sur « Capacite fixe ».
   // ⚠️ `buildWizardFormData` (Recap) ne lit que des champs nommes : ce marqueur
   // ne part donc PAS au serveur.
-  const [capacityMode, setCapacityMode] = useState(
-    state.capacityMode === 'unlimited' ? 'unlimited' : 'fixed',
-  );
+  //
+  // AC04 — TROIS etats, pas deux : `unlimited`, `fixed`, et `null` = « pas
+  // encore tranche ». Seul le troisieme laisse le TYPE decider, et c'est ce qui
+  // ouvre un match sur « Illimite » sans jamais ecraser un choix fait a la main.
+  const [capacityMode, setCapacityMode] = useState(() => (
+    state.capacityMode === 'unlimited' || state.capacityMode === 'fixed'
+      ? state.capacityMode
+      : getDefaultCapacityModeForEventType(state.type?.name)
+  ));
   const [capacityValue, setCapacityValue] = useState(state.capacity || DEFAULT_CAPACITY);
   const [externalParticipantLimitValue, setExternalParticipantLimitValue] = useState(
     state.externalParticipantLimit || 3,
@@ -118,6 +135,55 @@ function EventWizardParticipants({ navigation, route }) {
   const initialSlots = useMemo(() => normalizeSlots(state.detectionSlots), [state.detectionSlots]);
   const [areSlotsEnabled, setAreSlotsEnabled] = useState(initialSlots.length > 0);
   const [slots, setSlots] = useState(initialSlots);
+
+  // AC04 — LA CONVOCATION D'UN MATCH.
+  //
+  // 🧩 On ne reecrit pas `MatchCallUpSelection` : cet ecran-la se pose SUR un
+  // evenement existant (il lit `event.team.players`, pre-coche depuis la
+  // composition deja enregistree, et enchaîne sur le terrain). Ici l'evenement
+  // n'existe pas encore. Ce qui est reutilise, ce sont les briques partagees —
+  // `Checkbox`, `ProfileAvatar`, `getCompositionPlayerId/Label` — et surtout la
+  // MEME donnee de sortie : une liste d'identifiants de joueurs, que le Recap
+  // envoie ensuite dans `draft.selectedPlayerIds`.
+  //
+  // 🚨 Pourquoi on RAPPELLE l'equipe : l'etape 2 la depose dans le tunnel via
+  // `useGetTeams({ summary: true })`, et ce mode ne rend des joueurs que leur
+  // `documentId` (`teamService.js:194`). Sans ce rappel, la liste afficherait
+  // trois fois « Joueur ».
+  const shouldOfferCallUp = shouldOfferMatchCallUp(state);
+  const organizerTeamId = String(state.team?.documentId || state.team?.id || '');
+  const { data: fullOrganizerTeam } = useGetTeam(organizerTeamId, {
+    enabled: shouldOfferCallUp && Boolean(organizerTeamId),
+  });
+  const squadPlayers = useMemo(() => {
+    /** @type {any[]} */
+    const source = fullOrganizerTeam?.players || [];
+    return source.filter((player) => Boolean(getCompositionPlayerId(player)));
+  }, [fullOrganizerTeam?.players]);
+
+  const [calledUpIds, setCalledUpIds] = useState(
+    /** @type {string[]} */ (Array.isArray(state.matchCallUpPlayerIds)
+      ? state.matchCallUpPlayerIds
+      : []),
+  );
+  // « A-t-on deja touche a la liste ? » — sans ce marqueur, une convocation
+  // videe a la main serait recochee en entier au rendu suivant.
+  const [hasTouchedCallUp, setHasTouchedCallUp] = useState(
+    Array.isArray(state.matchCallUpPlayerIds) && state.matchCallUpPlayerIds.length > 0,
+  );
+
+  // L'effectif de base EST la convocation de depart : on decoche les absents.
+  useEffect(() => {
+    if (!shouldOfferCallUp || hasTouchedCallUp || squadPlayers.length === 0) return;
+    setCalledUpIds(squadPlayers.map(getCompositionPlayerId));
+  }, [hasTouchedCallUp, shouldOfferCallUp, squadPlayers]);
+
+  const handleToggleCallUp = (/** @type {string} */ playerId) => {
+    setHasTouchedCallUp(true);
+    setCalledUpIds((current) => (current.includes(playerId)
+      ? current.filter((identifiant) => identifiant !== playerId)
+      : [...current, playerId]));
+  };
 
   const isReservation = useMemo(
     () => isReservationTypeName(state.type?.name),
@@ -252,7 +318,14 @@ function EventWizardParticipants({ navigation, route }) {
   // que le lot s'interdit. Une cle neuve porte donc la copy du pack.
   let participantsSubtitleKey = 'eventWizard.steps.participants.subtitleQuestion';
   let participantsSubtitleFallback = "Combien de joueurs peuvent s'inscrire ?";
-  if (isTraining && isOpenTraining) {
+  if (shouldOfferCallUp) {
+    // AC04 — sur un match, la question de l'etape n'est plus « combien ? » mais
+    // « qui ? ». Cle neuve, meme raison qu'au-dessus : `fr.js` gagne toujours
+    // sur le repli, et retoucher une valeur existante compterait comme une
+    // suppression dans le diff.
+    participantsSubtitleKey = 'eventWizard.steps.participants.matchCallUpSubtitle';
+    participantsSubtitleFallback = 'Coche les joueurs que tu convoques.';
+  } else if (isTraining && isOpenTraining) {
     participantsSubtitleKey = 'eventWizard.steps.participants.trainingOpenSubtitle';
     participantsSubtitleFallback = 'Définis uniquement combien de joueurs externes a l équipe tu veux accepter.';
   } else if (isTraining) {
@@ -312,6 +385,17 @@ function EventWizardParticipants({ navigation, route }) {
       },
       type: 'SET_PARTICIPANTS',
     });
+
+    // AC04 — le choix de convocation, garde en memoire jusqu'a la creation.
+    // ⛔ Meme garde que les postes : on n'ecrit que si la section etait offerte.
+    if (shouldOfferCallUp) {
+      dispatch({
+        payload: squadPlayers
+          .map(getCompositionPlayerId)
+          .filter((playerId) => calledUpIds.includes(playerId)),
+        type: 'SET_MATCH_CALL_UP',
+      });
+    }
 
     // D58 — l'enregistrement que faisait l'ecran fusionne, au meme format.
     // ⛔ Uniquement quand la section est offerte : hors de ce cas l'ancien ecran
@@ -466,6 +550,84 @@ function EventWizardParticipants({ navigation, route }) {
               </View>
             ) : null}
           </>
+        ) : null}
+
+        {/* AC04 — LA CONVOCATION : l'effectif de l'equipe, a cocher. C'est la
+            reponse au constat ① d'Adel du 2026-08-20. */}
+        {shouldOfferCallUp ? (
+          <View style={[ApplicationStyle.card, Spaces.padding[16], Spaces.gap[12], surfaceStyle]}>
+            <View style={[Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween]}>
+              <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
+                {t('eventWizard.steps.participants.matchCallUpTitle', 'Convocation')}
+              </Text>
+              <Text style={[Fonts.p3, Fonts.neutral300]}>
+                {t(
+                  'eventWizard.steps.participants.matchCallUpCount',
+                  '{{count}} sur {{total}}',
+                  { count: calledUpIds.length, total: squadPlayers.length },
+                )}
+              </Text>
+            </View>
+
+            {squadPlayers.length === 0 ? (
+              <Text style={[Fonts.p3, Fonts.neutral300, { lineHeight: 18 }]}>
+                {t(
+                  'eventWizard.steps.participants.matchCallUpEmpty',
+                  "Cette équipe n'a encore aucun joueur. Tu pourras convoquer depuis la fiche du match.",
+                )}
+              </Text>
+            ) : null}
+
+            {squadPlayers.map((/** @type {any} */ player) => {
+              const playerId = getCompositionPlayerId(player);
+              const playerLabel = getCompositionPlayerLabel(player);
+              const isCalledUp = calledUpIds.includes(playerId);
+
+              return (
+                <TouchableOpacity
+                  accessibilityLabel={playerLabel}
+                  accessibilityRole="button"
+                  key={`call-up-${playerId}`}
+                  onPress={() => handleToggleCallUp(playerId)}
+                  style={[
+                    Alignments.row,
+                    Alignments.alignCenter,
+                    Spaces.gap[12],
+                    { minHeight: 44, opacity: isCalledUp ? 1 : 0.55 },
+                  ]}
+                >
+                  <Checkbox
+                    disabled={false}
+                    onValueChange={() => handleToggleCallUp(playerId)}
+                    value={isCalledUp}
+                  />
+                  <ProfileAvatar
+                    enablePreview={false}
+                    imageUrl={player?.avatar || null}
+                    name={playerLabel}
+                    size={32}
+                  />
+                  <Text
+                    numberOfLines={1}
+                    style={[Fonts.p2, Fonts.neutral00, { flex: 1 }]}
+                  >
+                    {playerLabel}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+
+            {/* La ligne dit la CONSEQUENCE, comme le reste de l'etape : la
+                convocation part en BROUILLON, elle ne previent encore
+                personne. C'est « Publier la convocation », depuis la fiche du
+                match, qui la rend visible aux joueurs. */}
+            <Text style={[Fonts.p3, Fonts.neutral300, { lineHeight: 18 }]}>
+              {t(
+                'eventWizard.steps.participants.matchCallUpHint',
+                'Tu pourras encore la modifier, puis la publier depuis la fiche du match.',
+              )}
+            </Text>
+          </View>
         ) : null}
 
         {shouldCollectInternalPlayers ? (
