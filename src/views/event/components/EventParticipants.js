@@ -1,8 +1,11 @@
 // @ts-nocheck
+import { useIsMutating } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import {
   Image, Text, TouchableOpacity, View,
 } from 'react-native';
+
+import { REMIND_EVENT_MUTATION_KEY } from '@/domains/event/remindReport';
 
 import useTheme from '@/theme/themeContext';
 
@@ -251,6 +254,11 @@ function EventParticipants({
     Alignments, ApplicationStyle, Colors, Fonts, Spaces,
   } = useTheme();
   const { t } = useTranslation();
+  // AC07 : le bouton se grise TANT QUE la relance est en vol. On lit l etat de
+  // la mutation par sa clef plutot que par une prop : `EventDetails` n a rien a
+  // faire descendre, et les deux boutons « Relancer » de cet ecran se grisent
+  // ensemble — ils declenchent le meme envoi.
+  const isReminding = useIsMutating({ mutationKey: REMIND_EVENT_MUTATION_KEY }) > 0;
   const areParticipantIdentitiesHidden = event?.participantIdentitiesHidden === true;
 
   const renderParticipant = (player, options = {}) => {
@@ -427,7 +435,7 @@ function EventParticipants({
                 {t('eventDetails.participationStatus.notAnswered')}
               </Text>
               {canEdit ? (
-                <Button isOption onPress={handleRemindPlayers} title={t('eventDetails.actions.remind')} variant="Primary" />
+                <Button isLoading={isReminding} isOption onPress={handleRemindPlayers} title={t('eventDetails.actions.remind')} variant="Primary" />
               ) : null}
             </View>
             {section.notAnswered.map((player) => renderParticipant(player, {
@@ -571,7 +579,7 @@ function EventParticipants({
                   {t('eventDetails.participationStatus.notAnswered')}
                 </Text>
                 {canEdit ? (
-                  <Button isOption onPress={handleRemindPlayers} title={t('eventDetails.actions.remind')} variant="Primary" />
+                  <Button isLoading={isReminding} isOption onPress={handleRemindPlayers} title={t('eventDetails.actions.remind')} variant="Primary" />
                 ) : null}
               </View>
               {(participationsByStatus.notAnswered || []).map((player) => renderParticipant(player, {

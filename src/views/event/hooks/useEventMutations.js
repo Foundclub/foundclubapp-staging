@@ -3,6 +3,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { Alert } from 'react-native';
 
+import { buildRemindMessage, REMIND_EVENT_MUTATION_KEY } from '@/domains/event/remindReport';
 import { getParticipationErrorMessage } from '@/domains/participation/participationFlow';
 
 import {
@@ -195,13 +196,32 @@ export const useEventMutations = (eventId, refetch, refetchParticipations) => {
     },
   });
 
+  // AC07 — la relance dit ce qui s est REELLEMENT passe.
+  //
+  // Avant : `onSuccess` affichait « Ta relance a bien ete envoyee » sans
+  // regarder la reponse, et il n y avait AUCUN `onError`. Un coach qui appuyait
+  // deux fois en 48 h lisait donc deux fois « c est parti » alors que
+  // l anti-spam avait tout ecarte ; et une relance en panne ne disait rien.
+  //
+  // La `mutationKey` n est pas decorative : c est par elle que le bouton se
+  // grise pendant l envoi (`EventParticipants`), sans avoir a faire descendre
+  // un drapeau depuis l ecran.
   const remindEventMutation = useMutation({
     mutationFn: remindUnansweredPlayers,
-    onSuccess: () => {
+    mutationKey: REMIND_EVENT_MUTATION_KEY,
+    onError: (error) => {
+      // La CONSEQUENCE est collee a la raison : le serveur explique pourquoi,
+      // mais c est « personne n a ete prevenu » qui manquait — et c est la
+      // seule phrase qui empeche le coach de croire sa relance partie.
+      const raison = getParticipationErrorMessage(error, 'Le serveur n a pas repondu.');
       Alert.alert(
-        t('eventDetails.modals.remindSuccess.title'),
-        t('eventDetails.modals.remindSuccess.description'),
+        'La relance n a pas pu partir',
+        `${raison} Personne n a ete prevenu : reessaie dans un instant.`,
       );
+    },
+    onSuccess: (report) => {
+      const message = buildRemindMessage(report);
+      Alert.alert(message.title, message.description);
     },
   });
 

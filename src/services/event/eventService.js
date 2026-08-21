@@ -1236,13 +1236,51 @@ export const respondToEventRsvp = async (eventId, answer, meta = {}) => {
 };
 
 /**
- * Send reminders to players who haven't answered
- * @param {string} eventId - The ID of the event
- * @returns {Promise<any>} - Response from API
+ * @typedef {object} RemindReport
+ * @property {number} blockedCount - Personnes ecartees par l anti-spam de 48 h.
+ * @property {string | null} lastRemindedAt - Date de la derniere relance recue.
+ * @property {string | null} nextReminderAt - Date de la prochaine relance possible.
+ * @property {string[]} recipients - Identifiants des personnes relancees.
+ * @property {number} remindedCount - Nombre de personnes reellement relancees.
+ * @property {number} unansweredCount - Personnes sans reponse au moment de l appel.
  */
-export const remindUnansweredPlayers = async (eventId) => {
-  const response = await client.post(`/events/${eventId}/remind-unanswered-players`);
-  return response.data;
+
+/**
+ * Relance les joueur.se.s qui n ont pas encore repondu.
+ *
+ * AC07 : le serveur rend desormais un COMPTE RENDU et non plus une liste
+ * ignoree — combien de personnes ont ete relancees, combien ont ete ecartees
+ * par l anti-spam de 48 h, et a partir de quand une relance touchera de
+ * nouveau quelqu un. C est ce compte rendu qui permet a l ecran d arreter de
+ * dire « c est envoye » quand rien n est parti.
+ * @param {string | { eventId: string, teamId?: string | null }} input - L evenement vise.
+ * @returns {Promise<RemindReport>} - Le compte rendu de la relance.
+ */
+export const remindUnansweredPlayers = async (input) => {
+  const eventId = typeof input === 'string' ? input : input?.eventId;
+  const teamId = typeof input === 'string' ? null : (input?.teamId || null);
+
+  const response = await client.post(`/events/${eventId}/remind-unanswered-players`, {
+    data: { teamId },
+  });
+
+  const body = response?.data?.data ?? response?.data ?? {};
+  // Un serveur d une version anterieure rendait la LISTE seule. On la lit comme
+  // telle plutot que d annoncer zero relance a tort : mentir dans l autre sens
+  // reste mentir.
+  const report = Array.isArray(body) ? { recipients: body } : body;
+  const recipients = Array.isArray(report?.recipients) ? report.recipients : [];
+
+  return {
+    blockedCount: Number(report?.blockedCount) || 0,
+    lastRemindedAt: report?.lastRemindedAt || null,
+    nextReminderAt: report?.nextReminderAt || null,
+    recipients,
+    remindedCount: Number.isFinite(Number(report?.remindedCount))
+      ? Number(report.remindedCount)
+      : recipients.length,
+    unansweredCount: Number(report?.unansweredCount) || 0,
+  };
 };
 
 /**
