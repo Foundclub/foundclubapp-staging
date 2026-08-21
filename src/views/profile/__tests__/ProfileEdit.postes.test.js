@@ -93,6 +93,16 @@ jest.mock('@/services/auth/authService', () => ({ updateMe: jest.fn() }));
 jest.mock('@/services/level/levelQueries', () => ({ useGetLevels: () => ({ data: [] }) }));
 jest.mock('@/services/section/sectionQueries', () => ({ useGetSections: () => ({ data: [] }) }));
 
+// AC03 — le sport et la categorie viennent desormais des listes du SERVEUR.
+// Sans ces doublures, l'ecran tire le vrai client HTTP et la suite ne se charge
+// meme pas (« API_URL is missing »), comme pour les niveaux et les sections.
+jest.mock('@/services/activity/activityQueries', () => ({
+  useGetActivities: () => ({ data: [{ documentId: 'act-1', name: 'Football' }] }),
+}));
+jest.mock('@/services/category/categoryQueries', () => ({
+  useGetCategories: () => ({ data: [{ documentId: 'cat-1', name: 'U13 (13 ans)' }] }),
+}));
+
 // Le VRAI theme, sans le contexte React qui le porte.
 jest.mock('@/theme/themeContext', () => {
   const genererCouleurs = jest.requireActual('@/theme/colors').default;

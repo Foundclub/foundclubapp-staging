@@ -26,8 +26,14 @@ import SelectAvatar from '@/components/molecules/selectAvatar/SelectAvatar';
 import TutorialFlowBoundary from '@/components/molecules/tutorial/TutorialFlowBoundary';
 import AutocompleteAddressInput from '@/components/organisms/autocompleteAddressInput/autocompleteAddressInput';
 import ScreenContainer from '@/components/templates/ScreenContainer';
+import {
+  buildChoiceOptions,
+  resolveChoiceValues,
+} from '@/views/profile/profileFormContract';
 
+import { useGetActivities } from '@/services/activity/activityQueries';
 import { updateMe } from '@/services/auth/authService';
+import { useGetCategories } from '@/services/category/categoryQueries';
 import { emitCelebrationBanner } from '@/services/celebrations/celebrationRuntime';
 import { useGetLevels } from '@/services/level/levelQueries';
 import {
@@ -57,27 +63,6 @@ const defaultValues = {
   section: '',
   weight: '',
 };
-
-const categoryOptions = [
-  { label: 'U7', value: 'U7' },
-  { label: 'U8', value: 'U8' },
-  { label: 'U9', value: 'U9' },
-  { label: 'U10', value: 'U10' },
-  { label: 'U11', value: 'U11' },
-  { label: 'U12', value: 'U12' },
-  { label: 'U13', value: 'U13' },
-  { label: 'U14', value: 'U14' },
-  { label: 'U15', value: 'U15' },
-  { label: 'U16', value: 'U16' },
-  { label: 'U17', value: 'U17' },
-  { label: 'U18', value: 'U18' },
-  { label: 'U19', value: 'U19' },
-  { label: 'U20', value: 'U20' },
-  { label: 'U21', value: 'U21' },
-  { label: 'U23', value: 'U23' },
-  { label: 'Senior', value: 'Senior' },
-  { label: 'Veteran', value: 'Veteran' },
-];
 
 const buildProfileFormValues = (userData, formatBirthdateToDisplay) => ({
   ...defaultValues,
@@ -137,6 +122,10 @@ function ProfileEditWeb({ navigation, route }) {
   const { t } = useTranslation();
   const { data: sections } = useGetSections();
   const { data: levels } = useGetLevels();
+  // AC03 — les listes de reference viennent du SERVEUR, comme sur le telephone
+  // et comme a l'inscription. Aucune liste n'est plus ecrite ici.
+  const { data: activities } = useGetActivities();
+  const { data: categories } = useGetCategories();
   const {
     formatBirthdateToDisplay,
     formatBirthdateToSend,
@@ -154,6 +143,8 @@ function ProfileEditWeb({ navigation, route }) {
   const [formErrors, setFormErrors] = useState(/** @type {Record<string, string>} */ ({}));
   const [parentalDeclarationChecked, setParentalDeclarationChecked] = useState(false);
   const [submitErrorMessage, setSubmitErrorMessage] = useState('');
+  const [sportSearch, setSportSearch] = useState('');
+  const [categorySearch, setCategorySearch] = useState('');
   const hydratedUserKeyRef = useRef(null);
   const hydratedSignatureRef = useRef('');
   const inputRefs = useRef({});
@@ -257,27 +248,6 @@ function ProfileEditWeb({ navigation, route }) {
   const setInputRef = (fieldName) => (ref) => {
     inputRefs.current[fieldName] = ref;
   };
-
-  const getSportOptions = useMemo(() => {
-    const defaultSports = [
-      { label: 'Football', value: 'football' },
-      { label: 'Basketball', value: 'basketball' },
-      { label: 'Handball', value: 'handball' },
-      { label: 'Volleyball', value: 'volleyball' },
-      { label: 'Autre', value: 'other' },
-    ];
-
-    if (
-      userData?.preferredSport
-      && !defaultSports.find((sport) => sport.value === userData.preferredSport)
-    ) {
-      const label = userData.preferredSport.charAt(0).toUpperCase()
-        + userData.preferredSport.slice(1);
-      defaultSports.unshift({ label, value: userData.preferredSport });
-    }
-
-    return defaultSports;
-  }, [userData?.preferredSport]);
 
   // Meme source que l'inscription (`UserPosition`) : sans ca, le poste choisi a
   // l'inscription ne se retrouve pas ici.
@@ -489,13 +459,16 @@ function ProfileEditWeb({ navigation, route }) {
                 <AutocompleteSelect
                   error={formErrors.category}
                   isMulti
+                  isSearchable
                   label={t('profile.fields.category.label', 'Categorie')}
-                  options={categoryOptions}
+                  options={buildChoiceOptions(categories, formValues.category, categorySearch)}
                   placeholder={t('profile.fields.category.placeholder', 'Sélectionner une catégorie')}
+                  searchValue={categorySearch}
+                  setSearchValue={setCategorySearch}
                   setValue={(options) => {
                     setFieldValue('category', options?.map((option) => option.value).join(', ') || '');
                   }}
-                  value={formValues.category ? formValues.category.split(', ').filter(Boolean) : []}
+                  value={resolveChoiceValues(categories, formValues.category)}
                 />
 
                 {profileFields?.includes('height') ? (
@@ -515,14 +488,17 @@ function ProfileEditWeb({ navigation, route }) {
 
                 <AutocompleteSelect
                   error={formErrors.preferredSport}
+                  isSearchable
                   label={t('profile.fields.preferredSport.label', 'Sport de préférence')}
-                  options={getSportOptions}
+                  options={buildChoiceOptions(activities, formValues.preferredSport, sportSearch)}
                   placeholder={t('profile.fields.preferredSport.placeholder', 'Sélectionner un sport')}
+                  searchValue={sportSearch}
+                  setSearchValue={setSportSearch}
                   setValue={(option) => {
                     setFieldValue('preferredSport', option?.value || '');
                     setFieldValue('position', '');
                   }}
-                  value={formValues.preferredSport}
+                  value={resolveChoiceValues(activities, formValues.preferredSport)[0] || ''}
                 />
 
                 {profileFields?.includes('position') ? (() => {

@@ -29,15 +29,19 @@ import SelectAvatar from '@/components/molecules/selectAvatar/SelectAvatar';
 import AutocompleteAddressInput from '@/components/organisms/autocompleteAddressInput/autocompleteAddressInput';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 import {
+  buildChoiceOptions,
   buildProfileFormValues,
   defaultValues,
   getAgeFromDisplayedBirthdate,
   profileSchema,
+  resolveChoiceValues,
 } from '@/views/profile/profileFormContract';
 
 import { RouteNames } from '@/navigation/routeNames';
 
+import { useGetActivities } from '@/services/activity/activityQueries';
 import { updateMe } from '@/services/auth/authService';
+import { useGetCategories } from '@/services/category/categoryQueries';
 import { emitCelebrationBanner } from '@/services/celebrations/celebrationRuntime';
 import { useGetLevels } from '@/services/level/levelQueries';
 import { useGetPersonalStats } from '@/services/matchStats/matchStatsQueries';
@@ -107,12 +111,6 @@ const TOUCH_TARGET = 44;
 
 // Meme liste que `ProfileEdit` : la categorie ne se reinvente pas d'un ecran
 // a l'autre.
-const CATEGORY_OPTIONS = [
-  'U7', 'U8', 'U9', 'U10', 'U11', 'U12', 'U13', 'U14', 'U15', 'U16', 'U17',
-  'U18', 'U19', 'U20', 'U21', 'U23', 'Senior',
-].map((value) => ({ label: value, value }))
-  .concat([{ label: 'Vétéran', value: 'Veteran' }]);
-
 /**
  * Rangee-valeur 52 pt de la section « Suivi » : tuile d'icone, libelle, valeur
  * a droite, chevron.
@@ -251,11 +249,17 @@ function SelfProfilePlayerCoach({ navigation }) {
   const { getGeohashForPointAndRadius } = usePlaces();
   const { data: sections } = useGetSections();
   const { data: levels } = useGetLevels();
+  // AC03 — les listes de reference viennent du SERVEUR, comme sur les deux
+  // autres ecrans d'edition. Aucune liste n'est plus ecrite ici.
+  const { data: activities } = useGetActivities();
+  const { data: categories } = useGetCategories();
   const { data: histories } = useGetMyHistories();
   const userId = userData?.documentId || userData?.id;
   const { data: personalStats } = useGetPersonalStats(userId, { enabled: Boolean(userId) });
 
   const [avatar, setAvatar] = useState(/** @type {any} */ (undefined));
+  const [sportSearch, setSportSearch] = useState('');
+  const [categorySearch, setCategorySearch] = useState('');
   // AA11 — CE QUI VIENT DE CHANGER, pose juste avant l'envoi et lu seulement
   // apres un succes. Un `ref` et pas un `state` : ecrire un etat ici
   // relancerait un rendu du formulaire au moment ou on le soumet.
@@ -423,24 +427,6 @@ function SelfProfilePlayerCoach({ navigation }) {
       },
     ];
   }, [personalStats?.overall, t]);
-
-  const getSportOptions = () => {
-    const defaultSports = [
-      { label: 'Football', value: 'football' },
-      { label: 'Basketball', value: 'basketball' },
-      { label: 'Handball', value: 'handball' },
-      { label: 'Volleyball', value: 'volleyball' },
-      { label: 'Autre', value: 'other' },
-    ];
-    const current = userData?.preferredSport;
-    if (current && !defaultSports.find((sport) => sport.value === current)) {
-      defaultSports.unshift({
-        label: current.charAt(0).toUpperCase() + current.slice(1),
-        value: current,
-      });
-    }
-    return defaultSports;
-  };
 
   /**
    * Enregistre le profil. Chaque champ n'est envoye que s'il est ATTEIGNABLE
@@ -825,15 +811,18 @@ function SelfProfilePlayerCoach({ navigation }) {
           render={({ field: { onBlur, onChange, value } }) => (
             <AutocompleteSelect
               error={getFieldError({ errors: formErrors, fieldName: 'preferredSport' })}
+              isSearchable
               label={t('profile.fields.preferredSport.label', 'Sport de préférence')}
               onBlur={onBlur}
-              options={getSportOptions()}
+              options={buildChoiceOptions(activities, value, sportSearch)}
               placeholder={t('profile.fields.preferredSport.placeholder', 'Sélectionner un sport')}
+              searchValue={sportSearch}
+              setSearchValue={setSportSearch}
               setValue={(/** @type {any} */ option) => {
                 onChange(option?.value || '');
                 setValue('position', '');
               }}
-              value={value}
+              value={resolveChoiceValues(activities, value)[0] || ''}
             />
           )}
         />
@@ -936,14 +925,17 @@ function SelfProfilePlayerCoach({ navigation }) {
               <AutocompleteSelect
                 error={getFieldError({ errors: formErrors, fieldName: 'category' })}
                 isMulti
+                isSearchable
                 label={t('profile.fields.category.label', 'Catégorie')}
                 onBlur={onBlur}
-                options={CATEGORY_OPTIONS}
+                options={buildChoiceOptions(categories, value, categorySearch)}
                 placeholder={t('profile.fields.category.placeholder', 'Sélectionner une catégorie')}
+                searchValue={categorySearch}
+                setSearchValue={setCategorySearch}
                 setValue={(/** @type {any[]} */ options) => {
                   onChange(options?.map((option) => option.value).join(', ') || '');
                 }}
-                value={value ? value.split(', ') : []}
+                value={resolveChoiceValues(categories, value)}
               />
             )}
           />
