@@ -84,6 +84,7 @@ const flattenStyle = (style, acc = {}) => {
 };
 
 /**
+ * Rassemble tout le texte porte par un noeud rendu et ses enfants.
  * @param {any} node
  * @param {string[]} acc
  * @returns {string[]}
@@ -125,6 +126,7 @@ const findTextNodeByContent = (node, content) => {
 };
 
 /**
+ * Rend la couleur effective du noeud Text dont le contenu est `content`.
  * @param {any} tree
  * @param {string} content
  * @returns {any}
@@ -151,6 +153,7 @@ const readAccent = (tree) => {
 };
 
 /**
+ * Fabrique un evenement de recette : meme squelette, lieu et type variables.
  * @param {{ facility: any; typeName?: string }} params
  * @returns {any}
  */
@@ -172,6 +175,7 @@ const makeEvent = ({ facility, typeName = 'Match' }) => ({
 });
 
 /**
+ * Rend l entete une fois et rend son arbre JSON, sans laisser de montage vivant.
  * @param {any} event
  * @returns {any}
  */
