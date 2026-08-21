@@ -123,6 +123,22 @@ const getStaffDisplayName = (user) => {
   return [firstname, lastname].filter(Boolean).join(' ').trim() || 'Staff';
 };
 
+/**
+ * AD06 (L3-B) : l heure d arrivee existait dans la reponse du serveur et
+ * n etait affichee NULLE PART. On la rend en heure LOCALE courte (14:32).
+ * Une valeur illisible rend une chaine vide : jamais « Invalid Date ».
+ * @param {string | null | undefined} arrivedAt
+ * @returns {string}
+ */
+const formatArrivalTime = (arrivedAt) => {
+  if (!arrivedAt) return '';
+  const date = new Date(arrivedAt);
+  if (Number.isNaN(date.getTime())) return '';
+  const heures = String(date.getHours()).padStart(2, '0');
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+  return `${heures}:${minutes}`;
+};
+
 const resolveAttendanceBadge = ({
   allowLiveLate = false,
   attendance,
@@ -130,6 +146,7 @@ const resolveAttendanceBadge = ({
   eventStartAt,
   nowMs,
   statusKind = 'participating',
+  t = (/** @type {string} */ clef, /** @type {any} */ valeurParDefaut) => valeurParDefaut,
 }) => {
   const normalizedAttendanceStatus = String(
     attendance?.attendanceStatus || attendance?.finalState || '',
@@ -152,7 +169,7 @@ const resolveAttendanceBadge = ({
       backgroundColor: `${colors.error500}18`,
       borderColor: `${colors.error500}36`,
       textColor: colors.error500,
-      title: 'Non pointe',
+      title: t('eventDetails.attendanceBadge.notMarked', 'Non pointé'),
       value: null,
     };
   }
@@ -161,7 +178,7 @@ const resolveAttendanceBadge = ({
     return {
       backgroundColor: `${colors.error500}18`,
       borderColor: `${colors.error500}36`,
-      textColor: colors.error500,
+      textColor: colors.error300,
       title: 'Absent',
       value: null,
     };
@@ -183,7 +200,7 @@ const resolveAttendanceBadge = ({
         backgroundColor: `${colors.warning500}18`,
         borderColor: `${colors.warning500}36`,
         textColor: colors.warning500,
-        title: 'Arrive',
+        title: t('eventDetails.attendanceBadge.arrived', 'Arrivé'),
         value: `+${lateMinutes} min`,
       };
     }
@@ -192,7 +209,7 @@ const resolveAttendanceBadge = ({
       backgroundColor: `${colors.success500}18`,
       borderColor: `${colors.success500}36`,
       textColor: colors.success500,
-      title: 'Arrive',
+      title: t('eventDetails.attendanceBadge.arrived', 'Arrivé'),
       value: null,
     };
   }
@@ -202,7 +219,7 @@ const resolveAttendanceBadge = ({
       backgroundColor: `${colors.warning500}18`,
       borderColor: `${colors.warning500}36`,
       textColor: colors.warning500,
-      title: 'Retard annonce',
+      title: t('eventDetails.attendanceBadge.declaredLate', 'Retard annoncé'),
       value: `+${declaredLateMinutes} min`,
     };
   }
@@ -279,6 +296,7 @@ function EventParticipants({
         styles={{
           Alignments, ApplicationStyle, Colors, Fonts, Spaces,
         }}
+        t={t}
       />
     );
   };
@@ -335,7 +353,25 @@ function EventParticipants({
   );
 
   const renderStatusGroup = (title, players, options = {}) => {
-    if (!players?.length) return null;
+    // AD06 (L6-F) : un groupe vide rendait `null`, TITRE COMPRIS — un trou
+    // dans l ecran. Il garde desormais son titre et dit POURQUOI il est
+    // vide, en UNE ligne (pas `EmptyState`, qui est un bloc de page :
+    // icone 80 px et 24 de marge, beaucoup trop gros dans une carte).
+    // Sans message fourni, on garde le silence d avant : c est ce qui
+    // laisse l historique invisible quand il est vide.
+    if (!players?.length) {
+      if (!options.emptyMessage) return null;
+      return (
+        <>
+          <Text style={[Fonts.h4Bold, Fonts.primary500]}>
+            {title}
+          </Text>
+          <Text style={[Fonts.p3, Fonts.neutral300]}>
+            {options.emptyMessage}
+          </Text>
+        </>
+      );
+    }
     return (
       <>
         <Text style={[Fonts.h4Bold, Fonts.primary500]}>
@@ -410,6 +446,7 @@ function EventParticipants({
           section.participating,
           {
             allowLiveLate: true,
+            emptyMessage: t('eventDetails.emptyStates.noConfirmation'),
             keyPrefix: `${section.key}-present`,
             showCoachActions: section.allowCoachActions ?? canEdit,
             statusKind: 'participating',
@@ -421,6 +458,7 @@ function EventParticipants({
           section.missing,
           {
             allowLiveLate: false,
+            emptyMessage: t('eventDetails.emptyStates.noAbsence'),
             keyPrefix: `${section.key}-missing`,
             statusKind: 'missing',
             statusLabel: t('eventDetails.participationStatus.missing'),
@@ -445,6 +483,12 @@ function EventParticipants({
             }))}
           </>
         ) : null}
+
+        {section.notAnswered?.length ? null : renderStatusGroup(
+          t('eventDetails.participationStatus.notAnswered'),
+          [],
+          { emptyMessage: t('eventDetails.emptyStates.allAnswered') },
+        )}
 
         {hasHistorical ? (
           <View style={[Spaces.gap[8], Spaces.marginTop[8]]}>
@@ -488,6 +532,91 @@ function EventParticipants({
   );
   const capacity = Number(participantsSummary?.capacity ?? event?.capacity ?? 0);
   const anonymizedPreviewCount = Math.min(participatingCount, 5);
+
+  // AD06 (L3-A) — LES TROIS COMPTEURS.
+  // `participantsSummary` ne porte que `participatingCount` et `capacity`
+  // (EventDetails.js:1910) : ni les absents, ni les sans-reponse ne descendent
+  // jusqu ici. On les compte donc sur les listes REELLEMENT rendues, ce qui
+  // evite toute dependance croisee avec l ecran.
+  const listesRendues = hasTeamSections
+    ? sectionsToRender.reduce((total, item) => ({
+      missing: total.missing + (item.missing?.length || 0),
+      notAnswered: total.notAnswered + (item.notAnswered?.length || 0),
+      participating: total.participating + (item.participating?.length || 0),
+    }), { missing: 0, notAnswered: 0, participating: 0 })
+    : {
+      missing: participationsByStatus?.missing?.length || 0,
+      notAnswered: participationsByStatus?.notAnswered?.length || 0,
+      participating: participationsByStatus?.participating?.length || 0,
+    };
+  const hasRenderedLists = hasTeamSections || Boolean(participationsByStatus);
+  const presentsCount = hasRenderedLists ? listesRendues.participating : participatingCount;
+  const absentsCount = listesRendues.missing;
+  // L effectif total est celui qu on rend a l ecran : l effectif d une equipe
+  // n arrive pas jusqu a ce composant. « Sans reponse » se lit donc par
+  // SOUSTRACTION, bornee a 0 — un resume serveur incoherent ne doit jamais
+  // afficher un nombre negatif.
+  const totalAttendu = presentsCount + absentsCount + listesRendues.notAnswered;
+  const sansReponseCount = Math.max(0, totalAttendu - presentsCount - absentsCount);
+  const reponsesRecues = presentsCount + absentsCount;
+  const partReponses = totalAttendu > 0 ? Math.round((reponsesRecues / totalAttendu) * 100) : 0;
+
+  const renderCounterTile = (identifiant, libelle, valeur) => (
+    <View
+      key={identifiant}
+      style={[
+        Alignments.fill,
+        Alignments.alignCenter,
+        ApplicationStyle.borderRadius16,
+        ApplicationStyle.backgroundColor.primary700,
+        Spaces.paddingVertical[12],
+        Spaces.paddingHorizontal[8],
+        Spaces.gap[4],
+      ]}
+      testID={identifiant}
+    >
+      <Text style={[Fonts.h1Bold, Fonts.neutral00]}>
+        {valeur}
+      </Text>
+      <Text numberOfLines={2} style={[Fonts.p3, Fonts.neutral200]}>
+        {libelle}
+      </Text>
+    </View>
+  );
+
+  // La barre « N reponses sur M ». Elle vit ICI, pas dans `src/components/` :
+  // 9 lots tournent en parallele et un composant partage neuf serait un
+  // fichier-carrefour de plus. Le modele visuel est celui de
+  // MatchStatsEditor.js:1421-1437, deja rendu ailleurs dans l app.
+  // ⛔ `Stepper.js` ne pouvait pas servir : il rend `null` des que le
+  // remplissage vaut 0, or c est justement l etat « 0 reponse » qu il faut voir.
+  const renderResponsesBar = () => (
+    <View style={[Spaces.gap[8]]}>
+      <Text style={[Fonts.p3, Fonts.neutral200]} testID="AD06-barre-legende">
+        {t('eventDetails.participantsSummary.responses', '{{received}} réponses sur {{total}}')
+          .replace('{{received}}', String(reponsesRecues))
+          .replace('{{total}}', String(totalAttendu))}
+      </Text>
+      <View
+        style={{
+          backgroundColor: 'rgba(255,255,255,0.08)',
+          borderRadius: 999,
+          height: 6,
+          overflow: 'hidden',
+        }}
+        testID="AD06-barre-reponses"
+      >
+        <View
+          style={{
+            backgroundColor: Colors.success500,
+            borderRadius: 999,
+            height: '100%',
+            width: `${partReponses}%`,
+          }}
+        />
+      </View>
+    </View>
+  );
 
   const renderParticipationsContent = () => {
     if (areParticipantIdentitiesHidden) {
@@ -556,6 +685,7 @@ function EventParticipants({
             participationsByStatus.participating || [],
             {
               allowLiveLate: true,
+              emptyMessage: t('eventDetails.emptyStates.noConfirmation'),
               keyPrefix: 'legacy-present',
               showCoachActions: canEdit,
               statusKind: 'participating',
@@ -566,6 +696,7 @@ function EventParticipants({
             participationsByStatus.missing || [],
             {
               allowLiveLate: false,
+              emptyMessage: t('eventDetails.emptyStates.noAbsence'),
               keyPrefix: 'legacy-missing',
               statusKind: 'missing',
               statusLabel: t('eventDetails.participationStatus.missing'),
@@ -588,6 +719,11 @@ function EventParticipants({
                 statusLabel: t('eventDetails.participationStatus.notAnswered'),
               }))}
             </>
+          )}
+          {(participationsByStatus.notAnswered || []).length > 0 ? null : renderStatusGroup(
+            t('eventDetails.participationStatus.notAnswered'),
+            [],
+            { emptyMessage: t('eventDetails.emptyStates.allAnswered') },
           )}
         </>
       );
@@ -615,9 +751,6 @@ function EventParticipants({
       <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter]}>
         <Text style={[Fonts.h3Bold, Fonts.neutral00]}>
           {t('eventDetails.fields.participations')}
-          <Text>
-            {` :  ${participatingCount} ${capacity ? ' / ' : ''} ${capacity || ''}`}
-          </Text>
         </Text>
         <TouchableOpacity onPress={handleShare}>
           <Image resizeMode="contain" source={SHARE_ICON} style={{ height: 48, width: 48 }} />
@@ -631,6 +764,27 @@ function EventParticipants({
           </Text>
         </TouchableOpacity>
       )}
+
+      <View style={[Spaces.gap[12]]}>
+        <View style={[Alignments.row, Spaces.gap[8]]}>
+          {renderCounterTile(
+            'AD06-tuile-participating',
+            t('eventDetails.participationStatus.participating'),
+            capacity ? `${presentsCount} / ${capacity}` : String(presentsCount),
+          )}
+          {renderCounterTile(
+            'AD06-tuile-missing',
+            t('eventDetails.participationStatus.missing'),
+            String(absentsCount),
+          )}
+          {renderCounterTile(
+            'AD06-tuile-notAnswered',
+            t('eventDetails.participationStatus.notAnswered'),
+            String(sansReponseCount),
+          )}
+        </View>
+        {renderResponsesBar()}
+      </View>
 
       {renderParticipationsContent()}
     </View>
@@ -649,7 +803,8 @@ function EventParticipants({
  * onMarkArrival?: (user?: User) => void,
  * onEditLate?: (user?: User) => void,
  * statusKind?: 'participating' | 'missing' | 'not_answered',
- * styles: any
+ * styles: any,
+ * t: (clef: string, valeurParDefaut?: string) => string
  * }} props
  */
 function ParticipantItem({
@@ -664,6 +819,7 @@ function ParticipantItem({
   player,
   statusKind = 'participating',
   styles,
+  t,
 }) {
   const {
     Alignments, ApplicationStyle, Colors, Fonts, Spaces,
@@ -675,7 +831,9 @@ function ParticipantItem({
     eventStartAt,
     nowMs,
     statusKind,
+    t,
   });
+  const arrivalTime = formatArrivalTime(attendance?.arrivedAt);
   const hasStaffMeta = canEdit && (attendance?.note || attendance?.manualOverride || attendance?.updatedBy);
   const primaryCoachActionTitle = attendance?.arrivedAt ? 'Corriger' : 'Pointer l\'arrivée';
 
@@ -728,12 +886,17 @@ function ParticipantItem({
             },
           ]}
         >
-          <Text style={[Fonts.p4, { color: badge.textColor, textAlign: 'center' }]}>
+          <Text style={[Fonts.p3, { color: badge.textColor, textAlign: 'center' }]}>
             {badge.title}
           </Text>
           {badge.value ? (
-            <Text style={[Fonts.p4Bold, { color: badge.textColor, marginTop: 2, textAlign: 'center' }]}>
+            <Text style={[Fonts.p3Bold, { color: badge.textColor, marginTop: 2, textAlign: 'center' }]}>
               {badge.value}
+            </Text>
+          ) : null}
+          {arrivalTime ? (
+            <Text style={[Fonts.p4, { color: badge.textColor, marginTop: 2, textAlign: 'center' }]}>
+              {arrivalTime}
             </Text>
           ) : null}
         </View>

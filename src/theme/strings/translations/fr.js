@@ -1018,8 +1018,19 @@ export default {
       refuse: 'Refuser',
       remind: 'Relancer',
     },
+    attendanceBadge: {
+      arrived: 'Arrivé',
+      declaredLate: 'Retard annoncé',
+      notMarked: 'Non pointé',
+      selfArrived: 'Je suis arrivé·e',
+    },
     compositionSource: {
       defaultComposition: 'Composition type',
+    },
+    emptyStates: {
+      allAnswered: 'Tout le monde a répondu.',
+      noAbsence: 'Aucune absence signalée.',
+      noConfirmation: 'Personne n\'a encore confirmé sa présence.',
     },
     fields: {
       description: 'À propos',
@@ -1104,6 +1115,9 @@ export default {
         description: 'Merci de ton retour, nous allons traiter ta demande dans les plus brefs délais.',
         title: 'Ton signalement a bien été envoyé',
       },
+    },
+    participantsSummary: {
+      responses: '{{received}} réponses sur {{total}}',
     },
     participationStatus: {
       missing: 'Absent·e·s',
