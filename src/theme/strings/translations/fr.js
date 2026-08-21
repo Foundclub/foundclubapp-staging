@@ -634,7 +634,7 @@ export default {
       report: 'Signaler',
     },
     attachments: {
-      camera: 'Camera',
+      camera: 'Caméra',
       contact: 'Contact',
       createPoll: 'Créer un sondage',
       document: 'Document',
@@ -1434,7 +1434,7 @@ export default {
         playersUnit: 'joueurs max',
         previewCapacity: 'Capacité: {{value}}',
         previewMode: 'Mode: {{value}}',
-        previewTitle: 'Apercu',
+        previewTitle: 'Aperçu',
         previewTotalPlayers: 'Joueurs attendus: {{value}}',
         quickPresets: 'Valeurs rapides',
         subtitle: 'Choisis une capacité max, ou laisse l événement en accès illimité.',
@@ -1461,13 +1461,13 @@ export default {
       },
       validation: {
         autoDesc: 'Les participants peuvent confirmer automatiquement leur présence.',
-        autoRuleOne: 'Check-in simplifie pour les joueurs',
-        autoRuleTwo: 'Ideal pour les sessions ouvertes',
-        manualDesc: 'Le coach validé manuellement les participants.',
+        autoRuleOne: 'Check-in simplifié pour les joueurs',
+        autoRuleTwo: 'Idéal pour les sessions ouvertes',
+        manualDesc: 'Le coach valide manuellement les participants.',
         manualRuleOne: 'Contrôle total par le staff',
         manualRuleTwo: 'Recommandé pour les groupes fermés',
         optionLabel: 'Mode {{title}}',
-        previewTitle: 'Mode sélectionne',
+        previewTitle: 'Mode sélectionné',
         recommended: 'Recommandé',
         selectedHint: 'Mode actuellement sélectionné.',
         selectHint: 'Sélectionne ce mode de validation.',
@@ -1547,7 +1547,7 @@ export default {
     },
     badges: {
       multisport: 'Multisport',
-      shared: 'Partagee',
+      shared: 'Partagée',
     },
     capacity: {
       hintPlural: 'Capacité simultanée: {{count}} équipes',
@@ -1568,7 +1568,7 @@ export default {
       allSharedFacilities: 'Toutes partagées',
       occupiedBy: 'Occupé par {{clubName}}',
       scopeClub: 'Mon club',
-      scopeShared: 'Partagees',
+      scopeShared: 'Partagées',
       sharedEmpty: 'Aucune installation partagée disponible pour ce club.',
       sharedFallbackTitle: 'Occupation',
       sharedLabel: 'Planning partagé',
@@ -1974,7 +1974,7 @@ export default {
         title: 'Demandes adhésion équipes',
       },
       profileAlerts: {
-        description: 'Configure des alertes personnalisees selon tes recherches.',
+        description: 'Configure des alertes personnalisées selon tes recherches.',
         title: 'Gérer mes alertes',
       },
       profileEdit: {
@@ -2443,7 +2443,7 @@ export default {
       deleteSection: 'Supprimer la section',
       editClub: 'Modifier les informations du club',
       openAdminHint: 'Ouvrir le profil du dirigeant',
-      openSectionHint: 'Ouvrir le detail de la section',
+      openSectionHint: 'Ouvrir le détail de la section',
       sendEmail: 'Envoyer un email au club',
     },
     actions: {
@@ -2589,7 +2589,7 @@ export default {
       },
     },
     labels: {
-      participationDeclined: 'Refusee',
+      participationDeclined: 'Refusée',
     },
   },
   onboarding: {
@@ -3337,7 +3337,7 @@ export default {
     },
     defaultName: 'Squad',
     delete: {
-      confirmationWithName: 'Es-tu sur de vouloir supprimer la squad "{{teamName}}" ? Cette action est irreversible.',
+      confirmationWithName: 'Es-tu sûr de vouloir supprimer la squad "{{teamName}}" ? Cette action est irréversible.',
       title: 'Supprimer la squad',
     },
     join: {
@@ -3360,7 +3360,7 @@ export default {
       deleteError: 'Impossible de supprimer le créneau',
       editTitle: 'Modifier le créneau',
       joinHint: 'Rejoins la squad pour participer aux créneaux.',
-      multipleAdded: '{{count}} créneaux ajoutes',
+      multipleAdded: '{{count}} créneaux ajoutés',
       saveError: 'Impossible de sauvegarder le créneau',
       statusError: 'Impossible de modifier ton statut.',
       updated: 'Créneau modifié',
@@ -3425,7 +3425,7 @@ export default {
       previous: 'Précédent',
       processing: 'Traitement...',
       publish: 'Publier',
-      refresh: 'Rafraichir',
+      refresh: 'Rafraîchir',
       remove: 'Retirer',
       save: 'Enregistrer',
       saving: 'Enregistrement...',
@@ -3444,7 +3444,7 @@ export default {
       filePickerUnavailable: 'Le sélecteur de fichiers est indisponible sur cette build.',
       fileResolveFailed: 'Impossible de récupérer ce fichier.',
       fileSelectFailed: 'Impossible de sélectionner ce fichier.',
-      openCameraFailed: 'Impossible d\'ouvrir la camera.',
+      openCameraFailed: 'Impossible d\'ouvrir la caméra.',
       openGalleryFailed: 'Impossible d\'ouvrir la galerie.',
       reasonRequiredMessage: 'Minimum 3 caractères.',
       reasonRequiredTitle: 'Raison requise',
@@ -3469,7 +3469,7 @@ export default {
       unknown: 'inconnue',
     },
     deleteModal: {
-      description: 'Action definitive. Une raison d\'audit est obligatoire.',
+      description: 'Action définitive. Une raison d\'audit est obligatoire.',
       reasonPlaceholder: 'Raison obligatoire (minimum 3 caractères)',
       title: 'Supprimer l\'entrée',
     },
@@ -3477,7 +3477,7 @@ export default {
       createdAt: 'Crée le',
       noAudit: 'Aucun log disponible.',
       noKeyFields: 'Aucun champ clé détecté.',
-      noRelations: 'Aucune relation ou media exploitable.',
+      noRelations: 'Aucune relation ou média exploitable.',
       rawJsonCollapsed: 'Vue avancée repliée pour garder l\'écran lisible.',
       sections: {
         audit: 'Audit récent',
@@ -3554,7 +3554,7 @@ export default {
       updatedPrefix: 'Maj:',
     },
     media: {
-      camera: 'Camera',
+      camera: 'Caméra',
       file: 'Fichier',
       gallery: 'Galerie',
     },
@@ -3623,7 +3623,7 @@ export default {
     comingSoon: 'Bientôt disponible',
     confirmedPlayers: 'Joueurs confirmés',
     cta: {
-      confirmPresence: 'Je suis present',
+      confirmPresence: 'Je suis présent',
       removePresence: 'Retirer ma présence',
     },
     empty: 'Aucun créneau défini.',
@@ -3845,13 +3845,13 @@ export default {
       lookingForClub: 'En recherche de club',
     },
     empty: {
-      club: 'Aucun club renseigne',
+      club: 'Aucun club renseigné',
       coachTeams: 'Aucune équipe entraînée',
       playerTeams: 'Aucune équipe joueur',
     },
     fields: {
       address: 'Adresse',
-      age: 'Age',
+      age: 'Âge',
       bestLevel: 'Niveau',
       birthdate: 'Date de naissance',
       birthYear: 'Année de naissance',
