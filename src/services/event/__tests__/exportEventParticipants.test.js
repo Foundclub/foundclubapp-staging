@@ -70,10 +70,16 @@ const { exportEventParticipants } = require('../eventService');
 const EVENEMENT_ID = 'evt-ad05';
 const NOM_EVENEMENT = 'U15 A';
 
-/** @returns {string} - L'URL réellement demandée au réseau. */
+/**
+ * L'URL réellement partie sur le réseau.
+ * @returns {string} - L'URL demandée.
+ */
 const urlDemandee = () => mockFetch.mock.calls[0][1];
 
-/** @returns {string} - Le chemin où le fichier a été déposé sur le téléphone. */
+/**
+ * Le chemin où le fichier a été déposé sur le téléphone.
+ * @returns {string} - Le chemin du fichier.
+ */
 const cheminDepose = () => mockConfig.mock.calls[0][0].path;
 
 beforeEach(() => {
@@ -85,7 +91,7 @@ beforeEach(() => {
 // ---------------------------------------------------------------------------
 
 describe('AD05/T6 — le tuyau de l export', () => {
-  it('appelée avec 2 arguments, ne demande RIEN de neuf : pas de withoutContacts dans l URL', async () => {
+  it('appelée avec 2 arguments, ne demande RIEN de neuf dans l URL', async () => {
     await exportEventParticipants(EVENEMENT_ID, NOM_EVENEMENT);
 
     expect(urlDemandee()).toBe('https://api.test/events/evt-ad05/export-participants');
@@ -103,15 +109,15 @@ describe('AD05/T6 — le tuyau de l export', () => {
   // 🎯 LA MOITIE NEUVE — la bascule voyage jusqu au serveur
   // -------------------------------------------------------------------------
 
-  it('appelée avec { withoutContacts: true }, demande une URL qui finit par ?withoutContacts=1', async () => {
+  it('avec { withoutContacts: true }, l URL finit par ?withoutContacts=1', async () => {
     await exportEventParticipants(EVENEMENT_ID, NOM_EVENEMENT, { withoutContacts: true });
 
     expect(urlDemandee()).toBe(
-      'https://api.test/events/evt-ad05/export-participants?withoutContacts=1'
+      'https://api.test/events/evt-ad05/export-participants?withoutContacts=1',
     );
   });
 
-  it('appelée avec { withoutContacts: true }, le NOM du fichier dit ce qu il ne contient pas', async () => {
+  it('avec { withoutContacts: true }, le NOM du fichier le dit aussi', async () => {
     await exportEventParticipants(EVENEMENT_ID, NOM_EVENEMENT, { withoutContacts: true });
 
     expect(cheminDepose()).toContain('participants_U15_A_sans_coordonnees.xlsx');
