@@ -98,6 +98,7 @@ import {
 import { markEventDetailsPerf } from '@/utils/performance/eventDetailsPerformance';
 
 import EventDetectionSlots from './components/EventDetectionSlots';
+import EventExportSheet from './components/EventExportSheet';
 import EventHeader from './components/EventHeader';
 import EventParticipants from './components/EventParticipants';
 import EventReservationActions from './components/EventReservationActions';
@@ -533,6 +534,7 @@ function EventDetails({ navigation, route }) {
   });
   const [tournamentTeamNameDraft, setTournamentTeamNameDraft] = useState('');
   const [pendingTournamentAction, setPendingTournamentAction] = useState(null);
+  const [isExportSheetVisible, setIsExportSheetVisible] = useState(false);
   const [isShareModalVisible, setIsShareModalVisible] = useState(false);
   const [isTrainingOpenModalVisible, setIsTrainingOpenModalVisible] = useState(false);
   const [selectedParticipationId, setSelectedParticipationId] = useState('');
@@ -1446,7 +1448,7 @@ function EventDetails({ navigation, route }) {
           type: 'declare-late',
         },
         secondaryAction: {
-          title: 'Je suis arrive',
+          title: t('eventDetails.attendanceBadge.selfArrived'),
           type: 'arrived',
         },
       };
@@ -1465,7 +1467,7 @@ function EventDetails({ navigation, route }) {
         description: `Il te reste ${minutesLeft} min pour signaler ton arrivée ou ton retard.`,
         hasArrived: false,
         primaryAction: {
-          title: 'Je suis arrive',
+          title: t('eventDetails.attendanceBadge.selfArrived'),
           type: 'arrived',
         },
         secondaryAction: {
@@ -1486,7 +1488,7 @@ function EventDetails({ navigation, route }) {
       description: 'Le début est passé. Signale ton retard ou confirme ton arrivée.',
       hasArrived: false,
       primaryAction: {
-        title: 'Je suis arrive',
+        title: t('eventDetails.attendanceBadge.selfArrived'),
         type: 'arrived',
       },
       secondaryAction: {
@@ -1507,6 +1509,7 @@ function EventDetails({ navigation, route }) {
     myAttendance?.finalState,
     myAttendance?.lateMinutes,
     serverNowMs,
+    t,
   ]);
 
   const allEventParticipations = useMemo(() => {
@@ -2560,11 +2563,29 @@ function EventDetails({ navigation, route }) {
     userData,
   ]);
 
-  const handleExportParticipants = useCallback(async () => {
+  // AD10 — « Exporter » OUVRE LA FEUILLE, il ne telecharge plus rien.
+  // Avant : un appui sortait directement un classeur de 8 colonnes, dont
+  // l e-mail et le telephone de tout le monde, sans un mot. La feuille livree
+  // par AD05 (`EventExportSheet`) nomme les 8 colonnes et porte la bascule
+  // « Retirer e-mails et telephones » ; c est ELLE qui lance le telechargement.
+  const handleExportParticipants = useCallback(() => {
     if (!eventId) return;
+    setIsExportSheetVisible(true);
+  }, [eventId]);
+
+  const handleConfirmExport = useCallback(async (
+    /** @type {{ withoutContacts?: boolean }} */ options,
+  ) => {
+    setIsExportSheetVisible(false);
+    if (!eventId) return;
+    const withoutContacts = Boolean(options?.withoutContacts);
     Alert.alert(t('common.loading'), t('eventDetails.exporting'));
     try {
-      const path = await exportEventParticipants(eventId, event?.name || 'participants');
+      const path = await exportEventParticipants(
+        eventId,
+        event?.name || 'participants',
+        { withoutContacts },
+      );
       if (Platform.OS === 'ios') {
         setTimeout(() => {
           SharePlatform.share({ title: 'Participants', url: path }).catch(() => undefined);
@@ -6172,6 +6193,21 @@ function EventDetails({ navigation, route }) {
         isVisible={isShareModalVisible}
         onClose={() => setIsShareModalVisible(false)}
         onSelectChat={handleShareEventInChat}
+      />
+
+      {/*
+        ponytail: la feuille sait afficher « le fichier contiendra N personnes »,
+        et on ne lui passe PAS ce nombre. Plafond assume : l ecran ne connait
+        que ses participants VISIBLES, alors que le classeur porte aussi les
+        joueurs eligibles sans reponse et l historique des demandes refusees.
+        Un compte faux sur une feuille qui parle de donnees personnelles est
+        pire que pas de compte. Voie de sortie : exposer le compte reel depuis
+        le serveur (`event-export.ts`), puis le passer ici.
+      */}
+      <EventExportSheet
+        isVisible={isExportSheetVisible}
+        onClose={() => setIsExportSheetVisible(false)}
+        onConfirm={handleConfirmExport}
       />
 
       <TrainingOpenBottomSheet

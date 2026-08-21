@@ -42,7 +42,7 @@ function TrainerInvitedModal({
           />
           <Button
             onPress={onClose}
-            title={t('actions.later')}
+            title={t('common.actions.askLater')}
             variant="Secondary"
           />
         </View>

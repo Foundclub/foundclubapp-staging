@@ -250,8 +250,15 @@ describe('AD09 - la couleur de l installation dans l entete de la fiche evenemen
 
     expect(withFacility.borderLeftWidth).toBe(4);
     expect(withFacility.borderLeftColor).toBe(ORANGE_TERRAIN_A);
-    // Sans lieu, le lisere existe mais reste de la couleur d'avant AD09.
-    expect(withoutFacility.borderLeftColor).toBe(CYAN_OF_TODAY);
+    // ✏️ CORRIGE PAR AD10 le 2026-08-21, et c'est l'intention d'AD09 qui
+    // gagne contre son propre code : ce lot avait ecrit « un evenement sans
+    // lieu ne change pas d'apparence », puis pose le lisere SANS CONDITION.
+    // Un evenement sans lieu portait donc 4 px de cyan qu'il n'avait jamais
+    // eus avant `c60763e`. Un lisere qui code la couleur d'un lieu ABSENT ne
+    // dit rien ; la carte (`EventCardNew`) ne le pose deja que s'il y a un
+    // lieu. Sans lieu : AUCUN lisere.
+    expect(withoutFacility.borderLeftWidth).toBeUndefined();
+    expect(withoutFacility.borderLeftColor).toBeUndefined();
   });
 
   test('AD09 · temoin 9 — la pastille affiche le nom du lieu, et disparait sans nom', () => {
