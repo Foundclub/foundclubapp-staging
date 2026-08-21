@@ -104,6 +104,7 @@ import EventReservationActions from './components/EventReservationActions';
 import EventTasksSection from './components/EventTasksSection';
 import EventTeamAudiencesSection from './components/EventTeamAudiencesSection';
 import { resolveEventAttendanceGate } from './eventAttendanceGate';
+import { resolveEventEndedAt, resolveIsMatchFinished } from './eventMatchClock';
 import { useEventMutations } from './hooks/useEventMutations';
 import { OwnAnswerAction, resolveOwnAnswerAction } from './ownAnswerAction';
 import { createTournamentDesignSystem } from './tournamentDesignSystem';
@@ -1072,27 +1073,31 @@ function EventDetails({ navigation, route }) {
     return resolveEventStartAt(event);
   }, [attendancePayload?.data?.eventStartAt, event]);
 
-  const eventEndedAt = useMemo(() => {
-    if (event?.endDate) {
-      const parsed = new Date(event.endDate);
-      if (!Number.isNaN(parsed.getTime())) return parsed;
-    }
+  const eventEndedAt = useMemo(
+    () => resolveEventEndedAt(event?.endDate, eventStartAt),
+    [event?.endDate, eventStartAt],
+  );
 
-    if (!eventStartAt) return null;
-    return new Date(eventStartAt.getTime() + (120 * 60 * 1000));
-  }, [event?.endDate, eventStartAt]);
-
-  const isMatchFinished = useMemo(() => {
-    if (!eventEndedAt) return false;
-    return eventEndedAt.getTime() <= Date.now();
-  }, [eventEndedAt]);
-
-  const serverNowMs = useMemo(() => {
+  // AC10 — l'horloge du SERVEUR, ou rien : `null` quand il ne l'a pas donnee.
+  // C'est elle, et elle seule, qui decide qu'un match est fini.
+  const serverClockMs = useMemo(() => {
     const backendNowRaw = attendancePayload?.data?.serverNow;
-    const backendNowMs = backendNowRaw ? new Date(backendNowRaw).getTime() : Date.now();
-    const baseMs = Number.isNaN(backendNowMs) ? Date.now() : backendNowMs;
-    return baseMs + elapsedSinceServerNowMs;
+    const backendNowMs = backendNowRaw ? new Date(backendNowRaw).getTime() : NaN;
+    if (Number.isNaN(backendNowMs)) return null;
+    return backendNowMs + elapsedSinceServerNowMs;
   }, [attendancePayload?.data?.serverNow, elapsedSinceServerNowMs]);
+
+  const isMatchFinished = useMemo(
+    () => resolveIsMatchFinished({ eventEndedAt, serverNowMs: serverClockMs }),
+    [eventEndedAt, serverClockMs],
+  );
+
+  // Le compte a rebours d'arrivee, lui, doit rester affichable meme sans le
+  // serveur : il tombe alors sur l'horloge locale, comme avant AC10.
+  const serverNowMs = useMemo(
+    () => (serverClockMs === null ? Date.now() + elapsedSinceServerNowMs : serverClockMs),
+    [elapsedSinceServerNowMs, serverClockMs],
+  );
 
   useEffect(() => {
     setElapsedSinceServerNowMs(0);
