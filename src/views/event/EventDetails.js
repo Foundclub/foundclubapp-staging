@@ -3139,6 +3139,25 @@ function EventDetails({ navigation, route }) {
     return 'Tu n’es pas dans la composition publiée.';
   }, [viewerConvocationRole]);
 
+  // AD01 — LA MEME PHRASE, MAIS EN HAUT DE LA PAGE.
+  //
+  // 🥇 AC08 a repondu a « suis-je convoque ? » — mais la reponse vit dans le
+  // DERNIER bloc du defilement (« Composition d'equipes », `:5672`), au bas
+  // d'une fiche de 6 496 lignes. Un joueur devait faire defiler l'evenement
+  // ENTIER pour apprendre s'il jouait. C'est un DEPLACEMENT, pas une
+  // construction : `viewerConvocationLine` (`:3136`) reste la seule source,
+  // aucune requete de plus, aucun second calcul.
+  //
+  // 🗣️ ET AVANT PUBLICATION, LA PAGE PARLE AU LIEU DE SE TAIRE. Le silence,
+  // le lecteur le lit comme « je ne joue pas » — c'est le defaut n°3 de la
+  // matrice d'audit. Une 4e phrase honnete coute une ligne et supprime le
+  // contresens.
+  const viewerConvocationHeadline = useMemo(() => (
+    hasPublishedComposition
+      ? viewerConvocationLine
+      : 'La composition n’est pas encore publiée.'
+  ), [hasPublishedComposition, viewerConvocationLine]);
+
   const publishedCompositionCtaTitle = useMemo(() => {
     if (canEdit) return t('matchConvocation.published.openCta');
     return viewerConvocationRole ? 'Voir ma convocation' : "Voir la composition d'équipes";
@@ -4097,6 +4116,35 @@ function EventDetails({ navigation, route }) {
     );
   };
 
+  // AD01 — LA LIGNE COMPACTE, EN HAUT DU CORPS DE LA PAGE.
+  //
+  // 🔒 Elle parait EXACTEMENT la ou le bloc du bas paraissait deja pour ce
+  // lecteur (`:5672`) : meme garde `supportsEventComposition`, meme garde
+  // `canViewPublishedComposition`, meme exclusion de l'organisateur
+  // (`:5682` — le coach ne lit pas « Tu es convoque », ce n'est pas son ecran).
+  // ⇒ Aucune surface nouvelle : la phrase change de PLACE, pas de public.
+  const renderViewerConvocationLine = () => {
+    if (canEdit || !supportsEventComposition || !canViewPublishedComposition) return null;
+
+    const estRetenu = Boolean(hasPublishedComposition && viewerConvocationRole);
+
+    return (
+      <View
+        style={[
+          ApplicationStyle.borderRadius16,
+          ApplicationStyle.borderWidth1,
+          Spaces.paddingHorizontal[16],
+          Spaces.paddingVertical[12],
+          { borderColor: withAlpha(estRetenu ? Colors.primary500 : Colors.neutral300, 0.45) },
+        ]}
+      >
+        <Text style={[Fonts.p2Bold, estRetenu ? Fonts.primary500 : Fonts.neutral300]}>
+          {viewerConvocationHeadline}
+        </Text>
+      </View>
+    );
+  };
+
   const renderManagePanel = () => {
     if (!hasManageActions) return null;
 
@@ -4973,6 +5021,7 @@ function EventDetails({ navigation, route }) {
             {renderTournamentActionsPanel()}
             {renderManagePanel()}
             {renderCompoReminder()}
+            {renderViewerConvocationLine()}
             <View style={[Spaces.gap[24]]}>
 
               {isStageParentEvent ? (
