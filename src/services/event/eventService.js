@@ -1460,18 +1460,27 @@ export const resetCoachAttendance = async (eventId, userId) => {
  * Export event participants to Excel
  * @param {string} eventId
  * @param {string} eventName
+ * @param {{ withoutContacts?: boolean }} [options] - `withoutContacts: true`
+ *   demande au serveur un classeur SANS les colonnes e-mail et telephone, et le
+ *   nom du fichier depose le dit. Absent, l export est celui d avant.
  * @returns {Promise<string>} - The path to the downloaded file
  */
-export const exportEventParticipants = async (eventId, eventName) => {
+export const exportEventParticipants = async (eventId, eventName, options = {}) => {
   const token = getAuthTokens()?.token;
   const baseURL = getApiBaseUrl();
   if (!baseURL) {
     throw new Error('API base URL is missing');
   }
-  const url = `${baseURL}/events/${eventId}/export-participants`;
+  const withoutContacts = Boolean(options?.withoutContacts);
+  const query = withoutContacts ? '?withoutContacts=1' : '';
+  const url = `${baseURL}/events/${eventId}/export-participants${query}`;
 
   const { dirs } = ReactNativeBlobUtil.fs;
-  const fileName = `participants_${eventName ? eventName.replace(/[^a-zA-Z0-9]/g, '_') : 'event'}.xlsx`;
+  // Un fichier qui ment sur son contenu est pire que pas de fichier : sur
+  // Android il atterrit dans le dossier Telechargements public, ou son seul nom
+  // dira s il porte ou non le carnet d adresses de l equipe.
+  const suffix = withoutContacts ? '_sans_coordonnees' : '';
+  const fileName = `participants_${eventName ? eventName.replace(/[^a-zA-Z0-9]/g, '_') : 'event'}${suffix}.xlsx`;
 
   const path = Platform.select({
     android: `${dirs.DownloadDir}/${fileName}`,
