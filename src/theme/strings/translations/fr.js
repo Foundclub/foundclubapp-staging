@@ -1105,6 +1105,9 @@ export default {
         title: 'Ton signalement a bien été envoyé',
       },
     },
+    participantsSummary: {
+      responses: '{{received}} réponses sur {{total}}',
+    },
     participationStatus: {
       missing: 'Absent·e·s',
       notAnswered: 'Sans réponse',

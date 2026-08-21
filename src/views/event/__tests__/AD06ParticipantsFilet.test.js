@@ -230,6 +230,20 @@ const pastilles = (arbre) => arbre.root
   }));
 
 /**
+ * Les textes de la LISTE, c est-a-dire tout ce qui suit le bloc de compteurs.
+ * Depuis L3-A, les libelles des 3 tuiles reprennent mot pour mot les titres de
+ * groupe : sans cette coupe, `indexOf` designerait la tuile au lieu du groupe.
+ * La coupe se fait sur la legende de la barre, dernier texte du bloc.
+ * @param {any} arbre - L arbre rendu.
+ * @returns {string[]} - Les textes de la liste des participants.
+ */
+const textesDeLaListe = (arbre) => {
+  const textes = textesVisibles(arbre);
+  const rangLegende = textes.findIndex((/** @type {string} */ t) => /réponses sur/.test(t));
+  return rangLegende >= 0 ? textes.slice(rangLegende + 1) : textes;
+};
+
+/**
  * Lit le texte d un noeud repere par son `testID`.
  * @param {any} arbre - L arbre rendu.
  * @param {string} identifiant - Le `testID` cherche.
@@ -317,7 +331,7 @@ describe('AD06 · temoin 2 — les 5 groupes et leur ordre', () => {
       })],
     });
 
-    const textes = textesVisibles(arbre);
+    const textes = textesDeLaListe(arbre);
     const rang = (/** @type {string} */ libelle) => textes.indexOf(libelle);
 
     expect(rang('Demandes de participation')).toBeGreaterThanOrEqual(0);
@@ -341,11 +355,17 @@ describe('AD06 · temoin 3 — le second chemin, celui sans equipes', () => {
       teamParticipationSections: [],
     });
 
-    const textes = textesVisibles(arbre);
+    // Les demandes sont rendues AU NIVEAU DU HAUT : elles arrivent avant meme
+    // le bloc de compteurs, donc avant tout le reste de l ecran.
+    const tousLesTextes = textesVisibles(arbre);
+    expect(tousLesTextes.indexOf('Demandes de participation')).toBeGreaterThanOrEqual(0);
+    expect(tousLesTextes.indexOf('Demandes de participation'))
+      .toBeLessThan(tousLesTextes.indexOf('Présent·e·s'));
+
+    const textes = textesDeLaListe(arbre);
     const rang = (/** @type {string} */ libelle) => textes.indexOf(libelle);
 
-    expect(rang('Demandes de participation')).toBeGreaterThanOrEqual(0);
-    expect(rang('Demandes de participation')).toBeLessThan(rang('Présent·e·s'));
+    expect(rang('Présent·e·s')).toBeGreaterThanOrEqual(0);
     expect(rang('Présent·e·s')).toBeLessThan(rang('Absent·e·s'));
     expect(rang('Absent·e·s')).toBeLessThan(rang('Sans réponse'));
     // Ce chemin ne connait PAS l historique, ni les noms d equipe.
@@ -441,15 +461,16 @@ describe('AD06 · temoin 7 — l heure d arrivee et les accents', () => {
       teamParticipationSections: [section({ participating: [P_ARRIVE] })],
     });
 
-    const textes = textesVisibles(arbre);
-
     // 1. L heure d arrivee ne part plus a la poubelle.
-    expect(textes).toContain('14:32');
+    expect(textesVisibles(arbre)).toContain('14:32');
 
     // 2. Le libelle est accentue, et il vient du dictionnaire.
     expect(pastilles(arbre).map((/** @type {any} */ p) => p.texte)).toContain('Arrivé');
 
     // 3. Un groupe vide garde son TITRE et dit POURQUOI il est vide.
+    //    On lit la LISTE, pas les tuiles : sinon le titre serait « trouve »
+    //    dans le bloc de compteurs et le temoin serait vert pour rien.
+    const textes = textesDeLaListe(arbre);
     expect(textes).toContain('Absent·e·s');
     expect(textes).toContain('Aucune absence signalée.');
     expect(textes).toContain('Sans réponse');
@@ -461,7 +482,7 @@ describe('AD06 · temoin 7 — l heure d arrivee et les accents', () => {
       teamParticipationSections: [section({ notAnswered: [P_SANS_REPONSE] })],
     });
 
-    const textes = textesVisibles(arbre);
+    const textes = textesDeLaListe(arbre);
     expect(textes).toContain('Présent·e·s');
     expect(textes).toContain('Personne n\'a encore confirmé sa présence.');
   });

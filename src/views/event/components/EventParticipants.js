@@ -489,6 +489,91 @@ function EventParticipants({
   const capacity = Number(participantsSummary?.capacity ?? event?.capacity ?? 0);
   const anonymizedPreviewCount = Math.min(participatingCount, 5);
 
+  // AD06 (L3-A) — LES TROIS COMPTEURS.
+  // `participantsSummary` ne porte que `participatingCount` et `capacity`
+  // (EventDetails.js:1910) : ni les absents, ni les sans-reponse ne descendent
+  // jusqu ici. On les compte donc sur les listes REELLEMENT rendues, ce qui
+  // evite toute dependance croisee avec l ecran.
+  const listesRendues = hasTeamSections
+    ? sectionsToRender.reduce((total, item) => ({
+      missing: total.missing + (item.missing?.length || 0),
+      notAnswered: total.notAnswered + (item.notAnswered?.length || 0),
+      participating: total.participating + (item.participating?.length || 0),
+    }), { missing: 0, notAnswered: 0, participating: 0 })
+    : {
+      missing: participationsByStatus?.missing?.length || 0,
+      notAnswered: participationsByStatus?.notAnswered?.length || 0,
+      participating: participationsByStatus?.participating?.length || 0,
+    };
+  const hasRenderedLists = hasTeamSections || Boolean(participationsByStatus);
+  const presentsCount = hasRenderedLists ? listesRendues.participating : participatingCount;
+  const absentsCount = listesRendues.missing;
+  // L effectif total est celui qu on rend a l ecran : l effectif d une equipe
+  // n arrive pas jusqu a ce composant. « Sans reponse » se lit donc par
+  // SOUSTRACTION, bornee a 0 — un resume serveur incoherent ne doit jamais
+  // afficher un nombre negatif.
+  const totalAttendu = presentsCount + absentsCount + listesRendues.notAnswered;
+  const sansReponseCount = Math.max(0, totalAttendu - presentsCount - absentsCount);
+  const reponsesRecues = presentsCount + absentsCount;
+  const partReponses = totalAttendu > 0 ? Math.round((reponsesRecues / totalAttendu) * 100) : 0;
+
+  const renderCounterTile = (identifiant, libelle, valeur) => (
+    <View
+      key={identifiant}
+      style={[
+        Alignments.fill,
+        Alignments.alignCenter,
+        ApplicationStyle.borderRadius16,
+        ApplicationStyle.backgroundColor.primary700,
+        Spaces.paddingVertical[12],
+        Spaces.paddingHorizontal[8],
+        Spaces.gap[4],
+      ]}
+      testID={identifiant}
+    >
+      <Text style={[Fonts.h1Bold, Fonts.neutral00]}>
+        {valeur}
+      </Text>
+      <Text numberOfLines={2} style={[Fonts.p3, Fonts.neutral200]}>
+        {libelle}
+      </Text>
+    </View>
+  );
+
+  // La barre « N reponses sur M ». Elle vit ICI, pas dans `src/components/` :
+  // 9 lots tournent en parallele et un composant partage neuf serait un
+  // fichier-carrefour de plus. Le modele visuel est celui de
+  // MatchStatsEditor.js:1421-1437, deja rendu ailleurs dans l app.
+  // ⛔ `Stepper.js` ne pouvait pas servir : il rend `null` des que le
+  // remplissage vaut 0, or c est justement l etat « 0 reponse » qu il faut voir.
+  const renderResponsesBar = () => (
+    <View style={[Spaces.gap[8]]}>
+      <Text style={[Fonts.p3, Fonts.neutral200]} testID="AD06-barre-legende">
+        {t('eventDetails.participantsSummary.responses', '{{received}} réponses sur {{total}}')
+          .replace('{{received}}', String(reponsesRecues))
+          .replace('{{total}}', String(totalAttendu))}
+      </Text>
+      <View
+        style={{
+          backgroundColor: 'rgba(255,255,255,0.08)',
+          borderRadius: 999,
+          height: 6,
+          overflow: 'hidden',
+        }}
+        testID="AD06-barre-reponses"
+      >
+        <View
+          style={{
+            backgroundColor: Colors.success500,
+            borderRadius: 999,
+            height: '100%',
+            width: `${partReponses}%`,
+          }}
+        />
+      </View>
+    </View>
+  );
+
   const renderParticipationsContent = () => {
     if (areParticipantIdentitiesHidden) {
       return (
@@ -615,9 +700,6 @@ function EventParticipants({
       <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter]}>
         <Text style={[Fonts.h3Bold, Fonts.neutral00]}>
           {t('eventDetails.fields.participations')}
-          <Text>
-            {` :  ${participatingCount} ${capacity ? ' / ' : ''} ${capacity || ''}`}
-          </Text>
         </Text>
         <TouchableOpacity onPress={handleShare}>
           <Image resizeMode="contain" source={SHARE_ICON} style={{ height: 48, width: 48 }} />
@@ -631,6 +713,27 @@ function EventParticipants({
           </Text>
         </TouchableOpacity>
       )}
+
+      <View style={[Spaces.gap[12]]}>
+        <View style={[Alignments.row, Spaces.gap[8]]}>
+          {renderCounterTile(
+            'AD06-tuile-participating',
+            t('eventDetails.participationStatus.participating'),
+            capacity ? `${presentsCount} / ${capacity}` : String(presentsCount),
+          )}
+          {renderCounterTile(
+            'AD06-tuile-missing',
+            t('eventDetails.participationStatus.missing'),
+            String(absentsCount),
+          )}
+          {renderCounterTile(
+            'AD06-tuile-notAnswered',
+            t('eventDetails.participationStatus.notAnswered'),
+            String(sansReponseCount),
+          )}
+        </View>
+        {renderResponsesBar()}
+      </View>
 
       {renderParticipationsContent()}
     </View>
