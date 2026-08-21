@@ -856,6 +856,12 @@ const styles = StyleSheet.create({
     flex: 1,
     height: 4,
   },
+  rsvpBadge: {
+    borderRadius: 8,
+    borderWidth: 1,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
   screen: {
     paddingHorizontal: 0,
   },
@@ -865,12 +871,6 @@ const styles = StyleSheet.create({
     minHeight: 44,
     paddingHorizontal: 16,
     paddingVertical: 11,
-  },
-  rsvpBadge: {
-    borderRadius: 8,
-    borderWidth: 1,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
   },
   searchWrapper: {
     paddingBottom: 12,

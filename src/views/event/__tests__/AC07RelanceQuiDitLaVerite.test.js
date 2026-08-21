@@ -269,16 +269,19 @@ describe('AC07/3 — le 2e appui en 48 h dit « deja relance », avec la date', 
 // ---------------------------------------------------------------------------
 
 describe('AC07/5 — une relance qui ECHOUE ne dit PAS qu elle a reussi', () => {
-  test('une panne serveur affiche une erreur, et nomme le fait que personne n a ete prevenu', async () => {
-    remindUnansweredPlayers.mockRejectedValue(new Error('Network Error'));
+  test(
+    'une panne serveur affiche une erreur, et nomme le fait que personne n a ete prevenu',
+    async () => {
+      remindUnansweredPlayers.mockRejectedValue(new Error('Network Error'));
 
-    const modale = await relancerEtLireLaModale();
+      const modale = await relancerEtLireLaModale();
 
-    expect(modale.titre).toBe('La relance n a pas pu partir');
-    expect(modale.corps).toMatch(/Personne n a ete prevenu/);
-    const tout = `${modale.titre} ${modale.corps}`.toLowerCase();
-    expect(tout).not.toMatch(/a bien ete envoy/);
-  });
+      expect(modale.titre).toBe('La relance n a pas pu partir');
+      expect(modale.corps).toMatch(/Personne n a ete prevenu/);
+      const tout = `${modale.titre} ${modale.corps}`.toLowerCase();
+      expect(tout).not.toMatch(/a bien ete envoy/);
+    },
+  );
 
   test('🚨 aucune modale de succes n est affichee quand l appel echoue', async () => {
     remindUnansweredPlayers.mockRejectedValue(new Error('boom'));

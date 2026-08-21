@@ -137,19 +137,22 @@ describe('AC07/1 — le retour du coach part ET revient', () => {
     expect(relu.report.coachPlayerReviews).toEqual([]);
   });
 
-  test('PROTEGE : une charge muette sur le retour du coach ne porte aucune des trois clefs', async () => {
+  test(
+    'PROTEGE : une charge muette sur le retour du coach ne porte aucune des trois clefs',
+    async () => {
     // Sans ce garde-fou, on aurait pu « reparer » en etalant le payload entier
     // ou en forcant `null` par defaut — ce qui EFFACERAIT le retour du coach a
     // chaque enregistrement de score fait depuis un autre ecran.
-    monterLeServeurDePapier();
+      monterLeServeurDePapier();
 
-    await saveEventMatchStatsDraft('evt-1', { playerLines: [], scoreAgainst: 1, scoreFor: 2 });
+      await saveEventMatchStatsDraft('evt-1', { playerLines: [], scoreAgainst: 1, scoreFor: 2 });
 
-    const chargeEnvoyee = mockPost.mock.calls[0][1].data;
-    expect(Object.prototype.hasOwnProperty.call(chargeEnvoyee, 'coachPlayerReviews')).toBe(false);
-    expect(Object.prototype.hasOwnProperty.call(chargeEnvoyee, 'collectiveComment')).toBe(false);
-    expect(Object.prototype.hasOwnProperty.call(chargeEnvoyee, 'collectiveRating')).toBe(false);
-  });
+      const chargeEnvoyee = mockPost.mock.calls[0][1].data;
+      expect(Object.prototype.hasOwnProperty.call(chargeEnvoyee, 'coachPlayerReviews')).toBe(false);
+      expect(Object.prototype.hasOwnProperty.call(chargeEnvoyee, 'collectiveComment')).toBe(false);
+      expect(Object.prototype.hasOwnProperty.call(chargeEnvoyee, 'collectiveRating')).toBe(false);
+    },
+  );
 
   test('PROTEGE : les quatre clefs deja transmises le sont toujours', async () => {
     monterLeServeurDePapier();

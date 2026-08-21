@@ -358,14 +358,17 @@ const monterEcran = async (Ecran, profil) => {
 
 describe.each(ECRANS)('AC03 — le profil se choisit dans la liste du serveur ($nom)', ({ Ecran }) => {
   // TEMOIN 1 — le sport se choisit dans une liste, il ne se tape plus.
-  test('le sport propose EXACTEMENT la liste du serveur, et ce n est pas une case a remplir', async () => {
-    const arbre = await monterEcran(Ecran, { preferredSport: 'Football' });
+  test(
+    'le sport propose EXACTEMENT la liste du serveur, et ce n est pas une case a remplir',
+    async () => {
+      const arbre = await monterEcran(Ecran, { preferredSport: 'Football' });
 
-    expect(optionsDe(arbre, 'Sport de préférence')).toEqual(
-      SPORTS_DU_SERVEUR.map((sport) => sport.name),
-    );
-    expect(enSaisieLibre(arbre, 'Sport de préférence')).toBe(false);
-  });
+      expect(optionsDe(arbre, 'Sport de préférence')).toEqual(
+        SPORTS_DU_SERVEUR.map((sport) => sport.name),
+      );
+      expect(enSaisieLibre(arbre, 'Sport de préférence')).toBe(false);
+    },
+  );
 
   // TEMOIN 2 — la categorie aussi. Les libelles du serveur portent l'age
   // (« U13 (13 ans) ») ; les listes ecrites en dur disaient « U13 ».

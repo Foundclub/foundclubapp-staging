@@ -115,6 +115,25 @@ const lireLesBoutonsRelancer = (arbre) => arbre.root
   .filter((/** @type {any} */ noeud) => noeud.props.title === 'eventDetails.actions.remind')
   .map((/** @type {any} */ noeud) => Boolean(noeud.props.isLoading));
 
+/**
+ * Attend que TOUS les boutons « Relancer » soient dans l etat voulu.
+ * La relance atterrit en plusieurs tours de boucle selon la charge de la
+ * machine : parier sur un seul tick rend le temoin instable.
+ * @param {any} arbre - L arbre rendu.
+ * @param {boolean} attendu - L etat `isLoading` attendu.
+ * @returns {Promise<void>} - Rend la main des que l etat est atteint.
+ */
+const attendreLesBoutons = async (arbre, attendu) => {
+  for (let tour = 0; tour < 30; tour += 1) {
+    const etats = lireLesBoutonsRelancer(arbre);
+    if (etats.length > 0 && etats.every((estGrise) => estGrise === attendu)) return;
+    // eslint-disable-next-line no-await-in-loop -- on laisse le rendu se poser, tour par tour
+    await act(async () => {
+      await new Promise((resoudre) => { setTimeout(resoudre, 0); });
+    });
+  }
+};
+
 describe('AC07/4 — le bouton est grise pendant l envoi', () => {
   test('actif au repos, grise pendant la relance', async () => {
     const queryClient = new QueryClient({
@@ -141,10 +160,8 @@ describe('AC07/4 — le bouton est grise pendant l envoi', () => {
     expect(auRepos.every((estGrise) => estGrise === false)).toBe(true);
 
     // 2. Relance en vol : il est grise.
-    await act(async () => {
-      poignee.demarrer();
-      await new Promise((resoudre) => { setTimeout(resoudre, 0); });
-    });
+    await act(async () => { poignee.demarrer(); });
+    await attendreLesBoutons(arbre, true);
 
     const pendantLEnvoi = lireLesBoutonsRelancer(arbre);
     expect(pendantLEnvoi.length).toBe(auRepos.length);
@@ -152,10 +169,8 @@ describe('AC07/4 — le bouton est grise pendant l envoi', () => {
 
     // 3. On laisse la relance atterrir AVANT de demonter : sinon jest reste
     //    pendu a une promesse que plus personne ne tient.
-    await act(async () => {
-      poignee.poser();
-      await new Promise((resoudre) => { setTimeout(resoudre, 0); });
-    });
+    await act(async () => { poignee.poser(); });
+    await attendreLesBoutons(arbre, false);
     expect(lireLesBoutonsRelancer(arbre).every((estGrise) => estGrise === false)).toBe(true);
 
     await act(async () => { arbre.unmount(); });

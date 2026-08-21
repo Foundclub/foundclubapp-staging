@@ -6,7 +6,6 @@ import {
 } from 'react-native';
 
 import { REMIND_EVENT_MUTATION_KEY } from '@/domains/event/remindReport';
-
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';

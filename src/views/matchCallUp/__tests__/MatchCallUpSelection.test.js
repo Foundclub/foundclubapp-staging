@@ -481,24 +481,27 @@ describe('D77 ecran 2 — convoquer hors equipe', () => {
     expect(texte).not.toContain('Moussa Diallo');
   });
 
-  test('🟡 un indisponible est averti EN JAUNE, et sa meta est REMPLACEE par le motif', async () => {
-    const arbre = await rendre();
-    await appuyerSur(arbre, 'Autres équipes');
+  test(
+    '🟡 un indisponible est averti EN JAUNE, et sa meta est REMPLACEE par le motif',
+    async () => {
+      const arbre = await rendre();
+      await appuyerSur(arbre, 'Autres équipes');
 
-    const texte = texteVisible(arbre);
-    expect(texte).toContain('Licence non validée');
-    expect(texte).toContain('Suspendu 1 match');
-    // Le motif remplace la meta : le numero du joueur suspendu a disparu.
-    expect(texte).not.toContain('N°8 · MD');
+      const texte = texteVisible(arbre);
+      expect(texte).toContain('Licence non validée');
+      expect(texte).toContain('Suspendu 1 match');
+      // Le motif remplace la meta : le numero du joueur suspendu a disparu.
+      expect(texte).not.toContain('N°8 · MD');
 
-    const motif = arbre.root
-      .findAllByType(Text)
-      .find((/** @type {any} */ noeud) => aplatirTexte(noeud.props.children)
+      const motif = arbre.root
+        .findAllByType(Text)
+        .find((/** @type {any} */ noeud) => aplatirTexte(noeud.props.children)
         === 'Licence non validée');
-    const styles = [motif.props.style].flat(Infinity).filter(Boolean);
-    expect(styles.some((/** @type {any} */ style) => style?.color === couleursReelles.warning500))
-      .toBe(true);
-  });
+      const styles = [motif.props.style].flat(Infinity).filter(Boolean);
+      expect(styles.some((/** @type {any} */ style) => style?.color === couleursReelles.warning500))
+        .toBe(true);
+    },
+  );
 
   test('🚨 ET IL RESTE COCHABLE — on avertit, on ne bloque pas', async () => {
     const arbre = await rendre();
@@ -814,22 +817,25 @@ describe('AC09 — voir qui a repondu avant de convoquer', () => {
     expect(etiquetteEtat(arbre, 'Sami Baki')).toContain('Sans réponse');
   });
 
-  test('TEMOIN 2 — les QUATRE etats sont distingues, « en attente » n est pas « sans reponse »', async () => {
-    const arbre = await rendre({ players: EFFECTIF_AC09 });
+  test(
+    'TEMOIN 2 — les QUATRE etats sont distingues, « en attente » n est pas « sans reponse »',
+    async () => {
+      const arbre = await rendre({ players: EFFECTIF_AC09 });
 
-    const etats = [
-      etiquetteEtat(arbre, 'Moussa Diallo'),
-      etiquetteEtat(arbre, 'Hugo Fofana'),
-      etiquetteEtat(arbre, 'Théo Marchal'),
-      etiquetteEtat(arbre, 'Sami Baki'),
-    ];
+      const etats = [
+        etiquetteEtat(arbre, 'Moussa Diallo'),
+        etiquetteEtat(arbre, 'Hugo Fofana'),
+        etiquetteEtat(arbre, 'Théo Marchal'),
+        etiquetteEtat(arbre, 'Sami Baki'),
+      ];
 
-    expect(etats.every((etat) => etat.length > 0)).toBe(true);
-    expect(new Set(etats).size).toBe(4);
-    // ⛔ Le 4e etat n'est PAS ecrase en « sans reponse » : une demande en
-    // attente, ce n'est pas un silence.
-    expect(etats[2]).not.toEqual(etats[3]);
-  });
+      expect(etats.every((etat) => etat.length > 0)).toBe(true);
+      expect(new Set(etats).size).toBe(4);
+      // ⛔ Le 4e etat n'est PAS ecrase en « sans reponse » : une demande en
+      // attente, ce n'est pas un silence.
+      expect(etats[2]).not.toEqual(etats[3]);
+    },
+  );
 
   test('🚨 TEMOIN 3 — l etat se lit SANS LA COULEUR : un mot, et un signe distinct', async () => {
     const arbre = await rendre({ players: EFFECTIF_AC09 });
@@ -864,27 +870,33 @@ describe('AC09 — voir qui a repondu avant de convoquer', () => {
     expect(texteVisible(arbre)).toContain('Préviens-le toi-même');
   });
 
-  test('🕳️ sans charge d evenement, AUCUN etat n est affiche — on ne dit pas du faux', async () => {
-    mockEvent = undefined;
-    const arbre = await rendre({ players: EFFECTIF_AC09 });
+  test(
+    '🕳️ sans charge d evenement, AUCUN etat n est affiche — on ne dit pas du faux',
+    async () => {
+      mockEvent = undefined;
+      const arbre = await rendre({ players: EFFECTIF_AC09 });
 
-    expect(etiquetteEtat(arbre, 'Moussa Diallo')).toBe('');
-    expect(etiquetteEtat(arbre, 'Sami Baki')).toBe('');
-  });
+      expect(etiquetteEtat(arbre, 'Moussa Diallo')).toBe('');
+      expect(etiquetteEtat(arbre, 'Sami Baki')).toBe('');
+    },
+  );
 
-  test('🥇 TEMOIN 4 — cocher un ABSENT declenche la fenetre de prevention, qui le NOMME', async () => {
-    const arbre = await rendre({ players: EFFECTIF_AC09 });
-    await act(async () => {
-      rangeeJoueur(arbre, 'Hugo Fofana').props.onPress();
-    });
-    await appuyerSur(arbre, 'Suivant');
+  test(
+    '🥇 TEMOIN 4 — cocher un ABSENT declenche la fenetre de prevention, qui le NOMME',
+    async () => {
+      const arbre = await rendre({ players: EFFECTIF_AC09 });
+      await act(async () => {
+        rangeeJoueur(arbre, 'Hugo Fofana').props.onPress();
+      });
+      await appuyerSur(arbre, 'Suivant');
 
-    const texte = texteVisible(arbre);
-    expect(texte).toContain('1 joueur a dit ABSENT');
-    expect(texte).toContain('Hugo Fofana');
-    // ⛔ Rien n'est parti : on previent AVANT.
-    expect(mockNavigate).not.toHaveBeenCalled();
-  });
+      const texte = texteVisible(arbre);
+      expect(texte).toContain('1 joueur a dit ABSENT');
+      expect(texte).toContain('Hugo Fofana');
+      // ⛔ Rien n'est parti : on previent AVANT.
+      expect(mockNavigate).not.toHaveBeenCalled();
+    },
+  );
 
   test('la fenetre compte et nomme TOUS les absents coches', async () => {
     mockEvent = {
@@ -986,39 +998,45 @@ describe('AC09 — voir qui a repondu avant de convoquer', () => {
     expect(parametres.pendingManualPlayer).toBeUndefined();
   });
 
-  test('🔒 et un ABSENT confirme voyage par le MEME chemin qu avant (terrain deja pose)', async () => {
-    const arbre = await rendre({
-      existingComposition: {
-        schemaVersion: 3,
-        selectedPlayerIds: ['p1'],
-        teams: [{
-          id: 'team_1',
-          placements: [{
-            playerId: 'p1', positionX: 50, positionY: 93, slotId: 'team_1:slot_1',
+  test(
+    '🔒 et un ABSENT confirme voyage par le MEME chemin qu avant (terrain deja pose)',
+    async () => {
+      const arbre = await rendre({
+        existingComposition: {
+          schemaVersion: 3,
+          selectedPlayerIds: ['p1'],
+          teams: [{
+            id: 'team_1',
+            placements: [{
+              playerId: 'p1', positionX: 50, positionY: 93, slotId: 'team_1:slot_1',
+            }],
           }],
-        }],
-      },
-      players: EFFECTIF_AC09,
-    });
-    await act(async () => {
-      rangeeJoueur(arbre, 'Hugo Fofana').props.onPress();
-    });
-    await appuyerSur(arbre, 'Suivant');
-    await appuyerSur(arbre, 'Convoquer quand même');
+        },
+        players: EFFECTIF_AC09,
+      });
+      await act(async () => {
+        rangeeJoueur(arbre, 'Hugo Fofana').props.onPress();
+      });
+      await appuyerSur(arbre, 'Suivant');
+      await appuyerSur(arbre, 'Convoquer quand même');
 
-    const [nomEcran, parametres] = mockNavigate.mock.calls[0];
-    expect(nomEcran).toBe('MatchCompositionBoard');
-    expect(parametres.startPlacements).toEqual([{
-      playerId: 'p1', positionX: 50, positionY: 93, slotId: 'team_1:slot_1',
-    }]);
-  });
+      const [nomEcran, parametres] = mockNavigate.mock.calls[0];
+      expect(nomEcran).toBe('MatchCompositionBoard');
+      expect(parametres.startPlacements).toEqual([{
+        playerId: 'p1', positionX: 50, positionY: 93, slotId: 'team_1:slot_1',
+      }]);
+    },
+  );
 
-  test('⛔ « Suivant » sans personne coche avertit TOUJOURS, avant toute fenetre d absents', async () => {
-    const arbre = await rendre({ players: EFFECTIF_AC09 });
-    await appuyerSur(arbre, 'Suivant');
+  test(
+    '⛔ « Suivant » sans personne coche avertit TOUJOURS, avant toute fenetre d absents',
+    async () => {
+      const arbre = await rendre({ players: EFFECTIF_AC09 });
+      await appuyerSur(arbre, 'Suivant');
 
-    expect(mockAlert).toHaveBeenCalledWith('Attention', 'Sélectionne au moins un joueur.');
-    expect(texteVisible(arbre)).not.toContain('ABSENT');
-    expect(mockNavigate).not.toHaveBeenCalled();
-  });
+      expect(mockAlert).toHaveBeenCalledWith('Attention', 'Sélectionne au moins un joueur.');
+      expect(texteVisible(arbre)).not.toContain('ABSENT');
+      expect(mockNavigate).not.toHaveBeenCalled();
+    },
+  );
 });
