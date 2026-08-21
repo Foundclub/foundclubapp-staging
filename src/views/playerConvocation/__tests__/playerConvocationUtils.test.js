@@ -281,7 +281,9 @@ const packBancSeul = () => ({
     documentId: 'joueur-2', firstname: 'Leo', lastname: 'Diarra', number: 7, position: 'Ailier',
   }],
   snapshotPlayers: [
-    { documentId: 'joueur-1', firstname: 'Karim', lastname: 'Sylla', number: 1 },
+    {
+      documentId: 'joueur-1', firstname: 'Karim', lastname: 'Sylla', number: 1,
+    },
   ],
   sportContext: 'football',
   teams: [{
@@ -317,7 +319,7 @@ describe('AD08 — le remplacant a droit a sa propre carte d identite', () => {
     expect(vue?.positionLabel).toBe('Ailier');
   });
 
-  test('⛔ et rien ne change pour un titulaire : sa fiche vient toujours de `snapshotPlayers`', () => {
+  test('⛔ et rien ne change pour un titulaire : sa fiche reste celle du terrain', () => {
     const vue = buildPlayerConvocationView({
       convocation: chargeServeur(packBancSeul()),
       userId: 'joueur-1',
