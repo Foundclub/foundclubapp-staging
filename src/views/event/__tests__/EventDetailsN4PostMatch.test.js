@@ -21,6 +21,7 @@ import { Text } from 'react-native';
 const mockUseAuth = jest.fn();
 const mockSetOptions = jest.fn();
 const mockRemindMutate = jest.fn();
+const mockNavigate = jest.fn();
 const mockEventQuery = { data: null };
 const mockMatchStatsQuery = { data: null };
 const mockMyMatchResponseQuery = { data: null };
@@ -383,7 +384,7 @@ const monter = (/** @type {any} */ options = {}) => {
           addListener: () => () => {},
           canGoBack: () => true,
           goBack: jest.fn(),
-          navigate: jest.fn(),
+          navigate: mockNavigate,
           setOptions: mockSetOptions,
         }}
         route={{ params: { eventId: 'event-1' } }}
@@ -449,10 +450,16 @@ describe('N4/E6 — ce que la page dit apres un match fini', () => {
     expect(rangDe(textes, 'Stats du match')).toBeGreaterThanOrEqual(0);
   });
 
-  test('sans score, la page dit qu il reste a le completer', () => {
+  // ⚠️ TEMOIN ADAPTE PAR L ETAPE 4 (D6). Avant : la page affichait
+  // « Score à compléter » dans l entete du bloc. Depuis la carte-parcours, la
+  // meme chose se dit a sa place — l ETAPE 1 du parcours, qui la nomme
+  // (« Score ») et dit ce qu il reste a faire (« À enregistrer »).
+  // L information n a pas disparu : elle a un titre.
+  test('sans score, l etape 1 dit qu il reste a l enregistrer', () => {
     const textes = textesVisibles(monter());
 
-    expect(rangDe(textes, 'Score à compléter')).toBeGreaterThanOrEqual(0);
+    expect(rangDe(textes, 'Score')).toBeGreaterThanOrEqual(0);
+    expect(rangDe(textes, 'À enregistrer')).toBeGreaterThanOrEqual(0);
   });
 
   test('🔢 avec un score, elle affiche le score DU SERVEUR', () => {
@@ -510,6 +517,69 @@ describe('N4/E6 — ce que la page dit apres un match fini', () => {
     }));
 
     expect(rangDe(textes, 'score officiel a changé')).toBeGreaterThanOrEqual(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// D6 — LA CARTE-PARCOURS, BRANCHEE DANS L ECRAN
+// ---------------------------------------------------------------------------
+
+describe('N4/D6 — la carte « APRÈS LE MATCH » est dans l Apercu', () => {
+  const parTestID = (/** @type {any} */ root, /** @type {string} */ id) => root
+    .findAll((/** @type {any} */ node) => node.props?.testID === id, { deep: false })[0];
+
+  test('elle est la, et elle annonce l etape courante', () => {
+    const root = monter();
+
+    expect(parTestID(root, 'post-match-journey')).toBeTruthy();
+    expect(textesVisibles(root)).toEqual(expect.arrayContaining(['APRÈS LE MATCH']));
+  });
+
+  test('🎯 sans score, son bouton ouvre la FEUILLE DE SCORE, pas l editeur', () => {
+    const root = monter();
+
+    act(() => { parTestID(root, 'post-match-action').props.onPress(); });
+
+    // La feuille courte d AD01 : deux champs, et c est tout. Elle vit dans
+    // l ecran, donc rien n est navigue — c est justement la preuve.
+    expect(mockNavigate).not.toHaveBeenCalledWith(
+      'MatchStatsEditor',
+      expect.anything(),
+    );
+    expect(textesVisibles(root)).toEqual(expect.arrayContaining(['Valider le score']));
+  });
+
+  test('🎯 avec un score, son bouton ouvre l EDITEUR complet', () => {
+    const root = monter({
+      matchStats: statsAvec({
+        score: {
+          available: true,
+          locked: false,
+          scoreAgainst: 1,
+          scoreFor: 3,
+          source: 'manual',
+          waitingOfficial: false,
+        },
+      }),
+    });
+
+    act(() => { parTestID(root, 'post-match-action').props.onPress(); });
+
+    expect(mockNavigate).toHaveBeenCalledWith(
+      'MatchStatsEditor',
+      expect.objectContaining({ eventId: 'event-1' }),
+    );
+  });
+
+  test('⛔ le motif d une porte fermee ne disparait pas avec les 7 titres', () => {
+    // Un match PAS FINI : la porte est grisee, et elle doit dire pourquoi.
+    const root = monter({
+      event: { ...MATCH_FINI, date: '2099-01-01T10:00:00.000Z', endDate: '2099-01-01T12:00:00.000Z' },
+    });
+
+    expect(textesVisibles(root)).toEqual(expect.arrayContaining([
+      'Les stats seront disponibles à la fin du match.',
+    ]));
   });
 });
 

@@ -636,6 +636,32 @@ const ouvrirLaFeuilleDeGestion = () => {
   });
 };
 
+/**
+ * Presse une rangee du menu par sa CLEF.
+ *
+ * 🧨 N4 (D6) L'IMPOSE : la rangee des stats affichait l'un des SEPT titres de
+ * `matchStatsPrimaryAction` et n'en affiche plus qu'UN, « Stats du match ».
+ * Presser par le libelle revenait a suivre un mot qui bouge.
+ * @param {any} root - Racine du rendu.
+ * @param {string} cle - La cle de la rangee.
+ * @returns {void}
+ */
+const presserLaRangee = (/** @type {any} */ root, /** @type {string} */ cle) => {
+  const [etiquette] = root.findAll(
+    (/** @type {any} */ node) => node.props?.testID === `event-manage-label-${cle}`,
+    { deep: false },
+  );
+  if (!etiquette) throw new Error(`Aucune rangee de menu ne porte la cle « ${cle} »`);
+  // On remonte jusqu'au premier ancetre PRESSABLE. Reperer le type exact
+  // (`TouchableOpacity`) obligerait ce fichier a l'importer pour un seul
+  // helper ; la presence d'un `onPress` dit la meme chose et ne depend de rien.
+  let noeud = etiquette.parent;
+  while (noeud && typeof noeud.props?.onPress !== 'function') noeud = noeud.parent;
+  act(() => {
+    noeud.props.onPress();
+  });
+};
+
 describe('AD01 · TEMOIN 1 — 🥇 le convoque le sait SANS faire defiler', () => {
   // L4-A : « avant le bloc du bas » devient « AU MONTAGE, sans un seul appui ».
   // La garantie de fond ne bouge pas d'un pouce — elle se renforce meme : la
@@ -838,7 +864,10 @@ describe('AD01 · TEMOIN 6 — ✍️ deux champs suffisent a ecrire 3-1', () =>
     const root = coachDevantUnMatchFini(statsSansScore());
 
     ouvrirLaFeuilleDeGestion();
-    appuyer(root, 'Enregistrer le score');
+    // N4 (D6) : par la CLEF de la rangee. Sans cela, `appuyer` attraperait le
+    // bouton de l'etape 1 de la carte-parcours, qui porte le meme libelle et
+    // ouvre la meme feuille — vrai, mais ce n'est pas le chemin teste ici.
+    presserLaRangee(root, 'matchStats');
 
     saisir(root, 0, '3');
     saisir(root, 1, '1');
@@ -864,7 +893,10 @@ describe('AD01 · TEMOIN 6 — ✍️ deux champs suffisent a ecrire 3-1', () =>
     const root = coachDevantUnMatchFini(statsSansScore());
 
     ouvrirLaFeuilleDeGestion();
-    appuyer(root, 'Enregistrer le score');
+    // N4 (D6) : par la CLEF de la rangee. Sans cela, `appuyer` attraperait le
+    // bouton de l'etape 1 de la carte-parcours, qui porte le meme libelle et
+    // ouvre la meme feuille — vrai, mais ce n'est pas le chemin teste ici.
+    presserLaRangee(root, 'matchStats');
     saisir(root, 0, '3');
 
     expect(boutonPortant(root, 'Valider le score').props.disabled).toBe(true);
@@ -880,7 +912,8 @@ describe('AD01 · TEMOIN 6 — ✍️ deux champs suffisent a ecrire 3-1', () =>
     }));
 
     ouvrirLaFeuilleDeGestion();
-    appuyer(root, 'Saisir les stats du match');
+    // N4 (D6) : par la CLEF. Le libelle de la rangee ne depend plus de l'etat.
+    presserLaRangee(root, 'matchStats');
 
     expect(routesEmpruntees()).toContain('MatchStatsEditor');
   });
@@ -891,7 +924,10 @@ describe('AD01 · TEMOIN 7 — 🔒 un score verrouille ne se reecrit pas', () =
     const root = coachDevantUnMatchFini(statsSansScore({ locked: true, source: 'external_sync' }));
 
     ouvrirLaFeuilleDeGestion();
-    appuyer(root, 'Enregistrer le score');
+    // N4 (D6) : par la CLEF de la rangee. Sans cela, `appuyer` attraperait le
+    // bouton de l'etape 1 de la carte-parcours, qui porte le meme libelle et
+    // ouvre la meme feuille — vrai, mais ce n'est pas le chemin teste ici.
+    presserLaRangee(root, 'matchStats');
 
     expect(boutonPortant(root, 'Valider le score').props.disabled).toBe(true);
     expect(textesVisibles(root).join(' | '))
@@ -902,7 +938,10 @@ describe('AD01 · TEMOIN 7 — 🔒 un score verrouille ne se reecrit pas', () =
     const root = coachDevantUnMatchFini(statsSansScore({ locked: true, source: 'league' }));
 
     ouvrirLaFeuilleDeGestion();
-    appuyer(root, 'Enregistrer le score');
+    // N4 (D6) : par la CLEF de la rangee. Sans cela, `appuyer` attraperait le
+    // bouton de l'etape 1 de la carte-parcours, qui porte le meme libelle et
+    // ouvre la meme feuille — vrai, mais ce n'est pas le chemin teste ici.
+    presserLaRangee(root, 'matchStats');
     const champs = root.findAllByType(TextInput);
 
     expect(champs.every((/** @type {any} */ champ) => champ.props.editable === false)).toBe(true);

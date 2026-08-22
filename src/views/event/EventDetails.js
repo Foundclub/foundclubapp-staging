@@ -117,6 +117,7 @@ import EventParticipants from './components/EventParticipants';
 import EventReservationActions from './components/EventReservationActions';
 import EventTasksSection from './components/EventTasksSection';
 import EventTeamAudiencesSection from './components/EventTeamAudiencesSection';
+import PostMatchJourneyCard from './components/PostMatchJourneyCard';
 import RemindTeamsSheet from './components/RemindTeamsSheet';
 import TournamentPeopleList from './components/TournamentPeopleList';
 import TournamentProgressRail from './components/TournamentProgressRail';
@@ -3379,68 +3380,13 @@ function EventDetails({ navigation, route }) {
     matchOpponentName,
     matchStatsPayload?.score,
   ]);
-  const matchStatsSummaryText = useMemo(() => {
-    if (isMatchStatsReviewRequired) {
-      return 'Le score officiel a changé. Vérification requise avant nouvelle publication.';
-    }
-    if (isMatchStatsFinal) {
-      return 'Rapport finalise pour cette équipe.';
-    }
-    if (matchStatsPayload?.score?.waitingOfficial) {
-      return 'En attente du score officiel.';
-    }
-    return 'Temps de jeu et statistiques clés à compléter.';
-  }, [isMatchStatsFinal, isMatchStatsReviewRequired, matchStatsPayload?.score?.waitingOfficial]);
-  const matchStatsStatusMeta = useMemo(() => {
-    if (isMatchStatsReviewRequired) {
-      return {
-        backgroundColor: `${Colors.warning500}20`,
-        borderColor: `${Colors.warning500}45`,
-        label: 'Vérification requise',
-        textColor: Colors.warning500,
-      };
-    }
-    if (isMatchStatsFinal) {
-      return {
-        backgroundColor: `${Colors.success500}20`,
-        borderColor: `${Colors.success500}45`,
-        label: 'Stats publiées',
-        textColor: Colors.success500,
-      };
-    }
-    if (matchStatsPayload?.score?.waitingOfficial) {
-      return {
-        backgroundColor: `${Colors.gold500}20`,
-        borderColor: `${Colors.gold500}45`,
-        label: 'Score officiel en attente',
-        textColor: Colors.gold500,
-      };
-    }
-    if (matchStatsPayload?.score?.available) {
-      return {
-        backgroundColor: `${Colors.primary500}20`,
-        borderColor: `${Colors.primary500}45`,
-        label: 'A finaliser',
-        textColor: Colors.primary500,
-      };
-    }
-    return {
-      backgroundColor: `${Colors.neutral00}14`,
-      borderColor: `${Colors.neutral00}24`,
-      label: 'Score à compléter',
-      textColor: Colors.neutral00,
-    };
-  }, [
-    Colors.gold500,
-    Colors.neutral00,
-    Colors.primary500,
-    Colors.success500,
-    Colors.warning500,
-    isMatchStatsFinal,
-    isMatchStatsReviewRequired,
-    matchStatsPayload?.score?.available,
-    matchStatsPayload?.score?.waitingOfficial,
-  ]);
+  // N4 (D6) : `matchStatsSummaryText`, `matchStatsStatusMeta` et
+  // `matchStatsCardButtonTitle` ont QUITTE ce fichier. Ils decrivaient l'entete
+  // du bloc « Stats du match » — une phrase de resume, une pastille d'etat et le
+  // libelle d'un bouton unique — que la carte-parcours remplace en nommant les
+  // trois etapes. Ils n'avaient plus aucun lecteur ; les garder aurait fait
+  // trois juges de plus sur le meme etat, qui divergeraient au premier
+  // changement de regle. Meme motif que `compositionPrimaryAction` (D4).
 
   const convocationBranches = useMemo(() => {
     if (Array.isArray(convocationPayload?.branches)) {
@@ -3583,26 +3529,36 @@ function EventDetails({ navigation, route }) {
   // bouton de composition (« Brouillon enregistre le ... »). Ce bouton est
   // devenu la chip « Convocation » ; le bloc n'avait plus aucun lecteur.
 
+  // 🗣️ N4 (D6) — LES SEPT TITRES ONT DISPARU, L'ETAT EST RESTE.
+  //
+  // Ce bloc decidait AUSSI le libelle du bouton : sept mots differents
+  // (« Enregistrer le score », « Saisir les stats du match », « Mettre à jour
+  // après score officiel », « En attente de l'équipe »…) pour une porte qui
+  // mene toujours au meme endroit. Le lecteur voyait changer le MOT sans
+  // jamais voir OU il en etait — or il y a trois etapes apres un match.
+  // ⇒ La rangee du menu et la modale d'invite disent desormais UNE chaine,
+  // « Stats du match ». Ce qui variait — l'ETAT — n'est pas perdu : il vit
+  // dans `subtitle` (la note de la rangee, le motif d'une porte fermee) et,
+  // en entier, dans `PostMatchJourneyCard`.
+  // ⛔ `disabled` et `isScoreEntry` NE BOUGENT PAS : ce sont eux qui portent le
+  // droit et l'aiguillage, et ils vivent ici, a un seul endroit.
   const matchStatsPrimaryAction = useMemo(() => {
     if (!isMatchFinished) {
       return {
         disabled: true,
         subtitle: 'Les stats seront disponibles à la fin du match.',
-        title: 'Stats du match',
       };
     }
     if (matchStatsPayload?.score?.waitingOfficial) {
       return {
         disabled: true,
         subtitle: 'En attente du score officiel synchronise.',
-        title: 'Score officiel en attente',
       };
     }
     if (isMatchStatsReviewRequired) {
       return {
         disabled: false,
         subtitle: 'Le score officiel a changé. Vérifie puis republie cette version.',
-        title: 'Mettre à jour après score officiel',
       };
     }
     if (isMatchStatsFinal) {
@@ -3611,21 +3567,18 @@ function EventDetails({ navigation, route }) {
         subtitle: matchStatsReport?.finalizedAt
           ? `Rapport finalise le ${new Date(matchStatsReport.finalizedAt).toLocaleString('fr-FR')}`
           : 'Rapport finalise',
-        title: 'Voir les stats du match',
       };
     }
     if (!canManageMatchStats) {
       return {
         disabled: true,
         subtitle: 'Les membres de ton équipe peuvent encore finaliser ce rapport.',
-        title: "En attente de l'équipe",
       };
     }
     if (matchStatsPayload?.score?.available) {
       return {
         disabled: false,
         subtitle: 'Complète le temps de jeu et les stats clés de ton équipe.',
-        title: 'Saisir les stats du match',
       };
     }
     // AD01 (✍️) — LE SEUL CAS QUE LA FEUILLE COURTE DETOURNE. Ce drapeau vit
@@ -3635,7 +3588,6 @@ function EventDetails({ navigation, route }) {
       disabled: false,
       isScoreEntry: true,
       subtitle: 'Commence par enregistrer le score du match.',
-      title: 'Enregistrer le score',
     };
   }, [
     isMatchFinished,
@@ -3646,11 +3598,6 @@ function EventDetails({ navigation, route }) {
     matchStatsPayload?.score?.waitingOfficial,
     matchStatsReport?.finalizedAt,
   ]);
-  const matchStatsCardButtonTitle = useMemo(() => {
-    if (isMatchStatsReviewRequired) return 'Mettre à jour';
-    if (isMatchStatsCompleted) return 'Voir';
-    return 'Ouvrir';
-  }, [isMatchStatsCompleted, isMatchStatsReviewRequired]);
   const myMatchResponseStatusMeta = useMemo(() => {
     if (myMatchResponse?.status === 'draft') {
       return {
@@ -4476,7 +4423,12 @@ function EventDetails({ navigation, route }) {
         fullWidth: true,
         icon: 'running',
         key: 'matchStats',
-        label: isMatchStatsFetching ? 'Chargement...' : matchStatsPrimaryAction.title,
+        // N4 (D6) : UNE SEULE CHAINE. Cette rangee affichait l'un des SEPT titres
+        // de `matchStatsPrimaryAction` — un mot different a chaque visite, pour
+        // une porte qui mene toujours au meme endroit. L'ETAT n'est pas perdu :
+        // il descend dans la note (juste dessous) et se lit en entier dans la
+        // carte-parcours de l'Apercu.
+        label: isMatchStatsFetching ? 'Chargement...' : 'Stats du match',
         note: matchStatsPrimaryAction.subtitle,
         // AD01 (✍️) — LE DETOURNEMENT D'UN SEUL CAS. « Enregistrer le score »
         // ouvre desormais deux champs ; tous les autres etats de cette meme
@@ -6882,43 +6834,49 @@ function EventDetails({ navigation, route }) {
               {showOverviewTab && isMatchEvent && compositionTeamId && canViewMatchStats ? (
                 <View style={[Spaces.gap[12]]}>
                   <Text style={[Fonts.h3Bold, Fonts.neutral00]}>Stats du match</Text>
+
+                  {/* 🎯 N4 (D6) — LA CARTE-PARCOURS « APRÈS LE MATCH » (maquette 05 · 5C).
+                      Elle remplace l'entete de ce bloc : une pastille d'etat, un score et
+                      une phrase de resume disaient TROIS fois « ou on en est » sans jamais
+                      nommer les etapes. Le parcours les nomme, et le seul bouton qui reste
+                      est celui de l'etape COURANTE.
+                      ⛔ Rien n'est perdu : le motif d'une porte fermee (le sous-titre de
+                      `matchStatsPrimaryAction`) descend DANS la carte, et le detail du
+                      rapport reste juste dessous. */}
+                  <PostMatchJourneyCard
+                    boutonDesactive={matchStatsPrimaryAction.disabled || isMatchStatsFetching}
+                    motif={matchStatsPrimaryAction.subtitle}
+                    onPressEtape={(/** @type {string} */ etape) => (etape === 'score'
+                      ? openMatchScoreSheet()
+                      : openMatchStatsEditor())}
+                    reponsesAttendues={Number(
+                      matchStatsReport?.responseEligibleCount
+                      ?? playerCollectiveRating?.eligibleCount
+                      ?? 0,
+                    )}
+                    reponsesRecues={Number(
+                      matchStatsReport?.responseCompletionCount
+                      ?? playerCollectiveRating?.count
+                      ?? 0,
+                    )}
+                    scoreDisponible={Boolean(matchStatsPayload?.score?.available)}
+                    scoreLibelle={matchStatsScoreLabel}
+                    scoreOrigine={matchStatsPayload?.score?.source || ''}
+                    statsFinalisees={isMatchStatsFinal}
+                    verificationRequise={isMatchStatsReviewRequired}
+                  />
+
+                  {/* Le DETAIL du rapport, sous le parcours. Son cadre disparait quand il
+                      n'y a encore rien a detailler : une boite bordee et vide se lit comme
+                      un contenu qui n'a pas charge. */}
                   <View
-                    style={[
+                    style={matchStatsReport || hasCollectiveRatings ? [
                       ApplicationStyle.backgroundColor.primary900,
                       ApplicationStyle.borderRadius24,
-                      ApplicationStyle.borderColor.primary500,
-                      ApplicationStyle.borderWidth1,
                       Spaces.padding[16],
                       Spaces.gap[12],
-                    ]}
+                    ] : null}
                   >
-                    <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter, Spaces.gap[12]]}>
-                      <View style={{ flex: 1 }}>
-                        <Text style={[Fonts.p4Bold, Fonts.primary500]}>Suivi post-match</Text>
-                        <Text style={[Fonts.h4Bold, Fonts.neutral00]}>{matchStatsScoreLabel}</Text>
-                      </View>
-                      <View
-                        style={[
-                          Spaces.paddingHorizontal[12],
-                          Spaces.paddingVertical[8],
-                          {
-                            backgroundColor: matchStatsStatusMeta.backgroundColor,
-                            borderColor: matchStatsStatusMeta.borderColor,
-                            borderRadius: 999,
-                            borderWidth: 1,
-                          },
-                        ]}
-                      >
-                        <Text style={[Fonts.p4Bold, { color: matchStatsStatusMeta.textColor }]}>
-                          {matchStatsStatusMeta.label}
-                        </Text>
-                      </View>
-                    </View>
-
-                    <Text style={[Fonts.p2, Fonts.neutral100]}>
-                      {matchStatsSummaryText}
-                    </Text>
-
                     {hasCollectiveRatings ? (
                       <View style={[Alignments.row, Spaces.gap[12]]}>
                         {matchStatsReport?.collectiveRating ? (
@@ -6966,7 +6924,11 @@ function EventDetails({ navigation, route }) {
                       </View>
                     ) : null}
 
-                    {(matchStatsReport?.responseEligibleCount || matchStatsReport?.responseCompletionCount || playerCollectiveRating?.count) ? (
+                    {/* N4 (D6) : « 4/12 joueurs ont repondu » est devenu l'ETAPE 3 de la
+                        carte, juste au-dessus. Le repeter ici serait le meme chiffre a
+                        trois centimetres de lui-meme. Le nombre de notes collectives
+                        prises en compte, lui, reste — il ne dit pas la meme chose. */}
+                    {playerCollectiveRating?.count ? (
                       <View
                         style={[
                           ApplicationStyle.backgroundColor.primary700,
@@ -6975,14 +6937,9 @@ function EventDetails({ navigation, route }) {
                           Spaces.gap[4],
                         ]}
                       >
-                        <Text style={[Fonts.p4Bold, Fonts.primary100]}>
-                          {`${matchStatsReport?.responseCompletionCount ?? playerCollectiveRating?.count ?? 0}/${matchStatsReport?.responseEligibleCount ?? playerCollectiveRating?.eligibleCount ?? 0} joueurs ont repondu`}
+                        <Text style={[Fonts.p4, Fonts.neutral100]}>
+                          {`${playerCollectiveRating.count} note${playerCollectiveRating.count > 1 ? 's' : ''} collective${playerCollectiveRating.count > 1 ? 's' : ''} prise${playerCollectiveRating.count > 1 ? 's' : ''} en compte`}
                         </Text>
-                        {playerCollectiveRating?.count ? (
-                          <Text style={[Fonts.p4, Fonts.neutral100]}>
-                            {`${playerCollectiveRating.count} note${playerCollectiveRating.count > 1 ? 's' : ''} collective${playerCollectiveRating.count > 1 ? 's' : ''} prise${playerCollectiveRating.count > 1 ? 's' : ''} en compte`}
-                          </Text>
-                        ) : null}
                       </View>
                     ) : null}
 
@@ -7037,13 +6994,6 @@ function EventDetails({ navigation, route }) {
                       </View>
                     ) : null}
 
-                    <Button
-                      disabled={matchStatsPrimaryAction.disabled || isMatchStatsFetching}
-                      onPress={openMatchStatsEditor}
-                      size="sm"
-                      title={matchStatsCardButtonTitle}
-                      variant="Secondary"
-                    />
                   </View>
                 </View>
               ) : null}
@@ -7672,7 +7622,7 @@ function EventDetails({ navigation, route }) {
               dismissMatchStatsPrompt();
               openMatchStatsEditor();
             }}
-            title={matchStatsPrimaryAction.title}
+            title="Stats du match"
             variant="Primary"
           />
           <Button

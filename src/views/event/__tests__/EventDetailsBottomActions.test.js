@@ -493,6 +493,31 @@ const libelleDeLaRangee = (/** @type {any} */ root, /** @type {string} */ cle) =
   return noeud ? textOf(noeud).trim() : '';
 };
 
+/**
+ * Presse une rangee du menu par sa CLEF.
+ *
+ * 🧨 N4 (D6) L'IMPOSE : cette rangee affichait l'un des SEPT titres de
+ * `matchStatsPrimaryAction` (« Saisir les stats du match », « Enregistrer le
+ * score »…). Elle en affiche desormais UN SEUL, « Stats du match », et l'etat
+ * est passe dans sa note et dans la carte-parcours. Presser par le libelle
+ * revenait donc a suivre un mot qui bouge — la clef, elle, ne bouge pas.
+ * @param {any} root - Racine du rendu.
+ * @param {string} cle - La cle de la rangee.
+ * @returns {void}
+ */
+const presserLaRangee = (/** @type {any} */ root, /** @type {string} */ cle) => {
+  const [etiquette] = root.findAll(
+    (/** @type {any} */ node) => node.props?.testID === `event-manage-label-${cle}`,
+    { deep: false },
+  );
+  if (!etiquette) throw new Error(`Aucune rangee de menu ne porte la cle « ${cle} »`);
+  let noeud = etiquette.parent;
+  while (noeud && noeud.type !== TouchableOpacity) noeud = noeud.parent;
+  act(() => {
+    noeud.props.onPress();
+  });
+};
+
 const press = (/** @type {any} */ root, /** @type {string} */ label) => {
   const node = pressableWithText(root, label);
   if (!node) throw new Error(`Aucun pressable ne porte le libelle « ${label} »`);
@@ -1593,7 +1618,9 @@ describe('D71 — les stats du match quittent le pied de page pour le menu', () 
     });
     ouvrirLaFeuilleDeGestion();
 
-    press(root, 'Saisir les stats du match');
+    // N4 (D6) : la rangee dit « Stats du match » quel que soit l'etat. On la
+    // presse par sa CLEF — ce que ce temoin protege est la DESTINATION.
+    presserLaRangee(root, 'matchStats');
     expect(Alert.alert).not.toHaveBeenCalled();
     expect(mockNavigate).toHaveBeenCalledWith('MatchStatsEditor', expect.objectContaining({
       eventId: 'event-1',
@@ -1722,7 +1749,8 @@ describe('AC10 — le match est fini quand le SERVEUR le dit, pas le telephone',
     const root = monterLeMatch(new Date(FIN_DU_MATCH_MS + 60000).toISOString());
 
     expect(chipStatsEstGrisee(root)).toBe(false);
-    press(root, 'Saisir les stats du match');
+    // N4 (D6) : par la CLEF, le libelle ne dependant plus de l'etat.
+    presserLaRangee(root, 'matchStats');
     expect(mockNavigate).toHaveBeenCalledWith('MatchStatsEditor', expect.objectContaining({
       eventId: 'event-1',
       sourceType: 'event',

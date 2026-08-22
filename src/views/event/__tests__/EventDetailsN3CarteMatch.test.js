@@ -639,9 +639,13 @@ describe('N3 - la carte du match : ce que l ecran calcule', () => {
     // ⛔ PAS de JSON.stringify sur des enfants React : l'arbre rendu porte un
     // `_owner` qui boucle sur lui-meme (« Converting circular structure »).
     // On descend par `props.children`, comme le fait `EventDetailsN1PetitsBlocs`.
+    // 🚤 EGALITE STRICTE, ET C'EST N4 QUI L'IMPOSE : la carte-parcours de
+    // l'apres-match porte desormais un bouton « Enregistrer le score ». Un
+    // `includes('Enregistrer')` attrapait le PREMIER venu — celui de la carte —
+    // et ce temoin verifiait alors un geste qu'il n'avait pas declenche.
     const valider = racine
       .findAll((/** @type {any} */ n) => n.props?.accessibilityRole === 'button')
-      .find((/** @type {any} */ n) => texteDe(n).includes('Enregistrer'));
+      .find((/** @type {any} */ n) => texteDe(n).trim() === 'Enregistrer');
     expect(valider).toBeDefined();
 
     await act(async () => {
