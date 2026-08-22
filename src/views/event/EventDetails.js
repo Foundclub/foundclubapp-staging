@@ -44,10 +44,12 @@ import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
 import Checkbox from '@/components/atoms/checkbox/Checkbox';
+import GlyphIcon from '@/components/atoms/glyphIcon/GlyphIcon';
 import HeaderBackButton from '@/components/atoms/headerBackButton/HeaderBackButton';
 import Tag from '@/components/atoms/tag/Tag';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 import EventAnswerButtons from '@/components/molecules/eventAnswerButtons/EventAnswerButtons';
+import SegmentedControl from '@/components/molecules/segmentedControl/SegmentedControl';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
 import JoinEventModal from '@/components/organisms/joinEventModal/JoinEventModal';
 import RefuseParticipationModal from '@/components/organisms/refuseParticipationModal/RefuseParticipationModal';
@@ -539,9 +541,14 @@ function EventDetails({ navigation, route }) {
   const [isTrainingOpenModalVisible, setIsTrainingOpenModalVisible] = useState(false);
   const [selectedParticipationId, setSelectedParticipationId] = useState('');
   const [stageDetailsTab, setStageDetailsTab] = useState('overview');
-  // D4 : le panneau d'organisation part REPLIE. Ouvert par defaut, il mangeait
-  // ~230 px au-dessus des participants et de la composition.
-  const [isEventActionsOpen, setIsEventActionsOpen] = useState(false);
+  // L4-A : les onglets du MATCH. ⛔ A ne pas confondre avec `stageDetailsTab`
+  // juste au-dessus, qui appartient au bloc « stage parent » et n'a rien a voir
+  // avec ce lot. Aucun autre type d'evenement ne lit celui-ci.
+  const [detailsTab, setDetailsTab] = useState('overview');
+  // L4-B : le panneau d'organisation n'est plus un accordeon dans la colonne,
+  // c'est une FEUILLE ouverte par le ⋯ de la barre du haut. Elle part fermee,
+  // pour la meme raison qu'avant D4 : ouverte, elle cache la page entiere.
+  const [isEventActionsSheetOpen, setIsEventActionsSheetOpen] = useState(false);
   const [isMatchStatsPromptVisible, setIsMatchStatsPromptVisible] = useState(false);
   const [dismissedMatchStatsPromptKey, setDismissedMatchStatsPromptKey] = useState(null);
   const [areDeferredQueriesEnabled, setAreDeferredQueriesEnabled] = useState(false);
@@ -2756,9 +2763,6 @@ function EventDetails({ navigation, route }) {
     [event, isMatchEvent],
   );
   const supportsEventComposition = Boolean(event?.team?.documentId || (event?.invitedTeams || []).length > 0);
-  const eventActionsToggleLabel = isEventActionsOpen
-    ? 'Fermer les actions événement'
-    : 'Ouvrir les actions événement';
 
   // @ts-ignore: FIXME: Baseline TS regression
   const getCompositionSourceLabel = useCallback((source) => {
@@ -4204,15 +4208,71 @@ function EventDetails({ navigation, route }) {
   });
   const hasManageActions = manageChips.length > 0;
 
-  // ⚠️ PAS de `overflow: 'hidden'` ici, contrairement au panneau d'avant D21 :
-  // sur iOS il pose `masksToBounds` et CLIPPE l'ombre du meme calque — la
-  // surface cesse alors de paraitre flottante, en silence et sur la seule
-  // plateforme de recette. Rien ne deborde de toute facon : les chips sont
-  // rentrees de 16 px, plus que la coupe des coins arrondis.
-  const manageSurfaceStyle = {
-    backgroundColor: withAlpha(Colors.primary900, 0.96),
-    borderColor: withAlpha(Colors.primary500, 0.3),
+  // ───────────────────────────────────────────────────────────────────────────
+  // L4-A — LES ONGLETS DU MATCH (maquette planche 04, cadres 4A et 4B).
+  //
+  // La page empilait 19 blocs dans UNE colonne. Elle en garde une ZONE FIXE
+  // (pastille de type, adversaire, carte d'entete, statut de convocation, barre
+  // du bas) et repartit le RESTE en trois onglets.
+  //
+  // ⛔ UN SEUL TYPE : le MATCH. Le tournoi, le stage, la detection et
+  // l'entrainement gardent leur colonne A L'IDENTIQUE — decision du CONSTAT
+  // (« un seul type dans ce lot ») et d'Adel (Q2, 2026-08-20 : le tournoi est un
+  // lot separe, apres qu'il ait retrouve une barre du bas).
+  // ⇒ C'est ce que dit `!isMatchEvent ||` en tete de chaque drapeau : hors
+  // match, les trois sont VRAIS en meme temps, donc tout se rend comme avant.
+  //
+  // ⚠️ « Match amical » contient « match » : `isMatchEvent` est vrai pour lui
+  // (comparaison par sous-chaine, l. ~2750). C'est voulu — meme metier, meme
+  // page — et c'est fige par temoin plutot que laisse a la surprise.
+  const detailsTabs = useMemo(() => {
+    if (!isMatchEvent) return [];
+    return [
+      { label: t('eventDetails.tabs.overview', 'Aperçu'), value: 'overview' },
+      { label: t('eventDetails.fields.participations', 'Participants'), value: 'participants' },
+      { label: t('eventDetails.tabs.callUp', 'Convocation'), value: 'callUp' },
+    ];
+  }, [isMatchEvent, t]);
+
+  const showOverviewTab = !isMatchEvent || detailsTab === 'overview';
+  const showParticipantsTab = !isMatchEvent || detailsTab === 'participants';
+  const showCallUpTab = !isMatchEvent || detailsTab === 'callUp';
+
+  // Les trois conditions que la repartition en onglets rendait trop longues
+  // pour tenir sur leur ligne d'ouverture. Elles sont REPRISES TELLES QUELLES
+  // des blocs ou elles vivaient : c'est un nom pose dessus, pas une regle qui
+  // change.
+  const hasEventTasks = Array.isArray(event?.eventTasks) && event.eventTasks.length > 0;
+  const hasTeamAudiences = Array.isArray(event?.teamAudiences)
+    && event.teamAudiences.length > 0;
+  const showPublishedComposition = supportsEventComposition
+    && (canViewPublishedComposition || canEdit);
+
+  // ⚠️ `centerContent` N'EST PAS UN CHOIX DE STYLE : sans lui, `SegmentedControl`
+  // installe un pan gesture MANUEL (SegmentedControl.js:56 et 243-265) qui
+  // entrerait en conflit avec le defilement vertical de la ScrollView qui
+  // l'entoure. Avec trois onglets courts, la repartition en largeurs egales est
+  // de toute facon celle de la maquette.
+  // ⚠️ Le composant ne pose AUCUNE marge externe : c'est l'appelant qui les
+  // pose (motif CMMembersScreen.js:297). Ici, le `gap: 24` du conteneur suffit.
+  const renderDetailsTabs = () => {
+    if (!detailsTabs.length) return null;
+
+    return (
+      <View style={[Alignments.alignCenter]} testID="event-details-tabs">
+        <SegmentedControl
+          centerContent
+          onChange={setDetailsTab}
+          options={detailsTabs}
+          value={detailsTab}
+        />
+      </View>
+    );
   };
+
+  // L4-B : `manageSurfaceStyle` decrivait la surface flottante de l'accordeon.
+  // Il n'a plus de lecteur — la feuille porte son propre fond, celui de
+  // `BottomModal`.
 
   /**
    * D53 : le menu d'organisation ne flotte plus AU-DESSUS de la liste — il est
@@ -4315,108 +4375,148 @@ function EventDetails({ navigation, route }) {
     );
   };
 
-  const renderManagePanel = () => {
+  // L4-B — CE QUE CHAQUE RANGEE DIT SOUS SON LIBELLE.
+  // La maquette 04 · 4C demande que le menu annonce OU il mene : « Compo » et
+  // « Modifier » ne se distinguent pas d'un seul mot quand on ne connait pas
+  // l'app. ⛔ Les chips qui portent DEJA une `note` (l'etat des stats du match,
+  // le motif d'une porte fermee) gardent la leur : un MOTIF prime toujours sur
+  // une destination — une porte grisee doit dire pourquoi, pas ou elle mene.
+  const manageRowSubtitles = {
+    cancel: t('eventDetails.menu.cancel', 'Prévenir les participant·e·s et annuler'),
+    detectionTeamsBoard: t('eventDetails.menu.detectionTeamsBoard', 'Les terrains de la détection'),
+    edit: t('eventDetails.menu.edit', 'Date, lieu, description'),
+    feature: t('eventDetails.menu.feature', 'Proposer cet événement à la une'),
+    licenseCampaign: t('eventDetails.menu.campaign', 'Créer la cotisation de cet événement'),
+    lineup: t('eventDetails.menu.lineup', 'Choisir et convoquer les joueur·se·s'),
+    poster: t('eventDetails.menu.poster', 'Voir et partager l’affiche'),
+    tournamentSettings: t('eventDetails.menu.tournamentSettings', 'Format, équipes et terrains'),
+  };
+
+  /**
+   * Une rangee de la feuille d'organisation. Recopie du motif AC01
+   * (`TeamDetails.js:2487`) avec UNE difference : elle porte un sous-titre, et
+   * ce sous-titre n'est JAMAIS tronque — deux des notes sont des phrases de
+   * trois lignes, et une porte fermee coupee au milieu ne s'explique plus.
+   * @param {any} chip - La chip issue de `buildManageChips`.
+   * @param {boolean} isLast - Vraie pour la derniere rangee (pas de filet).
+   * @returns {import('react').ReactElement} - La rangee.
+   */
+  const renderManageRow = (chip, isLast) => {
+    let rowColor = Colors.primary500;
+    if (chip.isDestructive) rowColor = Colors.error500;
+    else if (chip.disabled) rowColor = Colors.neutral300;
+
+    const subtitle = chip.note || manageRowSubtitles[chip.key] || '';
+
+    return (
+      // 🪤 LE `testID` VIT SUR CE `View`, PAS SUR LE PRESSABLE, et ce n'est pas
+      // un detail de style : `TouchableOpacity` propage son `testID` a cinq
+      // noeuds internes, et les temoins voisins comptent les chips par
+      // `node.props.testID === … && node.type === View`. Pose sur le pressable,
+      // le meme releve rendrait « 25 actions » la ou il y en a 5.
+      // ⛔ La largeur est `100%` : la grille a deux colonnes de l'accordeon
+      // laisse place aux rangees pleine largeur de la maquette 04 · 4C — une
+      // demi-chip ne peut pas porter un libelle ET sa destination.
+      <View key={chip.key} style={{ width: '100%' }} testID="event-manage-chip">
+        <TouchableOpacity
+          accessibilityRole="button"
+          activeOpacity={0.82}
+          disabled={chip.disabled}
+          onPress={chip.onPress}
+          style={[
+            Alignments.row,
+            Alignments.alignCenter,
+            Spaces.gap[12],
+            Spaces.paddingHorizontal[16],
+            Spaces.paddingVertical[12],
+            {
+              borderBottomColor: withAlpha(Colors.neutral00, 0.07),
+              borderBottomWidth: isLast ? 0 : 1,
+              minHeight: 52,
+            },
+          ]}
+        >
+          <View
+            style={{
+              alignItems: 'center',
+              backgroundColor: withAlpha(rowColor, 0.1),
+              borderRadius: 12,
+              height: 32,
+              justifyContent: 'center',
+              opacity: chip.disabled ? 0.55 : 1,
+              width: 32,
+            }}
+          >
+            <Image
+              source={Images[chip.icon]}
+              style={{ height: 15, tintColor: rowColor, width: 15 }}
+            />
+          </View>
+
+          <View style={{ flex: 1 }}>
+            <Text
+              style={[
+                Fonts.p2Bold,
+                { color: chip.isDestructive ? Colors.error500 : Colors.neutral00 },
+              ]}
+            >
+              {chip.label}
+            </Text>
+            {subtitle ? (
+              <Text style={[Fonts.p4, Fonts.neutral300, Spaces.marginTop[4]]}>
+                {subtitle}
+              </Text>
+            ) : null}
+          </View>
+
+          <Text style={[Fonts.p2, Fonts.neutral500]}>›</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  };
+
+  // L4-B — L'ACCORDEON DEVIENT UNE FEUILLE, OUVERTE PAR LE ⋯ DE LA BARRE DU HAUT.
+  //
+  // ⛔ AUCUNE ACTION N'A ETE RETIREE NI DEPLACEE : la feuille rend EXACTEMENT
+  // `manageChips`, dans le meme ordre, avec les memes conditions et les memes
+  // libelles. Seul le CONTENANT change — l'accordeon vivait au milieu de la
+  // colonne, ferme par defaut, et il fallait defiler pour le trouver.
+  //
+  // `snapPoints` reste ABSENT a dessein : la feuille porte un en-tete et AUCUN
+  // pied, cas ou le dimensionnement dynamique de `BottomModal` suffit
+  // (`BottomModal.js:297`, `enableDynamicSizing={!snapPoints}`). C'est
+  // l'association en-tete + pied qui exige des `snapPoints` (piege paye au lot
+  // D19, meme choix qu'AC01 sur `TeamDetails.js:4561`).
+  const renderManageSheet = () => {
     if (!hasManageActions) return null;
 
     return (
-      <View style={[Spaces.marginTop[12], { alignItems: 'flex-end' }]}>
-        {isEventActionsOpen ? (
-          <View
-            style={[
-              ApplicationStyle.borderWidth1,
-              ApplicationStyle.shadow200,
-              Spaces.paddingHorizontal[16],
-              Spaces.paddingTop[12],
-              Spaces.marginBottom[8],
-              manageSurfaceStyle,
-              { alignSelf: 'stretch', borderRadius: 18 },
-            ]}
-            testID="event-manage-sheet"
-          >
-            <View
-              style={[
-                Alignments.row,
-                Spaces.gap[8],
-                Spaces.paddingBottom[12],
-                { flexWrap: 'wrap' },
-              ]}
-            >
-              {manageChips.map((chip, index) => {
-                // Une chip orpheline en fin de grille prend toute la largeur :
-                // une demi-chip seule au milieu se lit comme un bug d'affichage.
-                // D71 : une chip qui porte une NOTE la prend aussi — une phrase
-                // dans une demi-colonne se casse en quatre lignes illisibles.
-                const isLastAlone = manageChips.length % 2 === 1
-                  && index === manageChips.length - 1;
-                const isFullWidth = isLastAlone || Boolean(chip.fullWidth);
-                const chipColor = chip.isDestructive ? Colors.error500 : Colors.primary500;
-
-                return (
-                  <View key={chip.key} style={{ width: isFullWidth ? '100%' : '48%' }} testID="event-manage-chip">
-                    <Button
-                      disabled={chip.disabled}
-                      icon={chip.icon}
-                      iconColor={chipColor}
-                      onPress={chip.onPress}
-                      size="sm"
-                      style={{ borderColor: withAlpha(chipColor, 0.45) }}
-                      textStyle={[Fonts.p3Bold, { color: chipColor }]}
-                      title={chip.label}
-                      variant="Secondary"
-                    />
-                    {chip.note ? (
-                      <Text style={[Fonts.p4, Fonts.neutral300, Spaces.marginTop[4]]}>
-                        {chip.note}
-                      </Text>
-                    ) : null}
-                  </View>
-                );
-              })}
-            </View>
-          </View>
-        ) : null}
-
+      <BottomModal
+        close={() => setIsEventActionsSheetOpen(false)}
+        headerComponent={(
+          <Text style={[Fonts.h5Bold, Fonts.neutral00]}>
+            {t('eventDetails.managePanel.title', "Gérer l'événement")}
+          </Text>
+        )}
+        isVisible={isEventActionsSheetOpen}
+      >
         <View
           style={[
             ApplicationStyle.borderWidth1,
-            ApplicationStyle.shadow200,
-            Spaces.paddingHorizontal[16],
-            manageSurfaceStyle,
-            { borderRadius: 24 },
+            {
+              borderColor: withAlpha(Colors.primary500, 0.3),
+              borderRadius: 16,
+              overflow: 'hidden',
+            },
           ]}
-          testID="event-manage-panel"
+          testID="event-manage-sheet"
         >
-          <TouchableOpacity
-            accessibilityLabel={eventActionsToggleLabel}
-            accessibilityRole="button"
-            activeOpacity={0.82}
-            onPress={() => setIsEventActionsOpen((previousValue) => !previousValue)}
-          >
-            <View
-              style={[
-                Alignments.row,
-                Alignments.alignCenter,
-                Spaces.gap[8],
-                { height: 44 },
-              ]}
-              testID="event-manage-panel-row"
-            >
-              <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
-                {t('eventDetails.managePanel.title', "Gérer l'événement")}
-              </Text>
-              <Image
-                source={Images.chevronDown}
-                style={{
-                  height: 16,
-                  tintColor: Colors.primary500,
-                  transform: [{ rotate: isEventActionsOpen ? '180deg' : '0deg' }],
-                  width: 16,
-                }}
-              />
-            </View>
-          </TouchableOpacity>
+          {manageChips.map((chip, index) => renderManageRow(
+            chip,
+            index === manageChips.length - 1,
+          ))}
         </View>
-      </View>
+      </BottomModal>
     );
   };
 
@@ -5059,17 +5159,42 @@ function EventDetails({ navigation, route }) {
     [fromEventCreation, handleBackAfterCreation],
   );
 
+  // L4-B — LA BARRE DU HAUT : ← · signaler · ⋯ (maquette planche 04 · 4C).
+  // Le ⋯ remplace l'accordeon « Gérer l'événement » qui vivait au milieu de la
+  // colonne. Il n'apparait QUE s'il y a quelque chose a gerer : c'est la meme
+  // regle que l'accordeon d'avant (`hasManageActions`), donc aucun droit n'est
+  // elargi et personne ne gagne un bouton muet.
+  // 🖼️ Le glyphe `dotsVertical` existe deja (`GlyphIcon.js:120`, lot AD07) —
+  // aucune image nouvelle n'est livree ici, et on ne redessine pas trois ronds
+  // a la main comme AC01 avait du le faire avant lui.
   const renderHeaderRight = useCallback(
     () => (
-      <Button
-        icon="flag"
-        isOption
-        onPress={() => setIsReportModalVisible(true)}
-        style={Spaces.marginRight[16]}
-        variant="Secondary"
-      />
+      <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[4], Spaces.marginRight[16]]}>
+        <Button
+          icon="flag"
+          isOption
+          onPress={() => setIsReportModalVisible(true)}
+          variant="Secondary"
+        />
+        {hasManageActions ? (
+          <TouchableOpacity
+            accessibilityLabel={t('eventDetails.managePanel.title', "Gérer l'événement")}
+            accessibilityRole="button"
+            activeOpacity={0.7}
+            onPress={() => setIsEventActionsSheetOpen(true)}
+            style={[
+              Alignments.alignCenter,
+              Alignments.justifyCenter,
+              { height: 44, width: 44 },
+            ]}
+            testID="event-actions-menu-button"
+          >
+            <GlyphIcon color={Colors.neutral00} name="dotsVertical" size={20} />
+          </TouchableOpacity>
+        ) : null}
+      </View>
     ),
-    [Spaces.marginRight],
+    [Alignments, Colors.neutral00, hasManageActions, Spaces, t],
   );
 
   useLayoutEffect(() => {
@@ -5189,10 +5314,10 @@ function EventDetails({ navigation, route }) {
           <WithDataWrapper error={error} isLoading={isLoading} wrapperStyle={[Alignments.fill, Spaces.gap[24]]}>
             <EventHeader event={event} matchScoreSummary={matchHeaderScoreSummary} />
             {renderTournamentActionsPanel()}
-            {renderManagePanel()}
-            {renderCompoReminder()}
             {renderViewerConvocationLine()}
+            {renderDetailsTabs()}
             <View style={[Spaces.gap[24]]}>
+              {showCallUpTab && renderCompoReminder()}
 
               {isStageParentEvent ? (
                 <View style={[Spaces.gap[16]]}>
@@ -5365,24 +5490,16 @@ function EventDetails({ navigation, route }) {
                 </TouchableOpacity>
               ) : null}
 
-              {Array.isArray(event?.eventTasks) && event.eventTasks.length > 0 ? (
-                <EventTasksSection
-                  canManageEvent={canEdit}
-                  event={event}
-                  userData={userData}
-                />
-              ) : null}
-
               {renderTournamentSection()}
 
-              {eventDescriptionText ? (
+              {showOverviewTab && eventDescriptionText ? (
                 <View style={[Spaces.gap[16]]}>
                   <Text style={[Fonts.h3Bold, Fonts.neutral00]}>{t('eventDetails.fields.description')}</Text>
                   <Text style={[Fonts.p1, Fonts.primary100]}>{eventDescriptionText}</Text>
                 </View>
               ) : null}
 
-              {canSelfMarkArrival && selfAttendanceStatus ? (
+              {showOverviewTab && canSelfMarkArrival && selfAttendanceStatus ? (
                 <View style={[Spaces.gap[12]]}>
                   <Text style={[Fonts.h3Bold, Fonts.neutral00]}>Statut d&apos;arrivée</Text>
                   <View
@@ -5464,7 +5581,15 @@ function EventDetails({ navigation, route }) {
                 />
               ) : null}
 
-              {Array.isArray(event?.teamAudiences) && event.teamAudiences.length > 0 ? (
+              {showOverviewTab && hasEventTasks ? (
+                <EventTasksSection
+                  canManageEvent={canEdit}
+                  event={event}
+                  userData={userData}
+                />
+              ) : null}
+
+              {showOverviewTab && hasTeamAudiences ? (
                 <EventTeamAudiencesSection
                   canManageEvent={canEdit}
                   event={event}
@@ -5516,7 +5641,7 @@ function EventDetails({ navigation, route }) {
                 </View>
               ) : null}
 
-              {(!isTournamentEvent || isStageDayEvent) ? (
+              {showParticipantsTab && (!isTournamentEvent || isStageDayEvent) ? (
                 <EventParticipants
                   // @ts-ignore: FIXME: Baseline TS regression
                   attendanceByUserId={attendanceByUserId}
@@ -5540,7 +5665,7 @@ function EventDetails({ navigation, route }) {
                 />
               ) : null}
 
-              {isMatchEvent
+              {showOverviewTab && isMatchEvent
             && compositionTeamId
             && isTeamMember
             && isMatchFinished
@@ -5569,7 +5694,7 @@ function EventDetails({ navigation, route }) {
               </View>
                 ) : null}
 
-              {isMatchEvent && compositionTeamId && isTeamMember && isMatchFinished && canRespondMyMatchStats ? (
+              {showOverviewTab && isMatchEvent && compositionTeamId && isTeamMember && isMatchFinished && canRespondMyMatchStats ? (
                 <View style={[Spaces.gap[12]]}>
                   <Text style={[Fonts.h3Bold, Fonts.neutral00]}>Mes stats</Text>
                   <View
@@ -5652,7 +5777,7 @@ function EventDetails({ navigation, route }) {
                 </View>
               ) : null}
 
-              {isMatchEvent && compositionTeamId && isTeamMember && isMatchFinished && canRespondMyMatchStats ? (
+              {showOverviewTab && isMatchEvent && compositionTeamId && isTeamMember && isMatchFinished && canRespondMyMatchStats ? (
                 <View style={[Spaces.gap[12]]}>
                   <Text style={[Fonts.h3Bold, Fonts.neutral00]}>Mon retour coach</Text>
                   <View
@@ -5719,7 +5844,7 @@ function EventDetails({ navigation, route }) {
                 </View>
               ) : null}
 
-              {isMatchEvent && compositionTeamId && canViewMatchStats ? (
+              {showOverviewTab && isMatchEvent && compositionTeamId && canViewMatchStats ? (
                 <View style={[Spaces.gap[12]]}>
                   <Text style={[Fonts.h3Bold, Fonts.neutral00]}>Stats du match</Text>
                   <View
@@ -5888,7 +6013,7 @@ function EventDetails({ navigation, route }) {
                 </View>
               ) : null}
 
-              {supportsEventComposition && (canViewPublishedComposition || canEdit) ? (
+              {showCallUpTab && showPublishedComposition ? (
                 <View style={[Spaces.gap[12]]}>
                   <Text style={[Fonts.h3Bold, Fonts.neutral00]}>
                     Composition d&apos;equipes
@@ -5972,6 +6097,12 @@ function EventDetails({ navigation, route }) {
           )
           : renderActionButtons()}
       </View>
+
+      {/* L4-B : la feuille d'organisation vit AVEC LES MODALES, hors de la
+          ScrollView — elle se pose PAR-DESSUS la page. C'est ce qui la rend
+          incapable de recouvrir le bas de la liste des participants, defaut
+          que D64 avait du corriger sur l'accordeon flottant d'avant. */}
+      {renderManageSheet()}
 
       {(() => {
         let joinModalConfirmLabel = currentParticipationFlow?.confirmLabel;

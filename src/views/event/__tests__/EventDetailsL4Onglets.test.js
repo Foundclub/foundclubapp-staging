@@ -1,33 +1,29 @@
-import { Text } from 'react-native';
+import { Text, TouchableOpacity } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
-// ==========================================================================
-// AC08 — LA PORTE. Temoins 1, 2, 5 et 6 du lot.
+// L4-A — LA PAGE DE DETAIL D'UN MATCH GAGNE SES ONGLETS.
 //
-// 🗣️ Adel, trois fois : « pour voir la composition, l'ecran n'est pas bon du
-// tout » (7b) · « c'est nul, l'ecran est mauvais » (D-22) · « je dois VRAIMENT
-// voir la compo : le terrain avec les joueurs places et le banc » (D-23).
+// Constat de l'audit du pack de design (`CONSTAT_DETAIL_EVENEMENT.md`, ecart 2) :
+// l'ecran empilait 19 blocs dans UNE SEULE COLONNE. La maquette (planche 04)
+// la coupe en trois onglets — Aperçu · Participants · Convocation — sous une
+// zone fixe (carte d'entete + statut de convocation) qui, elle, ne bouge pas.
 //
-// 🧨 CE QUE LA MESURE A TROUVE, et qui explique le constat : l'ecran demande
-// EXISTE deja, entier (`PlayerConvocationScreen`, 414 lignes, teste). Mais la
-// page d'un evenement n'y menait JAMAIS — seule une notification poussee y
-// conduisait, et le bouton « Voir la composition d'equipes » deposait le joueur
-// sur le TABLEAU DU COACH desactive (1 974 lignes), sans bouton pour repondre.
-// Convoque et non-convoque lisaient exactement le meme bloc.
+// ⛔ UN SEUL TYPE DANS CE LOT : le MATCH. Le tournoi, le stage, la detection et
+// l'entrainement gardent leur colonne A L'IDENTIQUE — decision du CONSTAT
+// (l. 1235) et d'Adel (Q2, 20/08). Le temoin 4 le verrouille des deux cotes :
+// trois onglets sur un match, ZERO ailleurs.
 //
-// 🎯 Ce fichier ne verrouille pas un dessin : il verrouille UN CHEMIN.
-//   1. 🥇 un joueur convoque atteint le terrain en UN appui ;
-//   2. 🔒 un joueur NON convoque n'est PAS envoye la-bas (il y serait repose
-//      aussitot : ce serait un aller-retour pour rien) ;
-//   5. convoque et non convoque ne lisent PLUS la meme chose ;
-//   6. 🔒 NON-REGRESSION : le tableau du COACH n'a pas bouge d'un pouce.
+// ⚠️ « Match amical » contient « match » : `isMatchEvent` est VRAI pour lui
+// (`EventDetails.js:2748`, comparaison par sous-chaine). C'est voulu — meme
+// metier — et c'est teste ci-dessous plutot que suppose.
 //
-// La couture est le TEXTE VISIBLE et la ROUTE EMPRUNTEE, jamais la forme de
-// l'arbre — le meme choix que `EventDetailsCompoReminder.test.js`.
-// ==========================================================================
+// ⚠️ CE QUE CE FILET NE PROUVE PAS : Jest n'a pas de moteur de mise en page. Il
+// lit ce qui est MONTE et ce qui ne l'est pas. Le rendu reel se voit a la
+// recette.
 
 const mockUseAuth = jest.fn();
 const mockNavigate = jest.fn();
+const mockSetOptions = jest.fn();
 const mockEventQuery = { data: null };
 const mockConvocationQuery = { data: null };
 
@@ -192,7 +188,6 @@ jest.mock('@/components/atoms/button/Button', () => {
     return react.createElement(
       rn.TouchableOpacity,
       {
-        accessibilityLabel: props.accessibilityLabel,
         accessibilityRole: 'button',
         disabled: Boolean(props.disabled || props.isLoading),
         onPress: props.onPress,
@@ -227,6 +222,49 @@ jest.mock('@/components/molecules/bottomModal/BottomModal', () => {
   };
 });
 
+// 🎛️ LA DOUBLURE DES ONGLETS. `SegmentedControl` est deja sous test chez lui
+// (201 lignes) : ce n'est pas son dessin qu'on verifie ici, c'est CE QU'ON LUI
+// DONNE et CE QU'IL COMMANDE. La doublure rend donc un pressable par option,
+// portant son libelle — exactement ce qu'un doigt peut atteindre.
+// ⛔ Elle est aussi ce qui evite de monter `react-native-reanimated` et
+// `react-native-gesture-handler` pour rien dans une suite qui monte deja
+// 6 800 lignes d'ecran.
+jest.mock('@/components/molecules/segmentedControl/SegmentedControl', () => {
+  const react = jest.requireActual('react');
+  const rn = jest.requireActual('react-native');
+  return function SegmentedControlDouble(/** @type {any} */ props) {
+    return react.createElement(
+      rn.View,
+      { testID: 'doublure-onglets' },
+      (props.options || []).map((/** @type {any} */ option) => react.createElement(
+        rn.TouchableOpacity,
+        {
+          key: option.value,
+          onPress: () => props.onChange(option.value),
+          testID: `onglet-${option.value}`,
+        },
+        react.createElement(rn.Text, null, option.label),
+      )),
+    );
+  };
+});
+
+// 🪢 La doublure d'`EventParticipants` rend le MEME bouton que le vrai et le
+// branche sur la MEME propriete — motif repris d'`AD10ExportFeuilleBranchee`,
+// ou le temoin 0 compare cette doublure au vrai composant monte pour de bon.
+// C'est ce qui rend le temoin 6 credible sans monter 784 lignes de liste.
+jest.mock('../components/EventParticipants', () => {
+  const react = jest.requireActual('react');
+  const rn = jest.requireActual('react-native');
+  return function EventParticipantsDouble(/** @type {any} */ props) {
+    return react.createElement(
+      rn.TouchableOpacity,
+      { onPress: props.handleExportParticipants, testID: 'bouton-export' },
+      react.createElement(rn.Text, null, 'Exporter la liste (Excel/CSV)'),
+    );
+  };
+});
+
 /* eslint-disable global-require */
 jest.mock(
   '@/components/molecules/eventAnswerButtons/EventAnswerButtons',
@@ -253,10 +291,6 @@ jest.mock(
   () => require('@/testSupport/textDouble').makeTextDouble('DOUBLURE_EventHeader'),
 );
 jest.mock(
-  '../components/EventParticipants',
-  () => require('@/testSupport/textDouble').makeTextDouble('DOUBLURE_EventParticipants'),
-);
-jest.mock(
   '../components/EventDetectionSlots',
   () => require('@/testSupport/textDouble').makeTextDouble('DOUBLURE_EventDetectionSlots'),
 );
@@ -274,65 +308,17 @@ jest.mock(
 );
 /* eslint-enable global-require */
 
-// 🎛️ L4-A — LA DOUBLURE DES ONGLETS, ET ELLE N'EST PAS FACULTATIVE.
-// `SegmentedControl` importe `react-native-gesture-handler`, dont
-// `lib/commonjs/specs/NativeRNGestureHandlerModule.ts` n'est PAS couvert par le
-// `transformIgnorePatterns` du depot : sans doublure, la SUITE ENTIERE meurt au
-// chargement (« Cannot use import statement outside a module ») et AUCUN test
-// ne s'execute. C'est pour ca que les 16 autres appelants du composant le
-// doublent aussi (motif ClubDetails.deuxPortes.test.js:299).
-// La doublure rend un pressable par onglet, portant son libelle : le dessin est
-// verifie chez le composant (201 lignes de test), ce qui se verifie ici c'est
-// CE QU'ON LUI DONNE et CE QU'IL COMMANDE.
-jest.mock('@/components/molecules/segmentedControl/SegmentedControl', () => {
-  const react = jest.requireActual('react');
-  const rn = jest.requireActual('react-native');
-  return function SegmentedControlDouble(/** @type {any} */ props) {
-    return react.createElement(
-      rn.View,
-      { testID: 'doublure-onglets' },
-      (props.options || []).map((/** @type {any} */ option) => react.createElement(
-        rn.TouchableOpacity,
-        {
-          key: option.value,
-          onPress: () => props.onChange(option.value),
-          testID: `onglet-${option.value}`,
-        },
-        react.createElement(rn.Text, null, option.label),
-      )),
-    );
-  };
-});
-
-/**
- * Bascule sur l'onglet demande. Sans effet sur un evenement qui n'a pas
- * d'onglets (tout type autre que le match) : la colonne y est entiere.
- * @param {any} root - Racine du rendu.
- * @param {string} valeur - 'overview' | 'participants' | 'callUp'.
- * @returns {void}
- */
-const allerSurLOnglet = (root, valeur) => {
-  const [onglet] = root.findAll(
-    (/** @type {any} */ node) => node.props?.testID === `onglet-${valeur}`,
-    { deep: false },
-  );
-  if (!onglet) return;
-  act(() => {
-    onglet.props.onPress();
-  });
-};
-
 // eslint-disable-next-line import/first
 import EventDetails from '../EventDetails';
 
-// Le premier montage transpile tout le graphe d'imports de l'ecran.
 jest.setTimeout(30000);
 
 const CLUB_ID = 'club-1';
 const TEAM_ID = 'team-1';
 const JOUEUR = 'joueur-1';
 const REMPLACANT = 'joueur-2';
-const SPECTATEUR = 'joueur-9';
+
+const DESCRIPTION = 'Rendez-vous au stade a 9 h, pensez aux protege-tibias.';
 
 // Le pack publie par le coach : un titulaire sur le terrain, un sur le banc.
 const PACK = {
@@ -354,7 +340,7 @@ const PACK = {
 };
 
 // 🧨 La charge telle que `GET /events/:id/convocation` l'envoie VRAIMENT
-// (`getPlayerConvocationView`, forme `branches`) — aucun `published` a la racine.
+// (forme `branches`) — aucun `published` a la racine.
 const CONVOCATION = {
   branches: [{
     published: PACK,
@@ -367,9 +353,10 @@ const CONVOCATION = {
   schemaVersion: 3,
 };
 
-const buildMatch = (/** @type {any} */ overrides = {}) => ({
+const buildEvent = (/** @type {any} */ overrides = {}) => ({
   club: { documentId: CLUB_ID },
   date: '2099-01-01T10:00:00.000Z',
+  description: DESCRIPTION,
   documentId: 'event-1',
   featuredRequests: [],
   id: 1,
@@ -391,31 +378,50 @@ const buildMatch = (/** @type {any} */ overrides = {}) => ({
   ...overrides,
 });
 
-const authPour = (/** @type {string} */ documentId, /** @type {boolean} */ peutGerer = false) => ({
+const authPour = (
+  /** @type {string} */ documentId,
+  /** @type {boolean} */ peutGerer = false,
+) => ({
   canEditClub: () => peutGerer,
   canEditEvent: () => peutGerer,
   canManageEvent: () => peutGerer,
   freeUsageSummary: null,
   subscriptionAccessLevel: 'FREE',
-  userData: { documentId, role: { name: peutGerer ? 'Dirigeant' : 'Joueur' } },
+  userData: {
+    documentId,
+    role: { name: peutGerer ? 'Dirigeant' : 'Joueur' },
+  },
 });
 
 /** @type {any} */
 let mounted = null;
 
-const monter = (/** @type {any} */ { auth, convocation = CONVOCATION, event } = {}) => {
-  mockEventQuery.data = event === undefined ? buildMatch() : event;
+const demonter = () => {
+  if (!mounted) return;
+  act(() => {
+    mounted.unmount();
+  });
+  mounted = null;
+};
+
+const monter = (/** @type {any} */ { auth, convocation = null, event } = {}) => {
+  mockEventQuery.data = event === undefined ? buildEvent() : event;
   mockConvocationQuery.data = convocation;
-  mockUseAuth.mockReturnValue(auth || authPour(JOUEUR));
+  mockUseAuth.mockReturnValue(auth || authPour('coach-1', true));
+
+  demonter();
+  mockSetOptions.mockClear();
 
   act(() => {
     mounted = renderer.create(
       <EventDetails
         navigation={{
           addListener: () => () => {},
+          getParent: () => undefined,
+          getState: () => ({ routeNames: ['EventDetails', 'EventEdit'] }),
           goBack: jest.fn(),
           navigate: mockNavigate,
-          setOptions: jest.fn(),
+          setOptions: mockSetOptions,
         }}
         route={{ params: { eventId: 'event-1' } }}
       />,
@@ -424,6 +430,10 @@ const monter = (/** @type {any} */ { auth, convocation = CONVOCATION, event } = 
 
   return mounted.root;
 };
+
+afterEach(() => {
+  demonter();
+});
 
 const textOf = (/** @type {any} */ node) => {
   const parts = [];
@@ -446,131 +456,157 @@ const textesVisibles = (/** @type {any} */ root) => root
   .map((/** @type {any} */ node) => textOf(node))
   .filter(Boolean);
 
-const appuyer = (/** @type {any} */ root, /** @type {string} */ libelle) => {
-  const bouton = root
-    .findAllByProps({ accessibilityRole: 'button' })
-    .find((/** @type {any} */ node) => textOf(node).includes(libelle));
-  if (!bouton) {
-    const vu = textesVisibles(root).join(' | ');
-    throw new Error(`Aucun bouton ne porte le libelle « ${libelle} ». Vu : ${vu}`);
-  }
+const contient = (/** @type {any} */ root, /** @type {string} */ extrait) => textesVisibles(root)
+  .join(' | ')
+  .includes(extrait);
+
+const parTestID = (/** @type {any} */ root, /** @type {string} */ id) => root
+  .findAll((/** @type {any} */ node) => node.props?.testID === id, { deep: false });
+
+const libellesDesOnglets = (/** @type {any} */ root) => parTestID(root, 'doublure-onglets')
+  .flatMap((/** @type {any} */ node) => node
+    .findAllByType(TouchableOpacity)
+    .map((/** @type {any} */ item) => textOf(item)));
+
+const allerSurLOnglet = (/** @type {any} */ root, /** @type {string} */ valeur) => {
+  const [onglet] = parTestID(root, `onglet-${valeur}`);
+  if (!onglet) throw new Error(`Aucun onglet « ${valeur} » a l ecran`);
   act(() => {
-    bouton.props.onPress();
+    onglet.props.onPress();
   });
 };
 
-const derniereRoute = () => {
-  const call = [...mockNavigate.mock.calls].pop();
-  return call ? call[0] : null;
-};
-
-beforeEach(() => {
-  jest.clearAllMocks();
-  mockEventQuery.data = null;
-  mockConvocationQuery.data = null;
-});
-
-afterEach(() => {
-  if (mounted) {
-    act(() => {
-      mounted.unmount();
-    });
-    mounted = null;
-  }
-});
-
-describe('AC08 · TEMOIN 1 — 🥇 le convoque atteint le terrain en UN appui', () => {
-  test('un titulaire part sur SON ecran, avec l evenement et l equipe', () => {
+describe('L4 · temoin 4 — trois onglets sur un match, zero ailleurs', () => {
+  test('un MATCH porte Aperçu · Participants · Convocation, dans cet ordre', () => {
     const root = monter();
 
-    allerSurLOnglet(root, 'callUp');
-    appuyer(root, 'Voir ma convocation');
-
-    expect(mockNavigate).toHaveBeenCalledWith(
-      'PlayerConvocation',
-      { eventId: 'event-1', teamId: TEAM_ID },
-    );
+    expect(libellesDesOnglets(root)).toEqual(['Aperçu', 'Participants', 'Convocation']);
   });
 
-  test('un remplacant aussi — le banc est une convocation, pas un lot de consolation', () => {
-    const root = monter({ auth: authPour(REMPLACANT) });
+  test('un « Match amical » les porte AUSSI — meme metier, meme page', () => {
+    // `isMatchEvent` compare par SOUS-CHAINE (`EventDetails.js:2748`) : « Match
+    // amical » contient « match ». C'est voulu, et c'est mesure ici plutot que
+    // suppose — le jour ou quelqu'un resserre la comparaison, ce temoin parle.
+    const root = monter({ event: buildEvent({ type: { name: 'Match amical' } }) });
 
-    allerSurLOnglet(root, 'callUp');
-    appuyer(root, 'Voir ma convocation');
-
-    expect(derniereRoute()).toBe('PlayerConvocation');
+    expect(libellesDesOnglets(root)).toEqual(['Aperçu', 'Participants', 'Convocation']);
   });
-});
 
-describe('AC08 · TEMOIN 2 — 🔒 le non-convoque ne tombe pas dans un cul-de-sac', () => {
-  test('il n est PAS envoye sur l ecran du convoque, qui le reposerait aussitot', () => {
+  test('un ENTRAINEMENT n a AUCUN onglet, et sa colonne est intacte', () => {
+    const root = monter({ event: buildEvent({ type: { name: 'Entrainement' } }) });
+
+    expect(parTestID(root, 'doublure-onglets')).toHaveLength(0);
+    // ⛔ LE COEUR DU TEMOIN : sur un non-match, TOUT reste empile dans la meme
+    // colonne, visible d'un coup — description ET liste, sans le moindre appui.
+    expect(contient(root, DESCRIPTION)).toBe(true);
+    expect(contient(root, 'Exporter la liste (Excel/CSV)')).toBe(true);
+  });
+
+  test('un TOURNOI non plus : ce lot ne touche qu au match', () => {
+    const root = monter({ event: buildEvent({ type: { name: 'Tournoi' } }) });
+
+    expect(parTestID(root, 'doublure-onglets')).toHaveLength(0);
+  });
+
+  test('sur un match, Aperçu est l onglet ouvert au montage', () => {
+    const root = monter();
+
+    // La description vit dans Aperçu : elle se lit sans aucun appui.
+    expect(contient(root, DESCRIPTION)).toBe(true);
+    // La liste, elle, vit dans son propre onglet et n'est donc PAS montee.
+    expect(contient(root, 'Exporter la liste (Excel/CSV)')).toBe(false);
+  });
+
+  test('la DESCRIPTION ouvre l onglet Aperçu — elle passe avant les taches', () => {
+    // Regle 2 des six regles du 22/08 (CONSTAT, ecart 4) : « un seul champ, le
+    // meme nom pour les six types, EN HAUT DE L'APERÇU, sous la carte ».
+    // Avant L4-A, la description etait rendue au 9e rang de la page, apres les
+    // taches. Le bloc des taches redescend donc SOUS elle.
     const root = monter({
-      auth: authPour(SPECTATEUR),
-      event: buildMatch({
-        team: {
-          club: { documentId: CLUB_ID },
-          documentId: TEAM_ID,
-          name: 'U15',
-          players: [{ documentId: JOUEUR }, { documentId: SPECTATEUR }],
-          trainers: [],
-        },
+      event: buildEvent({
+        eventTasks: [{ documentId: 'tache-1', title: 'Apporter les ballons' }],
       }),
     });
 
-    allerSurLOnglet(root, 'callUp');
-    appuyer(root, "Voir la composition d'équipes");
+    const textes = textesVisibles(root);
+    const rangDescription = textes.findIndex((/** @type {string} */ t) => t.includes(DESCRIPTION));
+    const rangTaches = textes.findIndex(
+      (/** @type {string} */ t) => t.includes('DOUBLURE_EventTasksSection'),
+    );
 
-    expect(derniereRoute()).not.toBe('PlayerConvocation');
+    expect(rangDescription).toBeGreaterThanOrEqual(0);
+    expect(rangTaches).toBeGreaterThanOrEqual(0);
+    expect(rangDescription).toBeLessThan(rangTaches);
+  });
+
+  test('l onglet Convocation porte la composition publiee, Aperçu ne la porte pas', () => {
+    const root = monter({
+      auth: authPour(JOUEUR),
+      convocation: CONVOCATION,
+    });
+
+    expect(contient(root, 'Composition d')).toBe(false);
+
+    allerSurLOnglet(root, 'callUp');
+
+    expect(contient(root, 'Composition d')).toBe(true);
+    // Et la description a laisse la place : un onglet a la fois.
+    expect(contient(root, DESCRIPTION)).toBe(false);
   });
 });
 
-describe('AC08 · TEMOIN 5 — convoque et non convoque ne lisent PLUS la meme page', () => {
-  test('le convoque lit « Tu es convoque · Titulaire »', () => {
-    const textes = textesVisibles(monter()).join(' | ');
+describe('L4 · temoin 5 — le convoque lit son statut sans un seul appui', () => {
+  // 🔒 GARANTIE REPRISE D'AC08 (temoin 5) ET D'AD01 (temoins 1 et 2) : la
+  // phrase de convocation etait lisible AU MONTAGE, avant tout appui. Les
+  // onglets ne la renegocient PAS — elle vit dans la ZONE FIXE, au-dessus de la
+  // barre d'onglets, donc elle est vraie quel que soit l'onglet actif.
+  test('« Tu es convoqué · Titulaire » se lit au montage, onglet Aperçu', () => {
+    const root = monter({ auth: authPour(JOUEUR), convocation: CONVOCATION });
 
-    expect(textes).toContain('Tu es convoqué · Titulaire');
+    expect(contient(root, 'Tu es convoqué · Titulaire')).toBe(true);
   });
 
-  test('le remplacant lit « Tu es convoque · Remplacant »', () => {
-    const textes = textesVisibles(monter({ auth: authPour(REMPLACANT) })).join(' | ');
+  test('et elle reste lisible sur CHACUN des trois onglets', () => {
+    const root = monter({ auth: authPour(JOUEUR), convocation: CONVOCATION });
 
-    expect(textes).toContain('Tu es convoqué · Remplaçant');
+    ['overview', 'participants', 'callUp'].forEach((onglet) => {
+      allerSurLOnglet(root, onglet);
+      expect(contient(root, 'Tu es convoqué · Titulaire')).toBe(true);
+    });
   });
 
-  test('celui qui n y est pas le lit AUSSI, en clair — le silence etait le defaut', () => {
-    const textes = textesVisibles(monter({
-      auth: authPour(SPECTATEUR),
-      event: buildMatch({
-        team: {
-          club: { documentId: CLUB_ID },
-          documentId: TEAM_ID,
-          name: 'U15',
-          players: [{ documentId: JOUEUR }, { documentId: SPECTATEUR }],
-          trainers: [],
-        },
-      }),
-    })).join(' | ');
+  test('le remplacant lit la sienne, au montage aussi', () => {
+    const root = monter({ auth: authPour(REMPLACANT), convocation: CONVOCATION });
 
-    expect(textes).toContain('Tu n’es pas dans la composition publiée.');
-    expect(textes).not.toContain('Tu es convoqué');
+    expect(contient(root, 'Tu es convoqué · Remplaçant')).toBe(true);
   });
 });
 
-describe('AC08 · TEMOIN 6 — 🔒 le tableau du COACH n a pas bouge', () => {
-  test('l entraineur part toujours sur « Convocation publiee », jamais ailleurs', () => {
-    const root = monter({ auth: authPour('coach-1', true) });
+describe('L4 · temoin 6 — l export reste atteignable', () => {
+  test('onglet Participants : « Exporter la liste (Excel/CSV) » est la', () => {
+    const root = monter();
 
-    allerSurLOnglet(root, 'callUp');
-    appuyer(root, 'matchConvocation.published.openCta');
+    allerSurLOnglet(root, 'participants');
 
-    expect(derniereRoute()).toBe('MatchConvocationPublished');
-    expect(mockNavigate).not.toHaveBeenCalledWith('PlayerConvocation', expect.anything());
+    expect(contient(root, 'Exporter la liste (Excel/CSV)')).toBe(true);
+    expect(parTestID(root, 'bouton-export')).toHaveLength(1);
   });
 
-  test('et il ne lit AUCUNE ligne « Tu es convoque » — ce n est pas son ecran', () => {
-    const textes = textesVisibles(monter({ auth: authPour('coach-1', true) })).join(' | ');
+  test('et il est branche : son appui appelle bien le declencheur de l ecran', () => {
+    const root = monter();
+    allerSurLOnglet(root, 'participants');
 
-    expect(textes).not.toContain('Tu es convoqué');
-    expect(textes).not.toContain('Tu n’es pas dans la composition publiée.');
+    const [bouton] = parTestID(root, 'bouton-export');
+    expect(typeof bouton.props.onPress).toBe('function');
+  });
+
+  test('on revient a Aperçu et la description est de nouveau la : rien n est perdu', () => {
+    const root = monter();
+
+    allerSurLOnglet(root, 'participants');
+    expect(contient(root, DESCRIPTION)).toBe(false);
+
+    allerSurLOnglet(root, 'overview');
+    expect(contient(root, DESCRIPTION)).toBe(true);
   });
 });

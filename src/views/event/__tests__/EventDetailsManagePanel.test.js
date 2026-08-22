@@ -20,6 +20,8 @@ import renderer, { act } from 'react-test-renderer';
 
 const mockUseAuth = jest.fn();
 const mockNavigate = jest.fn();
+// L4-B : partage, pour pouvoir relire le `headerRight` que l ecran y depose.
+const mockSetOptions = jest.fn();
 const mockPerfMark = jest.fn();
 const mockCancelEventMutate = jest.fn();
 const mockEventQuery = { data: null };
@@ -282,6 +284,36 @@ jest.mock(
 );
 /* eslint-enable global-require */
 
+// 🎛️ L4-A — LA DOUBLURE DES ONGLETS, ET ELLE N'EST PAS FACULTATIVE.
+// `SegmentedControl` importe `react-native-gesture-handler`, dont
+// `lib/commonjs/specs/NativeRNGestureHandlerModule.ts` n'est PAS couvert par le
+// `transformIgnorePatterns` du depot : sans doublure, la SUITE ENTIERE meurt au
+// chargement (« Cannot use import statement outside a module ») et AUCUN test
+// ne s'execute. C'est pour ca que les 16 autres appelants du composant le
+// doublent aussi (motif ClubDetails.deuxPortes.test.js:299).
+// La doublure rend un pressable par onglet, portant son libelle : le dessin est
+// verifie chez le composant (201 lignes de test), ce qui se verifie ici c'est
+// CE QU'ON LUI DONNE et CE QU'IL COMMANDE.
+jest.mock('@/components/molecules/segmentedControl/SegmentedControl', () => {
+  const react = jest.requireActual('react');
+  const rn = jest.requireActual('react-native');
+  return function SegmentedControlDouble(/** @type {any} */ props) {
+    return react.createElement(
+      rn.View,
+      { testID: 'doublure-onglets' },
+      (props.options || []).map((/** @type {any} */ option) => react.createElement(
+        rn.TouchableOpacity,
+        {
+          key: option.value,
+          onPress: () => props.onChange(option.value),
+          testID: `onglet-${option.value}`,
+        },
+        react.createElement(rn.Text, null, option.label),
+      )),
+    );
+  };
+});
+
 // eslint-disable-next-line import/first
 import EventDetails from '../EventDetails';
 
@@ -332,7 +364,7 @@ const mountScreen = (/** @type {any} */ { auth, event } = {}) => {
           addListener: () => () => {},
           goBack: jest.fn(),
           navigate: mockNavigate,
-          setOptions: jest.fn(),
+          setOptions: mockSetOptions,
         }}
         route={{ params: { eventId: 'event-1' } }}
       />,
@@ -418,17 +450,6 @@ const pressAlertOption = (/** @type {string} */ label) => {
 };
 
 /**
- * Deplie le panneau compact s'il est la. Sur la source d'avant D4 ce controle
- * n'existe pas : la fonction ne fait alors rien, et le meme releve vaut des
- * deux cotes.
- * @param {any} root - Racine du rendu.
- * @returns {void}
- */
-const openManagePanel = (root) => {
-  if (pressableWithText(root, "Gérer l'événement")) press(root, "Gérer l'événement");
-};
-
-/**
  * LA COUTURE. Rend la liste des actions d'organisation REELLEMENT atteignables,
  * quel que soit le chemin : chip directe (apres refonte) ou passage par l'action
  * sheet intermediaire (avant refonte). C'est cette liste qui doit rester
@@ -440,7 +461,7 @@ const reachableManageActions = (/** @type {any} */ root) => {
   // Depuis D4, les actions vivent dans un panneau replie : le deplier fait
   // partie du chemin. Sur la source d'avant, cette ligne ne trouve rien et ne
   // fait rien — c'est ce qui permet au meme releve de valoir des deux cotes.
-  openManagePanel(root);
+  ouvrirLaFeuilleDeGestion();
   const direct = root
     .findAllByType(TouchableOpacity)
     .map((/** @type {any} */ node) => textOf(node))
@@ -494,27 +515,6 @@ const byTestId = (/** @type {any} */ root, /** @type {string} */ id) => root
 
 const flatStyle = (/** @type {any} */ node) => StyleSheet.flatten(node?.props?.style) || {};
 
-/**
- * Hauteur DECLAREE du panneau replie : rangee + rembourrages + bordures.
- * Ce n'est pas une mesure a l'ecran (il faudrait un appareil) mais la somme des
- * valeurs que le style impose — donc verifiable, et ca suffit a interdire le
- * retour d'un titre et d'un paragraphe.
- * @param {any} root - Racine du rendu.
- * @returns {number} - La hauteur declaree, en points.
- */
-const collapsedPanelHeight = (/** @type {any} */ root) => {
-  const [panel] = byTestId(root, PANEL_ID);
-  const [row] = byTestId(root, PANEL_ROW_ID);
-  if (!panel || !row) throw new Error('Le panneau compact n est pas rendu');
-  const panelStyle = flatStyle(panel);
-  const rowStyle = flatStyle(row);
-  const vertical = Number(panelStyle.paddingVertical || 0);
-  const top = Number(panelStyle.paddingTop || vertical);
-  const bottom = Number(panelStyle.paddingBottom || vertical);
-  const border = Number(panelStyle.borderWidth || 0) * 2;
-  return Number(rowStyle.height || 0) + top + bottom + border;
-};
-
 const chipWidths = (/** @type {any} */ root) => byTestId(root, CHIP_ID)
   .map((/** @type {any} */ node) => flatStyle(node).width);
 
@@ -543,6 +543,74 @@ afterEach(() => {
   }
   jest.restoreAllMocks();
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// L4-B — LE MENU D'ORGANISATION A QUITTE LA COLONNE POUR LA BARRE DU HAUT.
+//
+// L'accordeon « Gérer l'événement » est devenu un ⋯ pose dans l'en-tete de
+// navigation, qui ouvre une feuille. Les actions, elles, n'ont pas bouge d'un
+// pouce : meme liste, meme ordre, memes conditions.
+//
+// 🚨 LE PIEGE QUE CES TROIS FONCTIONS DEMINENT, et il est SILENCIEUX :
+// `navigation.setOptions` est une DOUBLURE MUETTE ici, donc l'element
+// `headerRight` n'entre JAMAIS dans l'arbre monte. Chercher le ⋯ par son
+// `testID` dans le rendu trouverait le vide SANS RIEN DIRE — et tous les
+// temoins d'actions ci-dessous deviendraient verts en ne testant plus rien.
+// ⇒ On va le chercher la ou il est reellement : dans le dernier `headerRight`
+// remis a `setOptions`, dont on parcourt l'arbre d'ELEMENTS non montes.
+// Motif existant : `EventFilters.criteres.test.js:316-323`.
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Cherche un element dans un arbre NON MONTE, par predicat sur ses props.
+ * @param {any} element - Racine de l'arbre d'elements.
+ * @param {any} predicat - Le test applique a chaque noeud.
+ * @returns {any} - Le premier element qui satisfait le predicat, ou null.
+ */
+const chercherDansElements = (element, predicat) => {
+  if (!element || typeof element !== 'object') return null;
+  if (Array.isArray(element)) {
+    return element.reduce(
+      (/** @type {any} */ trouve, /** @type {any} */ enfant) => (
+        trouve || chercherDansElements(enfant, predicat)
+      ),
+      null,
+    );
+  }
+  if (element.props && predicat(element)) return element;
+  return chercherDansElements(element.props?.children, predicat);
+};
+
+/**
+ * Le ⋯ de la barre du haut, ou null s'il n'y a rien a gerer.
+ * @returns {any} - L'element du bouton, ou null.
+ */
+const boutonDeGestion = () => {
+  const appels = mockSetOptions.mock.calls.filter(
+    (/** @type {any} */ appel) => appel[0]?.headerRight,
+  );
+  if (!appels.length) return null;
+  return chercherDansElements(
+    appels[appels.length - 1][0].headerRight(),
+    (/** @type {any} */ noeud) => noeud?.props?.testID === 'event-actions-menu-button',
+  );
+};
+
+/**
+ * Ouvre la feuille d'organisation. Remplace l'appui sur le texte « Gérer
+ * l'événement » de l'accordeon d'avant L4-B : meme geste pour la personne qui
+ * s'en sert, meme liste d'actions au bout.
+ * TOLERANTE A DESSEIN, comme l'ancien helper : la ou il n'y a rien a gerer, il
+ * n'y a pas de bouton, et l'inventaire doit pouvoir sortir vide sans jeter.
+ * @returns {void}
+ */
+const ouvrirLaFeuilleDeGestion = () => {
+  const bouton = boutonDeGestion();
+  if (!bouton) return;
+  act(() => {
+    bouton.props.onPress();
+  });
+};
 
 describe('EventDetails — panneau organisateur : etats recenses', () => {
   test('etat 1 — organisateur : modifier, a la une, compo et annuler atteignables', () => {
@@ -645,7 +713,7 @@ describe('EventDetails — ou menent les actions (inchange par la refonte)', () 
 
   test('Modifier ouvre l ecran EventEdit avec l identifiant de l evenement', () => {
     const root = asOrganiser();
-    openManagePanel(root);
+    ouvrirLaFeuilleDeGestion();
     const direct = pressableWithText(root, 'Modifier');
 
     if (direct) press(root, 'Modifier');
@@ -662,7 +730,7 @@ describe('EventDetails — ou menent les actions (inchange par la refonte)', () 
 
   test('l annulation garde sa confirmation, et ne mute rien tant qu on n a pas confirme', () => {
     const root = asOrganiser();
-    openManagePanel(root);
+    ouvrirLaFeuilleDeGestion();
     const direct = pressableWithText(root, 'Annuler');
 
     if (direct) press(root, 'Annuler');
@@ -686,7 +754,7 @@ describe('EventDetails — ou menent les actions (inchange par la refonte)', () 
       auth: { canEditEvent: () => true, canManageEvent: () => true },
       event: buildEvent({ recurrenceGroupId: 'rec-1' }),
     });
-    openManagePanel(root);
+    ouvrirLaFeuilleDeGestion();
     const direct = pressableWithText(root, 'Annuler');
 
     if (direct) press(root, 'Annuler');
@@ -701,7 +769,7 @@ describe('EventDetails — ou menent les actions (inchange par la refonte)', () 
 
   test('Compo ouvre la composition, sans passer par une action sheet', () => {
     const root = asOrganiser();
-    openManagePanel(root);
+    ouvrirLaFeuilleDeGestion();
     const lineup = pressableWithText(root, 'Compo')
       || pressableWithText(root, 'composition');
     expect(lineup).toBeTruthy();
@@ -747,27 +815,45 @@ describe('D4 — le panneau compact « Gerer l evenement »', () => {
     },
   });
 
-  test('replie par defaut : une rangee, aucune chip, aucun paragraphe', () => {
+  // L4-B : « replie par defaut » devient « la feuille est fermee au montage ».
+  // La GARANTIE est la meme mot pour mot — au montage, la page ne montre AUCUNE
+  // action d'organisation, et rien ne mange la hauteur de l'ecran. Seul le
+  // contenant a change : la rangee-accordeon est devenue un ⋯ en barre du haut.
+  test('ferme par defaut : un ⋯ atteignable, aucune chip, aucun paragraphe', () => {
     const root = asOrganiser();
 
-    expect(hasText(root, "Gérer l'événement")).toBe(true);
+    expect(boutonDeGestion()).toBeTruthy();
     expect(pressableWithText(root, 'Modifier')).toBeUndefined();
     expect(hasText(root, 'Actions événement')).toBe(false);
     expect(hasText(root, 'Modifie cet evenement')).toBe(false);
     expect(hasText(root, 'Gère les cotisations rattachées')).toBe(false);
   });
 
-  test('replie, le panneau tient dans 60 px declares', () => {
+  // L4-B : « le panneau replie tient dans 60 px » devient « le ⋯ ne coute RIEN
+  // a la colonne ». La garantie de fond — le menu ne mange pas la page — est
+  // desormais absolue : il n'est plus dans la page du tout. Ce qui reste a
+  // verifier, c'est qu'il garde une cible tactile d'au moins 44 pt.
+  test('le ⋯ ne coute aucune hauteur a la colonne, et reste une cible de 44 pt', () => {
     const root = asOrganiser();
 
-    expect(collapsedPanelHeight(root)).toBeLessThanOrEqual(60);
+    expect(byTestId(root, PANEL_ID)).toHaveLength(0);
+    expect(byTestId(root, PANEL_ROW_ID)).toHaveLength(0);
+
+    const style = StyleSheet.flatten(boutonDeGestion().props.style) || {};
+    expect(Number(style.height)).toBeGreaterThanOrEqual(44);
+    expect(Number(style.width)).toBeGreaterThanOrEqual(44);
   });
 
-  test('deplie : les 4 chips d action sont la, en deux colonnes', () => {
+  // ⚠️ INVERSION VOLONTAIRE (L4-B), maquette planche 04 · 4C : la grille a deux
+  // colonnes devient une LISTE DE RANGEES pleine largeur, parce que chaque
+  // rangee porte desormais SA DESTINATION sous son libelle — une demi-colonne
+  // casserait la destination en quatre lignes illisibles.
+  // ⇒ CE QUE CE TEMOIN PROTEGE EST INTACT : les 4 actions, toutes atteignables.
+  test('ouvert : les 4 actions sont la, en rangees pleine largeur', () => {
     const root = asOrganiser();
-    press(root, "Gérer l'événement");
+    ouvrirLaFeuilleDeGestion();
 
-    expect(chipWidths(root)).toEqual(['48%', '48%', '48%', '48%']);
+    expect(chipWidths(root)).toEqual(['100%', '100%', '100%', '100%']);
     ['Modifier', 'À la une', 'Compo', 'Annuler'].forEach((label) => {
       expect(pressableWithText(root, label)).toBeTruthy();
     });
@@ -775,7 +861,7 @@ describe('D4 — le panneau compact « Gerer l evenement »', () => {
 
   test('un seul tap : la chip Modifier navigue sans action sheet intermediaire', () => {
     const root = asOrganiser();
-    press(root, "Gérer l'événement");
+    ouvrirLaFeuilleDeGestion();
     press(root, 'Modifier');
 
     expect(Alert.alert).not.toHaveBeenCalled();
@@ -787,7 +873,7 @@ describe('D4 — le panneau compact « Gerer l evenement »', () => {
 
   test('plus aucun bouton autonome « Mettre a la une » : la chip ouvre la modale existante', () => {
     const root = asOrganiser();
-    press(root, "Gérer l'événement");
+    ouvrirLaFeuilleDeGestion();
 
     expect(pressableWithText(root, 'Mettre à la une')).toBeUndefined();
     expect(hasText(root, 'Choisis ou tu souhaites mettre cet événement en avant.')).toBe(false);
@@ -798,7 +884,7 @@ describe('D4 — le panneau compact « Gerer l evenement »', () => {
 
   test('la chip Annuler garde la confirmation, et ne mute rien avant le oui', () => {
     const root = asOrganiser();
-    press(root, "Gérer l'événement");
+    ouvrirLaFeuilleDeGestion();
     press(root, 'Annuler');
 
     expect(alertOptionLabels()).toEqual([
@@ -822,9 +908,11 @@ describe('D4 — le panneau compact « Gerer l evenement »', () => {
         team: null,
       }),
     });
-    press(root, "Gérer l'événement");
+    ouvrirLaFeuilleDeGestion();
 
-    expect(chipWidths(root)).toEqual(['48%', '48%']);
+    // L4-B : deux actions seulement, chacune sur sa rangee. Le COMPTE est ce
+    // que ce temoin protege ; la largeur suit la maquette 04 · 4C.
+    expect(chipWidths(root)).toEqual(['100%', '100%']);
   });
 
   test('TEMOIN NEGATIF : sans canEdit, ni Modifier ni Annuler dans le panneau', () => {
@@ -836,23 +924,25 @@ describe('D4 — le panneau compact « Gerer l evenement »', () => {
       },
     });
 
-    if (pressableWithText(root, "Gérer l'événement")) press(root, "Gérer l'événement");
+    ouvrirLaFeuilleDeGestion();
     expect(pressableWithText(root, 'Modifier')).toBeUndefined();
     expect(pressableWithText(root, 'Annuler')).toBeUndefined();
   });
 
-  test('TEMOIN NEGATIF : aucune chip visible, donc aucun panneau', () => {
+  test('TEMOIN NEGATIF : aucune chip visible, donc aucun ⋯', () => {
     const root = mountScreen();
 
     expect(byTestId(root, PANEL_ID)).toHaveLength(0);
-    expect(hasText(root, "Gérer l'événement")).toBe(false);
+    // L4-B : la garantie « pas d'actions ⇒ pas de bouton muet » se lit
+    // maintenant sur l'en-tete, seul endroit ou le menu existe encore.
+    expect(boutonDeGestion()).toBeNull();
   });
 
-  test('variante tournoi : 5 chips, dont Reglages tournoi en pleine largeur', () => {
+  test('variante tournoi : 5 actions, dont Reglages tournoi', () => {
     const root = asTournamentOrganiser();
-    press(root, "Gérer l'événement");
+    ouvrirLaFeuilleDeGestion();
 
-    expect(chipWidths(root)).toEqual(['48%', '48%', '48%', '48%', '100%']);
+    expect(chipWidths(root)).toEqual(['100%', '100%', '100%', '100%', '100%']);
     ['Modifier', 'À la une', 'Compo', 'Réglages tournoi', 'Annuler'].forEach((label) => {
       expect(pressableWithText(root, label)).toBeTruthy();
     });
@@ -860,7 +950,7 @@ describe('D4 — le panneau compact « Gerer l evenement »', () => {
 
   test('variante tournoi : Reglages tournoi navigue en un seul tap', () => {
     const root = asTournamentOrganiser();
-    press(root, "Gérer l'événement");
+    ouvrirLaFeuilleDeGestion();
     press(root, 'Réglages tournoi');
 
     expect(Alert.alert).not.toHaveBeenCalled();
@@ -869,7 +959,7 @@ describe('D4 — le panneau compact « Gerer l evenement »', () => {
 
   test('l action sheet intermediaire a disparu des deux panneaux', () => {
     const root = asTournamentOrganiser();
-    press(root, "Gérer l'événement");
+    ouvrirLaFeuilleDeGestion();
 
     expect(pressableWithText(root, 'Actions événement')).toBeUndefined();
     expect(pressableWithText(root, 'Actions tournoi')).toBeUndefined();
@@ -882,7 +972,11 @@ describe('D4 — le panneau compact « Gerer l evenement »', () => {
     });
 
     expect(hasText(root, 'DOUBLURE_EventReservationActions')).toBe(true);
-    expect(byTestId(root, PANEL_ID)).toHaveLength(1);
+    // L4-B : le panneau a quitte la colonne. Ce que ce temoin protege — le
+    // module de reservation reste rendu, et il n'y a pas d'action sheet
+    // intermediaire — se lit maintenant sur le ⋯ et sa feuille.
+    expect(byTestId(root, PANEL_ID)).toHaveLength(0);
+    expect(boutonDeGestion()).toBeTruthy();
     expect(pressableWithText(root, 'Actions événement')).toBeUndefined();
   });
 });
@@ -938,7 +1032,7 @@ describe('C-E — le type de l evenement decide de la porte de composition', () 
   };
 
   const pressCompo = (/** @type {any} */ root) => {
-    openManagePanel(root);
+    ouvrirLaFeuilleDeGestion();
     const lineup = pressableWithText(root, 'Compo') || pressableWithText(root, 'composition');
     if (!lineup) throw new Error('L action de composition n est pas atteignable');
     act(() => {

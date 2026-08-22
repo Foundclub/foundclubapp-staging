@@ -20,6 +20,8 @@ import renderer, { act } from 'react-test-renderer';
 
 const mockUseAuth = jest.fn();
 const mockNavigate = jest.fn();
+// L4-B : partage, pour pouvoir relire le `headerRight` que l ecran y depose.
+const mockSetOptions = jest.fn();
 const mockEventQuery = { data: null };
 const mockCampaignsQuery = { data: { data: [] }, isLoading: false };
 const mockMatchStatsQuery = { data: null, isFetching: false };
@@ -301,6 +303,37 @@ jest.mock(
 
 // eslint-disable-next-line import/first
 import { getEventShowcaseTemplate } from '@/domains/visuals/eventShowcaseTemplate';
+
+// 🎛️ L4-A — LA DOUBLURE DES ONGLETS, ET ELLE N'EST PAS FACULTATIVE.
+// `SegmentedControl` importe `react-native-gesture-handler`, dont
+// `lib/commonjs/specs/NativeRNGestureHandlerModule.ts` n'est PAS couvert par le
+// `transformIgnorePatterns` du depot : sans doublure, la SUITE ENTIERE meurt au
+// chargement (« Cannot use import statement outside a module ») et AUCUN test
+// ne s'execute. C'est pour ca que les 16 autres appelants du composant le
+// doublent aussi (motif ClubDetails.deuxPortes.test.js:299).
+// La doublure rend un pressable par onglet, portant son libelle : le dessin est
+// verifie chez le composant (201 lignes de test), ce qui se verifie ici c'est
+// CE QU'ON LUI DONNE et CE QU'IL COMMANDE.
+jest.mock('@/components/molecules/segmentedControl/SegmentedControl', () => {
+  const react = jest.requireActual('react');
+  const rn = jest.requireActual('react-native');
+  return function SegmentedControlDouble(/** @type {any} */ props) {
+    return react.createElement(
+      rn.View,
+      { testID: 'doublure-onglets' },
+      (props.options || []).map((/** @type {any} */ option) => react.createElement(
+        rn.TouchableOpacity,
+        {
+          key: option.value,
+          onPress: () => props.onChange(option.value),
+          testID: `onglet-${option.value}`,
+        },
+        react.createElement(rn.Text, null, option.label),
+      )),
+    );
+  };
+});
+
 // eslint-disable-next-line import/first
 import EventDetails from '../EventDetails';
 
@@ -368,7 +401,7 @@ const buildNavigation = (/** @type {Array<string>} */ routeNames) => ({
   getState: () => ({ routeNames }),
   goBack: jest.fn(),
   navigate: mockNavigate,
-  setOptions: jest.fn(),
+  setOptions: mockSetOptions,
 });
 
 const EVENT_STACK_ROUTES = [
@@ -445,17 +478,6 @@ const press = (/** @type {any} */ root, /** @type {string} */ label) => {
   });
 };
 
-// Idempotent A DESSEIN : le toggle du menu bascule dans les deux sens, donc un
-// helper naif REFERME le menu au deuxieme appel et rend une liste vide qui se
-// lit comme une regression. On ne presse que si les chips ne sont pas deja la.
-const openManagePanel = (/** @type {any} */ root) => {
-  const alreadyOpen = root
-    .findAll((/** @type {any} */ node) => node.props?.testID === 'event-manage-chip')
-    .length > 0;
-  if (alreadyOpen) return;
-  if (pressableWithText(root, "Gérer l'événement")) press(root, "Gérer l'événement");
-};
-
 /**
  * LA COUTURE. Toutes les actions du bas d'ecran REELLEMENT atteignables, quel
  * que soit leur chemin : bouton de page (avant D21) ou chip du menu (apres).
@@ -464,10 +486,22 @@ const openManagePanel = (/** @type {any} */ root) => {
  * @returns {Array<string>} - Les cles d'action atteignables, triees.
  */
 const bottomActionInventory = (/** @type {any} */ root) => {
-  openManagePanel(root);
+  ouvrirLaFeuilleDeGestion();
+  // 🧨 L4-B A CASSE CE RELEVE, ET IL FALLAIT LE VOIR : depuis que la rangee du
+  // menu porte SA DESTINATION sous son libelle, la note vit DANS le pressable.
+  // `textOf(pressable)` attrapait donc la note en plus du libelle — et celle de
+  // « Faire venir des joueurs » contient « l'affiche » et « ouvrir une séance ».
+  // Resultat mesure : un entrainement rendait `poster` ET `campaign-open` alors
+  // qu'il n'a NI l'un NI l'autre. Le releve accusait le code d'un defaut qui
+  // n'existait que dans la sonde.
+  // ⇒ Le repere redevient ce qu'il a toujours voulu etre (commentaire D99
+  // ci-dessous) : LE LIBELLE, c'est-a-dire le PREMIER texte du pressable.
   const labels = root
     .findAllByType(TouchableOpacity)
-    .map((/** @type {any} */ node) => textOf(node))
+    .map((/** @type {any} */ node) => {
+      const [premierTexte] = node.findAllByType(Text);
+      return premierTexte ? textOf(premierTexte) : '';
+    })
     .filter(Boolean);
   const found = new Set();
   // La comparaison ignore la casse : un repere sensible a la majuscule casse au
@@ -543,44 +577,6 @@ const isUnder = (/** @type {any} */ node, /** @type {any} */ ancestor) => {
 };
 
 /**
- * Le noeud qui PORTE la position du panneau : le panneau lui-meme avant D21,
- * la couche flottante qui l'enveloppe apres. On remonte donc la chaine des
- * ancetres jusqu'a trouver une position declaree.
- * @param {any} root - Racine du rendu.
- * @returns {string} - 'absolute', 'relative' ou 'aucune'.
- */
-const managePanelPosition = (/** @type {any} */ root) => {
-  let node = byTestId(root, PANEL_ID)[0];
-  if (!node) throw new Error('Le panneau « Gerer l evenement » n est pas rendu');
-  while (node) {
-    const { position } = flatStyle(node);
-    if (position) return String(position);
-    node = node.parent;
-  }
-  return 'aucune';
-};
-
-/**
- * Hauteur DECLAREE du panneau replie (rangee + rembourrages + bordures). Ce
- * n'est pas une mesure a l'ecran, mais la somme que le style impose — donc
- * verifiable par commande.
- * @param {any} root - Racine du rendu.
- * @returns {number} - La hauteur declaree, en points.
- */
-const collapsedPanelHeight = (/** @type {any} */ root) => {
-  const [panel] = byTestId(root, PANEL_ID);
-  const [row] = byTestId(root, PANEL_ROW_ID);
-  if (!panel || !row) throw new Error('Le panneau compact n est pas rendu');
-  const panelStyle = flatStyle(panel);
-  const rowStyle = flatStyle(row);
-  const vertical = Number(panelStyle.paddingVertical || 0);
-  const top = Number(panelStyle.paddingTop || vertical);
-  const bottom = Number(panelStyle.paddingBottom || vertical);
-  const border = Number(panelStyle.borderWidth || 0) * 2;
-  return Number(rowStyle.height || 0) + top + bottom + border;
-};
-
-/**
  * Le style de contenu de la liste defilante de l'ecran. C'est lui qui reserve
  * — ou non — la place de ce qui flotte par-dessus.
  * @param {any} root - Racine du rendu.
@@ -638,6 +634,74 @@ afterEach(() => {
   unmountScreen();
   jest.restoreAllMocks();
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// L4-B — LE MENU D'ORGANISATION A QUITTE LA COLONNE POUR LA BARRE DU HAUT.
+//
+// L'accordeon « Gérer l'événement » est devenu un ⋯ pose dans l'en-tete de
+// navigation, qui ouvre une feuille. Les actions, elles, n'ont pas bouge d'un
+// pouce : meme liste, meme ordre, memes conditions.
+//
+// 🚨 LE PIEGE QUE CES TROIS FONCTIONS DEMINENT, et il est SILENCIEUX :
+// `navigation.setOptions` est une DOUBLURE MUETTE ici, donc l'element
+// `headerRight` n'entre JAMAIS dans l'arbre monte. Chercher le ⋯ par son
+// `testID` dans le rendu trouverait le vide SANS RIEN DIRE — et tous les
+// temoins d'actions ci-dessous deviendraient verts en ne testant plus rien.
+// ⇒ On va le chercher la ou il est reellement : dans le dernier `headerRight`
+// remis a `setOptions`, dont on parcourt l'arbre d'ELEMENTS non montes.
+// Motif existant : `EventFilters.criteres.test.js:316-323`.
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Cherche un element dans un arbre NON MONTE, par predicat sur ses props.
+ * @param {any} element - Racine de l'arbre d'elements.
+ * @param {any} predicat - Le test applique a chaque noeud.
+ * @returns {any} - Le premier element qui satisfait le predicat, ou null.
+ */
+const chercherDansElements = (element, predicat) => {
+  if (!element || typeof element !== 'object') return null;
+  if (Array.isArray(element)) {
+    return element.reduce(
+      (/** @type {any} */ trouve, /** @type {any} */ enfant) => (
+        trouve || chercherDansElements(enfant, predicat)
+      ),
+      null,
+    );
+  }
+  if (element.props && predicat(element)) return element;
+  return chercherDansElements(element.props?.children, predicat);
+};
+
+/**
+ * Le ⋯ de la barre du haut, ou null s'il n'y a rien a gerer.
+ * @returns {any} - L'element du bouton, ou null.
+ */
+const boutonDeGestion = () => {
+  const appels = mockSetOptions.mock.calls.filter(
+    (/** @type {any} */ appel) => appel[0]?.headerRight,
+  );
+  if (!appels.length) return null;
+  return chercherDansElements(
+    appels[appels.length - 1][0].headerRight(),
+    (/** @type {any} */ noeud) => noeud?.props?.testID === 'event-actions-menu-button',
+  );
+};
+
+/**
+ * Ouvre la feuille d'organisation. Remplace l'appui sur le texte « Gérer
+ * l'événement » de l'accordeon d'avant L4-B : meme geste pour la personne qui
+ * s'en sert, meme liste d'actions au bout.
+ * TOLERANTE A DESSEIN, comme l'ancien helper : la ou il n'y a rien a gerer, il
+ * n'y a pas de bouton, et l'inventaire doit pouvoir sortir vide sans jeter.
+ * @returns {void}
+ */
+const ouvrirLaFeuilleDeGestion = () => {
+  const bouton = boutonDeGestion();
+  if (!bouton) return;
+  act(() => {
+    bouton.props.onPress();
+  });
+};
 
 describe('EventDetails — bas de page : ce qui est atteignable (invariant D21)', () => {
   test('organisateur, campagne suggeree : les 5 actions livrees restent atteignables', () => {
@@ -737,10 +801,15 @@ describe('EventDetails — bas de page : etat LIVRE avant D21 (caracterisation)'
     expect(hasText(root, 'cotisation')).toBe(false);
   });
 
-  test('replie, le menu tient dans 60 px declares', () => {
+  // L4-B : « le menu replie tient dans 60 px » devient « il ne coute plus RIEN
+  // a la colonne ». C'est la meme garantie, poussee au bout : le menu ne mange
+  // plus un seul point de la page, il a quitte la colonne pour l'en-tete.
+  test('ferme, le menu ne coute plus aucune hauteur a la colonne', () => {
     const root = asOrganiser();
 
-    expect(collapsedPanelHeight(root)).toBeLessThanOrEqual(60);
+    expect(byTestId(root, PANEL_ID)).toHaveLength(0);
+    expect(byTestId(root, PANEL_ROW_ID)).toHaveLength(0);
+    expect(byTestId(root, 'event-manage-chip')).toHaveLength(0);
   });
 
   // ⚠️ INVERSION VOLONTAIRE des 40 px (D53) : la liste reserve desormais 16 px,
@@ -757,7 +826,7 @@ describe('EventDetails — bas de page : etat LIVRE avant D21 (caracterisation)'
     // que juste apres la creation. C'est aujourd'hui l'etat de la seule pile
     // PUBLIQUE, ou la route `EventPublishedShowcase` n'est pas enregistree.
     const root = asOrganiser({ routeNames: ['EventDetails', 'EventEdit'] });
-    openManagePanel(root);
+    ouvrirLaFeuilleDeGestion();
 
     expect(pressableWithText(root, 'affiche')).toBeUndefined();
     expect(mockNavigate).not.toHaveBeenCalledWith(
@@ -775,13 +844,13 @@ describe('D21 ① — la cotisation est rangee dans le menu « Gérer l evenemen
     const root = asClubManager({ params: { eventCampaignCreationSuggested: true } });
 
     expect(pressableWithText(root, 'Cotisation')).toBeUndefined();
-    press(root, "Gérer l'événement");
+    ouvrirLaFeuilleDeGestion();
     expect(pressableWithText(root, 'Cotisation')).toBeTruthy();
   });
 
   test('le nom raccourci ouvre le MEME reglage de campagne, en un seul tap', () => {
     const root = asClubManager({ params: { eventCampaignCreationSuggested: true } });
-    press(root, "Gérer l'événement");
+    ouvrirLaFeuilleDeGestion();
     press(root, 'Cotisation');
 
     expect(mockNavigate).toHaveBeenCalledWith('ClubStack', {
@@ -795,7 +864,7 @@ describe('D21 ① — la cotisation est rangee dans le menu « Gérer l evenemen
   // cotisation » a disparu de l'ecran, dans tous ses etats.
   test('UN SEUL libelle : ni « Préparer… » ni « Créer une… » ne subsistent', () => {
     const root = asClubManager({ params: { eventCampaignCreationSuggested: true } });
-    press(root, "Gérer l'événement");
+    ouvrirLaFeuilleDeGestion();
 
     expect(hasText(root, 'Cotisation')).toBe(true);
     expect(hasText(root, 'Préparer')).toBe(false);
@@ -826,7 +895,7 @@ describe('D21 ① — la cotisation est rangee dans le menu « Gérer l evenemen
         totals: { total: 3 },
       }],
     });
-    openManagePanel(root);
+    ouvrirLaFeuilleDeGestion();
 
     expect(pressableWithText(root, 'Préparer la cotisation')).toBeUndefined();
     expect(pressableWithText(root, 'Créer une autre campagne')).toBeTruthy();
@@ -856,7 +925,7 @@ describe('D21 ① — un seul mot, mais AUCUN comportement fondu', () => {
   // chemins sont exerces ici, cote a cote.
   test('SANS campagne existante : l action ouvre directement le reglage', () => {
     const root = asClubManager({ params: { eventCampaignCreationSuggested: true } });
-    press(root, "Gérer l'événement");
+    ouvrirLaFeuilleDeGestion();
     press(root, 'Cotisation');
 
     expect(Alert.alert).not.toHaveBeenCalled();
@@ -923,21 +992,24 @@ describe('D21 ② — « Gérer l evenement » devient un bouton flottant', () =
     // processus meurt en OOM avant d'afficher la moindre ligne utile (mesure
     // D53 : 4 Go de tas satures, aucun message). Un echec doit rester lisible.
     expect(couches.length).toBe(0);
-    expect(managePanelPosition(root)).not.toBe('absolute');
+    // L4-B : la question « le panneau flotte-t-il ? » n'a plus d'objet — il n'y
+    // A PLUS DE PANNEAU DANS LA COLONNE. La garantie devient absolue au lieu
+    // d'etre mesuree : ce qui n'est pas dans la page ne peut rien y recouvrir.
+    expect(byTestId(root, PANEL_ID)).toHaveLength(0);
   });
 
-  test('le menu reste aligne a droite : c est une pastille, pas la bande d avant D21', () => {
-    // Le defaut que D21 avait corrige ne doit pas revenir : le menu ne reprend
-    // PAS toute une bande en pied d'ecran, il reste compact et cale a droite.
+  test('le menu ne prend AUCUNE place dans la colonne : il vit dans la barre du haut', () => {
+    // Le defaut que D21 avait corrige ne peut plus revenir : le menu ne reprend
+    // pas une bande en pied d'ecran, et il ne prend meme plus une pastille dans
+    // le contenu. Il est passe dans l'en-tete de navigation (L4-B).
     const root = asOrganiser();
-    const [enveloppe] = root.findAll(
-      (/** @type {any} */ node) => flatStyle(node).alignItems === 'flex-end'
-        && flatStyle(node).marginTop === 12,
-    );
 
-    expect(enveloppe).toBeTruthy();
-    expect(isUnder(byTestId(root, 'event-manage-panel')[0], enveloppe)).toBe(true);
-    expect(collapsedPanelHeight(root)).toBeLessThanOrEqual(60);
+    expect(byTestId(root, PANEL_ID)).toHaveLength(0);
+    expect(byTestId(root, PANEL_ROW_ID)).toHaveLength(0);
+
+    const bouton = boutonDeGestion();
+    expect(bouton).toBeTruthy();
+    expect(Number(flatStyle(bouton).height)).toBeGreaterThanOrEqual(44);
   });
 
   // ⛔ LE GARDE-FOU DU LOT (D53), et il remplace la reserve de 80 px : plus rien
@@ -954,41 +1026,41 @@ describe('D21 ② — « Gérer l evenement » devient un bouton flottant', () =
   // propriete qui interdit le recouvrement n'a jamais ete « pose apres », c'est
   // « EN FLUX ». Un frere en flux repousse son voisin, il ne passe jamais
   // dessus — que le menu vienne avant ou apres.
-  test('AUCUN participant ne peut etre recouvert : le menu est en flux, et il precede la liste', () => {
+  // ⚠️ INVERSION VOLONTAIRE de D64 (L4-B), maquette planche 04 · 4C : le menu
+  // n'est plus DU TOUT dans la colonne — ni avant la liste, ni apres, ni en
+  // couche. Il ouvre une FEUILLE modale depuis la barre du haut.
+  // ⇒ CE QUE D53 PUIS D64 PROTEGEAIENT EST INTACT, et la preuve se raccourcit :
+  // la propriete qui interdisait le recouvrement etait « EN FLUX » ; elle
+  // devient « PAS DANS LA COLONNE », qui l'implique.
+  test('AUCUN participant ne peut etre recouvert : le menu n est plus dans la colonne', () => {
     const root = asOrganiser();
-    const panneau = byTestId(root, 'event-manage-panel')[0];
     const participants = participantsBlock(root);
 
-    // 1. ⛔ EN FLUX. Sans cette ligne, le test reste VERT alors que le menu
-    //    surplombe la liste : deux blocs se recouvrent tres bien quand l'un est
-    //    en absolu. C'est le seul controle qui distingue « pose a cote » de
-    //    « pose par-dessus ». (Verifie en retablissant la couche de D21 : les
-    //    points 2 et 3 restaient verts, celui-ci tombe.)
-    expect(managePanelPosition(root)).not.toBe('absolute');
-    // 2. Les deux blocs sont distincts : la liste n'est pas rangee DANS le
-    //    menu, ni le menu dans la liste.
-    expect(isUnder(participants, panneau)).toBe(false);
-    expect(isUnder(panneau, participants)).toBe(false);
-    // 3. Et le menu vient AVANT la liste : en flux, donc il la repousse vers le
-    //    bas au lieu de la masquer.
-    // `findAll` parcourt en profondeur d'abord : l'ordre du tableau EST l'ordre
-    // de rendu, donc l'ordre d'empilement d'un conteneur en colonne.
-    const ordreDeRendu = root.findAll(() => true);
-    expect(ordreDeRendu.indexOf(panneau)).toBeLessThan(ordreDeRendu.indexOf(participants));
+    // 1. ⛔ RIEN A RECOUVRIR AVEC : le panneau n'existe plus dans la page.
+    expect(byTestId(root, PANEL_ID)).toHaveLength(0);
+    // 2. La liste est bien la, et elle est intacte.
+    expect(participants).toBeTruthy();
+
+    // 3. Menu OUVERT, la liste est toujours montee et n'est pas rangee DANS la
+    //    feuille : la feuille se pose par-dessus, elle ne mange pas la colonne.
+    ouvrirLaFeuilleDeGestion();
+    const feuille = byTestId(root, 'event-manage-sheet')[0];
+    expect(feuille).toBeTruthy();
+    expect(isUnder(participantsBlock(root), feuille)).toBe(false);
+    expect(isUnder(feuille, participantsBlock(root))).toBe(false);
   });
 
-  test('deplie, la grille de chips repousse la liste au lieu de la masquer', () => {
+  test('la feuille ouverte ne coupe rien : la liste des participants reste entiere', () => {
     // Le pire cas de l'ancienne couche flottante : depliee, elle couvrait bien
-    // plus que les 80 px reserves. En flux, elle ne peut plus rien couvrir.
+    // plus que les 80 px reserves. Une feuille modale, elle, ne peut rien
+    // couvrir de facon permanente — on la referme, et la page est intacte.
     const root = asOrganiser();
-    press(root, "Gérer l'événement");
-    const grille = byTestId(root, 'event-manage-sheet')[0];
-    const participants = participantsBlock(root);
+    ouvrirLaFeuilleDeGestion();
 
-    expect(grille).toBeTruthy();
-    expect(flatStyle(grille).position).toBeUndefined();
-    const ordreDeRendu = root.findAll(() => true);
-    expect(ordreDeRendu.indexOf(grille)).toBeLessThan(ordreDeRendu.indexOf(participants));
+    expect(byTestId(root, 'event-manage-sheet')[0]).toBeTruthy();
+    expect(hasText(root, 'DOUBLURE_EventParticipants')).toBe(true);
+    // Et la colonne n'a pas gagne un bloc au passage : toujours aucun panneau.
+    expect(byTestId(root, PANEL_ID)).toHaveLength(0);
   });
 
   test('le pied d ecran garde sa bande a lui, distincte de la liste et du menu', () => {
@@ -1015,20 +1087,21 @@ describe('D21 ② — « Gérer l evenement » devient un bouton flottant', () =
     expect(isUnder(openButton, cadre)).toBe(false);
   });
 
-  test('deplie : la grille de chips ne change pas — memes colonnes, un seul tap', () => {
+  // ⚠️ INVERSION VOLONTAIRE (L4-B), maquette planche 04 · 4C : la GRILLE A DEUX
+  // COLONNES devient une LISTE DE RANGEES pleine largeur. La raison est dans le
+  // contenu, pas dans le gout : chaque rangee porte desormais SA DESTINATION
+  // sous son libelle, et une demi-colonne casse une destination en quatre
+  // lignes illisibles — c'est deja pour ca que « Stats du match » (D71) et
+  // l'aiguillage detection (D99) prenaient la ligne entiere.
+  // ⇒ CE QUE CE TEMOIN PROTEGE EST INTACT : le compte des actions, et « un seul
+  // tap » jusqu'a la destination.
+  test('ouvert : cinq rangees pleine largeur, et toujours un seul tap', () => {
     const root = asOrganiser();
-    press(root, "Gérer l'événement");
+    ouvrirLaFeuilleDeGestion();
 
     const widths = byTestId(root, 'event-manage-chip')
       .map((/** @type {any} */ node) => flatStyle(node).width);
-    // Une chip orpheline en fin de grille prend toute la largeur : regle
-    // inchangee, seul le nombre de chips a bouge (D21 ③ ajoute « Voir l'affiche »).
-    // D99 : le compte est le MEME (5), mais l'evenement par defaut est un
-    // entrainement, dont la chip d'aiguillage porte une PHRASE — elle prend donc
-    // la ligne entiere, par la meme regle que « Stats du match » (D71). La
-    // derniere chip se retrouve orpheline et passe a 100 % : c'est la regle
-    // existante qui s'applique, pas une exception ecrite pour ce lot.
-    expect(widths).toEqual(['48%', '48%', '48%', '100%', '100%']);
+    expect(widths).toEqual(['100%', '100%', '100%', '100%', '100%']);
 
     press(root, 'Modifier');
     expect(Alert.alert).not.toHaveBeenCalled();
@@ -1038,13 +1111,14 @@ describe('D21 ② — « Gérer l evenement » devient un bouton flottant', () =
     });
   });
 
-  test('un seul menu sur un tournoi : les chips vivent dans la couche flottante', () => {
+  test('un seul menu sur un tournoi : les chips vivent dans la feuille', () => {
     const root = asOrganiser({ event: buildEvent({ type: { name: 'Tournoi' } }) });
-    press(root, "Gérer l'événement");
+    ouvrirLaFeuilleDeGestion();
 
     // Avant D21, un tournoi rendait DEUX panneaux (celui du bloc tournoi et
-    // celui du pied d'ecran). Il n'y en a plus qu'un.
-    expect(byTestId(root, PANEL_ID)).toHaveLength(1);
+    // celui du pied d'ecran). Depuis L4-B il n'y a plus qu'une SEULE feuille —
+    // meme garantie, meme unicite, sur le contenant d'aujourd'hui.
+    expect(byTestId(root, 'event-manage-sheet')).toHaveLength(1);
     expect(hasText(root, 'Gérer le tournoi')).toBe(true);
     ['Modifier', 'À la une', 'Compo', 'Réglages tournoi', 'Annuler'].forEach((label) => {
       expect(pressableWithText(root, label)).toBeTruthy();
@@ -1084,11 +1158,14 @@ describe('D21 ② — « Gérer l evenement » devient un bouton flottant', () =
       .toHaveLength(0);
   });
 
-  test('replie : aucune chip rendue — la couche ne coute que la pastille', () => {
+  // L4-B : « replie » devient « ferme ». La garantie ne bouge pas — au montage,
+  // aucune action d'organisation n'est rendue — et elle se renforce : la couche
+  // ne coute meme plus la pastille, le ⋯ ayant quitte la page pour l'en-tete.
+  test('ferme : aucune chip rendue — la couche ne coute plus rien a la page', () => {
     const root = asOrganiser();
 
     expect(byTestId(root, 'event-manage-chip')).toHaveLength(0);
-    expect(hasText(root, "Gérer l'événement")).toBe(true);
+    expect(boutonDeGestion()).toBeTruthy();
   });
 });
 
@@ -1117,7 +1194,7 @@ describe('D21 ③ — un point d entree vers l affiche de l evenement', () => {
   // l'identifiant, le gabarit et le type voyagent ensemble.
   test('l affiche redevient atteignable, avec son eventId, son gabarit ET son type', () => {
     const root = asOrganiser({ event: buildEvent({ type: { name: 'Match' } }) });
-    press(root, "Gérer l'événement");
+    ouvrirLaFeuilleDeGestion();
     press(root, "Voir l'affiche");
 
     expect(mockNavigate).toHaveBeenCalledWith('EventPublishedShowcase', {
@@ -1130,7 +1207,7 @@ describe('D21 ③ — un point d entree vers l affiche de l evenement', () => {
   // D28 — le gabarit suit le TYPE de l'evenement ouvert, pas une constante.
   test('le gabarit passe est celui que le type de l evenement decide', () => {
     const root = asOrganiser({ event: buildEvent({ type: { name: "Détection / Séance d'essai" } }) });
-    press(root, "Gérer l'événement");
+    ouvrirLaFeuilleDeGestion();
     press(root, "Voir l'affiche");
 
     const [, params] = mockNavigate.mock.calls
@@ -1142,7 +1219,7 @@ describe('D21 ③ — un point d entree vers l affiche de l evenement', () => {
   // ecran. Ce que le temoin mesure est inchange.
   test('aucune celebration rejouee : on consulte, on ne re-publie pas', () => {
     const root = asOrganiser({ event: buildEvent({ type: { name: 'Match' } }) });
-    press(root, "Gérer l'événement");
+    ouvrirLaFeuilleDeGestion();
     press(root, "Voir l'affiche");
 
     const [, params] = mockNavigate.mock.calls
@@ -1222,7 +1299,7 @@ describe('D99 — un entrainement ne propose plus d affiche, il propose une dete
   // MultisportClubDetails, CMDashboard) : la pile evenement, puis l'etape.
   test('③ bis — et l aiguillage ouvre REELLEMENT le choix du type', () => {
     const root = entrainement();
-    openManagePanel(root);
+    ouvrirLaFeuilleDeGestion();
     press(root, 'Faire venir');
 
     expect(mockNavigate).toHaveBeenCalledWith('EventStack', {
@@ -1235,7 +1312,7 @@ describe('D99 — un entrainement ne propose plus d affiche, il propose une dete
   // qu'il retrouvera dans la liste des types, a l'ecran suivant.
   test('③ ter — la raison est ecrite a cote du bouton, pas cachee derriere', () => {
     const root = entrainement();
-    openManagePanel(root);
+    ouvrirLaFeuilleDeGestion();
 
     expect(hasText(root, 'de l’extérieur')).toBe(true);
     expect(hasText(root, 'détection')).toBe(true);
@@ -1284,21 +1361,22 @@ describe('D99 — un entrainement ne propose plus d affiche, il propose une dete
 // C'est exactement ce qu'on demande a un filet — survivre au deplacement qu'il
 // protege, et ne tomber que si le deplacement casse quelque chose.
 describe('D64 — le filet : deux invariants qui ne dependent pas de l endroit', () => {
-  test('le panneau « Gerer l evenement » est atteignable, ou qu il soit pose', () => {
+  // L4-B a fait exactement ce que ce filet annonce : il a DEPLACE le menu, une
+  // fois de plus. Le temoin tient sa promesse — il ne nomme toujours pas
+  // l'endroit, il verifie qu'ON Y ARRIVE et qu'un seul appui l'ouvre.
+  test('le menu d organisation est atteignable, ou qu il soit pose', () => {
     const root = asOrganiser();
-
-    expect(byTestId(root, PANEL_ID)[0]).toBeTruthy();
 
     // Atteignable au DOIGT et au LECTEUR D'ECRAN : un role annonce, un libelle
     // non vide, et une cible d'au moins 44 pt (le minimum tactile).
-    const bascule = pressableWithText(root, "Gérer l'événement");
+    const bascule = boutonDeGestion();
     expect(bascule).toBeTruthy();
     expect(bascule.props.accessibilityRole).toBe('button');
     expect(String(bascule.props.accessibilityLabel || '').length).toBeGreaterThan(0);
-    expect(Number(flatStyle(byTestId(root, PANEL_ROW_ID)[0]).height)).toBeGreaterThanOrEqual(44);
+    expect(Number(flatStyle(bascule).height)).toBeGreaterThanOrEqual(44);
 
     // Et il OUVRE : un seul appui suffit a faire apparaitre les chips.
-    press(root, "Gérer l'événement");
+    ouvrirLaFeuilleDeGestion();
     expect(byTestId(root, 'event-manage-chip').length).toBeGreaterThan(0);
   });
 
@@ -1312,12 +1390,13 @@ describe('D64 — le filet : deux invariants qui ne dependent pas de l endroit',
   test('le dernier participant de la liste n est recouvert par rien', () => {
     const organisateur = asOrganiser();
 
-    // 1. RIEN NE SURPLOMBE. Le menu est en flux, replie comme deplie : un frere
-    //    en flux repousse son voisin, il ne peut pas passer par-dessus.
-    expect(managePanelPosition(organisateur)).not.toBe('absolute');
-    press(organisateur, "Gérer l'événement");
+    // 1. RIEN NE SURPLOMBE. Depuis L4-B, la preuve est plus courte que
+    //    « en flux » : le menu n'est PAS DANS LA COLONNE, ni ferme ni ouvert.
+    //    Ce qui n'est pas dans la page ne peut rien y recouvrir.
+    expect(byTestId(organisateur, PANEL_ID)).toHaveLength(0);
+    ouvrirLaFeuilleDeGestion();
     expect(byTestId(organisateur, 'event-manage-sheet')[0]).toBeTruthy();
-    expect(managePanelPosition(organisateur)).not.toBe('absolute');
+    expect(byTestId(organisateur, PANEL_ID)).toHaveLength(0);
 
     // 2. La liste des participants est bien rendue, et elle n'est pas rangee
     //    DANS le menu : on ne l'a pas fait disparaitre en la deplacant.
@@ -1337,8 +1416,10 @@ describe('D64 — le filet : deux invariants qui ne dependent pas de l endroit',
   test('0, 1 ou 50 participants : le menu garde exactement la meme place', () => {
     // C'EST LA PROPRIETE QUI FAIT DISPARAITRE LE VIDE. Avant D64, la place du
     // menu dependait de la longueur de la page : plaque au bas d'un cadre plein
-    // ecran, il s'eloignait du contenu a mesure que la page etait courte. Pose
-    // dans le flux, il suit le contenu — donc plus rien a caler.
+    // ecran, il s'eloignait du contenu a mesure que la page etait courte.
+    // ⚠️ INVERSION VOLONTAIRE (L4-B) : la place ne depend plus du contenu parce
+    // qu'elle ne depend plus DE LA PAGE — le ⋯ est ancre dans la barre du haut,
+    // toujours au meme endroit, quelle que soit la longueur de la liste.
     // ⚠️ Un arbre a la fois : on finit tout sur celui-ci avant de monter le
     // suivant (mocks partages, cf. le temoin precedent).
     [0, 1, 50].forEach((nombre) => {
@@ -1348,13 +1429,10 @@ describe('D64 — le filet : deux invariants qui ne dependent pas de l endroit',
         user: { documentId: `joueur-${index}` },
       }));
       const root = asOrganiser({ event: buildEvent({ participations }) });
-      const panneau = byTestId(root, PANEL_ID)[0];
-      const ordreDeRendu = root.findAll(() => true);
 
-      expect(panneau).toBeTruthy();
-      expect(managePanelPosition(root)).not.toBe('absolute');
-      expect(ordreDeRendu.indexOf(panneau))
-        .toBeLessThan(ordreDeRendu.indexOf(participantsBlock(root)));
+      expect(boutonDeGestion()).toBeTruthy();
+      expect(byTestId(root, PANEL_ID)).toHaveLength(0);
+      expect(participantsBlock(root)).toBeTruthy();
     });
   });
 
@@ -1429,13 +1507,13 @@ describe('D71 — les stats du match quittent le pied de page pour le menu', () 
     // Menu REPLIE : plus aucun chemin vers les stats sur la page.
     expect(pressableWithText(root, 'Stats du match')).toBeUndefined();
 
-    openManagePanel(root);
+    ouvrirLaFeuilleDeGestion();
     expect(pressableWithText(root, 'Stats du match')).toBeTruthy();
   });
 
   test('l inventaire du bas de page gagne les stats, et ne perd rien', () => {
     const root = asMatchOrganiser();
-    openManagePanel(root);
+    ouvrirLaFeuilleDeGestion();
 
     expect(chipWithLabel(root, 'Stats du match')).toBeTruthy();
     // Les gestes livres avant D71 sont tous encore la.
@@ -1446,19 +1524,22 @@ describe('D71 — les stats du match quittent le pied de page pour le menu', () 
 
   test('AUCUNE INFORMATION PERDUE : le sous-titre devient la note de la chip', () => {
     const root = asMatchOrganiser();
-    openManagePanel(root);
+    ouvrirLaFeuilleDeGestion();
 
     // Le texte exact que le bouton du pied portait sous lui avant D71 — et il
     // vit DESORMAIS dans la chip, pas ailleurs sur la page. Sans ce second
     // controle, le temoin resterait vert avec le sous-titre reste en bas.
+    // ⚠️ L4-B : la rangee finit par un chevron « › », donc le DERNIER texte
+    // n'est plus la note. On lit la LISTE des textes de la rangee et on y
+    // cherche la phrase exacte — increvable a l'ajout d'un ornement.
     const chip = chipWithLabel(root, 'Stats du match');
-    expect(textOf(chip.findAllByType(Text).pop()))
-      .toBe('Les stats seront disponibles à la fin du match.');
+    const textesDeLaRangee = chip.findAllByType(Text).map((/** @type {any} */ n) => textOf(n));
+    expect(textesDeLaRangee).toContain('Les stats seront disponibles à la fin du match.');
   });
 
   test('avant la fin du match, la chip est grisee — comme le bouton l etait', () => {
     const root = asMatchOrganiser();
-    openManagePanel(root);
+    ouvrirLaFeuilleDeGestion();
 
     const [bouton] = chipWithLabel(root, 'Stats du match').findAllByType(TouchableOpacity);
     expect(bouton.props.disabled).toBe(true);
@@ -1466,7 +1547,7 @@ describe('D71 — les stats du match quittent le pied de page pour le menu', () 
 
   test('la chip porte la pleine largeur : sa note est une phrase, pas une etiquette', () => {
     const root = asMatchOrganiser();
-    openManagePanel(root);
+    ouvrirLaFeuilleDeGestion();
 
     expect(flatStyle(chipWithLabel(root, 'Stats du match')).width).toBe('100%');
   });
@@ -1479,7 +1560,7 @@ describe('D71 — les stats du match quittent le pied de page pour le menu', () 
         score: { available: true },
       },
     });
-    openManagePanel(root);
+    ouvrirLaFeuilleDeGestion();
 
     press(root, 'Saisir les stats du match');
     expect(Alert.alert).not.toHaveBeenCalled();
@@ -1501,23 +1582,32 @@ describe('D71 — les stats du match quittent le pied de page pour le menu', () 
 
   test('TEMOIN NEGATIF : sur un evenement qui n est pas un match, aucune chip stats', () => {
     const root = asOrganiser();
-    openManagePanel(root);
+    ouvrirLaFeuilleDeGestion();
 
     expect(pressableWithText(root, 'Stats du match')).toBeUndefined();
     expect(hasText(root, 'Les stats seront disponibles')).toBe(false);
   });
 
-  test('le menu allonge reste atteignable : il defile avec la liste', () => {
+  // ⚠️ INVERSION VOLONTAIRE (L4-B) : le menu n'est plus un enfant de la liste
+  // defilante — c'est une FEUILLE, et c'est elle qui defile toute seule.
+  // ⇒ La garantie de fond ne bouge pas : une 6e action ne peut pas sortir du
+  // cadre. Elle est meme mieux tenue — la feuille se dimensionne sur son
+  // contenu (`BottomModal`, `enableDynamicSizing`), la ou le panneau dependait
+  // de la place restante dans la page.
+  test('le menu allonge reste atteignable : la feuille grandit avec ses rangees', () => {
     const root = asMatchOrganiser();
-    openManagePanel(root);
+    ouvrirLaFeuilleDeGestion();
 
-    // Rien n'est ancre : le menu est un enfant de la liste defilante, donc une
-    // 6e chip le fait grandir DANS le defilement au lieu de sortir du cadre.
-    const [panneau] = byTestId(root, PANEL_ID);
     const [scroll] = root.findAll((/** @type {any} */ node) => Boolean(node.props?.refreshControl)
       && Boolean(node.props?.contentContainerStyle));
-    expect(managePanelPosition(root)).not.toBe('absolute');
-    expect(isUnder(panneau, scroll)).toBe(true);
+    const feuille = byTestId(root, 'event-manage-sheet')[0];
+
+    expect(feuille).toBeTruthy();
+    // La feuille N'EST PAS dans la liste defilante : elle se pose par-dessus.
+    expect(isUnder(feuille, scroll)).toBe(false);
+    // Et le match, qui porte une action de plus que l'entrainement, les rend
+    // TOUTES : rien ne tombe hors du cadre.
+    expect(byTestId(root, 'event-manage-chip').length).toBeGreaterThanOrEqual(5);
   });
 });
 
@@ -1579,7 +1669,7 @@ describe('AC10 — le match est fini quand le SERVEUR le dit, pas le telephone',
       },
       serverNow,
     });
-    openManagePanel(root);
+    ouvrirLaFeuilleDeGestion();
     return root;
   };
 
