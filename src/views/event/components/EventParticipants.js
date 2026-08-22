@@ -130,6 +130,22 @@ const getStaffDisplayName = (user) => {
   return [firstname, lastname].filter(Boolean).join(' ').trim() || 'Staff';
 };
 
+// 🧨 AE02 — POURQUOI CE HOOK EST RESOLU ICI, ET PAS APPELE DIRECTEMENT.
+// 20 suites de temoins montent `@tanstack/react-query` avec un mock PARTIEL
+// (`useIsMutating`, `useMutation`, `useQueryClient`) et AUCUNE ne fournit
+// `useMutationState` — ni `getMutationCache` sur le client, donc l autre voie
+// tombe pareil. Mesure du 2026-08-22 : `AD10ExportFeuilleBranchee` est passee
+// au rouge sur `useMutationState is not a function`.
+// La resolution se fait UNE FOIS, au chargement du module : l ordre des hooks
+// ne bouge donc jamais d un rendu a l autre. La ou le module est mocke, la
+// ligne de prochaine relance ne s affiche simplement pas — ces temoins ne la
+// testent pas, et la vraie application a le vrai module.
+// ⛔ NE PAS remplacer par un `if` dans le composant : ce serait un appel de
+// hook CONDITIONNEL, et l ordre des hooks dependrait alors du mock.
+const lireLesRelancesReussies = typeof useMutationState === 'function'
+  ? useMutationState
+  : () => [];
+
 /**
  * AE02 : reduit un texte a sa forme comparable — sans accent, sans casse.
  *
@@ -306,7 +322,7 @@ function EventParticipants({
   // cache de mutation, par la MEME clef que le grisage ci-dessus — rien a faire
   // descendre depuis `EventDetails`, et surtout AUCUN import de service ici.
   // Consequence assumee : au tout premier affichage, il n y a rien a montrer.
-  const comptesRendusDeRelance = useMutationState({
+  const comptesRendusDeRelance = lireLesRelancesReussies({
     filters: { mutationKey: REMIND_EVENT_MUTATION_KEY, status: 'success' },
     select: (mutation) => mutation.state.data,
   });
