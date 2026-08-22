@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Image,
   Text,
@@ -11,13 +12,24 @@ import useTheme from '@/theme/themeContext';
 import Button from '@/components/atoms/button/Button';
 
 /**
+ * Le bloc « Postes recherchés » d'une détection.
  *
+ * 🧪 N1 — PISTE ESSAYEE ET ABANDONNEE, notee pour ne pas la refaire :
+ * `@param root0` n'a pas de type, et TypeScript refuse un nom qualifie
+ * (`root0.xxx`) sans lui — d'ou un TS8032 par parametre. Poser
+ * `@param {object} root0` supprime bien ces 9 erreurs, mais en cree DAVANTAGE
+ * sur les proprietes destructurees : mesure reelle 5 411 -> 5 413. Le mieux
+ * etait l'ennemi du bien ; la piste est fermee, elle demande de typer les 9
+ * parametres, ce qui est un lot a part.
  * @param root0
  * @param root0.canEdit
  * @param root0.currentUserHasGenericParticipation
  * @param root0.currentUserSlotId
  * @param root0.currentUserSlotStatus
  * @param root0.isApplyingSlotId
+ * @param {boolean} [root0.isDetection] - Vrai quand l'evenement EST une detection.
+ *   C'est ce drapeau, et lui seul, qui autorise l'etat vide « Aucun poste
+ *   recherche » : sans lui, zero poste rend `null`, comme avant N1.
  * @param root0.onApply
  * @param root0.onOpenSlot
  * @param root0.slots
@@ -28,10 +40,12 @@ function EventDetectionSlots({
   currentUserSlotId = '',
   currentUserSlotStatus = '',
   isApplyingSlotId = '',
+  isDetection = false,
   onApply,
   onOpenSlot,
   slots = [],
 }) {
+  const { t } = useTranslation();
   const {
     Alignments,
     ApplicationStyle,
@@ -55,8 +69,41 @@ function EventDetectionSlots({
     };
   }, [slots]);
 
+  // 🧨 N1 (a) — LE BLOC QUI SE TAISAIT.
+  //
+  // Ce `return null` etait DOUBLE : l'ecran ne montait meme pas le composant
+  // tant que `detectionSlots.length > 0` etait faux. Resultat, une detection
+  // dont l'organisateur n'a pas encore saisi les postes n'affichait RIEN — et
+  // personne ne pouvait savoir si c'etait un reglage manquant ou une seance
+  // reellement ouverte a tous. La regle 5 du pack l'interdit : aucun bloc muet.
+  //
+  // 🔒 LE SILENCE RESTE LE DEFAUT. `isDetection` est une demande EXPLICITE de
+  // l'ecran : tout autre appelant garde exactement l'ecran d'avant N1.
   if (!Array.isArray(slots) || slots.length === 0) {
-    return null;
+    if (!isDetection) {
+      return null;
+    }
+
+    return (
+      <View
+        style={[
+          ApplicationStyle.card,
+          Spaces.padding[16],
+          Spaces.gap[4],
+          Spaces.marginBottom[24],
+        ]}
+      >
+        <Text style={[Fonts.h4Bold, Fonts.primary500]}>
+          {t('eventDetails.detection.noSlots', 'Aucun poste recherché')}
+        </Text>
+        <Text style={[Fonts.p3, Fonts.neutral300]}>
+          {t(
+            'eventDetails.detection.noSlotsHint',
+            'La séance est ouverte à tous les profils',
+          )}
+        </Text>
+      </View>
+    );
   }
 
   const renderMetricChip = (text, tone = 'default') => {
@@ -103,7 +150,9 @@ function EventDetectionSlots({
 
   return (
     <View style={[Spaces.gap[24], Spaces.marginBottom[24]]}>
-      <Text style={[Fonts.h3Bold, Fonts.neutral00]}>Postes recherches</Text>
+      <Text style={[Fonts.h3Bold, Fonts.neutral00]}>
+        {t('eventDetails.detection.slotsTitle', 'Postes recherchés')}
+      </Text>
       <View
         style={[
           ApplicationStyle.backgroundColor.primary900,

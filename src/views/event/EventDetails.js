@@ -377,6 +377,28 @@ const getStageDayStatusSummary = (stageDay) => {
   }, { absent: 0, pending: 0, present: 0 });
 };
 
+/**
+ * 🏷️ N1 (c) — LE LIBELLE DE LA PASTILLE DE TYPE, EN UN SEUL ENDROIT.
+ *
+ * Le nom du type en capitales, puis autant de precisions que le lot en cours
+ * sait dire, collees par « · ». Une FONCTION plutot qu'une ternaire dans le JSX
+ * parce que le lot N3 vient poser « MATCH · À DOMICILE » dans CETTE MEME
+ * pastille juste apres celui-ci : deux ternaires imbriquees deviendraient
+ * illisibles au troisieme segment. N3 n'a qu'a allonger le tableau.
+ *
+ * Un segment vide est retire : il ne laisse jamais un separateur orphelin.
+ * @param {string | null | undefined} typeName - Le nom du type d'evenement.
+ * @param {Array<string | null | undefined>} [segments] - Les precisions a coller.
+ * @returns {string} Le libelle, pret pour la pastille.
+ */
+const buildTypeTagLabel = (typeName, segments = []) => [
+  String(typeName || '').toUpperCase(),
+  ...segments,
+]
+  .map((/** @type {any} */ part) => String(part || '').trim())
+  .filter(Boolean)
+  .join(' · ');
+
 // @ts-ignore: FIXME: Baseline TS regression
 const getFeaturedScopeStatusLabel = (status) => {
   if (status === 'pending') return 'Demande en attente';
@@ -1924,6 +1946,68 @@ function EventDetails({ navigation, route }) {
       teamParticipationSections: sections,
     };
   }, [canEdit, event, inactiveEventParticipations, pendingParticipations, trainerKeysForEvent]);
+
+  // 🗣️ N1 (b) — CE QUE L'ENTRAINEMENT OUVERT DIT ENFIN A TOUT LE MONDE.
+  //
+  // 🧨 LE DEFAUT : « Accueille N joueurs de l'exterieur » n'existait QUE dans la
+  // carte d'organisation, reservee a `canManageTrainingVisibility`. Un joueur ou
+  // un visiteur ne voyait donc NULLE PART que la seance lui etait ouverte — et
+  // c'est pourtant la seule information de ce bloc qui le concerne.
+  //
+  // 🔒 Q14 — DES NOMBRES, JAMAIS DES NOMS. Le compte des demandes a verifier
+  // reste chez l'organisateur ; le reste est public parce que le serveur le
+  // publie deja : `sessionStatus`, `externalParticipantLimit` et
+  // `externalParticipantValidationMode` ne sont pas `private` au schema,
+  // `getEventById` n'a aucune projection `fields`, et
+  // `shieldEventPayloadForViewer` masque les identites EN GARDANT les comptes.
+  //
+  // ⛔ Un entrainement ferme, ou ouvert sans quota, ne dit rien : « Accueille 0
+  // joueur·se·s » serait pire que le silence.
+  const openTrainingPublicLine = useMemo(() => {
+    const quota = Number(trainingOpenConfig.externalParticipantLimit || 0);
+    if (!trainingOpenConfig.isOpenTraining || quota <= 0) return '';
+
+    const taken = externalParticipationSection?.participating?.length || 0;
+    const ligne = t(
+      'eventDetails.openTraining.publicLine',
+      'Accueille {{quota}} joueur·se·s de l’extérieur · {{taken}} place(s) prise(s)',
+      { quota, taken },
+    );
+
+    const pending = externalParticipationSection?.pending?.length || 0;
+    if (!canEdit || pending <= 0) return ligne;
+
+    const suffixe = t(
+      'eventDetails.openTraining.pendingSuffix',
+      '{{pending}} demande(s) à vérifier',
+      { pending },
+    );
+    return `${ligne} · ${suffixe}`;
+  }, [
+    canEdit,
+    externalParticipationSection,
+    t,
+    trainingOpenConfig.externalParticipantLimit,
+    trainingOpenConfig.isOpenTraining,
+  ]);
+
+  // 🎟️ N1 (c) — LA CAPACITE D'UN « AUTRE », DANS SA PASTILLE.
+  //
+  // `event.capacity` existe depuis toujours au schema Strapi et descend jusqu'ici
+  // dans `participantsSummary.capacity`. La pastille de type, elle, restait nue :
+  // un evenement « Autre » limite a 12 places ne le disait nulle part.
+  //
+  // ⛔ SANS CAPACITE, PASTILLE NUE — surtout pas « Illimité » : on n'invente pas
+  // une regle que personne n'a ecrite. Et la portee reste le type « Autre » : les
+  // autres types ont deja leurs propres compteurs ailleurs dans la page.
+  const isOtherEventType = normalizeEventTypeLabel(event?.type?.name).includes('autre');
+  const typeTagSegments = useMemo(() => {
+    const total = Number(participantsSummary?.capacity || 0);
+    if (!isOtherEventType || total <= 0) return [];
+
+    const taken = Number(participantsSummary?.participatingCount || 0);
+    return [t('eventDetails.typeTag.capacity', '{{taken}}/{{total}} PLACES', { taken, total })];
+  }, [isOtherEventType, participantsSummary, t]);
 
   const participationsByStatus = useMemo(() => {
     if (!canEdit) {
@@ -4994,10 +5078,26 @@ function EventDetails({ navigation, route }) {
     // D4 : le bouton autonome « Mettre à la une » a disparu — c'est la chip
     // « À la une » du panneau qui ouvre la meme modale, sous la meme condition.
     const pendingFeaturedActionNode = (() => {
+      // 🔇 N1 (d) — CES DEUX BOUTONS-LA NE SONT PAS MUETS, ET C'EST LE POINT.
+      //
+      // La regle 5 du pack interdit un bouton gris sans explication. Ces deux-ci
+      // portent DEJA leur motif dans leur titre : « Demande en attente » et
+      // « Déjà à la une » disent exactement pourquoi on ne peut pas appuyer. Rien
+      // a corriger, donc — mais leurs libelles etaient ecrits EN DUR, ce qui les
+      // rendait invisibles a toute relecture de fr.js et impossibles a traduire.
+      //
+      // ⛔ « Demande en attente » existait deja en DEUX clefs : on reprend celle
+      // du domaine de la mise a la une plutot que d'en creer une troisieme.
+      // Seul « Déjà à la une » n'existait nulle part et devient une clef neuve.
       if (hasPendingFeaturedScope) {
         return (
           <View style={{ marginTop: 12, opacity: 0.7 }}>
-            <Button disabled icon="clock" title="Demande en attente" variant="Secondary" />
+            <Button
+              disabled
+              icon="clock"
+              title={t('reservation.featuredRequest.pending', 'Demande en attente')}
+              variant="Secondary"
+            />
           </View>
         );
       }
@@ -5005,7 +5105,12 @@ function EventDetails({ navigation, route }) {
       if (hasApprovedFeaturedScope && canManageFeatured) {
         return (
           <View style={{ marginTop: 12, opacity: 0.8 }}>
-            <Button disabled icon="check" title="Déjà à la une" variant="Secondary" />
+            <Button
+              disabled
+              icon="check"
+              title={t('eventDetails.featuredRequest.alreadyFeatured', 'Déjà à la une')}
+              variant="Secondary"
+            />
           </View>
         );
       }
@@ -5273,7 +5378,11 @@ function EventDetails({ navigation, route }) {
   return (
     <ScreenContainer bgImage="bg2" contentContainerStyle={[Spaces.gap[32], Alignments.fill]} gradient={null} withHeaderPadding>
       <View style={[Spaces.gap[8], Alignments.alignCenter]}>
-        <Tag style={{}} text={event?.type?.name?.toUpperCase() || ''} textStyle={Fonts.p2} />
+        <Tag
+          style={{}}
+          text={buildTypeTagLabel(event?.type?.name, typeTagSegments)}
+          textStyle={Fonts.p2}
+        />
         {/* Y02 : le nom de l'adversaire, sous la pastille de type. ⛔ La ligne
             n'est MONTEE que si l'adversaire est connu — jamais un « vs » suivi
             d'un blanc, et rien ne change pour les autres types d'evenement. */}
@@ -5313,6 +5422,12 @@ function EventDetails({ navigation, route }) {
         >
           <WithDataWrapper error={error} isLoading={isLoading} wrapperStyle={[Alignments.fill, Spaces.gap[24]]}>
             <EventHeader event={event} matchScoreSummary={matchHeaderScoreSummary} />
+            {/* N1 (b) — sous la carte d'entete, et pour TOUS les lecteurs. Elle
+                ne concerne que l'entrainement ouvert : les onglets du match ne
+                la voient jamais, donc rien a brancher sur `showOverviewTab`. */}
+            {openTrainingPublicLine ? (
+              <Text style={[Fonts.p3, Fonts.neutral200]}>{openTrainingPublicLine}</Text>
+            ) : null}
             {renderTournamentActionsPanel()}
             {renderViewerConvocationLine()}
             {renderDetailsTabs()}
@@ -5566,7 +5681,14 @@ function EventDetails({ navigation, route }) {
                 </View>
               ) : null}
 
-              {detectionSlots.length > 0 ? (
+              {/* N1 (a) — LE BLOC SE MONTE DES QU'IL S'AGIT D'UNE DETECTION,
+                  et non plus seulement quand il y a des postes a montrer.
+                  🧨 Avant, deux gardes se superposaient : `length > 0` ici, et un
+                  `return null` dans le composant. Une detection sans poste
+                  n'affichait donc RIEN — l'organisateur ne savait pas s'il avait
+                  oublie un reglage. C'est desormais le composant qui decide quoi
+                  dire, en UN seul endroit, commande par `isDetection`. */}
+              {isDetectionEvent ? (
                 <EventDetectionSlots
                   canEdit={canEdit}
                   currentUserHasGenericParticipation={Boolean((hasAcceptedRequest || hasPendingRequest) && !currentUserDetectionParticipation)}
@@ -5575,6 +5697,7 @@ function EventDetails({ navigation, route }) {
                   currentUserSlotStatus={String(currentUserDetectionParticipation?.participationStatus || '').toLowerCase()}
                   // @ts-ignore: FIXME: Baseline TS regression
                   isApplyingSlotId={applyToDetectionSlotMutation.isPending ? String(applyToDetectionSlotMutation.variables?.slotDocumentId || '') : ''}
+                  isDetection
                   onApply={handleApplyToDetectionSlot}
                   onOpenSlot={handleOpenDetectionSlot}
                   slots={detectionSlots}
