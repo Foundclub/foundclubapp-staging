@@ -8,9 +8,7 @@ import {
   updateCoachLateMinutes,
 } from '@/services/event/eventService';
 
-import { getServerErrorCode } from '@/utils/errors/displayError';
-
-import { chunkUserIds, summarizeBulkOutcome, WINDOW_CLOSED_CODE } from './attendanceCallModel';
+import { chunkUserIds, summarizeBulkOutcome } from './attendanceCallModel';
 
 /**
  * L5-A — LES ECRITURES DE L ECRAN D APPEL, ET RIEN D AUTRE.
@@ -96,67 +94,6 @@ export const useAttendanceCallMutations = (eventId) => {
     lateMinutesMutation,
     resetMutation,
   };
-};
-
-/**
- * La phrase FRANCAISE d un refus serveur.
- *
- * ⛔ Le serveur repond en anglais brut (« Attendance can only be marked from 30
- * minutes before… ») : la laisser passer telle quelle mettrait de l anglais
- * sous le doigt d un coach au bord d un terrain. Le code, lui, est stable.
- * @param {any} error
- * @param {(key: string, fallback: string) => string} t
- * @returns {string}
- */
-export const describeAttendanceError = (error, t) => {
-  const code = getServerErrorCode(error);
-  if (code === WINDOW_CLOSED_CODE) {
-    return t(
-      'eventDetails.attendanceCall.errors.windowClosed',
-      "L'appel n'est pas ouvert en ce moment. Il s'ouvre 30 minutes avant le début"
-      + ' et se ferme 2 h après la fin.',
-    );
-  }
-  return t(
-    'eventDetails.attendanceCall.errors.generic',
-    "Impossible d'enregistrer le pointage. Réessaie dans un instant.",
-  );
-};
-
-/**
- * La phrase qui resume un envoi groupe — UNE seule quand la cause est unique.
- *
- * 🧨 22 refus pour la meme raison, c est UNE phrase. En afficher 22 rendrait
- * l ecran illisible au moment precis ou le coach a besoin de comprendre vite.
- * @param {{ failedCount: number, failures: Array<{ code: string }>, markedCount: number }} summary
- * @param {(key: string, fallback: string) => string} t
- * @returns {string}
- */
-export const describeBulkOutcome = (summary, t) => {
-  const marked = Number(summary?.markedCount || 0);
-  const failed = Number(summary?.failedCount || 0);
-  if (failed === 0) {
-    return t('eventDetails.attendanceCall.bulk.allMarked', 'Tout le monde est pointé.');
-  }
-
-  const codes = Array.from(new Set((summary?.failures || []).map((failure) => failure.code)));
-  if (codes.length === 1 && codes[0] === WINDOW_CLOSED_CODE) {
-    return t(
-      'eventDetails.attendanceCall.bulk.windowClosed',
-      "Personne n'a été pointé : l'appel n'est pas ouvert en ce moment.",
-    );
-  }
-  if (codes.length === 1 && marked === 0) {
-    return t(
-      'eventDetails.attendanceCall.bulk.allRefused',
-      "Personne n'a été pointé : le serveur a refusé pour la même raison.",
-    );
-  }
-  const reste = t(
-    'eventDetails.attendanceCall.bulk.partial',
-    'pointé·e·s, le reste a été refusé.',
-  );
-  return `${marked} ${reste}`;
 };
 
 export default useAttendanceCallMutations;

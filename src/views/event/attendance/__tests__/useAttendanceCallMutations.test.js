@@ -1,11 +1,8 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import renderer, { act } from 'react-test-renderer';
 
-import {
-  describeAttendanceError,
-  describeBulkOutcome,
-  useAttendanceCallMutations,
-} from '../useAttendanceCallMutations';
+import { describeAttendanceError, describeBulkOutcome } from '../attendanceCallModel';
+import { useAttendanceCallMutations } from '../useAttendanceCallMutations';
 
 /**
  * L5-A · ETAPE 1 — LE TUYAU DU POINTAGE GROUPE.
