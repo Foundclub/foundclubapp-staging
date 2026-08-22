@@ -10,6 +10,13 @@ import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 
 import { formatTimeInZone, isMarked, isNoShow } from './attendanceCallModel';
 
+// 🪤 `SvgIcon` declare ses proprietes en `@param` separes au lieu d un objet
+// `props` : TypeScript le lit donc comme une fonction a arguments positionnels,
+// et TOUT appel en JSX leve une erreur. Le defaut est dans le composant (il
+// porte deja 5 erreurs a lui seul, mesurees le 2026-08-23) ; le corriger est un
+// autre lot — celui-ci se contente de ne pas en ajouter une sixieme.
+const Icone = /** @type {any} */ (SvgIcon);
+
 const styles = StyleSheet.create({
   identity: { flex: 1 },
   row: {
@@ -151,7 +158,7 @@ function AttendanceRow({
             onPress={() => onLate?.(item)}
             style={styles.targetIcon}
           >
-            <SvgIcon color={Colors.warning500} height={20} name="clock-two-thirty" width={20} />
+            <Icone color={Colors.warning500} height={20} name="clock-two-thirty" width={20} />
           </TouchableOpacity>
         </>
       )}

@@ -293,16 +293,16 @@ export const resolveServerClockMs = ({ elapsedMs = 0, serverNowIso }) => {
  */
 export const summarizeBulkOutcome = (response) => {
   const data = response?.data ?? response;
-  const items = Array.isArray(data?.items) ? data.items : [];
+  const items = /** @type {any[]} */ (Array.isArray(data?.items) ? data.items : []);
   const failures = items
-    .filter((item) => item && item.ok === false)
-    .map((item) => ({
+    .filter((/** @type {any} */ item) => item && item.ok === false)
+    .map((/** @type {any} */ item) => ({
       code: String(item?.error?.code || ''),
       message: String(item?.error?.message || ''),
       userDocumentId: String(item?.userDocumentId || ''),
     }));
 
-  const codes = Array.from(new Set(failures.map((failure) => failure.code)));
+  const codes = Array.from(new Set(failures.map((/** @type {any} */ failure) => failure.code)));
   return {
     failedCount: Number.isFinite(data?.failedCount) ? Number(data.failedCount) : failures.length,
     failures,

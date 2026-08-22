@@ -125,10 +125,12 @@ function EventAttendanceCall() {
   const [bulkMessage, setBulkMessage] = useState('');
   // Les trois feuilles. `sheetItem` porte la ligne visee par 2E et 2F.
   const [openSheet, setOpenSheet] = useState('');
-  const [sheetItem, setSheetItem] = useState(null);
+  const [sheetItem, setSheetItem] = useState(/** @type {any} */ (null));
 
   const payloadData = attendancePayload?.data;
-  const items = useMemo(() => payloadData?.items || [], [payloadData?.items]);
+  const items = /** @type {any[]} */ (
+    useMemo(() => payloadData?.items || [], [payloadData?.items])
+  );
   const timezone = payloadData?.timezone;
   const identitiesHidden = Boolean(payloadData?.participantIdentitiesHidden);
 
@@ -158,11 +160,14 @@ function EventAttendanceCall() {
   const markedCount = items.length - presence.waiting;
 
   const unansweredItems = useMemo(() => listUnanswered(items), [items]);
-  const unmarkedItems = useMemo(() => items.filter((item) => !isMarked(item)), [items]);
+  const unmarkedItems = useMemo(
+    () => items.filter((/** @type {any} */ item) => !isMarked(item)),
+    [items],
+  );
   const markedItems = useMemo(() => items.filter(isMarked), [items]);
 
   const visibleUnmarked = activeTab === TAB_UNANSWERED
-    ? unansweredItems.filter((item) => !isMarked(item))
+    ? unansweredItems.filter((/** @type {any} */ item) => !isMarked(item))
     : unmarkedItems;
 
   const teamName = event?.team?.name || '';
@@ -190,7 +195,7 @@ function EventAttendanceCall() {
     tabUnanswered: t('eventDetails.attendanceCall.tabs.unanswered', 'Sans réponse'),
   };
 
-  const handleMark = useCallback((item) => {
+  const handleMark = useCallback((/** @type {any} */ item) => {
     coachArrivalMutation.mutate({ payload: {}, userId: item?.user?.documentId });
   }, [coachArrivalMutation]);
 
@@ -238,10 +243,16 @@ function EventAttendanceCall() {
   const handleUnmarkAll = useCallback(() => {
     // 🔒 On ne vise QUE les lignes qui portent un `arrivedAt` : `reset` efface
     // aussi la declaration que le joueur avait faite lui-meme.
-    markedItems.forEach((item) => resetMutation.mutate({ userId: item?.user?.documentId }));
+    markedItems.forEach(
+      (/** @type {any} */ item) => resetMutation.mutate({ userId: item?.user?.documentId }),
+    );
   }, [markedItems, resetMutation]);
 
-  const renderCounter = (valeur, libelle, couleur) => (
+  const renderCounter = (
+    /** @type {number} */ valeur,
+    /** @type {string} */ libelle,
+    /** @type {string} */ couleur,
+  ) => (
     <View
       key={libelle}
       style={[styles.counter, { backgroundColor: withAlpha(Colors.primary900, 0.6) }]}
@@ -255,7 +266,7 @@ function EventAttendanceCall() {
   const renderBeforeWindow = () => {
     const heureOuverture = formatTimeInZone(attendanceWindow.opensAtMs, timezone);
     const signalled = items.filter(
-      (item) => Number(item?.attendance?.declaredLateMinutes || 0) > 0,
+      (/** @type {any} */ item) => Number(item?.attendance?.declaredLateMinutes || 0) > 0,
     );
 
     return (
@@ -300,7 +311,7 @@ function EventAttendanceCall() {
             <Text style={[Fonts.p4Bold, { color: Colors.neutral400 }]}>
               {t('eventDetails.attendanceCall.before.alreadySignalled', 'DÉJÀ SIGNALÉ')}
             </Text>
-            {signalled.map((item, index) => {
+            {signalled.map((/** @type {any} */ item, /** @type {number} */ index) => {
               const minutesSignalees = Number(item?.attendance?.declaredLateMinutes || 0);
               const nom = identitiesHidden
                 ? `${t('eventDetails.attendanceCall.row.anonymous', 'Participant·e')} ${index + 1}`
@@ -392,7 +403,7 @@ function EventAttendanceCall() {
       )}
 
       <View style={styles.list}>
-        {visibleUnmarked.map((item, index) => (
+        {visibleUnmarked.map((/** @type {any} */ item, /** @type {number} */ index) => (
           <AttendanceRow
             identitiesHidden={identitiesHidden}
             item={item}
@@ -411,7 +422,7 @@ function EventAttendanceCall() {
           <Text style={[Fonts.p4Bold, { color: Colors.neutral400 }]}>
             {`${mots.markedSection} · ${markedItems.length}`}
           </Text>
-          {markedItems.map((item, index) => (
+          {markedItems.map((/** @type {any} */ item, /** @type {number} */ index) => (
             <AttendanceRow
               identitiesHidden={identitiesHidden}
               item={item}
@@ -432,7 +443,7 @@ function EventAttendanceCall() {
   const heureDebut = formatTimeInZone(payloadData?.eventStartAt || event?.date, timezone);
 
   return (
-    <ScreenContainer bgImage="bg2" bottomInsetMode="edge-to-edge" style={styles.screen}>
+    <ScreenContainer bgImage="bg2" bottomInsetMode="edge-to-edge" style={[styles.screen]}>
       <View style={styles.header}>
         <HeaderBackButton onPress={() => navigation.goBack()} />
         <View style={styles.headerTexts}>
