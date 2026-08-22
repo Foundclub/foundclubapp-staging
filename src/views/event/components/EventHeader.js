@@ -61,6 +61,23 @@ const getBackgroundImage = (/** @type {any} */ typeName, /** @type {any} */ even
 };
 
 /**
+ * 🏁 N3 (D7) — LES TROIS COULEURS DU VERDICT, en jetons de theme.
+ *
+ * Un objet plutot que trois ternaires : la couleur du badge et celle de la
+ * bordure se lisent alors au meme endroit, et un quatrieme etat (forfait,
+ * report…) s'ajoute par une ligne. ⛔ Aucun hex : `verify:theme-contract`
+ * les compte, y compris dans les tests.
+ */
+const VERDICT_COLOR_TOKENS = {
+  draw: 'primary100',
+  loss: 'error300',
+  win: 'success500',
+};
+
+/** L'opacite de la bordure quand un verdict la colore (planche 03, cadre B). */
+const VERDICT_BORDER_ALPHA = 0.4;
+
+/**
  * @param {unknown} value
  * @returns {string}
  */
@@ -101,9 +118,13 @@ const toDisplayText = (value) => {
  * @param {{
  *   event: any;
  *   matchScoreSummary?: {
- *     badgeLabel: string;
+ *     awaitingOpponent?: boolean;
+ *     badgeLabel?: string;
  *     helperText?: string | null;
+ *     onNameOpponent?: (() => void) | null;
+ *     opponentName?: string;
  *     value: string;
+ *     verdict?: 'win' | 'draw' | 'loss' | null;
  *   } | null;
  * }} props
  */
@@ -161,17 +182,31 @@ function EventHeader({ event, matchScoreSummary = null }) {
   const tournamentTitle = eventOwnName || t('eventDetails.header.tournamentFallback', 'Tournoi');
   // AE01 — le titre principal suit le TYPE (planche 03, cadres C/D/E/G/H).
   // Deux familles en sont EXCLUES et gardent le nom du club :
-  //  - le match : son titre « VS X » vit dans showMatchTitle, et sans
-  //    adversaire (cadre 03 · I) c'est le nom du club qui doit rester —
-  //    le replier sur event.name lui prendrait le seul nom qu'il porte ;
+  //  - le match (voir N3 juste en dessous) ;
   //  - la reservation, qui n'a pas de nom propre a montrer.
-  // Le club ne disparait de NULLE PART : le logo, le sous-titre et la
-  // pastille continuent de le porter.
+  // Le club ne disparait de NULLE PART : le logo et la pastille le portent.
   const keepsClubNameTitle = normalizedTypeName.includes('match')
     || normalizedTypeName.includes('competition')
     || normalizedTypeName.includes('reservation');
+
+  // 🏷️ N3 (D4, Q1 = C — Adel, 20/08) — LE MATCH GARDE LE NOM DU CLUB.
+  //
+  // Avant ce lot il portait « VS FC Bonneveine » en titre et repoussait le club
+  // dans un sous-titre « Domicile - Test FC ». Les deux moities de cette phrase
+  // ont trouve une meilleure place : l'adversaire dans l'encart, face au club
+  // (« Test FC — FC Bonneveine »), et le lieu dans la pastille de type (D1).
+  // Le titre n'a donc plus qu'une chose a dire, et le sous-titre plus rien —
+  // le remplir du seul `clubName` repeterait le titre mot pour mot.
+  //
+  // ⚠️ `showMatchTitle` couvre AUSSI le tournoi (l. ~153) : un tournoi dont le
+  // nom contient « VS X » passe par la meme branche. Il n'est PAS concerne par
+  // Q1 — d'ou ce drapeau, qui ne retient que le match et la competition.
+  const isMatchLikeEvent = normalizedTypeName.includes('match')
+    || normalizedTypeName.includes('competition');
+  const showsMatchOpponentTitle = showMatchTitle && !isMatchLikeEvent;
+
   let headerPrimaryTitle = clubName;
-  if (showMatchTitle) {
+  if (showsMatchOpponentTitle) {
     headerPrimaryTitle = eventTitle;
   } else if (isTournamentEvent) {
     headerPrimaryTitle = tournamentTitle;
@@ -182,7 +217,7 @@ function EventHeader({ event, matchScoreSummary = null }) {
   }
 
   let headerSecondaryTitle = '';
-  if (showMatchTitle) {
+  if (showsMatchOpponentTitle) {
     headerSecondaryTitle = [matchContextLabel, clubName].filter(Boolean).join(' - ');
   } else if (isTournamentEvent) {
     headerSecondaryTitle = [clubName, activityName, categoryName].filter(Boolean).join(' - ');
@@ -251,6 +286,28 @@ function EventHeader({ event, matchScoreSummary = null }) {
       });
   };
 
+  // 🏁 N3 (D5/D6/D7) — CE QUE L'ENCART AFFICHE, calcule une fois.
+  // L'ecran fournit la DONNEE (`opponentName`, `verdict`) ; la carte fournit la
+  // MISE EN FORME. C'est la meme separation que pour l'orientation (D3), a
+  // l'envers : l'ecran sait qui regarde, la carte sait comment le dire.
+  const verdictColorToken = matchScoreSummary?.verdict
+    ? VERDICT_COLOR_TOKENS[matchScoreSummary.verdict]
+    : null;
+  const verdictColor = verdictColorToken ? Colors[verdictColorToken] : null;
+  const verdictFontStyle = verdictColorToken ? Fonts[verdictColorToken] : Fonts.primary100;
+  const verdictLabel = {
+    draw: t('eventDetails.matchCard.verdict.draw', 'Nul'),
+    loss: t('eventDetails.matchCard.verdict.loss', 'Défaite'),
+    win: t('eventDetails.matchCard.verdict.win', 'Victoire'),
+  }[matchScoreSummary?.verdict || ''] || '';
+  const badgeLabelWithVerdict = [matchScoreSummary?.badgeLabel, verdictLabel]
+    .filter(Boolean)
+    .join(' · ');
+  const opponentDisplayName = toDisplayText(matchScoreSummary?.opponentName);
+  const matchupLabel = opponentDisplayName
+    ? [clubName, opponentDisplayName].filter(Boolean).join(' — ')
+    : t('eventDetails.matchCard.opponentToConfirm', 'Adversaire à confirmer');
+
   return (
     <ImageBackground
       imageStyle={{ borderRadius: 24 }}
@@ -293,7 +350,11 @@ function EventHeader({ event, matchScoreSummary = null }) {
           size={60}
         />
         <View style={[Spaces.gap[4], { maxWidth: '75%' }]}>
-          <Text style={[showMatchTitle ? Fonts.h3Black : Fonts.p1Bold, Fonts.neutral00]}>
+          {/* N3 — un match affiche desormais son club en titre, avec ou sans
+              adversaire. Sans ce `isMatchLikeEvent`, le MEME nom de club
+              s'ecrirait en gros quand l'adversaire est connu et en petit
+              sinon : une difference de taille que rien a l'ecran n'explique. */}
+          <Text style={[showMatchTitle || isMatchLikeEvent ? Fonts.h3Black : Fonts.p1Bold, Fonts.neutral00]}>
             {headerPrimaryTitle}
           </Text>
           {headerSecondaryTitle ? (
@@ -329,15 +390,32 @@ function EventHeader({ event, matchScoreSummary = null }) {
             Spaces.gap[8],
             {
               backgroundColor: withAlpha(accentColor, 0.09),
-              borderColor: withAlpha(accentColor, 0.33),
+              borderColor: verdictColor
+                ? withAlpha(verdictColor, VERDICT_BORDER_ALPHA)
+                : withAlpha(accentColor, 0.33),
               borderWidth: 1,
               minWidth: 172,
             },
+            // D10 — le POINTILLE dit « il manque quelque chose » sans ecrire un
+            // mot de plus. Un trait plein annoncerait un encart complet.
+            matchScoreSummary.awaitingOpponent ? { borderStyle: 'dashed' } : null,
           ]}
+          testID="event-header-match-encart"
         >
-          <Text style={[Fonts.p4Bold, Fonts.primary100]}>
-            {matchScoreSummary.badgeLabel}
+          {/* D5 — LE FACE-A-FACE, en tete de l'encart : « Test FC — FC Bonneveine ».
+              Le tiret cadratin et AUCUN mot entre les deux noms (Q1 = C) : la
+              mise en page dit deja « contre ».
+              ⚠️ Le libelle se compose ICI et non dans l'ecran : le nom du club
+              est deja resolu a cet endroit (`clubName`), le refaire au-dessus
+              serait la meme regle ecrite deux fois. */}
+          <Text style={[Fonts.p3Bold, Fonts.neutral00, Fonts.textCenter]}>
+            {matchupLabel}
           </Text>
+          {badgeLabelWithVerdict ? (
+            <Text style={[Fonts.p4Bold, verdictFontStyle]}>
+              {badgeLabelWithVerdict}
+            </Text>
+          ) : null}
           <Text style={[Fonts.h4Black, Fonts.neutral00]}>
             {matchScoreSummary.value}
           </Text>
@@ -345,6 +423,27 @@ function EventHeader({ event, matchScoreSummary = null }) {
             <Text style={[Fonts.p4, Fonts.primary100, Fonts.textCenter]}>
               {matchScoreSummary.helperText}
             </Text>
+          ) : null}
+          {/* D9/D10 — la PRESENCE du rappel porte le droit. Un lecteur qui
+              n'organise pas ne recoit pas `onNameOpponent`, donc aucun bouton
+              n'est monte : impossible d'afficher une action interdite en
+              oubliant de lire un drapeau. */}
+          {matchScoreSummary.onNameOpponent ? (
+            <TouchableOpacity
+              activeOpacity={0.8}
+              onPress={matchScoreSummary.onNameOpponent}
+              style={[
+                ApplicationStyle.borderRadius100,
+                Spaces.paddingHorizontal[12],
+                Spaces.paddingVertical[4],
+                { backgroundColor: withAlpha(accentColor, 0.18) },
+              ]}
+              testID="event-header-nommer-adversaire"
+            >
+              <Text style={[Fonts.p4Bold, Fonts.neutral00]}>
+                {t('eventDetails.matchCard.nameOpponent', 'Nommer l\'adversaire')}
+              </Text>
+            </TouchableOpacity>
           ) : null}
         </View>
       ) : null}

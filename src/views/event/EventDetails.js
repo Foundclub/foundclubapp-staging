@@ -3156,15 +3156,39 @@ function EventDetails({ navigation, route }) {
       scoreState?.waitingOfficial || (!scoreState?.available && event?.externalAutoSource),
     );
 
-    if (!available && !isMatchFinished) {
-      return null;
+    // 🆕 N3 (D5) — L'ENCART EXISTE AVANT LE MATCH.
+    // Jusqu'ici cette ligne rendait `null` : un match a venir n'affichait donc
+    // AUCUN encart, et l'adversaire n'apparaissait nulle part sur la carte.
+    // C'est le cadre A de la planche 03 — « Test FC — FC Bonneveine » et
+    // « Score en attente » se montrent des qu'un adversaire est connu, et le
+    // cadre I (adversaire inconnu) se montre aussi, pour le dire.
+    const awaitingOpponent = !matchOpponentName;
+
+    // 🏁 N3 (D6) — LE VERDICT SE DEDUIT, IL NE SE STOCKE PAS.
+    // `resolvedScoreFor/Against` sont DEJA orientes vers le lecteur (D3) :
+    // le verdict herite donc de l'orientation sans rien recalculer, et le
+    // 3-1 de l'organisateur devient bien une defaite pour l'equipe invitee.
+    let verdict = null;
+    if (available) {
+      const scoredFor = Number(resolvedScoreFor);
+      const scoredAgainst = Number(resolvedScoreAgainst);
+      if (Number.isFinite(scoredFor) && Number.isFinite(scoredAgainst)) {
+        if (scoredFor > scoredAgainst) verdict = 'win';
+        else if (scoredFor < scoredAgainst) verdict = 'loss';
+        else verdict = 'draw';
+      }
     }
 
     if (!available) {
       return {
+        awaitingOpponent,
         badgeLabel: waitingOfficial ? 'Score officiel' : 'Score du match',
-        helperText: waitingOfficial ? 'Score en attente de synchronisation' : 'Score en attente',
+        // Le repli disait « Score en attente » ICI ET dans `value` : la meme
+        // phrase deux fois dans un encart de 172 px. Une seule suffit.
+        helperText: waitingOfficial ? 'Score en attente de synchronisation' : null,
+        opponentName: matchOpponentName,
         value: 'Score en attente',
+        verdict: null,
       };
     }
 
@@ -3176,16 +3200,23 @@ function EventDetails({ navigation, route }) {
     }
 
     return {
+      awaitingOpponent,
       badgeLabel,
       helperText: waitingOfficial ? 'Synchronise automatiquement depuis la source officielle' : null,
+      opponentName: matchOpponentName,
       value: `${resolvedScoreFor} - ${resolvedScoreAgainst}`,
+      verdict,
     };
   }, [
+    // `isMatchFinished` a QUITTE cette liste avec D5 : l'encart ne dependait de
+    // lui que pour se CACHER avant le coup d'envoi (`!available && !isMatchFinished`
+    // rendait null). Il s'affiche desormais des qu'il s'agit d'un match, donc
+    // le calcul ne lit plus l'etat de fin. La pastille, elle, le lit toujours (D8).
     event?.externalAutoSource,
     event?.matchResult,
     isMatchEvent,
-    isMatchFinished,
     isViewerFromInvitedTeam,
+    matchOpponentName,
     matchStatsPayload?.score,
   ]);
   const matchStatsSummaryText = useMemo(() => {
@@ -5443,14 +5474,14 @@ function EventDetails({ navigation, route }) {
           text={buildTypeTagLabel(event?.type?.name, typeTagSegmentsComplets)}
           textStyle={Fonts.p2}
         />
-        {/* Y02 : le nom de l'adversaire, sous la pastille de type. ⛔ La ligne
-            n'est MONTEE que si l'adversaire est connu — jamais un « vs » suivi
-            d'un blanc, et rien ne change pour les autres types d'evenement. */}
-        {matchOpponentName ? (
-          <Text style={[Fonts.h4, Fonts.neutral00]}>
-            {t('eventDetails.opponentLine', 'vs {{opponent}}', { opponent: matchOpponentName })}
-          </Text>
-        ) : null}
+        {/* N3 (D4, Q1 = C) — la ligne « vs X » qu'Y02 avait posee ici est
+            RETIREE : l'adversaire vit desormais dans l'encart de la carte,
+            face au club (« Test FC — FC Bonneveine »). La garder ferait dire
+            trois fois la meme chose — encart, titre, et cette ligne.
+            ✅ Rien a nettoyer dans fr.js : `eventDetails.opponentLine` n'y a
+            JAMAIS ete ajoutee (verifie — aucune occurrence dans
+            src/theme/strings/translations/). Elle ne vivait que comme repli
+            de t() ici meme ; elle part avec la ligne. */}
       </View>
 
       {/* D64 : ce cadre ne contient plus que la liste, et c'est le geste du lot.

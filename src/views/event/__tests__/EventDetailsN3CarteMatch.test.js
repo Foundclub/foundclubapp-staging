@@ -353,7 +353,6 @@ const COACH = 'coach-1';
 const COACH_INVITEE = 'coach-invitee';
 const CLUB_NAME = 'Test FC';
 const ADVERSAIRE = 'FC Bonneveine';
-const TIRET_CADRATIN = '—';
 
 // Un match FINI a besoin de l'horloge du SERVEUR : sans elle
 // `resolveIsMatchFinished` rend `false`, quelle que soit la date de
@@ -549,7 +548,10 @@ describe('N3 - la carte du match : ce que l ecran calcule', () => {
 
     const resultat = resume();
     expect(resultat).not.toBeNull();
-    expect(resultat.matchupLabel).toBe(`${CLUB_NAME} ${TIRET_CADRATIN} ${ADVERSAIRE}`);
+    // L'ecran rend la DONNEE ; le libelle « Test FC — FC Bonneveine » se
+    // compose dans l'entete, ou `clubName` est deja resolu. La chaine rendue
+    // est temoignee la-bas (EventHeaderN3CarteMatch, temoin 2).
+    expect(resultat.opponentName).toBe(ADVERSAIRE);
     expect(resultat.value).toBe('Score en attente');
     expect(resultat.verdict).toBeNull();
   });

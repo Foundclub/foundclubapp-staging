@@ -15,6 +15,9 @@ import EventHeader from '../EventHeader';
 //   · D4 — le titre du match est le nom du CLUB (Q1 = C, Adel 20/08), et le
 //     sous-titre ne repete plus « Domicile - » (D1 : la pastille le dit deja).
 //   · D5 — l'encart existe AVANT le match, des qu'un adversaire est connu.
+//     ⚠️ L'ecran passe la DONNEE (`opponentName`) ; c'est l'entete qui compose
+//     « Test FC — FC Bonneveine », parce que le nom du club y est deja resolu.
+//     Le temoin 2 verifie donc la chaine RENDUE, pas une chaine recopiee.
 //   · D6/D7 — le verdict et ses trois couleurs.
 //   · D9/D10 — « Nommer l'adversaire », et le pointille sans bouton.
 //
@@ -232,7 +235,7 @@ describe('N3 - la carte du match : titre, encart, verdict, adversaire', () => {
     // l'encart, et le lieu dans la pastille de type hors carte (D1).
     const arbre = renderHeader(matchEvent(), {
       badgeLabel: 'Score du match',
-      matchupLabel: `${CLUB_NAME} ${TIRET_CADRATIN} ${ADVERSAIRE}`,
+      opponentName: ADVERSAIRE,
       value: 'Score en attente',
     });
 
@@ -248,7 +251,7 @@ describe('N3 - la carte du match : titre, encart, verdict, adversaire', () => {
   test('N3 · temoin 2 — l\'encart « Club — Adversaire » et le « Score en attente » (D5)', () => {
     const arbre = renderHeader(matchEvent(), {
       badgeLabel: 'Score du match',
-      matchupLabel: `${CLUB_NAME} ${TIRET_CADRATIN} ${ADVERSAIRE}`,
+      opponentName: ADVERSAIRE,
       value: 'Score en attente',
     });
 
@@ -265,7 +268,7 @@ describe('N3 - la carte du match : titre, encart, verdict, adversaire', () => {
   test('N3 · temoin 3 — le verdict colore le badge ET la bordure de l\'encart (D6/D7)', () => {
     const avecVerdict = (/** @type {any} */ verdict) => renderHeader(matchEvent(), {
       badgeLabel: 'Score du match',
-      matchupLabel: `${CLUB_NAME} ${TIRET_CADRATIN} ${ADVERSAIRE}`,
+      opponentName: ADVERSAIRE,
       value: '3 - 1',
       verdict,
     });
@@ -291,7 +294,7 @@ describe('N3 - la carte du match : titre, encart, verdict, adversaire', () => {
     // son encart doit rester exactement ce qu'il etait avant ce lot.
     const arbre = renderHeader(matchEvent(), {
       badgeLabel: 'Score du match',
-      matchupLabel: `${CLUB_NAME} ${TIRET_CADRATIN} ${ADVERSAIRE}`,
+      opponentName: ADVERSAIRE,
       value: 'Score en attente',
       verdict: null,
     });
@@ -318,7 +321,7 @@ describe('N3 - la carte du match : titre, encart, verdict, adversaire', () => {
       .resolveFacilityPlanningColor(facility);
     const arbre = renderHeader(matchEvent({ facility }), {
       badgeLabel: 'Score du match',
-      matchupLabel: `${CLUB_NAME} ${TIRET_CADRATIN} ${ADVERSAIRE}`,
+      opponentName: ADVERSAIRE,
       value: '3 - 1',
       verdict: 'win',
     });
@@ -376,7 +379,7 @@ describe('N3 - la carte du match : titre, encart, verdict, adversaire', () => {
     askedKeys.length = 0;
     renderHeader(matchEvent(), {
       badgeLabel: 'Score du match',
-      matchupLabel: `${CLUB_NAME} ${TIRET_CADRATIN} ${ADVERSAIRE}`,
+      opponentName: ADVERSAIRE,
       value: '3 - 1',
       verdict: 'win',
     });
