@@ -421,6 +421,44 @@ const pressableWithText = (/** @type {any} */ root, /** @type {string} */ label)
   .findAllByType(TouchableOpacity)
   .find((/** @type {any} */ node) => textOf(node).includes(label));
 
+/**
+ * 🎯 N4 (D2) — LE LIBELLE D'UNE RANGEE DU MENU, VISE PAR SA CLEF.
+ *
+ * 🧨 POURQUOI PAS PAR SON TEXTE : depuis L4 un ONGLET porte « Convocation », et
+ * depuis N4 la rangee du menu aussi — sur la MEME page. Un releve par
+ * sous-chaine attrape l'onglet en premier et rend la rangee « atteignable »
+ * partout, y compris la ou elle n'existe pas.
+ * @param {any} root - Racine du rendu.
+ * @param {string} cle - La cle de la rangee (`lineup`, `edit`…).
+ * @returns {string} - Le libelle exact, ou '' si la rangee n'existe pas.
+ */
+const libelleDeLaRangee = (/** @type {any} */ root, /** @type {string} */ cle) => {
+  const [etiquette] = root.findAll(
+    (/** @type {any} */ node) => node.props?.testID === `event-manage-label-${cle}`,
+    { deep: false },
+  );
+
+  return etiquette ? textOf(etiquette).trim() : '';
+};
+
+/**
+ * Le pressable d'une rangee du menu, atteint par la CLEF de son libelle puis
+ * remonte jusqu'au `TouchableOpacity` qui le porte.
+ * @param {any} root - Racine du rendu.
+ * @param {string} cle - La cle de la rangee.
+ * @returns {any} - Le pressable, ou null.
+ */
+const rangeeDuMenu = (/** @type {any} */ root, /** @type {string} */ cle) => {
+  const [etiquette] = root.findAll(
+    (/** @type {any} */ node) => node.props?.testID === `event-manage-label-${cle}`,
+    { deep: false },
+  );
+  let noeud = etiquette ? etiquette.parent : null;
+  while (noeud && noeud.type !== TouchableOpacity) noeud = noeud.parent;
+
+  return noeud;
+};
+
 const press = (/** @type {any} */ root, /** @type {string} */ label) => {
   const node = pressableWithText(root, label);
   if (!node) throw new Error(`Aucun pressable ne porte le libelle « ${label} »`);
@@ -475,9 +513,11 @@ const reachableManageActions = (/** @type {any} */ root) => {
   collect('Modifier', 'edit');
   collect('la une', 'featured');
   collect('Annuler', 'cancel');
-  collect('composition', 'lineup');
-  collect('Composition', 'lineup');
-  collect('Compo', 'lineup');
+  // 🎯 N4 (D2) — LA RANGEE DE CONVOCATION SE RELEVE PAR SA CLEF. Les trois
+  // `collect` d'avant ('composition', 'Composition', 'Compo') cherchaient le
+  // mot dans le texte des pressables : depuis N4 le mot est « Convocation », et
+  // un ONGLET le porte deja. Le releve aurait donc ete vrai partout.
+  if (libelleDeLaRangee(root, 'lineup')) found.add('lineup');
 
   const collectFromSheet = () => {
     alertOptionLabels().forEach((/** @type {string} */ label) => {
@@ -767,11 +807,13 @@ describe('EventDetails — ou menent les actions (inchange par la refonte)', () 
     expect(mockCancelEventMutate).not.toHaveBeenCalled();
   });
 
-  test('Compo ouvre la composition, sans passer par une action sheet', () => {
+  test('« Convocation » ouvre la composition, sans passer par une action sheet', () => {
     const root = asOrganiser();
     ouvrirLaFeuilleDeGestion();
-    const lineup = pressableWithText(root, 'Compo')
-      || pressableWithText(root, 'composition');
+    // N4 (D1/D2) : la rangee s'appelle « Convocation » — egalite STRICTE, et
+    // par clef, pour ne pas confondre avec l'onglet homonyme.
+    expect(libelleDeLaRangee(root, 'lineup')).toBe('Convocation');
+    const lineup = rangeeDuMenu(root, 'lineup');
     expect(lineup).toBeTruthy();
 
     act(() => {
@@ -854,9 +896,11 @@ describe('D4 — le panneau compact « Gerer l evenement »', () => {
     ouvrirLaFeuilleDeGestion();
 
     expect(chipWidths(root)).toEqual(['100%', '100%', '100%', '100%']);
-    ['Modifier', 'À la une', 'Compo', 'Annuler'].forEach((label) => {
+    ['Modifier', 'À la une', 'Annuler'].forEach((label) => {
       expect(pressableWithText(root, label)).toBeTruthy();
     });
+    // N4 (D1) : « Compo » est devenu « Convocation ». Meme rangee, meme porte.
+    expect(libelleDeLaRangee(root, 'lineup')).toBe('Convocation');
   });
 
   test('un seul tap : la chip Modifier navigue sans action sheet intermediaire', () => {
@@ -943,9 +987,11 @@ describe('D4 — le panneau compact « Gerer l evenement »', () => {
     ouvrirLaFeuilleDeGestion();
 
     expect(chipWidths(root)).toEqual(['100%', '100%', '100%', '100%', '100%']);
-    ['Modifier', 'À la une', 'Compo', 'Réglages tournoi', 'Annuler'].forEach((label) => {
+    ['Modifier', 'À la une', 'Réglages tournoi', 'Annuler'].forEach((label) => {
       expect(pressableWithText(root, label)).toBeTruthy();
     });
+    // N4 (D1) : « Compo » est devenu « Convocation ». Meme rangee, meme porte.
+    expect(libelleDeLaRangee(root, 'lineup')).toBe('Convocation');
   });
 
   test('variante tournoi : Reglages tournoi navigue en un seul tap', () => {
@@ -1031,9 +1077,12 @@ describe('C-E — le type de l evenement decide de la porte de composition', () 
     });
   };
 
+  // N4 (D2) : la rangee se presse par sa CLEF. Son libelle depend desormais du
+  // type d'evenement (« Convocation » / « Répartition ») — un helper qui vise
+  // le mot ne saurait plus lequel chercher, et attraperait l'onglet homonyme.
   const pressCompo = (/** @type {any} */ root) => {
     ouvrirLaFeuilleDeGestion();
-    const lineup = pressableWithText(root, 'Compo') || pressableWithText(root, 'composition');
+    const lineup = rangeeDuMenu(root, 'lineup');
     if (!lineup) throw new Error('L action de composition n est pas atteignable');
     act(() => {
       lineup.props.onPress();

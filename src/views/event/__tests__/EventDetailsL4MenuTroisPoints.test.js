@@ -533,7 +533,14 @@ describe('L4 · temoin 1 — le trois-points ouvre la feuille', () => {
     // la feuille rend `buildManageChips` tel quel.
     expect(libelles.some((/** @type {string} */ v) => v.includes('Modifier'))).toBe(true);
     expect(libelles.some((/** @type {string} */ v) => v.includes('À la une'))).toBe(true);
-    expect(libelles.some((/** @type {string} */ v) => v.includes('Compo'))).toBe(true);
+    // 🎯 N4 (D1/D2) — « Compo » est devenu « Convocation ». Le releve vise la
+    // CLEF de la rangee et compare STRICTEMENT : `libelles` porte le libelle ET
+    // son sous-titre, et un onglet homonyme existe depuis L4.
+    const [etiquetteConvocation] = root.findAll(
+      (/** @type {any} */ node) => node.props?.testID === 'event-manage-label-lineup',
+      { deep: false },
+    );
+    expect(textOf(etiquetteConvocation).trim()).toBe('Convocation');
     expect(
       libelles.some((/** @type {string} */ v) => v.includes('Faire venir des joueurs')),
     ).toBe(true);

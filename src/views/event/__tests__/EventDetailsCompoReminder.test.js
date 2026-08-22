@@ -354,9 +354,15 @@ const REMINDER_ID = 'event-compo-reminder';
 // qui les reecrit doit voir ce fichier dans son diff.
 // ⚠️ Apostrophe TYPOGRAPHIQUE (’), celle des libelles recents du depot : une
 // apostrophe droite ne trouverait rien et le rouge accuserait le code.
-const TITRE_RAPPEL = 'Ce match n’a pas encore de compo';
-const ACTION_RAPPEL = 'Préparer la compo';
-const TITRE_OFFRE = 'La compo est incluse dans l’offre Équipe';
+// 🗣️ N4 (D1) — LES MOTS DU BANDEAU, APRES LA DISPARITION DE « COMPO ».
+// Le bandeau disait « compo », un mot de metier que personne qui decouvre
+// l'app ne comprend. Il dit desormais « convocation », comme la rangee du menu
+// vers laquelle il mene. ⛔ Le bandeau, sa condition d'affichage, sa hauteur et
+// sa destination n'ont pas bouge d'un pouce : SEULS LES MOTS changent, et ces
+// trois chaines vivent maintenant dans `fr.js` (clefs `eventDetails.compoReminder`).
+const TITRE_RAPPEL = 'Ce match n’a pas encore de convocation';
+const ACTION_RAPPEL = 'Préparer la convocation';
+const TITRE_OFFRE = 'La convocation est incluse dans l’offre Équipe';
 const ACTION_OFFRE = 'Voir l’offre Équipe';
 
 // 🚧 Le plafond de hauteur DECLAREE du bandeau. Ce n'est pas une mesure a
@@ -644,7 +650,7 @@ describe('C2 — temoin 1 : un match sans compo affiche le rappel', () => {
       action.props.onPress();
     });
 
-    // La meme destination que la chip « Compo » du menu, prouvee par
+    // La meme destination que la rangee « Convocation » du menu, prouvee par
     // EventDetailsManagePanel.test.js. Le bandeau est un raccourci vers une
     // porte existante, pas une porte de plus.
     expect(mockNavigate).toHaveBeenCalledWith(
@@ -665,11 +671,19 @@ describe('C2 — temoin 1 : un match sans compo affiche le rappel', () => {
     expect(hauteurDeclaree(root)).toBeLessThanOrEqual(PLAFOND_HAUTEUR_DECLAREE);
   });
 
-  test('le menu d organisation garde sa chip Compo : aucun chemin supprime', () => {
+  test('le menu d organisation garde sa rangee de convocation : aucun chemin supprime', () => {
     const root = mountScreen({ auth: asOrganiser() });
     ouvrirLaFeuilleDeGestion();
 
-    expect(pressableWithText(root, 'Compo')).toBeTruthy();
+    // 🎯 N4 (D1/D2) — « Compo » est devenu « Convocation », et le releve passe
+    // par la CLEF de la rangee : depuis L4 un ONGLET porte le meme mot, donc
+    // `pressableWithText(root, 'Convocation')` serait vrai meme sans rangee.
+    const [etiquette] = root.findAll(
+      (/** @type {any} */ node) => node.props?.testID === 'event-manage-label-lineup',
+      { deep: false },
+    );
+    expect(etiquette).toBeTruthy();
+    expect(textOf(etiquette).trim()).toBe('Convocation');
   });
 });
 

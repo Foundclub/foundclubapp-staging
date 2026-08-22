@@ -3548,7 +3548,7 @@ function EventDetails({ navigation, route }) {
 
   // D4 : `compositionPrimaryAction` decrivait le titre et le sous-titre du gros
   // bouton de composition (« Brouillon enregistre le ... »). Ce bouton est
-  // devenu la chip « Compo » ; le bloc n'avait plus aucun lecteur.
+  // devenu la chip « Convocation » ; le bloc n'avait plus aucun lecteur.
 
   const matchStatsPrimaryAction = useMemo(() => {
     if (!isMatchFinished) {
@@ -4379,12 +4379,21 @@ function EventDetails({ navigation, route }) {
       });
     }
 
+    // 🗣️ N4 (D1) — « COMPO » DISPARAIT COMME MOT, ET LE LIBELLE DIT LA
+    // DESTINATION. « Compo » est un mot de metier : personne qui decouvre
+    // l'app ne devine qu'il mene a la convocation des joueur·se·s. Le libelle
+    // suit donc l'ecran au bout du chemin, qui n'est pas le meme partout :
+    //   · detection  -> `DetectionSquadSetup`   => « Répartition »
+    //   · tout le reste -> `MatchCallUpSelection` => « Convocation »
+    // ⛔ AUCUNE DESTINATION NE CHANGE : c'est le mot qui change, pas la porte.
     if (canEdit && supportsEventComposition) {
       chips.push({
         disabled: isStaffCompositionFetching,
         icon: 'users',
         key: 'lineup',
-        label: t('eventDetails.managePanel.lineup', 'Compo'),
+        label: isDetectionEvent
+          ? t('eventDetails.managePanel.lineupDetection', 'Répartition')
+          : t('eventDetails.managePanel.lineup', 'Convocation'),
         onPress: handleManageComposition,
       });
     }
@@ -4407,7 +4416,7 @@ function EventDetails({ navigation, route }) {
         ),
         note: hasDetectionTeams ? null : t(
           'eventDetails.managePanel.detectionTeamsBoardHint',
-          'Répartis d’abord les équipes depuis « Compo ».',
+          'Répartis d’abord les équipes depuis « Répartition ».',
         ),
         onPress: openDetectionTeamsBoard,
       });
@@ -4712,7 +4721,7 @@ function EventDetails({ navigation, route }) {
    * rien ne disait qu'ils formaient une suite.
    *
    * ⚠️ CE QUE CET ONGLET REPARE N'EST PAS UN MANQUE D'ECRANS, C'EST UN MANQUE
-   * D'ORDRE. Un organisateur voyait « Compo » et « Placer les équipes » comme
+   * D'ORDRE. Un organisateur voyait « Convocation » et « Placer les équipes » comme
    * deux boutons sans rapport, et n'atteignait jamais la rotation.
    *
    * 🔢 L'ETAPE 1 SE LIT SUR LE SERVEUR, jamais sur l'ecran de repartition :
@@ -5222,17 +5231,17 @@ function EventDetails({ navigation, route }) {
    * @returns {any} - Le bloc du menu, ou null si aucune action n'est ouverte.
    */
   // C2 — LE BANDEAU LUI-MEME. Il se pose SOUS « Gerer l'evenement », c'est-a-dire
-  // juste a cote de la porte qu'il designe : la chip « Compo » vit dans ce menu,
+  // juste a cote de la porte qu'il designe : la rangee « Convocation » vit dans ce menu,
   // et ce menu est REPLIE par defaut (`useState(false)`) — le rappel est donc le
   // seul endroit de la page ou le geste se voit sans deplier quoi que ce soit.
   //
   // 🧷 C'est un MORCEAU D'ECRAN, jamais une route de plus : D81 a mesure qu'un
   // `navigate` vers un ecran absent de la pile l'y empile, et que la fleche
   // retour y redescend. Le bandeau reutilise `handleManageComposition`, la
-  // destination exacte de la chip « Compo ».
+  // destination exacte de la rangee « Convocation ».
   //
   // 💳 ET LE PRIX EST SUR LA PROPOSITION, PAS AU BOUT. Aujourd'hui la chip
-  // « Compo » s'affiche sans aucun controle d'abonnement et le refus tombe en
+  // « Convocation » s'affiche sans aucun controle d'abonnement et le refus tombe en
   // 403 AU MOMENT DE PUBLIER (D88 §2.2) — apres que le coach a coche et place
   // ses joueurs. Un rappel muet laisserait ce mur entier ; un rappel qui dirait
   // « prepare ta compo » le mettrait en vitrine a zero clic. Il annonce donc
@@ -5260,8 +5269,11 @@ function EventDetails({ navigation, route }) {
       >
         <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
           {canManageComposition
-            ? t('eventDetails.compoReminder.title', 'Ce match n’a pas encore de compo')
-            : t('eventDetails.compoReminder.offerTitle', 'La compo est incluse dans l’offre Équipe')}
+            ? t('eventDetails.compoReminder.title', 'Ce match n’a pas encore de convocation')
+            : t(
+              'eventDetails.compoReminder.offerTitle',
+              'La convocation est incluse dans l’offre Équipe',
+            )}
         </Text>
         <TouchableOpacity
           accessibilityRole="button"
@@ -5270,7 +5282,7 @@ function EventDetails({ navigation, route }) {
         >
           <Text style={[Fonts.p3Bold, Fonts.primary500]}>
             {canManageComposition
-              ? t('eventDetails.compoReminder.action', 'Préparer la compo')
+              ? t('eventDetails.compoReminder.action', 'Préparer la convocation')
               : t('eventDetails.compoReminder.offerAction', 'Voir l’offre Équipe')}
           </Text>
         </TouchableOpacity>
@@ -5308,7 +5320,7 @@ function EventDetails({ navigation, route }) {
   };
 
   // L4-B — CE QUE CHAQUE RANGEE DIT SOUS SON LIBELLE.
-  // La maquette 04 · 4C demande que le menu annonce OU il mene : « Compo » et
+  // La maquette 04 · 4C demande que le menu annonce OU il mene : « Convocation » et
   // « Modifier » ne se distinguent pas d'un seul mot quand on ne connait pas
   // l'app. ⛔ Les chips qui portent DEJA une `note` (l'etat des stats du match,
   // le motif d'une porte fermee) gardent la leur : un MOTIF prime toujours sur
@@ -5319,7 +5331,11 @@ function EventDetails({ navigation, route }) {
     edit: t('eventDetails.menu.edit', 'Date, lieu, description'),
     feature: t('eventDetails.menu.feature', 'Proposer cet événement à la une'),
     licenseCampaign: t('eventDetails.menu.campaign', 'Créer la cotisation de cet événement'),
-    lineup: t('eventDetails.menu.lineup', 'Choisir et convoquer les joueur·se·s'),
+    // N4 (D1) : le sous-titre suit le libelle. « Convoquer » ne veut rien dire
+    // sur une detection, ou l'on repartit des inconnus sur des terrains.
+    lineup: isDetectionEvent
+      ? t('eventDetails.menu.lineupDetection', 'Répartir les joueur·se·s sur les terrains')
+      : t('eventDetails.menu.lineup', 'Choisir et convoquer les joueur·se·s'),
     poster: t('eventDetails.menu.poster', 'Voir et partager l’affiche'),
     tournamentSettings: t('eventDetails.menu.tournamentSettings', 'Format, équipes et terrains'),
   };
@@ -5386,11 +5402,21 @@ function EventDetails({ navigation, route }) {
           </View>
 
           <View style={{ flex: 1 }}>
+            {/* 🎯 N4 (D2) — LE LIBELLE SE VISE PAR SA CLEF, JAMAIS PAR SON
+                TEXTE. Depuis L4 il existe un ONGLET « Convocation » ET une
+                rangee « Convocation » sur la meme page : tout releve par
+                sous-chaine attrape l'onglet en premier et ne prouve plus rien.
+                Le `testID` porte la clef de la rangee, ce qui permet une
+                egalite STRICTE de libelle dans les temoins.
+                ⛔ Il vit sur ce `Text` et pas sur le `View` du dessus : celui-la
+                porte deja `event-manage-chip`, par lequel les temoins voisins
+                COMPTENT les rangees. */}
             <Text
               style={[
                 Fonts.p2Bold,
                 { color: chip.isDestructive ? Colors.error500 : Colors.neutral00 },
               ]}
+              testID={`event-manage-label-${chip.key}`}
             >
               {chip.label}
             </Text>

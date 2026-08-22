@@ -470,6 +470,29 @@ const pressableWithText = (/** @type {any} */ root, /** @type {string} */ label)
   .findAllByType(TouchableOpacity)
   .find((/** @type {any} */ node) => textOf(node).includes(label));
 
+/**
+ * 🎯 N4 (D2) — LE LIBELLE D'UNE RANGEE DU MENU, VISE PAR SA CLEF.
+ *
+ * 🧨 POURQUOI PAS PAR SON TEXTE : depuis L4 il existe un ONGLET « Convocation »
+ * ET (depuis N4) une rangee « Convocation », sur la MEME page. La doublure
+ * d'onglets rend elle aussi des `TouchableOpacity` portant ce mot : un releve
+ * par sous-chaine attrape donc l'onglet EN PREMIER et signale la rangee comme
+ * atteignable la ou elle n'existe pas. Le releve accuserait alors le code d'un
+ * defaut qui n'existe que dans la sonde — exactement le piege paye par L4-B
+ * sur les notes de rangee (commentaire de `bottomActionInventory`).
+ * @param {any} root - Racine du rendu.
+ * @param {string} cle - La cle de la rangee (`lineup`, `edit`, `matchStats`…).
+ * @returns {string} - Le libelle exact, ou '' si la rangee n'existe pas.
+ */
+const libelleDeLaRangee = (/** @type {any} */ root, /** @type {string} */ cle) => {
+  const [noeud] = root.findAll(
+    (/** @type {any} */ node) => node.props?.testID === `event-manage-label-${cle}`,
+    { deep: false },
+  );
+
+  return noeud ? textOf(noeud).trim() : '';
+};
+
 const press = (/** @type {any} */ root, /** @type {string} */ label) => {
   const node = pressableWithText(root, label);
   if (!node) throw new Error(`Aucun pressable ne porte le libelle « ${label} »`);
@@ -529,7 +552,10 @@ const bottomActionInventory = (/** @type {any} */ root) => {
   collect('Modifier', 'edit');
   collect('la une', 'featured');
   collect('Annuler', 'cancel');
-  collect('Compo', 'lineup');
+  // 🎯 N4 (D2) — LA RANGEE DE CONVOCATION SE RELEVE PAR SA CLEF, PAS PAR SON
+  // MOT. `collect('Convocation', 'lineup')` attraperait l'ONGLET du meme nom
+  // (voir `libelleDeLaRangee`) et rendrait `lineup` atteignable partout.
+  if (libelleDeLaRangee(root, 'lineup')) found.add('lineup');
   collect('Réglages tournoi', 'tournamentSettings');
 
   return [...found].sort();
@@ -1120,9 +1146,12 @@ describe('D21 ② — « Gérer l evenement » devient un bouton flottant', () =
     // meme garantie, meme unicite, sur le contenant d'aujourd'hui.
     expect(byTestId(root, 'event-manage-sheet')).toHaveLength(1);
     expect(hasText(root, 'Gérer le tournoi')).toBe(true);
-    ['Modifier', 'À la une', 'Compo', 'Réglages tournoi', 'Annuler'].forEach((label) => {
+    ['Modifier', 'À la une', 'Réglages tournoi', 'Annuler'].forEach((label) => {
       expect(pressableWithText(root, label)).toBeTruthy();
     });
+    // N4 (D1) : « Compo » est devenu « Convocation ». Egalite STRICTE et par
+    // clef — le mot seul attraperait l'onglet homonyme.
+    expect(libelleDeLaRangee(root, 'lineup')).toBe('Convocation');
   });
 
   // ⚠️ INVERSION VOLONTAIRE du « TROU CONSTATE » sur la demande a la une : la
@@ -1517,9 +1546,11 @@ describe('D71 — les stats du match quittent le pied de page pour le menu', () 
 
     expect(chipWithLabel(root, 'Stats du match')).toBeTruthy();
     // Les gestes livres avant D71 sont tous encore la.
-    ['Modifier', 'À la une', 'Compo', 'Annuler'].forEach((label) => {
+    ['Modifier', 'À la une', 'Annuler'].forEach((label) => {
       expect(pressableWithText(root, label)).toBeTruthy();
     });
+    // N4 (D1) : « Compo » est devenu « Convocation », meme rangee, meme porte.
+    expect(libelleDeLaRangee(root, 'lineup')).toBe('Convocation');
   });
 
   test('AUCUNE INFORMATION PERDUE : le sous-titre devient la note de la chip', () => {
