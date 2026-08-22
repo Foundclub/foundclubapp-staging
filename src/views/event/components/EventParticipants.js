@@ -1,5 +1,5 @@
 // @ts-nocheck
-import { useIsMutating } from '@tanstack/react-query';
+import { useIsMutating, useMutationState } from '@tanstack/react-query';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -12,6 +12,8 @@ import useTheme from '@/theme/themeContext';
 import Button from '@/components/atoms/button/Button';
 import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 import SearchBar from '@/components/molecules/searchBar/SearchBar';
+
+import { formatDateTimeWithDayPrefix } from '@/utils/date';
 
 // import statique (pas require) : require n'existe pas sur le rendu web ESM.
 import SHARE_ICON from '@/assets/icons/share2.png';
@@ -297,6 +299,41 @@ function EventParticipants({
   // ensemble — ils declenchent le meme envoi.
   const isReminding = useIsMutating({ mutationKey: REMIND_EVENT_MUTATION_KEY }) > 0;
   const areParticipantIdentitiesHidden = event?.participantIdentitiesHidden === true;
+
+  // AE02 (1I) — LE MOTIF ANTI-SPAM, AVANT L APPUI.
+  // 🧨 `nextReminderAt` n existe NULLE PART tant qu aucune relance n est
+  // partie : il ne vit que dans la REPONSE du serveur. On le relit donc dans le
+  // cache de mutation, par la MEME clef que le grisage ci-dessus — rien a faire
+  // descendre depuis `EventDetails`, et surtout AUCUN import de service ici.
+  // Consequence assumee : au tout premier affichage, il n y a rien a montrer.
+  const comptesRendusDeRelance = useMutationState({
+    filters: { mutationKey: REMIND_EVENT_MUTATION_KEY, status: 'success' },
+    select: (mutation) => mutation.state.data,
+  });
+  const dernierCompteRendu = comptesRendusDeRelance[comptesRendusDeRelance.length - 1];
+  const instantCourant = typeof nowMs === 'number' ? nowMs : Date.now();
+  const prochaineRelanceMs = Date.parse(dernierCompteRendu?.nextReminderAt || '');
+  // Une date DEPASSEE n a plus rien a dire : on peut relancer.
+  const prochaineRelance = Number.isFinite(prochaineRelanceMs)
+    && prochaineRelanceMs > instantCourant
+    ? formatDateTimeWithDayPrefix(dernierCompteRendu.nextReminderAt)
+    : '';
+  const phraseProchaineRelance = t(
+    'eventDetails.participantsSummary.nextReminder',
+    'Prochaine relance possible le {{date}}',
+  ).replace('{{date}}', prochaineRelance);
+
+  /**
+   * La ligne « Prochaine relance possible le … », sous le bouton « Relancer ».
+   * Rien a montrer tant qu aucune relance n a eu lieu : elle rend `null`.
+   * @returns {any} - La ligne, ou rien.
+   */
+  const renderProchaineRelance = () => (prochaineRelance ? (
+    <Text style={[Fonts.p4, Fonts.neutral300]} testID="AE02-prochaine-relance">
+      {phraseProchaineRelance}
+    </Text>
+  ) : null);
+
   // AE02 (1E partiel) — CHERCHER UN NOM.
   // La saisie vit ICI, en etat local : `EventDetails` est tenu par un autre lot
   // et ne peut recevoir aucune prop neuve. ⚠️ Saisie vide = l ecran STRICTEMENT
@@ -534,6 +571,7 @@ function EventParticipants({
                 <Button isLoading={isReminding} isOption onPress={handleRemindPlayers} title={t('eventDetails.actions.remind')} variant="Primary" />
               ) : null}
             </View>
+            {canEdit ? renderProchaineRelance() : null}
             {section.notAnswered.map((player) => renderParticipant(player, {
               allowLiveLate: false,
               keyPrefix: `${section.key}-not-answered`,
@@ -866,7 +904,8 @@ function EventParticipants({
                   <Button isLoading={isReminding} isOption onPress={handleRemindPlayers} title={t('eventDetails.actions.remind')} variant="Primary" />
                 ) : null}
               </View>
-                {(listesAffichees.notAnswered || []).map((player) => renderParticipant(player, {
+              {canEdit ? renderProchaineRelance() : null}
+              {(listesAffichees.notAnswered || []).map((player) => renderParticipant(player, {
                 allowLiveLate: false,
                 keyPrefix: 'legacy-not-answered',
                 statusKind: 'not_answered',
