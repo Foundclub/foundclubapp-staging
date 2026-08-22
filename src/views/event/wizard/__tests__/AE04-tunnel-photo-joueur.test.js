@@ -51,7 +51,9 @@ const EQUIPE_COMPLETE = {
       firstname: 'Louis',
       lastname: 'Marchand',
     },
-    { avatar: null, documentId: 'j3', firstname: 'Theo', lastname: 'Nguyen' },
+    {
+      avatar: null, documentId: 'j3', firstname: 'Theo', lastname: 'Nguyen',
+    },
   ],
   sport: { documentId: 'sport-1', name: 'Football' },
 };
@@ -205,7 +207,7 @@ describe("AE04 — l'etape Participants d'un match, avec des joueurs qui ont une
     demonter();
   });
 
-  it("ne passe JAMAIS un objet a ProfileAvatar — une string ou rien", () => {
+  it('ne passe JAMAIS un objet a ProfileAvatar — une string ou rien', () => {
     const { demonter } = monterEtapeParticipants();
 
     mockAvatarsRecus.forEach((/** @type {any} */ props) => {
@@ -224,7 +226,7 @@ describe("AE04 — l'etape Participants d'un match, avec des joueurs qui ont une
     demonter();
   });
 
-  it("transmet telle quelle la photo deja sous forme de string", () => {
+  it('transmet telle quelle la photo deja sous forme de string', () => {
     const { demonter } = monterEtapeParticipants();
 
     expect(avatarDe('Louis Marchand').imageUrl).toBe('/uploads/louis.jpg');
@@ -232,7 +234,7 @@ describe("AE04 — l'etape Participants d'un match, avec des joueurs qui ont une
     demonter();
   });
 
-  it("laisse les initiales au joueur sans photo", () => {
+  it('laisse les initiales au joueur sans photo', () => {
     const { demonter } = monterEtapeParticipants();
 
     expect(avatarDe('Theo Nguyen').imageUrl).toBeNull();
