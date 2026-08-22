@@ -1,4 +1,4 @@
-import { Text, TouchableOpacity } from 'react-native';
+import { Alert, Text, TouchableOpacity } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
 // Lot N2 — LE FILET AVANT DE RANGER (E6). Ce fichier ne demande RIEN de neuf.
@@ -28,6 +28,9 @@ const mockNavigate = jest.fn();
 const mockSetOptions = jest.fn();
 const mockEventQuery = { data: null };
 const mockAttendance = { data: null };
+const mockCampaigns = { value: [] };
+const mockBulkReminder = jest.fn(() => Promise.resolve({}));
+const mockGenerateAssignments = jest.fn(() => Promise.resolve({}));
 
 // 🈯 La doublure de traduction INTERPOLE, contrairement a celle des filets
 // precedents. Ce n'est pas du zele : l'etape 1 du chemin de detection affiche
@@ -78,10 +81,19 @@ jest.mock('@react-navigation/native', () => ({
   useFocusEffect: () => {},
 }));
 
+// 🔌 `mutate` APPELLE VRAIMENT la `mutationFn`, contrairement aux filets
+// precedents ou il etait un `jest.fn()` muet. Sans cela, un temoin qui presse
+// « Relancer » ne prouverait que l'existence du bouton — pas qu'il est branche
+// sur le bon appel serveur avec la bonne charge.
 jest.mock('@tanstack/react-query', () => ({
   useMutation: (/** @type {any} */ options) => ({
     isPending: false,
-    mutate: jest.fn(),
+    mutate: (/** @type {any} */ variables, /** @type {any} */ handlers) => {
+      const resultat = options?.mutationFn?.(variables);
+      Promise.resolve(resultat)
+        .then((valeur) => handlers?.onSuccess?.(valeur))
+        .catch((erreur) => handlers?.onError?.(erreur));
+    },
     mutateAsync: jest.fn(),
     options,
   }),
@@ -131,8 +143,13 @@ jest.mock('@/services/eventParticipation/eventParticipationQueries', () => ({
   useGetEventParticipations: () => emptyQuery(),
 }));
 
+// 💶 Le module des cotisations est mocke EN ENTIER, y compris ses deux
+// fonctions de service : c'est ce qui permet de PRESSER le bouton de relance
+// dans un temoin et de verifier la charge exacte envoyee au serveur.
 jest.mock('@/services/license/licenseQueries', () => ({
-  useLicenseCampaigns: () => ({ ...emptyQuery(), data: { data: [] } }),
+  generateLicenseAssignments: (/** @type {any} */ ...args) => mockGenerateAssignments(...args),
+  sendBulkLicenseReminder: (/** @type {any} */ ...args) => mockBulkReminder(...args),
+  useLicenseCampaigns: () => ({ ...emptyQuery(), data: { data: mockCampaigns.value } }),
 }));
 
 jest.mock('@/services/matchStats/matchStatsQueries', () => ({
@@ -365,8 +382,13 @@ const buildStageParent = (/** @type {any} */ overrides = {}) => buildEvent({
       date: '2026-10-20T09:00:00.000Z',
       documentId: 'jour-1',
       endTime: '17:00:00.000',
-      participations: [
-        { documentId: 'p-1', participationStatus: 'accepted', user: { documentId: 'u-1' } },
+      // 🧨 C'est `participationRequests` — et non `participations` — que lit le
+      // resume d'une journee (`getStageDayStatusSummary`). Se tromper de champ
+      // ferait afficher « 0 · 0 · 0 » a un stage plein.
+      participationRequests: [
+        { documentId: 'r-1', participationStatus: 'accepted', user: { documentId: 'u-1' } },
+        { documentId: 'r-2', participationStatus: 'declined', user: { documentId: 'u-2' } },
+        { documentId: 'r-3', participationStatus: 'pending', user: { documentId: 'u-3' } },
       ],
       startTime: '09:00:00.000',
     },
@@ -374,7 +396,7 @@ const buildStageParent = (/** @type {any} */ overrides = {}) => buildEvent({
       date: '2026-10-21T09:00:00.000Z',
       documentId: 'jour-2',
       endTime: '17:00:00.000',
-      participations: [],
+      participationRequests: [],
       startTime: '09:00:00.000',
     },
   ],
@@ -473,9 +495,17 @@ const demonter = () => {
   mounted = null;
 };
 
-const monter = (/** @type {any} */ { attendance = null, auth, event } = {}) => {
+const monter = (/** @type {any} */ {
+  attendance = null,
+  auth,
+  campagnes = [],
+  event,
+} = {}) => {
   mockEventQuery.data = event === undefined ? buildEvent() : event;
   mockAttendance.data = attendance;
+  mockCampaigns.value = campagnes;
+  mockBulkReminder.mockClear();
+  mockGenerateAssignments.mockClear();
   mockUseAuth.mockReturnValue(auth || authPour('coach-1', true));
 
   demonter();
@@ -537,6 +567,20 @@ const libellesDesOnglets = (/** @type {any} */ root) => parTestID(root, 'doublur
     .findAllByType(TouchableOpacity)
     .map((/** @type {any} */ item) => textOf(item)));
 
+// 👆 Presse le bouton dont le libelle CONTIENT cet extrait. La doublure de
+// `Button` rend un `TouchableOpacity` portant son titre : c'est exactement ce
+// qu'un doigt atteint.
+const appuyerSur = (/** @type {any} */ root, /** @type {string} */ extrait) => {
+  const cible = root
+    .findAllByType(TouchableOpacity)
+    .find((/** @type {any} */ node) => textOf(node).includes(extrait));
+  if (!cible) throw new Error(`Aucun bouton « ${extrait} » a l ecran`);
+  if (cible.props.disabled) throw new Error(`Le bouton « ${extrait} » est grise`);
+  act(() => {
+    cible.props.onPress();
+  });
+};
+
 const allerSurLOnglet = (/** @type {any} */ root, /** @type {string} */ valeur) => {
   const [onglet] = parTestID(root, `onglet-${valeur}`);
   if (!onglet) throw new Error(`Aucun onglet « ${valeur} » a l ecran`);
@@ -545,45 +589,84 @@ const allerSurLOnglet = (/** @type {any} */ root, /** @type {string} */ valeur) 
   });
 };
 
-describe('N2 · caracterisation — LE STAGE PARENT tel qu il est au 23/08', () => {
-  test('il monte, et il porte SES DEUX PASTILLES MAISON, pas des onglets', () => {
+describe('N2 · 4F — LE STAGE PARENT SE RANGE EN TROIS ONGLETS', () => {
+  // ♻️ REECRITS PAR L'ETAPE 3. Les quatre temoins de caracterisation disaient :
+  // deux pastilles maison, pas d'onglets · les puces « 2 jour(s) / 2 inscrit(s) »
+  // dans une carte · la liste sans appui · la description apres le bloc. Les
+  // quatre changent, et c'est EXACTEMENT le rangement demande.
+
+  test('il porte Aperçu · Jours · N · Personnes · N, et PLUS ses pastilles maison', () => {
     const root = monter({ event: buildStageParent() });
 
-    // ⛔ LE DEFAUT A CORRIGER : deux jeux de navigation coexistent sur la page.
-    // « Vue générale » / « Jours » sont des `TouchableOpacity` dessines a la
-    // main DANS une carte, et non le `SegmentedControl` de la maquette.
-    expect(contient(root, 'Vue générale')).toBe(true);
-    expect(contient(root, 'Jours')).toBe(true);
-    expect(parTestID(root, 'doublure-onglets')).toHaveLength(0);
+    expect(libellesDesOnglets(root)).toEqual(['Aperçu', 'Jours · 2', 'Personnes · 2']);
+    // ⛔ LE COEUR DE L'ETAPE : le second jeu de navigation a disparu. Tant que
+    // « Vue générale » traine a l'ecran, c'est qu'il reste des onglets DANS un
+    // onglet — l'emboitement que la planche 04 interdit.
+    expect(contient(root, 'Vue générale')).toBe(false);
   });
 
-  test('la pastille « Vue générale » montre periode, horaires et lieu', () => {
+  test('les deux compteurs ont quitte les puces pour les ONGLETS', () => {
+    // Les puces « 2 jour(s) » et « 2 inscrit(s) » disaient la meme chose que les
+    // onglets « Jours · 2 » et « Personnes · 2 ». Elles ne sont pas perdues :
+    // elles sont remontees a l'endroit ou on les cherche.
+    const root = monter({ event: buildStageParent() });
+
+    expect(contient(root, '2 jour(s)')).toBe(false);
+    expect(contient(root, '2 inscrit(s)')).toBe(false);
+    expect(libellesDesOnglets(root)).toContain('Jours · 2');
+    expect(libellesDesOnglets(root)).toContain('Personnes · 2');
+  });
+
+  test('l Aperçu garde periode, horaires et lieu', () => {
     const root = monter({ event: buildStageParent() });
 
     expect(contient(root, 'Période')).toBe(true);
     expect(contient(root, 'Horaires')).toBe(true);
     expect(contient(root, 'Lieu principal')).toBe(true);
-    // Les deux compteurs que la carte affiche aujourd'hui.
-    expect(contient(root, '2 jour(s)')).toBe(true);
-    expect(contient(root, '2 inscrit(s)')).toBe(true);
   });
 
-  test('la LISTE DES PARTICIPANTS du stage est montee, sans aucun appui', () => {
-    const root = monter({ event: buildStageParent() });
-
-    expect(contient(root, 'LISTE_DES_PARTICIPANTS')).toBe(true);
-  });
-
-  test('la DESCRIPTION est montee — mais APRES le bloc du stage', () => {
-    // 🧾 Le defaut que la note du jalon N3 signale : la regle 2 du pack veut la
-    // description EN HAUT de l'Aperçu. Sur un stage, elle passe apres. Ce
-    // temoin fige l'ordre ACTUEL, pour que le rangement le change VISIBLEMENT
-    // plutot que par accident.
+  test('🧾 la DESCRIPTION ouvre desormais l Aperçu — elle passe AVANT le stage', () => {
+    // Regle 2 du pack, signalee par la note du jalon N3 : quatre blocs passaient
+    // devant elle sur un stage. Le sens de la comparaison s'inverse ici, et
+    // c'est la preuve que le rangement a bien change l'ordre.
     const root = monter({ event: buildStageParent() });
     const textes = textesVisibles(root).join(' | ');
 
     expect(textes).toContain(DESCRIPTION);
-    expect(textes.indexOf('Période')).toBeLessThan(textes.indexOf(DESCRIPTION));
+    expect(textes.indexOf(DESCRIPTION)).toBeLessThan(textes.indexOf('Période'));
+  });
+
+  test('la liste des personnes vit dans l onglet « Personnes »', () => {
+    const root = monter({ event: buildStageParent() });
+
+    expect(contient(root, 'LISTE_DES_PARTICIPANTS')).toBe(false);
+
+    allerSurLOnglet(root, 'participants');
+    expect(contient(root, 'LISTE_DES_PARTICIPANTS')).toBe(true);
+  });
+
+  test('📅 l onglet « Jours » liste les journees, numerotees, avec leur legende', () => {
+    const root = monter({ event: buildStageParent() });
+    allerSurLOnglet(root, 'stageDays');
+
+    expect(parTestID(root, 'stage-days')).toHaveLength(1);
+    expect(contient(root, 'présent·e·s · absent·e·s · sans réponse')).toBe(true);
+    expect(contient(root, 'Jour 1')).toBe(true);
+    expect(contient(root, 'Jour 2')).toBe(true);
+    // Jour 1 : un·e accepte·e, un·e refuse·e, un·e sans reponse. Jour 2 : vide.
+    expect(contient(root, '1 · 1 · 1')).toBe(true);
+    expect(contient(root, '0 · 0 · 0')).toBe(true);
+  });
+
+  test('un stage SANS journee garde l onglet, avec son etat vide', () => {
+    // Regle de la planche 04 : un onglet vide reste affiche. Le compteur dit 0,
+    // et l'onglet explique — il ne disparait pas.
+    const root = monter({ event: buildStageParent({ childStageEvents: [] }) });
+
+    expect(libellesDesOnglets(root)).toContain('Jours · 0');
+
+    allerSurLOnglet(root, 'stageDays');
+    expect(parTestID(root, 'stage-days-empty')).toHaveLength(1);
   });
 });
 
@@ -700,6 +783,135 @@ describe('N2 · caracterisation — CE QUI NE DOIT PAS BOUGER', () => {
     const root = monter({ event: buildEvent({ type: { name: 'Match' } }) });
 
     expect(libellesDesOnglets(root)).toEqual(['Aperçu', 'Participants · 0', 'Convocation']);
+  });
+});
+
+// 💶 Une campagne de cotisation telle que le serveur la sert : neuf compteurs,
+// dont la page ne lisait qu'un seul avant ce lot.
+const buildCampagne = (/** @type {any} */ overrides = {}) => ({
+  currency: 'EUR',
+  defaultAmountCents: 8000,
+  documentId: 'camp-1',
+  name: 'Stage Toussaint',
+  status: 'active',
+  totals: {
+    expectedCents: 192000,
+    paidCents: 144000,
+    paidCount: 18,
+    statusCounts: { overdue: 2, partial: 1, pending: 3 },
+    total: 24,
+  },
+  ...overrides,
+});
+
+describe('N2 · 4F — « QUI N A PAS PAYE » ARRIVE SUR LA PAGE DU STAGE', () => {
+  test('la carte annonce combien d impayés, sur combien d inscrit·e·s', () => {
+    const root = monter({
+      campagnes: [buildCampagne()],
+      event: buildStageParent(),
+    });
+
+    expect(parTestID(root, 'stage-license-card')).toHaveLength(1);
+    expect(contient(root, 'PROCHAINE ACTION')).toBe(true);
+    expect(contient(root, 'Relancer 6 impayés')).toBe(true);
+    expect(contient(root, 'Sur 24 inscrit·e·s, 6 n’ont pas réglé')).toBe(true);
+  });
+
+  test('🔒 elle est INVISIBLE pour qui ne gere pas les cotisations du club', () => {
+    // ⚠️ Donnee financiere : « 6 n'ont pas réglé » sur un groupe de 24 designe
+    // un sixieme du groupe par soustraction. Elle ne sort jamais du perimetre
+    // de qui gere l'argent du club.
+    const root = monter({
+      auth: authPour('parent-1', false),
+      campagnes: [buildCampagne()],
+      event: buildStageParent(),
+    });
+
+    expect(parTestID(root, 'stage-license-card')).toHaveLength(0);
+    expect(contient(root, 'Relancer 6 impayés')).toBe(false);
+    expect(contient(root, 'PROCHAINE ACTION')).toBe(false);
+  });
+
+  test('📮 « Relancer » demande confirmation, puis envoie LES TROIS etats impayes', () => {
+    const alerte = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+    const root = monter({
+      campagnes: [buildCampagne()],
+      event: buildStageParent(),
+    });
+
+    appuyerSur(root, 'Relancer 6 impayés');
+
+    // Rien n'est parti tant que la confirmation n'est pas donnee : envoyer un
+    // message a six familles ne se declenche pas sur un appui unique.
+    expect(mockBulkReminder).not.toHaveBeenCalled();
+    expect(alerte).toHaveBeenCalled();
+
+    const boutons = alerte.mock.calls[0][2];
+    const envoyer = boutons.find((/** @type {any} */ b) => b.text === 'Envoyer');
+    act(() => {
+      envoyer.onPress();
+    });
+
+    // 🔑 La charge est EXACTEMENT celle de l'ecran des cotisations du club :
+    // meme definition d'un impaye, meme appel serveur.
+    expect(mockBulkReminder).toHaveBeenCalledWith(
+      'camp-1',
+      { statuses: ['pending', 'partial', 'overdue'] },
+    );
+
+    alerte.mockRestore();
+  });
+
+  test('🔇 une campagne NON ACTIVE grise le bouton, et dit pourquoi', () => {
+    const root = monter({
+      campagnes: [buildCampagne({ status: 'draft' })],
+      event: buildStageParent(),
+    });
+
+    expect(contient(root, 'La campagne n’est pas active')).toBe(true);
+    // Le bouton est la, mais ferme : `appuyerSur` refuse un bouton grise.
+    expect(() => appuyerSur(root, 'Relancer 6 impayés')).toThrow('est grise');
+    expect(mockBulkReminder).not.toHaveBeenCalled();
+  });
+
+  test('🧮 les inscrit·e·s SANS cotisation sont comptes, et rattrapables', () => {
+    // ⚠️ Ce trou-la est invisible partout ailleurs : ces personnes ne sont ni
+    // payeuses ni impayees — elles n'existent pas dans la campagne.
+    const root = monter({
+      campagnes: [buildCampagne()],
+      event: buildStageParent({
+        participations: Array.from({ length: 27 }, (_, i) => ({ documentId: `p-${i}` })),
+      }),
+    });
+
+    expect(contient(root, '3 inscrit·e·s sans cotisation')).toBe(true);
+
+    appuyerSur(root, 'Mettre à jour les affectations');
+    expect(mockGenerateAssignments).toHaveBeenCalledWith('camp-1');
+  });
+
+  test('sans aucun impaye, la carte felicite au lieu de proposer une relance', () => {
+    const root = monter({
+      campagnes: [buildCampagne({
+        totals: {
+          expectedCents: 192000,
+          paidCents: 192000,
+          paidCount: 24,
+          statusCounts: { overdue: 0, partial: 0, pending: 0 },
+          total: 24,
+        },
+      })],
+      event: buildStageParent(),
+    });
+
+    expect(contient(root, 'Tout le monde a réglé sa cotisation.')).toBe(true);
+    expect(contient(root, 'Relancer')).toBe(false);
+  });
+
+  test('sans campagne rattachee, aucune carte — la page ne parle pas d argent', () => {
+    const root = monter({ event: buildStageParent() });
+
+    expect(parTestID(root, 'stage-license-card')).toHaveLength(0);
   });
 });
 

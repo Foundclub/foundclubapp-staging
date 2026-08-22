@@ -79,7 +79,17 @@ import {
   rejectFeatured,
 } from '@/services/event/eventService';
 import { useGetEventParticipations } from '@/services/eventParticipation/eventParticipationQueries';
-import { useLicenseCampaigns } from '@/services/license/licenseQueries';
+// 🧾 N2 — AUCUN MODULE NOUVEAU N'ENTRE ICI : `licenseQueries` etait deja
+// importe pour `useLicenseCampaigns`. Les deux fonctions de service qui
+// s'ajoutent sont des RE-EXPORTS du meme fichier, et elles ne sont appelees que
+// dans la fermeture d'une mutation — jamais au montage. C'est ce qui evite le
+// piege connu du projet (un import de service de plus = des suites entieres qui
+// ne s'executent plus, `.env` etant absent des copies de travail).
+import {
+  generateLicenseAssignments,
+  sendBulkLicenseReminder,
+  useLicenseCampaigns,
+} from '@/services/license/licenseQueries';
 import {
   useGetEventMatchStats,
   useGetEventMyMatchResponse,
@@ -583,10 +593,11 @@ function EventDetails({ navigation, route }) {
   const [isShareModalVisible, setIsShareModalVisible] = useState(false);
   const [isTrainingOpenModalVisible, setIsTrainingOpenModalVisible] = useState(false);
   const [selectedParticipationId, setSelectedParticipationId] = useState('');
-  const [stageDetailsTab, setStageDetailsTab] = useState('overview');
-  // L4-A : les onglets du MATCH. ⛔ A ne pas confondre avec `stageDetailsTab`
-  // juste au-dessus, qui appartient au bloc « stage parent » et n'a rien a voir
-  // avec ce lot. Aucun autre type d'evenement ne lit celui-ci.
+  // 🎛️ L'UNIQUE ETAT D'ONGLET DE LA PAGE, pour les quatre types ranges.
+  // ⛔ N2 a SUPPRIME `stageDetailsTab`, le second etat qui vivait ici et ne
+  // servait qu'au stage : ses deux pastilles dessinees a la main creaient des
+  // onglets DANS un onglet. Un seul mecanisme, un seul etat — c'est la
+  // condition pour que « Aperçu » veuille dire la meme chose partout.
   const [detailsTab, setDetailsTab] = useState('overview');
   // L4-B : le panneau d'organisation n'est plus un accordeon dans la colonne,
   // c'est une FEUILLE ouverte par le ⋯ de la barre du haut. Elle part fermee,
@@ -935,8 +946,12 @@ function EventDetails({ navigation, route }) {
     }),
     [tournamentTeams],
   );
+  // 🔄 CHANGER D EVENEMENT REMET L ONGLET SUR L APERÇU. Cet effet existait deja,
+  // mais il ne remettait que l ancien etat du stage. Il commande desormais
+  // l etat UNIQUE : sans lui, ouvrir une journee de stage depuis l onglet
+  // « Jours » afficherait la journee sur un onglet qu elle n a pas.
   useEffect(() => {
-    setStageDetailsTab('overview');
+    setDetailsTab('overview');
   }, [event?.documentId]);
   const eventDescriptionText = useMemo(() => {
     const rawDescription = event?.description;
@@ -1047,6 +1062,30 @@ function EventDetails({ navigation, route }) {
     if (Array.isArray(queriedCampaigns)) return queriedCampaigns;
     return Array.isArray(event?.licenseCampaigns) ? event.licenseCampaigns : [];
   }, [event?.licenseCampaigns, eventLicenseCampaignsQuery.data]);
+
+  // 💶 N2 — LA COTISATION DU STAGE : DEUX GESTES QUI EXISTAIENT DEJA COTE
+  // SERVEUR ET QUE LA PAGE N'OFFRAIT PAS.
+  //
+  // ⚠️ Le chiffrage l'a montre : la campagne rattachee a l'evenement livre DEJA
+  // neuf compteurs (total, paidCount, statusCounts, expectedCents, paidCents…)
+  // et la relance groupee existe (`POST /licenses/campaigns/:id/reminders/bulk`,
+  // deja branchee sur l'ecran des cotisations du club). La page de l'evenement
+  // n'en lisait qu'UN SEUL — `totals.total` — pour ecrire « Cotisations liées ».
+  // Il n'y avait donc rien a construire, seulement a montrer.
+  //
+  // ⛔ On passe par `useMutation` et NON par `useLicenseMutation` : ce dernier
+  // s'appelle au MONTAGE, et les treize suites qui montent cet ecran mockent
+  // `licenseQueries` sans lui. Les fonctions de service, elles, ne sont touchees
+  // que dans la fermeture — jamais au rendu.
+  const eventLicenseReminderMutation = useMutation({
+    mutationFn: (/** @type {any} */ { campaignId, ...payload }) => (
+      sendBulkLicenseReminder(campaignId, payload)
+    ),
+  });
+  const eventLicenseAssignmentsMutation = useMutation({
+    mutationFn: (/** @type {any} */ { campaignId }) => generateLicenseAssignments(campaignId),
+  });
+
   const featuredRequestsSummary = useMemo(() => ({
     CM: {
       requestId: null,
@@ -4585,8 +4624,29 @@ function EventDetails({ navigation, route }) {
       ];
     }
 
+    if (isStageParentEvent) {
+      return [
+        overviewTab,
+        {
+          label: withTabCount(t('eventDetails.tabs.stageDays', 'Jours'), stageChildDays.length),
+          value: 'stageDays',
+        },
+        {
+          label: withTabCount(t('eventDetails.tabs.people', 'Personnes'), acceptedPeopleCount),
+          value: 'participants',
+        },
+      ];
+    }
+
     return [];
-  }, [acceptedPeopleCount, isDetectionEvent, isMatchEvent, t]);
+  }, [
+    acceptedPeopleCount,
+    isDetectionEvent,
+    isMatchEvent,
+    isStageParentEvent,
+    stageChildDays.length,
+    t,
+  ]);
 
   // 🚪 LE DRAPEAU QUI OUVRE TOUT : y a-t-il des onglets sur cette page ?
   // Hors des types ranges (entrainement, reservation, « autre »…), il est FAUX
@@ -4599,6 +4659,7 @@ function EventDetails({ navigation, route }) {
   const showParticipantsTab = isOnTab('participants');
   const showCallUpTab = isOnTab('callUp');
   const showDetectionSplitTab = isOnTab('detectionSplit');
+  const showStageDaysTab = isOnTab('stageDays');
 
   // Les trois conditions que la repartition en onglets rendait trop longues
   // pour tenir sur leur ligne d'ouverture. Elles sont REPRISES TELLES QUELLES
@@ -4787,6 +4848,303 @@ function EventDetails({ navigation, route }) {
             ) : null}
           </View>
         ))}
+      </View>
+    );
+  };
+
+  /**
+   * 💶 N2 — « QUI N'A PAS PAYE », SUR LA PAGE DU STAGE (planche 04, cadre 4F).
+   *
+   * ⚠️ CETTE CARTE NE CALCULE RIEN. Tout ce qu'elle montre existait deja : le
+   * serveur livre neuf compteurs par campagne, et la relance groupee tourne
+   * depuis l'ecran des cotisations du club. La page de l'evenement n'en lisait
+   * qu'un seul (`totals.total`). C'est un branchement, pas une fonctionnalite.
+   *
+   * 🔒 ELLE EST DERRIERE `canManageEventLicenseCampaigns`, ET SEULEMENT LA.
+   * Ce sont des donnees FINANCIERES nominatives par ricochet (« 6 n'ont pas
+   * réglé » sur un stage de 24 designe un sixieme du groupe) : elles ne
+   * remontent jamais dans l'entete, que tout le monde voit.
+   */
+  const renderStageLicenseCard = () => {
+    if (!canManageEventLicenseCampaigns) return null;
+
+    const campaign = eventLicenseCampaigns[0];
+    if (!campaign) return null;
+
+    const campaignId = campaign?.documentId || campaign?.id;
+    const statusCounts = campaign?.totals?.statusCounts || {};
+    // 💰 Les trois etats qui valent une relance, exactement ceux de l'ecran des
+    // cotisations du club — meme definition, meme charge envoyee au serveur.
+    const unpaidCount = Number(statusCounts.pending || 0)
+      + Number(statusCounts.partial || 0)
+      + Number(statusCounts.overdue || 0);
+    const assignedCount = Number(campaign?.totals?.total || 0);
+    // 🧮 Les inscrit·e·s a qui AUCUNE cotisation n'est rattachee. Ce trou-la est
+    // invisible partout ailleurs : ils ne sont ni payeurs ni impayes, ils
+    // n'existent simplement pas dans la campagne.
+    const withoutAssignment = Math.max(0, acceptedPeopleCount - assignedCount);
+    const isCampaignActive = String(campaign?.status || '') === 'active';
+    const currency = campaign?.currency || 'EUR';
+
+    const handleRelance = () => {
+      if (!campaignId || !unpaidCount) return;
+      Alert.alert(
+        t('eventDetails.stageLicense.confirmTitle', 'Relancer les impayés'),
+        t(
+          'eventDetails.stageLicense.confirmBody',
+          'Envoyer une relance aux cotisations en attente, partielles ou en retard ?',
+        ),
+        [
+          { style: 'cancel', text: t('common.cancel', 'Annuler') },
+          {
+            onPress: () => eventLicenseReminderMutation.mutate(
+              { campaignId, statuses: ['pending', 'partial', 'overdue'] },
+              {
+                onError: (/** @type {any} */ error) => Alert.alert(
+                  t('eventDetails.stageLicense.errorTitle', 'Relance impossible'),
+                  error?.message
+                    || t('eventDetails.stageLicense.errorBody', 'Rien n’a été envoyé.'),
+                ),
+                onSuccess: () => {
+                  eventLicenseCampaignsQuery.refetch();
+                  Alert.alert(
+                    t('eventDetails.stageLicense.sentTitle', 'Relances envoyées'),
+                    t('eventDetails.stageLicense.sentBody', 'Les impayés ont reçu un rappel.'),
+                  );
+                },
+              },
+            ),
+            text: t('eventDetails.stageLicense.confirmSend', 'Envoyer'),
+          },
+        ],
+      );
+    };
+
+    const handleAffectations = () => {
+      if (!campaignId) return;
+      eventLicenseAssignmentsMutation.mutate({ campaignId }, {
+        onSuccess: () => eventLicenseCampaignsQuery.refetch(),
+      });
+    };
+
+    return (
+      <View
+        style={[
+          ApplicationStyle.borderRadius16,
+          ApplicationStyle.borderWidth1,
+          Spaces.padding[16],
+          Spaces.gap[12],
+          {
+            backgroundColor: withAlpha(Colors.primary500, 0.08),
+            borderColor: withAlpha(Colors.primary500, 0.24),
+          },
+        ]}
+        testID="stage-license-card"
+      >
+        <Text style={[Fonts.p4Bold, Fonts.primary500]}>
+          {t('eventDetails.stageLicense.kicker', 'PROCHAINE ACTION')}
+        </Text>
+
+        {unpaidCount > 0 ? (
+          <View style={[Spaces.gap[4]]}>
+            <Text style={[Fonts.h4Bold, Fonts.neutral00]}>
+              {t('eventDetails.stageLicense.title', 'Relancer {{count}} impayés', {
+                count: unpaidCount,
+              })}
+            </Text>
+            <Text style={[Fonts.p3, Fonts.neutral200]}>
+              {t(
+                'eventDetails.stageLicense.body',
+                'Sur {{total}} inscrit·e·s, {{unpaid}} n’ont pas réglé les {{amount}} du stage',
+                {
+                  amount: formatCampaignAmount(campaign?.defaultAmountCents, currency),
+                  total: assignedCount,
+                  unpaid: unpaidCount,
+                },
+              )}
+            </Text>
+            <Text style={[Fonts.p4, Fonts.neutral300]}>
+              {t('eventDetails.stageLicense.collected', '{{paid}} reçus sur {{expected}} attendus', {
+                expected: formatCampaignAmount(campaign?.totals?.expectedCents, currency),
+                paid: formatCampaignAmount(campaign?.totals?.paidCents, currency),
+              })}
+            </Text>
+          </View>
+        ) : (
+          <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
+            {t('eventDetails.stageLicense.allPaid', 'Tout le monde a réglé sa cotisation.')}
+          </Text>
+        )}
+
+        {unpaidCount > 0 ? (
+          <Button
+            disabled={!isCampaignActive || eventLicenseReminderMutation.isPending}
+            isLoading={eventLicenseReminderMutation.isPending}
+            onPress={handleRelance}
+            title={t('eventDetails.stageLicense.remind', 'Relancer {{count}} impayés', {
+              count: unpaidCount,
+            })}
+            variant="Primary"
+          />
+        ) : null}
+
+        {/* 🔇 Regle 5 du pack : un bouton ferme DIT pourquoi. Une campagne en
+            brouillon ou en pause ne peut rien envoyer, et c'est ecrit. */}
+        {unpaidCount > 0 && !isCampaignActive ? (
+          <Text style={[Fonts.p4, Fonts.neutral300]}>
+            {t(
+              'eventDetails.stageLicense.inactive',
+              'La campagne n’est pas active : aucune relance ne peut partir.',
+            )}
+          </Text>
+        ) : null}
+
+        {withoutAssignment > 0 ? (
+          <View style={[Spaces.gap[8]]}>
+            <Text style={[Fonts.p3, Fonts.neutral200]}>
+              {t(
+                'eventDetails.stageLicense.withoutAssignment',
+                '{{count}} inscrit·e·s sans cotisation',
+                { count: withoutAssignment },
+              )}
+            </Text>
+            <Button
+              disabled={eventLicenseAssignmentsMutation.isPending}
+              isLoading={eventLicenseAssignmentsMutation.isPending}
+              onPress={handleAffectations}
+              title={t(
+                'eventDetails.stageLicense.generate',
+                'Mettre à jour les affectations',
+              )}
+              variant="SecondaryLight"
+            />
+          </View>
+        ) : null}
+      </View>
+    );
+  };
+
+  /**
+   * 🏕️ N2 — L'APERÇU D'UN STAGE (planche 04, cadre 4F).
+   *
+   * Meme contenu qu'avant — periode, horaires, lieu, puces — mais SANS la carte
+   * qui l'enfermait et sans ses deux pastilles maison. Elles creaient un
+   * emboitement que la planche 04 interdit : des onglets DANS un onglet.
+   */
+  const renderStageOverviewTab = () => (
+    <View style={[Spaces.gap[12]]} testID="stage-overview">
+      {renderStageLicenseCard()}
+
+      <View style={[Spaces.gap[4]]}>
+        <Text style={[Fonts.p3, Fonts.neutral200]}>
+          {t('eventDetails.stage.period', 'Période')}
+        </Text>
+        <Text style={[Fonts.p2, Fonts.neutral00]}>
+          {stagePeriodSummary || t('eventDetails.stage.periodEmpty', 'Non renseignée')}
+        </Text>
+      </View>
+      <View style={[Spaces.gap[4]]}>
+        <Text style={[Fonts.p3, Fonts.neutral200]}>
+          {t('eventDetails.stage.hours', 'Horaires')}
+        </Text>
+        <Text style={[Fonts.p2, Fonts.primary500]}>
+          {stageHoursSummary || t('eventDetails.stage.hoursEmpty', 'Variables')}
+        </Text>
+      </View>
+      <View style={[Spaces.gap[4]]}>
+        <Text style={[Fonts.p3, Fonts.neutral200]}>
+          {t('eventDetails.stage.mainPlace', 'Lieu principal')}
+        </Text>
+        <Text style={[Fonts.p2, Fonts.neutral100]}>
+          {event?.facility?.name
+            || event?.locationDetails
+            || t('eventDetails.stage.placeEmpty', 'À définir')}
+        </Text>
+      </View>
+    </View>
+  );
+
+  /**
+   * 📅 N2 — LES JOURNEES DU STAGE (planche 04, cadre 4F, onglet « Jours »).
+   *
+   * Chaque ligne porte son rang, sa date, ses horaires et ses trois compteurs.
+   * ⚠️ Les trois nombres etaient deja la, mais ecrits « 22 presents 1 absents
+   * 1 sans réponse » sur chaque ligne — la planche 04 sort la legende UNE FOIS,
+   * en tete, et laisse les lignes ne porter que les chiffres.
+   */
+  const renderStageDaysTab = () => {
+    if (!stageChildDays.length) {
+      return (
+        <Text style={[Fonts.p2, Fonts.neutral200]} testID="stage-days-empty">
+          {t('eventDetails.stage.noDays', 'Aucune journée de stage n’est encore disponible.')}
+        </Text>
+      );
+    }
+
+    return (
+      <View style={[Spaces.gap[12]]} testID="stage-days">
+        <Text style={[Fonts.p4, Fonts.neutral300]}>
+          {t('eventDetails.stage.legend', 'présent·e·s · absent·e·s · sans réponse')}
+        </Text>
+
+        {stageChildDays.map((stageDay, index) => {
+          const summary = getStageDayStatusSummary(stageDay);
+          const dayDate = new Date(stageDay?.date);
+          const isToday = new Date(serverNowMs).toDateString() === dayDate.toDateString();
+
+          return (
+            <TouchableOpacity
+              key={stageDay?.documentId || stageDay?.date}
+              onPress={() => navigation.navigate(RouteNames.EventDetails, {
+                eventId: stageDay?.documentId,
+              })}
+              style={[
+                ApplicationStyle.borderRadius16,
+                ApplicationStyle.borderWidth1,
+                Spaces.padding[16],
+                Spaces.gap[8],
+                {
+                  backgroundColor: withAlpha(Colors.primary500, isToday ? 0.14 : 0.08),
+                  borderColor: withAlpha(Colors.primary500, isToday ? 0.5 : 0.2),
+                },
+              ]}
+              testID={`stage-day-${index + 1}`}
+            >
+              <View
+                style={[
+                  Alignments.row,
+                  Alignments.justifySpaceBetween,
+                  Alignments.alignCenter,
+                  Spaces.gap[12],
+                ]}
+              >
+                <View style={{ flex: 1 }}>
+                  <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
+                    {`${t('eventDetails.stage.day', 'Jour')} ${index + 1} · ${dayDate.toLocaleDateString('fr-FR', {
+                      day: '2-digit',
+                      month: 'short',
+                      weekday: 'long',
+                    })}`}
+                  </Text>
+                  <Text style={[Fonts.p3, Fonts.neutral200, Spaces.marginTop[4]]}>
+                    {`${String(stageDay?.startTime || '').slice(0, 5)} - ${String(stageDay?.endTime || '').slice(0, 5)}`}
+                  </Text>
+                </View>
+                {isToday ? (
+                  <Tag
+                    style={tournamentDs.getToneTagStyle(Colors.success500)}
+                    text={t('eventDetails.stage.today', 'AUJOURD’HUI')}
+                    textColor="neutral00"
+                    textStyle={{ color: Colors.success500 }}
+                  />
+                ) : null}
+              </View>
+              <Text style={[Fonts.p3Bold, Fonts.neutral100]}>
+                {`${summary.present} · ${summary.absent} · ${summary.pending}`}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
       </View>
     );
   };
@@ -5891,154 +6249,27 @@ function EventDetails({ navigation, route }) {
             {renderViewerConvocationLine()}
             {renderDetailsTabs()}
             <View style={[Spaces.gap[24]]}>
-              {showCallUpTab && renderCompoReminder()}
-
-              {isStageParentEvent ? (
+              {/* 🧾 N2 — LA DESCRIPTION OUVRE L APERÇU, POUR LES QUATRE TYPES.
+                  Regle 2 du pack : un seul champ, le meme nom partout, EN HAUT
+                  de l Apercu. Sur un stage et sur un tournoi, quatre blocs
+                  passaient avant elle — rappel compo, bloc du stage, lien vers
+                  le stage parent, section tournoi. Elle passe devant. */}
+              {showOverviewTab && eventDescriptionText ? (
                 <View style={[Spaces.gap[16]]}>
-                  <Text style={[Fonts.h3Bold, Fonts.neutral00]}>
-                    {isTournamentEvent ? 'Tournoi' : 'Stage'}
-                  </Text>
-                  <View
-                    style={[
-                      ApplicationStyle.backgroundColor.primary900,
-                      ApplicationStyle.borderRadius24,
-                      ApplicationStyle.borderWidth1,
-                      Spaces.padding[16],
-                      Spaces.gap[16],
-                      {
-                        borderColor: `${Colors.primary500}55`,
-                      },
-                    ]}
-                  >
-                    <View style={[Alignments.row, Spaces.gap[8]]}>
-                      {[
-                        { key: 'overview', label: 'Vue générale' },
-                        { key: 'days', label: 'Jours' },
-                      ].map((tab) => {
-                        const selected = stageDetailsTab === tab.key;
-                        return (
-                          <TouchableOpacity
-                            key={tab.key}
-                            onPress={() => setStageDetailsTab(tab.key)}
-                            style={[
-                              ApplicationStyle.borderRadius100,
-                              Spaces.paddingHorizontal[16],
-                              Spaces.paddingVertical[12],
-                              {
-                                backgroundColor: selected ? `${Colors.primary500}22` : 'rgba(255,255,255,0.05)',
-                                borderColor: selected
-                                  ? Colors.primary500
-                                  : `${Colors.primary500}40`,
-                                borderWidth: 1,
-                              },
-                            ]}
-                          >
-                            <Text style={[Fonts.p3Bold, selected ? Fonts.primary500 : Fonts.neutral200]}>
-                              {tab.label}
-                            </Text>
-                          </TouchableOpacity>
-                        );
-                      })}
-                    </View>
-
-                    {stageDetailsTab === 'overview' ? (
-                      <View style={[Spaces.gap[12]]}>
-                        <View style={[Spaces.gap[4]]}>
-                          <Text style={[Fonts.p3, Fonts.neutral200]}>Période</Text>
-                          <Text style={[Fonts.p2, Fonts.neutral00]}>{stagePeriodSummary || 'Non renseignée'}</Text>
-                        </View>
-                        <View style={[Spaces.gap[4]]}>
-                          <Text style={[Fonts.p3, Fonts.neutral200]}>Horaires</Text>
-                          <Text style={[Fonts.p2, Fonts.primary500]}>{stageHoursSummary || 'Variables'}</Text>
-                        </View>
-                        <View style={[Spaces.gap[4]]}>
-                          <Text style={[Fonts.p3, Fonts.neutral200]}>Lieu principal</Text>
-                          <Text style={[Fonts.p2, Fonts.neutral100]}>
-                            {event?.facility?.name || event?.locationDetails || 'A définir'}
-                          </Text>
-                        </View>
-                        <View style={[Alignments.row, Spaces.gap[8], { flexWrap: 'wrap' }]}>
-                          <View
-                            style={[
-                              ApplicationStyle.card,
-                              Spaces.paddingHorizontal[12],
-                              Spaces.paddingVertical[8],
-                              {
-                                backgroundColor: 'rgba(1, 179, 244, 0.08)',
-                                borderColor: 'rgba(1, 179, 244, 0.20)',
-                              },
-                            ]}
-                          >
-                            <Text style={[Fonts.p3Bold, Fonts.primary500]}>{`${stageChildDays.length} jour(s)`}</Text>
-                          </View>
-                          <View
-                            style={[
-                              ApplicationStyle.card,
-                              Spaces.paddingHorizontal[12],
-                              Spaces.paddingVertical[8],
-                              {
-                                backgroundColor: 'rgba(1, 179, 244, 0.08)',
-                                borderColor: 'rgba(1, 179, 244, 0.20)',
-                              },
-                            ]}
-                          >
-                            <Text style={[Fonts.p3Bold, Fonts.primary500]}>{`${event?.participations?.length || 0} inscrit(s)`}</Text>
-                          </View>
-                        </View>
-                      </View>
-                    ) : (
-                      <View style={[Spaces.gap[12]]}>
-                        {stageChildDays.map((stageDay) => {
-                          const summary = getStageDayStatusSummary(stageDay);
-                          return (
-                            <TouchableOpacity
-                              key={stageDay?.documentId || stageDay?.date}
-                              onPress={() => navigation.navigate(RouteNames.EventDetails, {
-                                eventId: stageDay?.documentId,
-                              })}
-                              style={[
-                                ApplicationStyle.card,
-                                Spaces.padding[16],
-                                Spaces.gap[8],
-                                {
-                                  backgroundColor: 'rgba(1, 179, 244, 0.08)',
-                                  borderColor: 'rgba(1, 179, 244, 0.20)',
-                                },
-                              ]}
-                            >
-                              <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter, Spaces.gap[12]]}>
-                                <View style={{ flex: 1 }}>
-                                  <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
-                                    {new Date(stageDay?.date).toLocaleDateString('fr-FR', {
-                                      day: '2-digit',
-                                      month: 'short',
-                                      weekday: 'long',
-                                    })}
-                                  </Text>
-                                  <Text style={[Fonts.p3, Fonts.neutral200, Spaces.marginTop[4]]}>
-                                    {`${String(stageDay?.startTime || '').slice(0, 5)} - ${String(stageDay?.endTime || '').slice(0, 5)}`}
-                                  </Text>
-                                </View>
-                                <Text style={[Fonts.p3Bold, Fonts.primary500]}>Voir</Text>
-                              </View>
-                              <View style={[Alignments.row, Spaces.gap[8], { flexWrap: 'wrap' }]}>
-                                <Text style={[Fonts.p4, Fonts.neutral200]}>{`${summary.present} presents`}</Text>
-                                <Text style={[Fonts.p4, Fonts.neutral200]}>{`${summary.absent} absents`}</Text>
-                                <Text style={[Fonts.p4, Fonts.neutral200]}>{`${summary.pending} sans réponse`}</Text>
-                              </View>
-                            </TouchableOpacity>
-                          );
-                        })}
-                        {stageChildDays.length === 0 ? (
-                          <Text style={[Fonts.p2, Fonts.neutral200]}>
-                            Aucune journee de stage n&apos;est encore disponible.
-                          </Text>
-                        ) : null}
-                      </View>
-                    )}
-                  </View>
+                  <Text style={[Fonts.h3Bold, Fonts.neutral00]}>{t('eventDetails.fields.description')}</Text>
+                  <Text style={[Fonts.p1, Fonts.primary100]}>{eventDescriptionText}</Text>
                 </View>
               ) : null}
+
+              {showCallUpTab && renderCompoReminder()}
+
+              {/* 🏕️ N2 — LE STAGE PERD SES DEUX PASTILLES MAISON. Elles
+                  vivaient DANS une carte, ce qui faisait des onglets a
+                  l interieur d un onglet. Le contenu, lui, est intact : il a
+                  simplement rejoint la matrice commune. */}
+              {showOverviewTab && isStageParentEvent ? renderStageOverviewTab() : null}
+
+              {showStageDaysTab && isStageParentEvent ? renderStageDaysTab() : null}
 
               {isStageDayEvent && event?.parentEvent?.documentId ? (
                 <TouchableOpacity
@@ -6065,13 +6296,6 @@ function EventDetails({ navigation, route }) {
               ) : null}
 
               {renderTournamentSection()}
-
-              {showOverviewTab && eventDescriptionText ? (
-                <View style={[Spaces.gap[16]]}>
-                  <Text style={[Fonts.h3Bold, Fonts.neutral00]}>{t('eventDetails.fields.description')}</Text>
-                  <Text style={[Fonts.p1, Fonts.primary100]}>{eventDescriptionText}</Text>
-                </View>
-              ) : null}
 
               {showOverviewTab && canSelfMarkArrival && selfAttendanceStatus ? (
                 <View style={[Spaces.gap[12]]}>
