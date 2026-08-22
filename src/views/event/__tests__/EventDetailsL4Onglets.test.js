@@ -477,10 +477,16 @@ const allerSurLOnglet = (/** @type {any} */ root, /** @type {string} */ valeur) 
 };
 
 describe('L4 · temoin 4 — trois onglets sur un match, zero ailleurs', () => {
-  test('un MATCH porte Aperçu · Participants · Convocation, dans cet ordre', () => {
+  // 🔢 MIS A JOUR PAR N2 : l'onglet des personnes porte desormais son EFFECTIF.
+  // C'est une regle de la planche 04 qui vaut pour les quatre types ranges, pas
+  // une decoration du match : « Participants · 8 », « Candidats · 9 »,
+  // « Personnes · 74 ». Ici l'evenement de reference n'a aucune participation,
+  // d'ou le `· 0` — un onglet vide reste affiche AVEC son compte, il ne se
+  // cache pas. La matrice complete est tenue par `EventDetailsN2Onglets`.
+  test('un MATCH porte Aperçu · Participants · N · Convocation, dans cet ordre', () => {
     const root = monter();
 
-    expect(libellesDesOnglets(root)).toEqual(['Aperçu', 'Participants', 'Convocation']);
+    expect(libellesDesOnglets(root)).toEqual(['Aperçu', 'Participants · 0', 'Convocation']);
   });
 
   test('un « Match amical » les porte AUSSI — meme metier, meme page', () => {
@@ -489,7 +495,7 @@ describe('L4 · temoin 4 — trois onglets sur un match, zero ailleurs', () => {
     // suppose — le jour ou quelqu'un resserre la comparaison, ce temoin parle.
     const root = monter({ event: buildEvent({ type: { name: 'Match amical' } }) });
 
-    expect(libellesDesOnglets(root)).toEqual(['Aperçu', 'Participants', 'Convocation']);
+    expect(libellesDesOnglets(root)).toEqual(['Aperçu', 'Participants · 0', 'Convocation']);
   });
 
   test('un ENTRAINEMENT n a AUCUN onglet, et sa colonne est intacte', () => {
@@ -502,8 +508,20 @@ describe('L4 · temoin 4 — trois onglets sur un match, zero ailleurs', () => {
     expect(contient(root, 'Exporter la liste (Excel/CSV)')).toBe(true);
   });
 
-  test('un TOURNOI non plus : ce lot ne touche qu au match', () => {
+  // ♻️ REECRIT PAR N2. Ce temoin disait « le tournoi n'a AUCUN onglet : ce lot
+  // ne touche qu'au match ». C'etait vrai de L4, et Adel l'avait voulu ainsi
+  // (Q2, 20/08 : le tournoi apres qu'il ait retrouve une barre du bas). C'est
+  // fait — le tournoi rejoint la matrice avec ses trois onglets a lui.
+  test('un TOURNOI porte MAINTENANT les siens : Aperçu · Équipes · Personnes', () => {
     const root = monter({ event: buildEvent({ type: { name: 'Tournoi' } }) });
+
+    expect(libellesDesOnglets(root)).toEqual(['Aperçu', 'Équipes · 0', 'Personnes · 0']);
+  });
+
+  test('un ENTRAINEMENT, lui, n en a toujours AUCUN', () => {
+    // ⛔ La matrice ne ratisse pas tout : quatre types seulement en ont assez
+    // pour deborder d'une colonne. L'entrainement garde la sienne, entiere.
+    const root = monter({ event: buildEvent({ type: { name: 'Entrainement' } }) });
 
     expect(parTestID(root, 'doublure-onglets')).toHaveLength(0);
   });

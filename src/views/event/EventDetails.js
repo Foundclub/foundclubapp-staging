@@ -79,7 +79,17 @@ import {
   rejectFeatured,
 } from '@/services/event/eventService';
 import { useGetEventParticipations } from '@/services/eventParticipation/eventParticipationQueries';
-import { useLicenseCampaigns } from '@/services/license/licenseQueries';
+// 🧾 N2 — AUCUN MODULE NOUVEAU N'ENTRE ICI : `licenseQueries` etait deja
+// importe pour `useLicenseCampaigns`. Les deux fonctions de service qui
+// s'ajoutent sont des RE-EXPORTS du meme fichier, et elles ne sont appelees que
+// dans la fermeture d'une mutation — jamais au montage. C'est ce qui evite le
+// piege connu du projet (un import de service de plus = des suites entieres qui
+// ne s'executent plus, `.env` etant absent des copies de travail).
+import {
+  generateLicenseAssignments,
+  sendBulkLicenseReminder,
+  useLicenseCampaigns,
+} from '@/services/license/licenseQueries';
 import {
   useGetEventMatchStats,
   useGetEventMyMatchResponse,
@@ -107,12 +117,15 @@ import EventParticipants from './components/EventParticipants';
 import EventReservationActions from './components/EventReservationActions';
 import EventTasksSection from './components/EventTasksSection';
 import EventTeamAudiencesSection from './components/EventTeamAudiencesSection';
+import TournamentPeopleList from './components/TournamentPeopleList';
+import TournamentProgressRail from './components/TournamentProgressRail';
 import { resolveEventAttendanceGate } from './eventAttendanceGate';
 import { resolveEventEndedAt, resolveIsMatchFinished } from './eventMatchClock';
 import { useEventMutations } from './hooks/useEventMutations';
 import { OwnAnswerAction, resolveOwnAnswerAction } from './ownAnswerAction';
 import { createTournamentDesignSystem } from './tournamentDesignSystem';
 import {
+  getTournamentMemberBuckets,
   getTournamentPendingMembershipForUser,
   getTournamentRosterSummary,
   getTournamentStatusCounters,
@@ -379,6 +392,26 @@ const getStageDayStatusSummary = (stageDay) => {
 };
 
 /**
+ * 🔢 N2 — L'EFFECTIF COLLE AU LIBELLE D'UN ONGLET (planche 04).
+ *
+ * `SegmentedControl` n'accepte qu'une CHAINE par option : le compteur ne peut
+ * pas etre un noeud pose a cote, il fait partie du mot. Un seul endroit le
+ * colle, pour les quatre types — sinon « Participants · 8 » et « Personnes ·8 »
+ * finiraient par diverger d'un espace, et personne ne le verrait avant l'ecran.
+ *
+ * ⛔ Un compteur absent (`null`, `undefined`, `NaN`) rend le libelle NU plutot
+ * que « Répartition · 0 » : la planche 04 donne un effectif a tous les onglets
+ * SAUF « Répartition », qui ne compte rien.
+ *
+ * @param {string} label Le nom de l'onglet.
+ * @param {number} [count] L'effectif, quand cet onglet en a un.
+ * @returns {string} Le libelle a afficher.
+ */
+const withTabCount = (label, count) => (
+  Number.isFinite(count) ? `${label} · ${count}` : label
+);
+
+/**
  * 🏷️ N1 (c) — LE LIBELLE DE LA PASTILLE DE TYPE, EN UN SEUL ENDROIT.
  *
  * Le nom du type en capitales, puis autant de precisions que le lot en cours
@@ -563,10 +596,11 @@ function EventDetails({ navigation, route }) {
   const [isShareModalVisible, setIsShareModalVisible] = useState(false);
   const [isTrainingOpenModalVisible, setIsTrainingOpenModalVisible] = useState(false);
   const [selectedParticipationId, setSelectedParticipationId] = useState('');
-  const [stageDetailsTab, setStageDetailsTab] = useState('overview');
-  // L4-A : les onglets du MATCH. ⛔ A ne pas confondre avec `stageDetailsTab`
-  // juste au-dessus, qui appartient au bloc « stage parent » et n'a rien a voir
-  // avec ce lot. Aucun autre type d'evenement ne lit celui-ci.
+  // 🎛️ L'UNIQUE ETAT D'ONGLET DE LA PAGE, pour les quatre types ranges.
+  // ⛔ N2 a SUPPRIME `stageDetailsTab`, le second etat qui vivait ici et ne
+  // servait qu'au stage : ses deux pastilles dessinees a la main creaient des
+  // onglets DANS un onglet. Un seul mecanisme, un seul etat — c'est la
+  // condition pour que « Aperçu » veuille dire la meme chose partout.
   const [detailsTab, setDetailsTab] = useState('overview');
   // L4-B : le panneau d'organisation n'est plus un accordeon dans la colonne,
   // c'est une FEUILLE ouverte par le ⋯ de la barre du haut. Elle part fermee,
@@ -836,6 +870,15 @@ function EventDetails({ navigation, route }) {
     () => getTournamentStatusCounters(tournamentTeams, tournamentConfig),
     [tournamentConfig, tournamentTeams],
   );
+  // 👥 N2 — COMBIEN DE PERSONNES sur ce tournoi, toutes equipes confondues.
+  // ⛔ Les ACTIFS seulement (pending | present | absent) : une invitation sans
+  // reponse n'est pas encore quelqu'un qui vient, et un refus n'est plus
+  // personne. C'est le meme decoupage que la liste elle-meme, sinon l'onglet
+  // annoncerait « Personnes · 74 » au-dessus d'une liste de 61.
+  const tournamentPeopleCount = useMemo(() => tournamentTeams.reduce(
+    (somme, team) => somme + getTournamentMemberBuckets(team?.members || []).activeMembers.length,
+    0,
+  ), [tournamentTeams]);
   const currentUserTournamentTeam = useMemo(() => {
     const currentUserId = userData?.documentId;
     if (!currentUserId) return null;
@@ -915,8 +958,12 @@ function EventDetails({ navigation, route }) {
     }),
     [tournamentTeams],
   );
+  // 🔄 CHANGER D EVENEMENT REMET L ONGLET SUR L APERÇU. Cet effet existait deja,
+  // mais il ne remettait que l ancien etat du stage. Il commande desormais
+  // l etat UNIQUE : sans lui, ouvrir une journee de stage depuis l onglet
+  // « Jours » afficherait la journee sur un onglet qu elle n a pas.
   useEffect(() => {
-    setStageDetailsTab('overview');
+    setDetailsTab('overview');
   }, [event?.documentId]);
   const eventDescriptionText = useMemo(() => {
     const rawDescription = event?.description;
@@ -1027,6 +1074,30 @@ function EventDetails({ navigation, route }) {
     if (Array.isArray(queriedCampaigns)) return queriedCampaigns;
     return Array.isArray(event?.licenseCampaigns) ? event.licenseCampaigns : [];
   }, [event?.licenseCampaigns, eventLicenseCampaignsQuery.data]);
+
+  // 💶 N2 — LA COTISATION DU STAGE : DEUX GESTES QUI EXISTAIENT DEJA COTE
+  // SERVEUR ET QUE LA PAGE N'OFFRAIT PAS.
+  //
+  // ⚠️ Le chiffrage l'a montre : la campagne rattachee a l'evenement livre DEJA
+  // neuf compteurs (total, paidCount, statusCounts, expectedCents, paidCents…)
+  // et la relance groupee existe (`POST /licenses/campaigns/:id/reminders/bulk`,
+  // deja branchee sur l'ecran des cotisations du club). La page de l'evenement
+  // n'en lisait qu'UN SEUL — `totals.total` — pour ecrire « Cotisations liées ».
+  // Il n'y avait donc rien a construire, seulement a montrer.
+  //
+  // ⛔ On passe par `useMutation` et NON par `useLicenseMutation` : ce dernier
+  // s'appelle au MONTAGE, et les treize suites qui montent cet ecran mockent
+  // `licenseQueries` sans lui. Les fonctions de service, elles, ne sont touchees
+  // que dans la fermeture — jamais au rendu.
+  const eventLicenseReminderMutation = useMutation({
+    mutationFn: (/** @type {any} */ { campaignId, ...payload }) => (
+      sendBulkLicenseReminder(campaignId, payload)
+    ),
+  });
+  const eventLicenseAssignmentsMutation = useMutation({
+    mutationFn: (/** @type {any} */ { campaignId }) => generateLicenseAssignments(campaignId),
+  });
+
   const featuredRequestsSummary = useMemo(() => ({
     CM: {
       requestId: null,
@@ -3980,6 +4051,19 @@ function EventDetails({ navigation, route }) {
   const detectionSplit = staffCompositionPayload?.detectionSplit || null;
   const hasDetectionTeams = Boolean(detectionSplit?.teams?.length);
 
+  // 🔢 N2 — COMBIEN DE PERSONNES SONT DEJA POINTEES, d'apres le SERVEUR.
+  // ⛔ Ni l'etat local de `DetectionSquadSetup`, ni le RSVP : `not_marked` est
+  // la valeur que le serveur donne a quelqu'un qu'on n'a PAS encore pointe, et
+  // la compter ferait afficher « 14 pointé·e·s sur 14 » avant meme le coup
+  // d'envoi. Meme lecture qu'`EventParticipants` (`attendanceStatus` d'abord,
+  // `finalState` en repli).
+  const detectionPointedCount = useMemo(() => (
+    Object.values(attendanceByUserId).filter((/** @type {any} */ entry) => {
+      const state = String(entry?.attendanceStatus || entry?.finalState || '').toLowerCase();
+      return Boolean(state) && state !== 'not_marked';
+    }).length
+  ), [attendanceByUserId]);
+
   const openDetectionTeamsBoard = useCallback(() => {
     if (!eventId || !compositionTeamId) return;
 
@@ -3995,6 +4079,37 @@ function EventDetails({ navigation, route }) {
     compositionSport,
     compositionTeamId,
     detectionSplit?.memberMode,
+    eventId,
+    navigation,
+  ]);
+
+  /**
+   * 🔁 N2 — L'ETAPE 4 DU CHEMIN DE DETECTION CESSE D'ETRE INATTEIGNABLE DEPUIS
+   * LA PAGE. Jusqu'ici, la rotation ne s'ouvrait QUE depuis le terrain
+   * (`DetectionTeamsBoard`), c'est-a-dire seulement si on savait deja qu'elle
+   * existait.
+   *
+   * ⚠️ Ce n'est PAS un raccourci fragile : `DetectionRotationBoard` est ecrit
+   * pour etre ouvert directement — il recharge la composition lui-meme et
+   * retombe sur le `detectionSplit` du serveur quand la route n'en porte pas
+   * (`DetectionRotationBoard.js`, « sinon du serveur quand on ouvre cet ecran
+   * directement »). On lui passe donc les MEMES parametres que le terrain,
+   * plus l'equipe de depart.
+   */
+  const openDetectionRotation = useCallback(() => {
+    if (!eventId || !compositionTeamId) return;
+
+    navigation.navigate(RouteNames.DetectionRotation, {
+      eventId,
+      players: compositionEditorPlayers,
+      sport: compositionSport,
+      teamId: compositionTeamId,
+      teamIndex: 0,
+    });
+  }, [
+    compositionEditorPlayers,
+    compositionSport,
+    compositionTeamId,
     eventId,
     navigation,
   ]);
@@ -4446,28 +4561,136 @@ function EventDetails({ navigation, route }) {
   // (pastille de type, adversaire, carte d'entete, statut de convocation, barre
   // du bas) et repartit le RESTE en trois onglets.
   //
-  // ⛔ UN SEUL TYPE : le MATCH. Le tournoi, le stage, la detection et
-  // l'entrainement gardent leur colonne A L'IDENTIQUE — decision du CONSTAT
-  // (« un seul type dans ce lot ») et d'Adel (Q2, 2026-08-20 : le tournoi est un
-  // lot separe, apres qu'il ait retrouve une barre du bas).
-  // ⇒ C'est ce que dit `!isMatchEvent ||` en tete de chaque drapeau : hors
-  // match, les trois sont VRAIS en meme temps, donc tout se rend comme avant.
+  // ───────────────────────────────────────────────────────────────────────────
+  // N2 — LA MATRICE : LES TROIS AUTRES TYPES REJOIGNENT LE MECANISME.
+  //
+  // L4 avait pose le mecanisme pour UN SEUL type, le match, en attendant
+  // qu'Adel tranche le sort du tournoi (Q2, 20/08). C'est fait. La detection,
+  // le stage parent et le tournoi se rangent maintenant DE LA MEME FACON :
+  // meme etat `detailsTab`, meme `SegmentedControl`, meme helper de compteur.
+  //
+  // ⛔ CE N'EST PAS UN SECOND JEU D'ONGLETS. C'est le point de tout le lot : le
+  // stage en avait un a lui, deux pastilles dessinees a la main dans une carte,
+  // qui creaient un emboitement (des onglets DANS un onglet). Elles
+  // disparaissent au profit de celui-ci.
+  //
+  // 🔢 LES REGLES DE LA MATRICE, telles que la planche 04 les fixe :
+  //   · jamais plus de TROIS onglets ;
+  //   · le premier s'appelle TOUJOURS « Aperçu » ;
+  //   · chaque onglet porte son effectif, sauf « Répartition » qui ne compte
+  //     rien ;
+  //   · un onglet vide reste AFFICHE avec son etat vide — il ne se retire pas,
+  //     sinon la page change de forme selon les donnees et on ne sait plus ou
+  //     chercher.
+  //
+  // 🔑 LA VALEUR `participants` EST PARTAGEE PAR LES QUATRE TYPES, et c'est
+  // precisement ce qui evite un second mecanisme : seul le LIBELLE change
+  // (« Participants », « Candidats », « Personnes »), et le rang de l'onglet
+  // change (2e sur un match, 3e ailleurs). Le drapeau qui commande la liste
+  // reste donc UN SEUL, `showParticipantsTab`, quel que soit le type.
+  //
+  // ⇒ Hors des types ranges, `detailsTabs` est VIDE : tous les `isOnTab` rendent
+  // VRAI en meme temps, et la colonne unique se rend exactement comme avant.
   //
   // ⚠️ « Match amical » contient « match » : `isMatchEvent` est vrai pour lui
   // (comparaison par sous-chaine, l. ~2750). C'est voulu — meme metier, meme
   // page — et c'est fige par temoin plutot que laisse a la surprise.
-  const detailsTabs = useMemo(() => {
-    if (!isMatchEvent) return [];
-    return [
-      { label: t('eventDetails.tabs.overview', 'Aperçu'), value: 'overview' },
-      { label: t('eventDetails.fields.participations', 'Participants'), value: 'participants' },
-      { label: t('eventDetails.tabs.callUp', 'Convocation'), value: 'callUp' },
-    ];
-  }, [isMatchEvent, t]);
+  // 🔢 L'effectif que portent les onglets « Participants » (match),
+  // « Candidats » (detection) et « Personnes » (stage) : les personnes
+  // ACCEPTEES. C'est EXACTEMENT le nombre que la carte de cotisation appelle
+  // « inscrit·e·s » (N2-C) — un seul comptage, sinon l'onglet et la carte se
+  // contrediraient a trois centimetres l'un de l'autre.
+  const acceptedPeopleCount = participationsByStatus.participating.length;
 
-  const showOverviewTab = !isMatchEvent || detailsTab === 'overview';
-  const showParticipantsTab = !isMatchEvent || detailsTab === 'participants';
-  const showCallUpTab = !isMatchEvent || detailsTab === 'callUp';
+  const detailsTabs = useMemo(() => {
+    const overviewTab = { label: t('eventDetails.tabs.overview', 'Aperçu'), value: 'overview' };
+
+    if (isMatchEvent) {
+      return [
+        overviewTab,
+        {
+          label: withTabCount(
+            t('eventDetails.fields.participations', 'Participants'),
+            acceptedPeopleCount,
+          ),
+          value: 'participants',
+        },
+        { label: t('eventDetails.tabs.callUp', 'Convocation'), value: 'callUp' },
+      ];
+    }
+
+    if (isDetectionEvent) {
+      return [
+        overviewTab,
+        {
+          label: t('eventDetails.tabs.detectionSplit', 'Répartition'),
+          value: 'detectionSplit',
+        },
+        {
+          label: withTabCount(
+            t('eventDetails.tabs.detectionCandidates', 'Candidats'),
+            acceptedPeopleCount,
+          ),
+          value: 'participants',
+        },
+      ];
+    }
+
+    if (isStageParentEvent) {
+      return [
+        overviewTab,
+        {
+          label: withTabCount(t('eventDetails.tabs.stageDays', 'Jours'), stageChildDays.length),
+          value: 'stageDays',
+        },
+        {
+          label: withTabCount(t('eventDetails.tabs.people', 'Personnes'), acceptedPeopleCount),
+          value: 'participants',
+        },
+      ];
+    }
+
+    if (isTournamentEvent && !isStageDayEvent) {
+      return [
+        overviewTab,
+        {
+          label: withTabCount(t('eventDetails.tabs.teams', 'Équipes'), tournamentTeams.length),
+          value: 'tournamentTeams',
+        },
+        {
+          label: withTabCount(t('eventDetails.tabs.people', 'Personnes'), tournamentPeopleCount),
+          value: 'participants',
+        },
+      ];
+    }
+
+    return [];
+  }, [
+    acceptedPeopleCount,
+    isDetectionEvent,
+    isMatchEvent,
+    isStageDayEvent,
+    isStageParentEvent,
+    isTournamentEvent,
+    stageChildDays.length,
+    t,
+    tournamentPeopleCount,
+    tournamentTeams.length,
+  ]);
+
+  // 🚪 LE DRAPEAU QUI OUVRE TOUT : y a-t-il des onglets sur cette page ?
+  // Hors des types ranges (entrainement, reservation, « autre »…), il est FAUX
+  // et chaque `isOnTab` rend VRAI — la colonne unique se rend comme avant, sans
+  // qu'aucune condition de bloc n'ait a connaitre la liste des types.
+  const hasDetailsTabs = detailsTabs.length > 0;
+  const isOnTab = (/** @type {string} */ value) => !hasDetailsTabs || detailsTab === value;
+
+  const showOverviewTab = isOnTab('overview');
+  const showParticipantsTab = isOnTab('participants');
+  const showCallUpTab = isOnTab('callUp');
+  const showDetectionSplitTab = isOnTab('detectionSplit');
+  const showStageDaysTab = isOnTab('stageDays');
+  const showTournamentTeamsTab = isOnTab('tournamentTeams');
 
   // Les trois conditions que la repartition en onglets rendait trop longues
   // pour tenir sur leur ligne d'ouverture. Elles sont REPRISES TELLES QUELLES
@@ -4478,6 +4701,484 @@ function EventDetails({ navigation, route }) {
     && event.teamAudiences.length > 0;
   const showPublishedComposition = supportsEventComposition
     && (canViewPublishedComposition || canEdit);
+
+  /**
+   * 🧭 N2 — LE CHEMIN COMPLET D'UNE DETECTION (planche 04, cadre 4G).
+   *
+   * Une seance de detection se deroule en QUATRE gestes, dans cet ordre : on
+   * pointe qui est la, on repartit en equipes, on place sur le terrain, on fait
+   * tourner pour que chacun joue. Les quatre ecrans existent — 2 980 lignes
+   * livrees — mais seuls DEUX etaient atteignables, par des chips du menu, et
+   * rien ne disait qu'ils formaient une suite.
+   *
+   * ⚠️ CE QUE CET ONGLET REPARE N'EST PAS UN MANQUE D'ECRANS, C'EST UN MANQUE
+   * D'ORDRE. Un organisateur voyait « Compo » et « Placer les équipes » comme
+   * deux boutons sans rapport, et n'atteignait jamais la rotation.
+   *
+   * 🔢 L'ETAPE 1 SE LIT SUR LE SERVEUR, jamais sur l'ecran de repartition :
+   * `attendanceByUserId` vient de `GET /events/:id/attendance`. L'etat local de
+   * `DetectionSquadSetup` ne survivrait pas a un retour en arriere, et dirait
+   * « 0 pointé » a un coach qui vient d'en pointer quatorze.
+   */
+  const renderDetectionSplitTab = () => {
+    if (!isDetectionEvent) return null;
+
+    // 🔒 RESERVE AU STAFF — et l'onglet reste AFFICHE pour tout le monde.
+    // La planche 04 est explicite : un onglet vide garde sa place et porte son
+    // etat vide. Le retirer aux candidats ferait changer la page de forme selon
+    // qui regarde, et un candidat qui a entendu parler de « la répartition » ne
+    // saurait pas si elle n'existe pas ou si elle ne lui est pas destinee.
+    if (!canEdit) {
+      return (
+        <View
+          style={[
+            ApplicationStyle.borderRadius16,
+            ApplicationStyle.borderWidth1,
+            Spaces.padding[16],
+            Spaces.gap[8],
+            {
+              backgroundColor: withAlpha(Colors.primary500, 0.08),
+              borderColor: withAlpha(Colors.primary500, 0.24),
+            },
+          ]}
+          testID="detection-split-staff-only"
+        >
+          <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
+            {t('eventDetails.detectionSplit.staffOnlyTitle', 'Réservé au staff de la séance')}
+          </Text>
+          <Text style={[Fonts.p3, Fonts.neutral200]}>
+            {t(
+              'eventDetails.detectionSplit.staffOnlyHint',
+              'Le staff répartit les candidats en équipes et gère leur temps de jeu.',
+            )}
+          </Text>
+        </View>
+      );
+    }
+
+    const detectionTeamCount = detectionSplit?.teams?.length || 0;
+    const blockedUntilSplit = t(
+      'eventDetails.detectionSplit.blockedUntilSplit',
+      'Génère d’abord la répartition, à l’étape 2.',
+    );
+
+    const steps = [
+      {
+        done: acceptedPeopleCount > 0 && detectionPointedCount >= acceptedPeopleCount,
+        hint: acceptedPeopleCount > 0
+          ? t(
+            'eventDetails.detectionSplit.stepAttendanceCount',
+            '{{pointed}} pointé·e·s sur {{total}}',
+            { pointed: detectionPointedCount, total: acceptedPeopleCount },
+          )
+          : t(
+            'eventDetails.detectionSplit.stepAttendanceEmpty',
+            'Aucun candidat inscrit pour l’instant',
+          ),
+        key: 'attendance',
+        rank: 1,
+        title: t('eventDetails.detectionSplit.stepAttendance', 'Pointer les présent·e·s'),
+      },
+      {
+        action: t('eventDetails.detectionSplit.generate', 'Générer la répartition'),
+        done: hasDetectionTeams,
+        hint: t(
+          'eventDetails.detectionSplit.stepSplitHint',
+          'Séparer par poste recherché',
+        ),
+        key: 'split',
+        onPress: handleManageComposition,
+        rank: 2,
+        title: hasDetectionTeams
+          ? t(
+            'eventDetails.detectionSplit.stepSplitDone',
+            'Réparti·e·s en {{count}} équipes',
+            { count: detectionTeamCount },
+          )
+          : t('eventDetails.detectionSplit.stepSplit', 'Répartir en équipes'),
+      },
+      {
+        action: t('eventDetails.detectionSplit.openBoard', 'Placer sur le terrain'),
+        blockedReason: blockedUntilSplit,
+        disabled: !hasDetectionTeams || isStaffCompositionFetching,
+        hint: t('eventDetails.detectionSplit.stepBoardHint', 'Après la répartition'),
+        key: 'board',
+        onPress: openDetectionTeamsBoard,
+        rank: 3,
+        title: t('eventDetails.detectionSplit.stepBoard', 'Placer sur le terrain'),
+      },
+      {
+        action: t('eventDetails.detectionSplit.openRotation', 'Faire tourner'),
+        blockedReason: blockedUntilSplit,
+        disabled: !hasDetectionTeams || isStaffCompositionFetching,
+        hint: t(
+          'eventDetails.detectionSplit.stepRotationHint',
+          'Temps de jeu par joueur · plancher 5 min',
+        ),
+        key: 'rotation',
+        onPress: openDetectionRotation,
+        rank: 4,
+        title: t('eventDetails.detectionSplit.stepRotation', 'Faire tourner'),
+      },
+    ];
+
+    return (
+      <View style={[Spaces.gap[12]]} testID="detection-split-path">
+        <Text style={[Fonts.p4Bold, Fonts.primary500]}>
+          {t('eventDetails.detectionSplit.title', 'LE CHEMIN COMPLET')}
+        </Text>
+
+        {steps.map((step) => (
+          <View
+            key={step.key}
+            style={[
+              ApplicationStyle.borderRadius16,
+              ApplicationStyle.borderWidth1,
+              Spaces.padding[12],
+              Spaces.gap[8],
+              {
+                backgroundColor: withAlpha(Colors.primary500, step.done ? 0.12 : 0.06),
+                borderColor: withAlpha(
+                  step.done ? Colors.success500 : Colors.primary500,
+                  step.done ? 0.45 : 0.24,
+                ),
+              },
+            ]}
+            testID={`detection-split-step-${step.key}`}
+          >
+            <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[12]]}>
+              <View style={{ flex: 1 }}>
+                <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
+                  {`${step.rank}. ${step.title}`}
+                </Text>
+                <Text style={[Fonts.p4, Fonts.neutral200]}>{step.hint}</Text>
+              </View>
+              {step.done ? (
+                <Tag
+                  style={tournamentDs.getToneTagStyle(Colors.success500)}
+                  text={t('eventDetails.detectionSplit.stepDone', 'Fait')}
+                  textColor="neutral00"
+                  textStyle={{ color: Colors.success500 }}
+                />
+              ) : null}
+            </View>
+
+            {step.action ? (
+              <Button
+                disabled={Boolean(step.disabled)}
+                onPress={step.onPress}
+                title={step.action}
+                variant={step.done ? 'SecondaryLight' : 'Primary'}
+              />
+            ) : null}
+
+            {/* 🔇 Regle 5 du pack : JAMAIS un bouton gris sans son motif. Celui-ci
+                est ferme parce que l'etape 2 n'est pas faite, et il le dit. */}
+            {step.action && step.disabled && step.blockedReason ? (
+              <Text style={[Fonts.p4, Fonts.neutral300]}>{step.blockedReason}</Text>
+            ) : null}
+          </View>
+        ))}
+      </View>
+    );
+  };
+
+  /**
+   * 💶 N2 — « QUI N'A PAS PAYE », SUR LA PAGE DU STAGE (planche 04, cadre 4F).
+   *
+   * ⚠️ CETTE CARTE NE CALCULE RIEN. Tout ce qu'elle montre existait deja : le
+   * serveur livre neuf compteurs par campagne, et la relance groupee tourne
+   * depuis l'ecran des cotisations du club. La page de l'evenement n'en lisait
+   * qu'un seul (`totals.total`). C'est un branchement, pas une fonctionnalite.
+   *
+   * 🔒 ELLE EST DERRIERE `canManageEventLicenseCampaigns`, ET SEULEMENT LA.
+   * Ce sont des donnees FINANCIERES nominatives par ricochet (« 6 n'ont pas
+   * réglé » sur un stage de 24 designe un sixieme du groupe) : elles ne
+   * remontent jamais dans l'entete, que tout le monde voit.
+   */
+  const renderStageLicenseCard = () => {
+    if (!canManageEventLicenseCampaigns) return null;
+
+    const campaign = eventLicenseCampaigns[0];
+    if (!campaign) return null;
+
+    const campaignId = campaign?.documentId || campaign?.id;
+    const statusCounts = campaign?.totals?.statusCounts || {};
+    // 💰 Les trois etats qui valent une relance, exactement ceux de l'ecran des
+    // cotisations du club — meme definition, meme charge envoyee au serveur.
+    const unpaidCount = Number(statusCounts.pending || 0)
+      + Number(statusCounts.partial || 0)
+      + Number(statusCounts.overdue || 0);
+    const assignedCount = Number(campaign?.totals?.total || 0);
+    // 🧮 Les inscrit·e·s a qui AUCUNE cotisation n'est rattachee. Ce trou-la est
+    // invisible partout ailleurs : ils ne sont ni payeurs ni impayes, ils
+    // n'existent simplement pas dans la campagne.
+    const withoutAssignment = Math.max(0, acceptedPeopleCount - assignedCount);
+    const isCampaignActive = String(campaign?.status || '') === 'active';
+    const currency = campaign?.currency || 'EUR';
+
+    const handleRelance = () => {
+      if (!campaignId || !unpaidCount) return;
+      Alert.alert(
+        t('eventDetails.stageLicense.confirmTitle', 'Relancer les impayés'),
+        t(
+          'eventDetails.stageLicense.confirmBody',
+          'Envoyer une relance aux cotisations en attente, partielles ou en retard ?',
+        ),
+        [
+          { style: 'cancel', text: t('common.cancel', 'Annuler') },
+          {
+            onPress: () => eventLicenseReminderMutation.mutate(
+              { campaignId, statuses: ['pending', 'partial', 'overdue'] },
+              {
+                onError: (/** @type {any} */ echec) => Alert.alert(
+                  t('eventDetails.stageLicense.errorTitle', 'Relance impossible'),
+                  echec?.message
+                    || t('eventDetails.stageLicense.errorBody', 'Rien n’a été envoyé.'),
+                ),
+                onSuccess: () => {
+                  eventLicenseCampaignsQuery.refetch();
+                  Alert.alert(
+                    t('eventDetails.stageLicense.sentTitle', 'Relances envoyées'),
+                    t('eventDetails.stageLicense.sentBody', 'Les impayés ont reçu un rappel.'),
+                  );
+                },
+              },
+            ),
+            text: t('eventDetails.stageLicense.confirmSend', 'Envoyer'),
+          },
+        ],
+      );
+    };
+
+    const handleAffectations = () => {
+      if (!campaignId) return;
+      eventLicenseAssignmentsMutation.mutate({ campaignId }, {
+        onSuccess: () => eventLicenseCampaignsQuery.refetch(),
+      });
+    };
+
+    return (
+      <View
+        style={[
+          ApplicationStyle.borderRadius16,
+          ApplicationStyle.borderWidth1,
+          Spaces.padding[16],
+          Spaces.gap[12],
+          {
+            backgroundColor: withAlpha(Colors.primary500, 0.08),
+            borderColor: withAlpha(Colors.primary500, 0.24),
+          },
+        ]}
+        testID="stage-license-card"
+      >
+        <Text style={[Fonts.p4Bold, Fonts.primary500]}>
+          {t('eventDetails.stageLicense.kicker', 'PROCHAINE ACTION')}
+        </Text>
+
+        {unpaidCount > 0 ? (
+          <View style={[Spaces.gap[4]]}>
+            <Text style={[Fonts.h4Bold, Fonts.neutral00]}>
+              {t('eventDetails.stageLicense.title', 'Relancer {{count}} impayés', {
+                count: unpaidCount,
+              })}
+            </Text>
+            <Text style={[Fonts.p3, Fonts.neutral200]}>
+              {t(
+                'eventDetails.stageLicense.body',
+                'Sur {{total}} inscrit·e·s, {{unpaid}} n’ont pas réglé les {{amount}} du stage',
+                {
+                  amount: formatCampaignAmount(campaign?.defaultAmountCents, currency),
+                  total: assignedCount,
+                  unpaid: unpaidCount,
+                },
+              )}
+            </Text>
+            <Text style={[Fonts.p4, Fonts.neutral300]}>
+              {t('eventDetails.stageLicense.collected', '{{paid}} reçus sur {{expected}} attendus', {
+                expected: formatCampaignAmount(campaign?.totals?.expectedCents, currency),
+                paid: formatCampaignAmount(campaign?.totals?.paidCents, currency),
+              })}
+            </Text>
+          </View>
+        ) : (
+          <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
+            {t('eventDetails.stageLicense.allPaid', 'Tout le monde a réglé sa cotisation.')}
+          </Text>
+        )}
+
+        {unpaidCount > 0 ? (
+          <Button
+            disabled={!isCampaignActive || eventLicenseReminderMutation.isPending}
+            isLoading={eventLicenseReminderMutation.isPending}
+            onPress={handleRelance}
+            title={t('eventDetails.stageLicense.remind', 'Relancer {{count}} impayés', {
+              count: unpaidCount,
+            })}
+            variant="Primary"
+          />
+        ) : null}
+
+        {/* 🔇 Regle 5 du pack : un bouton ferme DIT pourquoi. Une campagne en
+            brouillon ou en pause ne peut rien envoyer, et c'est ecrit. */}
+        {unpaidCount > 0 && !isCampaignActive ? (
+          <Text style={[Fonts.p4, Fonts.neutral300]}>
+            {t(
+              'eventDetails.stageLicense.inactive',
+              'La campagne n’est pas active : aucune relance ne peut partir.',
+            )}
+          </Text>
+        ) : null}
+
+        {withoutAssignment > 0 ? (
+          <View style={[Spaces.gap[8]]}>
+            <Text style={[Fonts.p3, Fonts.neutral200]}>
+              {t(
+                'eventDetails.stageLicense.withoutAssignment',
+                '{{count}} inscrit·e·s sans cotisation',
+                { count: withoutAssignment },
+              )}
+            </Text>
+            <Button
+              disabled={eventLicenseAssignmentsMutation.isPending}
+              isLoading={eventLicenseAssignmentsMutation.isPending}
+              onPress={handleAffectations}
+              title={t(
+                'eventDetails.stageLicense.generate',
+                'Mettre à jour les affectations',
+              )}
+              variant="SecondaryLight"
+            />
+          </View>
+        ) : null}
+      </View>
+    );
+  };
+
+  /**
+   * 🏕️ N2 — L'APERÇU D'UN STAGE (planche 04, cadre 4F).
+   *
+   * Meme contenu qu'avant — periode, horaires, lieu, puces — mais SANS la carte
+   * qui l'enfermait et sans ses deux pastilles maison. Elles creaient un
+   * emboitement que la planche 04 interdit : des onglets DANS un onglet.
+   */
+  const renderStageOverviewTab = () => (
+    <View style={[Spaces.gap[12]]} testID="stage-overview">
+      {renderStageLicenseCard()}
+
+      <View style={[Spaces.gap[4]]}>
+        <Text style={[Fonts.p3, Fonts.neutral200]}>
+          {t('eventDetails.stage.period', 'Période')}
+        </Text>
+        <Text style={[Fonts.p2, Fonts.neutral00]}>
+          {stagePeriodSummary || t('eventDetails.stage.periodEmpty', 'Non renseignée')}
+        </Text>
+      </View>
+      <View style={[Spaces.gap[4]]}>
+        <Text style={[Fonts.p3, Fonts.neutral200]}>
+          {t('eventDetails.stage.hours', 'Horaires')}
+        </Text>
+        <Text style={[Fonts.p2, Fonts.primary500]}>
+          {stageHoursSummary || t('eventDetails.stage.hoursEmpty', 'Variables')}
+        </Text>
+      </View>
+      <View style={[Spaces.gap[4]]}>
+        <Text style={[Fonts.p3, Fonts.neutral200]}>
+          {t('eventDetails.stage.mainPlace', 'Lieu principal')}
+        </Text>
+        <Text style={[Fonts.p2, Fonts.neutral100]}>
+          {event?.facility?.name
+            || event?.locationDetails
+            || t('eventDetails.stage.placeEmpty', 'À définir')}
+        </Text>
+      </View>
+    </View>
+  );
+
+  /**
+   * 📅 N2 — LES JOURNEES DU STAGE (planche 04, cadre 4F, onglet « Jours »).
+   *
+   * Chaque ligne porte son rang, sa date, ses horaires et ses trois compteurs.
+   * ⚠️ Les trois nombres etaient deja la, mais ecrits « 22 presents 1 absents
+   * 1 sans réponse » sur chaque ligne — la planche 04 sort la legende UNE FOIS,
+   * en tete, et laisse les lignes ne porter que les chiffres.
+   */
+  const renderStageDaysTab = () => {
+    if (!stageChildDays.length) {
+      return (
+        <Text style={[Fonts.p2, Fonts.neutral200]} testID="stage-days-empty">
+          {t('eventDetails.stage.noDays', 'Aucune journée de stage n’est encore disponible.')}
+        </Text>
+      );
+    }
+
+    return (
+      <View style={[Spaces.gap[12]]} testID="stage-days">
+        <Text style={[Fonts.p4, Fonts.neutral300]}>
+          {t('eventDetails.stage.legend', 'présent·e·s · absent·e·s · sans réponse')}
+        </Text>
+
+        {stageChildDays.map((stageDay, index) => {
+          const summary = getStageDayStatusSummary(stageDay);
+          const dayDate = new Date(stageDay?.date);
+          const isToday = new Date(serverNowMs).toDateString() === dayDate.toDateString();
+
+          return (
+            <TouchableOpacity
+              key={stageDay?.documentId || stageDay?.date}
+              onPress={() => navigation.navigate(RouteNames.EventDetails, {
+                eventId: stageDay?.documentId,
+              })}
+              style={[
+                ApplicationStyle.borderRadius16,
+                ApplicationStyle.borderWidth1,
+                Spaces.padding[16],
+                Spaces.gap[8],
+                {
+                  backgroundColor: withAlpha(Colors.primary500, isToday ? 0.14 : 0.08),
+                  borderColor: withAlpha(Colors.primary500, isToday ? 0.5 : 0.2),
+                },
+              ]}
+              testID={`stage-day-${index + 1}`}
+            >
+              <View
+                style={[
+                  Alignments.row,
+                  Alignments.justifySpaceBetween,
+                  Alignments.alignCenter,
+                  Spaces.gap[12],
+                ]}
+              >
+                <View style={{ flex: 1 }}>
+                  <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
+                    {`${t('eventDetails.stage.day', 'Jour')} ${index + 1} · ${dayDate.toLocaleDateString('fr-FR', {
+                      day: '2-digit',
+                      month: 'short',
+                      weekday: 'long',
+                    })}`}
+                  </Text>
+                  <Text style={[Fonts.p3, Fonts.neutral200, Spaces.marginTop[4]]}>
+                    {`${String(stageDay?.startTime || '').slice(0, 5)} - ${String(stageDay?.endTime || '').slice(0, 5)}`}
+                  </Text>
+                </View>
+                {isToday ? (
+                  <Tag
+                    style={tournamentDs.getToneTagStyle(Colors.success500)}
+                    text={t('eventDetails.stage.today', 'AUJOURD’HUI')}
+                    textColor="neutral00"
+                    textStyle={{ color: Colors.success500 }}
+                  />
+                ) : null}
+              </View>
+              <Text style={[Fonts.p3Bold, Fonts.neutral100]}>
+                {`${summary.present} · ${summary.absent} · ${summary.pending}`}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+    );
+  };
 
   // ⚠️ `centerContent` N'EST PAS UN CHOIX DE STYLE : sans lui, `SegmentedControl`
   // installe un pan gesture MANUEL (SegmentedControl.js:56 et 243-265) qui
@@ -4751,18 +5452,66 @@ function EventDetails({ navigation, route }) {
     );
   };
 
+  /**
+   * 🎯 N2 — L'ACTION PRIMAIRE D'UN TOURNOI, SELON QUI REGARDE (Q8=C, 6 etats).
+   *
+   * ⚠️ Un tournoi etait le SEUL type d'evenement sans barre du bas : depuis
+   * avril, `renderActionButtons` rendait `null` des qu'il en voyait un, et
+   * l'ecran se terminait sur du vide. Toutes les actions vivaient dans un
+   * panneau pose en HAUT de la page — donc hors de portee du pouce, et hors de
+   * vue des qu'on avait defile.
+   *
+   * ⛔ AUCUN LIBELLE N'EST INVENTE ICI : les six existaient deja dans le
+   * panneau de tete. C'est un DEPLACEMENT, pas un elargissement de droits —
+   * les conditions sont reprises telles quelles, dans le meme ordre.
+   *
+   * @returns {{ onPress: () => void, title: string } | null}
+   */
+  const getTournamentPrimaryAction = () => {
+    if (!isTournamentEvent || isStageDayEvent) return null;
+
+    if (canEdit) {
+      return { onPress: handleOpenTournamentManagement, title: 'Gérer le tournoi' };
+    }
+
+    if (managedTournamentTeam?.documentId) {
+      return {
+        onPress: () => handleOpenTournamentTeam(managedTournamentTeam.documentId),
+        title: 'Gérer mon équipe inscrite',
+      };
+    }
+
+    if (currentUserTournamentTeam?.documentId) {
+      return {
+        onPress: () => handleOpenTournamentTeam(currentUserTournamentTeam.documentId),
+        title: 'Voir mon équipe inscrite',
+      };
+    }
+
+    if (currentUserPendingTournamentTeam?.documentId) {
+      const pendingStatus = normalizeTournamentText(
+        currentUserPendingTournamentTeam?.members?.find(
+          // @ts-ignore: FIXME: Baseline TS regression
+          (member) => member?.user?.documentId === userData?.documentId,
+        )?.responseStatus,
+      );
+      return {
+        onPress: () => handleOpenTournamentTeam(currentUserPendingTournamentTeam.documentId),
+        title: pendingStatus === 'invited' ? 'Répondre à mon invitation' : 'Suivre ma demande',
+      };
+    }
+
+    return { onPress: handleOpenTournamentManagement, title: 'Voir le tournoi' };
+  };
+
   const renderTournamentActionsPanel = () => {
     if (!isTournamentEvent || isStageDayEvent) return null;
-    const primaryActionTitle = canEdit ? 'Gérer le tournoi' : 'Voir le tournoi';
-    const currentUserPendingTournamentMemberStatus = normalizeTournamentText(
-      currentUserPendingTournamentTeam?.members?.find(
-        // @ts-ignore: FIXME: Baseline TS regression
-        (member) => member?.user?.documentId === userData?.documentId,
-      )?.responseStatus,
-    );
-    // D4 : la participation au tournoi (gerer / voir, mon equipe, m'inscrire)
-    // reste TOUJOURS visible — c'est le coeur de l'ecran pour un visiteur. Seules
-    // les actions d'organisation passent dans le panneau compact, replie.
+    // 🎯 N2 — LES QUATRE ACTIONS PRIMAIRES ONT QUITTE CE PANNEAU pour la barre
+    // du bas (`getTournamentPrimaryAction`). Elles etaient en HAUT de la page :
+    // hors de portee du pouce, et invisibles des qu'on avait defile.
+    // ⛔ Il ne reste ici que les deux gestes d'INSCRIPTION.
+    if (!canRegisterTournamentSourceTeam && !canCreateCustomTournamentTeam) return null;
+
     return (
       <View style={[Spaces.gap[12]]}>
         <View
@@ -4779,36 +5528,6 @@ function EventDetails({ navigation, route }) {
             },
           ]}
         >
-          <Button
-            onPress={handleOpenTournamentManagement}
-            title={primaryActionTitle}
-            variant={canEdit ? 'Primary' : 'Secondary'}
-          />
-
-          {managedTournamentTeam?.documentId ? (
-            <Button
-              onPress={() => handleOpenTournamentTeam(managedTournamentTeam.documentId)}
-              title="Gérer mon équipe inscrite"
-              variant="Primary"
-            />
-          ) : null}
-
-          {!managedTournamentTeam?.documentId && currentUserTournamentTeam?.documentId ? (
-            <Button
-              onPress={() => handleOpenTournamentTeam(currentUserTournamentTeam.documentId)}
-              title="Voir mon équipe inscrite"
-              variant="Primary"
-            />
-          ) : null}
-
-          {!managedTournamentTeam?.documentId && !currentUserTournamentTeam?.documentId && currentUserPendingTournamentTeam?.documentId ? (
-            <Button
-              onPress={() => handleOpenTournamentTeam(currentUserPendingTournamentTeam.documentId)}
-              title={currentUserPendingTournamentMemberStatus === 'invited' ? 'Répondre à mon invitation' : 'Suivre ma demande'}
-              variant="Primary"
-            />
-          ) : null}
-
           {canRegisterTournamentSourceTeam ? (
             <Button
               onPress={() => setIsTournamentRegisterModalVisible(true)}
@@ -4953,6 +5672,43 @@ function EventDetails({ navigation, route }) {
       primaryActionHelper = 'Finalise les équipes et les paramètres avant de lancer le tournoi.';
     }
     const teamsSummary = `${tournamentTeamCounters.accepted} validée(s) · ${tournamentTeamCounters.pending} en attente`;
+
+    // 🧭 LES CINQ ETAPES DU FIL — ce que la page sait, sans un appel de plus.
+    //
+    // ponytail: « Poules » et « Matchs » ne sont pas distinguees de « Publié ».
+    //   PLAFOND : la page ne peut pas savoir si les poules existent mais ne sont
+    //   pas publiees — cet etat-la vit derriere `GET /events/:id/tournament/dashboard`.
+    //   POURQUOI ON NE L'APPELLE PAS : ce hook tire `tournamentCompetitionService`,
+    //   donc `@/services/client`. Les treize suites qui montent cet ecran
+    //   devraient toutes le mocker, et le projet a deja paye ce piege (un import
+    //   de service de plus = des suites entieres qui ne s'executent plus).
+    //   CE QUI RESTE VRAI : publier EXIGE des poules et des matchs. Un tournoi
+    //   publie a donc necessairement franchi les etapes 3 et 4 — le fil ne ment
+    //   jamais, il est seulement moins precis pendant le brouillon.
+    //   SORTIE : appeler `useGetTournamentDashboard` le jour ou un lot mocke ce
+    //   module dans les treize suites.
+    const tournamentRailSteps = [
+      {
+        done: Boolean(event?.tournamentConfig?.formatMode),
+        label: t('eventDetails.tournamentRail.settings', 'Réglages'),
+      },
+      {
+        done: tournamentTeamCounters.accepted >= 2,
+        label: t('eventDetails.tournamentRail.teams', 'Équipes'),
+      },
+      {
+        done: isCompetitionPublished,
+        label: t('eventDetails.tournamentRail.groups', 'Poules'),
+      },
+      {
+        done: isCompetitionPublished,
+        label: t('eventDetails.tournamentRail.matches', 'Matchs'),
+      },
+      {
+        done: isCompetitionPublished,
+        label: t('eventDetails.tournamentRail.published', 'Publié'),
+      },
+    ];
     const tournamentScopeLabel = event?.tournamentScopeMode === 'autonomous'
       ? 'Tournoi autonome'
       : 'Équipe source';
@@ -5043,6 +5799,14 @@ function EventDetails({ navigation, route }) {
           ) : null}
         </View>
 
+        <TournamentProgressRail
+          note={tournamentTeamCounters.pending > 0
+            ? `${tournamentTeamCounters.pending} inscription${tournamentTeamCounters.pending > 1 ? 's' : ''} à vérifier`
+            : ''}
+          steps={tournamentRailSteps}
+          title={t('eventDetails.tournamentRail.title', 'OÙ EN EST LE TOURNOI')}
+        />
+
         {currentUserTournamentMember ? (
           <View style={tournamentDs.styles.panelCard}>
             <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter, Spaces.gap[12]]}>
@@ -5082,6 +5846,30 @@ function EventDetails({ navigation, route }) {
             </View>
           </View>
         ) : null}
+      </View>
+    );
+  };
+
+  /**
+   * 🏆 N2 — L'ONGLET « Équipes » D'UN TOURNOI (planche 04, cadre 4E).
+   *
+   * Tout ce qui parle des equipes inscrites vit ici : le resume, les cartes, et
+   * les deux gestes d'INSCRIPTION qui vivaient dans le panneau de tete.
+   *
+   * ⚠️ LES BOUTONS « Valider » / « Refuser » N'ONT PAS BOUGE D'UN POUCE. Ils
+   * acceptent ou refusent l'inscription d'une equipe — un geste qui engage
+   * l'organisateur vis-a-vis d'un tiers. Meme condition (`canEdit` et statut
+   * `pending`), meme handler, meme charge. Seul l'onglet qui les contient est
+   * neuf, et c'est le filet de l'etape 1 qui le prouve.
+   */
+  const renderTournamentTeamsTab = () => {
+    if (!isTournamentEvent || isStageDayEvent) return null;
+
+    const teamsSummary = `${tournamentTeamCounters.accepted} validée(s) · ${tournamentTeamCounters.pending} en attente`;
+
+    return (
+      <View style={Spaces.gap[16]}>
+        {renderTournamentActionsPanel()}
 
         <View style={tournamentDs.styles.panelCard}>
           <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter, Spaces.gap[12]]}>
@@ -5112,14 +5900,22 @@ function EventDetails({ navigation, route }) {
         {tournamentTeams.map((tournamentTeam) => {
           const rosterSummary = getTournamentRosterSummary(tournamentTeam, tournamentConfig);
           const hasRosterWarning = isTournamentTeamNonCompliant(tournamentTeam, tournamentConfig);
-          let tournamentTeamStatusLabel = 'Équipe inscrite';
+          // 🏷️ Les quatre etats, tels que la planche 04 les nomme : deux mots
+          // en capitales, lisibles d'un coup d'oeil sur une pile de cartes.
+          let tournamentTeamStatusLabel = t('eventDetails.tournamentTeams.accepted', 'INSCRITE');
           if (tournamentTeam?.status === 'pending') {
-            tournamentTeamStatusLabel = 'Validation en attente';
+            tournamentTeamStatusLabel = t('eventDetails.tournamentTeams.pending', 'À VÉRIFIER');
           } else if (tournamentTeam?.status === 'declined') {
-            tournamentTeamStatusLabel = 'Équipe refusée';
+            tournamentTeamStatusLabel = t('eventDetails.tournamentTeams.declined', 'REFUSÉE');
           } else if (tournamentTeam?.status === 'archived') {
-            tournamentTeamStatusLabel = 'Équipe archivée';
+            tournamentTeamStatusLabel = t('eventDetails.tournamentTeams.archived', 'ARCHIVÉE');
           }
+          // 👑 Le capitaine ou le referent : la carte disait le NOMBRE de joueurs
+          // sans jamais dire A QUI s'adresser pour cette equipe.
+          const tournamentTeamLead = [
+            tournamentTeam?.captainUser?.firstname,
+            tournamentTeam?.captainUser?.lastname,
+          ].filter(Boolean).join(' ');
 
           return (
             <TouchableOpacity
@@ -5145,9 +5941,16 @@ function EventDetails({ navigation, route }) {
                 />
               </View>
 
-              <Text style={[Fonts.p4, Fonts.neutral200]}>
+              <Text style={[Fonts.p4Bold, Fonts.neutral200]}>
                 {tournamentTeamStatusLabel}
               </Text>
+              {tournamentTeamLead ? (
+                <Text style={[Fonts.p4, Fonts.neutral300]}>
+                  {t('eventDetails.tournamentTeams.lead', 'Référent·e : {{name}}', {
+                    name: tournamentTeamLead,
+                  })}
+                </Text>
+              ) : null}
               <View style={[Alignments.row, Spaces.gap[8], { flexWrap: 'wrap' }]}>
                 {rosterSummary.invitedCount > 0 ? (
                   <Tag
@@ -5172,19 +5975,22 @@ function EventDetails({ navigation, route }) {
 
               {canEdit && tournamentTeam?.status === 'pending' ? (
                 <View style={[Alignments.row, Spaces.gap[12], Spaces.marginTop[4]]}>
+                  {/* 📏 44 px (`isOption`), et non les 39 px de `size="sm"` : la
+                      planche 04 fixe cette taille pour les deux gestes qui
+                      engagent l'organisateur vis-a-vis d'une equipe. */}
                   <Button
                     isLoading={reviewTournamentTeamMutation.isPending}
+                    isOption
                     onPress={() => handleReviewTournamentTeam(tournamentTeam?.documentId, 'accepted')}
-                    size="sm"
                     title="Valider"
                     variant="Primary"
                   />
                   <Button
                     isLoading={reviewTournamentTeamMutation.isPending}
+                    isOption
                     onPress={() => handleReviewTournamentTeam(tournamentTeam?.documentId, 'declined')}
-                    size="sm"
                     style={{ borderColor: `${Colors.error500}55` }}
-                    textStyle={{ color: Colors.error500 }}
+                    textStyle={{ color: Colors.error300 }}
                     title="Refuser"
                     variant="SecondaryLight"
                   />
@@ -5218,8 +6024,29 @@ function EventDetails({ navigation, route }) {
       );
     }
 
+    // 🏆 N2 — LE TOURNOI RETROUVE UNE BARRE DU BAS (Q8=C).
+    //
+    // ⚠️ Il en etait prive DEPUIS AVRIL : ce `return null` renvoyait un ecran
+    // qui se termine sur du vide, quel que soit le role. Un seul bouton
+    // desormais, celui que CE lecteur-la peut faire — jamais une pile de six.
+    //
+    // 📏 52 px, et non les 47 px par defaut du composant : la planche 04 le
+    // demande explicitement pour cette barre-la. C'est le seul bouton de
+    // l'ecran, il porte donc toute la surface d'appui.
     if (isTournamentEvent && !isStageDayEvent) {
-      return null;
+      const primaryAction = getTournamentPrimaryAction();
+      if (!primaryAction) return null;
+
+      return (
+        <View testID="tournament-bottom-bar">
+          <Button
+            onPress={primaryAction.onPress}
+            style={{ height: 52 }}
+            title={primaryAction.title}
+            variant="Primary"
+          />
+        </View>
+      );
     }
 
     // D4 : le bouton autonome « Mettre à la une » a disparu — c'est la chip
@@ -5579,154 +6406,27 @@ function EventDetails({ navigation, route }) {
             {renderViewerConvocationLine()}
             {renderDetailsTabs()}
             <View style={[Spaces.gap[24]]}>
-              {showCallUpTab && renderCompoReminder()}
-
-              {isStageParentEvent ? (
+              {/* 🧾 N2 — LA DESCRIPTION OUVRE L APERÇU, POUR LES QUATRE TYPES.
+                  Regle 2 du pack : un seul champ, le meme nom partout, EN HAUT
+                  de l Apercu. Sur un stage et sur un tournoi, quatre blocs
+                  passaient avant elle — rappel compo, bloc du stage, lien vers
+                  le stage parent, section tournoi. Elle passe devant. */}
+              {showOverviewTab && eventDescriptionText ? (
                 <View style={[Spaces.gap[16]]}>
-                  <Text style={[Fonts.h3Bold, Fonts.neutral00]}>
-                    {isTournamentEvent ? 'Tournoi' : 'Stage'}
-                  </Text>
-                  <View
-                    style={[
-                      ApplicationStyle.backgroundColor.primary900,
-                      ApplicationStyle.borderRadius24,
-                      ApplicationStyle.borderWidth1,
-                      Spaces.padding[16],
-                      Spaces.gap[16],
-                      {
-                        borderColor: `${Colors.primary500}55`,
-                      },
-                    ]}
-                  >
-                    <View style={[Alignments.row, Spaces.gap[8]]}>
-                      {[
-                        { key: 'overview', label: 'Vue générale' },
-                        { key: 'days', label: 'Jours' },
-                      ].map((tab) => {
-                        const selected = stageDetailsTab === tab.key;
-                        return (
-                          <TouchableOpacity
-                            key={tab.key}
-                            onPress={() => setStageDetailsTab(tab.key)}
-                            style={[
-                              ApplicationStyle.borderRadius100,
-                              Spaces.paddingHorizontal[16],
-                              Spaces.paddingVertical[12],
-                              {
-                                backgroundColor: selected ? `${Colors.primary500}22` : 'rgba(255,255,255,0.05)',
-                                borderColor: selected
-                                  ? Colors.primary500
-                                  : `${Colors.primary500}40`,
-                                borderWidth: 1,
-                              },
-                            ]}
-                          >
-                            <Text style={[Fonts.p3Bold, selected ? Fonts.primary500 : Fonts.neutral200]}>
-                              {tab.label}
-                            </Text>
-                          </TouchableOpacity>
-                        );
-                      })}
-                    </View>
-
-                    {stageDetailsTab === 'overview' ? (
-                      <View style={[Spaces.gap[12]]}>
-                        <View style={[Spaces.gap[4]]}>
-                          <Text style={[Fonts.p3, Fonts.neutral200]}>Période</Text>
-                          <Text style={[Fonts.p2, Fonts.neutral00]}>{stagePeriodSummary || 'Non renseignée'}</Text>
-                        </View>
-                        <View style={[Spaces.gap[4]]}>
-                          <Text style={[Fonts.p3, Fonts.neutral200]}>Horaires</Text>
-                          <Text style={[Fonts.p2, Fonts.primary500]}>{stageHoursSummary || 'Variables'}</Text>
-                        </View>
-                        <View style={[Spaces.gap[4]]}>
-                          <Text style={[Fonts.p3, Fonts.neutral200]}>Lieu principal</Text>
-                          <Text style={[Fonts.p2, Fonts.neutral100]}>
-                            {event?.facility?.name || event?.locationDetails || 'A définir'}
-                          </Text>
-                        </View>
-                        <View style={[Alignments.row, Spaces.gap[8], { flexWrap: 'wrap' }]}>
-                          <View
-                            style={[
-                              ApplicationStyle.card,
-                              Spaces.paddingHorizontal[12],
-                              Spaces.paddingVertical[8],
-                              {
-                                backgroundColor: 'rgba(1, 179, 244, 0.08)',
-                                borderColor: 'rgba(1, 179, 244, 0.20)',
-                              },
-                            ]}
-                          >
-                            <Text style={[Fonts.p3Bold, Fonts.primary500]}>{`${stageChildDays.length} jour(s)`}</Text>
-                          </View>
-                          <View
-                            style={[
-                              ApplicationStyle.card,
-                              Spaces.paddingHorizontal[12],
-                              Spaces.paddingVertical[8],
-                              {
-                                backgroundColor: 'rgba(1, 179, 244, 0.08)',
-                                borderColor: 'rgba(1, 179, 244, 0.20)',
-                              },
-                            ]}
-                          >
-                            <Text style={[Fonts.p3Bold, Fonts.primary500]}>{`${event?.participations?.length || 0} inscrit(s)`}</Text>
-                          </View>
-                        </View>
-                      </View>
-                    ) : (
-                      <View style={[Spaces.gap[12]]}>
-                        {stageChildDays.map((stageDay) => {
-                          const summary = getStageDayStatusSummary(stageDay);
-                          return (
-                            <TouchableOpacity
-                              key={stageDay?.documentId || stageDay?.date}
-                              onPress={() => navigation.navigate(RouteNames.EventDetails, {
-                                eventId: stageDay?.documentId,
-                              })}
-                              style={[
-                                ApplicationStyle.card,
-                                Spaces.padding[16],
-                                Spaces.gap[8],
-                                {
-                                  backgroundColor: 'rgba(1, 179, 244, 0.08)',
-                                  borderColor: 'rgba(1, 179, 244, 0.20)',
-                                },
-                              ]}
-                            >
-                              <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter, Spaces.gap[12]]}>
-                                <View style={{ flex: 1 }}>
-                                  <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
-                                    {new Date(stageDay?.date).toLocaleDateString('fr-FR', {
-                                      day: '2-digit',
-                                      month: 'short',
-                                      weekday: 'long',
-                                    })}
-                                  </Text>
-                                  <Text style={[Fonts.p3, Fonts.neutral200, Spaces.marginTop[4]]}>
-                                    {`${String(stageDay?.startTime || '').slice(0, 5)} - ${String(stageDay?.endTime || '').slice(0, 5)}`}
-                                  </Text>
-                                </View>
-                                <Text style={[Fonts.p3Bold, Fonts.primary500]}>Voir</Text>
-                              </View>
-                              <View style={[Alignments.row, Spaces.gap[8], { flexWrap: 'wrap' }]}>
-                                <Text style={[Fonts.p4, Fonts.neutral200]}>{`${summary.present} presents`}</Text>
-                                <Text style={[Fonts.p4, Fonts.neutral200]}>{`${summary.absent} absents`}</Text>
-                                <Text style={[Fonts.p4, Fonts.neutral200]}>{`${summary.pending} sans réponse`}</Text>
-                              </View>
-                            </TouchableOpacity>
-                          );
-                        })}
-                        {stageChildDays.length === 0 ? (
-                          <Text style={[Fonts.p2, Fonts.neutral200]}>
-                            Aucune journee de stage n&apos;est encore disponible.
-                          </Text>
-                        ) : null}
-                      </View>
-                    )}
-                  </View>
+                  <Text style={[Fonts.h3Bold, Fonts.neutral00]}>{t('eventDetails.fields.description')}</Text>
+                  <Text style={[Fonts.p1, Fonts.primary100]}>{eventDescriptionText}</Text>
                 </View>
               ) : null}
+
+              {showCallUpTab && renderCompoReminder()}
+
+              {/* 🏕️ N2 — LE STAGE PERD SES DEUX PASTILLES MAISON. Elles
+                  vivaient DANS une carte, ce qui faisait des onglets a
+                  l interieur d un onglet. Le contenu, lui, est intact : il a
+                  simplement rejoint la matrice commune. */}
+              {showOverviewTab && isStageParentEvent ? renderStageOverviewTab() : null}
+
+              {showStageDaysTab && isStageParentEvent ? renderStageDaysTab() : null}
 
               {isStageDayEvent && event?.parentEvent?.documentId ? (
                 <TouchableOpacity
@@ -5752,14 +6452,9 @@ function EventDetails({ navigation, route }) {
                 </TouchableOpacity>
               ) : null}
 
-              {renderTournamentSection()}
+              {showOverviewTab ? renderTournamentSection() : null}
 
-              {showOverviewTab && eventDescriptionText ? (
-                <View style={[Spaces.gap[16]]}>
-                  <Text style={[Fonts.h3Bold, Fonts.neutral00]}>{t('eventDetails.fields.description')}</Text>
-                  <Text style={[Fonts.p1, Fonts.primary100]}>{eventDescriptionText}</Text>
-                </View>
-              ) : null}
+              {showTournamentTeamsTab ? renderTournamentTeamsTab() : null}
 
               {showOverviewTab && canSelfMarkArrival && selfAttendanceStatus ? (
                 <View style={[Spaces.gap[12]]}>
@@ -5835,7 +6530,9 @@ function EventDetails({ navigation, route }) {
                   n'affichait donc RIEN — l'organisateur ne savait pas s'il avait
                   oublie un reglage. C'est desormais le composant qui decide quoi
                   dire, en UN seul endroit, commande par `isDetection`. */}
-              {isDetectionEvent ? (
+              {showDetectionSplitTab && isDetectionEvent ? renderDetectionSplitTab() : null}
+
+              {showOverviewTab && isDetectionEvent ? (
                 <EventDetectionSlots
                   canEdit={canEdit}
                   currentUserHasGenericParticipation={Boolean((hasAcceptedRequest || hasPendingRequest) && !currentUserDetectionParticipation)}
@@ -5933,6 +6630,15 @@ function EventDetails({ navigation, route }) {
                   pendingParticipations={pendingParticipations}
                   teamParticipationSections={teamParticipationSections}
                 />
+              ) : null}
+
+              {/* 👥 N2 — « Personnes » SUR UN TOURNOI. La liste des participations
+                  ne dit rien d'un tournoi : on n'y participe pas seul, on y
+                  participe PAR SON EQUIPE. C'est donc les effectifs des equipes
+                  inscrites qu'il faut reunir, et c'est un composant a part.
+                  🔒 Les noms ne sortent que pour qui organise. */}
+              {showParticipantsTab && isTournamentEvent && !isStageDayEvent ? (
+                <TournamentPeopleList canSeeNames={canEdit} teams={tournamentTeams} />
               ) : null}
 
               {showOverviewTab && isMatchEvent
