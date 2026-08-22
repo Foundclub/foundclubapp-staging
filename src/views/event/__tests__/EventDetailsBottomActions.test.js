@@ -303,6 +303,37 @@ jest.mock(
 
 // eslint-disable-next-line import/first
 import { getEventShowcaseTemplate } from '@/domains/visuals/eventShowcaseTemplate';
+
+// 🎛️ L4-A — LA DOUBLURE DES ONGLETS, ET ELLE N'EST PAS FACULTATIVE.
+// `SegmentedControl` importe `react-native-gesture-handler`, dont
+// `lib/commonjs/specs/NativeRNGestureHandlerModule.ts` n'est PAS couvert par le
+// `transformIgnorePatterns` du depot : sans doublure, la SUITE ENTIERE meurt au
+// chargement (« Cannot use import statement outside a module ») et AUCUN test
+// ne s'execute. C'est pour ca que les 16 autres appelants du composant le
+// doublent aussi (motif ClubDetails.deuxPortes.test.js:299).
+// La doublure rend un pressable par onglet, portant son libelle : le dessin est
+// verifie chez le composant (201 lignes de test), ce qui se verifie ici c'est
+// CE QU'ON LUI DONNE et CE QU'IL COMMANDE.
+jest.mock('@/components/molecules/segmentedControl/SegmentedControl', () => {
+  const react = jest.requireActual('react');
+  const rn = jest.requireActual('react-native');
+  return function SegmentedControlDouble(/** @type {any} */ props) {
+    return react.createElement(
+      rn.View,
+      { testID: 'doublure-onglets' },
+      (props.options || []).map((/** @type {any} */ option) => react.createElement(
+        rn.TouchableOpacity,
+        {
+          key: option.value,
+          onPress: () => props.onChange(option.value),
+          testID: `onglet-${option.value}`,
+        },
+        react.createElement(rn.Text, null, option.label),
+      )),
+    );
+  };
+});
+
 // eslint-disable-next-line import/first
 import EventDetails from '../EventDetails';
 
@@ -446,7 +477,6 @@ const press = (/** @type {any} */ root, /** @type {string} */ label) => {
     node.props.onPress();
   });
 };
-
 
 /**
  * LA COUTURE. Toutes les actions du bas d'ecran REELLEMENT atteignables, quel

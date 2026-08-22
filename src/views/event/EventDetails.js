@@ -49,6 +49,7 @@ import HeaderBackButton from '@/components/atoms/headerBackButton/HeaderBackButt
 import Tag from '@/components/atoms/tag/Tag';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 import EventAnswerButtons from '@/components/molecules/eventAnswerButtons/EventAnswerButtons';
+import SegmentedControl from '@/components/molecules/segmentedControl/SegmentedControl';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
 import JoinEventModal from '@/components/organisms/joinEventModal/JoinEventModal';
 import RefuseParticipationModal from '@/components/organisms/refuseParticipationModal/RefuseParticipationModal';
@@ -540,6 +541,10 @@ function EventDetails({ navigation, route }) {
   const [isTrainingOpenModalVisible, setIsTrainingOpenModalVisible] = useState(false);
   const [selectedParticipationId, setSelectedParticipationId] = useState('');
   const [stageDetailsTab, setStageDetailsTab] = useState('overview');
+  // L4-A : les onglets du MATCH. ⛔ A ne pas confondre avec `stageDetailsTab`
+  // juste au-dessus, qui appartient au bloc « stage parent » et n'a rien a voir
+  // avec ce lot. Aucun autre type d'evenement ne lit celui-ci.
+  const [detailsTab, setDetailsTab] = useState('overview');
   // L4-B : le panneau d'organisation n'est plus un accordeon dans la colonne,
   // c'est une FEUILLE ouverte par le ⋯ de la barre du haut. Elle part fermee,
   // pour la meme raison qu'avant D4 : ouverte, elle cache la page entiere.
@@ -4203,6 +4208,68 @@ function EventDetails({ navigation, route }) {
   });
   const hasManageActions = manageChips.length > 0;
 
+  // ───────────────────────────────────────────────────────────────────────────
+  // L4-A — LES ONGLETS DU MATCH (maquette planche 04, cadres 4A et 4B).
+  //
+  // La page empilait 19 blocs dans UNE colonne. Elle en garde une ZONE FIXE
+  // (pastille de type, adversaire, carte d'entete, statut de convocation, barre
+  // du bas) et repartit le RESTE en trois onglets.
+  //
+  // ⛔ UN SEUL TYPE : le MATCH. Le tournoi, le stage, la detection et
+  // l'entrainement gardent leur colonne A L'IDENTIQUE — decision du CONSTAT
+  // (« un seul type dans ce lot ») et d'Adel (Q2, 2026-08-20 : le tournoi est un
+  // lot separe, apres qu'il ait retrouve une barre du bas).
+  // ⇒ C'est ce que dit `!isMatchEvent ||` en tete de chaque drapeau : hors
+  // match, les trois sont VRAIS en meme temps, donc tout se rend comme avant.
+  //
+  // ⚠️ « Match amical » contient « match » : `isMatchEvent` est vrai pour lui
+  // (comparaison par sous-chaine, l. ~2750). C'est voulu — meme metier, meme
+  // page — et c'est fige par temoin plutot que laisse a la surprise.
+  const detailsTabs = useMemo(() => {
+    if (!isMatchEvent) return [];
+    return [
+      { label: t('eventDetails.tabs.overview', 'Aperçu'), value: 'overview' },
+      { label: t('eventDetails.fields.participations', 'Participants'), value: 'participants' },
+      { label: t('eventDetails.tabs.callUp', 'Convocation'), value: 'callUp' },
+    ];
+  }, [isMatchEvent, t]);
+
+  const showOverviewTab = !isMatchEvent || detailsTab === 'overview';
+  const showParticipantsTab = !isMatchEvent || detailsTab === 'participants';
+  const showCallUpTab = !isMatchEvent || detailsTab === 'callUp';
+
+  // Les trois conditions que la repartition en onglets rendait trop longues
+  // pour tenir sur leur ligne d'ouverture. Elles sont REPRISES TELLES QUELLES
+  // des blocs ou elles vivaient : c'est un nom pose dessus, pas une regle qui
+  // change.
+  const hasEventTasks = Array.isArray(event?.eventTasks) && event.eventTasks.length > 0;
+  const hasTeamAudiences = Array.isArray(event?.teamAudiences)
+    && event.teamAudiences.length > 0;
+  const showPublishedComposition = supportsEventComposition
+    && (canViewPublishedComposition || canEdit);
+
+  // ⚠️ `centerContent` N'EST PAS UN CHOIX DE STYLE : sans lui, `SegmentedControl`
+  // installe un pan gesture MANUEL (SegmentedControl.js:56 et 243-265) qui
+  // entrerait en conflit avec le defilement vertical de la ScrollView qui
+  // l'entoure. Avec trois onglets courts, la repartition en largeurs egales est
+  // de toute facon celle de la maquette.
+  // ⚠️ Le composant ne pose AUCUNE marge externe : c'est l'appelant qui les
+  // pose (motif CMMembersScreen.js:297). Ici, le `gap: 24` du conteneur suffit.
+  const renderDetailsTabs = () => {
+    if (!detailsTabs.length) return null;
+
+    return (
+      <View style={[Alignments.alignCenter]} testID="event-details-tabs">
+        <SegmentedControl
+          centerContent
+          onChange={setDetailsTab}
+          options={detailsTabs}
+          value={detailsTab}
+        />
+      </View>
+    );
+  };
+
   // L4-B : `manageSurfaceStyle` decrivait la surface flottante de l'accordeon.
   // Il n'a plus de lecteur — la feuille porte son propre fond, celui de
   // `BottomModal`.
@@ -5247,9 +5314,10 @@ function EventDetails({ navigation, route }) {
           <WithDataWrapper error={error} isLoading={isLoading} wrapperStyle={[Alignments.fill, Spaces.gap[24]]}>
             <EventHeader event={event} matchScoreSummary={matchHeaderScoreSummary} />
             {renderTournamentActionsPanel()}
-            {renderCompoReminder()}
             {renderViewerConvocationLine()}
+            {renderDetailsTabs()}
             <View style={[Spaces.gap[24]]}>
+              {showCallUpTab && renderCompoReminder()}
 
               {isStageParentEvent ? (
                 <View style={[Spaces.gap[16]]}>
@@ -5422,7 +5490,7 @@ function EventDetails({ navigation, route }) {
                 </TouchableOpacity>
               ) : null}
 
-              {Array.isArray(event?.eventTasks) && event.eventTasks.length > 0 ? (
+              {showOverviewTab && hasEventTasks ? (
                 <EventTasksSection
                   canManageEvent={canEdit}
                   event={event}
@@ -5432,14 +5500,14 @@ function EventDetails({ navigation, route }) {
 
               {renderTournamentSection()}
 
-              {eventDescriptionText ? (
+              {showOverviewTab && eventDescriptionText ? (
                 <View style={[Spaces.gap[16]]}>
                   <Text style={[Fonts.h3Bold, Fonts.neutral00]}>{t('eventDetails.fields.description')}</Text>
                   <Text style={[Fonts.p1, Fonts.primary100]}>{eventDescriptionText}</Text>
                 </View>
               ) : null}
 
-              {canSelfMarkArrival && selfAttendanceStatus ? (
+              {showOverviewTab && canSelfMarkArrival && selfAttendanceStatus ? (
                 <View style={[Spaces.gap[12]]}>
                   <Text style={[Fonts.h3Bold, Fonts.neutral00]}>Statut d&apos;arrivée</Text>
                   <View
@@ -5521,7 +5589,7 @@ function EventDetails({ navigation, route }) {
                 />
               ) : null}
 
-              {Array.isArray(event?.teamAudiences) && event.teamAudiences.length > 0 ? (
+              {showOverviewTab && hasTeamAudiences ? (
                 <EventTeamAudiencesSection
                   canManageEvent={canEdit}
                   event={event}
@@ -5573,7 +5641,7 @@ function EventDetails({ navigation, route }) {
                 </View>
               ) : null}
 
-              {(!isTournamentEvent || isStageDayEvent) ? (
+              {showParticipantsTab && (!isTournamentEvent || isStageDayEvent) ? (
                 <EventParticipants
                   // @ts-ignore: FIXME: Baseline TS regression
                   attendanceByUserId={attendanceByUserId}
@@ -5597,7 +5665,7 @@ function EventDetails({ navigation, route }) {
                 />
               ) : null}
 
-              {isMatchEvent
+              {showOverviewTab && isMatchEvent
             && compositionTeamId
             && isTeamMember
             && isMatchFinished
@@ -5626,7 +5694,7 @@ function EventDetails({ navigation, route }) {
               </View>
                 ) : null}
 
-              {isMatchEvent && compositionTeamId && isTeamMember && isMatchFinished && canRespondMyMatchStats ? (
+              {showOverviewTab && isMatchEvent && compositionTeamId && isTeamMember && isMatchFinished && canRespondMyMatchStats ? (
                 <View style={[Spaces.gap[12]]}>
                   <Text style={[Fonts.h3Bold, Fonts.neutral00]}>Mes stats</Text>
                   <View
@@ -5709,7 +5777,7 @@ function EventDetails({ navigation, route }) {
                 </View>
               ) : null}
 
-              {isMatchEvent && compositionTeamId && isTeamMember && isMatchFinished && canRespondMyMatchStats ? (
+              {showOverviewTab && isMatchEvent && compositionTeamId && isTeamMember && isMatchFinished && canRespondMyMatchStats ? (
                 <View style={[Spaces.gap[12]]}>
                   <Text style={[Fonts.h3Bold, Fonts.neutral00]}>Mon retour coach</Text>
                   <View
@@ -5776,7 +5844,7 @@ function EventDetails({ navigation, route }) {
                 </View>
               ) : null}
 
-              {isMatchEvent && compositionTeamId && canViewMatchStats ? (
+              {showOverviewTab && isMatchEvent && compositionTeamId && canViewMatchStats ? (
                 <View style={[Spaces.gap[12]]}>
                   <Text style={[Fonts.h3Bold, Fonts.neutral00]}>Stats du match</Text>
                   <View
@@ -5945,7 +6013,7 @@ function EventDetails({ navigation, route }) {
                 </View>
               ) : null}
 
-              {supportsEventComposition && (canViewPublishedComposition || canEdit) ? (
+              {showCallUpTab && showPublishedComposition ? (
                 <View style={[Spaces.gap[12]]}>
                   <Text style={[Fonts.h3Bold, Fonts.neutral00]}>
                     Composition d&apos;equipes

@@ -1189,6 +1189,10 @@ export default {
       participating: 'Présent·e·s',
     },
     participationSuccess: 'Ta participation est enregistrée.',
+    tabs: {
+      callUp: 'Convocation',
+      overview: 'Aperçu',
+    },
   },
   eventEdit: {
     actions: {

@@ -288,6 +288,54 @@ jest.mock(
 );
 /* eslint-enable global-require */
 
+// 🎛️ L4-A — LA DOUBLURE DES ONGLETS, ET ELLE N'EST PAS FACULTATIVE.
+// `SegmentedControl` importe `react-native-gesture-handler`, dont
+// `lib/commonjs/specs/NativeRNGestureHandlerModule.ts` n'est PAS couvert par le
+// `transformIgnorePatterns` du depot : sans doublure, la SUITE ENTIERE meurt au
+// chargement (« Cannot use import statement outside a module ») et AUCUN test
+// ne s'execute. C'est pour ca que les 16 autres appelants du composant le
+// doublent aussi (motif ClubDetails.deuxPortes.test.js:299).
+// La doublure rend un pressable par onglet, portant son libelle : le dessin est
+// verifie chez le composant (201 lignes de test), ce qui se verifie ici c'est
+// CE QU'ON LUI DONNE et CE QU'IL COMMANDE.
+jest.mock('@/components/molecules/segmentedControl/SegmentedControl', () => {
+  const react = jest.requireActual('react');
+  const rn = jest.requireActual('react-native');
+  return function SegmentedControlDouble(/** @type {any} */ props) {
+    return react.createElement(
+      rn.View,
+      { testID: 'doublure-onglets' },
+      (props.options || []).map((/** @type {any} */ option) => react.createElement(
+        rn.TouchableOpacity,
+        {
+          key: option.value,
+          onPress: () => props.onChange(option.value),
+          testID: `onglet-${option.value}`,
+        },
+        react.createElement(rn.Text, null, option.label),
+      )),
+    );
+  };
+});
+
+/**
+ * Bascule sur l'onglet demande. Sans effet sur un evenement qui n'a pas
+ * d'onglets (tout type autre que le match) : la colonne y est entiere.
+ * @param {any} root - Racine du rendu.
+ * @param {string} valeur - 'overview' | 'participants' | 'callUp'.
+ * @returns {void}
+ */
+const allerSurLOnglet = (root, valeur) => {
+  const [onglet] = root.findAll(
+    (/** @type {any} */ node) => node.props?.testID === `onglet-${valeur}`,
+    { deep: false },
+  );
+  if (!onglet) return;
+  act(() => {
+    onglet.props.onPress();
+  });
+};
+
 // eslint-disable-next-line import/first
 import EventDetails from '../EventDetails';
 
@@ -589,8 +637,26 @@ const ouvrirLaFeuilleDeGestion = () => {
 };
 
 describe('AD01 · TEMOIN 1 — 🥇 le convoque le sait SANS faire defiler', () => {
-  test('« Tu es convoque · Titulaire » se lit AVANT le bloc du bas', () => {
+  // L4-A : « avant le bloc du bas » devient « AU MONTAGE, sans un seul appui ».
+  // La garantie de fond ne bouge pas d'un pouce — elle se renforce meme : la
+  // ligne vit maintenant dans la ZONE FIXE, au-dessus des onglets, donc elle
+  // n'est plus seulement AVANT le bloc « Composition d'equipes », elle est
+  // TOUJOURS LA, quel que soit l'onglet ouvert. Le bloc du bas, lui, a migre
+  // dans l'onglet Convocation : il n'est plus dans le meme releve, et
+  // comparer deux rangs dont l'un n'existe pas ne prouverait plus rien.
+  test('« Tu es convoque · Titulaire » se lit AU MONTAGE, sans aucun appui', () => {
     const textes = textesVisibles(monter());
+
+    expect(rangDe(textes, 'Tu es convoqué · Titulaire')).toBeGreaterThanOrEqual(0);
+    // Et le bloc du bas n'est PAS dans la meme vue : c'est ce qui prouve que la
+    // ligne n'a pas simplement suivi le bloc dans son onglet.
+    expect(rangDe(textes, BLOC_DU_BAS)).toBe(-1);
+  });
+
+  test('et elle precede toujours le bloc du bas, une fois l onglet ouvert', () => {
+    const root = monter();
+    allerSurLOnglet(root, 'callUp');
+    const textes = textesVisibles(root);
 
     const ligne = rangDe(textes, 'Tu es convoqué · Titulaire');
     const bas = rangDe(textes, BLOC_DU_BAS);

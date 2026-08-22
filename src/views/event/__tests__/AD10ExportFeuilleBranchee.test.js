@@ -281,6 +281,54 @@ jest.mock('../components/EventParticipants', () => {
   };
 });
 
+// 🎛️ L4-A — LA DOUBLURE DES ONGLETS, ET ELLE N'EST PAS FACULTATIVE.
+// `SegmentedControl` importe `react-native-gesture-handler`, dont
+// `lib/commonjs/specs/NativeRNGestureHandlerModule.ts` n'est PAS couvert par le
+// `transformIgnorePatterns` du depot : sans doublure, la SUITE ENTIERE meurt au
+// chargement (« Cannot use import statement outside a module ») et AUCUN test
+// ne s'execute. C'est pour ca que les 16 autres appelants du composant le
+// doublent aussi (motif ClubDetails.deuxPortes.test.js:299).
+// La doublure rend un pressable par onglet, portant son libelle : le dessin est
+// verifie chez le composant (201 lignes de test), ce qui se verifie ici c'est
+// CE QU'ON LUI DONNE et CE QU'IL COMMANDE.
+jest.mock('@/components/molecules/segmentedControl/SegmentedControl', () => {
+  const react = jest.requireActual('react');
+  const rn = jest.requireActual('react-native');
+  return function SegmentedControlDouble(/** @type {any} */ props) {
+    return react.createElement(
+      rn.View,
+      { testID: 'doublure-onglets' },
+      (props.options || []).map((/** @type {any} */ option) => react.createElement(
+        rn.TouchableOpacity,
+        {
+          key: option.value,
+          onPress: () => props.onChange(option.value),
+          testID: `onglet-${option.value}`,
+        },
+        react.createElement(rn.Text, null, option.label),
+      )),
+    );
+  };
+});
+
+/**
+ * Bascule sur l'onglet demande. Sans effet sur un evenement qui n'a pas
+ * d'onglets (tout type autre que le match) : la colonne y est entiere.
+ * @param {any} root - Racine du rendu.
+ * @param {string} valeur - 'overview' | 'participants' | 'callUp'.
+ * @returns {void}
+ */
+const allerSurLOnglet = (root, valeur) => {
+  const [onglet] = root.findAll(
+    (/** @type {any} */ node) => node.props?.testID === `onglet-${valeur}`,
+    { deep: false },
+  );
+  if (!onglet) return;
+  act(() => {
+    onglet.props.onPress();
+  });
+};
+
 // eslint-disable-next-line import/first
 import EventDetails from '../EventDetails';
 
@@ -380,7 +428,12 @@ const appuyer = (/** @type {any} */ root, /** @type {string} */ libelle) => {
   act(() => { bouton.props.onPress(); });
 };
 
+// L4-A : la liste des participants vit desormais DANS SON ONGLET (la fixture de
+// ce fichier est un MATCH). Le chemin de l export gagne donc un appui — et ce
+// helper le dit, plutot que de le cacher : « onglet Participants, puis
+// Exporter ». Tout ce que les temoins ci-dessous prouvent ensuite est intact.
 const ouvrirLaFeuille = (/** @type {any} */ root) => {
+  allerSurLOnglet(root, 'participants');
   const bouton = root.findByProps({ testID: 'bouton-export' });
   act(() => { bouton.props.onPress(); });
 };

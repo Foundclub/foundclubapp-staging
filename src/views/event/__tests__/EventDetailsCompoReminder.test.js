@@ -292,6 +292,54 @@ jest.mock(
 );
 /* eslint-enable global-require */
 
+// 🎛️ L4-A — LA DOUBLURE DES ONGLETS, ET ELLE N'EST PAS FACULTATIVE.
+// `SegmentedControl` importe `react-native-gesture-handler`, dont
+// `lib/commonjs/specs/NativeRNGestureHandlerModule.ts` n'est PAS couvert par le
+// `transformIgnorePatterns` du depot : sans doublure, la SUITE ENTIERE meurt au
+// chargement (« Cannot use import statement outside a module ») et AUCUN test
+// ne s'execute. C'est pour ca que les 16 autres appelants du composant le
+// doublent aussi (motif ClubDetails.deuxPortes.test.js:299).
+// La doublure rend un pressable par onglet, portant son libelle : le dessin est
+// verifie chez le composant (201 lignes de test), ce qui se verifie ici c'est
+// CE QU'ON LUI DONNE et CE QU'IL COMMANDE.
+jest.mock('@/components/molecules/segmentedControl/SegmentedControl', () => {
+  const react = jest.requireActual('react');
+  const rn = jest.requireActual('react-native');
+  return function SegmentedControlDouble(/** @type {any} */ props) {
+    return react.createElement(
+      rn.View,
+      { testID: 'doublure-onglets' },
+      (props.options || []).map((/** @type {any} */ option) => react.createElement(
+        rn.TouchableOpacity,
+        {
+          key: option.value,
+          onPress: () => props.onChange(option.value),
+          testID: `onglet-${option.value}`,
+        },
+        react.createElement(rn.Text, null, option.label),
+      )),
+    );
+  };
+});
+
+/**
+ * Bascule sur l'onglet demande. Sans effet sur un evenement qui n'a pas
+ * d'onglets (tout type autre que le match) : la colonne y est entiere.
+ * @param {any} root - Racine du rendu.
+ * @param {string} valeur - 'overview' | 'participants' | 'callUp'.
+ * @returns {void}
+ */
+const allerSurLOnglet = (root, valeur) => {
+  const [onglet] = root.findAll(
+    (/** @type {any} */ node) => node.props?.testID === `onglet-${valeur}`,
+    { deep: false },
+  );
+  if (!onglet) return;
+  act(() => {
+    onglet.props.onPress();
+  });
+};
+
 // eslint-disable-next-line import/first
 import EventDetails from '../EventDetails';
 
@@ -385,6 +433,16 @@ const mountScreen = (/** @type {any} */ {
       />,
     );
   });
+
+  // ⚠️ RENEGOCIATION ASSUMEE (L4-A, maquette planche 04) : le rappel de compo
+  // n'ouvre plus la page, il ouvre l'ONGLET CONVOCATION dont il devient le
+  // coeur. Le contrat passe donc de « 0 appui » a « 1 appui d'onglet ».
+  // ⛔ CE N'EST PAS UNE DECISION DE CE FICHIER : elle vient du pack de design,
+  // elle est ecrite dans le prompt du lot, et le temoin dedie juste sous le
+  // bloc C2 · temoin 1 la dit a voix haute plutot que de la cacher ici.
+  // ⛔ ET RIEN D'AUTRE NE CHANGE : tous les temoins de SILENCE ci-dessous — la
+  // moitie qui coute cher — gardent exactement le sens qu'ils avaient.
+  allerSurLOnglet(mounted.root, 'callUp');
 
   return mounted.root;
 };
@@ -544,6 +602,30 @@ const ouvrirLaFeuilleDeGestion = () => {
     bouton.props.onPress();
   });
 };
+
+// ── L4-A — LE CONTRAT A CHANGE, ET IL EST ECRIT ICI ────────────────────────
+// Avant L4-A, le rappel etait visible AU MONTAGE, sans aucun appui. La maquette
+// (planche 04) en fait le COEUR de l'onglet Convocation : il coute donc
+// desormais UN appui d'onglet. Ce temoin existe pour que ce prix soit VISIBLE
+// dans le filet — pas enfoui dans un helper de montage.
+describe('L4-A — le rappel de compo coute UN appui d onglet, et pas plus', () => {
+  test('il n est PAS dans l onglet Aperçu, il EST dans l onglet Convocation', () => {
+    const root = mountScreen({ auth: asOrganiser() });
+
+    allerSurLOnglet(root, 'overview');
+    expect(hasText(root, TITRE_RAPPEL)).toBe(false);
+
+    allerSurLOnglet(root, 'callUp');
+    expect(hasText(root, TITRE_RAPPEL)).toBe(true);
+    // ⛔ ET IL EST EN TETE DE L'ONGLET : un rappel range au fond redemanderait
+    // de defiler, et on aurait troque un defaut contre le meme.
+    const textes = visibleTexts(root);
+    const rangDuRappel = textes.findIndex((/** @type {string} */ t) => t.includes(TITRE_RAPPEL));
+    const rangDuBloc = textes.findIndex((/** @type {string} */ t) => t.includes('Composition d'));
+    expect(rangDuRappel).toBeGreaterThanOrEqual(0);
+    if (rangDuBloc >= 0) expect(rangDuRappel).toBeLessThan(rangDuBloc);
+  });
+});
 
 describe('C2 — temoin 1 : un match sans compo affiche le rappel', () => {
   test('le rappel est la, et il parle des mots du coach', () => {
