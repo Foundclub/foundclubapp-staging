@@ -198,9 +198,12 @@ const ligne = ({
   lateMinutes = 0,
   note = null,
   rsvpStatus = 'participating',
+  source = 'coach_mark',
   userId,
 }) => ({
-  attendance: arrivedAt ? { arrivedAt, lateMinutes, note } : null,
+  attendance: arrivedAt ? {
+    arrivedAt, lateMinutes, note, source,
+  } : null,
   attendanceStatus: arrivedAt ? 'arrived_on_time' : 'not_marked',
   countsInTeamStats: {},
   finalOperationalStatus: 'pending',
@@ -341,6 +344,60 @@ describe('L5-A · 2E — pointer un retard', () => {
     // 🧨 Sans `arrivedAt`, le serveur poserait SON instant courant — l ecran
     // afficherait « Arrivé +10 min à 18:42 » pour un match de 18:00.
     expect(envoi.payload.arrivedAt).toBe('2026-08-19T16:10:00.000Z');
+  });
+});
+
+describe('L5-A · 2E — « Autre heure » n est pas decoratif', () => {
+  test('une heure saisie a la main devient un VRAI retard en minutes', async () => {
+    const arbre = await monter([ligne({ firstname: 'Hugo', userId: 'u2' })]);
+
+    await act(async () => { appuyable(arbre, 'Retard pour Hugo').props.onPress(); });
+    await act(async () => { appuyable(arbre, 'Autre heure').props.onPress(); });
+
+    // La saisie n existe QU APRES le choix — c est la promesse « jamais un
+    // clavier par defaut ».
+    const saisie = arbre.root.findAll(
+      (/** @type {any} */ noeud) => typeof noeud.type === 'string'
+        && noeud.type === 'TextInput'
+        && String(noeud.props?.placeholder || '').includes('HH:MM'),
+      { deep: true },
+    )[0];
+    expect(saisie).toBeTruthy();
+
+    // Le match commence a 18:00 (Paris) ; on annonce une arrivee a 18:25.
+    await act(async () => { saisie.props.onChangeText('18:25'); });
+    expect(aplatirTexte(arbre.toJSON())).toContain('Arrivé +25 min à 18:25');
+
+    await act(async () => { appuyable(arbre, 'Enregistrer').props.onPress(); });
+    const envoi = mockCoachArrivalMutate.mock.calls[0][0];
+    // 🧨 Avant correction, ce chiffre valait 0 : le palier existait a l ecran
+    // et ne partait jamais au serveur.
+    expect(envoi.payload.lateMinutes).toBe(25);
+    expect(envoi.payload.arrivedAt).toBe('2026-08-19T16:25:00.000Z');
+  });
+});
+
+describe('L5-A · 2C — une ligne pointee ne se derobe pas sous le pouce', () => {
+  test('dans « Sans réponse », elle reste en place et dit « Pointé par toi à »', async () => {
+    const arbre = await monter([
+      ligne({ firstname: 'Ilan', rsvpStatus: 'not_answered', userId: 'u9' }),
+      ligne({
+        arrivedAt: '2026-08-19T16:04:00.000Z',
+        firstname: 'Kais',
+        rsvpStatus: 'not_answered',
+        source: 'coach_mark',
+        userId: 'u8',
+      }),
+    ]);
+
+    await act(async () => { appuyable(arbre, 'Sans réponse').props.onPress(); });
+    const texte = aplatirTexte(arbre.toJSON());
+
+    // Kais a ete pointe : il est TOUJOURS dans l onglet, pas renvoye ailleurs.
+    expect(texte).toContain('Kais');
+    expect(texte).toContain('Pointé par toi à 18:04');
+    // …et il n est pas redit une seconde fois dans « DÉJÀ POINTÉS ».
+    expect(texte.split('Kais')).toHaveLength(3); // avatar + nom, une seule ligne
   });
 });
 

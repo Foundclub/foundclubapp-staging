@@ -166,9 +166,13 @@ function EventAttendanceCall() {
   );
   const markedItems = useMemo(() => items.filter(isMarked), [items]);
 
-  const visibleUnmarked = activeTab === TAB_UNANSWERED
-    ? unansweredItems.filter((/** @type {any} */ item) => !isMarked(item))
-    : unmarkedItems;
+  // Onglet « Sans réponse » : on garde AUSSI ceux qu on vient de pointer, pour
+  // que la liste ne se derobe pas sous le pouce (cadre 2C de la maquette).
+  const visibleUnmarked = activeTab === TAB_UNANSWERED ? unansweredItems : unmarkedItems;
+  // …et la section « DÉJÀ POINTÉS » ne les redit donc pas une seconde fois.
+  const markedSectionItems = activeTab === TAB_UNANSWERED
+    ? markedItems.filter((/** @type {any} */ item) => !unansweredItems.includes(item))
+    : markedItems;
 
   const teamName = event?.team?.name || '';
 
@@ -408,21 +412,25 @@ function EventAttendanceCall() {
             identitiesHidden={identitiesHidden}
             item={item}
             key={item?.user?.documentId || index}
+            onCorrect={(/** @type {any} */ cible) => {
+              setSheetItem(cible); setOpenSheet('correct');
+            }}
             onLate={(/** @type {any} */ cible) => { setSheetItem(cible); setOpenSheet('late'); }}
             onMark={handleMark}
             position={index + 1}
+            stayInPlace={activeTab === TAB_UNANSWERED}
             t={t}
             timezone={timezone}
           />
         ))}
       </View>
 
-      {markedItems.length > 0 && (
+      {markedSectionItems.length > 0 && (
         <View style={styles.list}>
           <Text style={[Fonts.p4Bold, { color: Colors.neutral400 }]}>
-            {`${mots.markedSection} · ${markedItems.length}`}
+            {`${mots.markedSection} · ${markedSectionItems.length}`}
           </Text>
-          {markedItems.map((/** @type {any} */ item, /** @type {number} */ index) => (
+          {markedSectionItems.map((/** @type {any} */ item, /** @type {number} */ index) => (
             <AttendanceRow
               identitiesHidden={identitiesHidden}
               item={item}

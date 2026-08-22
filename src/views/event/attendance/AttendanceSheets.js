@@ -10,7 +10,11 @@ import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 import ChoiceChipGroup from '@/components/molecules/choiceChipGroup/ChoiceChipGroup';
 
 import {
-  buildArrivedAtIso, countPresence, formatTimeInZone, listNeverSeen,
+  buildArrivedAtIso,
+  countPresence,
+  formatTimeInZone,
+  listNeverSeen,
+  resolveLateMinutesFromArrivalTime,
 } from './attendanceCallModel';
 
 const styles = StyleSheet.create({
@@ -232,7 +236,15 @@ export function AttendanceLateSheet({
   }, [isVisible, item]);
 
   const estLibre = choix === 'custom';
-  const minutes = estLibre ? 0 : Number(choix);
+  // 🧨 « Autre heure » n est pas decoratif : sans cette conversion, saisir
+  // 18:25 partait au serveur en `lateMinutes: 0` — le palier existait a
+  // l ecran et ne faisait rien.
+  const minutesLibres = resolveLateMinutesFromArrivalTime({
+    arrivalTime: heureLibre,
+    eventStartMs,
+    timeZone: timezone,
+  });
+  const minutes = estLibre ? (minutesLibres ?? 0) : Number(choix);
   const arrivedAt = buildArrivedAtIso({ eventStartMs, lateMinutes: minutes });
   const motArrive = t('eventDetails.attendanceCall.late.preview', 'Arrivé');
   const motA = t('eventDetails.attendanceCall.late.previewAt', 'à');

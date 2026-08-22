@@ -412,6 +412,26 @@ export const chunkUserIds = (userIds) => {
 };
 
 /**
+ * Le retard, en minutes, deduit d une heure d arrivee MURALE saisie a la main
+ * (le palier « Autre heure » du cadre 2E).
+ *
+ * 🧭 Meme principe que `resolveDurationMinutes` : on compare deux heures
+ * murales du meme jour, ce qui ne depend d aucun fuseau. Une heure anterieure
+ * au debut se lit comme le lendemain — un tournoi qui commence a 23:00 et un
+ * joueur qui arrive a 00:15 font +75 min, pas -1365.
+ * @param {{ arrivalTime: unknown, eventStartMs: number | null, timeZone?: string }} input
+ * @returns {number | null}
+ */
+export const resolveLateMinutesFromArrivalTime = ({ arrivalTime, eventStartMs, timeZone }) => {
+  const arrivalMinutes = toMinutesOfDay(arrivalTime);
+  if (arrivalMinutes === null) return null;
+  const startMinutes = toMinutesOfDay(formatTimeInZone(eventStartMs, timeZone));
+  if (startMinutes === null) return null;
+  const delta = arrivalMinutes - startMinutes;
+  return delta >= 0 ? delta : delta + DAY_MINUTES;
+};
+
+/**
  * L heure d arrivee a ENVOYER pour un retard constate.
  *
  * 🧨 Sans `arrivedAt`, le serveur pose SON instant courant — meme quand

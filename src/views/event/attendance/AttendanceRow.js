@@ -63,6 +63,8 @@ const styles = StyleSheet.create({
  * @param {(item: any) => void} [props.onCorrect] - Ouvre « Corriger » (2F).
  * @param {(item: any) => void} [props.onLate] - Ouvre « Retard constate » (2E).
  * @param {(item: any) => void} [props.onMark] - Pointe la personne.
+ * @param {boolean} [props.stayInPlace] - Onglet « Sans réponse » : une ligne
+ *   pointee NE SAUTE PAS ailleurs, elle se remplit sur place.
  * @param {number} props.position - Rang, pour nommer une personne masquee.
  * @param {(key: string, fallback: string) => string} props.t - Le traducteur.
  * @param {string} [props.timezone] - Le fuseau du club.
@@ -75,6 +77,7 @@ function AttendanceRow({
   onLate,
   onMark,
   position,
+  stayInPlace = false,
   t,
   timezone,
 }) {
@@ -90,8 +93,22 @@ function AttendanceRow({
   const heureArrivee = formatTimeInZone(item?.attendance?.arrivedAt, timezone);
   const minutesAnnoncees = Number(item?.attendance?.declaredLateMinutes || 0);
 
+  // 🖐️ POURQUOI UNE LIGNE POINTEE PEUT RESTER LA. Dans l onglet « Sans
+  // réponse », faire disparaitre la ligne au moment ou le doigt la touche
+  // decale toute la liste sous le pouce : l appui suivant tombe sur quelqu un
+  // d autre. Elle se remplit sur place, et le coach continue de haut en bas.
+  const resteEnPlace = stayInPlace && pointe;
+  const pointeParLeStaff = String(item?.attendance?.source || '').startsWith('coach');
+
   let sousLigne;
-  if (pointe && minutesRetard > 0) {
+  if (resteEnPlace && pointeParLeStaff) {
+    // ⚠️ « par toi » suppose que le coach qui regarde est celui qui a pointe —
+    // vrai sauf si deux encadrants font l appel a deux. `attendance.updatedBy`
+    // est deja dans la reponse : une comparaison suffira le jour ou l ecran
+    // connaitra l utilisateur courant.
+    const motPointe = t('eventDetails.attendanceCall.row.markedByYou', 'Pointé par toi à');
+    sousLigne = `${motPointe} ${heureArrivee}`;
+  } else if (pointe && minutesRetard > 0) {
     const mot = t('eventDetails.attendanceCall.row.arrivedLate', 'Arrivé');
     sousLigne = `${mot} +${minutesRetard} min · ${heureArrivee}`;
   } else if (pointe) {
@@ -126,7 +143,7 @@ function AttendanceRow({
         <Text numberOfLines={1} style={[Fonts.p4, { color: Colors.neutral300 }]}>{sousLigne}</Text>
       </View>
 
-      {pointe ? (
+      {pointe && !resteEnPlace ? (
         <TouchableOpacity
           accessibilityLabel={`${t('eventDetails.attendanceCall.row.correct', 'Corriger')} ${nom}`}
           accessibilityRole="button"
@@ -143,11 +160,17 @@ function AttendanceRow({
           <TouchableOpacity
             accessibilityLabel={`${t('eventDetails.attendanceCall.row.markHere', 'Là')} ${nom}`}
             accessibilityRole="button"
-            accessibilityState={{ disabled: false }}
-            onPress={() => onMark?.(item)}
-            style={[styles.target, { borderColor: Colors.success500 }]}
+            accessibilityState={{ disabled: false, selected: resteEnPlace }}
+            onPress={() => (resteEnPlace ? onCorrect?.(item) : onMark?.(item))}
+            style={[styles.target, {
+              backgroundColor: resteEnPlace ? Colors.success500 : undefined,
+              borderColor: Colors.success500,
+            }]}
           >
-            <Text style={[Fonts.p3Bold, { color: Colors.success500 }]}>
+            <Text style={[Fonts.p3Bold, {
+              color: resteEnPlace ? Colors.primary900 : Colors.success500,
+            }]}
+            >
               {t('eventDetails.attendanceCall.row.markHere', 'Là')}
             </Text>
           </TouchableOpacity>
