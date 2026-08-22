@@ -20,6 +20,7 @@ import {
   resolveFriendlyMatchOpponent,
 } from '@/domains/messaging/messagingUseCases';
 import useMessaging from '@/domains/messaging/useMessaging';
+import { formatThreadUnreadBadge } from '@/domains/messaging/useUnreadMessages';
 import { TutorialIds } from '@/domains/tutorial/tutorialIds';
 import useTheme from '@/theme/themeContext';
 
@@ -616,10 +617,18 @@ function Messaging({ navigation, route }) {
     // supposait un ordre que le contrat serveur ne promet pas.
     const lastMessage = getChatLastMessage(chat);
     const isMyMessage = lastMessage?.sender?.documentId === userData?.documentId;
-    const hasUnread = !isMyMessage && (lastMessage && getUnreadStatus(
-      chat.documentId,
-      new Date(lastMessage.createdAt).toISOString(),
-    ));
+    // AE06 — le serveur sait combien de MESSAGES sont non lus (il relit le
+    // curseur de lecture). Quand il le dit, il gagne sur le « lu » garde en
+    // local, qui ne connait que le dernier message.
+    const serverUnreadCount = Number(chat?.unreadCount);
+    const hasServerUnreadCount = Number.isFinite(serverUnreadCount);
+    const unreadBadge = formatThreadUnreadBadge(serverUnreadCount);
+    const hasUnread = hasServerUnreadCount
+      ? serverUnreadCount > 0
+      : !isMyMessage && (lastMessage && getUnreadStatus(
+        chat.documentId,
+        new Date(lastMessage.createdAt).toISOString(),
+      ));
 
     const isPinned = chat.pinnedBy?.some((u) => u.documentId === userData?.documentId);
     let chatBackgroundStyle = ApplicationStyle.backgroundColor.transparent;
@@ -720,6 +729,11 @@ function Messaging({ navigation, route }) {
                   >
                     {formatChatTimestamp(lastMessage.createdAt)}
                   </Text>
+                  {unreadBadge ? (
+                    <Text style={[Fonts.p3Bold, { color: Colors.error500 }]}>
+                      {unreadBadge}
+                    </Text>
+                  ) : null}
                   {hasUnread ? (
                     <View
                       accessibilityLabel={t('messaging.unread.badge', 'Non lu')}

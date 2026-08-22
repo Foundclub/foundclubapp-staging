@@ -8,6 +8,36 @@ import { useGetChats } from '@/services/chat/chatQueriesCompat';
 import useAuth from '../auth/useAuth';
 import { getChatLastMessage, getUnreadStatus } from './messagingUseCases';
 
+// AE06 — la pastille ne dira jamais plus que ca. Le serveur borne deja, mais
+// une app peut parler a un serveur plus vieux OU plus recent : on borne ici
+// aussi. 🧨 Sur l ONGLET le nombre reste un NOMBRE : PrivateTabNavigator
+// n affiche la pastille que si `badge > 0`, et une chaine « 99+ » vaudrait
+// false — la pastille disparaitrait au moment ou elle compte le plus.
+export const UNREAD_BADGE_CAP = 99;
+
+/**
+ * Le nombre a peindre A COTE du point « Non lu » d une conversation.
+ * Contrairement a l onglet, la liste a la place d ecrire « 99+ ».
+ * @param {unknown} count - Le compte rendu par le serveur pour ce fil.
+ * @returns {string} Le libelle, ou '' quand il n y a rien a dire.
+ */
+export const formatThreadUnreadBadge = (count) => {
+  const parsed = Number(count);
+  if (!Number.isFinite(parsed) || parsed <= 0) return '';
+  return parsed > UNREAD_BADGE_CAP ? `${UNREAD_BADGE_CAP}+` : String(Math.floor(parsed));
+};
+
+/**
+ * Ramene un compte brut a ce que la pastille de l onglet sait afficher.
+ * @param {unknown} value - Un compte brut.
+ * @returns {number} Le meme compte, entier, positif et borne.
+ */
+const toBoundedCount = (value) => {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || parsed <= 0) return 0;
+  return Math.min(Math.floor(parsed), UNREAD_BADGE_CAP);
+};
+
 /**
  * @param {import('@tanstack/react-query').QueryClient} queryClient
  * @returns {Chat[]}
@@ -45,6 +75,27 @@ const getCachedChats = (queryClient) => {
 };
 
 /**
+ * AE06 — le total que le serveur a calcule sur TOUS les fils accessibles.
+ * C est la seule source qui voit au-dela de la page 1.
+ * @param {import('@tanstack/react-query').QueryClient} queryClient
+ * @returns {number | null} Le total, ou null si le serveur ne le dit pas.
+ */
+const getServerUnreadTotal = (queryClient) => {
+  const queryEntries = queryClient.getQueriesData({ queryKey: ['chats'] });
+
+  for (let index = 0; index < queryEntries.length; index += 1) {
+    const queryData = /** @type {any} */ (queryEntries[index][1]);
+    const meta = Array.isArray(queryData?.pages)
+      ? queryData.pages[0]?.meta
+      : queryData?.meta;
+    const total = Number(meta?.unreadTotal);
+    if (Number.isFinite(total)) return total;
+  }
+
+  return null;
+};
+
+/**
  * Hook to manage unread messages across cached chats.
  *
  * AC05 — Adel : « il manque une pastille rouge avec le nombre de messages non
@@ -57,6 +108,17 @@ const getCachedChats = (queryClient) => {
  * ⚠️ Le serveur ne renvoie qu'UN message par conversation
  * (`chat.messages` vient de `latestMessageSnapshot`) : ce compteur compte donc
  * des CONVERSATIONS non lues, jamais des messages.
+ * AE06 — CE QUI A CHANGE : le compte ci-dessous comptait des CONVERSATIONS,
+ * sur un « lu » garde en local (MMKV), et ne voyait jamais plus loin que la
+ * page 1. Le serveur relit maintenant le curseur de lecture et rend le compte
+ * de MESSAGES : `meta.unreadTotal` pour l ensemble, `unreadCount` par fil.
+ * Trois marches, de la plus sure a la plus ancienne :
+ *   1. le total du serveur — le seul qui voit au-dela de la page 1 ;
+ *   2. la somme des comptes de la page — si le serveur compte par fil sans
+ *      donner de total (filtres, page > 1) ;
+ *   3. l ancien calcul — si le serveur ne compte pas du tout. L app peut
+ *      partir AVANT le serveur : rien ne casse, la pastille compte des
+ *      conversations comme avant.
  * @returns {{ unreadCount: number }} Object containing unread messages count
  */
 const useUnreadMessages = () => {
@@ -82,11 +144,29 @@ const useUnreadMessages = () => {
   });
 
   const countUnreadMessages = useCallback(() => {
+    // 1. Le total du serveur, quand il le dit.
+    const serverTotal = getServerUnreadTotal(queryClient);
+    if (serverTotal !== null) {
+      return toBoundedCount(serverTotal);
+    }
+
     const chats = getCachedChats(queryClient);
     if (!Array.isArray(chats) || chats.length === 0) {
       return 0;
     }
 
+    // 2. La somme des comptes de la page, quand le serveur compte par fil.
+    const chatsAvecCompte = chats.filter(
+      (chat) => Number.isFinite(Number(chat?.unreadCount)),
+    );
+    if (chatsAvecCompte.length > 0) {
+      return toBoundedCount(chatsAvecCompte.reduce(
+        (total, chat) => total + Math.max(0, Number(chat.unreadCount)),
+        0,
+      ));
+    }
+
+    // 3. L ancien calcul : des conversations, sur le « lu » local.
     return chats.reduce((total, chat) => {
       if (!chat || typeof chat.documentId !== 'string' || !Array.isArray(chat.messages)) {
         return total;
