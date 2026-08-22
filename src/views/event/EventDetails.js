@@ -1925,6 +1925,50 @@ function EventDetails({ navigation, route }) {
     };
   }, [canEdit, event, inactiveEventParticipations, pendingParticipations, trainerKeysForEvent]);
 
+  // 🗣️ N1 (b) — CE QUE L'ENTRAINEMENT OUVERT DIT ENFIN A TOUT LE MONDE.
+  //
+  // 🧨 LE DEFAUT : « Accueille N joueurs de l'exterieur » n'existait QUE dans la
+  // carte d'organisation, reservee a `canManageTrainingVisibility`. Un joueur ou
+  // un visiteur ne voyait donc NULLE PART que la seance lui etait ouverte — et
+  // c'est pourtant la seule information de ce bloc qui le concerne.
+  //
+  // 🔒 Q14 — DES NOMBRES, JAMAIS DES NOMS. Le compte des demandes a verifier
+  // reste chez l'organisateur ; le reste est public parce que le serveur le
+  // publie deja : `sessionStatus`, `externalParticipantLimit` et
+  // `externalParticipantValidationMode` ne sont pas `private` au schema,
+  // `getEventById` n'a aucune projection `fields`, et
+  // `shieldEventPayloadForViewer` masque les identites EN GARDANT les comptes.
+  //
+  // ⛔ Un entrainement ferme, ou ouvert sans quota, ne dit rien : « Accueille 0
+  // joueur·se·s » serait pire que le silence.
+  const openTrainingPublicLine = useMemo(() => {
+    const quota = Number(trainingOpenConfig.externalParticipantLimit || 0);
+    if (!trainingOpenConfig.isOpenTraining || quota <= 0) return '';
+
+    const taken = externalParticipationSection?.participating?.length || 0;
+    const ligne = t(
+      'eventDetails.openTraining.publicLine',
+      'Accueille {{quota}} joueur·se·s de l’extérieur · {{taken}} place(s) prise(s)',
+      { quota, taken },
+    );
+
+    const pending = externalParticipationSection?.pending?.length || 0;
+    if (!canEdit || pending <= 0) return ligne;
+
+    const suffixe = t(
+      'eventDetails.openTraining.pendingSuffix',
+      '{{pending}} demande(s) à vérifier',
+      { pending },
+    );
+    return `${ligne} · ${suffixe}`;
+  }, [
+    canEdit,
+    externalParticipationSection,
+    t,
+    trainingOpenConfig.externalParticipantLimit,
+    trainingOpenConfig.isOpenTraining,
+  ]);
+
   const participationsByStatus = useMemo(() => {
     if (!canEdit) {
       return {
@@ -5313,6 +5357,12 @@ function EventDetails({ navigation, route }) {
         >
           <WithDataWrapper error={error} isLoading={isLoading} wrapperStyle={[Alignments.fill, Spaces.gap[24]]}>
             <EventHeader event={event} matchScoreSummary={matchHeaderScoreSummary} />
+            {/* N1 (b) — sous la carte d'entete, et pour TOUS les lecteurs. Elle
+                ne concerne que l'entrainement ouvert : les onglets du match ne
+                la voient jamais, donc rien a brancher sur `showOverviewTab`. */}
+            {openTrainingPublicLine ? (
+              <Text style={[Fonts.p3, Fonts.neutral200]}>{openTrainingPublicLine}</Text>
+            ) : null}
             {renderTournamentActionsPanel()}
             {renderViewerConvocationLine()}
             {renderDetailsTabs()}
