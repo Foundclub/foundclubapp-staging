@@ -49,6 +49,76 @@ const normalizeChatId = (value) => {
 };
 
 /**
+ * AE06 — faut-il relire la liste des conversations apres cet echo de lecture ?
+ * Seulement si c est MOI qui ai lu : c est mon compte de non-lus qui vient de
+ * changer, pas celui des autres. Sans ce filtre, chaque lecture de n importe
+ * qui dans le fil declencherait un appel reseau chez tout le monde.
+ * @param {any} payload - La charge utile de l evenement MESSAGE_READ.
+ * @param {string | undefined} myDocumentId - Mon identifiant.
+ * @returns {boolean} Vrai s il faut relire.
+ */
+export const shouldRefetchChatsAfterRead = (payload, myDocumentId) => {
+  const readerId = normalizeChatId(payload?.userDocumentId);
+  const safeMyId = normalizeChatId(myDocumentId);
+  return Boolean(readerId) && Boolean(safeMyId) && readerId === safeMyId;
+};
+
+/**
+ * AE06 — j entre dans une conversation : son compte tombe a zero et le total
+ * baisse d autant, TOUT DE SUITE et SANS reseau. Le serveur confirmera au
+ * prochain echo ; en attendant la pastille ne ment plus.
+ * 🧨 Quand rien ne change, le tableau `data` GARDE son identite : une liste
+ * dont l identite change relache le verrou de sa pagination et se relance.
+ * @param {any} oldData - La page (ou les pages) en cache.
+ * @param {string} chatDocumentId - Le fil qu on vient d ouvrir.
+ * @returns {any} Les memes donnees, compte du fil remis a zero.
+ */
+export const applyOptimisticChatRead = (oldData, chatDocumentId) => {
+  if (!oldData || typeof oldData !== 'object') return oldData;
+
+  const safeChatId = normalizeChatId(chatDocumentId);
+
+  /**
+   * @param {any} page - Une page de la liste.
+   * @returns {any} La page, compte remis a zero si besoin.
+   */
+  const readPage = (page) => {
+    const chats = Array.isArray(page?.data) ? page.data : null;
+    let cleared = 0;
+
+    const nextChats = chats
+      ? chats.map((/** @type {any} */ chat) => {
+        if (!safeChatId || normalizeChatId(chat?.documentId) !== safeChatId) return chat;
+
+        const current = Number(chat?.unreadCount);
+        if (!Number.isFinite(current) || current <= 0) return chat;
+
+        cleared += current;
+        return { ...chat, unreadCount: 0 };
+      })
+      : null;
+
+    const previousTotal = Number(page?.meta?.unreadTotal);
+    const nextMeta = (cleared > 0 && Number.isFinite(previousTotal))
+      ? { ...page.meta, unreadTotal: Math.max(0, previousTotal - cleared) }
+      : page?.meta;
+
+    return {
+      ...page,
+      // Le tableau ne change d identite QUE si un compte a bouge.
+      ...(chats ? { data: cleared > 0 ? nextChats : chats } : {}),
+      ...(page?.meta ? { meta: nextMeta } : {}),
+    };
+  };
+
+  if (Array.isArray(oldData?.pages)) {
+    return { ...oldData, pages: oldData.pages.map(readPage) };
+  }
+
+  return readPage(oldData);
+};
+
+/**
  * @param {unknown} value
  * @returns {string}
  */
@@ -243,23 +313,14 @@ const useMessaging = (currentChatId) => {
     return Array.isArray(response?.data) ? response.data : [];
   }, [chatsLookupFilters, chatsLookupQueryKey, getCachedChatsForLookup, queryClient]);
 
-  const notifyChatsReadStatusChanged = useCallback(() => {
-    queryClient.setQueriesData({ queryKey: ['chats'] }, (/** @type {any} */ oldData) => {
-      if (!oldData) return oldData;
-
-      if (Array.isArray(oldData?.pages)) {
-        return {
-          ...oldData,
-          pages: oldData.pages.map((/** @type {any} */ page) => ({ ...page })),
-        };
-      }
-
-      if (typeof oldData === 'object') {
-        return { ...oldData };
-      }
-
-      return oldData;
-    });
+  // AE06 — en plus du clonage qui fait relire le « lu » local, on remet a zero
+  // le compte SERVEUR du fil ouvert et on baisse le total d autant. Sans
+  // reseau : la pastille tombe a l instant ou on ouvre la conversation.
+  const notifyChatsReadStatusChanged = useCallback((/** @type {string} */ chatId = '') => {
+    queryClient.setQueriesData(
+      { queryKey: ['chats'] },
+      (/** @type {any} */ oldData) => applyOptimisticChatRead(oldData, chatId),
+    );
   }, [queryClient]);
 
   /**
@@ -272,7 +333,7 @@ const useMessaging = (currentChatId) => {
 
     storage.set(getLastReadMessageKey(safeChatId), new Date().toISOString());
     // getUnreadStatus reads local storage; clone cached pages to re-render without a network refetch.
-    notifyChatsReadStatusChanged();
+    notifyChatsReadStatusChanged(safeChatId);
   }, [notifyChatsReadStatusChanged]);
 
   /**
@@ -482,6 +543,15 @@ const useMessaging = (currentChatId) => {
     const readerId = normalizeChatId(payload?.userDocumentId);
     if (!chatDocumentId || !readerId) return;
 
+    // AE06 — le serveur vient de perimer MA liste (il ecrit le curseur, puis
+    // invalide son cache) : c est le seul moment ou le nouveau compte est
+    // disponible. 🧊 `refetch` et pas `invalidate` : une query en veille — et
+    // celle de la pastille l est des qu on n est pas dans la messagerie — ne se
+    // relit jamais sur une simple invalidation.
+    if (shouldRefetchChatsAfterRead(payload, userData?.documentId)) {
+      queryClient.refetchQueries({ queryKey: ['chats'] });
+    }
+
     queryClient.setQueriesData({ queryKey: ['chat-messages', chatDocumentId] }, (/** @type {any} */ oldData) => {
       if (!oldData?.pages) return oldData;
 
@@ -529,7 +599,7 @@ const useMessaging = (currentChatId) => {
         })),
       };
     });
-  }, [queryClient]);
+  }, [queryClient, userData?.documentId]);
 
   const handleJoined = useCallback((/** @type {JoinData} */ data) => {
     const chatDocumentId = normalizeChatId(data?.chatDocumentId || '');

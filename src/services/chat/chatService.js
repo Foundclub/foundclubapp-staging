@@ -83,6 +83,11 @@ export const getChats = async (page = 1, pageSize = 20) => {
       error: error?.message || error,
       length: rawData.length,
     });
+    // AE06 — le repli reconstruisait `meta` de zero : le total de non-lus
+    // disparaissait ici en SILENCE, sans erreur nulle part, des qu un seul fil
+    // de la page avait une forme inattendue. On le recopie.
+    const rawUnreadTotal = Number(response?.data?.meta?.unreadTotal);
+
     return {
       data: rawData,
       meta: {
@@ -91,6 +96,7 @@ export const getChats = async (page = 1, pageSize = 20) => {
           pageCount: Number(rawPagination.pageCount || 1),
           total: Number(rawPagination.total || rawData.length),
         },
+        ...(Number.isFinite(rawUnreadTotal) ? { unreadTotal: rawUnreadTotal } : {}),
       },
     };
   }
