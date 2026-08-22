@@ -223,7 +223,9 @@ function AdminClaimDetail() {
           </Text>
           <View style={[Alignments.row, Alignments.alignCenter]}>
             <ProfileAvatar
-              imageUrl={requester?.avatar}
+              imageUrl={typeof requester?.avatar === 'string'
+                ? requester.avatar
+                : requester?.avatar?.url}
               name={[requester.firstname, requester.lastname].filter(Boolean).join(' ').trim()}
               size={60}
             />

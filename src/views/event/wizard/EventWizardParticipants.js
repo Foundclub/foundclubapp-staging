@@ -21,6 +21,7 @@ import { RouteNames } from '@/navigation/routeNames';
 import { useGetTeam } from '@/services/team/teamQueries';
 
 import {
+  getCompositionPlayerAvatarUrl,
   getCompositionPlayerId,
   getCompositionPlayerLabel,
 } from '@/utils/compositionPlayer';
@@ -603,7 +604,7 @@ function EventWizardParticipants({ navigation, route }) {
                   />
                   <ProfileAvatar
                     enablePreview={false}
-                    imageUrl={player?.avatar || null}
+                    imageUrl={getCompositionPlayerAvatarUrl(player) ?? null}
                     name={playerLabel}
                     size={32}
                   />
