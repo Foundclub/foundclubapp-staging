@@ -1117,6 +1117,18 @@ export default {
       title: 'Gérer l\'événement',
       tournamentSettings: 'Réglages tournoi',
     },
+    matchCard: {
+      nameOpponent: 'Nommer l\'adversaire',
+      nameOpponentHint: 'Il apparaîtra sur la carte du match, face à ton club.',
+      opponentPlaceholder: 'Nom de l\'équipe adverse',
+      opponentToConfirm: 'Adversaire à confirmer',
+      saveOpponentFailed: 'Impossible d\'enregistrer le nom de l\'adversaire pour le moment.',
+      verdict: {
+        draw: 'Nul',
+        loss: 'Défaite',
+        win: 'Victoire',
+      },
+    },
     menu: {
       campaign: 'Créer la cotisation de cet événement',
       cancel: 'Prévenir les participant·e·s et annuler',

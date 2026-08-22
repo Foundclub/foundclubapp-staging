@@ -455,6 +455,27 @@ afterEach(() => {
 });
 
 /**
+ * Rassemble tout le texte porte par un noeud rendu et ses enfants.
+ * @param {any} node Le noeud de depart.
+ * @returns {string} Le texte, replie en une seule chaine.
+ */
+const texteDe = (node) => {
+  const morceaux = /** @type {string[]} */ ([]);
+  const parcourir = (/** @type {any} */ enfant) => {
+    if (enfant === null || enfant === undefined || enfant === false) return;
+    if (typeof enfant === 'string' || typeof enfant === 'number') {
+      morceaux.push(String(enfant));
+      return;
+    }
+    const enfants = enfant?.props?.children;
+    if (Array.isArray(enfants)) enfants.forEach(parcourir);
+    else parcourir(enfants);
+  };
+  parcourir(node);
+  return morceaux.join(' ').replace(/\s+/g, ' ').trim();
+};
+
+/**
  * Le libelle complet pose dans la pastille de type.
  * @returns {string} Le libelle.
  */
@@ -615,12 +636,12 @@ describe('N3 - la carte du match : ce que l ecran calcule', () => {
       champ.props.onChangeText('US Marseille');
     });
 
-    const porteLeMot = (/** @type {any} */ n) => JSON
-      .stringify(n.props.children || '')
-      .includes('Enregistrer');
+    // ⛔ PAS de JSON.stringify sur des enfants React : l'arbre rendu porte un
+    // `_owner` qui boucle sur lui-meme (« Converting circular structure »).
+    // On descend par `props.children`, comme le fait `EventDetailsN1PetitsBlocs`.
     const valider = racine
       .findAll((/** @type {any} */ n) => n.props?.accessibilityRole === 'button')
-      .find(porteLeMot);
+      .find((/** @type {any} */ n) => texteDe(n).includes('Enregistrer'));
     expect(valider).toBeDefined();
 
     await act(async () => {
@@ -645,6 +666,13 @@ describe('N3 - la carte du match : ce que l ecran calcule', () => {
     // rappel qui porte le droit, plutot qu'un drapeau que l'entete pourrait
     // oublier de lire.
     expect(resultat.onNameOpponent).toBeNull();
+
+    // Et l'organisateur qui a DEJA un adversaire n'a pas ce bouton non plus :
+    // le raccourci sert a NOMMER ce qui manque. Renommer un adversaire connu
+    // reste dans EventEdit, ou vit le champ complet (hors lot).
+    monter({ auth: ORGANISATEUR(), event: buildMatch() });
+    expect(resume().awaitingOpponent).toBe(false);
+    expect(resume().onNameOpponent).toBeNull();
   });
 
   test('N3 · temoin 9 — rien de tout cela pour un evenement qui n\'est pas un match', () => {

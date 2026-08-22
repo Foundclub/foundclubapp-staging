@@ -25,6 +25,7 @@ import { USER_ROLES } from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
 import {
   isMatchTypeName,
+  OPPONENT_NAME_MAX_LENGTH,
   resolveEventDisplayName,
   resolveEventOpponentName,
 } from '@/domains/event/eventDisplayName';
@@ -3123,6 +3124,51 @@ function EventDetails({ navigation, route }) {
     matchStatsPayload?.score?.scoreAgainst,
     matchStatsPayload?.score?.scoreFor,
   ]);
+  // ✍️ N3 (D9) — NOMMER L'ADVERSAIRE, DEPUIS LA CARTE.
+  //
+  // Le champ existe deja dans EventEdit (hors lot, nomme) : il faut ouvrir le
+  // formulaire complet de l'evenement pour renseigner UN mot. La feuille ci-
+  // dessous est le raccourci du cadre 03 · I — un champ, deux boutons, et on
+  // repart. Elle ne fait PAS de recherche de club : l'adversaire est du texte
+  // libre cote serveur (`opponentName`, varchar 120, accepte tel quel par
+  // PUT /events/:id), et une recherche de club promettrait un rattachement
+  // qui n'existe pas.
+  const [isOpponentSheetVisible, setIsOpponentSheetVisible] = useState(false);
+  const [opponentNameDraft, setOpponentNameDraft] = useState('');
+  const [isOpponentSaving, setIsOpponentSaving] = useState(false);
+
+  const handleOpenOpponentSheet = useCallback(() => {
+    setOpponentNameDraft(matchOpponentName || '');
+    setIsOpponentSheetVisible(true);
+  }, [matchOpponentName]);
+
+  const handleSaveOpponentName = useCallback(async () => {
+    const nomSaisi = opponentNameDraft.trim();
+    if (!eventId || !nomSaisi) return;
+
+    setIsOpponentSaving(true);
+    try {
+      await mutations.updateEventNoNavMutation.mutateAsync({
+        documentId: eventId,
+        eventData: { opponentName: nomSaisi },
+      });
+      setIsOpponentSheetVisible(false);
+    } catch (opponentError) {
+      // 🗣️ Une porte fermee DIT pourquoi — sinon la feuille reste ouverte sans
+      // que rien n'explique que l'enregistrement a echoue.
+      Alert.alert(
+        t('common.error', 'Erreur'),
+        opponentError?.message
+          || t(
+            'eventDetails.matchCard.saveOpponentFailed',
+            'Impossible d\'enregistrer le nom de l\'adversaire pour le moment.',
+          ),
+      );
+    } finally {
+      setIsOpponentSaving(false);
+    }
+  }, [eventId, mutations.updateEventNoNavMutation, opponentNameDraft, t]);
+
   const matchHeaderScoreSummary = useMemo(() => {
     if (!isMatchEvent) return null;
 
@@ -3179,6 +3225,12 @@ function EventDetails({ navigation, route }) {
       }
     }
 
+    // D9/D10 — LA PRESENCE DU RAPPEL PORTE LE DROIT, pas un drapeau que
+    // l'entete pourrait oublier de lire. Il n'existe que pour qui peut editer
+    // ET quand l'adversaire manque : renommer un adversaire deja connu reste
+    // dans EventEdit, ou vit le champ complet.
+    const onNameOpponent = canEdit && awaitingOpponent ? handleOpenOpponentSheet : null;
+
     if (!available) {
       return {
         awaitingOpponent,
@@ -3186,6 +3238,7 @@ function EventDetails({ navigation, route }) {
         // Le repli disait « Score en attente » ICI ET dans `value` : la meme
         // phrase deux fois dans un encart de 172 px. Une seule suffit.
         helperText: waitingOfficial ? 'Score en attente de synchronisation' : null,
+        onNameOpponent,
         opponentName: matchOpponentName,
         value: 'Score en attente',
         verdict: null,
@@ -3203,6 +3256,7 @@ function EventDetails({ navigation, route }) {
       awaitingOpponent,
       badgeLabel,
       helperText: waitingOfficial ? 'Synchronise automatiquement depuis la source officielle' : null,
+      onNameOpponent,
       opponentName: matchOpponentName,
       value: `${resolvedScoreFor} - ${resolvedScoreAgainst}`,
       verdict,
@@ -3212,8 +3266,10 @@ function EventDetails({ navigation, route }) {
     // lui que pour se CACHER avant le coup d'envoi (`!available && !isMatchFinished`
     // rendait null). Il s'affiche desormais des qu'il s'agit d'un match, donc
     // le calcul ne lit plus l'etat de fin. La pastille, elle, le lit toujours (D8).
+    canEdit,
     event?.externalAutoSource,
     event?.matchResult,
+    handleOpenOpponentSheet,
     isMatchEvent,
     isViewerFromInvitedTeam,
     matchOpponentName,
@@ -6923,6 +6979,63 @@ function EventDetails({ navigation, route }) {
             />
             <Button
               onPress={() => setIsMatchScoreSheetVisible(false)}
+              title={t('common.cancel', 'Annuler')}
+              variant="Secondary"
+            />
+          </View>
+        </View>
+      </BottomModal>
+
+      {/* N3 (D9, ✍️) — LA FEUILLE DE L'ADVERSAIRE : un champ, et c'est tout.
+          ⚠️ `snapPoints` est OBLIGATOIRE : sans lui, une `BottomModal` ne peut
+          pas porter a la fois un en-tete et un pied (piege D19, deja paye).
+          Meme gabarit que la feuille du score juste au-dessus — on ne cherche
+          pas un autre agencement pour un formulaire encore plus court. */}
+      <BottomModal
+        close={() => setIsOpponentSheetVisible(false)}
+        isVisible={isOpponentSheetVisible}
+        snapPoints={['52%']}
+      >
+        <View style={[Spaces.gap[16], Spaces.paddingBottom[12]]}>
+          <View style={[Spaces.gap[4]]}>
+            <Text style={[Fonts.h3Bold, Fonts.neutral00]}>
+              {t('eventDetails.matchCard.nameOpponent', 'Nommer l\'adversaire')}
+            </Text>
+            <Text style={[Fonts.p2, Fonts.neutral100]}>
+              {t(
+                'eventDetails.matchCard.nameOpponentHint',
+                'Il apparaitra sur la carte du match, face a ton club.',
+              )}
+            </Text>
+          </View>
+
+          <TextInput
+            autoFocus
+            maxLength={OPPONENT_NAME_MAX_LENGTH}
+            onChangeText={setOpponentNameDraft}
+            placeholder={t('eventDetails.matchCard.opponentPlaceholder', 'Nom de l\'équipe adverse')}
+            placeholderTextColor={Colors.neutral400}
+            selectionColor={Colors.primary500}
+            style={[
+              ApplicationStyle.input,
+              ApplicationStyle.backgroundColor.neutral800,
+              ApplicationStyle.borderColor.neutral600,
+              Fonts.p1,
+              Fonts.neutral00,
+            ]}
+            value={opponentNameDraft}
+          />
+
+          <View style={[Spaces.gap[12]]}>
+            <Button
+              disabled={!opponentNameDraft.trim() || isOpponentSaving}
+              isLoading={isOpponentSaving}
+              onPress={handleSaveOpponentName}
+              title={t('common.save', 'Enregistrer')}
+              variant="Primary"
+            />
+            <Button
+              onPress={() => setIsOpponentSheetVisible(false)}
               title={t('common.cancel', 'Annuler')}
               variant="Secondary"
             />
