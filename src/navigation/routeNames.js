@@ -92,6 +92,10 @@ export const RouteNames = /** @type {const} */ ({
   CreateSection: 'CreateSection',
   CreateSquad: 'CreateSquad',
   EndMatchScreen: 'EndMatchScreen',
+  // L5-A — « Faire l appel » (planche 02) : un ECRAN PLEIN, pas une feuille.
+  // C est un MODE — deux cibles de 44 par ligne, la ligne elle-meme n est pas
+  // cliquable — et un mode ne se pose pas par-dessus l ecran de detail.
+  EventAttendanceCall: 'EventAttendanceCall',
   EventDetails: 'EventDetails',
   EventEdit: 'EventEdit',
   EventFilters: 'EventFilters',

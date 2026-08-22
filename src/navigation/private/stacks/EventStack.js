@@ -6,6 +6,7 @@ import DetectionSquadSetup from '@/views/detection/DetectionSquadSetup';
 import DetectionTeamsAuto from '@/views/detection/DetectionTeamsAuto';
 import DetectionTeamsBoard from '@/views/detection/DetectionTeamsBoard';
 import DetectionTeamsManual from '@/views/detection/DetectionTeamsManual';
+import EventAttendanceCall from '@/views/event/attendance/EventAttendanceCall';
 import EventDetails from '@/views/event/EventDetails';
 import EventEdit from '@/views/event/EventEdit';
 import EventFilters from '@/views/event/EventFilters';
@@ -122,6 +123,12 @@ function EventStack() {
             ...commonOptions,
             headerTitle: '',
           }}
+        />
+        {/* L5-A — « Faire l appel » (planche 02) : ecran plein, en-tete a lui. */}
+        <Stack.Screen
+          component={EventAttendanceCall}
+          name={RouteNames.EventAttendanceCall}
+          options={{ headerShown: false }}
         />
         {/* Match — convocation (D77) : ecrans 1 a 3 du pack composition. */}
         <Stack.Screen
