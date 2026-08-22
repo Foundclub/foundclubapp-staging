@@ -201,21 +201,24 @@ const backgroundOf = (params) => backgroundFileOf(renderHeader(makeEvent(params)
 const titleOf = (params) => primaryTitleOf(renderHeader(makeEvent(params)));
 
 describe('AE01 - le fond et le titre de la carte d entete, type par type', () => {
-  test('AE01 · temoin 1 — le fond de chaque type, etat actuel', () => {
-    // Les cinq types qui ont deja LEUR fond.
+  test('AE01 · temoin 1 — chaque type porte SON fond, tournoi et stage compris', () => {
+    // Les cinq types qui avaient deja LEUR fond : ils ne bougent pas.
     expect(backgroundOf({ typeName: 'Match' })).toBe('card-match.png');
     expect(backgroundOf({ typeName: 'Entrainement' })).toBe('card-entrainement.png');
     expect(backgroundOf({ typeName: 'Detection' })).toBe('card-detection.png');
     expect(backgroundOf({ typeName: 'Reservation' })).toBe('card-reservation.png');
     expect(backgroundOf({ typeName: 'Autre' })).toBe('card-autre.png');
 
-    // LES DEUX DEFAUTS que ce lot corrige : le tournoi emprunte le fond du
-    // match, le stage tombe dans le fond « autre ». Les deux images dediees
-    // existent pourtant (`src/assets/background-card-event/`) et les CARTES
-    // de liste les posent deja (`EventCardNew.js`).
-    expect(backgroundOf({ typeName: 'Tournoi' })).toBe('card-match.png');
-    expect(backgroundOf(STAGE_PARENT)).toBe('card-autre.png');
-    expect(backgroundOf(STAGE_DAY)).toBe('card-autre.png');
+    // CE QUE CE LOT CORRIGE : le tournoi empruntait le fond du match, et le
+    // stage tombait dans le fond « autre ». Les deux images dediees existaient
+    // pourtant (`src/assets/background-card-event/`) et les CARTES de liste
+    // les posaient deja (`EventCardNew.js:53-62`) — seule l entete les
+    // ignorait. Source qui fait foi : RESTE_A_FAIRE_DESIGN.md (L6-B, 22/08),
+    // et NON la planche 03 v2, qui gardait le fond du match pour le tournoi
+    // sur une premisse fausse (« tournoi et stage n ont pas de visuel dedie »).
+    expect(backgroundOf({ typeName: 'Tournoi' })).toBe('card-tournoi.png');
+    expect(backgroundOf(STAGE_PARENT)).toBe('card-stage.png');
+    expect(backgroundOf(STAGE_DAY)).toBe('card-stage.png');
   });
 
   test('AE01 · temoin 2 — le titre de chaque type, etat actuel', () => {

@@ -27,19 +27,36 @@ import BG_DETECTION from '@/assets/background-card-event/card-detection.png';
 import BG_TRAINING from '@/assets/background-card-event/card-entrainement.png';
 import BG_MATCH from '@/assets/background-card-event/card-match.png';
 import BG_RESERVATION from '@/assets/background-card-event/card-reservation.png';
+import BG_STAGE from '@/assets/background-card-event/card-stage.png';
+import BG_TOURNAMENT from '@/assets/background-card-event/card-tournoi.png';
 
-const getBackgroundImage = (/** @type {any} */ typeName) => {
+// AE01 — les 7 fonds, recopies des CARTES de liste (`EventCardNew.js:53-62`) :
+// le tournoi empruntait le fond du match et le stage tombait dans « autre »,
+// alors que `card-tournoi.png` et `card-stage.png` existent depuis `ed41a15`.
+// C'est RESTE_A_FAIRE_DESIGN.md (L6-B, 22/08) qui commande, PAS la planche 03
+// v2 : celle-ci gardait card-match pour le tournoi en croyant que le visuel
+// dedie n'existait pas.
+const getBackgroundImage = (/** @type {any} */ typeName, /** @type {any} */ eventFormat) => {
   const normalizedType = (typeName?.toLowerCase() || '')
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '');
+  // Un stage se reconnait a son FORMAT, pas a son libelle de type : c'est ce
+  // que lisent deja `EventDetails.js` (isStageParentEvent / isStageDayEvent)
+  // et `EventCardNew.js`. Le libelle est accepte lui aussi, pour rester
+  // exactement aligne sur la carte de liste, qui teste les deux.
+  const normalizedFormat = String(eventFormat || '').toLowerCase();
+  const isStageEvent = normalizedFormat === 'stage_parent'
+    || normalizedFormat === 'stage_day'
+    || normalizedType.includes('stage');
   if (
     normalizedType.includes('match')
     || normalizedType.includes('competition')
-    || normalizedType.includes('tournoi')
   ) return BG_MATCH;
   if (normalizedType.includes('entrainement')) return BG_TRAINING;
   if (normalizedType.includes('detection')) return BG_DETECTION;
   if (normalizedType.includes('reservation')) return BG_RESERVATION;
+  if (normalizedType.includes('tournoi')) return BG_TOURNAMENT;
+  if (isStageEvent) return BG_STAGE;
   return BG_OTHER;
 };
 
@@ -97,7 +114,7 @@ function EventHeader({ event, matchScoreSummary = null }) {
   const SpacesAny = /** @type {any} */ (Spaces);
   const { t } = useTranslation();
 
-  const backgroundImage = getBackgroundImage(event?.type?.name);
+  const backgroundImage = getBackgroundImage(event?.type?.name, event?.eventFormat);
   // La couleur appartient au LIEU, pas au type : deux evenements au meme
   // endroit portent le meme accent. Sans installation, l'icone GPS et la
   // pastille de section gardent le cyan d'avant AD09.
