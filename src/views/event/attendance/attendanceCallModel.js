@@ -77,6 +77,32 @@ export const toMsOrNull = (value) => {
 };
 
 /**
+ * Une heure « HH:MM » lue dans le fuseau DU CLUB, jamais celui du telephone.
+ *
+ * 🧨 MESURE DU 2026-08-23 : la machine de developpement est en Asia/Bangkok.
+ * Formatee avec l horloge locale, l ouverture d un match parisien de 18:00
+ * s affichait « 22:30 » au lieu de « 17:30 ». Un coach qui voyage aurait vu la
+ * meme chose. Le serveur envoie deja son fuseau dans la reponse (`timezone`) :
+ * c est LUI qui fait foi, et le repli est celui du serveur.
+ *
+ * 🧭 Le mecanisme (`Intl.DateTimeFormat` + `timeZone`) n est pas invente ici :
+ * c est exactement celui de `src/utils/parisTime.js`, deja en production.
+ * @param {unknown} instant - Un instant ISO ou en millisecondes.
+ * @param {string} [timeZone] - Le fuseau du club, rendu par la reponse.
+ * @returns {string} - « 17:30 », ou une chaine vide si l instant est illisible.
+ */
+export const formatTimeInZone = (instant, timeZone) => {
+  const ms = toMsOrNull(instant);
+  if (ms === null) return '';
+  return new Intl.DateTimeFormat('fr-FR', {
+    hour: '2-digit',
+    hour12: false,
+    minute: '2-digit',
+    timeZone: timeZone || 'Europe/Paris',
+  }).format(new Date(ms));
+};
+
+/**
  * Minutes depuis minuit d une heure « HH:MM », ou `null`.
  * @param {unknown} value
  * @returns {number | null}
@@ -99,15 +125,83 @@ const toMinutesOfDay = (value) => {
  * Reconstruire un instant a partir d elle obligerait l app a connaitre ce
  * fuseau — donc a se tromper des qu un utilisateur voyage. La DIFFERENCE entre
  * deux heures murales du meme jour, elle, ne depend d aucun fuseau.
+ * 🧨 MESURE DU 2026-08-23 : exiger `startTime` etait un BUG. Un evenement
+ * porte tres souvent son heure de debut dans `date` seul — `startTime` ne fait
+ * que COMPLETER une heure manquante, cote serveur comme ici. Sans lui, la
+ * duree retombait sur 90 min : pour un match 18:00-20:00, la feuille de
+ * cloture annoncait le passage du serveur a 19:43 au lieu de 20:13, soit
+ * AVANT la fin du match. L heure murale du debut se lit donc dans `date`,
+ * rendue dans le fuseau du club.
  * @param {{ endTime?: unknown, startTime?: unknown }} event
+ * @param {{ startAtMs?: number | null, timeZone?: string }} [contexte]
  * @returns {number | null}
  */
-export const resolveDurationMinutes = (event) => {
-  const startMinutes = toMinutesOfDay(event?.startTime);
+export const resolveDurationMinutes = (event, contexte = {}) => {
   const endMinutes = toMinutesOfDay(event?.endTime);
-  if (startMinutes === null || endMinutes === null) return null;
+  if (endMinutes === null) return null;
+
+  const startMinutes = toMinutesOfDay(event?.startTime)
+    ?? toMinutesOfDay(formatTimeInZone(contexte.startAtMs, contexte.timeZone));
+  if (startMinutes === null) return null;
   const delta = endMinutes - startMinutes;
   return delta > 0 ? delta : delta + DAY_MINUTES;
+};
+
+/**
+ * La FIN de l evenement : `endDate`, sinon `endTime`, sinon 90 minutes.
+ *
+ * C est la meme cascade que le serveur (`resolveEventEndAt`), et elle sert a
+ * deux endroits : le repli de la fenetre, et la feuille de cloture qui doit
+ * annoncer a quelle heure le cron passera les non-pointes en « Non pointé ».
+ * @param {{ event?: any, payloadData?: any }} input
+ * @returns {number | null}
+ */
+export const resolveEventEndMs = ({ event, payloadData }) => {
+  const startAtMs = toMsOrNull(payloadData?.eventStartAt) ?? toMsOrNull(event?.date);
+  if (startAtMs === null) return null;
+
+  const explicitEndMs = toMsOrNull(event?.endDate);
+  if (explicitEndMs !== null && explicitEndMs > startAtMs) return explicitEndMs;
+
+  const durationMinutes = resolveDurationMinutes(event, {
+    startAtMs, timeZone: payloadData?.timezone,
+  }) ?? FALLBACK_DURATION_MINUTES;
+  return startAtMs + (durationMinutes * MINUTE_MS);
+};
+
+/**
+ * Les minutes de l heure auxquelles le cron de fin de match tourne.
+ *
+ * 🕐 `eventAbsenceFinalizationGovernance` est programme `13,43 * * * *`
+ * (`admin/config/cron/tasks.ts`) : deux passages par heure, a :13 et a :43.
+ * Les minutes d une heure ne dependent d aucun fuseau a decalage entier —
+ * Paris en est un — donc ce calcul est juste sans connaitre le fuseau.
+ */
+export const CRON_SWEEP_MINUTES = [13, 43];
+
+/**
+ * Le PREMIER passage du cron apres la fin du match.
+ *
+ * ⚠️ C est ce que la feuille de cloture doit dire : le bouton « Clôturer » ne
+ * passe personne en « Non pointé » — aucune route de cloture n existe. C est
+ * ce passage-la qui le fera. Annoncer le contraire ferait du bouton un
+ * MENTEUR : il rendrait la main sans avoir rien ecrit.
+ * @param {number | null} endAtMs - La fin du match, en millisecondes.
+ * @returns {number | null}
+ */
+export const resolveNoShowSweepMs = (endAtMs) => {
+  if (!Number.isFinite(endAtMs)) return null;
+  const fin = new Date(Number(endAtMs));
+  const [an, mois, jour, heure] = [
+    fin.getUTCFullYear(), fin.getUTCMonth(), fin.getUTCDate(), fin.getUTCHours(),
+  ];
+  const debutHeure = Date.UTC(an, mois, jour, heure);
+  const candidats = [
+    ...CRON_SWEEP_MINUTES.map((minute) => debutHeure + (minute * MINUTE_MS)),
+    // Si la fin tombe apres :43, le passage suivant est le :13 de l heure d apres.
+    ...CRON_SWEEP_MINUTES.map((minute) => debutHeure + ((60 + minute) * MINUTE_MS)),
+  ];
+  return candidats.find((instant) => instant >= Number(endAtMs)) ?? null;
 };
 
 /**
@@ -142,11 +236,7 @@ export const resolveAttendanceWindow = ({ event, payloadData }) => {
     };
   }
 
-  const explicitEndMs = toMsOrNull(event?.endDate);
-  const durationMinutes = resolveDurationMinutes(event) ?? FALLBACK_DURATION_MINUTES;
-  const endAtMs = explicitEndMs !== null && explicitEndMs > startAtMs
-    ? explicitEndMs
-    : startAtMs + (durationMinutes * MINUTE_MS);
+  const endAtMs = resolveEventEndMs({ event, payloadData }) ?? startAtMs;
 
   return {
     closesAtMs: endAtMs + (FALLBACK_AFTER_MINUTES * MINUTE_MS),
@@ -319,32 +409,6 @@ export const chunkUserIds = (userIds) => {
     chunks.push(source.slice(index, index + BULK_MAX_USERS));
   }
   return chunks;
-};
-
-/**
- * Une heure « HH:MM » lue dans le fuseau DU CLUB, jamais celui du telephone.
- *
- * 🧨 MESURE DU 2026-08-23 : la machine de developpement est en Asia/Bangkok.
- * Formatee avec l horloge locale, l ouverture d un match parisien de 18:00
- * s affichait « 22:30 » au lieu de « 17:30 ». Un coach qui voyage aurait vu la
- * meme chose. Le serveur envoie deja son fuseau dans la reponse (`timezone`) :
- * c est LUI qui fait foi, et le repli est celui du serveur.
- *
- * 🧭 Le mecanisme (`Intl.DateTimeFormat` + `timeZone`) n est pas invente ici :
- * c est exactement celui de `src/utils/parisTime.js`, deja en production.
- * @param {unknown} instant - Un instant ISO ou en millisecondes.
- * @param {string} [timeZone] - Le fuseau du club, rendu par la reponse.
- * @returns {string} - « 17:30 », ou une chaine vide si l instant est illisible.
- */
-export const formatTimeInZone = (instant, timeZone) => {
-  const ms = toMsOrNull(instant);
-  if (ms === null) return '';
-  return new Intl.DateTimeFormat('fr-FR', {
-    hour: '2-digit',
-    hour12: false,
-    minute: '2-digit',
-    timeZone: timeZone || 'Europe/Paris',
-  }).format(new Date(ms));
 };
 
 /**

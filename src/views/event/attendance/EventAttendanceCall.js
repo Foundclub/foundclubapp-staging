@@ -28,9 +28,15 @@ import {
   listUnmarkedIds,
   resolveAttendanceWindow,
   resolveCallMode,
+  resolveEventEndMs,
+  resolveNoShowSweepMs,
   resolveServerClockMs,
+  toMsOrNull,
 } from './attendanceCallModel';
 import AttendanceRow from './AttendanceRow';
+import {
+  AttendanceCloseSheet, AttendanceCorrectSheet, AttendanceLateSheet,
+} from './AttendanceSheets';
 import { useAttendanceCallMutations } from './useAttendanceCallMutations';
 
 const TAB_EXPECTED = 'expected';
@@ -117,6 +123,9 @@ function EventAttendanceCall() {
   const [activeTab, setActiveTab] = useState(TAB_EXPECTED);
   const [elapsedMs, setElapsedMs] = useState(0);
   const [bulkMessage, setBulkMessage] = useState('');
+  // Les trois feuilles. `sheetItem` porte la ligne visee par 2E et 2F.
+  const [openSheet, setOpenSheet] = useState('');
+  const [sheetItem, setSheetItem] = useState(null);
 
   const payloadData = attendancePayload?.data;
   const items = useMemo(() => payloadData?.items || [], [payloadData?.items]);
@@ -124,7 +133,7 @@ function EventAttendanceCall() {
   const identitiesHidden = Boolean(payloadData?.participantIdentitiesHidden);
 
   const {
-    bulkMutation, coachArrivalMutation, resetMutation,
+    bulkMutation, coachArrivalMutation, lateMinutesMutation, resetMutation,
   } = useAttendanceCallMutations(eventId);
 
   // AC10 — l horloge du SERVEUR, ou rien. Remise a zero a chaque nouveau
@@ -192,6 +201,39 @@ function EventAttendanceCall() {
       onSuccess: (/** @type {any} */ summary) => setBulkMessage(describeBulkOutcome(summary, t)),
     });
   }, [bulkMutation, t, visibleUnmarked]);
+
+  const eventStartMs = toMsOrNull(payloadData?.eventStartAt) ?? toMsOrNull(event?.date);
+
+  const handleLateSubmit = useCallback((/** @type {any} */ envoi) => {
+    const payload = {
+      arrivedAt: envoi.arrivedAt,
+      lateMinutes: envoi.lateMinutes,
+      note: envoi.note,
+    };
+    // 🧭 Pointer et CORRIGER ne sont pas la meme route : `coachArrival` cree
+    // le pointage, `patchLate` retouche celui qui existe deja.
+    if (envoi.isCorrection) lateMinutesMutation.mutate({ payload, userId: envoi.userId });
+    else coachArrivalMutation.mutate({ payload, userId: envoi.userId });
+    setOpenSheet('');
+  }, [coachArrivalMutation, lateMinutesMutation]);
+
+  const handleClearNote = useCallback(() => {
+    // 🧨 `patchLate` EXIGE `lateMinutes` : on renvoie celui qui est en place.
+    // Envoyer 0 pour effacer une note effacerait aussi le retard.
+    lateMinutesMutation.mutate({
+      payload: {
+        lateMinutes: Number(sheetItem?.attendance?.lateMinutes || 0),
+        note: null,
+      },
+      userId: sheetItem?.user?.documentId,
+    });
+    setOpenSheet('');
+  }, [lateMinutesMutation, sheetItem]);
+
+  const handleUnmark = useCallback(() => {
+    resetMutation.mutate({ userId: sheetItem?.user?.documentId });
+    setOpenSheet('');
+  }, [resetMutation, sheetItem]);
 
   const handleUnmarkAll = useCallback(() => {
     // 🔒 On ne vise QUE les lignes qui portent un `arrivedAt` : `reset` efface
@@ -355,6 +397,7 @@ function EventAttendanceCall() {
             identitiesHidden={identitiesHidden}
             item={item}
             key={item?.user?.documentId || index}
+            onLate={(/** @type {any} */ cible) => { setSheetItem(cible); setOpenSheet('late'); }}
             onMark={handleMark}
             position={index + 1}
             t={t}
@@ -373,6 +416,9 @@ function EventAttendanceCall() {
               identitiesHidden={identitiesHidden}
               item={item}
               key={item?.user?.documentId || index}
+              onCorrect={(/** @type {any} */ cible) => {
+                setSheetItem(cible); setOpenSheet('correct');
+              }}
               position={index + 1}
               t={t}
               timezone={timezone}
@@ -423,6 +469,7 @@ function EventAttendanceCall() {
           ) : (
             <TouchableOpacity
               accessibilityRole="button"
+              onPress={() => setOpenSheet('close')}
               style={[styles.disabledButton, { backgroundColor: Colors.primary500 }]}
             >
               <Text style={[Fonts.p2Bold, { color: Colors.primary900 }]}>
@@ -432,6 +479,37 @@ function EventAttendanceCall() {
           )}
         </View>
       )}
+      <AttendanceCloseSheet
+        closesAtMs={attendanceWindow.closesAtMs}
+        isVisible={openSheet === 'close'}
+        items={items}
+        onClose={() => setOpenSheet('')}
+        onConfirm={() => { setOpenSheet(''); navigation.goBack(); }}
+        payloadData={payloadData}
+        sweepAtMs={resolveNoShowSweepMs(resolveEventEndMs({ event, payloadData }))}
+        t={t}
+      />
+
+      <AttendanceLateSheet
+        eventStartMs={eventStartMs}
+        isCorrection={Boolean(sheetItem && isMarked(sheetItem))}
+        isVisible={openSheet === 'late'}
+        item={sheetItem}
+        onClose={() => setOpenSheet('')}
+        onSubmit={handleLateSubmit}
+        t={t}
+        timezone={timezone}
+      />
+
+      <AttendanceCorrectSheet
+        isVisible={openSheet === 'correct'}
+        item={sheetItem}
+        onChangeTime={() => setOpenSheet('late')}
+        onClearNote={handleClearNote}
+        onClose={() => setOpenSheet('')}
+        onUnmark={handleUnmark}
+        t={t}
+      />
     </ScreenContainer>
   );
 }
