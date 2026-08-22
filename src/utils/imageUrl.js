@@ -6,7 +6,7 @@ import { getPublicApiOrigin } from '@/config/runtimeUrls';
  * @returns {string | undefined} - The transformed URL
  */
 export const getImageUrl = (url) => {
-  if (!url) return undefined;
+  if (!url || typeof url !== 'string') return undefined;
 
   const publicOrigin = getPublicApiOrigin();
   const preferredLoopbackHost = (() => {
