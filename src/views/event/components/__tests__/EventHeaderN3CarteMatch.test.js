@@ -332,7 +332,7 @@ describe('N3 - la carte du match : titre, encart, verdict, adversaire', () => {
     expect(styleDe(carte).borderLeftColor).not.toBe(COULEURS.success500);
   });
 
-  test('N3 · temoin 6 — « Nommer l\'adversaire » n\'existe QUE si l\'ecran le permet (D9/D10)', () => {
+  test('N3 · temoin 6 — « Nommer l\'adversaire », seulement si permis (D9/D10)', () => {
     const onNameOpponent = jest.fn();
 
     // L'organisateur d'un match sans adversaire : l'encart l'invite a le nommer.

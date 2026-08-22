@@ -2888,12 +2888,78 @@ function EventDetails({ navigation, route }) {
     return teams[0]?.documentId || null;
   }, [event?.invitedTeams, event?.team, userData?.documentId, userData?.trainedTeams]);
 
+  // 🔄 N3 (D3) — QUI REGARDE CE MATCH ? Un evenement a UNE equipe organisatrice
+  // et des equipes invitees ; le meme match est donc « a domicile » pour l'une
+  // et « a l'exterieur » pour l'autre. Le score le savait deja (il s'inversait
+  // dans `matchHeaderScoreSummary`), mais la regle etait ecrite a l'interieur du
+  // calcul du score et n'etait donc utilisable par personne d'autre. Elle sort
+  // ici parce que la pastille de type et le verdict en ont besoin aussi — et
+  // qu'une pastille « À domicile » posee au-dessus d'un score inverse serait
+  // une contradiction visible a l'ecran.
+  const isViewerFromInvitedTeam = useMemo(() => {
+    const organizerTeamId = event?.team?.documentId || null;
+    const currentTeamId = compositionTeamId || organizerTeamId || null;
+    return Boolean(organizerTeamId && currentTeamId && organizerTeamId !== currentTeamId);
+  }, [compositionTeamId, event?.team?.documentId]);
+
   const compositionEditorTeam = useMemo(() => {
     const teams = [event?.team, ...(event?.invitedTeams || [])].filter(Boolean);
     return teams.find((team) => team?.documentId === compositionTeamId)
       || event?.team
       || null;
   }, [compositionTeamId, event?.invitedTeams, event?.team]);
+
+  // 🏷️ N3 (D1/D2/D3/D8) — CE QUE LA PASTILLE DE TYPE AJOUTE POUR UN MATCH.
+  //
+  // N1 a centralise le libelle dans `buildTypeTagLabel` en prevoyant ce lot :
+  // « MATCH » se complete d'un segment, et d'un seul a la fois.
+  //
+  // ⛔ `isHome` EST TRI-ETAT, et le troisieme etat n'est pas `false` :
+  // `null` veut dire « personne ne sait », ce qui est le cas de tout match
+  // saisi a la main. `Boolean(event?.isHome)` afficherait « À l'extérieur »
+  // pour ces matchs-la — une affirmation fausse, la ou se taire est juste.
+  //
+  // ⚠️ Le serveur qui ECRIT `isHome` (admin AE03, `3e7dd58`) n'est pas deploye
+  // sur la recette au 23/08. Jusque-la, le seul chemin qui affichera quelque
+  // chose en vrai est le repli sur `contextLabel`, deduit de la description des
+  // matchs synchronises. Ce n'est pas une rustine : c'est l'ancien parc, qui
+  // restera de toute facon depourvu du champ.
+  const matchVenueTagSegment = useMemo(() => {
+    if (!isMatchEvent) return '';
+    // D8 — un match fini s'est deja joue quelque part. Dire ou n'apprend plus
+    // rien a personne ; dire qu'il est TERMINÉ, si.
+    if (isMatchFinished) return t('eventDetails.typeTag.matchFinished', 'TERMINÉ');
+
+    let playsAtHome = null;
+    if (event?.isHome === true) playsAtHome = true;
+    else if (event?.isHome === false) playsAtHome = false;
+    else if (externalMatchDisplay?.contextLabel === 'Domicile') playsAtHome = true;
+    else if (externalMatchDisplay?.contextLabel === 'Exterieur') playsAtHome = false;
+
+    if (playsAtHome === null) return '';
+
+    const playsAtHomeForViewer = isViewerFromInvitedTeam ? !playsAtHome : playsAtHome;
+    return playsAtHomeForViewer
+      ? t('eventDetails.typeTag.matchHome', 'À DOMICILE')
+      : t('eventDetails.typeTag.matchAway', 'À L\'EXTÉRIEUR');
+  }, [
+    event?.isHome,
+    externalMatchDisplay?.contextLabel,
+    isMatchEvent,
+    isMatchFinished,
+    isViewerFromInvitedTeam,
+    t,
+  ]);
+
+  // N1 avait prevu que N3 « allonge le tableau » des precisions de la pastille.
+  // Il ne peut pas l'allonger DANS `typeTagSegments` : le lieu du match depend
+  // de `compositionTeamId`, declare 800 lignes plus bas — un hook ne se lit pas
+  // avant d'exister. Les deux listes se rejoignent donc ici, et
+  // `buildTypeTagLabel` retire tout seul les segments vides.
+  const typeTagSegmentsComplets = useMemo(
+    () => [...typeTagSegments, matchVenueTagSegment],
+    [matchVenueTagSegment, typeTagSegments],
+  );
 
   const compositionEditorPlayers = useMemo(
     () => getCompositionPlayersForEvent(event, compositionEditorTeam, isDetectionEvent),
@@ -3061,15 +3127,10 @@ function EventDetails({ navigation, route }) {
     if (!isMatchEvent) return null;
 
     const scoreState = matchStatsPayload?.score || null;
-    const organizerTeamId = event?.team?.documentId || null;
-    const currentTeamId = compositionTeamId || organizerTeamId || null;
     const storedMatchResult = event?.matchResult || null;
-    const shouldInvertStoredScore = Boolean(
-      storedMatchResult
-      && organizerTeamId
-      && currentTeamId
-      && organizerTeamId !== currentTeamId,
-    );
+    // La regle d'orientation vit desormais dans `isViewerFromInvitedTeam` (D3) :
+    // le score et la pastille ne peuvent plus diverger.
+    const shouldInvertStoredScore = Boolean(storedMatchResult && isViewerFromInvitedTeam);
 
     let fallbackScoreFor = null;
     let fallbackScoreAgainst = null;
@@ -3120,12 +3181,11 @@ function EventDetails({ navigation, route }) {
       value: `${resolvedScoreFor} - ${resolvedScoreAgainst}`,
     };
   }, [
-    compositionTeamId,
     event?.externalAutoSource,
     event?.matchResult,
-    event?.team?.documentId,
     isMatchEvent,
     isMatchFinished,
+    isViewerFromInvitedTeam,
     matchStatsPayload?.score,
   ]);
   const matchStatsSummaryText = useMemo(() => {
@@ -5380,7 +5440,7 @@ function EventDetails({ navigation, route }) {
       <View style={[Spaces.gap[8], Alignments.alignCenter]}>
         <Tag
           style={{}}
-          text={buildTypeTagLabel(event?.type?.name, typeTagSegments)}
+          text={buildTypeTagLabel(event?.type?.name, typeTagSegmentsComplets)}
           textStyle={Fonts.p2}
         />
         {/* Y02 : le nom de l'adversaire, sous la pastille de type. ⛔ La ligne

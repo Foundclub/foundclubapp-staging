@@ -455,10 +455,16 @@ afterEach(() => {
   demonter();
 });
 
-/** @returns {string} Le libelle pose dans la pastille de type. */
+/**
+ * Le libelle complet pose dans la pastille de type.
+ * @returns {string} Le libelle.
+ */
 const pastille = () => String(/** @type {any} */ (mockTagProps.value)?.text || '');
 
-/** @returns {any} L'objet passe a l'entete. */
+/**
+ * L'objet que l'ecran passe a l'entete pour peindre l'encart du match.
+ * @returns {any} Le resume, ou null.
+ */
 const resume = () => /** @type {any} */ (mockHeaderProps.value)?.matchScoreSummary || null;
 
 describe('N3 - la carte du match : ce que l ecran calcule', () => {
@@ -538,7 +544,7 @@ describe('N3 - la carte du match : ce que l ecran calcule', () => {
     expect(pastille()).toBe('MATCH · À DOMICILE');
   });
 
-  test('N3 · temoin 5 — l\'encart existe AVANT le match, des qu\'un adversaire est connu (D5)', () => {
+  test('N3 · temoin 5 — l\'encart existe AVANT le match (D5)', () => {
     monter({ event: buildMatch() });
 
     const resultat = resume();
@@ -607,9 +613,12 @@ describe('N3 - la carte du match : ce que l ecran calcule', () => {
       champ.props.onChangeText('US Marseille');
     });
 
-    const valider = racine.findAll(
-      (/** @type {any} */ n) => n.props?.accessibilityRole === 'button',
-    ).find((/** @type {any} */ n) => JSON.stringify(n.props.children || '').includes('Enregistrer'));
+    const porteLeMot = (/** @type {any} */ n) => JSON
+      .stringify(n.props.children || '')
+      .includes('Enregistrer');
+    const valider = racine
+      .findAll((/** @type {any} */ n) => n.props?.accessibilityRole === 'button')
+      .find(porteLeMot);
     expect(valider).toBeDefined();
 
     await act(async () => {

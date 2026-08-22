@@ -1214,6 +1214,9 @@ export default {
     },
     typeTag: {
       capacity: '{{taken}}/{{total}} PLACES',
+      matchAway: 'À L\'EXTÉRIEUR',
+      matchFinished: 'TERMINÉ',
+      matchHome: 'À DOMICILE',
     },
   },
   eventEdit: {
