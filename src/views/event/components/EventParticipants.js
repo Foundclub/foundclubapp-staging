@@ -1,5 +1,6 @@
 // @ts-nocheck
 import { useIsMutating } from '@tanstack/react-query';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Image, Text, TouchableOpacity, View,
@@ -10,6 +11,7 @@ import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
 import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
+import SearchBar from '@/components/molecules/searchBar/SearchBar';
 
 // import statique (pas require) : require n'existe pas sur le rendu web ESM.
 import SHARE_ICON from '@/assets/icons/share2.png';
@@ -125,6 +127,22 @@ const getStaffDisplayName = (user) => {
   const lastname = String(user?.lastname || '').trim();
   return [firstname, lastname].filter(Boolean).join(' ').trim() || 'Staff';
 };
+
+/**
+ * AE02 : reduit un texte a sa forme comparable — sans accent, sans casse.
+ *
+ * 🔤 Le motif est celui d `eventDisplayName.js:38-44`, RECOPIE et non importe :
+ * la-bas c est un `const` de module qui n est pas exporte, et ce module parle
+ * d adversaires de match, pas de participants. Trois lignes recopiees valent
+ * mieux qu un export ouvert dans un fichier qui ne demandait rien.
+ * @param {any} valeur - Le texte a reduire.
+ * @returns {string} - Sa forme comparable.
+ */
+const comparable = (valeur) => (valeur === null || valeur === undefined ? '' : String(valeur))
+  .normalize('NFD')
+  .replace(/[\u0300-\u036f]/g, '')
+  .toLowerCase()
+  .trim();
 
 /**
  * AD06 (L3-B) : l heure d arrivee existait dans la reponse du serveur et
@@ -279,6 +297,41 @@ function EventParticipants({
   // ensemble — ils declenchent le meme envoi.
   const isReminding = useIsMutating({ mutationKey: REMIND_EVENT_MUTATION_KEY }) > 0;
   const areParticipantIdentitiesHidden = event?.participantIdentitiesHidden === true;
+  // AE02 (1E partiel) — CHERCHER UN NOM.
+  // La saisie vit ICI, en etat local : `EventDetails` est tenu par un autre lot
+  // et ne peut recevoir aucune prop neuve. ⚠️ Saisie vide = l ecran STRICTEMENT
+  // d avant — c est ce qui protege le filet d AD06, qui ne tape jamais rien.
+  const [rechercheNom, setRechercheNom] = useState('');
+  const rechercheComparable = comparable(rechercheNom);
+  const rechercheActive = rechercheComparable.length > 0;
+
+  /**
+   * Ce nom est-il retenu par la recherche en cours ?
+   * @param {User | undefined} personne - La personne a tester.
+   * @returns {boolean} - Vrai si elle reste affichee.
+   */
+  const correspond = (personne) => !rechercheActive
+    || comparable(getUserDisplayName(personne)).includes(rechercheComparable);
+
+  /**
+   * Filtre une liste de joueurs par la recherche en cours.
+   * ⚠️ Au repos elle rend la liste D ORIGINE, telle quelle : pas de copie, donc
+   * pas le moindre ecart de rendu quand la barre est vide.
+   * @param {User[] | undefined} joueurs - La liste d origine.
+   * @returns {User[] | undefined} - La liste filtree, ou l originale au repos.
+   */
+  const filtrerJoueurs = (joueurs) => (rechercheActive
+    ? (joueurs || []).filter(correspond)
+    : joueurs);
+
+  /**
+   * Filtre une liste de demandes de participation par la recherche en cours.
+   * @param {PendingParticipation[] | undefined} demandes - La liste d origine.
+   * @returns {PendingParticipation[] | undefined} - La liste filtree, ou l originale.
+   */
+  const filtrerDemandes = (demandes) => (rechercheActive
+    ? (demandes || []).filter((demande) => correspond(demande?.user))
+    : demandes);
 
   const renderParticipant = (player, options = {}) => {
     const userId = player?.documentId || '';
@@ -363,7 +416,10 @@ function EventParticipants({
     // Sans message fourni, on garde le silence d avant : c est ce qui
     // laisse l historique invisible quand il est vide.
     if (!players?.length) {
-      if (!options.emptyMessage) return null;
+      // AE02 : pendant une recherche, un groupe sans resultat DISPARAIT, titre
+      // compris. Garder « Aucune absence signalée. » serait un mensonge : il y
+      // a peut-etre des absents, ils ne portent juste pas le nom cherche.
+      if (!options.emptyMessage || rechercheActive) return null;
       return (
         <>
           <Text style={[Fonts.h4Bold, Fonts.primary500]}>
@@ -530,6 +586,78 @@ function EventParticipants({
     ...(externalParticipationSection ? [externalParticipationSection] : []),
   ];
   const hasTeamSections = sectionsToRender.length > 0;
+
+  /**
+   * Compte les noms REELLEMENT rendus par une section d equipe.
+   * Sert deux fois : decider si la barre de recherche a lieu d etre, et jeter
+   * une section qui ne garde plus aucun nom une fois filtree.
+   * ⛔ `historical.pending` n en est pas : il est rendu comme un COMPTE, pas
+   * comme des noms — une section qui n aurait que lui serait une carte vide.
+   * @param {TeamParticipationSection} item - La section a compter.
+   * @returns {number} - Le nombre de noms affiches.
+   */
+  const compterNomsDeSection = (item) => {
+    const historique = item?.historical || {};
+    return (item?.participating?.length || 0)
+      + (item?.missing?.length || 0)
+      + (item?.notAnswered?.length || 0)
+      + (historique.participating?.length || 0)
+      + (historique.missing?.length || 0)
+      + (canApprovePendingRequests ? (item?.pending?.length || 0) : 0);
+  };
+
+  /**
+   * Compte les noms rendus par le chemin SANS equipes (et par le repli).
+   * @param {ParticipationsByStatus | undefined} listes - Les 3 listes.
+   * @param {User[] | undefined} repli - La liste de repli.
+   * @param {PendingParticipation[] | undefined} demandes - Les demandes.
+   * @returns {number} - Le nombre de noms affiches.
+   */
+  const compterNomsHorsEquipes = (listes, repli, demandes) => {
+    const personnes = listes
+      ? (listes.participating?.length || 0)
+        + (listes.missing?.length || 0)
+        + (listes.notAnswered?.length || 0)
+      : (repli?.length || 0);
+    return personnes + (canApprovePendingRequests ? (demandes?.length || 0) : 0);
+  };
+
+  /**
+   * Applique la recherche a une section d equipe, liste par liste.
+   * @param {TeamParticipationSection} item - La section d origine.
+   * @returns {TeamParticipationSection} - La section filtree.
+   */
+  const filtrerSection = (item) => ({
+    ...item,
+    historical: {
+      ...(item.historical || {}),
+      missing: filtrerJoueurs(item.historical?.missing),
+      participating: filtrerJoueurs(item.historical?.participating),
+      pending: filtrerDemandes(item.historical?.pending),
+    },
+    missing: filtrerJoueurs(item.missing),
+    notAnswered: filtrerJoueurs(item.notAnswered),
+    participating: filtrerJoueurs(item.participating),
+    pending: filtrerDemandes(item.pending),
+  });
+
+  // ⚠️ CE QUI EST FILTRE, ET CE QUI NE L EST PAS : seules les LISTES rendues
+  // passent par la recherche. Les 3 compteurs et la barre de reponses, eux,
+  // continuent de se calculer sur `sectionsToRender` — ils decrivent
+  // l evenement, pas la saisie. Un coach qui cherche « Dupont » ne doit pas
+  // voir « 1 présent » alors qu ils sont 14.
+  const sectionsAffichees = rechercheActive
+    ? sectionsToRender.map(filtrerSection).filter((item) => compterNomsDeSection(item) > 0)
+    : sectionsToRender;
+  const listesAffichees = rechercheActive && participationsByStatus
+    ? {
+      missing: filtrerJoueurs(participationsByStatus.missing),
+      notAnswered: filtrerJoueurs(participationsByStatus.notAnswered),
+      participating: filtrerJoueurs(participationsByStatus.participating),
+    }
+    : participationsByStatus;
+  const demandesAffichees = filtrerDemandes(pendingParticipations);
+  const repliAffiche = filtrerJoueurs(event?.participations);
   const participatingCount = Number(
     participantsSummary?.participatingCount ?? event?.participations?.length ?? 0,
   );
@@ -563,6 +691,18 @@ function EventParticipants({
   const sansReponseCount = Math.max(0, totalAttendu - presentsCount - absentsCount);
   const reponsesRecues = presentsCount + absentsCount;
   const partReponses = totalAttendu > 0 ? Math.round((reponsesRecues / totalAttendu) * 100) : 0;
+
+  // Ce que la recherche peut atteindre. 🪤 Le compte se fait sur les listes NON
+  // filtrees : sinon la barre disparaitrait sur une saisie sans resultat, et
+  // plus personne ne pourrait effacer sa saisie.
+  const nombreDeNomsAffichables = hasTeamSections
+    ? sectionsToRender.reduce((total, item) => total + compterNomsDeSection(item), 0)
+    : compterNomsHorsEquipes(participationsByStatus, event?.participations, pendingParticipations);
+  const nombreDeNomsRetenus = hasTeamSections
+    ? sectionsAffichees.reduce((total, item) => total + compterNomsDeSection(item), 0)
+    : compterNomsHorsEquipes(listesAffichees, repliAffiche, demandesAffichees);
+  const barreDeRechercheVisible = !areParticipantIdentitiesHidden && nombreDeNomsAffichables > 0;
+  const aucunResultat = rechercheActive && nombreDeNomsRetenus === 0;
 
   const renderCounterTile = (identifiant, libelle, valeur) => (
     <View
@@ -675,7 +815,7 @@ function EventParticipants({
     if (hasTeamSections) {
       return (
         <View style={[Spaces.gap[12]]}>
-          {sectionsToRender.map(renderTeamSection)}
+          {sectionsAffichees.map(renderTeamSection)}
         </View>
       );
     }
@@ -685,7 +825,7 @@ function EventParticipants({
         <>
           {renderStatusGroup(
             t('eventDetails.participationStatus.participating'),
-            participationsByStatus.participating || [],
+            listesAffichees.participating || [],
             {
               allowLiveLate: true,
               emptyMessage: t('eventDetails.emptyStates.noConfirmation'),
@@ -696,7 +836,7 @@ function EventParticipants({
           )}
           {renderStatusGroup(
             t('eventDetails.participationStatus.missing'),
-            participationsByStatus.missing || [],
+            listesAffichees.missing || [],
             {
               allowLiveLate: false,
               emptyMessage: t('eventDetails.emptyStates.noAbsence'),
@@ -705,7 +845,7 @@ function EventParticipants({
               statusLabel: t('eventDetails.participationStatus.missing'),
             },
           )}
-          {(participationsByStatus.notAnswered || []).length > 0 && (
+          {(listesAffichees.notAnswered || []).length > 0 && (
             <>
               <View style={[Alignments.row, Alignments.alignCenter, Alignments.spaceBetween, Spaces.gap[16]]}>
                 <Text style={[Fonts.h4Bold, Fonts.primary500]}>
@@ -715,7 +855,7 @@ function EventParticipants({
                   <Button isLoading={isReminding} isOption onPress={handleRemindPlayers} title={t('eventDetails.actions.remind')} variant="Primary" />
                 ) : null}
               </View>
-              {(participationsByStatus.notAnswered || []).map((player) => renderParticipant(player, {
+                {(listesAffichees.notAnswered || []).map((player) => renderParticipant(player, {
                 allowLiveLate: false,
                 keyPrefix: 'legacy-not-answered',
                 statusKind: 'not_answered',
@@ -723,7 +863,7 @@ function EventParticipants({
               }))}
             </>
           )}
-          {(participationsByStatus.notAnswered || []).length > 0 ? null : renderStatusGroup(
+          {(listesAffichees.notAnswered || []).length > 0 ? null : renderStatusGroup(
             t('eventDetails.participationStatus.notAnswered'),
             [],
             { emptyMessage: t('eventDetails.emptyStates.allAnswered') },
@@ -732,7 +872,7 @@ function EventParticipants({
       );
     }
 
-    return (event?.participations || []).map((player) => renderParticipant(player, {
+    return (repliAffiche || []).map((player) => renderParticipant(player, {
       allowLiveLate: true,
       keyPrefix: 'fallback',
       showCoachActions: canEdit,
@@ -742,12 +882,12 @@ function EventParticipants({
 
   return (
     <View style={[Spaces.gap[16], Alignments.fill]}>
-      {!hasTeamSections && canApprovePendingRequests && pendingParticipations?.length > 0 && (
+      {!hasTeamSections && canApprovePendingRequests && demandesAffichees?.length > 0 && (
         <View style={[Spaces.gap[16], Alignments.fill]}>
           <Text style={[Fonts.h3Bold, Fonts.neutral00]}>
             {t('eventDetails.fields.participationRequests')}
           </Text>
-          {pendingParticipations.map(renderPendingCard)}
+          {demandesAffichees.map(renderPendingCard)}
         </View>
       )}
 
@@ -789,7 +929,26 @@ function EventParticipants({
         {renderResponsesBar()}
       </View>
 
-      {renderParticipationsContent()}
+      {/* AE02 (1E partiel) : la barre se place SOUS les compteurs et AU-DESSUS
+          des groupes — elle filtre la liste, pas le resume. `withCalendar` et
+          `withFilter` a `false` donnent le champ nu a la loupe de la maquette.
+          Elle ne rend AUCUN noeud `Text` : les temoins d ordre d AD06, qui
+          lisent les textes rendus, ne la voient meme pas. */}
+      {barreDeRechercheVisible ? (
+        <SearchBar
+          onChangeText={setRechercheNom}
+          placeholder={t('eventDetails.participantsSearch.placeholder', 'Chercher un nom')}
+          value={rechercheNom}
+          withCalendar={false}
+          withFilter={false}
+        />
+      ) : null}
+
+      {aucunResultat ? (
+        <Text style={[Fonts.p3, Fonts.neutral300]} testID="AE02-aucun-resultat">
+          {t('eventDetails.participantsSearch.noResult', 'Aucun nom ne correspond')}
+        </Text>
+      ) : renderParticipationsContent()}
     </View>
   );
 }
