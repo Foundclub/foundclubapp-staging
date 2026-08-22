@@ -85,3 +85,21 @@ export const getCompositionPlayerInitials = (player) => {
     .map((part) => part[0]?.toUpperCase() || '')
     .join('') || '?';
 };
+
+/**
+ * L'adresse de la photo d'un joueur de composition.
+ *
+ * ⚠️ L'avatar d'un joueur est TANTOT une string — l'instantane fige dans une
+ * composition deja publiee — TANTOT l'objet media de Strapi ({ url, formats,
+ * ... }) rendu par le serveur. Passer l'objet brut a `getImageUrl` tuait
+ * l'ecran (« url.startsWith is not a function », constat AE04 du 2026-08-22).
+ *
+ * 🏠 Le motif vient de `views/matchCallUp/MatchCallUpSelection.js:446`, qui le
+ * faisait deja bien : il est sorti ici pour que les autres ecrans de compo
+ * cessent de le reinventer.
+ * @param {any} player
+ * @returns {string | undefined} `undefined` quand il n'y a pas de photo.
+ */
+export const getCompositionPlayerAvatarUrl = (player) => (
+  typeof player?.avatar === 'string' ? player.avatar : player?.avatar?.url
+);
