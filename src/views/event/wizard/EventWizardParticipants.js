@@ -604,7 +604,7 @@ function EventWizardParticipants({ navigation, route }) {
                   />
                   <ProfileAvatar
                     enablePreview={false}
-                    imageUrl={getCompositionPlayerAvatarUrl(player) ?? null}
+                    imageUrl={getCompositionPlayerAvatarUrl(player)}
                     name={playerLabel}
                     size={32}
                   />

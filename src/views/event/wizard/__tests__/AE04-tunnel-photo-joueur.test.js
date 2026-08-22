@@ -212,7 +212,7 @@ describe("AE04 — l'etape Participants d'un match, avec des joueurs qui ont une
 
     mockAvatarsRecus.forEach((/** @type {any} */ props) => {
       const recu = props.imageUrl;
-      expect(recu === null || typeof recu === 'string').toBe(true);
+      expect(recu === undefined || typeof recu === 'string').toBe(true);
     });
 
     demonter();
@@ -237,7 +237,7 @@ describe("AE04 — l'etape Participants d'un match, avec des joueurs qui ont une
   it('laisse les initiales au joueur sans photo', () => {
     const { demonter } = monterEtapeParticipants();
 
-    expect(avatarDe('Theo Nguyen').imageUrl).toBeNull();
+    expect(avatarDe('Theo Nguyen').imageUrl).toBeUndefined();
 
     demonter();
   });
