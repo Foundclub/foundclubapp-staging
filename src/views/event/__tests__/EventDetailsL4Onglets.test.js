@@ -517,6 +517,28 @@ describe('L4 · temoin 4 — trois onglets sur un match, zero ailleurs', () => {
     expect(contient(root, 'Exporter la liste (Excel/CSV)')).toBe(false);
   });
 
+  test('la DESCRIPTION ouvre l onglet Aperçu — elle passe avant les taches', () => {
+    // Regle 2 des six regles du 22/08 (CONSTAT, ecart 4) : « un seul champ, le
+    // meme nom pour les six types, EN HAUT DE L'APERÇU, sous la carte ».
+    // Avant L4-A, la description etait rendue au 9e rang de la page, apres les
+    // taches. Le bloc des taches redescend donc SOUS elle.
+    const root = monter({
+      event: buildEvent({
+        eventTasks: [{ documentId: 'tache-1', title: 'Apporter les ballons' }],
+      }),
+    });
+
+    const textes = textesVisibles(root);
+    const rangDescription = textes.findIndex((/** @type {string} */ t) => t.includes(DESCRIPTION));
+    const rangTaches = textes.findIndex(
+      (/** @type {string} */ t) => t.includes('DOUBLURE_EventTasksSection'),
+    );
+
+    expect(rangDescription).toBeGreaterThanOrEqual(0);
+    expect(rangTaches).toBeGreaterThanOrEqual(0);
+    expect(rangDescription).toBeLessThan(rangTaches);
+  });
+
   test('l onglet Convocation porte la composition publiee, Aperçu ne la porte pas', () => {
     const root = monter({
       auth: authPour(JOUEUR),

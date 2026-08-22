@@ -5490,14 +5490,6 @@ function EventDetails({ navigation, route }) {
                 </TouchableOpacity>
               ) : null}
 
-              {showOverviewTab && hasEventTasks ? (
-                <EventTasksSection
-                  canManageEvent={canEdit}
-                  event={event}
-                  userData={userData}
-                />
-              ) : null}
-
               {renderTournamentSection()}
 
               {showOverviewTab && eventDescriptionText ? (
@@ -5586,6 +5578,14 @@ function EventDetails({ navigation, route }) {
                   onApply={handleApplyToDetectionSlot}
                   onOpenSlot={handleOpenDetectionSlot}
                   slots={detectionSlots}
+                />
+              ) : null}
+
+              {showOverviewTab && hasEventTasks ? (
+                <EventTasksSection
+                  canManageEvent={canEdit}
+                  event={event}
+                  userData={userData}
                 />
               ) : null}
 
