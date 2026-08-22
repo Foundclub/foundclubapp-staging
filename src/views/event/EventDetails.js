@@ -5078,10 +5078,26 @@ function EventDetails({ navigation, route }) {
     // D4 : le bouton autonome « Mettre à la une » a disparu — c'est la chip
     // « À la une » du panneau qui ouvre la meme modale, sous la meme condition.
     const pendingFeaturedActionNode = (() => {
+      // 🔇 N1 (d) — CES DEUX BOUTONS-LA NE SONT PAS MUETS, ET C'EST LE POINT.
+      //
+      // La regle 5 du pack interdit un bouton gris sans explication. Ces deux-ci
+      // portent DEJA leur motif dans leur titre : « Demande en attente » et
+      // « Déjà à la une » disent exactement pourquoi on ne peut pas appuyer. Rien
+      // a corriger, donc — mais leurs libelles etaient ecrits EN DUR, ce qui les
+      // rendait invisibles a toute relecture de fr.js et impossibles a traduire.
+      //
+      // ⛔ « Demande en attente » existait deja en DEUX clefs : on reprend celle
+      // du domaine de la mise a la une plutot que d'en creer une troisieme.
+      // Seul « Déjà à la une » n'existait nulle part et devient une clef neuve.
       if (hasPendingFeaturedScope) {
         return (
           <View style={{ marginTop: 12, opacity: 0.7 }}>
-            <Button disabled icon="clock" title="Demande en attente" variant="Secondary" />
+            <Button
+              disabled
+              icon="clock"
+              title={t('reservation.featuredRequest.pending', 'Demande en attente')}
+              variant="Secondary"
+            />
           </View>
         );
       }
@@ -5089,7 +5105,12 @@ function EventDetails({ navigation, route }) {
       if (hasApprovedFeaturedScope && canManageFeatured) {
         return (
           <View style={{ marginTop: 12, opacity: 0.8 }}>
-            <Button disabled icon="check" title="Déjà à la une" variant="Secondary" />
+            <Button
+              disabled
+              icon="check"
+              title={t('eventDetails.featuredRequest.alreadyFeatured', 'Déjà à la une')}
+              variant="Secondary"
+            />
           </View>
         );
       }
