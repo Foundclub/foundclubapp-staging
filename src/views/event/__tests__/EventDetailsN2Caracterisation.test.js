@@ -671,19 +671,27 @@ describe('N2 · 4F — LE STAGE PARENT SE RANGE EN TROIS ONGLETS', () => {
 });
 
 describe('N2 · caracterisation — LE TOURNOI ET SES EQUIPES INSCRITES', () => {
-  test('le panneau de TETE porte « Gérer le tournoi »', () => {
+  // ♻️ REECRITS PAR L'ETAPE 4. Ces deux temoins cherchaient un TEXTE a l'ecran.
+  // 🧨 C'est trop faible : quand l'action a demenage du panneau de tete vers la
+  // barre du bas, ils sont restes VERTS sans rien mesurer de vrai. Ils nomment
+  // maintenant l'ENDROIT, qui est tout le sujet du deplacement.
+  test('l action primaire a QUITTE le panneau de tete pour la barre du bas', () => {
     const root = monter({ event: buildTournoi() });
 
-    expect(contient(root, 'Gérer le tournoi')).toBe(true);
+    const barre = parTestID(root, 'tournament-bottom-bar');
+    expect(barre).toHaveLength(1);
+    expect(textesVisibles(barre[0]).join(' ')).toContain('Gérer le tournoi');
   });
 
-  test('un lecteur qui ne gere PAS lit « Voir le tournoi »', () => {
+  test('un lecteur qui ne gere PAS lit « Voir le tournoi », dans la barre', () => {
     const root = monter({
       auth: authPour('visiteur-1', false),
       event: buildTournoi(),
     });
 
-    expect(contient(root, 'Voir le tournoi')).toBe(true);
+    const barre = parTestID(root, 'tournament-bottom-bar');
+    expect(barre).toHaveLength(1);
+    expect(textesVisibles(barre[0]).join(' ')).toContain('Voir le tournoi');
   });
 
   test('la section tournoi montre l etat de la competition et le compte d equipes', () => {
@@ -725,11 +733,16 @@ describe('N2 · caracterisation — LE TOURNOI ET SES EQUIPES INSCRITES', () => 
     expect(contient(root, 'Équipe inscrite')).toBe(true);
   });
 
-  test('un tournoi n a AUCUNE barre du bas — et c est le defaut a corriger', () => {
-    // `renderActionButtons` rend `null` des que l'evenement est un tournoi
-    // (inchange depuis avril). L'ecran se termine donc sur du vide.
+  // ♻️ REECRIT PAR L'ETAPE 4 : le defaut est corrige. `renderActionButtons`
+  // rendait `null` des qu'il voyait un tournoi, depuis avril.
+  test('🏆 un tournoi A une barre du bas, et elle ne porte QU UN bouton', () => {
     const root = monter({ event: buildTournoi() });
 
+    const barre = parTestID(root, 'tournament-bottom-bar');
+    expect(barre).toHaveLength(1);
+    // ⛔ UN seul, jamais la pile de six que portait le panneau de tete.
+    expect(barre[0].findAllByType(TouchableOpacity)).toHaveLength(1);
+    // Et ce n'est pas le RSVP classique : un tournoi repond par son equipe.
     expect(contient(root, 'DOUBLURE_EventAnswerButtons')).toBe(false);
   });
 
@@ -783,6 +796,113 @@ describe('N2 · caracterisation — CE QUI NE DOIT PAS BOUGER', () => {
     const root = monter({ event: buildEvent({ type: { name: 'Match' } }) });
 
     expect(libellesDesOnglets(root)).toEqual(['Aperçu', 'Participants · 0', 'Convocation']);
+  });
+});
+
+describe('N2 · 4E — LA BARRE DU BAS DU TOURNOI DIT CE QUE CE LECTEUR-LA PEUT FAIRE', () => {
+  // 🎯 Six etats, six libelles — tous DEJA ecrits dans l'ancien panneau de tete.
+  // Ce lot les deplace, il n'en invente aucun. Chaque temoin verifie qu'un role
+  // recoit SON action, et une seule.
+  // 🧨 On lit les `Text` RENDUS a l interieur de la barre, jamais `textOf` sur
+  // le noeud lui-meme : `<Button title="..." />` ne porte pas d enfants, son
+  // libelle vit dans une prop. `textOf` y rendrait la chaine vide, et le temoin
+  // passerait au vert sur une barre muette.
+  const libelleDeLaBarre = (/** @type {any} */ root) => {
+    const barre = parTestID(root, 'tournament-bottom-bar');
+    if (!barre.length) throw new Error('Aucune barre du bas a l ecran');
+    return barre[0]
+      .findAllByType(Text)
+      .map((/** @type {any} */ node) => textOf(node))
+      .join(' ');
+  };
+
+  test('1/6 — l ORGANISATEUR lit « Gérer le tournoi »', () => {
+    const root = monter({ event: buildTournoi() });
+
+    expect(libelleDeLaBarre(root)).toContain('Gérer le tournoi');
+  });
+
+  test('2/6 — le CAPITAINE d une equipe lit « Gérer mon équipe inscrite »', () => {
+    const root = monter({
+      auth: authPour('cap-1', false),
+      event: buildTournoi({
+        tournamentTeams: [{
+          captainUser: { documentId: 'cap-1' },
+          documentId: 'equipe-a',
+          members: [],
+          name: 'Les Aigles',
+          status: 'accepted',
+        }],
+      }),
+    });
+
+    expect(libelleDeLaBarre(root)).toContain('Gérer mon équipe inscrite');
+  });
+
+  test('3/6 — un MEMBRE lit « Voir mon équipe inscrite »', () => {
+    // `u-1` est membre actif des Aigles dans la charge de reference.
+    const root = monter({
+      auth: authPour('u-1', false),
+      event: buildTournoi(),
+    });
+
+    expect(libelleDeLaBarre(root)).toContain('Voir mon équipe inscrite');
+  });
+
+  test('4/6 — un INVITE lit « Répondre à mon invitation »', () => {
+    const root = monter({
+      auth: authPour('invite-1', false),
+      event: buildTournoi({
+        tournamentTeams: [{
+          documentId: 'equipe-a',
+          members: [
+            { documentId: 'm-9', responseStatus: 'invited', user: { documentId: 'invite-1' } },
+          ],
+          name: 'Les Aigles',
+          status: 'accepted',
+        }],
+      }),
+    });
+
+    expect(libelleDeLaBarre(root)).toContain('Répondre à mon invitation');
+  });
+
+  test('5/6 — qui a DEMANDE a rejoindre lit « Suivre ma demande »', () => {
+    const root = monter({
+      auth: authPour('demandeur-1', false),
+      event: buildTournoi({
+        tournamentTeams: [{
+          documentId: 'equipe-a',
+          members: [
+            { documentId: 'm-9', responseStatus: 'requested', user: { documentId: 'demandeur-1' } },
+          ],
+          name: 'Les Aigles',
+          status: 'accepted',
+        }],
+      }),
+    });
+
+    expect(libelleDeLaBarre(root)).toContain('Suivre ma demande');
+  });
+
+  test('6/6 — un VISITEUR lit « Voir le tournoi »', () => {
+    const root = monter({
+      auth: authPour('inconnu-1', false),
+      event: buildTournoi(),
+    });
+
+    expect(libelleDeLaBarre(root)).toContain('Voir le tournoi');
+  });
+
+  test('⛔ une JOURNEE de stage n est pas un tournoi : elle garde sa barre normale', () => {
+    // La condition `!isStageDayEvent` protege ce cas depuis toujours ; elle est
+    // reprise telle quelle dans la barre. Un temoin plutot qu'une supposition.
+    const root = monter({
+      event: buildTournoi({ eventFormat: 'stage_day' }),
+    });
+
+    expect(parTestID(root, 'tournament-bottom-bar')).toHaveLength(0);
+    expect(contient(root, 'DOUBLURE_EventAnswerButtons')).toBe(true);
   });
 });
 

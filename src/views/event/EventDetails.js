@@ -5421,18 +5421,66 @@ function EventDetails({ navigation, route }) {
     );
   };
 
+  /**
+   * 🎯 N2 — L'ACTION PRIMAIRE D'UN TOURNOI, SELON QUI REGARDE (Q8=C, 6 etats).
+   *
+   * ⚠️ Un tournoi etait le SEUL type d'evenement sans barre du bas : depuis
+   * avril, `renderActionButtons` rendait `null` des qu'il en voyait un, et
+   * l'ecran se terminait sur du vide. Toutes les actions vivaient dans un
+   * panneau pose en HAUT de la page — donc hors de portee du pouce, et hors de
+   * vue des qu'on avait defile.
+   *
+   * ⛔ AUCUN LIBELLE N'EST INVENTE ICI : les six existaient deja dans le
+   * panneau de tete. C'est un DEPLACEMENT, pas un elargissement de droits —
+   * les conditions sont reprises telles quelles, dans le meme ordre.
+   *
+   * @returns {{ onPress: () => void, title: string } | null}
+   */
+  const getTournamentPrimaryAction = () => {
+    if (!isTournamentEvent || isStageDayEvent) return null;
+
+    if (canEdit) {
+      return { onPress: handleOpenTournamentManagement, title: 'Gérer le tournoi' };
+    }
+
+    if (managedTournamentTeam?.documentId) {
+      return {
+        onPress: () => handleOpenTournamentTeam(managedTournamentTeam.documentId),
+        title: 'Gérer mon équipe inscrite',
+      };
+    }
+
+    if (currentUserTournamentTeam?.documentId) {
+      return {
+        onPress: () => handleOpenTournamentTeam(currentUserTournamentTeam.documentId),
+        title: 'Voir mon équipe inscrite',
+      };
+    }
+
+    if (currentUserPendingTournamentTeam?.documentId) {
+      const pendingStatus = normalizeTournamentText(
+        currentUserPendingTournamentTeam?.members?.find(
+          // @ts-ignore: FIXME: Baseline TS regression
+          (member) => member?.user?.documentId === userData?.documentId,
+        )?.responseStatus,
+      );
+      return {
+        onPress: () => handleOpenTournamentTeam(currentUserPendingTournamentTeam.documentId),
+        title: pendingStatus === 'invited' ? 'Répondre à mon invitation' : 'Suivre ma demande',
+      };
+    }
+
+    return { onPress: handleOpenTournamentManagement, title: 'Voir le tournoi' };
+  };
+
   const renderTournamentActionsPanel = () => {
     if (!isTournamentEvent || isStageDayEvent) return null;
-    const primaryActionTitle = canEdit ? 'Gérer le tournoi' : 'Voir le tournoi';
-    const currentUserPendingTournamentMemberStatus = normalizeTournamentText(
-      currentUserPendingTournamentTeam?.members?.find(
-        // @ts-ignore: FIXME: Baseline TS regression
-        (member) => member?.user?.documentId === userData?.documentId,
-      )?.responseStatus,
-    );
-    // D4 : la participation au tournoi (gerer / voir, mon equipe, m'inscrire)
-    // reste TOUJOURS visible — c'est le coeur de l'ecran pour un visiteur. Seules
-    // les actions d'organisation passent dans le panneau compact, replie.
+    // 🎯 N2 — LES QUATRE ACTIONS PRIMAIRES ONT QUITTE CE PANNEAU pour la barre
+    // du bas (`getTournamentPrimaryAction`). Elles etaient en HAUT de la page :
+    // hors de portee du pouce, et invisibles des qu'on avait defile.
+    // ⛔ Il ne reste ici que les deux gestes d'INSCRIPTION.
+    if (!canRegisterTournamentSourceTeam && !canCreateCustomTournamentTeam) return null;
+
     return (
       <View style={[Spaces.gap[12]]}>
         <View
@@ -5449,36 +5497,6 @@ function EventDetails({ navigation, route }) {
             },
           ]}
         >
-          <Button
-            onPress={handleOpenTournamentManagement}
-            title={primaryActionTitle}
-            variant={canEdit ? 'Primary' : 'Secondary'}
-          />
-
-          {managedTournamentTeam?.documentId ? (
-            <Button
-              onPress={() => handleOpenTournamentTeam(managedTournamentTeam.documentId)}
-              title="Gérer mon équipe inscrite"
-              variant="Primary"
-            />
-          ) : null}
-
-          {!managedTournamentTeam?.documentId && currentUserTournamentTeam?.documentId ? (
-            <Button
-              onPress={() => handleOpenTournamentTeam(currentUserTournamentTeam.documentId)}
-              title="Voir mon équipe inscrite"
-              variant="Primary"
-            />
-          ) : null}
-
-          {!managedTournamentTeam?.documentId && !currentUserTournamentTeam?.documentId && currentUserPendingTournamentTeam?.documentId ? (
-            <Button
-              onPress={() => handleOpenTournamentTeam(currentUserPendingTournamentTeam.documentId)}
-              title={currentUserPendingTournamentMemberStatus === 'invited' ? 'Répondre à mon invitation' : 'Suivre ma demande'}
-              variant="Primary"
-            />
-          ) : null}
-
           {canRegisterTournamentSourceTeam ? (
             <Button
               onPress={() => setIsTournamentRegisterModalVisible(true)}
@@ -5888,8 +5906,29 @@ function EventDetails({ navigation, route }) {
       );
     }
 
+    // 🏆 N2 — LE TOURNOI RETROUVE UNE BARRE DU BAS (Q8=C).
+    //
+    // ⚠️ Il en etait prive DEPUIS AVRIL : ce `return null` renvoyait un ecran
+    // qui se termine sur du vide, quel que soit le role. Un seul bouton
+    // desormais, celui que CE lecteur-la peut faire — jamais une pile de six.
+    //
+    // 📏 52 px, et non les 47 px par defaut du composant : la planche 04 le
+    // demande explicitement pour cette barre-la. C'est le seul bouton de
+    // l'ecran, il porte donc toute la surface d'appui.
     if (isTournamentEvent && !isStageDayEvent) {
-      return null;
+      const primaryAction = getTournamentPrimaryAction();
+      if (!primaryAction) return null;
+
+      return (
+        <View testID="tournament-bottom-bar">
+          <Button
+            onPress={primaryAction.onPress}
+            style={{ height: 52 }}
+            title={primaryAction.title}
+            variant="Primary"
+          />
+        </View>
+      );
     }
 
     // D4 : le bouton autonome « Mettre à la une » a disparu — c'est la chip
