@@ -508,8 +508,20 @@ describe('L4 · temoin 4 — trois onglets sur un match, zero ailleurs', () => {
     expect(contient(root, 'Exporter la liste (Excel/CSV)')).toBe(true);
   });
 
-  test('un TOURNOI non plus : ce lot ne touche qu au match', () => {
+  // ♻️ REECRIT PAR N2. Ce temoin disait « le tournoi n'a AUCUN onglet : ce lot
+  // ne touche qu'au match ». C'etait vrai de L4, et Adel l'avait voulu ainsi
+  // (Q2, 20/08 : le tournoi apres qu'il ait retrouve une barre du bas). C'est
+  // fait — le tournoi rejoint la matrice avec ses trois onglets a lui.
+  test('un TOURNOI porte MAINTENANT les siens : Aperçu · Équipes · Personnes', () => {
     const root = monter({ event: buildEvent({ type: { name: 'Tournoi' } }) });
+
+    expect(libellesDesOnglets(root)).toEqual(['Aperçu', 'Équipes · 0', 'Personnes · 0']);
+  });
+
+  test('un ENTRAINEMENT, lui, n en a toujours AUCUN', () => {
+    // ⛔ La matrice ne ratisse pas tout : quatre types seulement en ont assez
+    // pour deborder d'une colonne. L'entrainement garde la sienne, entiere.
+    const root = monter({ event: buildEvent({ type: { name: 'Entrainement' } }) });
 
     expect(parTestID(root, 'doublure-onglets')).toHaveLength(0);
   });

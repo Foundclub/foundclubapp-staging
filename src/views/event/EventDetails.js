@@ -117,12 +117,15 @@ import EventParticipants from './components/EventParticipants';
 import EventReservationActions from './components/EventReservationActions';
 import EventTasksSection from './components/EventTasksSection';
 import EventTeamAudiencesSection from './components/EventTeamAudiencesSection';
+import TournamentPeopleList from './components/TournamentPeopleList';
+import TournamentProgressRail from './components/TournamentProgressRail';
 import { resolveEventAttendanceGate } from './eventAttendanceGate';
 import { resolveEventEndedAt, resolveIsMatchFinished } from './eventMatchClock';
 import { useEventMutations } from './hooks/useEventMutations';
 import { OwnAnswerAction, resolveOwnAnswerAction } from './ownAnswerAction';
 import { createTournamentDesignSystem } from './tournamentDesignSystem';
 import {
+  getTournamentMemberBuckets,
   getTournamentPendingMembershipForUser,
   getTournamentRosterSummary,
   getTournamentStatusCounters,
@@ -867,6 +870,15 @@ function EventDetails({ navigation, route }) {
     () => getTournamentStatusCounters(tournamentTeams, tournamentConfig),
     [tournamentConfig, tournamentTeams],
   );
+  // 👥 N2 — COMBIEN DE PERSONNES sur ce tournoi, toutes equipes confondues.
+  // ⛔ Les ACTIFS seulement (pending | present | absent) : une invitation sans
+  // reponse n'est pas encore quelqu'un qui vient, et un refus n'est plus
+  // personne. C'est le meme decoupage que la liste elle-meme, sinon l'onglet
+  // annoncerait « Personnes · 74 » au-dessus d'une liste de 61.
+  const tournamentPeopleCount = useMemo(() => tournamentTeams.reduce(
+    (somme, team) => somme + getTournamentMemberBuckets(team?.members || []).activeMembers.length,
+    0,
+  ), [tournamentTeams]);
   const currentUserTournamentTeam = useMemo(() => {
     const currentUserId = userData?.documentId;
     if (!currentUserId) return null;
@@ -4638,14 +4650,32 @@ function EventDetails({ navigation, route }) {
       ];
     }
 
+    if (isTournamentEvent && !isStageDayEvent) {
+      return [
+        overviewTab,
+        {
+          label: withTabCount(t('eventDetails.tabs.teams', 'Équipes'), tournamentTeams.length),
+          value: 'tournamentTeams',
+        },
+        {
+          label: withTabCount(t('eventDetails.tabs.people', 'Personnes'), tournamentPeopleCount),
+          value: 'participants',
+        },
+      ];
+    }
+
     return [];
   }, [
     acceptedPeopleCount,
     isDetectionEvent,
     isMatchEvent,
+    isStageDayEvent,
     isStageParentEvent,
+    isTournamentEvent,
     stageChildDays.length,
     t,
+    tournamentPeopleCount,
+    tournamentTeams.length,
   ]);
 
   // 🚪 LE DRAPEAU QUI OUVRE TOUT : y a-t-il des onglets sur cette page ?
@@ -4660,6 +4690,7 @@ function EventDetails({ navigation, route }) {
   const showCallUpTab = isOnTab('callUp');
   const showDetectionSplitTab = isOnTab('detectionSplit');
   const showStageDaysTab = isOnTab('stageDays');
+  const showTournamentTeamsTab = isOnTab('tournamentTeams');
 
   // Les trois conditions que la repartition en onglets rendait trop longues
   // pour tenir sur leur ligne d'ouverture. Elles sont REPRISES TELLES QUELLES
@@ -4900,9 +4931,9 @@ function EventDetails({ navigation, route }) {
             onPress: () => eventLicenseReminderMutation.mutate(
               { campaignId, statuses: ['pending', 'partial', 'overdue'] },
               {
-                onError: (/** @type {any} */ error) => Alert.alert(
+                onError: (/** @type {any} */ echec) => Alert.alert(
                   t('eventDetails.stageLicense.errorTitle', 'Relance impossible'),
-                  error?.message
+                  echec?.message
                     || t('eventDetails.stageLicense.errorBody', 'Rien n’a été envoyé.'),
                 ),
                 onSuccess: () => {
@@ -5641,6 +5672,43 @@ function EventDetails({ navigation, route }) {
       primaryActionHelper = 'Finalise les équipes et les paramètres avant de lancer le tournoi.';
     }
     const teamsSummary = `${tournamentTeamCounters.accepted} validée(s) · ${tournamentTeamCounters.pending} en attente`;
+
+    // 🧭 LES CINQ ETAPES DU FIL — ce que la page sait, sans un appel de plus.
+    //
+    // ponytail: « Poules » et « Matchs » ne sont pas distinguees de « Publié ».
+    //   PLAFOND : la page ne peut pas savoir si les poules existent mais ne sont
+    //   pas publiees — cet etat-la vit derriere `GET /events/:id/tournament/dashboard`.
+    //   POURQUOI ON NE L'APPELLE PAS : ce hook tire `tournamentCompetitionService`,
+    //   donc `@/services/client`. Les treize suites qui montent cet ecran
+    //   devraient toutes le mocker, et le projet a deja paye ce piege (un import
+    //   de service de plus = des suites entieres qui ne s'executent plus).
+    //   CE QUI RESTE VRAI : publier EXIGE des poules et des matchs. Un tournoi
+    //   publie a donc necessairement franchi les etapes 3 et 4 — le fil ne ment
+    //   jamais, il est seulement moins precis pendant le brouillon.
+    //   SORTIE : appeler `useGetTournamentDashboard` le jour ou un lot mocke ce
+    //   module dans les treize suites.
+    const tournamentRailSteps = [
+      {
+        done: Boolean(event?.tournamentConfig?.formatMode),
+        label: t('eventDetails.tournamentRail.settings', 'Réglages'),
+      },
+      {
+        done: tournamentTeamCounters.accepted >= 2,
+        label: t('eventDetails.tournamentRail.teams', 'Équipes'),
+      },
+      {
+        done: isCompetitionPublished,
+        label: t('eventDetails.tournamentRail.groups', 'Poules'),
+      },
+      {
+        done: isCompetitionPublished,
+        label: t('eventDetails.tournamentRail.matches', 'Matchs'),
+      },
+      {
+        done: isCompetitionPublished,
+        label: t('eventDetails.tournamentRail.published', 'Publié'),
+      },
+    ];
     const tournamentScopeLabel = event?.tournamentScopeMode === 'autonomous'
       ? 'Tournoi autonome'
       : 'Équipe source';
@@ -5731,6 +5799,14 @@ function EventDetails({ navigation, route }) {
           ) : null}
         </View>
 
+        <TournamentProgressRail
+          note={tournamentTeamCounters.pending > 0
+            ? `${tournamentTeamCounters.pending} inscription${tournamentTeamCounters.pending > 1 ? 's' : ''} à vérifier`
+            : ''}
+          steps={tournamentRailSteps}
+          title={t('eventDetails.tournamentRail.title', 'OÙ EN EST LE TOURNOI')}
+        />
+
         {currentUserTournamentMember ? (
           <View style={tournamentDs.styles.panelCard}>
             <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter, Spaces.gap[12]]}>
@@ -5770,6 +5846,30 @@ function EventDetails({ navigation, route }) {
             </View>
           </View>
         ) : null}
+      </View>
+    );
+  };
+
+  /**
+   * 🏆 N2 — L'ONGLET « Équipes » D'UN TOURNOI (planche 04, cadre 4E).
+   *
+   * Tout ce qui parle des equipes inscrites vit ici : le resume, les cartes, et
+   * les deux gestes d'INSCRIPTION qui vivaient dans le panneau de tete.
+   *
+   * ⚠️ LES BOUTONS « Valider » / « Refuser » N'ONT PAS BOUGE D'UN POUCE. Ils
+   * acceptent ou refusent l'inscription d'une equipe — un geste qui engage
+   * l'organisateur vis-a-vis d'un tiers. Meme condition (`canEdit` et statut
+   * `pending`), meme handler, meme charge. Seul l'onglet qui les contient est
+   * neuf, et c'est le filet de l'etape 1 qui le prouve.
+   */
+  const renderTournamentTeamsTab = () => {
+    if (!isTournamentEvent || isStageDayEvent) return null;
+
+    const teamsSummary = `${tournamentTeamCounters.accepted} validée(s) · ${tournamentTeamCounters.pending} en attente`;
+
+    return (
+      <View style={Spaces.gap[16]}>
+        {renderTournamentActionsPanel()}
 
         <View style={tournamentDs.styles.panelCard}>
           <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter, Spaces.gap[12]]}>
@@ -5800,14 +5900,22 @@ function EventDetails({ navigation, route }) {
         {tournamentTeams.map((tournamentTeam) => {
           const rosterSummary = getTournamentRosterSummary(tournamentTeam, tournamentConfig);
           const hasRosterWarning = isTournamentTeamNonCompliant(tournamentTeam, tournamentConfig);
-          let tournamentTeamStatusLabel = 'Équipe inscrite';
+          // 🏷️ Les quatre etats, tels que la planche 04 les nomme : deux mots
+          // en capitales, lisibles d'un coup d'oeil sur une pile de cartes.
+          let tournamentTeamStatusLabel = t('eventDetails.tournamentTeams.accepted', 'INSCRITE');
           if (tournamentTeam?.status === 'pending') {
-            tournamentTeamStatusLabel = 'Validation en attente';
+            tournamentTeamStatusLabel = t('eventDetails.tournamentTeams.pending', 'À VÉRIFIER');
           } else if (tournamentTeam?.status === 'declined') {
-            tournamentTeamStatusLabel = 'Équipe refusée';
+            tournamentTeamStatusLabel = t('eventDetails.tournamentTeams.declined', 'REFUSÉE');
           } else if (tournamentTeam?.status === 'archived') {
-            tournamentTeamStatusLabel = 'Équipe archivée';
+            tournamentTeamStatusLabel = t('eventDetails.tournamentTeams.archived', 'ARCHIVÉE');
           }
+          // 👑 Le capitaine ou le referent : la carte disait le NOMBRE de joueurs
+          // sans jamais dire A QUI s'adresser pour cette equipe.
+          const tournamentTeamLead = [
+            tournamentTeam?.captainUser?.firstname,
+            tournamentTeam?.captainUser?.lastname,
+          ].filter(Boolean).join(' ');
 
           return (
             <TouchableOpacity
@@ -5833,9 +5941,16 @@ function EventDetails({ navigation, route }) {
                 />
               </View>
 
-              <Text style={[Fonts.p4, Fonts.neutral200]}>
+              <Text style={[Fonts.p4Bold, Fonts.neutral200]}>
                 {tournamentTeamStatusLabel}
               </Text>
+              {tournamentTeamLead ? (
+                <Text style={[Fonts.p4, Fonts.neutral300]}>
+                  {t('eventDetails.tournamentTeams.lead', 'Référent·e : {{name}}', {
+                    name: tournamentTeamLead,
+                  })}
+                </Text>
+              ) : null}
               <View style={[Alignments.row, Spaces.gap[8], { flexWrap: 'wrap' }]}>
                 {rosterSummary.invitedCount > 0 ? (
                   <Tag
@@ -5860,19 +5975,22 @@ function EventDetails({ navigation, route }) {
 
               {canEdit && tournamentTeam?.status === 'pending' ? (
                 <View style={[Alignments.row, Spaces.gap[12], Spaces.marginTop[4]]}>
+                  {/* 📏 44 px (`isOption`), et non les 39 px de `size="sm"` : la
+                      planche 04 fixe cette taille pour les deux gestes qui
+                      engagent l'organisateur vis-a-vis d'une equipe. */}
                   <Button
                     isLoading={reviewTournamentTeamMutation.isPending}
+                    isOption
                     onPress={() => handleReviewTournamentTeam(tournamentTeam?.documentId, 'accepted')}
-                    size="sm"
                     title="Valider"
                     variant="Primary"
                   />
                   <Button
                     isLoading={reviewTournamentTeamMutation.isPending}
+                    isOption
                     onPress={() => handleReviewTournamentTeam(tournamentTeam?.documentId, 'declined')}
-                    size="sm"
                     style={{ borderColor: `${Colors.error500}55` }}
-                    textStyle={{ color: Colors.error500 }}
+                    textStyle={{ color: Colors.error300 }}
                     title="Refuser"
                     variant="SecondaryLight"
                   />
@@ -6334,7 +6452,9 @@ function EventDetails({ navigation, route }) {
                 </TouchableOpacity>
               ) : null}
 
-              {renderTournamentSection()}
+              {showOverviewTab ? renderTournamentSection() : null}
+
+              {showTournamentTeamsTab ? renderTournamentTeamsTab() : null}
 
               {showOverviewTab && canSelfMarkArrival && selfAttendanceStatus ? (
                 <View style={[Spaces.gap[12]]}>
@@ -6510,6 +6630,15 @@ function EventDetails({ navigation, route }) {
                   pendingParticipations={pendingParticipations}
                   teamParticipationSections={teamParticipationSections}
                 />
+              ) : null}
+
+              {/* 👥 N2 — « Personnes » SUR UN TOURNOI. La liste des participations
+                  ne dit rien d'un tournoi : on n'y participe pas seul, on y
+                  participe PAR SON EQUIPE. C'est donc les effectifs des equipes
+                  inscrites qu'il faut reunir, et c'est un composant a part.
+                  🔒 Les noms ne sortent que pour qui organise. */}
+              {showParticipantsTab && isTournamentEvent && !isStageDayEvent ? (
+                <TournamentPeopleList canSeeNames={canEdit} teams={tournamentTeams} />
               ) : null}
 
               {showOverviewTab && isMatchEvent

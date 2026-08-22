@@ -441,6 +441,7 @@ const buildTournoi = (/** @type {any} */ overrides = {}) => buildEvent({
       status: 'accepted',
     },
     {
+      captainUser: { documentId: 'u-3', firstname: 'Chloe', lastname: 'Meunier' },
       documentId: 'equipe-b',
       members: [
         {
@@ -694,25 +695,40 @@ describe('N2 · caracterisation — LE TOURNOI ET SES EQUIPES INSCRITES', () => 
     expect(textesVisibles(barre[0]).join(' ')).toContain('Voir le tournoi');
   });
 
-  test('la section tournoi montre l etat de la competition et le compte d equipes', () => {
+  // ♻️ REECRITS PAR L'ETAPE 5 : tout ce qui parle des EQUIPES a rejoint son
+  // onglet. L'Apercu garde l'etat de la competition, et lui seul.
+  test('l Apercu garde l etat de la competition', () => {
     const root = monter({ event: buildTournoi() });
 
     expect(contient(root, 'TOURNOI')).toBe(true);
     expect(contient(root, 'Compétition en brouillon')).toBe(true);
-    expect(contient(root, 'Équipes tournoi')).toBe(true);
-    expect(contient(root, '1 validée(s) · 1 en attente')).toBe(true);
+    // ⛔ Les cartes d'equipe, elles, ne sont plus la : elles ont un onglet.
+    expect(contient(root, 'Équipes tournoi')).toBe(false);
+    expect(contient(root, 'Les Lions')).toBe(false);
   });
 
-  test('🔒 une equipe EN ATTENTE porte « Valider » et « Refuser » pour l organisateur', () => {
-    // ⚠️ LE TEMOIN LE PLUS IMPORTANT DU FICHIER. Ces deux boutons acceptent ou
-    // refusent l'inscription d'une equipe a un tournoi — un geste qui engage
-    // l'organisateur vis-a-vis d'un tiers. Il n'etait tenu par AUCUN test.
+  test('🔒 « Valider » et « Refuser » VIVENT DANS L ONGLET Équipes, intacts', () => {
+    // ⚠️ LE TEMOIN LE PLUS IMPORTANT DU FICHIER, et la raison d'etre du filet
+    // de l'etape 1 : ces deux boutons acceptent ou refusent l'inscription d'une
+    // equipe — un geste qui engage l'organisateur vis-a-vis d'un tiers. Le
+    // rangement les DEPLACE ; il ne doit ni les perdre, ni elargir qui les voit.
     const root = monter({ event: buildTournoi() });
+    allerSurLOnglet(root, 'tournamentTeams');
 
     expect(contient(root, 'Les Lions')).toBe(true);
-    expect(contient(root, 'Validation en attente')).toBe(true);
+    expect(contient(root, 'À VÉRIFIER')).toBe(true);
     expect(contient(root, 'Valider')).toBe(true);
     expect(contient(root, 'Refuser')).toBe(true);
+  });
+
+  test('👑 la carte dit A QUI s adresser pour cette equipe', () => {
+    // La carte disait le NOMBRE de joueurs sans jamais nommer le referent :
+    // un organisateur qui veut verifier une inscription ne savait pas qui
+    // contacter.
+    const root = monter({ event: buildTournoi() });
+    allerSurLOnglet(root, 'tournamentTeams');
+
+    expect(contient(root, 'Référent·e : Chloe Meunier')).toBe(true);
   });
 
   test('un lecteur qui ne gere PAS ne voit ni « Valider » ni « Refuser »', () => {
@@ -720,17 +736,20 @@ describe('N2 · caracterisation — LE TOURNOI ET SES EQUIPES INSCRITES', () => 
       auth: authPour('visiteur-1', false),
       event: buildTournoi(),
     });
+    allerSurLOnglet(root, 'tournamentTeams');
 
+    // Il voit bien les equipes — c'est public — mais aucun geste d'arbitrage.
     expect(contient(root, 'Les Lions')).toBe(true);
     expect(contient(root, 'Valider')).toBe(false);
     expect(contient(root, 'Refuser')).toBe(false);
   });
 
-  test('l equipe VALIDEE est dite inscrite', () => {
+  test('l equipe VALIDEE est dite inscrite, dans le meme onglet', () => {
     const root = monter({ event: buildTournoi() });
+    allerSurLOnglet(root, 'tournamentTeams');
 
     expect(contient(root, 'Les Aigles')).toBe(true);
-    expect(contient(root, 'Équipe inscrite')).toBe(true);
+    expect(contient(root, 'INSCRITE')).toBe(true);
   });
 
   // ♻️ REECRIT PAR L'ETAPE 4 : le defaut est corrige. `renderActionButtons`
@@ -746,10 +765,13 @@ describe('N2 · caracterisation — LE TOURNOI ET SES EQUIPES INSCRITES', () => 
     expect(contient(root, 'DOUBLURE_EventAnswerButtons')).toBe(false);
   });
 
-  test('un tournoi n a AUCUN onglet aujourd hui', () => {
+  // ♻️ REECRIT PAR L'ETAPE 5 : le tournoi rejoint la matrice.
+  test('un tournoi porte Apercu · Équipes · N · Personnes · N', () => {
     const root = monter({ event: buildTournoi() });
 
-    expect(parTestID(root, 'doublure-onglets')).toHaveLength(0);
+    // 2 equipes inscrites · 3 membres actifs au total (2 chez les Aigles, 1
+    // chez les Lions) — les deux compteurs ne mesurent PAS la meme chose.
+    expect(libellesDesOnglets(root)).toEqual(['Aperçu', 'Équipes · 2', 'Personnes · 3']);
   });
 });
 
@@ -796,6 +818,173 @@ describe('N2 · caracterisation — CE QUI NE DOIT PAS BOUGER', () => {
     const root = monter({ event: buildEvent({ type: { name: 'Match' } }) });
 
     expect(libellesDesOnglets(root)).toEqual(['Aperçu', 'Participants · 0', 'Convocation']);
+  });
+});
+
+describe('N2 · 4E — « OÙ EN EST LE TOURNOI », LE FIL DES CINQ ETAPES', () => {
+  test('il montre les cinq etapes, dans l ordre, sur l Aperçu', () => {
+    const root = monter({ event: buildTournoi() });
+
+    expect(parTestID(root, 'tournament-progress-rail')).toHaveLength(1);
+    const textes = textesVisibles(root).join(' | ');
+    expect(textes).toContain('OÙ EN EST LE TOURNOI');
+    ['Réglages', 'Équipes', 'Poules', 'Matchs', 'Publié'].forEach((etape) => {
+      expect(textes).toContain(etape);
+    });
+    expect(textes.indexOf('Poules')).toBeLessThan(textes.indexOf('Matchs'));
+    expect(textes.indexOf('Matchs')).toBeLessThan(textes.indexOf('Publié'));
+  });
+
+  // 🧷 Le fil rend la coche et le libelle dans DEUX `Text` distincts : on
+  // lit donc une etape entiere par son testID, jamais la page a plat.
+  const etapeDuFil = (/** @type {any} */ root, /** @type {number} */ rang) => {
+    const [noeud] = parTestID(root, `tournament-rail-step-${rang}`);
+    if (!noeud) throw new Error(`Aucune etape ${rang} dans le fil`);
+    return noeud
+      .findAllByType(Text)
+      .map((/** @type {any} */ n) => textOf(n))
+      .join(' ');
+  };
+
+  test('un BROUILLON n a que ses « Réglages » de faits', () => {
+    // ⚠️ Une seule coche : le format est choisi, mais une seule equipe est
+    // validee — il en faut deux pour qu'un tournoi existe.
+    const root = monter({ event: buildTournoi() });
+
+    expect(etapeDuFil(root, 1)).toContain('✓');
+    expect(etapeDuFil(root, 1)).toContain('Réglages');
+    // Les quatre suivantes portent leur RANG, pas une coche.
+    expect(etapeDuFil(root, 2)).toContain('2');
+    expect(etapeDuFil(root, 2)).not.toContain('✓');
+    expect(etapeDuFil(root, 5)).not.toContain('✓');
+  });
+
+  test('un tournoi PUBLIE a ses cinq etapes cochees', () => {
+    // 🔑 La regle qui rend le fil honnete sans appel serveur supplementaire :
+    // publier EXIGE des poules et des matchs. Un tournoi publie les a donc
+    // forcement franchies.
+    const root = monter({
+      event: buildTournoi({
+        tournamentConfig: {
+          competitionState: 'published',
+          formatMode: 'groups_only',
+          registrationMode: 'manual',
+        },
+        tournamentTeams: [
+          {
+            documentId: 'a', members: [], name: 'A', status: 'accepted',
+          },
+          {
+            documentId: 'b', members: [], name: 'B', status: 'accepted',
+          },
+        ],
+      }),
+    });
+
+    [1, 2, 3, 4, 5].forEach((rang) => {
+      expect(etapeDuFil(root, rang)).toContain('✓');
+    });
+  });
+
+  test('le fil dit combien d inscriptions restent a verifier', () => {
+    const root = monter({ event: buildTournoi() });
+
+    expect(contient(root, '1 inscription à vérifier')).toBe(true);
+  });
+});
+
+describe('N2 · 4E — « Personnes » : QUI VIENT, TOUTES EQUIPES CONFONDUES', () => {
+  test('l organisateur voit les personnes, groupees par equipe', () => {
+    const root = monter({ event: buildTournoi() });
+    allerSurLOnglet(root, 'participants');
+
+    expect(parTestID(root, 'tournament-people')).toHaveLength(1);
+    expect(contient(root, 'Ana Diaz')).toBe(true);
+    expect(contient(root, 'Bilal Sow')).toBe(true);
+    expect(contient(root, 'Chloe Meunier')).toBe(true);
+  });
+
+  test('🔒 un VISITEUR voit l onglet et son compte, JAMAIS les noms', () => {
+    // ⚠️ C'est la reunion des effectifs de toutes les equipes — souvent des
+    // dizaines de personnes, parfois mineures. Un nombre ne designe personne ;
+    // une liste de noms, si.
+    const root = monter({
+      auth: authPour('visiteur-1', false),
+      event: buildTournoi(),
+    });
+
+    expect(libellesDesOnglets(root)).toContain('Personnes · 3');
+
+    allerSurLOnglet(root, 'participants');
+    expect(parTestID(root, 'tournament-people-locked')).toHaveLength(1);
+    expect(contient(root, 'Ana Diaz')).toBe(false);
+    expect(contient(root, 'Chloe Meunier')).toBe(false);
+  });
+
+  test('🪦 un compte SUPPRIME ne laisse pas de fantome dans la liste', () => {
+    // AA02 : le serveur RENOMME sans effacer. La garde de reference exige
+    // `blocked` EN PLUS du tombstone, pour qu'un joueur vivant ne soit jamais
+    // masque par erreur.
+    const root = monter({
+      event: buildTournoi({
+        tournamentTeams: [{
+          documentId: 'equipe-a',
+          members: [
+            {
+              documentId: 'm-1',
+              responseStatus: 'present',
+              user: { documentId: 'u-1', firstname: 'Ana', lastname: 'Diaz' },
+            },
+            {
+              documentId: 'm-2',
+              responseStatus: 'present',
+              user: {
+                blocked: true,
+                documentId: 'u-9',
+                firstname: 'Utilisateur',
+                lastname: 'Supprimé',
+                username: 'deleted_user_9_1700000000',
+              },
+            },
+          ],
+          name: 'Les Aigles',
+          status: 'accepted',
+        }],
+      }),
+    });
+    allerSurLOnglet(root, 'participants');
+
+    expect(contient(root, 'Ana Diaz')).toBe(true);
+    expect(contient(root, 'Utilisateur Supprimé')).toBe(false);
+  });
+
+  test('un tournoi SANS personne garde l onglet, avec son etat vide', () => {
+    const root = monter({
+      event: buildTournoi({
+        tournamentTeams: [{
+          documentId: 'a', members: [], name: 'A', status: 'accepted',
+        }],
+      }),
+    });
+
+    expect(libellesDesOnglets(root)).toContain('Personnes · 0');
+
+    allerSurLOnglet(root, 'participants');
+    expect(parTestID(root, 'tournament-people-empty')).toHaveLength(1);
+  });
+
+  test('⛔ « Composition d équipes » a disparu du tournoi (bloc mort)', () => {
+    // D7 : ce bloc parlait de la composition de l'EQUIPE de l'evenement, notion
+    // qui n'a aucun sens sur un tournoi — on y joue par equipe inscrite. Il ne
+    // se rend plus, sur aucun des trois onglets.
+    const root = monter({ event: buildTournoi() });
+    expect(contient(root, 'Composition d')).toBe(false);
+
+    allerSurLOnglet(root, 'tournamentTeams');
+    expect(contient(root, 'Composition d')).toBe(false);
+
+    allerSurLOnglet(root, 'participants');
+    expect(contient(root, 'Composition d')).toBe(false);
   });
 });
 
