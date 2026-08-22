@@ -379,6 +379,26 @@ const getStageDayStatusSummary = (stageDay) => {
 };
 
 /**
+ * 🔢 N2 — L'EFFECTIF COLLE AU LIBELLE D'UN ONGLET (planche 04).
+ *
+ * `SegmentedControl` n'accepte qu'une CHAINE par option : le compteur ne peut
+ * pas etre un noeud pose a cote, il fait partie du mot. Un seul endroit le
+ * colle, pour les quatre types — sinon « Participants · 8 » et « Personnes ·8 »
+ * finiraient par diverger d'un espace, et personne ne le verrait avant l'ecran.
+ *
+ * ⛔ Un compteur absent (`null`, `undefined`, `NaN`) rend le libelle NU plutot
+ * que « Répartition · 0 » : la planche 04 donne un effectif a tous les onglets
+ * SAUF « Répartition », qui ne compte rien.
+ *
+ * @param {string} label Le nom de l'onglet.
+ * @param {number} [count] L'effectif, quand cet onglet en a un.
+ * @returns {string} Le libelle a afficher.
+ */
+const withTabCount = (label, count) => (
+  Number.isFinite(count) ? `${label} · ${count}` : label
+);
+
+/**
  * 🏷️ N1 (c) — LE LIBELLE DE LA PASTILLE DE TYPE, EN UN SEUL ENDROIT.
  *
  * Le nom du type en capitales, puis autant de precisions que le lot en cours
@@ -3980,6 +4000,19 @@ function EventDetails({ navigation, route }) {
   const detectionSplit = staffCompositionPayload?.detectionSplit || null;
   const hasDetectionTeams = Boolean(detectionSplit?.teams?.length);
 
+  // 🔢 N2 — COMBIEN DE PERSONNES SONT DEJA POINTEES, d'apres le SERVEUR.
+  // ⛔ Ni l'etat local de `DetectionSquadSetup`, ni le RSVP : `not_marked` est
+  // la valeur que le serveur donne a quelqu'un qu'on n'a PAS encore pointe, et
+  // la compter ferait afficher « 14 pointé·e·s sur 14 » avant meme le coup
+  // d'envoi. Meme lecture qu'`EventParticipants` (`attendanceStatus` d'abord,
+  // `finalState` en repli).
+  const detectionPointedCount = useMemo(() => (
+    Object.values(attendanceByUserId).filter((/** @type {any} */ entry) => {
+      const state = String(entry?.attendanceStatus || entry?.finalState || '').toLowerCase();
+      return Boolean(state) && state !== 'not_marked';
+    }).length
+  ), [attendanceByUserId]);
+
   const openDetectionTeamsBoard = useCallback(() => {
     if (!eventId || !compositionTeamId) return;
 
@@ -3995,6 +4028,37 @@ function EventDetails({ navigation, route }) {
     compositionSport,
     compositionTeamId,
     detectionSplit?.memberMode,
+    eventId,
+    navigation,
+  ]);
+
+  /**
+   * 🔁 N2 — L'ETAPE 4 DU CHEMIN DE DETECTION CESSE D'ETRE INATTEIGNABLE DEPUIS
+   * LA PAGE. Jusqu'ici, la rotation ne s'ouvrait QUE depuis le terrain
+   * (`DetectionTeamsBoard`), c'est-a-dire seulement si on savait deja qu'elle
+   * existait.
+   *
+   * ⚠️ Ce n'est PAS un raccourci fragile : `DetectionRotationBoard` est ecrit
+   * pour etre ouvert directement — il recharge la composition lui-meme et
+   * retombe sur le `detectionSplit` du serveur quand la route n'en porte pas
+   * (`DetectionRotationBoard.js`, « sinon du serveur quand on ouvre cet ecran
+   * directement »). On lui passe donc les MEMES parametres que le terrain,
+   * plus l'equipe de depart.
+   */
+  const openDetectionRotation = useCallback(() => {
+    if (!eventId || !compositionTeamId) return;
+
+    navigation.navigate(RouteNames.DetectionRotation, {
+      eventId,
+      players: compositionEditorPlayers,
+      sport: compositionSport,
+      teamId: compositionTeamId,
+      teamIndex: 0,
+    });
+  }, [
+    compositionEditorPlayers,
+    compositionSport,
+    compositionTeamId,
     eventId,
     navigation,
   ]);
@@ -4446,28 +4510,95 @@ function EventDetails({ navigation, route }) {
   // (pastille de type, adversaire, carte d'entete, statut de convocation, barre
   // du bas) et repartit le RESTE en trois onglets.
   //
-  // ⛔ UN SEUL TYPE : le MATCH. Le tournoi, le stage, la detection et
-  // l'entrainement gardent leur colonne A L'IDENTIQUE — decision du CONSTAT
-  // (« un seul type dans ce lot ») et d'Adel (Q2, 2026-08-20 : le tournoi est un
-  // lot separe, apres qu'il ait retrouve une barre du bas).
-  // ⇒ C'est ce que dit `!isMatchEvent ||` en tete de chaque drapeau : hors
-  // match, les trois sont VRAIS en meme temps, donc tout se rend comme avant.
+  // ───────────────────────────────────────────────────────────────────────────
+  // N2 — LA MATRICE : LES TROIS AUTRES TYPES REJOIGNENT LE MECANISME.
+  //
+  // L4 avait pose le mecanisme pour UN SEUL type, le match, en attendant
+  // qu'Adel tranche le sort du tournoi (Q2, 20/08). C'est fait. La detection,
+  // le stage parent et le tournoi se rangent maintenant DE LA MEME FACON :
+  // meme etat `detailsTab`, meme `SegmentedControl`, meme helper de compteur.
+  //
+  // ⛔ CE N'EST PAS UN SECOND JEU D'ONGLETS. C'est le point de tout le lot : le
+  // stage en avait un a lui, deux pastilles dessinees a la main dans une carte,
+  // qui creaient un emboitement (des onglets DANS un onglet). Elles
+  // disparaissent au profit de celui-ci.
+  //
+  // 🔢 LES REGLES DE LA MATRICE, telles que la planche 04 les fixe :
+  //   · jamais plus de TROIS onglets ;
+  //   · le premier s'appelle TOUJOURS « Aperçu » ;
+  //   · chaque onglet porte son effectif, sauf « Répartition » qui ne compte
+  //     rien ;
+  //   · un onglet vide reste AFFICHE avec son etat vide — il ne se retire pas,
+  //     sinon la page change de forme selon les donnees et on ne sait plus ou
+  //     chercher.
+  //
+  // 🔑 LA VALEUR `participants` EST PARTAGEE PAR LES QUATRE TYPES, et c'est
+  // precisement ce qui evite un second mecanisme : seul le LIBELLE change
+  // (« Participants », « Candidats », « Personnes »), et le rang de l'onglet
+  // change (2e sur un match, 3e ailleurs). Le drapeau qui commande la liste
+  // reste donc UN SEUL, `showParticipantsTab`, quel que soit le type.
+  //
+  // ⇒ Hors des types ranges, `detailsTabs` est VIDE : tous les `isOnTab` rendent
+  // VRAI en meme temps, et la colonne unique se rend exactement comme avant.
   //
   // ⚠️ « Match amical » contient « match » : `isMatchEvent` est vrai pour lui
   // (comparaison par sous-chaine, l. ~2750). C'est voulu — meme metier, meme
   // page — et c'est fige par temoin plutot que laisse a la surprise.
-  const detailsTabs = useMemo(() => {
-    if (!isMatchEvent) return [];
-    return [
-      { label: t('eventDetails.tabs.overview', 'Aperçu'), value: 'overview' },
-      { label: t('eventDetails.fields.participations', 'Participants'), value: 'participants' },
-      { label: t('eventDetails.tabs.callUp', 'Convocation'), value: 'callUp' },
-    ];
-  }, [isMatchEvent, t]);
+  // 🔢 L'effectif que portent les onglets « Participants » (match),
+  // « Candidats » (detection) et « Personnes » (stage) : les personnes
+  // ACCEPTEES. C'est EXACTEMENT le nombre que la carte de cotisation appelle
+  // « inscrit·e·s » (N2-C) — un seul comptage, sinon l'onglet et la carte se
+  // contrediraient a trois centimetres l'un de l'autre.
+  const acceptedPeopleCount = participationsByStatus.participating.length;
 
-  const showOverviewTab = !isMatchEvent || detailsTab === 'overview';
-  const showParticipantsTab = !isMatchEvent || detailsTab === 'participants';
-  const showCallUpTab = !isMatchEvent || detailsTab === 'callUp';
+  const detailsTabs = useMemo(() => {
+    const overviewTab = { label: t('eventDetails.tabs.overview', 'Aperçu'), value: 'overview' };
+
+    if (isMatchEvent) {
+      return [
+        overviewTab,
+        {
+          label: withTabCount(
+            t('eventDetails.fields.participations', 'Participants'),
+            acceptedPeopleCount,
+          ),
+          value: 'participants',
+        },
+        { label: t('eventDetails.tabs.callUp', 'Convocation'), value: 'callUp' },
+      ];
+    }
+
+    if (isDetectionEvent) {
+      return [
+        overviewTab,
+        {
+          label: t('eventDetails.tabs.detectionSplit', 'Répartition'),
+          value: 'detectionSplit',
+        },
+        {
+          label: withTabCount(
+            t('eventDetails.tabs.detectionCandidates', 'Candidats'),
+            acceptedPeopleCount,
+          ),
+          value: 'participants',
+        },
+      ];
+    }
+
+    return [];
+  }, [acceptedPeopleCount, isDetectionEvent, isMatchEvent, t]);
+
+  // 🚪 LE DRAPEAU QUI OUVRE TOUT : y a-t-il des onglets sur cette page ?
+  // Hors des types ranges (entrainement, reservation, « autre »…), il est FAUX
+  // et chaque `isOnTab` rend VRAI — la colonne unique se rend comme avant, sans
+  // qu'aucune condition de bloc n'ait a connaitre la liste des types.
+  const hasDetailsTabs = detailsTabs.length > 0;
+  const isOnTab = (/** @type {string} */ value) => !hasDetailsTabs || detailsTab === value;
+
+  const showOverviewTab = isOnTab('overview');
+  const showParticipantsTab = isOnTab('participants');
+  const showCallUpTab = isOnTab('callUp');
+  const showDetectionSplitTab = isOnTab('detectionSplit');
 
   // Les trois conditions que la repartition en onglets rendait trop longues
   // pour tenir sur leur ligne d'ouverture. Elles sont REPRISES TELLES QUELLES
@@ -4478,6 +4609,187 @@ function EventDetails({ navigation, route }) {
     && event.teamAudiences.length > 0;
   const showPublishedComposition = supportsEventComposition
     && (canViewPublishedComposition || canEdit);
+
+  /**
+   * 🧭 N2 — LE CHEMIN COMPLET D'UNE DETECTION (planche 04, cadre 4G).
+   *
+   * Une seance de detection se deroule en QUATRE gestes, dans cet ordre : on
+   * pointe qui est la, on repartit en equipes, on place sur le terrain, on fait
+   * tourner pour que chacun joue. Les quatre ecrans existent — 2 980 lignes
+   * livrees — mais seuls DEUX etaient atteignables, par des chips du menu, et
+   * rien ne disait qu'ils formaient une suite.
+   *
+   * ⚠️ CE QUE CET ONGLET REPARE N'EST PAS UN MANQUE D'ECRANS, C'EST UN MANQUE
+   * D'ORDRE. Un organisateur voyait « Compo » et « Placer les équipes » comme
+   * deux boutons sans rapport, et n'atteignait jamais la rotation.
+   *
+   * 🔢 L'ETAPE 1 SE LIT SUR LE SERVEUR, jamais sur l'ecran de repartition :
+   * `attendanceByUserId` vient de `GET /events/:id/attendance`. L'etat local de
+   * `DetectionSquadSetup` ne survivrait pas a un retour en arriere, et dirait
+   * « 0 pointé » a un coach qui vient d'en pointer quatorze.
+   */
+  const renderDetectionSplitTab = () => {
+    if (!isDetectionEvent) return null;
+
+    // 🔒 RESERVE AU STAFF — et l'onglet reste AFFICHE pour tout le monde.
+    // La planche 04 est explicite : un onglet vide garde sa place et porte son
+    // etat vide. Le retirer aux candidats ferait changer la page de forme selon
+    // qui regarde, et un candidat qui a entendu parler de « la répartition » ne
+    // saurait pas si elle n'existe pas ou si elle ne lui est pas destinee.
+    if (!canEdit) {
+      return (
+        <View
+          style={[
+            ApplicationStyle.borderRadius16,
+            ApplicationStyle.borderWidth1,
+            Spaces.padding[16],
+            Spaces.gap[8],
+            {
+              backgroundColor: withAlpha(Colors.primary500, 0.08),
+              borderColor: withAlpha(Colors.primary500, 0.24),
+            },
+          ]}
+          testID="detection-split-staff-only"
+        >
+          <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
+            {t('eventDetails.detectionSplit.staffOnlyTitle', 'Réservé au staff de la séance')}
+          </Text>
+          <Text style={[Fonts.p3, Fonts.neutral200]}>
+            {t(
+              'eventDetails.detectionSplit.staffOnlyHint',
+              'Le staff répartit les candidats en équipes et gère leur temps de jeu.',
+            )}
+          </Text>
+        </View>
+      );
+    }
+
+    const detectionTeamCount = detectionSplit?.teams?.length || 0;
+    const blockedUntilSplit = t(
+      'eventDetails.detectionSplit.blockedUntilSplit',
+      'Génère d’abord la répartition, à l’étape 2.',
+    );
+
+    const steps = [
+      {
+        done: acceptedPeopleCount > 0 && detectionPointedCount >= acceptedPeopleCount,
+        hint: acceptedPeopleCount > 0
+          ? t(
+            'eventDetails.detectionSplit.stepAttendanceCount',
+            '{{pointed}} pointé·e·s sur {{total}}',
+            { pointed: detectionPointedCount, total: acceptedPeopleCount },
+          )
+          : t(
+            'eventDetails.detectionSplit.stepAttendanceEmpty',
+            'Aucun candidat inscrit pour l’instant',
+          ),
+        key: 'attendance',
+        rank: 1,
+        title: t('eventDetails.detectionSplit.stepAttendance', 'Pointer les présent·e·s'),
+      },
+      {
+        action: t('eventDetails.detectionSplit.generate', 'Générer la répartition'),
+        done: hasDetectionTeams,
+        hint: t(
+          'eventDetails.detectionSplit.stepSplitHint',
+          'Séparer par poste recherché',
+        ),
+        key: 'split',
+        onPress: handleManageComposition,
+        rank: 2,
+        title: hasDetectionTeams
+          ? t(
+            'eventDetails.detectionSplit.stepSplitDone',
+            'Réparti·e·s en {{count}} équipes',
+            { count: detectionTeamCount },
+          )
+          : t('eventDetails.detectionSplit.stepSplit', 'Répartir en équipes'),
+      },
+      {
+        action: t('eventDetails.detectionSplit.openBoard', 'Placer sur le terrain'),
+        blockedReason: blockedUntilSplit,
+        disabled: !hasDetectionTeams || isStaffCompositionFetching,
+        hint: t('eventDetails.detectionSplit.stepBoardHint', 'Après la répartition'),
+        key: 'board',
+        onPress: openDetectionTeamsBoard,
+        rank: 3,
+        title: t('eventDetails.detectionSplit.stepBoard', 'Placer sur le terrain'),
+      },
+      {
+        action: t('eventDetails.detectionSplit.openRotation', 'Faire tourner'),
+        blockedReason: blockedUntilSplit,
+        disabled: !hasDetectionTeams || isStaffCompositionFetching,
+        hint: t(
+          'eventDetails.detectionSplit.stepRotationHint',
+          'Temps de jeu par joueur · plancher 5 min',
+        ),
+        key: 'rotation',
+        onPress: openDetectionRotation,
+        rank: 4,
+        title: t('eventDetails.detectionSplit.stepRotation', 'Faire tourner'),
+      },
+    ];
+
+    return (
+      <View style={[Spaces.gap[12]]} testID="detection-split-path">
+        <Text style={[Fonts.p4Bold, Fonts.primary500]}>
+          {t('eventDetails.detectionSplit.title', 'LE CHEMIN COMPLET')}
+        </Text>
+
+        {steps.map((step) => (
+          <View
+            key={step.key}
+            style={[
+              ApplicationStyle.borderRadius16,
+              ApplicationStyle.borderWidth1,
+              Spaces.padding[12],
+              Spaces.gap[8],
+              {
+                backgroundColor: withAlpha(Colors.primary500, step.done ? 0.12 : 0.06),
+                borderColor: withAlpha(
+                  step.done ? Colors.success500 : Colors.primary500,
+                  step.done ? 0.45 : 0.24,
+                ),
+              },
+            ]}
+            testID={`detection-split-step-${step.key}`}
+          >
+            <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[12]]}>
+              <View style={{ flex: 1 }}>
+                <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
+                  {`${step.rank}. ${step.title}`}
+                </Text>
+                <Text style={[Fonts.p4, Fonts.neutral200]}>{step.hint}</Text>
+              </View>
+              {step.done ? (
+                <Tag
+                  style={tournamentDs.getToneTagStyle(Colors.success500)}
+                  text={t('eventDetails.detectionSplit.stepDone', 'Fait')}
+                  textColor="neutral00"
+                  textStyle={{ color: Colors.success500 }}
+                />
+              ) : null}
+            </View>
+
+            {step.action ? (
+              <Button
+                disabled={Boolean(step.disabled)}
+                onPress={step.onPress}
+                title={step.action}
+                variant={step.done ? 'SecondaryLight' : 'Primary'}
+              />
+            ) : null}
+
+            {/* 🔇 Regle 5 du pack : JAMAIS un bouton gris sans son motif. Celui-ci
+                est ferme parce que l'etape 2 n'est pas faite, et il le dit. */}
+            {step.action && step.disabled && step.blockedReason ? (
+              <Text style={[Fonts.p4, Fonts.neutral300]}>{step.blockedReason}</Text>
+            ) : null}
+          </View>
+        ))}
+      </View>
+    );
+  };
 
   // ⚠️ `centerContent` N'EST PAS UN CHOIX DE STYLE : sans lui, `SegmentedControl`
   // installe un pan gesture MANUEL (SegmentedControl.js:56 et 243-265) qui
@@ -5835,7 +6147,9 @@ function EventDetails({ navigation, route }) {
                   n'affichait donc RIEN — l'organisateur ne savait pas s'il avait
                   oublie un reglage. C'est desormais le composant qui decide quoi
                   dire, en UN seul endroit, commande par `isDetection`. */}
-              {isDetectionEvent ? (
+              {showDetectionSplitTab && isDetectionEvent ? renderDetectionSplitTab() : null}
+
+              {showOverviewTab && isDetectionEvent ? (
                 <EventDetectionSlots
                   canEdit={canEdit}
                   currentUserHasGenericParticipation={Boolean((hasAcceptedRequest || hasPendingRequest) && !currentUserDetectionParticipation)}

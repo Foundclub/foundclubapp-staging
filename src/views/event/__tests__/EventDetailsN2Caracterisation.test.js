@@ -27,13 +27,29 @@ const mockUseAuth = jest.fn();
 const mockNavigate = jest.fn();
 const mockSetOptions = jest.fn();
 const mockEventQuery = { data: null };
+const mockAttendance = { data: null };
 
+// 🈯 La doublure de traduction INTERPOLE, contrairement a celle des filets
+// precedents. Ce n'est pas du zele : l'etape 1 du chemin de detection affiche
+// « N pointé·e·s sur M », et c'est precisement le nombre que le lot doit
+// prendre sur le SERVEUR et non dans l'etat local d'un ecran de repartition. Un
+// `t` qui rendrait « {{pointed}} pointé·e·s sur {{total}} » laisserait cette
+// regle sans temoin.
 jest.mock('react-i18next', () => ({
   ...jest.requireActual('react-i18next'),
   useTranslation: () => ({
-    t: (/** @type {string} */ key, /** @type {any} */ fallback) => (
-      typeof fallback === 'string' ? fallback : key
-    ),
+    t: (
+      /** @type {string} */ key,
+      /** @type {any} */ fallback,
+      /** @type {any} */ options,
+    ) => {
+      const modele = typeof fallback === 'string' ? fallback : key;
+      if (!options || typeof options !== 'object') return modele;
+      return Object.keys(options).reduce(
+        (texte, nom) => texte.split(`{{${nom}}}`).join(String(options[nom])),
+        modele,
+      );
+    },
   }),
 }));
 
@@ -106,7 +122,7 @@ jest.mock('@/services/event/eventQueries', () => ({
     isLoading: false,
     refetch: jest.fn(),
   }),
-  useGetEventAttendance: () => emptyQuery(),
+  useGetEventAttendance: () => ({ ...emptyQuery(), data: mockAttendance.data }),
   useGetEventConvocation: () => emptyQuery(),
   useGetEventTeamComposition: () => emptyQuery(),
 }));
@@ -457,8 +473,9 @@ const demonter = () => {
   mounted = null;
 };
 
-const monter = (/** @type {any} */ { auth, event } = {}) => {
+const monter = (/** @type {any} */ { attendance = null, auth, event } = {}) => {
   mockEventQuery.data = event === undefined ? buildEvent() : event;
+  mockAttendance.data = attendance;
   mockUseAuth.mockReturnValue(auth || authPour('coach-1', true));
 
   demonter();
@@ -519,6 +536,14 @@ const libellesDesOnglets = (/** @type {any} */ root) => parTestID(root, 'doublur
   .flatMap((/** @type {any} */ node) => node
     .findAllByType(TouchableOpacity)
     .map((/** @type {any} */ item) => textOf(item)));
+
+const allerSurLOnglet = (/** @type {any} */ root, /** @type {string} */ valeur) => {
+  const [onglet] = parTestID(root, `onglet-${valeur}`);
+  if (!onglet) throw new Error(`Aucun onglet « ${valeur} » a l ecran`);
+  act(() => {
+    onglet.props.onPress();
+  });
+};
 
 describe('N2 · caracterisation — LE STAGE PARENT tel qu il est au 23/08', () => {
   test('il monte, et il porte SES DEUX PASTILLES MAISON, pas des onglets', () => {
@@ -639,11 +664,18 @@ describe('N2 · caracterisation — LA DETECTION ET SES POSTES', () => {
     expect(contient(root, 'POSTES_DETECTION:2')).toBe(true);
   });
 
-  test('la liste des candidats est montee dans la meme colonne, sans onglet', () => {
+  // ♻️ REECRIT PAR L'ETAPE 2. Ce temoin disait « la liste est dans la meme
+  // colonne, sans onglet ». C'est exactement ce que le rangement change : la
+  // liste vit maintenant dans l'onglet « Candidats », et il faut un appui pour
+  // l'atteindre. Le temoin ne disparait pas — il dit la NOUVELLE regle.
+  test('la liste des candidats vit desormais DANS l onglet « Candidats »', () => {
     const root = monter({ event: buildDetection() });
 
+    // Au montage on est sur l'Aperçu : la liste n'est PAS montee.
+    expect(contient(root, 'LISTE_DES_PARTICIPANTS')).toBe(false);
+
+    allerSurLOnglet(root, 'participants');
     expect(contient(root, 'LISTE_DES_PARTICIPANTS')).toBe(true);
-    expect(parTestID(root, 'doublure-onglets')).toHaveLength(0);
   });
 
   test('la description d une detection est montee elle aussi', () => {
@@ -662,9 +694,137 @@ describe('N2 · caracterisation — CE QUI NE DOIT PAS BOUGER', () => {
     expect(contient(root, 'LISTE_DES_PARTICIPANTS')).toBe(true);
   });
 
-  test('un MATCH garde les trois onglets poses par L4', () => {
+  // ♻️ REECRIT PAR L'ETAPE 2 : le match garde ses trois onglets, mais celui des
+  // personnes porte maintenant son effectif (D1, retro-applique au match).
+  test('un MATCH garde ses trois onglets, avec l effectif sur « Participants »', () => {
     const root = monter({ event: buildEvent({ type: { name: 'Match' } }) });
 
-    expect(libellesDesOnglets(root)).toEqual(['Aperçu', 'Participants', 'Convocation']);
+    expect(libellesDesOnglets(root)).toEqual(['Aperçu', 'Participants · 0', 'Convocation']);
+  });
+});
+
+describe('N2 · 4G — LA DETECTION SE RANGE EN TROIS ONGLETS', () => {
+  test('elle porte Aperçu · Répartition · Candidats · N, dans cet ordre', () => {
+    // 🔢 « Répartition » est le SEUL onglet de toute la matrice sans compteur —
+    // il ne compte pas des personnes, il montre un chemin. C'est une regle de
+    // la planche 04, et c'est ce que `withTabCount` rend possible sans un
+    // second helper : un compteur absent rend le libelle nu.
+    const root = monter({ event: buildDetection() });
+
+    expect(libellesDesOnglets(root)).toEqual(['Aperçu', 'Répartition', 'Candidats · 0']);
+  });
+
+  test('le compteur de « Candidats » suit les inscrit·e·s acceptes', () => {
+    const root = monter({
+      event: buildDetection({
+        participations: [
+          { documentId: 'c-1', firstname: 'Ana' },
+          { documentId: 'c-2', firstname: 'Bilal' },
+          { documentId: 'c-3', firstname: 'Chloe' },
+        ],
+      }),
+    });
+
+    expect(libellesDesOnglets(root)).toEqual(['Aperçu', 'Répartition', 'Candidats · 3']);
+  });
+
+  test('les postes recherches restent dans l Aperçu, pas dans la Répartition', () => {
+    const root = monter({ event: buildDetection() });
+
+    expect(contient(root, 'POSTES_DETECTION:2')).toBe(true);
+
+    allerSurLOnglet(root, 'detectionSplit');
+    expect(contient(root, 'POSTES_DETECTION:2')).toBe(false);
+  });
+
+  test('🧭 la Répartition montre LE CHEMIN COMPLET, ses 4 etapes dans l ordre', () => {
+    const root = monter({ event: buildDetection() });
+    allerSurLOnglet(root, 'detectionSplit');
+
+    expect(parTestID(root, 'detection-split-path')).toHaveLength(1);
+    const textes = textesVisibles(root).join(' | ');
+    expect(textes).toContain('LE CHEMIN COMPLET');
+    expect(textes).toContain('1. Pointer les présent·e·s');
+    expect(textes).toContain('2. Répartir en équipes');
+    expect(textes).toContain('3. Placer sur le terrain');
+    expect(textes).toContain('4. Faire tourner');
+    // L'ordre des quatre gestes EST le sujet de l'onglet : il se verifie.
+    expect(textes.indexOf('1. Pointer')).toBeLessThan(textes.indexOf('2. Répartir'));
+    expect(textes.indexOf('2. Répartir')).toBeLessThan(textes.indexOf('3. Placer'));
+    expect(textes.indexOf('3. Placer')).toBeLessThan(textes.indexOf('4. Faire tourner'));
+  });
+
+  test('🔢 l etape 1 compte le pointage DU SERVEUR, et ignore « not_marked »', () => {
+    // ⚠️ LA REGLE QUE CE TEMOIN TIENT : le nombre de pointe·e·s se lit sur
+    // `GET /events/:id/attendance`, jamais dans l'etat local de l'ecran de
+    // repartition — celui-la ne survit pas a un retour en arriere et dirait
+    // « 0 pointé » a un coach qui vient d'en pointer trois.
+    // ⛔ Et `not_marked` est la valeur que le serveur donne a quelqu'un qu'on
+    // n'a PAS pointe : la compter afficherait « 3 sur 3 » avant le coup d'envoi.
+    const root = monter({
+      attendance: {
+        data: {
+          items: [
+            { attendanceStatus: 'arrived_on_time', user: { documentId: 'c-1' } },
+            { attendanceStatus: 'not_marked', user: { documentId: 'c-2' } },
+            { attendanceStatus: 'no_show', user: { documentId: 'c-3' } },
+          ],
+        },
+      },
+      event: buildDetection({
+        participations: [
+          { documentId: 'c-1', firstname: 'Ana' },
+          { documentId: 'c-2', firstname: 'Bilal' },
+          { documentId: 'c-3', firstname: 'Chloe' },
+        ],
+      }),
+    });
+    allerSurLOnglet(root, 'detectionSplit');
+
+    expect(contient(root, '2 pointé·e·s sur 3')).toBe(true);
+  });
+
+  test('sans aucun candidat inscrit, l etape 1 le dit au lieu d afficher « 0 sur 0 »', () => {
+    const root = monter({ event: buildDetection() });
+    allerSurLOnglet(root, 'detectionSplit');
+
+    expect(contient(root, 'Aucun candidat inscrit pour l’instant')).toBe(true);
+  });
+
+  test('l etape 2 propose « Générer la répartition »', () => {
+    const root = monter({ event: buildDetection() });
+    allerSurLOnglet(root, 'detectionSplit');
+
+    expect(contient(root, 'Générer la répartition')).toBe(true);
+  });
+
+  test('🔇 les etapes 3 et 4 sont GRISEES, et elles DISENT pourquoi', () => {
+    // ⛔ Regle 5 du pack : jamais un bouton gris sans son motif. Tant que la
+    // repartition n'existe pas, le terrain et la rotation ne mènent nulle part
+    // — mais ils restent visibles et expliquent ce qui les ouvre.
+    const root = monter({ event: buildDetection() });
+    allerSurLOnglet(root, 'detectionSplit');
+
+    expect(contient(root, 'Placer sur le terrain')).toBe(true);
+    expect(contient(root, 'Faire tourner')).toBe(true);
+    expect(contient(root, 'Génère d’abord la répartition, à l’étape 2.')).toBe(true);
+  });
+
+  test('🔒 un candidat voit l onglet Répartition, mais avec son etat vide', () => {
+    // La planche 04 est explicite : un onglet vide reste AFFICHE. Le retirer
+    // ferait changer la page de forme selon qui regarde.
+    const root = monter({
+      auth: authPour('candidat-1', false),
+      event: buildDetection(),
+    });
+
+    expect(libellesDesOnglets(root)).toEqual(['Aperçu', 'Répartition', 'Candidats · 0']);
+
+    allerSurLOnglet(root, 'detectionSplit');
+    expect(parTestID(root, 'detection-split-staff-only')).toHaveLength(1);
+    expect(contient(root, 'Réservé au staff de la séance')).toBe(true);
+    // ⛔ Et surtout : AUCUN des quatre gestes de staff ne lui est propose.
+    expect(parTestID(root, 'detection-split-path')).toHaveLength(0);
+    expect(contient(root, 'Générer la répartition')).toBe(false);
   });
 });
