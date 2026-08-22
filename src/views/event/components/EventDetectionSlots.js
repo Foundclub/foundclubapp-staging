@@ -12,7 +12,15 @@ import useTheme from '@/theme/themeContext';
 import Button from '@/components/atoms/button/Button';
 
 /**
+ * Le bloc « Postes recherchés » d'une détection.
  *
+ * 🧪 N1 — PISTE ESSAYEE ET ABANDONNEE, notee pour ne pas la refaire :
+ * `@param root0` n'a pas de type, et TypeScript refuse un nom qualifie
+ * (`root0.xxx`) sans lui — d'ou un TS8032 par parametre. Poser
+ * `@param {object} root0` supprime bien ces 9 erreurs, mais en cree DAVANTAGE
+ * sur les proprietes destructurees : mesure reelle 5 411 -> 5 413. Le mieux
+ * etait l'ennemi du bien ; la piste est fermee, elle demande de typer les 9
+ * parametres, ce qui est un lot a part.
  * @param root0
  * @param root0.canEdit
  * @param root0.currentUserHasGenericParticipation
