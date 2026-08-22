@@ -27,19 +27,36 @@ import BG_DETECTION from '@/assets/background-card-event/card-detection.png';
 import BG_TRAINING from '@/assets/background-card-event/card-entrainement.png';
 import BG_MATCH from '@/assets/background-card-event/card-match.png';
 import BG_RESERVATION from '@/assets/background-card-event/card-reservation.png';
+import BG_STAGE from '@/assets/background-card-event/card-stage.png';
+import BG_TOURNAMENT from '@/assets/background-card-event/card-tournoi.png';
 
-const getBackgroundImage = (/** @type {any} */ typeName) => {
+// AE01 — les 7 fonds, recopies des CARTES de liste (`EventCardNew.js:53-62`) :
+// le tournoi empruntait le fond du match et le stage tombait dans « autre »,
+// alors que `card-tournoi.png` et `card-stage.png` existent depuis `ed41a15`.
+// C'est RESTE_A_FAIRE_DESIGN.md (L6-B, 22/08) qui commande, PAS la planche 03
+// v2 : celle-ci gardait card-match pour le tournoi en croyant que le visuel
+// dedie n'existait pas.
+const getBackgroundImage = (/** @type {any} */ typeName, /** @type {any} */ eventFormat) => {
   const normalizedType = (typeName?.toLowerCase() || '')
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '');
+  // Un stage se reconnait a son FORMAT, pas a son libelle de type : c'est ce
+  // que lisent deja `EventDetails.js` (isStageParentEvent / isStageDayEvent)
+  // et `EventCardNew.js`. Le libelle est accepte lui aussi, pour rester
+  // exactement aligne sur la carte de liste, qui teste les deux.
+  const normalizedFormat = String(eventFormat || '').toLowerCase();
+  const isStageEvent = normalizedFormat === 'stage_parent'
+    || normalizedFormat === 'stage_day'
+    || normalizedType.includes('stage');
   if (
     normalizedType.includes('match')
     || normalizedType.includes('competition')
-    || normalizedType.includes('tournoi')
   ) return BG_MATCH;
   if (normalizedType.includes('entrainement')) return BG_TRAINING;
   if (normalizedType.includes('detection')) return BG_DETECTION;
   if (normalizedType.includes('reservation')) return BG_RESERVATION;
+  if (normalizedType.includes('tournoi')) return BG_TOURNAMENT;
+  if (isStageEvent) return BG_STAGE;
   return BG_OTHER;
 };
 
@@ -97,7 +114,7 @@ function EventHeader({ event, matchScoreSummary = null }) {
   const SpacesAny = /** @type {any} */ (Spaces);
   const { t } = useTranslation();
 
-  const backgroundImage = getBackgroundImage(event?.type?.name);
+  const backgroundImage = getBackgroundImage(event?.type?.name, event?.eventFormat);
   // La couleur appartient au LIEU, pas au type : deux evenements au meme
   // endroit portent le meme accent. Sans installation, l'icone GPS et la
   // pastille de section gardent le cyan d'avant AD09.
@@ -139,12 +156,29 @@ function EventHeader({ event, matchScoreSummary = null }) {
     || normalizedTypeName.includes('tournoi')
   ));
   const matchContextLabel = showMatchTitle ? matchDisplay.contextLabel : '';
-  const tournamentTitle = toDisplayText(event?.name) || 'Tournoi';
+  const eventOwnName = toDisplayText(event?.name);
+  const teamName = toDisplayText(event?.team?.name);
+  const tournamentTitle = eventOwnName || t('eventDetails.header.tournamentFallback', 'Tournoi');
+  // AE01 — le titre principal suit le TYPE (planche 03, cadres C/D/E/G/H).
+  // Deux familles en sont EXCLUES et gardent le nom du club :
+  //  - le match : son titre « VS X » vit dans showMatchTitle, et sans
+  //    adversaire (cadre 03 · I) c'est le nom du club qui doit rester —
+  //    le replier sur event.name lui prendrait le seul nom qu'il porte ;
+  //  - la reservation, qui n'a pas de nom propre a montrer.
+  // Le club ne disparait de NULLE PART : le logo, le sous-titre et la
+  // pastille continuent de le porter.
+  const keepsClubNameTitle = normalizedTypeName.includes('match')
+    || normalizedTypeName.includes('competition')
+    || normalizedTypeName.includes('reservation');
   let headerPrimaryTitle = clubName;
   if (showMatchTitle) {
     headerPrimaryTitle = eventTitle;
   } else if (isTournamentEvent) {
     headerPrimaryTitle = tournamentTitle;
+  } else if (normalizedTypeName.includes('entrainement')) {
+    headerPrimaryTitle = teamName || clubName;
+  } else if (!keepsClubNameTitle) {
+    headerPrimaryTitle = eventOwnName || clubName;
   }
 
   let headerSecondaryTitle = '';
@@ -392,7 +426,7 @@ function EventHeader({ event, matchScoreSummary = null }) {
         {invitedTeamNames.length > 0 && (
           <View style={[Spaces.gap[4]]}>
             <Text style={[Fonts.p3Bold, { color: accentColor }]}>
-              Équipes invitées
+              {t('eventDetails.header.invitedTeams', 'Équipes invitées')}
             </Text>
             <Text style={[Fonts.p2, Fonts.primary100]}>
               {invitedTeamNames.join(' \u2022 ')}
