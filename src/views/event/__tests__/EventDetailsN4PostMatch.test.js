@@ -295,6 +295,8 @@ jest.mock('@/components/molecules/segmentedControl/SegmentedControl', () => {
 
 // eslint-disable-next-line import/first
 import EventDetails from '../EventDetails';
+// eslint-disable-next-line import/first
+import RemindTeamsSheet from '../components/RemindTeamsSheet';
 
 const CLUB_ID = 'club-1';
 const TEAM_ID = 'team-1';
@@ -515,7 +517,7 @@ describe('N4/E6 — ce que la page dit apres un match fini', () => {
 // E6/2 — CE QUE LA RELANCE ENVOIE AUJOURD HUI
 // ---------------------------------------------------------------------------
 
-describe('N4/E6 — la relance, avant le lot', () => {
+describe('N4/E6 — la relance, et ce que D5 y change', () => {
   test('elle descend jusqu a la liste des participants', () => {
     allerSurLOnglet(monter(), 'participants');
 
@@ -524,13 +526,51 @@ describe('N4/E6 — la relance, avant le lot', () => {
     expect(typeof derniere?.handleRemindPlayers).toBe('function');
   });
 
-  test('🎯 elle envoie l identifiant de l evenement a la mutation', () => {
-    allerSurLOnglet(monter(), 'participants');
+  // ⚠️ TEMOIN ADAPTE PAR L ETAPE 3 (D5), ET C EST LE SEUL DU LOT.
+  // Avant : `handleRemindPlayers()` appelait `mutate('event-1')` tout de suite.
+  // Depuis D5, quand il Y A des equipes a relancer, le geste OUVRE LA FEUILLE
+  // au lieu d envoyer — parce que le serveur n accepte qu UN `teamId` par
+  // appel et qu il faut bien savoir lequel. Le geste direct n a pas disparu :
+  // il est le chemin de la liste plate, verrouille par le temoin suivant.
+  test('🎯 avec des equipes a relancer, elle OUVRE la feuille sur CETTE equipe', () => {
+    const root = monter();
+    allerSurLOnglet(root, 'participants');
+
+    const derniere = propsDesParticipants[propsDesParticipants.length - 1];
+    act(() => { derniere.handleRemindPlayers(TEAM_ID); });
+
+    const feuille = root.findByType(RemindTeamsSheet);
+    expect(feuille.props.isVisible).toBe(true);
+    expect(feuille.props.equipePreCochee).toBe(TEAM_ID);
+    // ⛔ Rien n est parti : c est la feuille qui enverra, avec les equipes cochees.
+    expect(mockRemindMutate).not.toHaveBeenCalled();
+  });
+
+  test('🔒 sans equipe a relancer, le geste d avant est INTACT : mutate en chaine', () => {
+    // Une equipe sans joueur eligible n a personne a relancer : la feuille
+    // n aurait rien a proposer, et proposer un choix entre zero option serait
+    // une porte qui ne mene nulle part.
+    const root = monter({
+      event: { ...MATCH_FINI, team: { ...MATCH_FINI.team, players: [] } },
+    });
+    allerSurLOnglet(root, 'participants');
 
     const derniere = propsDesParticipants[propsDesParticipants.length - 1];
     act(() => { derniere.handleRemindPlayers(); });
 
     expect(mockRemindMutate).toHaveBeenCalledTimes(1);
     expect(mockRemindMutate.mock.calls[0][0]).toBe('event-1');
+    expect(root.findByType(RemindTeamsSheet).props.isVisible).toBe(false);
+  });
+
+  test('🔢 la feuille ne recoit QUE les equipes ayant des sans-reponse', () => {
+    const root = monter();
+    allerSurLOnglet(root, 'participants');
+
+    const feuille = root.findByType(RemindTeamsSheet);
+    expect(feuille.props.sections.length).toBeGreaterThan(0);
+    feuille.props.sections.forEach((/** @type {any} */ section) => {
+      expect(section.notAnswered.length).toBeGreaterThan(0);
+    });
   });
 });

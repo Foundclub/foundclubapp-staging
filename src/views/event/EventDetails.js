@@ -117,6 +117,7 @@ import EventParticipants from './components/EventParticipants';
 import EventReservationActions from './components/EventReservationActions';
 import EventTasksSection from './components/EventTasksSection';
 import EventTeamAudiencesSection from './components/EventTeamAudiencesSection';
+import RemindTeamsSheet from './components/RemindTeamsSheet';
 import TournamentPeopleList from './components/TournamentPeopleList';
 import TournamentProgressRail from './components/TournamentProgressRail';
 import { resolveEventAttendanceGate } from './eventAttendanceGate';
@@ -606,6 +607,11 @@ function EventDetails({ navigation, route }) {
   // c'est une FEUILLE ouverte par le ⋯ de la barre du haut. Elle part fermee,
   // pour la meme raison qu'avant D4 : ouverte, elle cache la page entiere.
   const [isEventActionsSheetOpen, setIsEventActionsSheetOpen] = useState(false);
+  // N4 (D5) : `null` = feuille fermee ; une CHAINE (meme vide) = feuille
+  // ouverte, la chaine etant l'equipe a pre-cocher. Un booleen a cote d'une
+  // clef ferait deux etats a garder d'accord — et un jour ils divergeraient.
+  /** @type {[string | null, (v: string | null) => void]} */
+  const [remindSheetTeamKey, setRemindSheetTeamKey] = useState(null);
   const [isMatchStatsPromptVisible, setIsMatchStatsPromptVisible] = useState(false);
   const [dismissedMatchStatsPromptKey, setDismissedMatchStatsPromptKey] = useState(null);
   const [areDeferredQueriesEnabled, setAreDeferredQueriesEnabled] = useState(false);
@@ -2019,6 +2025,19 @@ function EventDetails({ navigation, route }) {
     };
   }, [canEdit, event, inactiveEventParticipations, pendingParticipations, trainerKeysForEvent]);
 
+  // 🎯 N4 (D5) — LES EQUIPES QU'IL Y A QUELQUE CHOSE A RELANCER.
+  // C'est cette liste, et elle seule, qui decide si « Relancer » ouvre une
+  // feuille de choix ou refait le geste direct d'avant : proposer un choix
+  // entre zero option serait une porte qui ne mene nulle part.
+  // ⛔ `external-participants` n'y entre pas : le serveur ne sait pas cibler
+  // une non-equipe (`teamId` obligatoire), la ligne serait un bouton mort.
+  const remindableTeamSections = useMemo(
+    () => teamParticipationSections.filter(
+      (/** @type {any} */ section) => (section?.notAnswered?.length || 0) > 0,
+    ),
+    [teamParticipationSections],
+  );
+
   // 🗣️ N1 (b) — CE QUE L'ENTRAINEMENT OUVERT DIT ENFIN A TOUT LE MONDE.
   //
   // 🧨 LE DEFAUT : « Accueille N joueurs de l'exterieur » n'existait QUE dans la
@@ -2586,9 +2605,23 @@ function EventDetails({ navigation, route }) {
     mutations.missingEventMutation.mutate(eventToDecline.documentId);
   };
 
-  const handleRemindPlayers = () => {
+  // 🎯 N4 (D5) — RELANCER DEVIENT UN CHOIX, QUAND IL Y A UN CHOIX A FAIRE.
+  //
+  // Un amical, un tournoi ou un stage reunit PLUSIEURS equipes, et le serveur
+  // n'accepte qu'un `teamId` par appel : « relancer les sans-reponse » ne
+  // pouvait donc viser personne en particulier. La feuille pose la question.
+  //
+  // ⛔ MAIS SEULEMENT S'IL Y A UNE QUESTION. Sur la liste plate (aucune section
+  // d'equipe — le cas le plus courant), il n'y a rien a cocher : la feuille
+  // afficherait « personne a relancer » alors qu'il y a du monde. Ce chemin-la
+  // garde donc EXACTEMENT le geste d'avant, modale comprise.
+  const handleRemindPlayers = (/** @type {string | undefined} */ teamKey) => {
     if (!eventId) return;
-    mutations.remindEventMutation.mutate(eventId);
+    if (!remindableTeamSections.length) {
+      mutations.remindEventMutation.mutate(eventId);
+      return;
+    }
+    setRemindSheetTeamKey(typeof teamKey === 'string' ? teamKey : '');
   };
 
   const handleUserPress = (/** @type {User | null | undefined} */ user) => {
@@ -7341,6 +7374,29 @@ function EventDetails({ navigation, route }) {
         isVisible={isExportSheetVisible}
         onClose={() => setIsExportSheetVisible(false)}
         onConfirm={handleConfirmExport}
+      />
+
+      {/* 🎯 N4 (D5) — LA FEUILLE DE RELANCE (1G / 1H / 1I).
+          Elle lit `data` et `error` de la mutation : c'est ce qui permet a la
+          modale du hook de SE TAIRE (D4, `presentation: 'sheet'`) sans qu'aucune
+          information ne se perde — deux fenetres pour un seul geste, ce serait
+          la modale par-dessus la feuille.
+          🔢 Le chiffre du pied vient de l'app et se dit indicatif ; celui du
+          compte rendu vient du SERVEUR, qui seul sait qui l'anti-spam ecarte. */}
+      <RemindTeamsSheet
+        equipePreCochee={remindSheetTeamKey || ''}
+        erreur={mutations.remindEventMutation.error}
+        isReminding={mutations.remindEventMutation.isPending}
+        isVisible={remindSheetTeamKey !== null}
+        nowMs={serverNowMs}
+        onClose={() => setRemindSheetTeamKey(null)}
+        onRelancer={(/** @type {string[]} */ teamIds) => mutations.remindEventMutation.mutate({
+          eventId,
+          presentation: 'sheet',
+          teamIds,
+        })}
+        rapport={mutations.remindEventMutation.data}
+        sections={remindableTeamSections}
       />
 
       <TrainingOpenBottomSheet
