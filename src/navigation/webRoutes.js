@@ -83,6 +83,7 @@ const WEB_ROUTE_PATTERNS = {
   [RouteNames.TeamWizardTrainers]: '/teams/wizard/trainers',
   [RouteNames.TeamWizardRecap]: '/teams/wizard/recap',
   [RouteNames.CreateSquad]: '/league/squads/create',
+  [RouteNames.EventAttendanceCall]: '/event/attendance-call',
   [RouteNames.EventDetails]: '/events/:eventId',
   [RouteNames.EventEdit]: '/events/:eventId/edit',
   [RouteNames.EventPublishedShowcase]: '/events/:eventId/published',
