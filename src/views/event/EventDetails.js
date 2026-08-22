@@ -25,6 +25,7 @@ import { USER_ROLES } from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
 import {
   isMatchTypeName,
+  OPPONENT_NAME_MAX_LENGTH,
   resolveEventDisplayName,
   resolveEventOpponentName,
 } from '@/domains/event/eventDisplayName';
@@ -2888,12 +2889,78 @@ function EventDetails({ navigation, route }) {
     return teams[0]?.documentId || null;
   }, [event?.invitedTeams, event?.team, userData?.documentId, userData?.trainedTeams]);
 
+  // 🔄 N3 (D3) — QUI REGARDE CE MATCH ? Un evenement a UNE equipe organisatrice
+  // et des equipes invitees ; le meme match est donc « a domicile » pour l'une
+  // et « a l'exterieur » pour l'autre. Le score le savait deja (il s'inversait
+  // dans `matchHeaderScoreSummary`), mais la regle etait ecrite a l'interieur du
+  // calcul du score et n'etait donc utilisable par personne d'autre. Elle sort
+  // ici parce que la pastille de type et le verdict en ont besoin aussi — et
+  // qu'une pastille « À domicile » posee au-dessus d'un score inverse serait
+  // une contradiction visible a l'ecran.
+  const isViewerFromInvitedTeam = useMemo(() => {
+    const organizerTeamId = event?.team?.documentId || null;
+    const currentTeamId = compositionTeamId || organizerTeamId || null;
+    return Boolean(organizerTeamId && currentTeamId && organizerTeamId !== currentTeamId);
+  }, [compositionTeamId, event?.team?.documentId]);
+
   const compositionEditorTeam = useMemo(() => {
     const teams = [event?.team, ...(event?.invitedTeams || [])].filter(Boolean);
     return teams.find((team) => team?.documentId === compositionTeamId)
       || event?.team
       || null;
   }, [compositionTeamId, event?.invitedTeams, event?.team]);
+
+  // 🏷️ N3 (D1/D2/D3/D8) — CE QUE LA PASTILLE DE TYPE AJOUTE POUR UN MATCH.
+  //
+  // N1 a centralise le libelle dans `buildTypeTagLabel` en prevoyant ce lot :
+  // « MATCH » se complete d'un segment, et d'un seul a la fois.
+  //
+  // ⛔ `isHome` EST TRI-ETAT, et le troisieme etat n'est pas `false` :
+  // `null` veut dire « personne ne sait », ce qui est le cas de tout match
+  // saisi a la main. `Boolean(event?.isHome)` afficherait « À l'extérieur »
+  // pour ces matchs-la — une affirmation fausse, la ou se taire est juste.
+  //
+  // ⚠️ Le serveur qui ECRIT `isHome` (admin AE03, `3e7dd58`) n'est pas deploye
+  // sur la recette au 23/08. Jusque-la, le seul chemin qui affichera quelque
+  // chose en vrai est le repli sur `contextLabel`, deduit de la description des
+  // matchs synchronises. Ce n'est pas une rustine : c'est l'ancien parc, qui
+  // restera de toute facon depourvu du champ.
+  const matchVenueTagSegment = useMemo(() => {
+    if (!isMatchEvent) return '';
+    // D8 — un match fini s'est deja joue quelque part. Dire ou n'apprend plus
+    // rien a personne ; dire qu'il est TERMINÉ, si.
+    if (isMatchFinished) return t('eventDetails.typeTag.matchFinished', 'TERMINÉ');
+
+    let playsAtHome = null;
+    if (event?.isHome === true) playsAtHome = true;
+    else if (event?.isHome === false) playsAtHome = false;
+    else if (externalMatchDisplay?.contextLabel === 'Domicile') playsAtHome = true;
+    else if (externalMatchDisplay?.contextLabel === 'Exterieur') playsAtHome = false;
+
+    if (playsAtHome === null) return '';
+
+    const playsAtHomeForViewer = isViewerFromInvitedTeam ? !playsAtHome : playsAtHome;
+    return playsAtHomeForViewer
+      ? t('eventDetails.typeTag.matchHome', 'À DOMICILE')
+      : t('eventDetails.typeTag.matchAway', 'À L\'EXTÉRIEUR');
+  }, [
+    event?.isHome,
+    externalMatchDisplay?.contextLabel,
+    isMatchEvent,
+    isMatchFinished,
+    isViewerFromInvitedTeam,
+    t,
+  ]);
+
+  // N1 avait prevu que N3 « allonge le tableau » des precisions de la pastille.
+  // Il ne peut pas l'allonger DANS `typeTagSegments` : le lieu du match depend
+  // de `compositionTeamId`, declare 800 lignes plus bas — un hook ne se lit pas
+  // avant d'exister. Les deux listes se rejoignent donc ici, et
+  // `buildTypeTagLabel` retire tout seul les segments vides.
+  const typeTagSegmentsComplets = useMemo(
+    () => [...typeTagSegments, matchVenueTagSegment],
+    [matchVenueTagSegment, typeTagSegments],
+  );
 
   const compositionEditorPlayers = useMemo(
     () => getCompositionPlayersForEvent(event, compositionEditorTeam, isDetectionEvent),
@@ -3057,19 +3124,59 @@ function EventDetails({ navigation, route }) {
     matchStatsPayload?.score?.scoreAgainst,
     matchStatsPayload?.score?.scoreFor,
   ]);
+  // ✍️ N3 (D9) — NOMMER L'ADVERSAIRE, DEPUIS LA CARTE.
+  //
+  // Le champ existe deja dans EventEdit (hors lot, nomme) : il faut ouvrir le
+  // formulaire complet de l'evenement pour renseigner UN mot. La feuille ci-
+  // dessous est le raccourci du cadre 03 · I — un champ, deux boutons, et on
+  // repart. Elle ne fait PAS de recherche de club : l'adversaire est du texte
+  // libre cote serveur (`opponentName`, varchar 120, accepte tel quel par
+  // PUT /events/:id), et une recherche de club promettrait un rattachement
+  // qui n'existe pas.
+  const [isOpponentSheetVisible, setIsOpponentSheetVisible] = useState(false);
+  const [opponentNameDraft, setOpponentNameDraft] = useState('');
+  const [isOpponentSaving, setIsOpponentSaving] = useState(false);
+
+  const handleOpenOpponentSheet = useCallback(() => {
+    setOpponentNameDraft(matchOpponentName || '');
+    setIsOpponentSheetVisible(true);
+  }, [matchOpponentName]);
+
+  const handleSaveOpponentName = useCallback(async () => {
+    const nomSaisi = opponentNameDraft.trim();
+    if (!eventId || !nomSaisi) return;
+
+    setIsOpponentSaving(true);
+    try {
+      await mutations.updateEventNoNavMutation.mutateAsync({
+        documentId: eventId,
+        eventData: { opponentName: nomSaisi },
+      });
+      setIsOpponentSheetVisible(false);
+    } catch (opponentError) {
+      // 🗣️ Une porte fermee DIT pourquoi — sinon la feuille reste ouverte sans
+      // que rien n'explique que l'enregistrement a echoue.
+      Alert.alert(
+        t('common.error', 'Erreur'),
+        opponentError?.message
+          || t(
+            'eventDetails.matchCard.saveOpponentFailed',
+            'Impossible d\'enregistrer le nom de l\'adversaire pour le moment.',
+          ),
+      );
+    } finally {
+      setIsOpponentSaving(false);
+    }
+  }, [eventId, mutations.updateEventNoNavMutation, opponentNameDraft, t]);
+
   const matchHeaderScoreSummary = useMemo(() => {
     if (!isMatchEvent) return null;
 
     const scoreState = matchStatsPayload?.score || null;
-    const organizerTeamId = event?.team?.documentId || null;
-    const currentTeamId = compositionTeamId || organizerTeamId || null;
     const storedMatchResult = event?.matchResult || null;
-    const shouldInvertStoredScore = Boolean(
-      storedMatchResult
-      && organizerTeamId
-      && currentTeamId
-      && organizerTeamId !== currentTeamId,
-    );
+    // La regle d'orientation vit desormais dans `isViewerFromInvitedTeam` (D3) :
+    // le score et la pastille ne peuvent plus diverger.
+    const shouldInvertStoredScore = Boolean(storedMatchResult && isViewerFromInvitedTeam);
 
     let fallbackScoreFor = null;
     let fallbackScoreAgainst = null;
@@ -3095,15 +3202,46 @@ function EventDetails({ navigation, route }) {
       scoreState?.waitingOfficial || (!scoreState?.available && event?.externalAutoSource),
     );
 
-    if (!available && !isMatchFinished) {
-      return null;
+    // 🆕 N3 (D5) — L'ENCART EXISTE AVANT LE MATCH.
+    // Jusqu'ici cette ligne rendait `null` : un match a venir n'affichait donc
+    // AUCUN encart, et l'adversaire n'apparaissait nulle part sur la carte.
+    // C'est le cadre A de la planche 03 — « Test FC — FC Bonneveine » et
+    // « Score en attente » se montrent des qu'un adversaire est connu, et le
+    // cadre I (adversaire inconnu) se montre aussi, pour le dire.
+    const awaitingOpponent = !matchOpponentName;
+
+    // 🏁 N3 (D6) — LE VERDICT SE DEDUIT, IL NE SE STOCKE PAS.
+    // `resolvedScoreFor/Against` sont DEJA orientes vers le lecteur (D3) :
+    // le verdict herite donc de l'orientation sans rien recalculer, et le
+    // 3-1 de l'organisateur devient bien une defaite pour l'equipe invitee.
+    let verdict = null;
+    if (available) {
+      const scoredFor = Number(resolvedScoreFor);
+      const scoredAgainst = Number(resolvedScoreAgainst);
+      if (Number.isFinite(scoredFor) && Number.isFinite(scoredAgainst)) {
+        if (scoredFor > scoredAgainst) verdict = 'win';
+        else if (scoredFor < scoredAgainst) verdict = 'loss';
+        else verdict = 'draw';
+      }
     }
+
+    // D9/D10 — LA PRESENCE DU RAPPEL PORTE LE DROIT, pas un drapeau que
+    // l'entete pourrait oublier de lire. Il n'existe que pour qui peut editer
+    // ET quand l'adversaire manque : renommer un adversaire deja connu reste
+    // dans EventEdit, ou vit le champ complet.
+    const onNameOpponent = canEdit && awaitingOpponent ? handleOpenOpponentSheet : null;
 
     if (!available) {
       return {
+        awaitingOpponent,
         badgeLabel: waitingOfficial ? 'Score officiel' : 'Score du match',
-        helperText: waitingOfficial ? 'Score en attente de synchronisation' : 'Score en attente',
+        // Le repli disait « Score en attente » ICI ET dans `value` : la meme
+        // phrase deux fois dans un encart de 172 px. Une seule suffit.
+        helperText: waitingOfficial ? 'Score en attente de synchronisation' : null,
+        onNameOpponent,
+        opponentName: matchOpponentName,
         value: 'Score en attente',
+        verdict: null,
       };
     }
 
@@ -3115,17 +3253,26 @@ function EventDetails({ navigation, route }) {
     }
 
     return {
+      awaitingOpponent,
       badgeLabel,
       helperText: waitingOfficial ? 'Synchronise automatiquement depuis la source officielle' : null,
+      onNameOpponent,
+      opponentName: matchOpponentName,
       value: `${resolvedScoreFor} - ${resolvedScoreAgainst}`,
+      verdict,
     };
   }, [
-    compositionTeamId,
+    // `isMatchFinished` a QUITTE cette liste avec D5 : l'encart ne dependait de
+    // lui que pour se CACHER avant le coup d'envoi (`!available && !isMatchFinished`
+    // rendait null). Il s'affiche desormais des qu'il s'agit d'un match, donc
+    // le calcul ne lit plus l'etat de fin. La pastille, elle, le lit toujours (D8).
+    canEdit,
     event?.externalAutoSource,
     event?.matchResult,
-    event?.team?.documentId,
+    handleOpenOpponentSheet,
     isMatchEvent,
-    isMatchFinished,
+    isViewerFromInvitedTeam,
+    matchOpponentName,
     matchStatsPayload?.score,
   ]);
   const matchStatsSummaryText = useMemo(() => {
@@ -5380,17 +5527,17 @@ function EventDetails({ navigation, route }) {
       <View style={[Spaces.gap[8], Alignments.alignCenter]}>
         <Tag
           style={{}}
-          text={buildTypeTagLabel(event?.type?.name, typeTagSegments)}
+          text={buildTypeTagLabel(event?.type?.name, typeTagSegmentsComplets)}
           textStyle={Fonts.p2}
         />
-        {/* Y02 : le nom de l'adversaire, sous la pastille de type. ⛔ La ligne
-            n'est MONTEE que si l'adversaire est connu — jamais un « vs » suivi
-            d'un blanc, et rien ne change pour les autres types d'evenement. */}
-        {matchOpponentName ? (
-          <Text style={[Fonts.h4, Fonts.neutral00]}>
-            {t('eventDetails.opponentLine', 'vs {{opponent}}', { opponent: matchOpponentName })}
-          </Text>
-        ) : null}
+        {/* N3 (D4, Q1 = C) — la ligne « vs X » qu'Y02 avait posee ici est
+            RETIREE : l'adversaire vit desormais dans l'encart de la carte,
+            face au club (« Test FC — FC Bonneveine »). La garder ferait dire
+            trois fois la meme chose — encart, titre, et cette ligne.
+            ✅ Rien a nettoyer dans fr.js : `eventDetails.opponentLine` n'y a
+            JAMAIS ete ajoutee (verifie — aucune occurrence dans
+            src/theme/strings/translations/). Elle ne vivait que comme repli
+            de t() ici meme ; elle part avec la ligne. */}
       </View>
 
       {/* D64 : ce cadre ne contient plus que la liste, et c'est le geste du lot.
@@ -6832,6 +6979,63 @@ function EventDetails({ navigation, route }) {
             />
             <Button
               onPress={() => setIsMatchScoreSheetVisible(false)}
+              title={t('common.cancel', 'Annuler')}
+              variant="Secondary"
+            />
+          </View>
+        </View>
+      </BottomModal>
+
+      {/* N3 (D9, ✍️) — LA FEUILLE DE L'ADVERSAIRE : un champ, et c'est tout.
+          ⚠️ `snapPoints` est OBLIGATOIRE : sans lui, une `BottomModal` ne peut
+          pas porter a la fois un en-tete et un pied (piege D19, deja paye).
+          Meme gabarit que la feuille du score juste au-dessus — on ne cherche
+          pas un autre agencement pour un formulaire encore plus court. */}
+      <BottomModal
+        close={() => setIsOpponentSheetVisible(false)}
+        isVisible={isOpponentSheetVisible}
+        snapPoints={['52%']}
+      >
+        <View style={[Spaces.gap[16], Spaces.paddingBottom[12]]}>
+          <View style={[Spaces.gap[4]]}>
+            <Text style={[Fonts.h3Bold, Fonts.neutral00]}>
+              {t('eventDetails.matchCard.nameOpponent', 'Nommer l\'adversaire')}
+            </Text>
+            <Text style={[Fonts.p2, Fonts.neutral100]}>
+              {t(
+                'eventDetails.matchCard.nameOpponentHint',
+                'Il apparaitra sur la carte du match, face a ton club.',
+              )}
+            </Text>
+          </View>
+
+          <TextInput
+            autoFocus
+            maxLength={OPPONENT_NAME_MAX_LENGTH}
+            onChangeText={setOpponentNameDraft}
+            placeholder={t('eventDetails.matchCard.opponentPlaceholder', 'Nom de l\'équipe adverse')}
+            placeholderTextColor={Colors.neutral400}
+            selectionColor={Colors.primary500}
+            style={[
+              ApplicationStyle.input,
+              ApplicationStyle.backgroundColor.neutral800,
+              ApplicationStyle.borderColor.neutral600,
+              Fonts.p1,
+              Fonts.neutral00,
+            ]}
+            value={opponentNameDraft}
+          />
+
+          <View style={[Spaces.gap[12]]}>
+            <Button
+              disabled={!opponentNameDraft.trim() || isOpponentSaving}
+              isLoading={isOpponentSaving}
+              onPress={handleSaveOpponentName}
+              title={t('common.save', 'Enregistrer')}
+              variant="Primary"
+            />
+            <Button
+              onPress={() => setIsOpponentSheetVisible(false)}
               title={t('common.cancel', 'Annuler')}
               variant="Secondary"
             />

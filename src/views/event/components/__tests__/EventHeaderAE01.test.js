@@ -256,12 +256,23 @@ describe('AE01 - le fond et le titre de la carte d entete, type par type', () =>
     expect(titleOf({ teamName: '', typeName: 'Entrainement' })).toBe(CLUB_NAME);
     expect(titleOf({ name: '', typeName: 'Detection' })).toBe(CLUB_NAME);
 
-    // Les quatre qui ne bougent PAS avec AE01. Le dernier est le cadre 03 · I
-    // « match sans adversaire » : hors lot, il garde le nom du club — et c est
-    // pour cela que le type match doit rester exclu du repli sur event.name.
+    // Les deux qui ne bougent ni avec AE01 ni avec N3.
     expect(titleOf({ typeName: 'Tournoi' })).toBe(EVENT_NAME);
     expect(titleOf({ typeName: 'Reservation' })).toBe(CLUB_NAME);
-    expect(titleOf({ name: matchTitle, typeName: 'Match' })).toBe(matchTitle);
+
+    // ✏️ REECRIT PAR N3 — DECISION Q1 = C (Adel, 20/08). Ce n'est pas une
+    // regression : c'est la decision qui a change, pas le code qui a derape.
+    //
+    // AE01 avait fige ici « un match affiche VS <adversaire> », en notant que
+    // le match SANS adversaire (cadre 03 · I) gardait le nom du club. Q1 a
+    // tranche l'inverse : le match garde TOUJOURS le nom du club en titre, et
+    // l'adversaire vit dans l'encart, face a lui — « Test FC — FC Bonneveine »
+    // (temoigne dans EventHeaderN3CarteMatch, temoin 2).
+    //
+    // ✅ Ce que ce couple garde vivant : le titre d'un match ne depend PLUS de
+    // l'adversaire. Avec ou sans lui, la meme chose s'affiche — et c'est
+    // exactement ce que l'ancien code ne faisait pas.
+    expect(titleOf({ name: matchTitle, typeName: 'Match' })).toBe(CLUB_NAME);
     expect(titleOf({ typeName: 'Match' })).toBe(CLUB_NAME);
   });
 
