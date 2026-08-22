@@ -53,8 +53,12 @@ const SOURCE_NAVIGATEUR = fs.readFileSync(
 /** Le serveur d aujourd hui : il dit le total. */
 const REPONSE_AVEC_TOTAL = {
   data: [
-    { documentId: 'chat-1', messages: [], type: 'team', unreadCount: 5 },
-    { documentId: 'chat-2', messages: [], type: 'team', unreadCount: 2 },
+    {
+      documentId: 'chat-1', messages: [], type: 'team', unreadCount: 5,
+    },
+    {
+      documentId: 'chat-2', messages: [], type: 'team', unreadCount: 2,
+    },
   ],
   meta: { pagination: { page: 1, pageCount: 3, total: 42 }, unreadTotal: 7 },
 };
@@ -62,9 +66,15 @@ const REPONSE_AVEC_TOTAL = {
 /** Un serveur qui compte par fil mais pas au total : on additionne la page. */
 const REPONSE_SANS_TOTAL = {
   data: [
-    { documentId: 'chat-1', messages: [], type: 'team', unreadCount: 4 },
-    { documentId: 'chat-2', messages: [], type: 'team', unreadCount: 2 },
-    { documentId: 'chat-3', messages: [], type: 'whisper', unreadCount: 0 },
+    {
+      documentId: 'chat-1', messages: [], type: 'team', unreadCount: 4,
+    },
+    {
+      documentId: 'chat-2', messages: [], type: 'team', unreadCount: 2,
+    },
+    {
+      documentId: 'chat-3', messages: [], type: 'whisper', unreadCount: 0,
+    },
   ],
   meta: { pagination: { page: 1, pageCount: 1, total: 3 } },
 };

@@ -25,8 +25,8 @@ jest.mock('@/domains/auth/useAuth', () => ({
 
 jest.mock('@/hooks/useSocket', () => ({
   __esModule: true,
-  EVENTS: { READ_MESSAGE: 'read-message' },
   default: () => ({ isConnected: false, socket: null }),
+  EVENTS: { READ_MESSAGE: 'read-message' },
 }));
 
 const mockGet = jest.fn();
@@ -52,11 +52,13 @@ jest.mock('@/utils/logger/logger', () => ({
 const fs = require('fs');
 const path = require('path');
 
-const { formatThreadUnreadBadge } = require('./useUnreadMessages');
+const { getChats } = require('@/services/chat/chatService');
+
 const {
   applyOptimisticChatRead,
   shouldRefetchChatsAfterRead,
 } = require('./useMessaging');
+const { formatThreadUnreadBadge } = require('./useUnreadMessages');
 
 const SOURCE_MESSAGERIE = fs.readFileSync(
   path.resolve(__dirname, '..', '..', 'views', 'Messaging.js'),
@@ -165,8 +167,6 @@ describe('AE06 temoin 7bis — le repli de lecture ne doit plus perdre le total'
   });
 
   test('quand la reponse ne passe pas le controle de forme, unreadTotal survit', async () => {
-    const { getChats } = require('@/services/chat/chatService');
-
     // Un fil sans `type` : le controle de forme refuse la reponse et le service
     // bascule sur son repli. Ce repli reconstruisait `meta` de zero — le total
     // de la pastille disparaissait donc en SILENCE, sans erreur nulle part.
@@ -194,8 +194,6 @@ describe('AE06 temoin 7bis — le repli de lecture ne doit plus perdre le total'
   });
 
   test('un serveur qui ne compte pas ne fabrique pas un total a zero', async () => {
-    const { getChats } = require('@/services/chat/chatService');
-
     mockGet.mockResolvedValueOnce({
       data: {
         data: [{ documentId: 'chat-1', messages: [] }],

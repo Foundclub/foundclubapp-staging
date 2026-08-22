@@ -79,6 +79,7 @@ export const applyOptimisticChatRead = (oldData, chatDocumentId) => {
   const safeChatId = normalizeChatId(chatDocumentId);
 
   /**
+   * Remet a zero le compte du fil ouvert dans une page, total compris.
    * @param {any} page - Une page de la liste.
    * @returns {any} La page, compte remis a zero si besoin.
    */

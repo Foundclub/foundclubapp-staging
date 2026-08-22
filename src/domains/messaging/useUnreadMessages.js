@@ -28,6 +28,7 @@ export const formatThreadUnreadBadge = (count) => {
 };
 
 /**
+ * Ramene un compte brut a ce que la pastille de l onglet sait afficher.
  * @param {unknown} value - Un compte brut.
  * @returns {number} Le meme compte, entier, positif et borne.
  */
