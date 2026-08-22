@@ -1091,6 +1091,10 @@ export default {
       participationRequests: 'Demandes de participation',
       participations: 'Participants',
     },
+    header: {
+      invitedTeams: 'Équipes invitées',
+      tournamentFallback: 'Tournoi',
+    },
     invitedTeams: {
       externalBadge: 'Ouvert à tous',
       externalHistoricalTitle: 'Historique participants externes',
