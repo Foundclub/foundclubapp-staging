@@ -103,6 +103,26 @@ export const formatTimeInZone = (instant, timeZone) => {
 };
 
 /**
+ * Une date courte « mer. 19/08 » lue dans le fuseau DU CLUB.
+ *
+ * Meme raison que `formatTimeInZone` : un match du mercredi 19 a 23:30 heure
+ * de Paris est deja le jeudi 20 pour un telephone a Bangkok.
+ * @param {unknown} instant - Un instant ISO ou en millisecondes.
+ * @param {string} [timeZone] - Le fuseau du club.
+ * @returns {string} - « mer. 19/08 », ou une chaine vide.
+ */
+export const formatShortDateInZone = (instant, timeZone) => {
+  const ms = toMsOrNull(instant);
+  if (ms === null) return '';
+  return new Intl.DateTimeFormat('fr-FR', {
+    day: '2-digit',
+    month: '2-digit',
+    timeZone: timeZone || 'Europe/Paris',
+    weekday: 'short',
+  }).format(new Date(ms));
+};
+
+/**
  * Minutes depuis minuit d une heure « HH:MM », ou `null`.
  * @param {unknown} value
  * @returns {number | null}

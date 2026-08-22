@@ -360,6 +360,47 @@ describe('L5-A · 2A — avant l heure, le bouton dit quand ca ouvre', () => {
   });
 });
 
+describe('L5-A · fenetre DEJA FERMEE — le bouton ne raconte pas l ouverture', () => {
+  test('apres la fermeture, il dit « Fermé depuis 22:00 », jamais « Ouvre à 17:30 »', async () => {
+    mockAttendance = reponseAttendance({
+      items: [ligne({ firstname: 'Leo', userId: 'u1' })],
+      serverNow: '2026-08-19T21:00:00.000Z', // 23:00 a Paris — 1 h APRES la fermeture
+    });
+
+    const arbre = await monter();
+    const texte = aplatirTexte(arbre.toJSON());
+
+    // 🧨 Le defaut corrige : le cadre « avant l heure » servait aussi apres la
+    // fermeture, et annoncait une ouverture deja passee depuis des heures.
+    expect(texte).toContain('Fermé depuis 22:00');
+    expect(texte).not.toContain('Ouvre à');
+    expect(texte).toContain("L'appel est clos");
+
+    // Et on ne bascule pas non plus dans le mode d appel.
+    expect(texte).not.toContain('Tout pointer');
+  });
+});
+
+describe('L5-A · 2A — le bandeau dit CE QU ON VA POINTER', () => {
+  test('type, equipe et creneau, lus dans le fuseau du club', async () => {
+    mockEvent = { ...mockEvent, type: { documentId: 't1', name: 'Entraînement' } };
+    mockAttendance = reponseAttendance({
+      items: [ligne({ firstname: 'Leo', userId: 'u1' })],
+      serverNow: '2026-08-19T15:12:00.000Z',
+    });
+
+    const arbre = await monter();
+    const texte = aplatirTexte(arbre.toJSON());
+
+    expect(texte).toContain('ENTRAÎNEMENT');
+    expect(texte).toContain('Seniors A');
+    // 🌍 « mer. 19/08 · 18:00 – 20:00 » : la machine est en Asia/Bangkok, ou
+    // cet instant est deja 23:00. Seule une lecture dans le fuseau du club
+    // donne le bon JOUR comme la bonne heure.
+    expect(texte).toContain('mer. 19/08 · 18:00 – 20:00');
+  });
+});
+
 describe('L5-A · 2B — dans la fenetre, le depart', () => {
   test('« 0 pointé sur 22 », compteurs de PRESENCE, pied desactive', async () => {
     mockAttendance = reponseAttendance({
@@ -374,6 +415,8 @@ describe('L5-A · 2B — dans la fenetre, le depart', () => {
     const texte = aplatirTexte(arbre.toJSON());
 
     expect(texte).toContain('0 pointé sur 22');
+    // Le mot « APPEL » ne disparait pas quand l appel s ouvre (entete 2B).
+    expect(texte).toContain('APPEL');
     expect(texte).toContain('Arrivé·e·s');
     expect(texte).toContain('En retard');
     expect(texte).toContain('En attente');

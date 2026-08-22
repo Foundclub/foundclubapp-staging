@@ -22,6 +22,7 @@ import {
   countAnswers,
   countPresence,
   describeBulkOutcome,
+  formatShortDateInZone,
   formatTimeInZone,
   isMarked,
   listUnanswered,
@@ -59,6 +60,7 @@ const styles = StyleSheet.create({
     minHeight: 44,
     paddingHorizontal: 24,
   },
+  eventBanner: { gap: 4 },
   footer: { gap: 8, paddingHorizontal: 16, paddingVertical: 12 },
   header: {
     alignItems: 'center', flexDirection: 'row', gap: 12, paddingHorizontal: 16, paddingVertical: 12,
@@ -175,6 +177,7 @@ function EventAttendanceCall() {
     : markedItems;
 
   const teamName = event?.team?.name || '';
+  const heureDebut = formatTimeInZone(payloadData?.eventStartAt || event?.date, timezone);
 
   // 🗣️ TOUTES LES CHAINES DE L ECRAN, AU MEME ENDROIT. Les replis francais
   // sont la SOURCE : `fr.js` appartient au lot L4, ce lot-ci n y ecrit pas —
@@ -197,6 +200,7 @@ function EventAttendanceCall() {
     presenceWaiting: t('eventDetails.attendanceCall.presence.waiting', 'En attente'),
     tabExpected: t('eventDetails.attendanceCall.tabs.expected', 'Attendus'),
     tabUnanswered: t('eventDetails.attendanceCall.tabs.unanswered', 'Sans réponse'),
+    title: t('eventDetails.attendanceCall.header.title', 'APPEL'),
   };
 
   const handleMark = useCallback((/** @type {any} */ item) => {
@@ -268,13 +272,51 @@ function EventAttendanceCall() {
 
   /* ---------------- CADRE 2A — avant l heure ---------------- */
   const renderBeforeWindow = () => {
+    // 🧨 DEFAUT TROUVE A LA RELECTURE : ce cadre servait AUSSI quand la fenetre
+    // etait DEJA FERMEE (mode `closed`), et il affichait alors « Ouvre à 17:30 »
+    // pour un appel termine depuis des heures. Le bouton reste desactive dans
+    // les deux cas, mais il ne raconte pas la meme chose.
+    const estFerme = mode === 'closed';
     const heureOuverture = formatTimeInZone(attendanceWindow.opensAtMs, timezone);
+    const heureFermeture = formatTimeInZone(attendanceWindow.closesAtMs, timezone);
+    const libelleBouton = estFerme
+      ? `${t('eventDetails.attendanceCall.closed.since', 'Fermé depuis')} ${heureFermeture}`
+      : `${t('eventDetails.attendanceCall.before.opensAt', 'Ouvre à')} ${heureOuverture}`;
+    const phraseFenetre = estFerme
+      ? t(
+        'eventDetails.attendanceCall.closed.explain',
+        "L'appel est clos. Il restait ouvert jusqu'à 2 h après la fin du match.",
+      )
+      : t(
+        'eventDetails.attendanceCall.before.explain',
+        "L'appel devient disponible 30 minutes avant le début,"
+        + ' et reste ouvert 2 h après la fin.',
+      );
     const signalled = items.filter(
       (/** @type {any} */ item) => Number(item?.attendance?.declaredLateMinutes || 0) > 0,
     );
 
+    const typeLibelle = String(event?.type?.name || '').toUpperCase();
+    const dateCourte = formatShortDateInZone(payloadData?.eventStartAt || event?.date, timezone);
+    const heureFin = formatTimeInZone(resolveEventEndMs({ event, payloadData }), timezone);
+    const creneau = [dateCourte, [heureDebut, heureFin].filter(Boolean).join(' – ')]
+      .filter(Boolean).join(' · ');
+
     return (
       <>
+        {/* Le rappel de CE QU ON VA POINTER — type, equipe, creneau. */}
+        <View style={styles.eventBanner}>
+          {typeLibelle !== '' && (
+            <Text style={[Fonts.p4Bold, { color: Colors.primary200 }]}>{typeLibelle}</Text>
+          )}
+          {teamName !== '' && (
+            <Text style={[Fonts.h4Bold, { color: Colors.neutral00 }]}>{teamName}</Text>
+          )}
+          {creneau !== '' && (
+            <Text style={[Fonts.p3, { color: Colors.neutral300 }]}>{creneau}</Text>
+          )}
+        </View>
+
         <View style={[styles.banner, { backgroundColor: withAlpha(Colors.primary900, 0.6) }]}>
           <Text style={[Fonts.h4Bold, { color: Colors.neutral00 }]}>
             {t('eventDetails.attendanceCall.before.title', "Faire l'appel")}
@@ -289,18 +331,10 @@ function EventAttendanceCall() {
             disabled
             style={[styles.disabledButton, { backgroundColor: Colors.neutral700 }]}
           >
-            <Text style={[Fonts.p2Bold, { color: Colors.neutral400 }]}>
-              {`${t('eventDetails.attendanceCall.before.opensAt', 'Ouvre à')} ${heureOuverture}`}
-            </Text>
+            <Text style={[Fonts.p2Bold, { color: Colors.neutral400 }]}>{libelleBouton}</Text>
           </TouchableOpacity>
 
-          <Text style={[Fonts.p4, { color: Colors.neutral300 }]}>
-            {t(
-              'eventDetails.attendanceCall.before.explain',
-              "L'appel devient disponible 30 minutes avant le début,"
-              + ' et reste ouvert 2 h après la fin.',
-            )}
-          </Text>
+          <Text style={[Fonts.p4, { color: Colors.neutral300 }]}>{phraseFenetre}</Text>
         </View>
 
         {/* ⚖️ Echelle des REPONSES — jamais celle des presences ici. */}
@@ -448,8 +482,6 @@ function EventAttendanceCall() {
     </>
   );
 
-  const heureDebut = formatTimeInZone(payloadData?.eventStartAt || event?.date, timezone);
-
   return (
     <ScreenContainer bgImage="bg2" bottomInsetMode="edge-to-edge" style={[styles.screen]}>
       <View style={styles.header}>
@@ -461,7 +493,8 @@ function EventAttendanceCall() {
               : t('eventDetails.attendanceCall.header.title', 'APPEL')}
           </Text>
           <Text numberOfLines={1} style={[Fonts.p3, { color: Colors.neutral300 }]}>
-            {`${teamName}${teamName && heureDebut ? ' · ' : ''}${heureDebut}`}
+            {[mode === 'open' ? mots.title : '', teamName, heureDebut]
+              .filter(Boolean).join(' · ')}
           </Text>
         </View>
         {mode === 'open' && (
