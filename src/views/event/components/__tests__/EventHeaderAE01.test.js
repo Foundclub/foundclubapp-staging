@@ -70,10 +70,17 @@ const STAGE_DAY = { eventFormat: 'stage_day', typeName: 'Autre' };
 
 /**
  * Fabrique un evenement de recette : meme squelette, type et format variables.
- * @param {{ eventFormat?: string | null; name?: string; typeName: string }} params
+ * @param {{
+ *   eventFormat?: string | null;
+ *   name?: string;
+ *   teamName?: string;
+ *   typeName: string;
+ * }} params
  * @returns {any}
  */
-const makeEvent = ({ eventFormat = null, name = EVENT_NAME, typeName }) => ({
+const makeEvent = ({
+  eventFormat = null, name = EVENT_NAME, teamName = TEAM_NAME, typeName,
+}) => ({
   date: '2026-09-12T18:00:00.000Z',
   documentId: 'evt-ae01',
   endTime: '20:00:00',
@@ -85,7 +92,7 @@ const makeEvent = ({ eventFormat = null, name = EVENT_NAME, typeName }) => ({
   team: {
     club: { documentId: 'club-1', name: CLUB_NAME },
     documentId: 'team-1',
-    name: TEAM_NAME,
+    name: teamName,
   },
   type: { documentId: 'type-1', name: typeName },
 });
@@ -221,20 +228,26 @@ describe('AE01 - le fond et le titre de la carte d entete, type par type', () =>
     expect(backgroundOf(STAGE_DAY)).toBe('card-stage.png');
   });
 
-  test('AE01 · temoin 2 — le titre de chaque type, etat actuel', () => {
+  test('AE01 · temoin 2 — le titre suit le TYPE : equipe, evenement, ou club', () => {
     const matchTitle = `VS ${OPPONENT_NAME}`;
 
-    // Quatre familles affichent le nom du CLUB la ou la maquette veut le nom
-    // de l equipe (entrainement) ou le nom de l evenement (detection, stage,
-    // autre). Le nom du club reste visible ailleurs : logo et pastille.
-    expect(titleOf({ typeName: 'Entrainement' })).toBe(CLUB_NAME);
-    expect(titleOf({ typeName: 'Detection' })).toBe(CLUB_NAME);
-    expect(titleOf(STAGE_PARENT)).toBe(CLUB_NAME);
-    expect(titleOf(STAGE_DAY)).toBe(CLUB_NAME);
-    expect(titleOf({ typeName: 'Autre' })).toBe(CLUB_NAME);
+    // Ce que demande la planche 03 (cadres C, D, E, G, H) : ces quatre
+    // familles affichaient le nom du CLUB. Le club ne DISPARAIT pas de la
+    // carte pour autant — il reste porte par le logo et par le sous-titre.
+    expect(titleOf({ typeName: 'Entrainement' })).toBe(TEAM_NAME);
+    expect(titleOf({ typeName: 'Detection' })).toBe(EVENT_NAME);
+    expect(titleOf(STAGE_PARENT)).toBe(EVENT_NAME);
+    expect(titleOf(STAGE_DAY)).toBe(EVENT_NAME);
+    expect(titleOf({ typeName: 'Autre' })).toBe(EVENT_NAME);
 
-    // Les trois qui ne bougent pas avec AE01. Le dernier est le cadre 03 · I
-    // « match sans adversaire » : hors lot, il garde le nom du club.
+    // Le repli quand la donnee voulue manque : le nom du club, comme avant.
+    // Sans ce repli, une carte sans nom d equipe afficherait un titre VIDE.
+    expect(titleOf({ teamName: '', typeName: 'Entrainement' })).toBe(CLUB_NAME);
+    expect(titleOf({ name: '', typeName: 'Detection' })).toBe(CLUB_NAME);
+
+    // Les quatre qui ne bougent PAS avec AE01. Le dernier est le cadre 03 · I
+    // « match sans adversaire » : hors lot, il garde le nom du club — et c est
+    // pour cela que le type match doit rester exclu du repli sur event.name.
     expect(titleOf({ typeName: 'Tournoi' })).toBe(EVENT_NAME);
     expect(titleOf({ typeName: 'Reservation' })).toBe(CLUB_NAME);
     expect(titleOf({ name: matchTitle, typeName: 'Match' })).toBe(matchTitle);

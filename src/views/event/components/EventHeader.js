@@ -156,12 +156,29 @@ function EventHeader({ event, matchScoreSummary = null }) {
     || normalizedTypeName.includes('tournoi')
   ));
   const matchContextLabel = showMatchTitle ? matchDisplay.contextLabel : '';
-  const tournamentTitle = toDisplayText(event?.name) || 'Tournoi';
+  const eventOwnName = toDisplayText(event?.name);
+  const teamName = toDisplayText(event?.team?.name);
+  const tournamentTitle = eventOwnName || 'Tournoi';
+  // AE01 — le titre principal suit le TYPE (planche 03, cadres C/D/E/G/H).
+  // Deux familles en sont EXCLUES et gardent le nom du club :
+  //  - le match : son titre « VS X » vit dans showMatchTitle, et sans
+  //    adversaire (cadre 03 · I) c'est le nom du club qui doit rester —
+  //    le replier sur event.name lui prendrait le seul nom qu'il porte ;
+  //  - la reservation, qui n'a pas de nom propre a montrer.
+  // Le club ne disparait de NULLE PART : le logo, le sous-titre et la
+  // pastille continuent de le porter.
+  const keepsClubNameTitle = normalizedTypeName.includes('match')
+    || normalizedTypeName.includes('competition')
+    || normalizedTypeName.includes('reservation');
   let headerPrimaryTitle = clubName;
   if (showMatchTitle) {
     headerPrimaryTitle = eventTitle;
   } else if (isTournamentEvent) {
     headerPrimaryTitle = tournamentTitle;
+  } else if (normalizedTypeName.includes('entrainement')) {
+    headerPrimaryTitle = teamName || clubName;
+  } else if (!keepsClubNameTitle) {
+    headerPrimaryTitle = eventOwnName || clubName;
   }
 
   let headerSecondaryTitle = '';
