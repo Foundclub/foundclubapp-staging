@@ -803,6 +803,48 @@ describe('N2 · caracterisation — LA DETECTION ET SES POSTES', () => {
   });
 });
 
+describe('N2 · LES BARRES DU BAS QUE LE RANGEMENT NE DOIT PAS EMPORTER', () => {
+  // 🧪 La planche 04 donne a la DETECTION et au STAGE la meme barre du bas
+  // qu'avant : « Présent·e / Absent·e », c'est-a-dire le RSVP classique
+  // (`EventAnswerButtons`). Ce lot ne la touche pas — mais « ne pas toucher »
+  // se PROUVE, sinon c'est une supposition. Seul le tournoi change (etape 4).
+  test('une DETECTION garde sa barre du bas Présent·e / Absent·e', () => {
+    const root = monter({ event: buildDetection() });
+
+    expect(contient(root, 'DOUBLURE_EventAnswerButtons')).toBe(true);
+    expect(parTestID(root, 'tournament-bottom-bar')).toHaveLength(0);
+  });
+
+  test('elle la garde AUSSI depuis l onglet Répartition', () => {
+    // ⚠️ La barre vit HORS de la zone a onglets : changer d'onglet ne doit pas
+    // l'emporter. C'est exactement le genre de perte qu'un rangement provoque.
+    const root = monter({ event: buildDetection() });
+    allerSurLOnglet(root, 'detectionSplit');
+
+    expect(contient(root, 'DOUBLURE_EventAnswerButtons')).toBe(true);
+  });
+
+  test('un STAGE garde sa barre du bas, sur chacun de ses trois onglets', () => {
+    const root = monter({ event: buildStageParent() });
+
+    expect(contient(root, 'DOUBLURE_EventAnswerButtons')).toBe(true);
+    allerSurLOnglet(root, 'stageDays');
+    expect(contient(root, 'DOUBLURE_EventAnswerButtons')).toBe(true);
+    allerSurLOnglet(root, 'participants');
+    expect(contient(root, 'DOUBLURE_EventAnswerButtons')).toBe(true);
+  });
+
+  test('le TOURNOI garde la sienne sur ses trois onglets', () => {
+    const root = monter({ event: buildTournoi() });
+
+    expect(parTestID(root, 'tournament-bottom-bar')).toHaveLength(1);
+    allerSurLOnglet(root, 'tournamentTeams');
+    expect(parTestID(root, 'tournament-bottom-bar')).toHaveLength(1);
+    allerSurLOnglet(root, 'participants');
+    expect(parTestID(root, 'tournament-bottom-bar')).toHaveLength(1);
+  });
+});
+
 describe('N2 · caracterisation — CE QUI NE DOIT PAS BOUGER', () => {
   test('un ENTRAINEMENT garde sa colonne unique et n a aucun onglet', () => {
     const root = monter({ event: buildEvent() });
