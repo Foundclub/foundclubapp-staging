@@ -158,7 +158,7 @@ function EventHeader({ event, matchScoreSummary = null }) {
   const matchContextLabel = showMatchTitle ? matchDisplay.contextLabel : '';
   const eventOwnName = toDisplayText(event?.name);
   const teamName = toDisplayText(event?.team?.name);
-  const tournamentTitle = eventOwnName || 'Tournoi';
+  const tournamentTitle = eventOwnName || t('eventDetails.header.tournamentFallback', 'Tournoi');
   // AE01 — le titre principal suit le TYPE (planche 03, cadres C/D/E/G/H).
   // Deux familles en sont EXCLUES et gardent le nom du club :
   //  - le match : son titre « VS X » vit dans showMatchTitle, et sans
@@ -426,7 +426,7 @@ function EventHeader({ event, matchScoreSummary = null }) {
         {invitedTeamNames.length > 0 && (
           <View style={[Spaces.gap[4]]}>
             <Text style={[Fonts.p3Bold, { color: accentColor }]}>
-              Équipes invitées
+              {t('eventDetails.header.invitedTeams', 'Équipes invitées')}
             </Text>
             <Text style={[Fonts.p2, Fonts.primary100]}>
               {invitedTeamNames.join(' \u2022 ')}

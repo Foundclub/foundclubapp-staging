@@ -48,12 +48,23 @@ jest.mock('@/theme/themeContext', () => {
   };
 });
 
-jest.mock('react-i18next', () => ({
-  initReactI18next: { init: jest.fn(), type: '3rdParty' },
-  useTranslation: () => ({
-    t: (key, fallback) => fallback || key,
-  }),
-}));
+// Le `t` du mock rend le REPLI : c'est exactement ce que l'utilisateur voit
+// tant que la clef n'existe pas dans fr.js. Il note au passage les clefs
+// demandees — sans ce releve, une clef mal orthographiee resterait invisible
+// pour toujours, puisque le repli s'afficherait quand meme.
+jest.mock('react-i18next', () => {
+  const askedKeys = [];
+  return {
+    askedKeys,
+    initReactI18next: { init: jest.fn(), type: '3rdParty' },
+    useTranslation: () => ({
+      t: (/** @type {string} */ key, /** @type {string} */ fallback) => {
+        askedKeys.push(key);
+        return fallback || key;
+      },
+    }),
+  };
+});
 
 // Trois noms VOLONTAIREMENT differents : c'est le seul moyen de voir QUELLE
 // donnee arrive dans le titre. Si les trois se ressemblaient, un temoin vert
@@ -254,8 +265,9 @@ describe('AE01 - le fond et le titre de la carte d entete, type par type', () =>
     expect(titleOf({ typeName: 'Match' })).toBe(CLUB_NAME);
   });
 
-  test('AE01 · temoin 3 — les deux libelles en dur de la carte, etat actuel', () => {
-    // Un tournoi sans nom retombe sur le mot « Tournoi ».
+  test('AE01 · temoin 3 — les 2 libelles de la carte passent par t(), sans changer', () => {
+    // Ce que l utilisateur voit ne bouge pas : un tournoi sans nom retombe sur
+    // le mot « Tournoi », et la liste des invites garde son intitule.
     const sansNom = renderHeader(makeEvent({ name: '', typeName: 'Tournoi' }));
     expect(primaryTitleOf(sansNom)).toBe('Tournoi');
 
@@ -266,5 +278,12 @@ describe('AE01 - le fond et le titre de la carte d entete, type par type', () =>
     const textes = textContentOf(avecInvites);
     expect(textes).toContain('Équipes invitées');
     expect(textes).toContain('US Marseille');
+
+    // Et les deux sont bien PASSES par t() avec la clef attendue. C est la
+    // seule chose qu un repli ne peut pas prouver tout seul : une clef mal
+    // orthographiee afficherait le meme texte et ne serait jamais traduite.
+    const { askedKeys } = jest.requireMock('react-i18next');
+    expect(askedKeys).toContain('eventDetails.header.tournamentFallback');
+    expect(askedKeys).toContain('eventDetails.header.invitedTeams');
   });
 });
