@@ -377,6 +377,28 @@ const getStageDayStatusSummary = (stageDay) => {
   }, { absent: 0, pending: 0, present: 0 });
 };
 
+/**
+ * 🏷️ N1 (c) — LE LIBELLE DE LA PASTILLE DE TYPE, EN UN SEUL ENDROIT.
+ *
+ * Le nom du type en capitales, puis autant de precisions que le lot en cours
+ * sait dire, collees par « · ». Une FONCTION plutot qu'une ternaire dans le JSX
+ * parce que le lot N3 vient poser « MATCH · À DOMICILE » dans CETTE MEME
+ * pastille juste apres celui-ci : deux ternaires imbriquees deviendraient
+ * illisibles au troisieme segment. N3 n'a qu'a allonger le tableau.
+ *
+ * Un segment vide est retire : il ne laisse jamais un separateur orphelin.
+ * @param {string | null | undefined} typeName - Le nom du type d'evenement.
+ * @param {Array<string | null | undefined>} [segments] - Les precisions a coller.
+ * @returns {string} Le libelle, pret pour la pastille.
+ */
+const buildTypeTagLabel = (typeName, segments = []) => [
+  String(typeName || '').toUpperCase(),
+  ...segments,
+]
+  .map((/** @type {any} */ part) => String(part || '').trim())
+  .filter(Boolean)
+  .join(' · ');
+
 // @ts-ignore: FIXME: Baseline TS regression
 const getFeaturedScopeStatusLabel = (status) => {
   if (status === 'pending') return 'Demande en attente';
@@ -1968,6 +1990,24 @@ function EventDetails({ navigation, route }) {
     trainingOpenConfig.externalParticipantLimit,
     trainingOpenConfig.isOpenTraining,
   ]);
+
+  // 🎟️ N1 (c) — LA CAPACITE D'UN « AUTRE », DANS SA PASTILLE.
+  //
+  // `event.capacity` existe depuis toujours au schema Strapi et descend jusqu'ici
+  // dans `participantsSummary.capacity`. La pastille de type, elle, restait nue :
+  // un evenement « Autre » limite a 12 places ne le disait nulle part.
+  //
+  // ⛔ SANS CAPACITE, PASTILLE NUE — surtout pas « Illimité » : on n'invente pas
+  // une regle que personne n'a ecrite. Et la portee reste le type « Autre » : les
+  // autres types ont deja leurs propres compteurs ailleurs dans la page.
+  const isOtherEventType = normalizeEventTypeLabel(event?.type?.name).includes('autre');
+  const typeTagSegments = useMemo(() => {
+    const total = Number(participantsSummary?.capacity || 0);
+    if (!isOtherEventType || total <= 0) return [];
+
+    const taken = Number(participantsSummary?.participatingCount || 0);
+    return [t('eventDetails.typeTag.capacity', '{{taken}}/{{total}} PLACES', { taken, total })];
+  }, [isOtherEventType, participantsSummary, t]);
 
   const participationsByStatus = useMemo(() => {
     if (!canEdit) {
@@ -5317,7 +5357,11 @@ function EventDetails({ navigation, route }) {
   return (
     <ScreenContainer bgImage="bg2" contentContainerStyle={[Spaces.gap[32], Alignments.fill]} gradient={null} withHeaderPadding>
       <View style={[Spaces.gap[8], Alignments.alignCenter]}>
-        <Tag style={{}} text={event?.type?.name?.toUpperCase() || ''} textStyle={Fonts.p2} />
+        <Tag
+          style={{}}
+          text={buildTypeTagLabel(event?.type?.name, typeTagSegments)}
+          textStyle={Fonts.p2}
+        />
         {/* Y02 : le nom de l'adversaire, sous la pastille de type. ⛔ La ligne
             n'est MONTEE que si l'adversaire est connu — jamais un « vs » suivi
             d'un blanc, et rien ne change pour les autres types d'evenement. */}
