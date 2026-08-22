@@ -1184,7 +1184,12 @@ export default {
         title: 'Ton signalement a bien été envoyé',
       },
     },
+    participantsSearch: {
+      noResult: 'Aucun nom ne correspond',
+      placeholder: 'Chercher un nom',
+    },
     participantsSummary: {
+      nextReminder: 'Prochaine relance possible le {{date}}',
       responses: '{{received}} réponses sur {{total}}',
     },
     participationStatus: {
