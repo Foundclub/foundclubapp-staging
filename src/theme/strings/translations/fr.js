@@ -1056,6 +1056,11 @@ export default {
     compositionSource: {
       defaultComposition: 'Composition type',
     },
+    detection: {
+      noSlots: 'Aucun poste recherché',
+      noSlotsHint: 'La séance est ouverte à tous les profils',
+      slotsTitle: 'Postes recherchés',
+    },
     emptyStates: {
       allAnswered: 'Tout le monde a répondu.',
       noAbsence: 'Aucune absence signalée.',
@@ -1084,6 +1089,7 @@ export default {
     exporting: 'Nous préparons la liste des participants...',
     exportSuccess: 'La liste des participants est téléchargée.',
     featuredRequest: {
+      alreadyFeatured: 'Déjà à la une',
       error: 'Impossible d’envoyer la demande de mise à la une.',
     },
     fields: {
@@ -1184,6 +1190,10 @@ export default {
         title: 'Ton signalement a bien été envoyé',
       },
     },
+    openTraining: {
+      pendingSuffix: '{{pending}} demande(s) à vérifier',
+      publicLine: 'Accueille {{quota}} joueur·se·s de l’extérieur · {{taken}} place(s) prise(s)',
+    },
     participantsSummary: {
       responses: '{{received}} réponses sur {{total}}',
     },
@@ -1196,6 +1206,9 @@ export default {
     tabs: {
       callUp: 'Convocation',
       overview: 'Aperçu',
+    },
+    typeTag: {
+      capacity: '{{taken}}/{{total}} PLACES',
     },
   },
   eventEdit: {

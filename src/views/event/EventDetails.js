@@ -5566,7 +5566,14 @@ function EventDetails({ navigation, route }) {
                 </View>
               ) : null}
 
-              {detectionSlots.length > 0 ? (
+              {/* N1 (a) — LE BLOC SE MONTE DES QU'IL S'AGIT D'UNE DETECTION,
+                  et non plus seulement quand il y a des postes a montrer.
+                  🧨 Avant, deux gardes se superposaient : `length > 0` ici, et un
+                  `return null` dans le composant. Une detection sans poste
+                  n'affichait donc RIEN — l'organisateur ne savait pas s'il avait
+                  oublie un reglage. C'est desormais le composant qui decide quoi
+                  dire, en UN seul endroit, commande par `isDetection`. */}
+              {isDetectionEvent ? (
                 <EventDetectionSlots
                   canEdit={canEdit}
                   currentUserHasGenericParticipation={Boolean((hasAcceptedRequest || hasPendingRequest) && !currentUserDetectionParticipation)}
@@ -5575,6 +5582,7 @@ function EventDetails({ navigation, route }) {
                   currentUserSlotStatus={String(currentUserDetectionParticipation?.participationStatus || '').toLowerCase()}
                   // @ts-ignore: FIXME: Baseline TS regression
                   isApplyingSlotId={applyToDetectionSlotMutation.isPending ? String(applyToDetectionSlotMutation.variables?.slotDocumentId || '') : ''}
+                  isDetection
                   onApply={handleApplyToDetectionSlot}
                   onOpenSlot={handleOpenDetectionSlot}
                   slots={detectionSlots}
