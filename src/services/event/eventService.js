@@ -1435,6 +1435,23 @@ export const markCoachArrival = async (eventId, userId, payload = {}) => {
 };
 
 /**
+ * L5-A — Coach marks arrival for a WHOLE LIST at once (AD04, route `bulk`).
+ *
+ * « Tout pointer » sur 22 personnes ne doit pas faire 22 requetes depuis le
+ * bord d'un terrain : le serveur plafonne la liste a 100 et repond LIGNE PAR
+ * LIGNE (`items[].ok` / `items[].error`), sans jamais tout annuler pour un
+ * seul refus. L'ecran qui l'appelle doit donc lire `items`, pas seulement le
+ * code HTTP : une reponse 200 peut contenir 22 refus.
+ * @param {string} eventId
+ * @param {{ note?: string, userIds: string[] }} payload
+ * @returns {Promise<any>}
+ */
+export const markCoachArrivalBulk = async (eventId, payload) => {
+  const response = await client.post(`/events/${eventId}/attendance/bulk`, payload);
+  return response.data;
+};
+
+/**
  * Coach updates lateness minutes for a participant.
  * @param {string} eventId
  * @param {string} userId
