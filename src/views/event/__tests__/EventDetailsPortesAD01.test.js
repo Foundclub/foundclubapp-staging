@@ -26,6 +26,8 @@ import renderer, { act } from 'react-test-renderer';
 
 const mockUseAuth = jest.fn();
 const mockNavigate = jest.fn();
+// L4-B : partage, pour pouvoir relire le `headerRight` que l ecran y depose.
+const mockSetOptions = jest.fn();
 const mockSaveEventMatchResult = jest.fn();
 const mockEventQuery = { data: null };
 const mockConvocationQuery = { data: null };
@@ -407,7 +409,7 @@ const monter = (/** @type {any} */ options = {}) => {
           addListener: () => () => {},
           goBack: jest.fn(),
           navigate: mockNavigate,
-          setOptions: jest.fn(),
+          setOptions: mockSetOptions,
         }}
         route={{ params: { eventId: 'event-1' } }}
       />,
@@ -466,10 +468,6 @@ const appuyer = (/** @type {any} */ root, /** @type {string} */ libelle) => {
   });
 };
 
-const ouvrirLeMenu = (/** @type {any} */ root) => {
-  appuyer(root, "Gérer l'événement");
-};
-
 const saisir = (
   /** @type {any} */ root,
   /** @type {number} */ rang,
@@ -521,6 +519,74 @@ afterEach(() => {
 // ==========================================================================
 // SUJET 1 — LA LIGNE D'ETAT REMONTE EN HAUT DE LA PAGE
 // ==========================================================================
+
+// ─────────────────────────────────────────────────────────────────────────────
+// L4-B — LE MENU D'ORGANISATION A QUITTE LA COLONNE POUR LA BARRE DU HAUT.
+//
+// L'accordeon « Gérer l'événement » est devenu un ⋯ pose dans l'en-tete de
+// navigation, qui ouvre une feuille. Les actions, elles, n'ont pas bouge d'un
+// pouce : meme liste, meme ordre, memes conditions.
+//
+// 🚨 LE PIEGE QUE CES TROIS FONCTIONS DEMINENT, et il est SILENCIEUX :
+// `navigation.setOptions` est une DOUBLURE MUETTE ici, donc l'element
+// `headerRight` n'entre JAMAIS dans l'arbre monte. Chercher le ⋯ par son
+// `testID` dans le rendu trouverait le vide SANS RIEN DIRE — et tous les
+// temoins d'actions ci-dessous deviendraient verts en ne testant plus rien.
+// ⇒ On va le chercher la ou il est reellement : dans le dernier `headerRight`
+// remis a `setOptions`, dont on parcourt l'arbre d'ELEMENTS non montes.
+// Motif existant : `EventFilters.criteres.test.js:316-323`.
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Cherche un element dans un arbre NON MONTE, par predicat sur ses props.
+ * @param {any} element - Racine de l'arbre d'elements.
+ * @param {any} predicat - Le test applique a chaque noeud.
+ * @returns {any} - Le premier element qui satisfait le predicat, ou null.
+ */
+const chercherDansElements = (element, predicat) => {
+  if (!element || typeof element !== 'object') return null;
+  if (Array.isArray(element)) {
+    return element.reduce(
+      (/** @type {any} */ trouve, /** @type {any} */ enfant) => (
+        trouve || chercherDansElements(enfant, predicat)
+      ),
+      null,
+    );
+  }
+  if (element.props && predicat(element)) return element;
+  return chercherDansElements(element.props?.children, predicat);
+};
+
+/**
+ * Le ⋯ de la barre du haut, ou null s'il n'y a rien a gerer.
+ * @returns {any} - L'element du bouton, ou null.
+ */
+const boutonDeGestion = () => {
+  const appels = mockSetOptions.mock.calls.filter(
+    (/** @type {any} */ appel) => appel[0]?.headerRight,
+  );
+  if (!appels.length) return null;
+  return chercherDansElements(
+    appels[appels.length - 1][0].headerRight(),
+    (/** @type {any} */ noeud) => noeud?.props?.testID === 'event-actions-menu-button',
+  );
+};
+
+/**
+ * Ouvre la feuille d'organisation. Remplace l'appui sur le texte « Gérer
+ * l'événement » de l'accordeon d'avant L4-B : meme geste pour la personne qui
+ * s'en sert, meme liste d'actions au bout.
+ * TOLERANTE A DESSEIN, comme l'ancien helper : la ou il n'y a rien a gerer, il
+ * n'y a pas de bouton, et l'inventaire doit pouvoir sortir vide sans jeter.
+ * @returns {void}
+ */
+const ouvrirLaFeuilleDeGestion = () => {
+  const bouton = boutonDeGestion();
+  if (!bouton) return;
+  act(() => {
+    bouton.props.onPress();
+  });
+};
 
 describe('AD01 · TEMOIN 1 — 🥇 le convoque le sait SANS faire defiler', () => {
   test('« Tu es convoque · Titulaire » se lit AVANT le bloc du bas', () => {
@@ -614,7 +680,7 @@ describe('AD01 · TEMOIN 4 — 🚪 les 1 547 lignes du terrain cessent d etre i
       published: null,
     });
 
-    ouvrirLeMenu(root);
+    ouvrirLaFeuilleDeGestion();
     appuyer(root, 'Placer les équipes sur les terrains');
 
     const appel = appelVers('DetectionTeamsBoard');
@@ -634,7 +700,7 @@ describe('AD01 · TEMOIN 4 — 🚪 les 1 547 lignes du terrain cessent d etre i
       published: null,
     });
 
-    ouvrirLeMenu(root);
+    ouvrirLaFeuilleDeGestion();
     const porte = boutonPortant(root, 'Placer les équipes sur les terrains');
 
     expect(porte).toBeDefined();
@@ -656,7 +722,7 @@ describe('AD01 · TEMOIN 5 — 🔒 un MATCH ne part PAS sur le terrain de detec
       },
     });
 
-    ouvrirLeMenu(root);
+    ouvrirLaFeuilleDeGestion();
 
     expect(boutonPortant(root, 'Placer les équipes sur les terrains')).toBeUndefined();
     expect(routesEmpruntees()).not.toContain('DetectionTeamsBoard');
@@ -705,7 +771,7 @@ describe('AD01 · TEMOIN 6 — ✍️ deux champs suffisent a ecrire 3-1', () =>
   test('saisir 3 et 1 puis valider envoie le score — sans ouvrir les 1 615 lignes', async () => {
     const root = coachDevantUnMatchFini(statsSansScore());
 
-    ouvrirLeMenu(root);
+    ouvrirLaFeuilleDeGestion();
     appuyer(root, 'Enregistrer le score');
 
     saisir(root, 0, '3');
@@ -731,7 +797,7 @@ describe('AD01 · TEMOIN 6 — ✍️ deux champs suffisent a ecrire 3-1', () =>
   test('un seul champ rempli : le bouton reste ferme, et il DIT pourquoi', () => {
     const root = coachDevantUnMatchFini(statsSansScore());
 
-    ouvrirLeMenu(root);
+    ouvrirLaFeuilleDeGestion();
     appuyer(root, 'Enregistrer le score');
     saisir(root, 0, '3');
 
@@ -747,7 +813,7 @@ describe('AD01 · TEMOIN 6 — ✍️ deux champs suffisent a ecrire 3-1', () =>
       scoreFor: 2,
     }));
 
-    ouvrirLeMenu(root);
+    ouvrirLaFeuilleDeGestion();
     appuyer(root, 'Saisir les stats du match');
 
     expect(routesEmpruntees()).toContain('MatchStatsEditor');
@@ -758,7 +824,7 @@ describe('AD01 · TEMOIN 7 — 🔒 un score verrouille ne se reecrit pas', () =
   test('feuille en lecture seule, bouton ferme, et le motif est a l ecran', () => {
     const root = coachDevantUnMatchFini(statsSansScore({ locked: true, source: 'external_sync' }));
 
-    ouvrirLeMenu(root);
+    ouvrirLaFeuilleDeGestion();
     appuyer(root, 'Enregistrer le score');
 
     expect(boutonPortant(root, 'Valider le score').props.disabled).toBe(true);
@@ -769,7 +835,7 @@ describe('AD01 · TEMOIN 7 — 🔒 un score verrouille ne se reecrit pas', () =
   test('et meme en forcant la saisie, rien ne part au serveur', () => {
     const root = coachDevantUnMatchFini(statsSansScore({ locked: true, source: 'league' }));
 
-    ouvrirLeMenu(root);
+    ouvrirLaFeuilleDeGestion();
     appuyer(root, 'Enregistrer le score');
     const champs = root.findAllByType(TextInput);
 

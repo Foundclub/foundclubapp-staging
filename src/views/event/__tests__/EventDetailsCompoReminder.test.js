@@ -29,6 +29,8 @@ import renderer, { act } from 'react-test-renderer';
 
 const mockUseAuth = jest.fn();
 const mockNavigate = jest.fn();
+// L4-B : partage, pour pouvoir relire le `headerRight` que l ecran y depose.
+const mockSetOptions = jest.fn();
 const mockEventQuery = { data: null };
 const mockTeamCompositionQuery = { data: null };
 const mockCompositionFetching = { value: false };
@@ -377,7 +379,7 @@ const mountScreen = (/** @type {any} */ {
           addListener: () => () => {},
           goBack: jest.fn(),
           navigate: mockNavigate,
-          setOptions: jest.fn(),
+          setOptions: mockSetOptions,
         }}
         route={{ params: { eventId: 'event-1' } }}
       />,
@@ -475,6 +477,74 @@ afterEach(() => {
   jest.restoreAllMocks();
 });
 
+// ─────────────────────────────────────────────────────────────────────────────
+// L4-B — LE MENU D'ORGANISATION A QUITTE LA COLONNE POUR LA BARRE DU HAUT.
+//
+// L'accordeon « Gérer l'événement » est devenu un ⋯ pose dans l'en-tete de
+// navigation, qui ouvre une feuille. Les actions, elles, n'ont pas bouge d'un
+// pouce : meme liste, meme ordre, memes conditions.
+//
+// 🚨 LE PIEGE QUE CES TROIS FONCTIONS DEMINENT, et il est SILENCIEUX :
+// `navigation.setOptions` est une DOUBLURE MUETTE ici, donc l'element
+// `headerRight` n'entre JAMAIS dans l'arbre monte. Chercher le ⋯ par son
+// `testID` dans le rendu trouverait le vide SANS RIEN DIRE — et tous les
+// temoins d'actions ci-dessous deviendraient verts en ne testant plus rien.
+// ⇒ On va le chercher la ou il est reellement : dans le dernier `headerRight`
+// remis a `setOptions`, dont on parcourt l'arbre d'ELEMENTS non montes.
+// Motif existant : `EventFilters.criteres.test.js:316-323`.
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Cherche un element dans un arbre NON MONTE, par predicat sur ses props.
+ * @param {any} element - Racine de l'arbre d'elements.
+ * @param {any} predicat - Le test applique a chaque noeud.
+ * @returns {any} - Le premier element qui satisfait le predicat, ou null.
+ */
+const chercherDansElements = (element, predicat) => {
+  if (!element || typeof element !== 'object') return null;
+  if (Array.isArray(element)) {
+    return element.reduce(
+      (/** @type {any} */ trouve, /** @type {any} */ enfant) => (
+        trouve || chercherDansElements(enfant, predicat)
+      ),
+      null,
+    );
+  }
+  if (element.props && predicat(element)) return element;
+  return chercherDansElements(element.props?.children, predicat);
+};
+
+/**
+ * Le ⋯ de la barre du haut, ou null s'il n'y a rien a gerer.
+ * @returns {any} - L'element du bouton, ou null.
+ */
+const boutonDeGestion = () => {
+  const appels = mockSetOptions.mock.calls.filter(
+    (/** @type {any} */ appel) => appel[0]?.headerRight,
+  );
+  if (!appels.length) return null;
+  return chercherDansElements(
+    appels[appels.length - 1][0].headerRight(),
+    (/** @type {any} */ noeud) => noeud?.props?.testID === 'event-actions-menu-button',
+  );
+};
+
+/**
+ * Ouvre la feuille d'organisation. Remplace l'appui sur le texte « Gérer
+ * l'événement » de l'accordeon d'avant L4-B : meme geste pour la personne qui
+ * s'en sert, meme liste d'actions au bout.
+ * TOLERANTE A DESSEIN, comme l'ancien helper : la ou il n'y a rien a gerer, il
+ * n'y a pas de bouton, et l'inventaire doit pouvoir sortir vide sans jeter.
+ * @returns {void}
+ */
+const ouvrirLaFeuilleDeGestion = () => {
+  const bouton = boutonDeGestion();
+  if (!bouton) return;
+  act(() => {
+    bouton.props.onPress();
+  });
+};
+
 describe('C2 — temoin 1 : un match sans compo affiche le rappel', () => {
   test('le rappel est la, et il parle des mots du coach', () => {
     const root = mountScreen({ auth: asOrganiser() });
@@ -513,12 +583,9 @@ describe('C2 — temoin 1 : un match sans compo affiche le rappel', () => {
     expect(hauteurDeclaree(root)).toBeLessThanOrEqual(PLAFOND_HAUTEUR_DECLAREE);
   });
 
-  test('le menu « Gerer l evenement » garde sa chip Compo : aucun chemin supprime', () => {
+  test('le menu d organisation garde sa chip Compo : aucun chemin supprime', () => {
     const root = mountScreen({ auth: asOrganiser() });
-    const menu = pressableWithText(root, "Gérer l'événement");
-    act(() => {
-      menu.props.onPress();
-    });
+    ouvrirLaFeuilleDeGestion();
 
     expect(pressableWithText(root, 'Compo')).toBeTruthy();
   });

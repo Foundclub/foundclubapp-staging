@@ -1107,6 +1107,16 @@ export default {
       title: 'Gérer l\'événement',
       tournamentSettings: 'Réglages tournoi',
     },
+    menu: {
+      campaign: 'Créer la cotisation de cet événement',
+      cancel: 'Prévenir les participant·e·s et annuler',
+      detectionTeamsBoard: 'Les terrains de la détection',
+      edit: 'Date, lieu, description',
+      feature: 'Proposer cet événement à la une',
+      lineup: 'Choisir et convoquer les joueur·se·s',
+      poster: 'Voir et partager l’affiche',
+      tournamentSettings: 'Format, équipes et terrains',
+    },
     modals: {
       accept: {
         title: 'Es-tu sûr·e de vouloir accepter cette demande ?',
