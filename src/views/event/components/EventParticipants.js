@@ -735,11 +735,22 @@ function EventParticipants({
   // remplissage vaut 0, or c est justement l etat « 0 reponse » qu il faut voir.
   const renderResponsesBar = () => (
     <View style={[Spaces.gap[8]]}>
-      <Text style={[Fonts.p3, Fonts.neutral200]} testID="AD06-barre-legende">
-        {t('eventDetails.participantsSummary.responses', '{{received}} réponses sur {{total}}')
-          .replace('{{received}}', String(reponsesRecues))
-          .replace('{{total}}', String(totalAttendu))}
-      </Text>
+      <View style={[Alignments.rowBetween, Spaces.gap[8]]}>
+        <Text style={[Fonts.p3, Fonts.neutral200]} testID="AD06-barre-legende">
+          {t('eventDetails.participantsSummary.responses', '{{received}} réponses sur {{total}}')
+            .replace('{{received}}', String(reponsesRecues))
+            .replace('{{total}}', String(totalAttendu))}
+        </Text>
+        {/* AE02 (1A) : le chiffre etait DEJA calcule et ne servait que de
+            largeur de barre (`width: ${partReponses}%`). Il vit dans SON noeud,
+            jamais dans la legende : le selecteur de pastilles d AD06 attrape
+            tout `Text` portant `textAlign: 'center'` + `color` dans le MEME
+            objet de style, et compare en `toEqual` STRICT. Celui-ci n en porte
+            aucun — c est ce qui garde AD06 vert. */}
+        <Text style={[Fonts.p3Bold, Fonts.neutral00]} testID="AE02-pourcentage">
+          {`${partReponses} %`}
+        </Text>
+      </View>
       <View
         style={{
           backgroundColor: 'rgba(255,255,255,0.08)',
