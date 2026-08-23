@@ -7,6 +7,7 @@ import {
 } from 'react-native';
 
 import { REMIND_EVENT_MUTATION_KEY } from '@/domains/event/remindReport';
+import { withAlpha } from '@/theme/colors';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -145,6 +146,22 @@ const getStaffDisplayName = (user) => {
 const lireLesRelancesReussies = typeof useMutationState === 'function'
   ? useMutationState
   : () => [];
+
+// 🔘 P2 (D1) — LES 4 PASTILLES DE FILTRE, 1:1 AVEC LES 3 GROUPES RSVP.
+// Elles trient des REPONSES, pas des arrivees : il n y a donc volontairement ni
+// « arrive » ni « en retard » ici. L assiduite se lit deja sur la pastille de
+// droite de chaque ligne, qui est une AUTRE information.
+// ⚠️ Les libelles ne reprennent PAS mot pour mot les titres de groupe
+// (« Presents » et non « Présent·e·s ») : les temoins d ordre d AD06 et d AE02
+// comparent des textes exacts, et un doublon parfait rendrait leur `indexOf`
+// ambigu le jour ou quelqu un descendrait ce bloc sous la legende.
+const FILTRE_TOUS = 'tous';
+const PASTILLES_DE_FILTRE = [
+  { clef: FILTRE_TOUS, clefTexte: 'all', repli: 'Tous' },
+  { clef: 'participating', clefTexte: 'present', repli: 'Présents' },
+  { clef: 'missing', clefTexte: 'absent', repli: 'Absents' },
+  { clef: 'notAnswered', clefTexte: 'notAnswered', repli: 'Sans réponse' },
+];
 
 /**
  * AE02 : reduit un texte a sa forme comparable — sans accent, sans casse.
@@ -355,6 +372,10 @@ function EventParticipants({
   // et ne peut recevoir aucune prop neuve. ⚠️ Saisie vide = l ecran STRICTEMENT
   // d avant — c est ce qui protege le filet d AD06, qui ne tape jamais rien.
   const [rechercheNom, setRechercheNom] = useState('');
+  // P2 : le filtre vit ICI et nulle part ailleurs. `EventDetails` n a rien a
+  // faire descendre — c est un etat d affichage, pas une donnee d evenement.
+  const [filtreStatut, setFiltreStatut] = useState(FILTRE_TOUS);
+  const filtreStatutActif = filtreStatut !== FILTRE_TOUS;
   const rechercheComparable = comparable(rechercheNom);
   const rechercheActive = rechercheComparable.length > 0;
 
@@ -472,7 +493,10 @@ function EventParticipants({
       // AE02 : pendant une recherche, un groupe sans resultat DISPARAIT, titre
       // compris. Garder « Aucune absence signalée. » serait un mensonge : il y
       // a peut-etre des absents, ils ne portent juste pas le nom cherche.
-      if (!options.emptyMessage || rechercheActive) return null;
+      // P2 : un filtre actif se comporte comme une recherche — garder
+      // « Aucune absence signalée. » sous la pastille « Présents » serait un
+      // mensonge : on n a pas regarde les absents, on les a mis de cote.
+      if (!options.emptyMessage || rechercheActive || filtreStatutActif) return null;
       return (
         <>
           <Text style={[Fonts.h4Bold, Fonts.primary500]}>
@@ -699,21 +723,57 @@ function EventParticipants({
     pending: filtrerDemandes(item.pending),
   });
 
+  /**
+   * Ne garde que la liste RSVP choisie ; les deux autres deviennent vides.
+   * ⛔ `pending` n est PAS touche : une demande de participation n est pas une
+   * reponse — la cacher derriere « Présents » ferait rater du travail au
+   * dirigeant. Le reste de l objet est recopie tel quel.
+   * @param {any} listes - Un objet portant participating / missing / notAnswered.
+   * @returns {any} - Les memes listes, deux d entre elles videes.
+   */
+  const garderLeGroupeChoisi = (listes) => ({
+    ...(listes || {}),
+    missing: filtreStatut === 'missing' ? (listes?.missing || []) : [],
+    notAnswered: filtreStatut === 'notAnswered' ? (listes?.notAnswered || []) : [],
+    participating: filtreStatut === 'participating' ? (listes?.participating || []) : [],
+  });
+
+  /**
+   * Applique le filtre a une section d equipe, historique compris.
+   * @param {TeamParticipationSection} item - La section a filtrer.
+   * @returns {TeamParticipationSection} - La section reduite au groupe choisi.
+   */
+  const filtrerSectionParStatut = (item) => ({
+    ...garderLeGroupeChoisi(item),
+    historical: garderLeGroupeChoisi(item?.historical),
+  });
+
   // ⚠️ CE QUI EST FILTRE, ET CE QUI NE L EST PAS : seules les LISTES rendues
   // passent par la recherche. Les 3 compteurs et la barre de reponses, eux,
   // continuent de se calculer sur `sectionsToRender` — ils decrivent
   // l evenement, pas la saisie. Un coach qui cherche « Dupont » ne doit pas
   // voir « 1 présent » alors qu ils sont 14.
-  const sectionsAffichees = rechercheActive
+  // P2 : les deux tamis se COMPOSENT, dans cet ordre — on cherche un nom, PUIS
+  // on ne garde qu un groupe. L inverse donnerait le meme resultat ici, mais
+  // cet ordre garde la recherche identique a ce qu AE02 tient deja.
+  const sectionsRecherchees = rechercheActive
     ? sectionsToRender.map(filtrerSection).filter((item) => compterNomsDeSection(item) > 0)
     : sectionsToRender;
-  const listesAffichees = rechercheActive && participationsByStatus
+  const sectionsAffichees = filtreStatutActif
+    ? sectionsRecherchees
+      .map(filtrerSectionParStatut)
+      .filter((item) => compterNomsDeSection(item) > 0)
+    : sectionsRecherchees;
+  const listesRecherchees = rechercheActive && participationsByStatus
     ? {
       missing: filtrerJoueurs(participationsByStatus.missing),
       notAnswered: filtrerJoueurs(participationsByStatus.notAnswered),
       participating: filtrerJoueurs(participationsByStatus.participating),
     }
     : participationsByStatus;
+  const listesAffichees = filtreStatutActif && participationsByStatus
+    ? garderLeGroupeChoisi(listesRecherchees)
+    : listesRecherchees;
   const demandesAffichees = filtrerDemandes(pendingParticipations);
   const repliAffiche = filtrerJoueurs(event?.participations);
   const participatingCount = Number(
@@ -761,6 +821,19 @@ function EventParticipants({
     : compterNomsHorsEquipes(listesAffichees, repliAffiche, demandesAffichees);
   const barreDeRechercheVisible = !areParticipantIdentitiesHidden && nombreDeNomsAffichables > 0;
   const aucunResultat = rechercheActive && nombreDeNomsRetenus === 0;
+  // P2 : le filtre a sa PROPRE cause de vide. Les deux ne se confondent pas —
+  // la recherche parle de noms, le filtre parle d un groupe.
+  const groupeVide = !rechercheActive && filtreStatutActif && nombreDeNomsRetenus === 0;
+  // P2 : pas de pastilles la ou il n y a rien a filtrer — ni quand les identites
+  // sont masquees (aucune liste n est rendue), ni sur le repli
+  // `event.participations`, qui ne porte AUCUN statut de reponse.
+  const pastillesFiltreVisibles = !areParticipantIdentitiesHidden && hasRenderedLists;
+  const comptesParFiltre = {
+    missing: absentsCount,
+    notAnswered: sansReponseCount,
+    participating: presentsCount,
+    tous: totalAttendu,
+  };
 
   const renderCounterTile = (identifiant, libelle, valeur) => (
     <View
@@ -784,6 +857,44 @@ function EventParticipants({
       </Text>
     </View>
   );
+
+  /**
+   * Une pastille de filtre.
+   * 🎨 Le motif visuel est celui des chips de `CMMembersScreen.js:305-349`
+   * (`Fonts.p3` + un jeton de couleur), RECOPIE et non importe : la-bas les
+   * chips vivent dans le corps d un ecran, ce n est pas un composant.
+   * ⛔ PAS de `SegmentedControl` : il fusionne `color` et `textAlign: 'center'`
+   * dans le MEME objet de style, et c est EXACTEMENT la couture que le
+   * selecteur de pastilles d AD06 attrape. Les 8 temoins de pastille comparent
+   * en `toEqual` STRICT — ils seraient partis au rouge en serie.
+   * @param {{clef: string, clefTexte: string, repli: string}} pastille - Sa definition.
+   * @param {number} compte - Le nombre a afficher a cote du libelle.
+   * @returns {any} - La pastille rendue.
+   */
+  const renderPastilleDeFiltre = (pastille, compte) => {
+    const choisie = filtreStatut === pastille.clef;
+    return (
+      <TouchableOpacity
+        key={pastille.clef}
+        onPress={() => setFiltreStatut(pastille.clef)}
+        style={[
+          ApplicationStyle.borderRadius16,
+          Spaces.paddingHorizontal[12],
+          Spaces.paddingVertical[8],
+          {
+            backgroundColor: choisie ? Colors.primary500 : Colors.primary700,
+            borderColor: choisie ? Colors.primary500 : withAlpha(Colors.neutral00, 0.16),
+            borderWidth: 1,
+          },
+        ]}
+        testID={`P2-pastille-${pastille.clef}`}
+      >
+        <Text style={[Fonts.p3, choisie ? Fonts.neutral900 : Fonts.neutral100]}>
+          {`${t(`eventDetails.participantsFilter.${pastille.clefTexte}`, pastille.repli)} · ${compte}`}
+        </Text>
+      </TouchableOpacity>
+    );
+  };
 
   // La barre « N reponses sur M ». Elle vit ICI, pas dans `src/components/` :
   // 9 lots tournent en parallele et un composant partage neuf serait un
@@ -996,6 +1107,22 @@ function EventParticipants({
             String(sansReponseCount),
           )}
         </View>
+
+        {/* 📍 P2 (D3) — LES PASTILLES SE RENDENT ICI, ET NULLE PART AILLEURS :
+            AU-DESSUS de la legende « reponses sur ». Cette legende est la COUPE
+            que trois temoins d ordre utilisent — AD06 l.327 et AE02 l.594
+            lisent la liste APRES elle, AD06 l.351 lit l ecran ENTIER. Descendu
+            sous la legende, ce bloc entrerait dans leurs `indexOf` et les
+            ferait tomber. */}
+        {pastillesFiltreVisibles ? (
+          <View style={[Alignments.row, Spaces.gap[8], { flexWrap: 'wrap' }]}>
+            {PASTILLES_DE_FILTRE.map((pastille) => renderPastilleDeFiltre(
+              pastille,
+              comptesParFiltre[pastille.clef] || 0,
+            ))}
+          </View>
+        ) : null}
+
         {renderResponsesBar()}
       </View>
 
@@ -1014,9 +1141,16 @@ function EventParticipants({
         />
       ) : null}
 
-      {aucunResultat ? (
-        <Text style={[Fonts.p3, Fonts.neutral300]} testID="AE02-aucun-resultat">
-          {t('eventDetails.participantsSearch.noResult', 'Aucun nom ne correspond')}
+      {/* P2 : le testID de la recherche est conserve TEL QUEL — c est celui que
+          lit le temoin AE02. Le filtre prend le sien, et son propre message. */}
+      {aucunResultat || groupeVide ? (
+        <Text
+          style={[Fonts.p3, Fonts.neutral300]}
+          testID={aucunResultat ? 'AE02-aucun-resultat' : 'P2-groupe-vide'}
+        >
+          {aucunResultat
+            ? t('eventDetails.participantsSearch.noResult', 'Aucun nom ne correspond')
+            : t('eventDetails.participantsFilter.empty', 'Personne dans ce groupe')}
         </Text>
       ) : renderParticipationsContent()}
     </View>

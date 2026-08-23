@@ -1345,6 +1345,13 @@ export default {
       pendingSuffix: '{{pending}} demande(s) à vérifier',
       publicLine: 'Accueille {{quota}} joueur·se·s de l’extérieur · {{taken}} place(s) prise(s)',
     },
+    participantsFilter: {
+      absent: 'Absents',
+      all: 'Tous',
+      empty: 'Personne dans ce groupe',
+      notAnswered: 'Sans réponse',
+      present: 'Présents',
+    },
     participantsSearch: {
       noResult: 'Aucun nom ne correspond',
       placeholder: 'Chercher un nom',
