@@ -75,13 +75,16 @@ const monter = (/** @type {any} */ options = {}) => {
     arbre = renderer.create(
       <PostMatchJourneyCard
         boutonDesactive={options.boutonDesactive ?? false}
+        monDocumentId={options.monDocumentId ?? ''}
         motif={options.motif ?? ''}
         onPressEtape={options.onPressEtape ?? jest.fn()}
         reponsesAttendues={options.reponsesAttendues ?? 0}
         reponsesRecues={options.reponsesRecues ?? 0}
+        scoreAuteur={options.scoreAuteur ?? null}
         scoreDisponible={options.scoreDisponible ?? false}
         scoreLibelle={options.scoreLibelle ?? 'Score à compléter'}
         scoreOrigine={options.scoreOrigine ?? ''}
+        scoreSaisiA={options.scoreSaisiA ?? ''}
         statsFinalisees={options.statsFinalisees ?? false}
         verificationRequise={options.verificationRequise ?? false}
       />,
@@ -255,6 +258,67 @@ describe('N4/D6 — etape 2 : les statistiques', () => {
     act(() => { boutonSous(root, 'post-match-action').props.onPress(); });
 
     expect(onPressEtape).toHaveBeenCalledWith('stats');
+  });
+
+  // -------------------------------------------------------------------------
+  // P5 (D5) — « SAISI PAR TOI À 20:12 »
+  // -------------------------------------------------------------------------
+  //
+  // ⚠️ Les trois props sont OPTIONNELLES et par defaut vides : la carte est
+  // rendue AUSSI par le site (`EventDetails.web.js`), qui ne les passe pas. Les
+  // temoins d origine ci-dessus le prouvent — ils ne les passent pas non plus et
+  // restent verts sur l affichage d avant.
+
+  // 20:12 heure LOCALE du banc : la carte raconte un moment au lecteur, dans son
+  // heure a lui. Ecrire cet instant en UTC ferait dependre le temoin du fuseau de
+  // la machine, et il rougirait ailleurs qu ici.
+  const SAISI_A_2012 = new Date(2026, 7, 20, 20, 12).toISOString();
+  const CAMILLE = { documentId: 'coach-doc', firstname: 'Camille' };
+
+  test('👤 quand c est MOI qui ai saisi, la carte dit « par toi »', () => {
+    const root = monter({
+      ...AVEC_SCORE,
+      monDocumentId: 'coach-doc',
+      scoreAuteur: CAMILLE,
+      scoreSaisiA: SAISI_A_2012,
+    });
+
+    expect(textes(root)).toEqual(expect.arrayContaining(['3 - 1 · saisi par toi à 20:12']));
+  });
+
+  test('👤 quand c est QUELQU UN D AUTRE, elle le nomme par son prenom', () => {
+    const root = monter({
+      ...AVEC_SCORE,
+      monDocumentId: 'un-autre-doc',
+      scoreAuteur: CAMILLE,
+      scoreSaisiA: SAISI_A_2012,
+    });
+
+    expect(textes(root)).toEqual(expect.arrayContaining(['3 - 1 · saisi par Camille à 20:12']));
+  });
+
+  test('🪤 sans auteur, elle retombe sur l origine — elle n invente personne', () => {
+    const root = monter({ ...AVEC_SCORE, scoreAuteur: null, scoreSaisiA: '' });
+
+    expect(textes(root)).toEqual(expect.arrayContaining(['3 - 1 · saisi à la main']));
+  });
+
+  test('🪤 un auteur SANS horodatage ne rend pas une phrase a moitie', () => {
+    const root = monter({ ...AVEC_SCORE, scoreAuteur: CAMILLE, scoreSaisiA: '' });
+
+    expect(textes(root)).toEqual(expect.arrayContaining(['3 - 1 · saisi à la main']));
+  });
+
+  test('🪤 un horodatage illisible ne casse pas la carte', () => {
+    const root = monter({ ...AVEC_SCORE, scoreAuteur: CAMILLE, scoreSaisiA: 'pas-une-date' });
+
+    expect(textes(root)).toEqual(expect.arrayContaining(['3 - 1 · saisi à la main']));
+  });
+
+  test('🪤 un auteur sans documentId ni prenom ne dit rien de plus', () => {
+    const root = monter({ ...AVEC_SCORE, scoreAuteur: {}, scoreSaisiA: SAISI_A_2012 });
+
+    expect(textes(root)).toEqual(expect.arrayContaining(['3 - 1 · saisi à la main']));
   });
 
   test('🔒 verification requise : le bouton dit « Mettre à jour »', () => {

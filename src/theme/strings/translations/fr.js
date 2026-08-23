@@ -1372,6 +1372,8 @@ export default {
       responsesTitle: 'Retours des joueurs',
       scoreManual: 'saisi à la main',
       scoreOfficial: 'score officiel',
+      scoreRecordedBy: 'saisi par {{name}} à {{time}}',
+      scoreRecordedByMe: 'saisi par toi à {{time}}',
       scoreTitle: 'Score',
       scoreTodo: 'À enregistrer',
       statsSubtitle: 'Buteurs, passeurs, temps de jeu',
