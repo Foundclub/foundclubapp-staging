@@ -1216,7 +1216,9 @@ export default {
     exportSuccess: 'La liste des participants est téléchargée.',
     featuredRequest: {
       alreadyFeatured: 'Déjà à la une',
+      available: 'Disponible',
       error: 'Impossible d’envoyer la demande de mise à la une.',
+      rejected: 'Refusée, tu peux redemander',
     },
     fields: {
       description: 'Description',

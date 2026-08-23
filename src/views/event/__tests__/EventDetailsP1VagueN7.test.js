@@ -571,3 +571,59 @@ describe('P1 · item 2 — « Cotisation » grisee avec son motif, jamais masque
     expect(rangee(root, 'Cotisation')).toBeUndefined();
   });
 });
+
+describe('P1 · item 3 — les quatre statuts de « Mettre a la une » passent par t()', () => {
+  // Trois portees (publique, club, multisport) ⇒ trois statuts visibles d'un
+  // coup ; le quatrieme (« Disponible ») se lit sur un second montage.
+  const avecMultisport = (/** @type {any} */ featuredRequestsSummary) => buildEvent({
+    club: { documentId: CLUB_ID, parentMultisport: { documentId: 'cm-1' } },
+    featuredRequestsSummary,
+    team: {
+      club: { documentId: CLUB_ID, parentMultisport: { documentId: 'cm-1' } },
+      documentId: TEAM_ID,
+      name: 'U15',
+    },
+  });
+
+  const ouvrirMettreALaUne = (/** @type {any} */ root) => {
+    ouvrirLeMenu();
+    const ligne = rangee(root, 'À la une');
+    if (!ligne) throw new Error('Aucune rangee « À la une » dans la feuille');
+    act(() => {
+      ligne.findAllByType(TouchableOpacity)[0].props.onPress();
+    });
+  };
+
+  test('en attente · deja a la une · refusee : trois clefs, trois libelles', () => {
+    const root = monter({
+      event: avecMultisport({
+        CM: { requestId: 'r3', status: 'rejected' },
+        PUBLIC: { requestId: 'r1', status: 'pending' },
+        SECTION: { requestId: 'r2', status: 'approved' },
+      }),
+    });
+    ouvrirMettreALaUne(root);
+
+    expect(askedKeys).toContain('reservation.featuredRequest.pending');
+    expect(askedKeys).toContain('eventDetails.featuredRequest.alreadyFeatured');
+    expect(askedKeys).toContain('eventDetails.featuredRequest.rejected');
+    expect(contient(root, 'Demande en attente')).toBe(true);
+    expect(contient(root, 'Déjà à la une')).toBe(true);
+    expect(contient(root, 'Refusée, tu peux redemander')).toBe(true);
+  });
+
+  test('disponible : la quatrieme clef', () => {
+    const root = monter({ event: buildEvent({ featuredRequestsSummary: {} }) });
+    ouvrirMettreALaUne(root);
+
+    expect(askedKeys).toContain('eventDetails.featuredRequest.available');
+    expect(contient(root, 'Disponible')).toBe(true);
+  });
+
+  test('les deux clefs neuves existent dans fr.js, les deux reprises aussi', () => {
+    expect(fr.eventDetails.featuredRequest.rejected).toBe('Refusée, tu peux redemander');
+    expect(fr.eventDetails.featuredRequest.available).toBe('Disponible');
+    expect(fr.eventDetails.featuredRequest.alreadyFeatured).toBe('Déjà à la une');
+    expect(fr.reservation.featuredRequest.pending).toBe('Demande en attente');
+  });
+});

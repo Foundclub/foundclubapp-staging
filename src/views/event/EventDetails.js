@@ -440,13 +440,21 @@ const buildTypeTagLabel = (typeName, segments = []) => [
   .map((/** @type {any} */ part) => String(part || '').trim())
   .filter(Boolean)
   .join(' · ');
-
-// @ts-ignore: FIXME: Baseline TS regression
-const getFeaturedScopeStatusLabel = (status) => {
-  if (status === 'pending') return 'Demande en attente';
-  if (status === 'approved') return 'Déjà à la une';
-  if (status === 'rejected') return 'Refusée, tu peux redemander';
-  return 'Disponible';
+/**
+ * 🔤 N7 item 3 (vague P, 23/08) — LES QUATRE STATUTS PASSENT PAR `t()`.
+ * La fonction vit hors du composant, la ou `t` n'existe pas : il DESCEND en
+ * parametre plutot que de remonter la logique au point d'appel. Deux clefs
+ * existaient deja (N1 les avait posees pour le bouton de la page), deux sont
+ * neuves.
+ * @param {any} t - La fonction de traduction du composant.
+ * @param {string} status - Le statut de la demande pour cette portee.
+ * @returns {string} - Le libelle, traduit.
+ */
+const getFeaturedScopeStatusLabel = (t, status) => {
+  if (status === 'pending') return t('reservation.featuredRequest.pending', 'Demande en attente');
+  if (status === 'approved') return t('eventDetails.featuredRequest.alreadyFeatured', 'Déjà à la une');
+  if (status === 'rejected') return t('eventDetails.featuredRequest.rejected', 'Refusée, tu peux redemander');
+  return t('eventDetails.featuredRequest.available', 'Disponible');
 };
 
 /**
@@ -7910,7 +7918,7 @@ function EventDetails({ navigation, route }) {
                 const isDisabled = option.status === 'pending' || option.status === 'approved';
                 // @ts-ignore: FIXME: Baseline TS regression
                 const isSelected = Boolean(selectedFeaturedScopes[option.kind]);
-                const statusLabel = getFeaturedScopeStatusLabel(option.status);
+                const statusLabel = getFeaturedScopeStatusLabel(t, option.status);
 
                 return (
                   <View
