@@ -234,7 +234,7 @@ describe("Q2 — l'effectif du match pendant qu'il vole encore", () => {
     demonter();
   });
 
-  test("①c pendant le vol, un indicateur de chargement tient la place de la liste", () => {
+  test('①c pendant le vol, un indicateur de chargement tient la place de la liste', () => {
     const { demonter, indicateurs } = monterPendantLeVol();
 
     expect(indicateurs().length).toBeGreaterThan(0);
