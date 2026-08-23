@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
+  ActivityIndicator,
   Alert,
   Switch,
   Text,
@@ -153,7 +154,13 @@ function EventWizardParticipants({ navigation, route }) {
   // trois fois « Joueur ».
   const shouldOfferCallUp = shouldOfferMatchCallUp(state);
   const organizerTeamId = String(state.team?.documentId || state.team?.id || '');
-  const { data: fullOrganizerTeam } = useGetTeam(organizerTeamId, {
+  //
+  // Q2 (constat d'Adel en recette du 2026-08-23) : `isLoading` n'est PAS du
+  // confort. Sans lui, "la requete vole encore" et "l'equipe est vraiment
+  // vide" rendent le MEME ecran -- `squadPlayers` vaut [] dans les deux cas --
+  // et l'etape annonce a tort "Cette equipe n'a encore aucun joueur", avec un
+  // compteur "0 sur 0", pendant tout le vol du GET /teams/:id.
+  const { data: fullOrganizerTeam, isLoading: isLoadingSquad } = useGetTeam(organizerTeamId, {
     enabled: shouldOfferCallUp && Boolean(organizerTeamId),
   });
   const squadPlayers = useMemo(() => {
@@ -561,16 +568,28 @@ function EventWizardParticipants({ navigation, route }) {
               <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
                 {t('eventWizard.steps.participants.matchCallUpTitle', 'Convocation')}
               </Text>
-              <Text style={[Fonts.p3, Fonts.neutral300]}>
-                {t(
-                  'eventWizard.steps.participants.matchCallUpCount',
-                  '{{count}} sur {{total}}',
-                  { count: calledUpIds.length, total: squadPlayers.length },
-                )}
-              </Text>
+              {isLoadingSquad ? null : (
+                <Text style={[Fonts.p3, Fonts.neutral300]}>
+                  {t(
+                    'eventWizard.steps.participants.matchCallUpCount',
+                    '{{count}} sur {{total}}',
+                    { count: calledUpIds.length, total: squadPlayers.length },
+                  )}
+                </Text>
+              )}
             </View>
 
-            {squadPlayers.length === 0 ? (
+            {/* Q2 -- l'effectif vole encore : on le DIT, au lieu de laisser
+                croire que l'equipe est vide. */}
+            {isLoadingSquad ? (
+              <ActivityIndicator
+                accessibilityLabel={t('common.loading', 'Chargement...')}
+                color={Colors.primary500}
+                size="large"
+              />
+            ) : null}
+
+            {!isLoadingSquad && squadPlayers.length === 0 ? (
               <Text style={[Fonts.p3, Fonts.neutral300, { lineHeight: 18 }]}>
                 {t(
                   'eventWizard.steps.participants.matchCallUpEmpty',

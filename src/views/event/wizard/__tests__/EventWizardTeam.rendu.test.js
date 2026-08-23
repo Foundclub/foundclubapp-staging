@@ -77,6 +77,23 @@ jest.mock('@/domains/auth/useAuth', () => {
   };
 });
 
+// Q2 (23/08) — DEUX DOUBLURES AJOUTEES, ET LA RAISON EST LA MEME LES DEUX
+// FOIS : cet ecran precharge desormais l'effectif de l'equipe au toucher.
+//   · sans la doublure de `teamService`, l'import de `getTeamById` chargerait
+//     le vrai client HTTP, qui exige `API_URL` (`client.native.js:21`) : la
+//     suite entiere mourrait AVANT son premier test (0 test execute) ;
+//   · sans celle de react-query, le vrai `useQueryClient()` jetterait
+//     « No QueryClient set » — ce fichier rend sans QueryClientProvider.
+// C'est le motif deja en place dans ses 5 suites soeurs.
+jest.mock('@tanstack/react-query', () => ({
+  useQueryClient: () => ({ prefetchQuery: () => Promise.resolve() }),
+}));
+
+jest.mock('@/services/team/teamService', () => ({
+  getTeamById: () => Promise.resolve(null),
+  getTeams: () => Promise.resolve([]),
+}));
+
 // ⛔ Jamais `requireActual` sur un service. `useGetTeams` est PAGINEE : rendre
 // le tableau directement donne une liste VIDE sans la moindre erreur.
 jest.mock('@/services/team/teamQueries', () => ({

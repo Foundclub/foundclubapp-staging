@@ -151,9 +151,16 @@ jest.mock('@/domains/auth/useAuth', () => {
 // (`useGetTeam`). Ce fichier mesure la CHAINE, pas les donnees : la doublure
 // rend donc « rien trouve », ce qui laisse les deux ecrans identiques a
 // eux-memes.
+// Q2 (23/08) — `prefetchQuery` AJOUTE : l'etape « Equipe organisatrice »
+// precharge desormais l'effectif au toucher, et ce fichier traverse un tunnel
+// MATCH en tapant une equipe. Sans cette ligne, le toucher jetterait un
+// TypeError au milieu de la chaine.
 jest.mock('@tanstack/react-query', () => ({
   useQuery: () => ({ data: undefined, isLoading: false }),
-  useQueryClient: () => ({ invalidateQueries: () => {} }),
+  useQueryClient: () => ({
+    invalidateQueries: () => {},
+    prefetchQuery: () => Promise.resolve(),
+  }),
 }));
 
 jest.mock('@/domains/event/useEvent', () => ({
@@ -181,7 +188,13 @@ jest.mock('@/domains/places/usePlaces', () => ({
 
 // ⛔ Jamais `requireActual` sur un service : le client HTTP exige `API_URL` et
 // la suite entiere meurt au chargement.
-jest.mock('@/services/team/teamService', () => ({ getTeams: () => Promise.resolve([]) }));
+// Q2 (23/08) — `getTeamById` AJOUTE : l'etape « Equipe organisatrice » l'importe
+// pour precharger l'effectif. Sans lui dans la doublure, l'import chargerait le
+// vrai client HTTP et la suite entiere mourrait au chargement.
+jest.mock('@/services/team/teamService', () => ({
+  getTeamById: () => Promise.resolve(null),
+  getTeams: () => Promise.resolve([]),
+}));
 
 // W07 — `EventWizardInvites` cherche desormais les clubs externes par la
 // recherche serveur `getClubs`. Comme `teamService` juste au-dessus, ce service
