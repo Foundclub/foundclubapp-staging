@@ -94,7 +94,7 @@ import SHARE_ICON from '@/assets/icons/share2.png';
  * @property {boolean} canEdit
  * @property {boolean} [canApprovePendingRequests]
  * @property {(user?: User) => void} handleUserPress
- * @property {() => void} handleRemindPlayers
+ * @property {(teamKey?: string) => void} handleRemindPlayers
  * @property {() => void} handleShare
  * @property {() => void} handleExportParticipants
  * @property {(participationId?: string, status?: 'accepted' | 'declined') => void} [handleUpdateParticipation]
@@ -584,7 +584,11 @@ function EventParticipants({
                 {t('eventDetails.participationStatus.notAnswered')}
               </Text>
               {canEdit ? (
-                <Button isLoading={isReminding} isOption onPress={handleRemindPlayers} title={t('eventDetails.actions.remind')} variant="Primary" />
+                // 🎯 N4 (D5) — LE BOUTON DIT QUELLE EQUIPE IL VISE. La feuille de
+                // relance s'ouvre avec CETTE equipe deja cochee : le serveur
+                // n'accepte qu'un `teamId` par appel, et c'est ici, et nulle
+                // part ailleurs, qu'on sait laquelle le coach regardait.
+                <Button isLoading={isReminding} isOption onPress={() => handleRemindPlayers(section.key)} title={t('eventDetails.actions.remind')} variant="Primary" />
               ) : null}
             </View>
             {canEdit ? renderProchaineRelance() : null}

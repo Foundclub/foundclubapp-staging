@@ -3,6 +3,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { Alert } from 'react-native';
 
+import { aggregateRemindReports } from '@/domains/event/aggregateRemindReports';
 import { buildRemindMessage, REMIND_EVENT_MUTATION_KEY } from '@/domains/event/remindReport';
 import { getParticipationErrorMessage } from '@/domains/participation/participationFlow';
 
@@ -230,10 +231,50 @@ export const useEventMutations = (eventId, refetch, refetchParticipations) => {
   // La `mutationKey` n est pas decorative : c est par elle que le bouton se
   // grise pendant l envoi (`EventParticipants`), sans avoir a faire descendre
   // un drapeau depuis l ecran.
+  // 🎯 N4 (D3) — RELANCER PLUSIEURS EQUIPES, SANS MUTATION NEUVE.
+  //
+  // 🧨 LE FAIT SERVEUR : `/remind-unanswered-players` n accepte qu UN SEUL
+  // `teamId` par appel. Deux equipes cochees = deux POST. La boucle vit donc
+  // DANS le `mutationFn`, et surtout PAS dans une mutation de plus :
+  //   · 13 suites de temoins montent `useEventMutations` avec une liste FIGEE
+  //     de mutations — en ajouter une les fait toutes tomber d un coup ;
+  //   · une SEULE cle de mutation, c est un SEUL etat `isPending` : le grisage
+  //     du bouton (AC07) et le motif anti-spam (AE02) restent alimentes par la
+  //     meme clef, sans rien faire descendre depuis l ecran.
+  //
+  // ⛔ LA CHARGE EN CHAINE RESTE ACCEPTEE, telle quelle. C est ce qui garde les
+  // 4 temoins d AC07 verts SANS UNE LIGNE REECRITE : `mutate('evt-1')` fait
+  // exactement ce qu il faisait, un seul appel et une seule modale.
   const remindEventMutation = useMutation({
-    mutationFn: remindUnansweredPlayers,
+    mutationFn: async (/** @type {any} */ charge) => {
+      const equipes = Array.isArray(charge?.teamIds) ? charge.teamIds.filter(Boolean) : [];
+      // Chaine, ou objet a une seule equipe : le chemin d avant, intact.
+      if (!equipes.length) return remindUnansweredPlayers(charge);
+
+      // 🚨 SEQUENTIELS, pas en parallele : l anti-spam de 48 h se decide cote
+      // serveur, et deux appels concurrents sur le meme evenement se liraient
+      // l un l autre a moitie ecrits.
+      const entrees = [];
+      // eslint-disable-next-line no-restricted-syntax
+      for (const teamId of equipes) {
+        try {
+          // eslint-disable-next-line no-await-in-loop
+          const report = await remindUnansweredPlayers({ eventId: charge.eventId, teamId });
+          entrees.push({ echec: false, report, teamId });
+        } catch (erreur) {
+          // Un echec sur UNE equipe ne jette pas le compte rendu des autres :
+          // il devient une ligne `echec` (voir `aggregateRemindReports`).
+          entrees.push({ echec: true, report: null, teamId });
+        }
+      }
+
+      return aggregateRemindReports(entrees);
+    },
     mutationKey: REMIND_EVENT_MUTATION_KEY,
-    onError: (error) => {
+    onError: (error, /** @type {any} */ variables) => {
+      // D4 : la feuille affiche elle-meme son compte rendu (1H). Deux fenetres
+      // pour un seul geste, ce serait la modale par-dessus la feuille.
+      if (variables?.presentation === 'sheet') return;
       // La CONSEQUENCE est collee a la raison : le serveur explique pourquoi,
       // mais c est « personne n a ete prevenu » qui manquait — et c est la
       // seule phrase qui empeche le coach de croire sa relance partie.
@@ -243,7 +284,8 @@ export const useEventMutations = (eventId, refetch, refetchParticipations) => {
         `${raison} Personne n a ete prevenu : reessaie dans un instant.`,
       );
     },
-    onSuccess: (report) => {
+    onSuccess: (report, /** @type {any} */ variables) => {
+      if (variables?.presentation === 'sheet') return;
       const message = buildRemindMessage(report);
       Alert.alert(message.title, message.description);
     },

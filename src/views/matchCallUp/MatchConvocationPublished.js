@@ -51,12 +51,24 @@ import {
  *   · `SubscriptionPaywallSheet` — le mur payant branche par le lot C-A.
  *   · `ScreenContainer` / `HeaderBackButton` / `Button` — le gabarit d'ecran.
  *
- * ⚠️ « Relancer » n'a PAS de geste serveur dedie : la seule action existante est
- * `POST /events/:id/composition/publish`, qui renvoie exactement la meme
- * convocation (meme canal, meme push, meme demande de reponse) et incremente
- * `version`. C'est ce que le pack appelle republier — donc relancer, c'est
- * republier a l'identique. La fenetre de confirmation dit ce qui va se passer,
- * plutot que de laisser croire a un rappel silencieux.
+ * 🧨 CE COMMENTAIRE DISAIT LE CONTRAIRE DU CODE — corrige par N4 (D8), 2026-08-23.
+ *
+ * Il affirmait : « Relancer n'a PAS de geste serveur dedie », et en concluait que
+ * relancer, c'etait republier a l'identique. C'est FAUX, et la preuve est a deux
+ * fichiers d'ici : `remindUnansweredPlayers` (`services/event/eventService.js`)
+ * poste sur `POST /events/:id/remind-unanswered-players`. Ce geste-la existe,
+ * il vise les SANS-REPONSE et eux seuls, il porte un anti-spam de 48 h, et il
+ * rend un compte rendu chiffre (AC07). Il n'accepte qu'UN `teamId` par appel.
+ *
+ * ⚠️ LES DEUX GESTES NE FONT DONC PAS LA MEME CHOSE :
+ *   · REPUBLIER (`POST /events/:id/composition/publish`) renvoie la convocation
+ *     entiere, a TOUT LE MONDE, et incremente `version` ;
+ *   · RELANCER ne touche que ceux qui n'ont pas repondu.
+ * Croire l'un equivalent a l'autre, c'est renvoyer une convocation complete a
+ * une equipe qui a deja repondu pour reveiller trois retardataires.
+ *
+ * 🚧 Les mettre cote a cote dans CET ecran est un lot a part (cadre 5E) :
+ * N4 n'a corrige que le commentaire, pas la fenetre de confirmation.
  * @returns {import('react').ReactElement}
  */
 function MatchConvocationPublished() {
@@ -126,9 +138,16 @@ function MatchConvocationPublished() {
       await publishEventConvocation(eventId, { teamId });
 
       // 🧨 AB03 — MEME CAUSE QUE SES DEUX ECRANS FRERES. Renvoyer la convocation
-      // change `publishedAt` et remet les reponses a zero cote serveur : sans
-      // cette ligne, l'ecran continuait d'afficher l'ancienne date d'envoi et
-      // les anciennes reponses, ici comme sur `EventDetails`.
+      // change `publishedAt` et incremente `version` : sans cette ligne, l'ecran
+      // continuait d'afficher l'ancienne date d'envoi, ici comme sur
+      // `EventDetails`.
+      // ✅ CORRIGE PAR N4 (D8), 2026-08-23 : ce commentaire disait que republier
+      // « remet les reponses a zero ». Il ne les remet PAS a zero — mesure sur le
+      // code serveur par le chef d'orchestre le 23/08. La distinction n'est pas
+      // theorique : elle decide si l'on ose republier une convocation deja
+      // repondue, et ce commentaire-la disait de ne pas oser.
+      // ⚠️ Ce qui se voit d'ici : la DATE et la VERSION changent, et c'est ce que
+      // l'invalidation va rechercher. Le reste vit dans `admin`.
       // ⚠️ Non attendu : le marquage est SYNCHRONE, seule la relecture ne l'est
       //    pas — et l'ecran reste monte pour la recevoir.
       invalidateAfterAction(queryClient, 'publishComposition').catch(() => {});
