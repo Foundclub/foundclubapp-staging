@@ -1330,6 +1330,17 @@ export default {
         title: 'Ton signalement a bien été envoyé',
       },
     },
+    nextAction: {
+      action: 'Faire l’appel',
+      done: 'Appel terminé',
+      expectedOne: '{{count}} attendu',
+      expectedOther: '{{count}} attendus',
+      opensAt: 'Ouvre à {{time}}',
+      opensSoon: 'Pas encore ouvert',
+      title: 'Faire l’appel',
+      window: 'L’appel devient disponible 30 minutes avant le début, '
+        + 'et reste ouvert 2 h après la fin.',
+    },
     openTraining: {
       pendingSuffix: '{{pending}} demande(s) à vérifier',
       publicLine: 'Accueille {{quota}} joueur·se·s de l’extérieur · {{taken}} place(s) prise(s)',
