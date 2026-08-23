@@ -477,7 +477,10 @@ const elementDEntete = () => {
   return appels[appels.length - 1][0].headerRight();
 };
 
-const chercherDansElements = (/** @type {any} */ element, /** @type {(n: any) => boolean} */ predicat) => {
+const chercherDansElements = (
+  /** @type {any} */ element,
+  /** @type {(n: any) => boolean} */ predicat,
+) => {
   if (!element || typeof element !== 'object') return null;
   if (Array.isArray(element)) {
     return element.reduce(
@@ -527,7 +530,7 @@ describe('P1 · item 1 — la phrase-robot FFF ne sert plus de description', () 
     expect(contient(root, TITRE_DESCRIPTION)).toBe(true);
   });
 
-  test('un match NON externe garde sa description, meme si elle ressemble a la phrase-robot', () => {
+  test('un match NON externe garde sa description, meme si elle ressemble au robot', () => {
     // 🔒 La garde est `externalAutoSource` : sans source externe, on ne
     // censure rien — ce que l'organisateur a ecrit est a lui.
     const root = monter({
@@ -545,7 +548,7 @@ describe('P1 · item 1 — la phrase-robot FFF ne sert plus de description', () 
     expect(contient(root, TITRE_DESCRIPTION)).toBe(true);
   });
 
-  test('le bloc s appelle « Description » dans fr.js — la clef est conservee, sa valeur change', () => {
+  test('le bloc s appelle « Description » dans fr.js — clef conservee, valeur changee', () => {
     // 🔑 La CLEF ne bouge pas (le controle de recolte compare les ensembles de
     // clefs) ; c'est sa VALEUR qui passe de « À propos » a « Description ».
     expect(fr.eventDetails.fields.description).toBe('Description');
@@ -687,7 +690,7 @@ describe('P1 · item 5 — le fil du tournoi lit le dashboard', () => {
     expect(etapeDuFil(root, 5)).not.toContain('✓');
   });
 
-  test('le dashboard dit « publie » : la cinquieme se coche, meme si l evenement en cache est en retard', () => {
+  test('le dashboard dit « publie » : la 5e se coche, meme si le cache est en retard', () => {
     // 🔑 Le dashboard est la source la plus fraiche : l'evenement du cache peut
     // encore dire « draft » quelques secondes apres la publication.
     const root = monter({
@@ -702,7 +705,7 @@ describe('P1 · item 5 — le fil du tournoi lit le dashboard', () => {
     expect(etapeDuFil(root, 5)).toContain('✓');
   });
 
-  test('REPLI : sans dashboard, un brouillon garde 3/4/5 vides et un publie garde tout coche', () => {
+  test('REPLI sans dashboard : brouillon => 3/4/5 vides, publie => tout coche', () => {
     // Les 15 suites voisines mockent ce hook MUET (`data: undefined`) : leurs
     // temoins du fil (N2Caracterisation) doivent rester verts tels quels.
     const brouillon = monter({ dashboard: undefined, event: buildTournoi() });

@@ -677,17 +677,18 @@ describe('L4 · temoin 3 — l accordeon n existe plus', () => {
   });
 });
 
-describe('N7 item 4 (vague P, 23/08) — la bascule d ouverture de l entrainement vit dans la feuille', () => {
+describe('N7 item 4 (vague P, 23/08) — la bascule d entrainement vit dans la feuille', () => {
   // 🏋️ La carte « Entraînement ouvert / privé » de l'Apercu portait trois
   // choses : un ETAT, la ligne de quota, et le BOUTON de bascule. Le bouton est
   // une action d'organisation — il n'y a qu'un endroit pour ca, et c'est cette
   // feuille (meme motif que « Stats du match », D71). La ligne de quota devient
   // la NOTE de la rangee. L'ETAT, lui, n'est PAS reconstruit ici : c'est la
   // carte d'ouverture enrichie du lot P8, qui vient apres.
-  const rangeeBascule = (/** @type {any} */ root, /** @type {string} */ libelle) => rangeesDeLaFeuille(root)
-    .find((/** @type {any} */ n) => textOf(n).includes(libelle));
+  const rangeeBascule = (/** @type {any} */ root, /** @type {string} */ libelle) => (
+    rangeesDeLaFeuille(root).find((/** @type {any} */ n) => textOf(n).includes(libelle))
+  );
 
-  test('entrainement OUVERT : une rangee « Fermer l entrainement », dont la note est le quota', () => {
+  test('entrainement OUVERT : rangee « Fermer l entrainement », note = le quota', () => {
     const root = monter({
       event: buildEvent({ externalParticipantLimit: 4, externalParticipantValidationMode: 'auto' }),
     });
@@ -699,7 +700,7 @@ describe('N7 item 4 (vague P, 23/08) — la bascule d ouverture de l entrainemen
     expect(typeof rangee.findAllByType(TouchableOpacity)[0].props.onPress).toBe('function');
   });
 
-  test('entrainement FERME : « Ouvrir l entrainement », et le dernier reglage memorise en note', () => {
+  test('entrainement FERME : « Ouvrir l entrainement », dernier reglage en note', () => {
     const root = monter({
       event: buildEvent({ externalParticipantLimit: 3, sessionStatus: 'closed' }),
     });

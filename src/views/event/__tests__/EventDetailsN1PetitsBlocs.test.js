@@ -485,7 +485,10 @@ const contient = (
 // ⋯ N7 item 4 (vague P, 23/08) — la bascule « Ouvrir / Fermer l'entraînement »
 // vit desormais dans la feuille du menu ⋯, qui s'ouvre depuis l'EN-TETE de
 // navigation. On va la chercher la ou elle est (motif L4MenuTroisPoints).
-const chercherDansElements = (/** @type {any} */ element, /** @type {(n: any) => boolean} */ predicat) => {
+const chercherDansElements = (
+  /** @type {any} */ element,
+  /** @type {(n: any) => boolean} */ predicat,
+) => {
   if (!element || typeof element !== 'object') return null;
   if (Array.isArray(element)) {
     return element.reduce(

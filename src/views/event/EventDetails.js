@@ -95,7 +95,9 @@ import {
   useGetEventMyMatchResponse,
 } from '@/services/matchStats/matchStatsQueries';
 import { applyToRecruitmentAd } from '@/services/recruitment/recruitmentService';
-import { useGetTournamentDashboard } from '@/services/tournamentCompetition/tournamentCompetitionQueries';
+import {
+  useGetTournamentDashboard,
+} from '@/services/tournamentCompetition/tournamentCompetitionQueries';
 import {
   createCustomTournamentTeam,
   registerClubTeamToTournament,
@@ -453,8 +455,12 @@ const buildTypeTagLabel = (typeName, segments = []) => [
  */
 const getFeaturedScopeStatusLabel = (t, status) => {
   if (status === 'pending') return t('reservation.featuredRequest.pending', 'Demande en attente');
-  if (status === 'approved') return t('eventDetails.featuredRequest.alreadyFeatured', 'Déjà à la une');
-  if (status === 'rejected') return t('eventDetails.featuredRequest.rejected', 'Refusée, tu peux redemander');
+  if (status === 'approved') {
+    return t('eventDetails.featuredRequest.alreadyFeatured', 'Déjà à la une');
+  }
+  if (status === 'rejected') {
+    return t('eventDetails.featuredRequest.rejected', 'Refusée, tu peux redemander');
+  }
   return t('eventDetails.featuredRequest.available', 'Disponible');
 };
 
@@ -4622,7 +4628,10 @@ function EventDetails({ navigation, route }) {
         key: 'licenseCampaign',
         label: t('eventDetails.managePanel.campaign', 'Cotisation'),
         note: hasLinkedCampaign
-          ? t('eventDetails.managePanel.campaignAlreadyLinked', 'Cet événement a déjà une cotisation')
+          ? t(
+            'eventDetails.managePanel.campaignAlreadyLinked',
+            'Cet événement a déjà une cotisation',
+          )
           : null,
         onPress: openEventLicenseCampaignSettings,
       });
@@ -4646,9 +4655,11 @@ function EventDetails({ navigation, route }) {
         : 'manuelle';
       let quotaNote = null;
       if (trainingOpenConfig.externalParticipantLimit !== null) {
+        const quotaLine = `${trainingOpenConfig.externalParticipantLimit} place(s) externes`
+          + ` - validation ${validationLabel}`;
         quotaNote = trainingOpenConfig.isOpenTraining
-          ? `${trainingOpenConfig.externalParticipantLimit} place(s) externes - validation ${validationLabel}`
-          : `Dernier reglage mémorise: ${trainingOpenConfig.externalParticipantLimit} place(s) externes - validation ${validationLabel}`;
+          ? quotaLine
+          : `Dernier reglage mémorise: ${quotaLine}`;
       }
       chips.push({
         disabled: mutations.updateEventNoNavMutation.isPending,
@@ -5474,7 +5485,10 @@ function EventDetails({ navigation, route }) {
     poster: t('eventDetails.menu.poster', 'Voir et partager l’affiche'),
     tournamentSettings: t('eventDetails.menu.tournamentSettings', 'Format, équipes et terrains'),
     // N7 item 4 : repli quand aucun quota n'est memorise (la note porte sinon le quota).
-    trainingVisibility: t('eventDetails.menu.trainingVisibility', 'Accueillir des joueur·se·s de l’extérieur'),
+    trainingVisibility: t(
+      'eventDetails.menu.trainingVisibility',
+      'Accueillir des joueur·se·s de l’extérieur',
+    ),
   };
 
   /**
