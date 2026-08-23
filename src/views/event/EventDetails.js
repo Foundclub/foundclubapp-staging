@@ -110,9 +110,15 @@ import {
 } from '@/utils/matchStatsPromptSession';
 import { markEventDetailsPerf } from '@/utils/performance/eventDetailsPerformance';
 
+import {
+  formatTimeInZone,
+  resolveAttendanceWindow,
+  resolveCallMode,
+} from './attendance/attendanceCallModel';
 import EventDetectionSlots from './components/EventDetectionSlots';
 import EventExportSheet from './components/EventExportSheet';
 import EventHeader from './components/EventHeader';
+import EventNextActionCard from './components/EventNextActionCard';
 import EventParticipants from './components/EventParticipants';
 import EventReservationActions from './components/EventReservationActions';
 import EventTasksSection from './components/EventTasksSection';
@@ -1208,6 +1214,51 @@ function EventDetails({ navigation, route }) {
     () => (serverClockMs === null ? Date.now() + elapsedSinceServerNowMs : serverClockMs),
     [elapsedSinceServerNowMs, serverClockMs],
   );
+
+  // ==========================================================================
+  // N5 (D1/D2/D5) — LA PORTE D ENTREE DE L APPEL.
+  //
+  // ⛔ C est `serverClockMs` qui decide, JAMAIS `serverNowMs` juste au-dessus :
+  // le second retombe sur `Date.now()` quand le serveur n a rien dit — il sert
+  // au compte a rebours, qui doit rester affichable sans lui. Ouvrir la porte
+  // sur l horloge du telephone la rendrait cliquable alors que le serveur
+  // refuse ensuite ligne par ligne.
+  //
+  // 🧭 La fenetre n est pas recalculee ici : `resolveAttendanceWindow` est LA
+  // definition unique (celle de L5-A), serveur d abord, repli 30/120 ensuite.
+  // ==========================================================================
+  const attendanceCallWindow = useMemo(
+    () => resolveAttendanceWindow({ event, payloadData: attendancePayload?.data }),
+    [attendancePayload?.data, event],
+  );
+
+  // D5 — sans charge d appel (requete desactivee ou en vol), la carte se montre
+  // avec le repli local pour que le coach VOIE la porte, mais elle ne s ouvre
+  // pas : `before` est le seul etat honnete tant qu aucune fenetre n a ete
+  // confirmee par le serveur.
+  const nextActionMode = useMemo(() => {
+    if (!attendancePayload?.data) return 'before';
+
+    return resolveCallMode({ serverNowMs: serverClockMs, window: attendanceCallWindow });
+  }, [attendanceCallWindow, attendancePayload?.data, serverClockMs]);
+
+  // D2 — « N attendus » = l audience entiere : c est ce que la maquette
+  // additionne (18 + 2 + 2). `null` quand la charge n est pas la — on ne dit
+  // pas « 0 attendu » a la place de « je ne sais pas ».
+  const nextActionExpectedCount = useMemo(() => {
+    const items = attendancePayload?.data?.items;
+
+    return Array.isArray(items) ? items.length : null;
+  }, [attendancePayload?.data?.items]);
+
+  const nextActionOpensAtLabel = formatTimeInZone(
+    attendanceCallWindow.opensAtMs,
+    attendancePayload?.data?.timezone,
+  );
+
+  const openAttendanceCall = useCallback(() => {
+    navigation.navigate(RouteNames.EventAttendanceCall, { eventId });
+  }, [eventId, navigation]);
 
   useEffect(() => {
     setElapsedSinceServerNowMs(0);
@@ -4686,6 +4737,18 @@ function EventDetails({ navigation, route }) {
   const showStageDaysTab = isOnTab('stageDays');
   const showTournamentTeamsTab = isOnTab('tournamentTeams');
 
+  // D3 — QUI VOIT LA PORTE. `canEdit` ne suffit pas : la grille d acces
+  // (`eventAttendanceGate`) ne regarde que l appartenance a l equipe et la
+  // participation. Un dirigeant organisateur hors de l equipe est donc
+  // `canEdit` sans etre `canAccessAttendance`, et le serveur lui repondrait
+  // 403 : lui montrer la porte serait lui promettre une piece fermee a clef.
+  // 🕳️ Elargir la grille est un lot a part (L5-0), pas une correction ici.
+  // Un tournoi, lui, n a pas d appel du tout.
+  const showNextActionCard = showOverviewTab
+    && canEdit
+    && canAccessAttendance
+    && !isTournamentEvent;
+
   // Les trois conditions que la repartition en onglets rendait trop longues
   // pour tenir sur leur ligne d'ouverture. Elles sont REPRISES TELLES QUELLES
   // des blocs ou elles vivaient : c'est un nom pose dessus, pas une regle qui
@@ -6417,6 +6480,21 @@ function EventDetails({ navigation, route }) {
             {renderViewerConvocationLine()}
             {renderDetailsTabs()}
             <View style={[Spaces.gap[24]]}>
+              {/* 🚪 N5 (D4) — LA PROCHAINE ACTION PASSE EN PREMIER, juste sous
+                  l entete, comme la maquette 2A la dessine. Elle ne renverse pas
+                  la regle de L4 (« la description ouvre l Aperçu ») : elle la
+                  precise — description AVANT les taches, action AVANT la
+                  description. C est la seule chose a faire maintenant ; le reste
+                  de la page est de la consultation. */}
+              {showNextActionCard ? (
+                <EventNextActionCard
+                  expectedCount={nextActionExpectedCount}
+                  mode={nextActionMode}
+                  onPress={openAttendanceCall}
+                  opensAtLabel={nextActionOpensAtLabel}
+                />
+              ) : null}
+
               {/* 🧾 N2 — LA DESCRIPTION OUVRE L APERÇU, POUR LES QUATRE TYPES.
                   Regle 2 du pack : un seul champ, le meme nom partout, EN HAUT
                   de l Apercu. Sur un stage et sur un tournoi, quatre blocs
