@@ -30,6 +30,7 @@ import { RouteNames } from '@/navigation/routeNames';
 import { celebrate } from '@/services/celebrations/celebrationRuntime';
 import {
   useGetEvent,
+  useGetEventAttendance,
   useGetEventConvocation,
   useGetEventTeamComposition,
 } from '@/services/event/eventQueries';
@@ -39,6 +40,7 @@ import {
   createEventParticipation,
   deleteEventParticipation,
 } from '@/services/eventParticipation/eventParticipationService';
+import { useGetEventMatchStats } from '@/services/matchStats/matchStatsQueries';
 import {
   createCustomTournamentTeam,
   registerClubTeamToTournament,
@@ -56,8 +58,18 @@ import { buildPublicEventUrl, buildShareMessageWithUrl } from '@/utils/shareLink
 /* eslint-disable perfectionist/sort-imports */
 import * as SharePlatform from '@/platform/share';
 import { BREAKPOINTS } from '@/responsive';
+import {
+  formatTimeInZone,
+  resolveAttendanceWindow,
+  resolveCallMode,
+  resolveServerClockMs,
+} from './attendance/attendanceCallModel';
+import EventNextActionCard from './components/EventNextActionCard';
 import EventTasksSection from './components/EventTasksSection';
 import EventTeamAudiencesSection from './components/EventTeamAudiencesSection';
+import PostMatchJourneyCard from './components/PostMatchJourneyCard';
+import { resolveEventAttendanceGate } from './eventAttendanceGate';
+import { resolveEventEndedAt, resolveIsMatchFinished } from './eventMatchClock';
 /* eslint-enable perfectionist/sort-imports */
 
 const flattenPages = (pages) => {
@@ -286,6 +298,99 @@ function EventDetails({ navigation, route }) {
   // par le `normalizeTypeName` local — les deux normalisent a l'identique, mais
   // seul le helper garantit que les deux surfaces resteront d'accord.
   const isDetectionEvent = isDetectionEventType(event?.type?.name);
+
+  // ==========================================================================
+  // P9 · ECRAN 1 — LA PORTE D ENTREE DE L APPEL, SUR LE SITE (miroir de N5).
+  //
+  // 🪞 CE BLOC N INVENTE AUCUNE REGLE, IL IMPORTE CELLES DU TELEPHONE :
+  // `resolveEventAttendanceGate`, `resolveAttendanceWindow`, `resolveCallMode`
+  // et `EventNextActionCard` sont les modules de `EventDetails.js`, servis ici
+  // par react-native-web. Les recopier aurait pose un SECOND juge sur le meme
+  // etat, qui divergerait au premier changement de regle — c est exactement le
+  // defaut que P9 repare (D08, D22, D40, D48, et le gate elargi en ce moment).
+  //
+  // ⛔ L HORLOGE QUI DECIDE EST CELLE DU SERVEUR, jamais celle du navigateur.
+  // Sans `serverNow`, `resolveCallMode` repond `before` : la porte se VOIT mais
+  // ne s ouvre pas. C est le seul etat honnete — l ouvrir sur l heure du poste
+  // la rendrait cliquable alors que le serveur refuse ensuite ligne par ligne.
+  // ==========================================================================
+
+  // 🧭 LE TELEPHONE ECARTE ICI LES ENTRAINEURS de la liste des participants
+  // (`trainerKeysForEvent`, EventDetails.js:1154). Cette soustraction n est PAS
+  // recopiee, et ce n est pas un oubli : elle ne peut pas changer la reponse du
+  // gate. Pour qu elle retire quelqu un, il faut qu un entraineur de l equipe
+  // porte le meme `documentId` que le lecteur — or c est exactement ce qui rend
+  // `isTeamMember` vrai, et le gate est un OU. Elle ne sert la-bas qu au second
+  // drapeau (`canSelfMarkArrival`), que cette carte n emploie pas.
+  const isCurrentUserParticipating = useMemo(() => {
+    const currentUserId = userData?.documentId;
+    if (!currentUserId) return false;
+    return (event?.participations || []).some(
+      (participant) => participant?.documentId === currentUserId,
+    );
+  }, [event?.participations, userData?.documentId]);
+  const { canAccessAttendance } = useMemo(
+    () => resolveEventAttendanceGate({ canEdit, isCurrentUserParticipating, isTeamMember }),
+    [canEdit, isCurrentUserParticipating, isTeamMember],
+  );
+  const { data: attendancePayload } = useGetEventAttendance(eventId || '', {
+    enabled: Boolean(eventId && canAccessAttendance),
+  });
+
+  // ⏱️ L instant du serveur AVANCE, sinon la porte resterait fermee jusqu au
+  // prochain rechargement de la page pour qui attend l heure d ouverture. Meme
+  // mecanique que le telephone (EventDetails.js:1263-1273) : un pas de 30 s,
+  // remis a zero des que le serveur redonne son instant.
+  const [elapsedSinceServerNowMs, setElapsedSinceServerNowMs] = useState(0);
+
+  useEffect(() => {
+    setElapsedSinceServerNowMs(0);
+  }, [attendancePayload?.data?.serverNow]);
+
+  useEffect(() => {
+    const timerId = setInterval(() => {
+      setElapsedSinceServerNowMs((previous) => previous + 30000);
+    }, 30000);
+
+    return () => clearInterval(timerId);
+  }, []);
+
+  const serverClockMs = useMemo(
+    () => resolveServerClockMs({
+      elapsedMs: elapsedSinceServerNowMs,
+      serverNowIso: attendancePayload?.data?.serverNow,
+    }),
+    [attendancePayload?.data?.serverNow, elapsedSinceServerNowMs],
+  );
+  const attendanceCallWindow = useMemo(
+    () => resolveAttendanceWindow({ event, payloadData: attendancePayload?.data }),
+    [attendancePayload?.data, event],
+  );
+  // D5 du telephone : sans charge d appel, la carte se montre avec le repli
+  // local pour que l organisateur VOIE la porte, mais elle ne s ouvre pas.
+  const nextActionMode = useMemo(() => {
+    if (!attendancePayload?.data) return 'before';
+
+    return resolveCallMode({ serverNowMs: serverClockMs, window: attendanceCallWindow });
+  }, [attendanceCallWindow, attendancePayload?.data, serverClockMs]);
+  // « N attendus » = l audience entiere. `null` quand la charge n est pas la :
+  // on ne dit pas « 0 attendu » a la place de « je ne sais pas ».
+  const nextActionExpectedCount = useMemo(() => {
+    const items = attendancePayload?.data?.items;
+
+    return Array.isArray(items) ? items.length : null;
+  }, [attendancePayload?.data?.items]);
+  const nextActionOpensAtLabel = formatTimeInZone(
+    attendanceCallWindow.opensAtMs,
+    attendancePayload?.data?.timezone,
+  );
+  const openAttendanceCall = useCallback(() => {
+    navigation.navigate(RouteNames.EventAttendanceCall, { eventId });
+  }, [eventId, navigation]);
+  // Le telephone ajoute `showOverviewTab` a cette condition : le site n a pas
+  // d onglets, sa page EST l Apercu. Les trois autres sont celles de N5
+  // (EventDetails.js:4747), mot pour mot.
+  const showNextActionCard = canEdit && canAccessAttendance && !isTournamentEvent;
   const tournamentConfig = useMemo(
     () => event?.tournamentConfig || {},
     [event?.tournamentConfig],
@@ -362,6 +467,123 @@ function EventDetails({ navigation, route }) {
     () => resolveEventDisplayName(event, 'Evenement'),
     [event],
   );
+
+  // ==========================================================================
+  // P9 · ECRAN 2 — LA CARTE-PARCOURS « APRES LE MATCH » (miroir de N4).
+  //
+  // 🪞 Meme principe que l ecran 1 : `PostMatchJourneyCard` est le composant du
+  // telephone, servi tel quel. Il recoit des FAITS et rend un dessin — c est LUI
+  // qui decide de l etape courante (`resoudreLeParcours`), pas ce fichier.
+  //
+  // 🧭 LA CARTE SE MONTRE AVANT LA FIN DU MATCH, et c est VOLONTAIRE : elle
+  // annonce ce qui vient. C est la condition de EventDetails.js:6912 reprise
+  // telle quelle — y mettre « match termine » serait un contresens.
+  // ==========================================================================
+  const isMatchEvent = normalizeTypeName(event?.type?.name).includes('match');
+  // ⛔ LE DEBUT VIENT DU SERVEUR, IL NE SE DEDUIT PAS DE `event.date` : quand la
+  // date est a minuit et que l heure vit dans `startTime`, la deduction placerait
+  // la fin du match a 02:00 et ouvrirait l apres-match AVANT le coup d envoi
+  // (lecon AC10). Le telephone repare ce cas avec un helper local
+  // (EventDetails.js:555) que ce fichier n a pas. Sans debut serveur la fin reste
+  // inconnue, `resolveIsMatchFinished` repond NON, et la porte reste fermee :
+  // l erreur va donc toujours dans le sens sur.
+  const eventEndedAt = useMemo(
+    () => resolveEventEndedAt(event?.endDate, attendancePayload?.data?.eventStartAt),
+    [attendancePayload?.data?.eventStartAt, event?.endDate],
+  );
+  const isMatchFinished = useMemo(
+    () => resolveIsMatchFinished({ eventEndedAt, serverNowMs: serverClockMs }),
+    [eventEndedAt, serverClockMs],
+  );
+  const {
+    data: matchStatsPayload,
+    isFetching: isMatchStatsFetching,
+  } = useGetEventMatchStats(eventId || '', compositionTeamId || undefined, {
+    enabled: Boolean(eventId && isMatchEvent && compositionTeamId && (canEdit || isTeamMember)),
+  });
+  const matchStatsReport = matchStatsPayload?.report || null;
+  const playerCollectiveRating = matchStatsPayload?.playerCollectiveRating || null;
+  const isMatchStatsFinal = matchStatsReport?.status === 'final';
+  const isMatchStatsReviewRequired = Boolean(matchStatsReport?.needsReview);
+  const canViewMatchStats = Boolean(matchStatsPayload?.permissions?.canView || isTeamMember);
+  const canManageMatchStats = Boolean(matchStatsPayload?.permissions?.canManage);
+  const matchStatsScoreLabel = useMemo(() => {
+    const score = matchStatsPayload?.score;
+    if (!score?.available) return 'Score à compléter';
+
+    return `${score.scoreFor ?? '-'} - ${score.scoreAgainst ?? '-'}`;
+  }, [matchStatsPayload?.score]);
+
+  // 🚪 LA PORTE DE LA CARTE : ouverte ou fermee, et POURQUOI quand elle est
+  // fermee. L ordre des branches suit celui du telephone
+  // (EventDetails.js:3596), a UNE difference pres, nommee plus bas.
+  //
+  // 🧾 Seules les branches FERMEES portent une phrase, et ce n est pas un
+  // oubli : la carte ne dessine le motif que porte close
+  // (`boutonDesactive && motif`). Les etats ouverts du telephone ont bien un
+  // sous-titre, mais il n est JAMAIS affiche — le recopier ici aurait ajoute du
+  // texte que personne ne lit, et un second juge a maintenir.
+  const postMatchAction = useMemo(() => {
+    if (!isMatchFinished) {
+      return { disabled: true, subtitle: 'Les stats seront disponibles à la fin du match.' };
+    }
+    if (matchStatsPayload?.score?.waitingOfficial) {
+      return { disabled: true, subtitle: 'En attente du score officiel synchronise.' };
+    }
+    // ⛔ LA DIFFERENCE ANNONCEE — L ETAPE « SCORE » N A PAS DE DESTINATION ICI.
+    // Le telephone l ouvre dans une feuille (`openMatchScoreSheet`) que ce
+    // fichier n a pas. Un bouton qui ne ferait RIEN serait un menteur : il
+    // rendrait la main sans avoir rien ecrit. La porte se ferme donc, et elle
+    // DIT ou aller. Ce test passe AVANT les suivants pour tenir une regle
+    // simple : quand le parcours designe l etape 1, la porte est close.
+    // Voie de sortie : un ecran de saisie du score au registre web.
+    if (!matchStatsPayload?.score?.available) {
+      return { disabled: true, subtitle: 'Le score s’enregistre depuis l’application mobile.' };
+    }
+    // Un rapport publie ou a re-verifier se RELIT toujours, meme sans le droit
+    // de le gerer : c est pour cela que ce test passe avant le suivant.
+    if (isMatchStatsReviewRequired || isMatchStatsFinal) {
+      return { disabled: false, subtitle: '' };
+    }
+    if (!canManageMatchStats) {
+      return {
+        disabled: true,
+        subtitle: 'Les membres de ton équipe peuvent encore finaliser ce rapport.',
+      };
+    }
+
+    return { disabled: false, subtitle: '' };
+  }, [
+    canManageMatchStats,
+    isMatchFinished,
+    isMatchStatsFinal,
+    isMatchStatsReviewRequired,
+    matchStatsPayload?.score?.available,
+    matchStatsPayload?.score?.waitingOfficial,
+  ]);
+  const openMatchStatsEditor = useCallback(() => {
+    if (!eventId || !compositionTeamId) return;
+
+    navigation.navigate(RouteNames.MatchStatsEditor, {
+      eventId,
+      sourceType: 'event',
+      sport: matchStatsPayload?.sport || compositionSport,
+      teamId: compositionTeamId,
+      teamName: compositionEditorTeam?.name || matchStatsPayload?.team?.name || null,
+      title: 'Bilan équipe',
+    });
+  }, [
+    compositionEditorTeam?.name,
+    compositionSport,
+    compositionTeamId,
+    eventId,
+    matchStatsPayload?.sport,
+    matchStatsPayload?.team?.name,
+    navigation,
+  ]);
+  const isPostMatchDoorClosed = Boolean(postMatchAction.disabled || isMatchStatsFetching);
+  // Comme pour l ecran 1, `showOverviewTab` tombe : le site n a pas d onglets.
+  const showPostMatchCard = Boolean(isMatchEvent && compositionTeamId && canViewMatchStats);
   const {
     data: staffCompositionPayload,
     isFetching: isStaffCompositionFetching,
@@ -1182,6 +1404,18 @@ function EventDetails({ navigation, route }) {
               background: sectionBackground, border: `1px solid ${borderColor}`, borderRadius: 24, display: 'grid', gap: 18, padding: 22,
             }}
             >
+              {/* 🚪 P9 · ECRAN 1 — LA PROCHAINE ACTION PASSE EN PREMIER, comme sur
+                  le telephone : c est la seule chose a FAIRE maintenant, tout
+                  le reste de la page est de la consultation. */}
+              {showNextActionCard ? (
+                <EventNextActionCard
+                  expectedCount={nextActionExpectedCount}
+                  mode={nextActionMode}
+                  onPress={openAttendanceCall}
+                  opensAtLabel={nextActionOpensAtLabel}
+                />
+              ) : null}
+
               {hasVisibleEventTasks ? (
                 <div>
                   <EventTasksSection
@@ -1402,6 +1636,44 @@ function EventDetails({ navigation, route }) {
                       </button>
                     ) : null}
                   </div>
+                </div>
+              ) : null}
+
+              {/* 🎯 P9 · ECRAN 2 — LE PARCOURS D APRES-MATCH, juste apres la
+                  composition : les deux parlent du meme match. */}
+              {showPostMatchCard ? (
+                <div style={{ display: 'grid', gap: 12 }}>
+                  <h2 style={sectionTitleStyle}>Stats du match</h2>
+                  <PostMatchJourneyCard
+                    boutonDesactive={isPostMatchDoorClosed}
+                    motif={postMatchAction.subtitle}
+                    onPressEtape={(/** @type {string} */ etape) => {
+                      // 🔒 DEUX COUCHES, ET C EST VOULU. Contrairement a la carte
+                      // d appel (N5), qui RETIRE son `onPress` porte close, cette
+                      // carte-ci le garde toujours : seul `TouchableOpacity` bloque
+                      // alors l appui. Une seule couche ne suffit pas devant une
+                      // porte qui protege l apres-match — ouvrir l editeur avant la
+                      // fin du match est exactement la faute d AC10, et l etape
+                      // « Score » n a de toute facon aucune destination ici.
+                      if (isPostMatchDoorClosed || etape === 'score') return;
+                      openMatchStatsEditor();
+                    }}
+                    reponsesAttendues={Number(
+                      matchStatsReport?.responseEligibleCount
+                      ?? playerCollectiveRating?.eligibleCount
+                      ?? 0,
+                    )}
+                    reponsesRecues={Number(
+                      matchStatsReport?.responseCompletionCount
+                      ?? playerCollectiveRating?.count
+                      ?? 0,
+                    )}
+                    scoreDisponible={Boolean(matchStatsPayload?.score?.available)}
+                    scoreLibelle={matchStatsScoreLabel}
+                    scoreOrigine={matchStatsPayload?.score?.source || ''}
+                    statsFinalisees={isMatchStatsFinal}
+                    verificationRequise={isMatchStatsReviewRequired}
+                  />
                 </div>
               ) : null}
 
