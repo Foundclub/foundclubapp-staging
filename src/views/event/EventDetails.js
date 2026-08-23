@@ -94,7 +94,10 @@ import {
   useGetEventMatchStats,
   useGetEventMyMatchResponse,
 } from '@/services/matchStats/matchStatsQueries';
-import { applyToRecruitmentAd } from '@/services/recruitment/recruitmentService';
+import {
+  applyToRecruitmentAd,
+  getRecruitmentApplications,
+} from '@/services/recruitment/recruitmentService';
 import {
   useGetTournamentDashboard,
 } from '@/services/tournamentCompetition/tournamentCompetitionQueries';
@@ -600,6 +603,19 @@ function EventDetails({ navigation, route }) {
   const [isJoinModalVisible, setIsJoinModalVisible] = useState(false);
   const [joinModalError, setJoinModalError] = useState('');
   const [isDetectionSlotPickerVisible, setIsDetectionSlotPickerVisible] = useState(false);
+  // 🗂️ P7 — LA FICHE CANDIDAT. `null` = fermee. Elle porte la personne, sa
+  // participation (quand il y en a une) et le poste retrouve.
+  const [detectionCandidateSheet, setDetectionCandidateSheet] = useState(
+    /** @type {any} */ (null),
+  );
+  // 📝 Le retour individuel (regle 6) vit sur la CANDIDATURE D'ANNONCE, pas sur
+  // l'evenement : `eventService` peuple `recruitmentAds.candidates` (des
+  // personnes) et jamais `recruitmentAds.applications`. On va donc le chercher
+  // a l'ouverture de la fiche, et on dit franchement ou on en est.
+  const [detectionCandidateReview, setDetectionCandidateReview] = useState(
+    /** @type {{ note: string, state: 'idle' | 'loading' | 'loaded' | 'error' }} */
+    ({ note: '', state: 'idle' }),
+  );
   const [pendingDetectionSlot, setPendingDetectionSlot] = useState(null);
   const [isRefuseModalVisible, setIsRefuseModalVisible] = useState(false);
   const [isReportModalVisible, setIsReportModalVisible] = useState(false);
@@ -1870,12 +1886,40 @@ function EventDetails({ navigation, route }) {
     const totalOpen = detectionSlots.reduce((sum, slot) => sum + (slot?.isComplete ? 0 : 1), 0);
     // @ts-ignore: FIXME: Baseline TS regression
     const totalRequested = detectionSlots.reduce((sum, slot) => sum + Number(slot?.quantity || 0), 0);
+    // 🔭 P7 — « candidatures a voir » = celles qui attendent encore une
+    // decision, poste par poste.
+    // 🪤 ON NE RECOMPTE RIEN : `candidatesCount` porte deja le `max()`
+    // anti-double-comptage pose plus haut (une meme personne peut figurer a la
+    // fois dans `slot.candidates` et dans une participation). Repartir des
+    // listes brutes ici afficherait un nombre plus gros que la realite.
+    // On retranche les personnes DEJA validees : ce qui reste est ce que le
+    // staff doit encore regarder.
+    const totalToReview = detectionSlots.reduce(
+      // @ts-ignore: FIXME: Baseline TS regression
+      (sum, slot) => sum + Math.max(
+        0,
+        Number(slot?.candidatesCount || 0) - Number(slot?.acceptedCount || 0),
+      ),
+      0,
+    );
 
     return {
       totalOpen,
       totalRequested,
+      totalToReview,
     };
   }, [detectionSlots]);
+  // 🔭 P7 — le resume que porte l'entete. `null` hors detection : c'est cette
+  // prop, et elle seule, qui commande les deux tuiles (temoin 4 de
+  // `EventHeaderP7DetectionTuiles.test.js`).
+  const detectionHeaderSummary = useMemo(() => (
+    isDetectionEvent
+      ? {
+        openPositions: detectionSlotsSummary.totalOpen,
+        toReview: detectionSlotsSummary.totalToReview,
+      }
+      : null
+  ), [detectionSlotsSummary, isDetectionEvent]);
   const currentParticipationFlow = useMemo(() => resolveParticipationFlow(event, {
     detectionSlotsCount: detectionSlots.length,
     participationState: currentUserParticipationState,
@@ -2272,6 +2316,95 @@ function EventDetails({ navigation, route }) {
       participating: participatingPlayers,
     };
   }, [canEdit, event, pendingParticipations, trainerKeysForEvent]);
+  // 🗂️ P7 — LES CANDIDATS, RANGES PAR POSTE (regle 5 du pack : « chaque poste
+  // ouvre les gens de ce poste, en deux groupes nommes : participants (retenus)
+  // et demandes (a accepter / refuser) »).
+  //
+  // 🔒 CE CALCUL NE FABRIQUE PERSONNE ET N'EN PERD AUCUN. Il REPARTIT les deux
+  // listes que l'onglet rendait deja — `participationsByStatus.participating`
+  // et `pendingParticipations` — au lieu d'aller rechercher les gens ailleurs.
+  // C'est ce qui garantit qu'un regroupement ne fait disparaitre personne.
+  //
+  // 🪤 LES DEUX LISTES NE VIENNENT PAS DE LA MEME SOURCE : les retenus sont des
+  // UTILISATEURS (`event.participations`), les demandes sont des PARTICIPATIONS
+  // (`participationRequests`). Seule la participation porte le poste ; on passe
+  // donc par une table « personne validee -> poste » pour rattacher les retenus.
+  const detectionPositionSections = useMemo(() => {
+    if (!isDetectionEvent || !detectionSlots.length) return [];
+
+    /** @type {Map<string, string>} */
+    const slotIdByAcceptedUserKey = new Map();
+    activeEventParticipations.forEach((/** @type {any} */ participation) => {
+      const slotId = String(participation?.recruitmentAd?.documentId || '');
+      const userKey = getUserKey(participation?.user);
+      const status = String(participation?.participationStatus || '').toLowerCase();
+      if (!slotId || !userKey || status !== 'accepted') return;
+      slotIdByAcceptedUserKey.set(String(userKey), slotId);
+    });
+
+    const retenus = /** @type {any[]} */ (participationsByStatus?.participating || []);
+    const demandes = /** @type {any[]} */ (pendingParticipations || []);
+
+    // @ts-ignore: FIXME: Baseline TS regression
+    const sections = detectionSlots.map((/** @type {any} */ slot) => {
+      const slotId = String(slot?.documentId || '');
+      return {
+        acceptedCount: Number(slot?.acceptedCount || 0),
+        isComplete: Boolean(slot?.isComplete),
+        key: slotId || `poste-${String(slot?.position || '')}`,
+        participating: retenus.filter(
+          (player) => slotIdByAcceptedUserKey.get(String(getUserKey(player) || '')) === slotId,
+        ),
+        pending: demandes.filter(
+          (participation) => String(participation?.recruitmentAd?.documentId || '') === slotId,
+        ),
+        position: String(slot?.position || ''),
+        quantity: Number(slot?.quantity || 1),
+      };
+    });
+
+    // 🧯 LE GROUPE DE REPLI, ET LA RAISON D'ETRE DE CE LOT EN UNE LIGNE : une
+    // detection accepte AUSSI des inscriptions hors annonce (`getDetectionCandi
+    // datePlayers` en compte trois canaux). Sans ce groupe, regrouper par poste
+    // ferait disparaitre de l'ecran des gens qui y etaient la veille. Il ne
+    // s'affiche que s'il porte quelqu'un : pas de titre pour un groupe vide.
+    const placesRetenus = new Set(
+      sections.flatMap((section) => section.participating.map(
+        (/** @type {any} */ player) => String(getUserKey(player) || ''),
+      )),
+    );
+    const placesDemandes = new Set(
+      sections.flatMap((section) => section.pending.map(
+        (/** @type {any} */ participation) => String(participation?.documentId || ''),
+      )),
+    );
+    const retenusSansPoste = retenus.filter(
+      (player) => !placesRetenus.has(String(getUserKey(player) || '')),
+    );
+    const demandesSansPoste = demandes.filter(
+      (participation) => !placesDemandes.has(String(participation?.documentId || '')),
+    );
+
+    if (retenusSansPoste.length || demandesSansPoste.length) {
+      sections.push({
+        acceptedCount: retenusSansPoste.length,
+        isComplete: false,
+        key: 'p7-sans-poste',
+        participating: retenusSansPoste,
+        pending: demandesSansPoste,
+        position: '',
+        quantity: 0,
+      });
+    }
+
+    return sections;
+  }, [
+    activeEventParticipations,
+    detectionSlots,
+    isDetectionEvent,
+    participationsByStatus,
+    pendingParticipations,
+  ]);
   const applyToDetectionSlotMutation = useMutation({
     // @ts-ignore: FIXME: Baseline TS regression
     mutationFn: ({ payload = {}, slotDocumentId }) => applyToRecruitmentAd(slotDocumentId, payload),
@@ -2769,6 +2902,107 @@ function EventDetails({ navigation, route }) {
       screen: RouteNames.UserDetails,
     });
   };
+
+  // 🗂️ P7 — OUVRIR LA FICHE D'UN CANDIDAT.
+  //
+  // 🪤 LES DEUX CHEMINS N'ARRIVENT PAS AVEC LA MEME MATIERE : une DEMANDE
+  // apporte sa participation (c'est elle qu'on a tapee), un RETENU n'apporte
+  // que la personne (la liste des retenus est une liste d'utilisateurs). On
+  // retrouve donc la participation manquante ici, en UN endroit, plutot que de
+  // demander aux deux appelants de la porter.
+  const handleOpenDetectionCandidate = ({ participation = null, user }) => {
+    if (!user) return;
+    const userKey = String(getUserKey(user) || '');
+    const resolvedParticipation = participation || activeEventParticipations.find(
+      (/** @type {any} */ item) => String(getUserKey(item?.user) || '') === userKey,
+    ) || null;
+    // @ts-ignore: FIXME: Baseline TS regression
+    const slotId = String(resolvedParticipation?.recruitmentAd?.documentId || '');
+    const slot = detectionSlots.find(
+      (/** @type {any} */ item) => String(item?.documentId || '') === slotId,
+    ) || null;
+
+    setDetectionCandidateSheet({ participation: resolvedParticipation, slot, user });
+
+    // 🔒 PAS DE POSTE, PAS DE RETOUR INDIVIDUEL — et on ne l'invente pas. Une
+    // inscription hors annonce (`event-participation`) n'a AUCUN champ
+    // `reviewNote` : seule une `recruitment-application` en porte un. La fiche
+    // le DIT au lieu d'afficher un cadre vide qui ferait croire a une note
+    // effacee.
+    if (!slotId) {
+      setDetectionCandidateReview({ note: '', state: 'idle' });
+      return;
+    }
+
+    setDetectionCandidateReview({ note: '', state: 'loading' });
+    // Le service est appele DANS CE HANDLER, jamais au rendu : les 15 suites
+    // voisines qui doublent `recruitmentService` avec le seul
+    // `applyToRecruitmentAd` continuent de monter l'ecran sans rien casser.
+    // `Promise.resolve().then(...)` fait tomber une doublure incomplete dans le
+    // `catch` au lieu de jeter en pleine poignee d'appui.
+    Promise.resolve()
+      .then(() => getRecruitmentApplications(slotId))
+      .then((/** @type {any[]} */ applications) => {
+        const application = (applications || []).find(
+          (/** @type {any} */ item) => String(getUserKey(item?.user) || '') === userKey,
+        );
+        setDetectionCandidateReview({
+          note: String(application?.reviewNote || ''),
+          state: 'loaded',
+        });
+      })
+      .catch(() => setDetectionCandidateReview({ note: '', state: 'error' }));
+  };
+
+  // 🏷️ LES LIBELLES DE LA FICHE, CALCULES ICI ET PAS DANS LE JSX. Une regle
+  // d'affichage ecrite au milieu d'une balise n'est relisible par personne, et
+  // c'est la que les fautes se cachent. La feuille, plus bas, ne fait que les
+  // poser.
+  const detectionCandidateName = [
+    detectionCandidateSheet?.user?.firstname,
+    detectionCandidateSheet?.user?.lastname,
+  ].filter(Boolean).join(' ').trim()
+    || t('eventDetails.detection.candidateFallbackName', 'Candidat·e');
+  const detectionCandidateStatus = String(
+    detectionCandidateSheet?.participation?.participationStatus || '',
+  ).toLowerCase();
+  const detectionCandidateStatusLabel = {
+    accepted: t('eventDetails.detection.candidateStatusAccepted', 'Retenu·e sur ce poste'),
+    declined: t('eventDetails.detection.candidateStatusDeclined', 'Refusé·e'),
+    pending: t('eventDetails.detection.candidateStatusPending', 'Demande à traiter'),
+  }[detectionCandidateStatus]
+    || t('eventDetails.detection.candidateStatusUnknown', 'Inscrit·e à la séance');
+  const detectionCandidatePositionLabel = detectionCandidateSheet?.slot?.position
+    ? t(
+      'eventDetails.detection.candidateAppliedFor',
+      'A postulé au poste : {{position}}',
+      { position: detectionCandidateSheet.slot.position },
+    )
+    : t(
+      'eventDetails.detection.candidateNoPosition',
+      'Inscription hors annonce, sans poste',
+    );
+  // 📝 Les QUATRE etats du retour individuel, dits franchement : il n'y en a
+  // pas ici, on le charge, le voici, on n'a pas pu.
+  const detectionCandidateReviewLabel = (() => {
+    if (!detectionCandidateSheet?.slot) {
+      return t(
+        'eventDetails.detection.candidateReviewUnavailable',
+        'Le retour individuel n’existe que pour les candidatures passées par une annonce.',
+      );
+    }
+    if (detectionCandidateReview.state === 'loading') {
+      return t('eventDetails.detection.candidateReviewLoading', 'Chargement du retour…');
+    }
+    if (detectionCandidateReview.state === 'error') {
+      return t(
+        'eventDetails.detection.candidateReviewError',
+        'Impossible de lire le retour pour le moment.',
+      );
+    }
+    return detectionCandidateReview.note
+      || t('eventDetails.detection.candidateReviewEmpty', 'Pas encore de retour du staff.');
+  })();
 
   const handleUpdateParticipation = (
     /** @type {string | undefined} */ participationId,
@@ -6761,7 +6995,11 @@ function EventDetails({ navigation, route }) {
           showsVerticalScrollIndicator={false}
         >
           <WithDataWrapper error={error} isLoading={isLoading} wrapperStyle={[Alignments.fill, Spaces.gap[24]]}>
-            <EventHeader event={event} matchScoreSummary={matchHeaderScoreSummary} />
+            <EventHeader
+              detectionSummary={detectionHeaderSummary}
+              event={event}
+              matchScoreSummary={matchHeaderScoreSummary}
+            />
             {/* N1 (b) — sous la carte d'entete, et pour TOUS les lecteurs. Elle
                 ne concerne que l'entrainement ouvert : les onglets du match ne
                 la voient jamais, donc rien a brancher sur `showOverviewTab`. */}
@@ -6970,6 +7208,7 @@ function EventDetails({ navigation, route }) {
                   canApprovePendingRequests={canApprovePendingRequests}
                   canEdit={canEdit}
                   canManageEventLicenseCampaigns={canManageEventLicenseCampaigns}
+                  detectionPositionSections={detectionPositionSections}
                   event={event}
                   eventLicenseCampaigns={eventLicenseCampaigns}
                   eventStartAt={eventStartAt}
@@ -6980,6 +7219,7 @@ function EventDetails({ navigation, route }) {
                   handleUpdateParticipation={handleUpdateParticipation}
                   handleUserPress={handleUserPress}
                   nowMs={serverNowMs}
+                  onCandidatePress={handleOpenDetectionCandidate}
                   onCoachEditLate={handleCoachEditLate}
                   onCoachMarkArrival={handleCoachMarkArrival}
                   participantsSummary={participantsSummary}
@@ -7631,6 +7871,112 @@ function EventDetails({ navigation, route }) {
               </View>
             );
           })}
+        </View>
+      </BottomModal>
+
+      {/* 🗂️ P7 — LA FICHE CANDIDAT (decision 4=B : une FEUILLE, pas un ecran).
+          Elle repond aux 4 questions qu'on se pose devant un nom sur une
+          detection : a quoi a-t-il postule, ou en est sa demande, qu'en a dit
+          le staff, et qu'est-ce que j'en fais maintenant.
+          ⚠️ AUCUNE ROUTE NEUVE : `RecruitmentAdDetails` reste le chemin de
+          l'ANNONCE ; ceci est le chemin du CANDIDAT, depuis sa seance. */}
+      <BottomModal
+        close={() => setDetectionCandidateSheet(null)}
+        headerComponent={(
+          <View style={[Spaces.gap[8]]}>
+            <Text style={[Fonts.h3Bold, Fonts.neutral00, { textAlign: 'center' }]}>
+              {detectionCandidateName}
+            </Text>
+            <Text
+              style={[Fonts.p3, Fonts.primary200, { textAlign: 'center' }]}
+              testID="p7-fiche-poste"
+            >
+              {detectionCandidatePositionLabel}
+            </Text>
+          </View>
+        )}
+        isVisible={Boolean(detectionCandidateSheet)}
+        snapPoints={['62%']}
+        style={{
+          borderColor: withAlpha(Colors.primary500, 0.14),
+          borderWidth: 1,
+        }}
+      >
+        <View style={[Spaces.gap[16], Spaces.paddingBottom[24]]}>
+          <View style={[Spaces.gap[4]]}>
+            <Text style={[Fonts.p3Bold, Fonts.neutral200]}>
+              {t('eventDetails.detection.candidateStatusTitle', 'Statut')}
+            </Text>
+            <Text style={[Fonts.p2Bold, Fonts.neutral00]} testID="p7-fiche-statut">
+              {detectionCandidateStatusLabel}
+            </Text>
+          </View>
+
+          {/* 📝 LE RETOUR INDIVIDUEL (regle 6). Ses quatre etats se decident
+              plus haut, avec les autres libelles de la fiche. */}
+          <View style={[Spaces.gap[4]]}>
+            <Text style={[Fonts.p3Bold, Fonts.neutral200]}>
+              {t('eventDetails.detection.candidateReviewTitle', 'Retour individuel')}
+            </Text>
+            <Text style={[Fonts.p3, Fonts.neutral300]} testID="p7-fiche-retour">
+              {detectionCandidateReviewLabel}
+            </Text>
+          </View>
+
+          {/* ✅ ACCEPTER / REFUSER — les MEMES mutations que la carte de demande
+              de l'onglet Candidats (`handleUpdateParticipation`), pas un second
+              chemin d'ecriture. Ils ne se montent que devant une demande a
+              trancher, et pour qui a le droit de la trancher. */}
+          {canApprovePendingRequests && detectionCandidateStatus === 'pending' ? (
+            <View style={[Alignments.row, Spaces.gap[12]]} testID="p7-fiche-actions">
+              <View style={[Alignments.fill]}>
+                <Button
+                  onPress={() => {
+                    handleUpdateParticipation(
+                      detectionCandidateSheet?.participation?.documentId,
+                      'accepted',
+                    );
+                    setDetectionCandidateSheet(null);
+                  }}
+                  title={t('eventDetails.detection.candidateAccept', 'Accepter')}
+                  variant="Primary"
+                />
+              </View>
+              <View style={[Alignments.fill]}>
+                <Button
+                  onPress={() => {
+                    handleUpdateParticipation(
+                      detectionCandidateSheet?.participation?.documentId,
+                      'declined',
+                    );
+                    setDetectionCandidateSheet(null);
+                  }}
+                  title={t('eventDetails.detection.candidateDecline', 'Refuser')}
+                  variant="Secondary"
+                />
+              </View>
+            </View>
+          ) : null}
+
+          {/* 🔒 « INVITER DANS L'EQUIPE » NAIT GRISE, ET SON MOTIF EST ECRIT.
+              Le rail serveur de l'invitation avec consentement est le lot P10 ;
+              le brancher ici est un micro-lot qui vient APRES la recolte des
+              deux. Un bouton grise qui dit pourquoi vaut mieux qu'un bouton
+              absent : l'organisateur sait que ca existe et que ca arrive.
+              ⛔ ET SURTOUT : il ne doit JAMAIS devenir un ajout direct a
+              l'equipe (`players.connect`), qui se passerait du consentement de
+              la personne. */}
+          <View style={[Spaces.gap[4]]}>
+            <Button
+              disabled
+              onPress={() => {}}
+              title={t('eventDetails.detection.candidateInvite', 'Inviter dans l’équipe')}
+              variant="Primary"
+            />
+            <Text style={[Fonts.p4, Fonts.neutral300]} testID="p7-fiche-invite-motif">
+              {t('eventDetails.detection.candidateInviteSoon', 'L’invitation arrive bientôt.')}
+            </Text>
+          </View>
         </View>
       </BottomModal>
 
