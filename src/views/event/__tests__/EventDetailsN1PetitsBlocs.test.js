@@ -602,6 +602,11 @@ describe('N1 · (b) — l entrainement ouvert se dit a TOUT LE MONDE', () => {
     const racine = monter({ auth: ORGANISATEUR(), event: entrainementOuvert() });
 
     expect(contient(racine, 'Accueille 8 joueur·se·s de l’extérieur')).toBe(true);
+    // ♻️ P8 (vague P, 23/08) : ce compte est toujours a l'ecran, mais il a
+    // change d'endroit — il a quitte le SUFFIXE de la ligne publique pour la
+    // carte d'ouverture, qui l'accompagne d'un bouton vers la file. Ce que ce
+    // temoin garantit ne bouge pas : l'organisateur le voit, le lecteur non
+    // (temoin precedent). Le detail est fige dans `EventDetailsP8Entrainement`.
     expect(contient(racine, '1 demande(s) à vérifier')).toBe(true);
     // ♻️ N7 item 4 (vague P, 23/08) : la bascule est dans la feuille ⋯, plus
     // dans une carte de l'Apercu — la ligne publique, elle, n'a pas bouge.
@@ -641,6 +646,8 @@ describe('N1 · (b) — l entrainement ouvert se dit a TOUT LE MONDE', () => {
     monter({ auth: ORGANISATEUR(), event: entrainementOuvert() });
 
     expect(askedKeys).toContain('eventDetails.openTraining.publicLine');
+    // ♻️ P8 : cette clef est demandee par la CARTE d'ouverture depuis la vague
+    // P — elle n'est pas perdue, elle a change de demandeur.
     expect(askedKeys).toContain('eventDetails.openTraining.pendingSuffix');
   });
 });
