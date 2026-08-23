@@ -30,6 +30,7 @@ const mockUseAuth = jest.fn();
 const mockEventQuery = { data: null };
 const mockConvocationQuery = { data: null };
 const mockAttendanceQuery = { data: null };
+const mockMatchStatsQuery = { data: null };
 
 jest.mock('@tanstack/react-query', () => ({
   useMutation: (/** @type {any} */ options) => ({
@@ -98,6 +99,20 @@ jest.mock('@/services/event/eventQueries', () => ({
 
 jest.mock('@/services/eventParticipation/eventParticipationQueries', () => ({
   useGetEventParticipations: () => emptyQuery(),
+}));
+
+// 🧨 CE MODULE N EST JAMAIS CHARGE POUR DE VRAI, et c est deliberé : il tire
+// `matchStatsService`, donc le client HTTP, donc un `.env` que git ignore et
+// qu aucune copie de travail ne possede. Un seul import reel de service fait
+// tomber la SUITE ENTIERE — zero test execute, et le compteur « Tests: »
+// n en dit rien.
+jest.mock('@/services/matchStats/matchStatsQueries', () => ({
+  useGetEventMatchStats: () => ({
+    data: mockMatchStatsQuery.data,
+    isFetching: false,
+    isLoading: false,
+    refetch: jest.fn(),
+  }),
 }));
 
 jest.mock('@/services/event/eventService', () => ({ updateEvent: jest.fn() }));
@@ -207,9 +222,14 @@ const buildAttendance = ({
 /** @type {any} */
 let mounted = null;
 
-const mountScreen = (/** @type {any} */ { attendance = null, auth, event } = {}) => {
+const mountScreen = (
+  /** @type {any} */ {
+    attendance = null, auth, event, matchStats = null,
+  } = {},
+) => {
   mockEventQuery.data = event === undefined ? buildEvent() : event;
   mockAttendanceQuery.data = attendance;
+  mockMatchStatsQuery.data = matchStats;
   mockUseAuth.mockReturnValue(auth || {
     canEditClub: () => true,
     canEditEvent: () => true,
@@ -289,6 +309,7 @@ beforeEach(() => {
   mockEventQuery.data = null;
   mockConvocationQuery.data = null;
   mockAttendanceQuery.data = null;
+  mockMatchStatsQuery.data = null;
 });
 
 afterEach(() => {
@@ -367,5 +388,176 @@ describe('P9 · ecran 1 — la carte « Faire l appel » sur l Apercu du site', 
     });
 
     expect(parTestID(root, 'event-next-action')).toHaveLength(0);
+  });
+});
+
+// ==========================================================================
+// P9 · ECRAN 2 — LA CARTE-PARCOURS « APRES LE MATCH » (N4), SUR LE SITE.
+// ==========================================================================
+
+/**
+ * Un match, avec sa fin DECLAREE : c est elle qui dit si l apres-match est ouvert.
+ * @param {any} [overrides] - Les surcharges voulues.
+ * @returns {any} - L evenement.
+ */
+const buildMatchEvent = (/** @type {any} */ overrides = {}) => buildEvent({
+  endDate: '2099-01-01T19:00:00.000Z',
+  name: 'Match vs Lyon',
+  type: { name: 'Match' },
+  ...overrides,
+});
+
+/**
+ * La charge « stats du match » telle que le serveur la rend.
+ * @param {any} [overrides] - Les surcharges voulues.
+ * @returns {any} - La charge.
+ */
+const buildMatchStats = (/** @type {any} */ overrides = {}) => ({
+  permissions: { canManage: true, canView: true },
+  playerCollectiveRating: { average: 7, count: 4, eligibleCount: 12 },
+  report: {
+    needsReview: false,
+    responseCompletionCount: 4,
+    responseEligibleCount: 12,
+    status: 'draft',
+  },
+  score: {
+    available: true,
+    scoreAgainst: 1,
+    scoreFor: 3,
+    source: 'manual',
+    waitingOfficial: false,
+  },
+  sport: 'football',
+  team: { name: 'U15' },
+  ...overrides,
+});
+
+/** Apres le coup de sifflet final : l horloge serveur a depasse la fin declaree. */
+const APRES_LE_MATCH = { serverNow: '2099-01-01T20:00:00.000Z' };
+
+/** Avant la fin : le match court encore. */
+const PENDANT_LE_MATCH = { serverNow: '2099-01-01T18:00:00.000Z' };
+
+describe('P9 · ecran 2 — la carte « APRES LE MATCH » sur l Apercu du site', () => {
+  test('un match avec compo : la carte est la, et elle NOMME ses trois etapes', () => {
+    const root = mountScreen({
+      attendance: buildAttendance(APRES_LE_MATCH),
+      event: buildMatchEvent(),
+      matchStats: buildMatchStats(),
+    });
+
+    const carte = parTestID(root, 'post-match-journey')[0];
+    expect(carte).toBeDefined();
+
+    const texte = textOf(carte);
+    expect(texte).toContain('APRÈS LE MATCH');
+    expect(texte).toContain('Score');
+    expect(texte).toContain('Statistiques de l’équipe');
+    expect(texte).toContain('Retours des joueurs');
+    // Le score enregistre se lit avec son origine, comme sur le telephone.
+    expect(texte).toContain('3 - 1');
+    expect(texte).toContain('saisi à la main');
+    expect(texte).toContain('4 sur 12 ont répondu');
+  });
+
+  test('match fini, score enregistre : le clic mene a l editeur de stats', () => {
+    const root = mountScreen({
+      attendance: buildAttendance(APRES_LE_MATCH),
+      event: buildMatchEvent(),
+      matchStats: buildMatchStats(),
+    });
+
+    const bouton = boutonDe(root, 'post-match-action');
+    expect(bouton.props.disabled).toBe(false);
+
+    act(() => {
+      bouton.props.onPress();
+    });
+
+    expect(dernierEnvoiVers('MatchStatsEditor')).toEqual(
+      expect.objectContaining({ eventId: 'event-1', sourceType: 'event', teamId: TEAM_ID }),
+    );
+  });
+
+  test('AVANT la fin du match : la carte est deja la, porte fermee, et elle dit pourquoi', () => {
+    const root = mountScreen({
+      attendance: buildAttendance(PENDANT_LE_MATCH),
+      event: buildMatchEvent(),
+      matchStats: buildMatchStats(),
+    });
+
+    // 🧭 VOLONTAIRE, et repris du telephone : la carte apparait AVANT la fin du
+    // match. Elle sert a montrer ce qui vient, pas seulement ce qui est du.
+    const carte = parTestID(root, 'post-match-journey')[0];
+    expect(carte).toBeDefined();
+    expect(textOf(carte)).toContain('Les stats seront disponibles à la fin du match.');
+
+    const bouton = boutonDe(root, 'post-match-action');
+    expect(bouton.props.disabled).toBe(true);
+    act(() => {
+      bouton.props.onPress?.();
+    });
+    expect(dernierEnvoiVers('MatchStatsEditor')).toBeNull();
+  });
+
+  test('etape « Score » : sans destination sur le site, la porte se ferme et le DIT', () => {
+    const root = mountScreen({
+      attendance: buildAttendance(APRES_LE_MATCH),
+      event: buildMatchEvent(),
+      matchStats: buildMatchStats({
+        score: { available: false, source: '', waitingOfficial: false },
+      }),
+    });
+
+    const carte = parTestID(root, 'post-match-journey')[0];
+    expect(carte).toBeDefined();
+    // Le parcours designe bien l etape 1, et la carte le dit en toutes lettres.
+    expect(textOf(carte)).toContain('Étape 1 sur 3');
+    expect(textOf(carte)).toContain('À enregistrer');
+    // ⛔ LE POINT DU TEMOIN : le telephone ouvre ici une feuille que ce fichier
+    // n a pas. Un bouton qui ne ferait RIEN serait un menteur ; il se ferme.
+    expect(textOf(carte)).toContain('Le score s’enregistre depuis l’application mobile.');
+
+    const bouton = boutonDe(root, 'post-match-action');
+    expect(bouton.props.disabled).toBe(true);
+    act(() => {
+      bouton.props.onPress?.();
+    });
+    expect(dernierEnvoiVers('MatchStatsEditor')).toBeNull();
+  });
+
+  test('un visiteur sans compte ne voit RIEN de la carte (AD02)', () => {
+    const root = mountScreen({
+      attendance: buildAttendance(APRES_LE_MATCH),
+      auth: { canManageEvent: () => false, userData: null },
+      event: buildMatchEvent(),
+      matchStats: buildMatchStats({ permissions: { canManage: false, canView: false } }),
+    });
+
+    expect(parTestID(root, 'post-match-journey')).toHaveLength(0);
+  });
+
+  test('sans le droit de lire les stats, pas de carte non plus', () => {
+    const root = mountScreen({
+      attendance: buildAttendance(APRES_LE_MATCH),
+      auth: {
+        canManageEvent: () => false,
+        userData: { documentId: 'quelqu-un-dautre', role: { name: 'Joueur' } },
+      },
+      event: buildMatchEvent(),
+      matchStats: buildMatchStats({ permissions: { canManage: false, canView: false } }),
+    });
+
+    expect(parTestID(root, 'post-match-journey')).toHaveLength(0);
+  });
+
+  test('un entrainement n a pas de carte d apres-match', () => {
+    const root = mountScreen({
+      attendance: buildAttendance(APRES_LE_MATCH),
+      matchStats: buildMatchStats(),
+    });
+
+    expect(parTestID(root, 'post-match-journey')).toHaveLength(0);
   });
 });

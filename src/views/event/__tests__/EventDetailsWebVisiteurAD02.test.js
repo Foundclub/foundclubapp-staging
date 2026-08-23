@@ -112,6 +112,17 @@ jest.mock('@/services/eventParticipation/eventParticipationQueries', () => ({
   useGetEventParticipations: () => emptyQuery(),
 }));
 
+// 🧨 P9 : CE MODULE NE DOIT JAMAIS SE CHARGER POUR DE VRAI. L Apercu du site
+// porte desormais la carte « APRES LE MATCH », donc il importe
+// `matchStatsQueries` — qui tire le service de stats, donc le client HTTP, donc
+// un `.env` que git ignore et qu aucune copie de travail ne possede. Sans cette
+// doublure la SUITE ENTIERE meurt au chargement : « Tests: 0 total », et le
+// compteur de tests ne dit rien de l echec. Ces suites-ci n exercent pas
+// l apres-match : une charge vide suffit.
+jest.mock('@/services/matchStats/matchStatsQueries', () => ({
+  useGetEventMatchStats: () => emptyQuery(),
+}));
+
 // `EventTasksSection` est monte pour de vrai : il appelle ces quatre services.
 jest.mock('@/services/event/eventService', () => ({
   approveEventTaskAssignment: jest.fn(),
