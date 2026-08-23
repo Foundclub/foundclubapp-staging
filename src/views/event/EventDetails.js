@@ -94,7 +94,10 @@ import {
   useGetEventMatchStats,
   useGetEventMyMatchResponse,
 } from '@/services/matchStats/matchStatsQueries';
-import { applyToRecruitmentAd } from '@/services/recruitment/recruitmentService';
+import {
+  applyToRecruitmentAd,
+  getRecruitmentApplications,
+} from '@/services/recruitment/recruitmentService';
 import {
   useGetTournamentDashboard,
 } from '@/services/tournamentCompetition/tournamentCompetitionQueries';
@@ -600,6 +603,19 @@ function EventDetails({ navigation, route }) {
   const [isJoinModalVisible, setIsJoinModalVisible] = useState(false);
   const [joinModalError, setJoinModalError] = useState('');
   const [isDetectionSlotPickerVisible, setIsDetectionSlotPickerVisible] = useState(false);
+  // 🗂️ P7 — LA FICHE CANDIDAT. `null` = fermee. Elle porte la personne, sa
+  // participation (quand il y en a une) et le poste retrouve.
+  const [detectionCandidateSheet, setDetectionCandidateSheet] = useState(
+    /** @type {any} */ (null),
+  );
+  // 📝 Le retour individuel (regle 6) vit sur la CANDIDATURE D'ANNONCE, pas sur
+  // l'evenement : `eventService` peuple `recruitmentAds.candidates` (des
+  // personnes) et jamais `recruitmentAds.applications`. On va donc le chercher
+  // a l'ouverture de la fiche, et on dit franchement ou on en est.
+  const [detectionCandidateReview, setDetectionCandidateReview] = useState(
+    /** @type {{ note: string, state: 'idle' | 'loading' | 'loaded' | 'error' }} */
+    ({ note: '', state: 'idle' }),
+  );
   const [pendingDetectionSlot, setPendingDetectionSlot] = useState(null);
   const [isRefuseModalVisible, setIsRefuseModalVisible] = useState(false);
   const [isReportModalVisible, setIsReportModalVisible] = useState(false);
@@ -2886,6 +2902,107 @@ function EventDetails({ navigation, route }) {
       screen: RouteNames.UserDetails,
     });
   };
+
+  // 🗂️ P7 — OUVRIR LA FICHE D'UN CANDIDAT.
+  //
+  // 🪤 LES DEUX CHEMINS N'ARRIVENT PAS AVEC LA MEME MATIERE : une DEMANDE
+  // apporte sa participation (c'est elle qu'on a tapee), un RETENU n'apporte
+  // que la personne (la liste des retenus est une liste d'utilisateurs). On
+  // retrouve donc la participation manquante ici, en UN endroit, plutot que de
+  // demander aux deux appelants de la porter.
+  const handleOpenDetectionCandidate = ({ participation = null, user }) => {
+    if (!user) return;
+    const userKey = String(getUserKey(user) || '');
+    const resolvedParticipation = participation || activeEventParticipations.find(
+      (/** @type {any} */ item) => String(getUserKey(item?.user) || '') === userKey,
+    ) || null;
+    // @ts-ignore: FIXME: Baseline TS regression
+    const slotId = String(resolvedParticipation?.recruitmentAd?.documentId || '');
+    const slot = detectionSlots.find(
+      (/** @type {any} */ item) => String(item?.documentId || '') === slotId,
+    ) || null;
+
+    setDetectionCandidateSheet({ participation: resolvedParticipation, slot, user });
+
+    // 🔒 PAS DE POSTE, PAS DE RETOUR INDIVIDUEL — et on ne l'invente pas. Une
+    // inscription hors annonce (`event-participation`) n'a AUCUN champ
+    // `reviewNote` : seule une `recruitment-application` en porte un. La fiche
+    // le DIT au lieu d'afficher un cadre vide qui ferait croire a une note
+    // effacee.
+    if (!slotId) {
+      setDetectionCandidateReview({ note: '', state: 'idle' });
+      return;
+    }
+
+    setDetectionCandidateReview({ note: '', state: 'loading' });
+    // Le service est appele DANS CE HANDLER, jamais au rendu : les 15 suites
+    // voisines qui doublent `recruitmentService` avec le seul
+    // `applyToRecruitmentAd` continuent de monter l'ecran sans rien casser.
+    // `Promise.resolve().then(...)` fait tomber une doublure incomplete dans le
+    // `catch` au lieu de jeter en pleine poignee d'appui.
+    Promise.resolve()
+      .then(() => getRecruitmentApplications(slotId))
+      .then((/** @type {any[]} */ applications) => {
+        const application = (applications || []).find(
+          (/** @type {any} */ item) => String(getUserKey(item?.user) || '') === userKey,
+        );
+        setDetectionCandidateReview({
+          note: String(application?.reviewNote || ''),
+          state: 'loaded',
+        });
+      })
+      .catch(() => setDetectionCandidateReview({ note: '', state: 'error' }));
+  };
+
+  // 🏷️ LES LIBELLES DE LA FICHE, CALCULES ICI ET PAS DANS LE JSX. Une regle
+  // d'affichage ecrite au milieu d'une balise n'est relisible par personne, et
+  // c'est la que les fautes se cachent. La feuille, plus bas, ne fait que les
+  // poser.
+  const detectionCandidateName = [
+    detectionCandidateSheet?.user?.firstname,
+    detectionCandidateSheet?.user?.lastname,
+  ].filter(Boolean).join(' ').trim()
+    || t('eventDetails.detection.candidateFallbackName', 'Candidat·e');
+  const detectionCandidateStatus = String(
+    detectionCandidateSheet?.participation?.participationStatus || '',
+  ).toLowerCase();
+  const detectionCandidateStatusLabel = {
+    accepted: t('eventDetails.detection.candidateStatusAccepted', 'Retenu·e sur ce poste'),
+    declined: t('eventDetails.detection.candidateStatusDeclined', 'Refusé·e'),
+    pending: t('eventDetails.detection.candidateStatusPending', 'Demande à traiter'),
+  }[detectionCandidateStatus]
+    || t('eventDetails.detection.candidateStatusUnknown', 'Inscrit·e à la séance');
+  const detectionCandidatePositionLabel = detectionCandidateSheet?.slot?.position
+    ? t(
+      'eventDetails.detection.candidateAppliedFor',
+      'A postulé au poste : {{position}}',
+      { position: detectionCandidateSheet.slot.position },
+    )
+    : t(
+      'eventDetails.detection.candidateNoPosition',
+      'Inscription hors annonce, sans poste',
+    );
+  // 📝 Les QUATRE etats du retour individuel, dits franchement : il n'y en a
+  // pas ici, on le charge, le voici, on n'a pas pu.
+  const detectionCandidateReviewLabel = (() => {
+    if (!detectionCandidateSheet?.slot) {
+      return t(
+        'eventDetails.detection.candidateReviewUnavailable',
+        'Le retour individuel n’existe que pour les candidatures passées par une annonce.',
+      );
+    }
+    if (detectionCandidateReview.state === 'loading') {
+      return t('eventDetails.detection.candidateReviewLoading', 'Chargement du retour…');
+    }
+    if (detectionCandidateReview.state === 'error') {
+      return t(
+        'eventDetails.detection.candidateReviewError',
+        'Impossible de lire le retour pour le moment.',
+      );
+    }
+    return detectionCandidateReview.note
+      || t('eventDetails.detection.candidateReviewEmpty', 'Pas encore de retour du staff.');
+  })();
 
   const handleUpdateParticipation = (
     /** @type {string | undefined} */ participationId,
@@ -7102,6 +7219,7 @@ function EventDetails({ navigation, route }) {
                   handleUpdateParticipation={handleUpdateParticipation}
                   handleUserPress={handleUserPress}
                   nowMs={serverNowMs}
+                  onCandidatePress={handleOpenDetectionCandidate}
                   onCoachEditLate={handleCoachEditLate}
                   onCoachMarkArrival={handleCoachMarkArrival}
                   participantsSummary={participantsSummary}
@@ -7753,6 +7871,112 @@ function EventDetails({ navigation, route }) {
               </View>
             );
           })}
+        </View>
+      </BottomModal>
+
+      {/* 🗂️ P7 — LA FICHE CANDIDAT (decision 4=B : une FEUILLE, pas un ecran).
+          Elle repond aux 4 questions qu'on se pose devant un nom sur une
+          detection : a quoi a-t-il postule, ou en est sa demande, qu'en a dit
+          le staff, et qu'est-ce que j'en fais maintenant.
+          ⚠️ AUCUNE ROUTE NEUVE : `RecruitmentAdDetails` reste le chemin de
+          l'ANNONCE ; ceci est le chemin du CANDIDAT, depuis sa seance. */}
+      <BottomModal
+        close={() => setDetectionCandidateSheet(null)}
+        headerComponent={(
+          <View style={[Spaces.gap[8]]}>
+            <Text style={[Fonts.h3Bold, Fonts.neutral00, { textAlign: 'center' }]}>
+              {detectionCandidateName}
+            </Text>
+            <Text
+              style={[Fonts.p3, Fonts.primary200, { textAlign: 'center' }]}
+              testID="p7-fiche-poste"
+            >
+              {detectionCandidatePositionLabel}
+            </Text>
+          </View>
+        )}
+        isVisible={Boolean(detectionCandidateSheet)}
+        snapPoints={['62%']}
+        style={{
+          borderColor: withAlpha(Colors.primary500, 0.14),
+          borderWidth: 1,
+        }}
+      >
+        <View style={[Spaces.gap[16], Spaces.paddingBottom[24]]}>
+          <View style={[Spaces.gap[4]]}>
+            <Text style={[Fonts.p3Bold, Fonts.neutral200]}>
+              {t('eventDetails.detection.candidateStatusTitle', 'Statut')}
+            </Text>
+            <Text style={[Fonts.p2Bold, Fonts.neutral00]} testID="p7-fiche-statut">
+              {detectionCandidateStatusLabel}
+            </Text>
+          </View>
+
+          {/* 📝 LE RETOUR INDIVIDUEL (regle 6). Ses quatre etats se decident
+              plus haut, avec les autres libelles de la fiche. */}
+          <View style={[Spaces.gap[4]]}>
+            <Text style={[Fonts.p3Bold, Fonts.neutral200]}>
+              {t('eventDetails.detection.candidateReviewTitle', 'Retour individuel')}
+            </Text>
+            <Text style={[Fonts.p3, Fonts.neutral300]} testID="p7-fiche-retour">
+              {detectionCandidateReviewLabel}
+            </Text>
+          </View>
+
+          {/* ✅ ACCEPTER / REFUSER — les MEMES mutations que la carte de demande
+              de l'onglet Candidats (`handleUpdateParticipation`), pas un second
+              chemin d'ecriture. Ils ne se montent que devant une demande a
+              trancher, et pour qui a le droit de la trancher. */}
+          {canApprovePendingRequests && detectionCandidateStatus === 'pending' ? (
+            <View style={[Alignments.row, Spaces.gap[12]]} testID="p7-fiche-actions">
+              <View style={[Alignments.fill]}>
+                <Button
+                  onPress={() => {
+                    handleUpdateParticipation(
+                      detectionCandidateSheet?.participation?.documentId,
+                      'accepted',
+                    );
+                    setDetectionCandidateSheet(null);
+                  }}
+                  title={t('eventDetails.detection.candidateAccept', 'Accepter')}
+                  variant="Primary"
+                />
+              </View>
+              <View style={[Alignments.fill]}>
+                <Button
+                  onPress={() => {
+                    handleUpdateParticipation(
+                      detectionCandidateSheet?.participation?.documentId,
+                      'declined',
+                    );
+                    setDetectionCandidateSheet(null);
+                  }}
+                  title={t('eventDetails.detection.candidateDecline', 'Refuser')}
+                  variant="Secondary"
+                />
+              </View>
+            </View>
+          ) : null}
+
+          {/* 🔒 « INVITER DANS L'EQUIPE » NAIT GRISE, ET SON MOTIF EST ECRIT.
+              Le rail serveur de l'invitation avec consentement est le lot P10 ;
+              le brancher ici est un micro-lot qui vient APRES la recolte des
+              deux. Un bouton grise qui dit pourquoi vaut mieux qu'un bouton
+              absent : l'organisateur sait que ca existe et que ca arrive.
+              ⛔ ET SURTOUT : il ne doit JAMAIS devenir un ajout direct a
+              l'equipe (`players.connect`), qui se passerait du consentement de
+              la personne. */}
+          <View style={[Spaces.gap[4]]}>
+            <Button
+              disabled
+              onPress={() => {}}
+              title={t('eventDetails.detection.candidateInvite', 'Inviter dans l’équipe')}
+              variant="Primary"
+            />
+            <Text style={[Fonts.p4, Fonts.neutral300]} testID="p7-fiche-invite-motif">
+              {t('eventDetails.detection.candidateInviteSoon', 'L’invitation arrive bientôt.')}
+            </Text>
+          </View>
         </View>
       </BottomModal>
 

@@ -102,6 +102,7 @@ import SHARE_ICON from '@/assets/icons/share2.png';
 /**
  * @typedef {object} EventParticipantsProps
  * @property {DetectionPositionSection[]} [detectionPositionSections]
+ * @property {((payload: { participation: any, user: any }) => void) | null} [onCandidatePress]
  * @property {import('@/domains/event/types').FCEvent | undefined} event
  * @property {ParticipationsByStatus | undefined} participationsByStatus
  * @property {PendingParticipation[]} pendingParticipations
@@ -389,6 +390,7 @@ function EventParticipants({
   handleUpdateParticipation,
   handleUserPress,
   nowMs,
+  onCandidatePress = null,
   onCoachEditLate,
   onCoachMarkArrival,
   participantsSummary,
@@ -532,6 +534,20 @@ function EventParticipants({
     ? (demandes || []).filter((demande) => correspond(demande?.user))
     : demandes);
 
+  // 👆 P7 — OU MENE UN APPUI SUR UNE PERSONNE.
+  // Partout ailleurs dans l'app, appuyer sur quelqu'un ouvre SON PROFIL. Sur
+  // une detection rangee par poste, ca ouvre sa FICHE DE CANDIDATURE : c'est le
+  // poste postule, le statut et les boutons Accepter / Refuser qu'on veut voir,
+  // pas une biographie. Le detour passe par UNE fonction pour que les deux
+  // chemins (les demandes et les retenus) ne puissent pas diverger.
+  const ouvrirLaFicheOuLeProfil = (user, participation = null) => {
+    if (modeDetectionParPoste && onCandidatePress) {
+      onCandidatePress({ participation, user });
+      return;
+    }
+    handleUserPress(user);
+  };
+
   const renderParticipant = (player, options = {}) => {
     const userId = player?.documentId || '';
     const attendance = userId ? attendanceByUserId[userId] : null;
@@ -549,7 +565,7 @@ function EventParticipants({
         nowMs={nowMs}
         onEditLate={onCoachEditLate}
         onMarkArrival={onCoachMarkArrival}
-        onPress={handleUserPress}
+        onPress={options.onPress || handleUserPress}
         paymentStatus={statutPaiement}
         player={player}
         statusKind={options.statusKind || 'participating'}
@@ -564,7 +580,7 @@ function EventParticipants({
   const renderPendingCard = (participation, indexKey) => (
     <TouchableOpacity
       key={participation.documentId || `pending-${indexKey}`}
-      onPress={() => handleUserPress(participation.user)}
+      onPress={() => ouvrirLaFicheOuLeProfil(participation.user, participation)}
       style={[
         ApplicationStyle.borderRadius24,
         Alignments.row,
@@ -1108,7 +1124,14 @@ function EventParticipants({
           Spaces.padding[16],
         ]}
       >
-        <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter, Spaces.gap[8]]}>
+        <View
+          style={[
+            Alignments.row,
+            Alignments.justifySpaceBetween,
+            Alignments.alignCenter,
+            Spaces.gap[8],
+          ]}
+        >
           <Text style={[Fonts.h4Bold, Fonts.neutral00]}>
             {section.position || t('eventDetails.detection.noPositionGroup', 'Sans poste précisé')}
           </Text>
@@ -1142,6 +1165,7 @@ function EventParticipants({
               'Personne n’est encore retenu·e sur ce poste.',
             ),
             keyPrefix: `p7-poste-${section.key}`,
+            onPress: (/** @type {any} */ player) => ouvrirLaFicheOuLeProfil(player),
             showCoachActions: canEdit,
             statusKind: 'participating',
           },

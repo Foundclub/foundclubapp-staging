@@ -147,8 +147,9 @@ const textContentOf = (node, acc = []) => {
 };
 
 /**
- * @param {any} candidate
- * @returns {boolean}
+ * Dit si un noeud rendu est un `Text`.
+ * @param {any} candidate - Le noeud a examiner.
+ * @returns {boolean} - Vrai si c'est un `Text`.
  */
 const isTextNode = (candidate) => candidate?.type === 'Text';
 

@@ -1,4 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { TouchableOpacity } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
 import EventParticipants from '../components/EventParticipants';
@@ -298,6 +299,83 @@ describe('P7 - le regroupement par poste, rendu par EventParticipants', () => {
 
     expect(texte).toContain('Participants retenus');
     expect(texte).toContain('Personne n’est encore retenu·e sur ce poste.');
+  });
+
+  test('P7 · temoin 6 — appuyer sur une DEMANDE ouvre la fiche, pas le profil', () => {
+    const ouvrirLaFiche = jest.fn();
+    const ouvrirLeProfil = jest.fn();
+    const arbre = monter({
+      detectionPositionSections: [POSTE_GARDIEN],
+      handleUserPress: ouvrirLeProfil,
+      onCandidatePress: ouvrirLaFiche,
+      pendingParticipations: [demande('part-gardien', CANDIDAT)],
+    });
+
+    // La carte de demande est le `TouchableOpacity` qui porte le nom.
+    const carte = arbre.root.findAll(
+      (/** @type {any} */ noeud) => noeud.type === TouchableOpacity
+        && texteDe(noeud).includes('Bahia'),
+    )[0];
+    act(() => {
+      carte.props.onPress();
+    });
+
+    expect(ouvrirLaFiche).toHaveBeenCalledWith(
+      expect.objectContaining({
+        user: expect.objectContaining({ documentId: CANDIDAT.documentId }),
+      }),
+    );
+    expect(ouvrirLeProfil).not.toHaveBeenCalled();
+  });
+
+  test('P7 · temoin 7 — appuyer sur un RETENU ouvre sa fiche aussi', () => {
+    // Les deux chemins passent par la MEME fonction : ils ne peuvent pas
+    // diverger, l'un menant a la fiche et l'autre au profil.
+    const ouvrirLaFiche = jest.fn();
+    const ouvrirLeProfil = jest.fn();
+    const arbre = monter({
+      detectionPositionSections: [{ ...POSTE_GARDIEN, pending: [] }],
+      handleUserPress: ouvrirLeProfil,
+      onCandidatePress: ouvrirLaFiche,
+    });
+
+    const ligne = arbre.root.findAll(
+      (/** @type {any} */ noeud) => noeud.type === TouchableOpacity
+        && texteDe(noeud).includes('Alix'),
+    )[0];
+    act(() => {
+      ligne.props.onPress();
+    });
+
+    expect(ouvrirLaFiche).toHaveBeenCalledWith(
+      expect.objectContaining({
+        user: expect.objectContaining({ documentId: RETENU.documentId }),
+      }),
+    );
+    expect(ouvrirLeProfil).not.toHaveBeenCalled();
+  });
+
+  test('P7 · temoin 8 — HORS mode par poste, l appui ouvre toujours le profil', () => {
+    // 🔒 Le detour n'existe QUE pour une detection rangee par poste. Partout
+    // ailleurs, appuyer sur quelqu'un ouvre son profil, comme avant ce lot.
+    const ouvrirLaFiche = jest.fn();
+    const ouvrirLeProfil = jest.fn();
+    const arbre = monter({
+      handleUserPress: ouvrirLeProfil,
+      onCandidatePress: ouvrirLaFiche,
+      participationsByStatus: { missing: [], notAnswered: [], participating: [RETENU] },
+    });
+
+    const ligne = arbre.root.findAll(
+      (/** @type {any} */ noeud) => noeud.type === TouchableOpacity
+        && texteDe(noeud).includes('Alix'),
+    )[0];
+    act(() => {
+      ligne.props.onPress();
+    });
+
+    expect(ouvrirLeProfil).toHaveBeenCalled();
+    expect(ouvrirLaFiche).not.toHaveBeenCalled();
   });
 
   test('P7 · temoin 5 — SANS postes, l affichage d avant ce lot est intact', () => {

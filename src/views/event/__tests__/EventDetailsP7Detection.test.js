@@ -1,4 +1,4 @@
-import { Text, TouchableOpacity } from 'react-native';
+import { Alert, Text, TouchableOpacity } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
 import { capteurEntete, capteurParticipants } from '@/testSupport/p7Capteurs';
@@ -20,6 +20,11 @@ const mockUseAuth = jest.fn();
 const mockNavigate = jest.fn();
 const mockSetOptions = jest.fn();
 const mockEventQuery = { data: /** @type {any} */ (null) };
+// Les deux mutations que la fiche candidat doit REUTILISER (jamais un second
+// chemin d'ecriture) : on les garde stables pour pouvoir les observer.
+const mockAccepterParticipation = jest.fn();
+const mockRefuserParticipation = jest.fn();
+const mockLireLesCandidatures = jest.fn(() => Promise.resolve([]));
 
 // 📸 Les capteurs vivent dans `@/testSupport/p7Capteurs` (importe plus haut) :
 // chaque rendu y ECRASE la valeur, un temoin lit donc toujours le DERNIER
@@ -149,8 +154,13 @@ jest.mock('@/services/event/eventService', () => ({
   rejectFeatured: jest.fn(),
 }));
 
+// 🔌 D4 — LE MOCK ETENDU, ET SEULEMENT DANS CE FICHIER. Les 15 suites voisines
+// doublent ce service avec le SEUL `applyToRecruitmentAd` : elles continuent de
+// marcher parce que `getRecruitmentApplications` n'est appele que dans un
+// HANDLER (a l'ouverture de la fiche), jamais au rendu.
 jest.mock('@/services/recruitment/recruitmentService', () => ({
   applyToRecruitmentAd: jest.fn(),
+  getRecruitmentApplications: (/** @type {any} */ adId) => mockLireLesCandidatures(adId),
 }));
 
 jest.mock('@/services/tournamentTeam/tournamentTeamService', () => ({
@@ -176,12 +186,12 @@ jest.mock('../hooks/useEventMutations', () => {
   const idleMutation = () => ({ isPending: false, mutate: jest.fn() });
   return {
     useEventMutations: () => ({
-      acceptParticipationMutation: idleMutation(),
+      acceptParticipationMutation: { isPending: false, mutate: mockAccepterParticipation },
       bookFullMutation: idleMutation(),
       cancelEventMutation: idleMutation(),
       coachArrivalMutation: idleMutation(),
       createEventParticipationMutation: idleMutation(),
-      declineParticipationMutation: idleMutation(),
+      declineParticipationMutation: { isPending: false, mutate: mockRefuserParticipation },
       deleteParticipationMutation: idleMutation(),
       joinReservationMutation: idleMutation(),
       missingEventMutation: idleMutation(),
@@ -296,10 +306,21 @@ jest.mock(
   '@/components/organisms/joinEventModal/JoinEventModal',
   () => require('@/testSupport/textDouble').makeTextDouble('DOUBLURE_JoinEventModal'),
 );
-jest.mock(
-  '@/components/organisms/refuseParticipationModal/RefuseParticipationModal',
-  () => require('@/testSupport/textDouble').makeTextDouble('DOUBLURE_RefuseParticipationModal'),
-);
+/* eslint-enable global-require */
+// La doublure de la modale de refus rend son ETAT : c'est le seul moyen de
+// prouver que « Refuser » ouvre bien la modale existante, et n'ecrit rien lui-meme.
+jest.mock('@/components/organisms/refuseParticipationModal/RefuseParticipationModal', () => {
+  const react = jest.requireActual('react');
+  const rn = jest.requireActual('react-native');
+  return function RefuseModalDouble(/** @type {any} */ props) {
+    return react.createElement(
+      rn.Text,
+      null,
+      `DOUBLURE_RefuseParticipationModal:${props.isVisible ? 'ouverte' : 'fermee'}`,
+    );
+  };
+});
+/* eslint-disable global-require */
 jest.mock(
   '@/components/organisms/reportEventModal/ReportEventModal',
   () => require('@/testSupport/textDouble').makeTextDouble('DOUBLURE_ReportEventModal'),
@@ -434,6 +455,13 @@ const monter = (/** @type {any} */ { auth, event, params = {} } = {}) => {
 
   demonter();
   mockSetOptions.mockClear();
+  // 🧹 Les compteurs d'appels repartent de zero a chaque montage : sans ca, un
+  // `not.toHaveBeenCalled()` compterait les appels du temoin precedent.
+  // `mockClear` n'efface QUE les appels, pas les `mockResolvedValueOnce` poses
+  // juste avant le montage.
+  mockAccepterParticipation.mockClear();
+  mockRefuserParticipation.mockClear();
+  mockLireLesCandidatures.mockClear();
   capteurEntete.props = null;
   capteurParticipants.props = null;
 
@@ -590,7 +618,8 @@ describe('P7 - les candidats descendent RANGES PAR POSTE (regle 5)', () => {
 
     const sections = capteurParticipants.props.detectionPositionSections;
 
-    expect(sections.map((/** @type {any} */ item) => item.position)).toEqual(['Gardien', 'Attaquant']);
+    expect(sections.map((/** @type {any} */ item) => item.position))
+      .toEqual(['Gardien', 'Attaquant']);
     expect(sections[0].participating.map((/** @type {any} */ user) => user.documentId))
       .toEqual([GARDIEN_1.documentId]);
     expect(sections[0].pending.map((/** @type {any} */ item) => item.documentId))
@@ -666,5 +695,168 @@ describe('P7 - les candidats descendent RANGES PAR POSTE (regle 5)', () => {
     allerSurLOnglet(root, 'participants');
 
     expect(capteurParticipants.props.detectionPositionSections).toEqual([]);
+  });
+});
+
+describe('P7 - la fiche candidat, en feuille', () => {
+  /**
+   * Ouvre la fiche comme le ferait un doigt sur un candidat : l'onglet
+   * « Candidats » monte la liste, et la liste appelle `onCandidatePress`.
+   * @param {any} root - L'arbre monte.
+   * @param {any} payload - La personne, et sa participation quand on l'a.
+   * @returns {void} - Rien.
+   */
+  const taperSurUnCandidat = (root, payload) => {
+    allerSurLOnglet(root, 'participants');
+    act(() => {
+      capteurParticipants.props.onCandidatePress(payload);
+    });
+  };
+
+  const DEMANDE_GARDIEN = {
+    documentId: 'part-gardien-attente',
+    isActive: true,
+    participationStatus: 'pending',
+    recruitmentAd: { documentId: 'ad-gardien' },
+    user: GARDIEN_2,
+  };
+
+  test('P7 · temoin 12 — taper un candidat ouvre sa fiche : poste et statut', () => {
+    const root = monter({ event: buildDetection({ participations: [GARDIEN_1] }) });
+
+    // Avant l'appui, aucune fiche.
+    expect(contient(root, 'A postulé au poste')).toBe(false);
+
+    taperSurUnCandidat(root, { participation: DEMANDE_GARDIEN, user: GARDIEN_2 });
+
+    expect(contient(root, 'A postulé au poste : Gardien')).toBe(true);
+    expect(contient(root, 'Demande à traiter')).toBe(true);
+  });
+
+  test('P7 · temoin 13 — « Accepter » passe par la mutation DEJA en place', () => {
+    // 🔒 Le point qui compte : la fiche ne cree pas un second chemin
+    // d'ecriture. Elle appelle `handleUpdateParticipation`, donc la meme
+    // confirmation et la meme mutation que la carte de demande.
+    const alerte = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+    const root = monter({ event: buildDetection({ participations: [GARDIEN_1] }) });
+
+    taperSurUnCandidat(root, { participation: DEMANDE_GARDIEN, user: GARDIEN_2 });
+
+    const accepter = root.findAll(
+      (/** @type {any} */ node) => node.props?.accessibilityRole === 'button'
+        && textOf(node) === 'Accepter',
+    )[0];
+    act(() => {
+      accepter.props.onPress();
+    });
+
+    // L'ecran demande confirmation AVANT d'ecrire : c'est le comportement
+    // existant, la fiche ne le contourne pas.
+    expect(alerte).toHaveBeenCalled();
+    expect(mockAccepterParticipation).not.toHaveBeenCalled();
+
+    // On appuie sur « Confirmer » de l'alerte.
+    const boutons = alerte.mock.calls[alerte.mock.calls.length - 1][2];
+    act(() => {
+      boutons[boutons.length - 1].onPress();
+    });
+
+    expect(mockAccepterParticipation).toHaveBeenCalledWith('part-gardien-attente');
+    alerte.mockRestore();
+  });
+
+  test('P7 · temoin 14 — « Refuser » ouvre la modale de refus existante', () => {
+    // Refuser demande un motif : l'ecran a deja une modale pour ca. La fiche
+    // l'ouvre au lieu d'ecrire elle-meme — sinon on perdrait le motif.
+    const root = monter({ event: buildDetection({ participations: [GARDIEN_1] }) });
+
+    taperSurUnCandidat(root, { participation: DEMANDE_GARDIEN, user: GARDIEN_2 });
+    expect(contient(root, 'DOUBLURE_RefuseParticipationModal:fermee')).toBe(true);
+
+    const refuser = root.findAll(
+      (/** @type {any} */ node) => node.props?.accessibilityRole === 'button'
+        && textOf(node) === 'Refuser',
+    )[0];
+    act(() => {
+      refuser.props.onPress();
+    });
+
+    expect(contient(root, 'DOUBLURE_RefuseParticipationModal:ouverte')).toBe(true);
+    expect(mockRefuserParticipation).not.toHaveBeenCalled();
+  });
+
+  test('P7 · temoin 15 — le retour individuel est LU sur la candidature d annonce', async () => {
+    // 📝 Regle 6. `reviewNote` ne voyage PAS avec l'evenement (le serveur peuple
+    // `recruitmentAds.candidates`, pas `.applications`) : on va le chercher.
+    mockLireLesCandidatures.mockResolvedValueOnce([
+      { documentId: 'candidature-1', reviewNote: 'Bon pied gauche, a revoir.', user: GARDIEN_2 },
+    ]);
+    const root = monter({ event: buildDetection({ participations: [GARDIEN_1] }) });
+
+    taperSurUnCandidat(root, { participation: DEMANDE_GARDIEN, user: GARDIEN_2 });
+    await act(async () => {});
+
+    expect(mockLireLesCandidatures).toHaveBeenCalledWith('ad-gardien');
+    expect(contient(root, 'Bon pied gauche, a revoir.')).toBe(true);
+  });
+
+  test('P7 · temoin 16 — hors annonce, la fiche NOMME la difference', async () => {
+    // 🔒 D3 : une `event-participation` n'a AUCUN champ `reviewNote`. On ne
+    // l'invente pas, et on n'affiche pas un cadre vide qui ferait croire a une
+    // note effacee : on ecrit pourquoi il n'y en a pas.
+    const LIBRE = { avatar: null, documentId: 'u-libre', firstname: 'Elia' };
+    const root = monter({
+      event: buildDetection({ participations: [GARDIEN_1, LIBRE] }),
+    });
+
+    taperSurUnCandidat(root, { participation: null, user: LIBRE });
+    await act(async () => {});
+
+    const motif = 'Le retour individuel n’existe que pour les candidatures'
+      + ' passées par une annonce.';
+    expect(contient(root, motif)).toBe(true);
+    // Et on n'est pas alle chercher une candidature qui n'existe pas.
+    expect(mockLireLesCandidatures).not.toHaveBeenCalled();
+  });
+
+  test('P7 · temoin 17 — une lecture qui echoue le DIT, elle ne ment pas', async () => {
+    mockLireLesCandidatures.mockRejectedValueOnce(new Error('reseau'));
+    const root = monter({ event: buildDetection({ participations: [GARDIEN_1] }) });
+
+    taperSurUnCandidat(root, { participation: DEMANDE_GARDIEN, user: GARDIEN_2 });
+    await act(async () => {});
+
+    expect(contient(root, 'Impossible de lire le retour pour le moment.')).toBe(true);
+  });
+});
+
+describe('P7 - le bouton « Inviter dans l equipe » nait GRISE (serveur = lot P10)', () => {
+  test('P7 · temoin 18 — il est monte, DESACTIVE, et son motif est ecrit', () => {
+    // 🔒 Un bouton grise qui dit pourquoi vaut mieux qu'un bouton absent :
+    // l'organisateur sait que la fonction existe et qu'elle arrive. Le rail
+    // serveur de l'invitation avec consentement est le lot P10 ; le brancher
+    // ici est un micro-lot qui vient APRES la recolte des deux.
+    const root = monter({ event: buildDetection({ participations: [GARDIEN_1] }) });
+    allerSurLOnglet(root, 'participants');
+    act(() => {
+      capteurParticipants.props.onCandidatePress({
+        participation: {
+          documentId: 'part-gardien-attente',
+          participationStatus: 'pending',
+          recruitmentAd: { documentId: 'ad-gardien' },
+          user: GARDIEN_2,
+        },
+        user: GARDIEN_2,
+      });
+    });
+
+    const inviter = root.findAll(
+      (/** @type {any} */ node) => node.props?.accessibilityRole === 'button'
+        && textOf(node) === 'Inviter dans l’équipe',
+    )[0];
+
+    expect(inviter).toBeDefined();
+    expect(inviter.props.disabled).toBe(true);
+    expect(contient(root, 'L’invitation arrive bientôt.')).toBe(true);
   });
 });
