@@ -18,6 +18,13 @@ let mockRouteParams = {};
 /** @type {any} */
 let mockComposition;
 
+/**
+ * Les proprietes recues par chaque `ProfileAvatar` rendu, dans l'ordre.
+ * ⚠️ Le nom DOIT commencer par `mock` : jest refuse toute autre variable
+ * hors-portee dans une fabrique `jest.mock`.
+ */
+const mockAvatarsRecus = [];
+
 // 🧨 L'objet `navigation` est FIGE : le recreer a chaque rendu relance les
 // effets qui en dependent et Jest part en boucle infinie, sans message utile.
 const mockNavigation = { goBack: mockGoBack, navigate: mockNavigate };
@@ -111,11 +118,18 @@ jest.mock('@/components/atoms/headerBackButton/HeaderBackButton', () => {
   return { __esModule: true, default: () => <TexteRN>RETOUR</TexteRN> };
 });
 
+// 🎯 LA DOUBLURE QUI VOIT. Elle NOTE ce que l'ecran lui passe avant de rendre
+// son texte. Sans ce carnet, elle ne regarde que `name` et reste donc VERTE
+// quand l'ecran passe l'OBJET media brut au lieu de l'adresse de la photo
+// (motif AE04, `views/event/wizard/__tests__/AE04-tunnel-photo-joueur.test.js`).
 jest.mock('@/components/molecules/profileAvatar/ProfileAvatar', () => {
   const { Text: TexteRN } = jest.requireActual('react-native');
   return {
     __esModule: true,
-    default: (/** @type {any} */ { name }) => <TexteRN>{`AVATAR:${name}`}</TexteRN>,
+    default: (/** @type {any} */ props) => {
+      mockAvatarsRecus.push(props);
+      return <TexteRN>{`AVATAR:${props.name}`}</TexteRN>;
+    },
   };
 });
 
@@ -146,15 +160,34 @@ const PACK_PUBLIE = {
   manualPlayers: [],
   requireResponse: true,
   reservePlayerIds: ['p3'],
+  // ⚠️ Les 3 formes d'avatar cohabitent dans le meme pack, expres : l'OBJET
+  // media du serveur (p1), l'adresse deja aplatie de l'instantane (p3), et
+  // l'absence de photo (p2). Voir le carnet `mockAvatarsRecus` plus bas.
   snapshotPlayers: [
     {
-      documentId: 'p1', firstname: 'Karim', lastname: 'Sylla', number: 9,
+      avatar: {
+        formats: { thumbnail: { url: '/uploads/thumbnail_karim.jpg' } },
+        id: 7,
+        url: '/uploads/karim.jpg',
+      },
+      documentId: 'p1',
+      firstname: 'Karim',
+      lastname: 'Sylla',
+      number: 9,
     },
     {
-      documentId: 'p2', firstname: 'Yanis', lastname: 'Bertrand', number: 4,
+      avatar: null,
+      documentId: 'p2',
+      firstname: 'Yanis',
+      lastname: 'Bertrand',
+      number: 4,
     },
     {
-      documentId: 'p3', firstname: 'Malik', lastname: 'Cisse', number: 7,
+      avatar: '/uploads/malik.jpg',
+      documentId: 'p3',
+      firstname: 'Malik',
+      lastname: 'Cisse',
+      number: 7,
     },
   ],
   sportContext: 'football',
@@ -237,6 +270,7 @@ const appuyerSur = async (arbre, libelle) => {
 };
 
 beforeEach(() => {
+  mockAvatarsRecus.length = 0;
   mockNavigate.mockClear();
   mockGoBack.mockClear();
   mockPublish.mockReset();
@@ -371,5 +405,47 @@ describe('C-B ecran 8 — ce qu il refuse de faire', () => {
     expect(mockSaveDraft).not.toHaveBeenCalled();
     expect(mockPublish).not.toHaveBeenCalled();
     expect(mockGoBack).toHaveBeenCalled();
+  });
+});
+
+// ⚠️ L'avatar d'un joueur de compo est TANTOT une string — l'instantane fige
+// d'une compo publiee — TANTOT l'objet media de Strapi ({ url, formats, ... }).
+// Passer l'objet BRUT a `getImageUrl` ne tue plus l'ecran (sa garde rend
+// `undefined`), mais il EFFACE la photo et retombe sur les initiales. C'est le
+// constat AE04 du 2026-08-22, et ces 2 ecrans-ci en etaient les derniers
+// porteurs : ils appellent desormais `getCompositionPlayerAvatarUrl`.
+//
+// 🎯 CE TEMOIN NE REGARDE PAS DES PIXELS, il regarde CE QUE L'ECRAN PASSE.
+describe('🖼️ C-B ecran 8 — la photo du joueur arrive entiere jusqu a l avatar', () => {
+  test('ne passe JAMAIS un objet brut a ProfileAvatar — une string ou rien', async () => {
+    await rendre();
+
+    expect(mockAvatarsRecus.length).toBeGreaterThan(0);
+    mockAvatarsRecus.forEach((/** @type {any} */ props) => {
+      const recu = props.imageUrl;
+      expect(recu === undefined || typeof recu === 'string').toBe(true);
+    });
+  });
+
+  test('🥇 TRANSMET la photo du joueur dont l avatar est un objet media', async () => {
+    await rendre();
+
+    // ⛔ La seule garde de `imageUrl.js` rendrait `undefined` ici : l'ecran
+    // afficherait les initiales alors que le joueur A une photo.
+    const avatar = mockAvatarsRecus
+      .filter((/** @type {any} */ props) => props.name === 'Karim Sylla')
+      .pop();
+
+    expect(avatar.imageUrl).toBe('/uploads/karim.jpg');
+  });
+
+  test('transmet telle quelle la photo deja sous forme de string', async () => {
+    await rendre();
+
+    const avatar = mockAvatarsRecus
+      .filter((/** @type {any} */ props) => props.name === 'Malik Cisse')
+      .pop();
+
+    expect(avatar.imageUrl).toBe('/uploads/malik.jpg');
   });
 });
