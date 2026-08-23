@@ -96,6 +96,9 @@ import {
 } from '@/services/matchStats/matchStatsQueries';
 import { applyToRecruitmentAd } from '@/services/recruitment/recruitmentService';
 import {
+  useGetTournamentDashboard,
+} from '@/services/tournamentCompetition/tournamentCompetitionQueries';
+import {
   createCustomTournamentTeam,
   registerClubTeamToTournament,
   requestJoinTournamentTeam,
@@ -440,13 +443,25 @@ const buildTypeTagLabel = (typeName, segments = []) => [
   .map((/** @type {any} */ part) => String(part || '').trim())
   .filter(Boolean)
   .join(' · ');
-
-// @ts-ignore: FIXME: Baseline TS regression
-const getFeaturedScopeStatusLabel = (status) => {
-  if (status === 'pending') return 'Demande en attente';
-  if (status === 'approved') return 'Déjà à la une';
-  if (status === 'rejected') return 'Refusée, tu peux redemander';
-  return 'Disponible';
+/**
+ * 🔤 N7 item 3 (vague P, 23/08) — LES QUATRE STATUTS PASSENT PAR `t()`.
+ * La fonction vit hors du composant, la ou `t` n'existe pas : il DESCEND en
+ * parametre plutot que de remonter la logique au point d'appel. Deux clefs
+ * existaient deja (N1 les avait posees pour le bouton de la page), deux sont
+ * neuves.
+ * @param {any} t - La fonction de traduction du composant.
+ * @param {string} status - Le statut de la demande pour cette portee.
+ * @returns {string} - Le libelle, traduit.
+ */
+const getFeaturedScopeStatusLabel = (t, status) => {
+  if (status === 'pending') return t('reservation.featuredRequest.pending', 'Demande en attente');
+  if (status === 'approved') {
+    return t('eventDetails.featuredRequest.alreadyFeatured', 'Déjà à la une');
+  }
+  if (status === 'rejected') {
+    return t('eventDetails.featuredRequest.rejected', 'Refusée, tu peux redemander');
+  }
+  return t('eventDetails.featuredRequest.available', 'Disponible');
 };
 
 /**
@@ -999,10 +1014,24 @@ function EventDetails({ navigation, route }) {
       .toLowerCase()
       .normalize('NFD')
       .replace(/[\u0300-\u036f]/g, '');
+    const isRobotSyncPhrase = normalizedDescription.includes('match externe synchron');
+
+    // 🤖 N7 item 1 (vague P, 23/08) — LA PHRASE-ROBOT NE SERT PLUS DE DESCRIPTION.
+    // « Match externe synchronisé - Domicile » n'est pas une description, c'est
+    // la trace du robot FFF. Jusqu'ici la page l'affichait en lui ACCOLANT
+    // l'adversaire : la pastille N3 porte deja Domicile/Exterieur et le titre
+    // porte deja « VS … ». Sur un evenement synchronise, elle s'efface donc :
+    // le bloc « Description » disparait avec elle (gate `eventDescriptionText`
+    // au rendu). Une VRAIE phrase ecrite par un humain sur ce meme match reste
+    // affichee — la garde est la phrase-robot ET la source externe, jamais
+    // l'une sans l'autre.
+    if (event?.externalAutoSource && isRobotSyncPhrase) {
+      return '';
+    }
 
     if (
       externalMatchDisplay?.title
-      && normalizedDescription.includes('match externe synchron')
+      && isRobotSyncPhrase
       && !/\bvs\b/i.test(resolvedDescription)
     ) {
       return [
@@ -1015,7 +1044,12 @@ function EventDetails({ navigation, route }) {
     }
 
     return resolvedDescription;
-  }, [event?.description, externalMatchDisplay?.contextLabel, externalMatchDisplay?.title]);
+  }, [
+    event?.description,
+    event?.externalAutoSource,
+    externalMatchDisplay?.contextLabel,
+    externalMatchDisplay?.title,
+  ]);
   const canEdit = Boolean(canManageEvent(event));
   const trainingOpenConfig = useMemo(() => resolveTrainingOpenConfig(event || {}), [event]);
   const canManageTrainingVisibility = Boolean(canEdit && trainingOpenConfig.isTraining);
@@ -1081,6 +1115,18 @@ function EventDetails({ navigation, route }) {
   }), [eventClubId, licenseCampaignEventId]);
   const eventLicenseCampaignsQuery = useLicenseCampaigns(eventLicenseCampaignsQueryParams, {
     enabled: Boolean(canManageEventLicenseCampaigns && eventClubId && licenseCampaignEventId),
+  });
+  // 🏆 N7 item 5 (vague P, 23/08) — LE FIL DU TOURNOI LIT LE DASHBOARD.
+  // Jusqu'ici les etapes Poules / Matchs / Publié s'effondraient sur le seul
+  // `competitionState` de l'evenement (voir `renderTournamentSection`). Le
+  // dashboard (`GET /events/:id/tournament/dashboard`, meme appel que
+  // `TournamentManagement`) sait, lui, si les poules et les matchs EXISTENT
+  // avant publication. Il n'est demande QUE pour un tournoi (pas une journee
+  // de stage) : les autres types ne paient pas l'appel.
+  // ⚠️ Ce hook tire `@/services/client` : les 16 suites qui montent cet ecran
+  //    le mockent (`tournamentCompetitionQueries`), sinon elles tombent a 0 test.
+  const tournamentDashboardQuery = useGetTournamentDashboard(eventId || '', {
+    enabled: Boolean(eventId && isTournamentEvent && !isStageDayEvent),
   });
   const eventLicenseCampaigns = useMemo(() => {
     const queriedCampaigns = eventLicenseCampaignsQuery.data?.data;
@@ -4565,15 +4611,67 @@ function EventDetails({ navigation, route }) {
     // ⛔ SEUL LE TEXTE est unifie : le code se comporte toujours differemment
     //    selon qu'une campagne existe — avertissement d'abord, navigation
     //    ensuite. Fige par test.
+    // 💶 N7 item 2 (vague P, 23/08) — GRISEE AVEC SON MOTIF, JAMAIS MASQUEE.
+    // Jusqu'ici la rangee DISPARAISSAIT des qu'une campagne existait : une porte
+    // qui s'efface ne s'explique pas, alors qu'une porte fermee qui DIT pourquoi
+    // se comprend (meme motif que « Placer les équipes », AD01). La condition de
+    // PRESENCE ne change pas ; c'est la condition « aucune campagne » qui passe
+    // de la presence a l'etat `disabled` + note. `renderManageRow` sait deja
+    // rendre les deux.
     if (canManageEventLicenseCampaigns
       && (eventCampaignCreationSuggested || eventLicenseCampaigns.length > 0)
-      && !eventLicenseCampaignsQuery.isLoading
-      && eventLicenseCampaigns.length === 0) {
+      && !eventLicenseCampaignsQuery.isLoading) {
+      const hasLinkedCampaign = eventLicenseCampaigns.length > 0;
       chips.push({
+        disabled: hasLinkedCampaign,
         icon: 'euroCircle',
         key: 'licenseCampaign',
         label: t('eventDetails.managePanel.campaign', 'Cotisation'),
+        note: hasLinkedCampaign
+          ? t(
+            'eventDetails.managePanel.campaignAlreadyLinked',
+            'Cet événement a déjà une cotisation',
+          )
+          : null,
         onPress: openEventLicenseCampaignSettings,
+      });
+    }
+
+    // 🏋️ N7 item 4 (vague P, 23/08) — LA BASCULE D'OUVERTURE DE L'ENTRAINEMENT
+    // DEMENAGE DANS CE MENU. La carte « Entraînement ouvert / privé » de
+    // l'Apercu portait trois choses : un ETAT, la ligne de quota, et le BOUTON
+    // de bascule. Le bouton est une action d'organisation — il n'y a qu'un
+    // endroit pour ca, et c'est ici (meme motif que « Stats du match », D71).
+    // La ligne de quota, reprise TELLE QUELLE, devient la note de la rangee.
+    // ⛔ L'ETAT (ouvert / prive, a qui c'est ouvert) n'est PAS reconstruit ici :
+    //    c'est la carte d'ouverture enrichie du lot P8, qui vient apres.
+    // ✅ Ce que tout le monde voit (« Accueille N joueur·se·s de l'extérieur »,
+    //    `openTrainingPublicLine`) n'a pas bouge : il ne dependait pas de la carte.
+    // Gate et gestes REPRIS TELS QUELS de la carte : `canManageTrainingVisibility`,
+    // `handleCloseTraining` / `setIsTrainingOpenModalVisible`.
+    if (canManageTrainingVisibility) {
+      const validationLabel = trainingOpenConfig.externalParticipantValidationMode === 'auto'
+        ? 'automatique'
+        : 'manuelle';
+      let quotaNote = null;
+      if (trainingOpenConfig.externalParticipantLimit !== null) {
+        const quotaLine = `${trainingOpenConfig.externalParticipantLimit} place(s) externes`
+          + ` - validation ${validationLabel}`;
+        quotaNote = trainingOpenConfig.isOpenTraining
+          ? quotaLine
+          : `Dernier reglage mémorise: ${quotaLine}`;
+      }
+      chips.push({
+        disabled: mutations.updateEventNoNavMutation.isPending,
+        icon: 'whistle',
+        key: 'trainingVisibility',
+        label: trainingOpenConfig.isOpenTraining
+          ? t('eventDetails.managePanel.closeTraining', 'Fermer l\'entraînement')
+          : t('eventDetails.managePanel.openTraining', 'Ouvrir l\'entraînement'),
+        note: quotaNote,
+        onPress: trainingOpenConfig.isOpenTraining
+          ? handleCloseTraining
+          : () => setIsTrainingOpenModalVisible(true),
       });
     }
 
@@ -5386,6 +5484,11 @@ function EventDetails({ navigation, route }) {
       : t('eventDetails.menu.lineup', 'Choisir et convoquer les joueur·se·s'),
     poster: t('eventDetails.menu.poster', 'Voir et partager l’affiche'),
     tournamentSettings: t('eventDetails.menu.tournamentSettings', 'Format, équipes et terrains'),
+    // N7 item 4 : repli quand aucun quota n'est memorise (la note porte sinon le quota).
+    trainingVisibility: t(
+      'eventDetails.menu.trainingVisibility',
+      'Accueillir des joueur·se·s de l’extérieur',
+    ),
   };
 
   /**
@@ -5747,20 +5850,46 @@ function EventDetails({ navigation, route }) {
     }
     const teamsSummary = `${tournamentTeamCounters.accepted} validée(s) · ${tournamentTeamCounters.pending} en attente`;
 
-    // 🧭 LES CINQ ETAPES DU FIL — ce que la page sait, sans un appel de plus.
+    // 🧭 LES CINQ ETAPES DU FIL — les trois dernieres lisent le dashboard.
     //
-    // ponytail: « Poules » et « Matchs » ne sont pas distinguees de « Publié ».
-    //   PLAFOND : la page ne peut pas savoir si les poules existent mais ne sont
-    //   pas publiees — cet etat-la vit derriere `GET /events/:id/tournament/dashboard`.
-    //   POURQUOI ON NE L'APPELLE PAS : ce hook tire `tournamentCompetitionService`,
-    //   donc `@/services/client`. Les treize suites qui montent cet ecran
-    //   devraient toutes le mocker, et le projet a deja paye ce piege (un import
-    //   de service de plus = des suites entieres qui ne s'executent plus).
-    //   CE QUI RESTE VRAI : publier EXIGE des poules et des matchs. Un tournoi
-    //   publie a donc necessairement franchi les etapes 3 et 4 — le fil ne ment
-    //   jamais, il est seulement moins precis pendant le brouillon.
-    //   SORTIE : appeler `useGetTournamentDashboard` le jour ou un lot mocke ce
-    //   module dans les treize suites.
+    // N7 item 5 (vague P, 23/08) — SORTIE DU PONYTAIL. Avant ce lot, « Poules »
+    // et « Matchs » n'etaient pas distinguees de « Publié » : la page ne
+    // savait pas si les poules existaient sans etre publiees, et le hook qui le
+    // sait tirait `@/services/client` — un import de service de plus aurait
+    // fait tomber a 0 test les suites qui montent cet ecran. Les 16 suites le
+    // mockent desormais (`tournamentCompetitionQueries`), le hook est branche.
+    //
+    // 📦 FORME REELLE du dashboard (admin `tournament-competition.js`) :
+    //   { bracket, config, event, groups, matches, overview, phases, standings,
+    //     teams } avec `config.competitionState` ('draft' | 'published').
+    // REGLE DE DERIVATION :
+    //   · Poules  = `groups.length > 0`
+    //   · Matchs  = `matches.length > 0`
+    //   · Publié  = `config.competitionState === 'published'`
+    // ✅ CE QUI RESTE VRAI : publier EXIGE des poules et des matchs — un tournoi
+    //    publie coche donc 3 et 4 meme si son format n'a pas de poules
+    //    (`knockout_only`) : le fil ne dit jamais « pas encore » d'une etape
+    //    que la publication a deja franchie.
+    // ♻️ REPLI : tant que le dashboard n'a rien rendu (`data` absent), le calcul
+    //    d'avant tient — tout s'effondre sur `competitionState` de l'evenement.
+    const tournamentDashboard = tournamentDashboardQuery.data;
+    const hasTournamentDashboard = Boolean(
+      tournamentDashboard && typeof tournamentDashboard === 'object',
+    );
+    const dashboardGroupsCount = Array.isArray(tournamentDashboard?.groups)
+      ? tournamentDashboard.groups.length
+      : 0;
+    const dashboardMatchesCount = Array.isArray(tournamentDashboard?.matches)
+      ? tournamentDashboard.matches.length
+      : 0;
+    const dashboardPublished = tournamentDashboard?.config?.competitionState === 'published';
+    const railGroupsDone = hasTournamentDashboard
+      ? dashboardGroupsCount > 0 || dashboardPublished
+      : isCompetitionPublished;
+    const railMatchesDone = hasTournamentDashboard
+      ? dashboardMatchesCount > 0 || dashboardPublished
+      : isCompetitionPublished;
+    const railPublishedDone = hasTournamentDashboard ? dashboardPublished : isCompetitionPublished;
     const tournamentRailSteps = [
       {
         done: Boolean(event?.tournamentConfig?.formatMode),
@@ -5771,15 +5900,15 @@ function EventDetails({ navigation, route }) {
         label: t('eventDetails.tournamentRail.teams', 'Équipes'),
       },
       {
-        done: isCompetitionPublished,
+        done: railGroupsDone,
         label: t('eventDetails.tournamentRail.groups', 'Poules'),
       },
       {
-        done: isCompetitionPublished,
+        done: railMatchesDone,
         label: t('eventDetails.tournamentRail.matches', 'Matchs'),
       },
       {
-        done: isCompetitionPublished,
+        done: railPublishedDone,
         label: t('eventDetails.tournamentRail.published', 'Publié'),
       },
     ];
@@ -6651,50 +6780,6 @@ function EventDetails({ navigation, route }) {
                   event={event}
                   userData={userData}
                 />
-              ) : null}
-
-              {canManageTrainingVisibility ? (
-                <View
-                  style={[
-                    ApplicationStyle.backgroundColor.primary900,
-                    ApplicationStyle.borderRadius16,
-                    ApplicationStyle.borderWidth1,
-                    Spaces.padding[16],
-                    Spaces.gap[12],
-                    {
-                      borderColor: `${Colors.primary500}33`,
-                    },
-                  ]}
-                >
-                  <View style={[Spaces.gap[4]]}>
-                    <Text style={[Fonts.h4Bold, Fonts.neutral00]}>
-                      {trainingOpenConfig.isOpenTraining ? 'Entraînement ouvert' : 'Entraînement prive'}
-                    </Text>
-                    <Text style={[Fonts.p2, Fonts.neutral200]}>
-                      {trainingOpenConfig.isOpenTraining
-                        ? 'Les joueurs externes peuvent rejoindre selon ton quota et ton mode de validation.'
-                        : 'Ouvre l\'entraînement pour autoriser un quota de joueurs externes sans toucher à tes joueurs internes.'}
-                    </Text>
-                  </View>
-
-                  {trainingOpenConfig.externalParticipantLimit !== null ? (
-                    <Text style={[Fonts.p3, Fonts.primary100]}>
-                      {trainingOpenConfig.isOpenTraining
-                        ? `${trainingOpenConfig.externalParticipantLimit} place(s) externes - validation ${trainingOpenConfig.externalParticipantValidationMode === 'auto' ? 'automatique' : 'manuelle'}`
-                        : `Dernier reglage mémorise: ${trainingOpenConfig.externalParticipantLimit} place(s) externes - validation ${trainingOpenConfig.externalParticipantValidationMode === 'auto' ? 'automatique' : 'manuelle'}`}
-                    </Text>
-                  ) : null}
-
-                  <Button
-                    disabled={mutations.updateEventNoNavMutation.isPending}
-                    isLoading={mutations.updateEventNoNavMutation.isPending}
-                    onPress={trainingOpenConfig.isOpenTraining
-                      ? handleCloseTraining
-                      : () => setIsTrainingOpenModalVisible(true)}
-                    title={trainingOpenConfig.isOpenTraining ? 'Fermer l\'entraînement' : 'Ouvrir l\'entraînement'}
-                    variant={trainingOpenConfig.isOpenTraining ? 'SecondaryLight' : 'Primary'}
-                  />
-                </View>
               ) : null}
 
               {showParticipantsTab && (!isTournamentEvent || isStageDayEvent) ? (
@@ -7882,7 +7967,7 @@ function EventDetails({ navigation, route }) {
                 const isDisabled = option.status === 'pending' || option.status === 'approved';
                 // @ts-ignore: FIXME: Baseline TS regression
                 const isSelected = Boolean(selectedFeaturedScopes[option.kind]);
-                const statusLabel = getFeaturedScopeStatusLabel(option.status);
+                const statusLabel = getFeaturedScopeStatusLabel(t, option.status);
 
                 return (
                   <View

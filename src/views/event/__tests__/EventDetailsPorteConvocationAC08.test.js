@@ -122,6 +122,14 @@ jest.mock('@/services/license/licenseQueries', () => ({
   useLicenseCampaigns: () => ({ ...emptyQuery(), data: { data: [] } }),
 }));
 
+// 🏆 N7 item 5 (vague P, 23/08) — le fil du tournoi lit `useGetTournamentDashboard`,
+// qui tire `@/services/client`. Sans cette doublure MUETTE, la suite entiere
+// tombe a 0 test (piege connu : un import de service de plus). `data: undefined`
+// = le calcul de repli de la page, identique a ce que ces temoins decrivaient.
+jest.mock('@/services/tournamentCompetition/tournamentCompetitionQueries', () => ({
+  useGetTournamentDashboard: () => ({ data: undefined, isLoading: false }),
+}));
+
 jest.mock('@/services/matchStats/matchStatsQueries', () => ({
   useGetEventMatchStats: () => emptyQuery(),
   useGetEventMyMatchResponse: () => emptyQuery(),

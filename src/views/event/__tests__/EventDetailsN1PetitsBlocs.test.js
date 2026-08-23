@@ -141,6 +141,14 @@ jest.mock('@/services/license/licenseQueries', () => ({
   useLicenseCampaigns: () => ({ ...emptyQuery(), data: { data: [] } }),
 }));
 
+// 🏆 N7 item 5 (vague P, 23/08) — le fil du tournoi lit `useGetTournamentDashboard`,
+// qui tire `@/services/client`. Sans cette doublure MUETTE, la suite entiere
+// tombe a 0 test (piege connu : un import de service de plus). `data: undefined`
+// = le calcul de repli de la page, identique a ce que ces temoins decrivaient.
+jest.mock('@/services/tournamentCompetition/tournamentCompetitionQueries', () => ({
+  useGetTournamentDashboard: () => ({ data: undefined, isLoading: false }),
+}));
+
 jest.mock('@/services/matchStats/matchStatsQueries', () => ({
   useGetEventMatchStats: () => emptyQuery(),
   useGetEventMyMatchResponse: () => emptyQuery(),
@@ -474,6 +482,41 @@ const contient = (
   /** @type {string} */ extrait,
 ) => textesVisibles(racine).join(' | ').includes(extrait);
 
+// ⋯ N7 item 4 (vague P, 23/08) — la bascule « Ouvrir / Fermer l'entraînement »
+// vit desormais dans la feuille du menu ⋯, qui s'ouvre depuis l'EN-TETE de
+// navigation. On va la chercher la ou elle est (motif L4MenuTroisPoints).
+const chercherDansElements = (
+  /** @type {any} */ element,
+  /** @type {(n: any) => boolean} */ predicat,
+) => {
+  if (!element || typeof element !== 'object') return null;
+  if (Array.isArray(element)) {
+    return element.reduce(
+      (/** @type {any} */ trouve, /** @type {any} */ enfant) => (
+        trouve || chercherDansElements(enfant, predicat)
+      ),
+      null,
+    );
+  }
+  if (element.props && predicat(element)) return element;
+  return chercherDansElements(element.props?.children, predicat);
+};
+
+const ouvrirLeMenu = () => {
+  const appels = mockSetOptions.mock.calls.filter(
+    (/** @type {any} */ appel) => appel[0]?.headerRight,
+  );
+  const entete = appels.length ? appels[appels.length - 1][0].headerRight() : null;
+  const bouton = chercherDansElements(
+    entete,
+    (/** @type {any} */ noeud) => noeud?.props?.testID === 'event-actions-menu-button',
+  );
+  if (!bouton) throw new Error('Aucun bouton trois-points dans l en-tete de navigation');
+  act(() => {
+    bouton.props.onPress();
+  });
+};
+
 const parTestID = (
   /** @type {any} */ racine,
   /** @type {string} */ id,
@@ -524,13 +567,18 @@ describe('N1 · (a) — le branchement du bloc des postes de detection', () => {
 });
 
 describe('N1 · (b) — l entrainement ouvert se dit a TOUT LE MONDE', () => {
-  test('caracterisation : la carte d organisation reste reservee a l organisateur', () => {
-    // 🔒 Ce que N1 ne change PAS. La carte « Ouvrir / Fermer l'entrainement »
+  test('caracterisation : la bascule d organisation reste reservee a l organisateur', () => {
+    // 🔒 Ce que N1 ne change PAS. La bascule « Ouvrir / Fermer l'entrainement »
     // porte une ACTION : elle n'a rien a faire chez un lecteur.
+    // ♻️ REECRIT PAR N7 item 4 (vague P, 23/08) : la bascule a quitte sa carte
+    // de l'Apercu pour la feuille du menu ⋯. Un lecteur n'a pas de menu ; un
+    // organisateur l'y trouve, et ne la voit PLUS sur la page elle-meme.
     const spectateur = monter({ auth: SPECTATEUR(), event: entrainementOuvert() });
     expect(contient(spectateur, 'Fermer l\'entraînement')).toBe(false);
 
     const organisateur = monter({ auth: ORGANISATEUR(), event: entrainementOuvert() });
+    expect(contient(organisateur, 'Fermer l\'entraînement')).toBe(false);
+    ouvrirLeMenu();
     expect(contient(organisateur, 'Fermer l\'entraînement')).toBe(true);
   });
 
@@ -550,11 +598,14 @@ describe('N1 · (b) — l entrainement ouvert se dit a TOUT LE MONDE', () => {
     expect(contient(racine, 'demande(s) à vérifier')).toBe(false);
   });
 
-  test('un ORGANISATEUR voit la ligne, son compte de demandes, ET sa carte', () => {
+  test('un ORGANISATEUR voit la ligne, son compte de demandes, ET sa bascule dans le menu', () => {
     const racine = monter({ auth: ORGANISATEUR(), event: entrainementOuvert() });
 
     expect(contient(racine, 'Accueille 8 joueur·se·s de l’extérieur')).toBe(true);
     expect(contient(racine, '1 demande(s) à vérifier')).toBe(true);
+    // ♻️ N7 item 4 (vague P, 23/08) : la bascule est dans la feuille ⋯, plus
+    // dans une carte de l'Apercu — la ligne publique, elle, n'a pas bouge.
+    ouvrirLeMenu();
     expect(contient(racine, 'Fermer l\'entraînement')).toBe(true);
   });
 

@@ -126,6 +126,14 @@ jest.mock('@/services/license/licenseQueries', () => ({
   useLicenseCampaigns: () => ({ ...emptyQuery(), data: { data: [] } }),
 }));
 
+// 🏆 N7 item 5 (vague P, 23/08) — le fil du tournoi lit `useGetTournamentDashboard`,
+// qui tire `@/services/client`. Sans cette doublure MUETTE, la suite entiere
+// tombe a 0 test (piege connu : un import de service de plus). `data: undefined`
+// = le calcul de repli de la page, identique a ce que ces temoins decrivaient.
+jest.mock('@/services/tournamentCompetition/tournamentCompetitionQueries', () => ({
+  useGetTournamentDashboard: () => ({ data: undefined, isLoading: false }),
+}));
+
 jest.mock('@/services/matchStats/matchStatsQueries', () => ({
   useGetEventMatchStats: () => emptyQuery(),
   useGetEventMyMatchResponse: () => emptyQuery(),
@@ -891,11 +899,13 @@ describe('D4 — le panneau compact « Gerer l evenement »', () => {
   // rangee porte desormais SA DESTINATION sous son libelle — une demi-colonne
   // casserait la destination en quatre lignes illisibles.
   // ⇒ CE QUE CE TEMOIN PROTEGE EST INTACT : les 4 actions, toutes atteignables.
-  test('ouvert : les 4 actions sont la, en rangees pleine largeur', () => {
+  test('ouvert : les 5 rangees sont la, pleine largeur (dont la bascule d entrainement)', () => {
     const root = asOrganiser();
     ouvrirLaFeuilleDeGestion();
 
-    expect(chipWidths(root)).toEqual(['100%', '100%', '100%', '100%']);
+    // N7 item 4 (vague P, 23/08) : sur un ENTRAINEMENT, la bascule « Ouvrir /
+    // Fermer l'entraînement » a rejoint la feuille — 4 rangees deviennent 5.
+    expect(chipWidths(root)).toEqual(['100%', '100%', '100%', '100%', '100%']);
     ['Modifier', 'À la une', 'Annuler'].forEach((label) => {
       expect(pressableWithText(root, label)).toBeTruthy();
     });
@@ -938,7 +948,7 @@ describe('D4 — le panneau compact « Gerer l evenement »', () => {
     expect(mockCancelEventMutate).not.toHaveBeenCalled();
   });
 
-  test('TEMOIN : deux chips seulement tiennent sur une rangee pleine largeur', () => {
+  test('TEMOIN : trois rangees seulement, chacune pleine largeur', () => {
     const root = mountScreen({
       auth: { canEditEvent: () => true, canManageEvent: () => true },
       // Ni equipe (pas de Compo) ni portee « a la une » disponible : restent
@@ -956,7 +966,9 @@ describe('D4 — le panneau compact « Gerer l evenement »', () => {
 
     // L4-B : deux actions seulement, chacune sur sa rangee. Le COMPTE est ce
     // que ce temoin protege ; la largeur suit la maquette 04 · 4C.
-    expect(chipWidths(root)).toEqual(['100%', '100%']);
+    // N7 item 4 (vague P, 23/08) : + la bascule d'entrainement, qui ne depend
+    // ni d'une equipe ni d'une portee « a la une » — 2 rangees deviennent 3.
+    expect(chipWidths(root)).toEqual(['100%', '100%', '100%']);
   });
 
   test('TEMOIN NEGATIF : sans canEdit, ni Modifier ni Annuler dans le panneau', () => {
