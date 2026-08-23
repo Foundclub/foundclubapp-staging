@@ -81,6 +81,12 @@ jest.mock('@/services/event/eventQueries', () => ({
     isLoading: false,
     refetch: jest.fn(),
   }),
+  // 🧭 P9 : la fabrique est FERMEE — ce que l ecran demande et qu elle ne
+  // declare pas revient `undefined`, et le montage meurt. `useGetEventAttendance`
+  // y entre parce que l Apercu du site porte desormais la carte « Faire l appel ».
+  // Ces suites-ci ne s en servent pas : une charge vide suffit, et la carte
+  // reste alors dans son etat honnete (`before`).
+  useGetEventAttendance: () => emptyQuery(),
   useGetEventConvocation: () => ({ ...emptyQuery(), data: mockConvocationQuery.data }),
   useGetEventTeamComposition: () => emptyQuery(),
 }));

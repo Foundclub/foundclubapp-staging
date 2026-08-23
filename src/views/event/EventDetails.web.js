@@ -30,6 +30,7 @@ import { RouteNames } from '@/navigation/routeNames';
 import { celebrate } from '@/services/celebrations/celebrationRuntime';
 import {
   useGetEvent,
+  useGetEventAttendance,
   useGetEventConvocation,
   useGetEventTeamComposition,
 } from '@/services/event/eventQueries';
@@ -56,8 +57,16 @@ import { buildPublicEventUrl, buildShareMessageWithUrl } from '@/utils/shareLink
 /* eslint-disable perfectionist/sort-imports */
 import * as SharePlatform from '@/platform/share';
 import { BREAKPOINTS } from '@/responsive';
+import {
+  formatTimeInZone,
+  resolveAttendanceWindow,
+  resolveCallMode,
+  resolveServerClockMs,
+} from './attendance/attendanceCallModel';
+import EventNextActionCard from './components/EventNextActionCard';
 import EventTasksSection from './components/EventTasksSection';
 import EventTeamAudiencesSection from './components/EventTeamAudiencesSection';
+import { resolveEventAttendanceGate } from './eventAttendanceGate';
 /* eslint-enable perfectionist/sort-imports */
 
 const flattenPages = (pages) => {
@@ -286,6 +295,99 @@ function EventDetails({ navigation, route }) {
   // par le `normalizeTypeName` local — les deux normalisent a l'identique, mais
   // seul le helper garantit que les deux surfaces resteront d'accord.
   const isDetectionEvent = isDetectionEventType(event?.type?.name);
+
+  // ==========================================================================
+  // P9 · ECRAN 1 — LA PORTE D ENTREE DE L APPEL, SUR LE SITE (miroir de N5).
+  //
+  // 🪞 CE BLOC N INVENTE AUCUNE REGLE, IL IMPORTE CELLES DU TELEPHONE :
+  // `resolveEventAttendanceGate`, `resolveAttendanceWindow`, `resolveCallMode`
+  // et `EventNextActionCard` sont les modules de `EventDetails.js`, servis ici
+  // par react-native-web. Les recopier aurait pose un SECOND juge sur le meme
+  // etat, qui divergerait au premier changement de regle — c est exactement le
+  // defaut que P9 repare (D08, D22, D40, D48, et le gate elargi en ce moment).
+  //
+  // ⛔ L HORLOGE QUI DECIDE EST CELLE DU SERVEUR, jamais celle du navigateur.
+  // Sans `serverNow`, `resolveCallMode` repond `before` : la porte se VOIT mais
+  // ne s ouvre pas. C est le seul etat honnete — l ouvrir sur l heure du poste
+  // la rendrait cliquable alors que le serveur refuse ensuite ligne par ligne.
+  // ==========================================================================
+
+  // 🧭 LE TELEPHONE ECARTE ICI LES ENTRAINEURS de la liste des participants
+  // (`trainerKeysForEvent`, EventDetails.js:1154). Cette soustraction n est PAS
+  // recopiee, et ce n est pas un oubli : elle ne peut pas changer la reponse du
+  // gate. Pour qu elle retire quelqu un, il faut qu un entraineur de l equipe
+  // porte le meme `documentId` que le lecteur — or c est exactement ce qui rend
+  // `isTeamMember` vrai, et le gate est un OU. Elle ne sert la-bas qu au second
+  // drapeau (`canSelfMarkArrival`), que cette carte n emploie pas.
+  const isCurrentUserParticipating = useMemo(() => {
+    const currentUserId = userData?.documentId;
+    if (!currentUserId) return false;
+    return (event?.participations || []).some(
+      (participant) => participant?.documentId === currentUserId,
+    );
+  }, [event?.participations, userData?.documentId]);
+  const { canAccessAttendance } = useMemo(
+    () => resolveEventAttendanceGate({ canEdit, isCurrentUserParticipating, isTeamMember }),
+    [canEdit, isCurrentUserParticipating, isTeamMember],
+  );
+  const { data: attendancePayload } = useGetEventAttendance(eventId || '', {
+    enabled: Boolean(eventId && canAccessAttendance),
+  });
+
+  // ⏱️ L instant du serveur AVANCE, sinon la porte resterait fermee jusqu au
+  // prochain rechargement de la page pour qui attend l heure d ouverture. Meme
+  // mecanique que le telephone (EventDetails.js:1263-1273) : un pas de 30 s,
+  // remis a zero des que le serveur redonne son instant.
+  const [elapsedSinceServerNowMs, setElapsedSinceServerNowMs] = useState(0);
+
+  useEffect(() => {
+    setElapsedSinceServerNowMs(0);
+  }, [attendancePayload?.data?.serverNow]);
+
+  useEffect(() => {
+    const timerId = setInterval(() => {
+      setElapsedSinceServerNowMs((previous) => previous + 30000);
+    }, 30000);
+
+    return () => clearInterval(timerId);
+  }, []);
+
+  const serverClockMs = useMemo(
+    () => resolveServerClockMs({
+      elapsedMs: elapsedSinceServerNowMs,
+      serverNowIso: attendancePayload?.data?.serverNow,
+    }),
+    [attendancePayload?.data?.serverNow, elapsedSinceServerNowMs],
+  );
+  const attendanceCallWindow = useMemo(
+    () => resolveAttendanceWindow({ event, payloadData: attendancePayload?.data }),
+    [attendancePayload?.data, event],
+  );
+  // D5 du telephone : sans charge d appel, la carte se montre avec le repli
+  // local pour que l organisateur VOIE la porte, mais elle ne s ouvre pas.
+  const nextActionMode = useMemo(() => {
+    if (!attendancePayload?.data) return 'before';
+
+    return resolveCallMode({ serverNowMs: serverClockMs, window: attendanceCallWindow });
+  }, [attendanceCallWindow, attendancePayload?.data, serverClockMs]);
+  // « N attendus » = l audience entiere. `null` quand la charge n est pas la :
+  // on ne dit pas « 0 attendu » a la place de « je ne sais pas ».
+  const nextActionExpectedCount = useMemo(() => {
+    const items = attendancePayload?.data?.items;
+
+    return Array.isArray(items) ? items.length : null;
+  }, [attendancePayload?.data?.items]);
+  const nextActionOpensAtLabel = formatTimeInZone(
+    attendanceCallWindow.opensAtMs,
+    attendancePayload?.data?.timezone,
+  );
+  const openAttendanceCall = useCallback(() => {
+    navigation.navigate(RouteNames.EventAttendanceCall, { eventId });
+  }, [eventId, navigation]);
+  // Le telephone ajoute `showOverviewTab` a cette condition : le site n a pas
+  // d onglets, sa page EST l Apercu. Les trois autres sont celles de N5
+  // (EventDetails.js:4747), mot pour mot.
+  const showNextActionCard = canEdit && canAccessAttendance && !isTournamentEvent;
   const tournamentConfig = useMemo(
     () => event?.tournamentConfig || {},
     [event?.tournamentConfig],
@@ -1182,6 +1284,18 @@ function EventDetails({ navigation, route }) {
               background: sectionBackground, border: `1px solid ${borderColor}`, borderRadius: 24, display: 'grid', gap: 18, padding: 22,
             }}
             >
+              {/* 🚪 P9 · ECRAN 1 — LA PROCHAINE ACTION PASSE EN PREMIER, comme sur
+                  le telephone : c est la seule chose a FAIRE maintenant, tout
+                  le reste de la page est de la consultation. */}
+              {showNextActionCard ? (
+                <EventNextActionCard
+                  expectedCount={nextActionExpectedCount}
+                  mode={nextActionMode}
+                  onPress={openAttendanceCall}
+                  opensAtLabel={nextActionOpensAtLabel}
+                />
+              ) : null}
+
               {hasVisibleEventTasks ? (
                 <div>
                   <EventTasksSection
