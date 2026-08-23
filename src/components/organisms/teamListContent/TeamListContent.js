@@ -330,9 +330,20 @@ function TeamListContent({
     const other = /** @type {Team[]} */ ([]);
 
     const teamRequests = userData.teamMembershipRequests || [];
-    const pending = teamRequests
-      .filter((/** @type {{ state?: string; team?: Team }} */ r) => r.state === 'pending' && r.team)
-      .map((/** @type {{ team?: Team; documentId?: string }} */ r) => ({ ...r.team, requestId: r.documentId }));
+    const enAttente = teamRequests
+      .filter((/** @type {{ state?: string; team?: Team }} */ r) => r.state === 'pending' && r.team);
+    // P10 — LE SENS DE LA LIGNE. `direction` vaut 'invite' quand le staff
+    // m'invite ; elle vaut 'request' ou '' (les lignes d'avant le lot) quand
+    // c'est MOI qui ai demande. Sans cette separation, une invitation recue
+    // s'afficherait comme une demande envoyee : le sens exactement inverse.
+    const estInvitation = (/** @type {{ direction?: string }} */ r) => (
+      String(r?.direction || '').trim() === 'invite'
+    );
+    const versCarte = (/** @type {{ team?: Team; documentId?: string }} */ r) => (
+      { ...r.team, requestId: r.documentId }
+    );
+    const pending = enAttente.filter((/** @type {any} */ r) => !estInvitation(r)).map(versCarte);
+    const invitations = enAttente.filter((/** @type {any} */ r) => estInvitation(r)).map(versCarte);
 
     const clubRequests = userData.clubMembershipRequests || [];
     const pendingClubs = clubRequests
@@ -353,7 +364,8 @@ function TeamListContent({
 
     scopedClassicTeams.forEach((/** @type {Team} */ team) => {
       const isTeamMine = isMyTeam(team, userData);
-      const isPending = pending.some((/** @type {PendingTeam} */ p) => p.documentId === team.documentId);
+      const isPending = [...pending, ...invitations]
+        .some((/** @type {PendingTeam} */ p) => p.documentId === team.documentId);
 
       if (isTeamMine) {
         my.push(team);
@@ -363,7 +375,10 @@ function TeamListContent({
     });
 
     return {
-      invitedTeams: [],
+      // La section « Invitations recues » et son badge INVITATION existaient
+      // deja pour les equipes de ligue : P10 les REUTILISE, il n'ajoute ni
+      // section, ni ecran, ni route.
+      invitedTeams: sortTeamsForDisplay(invitations),
       myTeams: sortTeamsForDisplay(my),
       otherTeams: sortTeamsForDisplay(other),
       pendingTeams: sortTeamsForDisplay([...pending, ...pendingClubs]),
@@ -664,6 +679,11 @@ function TeamListContent({
       //  · rejoindre une equipe : accept sous police `is-team-manager`.
       const isClubRequestCard = isPending && item?.type === 'club';
       let noticeKind = null;
+      // P10 — une invitation recue porte son propre bandeau : le pendant exact
+      // de `teamJoin`, dans l'autre sens.
+      if (isInvitation) {
+        noticeKind = 'teamInvite';
+      }
       if (isPending) {
         if (!isClubRequestCard) {
           noticeKind = 'teamJoin';
@@ -695,6 +715,20 @@ function TeamListContent({
           who: t(
             'teamList.pendingNotice.clubJoin.who',
             'Un·e dirigeant·e du club doit l\'accepter.',
+          ),
+        },
+        teamInvite: {
+          unblocks: t(
+            'teamList.pendingNotice.teamInvite.unblocks',
+            'Si tu acceptes, tu rejoins l\'effectif.',
+          ),
+          waiting: t(
+            'teamList.pendingNotice.teamInvite.waiting',
+            'Cette équipe t\'invite',
+          ),
+          who: t(
+            'teamList.pendingNotice.teamInvite.who',
+            'Ouvre la fiche de l\'équipe pour accepter ou refuser.',
           ),
         },
         teamJoin: {

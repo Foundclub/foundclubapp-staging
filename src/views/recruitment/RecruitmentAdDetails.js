@@ -50,6 +50,10 @@ import {
   updateRecruitmentApplicationStatus,
   withdrawRecruitmentApplication,
 } from '@/services/recruitment/recruitmentService';
+import {
+  inviteToTeam,
+  resolveTeamInvitationAvailability,
+} from '@/services/teamMembershipRequest/teamMembershipRequestService';
 
 import {
   getClubCertificationLabel,
@@ -169,6 +173,13 @@ function RecruitmentAdDetails() {
   const [coachApplicationPhone, setCoachApplicationPhone] = useState(String(userData?.phoneNumber || '').trim());
   const [coachApplicationEmail, setCoachApplicationEmail] = useState(String(userData?.email || '').trim());
   const [optimisticApplicationStatus, setOptimisticApplicationStatus] = useState(/** @type {'accepted' | 'pending' | null} */ (null));
+  // P10 — les candidatures dont l'invitation vient de partir. Meme motif que
+  // `optimisticApplicationStatus` juste au-dessus : le serveur ne renvoie pas
+  // l'etat de l'invitation avec la candidature, et P10 s'interdit d'ouvrir une
+  // requete de plus.
+  const [invitedApplicationIds, setInvitedApplicationIds] = useState(
+    /** @type {string[]} */ ([]),
+  );
 
   const adId = params?.ad?.documentId || params?.adId || params?.ad?.id;
 
@@ -393,6 +404,31 @@ function RecruitmentAdDetails() {
     },
   }));
 
+  // P10 — INVITER un candidat dans l'equipe de l'annonce.
+  // ⛔ Ce n'est pas « l'ajouter » : le serveur cree une invitation `pending`, la
+  // personne recoit une notification, et c'est ELLE qui accepte ou refuse.
+  const inviteApplicantMutation = /** @type {any} */ (useMutation({
+    mutationFn: (/** @type {any} */ payload = {}) => inviteToTeam({
+      sourceApplication: payload.applicationId,
+      team: payload.teamId,
+      user: payload.candidateId,
+    }),
+    onError: (/** @type {any} */ error) => {
+      Alert.alert(
+        'Invitation',
+        error?.message || 'Impossible d\'envoyer l\'invitation pour le moment.',
+      );
+    },
+    onSuccess: (/** @type {any} */ _data, /** @type {any} */ variables) => {
+      const applicationId = String(variables?.applicationId || '').trim();
+      if (applicationId) {
+        setInvitedApplicationIds((previous) => (
+          previous.includes(applicationId) ? previous : [...previous, applicationId]
+        ));
+      }
+    },
+  }));
+
   const withdrawApplicationMutation = /** @type {any} */ (useMutation({
     mutationFn: (/** @type {any} */ applicationId) => withdrawRecruitmentApplication(applicationId),
     onError: (/** @type {any} */ error) => {
@@ -428,6 +464,8 @@ function RecruitmentAdDetails() {
   }, [navigation, Colors]);
 
   const team = ad?.team;
+  // P10 — l equipe DE L ANNONCE : c est dans celle-la que le staff invite.
+  const adTeamDocumentId = String(team?.documentId || '').trim();
   const club = team?.club;
   const clubName = club?.name || team?.name || 'Club inconnu';
   const clubLogo = getImageUrl(club?.logo?.url);
@@ -1031,6 +1069,18 @@ function RecruitmentAdDetails() {
                 const isDeclineLoading = updateApplicationStatusMutation.isPending
                   && updateApplicationStatusMutation.variables?.applicationId === application?.documentId
                   && updateApplicationStatusMutation.variables?.status === 'declined';
+                // P10 — inviter dans l'equipe de l'annonce. La regle vit dans
+                // le service (elle est partagee avec le micro-lot P7 qui
+                // branchera le bouton grise de la fiche candidat).
+                const invitation = resolveTeamInvitationAvailability(
+                  application,
+                  adTeamDocumentId,
+                );
+                const canInviteCandidate = invitation.canInvite;
+                const isAlreadyInvited = invitedApplicationIds
+                  .includes(String(application?.documentId || ''));
+                const isInviteLoading = inviteApplicantMutation.isPending
+                  && inviteApplicantMutation.variables?.applicationId === application?.documentId;
 
                 return (
                   <View
@@ -1144,8 +1194,37 @@ function RecruitmentAdDetails() {
                       </View>
                     ) : null}
 
+                    {isAlreadyInvited ? (
+                      <Text style={[Fonts.p4Bold, { color: Colors.success500, marginTop: 12 }]}>
+                        {t('recruitment.invite.sent', 'Invitation envoyée')}
+                      </Text>
+                    ) : null}
+
+                    {invitation.reason === 'no-account' && isPendingApplication ? (
+                      <Text style={[Fonts.p4, { color: Colors.neutral300, marginTop: 12 }]}>
+                        {t(
+                          'recruitment.invite.needsAccount',
+                          'Cette personne n\'a pas encore de compte FoundClub : impossible de l\'inviter dans l\'équipe.',
+                        )}
+                      </Text>
+                    ) : null}
+
                     {isPendingApplication ? (
                       <View style={[Alignments.row, Alignments.justifyEnd, Spaces.gap[8], { marginTop: 12 }]}>
+                        <Button
+                          disabled={!canInviteCandidate || isAlreadyInvited || inviteApplicantMutation.isPending}
+                          isLoading={isInviteLoading}
+                          onPress={() => inviteApplicantMutation.mutate({
+                            applicationId: application.documentId,
+                            candidateId: invitation.candidateId,
+                            teamId: adTeamDocumentId,
+                          })}
+                          size="sm"
+                          title={isAlreadyInvited
+                            ? t('recruitment.invite.sent', 'Invitation envoyée')
+                            : t('recruitment.invite.action', 'Inviter dans l\'équipe')}
+                          variant="Secondary"
+                        />
                         <Button
                           disabled={updateApplicationStatusMutation.isPending}
                           isLoading={isAcceptLoading}

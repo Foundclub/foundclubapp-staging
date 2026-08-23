@@ -10,7 +10,15 @@ const teamMembershipRequestLogger = createLogger('team-membership-request');
 
 const teamMembershipRequestSchema = Joi.object({
   decisionSource: Joi.string().allow('', null).optional(),
+  // P10 — le SENS de la ligne. `null` sur toutes celles d'avant le lot, et
+  // `null` se lit PARTOUT comme 'request'.
+  // ⚠️ Ce champ est declare mais il ne FILTRE rien : `allowUnknown: true` (plus
+  // bas) le laissait deja passer. Il est ecrit ici pour qu'on sache qu'il
+  // existe — un champ qui traverse en silence est un champ qu'un lot futur
+  // supprime sans le voir.
+  direction: Joi.string().valid('request', 'invite').allow(null).optional(),
   documentId: Joi.string().required(),
+  invitedBy: Joi.object().allow(null).optional(),
   permissions: Joi.object({
     canManage: Joi.boolean().optional(),
     canView: Joi.boolean().optional(),
@@ -207,6 +215,84 @@ export const acceptTeamMembershipRequest = async (requestId) => {
 export const rejectTeamMembershipRequest = async (requestId) => {
   const response = await client.post(`/team-membership-requests/${requestId}/refuse`);
   return response.data;
+};
+
+/**
+ * P10 — Peut-on inviter cette candidature dans l'equipe de l'annonce ?
+ *
+ * ⚠️ LE CAS QUI FAIT EXISTER CETTE FONCTION : un LEAD SANS COMPTE. La
+ * candidature porte alors des instantanes (`phoneSnapshot` / `emailSnapshot`)
+ * et `applicant` est absent — il n'y a personne a inviter, et surtout
+ * personne a qui demander son consentement. Le bouton doit etre GRISE avec son
+ * motif, jamais absent : un bouton disparu ne s'explique pas.
+ *
+ * Le serveur refuse le meme cas de son cote (`invite` exige un `user`) : cette
+ * fonction habille le refus, elle ne le remplace pas.
+ * @param {any} application - la candidature affichee
+ * @param {string} [teamDocumentId] - l'equipe de l'annonce
+ * @returns {{ candidateId: string, canInvite: boolean, reason: string }}
+ */
+export const resolveTeamInvitationAvailability = (application, teamDocumentId) => {
+  const candidate = application?.applicant;
+  const candidateId = String(candidate?.documentId || candidate?.id || '').trim();
+  const teamId = String(teamDocumentId || '').trim();
+
+  if (!teamId) {
+    return { candidateId, canInvite: false, reason: 'missing-team' };
+  }
+  if (!candidateId) {
+    return { candidateId, canInvite: false, reason: 'no-account' };
+  }
+  return { candidateId, canInvite: true, reason: '' };
+};
+
+/**
+ * P10 — Inviter quelqu'un dans une equipe (geste du STAFF).
+ *
+ * ⛔ Ce n'est PAS `createTeamMembershipRequest` : celle-la cree une demande AU
+ * NOM DE L'APPELANT (le serveur force `user` a l'appelant). Ici, la ligne porte
+ * la personne INVITEE, et elle reste `pending` tant qu'elle n'a pas repondu —
+ * personne n'est ajoute a l'equipe par ce geste.
+ * @param {{ sourceApplication?: string, team: string, user: string }} invitation
+ * @returns {Promise<any>} - The created invitation
+ */
+export const inviteToTeam = async (invitation) => {
+  try {
+    const response = await client.post('/team-membership-requests/invite', {
+      data: invitation,
+    });
+    return response.data;
+  } catch (error) {
+    throw toReadableError(error, 'Impossible d\'envoyer l\'invitation pour le moment.');
+  }
+};
+
+/**
+ * P10 — Accepter une invitation recue (geste de la personne INVITEE).
+ * @param {string} requestId - The ID of the invitation to accept
+ * @returns {Promise<any>} - The accepted invitation
+ */
+export const acceptTeamInvitation = async (requestId) => {
+  try {
+    const response = await client.post(`/team-membership-requests/${requestId}/accept-invite`);
+    return response.data;
+  } catch (error) {
+    throw toReadableError(error, 'Impossible d\'accepter cette invitation pour le moment.');
+  }
+};
+
+/**
+ * P10 — Refuser une invitation recue (geste de la personne INVITEE).
+ * @param {string} requestId - The ID of the invitation to refuse
+ * @returns {Promise<any>} - The refused invitation
+ */
+export const refuseTeamInvitation = async (requestId) => {
+  try {
+    const response = await client.post(`/team-membership-requests/${requestId}/refuse-invite`);
+    return response.data;
+  } catch (error) {
+    throw toReadableError(error, 'Impossible de refuser cette invitation pour le moment.');
+  }
 };
 
 /**
