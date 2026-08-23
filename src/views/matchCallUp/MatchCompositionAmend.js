@@ -22,7 +22,7 @@ import ScreenContainer from '@/components/templates/ScreenContainer';
 import { useGetEventTeamComposition } from '@/services/event/eventQueries';
 import { publishEventConvocation, saveEventCompositionDraft } from '@/services/event/eventService';
 
-import { getImageUrl } from '@/utils/imageUrl';
+import { getCompositionPlayerAvatarUrl } from '@/utils/compositionPlayer';
 
 import { buildMatchCompositionPack } from './matchCompositionUtils';
 import {
@@ -191,7 +191,7 @@ function MatchCompositionAmend() {
       >
         <ProfileAvatar
           enablePreview={false}
-          imageUrl={getImageUrl(row.player?.avatar)}
+          imageUrl={getCompositionPlayerAvatarUrl(row.player)}
           name={nomDe(row.player)}
           size={36}
           style={[styles.moveAvatar, { borderColor: tone }]}
