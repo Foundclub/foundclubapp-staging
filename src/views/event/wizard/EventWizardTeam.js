@@ -1,3 +1,4 @@
+import { useQueryClient } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -21,6 +22,7 @@ import { useGetActivities } from '@/services/activity/activityQueries';
 import { useGetCategories } from '@/services/category/categoryQueries';
 import { useGetSections } from '@/services/section/sectionQueries';
 import { useGetTeams } from '@/services/team/teamQueries';
+import { getTeamById } from '@/services/team/teamService';
 
 import { sortTeamsForDisplay } from '@/utils/teamSort';
 
@@ -29,6 +31,7 @@ import {
   getEventWizardNextRoute,
   getEventWizardStepCount,
   getEventWizardStepIndex,
+  isMatchEventType,
   isTournamentEventType,
 } from './eventWizardDetectionUtils';
 
@@ -75,6 +78,7 @@ function EventWizardTeam({ navigation }) {
   const { t } = useTranslation();
   const { USER_ROLES, userData } = useAuth();
   const { dispatch, state } = useEventWizard();
+  const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState('');
   const isClubManager = userData?.role?.name === USER_ROLES.president;
   const isTournament = isTournamentEventType(state?.type?.name);
@@ -264,6 +268,33 @@ function EventWizardTeam({ navigation }) {
     // D08 : `EventWizardInvites` n'est plus l'etape par defaut apres l'equipe.
     // Il est sorti de la chaine et se rejoint desormais depuis le Recap.
     const nextRoute = getEventWizardNextRoute(RouteNames.EventWizardTeam, state);
+
+    // Q2 (constat d'Adel en recette du 2026-08-23) — LE DEPART ANTICIPE DE
+    // L'EFFECTIF. L'etape « Participants » (6e ecran) rappelle l'equipe
+    // COMPLETE pour porter la convocation d'un match, et ce GET est lourd
+    // (`teamService.js:309-352` : 8 relations, `players.populate: '*'`,
+    // validation Joi). Le laisser partir au montage de cette etape-la, c'est
+    // faire attendre l'organisateur devant la liste qu'il vient d'ouvrir.
+    // Il part donc ICI, au toucher, pendant que l'organisateur remplit les
+    // trois ecrans de saisie qui separent les deux etapes.
+    //
+    // 🔑 La cle est la MEME que celle de `useGetTeam` (`teamQueries.js:43`) :
+    // c'est ce qui fait que l'etape 6 LIT LE CACHE au lieu de repartir. Un
+    // caractere d'ecart et le prechargement ne servirait plus a rien.
+    //
+    // ⛔ Hors match, on ne precharge RIEN : `shouldOfferMatchCallUp`
+    // (`eventWizardDetectionUtils.js:140-144`) coupe la convocation pour tous
+    // les autres types, et personne ne lirait cet effectif.
+    // ⚠️ Aucun `await` : c'est un depart anticipe, pas une etape du parcours.
+    // La navigation ne l'attend pas, et un echec reseau n'est pas traite ici —
+    // l'etape 6 refera l'appel elle-meme si le cache est vide.
+    const teamDocumentId = String(team?.documentId || team?.id || '');
+    if (teamDocumentId && isMatchEventType(state?.type?.name)) {
+      queryClient.prefetchQuery({
+        queryFn: () => getTeamById(teamDocumentId),
+        queryKey: ['team', teamDocumentId],
+      });
+    }
 
     if (isTournamentEventType(state?.type?.name)) {
       dispatch({
