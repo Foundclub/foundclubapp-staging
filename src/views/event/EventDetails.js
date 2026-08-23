@@ -999,10 +999,24 @@ function EventDetails({ navigation, route }) {
       .toLowerCase()
       .normalize('NFD')
       .replace(/[\u0300-\u036f]/g, '');
+    const isRobotSyncPhrase = normalizedDescription.includes('match externe synchron');
+
+    // 🤖 N7 item 1 (vague P, 23/08) — LA PHRASE-ROBOT NE SERT PLUS DE DESCRIPTION.
+    // « Match externe synchronisé - Domicile » n'est pas une description, c'est
+    // la trace du robot FFF. Jusqu'ici la page l'affichait en lui ACCOLANT
+    // l'adversaire : la pastille N3 porte deja Domicile/Exterieur et le titre
+    // porte deja « VS … ». Sur un evenement synchronise, elle s'efface donc :
+    // le bloc « Description » disparait avec elle (gate `eventDescriptionText`
+    // au rendu). Une VRAIE phrase ecrite par un humain sur ce meme match reste
+    // affichee — la garde est la phrase-robot ET la source externe, jamais
+    // l'une sans l'autre.
+    if (event?.externalAutoSource && isRobotSyncPhrase) {
+      return '';
+    }
 
     if (
       externalMatchDisplay?.title
-      && normalizedDescription.includes('match externe synchron')
+      && isRobotSyncPhrase
       && !/\bvs\b/i.test(resolvedDescription)
     ) {
       return [
@@ -1015,7 +1029,12 @@ function EventDetails({ navigation, route }) {
     }
 
     return resolvedDescription;
-  }, [event?.description, externalMatchDisplay?.contextLabel, externalMatchDisplay?.title]);
+  }, [
+    event?.description,
+    event?.externalAutoSource,
+    externalMatchDisplay?.contextLabel,
+    externalMatchDisplay?.title,
+  ]);
   const canEdit = Boolean(canManageEvent(event));
   const trainingOpenConfig = useMemo(() => resolveTrainingOpenConfig(event || {}), [event]);
   const canManageTrainingVisibility = Boolean(canEdit && trainingOpenConfig.isTraining);

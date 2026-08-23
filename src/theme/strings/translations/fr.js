@@ -1219,7 +1219,7 @@ export default {
       error: 'Impossible d’envoyer la demande de mise à la une.',
     },
     fields: {
-      description: 'À propos',
+      description: 'Description',
       participationRequests: 'Demandes de participation',
       participations: 'Participants',
     },
