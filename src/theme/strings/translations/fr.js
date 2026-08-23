@@ -3505,6 +3505,13 @@ export default {
     },
     updateError: 'Impossible d\'enregistrer ton profil pour le moment. Vérifie ta connexion et réessaie.',
   },
+  recruitment: {
+    invite: {
+      action: 'Inviter dans l\'équipe',
+      needsAccount: 'Cette personne n\'a pas encore de compte FoundClub : impossible de l\'inviter.',
+      sent: 'Invitation envoyée',
+    },
+  },
   register: {
     actions: {
       register: 'Continuer',

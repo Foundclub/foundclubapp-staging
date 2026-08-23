@@ -34,6 +34,7 @@ const {
   getTeamMembershipRequests,
   inviteToTeam,
   refuseTeamInvitation,
+  resolveTeamInvitationAvailability,
 } = require('../teamMembershipRequestService');
 
 const PAGINATION = {
@@ -73,7 +74,9 @@ describe('P10 — l invitation traverse l app sans se faire ecarter', () => {
   });
 
   test('temoin 2 — une ligne heritee (`direction: null`) passe elle aussi, inchangee', async () => {
-    mockGet.mockResolvedValue({ data: { data: [DEMANDE_HERITEE], meta: { pagination: PAGINATION } } });
+    mockGet.mockResolvedValue({
+      data: { data: [DEMANDE_HERITEE], meta: { pagination: PAGINATION } },
+    });
 
     const result = await getTeamMembershipRequests('team-1');
 
@@ -81,7 +84,7 @@ describe('P10 — l invitation traverse l app sans se faire ecarter', () => {
     expect(result.data[0].direction).toBeNull();
   });
 
-  test('temoin 3 — `inviteToTeam` poste sur la route NEUVE, avec la candidature d origine', async () => {
+  test('temoin 3 — `inviteToTeam` poste sur la route NEUVE, avec sa candidature', async () => {
     mockPost.mockResolvedValue({ data: { data: { documentId: 'tmr-cree' } } });
 
     await inviteToTeam({
@@ -99,14 +102,15 @@ describe('P10 — l invitation traverse l app sans se faire ecarter', () => {
     });
   });
 
-  test('temoin 4 — accepter et refuser une invitation empruntent leurs PROPRES routes', async () => {
+  test('temoin 4 — accepter et refuser empruntent leurs PROPRES routes', async () => {
     mockPost.mockResolvedValue({ data: { data: {} } });
 
     await acceptTeamInvitation('tmr-invitation');
     await refuseTeamInvitation('tmr-invitation');
 
-    expect(mockPost).toHaveBeenNthCalledWith(1, '/team-membership-requests/tmr-invitation/accept-invite');
-    expect(mockPost).toHaveBeenNthCalledWith(2, '/team-membership-requests/tmr-invitation/refuse-invite');
+    const BASE = '/team-membership-requests/tmr-invitation';
+    expect(mockPost).toHaveBeenNthCalledWith(1, `${BASE}/accept-invite`);
+    expect(mockPost).toHaveBeenNthCalledWith(2, `${BASE}/refuse-invite`);
     // ⛔ Jamais /accept ni /refuse : ce sont les routes du STAFF sur une DEMANDE.
     const chemins = mockPost.mock.calls.map(([chemin]) => chemin);
     expect(chemins.some((chemin) => /\/(accept|refuse)$/.test(chemin))).toBe(false);
@@ -122,5 +126,45 @@ describe('P10 — l invitation traverse l app sans se faire ecarter', () => {
       message: 'Forbidden',
       status: 403,
     });
+  });
+});
+
+describe('P10 (D11) — qui peut etre invite, et qui ne peut pas', () => {
+  const TEAM = 'team-1';
+
+  test('temoin 6 — une candidature portee par un COMPTE peut etre invitee', () => {
+    const resultat = resolveTeamInvitationAvailability(
+      { applicant: { documentId: 'candidate-1' }, documentId: 'app-1' },
+      TEAM,
+    );
+
+    expect(resultat).toEqual({ candidateId: 'candidate-1', canInvite: true, reason: '' });
+  });
+
+  test('🔴 temoin 7 — un LEAD SANS COMPTE ne peut PAS etre invite, et le motif est nomme', () => {
+    // La candidature ne porte que des instantanes : il n y a personne a qui
+    // demander son consentement.
+    const resultat = resolveTeamInvitationAvailability(
+      {
+        documentId: 'app-2',
+        emailSnapshot: 'lead@example.test',
+        phoneSnapshot: '0600000000',
+      },
+      TEAM,
+    );
+
+    expect(resultat.canInvite).toBe(false);
+    expect(resultat.reason).toBe('no-account');
+    expect(resultat.candidateId).toBe('');
+  });
+
+  test('temoin 8 — sans equipe sur l annonce, on n invite nulle part', () => {
+    const resultat = resolveTeamInvitationAvailability(
+      { applicant: { documentId: 'candidate-1' }, documentId: 'app-3' },
+      '',
+    );
+
+    expect(resultat.canInvite).toBe(false);
+    expect(resultat.reason).toBe('missing-team');
   });
 });

@@ -218,6 +218,35 @@ export const rejectTeamMembershipRequest = async (requestId) => {
 };
 
 /**
+ * P10 — Peut-on inviter cette candidature dans l'equipe de l'annonce ?
+ *
+ * ⚠️ LE CAS QUI FAIT EXISTER CETTE FONCTION : un LEAD SANS COMPTE. La
+ * candidature porte alors des instantanes (`phoneSnapshot` / `emailSnapshot`)
+ * et `applicant` est absent — il n'y a personne a inviter, et surtout
+ * personne a qui demander son consentement. Le bouton doit etre GRISE avec son
+ * motif, jamais absent : un bouton disparu ne s'explique pas.
+ *
+ * Le serveur refuse le meme cas de son cote (`invite` exige un `user`) : cette
+ * fonction habille le refus, elle ne le remplace pas.
+ * @param {any} application - la candidature affichee
+ * @param {string} [teamDocumentId] - l'equipe de l'annonce
+ * @returns {{ candidateId: string, canInvite: boolean, reason: string }}
+ */
+export const resolveTeamInvitationAvailability = (application, teamDocumentId) => {
+  const candidate = application?.applicant;
+  const candidateId = String(candidate?.documentId || candidate?.id || '').trim();
+  const teamId = String(teamDocumentId || '').trim();
+
+  if (!teamId) {
+    return { candidateId, canInvite: false, reason: 'missing-team' };
+  }
+  if (!candidateId) {
+    return { candidateId, canInvite: false, reason: 'no-account' };
+  }
+  return { candidateId, canInvite: true, reason: '' };
+};
+
+/**
  * P10 — Inviter quelqu'un dans une equipe (geste du STAFF).
  *
  * ⛔ Ce n'est PAS `createTeamMembershipRequest` : celle-la cree une demande AU
