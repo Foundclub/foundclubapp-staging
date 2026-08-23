@@ -6703,7 +6703,9 @@ function EventDetails({ navigation, route }) {
                   attendanceByUserId={attendanceByUserId}
                   canApprovePendingRequests={canApprovePendingRequests}
                   canEdit={canEdit}
+                  canManageEventLicenseCampaigns={canManageEventLicenseCampaigns}
                   event={event}
+                  eventLicenseCampaigns={eventLicenseCampaigns}
                   eventStartAt={eventStartAt}
                   externalParticipationSection={externalParticipationSection}
                   handleExportParticipants={handleExportParticipants}

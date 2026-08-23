@@ -1,17 +1,20 @@
 // @ts-nocheck
 import { useIsMutating, useMutationState } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Image, Text, TouchableOpacity, View,
 } from 'react-native';
 
 import { REMIND_EVENT_MUTATION_KEY } from '@/domains/event/remindReport';
+import { withAlpha } from '@/theme/colors';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
 import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 import SearchBar from '@/components/molecules/searchBar/SearchBar';
+
+import { useLicenseAssignments } from '@/services/license/licenseQueries';
 
 import { formatDateTimeWithDayPrefix } from '@/utils/date';
 
@@ -93,6 +96,8 @@ import SHARE_ICON from '@/assets/icons/share2.png';
  * @property {{ participatingCount?: number; capacity?: number }} [participantsSummary]
  * @property {boolean} canEdit
  * @property {boolean} [canApprovePendingRequests]
+ * @property {boolean} [canManageEventLicenseCampaigns]
+ * @property {any[]} [eventLicenseCampaigns]
  * @property {(user?: User) => void} handleUserPress
  * @property {(teamKey?: string) => void} handleRemindPlayers
  * @property {() => void} handleShare
@@ -145,6 +150,75 @@ const getStaffDisplayName = (user) => {
 const lireLesRelancesReussies = typeof useMutationState === 'function'
   ? useMutationState
   : () => [];
+
+// 🔘 P2 (D1) — LES 4 PASTILLES DE FILTRE, 1:1 AVEC LES 3 GROUPES RSVP.
+// Elles trient des REPONSES, pas des arrivees : il n y a donc volontairement ni
+// « arrive » ni « en retard » ici. L assiduite se lit deja sur la pastille de
+// droite de chaque ligne, qui est une AUTRE information.
+// ⚠️ Les libelles ne reprennent PAS mot pour mot les titres de groupe
+// (« Presents » et non « Présent·e·s ») : les temoins d ordre d AD06 et d AE02
+// comparent des textes exacts, et un doublon parfait rendrait leur `indexOf`
+// ambigu le jour ou quelqu un descendrait ce bloc sous la legende.
+// 🧨 P2 (D5-a) — POURQUOI CE HOOK EST RESOLU ICI, ET PAS APPELE DIRECTEMENT.
+// C est le MEME motif que `lireLesRelancesReussies` ci-dessus, pour la meme
+// raison, mesuree : 15 suites (les 14 `EventDetails*` et
+// `AD10ExportFeuilleBranchee`) mockent `@/services/license/licenseQueries` en
+// n exposant QUE `useLicenseCampaigns`. L appeler directement rendrait
+// « useLicenseAssignments is not a function » au montage — et une suite qui
+// jette au montage rend 0 test, pas un echec lisible.
+// La resolution se fait UNE FOIS, au chargement du module : l ordre des hooks
+// ne bouge donc jamais d un rendu a l autre.
+// ⛔ NE PAS remplacer par un `if` dans le composant : ce serait un appel de
+// hook CONDITIONNEL, et l ordre des hooks dependrait alors du mock.
+const lireLesAffectationsDeCotisation = typeof useLicenseAssignments === 'function'
+  ? useLicenseAssignments
+  : () => ({ data: undefined, isLoading: false });
+
+// 💶 P2 (D7) — LES 6 STATUTS D UNE COTISATION, EN TABLE LOCALE.
+// Libelles RECOPIES de `ClubLicenses.js:101`, tons de `ClubLicenses.js:121-126`.
+// Recopies et NON importes : ce fichier ne les exporte pas, et ouvrir un export
+// dans un ecran de 2 700 lignes pour six mots serait un couplage de plus.
+// ⚠️ Une affectation porte SIX statuts, pas trois : le raccourci « paye / pas
+// paye » perdrait `partial`, `waived`, `manual_review` et `overdue` — dont deux
+// veulent dire « ne relance pas cette personne ».
+// ⚠️ Aucun de ces libelles n est EGAL a un texte des temoins d ordre
+// (« Présent·e·s », « Demandes de participation »…) : le temoin 8 le tient.
+const STATUTS_PAIEMENT = {
+  manual_review: { clef: 'manualReview', repli: 'À valider' },
+  overdue: { clef: 'overdue', repli: 'En retard' },
+  paid: { clef: 'paid', repli: 'Payée' },
+  partial: { clef: 'partial', repli: 'Partiel' },
+  pending: { clef: 'pending', repli: 'En attente' },
+  waived: { clef: 'waived', repli: 'Exemptée' },
+};
+
+// Une page suffit : on liste les participants d UN evenement, pas tout un club.
+// La constante vit au niveau du module pour que son IDENTITE ne change pas d un
+// rendu a l autre — sinon la clef de cache de la requete changerait sans arret.
+const PARAMS_AFFECTATIONS = { pageSize: 100 };
+
+/**
+ * Le ton d un statut de cotisation, recopie de `ClubLicenses.js:121-126`.
+ * @param {any} colors - Les jetons de couleur du theme.
+ * @param {string} statut - Le statut de l affectation.
+ * @returns {string} - Le jeton de couleur a appliquer.
+ */
+const tonStatutPaiement = (colors, statut) => ({
+  manual_review: colors.warning500,
+  overdue: colors.error500,
+  paid: colors.success500,
+  partial: colors.primary200,
+  pending: colors.primary500,
+  waived: colors.neutral200,
+}[statut] || colors.primary500);
+
+const FILTRE_TOUS = 'tous';
+const PASTILLES_DE_FILTRE = [
+  { clef: FILTRE_TOUS, clefTexte: 'all', repli: 'Tous' },
+  { clef: 'participating', clefTexte: 'present', repli: 'Présents' },
+  { clef: 'missing', clefTexte: 'absent', repli: 'Absents' },
+  { clef: 'notAnswered', clefTexte: 'notAnswered', repli: 'Sans réponse' },
+];
 
 /**
  * AE02 : reduit un texte a sa forme comparable — sans accent, sans casse.
@@ -289,7 +363,9 @@ function EventParticipants({
   attendanceByUserId = {},
   canEdit,
   canApprovePendingRequests = canEdit,
+  canManageEventLicenseCampaigns = false,
   event,
+  eventLicenseCampaigns = [],
   eventStartAt,
   externalParticipationSection = null,
   handleExportParticipants,
@@ -355,6 +431,61 @@ function EventParticipants({
   // et ne peut recevoir aucune prop neuve. ⚠️ Saisie vide = l ecran STRICTEMENT
   // d avant — c est ce qui protege le filet d AD06, qui ne tape jamais rien.
   const [rechercheNom, setRechercheNom] = useState('');
+  // P2 : le filtre vit ICI et nulle part ailleurs. `EventDetails` n a rien a
+  // faire descendre — c est un etat d affichage, pas une donnee d evenement.
+  const [filtreStatut, setFiltreStatut] = useState(FILTRE_TOUS);
+  const filtreStatutActif = filtreStatut !== FILTRE_TOUS;
+
+  // 💶 P2 (D6) — QUI A PAYE. La source existe DEJA de bout en bout
+  // (`useLicenseAssignments` → `getLicenseAssignments` → GET
+  // /licenses/campaigns/:id/assignments) : rien a ecrire cote service.
+  // La chaine de repli est celle de `ClubLicenses.js:1098-1104`, dans le meme
+  // ordre — une campagne en cours prime sur un brouillon oublie.
+  const campagneDeCotisation = useMemo(() => {
+    const liste = Array.isArray(eventLicenseCampaigns) ? eventLicenseCampaigns : [];
+    return liste.find((item) => item?.status === 'active')
+      || liste.find((item) => item?.status === 'paused')
+      || liste.find((item) => item?.status === 'scheduled')
+      || liste.find((item) => item?.status === 'draft')
+      || liste[0]
+      || null;
+  }, [eventLicenseCampaigns]);
+  const idCampagneDeCotisation = campagneDeCotisation?.documentId
+    || campagneDeCotisation?.id
+    || null;
+  // 🔒 P2 (D7) — LA PORTE EST ICI, ET ELLE EST FERMEE PAR DEFAUT. C est de
+  // l argent : sans droit de gestion, la requete ne part meme pas.
+  // (D8) Sans campagne non plus : la colonne n existe pas, elle n est pas vide.
+  const colonnePaiementVisible = Boolean(
+    canManageEventLicenseCampaigns && idCampagneDeCotisation,
+  );
+  const affectationsDeCotisation = lireLesAffectationsDeCotisation(
+    idCampagneDeCotisation,
+    PARAMS_AFFECTATIONS,
+    { enabled: colonnePaiementVisible },
+  );
+  const statutPaiementParUtilisateur = useMemo(() => {
+    /** @type {Record<string, string>} */
+    const table = {};
+    // 🧨 LA SEULE CHOSE QUE JE N AI PAS PU OBSERVER EN VRAI : la forme exacte de
+    // la reponse. Deux sources concordantes disent `query.data.data` —
+    // `ClubLicenses.js:1203` (`assignmentsQuery.data?.data`) et `:1236`
+    // (`...data?.meta?.pagination?.total`), plus le montage de
+    // `ClubLicenses.aPayerListe.test.js:187`. Mais `unwrap()`
+    // (`licenseService.js:8`) rend `response.data.data`, ce qui laisse une
+    // lecture ou la liste arriverait NUE. Les deux sont acceptees ici : une
+    // colonne d argent muette parce que la forme a bouge serait un defaut
+    // invisible — l ecran resterait vert, il ne dirait simplement plus rien.
+    const recue = affectationsDeCotisation?.data;
+    const affectations = Array.isArray(recue) ? recue : recue?.data;
+    if (!Array.isArray(affectations)) return table;
+    affectations.forEach((item) => {
+      const clef = String(item?.user?.documentId || item?.user?.id || '');
+      const statut = String(item?.status || '');
+      if (clef && statut) table[clef] = statut;
+    });
+    return table;
+  }, [affectationsDeCotisation?.data]);
   const rechercheComparable = comparable(rechercheNom);
   const rechercheActive = rechercheComparable.length > 0;
 
@@ -389,6 +520,10 @@ function EventParticipants({
   const renderParticipant = (player, options = {}) => {
     const userId = player?.documentId || '';
     const attendance = userId ? attendanceByUserId[userId] : null;
+    // P2 : hors gate on ne descend RIEN — pas une chaine vide « au cas ou ».
+    const statutPaiement = colonnePaiementVisible
+      ? (statutPaiementParUtilisateur[userId] || '')
+      : '';
     return (
       <ParticipantItem
         allowLiveLate={Boolean(options.allowLiveLate)}
@@ -400,6 +535,7 @@ function EventParticipants({
         onEditLate={onCoachEditLate}
         onMarkArrival={onCoachMarkArrival}
         onPress={handleUserPress}
+        paymentStatus={statutPaiement}
         player={player}
         statusKind={options.statusKind || 'participating'}
         styles={{
@@ -472,7 +608,10 @@ function EventParticipants({
       // AE02 : pendant une recherche, un groupe sans resultat DISPARAIT, titre
       // compris. Garder « Aucune absence signalée. » serait un mensonge : il y
       // a peut-etre des absents, ils ne portent juste pas le nom cherche.
-      if (!options.emptyMessage || rechercheActive) return null;
+      // P2 : un filtre actif se comporte comme une recherche — garder
+      // « Aucune absence signalée. » sous la pastille « Présents » serait un
+      // mensonge : on n a pas regarde les absents, on les a mis de cote.
+      if (!options.emptyMessage || rechercheActive || filtreStatutActif) return null;
       return (
         <>
           <Text style={[Fonts.h4Bold, Fonts.primary500]}>
@@ -699,21 +838,57 @@ function EventParticipants({
     pending: filtrerDemandes(item.pending),
   });
 
+  /**
+   * Ne garde que la liste RSVP choisie ; les deux autres deviennent vides.
+   * ⛔ `pending` n est PAS touche : une demande de participation n est pas une
+   * reponse — la cacher derriere « Présents » ferait rater du travail au
+   * dirigeant. Le reste de l objet est recopie tel quel.
+   * @param {any} listes - Un objet portant participating / missing / notAnswered.
+   * @returns {any} - Les memes listes, deux d entre elles videes.
+   */
+  const garderLeGroupeChoisi = (listes) => ({
+    ...(listes || {}),
+    missing: filtreStatut === 'missing' ? (listes?.missing || []) : [],
+    notAnswered: filtreStatut === 'notAnswered' ? (listes?.notAnswered || []) : [],
+    participating: filtreStatut === 'participating' ? (listes?.participating || []) : [],
+  });
+
+  /**
+   * Applique le filtre a une section d equipe, historique compris.
+   * @param {TeamParticipationSection} item - La section a filtrer.
+   * @returns {TeamParticipationSection} - La section reduite au groupe choisi.
+   */
+  const filtrerSectionParStatut = (item) => ({
+    ...garderLeGroupeChoisi(item),
+    historical: garderLeGroupeChoisi(item?.historical),
+  });
+
   // ⚠️ CE QUI EST FILTRE, ET CE QUI NE L EST PAS : seules les LISTES rendues
   // passent par la recherche. Les 3 compteurs et la barre de reponses, eux,
   // continuent de se calculer sur `sectionsToRender` — ils decrivent
   // l evenement, pas la saisie. Un coach qui cherche « Dupont » ne doit pas
   // voir « 1 présent » alors qu ils sont 14.
-  const sectionsAffichees = rechercheActive
+  // P2 : les deux tamis se COMPOSENT, dans cet ordre — on cherche un nom, PUIS
+  // on ne garde qu un groupe. L inverse donnerait le meme resultat ici, mais
+  // cet ordre garde la recherche identique a ce qu AE02 tient deja.
+  const sectionsRecherchees = rechercheActive
     ? sectionsToRender.map(filtrerSection).filter((item) => compterNomsDeSection(item) > 0)
     : sectionsToRender;
-  const listesAffichees = rechercheActive && participationsByStatus
+  const sectionsAffichees = filtreStatutActif
+    ? sectionsRecherchees
+      .map(filtrerSectionParStatut)
+      .filter((item) => compterNomsDeSection(item) > 0)
+    : sectionsRecherchees;
+  const listesRecherchees = rechercheActive && participationsByStatus
     ? {
       missing: filtrerJoueurs(participationsByStatus.missing),
       notAnswered: filtrerJoueurs(participationsByStatus.notAnswered),
       participating: filtrerJoueurs(participationsByStatus.participating),
     }
     : participationsByStatus;
+  const listesAffichees = filtreStatutActif && participationsByStatus
+    ? garderLeGroupeChoisi(listesRecherchees)
+    : listesRecherchees;
   const demandesAffichees = filtrerDemandes(pendingParticipations);
   const repliAffiche = filtrerJoueurs(event?.participations);
   const participatingCount = Number(
@@ -761,6 +936,19 @@ function EventParticipants({
     : compterNomsHorsEquipes(listesAffichees, repliAffiche, demandesAffichees);
   const barreDeRechercheVisible = !areParticipantIdentitiesHidden && nombreDeNomsAffichables > 0;
   const aucunResultat = rechercheActive && nombreDeNomsRetenus === 0;
+  // P2 : le filtre a sa PROPRE cause de vide. Les deux ne se confondent pas —
+  // la recherche parle de noms, le filtre parle d un groupe.
+  const groupeVide = !rechercheActive && filtreStatutActif && nombreDeNomsRetenus === 0;
+  // P2 : pas de pastilles la ou il n y a rien a filtrer — ni quand les identites
+  // sont masquees (aucune liste n est rendue), ni sur le repli
+  // `event.participations`, qui ne porte AUCUN statut de reponse.
+  const pastillesFiltreVisibles = !areParticipantIdentitiesHidden && hasRenderedLists;
+  const comptesParFiltre = {
+    missing: absentsCount,
+    notAnswered: sansReponseCount,
+    participating: presentsCount,
+    tous: totalAttendu,
+  };
 
   const renderCounterTile = (identifiant, libelle, valeur) => (
     <View
@@ -784,6 +972,48 @@ function EventParticipants({
       </Text>
     </View>
   );
+
+  /**
+   * Une pastille de filtre.
+   * 🎨 Le motif visuel est celui des chips de `CMMembersScreen.js:305-349`
+   * (`Fonts.p3` + un jeton de couleur), RECOPIE et non importe : la-bas les
+   * chips vivent dans le corps d un ecran, ce n est pas un composant.
+   * ⛔ PAS de `SegmentedControl` : il fusionne `color` et `textAlign: 'center'`
+   * dans le MEME objet de style, et c est EXACTEMENT la couture que le
+   * selecteur de pastilles d AD06 attrape. Les 8 temoins de pastille comparent
+   * en `toEqual` STRICT — ils seraient partis au rouge en serie.
+   * @param {{clef: string, clefTexte: string, repli: string}} pastille - Sa definition.
+   * @param {number} compte - Le nombre a afficher a cote du libelle.
+   * @returns {any} - La pastille rendue.
+   */
+  const renderPastilleDeFiltre = (pastille, compte) => {
+    const choisie = filtreStatut === pastille.clef;
+    const libelle = t(
+      `eventDetails.participantsFilter.${pastille.clefTexte}`,
+      pastille.repli,
+    );
+    return (
+      <TouchableOpacity
+        key={pastille.clef}
+        onPress={() => setFiltreStatut(pastille.clef)}
+        style={[
+          ApplicationStyle.borderRadius16,
+          Spaces.paddingHorizontal[12],
+          Spaces.paddingVertical[8],
+          {
+            backgroundColor: choisie ? Colors.primary500 : Colors.primary700,
+            borderColor: choisie ? Colors.primary500 : withAlpha(Colors.neutral00, 0.16),
+            borderWidth: 1,
+          },
+        ]}
+        testID={`P2-pastille-${pastille.clef}`}
+      >
+        <Text style={[Fonts.p3, choisie ? Fonts.neutral900 : Fonts.neutral100]}>
+          {`${libelle} · ${compte}`}
+        </Text>
+      </TouchableOpacity>
+    );
+  };
 
   // La barre « N reponses sur M ». Elle vit ICI, pas dans `src/components/` :
   // 9 lots tournent en parallele et un composant partage neuf serait un
@@ -996,6 +1226,22 @@ function EventParticipants({
             String(sansReponseCount),
           )}
         </View>
+
+        {/* 📍 P2 (D3) — LES PASTILLES SE RENDENT ICI, ET NULLE PART AILLEURS :
+            AU-DESSUS de la legende « reponses sur ». Cette legende est la COUPE
+            que trois temoins d ordre utilisent — AD06 l.327 et AE02 l.594
+            lisent la liste APRES elle, AD06 l.351 lit l ecran ENTIER. Descendu
+            sous la legende, ce bloc entrerait dans leurs `indexOf` et les
+            ferait tomber. */}
+        {pastillesFiltreVisibles ? (
+          <View style={[Alignments.row, Spaces.gap[8], { flexWrap: 'wrap' }]}>
+            {PASTILLES_DE_FILTRE.map((pastille) => renderPastilleDeFiltre(
+              pastille,
+              comptesParFiltre[pastille.clef] || 0,
+            ))}
+          </View>
+        ) : null}
+
         {renderResponsesBar()}
       </View>
 
@@ -1014,9 +1260,16 @@ function EventParticipants({
         />
       ) : null}
 
-      {aucunResultat ? (
-        <Text style={[Fonts.p3, Fonts.neutral300]} testID="AE02-aucun-resultat">
-          {t('eventDetails.participantsSearch.noResult', 'Aucun nom ne correspond')}
+      {/* P2 : le testID de la recherche est conserve TEL QUEL — c est celui que
+          lit le temoin AE02. Le filtre prend le sien, et son propre message. */}
+      {aucunResultat || groupeVide ? (
+        <Text
+          style={[Fonts.p3, Fonts.neutral300]}
+          testID={aucunResultat ? 'AE02-aucun-resultat' : 'P2-groupe-vide'}
+        >
+          {aucunResultat
+            ? t('eventDetails.participantsSearch.noResult', 'Aucun nom ne correspond')
+            : t('eventDetails.participantsFilter.empty', 'Personne dans ce groupe')}
         </Text>
       ) : renderParticipationsContent()}
     </View>
@@ -1034,6 +1287,7 @@ function EventParticipants({
  * onPress: (user?: User) => void,
  * onMarkArrival?: (user?: User) => void,
  * onEditLate?: (user?: User) => void,
+ * paymentStatus?: string,
  * statusKind?: 'participating' | 'missing' | 'not_answered',
  * styles: any,
  * t: (clef: string, valeurParDefaut?: string) => string
@@ -1048,6 +1302,7 @@ function ParticipantItem({
   onEditLate,
   onMarkArrival,
   onPress,
+  paymentStatus = '',
   player,
   statusKind = 'participating',
   styles,
@@ -1065,6 +1320,17 @@ function ParticipantItem({
     statusKind,
     t,
   });
+  // 💶 P2 : un statut inconnu ne rend RIEN. La colonne se decide sur le
+  // LIBELLE, pas sur la chaine brute — un statut que ce fichier ne connait pas
+  // ne doit pas s afficher tel quel a l ecran.
+  const definitionDePaiement = STATUTS_PAIEMENT[String(paymentStatus || '')];
+  const libelleDePaiement = definitionDePaiement
+    ? t(
+      `eventDetails.participantsPayment.${definitionDePaiement.clef}`,
+      definitionDePaiement.repli,
+    )
+    : '';
+  const tonDePaiement = tonStatutPaiement(Colors, String(paymentStatus || ''));
   const arrivalTime = formatArrivalTime(attendance?.arrivedAt);
   const hasStaffMeta = canEdit && (attendance?.note || attendance?.manualOverride || attendance?.updatedBy);
   const primaryCoachActionTitle = attendance?.arrivedAt ? 'Corriger' : 'Pointer l\'arrivée';
@@ -1136,6 +1402,33 @@ function ParticipantItem({
             </Text>
           ) : null}
         </View>
+
+        {/* 💶 P2 (D7) — « A PAYE », LA COLONNE D A COTE DE « VIENT ».
+            ⚠️ Son `Text` ne porte PAS `textAlign: 'center'` : la pastille
+            d assiduite juste au-dessus, elle, le porte AVEC `color` dans le
+            MEME objet — et c est cette couture exacte que le selecteur d AD06
+            attrape. Un `textAlign` ici ferait entrer « Payée » dans les 8
+            temoins de pastille, qui comparent en `toEqual` STRICT. */}
+        {libelleDePaiement ? (
+          <View
+            style={[
+              ApplicationStyle.borderRadius16,
+              Alignments.alignCenter,
+              Spaces.paddingHorizontal[12],
+              Spaces.paddingVertical[4],
+              {
+                backgroundColor: withAlpha(tonDePaiement, 0.12),
+                borderColor: withAlpha(tonDePaiement, 0.32),
+                borderWidth: 1,
+              },
+            ]}
+            testID={`P2-paiement-${player?.documentId || ''}`}
+          >
+            <Text numberOfLines={1} style={[Fonts.p4, { color: tonDePaiement }]}>
+              {libelleDePaiement}
+            </Text>
+          </View>
+        ) : null}
       </TouchableOpacity>
 
       {canEdit && (
