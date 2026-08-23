@@ -100,7 +100,10 @@ export const aggregateRemindReports = (entrees) => {
   const liste = Array.isArray(entrees) ? entrees : [];
 
   return liste.reduce((cumul, entree) => {
-    const rapport = entree?.report || null;
+    // Le typedef partage de `remindReport` ne declare pas `recipients` (il
+    // decrit ce que `buildRemindMessage` LIT, pas toute la reponse serveur).
+    // On lit donc la charge telle qu'elle arrive, sans lui mentir sur sa forme.
+    const rapport = /** @type {any} */ (entree?.report || null);
     const echec = Boolean(entree?.echec);
     const remindedCount = nombre(rapport?.remindedCount);
     const blockedCount = nombre(rapport?.blockedCount);

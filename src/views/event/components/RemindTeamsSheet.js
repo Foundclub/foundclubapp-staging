@@ -2,15 +2,14 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Text, View } from 'react-native';
 
-import useTheme from '@/theme/themeContext';
-
 import { buildRemindMessage } from '@/domains/event/remindReport';
-
-import { formatDateTimeWithDayPrefix } from '@/utils/date';
+import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
 import Checkbox from '@/components/atoms/checkbox/Checkbox';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
+
+import { formatDateTimeWithDayPrefix } from '@/utils/date';
 
 /**
  * N4 (D5) — LA FEUILLE QUI CHOISIT QUI ON RELANCE (cadres 1G, 1H, 1I).
@@ -86,8 +85,7 @@ function RemindTeamsSheet({
   } = useTheme();
   const { t } = useTranslation();
 
-  /** @type {[string[], (v: string[]) => void]} */
-  const [cochees, setCochees] = useState([]);
+  const [cochees, setCochees] = useState(/** @type {string[]} */ ([]));
   // 🔒 CE DRAPEAU EST LE COEUR DE 1H. `rapport` est le cache de la mutation :
   // il SURVIT a la fermeture de la feuille. Sans lui, rouvrir la feuille
   // afficherait d emblee le compte rendu d une relance d hier — et l on ne
@@ -241,6 +239,7 @@ function RemindTeamsSheet({
             testID={`remind-sheet-team-${section.key}`}
           >
             <Checkbox
+              disabled={false}
               onValueChange={() => basculer(section.key)}
               value={cochees.includes(section.key)}
             />
@@ -274,18 +273,22 @@ function RemindTeamsSheet({
     />
   ) : (
     <View style={[Spaces.gap[8]]}>
-      <Button
-        disabled={!cochees.length || isReminding}
-        isLoading={isReminding}
-        onPress={() => {
-          setAEnvoye(true);
-          onRelancer(cochees);
-        }}
-        style={{ minHeight: MIN_TOUCH_TARGET }}
-        testID="remind-sheet-confirm"
-        title={t('eventDetails.remindSheet.confirm', 'Relancer {{count}} personne·s')
-          .replace('{{count}}', String(nombreIndicatif))}
-      />
+      {/* 🪤 `testID` sur le `View`, pas sur le `Button` : l'atome ne le
+          declare ni ne le transmet. Pose dessus, il n'existerait que dans les
+          doublures de test. */}
+      <View testID="remind-sheet-confirm">
+        <Button
+          disabled={!cochees.length || isReminding}
+          isLoading={isReminding}
+          onPress={() => {
+            setAEnvoye(true);
+            onRelancer(cochees);
+          }}
+          style={{ minHeight: MIN_TOUCH_TARGET }}
+          title={t('eventDetails.remindSheet.confirm', 'Relancer {{count}} personne·s')
+            .replace('{{count}}', String(nombreIndicatif))}
+        />
+      </View>
       {/* 🔢 LE CHIFFRE DU PIED EST INDICATIF, ET LA FEUILLE LE DIT. C est le
           compte de l APP ; le serveur ecarte ensuite les personnes deja
           relancees, et c est SON chiffre que le compte rendu affiche. */}

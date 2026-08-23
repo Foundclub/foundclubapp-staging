@@ -109,8 +109,22 @@ const textes = (/** @type {any} */ root) => root
 const parTestID = (/** @type {any} */ root, /** @type {string} */ id) => root
   .findAll((/** @type {any} */ node) => node.props?.testID === id, { deep: false })[0];
 
+// 🪤 LE BOUTON EST SOUS LE `testID`, PAS DESSUS. L'atome `Button` ne
+// declare ni ne transmet `testID` : il vit donc sur le `View` qui l'enveloppe,
+// et c'est la seule facon d'avoir le meme repere dans la vraie app et ici.
+const boutonSous = (/** @type {any} */ root, /** @type {string} */ id) => {
+  const conteneur = parTestID(root, id);
+  if (!conteneur) return null;
+
+  return conteneur.findAll(
+    (/** @type {any} */ node) => typeof node.props?.onPress === 'function'
+      && typeof node.props?.title === 'string',
+    { deep: false },
+  )[0];
+};
+
 const libelleDuBouton = (/** @type {any} */ root) => String(
-  parTestID(root, 'post-match-action')?.props?.title || '',
+  boutonSous(root, 'post-match-action')?.props?.title || '',
 );
 
 // Le score enregistre, tel que l ecran le fabrique deja.
@@ -207,7 +221,7 @@ describe('N4/D6 — etape 1 : le score', () => {
     const onPressEtape = jest.fn();
     const root = monter({ onPressEtape });
 
-    act(() => { parTestID(root, 'post-match-action').props.onPress(); });
+    act(() => { boutonSous(root, 'post-match-action').props.onPress(); });
 
     expect(onPressEtape).toHaveBeenCalledWith('score');
   });
@@ -238,7 +252,7 @@ describe('N4/D6 — etape 2 : les statistiques', () => {
     const root = monter({ ...AVEC_SCORE, onPressEtape });
 
     expect(libelleDuBouton(root)).toBe('Saisir les stats');
-    act(() => { parTestID(root, 'post-match-action').props.onPress(); });
+    act(() => { boutonSous(root, 'post-match-action').props.onPress(); });
 
     expect(onPressEtape).toHaveBeenCalledWith('stats');
   });
@@ -291,7 +305,7 @@ describe('N4/D6 — une porte fermee dit POURQUOI', () => {
       motif: 'Les stats seront disponibles à la fin du match.',
     });
 
-    expect(parTestID(root, 'post-match-action').props.disabled).toBe(true);
+    expect(boutonSous(root, 'post-match-action').props.disabled).toBe(true);
     expect(textes(root)).toEqual(expect.arrayContaining([
       'Les stats seront disponibles à la fin du match.',
     ]));
@@ -301,6 +315,6 @@ describe('N4/D6 — une porte fermee dit POURQUOI', () => {
     const root = monter({ motif: 'Les stats seront disponibles à la fin du match.' });
 
     expect(parTestID(root, 'post-match-motif')).toBeUndefined();
-    expect(parTestID(root, 'post-match-action').props.disabled).toBe(false);
+    expect(boutonSous(root, 'post-match-action').props.disabled).toBe(false);
   });
 });

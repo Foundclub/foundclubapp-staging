@@ -82,7 +82,11 @@ const EVENEMENT_ID = 'evt-1';
 const EQUIPE_A = 'team-a';
 const EQUIPE_B = 'team-b';
 
-/** Une reponse serveur complete, telle que le service la normalise. */
+/**
+ * Une reponse serveur complete, telle que le service la normalise.
+ * @param {any} [champs] - Les champs a surcharger.
+ * @returns {any} - La reponse.
+ */
 const reponse = (/** @type {any} */ champs = {}) => ({
   blockedCount: 0,
   lastRemindedAt: null,

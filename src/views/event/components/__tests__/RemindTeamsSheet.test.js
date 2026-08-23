@@ -157,7 +157,20 @@ const parTestID = (/** @type {any} */ root, /** @type {string} */ id) => root
 const cases = (/** @type {any} */ root) => root
   .findAll((/** @type {any} */ node) => node.props?.testID === 'doublure-case', { deep: false });
 
-const bouton = (/** @type {any} */ root, /** @type {string} */ id) => parTestID(root, id)[0];
+const bouton = (/** @type {any} */ root, /** @type {string} */ id) => {
+  const [conteneur] = parTestID(root, id);
+  if (!conteneur) return null;
+
+  // 🪤 LE BOUTON EST SOUS LE `testID`, PAS DESSUS : l'atome `Button` ne
+  // declare ni ne transmet `testID`. Pose dessus, le repere n'aurait existe
+  // que dans cette doublure — et ce temoin serait passe au vert sur une
+  // fiction. Il vit donc sur le `View` qui enveloppe le bouton.
+  return conteneur.findAll(
+    (/** @type {any} */ node) => typeof node.props?.onPress === 'function'
+      && typeof node.props?.title === 'string',
+    { deep: false },
+  )[0];
+};
 
 // 🪤 `deep: false` rend le noeud le PLUS EXTERIEUR portant le testID : c est la
 // doublure `Button` elle-meme, qui recoit son libelle en PROP (`title`) et non
@@ -333,8 +346,12 @@ describe('N4/1H — apres l envoi, la feuille rend compte', () => {
       equipePreCochee: EQUIPE_A,
       rapport: {
         parEquipe: [
-          { echec: false, remindedCount: 3, teamId: EQUIPE_A, teamName: 'U15 A' },
-          { echec: true, remindedCount: 0, teamId: EQUIPE_B, teamName: 'U15 B' },
+          {
+            echec: false, remindedCount: 3, teamId: EQUIPE_A, teamName: 'U15 A',
+          },
+          {
+            echec: true, remindedCount: 0, teamId: EQUIPE_B, teamName: 'U15 B',
+          },
         ],
         remindedCount: 3,
       },
@@ -351,7 +368,9 @@ describe('N4/1H — apres l envoi, la feuille rend compte', () => {
     const root = monter({
       equipePreCochee: EQUIPE_A,
       rapport: {
-        parEquipe: [{ echec: false, remindedCount: 2, teamId: EQUIPE_A, teamName: 'U15 A' }],
+        parEquipe: [{
+          echec: false, remindedCount: 2, teamId: EQUIPE_A, teamName: 'U15 A',
+        }],
         remindedCount: 2,
       },
     });

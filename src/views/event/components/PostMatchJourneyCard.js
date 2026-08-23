@@ -104,8 +104,12 @@ function PostMatchJourneyCard({
   });
 
   const origineDuScore = () => {
-    if (scoreOrigine === 'external_sync') return t('eventDetails.postMatch.scoreOfficial', 'score officiel');
-    if (scoreOrigine === 'manual') return t('eventDetails.postMatch.scoreManual', 'saisi à la main');
+    if (scoreOrigine === 'external_sync') {
+      return t('eventDetails.postMatch.scoreOfficial', 'score officiel');
+    }
+    if (scoreOrigine === 'manual') {
+      return t('eventDetails.postMatch.scoreManual', 'saisi à la main');
+    }
 
     return '';
   };
@@ -127,6 +131,7 @@ function PostMatchJourneyCard({
       .replace('{{total}}', String(reponsesAttendues));
   };
 
+  /** @type {Record<string, { sousTitre: string, titre: string }>} */
   const CONTENU = {
     responses: {
       sousTitre: sousTitreDesReponses(),
@@ -246,14 +251,20 @@ function PostMatchJourneyCard({
         </Text>
       ) : null}
 
-      <Button
-        disabled={boutonDesactive}
-        onPress={() => onPressEtape(courante || 'responses')}
-        size="sm"
-        testID="post-match-action"
-        title={libelleDuBouton()}
-        variant={courante ? 'Primary' : 'Secondary'}
-      />
+      {/* 🪤 LE `testID` VIT SUR CE `View`, PAS SUR LE `Button` : l'atome
+          `Button` ne declare NI ne transmet `testID` (son JSDoc s'arrete a
+          `accessibilityRole`). Le poser dessus ne l'aurait mis nulle part dans
+          la vraie app — seules les doublures de test l'auraient vu, et les
+          temoins seraient passes au vert sur une fiction. */}
+      <View testID="post-match-action">
+        <Button
+          disabled={boutonDesactive}
+          onPress={() => onPressEtape(courante || 'responses')}
+          size="sm"
+          title={libelleDuBouton()}
+          variant={courante ? 'Primary' : 'Secondary'}
+        />
+      </View>
     </View>
   );
 }

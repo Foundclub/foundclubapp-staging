@@ -78,7 +78,7 @@ describe('N4/D3 — la prochaine relance est la PLUS TARDIVE', () => {
     expect(reuni.nextReminderAt).toBe('2026-08-25T12:00:00.000Z');
   });
 
-  test("l ordre d arrivee ne change rien : 12 h gagne aussi quand elle vient d abord", () => {
+  test('l ordre d arrivee ne change rien : 12 h gagne aussi quand elle vient d abord', () => {
     const reuni = aggregateRemindReports([
       { report: rapport({ nextReminderAt: '2026-08-25T12:00:00.000Z' }), teamId: 'b' },
       { report: rapport({ nextReminderAt: '2026-08-25T10:00:00.000Z' }), teamId: 'a' },
@@ -163,7 +163,9 @@ describe('N4/D3 — 🚨 un echec PARTIEL se dit, il ne se noie pas', () => {
   test('la 2e equipe en echec ne fait pas mentir la 1re : 3 relances tiennent', () => {
     const reuni = aggregateRemindReports([
       { report: rapport({ remindedCount: 3 }), teamId: 'equipe-a', teamName: 'U15 A' },
-      { echec: true, report: null, teamId: 'equipe-b', teamName: 'U15 B' },
+      {
+        echec: true, report: null, teamId: 'equipe-b', teamName: 'U15 B',
+      },
     ]);
 
     expect(reuni.remindedCount).toBe(3);

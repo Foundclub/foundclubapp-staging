@@ -1,5 +1,5 @@
-import renderer, { act } from 'react-test-renderer';
 import { Text } from 'react-native';
+import renderer, { act } from 'react-test-renderer';
 
 // ==========================================================================
 // N4 (E6) — CE QUE LA PAGE DIT APRES LE MATCH, AVANT QU ON Y TOUCHE.
@@ -295,9 +295,9 @@ jest.mock('@/components/molecules/segmentedControl/SegmentedControl', () => {
 });
 
 // eslint-disable-next-line import/first
-import EventDetails from '../EventDetails';
-// eslint-disable-next-line import/first
 import RemindTeamsSheet from '../components/RemindTeamsSheet';
+// eslint-disable-next-line import/first
+import EventDetails from '../EventDetails';
 
 const CLUB_ID = 'club-1';
 const TEAM_ID = 'team-1';
@@ -528,6 +528,21 @@ describe('N4/D6 — la carte « APRÈS LE MATCH » est dans l Apercu', () => {
   const parTestID = (/** @type {any} */ root, /** @type {string} */ id) => root
     .findAll((/** @type {any} */ node) => node.props?.testID === id, { deep: false })[0];
 
+  // 🪤 LE BOUTON EST SOUS LE `testID`, PAS DESSUS. L atome `Button` ne declare
+  // ni ne transmet `testID` (son JSDoc s arrete a `accessibilityRole`) : le
+  // repere vit donc sur le `View` qui l enveloppe. Pose sur le bouton, il
+  // n aurait existe QUE dans les doublures de test — et ce temoin serait passe
+  // au vert sur un repere absent de la vraie application.
+  const boutonSous = (/** @type {any} */ root, /** @type {string} */ id) => {
+    const conteneur = parTestID(root, id);
+    if (!conteneur) return null;
+
+    return conteneur.findAll(
+      (/** @type {any} */ node) => typeof node.props?.onPress === 'function',
+      { deep: false },
+    )[0];
+  };
+
   test('elle est la, et elle annonce l etape courante', () => {
     const root = monter();
 
@@ -538,7 +553,7 @@ describe('N4/D6 — la carte « APRÈS LE MATCH » est dans l Apercu', () => {
   test('🎯 sans score, son bouton ouvre la FEUILLE DE SCORE, pas l editeur', () => {
     const root = monter();
 
-    act(() => { parTestID(root, 'post-match-action').props.onPress(); });
+    act(() => { boutonSous(root, 'post-match-action').props.onPress(); });
 
     // La feuille courte d AD01 : deux champs, et c est tout. Elle vit dans
     // l ecran, donc rien n est navigue — c est justement la preuve.
@@ -563,7 +578,7 @@ describe('N4/D6 — la carte « APRÈS LE MATCH » est dans l Apercu', () => {
       }),
     });
 
-    act(() => { parTestID(root, 'post-match-action').props.onPress(); });
+    act(() => { boutonSous(root, 'post-match-action').props.onPress(); });
 
     expect(mockNavigate).toHaveBeenCalledWith(
       'MatchStatsEditor',
@@ -574,7 +589,11 @@ describe('N4/D6 — la carte « APRÈS LE MATCH » est dans l Apercu', () => {
   test('⛔ le motif d une porte fermee ne disparait pas avec les 7 titres', () => {
     // Un match PAS FINI : la porte est grisee, et elle doit dire pourquoi.
     const root = monter({
-      event: { ...MATCH_FINI, date: '2099-01-01T10:00:00.000Z', endDate: '2099-01-01T12:00:00.000Z' },
+      event: {
+        ...MATCH_FINI,
+        date: '2099-01-01T10:00:00.000Z',
+        endDate: '2099-01-01T12:00:00.000Z',
+      },
     });
 
     expect(textesVisibles(root)).toEqual(expect.arrayContaining([
