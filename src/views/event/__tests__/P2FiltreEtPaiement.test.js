@@ -674,3 +674,34 @@ describe('P2 · temoin 10 — la forme de la reponse du serveur', () => {
     expect(parIdentifiant(arbre, 'P2-paiement-p-present')).toBe('');
   });
 });
+
+describe('P2 · temoin 11 — 🔒 rien ne fuit quand l organisateur masque les identites', () => {
+  test('aucun statut de cotisation, aucune pastille de filtre, aucun nom', () => {
+    // 🔒 CE TEMOIN GARDE LA CHOSE LA PLUS SENSIBLE QUE CE LOT AJOUTE. Quand
+    // l organisateur coche « masquer les identites », l ecran ne rend plus de
+    // lignes du tout — donc pas de colonne d argent non plus. C est vrai par
+    // CONSTRUCTION aujourd hui (le rendu sort avant les groupes), et c est
+    // exactement le genre de propriete qu un lot suivant casse sans le voir en
+    // deplacant un bloc.
+    armerAffectations([
+      affectation('p-present', 'paid'),
+      affectation('p-absent', 'overdue'),
+    ]);
+
+    const arbre = monter({
+      canManageEventLicenseCampaigns: true,
+      event: { documentId: 'evt-1', participantIdentitiesHidden: true },
+      eventLicenseCampaigns: [CAMPAGNE_ACTIVE],
+      participationsByStatus: LES_TROIS,
+    });
+
+    const textes = textesVisibles(arbre);
+
+    expect(parIdentifiant(arbre, 'P2-paiement-p-present')).toBe('');
+    expect(parIdentifiant(arbre, 'P2-paiement-p-absent')).toBe('');
+    expect(textes).not.toContain('Payée');
+    expect(textes).not.toContain('En retard');
+    expect(textes).not.toContain('Alex Test');
+    expect(chip(arbre, 'tous')).toBeUndefined();
+  });
+});
