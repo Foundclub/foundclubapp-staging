@@ -5109,12 +5109,11 @@ function EventDetails({ navigation, route }) {
   const showStageDaysTab = isOnTab('stageDays');
   const showTournamentTeamsTab = isOnTab('tournamentTeams');
 
-  // D3 — QUI VOIT LA PORTE. `canEdit` ne suffit pas : la grille d acces
-  // (`eventAttendanceGate`) ne regarde que l appartenance a l equipe et la
-  // participation. Un dirigeant organisateur hors de l equipe est donc
-  // `canEdit` sans etre `canAccessAttendance`, et le serveur lui repondrait
-  // 403 : lui montrer la porte serait lui promettre une piece fermee a clef.
-  // 🕳️ Elargir la grille est un lot a part (L5-0), pas une correction ici.
+  // D3 — QUI VOIT LA PORTE. La grille d acces (`eventAttendanceGate`) inclut
+  // `canEdit` depuis L5-0 (vague P, 23/08) : un dirigeant organisateur hors
+  // de l equipe voit la porte, et la policy serveur de LECTURE est alignee
+  // sur celle d ecriture (can-access-attendance, meme audience que
+  // is-event-trainer). Le trou « 403 sur une piece promise » est ferme.
   // Un tournoi, lui, n a pas d appel du tout.
   const showNextActionCard = showOverviewTab
     && canEdit
