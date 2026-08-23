@@ -31,6 +31,7 @@ import {
   hasActiveClubOffer,
 } from '@/domains/subscription/subscriptionDecision';
 import { isMyTeam as isMyTeamJudge } from '@/domains/team/teamMembership';
+import { withAlpha } from '@/theme/colors';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -71,7 +72,11 @@ import {
   removePlayerFromTeam,
   updateTeam,
 } from '@/services/team/teamService';
-import { createTeamMembershipRequest } from '@/services/teamMembershipRequest/teamMembershipRequestService';
+import {
+  acceptTeamInvitation,
+  createTeamMembershipRequest,
+  refuseTeamInvitation,
+} from '@/services/teamMembershipRequest/teamMembershipRequestService';
 
 import { isVerifiedClub } from '@/utils/clubCertification';
 import { getErrorMessage as getDisplayErrorMessage } from '@/utils/errors/displayError';
@@ -612,6 +617,35 @@ function TeamDetails({ navigation, route }) {
           text: t('teamDetails.alerts.joinRequest.actions.ok'),
         }],
       );
+    },
+  }));
+
+  // P10 — LE CONSENTEMENT. Accepter est le geste qui connecte a l equipe :
+  // personne d autre ne peut le faire a ma place (le serveur refuse le staff
+  // sur ces deux routes).
+  const answerInvitationMutation = /** @type {any} */ (useMutation({
+    mutationFn: (/** @type {any} */ payload = {}) => (
+      payload.answer === 'accept'
+        ? acceptTeamInvitation(payload.requestId)
+        : refuseTeamInvitation(payload.requestId)
+    ),
+    onError: (/** @type {any} */ error) => {
+      Alert.alert(
+        t('teamDetails.invitation.title', 'Invitation'),
+        error?.message
+        || t(
+          'teamDetails.invitation.error',
+          'Impossible de répondre à cette invitation pour le moment.',
+        ),
+      );
+    },
+    onSuccess: () => {
+      // 🧊 `refetchUserData()` est IMPERATIF, et c est deliberé : le bootstrap
+      // porte `teamMembershipRequests`, et invalider une query en veille ne
+      // relit rien. Sans lui, la banniere resterait a l ecran apres la reponse.
+      refetchUserData();
+      refetch();
+      queryClient.invalidateQueries({ queryKey: ['teams'] });
     },
   }));
 
@@ -1479,14 +1513,24 @@ function TeamDetails({ navigation, route }) {
     }, 180);
   }, []);
 
-  const pendingRequest = useMemo(() => {
-    if (!currentUser?.teamMembershipRequests) {
-      return null;
-    }
-    return currentUser.teamMembershipRequests.find(
+  // P10 — DEUX SENS OPPOSES sur la meme collection, et il ne faut pas les
+  // confondre : `pendingRequest` est une demande QUE J AI ENVOYEE (le bouton
+  // « C est mon equipe » passe alors a « Demande en attente ») ;
+  // `pendingInvitation` est une invitation QUE JE RECOIS, a laquelle je reponds.
+  // `direction` absente = ligne d avant le lot = une demande.
+  const pendingTeamRows = useMemo(() => (
+    (currentUser?.teamMembershipRequests || []).filter(
       (/** @type {any} */ r) => r.team?.documentId === teamId && r.state === 'pending',
-    );
-  }, [currentUser, teamId]);
+    )
+  ), [currentUser, teamId]);
+
+  const pendingRequest = useMemo(() => pendingTeamRows.find(
+    (/** @type {any} */ r) => String(r?.direction || '').trim() !== 'invite',
+  ) || null, [pendingTeamRows]);
+
+  const pendingInvitation = useMemo(() => pendingTeamRows.find(
+    (/** @type {any} */ r) => String(r?.direction || '').trim() === 'invite',
+  ) || null, [pendingTeamRows]);
 
   const trainerContactIds = useMemo(
     () => (team?.trainers || [])
@@ -4537,6 +4581,56 @@ function TeamDetails({ navigation, route }) {
           comme le panneau qu'il remplace, un FRERE de la zone defilante de la
           page - donc toujours au-dessus de la ligne de flottaison, sans avoir
           a defiler. */}
+      {pendingInvitation ? (
+        <View
+          style={[
+            Spaces.marginTop[12],
+            Spaces.marginHorizontal[16],
+            Spaces.padding[16],
+            ApplicationStyle.borderRadius16,
+            {
+              backgroundColor: withAlpha(Colors.gold500, 0.12),
+              borderColor: Colors.gold500,
+              borderWidth: 1,
+            },
+          ]}
+        >
+          <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
+            {t('teamDetails.invitation.title', 'Invitation')}
+          </Text>
+          <Text style={[Fonts.p3, Fonts.neutral100, Spaces.marginTop[8]]}>
+            {t(
+              'teamDetails.invitation.message',
+              'Le staff de cette équipe t\'invite à la rejoindre. À toi de décider.',
+            )}
+          </Text>
+          <View style={[Alignments.row, Spaces.gap[8], Spaces.marginTop[16]]}>
+            <View style={{ flex: 1 }}>
+              <Button
+                disabled={answerInvitationMutation.isPending}
+                onPress={() => answerInvitationMutation.mutate({
+                  answer: 'accept',
+                  requestId: pendingInvitation.documentId,
+                })}
+                title={t('teamDetails.invitation.accept', 'Accepter')}
+                variant="Primary"
+              />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Button
+                disabled={answerInvitationMutation.isPending}
+                onPress={() => answerInvitationMutation.mutate({
+                  answer: 'refuse',
+                  requestId: pendingInvitation.documentId,
+                })}
+                title={t('teamDetails.invitation.refuse', 'Refuser')}
+                variant="Secondary"
+              />
+            </View>
+          </View>
+        </View>
+      ) : null}
+
       {showJoinAction ? (
         <View
           style={[

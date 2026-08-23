@@ -4065,6 +4065,13 @@ export default {
         title: 'Ajoute le classement de ta ligue',
       },
     },
+    invitation: {
+      accept: 'Accepter',
+      error: 'Impossible de répondre à cette invitation pour le moment.',
+      message: 'Le staff de cette équipe t\'invite à la rejoindre. À toi de décider.',
+      refuse: 'Refuser',
+      title: 'Invitation',
+    },
     myTitle: 'Mon équipe',
     sections: {
       nextEvents: 'Prochains événements',
@@ -4183,6 +4190,11 @@ export default {
         unblocks: 'Une fois acceptée, tu fais partie du club.',
         waiting: 'Ta demande pour rejoindre ce club',
         who: 'Un·e dirigeant·e du club doit l\'accepter.',
+      },
+      teamInvite: {
+        unblocks: 'Si tu acceptes, tu rejoins l\'effectif.',
+        waiting: 'Cette équipe t\'invite',
+        who: 'Ouvre la fiche de l\'équipe pour accepter ou refuser.',
       },
       teamJoin: {
         unblocks: 'Une fois acceptée, tu rejoins l\'effectif.',
