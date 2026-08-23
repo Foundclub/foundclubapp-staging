@@ -1146,13 +1146,15 @@ describe('D21 ② — « Gérer l evenement » devient un bouton flottant', () =
   // l'aiguillage detection (D99) prenaient la ligne entiere.
   // ⇒ CE QUE CE TEMOIN PROTEGE EST INTACT : le compte des actions, et « un seul
   // tap » jusqu'a la destination.
-  test('ouvert : cinq rangees pleine largeur, et toujours un seul tap', () => {
+  test('ouvert : six rangees pleine largeur, et toujours un seul tap', () => {
     const root = asOrganiser();
     ouvrirLaFeuilleDeGestion();
 
     const widths = byTestId(root, 'event-manage-chip')
       .map((/** @type {any} */ node) => flatStyle(node).width);
-    expect(widths).toEqual(['100%', '100%', '100%', '100%', '100%']);
+    // N7 item 4 (vague P, 23/08) : sur un ENTRAINEMENT, la bascule « Ouvrir /
+    // Fermer l'entraînement » a rejoint la feuille — 5 rangees deviennent 6.
+    expect(widths).toEqual(['100%', '100%', '100%', '100%', '100%', '100%']);
 
     press(root, 'Modifier');
     expect(Alert.alert).not.toHaveBeenCalled();

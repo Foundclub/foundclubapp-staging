@@ -521,7 +521,7 @@ describe('L4 · temoin 1 — le trois-points ouvre la feuille', () => {
     expect(rangeesDeLaFeuille(root).length).toBeGreaterThan(0);
   });
 
-  test('les 5 actions de l entrainement sont la, et Annuler ferme la marche', () => {
+  test('les 6 actions de l entrainement sont la, et Annuler ferme la marche', () => {
     const root = monter();
     ouvrirLeMenu();
 
@@ -529,8 +529,10 @@ describe('L4 · temoin 1 — le trois-points ouvre la feuille', () => {
 
     // Le releve EXACT, chip par chip, MESURE sur cette fixture (dirigeant du
     // club, entrainement d'equipe) : `edit`, `feature`, `lineup`,
-    // `detectionSwitch`, `cancel`. Aucune n'a ete ajoutee ni retiree par L4 :
-    // la feuille rend `buildManageChips` tel quel.
+    // `detectionSwitch`, `trainingVisibility`, `cancel`.
+    // ♻️ REECRIT PAR N7 item 4 (vague P, 23/08) : la bascule « Ouvrir / Fermer
+    // l'entraînement » a quitte sa carte de l'Apercu pour cette feuille —
+    // 5 rangees deviennent 6, et Annuler reste la derniere.
     expect(libelles.some((/** @type {string} */ v) => v.includes('Modifier'))).toBe(true);
     expect(libelles.some((/** @type {string} */ v) => v.includes('À la une'))).toBe(true);
     // 🎯 N4 (D1/D2) — « Compo » est devenu « Convocation ». Le releve vise la
@@ -544,7 +546,10 @@ describe('L4 · temoin 1 — le trois-points ouvre la feuille', () => {
     expect(
       libelles.some((/** @type {string} */ v) => v.includes('Faire venir des joueurs')),
     ).toBe(true);
-    expect(libelles).toHaveLength(5);
+    expect(
+      libelles.some((/** @type {string} */ v) => v.includes("Fermer l'entraînement")),
+    ).toBe(true);
+    expect(libelles).toHaveLength(6);
     expect(libelles[libelles.length - 1]).toContain('Annuler');
   });
 
@@ -576,7 +581,7 @@ describe('L4 · temoin 1 — le trois-points ouvre la feuille', () => {
 });
 
 describe('L4 · temoin 2 — chaque rangee porte sa destination ou son motif', () => {
-  test('les 5 rangees de l entrainement ont un sous-titre, pas seulement un mot', () => {
+  test('les 6 rangees de l entrainement ont un sous-titre, pas seulement un mot', () => {
     const root = monter();
     ouvrirLeMenu();
 
@@ -661,5 +666,56 @@ describe('L4 · temoin 3 — l accordeon n existe plus', () => {
     // ⛔ Et plus rien du menu ne vit dans la colonne : l'ancien panneau y tenait
     // une surface flottante qui mangeait le bas de la liste (D64).
     expect(parTestID(root, 'event-manage-sheet')[0]).toBeTruthy();
+  });
+});
+
+describe('N7 item 4 (vague P, 23/08) — la bascule d ouverture de l entrainement vit dans la feuille', () => {
+  // 🏋️ La carte « Entraînement ouvert / privé » de l'Apercu portait trois
+  // choses : un ETAT, la ligne de quota, et le BOUTON de bascule. Le bouton est
+  // une action d'organisation — il n'y a qu'un endroit pour ca, et c'est cette
+  // feuille (meme motif que « Stats du match », D71). La ligne de quota devient
+  // la NOTE de la rangee. L'ETAT, lui, n'est PAS reconstruit ici : c'est la
+  // carte d'ouverture enrichie du lot P8, qui vient apres.
+  const rangeeBascule = (/** @type {any} */ root, /** @type {string} */ libelle) => rangeesDeLaFeuille(root)
+    .find((/** @type {any} */ n) => textOf(n).includes(libelle));
+
+  test('entrainement OUVERT : une rangee « Fermer l entrainement », dont la note est le quota', () => {
+    const root = monter({
+      event: buildEvent({ externalParticipantLimit: 4, externalParticipantValidationMode: 'auto' }),
+    });
+    ouvrirLeMenu();
+
+    const rangee = rangeeBascule(root, "Fermer l'entraînement");
+    expect(rangee).toBeTruthy();
+    expect(textOf(rangee)).toContain('4 place(s) externes - validation automatique');
+    expect(typeof rangee.findAllByType(TouchableOpacity)[0].props.onPress).toBe('function');
+  });
+
+  test('entrainement FERME : « Ouvrir l entrainement », et le dernier reglage memorise en note', () => {
+    const root = monter({
+      event: buildEvent({ externalParticipantLimit: 3, sessionStatus: 'closed' }),
+    });
+    ouvrirLeMenu();
+
+    const rangee = rangeeBascule(root, "Ouvrir l'entraînement");
+    expect(rangee).toBeTruthy();
+    expect(textOf(rangee)).toContain('3 place(s) externes - validation manuelle');
+  });
+
+  test('la carte d etat a QUITTE l Apercu : ni son titre, ni son bouton dans la colonne', () => {
+    const root = monter();
+
+    const textes = textesVisibles(root).join(' | ');
+    expect(textes).not.toContain('Entraînement ouvert');
+    expect(textes).not.toContain('Entraînement prive');
+    expect(textes).not.toContain("Fermer l'entraînement");
+    expect(textes).not.toContain("Ouvrir l'entraînement");
+  });
+
+  test('TEMOIN NEGATIF : sur un MATCH, aucune rangee de bascule', () => {
+    const root = monter({ event: buildEvent({ name: 'U15 vs Voisins', type: { name: 'Match' } }) });
+    ouvrirLeMenu();
+
+    expect(rangeeBascule(root, "l'entraînement")).toBeUndefined();
   });
 });

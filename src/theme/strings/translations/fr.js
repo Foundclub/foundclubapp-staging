@@ -1240,10 +1240,12 @@ export default {
     managePanel: {
       campaignAlreadyLinked: 'Cet événement a déjà une cotisation',
       cancel: 'Annuler',
+      closeTraining: 'Fermer l\'entraînement',
       edit: 'Modifier',
       feature: 'À la une',
       lineup: 'Convocation',
       lineupDetection: 'Répartition',
+      openTraining: 'Ouvrir l\'entraînement',
       title: 'Gérer l\'événement',
       tournamentSettings: 'Réglages tournoi',
     },
@@ -1269,6 +1271,7 @@ export default {
       lineupDetection: 'Répartir les joueur·se·s sur les terrains',
       poster: 'Voir et partager l’affiche',
       tournamentSettings: 'Format, équipes et terrains',
+      trainingVisibility: 'Accueillir des joueur·se·s de l’extérieur',
     },
     modals: {
       accept: {

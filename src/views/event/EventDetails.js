@@ -4615,6 +4615,42 @@ function EventDetails({ navigation, route }) {
       });
     }
 
+    // 🏋️ N7 item 4 (vague P, 23/08) — LA BASCULE D'OUVERTURE DE L'ENTRAINEMENT
+    // DEMENAGE DANS CE MENU. La carte « Entraînement ouvert / privé » de
+    // l'Apercu portait trois choses : un ETAT, la ligne de quota, et le BOUTON
+    // de bascule. Le bouton est une action d'organisation — il n'y a qu'un
+    // endroit pour ca, et c'est ici (meme motif que « Stats du match », D71).
+    // La ligne de quota, reprise TELLE QUELLE, devient la note de la rangee.
+    // ⛔ L'ETAT (ouvert / prive, a qui c'est ouvert) n'est PAS reconstruit ici :
+    //    c'est la carte d'ouverture enrichie du lot P8, qui vient apres.
+    // ✅ Ce que tout le monde voit (« Accueille N joueur·se·s de l'extérieur »,
+    //    `openTrainingPublicLine`) n'a pas bouge : il ne dependait pas de la carte.
+    // Gate et gestes REPRIS TELS QUELS de la carte : `canManageTrainingVisibility`,
+    // `handleCloseTraining` / `setIsTrainingOpenModalVisible`.
+    if (canManageTrainingVisibility) {
+      const validationLabel = trainingOpenConfig.externalParticipantValidationMode === 'auto'
+        ? 'automatique'
+        : 'manuelle';
+      let quotaNote = null;
+      if (trainingOpenConfig.externalParticipantLimit !== null) {
+        quotaNote = trainingOpenConfig.isOpenTraining
+          ? `${trainingOpenConfig.externalParticipantLimit} place(s) externes - validation ${validationLabel}`
+          : `Dernier reglage mémorise: ${trainingOpenConfig.externalParticipantLimit} place(s) externes - validation ${validationLabel}`;
+      }
+      chips.push({
+        disabled: mutations.updateEventNoNavMutation.isPending,
+        icon: 'whistle',
+        key: 'trainingVisibility',
+        label: trainingOpenConfig.isOpenTraining
+          ? t('eventDetails.managePanel.closeTraining', 'Fermer l\'entraînement')
+          : t('eventDetails.managePanel.openTraining', 'Ouvrir l\'entraînement'),
+        note: quotaNote,
+        onPress: trainingOpenConfig.isOpenTraining
+          ? handleCloseTraining
+          : () => setIsTrainingOpenModalVisible(true),
+      });
+    }
+
     if (canEdit) {
       chips.push({
         icon: 'close',
@@ -5424,6 +5460,8 @@ function EventDetails({ navigation, route }) {
       : t('eventDetails.menu.lineup', 'Choisir et convoquer les joueur·se·s'),
     poster: t('eventDetails.menu.poster', 'Voir et partager l’affiche'),
     tournamentSettings: t('eventDetails.menu.tournamentSettings', 'Format, équipes et terrains'),
+    // N7 item 4 : repli quand aucun quota n'est memorise (la note porte sinon le quota).
+    trainingVisibility: t('eventDetails.menu.trainingVisibility', 'Accueillir des joueur·se·s de l’extérieur'),
   };
 
   /**
@@ -6689,50 +6727,6 @@ function EventDetails({ navigation, route }) {
                   event={event}
                   userData={userData}
                 />
-              ) : null}
-
-              {canManageTrainingVisibility ? (
-                <View
-                  style={[
-                    ApplicationStyle.backgroundColor.primary900,
-                    ApplicationStyle.borderRadius16,
-                    ApplicationStyle.borderWidth1,
-                    Spaces.padding[16],
-                    Spaces.gap[12],
-                    {
-                      borderColor: `${Colors.primary500}33`,
-                    },
-                  ]}
-                >
-                  <View style={[Spaces.gap[4]]}>
-                    <Text style={[Fonts.h4Bold, Fonts.neutral00]}>
-                      {trainingOpenConfig.isOpenTraining ? 'Entraînement ouvert' : 'Entraînement prive'}
-                    </Text>
-                    <Text style={[Fonts.p2, Fonts.neutral200]}>
-                      {trainingOpenConfig.isOpenTraining
-                        ? 'Les joueurs externes peuvent rejoindre selon ton quota et ton mode de validation.'
-                        : 'Ouvre l\'entraînement pour autoriser un quota de joueurs externes sans toucher à tes joueurs internes.'}
-                    </Text>
-                  </View>
-
-                  {trainingOpenConfig.externalParticipantLimit !== null ? (
-                    <Text style={[Fonts.p3, Fonts.primary100]}>
-                      {trainingOpenConfig.isOpenTraining
-                        ? `${trainingOpenConfig.externalParticipantLimit} place(s) externes - validation ${trainingOpenConfig.externalParticipantValidationMode === 'auto' ? 'automatique' : 'manuelle'}`
-                        : `Dernier reglage mémorise: ${trainingOpenConfig.externalParticipantLimit} place(s) externes - validation ${trainingOpenConfig.externalParticipantValidationMode === 'auto' ? 'automatique' : 'manuelle'}`}
-                    </Text>
-                  ) : null}
-
-                  <Button
-                    disabled={mutations.updateEventNoNavMutation.isPending}
-                    isLoading={mutations.updateEventNoNavMutation.isPending}
-                    onPress={trainingOpenConfig.isOpenTraining
-                      ? handleCloseTraining
-                      : () => setIsTrainingOpenModalVisible(true)}
-                    title={trainingOpenConfig.isOpenTraining ? 'Fermer l\'entraînement' : 'Ouvrir l\'entraînement'}
-                    variant={trainingOpenConfig.isOpenTraining ? 'SecondaryLight' : 'Primary'}
-                  />
-                </View>
               ) : null}
 
               {showParticipantsTab && (!isTournamentEvent || isStageDayEvent) ? (
