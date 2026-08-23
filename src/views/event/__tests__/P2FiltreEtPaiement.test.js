@@ -114,6 +114,20 @@ const PROPS_BASE = {
   teamParticipationSections: [],
 };
 
+/**
+ * Rend une section d equipe complete, prete a etre surchargee (recopie d AD06).
+ * @param {object} [surcharges] - Les champs a remplacer.
+ * @returns {object} - La section.
+ */
+const section = (surcharges = {}) => ({
+  key: 'eq-1',
+  missing: [],
+  notAnswered: [],
+  participating: [],
+  teamName: 'U15 Feminines',
+  ...surcharges,
+});
+
 const LES_TROIS = {
   missing: [P_ABSENT],
   notAnswered: [P_SANS_REPONSE],
@@ -531,5 +545,85 @@ describe('P2 · temoin 8 — la colonne d argent ne casse aucun temoin d ordre',
     expect(textes.indexOf('Présent·e·s')).toBeGreaterThanOrEqual(0);
     expect(textes.indexOf('Présent·e·s')).toBeLessThan(textes.indexOf('Absent·e·s'));
     expect(textes.indexOf('Absent·e·s')).toBeLessThan(textes.indexOf('Sans réponse'));
+  });
+});
+
+describe('P2 · temoin 9 — le CHEMIN AVEC EQUIPES, celui de la vraie vie', () => {
+  test('le filtre reduit les groupes DANS la section, et la section reste', () => {
+    const arbre = monter({
+      teamParticipationSections: [section({
+        missing: [P_ABSENT],
+        notAnswered: [P_SANS_REPONSE],
+        participating: [P_PRESENT],
+      })],
+    });
+
+    appuyer(arbre, 'missing');
+    const textes = textesDeLaListe(arbre);
+
+    expect(textes).toContain('U15 Feminines');
+    expect(textes).toContain('Absent·e·s');
+    expect(textes).toContain('Bilal Test');
+    expect(textes).not.toContain('Présent·e·s');
+    expect(textes).not.toContain('Sans réponse');
+    expect(textes).not.toContain('Alex Test');
+    expect(textes).not.toContain('Sami Test');
+  });
+
+  test('l historique de la section suit le meme filtre', () => {
+    const arbre = monter({
+      teamParticipationSections: [section({
+        historical: {
+          missing: [joueur('h-2', 'Hugo')],
+          participating: [joueur('h-1', 'Hana')],
+        },
+        participating: [P_PRESENT],
+      })],
+    });
+
+    appuyer(arbre, 'participating');
+    const textes = textesDeLaListe(arbre);
+
+    expect(textes).toContain('Hana Test');
+    expect(textes).not.toContain('Hugo Test');
+  });
+
+  test('une section que le filtre vide entierement disparait', () => {
+    const arbre = monter({
+      teamParticipationSections: [
+        section({ key: 'eq-1', participating: [P_PRESENT], teamName: 'U15 Feminines' }),
+        section({ key: 'eq-2', missing: [P_ABSENT], teamName: 'U17 Garcons' }),
+      ],
+    });
+
+    appuyer(arbre, 'missing');
+    const textes = textesDeLaListe(arbre);
+
+    expect(textes).toContain('U17 Garcons');
+    expect(textes).not.toContain('U15 Feminines');
+  });
+
+  test('un filtre qui ne garde personne DIT pourquoi, sans mentir sur la cause', () => {
+    const arbre = monter({
+      participationsByStatus: { missing: [], notAnswered: [], participating: [P_PRESENT] },
+    });
+
+    appuyer(arbre, 'missing');
+
+    // ⛔ PAS « Aucun nom ne correspond » : personne n a saisi le moindre nom.
+    expect(parIdentifiant(arbre, 'P2-groupe-vide')).toBe('Personne dans ce groupe');
+    expect(parIdentifiant(arbre, 'AE02-aucun-resultat')).toBe('');
+  });
+
+  test('la colonne « a paye » se rend aussi sur le chemin avec equipes', () => {
+    armerAffectations([affectation('p-present', 'waived')]);
+
+    const arbre = monter({
+      canManageEventLicenseCampaigns: true,
+      eventLicenseCampaigns: [CAMPAGNE_ACTIVE],
+      teamParticipationSections: [section({ participating: [P_PRESENT] })],
+    });
+
+    expect(parIdentifiant(arbre, 'P2-paiement-p-present')).toBe('Exemptée');
   });
 });
