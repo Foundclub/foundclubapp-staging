@@ -25,7 +25,7 @@ import { RouteNames } from '@/navigation/routeNames';
 import { useGetEventTeamComposition } from '@/services/event/eventQueries';
 import { publishEventConvocation } from '@/services/event/eventService';
 
-import { getImageUrl } from '@/utils/imageUrl';
+import { getCompositionPlayerAvatarUrl } from '@/utils/compositionPlayer';
 
 import {
   buildConvocationRoster,
@@ -267,7 +267,7 @@ function MatchConvocationPublished() {
         <View style={styles.playerHead}>
           <ProfileAvatar
             enablePreview={false}
-            imageUrl={getImageUrl(player?.avatar)}
+            imageUrl={getCompositionPlayerAvatarUrl(player)}
             name={name}
             size={34}
             style={[
