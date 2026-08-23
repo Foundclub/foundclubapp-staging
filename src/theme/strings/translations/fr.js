@@ -1348,8 +1348,17 @@ export default {
         + 'et reste ouvert 2 h après la fin.',
     },
     openTraining: {
+      cardClosedMeaning: 'Réservé à ton équipe : personne de l’extérieur ne peut s’inscrire.',
+      cardClosedTitle: 'Entraînement privé',
+      cardOpenMeaning: 'Ouvert aux joueur·se·s de l’extérieur, en plus de ton équipe.',
+      cardOpenTitle: 'Entraînement ouvert',
+      goToExternals: 'Voir les participants externes',
+      goToPending: 'Voir les demandes',
       pendingSuffix: '{{pending}} demande(s) à vérifier',
       publicLine: 'Accueille {{quota}} joueur·se·s de l’extérieur · {{taken}} place(s) prise(s)',
+      seatsLeft: '{{left}} place(s) externe(s) restante(s) sur {{quota}}',
+      validationAuto: 'Validation automatique : les demandes sont acceptées toutes seules.',
+      validationManual: 'Validation manuelle : c’est toi qui acceptes chaque demande.',
     },
     participantsFilter: {
       absent: 'Absents',

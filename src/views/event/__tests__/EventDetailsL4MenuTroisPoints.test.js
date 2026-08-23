@@ -711,14 +711,23 @@ describe('N7 item 4 (vague P, 23/08) — la bascule d entrainement vit dans la f
     expect(textOf(rangee)).toContain('3 place(s) externes - validation manuelle');
   });
 
-  test('la carte d etat a QUITTE l Apercu : ni son titre, ni son bouton dans la colonne', () => {
+  // ♻️ ADAPTE PAR P8 (vague P, 23/08) — ce temoin figeait un etat de TRANSIT.
+  // Entre N7 item 4 et P8, l'Apercu n'avait plus AUCUNE carte d'entrainement ;
+  // P8 y pose la carte d'ETAT que le commentaire ci-dessus annonce (« qui vient
+  // apres »). Ce que N7 garantit, lui, ne bouge pas d'un pouce, et c'est cela
+  // qui reste teste : l'ACTION de bascule ne revient PAS dans la colonne, et
+  // l'ancienne carte — reconnaissable a son « prive » sans accent — a disparu.
+  test('la BASCULE a quitte l Apercu : seule la carte d ETAT de P8 y revient', () => {
     const root = monter();
 
     const textes = textesVisibles(root).join(' | ');
-    expect(textes).not.toContain('Entraînement ouvert');
-    expect(textes).not.toContain('Entraînement prive');
     expect(textes).not.toContain("Fermer l'entraînement");
     expect(textes).not.toContain("Ouvrir l'entraînement");
+    expect(textes).not.toContain('Entraînement prive');
+    // ✅ Ce qui la remplace : la carte de P8, qui AFFICHE l'etat sans jamais le
+    // commander — aucun bouton de bascule dedans, la preuve est deux lignes
+    // plus haut.
+    expect(parTestID(root, 'p8-carte-ouverture-entrainement')[0]).toBeTruthy();
   });
 
   test('TEMOIN NEGATIF : sur un MATCH, aucune rangee de bascule', () => {

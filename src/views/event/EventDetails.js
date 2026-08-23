@@ -647,6 +647,49 @@ function EventDetails({ navigation, route }) {
   const creationCelebrationShownRef = useRef(false);
   const subscriptionFollowUpShownRef = useRef(false);
 
+  // 🧭 P8 — LE RAIL QUI DESCEND DE LA CARTE D'OUVERTURE JUSQU'A LA FILE DES
+  // EXTERNES.
+  //
+  // La page d'un evenement est UNE colonne qui defile (decision d'Adel du
+  // 20/08 : pas d'onglets sur l'entrainement). La file des demandes des joueurs
+  // de l'exterieur vit donc tout en bas, DANS la liste des participants —
+  // « noyee », dit le pack (BRIEF_DESIGN_EVENT_DETAILS_2026_08_20.md, fiche 2).
+  // La carte d'ouverture annonce un nombre de demandes ; sans ce rail, elle
+  // annoncerait un chiffre sans dire ou aller.
+  //
+  // ⚠️ Aucun `ref` n'existait sur la ScrollView de cet ecran : il nait ici.
+  // `measureLayout` est la fonction NATIVE de React Native pour situer une vue
+  // dans une autre (§1 bis, barreau 4). Elle traverse les emboitements
+  // (`WithDataWrapper`, la colonne `gap[24]`) sans qu'on additionne des
+  // decalages a la main — une addition qui se romprait au premier `padding`
+  // ajoute plus haut, et EN SILENCE.
+  //
+  // ⛔ Jest n'a pas de moteur de mise en page : `measureLayout` n'y rend rien,
+  // et le geste devient un non-evenement (aucune erreur, aucun defilement). Le
+  // defilement REEL ne se voit qu'a la recette.
+  const overviewScrollRef = useRef(null);
+  const participantsAnchorRef = useRef(null);
+  const scrollToParticipants = useCallback(() => {
+    const defileur = overviewScrollRef.current;
+    const ancre = participantsAnchorRef.current;
+    if (!defileur || typeof defileur.scrollTo !== 'function') return;
+
+    const contenu = typeof defileur.getInnerViewNode === 'function'
+      ? defileur.getInnerViewNode()
+      : null;
+    if (!ancre || !contenu || typeof ancre.measureLayout !== 'function') return;
+
+    ancre.measureLayout(
+      contenu,
+      (_x, y) => {
+        // 16 px d'air au-dessus de la liste : sans eux, son titre arrive colle
+        // au bord haut de l'ecran et on ne voit plus d'ou l'on vient.
+        defileur.scrollTo({ animated: true, y: Math.max(0, y - 16) });
+      },
+      () => {},
+    );
+  }, []);
+
   const [isLateModalVisible, setIsLateModalVisible] = useState(false);
   const [lateModalMode, setLateModalMode] = useState(/** @type {'coach_mark' | 'coach_edit' | 'player_declare' | 'player_update'} */ ('coach_mark'));
   const [lateModalUser, setLateModalUser] = useState(/** @type {User | null} */ (null));
@@ -2152,28 +2195,25 @@ function EventDetails({ navigation, route }) {
   //
   // ⛔ Un entrainement ferme, ou ouvert sans quota, ne dit rien : « Accueille 0
   // joueur·se·s » serait pire que le silence.
+  //
+  // ♻️ P8 (vague P, 23/08) — LE SUFFIXE « N demande(s) a verifier » A QUITTE
+  // CETTE LIGNE. Il y etait reserve a `canEdit` ; la carte d'ouverture, juste
+  // au-dessus de la liste, le dit desormais mieux — avec son bouton pour y
+  // aller. Le garder ici l'aurait fait lire DEUX fois a l'organisateur.
+  // 🔒 Rien n'a change pour un lecteur : cette ligne est, mot pour mot, celle
+  // qu'il voyait deja. La clef `openTraining.pendingSuffix` n'est pas
+  // supprimee : c'est la carte qui la demande maintenant.
   const openTrainingPublicLine = useMemo(() => {
     const quota = Number(trainingOpenConfig.externalParticipantLimit || 0);
     if (!trainingOpenConfig.isOpenTraining || quota <= 0) return '';
 
     const taken = externalParticipationSection?.participating?.length || 0;
-    const ligne = t(
+    return t(
       'eventDetails.openTraining.publicLine',
       'Accueille {{quota}} joueur·se·s de l’extérieur · {{taken}} place(s) prise(s)',
       { quota, taken },
     );
-
-    const pending = externalParticipationSection?.pending?.length || 0;
-    if (!canEdit || pending <= 0) return ligne;
-
-    const suffixe = t(
-      'eventDetails.openTraining.pendingSuffix',
-      '{{pending}} demande(s) à vérifier',
-      { pending },
-    );
-    return `${ligne} · ${suffixe}`;
   }, [
-    canEdit,
     externalParticipationSection,
     t,
     trainingOpenConfig.externalParticipantLimit,
@@ -5436,6 +5476,128 @@ function EventDetails({ navigation, route }) {
     );
   };
 
+  // 🏋️ P8 — LA CARTE D'OUVERTURE, CELLE QUI COMPTE ENFIN.
+  //
+  // 🧨 LE DEFAUT MESURE (pack « detail evenement », fiche 2) : la carte d'avant
+  // melangeait un ETAT et une ACTION, et ne comptait RIEN. Pour savoir s'il
+  // restait de la place, ou combien de personnes attendaient sa reponse, un
+  // organisateur devait ouvrir la liste des participants et compter a la main.
+  //
+  // Ce que la carte dit maintenant, et d'ou ca vient — ZERO requete neuve :
+  //   · l'etat              ← `trainingOpenConfig` (deja calcule pour le menu ⋯)
+  //   · les places restantes ← quota - externes deja acceptes
+  //   · qui valide          ← `externalParticipantValidationMode`
+  //   · les demandes        ← `externalParticipationSection.pending`
+  //
+  // 🪤 « Ouvert » porte DEUX sens dans l'app : public/prive d'un cote, ouvert
+  // aux joueurs de l'exterieur de l'autre. Le pack demande de les demeler. Le
+  // titre garde le mot que les dirigeants connaissent deja (Annexe B du pack) ;
+  // la ligne juste en dessous dit A QUI c'est ouvert, et c'est elle qui tranche.
+  //
+  // ⛔ AUCUN BOUTON MUET (regle 5 du pack) : sans participant externe et sans
+  //    demande, la file n'existe pas — le bouton non plus.
+  // ⛔ L'ACTION d'ouvrir / de fermer n'est PAS ici : elle vit dans le menu ⋯
+  //    depuis N7 item 4. Cette carte AFFICHE un etat, elle ne le bascule pas.
+  const renderTrainingOpeningCard = () => {
+    const quota = Number(trainingOpenConfig.externalParticipantLimit || 0);
+    const taken = externalParticipationSection?.participating?.length || 0;
+    // 🪤 LE COMPTEUR SE TAIT POUR QUI NE PEUT PAS VALIDER, et ce n'est pas de la
+    // prudence : c'est la MEME condition que la liste des participants, qui ne
+    // rend les demandes que sous `canApprovePendingRequests` (EventParticipants
+    // :686). Or « organiser » et « valider » ne sont pas le meme droit ici —
+    // `canManageEvent` s'ouvre a qui gere le CLUB, `canEditEvent` demande
+    // d'entrainer CETTE equipe (useAuth:591-624). Un dirigeant de club qui
+    // n'entraine pas l'equipe a donc `canEdit` sans `canApprovePendingRequests` :
+    // sans cette ligne, la carte lui annoncerait des demandes et son bouton le
+    // ferait descendre vers une liste qui ne les montre pas.
+    const pending = canApprovePendingRequests
+      ? (externalParticipationSection?.pending?.length || 0)
+      : 0;
+    // ⛔ Un entrainement ferme, ou ouvert sans quota, ne promet aucune place :
+    // « 0 place restante sur 0 » serait pire que le silence (motif N1).
+    const showSeats = Boolean(trainingOpenConfig.isOpenTraining && quota > 0);
+    const isAutoValidation = trainingOpenConfig.externalParticipantValidationMode === 'auto';
+
+    return (
+      <View
+        style={[
+          ApplicationStyle.borderRadius16,
+          ApplicationStyle.borderWidth1,
+          Spaces.padding[16],
+          Spaces.gap[12],
+          {
+            backgroundColor: withAlpha(Colors.primary500, 0.08),
+            borderColor: withAlpha(Colors.primary500, 0.24),
+          },
+        ]}
+        testID="p8-carte-ouverture-entrainement"
+      >
+        <View style={[Spaces.gap[4]]}>
+          <Text style={[Fonts.h4Bold, Fonts.neutral00]}>
+            {trainingOpenConfig.isOpenTraining
+              ? t('eventDetails.openTraining.cardOpenTitle', 'Entraînement ouvert')
+              : t('eventDetails.openTraining.cardClosedTitle', 'Entraînement privé')}
+          </Text>
+          <Text style={[Fonts.p3, Fonts.neutral200]}>
+            {trainingOpenConfig.isOpenTraining
+              ? t(
+                'eventDetails.openTraining.cardOpenMeaning',
+                'Ouvert aux joueur·se·s de l’extérieur, en plus de ton équipe.',
+              )
+              : t(
+                'eventDetails.openTraining.cardClosedMeaning',
+                'Réservé à ton équipe : personne de l’extérieur ne peut s’inscrire.',
+              )}
+          </Text>
+        </View>
+
+        {showSeats ? (
+          <Text style={[Fonts.p1Bold, Fonts.neutral00]}>
+            {t(
+              'eventDetails.openTraining.seatsLeft',
+              '{{left}} place(s) externe(s) restante(s) sur {{quota}}',
+              { left: Math.max(0, quota - taken), quota },
+            )}
+          </Text>
+        ) : null}
+
+        {showSeats ? (
+          <Text style={[Fonts.p3, Fonts.neutral200]}>
+            {isAutoValidation
+              ? t(
+                'eventDetails.openTraining.validationAuto',
+                'Validation automatique : les demandes sont acceptées toutes seules.',
+              )
+              : t(
+                'eventDetails.openTraining.validationManual',
+                'Validation manuelle : c’est toi qui acceptes chaque demande.',
+              )}
+          </Text>
+        ) : null}
+
+        {pending > 0 ? (
+          <Text style={[Fonts.p2Bold, Fonts.primary100]}>
+            {t(
+              'eventDetails.openTraining.pendingSuffix',
+              '{{pending}} demande(s) à vérifier',
+              { pending },
+            )}
+          </Text>
+        ) : null}
+
+        {externalParticipationSection ? (
+          <Button
+            onPress={scrollToParticipants}
+            title={pending > 0
+              ? t('eventDetails.openTraining.goToPending', 'Voir les demandes')
+              : t('eventDetails.openTraining.goToExternals', 'Voir les participants externes')}
+            variant="SecondaryLight"
+          />
+        ) : null}
+      </View>
+    );
+  };
+
   // AD01 — LA LIGNE COMPACTE, EN HAUT DU CORPS DE LA PAGE.
   //
   // 🔒 Elle parait EXACTEMENT la ou le bloc du bas paraissait deja pour ce
@@ -6589,6 +6751,7 @@ function EventDetails({ navigation, route }) {
             // meme dans les deux cas (avec ou sans actions d'organisation).
             Spaces.paddingBottom[16],
           ]}
+          ref={overviewScrollRef}
           refreshControl={(
             <RefreshControl
               onRefresh={() => refreshEventDetails({ includeSecondary: true })}
@@ -6780,6 +6943,24 @@ function EventDetails({ navigation, route }) {
                   event={event}
                   userData={userData}
                 />
+              ) : null}
+
+              {/* 🏋️ P8 — LA CARTE D'OUVERTURE, A SA PLACE : juste au-dessus de
+                  la liste des participants (rang 10 de la matrice du pack), et
+                  seulement pour qui organise un entrainement.
+                  🧭 L'ANCRE qui la suit est le bas du rail : une vue vide, sans
+                  style, dans un cadre SANS `gap` — elle ne deplace donc RIEN.
+                  ⚠️ Elle est le seul point de mesure legal : le bloc
+                  `<EventParticipants` lui-meme appartient au lot P2. */}
+              {canManageTrainingVisibility ? (
+                <View>
+                  {renderTrainingOpeningCard()}
+                  <View
+                    collapsable={false}
+                    ref={participantsAnchorRef}
+                    testID="p8-ancre-participants"
+                  />
+                </View>
               ) : null}
 
               {showParticipantsTab && (!isTournamentEvent || isStageDayEvent) ? (
