@@ -20,11 +20,14 @@ const DAY_MINUTES = 24 * 60;
 /**
  * Repli — duree retenue quand l evenement ne declare ni fin ni heure de fin.
  *
- * ⚠️ 90, et pas 120 : c est la valeur du service qui borne L APPEL
+ * 90, comme la valeur du service qui borne L APPEL
  * (`admin/src/api/event-attendance/services/event-attendance.ts`,
- * `defaultDurationMinutes: 90`). Le 120 de `eventMatchClock.js` est une AUTRE
- * question — celle des statistiques d apres-match, servie par un autre service
- * serveur (`match-stats-report.ts`). Les confondre casserait l un ou l autre.
+ * `defaultDurationMinutes: 90`).
+ *
+ * ⚠️ `eventMatchClock.js` porte la MEME valeur depuis le lot P5, mais pour une
+ * AUTRE question — celle des statistiques d apres-match, servie par un autre
+ * service serveur (`match-stats-report.ts`). Les deux repondent 90 aujourd hui ;
+ * ce sont deux reglages distincts, et les confondre casserait l un ou l autre.
  */
 export const FALLBACK_DURATION_MINUTES = 90;
 

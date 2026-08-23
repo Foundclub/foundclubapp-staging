@@ -75,17 +75,17 @@ describe('AC10 — quelle horloge dit qu un match est fini', () => {
 });
 
 describe('AC10 — la duree par defaut recopie celle du serveur', () => {
-  // Le serveur applique 120 min dans `getEventEndedAt`
+  // Le serveur applique 90 min dans `getEventEndedAt`
   // (admin/src/api/match-stats-report/services/match-stats-report.ts).
   // C est lui qui accepte ou refuse les stats : une autre valeur ici
   // desynchroniserait l app de la machine qui les produit.
-  test('un match sans heure de fin utilise la duree par defaut de 120 minutes', () => {
-    expect(DEFAULT_MATCH_DURATION_MINUTES).toBe(120);
+  test('un match sans heure de fin utilise la duree par defaut de 90 minutes', () => {
+    expect(DEFAULT_MATCH_DURATION_MINUTES).toBe(90);
 
     const debut = new Date('2026-08-20T18:00:00.000Z');
     const fin = resolveEventEndedAt(null, debut);
 
-    expect(fin?.toISOString()).toBe('2026-08-20T20:00:00.000Z');
+    expect(fin?.toISOString()).toBe('2026-08-20T19:30:00.000Z');
   });
 
   test('une heure de fin declaree l emporte toujours sur la duree par defaut', () => {
@@ -99,7 +99,7 @@ describe('AC10 — la duree par defaut recopie celle du serveur', () => {
     const debut = new Date('2026-08-20T18:00:00.000Z');
     const fin = resolveEventEndedAt('pas-une-date', debut);
 
-    expect(fin?.toISOString()).toBe('2026-08-20T20:00:00.000Z');
+    expect(fin?.toISOString()).toBe('2026-08-20T19:30:00.000Z');
   });
 
   test('sans debut connu, il n y a pas d heure de fin — et donc aucune decision', () => {
