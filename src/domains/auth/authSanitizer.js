@@ -137,6 +137,12 @@ const sanitizeTeamSummary = (/** @type {any} */ team) => {
 const sanitizeTeamMembershipRequest = (/** @type {any} */ request) => {
   if (!request) return null;
   return {
+    // P10 — le SENS de la ligne : 'invite' (le staff m'invite) ou 'request'
+    // (j'ai demande). Le serveur rend `null` sur les lignes d'avant le lot ;
+    // `normalizeString` en fait '', et l'ecran lit '' comme une demande.
+    // Sans ce champ, TeamListContent affiche TOUTE ligne pending comme une
+    // « demande envoyee » et l'invitation reste invisible.
+    direction: normalizeString(request?.direction),
     documentId: normalizeString(request?.documentId),
     id: request?.id ?? null,
     state: normalizeString(request?.state),

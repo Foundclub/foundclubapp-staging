@@ -578,6 +578,10 @@ export const resolveNotificationDestination = (rawPayload = {}) => {
     case NOTIFICATION_TYPES.ADD_TO_TEAM:
     case NOTIFICATION_TYPES.NEW_TEAM:
     case NOTIFICATION_TYPES.TEAM_EXTERNAL_SOURCE_UPDATED:
+    // P10 — « L'equipe X t'invite ». La banniere accepter/refuser vit sur la
+    // fiche de l'equipe : ce type retombe donc sur `teamDetailsDestination`,
+    // comme ADD_TO_TEAM. Aucun ecran neuf, aucune route neuve.
+    case NOTIFICATION_TYPES.TEAM_MEMBERSHIP_INVITATION:
     case NOTIFICATION_TYPES.TEAM_MEMBERSHIP_REQUEST: {
       // U06 — LA PORTE QUI MANQUAIT. `TeamMembershipRequestList` etait construit,
       // branche dans `TeamStack` et expose sur le web (`/teams/:teamId/requests`),

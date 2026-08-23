@@ -1086,6 +1086,7 @@ export const NOTIFICATION_TYPES = {
   // Teams
   NEW_TEAM: 'newTeam',
   TEAM_EXTERNAL_SOURCE_UPDATED: 'teamExternalSourceUpdated',
+  TEAM_MEMBERSHIP_INVITATION: 'teamMembershipInvitation',
   TEAM_MEMBERSHIP_REQUEST: 'teamMembershipRequest',
   TEAM_REQUEST: 'teamRequest',
   TOURNAMENT_CAPTAIN_TRANSFER: 'tournamentCaptainTransfer',
