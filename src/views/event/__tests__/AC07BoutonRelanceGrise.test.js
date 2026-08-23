@@ -24,6 +24,16 @@ import EventParticipants from '../components/EventParticipants';
 // Effet de bord voulu : les DEUX boutons « Relancer » de cet ecran se grisent
 // ensemble, puisqu ils declenchent le meme envoi.
 
+// 🧨 D5-b — CE MOCK EST UNE CONDITION DE DEMARRAGE, PAS UN CONFORT.
+// Depuis P2, `EventParticipants` importe `licenseQueries`. Le VRAI module
+// descend jusqu a `client.native.js`, qui jette AU CHARGEMENT quand `.env` est
+// absent — et `.env` est gitignore, donc absent de toute copie de travail.
+// Sans ce mock, la suite entiere ne demarre pas : « failed to run », 0 test
+// execute. Un compteur de tests VERT ne le verrait meme pas.
+jest.mock('@/services/license/licenseQueries', () => ({
+  useLicenseAssignments: () => ({ data: undefined, isLoading: false }),
+}));
+
 jest.mock('react-i18next', () => ({
   initReactI18next: { init: jest.fn(), type: '3rdParty' },
   useTranslation: () => ({ t: (/** @type {string} */ key) => key }),

@@ -242,6 +242,44 @@ const appuyer = (arbre, clef) => {
   act(() => { chip(arbre, clef).props.onPress(); });
 };
 
+/**
+ * Lit le texte d un noeud repere par son `testID` (recopie d AD06).
+ * @param {any} arbre - L arbre rendu.
+ * @param {string} identifiant - Le `testID` cherche.
+ * @returns {string} - Le texte porte par ce noeud, ou '' s il n existe pas.
+ */
+const parIdentifiant = (arbre, identifiant) => {
+  const trouves = arbre.root.findAllByProps({ testID: identifiant });
+  return trouves.length > 0 ? texteDe(trouves[0]) : '';
+};
+
+const CAMPAGNE_ACTIVE = { documentId: 'camp-active', status: 'active' };
+const CAMPAGNE_BROUILLON = { documentId: 'camp-brouillon', status: 'draft' };
+
+/**
+ * Fabrique une affectation de cotisation, telle que la rend le serveur.
+ * @param {string} idUtilisateur - Le `documentId` du membre.
+ * @param {string} statut - L un des 6 statuts de cotisation.
+ * @returns {object} - L affectation.
+ */
+const affectation = (idUtilisateur, statut) => ({
+  status: statut,
+  user: { documentId: idUtilisateur, id: idUtilisateur },
+});
+
+/**
+ * Arme la reponse du serveur pour les affectations de cotisation.
+ * @param {object[]} liste - Les affectations a rendre.
+ * @returns {void} - Rien.
+ */
+const armerAffectations = (liste) => {
+  mockAffectations.valeur = { data: { data: liste }, isLoading: false };
+};
+
+beforeEach(() => {
+  mockAffectations.valeur = { data: undefined, isLoading: false };
+});
+
 describe('P2 · temoin 1 — les 4 pastilles et leurs compteurs', () => {
   test('Tous, Presents, Absents, Sans reponse portent chacune son nombre', () => {
     const arbre = monter({ participationsByStatus: LES_TROIS });
@@ -345,5 +383,153 @@ describe('P2 · temoin 5 — le selecteur de pastilles d AD06 ignore les chips',
     expect(textesDePastille.some((/** @type {string} */ t) => /^Tous/.test(t))).toBe(false);
     expect(textesDePastille.some((/** @type {string} */ t) => /^Présents/.test(t))).toBe(false);
     expect(textesDePastille.some((/** @type {string} */ t) => /^Absents/.test(t))).toBe(false);
+  });
+});
+
+describe('P2 · temoin 6 — la colonne « a paye », vue par un dirigeant', () => {
+  test('« Payée » sur la ligne du payeur, « En attente » sur l autre', () => {
+    armerAffectations([
+      affectation('p-present', 'paid'),
+      affectation('p-absent', 'pending'),
+    ]);
+
+    const arbre = monter({
+      canManageEventLicenseCampaigns: true,
+      eventLicenseCampaigns: [CAMPAGNE_ACTIVE],
+      participationsByStatus: LES_TROIS,
+    });
+
+    // 🎯 On lit par testID, PAS par `textesVisibles` : « En attente » est aussi
+    // un libelle de la pastille d assiduite, et un temoin qui chercherait ce
+    // texte dans tout l ecran serait VERT meme si la colonne n existait pas.
+    expect(parIdentifiant(arbre, 'P2-paiement-p-present')).toBe('Payée');
+    expect(parIdentifiant(arbre, 'P2-paiement-p-absent')).toBe('En attente');
+  });
+
+  test('les 6 statuts ont chacun leur libelle francais', () => {
+    const attendus = {
+      manual_review: 'À valider',
+      overdue: 'En retard',
+      paid: 'Payée',
+      partial: 'Partiel',
+      pending: 'En attente',
+      waived: 'Exemptée',
+    };
+
+    Object.entries(attendus).forEach(([statut, libelle]) => {
+      armerAffectations([affectation('p-present', statut)]);
+      const arbre = monter({
+        canManageEventLicenseCampaigns: true,
+        eventLicenseCampaigns: [CAMPAGNE_ACTIVE],
+        participationsByStatus: LES_TROIS,
+      });
+      expect(parIdentifiant(arbre, 'P2-paiement-p-present')).toBe(libelle);
+    });
+  });
+
+  test('la campagne se choisit par la chaine de repli : active avant brouillon', () => {
+    armerAffectations([affectation('p-present', 'paid')]);
+
+    const arbre = monter({
+      canManageEventLicenseCampaigns: true,
+      eventLicenseCampaigns: [CAMPAGNE_BROUILLON, CAMPAGNE_ACTIVE],
+      participationsByStatus: LES_TROIS,
+    });
+
+    expect(parIdentifiant(arbre, 'P2-paiement-p-present')).toBe('Payée');
+  });
+
+  test('une personne sans affectation ne porte RIEN', () => {
+    armerAffectations([affectation('p-present', 'paid')]);
+
+    const arbre = monter({
+      canManageEventLicenseCampaigns: true,
+      eventLicenseCampaigns: [CAMPAGNE_ACTIVE],
+      participationsByStatus: LES_TROIS,
+    });
+
+    expect(parIdentifiant(arbre, 'P2-paiement-p-present')).toBe('Payée');
+    expect(parIdentifiant(arbre, 'P2-paiement-p-absent')).toBe('');
+  });
+});
+
+describe('P2 · temoin 7 — la colonne est GATEE, c est de l argent', () => {
+  test('un NON-dirigeant ne voit rien, meme avec une campagne et des affectations', () => {
+    armerAffectations([
+      affectation('p-present', 'paid'),
+      affectation('p-absent', 'pending'),
+    ]);
+
+    const arbre = monter({
+      canManageEventLicenseCampaigns: false,
+      eventLicenseCampaigns: [CAMPAGNE_ACTIVE],
+      participationsByStatus: LES_TROIS,
+    });
+
+    expect(parIdentifiant(arbre, 'P2-paiement-p-present')).toBe('');
+    expect(parIdentifiant(arbre, 'P2-paiement-p-absent')).toBe('');
+    expect(textesVisibles(arbre)).not.toContain('Payée');
+  });
+
+  test('un dirigeant SANS campagne ne voit pas de colonne vide : elle n existe pas', () => {
+    armerAffectations([affectation('p-present', 'paid')]);
+
+    const arbre = monter({
+      canManageEventLicenseCampaigns: true,
+      eventLicenseCampaigns: [],
+      participationsByStatus: LES_TROIS,
+    });
+
+    expect(parIdentifiant(arbre, 'P2-paiement-p-present')).toBe('');
+    expect(textesVisibles(arbre)).not.toContain('Payée');
+    expect(textesVisibles(arbre)).not.toContain('—');
+  });
+});
+
+describe('P2 · temoin 8 — la colonne d argent ne casse aucun temoin d ordre', () => {
+  test('aucun libelle de paiement n est EGAL a un texte des temoins d ordre', () => {
+    const libelles = ['À valider', 'En retard', 'Payée', 'Partiel', 'En attente', 'Exemptée'];
+    const textesDOrdre = [
+      'Demandes de participation',
+      'Présent·e·s',
+      'Absent·e·s',
+      'Sans réponse',
+      'Historique équipe retirée',
+    ];
+
+    libelles.forEach((libelle) => {
+      expect(textesDOrdre).not.toContain(libelle);
+    });
+  });
+
+  test('le selecteur de pastilles d AD06 n attrape pas la colonne de paiement', () => {
+    armerAffectations([
+      affectation('p-present', 'paid'),
+      affectation('p-absent', 'pending'),
+    ]);
+
+    const arbre = monter({
+      canManageEventLicenseCampaigns: true,
+      eventLicenseCampaigns: [CAMPAGNE_ACTIVE],
+      participationsByStatus: LES_TROIS,
+    });
+
+    expect(pastilles(arbre).map((/** @type {any} */ p) => p.texte)).not.toContain('Payée');
+  });
+
+  test('l ORDRE des 3 groupes tient, colonne d argent affichee', () => {
+    armerAffectations([affectation('p-present', 'paid')]);
+
+    const arbre = monter({
+      canManageEventLicenseCampaigns: true,
+      eventLicenseCampaigns: [CAMPAGNE_ACTIVE],
+      participationsByStatus: LES_TROIS,
+    });
+
+    const textes = textesDeLaListe(arbre);
+
+    expect(textes.indexOf('Présent·e·s')).toBeGreaterThanOrEqual(0);
+    expect(textes.indexOf('Présent·e·s')).toBeLessThan(textes.indexOf('Absent·e·s'));
+    expect(textes.indexOf('Absent·e·s')).toBeLessThan(textes.indexOf('Sans réponse'));
   });
 });
