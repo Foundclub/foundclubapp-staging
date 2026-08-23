@@ -1352,6 +1352,14 @@ export default {
       notAnswered: 'Sans réponse',
       present: 'Présents',
     },
+    participantsPayment: {
+      manualReview: 'À valider',
+      overdue: 'En retard',
+      paid: 'Payée',
+      partial: 'Partiel',
+      pending: 'En attente',
+      waived: 'Exemptée',
+    },
     participantsSearch: {
       noResult: 'Aucun nom ne correspond',
       placeholder: 'Chercher un nom',

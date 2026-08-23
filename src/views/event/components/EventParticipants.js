@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { useIsMutating, useMutationState } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Image, Text, TouchableOpacity, View,
@@ -13,6 +13,8 @@ import useTheme from '@/theme/themeContext';
 import Button from '@/components/atoms/button/Button';
 import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 import SearchBar from '@/components/molecules/searchBar/SearchBar';
+
+import { useLicenseAssignments } from '@/services/license/licenseQueries';
 
 import { formatDateTimeWithDayPrefix } from '@/utils/date';
 
@@ -94,6 +96,8 @@ import SHARE_ICON from '@/assets/icons/share2.png';
  * @property {{ participatingCount?: number; capacity?: number }} [participantsSummary]
  * @property {boolean} canEdit
  * @property {boolean} [canApprovePendingRequests]
+ * @property {boolean} [canManageEventLicenseCampaigns]
+ * @property {any[]} [eventLicenseCampaigns]
  * @property {(user?: User) => void} handleUserPress
  * @property {(teamKey?: string) => void} handleRemindPlayers
  * @property {() => void} handleShare
@@ -155,6 +159,59 @@ const lireLesRelancesReussies = typeof useMutationState === 'function'
 // (« Presents » et non « Présent·e·s ») : les temoins d ordre d AD06 et d AE02
 // comparent des textes exacts, et un doublon parfait rendrait leur `indexOf`
 // ambigu le jour ou quelqu un descendrait ce bloc sous la legende.
+// 🧨 P2 (D5-a) — POURQUOI CE HOOK EST RESOLU ICI, ET PAS APPELE DIRECTEMENT.
+// C est le MEME motif que `lireLesRelancesReussies` ci-dessus, pour la meme
+// raison, mesuree : 15 suites (les 14 `EventDetails*` et
+// `AD10ExportFeuilleBranchee`) mockent `@/services/license/licenseQueries` en
+// n exposant QUE `useLicenseCampaigns`. L appeler directement rendrait
+// « useLicenseAssignments is not a function » au montage — et une suite qui
+// jette au montage rend 0 test, pas un echec lisible.
+// La resolution se fait UNE FOIS, au chargement du module : l ordre des hooks
+// ne bouge donc jamais d un rendu a l autre.
+// ⛔ NE PAS remplacer par un `if` dans le composant : ce serait un appel de
+// hook CONDITIONNEL, et l ordre des hooks dependrait alors du mock.
+const lireLesAffectationsDeCotisation = typeof useLicenseAssignments === 'function'
+  ? useLicenseAssignments
+  : () => ({ data: undefined, isLoading: false });
+
+// 💶 P2 (D7) — LES 6 STATUTS D UNE COTISATION, EN TABLE LOCALE.
+// Libelles RECOPIES de `ClubLicenses.js:101`, tons de `ClubLicenses.js:121-126`.
+// Recopies et NON importes : ce fichier ne les exporte pas, et ouvrir un export
+// dans un ecran de 2 700 lignes pour six mots serait un couplage de plus.
+// ⚠️ Une affectation porte SIX statuts, pas trois : le raccourci « paye / pas
+// paye » perdrait `partial`, `waived`, `manual_review` et `overdue` — dont deux
+// veulent dire « ne relance pas cette personne ».
+// ⚠️ Aucun de ces libelles n est EGAL a un texte des temoins d ordre
+// (« Présent·e·s », « Demandes de participation »…) : le temoin 8 le tient.
+const STATUTS_PAIEMENT = {
+  manual_review: { clef: 'manualReview', repli: 'À valider' },
+  overdue: { clef: 'overdue', repli: 'En retard' },
+  paid: { clef: 'paid', repli: 'Payée' },
+  partial: { clef: 'partial', repli: 'Partiel' },
+  pending: { clef: 'pending', repli: 'En attente' },
+  waived: { clef: 'waived', repli: 'Exemptée' },
+};
+
+// Une page suffit : on liste les participants d UN evenement, pas tout un club.
+// La constante vit au niveau du module pour que son IDENTITE ne change pas d un
+// rendu a l autre — sinon la clef de cache de la requete changerait sans arret.
+const PARAMS_AFFECTATIONS = { pageSize: 100 };
+
+/**
+ * Le ton d un statut de cotisation, recopie de `ClubLicenses.js:121-126`.
+ * @param {any} colors - Les jetons de couleur du theme.
+ * @param {string} statut - Le statut de l affectation.
+ * @returns {string} - Le jeton de couleur a appliquer.
+ */
+const tonStatutPaiement = (colors, statut) => ({
+  manual_review: colors.warning500,
+  overdue: colors.error500,
+  paid: colors.success500,
+  partial: colors.primary200,
+  pending: colors.primary500,
+  waived: colors.neutral200,
+}[statut] || colors.primary500);
+
 const FILTRE_TOUS = 'tous';
 const PASTILLES_DE_FILTRE = [
   { clef: FILTRE_TOUS, clefTexte: 'all', repli: 'Tous' },
@@ -306,7 +363,9 @@ function EventParticipants({
   attendanceByUserId = {},
   canEdit,
   canApprovePendingRequests = canEdit,
+  canManageEventLicenseCampaigns = false,
   event,
+  eventLicenseCampaigns = [],
   eventStartAt,
   externalParticipationSection = null,
   handleExportParticipants,
@@ -376,6 +435,47 @@ function EventParticipants({
   // faire descendre — c est un etat d affichage, pas une donnee d evenement.
   const [filtreStatut, setFiltreStatut] = useState(FILTRE_TOUS);
   const filtreStatutActif = filtreStatut !== FILTRE_TOUS;
+
+  // 💶 P2 (D6) — QUI A PAYE. La source existe DEJA de bout en bout
+  // (`useLicenseAssignments` → `getLicenseAssignments` → GET
+  // /licenses/campaigns/:id/assignments) : rien a ecrire cote service.
+  // La chaine de repli est celle de `ClubLicenses.js:1098-1104`, dans le meme
+  // ordre — une campagne en cours prime sur un brouillon oublie.
+  const campagneDeCotisation = useMemo(() => {
+    const liste = Array.isArray(eventLicenseCampaigns) ? eventLicenseCampaigns : [];
+    return liste.find((item) => item?.status === 'active')
+      || liste.find((item) => item?.status === 'paused')
+      || liste.find((item) => item?.status === 'scheduled')
+      || liste.find((item) => item?.status === 'draft')
+      || liste[0]
+      || null;
+  }, [eventLicenseCampaigns]);
+  const idCampagneDeCotisation = campagneDeCotisation?.documentId
+    || campagneDeCotisation?.id
+    || null;
+  // 🔒 P2 (D7) — LA PORTE EST ICI, ET ELLE EST FERMEE PAR DEFAUT. C est de
+  // l argent : sans droit de gestion, la requete ne part meme pas.
+  // (D8) Sans campagne non plus : la colonne n existe pas, elle n est pas vide.
+  const colonnePaiementVisible = Boolean(
+    canManageEventLicenseCampaigns && idCampagneDeCotisation,
+  );
+  const affectationsDeCotisation = lireLesAffectationsDeCotisation(
+    idCampagneDeCotisation,
+    PARAMS_AFFECTATIONS,
+    { enabled: colonnePaiementVisible },
+  );
+  const statutPaiementParUtilisateur = useMemo(() => {
+    /** @type {Record<string, string>} */
+    const table = {};
+    const affectations = affectationsDeCotisation?.data?.data;
+    if (!Array.isArray(affectations)) return table;
+    affectations.forEach((item) => {
+      const clef = String(item?.user?.documentId || item?.user?.id || '');
+      const statut = String(item?.status || '');
+      if (clef && statut) table[clef] = statut;
+    });
+    return table;
+  }, [affectationsDeCotisation?.data]);
   const rechercheComparable = comparable(rechercheNom);
   const rechercheActive = rechercheComparable.length > 0;
 
@@ -410,6 +510,10 @@ function EventParticipants({
   const renderParticipant = (player, options = {}) => {
     const userId = player?.documentId || '';
     const attendance = userId ? attendanceByUserId[userId] : null;
+    // P2 : hors gate on ne descend RIEN — pas une chaine vide « au cas ou ».
+    const statutPaiement = colonnePaiementVisible
+      ? (statutPaiementParUtilisateur[userId] || '')
+      : '';
     return (
       <ParticipantItem
         allowLiveLate={Boolean(options.allowLiveLate)}
@@ -421,6 +525,7 @@ function EventParticipants({
         onEditLate={onCoachEditLate}
         onMarkArrival={onCoachMarkArrival}
         onPress={handleUserPress}
+        paymentStatus={statutPaiement}
         player={player}
         statusKind={options.statusKind || 'participating'}
         styles={{
@@ -873,6 +978,10 @@ function EventParticipants({
    */
   const renderPastilleDeFiltre = (pastille, compte) => {
     const choisie = filtreStatut === pastille.clef;
+    const libelle = t(
+      `eventDetails.participantsFilter.${pastille.clefTexte}`,
+      pastille.repli,
+    );
     return (
       <TouchableOpacity
         key={pastille.clef}
@@ -890,7 +999,7 @@ function EventParticipants({
         testID={`P2-pastille-${pastille.clef}`}
       >
         <Text style={[Fonts.p3, choisie ? Fonts.neutral900 : Fonts.neutral100]}>
-          {`${t(`eventDetails.participantsFilter.${pastille.clefTexte}`, pastille.repli)} · ${compte}`}
+          {`${libelle} · ${compte}`}
         </Text>
       </TouchableOpacity>
     );
@@ -1168,6 +1277,7 @@ function EventParticipants({
  * onPress: (user?: User) => void,
  * onMarkArrival?: (user?: User) => void,
  * onEditLate?: (user?: User) => void,
+ * paymentStatus?: string,
  * statusKind?: 'participating' | 'missing' | 'not_answered',
  * styles: any,
  * t: (clef: string, valeurParDefaut?: string) => string
@@ -1182,6 +1292,7 @@ function ParticipantItem({
   onEditLate,
   onMarkArrival,
   onPress,
+  paymentStatus = '',
   player,
   statusKind = 'participating',
   styles,
@@ -1199,6 +1310,17 @@ function ParticipantItem({
     statusKind,
     t,
   });
+  // 💶 P2 : un statut inconnu ne rend RIEN. La colonne se decide sur le
+  // LIBELLE, pas sur la chaine brute — un statut que ce fichier ne connait pas
+  // ne doit pas s afficher tel quel a l ecran.
+  const definitionDePaiement = STATUTS_PAIEMENT[String(paymentStatus || '')];
+  const libelleDePaiement = definitionDePaiement
+    ? t(
+      `eventDetails.participantsPayment.${definitionDePaiement.clef}`,
+      definitionDePaiement.repli,
+    )
+    : '';
+  const tonDePaiement = tonStatutPaiement(Colors, String(paymentStatus || ''));
   const arrivalTime = formatArrivalTime(attendance?.arrivedAt);
   const hasStaffMeta = canEdit && (attendance?.note || attendance?.manualOverride || attendance?.updatedBy);
   const primaryCoachActionTitle = attendance?.arrivedAt ? 'Corriger' : 'Pointer l\'arrivée';
@@ -1270,6 +1392,33 @@ function ParticipantItem({
             </Text>
           ) : null}
         </View>
+
+        {/* 💶 P2 (D7) — « A PAYE », LA COLONNE D A COTE DE « VIENT ».
+            ⚠️ Son `Text` ne porte PAS `textAlign: 'center'` : la pastille
+            d assiduite juste au-dessus, elle, le porte AVEC `color` dans le
+            MEME objet — et c est cette couture exacte que le selecteur d AD06
+            attrape. Un `textAlign` ici ferait entrer « Payée » dans les 8
+            temoins de pastille, qui comparent en `toEqual` STRICT. */}
+        {libelleDePaiement ? (
+          <View
+            style={[
+              ApplicationStyle.borderRadius16,
+              Alignments.alignCenter,
+              Spaces.paddingHorizontal[12],
+              Spaces.paddingVertical[4],
+              {
+                backgroundColor: withAlpha(tonDePaiement, 0.12),
+                borderColor: withAlpha(tonDePaiement, 0.32),
+                borderWidth: 1,
+              },
+            ]}
+            testID={`P2-paiement-${player?.documentId || ''}`}
+          >
+            <Text numberOfLines={1} style={[Fonts.p4, { color: tonDePaiement }]}>
+              {libelleDePaiement}
+            </Text>
+          </View>
+        ) : null}
       </TouchableOpacity>
 
       {canEdit && (
