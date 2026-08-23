@@ -13,10 +13,13 @@ import renderer, { act } from 'react-test-renderer';
 //   · QUI voit la carte (D3) — et surtout qui ne la voit PAS ;
 //   · OU elle se pose (D4) — au-dessus de la description ;
 //   · CE QU ELLE DIT selon l heure du SERVEUR, jamais celle du telephone ;
-//   · 🕳️ LE TROU CONNU, nomme et tenu par un temoin : un dirigeant
-//     organisateur qui n est pas de l equipe est `canEdit` mais PAS
-//     `canAccessAttendance` — il ne voit pas la carte, et le serveur lui
-//     repondrait 403. Lui montrer la porte serait lui mentir.
+//   · ✅ LE TROU REFERME PAR L5-0 (vague P, 23/08) : un dirigeant
+//     organisateur hors de l equipe est `canEdit`, et il est desormais
+//     `canAccessAttendance` aussi. Il pouvait DEJA pointer cote serveur
+//     (`is-event-trainer` accepte `canManageTeam`) ; seule la LECTURE lui
+//     etait refusee. Le temoin qui figeait ce trou dit maintenant l inverse.
+//     ⚠️ Les deux moities voyagent ENSEMBLE : sans l admin deploye, la carte
+//     mene a un 403.
 // ==========================================================================
 
 const mockUseAuth = jest.fn();
@@ -517,15 +520,19 @@ describe('N5 — a qui la carte s adresse', () => {
     expect(laCarte(root)).toBeNull();
   });
 
-  test('🕳️ TROU CONNU — un dirigeant hors de l equipe ne la voit pas non plus', () => {
-    // Il est `canEdit` (il organise), mais PAS `canAccessAttendance` : la
-    // grille ne regarde que l appartenance a l equipe et la participation
-    // (`eventAttendanceGate`). Le serveur lui repondrait 403. Lui afficher la
-    // porte serait lui promettre une piece fermee a clef.
-    // ⇒ Elargir la grille est un lot a part (L5-0), pas une correction ici.
+  test('✅ TROU REFERME (L5-0, vague P 23/08) — le dirigeant hors equipe VOIT la carte', () => {
+    // 🕳️ CE TEMOIN DISAIT L INVERSE, ET C ETAIT VOULU : tant que le serveur
+    // repondait 403 a ce persona, lui montrer la porte aurait ete lui
+    // promettre une piece fermee a clef.
+    // ✅ Le lot L5-0 a ouvert la clef : `can-access-attendance` accepte
+    // desormais `canManageTeam` — exactement l audience qui pouvait DEJA
+    // pointer via `is-event-trainer`. La grille de l app suit
+    // (`eventAttendanceGate.js`), et la carte s affiche.
+    // ⚠️ Les deux moities voyagent ENSEMBLE : tant que l admin n est pas
+    // deploye, cette carte mene a un 403.
     const root = monter({ auth: authPour(DIRIGEANT_HORS_EQUIPE, true) });
 
-    expect(laCarte(root)).toBeNull();
+    expect(laCarte(root)).toBeTruthy();
   });
 
   test('un tournoi n a pas d appel : pas de carte', () => {
