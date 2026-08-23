@@ -1236,6 +1236,7 @@ export default {
       invitedTeamBadge: 'équipe invitée',
     },
     managePanel: {
+      campaignAlreadyLinked: 'Cet événement a déjà une cotisation',
       cancel: 'Annuler',
       edit: 'Modifier',
       feature: 'À la une',

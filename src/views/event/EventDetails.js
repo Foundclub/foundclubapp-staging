@@ -4584,14 +4584,25 @@ function EventDetails({ navigation, route }) {
     // ⛔ SEUL LE TEXTE est unifie : le code se comporte toujours differemment
     //    selon qu'une campagne existe — avertissement d'abord, navigation
     //    ensuite. Fige par test.
+    // 💶 N7 item 2 (vague P, 23/08) — GRISEE AVEC SON MOTIF, JAMAIS MASQUEE.
+    // Jusqu'ici la rangee DISPARAISSAIT des qu'une campagne existait : une porte
+    // qui s'efface ne s'explique pas, alors qu'une porte fermee qui DIT pourquoi
+    // se comprend (meme motif que « Placer les équipes », AD01). La condition de
+    // PRESENCE ne change pas ; c'est la condition « aucune campagne » qui passe
+    // de la presence a l'etat `disabled` + note. `renderManageRow` sait deja
+    // rendre les deux.
     if (canManageEventLicenseCampaigns
       && (eventCampaignCreationSuggested || eventLicenseCampaigns.length > 0)
-      && !eventLicenseCampaignsQuery.isLoading
-      && eventLicenseCampaigns.length === 0) {
+      && !eventLicenseCampaignsQuery.isLoading) {
+      const hasLinkedCampaign = eventLicenseCampaigns.length > 0;
       chips.push({
+        disabled: hasLinkedCampaign,
         icon: 'euroCircle',
         key: 'licenseCampaign',
         label: t('eventDetails.managePanel.campaign', 'Cotisation'),
+        note: hasLinkedCampaign
+          ? t('eventDetails.managePanel.campaignAlreadyLinked', 'Cet événement a déjà une cotisation')
+          : null,
         onPress: openEventLicenseCampaignSettings,
       });
     }

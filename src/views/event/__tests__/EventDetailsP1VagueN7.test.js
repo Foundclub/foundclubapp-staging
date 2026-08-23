@@ -1,4 +1,4 @@
-import { Text } from 'react-native';
+import { Text, TouchableOpacity } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
 import fr from '@/theme/strings/translations/fr';
@@ -445,6 +445,49 @@ const textesVisibles = (/** @type {any} */ root) => root
 const contient = (/** @type {any} */ root, /** @type {string} */ extrait) => textesVisibles(root)
   .join(' | ')
   .includes(extrait);
+
+const parTestID = (/** @type {any} */ root, /** @type {string} */ id) => root
+  .findAll((/** @type {any} */ node) => node.props?.testID === id, { deep: false });
+
+// ─── Le menu ⋯ vit dans l'en-tete de navigation (motif L4MenuTroisPoints) ───
+const elementDEntete = () => {
+  const appels = mockSetOptions.mock.calls.filter(
+    (/** @type {any} */ appel) => appel[0]?.headerRight,
+  );
+  if (!appels.length) return null;
+  return appels[appels.length - 1][0].headerRight();
+};
+
+const chercherDansElements = (/** @type {any} */ element, /** @type {(n: any) => boolean} */ predicat) => {
+  if (!element || typeof element !== 'object') return null;
+  if (Array.isArray(element)) {
+    return element.reduce(
+      (/** @type {any} */ trouve, /** @type {any} */ enfant) => (
+        trouve || chercherDansElements(enfant, predicat)
+      ),
+      null,
+    );
+  }
+  if (element.props && predicat(element)) return element;
+  return chercherDansElements(element.props?.children, predicat);
+};
+
+const ouvrirLeMenu = () => {
+  const bouton = chercherDansElements(
+    elementDEntete(),
+    (/** @type {any} */ noeud) => noeud?.props?.testID === 'event-actions-menu-button',
+  );
+  if (!bouton) throw new Error('Aucun bouton trois-points dans l en-tete de navigation');
+  act(() => {
+    bouton.props.onPress();
+  });
+};
+
+const rangeesDeLaFeuille = (/** @type {any} */ root) => parTestID(root, 'event-manage-chip');
+
+const rangee = (/** @type {any} */ root, /** @type {string} */ extrait) => rangeesDeLaFeuille(root)
+  .find((/** @type {any} */ n) => textOf(n).includes(extrait));
+
 // La clef du titre, telle que la doublure `t` la rend (aucun repli textuel).
 const TITRE_DESCRIPTION = 'eventDetails.fields.description';
 
@@ -487,5 +530,44 @@ describe('P1 · item 1 — la phrase-robot FFF ne sert plus de description', () 
     // 🔑 La CLEF ne bouge pas (le controle de recolte compare les ensembles de
     // clefs) ; c'est sa VALEUR qui passe de « À propos » a « Description ».
     expect(fr.eventDetails.fields.description).toBe('Description');
+  });
+});
+
+describe('P1 · item 2 — « Cotisation » grisee avec son motif, jamais masquee', () => {
+  const CAMPAGNE = {
+    currency: 'EUR',
+    defaultAmountCents: 5000,
+    documentId: 'camp-1',
+    name: 'Cotisation U15',
+    status: 'draft',
+    totals: { total: 3 },
+  };
+
+  test('AVEC une campagne deja liee : la rangee est LA, grisee, et dit pourquoi', () => {
+    const root = monter({ campagnes: [CAMPAGNE] });
+    ouvrirLeMenu();
+
+    const ligne = rangee(root, 'Cotisation');
+    expect(ligne).toBeTruthy();
+    expect(ligne.findAllByType(TouchableOpacity)[0].props.disabled).toBe(true);
+    expect(textOf(ligne)).toContain('Cet événement a déjà une cotisation');
+    expect(askedKeys).toContain('eventDetails.managePanel.campaignAlreadyLinked');
+  });
+
+  test('SANS campagne, suggeree par le tunnel : la rangee reste ACTIVE et sans motif', () => {
+    const root = monter({ params: { eventCampaignCreationSuggested: true } });
+    ouvrirLeMenu();
+
+    const ligne = rangee(root, 'Cotisation');
+    expect(ligne).toBeTruthy();
+    expect(ligne.findAllByType(TouchableOpacity)[0].props.disabled).toBeFalsy();
+    expect(textOf(ligne)).not.toContain('déjà une cotisation');
+  });
+
+  test('SANS campagne et sans suggestion : toujours aucune rangee (perimetre inchange)', () => {
+    const root = monter();
+    ouvrirLeMenu();
+
+    expect(rangee(root, 'Cotisation')).toBeUndefined();
   });
 });
