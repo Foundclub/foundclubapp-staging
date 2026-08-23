@@ -403,6 +403,15 @@ const authPour = (
 const ORGANISATEUR = () => authPour(COACH, true);
 const SPECTATEUR = () => authPour('visiteur-1', false);
 
+// 🎭 Le dirigeant qui ORGANISE sans entrainer l'equipe. « Organiser » et
+// « valider une demande » ne sont pas le meme droit : `canManageEvent` s'ouvre a
+// qui gere le CLUB, tandis que `canEditEvent` exige d'entrainer CETTE equipe
+// (useAuth:591-624). Ce cas est celui du lot P6, et il est courant.
+const ORGANISATEUR_SANS_VALIDATION = () => ({
+  ...authPour(COACH, true),
+  canEditEvent: () => false,
+});
+
 /** @type {any} */
 let monte = null;
 
@@ -557,6 +566,25 @@ describe('P8 · la carte d ouverture, face ORGANISATEUR', () => {
 
     expect(boutonAvecTitre(racine, 'Voir les participants externes')).toBeTruthy();
     expect(boutonAvecTitre(racine, 'Voir les demandes')).toBeFalsy();
+  });
+
+  test('organisateur SANS le droit de valider : aucune promesse de demandes', () => {
+    // 🧨 LE PIEGE EVITE : la liste des participants ne rend les demandes que
+    // sous `canApprovePendingRequests` (EventParticipants:686). Annoncer « 1
+    // demande a verifier » a qui ne peut pas les voir, et lui donner un bouton
+    // pour y descendre, serait promettre une porte qui n'existe pas.
+    const racine = monter({
+      auth: ORGANISATEUR_SANS_VALIDATION(),
+      event: entrainementOuvert(),
+    });
+
+    expect(parTestID(racine, 'p8-carte-ouverture-entrainement')).toHaveLength(1);
+    expect(texteDeLaCarte(racine)).not.toContain('à vérifier');
+    expect(boutonAvecTitre(racine, 'Voir les demandes')).toBeFalsy();
+    // ✅ Ce qu'il PEUT voir ne disparait pas : 2 externes sont bien dans la
+    // liste, et le bouton l'y emmene toujours.
+    expect(boutonAvecTitre(racine, 'Voir les participants externes')).toBeTruthy();
+    expect(texteDeLaCarte(racine)).toContain('6 place(s) externe(s) restante(s) sur 8');
   });
 
   test('« qui valide » se dit en clair, et pas de la meme facon', () => {

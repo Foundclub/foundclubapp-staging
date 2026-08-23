@@ -5501,7 +5501,18 @@ function EventDetails({ navigation, route }) {
   const renderTrainingOpeningCard = () => {
     const quota = Number(trainingOpenConfig.externalParticipantLimit || 0);
     const taken = externalParticipationSection?.participating?.length || 0;
-    const pending = externalParticipationSection?.pending?.length || 0;
+    // 🪤 LE COMPTEUR SE TAIT POUR QUI NE PEUT PAS VALIDER, et ce n'est pas de la
+    // prudence : c'est la MEME condition que la liste des participants, qui ne
+    // rend les demandes que sous `canApprovePendingRequests` (EventParticipants
+    // :686). Or « organiser » et « valider » ne sont pas le meme droit ici —
+    // `canManageEvent` s'ouvre a qui gere le CLUB, `canEditEvent` demande
+    // d'entrainer CETTE equipe (useAuth:591-624). Un dirigeant de club qui
+    // n'entraine pas l'equipe a donc `canEdit` sans `canApprovePendingRequests` :
+    // sans cette ligne, la carte lui annoncerait des demandes et son bouton le
+    // ferait descendre vers une liste qui ne les montre pas.
+    const pending = canApprovePendingRequests
+      ? (externalParticipationSection?.pending?.length || 0)
+      : 0;
     // ⛔ Un entrainement ferme, ou ouvert sans quota, ne promet aucune place :
     // « 0 place restante sur 0 » serait pire que le silence (motif N1).
     const showSeats = Boolean(trainingOpenConfig.isOpenTraining && quota > 0);
