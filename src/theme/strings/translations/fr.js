@@ -1163,9 +1163,18 @@ export default {
       defaultComposition: 'Composition type',
     },
     detection: {
+      groupParticipants: 'Participants retenus',
+      groupPending: 'Demandes à traiter',
+      noParticipantYet: 'Personne n’est encore retenu·e sur ce poste.',
+      noPositionGroup: 'Sans poste précisé',
       noSlots: 'Aucun poste recherché',
       noSlotsHint: 'La séance est ouverte à tous les profils',
+      positionFilled: '{{accepted}}/{{quantity}} retenu·e·s',
       slotsTitle: 'Postes recherchés',
+      tileApplication: 'candidature à voir',
+      tileApplications: 'candidatures à voir',
+      tileOpenPosition: 'poste ouvert',
+      tileOpenPositions: 'postes ouverts',
     },
     detectionSplit: {
       blockedUntilSplit: 'Génère d’abord la répartition, à l’étape 2.',

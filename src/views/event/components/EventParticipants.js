@@ -87,7 +87,21 @@ import SHARE_ICON from '@/assets/icons/share2.png';
  * }} TeamParticipationSection
  */
 /**
+ * Un POSTE d'une detection, avec ses deux groupes (regle 5 du pack).
+ * `position` vide = le groupe de repli « sans poste precise ».
+ * @typedef {{
+ *   acceptedCount: number;
+ *   isComplete: boolean;
+ *   key: string;
+ *   participating: User[];
+ *   pending: PendingParticipation[];
+ *   position: string;
+ *   quantity: number;
+ * }} DetectionPositionSection
+ */
+/**
  * @typedef {object} EventParticipantsProps
+ * @property {DetectionPositionSection[]} [detectionPositionSections]
  * @property {import('@/domains/event/types').FCEvent | undefined} event
  * @property {ParticipationsByStatus | undefined} participationsByStatus
  * @property {PendingParticipation[]} pendingParticipations
@@ -364,6 +378,7 @@ function EventParticipants({
   canEdit,
   canApprovePendingRequests = canEdit,
   canManageEventLicenseCampaigns = false,
+  detectionPositionSections = [],
   event,
   eventLicenseCampaigns = [],
   eventStartAt,
@@ -890,6 +905,10 @@ function EventParticipants({
     ? garderLeGroupeChoisi(listesRecherchees)
     : listesRecherchees;
   const demandesAffichees = filtrerDemandes(pendingParticipations);
+  // 🗂️ P7 — le mode est commande par la PRESENCE de postes, pas par un drapeau
+  // de plus : l'ecran ne descend cette liste que pour une detection qui a des
+  // postes recherches.
+  const modeDetectionParPoste = detectionPositionSections.length > 0;
   const repliAffiche = filtrerJoueurs(event?.participations);
   const participatingCount = Number(
     participantsSummary?.participatingCount ?? event?.participations?.length ?? 0,
@@ -1060,6 +1079,77 @@ function EventParticipants({
     </View>
   );
 
+  // 🗂️ P7 — UN POSTE DE DETECTION, avec ses DEUX groupes nommes (regle 5).
+  // Structurellement, un poste est la meme chose qu'une equipe invitee : un
+  // titre, des demandes a trancher, des gens retenus. On reutilise donc
+  // `renderPendingCard` et `renderStatusGroup` tels quels — meme carte, memes
+  // boutons Accepter / Refuser, meme grisage AC07.
+  const renderDetectionPositionSection = (/** @type {any} */ section) => {
+    const demandes = filtrerDemandes(section.pending);
+    const retenus = filtrerJoueurs(section.participating);
+    // Les demandes ne sont pas l'un des 3 statuts des pastilles : un filtre de
+    // statut actif les met de cote, exactement comme `garderLeGroupeChoisi`
+    // vide les groupes non choisis.
+    const demandesVisibles = canApprovePendingRequests && !filtreStatutActif && demandes.length > 0;
+    const retenusVisibles = !filtreStatutActif || filtreStatut === 'participating';
+    // Un poste vide GARDE son titre — sauf pendant une recherche ou sous un
+    // filtre, ou le garder serait un mensonge (on n'a pas regarde tout le
+    // monde, on a mis une partie de cote).
+    const trie = rechercheActive || filtreStatutActif;
+    if (trie && !demandesVisibles && !(retenusVisibles && retenus.length > 0)) return null;
+
+    return (
+      <View
+        key={section.key}
+        style={[
+          Spaces.gap[12],
+          ApplicationStyle.backgroundColor.primary700,
+          ApplicationStyle.borderRadius24,
+          Spaces.padding[16],
+        ]}
+      >
+        <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter, Spaces.gap[8]]}>
+          <Text style={[Fonts.h4Bold, Fonts.neutral00]}>
+            {section.position || t('eventDetails.detection.noPositionGroup', 'Sans poste précisé')}
+          </Text>
+          {section.quantity > 0 ? (
+            <Text style={[Fonts.p4, Fonts.primary100]}>
+              {t(
+                'eventDetails.detection.positionFilled',
+                '{{accepted}}/{{quantity}} retenu·e·s',
+                { accepted: section.acceptedCount, quantity: section.quantity },
+              )}
+            </Text>
+          ) : null}
+        </View>
+
+        {demandesVisibles ? (
+          <View style={[Spaces.gap[12]]}>
+            <Text style={[Fonts.p3Bold, Fonts.primary500]}>
+              {t('eventDetails.detection.groupPending', 'Demandes à traiter')}
+            </Text>
+            {demandes.map(renderPendingCard)}
+          </View>
+        ) : null}
+
+        {retenusVisibles ? renderStatusGroup(
+          t('eventDetails.detection.groupParticipants', 'Participants retenus'),
+          retenus,
+          {
+            allowLiveLate: true,
+            emptyMessage: t(
+              'eventDetails.detection.noParticipantYet',
+              'Personne n’est encore retenu·e sur ce poste.',
+            ),
+            keyPrefix: `p7-poste-${section.key}`,
+            showCoachActions: canEdit,
+            statusKind: 'participating',
+          },
+        ) : null}
+      </View>
+    );
+  };
+
   const renderParticipationsContent = () => {
     if (areParticipantIdentitiesHidden) {
       return (
@@ -1107,6 +1197,19 @@ function EventParticipants({
               'Les identités des participants sont masquees par l organisateur.',
             )}
           </Text>
+        </View>
+      );
+    }
+
+    // 🗂️ P7 — LE MODE « PAR POSTE » PASSE AVANT LES AUTRES, et il REMPLACE la
+    // liste a plat : rendre les deux afficherait chaque personne deux fois.
+    // Il n'existe que si l'ecran a descendu des postes, c'est-a-dire pour une
+    // detection qui en a. Tout autre evenement garde exactement l'affichage
+    // d'avant ce lot.
+    if (modeDetectionParPoste) {
+      return (
+        <View style={[Spaces.gap[12]]} testID="p7-candidats-par-poste">
+          {detectionPositionSections.map(renderDetectionPositionSection)}
         </View>
       );
     }
@@ -1182,7 +1285,10 @@ function EventParticipants({
 
   return (
     <View style={[Spaces.gap[16], Alignments.fill]}>
-      {!hasTeamSections && canApprovePendingRequests && demandesAffichees?.length > 0 && (
+      {/* 🗂️ P7 — en mode « par poste », les demandes vivent DANS leur poste :
+          les laisser aussi en tete de page les afficherait deux fois. */}
+      {!modeDetectionParPoste && !hasTeamSections
+        && canApprovePendingRequests && demandesAffichees?.length > 0 && (
         <View style={[Spaces.gap[16], Alignments.fill]}>
           <Text style={[Fonts.h3Bold, Fonts.neutral00]}>
             {t('eventDetails.fields.participationRequests')}

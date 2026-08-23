@@ -116,6 +116,10 @@ const toDisplayText = (value) => {
 
 /**
  * @param {{
+ *   detectionSummary?: {
+ *     openPositions: number;
+ *     toReview: number;
+ *   } | null;
  *   event: any;
  *   matchScoreSummary?: {
  *     awaitingOpponent?: boolean;
@@ -128,7 +132,7 @@ const toDisplayText = (value) => {
  *   } | null;
  * }} props
  */
-function EventHeader({ event, matchScoreSummary = null }) {
+function EventHeader({ detectionSummary = null, event, matchScoreSummary = null }) {
   const {
     Alignments, ApplicationStyle, Colors, Fonts, Images, Spaces,
   } = useTheme();
@@ -445,6 +449,74 @@ function EventHeader({ event, matchScoreSummary = null }) {
               </Text>
             </TouchableOpacity>
           ) : null}
+        </View>
+      ) : null}
+
+      {/* 🔭 P7 — LES DEUX TUILES DE RECRUTEMENT (planche 03, carte E).
+          « Les deux chiffres du metier remplacent l'encart score » : un
+          evenement ne peut pas etre a la fois un match et une detection, les
+          deux blocs ne se croisent donc jamais a l'ecran.
+
+          🪤 LEUR PLACE EST UNE REGLE, PAS UN GOUT. `EventHeaderAE01.test.js`
+          lit le PREMIER `Text` de l'arbre pour verifier le titre de la carte.
+          Une tuile posee au-dessus du titre casserait ses 3 temoins d'un coup,
+          avec un message d'echec parlant de fond d'ecran. Les tuiles restent
+          donc SOUS le titre, exactement comme l'encart score de N3.
+          Le temoin 3 d'`EventHeaderP7DetectionTuiles.test.js` tient la regle. */}
+      {detectionSummary ? (
+        <View
+          style={[Alignments.row, Alignments.fullWidth, Spaces.gap[8]]}
+          testID="p7-tuiles-detection"
+        >
+          <View
+            style={[
+              ApplicationStyle.borderRadius16,
+              Alignments.fill,
+              Spaces.padding[12],
+              Spaces.gap[4],
+              {
+                backgroundColor: withAlpha(Colors.primary900, 0.45),
+                borderColor: withAlpha(Colors.primary500, 0.3),
+                borderWidth: 1,
+              },
+            ]}
+            testID="p7-tuile-postes-ouverts"
+          >
+            <Text style={[Fonts.h2Black, Fonts.neutral00]}>
+              {String(detectionSummary.openPositions)}
+            </Text>
+            <Text style={[Fonts.p3Bold, Fonts.neutral200]}>
+              {detectionSummary.openPositions === 1
+                ? t('eventDetails.detection.tileOpenPosition', 'poste ouvert')
+                : t('eventDetails.detection.tileOpenPositions', 'postes ouverts')}
+            </Text>
+          </View>
+          {/* Le chiffre des candidatures porte l'orange `warning500` : c'est
+              lui qui appelle une action du staff, le nombre de postes ne
+              decrit qu'un reglage. */}
+          <View
+            style={[
+              ApplicationStyle.borderRadius16,
+              Alignments.fill,
+              Spaces.padding[12],
+              Spaces.gap[4],
+              {
+                backgroundColor: withAlpha(Colors.primary900, 0.45),
+                borderColor: withAlpha(Colors.warning500, 0.3),
+                borderWidth: 1,
+              },
+            ]}
+            testID="p7-tuile-candidatures"
+          >
+            <Text style={[Fonts.h2Black, { color: Colors.warning500 }]}>
+              {String(detectionSummary.toReview)}
+            </Text>
+            <Text style={[Fonts.p3Bold, Fonts.neutral200]}>
+              {detectionSummary.toReview === 1
+                ? t('eventDetails.detection.tileApplication', 'candidature à voir')
+                : t('eventDetails.detection.tileApplications', 'candidatures à voir')}
+            </Text>
+          </View>
         </View>
       ) : null}
 

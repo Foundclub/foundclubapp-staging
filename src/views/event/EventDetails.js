@@ -1870,12 +1870,40 @@ function EventDetails({ navigation, route }) {
     const totalOpen = detectionSlots.reduce((sum, slot) => sum + (slot?.isComplete ? 0 : 1), 0);
     // @ts-ignore: FIXME: Baseline TS regression
     const totalRequested = detectionSlots.reduce((sum, slot) => sum + Number(slot?.quantity || 0), 0);
+    // 🔭 P7 — « candidatures a voir » = celles qui attendent encore une
+    // decision, poste par poste.
+    // 🪤 ON NE RECOMPTE RIEN : `candidatesCount` porte deja le `max()`
+    // anti-double-comptage pose plus haut (une meme personne peut figurer a la
+    // fois dans `slot.candidates` et dans une participation). Repartir des
+    // listes brutes ici afficherait un nombre plus gros que la realite.
+    // On retranche les personnes DEJA validees : ce qui reste est ce que le
+    // staff doit encore regarder.
+    const totalToReview = detectionSlots.reduce(
+      // @ts-ignore: FIXME: Baseline TS regression
+      (sum, slot) => sum + Math.max(
+        0,
+        Number(slot?.candidatesCount || 0) - Number(slot?.acceptedCount || 0),
+      ),
+      0,
+    );
 
     return {
       totalOpen,
       totalRequested,
+      totalToReview,
     };
   }, [detectionSlots]);
+  // 🔭 P7 — le resume que porte l'entete. `null` hors detection : c'est cette
+  // prop, et elle seule, qui commande les deux tuiles (temoin 4 de
+  // `EventHeaderP7DetectionTuiles.test.js`).
+  const detectionHeaderSummary = useMemo(() => (
+    isDetectionEvent
+      ? {
+        openPositions: detectionSlotsSummary.totalOpen,
+        toReview: detectionSlotsSummary.totalToReview,
+      }
+      : null
+  ), [detectionSlotsSummary, isDetectionEvent]);
   const currentParticipationFlow = useMemo(() => resolveParticipationFlow(event, {
     detectionSlotsCount: detectionSlots.length,
     participationState: currentUserParticipationState,
@@ -2272,6 +2300,95 @@ function EventDetails({ navigation, route }) {
       participating: participatingPlayers,
     };
   }, [canEdit, event, pendingParticipations, trainerKeysForEvent]);
+  // 🗂️ P7 — LES CANDIDATS, RANGES PAR POSTE (regle 5 du pack : « chaque poste
+  // ouvre les gens de ce poste, en deux groupes nommes : participants (retenus)
+  // et demandes (a accepter / refuser) »).
+  //
+  // 🔒 CE CALCUL NE FABRIQUE PERSONNE ET N'EN PERD AUCUN. Il REPARTIT les deux
+  // listes que l'onglet rendait deja — `participationsByStatus.participating`
+  // et `pendingParticipations` — au lieu d'aller rechercher les gens ailleurs.
+  // C'est ce qui garantit qu'un regroupement ne fait disparaitre personne.
+  //
+  // 🪤 LES DEUX LISTES NE VIENNENT PAS DE LA MEME SOURCE : les retenus sont des
+  // UTILISATEURS (`event.participations`), les demandes sont des PARTICIPATIONS
+  // (`participationRequests`). Seule la participation porte le poste ; on passe
+  // donc par une table « personne validee -> poste » pour rattacher les retenus.
+  const detectionPositionSections = useMemo(() => {
+    if (!isDetectionEvent || !detectionSlots.length) return [];
+
+    /** @type {Map<string, string>} */
+    const slotIdByAcceptedUserKey = new Map();
+    activeEventParticipations.forEach((/** @type {any} */ participation) => {
+      const slotId = String(participation?.recruitmentAd?.documentId || '');
+      const userKey = getUserKey(participation?.user);
+      const status = String(participation?.participationStatus || '').toLowerCase();
+      if (!slotId || !userKey || status !== 'accepted') return;
+      slotIdByAcceptedUserKey.set(String(userKey), slotId);
+    });
+
+    const retenus = /** @type {any[]} */ (participationsByStatus?.participating || []);
+    const demandes = /** @type {any[]} */ (pendingParticipations || []);
+
+    // @ts-ignore: FIXME: Baseline TS regression
+    const sections = detectionSlots.map((/** @type {any} */ slot) => {
+      const slotId = String(slot?.documentId || '');
+      return {
+        acceptedCount: Number(slot?.acceptedCount || 0),
+        isComplete: Boolean(slot?.isComplete),
+        key: slotId || `poste-${String(slot?.position || '')}`,
+        participating: retenus.filter(
+          (player) => slotIdByAcceptedUserKey.get(String(getUserKey(player) || '')) === slotId,
+        ),
+        pending: demandes.filter(
+          (participation) => String(participation?.recruitmentAd?.documentId || '') === slotId,
+        ),
+        position: String(slot?.position || ''),
+        quantity: Number(slot?.quantity || 1),
+      };
+    });
+
+    // 🧯 LE GROUPE DE REPLI, ET LA RAISON D'ETRE DE CE LOT EN UNE LIGNE : une
+    // detection accepte AUSSI des inscriptions hors annonce (`getDetectionCandi
+    // datePlayers` en compte trois canaux). Sans ce groupe, regrouper par poste
+    // ferait disparaitre de l'ecran des gens qui y etaient la veille. Il ne
+    // s'affiche que s'il porte quelqu'un : pas de titre pour un groupe vide.
+    const placesRetenus = new Set(
+      sections.flatMap((section) => section.participating.map(
+        (/** @type {any} */ player) => String(getUserKey(player) || ''),
+      )),
+    );
+    const placesDemandes = new Set(
+      sections.flatMap((section) => section.pending.map(
+        (/** @type {any} */ participation) => String(participation?.documentId || ''),
+      )),
+    );
+    const retenusSansPoste = retenus.filter(
+      (player) => !placesRetenus.has(String(getUserKey(player) || '')),
+    );
+    const demandesSansPoste = demandes.filter(
+      (participation) => !placesDemandes.has(String(participation?.documentId || '')),
+    );
+
+    if (retenusSansPoste.length || demandesSansPoste.length) {
+      sections.push({
+        acceptedCount: retenusSansPoste.length,
+        isComplete: false,
+        key: 'p7-sans-poste',
+        participating: retenusSansPoste,
+        pending: demandesSansPoste,
+        position: '',
+        quantity: 0,
+      });
+    }
+
+    return sections;
+  }, [
+    activeEventParticipations,
+    detectionSlots,
+    isDetectionEvent,
+    participationsByStatus,
+    pendingParticipations,
+  ]);
   const applyToDetectionSlotMutation = useMutation({
     // @ts-ignore: FIXME: Baseline TS regression
     mutationFn: ({ payload = {}, slotDocumentId }) => applyToRecruitmentAd(slotDocumentId, payload),
@@ -6761,7 +6878,11 @@ function EventDetails({ navigation, route }) {
           showsVerticalScrollIndicator={false}
         >
           <WithDataWrapper error={error} isLoading={isLoading} wrapperStyle={[Alignments.fill, Spaces.gap[24]]}>
-            <EventHeader event={event} matchScoreSummary={matchHeaderScoreSummary} />
+            <EventHeader
+              detectionSummary={detectionHeaderSummary}
+              event={event}
+              matchScoreSummary={matchHeaderScoreSummary}
+            />
             {/* N1 (b) — sous la carte d'entete, et pour TOUS les lecteurs. Elle
                 ne concerne que l'entrainement ouvert : les onglets du match ne
                 la voient jamais, donc rien a brancher sur `showOverviewTab`. */}
@@ -6970,6 +7091,7 @@ function EventDetails({ navigation, route }) {
                   canApprovePendingRequests={canApprovePendingRequests}
                   canEdit={canEdit}
                   canManageEventLicenseCampaigns={canManageEventLicenseCampaigns}
+                  detectionPositionSections={detectionPositionSections}
                   event={event}
                   eventLicenseCampaigns={eventLicenseCampaigns}
                   eventStartAt={eventStartAt}
