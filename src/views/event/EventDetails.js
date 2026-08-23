@@ -95,6 +95,7 @@ import {
   useGetEventMyMatchResponse,
 } from '@/services/matchStats/matchStatsQueries';
 import { applyToRecruitmentAd } from '@/services/recruitment/recruitmentService';
+import { useGetTournamentDashboard } from '@/services/tournamentCompetition/tournamentCompetitionQueries';
 import {
   createCustomTournamentTeam,
   registerClubTeamToTournament,
@@ -1108,6 +1109,18 @@ function EventDetails({ navigation, route }) {
   }), [eventClubId, licenseCampaignEventId]);
   const eventLicenseCampaignsQuery = useLicenseCampaigns(eventLicenseCampaignsQueryParams, {
     enabled: Boolean(canManageEventLicenseCampaigns && eventClubId && licenseCampaignEventId),
+  });
+  // 🏆 N7 item 5 (vague P, 23/08) — LE FIL DU TOURNOI LIT LE DASHBOARD.
+  // Jusqu'ici les etapes Poules / Matchs / Publié s'effondraient sur le seul
+  // `competitionState` de l'evenement (voir `renderTournamentSection`). Le
+  // dashboard (`GET /events/:id/tournament/dashboard`, meme appel que
+  // `TournamentManagement`) sait, lui, si les poules et les matchs EXISTENT
+  // avant publication. Il n'est demande QUE pour un tournoi (pas une journee
+  // de stage) : les autres types ne paient pas l'appel.
+  // ⚠️ Ce hook tire `@/services/client` : les 16 suites qui montent cet ecran
+  //    le mockent (`tournamentCompetitionQueries`), sinon elles tombent a 0 test.
+  const tournamentDashboardQuery = useGetTournamentDashboard(eventId || '', {
+    enabled: Boolean(eventId && isTournamentEvent && !isStageDayEvent),
   });
   const eventLicenseCampaigns = useMemo(() => {
     const queriedCampaigns = eventLicenseCampaignsQuery.data?.data;
@@ -5823,20 +5836,46 @@ function EventDetails({ navigation, route }) {
     }
     const teamsSummary = `${tournamentTeamCounters.accepted} validée(s) · ${tournamentTeamCounters.pending} en attente`;
 
-    // 🧭 LES CINQ ETAPES DU FIL — ce que la page sait, sans un appel de plus.
+    // 🧭 LES CINQ ETAPES DU FIL — les trois dernieres lisent le dashboard.
     //
-    // ponytail: « Poules » et « Matchs » ne sont pas distinguees de « Publié ».
-    //   PLAFOND : la page ne peut pas savoir si les poules existent mais ne sont
-    //   pas publiees — cet etat-la vit derriere `GET /events/:id/tournament/dashboard`.
-    //   POURQUOI ON NE L'APPELLE PAS : ce hook tire `tournamentCompetitionService`,
-    //   donc `@/services/client`. Les treize suites qui montent cet ecran
-    //   devraient toutes le mocker, et le projet a deja paye ce piege (un import
-    //   de service de plus = des suites entieres qui ne s'executent plus).
-    //   CE QUI RESTE VRAI : publier EXIGE des poules et des matchs. Un tournoi
-    //   publie a donc necessairement franchi les etapes 3 et 4 — le fil ne ment
-    //   jamais, il est seulement moins precis pendant le brouillon.
-    //   SORTIE : appeler `useGetTournamentDashboard` le jour ou un lot mocke ce
-    //   module dans les treize suites.
+    // N7 item 5 (vague P, 23/08) — SORTIE DU PONYTAIL. Avant ce lot, « Poules »
+    // et « Matchs » n'etaient pas distinguees de « Publié » : la page ne
+    // savait pas si les poules existaient sans etre publiees, et le hook qui le
+    // sait tirait `@/services/client` — un import de service de plus aurait
+    // fait tomber a 0 test les suites qui montent cet ecran. Les 16 suites le
+    // mockent desormais (`tournamentCompetitionQueries`), le hook est branche.
+    //
+    // 📦 FORME REELLE du dashboard (admin `tournament-competition.js`) :
+    //   { bracket, config, event, groups, matches, overview, phases, standings,
+    //     teams } avec `config.competitionState` ('draft' | 'published').
+    // REGLE DE DERIVATION :
+    //   · Poules  = `groups.length > 0`
+    //   · Matchs  = `matches.length > 0`
+    //   · Publié  = `config.competitionState === 'published'`
+    // ✅ CE QUI RESTE VRAI : publier EXIGE des poules et des matchs — un tournoi
+    //    publie coche donc 3 et 4 meme si son format n'a pas de poules
+    //    (`knockout_only`) : le fil ne dit jamais « pas encore » d'une etape
+    //    que la publication a deja franchie.
+    // ♻️ REPLI : tant que le dashboard n'a rien rendu (`data` absent), le calcul
+    //    d'avant tient — tout s'effondre sur `competitionState` de l'evenement.
+    const tournamentDashboard = tournamentDashboardQuery.data;
+    const hasTournamentDashboard = Boolean(
+      tournamentDashboard && typeof tournamentDashboard === 'object',
+    );
+    const dashboardGroupsCount = Array.isArray(tournamentDashboard?.groups)
+      ? tournamentDashboard.groups.length
+      : 0;
+    const dashboardMatchesCount = Array.isArray(tournamentDashboard?.matches)
+      ? tournamentDashboard.matches.length
+      : 0;
+    const dashboardPublished = tournamentDashboard?.config?.competitionState === 'published';
+    const railGroupsDone = hasTournamentDashboard
+      ? dashboardGroupsCount > 0 || dashboardPublished
+      : isCompetitionPublished;
+    const railMatchesDone = hasTournamentDashboard
+      ? dashboardMatchesCount > 0 || dashboardPublished
+      : isCompetitionPublished;
+    const railPublishedDone = hasTournamentDashboard ? dashboardPublished : isCompetitionPublished;
     const tournamentRailSteps = [
       {
         done: Boolean(event?.tournamentConfig?.formatMode),
@@ -5847,15 +5886,15 @@ function EventDetails({ navigation, route }) {
         label: t('eventDetails.tournamentRail.teams', 'Équipes'),
       },
       {
-        done: isCompetitionPublished,
+        done: railGroupsDone,
         label: t('eventDetails.tournamentRail.groups', 'Poules'),
       },
       {
-        done: isCompetitionPublished,
+        done: railMatchesDone,
         label: t('eventDetails.tournamentRail.matches', 'Matchs'),
       },
       {
-        done: isCompetitionPublished,
+        done: railPublishedDone,
         label: t('eventDetails.tournamentRail.published', 'Publié'),
       },
     ];

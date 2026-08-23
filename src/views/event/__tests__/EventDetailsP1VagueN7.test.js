@@ -359,6 +359,25 @@ const buildMatchFFF = (/** @type {any} */ overrides = {}) => buildEvent({
   ...overrides,
 });
 
+const buildTournoi = (/** @type {any} */ overrides = {}) => buildEvent({
+  name: 'Tournoi de printemps',
+  tournamentConfig: {
+    competitionState: 'draft',
+    formatMode: 'groups_only',
+    registrationMode: 'manual',
+  },
+  tournamentTeams: [
+    {
+      documentId: 'a', members: [], name: 'A', status: 'accepted',
+    },
+    {
+      documentId: 'b', members: [], name: 'B', status: 'accepted',
+    },
+  ],
+  type: { name: 'Tournoi' },
+  ...overrides,
+});
+
 const authOrganisateur = (/** @type {boolean} */ peutGerer = true) => ({
   canEditClub: () => peutGerer,
   canEditEvent: () => peutGerer,
@@ -625,5 +644,84 @@ describe('P1 · item 3 — les quatre statuts de « Mettre a la une » passent p
     expect(fr.eventDetails.featuredRequest.available).toBe('Disponible');
     expect(fr.eventDetails.featuredRequest.alreadyFeatured).toBe('Déjà à la une');
     expect(fr.reservation.featuredRequest.pending).toBe('Demande en attente');
+  });
+});
+
+describe('P1 · item 5 — le fil du tournoi lit le dashboard', () => {
+  const etapeDuFil = (/** @type {any} */ root, /** @type {number} */ rang) => {
+    const [noeud] = parTestID(root, `tournament-rail-step-${rang}`);
+    if (!noeud) throw new Error(`Aucune etape ${rang} dans le fil`);
+    return noeud
+      .findAllByType(Text)
+      .map((/** @type {any} */ n) => textOf(n))
+      .join(' ');
+  };
+
+  test('des POULES sans match : etape 3 cochee, 4 et 5 pas encore', () => {
+    const root = monter({
+      dashboard: {
+        config: { competitionState: 'draft' },
+        groups: [{ documentId: 'g1' }],
+        matches: [],
+      },
+      event: buildTournoi(),
+    });
+
+    expect(etapeDuFil(root, 3)).toContain('✓');
+    expect(etapeDuFil(root, 4)).not.toContain('✓');
+    expect(etapeDuFil(root, 5)).not.toContain('✓');
+  });
+
+  test('des poules ET des matchs, toujours en brouillon : 3 et 4 cochees, 5 non', () => {
+    const root = monter({
+      dashboard: {
+        config: { competitionState: 'draft' },
+        groups: [{ documentId: 'g1' }],
+        matches: [{ documentId: 'm1' }],
+      },
+      event: buildTournoi(),
+    });
+
+    expect(etapeDuFil(root, 3)).toContain('✓');
+    expect(etapeDuFil(root, 4)).toContain('✓');
+    expect(etapeDuFil(root, 5)).not.toContain('✓');
+  });
+
+  test('le dashboard dit « publie » : la cinquieme se coche, meme si l evenement en cache est en retard', () => {
+    // 🔑 Le dashboard est la source la plus fraiche : l'evenement du cache peut
+    // encore dire « draft » quelques secondes apres la publication.
+    const root = monter({
+      dashboard: {
+        config: { competitionState: 'published' },
+        groups: [{ documentId: 'g1' }],
+        matches: [{ documentId: 'm1' }],
+      },
+      event: buildTournoi(),
+    });
+
+    expect(etapeDuFil(root, 5)).toContain('✓');
+  });
+
+  test('REPLI : sans dashboard, un brouillon garde 3/4/5 vides et un publie garde tout coche', () => {
+    // Les 15 suites voisines mockent ce hook MUET (`data: undefined`) : leurs
+    // temoins du fil (N2Caracterisation) doivent rester verts tels quels.
+    const brouillon = monter({ dashboard: undefined, event: buildTournoi() });
+    expect(etapeDuFil(brouillon, 3)).not.toContain('✓');
+    expect(etapeDuFil(brouillon, 4)).not.toContain('✓');
+    expect(etapeDuFil(brouillon, 5)).not.toContain('✓');
+
+    const publie = monter({
+      dashboard: undefined,
+      event: buildTournoi({
+        tournamentConfig: {
+          competitionState: 'published',
+          formatMode: 'groups_only',
+          registrationMode: 'manual',
+        },
+      }),
+    });
+    [3, 4, 5].forEach((rang) => {
+      expect(etapeDuFil(publie, rang)).toContain('✓');
+    });
   });
 });
