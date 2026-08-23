@@ -467,7 +467,17 @@ function EventParticipants({
   const statutPaiementParUtilisateur = useMemo(() => {
     /** @type {Record<string, string>} */
     const table = {};
-    const affectations = affectationsDeCotisation?.data?.data;
+    // 🧨 LA SEULE CHOSE QUE JE N AI PAS PU OBSERVER EN VRAI : la forme exacte de
+    // la reponse. Deux sources concordantes disent `query.data.data` —
+    // `ClubLicenses.js:1203` (`assignmentsQuery.data?.data`) et `:1236`
+    // (`...data?.meta?.pagination?.total`), plus le montage de
+    // `ClubLicenses.aPayerListe.test.js:187`. Mais `unwrap()`
+    // (`licenseService.js:8`) rend `response.data.data`, ce qui laisse une
+    // lecture ou la liste arriverait NUE. Les deux sont acceptees ici : une
+    // colonne d argent muette parce que la forme a bouge serait un defaut
+    // invisible — l ecran resterait vert, il ne dirait simplement plus rien.
+    const recue = affectationsDeCotisation?.data;
+    const affectations = Array.isArray(recue) ? recue : recue?.data;
     if (!Array.isArray(affectations)) return table;
     affectations.forEach((item) => {
       const clef = String(item?.user?.documentId || item?.user?.id || '');

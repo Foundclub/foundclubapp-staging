@@ -627,3 +627,50 @@ describe('P2 · temoin 9 — le CHEMIN AVEC EQUIPES, celui de la vraie vie', () 
     expect(parIdentifiant(arbre, 'P2-paiement-p-present')).toBe('Exemptée');
   });
 });
+
+describe('P2 · temoin 10 — la forme de la reponse du serveur', () => {
+  test('la liste ENVELOPPEE (query.data.data) est lue', () => {
+    mockAffectations.valeur = {
+      data: { data: [affectation('p-present', 'paid')] },
+      isLoading: false,
+    };
+
+    const arbre = monter({
+      canManageEventLicenseCampaigns: true,
+      eventLicenseCampaigns: [CAMPAGNE_ACTIVE],
+      participationsByStatus: LES_TROIS,
+    });
+
+    expect(parIdentifiant(arbre, 'P2-paiement-p-present')).toBe('Payée');
+  });
+
+  test('la liste NUE (query.data) est lue aussi', () => {
+    // 🧨 Ce temoin existe parce que je n ai PAS pu observer la vraie reponse du
+    // serveur. Les deux lectures possibles de `unwrap()` sont couvertes : si la
+    // forme est celle-la, la colonne parle quand meme au lieu de rester muette.
+    mockAffectations.valeur = {
+      data: [affectation('p-present', 'overdue')],
+      isLoading: false,
+    };
+
+    const arbre = monter({
+      canManageEventLicenseCampaigns: true,
+      eventLicenseCampaigns: [CAMPAGNE_ACTIVE],
+      participationsByStatus: LES_TROIS,
+    });
+
+    expect(parIdentifiant(arbre, 'P2-paiement-p-present')).toBe('En retard');
+  });
+
+  test('une reponse vide ou absente ne rend rien, sans jeter', () => {
+    mockAffectations.valeur = { data: undefined, isLoading: true };
+
+    const arbre = monter({
+      canManageEventLicenseCampaigns: true,
+      eventLicenseCampaigns: [CAMPAGNE_ACTIVE],
+      participationsByStatus: LES_TROIS,
+    });
+
+    expect(parIdentifiant(arbre, 'P2-paiement-p-present')).toBe('');
+  });
+});
