@@ -19,12 +19,16 @@
  * Ce n'est pas un chiffre choisi ici : c'est la RECOPIE de la valeur que le
  * serveur applique pour la meme question, dans
  * `admin/src/api/match-stats-report/services/match-stats-report.ts`
- * (`DEFAULT_MATCH_DURATION_MINUTES = 120`, utilise par son `getEventEndedAt`).
+ * (`DEFAULT_MATCH_DURATION_MINUTES`, utilise par son `getEventEndedAt`).
  * C'est ce service qui accepte ou refuse les statistiques ; une autre valeur ici
  * ferait dire a l'app « c'est fini » alors que la machine qui produit les stats
  * pense l'inverse.
+ *
+ * ⚠️ Les deux valeurs se deplacent ENSEMBLE, dans le meme lot. Le serveur tient
+ * un temoin de sa moitie (`admin/tests/authz/P5-duree-match-par-defaut.test.js`) ;
+ * aucune porte de ce depot ne peut voir l'autre moitie.
  */
-export const DEFAULT_MATCH_DURATION_MINUTES = 120;
+export const DEFAULT_MATCH_DURATION_MINUTES = 90;
 
 /**
  * Lit une date sans jamais rendre une date invalide.
