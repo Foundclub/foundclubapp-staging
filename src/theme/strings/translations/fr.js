@@ -1609,7 +1609,9 @@ export default {
         placeholder: 'Sélectionner un type d\'événement',
       },
       validationMode: {
-        label: 'Mode de validation',
+        // R8 (D2) — ce reglage ne filtre QUE les demandes venues du dehors : le
+        // libelle le dit, au lieu de laisser croire qu'il commande les presences.
+        label: 'Validation des demandes extérieures',
         options: {
           auto: 'Automatique',
           manual: 'Manuelle',

@@ -233,6 +233,7 @@ function EventEdit({ navigation, route }) {
     getDateFromDateInput,
     getEventEditSupport,
     getReccurrenceDayOptions,
+    hasExternalAudience,
     isTrainingEventType,
     recurrenceFrequencyOptions,
     resolveTrainingOpenConfig,
@@ -365,6 +366,22 @@ function EventEdit({ navigation, route }) {
     [isTrainingEventType, selectedTypeData?.name],
   );
   const isOpenTrainingType = isTrainingType && selectedSessionStatus !== 'closed';
+
+  // R8 (D1) — UN REGLAGE QUI NE COMMANDE PERSONNE NE SE PROPOSE PAS.
+  //
+  // Sur un evenement prive, tout le monde est convie : `validationMode` ne
+  // filtre plus personne (AA01, GO Adel du 2026-08-20 — le serveur accepte
+  // d'office un membre convie, et refuse d'emblee qui ne l'est pas). Le
+  // proposer quand meme laissait croire qu'on pouvait filtrer ses propres
+  // membres, et c'est le retour de recette de la 2.6.26.
+  const showValidationField = hasExternalAudience({ sessionStatus: selectedSessionStatus });
+
+  // R8 (D2) — LE LIBELLE DIT QUI IL FILTRE. Sur un entrainement il nommait deja
+  // ceux qu'il concerne ; ailleurs, « Mode de validation » ne disait rien de
+  // l'audience reellement filtree.
+  const validationModeLabel = isTrainingType
+    ? t('eventEdit.fields.trainingValidationMode.label', 'Validation des membres internes')
+    : t('eventEdit.fields.validationMode.label', 'Validation des demandes extérieures');
   const editSupport = useMemo(
     () => getEventEditSupport(event, selectedTypeData?.name),
     [event, getEventEditSupport, selectedTypeData?.name],
@@ -877,28 +894,28 @@ function EventEdit({ navigation, route }) {
               )}
             />
 
-            <Controller
-              control={control}
-              name="validationMode"
-              render={({
-                field: {
-                  name, onBlur, onChange, value,
-                },
-              }) => (
-                <AutocompleteSelect
-                  error={getFieldError({ errors: formErrors, fieldName: name })}
-                  label={isTrainingType
-                    ? t('eventEdit.fields.trainingValidationMode.label', 'Validation des membres internes')
-                    : t('eventEdit.fields.validationMode.label')}
-                  onBlur={onBlur}
-                  options={validationModeOptions}
-                  setValue={(/** @type {Option} */option) => {
-                    onChange(option?.value || '');
-                  }}
-                  value={validationModeOptions.find((option) => option.value === value)?.label || ''}
-                />
-              )}
-            />
+            {showValidationField ? (
+              <Controller
+                control={control}
+                name="validationMode"
+                render={({
+                  field: {
+                    name, onBlur, onChange, value,
+                  },
+                }) => (
+                  <AutocompleteSelect
+                    error={getFieldError({ errors: formErrors, fieldName: name })}
+                    label={validationModeLabel}
+                    onBlur={onBlur}
+                    options={validationModeOptions}
+                    setValue={(/** @type {Option} */option) => {
+                      onChange(option?.value || '');
+                    }}
+                    value={validationModeOptions.find((option) => option.value === value)?.label || ''}
+                  />
+                )}
+              />
+            ) : null}
 
             {isOpenTrainingType ? (
               <Controller

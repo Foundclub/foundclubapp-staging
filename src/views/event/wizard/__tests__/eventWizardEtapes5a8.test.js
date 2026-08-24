@@ -520,7 +520,7 @@ describe('D10 — etape 6 · Acces', () => {
     expect(contenu).toContain('Visibilité');
     expect(contenu).toContain('Public');
     expect(contenu).toContain('Privé');
-    expect(contenu).toContain('Validation des présences');
+    expect(contenu).toContain('Validation des demandes extérieures');
     expect(contenu).toContain('Automatique');
     expect(contenu).toContain('Manuelle');
     demonter();
@@ -545,7 +545,9 @@ describe('D10 — etape 6 · Acces', () => {
     // paire de pilules, et la valeur portee par la rangee « Avancé ».
     const contenu = contenuDe(arbre);
     expect(contenu).toContain('Découvrable par tous');
-    expect(contenu).toContain('Les participants confirment seuls leur présence');
+    // R8 (D2) — sur une detection, la validation ne voit que les demandes du
+    // dehors : sa ligne d'aide le dit desormais. Le defaut mesure reste 'auto'.
+    expect(contenu).toContain('acceptées sans validation');
     expect(contenu).toContain('Visibles');
     demonter();
   });
@@ -570,7 +572,8 @@ describe('D10 — etape 6 · Acces', () => {
       pressableQuiPorte(arbre, 'Manuelle').props.onPress();
     });
 
-    expect(contenuDe(arbre)).toContain('Le coach valide chaque participant');
+    // R8 (D2) — meme geste, phrase qui nomme QUI est filtre.
+    expect(contenuDe(arbre)).toContain("Tu valides chaque demande venue de l'extérieur");
     demonter();
   });
 
@@ -617,14 +620,95 @@ describe('D10 — etape 6 · Acces', () => {
 
   it('cache le bloc validation pour un tournoi — il vient des reglages du tournoi', () => {
     const { arbre, demonter } = monter(EventWizardAccess, {
+      // 🪤 VISIBILITE EXPLICITE, ET C'EST VOLONTAIRE. Un tournoi naît PUBLIC
+      // (`getDefaultSessionStatusForEventType`). Sans cette ligne, R8 (D1)
+      // cacherait le bloc pour cause de « prive » et ce temoin deviendrait vert
+      // sans plus rien mesurer de la regle tournoi qui est son sujet.
+      sessionStatus: 'open',
       team: EQUIPE,
       type: { documentId: 'type-tournoi', name: 'Tournoi' },
     });
 
     const contenu = contenuDe(arbre);
     expect(contenu).toContain('Visibilité');
-    expect(contenu).not.toContain('Validation des présences');
+    expect(contenu).not.toContain('Validation des demandes extérieures');
+    expect(contenu).not.toContain('Validation des membres internes');
     demonter();
+  });
+
+  // 🎯 R8 — CE QUE LA RECETTE DE LA 2.6.26 A REMONTE : « le reglage validation
+  // manuelle sur un evenement prive ne fait rien ». C'est vrai, et c'est VOULU
+  // cote serveur (AA01, GO Adel du 2026-08-20) : un membre convie REPOND a une
+  // convocation, il ne demande pas a entrer. Sur un prive, tout le monde est
+  // convie — le reglage ne commande donc personne.
+  //
+  // La reponse de ce lot n'est pas de changer le serveur, c'est de faire dire
+  // la verite a l'app : un reglage qui ne commande rien ne se propose pas, et
+  // quand il commande quelqu'un, il dit QUI.
+  describe('R8 — la validation ne se propose que si elle filtre quelqu un', () => {
+    it('sur un evenement PRIVE, la pilule de validation disparait', () => {
+      const { arbre, demonter } = monter(EventWizardAccess, {
+        ...ETAT_DETECTION,
+        sessionStatus: 'closed',
+      });
+      const contenu = contenuDe(arbre);
+
+      expect(contenu).toContain('Visibilité');
+      expect(contenu).not.toContain('Validation des demandes extérieures');
+      expect(contenu).not.toContain('Validation des présences');
+      demonter();
+    });
+
+    it('sur un evenement PUBLIC, elle revient et nomme ceux qu elle filtre', () => {
+      const { arbre, demonter } = monter(EventWizardAccess, ETAT_DETECTION);
+      const contenu = contenuDe(arbre);
+
+      expect(contenu).toContain('Validation des demandes extérieures');
+      expect(contenu).not.toContain('Validation des présences');
+      demonter();
+    });
+
+    // LE TEMOIN QUI COMPTE VRAIMENT : la pilule doit suivre la visibilite SANS
+    // quitter l'ecran. C'est le geste reel de l'organisateur — il bascule sur
+    // « Prive » et doit voir le reglage inutile s'effacer sous ses yeux.
+    it('basculer de public a prive efface la pilule sans quitter l ecran', () => {
+      const { arbre, demonter } = monter(EventWizardAccess, ETAT_DETECTION);
+      expect(contenuDe(arbre)).toContain('Validation des demandes extérieures');
+
+      act(() => {
+        pressableQuiPorte(arbre, 'Privé').props.onPress();
+      });
+
+      expect(contenuDe(arbre)).not.toContain('Validation des demandes extérieures');
+      demonter();
+    });
+
+    it('un entrainement PUBLIC garde ses deux pilules, chacune nommant qui elle filtre', () => {
+      const { arbre, demonter } = monter(EventWizardAccess, {
+        sessionStatus: 'open',
+        team: EQUIPE,
+        type: { documentId: 'type-entrainement', name: 'Entrainement' },
+      });
+      const contenu = contenuDe(arbre);
+
+      expect(contenu).toContain('Validation des membres internes');
+      expect(contenu).toContain('Validation des joueurs externes');
+      demonter();
+    });
+
+    it('un entrainement PRIVE n en garde aucune', () => {
+      const { arbre, demonter } = monter(EventWizardAccess, {
+        sessionStatus: 'closed',
+        team: EQUIPE,
+        type: { documentId: 'type-entrainement', name: 'Entrainement' },
+      });
+      const contenu = contenuDe(arbre);
+
+      expect(contenu).toContain('Visibilité');
+      expect(contenu).not.toContain('Validation des membres internes');
+      expect(contenu).not.toContain('Validation des joueurs externes');
+      demonter();
+    });
   });
 });
 

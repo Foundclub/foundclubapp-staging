@@ -83,6 +83,33 @@ const resolveLegacyTrainingExternalLimit = (eventLike = {}) => {
   return 0;
 };
 
+/**
+ * R8 (D1) — QUELQU'UN DU DEHORS PEUT-IL SEULEMENT DEMANDER A VENIR ?
+ *
+ * Retour de recette de la 2.6.26 : « le reglage validation manuelle sur un
+ * evenement prive ne fait rien ». C'est exact, et c'est VOULU cote serveur
+ * (AA01, GO Adel du 2026-08-20). `validationMode` ne filtre QUE les gens du
+ * DEHORS qui DEMANDENT a venir — le serveur l'ecrit lui-meme, et le fait deux
+ * fois :
+ *   · `event-rsvp.ts` — un membre convie est accepte d'office : il REPOND a une
+ *     convocation, il ne demande rien ;
+ *   · `event-participation.ts` — sur un evenement prive, qui n'appartient a
+ *     aucune equipe conviee est REFUSE avant meme d'atteindre la validation.
+ *
+ * Sur un prive, tout le monde est donc convie, et le reglage ne commande
+ * personne. Le proposer quand meme laisse croire qu'on peut filtrer ses propres
+ * membres : un reglage qui ne fait rien et qu'on peut regler est un mensonge.
+ *
+ * ⚠️ LE REPLI N'EST PAS 'closed', ET C'EST VOLONTAIRE : ne rien savoir de la
+ * visibilite ne doit jamais FAIRE DISPARAITRE un reglage qui, lui, commande
+ * peut-etre quelqu'un. On ne cache que ce qu'on a mesure comme inutile.
+ * @param {any} [eventLike] L'evenement, ou l'etat du tunnel de creation.
+ * @returns {boolean} Vrai si des demandes venues du dehors sont possibles.
+ */
+export const hasExternalAudience = (eventLike = {}) => String(
+  eventLike?.sessionStatus || 'open',
+).trim().toLowerCase() !== 'closed';
+
 export const resolveTrainingOpenConfig = (eventLike = {}) => {
   const typeName = eventLike?.type?.name || eventLike?.typeName || '';
   const isTraining = isTrainingEventType(typeName);
@@ -99,8 +126,21 @@ export const resolveTrainingOpenConfig = (eventLike = {}) => {
   if (externalParticipantLimit === null && isOpenTraining) {
     externalParticipantLimit = resolveLegacyTrainingExternalLimit(eventLike);
   }
+  // R8 (D3) — LE REPLI NE S'HERITE PLUS DU MODE INTERNE.
+  //
+  // Il recopiait `validationMode`, dont le defaut du tunnel est 'auto' : un
+  // organisateur qui n'avait rien dit sur les externes se retrouvait donc a les
+  // laisser entrer SANS validation, sans l'avoir demande une seule fois. Le
+  // repli sur qui l'on ne sait rien doit fermer la porte, pas l'ouvrir.
+  //
+  // ⚠️ LE JUMEAU SERVEUR N'A PAS BOUGE (decision A du 24/08, qui le gele) :
+  // `admin/src/api/event/utils/training-open-config.js` porte encore l'heritage,
+  // et `admin/src/bootstrap/maintenance.js` l'a deja grave en base sur les
+  // vieux entrainements. Ce que l'app ENREGISTRE fait foi ensuite : au premier
+  // enregistrement, 'manual' part explicitement dans la charge utile et les
+  // deux cotes se rejoignent.
   const externalParticipantValidationMode = storedExternalValidationMode
-    || (isOpenTraining ? normalizeValidationModeValue(eventLike?.validationMode, 'manual') : null);
+    || (isOpenTraining ? 'manual' : null);
 
   return {
     externalParticipantLimit,

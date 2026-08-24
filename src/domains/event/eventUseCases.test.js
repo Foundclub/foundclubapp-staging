@@ -8,6 +8,7 @@ import {
   formatTimeInput,
   getEventEditSupport,
   getReccurrenceDayOptions,
+  hasExternalAudience,
   haveIAlreadyJoined,
   isValidDate,
   isValidTime,
@@ -526,10 +527,68 @@ describe('Event Use Cases', () => {
         validationMode: 'auto',
       })).toEqual(expect.objectContaining({
         externalParticipantLimit: 4,
-        externalParticipantValidationMode: 'auto',
+        externalParticipantValidationMode: 'manual',
         isOpenTraining: true,
         isTraining: true,
       }));
+    });
+
+    // R8 (D3) — LE REPLI NE S'HERITE PLUS DU MODE INTERNE.
+    //
+    // Avant ce lot, un entrainement ouvert sans mode externe choisi recopiait
+    // `validationMode`. Or le defaut du tunnel est 'auto' : un organisateur qui
+    // n'avait rien dit sur les externes se retrouvait donc a les laisser entrer
+    // SANS validation, sans l'avoir demande une seule fois. Le repli sur qui on
+    // ne sait rien doit fermer la porte, pas l'ouvrir.
+    test('R8 — sans mode externe choisi, le repli est manual, jamais le mode interne', () => {
+      expect(resolveTrainingOpenConfig({
+        sessionStatus: 'open',
+        type: { name: 'Entrainement' },
+        validationMode: 'auto',
+      }).externalParticipantValidationMode).toBe('manual');
+    });
+
+    test('R8 — un mode externe explicitement choisi reste celui qui a ete choisi', () => {
+      expect(resolveTrainingOpenConfig({
+        externalParticipantValidationMode: 'auto',
+        sessionStatus: 'open',
+        type: { name: 'Entrainement' },
+        validationMode: 'manual',
+      }).externalParticipantValidationMode).toBe('auto');
+    });
+
+    test('R8 — un entrainement prive n a aucun mode externe : personne du dehors', () => {
+      expect(resolveTrainingOpenConfig({
+        sessionStatus: 'closed',
+        type: { name: 'Entrainement' },
+        validationMode: 'auto',
+      }).externalParticipantValidationMode).toBeNull();
+    });
+  });
+
+  // R8 (D1) — LE RETOUR DE RECETTE DE LA 2.6.26 : « le reglage validation
+  // manuelle sur un evenement prive ne fait rien ». C'est exact, et le serveur
+  // le dit deja deux fois (`event-rsvp.ts`, `event-participation.ts`). Ce
+  // predicat est la reponse cote app : il dit si quelqu'un du DEHORS peut
+  // seulement demander a venir. Si non, le reglage ne commande personne.
+  describe('hasExternalAudience (R8)', () => {
+    test('un evenement prive ne recoit personne du dehors', () => {
+      expect(hasExternalAudience({ sessionStatus: 'closed' })).toBe(false);
+    });
+
+    test('un evenement public peut recevoir des demandes du dehors', () => {
+      expect(hasExternalAudience({ sessionStatus: 'open' })).toBe(true);
+    });
+
+    // Le repli ne CACHE jamais un reglage : ne rien savoir de la visibilite ne
+    // doit pas faire disparaitre une pilule qui, elle, commande peut-etre.
+    test('sans visibilite connue, on ne cache rien', () => {
+      expect(hasExternalAudience({})).toBe(true);
+      expect(hasExternalAudience()).toBe(true);
+    });
+
+    test('la casse et les espaces ne changent pas le verdict', () => {
+      expect(hasExternalAudience({ sessionStatus: '  CLOSED  ' })).toBe(false);
     });
   });
 
