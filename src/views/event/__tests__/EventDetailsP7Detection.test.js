@@ -1268,3 +1268,49 @@ describe('R9 - LE BOUTON « INVITER DANS L EQUIPE » EST ENFIN BRANCHE', () => {
     expect(contient(root, 'aucune équipe')).toBe(true);
   });
 });
+
+describe('R9 - LA BARRE DU HAUT PORTE ENFIN UN FOND, SUR CET ECRAN SEULEMENT', () => {
+  // 🧨 LE CONSTAT DE RECETTE DU 24/08 : le titre chevauche le drapeau et le ⋯.
+  //
+  // 🔍 LA MECANIQUE : la barre est TRANSPARENTE pour toute la pile
+  // (`commonOptions.js`, `headerTransparent: true`) et les deux glyphes n ont
+  // aucun fond. Le contenu passe donc dessous — c est voulu — mais rien ne
+  // garantit que les boutons restent lisibles par-dessus.
+  //
+  // ⛔ POURQUOI PAS DANS `commonOptions` : ce fichier commande TOUS les ecrans.
+  // Rendre la barre opaque pour toute l app afin de reparer une detection serait
+  // un changement global que personne n a demande. Le fond est donc pose par CET
+  // ECRAN, dans son `setOptions`.
+
+  /**
+   * Rend les dernieres options passees a la navigation.
+   * @returns {any}
+   */
+  const dernieresOptions = () => {
+    const appels = mockSetOptions.mock.calls;
+    return appels[appels.length - 1][0];
+  };
+
+  test('R9 · temoin 30 — l ecran pose un fond de barre', () => {
+    monter({ event: buildDetection() });
+
+    expect(typeof dernieresOptions().headerBackground).toBe('function');
+  });
+
+  test('R9 · temoin 31 — ce fond ne mange pas les appuis des boutons', () => {
+    // 🔒 Un fond pose PAR-DESSUS la barre avalerait le drapeau et le ⋯. Il doit
+    // etre transparent aux doigts.
+    monter({ event: buildDetection() });
+
+    const fond = dernieresOptions().headerBackground();
+
+    expect(fond.props.pointerEvents).toBe('none');
+  });
+
+  test('R9 · temoin 32 — les deux boutons du haut sont toujours la', () => {
+    // 🔒 La borne : reparer le chevauchement ne doit rien retirer a la barre.
+    monter({ event: buildDetection() });
+
+    expect(typeof dernieresOptions().headerRight).toBe('function');
+  });
+});

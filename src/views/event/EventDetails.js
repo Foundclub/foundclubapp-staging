@@ -7118,6 +7118,40 @@ function EventDetails({ navigation, route }) {
   // 🖼️ Le glyphe `dotsVertical` existe deja (`GlyphIcon.js:120`, lot AD07) —
   // aucune image nouvelle n'est livree ici, et on ne redessine pas trois ronds
   // a la main comme AC01 avait du le faire avant lui.
+  // 🎨 R9 — LE FOND DE LA BARRE DU HAUT, POSE PAR CET ECRAN SEULEMENT.
+  //
+  // 🧨 Le defaut de recette du 24/08 : le titre chevauche le drapeau et le ⋯.
+  // La barre est TRANSPARENTE pour toute la pile (`commonOptions.js`) et les
+  // deux glyphes n ont aucun fond : le contenu passe dessous — c est voulu, c est
+  // ce qui donne l entete pleine largeur — mais rien ne garantissait que les
+  // boutons restent lisibles par-dessus.
+  //
+  // ⛔ POURQUOI PAS DANS `commonOptions` : ce fichier commande TOUS les ecrans
+  // de l app. Rendre la barre opaque partout pour reparer une detection serait
+  // un changement global que personne n a demande.
+  //
+  // 🖌️ Un degrade en quatre bandes plutot qu une bibliotheque : les huit
+  // suites qui montent un composant a `LinearGradient` le doublent TOUTES une
+  // par une. L importer ici obligerait a doubler la meme chose dans les vingt
+  // suites de cet ecran, pour un fond de barre. Meme motif que `HomeActionCard`,
+  // qui imite deja une retombee de degrade sans lib ni image.
+  const renderHeaderBackground = useCallback(
+    () => (
+      <View pointerEvents="none" style={[Alignments.fill]}>
+        {[0.92, 0.7, 0.42, 0.14].map((opacite) => (
+          <View
+            key={`r9-voile-${opacite}`}
+            style={[
+              Alignments.fill,
+              { backgroundColor: withAlpha(Colors.primary900, opacite) },
+            ]}
+          />
+        ))}
+      </View>
+    ),
+    [Alignments, Colors.primary900],
+  );
+
   const renderHeaderRight = useCallback(
     () => (
       <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[4], Spaces.marginRight[16]]}>
@@ -7150,10 +7184,17 @@ function EventDetails({ navigation, route }) {
 
   useLayoutEffect(() => {
     navigation.setOptions({
+      headerBackground: renderHeaderBackground,
       headerLeft: fromEventCreation ? renderHeaderLeft : undefined,
       headerRight: renderHeaderRight,
     });
-  }, [fromEventCreation, navigation, renderHeaderLeft, renderHeaderRight]);
+  }, [
+    fromEventCreation,
+    navigation,
+    renderHeaderBackground,
+    renderHeaderLeft,
+    renderHeaderRight,
+  ]);
 
   const isCoachLateModal = lateModalMode === 'coach_mark' || lateModalMode === 'coach_edit';
   const isPlayerLateModal = lateModalMode === 'player_declare' || lateModalMode === 'player_update';
