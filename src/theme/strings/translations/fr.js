@@ -1156,11 +1156,17 @@ export default {
     },
     compoReminder: {
       action: 'Préparer la convocation',
+      draftAction: 'Reprendre le brouillon',
+      draftTitle: 'Ta convocation est commencée',
       offerTitle: 'La convocation est incluse dans l’offre Équipe',
       title: 'Ce match n’a pas encore de convocation',
     },
     compositionSource: {
       defaultComposition: 'Composition type',
+    },
+    convocation: {
+      bench: 'Sur le banc',
+      starters: 'Sur le terrain',
     },
     detection: {
       candidateAccept: 'Accepter',
