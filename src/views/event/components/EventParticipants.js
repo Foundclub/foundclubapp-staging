@@ -352,21 +352,29 @@ const resolveAttendanceBadge = ({
     };
   }
 
+  // 🏷️ R7-c (vague R, 24/08, decision produit d Adel) — LES DEUX DERNIERES
+  // SORTIES DISAIENT « En attente », a des etats OPPOSES.
+  //
+  // Le coup d envoi est passe et personne ne l a pointe : ce n est pas un etat
+  // d attente, c est une ACTION qui attend le coach. La pastille le dit, et le
+  // « +X min » qui l accompagne dit depuis combien de temps.
   if (runningLateMinutes > 0) {
     return {
       backgroundColor: `${colors.warning500}18`,
       borderColor: `${colors.warning500}36`,
       textColor: colors.warning500,
-      title: 'En attente',
+      title: t('eventDetails.attendanceBadge.toMark', 'À pointer'),
       value: `+${runningLateMinutes} min`,
     };
   }
 
+  // …et la, il a REPONDU present avant le coup d envoi. Rien n attend
+  // personne : la pastille raconte ce qu il a fait, pas une consigne.
   return {
     backgroundColor: `${colors.neutral300}12`,
     borderColor: `${colors.neutral300}24`,
     textColor: colors.neutral200,
-    title: 'En attente',
+    title: t('eventDetails.attendanceBadge.saidYes', 'A dit présent'),
     value: null,
   };
 };

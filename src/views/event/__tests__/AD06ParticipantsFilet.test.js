@@ -97,10 +97,15 @@ const NOW_MS = Date.parse('2026-08-20T18:00:00.000Z');
 // Elle decrit l ETAT COURANT du code. Le lot L3-B la met a jour en meme temps
 // qu il accentue les libelles : c est la seule chose que ce fichier apprend du
 // futur, et le diff tient en 5 lignes.
+// 🏷️ R7-c (vague R, 24/08, decision produit d Adel) : les DEUX sorties
+// « En attente » disaient la meme chose a des etats opposes — quelqu un qui a
+// repondu present avant le coup d envoi, et quelqu un qu on n a toujours pas
+// pointe 12 minutes apres. Elles disent maintenant CE QU ELLES SONT.
 const PASTILLE = {
   absent: 'Absent',
+  aDitPresent: 'A dit présent',
+  aPointer: 'À pointer',
   arrive: 'Arrivé',
-  attente: 'En attente',
   nonPointe: 'Non pointé',
   retardAnnonce: 'Retard annoncé',
   sansReponse: 'Sans réponse',
@@ -312,8 +317,9 @@ describe('AD06 · temoin 1 — les 8 sorties de la pastille', () => {
       // 6. retard ANNONCE a l avance.
       { couleur: COULEURS.warning500, texte: PASTILLE.retardAnnonce },
       { couleur: COULEURS.warning500, texte: '+5 min' },
-      // 7. retard VIVANT, calcule depuis le coup d envoi.
-      { couleur: COULEURS.warning500, texte: PASTILLE.attente },
+      // 7. retard VIVANT, calcule depuis le coup d envoi : le coup d envoi est
+      //    passe et personne ne l a pointe — c est une ACTION qui attend.
+      { couleur: COULEURS.warning500, texte: PASTILLE.aPointer },
       { couleur: COULEURS.warning500, texte: '+12 min' },
       // 2. absent declare.
       { couleur: COULEUR_ABSENT, texte: PASTILLE.absent },
@@ -327,8 +333,10 @@ describe('AD06 · temoin 1 — les 8 sorties de la pastille', () => {
       teamParticipationSections: [section({ participating: [P_ATTENTE] })],
     });
 
+    // R7-c : il a REPONDU present et le match n a pas commence. Rien n attend
+    // le coach ici — la pastille dit donc ce qu il a fait, pas une consigne.
     expect(pastilles(arbre)).toEqual([
-      { couleur: COULEURS.neutral200, texte: PASTILLE.attente },
+      { couleur: COULEURS.neutral200, texte: PASTILLE.aDitPresent },
     ]);
   });
 });

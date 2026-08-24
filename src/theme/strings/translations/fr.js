@@ -1051,7 +1051,9 @@ export default {
       arrived: 'Arrivé',
       declaredLate: 'Retard annoncé',
       notMarked: 'Non pointé',
+      saidYes: 'A dit présent',
       selfArrived: 'Je suis arrivé·e',
+      toMark: 'À pointer',
     },
     attendanceCall: {
       actions: {
