@@ -129,10 +129,15 @@ describe('EventAnswerButtons — repondre present ou absent (caracterisation)', 
     expect(onDecline).toHaveBeenCalledTimes(1);
   });
 
-  it('TROU fige — evenement PUBLIC : aucun bouton « absent », seulement « participer »', () => {
-    // sessionStatus « open » = « Public » cote produit. Un joueur de l equipe
-    // conviee n a alors AUCUN moyen de se declarer absent, ni sur la carte ni
-    // sur le detail : la branche a deux boutons est reservee au prive.
+  it('TROU BOUCHE (R4/D5) — evenement PUBLIC : le membre convie garde present et absent', () => {
+    // 🕳️ CE TEMOIN FIGEAIT UN TROU, ET IL EST BOUCHE DEPUIS LE 2026-08-24.
+    // Il disait : « sessionStatus open = Public ; un joueur de l equipe conviee
+    // n a alors AUCUN moyen de se declarer absent, la branche a deux boutons
+    // est reservee au prive. » Adel l a vu en recette : ouvrir une seance
+    // retirait ses boutons a celui qui etait deja attendu, au profit d un
+    // « Participer » gris et muet.
+    // 🎯 Desormais c est etre CONVIE qui decide, pas l ouverture de la seance.
+    // Detail et cas limites : `EventAnswerButtonsR4Pied.test.js`.
     const tree = render({
       event: buildEvent({ sessionStatus: 'open' }),
       onDecline: jest.fn(),
@@ -140,8 +145,10 @@ describe('EventAnswerButtons — repondre present ou absent (caracterisation)', 
       onParticipate: jest.fn(),
     });
 
-    // Le libelle vient de resolveParticipationFlow (texte en dur, pas une cle).
-    expect(buttonTitles(tree)).toEqual(['Participer']);
+    expect(buttonTitles(tree)).toEqual([
+      'eventList.actions.present',
+      'eventList.actions.absent',
+    ]);
   });
 });
 

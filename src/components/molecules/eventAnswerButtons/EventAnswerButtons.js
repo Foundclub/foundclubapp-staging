@@ -246,14 +246,37 @@ function EventAnswerButtons({
     }
 
     const answerChoicesNode = (() => {
-      if (event?.sessionStatus?.toLowerCase() === 'closed') {
+      // D5 (retour de recette du 2026-08-24) — OUVRIR UNE SEANCE NE DOIT PAS
+      // RETIRER SES BOUTONS A CELUI QUI EST DEJA CONVIE.
+      //
+      // 📏 CE QU ADEL A VU : la MEME seance, passee de « privee » a
+      // « ouverte », remplace Present / Absent par un « Participer » gris ET
+      // MUET. Le mecanisme, parce qu il n est pas devinable : la rangee de
+      // reponse etait reservee a `sessionStatus === 'closed'` ; ailleurs, tout
+      // le monde tombait sur « Participer », que `canEventBeJoined` eteint des
+      // que `capacity > 0` pour qui n a pas le role « Joueur » — et la phrase
+      // d a-cote exigeait `!canAct`, qui valait `true`. Bouton eteint, pas un
+      // mot.
+      //
+      // 🎯 Etre CONVIE decide de la rangee de reponse. Que la seance accepte du
+      // monde EN PLUS ne change rien pour ceux qui sont deja attendus.
+      const isClosedSession = event?.sessionStatus?.toLowerCase() === 'closed';
+
+      if (isClosedSession || canAnswerAsMember) {
         if (!resolvedParticipationFlow?.canAct) {
           return (
             <View style={[Alignments.fullWidth, Spaces.gap[16]]}>
               <Tag
-                text={t('eventList.info.restrictedEvent', 'Accès réserve')}
+                text={t('eventList.info.restrictedEvent', 'Accès réservé')}
                 textStyle={Fonts.p1Bold}
               />
+              {/* ⛔ JAMAIS MUET : quand le flux sait POURQUOI il refuse, il le
+                  dit. Une porte fermee sans motif se lit comme une panne. */}
+              {resolvedParticipationFlow?.blockedReason ? (
+                <Text style={[Fonts.p4, Fonts.neutral300]}>
+                  {resolvedParticipationFlow.blockedReason}
+                </Text>
+              ) : null}
               {onAbout ? (
                 <Button
                   onPress={onAbout}
@@ -288,23 +311,40 @@ function EventAnswerButtons({
         );
       }
 
+      const canJoinEvent = canEventBeJoined({
+        capacity: event?.capacity,
+        participations: event?.participations,
+        userId: userData?.documentId,
+        userRole: userData?.role,
+      });
+      const isEventFull = Boolean(event?.capacity)
+        && (event?.participations?.length || 0) >= Number(event.capacity);
+
+      // ⛔ PAS DE BOUTON ETEINT SANS MOTIF (suite de D5). A cet endroit,
+      // `canEventBeJoined` ne refuse plus que sur la jauge : la reponse deja
+      // donnee est traitee bien plus haut, et qui n est pas « Joueur » n arrive
+      // ici que s il est convie — auquel cas il a la rangee ci-dessus.
+      // 🔒 On ne l ecrit QUE si on peut le prouver (`isEventFull`) : un motif
+      // invente serait pire que le silence d avant.
+      let joinBlockedReason = '';
+      if (!resolvedParticipationFlow?.canAct) {
+        joinBlockedReason = resolvedParticipationFlow?.blockedReason || '';
+      } else if (!canJoinEvent && isEventFull) {
+        joinBlockedReason = t('eventList.info.eventFull', 'Cet événement est complet.');
+      }
+
       return (
         <View style={[Alignments.fullWidth, Spaces.gap[12]]}>
           <Button
-            disabled={!resolvedParticipationFlow?.canAct || !canEventBeJoined({
-              capacity: event?.capacity,
-              participations: event?.participations,
-              userId: userData?.documentId,
-              userRole: userData?.role,
-            })}
+            disabled={!resolvedParticipationFlow?.canAct || !canJoinEvent}
             onPress={onJoin}
             style={Alignments.fullWidth}
             title={resolvedParticipationFlow?.actionLabel || t('eventList.actions.join')}
             variant="Primary"
           />
-          {!resolvedParticipationFlow?.canAct && resolvedParticipationFlow?.blockedReason ? (
+          {joinBlockedReason ? (
             <Text style={[Fonts.p4, Fonts.neutral300]}>
-              {resolvedParticipationFlow.blockedReason}
+              {joinBlockedReason}
             </Text>
           ) : null}
         </View>
