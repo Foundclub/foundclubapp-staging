@@ -566,3 +566,77 @@ describe('AA01 — la bascule d une reponse passe par la porte des reponses', ()
     expect(mockRespondToRsvp).not.toHaveBeenCalled();
   });
 });
+
+// LOT R4 (decision d Adel du 2026-08-24) — LE BOUT EN BOUT DU BOUTON UNIQUE.
+//
+// Les temoins ci-dessus prouvent la bascule ABSENT -> PRESENT. Ceux-ci prouvent
+// l autre sens, celui qu Adel a demande en recette : « Annuler ma
+// participation » ne remet plus le membre « sans reponse », il le MARQUE
+// ABSENT — donc il frappe `POST /events/:id/missing`, la porte que le compteur
+// des absents ecoute (`syncEventRelationsFromResponses`).
+//
+// 🎭 La doublure `BASCULER_MA_REPONSE` appuie sur `onDeleteParticipation`,
+// c est-a-dire exactement le bouton de la vue joueur.
+
+/**
+ * Ma ligne de reponse, telle que la fiche la porte (`participationRequests`).
+ * @param {string} participationStatus Le statut Strapi de la ligne.
+ * @returns {any} La reponse active.
+ */
+const myResponse = (participationStatus) => ({
+  documentId: 'resp-mine',
+  isActive: true,
+  participationStatus,
+  updatedAt: '2026-08-24T10:00:00.000Z',
+  user: { documentId: ME },
+});
+
+describe('R4 — « Annuler ma participation » marque absent', () => {
+  test('R4/12 — 🥇 un MEMBRE deja present est MARQUE ABSENT, sa reponse n est pas effacee', () => {
+    const root = mountScreen({
+      event: buildEvent({
+        participationRequests: [myResponse('accepted')],
+        participations: [{ documentId: ME }],
+      }),
+    });
+
+    pressLabelled(root, 'BASCULER_MA_REPONSE');
+
+    expect(mockMissingEvent).toHaveBeenCalledWith('event-1');
+    expect(mockDeleteParticipation).not.toHaveBeenCalled();
+  });
+
+  test('R4/13 — 🔒 une demande EN ATTENTE est SUPPRIMEE, jamais rangee chez les absents', () => {
+    const root = mountScreen({
+      event: buildEvent({
+        participationRequests: [myResponse('pending')],
+        participations: [],
+      }),
+    });
+
+    pressLabelled(root, 'BASCULER_MA_REPONSE');
+
+    expect(mockDeleteParticipation).toHaveBeenCalledWith('resp-mine');
+    expect(mockMissingEvent).not.toHaveBeenCalled();
+  });
+
+  test('R4/14 — 🔒 un participant VENU DU DEHORS voit toujours sa reponse SUPPRIMEE', () => {
+    const root = mountScreen({
+      event: buildEvent({
+        participationRequests: [myResponse('accepted')],
+        participations: [{ documentId: ME }],
+        team: {
+          documentId: TEAM_ID,
+          name: 'U15',
+          players: [],
+          trainers: [],
+        },
+      }),
+    });
+
+    pressLabelled(root, 'BASCULER_MA_REPONSE');
+
+    expect(mockDeleteParticipation).toHaveBeenCalledWith('resp-mine');
+    expect(mockMissingEvent).not.toHaveBeenCalled();
+  });
+});

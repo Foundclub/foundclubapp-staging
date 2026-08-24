@@ -19,6 +19,13 @@ import EventAnswerButtons from '../EventAnswerButtons';
 // un membre d une equipe conviee. `POST /events/:id/missing` exige une equipe
 // source (`event.ts:3068`) et refuserait un participant venu du dehors — lui
 // donner ce bouton, ce serait lui promettre une action qui echoue.
+//
+// 🔄 R4 (2026-08-24) — LA SUITE DE L HISTOIRE, ET ELLE CHANGE CE FICHIER.
+// AA01 avait ajoute un SECOND bouton (« Absent·e ») a cote de « Annuler ma
+// participation ». Adel a vu le doublon en recette, et que « Absent·e » se
+// lisait comme un ETAT. Il n en reste qu UN seul bouton, et c est lui qui
+// marque absent. L intention d AA01 est intacte — un geste, pas deux ; c est le
+// chemin qui a change, et `resolveOwnAnswerAction` en est le seul aiguilleur.
 
 jest.mock('@/theme/themeContext', () => {
   const styleLeaf = {};
@@ -109,33 +116,35 @@ const render = (props) => {
 
 const titlesOf = (tree) => tree.root.findAllByType(Button).map((button) => button.props.title);
 
-test('AA01/3 — un membre DEJA PRESENT peut se declarer absent en UN geste', () => {
+test('AA01/3 (R4) — un membre DEJA PRESENT se declare absent en UN geste, UN bouton', () => {
   mockUserData.mockReturnValue(playerUser);
   const onDecline = jest.fn();
+  const onDeleteParticipation = jest.fn();
 
   const tree = render({
     event: buildJoinedEvent(),
     onDecline,
-    onDeleteParticipation: () => {},
+    onDeleteParticipation,
     onJoin: () => {},
     onLogin: () => {},
     onParticipate: () => {},
   });
 
-  const titles = titlesOf(tree);
-  expect(titles).toContain('eventList.actions.absent');
-  // ⛔ Le bouton d annulation reste : se declarer absent et retirer sa reponse
-  // ne sont pas le meme geste, et AA01 n en supprime aucun.
-  expect(titles).toContain('eventDetails.actions.cancelResponse');
+  // ⛔ R4 — « Absent·e » a quitte cet etat : deux boutons pour un seul geste,
+  // et un libelle qui se lisait comme un etat. Il n en reste qu un.
+  expect(titlesOf(tree)).toEqual(['eventDetails.actions.cancelResponse']);
 
   const bouton = tree.root
     .findAllByType(Button)
-    .find((node) => node.props.title === 'eventList.actions.absent');
+    .find((node) => node.props.title === 'eventDetails.actions.cancelResponse');
   act(() => {
     bouton.props.onPress();
   });
 
-  expect(onDecline).toHaveBeenCalledTimes(1);
+  // 🎯 L intention d AA01 est intacte : UN geste suffit pour passer de present
+  // a absent. Ce qui a change, c est la porte — celle qui confirme d abord.
+  expect(onDeleteParticipation).toHaveBeenCalledTimes(1);
+  expect(onDecline).not.toHaveBeenCalled();
 });
 
 test('AA01/3 bis — 🔒 un participant VENU DU DEHORS ne recoit pas ce bouton', () => {

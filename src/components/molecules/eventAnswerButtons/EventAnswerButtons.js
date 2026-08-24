@@ -196,6 +196,24 @@ function EventAnswerButtons({
             text={hasPendingRequest ? t('eventList.info.pendingRequest') : t('eventList.info.alreadyJoined')}
             textStyle={Fonts.p1Bold}
           />
+          {/* R4 (DECISION D ADEL DU 2026-08-24) — UN SEUL BOUTON, ET IL MARQUE ABSENT.
+
+              Cet etat en portait DEUX pour un seul geste : « Annuler ma
+              participation », qui remettait « sans reponse », et « Absent·e »,
+              qui creait la ligne 'missing'. Adel l a dit en recette : c est un
+              doublon, et « Absent·e » se lit comme un ETAT (« je suis absent »)
+              alors que c est une action. Il n en reste qu un.
+
+              🎯 CE BOUTON NE DECIDE PLUS DE CE QU IL FAIT. Effacer la reponse
+              ou marquer absent se tranche dans `resolveOwnAnswerAction`
+              (`views/event/ownAnswerAction.js`) : un seul endroit, teste, que
+              la fiche ET la carte de liste consultent. Le libelle ne peut donc
+              plus promettre autre chose que ce que le geste fait.
+
+              ⛔ Surtout pas `onDecline` ici : il agit SANS confirmation
+              (`EventDetails.js:2866`), et ce bouton en demande une depuis
+              toujours. La porte `onDeleteParticipation` est celle qui
+              confirme. */}
           {onDeleteParticipation && (
             <Button
               onPress={onDeleteParticipation}
@@ -204,23 +222,6 @@ function EventAnswerButtons({
               variant="SecondaryLight"
             />
           )}
-          {/* AA01 — LE RETOUR DE LA BASCULE, DANS L AUTRE SENS.
-              Un membre qui avait dit « present » n avait plus qu un bouton :
-              « Annuler ma participation », qui le ramene a « sans reponse ».
-              Pour se declarer absent il fallait DEUX gestes, et le premier
-              effacait sa reponse entre-temps — exactement ce que le constat
-              d Adel du 2026-08-20 reproche a l autre sens.
-              🔒 Reserve au MEMBRE d une equipe conviee : `POST /events/:id/missing`
-              exige une equipe source (`event.ts:3068`) et refuserait un
-              participant venu du dehors. */}
-          {canAnswerAsMember ? (
-            <Button
-              onPress={onDecline}
-              style={Alignments.fullWidth}
-              title={t('eventList.actions.absent')}
-              variant="Secondary"
-            />
-          ) : null}
         </View>
       );
     }
