@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { Text } from 'react-native';
+import { AppState, Text } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
 import { getAppUpdateGate } from '@/services/appUpdate/appUpdateGateService';
@@ -14,6 +14,9 @@ import AppUpdateGate from '@/app/AppUpdateGate';
 //
 // Les temoins ci-dessous sont donc ecrits DANS CE SENS : ils verifient d'abord
 // et surtout que l'app S'OUVRE. Un seul verifie qu'elle bloque.
+//
+// 🟠 R3 ajoute l'etage doux — la feuille « Plus tard ». Meme exigence dans
+// l'autre sens : elle ne doit jamais empecher d'entrer.
 
 // Seul l'APPEL RESEAU est simule. Les regles de decision
 // (`appUpdateGateRules`) tournent pour de vrai : ce sont elles que ces temoins
@@ -45,6 +48,19 @@ jest.mock('@/views/appUpdate/AppUpdateRequiredScreen', () => {
   };
 });
 
+// 🚪 La feuille a ses propres temoins (`AppUpdateRecommendedSheet.test.js`).
+// Ici on ne verifie qu'une chose : la PORTE decide-t-elle de la montrer ?
+jest.mock('@/views/appUpdate/AppUpdateRecommendedSheet', () => {
+  const reactActuel = jest.requireActual('react');
+  const { Text: MockText } = jest.requireActual('react-native');
+  return {
+    __esModule: true,
+    default: (/** @type {any} */ props) => (props.isVisible
+      ? reactActuel.createElement(MockText, { onPress: props.onLater }, 'FEUILLE_RECO')
+      : null),
+  };
+});
+
 const ENFANT = 'APP_OUVERTE';
 
 const CLE = ['app', 'update-gate'];
@@ -65,12 +81,12 @@ const laisserReagir = async () => {
 
 /**
  * Monte la porte autour d'un enfant reconnaissable et rend ce qu'on voit.
- * @param {{ attendreReponse?: boolean }} [options] - `false` fige le rendu
- * pendant que l'appel est encore en vol.
- * @returns {Promise<{ appOuverte: boolean, ecranBloquant: boolean }>} Ce que
- * l'arbre rendu contient reellement.
+ * @param {{ attendreReponse?: boolean, garderMonte?: boolean }} [options] -
+ * `attendreReponse: false` fige le rendu pendant que l'appel est encore en vol ;
+ * `garderMonte: true` laisse l'arbre vivant pour appuyer sur un bouton.
+ * @returns {Promise<any>} Ce que l'arbre rendu contient reellement.
  */
-const rendreLaPorte = async ({ attendreReponse = true } = {}) => {
+const rendreLaPorte = async ({ attendreReponse = true, garderMonte = false } = {}) => {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
@@ -100,13 +116,29 @@ const rendreLaPorte = async ({ attendreReponse = true } = {}) => {
     await laisserReagir();
   }
 
-  const texte = JSON.stringify(arbre.toJSON());
-  arbre.unmount();
-  queryClient.clear();
+  const lire = () => {
+    const texte = JSON.stringify(arbre.toJSON());
+    return {
+      appOuverte: texte.includes(ENFANT),
+      ecranBloquant: texte.includes('ECRAN_BLOQUANT'),
+      feuilleRecommandee: texte.includes('FEUILLE_RECO'),
+    };
+  };
+
+  const demonter = () => {
+    arbre.unmount();
+    queryClient.clear();
+  };
+
+  const vu = lire();
+
+  if (!garderMonte) {
+    demonter();
+    return vu;
+  }
 
   return {
-    appOuverte: texte.includes(ENFANT),
-    ecranBloquant: texte.includes('ECRAN_BLOQUANT'),
+    ...vu, arbre, demonter, lire,
   };
 };
 
@@ -121,10 +153,11 @@ beforeEach(() => {
 test("serveur injoignable : l'app s'ouvre", async () => {
   getAppUpdateGate.mockRejectedValue(new Error('Network Error'));
 
-  const { appOuverte, ecranBloquant } = await rendreLaPorte();
+  const { appOuverte, ecranBloquant, feuilleRecommandee } = await rendreLaPorte();
 
   expect(appOuverte).toBe(true);
   expect(ecranBloquant).toBe(false);
+  expect(feuilleRecommandee).toBe(false);
 });
 
 test("appel qui n'a pas encore repondu : l'app s'ouvre pendant ce temps", async () => {
@@ -184,4 +217,173 @@ test('verdict explicite du serveur : ecran bloquant', async () => {
   // ni le bouton retour du telephone ni un geste de retour arriere n'ont quoi
   // que ce soit a depiler.
   expect(appOuverte).toBe(false);
+});
+
+// ---------------------------------------------------------------------------
+// R3 / TEMOIN 7 — verdict RECOMMANDE ⇒ la feuille, et l'app reste ouverte.
+// ---------------------------------------------------------------------------
+
+test("verdict recommande : la feuille s'affiche SANS fermer l'app", async () => {
+  getAppUpdateGate.mockResolvedValue({
+    blocked: false,
+    platform: 'ios',
+    recommended: true,
+    recommendedVersion: '2.7.0',
+  });
+
+  const { appOuverte, ecranBloquant, feuilleRecommandee } = await rendreLaPorte();
+
+  // 🟠 LE POINT DE TOUT L'ETAGE DOUX : l'app est LA, derriere la feuille.
+  expect(appOuverte).toBe(true);
+  expect(feuilleRecommandee).toBe(true);
+  expect(ecranBloquant).toBe(false);
+});
+
+test.each([
+  ['recommandation absente', { blocked: false }],
+  ['recommandation en texte', { recommended: 'true' }],
+  ['recommandation a 1', { recommended: 1 }],
+  ['recommandation explicitement fausse', { recommended: false }],
+  ['champ mal orthographie', { recomended: true }],
+  ['reponse vide', null],
+])('%s : aucune feuille', async (_libelle, charge) => {
+  getAppUpdateGate.mockResolvedValue(charge);
+
+  const { appOuverte, feuilleRecommandee } = await rendreLaPorte();
+
+  expect(appOuverte).toBe(true);
+  expect(feuilleRecommandee).toBe(false);
+});
+
+test('bloque ET recommande : l\'ecran bloquant gagne, aucune feuille', async () => {
+  getAppUpdateGate.mockResolvedValue({
+    blocked: true,
+    minimumVersion: '2.6.9',
+    recommended: true,
+    recommendedVersion: '2.7.0',
+  });
+
+  const { appOuverte, ecranBloquant, feuilleRecommandee } = await rendreLaPorte();
+
+  expect(ecranBloquant).toBe(true);
+  expect(appOuverte).toBe(false);
+  // 🔒 Une sortie « Plus tard » posee sur un mur serait une promesse mensongere.
+  expect(feuilleRecommandee).toBe(false);
+});
+
+// ---------------------------------------------------------------------------
+// R3 — « UNE SEULE FOIS PAR DEMARRAGE A FROID ».
+// ---------------------------------------------------------------------------
+
+test('« Plus tard » referme la feuille et laisse entrer', async () => {
+  getAppUpdateGate.mockResolvedValue({
+    blocked: false,
+    recommended: true,
+    recommendedVersion: '2.7.0',
+  });
+
+  const { arbre, demonter, lire } = await rendreLaPorte({ garderMonte: true });
+
+  expect(lire().feuilleRecommandee).toBe(true);
+
+  await act(async () => {
+    arbre.root.find((noeud) => noeud.props?.children === 'FEUILLE_RECO').props.onPress();
+  });
+
+  const apres = lire();
+  expect(apres.feuilleRecommandee).toBe(false);
+  expect(apres.appOuverte).toBe(true);
+
+  demonter();
+});
+
+test('une feuille refusee ne revient pas quand le levier est relu', async () => {
+  getAppUpdateGate.mockResolvedValue({
+    blocked: false,
+    recommended: true,
+    recommendedVersion: '2.7.0',
+  });
+
+  const { arbre, demonter, lire } = await rendreLaPorte({ garderMonte: true });
+
+  await act(async () => {
+    arbre.root.find((noeud) => noeud.props?.children === 'FEUILLE_RECO').props.onPress();
+  });
+  expect(lire().feuilleRecommandee).toBe(false);
+
+  // Le serveur redit exactement la meme chose (c'est ce qui arrive a chaque
+  // retour au premier plan). ⏱️ Un refus vaut pour TOUTE la session : la
+  // feuille ne doit pas resurgir.
+  await laisserReagir();
+
+  expect(lire().feuilleRecommandee).toBe(false);
+  expect(lire().appOuverte).toBe(true);
+
+  demonter();
+});
+
+// ---------------------------------------------------------------------------
+// R3 / D3 — LE LEVIER SE RELIT AU RETOUR AU PREMIER PLAN.
+//
+// 🔄 Sans ceci, quelqu'un qui laisse l'app ouverte des jours ne verrait jamais
+// la bascule : la requete est en `refetchOnWindowFocus: false`.
+// ---------------------------------------------------------------------------
+
+test('retour au premier plan : le levier est relu', async () => {
+  getAppUpdateGate.mockResolvedValue({ blocked: false });
+
+  /** @type {Array<(etat: string) => void>} */
+  const ecouteurs = [];
+  const espion = jest.spyOn(AppState, 'addEventListener').mockImplementation(
+    (/** @type {string} */ type, /** @type {any} */ handler) => {
+      if (type === 'change') ecouteurs.push(handler);
+      return { remove: () => {} };
+    },
+  );
+
+  const { demonter } = await rendreLaPorte({ garderMonte: true });
+
+  const appelsAvant = getAppUpdateGate.mock.calls.length;
+  expect(ecouteurs.length).toBeGreaterThan(0);
+
+  await act(async () => {
+    ecouteurs.forEach((ecouteur) => ecouteur('background'));
+    ecouteurs.forEach((ecouteur) => ecouteur('active'));
+  });
+  await laisserReagir();
+
+  expect(getAppUpdateGate.mock.calls.length).toBeGreaterThan(appelsAvant);
+
+  demonter();
+  espion.mockRestore();
+});
+
+test('iOS : derouler le centre de controle ne relit RIEN', async () => {
+  getAppUpdateGate.mockResolvedValue({ blocked: false });
+
+  /** @type {Array<(etat: string) => void>} */
+  const ecouteurs = [];
+  const espion = jest.spyOn(AppState, 'addEventListener').mockImplementation(
+    (/** @type {string} */ type, /** @type {any} */ handler) => {
+      if (type === 'change') ecouteurs.push(handler);
+      return { remove: () => {} };
+    },
+  );
+
+  const { demonter } = await rendreLaPorte({ garderMonte: true });
+
+  const appelsAvant = getAppUpdateGate.mock.calls.length;
+
+  // ⚠️ `inactive -> active` n'est PAS un retour : iOS le rend aussi pour un
+  // appel entrant ou un doigt qui frole le haut de l'ecran.
+  await act(async () => {
+    ecouteurs.forEach((ecouteur) => ecouteur('inactive'));
+    ecouteurs.forEach((ecouteur) => ecouteur('active'));
+  });
+  await laisserReagir();
+
+  expect(getAppUpdateGate.mock.calls.length).toBe(appelsAvant);
+
+  demonter();
+  espion.mockRestore();
 });
