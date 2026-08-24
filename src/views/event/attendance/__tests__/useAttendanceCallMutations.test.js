@@ -356,3 +356,64 @@ describe('R7-a — le refus serveur devient une phrase, jamais un silence', () =
     await demonter();
   });
 });
+
+// ===========================================================================
+// R7-d — LES SIX CLEFS QU UN POINTAGE PERIME.
+//
+// 🧨 `eventParticipations` a ete AJOUTEE le 24/08 : `performCoachArrival`
+//   rattache la personne aux `participations` et la retire des `missings`.
+//   Sur l ecran d appel, ou cette requete n est pas montee, l oubli ne se
+//   voyait pas. Depuis que la liste des participants ecrit elle aussi
+//   (« À l'heure »), il se verrait a l oeil nu : quelqu un qu on vient de
+//   pointer resterait range dans « Sans réponse », une pastille « Arrivé » a
+//   cote.
+//   ⚠️ Un temoin qui compterait les appels ne suffirait pas — c est la LISTE
+//   des clefs qui doit etre juste. Il les lit donc une par une.
+// ===========================================================================
+
+describe('R7-d — un pointage perime les six bonnes clefs', () => {
+  test('les 6 clefs, nommees, apres un pointage reussi', async () => {
+    mockMarkCoachArrival.mockResolvedValue({ data: {} });
+
+    /** @type {any[]} */
+    const invalidees = [];
+    const queryClient = new QueryClient({
+      defaultOptions: { mutations: { retry: false }, queries: { retry: false } },
+    });
+    const vraiInvalidate = queryClient.invalidateQueries.bind(queryClient);
+    queryClient.invalidateQueries = (/** @type {any} */ filtres) => {
+      invalidees.push(filtres?.queryKey);
+      return vraiInvalidate(filtres);
+    };
+
+    /** @type {any[]} */
+    const vues = [];
+    /** @type {any} */
+    let arbre;
+    await act(async () => {
+      arbre = renderer.create(
+        <QueryClientProvider client={queryClient}>
+          <SondeAppel vues={vues} />
+        </QueryClientProvider>,
+      );
+    });
+    await vidangerLaFile();
+
+    await act(async () => {
+      vues[vues.length - 1].coachArrivalMutation.mutate({ payload: {}, userId: 'user-a' });
+    });
+    await vidangerLaFile();
+
+    expect(invalidees).toEqual([
+      ['events'],
+      ['planning', 'personal'],
+      ['event', EVENEMENT_ID],
+      ['eventAttendance', EVENEMENT_ID],
+      ['eventParticipations', EVENEMENT_ID],
+      ['teamStats'],
+    ]);
+
+    await act(async () => { arbre.unmount(); });
+    queryClient.clear();
+  });
+});

@@ -21,10 +21,20 @@ import { chunkUserIds, describeAttendanceError, summarizeBulkOutcome } from './a
  * qu une seule requete a relire. Le brancher ici aurait oblige a lui inventer
  * deux fonctions vides, c est-a-dire a mentir sur ce qui se rafraichit.
  *
- * ⚠️ EN REVANCHE LES INVALIDATIONS SONT LES MEMES, LES CINQ : un pointage
+ * ⚠️ EN REVANCHE LES INVALIDATIONS SONT LES MEMES, LES SIX : un pointage
  * change la liste des evenements, le planning personnel, l evenement, la
- * feuille de presence ET les statistiques d equipe. En oublier une laisse un
- * ecran voisin afficher un chiffre faux jusqu au prochain demarrage.
+ * feuille de presence, LES PARTICIPATIONS et les statistiques d equipe. En
+ * oublier une laisse un ecran voisin afficher un chiffre faux jusqu au
+ * prochain demarrage.
+ *
+ * 🧨 R7-d — `eventParticipations` a ete AJOUTEE, et ce n est pas un confort :
+ * `performCoachArrival` rattache la personne aux `participations` et la retire
+ * des `missings`. Sur l ecran d appel, ou cette requete n est pas montee, ca ne
+ * se voyait pas. Depuis que `EventParticipants` ecrit lui aussi (« À l'heure »),
+ * l oubli se verrait a l oeil nu : quelqu un qu on vient de pointer resterait
+ * range dans « Sans réponse » avec une pastille « Arrivé » a cote.
+ * `useEventMutations` la rafraichit deja, mais par un rappel imperatif
+ * (`refetchParticipations`) que ce hook-ci n a pas.
  * @param {string} eventId
  * @returns {any}
  */
@@ -37,6 +47,7 @@ export const useAttendanceCallMutations = (eventId) => {
     queryClient.invalidateQueries({ queryKey: ['planning', 'personal'] });
     queryClient.invalidateQueries({ queryKey: ['event', eventId] });
     queryClient.invalidateQueries({ queryKey: ['eventAttendance', eventId] });
+    queryClient.invalidateQueries({ queryKey: ['eventParticipations', eventId] });
     queryClient.invalidateQueries({ queryKey: ['teamStats'] });
   }, [eventId, queryClient]);
 
