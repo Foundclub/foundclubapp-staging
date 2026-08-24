@@ -158,3 +158,103 @@ describe('Y02/6 — les autres types d evenement n ont pas change de nom', () =>
     expect(resolveEventDisplayName({}, 'Événement')).toBe('Événement');
   });
 });
+
+// -- 7. R2 — UNE EQUIPE DE MON PROPRE CLUB N EST PAS UN ADVERSAIRE -----------
+//
+// 🧨 Retour de recette de la 2.6.26 : inviter une equipe de SON PROPRE club sur
+// un evenement faisait que l evenement PRENAIT LE NOM de cette equipe (« Match
+// vs U15 B ») et se comportait comme un match CONTRE elle. La regle
+// « toute equipe invitee differente de l organisatrice EST l adversaire » ne
+// regardait que les EQUIPES ; elle ne regardait jamais leur CLUB.
+//
+// ⚖️ LA REGLE EXIGE LES DEUX CLUBS CONNUS ET EGAUX. Si l un des deux manque
+// (ancien parc, charge utile compacte), le comportement d avant reste : on ne
+// DEVINE pas. C est aussi ce qui garde verts les temoins 1 a 6 ci-dessus, dont
+// aucune donnee ne porte de club.
+const CLUB = { documentId: 'club-1', name: 'Test FC' };
+const AUTRE_CLUB = { documentId: 'club-2', name: 'FC Bonneveine' };
+const U15_A = { club: CLUB, documentId: 'team-u15-a', name: 'U15 A' };
+const U15_B = { club: CLUB, documentId: 'team-u15-b', name: 'U15 B' };
+const EQUIPE_D_EN_FACE = {
+  club: AUTRE_CLUB,
+  documentId: 'team-adverse',
+  name: 'FC Bonneveine U15',
+};
+
+describe('R2/1 — un match interne ne fabrique aucun adversaire', () => {
+  test('une equipe invitee DU MEME CLUB n est pas l adversaire', () => {
+    expect(resolveEventOpponentName({
+      club: CLUB,
+      invitedTeams: [U15_B],
+      team: U15_A,
+    })).toBe('');
+  });
+
+  test('l evenement garde SON nom, jamais celui de l equipe invitee', () => {
+    expect(resolveEventDisplayName({
+      club: CLUB,
+      invitedTeams: [U15_B],
+      name: 'Match - 12/09/2026 - U15 A',
+      team: U15_A,
+      type: TYPE_MATCH,
+    })).toBe('Match - 12/09/2026 - U15 A');
+  });
+
+  test('le club de l organisateur se lit aussi sur l evenement, sans team.club', () => {
+    expect(resolveEventOpponentName({
+      club: CLUB,
+      invitedTeams: [U15_B],
+      team: { documentId: 'team-u15-a', name: 'U15 A' },
+    })).toBe('');
+  });
+});
+
+describe('R2/2 — un vrai adversaire reste strictement inchange', () => {
+  test('une equipe invitee d un AUTRE club reste l adversaire', () => {
+    expect(resolveEventOpponentName({
+      club: CLUB,
+      invitedTeams: [EQUIPE_D_EN_FACE],
+      team: U15_A,
+    })).toBe('FC Bonneveine U15');
+  });
+
+  test('deux invitees, une du club et une d en face : c est celle d en face', () => {
+    expect(resolveEventOpponentName({
+      club: CLUB,
+      invitedTeams: [U15_B, EQUIPE_D_EN_FACE],
+      team: U15_A,
+    })).toBe('FC Bonneveine U15');
+  });
+
+  test('un club INCONNU garde le comportement d avant', () => {
+    // Ancien parc ou charge utile compacte : rien ne dit a quel club appartient
+    // l equipe invitee. On ne devine pas, donc rien ne bouge.
+    expect(resolveEventOpponentName({
+      invitedTeams: [{ documentId: 'team-u15-b', name: 'U15 B' }],
+      team: U15_A,
+    })).toBe('U15 B');
+  });
+
+  test('le champ saisi a la main passe toujours devant', () => {
+    // Un humain qui NOMME un adversaire a raison, meme sur un match interne :
+    // `opponentName` est lu avant toute entite, et R2 ne touche pas cet ordre.
+    expect(resolveEventOpponentName({
+      club: CLUB,
+      invitedTeams: [U15_B],
+      opponentName: 'U15 B',
+      team: U15_A,
+    })).toBe('U15 B');
+  });
+
+  test('le chemin du calendrier federal ne change pas (D4)', () => {
+    // L adversaire importe n a JAMAIS de club connu chez nous : la regle R2 ne
+    // peut pas s y appliquer. L orientation domicile/exterieur de ce chemin-la
+    // vit ailleurs (`external-events-sync.ts`, `resolveMatchInvolvement`).
+    expect(resolveEventOpponentName({
+      club: CLUB,
+      invitedTeams: [],
+      opponentName: 'AS Saint-Priest',
+      team: U15_A,
+    })).toBe('AS Saint-Priest');
+  });
+});

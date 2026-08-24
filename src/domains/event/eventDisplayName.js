@@ -67,6 +67,40 @@ const cleEntite = (/** @type {any} */ entite) => texte(
 );
 
 /**
+ * Le club qui ORGANISE l'evenement.
+ *
+ * Deux chemins le peuplent, et jamais les memes : la fiche et l'ecran
+ * descendent jusqu'a `event.team.club`, les affiches s'arretent a
+ * `event.club`. L'un OU l'autre suffit.
+ * @param {any} eventLike Evenement, tel que l'API le sert.
+ * @returns {string} La cle du club organisateur, vide s'il est inconnu.
+ */
+const cleClubOrganisateur = (eventLike) => cleEntite(
+  eventLike?.team?.club ?? eventLike?.club,
+);
+
+/**
+ * 🧨 R2 — UNE EQUIPE DE MON PROPRE CLUB N'EST PAS UN ADVERSAIRE.
+ *
+ * Retour de recette de la 2.6.26 : inviter une equipe de son propre club
+ * faisait que l'evenement PRENAIT SON NOM (« Match vs U15 B ») et se
+ * comportait comme un match CONTRE elle. La regle d'en dessous ne regardait
+ * que les EQUIPES ; elle ne regardait jamais leur CLUB.
+ *
+ * ⚖️ Elle exige les DEUX clubs CONNUS et EGAUX. Quand l'un manque — ancien
+ * parc, charge utile compacte — on ne DEVINE pas : le comportement d'avant
+ * reste. C'est ce qui rend ce garde-fou sans risque sur les donnees deja la.
+ * @param {any} equipe Equipe invitee.
+ * @param {any} eventLike Evenement, tel que l'API le sert.
+ * @returns {boolean} Vrai seulement si les deux clubs sont connus et egaux.
+ */
+const estDuClubOrganisateur = (equipe, eventLike) => {
+  const clubOrganisateur = cleClubOrganisateur(eventLike);
+  const clubDeLEquipe = cleEntite(equipe?.club);
+  return Boolean(clubOrganisateur && clubDeLEquipe && clubOrganisateur === clubDeLEquipe);
+};
+
+/**
  * L'adversaire d'un evenement : le champ stocke d'abord, les entites ensuite.
  *
  * L'ordre n'est pas arbitraire — `opponentName` est le seul endroit ou un humain
@@ -86,6 +120,7 @@ export const resolveEventOpponentName = (eventLike) => {
   const invitee = invitees.find((equipe) => {
     const nom = texte(equipe?.name);
     if (!nom) return false;
+    if (estDuClubOrganisateur(equipe, eventLike)) return false;
     const cle = cleEntite(equipe);
     return cle ? cle !== notreCle : comparable(nom) !== notreNom;
   });
