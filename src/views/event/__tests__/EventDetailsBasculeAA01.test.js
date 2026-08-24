@@ -640,3 +640,70 @@ describe('R4 — « Annuler ma participation » marque absent', () => {
     expect(mockMissingEvent).not.toHaveBeenCalled();
   });
 });
+
+// 🗣️ R6 (vague R) — LE PARTIEL LAISSE PAR R4 : LE GESTE AVAIT CHANGE, PAS LES MOTS.
+//
+// R4 a fait qu un membre convie deja present soit MARQUE ABSENT au lieu de voir
+// sa reponse effacee (temoin R4/12 juste au-dessus). La fenetre de confirmation,
+// elle, a garde les chaines de la SUPPRESSION : « Annuler ma participation » et
+// « Es-tu sur·e de vouloir annuler ta participation a cet evenement ? ».
+//
+// 🧨 La personne lisait donc une question et en executait une autre — et la
+// difference n est pas cosmetique : effacer sa reponse et se declarer absent ne
+// donnent pas le meme compteur au coach, ni le meme retour en arriere.
+//
+// ⛔ La branche SUPPRESSION garde ses mots : ils sont justes pour elle. C est
+// tout le point d avoir deux jeux de chaines la ou il y a deux gestes.
+describe('R6 — la fenetre dit le geste qu elle declenche', () => {
+  test('R6/15 — 🥇 un MEMBRE marque absent ne lit plus la fenetre de suppression', () => {
+    const root = mountScreen({
+      event: buildEvent({
+        participationRequests: [myResponse('accepted')],
+        participations: [{ documentId: ME }],
+      }),
+    });
+
+    pressLabelled(root, 'BASCULER_MA_REPONSE');
+
+    const [titre, description] = /** @type {any} */ (Alert.alert).mock.calls[0];
+
+    expect(titre).toBe('eventDetails.modals.declareMissing.title');
+    expect(description).toBe('eventDetails.modals.declareMissing.description');
+    // 🔒 Et le geste reste celui de R4 : les mots suivent le geste, ils ne le
+    // remplacent pas.
+    expect(mockMissingEvent).toHaveBeenCalledWith('event-1');
+  });
+
+  test('R6/16 — 🔒 la branche SUPPRESSION garde ses mots a elle', () => {
+    // Contre-epreuve indispensable : un seul jeu de chaines pour DEUX gestes
+    // est exactement le defaut qu on repare. Le remplacer par un autre jeu
+    // unique ne serait pas une correction, juste un deplacement.
+    const root = mountScreen({
+      event: buildEvent({
+        participationRequests: [myResponse('pending')],
+        participations: [],
+      }),
+    });
+
+    pressLabelled(root, 'BASCULER_MA_REPONSE');
+
+    const [titre] = /** @type {any} */ (Alert.alert).mock.calls[0];
+
+    expect(titre).toBe('eventDetails.modals.deleteParticipation.title');
+    expect(mockDeleteParticipation).toHaveBeenCalledWith('resp-mine');
+  });
+
+  test('R6/17 — 🧨 et le dictionnaire porte VRAIMENT la phrase que la personne lit', () => {
+    // ⛔ LE TEMOIN QUI EMPECHE LE FAUX VERT. Le mock de traduction de ce fichier
+    // rend la CLEF quand il n y a pas de repli : les deux temoins ci-dessus
+    // resteraient donc verts avec un dictionnaire VIDE, et l ecran afficherait
+    // « eventDetails.modals.declareMissing.title » en toutes lettres.
+    const fr = jest.requireActual('@/theme/strings/translations/fr').default;
+
+    expect(fr.eventDetails.modals.declareMissing.title).toBe('Me déclarer absent·e');
+    expect(fr.eventDetails.modals.declareMissing.description)
+      .toContain('tu passeras chez les absent·e·s');
+    // La branche de suppression n a pas ete touchee au passage.
+    expect(fr.eventDetails.modals.deleteParticipation.title).toBe('Annuler ma participation');
+  });
+});

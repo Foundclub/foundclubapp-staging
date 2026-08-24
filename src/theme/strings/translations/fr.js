@@ -1319,6 +1319,11 @@ export default {
         description: 'Une fois annulé, l\'événement ne sera plus visible par les participant·e·s.',
         title: 'Es-tu sûr·e de vouloir annuler cet événement ?',
       },
+      declareMissing: {
+        description: 'Tu ne seras plus compté·e présent·e : tu passeras chez les absent·e·s.'
+          + ' Tu pourras revenir sur ta réponse.',
+        title: 'Me déclarer absent·e',
+      },
       deleteParticipation: {
         actions: {
           cancel: 'Non, retour',

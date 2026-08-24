@@ -3144,9 +3144,18 @@ function EventDetails({ navigation, route }) {
     }
 
     if (kind === OwnAnswerAction.declareMissing) {
+      // 🗣️ R6 (vague R) — LE PARTIEL LAISSE PAR R4. Le geste avait change ici
+      // (marquer absent au lieu d effacer la reponse), les MOTS de la fenetre
+      // etaient restes ceux de la suppression : « Annuler ma participation ».
+      // La personne lisait une question et en executait une autre — et la
+      // difference compte : effacer sa reponse et se declarer absent ne donnent
+      // pas le meme compteur au coach.
+      // ⛔ Les BOUTONS restent partages (« Non, retour » / « Oui, annuler ») :
+      // ils conviennent aux deux gestes, et les dupliquer ferait deux endroits
+      // a corriger le jour ou l un d eux change.
       Alert.alert(
-        t('eventDetails.modals.deleteParticipation.title'),
-        t('eventDetails.modals.deleteParticipation.description'),
+        t('eventDetails.modals.declareMissing.title'),
+        t('eventDetails.modals.declareMissing.description'),
         [
           { style: 'cancel', text: t('eventDetails.modals.deleteParticipation.actions.cancel') },
           {
