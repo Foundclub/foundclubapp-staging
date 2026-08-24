@@ -11,7 +11,11 @@ import { getAuthRuntimeSnapshot } from '@/store/authRuntime';
 import useTheme from '@/theme/themeContext';
 
 import RenderedTacticalField from '@/components/tactical/RenderedTacticalField';
-import { getViewerConvocationRole } from '@/views/playerConvocation/playerConvocationUtils';
+import {
+  buildConvocationFieldTokens,
+  getPersonName,
+  getViewerConvocationRole,
+} from '@/views/playerConvocation/playerConvocationUtils';
 
 import { RouteNames } from '@/navigation/routeNames';
 
@@ -98,6 +102,36 @@ function CompositionMessageBubble({ composition, isMe = false }) {
     : placements;
 
   const allPlayers = [...teamPlayers, ...manualPlayers, ...reservePlayers, ...snapshotPlayers];
+
+  // 🧾 R6 (vague R) — LES NOMS, ENFIN ECRITS.
+  //
+  // 🧨 Constat de recette du 24/08 : « la liste des convoques doit se voir dans
+  // le groupe de messages de l equipe ». La carte partait deja toute seule a la
+  // publication et annonçait « 11 joueurs » — onze QUI ? Les personnes
+  // voyageaient DEJA dans sa propre charge (`snapshotPlayers`,
+  // `reservePlayers`) : le lecteur du tchat devait ouvrir un ecran pour savoir
+  // s il en faisait partie. ⇒ ZERO changement serveur : la donnee etait la.
+  //
+  // ♻️ `buildConvocationFieldTokens` est le MEME assembleur que l ecran du
+  // joueur convoque et que l onglet « Convocation » : il apparie un placement a
+  // sa personne et JETTE les placements orphelins — jamais de ligne vide a la
+  // place d un nom qu on n a pas.
+  const starters = buildConvocationFieldTokens({
+    placements: previewPlacements,
+    snapshotPlayers: allPlayers,
+  });
+  const benchPlayers = reservePlayers.filter((player) => getPersonName(player));
+
+  // ⛔ LE MINI-TERRAIN N A JAMAIS DESSINE QUE LA PREMIERE EQUIPE — c est un
+  // apercu, et il le reste : 250 pt de large ne portent pas quatre effectifs.
+  // Mais une liste qui s arreterait la SANS RIEN DIRE ferait croire au lecteur
+  // qu il a vu tout le monde. La carte compte donc ce qu elle ne montre pas.
+  const otherTeamsCount = isMultiTeamComposition && Array.isArray(teams)
+    ? Math.max(0, teams.length - 1)
+    : 0;
+  const otherTeamsLine = otherTeamsCount > 0
+    ? `+ ${otherTeamsCount} autre équipe${otherTeamsCount > 1 ? 's' : ''} dans cette composition`
+    : '';
 
   // U06 — l'heure etait DEJA dans `eventDate` (champ `datetime` cote serveur) et
   // partait a la poubelle : la carte n'en gardait que le jour.
@@ -233,6 +267,43 @@ function CompositionMessageBubble({ composition, isMe = false }) {
         </View>
       </RenderedTacticalField>
 
+      {/* 🧾 R6 — QUI EST CONVOQUE. Le bloc entier disparait quand il n y a
+          personne : une section « Sur le banc » suivie de rien se lit comme un
+          bug, et un pack sans remplacant est le cas normal. */}
+      {starters.length > 0 || benchPlayers.length > 0 ? (
+        <View style={[styles.roster, { borderTopColor: Colors.neutral700 }]}>
+          {starters.length > 0 ? (
+            <Text style={[Fonts.p4Bold, { color: Colors.neutral00 }]}>Sur le terrain</Text>
+          ) : null}
+          {starters.map((token) => (
+            <Text
+              key={`terrain-${token?.placement?.playerId}`}
+              numberOfLines={1}
+              style={[Fonts.p4, { color: Colors.neutral200 }]}
+            >
+              {getPersonName(token.player)}
+            </Text>
+          ))}
+
+          {benchPlayers.length > 0 ? (
+            <Text style={[Fonts.p4Bold, { color: Colors.neutral00 }]}>Sur le banc</Text>
+          ) : null}
+          {benchPlayers.map((player) => (
+            <Text
+              key={`banc-${getPlayerId(player)}`}
+              numberOfLines={1}
+              style={[Fonts.p4, { color: Colors.neutral200 }]}
+            >
+              {getPersonName(player)}
+            </Text>
+          ))}
+
+          {otherTeamsLine ? (
+            <Text style={[Fonts.p4, { color: Colors.neutral200 }]}>{otherTeamsLine}</Text>
+          ) : null}
+        </View>
+      ) : null}
+
       <View style={[styles.footer, { backgroundColor: Colors.neutral900 }]}>
         {hasEventContext ? (
           <>
@@ -307,6 +378,15 @@ const styles = StyleSheet.create({
   miniTokenText: {
     fontSize: 8,
     fontWeight: '700',
+  },
+  // R6 — memes rembourrages que le pied de carte : la liste est une TROISIEME
+  // bande de la meme carte, pas un encart pose dessus. Seul le filet du haut la
+  // separe du terrain.
+  roster: {
+    borderTopWidth: 1,
+    gap: 2,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
   },
 });
 
