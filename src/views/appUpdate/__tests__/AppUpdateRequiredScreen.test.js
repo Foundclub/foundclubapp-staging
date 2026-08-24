@@ -4,6 +4,8 @@ import renderer, { act } from 'react-test-renderer';
 import AppUpdateRequiredScreen from '@/views/appUpdate/AppUpdateRequiredScreen';
 
 // S09 — l'ecran lui-meme : ce qu'il dit, et les deux portes qu'il ouvre.
+// R3 y ajoute l'habillage du pack : pastille de version, nouveautes, et le
+// message « store injoignable ».
 //
 // 🔒 Le second bouton n'est pas une politesse : un ecran bloquant sans moyen de
 // joindre quelqu'un transforme un incident de version en desinstallation.
@@ -12,10 +14,13 @@ jest.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (/** @type {string} */ _cle, /** @type {any} */ repli, /** @type {any} */ options) => {
       if (typeof repli === 'string') return repli;
-      if (repli && typeof repli === 'object') {
-        return String(repli.defaultValue || '').replace('{{version}}', String(repli.version || ''));
-      }
-      return String(options?.defaultValue || '');
+      const source = (repli && typeof repli === 'object') ? repli : (options || {});
+      // Le vrai i18next remplace TOUS les jetons `{{x}}` par l'option de meme
+      // nom. La doublure fait pareil, sinon un libelle a trou passerait vert.
+      return String(source.defaultValue || '').replace(
+        /\{\{(\w+)\}\}/g,
+        (_motif, /** @type {string} */ nom) => String(source[nom] ?? ''),
+      );
     },
   }),
 }));
@@ -35,7 +40,7 @@ jest.mock('@/theme/themeContext', () => {
       ApplicationStyle: genererStyles(couleurs),
       Colors: couleurs,
       Fonts: genererPolices(couleurs),
-      Images: { logo: 1 },
+      Images: { check: 2, logo: 1 },
       Spaces: espaces,
     }),
   };
@@ -89,6 +94,10 @@ test('le bouton de mise a jour ouvre l\'adresse de boutique recue', () => {
 
 // ---------------------------------------------------------------------------
 // L'ISSUE DE SECOURS — jamais de cul-de-sac.
+//
+// ⚖️ Le pack (planche A) dessine « une seule sortie : le store ». On garde
+// pourtant ce second bouton, et ce temoin existe pour que le choix reste
+// VISIBLE : le supprimer fera echouer ce test, pas passer inapercu.
 // ---------------------------------------------------------------------------
 
 test('un second bouton mene au contact', () => {
@@ -110,7 +119,7 @@ test('un second bouton mene au contact', () => {
 // L'ECRAN DIT POURQUOI — pas seulement « mettez a jour ».
 // ---------------------------------------------------------------------------
 
-test('l\'ecran explique la raison du blocage', () => {
+test('l\'ecran explique la raison du blocage et rassure sur les donnees', () => {
   const arbre = rendre({
     contactUrl: 'https://foundclub.app',
     currentVersion: '2.6.7',
@@ -120,10 +129,114 @@ test('l\'ecran explique la raison du blocage', () => {
 
   const texte = JSON.stringify(arbre.toJSON());
 
-  expect(texte).toContain('Des corrections importantes sont arrivées depuis');
+  expect(texte).toContain('Une mise à jour est disponible');
+  expect(texte).toContain('Télécharge la nouvelle version de FoundClub');
+  // 🔒 Sans cette phrase, une mise a jour forcee ressemble a une perte de compte.
   expect(texte).toContain('Tes données et ton compte sont intacts');
-  expect(texte).toContain('Version installée : 2.6.7');
-  expect(texte).toContain('Version demandée : 2.6.9');
+});
+
+// ---------------------------------------------------------------------------
+// R3 — LA PASTILLE DE VERSION (planche A). Sans elle, l'ecran ressemble a une
+// panne de l'app plutot qu'a une version depassee.
+// ---------------------------------------------------------------------------
+
+test('la pastille dit la version exigee ET celle installee', () => {
+  const arbre = rendre({
+    currentVersion: '3.0.1',
+    minimumVersion: '3.2.0',
+    storeUrl: 'https://play.example/fc',
+  });
+
+  const texte = JSON.stringify(arbre.toJSON());
+
+  expect(texte).toContain('Version 3.2.0 requise · tu es en 3.0.1');
+  // Aucun jeton de libelle ne doit rester a l'ecran.
+  expect(texte).not.toContain('{{');
+});
+
+test('une seule version connue : on retombe sur la ligne simple, jamais un trou', () => {
+  const arbre = rendre({ minimumVersion: '3.2.0', storeUrl: 'https://play.example/fc' });
+
+  const texte = JSON.stringify(arbre.toJSON());
+
+  expect(texte).toContain('Version demandée : 3.2.0');
+  expect(texte).not.toContain('{{');
+});
+
+test('aucune version connue : aucune pastille', () => {
+  const arbre = rendre({ storeUrl: 'https://play.example/fc' });
+
+  const texte = JSON.stringify(arbre.toJSON());
+
+  expect(texte).not.toContain('requise');
+  expect(texte).not.toContain('Version demandée');
+});
+
+// ---------------------------------------------------------------------------
+// R3 — LES NOUVEAUTES (planche B). « S'il est vide, l'ecran A s'affiche tel
+// quel — jamais de carte vide. »
+// ---------------------------------------------------------------------------
+
+test('les nouveautes recues s\'affichent sous un intitule', () => {
+  const arbre = rendre({
+    releaseNotes: ['Paiement en plusieurs fois', 'Notifications plus fiables'],
+    storeUrl: 'https://play.example/fc',
+  });
+
+  const texte = JSON.stringify(arbre.toJSON());
+
+  expect(texte).toContain('Dans cette version');
+  expect(texte).toContain('Paiement en plusieurs fois');
+  expect(texte).toContain('Notifications plus fiables');
+});
+
+test.each([
+  ['aucune nouveaute', []],
+  ['champ absent', undefined],
+  ['valeur qui n\'est pas un tableau', 'Paiement'],
+  ['lignes vides seulement', ['', '   ']],
+])('%s : AUCUNE carte n\'est dessinee', (_libelle, notes) => {
+  const arbre = rendre({ releaseNotes: notes, storeUrl: 'https://play.example/fc' });
+
+  expect(JSON.stringify(arbre.toJSON())).not.toContain('Dans cette version');
+});
+
+// ---------------------------------------------------------------------------
+// R3 — 🏪 STORE INJOIGNABLE. Le pack : « un message factuel s'affiche sous le
+// bouton — pas de toast, l'ecran est deja minimal ».
+// ---------------------------------------------------------------------------
+
+test('store injoignable : le message remplace l\'avis de redirection', async () => {
+  const arbre = rendre({
+    contactUrl: 'https://foundclub.app',
+    onOpenUrl: () => Promise.reject(new Error('no activity found')),
+    storeUrl: 'https://play.example/fc',
+  });
+
+  expect(JSON.stringify(arbre.toJSON())).toContain('Tu seras redirigé·e vers');
+
+  await act(async () => {
+    await trouverBouton(arbre, 'Mettre à jour').props.onPress();
+  });
+
+  const texte = JSON.stringify(arbre.toJSON());
+  expect(texte).toContain("Impossible d'ouvrir le store. Réessaie.");
+  // 🔒 Les deux sorties restent la : un echec d'ouverture ne doit pas murer l'ecran.
+  expect(trouverBouton(arbre, 'Mettre à jour')).toBeTruthy();
+  expect(trouverBouton(arbre, 'Un problème ? Nous contacter')).toBeTruthy();
+});
+
+test('ouverture reussie : aucun message d\'echec', async () => {
+  const arbre = rendre({
+    onOpenUrl: () => Promise.resolve(),
+    storeUrl: 'https://play.example/fc',
+  });
+
+  await act(async () => {
+    await trouverBouton(arbre, 'Mettre à jour').props.onPress();
+  });
+
+  expect(JSON.stringify(arbre.toJSON())).not.toContain("Impossible d'ouvrir le store");
 });
 
 // ---------------------------------------------------------------------------

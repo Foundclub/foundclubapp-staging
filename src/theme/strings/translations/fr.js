@@ -245,20 +245,34 @@ export default {
   appUpdateGate: {
     a11y: {
       contactHint: "Ouvre le site FoundClub pour joindre l'équipe.",
+      laterHint: 'Ferme ce message et continue dans FoundClub.',
       updateHint: "Ouvre la boutique d'applications de ce téléphone.",
     },
     actions: {
       contact: 'Un problème ? Nous contacter',
+      later: 'Plus tard',
       update: 'Mettre à jour',
     },
     installedVersion: 'Version installée : {{version}}',
+    recommended: {
+      description: 'Mets à jour FoundClub pour profiter des dernières nouveautés '
+        + 'et corrections.',
+      title: 'Une mise à jour est disponible',
+      version: 'Version {{version}}',
+    },
+    redirectNotice: 'Tu seras redirigé·e vers {{store}}.',
+    releaseNotesTitle: 'Dans cette version',
     requiredVersion: 'Version demandée : {{version}}',
-    title: 'Mise à jour nécessaire',
-    what: 'Installe la dernière version depuis la boutique, puis rouvre FoundClub. '
-      + 'Tes données et ton compte sont intacts.',
-    why: 'Cette version de FoundClub est trop ancienne. Des corrections importantes '
-      + "sont arrivées depuis, et l'application ne peut plus fonctionner correctement "
-      + 'avec celle-ci.',
+    stores: {
+      android: 'Google Play',
+      ios: "l'App Store",
+    },
+    storeUnreachable: "Impossible d'ouvrir le store. Réessaie.",
+    title: 'Une mise à jour est disponible',
+    versionChip: 'Version {{minimum}} requise · tu es en {{current}}',
+    what: 'Tes données et ton compte sont intacts.',
+    why: 'Télécharge la nouvelle version de FoundClub pour continuer à profiter '
+      + "de l'app.",
   },
   club: {
     fields: {
