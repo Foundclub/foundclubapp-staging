@@ -74,6 +74,9 @@ jest.mock('@tanstack/react-query', () => ({
   }),
   useQueryClient: () => ({
     invalidateQueries: jest.fn(),
+    // R5 : depuis le prechargement au toucher de « Modifier », l ecran appelle
+    // aussi `prefetchQuery`. La doublure doit suivre la surface du vrai client.
+    prefetchQuery: jest.fn(),
     setQueryData: jest.fn(),
   }),
 }));
