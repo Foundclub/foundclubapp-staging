@@ -38,8 +38,8 @@ const mockDashboard = { data: /** @type {any} */ (undefined) };
 jest.mock('@/services/teamMembershipRequest/teamMembershipRequestService', () => ({
   inviteToTeam: () => Promise.resolve(null),
   resolveTeamInvitationAvailability: () => ({
-    canInvite: false,
     candidateId: '',
+    canInvite: false,
     reason: 'missing-team',
   }),
 }));

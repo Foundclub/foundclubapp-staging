@@ -94,7 +94,7 @@ jest.mock('@shopify/flash-list', () => {
 // ensuite dessus comme le doigt d Adel le ferait a l ecran.
 jest.mock('@/components/molecules/eventCard/EventCardNew', () => {
   const { View } = jest.requireActual('react-native');
-  const capteur = require('@/testSupport/r9CapteurCarte').capteurCarte;
+  const capteur = jest.requireActual('@/testSupport/r9CapteurCarte').capteurCarte;
   return {
     __esModule: true,
     default: (/** @type {any} */ props) => {
@@ -193,7 +193,7 @@ jest.mock('@/components/molecules/withDataWrapper/WithDataWrapper', () => {
   };
 });
 
-const { capteurCarte } = require('@/testSupport/r9CapteurCarte');
+const { capteurCarte } = jest.requireActual('@/testSupport/r9CapteurCarte');
 
 const EventListContent = require('../EventListContent').default;
 
@@ -239,7 +239,7 @@ afterEach(() => {
 });
 
 describe('R9 - repondre « Participer » sur la carte d une DETECTION', () => {
-  test('R9 · temoin 15 — l appui ouvre l ecran de l evenement, la ou vivent les postes', async () => {
+  test('R9 · temoin 15 — l appui ouvre l ecran ou vivent les postes', async () => {
     const carte = monterAvec(DETECTION);
 
     await act(async () => { await carte.onParticipate(); });

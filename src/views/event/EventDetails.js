@@ -3073,10 +3073,10 @@ function EventDetails({ navigation, route }) {
       team: payload.teamId,
       user: payload.candidateId,
     }),
-    onError: (/** @type {any} */ error) => {
+    onError: (/** @type {any} */ echecInvitation) => {
       Alert.alert(
         t('eventDetails.detection.candidateInvite', 'Inviter dans l’équipe'),
-        error?.message || t('common.errorOccurred'),
+        echecInvitation?.message || t('common.errorOccurred'),
       );
     },
     onSuccess: (/** @type {any} */ _data, /** @type {any} */ variables) => {

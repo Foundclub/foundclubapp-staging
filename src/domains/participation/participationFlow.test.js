@@ -222,7 +222,7 @@ describe('R9 - une detection propose ses postes meme quand l appelant ne les a p
     type: { name: 'Détection' },
   };
 
-  test('R9 · temoin 8 — sans compte de postes dans le contexte, on aiguille vers le choix du poste', () => {
+  test('R9 · temoin 8 — sans compte de postes, on aiguille vers le choix du poste', () => {
     const flow = resolveParticipationFlow(detectionAVenir, { user: playerUser });
 
     expect(flow.submitMode).toBe('detection-slot-picker');

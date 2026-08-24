@@ -364,7 +364,10 @@ function EventHeader({ detectionSummary = null, event, matchScoreSummary = null 
               drapeau et le ⋯), constate en recette le 24/08. */}
           <Text
             numberOfLines={2}
-            style={[showMatchTitle || isMatchLikeEvent ? Fonts.h3Black : Fonts.p1Bold, Fonts.neutral00]}
+            style={[
+              showMatchTitle || isMatchLikeEvent ? Fonts.h3Black : Fonts.p1Bold,
+              Fonts.neutral00,
+            ]}
           >
             {headerPrimaryTitle}
           </Text>

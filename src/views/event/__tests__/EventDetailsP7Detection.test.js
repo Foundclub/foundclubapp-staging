@@ -38,8 +38,8 @@ const mockLireLesCandidatures = jest.fn(() => Promise.resolve([]));
 // `@/services/client`, qui jette sans `.env`.
 const mockInviterDansLEquipe = jest.fn(() => Promise.resolve({ documentId: 'invit-1' }));
 const mockResoudreDisponibilite = jest.fn(() => ({
-  canInvite: true,
   candidateId: 'u-gardien-2',
+  canInvite: true,
   reason: '',
 }));
 // 📑 R9 — LA COPIE PAGINEE, pilotable. Les demandes arrivent a l ecran par
@@ -353,9 +353,9 @@ jest.mock(
   () => {
     const react = jest.requireActual('react');
     const rn = jest.requireActual('react-native');
-    const { capteurBarreDuBas } = require('@/testSupport/p7Capteurs');
+    const capteurLocal = jest.requireActual('@/testSupport/p7Capteurs').capteurBarreDuBas;
     return function BarreDuBasDouble(/** @type {any} */ props) {
-      capteurBarreDuBas.props = props;
+      capteurLocal.props = props;
       return react.createElement(rn.Text, null, 'DOUBLURE_EventAnswerButtons');
     };
   },
@@ -368,9 +368,9 @@ jest.mock(
   () => {
     const react = jest.requireActual('react');
     const rn = jest.requireActual('react-native');
-    const { capteurModaleParticipation } = require('@/testSupport/p7Capteurs');
+    const capteurLocal = jest.requireActual('@/testSupport/p7Capteurs').capteurModaleParticipation;
     return function JoinEventModalDouble(/** @type {any} */ props) {
-      capteurModaleParticipation.props = props;
+      capteurLocal.props = props;
       return react.createElement(rn.Text, null, 'DOUBLURE_JoinEventModal');
     };
   },
@@ -518,7 +518,12 @@ const demonter = () => {
   mounted = null;
 };
 
-const monter = (/** @type {any} */ { auth, event, pagesPaginees = null, params = {} } = {}) => {
+const monter = (/** @type {any} */ {
+  auth,
+  event,
+  pagesPaginees = null,
+  params = {},
+} = {}) => {
   mockEventQuery.data = event === undefined ? buildDetection() : event;
   mockParticipationsPages.pages = pagesPaginees;
   mockUseAuth.mockReturnValue(auth || authOrganisateur());
@@ -915,8 +920,8 @@ describe('P7 - le bouton « Inviter dans l equipe » nait GRISE (serveur = lot P
     // mais la VRAIE raison. Ce temoin garde son sujet — le motif ecrit — en le
     // posant sur le cas qui reste impossible : une personne sans compte.
     mockResoudreDisponibilite.mockImplementation(() => ({
-      canInvite: false,
       candidateId: '',
+      canInvite: false,
       reason: 'no-account',
     }));
     const root = monter({ event: buildDetection({ participations: [GARDIEN_1] }) });
@@ -943,8 +948,8 @@ describe('P7 - le bouton « Inviter dans l equipe » nait GRISE (serveur = lot P
     expect(contient(root, 'pas encore de compte FoundClub')).toBe(true);
 
     mockResoudreDisponibilite.mockImplementation(() => ({
-      canInvite: true,
       candidateId: 'u-gardien-2',
+      canInvite: true,
       reason: '',
     }));
   });
@@ -1181,8 +1186,8 @@ describe('R9 - LE BOUTON « INVITER DANS L EQUIPE » EST ENFIN BRANCHE', () => {
   // premier. Les temoins posent donc un comportement DURABLE, remis a neuf ici.
   afterEach(() => {
     mockResoudreDisponibilite.mockImplementation(() => ({
-      canInvite: true,
       candidateId: 'u-gardien-2',
+      canInvite: true,
       reason: '',
     }));
   });
@@ -1242,8 +1247,8 @@ describe('R9 - LE BOUTON « INVITER DANS L EQUIPE » EST ENFIN BRANCHE', () => {
   test('R9 · temoin 26 — SANS COMPTE : bouton grise, et le motif est HONNETE', () => {
     // 🎯 Le remplacement du « ça arrive bientôt » : un motif qui dit la verite.
     mockResoudreDisponibilite.mockReturnValue({
-      canInvite: false,
       candidateId: '',
+      canInvite: false,
       reason: 'no-account',
     });
     const root = ouvrirLaFiche();
@@ -1258,8 +1263,8 @@ describe('R9 - LE BOUTON « INVITER DANS L EQUIPE » EST ENFIN BRANCHE', () => {
     // passer par une annonce, sur un evenement qui n a pas d equipe. Il n y a
     // aucune equipe ou l inviter, et l ecran le dit au lieu de se taire.
     mockResoudreDisponibilite.mockReturnValue({
-      canInvite: false,
       candidateId: GARDIEN_2.documentId,
+      canInvite: false,
       reason: 'missing-team',
     });
     const root = ouvrirLaFiche({ team: null });

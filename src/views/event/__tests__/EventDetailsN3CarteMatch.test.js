@@ -39,8 +39,8 @@ const mockUpdateNoNav = jest.fn();
 jest.mock('@/services/teamMembershipRequest/teamMembershipRequestService', () => ({
   inviteToTeam: () => Promise.resolve(null),
   resolveTeamInvitationAvailability: () => ({
-    canInvite: false,
     candidateId: '',
+    canInvite: false,
     reason: 'missing-team',
   }),
 }));

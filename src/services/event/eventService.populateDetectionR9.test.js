@@ -110,7 +110,7 @@ describe('R9 - le lien vers l annonce voyage avec la demande de participation', 
     jest.clearAllMocks();
   });
 
-  test('R9 · temoin 1 — la FICHE d un evenement demande participationRequests.recruitmentAd', async () => {
+  test('R9 · temoin 1 — la FICHE demande participationRequests.recruitmentAd', async () => {
     const populate = await lirePopulateDeLaFiche();
 
     expect(populate).toContain('participationRequests.recruitmentAd');

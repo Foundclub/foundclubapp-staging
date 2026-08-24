@@ -37,8 +37,8 @@ const mockTeamCompositionQuery = { data: null };
 jest.mock('@/services/teamMembershipRequest/teamMembershipRequestService', () => ({
   inviteToTeam: () => Promise.resolve(null),
   resolveTeamInvitationAvailability: () => ({
-    canInvite: false,
     candidateId: '',
+    canInvite: false,
     reason: 'missing-team',
   }),
 }));
