@@ -1,7 +1,12 @@
 import { Alert, Text, TouchableOpacity } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
-import { capteurEntete, capteurParticipants } from '@/testSupport/p7Capteurs';
+import {
+  capteurBarreDuBas,
+  capteurEntete,
+  capteurModaleParticipation,
+  capteurParticipants,
+} from '@/testSupport/p7Capteurs';
 
 // Lot P7 (vague P du 23/08) — LE TABLEAU DE BORD DU RECRUTEMENT d'une
 // detection : les deux tuiles de l'entete (planche 03, carte E) et le
@@ -310,11 +315,33 @@ jest.mock('../components/EventParticipants', () => {
 /* eslint-disable global-require */
 jest.mock(
   '@/components/molecules/eventAnswerButtons/EventAnswerButtons',
-  () => require('@/testSupport/textDouble').makeTextDouble('DOUBLURE_EventAnswerButtons'),
+  // R9 — MEME TEXTE QU AVANT, plus la capture de ses props. La barre du bas
+  // porte `onJoin`, et c est le SEUL chemin qui ouvre le choix du poste : sans
+  // ses props, aucun temoin ne peut ouvrir ce selecteur pour le regarder.
+  () => {
+    const react = jest.requireActual('react');
+    const rn = jest.requireActual('react-native');
+    const { capteurBarreDuBas } = require('@/testSupport/p7Capteurs');
+    return function BarreDuBasDouble(/** @type {any} */ props) {
+      capteurBarreDuBas.props = props;
+      return react.createElement(rn.Text, null, 'DOUBLURE_EventAnswerButtons');
+    };
+  },
 );
 jest.mock(
   '@/components/organisms/joinEventModal/JoinEventModal',
-  () => require('@/testSupport/textDouble').makeTextDouble('DOUBLURE_JoinEventModal'),
+  // R9 — meme texte qu avant, plus la capture de `contextNote` : c est la
+  // seule difference observable entre « je postule au poste de gardien » et
+  // « je participe sans poste precis ».
+  () => {
+    const react = jest.requireActual('react');
+    const rn = jest.requireActual('react-native');
+    const { capteurModaleParticipation } = require('@/testSupport/p7Capteurs');
+    return function JoinEventModalDouble(/** @type {any} */ props) {
+      capteurModaleParticipation.props = props;
+      return react.createElement(rn.Text, null, 'DOUBLURE_JoinEventModal');
+    };
+  },
 );
 /* eslint-enable global-require */
 // La doublure de la modale de refus rend son ETAT : c'est le seul moyen de
@@ -475,6 +502,8 @@ const monter = (/** @type {any} */ { auth, event, pagesPaginees = null, params =
   mockLireLesCandidatures.mockClear();
   capteurEntete.props = null;
   capteurParticipants.props = null;
+  capteurBarreDuBas.props = null;
+  capteurModaleParticipation.props = null;
 
   act(() => {
     mounted = renderer.create(
@@ -966,5 +995,90 @@ describe('R9 - LE CANDIDAT ACCEPTE QUI DISPARAISSAIT DE SON POSTE', () => {
     expect(toutesLesDemandes).toHaveLength(2);
     expect(new Set(toutesLesDemandes.map((/** @type {any} */ item) => item.documentId)).size)
       .toBe(2);
+  });
+});
+
+describe('R9 - POSTULER SANS VISER UN POSTE PRECIS', () => {
+  // 🧨 LE CONSTAT DE RECETTE DU 24/08 : le selecteur n offrait QUE des postes.
+  // Or une detection accepte aussi des inscriptions hors annonce — le groupe
+  // d affichage « Sans poste precise » existait deja cote liste (p7-sans-poste),
+  // mais rien a l ecran ne permettait D Y ENTRER. Une porte de sortie sans porte
+  // d entree.
+  //
+  // 🔌 Le chemin est celui qui existait deja : `pendingDetectionSlot` a null
+  // renvoie la confirmation vers `handleConfirmParticipation`, exactement comme
+  // avant ce lot. Aucun second chemin d ecriture n est ouvert ici.
+
+  const joueur = () => authOrganisateur(false);
+
+  /**
+   * Ouvre le selecteur de postes comme un joueur le ferait depuis la barre du bas.
+   * @param {any} [surcharge] - surcharge de l evenement
+   * @returns {any} la racine du rendu
+   */
+  const ouvrirLeSelecteur = (surcharge = {}) => {
+    const root = monter({ auth: joueur(), event: buildDetection(surcharge) });
+    act(() => {
+      capteurBarreDuBas.props.onJoin();
+    });
+    return root;
+  };
+
+  /**
+   * Appuie sur le bouton qui porte exactement ce libelle.
+   * @param {any} root - la racine du rendu
+   * @param {string} libelle - le texte du bouton
+   * @returns {void}
+   */
+  const appuyerSur = (root, libelle) => {
+    const bouton = root.findAll(
+      (/** @type {any} */ node) => node.props?.accessibilityRole === 'button'
+        && textOf(node) === libelle,
+    )[0];
+    act(() => {
+      bouton.props.onPress();
+    });
+  };
+
+  test('R9 · temoin 18 — le selecteur offre une rangee « sans poste precis »', () => {
+    const root = ouvrirLeSelecteur();
+
+    expect(contient(root, 'Sans poste précis')).toBe(true);
+  });
+
+  test('R9 · temoin 19 — l emprunter confirme SANS annoncer de poste choisi', () => {
+    const root = ouvrirLeSelecteur();
+
+    appuyerSur(root, 'Participer sans poste');
+
+    // La modale de confirmation s ouvre — avec sa declaration de responsabilite,
+    // comme tout chemin generique — mais elle n annonce AUCUN poste.
+    expect(capteurModaleParticipation.props.isVisible).toBe(true);
+    expect(capteurModaleParticipation.props.contextNote).toBeFalsy();
+  });
+
+  test('R9 · temoin 20 — choisir un VRAI poste continue de l annoncer', () => {
+    // 🔒 La borne : la rangee neuve ne doit rien retirer au chemin d avant.
+    const root = ouvrirLeSelecteur();
+
+    appuyerSur(root, 'Participer');
+
+    expect(capteurModaleParticipation.props.contextNote).toBe('Poste choisi : Gardien.');
+  });
+
+  test('R9 · temoin 21 — sans AUCUN poste, on va droit a la confirmation, sans selecteur', () => {
+    // 🧭 CE TEMOIN DIT POURQUOI LA RANGEE N A PAS BESOIN D EXISTER ICI. Quand la
+    // detection ne cherche aucun poste, l ecran n ouvre pas de selecteur du tout :
+    // il confirme directement. C est DEJA « participer sans poste precis », par
+    // un chemin plus court. Un selecteur a une seule rangee serait un ecran de
+    // plus pour rien.
+    const root = monter({ auth: joueur(), event: buildDetection({ recruitmentAds: [] }) });
+    act(() => {
+      capteurBarreDuBas.props.onJoin();
+    });
+
+    expect(contient(root, 'Choisir un poste')).toBe(false);
+    expect(capteurModaleParticipation.props.isVisible).toBe(true);
+    expect(capteurModaleParticipation.props.contextNote).toBeFalsy();
   });
 });

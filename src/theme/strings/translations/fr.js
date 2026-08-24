@@ -1214,6 +1214,10 @@ export default {
       noPositionGroup: 'Sans poste précisé',
       noSlots: 'Aucun poste recherché',
       noSlotsHint: 'La séance est ouverte à tous les profils',
+      noSpecificPositionAction: 'Participer sans poste',
+      noSpecificPositionHint: 'Tu rejoins la séance sans viser un poste en particulier.'
+        + ' Le staff te placera sur place.',
+      noSpecificPositionTitle: 'Sans poste précis',
       positionFilled: '{{accepted}}/{{quantity}} retenu·e·s',
       slotsTitle: 'Postes recherchés',
       tileApplication: 'candidature à voir',

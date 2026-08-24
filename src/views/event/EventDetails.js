@@ -2913,6 +2913,23 @@ function EventDetails({ navigation, route }) {
     userData?.documentId,
   ]);
 
+  // 🎯 R9 — POSTULER SANS VISER UN POSTE.
+  //
+  // Le groupe d affichage « Sans poste precise » existait deja cote liste
+  // (`p7-sans-poste`), parce qu une detection accepte aussi des inscriptions
+  // hors annonce. Mais rien a l ecran ne permettait D Y ENTRER : le selecteur
+  // n offrait que des postes. C etait une porte de sortie sans porte d entree.
+  //
+  // ⛔ AUCUN SECOND CHEMIN D ECRITURE : `pendingDetectionSlot` a `null` renvoie
+  // la confirmation vers `handleConfirmParticipation`, exactement comme avant ce
+  // lot — donc avec la meme declaration de responsabilite.
+  const handleApplyWithoutDetectionSlot = useCallback(() => {
+    setIsDetectionSlotPickerVisible(false);
+    setPendingDetectionSlot(null);
+    setJoinModalError('');
+    setIsJoinModalVisible(true);
+  }, []);
+
   // @ts-ignore: FIXME: Baseline TS regression
   const handleApplyToDetectionSlotFromPicker = useCallback((slot) => {
     const slotDocumentId = String(slot?.documentId || '').trim();
@@ -8081,6 +8098,43 @@ function EventDetails({ navigation, route }) {
               </View>
             );
           })}
+
+          {/* 🧯 R9 — LA RANGEE QUI MANQUAIT : postuler sans viser un poste.
+              Elle est posee APRES les postes (on propose d abord ce que le club
+              cherche) et elle s affiche TOUJOURS, meme quand la detection n a
+              aucun poste — sinon le selecteur serait un cul-de-sac. */}
+          <View
+            style={[
+              ApplicationStyle.borderRadius24,
+              ApplicationStyle.borderWidth1,
+              Spaces.padding[16],
+              Spaces.gap[12],
+              {
+                backgroundColor: withAlpha(Colors.neutral00, 0.04),
+                borderColor: withAlpha(Colors.neutral00, 0.16),
+              },
+            ]}
+            testID="r9-poste-libre"
+          >
+            <View style={[Spaces.gap[4]]}>
+              <Text style={[Fonts.p1Bold, Fonts.neutral00]}>
+                {t('eventDetails.detection.noSpecificPositionTitle', 'Sans poste précis')}
+              </Text>
+              <Text style={[Fonts.p3, Fonts.neutral300]}>
+                {t(
+                  'eventDetails.detection.noSpecificPositionHint',
+                  'Tu rejoins la séance sans viser un poste en particulier.'
+                  + ' Le staff te placera sur place.',
+                )}
+              </Text>
+            </View>
+            <Button
+              disabled={applyToDetectionSlotMutation.isPending}
+              onPress={handleApplyWithoutDetectionSlot}
+              title={t('eventDetails.detection.noSpecificPositionAction', 'Participer sans poste')}
+              variant="Secondary"
+            />
+          </View>
         </View>
       </BottomModal>
 
