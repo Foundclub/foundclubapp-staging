@@ -5648,10 +5648,19 @@ function EventDetails({ navigation, route }) {
   // ⚠️ `centerContent` N'EST PAS UN CHOIX DE STYLE : sans lui, `SegmentedControl`
   // installe un pan gesture MANUEL (SegmentedControl.js:56 et 243-265) qui
   // entrerait en conflit avec le defilement vertical de la ScrollView qui
-  // l'entoure. Avec trois onglets courts, la repartition en largeurs egales est
-  // de toute facon celle de la maquette.
+  // l'entoure. La repartition en largeurs egales est celle de la maquette.
   // ⚠️ Le composant ne pose AUCUNE marge externe : c'est l'appelant qui les
   // pose (motif CMMembersScreen.js:297). Ici, le `gap: 24` du conteneur suffit.
+  //
+  // 📏 R6 (vague R) — ET C'EST EXACTEMENT LA QUE `fullLabels` MANQUAIT.
+  // La phrase « avec trois onglets COURTS, les tiers egaux suffisent » a tenu
+  // jusqu'a la recette du 24/08. Elle etait fausse : les libelles ne sont pas
+  // courts, ils portent leur effectif (planche 04, `withTabCount`). Un tiers de
+  // 360 pt vaut ~110 pt, et « Participants · 12 » n'y tient pas — le texte
+  // arrivait rogne a l'ecran alors qu'il etait ENTIER dans l'arbre.
+  // ⇒ `fullLabels` (pose par D63, jamais passe ici) autorise DEUX lignes et
+  // interdit la troncature. Il ne change ni la largeur des tiers, ni la valeur
+  // remontee par `onChange` — c'est une consigne d'affichage, rien d'autre.
   const renderDetailsTabs = () => {
     if (!detailsTabs.length) return null;
 
@@ -5659,6 +5668,7 @@ function EventDetails({ navigation, route }) {
       <View style={[Alignments.alignCenter]} testID="event-details-tabs">
         <SegmentedControl
           centerContent
+          fullLabels
           onChange={setDetailsTab}
           options={detailsTabs}
           value={detailsTab}

@@ -243,7 +243,11 @@ jest.mock('@/components/molecules/segmentedControl/SegmentedControl', () => {
   return function SegmentedControlDouble(/** @type {any} */ props) {
     return react.createElement(
       rn.View,
-      { testID: 'doublure-onglets' },
+      // 🔎 R6 (vague R) — LA DOUBLURE RELAIE AUSSI LA CONSIGNE D'AFFICHAGE.
+      // Le libelle a toujours ete complet DANS L'ARBRE : c'est `numberOfLines`
+      // qui le coupait A L'ECRAN. Un temoin qui lirait le texte rendu serait
+      // donc vert avant comme apres le correctif — seule la prop tranche.
+      { fullLabels: Boolean(props.fullLabels), testID: 'doublure-onglets' },
       (props.options || []).map((/** @type {any} */ option) => react.createElement(
         rn.TouchableOpacity,
         {
@@ -494,6 +498,29 @@ describe('L4 · temoin 4 — trois onglets sur un match, zero ailleurs', () => {
   test('un MATCH porte Aperçu · Participants · N · Convocation, dans cet ordre', () => {
     const root = monter();
 
+    expect(libellesDesOnglets(root)).toEqual(['Aperçu', 'Participants · 0', 'Convocation']);
+  });
+
+  // 📏 R6 (vague R) — LES TROIS LIBELLES NE SE ROGNENT PLUS.
+  //
+  // 🧨 CONSTAT DE RECETTE DU 24/08, un entraineur sur un MATCH : les trois
+  // onglets arrivaient COUPES. Le controle segmente repartit ses options en
+  // TIERS EGAUX et coupait a UNE ligne : sur un telephone de 360 pt, un tiers
+  // vaut ~110 pt, et « Participants · 12 » n'y tient pas.
+  //
+  // ⛔ LE COMPTEUR NE PART PAS POUR AUTANT — c'est la tentation que ce temoin
+  // interdit. La planche 04 l'EXIGE sur les quatre types ranges ; raccourcir le
+  // libelle aurait rendu l'ecran vert en SUPPRIMANT l'information. Ce qui change
+  // est la consigne d'affichage : deux lignes autorisees, zero troncature
+  // (`fullLabels`, pose par D63 sur `FacilityForm` et jamais passe ici).
+  test('les libelles sont demandes ENTIERS au controle segmente (R6, vague R)', () => {
+    const root = monter();
+
+    const [controle] = parTestID(root, 'doublure-onglets');
+
+    expect(controle.props.fullLabels).toBe(true);
+    // 🔒 Contre-epreuve dans le MEME temoin : la consigne d'affichage change,
+    // les compteurs restent. Sans cette ligne, vider les libelles passerait.
     expect(libellesDesOnglets(root)).toEqual(['Aperçu', 'Participants · 0', 'Convocation']);
   });
 
