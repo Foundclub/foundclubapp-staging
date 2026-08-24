@@ -196,6 +196,24 @@ function EventAnswerButtons({
             text={hasPendingRequest ? t('eventList.info.pendingRequest') : t('eventList.info.alreadyJoined')}
             textStyle={Fonts.p1Bold}
           />
+          {/* R4 (DECISION D ADEL DU 2026-08-24) — UN SEUL BOUTON, ET IL MARQUE ABSENT.
+
+              Cet etat en portait DEUX pour un seul geste : « Annuler ma
+              participation », qui remettait « sans reponse », et « Absent·e »,
+              qui creait la ligne 'missing'. Adel l a dit en recette : c est un
+              doublon, et « Absent·e » se lit comme un ETAT (« je suis absent »)
+              alors que c est une action. Il n en reste qu un.
+
+              🎯 CE BOUTON NE DECIDE PLUS DE CE QU IL FAIT. Effacer la reponse
+              ou marquer absent se tranche dans `resolveOwnAnswerAction`
+              (`views/event/ownAnswerAction.js`) : un seul endroit, teste, que
+              la fiche ET la carte de liste consultent. Le libelle ne peut donc
+              plus promettre autre chose que ce que le geste fait.
+
+              ⛔ Surtout pas `onDecline` ici : il agit SANS confirmation
+              (`EventDetails.js:2866`), et ce bouton en demande une depuis
+              toujours. La porte `onDeleteParticipation` est celle qui
+              confirme. */}
           {onDeleteParticipation && (
             <Button
               onPress={onDeleteParticipation}
@@ -204,23 +222,6 @@ function EventAnswerButtons({
               variant="SecondaryLight"
             />
           )}
-          {/* AA01 — LE RETOUR DE LA BASCULE, DANS L AUTRE SENS.
-              Un membre qui avait dit « present » n avait plus qu un bouton :
-              « Annuler ma participation », qui le ramene a « sans reponse ».
-              Pour se declarer absent il fallait DEUX gestes, et le premier
-              effacait sa reponse entre-temps — exactement ce que le constat
-              d Adel du 2026-08-20 reproche a l autre sens.
-              🔒 Reserve au MEMBRE d une equipe conviee : `POST /events/:id/missing`
-              exige une equipe source (`event.ts:3068`) et refuserait un
-              participant venu du dehors. */}
-          {canAnswerAsMember ? (
-            <Button
-              onPress={onDecline}
-              style={Alignments.fullWidth}
-              title={t('eventList.actions.absent')}
-              variant="Secondary"
-            />
-          ) : null}
         </View>
       );
     }
@@ -245,14 +246,37 @@ function EventAnswerButtons({
     }
 
     const answerChoicesNode = (() => {
-      if (event?.sessionStatus?.toLowerCase() === 'closed') {
+      // D5 (retour de recette du 2026-08-24) — OUVRIR UNE SEANCE NE DOIT PAS
+      // RETIRER SES BOUTONS A CELUI QUI EST DEJA CONVIE.
+      //
+      // 📏 CE QU ADEL A VU : la MEME seance, passee de « privee » a
+      // « ouverte », remplace Present / Absent par un « Participer » gris ET
+      // MUET. Le mecanisme, parce qu il n est pas devinable : la rangee de
+      // reponse etait reservee a `sessionStatus === 'closed'` ; ailleurs, tout
+      // le monde tombait sur « Participer », que `canEventBeJoined` eteint des
+      // que `capacity > 0` pour qui n a pas le role « Joueur » — et la phrase
+      // d a-cote exigeait `!canAct`, qui valait `true`. Bouton eteint, pas un
+      // mot.
+      //
+      // 🎯 Etre CONVIE decide de la rangee de reponse. Que la seance accepte du
+      // monde EN PLUS ne change rien pour ceux qui sont deja attendus.
+      const isClosedSession = event?.sessionStatus?.toLowerCase() === 'closed';
+
+      if (isClosedSession || canAnswerAsMember) {
         if (!resolvedParticipationFlow?.canAct) {
           return (
             <View style={[Alignments.fullWidth, Spaces.gap[16]]}>
               <Tag
-                text={t('eventList.info.restrictedEvent', 'Accès réserve')}
+                text={t('eventList.info.restrictedEvent', 'Accès réservé')}
                 textStyle={Fonts.p1Bold}
               />
+              {/* ⛔ JAMAIS MUET : quand le flux sait POURQUOI il refuse, il le
+                  dit. Une porte fermee sans motif se lit comme une panne. */}
+              {resolvedParticipationFlow?.blockedReason ? (
+                <Text style={[Fonts.p4, Fonts.neutral300]}>
+                  {resolvedParticipationFlow.blockedReason}
+                </Text>
+              ) : null}
               {onAbout ? (
                 <Button
                   onPress={onAbout}
@@ -287,23 +311,40 @@ function EventAnswerButtons({
         );
       }
 
+      const canJoinEvent = canEventBeJoined({
+        capacity: event?.capacity,
+        participations: event?.participations,
+        userId: userData?.documentId,
+        userRole: userData?.role,
+      });
+      const isEventFull = Boolean(event?.capacity)
+        && (event?.participations?.length || 0) >= Number(event.capacity);
+
+      // ⛔ PAS DE BOUTON ETEINT SANS MOTIF (suite de D5). A cet endroit,
+      // `canEventBeJoined` ne refuse plus que sur la jauge : la reponse deja
+      // donnee est traitee bien plus haut, et qui n est pas « Joueur » n arrive
+      // ici que s il est convie — auquel cas il a la rangee ci-dessus.
+      // 🔒 On ne l ecrit QUE si on peut le prouver (`isEventFull`) : un motif
+      // invente serait pire que le silence d avant.
+      let joinBlockedReason = '';
+      if (!resolvedParticipationFlow?.canAct) {
+        joinBlockedReason = resolvedParticipationFlow?.blockedReason || '';
+      } else if (!canJoinEvent && isEventFull) {
+        joinBlockedReason = t('eventList.info.eventFull', 'Cet événement est complet.');
+      }
+
       return (
         <View style={[Alignments.fullWidth, Spaces.gap[12]]}>
           <Button
-            disabled={!resolvedParticipationFlow?.canAct || !canEventBeJoined({
-              capacity: event?.capacity,
-              participations: event?.participations,
-              userId: userData?.documentId,
-              userRole: userData?.role,
-            })}
+            disabled={!resolvedParticipationFlow?.canAct || !canJoinEvent}
             onPress={onJoin}
             style={Alignments.fullWidth}
             title={resolvedParticipationFlow?.actionLabel || t('eventList.actions.join')}
             variant="Primary"
           />
-          {!resolvedParticipationFlow?.canAct && resolvedParticipationFlow?.blockedReason ? (
+          {joinBlockedReason ? (
             <Text style={[Fonts.p4, Fonts.neutral300]}>
-              {resolvedParticipationFlow.blockedReason}
+              {joinBlockedReason}
             </Text>
           ) : null}
         </View>

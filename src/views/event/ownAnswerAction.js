@@ -1,4 +1,5 @@
 import { getUserEntityKey, normalizeParticipationStatus } from '@/domains/event/participationState';
+import { resolveClientSourceTeamForUser } from '@/domains/participation/participationFlow';
 
 /**
  * Les quatre suites possibles quand le joueur appuie sur le bouton qui porte sa
@@ -47,16 +48,40 @@ export const resolveOwnAnswerAction = ({ activeEventParticipations = [], event, 
     return { kind: OwnAnswerAction.switchToPresent, participationId: '' };
   }
 
+  const isListedAsParticipant = (event?.participations || []).some(
+    (participant) => getUserEntityKey(participant) === currentUserKey,
+  );
+
+  // R4 (DECISION D ADEL DU 2026-08-24) — « ANNULER MA PARTICIPATION » MARQUE
+  // ABSENT, il n efface plus.
+  //
+  // La vue joueur offrait DEUX boutons pour un seul geste ; il n en reste qu un,
+  // et c est ICI que se decide ce qu il fait — pas dans le composant. Un seul
+  // endroit, teste, que la fiche et la carte de liste consultent toutes deux.
+  //
+  // 🔒 LA LIGNE DE PARTAGE EST CELLE DU SERVEUR : `POST /events/:id/missing`
+  // EXIGE une equipe source (`event.ts:3068`). On reutilise donc la fonction qui
+  // fait deja apparaitre ce bouton dans `EventAnswerButtons`
+  // (`resolveClientSourceTeamForUser`) : meme predicat des deux cotes, le
+  // libelle ne peut pas diverger du geste.
+  //
+  // ⛔ JAMAIS UNE DEMANDE EN ATTENTE : personne ne l a acceptee, donc personne
+  // ne l attendait. La ranger chez les absents fausserait le compteur. Un statut
+  // inconnu s en remet a `event.participations`, que le serveur tient.
+  const rowStatus = normalizeParticipationStatus(myParticipation?.participationStatus);
+  const answeredPresent = rowStatus === 'accepted' || (!rowStatus && isListedAsParticipant);
+  const isConvenedMember = Boolean(resolveClientSourceTeamForUser(event, user));
+
   if (myParticipation?.documentId) {
+    if (isConvenedMember && answeredPresent && event?.documentId) {
+      return { kind: OwnAnswerAction.declareMissing, participationId: '' };
+    }
+
     return {
       kind: OwnAnswerAction.deleteParticipation,
       participationId: String(myParticipation.documentId),
     };
   }
-
-  const isListedAsParticipant = (event?.participations || []).some(
-    (participant) => getUserEntityKey(participant) === currentUserKey,
-  );
 
   if (isListedAsParticipant && event?.documentId) {
     return { kind: OwnAnswerAction.declareMissing, participationId: '' };

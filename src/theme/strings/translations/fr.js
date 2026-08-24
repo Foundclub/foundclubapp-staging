@@ -1685,7 +1685,9 @@ export default {
       alreadyJoined: 'Je participe !',
       alreadyMissing: 'Je serai absent·e',
       declinedRequest: 'Demande refusée',
+      eventFull: 'Cet événement est complet.',
       pendingRequest: 'Demande en attente',
+      restrictedEvent: 'Accès réservé',
       staffDoesNotRsvp: 'Tu encadres cet événement : ce sont les joueurs qui répondent.',
     },
     joinModal: {

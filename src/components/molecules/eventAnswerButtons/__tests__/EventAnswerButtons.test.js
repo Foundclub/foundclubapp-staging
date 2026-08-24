@@ -129,10 +129,15 @@ describe('EventAnswerButtons — repondre present ou absent (caracterisation)', 
     expect(onDecline).toHaveBeenCalledTimes(1);
   });
 
-  it('TROU fige — evenement PUBLIC : aucun bouton « absent », seulement « participer »', () => {
-    // sessionStatus « open » = « Public » cote produit. Un joueur de l equipe
-    // conviee n a alors AUCUN moyen de se declarer absent, ni sur la carte ni
-    // sur le detail : la branche a deux boutons est reservee au prive.
+  it('TROU BOUCHE (R4/D5) — evenement PUBLIC : le membre convie garde present et absent', () => {
+    // 🕳️ CE TEMOIN FIGEAIT UN TROU, ET IL EST BOUCHE DEPUIS LE 2026-08-24.
+    // Il disait : « sessionStatus open = Public ; un joueur de l equipe conviee
+    // n a alors AUCUN moyen de se declarer absent, la branche a deux boutons
+    // est reservee au prive. » Adel l a vu en recette : ouvrir une seance
+    // retirait ses boutons a celui qui etait deja attendu, au profit d un
+    // « Participer » gris et muet.
+    // 🎯 Desormais c est etre CONVIE qui decide, pas l ouverture de la seance.
+    // Detail et cas limites : `EventAnswerButtonsR4Pied.test.js`.
     const tree = render({
       event: buildEvent({ sessionStatus: 'open' }),
       onDecline: jest.fn(),
@@ -140,8 +145,10 @@ describe('EventAnswerButtons — repondre present ou absent (caracterisation)', 
       onParticipate: jest.fn(),
     });
 
-    // Le libelle vient de resolveParticipationFlow (texte en dur, pas une cle).
-    expect(buttonTitles(tree)).toEqual(['Participer']);
+    expect(buttonTitles(tree)).toEqual([
+      'eventList.actions.present',
+      'eventList.actions.absent',
+    ]);
   });
 });
 
@@ -172,16 +179,13 @@ describe('EventAnswerButtons — changer d avis (caracterisation)', () => {
     });
 
     expect(tagTexts(tree)).toEqual(['eventList.info.alreadyJoined']);
-    // AA01 (2026-08-20) — « Je serai absent·e » s ajoute ici. Le sujet de ce
-    // temoin est l ETIQUETTE (ligne au-dessus) ; la liste des boutons decrit
-    // l etat, et cet etat a change volontairement : un membre deja present
-    // pouvait seulement ANNULER sa reponse, donc se declarer absent lui
-    // demandait DEUX gestes et effacait sa reponse entre les deux.
-    // Verrouille par `EventAnswerButtonsBasculeAA01.test.js`.
-    expect(buttonTitles(tree)).toEqual([
-      'eventDetails.actions.cancelResponse',
-      'eventList.actions.absent',
-    ]);
+    // R4 (2026-08-24) — LE DOUBLON EST PARTI. « Absent·e » s ajoutait ici
+    // depuis AA01 : Adel l a signale en recette, deux boutons pour un seul
+    // geste, et « Absent·e » qui se lit comme un etat. Il n en reste QU UN, et
+    // c est `resolveOwnAnswerAction` qui decide ce qu il fait — supprimer pour
+    // qui vient du dehors, MARQUER ABSENT pour un membre de l equipe conviee.
+    // Verrouille par `EventAnswerButtonsR4.test.js` et `ownAnswerActionR4.test.js`.
+    expect(buttonTitles(tree)).toEqual(['eventDetails.actions.cancelResponse']);
   });
 });
 
@@ -194,12 +198,11 @@ describe('EventAnswerButtons — validation manuelle (caracterisation)', () => {
     });
 
     expect(tagTexts(tree)).toEqual(['eventList.info.pendingRequest']);
-    // AA01 — meme raison qu au temoin precedent : un membre dont la demande est
-    // en attente peut desormais se declarer absent en un geste.
-    expect(buttonTitles(tree)).toEqual([
-      'eventDetails.actions.cancelResponse',
-      'eventList.actions.absent',
-    ]);
+    // R4 (2026-08-24) — meme raison qu au temoin precedent : un seul bouton.
+    // 🔒 Et pour CET etat il reste une suppression PURE : un demandeur que
+    // personne n a accepte n etait pas attendu, le ranger chez les absents
+    // fausserait le compteur (`ownAnswerActionR4.test.js`, temoin R4/7).
+    expect(buttonTitles(tree)).toEqual(['eventDetails.actions.cancelResponse']);
   });
 
   it('demande REFUSEE : le joueur VOIT le refus, et il voit le MOTIF', () => {
