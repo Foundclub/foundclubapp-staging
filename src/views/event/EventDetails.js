@@ -103,6 +103,15 @@ import {
   applyToRecruitmentAd,
   getRecruitmentApplications,
 } from '@/services/recruitment/recruitmentService';
+// R9 — LE RAIL D INVITATION DU LOT P10, recolte et deploye. Comme pour N2
+// plus haut, ces deux fonctions ne sont appelees que dans une fermeture (le
+// rendu de la fiche et la mutation), jamais au montage — mais l IMPORT, lui,
+// tire `@/services/client`, qui jette sans `.env`. Les 20 suites qui montent
+// cet ecran doublent donc le service, dans LE MEME COMMIT que cette ligne.
+import {
+  inviteToTeam,
+  resolveTeamInvitationAvailability,
+} from '@/services/teamMembershipRequest/teamMembershipRequestService';
 import {
   useGetTournamentDashboard,
 } from '@/services/tournamentCompetition/tournamentCompetitionQueries';
@@ -610,6 +619,12 @@ function EventDetails({ navigation, route }) {
   const [isDetectionSlotPickerVisible, setIsDetectionSlotPickerVisible] = useState(false);
   // 🗂️ P7 — LA FICHE CANDIDAT. `null` = fermee. Elle porte la personne, sa
   // participation (quand il y en a une) et le poste retrouve.
+  // R9 — les candidats dont l invitation vient de partir. Meme motif que dans
+  // `RecruitmentAdDetails` (lot P10) : le serveur ne renvoie pas l etat de
+  // l invitation avec la demande, et on s interdit une requete de plus.
+  const [invitedParticipationIds, setInvitedParticipationIds] = useState(
+    /** @type {string[]} */ ([]),
+  );
   const [detectionCandidateSheet, setDetectionCandidateSheet] = useState(
     /** @type {any} */ (null),
   );
@@ -3035,6 +3050,43 @@ function EventDetails({ navigation, route }) {
   // d'affichage ecrite au milieu d'une balise n'est relisible par personne, et
   // c'est la que les fautes se cachent. La feuille, plus bas, ne fait que les
   // poser.
+  // 🤝 R9 — PEUT-ON INVITER CE CANDIDAT DANS L EQUIPE ?
+  //
+  // 🪤 L ADAPTATEUR, ET C EST LE PIEGE DU LOT : la regle partagee a ete
+  // ecrite pour une CANDIDATURE d annonce, elle lit donc `application.applicant`.
+  // La fiche, elle, porte `participation.user`. On adapte l objet qu on lui
+  // passe ; on NE TOUCHE PAS a la fonction, qui sert aussi a l ecran de l annonce.
+  //
+  // 🏟️ L equipe est celle de l EVENEMENT : l annonce ne descend pas la
+  // sienne (`recruitmentAds` est peuple sans `team`), et c est de toute facon
+  // l equipe organisatrice qui a du sens ici — c est deja elle qui commande le
+  // droit de trancher les demandes (`canApprovePendingRequests`).
+  const detectionCandidateInvitation = resolveTeamInvitationAvailability(
+    { applicant: detectionCandidateSheet?.user },
+    event?.team?.documentId,
+  );
+  const detectionCandidateAlreadyInvited = invitedParticipationIds.includes(
+    String(detectionCandidateSheet?.participation?.documentId || ''),
+  );
+  const inviteCandidateMutation = /** @type {any} */ (useMutation({
+    mutationFn: (/** @type {any} */ payload = {}) => inviteToTeam({
+      team: payload.teamId,
+      user: payload.candidateId,
+    }),
+    onError: (/** @type {any} */ error) => {
+      Alert.alert(
+        t('eventDetails.detection.candidateInvite', 'Inviter dans l’équipe'),
+        error?.message || t('common.errorOccurred'),
+      );
+    },
+    onSuccess: (/** @type {any} */ _data, /** @type {any} */ variables) => {
+      const participationId = String(variables?.participationId || '').trim();
+      if (!participationId) return;
+      setInvitedParticipationIds((previous) => (
+        previous.includes(participationId) ? previous : [...previous, participationId]
+      ));
+    },
+  }));
   const detectionCandidateName = [
     detectionCandidateSheet?.user?.firstname,
     detectionCandidateSheet?.user?.lastname,
@@ -8222,24 +8274,48 @@ function EventDetails({ navigation, route }) {
             </View>
           ) : null}
 
-          {/* 🔒 « INVITER DANS L'EQUIPE » NAIT GRISE, ET SON MOTIF EST ECRIT.
-              Le rail serveur de l'invitation avec consentement est le lot P10 ;
-              le brancher ici est un micro-lot qui vient APRES la recolte des
-              deux. Un bouton grise qui dit pourquoi vaut mieux qu'un bouton
-              absent : l'organisateur sait que ca existe et que ca arrive.
-              ⛔ ET SURTOUT : il ne doit JAMAIS devenir un ajout direct a
-              l'equipe (`players.connect`), qui se passerait du consentement de
-              la personne. */}
+          {/* 🤝 R9 — « INVITER DANS L'EQUIPE », BRANCHE SUR LE RAIL P10.
+              ⛔ CE N'EST PAS UN AJOUT A L'EQUIPE : le serveur cree une invitation
+              `pending`, la personne recoit une notification, et c'est ELLE qui
+              accepte. Jamais de `players.connect` ici — ce serait se passer de
+              son consentement.
+              🗣️ Et quand ce n'est pas possible, le bouton reste GRISE AVEC SON
+              MOTIF : un bouton disparu ne s'explique pas. Ce qui change depuis P7,
+              c'est que le motif dit desormais la VERITE (pas de compte, pas
+              d'equipe) au lieu de « ca arrive bientot ». */}
           <View style={[Spaces.gap[4]]}>
             <Button
-              disabled
-              onPress={() => {}}
-              title={t('eventDetails.detection.candidateInvite', 'Inviter dans l’équipe')}
+              disabled={!detectionCandidateInvitation.canInvite
+                || detectionCandidateAlreadyInvited
+                || inviteCandidateMutation.isPending}
+              isLoading={inviteCandidateMutation.isPending}
+              onPress={() => inviteCandidateMutation.mutate({
+                candidateId: detectionCandidateInvitation.candidateId,
+                participationId: detectionCandidateSheet?.participation?.documentId,
+                teamId: event?.team?.documentId,
+              })}
+              title={detectionCandidateAlreadyInvited
+                ? t('recruitment.invite.sent', 'Invitation envoyée')
+                : t('eventDetails.detection.candidateInvite', 'Inviter dans l’équipe')}
               variant="Primary"
             />
-            <Text style={[Fonts.p4, Fonts.neutral300]} testID="p7-fiche-invite-motif">
-              {t('eventDetails.detection.candidateInviteSoon', 'L’invitation arrive bientôt.')}
-            </Text>
+            {detectionCandidateInvitation.canInvite && !detectionCandidateAlreadyInvited
+              ? null
+              : (
+                <Text style={[Fonts.p4, Fonts.neutral300]} testID="p7-fiche-invite-motif">
+                  {detectionCandidateInvitation.reason === 'missing-team'
+                    ? t(
+                      'eventDetails.detection.candidateInviteNoTeam',
+                      'Cet événement n’est rattaché à aucune équipe :'
+                      + ' il n’y a nulle part où inviter cette personne.',
+                    )
+                    : t(
+                      'recruitment.invite.needsAccount',
+                      'Cette personne n’a pas encore de compte FoundClub :'
+                      + ' impossible de l’inviter.',
+                    )}
+                </Text>
+              )}
           </View>
         </View>
       </BottomModal>

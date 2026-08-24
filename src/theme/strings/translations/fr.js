@@ -1195,6 +1195,8 @@ export default {
       candidateDecline: 'Refuser',
       candidateFallbackName: 'Candidat·e',
       candidateInvite: 'Inviter dans l’équipe',
+      candidateInviteNoTeam: 'Cet événement n’est rattaché à aucune équipe :'
+        + ' il n’y a nulle part où inviter cette personne.',
       candidateInviteSoon: 'L’invitation arrive bientôt.',
       candidateNoPosition: 'Inscription hors annonce, sans poste',
       candidateReviewEmpty: 'Pas encore de retour du staff.',

@@ -30,6 +30,18 @@ const mockEventQuery = { data: /** @type {any} */ (null) };
 const mockAccepterParticipation = jest.fn();
 const mockRefuserParticipation = jest.fn();
 const mockLireLesCandidatures = jest.fn(() => Promise.resolve([]));
+// R9 — le rail d invitation du lot P10, double. LA REGLE de disponibilite a
+// ses propres temoins (`services/teamMembershipRequest/__tests__/P10-invitation`)
+// et on ne la reteste pas ici : ce qui se prouve dans cette suite, c est le
+// CABLAGE — que l ecran appelle la regle avec le bon objet, et qu il obeit a
+// son verdict. On ne peut pas appeler la vraie fonction : la charger tirerait
+// `@/services/client`, qui jette sans `.env`.
+const mockInviterDansLEquipe = jest.fn(() => Promise.resolve({ documentId: 'invit-1' }));
+const mockResoudreDisponibilite = jest.fn(() => ({
+  canInvite: true,
+  candidateId: 'u-gardien-2',
+  reason: '',
+}));
 // 📑 R9 — LA COPIE PAGINEE, pilotable. Les demandes arrivent a l ecran par
 // DEUX chemins : embarquees dans l evenement, et paginees par cette requete.
 // Seule la seconde porte `recruitmentAd` cote serveur ; il faut donc pouvoir
@@ -39,6 +51,17 @@ const mockParticipationsPages = { pages: /** @type {any} */ (null) };
 // 📸 Les capteurs vivent dans `@/testSupport/p7Capteurs` (importe plus haut) :
 // chaque rendu y ECRASE la valeur, un temoin lit donc toujours le DERNIER
 // rendu, celui qui correspond a l'etat courant de l'ecran.
+
+// 🧨 R9 — MEME PIEGE QUE DANS LES 19 SUITES VOISINES (`@/services/client`
+// jette au chargement sans `.env`), mais ici la doublure est PILOTABLE : c est
+// cette suite qui prouve les etats du bouton « Inviter ».
+jest.mock('@/services/teamMembershipRequest/teamMembershipRequestService', () => ({
+  inviteToTeam: (/** @type {any} */ invitation) => mockInviterDansLEquipe(invitation),
+  resolveTeamInvitationAvailability: (
+    /** @type {any} */ candidature,
+    /** @type {any} */ equipe,
+  ) => mockResoudreDisponibilite(candidature, equipe),
+}));
 
 jest.mock('react-i18next', () => {
   const rendre = (/** @type {any} */ modele, /** @type {any} */ options) => String(modele)
@@ -90,10 +113,19 @@ jest.mock('@react-navigation/native', () => ({
 }));
 
 jest.mock('@tanstack/react-query', () => ({
+  // R9 — `mutate` EXECUTE desormais vraiment sa `mutationFn`, puis rend la
+  // main a `onSuccess` / `onError`. Sans ca, aucun temoin ne peut prouver
+  // qu un bouton ECRIT quelque chose : tous les services sont doubles, donc
+  // executer ne touche rien de reel.
   useMutation: (/** @type {any} */ options) => ({
     isPending: false,
-    mutate: jest.fn(),
-    mutateAsync: jest.fn(),
+    mutate: (/** @type {any} */ variables) => Promise
+      .resolve(options?.mutationFn?.(variables))
+      .then((/** @type {any} */ data) => options?.onSuccess?.(data, variables))
+      .catch((/** @type {any} */ error) => options?.onError?.(error, variables)),
+    mutateAsync: (/** @type {any} */ variables) => Promise.resolve(
+      options?.mutationFn?.(variables),
+    ),
     options,
   }),
   useQueryClient: () => ({
@@ -500,6 +532,8 @@ const monter = (/** @type {any} */ { auth, event, pagesPaginees = null, params =
   mockAccepterParticipation.mockClear();
   mockRefuserParticipation.mockClear();
   mockLireLesCandidatures.mockClear();
+  mockInviterDansLEquipe.mockClear();
+  mockResoudreDisponibilite.mockClear();
   capteurEntete.props = null;
   capteurParticipants.props = null;
   capteurBarreDuBas.props = null;
@@ -871,11 +905,20 @@ describe('P7 - la fiche candidat, en feuille', () => {
 });
 
 describe('P7 - le bouton « Inviter dans l equipe » nait GRISE (serveur = lot P10)', () => {
-  test('P7 · temoin 18 — il est monte, DESACTIVE, et son motif est ecrit', () => {
-    // 🔒 Un bouton grise qui dit pourquoi vaut mieux qu'un bouton absent :
-    // l'organisateur sait que la fonction existe et qu'elle arrive. Le rail
-    // serveur de l'invitation avec consentement est le lot P10 ; le brancher
-    // ici est un micro-lot qui vient APRES la recolte des deux.
+  test('P7 · temoin 18 — il est monte, et QUAND IL EST GRISE son motif est ecrit', () => {
+    // 🔒 L INTENTION DE CE TEMOIN N A PAS CHANGE : un bouton grise qui dit
+    // pourquoi vaut mieux qu'un bouton absent.
+    //
+    // 🔄 R9 (24/08) — CE QUI A CHANGE, ET C EST VOULU : le rail serveur du
+    // lot P10 existe maintenant, et le bouton est BRANCHE dessus. Il n'est donc
+    // plus grise par principe, et son motif ne dit plus « ca arrive bientot »
+    // mais la VRAIE raison. Ce temoin garde son sujet — le motif ecrit — en le
+    // posant sur le cas qui reste impossible : une personne sans compte.
+    mockResoudreDisponibilite.mockImplementation(() => ({
+      canInvite: false,
+      candidateId: '',
+      reason: 'no-account',
+    }));
     const root = monter({ event: buildDetection({ participations: [GARDIEN_1] }) });
     allerSurLOnglet(root, 'participants');
     act(() => {
@@ -897,7 +940,13 @@ describe('P7 - le bouton « Inviter dans l equipe » nait GRISE (serveur = lot P
 
     expect(inviter).toBeDefined();
     expect(inviter.props.disabled).toBe(true);
-    expect(contient(root, 'L’invitation arrive bientôt.')).toBe(true);
+    expect(contient(root, 'pas encore de compte FoundClub')).toBe(true);
+
+    mockResoudreDisponibilite.mockImplementation(() => ({
+      canInvite: true,
+      candidateId: 'u-gardien-2',
+      reason: '',
+    }));
   });
 });
 
@@ -1080,5 +1129,142 @@ describe('R9 - POSTULER SANS VISER UN POSTE PRECIS', () => {
     expect(contient(root, 'Choisir un poste')).toBe(false);
     expect(capteurModaleParticipation.props.isVisible).toBe(true);
     expect(capteurModaleParticipation.props.contextNote).toBeFalsy();
+  });
+});
+
+describe('R9 - LE BOUTON « INVITER DANS L EQUIPE » EST ENFIN BRANCHE', () => {
+  // 🔒 Ce bouton naissait GRISE avec le motif « L invitation arrive bientot »
+  // (lot P7), parce que le rail serveur n existait pas encore. Il existe depuis
+  // le lot P10 — recolte ET deploye — et `RecruitmentAdDetails` s en sert deja.
+  // Ce lot recopie CE cablage-la ; il n en invente pas un second.
+  //
+  // ⛔ CE QUE CE BOUTON N EST PAS, ET NE DOIT JAMAIS DEVENIR : un ajout direct a
+  // l equipe. Le serveur cree une invitation `pending` ; c est la PERSONNE qui
+  // accepte. Le temoin 24 verifie que l ecran appelle bien ce rail-la.
+  //
+  // 🔌 CE QUI SE PROUVE ICI, C EST LE CABLAGE. La regle de disponibilite a ses
+  // propres temoins cote service ; ici on prouve que l ecran l appelle avec le
+  // BON OBJET — c est le piege du lot : la regle lit `application.applicant`
+  // alors que la fiche porte `participation.user`.
+
+  const DEMANDE_A_TRAITER = {
+    documentId: 'part-gardien-attente',
+    isActive: true,
+    participationStatus: 'pending',
+    recruitmentAd: { documentId: 'ad-gardien' },
+    user: GARDIEN_2,
+  };
+
+  /**
+   * Ouvre la fiche d un candidat depuis l onglet Candidats.
+   * @param {any} [surcharge] - surcharge de l evenement
+   * @returns {any} la racine du rendu
+   */
+  const ouvrirLaFiche = (surcharge = {}) => {
+    const root = monter({ event: buildDetection(surcharge) });
+    allerSurLOnglet(root, 'participants');
+    act(() => {
+      capteurParticipants.props.onCandidatePress({
+        participation: DEMANDE_A_TRAITER,
+        user: GARDIEN_2,
+      });
+    });
+    return root;
+  };
+
+  /**
+   * Rend le bouton dont le libelle commence par « Inviter » ou « Invitation ».
+   * @param {any} root - la racine du rendu
+   * @returns {any} le noeud du bouton
+   */
+  // La regle est interrogee a CHAQUE rendu : un `...Once` serait avale par le
+  // premier. Les temoins posent donc un comportement DURABLE, remis a neuf ici.
+  afterEach(() => {
+    mockResoudreDisponibilite.mockImplementation(() => ({
+      canInvite: true,
+      candidateId: 'u-gardien-2',
+      reason: '',
+    }));
+  });
+
+  const boutonInviter = (root) => root.findAll(
+    (/** @type {any} */ node) => node.props?.accessibilityRole === 'button'
+      && /^(Inviter|Invitation)/.test(textOf(node)),
+  )[0];
+
+  test('R9 · temoin 22 — L ADAPTATEUR : la regle recoit `applicant`, pas `user`', () => {
+    // 🪤 LE PIEGE EXACT DU LOT. `resolveTeamInvitationAvailability` lit
+    // `application?.applicant` parce qu elle a ete ecrite pour une CANDIDATURE
+    // d annonce. La fiche candidat, elle, porte `participation.user`. Si on lui
+    // passe l objet tel quel, elle repond « pas de compte » pour tout le monde.
+    ouvrirLaFiche();
+
+    expect(mockResoudreDisponibilite).toHaveBeenCalled();
+    // La regle est appelee a chaque rendu ; c est le DERNIER appel qui porte la
+    // fiche ouverte.
+    const appels = mockResoudreDisponibilite.mock.calls;
+    const [candidature, equipe] = appels[appels.length - 1];
+    expect(candidature.applicant).toEqual(GARDIEN_2);
+    expect(equipe).toBe(TEAM_ID);
+  });
+
+  test('R9 · temoin 23 — quand c est possible, le bouton n est plus grise', () => {
+    const root = ouvrirLaFiche();
+
+    expect(boutonInviter(root).props.disabled).toBe(false);
+    expect(contient(root, 'L’invitation arrive bientôt.')).toBe(false);
+  });
+
+  test('R9 · temoin 24 — l appui cree une INVITATION, jamais un ajout d office', () => {
+    const root = ouvrirLaFiche();
+
+    act(() => {
+      boutonInviter(root).props.onPress();
+    });
+
+    expect(mockInviterDansLEquipe).toHaveBeenCalledTimes(1);
+    expect(mockInviterDansLEquipe.mock.calls[0][0]).toEqual(
+      expect.objectContaining({ team: TEAM_ID, user: GARDIEN_2.documentId }),
+    );
+  });
+
+  test('R9 · temoin 25 — une fois partie, l invitation le DIT et le bouton se ferme', async () => {
+    const root = ouvrirLaFiche();
+
+    await act(async () => {
+      await boutonInviter(root).props.onPress();
+    });
+
+    expect(contient(root, 'Invitation envoyée')).toBe(true);
+    expect(boutonInviter(root).props.disabled).toBe(true);
+  });
+
+  test('R9 · temoin 26 — SANS COMPTE : bouton grise, et le motif est HONNETE', () => {
+    // 🎯 Le remplacement du « ça arrive bientôt » : un motif qui dit la verite.
+    mockResoudreDisponibilite.mockReturnValue({
+      canInvite: false,
+      candidateId: '',
+      reason: 'no-account',
+    });
+    const root = ouvrirLaFiche();
+
+    expect(boutonInviter(root).props.disabled).toBe(true);
+    expect(contient(root, 'pas encore de compte FoundClub')).toBe(true);
+    expect(contient(root, 'L’invitation arrive bientôt.')).toBe(false);
+  });
+
+  test('R9 · temoin 27 — SANS EQUIPE : grise aussi, avec son propre motif', () => {
+    // 🧭 Le cas du canal PARTICIPATION : quelqu un inscrit a la seance sans
+    // passer par une annonce, sur un evenement qui n a pas d equipe. Il n y a
+    // aucune equipe ou l inviter, et l ecran le dit au lieu de se taire.
+    mockResoudreDisponibilite.mockReturnValue({
+      canInvite: false,
+      candidateId: GARDIEN_2.documentId,
+      reason: 'missing-team',
+    });
+    const root = ouvrirLaFiche({ team: null });
+
+    expect(boutonInviter(root).props.disabled).toBe(true);
+    expect(contient(root, 'aucune équipe')).toBe(true);
   });
 });
