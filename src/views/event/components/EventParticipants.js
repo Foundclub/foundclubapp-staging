@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { useIsMutating, useMutationState } from '@tanstack/react-query';
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Image, Text, TouchableOpacity, View,
@@ -17,6 +17,12 @@ import SearchBar from '@/components/molecules/searchBar/SearchBar';
 import { useLicenseAssignments } from '@/services/license/licenseQueries';
 
 import { formatDateTimeWithDayPrefix } from '@/utils/date';
+
+// 🪤 R7-d — PAR L ALIAS, PAS EN RELATIF. `import/order` veut l alias avant le
+// relatif, `perfectionist/sort-imports` veut l inverse : un seul import en
+// `../` suffisait a les mettre en contradiction, et aucune des deux ne peut
+// ceder. Ce fichier n en avait aucun jusqu ici — d ou le piege.
+import { useAttendanceCallMutations } from '@/views/event/attendance/useAttendanceCallMutations';
 
 // import statique (pas require) : require n'existe pas sur le rendu web ESM.
 import SHARE_ICON from '@/assets/icons/share2.png';
@@ -352,21 +358,29 @@ const resolveAttendanceBadge = ({
     };
   }
 
+  // 🏷️ R7-c (vague R, 24/08, decision produit d Adel) — LES DEUX DERNIERES
+  // SORTIES DISAIENT « En attente », a des etats OPPOSES.
+  //
+  // Le coup d envoi est passe et personne ne l a pointe : ce n est pas un etat
+  // d attente, c est une ACTION qui attend le coach. La pastille le dit, et le
+  // « +X min » qui l accompagne dit depuis combien de temps.
   if (runningLateMinutes > 0) {
     return {
       backgroundColor: `${colors.warning500}18`,
       borderColor: `${colors.warning500}36`,
       textColor: colors.warning500,
-      title: 'En attente',
+      title: t('eventDetails.attendanceBadge.toMark', 'À pointer'),
       value: `+${runningLateMinutes} min`,
     };
   }
 
+  // …et la, il a REPONDU present avant le coup d envoi. Rien n attend
+  // personne : la pastille raconte ce qu il a fait, pas une consigne.
   return {
     backgroundColor: `${colors.neutral300}12`,
     borderColor: `${colors.neutral300}24`,
     textColor: colors.neutral200,
-    title: 'En attente',
+    title: t('eventDetails.attendanceBadge.saidYes', 'A dit présent'),
     value: null,
   };
 };
@@ -408,6 +422,33 @@ function EventParticipants({
   // ensemble — ils declenchent le meme envoi.
   const isReminding = useIsMutating({ mutationKey: REMIND_EVENT_MUTATION_KEY }) > 0;
   const areParticipantIdentitiesHidden = event?.participantIdentitiesHidden === true;
+
+  // ✍️ R7-d — L ECRITURE « À l'heure », ET POURQUOI ELLE VIT ICI.
+  //
+  // ⚠️ CE FICHIER SE PASSAIT DE TOUT SERVICE, ET C ETAIT ECRIT (voir AE02
+  // juste en dessous). Le principe tenait parce qu il n y avait que des
+  // LECTURES a faire, et qu un cache de mutation suffisait. Pointer quelqu un
+  // est une ECRITURE : il n y a pas de cache d ou la tirer, et les deux seuls
+  // rappels que `EventDetails` fait descendre (`onCoachMarkArrival`,
+  // `onCoachEditLate`) ouvrent tous les deux le MEME modal — c est justement
+  // le doublon que ce lot supprime.
+  // 💥 CONSEQUENCE PAYEE, ET ASSUMEE : les 5 suites qui montent ce composant
+  // doivent desormais mocker `eventService` en plus de `licenseQueries` — le
+  // vrai module jette au CHARGEMENT quand `.env` est absent, ce qui est le cas
+  // de toute copie de travail.
+  const identifiantEvenement = event?.documentId || '';
+  const { coachArrivalMutation } = useAttendanceCallMutations(identifiantEvenement);
+  const pointerALHeure = useCallback((/** @type {User} */ joueur) => {
+    const identifiant = joueur?.documentId;
+    // ⛔ Les deux identifiants construisent l URL. Sans l un d eux, la requete
+    // partirait sur `/events//attendance//coach-arrival` : un 404 illisible
+    // plutot qu un geste qui ne part pas.
+    if (!identifiant || !identifiantEvenement) return;
+    // 🧨 `lateMinutes: 0` n est pas decoratif : sans lui le serveur calcule le
+    // retard depuis le coup d envoi et pointerait « +12 min » quelqu un que le
+    // coach vient justement de declarer a l heure.
+    coachArrivalMutation.mutate({ payload: { lateMinutes: 0 }, userId: identifiant });
+  }, [coachArrivalMutation, identifiantEvenement]);
 
   // AE02 (1I) — LE MOTIF ANTI-SPAM, AVANT L APPUI.
   // 🧨 `nextReminderAt` n existe NULLE PART tant qu aucune relance n est
@@ -565,6 +606,7 @@ function EventParticipants({
         nowMs={nowMs}
         onEditLate={onCoachEditLate}
         onMarkArrival={onCoachMarkArrival}
+        onMarkOnTime={pointerALHeure}
         onPress={options.onPress || handleUserPress}
         paymentStatus={statutPaiement}
         player={player}
@@ -1416,6 +1458,7 @@ function EventParticipants({
  * nowMs?: number,
  * onPress: (user?: User) => void,
  * onMarkArrival?: (user?: User) => void,
+ * onMarkOnTime?: (user?: User) => void,
  * onEditLate?: (user?: User) => void,
  * paymentStatus?: string,
  * statusKind?: 'participating' | 'missing' | 'not_answered',
@@ -1431,6 +1474,7 @@ function ParticipantItem({
   nowMs,
   onEditLate,
   onMarkArrival,
+  onMarkOnTime,
   onPress,
   paymentStatus = '',
   player,
@@ -1463,7 +1507,7 @@ function ParticipantItem({
   const tonDePaiement = tonStatutPaiement(Colors, String(paymentStatus || ''));
   const arrivalTime = formatArrivalTime(attendance?.arrivedAt);
   const hasStaffMeta = canEdit && (attendance?.note || attendance?.manualOverride || attendance?.updatedBy);
-  const primaryCoachActionTitle = attendance?.arrivedAt ? 'Corriger' : 'Pointer l\'arrivée';
+  const dejaPointe = Boolean(attendance?.arrivedAt);
 
   return (
     <View
@@ -1561,20 +1605,39 @@ function ParticipantItem({
         ) : null}
       </TouchableOpacity>
 
+      {/* 🎯 R7-d (vague R, 24/08) — UN SEUL POINT D ENTREE PAR JOUEUR.
+          Avant, « Pointer l arrivée » et « Modifier » vivaient cote a cote et
+          appelaient `openCoachLateModal(joueur, 'coach_mark' | 'coach_edit')` :
+          le MEME modal, au titre pres. Deux boutons, un seul geste — et aucun
+          des deux ne disait « il est arrivé à l heure », qui est pourtant le
+          cas le plus frequent au bord d un terrain.
+          Desormais c est l ETAT qui decide, exactement comme sur l ecran
+          d appel (AttendanceRow : « Là » + l horloge, puis « Corriger »). */}
       {canEdit && (
         <View style={[Alignments.row, Spaces.gap[8], Alignments.justifyEnd]}>
-          <Button
-            onPress={() => onMarkArrival && onMarkArrival(player)}
-            size="sm"
-            title={primaryCoachActionTitle}
-            variant="Primary"
-          />
-          <Button
-            onPress={() => onEditLate && onEditLate(player)}
-            size="sm"
-            title="Modifier"
-            variant="SecondaryLight"
-          />
+          {dejaPointe ? (
+            <Button
+              onPress={() => onEditLate && onEditLate(player)}
+              size="sm"
+              title={t('eventDetails.attendanceActions.edit', 'Modifier')}
+              variant="SecondaryLight"
+            />
+          ) : (
+            <>
+              <Button
+                onPress={() => onMarkOnTime && onMarkOnTime(player)}
+                size="sm"
+                title={t('eventDetails.attendanceActions.onTime', "À l'heure")}
+                variant="Primary"
+              />
+              <Button
+                onPress={() => onMarkArrival && onMarkArrival(player)}
+                size="sm"
+                title={t('eventDetails.attendanceActions.late', 'En retard')}
+                variant="SecondaryLight"
+              />
+            </>
+          )}
         </View>
       )}
 

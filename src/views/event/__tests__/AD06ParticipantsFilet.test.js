@@ -39,6 +39,19 @@ jest.mock('@/services/license/licenseQueries', () => ({
   useLicenseAssignments: () => ({ data: undefined, isLoading: false }),
 }));
 
+// 🧨 R7-d — CONDITION DE DEMARRAGE, PAS UN CONFORT (meme motif que le mock
+// `licenseQueries` ci-dessus). Depuis R7-d, `EventParticipants` monte
+// `useAttendanceCallMutations` pour ecrire le pointage « A l heure ». Le vrai
+// `eventService` descend jusqu a `client.native.js`, qui jette AU CHARGEMENT
+// quand `.env` est absent — et `.env` est gitignore, donc absent de toute
+// copie de travail. Sans ce mock : « failed to run », 0 test execute.
+jest.mock('@/services/event/eventService', () => ({
+  markCoachArrival: jest.fn(),
+  markCoachArrivalBulk: jest.fn(),
+  resetCoachAttendance: jest.fn(),
+  updateCoachLateMinutes: jest.fn(),
+}));
+
 jest.mock('react-i18next', () => {
   const traductions = jest.requireActual('@/theme/strings/translations/fr').default;
   /**
@@ -97,10 +110,15 @@ const NOW_MS = Date.parse('2026-08-20T18:00:00.000Z');
 // Elle decrit l ETAT COURANT du code. Le lot L3-B la met a jour en meme temps
 // qu il accentue les libelles : c est la seule chose que ce fichier apprend du
 // futur, et le diff tient en 5 lignes.
+// 🏷️ R7-c (vague R, 24/08, decision produit d Adel) : les DEUX sorties
+// « En attente » disaient la meme chose a des etats opposes — quelqu un qui a
+// repondu present avant le coup d envoi, et quelqu un qu on n a toujours pas
+// pointe 12 minutes apres. Elles disent maintenant CE QU ELLES SONT.
 const PASTILLE = {
   absent: 'Absent',
+  aDitPresent: 'A dit présent',
+  aPointer: 'À pointer',
   arrive: 'Arrivé',
-  attente: 'En attente',
   nonPointe: 'Non pointé',
   retardAnnonce: 'Retard annoncé',
   sansReponse: 'Sans réponse',
@@ -312,8 +330,9 @@ describe('AD06 · temoin 1 — les 8 sorties de la pastille', () => {
       // 6. retard ANNONCE a l avance.
       { couleur: COULEURS.warning500, texte: PASTILLE.retardAnnonce },
       { couleur: COULEURS.warning500, texte: '+5 min' },
-      // 7. retard VIVANT, calcule depuis le coup d envoi.
-      { couleur: COULEURS.warning500, texte: PASTILLE.attente },
+      // 7. retard VIVANT, calcule depuis le coup d envoi : le coup d envoi est
+      //    passe et personne ne l a pointe — c est une ACTION qui attend.
+      { couleur: COULEURS.warning500, texte: PASTILLE.aPointer },
       { couleur: COULEURS.warning500, texte: '+12 min' },
       // 2. absent declare.
       { couleur: COULEUR_ABSENT, texte: PASTILLE.absent },
@@ -327,8 +346,10 @@ describe('AD06 · temoin 1 — les 8 sorties de la pastille', () => {
       teamParticipationSections: [section({ participating: [P_ATTENTE] })],
     });
 
+    // R7-c : il a REPONDU present et le match n a pas commence. Rien n attend
+    // le coach ici — la pastille dit donc ce qu il a fait, pas une consigne.
     expect(pastilles(arbre)).toEqual([
-      { couleur: COULEURS.neutral200, texte: PASTILLE.attente },
+      { couleur: COULEURS.neutral200, texte: PASTILLE.aDitPresent },
     ]);
   });
 });
@@ -410,10 +431,13 @@ describe('AD06 · temoin 4 — les deux boutons des demandes font 44', () => {
 
   test('en revanche les DEUX boutons coach d une ligne ne font que 39 px', () => {
     // 📏 CONSTAT POSE POUR UN LOT SUIVANT, PAS UNE REGRESSION D AD06 :
-    // « Pointer l arrivee » et « Modifier » portent `size="sm"`, qui vaut 39 px
-    // (Button.js:61-72) — sous la cible tactile de 44. Le temoin fige la mesure
-    // pour qu on n ait pas a la redecouvrir ; le jour ou un lot les passe a 44,
-    // c est CE chiffre qu il change.
+    // les actions coach portent `size="sm"`, qui vaut 39 px (Button.js:61-72)
+    // — sous la cible tactile de 44. Le temoin fige la mesure pour qu on n ait
+    // pas a la redecouvrir ; le jour ou un lot les passe a 44, c est CE chiffre
+    // qu il change.
+    // 🔁 R7-d (24/08) : les libelles ont change (« Pointer l arrivée » et
+    // « Modifier », qui ouvraient le MEME modal, sont devenus « À l'heure » et
+    // « En retard »). La MESURE, elle, est inchangee.
     const arbre = monter({
       teamParticipationSections: [section({ participating: [P_ARRIVE] })],
     });
@@ -421,8 +445,8 @@ describe('AD06 · temoin 4 — les deux boutons des demandes font 44', () => {
     const boutonsCoach = arbre.root
       .findAllByType(Button)
       .filter((/** @type {any} */ noeud) => [
-        'Modifier',
-        'Pointer l\'arrivée',
+        'À l\'heure',
+        'En retard',
       ].includes(noeud.props.title));
 
     expect(boutonsCoach.length).toBe(2);
