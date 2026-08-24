@@ -925,6 +925,19 @@ function EventListContent({
       return;
     }
 
+    // 🎯 R9 — LA BRANCHE QUI MANQUAIT ICI, ET NULLE PART AILLEURS.
+    //
+    // `handleJoinEvent`, vingt lignes plus haut, a EXACTEMENT la meme depuis
+    // longtemps ; le tchat et la liste des participants aussi. Seul ce
+    // gestionnaire-ci ne l avait pas, et c est lui que la carte appelle quand on
+    // repond « Participer ». Sans elle, on tombait sur le chemin generique tout
+    // en bas : une participation SANS poste, qui verrouille ensuite la
+    // candidature aux postes. Les postes vivent sur l ecran de l evenement.
+    if (participationFlow?.submitMode === 'detection-slot-picker') {
+      handleEventSelect(event);
+      return;
+    }
+
     // AA01 — meme regle que `handleJoinEvent` : la reponse d un membre passe par
     // la porte des reponses, en un geste.
     if (participationFlow?.submitMode === 'rsvpPresent' && event?.documentId) {

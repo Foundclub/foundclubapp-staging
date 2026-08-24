@@ -198,6 +198,13 @@ const buildEventFlow = (entity, context) => {
       user,
     });
   const detectionSlotsCount = Number(context?.detectionSlotsCount || 0);
+  // R9 — « LE CONTEXTE NE DIT RIEN » N EST PAS « IL N Y A AUCUN POSTE ».
+  // Seul l ecran de detail COMPTE les postes ; les cartes de liste, le tchat
+  // et la liste des participants appellent sans ce chiffre. Confondre les deux
+  // cas, c est exactement ce qui rendait le choix du poste inatteignable
+  // depuis une carte (voir la bascule a la sortie de la branche generique).
+  const detectionSlotsCountProvided = context?.detectionSlotsCount !== undefined
+    && context?.detectionSlotsCount !== null;
   const alreadyHandled = Boolean(
     participationState?.isParticipating
     || participationState?.hasAcceptedRequest
@@ -334,13 +341,38 @@ const buildEventFlow = (entity, context) => {
     confirmLabel = 'Confirmer ma participation';
   }
 
+  // 🎯 R9 — L AIGUILLAGE VERS LE CHOIX DU POSTE, ET POURQUOI IL EST *ICI*.
+  //
+  // Trois surfaces savaient deja traiter `detection-slot-picker` (le tchat, la
+  // liste des participants, `handleJoinEvent`) mais AUCUNE ne passe
+  // `detectionSlotsCount` : leurs branches etaient inatteignables, et repondre
+  // « Participer » depuis une carte creait une participation generique SANS
+  // poste — qui verrouille ensuite la candidature aux postes.
+  //
+  // ⛔ POURQUOI PAS EN TETE, avec l autre aiguillage : un retour anticipe
+  // sauterait TOUS les garde-fous calcules ci-dessus (date passee, capacite,
+  // « deja repondu », evenement ferme) et mettrait `usesConfirmationModal` a
+  // faux, c est-a-dire retirerait la DECLARATION DE RESPONSABILITE sur les
+  // treize surfaces qui appellent cette fonction. Ici, `blockedReason`,
+  // `canAct`, `actionLabel`, `confirmLabel` et la modale restent identiques au
+  // caractere pres : seul l aiguillage change, et seulement quand rien ne bloque.
+  const routesToDetectionSlotPicker = isDetection
+    && !detectionSlotsCountProvided
+    && !blockedReason;
+
   return {
     actionLabel,
     blockedReason,
     canAct: !blockedReason,
     confirmLabel,
-    kind: isClosed ? ParticipationFlowKind.eventClosed : ParticipationFlowKind.eventOpen,
-    submitMode: answersAsConvenedMember ? 'rsvpPresent' : 'createEventParticipation',
+    kind: (() => {
+      if (routesToDetectionSlotPicker) return ParticipationFlowKind.detectionSlot;
+      return isClosed ? ParticipationFlowKind.eventClosed : ParticipationFlowKind.eventOpen;
+    })(),
+    submitMode: (() => {
+      if (routesToDetectionSlotPicker) return 'detection-slot-picker';
+      return answersAsConvenedMember ? 'rsvpPresent' : 'createEventParticipation';
+    })(),
     usesConfirmationModal: !answersAsConvenedMember,
   };
 };
