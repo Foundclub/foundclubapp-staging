@@ -32,6 +32,20 @@ const mockEventQuery = { data: null };
 // l'utilisateur voit tant que la clef n'existe pas dans fr.js. Il note au
 // passage les clefs demandees — sans ce releve, une clef mal orthographiee
 // resterait invisible pour toujours. (Motif N1.)
+// 🧨 R9 — CE MOCK N EST PAS DECORATIF. `teamMembershipRequestService`
+// importe `@/services/client`, qui JETTE AU CHARGEMENT quand `.env` est absent
+// — et `.env` est gitignore, donc absent de toute copie de travail. Sans cette
+// doublure, la SUITE ENTIERE tombe a 0 test execute des que l ecran importe le
+// service (piege documente, deja paye plusieurs fois).
+jest.mock('@/services/teamMembershipRequest/teamMembershipRequestService', () => ({
+  inviteToTeam: () => Promise.resolve(null),
+  resolveTeamInvitationAvailability: () => ({
+    candidateId: '',
+    canInvite: false,
+    reason: 'missing-team',
+  }),
+}));
+
 jest.mock('react-i18next', () => {
   const askedKeys = /** @type {string[]} */ ([]);
   const rendre = (/** @type {any} */ modele, /** @type {any} */ options) => String(modele)

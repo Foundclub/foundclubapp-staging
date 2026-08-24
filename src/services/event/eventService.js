@@ -310,6 +310,9 @@ export const getEventById = async (documentId) => getEventByIdResponse(documentI
     'participationRequests.user',
     'participationRequests.user.avatar',
     'participationRequests.sourceTeam',
+    // R9 — SANS CE LIEN, UN CANDIDAT N A PAS DE POSTE : l ecran d une detection
+    // range ses candidats en lisant `participation.recruitmentAd.documentId`.
+    'participationRequests.recruitmentAd',
     'recruitmentAds',
     'recruitmentAds.candidates',
     'recruitmentAds.candidates.avatar',
@@ -1126,6 +1129,9 @@ export const getEvents = async (params = {}, options = {}) => {
       'participationRequests.user',
       'participationRequests.user.avatar',
       'participationRequests.sourceTeam',
+      // R9 — meme raison qu a la ligne du dessus dans `getEventById` : sans ce
+      // lien, un candidat est invisible sous son poste (recette du 24/08).
+      'participationRequests.recruitmentAd',
       'league_match',
     ];
   }

@@ -298,3 +298,43 @@ describe('AE01 - le fond et le titre de la carte d entete, type par type', () =>
     expect(askedKeys).toContain('eventDetails.header.invitedTeams');
   });
 });
+
+describe('R9 - LE TITRE NE MONTE PLUS DANS LES BOUTONS DE LA BARRE', () => {
+  // 🧨 LE CONSTAT DE RECETTE DU 24/08 : sur une detection, le titre CHEVAUCHE
+  // les deux boutons du haut (le drapeau et le ⋯).
+  //
+  // 🔍 LA MECANIQUE, mesuree : la barre de navigation est TRANSPARENTE pour
+  // toute la pile (`commonOptions.js`, `headerTransparent: true`) et les deux
+  // glyphes n ont aucun fond. Le contenu passe donc DESSOUS — c est voulu, c est
+  // ce qui donne l entete pleine largeur. Ce qui ne l est pas, c est qu un titre
+  // long grimpe dedans : ce `Text` n avait AUCUNE limite de lignes.
+  //
+  // ⛔ CE QUI N EST PAS FAIT ICI : toucher `commonOptions`. Ce fichier commande
+  // TOUS les ecrans de l app ; y rendre la barre opaque pour reparer une
+  // detection serait un changement global non demande.
+
+  // Le titre principal est le PREMIER noeud Text de l entete — c est deja par la
+  // que passe `primaryTitleOf`, le raccourci des temoins d AE01.
+  const titreNodeOf = (/** @type {any} */ params) => findNode(
+    renderHeader(makeEvent(params)),
+    isTextNode,
+  );
+
+  test('R9 · temoin 28 — le titre principal est BORNE a deux lignes', () => {
+    const titre = titreNodeOf({ typeName: 'Detection' });
+
+    expect(textContentOf(titre?.children).join('').trim()).toBe(EVENT_NAME);
+    expect(titre.props.numberOfLines).toBe(2);
+  });
+
+  test('R9 · temoin 29 — un titre TRES long reste borne, il ne pousse pas vers le haut', () => {
+    // Le cas reel : un nom de detection sur quatre lignes remontait dans la
+    // barre. La borne vaut pour tous les types, pas seulement la detection.
+    const nomTresLong = 'Detection gardiens et joueurs de champ nes entre 2010 et 2013'
+      + ' secteur nord, samedi matin';
+    const titre = titreNodeOf({ name: nomTresLong, typeName: 'Detection' });
+
+    expect(textContentOf(titre?.children).join('').trim()).toBe(nomTresLong);
+    expect(titre.props.numberOfLines).toBe(2);
+  });
+});

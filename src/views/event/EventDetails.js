@@ -103,6 +103,15 @@ import {
   applyToRecruitmentAd,
   getRecruitmentApplications,
 } from '@/services/recruitment/recruitmentService';
+// R9 — LE RAIL D INVITATION DU LOT P10, recolte et deploye. Comme pour N2
+// plus haut, ces deux fonctions ne sont appelees que dans une fermeture (le
+// rendu de la fiche et la mutation), jamais au montage — mais l IMPORT, lui,
+// tire `@/services/client`, qui jette sans `.env`. Les 20 suites qui montent
+// cet ecran doublent donc le service, dans LE MEME COMMIT que cette ligne.
+import {
+  inviteToTeam,
+  resolveTeamInvitationAvailability,
+} from '@/services/teamMembershipRequest/teamMembershipRequestService';
 import {
   useGetTournamentDashboard,
 } from '@/services/tournamentCompetition/tournamentCompetitionQueries';
@@ -610,6 +619,12 @@ function EventDetails({ navigation, route }) {
   const [isDetectionSlotPickerVisible, setIsDetectionSlotPickerVisible] = useState(false);
   // 🗂️ P7 — LA FICHE CANDIDAT. `null` = fermee. Elle porte la personne, sa
   // participation (quand il y en a une) et le poste retrouve.
+  // R9 — les candidats dont l invitation vient de partir. Meme motif que dans
+  // `RecruitmentAdDetails` (lot P10) : le serveur ne renvoie pas l etat de
+  // l invitation avec la demande, et on s interdit une requete de plus.
+  const [invitedParticipationIds, setInvitedParticipationIds] = useState(
+    /** @type {string[]} */ ([]),
+  );
   const [detectionCandidateSheet, setDetectionCandidateSheet] = useState(
     /** @type {any} */ (null),
   );
@@ -1788,19 +1803,39 @@ function EventDetails({ navigation, route }) {
     );
     /** @type {Map<string, EventParticipation>} */
     const deduped = new Map();
-    embeddedRequests.forEach((/** @type {EventParticipation} */ participation) => {
+
+    /**
+     * 🔑 R9 — RANGER UNE DEMANDE EN GARDANT LA COPIE LA PLUS COMPLETE.
+     *
+     * 🧨 LE DEFAUT REPARE : les demandes arrivent par DEUX chemins — embarquees
+     * dans l evenement, et paginees par `useGetEventParticipations`. Seule la
+     * copie PAGINEE portait `recruitmentAd`. Or les embarquees etaient inserees
+     * en premier et `deduped.has(key)` faisait gagner cette copie AMPUTEE : le
+     * candidat perdait son poste, donc il disparaissait des groupes par poste
+     * avant comme apres sa validation (constat de recette du 24/08).
+     *
+     * Le populate est repare des deux cotes ; cette regle est la CEINTURE : tant
+     * qu une seule des deux copies porte le lien, c est celle-la qu on garde.
+     * Le rang d insertion, lui, ne bouge pas — `Map.set` sur une cle existante
+     * conserve sa place, et l ordre d affichage avec.
+     * @param {EventParticipation} participation - la demande a ranger
+     * @returns {void}
+     */
+    const retenirLaPlusComplete = (participation) => {
       const key = participation?.documentId
         || `${getUserKey(participation?.user) || 'user'}:${participation?.participationStatus || 'status'}:${participation?.updatedAt || ''}:${participation?.isActive === false ? 'inactive' : 'active'}`;
-      if (!key || deduped.has(key)) return;
+      if (!key) return;
+      const dejaRangee = deduped.get(key);
+      if (dejaRangee
+        && (dejaRangee?.recruitmentAd?.documentId || !participation?.recruitmentAd?.documentId)) {
+        return;
+      }
       deduped.set(key, participation);
-    });
+    };
+
+    embeddedRequests.forEach(retenirLaPlusComplete);
     pages.forEach((page) => {
-      (page?.data || []).forEach((/** @type {EventParticipation} */ participation) => {
-        const key = participation?.documentId
-          || `${getUserKey(participation?.user) || 'user'}:${participation?.participationStatus || 'status'}:${participation?.updatedAt || ''}:${participation?.isActive === false ? 'inactive' : 'active'}`;
-        if (!key || deduped.has(key)) return;
-        deduped.set(key, participation);
-      });
+      (page?.data || []).forEach(retenirLaPlusComplete);
     });
     // AA02 — le SECOND point de passage unique : toutes les listes bati es sur
     // une DEMANDE (`{ user }`) descendent d'ici — en attente, historique,
@@ -2893,6 +2928,23 @@ function EventDetails({ navigation, route }) {
     userData?.documentId,
   ]);
 
+  // 🎯 R9 — POSTULER SANS VISER UN POSTE.
+  //
+  // Le groupe d affichage « Sans poste precise » existait deja cote liste
+  // (`p7-sans-poste`), parce qu une detection accepte aussi des inscriptions
+  // hors annonce. Mais rien a l ecran ne permettait D Y ENTRER : le selecteur
+  // n offrait que des postes. C etait une porte de sortie sans porte d entree.
+  //
+  // ⛔ AUCUN SECOND CHEMIN D ECRITURE : `pendingDetectionSlot` a `null` renvoie
+  // la confirmation vers `handleConfirmParticipation`, exactement comme avant ce
+  // lot — donc avec la meme declaration de responsabilite.
+  const handleApplyWithoutDetectionSlot = useCallback(() => {
+    setIsDetectionSlotPickerVisible(false);
+    setPendingDetectionSlot(null);
+    setJoinModalError('');
+    setIsJoinModalVisible(true);
+  }, []);
+
   // @ts-ignore: FIXME: Baseline TS regression
   const handleApplyToDetectionSlotFromPicker = useCallback((slot) => {
     const slotDocumentId = String(slot?.documentId || '').trim();
@@ -2998,6 +3050,43 @@ function EventDetails({ navigation, route }) {
   // d'affichage ecrite au milieu d'une balise n'est relisible par personne, et
   // c'est la que les fautes se cachent. La feuille, plus bas, ne fait que les
   // poser.
+  // 🤝 R9 — PEUT-ON INVITER CE CANDIDAT DANS L EQUIPE ?
+  //
+  // 🪤 L ADAPTATEUR, ET C EST LE PIEGE DU LOT : la regle partagee a ete
+  // ecrite pour une CANDIDATURE d annonce, elle lit donc `application.applicant`.
+  // La fiche, elle, porte `participation.user`. On adapte l objet qu on lui
+  // passe ; on NE TOUCHE PAS a la fonction, qui sert aussi a l ecran de l annonce.
+  //
+  // 🏟️ L equipe est celle de l EVENEMENT : l annonce ne descend pas la
+  // sienne (`recruitmentAds` est peuple sans `team`), et c est de toute facon
+  // l equipe organisatrice qui a du sens ici — c est deja elle qui commande le
+  // droit de trancher les demandes (`canApprovePendingRequests`).
+  const detectionCandidateInvitation = resolveTeamInvitationAvailability(
+    { applicant: detectionCandidateSheet?.user },
+    event?.team?.documentId,
+  );
+  const detectionCandidateAlreadyInvited = invitedParticipationIds.includes(
+    String(detectionCandidateSheet?.participation?.documentId || ''),
+  );
+  const inviteCandidateMutation = /** @type {any} */ (useMutation({
+    mutationFn: (/** @type {any} */ payload = {}) => inviteToTeam({
+      team: payload.teamId,
+      user: payload.candidateId,
+    }),
+    onError: (/** @type {any} */ echecInvitation) => {
+      Alert.alert(
+        t('eventDetails.detection.candidateInvite', 'Inviter dans l’équipe'),
+        echecInvitation?.message || t('common.errorOccurred'),
+      );
+    },
+    onSuccess: (/** @type {any} */ _data, /** @type {any} */ variables) => {
+      const participationId = String(variables?.participationId || '').trim();
+      if (!participationId) return;
+      setInvitedParticipationIds((previous) => (
+        previous.includes(participationId) ? previous : [...previous, participationId]
+      ));
+    },
+  }));
   const detectionCandidateName = [
     detectionCandidateSheet?.user?.firstname,
     detectionCandidateSheet?.user?.lastname,
@@ -7029,6 +7118,40 @@ function EventDetails({ navigation, route }) {
   // 🖼️ Le glyphe `dotsVertical` existe deja (`GlyphIcon.js:120`, lot AD07) —
   // aucune image nouvelle n'est livree ici, et on ne redessine pas trois ronds
   // a la main comme AC01 avait du le faire avant lui.
+  // 🎨 R9 — LE FOND DE LA BARRE DU HAUT, POSE PAR CET ECRAN SEULEMENT.
+  //
+  // 🧨 Le defaut de recette du 24/08 : le titre chevauche le drapeau et le ⋯.
+  // La barre est TRANSPARENTE pour toute la pile (`commonOptions.js`) et les
+  // deux glyphes n ont aucun fond : le contenu passe dessous — c est voulu, c est
+  // ce qui donne l entete pleine largeur — mais rien ne garantissait que les
+  // boutons restent lisibles par-dessus.
+  //
+  // ⛔ POURQUOI PAS DANS `commonOptions` : ce fichier commande TOUS les ecrans
+  // de l app. Rendre la barre opaque partout pour reparer une detection serait
+  // un changement global que personne n a demande.
+  //
+  // 🖌️ Un degrade en quatre bandes plutot qu une bibliotheque : les huit
+  // suites qui montent un composant a `LinearGradient` le doublent TOUTES une
+  // par une. L importer ici obligerait a doubler la meme chose dans les vingt
+  // suites de cet ecran, pour un fond de barre. Meme motif que `HomeActionCard`,
+  // qui imite deja une retombee de degrade sans lib ni image.
+  const renderHeaderBackground = useCallback(
+    () => (
+      <View pointerEvents="none" style={[Alignments.fill]}>
+        {[0.92, 0.7, 0.42, 0.14].map((opacite) => (
+          <View
+            key={`r9-voile-${opacite}`}
+            style={[
+              Alignments.fill,
+              { backgroundColor: withAlpha(Colors.primary900, opacite) },
+            ]}
+          />
+        ))}
+      </View>
+    ),
+    [Alignments, Colors.primary900],
+  );
+
   const renderHeaderRight = useCallback(
     () => (
       <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[4], Spaces.marginRight[16]]}>
@@ -7061,10 +7184,17 @@ function EventDetails({ navigation, route }) {
 
   useLayoutEffect(() => {
     navigation.setOptions({
+      headerBackground: renderHeaderBackground,
       headerLeft: fromEventCreation ? renderHeaderLeft : undefined,
       headerRight: renderHeaderRight,
     });
-  }, [fromEventCreation, navigation, renderHeaderLeft, renderHeaderRight]);
+  }, [
+    fromEventCreation,
+    navigation,
+    renderHeaderBackground,
+    renderHeaderLeft,
+    renderHeaderRight,
+  ]);
 
   const isCoachLateModal = lateModalMode === 'coach_mark' || lateModalMode === 'coach_edit';
   const isPlayerLateModal = lateModalMode === 'player_declare' || lateModalMode === 'player_update';
@@ -8061,6 +8191,43 @@ function EventDetails({ navigation, route }) {
               </View>
             );
           })}
+
+          {/* 🧯 R9 — LA RANGEE QUI MANQUAIT : postuler sans viser un poste.
+              Elle est posee APRES les postes (on propose d abord ce que le club
+              cherche) et elle s affiche TOUJOURS, meme quand la detection n a
+              aucun poste — sinon le selecteur serait un cul-de-sac. */}
+          <View
+            style={[
+              ApplicationStyle.borderRadius24,
+              ApplicationStyle.borderWidth1,
+              Spaces.padding[16],
+              Spaces.gap[12],
+              {
+                backgroundColor: withAlpha(Colors.neutral00, 0.04),
+                borderColor: withAlpha(Colors.neutral00, 0.16),
+              },
+            ]}
+            testID="r9-poste-libre"
+          >
+            <View style={[Spaces.gap[4]]}>
+              <Text style={[Fonts.p1Bold, Fonts.neutral00]}>
+                {t('eventDetails.detection.noSpecificPositionTitle', 'Sans poste précis')}
+              </Text>
+              <Text style={[Fonts.p3, Fonts.neutral300]}>
+                {t(
+                  'eventDetails.detection.noSpecificPositionHint',
+                  'Tu rejoins la séance sans viser un poste en particulier.'
+                  + ' Le staff te placera sur place.',
+                )}
+              </Text>
+            </View>
+            <Button
+              disabled={applyToDetectionSlotMutation.isPending}
+              onPress={handleApplyWithoutDetectionSlot}
+              title={t('eventDetails.detection.noSpecificPositionAction', 'Participer sans poste')}
+              variant="Secondary"
+            />
+          </View>
         </View>
       </BottomModal>
 
@@ -8148,24 +8315,48 @@ function EventDetails({ navigation, route }) {
             </View>
           ) : null}
 
-          {/* 🔒 « INVITER DANS L'EQUIPE » NAIT GRISE, ET SON MOTIF EST ECRIT.
-              Le rail serveur de l'invitation avec consentement est le lot P10 ;
-              le brancher ici est un micro-lot qui vient APRES la recolte des
-              deux. Un bouton grise qui dit pourquoi vaut mieux qu'un bouton
-              absent : l'organisateur sait que ca existe et que ca arrive.
-              ⛔ ET SURTOUT : il ne doit JAMAIS devenir un ajout direct a
-              l'equipe (`players.connect`), qui se passerait du consentement de
-              la personne. */}
+          {/* 🤝 R9 — « INVITER DANS L'EQUIPE », BRANCHE SUR LE RAIL P10.
+              ⛔ CE N'EST PAS UN AJOUT A L'EQUIPE : le serveur cree une invitation
+              `pending`, la personne recoit une notification, et c'est ELLE qui
+              accepte. Jamais de `players.connect` ici — ce serait se passer de
+              son consentement.
+              🗣️ Et quand ce n'est pas possible, le bouton reste GRISE AVEC SON
+              MOTIF : un bouton disparu ne s'explique pas. Ce qui change depuis P7,
+              c'est que le motif dit desormais la VERITE (pas de compte, pas
+              d'equipe) au lieu de « ca arrive bientot ». */}
           <View style={[Spaces.gap[4]]}>
             <Button
-              disabled
-              onPress={() => {}}
-              title={t('eventDetails.detection.candidateInvite', 'Inviter dans l’équipe')}
+              disabled={!detectionCandidateInvitation.canInvite
+                || detectionCandidateAlreadyInvited
+                || inviteCandidateMutation.isPending}
+              isLoading={inviteCandidateMutation.isPending}
+              onPress={() => inviteCandidateMutation.mutate({
+                candidateId: detectionCandidateInvitation.candidateId,
+                participationId: detectionCandidateSheet?.participation?.documentId,
+                teamId: event?.team?.documentId,
+              })}
+              title={detectionCandidateAlreadyInvited
+                ? t('recruitment.invite.sent', 'Invitation envoyée')
+                : t('eventDetails.detection.candidateInvite', 'Inviter dans l’équipe')}
               variant="Primary"
             />
-            <Text style={[Fonts.p4, Fonts.neutral300]} testID="p7-fiche-invite-motif">
-              {t('eventDetails.detection.candidateInviteSoon', 'L’invitation arrive bientôt.')}
-            </Text>
+            {detectionCandidateInvitation.canInvite && !detectionCandidateAlreadyInvited
+              ? null
+              : (
+                <Text style={[Fonts.p4, Fonts.neutral300]} testID="p7-fiche-invite-motif">
+                  {detectionCandidateInvitation.reason === 'missing-team'
+                    ? t(
+                      'eventDetails.detection.candidateInviteNoTeam',
+                      'Cet événement n’est rattaché à aucune équipe :'
+                      + ' il n’y a nulle part où inviter cette personne.',
+                    )
+                    : t(
+                      'recruitment.invite.needsAccount',
+                      'Cette personne n’a pas encore de compte FoundClub :'
+                      + ' impossible de l’inviter.',
+                    )}
+                </Text>
+              )}
           </View>
         </View>
       </BottomModal>

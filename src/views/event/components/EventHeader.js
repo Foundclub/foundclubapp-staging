@@ -358,7 +358,17 @@ function EventHeader({ detectionSummary = null, event, matchScoreSummary = null 
               adversaire. Sans ce `isMatchLikeEvent`, le MEME nom de club
               s'ecrirait en gros quand l'adversaire est connu et en petit
               sinon : une difference de taille que rien a l'ecran n'explique. */}
-          <Text style={[showMatchTitle || isMatchLikeEvent ? Fonts.h3Black : Fonts.p1Bold, Fonts.neutral00]}>
+          {/* R9 — BORNE A DEUX LIGNES. La barre de navigation est transparente
+              pour toute la pile (`commonOptions.js`) et le contenu passe dessous :
+              sans limite, un titre long grimpait DANS les boutons du haut (le
+              drapeau et le ⋯), constate en recette le 24/08. */}
+          <Text
+            numberOfLines={2}
+            style={[
+              showMatchTitle || isMatchLikeEvent ? Fonts.h3Black : Fonts.p1Bold,
+              Fonts.neutral00,
+            ]}
+          >
             {headerPrimaryTitle}
           </Text>
           {headerSecondaryTitle ? (

@@ -1,7 +1,12 @@
 import { Alert, Text, TouchableOpacity } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
-import { capteurEntete, capteurParticipants } from '@/testSupport/p7Capteurs';
+import {
+  capteurBarreDuBas,
+  capteurEntete,
+  capteurModaleParticipation,
+  capteurParticipants,
+} from '@/testSupport/p7Capteurs';
 
 // Lot P7 (vague P du 23/08) — LE TABLEAU DE BORD DU RECRUTEMENT d'une
 // detection : les deux tuiles de l'entete (planche 03, carte E) et le
@@ -25,10 +30,38 @@ const mockEventQuery = { data: /** @type {any} */ (null) };
 const mockAccepterParticipation = jest.fn();
 const mockRefuserParticipation = jest.fn();
 const mockLireLesCandidatures = jest.fn(() => Promise.resolve([]));
+// R9 — le rail d invitation du lot P10, double. LA REGLE de disponibilite a
+// ses propres temoins (`services/teamMembershipRequest/__tests__/P10-invitation`)
+// et on ne la reteste pas ici : ce qui se prouve dans cette suite, c est le
+// CABLAGE — que l ecran appelle la regle avec le bon objet, et qu il obeit a
+// son verdict. On ne peut pas appeler la vraie fonction : la charger tirerait
+// `@/services/client`, qui jette sans `.env`.
+const mockInviterDansLEquipe = jest.fn(() => Promise.resolve({ documentId: 'invit-1' }));
+const mockResoudreDisponibilite = jest.fn(() => ({
+  candidateId: 'u-gardien-2',
+  canInvite: true,
+  reason: '',
+}));
+// 📑 R9 — LA COPIE PAGINEE, pilotable. Les demandes arrivent a l ecran par
+// DEUX chemins : embarquees dans l evenement, et paginees par cette requete.
+// Seule la seconde porte `recruitmentAd` cote serveur ; il faut donc pouvoir
+// les faire diverger pour prouver laquelle gagne la deduplication.
+const mockParticipationsPages = { pages: /** @type {any} */ (null) };
 
 // 📸 Les capteurs vivent dans `@/testSupport/p7Capteurs` (importe plus haut) :
 // chaque rendu y ECRASE la valeur, un temoin lit donc toujours le DERNIER
 // rendu, celui qui correspond a l'etat courant de l'ecran.
+
+// 🧨 R9 — MEME PIEGE QUE DANS LES 19 SUITES VOISINES (`@/services/client`
+// jette au chargement sans `.env`), mais ici la doublure est PILOTABLE : c est
+// cette suite qui prouve les etats du bouton « Inviter ».
+jest.mock('@/services/teamMembershipRequest/teamMembershipRequestService', () => ({
+  inviteToTeam: (/** @type {any} */ invitation) => mockInviterDansLEquipe(invitation),
+  resolveTeamInvitationAvailability: (
+    /** @type {any} */ candidature,
+    /** @type {any} */ equipe,
+  ) => mockResoudreDisponibilite(candidature, equipe),
+}));
 
 jest.mock('react-i18next', () => {
   const rendre = (/** @type {any} */ modele, /** @type {any} */ options) => String(modele)
@@ -80,10 +113,19 @@ jest.mock('@react-navigation/native', () => ({
 }));
 
 jest.mock('@tanstack/react-query', () => ({
+  // R9 — `mutate` EXECUTE desormais vraiment sa `mutationFn`, puis rend la
+  // main a `onSuccess` / `onError`. Sans ca, aucun temoin ne peut prouver
+  // qu un bouton ECRIT quelque chose : tous les services sont doubles, donc
+  // executer ne touche rien de reel.
   useMutation: (/** @type {any} */ options) => ({
     isPending: false,
-    mutate: jest.fn(),
-    mutateAsync: jest.fn(),
+    mutate: (/** @type {any} */ variables) => Promise
+      .resolve(options?.mutationFn?.(variables))
+      .then((/** @type {any} */ data) => options?.onSuccess?.(data, variables))
+      .catch((/** @type {any} */ error) => options?.onError?.(error, variables)),
+    mutateAsync: (/** @type {any} */ variables) => Promise.resolve(
+      options?.mutationFn?.(variables),
+    ),
     options,
   }),
   useQueryClient: () => ({
@@ -129,7 +171,12 @@ jest.mock('@/services/event/eventQueries', () => ({
 }));
 
 jest.mock('@/services/eventParticipation/eventParticipationQueries', () => ({
-  useGetEventParticipations: () => emptyQuery(),
+  useGetEventParticipations: () => ({
+    ...emptyQuery(),
+    data: mockParticipationsPages.pages
+      ? { pages: mockParticipationsPages.pages }
+      : null,
+  }),
 }));
 
 jest.mock('@/services/license/licenseQueries', () => ({
@@ -300,11 +347,33 @@ jest.mock('../components/EventParticipants', () => {
 /* eslint-disable global-require */
 jest.mock(
   '@/components/molecules/eventAnswerButtons/EventAnswerButtons',
-  () => require('@/testSupport/textDouble').makeTextDouble('DOUBLURE_EventAnswerButtons'),
+  // R9 — MEME TEXTE QU AVANT, plus la capture de ses props. La barre du bas
+  // porte `onJoin`, et c est le SEUL chemin qui ouvre le choix du poste : sans
+  // ses props, aucun temoin ne peut ouvrir ce selecteur pour le regarder.
+  () => {
+    const react = jest.requireActual('react');
+    const rn = jest.requireActual('react-native');
+    const capteurLocal = jest.requireActual('@/testSupport/p7Capteurs').capteurBarreDuBas;
+    return function BarreDuBasDouble(/** @type {any} */ props) {
+      capteurLocal.props = props;
+      return react.createElement(rn.Text, null, 'DOUBLURE_EventAnswerButtons');
+    };
+  },
 );
 jest.mock(
   '@/components/organisms/joinEventModal/JoinEventModal',
-  () => require('@/testSupport/textDouble').makeTextDouble('DOUBLURE_JoinEventModal'),
+  // R9 — meme texte qu avant, plus la capture de `contextNote` : c est la
+  // seule difference observable entre « je postule au poste de gardien » et
+  // « je participe sans poste precis ».
+  () => {
+    const react = jest.requireActual('react');
+    const rn = jest.requireActual('react-native');
+    const capteurLocal = jest.requireActual('@/testSupport/p7Capteurs').capteurModaleParticipation;
+    return function JoinEventModalDouble(/** @type {any} */ props) {
+      capteurLocal.props = props;
+      return react.createElement(rn.Text, null, 'DOUBLURE_JoinEventModal');
+    };
+  },
 );
 /* eslint-enable global-require */
 // La doublure de la modale de refus rend son ETAT : c'est le seul moyen de
@@ -449,8 +518,14 @@ const demonter = () => {
   mounted = null;
 };
 
-const monter = (/** @type {any} */ { auth, event, params = {} } = {}) => {
+const monter = (/** @type {any} */ {
+  auth,
+  event,
+  pagesPaginees = null,
+  params = {},
+} = {}) => {
   mockEventQuery.data = event === undefined ? buildDetection() : event;
+  mockParticipationsPages.pages = pagesPaginees;
   mockUseAuth.mockReturnValue(auth || authOrganisateur());
 
   demonter();
@@ -462,8 +537,12 @@ const monter = (/** @type {any} */ { auth, event, params = {} } = {}) => {
   mockAccepterParticipation.mockClear();
   mockRefuserParticipation.mockClear();
   mockLireLesCandidatures.mockClear();
+  mockInviterDansLEquipe.mockClear();
+  mockResoudreDisponibilite.mockClear();
   capteurEntete.props = null;
   capteurParticipants.props = null;
+  capteurBarreDuBas.props = null;
+  capteurModaleParticipation.props = null;
 
   act(() => {
     mounted = renderer.create(
@@ -831,11 +910,20 @@ describe('P7 - la fiche candidat, en feuille', () => {
 });
 
 describe('P7 - le bouton « Inviter dans l equipe » nait GRISE (serveur = lot P10)', () => {
-  test('P7 · temoin 18 — il est monte, DESACTIVE, et son motif est ecrit', () => {
-    // 🔒 Un bouton grise qui dit pourquoi vaut mieux qu'un bouton absent :
-    // l'organisateur sait que la fonction existe et qu'elle arrive. Le rail
-    // serveur de l'invitation avec consentement est le lot P10 ; le brancher
-    // ici est un micro-lot qui vient APRES la recolte des deux.
+  test('P7 · temoin 18 — il est monte, et QUAND IL EST GRISE son motif est ecrit', () => {
+    // 🔒 L INTENTION DE CE TEMOIN N A PAS CHANGE : un bouton grise qui dit
+    // pourquoi vaut mieux qu'un bouton absent.
+    //
+    // 🔄 R9 (24/08) — CE QUI A CHANGE, ET C EST VOULU : le rail serveur du
+    // lot P10 existe maintenant, et le bouton est BRANCHE dessus. Il n'est donc
+    // plus grise par principe, et son motif ne dit plus « ca arrive bientot »
+    // mais la VRAIE raison. Ce temoin garde son sujet — le motif ecrit — en le
+    // posant sur le cas qui reste impossible : une personne sans compte.
+    mockResoudreDisponibilite.mockImplementation(() => ({
+      candidateId: '',
+      canInvite: false,
+      reason: 'no-account',
+    }));
     const root = monter({ event: buildDetection({ participations: [GARDIEN_1] }) });
     allerSurLOnglet(root, 'participants');
     act(() => {
@@ -857,6 +945,377 @@ describe('P7 - le bouton « Inviter dans l equipe » nait GRISE (serveur = lot P
 
     expect(inviter).toBeDefined();
     expect(inviter.props.disabled).toBe(true);
-    expect(contient(root, 'L’invitation arrive bientôt.')).toBe(true);
+    expect(contient(root, 'pas encore de compte FoundClub')).toBe(true);
+
+    mockResoudreDisponibilite.mockImplementation(() => ({
+      candidateId: 'u-gardien-2',
+      canInvite: true,
+      reason: '',
+    }));
+  });
+});
+
+describe('R9 - LE CANDIDAT ACCEPTE QUI DISPARAISSAIT DE SON POSTE', () => {
+  // 🧨 LE CONSTAT DE RECETTE DU 24/08, mot pour mot : « un candidat accepte
+  // n apparait NI dans les candidats du poste avant, NI dans la liste du poste
+  // apres ». Deux causes, et il fallait les deux pour reparer :
+  //
+  //   1. le POPULATE ne descendait pas `recruitmentAd` sur les demandes
+  //      embarquees dans l evenement (repare dans `eventService.js` et dans
+  //      l allowlist du serveur) ;
+  //   2. la DEDUPLICATION inserait la copie embarquee EN PREMIER, donc la copie
+  //      amputee gagnait sur la copie paginee qui, elle, portait bien le lien.
+  //
+  // 🪤 CE QUI RENDAIT LE DEFAUT INVISIBLE AUX TESTS : les fixtures des suites
+  // d ecran posent `recruitmentAd` a la main sur les demandes embarquees. Elles
+  // decrivent un serveur plus genereux que le vrai. Les temoins ci-dessous
+  // reproduisent donc la charge REELLE d avant le lot : embarquee SANS le lien,
+  // paginee AVEC.
+
+  /**
+   * La demande telle que le serveur l embarquait dans l evenement : sans annonce.
+   * @param {any} demande - la demande complete
+   * @returns {any} la meme demande, amputee de son lien vers l annonce
+   */
+  const sansLAnnonce = (demande) => {
+    const { recruitmentAd, ...reste } = demande;
+    return reste;
+  };
+
+  /**
+   * Monte la detection avec les DEUX copies divergentes.
+   * @param {any} [surcharge] - surcharge de l evenement
+   * @returns {any} la racine du rendu
+   */
+  const monterAvecLesDeuxCopies = (surcharge = {}) => {
+    const detection = buildDetection(surcharge);
+    return monter({
+      event: {
+        ...detection,
+        participationRequests: detection.participationRequests.map(sansLAnnonce),
+      },
+      pagesPaginees: [{
+        data: detection.participationRequests,
+        meta: { pagination: { page: 1, pageCount: 1 } },
+      }],
+    });
+  };
+
+  test('R9 · temoin 4 — AVANT sa validation, le candidat est sous SON poste', () => {
+    const root = monterAvecLesDeuxCopies();
+    allerSurLOnglet(root, 'participants');
+
+    const sections = capteurParticipants.props.detectionPositionSections;
+    const gardien = sections.find((/** @type {any} */ item) => item.position === 'Gardien');
+
+    expect(gardien.pending.map((/** @type {any} */ item) => item.documentId))
+      .toEqual(['part-gardien-attente']);
+  });
+
+  test('R9 · temoin 5 — APRES sa validation, le retenu reste sous SON poste', () => {
+    // GARDIEN_1 est accepte : le serveur le range dans `participations`, et
+    // l ecran doit le rattacher a « Gardien » en passant par sa demande.
+    const root = monterAvecLesDeuxCopies({ participations: [GARDIEN_1] });
+    allerSurLOnglet(root, 'participants');
+
+    const sections = capteurParticipants.props.detectionPositionSections;
+    const gardien = sections.find((/** @type {any} */ item) => item.position === 'Gardien');
+
+    expect(gardien.participating.map((/** @type {any} */ user) => user.documentId))
+      .toEqual([GARDIEN_1.documentId]);
+    expect(gardien.acceptedCount).toBe(1);
+  });
+
+  test('R9 · temoin 6 — PERSONNE ne tombe dans le groupe de repli au passage', () => {
+    // 🧯 Le garde-fou : reparer le rangement ne doit pas se faire en poussant
+    // les gens dans « sans poste precise ». Tout le monde a un poste ici.
+    const root = monterAvecLesDeuxCopies({ participations: [GARDIEN_1] });
+    allerSurLOnglet(root, 'participants');
+
+    const sections = capteurParticipants.props.detectionPositionSections;
+
+    expect(sections.every((/** @type {any} */ item) => item.key !== 'p7-sans-poste')).toBe(true);
+  });
+
+  test('R9 · temoin 7 — les DEUX copies n en font qu une : aucun doublon', () => {
+    // 🔒 La deduplication doit toujours faire son travail : preferer la copie
+    // complete ne veut pas dire garder les deux.
+    const root = monterAvecLesDeuxCopies();
+    allerSurLOnglet(root, 'participants');
+
+    const sections = capteurParticipants.props.detectionPositionSections;
+    const toutesLesDemandes = sections.flatMap((/** @type {any} */ item) => item.pending);
+
+    expect(toutesLesDemandes).toHaveLength(2);
+    expect(new Set(toutesLesDemandes.map((/** @type {any} */ item) => item.documentId)).size)
+      .toBe(2);
+  });
+});
+
+describe('R9 - POSTULER SANS VISER UN POSTE PRECIS', () => {
+  // 🧨 LE CONSTAT DE RECETTE DU 24/08 : le selecteur n offrait QUE des postes.
+  // Or une detection accepte aussi des inscriptions hors annonce — le groupe
+  // d affichage « Sans poste precise » existait deja cote liste (p7-sans-poste),
+  // mais rien a l ecran ne permettait D Y ENTRER. Une porte de sortie sans porte
+  // d entree.
+  //
+  // 🔌 Le chemin est celui qui existait deja : `pendingDetectionSlot` a null
+  // renvoie la confirmation vers `handleConfirmParticipation`, exactement comme
+  // avant ce lot. Aucun second chemin d ecriture n est ouvert ici.
+
+  const joueur = () => authOrganisateur(false);
+
+  /**
+   * Ouvre le selecteur de postes comme un joueur le ferait depuis la barre du bas.
+   * @param {any} [surcharge] - surcharge de l evenement
+   * @returns {any} la racine du rendu
+   */
+  const ouvrirLeSelecteur = (surcharge = {}) => {
+    const root = monter({ auth: joueur(), event: buildDetection(surcharge) });
+    act(() => {
+      capteurBarreDuBas.props.onJoin();
+    });
+    return root;
+  };
+
+  /**
+   * Appuie sur le bouton qui porte exactement ce libelle.
+   * @param {any} root - la racine du rendu
+   * @param {string} libelle - le texte du bouton
+   * @returns {void}
+   */
+  const appuyerSur = (root, libelle) => {
+    const bouton = root.findAll(
+      (/** @type {any} */ node) => node.props?.accessibilityRole === 'button'
+        && textOf(node) === libelle,
+    )[0];
+    act(() => {
+      bouton.props.onPress();
+    });
+  };
+
+  test('R9 · temoin 18 — le selecteur offre une rangee « sans poste precis »', () => {
+    const root = ouvrirLeSelecteur();
+
+    expect(contient(root, 'Sans poste précis')).toBe(true);
+  });
+
+  test('R9 · temoin 19 — l emprunter confirme SANS annoncer de poste choisi', () => {
+    const root = ouvrirLeSelecteur();
+
+    appuyerSur(root, 'Participer sans poste');
+
+    // La modale de confirmation s ouvre — avec sa declaration de responsabilite,
+    // comme tout chemin generique — mais elle n annonce AUCUN poste.
+    expect(capteurModaleParticipation.props.isVisible).toBe(true);
+    expect(capteurModaleParticipation.props.contextNote).toBeFalsy();
+  });
+
+  test('R9 · temoin 20 — choisir un VRAI poste continue de l annoncer', () => {
+    // 🔒 La borne : la rangee neuve ne doit rien retirer au chemin d avant.
+    const root = ouvrirLeSelecteur();
+
+    appuyerSur(root, 'Participer');
+
+    expect(capteurModaleParticipation.props.contextNote).toBe('Poste choisi : Gardien.');
+  });
+
+  test('R9 · temoin 21 — sans AUCUN poste, on va droit a la confirmation, sans selecteur', () => {
+    // 🧭 CE TEMOIN DIT POURQUOI LA RANGEE N A PAS BESOIN D EXISTER ICI. Quand la
+    // detection ne cherche aucun poste, l ecran n ouvre pas de selecteur du tout :
+    // il confirme directement. C est DEJA « participer sans poste precis », par
+    // un chemin plus court. Un selecteur a une seule rangee serait un ecran de
+    // plus pour rien.
+    const root = monter({ auth: joueur(), event: buildDetection({ recruitmentAds: [] }) });
+    act(() => {
+      capteurBarreDuBas.props.onJoin();
+    });
+
+    expect(contient(root, 'Choisir un poste')).toBe(false);
+    expect(capteurModaleParticipation.props.isVisible).toBe(true);
+    expect(capteurModaleParticipation.props.contextNote).toBeFalsy();
+  });
+});
+
+describe('R9 - LE BOUTON « INVITER DANS L EQUIPE » EST ENFIN BRANCHE', () => {
+  // 🔒 Ce bouton naissait GRISE avec le motif « L invitation arrive bientot »
+  // (lot P7), parce que le rail serveur n existait pas encore. Il existe depuis
+  // le lot P10 — recolte ET deploye — et `RecruitmentAdDetails` s en sert deja.
+  // Ce lot recopie CE cablage-la ; il n en invente pas un second.
+  //
+  // ⛔ CE QUE CE BOUTON N EST PAS, ET NE DOIT JAMAIS DEVENIR : un ajout direct a
+  // l equipe. Le serveur cree une invitation `pending` ; c est la PERSONNE qui
+  // accepte. Le temoin 24 verifie que l ecran appelle bien ce rail-la.
+  //
+  // 🔌 CE QUI SE PROUVE ICI, C EST LE CABLAGE. La regle de disponibilite a ses
+  // propres temoins cote service ; ici on prouve que l ecran l appelle avec le
+  // BON OBJET — c est le piege du lot : la regle lit `application.applicant`
+  // alors que la fiche porte `participation.user`.
+
+  const DEMANDE_A_TRAITER = {
+    documentId: 'part-gardien-attente',
+    isActive: true,
+    participationStatus: 'pending',
+    recruitmentAd: { documentId: 'ad-gardien' },
+    user: GARDIEN_2,
+  };
+
+  /**
+   * Ouvre la fiche d un candidat depuis l onglet Candidats.
+   * @param {any} [surcharge] - surcharge de l evenement
+   * @returns {any} la racine du rendu
+   */
+  const ouvrirLaFiche = (surcharge = {}) => {
+    const root = monter({ event: buildDetection(surcharge) });
+    allerSurLOnglet(root, 'participants');
+    act(() => {
+      capteurParticipants.props.onCandidatePress({
+        participation: DEMANDE_A_TRAITER,
+        user: GARDIEN_2,
+      });
+    });
+    return root;
+  };
+
+  /**
+   * Rend le bouton dont le libelle commence par « Inviter » ou « Invitation ».
+   * @param {any} root - la racine du rendu
+   * @returns {any} le noeud du bouton
+   */
+  // La regle est interrogee a CHAQUE rendu : un `...Once` serait avale par le
+  // premier. Les temoins posent donc un comportement DURABLE, remis a neuf ici.
+  afterEach(() => {
+    mockResoudreDisponibilite.mockImplementation(() => ({
+      candidateId: 'u-gardien-2',
+      canInvite: true,
+      reason: '',
+    }));
+  });
+
+  const boutonInviter = (root) => root.findAll(
+    (/** @type {any} */ node) => node.props?.accessibilityRole === 'button'
+      && /^(Inviter|Invitation)/.test(textOf(node)),
+  )[0];
+
+  test('R9 · temoin 22 — L ADAPTATEUR : la regle recoit `applicant`, pas `user`', () => {
+    // 🪤 LE PIEGE EXACT DU LOT. `resolveTeamInvitationAvailability` lit
+    // `application?.applicant` parce qu elle a ete ecrite pour une CANDIDATURE
+    // d annonce. La fiche candidat, elle, porte `participation.user`. Si on lui
+    // passe l objet tel quel, elle repond « pas de compte » pour tout le monde.
+    ouvrirLaFiche();
+
+    expect(mockResoudreDisponibilite).toHaveBeenCalled();
+    // La regle est appelee a chaque rendu ; c est le DERNIER appel qui porte la
+    // fiche ouverte.
+    const appels = mockResoudreDisponibilite.mock.calls;
+    const [candidature, equipe] = appels[appels.length - 1];
+    expect(candidature.applicant).toEqual(GARDIEN_2);
+    expect(equipe).toBe(TEAM_ID);
+  });
+
+  test('R9 · temoin 23 — quand c est possible, le bouton n est plus grise', () => {
+    const root = ouvrirLaFiche();
+
+    expect(boutonInviter(root).props.disabled).toBe(false);
+    expect(contient(root, 'L’invitation arrive bientôt.')).toBe(false);
+  });
+
+  test('R9 · temoin 24 — l appui cree une INVITATION, jamais un ajout d office', () => {
+    const root = ouvrirLaFiche();
+
+    act(() => {
+      boutonInviter(root).props.onPress();
+    });
+
+    expect(mockInviterDansLEquipe).toHaveBeenCalledTimes(1);
+    expect(mockInviterDansLEquipe.mock.calls[0][0]).toEqual(
+      expect.objectContaining({ team: TEAM_ID, user: GARDIEN_2.documentId }),
+    );
+  });
+
+  test('R9 · temoin 25 — une fois partie, l invitation le DIT et le bouton se ferme', async () => {
+    const root = ouvrirLaFiche();
+
+    await act(async () => {
+      await boutonInviter(root).props.onPress();
+    });
+
+    expect(contient(root, 'Invitation envoyée')).toBe(true);
+    expect(boutonInviter(root).props.disabled).toBe(true);
+  });
+
+  test('R9 · temoin 26 — SANS COMPTE : bouton grise, et le motif est HONNETE', () => {
+    // 🎯 Le remplacement du « ça arrive bientôt » : un motif qui dit la verite.
+    mockResoudreDisponibilite.mockReturnValue({
+      candidateId: '',
+      canInvite: false,
+      reason: 'no-account',
+    });
+    const root = ouvrirLaFiche();
+
+    expect(boutonInviter(root).props.disabled).toBe(true);
+    expect(contient(root, 'pas encore de compte FoundClub')).toBe(true);
+    expect(contient(root, 'L’invitation arrive bientôt.')).toBe(false);
+  });
+
+  test('R9 · temoin 27 — SANS EQUIPE : grise aussi, avec son propre motif', () => {
+    // 🧭 Le cas du canal PARTICIPATION : quelqu un inscrit a la seance sans
+    // passer par une annonce, sur un evenement qui n a pas d equipe. Il n y a
+    // aucune equipe ou l inviter, et l ecran le dit au lieu de se taire.
+    mockResoudreDisponibilite.mockReturnValue({
+      candidateId: GARDIEN_2.documentId,
+      canInvite: false,
+      reason: 'missing-team',
+    });
+    const root = ouvrirLaFiche({ team: null });
+
+    expect(boutonInviter(root).props.disabled).toBe(true);
+    expect(contient(root, 'aucune équipe')).toBe(true);
+  });
+});
+
+describe('R9 - LA BARRE DU HAUT PORTE ENFIN UN FOND, SUR CET ECRAN SEULEMENT', () => {
+  // 🧨 LE CONSTAT DE RECETTE DU 24/08 : le titre chevauche le drapeau et le ⋯.
+  //
+  // 🔍 LA MECANIQUE : la barre est TRANSPARENTE pour toute la pile
+  // (`commonOptions.js`, `headerTransparent: true`) et les deux glyphes n ont
+  // aucun fond. Le contenu passe donc dessous — c est voulu — mais rien ne
+  // garantit que les boutons restent lisibles par-dessus.
+  //
+  // ⛔ POURQUOI PAS DANS `commonOptions` : ce fichier commande TOUS les ecrans.
+  // Rendre la barre opaque pour toute l app afin de reparer une detection serait
+  // un changement global que personne n a demande. Le fond est donc pose par CET
+  // ECRAN, dans son `setOptions`.
+
+  /**
+   * Rend les dernieres options passees a la navigation.
+   * @returns {any}
+   */
+  const dernieresOptions = () => {
+    const appels = mockSetOptions.mock.calls;
+    return appels[appels.length - 1][0];
+  };
+
+  test('R9 · temoin 30 — l ecran pose un fond de barre', () => {
+    monter({ event: buildDetection() });
+
+    expect(typeof dernieresOptions().headerBackground).toBe('function');
+  });
+
+  test('R9 · temoin 31 — ce fond ne mange pas les appuis des boutons', () => {
+    // 🔒 Un fond pose PAR-DESSUS la barre avalerait le drapeau et le ⋯. Il doit
+    // etre transparent aux doigts.
+    monter({ event: buildDetection() });
+
+    const fond = dernieresOptions().headerBackground();
+
+    expect(fond.props.pointerEvents).toBe('none');
+  });
+
+  test('R9 · temoin 32 — les deux boutons du haut sont toujours la', () => {
+    // 🔒 La borne : reparer le chevauchement ne doit rien retirer a la barre.
+    monter({ event: buildDetection() });
+
+    expect(typeof dernieresOptions().headerRight).toBe('function');
   });
 });
