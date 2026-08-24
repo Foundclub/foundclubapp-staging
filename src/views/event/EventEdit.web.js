@@ -8,6 +8,7 @@ import {
   createEventPayload,
   createEventUpdatePayload,
   getEventEditSupport,
+  hasExternalAudience,
   isTrainingEventType,
   resolveTrainingOpenConfig,
 } from '@/domains/event/eventUseCases';
@@ -219,6 +220,10 @@ function EventEdit({ navigation, route }) {
     [selectedTypeData?.name],
   );
   const isOpenTrainingType = isTrainingType && formState.sessionStatus !== 'closed';
+  // R8 (D1) — meme regle que sur mobile : sur un evenement prive, tout le monde
+  // est convie, `validationMode` ne filtre personne (AA01) et le reglage
+  // disparait plutot que de faire croire qu'il commande quelque chose.
+  const showValidationField = hasExternalAudience({ sessionStatus: formState.sessionStatus });
   const editSupport = useMemo(
     () => getEventEditSupport(event, selectedTypeData?.name),
     [event, selectedTypeData?.name],
@@ -647,15 +652,19 @@ function EventEdit({ navigation, route }) {
                   </label>
                 ) : null}
 
-                <label style={{ display: 'grid', gap: 8 }}>
-                  <span style={{ color: mutedTextColor, fontSize: 13 }}>
-                    {isTrainingType ? 'Validation des membres internes' : 'Validation'}
-                  </span>
-                  <select onChange={(eventObject) => updateField('validationMode', eventObject.target.value)} style={fieldStyle} value={formState.validationMode}>
-                    <option value="auto">Automatique</option>
-                    <option value="manual">Manuelle</option>
-                  </select>
-                </label>
+                {showValidationField ? (
+                  <label style={{ display: 'grid', gap: 8 }}>
+                    <span style={{ color: mutedTextColor, fontSize: 13 }}>
+                      {isTrainingType
+                        ? 'Validation des membres internes'
+                        : 'Validation des demandes extérieures'}
+                    </span>
+                    <select onChange={(eventObject) => updateField('validationMode', eventObject.target.value)} style={fieldStyle} value={formState.validationMode}>
+                      <option value="auto">Automatique</option>
+                      <option value="manual">Manuelle</option>
+                    </select>
+                  </label>
+                ) : null}
 
                 {isOpenTrainingType ? (
                   <>

@@ -3,7 +3,7 @@ import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Text, TouchableOpacity, View } from 'react-native';
 
-import { isTrainingEventType } from '@/domains/event/eventUseCases';
+import { hasExternalAudience, isTrainingEventType } from '@/domains/event/eventUseCases';
 import useTheme from '@/theme/themeContext';
 
 import SegmentedControl from '@/components/molecules/segmentedControl/SegmentedControl';
@@ -167,6 +167,46 @@ function EventWizardAccess({ navigation, route }) {
     ? t('eventWizard.steps.access.identityAnonymized', 'Anonymisées')
     : t('eventWizard.steps.access.identityVisible', 'Visibles');
 
+  // R8 (D1) — UN REGLAGE QUI NE COMMANDE PERSONNE NE SE PROPOSE PAS.
+  //
+  // Sur un evenement prive, tout le monde est convie : la validation n'a aucun
+  // effet (AA01, GO Adel du 2026-08-20). Le bloc entier disparait donc — et le
+  // reglage des externes avec lui, puisqu'un prive n'en accueille aucun.
+  // La regle se lit dans `hasExternalAudience`, ecrite une seule fois et
+  // partagee avec les deux ecrans de modification.
+  const canBeAskedToJoin = hasExternalAudience({ sessionStatus });
+  const showValidationBlock = !isTournament && canBeAskedToJoin;
+
+  // R8 (D2) — LE LIBELLE DIT QUI IL FILTRE. « Validation des presences »
+  // laissait croire qu'on filtrait les presents ; ce reglage ne voit que les
+  // demandes venues du dehors. Sur un entrainement, le libelle nommait deja
+  // ceux qu'il concerne : il ne bouge pas.
+  const validationGroupLabel = isTraining
+    ? t('eventWizard.steps.access.validationGroupInternal', 'Validation des membres internes')
+    : t('eventWizard.steps.access.validationGroupExternal', 'Validation des demandes extérieures');
+  const validationHint = (() => {
+    if (isTraining) {
+      return validationMode === 'manual'
+        ? t(
+          'eventWizard.steps.access.validationManualHint',
+          'Le coach valide chaque participant, un par un.',
+        )
+        : t(
+          'eventWizard.steps.access.validationAutoHint',
+          'Les participants confirment seuls leur présence — recommandé.',
+        );
+    }
+    return validationMode === 'manual'
+      ? t(
+        'eventWizard.steps.access.validationExternalManualHint',
+        'Tu valides chaque demande venue de l\'extérieur. Les invités répondent directement.',
+      )
+      : t(
+        'eventWizard.steps.access.validationExternalAutoHint',
+        'Les demandes venues de l\'extérieur sont acceptées sans validation — recommandé.',
+      );
+  })();
+
   const handleNext = () => {
     dispatch({
       payload: {
@@ -233,15 +273,10 @@ function EventWizardAccess({ navigation, route }) {
           </ChoiceHint>
         </View>
 
-        {!isTournament ? (
+        {showValidationBlock ? (
           <View style={[Spaces.marginTop[16]]}>
             <GroupLabel>
-              {t(
-                isTraining
-                  ? 'eventWizard.steps.access.validationGroupInternal'
-                  : 'eventWizard.steps.access.validationGroup',
-                isTraining ? 'Validation des membres internes' : 'Validation des présences',
-              )}
+              {validationGroupLabel}
             </GroupLabel>
             <SegmentedControl
               centerContent
@@ -250,15 +285,7 @@ function EventWizardAccess({ navigation, route }) {
               value={validationMode}
             />
             <ChoiceHint>
-              {validationMode === 'manual'
-                ? t(
-                  'eventWizard.steps.access.validationManualHint',
-                  'Le coach valide chaque participant, un par un.',
-                )
-                : t(
-                  'eventWizard.steps.access.validationAutoHint',
-                  'Les participants confirment seuls leur présence — recommandé.',
-                )}
+              {validationHint}
             </ChoiceHint>
 
             {isOpenTraining ? (
