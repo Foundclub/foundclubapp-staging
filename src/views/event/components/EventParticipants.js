@@ -432,15 +432,19 @@ function EventParticipants({
   // doivent desormais mocker `eventService` en plus de `licenseQueries` — le
   // vrai module jette au CHARGEMENT quand `.env` est absent, ce qui est le cas
   // de toute copie de travail.
-  const { coachArrivalMutation } = useAttendanceCallMutations(event?.documentId || '');
+  const identifiantEvenement = event?.documentId || '';
+  const { coachArrivalMutation } = useAttendanceCallMutations(identifiantEvenement);
   const pointerALHeure = useCallback((/** @type {User} */ joueur) => {
     const identifiant = joueur?.documentId;
-    if (!identifiant) return;
+    // ⛔ Les deux identifiants construisent l URL. Sans l un d eux, la requete
+    // partirait sur `/events//attendance//coach-arrival` : un 404 illisible
+    // plutot qu un geste qui ne part pas.
+    if (!identifiant || !identifiantEvenement) return;
     // 🧨 `lateMinutes: 0` n est pas decoratif : sans lui le serveur calcule le
     // retard depuis le coup d envoi et pointerait « +12 min » quelqu un que le
     // coach vient justement de declarer a l heure.
     coachArrivalMutation.mutate({ payload: { lateMinutes: 0 }, userId: identifiant });
-  }, [coachArrivalMutation]);
+  }, [coachArrivalMutation, identifiantEvenement]);
 
   // AE02 (1I) — LE MOTIF ANTI-SPAM, AVANT L APPUI.
   // 🧨 `nextReminderAt` n existe NULLE PART tant qu aucune relance n est

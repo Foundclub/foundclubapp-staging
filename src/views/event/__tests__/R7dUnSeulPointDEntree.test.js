@@ -269,6 +269,25 @@ describe('R7-d — un seul point d entree par joueur', () => {
     expect(mockMarkCoachArrival).not.toHaveBeenCalled();
   });
 
+  test('🔒 sans identifiant d evenement, le geste ne part PAS sur une URL trouee', async () => {
+    const arbre = monter({
+      event: {},
+      teamParticipationSections: [section({ participating: [P_A_POINTER] })],
+    });
+
+    const bouton = arbre.root
+      .findAllByType(Button)
+      .find((/** @type {any} */ noeud) => noeud.props.title === "À l'heure");
+
+    await act(async () => {
+      bouton.props.onPress();
+      await new Promise((resoudre) => { setTimeout(resoudre, 0); });
+    });
+
+    // `/events//attendance//coach-arrival` rendrait un 404 illisible.
+    expect(mockMarkCoachArrival).not.toHaveBeenCalled();
+  });
+
   test('🔒 sans droit de gestion, AUCUN bouton d action n apparait', () => {
     const arbre = monter({
       canEdit: false,
