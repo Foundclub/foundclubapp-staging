@@ -3511,11 +3511,30 @@ function EventDetails({ navigation, route }) {
   // ici parce que la pastille de type et le verdict en ont besoin aussi — et
   // qu'une pastille « À domicile » posee au-dessus d'un score inverse serait
   // une contradiction visible a l'ecran.
+  // 🧨 R2 (recette 2.6.26) — DEUX EQUIPES DU MEME CLUB NE S'AFFRONTENT PAS.
+  // Inviter une equipe de son propre club retournait la pastille et le score
+  // pour ses joueurs : le 3-1 gagne par le club devenait une DEFAITE a
+  // l'ecran. La regle est la meme qu'au nommage (`eventDisplayName.js`) —
+  // les DEUX clubs doivent etre connus et egaux, sinon rien ne change.
   const isViewerFromInvitedTeam = useMemo(() => {
     const organizerTeamId = event?.team?.documentId || null;
     const currentTeamId = compositionTeamId || organizerTeamId || null;
-    return Boolean(organizerTeamId && currentTeamId && organizerTeamId !== currentTeamId);
-  }, [compositionTeamId, event?.team?.documentId]);
+    if (!organizerTeamId || !currentTeamId || organizerTeamId === currentTeamId) return false;
+
+    const organizerClubId = event?.team?.club?.documentId || event?.club?.documentId || null;
+    const viewerTeam = (event?.invitedTeams || [])
+      .find((team) => team?.documentId === currentTeamId);
+    const viewerClubId = viewerTeam?.club?.documentId || null;
+    if (organizerClubId && viewerClubId && organizerClubId === viewerClubId) return false;
+
+    return true;
+  }, [
+    compositionTeamId,
+    event?.club?.documentId,
+    event?.invitedTeams,
+    event?.team?.club?.documentId,
+    event?.team?.documentId,
+  ]);
 
   const compositionEditorTeam = useMemo(() => {
     const teams = [event?.team, ...(event?.invitedTeams || [])].filter(Boolean);
