@@ -445,8 +445,8 @@ describe('AD06 · temoin 4 — les deux boutons des demandes font 44', () => {
     const boutonsCoach = arbre.root
       .findAllByType(Button)
       .filter((/** @type {any} */ noeud) => [
-        'En retard',
         'À l\'heure',
+        'En retard',
       ].includes(noeud.props.title));
 
     expect(boutonsCoach.length).toBe(2);

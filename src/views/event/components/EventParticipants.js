@@ -18,7 +18,11 @@ import { useLicenseAssignments } from '@/services/license/licenseQueries';
 
 import { formatDateTimeWithDayPrefix } from '@/utils/date';
 
-import { useAttendanceCallMutations } from '../attendance/useAttendanceCallMutations';
+// 🪤 R7-d — PAR L ALIAS, PAS EN RELATIF. `import/order` veut l alias avant le
+// relatif, `perfectionist/sort-imports` veut l inverse : un seul import en
+// `../` suffisait a les mettre en contradiction, et aucune des deux ne peut
+// ceder. Ce fichier n en avait aucun jusqu ici — d ou le piege.
+import { useAttendanceCallMutations } from '@/views/event/attendance/useAttendanceCallMutations';
 
 // import statique (pas require) : require n'existe pas sur le rendu web ESM.
 import SHARE_ICON from '@/assets/icons/share2.png';
