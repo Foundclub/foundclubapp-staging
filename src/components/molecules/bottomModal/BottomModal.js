@@ -46,6 +46,8 @@ const STALE_DISMISS_WINDOW_MS = 400;
  * @param {boolean} [props.enablePanDownToClose] - Enables pan-down-to-close gesture
  * @param {'adjustResize' | 'adjustPan' | 'stateUnchanged'} [props.androidKeyboardInputMode]
  * @param {'interactive' | 'extend' | 'fillParent'} [props.keyboardBehavior]
+ * @param {number} [props.maxContentHeightRatio] - Fraction de la hauteur d'ecran
+ * que la zone defilante peut occuper. Sans effet avec `snapPoints`.
  * @param {React.MutableRefObject<any>} [props.scrollViewRef] - Optional ref forwarded to BottomSheetScrollView
  * @param {object} [props.scrollViewProps] - Optional extra props forwarded to BottomSheetScrollView
  * @param {(string|number)[]} [props.snapPoints] - Array of snap points for the modal
@@ -69,6 +71,14 @@ function BottomModal({
   hideCloseButton = true,
   isVisible,
   keyboardBehavior = 'interactive',
+  // R5 (D1) — LE PLAFOND DE LA ZONE DEFILANTE DEVIENT REGLABLE, PAR EXCEPTION.
+  // Ce composant sert 70 appelants : remonter le plafond POUR TOUT LE MONDE
+  // changerait 70 ecrans sans qu aucun temoin ne le voie. La prop est donc
+  // OPT-IN, et son defaut est EXACTEMENT la valeur d avant.
+  // Seule la feuille « Gerer l evenement » la passe (EventDetails.js) : elle
+  // porte 5 a 7 rangees dont deux a note de 2-3 lignes, et ses dernieres
+  // actions tombaient sous le pli (constat de recette de la 2.6.26).
+  maxContentHeightRatio = 0.7,
   onDismissed,
   preventStartupPresentation = false,
   scrollable = true,
@@ -351,7 +361,9 @@ function BottomModal({
             keyboardShouldPersistTaps="handled"
             ref={scrollViewRef}
             style={[
-              snapPoints ? Alignments.fill : { maxHeight: Dimensions.get('screen').height * 0.7 },
+              snapPoints
+                ? Alignments.fill
+                : { maxHeight: Dimensions.get('screen').height * maxContentHeightRatio },
             ]}
             // eslint-disable-next-line react/jsx-props-no-spreading
             {...scrollViewProps}

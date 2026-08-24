@@ -76,6 +76,8 @@ import {
 import {
   approveFeatured,
   exportEventParticipants,
+  getEventByIdForEdit,
+  getEventTypes,
   rejectFeatured,
 } from '@/services/event/eventService';
 import { useGetEventParticipations } from '@/services/eventParticipation/eventParticipationQueries';
@@ -2533,11 +2535,46 @@ function EventDetails({ navigation, route }) {
   }, [eventStartAt]);
 
   const handleEditEvent = useCallback(() => {
+    // R5 (b) — LE DEPART ANTICIPE DES DEUX LECTURES DE L'ECRAN DE MODIFICATION.
+    //
+    // Constat de recette (2.6.26) : « tous les boutons de modifier un evenement
+    // sont lents a s'ouvrir ». EventEdit tire ses donnees AU MONTAGE — donc
+    // l'ecran s'affiche vide, puis se remplit. Les deux lectures qui le
+    // bloquent partent desormais ICI, au toucher, pendant que la transition
+    // de navigation joue : c'est autant de temps repris sur l'attente.
+    //
+    // 🔑 LES CLEFS SONT CELLES D'EventEdit, AU CARACTERE PRES
+    // (`eventQueries.js` : `useGetEventForEdit` et `useGetEventTypes`). C'est
+    // la seule chose qui compte : une clef voisine remplirait une case que
+    // personne ne lit, et l'attente serait exactement la meme.
+    // ⛔ La fiche d'evenement lit `['event', eventId]` — une clef DIFFERENTE,
+    // sur une projection plus large. Le cache de la fiche ne sert donc a rien
+    // a l'ecran de modification, et c'est pour ca qu'il faut precharger.
+    //
+    // ⚠️ Aucun `await` : c'est un depart anticipe, pas une etape du parcours.
+    // La navigation ne l'attend pas, et un echec reseau n'est pas traite ici —
+    // EventEdit refera l appel lui-meme si le cache est vide.
+    // Motif Q2, deja eprouve (`EventWizardTeam.js`).
+    if (eventId) {
+      queryClient.prefetchQuery({
+        queryFn: () => getEventByIdForEdit(eventId),
+        queryKey: ['event', eventId, 'edit'],
+      });
+      queryClient.prefetchQuery({
+        queryFn: () => getEventTypes(),
+        queryKey: ['event-types'],
+        // MEME fraicheur que le lecteur (`EventEdit.js`). Sans elle, ce
+        // prechargement-ci repartirait au reseau a CHAQUE appui sur « Modifier »
+        // — et il annulerait exactement ce que la duree de fraicheur economise.
+        staleTime: Infinity,
+      });
+    }
+
     navigation.navigate(RouteNames.EventStack, {
       params: { eventId },
       screen: RouteNames.EventEdit,
     });
-  }, [eventId, navigation]);
+  }, [eventId, navigation, queryClient]);
 
   // @ts-ignore: FIXME: Baseline TS regression
   const handleOpenTournamentTeam = useCallback((teamDocumentId) => {
@@ -6003,6 +6040,7 @@ function EventDetails({ navigation, route }) {
           </Text>
         )}
         isVisible={isEventActionsSheetOpen}
+        maxContentHeightRatio={0.9}
       >
         <View
           style={[

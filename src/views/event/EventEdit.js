@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { joiResolver } from '@hookform/resolvers/joi';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { format, isValid, parse } from 'date-fns';
 import Joi from 'joi';
 import { useEffect, useMemo, useState } from 'react';
@@ -44,6 +44,19 @@ import safeJsonParse from '@/utils/safeJsonParse';
 
 import EventTasksEditor from './components/EventTasksEditor';
 import EventTeamAudiencesEditor from './components/EventTeamAudiencesEditor';
+
+// R5 (b) — LES EQUIPES DU CLUB SONT RELUES AU PLUS UNE FOIS PAR MINUTE.
+// Elles ne changent pas d'une ouverture de l'ecran a l'autre, et elles etaient
+// redemandees a CHAQUE montage par un appel imperatif, hors du cache. Une
+// minute suffit a couvrir un aller-retour fiche → modification → fiche ; au-dela
+// on relit, pour qu'une equipe creee a l'instant finisse par apparaitre.
+const CLUB_TEAMS_STALE_MS = 60_000;
+
+// La MEME liste vide a chaque rendu : un `[]` litteral en valeur par defaut
+// changerait d identite a chaque passage et ferait recalculer pour rien les
+// deux `useMemo` qui en dependent (`manageableTeams`, `invitedTeamOptions`).
+/** @type {any[]} */
+const AUCUNE_EQUIPE = [];
 
 /** @typedef {import('@/domains/event/types').FCEventForm} FCEventForm */
 /** @typedef {import('@/domains/team/types').Team} Team */
@@ -206,7 +219,12 @@ function EventEdit({ navigation, route }) {
   const { t } = useTranslation();
   const { userData } = useAuth();
   const { data: event } = useGetEventForEdit(eventId);
-  const { data: eventTypes } = useGetEventTypes();
+  // R5 (b) — LA LISTE DES TYPES NE SE RECHARGE PLUS A CHAQUE OUVERTURE.
+  // C est une table de reference (Match, Entrainement, Reservation...) : elle ne
+  // bouge pas de la vie de l application. Sans duree de fraicheur, react-query
+  // la considerait perimee des sa reception et repartait au reseau a CHAQUE
+  // montage — y compris quand la fiche venait de la precharger.
+  const { data: eventTypes } = useGetEventTypes({ staleTime: Infinity });
   const {
     createEventUpdatePayload,
     createReccurrentEventPayload,
@@ -381,26 +399,22 @@ function EventEdit({ navigation, route }) {
   const cmId = initialSelectedTeam?.club?.parentMultisport?.documentId || userData?.club?.parentMultisport?.documentId;
 
   // Fetch club teams for invited teams selection
-  const [clubTeams, setClubTeams] = useState(/** @type {Team[]} */ ([]));
-
-  useEffect(() => {
-    const fetchClubTeams = async () => {
-      if (clubId) {
-        try {
-          console.log('Fetching teams for club:', clubId);
-          const response = await getTeams({ clubId, pageSize: 100 });
-          console.log('Fetched club teams:', response.data?.length);
-          setClubTeams(response.data || []);
-        } catch (error) {
-          console.error('Failed to fetch club teams', error);
-        }
-      } else {
-        setClubTeams([]);
-      }
-    };
-
-    fetchClubTeams();
-  }, [clubId]);
+  // R5 (b) — CET APPEL VIVAIT HORS DU CACHE, DONC IL REPARTAIT A CHAQUE
+  // MONTAGE. Meme charge, meme parametres, meme resultat : seul le rangement
+  // change. Ce qui se perd au passage, ce sont deux `console.log` par ouverture
+  // et une lecture reseau par aller-retour.
+  // ⛔ La clef est `club-teams`, PAS `teams` : `useGetTeams` (`teamQueries.js`)
+  // occupe deja `teams` avec une requete PAGINEE, et deux natures de requete
+  // sous une meme clef se corrompent mutuellement.
+  const { data: clubTeams = AUCUNE_EQUIPE } = useQuery({
+    enabled: Boolean(clubId),
+    queryFn: async () => {
+      const response = await getTeams({ clubId, pageSize: 100 });
+      return response.data || [];
+    },
+    queryKey: ['club-teams', clubId],
+    staleTime: CLUB_TEAMS_STALE_MS,
+  });
 
   const manageableTeams = useMemo(() => {
     if (isClubManager && clubTeams.length > 0) {
