@@ -1047,6 +1047,11 @@ export default {
       refuse: 'Refuser',
       remind: 'Relancer',
     },
+    attendanceActions: {
+      edit: 'Modifier',
+      late: 'En retard',
+      onTime: "À l'heure",
+    },
     attendanceBadge: {
       arrived: 'Arrivé',
       declaredLate: 'Retard annoncé',

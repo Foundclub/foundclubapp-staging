@@ -39,6 +39,19 @@ jest.mock('@/services/license/licenseQueries', () => ({
   useLicenseAssignments: () => ({ data: undefined, isLoading: false }),
 }));
 
+// 🧨 R7-d — CONDITION DE DEMARRAGE, PAS UN CONFORT (meme motif que le mock
+// `licenseQueries` ci-dessus). Depuis R7-d, `EventParticipants` monte
+// `useAttendanceCallMutations` pour ecrire le pointage « A l heure ». Le vrai
+// `eventService` descend jusqu a `client.native.js`, qui jette AU CHARGEMENT
+// quand `.env` est absent — et `.env` est gitignore, donc absent de toute
+// copie de travail. Sans ce mock : « failed to run », 0 test execute.
+jest.mock('@/services/event/eventService', () => ({
+  markCoachArrival: jest.fn(),
+  markCoachArrivalBulk: jest.fn(),
+  resetCoachAttendance: jest.fn(),
+  updateCoachLateMinutes: jest.fn(),
+}));
+
 jest.mock('react-i18next', () => {
   const traductions = jest.requireActual('@/theme/strings/translations/fr').default;
   /**
@@ -418,10 +431,13 @@ describe('AD06 · temoin 4 — les deux boutons des demandes font 44', () => {
 
   test('en revanche les DEUX boutons coach d une ligne ne font que 39 px', () => {
     // 📏 CONSTAT POSE POUR UN LOT SUIVANT, PAS UNE REGRESSION D AD06 :
-    // « Pointer l arrivee » et « Modifier » portent `size="sm"`, qui vaut 39 px
-    // (Button.js:61-72) — sous la cible tactile de 44. Le temoin fige la mesure
-    // pour qu on n ait pas a la redecouvrir ; le jour ou un lot les passe a 44,
-    // c est CE chiffre qu il change.
+    // les actions coach portent `size="sm"`, qui vaut 39 px (Button.js:61-72)
+    // — sous la cible tactile de 44. Le temoin fige la mesure pour qu on n ait
+    // pas a la redecouvrir ; le jour ou un lot les passe a 44, c est CE chiffre
+    // qu il change.
+    // 🔁 R7-d (24/08) : les libelles ont change (« Pointer l arrivée » et
+    // « Modifier », qui ouvraient le MEME modal, sont devenus « À l'heure » et
+    // « En retard »). La MESURE, elle, est inchangee.
     const arbre = monter({
       teamParticipationSections: [section({ participating: [P_ARRIVE] })],
     });
@@ -429,8 +445,8 @@ describe('AD06 · temoin 4 — les deux boutons des demandes font 44', () => {
     const boutonsCoach = arbre.root
       .findAllByType(Button)
       .filter((/** @type {any} */ noeud) => [
-        'Modifier',
-        'Pointer l\'arrivée',
+        'En retard',
+        'À l\'heure',
       ].includes(noeud.props.title));
 
     expect(boutonsCoach.length).toBe(2);

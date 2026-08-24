@@ -34,6 +34,19 @@ jest.mock('@/services/license/licenseQueries', () => ({
   useLicenseAssignments: () => ({ data: undefined, isLoading: false }),
 }));
 
+// 🧨 R7-d — CONDITION DE DEMARRAGE, PAS UN CONFORT (meme motif que le mock
+// `licenseQueries` ci-dessus). Depuis R7-d, `EventParticipants` monte
+// `useAttendanceCallMutations` pour ecrire le pointage « A l heure ». Le vrai
+// `eventService` descend jusqu a `client.native.js`, qui jette AU CHARGEMENT
+// quand `.env` est absent — et `.env` est gitignore, donc absent de toute
+// copie de travail. Sans ce mock : « failed to run », 0 test execute.
+jest.mock('@/services/event/eventService', () => ({
+  markCoachArrival: jest.fn(),
+  markCoachArrivalBulk: jest.fn(),
+  resetCoachAttendance: jest.fn(),
+  updateCoachLateMinutes: jest.fn(),
+}));
+
 jest.mock('react-i18next', () => ({
   initReactI18next: { init: jest.fn(), type: '3rdParty' },
   useTranslation: () => ({ t: (/** @type {string} */ key) => key }),
