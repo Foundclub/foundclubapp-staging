@@ -297,6 +297,10 @@ export const getEventById = async (documentId) => getEventByIdResponse(documentI
     'team.trainers',
     'team.trainers.avatar',
     'invitedTeams',
+    // R2 — le CLUB de l'equipe invitee : sans lui, impossible de savoir si
+    // elle est du notre, et une equipe de notre propre club devenait
+    // l'adversaire (`eventDisplayName.js`).
+    'invitedTeams.club',
     'invitedTeams.players',
     'invitedTeams.players.avatar',
     'invitedTeams.trainers',
@@ -648,6 +652,13 @@ const buildCompactEventCardPopulate = (viewerDocumentId) => ({
   },
   invitedTeams: {
     fields: ['documentId', 'name'],
+    // R2 — le club de l'equipe invitee voyage AUSSI dans la vue reduite :
+    // c'est elle qui alimente le nom affiche sur les cartes.
+    populate: {
+      club: {
+        fields: ['documentId'],
+      },
+    },
   },
   league_match: {
     fields: ['documentId'],
@@ -1126,6 +1137,10 @@ export const getEvents = async (params = {}, options = {}) => {
       'missings',
       'facility',
       'invitedTeams',
+      // R2 — meme raison qu'au-dessus dans `getEventById` : sans le club de
+      // l'equipe invitee, une carte de la LISTE ne peut pas savoir qu'elle est
+      // du notre, et affiche « Match vs <notre propre equipe> ».
+      'invitedTeams.club',
       'participationRequests.user',
       'participationRequests.user.avatar',
       'participationRequests.sourceTeam',

@@ -707,3 +707,128 @@ describe('N3 - la carte du match : ce que l ecran calcule', () => {
     expect(resume()).toBeNull();
   });
 });
+
+/* ------------------------------------------------------------------ */
+/* R2 — INVITER UNE EQUIPE DE SON PROPRE CLUB                          */
+/* ------------------------------------------------------------------ */
+//
+// 🧨 Retour de recette de la 2.6.26 : inviter une equipe de SON PROPRE club sur
+// un evenement le faisait basculer en match CONTRE elle — l evenement PRENAIT
+// SON NOM, la pastille domicile/exterieur se retournait pour ses joueurs, et le
+// score s inversait avec elle. La cause : la regle « toute equipe invitee
+// differente de l organisatrice EST l adversaire » ne regardait que les
+// EQUIPES, jamais leur CLUB.
+//
+// ⚖️ LA REGLE EXIGE LES DEUX CLUBS CONNUS ET EGAUX. Quand l un des deux manque
+// — c est le cas des temoins N3 ci-dessus, dont les equipes invitees n ont pas
+// de club — le comportement d avant reste : on ne devine pas.
+
+/** Une equipe invitee du MEME club que l organisateur (le cas du bug R2). */
+const EQUIPE_DU_MEME_CLUB = {
+  club: { documentId: CLUB_ID },
+  documentId: TEAM_INVITEE_ID,
+  name: 'U15 B',
+  trainers: [{ documentId: COACH_INVITEE }],
+};
+
+/** Une equipe invitee d un AUTRE club : le vrai adversaire, inchange. */
+const EQUIPE_D_UN_AUTRE_CLUB = {
+  club: { documentId: 'club-2' },
+  documentId: TEAM_INVITEE_ID,
+  name: ADVERSAIRE,
+  trainers: [{ documentId: COACH_INVITEE }],
+};
+
+describe('R2 - une equipe de mon propre club n est pas un adversaire', () => {
+  test('R2 · temoin 1 — l evenement ne prend PAS le nom de l equipe invitee (D2)', () => {
+    monter({
+      auth: ORGANISATEUR(),
+      event: buildMatch({
+        invitedTeams: [EQUIPE_DU_MEME_CLUB],
+        name: 'Match - 01/01/2099 - U15 A',
+        opponentName: null,
+      }),
+    });
+
+    // Aucun adversaire : l encart le dit, et l ecran continue de proposer d en
+    // nommer un. Avant R2, `opponentName` valait « U15 B » — notre propre equipe.
+    expect(resume().opponentName).toBe('');
+    expect(resume().awaitingOpponent).toBe(true);
+  });
+
+  test('R2 · temoin 2 — la pastille ne se retourne PAS pour l equipe du club (D3)', () => {
+    const matchInterne = buildMatch({
+      invitedTeams: [EQUIPE_DU_MEME_CLUB],
+      isHome: true,
+      opponentName: null,
+    });
+
+    monter({ auth: ORGANISATEUR(), event: matchInterne });
+    expect(pastille()).toBe('MATCH · À DOMICILE');
+
+    // Meme evenement, lu par le coach de l autre equipe DU MEME CLUB : les deux
+    // equipes recoivent chez elles. Avant R2, il lisait « À L'EXTÉRIEUR ».
+    monter({ auth: COACH_DE_L_INVITEE(), event: matchInterne });
+    expect(pastille()).toBe('MATCH · À DOMICILE');
+  });
+
+  test('R2 · temoin 3 — le score NE s inverse PAS pour l equipe invitee du meme club (D3)', () => {
+    const matchInterne = buildMatch({
+      invitedTeams: [EQUIPE_DU_MEME_CLUB],
+      matchResult: {
+        isFinal: true, scoreAgainst: 1, scoreFor: 3, source: 'manual',
+      },
+      opponentName: null,
+    });
+
+    monter({ auth: ORGANISATEUR(), event: matchInterne });
+    expect(resume().value).toBe('3 - 1');
+    expect(resume().verdict).toBe('win');
+
+    // Avant R2, le coach de l autre equipe du club lisait « 1 - 3 » et une
+    // DEFAITE — pour un match que son propre club avait gagne.
+    monter({ auth: COACH_DE_L_INVITEE(), event: matchInterne });
+    expect(resume().value).toBe('3 - 1');
+    expect(resume().verdict).toBe('win');
+  });
+
+  test('R2 · temoin 4 — un match contre un AUTRE club reste strictement inchange', () => {
+    const vraiMatch = buildMatch({
+      invitedTeams: [EQUIPE_D_UN_AUTRE_CLUB],
+      isHome: true,
+      matchResult: {
+        isFinal: true, scoreAgainst: 1, scoreFor: 3, source: 'manual',
+      },
+      opponentName: null,
+    });
+
+    monter({ auth: ORGANISATEUR(), event: vraiMatch });
+    expect(pastille()).toBe('MATCH · À DOMICILE');
+    expect(resume().opponentName).toBe(ADVERSAIRE);
+    expect(resume().verdict).toBe('win');
+
+    // L adversaire, lui, voit toujours le match retourne : c est le comportement
+    // de N3, et R2 ne doit pas y toucher.
+    monter({ auth: COACH_DE_L_INVITEE(), event: vraiMatch });
+    expect(pastille()).toBe('MATCH · À L\'EXTÉRIEUR');
+    expect(resume().value).toBe('1 - 3');
+    expect(resume().verdict).toBe('loss');
+  });
+
+  test('R2 · temoin 5 — sans club connu, rien ne change (ancien parc)', () => {
+    // Une equipe invitee sans club : impossible de savoir si elle est du club.
+    // On garde le comportement d aujourd hui plutot que de deviner.
+    const ancienParc = buildMatch({
+      invitedTeams: [{
+        documentId: TEAM_INVITEE_ID,
+        name: ADVERSAIRE,
+        trainers: [{ documentId: COACH_INVITEE }],
+      }],
+      isHome: true,
+      opponentName: null,
+    });
+
+    monter({ auth: COACH_DE_L_INVITEE(), event: ancienParc });
+    expect(pastille()).toBe('MATCH · À L\'EXTÉRIEUR');
+  });
+});
