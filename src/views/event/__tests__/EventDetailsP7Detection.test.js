@@ -25,6 +25,11 @@ const mockEventQuery = { data: /** @type {any} */ (null) };
 const mockAccepterParticipation = jest.fn();
 const mockRefuserParticipation = jest.fn();
 const mockLireLesCandidatures = jest.fn(() => Promise.resolve([]));
+// 📑 R9 — LA COPIE PAGINEE, pilotable. Les demandes arrivent a l ecran par
+// DEUX chemins : embarquees dans l evenement, et paginees par cette requete.
+// Seule la seconde porte `recruitmentAd` cote serveur ; il faut donc pouvoir
+// les faire diverger pour prouver laquelle gagne la deduplication.
+const mockParticipationsPages = { pages: /** @type {any} */ (null) };
 
 // 📸 Les capteurs vivent dans `@/testSupport/p7Capteurs` (importe plus haut) :
 // chaque rendu y ECRASE la valeur, un temoin lit donc toujours le DERNIER
@@ -129,7 +134,12 @@ jest.mock('@/services/event/eventQueries', () => ({
 }));
 
 jest.mock('@/services/eventParticipation/eventParticipationQueries', () => ({
-  useGetEventParticipations: () => emptyQuery(),
+  useGetEventParticipations: () => ({
+    ...emptyQuery(),
+    data: mockParticipationsPages.pages
+      ? { pages: mockParticipationsPages.pages }
+      : null,
+  }),
 }));
 
 jest.mock('@/services/license/licenseQueries', () => ({
@@ -449,8 +459,9 @@ const demonter = () => {
   mounted = null;
 };
 
-const monter = (/** @type {any} */ { auth, event, params = {} } = {}) => {
+const monter = (/** @type {any} */ { auth, event, pagesPaginees = null, params = {} } = {}) => {
   mockEventQuery.data = event === undefined ? buildDetection() : event;
+  mockParticipationsPages.pages = pagesPaginees;
   mockUseAuth.mockReturnValue(auth || authOrganisateur());
 
   demonter();
@@ -858,5 +869,102 @@ describe('P7 - le bouton « Inviter dans l equipe » nait GRISE (serveur = lot P
     expect(inviter).toBeDefined();
     expect(inviter.props.disabled).toBe(true);
     expect(contient(root, 'L’invitation arrive bientôt.')).toBe(true);
+  });
+});
+
+describe('R9 - LE CANDIDAT ACCEPTE QUI DISPARAISSAIT DE SON POSTE', () => {
+  // 🧨 LE CONSTAT DE RECETTE DU 24/08, mot pour mot : « un candidat accepte
+  // n apparait NI dans les candidats du poste avant, NI dans la liste du poste
+  // apres ». Deux causes, et il fallait les deux pour reparer :
+  //
+  //   1. le POPULATE ne descendait pas `recruitmentAd` sur les demandes
+  //      embarquees dans l evenement (repare dans `eventService.js` et dans
+  //      l allowlist du serveur) ;
+  //   2. la DEDUPLICATION inserait la copie embarquee EN PREMIER, donc la copie
+  //      amputee gagnait sur la copie paginee qui, elle, portait bien le lien.
+  //
+  // 🪤 CE QUI RENDAIT LE DEFAUT INVISIBLE AUX TESTS : les fixtures des suites
+  // d ecran posent `recruitmentAd` a la main sur les demandes embarquees. Elles
+  // decrivent un serveur plus genereux que le vrai. Les temoins ci-dessous
+  // reproduisent donc la charge REELLE d avant le lot : embarquee SANS le lien,
+  // paginee AVEC.
+
+  /**
+   * La demande telle que le serveur l embarquait dans l evenement : sans annonce.
+   * @param {any} demande - la demande complete
+   * @returns {any} la meme demande, amputee de son lien vers l annonce
+   */
+  const sansLAnnonce = (demande) => {
+    const { recruitmentAd, ...reste } = demande;
+    return reste;
+  };
+
+  /**
+   * Monte la detection avec les DEUX copies divergentes.
+   * @param {any} [surcharge] - surcharge de l evenement
+   * @returns {any} la racine du rendu
+   */
+  const monterAvecLesDeuxCopies = (surcharge = {}) => {
+    const detection = buildDetection(surcharge);
+    return monter({
+      event: {
+        ...detection,
+        participationRequests: detection.participationRequests.map(sansLAnnonce),
+      },
+      pagesPaginees: [{
+        data: detection.participationRequests,
+        meta: { pagination: { page: 1, pageCount: 1 } },
+      }],
+    });
+  };
+
+  test('R9 · temoin 4 — AVANT sa validation, le candidat est sous SON poste', () => {
+    const root = monterAvecLesDeuxCopies();
+    allerSurLOnglet(root, 'participants');
+
+    const sections = capteurParticipants.props.detectionPositionSections;
+    const gardien = sections.find((/** @type {any} */ item) => item.position === 'Gardien');
+
+    expect(gardien.pending.map((/** @type {any} */ item) => item.documentId))
+      .toEqual(['part-gardien-attente']);
+  });
+
+  test('R9 · temoin 5 — APRES sa validation, le retenu reste sous SON poste', () => {
+    // GARDIEN_1 est accepte : le serveur le range dans `participations`, et
+    // l ecran doit le rattacher a « Gardien » en passant par sa demande.
+    const root = monterAvecLesDeuxCopies({ participations: [GARDIEN_1] });
+    allerSurLOnglet(root, 'participants');
+
+    const sections = capteurParticipants.props.detectionPositionSections;
+    const gardien = sections.find((/** @type {any} */ item) => item.position === 'Gardien');
+
+    expect(gardien.participating.map((/** @type {any} */ user) => user.documentId))
+      .toEqual([GARDIEN_1.documentId]);
+    expect(gardien.acceptedCount).toBe(1);
+  });
+
+  test('R9 · temoin 6 — PERSONNE ne tombe dans le groupe de repli au passage', () => {
+    // 🧯 Le garde-fou : reparer le rangement ne doit pas se faire en poussant
+    // les gens dans « sans poste precise ». Tout le monde a un poste ici.
+    const root = monterAvecLesDeuxCopies({ participations: [GARDIEN_1] });
+    allerSurLOnglet(root, 'participants');
+
+    const sections = capteurParticipants.props.detectionPositionSections;
+
+    expect(sections.every((/** @type {any} */ item) => item.key !== 'p7-sans-poste')).toBe(true);
+  });
+
+  test('R9 · temoin 7 — les DEUX copies n en font qu une : aucun doublon', () => {
+    // 🔒 La deduplication doit toujours faire son travail : preferer la copie
+    // complete ne veut pas dire garder les deux.
+    const root = monterAvecLesDeuxCopies();
+    allerSurLOnglet(root, 'participants');
+
+    const sections = capteurParticipants.props.detectionPositionSections;
+    const toutesLesDemandes = sections.flatMap((/** @type {any} */ item) => item.pending);
+
+    expect(toutesLesDemandes).toHaveLength(2);
+    expect(new Set(toutesLesDemandes.map((/** @type {any} */ item) => item.documentId)).size)
+      .toBe(2);
   });
 });

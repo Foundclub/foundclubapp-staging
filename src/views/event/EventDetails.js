@@ -1788,19 +1788,39 @@ function EventDetails({ navigation, route }) {
     );
     /** @type {Map<string, EventParticipation>} */
     const deduped = new Map();
-    embeddedRequests.forEach((/** @type {EventParticipation} */ participation) => {
+
+    /**
+     * 🔑 R9 — RANGER UNE DEMANDE EN GARDANT LA COPIE LA PLUS COMPLETE.
+     *
+     * 🧨 LE DEFAUT REPARE : les demandes arrivent par DEUX chemins — embarquees
+     * dans l evenement, et paginees par `useGetEventParticipations`. Seule la
+     * copie PAGINEE portait `recruitmentAd`. Or les embarquees etaient inserees
+     * en premier et `deduped.has(key)` faisait gagner cette copie AMPUTEE : le
+     * candidat perdait son poste, donc il disparaissait des groupes par poste
+     * avant comme apres sa validation (constat de recette du 24/08).
+     *
+     * Le populate est repare des deux cotes ; cette regle est la CEINTURE : tant
+     * qu une seule des deux copies porte le lien, c est celle-la qu on garde.
+     * Le rang d insertion, lui, ne bouge pas — `Map.set` sur une cle existante
+     * conserve sa place, et l ordre d affichage avec.
+     * @param {EventParticipation} participation - la demande a ranger
+     * @returns {void}
+     */
+    const retenirLaPlusComplete = (participation) => {
       const key = participation?.documentId
         || `${getUserKey(participation?.user) || 'user'}:${participation?.participationStatus || 'status'}:${participation?.updatedAt || ''}:${participation?.isActive === false ? 'inactive' : 'active'}`;
-      if (!key || deduped.has(key)) return;
+      if (!key) return;
+      const dejaRangee = deduped.get(key);
+      if (dejaRangee
+        && (dejaRangee?.recruitmentAd?.documentId || !participation?.recruitmentAd?.documentId)) {
+        return;
+      }
       deduped.set(key, participation);
-    });
+    };
+
+    embeddedRequests.forEach(retenirLaPlusComplete);
     pages.forEach((page) => {
-      (page?.data || []).forEach((/** @type {EventParticipation} */ participation) => {
-        const key = participation?.documentId
-          || `${getUserKey(participation?.user) || 'user'}:${participation?.participationStatus || 'status'}:${participation?.updatedAt || ''}:${participation?.isActive === false ? 'inactive' : 'active'}`;
-        if (!key || deduped.has(key)) return;
-        deduped.set(key, participation);
-      });
+      (page?.data || []).forEach(retenirLaPlusComplete);
     });
     // AA02 — le SECOND point de passage unique : toutes les listes bati es sur
     // une DEMANDE (`{ user }`) descendent d'ici — en attente, historique,
