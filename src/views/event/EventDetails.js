@@ -58,7 +58,10 @@ import ReportEventModal from '@/components/organisms/reportEventModal/ReportEven
 import ShareEventModal from '@/components/organisms/shareEventModal/ShareEventModal';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 import {
+  buildConvocationFieldTokens,
+  buildConvocationReserveList,
   CONVOCATION_ROLE_STARTER,
+  getPersonName,
   getViewerConvocationRole,
 } from '@/views/playerConvocation/playerConvocationUtils';
 
@@ -3141,9 +3144,18 @@ function EventDetails({ navigation, route }) {
     }
 
     if (kind === OwnAnswerAction.declareMissing) {
+      // 🗣️ R6 (vague R) — LE PARTIEL LAISSE PAR R4. Le geste avait change ici
+      // (marquer absent au lieu d effacer la reponse), les MOTS de la fenetre
+      // etaient restes ceux de la suppression : « Annuler ma participation ».
+      // La personne lisait une question et en executait une autre — et la
+      // difference compte : effacer sa reponse et se declarer absent ne donnent
+      // pas le meme compteur au coach.
+      // ⛔ Les BOUTONS restent partages (« Non, retour » / « Oui, annuler ») :
+      // ils conviennent aux deux gestes, et les dupliquer ferait deux endroits
+      // a corriger le jour ou l un d eux change.
       Alert.alert(
-        t('eventDetails.modals.deleteParticipation.title'),
-        t('eventDetails.modals.deleteParticipation.description'),
+        t('eventDetails.modals.declareMissing.title'),
+        t('eventDetails.modals.declareMissing.description'),
         [
           { style: 'cancel', text: t('eventDetails.modals.deleteParticipation.actions.cancel') },
           {
@@ -3831,6 +3843,38 @@ function EventDetails({ navigation, route }) {
     [convocationBranches],
   );
 
+  // 🧾 R6 (vague R) — LES NOMS DES CONVOQUES, DEPUIS LA CHARGE DEJA LA.
+  //
+  // 🧨 Le resume publie comptait (« 1 equipe(s) publiee(s) · 1 branche(s)
+  // visible(s) ») et ne nommait PERSONNE. Pour lire qui vient, il fallait
+  // ouvrir un second ecran — alors que les noms voyagent DEJA dans la meme
+  // reponse, a la meme milliseconde : `published.snapshotPlayers`.
+  //
+  // ♻️ ZERO CALCUL NEUF. `buildConvocationFieldTokens` apparie les placements
+  // aux personnes, `buildConvocationReserveList` fusionne les deux listes du
+  // banc — les deux servent DEJA l'ecran du joueur convoque. Les redecrire ici
+  // donnerait deux facons de lire un convoque, qui divergeraient a la premiere
+  // charge partielle (AD08 a deja paye ce prix : un remplacant present dans
+  // `reserveSnapshotPlayers` seul etait lu par l'une et pas par l'autre).
+  //
+  // ⛔ Les placements sont aplatis sur TOUTES les equipes de la branche, pas
+  // sur `teams[0]` : un pack a deux equipes montrerait sinon la moitie de ses
+  // titulaires, sans que rien ne le dise.
+  const publishedConvocationRoster = useMemo(() => convocationBranches.map((branch, index) => {
+    const published = branch?.published || null;
+
+    return {
+      bench: buildConvocationReserveList(published),
+      key: String(branch?.team?.documentId || index),
+      starters: buildConvocationFieldTokens({
+        placements: (Array.isArray(published?.teams) ? published.teams : [])
+          .flatMap((entry) => (Array.isArray(entry?.placements) ? entry.placements : [])),
+        snapshotPlayers: published?.snapshotPlayers,
+      }),
+      teamName: String(branch?.team?.name || '').trim(),
+    };
+  }), [convocationBranches]);
+
   // AC08 — « SUIS-JE CONVOQUE ? », enfin repondu SUR LA PAGE.
   //
   // 🚨 Jusqu'ici, convoque et non-convoque lisaient exactement le meme bloc —
@@ -3898,8 +3942,20 @@ function EventDetails({ navigation, route }) {
   // le coach a commence, lui redire « tu n'as pas encore de compo » serait faux.
   // Et `bootstrap` n'est PAS une compo — le serveur le rend toujours (source
   // `empty`), c'est une proposition de depart.
-  const hasTeamComposition = Boolean(
-    staffCompositionPayload?.draft || staffCompositionPayload?.published,
+  //
+  // 🕳️ R6 (vague R) — LE TROU MESURE LE 24/08 : UN SEUL DRAPEAU POUR DEUX ETATS.
+  // `hasTeamComposition` melangeait le BROUILLON et le PUBLIE, et le bandeau ne
+  // paraissait qu'en leur absence a tous les deux. A l'ecran, pour un entraineur
+  // qui avait commence sa convocation : le bandeau disparaissait, le resume
+  // publie n'existait pas encore, et l'onglet « Convocation » ne montrait PLUS
+  // RIEN. Son travail etait invisible, et la seule porte pour le reprendre
+  // vivait dans un menu REPLIE par defaut.
+  //
+  // ⇒ Deux drapeaux, parce qu'il y a deux etats : un brouillon se REPREND, un
+  // publie se LIT. Aucun des deux ne laisse l'onglet vide.
+  const hasPublishedTeamComposition = Boolean(staffCompositionPayload?.published);
+  const hasDraftOnlyComposition = Boolean(
+    staffCompositionPayload?.draft && !staffCompositionPayload?.published,
   );
 
   // La composition fait partie des offres Equipe et Club — c'est la matrice du
@@ -3930,7 +3986,11 @@ function EventDetails({ navigation, route }) {
     && !isMatchFinished
     && subscriptionAccessLevel
     && staffCompositionPayload
-    && !hasTeamComposition,
+    // ⛔ R6 : c'etait `!hasTeamComposition`, et c'est LA le trou. Un brouillon
+    // fermait la porte au lieu de l'ouvrir. Seul le PUBLIE fait taire le
+    // bandeau — a ce moment-la, le resume et la liste des convoques, juste en
+    // dessous, prennent le relais.
+    && !hasPublishedTeamComposition,
   );
 
   // D4 : `compositionPrimaryAction` decrivait le titre et le sous-titre du gros
@@ -5648,10 +5708,19 @@ function EventDetails({ navigation, route }) {
   // ⚠️ `centerContent` N'EST PAS UN CHOIX DE STYLE : sans lui, `SegmentedControl`
   // installe un pan gesture MANUEL (SegmentedControl.js:56 et 243-265) qui
   // entrerait en conflit avec le defilement vertical de la ScrollView qui
-  // l'entoure. Avec trois onglets courts, la repartition en largeurs egales est
-  // de toute facon celle de la maquette.
+  // l'entoure. La repartition en largeurs egales est celle de la maquette.
   // ⚠️ Le composant ne pose AUCUNE marge externe : c'est l'appelant qui les
   // pose (motif CMMembersScreen.js:297). Ici, le `gap: 24` du conteneur suffit.
+  //
+  // 📏 R6 (vague R) — ET C'EST EXACTEMENT LA QUE `fullLabels` MANQUAIT.
+  // La phrase « avec trois onglets COURTS, les tiers egaux suffisent » a tenu
+  // jusqu'a la recette du 24/08. Elle etait fausse : les libelles ne sont pas
+  // courts, ils portent leur effectif (planche 04, `withTabCount`). Un tiers de
+  // 360 pt vaut ~110 pt, et « Participants · 12 » n'y tient pas — le texte
+  // arrivait rogne a l'ecran alors qu'il etait ENTIER dans l'arbre.
+  // ⇒ `fullLabels` (pose par D63, jamais passe ici) autorise DEUX lignes et
+  // interdit la troncature. Il ne change ni la largeur des tiers, ni la valeur
+  // remontee par `onChange` — c'est une consigne d'affichage, rien d'autre.
   const renderDetailsTabs = () => {
     if (!detailsTabs.length) return null;
 
@@ -5659,6 +5728,7 @@ function EventDetails({ navigation, route }) {
       <View style={[Alignments.alignCenter]} testID="event-details-tabs">
         <SegmentedControl
           centerContent
+          fullLabels
           onChange={setDetailsTab}
           options={detailsTabs}
           value={detailsTab}
@@ -5706,6 +5776,40 @@ function EventDetails({ navigation, route }) {
   const renderCompoReminder = () => {
     if (!isCompoReminderVisible) return null;
 
+    // 🚪 R6 (vague R) — TROIS ETATS, TROIS PHRASES, ZERO CUL-DE-SAC.
+    //   · rien de commence   → « Ce match n'a pas encore de convocation »
+    //   · brouillon en cours → « Ta convocation est commencée », et on la reprend
+    //   · pas l'offre        → la vitrine, inchangee
+    // Le PUBLIE n'est pas dans cette liste : il ETEINT le bandeau
+    // (`isCompoReminderVisible`) et laisse la place au resume et a la liste des
+    // convoques, juste en dessous dans le meme onglet.
+    //
+    // ♻️ ZERO HANDLER NEUF, et c'est le point : `handleManageComposition` rouvre
+    // DEJA le brouillon quand il y en a un (`staffCompositionPayload.draft`).
+    // La porte existait — il manquait les MOTS qui disent qu'elle est la.
+    let compoReminderTitle = t(
+      'eventDetails.compoReminder.title',
+      'Ce match n’a pas encore de convocation',
+    );
+    let compoReminderAction = t('eventDetails.compoReminder.action', 'Préparer la convocation');
+
+    if (!canManageComposition) {
+      compoReminderTitle = t(
+        'eventDetails.compoReminder.offerTitle',
+        'La convocation est incluse dans l’offre Équipe',
+      );
+      compoReminderAction = t('eventDetails.compoReminder.offerAction', 'Voir l’offre Équipe');
+    } else if (hasDraftOnlyComposition) {
+      compoReminderTitle = t(
+        'eventDetails.compoReminder.draftTitle',
+        'Ta convocation est commencée',
+      );
+      compoReminderAction = t(
+        'eventDetails.compoReminder.draftAction',
+        'Reprendre le brouillon',
+      );
+    }
+
     return (
       <View
         style={[
@@ -5724,12 +5828,7 @@ function EventDetails({ navigation, route }) {
         testID="event-compo-reminder"
       >
         <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
-          {canManageComposition
-            ? t('eventDetails.compoReminder.title', 'Ce match n’a pas encore de convocation')
-            : t(
-              'eventDetails.compoReminder.offerTitle',
-              'La convocation est incluse dans l’offre Équipe',
-            )}
+          {compoReminderTitle}
         </Text>
         <TouchableOpacity
           accessibilityRole="button"
@@ -5737,13 +5836,61 @@ function EventDetails({ navigation, route }) {
           style={[Spaces.paddingVertical[12], { alignSelf: 'flex-start' }]}
         >
           <Text style={[Fonts.p3Bold, Fonts.primary500]}>
-            {canManageComposition
-              ? t('eventDetails.compoReminder.action', 'Préparer la convocation')
-              : t('eventDetails.compoReminder.offerAction', 'Voir l’offre Équipe')}
+            {compoReminderAction}
           </Text>
         </TouchableOpacity>
       </View>
     );
+  };
+
+  /**
+   * 🧾 R6 (vague R) — LA LISTE DES CONVOQUES, DANS L'ONGLET « CONVOCATION ».
+   *
+   * ⛔ LE TITRE D'UNE SECTION NE PARAIT QUE SI ELLE A QUELQU'UN DEDANS. Un
+   * « Sur le banc » suivi de rien se lit comme un bug, pas comme une absence —
+   * et un pack sans remplacant est le cas NORMAL, pas l'exception.
+   * ⛔ Un identifiant sans personne connue n'ecrit pas de ligne vide : les deux
+   * assembleurs le filtrent deja a la source.
+   * @returns {any} Une liste par branche publiee, ou null quand il n'y en a pas.
+   */
+  const renderPublishedRoster = () => {
+    if (!publishedConvocationRoster.length) return null;
+
+    return publishedConvocationRoster.map((branch) => (
+      <View key={branch.key} style={[Spaces.gap[4]]}>
+        {/* Le nom de l'equipe n'apparait qu'a partir de DEUX branches : sur un
+            match il n'y en a qu'une, et la coiffer de son propre nom, deja
+            ecrit trois lignes plus haut, n'apprend rien a personne. */}
+        {publishedConvocationRoster.length > 1 && branch.teamName ? (
+          <Text style={[Fonts.p3Bold, Fonts.neutral00]}>{branch.teamName}</Text>
+        ) : null}
+
+        {branch.starters.length ? (
+          <Text style={[Fonts.p3Bold, Fonts.neutral100]}>
+            {t('eventDetails.convocation.starters', 'Sur le terrain')}
+          </Text>
+        ) : null}
+        {branch.starters.map((token) => (
+          <Text
+            key={`${branch.key}-terrain-${token?.placement?.playerId}`}
+            style={[Fonts.p3, Fonts.neutral300]}
+          >
+            {getPersonName(token.player)}
+          </Text>
+        ))}
+
+        {branch.bench.length ? (
+          <Text style={[Fonts.p3Bold, Fonts.neutral100]}>
+            {t('eventDetails.convocation.bench', 'Sur le banc')}
+          </Text>
+        ) : null}
+        {branch.bench.map((entry) => (
+          <Text key={`${branch.key}-banc-${entry.id}`} style={[Fonts.p3, Fonts.neutral300]}>
+            {getPersonName(entry.player)}
+          </Text>
+        ))}
+      </View>
+    ));
   };
 
   // 🏋️ P8 — LA CARTE D'OUVERTURE, CELLE QUI COMPTE ENFIN.
@@ -7659,6 +7806,12 @@ function EventDetails({ navigation, route }) {
                           {new Date(convocationBranches[0].published.publishedAt).toLocaleString('fr-FR')}
                         </Text>
                       ) : null}
+                      {/* 🧾 R6 — LES NOMS, AVANT le bouton. La question que se
+                          pose un entraineur en ouvrant cet onglet est « qui
+                          vient ? » : y repondre derriere un appui de plus,
+                          alors que la reponse est deja chargee, etait le
+                          defaut. Le bouton reste, pour le terrain et le detail. */}
+                      {renderPublishedRoster()}
                       {publishedCompositionTeamCount > 0 ? (
                         <Button
                           onPress={openPublishedConvocation}

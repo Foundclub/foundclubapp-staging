@@ -130,10 +130,15 @@ const getSlotIndex = (slotId) => {
 
 /**
  * Le nom affichable d'une personne, sans jamais rendre « undefined ».
+ *
+ * ♻️ EXPORTE PAR R6 (vague R), pas reecrit : la liste des convoques de la page
+ * d'evenement et la carte de compo du tchat ecrivent les MEMES noms, a partir
+ * de la MEME charge. Deux recettes du nom divergeraient des la premiere charge
+ * ou `lastname` manque — l'une rendrait « Karim », l'autre « Karim undefined ».
  * @param {any} person
  * @returns {string}
  */
-const getPersonName = (person) => [person?.firstname, person?.lastname]
+export const getPersonName = (person) => [person?.firstname, person?.lastname]
   .map((part) => String(part || '').trim())
   .filter(Boolean)
   .join(' ');

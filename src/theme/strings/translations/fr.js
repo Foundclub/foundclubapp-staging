@@ -1177,11 +1177,17 @@ export default {
     },
     compoReminder: {
       action: 'Préparer la convocation',
+      draftAction: 'Reprendre le brouillon',
+      draftTitle: 'Ta convocation est commencée',
       offerTitle: 'La convocation est incluse dans l’offre Équipe',
       title: 'Ce match n’a pas encore de convocation',
     },
     compositionSource: {
       defaultComposition: 'Composition type',
+    },
+    convocation: {
+      bench: 'Sur le banc',
+      starters: 'Sur le terrain',
     },
     detection: {
       candidateAccept: 'Accepter',
@@ -1333,6 +1339,11 @@ export default {
       cancelEvent: {
         description: 'Une fois annulé, l\'événement ne sera plus visible par les participant·e·s.',
         title: 'Es-tu sûr·e de vouloir annuler cet événement ?',
+      },
+      declareMissing: {
+        description: 'Tu ne seras plus compté·e présent·e : tu passeras chez les absent·e·s.'
+          + ' Tu pourras revenir sur ta réponse.',
+        title: 'Me déclarer absent·e',
       },
       deleteParticipation: {
         actions: {

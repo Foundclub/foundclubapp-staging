@@ -273,7 +273,11 @@ jest.mock('@/components/molecules/segmentedControl/SegmentedControl', () => {
   return function SegmentedControlDouble(/** @type {any} */ props) {
     return react.createElement(
       rn.View,
-      { testID: 'doublure-onglets' },
+      // 🔎 R6 (vague R) — LA DOUBLURE RELAIE AUSSI LA CONSIGNE D'AFFICHAGE.
+      // Le libelle a toujours ete complet DANS L'ARBRE : c'est `numberOfLines`
+      // qui le coupait A L'ECRAN. Un temoin qui lirait le texte rendu serait
+      // donc vert avant comme apres le correctif — seule la prop tranche.
+      { fullLabels: Boolean(props.fullLabels), testID: 'doublure-onglets' },
       (props.options || []).map((/** @type {any} */ option) => react.createElement(
         rn.TouchableOpacity,
         {
@@ -1397,5 +1401,30 @@ describe('N2 · 4G — LA DETECTION SE RANGE EN TROIS ONGLETS', () => {
     // ⛔ Et surtout : AUCUN des quatre gestes de staff ne lui est propose.
     expect(parTestID(root, 'detection-split-path')).toHaveLength(0);
     expect(contient(root, 'Générer la répartition')).toBe(false);
+  });
+});
+
+// 📏 R6 (vague R) — LA MATRICE ENTIERE DEMANDE SES LIBELLES ENTIERS.
+//
+// 🧨 Le constat de recette du 24/08 portait sur un MATCH, mais le defaut n'est
+// pas au match : il est dans la repartition en TIERS EGAUX, que les quatre
+// types partagent. Et ce sont les AUTRES types qui portent les libelles les
+// plus longs — « Répartition », « Candidats · 12 », « Personnes · 74 ».
+// ⇒ Mesurer le seul match aurait laisse trois ecrans casses derriere un
+// temoin vert. Le voici sur les trois types que N2 a ranges.
+describe('N2 · R6 — aucun libelle d onglet n est coupe, quel que soit le type', () => {
+  test.each([
+    ['stage parent', () => buildStageParent()],
+    ['tournoi', () => buildTournoi()],
+    ['detection', () => buildDetection()],
+  ])('un %s demande ses libelles ENTIERS au controle segmente', (_nom, construire) => {
+    const root = monter({ event: construire() });
+
+    const [controle] = parTestID(root, 'doublure-onglets');
+
+    expect(controle.props.fullLabels).toBe(true);
+    // 🔒 Contre-epreuve : la consigne d'affichage change, les compteurs de la
+    // planche 04 restent. Trois onglets, jamais moins.
+    expect(libellesDesOnglets(root)).toHaveLength(3);
   });
 });

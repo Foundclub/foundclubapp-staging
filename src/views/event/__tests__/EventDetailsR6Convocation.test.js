@@ -1,25 +1,25 @@
 import { Text, TouchableOpacity } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
-// L4-A — LA PAGE DE DETAIL D'UN MATCH GAGNE SES ONGLETS.
+// R6 (b) — L'ONGLET « CONVOCATION » DIT ENFIN QUI VIENT.
 //
-// Constat de l'audit du pack de design (`CONSTAT_DETAIL_EVENEMENT.md`, ecart 2) :
-// l'ecran empilait 19 blocs dans UNE SEULE COLONNE. La maquette (planche 04)
-// la coupe en trois onglets — Aperçu · Participants · Convocation — sous une
-// zone fixe (carte d'entete + statut de convocation) qui, elle, ne bouge pas.
+// 🗣️ Constat de recette 2.6.26 (24/08), un entraineur sur un MATCH : l'onglet
+// « Convocation » ne montrait ni de quoi creer sa compo, ni la liste des joueurs
+// convoques. Deux trous distincts ; ce filet tient le second.
 //
-// ⛔ UN SEUL TYPE DANS CE LOT : le MATCH. Le tournoi, le stage, la detection et
-// l'entrainement gardent leur colonne A L'IDENTIQUE — decision du CONSTAT
-// (l. 1235) et d'Adel (Q2, 20/08). Le temoin 4 le verrouille des deux cotes :
-// trois onglets sur un match, ZERO ailleurs.
+// 🧨 CE QUE LE RESUME PUBLIE DISAIT, MOT POUR MOT : « 1 equipe(s) publiee(s) »,
+// « 1 branche(s) visible(s) », « Publie le ... ». Trois lignes de COMPTAGE, zero
+// nom. Or les noms voyagaient DEJA dans la meme reponse, a la meme milliseconde
+// (`published.snapshotPlayers`) : il fallait ouvrir un second ecran pour lire une
+// donnee qui etait deja arrivee.
 //
-// ⚠️ « Match amical » contient « match » : `isMatchEvent` est VRAI pour lui
-// (`EventDetails.js:2748`, comparaison par sous-chaine). C'est voulu — meme
-// metier — et c'est teste ci-dessous plutot que suppose.
+// ♻️ HARNAIS REPRIS DE `EventDetailsL4Onglets` — memes doublures, et surtout la
+// MEME charge de convocation (forme `branches`, celle que le serveur envoie
+// vraiment). Un harnais invente ici aurait pu rendre vert un code qui ne lit pas
+// la vraie forme.
 //
 // ⚠️ CE QUE CE FILET NE PROUVE PAS : Jest n'a pas de moteur de mise en page. Il
-// lit ce qui est MONTE et ce qui ne l'est pas. Le rendu reel se voit a la
-// recette.
+// lit ce qui est MONTE, pas ce qui tient a l'ecran. Le rendu se voit a la recette.
 
 const mockUseAuth = jest.fn();
 const mockNavigate = jest.fn();
@@ -488,178 +488,113 @@ const allerSurLOnglet = (/** @type {any} */ root, /** @type {string} */ valeur) 
   });
 };
 
-describe('L4 · temoin 4 — trois onglets sur un match, zero ailleurs', () => {
-  // 🔢 MIS A JOUR PAR N2 : l'onglet des personnes porte desormais son EFFECTIF.
-  // C'est une regle de la planche 04 qui vaut pour les quatre types ranges, pas
-  // une decoration du match : « Participants · 8 », « Candidats · 9 »,
-  // « Personnes · 74 ». Ici l'evenement de reference n'a aucune participation,
-  // d'ou le `· 0` — un onglet vide reste affiche AVEC son compte, il ne se
-  // cache pas. La matrice complete est tenue par `EventDetailsN2Onglets`.
-  test('un MATCH porte Aperçu · Participants · N · Convocation, dans cet ordre', () => {
-    const root = monter();
+describe('R6 · (b) une convocation publiee NOMME ses convoques', () => {
+  test('les titulaires et le banc sont a l ecran, sans un appui de plus', () => {
+    const root = monter({ auth: authPour('coach-1', true), convocation: CONVOCATION });
 
+    // 🧭 On part bien de la page a onglets d'un match. Sans ce repere, le jour
+    // ou les onglets changent de forme, ce filet passerait a cote de son sujet
+    // en restant vert.
     expect(libellesDesOnglets(root)).toEqual(['Aperçu', 'Participants · 0', 'Convocation']);
-  });
-
-  // 📏 R6 (vague R) — LES TROIS LIBELLES NE SE ROGNENT PLUS.
-  //
-  // 🧨 CONSTAT DE RECETTE DU 24/08, un entraineur sur un MATCH : les trois
-  // onglets arrivaient COUPES. Le controle segmente repartit ses options en
-  // TIERS EGAUX et coupait a UNE ligne : sur un telephone de 360 pt, un tiers
-  // vaut ~110 pt, et « Participants · 12 » n'y tient pas.
-  //
-  // ⛔ LE COMPTEUR NE PART PAS POUR AUTANT — c'est la tentation que ce temoin
-  // interdit. La planche 04 l'EXIGE sur les quatre types ranges ; raccourcir le
-  // libelle aurait rendu l'ecran vert en SUPPRIMANT l'information. Ce qui change
-  // est la consigne d'affichage : deux lignes autorisees, zero troncature
-  // (`fullLabels`, pose par D63 sur `FacilityForm` et jamais passe ici).
-  test('les libelles sont demandes ENTIERS au controle segmente (R6, vague R)', () => {
-    const root = monter();
-
-    const [controle] = parTestID(root, 'doublure-onglets');
-
-    expect(controle.props.fullLabels).toBe(true);
-    // 🔒 Contre-epreuve dans le MEME temoin : la consigne d'affichage change,
-    // les compteurs restent. Sans cette ligne, vider les libelles passerait.
-    expect(libellesDesOnglets(root)).toEqual(['Aperçu', 'Participants · 0', 'Convocation']);
-  });
-
-  test('un « Match amical » les porte AUSSI — meme metier, meme page', () => {
-    // `isMatchEvent` compare par SOUS-CHAINE (`EventDetails.js:2748`) : « Match
-    // amical » contient « match ». C'est voulu, et c'est mesure ici plutot que
-    // suppose — le jour ou quelqu'un resserre la comparaison, ce temoin parle.
-    const root = monter({ event: buildEvent({ type: { name: 'Match amical' } }) });
-
-    expect(libellesDesOnglets(root)).toEqual(['Aperçu', 'Participants · 0', 'Convocation']);
-  });
-
-  test('un ENTRAINEMENT n a AUCUN onglet, et sa colonne est intacte', () => {
-    const root = monter({ event: buildEvent({ type: { name: 'Entrainement' } }) });
-
-    expect(parTestID(root, 'doublure-onglets')).toHaveLength(0);
-    // ⛔ LE COEUR DU TEMOIN : sur un non-match, TOUT reste empile dans la meme
-    // colonne, visible d'un coup — description ET liste, sans le moindre appui.
-    expect(contient(root, DESCRIPTION)).toBe(true);
-    expect(contient(root, 'Exporter la liste (Excel/CSV)')).toBe(true);
-  });
-
-  // ♻️ REECRIT PAR N2. Ce temoin disait « le tournoi n'a AUCUN onglet : ce lot
-  // ne touche qu'au match ». C'etait vrai de L4, et Adel l'avait voulu ainsi
-  // (Q2, 20/08 : le tournoi apres qu'il ait retrouve une barre du bas). C'est
-  // fait — le tournoi rejoint la matrice avec ses trois onglets a lui.
-  test('un TOURNOI porte MAINTENANT les siens : Aperçu · Équipes · Personnes', () => {
-    const root = monter({ event: buildEvent({ type: { name: 'Tournoi' } }) });
-
-    expect(libellesDesOnglets(root)).toEqual(['Aperçu', 'Équipes · 0', 'Personnes · 0']);
-  });
-
-  test('un ENTRAINEMENT, lui, n en a toujours AUCUN', () => {
-    // ⛔ La matrice ne ratisse pas tout : quatre types seulement en ont assez
-    // pour deborder d'une colonne. L'entrainement garde la sienne, entiere.
-    const root = monter({ event: buildEvent({ type: { name: 'Entrainement' } }) });
-
-    expect(parTestID(root, 'doublure-onglets')).toHaveLength(0);
-  });
-
-  test('sur un match, Aperçu est l onglet ouvert au montage', () => {
-    const root = monter();
-
-    // La description vit dans Aperçu : elle se lit sans aucun appui.
-    expect(contient(root, DESCRIPTION)).toBe(true);
-    // La liste, elle, vit dans son propre onglet et n'est donc PAS montee.
-    expect(contient(root, 'Exporter la liste (Excel/CSV)')).toBe(false);
-  });
-
-  test('la DESCRIPTION ouvre l onglet Aperçu — elle passe avant les taches', () => {
-    // Regle 2 des six regles du 22/08 (CONSTAT, ecart 4) : « un seul champ, le
-    // meme nom pour les six types, EN HAUT DE L'APERÇU, sous la carte ».
-    // Avant L4-A, la description etait rendue au 9e rang de la page, apres les
-    // taches. Le bloc des taches redescend donc SOUS elle.
-    const root = monter({
-      event: buildEvent({
-        eventTasks: [{ documentId: 'tache-1', title: 'Apporter les ballons' }],
-      }),
-    });
-
-    const textes = textesVisibles(root);
-    const rangDescription = textes.findIndex((/** @type {string} */ t) => t.includes(DESCRIPTION));
-    const rangTaches = textes.findIndex(
-      (/** @type {string} */ t) => t.includes('DOUBLURE_EventTasksSection'),
-    );
-
-    expect(rangDescription).toBeGreaterThanOrEqual(0);
-    expect(rangTaches).toBeGreaterThanOrEqual(0);
-    expect(rangDescription).toBeLessThan(rangTaches);
-  });
-
-  test('l onglet Convocation porte la composition publiee, Aperçu ne la porte pas', () => {
-    const root = monter({
-      auth: authPour(JOUEUR),
-      convocation: CONVOCATION,
-    });
-
-    expect(contient(root, 'Composition d')).toBe(false);
 
     allerSurLOnglet(root, 'callUp');
 
-    expect(contient(root, 'Composition d')).toBe(true);
-    // Et la description a laisse la place : un onglet a la fois.
-    expect(contient(root, DESCRIPTION)).toBe(false);
-  });
-});
-
-describe('L4 · temoin 5 — le convoque lit son statut sans un seul appui', () => {
-  // 🔒 GARANTIE REPRISE D'AC08 (temoin 5) ET D'AD01 (temoins 1 et 2) : la
-  // phrase de convocation etait lisible AU MONTAGE, avant tout appui. Les
-  // onglets ne la renegocient PAS — elle vit dans la ZONE FIXE, au-dessus de la
-  // barre d'onglets, donc elle est vraie quel que soit l'onglet actif.
-  test('« Tu es convoqué · Titulaire » se lit au montage, onglet Aperçu', () => {
-    const root = monter({ auth: authPour(JOUEUR), convocation: CONVOCATION });
-
-    expect(contient(root, 'Tu es convoqué · Titulaire')).toBe(true);
+    // 🎯 LE COEUR DU TEMOIN : des NOMS, la ou il n'y avait que des compteurs.
+    expect(contient(root, 'Karim Sylla')).toBe(true);
+    expect(contient(root, 'Leo Diarra')).toBe(true);
   });
 
-  test('et elle reste lisible sur CHACUN des trois onglets', () => {
+  test('le terrain et le banc sont dits SEPAREMENT, jamais en vrac', () => {
+    // Un coach ne lit pas « les 12 convoques » : il lit un onze et des
+    // remplacants. Melanger les deux rendrait la liste plus longue ET moins
+    // utile que le second ecran qu'elle remplace.
+    const root = monter({ auth: authPour('coach-1', true), convocation: CONVOCATION });
+
+    allerSurLOnglet(root, 'callUp');
+
+    expect(contient(root, 'Sur le terrain')).toBe(true);
+    expect(contient(root, 'Sur le banc')).toBe(true);
+  });
+
+  test('un JOUEUR convoque lit la meme liste que son entraineur', () => {
+    // ⛔ La liste n'est pas un privilege de staff : « qui vient ? » est la
+    // question de tout le monde, et le serveur envoie deja la charge aux
+    // membres de l'equipe (`canViewPublishedComposition`).
     const root = monter({ auth: authPour(JOUEUR), convocation: CONVOCATION });
 
-    ['overview', 'participants', 'callUp'].forEach((onglet) => {
-      allerSurLOnglet(root, onglet);
-      expect(contient(root, 'Tu es convoqué · Titulaire')).toBe(true);
+    allerSurLOnglet(root, 'callUp');
+
+    expect(contient(root, 'Karim Sylla')).toBe(true);
+    expect(contient(root, 'Leo Diarra')).toBe(true);
+  });
+
+  test('🔒 sans rien de publie : aucune liste, et surtout aucun titre VIDE', () => {
+    // La contre-epreuve qui compte. Un « Sur le terrain » suivi de rien se lit
+    // comme un bug ; c'est exactement ce qu'un rendu non garde produirait sur
+    // un match dont la compo n'est pas encore publiee — le cas le plus frequent.
+    const root = monter({ auth: authPour('coach-1', true) });
+
+    allerSurLOnglet(root, 'callUp');
+
+    expect(contient(root, 'Sur le terrain')).toBe(false);
+    expect(contient(root, 'Sur le banc')).toBe(false);
+  });
+
+  test('🔒 un pack SANS remplacant n annonce pas de banc', () => {
+    // Meme regle, appliquee a la moitie de la liste : un pack ou personne n'est
+    // sur le banc est un pack normal, pas un pack casse.
+    const packSansBanc = {
+      ...PACK,
+      reservePlayerIds: [],
+      reserveSnapshotPlayers: [],
+    };
+    const root = monter({
+      auth: authPour('coach-1', true),
+      convocation: {
+        ...CONVOCATION,
+        branches: [{ ...CONVOCATION.branches[0], published: packSansBanc }],
+      },
     });
+
+    allerSurLOnglet(root, 'callUp');
+
+    expect(contient(root, 'Karim Sylla')).toBe(true);
+    expect(contient(root, 'Sur le terrain')).toBe(true);
+    expect(contient(root, 'Sur le banc')).toBe(false);
   });
 
-  test('le remplacant lit la sienne, au montage aussi', () => {
-    const root = monter({ auth: authPour(REMPLACANT), convocation: CONVOCATION });
+  test('🧨 les titulaires de TOUTES les equipes du pack, pas seulement la premiere', () => {
+    // Le piege que ce temoin interdit : lire `teams[0].placements`, comme le
+    // fait la carte du tchat pour son mini-terrain. Sur un pack a deux equipes,
+    // la moitie des convoques manquerait — et RIEN a l'ecran ne le dirait.
+    const packDeuxEquipes = {
+      ...PACK,
+      snapshotPlayers: [
+        ...PACK.snapshotPlayers,
+        { documentId: 'joueur-3', firstname: 'Ines', lastname: 'Bakouche' },
+      ],
+      teams: [
+        ...PACK.teams,
+        {
+          id: 'team_2',
+          name: 'U15 B',
+          placements: [{
+            playerId: 'joueur-3', positionX: 50, positionY: 40, slotId: 'team_2:slot_1',
+          }],
+        },
+      ],
+    };
+    const root = monter({
+      auth: authPour('coach-1', true),
+      convocation: {
+        ...CONVOCATION,
+        branches: [{ ...CONVOCATION.branches[0], published: packDeuxEquipes }],
+      },
+    });
 
-    expect(contient(root, 'Tu es convoqué · Remplaçant')).toBe(true);
-  });
-});
+    allerSurLOnglet(root, 'callUp');
 
-describe('L4 · temoin 6 — l export reste atteignable', () => {
-  test('onglet Participants : « Exporter la liste (Excel/CSV) » est la', () => {
-    const root = monter();
-
-    allerSurLOnglet(root, 'participants');
-
-    expect(contient(root, 'Exporter la liste (Excel/CSV)')).toBe(true);
-    expect(parTestID(root, 'bouton-export')).toHaveLength(1);
-  });
-
-  test('et il est branche : son appui appelle bien le declencheur de l ecran', () => {
-    const root = monter();
-    allerSurLOnglet(root, 'participants');
-
-    const [bouton] = parTestID(root, 'bouton-export');
-    expect(typeof bouton.props.onPress).toBe('function');
-  });
-
-  test('on revient a Aperçu et la description est de nouveau la : rien n est perdu', () => {
-    const root = monter();
-
-    allerSurLOnglet(root, 'participants');
-    expect(contient(root, DESCRIPTION)).toBe(false);
-
-    allerSurLOnglet(root, 'overview');
-    expect(contient(root, DESCRIPTION)).toBe(true);
+    expect(contient(root, 'Karim Sylla')).toBe(true);
+    expect(contient(root, 'Ines Bakouche')).toBe(true);
   });
 });

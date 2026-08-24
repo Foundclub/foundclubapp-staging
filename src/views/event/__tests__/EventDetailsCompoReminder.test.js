@@ -372,6 +372,11 @@ const TITRE_RAPPEL = 'Ce match n’a pas encore de convocation';
 const ACTION_RAPPEL = 'Préparer la convocation';
 const TITRE_OFFRE = 'La convocation est incluse dans l’offre Équipe';
 const ACTION_OFFRE = 'Voir l’offre Équipe';
+// 🕳️ R6 (vague R) — LE TROISIEME ETAT, celui qui manquait. Entre « rien » et
+// « publie » il y a le BROUILLON, et c'est l'etat le plus frequent : un coach
+// ouvre sa convocation, coche trois joueurs, et revient le lendemain.
+const TITRE_BROUILLON = 'Ta convocation est commencée';
+const ACTION_BROUILLON = 'Reprendre le brouillon';
 
 // 🚧 Le plafond de hauteur DECLAREE du bandeau. Ce n'est pas une mesure a
 // l'ecran (il faudrait un appareil) mais la somme des valeurs que le style
@@ -498,7 +503,11 @@ const banner = (/** @type {any} */ root) => root
  * @returns {boolean} - Vrai si le rappel de compo est visible.
  */
 const rappelVisible = (/** @type {any} */ root) => hasText(root, TITRE_RAPPEL)
-  || hasText(root, TITRE_OFFRE);
+  || hasText(root, TITRE_OFFRE)
+  // 🕳️ R6 : sans cette troisieme phrase, ce juge dirait « le bandeau est
+  // absent » alors qu'il est A L'ECRAN avec son texte de brouillon — et les
+  // temoins qui exigent le SILENCE resteraient verts par accident.
+  || hasText(root, TITRE_BROUILLON);
 
 /**
  * Hauteur DECLAREE du bandeau, comptee AU PIRE : rembourrages, bordures et
@@ -695,14 +704,33 @@ describe('C2 — temoin 1 : un match sans compo affiche le rappel', () => {
   });
 });
 
-describe('C2 — temoin 2 : un match AVEC une compo ne l affiche pas', () => {
-  test('un BROUILLON suffit a le faire taire', () => {
+// ♻️ REECRIT PAR R6 (vague R). Ce bloc s'appelait « un match AVEC une compo ne
+// l affiche pas » et CARACTERISAIT le silence du bandeau des qu'un brouillon
+// existait.
+//
+// 🧨 La recette du 24/08 a montre que ce silence etait le DEFAUT, pas la regle.
+// Un entraineur qui avait commence sa convocation ouvrait l'onglet
+// « Convocation » et n'y trouvait PLUS RIEN : ni son travail en cours, ni une
+// porte pour le reprendre. Le bandeau s'etait tu parce qu'une compo
+// « existait », et le resume publie n'existait pas encore — l'onglet tombait
+// entre les deux. La seule porte restante vivait dans un menu REPLIE par defaut.
+//
+// ⇒ Seul le PUBLIE fait taire le bandeau : a ce moment-la, le resume et la
+// liste des convoques prennent le relais, et l'onglet n'est jamais vide.
+describe('C2 + R6 — le bandeau se tait sur une compo PUBLIEE, jamais sur un brouillon', () => {
+  test('🕳️ R6 : un BROUILLON ne le fait plus taire — il propose de le reprendre', () => {
     const root = mountScreen({
       auth: asOrganiser(),
       composition: { ...PAYLOAD_SANS_COMPO, draft: { mode: 'manual', teams: [] } },
     });
 
-    expect(rappelVisible(root)).toBe(false);
+    expect(rappelVisible(root)).toBe(true);
+    expect(hasText(root, TITRE_BROUILLON)).toBe(true);
+    expect(hasText(root, ACTION_BROUILLON)).toBe(true);
+    // ⛔ Et surtout PAS la phrase du vide : le coach a commence, lui redire
+    // « ce match n'a pas encore de convocation » serait faux — c'est ce que
+    // le temoin « ABSENT n'est pas VIDE » interdisait deja, et ca ne change pas.
+    expect(hasText(root, TITRE_RAPPEL)).toBe(false);
   });
 
   test('une compo PUBLIEE le fait taire aussi', () => {
@@ -722,6 +750,9 @@ describe('C2 — temoin 2 : un match AVEC une compo ne l affiche pas', () => {
     // au lieu de l'EXISTENCE. Un coach qui a ouvert la convocation et n'a
     // encore coche personne A commence sa compo — lui redire « tu n'as pas
     // encore de compo » serait faux.
+    // ♻️ R6 : le juge sur l'EXISTENCE ne bouge pas, sa CONCLUSION change. Avant,
+    // « c'est un brouillon » menait au silence ; desormais ca mene a la porte
+    // qui le rouvre. C'est le meme etat, enfin dit a quelqu'un.
     const root = mountScreen({
       auth: asOrganiser(),
       composition: {
@@ -730,7 +761,8 @@ describe('C2 — temoin 2 : un match AVEC une compo ne l affiche pas', () => {
       },
     });
 
-    expect(rappelVisible(root)).toBe(false);
+    expect(hasText(root, TITRE_BROUILLON)).toBe(true);
+    expect(hasText(root, TITRE_RAPPEL)).toBe(false);
   });
 
   test('la PROPOSITION de depart (`bootstrap`) n est pas une compo : le rappel reste', () => {
