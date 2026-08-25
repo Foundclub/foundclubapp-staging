@@ -62,6 +62,7 @@ import {
   buildConvocationFieldTokens,
   buildConvocationReserveList,
   CONVOCATION_ROLE_STARTER,
+  getConvocationPersonId,
   getPersonName,
   getViewerConvocationRole,
 } from '@/views/playerConvocation/playerConvocationUtils';
@@ -4067,6 +4068,52 @@ function EventDetails({ navigation, route }) {
     staffCompositionPayload?.draft && !staffCompositionPayload?.published,
   );
 
+  // 🧾 S5 (vague S) — QUI EST CONVOQUE, AVANT MEME QUE LA COMPO EXISTE.
+  //
+  // 🗣️ Adel, recette du 25/08 : « on peut convoquer SANS faire de composition ».
+  // R6 ne montrait de liste qu APRES publication, et la construisait a partir
+  // des PLACEMENTS. Un coach qui coche ses joueurs sans jamais ouvrir le
+  // terrain n avait donc aucune liste — alors que c est le chemin le plus
+  // court, et que le serveur l accepte deja : `publishConvocation` n exige
+  // qu un BROUILLON (`event-composition.ts`, `if (!draft) throw`), jamais un
+  // placement.
+  //
+  // ♻️ ZERO REQUETE NEUVE : les coches (`selectedPlayerIds`), l effectif
+  // (`eligiblePlayers`) et les joueurs saisis a la main sont DEJA dans la
+  // charge que cet ecran a chargee.
+  //
+  // ⚠️ `manualPlayers` vit DANS LE BROUILLON, pas a la racine de la charge. Les
+  // chercher au mauvais endroit ferait disparaitre les invites SANS UN MOT —
+  // et un joueur saisi a la main est justement celui qu aucune autre liste ne
+  // rattrape.
+  //
+  // ⛔ L ORDRE EST CELUI DU COACH, pas l ordre alphabetique : on parcourt
+  // `selectedPlayerIds`, qui porte la selection telle qu il l a faite.
+  // ⛔ Un identifiant coche dont on ne connait pas la personne n ecrit pas de
+  // ligne : mieux vaut un nom de moins qu une ligne vide.
+  const draftConvocationRoster = useMemo(() => {
+    if (!hasDraftOnlyComposition) return [];
+
+    const draft = staffCompositionPayload?.draft;
+    const selectedIds = Array.isArray(draft?.selectedPlayerIds) ? draft.selectedPlayerIds : [];
+    if (!selectedIds.length) return [];
+
+    const byId = new Map();
+    [
+      ...(Array.isArray(staffCompositionPayload?.eligiblePlayers)
+        ? staffCompositionPayload.eligiblePlayers : []),
+      ...(Array.isArray(draft?.manualPlayers) ? draft.manualPlayers : []),
+    ].forEach((/** @type {any} */ player) => byId.set(getConvocationPersonId(player), player));
+
+    return selectedIds
+      .map((/** @type {any} */ playerId) => byId.get(String(playerId ?? '').trim()))
+      .filter(Boolean);
+  }, [
+    hasDraftOnlyComposition,
+    staffCompositionPayload?.draft,
+    staffCompositionPayload?.eligiblePlayers,
+  ]);
+
   // La composition fait partie des offres Equipe et Club — c'est la matrice du
   // serveur (`composition.manage: ['TEAM', 'CLUB']`,
   // admin/src/api/subscription/services/subscription-permission.ts:80).
@@ -5971,6 +6018,44 @@ function EventDetails({ navigation, route }) {
   };
 
   /**
+   * 🧾 S5 (vague S) — LES CONVOQUES DU BROUILLON, sous le bandeau.
+   *
+   * ⛔ Le bloc entier disparait quand personne n est coche. Le bandeau, lui,
+   * parle toujours (« ABSENT n est pas VIDE ») : un brouillon vide reste un
+   * brouillon. Mais un titre « Convoqués » suivi de rien se lit comme un bug.
+   * @returns {any} La liste des coches, ou null quand il n y en a aucun.
+   */
+  const renderDraftRoster = () => {
+    // 🚪 MEME PORTE QUE LE BANDEAU, pas une porte de plus. `isCompoReminderVisible`
+    // porte deja `canEdit` : la liste accompagne le bandeau, elle apparait et
+    // disparait avec lui.
+    //
+    // 🧨 POURQUOI CE N EST PAS SUPERFLU, alors que la charge « n arrive que sous
+    // canEdit » : mesure du 25/08 — la requete est aussi gardee par
+    // `areDeferredQueriesEnabled`, qui vaut FAUX au montage. Un temoin qui lirait
+    // `enabled` serait donc vert pour TOUT LE MONDE, y compris si `canEdit`
+    // disparaissait de la condition. La protection ne serait plus mesuree par
+    // rien. Ici elle l est, et le temoin la prouve avec la charge en main.
+    if (!isCompoReminderVisible || !draftConvocationRoster.length) return null;
+
+    return (
+      <View style={[Spaces.gap[4]]}>
+        <Text style={[Fonts.p3Bold, Fonts.neutral100]}>
+          {t('eventDetails.convocation.called', 'Convoqués')}
+        </Text>
+        {draftConvocationRoster.map((/** @type {any} */ player) => (
+          <Text
+            key={`brouillon-${getConvocationPersonId(player)}`}
+            style={[Fonts.p3, Fonts.neutral300]}
+          >
+            {getPersonName(player)}
+          </Text>
+        ))}
+      </View>
+    );
+  };
+
+  /**
    * 🧾 R6 (vague R) — LA LISTE DES CONVOQUES, DANS L'ONGLET « CONVOCATION ».
    *
    * ⛔ LE TITRE D'UNE SECTION NE PARAIT QUE SI ELLE A QUELQU'UN DEDANS. Un
@@ -6006,9 +6091,19 @@ function EventDetails({ navigation, route }) {
           </Text>
         ))}
 
+        {/* 🧾 S5 (vague S) — « SUR LE BANC » N A DE SENS QUE S IL Y A UN TERRAIN.
+            📏 Mesure serveur (`event-composition.ts:428`) :
+            `reservePlayerIds = selectedPlayerIds.filter(non places)`. Une
+            convocation publiee SANS aucun placement — le chemin que S5 (c)
+            legitime — met donc TOUT LE MONDE dans cette liste. L ecran
+            annoncait « Sur le banc » a des gens qui n ont pas de terrain du
+            tout : factuellement faux, et vexant pour un titulaire.
+            ⇒ Sans titulaire, ce sont simplement des « Convoqués ». */}
         {branch.bench.length ? (
           <Text style={[Fonts.p3Bold, Fonts.neutral100]}>
-            {t('eventDetails.convocation.bench', 'Sur le banc')}
+            {branch.starters.length
+              ? t('eventDetails.convocation.bench', 'Sur le banc')
+              : t('eventDetails.convocation.called', 'Convoqués')}
           </Text>
         ) : null}
         {branch.bench.map((entry) => (
@@ -7458,6 +7553,13 @@ function EventDetails({ navigation, route }) {
               ) : null}
 
               {showCallUpTab && renderCompoReminder()}
+              {/* 🧾 S5 — les convoques du brouillon, JUSTE SOUS le bandeau qui
+                  propose de continuer. Les deux repondent a la meme question
+                  (« ou en est ma convocation ? ») : les separer obligerait a
+                  chercher. ⛔ Hors du bandeau, pas dedans : son plafond de
+                  hauteur (120 pt) protege le contenu du match, et une liste de
+                  onze noms le creverait. */}
+              {showCallUpTab && renderDraftRoster()}
 
               {/* 🏕️ N2 — LE STAGE PERD SES DEUX PASTILLES MAISON. Elles
                   vivaient DANS une carte, ce qui faisait des onglets a

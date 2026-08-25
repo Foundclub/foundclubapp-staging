@@ -1189,6 +1189,7 @@ export default {
     },
     convocation: {
       bench: 'Sur le banc',
+      called: 'Convoqués',
       starters: 'Sur le terrain',
     },
     detection: {
