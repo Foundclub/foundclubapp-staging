@@ -144,7 +144,7 @@ jest.mock(
   },
 );
 
-jest.mock('../MyLicense', () => function MyLicenseMock() {
+jest.mock('../MyLicenses', () => function MyLicensesMock() {
   return null;
 });
 

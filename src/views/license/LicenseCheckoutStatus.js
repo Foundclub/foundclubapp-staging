@@ -33,6 +33,11 @@ function LicenseCheckoutStatus({ navigation, route }) {
   } = useTheme();
   const provider = route?.params?.provider || 'paiement';
   const paymentId = route?.params?.paymentId;
+  // S9, vague S — « Retour a ma cotisation » ramene au DETAIL de la
+  // cotisation qu on vient de payer. `openCheckout` passe deja
+  // `assignmentId` en parametre de route ; sans lui, on retombe sur la
+  // LISTE plutot que d ouvrir un detail sans identifiant.
+  const assignmentId = route?.params?.assignmentId;
   const paymentQuery = useLicensePaymentStatus(paymentId, {
     enabled: Boolean(paymentId),
     refetchInterval: (query) => {
@@ -103,7 +108,12 @@ function LicenseCheckoutStatus({ navigation, route }) {
             </LicenseCard>
           </>
         ) : null}
-        <Button onPress={() => navigation.navigate(RouteNames.MyLicense)} title="Retour à ma cotisation" />
+        <Button
+          onPress={() => (assignmentId
+            ? navigation.navigate(RouteNames.MyLicense, { assignmentId })
+            : navigation.navigate(RouteNames.MyLicenses))}
+          title="Retour à ma cotisation"
+        />
       </View>
     </ScreenContainer>
   );

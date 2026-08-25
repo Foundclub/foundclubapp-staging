@@ -1,40 +1,35 @@
 import { Alert } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
-import MyLicense from '../MyLicense';
+import MyLicenseDetail from '../MyLicenseDetail';
 
 /**
- * AA07 / K2 — LES BOUTONS DU DOCUMENT DEPOSE.
+ * AA07 / K2 — LES PIECES ET LA LICENCE, DANS LE NOUVEAU DETAIL.
+ * Reecrit pour S9, vague S, sous l architecture A.
  *
  * 🗣️ Adel, recette du 2026-08-20 (son point D-21) : « le depot marche. Mais les
  * boutons voir / valider / remplacer ne sont ni clairs ni comprehensibles, et
  * ils rendent une erreur quand on appuie dessus — sauf "ouvrir" ». Et : « on
  * doit pouvoir TELECHARGER le document ».
  *
- * 🔬 CE QUE LA LECTURE A MONTRE, DEFAUT PAR DEFAUT :
+ * 🔁 CE QUI A CHANGE : la section « Documents a fournir » et la section « Ma
+ * licence » fusionnent en UN bloc « Mon dossier », et les gestes passent de
+ * boutons pleine largeur a des cibles de 44 px sur la ligne. Le pack le
+ * demande — mais LES TROIS GARANTIES, ELLES, NE BOUGENT PAS :
  *
- * 1. 🧨 LE BOUTON QUI SE CONTREDIT — « Voir ma licence » s affiche quand
- *    `officialLicenseDocument.file.url` existe, mais agit sur
- *    `officialLicenseDocument.SUBMISSION.file.url`. Deux chemins differents pour
- *    un seul bouton : des que le serveur remplit l un sans l autre, le bouton
- *    apparait et repond « Document indisponible ». C est exactement la forme du
- *    defaut decrit — un bouton visible qui rend une erreur.
- *
- * 2. 📛 LE LIBELLE QUI MENT — « Telecharger le modele » n a jamais rien
- *    telecharge : il appelait `LinksPlatform.openUrl`, c est-a-dire OUVRIR.
- *
- * 3. 🚫 LE TELECHARGEMENT ABSENT — aucun geste ne posait le fichier dans le
- *    telephone. C est la demande explicite d Adel.
- *
- * ⛔ CE QUE CE TEMOIN NE PROUVE PAS, ET NE PRETEND PAS PROUVER : l erreur
- * SERVEUR eventuelle derriere « Valider » (ecran du club) ne se reproduit pas
- * ici — elle demande un vrai appel. Elle est nommee dans le compte rendu.
+ *   1. 🧨 LE BOUTON QUI SE CONTREDIT — « ma licence » s affichait sur
+ *      `officialLicenseDocument.file.url` mais AGISSAIT sur
+ *      `officialLicenseDocument.SUBMISSION.file.url`. Deux chemins pour un seul
+ *      bouton : des que le serveur remplit l un sans l autre, le bouton
+ *      apparait et repond « Document indisponible ».
+ *   2. 🚫 LE TELECHARGEMENT — il POSE le fichier dans le telephone, la ou
+ *      « ouvrir » se contente de l AFFICHER. Deux gestes, deux libelles.
+ *   3. 🔒 AUCUN BOUTON SANS FICHIER — reparer la contradiction ne doit pas
+ *      faire apparaitre un geste la ou il n y a rien a ouvrir.
  */
 
 /** @type {any} */
 let mockMesCotisations;
-/** @type {any[]} */
-const mockBoutons = [];
 const mockOuvrirUrl = jest.fn();
 const mockTelecharger = jest.fn(() => Promise.resolve({ opened: true, outcome: 'downloads' }));
 const mockMutationFigee = { isPending: false, mutate: jest.fn(), mutateAsync: jest.fn() };
@@ -78,10 +73,13 @@ jest.mock('@/components/molecules/bottomModal/BottomModal', () => function Modal
   return children;
 });
 
-jest.mock('@/components/atoms/button/Button', () => function ButtonMock(/** @type {any} */ props) {
-  mockBoutons.push(props);
-  return null;
-});
+// AA07 / K2 — le telechargement natif charge `react-native-blob-util`, absent
+// des `transformIgnorePatterns` du projet : chaque suite qui l atteint le mocke
+// elle-meme, comme les 9 qui le faisaient deja.
+jest.mock('react-native-blob-util', () => ({
+  __esModule: true,
+  default: { config: jest.fn(), fs: { dirs: { CacheDir: '/cache' }, stat: jest.fn() } },
+}));
 
 jest.mock('@/platform/links', () => ({
   __esModule: true,
@@ -116,7 +114,7 @@ const DEPOT = {
 /**
  * Construit une cotisation, en laissant le test choisir la forme exacte de la
  * licence officielle — c est cette forme qui revele le defaut n°1.
- * @param {any} officialLicenseDocument la licence officielle telle que le serveur la rend
+ * @param {any} officialLicenseDocument la licence telle que le serveur la rend
  * @returns {any} une affectation de cotisation complete
  */
 const cotisation = (officialLicenseDocument = null) => ({
@@ -130,6 +128,7 @@ const cotisation = (officialLicenseDocument = null) => ({
     name: 'Cotisation 2026',
     paymentModes: {},
     seasonLabel: '2026-2027',
+    status: 'active',
   },
   club: { name: 'FC Nord' },
   currency: 'EUR',
@@ -154,45 +153,47 @@ afterEach(() => {
 });
 
 /**
- * Monte l ecran sur une cotisation donnee.
+ * Monte le detail sur une cotisation donnee.
  * @param {any} affectation la cotisation a afficher
  * @returns {void}
  */
 const monter = (affectation) => {
-  mockBoutons.length = 0;
   mockMesCotisations = {
     data: [affectation], isError: false, isLoading: false, refetch: jest.fn(),
   };
 
   act(() => {
     arbre = renderer.create(
-      <MyLicense
-        navigation={{ navigate: jest.fn(), setOptions: jest.fn() }}
-        route={{ params: {} }}
+      <MyLicenseDetail
+        navigation={{ canGoBack: () => true, goBack: jest.fn(), navigate: jest.fn() }}
+        route={{ params: { assignmentId: 'assign-1' } }}
       />,
     );
   });
 };
 
 /**
- * Retrouve un bouton par un morceau de son libelle.
- * @param {string} morceau texte cherche dans le titre
- * @returns {any} le bouton, ou undefined
+ * Retrouve un geste par un morceau de son libelle — qu il soit porte par un
+ * bouton (`title`) ou par une cible de 44 px (`accessibilityLabel`).
+ * @param {string} morceau texte cherche
+ * @returns {any} le geste, ou undefined
  */
-const bouton = (morceau) => mockBoutons.find(
-  (item) => String(item?.title || '').toLowerCase().includes(morceau.toLowerCase()),
-);
+const geste = (morceau) => arbre.root.findAll((/** @type {any} */ noeud) => {
+  if (typeof noeud.props?.onPress !== 'function') return false;
+  const etiquette = `${noeud.props?.title || ''} ${noeud.props?.accessibilityLabel || ''}`;
+  return etiquette.toLowerCase().includes(morceau.toLowerCase());
+})[0];
 
-describe('AA07 / K2 — telecharger le document', () => {
+describe('AA07 / K2 — telecharger la piece deposee', () => {
   it('un depot offre le TELECHARGEMENT en plus de l ouverture', async () => {
     monter(cotisation());
 
-    expect(bouton('Ouvrir')).toBeTruthy();
+    expect(geste('Ouvrir le document')).toBeTruthy();
     // 🎯 LA DEMANDE D ADEL : « on doit pouvoir telecharger le document ».
-    const telechargement = bouton('Télécharger le document');
+    const telechargement = geste('Télécharger le document');
     expect(telechargement).toBeTruthy();
 
-    await act(async () => { await telechargement.onPress(); });
+    await act(async () => { await telechargement.props.onPress(); });
     expect(mockTelecharger).toHaveBeenCalledWith(
       expect.objectContaining({ url: 'https://api.test/uploads/mon-certificat.pdf' }),
     );
@@ -201,10 +202,10 @@ describe('AA07 / K2 — telecharger le document', () => {
   it('« Telecharger le modele » telecharge VRAIMENT le modele', async () => {
     monter(cotisation());
 
-    const modele = bouton('modèle');
+    const modele = geste('modèle');
     expect(modele).toBeTruthy();
 
-    await act(async () => { await modele.onPress(); });
+    await act(async () => { await modele.props.onPress(); });
     // 📛 AVANT : ce bouton appelait `openUrl` — il OUVRAIT, il ne
     // telechargeait pas. Le libelle promettait ce que le geste ne faisait pas.
     expect(mockTelecharger).toHaveBeenCalledWith(
@@ -225,21 +226,70 @@ describe('AA07 / K2 — le bouton qui se contredisait', () => {
       submission: { documentId: 'sub-lic', status: 'validated' },
     }));
 
-    const voir = bouton('ma licence');
+    const voir = geste('Ouvrir ma licence');
     expect(voir).toBeTruthy();
 
-    await act(async () => { await voir.onPress(); });
+    await act(async () => { await voir.props.onPress(); });
 
     expect(alerte).not.toHaveBeenCalled();
     expect(mockOuvrirUrl).toHaveBeenCalledWith('https://api.test/uploads/licence-officielle.pdf');
     alerte.mockRestore();
   });
 
-  it('sans AUCUN fichier, aucun bouton de licence n est propose', () => {
+  it('sans AUCUN fichier, aucun geste de licence n est propose', () => {
     // 🔒 GARDE-FOU : reparer la contradiction ne doit pas faire apparaitre un
-    // bouton la ou il n y a rien a ouvrir — ce serait le meme defaut, inverse.
+    // geste la ou il n y a rien a ouvrir — ce serait le meme defaut, inverse.
     monter(cotisation({ request: { name: 'Licence officielle' }, submission: null }));
 
-    expect(bouton('ma licence')).toBeFalsy();
+    expect(geste('Ouvrir ma licence')).toBeFalsy();
+    expect(geste('Télécharger ma licence')).toBeFalsy();
+  });
+});
+
+describe('S9 — les cartes d absence que le pack supprime (D3)', () => {
+  it('aucune section vide ne se dessine', () => {
+    // 🧹 Defaut 4 : sept sections occupaient deux ecrans et demi de scroll pour
+    // n afficher que des phrases d absence. Cette cotisation n a ni paiement,
+    // ni relance, ni echeancier : les trois sections doivent DISPARAITRE.
+    monter(cotisation());
+    const rendu = JSON.stringify(arbre.toJSON());
+
+    expect(rendu).not.toContain('Pas d historique');
+    expect(rendu).not.toContain('Aucun document');
+    expect(rendu).not.toContain('Pas encore de reçu');
+    expect(rendu).not.toContain('relance(s)');
+    expect(rendu).not.toContain('Échéancier');
+    expect(rendu).not.toContain('Non définie');
+  });
+
+  it('sans date fixee, on dit ce que ca change — jamais « Non definie »', () => {
+    monter(cotisation());
+    const rendu = JSON.stringify(arbre.toJSON());
+
+    expect(rendu).toContain('Le club n a pas encore fixé de date');
+  });
+
+  it('un dossier COMPLET tient sur une ligne, et le detail reste a un tap', () => {
+    // 🗂️ Cadre 4B du pack : « replier n est pas cacher ». Licence deposee +
+    // piece obligatoire validee = une seule ligne verte ; les lignes de detail
+    // ne se dessinent qu apres le tap.
+    const complete = cotisation({
+      file: { url: '/uploads/licence-officielle.pdf' },
+      request: { name: 'Licence officielle' },
+      submission: { documentId: 'sub-lic', status: 'validated' },
+    });
+    complete.documentSubmissions = [{ ...DEPOT, status: 'validated' }];
+    monter(complete);
+
+    const replie = arbre.root.findAll((/** @type {any} */ noeud) => String(
+      noeud.props?.title || '',
+    ) === 'Dossier complet')[0];
+    expect(replie).toBeTruthy();
+    // ⛔ Replie : le detail n est PAS a l ecran...
+    expect(geste('Ouvrir ma licence')).toBeFalsy();
+
+    act(() => replie.props.onPress());
+    // ...mais il revient au premier tap. Replier n est pas cacher.
+    expect(geste('Ouvrir ma licence')).toBeTruthy();
   });
 });
