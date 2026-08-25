@@ -13,19 +13,19 @@ import useTheme from '@/theme/themeContext';
 
 import HeaderBackButton from '@/components/atoms/headerBackButton/HeaderBackButton';
 import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
-import SegmentedControl from '@/components/molecules/segmentedControl/SegmentedControl';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
 import { useGetEvent, useGetEventAttendance } from '@/services/event/eventQueries';
 
 import {
+  buildArrivedAtIso,
   countAnswers,
+  countCalled,
   countPresence,
   describeBulkOutcome,
   formatShortDateInZone,
   formatTimeInZone,
   isMarked,
-  listUnanswered,
   listUnmarkedIds,
   resolveAttendanceWindow,
   resolveCallMode,
@@ -35,13 +35,8 @@ import {
   toMsOrNull,
 } from './attendanceCallModel';
 import AttendanceRow from './AttendanceRow';
-import {
-  AttendanceCloseSheet, AttendanceCorrectSheet, AttendanceLateSheet,
-} from './AttendanceSheets';
+import { AttendanceCloseSheet, AttendanceLateSheet } from './AttendanceSheets';
 import { useAttendanceCallMutations } from './useAttendanceCallMutations';
-
-const TAB_EXPECTED = 'expected';
-const TAB_UNANSWERED = 'unanswered';
 
 // L horloge serveur avance d elle-meme, par pas de 30 s — c est le motif
 // d `EventDetails` (AC10), recopie ici parce que ce fichier-la est verrouille.
@@ -67,7 +62,9 @@ const styles = StyleSheet.create({
   },
   headerTexts: { flex: 1 },
   list: { gap: 8 },
-  pill: { borderRadius: 100, paddingHorizontal: 12, paddingVertical: 4 },
+  pill: {
+    borderRadius: 100, borderWidth: 1, paddingHorizontal: 12, paddingVertical: 4,
+  },
   screen: { flex: 1 },
   scroll: { gap: 16, paddingBottom: 24, paddingHorizontal: 16 },
   signalledRow: {
@@ -122,7 +119,6 @@ function EventAttendanceCall() {
   // affiche « Ouvre à 17:30 » alors qu il est 17:35.
   const { data: attendancePayload } = useGetEventAttendance(eventId, { refetchOnMount: 'always' });
 
-  const [activeTab, setActiveTab] = useState(TAB_EXPECTED);
   const [elapsedMs, setElapsedMs] = useState(0);
   const [bulkMessage, setBulkMessage] = useState('');
   // Les trois feuilles. `sheetItem` porte la ligne visee par 2E et 2F.
@@ -159,22 +155,12 @@ function EventAttendanceCall() {
 
   const answers = useMemo(() => countAnswers(items), [items]);
   const presence = useMemo(() => countPresence(items), [items]);
-  const markedCount = items.length - presence.waiting;
+  // 🔢 APPEL (26/08) — LE COMPTEUR COMPTE LES POINTES, PAS LES ARRIVES.
+  // `items.length - presence.waiting` ne voyait que les `arrivedAt` ; une
+  // absence posee a la main (D7bis) n en a pas et compte pourtant.
+  const markedCount = useMemo(() => countCalled(items), [items]);
 
-  const unansweredItems = useMemo(() => listUnanswered(items), [items]);
-  const unmarkedItems = useMemo(
-    () => items.filter((/** @type {any} */ item) => !isMarked(item)),
-    [items],
-  );
   const markedItems = useMemo(() => items.filter(isMarked), [items]);
-
-  // Onglet « Sans réponse » : on garde AUSSI ceux qu on vient de pointer, pour
-  // que la liste ne se derobe pas sous le pouce (cadre 2C de la maquette).
-  const visibleUnmarked = activeTab === TAB_UNANSWERED ? unansweredItems : unmarkedItems;
-  // …et la section « DÉJÀ POINTÉS » ne les redit donc pas une seconde fois.
-  const markedSectionItems = activeTab === TAB_UNANSWERED
-    ? markedItems.filter((/** @type {any} */ item) => !unansweredItems.includes(item))
-    : markedItems;
 
   const teamName = event?.team?.name || '';
   const heureDebut = formatTimeInZone(payloadData?.eventStartAt || event?.date, timezone);
@@ -188,8 +174,6 @@ function EventAttendanceCall() {
     answersYes: t('eventDetails.attendanceCall.answers.yes', 'Présent·e·s'),
     closeCall: t('eventDetails.attendanceCall.footer.close', "Clôturer l'appel"),
     declaredLate: t('eventDetails.attendanceCall.row.declaredLate', 'Retard annoncé'),
-    markedOf: t('eventDetails.attendanceCall.header.markedOf', 'pointé sur'),
-    markedSection: t('eventDetails.attendanceCall.markedSection', 'DÉJÀ POINTÉS'),
     markSomeone: t(
       'eventDetails.attendanceCall.footer.markSomeone',
       'Pointe au moins une personne',
@@ -198,24 +182,48 @@ function EventAttendanceCall() {
     presenceArrived: t('eventDetails.attendanceCall.presence.arrived', 'Arrivé·e·s'),
     presenceLate: t('eventDetails.attendanceCall.presence.late', 'En retard'),
     presenceWaiting: t('eventDetails.attendanceCall.presence.waiting', 'En attente'),
-    tabExpected: t('eventDetails.attendanceCall.tabs.expected', 'Attendus'),
-    tabUnanswered: t('eventDetails.attendanceCall.tabs.unanswered', 'Sans réponse'),
     title: t('eventDetails.attendanceCall.header.title', 'APPEL'),
   };
 
+  const eventStartMs = toMsOrNull(payloadData?.eventStartAt) ?? toMsOrNull(event?.date);
+
+  /**
+   * 🧨 « À L HEURE » DOIT DIRE L HEURE, SINON IL POSE UN RETARD.
+   *
+   * Sans `lateMinutes` ni `arrivedAt`, `performCoachArrival` prend sa branche
+   * automatique : il pose SON instant courant et RECALCULE le retard depuis le
+   * debut. Un coach qui appuie sur ✓ a 18h07 pour un match de 18h00 ecrivait
+   * donc « arrivé en retard, +7 min » — pour un joueur qu il vient de declarer
+   * a l heure, et sur le bouton qui porte une COCHE VERTE.
+   *
+   * ⛔ Ce n est pas un cas de bord : c est le geste le plus frequent de
+   * l ecran, et il se produit des la premiere minute de jeu.
+   *
+   * `buildArrivedAtIso` existait deja (attendanceCallModel.js) et servait la
+   * feuille de retard : le chemin est CONSERVE (decision D7-c), il est
+   * simplement employe aussi ici.
+   */
   const handleMark = useCallback((/** @type {any} */ item) => {
-    coachArrivalMutation.mutate({ payload: {}, userId: item?.user?.documentId });
-  }, [coachArrivalMutation]);
+    coachArrivalMutation.mutate({
+      payload: {
+        arrivedAt: buildArrivedAtIso({ eventStartMs, lateMinutes: 0 }),
+        lateMinutes: 0,
+      },
+      userId: item?.user?.documentId,
+    });
+  }, [coachArrivalMutation, eventStartMs]);
+
+  const handleUnmarkOne = useCallback((/** @type {any} */ item) => {
+    resetMutation.mutate({ userId: item?.user?.documentId });
+  }, [resetMutation]);
 
   const handleMarkAll = useCallback(() => {
-    const userIds = listUnmarkedIds(visibleUnmarked);
+    const userIds = listUnmarkedIds(items);
     if (userIds.length === 0) return;
     bulkMutation.mutate({ userIds }, {
       onSuccess: (/** @type {any} */ summary) => setBulkMessage(describeBulkOutcome(summary, t)),
     });
-  }, [bulkMutation, t, visibleUnmarked]);
-
-  const eventStartMs = toMsOrNull(payloadData?.eventStartAt) ?? toMsOrNull(event?.date);
+  }, [bulkMutation, items, t]);
 
   const handleLateSubmit = useCallback((/** @type {any} */ envoi) => {
     const payload = {
@@ -229,24 +237,6 @@ function EventAttendanceCall() {
     else coachArrivalMutation.mutate({ payload, userId: envoi.userId });
     setOpenSheet('');
   }, [coachArrivalMutation, lateMinutesMutation]);
-
-  const handleClearNote = useCallback(() => {
-    // 🧨 `patchLate` EXIGE `lateMinutes` : on renvoie celui qui est en place.
-    // Envoyer 0 pour effacer une note effacerait aussi le retard.
-    lateMinutesMutation.mutate({
-      payload: {
-        lateMinutes: Number(sheetItem?.attendance?.lateMinutes || 0),
-        note: null,
-      },
-      userId: sheetItem?.user?.documentId,
-    });
-    setOpenSheet('');
-  }, [lateMinutesMutation, sheetItem]);
-
-  const handleUnmark = useCallback(() => {
-    resetMutation.mutate({ userId: sheetItem?.user?.documentId });
-    setOpenSheet('');
-  }, [resetMutation, sheetItem]);
 
   const handleUnmarkAll = useCallback(() => {
     // 🔒 On ne vise QUE les lignes qui portent un `arrivedAt` : `reset` efface
@@ -403,104 +393,57 @@ function EventAttendanceCall() {
         </TouchableOpacity>
       </View>
 
-      <SegmentedControl
-        onChange={setActiveTab}
-        options={[
-          {
-            label: `${mots.tabExpected} · ${items.length}`,
-            value: TAB_EXPECTED,
-          },
-          {
-            label: `${mots.tabUnanswered} · ${unansweredItems.length}`,
-            value: TAB_UNANSWERED,
-          },
-        ]}
-        value={activeTab}
-      />
-
-      {activeTab === TAB_UNANSWERED && (
-        <View style={[styles.banner, { backgroundColor: withAlpha(Colors.warning500, 0.12) }]}>
-          <Text style={[Fonts.p3Bold, { color: Colors.neutral00 }]}>
-            {t('eventDetails.attendanceCall.unanswered.title', "Ils n'ont jamais répondu")}
-          </Text>
-          {/* 🧨 La maquette annonce « Ils reçoivent une notification ». C est
-              FAUX : `performCoachArrival` n envoie rien au joueur. La phrase
-              est retiree — promettre une notification qui n arrive pas est
-              pire que ne rien promettre. */}
-          <Text style={[Fonts.p4, { color: Colors.neutral200 }]}>
-            {t(
-              'eventDetails.attendanceCall.unanswered.explain',
-              'Si tu les pointes, ils passent en Présent·e et Arrivé·e en même temps.',
-            )}
-          </Text>
-        </View>
-      )}
-
       {bulkMessage !== '' && (
         <Text style={[Fonts.p4, { color: Colors.warning500 }]}>{bulkMessage}</Text>
       )}
 
+      {/* 🧱 UNE SEULE LISTE, DANS L ORDRE DE LA FEUILLE DE PRESENCE.
+          Les deux onglets (« Attendus » / « Sans réponse ») et la section
+          « DÉJÀ POINTÉS » disparaissent : ils faisaient SAUTER une ligne
+          d une pile a l autre au moment precis ou le doigt la touchait, et
+          obligeaient le coach a chercher deux fois la meme personne. Une
+          ligne pointee reste desormais exactement ou elle etait — c est ce
+          qui rend les trois boutons corrigeables en un tap. */}
       <View style={styles.list}>
-        {visibleUnmarked.map((/** @type {any} */ item, /** @type {number} */ index) => (
+        {items.map((/** @type {any} */ item, /** @type {number} */ index) => (
           <AttendanceRow
             identitiesHidden={identitiesHidden}
             item={item}
             key={item?.user?.documentId || index}
-            onCorrect={(/** @type {any} */ cible) => {
-              setSheetItem(cible); setOpenSheet('correct');
-            }}
             onLate={(/** @type {any} */ cible) => { setSheetItem(cible); setOpenSheet('late'); }}
-            onMark={handleMark}
+            onOnTime={handleMark}
+            onUnmark={handleUnmarkOne}
             position={index + 1}
-            stayInPlace={activeTab === TAB_UNANSWERED}
             t={t}
-            timezone={timezone}
           />
         ))}
       </View>
-
-      {markedSectionItems.length > 0 && (
-        <View style={styles.list}>
-          <Text style={[Fonts.p4Bold, { color: Colors.neutral400 }]}>
-            {`${mots.markedSection} · ${markedSectionItems.length}`}
-          </Text>
-          {markedSectionItems.map((/** @type {any} */ item, /** @type {number} */ index) => (
-            <AttendanceRow
-              identitiesHidden={identitiesHidden}
-              item={item}
-              key={item?.user?.documentId || index}
-              onCorrect={(/** @type {any} */ cible) => {
-                setSheetItem(cible); setOpenSheet('correct');
-              }}
-              position={index + 1}
-              t={t}
-              timezone={timezone}
-            />
-          ))}
-        </View>
-      )}
     </>
   );
 
   return (
     <ScreenContainer bgImage="bg2" bottomInsetMode="edge-to-edge" style={[styles.screen]}>
+      {/* 📐 L ENTETE DU PACK : le titre dit CE QUE C EST, le sous-titre dit
+          POUR QUI, et la pastille dit OU ON EN EST. L ancienne version
+          inversait les deux premiers — le titre portait « 0 pointé sur 22 »
+          et le mot « APPEL » etait relegue en sous-titre, colle au nom de
+          l equipe. Le chiffre a maintenant sa place a lui. */}
       <View style={styles.header}>
         <HeaderBackButton onPress={() => navigation.goBack()} />
         <View style={styles.headerTexts}>
-          <Text style={[Fonts.h4Bold, { color: Colors.neutral00 }]}>
-            {mode === 'open'
-              ? `${markedCount} ${mots.markedOf} ${items.length}`
-              : t('eventDetails.attendanceCall.header.title', 'APPEL')}
-          </Text>
+          <Text style={[Fonts.h3Black, { color: Colors.neutral00 }]}>{mots.title}</Text>
           <Text numberOfLines={1} style={[Fonts.p3, { color: Colors.neutral300 }]}>
-            {[mode === 'open' ? mots.title : '', teamName, heureDebut]
-              .filter(Boolean).join(' · ')}
+            {[teamName, heureDebut].filter(Boolean).join(' · ')}
           </Text>
         </View>
         {mode === 'open' && (
-          <View style={[styles.pill, { backgroundColor: Colors.success500 }]}>
-            <Text style={[Fonts.p4Bold, { color: Colors.primary900 }]}>
-              {t('eventDetails.attendanceCall.header.open', 'Ouvert')}
+          <View style={[styles.pill, {
+            backgroundColor: Colors.primary800,
+            borderColor: withAlpha(Colors.neutral00, 0.12),
+          }]}
+          >
+            <Text style={[Fonts.p3Black, { color: Colors.neutral200 }]}>
+              {`${markedCount} / ${items.length}`}
             </Text>
           </View>
         )}
@@ -553,15 +496,6 @@ function EventAttendanceCall() {
         timezone={timezone}
       />
 
-      <AttendanceCorrectSheet
-        isVisible={openSheet === 'correct'}
-        item={sheetItem}
-        onChangeTime={() => setOpenSheet('late')}
-        onClearNote={handleClearNote}
-        onClose={() => setOpenSheet('')}
-        onUnmark={handleUnmark}
-        t={t}
-      />
     </ScreenContainer>
   );
 }

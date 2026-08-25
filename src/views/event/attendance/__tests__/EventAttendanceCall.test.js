@@ -7,12 +7,13 @@ import EventAttendanceCall from '../EventAttendanceCall';
  *
  * 🔬 CE QUE CES TEMOINS TIENNENT :
  *   1. 2A — avant l heure, le bouton DIT quand ca ouvre. Jamais un bouton muet.
- *   2. 2B — dans la fenetre, le depart : « 0 pointé sur 22 », les compteurs de
- *      PRESENCE (jamais ceux de reponse en meme temps), et un pied desactive.
+ *   2. 2B — dans la fenetre, le depart : la pastille « 0 / 22 », les compteurs
+ *      de PRESENCE (jamais ceux de reponse en meme temps), et un pied desactive.
  *   3. 2C — un sans-reponse se pointe D UN GESTE (c est l ouverture serveur
- *      AD04 : le verrou est l audience, plus « a dit oui »).
+ *      AD04 : le verrou est l audience, plus « a dit oui »), et la coche envoie
+ *      `lateMinutes: 0` — sans quoi le serveur lui poserait un retard.
  *   4. « Tout pointer » passe par l envoi GROUPE, et un refus s affiche.
- *   5. La ligne n est PAS cliquable ; ses deux cibles font 44.
+ *   5. La ligne n est PAS cliquable ; ses cibles font 44 x 44, radius 12.
  *   6. `participantIdentitiesHidden` est respecte : aucun nom rendu.
  *   7. L horloge du TELEPHONE ne decide de rien.
  *   7b. Un non-pointe passe `no_show` par le cron reste POINTABLE.
@@ -101,7 +102,9 @@ jest.mock('@/theme/themeContext', () => {
       ApplicationStyle: genererStyles(couleurs),
       Colors: couleurs,
       Fonts: genererPolices(couleurs),
-      Images: { arrowLeft: 1, chevronLeft: 1 },
+      Images: {
+        arrowLeft: 1, check: 1, chevronLeft: 1, clock: 1, close: 1,
+      },
       Spaces: espaces,
     }),
   };
@@ -402,7 +405,13 @@ describe('L5-A · 2A — le bandeau dit CE QU ON VA POINTER', () => {
 });
 
 describe('L5-A · 2B — dans la fenetre, le depart', () => {
-  test('« 0 pointé sur 22 », compteurs de PRESENCE, pied desactive', async () => {
+  // 📐 APPEL (26/08) — MEME INTENTION, NOUVEL ATTENDU. Le temoin disait
+  // « 0 pointé sur 22 » dans le TITRE. Le pack minimaliste rend le titre au
+  // mot « APPEL » et deplace le chiffre dans une pastille « 0 / 22 » : ce qui
+  // est mesure ici reste « au depart, l ecran dit ou on en est, il montre
+  // l echelle des PRESENCES et jamais celle des reponses, et le pied est
+  // desactive tant que personne n est pointe ».
+  test('la pastille dit « 0 / 22 », compteurs de PRESENCE, pied desactive', async () => {
     mockAttendance = reponseAttendance({
       items: Array.from({ length: 22 }, (_valeur, index) => ligne({
         firstname: `Joueur${index}`,
@@ -414,8 +423,8 @@ describe('L5-A · 2B — dans la fenetre, le depart', () => {
     const arbre = await monter();
     const texte = aplatirTexte(arbre.toJSON());
 
-    expect(texte).toContain('0 pointé sur 22');
-    // Le mot « APPEL » ne disparait pas quand l appel s ouvre (entete 2B).
+    expect(texte).toContain('0 / 22');
+    // Le mot « APPEL » est le TITRE de l ecran, il ne disparait pas.
     expect(texte).toContain('APPEL');
     expect(texte).toContain('Arrivé·e·s');
     expect(texte).toContain('En retard');
@@ -432,7 +441,17 @@ describe('L5-A · 2B — dans la fenetre, le depart', () => {
 });
 
 describe('L5-A · 2C — un sans-reponse se pointe d un geste', () => {
-  test('l onglet « Sans réponse » explique AVANT le geste, et « Là » pointe', async () => {
+  // 📐 APPEL (26/08) — MEME INTENTION, NOUVEL ATTENDU. Le temoin passait par
+  // l onglet « Sans réponse » et son bandeau d explication ; le pack supprime
+  // les deux. Ce qui est mesure reste L OUVERTURE SERVEUR AD04 elle-meme :
+  // quelqu un qui n a JAMAIS repondu est dans la liste, et sa coche le pointe
+  // d un seul geste.
+  //
+  // 🧨 ET LE TEMOIN GAGNE CE QUE L ANCIEN NE VOYAIT PAS : le corps envoye.
+  // Sans `lateMinutes: 0` + `arrivedAt`, le serveur recalcule le retard depuis
+  // le debut et ecrit « en retard +6 min » pour un joueur qu on vient de
+  // declarer a l heure — sur un bouton qui porte une COCHE VERTE.
+  test('un sans-reponse est dans LA liste, et la coche le pointe A L HEURE', async () => {
     mockAttendance = reponseAttendance({
       items: [
         ligne({ firstname: 'Leo', rsvpStatus: 'participating', userId: 'u1' }),
@@ -442,22 +461,23 @@ describe('L5-A · 2C — un sans-reponse se pointe d un geste', () => {
     });
 
     const arbre = await monter();
-    await act(async () => { appuyable(arbre, 'Sans réponse').props.onPress(); });
-
     const texte = aplatirTexte(arbre.toJSON());
-    expect(texte).toContain("Ils n'ont jamais répondu");
-    expect(texte).toContain('Présent·e et Arrivé·e en même temps');
 
-    // 🧨 La maquette annonce « Ils reçoivent une notification ». C est FAUX :
-    // `performCoachArrival` n envoie rien au joueur. La phrase est retiree.
-    expect(texte).not.toContain('reçoivent une notification');
+    // ⛔ Plus d onglets : tout le monde est dans la meme liste.
+    expect(texte).not.toContain('Attendus ·');
+    expect(texte).toContain('Ilan');
+    // Le statut de reponse survit en sous-ligne (decision D8).
+    expect(texte).toContain('Sans réponse');
 
-    await act(async () => { appuyable(arbre, 'Là').props.onPress(); });
+    await act(async () => { appuyable(arbre, "À l'heure Ilan").props.onPress(); });
 
     expect(mockCoachArrivalMutate).toHaveBeenCalledTimes(1);
-    expect(mockCoachArrivalMutate.mock.calls[0][0]).toEqual(
-      expect.objectContaining({ userId: 'u9' }),
-    );
+    const envoi = mockCoachArrivalMutate.mock.calls[0][0];
+    expect(envoi).toEqual(expect.objectContaining({ userId: 'u9' }));
+    expect(envoi.payload.lateMinutes).toBe(0);
+    // L heure envoyee est le DEBUT de l evenement, pas l instant du tap :
+    // c est ce qui empeche « À l'heure » d ecrire un retard de 6 minutes.
+    expect(envoi.payload.arrivedAt).toBe(DEBUT_ISO);
   });
 });
 
@@ -517,8 +537,13 @@ describe('L5-A · « Tout pointer » passe par l envoi groupe', () => {
   });
 });
 
-describe('L5-A · la ligne n est pas cliquable, ses 2 cibles font 44', () => {
-  test('deux cibles par ligne, 44 de haut, et aucun appui sur la ligne', async () => {
+describe('L5-A · la ligne n est pas cliquable, ses cibles font 44', () => {
+  // 📐 APPEL (26/08) — MEME INTENTION, NOUVEL ATTENDU. Le pack remplace les
+  // deux cibles « Là » + horloge par les boutons d etat du minimaliste, et
+  // leur donne une taille FIXE de 44 avec un radius 12 (l ancienne version
+  // etait un `minHeight` sur une pastille ronde). Ce qui est mesure reste :
+  // des cibles atteignables au pouce, et une ligne qui ne se clique pas.
+  test('les cibles de la ligne font 44 x 44, et aucun appui sur la ligne', async () => {
     mockAttendance = reponseAttendance({
       items: [ligne({ firstname: 'Leo', userId: 'u1' })],
       serverNow: '2026-08-19T16:06:00.000Z',
@@ -529,16 +554,20 @@ describe('L5-A · la ligne n est pas cliquable, ses 2 cibles font 44', () => {
       String(noeud.props?.accessibilityLabel || '').includes('Leo')
     ));
 
+    // ⛔ Deux tant que l absence n a pas de route serveur (D7bis) : un bouton
+    // visible sans route derriere serait un menteur.
     expect(cibles).toHaveLength(2);
     cibles.forEach((/** @type {any} */ cible) => {
       const styles = [cible.props.style].flat(Infinity).filter(Boolean);
-      const hauteur = styles.reduce(
+      const lire = (/** @type {string} */ clef) => styles.reduce(
         (/** @type {number} */ trouvee, /** @type {any} */ style) => (
-          style?.minHeight ? Number(style.minHeight) : trouvee
+          style?.[clef] ? Number(style[clef]) : trouvee
         ),
         0,
       );
-      expect(hauteur).toBeGreaterThanOrEqual(44);
+      expect(lire('height')).toBe(44);
+      expect(lire('width')).toBe(44);
+      expect(lire('borderRadius')).toBe(12);
     });
 
     // ⛔ La ligne elle-meme n est pas cliquable : au bord d un terrain, un

@@ -3,7 +3,7 @@ import renderer, { act } from 'react-test-renderer';
 import EventAttendanceCall from '../EventAttendanceCall';
 
 /**
- * L5-A · ETAPE 5 — LES TROIS FEUILLES : 2D cloture, 2E retard, 2F corriger.
+ * L5-A · ETAPE 5 — LES FEUILLES : 2D cloture, 2E retard, et 2F « defaire ».
  *
  * 🔬 CE QUE CES TEMOINS TIENNENT :
  *   8.  2D — la cloture NOMME les personnes concernees, dit l heure du passage
@@ -12,8 +12,9 @@ import EventAttendanceCall from '../EventAttendanceCall';
  *       qui passe les non-pointes en « Non pointé ».
  *   9.  2E — six paliers, aucun clavier par defaut, et l envoi porte
  *       `lateMinutes` ET `arrivedAt` = debut + minutes.
- *   10. 2F — « Dépointer » remet en attente, « Annuler la note du staff »
- *       renvoie le retard COURANT avec une note vide.
+ *   10. 2F — defaire un pointage remet en attente. Depuis le pack minimaliste
+ *       du 26/08 c est le RE-TAP du bouton allume qui le fait (decision D2), et
+ *       non plus une feuille « Corriger » a trois appuis.
  */
 
 const mockGoBack = jest.fn();
@@ -84,7 +85,9 @@ jest.mock('@/theme/themeContext', () => {
       ApplicationStyle: genererStyles(couleurs),
       Colors: couleurs,
       Fonts: genererPolices(couleurs),
-      Images: { arrowLeft: 1, chevronLeft: 1 },
+      Images: {
+        arrowLeft: 1, check: 1, chevronLeft: 1, clock: 1, close: 1,
+      },
       Spaces: espaces,
     }),
   };
@@ -378,7 +381,16 @@ describe('L5-A · 2E — « Autre heure » n est pas decoratif', () => {
 });
 
 describe('L5-A · 2C — une ligne pointee ne se derobe pas sous le pouce', () => {
-  test('dans « Sans réponse », elle reste en place et dit « Pointé par toi à »', async () => {
+  // 📐 APPEL (26/08) — MEME INTENTION, ET ELLE EST MEME RENFORCEE.
+  //
+  // L ancien temoin tenait un contournement : dans l onglet « Sans réponse »,
+  // une ligne pointee restait EN PLACE au lieu de sauter dans « DÉJÀ POINTÉS »
+  // — sans quoi la liste se decalait sous le pouce et l appui suivant tombait
+  // sur quelqu un d autre. Le pack supprime les onglets ET la section : il n y
+  // a plus qu UNE liste, donc plus rien pour sauter. Ce temoin mesure
+  // desormais la propriete directement : la ligne pointee garde SON RANG, et
+  // n apparait qu une fois.
+  test('la ligne pointee garde son rang dans la liste unique, et ne se dedouble pas', async () => {
     const arbre = await monter([
       ligne({ firstname: 'Ilan', rsvpStatus: 'not_answered', userId: 'u9' }),
       ligne({
@@ -388,49 +400,74 @@ describe('L5-A · 2C — une ligne pointee ne se derobe pas sous le pouce', () =
         source: 'coach_mark',
         userId: 'u8',
       }),
+      ligne({ firstname: 'Malo', rsvpStatus: 'not_answered', userId: 'u7' }),
     ]);
 
-    await act(async () => { appuyable(arbre, 'Sans réponse').props.onPress(); });
     const texte = aplatirTexte(arbre.toJSON());
 
-    // Kais a ete pointe : il est TOUJOURS dans l onglet, pas renvoye ailleurs.
-    expect(texte).toContain('Kais');
-    expect(texte).toContain('Pointé par toi à 18:04');
-    // …et il n est pas redit une seconde fois dans « DÉJÀ POINTÉS ».
+    // Kais est pointe et reste EN DEUXIEME position, entre Ilan et Malo.
+    expect(texte.indexOf('Ilan')).toBeLessThan(texte.indexOf('Kais'));
+    expect(texte.indexOf('Kais')).toBeLessThan(texte.indexOf('Malo'));
+    // …et il n est pas redit une seconde fois ailleurs.
     expect(texte.split('Kais')).toHaveLength(3); // avatar + nom, une seule ligne
+    // Son etat se lit en toutes lettres, pas seulement a la pastille.
+    expect(texte).toContain("À l'heure");
   });
 });
 
-describe('L5-A · 2F — corriger un pointage', () => {
-  test('« Dépointer » remet en attente, « Annuler la note » garde le retard courant', async () => {
+describe('L5-A · 2F — defaire un pointage', () => {
+  // 📐 APPEL (26/08) — MEME INTENTION, NOUVEAU GESTE (decision D2).
+  //
+  // L ancien temoin passait par la feuille « Corriger » : trois appuis pour
+  // defaire un pointage (Corriger -> feuille -> Dépointer). Le pack supprime
+  // cette feuille et pose la regle « re-taper le bouton allume depointe ».
+  // Ce qui est mesure reste EXACTEMENT la meme chose : defaire un pointage
+  // remet la personne en attente, et ca appelle `reset`.
+  //
+  // 🗑️ CE QUI DISPARAIT AVEC LA FEUILLE, ET IL FAUT LE DIRE : « Annuler la
+  // note du staff ». Le pack ne maquette aucun champ de note ; la note reste
+  // stockee cote serveur, mais plus aucun ecran ne l ecrit ni ne l efface.
+  // C est une capacite retiree par le pack, pas un oubli de ce lot.
+  test('re-taper le bouton allume depointe et rappelle `reset`', async () => {
     const arbre = await monter([
       ligne({
         arrivedAt: '2026-08-19T16:12:00.000Z',
         firstname: 'Hugo',
         lateMinutes: 12,
-        note: 'Bus en retard',
         userId: 'u2',
       }),
     ]);
 
-    await act(async () => { appuyable(arbre, 'Corriger Hugo').props.onPress(); });
     const texte = aplatirTexte(arbre.toJSON());
-    expect(texte).toContain("Changer l'heure d'arrivée");
-    expect(texte).toContain('Annuler la note du staff');
-    expect(texte).toContain('Dépointer');
+    // ⛔ Plus de bouton « Corriger » : les trois boutons restent en place.
+    expect(texte).not.toContain('Corriger');
+    expect(texte).toContain('En retard · +12 min');
 
-    // 🧨 `patchLate` EXIGE `lateMinutes` : annuler la note se fait en renvoyant
-    // le retard COURANT avec `note: null`. Envoyer 0 effacerait le retard.
-    await act(async () => { appuyable(arbre, 'Annuler la note du staff').props.onPress(); });
-    expect(mockLateMutate).toHaveBeenCalledTimes(1);
-    expect(mockLateMutate.mock.calls[0][0]).toEqual({
-      payload: { lateMinutes: 12, note: null },
-      userId: 'u2',
-    });
+    // Hugo est en RETARD : c est donc l horloge qui est allumee, et la
+    // re-taper doit depointer — surtout pas rouvrir la feuille de retard.
+    await act(async () => { appuyable(arbre, 'Retard pour Hugo').props.onPress(); });
 
-    await act(async () => { appuyable(arbre, 'Corriger Hugo').props.onPress(); });
-    await act(async () => { appuyable(arbre, 'Dépointer').props.onPress(); });
     expect(mockResetMutate).toHaveBeenCalledTimes(1);
     expect(mockResetMutate.mock.calls[0][0]).toEqual({ userId: 'u2' });
+    expect(mockLateMutate).not.toHaveBeenCalled();
+  });
+
+  test('taper un bouton NON allume pose l etat, il ne depointe pas', async () => {
+    const arbre = await monter([
+      ligne({
+        arrivedAt: '2026-08-19T16:12:00.000Z',
+        firstname: 'Hugo',
+        lateMinutes: 12,
+        userId: 'u2',
+      }),
+    ]);
+
+    // Hugo est en retard ; la COCHE n est pas allumee. La taper corrige son
+    // etat vers « a l heure » — elle ne doit pas defaire le pointage.
+    await act(async () => { appuyable(arbre, "À l'heure Hugo").props.onPress(); });
+
+    expect(mockResetMutate).not.toHaveBeenCalled();
+    expect(mockCoachArrivalMutate).toHaveBeenCalledTimes(1);
+    expect(mockCoachArrivalMutate.mock.calls[0][0].payload.lateMinutes).toBe(0);
   });
 });

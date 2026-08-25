@@ -357,6 +357,66 @@ export const isMarked = (item) => Boolean(item?.attendance?.arrivedAt);
 export const isNoShow = (item) => item?.attendanceStatus === 'no_show' && !isMarked(item);
 
 /**
+ * APPEL (26/08) — L ETAT D UNE LIGNE, EN UN SEUL MOT.
+ *
+ * Le pack minimaliste ne connait que quatre etats par joueur :
+ *   `null` = a pointer · `ontime` = a l heure · `late` = en retard ·
+ *   `absent` = absence posee A LA MAIN par l encadrant.
+ *
+ * 🧭 POURQUOI CETTE FONCTION EXISTE, plutot que trois `if` dans la ligne :
+ * la pastille, la couleur de la sous-ligne, le bouton allume et le compteur
+ * du pied doivent TOUS repondre la meme chose. Quatre lectures separees du
+ * meme objet divergent au premier correctif — c est le motif du chemin unique
+ * `performCoachArrival` cote serveur.
+ *
+ * ⛔ `absent` NE SE DEDUIT PAS d un `attendanceStatus: 'no_show'` seul : le
+ * cron de fin de match pose ce meme statut a tout le monde a fin + 0, et ce
+ * n est PAS un jugement de l encadrant. Le marqueur qui separe les deux est
+ * `source` — `coach_manual` sans `arrivedAt` ne peut venir que du bouton
+ * « Absent » (une correction de retard, elle, porte toujours une arrivee).
+ * @param {any} item - La ligne rendue par `list`.
+ * @returns {'absent' | 'late' | 'ontime' | null} - L etat, ou `null`.
+ */
+export const resolveRowState = (item) => {
+  if (isMarked(item)) {
+    return Number(item?.attendance?.lateMinutes || 0) > 0 ? 'late' : 'ontime';
+  }
+  if (isCoachAbsence(item)) return 'absent';
+  return null;
+};
+
+/**
+ * Cette absence a-t-elle ete POSEE PAR UN ENCADRANT, ou constatee par le cron ?
+ *
+ * 🔒 La distinction n est pas cosmetique : « Non pointé » est un fait (personne
+ * n a rien dit), « Absent » est un CONSTAT signe. Les confondre ferait dire a
+ * l ecran que le coach a declare absents les vingt joueurs qu il a simplement
+ * oublies de pointer.
+ * @param {any} item - La ligne rendue par `list`.
+ * @returns {boolean}
+ */
+export const isCoachAbsence = (item) => (
+  item?.attendanceStatus === 'no_show'
+  && !item?.attendance?.arrivedAt
+  && String(item?.attendance?.source || '') === 'coach_manual'
+);
+
+/**
+ * Les lignes reellement POINTEES par l encadrant — celles que le compteur du
+ * header et le pied comptent.
+ *
+ * ⚠️ Ce n est pas `isMarked` : une absence posee a la main n a pas d
+ * `arrivedAt` et compte pourtant comme un pointage. Le compteur « x / N » du
+ * pack porte sur « etat different de « a pointer » », pas sur « est arrive ».
+ * @param {any[]} items
+ * @returns {number}
+ */
+export const countCalled = (items) => (items || []).reduce(
+  (total, item) => (resolveRowState(item) === null ? total : total + 1),
+  0,
+);
+
+/**
  * Les compteurs de REPONSES (echelle du cadre 2A — avant l heure).
  * @param {any[]} items
  * @returns {{ answeredNo: number, answeredYes: number, unanswered: number }}
