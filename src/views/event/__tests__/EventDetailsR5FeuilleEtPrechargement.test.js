@@ -490,6 +490,18 @@ const eventService = require('@/services/event/eventService');
  * feuille rendue serait faux : l'ecran en monte plusieurs.
  * @returns {any} - Les proprietes de la feuille, ou null si elle n'est pas la.
  */
+/**
+ * Aplatit un style RN (tableau, valeurs nulles) en un seul objet.
+ * @param {any} style - Le style tel que passe au composant.
+ * @returns {Record<string, any>} - Le style resolu.
+ */
+const styleAplati = (style) => (Array.isArray(style)
+  ? style.filter(Boolean).reduce(
+    (/** @type {any} */ acc, /** @type {any} */ part) => ({ ...acc, ...styleAplati(part) }),
+    {},
+  )
+  : (style || {}));
+
 const feuilleDeGestion = () => mockFeuillesRendues.find(
   (/** @type {any} */ proprietes) => chercherDansElements(
     proprietes.children,
@@ -615,6 +627,30 @@ describe('S2 — le titre de la feuille vit DANS le contenu mesure', () => {
 
     expect(plafond).toBeGreaterThan(0);
     expect(plafond).toBeLessThanOrEqual(0.9 * (HAUTEUR_FENETRE / HAUTEUR_DALLE));
+  });
+
+  // 🪑 S2-ter (retour de recette du 25/08) : « Annuler » est bien visible, mais
+  // la feuille « colle encore trop au bas » — Adel : « faut que ca remonte un
+  // peu ». Il ne s agit plus de rattraper une coupe, il s agit de donner de l air.
+  //
+  // 🧭 POURQUOI LE DEGAGEMENT BAS ET PAS LE PLAFOND, et c est le point qui
+  // tranche : la feuille est ancree EN BAS et se dimensionne sur son contenu.
+  // Baisser le plafond la rendrait plus COURTE — son bord haut DESCENDRAIT,
+  // exactement l inverse de ce qui est demande — et si le contenu tient deja
+  // sous le plafond, ca ne changerait rien du tout. Le degagement bas, lui,
+  // pousse le contenu vers le haut ET fait monter le bord superieur.
+  //
+  // ⛔ Cet air s AJOUTE a ce que `BottomModal` pose deja (40 + encoche basse) :
+  // on ne remplace pas son calcul, sinon on perdrait la part systeme.
+  test('la liste des actions garde de l air sous elle', () => {
+    monterEtOuvrirLeMenu();
+    const liste = chercherDansElements(
+      feuilleDeGestion()?.children,
+      (/** @type {any} */ noeud) => noeud?.props?.testID === 'event-manage-sheet',
+    );
+
+    expect(liste).not.toBeNull();
+    expect(styleAplati(liste?.props?.style).marginBottom).toBeGreaterThanOrEqual(24);
   });
 
   test('et il porte toujours le meme libelle', () => {
