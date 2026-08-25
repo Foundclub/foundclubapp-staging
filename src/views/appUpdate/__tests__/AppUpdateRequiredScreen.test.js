@@ -1,4 +1,5 @@
 import { createElement } from 'react';
+import { Platform } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
 import AppUpdateRequiredScreen from '@/views/appUpdate/AppUpdateRequiredScreen';
@@ -10,18 +11,44 @@ import AppUpdateRequiredScreen from '@/views/appUpdate/AppUpdateRequiredScreen';
 // 🔒 Le second bouton n'est pas une politesse : un ecran bloquant sans moyen de
 // joindre quelqu'un transforme un incident de version en desinstallation.
 
-jest.mock('react-i18next', () => ({
-  useTranslation: () => ({
-    t: (/** @type {string} */ _cle, /** @type {any} */ repli, /** @type {any} */ options) => {
-      if (typeof repli === 'string') return repli;
-      const source = (repli && typeof repli === 'object') ? repli : (options || {});
-      // Le vrai i18next remplace TOUS les jetons `{{x}}` par l'option de meme
-      // nom. La doublure fait pareil, sinon un libelle a trou passerait vert.
-      return String(source.defaultValue || '').replace(
-        /\{\{(\w+)\}\}/g,
-        (_motif, /** @type {string} */ nom) => String(source[nom] ?? ''),
-      );
-    },
+// 🧨 CETTE DOUBLURE A DEJA MENTI UNE FOIS, ET C'EST POUR CA QU'ELLE ECHAPPE.
+// Recette du 2026-08-26 sur iPhone : l'ecran affichait « vers l&#39;App Store ».
+// La doublure d'alors remplacait `{{store}}` SANS echapper — plus gentille que
+// la vraie bibliotheque — donc le temoin restait VERT sur l'ecran casse.
+// i18next echappe les valeurs INTERPOLEES (&, ', <, >, ", /) ; la chaine source,
+// elle, n'est jamais touchee. La doublure fait exactement pareil.
+jest.mock('react-i18next', () => {
+  /**
+   * @param {unknown} valeur
+   * @returns {string}
+   */
+  const echapper = (valeur) => String(valeur)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+    .replace(/\//g, '&#x2F;');
+
+  return {
+    useTranslation: () => ({
+      t: (/** @type {string} */ _cle, /** @type {any} */ repli, /** @type {any} */ options) => {
+        if (typeof repli === 'string') return repli;
+        const source = (repli && typeof repli === 'object') ? repli : (options || {});
+        return String(source.defaultValue || '').replace(
+          /\{\{(\w+)\}\}/g,
+          (_motif, /** @type {string} */ nom) => echapper(source[nom] ?? ''),
+        );
+      },
+    }),
+  };
+});
+
+// 📱 Un vrai iPhone a encoche : 59 px de barre systeme en haut, 34 en bas.
+// C'est CE chiffre qui rend le temoin du degagement capable d'etre rouge.
+jest.mock('react-native-safe-area-context', () => ({
+  useSafeAreaInsets: () => ({
+    bottom: 34, left: 0, right: 0, top: 59,
   }),
 }));
 
@@ -256,4 +283,82 @@ test('les deux actions sont annoncees comme des boutons, avec un intitule', () =
     expect(typeof noeud.props.accessibilityHint).toBe('string');
     expect(noeud.props.accessibilityHint.length).toBeGreaterThan(0);
   });
+});
+
+// ---------------------------------------------------------------------------
+// R3 bis — DEUX DEFAUTS VUS SUR L'IPHONE D'ADEL LE 2026-08-26.
+// ---------------------------------------------------------------------------
+
+// ⬆️ DEFAUT 1 — le logo passait SOUS la barre d'etat : l'heure, le reseau et la
+// batterie s'affichaient PAR-DESSUS. L'ecran ne demandait aucune marge de
+// securite, et `Spaces.padding[24]` ne connait pas la hauteur de la barre.
+test('le logo laisse un vrai degagement sous la barre systeme', () => {
+  const arbre = rendre({ storeUrl: 'https://play.example/fc' });
+
+  const defilement = arbre.root.find((noeud) => noeud.type === 'RCTScrollView');
+  const styles = [defilement.props.contentContainerStyle].flat(Infinity).filter(Boolean);
+  const paddingTop = styles.reduce(
+    (retenu, style) => (typeof style?.paddingTop === 'number' ? style.paddingTop : retenu),
+    0,
+  );
+
+  // 🔒 STRICTEMENT au-dessus de la barre : etre EGAL a 59 collerait le logo
+  // juste sous l'heure, ce qui est le defaut d'a cote (S6, corrige la veille).
+  expect(paddingTop).toBeGreaterThan(59);
+});
+
+test('le bas laisse passer la barre de geste du telephone', () => {
+  const arbre = rendre({ contactUrl: 'https://foundclub.app', storeUrl: 'https://play.example/fc' });
+
+  const defilement = arbre.root.find((noeud) => noeud.type === 'RCTScrollView');
+  const styles = [defilement.props.contentContainerStyle].flat(Infinity).filter(Boolean);
+  const paddingBottom = styles.reduce(
+    (retenu, style) => (typeof style?.paddingBottom === 'number' ? style.paddingBottom : retenu),
+    0,
+  );
+
+  expect(paddingBottom).toBeGreaterThan(34);
+});
+
+// 🔤 DEFAUT 2 — « Tu seras redirige·e vers l&#39;App Store. » i18next echappe
+// les valeurs interpolees : toute chaine a apostrophe passee par {{...}} ressort
+// en entite HTML. La correction est a la SOURCE — plus aucune interpolation ne
+// transporte de texte a apostrophe.
+test.each([
+  ['iOS', 'ios'],
+  ['Android', 'android'],
+])('%s : aucune entite HTML n\'atterrit a l\'ecran', (_libelle, plateforme) => {
+  const precedent = Platform.OS;
+  Platform.OS = plateforme;
+
+  try {
+    const arbre = rendre({
+      contactUrl: 'https://foundclub.app',
+      currentVersion: '3.0.1',
+      minimumVersion: '3.2.0',
+      releaseNotes: ["Paiement de l'adhesion en plusieurs fois"],
+      storeUrl: 'https://play.example/fc',
+    });
+
+    const texte = JSON.stringify(arbre.toJSON());
+
+    expect(texte).not.toContain('&#39;');
+    expect(texte).not.toContain('&amp;');
+    expect(texte).not.toContain('&quot;');
+    expect(texte).not.toContain('&#x2F;');
+  } finally {
+    Platform.OS = precedent;
+  }
+});
+
+test('le nom du store est ecrit en toutes lettres, avec son apostrophe', () => {
+  const precedent = Platform.OS;
+  Platform.OS = 'ios';
+
+  try {
+    const arbre = rendre({ storeUrl: 'https://apple.example/fc' });
+    expect(JSON.stringify(arbre.toJSON())).toContain("vers l'App Store");
+  } finally {
+    Platform.OS = precedent;
+  }
 });

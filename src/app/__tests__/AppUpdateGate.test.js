@@ -125,8 +125,12 @@ const rendreLaPorte = async ({ attendreReponse = true, garderMonte = false } = {
     };
   };
 
+  // ⚠️ Demonter DECLENCHE un rendu : hors `act`, react-test-renderer crie un
+  // avertissement a chaque test, et ce bruit finit par cacher un vrai signal.
   const demonter = () => {
-    arbre.unmount();
+    act(() => {
+      arbre.unmount();
+    });
     queryClient.clear();
   };
 
