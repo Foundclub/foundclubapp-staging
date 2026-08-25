@@ -6344,9 +6344,18 @@ function EventDetails({ navigation, route }) {
         >
           {t('eventDetails.managePanel.title', "Gérer l'événement")}
         </Text>
+        {/* S2-ter — L AIR SOUS LA DERNIERE RANGEE.
+            Retour de recette : « Annuler » est visible, mais la feuille colle
+            trop au bas. Ce cran de rampe s AJOUTE au degagement que BottomModal
+            pose deja (40 + encoche basse) — on ne remplace pas son calcul, sinon
+            on perdrait la part systeme.
+            ⛔ Pas touche au plafond : la feuille etant ancree EN BAS et
+            dimensionnee sur son contenu, le baisser la rendrait plus COURTE et
+            ferait DESCENDRE son bord haut — l inverse de ce qui est demande. */}
         <View
           style={[
             ApplicationStyle.borderWidth1,
+            Spaces.marginBottom[24],
             {
               borderColor: withAlpha(Colors.primary500, 0.3),
               borderRadius: 16,
