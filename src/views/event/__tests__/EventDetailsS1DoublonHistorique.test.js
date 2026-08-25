@@ -322,7 +322,6 @@ jest.mock(
 );
 /* eslint-enable global-require */
 
-
 // 🎛️ L4-A — LA DOUBLURE DES ONGLETS, ET ELLE N'EST PAS FACULTATIVE.
 // `SegmentedControl` importe `react-native-gesture-handler`, dont
 // `lib/commonjs/specs/NativeRNGestureHandlerModule.ts` n'est PAS couvert par le
