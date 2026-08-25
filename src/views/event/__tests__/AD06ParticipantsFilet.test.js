@@ -106,6 +106,24 @@ const COULEURS = jest.requireActual('@/theme/colors').default();
 const ARRIVEE_LOCALE = new Date(2026, 7, 20, 14, 32, 0);
 const NOW_MS = Date.parse('2026-08-20T18:00:00.000Z');
 
+// 🧭 S3 (vague S, 25/08) - LES ARRIVEES S ANCRENT SUR LE COUP D ENVOI.
+// La pastille annonce desormais l AVANCE (`eventStartAt - arrivedAt`) : comparer
+// une heure fabriquee en LOCAL a un instant fabrique en UTC rendrait un nombre
+// de minutes different selon le fuseau de la machine. On part donc du debut, et
+// on relit l heure attendue avec la meme regle que le composant.
+const DEBUT_MS = NOW_MS - (12 * 60000);
+const MINUTE_MS = 60000;
+
+/**
+ * L heure locale courte, exactement comme `formatArrivalTime` la rend.
+ * @param {number} ms - L instant.
+ * @returns {string} - L heure au format HH:MM.
+ */
+const heureLocale = (ms) => {
+  const date = new Date(ms);
+  return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+};
+
 // 🏷️ LA TABLE DES LIBELLES DE PASTILLE.
 // Elle decrit l ETAT COURANT du code. Le lot L3-B la met a jour en meme temps
 // qu il accentue les libelles : c est la seule chose que ce fichier apprend du
@@ -114,12 +132,16 @@ const NOW_MS = Date.parse('2026-08-20T18:00:00.000Z');
 // « En attente » disaient la meme chose a des etats opposes — quelqu un qui a
 // repondu present avant le coup d envoi, et quelqu un qu on n a toujours pas
 // pointe 12 minutes apres. Elles disent maintenant CE QU ELLES SONT.
+// 🏷️ S3 (vague S, 25/08, decision produit d Adel) : un present ANNONCE est
+// desormais BLEU FoundClub - le gris disait « en attente » a quelqu un qui avait
+// repondu. Et une arrivee ne se contente plus d un « +N min » : elle dit si
+// c est de l AVANCE (vert) ou du RETARD (rouge).
 const PASTILLE = {
   absent: 'Absent',
-  aDitPresent: 'A dit présent',
   aPointer: 'À pointer',
   arrive: 'Arrivé',
   nonPointe: 'Non pointé',
+  prevuALHeure: 'Prévu à l’heure',
   retardAnnonce: 'Retard annoncé',
   sansReponse: 'Sans réponse',
 };
@@ -145,6 +167,7 @@ const P_ATTENTE_VIVANTE = joueur('p-attente-vive', 'Lena');
 const P_ABSENT = joueur('p-absent', 'Bilal');
 const P_SANS_REPONSE = joueur('p-sansreponse', 'Sami');
 const P_ATTENTE = joueur('p-attente', 'Theo');
+const P_EN_AVANCE = joueur('p-en-avance', 'Ines');
 
 const DEMANDE = {
   documentId: 'demande-1',
@@ -302,17 +325,22 @@ describe('AD06 · temoin 1 — les 8 sorties de la pastille', () => {
   test('les 7 sorties qui vivent avec un evenement commence', () => {
     const arbre = monter({
       attendanceByUserId: {
-        'p-arrive': { arrivedAt: ARRIVEE_LOCALE.toISOString() },
-        'p-arrive-retard': { arrivedAt: ARRIVEE_LOCALE.toISOString(), lateMinutes: 7 },
+        'p-arrive': { arrivedAt: new Date(DEBUT_MS).toISOString() },
+        'p-arrive-retard': {
+          arrivedAt: new Date(DEBUT_MS + (7 * MINUTE_MS)).toISOString(),
+          lateMinutes: 7,
+        },
+        'p-en-avance': { arrivedAt: new Date(DEBUT_MS - (7 * MINUTE_MS)).toISOString() },
         'p-nonpointe': { attendanceStatus: 'no_show' },
         'p-retard': { attendanceStatus: 'declared_late', declaredLateMinutes: 5 },
       },
-      eventStartAt: new Date(NOW_MS - (12 * 60000)),
+      eventStartAt: new Date(DEBUT_MS),
       teamParticipationSections: [section({
         missing: [P_ABSENT],
         notAnswered: [P_SANS_REPONSE],
         participating: [
-          P_NON_POINTE, P_ARRIVE_RETARD, P_ARRIVE, P_RETARD_ANNONCE, P_ATTENTE_VIVANTE,
+          P_NON_POINTE, P_ARRIVE_RETARD, P_ARRIVE, P_EN_AVANCE, P_RETARD_ANNONCE,
+          P_ATTENTE_VIVANTE,
         ],
       })],
     });
@@ -320,13 +348,18 @@ describe('AD06 · temoin 1 — les 8 sorties de la pastille', () => {
     expect(pastilles(arbre)).toEqual([
       // 1. `no_show` gagne sur tout le reste.
       { couleur: COULEURS.error500, texte: PASTILLE.nonPointe },
-      // 4. arrive EN RETARD : le retard reel, puis l HEURE (L3-B).
-      { couleur: COULEURS.warning500, texte: PASTILLE.arrive },
-      { couleur: COULEURS.warning500, texte: '+7 min' },
-      { couleur: COULEURS.warning500, texte: '14:32' },
-      // 5. arrive a l heure, et on lit a quelle heure.
+      // 4. arrive EN RETARD : S3 le passe au ROUGE, et le retard se DIT.
+      //    Adel a demande ces mots-la : « N min de retard », pas « +N min ».
+      { couleur: COULEURS.error500, texte: PASTILLE.arrive },
+      { couleur: COULEURS.error500, texte: '7 min de retard' },
+      { couleur: COULEURS.error500, texte: heureLocale(DEBUT_MS + (7 * MINUTE_MS)) },
+      // 5a. arrive PILE a l heure : vert, aucune valeur a annoncer.
       { couleur: COULEURS.success500, texte: PASTILLE.arrive },
-      { couleur: COULEURS.success500, texte: '14:32' },
+      { couleur: COULEURS.success500, texte: heureLocale(DEBUT_MS) },
+      // 5b. arrive EN AVANCE : le meme vert, et l avance se dit (S3).
+      { couleur: COULEURS.success500, texte: PASTILLE.arrive },
+      { couleur: COULEURS.success500, texte: '7 min en avance' },
+      { couleur: COULEURS.success500, texte: heureLocale(DEBUT_MS - (7 * MINUTE_MS)) },
       // 6. retard ANNONCE a l avance.
       { couleur: COULEURS.warning500, texte: PASTILLE.retardAnnonce },
       { couleur: COULEURS.warning500, texte: '+5 min' },
@@ -348,8 +381,10 @@ describe('AD06 · temoin 1 — les 8 sorties de la pastille', () => {
 
     // R7-c : il a REPONDU present et le match n a pas commence. Rien n attend
     // le coach ici — la pastille dit donc ce qu il a fait, pas une consigne.
+    // S3 : et elle le dit en BLEU FoundClub, parce que le gris se lisait comme
+    // « il manque quelque chose » alors que tout est en ordre.
     expect(pastilles(arbre)).toEqual([
-      { couleur: COULEURS.neutral200, texte: PASTILLE.aDitPresent },
+      { couleur: COULEURS.primary500, texte: PASTILLE.prevuALHeure },
     ]);
   });
 });

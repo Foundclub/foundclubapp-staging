@@ -1069,8 +1069,10 @@ export default {
     attendanceBadge: {
       arrived: 'Arrivé',
       declaredLate: 'Retard annoncé',
+      early: 'min en avance',
+      late: 'min de retard',
       notMarked: 'Non pointé',
-      saidYes: 'A dit présent',
+      saidYes: 'Prévu à l’heure',
       selfArrived: 'Je suis arrivé·e',
       toMark: 'À pointer',
     },
