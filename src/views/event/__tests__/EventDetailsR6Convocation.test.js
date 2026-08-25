@@ -286,6 +286,23 @@ jest.mock('@/components/molecules/segmentedControl/SegmentedControl', () => {
 // branche sur la MEME propriete — motif repris d'`AD10ExportFeuilleBranchee`,
 // ou le temoin 0 compare cette doublure au vrai composant monte pour de bon.
 // C'est ce qui rend le temoin 6 credible sans monter 784 lignes de liste.
+// ⚽ S5-D (vague S) — LA DOUBLURE DU TERRAIN. Elle relaie ce qu on lui DEMANDE
+// de dessiner : le nombre de placements et le sport. Le dessin lui-meme (jetons,
+// traces SVG) est mesure dans le filet du composant, `ConvocationFieldPreview`.
+// Ici on verifie l ASSEMBLAGE : l onglet lui passe-t-il la bonne compo ?
+jest.mock('@/components/tactical/ConvocationFieldPreview', () => {
+  const react = jest.requireActual('react');
+  const rn = jest.requireActual('react-native');
+  return function ConvocationFieldPreviewDouble(/** @type {any} */ props) {
+    return react.createElement(rn.View, {
+      placementsCount: (props.placements || []).length,
+      snapshotCount: (props.snapshotPlayers || []).length,
+      sportContext: props.sportContext,
+      testID: 'doublure-terrain',
+    });
+  };
+});
+
 jest.mock('../components/EventParticipants', () => {
   const react = jest.requireActual('react');
   const rn = jest.requireActual('react-native');
@@ -665,6 +682,18 @@ describe('S5 · (c) publiee SANS placement : ce sont des convoques, pas un banc'
     expect(contient(root, 'Leo Diarra')).toBe(true);
   });
 
+  test('⚽ S5-D : SANS placement, AUCUN terrain — la liste suffit', () => {
+    // 🗣️ Adel valide S5-c : publiee sans compo, on garde la liste « Convoqués ».
+    // ⛔ Un terrain VIDE serait pire que pas de terrain : il donnerait a croire
+    // que la compo est vide, alors qu elle est simplement sans placement.
+    const root = monterSansPlacement();
+
+    allerSurLOnglet(root, 'callUp');
+
+    expect(parTestID(root, 'doublure-terrain')).toHaveLength(0);
+    expect(contient(root, 'Convoqués')).toBe(true);
+  });
+
   test('🔒 contre-epreuve : DES QU IL Y A un titulaire, le banc redevient un banc', () => {
     // Sans cette ligne, remplacer « Sur le banc » partout passerait — et un
     // remplacant d une vraie compo serait annonce comme un convoque ordinaire,
@@ -676,5 +705,57 @@ describe('S5 · (c) publiee SANS placement : ce sont des convoques, pas un banc'
     expect(contient(root, 'Sur le terrain')).toBe(true);
     expect(contient(root, 'Sur le banc')).toBe(true);
     expect(contient(root, 'Convoqués')).toBe(false);
+  });
+});
+
+// ⚽ S5-D (vague S) — LE TERRAIN SE VOIT SANS APPUYER SUR RIEN.
+//
+// 🗣️ Retour de recette d Adel (26/08), apres avoir valide a/b/c : « une fois la
+// composition creee et PUBLIEE, ca doit afficher LE TERRAIN avec les joueurs
+// places directement dans l onglet, sans devoir cliquer le bouton du bas ».
+//
+// 🧨 CE QUI MANQUAIT : l onglet decrivait la compo (« 1 equipe(s) publiee(s) »,
+// puis les noms depuis R6) et laissait le DESSIN derriere un appui. Or c est le
+// dessin qui repond a la question d un coach — qui joue ou.
+// ⇒ Le CTA reste : il mene a l ecran complet, ou l on peut modifier.
+describe('S5-D · le terrain de la compo publiee, DANS l onglet', () => {
+  test('🥇 il est monte avec les placements de la compo', () => {
+    const root = monter({ auth: authPour('coach-1', true), convocation: CONVOCATION });
+
+    allerSurLOnglet(root, 'callUp');
+
+    const [terrain] = parTestID(root, 'doublure-terrain');
+
+    expect(terrain).toBeTruthy();
+    // 🎯 Le juge porte sur CE QU ON LUI DEMANDE DE DESSINER : un terrain monte
+    // avec zero placement serait vert sur un simple `toBeTruthy`.
+    expect(terrain.props.placementsCount).toBe(1);
+    expect(terrain.props.snapshotCount).toBeGreaterThan(0);
+    expect(terrain.props.sportContext).toBe('football');
+  });
+
+  test('🔒 le CTA vers l ecran complet reste EN DESSOUS', () => {
+    // Le terrain de l onglet est un APERCU en lecture seule. Retirer le bouton
+    // en meme temps qu on ajoute le dessin fermerait la seule porte vers la
+    // modification — c est le genre de perte qu aucune porte ne signale.
+    // ⚠️ Monte avec un CONVOQUE, pas avec le coach : le libelle du coach passe
+    // par une clef SANS repli, et le mock de traduction de ce filet rend alors
+    // la clef. Un juge textuel y mesurerait le mock, pas l ecran.
+    const root = monter({ auth: authPour(JOUEUR), convocation: CONVOCATION });
+
+    allerSurLOnglet(root, 'callUp');
+
+    expect(parTestID(root, 'doublure-terrain')).toHaveLength(1);
+    expect(contient(root, 'Voir ma convocation')).toBe(true);
+  });
+
+  test('🔒 un JOUEUR convoque voit le terrain, lui aussi', () => {
+    // Meme regle que la liste (S5-c) : « qui joue ou » n est pas un privilege
+    // de staff. Le serveur envoie deja la charge aux membres de l equipe.
+    const root = monter({ auth: authPour(JOUEUR), convocation: CONVOCATION });
+
+    allerSurLOnglet(root, 'callUp');
+
+    expect(parTestID(root, 'doublure-terrain')).toHaveLength(1);
   });
 });

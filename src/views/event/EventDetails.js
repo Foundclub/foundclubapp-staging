@@ -57,6 +57,7 @@ import JoinEventModal from '@/components/organisms/joinEventModal/JoinEventModal
 import RefuseParticipationModal from '@/components/organisms/refuseParticipationModal/RefuseParticipationModal';
 import ReportEventModal from '@/components/organisms/reportEventModal/ReportEventModal';
 import ShareEventModal from '@/components/organisms/shareEventModal/ShareEventModal';
+import ConvocationFieldPreview from '@/components/tactical/ConvocationFieldPreview';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 import {
   buildConvocationFieldTokens,
@@ -4001,12 +4002,20 @@ function EventDetails({ navigation, route }) {
   const publishedConvocationRoster = useMemo(() => convocationBranches.map((branch, index) => {
     const published = branch?.published || null;
 
+    // ⚽ S5-D : les placements sont ASSEMBLES UNE FOIS et gardes tels quels. Ils
+    // servaient deja aux titulaires ; le terrain les reutilise, il ne les
+    // recalcule pas. Deux aplatissements du meme pack finiraient par diverger.
+    const placements = (Array.isArray(published?.teams) ? published.teams : [])
+      .flatMap((entry) => (Array.isArray(entry?.placements) ? entry.placements : []));
+
     return {
       bench: buildConvocationReserveList(published),
       key: String(branch?.team?.documentId || index),
+      placements,
+      snapshotPlayers: Array.isArray(published?.snapshotPlayers) ? published.snapshotPlayers : [],
+      sportContext: published?.sportContext || null,
       starters: buildConvocationFieldTokens({
-        placements: (Array.isArray(published?.teams) ? published.teams : [])
-          .flatMap((entry) => (Array.isArray(entry?.placements) ? entry.placements : [])),
+        placements,
         snapshotPlayers: published?.snapshotPlayers,
       }),
       teamName: String(branch?.team?.name || '').trim(),
@@ -6099,6 +6108,26 @@ function EventDetails({ navigation, route }) {
             ecrit trois lignes plus haut, n'apprend rien a personne. */}
         {publishedConvocationRoster.length > 1 && branch.teamName ? (
           <Text style={[Fonts.p3Bold, Fonts.neutral00]}>{branch.teamName}</Text>
+        ) : null}
+
+        {/* ⚽ S5-D (vague S) — LE TERRAIN, SANS APPUYER SUR RIEN.
+            🗣️ Adel, 26/08 : « une fois la composition publiee, ca doit afficher
+            LE TERRAIN avec les joueurs places directement dans l onglet, sans
+            devoir cliquer le bouton du bas ».
+            L onglet DECRIVAIT la compo (des compteurs, puis les noms depuis R6)
+            et laissait le DESSIN derriere un appui — or c est le dessin qui
+            repond a la question d un coach : qui joue ou.
+            ⛔ Il ne parait QUE s il y a des titulaires : une convocation publiee
+            sans placement (S5-c) garde sa liste « Convoqués », et un terrain
+            vide y ferait croire a une compo perdue.
+            ⛔ Et le CTA reste dessous : ce terrain est un APERCU en lecture
+            seule, la modification vit sur l ecran complet. */}
+        {branch.starters.length ? (
+          <ConvocationFieldPreview
+            placements={branch.placements}
+            snapshotPlayers={branch.snapshotPlayers}
+            sportContext={branch.sportContext}
+          />
         ) : null}
 
         {branch.starters.length ? (
