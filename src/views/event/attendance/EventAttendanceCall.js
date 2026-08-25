@@ -4,7 +4,7 @@ import {
 } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  ScrollView, StyleSheet, Text, TouchableOpacity, View,
+  Image, ScrollView, StyleSheet, Text, TouchableOpacity, View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -21,12 +21,11 @@ import {
   buildArrivedAtIso,
   countAnswers,
   countCalled,
-  countPresence,
   describeBulkOutcome,
   formatShortDateInZone,
   formatTimeInZone,
   isMarked,
-  listUnmarkedIds,
+  listUncalledIds,
   resolveAttendanceWindow,
   resolveCallMode,
   resolveEventEndMs,
@@ -62,6 +61,16 @@ const styles = StyleSheet.create({
   },
   headerTexts: { flex: 1 },
   list: { gap: 8 },
+  massAction: {
+    alignItems: 'center',
+    borderRadius: 14,
+    borderWidth: 1.5,
+    flexDirection: 'row',
+    gap: 8,
+    height: 52,
+    justifyContent: 'center',
+  },
+  massIcon: { height: 20, width: 20 },
   pill: {
     borderRadius: 100, borderWidth: 1, paddingHorizontal: 12, paddingVertical: 4,
   },
@@ -69,16 +78,6 @@ const styles = StyleSheet.create({
   scroll: { gap: 16, paddingBottom: 24, paddingHorizontal: 16 },
   signalledRow: {
     alignItems: 'center', flexDirection: 'row', gap: 12, minHeight: 52,
-  },
-  toolbar: { flexDirection: 'row', gap: 8 },
-  toolbarButton: {
-    alignItems: 'center',
-    borderRadius: 100,
-    borderWidth: 1,
-    flex: 1,
-    justifyContent: 'center',
-    minHeight: 44,
-    paddingHorizontal: 12,
   },
 });
 
@@ -103,7 +102,7 @@ const styles = StyleSheet.create({
  * @returns {import('react').ReactElement} - L ecran.
  */
 function EventAttendanceCall() {
-  const { Colors, Fonts } = useTheme();
+  const { Colors, Fonts, Images } = useTheme();
   const { t } = useTranslation();
   const navigation = useNavigation();
   const route = useRoute();
@@ -154,13 +153,10 @@ function EventAttendanceCall() {
   const mode = resolveCallMode({ serverNowMs, window: attendanceWindow });
 
   const answers = useMemo(() => countAnswers(items), [items]);
-  const presence = useMemo(() => countPresence(items), [items]);
   // 🔢 APPEL (26/08) — LE COMPTEUR COMPTE LES POINTES, PAS LES ARRIVES.
   // `items.length - presence.waiting` ne voyait que les `arrivedAt` ; une
   // absence posee a la main (D7bis) n en a pas et compte pourtant.
   const markedCount = useMemo(() => countCalled(items), [items]);
-
-  const markedItems = useMemo(() => items.filter(isMarked), [items]);
 
   const teamName = event?.team?.name || '';
   const heureDebut = formatTimeInZone(payloadData?.eventStartAt || event?.date, timezone);
@@ -174,14 +170,12 @@ function EventAttendanceCall() {
     answersYes: t('eventDetails.attendanceCall.answers.yes', 'Présent·e·s'),
     closeCall: t('eventDetails.attendanceCall.footer.close', "Clôturer l'appel"),
     declaredLate: t('eventDetails.attendanceCall.row.declaredLate', 'Retard annoncé'),
+    everyoneHere: t('eventDetails.attendanceCall.actions.everyoneHere', 'Tout le monde est là'),
     markSomeone: t(
       'eventDetails.attendanceCall.footer.markSomeone',
       'Pointe au moins une personne',
     ),
     outOf: t('eventDetails.attendanceCall.footer.outOf', 'sur'),
-    presenceArrived: t('eventDetails.attendanceCall.presence.arrived', 'Arrivé·e·s'),
-    presenceLate: t('eventDetails.attendanceCall.presence.late', 'En retard'),
-    presenceWaiting: t('eventDetails.attendanceCall.presence.waiting', 'En attente'),
     title: t('eventDetails.attendanceCall.header.title', 'APPEL'),
   };
 
@@ -217,13 +211,32 @@ function EventAttendanceCall() {
     resetMutation.mutate({ userId: item?.user?.documentId });
   }, [resetMutation]);
 
+  /**
+   * 🟢 D3 — « TOUT LE MONDE EST LA », SANS RIEN ECRASER.
+   *
+   * Le pack proposait de marquer TOUS les joueurs a l heure, en assumant
+   * d ecraser les etats deja saisis. C est le contraire de ce dont un coach a
+   * besoin : il pointe d abord les deux retards qu il vient de voir, PUIS il
+   * appuie pour le reste de l equipe. Ecraser lui ferait perdre exactement le
+   * travail qu il vient de faire — et rendrait le bouton dangereux au lieu
+   * d utile. ⇒ Seuls les « a pointer » basculent (`listUncalledIds`).
+   *
+   * 🧨 ET L ENVOI PORTE L HEURE. Sans `lateMinutes: 0` + `arrivedAt` = debut,
+   * le serveur recalcule le retard depuis SON instant courant et bascule toute
+   * la feuille en « +7 min » pour un appui a 18h07. C est le defaut corrige
+   * cote serveur au bloc 1 ; ici c est le corps qui l evite.
+   */
   const handleMarkAll = useCallback(() => {
-    const userIds = listUnmarkedIds(items);
+    const userIds = listUncalledIds(items);
     if (userIds.length === 0) return;
-    bulkMutation.mutate({ userIds }, {
+    bulkMutation.mutate({
+      arrivedAt: buildArrivedAtIso({ eventStartMs, lateMinutes: 0 }),
+      lateMinutes: 0,
+      userIds,
+    }, {
       onSuccess: (/** @type {any} */ summary) => setBulkMessage(describeBulkOutcome(summary, t)),
     });
-  }, [bulkMutation, items, t]);
+  }, [bulkMutation, eventStartMs, items, t]);
 
   const handleLateSubmit = useCallback((/** @type {any} */ envoi) => {
     const payload = {
@@ -237,14 +250,6 @@ function EventAttendanceCall() {
     else coachArrivalMutation.mutate({ payload, userId: envoi.userId });
     setOpenSheet('');
   }, [coachArrivalMutation, lateMinutesMutation]);
-
-  const handleUnmarkAll = useCallback(() => {
-    // 🔒 On ne vise QUE les lignes qui portent un `arrivedAt` : `reset` efface
-    // aussi la declaration que le joueur avait faite lui-meme.
-    markedItems.forEach(
-      (/** @type {any} */ item) => resetMutation.mutate({ userId: item?.user?.documentId }),
-    );
-  }, [markedItems, resetMutation]);
 
   const renderCounter = (
     /** @type {number} */ valeur,
@@ -365,33 +370,30 @@ function EventAttendanceCall() {
   /* ---------------- CADRES 2B / 2C — l appel ---------------- */
   const renderOpenCall = () => (
     <>
-      {/* ⚖️ Echelle des PRESENCES REELLES — jamais celle des reponses ici. */}
-      <View style={styles.counters}>
-        {renderCounter(presence.arrived, mots.presenceArrived, Colors.success500)}
-        {renderCounter(presence.late, mots.presenceLate, Colors.warning500)}
-        {renderCounter(presence.waiting, mots.presenceWaiting, Colors.neutral300)}
-      </View>
-
-      <View style={styles.toolbar}>
-        <TouchableOpacity
-          accessibilityRole="button"
-          onPress={handleMarkAll}
-          style={[styles.toolbarButton, { borderColor: Colors.success500 }]}
-        >
-          <Text style={[Fonts.p3Bold, { color: Colors.success500 }]}>
-            {t('eventDetails.attendanceCall.actions.markAll', 'Tout pointer')}
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          accessibilityRole="button"
-          onPress={handleUnmarkAll}
-          style={[styles.toolbarButton, { borderColor: Colors.neutral500 }]}
-        >
-          <Text style={[Fonts.p3Bold, { color: Colors.neutral200 }]}>
-            {t('eventDetails.attendanceCall.actions.unmarkAll', 'Tout dépointer')}
-          </Text>
-        </TouchableOpacity>
-      </View>
+      {/* 🟢 L ACTION DE MASSE DU PACK — UN bouton, pas deux.
+          Les trois compteurs de presence et la paire « Tout pointer » /
+          « Tout dépointer » disparaissent : le chiffre vit maintenant dans la
+          pastille de l entete, et « Tout dépointer » etait un geste
+          destructeur de masse offert au meme rang qu un geste utile.
+          ⚠️ Le bouton reste affiche meme quand tout est pointe : il ne
+          disparait pas sous le doigt au dernier joueur. Il est simplement
+          sans effet, et `handleMarkAll` sort tout de suite. */}
+      <TouchableOpacity
+        accessibilityLabel={mots.everyoneHere}
+        accessibilityRole="button"
+        onPress={handleMarkAll}
+        style={[styles.massAction, {
+          backgroundColor: withAlpha(Colors.success500, 0.14),
+          borderColor: withAlpha(Colors.success500, 0.5),
+        }]}
+      >
+        <Image
+          resizeMode="contain"
+          source={Images.check}
+          style={[styles.massIcon, { tintColor: Colors.success500 }]}
+        />
+        <Text style={[Fonts.p1Bold, { color: Colors.success500 }]}>{mots.everyoneHere}</Text>
+      </TouchableOpacity>
 
       {bulkMessage !== '' && (
         <Text style={[Fonts.p4, { color: Colors.warning500 }]}>{bulkMessage}</Text>

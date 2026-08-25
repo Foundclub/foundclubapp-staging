@@ -12,7 +12,8 @@ import EventAttendanceCall from '../EventAttendanceCall';
  *   3. 2C — un sans-reponse se pointe D UN GESTE (c est l ouverture serveur
  *      AD04 : le verrou est l audience, plus « a dit oui »), et la coche envoie
  *      `lateMinutes: 0` — sans quoi le serveur lui poserait un retard.
- *   4. « Tout pointer » passe par l envoi GROUPE, et un refus s affiche.
+ *   4. « Tout le monde est là » passe par l envoi GROUPE, n ECRASE PAS un
+ *      etat deja saisi (D3), porte l heure du debut, et un refus s affiche.
  *   5. La ligne n est PAS cliquable ; ses cibles font 44 x 44, radius 12.
  *   6. `participantIdentitiesHidden` est respecte : aucun nom rendu.
  *   7. L horloge du TELEPHONE ne decide de rien.
@@ -380,7 +381,7 @@ describe('L5-A · fenetre DEJA FERMEE — le bouton ne raconte pas l ouverture',
     expect(texte).toContain("L'appel est clos");
 
     // Et on ne bascule pas non plus dans le mode d appel.
-    expect(texte).not.toContain('Tout pointer');
+    expect(texte).not.toContain('Tout le monde est là');
   });
 });
 
@@ -406,12 +407,14 @@ describe('L5-A · 2A — le bandeau dit CE QU ON VA POINTER', () => {
 
 describe('L5-A · 2B — dans la fenetre, le depart', () => {
   // 📐 APPEL (26/08) — MEME INTENTION, NOUVEL ATTENDU. Le temoin disait
-  // « 0 pointé sur 22 » dans le TITRE. Le pack minimaliste rend le titre au
-  // mot « APPEL » et deplace le chiffre dans une pastille « 0 / 22 » : ce qui
-  // est mesure ici reste « au depart, l ecran dit ou on en est, il montre
-  // l echelle des PRESENCES et jamais celle des reponses, et le pied est
-  // desactive tant que personne n est pointe ».
-  test('la pastille dit « 0 / 22 », compteurs de PRESENCE, pied desactive', async () => {
+  // « 0 pointé sur 22 » dans le TITRE, exigeait les TROIS compteurs de
+  // presence et la paire « Tout pointer » / « Tout dépointer ». Le pack
+  // minimaliste rend le titre au mot « APPEL », deplace le chiffre dans une
+  // pastille « 0 / 22 », retire les compteurs (le chiffre est deja dans la
+  // pastille) et remplace la paire par UN bouton. Ce qui est mesure reste :
+  // au depart l ecran dit ou on en est, il ne melange pas les deux echelles,
+  // et le pied est desactive tant que personne n est pointe.
+  test('la pastille dit « 0 / 22 », une seule action de masse, pied desactive', async () => {
     mockAttendance = reponseAttendance({
       items: Array.from({ length: 22 }, (_valeur, index) => ligne({
         firstname: `Joueur${index}`,
@@ -426,15 +429,20 @@ describe('L5-A · 2B — dans la fenetre, le depart', () => {
     expect(texte).toContain('0 / 22');
     // Le mot « APPEL » est le TITRE de l ecran, il ne disparait pas.
     expect(texte).toContain('APPEL');
-    expect(texte).toContain('Arrivé·e·s');
-    expect(texte).toContain('En retard');
-    expect(texte).toContain('En attente');
 
-    // ⛔ Jamais l echelle des reponses ici.
+    // ⛔ Jamais l echelle des REPONSES sur l appel ouvert : c est la confusion
+    // majeure que la planche 02 corrige, et le pack ne la rouvre pas.
     expect(texte).not.toContain('Absent·e·s');
+    expect(texte).not.toContain('Présent·e·s');
+    // ⛔ Et plus de compteurs de presence non plus : le chiffre vit dans la
+    // pastille, le detail se lit ligne par ligne.
+    expect(texte).not.toContain('Arrivé·e·s');
+    expect(texte).not.toContain('En attente');
 
-    expect(appuyable(arbre, 'Tout pointer')).toBeTruthy();
-    expect(appuyable(arbre, 'Tout dépointer')).toBeTruthy();
+    // UNE action de masse, pas deux. « Tout dépointer » etait un geste
+    // destructeur de masse offert au meme rang qu un geste utile.
+    expect(appuyable(arbre, 'Tout le monde est là')).toBeTruthy();
+    expect(appuyable(arbre, 'Tout dépointer')).toBeFalsy();
 
     expect(texte).toContain('Pointe au moins une personne');
   });
@@ -481,11 +489,24 @@ describe('L5-A · 2C — un sans-reponse se pointe d un geste', () => {
   });
 });
 
-describe('L5-A · « Tout pointer » passe par l envoi groupe', () => {
-  test('3 non-pointes -> UN appel groupe avec 3 identifiants', async () => {
+describe('L5-A · « Tout le monde est là » passe par l envoi groupe', () => {
+  // 📐 APPEL (26/08) — MEME INTENTION, ET DEUX GARDES EN PLUS (decision D3).
+  // Le temoin tenait deja « un seul appel groupe, et seulement les
+  // non-pointes ». Il tient maintenant AUSSI : (1) un joueur deja pointe en
+  // RETARD n est pas ecrase — c est le travail que le coach vient de faire ;
+  // (2) l envoi porte `lateMinutes: 0` + `arrivedAt` = debut, sans quoi le
+  // serveur bascule toute la feuille en « +6 min ».
+  test('seuls les « a pointer » partent, et l envoi porte l heure du DEBUT', async () => {
     mockAttendance = reponseAttendance({
       items: [
         ligne({ arrivedAt: '2026-08-19T15:56:00.000Z', firstname: 'Leo', userId: 'u1' }),
+        ligne({
+          arrivedAt: '2026-08-19T16:10:00.000Z',
+          firstname: 'Kais',
+          isLate: true,
+          lateMinutes: 10,
+          userId: 'u5',
+        }),
         ligne({ firstname: 'Enzo', userId: 'u2' }),
         ligne({ firstname: 'Nina', userId: 'u3' }),
         ligne({ firstname: 'Adam', userId: 'u4' }),
@@ -494,12 +515,19 @@ describe('L5-A · « Tout pointer » passe par l envoi groupe', () => {
     });
 
     const arbre = await monter();
-    await act(async () => { appuyable(arbre, 'Tout pointer').props.onPress(); });
+    await act(async () => { appuyable(arbre, 'Tout le monde est là').props.onPress(); });
 
     expect(mockBulkMutate).toHaveBeenCalledTimes(1);
-    expect(mockBulkMutate.mock.calls[0][0]).toEqual(
-      expect.objectContaining({ userIds: ['u2', 'u3', 'u4'] }),
-    );
+    const envoi = mockBulkMutate.mock.calls[0][0];
+
+    // 🔒 D3 — Leo (a l heure) et Kais (+10 min) gardent leur etat.
+    expect(envoi.userIds).toEqual(['u2', 'u3', 'u4']);
+    expect(envoi.userIds).not.toContain('u5');
+
+    // 🧨 Sans ces deux champs, `performCoachArrival` recalcule le retard
+    // depuis 18:06 et ecrit « +6 min » pour TOUT LE MONDE.
+    expect(envoi.lateMinutes).toBe(0);
+    expect(envoi.arrivedAt).toBe(DEBUT_ISO);
   });
 
   test('22 refus pour la MEME cause donnent UNE phrase, pas vingt-deux', async () => {
@@ -512,7 +540,7 @@ describe('L5-A · « Tout pointer » passe par l envoi groupe', () => {
     });
 
     const arbre = await monter();
-    await act(async () => { appuyable(arbre, 'Tout pointer').props.onPress(); });
+    await act(async () => { appuyable(arbre, 'Tout le monde est là').props.onPress(); });
 
     // Le rappel de succes recoit le bilan : 22 refus, une seule cause.
     const options = mockBulkMutate.mock.calls[0][1];
@@ -626,7 +654,7 @@ describe('L5-A · l horloge du telephone ne decide de rien', () => {
 });
 
 describe('L5-A · un non-pointe passe no_show par le cron reste pointable', () => {
-  test('range dans « En attente », pastille « Non pointé », bouton actif', async () => {
+  test('pastille grise, sous-ligne « Non pointé », et cible toujours active', async () => {
     mockAttendance = reponseAttendance({
       items: [ligne({ attendanceStatus: 'no_show', firstname: 'Malo', userId: 'u7' })],
       serverNow: '2026-08-19T19:30:00.000Z', // apres la fin, DANS la fenetre encore
@@ -636,7 +664,18 @@ describe('L5-A · un non-pointe passe no_show par le cron reste pointable', () =
     const texte = aplatirTexte(arbre.toJSON());
 
     expect(texte).toContain('Non pointé');
-    expect(texte).toContain('En attente');
+
+    // 📐 APPEL (26/08) — le compteur « En attente » a disparu avec les trois
+    // compteurs de presence. La propriete mesuree est la meme, et se lit
+    // maintenant PLUS DIRECTEMENT : la ligne n a AUCUN etat, donc sa pastille
+    // est grise. Un `no_show` pose par le cron n est pas un pointage.
+    const pastilles = arbre.root.findAll(
+      (/** @type {any} */ noeud) => typeof noeud.type === 'string'
+        && String(noeud.props?.testID || '').startsWith('attendance-dot-'),
+      { deep: true },
+    );
+    expect(pastilles).toHaveLength(1);
+    expect(pastilles[0].props.testID).toBe('attendance-dot-none');
 
     // La cible existe bien avec son role et son etat (noeud hote)…
     const hote = bouton(arbre, 'Malo');

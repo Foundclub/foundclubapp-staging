@@ -451,21 +451,21 @@ export const countPresence = (items) => (items || []).reduce((totals, item) => {
 export const listNeverSeen = (items) => (items || []).filter((item) => !isMarked(item));
 
 /**
- * Les lignes « sans reponse » : l onglet du cadre 2C.
- * @param {any[]} items
- * @returns {any[]}
- */
-export const listUnanswered = (items) => (items || []).filter(
-  (item) => item?.rsvpStatus !== 'participating' && item?.rsvpStatus !== 'missing',
-);
-
-/**
- * Les identifiants a envoyer a `bulk` : les NON pointes de la liste donnee.
+ * Les identifiants a envoyer a `bulk` : ceux qui n ont AUCUN etat.
+ *
+ * 🔒 D3 (26/08) — « TOUT LE MONDE EST LA » N ECRASE RIEN. Le pack proposait de
+ * marquer TOUS les joueurs a l heure ; ce filtre ne rend que les « a pointer ».
+ * Un coach qui saisit deux retards puis appuie sur le bouton ne doit pas les
+ * perdre — et le bouton reste utile pour tout le reste de l equipe.
+ *
+ * ⚠️ Le critere est l ETAT, pas `arrivedAt` : une absence posee a la main
+ * (D7bis) n a pas d heure d arrivee et ne doit surtout pas etre reecrite en
+ * « arrive a l heure ».
  * @param {any[]} items
  * @returns {string[]}
  */
-export const listUnmarkedIds = (items) => (items || [])
-  .filter((item) => !isMarked(item))
+export const listUncalledIds = (items) => (items || [])
+  .filter((item) => resolveRowState(item) === null)
   .map((item) => String(item?.user?.documentId || ''))
   .filter(Boolean);
 
