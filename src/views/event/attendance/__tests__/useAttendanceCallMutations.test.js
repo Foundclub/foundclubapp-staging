@@ -230,8 +230,8 @@ describe('L5-A · etape 1 — le tuyau du pointage groupe', () => {
         data: {
           error: {
             details: { code: 'EVENT_ATTENDANCE_WINDOW_CLOSED' },
-            message: 'Attendance can only be marked from 30 minutes before'
-              + ' the event until 2 hours after it ends',
+            message: 'Attendance is open from the moment the event is created'
+              + ' until 2 hours after it ends',
           },
         },
       },
@@ -239,8 +239,8 @@ describe('L5-A · etape 1 — le tuyau du pointage groupe', () => {
 
     const phrase = describeAttendanceError(erreurServeur, traduire);
 
-    expect(phrase).toContain("L'appel n'est pas ouvert");
-    expect(phrase).not.toMatch(/Attendance can only/i);
+    expect(phrase).toContain("L'appel est fermé");
+    expect(phrase).not.toMatch(/Attendance is open/i);
   });
 
   test('22 refus pour la MEME cause donnent UNE phrase, pas vingt-deux', () => {
@@ -275,7 +275,7 @@ describe('L5-A · etape 1 — le tuyau du pointage groupe', () => {
 // 🧨 ET LA PHRASE EXISTAIT DEJA : `describeAttendanceError`
 //   (attendanceCallModel.js:482) avait ete ecrite pour traduire ce refus, et
 //   elle avait ZERO appelant de production — seulement son propre temoin.
-//   Le serveur repond « Attendance can only be marked from 30 minutes… » :
+//   Le serveur repond « Attendance is open from the moment… », en anglais :
 //   sans elle, c est de l anglais brut qui serait tombe sous le doigt du
 //   coach, au bord d un terrain.
 // ===========================================================================
@@ -291,8 +291,8 @@ describe('R7-a — le refus serveur devient une phrase, jamais un silence', () =
       data: {
         error: {
           details: code ? { code } : {},
-          message: 'Attendance can only be marked from 30 minutes before'
-            + ' the event until 2 hours after it ends',
+          message: 'Attendance is open from the moment the event is created'
+            + ' until 2 hours after it ends',
         },
       },
     },
@@ -313,8 +313,8 @@ describe('R7-a — le refus serveur devient une phrase, jamais un silence', () =
 
     expect(alerte).toHaveBeenCalledTimes(1);
     const phrase = String(alerte.mock.calls[0][1]);
-    expect(phrase).toContain("L'appel n'est pas ouvert");
-    expect(phrase).not.toMatch(/Attendance can only/i);
+    expect(phrase).toContain("L'appel est fermé");
+    expect(phrase).not.toMatch(/Attendance is open/i);
 
     alerte.mockRestore();
     await demonter();

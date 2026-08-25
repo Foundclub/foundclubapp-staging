@@ -331,7 +331,7 @@ describe('P9 · ecran 1 — la carte « Faire l appel » sur l Apercu du site', 
     const texte = textOf(carte);
     expect(texte).toContain('Faire l’appel');
     expect(texte).toContain('22 attendus');
-    expect(texte).toContain('appel devient disponible 30 minutes avant le début');
+    expect(texte).toContain('appel est ouvert dès la création de l’événement');
   });
 
   test('fenetre ouverte : le clic mene a l ecran d appel, avec le bon evenement', () => {

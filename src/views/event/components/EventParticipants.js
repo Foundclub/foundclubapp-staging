@@ -329,22 +329,44 @@ const resolveAttendanceBadge = ({
   }
 
   if (hasArrived) {
+    // 🟥 S3 / D10 (vague S, 25/08, demande explicite d Adel) — UN RETARD SE DIT
+    // EN TOUTES LETTRES, ET EN ROUGE. « +7 min » ne disait pas de quoi il
+    // s agissait : d une avance ? d un retard ? Le mot tranche.
+    // ⚠️ Le rouge cotoie donc deux voisins rouges (« Non pointé » en error500,
+    // « Absent » en error300). C est assume : ces trois-la sont les seuls etats
+    // qui demandent l attention du coach.
     if (lateMinutes > 0) {
       return {
-        backgroundColor: `${colors.warning500}18`,
-        borderColor: `${colors.warning500}36`,
-        textColor: colors.warning500,
+        backgroundColor: withAlpha(colors.error500, 0.09),
+        borderColor: withAlpha(colors.error500, 0.21),
+        textColor: colors.error500,
         title: t('eventDetails.attendanceBadge.arrived', 'Arrivé'),
-        value: `+${lateMinutes} min`,
+        value: `${lateMinutes} ${t('eventDetails.attendanceBadge.late', 'min de retard')}`,
       };
     }
 
+    // 🟢 S3 / D9 — ARRIVE A L HEURE, ET L AVANCE SE COMPTE ICI.
+    // Le serveur ne rend que `lateMinutes` : l avance, il ne la calcule pas.
+    // On la deduit donc de l ecart entre le coup d envoi et l arrivee — c est
+    // le motif deja ecrit pour la banniere personnelle de la fiche evenement.
+    // 🧨 `Math.max(1, ...)` n est pas un detail : sans lui, 30 secondes
+    // d avance s afficheraient « 0 min en avance ».
+    // ⛔ Et sans coup d envoi exploitable, on ne dit RIEN plutot qu un NaN.
+    const arrivedAtMs = new Date(attendance?.arrivedAt).getTime();
+    const eventStartMs = eventStartAt ? eventStartAt.getTime() : NaN;
+    const peutCompter = !Number.isNaN(arrivedAtMs) && !Number.isNaN(eventStartMs);
+    const avanceMinutes = peutCompter && arrivedAtMs < eventStartMs
+      ? Math.max(1, Math.floor((eventStartMs - arrivedAtMs) / 60000))
+      : 0;
+
     return {
-      backgroundColor: `${colors.success500}18`,
-      borderColor: `${colors.success500}36`,
+      backgroundColor: withAlpha(colors.success500, 0.09),
+      borderColor: withAlpha(colors.success500, 0.21),
       textColor: colors.success500,
       title: t('eventDetails.attendanceBadge.arrived', 'Arrivé'),
-      value: null,
+      value: avanceMinutes > 0
+        ? `${avanceMinutes} ${t('eventDetails.attendanceBadge.early', 'min en avance')}`
+        : null,
     };
   }
 
@@ -374,13 +396,15 @@ const resolveAttendanceBadge = ({
     };
   }
 
-  // …et la, il a REPONDU present avant le coup d envoi. Rien n attend
-  // personne : la pastille raconte ce qu il a fait, pas une consigne.
+  // 🔵 S3 / D8 (vague S, 25/08, decision produit d Adel) — IL A REPONDU
+  // PRESENT ET LE MATCH N A PAS COMMENCE : C EST UNE BONNE NOUVELLE.
+  // Le gris se lisait comme « il manque quelque chose » alors que tout est en
+  // ordre. Le bleu FoundClub dit l inverse : c est prevu, et ca tient.
   return {
-    backgroundColor: `${colors.neutral300}12`,
-    borderColor: `${colors.neutral300}24`,
-    textColor: colors.neutral200,
-    title: t('eventDetails.attendanceBadge.saidYes', 'A dit présent'),
+    backgroundColor: withAlpha(colors.primary500, 0.09),
+    borderColor: withAlpha(colors.primary500, 0.21),
+    textColor: colors.primary500,
+    title: t('eventDetails.attendanceBadge.saidYes', 'Prévu à l’heure'),
     value: null,
   };
 };

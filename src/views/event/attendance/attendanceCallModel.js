@@ -484,8 +484,8 @@ export const describeAttendanceError = (error, t) => {
   if (code === WINDOW_CLOSED_CODE) {
     return t(
       'eventDetails.attendanceCall.errors.windowClosed',
-      "L'appel n'est pas ouvert en ce moment. Il s'ouvre 30 minutes avant le début"
-      + ' et se ferme 2 h après la fin.',
+      "L'appel est fermé. Il reste ouvert jusqu'à 2 h après la fin"
+      + " de l'événement.",
     );
   }
   return t(

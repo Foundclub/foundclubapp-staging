@@ -98,7 +98,7 @@ const textesVisibles = (/** @type {any} */ root) => root.root
 
 const leBouton = (/** @type {any} */ root) => root.root.findByType(TouchableOpacity);
 
-const PHRASE = 'appel devient disponible 30 minutes avant le début';
+const PHRASE = 'appel est ouvert dès la création de l’événement';
 
 describe('N5 — la carte « prochaine action »', () => {
   test('avant l ouverture : le bouton annonce l heure, il est ferme, la phrase explique', () => {
