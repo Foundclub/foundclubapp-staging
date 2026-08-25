@@ -1,4 +1,4 @@
-import { TouchableOpacity } from 'react-native';
+import { Dimensions, TouchableOpacity } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
 // R5 (vague R, retours de recette de la 2.6.26) — DEUX CONSTATS D'ADEL, UN SEUL
@@ -580,6 +580,41 @@ describe('S2 — le titre de la feuille vit DANS le contenu mesure', () => {
 
     expect(contenu[0]?.props?.testID).toBe('event-manage-title');
     expect(contenu[1]?.props?.testID).toBe('event-manage-sheet');
+  });
+
+  // 🧨 S2-bis (retour de recette du 25/08, capture a l appui) : la feuille
+  // s affiche entiere SAUF sa derniere rangee, « Annuler », coupee au ras du
+  // bord bas — la barre de gestes passe dessus.
+  //
+  // ⛔ CE N EST PAS UNE MARGE QUI MANQUE. `BottomModal` pose deja
+  // `paddingBottom = 40 + insets.bottom` sur son contenu defilant. Le defaut est
+  // encore une histoire de MESURE : le plafond de la zone defilante se calcule
+  // sur `Dimensions.get('screen')`, la DALLE ENTIERE — barre d etat et barre de
+  // gestes comprises. A 90 % de la dalle, la zone peut donc etre PLUS HAUTE que
+  // la fenetre reellement affichable : son bas passe sous la barre de gestes, et
+  // rien ne defile puisque, de son point de vue, elle ne deborde pas.
+  //
+  // ✅ On demande donc une fraction de la DALLE qui vaille 90 % de la FENETRE.
+  // Sur un ecran ou les deux se valent (iOS sans barre logicielle), c est un
+  // non-evenement : le plafond reste 90 %.
+  test('son plafond se mesure sur la hauteur UTILISABLE, pas sur la dalle', () => {
+    const HAUTEUR_FENETRE = 800;
+    const HAUTEUR_DALLE = 1000;
+    const espion = jest.spyOn(Dimensions, 'get').mockImplementation(
+      (/** @type {any} */ quoi) => ({
+        fontScale: 1,
+        height: quoi === 'window' ? HAUTEUR_FENETRE : HAUTEUR_DALLE,
+        scale: 2,
+        width: 400,
+      }),
+    );
+
+    monterEtOuvrirLeMenu();
+    const plafond = feuilleDeGestion()?.maxContentHeightRatio;
+    espion.mockRestore();
+
+    expect(plafond).toBeGreaterThan(0);
+    expect(plafond).toBeLessThanOrEqual(0.9 * (HAUTEUR_FENETRE / HAUTEUR_DALLE));
   });
 
   test('et il porte toujours le meme libelle', () => {
