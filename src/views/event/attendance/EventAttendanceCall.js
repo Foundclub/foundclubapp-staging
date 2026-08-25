@@ -289,8 +289,8 @@ function EventAttendanceCall() {
       )
       : t(
         'eventDetails.attendanceCall.before.explain',
-        "L'appel devient disponible 30 minutes avant le début,"
-        + ' et reste ouvert 2 h après la fin.',
+        "L'appel est ouvert dès la création de l'événement"
+        + ' et se ferme 2 h après la fin.',
       );
     const signalled = items.filter(
       (/** @type {any} */ item) => Number(item?.attendance?.declaredLateMinutes || 0) > 0,

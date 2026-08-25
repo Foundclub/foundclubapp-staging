@@ -117,18 +117,19 @@ function EventNextActionCard({
       {/* ⏱️ LA PHRASE DIT LA REGLE DE LA FENETRE. Elle vit tant que la fenetre
           est devant ou en cours ; une fois l appel termine, elle n a plus rien
           a annoncer et disparait (D1).
-          ⚠️ Elle cite « 30 minutes » et « 2 h », qui sont les valeurs de REPLI
-          du modele. Le serveur, lui, peut etre regle autrement (variables d
-          environnement, cf. `resolveAttendanceWindow`) : la phrase serait alors
-          approximative. Elle reste une chaine de `fr.js`, donc corrigeable sans
-          toucher au code — voie de sortie : la construire depuis la fenetre
-          rendue par le serveur. */}
+          🔓 S4 (vague S, 25/08) : elle ne cite plus « 30 minutes avant », qui
+          n existe plus — l appel s ouvre des la CREATION de l evenement.
+          ⚠️ Elle cite encore « 2 h », qui est la valeur de REPLI du modele. Le
+          serveur peut etre regle autrement (`EVENT_ATTENDANCE_WINDOW_AFTER_MINUTES`) :
+          la phrase serait alors approximative. Elle reste une chaine de
+          `fr.js`, donc corrigeable sans toucher au code — voie de sortie : la
+          construire depuis la fenetre rendue par le serveur. */}
       {estTermine ? null : (
         <Text style={[Fonts.p4, Fonts.neutral200]} testID="event-next-action-window">
           {t(
             'eventDetails.nextAction.window',
-            'L’appel devient disponible 30 minutes avant le début, '
-              + 'et reste ouvert 2 h après la fin.',
+            'L’appel est ouvert dès la création de l’événement, '
+              + 'et se ferme 2 h après la fin.',
           )}
         </Text>
       )}

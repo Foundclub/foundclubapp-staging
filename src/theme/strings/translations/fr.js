@@ -1087,8 +1087,8 @@ export default {
       before: {
         alreadySignalled: 'DÉJÀ SIGNALÉ',
         expected: 'attendus',
-        explain: "L'appel devient disponible 30 minutes avant le début,"
-          + ' et reste ouvert 2 h après la fin.',
+        explain: "L'appel est ouvert dès la création de l'événement"
+          + ' et se ferme 2 h après la fin.',
         opensAt: 'Ouvre à',
         title: "Faire l'appel",
       },
@@ -1121,8 +1121,8 @@ export default {
       },
       errors: {
         generic: "Impossible d'enregistrer le pointage. Réessaie dans un instant.",
-        windowClosed: "L'appel n'est pas ouvert en ce moment."
-          + " Il s'ouvre 30 minutes avant le début et se ferme 2 h après la fin.",
+        windowClosed: "L'appel est fermé. Il reste ouvert jusqu'à 2 h"
+          + " après la fin de l'événement.",
       },
       footer: {
         close: "Clôturer l'appel",
@@ -1409,8 +1409,8 @@ export default {
       opensAt: 'Ouvre à {{time}}',
       opensSoon: 'Pas encore ouvert',
       title: 'Faire l’appel',
-      window: 'L’appel devient disponible 30 minutes avant le début, '
-        + 'et reste ouvert 2 h après la fin.',
+      window: 'L’appel est ouvert dès la création de l’événement, '
+        + 'et se ferme 2 h après la fin.',
     },
     openTraining: {
       cardClosedMeaning: 'Réservé à ton équipe : personne de l’extérieur ne peut s’inscrire.',

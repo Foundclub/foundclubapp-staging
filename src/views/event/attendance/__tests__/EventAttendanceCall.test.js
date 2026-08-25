@@ -329,7 +329,7 @@ describe('L5-A · 2A — avant l heure, le bouton dit quand ca ouvre', () => {
     // 🌍 Le point qui compte : « 17:30 », pas « 22:30 ». La machine est en
     // Asia/Bangkok — seule une lecture dans le fuseau du club donne 17:30.
     expect(texte).toContain('Ouvre à 17:30');
-    expect(texte).toContain("L'appel devient disponible 30 minutes avant le début");
+    expect(texte).toContain("L'appel est ouvert dès la création de l'événement");
 
     // Compteurs de REPONSES.
     expect(texte).toContain('Présent·e·s');
