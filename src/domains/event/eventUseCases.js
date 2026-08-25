@@ -53,14 +53,6 @@ export const isTrainingEventType = (typeName = '') => normalizeEventTypeLabel(ty
 export const isMatchEventType = (typeName = '') => normalizeEventTypeLabel(typeName).includes('match');
 export const isBookingEventType = (typeName = '') => normalizeEventTypeLabel(typeName).includes('reservation');
 
-const normalizeValidationModeValue = (value, fallbackValue = null) => {
-  const normalized = String(value || '').trim().toLowerCase();
-  if (normalized === 'auto' || normalized === 'manual') {
-    return normalized;
-  }
-  return fallbackValue;
-};
-
 const toNullableInteger = (value) => {
   if (value === null || value === undefined || value === '') return null;
   const parsed = Number(value);
@@ -118,29 +110,23 @@ export const resolveTrainingOpenConfig = (eventLike = {}) => {
     : 'open';
   const isOpenTraining = isTraining && sessionStatus === 'open';
   const storedLimit = toNullableInteger(eventLike?.externalParticipantLimit);
-  const storedExternalValidationMode = normalizeValidationModeValue(
-    eventLike?.externalParticipantValidationMode,
-    null,
-  );
   let externalParticipantLimit = storedLimit;
   if (externalParticipantLimit === null && isOpenTraining) {
     externalParticipantLimit = resolveLegacyTrainingExternalLimit(eventLike);
   }
-  // R8 (D3) — LE REPLI NE S'HERITE PLUS DU MODE INTERNE.
+  // S11 (vague S) — REGLE CORRIGEE PAR ADEL LE 2026-08-25 : IL N'Y A PLUS DE
+  // MODE A RESOUDRE, IL N'Y EN A PLUS QU'UN.
   //
-  // Il recopiait `validationMode`, dont le defaut du tunnel est 'auto' : un
-  // organisateur qui n'avait rien dit sur les externes se retrouvait donc a les
-  // laisser entrer SANS validation, sans l'avoir demande une seule fois. Le
-  // repli sur qui l'on ne sait rien doit fermer la porte, pas l'ouvrir.
+  // R8 avait rendu le REPLI strict ; S11 va au bout : la valeur stockee n'est
+  // plus lue du tout. Les demandes exterieures sont validees a la main,
+  // toujours, et le serveur le FORCE sur ses trois portes d'entree.
   //
-  // ⚠️ LE JUMEAU SERVEUR N'A PAS BOUGE (decision A du 24/08, qui le gele) :
-  // `admin/src/api/event/utils/training-open-config.js` porte encore l'heritage,
-  // et `admin/src/bootstrap/maintenance.js` l'a deja grave en base sur les
-  // vieux entrainements. Ce que l'app ENREGISTRE fait foi ensuite : au premier
-  // enregistrement, 'manual' part explicitement dans la charge utile et les
-  // deux cotes se rejoignent.
-  const externalParticipantValidationMode = storedExternalValidationMode
-    || (isOpenTraining ? 'manual' : null);
+  // 🎯 POURQUOI IGNORER LE STOCKE PLUTOT QUE DE LE MIGRER : la decision D3
+  // interdit toute migration (liste noire R4). Un vieil entrainement porte
+  // peut-etre encore 'auto' en base — le serveur n'en tient plus compte, et
+  // l'app ne doit pas afficher le contraire de ce qui se passera. C'est ce que
+  // lit la fiche d'evenement pour dire QUI valide, sans etre editee.
+  const externalParticipantValidationMode = isOpenTraining ? 'manual' : null;
 
   return {
     externalParticipantLimit,
