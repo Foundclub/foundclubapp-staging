@@ -1422,6 +1422,8 @@ export default {
       cardOpenTitle: 'Entraînement ouvert',
       goToExternals: 'Voir les participants externes',
       goToPending: 'Voir les demandes',
+      // S11-bis (GO Adel 25/08) — le raccourci sur la carte privee.
+      openCta: 'Ouvrir l’entraînement au public',
       pendingSuffix: '{{pending}} demande(s) à vérifier',
       publicLine: 'Accueille {{quota}} joueur·se·s de l’extérieur · {{taken}} place(s) prise(s)',
       seatsLeft: '{{left}} place(s) externe(s) restante(s) sur {{quota}}',

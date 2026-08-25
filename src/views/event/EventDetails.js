@@ -225,24 +225,25 @@ const clampParticipants = (value) => (
  * @param {object} props
  * @param {any} props.Alignments
  * @param {any} props.ApplicationStyle
- * @param {any} props.Colors
  * @param {any} props.Fonts
  * @param {any} props.Spaces
  * @param {number | null | undefined} props.initialLimit
- * @param {'auto' | 'manual' | null | undefined} props.initialValidationMode
  * @param {boolean} props.isSubmitting
  * @param {boolean} props.isVisible
  * @param {() => void} props.onClose
  * @param {(payload: { externalParticipantLimit: number; externalParticipantValidationMode: 'auto' | 'manual' }) => void} props.onSubmit
  * @returns {import('react').ReactElement}
  */
+// S11-bis / reliquat S11 — LA FEUILLE NE PROPOSE PLUS DE CHOISIR LA VALIDATION.
+// Depuis la regle corrigee par Adel le 2026-08-25, les demandes exterieures sont
+// validees a la main TOUJOURS, et le serveur le force sur ses trois portes.
+// Garder le choix ici, c'etait garder un bouton dont la valeur etait ignoree.
+// `Colors` disparait avec lui : c'etait son seul usage dans cette feuille.
 function TrainingOpenBottomSheet({
   Alignments,
   ApplicationStyle,
-  Colors,
   Fonts,
   initialLimit,
-  initialValidationMode,
   isSubmitting,
   isVisible,
   onClose,
@@ -254,15 +255,11 @@ function TrainingOpenBottomSheet({
     [initialLimit],
   );
   const [limitValue, setLimitValue] = useState(resolveInitialLimit);
-  const [validationMode, setValidationMode] = useState(
-    initialValidationMode === 'auto' ? 'auto' : 'manual',
-  );
 
   useEffect(() => {
     if (!isVisible) return;
     setLimitValue(resolveInitialLimit());
-    setValidationMode(initialValidationMode === 'auto' ? 'auto' : 'manual');
-  }, [initialValidationMode, isVisible, resolveInitialLimit]);
+  }, [isVisible, resolveInitialLimit]);
 
   const canDecreaseLimit = limitValue > MIN_PARTICIPANTS;
   const canIncreaseLimit = limitValue < MAX_PARTICIPANTS;
@@ -290,7 +287,7 @@ function TrainingOpenBottomSheet({
         <View style={[Spaces.gap[4]]}>
           <Text style={[Fonts.h3Bold, Fonts.neutral00]}>Ouvrir l entraînement</Text>
           <Text style={[Fonts.p2, Fonts.neutral100]}>
-            Définis combien de joueurs externes peuvent rejoindre cet entraînement, puis choisis leur mode de validation.
+            Définis combien de joueurs externes peuvent rejoindre cet entraînement.
           </Text>
         </View>
 
@@ -324,37 +321,11 @@ function TrainingOpenBottomSheet({
           </View>
         </View>
 
-        <View style={[Spaces.gap[8]]}>
-          <Text style={[Fonts.p3Bold, Fonts.neutral00]}>Validation des joueurs externes</Text>
-          <View style={[Alignments.row, Spaces.gap[8]]}>
-            {[
-              { key: 'auto', label: 'Automatique' },
-              { key: 'manual', label: 'Manuelle' },
-            ].map((option) => {
-              const selected = validationMode === option.key;
-              return (
-                <TouchableOpacity
-                  key={option.key}
-                  onPress={() => setValidationMode(option.key)}
-                  style={[
-                    ApplicationStyle.card,
-                    Spaces.paddingHorizontal[16],
-                    Spaces.paddingVertical[12],
-                    {
-                      backgroundColor: selected ? `${Colors.primary500}18` : 'transparent',
-                      borderColor: selected ? Colors.primary500 : `${Colors.primary500}44`,
-                      borderRadius: 999,
-                      borderWidth: 1,
-                    },
-                  ]}
-                >
-                  <Text style={[Fonts.p2Bold, selected ? Fonts.primary500 : Fonts.neutral100]}>
-                    {option.label}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
+        <View style={[Spaces.gap[4]]}>
+          <Text style={[Fonts.p3Bold, Fonts.neutral00]}>Demandes extérieures</Text>
+          <Text style={[Fonts.p2, Fonts.neutral100]}>
+            Les demandes extérieures sont validées par toi.
+          </Text>
         </View>
 
         <View style={[Spaces.gap[12], Spaces.marginTop[8]]}>
@@ -363,7 +334,9 @@ function TrainingOpenBottomSheet({
             isLoading={isSubmitting}
             onPress={() => onSubmit({
               externalParticipantLimit: limitValue,
-              externalParticipantValidationMode: validationMode,
+              // S11 — la seule valeur possible. Le serveur l'imposerait de toute
+              // facon ; l'envoyer explicitement garde la base d'accord avec lui.
+              externalParticipantValidationMode: 'manual',
             })}
             title="Confirmer l ouverture"
             variant="Primary"
@@ -6188,8 +6161,15 @@ function EventDetails({ navigation, route }) {
   //
   // ⛔ AUCUN BOUTON MUET (regle 5 du pack) : sans participant externe et sans
   //    demande, la file n'existe pas — le bouton non plus.
-  // ⛔ L'ACTION d'ouvrir / de fermer n'est PAS ici : elle vit dans le menu ⋯
-  //    depuis N7 item 4. Cette carte AFFICHE un etat, elle ne le bascule pas.
+  // 🔁 S11-bis (GO Adel du 2026-08-25) — CETTE REGLE DE N7 A ETE REVUE, ET PAR
+  //    LUI : « il manque sur la page detail de l'evenement entrainement un
+  //    bouton pour ouvrir l'entrainement au public ». La carte porte donc
+  //    desormais UN raccourci, et un seul : ouvrir, quand c'est ferme.
+  //    · FERMER reste dans le menu ⋯ (N7 item 4) — on n'y touche pas ;
+  //    · le raccourci ne DUPLIQUE rien : il ouvre la MEME feuille que la rangee
+  //      du menu, laquelle demande deja les places et enregistre ;
+  //    · il ne touche pas a la validation : depuis S11 les demandes
+  //      exterieures sont validees a la main, toujours, et le serveur le force.
   const renderTrainingOpeningCard = () => {
     const quota = Number(trainingOpenConfig.externalParticipantLimit || 0);
     const taken = externalParticipationSection?.participating?.length || 0;
@@ -6208,7 +6188,6 @@ function EventDetails({ navigation, route }) {
     // ⛔ Un entrainement ferme, ou ouvert sans quota, ne promet aucune place :
     // « 0 place restante sur 0 » serait pire que le silence (motif N1).
     const showSeats = Boolean(trainingOpenConfig.isOpenTraining && quota > 0);
-    const isAutoValidation = trainingOpenConfig.externalParticipantValidationMode === 'auto';
 
     return (
       <View
@@ -6253,17 +6232,19 @@ function EventDetails({ navigation, route }) {
           </Text>
         ) : null}
 
+        {/* S11 — UNE SEULE PHRASE POSSIBLE DESORMAIS. La branche « validation
+            automatique » etait devenue INATTEIGNABLE : `resolveTrainingOpenConfig`
+            rend toujours 'manual' pour un entrainement ouvert, et le serveur le
+            force de son cote. Afficher un `if` dont une moitie ne peut plus
+            arriver, c'est laisser croire qu'elle le peut encore.
+            🔑 La clef `eventDetails.openTraining.validationAuto` reste dans
+            fr.js : aucune clef ne se supprime (controle des ENSEMBLES). */}
         {showSeats ? (
           <Text style={[Fonts.p3, Fonts.neutral200]}>
-            {isAutoValidation
-              ? t(
-                'eventDetails.openTraining.validationAuto',
-                'Validation automatique : les demandes sont acceptées toutes seules.',
-              )
-              : t(
-                'eventDetails.openTraining.validationManual',
-                'Validation manuelle : c’est toi qui acceptes chaque demande.',
-              )}
+            {t(
+              'eventDetails.openTraining.validationManual',
+              'Validation manuelle : c’est toi qui acceptes chaque demande.',
+            )}
           </Text>
         ) : null}
 
@@ -6284,6 +6265,21 @@ function EventDetails({ navigation, route }) {
               ? t('eventDetails.openTraining.goToPending', 'Voir les demandes')
               : t('eventDetails.openTraining.goToExternals', 'Voir les participants externes')}
             variant="SecondaryLight"
+          />
+        ) : null}
+
+        {/* S11-bis — LE RACCOURCI D'ADEL. Il ne parait que sur un entrainement
+            FERME : ouvrir ce qui est deja ouvert ne menerait nulle part (regle
+            5 du pack, « aucun bouton muet »).
+            🔒 Pas de garde de droit ici, et c'est voulu : la carte entiere est
+            deja rendue sous `canManageTrainingVisibility` (voir son point de
+            montage). En rajouter une seconde ferait croire qu'elle protege
+            quelque chose de plus. Un temoin le prouve cote lecteur. */}
+        {!trainingOpenConfig.isOpenTraining ? (
+          <Button
+            onPress={() => setIsTrainingOpenModalVisible(true)}
+            title={t('eventDetails.openTraining.openCta', 'Ouvrir l’entraînement au public')}
+            variant="Primary"
           />
         ) : null}
       </View>
@@ -8685,10 +8681,8 @@ function EventDetails({ navigation, route }) {
       <TrainingOpenBottomSheet
         Alignments={Alignments}
         ApplicationStyle={ApplicationStyle}
-        Colors={Colors}
         Fonts={Fonts}
         initialLimit={trainingOpenConfig.externalParticipantLimit}
-        initialValidationMode={trainingOpenConfig.externalParticipantValidationMode}
         isSubmitting={mutations.updateEventNoNavMutation.isPending}
         isVisible={isTrainingOpenModalVisible}
         onClose={() => setIsTrainingOpenModalVisible(false)}

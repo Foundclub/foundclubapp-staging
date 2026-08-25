@@ -172,7 +172,6 @@ function EventDetails({ navigation, route }) {
   const [actionError, setActionError] = useState('');
   const [isTrainingSettingsVisible, setIsTrainingSettingsVisible] = useState(false);
   const [trainingOpenLimitDraft, setTrainingOpenLimitDraft] = useState('');
-  const [trainingOpenValidationDraft, setTrainingOpenValidationDraft] = useState('manual');
   const creationCelebrationShownRef = useRef(false);
 
   useEffect(() => {
@@ -749,12 +748,8 @@ function EventDetails({ navigation, route }) {
         ? String(trainingOpenConfig.externalParticipantLimit)
         : '',
     );
-    setTrainingOpenValidationDraft(
-      trainingOpenConfig.externalParticipantValidationMode || 'manual',
-    );
   }, [
     trainingOpenConfig.externalParticipantLimit,
-    trainingOpenConfig.externalParticipantValidationMode,
     trainingOpenConfig.isTraining,
   ]);
 
@@ -908,7 +903,9 @@ function EventDetails({ navigation, route }) {
     try {
       await updateTrainingMutation.mutateAsync({
         externalParticipantLimit,
-        externalParticipantValidationMode: trainingOpenValidationDraft === 'auto' ? 'auto' : 'manual',
+        // S11 — la seule valeur possible : le serveur force le manuel pour les
+        // demandes exterieures, quoi qu'on lui envoie.
+        externalParticipantValidationMode: 'manual',
         sessionStatus: 'open',
       });
     } catch (mutationError) {
@@ -917,7 +914,6 @@ function EventDetails({ navigation, route }) {
   }, [
     eventId,
     trainingOpenLimitDraft,
-    trainingOpenValidationDraft,
     updateTrainingMutation,
   ]);
 
@@ -1493,26 +1489,16 @@ function EventDetails({ navigation, route }) {
                         />
                       </label>
 
-                      <label style={{ display: 'grid', gap: 8 }}>
-                        <span style={{ color: mutedTextColor, fontSize: 13 }}>Validation des joueurs externes</span>
-                        <select
-                          onChange={(eventObject) => setTrainingOpenValidationDraft(eventObject.target.value)}
-                          style={{
-                            background: 'rgba(255,255,255,0.03)',
-                            border: `1px solid ${borderColor}`,
-                            borderRadius: 14,
-                            color: textColor,
-                            fontFamily: 'Montserrat-Regular, sans-serif',
-                            fontSize: 14,
-                            outline: 'none',
-                            padding: '12px 14px',
-                          }}
-                          value={trainingOpenValidationDraft}
-                        >
-                          <option value="auto">Automatique</option>
-                          <option value="manual">Manuelle</option>
-                        </select>
-                      </label>
+                      {/* S11 — plus un choix, une information : le serveur met
+                          toute demande venue du dehors en attente. */}
+                      <div style={{ display: 'grid', gap: 4 }}>
+                        <span style={{ color: mutedTextColor, fontSize: 13 }}>
+                          Demandes extérieures
+                        </span>
+                        <span style={{ color: mutedTextColor, fontSize: 13 }}>
+                          Les demandes extérieures sont validées par toi.
+                        </span>
+                      </div>
 
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
                         <button
