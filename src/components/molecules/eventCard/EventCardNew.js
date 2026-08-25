@@ -15,6 +15,7 @@ import LinearGradient from 'react-native-linear-gradient';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 
 import useAuth from '@/domains/auth/useAuth';
+import { estDuClubOrganisateur } from '@/domains/event/eventDisplayName';
 import { resolveTrainingOpenConfig } from '@/domains/event/eventUseCases';
 import { getCurrentUserEventParticipationState } from '@/domains/event/participationState';
 import useEvent from '@/domains/event/useEvent';
@@ -211,7 +212,7 @@ const formatStagePeriodLabel = (startValue, endValue) => {
 /**
  * Titre principal en mode planning (adversaire d'abord pour un match).
  * @param {{
- *   clubName: string, eventTitle: string, invitedTeamNames: string[],
+ *   clubName: string, eventTitle: string, invitedOpponentNames: string[],
  *   isMatchEvent: boolean, matchContext: any, teamName: string,
  * }} params - Contexte du titre.
  * @returns {string} - Titre principal de la carte planning.
@@ -219,7 +220,7 @@ const formatStagePeriodLabel = (startValue, endValue) => {
 const resolveTeamFocusedPrimaryTitle = ({
   clubName,
   eventTitle,
-  invitedTeamNames,
+  invitedOpponentNames,
   isMatchEvent,
   matchContext,
   teamName,
@@ -234,8 +235,12 @@ const resolveTeamFocusedPrimaryTitle = ({
   const opponentFromTitle = stripMatchPrefix(eventTitle);
   if (opponentFromTitle) return opponentFromTitle;
 
+  // ⚠️ `invitedOpponentNames` a DEJA ete filtre par la regle « meme club »
+  // (voir plus bas, au montage de la carte). Ce repli ne compare donc plus
+  // que des noms — ce qui est exactement son role — sans jamais pouvoir
+  // designer une equipe de notre propre club comme adversaire (S7).
   const normalizedTeamName = normalizeComparableText(teamName);
-  const invitedOpponent = invitedTeamNames.find((name) => (
+  const invitedOpponent = invitedOpponentNames.find((name) => (
     normalizeComparableText(name) && normalizeComparableText(name) !== normalizedTeamName
   ));
   if (invitedOpponent) return invitedOpponent;
@@ -505,14 +510,29 @@ function EventCardNew({
   const defaultTeamMetaLine = [teamCategory, teamSection, teamLevel]
     .filter((value) => !!value)
     .join(' • ');
-  const invitedTeamNames = (item?.invitedTeams || [])
+  const invitedTeams = Array.isArray(item?.invitedTeams) ? item.invitedTeams : [];
+  // 📋 TOUTES les equipes conviees : c'est la liste que la carte par defaut
+  // affiche telle quelle (« equipes invitees: … »). Elle ne se filtre pas —
+  // une equipe interne conviee reste une equipe conviee.
+  const invitedTeamNames = invitedTeams
+    .map((team) => team?.name)
+    .filter(Boolean);
+  // 🧨 S7 — CELLES QUI PEUVENT ETRE L ADVERSAIRE, et elles seules.
+  // Le repli du titre planning ne comparait que des NOMS : c'etait la 4e
+  // copie de « qui est l'adversaire », et la seule que R2 n'avait pas
+  // corrigee. On REFERENCE ici la regle unique de `eventDisplayName.js`
+  // plutot que d'en ecrire une cinquieme version.
+  // ⚖️ Elle exige les DEUX clubs connus et egaux : sans club (ancien parc,
+  // charge utile compacte), rien n'est filtre et le comportement d'avant reste.
+  const invitedOpponentNames = invitedTeams
+    .filter((team) => !estDuClubOrganisateur(team, item))
     .map((team) => team?.name)
     .filter(Boolean);
   const primaryTitle = isTeamFocusedCard
     ? resolveTeamFocusedPrimaryTitle({
       clubName,
       eventTitle,
-      invitedTeamNames,
+      invitedOpponentNames,
       isMatchEvent,
       matchContext: item?.matchContext,
       teamName,
