@@ -7,6 +7,7 @@ import {
 import { useTranslation } from 'react-i18next';
 import {
   Alert,
+  Dimensions,
   Image,
   InteractionManager,
   KeyboardAvoidingView,
@@ -6304,11 +6305,34 @@ function EventDetails({ navigation, route }) {
   const renderManageSheet = () => {
     if (!hasManageActions) return null;
 
+    // S2-bis — LE PLAFOND SE MESURE SUR LA HAUTEUR UTILISABLE, PAS SUR LA DALLE.
+    //
+    // Retour de recette du 25/08 : la feuille s affiche entiere SAUF « Annuler »,
+    // coupee au ras du bord bas, la barre de gestes par-dessus.
+    //
+    // ⛔ Ce n est PAS une marge basse qui manque : `BottomModal` pose deja
+    // `paddingBottom = 40 + insets.bottom` sur son contenu defilant. C est encore
+    // une mesure fausse — son plafond se calcule sur `Dimensions.get('screen')`,
+    // la DALLE ENTIERE, barre d etat et barre de gestes comprises. A 90 % de la
+    // dalle, la zone defilante peut donc etre PLUS HAUTE que la fenetre
+    // affichable : son bas sort de l ecran, et rien ne defile puisque, de son
+    // point de vue, elle ne deborde pas.
+    //
+    // ✅ On lui demande donc la fraction de DALLE qui vaut 90 % de FENETRE.
+    // Sur un ecran ou les deux se valent, `Math.min` garde 90 % : non-evenement.
+    // ⛔ Rien a changer dans `BottomModal` : ses 69 autres appelants ne bougent
+    // pas, et aucun d eux ne passe cette prop.
+    const hauteurDalle = Dimensions.get('screen').height;
+    const hauteurFenetre = Dimensions.get('window').height;
+    const plafondUtile = hauteurDalle > 0
+      ? Math.min(0.9, (hauteurFenetre / hauteurDalle) * 0.9)
+      : 0.9;
+
     return (
       <BottomModal
         close={() => setIsEventActionsSheetOpen(false)}
         isVisible={isEventActionsSheetOpen}
-        maxContentHeightRatio={0.9}
+        maxContentHeightRatio={plafondUtile}
       >
         {/* Le titre est le PREMIER enfant du contenu : c est ce qui le fait
             entrer dans la mesure de la feuille. Les marges rendent l espacement
