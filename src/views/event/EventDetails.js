@@ -6278,25 +6278,48 @@ function EventDetails({ navigation, route }) {
   // libelles. Seul le CONTENANT change — l'accordeon vivait au milieu de la
   // colonne, ferme par defaut, et il fallait defiler pour le trouver.
   //
-  // `snapPoints` reste ABSENT a dessein : la feuille porte un en-tete et AUCUN
-  // pied, cas ou le dimensionnement dynamique de `BottomModal` suffit
-  // (`BottomModal.js:297`, `enableDynamicSizing={!snapPoints}`). C'est
-  // l'association en-tete + pied qui exige des `snapPoints` (piege paye au lot
-  // D19, meme choix qu'AC01 sur `TeamDetails.js:4561`).
+  // ⚠️ S2 — POURQUOI LE TITRE VIT DANS LE CONTENU, ET NON EN `headerComponent`.
+  //
+  // En dimensionnement dynamique (`BottomModal.js:307`,
+  // `enableDynamicSizing={!snapPoints}`), la bibliotheque taille la feuille sur
+  // la hauteur du CONTENU DEFILANT SEUL. Un `headerComponent` fixe n entre
+  // JAMAIS dans cette mesure : la feuille etait donc trop courte de la hauteur
+  // du titre (~64 pt, reconnaissance du 25/08), et ce sont les DERNIERES
+  // rangees qui sortaient du cadre — « Annuler l'evenement » en tete.
+  //
+  // 🧨 ET ELLES N ETAIENT PAS RATTRAPABLES AU DOIGT : du point de vue de la zone
+  // defilante, rien ne deborde — sa fenetre vaut exactement son contenu, donc
+  // aucune course de defilement. C est ce qui rendait le defaut si etrange a
+  // decrire : « coupe en bas » ET « ne defile pas », en meme temps.
+  //
+  // ⛔ LE COMMENTAIRE QUI VIVAIT ICI AFFIRMAIT L INVERSE (« en-tete sans pied :
+  // le dimensionnement dynamique suffit ») et renvoyait a une ligne qui a bouge
+  // depuis. La regle vraie, et elle est simple : en dimensionnement dynamique,
+  // AUCUN element porteur de hauteur ne doit vivre hors du contenu.
+  //
+  // ⛔ `snapPoints` reste ABSENT a dessein : il reglerait la hauteur, mais
+  // figerait aussi la feuille a 90 % de l'ecran quand il n y a que deux actions
+  // a montrer. Et le corriger ici ne touche PAS `BottomModal`, donc aucun de ses
+  // 69 autres appelants ne bouge.
   const renderManageSheet = () => {
     if (!hasManageActions) return null;
 
     return (
       <BottomModal
         close={() => setIsEventActionsSheetOpen(false)}
-        headerComponent={(
-          <Text style={[Fonts.h5Bold, Fonts.neutral00]}>
-            {t('eventDetails.managePanel.title', "Gérer l'événement")}
-          </Text>
-        )}
         isVisible={isEventActionsSheetOpen}
         maxContentHeightRatio={0.9}
       >
+        {/* Le titre est le PREMIER enfant du contenu : c est ce qui le fait
+            entrer dans la mesure de la feuille. Les marges rendent l espacement
+            que le bandeau fixe donnait avant (12 de la feuille + 12 = 24 en
+            haut, 16 avant les rangees) — a l oeil, rien ne bouge. */}
+        <Text
+          style={[Fonts.h5Bold, Fonts.neutral00, Spaces.marginTop[12], Spaces.marginBottom[16]]}
+          testID="event-manage-title"
+        >
+          {t('eventDetails.managePanel.title', "Gérer l'événement")}
+        </Text>
         <View
           style={[
             ApplicationStyle.borderWidth1,

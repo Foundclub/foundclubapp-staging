@@ -63,6 +63,12 @@ const mergeUniqueEvents = (...collections) => {
     });
 };
 
+// La hauteur d une carte d evenement. Elle etait ecrite trois fois en clair
+// dans ce fichier ; elle sert desormais aussi aux cartes en attente (D6), et
+// c est justement parce que les deux valeurs doivent rester EGALES que la
+// liste ne saute pas au moment ou les donnees arrivent.
+const HAUTEUR_CARTE_EVENEMENT = 184;
+
 /**
  * @param {{ height?: number, width?: import('react-native').ViewStyle['width'] }} props
  * @returns {import('react').ReactElement}
@@ -72,6 +78,34 @@ function DeferredFallback({
   width = '100%',
 }) {
   return <View style={{ height, width }} />;
+}
+
+/**
+ * Une carte en attente : la FORME de ce qui arrive.
+ *
+ * Elle remplace la petite phrase grise « Mise a jour des evenements... », qui
+ * disait qu il se passait quelque chose sans jamais dire QUOI ni COMBIEN.
+ * Sa hauteur est celle des vraies cartes : la liste ne saute donc pas quand
+ * elles arrivent.
+ *
+ * ⛔ Pas de `SkeletonLoader` ici, et ce n est pas un oubli : il tire Reanimated,
+ * MaskedView et LinearGradient, et il fait tourner une animation en boucle. Sur
+ * l ecran qu on est justement en train d'alleger, une forme immobile suffit.
+ * @returns {import('react').ReactElement}
+ */
+function CarteEnAttente() {
+  const { ApplicationStyle } = useTheme();
+
+  return (
+    <View
+      style={[
+        ApplicationStyle.backgroundColor.primary700,
+        ApplicationStyle.borderRadius24,
+        { height: HAUTEUR_CARTE_EVENEMENT },
+      ]}
+      testID="planning-skeleton-card"
+    />
+  );
 }
 
 /**
@@ -108,13 +142,31 @@ function ParticipantEventList({ navigation }) {
 
   // Hooks
 
+  // S8 (D5) — ON NE DEMANDE PLUS TOUS LES PARTICIPANTS POUR N EN LIRE QU UN.
+  //
+  // Sans `viewerDocumentId`, le populate compact du serveur
+  // (`eventService.js`, `buildViewerScopedUserRelation`) renvoie
+  // `participations`, `missings` et `participationRequests` de TOUS les
+  // participants, pour CHAQUE evenement de la page — alors que les cartes n y
+  // cherchent que la ligne du spectateur. Avec, le serveur filtre : au plus une
+  // ligne par evenement.
+  //
+  // ⚠️ CE QUE CA COUTE, ET IL FAUT LE SAVOIR : le compteur `participations.length`
+  // que lisent la jauge « inscrits / capacite » et les gardes « evenement
+  // complet » ne voit plus qu une ligne. `EventListContent` vit DEJA avec cette
+  // degradation sur les MEMES cartes ; on fait pareil ici, sciemment.
+  // ⚠️ Ca change aussi la CLE de la requete : le premier affichage part d'un
+  // cache froid. Une seule fois.
+  const userDocumentId = userData?.documentId;
+
   const myEventsQueryConfig = useMemo(() => ({
     compact: true,
     // @ts-ignore
     myTeams: true,
     sort: 'date:asc',
     startDateAfter: listStartDateAfter,
-  }), [listStartDateAfter]);
+    ...(userDocumentId ? { viewerDocumentId: userDocumentId } : {}),
+  }), [listStartDateAfter, userDocumentId]);
 
   // @ts-ignore
   const {
@@ -161,7 +213,8 @@ function ParticipantEventList({ navigation }) {
     pageSize: 5,
     sessionStatus: 'open',
     startDateAfter: listStartDateAfter,
-  }), [allClubIds, listStartDateAfter]);
+    ...(userDocumentId ? { viewerDocumentId: userDocumentId } : {}),
+  }), [allClubIds, listStartDateAfter, userDocumentId]);
 
   const {
     data: featuredData,
@@ -426,7 +479,7 @@ function ParticipantEventList({ navigation }) {
     if (item.reservation) {
       return (
         <View style={[Spaces.marginBottom[16]]}>
-          <Suspense fallback={<DeferredFallback height={184} />}>
+          <Suspense fallback={<DeferredFallback height={HAUTEUR_CARTE_EVENEMENT} />}>
             <EventCardNew
               item={item.reservation}
               // @ts-ignore
@@ -443,7 +496,7 @@ function ParticipantEventList({ navigation }) {
     }
     return (
       <View style={[Spaces.marginBottom[16]]}>
-        <Suspense fallback={<DeferredFallback height={184} />}>
+        <Suspense fallback={<DeferredFallback height={HAUTEUR_CARTE_EVENEMENT} />}>
           <EventCardNew
             displayProfile="teamFocused"
             item={item}
@@ -570,11 +623,11 @@ function ParticipantEventList({ navigation }) {
                 selectedDate={listStartDate}
               />
             </Suspense>
-            {(!shouldLoadEventFeed || isEventsLoading || (shouldLoadFeaturedFeed && isFeaturedLoading)) && (
-              <Text style={[Fonts.p4, Fonts.neutral300, Spaces.marginTop[8]]}>
-                Mise à jour des événements...
-              </Text>
-            )}
+            {(!shouldLoadEventFeed || isEventsLoading || (shouldLoadFeaturedFeed && isFeaturedLoading)) ? (
+              <View style={[Spaces.marginTop[16], Spaces.gap[12]]}>
+                {[0, 1, 2].map((rang) => <CarteEnAttente key={rang} />)}
+              </View>
+            ) : null}
           </View>
         ) : null}
       </View>
@@ -583,10 +636,8 @@ function ParticipantEventList({ navigation }) {
     Alignments.alignCenter,
     Alignments.justifySpaceBetween,
     Alignments.row,
-    Fonts.p4,
     Fonts.h3,
     Fonts.neutral00,
-    Fonts.neutral300,
     Spaces.gap,
     Spaces.marginBottom,
     Spaces.marginTop,
