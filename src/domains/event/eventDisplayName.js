@@ -93,8 +93,12 @@ const cleClubOrganisateur = (eventLike) => cleEntite(
  * @param {any} equipe Equipe invitee.
  * @param {any} eventLike Evenement, tel que l'API le sert.
  * @returns {boolean} Vrai seulement si les deux clubs sont connus et egaux.
+ *
+ * 🔓 EXPORTE depuis S7 : la carte « Mon planning » portait une 4e copie de
+ * cette comparaison (`EventCardNew.js`, repli du titre). Elle la REFERENCE
+ * desormais au lieu de la recopier — la regle reste ecrite ici, une fois.
  */
-const estDuClubOrganisateur = (equipe, eventLike) => {
+export const estDuClubOrganisateur = (equipe, eventLike) => {
   const clubOrganisateur = cleClubOrganisateur(eventLike);
   const clubDeLEquipe = cleEntite(equipe?.club);
   return Boolean(clubOrganisateur && clubDeLEquipe && clubOrganisateur === clubDeLEquipe);
