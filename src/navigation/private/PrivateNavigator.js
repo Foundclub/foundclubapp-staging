@@ -529,30 +529,13 @@ function PrivateNavigator() {
             headerShown: false,
           }}
         />
-        {/*
-          S9, vague S — LE PARCOURS MEMBRE « MES COTISATIONS », TROIS ECRANS.
-          Les trois portent LEUR PROPRE barre du haut (retour + titre + menu),
-          que le pack dessine : `headerShown: false` partout.
-          🚦 Le DETAIL n est enregistre QUE dans cette pile, jamais dans
-          `SearchStack` — c est ce qui CACHE LE DOCK (decision D5 du pack) sans
-          une ligne de configuration : `SearchStack.js:12` existe justement
-          « to keep bottom tab bar visible ». Une route hors des onglets n a pas
-          de dock. La liste et l archive, elles, sont dans les deux piles.
-        */}
         <Stack.Screen
-          getComponent={() => require('@/views/license/MyLicenses').default}
-          name={RouteNames.MyLicenses}
-          options={{ headerShown: false }}
-        />
-        <Stack.Screen
-          getComponent={() => require('@/views/license/MyLicensesArchive').default}
-          name={RouteNames.MyLicensesArchive}
-          options={{ headerShown: false }}
-        />
-        <Stack.Screen
-          getComponent={() => require('@/views/license/MyLicenseDetail').default}
+          getComponent={() => require('@/views/license/MyLicense').default}
           name={RouteNames.MyLicense}
-          options={{ headerShown: false }}
+          options={{
+            ...commonOptions,
+            headerTitle: 'Ma cotisation',
+          }}
         />
         <Stack.Screen
           getComponent={() => require('@/views/guidance/GuideOffersRecap').default}

@@ -841,17 +841,10 @@ export const resolveNotificationDestination = (rawPayload = {}) => {
     case NOTIFICATION_TYPES.LICENSE_PAYMENT_REJECTED:
     case NOTIFICATION_TYPES.LICENSE_PAYMENT_REMINDER:
     case NOTIFICATION_TYPES.LICENSE_PAYMENT_SUBMITTED:
-      // S9, vague S — UNE NOTIFICATION DE COTISATION SAIT OU ELLE VA.
-      // Avec un `assignmentId`, elle ouvre LE DETAIL de la cotisation
-      // concernee ; sans lui, elle depose sur la LISTE, qui est l entree du
-      // parcours. ⛔ Jamais un detail sans identifiant : ce serait un ecran
-      // vide au bout d une notification.
-      return adaptDestinationForCurrentPlatform(payload, payload.assignmentId
-        ? {
-          params: { assignmentId: String(payload.assignmentId) },
-          route: RouteNames.MyLicense,
-        }
-        : { params: {}, route: RouteNames.MyLicenses });
+      return adaptDestinationForCurrentPlatform(payload, {
+        params: payload.assignmentId ? { assignmentId: String(payload.assignmentId) } : {},
+        route: RouteNames.MyLicense,
+      });
     case NOTIFICATION_TYPES.NEW_GROUP_MESSAGE:
     case NOTIFICATION_TYPES.NEW_LEAGUE_MATCH_MESSAGE:
     case NOTIFICATION_TYPES.NEW_TEAM_MESSAGE:

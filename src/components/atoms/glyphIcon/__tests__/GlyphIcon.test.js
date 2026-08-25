@@ -24,32 +24,11 @@ import GlyphIcon from '../GlyphIcon';
 // vert et l'ecran n'afficherait rien du tout. Un glyphe se prouve par sa
 // GEOMETRIE, jamais par le fait qu'un `Svg` sorte du rendu.
 
-// S9, vague S — les 18 glyphes du pack « Mes cotisations » entrent dans la
-// MEME liste, donc sous les MEMES quatre temoins. Un glyphe ajoute sans
-// geometrie, sans couleur ou sans taille tombe au rouge ici, pas a l ecran.
 const NOMS = [
   'arrowDownToBracket',
-  'ban',
-  'calendar',
-  'calendarDays',
   'chartColumn',
-  'chevronLeft',
-  'chevronRight',
-  'circleCheck',
-  'circleInformation',
-  'clock',
-  'creditCard',
   'dotsVertical',
-  'envelope',
-  'euroCircle',
-  'fileArrowUp',
-  'fileCheck',
-  'gift',
-  'hourglass',
-  'idCard',
-  'landmark',
   'lock',
-  'receiptAlt',
   'triangleExclamation',
   'wifiSlash',
 ];

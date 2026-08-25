@@ -1313,7 +1313,7 @@ function HomeHubContent({ auth, navigation, route }) {
   }, [clubId, navigation, showBanner, t]);
 
   const handleOpenMyLicense = useCallback(() => {
-    navigation.navigate(RouteNames.MyLicenses);
+    navigation.navigate(RouteNames.MyLicense);
   }, [navigation]);
 
   const handleOpenRequestsHub = useCallback((/** @type {any} */ initialFilter = 'all') => {

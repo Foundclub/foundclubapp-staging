@@ -118,8 +118,6 @@ export const RouteNames = /** @type {const} */ ({
   MyClubs: 'MyClubs',
   MyEventList: 'MyEventList',
   MyLicense: 'MyLicense',
-  MyLicenses: 'MyLicenses',
-  MyLicensesArchive: 'MyLicensesArchive',
   MyTeamList: 'MyTeamList',
   NewConversation: 'NewConversation',
   NotificationDetails: 'NotificationDetails',

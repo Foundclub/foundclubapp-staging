@@ -42,19 +42,9 @@ function SearchStack() {
         getComponent={() => require('@/views/search/SearchHubRouteAlias').default}
         name={RouteNames.SearchRecruitment}
       />
-      {/*
-        S9, vague S — la LISTE et l ARCHIVE vivent aussi ici, dans l onglet :
-        ce sont des ecrans de CONSULTATION, le dock y reste (D5).
-        ⛔ Le DETAIL n y est PAS : il doit remonter a la pile racine pour que le
-        dock s efface pendant la tache.
-      */}
       <Stack.Screen
-        getComponent={() => require('@/views/license/MyLicenses').default}
-        name={RouteNames.MyLicenses}
-      />
-      <Stack.Screen
-        getComponent={() => require('@/views/license/MyLicensesArchive').default}
-        name={RouteNames.MyLicensesArchive}
+        getComponent={() => require('@/views/license/MyLicense').default}
+        name={RouteNames.MyLicense}
       />
       <Stack.Screen
         getComponent={() => require('@/views/license/LicenseCheckoutStatus').default}
