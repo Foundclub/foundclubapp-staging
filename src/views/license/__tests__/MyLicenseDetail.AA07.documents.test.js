@@ -56,6 +56,14 @@ jest.mock('@react-navigation/native', () => ({
   useNavigation: () => mockNavigationContexte,
 }));
 
+// S9-ter — le bouton flottant lit le retrait bas systeme. Meme mock que les
+// suites qui montent deja un calque (ClubDetails.AB05, ClubDetails.V01...).
+jest.mock('react-native-safe-area-context', () => ({
+  useSafeAreaInsets: () => ({
+    bottom: 0, left: 0, right: 0, top: 0,
+  }),
+}));
+
 jest.mock('@/theme/themeContext', () => {
   const couleurs = jest.requireActual('@/theme/colors').default();
   return {
