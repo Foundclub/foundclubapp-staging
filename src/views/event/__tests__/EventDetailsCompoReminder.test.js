@@ -236,6 +236,10 @@ jest.mock('@/components/atoms/button/Button', () => {
         accessibilityRole: 'button',
         disabled: Boolean(props.disabled || props.isLoading),
         onPress: props.onPress,
+        // 🔘 S5 (vague S) : la doublure relaie le VARIANT. Sans lui, « c est un
+        // vrai bouton » ne se mesure pas — un lien texte et un Button rendent
+        // tous les deux un pressable portant un libelle.
+        variant: props.variant,
       },
       react.createElement(rn.Text, null, props.title || ''),
     );
@@ -389,8 +393,11 @@ const ACTION_OFFRE = 'Voir l’offre Équipe';
 // 🕳️ R6 (vague R) — LE TROISIEME ETAT, celui qui manquait. Entre « rien » et
 // « publie » il y a le BROUILLON, et c'est l'etat le plus frequent : un coach
 // ouvre sa convocation, coche trois joueurs, et revient le lendemain.
-const TITRE_BROUILLON = 'Ta convocation est commencée';
-const ACTION_BROUILLON = 'Reprendre le brouillon';
+// ♻️ S5 (vague S) — LES MOTS D ADEL, MOT POUR MOT. Il en prepare PLUSIEURS (une
+// par equipe conviee), d ou le pluriel ; et « brouillon » est un mot d outil,
+// pas un mot de terrain. « Continuer » dit ce qui se passe au doigt.
+const TITRE_BROUILLON = 'Tes convocations sont commencées';
+const ACTION_BROUILLON = 'Continuer mes convocations';
 
 // 🚧 Le plafond de hauteur DECLAREE du bandeau. Ce n'est pas une mesure a
 // l'ecran (il faudrait un appareil) mais la somme des valeurs que le style
@@ -510,6 +517,20 @@ const pressableWithText = (/** @type {any} */ root, /** @type {string} */ label)
 
 const banner = (/** @type {any} */ root) => root
   .findAll((/** @type {any} */ node) => node.props?.testID === REMINDER_ID && node.type === View);
+
+/**
+ * 🔘 S5 — L action du bandeau, prise DANS le bandeau.
+ *
+ * ⛔ Pas `pressableWithText` : la page porte d autres pressables, et un libelle
+ * qui changerait de mot ferait passer ce juge a cote sans rien dire.
+ * @param {any} root - Racine du rendu.
+ * @returns {any} - Le pressable de l action, ou undefined.
+ */
+const actionDuBandeau = (/** @type {any} */ root) => {
+  const [node] = banner(root);
+  if (!node) throw new Error('Le bandeau de rappel n est pas rendu');
+  return node.findAllByType(TouchableOpacity)[0];
+};
 
 /**
  * Le rappel est-il rendu ? Un seul juge : le libelle que l'organisateur lit.
@@ -757,6 +778,27 @@ describe('C2 + R6 — le bandeau se tait sur une compo PUBLIEE, jamais sur un br
     });
 
     expect(rappelVisible(root)).toBe(false);
+  });
+
+  test('🔘 S5 : l action du bandeau est un VRAI bouton, pas un lien texte', () => {
+    // 🗣️ Adel, recette du 25/08 : « le lien texte devient un vrai bouton ».
+    // Ce qu il y avait : un `TouchableOpacity` nu portant du texte primary500.
+    // A l ecran, rien ne le designait comme la porte principale de l onglet —
+    // il se lisait comme une note de bas de bloc.
+    //
+    // ⛔ LE JUGE PORTE SUR LE VARIANT DEMANDE AU COMPOSANT PARTAGE, pas sur le
+    // texte : un lien et un `Button` rendent tous les deux un pressable portant
+    // un libelle. Lire le texte ne distinguerait donc PAS les deux, et ce
+    // temoin serait vert avant comme apres.
+    const root = mountScreen({
+      auth: asOrganiser(),
+      composition: { ...PAYLOAD_SANS_COMPO, draft: { mode: 'manual', teams: [] } },
+    });
+
+    const action = actionDuBandeau(root);
+
+    expect(action.props.variant).toBe('Primary');
+    expect(textOf(action)).toContain(ACTION_BROUILLON);
   });
 
   test('🔒 « ABSENT » N EST PAS « VIDE » : un brouillon sans joueur reste un brouillon', () => {

@@ -5917,13 +5917,19 @@ function EventDetails({ navigation, route }) {
       );
       compoReminderAction = t('eventDetails.compoReminder.offerAction', 'Voir l’offre Équipe');
     } else if (hasDraftOnlyComposition) {
+      // 🗣️ S5 (vague S) — LES MOTS D ADEL, MOT POUR MOT. Deux corrections dans
+      // la meme phrase : le PLURIEL (un coach prepare une convocation par equipe
+      // conviee, pas une seule), et « brouillon » qui disparait — c est un mot
+      // d outil, pas un mot de terrain. « Continuer » dit ce qui se passe au
+      // doigt. Seules les VALEURS changent : les clefs et la condition sont
+      // celles de R6.
       compoReminderTitle = t(
         'eventDetails.compoReminder.draftTitle',
-        'Ta convocation est commencée',
+        'Tes convocations sont commencées',
       );
       compoReminderAction = t(
         'eventDetails.compoReminder.draftAction',
-        'Reprendre le brouillon',
+        'Continuer mes convocations',
       );
     }
 
@@ -5947,15 +5953,19 @@ function EventDetails({ navigation, route }) {
         <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
           {compoReminderTitle}
         </Text>
-        <TouchableOpacity
-          accessibilityRole="button"
+        {/* 🔘 S5 (vague S) — UN VRAI BOUTON, PAS UN LIEN.
+            Ce qu il y avait : un pressable nu portant du texte primary500. A
+            l ecran il se lisait comme une note de bas de bloc, alors que c est
+            LA porte principale de l onglet « Convocation ».
+            ♻️ Meme handler, meme condition : seul l habillage change. Le
+            composant partage porte deja la cible tactile et le contraste
+            (encre primary900 sur primary500, THEME.md) — les redecrire ici
+            aurait fait un seizieme bouton maison a corriger un jour. */}
+        <Button
           onPress={canManageComposition ? handleManageComposition : handleOpenSubscriptionOverview}
-          style={[Spaces.paddingVertical[12], { alignSelf: 'flex-start' }]}
-        >
-          <Text style={[Fonts.p3Bold, Fonts.primary500]}>
-            {compoReminderAction}
-          </Text>
-        </TouchableOpacity>
+          title={compoReminderAction}
+          variant="Primary"
+        />
       </View>
     );
   };
