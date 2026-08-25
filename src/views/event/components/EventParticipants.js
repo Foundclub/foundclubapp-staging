@@ -1,4 +1,5 @@
 // @ts-nocheck
+import { useNavigation } from '@react-navigation/native';
 import { useIsMutating, useMutationState } from '@tanstack/react-query';
 import { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -14,6 +15,8 @@ import Button from '@/components/atoms/button/Button';
 import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 import SearchBar from '@/components/molecules/searchBar/SearchBar';
 
+import { RouteNames } from '@/navigation/routeNames';
+
 import { useLicenseAssignments } from '@/services/license/licenseQueries';
 
 import { formatDateTimeWithDayPrefix } from '@/utils/date';
@@ -22,7 +25,6 @@ import { formatDateTimeWithDayPrefix } from '@/utils/date';
 // relatif, `perfectionist/sort-imports` veut l inverse : un seul import en
 // `../` suffisait a les mettre en contradiction, et aucune des deux ne peut
 // ceder. Ce fichier n en avait aucun jusqu ici — d ou le piege.
-import { useAttendanceCallMutations } from '@/views/event/attendance/useAttendanceCallMutations';
 
 // import statique (pas require) : require n'existe pas sur le rendu web ESM.
 import SHARE_ICON from '@/assets/icons/share2.png';
@@ -127,7 +129,6 @@ import SHARE_ICON from '@/assets/icons/share2.png';
  * @property {Record<string, AttendanceState>} [attendanceByUserId]
  * @property {Date | null | undefined} [eventStartAt]
  * @property {number | undefined} [nowMs]
- * @property {(user?: User) => void} [onCoachMarkArrival]
  * @property {(user?: User) => void} [onCoachEditLate]
  */
 
@@ -430,7 +431,6 @@ function EventParticipants({
   nowMs,
   onCandidatePress = null,
   onCoachEditLate,
-  onCoachMarkArrival,
   participantsSummary,
   participationsByStatus,
   pendingParticipations,
@@ -447,32 +447,33 @@ function EventParticipants({
   const isReminding = useIsMutating({ mutationKey: REMIND_EVENT_MUTATION_KEY }) > 0;
   const areParticipantIdentitiesHidden = event?.participantIdentitiesHidden === true;
 
-  // ✍️ R7-d — L ECRITURE « À l'heure », ET POURQUOI ELLE VIT ICI.
-  //
-  // ⚠️ CE FICHIER SE PASSAIT DE TOUT SERVICE, ET C ETAIT ECRIT (voir AE02
-  // juste en dessous). Le principe tenait parce qu il n y avait que des
-  // LECTURES a faire, et qu un cache de mutation suffisait. Pointer quelqu un
-  // est une ECRITURE : il n y a pas de cache d ou la tirer, et les deux seuls
-  // rappels que `EventDetails` fait descendre (`onCoachMarkArrival`,
-  // `onCoachEditLate`) ouvrent tous les deux le MEME modal — c est justement
-  // le doublon que ce lot supprime.
-  // 💥 CONSEQUENCE PAYEE, ET ASSUMEE : les 5 suites qui montent ce composant
-  // doivent desormais mocker `eventService` en plus de `licenseQueries` — le
-  // vrai module jette au CHARGEMENT quand `.env` est absent, ce qui est le cas
-  // de toute copie de travail.
+  // 🗑️ S3-bis (25/08) - L ECRITURE « À l'heure » DE R7-d A ETE RETIREE
+  // AVEC SON BOUTON. Elle vivait ici parce qu il fallait pointer depuis la
+  // liste ; Adel a decide que le pointage se fait sur l ecran d appel. Un
+  // rappel que plus aucun bouton n atteint est du code mort - c est le defaut
+  // le plus cher de ce projet, et la porte lint le refuse (`no-unused-vars`).
+  // ♻️ Effet de bord heureux : ce fichier ne monte plus AUCUN service.
+  const navigation = useNavigation();
   const identifiantEvenement = event?.documentId || '';
-  const { coachArrivalMutation } = useAttendanceCallMutations(identifiantEvenement);
-  const pointerALHeure = useCallback((/** @type {User} */ joueur) => {
-    const identifiant = joueur?.documentId;
-    // ⛔ Les deux identifiants construisent l URL. Sans l un d eux, la requete
-    // partirait sur `/events//attendance//coach-arrival` : un 404 illisible
-    // plutot qu un geste qui ne part pas.
-    if (!identifiant || !identifiantEvenement) return;
-    // 🧨 `lateMinutes: 0` n est pas decoratif : sans lui le serveur calcule le
-    // retard depuis le coup d envoi et pointerait « +12 min » quelqu un que le
-    // coach vient justement de declarer a l heure.
-    coachArrivalMutation.mutate({ payload: { lateMinutes: 0 }, userId: identifiant });
-  }, [coachArrivalMutation, identifiantEvenement]);
+
+  /**
+   * 🚪 S3-bis — LA PORTE VERS L ECRAN D APPEL.
+   *
+   * ⛔ On ne recopie AUCUNE logique de fenetre ici : savoir si l appel est
+   * ouvert, ferme, ou pas encore commence est le travail de l ecran d appel et
+   * du serveur qui lui rend ses bornes. Ce bouton ne fait qu une chose — y
+   * mener — et c est exactement la meme destination que la carte
+   * « Faire l appel » de l Apercu (`RouteNames.EventAttendanceCall`).
+   * 🧭 Il vit ICI plutot que descendu par la fiche evenement parce que
+   * `EventDetails.js` est verrouille par une file d attente : y ajouter une
+   * prop aurait bloque ce lot derriere trois autres.
+   * @returns {void}
+   */
+  const ouvrirLAppel = useCallback(() => {
+    if (!identifiantEvenement) return;
+    // @ts-ignore: FIXME: Baseline TS regression
+    navigation.navigate(RouteNames.EventAttendanceCall, { eventId: identifiantEvenement });
+  }, [identifiantEvenement, navigation]);
 
   // AE02 (1I) — LE MOTIF ANTI-SPAM, AVANT L APPUI.
   // 🧨 `nextReminderAt` n existe NULLE PART tant qu aucune relance n est
@@ -629,8 +630,6 @@ function EventParticipants({
         key={`${options.keyPrefix || 'participant'}-${player.documentId || userId}`}
         nowMs={nowMs}
         onEditLate={onCoachEditLate}
-        onMarkArrival={onCoachMarkArrival}
-        onMarkOnTime={pointerALHeure}
         onPress={options.onPress || handleUserPress}
         paymentStatus={statutPaiement}
         player={player}
@@ -1404,6 +1403,20 @@ function EventParticipants({
         </TouchableOpacity>
       )}
 
+      {/* 📢 S3-bis (vague S, 25/08, retour de recette d Adel) — LA PORTE VERS
+          L APPEL, EN TETE DE LISTE. Les rangees ne portent plus de bouton de
+          pointage : le geste se fait sur son ecran, et on y va d ici.
+          🧭 Place AVANT le bloc de compteurs, donc avant la legende
+          « reponses sur » qui sert de COUPE a trois temoins d ordre (AD06, AE02) :
+          il n entre pas dans leur lecture de la liste. */}
+      {canEdit && (
+        <Button
+          onPress={ouvrirLAppel}
+          title={t('eventDetails.nextAction.action', 'Faire l’appel')}
+          variant="Primary"
+        />
+      )}
+
       <View style={[Spaces.gap[12]]}>
         <View style={[Alignments.row, Spaces.gap[8]]}>
           {renderCounterTile(
@@ -1481,8 +1494,6 @@ function EventParticipants({
  * eventStartAt?: Date | null,
  * nowMs?: number,
  * onPress: (user?: User) => void,
- * onMarkArrival?: (user?: User) => void,
- * onMarkOnTime?: (user?: User) => void,
  * onEditLate?: (user?: User) => void,
  * paymentStatus?: string,
  * statusKind?: 'participating' | 'missing' | 'not_answered',
@@ -1497,8 +1508,6 @@ function ParticipantItem({
   eventStartAt,
   nowMs,
   onEditLate,
-  onMarkArrival,
-  onMarkOnTime,
   onPress,
   paymentStatus = '',
   player,
@@ -1629,39 +1638,25 @@ function ParticipantItem({
         ) : null}
       </TouchableOpacity>
 
-      {/* 🎯 R7-d (vague R, 24/08) — UN SEUL POINT D ENTREE PAR JOUEUR.
-          Avant, « Pointer l arrivée » et « Modifier » vivaient cote a cote et
-          appelaient `openCoachLateModal(joueur, 'coach_mark' | 'coach_edit')` :
-          le MEME modal, au titre pres. Deux boutons, un seul geste — et aucun
-          des deux ne disait « il est arrivé à l heure », qui est pourtant le
-          cas le plus frequent au bord d un terrain.
-          Desormais c est l ETAT qui decide, exactement comme sur l ecran
-          d appel (AttendanceRow : « Là » + l horloge, puis « Corriger »). */}
-      {canEdit && (
+      {/* 🎯 R7-d (vague R, 24/08) puis S3-bis (vague S, 25/08) — POINTER N EST
+          PLUS UN GESTE DE CETTE LISTE.
+          R7-d avait deja fusionne les deux boutons qui ouvraient le MEME modal.
+          Adel, en recette de la 2.6.27, est alle plus loin : « pour l entraineur
+          il faut cacher les boutons "a l heure" et "en retard" ». Cette liste
+          est un ecran de LECTURE — qui vient, qui manque, qui est arrive ;
+          pointer est un geste suivi, ligne apres ligne, et il a son ecran. Le
+          bouton « Faire l appel » en tete de liste y mene.
+          ⚠️ « Modifier » RESTE : Adel a nomme deux boutons, pas trois, et
+          corriger une erreur de saisie sans quitter la liste n a rien a voir
+          avec pointer une rangee. */}
+      {canEdit && dejaPointe && (
         <View style={[Alignments.row, Spaces.gap[8], Alignments.justifyEnd]}>
-          {dejaPointe ? (
-            <Button
-              onPress={() => onEditLate && onEditLate(player)}
-              size="sm"
-              title={t('eventDetails.attendanceActions.edit', 'Modifier')}
-              variant="SecondaryLight"
-            />
-          ) : (
-            <>
-              <Button
-                onPress={() => onMarkOnTime && onMarkOnTime(player)}
-                size="sm"
-                title={t('eventDetails.attendanceActions.onTime', "À l'heure")}
-                variant="Primary"
-              />
-              <Button
-                onPress={() => onMarkArrival && onMarkArrival(player)}
-                size="sm"
-                title={t('eventDetails.attendanceActions.late', 'En retard')}
-                variant="SecondaryLight"
-              />
-            </>
-          )}
+          <Button
+            onPress={() => onEditLate && onEditLate(player)}
+            size="sm"
+            title={t('eventDetails.attendanceActions.edit', 'Modifier')}
+            variant="SecondaryLight"
+          />
         </View>
       )}
 
