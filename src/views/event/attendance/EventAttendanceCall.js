@@ -43,6 +43,13 @@ const CLOCK_TICK_MS = 30000;
 
 const styles = StyleSheet.create({
   banner: { borderRadius: 12, gap: 8, padding: 16 },
+  closeButton: {
+    alignItems: 'center',
+    borderRadius: 100,
+    height: 52,
+    justifyContent: 'center',
+    paddingHorizontal: 24,
+  },
   counter: {
     alignItems: 'center', borderRadius: 12, flex: 1, gap: 4, paddingVertical: 12,
   },
@@ -181,6 +188,13 @@ function EventAttendanceCall() {
     outOf: t('eventDetails.attendanceCall.footer.outOf', 'sur'),
     title: t('eventDetails.attendanceCall.header.title', 'APPEL'),
   };
+
+  // 🏷️ D5 — « Clôturer l'appel · x sur N », SANS le compteur quand tout est
+  // pointe : a ce moment-la « 15 sur 15 » n apprend plus rien et allonge un
+  // libelle qui doit tenir sur une seule ligne.
+  const libelleCloture = markedCount === items.length
+    ? mots.closeCall
+    : `${mots.closeCall} · ${markedCount} ${mots.outOf} ${items.length}`;
 
   const eventStartMs = toMsOrNull(payloadData?.eventStartAt) ?? toMsOrNull(event?.date);
 
@@ -464,22 +478,35 @@ function EventAttendanceCall() {
 
       {mode === 'open' && (
         <View style={[styles.footer, { paddingBottom: insets.bottom + 12 }]}>
-          {markedCount === 0 ? (
-            <View style={[styles.disabledButton, { backgroundColor: Colors.neutral700 }]}>
-              <Text style={[Fonts.p2Bold, { color: Colors.neutral400 }]}>
-                {mots.markSomeone}
-              </Text>
-            </View>
-          ) : (
-            <TouchableOpacity
-              accessibilityRole="button"
-              onPress={() => setOpenSheet('close')}
-              style={[styles.disabledButton, { backgroundColor: Colors.primary500 }]}
-            >
-              <Text style={[Fonts.p2Bold, { color: Colors.primary900 }]}>
-                {`${mots.closeCall} · ${markedCount} ${mots.outOf} ${items.length}`}
-              </Text>
-            </TouchableOpacity>
+          {/* 🚪 D5 — LE PIED NE BLOQUE PAS UN APPEL PARTIEL.
+              Le pack hesitait a exiger que tout le monde soit pointe. Un appel
+              partiel est un cas REEL : le coach attend encore deux joueurs
+              qu il sait en route. Le seul refus est donc « personne n a ete
+              pointe » — au-dela, le bouton passe.
+              ⛔ ET IL NE MENT PAS SUR CE QU IL FAIT (D7ter) : aucune notion de
+              cloture n existe cote serveur, chaque pointage est deja enregistre
+              au fil de l eau. Ce bouton FERME L ECRAN. C est la feuille
+              ci-dessous qui dit qui passera en « Non pointé », quand, et
+              jusqu a quand on peut encore corriger. */}
+          <TouchableOpacity
+            accessibilityLabel={libelleCloture}
+            accessibilityRole="button"
+            accessibilityState={{ disabled: markedCount === 0 }}
+            disabled={markedCount === 0}
+            onPress={() => setOpenSheet('close')}
+            style={[styles.closeButton, {
+              backgroundColor: Colors.primary500,
+              opacity: markedCount === 0 ? 0.4 : 1,
+            }]}
+          >
+            <Text style={[Fonts.p1Bold, { color: Colors.primary900 }]}>{libelleCloture}</Text>
+          </TouchableOpacity>
+
+          {/* ⛔ « Jamais un bouton muet » — la lecon est deja payee sur le
+              cadre « avant l heure » de cet ecran. Un bouton grise sans un mot
+              laisse le coach chercher ce qui manque. */}
+          {markedCount === 0 && (
+            <Text style={[Fonts.p4, { color: Colors.neutral400 }]}>{mots.markSomeone}</Text>
           )}
         </View>
       )}

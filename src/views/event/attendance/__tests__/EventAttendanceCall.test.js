@@ -610,6 +610,67 @@ describe('L5-A · la ligne n est pas cliquable, ses cibles font 44', () => {
   });
 });
 
+describe('L5-A · le pied ne bloque pas un appel PARTIEL', () => {
+  // 📐 APPEL (26/08) — TEMOIN NEUF (decision D5). Le pack hesitait a exiger que
+  // TOUT le monde soit pointe avant de clore. Un appel partiel est un cas reel
+  // — le coach attend encore deux joueurs qu il sait en route — et le bloquer
+  // l enfermerait sur cet ecran. Le seul refus est « personne n a ete pointe ».
+  test('2 pointes sur 4 : le bouton passe, et il dit « 2 sur 4 »', async () => {
+    mockAttendance = reponseAttendance({
+      items: [
+        ligne({ arrivedAt: '2026-08-19T16:00:00.000Z', firstname: 'Leo', userId: 'u1' }),
+        ligne({ arrivedAt: '2026-08-19T16:00:00.000Z', firstname: 'Hugo', userId: 'u2' }),
+        ligne({ firstname: 'Nina', userId: 'u3' }),
+        ligne({ firstname: 'Adam', userId: 'u4' }),
+      ],
+      serverNow: '2026-08-19T16:06:00.000Z',
+    });
+
+    const arbre = await monter();
+    const cible = bouton(arbre, "Clôturer l'appel · 2 sur 4");
+
+    expect(cible).toBeTruthy();
+    expect(cible.props.accessibilityState?.disabled).toBe(false);
+    // ⛔ Et il n y a aucune phrase qui reclamerait un appel complet.
+    expect(aplatirTexte(arbre.toJSON())).not.toContain('Pointe au moins une personne');
+  });
+
+  test('0 pointe : le bouton est desactive, et il DIT pourquoi', async () => {
+    mockAttendance = reponseAttendance({
+      items: [
+        ligne({ firstname: 'Nina', userId: 'u3' }),
+        ligne({ firstname: 'Adam', userId: 'u4' }),
+      ],
+      serverNow: '2026-08-19T16:06:00.000Z',
+    });
+
+    const arbre = await monter();
+    const cible = bouton(arbre, "Clôturer l'appel · 0 sur 2");
+
+    expect(cible).toBeTruthy();
+    expect(cible.props.accessibilityState?.disabled).toBe(true);
+    // ⛔ « Jamais un bouton muet » : la lecon est deja payee sur cet ecran.
+    expect(aplatirTexte(arbre.toJSON())).toContain('Pointe au moins une personne');
+  });
+
+  test('tout le monde pointe : le compteur DISPARAIT du libelle', async () => {
+    mockAttendance = reponseAttendance({
+      items: [
+        ligne({ arrivedAt: '2026-08-19T16:00:00.000Z', firstname: 'Leo', userId: 'u1' }),
+        ligne({ arrivedAt: '2026-08-19T16:00:00.000Z', firstname: 'Hugo', userId: 'u2' }),
+      ],
+      serverNow: '2026-08-19T16:06:00.000Z',
+    });
+
+    const arbre = await monter();
+    const texte = aplatirTexte(arbre.toJSON());
+
+    expect(texte).toContain("Clôturer l'appel");
+    // « 2 sur 2 » n apprend rien et allonge un libelle qui tient sur une ligne.
+    expect(texte).not.toContain('2 sur 2');
+  });
+});
+
 describe('L5-A · identites masquees respectees', () => {
   test('`participantIdentitiesHidden` -> aucun nom rendu', async () => {
     mockAttendance = reponseAttendance({
