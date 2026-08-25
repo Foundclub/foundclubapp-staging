@@ -229,6 +229,10 @@ function MyLicenseDetail({ navigation, route }) {
   const [paySheetVisible, setPaySheetVisible] = useState(false);
   const [declareSheetVisible, setDeclareSheetVisible] = useState(false);
   const [payerSheetVisible, setPayerSheetVisible] = useState(false);
+  // 🗂️ « Replier n est pas cacher » : un dossier complet tient sur UNE ligne
+  // verte, et le detail des pieces reste a un tap. C est la seule section
+  // repliable de la page (cadre 4B du pack).
+  const [dossierExpanded, setDossierExpanded] = useState(false);
 
   const assignmentId = licenseKeyOf(current);
   const campaignId = current?.campaign?.documentId || current?.campaign?.id;
@@ -478,6 +482,15 @@ function MyLicenseDetail({ navigation, route }) {
   const payments = (current?.payments || [])
     .filter((payment) => ['confirmed', 'partially_refunded', 'refunded'].includes(payment?.status));
   const receiptCount = payments.filter((payment) => payment?.receipt).length;
+  const requiredRequests = documentRequests.filter((item) => item?.required !== false);
+  const validatedCount = documentRequests.filter(
+    (item) => submissionByRequestId.get(licenseKeyOf(item))?.status === 'validated',
+  ).length;
+  const piecesPlural = validatedCount > 1 ? 's' : '';
+  const isDossierComplete = Boolean(fileUrlOf(officialLicenseDocument))
+    && requiredRequests.every(
+      (item) => submissionByRequestId.get(licenseKeyOf(item))?.status === 'validated',
+    );
   const isOpen = !isCampaignPaused && !isSettledAssignment(current);
   const canPayOnline = onlineMethods.length > 0 && isOpen;
   const canDeclare = manualMethods.length > 0 && isOpen;
@@ -649,97 +662,125 @@ function MyLicenseDetail({ navigation, route }) {
                 : undefined}
               title="Mon dossier"
             />
-            {officialLicenseDocument ? (
+            {isDossierComplete ? (
               <MemberRow
-                glyph="idCard"
-                glyphColor={fileUrlOf(officialLicenseDocument)
-                  ? Colors.success500
-                  : Colors.neutral300}
+                glyph="circleCheck"
+                glyphColor={Colors.success500}
+                onPress={() => setDossierExpanded((open) => !open)}
+                state={[
+                  'Licence validée',
+                  validatedCount
+                    ? `${validatedCount} pièce${piecesPlural} reçue${piecesPlural}`
+                    : null,
+                ].filter(Boolean).join(' · ')}
+                title="Dossier complet"
+                trailing={(
+                  <GlyphIcon
+                    color={Colors.primary500}
+                    name={dossierExpanded ? 'chevronLeft' : 'chevronRight'}
+                    size={20}
+                  />
+                )}
+              />
+            ) : null}
+            {isDossierComplete && !dossierExpanded ? null : (
+              <>
+                {officialLicenseDocument ? (
+                  <MemberRow
+                    glyph="idCard"
+                    glyphColor={fileUrlOf(officialLicenseDocument)
+                      ? Colors.success500
+                      : Colors.neutral300}
                 // 🩹 UN ETAT, PAS UNE ABSENCE. « Ta licence n est pas encore
                 // disponible » ne disait pas QUI bloque. ⚠️ L ouverture S8 du
                 // pack (etat reel de la demande a la federation) n existe pas
                 // cote serveur : on dit donc ce qu on SAIT, sans l inventer.
-                state={fileUrlOf(officialLicenseDocument)
-                  ? `Disponible depuis le ${licenceDate || 'dépôt du club'}`
-                  : 'Le club ne l a pas encore déposée.'}
-                title={officialLicenseDocument?.request?.name || 'Ma licence'}
-                trailing={fileUrlOf(officialLicenseDocument) ? (
-                  <View style={{ flexDirection: 'row', gap: memberSpacing.rowGap }}>
-                    <MemberRowAction
-                      glyph="idCard"
-                      label="Ouvrir ma licence"
-                      onPress={() => openUploadedDocument(officialLicenseDocument)}
-                    />
-                    <MemberRowAction
-                      glyph="arrowDownToBracket"
-                      label="Télécharger ma licence"
-                      onPress={() => downloadDocument(officialLicenseDocument, 'ma-licence')}
-                    />
-                  </View>
-                ) : null}
-              />
-            ) : null}
-            {documentRequests.map((request) => {
-              const submission = submissionByRequestId.get(licenseKeyOf(request));
-              const hasFile = Boolean(fileUrlOf(submission));
-              const dueDate = formatMemberDate(request?.dueDate, { withYear: false });
-              // ⛔ UNE PIECE DIT TOUJOURS QUI ATTEND QUOI, ET JUSQU A QUAND.
-              let state = request?.required === false ? 'Facultatif' : 'Obligatoire';
-              if (dueDate) state += ` · à remettre avant le ${dueDate}`;
-              if (submission?.status === 'validated') state = 'Validée par le club';
-              else if (submission) state = 'Envoyée · le club vérifie';
-              return (
-                <View
-                  key={licenseKeyOf(request) || request?.name}
-                  style={{ gap: memberSpacing.rowGap }}
-                >
-                  <MemberRow
-                    dashed={Boolean(submission) && submission?.status !== 'validated'}
-                    glyph={submission?.status === 'validated' ? 'fileCheck' : 'fileArrowUp'}
-                    glyphColor={submission?.status === 'validated'
-                      ? Colors.success500
-                      : Colors.warning400}
-                    state={submission?.refusalReason || state}
-                    stateColor={submission?.refusalReason ? Colors.error300 : undefined}
-                    title={request?.name || 'Pièce demandée'}
-                    trailing={hasFile ? (
+                    state={fileUrlOf(officialLicenseDocument)
+                      ? `Disponible depuis le ${licenceDate || 'dépôt du club'}`
+                      : 'Le club ne l a pas encore déposée.'}
+                    title={officialLicenseDocument?.request?.name || 'Ma licence'}
+                    trailing={fileUrlOf(officialLicenseDocument) ? (
                       <View style={{ flexDirection: 'row', gap: memberSpacing.rowGap }}>
                         <MemberRowAction
-                          glyph="fileCheck"
-                          label="Ouvrir le document"
-                          onPress={() => openUploadedDocument(submission)}
+                          glyph="idCard"
+                          label="Ouvrir ma licence"
+                          onPress={() => openUploadedDocument(officialLicenseDocument)}
                         />
                         <MemberRowAction
                           glyph="arrowDownToBracket"
-                          label="Télécharger le document"
-                          onPress={() => downloadDocument(submission, request?.name || undefined)}
+                          label="Télécharger ma licence"
+                          onPress={() => downloadDocument(officialLicenseDocument, 'ma-licence')}
                         />
                       </View>
                     ) : null}
                   />
-                  <View style={{ flexDirection: 'row', gap: memberSpacing.rowGap }}>
-                    {/* « Deposer » est un GESTE, pas une navigation : 36 px,
-                        rayon 999, plein cyan. */}
-                    <Button
-                      isLoading={documentMutation.isPending}
-                      onPress={() => uploadDocument(request)}
-                      size="sm"
-                      style={{ borderRadius: memberRadius.pill, flex: 1 }}
-                      title={submission ? 'Remplacer ma pièce' : 'Déposer'}
-                    />
-                    {request?.templateFile?.url ? (
-                      <Button
-                        onPress={() => downloadTemplate(request)}
-                        size="sm"
-                        style={{ borderRadius: memberRadius.pill, flex: 1 }}
-                        title="Télécharger le modèle"
-                        variant="Secondary"
+                ) : null}
+                {documentRequests.map((request) => {
+                  const submission = submissionByRequestId.get(licenseKeyOf(request));
+                  const hasFile = Boolean(fileUrlOf(submission));
+                  const dueDate = formatMemberDate(request?.dueDate, { withYear: false });
+                  // ⛔ UNE PIECE DIT TOUJOURS QUI ATTEND QUOI, ET JUSQU A QUAND.
+                  let state = request?.required === false ? 'Facultatif' : 'Obligatoire';
+                  if (dueDate) state += ` · à remettre avant le ${dueDate}`;
+                  if (submission?.status === 'validated') state = 'Validée par le club';
+                  else if (submission) state = 'Envoyée · le club vérifie';
+                  return (
+                    <View
+                      key={licenseKeyOf(request) || request?.name}
+                      style={{ gap: memberSpacing.rowGap }}
+                    >
+                      <MemberRow
+                        dashed={Boolean(submission) && submission?.status !== 'validated'}
+                        glyph={submission?.status === 'validated' ? 'fileCheck' : 'fileArrowUp'}
+                        glyphColor={submission?.status === 'validated'
+                          ? Colors.success500
+                          : Colors.warning400}
+                        state={submission?.refusalReason || state}
+                        stateColor={submission?.refusalReason ? Colors.error300 : undefined}
+                        title={request?.name || 'Pièce demandée'}
+                        trailing={hasFile ? (
+                          <View style={{ flexDirection: 'row', gap: memberSpacing.rowGap }}>
+                            <MemberRowAction
+                              glyph="fileCheck"
+                              label="Ouvrir le document"
+                              onPress={() => openUploadedDocument(submission)}
+                            />
+                            <MemberRowAction
+                              glyph="arrowDownToBracket"
+                              label="Télécharger le document"
+                              onPress={() => downloadDocument(
+                                submission,
+                                request?.name || undefined,
+                              )}
+                            />
+                          </View>
+                        ) : null}
                       />
-                    ) : null}
-                  </View>
-                </View>
-              );
-            })}
+                      <View style={{ flexDirection: 'row', gap: memberSpacing.rowGap }}>
+                        {/* « Deposer » est un GESTE, pas une navigation : 36 px,
+                        rayon 999, plein cyan. */}
+                        <Button
+                          isLoading={documentMutation.isPending}
+                          onPress={() => uploadDocument(request)}
+                          size="sm"
+                          style={{ borderRadius: memberRadius.pill, flex: 1 }}
+                          title={submission ? 'Remplacer ma pièce' : 'Déposer'}
+                        />
+                        {request?.templateFile?.url ? (
+                          <Button
+                            onPress={() => downloadTemplate(request)}
+                            size="sm"
+                            style={{ borderRadius: memberRadius.pill, flex: 1 }}
+                            title="Télécharger le modèle"
+                            variant="Secondary"
+                          />
+                        ) : null}
+                      </View>
+                    </View>
+                  );
+                })}
+              </>
+            )}
           </View>
         ) : null}
 

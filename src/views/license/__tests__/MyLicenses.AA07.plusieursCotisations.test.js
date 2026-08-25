@@ -182,6 +182,26 @@ describe('AA07 / K1 — plusieurs cotisations restent atteignables', () => {
     expect(cible('Licence senior')).toBeTruthy();
   });
 
+  it('replie les saisons passees en UNE ligne, et ne ment pas sur leur solde', () => {
+    // ❄️ Une saison archivee ne se dessine pas dans la liste : elle se replie,
+    // et l archive est un ecran a part. ⛔ « tout est paye » ne s ecrit QUE si
+    // c est vrai — l archive contient aussi les campagnes fermees par le club,
+    // qui ne sont pas toutes soldees.
+    const ancienne = cotisation({
+      campaign: 'Licence U18', club: 'FC Nord', documentId: 'vieux', status: 'paid',
+    });
+    ancienne.campaign.seasonLabel = '2025-2026';
+    ancienne.amountPaidCents = 18000;
+    ancienne.amountRemainingCents = 0;
+
+    const rendu = monter([DEUX_COTISATIONS[0], ancienne]);
+    expect(rendu).toContain('1 saison archivée');
+    expect(rendu).toContain('2025-2026');
+    expect(rendu).toContain('tout est payé');
+    // La cotisation archivee ne prend PAS une carte dans la saison en cours.
+    expect(cible('Licence U18')).toBeFalsy();
+  });
+
   it('ne dessine JAMAIS un statut que le pack ne nomme pas', () => {
     // ⛔ `not_due`, `refunded` et `disputed` sont masques (decision du chef,
     // 25/08). Une cotisation qui les porte ne doit pas apparaitre avec un mot

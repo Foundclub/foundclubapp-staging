@@ -268,4 +268,28 @@ describe('S9 — les cartes d absence que le pack supprime (D3)', () => {
 
     expect(rendu).toContain('Le club n a pas encore fixé de date');
   });
+
+  it('un dossier COMPLET tient sur une ligne, et le detail reste a un tap', () => {
+    // 🗂️ Cadre 4B du pack : « replier n est pas cacher ». Licence deposee +
+    // piece obligatoire validee = une seule ligne verte ; les lignes de detail
+    // ne se dessinent qu apres le tap.
+    const complete = cotisation({
+      file: { url: '/uploads/licence-officielle.pdf' },
+      request: { name: 'Licence officielle' },
+      submission: { documentId: 'sub-lic', status: 'validated' },
+    });
+    complete.documentSubmissions = [{ ...DEPOT, status: 'validated' }];
+    monter(complete);
+
+    const replie = arbre.root.findAll((/** @type {any} */ noeud) => String(
+      noeud.props?.title || '',
+    ) === 'Dossier complet')[0];
+    expect(replie).toBeTruthy();
+    // ⛔ Replie : le detail n est PAS a l ecran...
+    expect(geste('Ouvrir ma licence')).toBeFalsy();
+
+    act(() => replie.props.onPress());
+    // ...mais il revient au premier tap. Replier n est pas cacher.
+    expect(geste('Ouvrir ma licence')).toBeTruthy();
+  });
 });

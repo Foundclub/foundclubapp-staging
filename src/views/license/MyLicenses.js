@@ -219,6 +219,9 @@ function MyLicenses({ navigation }) {
   )].sort().reverse(), [archived]);
   const archivedCount = archivedSeasons.length || archived.length;
   const archivedPlural = archivedCount > 1 ? 's' : '';
+  const archivedAllPaid = archived.every(
+    (item) => (Number(item?.amountRemainingCents) || 0) <= 0,
+  );
 
   const openAssignment = useCallback((assignment) => {
     navigation.navigate(RouteNames.MyLicense, { assignmentId: licenseKeyOf(assignment) });
@@ -340,6 +343,7 @@ function MyLicenses({ navigation }) {
                 </Text>
                 <Text numberOfLines={1} style={[type.rowState, Fonts.neutral300]}>
                   {archivedSeasons.join(' · ')}
+                  {archivedAllPaid ? ' — tout est payé' : ''}
                 </Text>
               </View>
               <GlyphIcon color={Colors.primary500} name="chevronRight" size={20} />
