@@ -261,7 +261,14 @@ jest.mock('@/components/molecules/segmentedControl/SegmentedControl', () => {
       // Le libelle a toujours ete complet DANS L'ARBRE : c'est `numberOfLines`
       // qui le coupait A L'ECRAN. Un temoin qui lirait le texte rendu serait
       // donc vert avant comme apres le correctif — seule la prop tranche.
-      { fullLabels: Boolean(props.fullLabels), testID: 'doublure-onglets' },
+      // 🔠 S5 (vague S) : la doublure relaie AUSSI `fitLabels`. Elle ne captait
+      // que `fullLabels` — un temoin qui ne regarde pas la prop qui commande
+      // reste vert quand l ecran change de mode.
+      {
+        fitLabels: Boolean(props.fitLabels),
+        fullLabels: Boolean(props.fullLabels),
+        testID: 'doublure-onglets',
+      },
       (props.options || []).map((/** @type {any} */ option) => react.createElement(
         rn.TouchableOpacity,
         {

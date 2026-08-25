@@ -5821,15 +5821,23 @@ function EventDetails({ navigation, route }) {
   // ⚠️ Le composant ne pose AUCUNE marge externe : c'est l'appelant qui les
   // pose (motif CMMembersScreen.js:297). Ici, le `gap: 24` du conteneur suffit.
   //
-  // 📏 R6 (vague R) — ET C'EST EXACTEMENT LA QUE `fullLabels` MANQUAIT.
-  // La phrase « avec trois onglets COURTS, les tiers egaux suffisent » a tenu
-  // jusqu'a la recette du 24/08. Elle etait fausse : les libelles ne sont pas
-  // courts, ils portent leur effectif (planche 04, `withTabCount`). Un tiers de
-  // 360 pt vaut ~110 pt, et « Participants · 12 » n'y tient pas — le texte
-  // arrivait rogne a l'ecran alors qu'il etait ENTIER dans l'arbre.
-  // ⇒ `fullLabels` (pose par D63, jamais passe ici) autorise DEUX lignes et
-  // interdit la troncature. Il ne change ni la largeur des tiers, ni la valeur
-  // remontee par `onChange` — c'est une consigne d'affichage, rien d'autre.
+  // 📏 R6 puis S5 — DEUX RECETTES, DEUX REPONSES A LA MEME EXIGENCE.
+  //
+  // Le probleme de fond n'a pas change : les libelles ne sont PAS courts, ils
+  // portent leur effectif (planche 04, `withTabCount`). Un tiers de 360 pt vaut
+  // ~110 pt, et « Participants · 12 » n'y tient pas.
+  //
+  // R6 (24/08) a repondu par `fullLabels` : DEUX lignes, jamais tronque.
+  // 🧨 S5 (25/08) — Adel l'a regarde : en deux lignes, la coupure tombe sur la
+  // DERNIERE lettre. Un « s » seul sous « Participant », un « n » seul sous
+  // « Convocatio ». Ce n'est pas plus lisible qu'une troncature, ca ressemble a
+  // un bug d'affichage — et ca double la hauteur du bandeau pour ca.
+  //
+  // ⇒ `fitLabels` : UNE ligne, et le texte RETRECIT jusqu'a 72 % pour tenir.
+  // ⛔ On ne corrige PAS `fullLabels` en place : sa semantique deux-lignes est
+  // celle dont `FacilityForm` depend, et la hauteur y est reservee pour deux
+  // lignes (FacilityForm.js). Les deux besoins sont reels et opposes.
+  // ⛔ Et on ne raccourcit toujours PAS les libelles : le compteur est exige.
   const renderDetailsTabs = () => {
     if (!detailsTabs.length) return null;
 
@@ -5837,7 +5845,7 @@ function EventDetails({ navigation, route }) {
       <View style={[Alignments.alignCenter]} testID="event-details-tabs">
         <SegmentedControl
           centerContent
-          fullLabels
+          fitLabels
           onChange={setDetailsTab}
           options={detailsTabs}
           value={detailsTab}

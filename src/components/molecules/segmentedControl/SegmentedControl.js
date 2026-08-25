@@ -21,6 +21,17 @@ import Animated, { useAnimatedStyle, useSharedValue } from 'react-native-reanima
 import { horizontalScale, moderateScale, verticalScale } from '@/theme/scaling';
 import useTheme from '@/theme/themeContext';
 
+// 🔠 S5 (vague S) — LE PLANCHER DE RETRECISSEMENT DU MODE UNE-LIGNE.
+//
+// 0,72 est la valeur deja retenue 17 fois dans ce depot pour le meme besoin
+// (MatchHistory.js, FutCard.js, FriendlyMatchListContent.js…) : en dessous, le
+// texte devient plus petit que ce qu'un pouce lit sur un telephone.
+//
+// ⚠️ C'EST UN PLANCHER, PAS UNE PROMESSE. Si le libelle ne tient toujours pas a
+// 72 % de sa taille, React Native l'ellipse — le contrat « jamais tronque » de
+// ce mode vaut TANT QUE 72 % suffit, et pas au-dela.
+const SHRINK_MIN_SCALE = 0.72;
+
 /**
  * SegmentedControl component.
  * @param {object} props
@@ -28,11 +39,12 @@ import useTheme from '@/theme/themeContext';
  * @param {string} props.value
  * @param {(value: string) => void} props.onChange
  * @param {boolean} [props.centerContent]
+ * @param {boolean} [props.fitLabels] S5 : UNE ligne, le texte retrecit pour tenir.
  * @param {boolean} [props.fullLabels] Libelles systeme : jamais tronques.
  * @returns {import('react').ReactElement}
  */
 function SegmentedControl({
-  centerContent = false, fullLabels = false, onChange, options, value,
+  centerContent = false, fitLabels = false, fullLabels = false, onChange, options, value,
 }) {
   const { Colors, Fonts } = useTheme();
   const isWeb = Platform.OS === 'web';
@@ -218,11 +230,29 @@ function SegmentedControl({
           isSelected && styles.segmentSelected,
         ]}
       >
+        {/* 🔠 S5 (vague S) — TROIS MODES, ET UN SEUL GAGNE A LA FOIS.
+            · defaut          → une ligne, le texte se coupe (15 ecrans a onglets courts)
+            · `fullLabels`    → DEUX lignes, jamais coupe (D63, FacilityForm)
+            · `fitLabels`     → UNE ligne, le texte RETRECIT jusqu a 72 %
+
+            🧨 POURQUOI UN TROISIEME MODE PLUTOT QUE DE CORRIGER `fullLabels` :
+            la recette du 25/08 a montre qu en deux lignes, « Participants » et
+            « Convocation » se cassent sur leur DERNIERE lettre — un « s » et un
+            « n » tout seuls sous le mot. Passer les onglets a une ligne en
+            changeant `fullLabels` aurait ramene FacilityForm a la troncature que
+            D63 avait justement supprimee, et sa hauteur y est reservee pour deux
+            lignes. Les deux besoins sont reels et opposes : ils ont deux props.
+
+            ⚠️ `fitLabels` PRIME sur `fullLabels` quand les deux arrivent. Sans
+            regle ecrite ici, un futur appelant qui passe les deux tomberait sur
+            un rendu indefini — et ce genre d indefini se decouvre a la recette. */}
         <Text
-          numberOfLines={fullLabels ? 2 : 1}
+          adjustsFontSizeToFit={fitLabels}
+          minimumFontScale={fitLabels ? SHRINK_MIN_SCALE : undefined}
+          numberOfLines={fullLabels && !fitLabels ? 2 : 1}
           style={[
             styles.segmentText,
-            fullLabels && styles.segmentTextFull,
+            fullLabels && !fitLabels && styles.segmentTextFull,
             isSelected && styles.segmentTextSelected,
           ]}
         >
