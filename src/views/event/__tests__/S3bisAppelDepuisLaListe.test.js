@@ -1,4 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { Text } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
 import Button from '@/components/atoms/button/Button';
@@ -258,7 +259,7 @@ describe('S3-bis — l appel se fait sur l ecran d appel, pas dans la liste', ()
     });
 
     const pastilles = arbre.root
-      .findAllByType(require('react-native').Text)
+      .findAllByType(Text)
       .map((/** @type {any} */ noeud) => ({
         centre: (Array.isArray(noeud.props.style)
           ? noeud.props.style.flat(Infinity)

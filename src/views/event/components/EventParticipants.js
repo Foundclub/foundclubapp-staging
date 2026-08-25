@@ -8,13 +8,14 @@ import {
 } from 'react-native';
 
 import { REMIND_EVENT_MUTATION_KEY } from '@/domains/event/remindReport';
-import { RouteNames } from '@/navigation/routeNames';
 import { withAlpha } from '@/theme/colors';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
 import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 import SearchBar from '@/components/molecules/searchBar/SearchBar';
+
+import { RouteNames } from '@/navigation/routeNames';
 
 import { useLicenseAssignments } from '@/services/license/licenseQueries';
 
@@ -24,7 +25,6 @@ import { formatDateTimeWithDayPrefix } from '@/utils/date';
 // relatif, `perfectionist/sort-imports` veut l inverse : un seul import en
 // `../` suffisait a les mettre en contradiction, et aucune des deux ne peut
 // ceder. Ce fichier n en avait aucun jusqu ici — d ou le piege.
-import { useAttendanceCallMutations } from '@/views/event/attendance/useAttendanceCallMutations';
 
 // import statique (pas require) : require n'existe pas sur le rendu web ESM.
 import SHARE_ICON from '@/assets/icons/share2.png';
@@ -129,7 +129,6 @@ import SHARE_ICON from '@/assets/icons/share2.png';
  * @property {Record<string, AttendanceState>} [attendanceByUserId]
  * @property {Date | null | undefined} [eventStartAt]
  * @property {number | undefined} [nowMs]
- * @property {(user?: User) => void} [onCoachMarkArrival]
  * @property {(user?: User) => void} [onCoachEditLate]
  */
 
@@ -432,7 +431,6 @@ function EventParticipants({
   nowMs,
   onCandidatePress = null,
   onCoachEditLate,
-  onCoachMarkArrival,
   participantsSummary,
   participationsByStatus,
   pendingParticipations,
@@ -449,19 +447,12 @@ function EventParticipants({
   const isReminding = useIsMutating({ mutationKey: REMIND_EVENT_MUTATION_KEY }) > 0;
   const areParticipantIdentitiesHidden = event?.participantIdentitiesHidden === true;
 
-  // ✍️ R7-d — L ECRITURE « À l'heure », ET POURQUOI ELLE VIT ICI.
-  //
-  // ⚠️ CE FICHIER SE PASSAIT DE TOUT SERVICE, ET C ETAIT ECRIT (voir AE02
-  // juste en dessous). Le principe tenait parce qu il n y avait que des
-  // LECTURES a faire, et qu un cache de mutation suffisait. Pointer quelqu un
-  // est une ECRITURE : il n y a pas de cache d ou la tirer, et les deux seuls
-  // rappels que `EventDetails` fait descendre (`onCoachMarkArrival`,
-  // `onCoachEditLate`) ouvrent tous les deux le MEME modal — c est justement
-  // le doublon que ce lot supprime.
-  // 💥 CONSEQUENCE PAYEE, ET ASSUMEE : les 5 suites qui montent ce composant
-  // doivent desormais mocker `eventService` en plus de `licenseQueries` — le
-  // vrai module jette au CHARGEMENT quand `.env` est absent, ce qui est le cas
-  // de toute copie de travail.
+  // 🗑️ S3-bis (25/08) - L ECRITURE « À l'heure » DE R7-d A ETE RETIREE
+  // AVEC SON BOUTON. Elle vivait ici parce qu il fallait pointer depuis la
+  // liste ; Adel a decide que le pointage se fait sur l ecran d appel. Un
+  // rappel que plus aucun bouton n atteint est du code mort - c est le defaut
+  // le plus cher de ce projet, et la porte lint le refuse (`no-unused-vars`).
+  // ♻️ Effet de bord heureux : ce fichier ne monte plus AUCUN service.
   const navigation = useNavigation();
   const identifiantEvenement = event?.documentId || '';
 
@@ -483,18 +474,6 @@ function EventParticipants({
     // @ts-ignore: FIXME: Baseline TS regression
     navigation.navigate(RouteNames.EventAttendanceCall, { eventId: identifiantEvenement });
   }, [identifiantEvenement, navigation]);
-  const { coachArrivalMutation } = useAttendanceCallMutations(identifiantEvenement);
-  const pointerALHeure = useCallback((/** @type {User} */ joueur) => {
-    const identifiant = joueur?.documentId;
-    // ⛔ Les deux identifiants construisent l URL. Sans l un d eux, la requete
-    // partirait sur `/events//attendance//coach-arrival` : un 404 illisible
-    // plutot qu un geste qui ne part pas.
-    if (!identifiant || !identifiantEvenement) return;
-    // 🧨 `lateMinutes: 0` n est pas decoratif : sans lui le serveur calcule le
-    // retard depuis le coup d envoi et pointerait « +12 min » quelqu un que le
-    // coach vient justement de declarer a l heure.
-    coachArrivalMutation.mutate({ payload: { lateMinutes: 0 }, userId: identifiant });
-  }, [coachArrivalMutation, identifiantEvenement]);
 
   // AE02 (1I) — LE MOTIF ANTI-SPAM, AVANT L APPUI.
   // 🧨 `nextReminderAt` n existe NULLE PART tant qu aucune relance n est
@@ -651,8 +630,6 @@ function EventParticipants({
         key={`${options.keyPrefix || 'participant'}-${player.documentId || userId}`}
         nowMs={nowMs}
         onEditLate={onCoachEditLate}
-        onMarkArrival={onCoachMarkArrival}
-        onMarkOnTime={pointerALHeure}
         onPress={options.onPress || handleUserPress}
         paymentStatus={statutPaiement}
         player={player}
@@ -1517,8 +1494,6 @@ function EventParticipants({
  * eventStartAt?: Date | null,
  * nowMs?: number,
  * onPress: (user?: User) => void,
- * onMarkArrival?: (user?: User) => void,
- * onMarkOnTime?: (user?: User) => void,
  * onEditLate?: (user?: User) => void,
  * paymentStatus?: string,
  * statusKind?: 'participating' | 'missing' | 'not_answered',
@@ -1533,8 +1508,6 @@ function ParticipantItem({
   eventStartAt,
   nowMs,
   onEditLate,
-  onMarkArrival,
-  onMarkOnTime,
   onPress,
   paymentStatus = '',
   player,
