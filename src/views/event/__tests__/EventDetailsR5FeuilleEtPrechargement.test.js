@@ -535,15 +535,61 @@ describe('R5 (a) — la feuille « Gerer l evenement » n est plus bridee a 70 %
     expect(feuilleDeGestion()?.maxContentHeightRatio).toBe(0.9);
   });
 
-  // ⛔ CE QUI NE CHANGE PAS : la feuille reste sans hauteur fixe. Elle porte un
-  // en-tete et AUCUN pied, cas ou le dimensionnement dynamique suffit — lui
-  // donner des `snapPoints` reglerait la hauteur, mais figerait aussi la feuille
-  // a 90 % de l'ecran quand il n'y a que deux actions a montrer.
+  // ⛔ CE QUI NE CHANGE PAS : la feuille reste sans hauteur fixe. Lui donner des
+  // `snapPoints` reglerait la hauteur, mais figerait aussi la feuille a 90 % de
+  // l'ecran quand il n'y a que deux actions a montrer.
+  // ⚠️ Ce qui rend le dimensionnement dynamique JUSTE, depuis S2, c est que
+  // plus rien ne vit hors du contenu mesure — voir le bloc S2 ci-dessous.
   test('et elle garde son dimensionnement dynamique (aucun snapPoints)', () => {
     monterEtOuvrirLeMenu();
 
     expect(feuilleDeGestion()).not.toBeNull();
     expect(feuilleDeGestion()?.snapPoints).toBeUndefined();
+  });
+});
+
+describe('S2 — le titre de la feuille vit DANS le contenu mesure', () => {
+  // 🧨 LE DEFAUT, ET IL EST GEOMETRIQUE, PAS COSMETIQUE (recette 2.6.27,
+  // capture de 12h35 : « Annuler » coupe, et la feuille NE DEFILE PAS).
+  //
+  // En dimensionnement dynamique, la hauteur de la feuille est celle du CONTENU
+  // DEFILANT SEUL : un `headerComponent` fixe (~64 pt) n'entre JAMAIS dans la
+  // mesure. La boite visible est donc taillee trop court, et comme son masque
+  // coupe par le BAS pendant que l'en-tete pousse le contenu vers le bas, les
+  // dernieres rangees sortent du cadre. Elles ne sont pas non plus rattrapables
+  // au doigt : du point de vue de la zone defilante il ne DEBORDE rien —
+  // sa fenetre vaut exactement son contenu, donc zero course de defilement.
+  //
+  // ⛔ Le plafond de 90 % pose en R5 ne corrigeait pas ca : il a AGGRAVE le cas
+  // long, puisque 90 % de l'ecran PLUS l'en-tete depasse le conteneur.
+  //
+  // ✅ Le correctif ne touche pas `BottomModal` (69 autres appelants) : le titre
+  // descend dans le contenu, et la mesure redevient exacte.
+  test('elle ne recoit plus d en-tete fixe', () => {
+    monterEtOuvrirLeMenu();
+
+    expect(feuilleDeGestion()).not.toBeNull();
+    expect(feuilleDeGestion()?.headerComponent).toBeUndefined();
+  });
+
+  // L ORDRE fait partie du temoin : le titre doit venir AVANT les rangees,
+  // sinon on aurait deplace le probleme au lieu de le regler.
+  test('et le titre est le PREMIER element du contenu, devant les rangees', () => {
+    monterEtOuvrirLeMenu();
+    const contenu = [].concat(feuilleDeGestion()?.children || []);
+
+    expect(contenu[0]?.props?.testID).toBe('event-manage-title');
+    expect(contenu[1]?.props?.testID).toBe('event-manage-sheet');
+  });
+
+  test('et il porte toujours le meme libelle', () => {
+    monterEtOuvrirLeMenu();
+    const titre = chercherDansElements(
+      feuilleDeGestion()?.children,
+      (/** @type {any} */ noeud) => noeud?.props?.testID === 'event-manage-title',
+    );
+
+    expect(titre?.props?.children).toBe("Gérer l'événement");
   });
 });
 
