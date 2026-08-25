@@ -4857,10 +4857,6 @@ function EventDetails({ navigation, route }) {
     setLateModalNote('');
   }, []);
 
-  const handleCoachMarkArrival = useCallback((/** @type {User | null | undefined} */ targetUser) => {
-    openCoachLateModal(targetUser, 'coach_mark');
-  }, [openCoachLateModal]);
-
   const handleCoachEditLate = useCallback((/** @type {User | null | undefined} */ targetUser) => {
     openCoachLateModal(targetUser, 'coach_edit');
   }, [openCoachLateModal]);
@@ -7771,7 +7767,6 @@ function EventDetails({ navigation, route }) {
                   nowMs={serverNowMs}
                   onCandidatePress={handleOpenDetectionCandidate}
                   onCoachEditLate={handleCoachEditLate}
-                  onCoachMarkArrival={handleCoachMarkArrival}
                   participantsSummary={participantsSummary}
                   participationsByStatus={participationsByStatus}
                   pendingParticipations={pendingParticipations}
