@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import {
   Image, Linking, Platform, ScrollView, Text, View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { withAlpha } from '@/theme/colors';
 import useTheme from '@/theme/themeContext';
@@ -10,17 +11,34 @@ import useTheme from '@/theme/themeContext';
 import Button from '@/components/atoms/button/Button';
 import GlyphIcon from '@/components/atoms/glyphIcon/GlyphIcon';
 
+// ⬆️ RECETTE DU 2026-08-26, SUR L'IPHONE D'ADEL : le logo passait SOUS la barre
+// d'etat — l'heure, le reseau et la batterie s'affichaient PAR-DESSUS lui.
+// `Spaces.padding[24]` ne connait pas la hauteur de cette barre, et un `gap` de
+// conteneur ne s'applique JAMAIS avant le premier enfant. Il faut donc la mesure
+// REELLE du telephone, plus une respiration.
+// 24 est un cran de la rampe Spaces (qui n'a ni 6, ni 10, ni 14) : on reprend
+// celui du padding lateral, pour que l'ecran respire pareil de tous les cotes.
+const SAFE_AREA_GAP = 24;
+
 /**
- * Le nom de la boutique, ecrit en toutes lettres — le pack l'exige : « nom du
- * store ecrit en toutes lettres selon la plateforme ». « Va sur le store » ne
- * dit a personne ou appuyer.
+ * L'avis de redirection, en UNE seule chaine par plateforme.
+ *
+ * 🔤 RECETTE DU 2026-08-26 : l'ecran affichait « vers l&#39;App Store ».
+ * i18next ECHAPPE les valeurs interpolees (&, ', <, >, ", /) — c'est ecrit dans
+ * ce depot depuis le lot D41 (`fr.js`, bloc `friendlyMatch`) — donc « l'App
+ * Store » passe par `{{store}}` et ressort en entite HTML.
+ * ⛔ LA CORRECTION N'EST PAS D'ETEINDRE L'ECHAPPEMENT : ce serait l'ouvrir pour
+ * toutes les autres interpolations, dont certaines portent un jour un nom de
+ * club saisi par un humain. On retire l'interpolation, c'est tout : deux phrases
+ * completes, aucun assemblage, rien a echapper. C'est aussi ce que preferent les
+ * traducteurs — l'ordre des mots change d'une langue a l'autre.
  * @param {(key: string, fallback: string) => string} t
  * @returns {string}
  */
-const resolveStoreName = (t) => (
+const resolveRedirectNotice = (t) => (
   Platform.OS === 'ios'
-    ? t('appUpdateGate.stores.ios', "l'App Store")
-    : t('appUpdateGate.stores.android', 'Google Play')
+    ? t('appUpdateGate.redirectNoticeIos', "Tu seras redirigé·e vers l'App Store.")
+    : t('appUpdateGate.redirectNoticeAndroid', 'Tu seras redirigé·e vers Google Play.')
 );
 
 /**
@@ -61,7 +79,17 @@ function AppUpdateRequiredScreen({
     Alignments, ApplicationStyle, Colors, Fonts, Images, Spaces,
   } = useTheme();
   const { t } = useTranslation();
+  const insets = useSafeAreaInsets();
   const [openFailed, setOpenFailed] = useState(false);
+
+  // 📱 La barre systeme en haut, la barre de geste en bas : deux hauteurs que
+  // seul le telephone connait. Elles s'AJOUTENT au degagement, elles ne le
+  // remplacent pas — sinon le logo se colle juste sous l'heure.
+  /** @type {import('react-native').ViewStyle} */
+  const safeAreaStyle = {
+    paddingBottom: insets.bottom + SAFE_AREA_GAP,
+    paddingTop: insets.top + SAFE_AREA_GAP,
+  };
 
   /** @type {import('react-native').ImageStyle} */
   const imageStyle = {
@@ -170,6 +198,7 @@ function AppUpdateRequiredScreen({
         contentContainerStyle={[
           Alignments.scrollSpaceBetween,
           Spaces.padding[24],
+          safeAreaStyle,
           Spaces.gap[24],
           Alignments.alignCenter,
         ]}
@@ -268,10 +297,7 @@ function AppUpdateRequiredScreen({
             </Text>
           ) : (
             <Text style={[Fonts.p3, Fonts.neutral400, Fonts.textCenter]}>
-              {t('appUpdateGate.redirectNotice', {
-                defaultValue: 'Tu seras redirigé·e vers {{store}}.',
-                store: resolveStoreName(t),
-              })}
+              {resolveRedirectNotice(t)}
             </Text>
           )}
           <Button

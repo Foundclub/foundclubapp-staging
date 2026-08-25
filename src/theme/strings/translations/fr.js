@@ -260,7 +260,15 @@ export default {
       title: 'Une mise à jour est disponible',
       version: 'Version {{version}}',
     },
+    // 🔤 ⛔ NE PLUS UTILISER redirectNotice NI stores.* POUR CETTE PHRASE.
+    // Recette du 2026-08-26 : « vers l'App Store » passe par {{store}}, et
+    // i18next ECHAPPE les valeurs interpolees ⇒ l'ecran affichait
+    // « vers l&#39;App Store ». Les deux clefs completes ci-dessous n'ont AUCUNE
+    // interpolation, donc plus rien a echapper. Les deux clefs historiques
+    // restent la (aucune clef ne se supprime) mais ne sont plus lues.
     redirectNotice: 'Tu seras redirigé·e vers {{store}}.',
+    redirectNoticeAndroid: 'Tu seras redirigé·e vers Google Play.',
+    redirectNoticeIos: "Tu seras redirigé·e vers l'App Store.",
     releaseNotesTitle: 'Dans cette version',
     requiredVersion: 'Version demandée : {{version}}',
     stores: {
