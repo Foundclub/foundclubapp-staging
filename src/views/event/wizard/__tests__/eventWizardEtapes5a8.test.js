@@ -520,7 +520,7 @@ describe('D10 — etape 6 · Acces', () => {
     expect(contenu).toContain('Visibilité');
     expect(contenu).toContain('Public');
     expect(contenu).toContain('Privé');
-    expect(contenu).toContain('Validation des demandes extérieures');
+    expect(contenu).toContain('Validation des membres');
     expect(contenu).toContain('Automatique');
     expect(contenu).toContain('Manuelle');
     demonter();
@@ -545,9 +545,10 @@ describe('D10 — etape 6 · Acces', () => {
     // paire de pilules, et la valeur portee par la rangee « Avancé ».
     const contenu = contenuDe(arbre);
     expect(contenu).toContain('Découvrable par tous');
-    // R8 (D2) — sur une detection, la validation ne voit que les demandes du
-    // dehors : sa ligne d'aide le dit desormais. Le defaut mesure reste 'auto'.
-    expect(contenu).toContain('acceptées sans validation');
+    // S11 — la validation ne commande plus que les MEMBRES (les demandes du
+    // dehors sont validees a la main, sans reglage). Sa ligne d'aide redit donc
+    // ce qu'elle disait avant R8. Le defaut mesure, lui, reste 'auto'.
+    expect(contenu).toContain('confirment seuls leur présence');
     expect(contenu).toContain('Visibles');
     demonter();
   });
@@ -572,8 +573,9 @@ describe('D10 — etape 6 · Acces', () => {
       pressableQuiPorte(arbre, 'Manuelle').props.onPress();
     });
 
-    // R8 (D2) — meme geste, phrase qui nomme QUI est filtre.
-    expect(contenuDe(arbre)).toContain("Tu valides chaque demande venue de l'extérieur");
+    // S11 — meme geste ; la phrase est celle des membres, seule audience que
+    // ce reglage commande encore.
+    expect(contenuDe(arbre)).toContain('Le coach valide chaque participant');
     demonter();
   });
 
@@ -631,8 +633,8 @@ describe('D10 — etape 6 · Acces', () => {
 
     const contenu = contenuDe(arbre);
     expect(contenu).toContain('Visibilité');
-    expect(contenu).not.toContain('Validation des demandes extérieures');
-    expect(contenu).not.toContain('Validation des membres internes');
+    expect(contenu).not.toContain('Validation des membres');
+    expect(contenu).not.toContain('Demandes extérieures');
     demonter();
   });
 
@@ -645,8 +647,18 @@ describe('D10 — etape 6 · Acces', () => {
   // La reponse de ce lot n'est pas de changer le serveur, c'est de faire dire
   // la verite a l'app : un reglage qui ne commande rien ne se propose pas, et
   // quand il commande quelqu'un, il dit QUI.
-  describe('R8 — la validation ne se propose que si elle filtre quelqu un', () => {
-    it('sur un evenement PRIVE, la pilule de validation disparait', () => {
+  // 🔄 CE BLOC ETAIT CELUI DE R8. Il n'est pas supprime, il est REECRIT sous la
+  // regle corrigee par Adel le 2026-08-25 (S11, vague S) :
+  //   · membre d'une equipe conviee -> validation AUTOMATIQUE (inchange) ;
+  //   · participant EXTERIEUR       -> validation MANUELLE, TOUJOURS, et le
+  //     serveur la FORCE sur ses trois portes d'entree.
+  //
+  // Ce que R8 protegeait — « l'app ne propose pas un reglage qui ne commande
+  // personne » — survit donc entier, et se renforce : le choix des externes
+  // disparait completement, remplace par une INFORMATION. Un bouton dont le
+  // serveur ignore la valeur serait un bouton sans fil.
+  describe('S11 — les externes ne sont plus un choix, mais une information', () => {
+    it('sur un evenement PRIVE, il n y a ni pilule ni information', () => {
       const { arbre, demonter } = monter(EventWizardAccess, {
         ...ETAT_DETECTION,
         sessionStatus: 'closed',
@@ -654,36 +666,57 @@ describe('D10 — etape 6 · Acces', () => {
       const contenu = contenuDe(arbre);
 
       expect(contenu).toContain('Visibilité');
-      expect(contenu).not.toContain('Validation des demandes extérieures');
+      expect(contenu).not.toContain('Validation des membres');
+      expect(contenu).not.toContain('Demandes extérieures');
+      // 🔒 l'ancien libelle menteur ne doit jamais revenir non plus
       expect(contenu).not.toContain('Validation des présences');
       demonter();
     });
 
-    it('sur un evenement PUBLIC, elle revient et nomme ceux qu elle filtre', () => {
+    it('sur un evenement PUBLIC, la pilule nomme les MEMBRES et l information nomme les externes', () => {
       const { arbre, demonter } = monter(EventWizardAccess, ETAT_DETECTION);
       const contenu = contenuDe(arbre);
 
-      expect(contenu).toContain('Validation des demandes extérieures');
+      expect(contenu).toContain('Validation des membres');
+      expect(contenu).toContain('Demandes extérieures');
+      expect(contenu).toContain('Les demandes extérieures sont validées par toi');
       expect(contenu).not.toContain('Validation des présences');
       demonter();
     });
 
-    // LE TEMOIN QUI COMPTE VRAIMENT : la pilule doit suivre la visibilite SANS
-    // quitter l'ecran. C'est le geste reel de l'organisateur — il bascule sur
-    // « Prive » et doit voir le reglage inutile s'effacer sous ses yeux.
-    it('basculer de public a prive efface la pilule sans quitter l ecran', () => {
+    // 🎯 LE TEMOIN QUI COMPTE LE PLUS : l'information ne doit JAMAIS s'accompagner
+    // d'un choix. Le jour ou quelqu'un remettrait des pilules « Automatique /
+    // Manuelle » sous « Demandes exterieures », le serveur les ignorerait — et
+    // l'app mentirait de nouveau, exactement comme avant R8.
+    it('l information exterieure ne propose AUCUN choix a cote d elle', () => {
+      const { arbre, demonter } = monter(EventWizardAccess, {
+        sessionStatus: 'open',
+        team: EQUIPE,
+        type: { documentId: 'type-entrainement', name: 'Entrainement' },
+      });
+
+      expect(contenuDe(arbre)).toContain('Les demandes extérieures sont validées par toi');
+      expect(() => pressableQuiPorte(arbre, 'Validation des joueurs externes')).toThrow();
+      expect(contenuDe(arbre)).not.toContain('Validation des joueurs externes');
+      demonter();
+    });
+
+    // La pilule des MEMBRES doit toujours suivre la visibilite sans quitter
+    // l'ecran : c'est le geste reel de l'organisateur.
+    it('basculer de public a prive efface tout le bloc sans quitter l ecran', () => {
       const { arbre, demonter } = monter(EventWizardAccess, ETAT_DETECTION);
-      expect(contenuDe(arbre)).toContain('Validation des demandes extérieures');
+      expect(contenuDe(arbre)).toContain('Validation des membres');
 
       act(() => {
         pressableQuiPorte(arbre, 'Privé').props.onPress();
       });
 
-      expect(contenuDe(arbre)).not.toContain('Validation des demandes extérieures');
+      expect(contenuDe(arbre)).not.toContain('Validation des membres');
+      expect(contenuDe(arbre)).not.toContain('Demandes extérieures');
       demonter();
     });
 
-    it('un entrainement PUBLIC garde ses deux pilules, chacune nommant qui elle filtre', () => {
+    it('un entrainement PUBLIC garde SA pilule de membres internes (D2 : rien ne bouge pour eux)', () => {
       const { arbre, demonter } = monter(EventWizardAccess, {
         sessionStatus: 'open',
         team: EQUIPE,
@@ -692,11 +725,11 @@ describe('D10 — etape 6 · Acces', () => {
       const contenu = contenuDe(arbre);
 
       expect(contenu).toContain('Validation des membres internes');
-      expect(contenu).toContain('Validation des joueurs externes');
+      expect(contenu).toContain('Demandes extérieures');
       demonter();
     });
 
-    it('un entrainement PRIVE n en garde aucune', () => {
+    it('un entrainement PRIVE ne garde rien du tout', () => {
       const { arbre, demonter } = monter(EventWizardAccess, {
         sessionStatus: 'closed',
         team: EQUIPE,
@@ -706,7 +739,7 @@ describe('D10 — etape 6 · Acces', () => {
 
       expect(contenu).toContain('Visibilité');
       expect(contenu).not.toContain('Validation des membres internes');
-      expect(contenu).not.toContain('Validation des joueurs externes');
+      expect(contenu).not.toContain('Demandes extérieures');
       demonter();
     });
   });

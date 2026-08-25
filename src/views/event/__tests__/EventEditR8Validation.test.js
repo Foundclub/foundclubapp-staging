@@ -19,9 +19,16 @@ import EventEdit from '../EventEdit';
 //     qui DEMANDENT a venir ».
 //
 // Sur un prive, tout le monde est convie : le reglage ne commande personne.
-// La decision A (Adel, 24/08) gele le serveur — c'est donc l'APP qui doit
-// cesser de proposer un reglage qui ne commande rien, et nommer QUI il filtre
-// quand il en filtre un.
+//
+// 🔄 S11 (vague S) — REGLE CORRIGEE PAR ADEL LE 2026-08-25, elle REMPLACE celle
+// de R8 ci-dessus. Les demandes venues du dehors sont validees a la main
+// TOUJOURS, et le serveur le FORCE sur ses trois portes d'entree. Consequence
+// pour cet ecran : le reglage ne commande plus que les MEMBRES des equipes
+// conviees, son libelle le dit, et le choix « externes » disparait au profit
+// d'une simple information.
+//
+// Ce que R8 protegeait — l'app ne propose pas un reglage qui ne commande
+// personne — survit entier, et se renforce.
 //
 // ⚠️ CE QU'IL NE PROUVE PAS : le comportement du serveur. Il mesure ce que
 // l'ecran PROPOSE, pas ce que la base fait de la valeur.
@@ -162,9 +169,10 @@ jest.setTimeout(30000);
 
 const eventService = jest.requireMock('@/services/event/eventService');
 
-const LIBELLE_EXTERNE = 'Validation des demandes extérieures';
+const LIBELLE_MEMBRES = 'Validation des membres';
 const LIBELLE_INTERNE = 'Validation des membres internes';
 const LIBELLE_JOUEURS_EXTERNES = 'Validation des joueurs externes';
+const INFO_EXTERNES = 'Les demandes extérieures sont validées par toi.';
 
 /** @type {any} */
 let arbre = null;
@@ -245,6 +253,27 @@ const libellesDesSelecteurs = (racine) => racine
   )
   .map((/** @type {any} */ noeud) => String(noeud.props.testID).replace(/^select-/, ''));
 
+/**
+ * Tous les textes rendus sous ce noeud, a plat.
+ *
+ * ⚠️ Necessaire en plus de `libellesDesSelecteurs` : depuis S11, l'information
+ * sur les demandes exterieures n'est justement PLUS un selecteur. La lire par
+ * les selecteurs reviendrait a ne pas la voir du tout.
+ * @param {any} instance - Instance de test, ou racine.
+ * @param {string[]} [recueil] - Accumulateur.
+ * @returns {string[]} - Les textes trouves.
+ */
+const textesDe = (instance, recueil = []) => {
+  (instance?.children || []).forEach((/** @type {any} */ enfant) => {
+    if (typeof enfant === 'string' || typeof enfant === 'number') {
+      recueil.push(String(enfant));
+      return;
+    }
+    textesDe(enfant, recueil);
+  });
+  return recueil;
+};
+
 afterEach(() => {
   if (arbre) act(() => arbre.unmount());
   arbre = null;
@@ -274,21 +303,34 @@ describe('R8 (D1) — un reglage qui ne commande personne ne se propose pas', ()
   });
 });
 
-describe('R8 (D2) — quand elle commande quelqu un, elle dit QUI', () => {
-  test('evenement PUBLIC : la pilule revient, et nomme les demandes du dehors', async () => {
+describe('S11 (D4) — le reglage nomme les MEMBRES, les externes deviennent une information', () => {
+  test('evenement PUBLIC : le reglage restant nomme les membres, jamais les presences', async () => {
     const racine = await monterSur(evenement('open', 'type-detection', 'Detection'));
     const libelles = libellesDesSelecteurs(racine);
 
-    expect(libelles).toContain(LIBELLE_EXTERNE);
+    expect(libelles).toContain(LIBELLE_MEMBRES);
     expect(libelles).not.toContain('Validation des présences');
   });
 
-  test('entrainement PUBLIC : les deux pilules, chacune nommant qui elle filtre', async () => {
+  test('evenement PUBLIC : l information exterieure est affichee, et n est PAS un choix', async () => {
+    const racine = await monterSur(evenement('open', 'type-detection', 'Detection'));
+
+    expect(textesDe(racine).join(' | ')).toContain(INFO_EXTERNES);
+    // 🎯 LE POINT QUI COMPTE : aucun selecteur ne parle des externes. Le jour ou
+    // l'on en remettrait un, le serveur ignorerait sa valeur — et l'ecran
+    // mentirait de nouveau, exactement comme avant R8.
+    expect(
+      libellesDesSelecteurs(racine).filter((libelle) => /xt[ée]rieur|xterne/.test(libelle)),
+    ).toEqual([]);
+  });
+
+  test('entrainement PUBLIC : la pilule des membres internes reste (D2), le choix externe a disparu', async () => {
     const racine = await monterSur(evenement('open', 'type-entrainement', 'Entrainement'));
     const libelles = libellesDesSelecteurs(racine);
 
     expect(libelles).toContain(LIBELLE_INTERNE);
-    expect(libelles).toContain(LIBELLE_JOUEURS_EXTERNES);
+    expect(libelles).not.toContain(LIBELLE_JOUEURS_EXTERNES);
+    expect(textesDe(racine).join(' | ')).toContain(INFO_EXTERNES);
   });
 });
 

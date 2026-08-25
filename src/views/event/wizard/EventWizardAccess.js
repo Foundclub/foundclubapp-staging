@@ -114,9 +114,6 @@ function EventWizardAccess({ navigation, route }) {
     state.sessionStatus || getDefaultSessionStatusForEventType(state.type?.name),
   );
   const [validationMode, setValidationMode] = useState(state.validationMode || 'auto');
-  const [externalParticipantValidationMode, setExternalParticipantValidationMode] = useState(
-    state.externalParticipantValidationMode || 'manual',
-  );
   // La visibilite des identites est le seul reglage « avance » du pack : il
   // reste replie tant que personne ne le demande, mais sa VALEUR est toujours
   // lisible sur la rangee — un reglage cache dont on ignore l'etat serait pire
@@ -125,7 +122,6 @@ function EventWizardAccess({ navigation, route }) {
 
   const isTraining = isTrainingEventType(state.type?.name);
   const isTournament = isTournamentEventType(state?.type?.name);
-  const isOpenTraining = isTraining && sessionStatus !== 'closed';
 
   // La visibilite choisie ici decide encore de la forme du parcours (un
   // entrainement prive saute l'etape Participants) : le compteur et l'ecran
@@ -177,35 +173,26 @@ function EventWizardAccess({ navigation, route }) {
   const canBeAskedToJoin = hasExternalAudience({ sessionStatus });
   const showValidationBlock = !isTournament && canBeAskedToJoin;
 
-  // R8 (D2) — LE LIBELLE DIT QUI IL FILTRE. « Validation des presences »
-  // laissait croire qu'on filtrait les presents ; ce reglage ne voit que les
-  // demandes venues du dehors. Sur un entrainement, le libelle nommait deja
-  // ceux qu'il concerne : il ne bouge pas.
+  // S11 (vague S) — REGLE CORRIGEE PAR ADEL LE 2026-08-25.
+  //
+  // R8 avait renomme cette pilule « Validation des demandes exterieures », ce
+  // qui etait vrai a ce moment-la. Ca ne l'est plus : depuis S11 le serveur met
+  // TOUJOURS une demande venue du dehors en attente de validation, sur les
+  // TROIS portes d'entree. Ce reglage ne commande donc plus que les MEMBRES des
+  // equipes conviees — la seule audience qui lui reste, et pour qui rien n'a
+  // change. Le libelle le dit.
   const validationGroupLabel = isTraining
     ? t('eventWizard.steps.access.validationGroupInternal', 'Validation des membres internes')
-    : t('eventWizard.steps.access.validationGroupExternal', 'Validation des demandes extérieures');
-  const validationHint = (() => {
-    if (isTraining) {
-      return validationMode === 'manual'
-        ? t(
-          'eventWizard.steps.access.validationManualHint',
-          'Le coach valide chaque participant, un par un.',
-        )
-        : t(
-          'eventWizard.steps.access.validationAutoHint',
-          'Les participants confirment seuls leur présence — recommandé.',
-        );
-    }
-    return validationMode === 'manual'
-      ? t(
-        'eventWizard.steps.access.validationExternalManualHint',
-        'Tu valides chaque demande venue de l\'extérieur. Les invités répondent directement.',
-      )
-      : t(
-        'eventWizard.steps.access.validationExternalAutoHint',
-        'Les demandes venues de l\'extérieur sont acceptées sans validation — recommandé.',
-      );
-  })();
+    : t('eventWizard.steps.access.validationGroupMembers', 'Validation des membres');
+  const validationHint = validationMode === 'manual'
+    ? t(
+      'eventWizard.steps.access.validationManualHint',
+      'Le coach valide chaque participant, un par un.',
+    )
+    : t(
+      'eventWizard.steps.access.validationAutoHint',
+      'Les participants confirment seuls leur présence — recommandé.',
+    );
 
   const handleNext = () => {
     dispatch({
@@ -221,9 +208,10 @@ function EventWizardAccess({ navigation, route }) {
     if (!isTournament) {
       dispatch({
         payload: {
-          externalParticipantValidationMode: isOpenTraining
-            ? externalParticipantValidationMode
-            : (state.externalParticipantValidationMode || externalParticipantValidationMode),
+          // S11 — les demandes exterieures sont validees a la main, toujours.
+          // Il n'y a plus rien a choisir : on enregistre la seule valeur vraie,
+          // pour que ce que porte l'evenement dise la meme chose que le serveur.
+          externalParticipantValidationMode: 'manual',
           validationMode,
         },
         type: 'SET_VALIDATION_MODE',
@@ -288,33 +276,23 @@ function EventWizardAccess({ navigation, route }) {
               {validationHint}
             </ChoiceHint>
 
-            {isOpenTraining ? (
-              <View style={[Spaces.marginTop[16]]}>
-                <GroupLabel>
-                  {t(
-                    'eventWizard.steps.validation.externalTitle',
-                    'Validation des joueurs externes',
-                  )}
-                </GroupLabel>
-                <SegmentedControl
-                  centerContent
-                  onChange={setExternalParticipantValidationMode}
-                  options={validationOptions}
-                  value={externalParticipantValidationMode}
-                />
-                <ChoiceHint>
-                  {externalParticipantValidationMode === 'manual'
-                    ? t(
-                      'eventWizard.steps.access.externalManualHint',
-                      'Chaque joueur exterieur au club passe par toi.',
-                    )
-                    : t(
-                      'eventWizard.steps.access.externalAutoHint',
-                      'Les joueurs exterieurs au club rejoignent la séance sans validation.',
-                    )}
-                </ChoiceHint>
-              </View>
-            ) : null}
+            {/* S11 — CE N'EST PLUS UN CHOIX, C'EST UNE INFORMATION. Le serveur
+                met toute demande venue du dehors en attente, quoi qu'on lui
+                envoie : proposer « automatique » ici serait un bouton sans fil. */}
+            <View style={[Spaces.marginTop[16]]}>
+              <GroupLabel>
+                {t(
+                  'eventWizard.steps.access.externalGroup',
+                  'Demandes extérieures',
+                )}
+              </GroupLabel>
+              <ChoiceHint>
+                {t(
+                  'eventWizard.steps.access.externalAlwaysManualHint',
+                  'Les demandes extérieures sont validées par toi.',
+                )}
+              </ChoiceHint>
+            </View>
           </View>
         ) : null}
 

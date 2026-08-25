@@ -1586,6 +1586,10 @@ export default {
         label: 'Heure de fin',
         placeholder: 'HH:mm',
       },
+      externalRequests: {
+        alwaysManual: 'Les demandes extérieures sont validées par toi.',
+        label: 'Demandes extérieures',
+      },
       invitedTeams: {
         label: 'Inviter des équipes',
         myTeams: 'MES ÉQUIPES',
@@ -1649,9 +1653,10 @@ export default {
         placeholder: 'Sélectionner un type d\'événement',
       },
       validationMode: {
-        // R8 (D2) — ce reglage ne filtre QUE les demandes venues du dehors : le
-        // libelle le dit, au lieu de laisser croire qu'il commande les presences.
-        label: 'Validation des demandes extérieures',
+        // S11 — depuis la regle corrigee par Adel le 25/08, le serveur met
+        // TOUTE demande venue du dehors en attente. Ce reglage ne commande donc
+        // plus que les MEMBRES des equipes conviees : le libelle le dit.
+        label: 'Validation des membres',
         options: {
           auto: 'Automatique',
           manual: 'Manuelle',
@@ -1834,6 +1839,11 @@ export default {
       whenWhereTitle: 'Quand et lieu',
     },
     steps: {
+      access: {
+        externalAlwaysManualHint: 'Les demandes extérieures sont validées par toi.',
+        externalGroup: 'Demandes extérieures',
+        validationGroupMembers: 'Validation des membres',
+      },
       description: {
         label: 'Description',
         placeholder: 'Ajoute des détails utiles pour les participants.',

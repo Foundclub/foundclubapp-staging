@@ -376,12 +376,15 @@ function EventEdit({ navigation, route }) {
   // membres, et c'est le retour de recette de la 2.6.26.
   const showValidationField = hasExternalAudience({ sessionStatus: selectedSessionStatus });
 
-  // R8 (D2) — LE LIBELLE DIT QUI IL FILTRE. Sur un entrainement il nommait deja
-  // ceux qu'il concerne ; ailleurs, « Mode de validation » ne disait rien de
-  // l'audience reellement filtree.
+  // S11 (vague S) — REGLE CORRIGEE PAR ADEL LE 2026-08-25.
+  //
+  // R8 avait renomme ce champ « Validation des demandes exterieures » : c'etait
+  // vrai alors, ca ne l'est plus. Le serveur met desormais TOUTE demande venue
+  // du dehors en attente, sur ses trois portes d'entree. Ce reglage ne commande
+  // donc plus que les MEMBRES des equipes conviees — pour qui rien ne change.
   const validationModeLabel = isTrainingType
     ? t('eventEdit.fields.trainingValidationMode.label', 'Validation des membres internes')
-    : t('eventEdit.fields.validationMode.label', 'Validation des demandes extérieures');
+    : t('eventEdit.fields.validationMode.label', 'Validation des membres');
   const editSupport = useMemo(
     () => getEventEditSupport(event, selectedTypeData?.name),
     [event, getEventEditSupport, selectedTypeData?.name],
@@ -561,17 +564,6 @@ function EventEdit({ navigation, route }) {
             t(
               'eventEdit.trainingOpen.externalLimitRequired',
               'Indique combien de places externes tu ouvres pour cet entraînement.',
-            ),
-          );
-          return;
-        }
-
-        if (!String(data.externalParticipantValidationMode || '').trim()) {
-          Alert.alert(
-            t('common.error', 'Erreur'),
-            t(
-              'eventEdit.trainingOpen.externalValidationRequired',
-              'Choisis un mode de validation pour les joueurs externes.',
             ),
           );
           return;
@@ -917,27 +909,23 @@ function EventEdit({ navigation, route }) {
               />
             ) : null}
 
-            {isOpenTrainingType ? (
-              <Controller
-                control={control}
-                name="externalParticipantValidationMode"
-                render={({
-                  field: {
-                    name, onBlur, onChange, value,
-                  },
-                }) => (
-                  <AutocompleteSelect
-                    error={getFieldError({ errors: formErrors, fieldName: name })}
-                    label={t('eventEdit.fields.externalParticipantValidationMode.label', 'Validation des joueurs externes')}
-                    onBlur={onBlur}
-                    options={validationModeOptions}
-                    setValue={(/** @type {Option} */option) => {
-                      onChange(option?.value || 'manual');
-                    }}
-                    value={validationModeOptions.find((option) => option.value === value)?.label || ''}
-                  />
-                )}
-              />
+            {/* S11 — CE N'EST PLUS UN CHOIX, C'EST UNE INFORMATION. Le serveur
+                met toute demande venue du dehors en attente, quoi qu'on lui
+                envoie : un selecteur « automatique » serait un bouton sans fil.
+                Il s'affiche partout ou des demandes exterieures sont possibles,
+                donc sur tout evenement public — plus seulement un entrainement. */}
+            {showValidationField ? (
+              <View style={[Spaces.gap[4]]}>
+                <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
+                  {t('eventEdit.fields.externalRequests.label', 'Demandes extérieures')}
+                </Text>
+                <Text style={[Fonts.p3, Fonts.neutral200]}>
+                  {t(
+                    'eventEdit.fields.externalRequests.alwaysManual',
+                    'Les demandes extérieures sont validées par toi.',
+                  )}
+                </Text>
+              </View>
             ) : null}
 
             <Controller

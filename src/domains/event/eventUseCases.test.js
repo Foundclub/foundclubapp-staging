@@ -533,14 +533,14 @@ describe('Event Use Cases', () => {
       }));
     });
 
-    // R8 (D3) — LE REPLI NE S'HERITE PLUS DU MODE INTERNE.
+    // S11 (vague S) — REGLE CORRIGEE PAR ADEL LE 2026-08-25, elle REMPLACE R8.
     //
-    // Avant ce lot, un entrainement ouvert sans mode externe choisi recopiait
-    // `validationMode`. Or le defaut du tunnel est 'auto' : un organisateur qui
-    // n'avait rien dit sur les externes se retrouvait donc a les laisser entrer
-    // SANS validation, sans l'avoir demande une seule fois. Le repli sur qui on
-    // ne sait rien doit fermer la porte, pas l'ouvrir.
-    test('R8 — sans mode externe choisi, le repli est manual, jamais le mode interne', () => {
+    // R8 avait rendu le REPLI strict : sans mode externe choisi, on fermait la
+    // porte au lieu de recopier un `validationMode` a 'auto'. S11 va au bout —
+    // il n'y a plus de mode a choisir DU TOUT. Les demandes exterieures sont
+    // validees a la main, toujours, et le serveur le FORCE sur ses trois portes
+    // d'entree. La protection de R8 survit donc, en plus fort.
+    test('S11 — un entrainement ouvert repond « manual », sans regarder le mode interne', () => {
       expect(resolveTrainingOpenConfig({
         sessionStatus: 'open',
         type: { name: 'Entrainement' },
@@ -548,16 +548,21 @@ describe('Event Use Cases', () => {
       }).externalParticipantValidationMode).toBe('manual');
     });
 
-    test('R8 — un mode externe explicitement choisi reste celui qui a ete choisi', () => {
+    // ⚠️ CE TEMOIN DISAIT L'INVERSE SOUS R8 (« un mode externe explicitement
+    // choisi reste celui qui a ete choisi », qui attendait 'auto'). Il n'est pas
+    // supprime, il est RETOURNE : c'est exactement ce que la regle du 25/08 a
+    // change, et un vieil entrainement porte peut-etre encore 'auto' en base.
+    // L'app ne doit jamais afficher le contraire de ce que fera le serveur.
+    test('S11 — meme un « auto » deja en base est ignore : la reponse reste « manual »', () => {
       expect(resolveTrainingOpenConfig({
         externalParticipantValidationMode: 'auto',
         sessionStatus: 'open',
         type: { name: 'Entrainement' },
         validationMode: 'manual',
-      }).externalParticipantValidationMode).toBe('auto');
+      }).externalParticipantValidationMode).toBe('manual');
     });
 
-    test('R8 — un entrainement prive n a aucun mode externe : personne du dehors', () => {
+    test('S11 — un entrainement prive n a aucun mode externe : personne du dehors', () => {
       expect(resolveTrainingOpenConfig({
         sessionStatus: 'closed',
         type: { name: 'Entrainement' },

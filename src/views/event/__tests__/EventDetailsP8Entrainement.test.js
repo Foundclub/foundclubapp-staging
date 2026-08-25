@@ -601,18 +601,27 @@ describe('P8 · la carte d ouverture, face ORGANISATEUR', () => {
     expect(texteDeLaCarte(racine)).toContain('6 place(s) externe(s) restante(s) sur 8');
   });
 
-  test('« qui valide » se dit en clair, et pas de la meme facon', () => {
+  test('« qui valide » se dit en clair — et c est TOUJOURS l organisateur (S11)', () => {
     // 🎯 Pack fiche 2 : « combien de places externes, QUI VALIDE, et surtout
-    // combien de demandes ». Le reglage brut vit dans le menu ⋯ (N7 item 4) ;
-    // ici on dit ce qu'il CHANGE pour l'organisateur.
+    // combien de demandes ». Le sujet de ce temoin — la carte DIT qui valide —
+    // ne bouge pas.
+    //
+    // 🔄 CE QUI A CHANGE LE 2026-08-25 (S11) : la seconde moitie de ce temoin
+    // attendait « acceptées toutes seules » quand le reglage valait « auto ».
+    // Ce cas n'existe plus : les demandes exterieures sont validees a la main,
+    // toujours, et le serveur le FORCE. Le temoin n'est donc pas supprime — il
+    // est RETOURNE, et il garde desormais quelque chose de plus precieux : que
+    // la carte ne promette JAMAIS une acceptation automatique que le serveur
+    // n'honorera pas.
     const manuelle = monter({ auth: ORGANISATEUR(), event: entrainementOuvert() });
     expect(texteDeLaCarte(manuelle)).toContain('c’est toi qui acceptes chaque demande');
 
-    const auto = monter({
+    const vieuxReglageAuto = monter({
       auth: ORGANISATEUR(),
       event: entrainementOuvert({ externalParticipantValidationMode: 'auto' }),
     });
-    expect(texteDeLaCarte(auto)).toContain('acceptées toutes seules');
+    expect(texteDeLaCarte(vieuxReglageAuto)).toContain('c’est toi qui acceptes chaque demande');
+    expect(texteDeLaCarte(vieuxReglageAuto)).not.toContain('acceptées toutes seules');
   });
 
   test('un entrainement PRIVE dit qu il est reserve, et ne promet aucune place', () => {

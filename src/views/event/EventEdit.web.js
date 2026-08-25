@@ -366,11 +366,6 @@ function EventEdit({ navigation, route }) {
         setSubmitError('Indique combien de places externes tu ouvres pour cet entraînement.');
         return;
       }
-
-      if (!String(formState.externalParticipantValidationMode || '').trim()) {
-        setSubmitError('Choisis un mode de validation pour les joueurs externes.');
-        return;
-      }
     }
 
     let normalizedTotalPlayers = null;
@@ -657,7 +652,7 @@ function EventEdit({ navigation, route }) {
                     <span style={{ color: mutedTextColor, fontSize: 13 }}>
                       {isTrainingType
                         ? 'Validation des membres internes'
-                        : 'Validation des demandes extérieures'}
+                        : 'Validation des membres'}
                     </span>
                     <select onChange={(eventObject) => updateField('validationMode', eventObject.target.value)} style={fieldStyle} value={formState.validationMode}>
                       <option value="auto">Automatique</option>
@@ -666,21 +661,24 @@ function EventEdit({ navigation, route }) {
                   </label>
                 ) : null}
 
-                {isOpenTrainingType ? (
-                  <>
-                    <label style={{ display: 'grid', gap: 8 }}>
-                      <span style={{ color: mutedTextColor, fontSize: 13 }}>Places externes</span>
-                      <input min="0" onChange={(eventObject) => updateField('externalParticipantLimit', eventObject.target.value)} style={fieldStyle} type="number" value={formState.externalParticipantLimit} />
-                    </label>
+                {/* S11 — plus un choix, une information : le serveur met toute
+                    demande venue du dehors en attente, quoi qu'on lui envoie. */}
+                {showValidationField ? (
+                  <div style={{ display: 'grid', gap: 4 }}>
+                    <span style={{ color: mutedTextColor, fontSize: 13 }}>
+                      Demandes extérieures
+                    </span>
+                    <span style={{ color: mutedTextColor, fontSize: 13 }}>
+                      Les demandes extérieures sont validées par toi.
+                    </span>
+                  </div>
+                ) : null}
 
-                    <label style={{ display: 'grid', gap: 8 }}>
-                      <span style={{ color: mutedTextColor, fontSize: 13 }}>Validation des joueurs externes</span>
-                      <select onChange={(eventObject) => updateField('externalParticipantValidationMode', eventObject.target.value)} style={fieldStyle} value={formState.externalParticipantValidationMode}>
-                        <option value="auto">Automatique</option>
-                        <option value="manual">Manuelle</option>
-                      </select>
-                    </label>
-                  </>
+                {isOpenTrainingType ? (
+                  <label style={{ display: 'grid', gap: 8 }}>
+                    <span style={{ color: mutedTextColor, fontSize: 13 }}>Places externes</span>
+                    <input min="0" onChange={(eventObject) => updateField('externalParticipantLimit', eventObject.target.value)} style={fieldStyle} type="number" value={formState.externalParticipantLimit} />
+                  </label>
                 ) : null}
 
                 <label style={{ display: 'grid', gap: 8 }}>
