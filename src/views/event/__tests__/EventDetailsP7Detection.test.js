@@ -36,6 +36,10 @@ const mockLireLesCandidatures = jest.fn(() => Promise.resolve([]));
 // CABLAGE — que l ecran appelle la regle avec le bon objet, et qu il obeit a
 // son verdict. On ne peut pas appeler la vraie fonction : la charger tirerait
 // `@/services/client`, qui jette sans `.env`.
+// S6 — la VRAIE rampe d espacement, celle que l ecran recoit par `useTheme`.
+// 🪤 Sans elle, `Spaces.marginTop[12]` serait `undefined` dans le temoin, et
+// `expect(undefined).toBe(undefined)` passerait au VERT sur un ecran CASSE.
+const SpacesReel = jest.requireActual('@/theme/spaces').default;
 const mockInviterDansLEquipe = jest.fn(() => Promise.resolve({ documentId: 'invit-1' }));
 const mockResoudreDisponibilite = jest.fn(() => ({
   candidateId: 'u-gardien-2',
@@ -1317,5 +1321,48 @@ describe('R9 - LA BARRE DU HAUT PORTE ENFIN UN FOND, SUR CET ECRAN SEULEMENT', (
     monter({ event: buildDetection() });
 
     expect(typeof dernieresOptions().headerRight).toBe('function');
+  });
+
+  // 🧨 S6 (recette 2.6.27, screenshot detection 12:56) — CA CHEVAUCHE ENCORE.
+  //
+  // R9 avait borne le TITRE de la carte a deux lignes et pose un voile sous la
+  // barre. Le titre n etait pas le coupable : la reconnaissance du 25/08 a
+  // mesure que le premier enfant de l ecran est la PASTILLE DE TYPE
+  // (« DETECTION », « SEANCE D ESSAI »), que R9 n a jamais touchee.
+  //
+  // 🔍 LA CHAINE, MAILLON PAR MAILLON :
+  //  1. `ScreenContainer` pose `paddingTop = hauteur EXACTE de la barre` — zero
+  //     respiration ;
+  //  2. le `gap` de 32 du conteneur s applique ENTRE les enfants, JAMAIS avant le
+  //     premier : la pastille demarre donc pile au ras de la barre. C est ce
+  //     maillon qui rend le defaut invisible a la lecture ;
+  //  3. les deux boutons font 44x44 dans une bande de 44 pt : sur un iPhone a
+  //     Dynamic Island ils debordent d environ 2,7 px SOUS la barre, et la
+  //     pastille centree passe horizontalement sous le drapeau.
+  //
+  // ⛔ LE CORRECTIF EST LOCAL A CET ECRAN : ni `ScreenContainer` ni `Tag` ne
+  // bougent — ce sont des composants partages, et le defaut ne l est pas.
+  //
+  // ⚠️ CE QUE CE TEMOIN NE PROUVE PAS : Jest n a pas de moteur de mise en page.
+  // Il prouve que la marge est POSEE, jamais que le chevauchement a disparu a
+  // l ecran. La preuve pixel est la recette sur la prochaine build.
+  test('S6 · temoin 1 — la pastille de type respire sous la barre du haut', () => {
+    const root = monter({ event: buildDetection() });
+    const rangee = root.findAll(
+      (/** @type {any} */ node) => node.props?.testID === 'event-type-tag-row',
+    )[0];
+
+    expect(rangee).toBeDefined();
+
+    const styles = Array.isArray(rangee.props.style)
+      ? rangee.props.style
+      : [rangee.props.style];
+    const margeHaute = styles
+      .filter(Boolean)
+      .reduce((/** @type {any} */ trouvee, /** @type {any} */ style) => (
+        style?.marginTop === undefined ? trouvee : style.marginTop
+      ), undefined);
+
+    expect(margeHaute).toBe(SpacesReel.marginTop[12].marginTop);
   });
 });

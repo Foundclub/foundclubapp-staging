@@ -7330,7 +7330,20 @@ function EventDetails({ navigation, route }) {
   // `EventDetailsBottomActions.test.js`.
   return (
     <ScreenContainer bgImage="bg2" contentContainerStyle={[Spaces.gap[32], Alignments.fill]} gradient={null} withHeaderPadding>
-      <View style={[Spaces.gap[8], Alignments.alignCenter]}>
+      {/* 🧨 S6 (recette 2.6.27) — LA PASTILLE RESPIRE SOUS LA BARRE.
+          `ScreenContainer` pose un rembourrage haut EGAL a la hauteur de la
+          barre, et le `gap` du conteneur s applique ENTRE les enfants, jamais
+          AVANT le premier : cette rangee demarrait donc pile au ras de la barre.
+          Or les deux boutons (44x44 dans une bande de 44 pt) debordent d environ
+          2,7 px dessous sur un iPhone a Dynamic Island, et la pastille centree
+          passe sous le drapeau. 12 px de separation VERTICALE suffisent.
+          ⛔ Ni `ScreenContainer` ni `Tag` ne bougent : ils sont partages, le
+          defaut ne l est pas. Et surtout PAS de plafond de largeur ici, qui
+          tronquerait « SEANCE D ESSAI ». */}
+      <View
+        style={[Spaces.gap[8], Spaces.marginTop[12], Alignments.alignCenter]}
+        testID="event-type-tag-row"
+      >
         <Tag
           style={{}}
           text={buildTypeTagLabel(event?.type?.name, typeTagSegmentsComplets)}
