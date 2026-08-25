@@ -120,9 +120,12 @@ function EventAttendanceCall() {
 
   const [elapsedMs, setElapsedMs] = useState(0);
   const [bulkMessage, setBulkMessage] = useState('');
-  // Les trois feuilles. `sheetItem` porte la ligne visee par 2E et 2F.
+  // Les deux feuilles restantes. `sheetItem` porte la ligne visee par 2E, et
+  // `sheetPosition` son rang — la feuille NOMME le joueur, elle doit donc
+  // pouvoir dire « Participant·e 4 » quand les identites sont masquees.
   const [openSheet, setOpenSheet] = useState('');
   const [sheetItem, setSheetItem] = useState(/** @type {any} */ (null));
+  const [sheetPosition, setSheetPosition] = useState(1);
 
   const payloadData = attendancePayload?.data;
   const items = /** @type {any[]} */ (
@@ -239,10 +242,12 @@ function EventAttendanceCall() {
   }, [bulkMutation, eventStartMs, items, t]);
 
   const handleLateSubmit = useCallback((/** @type {any} */ envoi) => {
+    // ⛔ Plus de `note` : la feuille du pack n en porte plus (D4). L envoyer a
+    // `null` EFFACERAIT une note posee ailleurs — on ne transmet donc pas le
+    // champ du tout, et le serveur laisse celle qui existe en place.
     const payload = {
       arrivedAt: envoi.arrivedAt,
       lateMinutes: envoi.lateMinutes,
-      note: envoi.note,
     };
     // 🧭 Pointer et CORRIGER ne sont pas la meme route : `coachArrival` cree
     // le pointage, `patchLate` retouche celui qui existe deja.
@@ -412,7 +417,9 @@ function EventAttendanceCall() {
             identitiesHidden={identitiesHidden}
             item={item}
             key={item?.user?.documentId || index}
-            onLate={(/** @type {any} */ cible) => { setSheetItem(cible); setOpenSheet('late'); }}
+            onLate={(/** @type {any} */ cible) => {
+              setSheetItem(cible); setSheetPosition(index + 1); setOpenSheet('late');
+            }}
             onOnTime={handleMark}
             onUnmark={handleUnmarkOne}
             position={index + 1}
@@ -489,13 +496,14 @@ function EventAttendanceCall() {
 
       <AttendanceLateSheet
         eventStartMs={eventStartMs}
+        identitiesHidden={identitiesHidden}
         isCorrection={Boolean(sheetItem && isMarked(sheetItem))}
         isVisible={openSheet === 'late'}
         item={sheetItem}
         onClose={() => setOpenSheet('')}
         onSubmit={handleLateSubmit}
+        position={sheetPosition}
         t={t}
-        timezone={timezone}
       />
 
     </ScreenContainer>

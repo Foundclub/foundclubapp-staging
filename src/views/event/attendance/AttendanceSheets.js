@@ -1,30 +1,47 @@
-import { useEffect, useState } from 'react';
 import {
-  ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View,
+  ScrollView, StyleSheet, Text, TouchableOpacity, View,
 } from 'react-native';
 
 import { withAlpha } from '@/theme/colors';
 import useTheme from '@/theme/themeContext';
 
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
-import ChoiceChipGroup from '@/components/molecules/choiceChipGroup/ChoiceChipGroup';
 
 import {
   buildArrivedAtIso,
   countPresence,
   formatTimeInZone,
   listNeverSeen,
-  resolveLateMinutesFromArrivalTime,
 } from './attendanceCallModel';
 
+/**
+ * Les six paliers du pack, dans l ordre de la grille 3 x 2.
+ *
+ * ⛔ PAS DE SAISIE LIBRE EN V1 (decision D4). L ancienne feuille offrait
+ * « Autre heure » : un clavier au bord d un terrain, pour un cas que ces six
+ * valeurs couvrent deja. A rouvrir si la recette le demande.
+ */
+const LATE_STEPS = [5, 10, 15, 20, 30, 45];
+
 const styles = StyleSheet.create({
-  action: {
+  body: { gap: 12, paddingHorizontal: 16, paddingVertical: 8 },
+  cancel: {
+    alignItems: 'center',
     borderRadius: 12,
     justifyContent: 'center',
     minHeight: 44,
-    paddingHorizontal: 16,
   },
-  body: { gap: 12, paddingHorizontal: 16, paddingVertical: 8 },
+  // 🖐️ 48 de HAUT : c est une hauteur, pas un jeton `Spaces` — la rampe ne
+  // genere que des marges et des espacements, elle n a rien a dire ici.
+  chip: {
+    alignItems: 'center',
+    borderRadius: 12,
+    borderWidth: 1,
+    flexBasis: '31%',
+    flexGrow: 1,
+    height: 48,
+    justifyContent: 'center',
+  },
   footer: {
     flexDirection: 'row', gap: 8, paddingHorizontal: 16, paddingVertical: 12,
   },
@@ -37,10 +54,8 @@ const styles = StyleSheet.create({
     minHeight: 44,
     paddingHorizontal: 16,
   },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   header: { gap: 4, paddingHorizontal: 16, paddingTop: 16 },
-  input: {
-    borderRadius: 12, borderWidth: 1, minHeight: 44, paddingHorizontal: 12,
-  },
   nameRow: { justifyContent: 'center', minHeight: 44 },
   namesBox: { borderRadius: 12, gap: 4, padding: 12 },
 });
@@ -190,12 +205,22 @@ export function AttendanceCloseSheet({
 }
 
 /**
- * 2E — RETARD CONSTATE.
+ * 2E — RETARD CONSTATE (pack minimaliste du 26/08, decision D4).
  *
- * ⌨️ « Jamais un clavier par défaut » : le retard se pose en DEUX APPUIS
- * (un palier courant, puis l heure exacte seulement si besoin). Aucune saisie
- * ne prend le focus — au bord d un terrain, un clavier qui s ouvre tout seul
- * mange l ecran.
+ * 🎯 UN SEUL APPUI, ET C EST TOUT LE SUJET. L ancienne feuille demandait
+ * DEUX gestes — choisir un palier, puis appuyer sur « Enregistrer » — plus une
+ * saisie libre « Autre heure » et une note du staff. Au bord d un terrain, le
+ * coach a un joueur devant lui et une equipe a placer : choisir la duree DOIT
+ * pointer et refermer.
+ *
+ * ⌨️ « Jamais un clavier par défaut » est desormais tenu par CONSTRUCTION :
+ * il n y a plus aucune saisie dans cette feuille.
+ *
+ * 🧭 POURQUOI PAS `ChoiceChipGroup` (qui existe deja) : ce composant porte un
+ * ETAT selectionne et attend un geste de validation separe. Ici, choisir EST
+ * valider — il n y a jamais de selection a afficher. L employer aurait
+ * demande de neutraliser sa moitie utile ; la grille 3 x 2 du pack tient en
+ * douze lignes.
  *
  * 🧨 L ENVOI PORTE `arrivedAt`, ET C EST OBLIGATOIRE : sans lui le serveur
  * pose SON instant courant, meme quand `lateMinutes` vaut 10. L ecran
@@ -205,133 +230,78 @@ export function AttendanceCloseSheet({
  * @param {boolean} props.isCorrection - Corriger (patchLate) plutot que pointer.
  * @param {boolean} props.isVisible - La feuille est-elle ouverte.
  * @param {any} props.item - La ligne visee.
+ * @param {boolean} [props.identitiesHidden] - Le serveur masque les identites.
+ * @param {number} [props.position] - Rang, pour nommer une personne masquee.
  * @param {() => void} props.onClose - Fermer.
  * @param {(payload: any) => void} props.onSubmit - Envoyer.
  * @param {(key: string, fallback: string) => string} props.t - Le traducteur.
- * @param {string} [props.timezone] - Le fuseau du club.
  * @returns {import('react').ReactElement} - La feuille.
  */
 export function AttendanceLateSheet({
   eventStartMs,
+  identitiesHidden = false,
   isCorrection = false,
   isVisible,
   item,
   onClose,
   onSubmit,
+  position = 1,
   t,
-  timezone,
 }) {
   const { Colors, Fonts } = useTheme();
-  const [choix, setChoix] = useState('0');
-  const [heureLibre, setHeureLibre] = useState('');
-  const [note, setNote] = useState('');
 
-  // Chaque ouverture repart propre : garder le choix precedent ferait poser un
-  // retard de +30 a quelqu un qui arrive a l heure.
-  useEffect(() => {
-    if (!isVisible) return;
-    setChoix(String(Number(item?.attendance?.lateMinutes || 0)));
-    setHeureLibre('');
-    setNote(String(item?.attendance?.note || ''));
-  }, [isVisible, item]);
+  // 🔒 Le nom suit la meme regle que la ligne : masque, il ne sort ni a
+  // l ecran ni dans l etiquette d accessibilite.
+  const nom = identitiesHidden
+    ? `${t('eventDetails.attendanceCall.row.anonymous', 'Participant·e')} ${position}`
+    : `${item?.user?.firstname || ''} ${item?.user?.lastname || ''}`.trim();
 
-  const estLibre = choix === 'custom';
-  // 🧨 « Autre heure » n est pas decoratif : sans cette conversion, saisir
-  // 18:25 partait au serveur en `lateMinutes: 0` — le palier existait a
-  // l ecran et ne faisait rien.
-  const minutesLibres = resolveLateMinutesFromArrivalTime({
-    arrivalTime: heureLibre,
-    eventStartMs,
-    timeZone: timezone,
-  });
-  const minutes = estLibre ? (minutesLibres ?? 0) : Number(choix);
-  const arrivedAt = buildArrivedAtIso({ eventStartMs, lateMinutes: minutes });
-  const motArrive = t('eventDetails.attendanceCall.late.preview', 'Arrivé');
-  const motA = t('eventDetails.attendanceCall.late.previewAt', 'à');
-  const heureArrivee = formatTimeInZone(arrivedAt, timezone);
-  const apercu = minutes > 0
-    ? `${motArrive} +${minutes} min ${motA} ${heureArrivee}`
-    : t('eventDetails.attendanceCall.late.onTimePreview', "Arrivé à l'heure");
+  const motMin = t('eventDetails.attendanceCall.late.minutes', 'min');
 
   return (
-    <BottomModal
-      close={onClose}
-      footerComponent={(
-        <View style={styles.footer}>
-          <TouchableOpacity
-            accessibilityLabel={t('eventDetails.attendanceCall.late.cancel', 'Fermer')}
-            accessibilityRole="button"
-            onPress={onClose}
-            style={[styles.footerButton, { borderColor: Colors.neutral500 }]}
-          >
-            <Text style={[Fonts.p3Bold, { color: Colors.neutral200 }]}>
-              {t('eventDetails.attendanceCall.late.cancel', 'Fermer')}
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            accessibilityLabel={t('eventDetails.attendanceCall.late.submit', 'Enregistrer')}
-            accessibilityRole="button"
-            onPress={() => onSubmit({
-              arrivedAt,
-              isCorrection,
-              lateMinutes: minutes,
-              note: note.trim() || null,
-              userId: item?.user?.documentId,
-            })}
-            style={[styles.footerButton, {
-              backgroundColor: Colors.primary500, borderColor: Colors.primary500,
-            }]}
-          >
-            <Text style={[Fonts.p3Bold, { color: Colors.primary900 }]}>
-              {t('eventDetails.attendanceCall.late.submit', 'Enregistrer')}
-            </Text>
-          </TouchableOpacity>
-        </View>
-      )}
-      isVisible={isVisible}
-      snapPoints={['52%']}
-    >
+    <BottomModal close={onClose} isVisible={isVisible} snapPoints={['44%']}>
       <View style={styles.body}>
-        <ChoiceChipGroup
-          onSelect={(/** @type {any} */ valeur) => setChoix(String(valeur))}
-          options={[
-            { label: t('eventDetails.attendanceCall.late.onTime', "À l'heure"), value: '0' },
-            { label: '+5', value: '5' },
-            { label: '+10', value: '10' },
-            { label: '+15', value: '15' },
-            { label: '+30', value: '30' },
-            { label: t('eventDetails.attendanceCall.late.custom', 'Autre heure'), value: 'custom' },
-          ]}
-          selectedValue={choix}
-          title={t('eventDetails.attendanceCall.late.title', 'RETARD CONSTATÉ')}
-        />
+        <Text style={[Fonts.h4Bold, { color: Colors.neutral00 }]}>{nom}</Text>
+        <Text style={[Fonts.p3, { color: Colors.neutral300 }]}>
+          {t('eventDetails.attendanceCall.late.question', 'Arrivé avec combien de retard ?')}
+        </Text>
 
-        {/* La saisie libre n existe QUE si on l a demandee — c est ce qui tient
-            la promesse « jamais un clavier par défaut ». */}
-        {estLibre && (
-          <TextInput
-            keyboardType="numbers-and-punctuation"
-            onChangeText={setHeureLibre}
-            placeholder={t(
-              'eventDetails.attendanceCall.late.customPlaceholder',
-              'Heure d\'arrivée (HH:MM)',
-            )}
-            placeholderTextColor={Colors.neutral400}
-            style={[styles.input, { borderColor: Colors.neutral500, color: Colors.neutral00 }]}
-            value={heureLibre}
-          />
-        )}
+        {/* 📐 La grille 3 x 2 du pack. `flexBasis: '31%'` + `flexWrap` rend
+            trois colonnes sans table ni calcul de largeur d ecran. */}
+        <View style={styles.grid}>
+          {LATE_STEPS.map((minutes) => (
+            <TouchableOpacity
+              accessibilityLabel={`+${minutes} ${motMin}`}
+              accessibilityRole="button"
+              key={minutes}
+              onPress={() => onSubmit({
+                arrivedAt: buildArrivedAtIso({ eventStartMs, lateMinutes: minutes }),
+                isCorrection,
+                lateMinutes: minutes,
+                userId: item?.user?.documentId,
+              })}
+              style={[styles.chip, {
+                backgroundColor: Colors.primary800,
+                borderColor: withAlpha(Colors.neutral00, 0.14),
+              }]}
+            >
+              <Text style={[Fonts.p1Bold, { color: Colors.neutral00 }]}>
+                {`+${minutes} ${motMin}`}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
 
-        <TextInput
-          multiline
-          onChangeText={setNote}
-          placeholder={t('eventDetails.attendanceCall.late.note', 'Note du staff (optionnel)')}
-          placeholderTextColor={Colors.neutral400}
-          style={[styles.input, { borderColor: Colors.neutral500, color: Colors.neutral00 }]}
-          value={note}
-        />
-
-        <Text style={[Fonts.p3Bold, { color: Colors.warning500 }]}>{apercu}</Text>
+        <TouchableOpacity
+          accessibilityLabel={t('eventDetails.attendanceCall.late.cancel', 'Annuler')}
+          accessibilityRole="button"
+          onPress={onClose}
+          style={styles.cancel}
+        >
+          <Text style={[Fonts.p2Bold, { color: Colors.neutral300 }]}>
+            {t('eventDetails.attendanceCall.late.cancel', 'Annuler')}
+          </Text>
+        </TouchableOpacity>
       </View>
     </BottomModal>
   );

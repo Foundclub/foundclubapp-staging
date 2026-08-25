@@ -10,8 +10,10 @@ import EventAttendanceCall from '../EventAttendanceCall';
  *       serveur, et NE FAIT AUCUN APPEL RESEAU. C est un geste d ECRAN : aucune
  *       route de cloture n existe cote serveur, c est le cron de fin de match
  *       qui passe les non-pointes en « Non pointé ».
- *   9.  2E — six paliers, aucun clavier par defaut, et l envoi porte
- *       `lateMinutes` ET `arrivedAt` = debut + minutes.
+ *   9.  2E — six paliers (+5 a +45), AUCUNE saisie, et choisir un palier
+ *       pointe ET referme. L envoi porte `lateMinutes` ET `arrivedAt` =
+ *       debut + minutes, et surtout AUCUNE clef `note` : la transmettre a
+ *       `null` effacerait une note posee ailleurs.
  *   10. 2F — defaire un pointage remet en attente. Depuis le pack minimaliste
  *       du 26/08 c est le RE-TAP du bouton allume qui le fait (decision D2), et
  *       non plus une feuille « Corriger » a trois appuis.
@@ -313,32 +315,41 @@ describe('L5-A · 2D — la cloture ne ment pas sur ce qu elle fait', () => {
 });
 
 describe('L5-A · 2E — pointer un retard', () => {
-  test('six paliers, aucun clavier par defaut, envoi avec lateMinutes ET arrivedAt', async () => {
+  // 📐 APPEL (26/08) — MEME INTENTION, PALIERS ET GESTE CHANGES (decision D4).
+  //
+  // L ancien temoin exigeait la liste litterale « À l'heure / +5 / +10 / +15 /
+  // +30 / Autre heure » et un bouton « Enregistrer ». Le pack donne les six
+  // paliers +5 / +10 / +15 / +20 / +30 / +45 et fait de CHOISIR l acte lui-meme.
+  // Ce qui est mesure reste : six paliers, aucun clavier, et l envoi qui porte
+  // `lateMinutes` ET `arrivedAt` calcule depuis le DEBUT.
+  test('six paliers, aucun clavier, et choisir SUFFIT a pointer', async () => {
     const arbre = await monter([ligne({ firstname: 'Hugo', userId: 'u2' })]);
 
     await act(async () => { appuyable(arbre, 'Retard pour Hugo').props.onPress(); });
     const texte = aplatirTexte(arbre.toJSON());
 
-    expect(texte).toContain('RETARD CONSTATÉ');
-    ["À l'heure", '+5', '+10', '+15', '+30', 'Autre heure'].forEach((palier) => {
+    // La feuille NOMME le joueur : au bord d un terrain, on doit savoir pour
+    // qui on saisit sans refermer la feuille.
+    expect(texte).toContain('Hugo Dupont');
+    expect(texte).toContain('Arrivé avec combien de retard ?');
+
+    ['+5 min', '+10 min', '+15 min', '+20 min', '+30 min', '+45 min'].forEach((palier) => {
       expect(texte).toContain(palier);
     });
 
-    // ⌨️ « Jamais un clavier par défaut » : aucune saisie ne prend le focus,
-    // et la saisie d heure libre n existe qu apres « Autre heure ».
+    // ⌨️ « Jamais un clavier par défaut » est maintenant tenu PAR
+    // CONSTRUCTION : il n y a plus aucune saisie dans cette feuille.
     const saisies = arbre.root.findAll(
       (/** @type {any} */ noeud) => typeof noeud.type === 'string' && noeud.type === 'TextInput',
       { deep: true },
     );
-    saisies.forEach((/** @type {any} */ saisie) => {
-      expect(saisie.props.autoFocus).toBeFalsy();
-    });
+    expect(saisies).toHaveLength(0);
 
-    await act(async () => { appuyable(arbre, '+10').props.onPress(); });
-    // Debut 18:00 a Paris + 10 min = 18:10 — c est ce que la maquette annonce.
-    expect(aplatirTexte(arbre.toJSON())).toContain('Arrivé +10 min à 18:10');
+    // ⛔ Plus de bouton de validation : le palier EST la validation.
+    expect(texte).not.toContain('Enregistrer');
+    expect(texte).toContain('Annuler');
 
-    await act(async () => { appuyable(arbre, 'Enregistrer').props.onPress(); });
+    await act(async () => { appuyable(arbre, '+10 min').props.onPress(); });
 
     expect(mockCoachArrivalMutate).toHaveBeenCalledTimes(1);
     const envoi = mockCoachArrivalMutate.mock.calls[0][0];
@@ -348,35 +359,48 @@ describe('L5-A · 2E — pointer un retard', () => {
     // afficherait « Arrivé +10 min à 18:42 » pour un match de 18:00.
     expect(envoi.payload.arrivedAt).toBe('2026-08-19T16:10:00.000Z');
   });
+
+  test('la feuille de retard declare sa hauteur', async () => {
+    const arbre = await monter([ligne({ firstname: 'Hugo', userId: 'u2' })]);
+    await act(async () => { appuyable(arbre, 'Retard pour Hugo').props.onPress(); });
+
+    const feuille = arbre.root.findAll(
+      (/** @type {any} */ noeud) => typeof noeud.type === 'string'
+        && String(noeud.props?.testID || '').startsWith('sheet-snap-'),
+      { deep: true },
+    );
+    expect(feuille).toHaveLength(1);
+    expect(feuille[0].props.testID).toBe('sheet-snap-44%');
+  });
 });
 
-describe('L5-A · 2E — « Autre heure » n est pas decoratif', () => {
-  test('une heure saisie a la main devient un VRAI retard en minutes', async () => {
-    const arbre = await monter([ligne({ firstname: 'Hugo', userId: 'u2' })]);
+describe('L5-A · 2E — le retard NE REECRIT PAS la note du staff', () => {
+  // 🗑️ Le pack retire le champ de note. Le piege serait d envoyer `note: null`
+  // « pour faire propre » : `patchLate` l ecrirait, et une note posee
+  // ailleurs disparaitrait au premier retard corrige. Le champ n est donc pas
+  // transmis DU TOUT.
+  test('le corps envoye ne porte aucune clef `note`', async () => {
+    const arbre = await monter([
+      ligne({
+        arrivedAt: '2026-08-19T16:12:00.000Z',
+        firstname: 'Hugo',
+        lateMinutes: 12,
+        note: 'Bus en retard',
+        userId: 'u2',
+      }),
+    ]);
 
     await act(async () => { appuyable(arbre, 'Retard pour Hugo').props.onPress(); });
-    await act(async () => { appuyable(arbre, 'Autre heure').props.onPress(); });
+    expect(mockResetMutate).toHaveBeenCalledTimes(1);
+    // Hugo est deja en retard : re-taper l horloge DEPOINTE (D2). On passe
+    // donc par un joueur non pointe pour mesurer l envoi de la feuille.
+    const propre = await monter([ligne({ firstname: 'Malo', userId: 'u7' })]);
+    await act(async () => { appuyable(propre, 'Retard pour Malo').props.onPress(); });
+    await act(async () => { appuyable(propre, '+20 min').props.onPress(); });
 
-    // La saisie n existe QU APRES le choix — c est la promesse « jamais un
-    // clavier par defaut ».
-    const saisie = arbre.root.findAll(
-      (/** @type {any} */ noeud) => typeof noeud.type === 'string'
-        && noeud.type === 'TextInput'
-        && String(noeud.props?.placeholder || '').includes('HH:MM'),
-      { deep: true },
-    )[0];
-    expect(saisie).toBeTruthy();
-
-    // Le match commence a 18:00 (Paris) ; on annonce une arrivee a 18:25.
-    await act(async () => { saisie.props.onChangeText('18:25'); });
-    expect(aplatirTexte(arbre.toJSON())).toContain('Arrivé +25 min à 18:25');
-
-    await act(async () => { appuyable(arbre, 'Enregistrer').props.onPress(); });
     const envoi = mockCoachArrivalMutate.mock.calls[0][0];
-    // 🧨 Avant correction, ce chiffre valait 0 : le palier existait a l ecran
-    // et ne partait jamais au serveur.
-    expect(envoi.payload.lateMinutes).toBe(25);
-    expect(envoi.payload.arrivedAt).toBe('2026-08-19T16:25:00.000Z');
+    expect(envoi.payload.lateMinutes).toBe(20);
+    expect(Object.prototype.hasOwnProperty.call(envoi.payload, 'note')).toBe(false);
   });
 });
 
