@@ -729,3 +729,77 @@ describe('P8 · les clefs', () => {
     expect(askedKeys).toContain('eventDetails.openTraining.goToPending');
   });
 });
+
+// ---------------------------------------------------------------------------
+// S11-bis — LE RACCOURCI D'OUVERTURE SUR LA CARTE PRIVEE
+// ---------------------------------------------------------------------------
+//
+// 🗣️ GO D'ADEL DU 2026-08-25, en ses mots : « il manque sur la page detail de
+// l'evenement entrainement un bouton pour ouvrir l'entrainement au public
+// comme dans action evenement ».
+//
+// ⚖️ CE QUE CE GO CHANGE, ET IL FAUT LE DIRE : le lot N7 avait DELIBEREMENT
+// sorti la bascule de cette carte (« cette carte AFFICHE un etat, elle ne le
+// bascule pas »). Adel revient sur ce choix en connaissance de cause — ce n'est
+// pas un oubli qu'on repare, c'est une decision de produit qui en remplace une
+// autre. Le raccourci ne DUPLIQUE rien : il ouvre la MEME feuille que la rangee
+// du menu ⋯, laquelle demande deja les places et enregistre.
+//
+// 🔒 Ce que le bouton ne fait PAS : il ne touche pas a la validation. Depuis
+// S11, les demandes exterieures sont validees a la main, toujours, et le
+// serveur le force. Ce bouton ne change QUE l'acces.
+describe('S11-bis · le raccourci d ouverture (GO Adel 25/08)', () => {
+  const CTA = 'Ouvrir l’entraînement au public';
+
+  test('un entrainement PRIVE porte enfin son bouton d ouverture', () => {
+    const racine = monter({
+      auth: ORGANISATEUR(),
+      event: entrainementOuvert({ sessionStatus: 'closed' }),
+    });
+
+    expect(boutonAvecTitre(racine, CTA)).toBeTruthy();
+  });
+
+  test('un entrainement DEJA OUVERT ne le porte pas — il ne menerait nulle part', () => {
+    // 🔒 Regle 5 du pack, toujours vivante : aucun bouton muet. Ouvrir ce qui
+    // est deja ouvert n'a pas de sens.
+    const racine = monter({ auth: ORGANISATEUR(), event: entrainementOuvert() });
+
+    expect(boutonAvecTitre(racine, CTA)).toBeFalsy();
+  });
+
+  test('le presser ouvre la MEME feuille que le menu ⋯, celle qui demande les places', () => {
+    const racine = monter({
+      auth: ORGANISATEUR(),
+      event: entrainementOuvert({ sessionStatus: 'closed' }),
+    });
+
+    expect(textesVisibles(racine).join(' | ')).not.toContain('Places externes');
+
+    act(() => {
+      boutonAvecTitre(racine, CTA).props.onPress();
+    });
+
+    // 🎯 LA PREUVE QU'IL N'Y A PAS DE SECONDE MECANIQUE : ce qui s'ouvre est la
+    // feuille existante, reconnaissable a son compteur de places.
+    expect(textesVisibles(racine).join(' | ')).toContain('Places externes');
+  });
+
+  test('un LECTEUR ne le voit pas : il n a meme pas la carte', () => {
+    const racine = monter({
+      auth: SPECTATEUR(),
+      event: entrainementOuvert({ sessionStatus: 'closed' }),
+    });
+
+    expect(parTestID(racine, 'p8-carte-ouverture-entrainement')).toHaveLength(0);
+    expect(boutonAvecTitre(racine, CTA)).toBeFalsy();
+  });
+
+  test('la carte privee demande SA clef a fr.js', () => {
+    monter({ auth: ORGANISATEUR(), event: entrainementOuvert({ sessionStatus: 'closed' }) });
+
+    expect(askedKeys).toContain('eventDetails.openTraining.cardClosedTitle');
+    expect(askedKeys).toContain('eventDetails.openTraining.cardClosedMeaning');
+    expect(askedKeys).toContain('eventDetails.openTraining.openCta');
+  });
+});
