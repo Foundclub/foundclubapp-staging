@@ -99,13 +99,29 @@ const styles = StyleSheet.create({
  * 🕐 DEUX MODES, JAMAIS MELANGES :
  *   · avant la fenetre (2A) : un bouton DESACTIVE qui dit a quelle heure ca
  *     ouvre, et les compteurs de REPONSES ;
- *   · dans la fenetre (2B/2C) : l appel, et les compteurs de PRESENCE REELLE.
- * « Réponse ≠ présence » est la confusion majeure que cette planche corrige :
+ *   · dans la fenetre (2B/2C) : l appel minimaliste — UNE liste, UNE ligne par
+ *     joueur, TROIS actions.
+ * « Réponse ≠ présence » reste la confusion majeure que cette planche corrige :
  * les deux echelles ne se voient jamais ensemble.
  *
- * ⛔ CET ECRAN NE POSE JAMAIS UNE ABSENCE A LA PLACE DU JOUEUR. Pointer, c est
- * constater une presence ; ne pas pointer, c est « Non pointé » — un fait, pas
- * un jugement. Il n y a donc aucun bouton « Absent » ici.
+ * 🔴 CET ECRAN POSE DESORMAIS UNE ABSENCE — LA REGLE A ETE RENVERSEE LE 26/08,
+ * ET C EST ECRIT ICI PARCE QUE LE CONTRAIRE Y ETAIT ECRIT.
+ *
+ * Ce fichier a porte pendant des mois : « CET ECRAN NE POSE JAMAIS UNE ABSENCE
+ * A LA PLACE DU JOUEUR […] il n y a donc aucun bouton Absent ici ». Le
+ * raisonnement etait honnete — pointer constate une presence, ne pas pointer
+ * est un fait et pas un jugement. Le pack de design d Adel tranche autrement :
+ * un coach au bord d un terrain SAIT qui n est pas venu, et le lui faire taire
+ * l oblige a laisser une feuille fausse derriere lui.
+ *
+ * ⚠️ CE QUI PROTEGE CE RENVERSEMENT, et il faut le garder :
+ *   · l absence est ECRITE PAR UN HUMAIN et le dit — `source: 'coach_manual'`
+ *     + `manualOverride: true`. Le `no_show` du cron de fin de match, lui,
+ *     porte `system_finalization`. Les confondre ferait dire a l ecran que le
+ *     coach a declare absents les vingt joueurs qu il a oublie de pointer ;
+ *   · elle est REVERSIBLE en un tap (re-taper la croix depointe, D2) ;
+ *   · elle NE TOUCHE PAS la parole du joueur : ni `participations`, ni
+ *     `missings`. Ce qu il a declare lui-meme lui reste.
  * @returns {import('react').ReactElement} - L ecran.
  */
 function EventAttendanceCall() {
@@ -142,7 +158,7 @@ function EventAttendanceCall() {
   const identitiesHidden = Boolean(payloadData?.participantIdentitiesHidden);
 
   const {
-    bulkMutation, coachArrivalMutation, lateMinutesMutation, resetMutation,
+    absenceMutation, bulkMutation, coachArrivalMutation, lateMinutesMutation, resetMutation,
   } = useAttendanceCallMutations(eventId);
 
   // AC10 — l horloge du SERVEUR, ou rien. Remise a zero a chaque nouveau
@@ -227,6 +243,15 @@ function EventAttendanceCall() {
   const handleUnmarkOne = useCallback((/** @type {any} */ item) => {
     resetMutation.mutate({ userId: item?.user?.documentId });
   }, [resetMutation]);
+
+  /**
+   * 🔴 D7bis — POSER UNE ABSENCE. Aucun corps a envoyer : il n y a ni heure ni
+   * duree a declarer, seulement un constat. Le serveur pose son marqueur
+   * d origine lui-meme.
+   */
+  const handleAbsent = useCallback((/** @type {any} */ item) => {
+    absenceMutation.mutate({ userId: item?.user?.documentId });
+  }, [absenceMutation]);
 
   /**
    * 🟢 D3 — « TOUT LE MONDE EST LA », SANS RIEN ECRASER.
@@ -431,6 +456,7 @@ function EventAttendanceCall() {
             identitiesHidden={identitiesHidden}
             item={item}
             key={item?.user?.documentId || index}
+            onAbsent={handleAbsent}
             onLate={(/** @type {any} */ cible) => {
               setSheetItem(cible); setSheetPosition(index + 1); setOpenSheet('late');
             }}

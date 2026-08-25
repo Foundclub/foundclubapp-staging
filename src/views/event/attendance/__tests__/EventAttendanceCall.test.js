@@ -35,6 +35,7 @@ let mockEvent;
 /** @type {any} */
 let mockAttendance;
 
+const mockAbsenceMutate = jest.fn();
 const mockBulkMutate = jest.fn();
 const mockCoachArrivalMutate = jest.fn();
 const mockLateMutate = jest.fn();
@@ -80,6 +81,7 @@ jest.mock('@/services/event/eventQueries', () => ({
 // et non transforme : la SUITE ENTIERE meurt au chargement, 0 test execute.
 jest.mock('../useAttendanceCallMutations', () => ({
   useAttendanceCallMutations: () => ({
+    absenceMutation: { isPending: false, mutate: mockAbsenceMutate },
     bulkMutation: { isPending: false, mutate: mockBulkMutate },
     coachArrivalMutation: { isPending: false, mutate: mockCoachArrivalMutate },
     invalidateAll: jest.fn(),
@@ -582,9 +584,10 @@ describe('L5-A · la ligne n est pas cliquable, ses cibles font 44', () => {
       String(noeud.props?.accessibilityLabel || '').includes('Leo')
     ));
 
-    // ⛔ Deux tant que l absence n a pas de route serveur (D7bis) : un bouton
+    // 🔴 TROIS depuis D7bis (26/08) : la coche, l horloge et la croix. La
+    // troisieme n existe que parce qu une route serveur la porte — un bouton
     // visible sans route derriere serait un menteur.
-    expect(cibles).toHaveLength(2);
+    expect(cibles).toHaveLength(3);
     cibles.forEach((/** @type {any} */ cible) => {
       const styles = [cible.props.style].flat(Infinity).filter(Boolean);
       const lire = (/** @type {string} */ clef) => styles.reduce(
@@ -668,6 +671,105 @@ describe('L5-A · le pied ne bloque pas un appel PARTIEL', () => {
     expect(texte).toContain("Clôturer l'appel");
     // « 2 sur 2 » n apprend rien et allonge un libelle qui tient sur une ligne.
     expect(texte).not.toContain('2 sur 2');
+  });
+});
+
+describe('L5-A · 🔴 D7bis — l encadrant declare quelqu un absent', () => {
+  // 🔴 CE BLOC MESURE UN RENVERSEMENT DE REGLE (26/08, dessin d Adel).
+  // Ce fichier a porte pendant des mois « aucun bouton Absent ici ». Le
+  // commentaire d en-tete de l ecran a ete reecrit dans le meme commit : un
+  // commentaire qui contredit le code est le piege que la methode interdit.
+  test('la croix appelle la route d absence, sans aucun corps', async () => {
+    mockAttendance = reponseAttendance({
+      items: [ligne({ firstname: 'Malo', userId: 'u7' })],
+      serverNow: '2026-08-19T16:06:00.000Z',
+    });
+
+    const arbre = await monter();
+    await act(async () => { appuyable(arbre, 'Absent Malo').props.onPress(); });
+
+    expect(mockAbsenceMutate).toHaveBeenCalledTimes(1);
+    expect(mockAbsenceMutate.mock.calls[0][0]).toEqual({ userId: 'u7' });
+    // ⛔ Poser une absence n est ni une arrivee ni un retard.
+    expect(mockCoachArrivalMutate).not.toHaveBeenCalled();
+    expect(mockLateMutate).not.toHaveBeenCalled();
+  });
+
+  test('une absence posee A LA MAIN se lit « Absent », le no_show du cron « Non pointé »', async () => {
+    mockAttendance = reponseAttendance({
+      items: [
+        // Posee par l encadrant : marqueur `coach_manual`, aucune arrivee.
+        {
+          ...ligne({ attendanceStatus: 'no_show', firstname: 'Malo', userId: 'u7' }),
+          attendance: {
+            arrivedAt: null, lateMinutes: 0, manualOverride: true, source: 'coach_manual',
+          },
+        },
+        // Balayee par le cron de fin de match : c est un FAIT, pas un jugement.
+        ligne({ attendanceStatus: 'no_show', firstname: 'Nina', userId: 'u3' }),
+      ],
+      serverNow: '2026-08-19T19:30:00.000Z',
+    });
+
+    const arbre = await monter();
+    const texte = aplatirTexte(arbre.toJSON());
+
+    expect(texte).toContain('Absent');
+    expect(texte).toContain('Non pointé');
+
+    // 🏷️ LA MESURE QUI COMPTE : les deux lignes n ont PAS le meme etat. Sans
+    // le marqueur d origine, l ecran signerait un jugement que le coach n a
+    // jamais porte sur tous ceux qu il a juste oublie de pointer.
+    const pastilles = arbre.root.findAll(
+      (/** @type {any} */ noeud) => typeof noeud.type === 'string'
+        && String(noeud.props?.testID || '').startsWith('attendance-dot-'),
+      { deep: true },
+    ).map((/** @type {any} */ noeud) => noeud.props.testID);
+
+    expect(pastilles).toEqual(['attendance-dot-absent', 'attendance-dot-none']);
+    // Et l absence COMPTE dans le pointage : 1 sur 2.
+    expect(texte).toContain('1 / 2');
+  });
+
+  test('re-taper la croix DEPOINTE (D2), il ne repose pas une absence', async () => {
+    mockAttendance = reponseAttendance({
+      items: [{
+        ...ligne({ attendanceStatus: 'no_show', firstname: 'Malo', userId: 'u7' }),
+        attendance: {
+          arrivedAt: null, lateMinutes: 0, manualOverride: true, source: 'coach_manual',
+        },
+      }],
+      serverNow: '2026-08-19T16:06:00.000Z',
+    });
+
+    const arbre = await monter();
+    await act(async () => { appuyable(arbre, 'Absent Malo').props.onPress(); });
+
+    expect(mockResetMutate).toHaveBeenCalledTimes(1);
+    expect(mockResetMutate.mock.calls[0][0]).toEqual({ userId: 'u7' });
+    expect(mockAbsenceMutate).not.toHaveBeenCalled();
+  });
+
+  test('« Tout le monde est là » N ECRASE PAS une absence posee a la main', async () => {
+    mockAttendance = reponseAttendance({
+      items: [
+        {
+          ...ligne({ attendanceStatus: 'no_show', firstname: 'Malo', userId: 'u7' }),
+          attendance: {
+            arrivedAt: null, lateMinutes: 0, manualOverride: true, source: 'coach_manual',
+          },
+        },
+        ligne({ firstname: 'Enzo', userId: 'u2' }),
+      ],
+      serverNow: '2026-08-19T16:06:00.000Z',
+    });
+
+    const arbre = await monter();
+    await act(async () => { appuyable(arbre, 'Tout le monde est là').props.onPress(); });
+
+    // 🔒 C est le cas que `listUncalledIds` protege : une absence n a pas
+    // d `arrivedAt`, un filtre base dessus l aurait reecrite « a l heure ».
+    expect(mockBulkMutate.mock.calls[0][0].userIds).toEqual(['u2']);
   });
 });
 

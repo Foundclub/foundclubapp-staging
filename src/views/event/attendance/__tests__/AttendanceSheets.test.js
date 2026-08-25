@@ -27,6 +27,7 @@ let mockEvent;
 /** @type {any} */
 let mockAttendance;
 
+const mockAbsenceMutate = jest.fn();
 const mockBulkMutate = jest.fn();
 const mockCoachArrivalMutate = jest.fn();
 const mockLateMutate = jest.fn();
@@ -64,6 +65,7 @@ jest.mock('@/services/event/eventQueries', () => ({
 // mourrait au chargement, 0 test execute.
 jest.mock('../useAttendanceCallMutations', () => ({
   useAttendanceCallMutations: () => ({
+    absenceMutation: { isPending: false, mutate: mockAbsenceMutate },
     bulkMutation: { isPending: false, mutate: mockBulkMutate },
     coachArrivalMutation: { isPending: false, mutate: mockCoachArrivalMutate },
     invalidateAll: jest.fn(),
