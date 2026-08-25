@@ -54,7 +54,7 @@ import {
   LicenseStatusChip,
   paymentModeLabels,
 } from './licenseDesignSystem';
-import MyLicense from './MyLicense';
+import MyLicenses from './MyLicenses';
 
 /**
  * Champ texte de la feuille HelloAsso — meme grammaire que les champs du tunnel
@@ -1980,7 +1980,7 @@ function ClubLicenses({ navigation, route }) {
   }, [clubId, navigation, refetchUserData, switchClubMutation]);
 
   if (showMemberLicense) {
-    return <MyLicense navigation={navigation} route={route} />;
+    return <MyLicenses navigation={navigation} route={route} />;
   }
 
   // Sur le hub, l'ecran ne rend plus de titre : le navigateur en pose deja un

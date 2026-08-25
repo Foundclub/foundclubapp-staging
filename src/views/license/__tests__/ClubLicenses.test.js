@@ -134,7 +134,7 @@ jest.mock('@/components/molecules/segmentedControl/SegmentedControl', () => func
   return null;
 });
 
-jest.mock('../MyLicense', () => function MyLicenseMock() {
+jest.mock('../MyLicenses', () => function MyLicensesMock() {
   return null;
 });
 
