@@ -104,6 +104,7 @@ const monter = (props = {}) => {
     arbre = renderer.create(
       <SegmentedControl
         centerContent={Boolean(props.centerContent)}
+        fitLabels={Boolean(props.fitLabels)}
         fullLabels={Boolean(props.fullLabels)}
         onChange={props.onChange || jest.fn()}
         options={props.options || MODES_DE_CONFLIT}
@@ -197,5 +198,76 @@ describe('SegmentedControl — D63 : un libelle systeme ne se tronque jamais', (
     });
 
     expect(onChange).toHaveBeenCalledWith('pending_validation');
+  });
+});
+
+// 🔠 S5 (vague S) — UN TROISIEME MODE : UNE LIGNE, MAIS LE TEXTE RETRECIT.
+//
+// 🗣️ Recette 2.6.27 (25/08) : « les libelles d onglet doivent tenir sur UNE
+// SEULE ligne ». Avec `fullLabels` (D63), « Participants » et « Convocation »
+// se cassaient sur leur DERNIERE lettre — un « s » et un « n » tout seuls sous
+// le mot. C est pire que la troncature : ca ressemble a un bug d affichage.
+//
+// ⛔ CE QUI N ETAIT PAS UNE OPTION : corriger `fullLabels` en place. Sa
+// semantique (deux lignes, jamais coupe) est celle dont FacilityForm depend, et
+// sa hauteur y est RESERVEE pour deux lignes. Le ramener a une ligne y
+// reintroduirait la troncature que D63 avait supprimee. Les deux besoins sont
+// reels et opposes ⇒ deux props. Les temoins D63 ci-dessus restent INTACTS :
+// ce sont eux qui protegent FacilityForm de ce lot.
+describe('SegmentedControl — S5 : le mode UNE LIGNE qui retrecit au lieu de couper', () => {
+  it('avec fitLabels, chaque libelle tient sur UNE seule ligne', () => {
+    const lignesParLibelle = libellesRendus(monter({ centerContent: true, fitLabels: true }))
+      .map((/** @type {any} */ noeud) => noeud.props.numberOfLines);
+
+    expect(lignesParLibelle).toEqual([1, 1]);
+  });
+
+  it('avec fitLabels, le texte RETRECIT pour tenir — il ne s ampute pas', () => {
+    // 🎯 LE COEUR DU MODE. Sans `adjustsFontSizeToFit`, `numberOfLines={1}` se
+    // contente de couper : on serait revenu au defaut historique, et le « s »
+    // de Participants aurait disparu au lieu de passer a la ligne. Le plancher
+    // dit jusqu ou on accepte de reduire.
+    const noeuds = libellesRendus(monter({ centerContent: true, fitLabels: true }));
+
+    noeuds.forEach((/** @type {any} */ noeud) => {
+      expect(noeud.props.adjustsFontSizeToFit).toBe(true);
+      expect(noeud.props.minimumFontScale).toBe(0.72);
+    });
+  });
+
+  it('🔒 sans fitLabels, aucun libelle ne retrecit : les autres ecrans ne bougent pas', () => {
+    // La contre-epreuve qui garde les 15 ecrans a onglets courts hors de ce lot.
+    const noeuds = libellesRendus(monter());
+
+    noeuds.forEach((/** @type {any} */ noeud) => {
+      expect(noeud.props.adjustsFontSizeToFit).toBe(false);
+      expect(noeud.props.minimumFontScale).toBeUndefined();
+    });
+  });
+
+  it('🔒 fitLabels PRIME sur fullLabels quand les deux arrivent', () => {
+    // Un futur appelant qui passerait les deux ne doit pas tomber sur un rendu
+    // indefini — ce genre d indefini se decouvre a la recette, pas en CI.
+    const noeuds = libellesRendus(monter({
+      centerContent: true,
+      fitLabels: true,
+      fullLabels: true,
+    }));
+
+    expect(noeuds.map((/** @type {any} */ noeud) => noeud.props.numberOfLines)).toEqual([1, 1]);
+    noeuds.forEach((/** @type {any} */ noeud) => {
+      expect(noeud.props.adjustsFontSizeToFit).toBe(true);
+    });
+  });
+
+  it('fitLabels ne change rien aux valeurs remontees', () => {
+    const onChange = jest.fn();
+    const arbre = monter({ centerContent: true, fitLabels: true, onChange });
+
+    act(() => {
+      arbre.root.findAllByType(TouchableOpacity)[1].props.onPress();
+    });
+
+    expect(onChange).toHaveBeenCalledWith('allow_and_notify');
   });
 });

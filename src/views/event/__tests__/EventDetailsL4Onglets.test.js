@@ -261,7 +261,14 @@ jest.mock('@/components/molecules/segmentedControl/SegmentedControl', () => {
       // Le libelle a toujours ete complet DANS L'ARBRE : c'est `numberOfLines`
       // qui le coupait A L'ECRAN. Un temoin qui lirait le texte rendu serait
       // donc vert avant comme apres le correctif — seule la prop tranche.
-      { fullLabels: Boolean(props.fullLabels), testID: 'doublure-onglets' },
+      // 🔠 S5 (vague S) : la doublure relaie AUSSI `fitLabels`. Elle ne captait
+      // que `fullLabels` — un temoin qui ne regarde pas la prop qui commande
+      // reste vert quand l ecran change de mode.
+      {
+        fitLabels: Boolean(props.fitLabels),
+        fullLabels: Boolean(props.fullLabels),
+        testID: 'doublure-onglets',
+      },
       (props.options || []).map((/** @type {any} */ option) => react.createElement(
         rn.TouchableOpacity,
         {
@@ -524,15 +531,22 @@ describe('L4 · temoin 4 — trois onglets sur un match, zero ailleurs', () => {
   //
   // ⛔ LE COMPTEUR NE PART PAS POUR AUTANT — c'est la tentation que ce temoin
   // interdit. La planche 04 l'EXIGE sur les quatre types ranges ; raccourcir le
-  // libelle aurait rendu l'ecran vert en SUPPRIMANT l'information. Ce qui change
-  // est la consigne d'affichage : deux lignes autorisees, zero troncature
-  // (`fullLabels`, pose par D63 sur `FacilityForm` et jamais passe ici).
-  test('les libelles sont demandes ENTIERS au controle segmente (R6, vague R)', () => {
+  // libelle aurait rendu l'ecran vert en SUPPRIMANT l'information.
+  //
+  // ♻️ MIS A JOUR PAR S5 (vague S). R6 avait obtenu « entier » en autorisant
+  // DEUX lignes (`fullLabels`). Adel l'a vu a l'ecran le 25/08 : en deux lignes,
+  // les libelles se cassent sur leur DERNIERE lettre — un « s » sous
+  // « Participant », un « n » sous « Convocatio ». Le besoin est le meme (ne
+  // rien amputer), la reponse change : UNE ligne, et le texte RETRECIT
+  // (`fitLabels`). Le compteur, lui, reste exige.
+  test('les libelles sont demandes ENTIERS et sur UNE ligne (S5, vague S)', () => {
     const root = monter();
 
     const [controle] = parTestID(root, 'doublure-onglets');
 
-    expect(controle.props.fullLabels).toBe(true);
+    expect(controle.props.fitLabels).toBe(true);
+    // ⛔ Et surtout PAS le mode deux lignes : c'est LUI que la recette a refuse.
+    expect(controle.props.fullLabels).toBe(false);
     // 🔒 Contre-epreuve dans le MEME temoin : la consigne d'affichage change,
     // les compteurs restent. Sans cette ligne, vider les libelles passerait.
     expect(libellesDesOnglets(root)).toEqual(['Aperçu', 'Participants · 0', 'Convocation']);

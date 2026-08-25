@@ -33,6 +33,8 @@ const mockNavigate = jest.fn();
 const mockSetOptions = jest.fn();
 const mockEventQuery = { data: null };
 const mockTeamCompositionQuery = { data: null };
+/** @type {any[]} S5 : les options passees a la requete de composition, dans l ordre. */
+const mockCompositionQueryOptions = [];
 const mockCompositionFetching = { value: false };
 
 // 🧨 R9 — CE MOCK N EST PAS DECORATIF. `teamMembershipRequestService`
@@ -137,11 +139,22 @@ jest.mock('@/services/event/eventQueries', () => ({
     data: { data: { serverNow: new Date().toISOString() } },
   }),
   useGetEventConvocation: () => emptyQuery(),
-  useGetEventTeamComposition: () => ({
-    ...emptyQuery(),
-    data: mockTeamCompositionQuery.data,
-    isFetching: mockCompositionFetching.value,
-  }),
+  // 🔒 S5 (vague S) : on RETIENT les options passees a la requete. La liste des
+  // convoques du brouillon n est protegee par AUCUNE porte d affichage — elle
+  // l est par le fait que la requete elle-meme ne part pas sans `canEdit`.
+  // Un mock qui jette les options rendrait cette protection invisible au filet.
+  useGetEventTeamComposition: (
+    /** @type {any} */ _eventId,
+    /** @type {any} */ _teamId,
+    /** @type {any} */ options,
+  ) => {
+    mockCompositionQueryOptions.push(options);
+    return {
+      ...emptyQuery(),
+      data: mockTeamCompositionQuery.data,
+      isFetching: mockCompositionFetching.value,
+    };
+  },
 }));
 
 jest.mock('@/services/eventParticipation/eventParticipationQueries', () => ({
@@ -236,6 +249,10 @@ jest.mock('@/components/atoms/button/Button', () => {
         accessibilityRole: 'button',
         disabled: Boolean(props.disabled || props.isLoading),
         onPress: props.onPress,
+        // 🔘 S5 (vague S) : la doublure relaie le VARIANT. Sans lui, « c est un
+        // vrai bouton » ne se mesure pas — un lien texte et un Button rendent
+        // tous les deux un pressable portant un libelle.
+        variant: props.variant,
       },
       react.createElement(rn.Text, null, props.title || ''),
     );
@@ -389,8 +406,11 @@ const ACTION_OFFRE = 'Voir l’offre Équipe';
 // 🕳️ R6 (vague R) — LE TROISIEME ETAT, celui qui manquait. Entre « rien » et
 // « publie » il y a le BROUILLON, et c'est l'etat le plus frequent : un coach
 // ouvre sa convocation, coche trois joueurs, et revient le lendemain.
-const TITRE_BROUILLON = 'Ta convocation est commencée';
-const ACTION_BROUILLON = 'Reprendre le brouillon';
+// ♻️ S5 (vague S) — LES MOTS D ADEL, MOT POUR MOT. Il en prepare PLUSIEURS (une
+// par equipe conviee), d ou le pluriel ; et « brouillon » est un mot d outil,
+// pas un mot de terrain. « Continuer » dit ce qui se passe au doigt.
+const TITRE_BROUILLON = 'Tes convocations sont commencées';
+const ACTION_BROUILLON = 'Continuer mes convocations';
 
 // 🚧 Le plafond de hauteur DECLAREE du bandeau. Ce n'est pas une mesure a
 // l'ecran (il faudrait un appareil) mais la somme des valeurs que le style
@@ -512,6 +532,20 @@ const banner = (/** @type {any} */ root) => root
   .findAll((/** @type {any} */ node) => node.props?.testID === REMINDER_ID && node.type === View);
 
 /**
+ * 🔘 S5 — L action du bandeau, prise DANS le bandeau.
+ *
+ * ⛔ Pas `pressableWithText` : la page porte d autres pressables, et un libelle
+ * qui changerait de mot ferait passer ce juge a cote sans rien dire.
+ * @param {any} root - Racine du rendu.
+ * @returns {any} - Le pressable de l action, ou undefined.
+ */
+const actionDuBandeau = (/** @type {any} */ root) => {
+  const [node] = banner(root);
+  if (!node) throw new Error('Le bandeau de rappel n est pas rendu');
+  return node.findAllByType(TouchableOpacity)[0];
+};
+
+/**
  * Le rappel est-il rendu ? Un seul juge : le libelle que l'organisateur lit.
  * @param {any} root - Racine du rendu.
  * @returns {boolean} - Vrai si le rappel de compo est visible.
@@ -559,6 +593,7 @@ const asOrganiser = (/** @type {any} */ extra = {}) => ({
 beforeEach(() => {
   jest.clearAllMocks();
   jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+  mockCompositionQueryOptions.length = 0;
   mounted = null;
 });
 
@@ -759,6 +794,27 @@ describe('C2 + R6 — le bandeau se tait sur une compo PUBLIEE, jamais sur un br
     expect(rappelVisible(root)).toBe(false);
   });
 
+  test('🔘 S5 : l action du bandeau est un VRAI bouton, pas un lien texte', () => {
+    // 🗣️ Adel, recette du 25/08 : « le lien texte devient un vrai bouton ».
+    // Ce qu il y avait : un `TouchableOpacity` nu portant du texte primary500.
+    // A l ecran, rien ne le designait comme la porte principale de l onglet —
+    // il se lisait comme une note de bas de bloc.
+    //
+    // ⛔ LE JUGE PORTE SUR LE VARIANT DEMANDE AU COMPOSANT PARTAGE, pas sur le
+    // texte : un lien et un `Button` rendent tous les deux un pressable portant
+    // un libelle. Lire le texte ne distinguerait donc PAS les deux, et ce
+    // temoin serait vert avant comme apres.
+    const root = mountScreen({
+      auth: asOrganiser(),
+      composition: { ...PAYLOAD_SANS_COMPO, draft: { mode: 'manual', teams: [] } },
+    });
+
+    const action = actionDuBandeau(root);
+
+    expect(action.props.variant).toBe('Primary');
+    expect(textOf(action)).toContain(ACTION_BROUILLON);
+  });
+
   test('🔒 « ABSENT » N EST PAS « VIDE » : un brouillon sans joueur reste un brouillon', () => {
     // Le piege que ce temoin interdit : lire le CONTENU (`selectedPlayerIds`)
     // au lieu de l'EXISTENCE. Un coach qui a ouvert la convocation et n'a
@@ -910,5 +966,120 @@ describe('C2 — temoin 4 : qui n a pas le droit d agir ne se voit rien promettr
     });
 
     expect(rappelVisible(root)).toBe(false);
+  });
+});
+
+// 🧾 S5 (vague S) — ON PEUT CONVOQUER SANS FAIRE DE COMPOSITION.
+//
+// 🗣️ Adel, recette du 25/08 : « la liste des convoques s affiche DIRECTEMENT
+// dans l onglet — on peut convoquer SANS faire de composition ».
+//
+// 🧨 CE QUI MANQUAIT : R6 n affichait de liste QU APRES publication, et la
+// construisait a partir des PLACEMENTS. Un coach qui coche ses joueurs sans
+// jamais ouvrir le terrain n avait donc aucune liste — alors que c est le
+// chemin le plus court, et que le serveur l accepte deja : `publishConvocation`
+// n exige qu un BROUILLON (`event-composition.ts`, `if (!draft) throw`), jamais
+// un placement.
+//
+// ♻️ ZERO REQUETE NEUVE : `selectedPlayerIds` (les coches), `eligiblePlayers`
+// (l effectif) et `draft.manualPlayers` (les joueurs saisis a la main) sont
+// DEJA dans la charge que cet ecran a chargee.
+// ⚠️ `manualPlayers` vit DANS le brouillon, pas a la racine de la charge : les
+// chercher au mauvais endroit ferait disparaitre silencieusement les invites.
+describe('S5 — la liste des convoques du BROUILLON, avant toute publication', () => {
+  const EFFECTIF = [
+    { documentId: 'p1', firstname: 'Karim', lastname: 'Sylla' },
+    { documentId: 'p2', firstname: 'Leo', lastname: 'Diarra' },
+    { documentId: 'p3', firstname: 'Ines', lastname: 'Bakouche' },
+  ];
+
+  const brouillonAvec = (/** @type {any} */ draft) => ({
+    ...PAYLOAD_SANS_COMPO,
+    draft: { mode: 'manual', teams: [], ...draft },
+    eligiblePlayers: EFFECTIF,
+  });
+
+  test('🥇 les joueurs COCHES sont nommes, sans compo et sans publication', () => {
+    const root = mountScreen({
+      auth: asOrganiser(),
+      composition: brouillonAvec({ selectedPlayerIds: ['p1', 'p3'] }),
+    });
+
+    expect(hasText(root, 'Karim Sylla')).toBe(true);
+    expect(hasText(root, 'Ines Bakouche')).toBe(true);
+  });
+
+  test('🔒 un joueur NON coche n apparait pas', () => {
+    // La contre-epreuve qui separe « la liste des convoques » de « l effectif ».
+    // Sans elle, afficher `eligiblePlayers` en entier passerait le temoin
+    // precedent — et l ecran annoncerait comme convoques des gens qui ne le
+    // sont pas.
+    const root = mountScreen({
+      auth: asOrganiser(),
+      composition: brouillonAvec({ selectedPlayerIds: ['p1', 'p3'] }),
+    });
+
+    expect(hasText(root, 'Leo Diarra')).toBe(false);
+  });
+
+  test('un joueur saisi A LA MAIN compte comme les autres', () => {
+    // ⚠️ `manualPlayers` vit DANS le brouillon. Le chercher a la racine de la
+    // charge le ferait disparaitre sans un mot — et un invite non licencie est
+    // exactement le genre de personne qu on convoque a la main.
+    const root = mountScreen({
+      auth: asOrganiser(),
+      composition: brouillonAvec({
+        manualPlayers: [{ documentId: 'm1', firstname: 'Sacha', lastname: 'Invite' }],
+        selectedPlayerIds: ['p1', 'm1'],
+      }),
+    });
+
+    expect(hasText(root, 'Sacha Invite')).toBe(true);
+  });
+
+  test('🔒 un brouillon SANS personne cochee n ecrit aucun titre vide', () => {
+    // « ABSENT n est pas VIDE » (temoin C2) dit que ce brouillon reste un
+    // brouillon : le bandeau parle. Mais une section « Convoqués » suivie de
+    // rien se lit comme un bug — le bandeau suffit a lui seul.
+    const root = mountScreen({
+      auth: asOrganiser(),
+      composition: brouillonAvec({ selectedPlayerIds: [] }),
+    });
+
+    expect(hasText(root, TITRE_BROUILLON)).toBe(true);
+    expect(hasText(root, 'Convoqués')).toBe(false);
+  });
+
+  test('🔒 LA PORTE : un lecteur qui n organise pas ne voit AUCUN nom', () => {
+    // 🚪 CE TEMOIN TIENT LA CONFIDENTIALITE DE LA LISTE, et il la mesure LA
+    // CHARGE EN MAIN : le mock la fournit quand meme. Si la seule protection
+    // etait la requete, ce temoin serait ROUGE — c est ce qu il verifie.
+    //
+    // 🧨 MESURE DU 25/08, ET ELLE A CHANGE CE LOT : « la charge n arrive que
+    // sous `canEdit` » est vrai en production, mais la requete est AUSSI gardee
+    // par `areDeferredQueriesEnabled`, faux au montage. Un temoin qui lirait
+    // `enabled` rendrait donc FAUX pour tout le monde — y compris le jour ou
+    // `canEdit` disparaitrait de la condition. Il aurait l air de proteger la
+    // liste sans rien mesurer du tout.
+    // ⇒ La liste passe par la MEME porte que le bandeau (`isCompoReminderVisible`,
+    // qui porte deja `canEdit`). Ce n est pas une porte de plus : c est celle
+    // du bloc qu elle accompagne, et elle est enfin mesurable.
+    const root = mountScreen({ composition: brouillonAvec({ selectedPlayerIds: ['p1'] }) });
+
+    expect(hasText(root, 'Karim Sylla')).toBe(false);
+    expect(hasText(root, 'Convoqués')).toBe(false);
+  });
+
+  test('🔒 et la requete elle-meme ne part pas non plus pour ce lecteur', () => {
+    // Ceinture ET bretelles. ⚠️ Ce juge NE PROUVE PAS `canEdit` a lui seul :
+    // `areDeferredQueriesEnabled` suffit a rendre `enabled` faux au montage.
+    // Il est ici pour figer que la page ne va PAS chercher cette charge en
+    // arrivant — pas pour tenir la confidentialite. C est le temoin ci-dessus
+    // qui la tient.
+    mountScreen({ composition: brouillonAvec({ selectedPlayerIds: ['p1'] }) });
+
+    const dernier = mockCompositionQueryOptions[mockCompositionQueryOptions.length - 1];
+
+    expect(dernier.enabled).toBe(false);
   });
 });

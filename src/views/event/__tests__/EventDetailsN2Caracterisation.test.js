@@ -291,7 +291,14 @@ jest.mock('@/components/molecules/segmentedControl/SegmentedControl', () => {
       // Le libelle a toujours ete complet DANS L'ARBRE : c'est `numberOfLines`
       // qui le coupait A L'ECRAN. Un temoin qui lirait le texte rendu serait
       // donc vert avant comme apres le correctif — seule la prop tranche.
-      { fullLabels: Boolean(props.fullLabels), testID: 'doublure-onglets' },
+      // 🔠 S5 (vague S) : la doublure relaie AUSSI `fitLabels`. Elle ne captait
+      // que `fullLabels` — un temoin qui ne regarde pas la prop qui commande
+      // reste vert quand l ecran change de mode.
+      {
+        fitLabels: Boolean(props.fitLabels),
+        fullLabels: Boolean(props.fullLabels),
+        testID: 'doublure-onglets',
+      },
       (props.options || []).map((/** @type {any} */ option) => react.createElement(
         rn.TouchableOpacity,
         {
@@ -1426,17 +1433,21 @@ describe('N2 · 4G — LA DETECTION SE RANGE EN TROIS ONGLETS', () => {
 // plus longs — « Répartition », « Candidats · 12 », « Personnes · 74 ».
 // ⇒ Mesurer le seul match aurait laisse trois ecrans casses derriere un
 // temoin vert. Le voici sur les trois types que N2 a ranges.
-describe('N2 · R6 — aucun libelle d onglet n est coupe, quel que soit le type', () => {
+// ♻️ MIS A JOUR PAR S5 (vague S) : meme exigence, autre reponse. R6 obtenait
+// « entier » avec DEUX lignes ; a l'ecran, les libelles se cassaient sur leur
+// derniere lettre. C'est desormais UNE ligne avec retrecissement (`fitLabels`).
+describe('N2 · S5 — aucun libelle d onglet n est coupe, quel que soit le type', () => {
   test.each([
     ['stage parent', () => buildStageParent()],
     ['tournoi', () => buildTournoi()],
     ['detection', () => buildDetection()],
-  ])('un %s demande ses libelles ENTIERS au controle segmente', (_nom, construire) => {
+  ])('un %s demande ses libelles ENTIERS, sur UNE ligne', (_nom, construire) => {
     const root = monter({ event: construire() });
 
     const [controle] = parTestID(root, 'doublure-onglets');
 
-    expect(controle.props.fullLabels).toBe(true);
+    expect(controle.props.fitLabels).toBe(true);
+    expect(controle.props.fullLabels).toBe(false);
     // 🔒 Contre-epreuve : la consigne d'affichage change, les compteurs de la
     // planche 04 restent. Trois onglets, jamais moins.
     expect(libellesDesOnglets(root)).toHaveLength(3);

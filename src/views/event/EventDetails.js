@@ -62,6 +62,7 @@ import {
   buildConvocationFieldTokens,
   buildConvocationReserveList,
   CONVOCATION_ROLE_STARTER,
+  getConvocationPersonId,
   getPersonName,
   getViewerConvocationRole,
 } from '@/views/playerConvocation/playerConvocationUtils';
@@ -4067,6 +4068,52 @@ function EventDetails({ navigation, route }) {
     staffCompositionPayload?.draft && !staffCompositionPayload?.published,
   );
 
+  // 🧾 S5 (vague S) — QUI EST CONVOQUE, AVANT MEME QUE LA COMPO EXISTE.
+  //
+  // 🗣️ Adel, recette du 25/08 : « on peut convoquer SANS faire de composition ».
+  // R6 ne montrait de liste qu APRES publication, et la construisait a partir
+  // des PLACEMENTS. Un coach qui coche ses joueurs sans jamais ouvrir le
+  // terrain n avait donc aucune liste — alors que c est le chemin le plus
+  // court, et que le serveur l accepte deja : `publishConvocation` n exige
+  // qu un BROUILLON (`event-composition.ts`, `if (!draft) throw`), jamais un
+  // placement.
+  //
+  // ♻️ ZERO REQUETE NEUVE : les coches (`selectedPlayerIds`), l effectif
+  // (`eligiblePlayers`) et les joueurs saisis a la main sont DEJA dans la
+  // charge que cet ecran a chargee.
+  //
+  // ⚠️ `manualPlayers` vit DANS LE BROUILLON, pas a la racine de la charge. Les
+  // chercher au mauvais endroit ferait disparaitre les invites SANS UN MOT —
+  // et un joueur saisi a la main est justement celui qu aucune autre liste ne
+  // rattrape.
+  //
+  // ⛔ L ORDRE EST CELUI DU COACH, pas l ordre alphabetique : on parcourt
+  // `selectedPlayerIds`, qui porte la selection telle qu il l a faite.
+  // ⛔ Un identifiant coche dont on ne connait pas la personne n ecrit pas de
+  // ligne : mieux vaut un nom de moins qu une ligne vide.
+  const draftConvocationRoster = useMemo(() => {
+    if (!hasDraftOnlyComposition) return [];
+
+    const draft = staffCompositionPayload?.draft;
+    const selectedIds = Array.isArray(draft?.selectedPlayerIds) ? draft.selectedPlayerIds : [];
+    if (!selectedIds.length) return [];
+
+    const byId = new Map();
+    [
+      ...(Array.isArray(staffCompositionPayload?.eligiblePlayers)
+        ? staffCompositionPayload.eligiblePlayers : []),
+      ...(Array.isArray(draft?.manualPlayers) ? draft.manualPlayers : []),
+    ].forEach((/** @type {any} */ player) => byId.set(getConvocationPersonId(player), player));
+
+    return selectedIds
+      .map((/** @type {any} */ playerId) => byId.get(String(playerId ?? '').trim()))
+      .filter(Boolean);
+  }, [
+    hasDraftOnlyComposition,
+    staffCompositionPayload?.draft,
+    staffCompositionPayload?.eligiblePlayers,
+  ]);
+
   // La composition fait partie des offres Equipe et Club — c'est la matrice du
   // serveur (`composition.manage: ['TEAM', 'CLUB']`,
   // admin/src/api/subscription/services/subscription-permission.ts:80).
@@ -5821,15 +5868,23 @@ function EventDetails({ navigation, route }) {
   // ⚠️ Le composant ne pose AUCUNE marge externe : c'est l'appelant qui les
   // pose (motif CMMembersScreen.js:297). Ici, le `gap: 24` du conteneur suffit.
   //
-  // 📏 R6 (vague R) — ET C'EST EXACTEMENT LA QUE `fullLabels` MANQUAIT.
-  // La phrase « avec trois onglets COURTS, les tiers egaux suffisent » a tenu
-  // jusqu'a la recette du 24/08. Elle etait fausse : les libelles ne sont pas
-  // courts, ils portent leur effectif (planche 04, `withTabCount`). Un tiers de
-  // 360 pt vaut ~110 pt, et « Participants · 12 » n'y tient pas — le texte
-  // arrivait rogne a l'ecran alors qu'il etait ENTIER dans l'arbre.
-  // ⇒ `fullLabels` (pose par D63, jamais passe ici) autorise DEUX lignes et
-  // interdit la troncature. Il ne change ni la largeur des tiers, ni la valeur
-  // remontee par `onChange` — c'est une consigne d'affichage, rien d'autre.
+  // 📏 R6 puis S5 — DEUX RECETTES, DEUX REPONSES A LA MEME EXIGENCE.
+  //
+  // Le probleme de fond n'a pas change : les libelles ne sont PAS courts, ils
+  // portent leur effectif (planche 04, `withTabCount`). Un tiers de 360 pt vaut
+  // ~110 pt, et « Participants · 12 » n'y tient pas.
+  //
+  // R6 (24/08) a repondu par `fullLabels` : DEUX lignes, jamais tronque.
+  // 🧨 S5 (25/08) — Adel l'a regarde : en deux lignes, la coupure tombe sur la
+  // DERNIERE lettre. Un « s » seul sous « Participant », un « n » seul sous
+  // « Convocatio ». Ce n'est pas plus lisible qu'une troncature, ca ressemble a
+  // un bug d'affichage — et ca double la hauteur du bandeau pour ca.
+  //
+  // ⇒ `fitLabels` : UNE ligne, et le texte RETRECIT jusqu'a 72 % pour tenir.
+  // ⛔ On ne corrige PAS `fullLabels` en place : sa semantique deux-lignes est
+  // celle dont `FacilityForm` depend, et la hauteur y est reservee pour deux
+  // lignes (FacilityForm.js). Les deux besoins sont reels et opposes.
+  // ⛔ Et on ne raccourcit toujours PAS les libelles : le compteur est exige.
   const renderDetailsTabs = () => {
     if (!detailsTabs.length) return null;
 
@@ -5837,7 +5892,7 @@ function EventDetails({ navigation, route }) {
       <View style={[Alignments.alignCenter]} testID="event-details-tabs">
         <SegmentedControl
           centerContent
-          fullLabels
+          fitLabels
           onChange={setDetailsTab}
           options={detailsTabs}
           value={detailsTab}
@@ -5909,13 +5964,19 @@ function EventDetails({ navigation, route }) {
       );
       compoReminderAction = t('eventDetails.compoReminder.offerAction', 'Voir l’offre Équipe');
     } else if (hasDraftOnlyComposition) {
+      // 🗣️ S5 (vague S) — LES MOTS D ADEL, MOT POUR MOT. Deux corrections dans
+      // la meme phrase : le PLURIEL (un coach prepare une convocation par equipe
+      // conviee, pas une seule), et « brouillon » qui disparait — c est un mot
+      // d outil, pas un mot de terrain. « Continuer » dit ce qui se passe au
+      // doigt. Seules les VALEURS changent : les clefs et la condition sont
+      // celles de R6.
       compoReminderTitle = t(
         'eventDetails.compoReminder.draftTitle',
-        'Ta convocation est commencée',
+        'Tes convocations sont commencées',
       );
       compoReminderAction = t(
         'eventDetails.compoReminder.draftAction',
-        'Reprendre le brouillon',
+        'Continuer mes convocations',
       );
     }
 
@@ -5939,15 +6000,57 @@ function EventDetails({ navigation, route }) {
         <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
           {compoReminderTitle}
         </Text>
-        <TouchableOpacity
-          accessibilityRole="button"
+        {/* 🔘 S5 (vague S) — UN VRAI BOUTON, PAS UN LIEN.
+            Ce qu il y avait : un pressable nu portant du texte primary500. A
+            l ecran il se lisait comme une note de bas de bloc, alors que c est
+            LA porte principale de l onglet « Convocation ».
+            ♻️ Meme handler, meme condition : seul l habillage change. Le
+            composant partage porte deja la cible tactile et le contraste
+            (encre primary900 sur primary500, THEME.md) — les redecrire ici
+            aurait fait un seizieme bouton maison a corriger un jour. */}
+        <Button
           onPress={canManageComposition ? handleManageComposition : handleOpenSubscriptionOverview}
-          style={[Spaces.paddingVertical[12], { alignSelf: 'flex-start' }]}
-        >
-          <Text style={[Fonts.p3Bold, Fonts.primary500]}>
-            {compoReminderAction}
+          title={compoReminderAction}
+          variant="Primary"
+        />
+      </View>
+    );
+  };
+
+  /**
+   * 🧾 S5 (vague S) — LES CONVOQUES DU BROUILLON, sous le bandeau.
+   *
+   * ⛔ Le bloc entier disparait quand personne n est coche. Le bandeau, lui,
+   * parle toujours (« ABSENT n est pas VIDE ») : un brouillon vide reste un
+   * brouillon. Mais un titre « Convoqués » suivi de rien se lit comme un bug.
+   * @returns {any} La liste des coches, ou null quand il n y en a aucun.
+   */
+  const renderDraftRoster = () => {
+    // 🚪 MEME PORTE QUE LE BANDEAU, pas une porte de plus. `isCompoReminderVisible`
+    // porte deja `canEdit` : la liste accompagne le bandeau, elle apparait et
+    // disparait avec lui.
+    //
+    // 🧨 POURQUOI CE N EST PAS SUPERFLU, alors que la charge « n arrive que sous
+    // canEdit » : mesure du 25/08 — la requete est aussi gardee par
+    // `areDeferredQueriesEnabled`, qui vaut FAUX au montage. Un temoin qui lirait
+    // `enabled` serait donc vert pour TOUT LE MONDE, y compris si `canEdit`
+    // disparaissait de la condition. La protection ne serait plus mesuree par
+    // rien. Ici elle l est, et le temoin la prouve avec la charge en main.
+    if (!isCompoReminderVisible || !draftConvocationRoster.length) return null;
+
+    return (
+      <View style={[Spaces.gap[4]]}>
+        <Text style={[Fonts.p3Bold, Fonts.neutral100]}>
+          {t('eventDetails.convocation.called', 'Convoqués')}
+        </Text>
+        {draftConvocationRoster.map((/** @type {any} */ player) => (
+          <Text
+            key={`brouillon-${getConvocationPersonId(player)}`}
+            style={[Fonts.p3, Fonts.neutral300]}
+          >
+            {getPersonName(player)}
           </Text>
-        </TouchableOpacity>
+        ))}
       </View>
     );
   };
@@ -5988,9 +6091,19 @@ function EventDetails({ navigation, route }) {
           </Text>
         ))}
 
+        {/* 🧾 S5 (vague S) — « SUR LE BANC » N A DE SENS QUE S IL Y A UN TERRAIN.
+            📏 Mesure serveur (`event-composition.ts:428`) :
+            `reservePlayerIds = selectedPlayerIds.filter(non places)`. Une
+            convocation publiee SANS aucun placement — le chemin que S5 (c)
+            legitime — met donc TOUT LE MONDE dans cette liste. L ecran
+            annoncait « Sur le banc » a des gens qui n ont pas de terrain du
+            tout : factuellement faux, et vexant pour un titulaire.
+            ⇒ Sans titulaire, ce sont simplement des « Convoqués ». */}
         {branch.bench.length ? (
           <Text style={[Fonts.p3Bold, Fonts.neutral100]}>
-            {t('eventDetails.convocation.bench', 'Sur le banc')}
+            {branch.starters.length
+              ? t('eventDetails.convocation.bench', 'Sur le banc')
+              : t('eventDetails.convocation.called', 'Convoqués')}
           </Text>
         ) : null}
         {branch.bench.map((entry) => (
@@ -7440,6 +7553,13 @@ function EventDetails({ navigation, route }) {
               ) : null}
 
               {showCallUpTab && renderCompoReminder()}
+              {/* 🧾 S5 — les convoques du brouillon, JUSTE SOUS le bandeau qui
+                  propose de continuer. Les deux repondent a la meme question
+                  (« ou en est ma convocation ? ») : les separer obligerait a
+                  chercher. ⛔ Hors du bandeau, pas dedans : son plafond de
+                  hauteur (120 pt) protege le contenu du match, et une liste de
+                  onze noms le creverait. */}
+              {showCallUpTab && renderDraftRoster()}
 
               {/* 🏕️ N2 — LE STAGE PERD SES DEUX PASTILLES MAISON. Elles
                   vivaient DANS une carte, ce qui faisait des onglets a

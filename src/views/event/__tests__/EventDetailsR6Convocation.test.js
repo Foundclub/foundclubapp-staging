@@ -261,7 +261,14 @@ jest.mock('@/components/molecules/segmentedControl/SegmentedControl', () => {
       // Le libelle a toujours ete complet DANS L'ARBRE : c'est `numberOfLines`
       // qui le coupait A L'ECRAN. Un temoin qui lirait le texte rendu serait
       // donc vert avant comme apres le correctif — seule la prop tranche.
-      { fullLabels: Boolean(props.fullLabels), testID: 'doublure-onglets' },
+      // 🔠 S5 (vague S) : la doublure relaie AUSSI `fitLabels`. Elle ne captait
+      // que `fullLabels` — un temoin qui ne regarde pas la prop qui commande
+      // reste vert quand l ecran change de mode.
+      {
+        fitLabels: Boolean(props.fitLabels),
+        fullLabels: Boolean(props.fullLabels),
+        testID: 'doublure-onglets',
+      },
       (props.options || []).map((/** @type {any} */ option) => react.createElement(
         rn.TouchableOpacity,
         {
@@ -610,5 +617,64 @@ describe('R6 · (b) une convocation publiee NOMME ses convoques', () => {
 
     expect(contient(root, 'Karim Sylla')).toBe(true);
     expect(contient(root, 'Ines Bakouche')).toBe(true);
+  });
+});
+
+// 🧾 S5 (vague S) — UNE CONVOCATION PUBLIEE SANS COMPOSITION.
+//
+// C est le chemin que S5 (c) legitime : un coach coche ses joueurs et publie,
+// sans jamais ouvrir le terrain. Le serveur l accepte deja (`publishConvocation`
+// n exige qu un brouillon), et il range alors TOUS les convoques dans
+// `reservePlayerIds` — mesure : `event-composition.ts:428`,
+// `reservePlayerIds = selectedPlayerIds.filter(non places)`.
+//
+// 🧨 CONSEQUENCE A L ECRAN, avant ce lot : la page annoncait « Sur le banc » a
+// des gens qui n avaient pas de terrain du tout. Factuellement faux, et vexant
+// pour quelqu un qui se croyait titulaire.
+describe('S5 · (c) publiee SANS placement : ce sont des convoques, pas un banc', () => {
+  const packSansPlacement = {
+    ...PACK,
+    reservePlayerIds: [JOUEUR, REMPLACANT],
+    reserveSnapshotPlayers: [...PACK.snapshotPlayers, ...PACK.reserveSnapshotPlayers],
+    teams: [{ id: 'team_1', name: 'U15', placements: [] }],
+  };
+
+  const monterSansPlacement = () => monter({
+    auth: authPour('coach-1', true),
+    convocation: {
+      ...CONVOCATION,
+      branches: [{ ...CONVOCATION.branches[0], published: packSansPlacement }],
+    },
+  });
+
+  test('🥇 le titre dit « Convoqués », jamais « Sur le banc »', () => {
+    const root = monterSansPlacement();
+
+    allerSurLOnglet(root, 'callUp');
+
+    expect(contient(root, 'Convoqués')).toBe(true);
+    expect(contient(root, 'Sur le banc')).toBe(false);
+  });
+
+  test('et tout le monde est nomme, comme avec une compo', () => {
+    const root = monterSansPlacement();
+
+    allerSurLOnglet(root, 'callUp');
+
+    expect(contient(root, 'Karim Sylla')).toBe(true);
+    expect(contient(root, 'Leo Diarra')).toBe(true);
+  });
+
+  test('🔒 contre-epreuve : DES QU IL Y A un titulaire, le banc redevient un banc', () => {
+    // Sans cette ligne, remplacer « Sur le banc » partout passerait — et un
+    // remplacant d une vraie compo serait annonce comme un convoque ordinaire,
+    // alors que la distinction est justement l information du coach.
+    const root = monter({ auth: authPour('coach-1', true), convocation: CONVOCATION });
+
+    allerSurLOnglet(root, 'callUp');
+
+    expect(contient(root, 'Sur le terrain')).toBe(true);
+    expect(contient(root, 'Sur le banc')).toBe(true);
+    expect(contient(root, 'Convoqués')).toBe(false);
   });
 });
