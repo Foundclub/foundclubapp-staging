@@ -107,7 +107,11 @@ jest.mock('@/components/molecules/autocompleteSelect/AutocompleteSelect', () => 
   return function AutocompleteSelectDouble(/** @type {any} */ props) {
     return react.createElement(rn.View, {
       options: props.options,
+      // S11-ter : le GESTE est garde, pas seulement le libelle. Sans lui, on ne
+      // peut que constater ce que l'ecran propose, jamais s'en servir.
+      setValue: props.setValue,
       testID: `select-${props.label || 'sans-libelle'}`,
+      valeurAffichee: props.value,
     });
   };
 });
@@ -133,10 +137,17 @@ jest.mock(
   '@/components/molecules/dayPicker/DayPicker',
   () => require('@/testSupport/textDouble').makeTextDouble('DOUBLURE_DayPicker'),
 );
-jest.mock(
-  '@/components/molecules/input/Input',
-  () => require('@/testSupport/textDouble').makeTextDouble('DOUBLURE_Input'),
-);
+// S11-ter : ce champ porte son libelle, pour qu'on puisse constater l'apparition
+// de « Places externes » quand l'entrainement passe en public.
+jest.mock('@/components/molecules/input/Input', () => {
+  const react = jest.requireActual('react');
+  const rn = jest.requireActual('react-native');
+  return function InputDouble(/** @type {any} */ props) {
+    return react.createElement(rn.View, {
+      testID: `champ-${props.label || 'sans-libelle'}`,
+    });
+  };
+});
 jest.mock(
   '@/components/molecules/timePickerInput/TimePickerInput',
   () => require('@/testSupport/textDouble').makeTextDouble('DOUBLURE_TimePickerInput'),
@@ -184,7 +195,7 @@ let arbre = null;
  * @param {string} typeName - Son nom, celui qui decide « entrainement » ou non.
  * @returns {any} - L'evenement rendu par le service.
  */
-const evenement = (sessionStatus, typeId, typeName) => ({
+const evenement = (sessionStatus, typeId, typeName, enPlus = {}) => ({
   date: '2030-05-15T18:30:00.000Z',
   documentId: 'event-1',
   endTime: '20:00:00.000',
@@ -195,6 +206,7 @@ const evenement = (sessionStatus, typeId, typeName) => ({
   // Le pire cas pour ce lot : une valeur « manuelle » deja en base. C'est
   // exactement l'evenement dont Adel dit que le reglage ne fait rien.
   validationMode: 'manual',
+  ...enPlus,
 });
 
 /**
@@ -273,6 +285,29 @@ const textesDe = (instance, recueil = []) => {
   });
   return recueil;
 };
+
+/**
+ * Le noeud du selecteur portant ce libelle, releve A L'APPEL.
+ * @param {any} racine - La racine du rendu.
+ * @param {string} libelle - Le libelle affiche par le selecteur.
+ * @returns {any} - Le noeud, ou undefined.
+ */
+const selecteur = (racine, libelle) => racine.findAll(
+  (/** @type {any} */ noeud) => noeud.props?.testID === `select-${libelle}`,
+  { deep: false },
+)[0];
+
+/**
+ * Les libelles des CHAMPS de saisie actuellement rendus.
+ * @param {any} racine - La racine du rendu.
+ * @returns {string[]} - Les libelles.
+ */
+const libellesDesChamps = (racine) => racine
+  .findAll(
+    (/** @type {any} */ noeud) => String(noeud.props?.testID || '').startsWith('champ-'),
+    { deep: false },
+  )
+  .map((/** @type {any} */ noeud) => String(noeud.props.testID).replace(/^champ-/, ''));
 
 afterEach(() => {
   if (arbre) act(() => arbre.unmount());
@@ -365,6 +400,78 @@ describe('R8 — cacher le reglage ne casse pas l enregistrement', () => {
     // Et la valeur du champ cache est bien partie avec le reste.
     const [charge] = eventService.updateEvent.mock.calls[0];
     expect(charge.eventData).toEqual(expect.objectContaining({ validationMode: 'manual' }));
+
+    alerte.mockRestore();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// S11-ter — OUVRIR UN ENTRAINEMENT PRIVE AU PUBLIC
+// ---------------------------------------------------------------------------
+//
+// 🗣️ DEMANDE D'ADEL (recette du 2026-08-25) : « dans la case entrainement
+// prive, il faut rajouter un bouton "ouvrir l'entrainement au public" ».
+//
+// 🗺️ CE QUE LA CARTE A TROUVE : la « case » qu'il voit est la carte d'etat de
+// la FICHE d'evenement (`EventDetails.js`, `renderTrainingOpeningCard`), qui
+// porte deja un commentaire disant que la bascule n'y vit pas — elle est dans
+// le menu ⋯ depuis N7. Ce fichier est occupe par la file S2→S6→S5→S1 : le
+// bouton demande ne peut pas etre pose ici, il est consigne pour S11-bis.
+//
+// ✅ CE QUE CES TEMOINS ETABLISSENT, ET QUI N'ETAIT ECRIT NULLE PART : le geste
+// EXISTE DEJA depuis « Modifier l'evenement ». Adel n'a pas besoin d'attendre
+// S11-bis pour ouvrir un entrainement — il lui manque un raccourci, pas une
+// fonctionnalite. Aucun test ne le disait, donc rien ne le protegeait.
+
+describe('S11-ter — un entrainement PRIVE peut deja etre ouvert depuis « Modifier »', () => {
+  const ENTRAINEMENT_PRIVE = () => evenement('closed', 'type-entrainement', 'Entrainement', {
+    // Des places deja memorisees : le cas d'un entrainement qu'on referme puis
+    // rouvre. Sans elles, l'enregistrement exige d'abord d'en saisir.
+    externalParticipantLimit: 4,
+  });
+
+  test('la visibilite se regle sur place, et propose bien « ouvert » comme « prive »', async () => {
+    const racine = await monterSur(ENTRAINEMENT_PRIVE());
+
+    const visibilite = selecteur(racine, 'eventEdit.fields.sessionStatus.label');
+    expect(visibilite).toBeDefined();
+    expect((visibilite.props.options || []).map((/** @type {any} */ o) => o.value))
+      .toEqual(expect.arrayContaining(['open', 'closed']));
+  });
+
+  test('passer en « ouvert » fait apparaitre les places externes, sur le meme ecran', async () => {
+    const racine = await monterSur(ENTRAINEMENT_PRIVE());
+
+    // 🪤 Releve A L'APPEL : un noeud garde en variable est un instantane.
+    expect(libellesDesChamps(racine)).not.toContain('Places externes');
+
+    await act(async () => {
+      selecteur(racine, 'eventEdit.fields.sessionStatus.label').props.setValue({ value: 'open' });
+    });
+
+    expect(libellesDesChamps(racine)).toContain('Places externes');
+  });
+
+  test('et l enregistrement part bien avec l entrainement OUVERT', async () => {
+    const alerte = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+    const racine = await monterSur(ENTRAINEMENT_PRIVE());
+
+    await act(async () => {
+      selecteur(racine, 'eventEdit.fields.sessionStatus.label').props.setValue({ value: 'open' });
+    });
+
+    const bouton = racine.findAll(
+      (/** @type {any} */ noeud) => noeud.props?.testID === 'bouton-eventEdit.actions.save',
+      { deep: false },
+    )[0];
+    await act(async () => {
+      await bouton.props.onPress();
+    });
+
+    expect(alerte).not.toHaveBeenCalled();
+    expect(eventService.updateEvent).toHaveBeenCalledTimes(1);
+    const [charge] = eventService.updateEvent.mock.calls[0];
+    expect(charge.eventData).toEqual(expect.objectContaining({ sessionStatus: 'open' }));
 
     alerte.mockRestore();
   });
