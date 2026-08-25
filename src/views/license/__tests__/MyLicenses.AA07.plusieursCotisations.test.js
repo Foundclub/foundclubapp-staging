@@ -31,6 +31,16 @@ jest.mock('@/services/license/licenseQueries', () => ({
   useMyLicenses: () => mockMesCotisations,
 }));
 
+// S9-bis — `MemberTopBar` reutilise desormais `HeaderBackButton`, le composant
+// de retour des 65 autres ecrans. Il appelle `useNavigation()` en interne (pour
+// pouvoir se passer d un `onPress`), ce qui exige un navigateur autour. C est le
+// meme mock que les suites qui montent deja cet entete (AttendanceSheets,
+// DetectionRotationBoard...).
+const mockNavigationContexte = { goBack: jest.fn(), navigate: jest.fn() };
+jest.mock('@react-navigation/native', () => ({
+  useNavigation: () => mockNavigationContexte,
+}));
+
 jest.mock('@/theme/themeContext', () => {
   const couleurs = jest.requireActual('@/theme/colors').default();
   return {

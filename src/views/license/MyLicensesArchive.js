@@ -76,7 +76,7 @@ const settledDateOf = (assignment) => formatMemberDate(
  * @returns {import('react').ReactElement}
  */
 function MyLicensesArchive({ navigation }) {
-  const { Fonts } = useTheme();
+  const { Alignments, Fonts } = useTheme();
   const type = memberType(Fonts);
   const query = useMyLicenses();
   const assignments = useMemo(() => query.data || [], [query.data]);
@@ -128,9 +128,12 @@ function MyLicensesArchive({ navigation }) {
   return (
     <ScreenContainer bottomInsetMode="tab-scene" withHeaderPadding>
       <MemberTopBar onBack={goBack} title="Saisons passées" />
+      {/* S9-bis : meme borne de hauteur que le detail — cf. le temoin
+          `MyLicenseDetail.S9bis.defilement.test.js` pour la cause. */}
       <ScrollView
         contentContainerStyle={{ gap: memberSpacing.section, paddingBottom: 40 }}
         showsVerticalScrollIndicator={false}
+        style={Alignments.fill}
       >
         {seasons.map((group) => (
           <View key={group.season} style={{ gap: memberSpacing.rowGap }}>

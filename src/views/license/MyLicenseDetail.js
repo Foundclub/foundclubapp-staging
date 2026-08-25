@@ -206,7 +206,7 @@ function AmountCard({ assignment, footer }) {
  * @returns {import('react').ReactElement}
  */
 function MyLicenseDetail({ navigation, route }) {
-  const { Colors, Fonts } = useTheme();
+  const { Alignments, Colors, Fonts } = useTheme();
   const type = memberType(Fonts);
   const routeAssignmentId = route?.params?.assignmentId;
   const listQuery = useMyLicenses();
@@ -502,7 +502,6 @@ function MyLicenseDetail({ navigation, route }) {
     const lastReceipt = payments.find((payment) => payment?.receipt)?.receipt;
     cardFooter = lastReceipt ? (
       <Button
-        icon="share"
         onPress={() => downloadDocument(
           { file: lastReceipt?.pdfFile },
           `recu-${lastReceipt?.receiptNumber || ''}`,
@@ -582,9 +581,23 @@ function MyLicenseDetail({ navigation, route }) {
   return (
     <ScreenContainer bottomInsetMode="screen" withHeaderPadding>
       <MemberTopBar onBack={goBack} onMenu={() => setMenuVisible(true)} title="Ma cotisation" />
+      {/*
+        S9-bis / defaut 1 — POURQUOI CE `Alignments.fill` N EST PAS DECORATIF.
+        Adel, recette du 25/08 : « la page est figee, le bouton du bas est coupe ».
+        `ScreenContainer` range ses enfants dans `Alignments.grow1`, qui vaut
+        `flexGrow: 1` SEUL (`theme/alignements.js:110`) — et `flexShrink` vaut 0
+        par defaut en Yoga. Aucun frere ne peut donc RETRECIR : le ScrollView
+        prenait la hauteur de son contenu, sa zone visible egalait sa zone de
+        contenu (⇒ rien a faire defiler) et il poussait la barre d action hors de
+        l ecran (⇒ bouton coupe). Un seul defaut, deux symptomes.
+        `Alignments.fill` = `flex: 1` = grow 1 + SHRINK 1 + basis 0 : la zone
+        defilante prend exactement la place restante entre les deux barres.
+        🔒 Temoin : `MyLicenseDetail.S9bis.defilement.test.js`.
+      */}
       <ScrollView
         contentContainerStyle={{ gap: memberSpacing.section, paddingBottom: 32 }}
         showsVerticalScrollIndicator={false}
+        style={Alignments.fill}
       >
         <AmountCard assignment={current} footer={cardFooter} />
 
@@ -854,7 +867,7 @@ function MyLicenseDetail({ navigation, route }) {
               if (receipt?.pdfFile?.url) {
                 receiptAction = (
                   <MemberRowAction
-                    glyph="receiptAlt"
+                    glyph="arrowDownToBracket"
                     label="Télécharger le reçu"
                     onPress={() => downloadDocument(
                       { file: receipt.pdfFile },
@@ -863,6 +876,10 @@ function MyLicenseDetail({ navigation, route }) {
                   />
                 );
               } else if (canGenerate) {
+                // ⛔ « Generer » n est PAS « telecharger » : ce geste fabrique le
+                // document, il ne le pose pas dans le telephone. Il garde donc le
+                // glyphe DOCUMENT du pack (`fc-fileAlt`), pas sa fleche de
+                // telechargement (`fc-download`). Deux gestes, deux glyphes.
                 receiptAction = (
                   <MemberRowAction
                     glyph="receiptAlt"
