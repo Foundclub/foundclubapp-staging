@@ -1145,7 +1145,7 @@ export default {
         title: 'APPEL',
       },
       late: {
-        cancel: 'Fermer',
+        cancel: 'Annuler',
         custom: 'Autre heure',
         customPlaceholder: "Heure d'arrivée (HH:MM)",
         note: 'Note du staff (optionnel)',

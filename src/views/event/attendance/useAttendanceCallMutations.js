@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { Alert } from 'react-native';
 
 import {
+  markCoachAbsence,
   markCoachArrival,
   markCoachArrivalBulk,
   resetCoachAttendance,
@@ -91,6 +92,19 @@ export const useAttendanceCallMutations = (eventId) => {
     onSuccess: invalidateAll,
   });
 
+  /**
+   * APPEL / D7bis (26/08) — POSER UNE ABSENCE.
+   *
+   * Memes invalidations et meme gestionnaire de refus que les trois autres :
+   * une absence change la feuille de presence, les participations ET les
+   * statistiques d equipe (`countsInTeamStats.absence` lit `no_show`).
+   */
+  const absenceMutation = useMutation({
+    mutationFn: (/** @type {any} */ { userId }) => markCoachAbsence(eventId, userId),
+    onError: direLeRefus,
+    onSuccess: invalidateAll,
+  });
+
   const resetMutation = useMutation({
     mutationFn: (/** @type {any} */ { userId }) => resetCoachAttendance(eventId, userId),
     onError: direLeRefus,
@@ -133,6 +147,7 @@ export const useAttendanceCallMutations = (eventId) => {
   });
 
   return {
+    absenceMutation,
     bulkMutation,
     coachArrivalMutation,
     invalidateAll,

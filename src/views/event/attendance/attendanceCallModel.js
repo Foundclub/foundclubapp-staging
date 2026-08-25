@@ -357,6 +357,66 @@ export const isMarked = (item) => Boolean(item?.attendance?.arrivedAt);
 export const isNoShow = (item) => item?.attendanceStatus === 'no_show' && !isMarked(item);
 
 /**
+ * APPEL (26/08) — L ETAT D UNE LIGNE, EN UN SEUL MOT.
+ *
+ * Le pack minimaliste ne connait que quatre etats par joueur :
+ *   `null` = a pointer · `ontime` = a l heure · `late` = en retard ·
+ *   `absent` = absence posee A LA MAIN par l encadrant.
+ *
+ * 🧭 POURQUOI CETTE FONCTION EXISTE, plutot que trois `if` dans la ligne :
+ * la pastille, la couleur de la sous-ligne, le bouton allume et le compteur
+ * du pied doivent TOUS repondre la meme chose. Quatre lectures separees du
+ * meme objet divergent au premier correctif — c est le motif du chemin unique
+ * `performCoachArrival` cote serveur.
+ *
+ * ⛔ `absent` NE SE DEDUIT PAS d un `attendanceStatus: 'no_show'` seul : le
+ * cron de fin de match pose ce meme statut a tout le monde a fin + 0, et ce
+ * n est PAS un jugement de l encadrant. Le marqueur qui separe les deux est
+ * `source` — `coach_manual` sans `arrivedAt` ne peut venir que du bouton
+ * « Absent » (une correction de retard, elle, porte toujours une arrivee).
+ * @param {any} item - La ligne rendue par `list`.
+ * @returns {'absent' | 'late' | 'ontime' | null} - L etat, ou `null`.
+ */
+export const resolveRowState = (item) => {
+  if (isMarked(item)) {
+    return Number(item?.attendance?.lateMinutes || 0) > 0 ? 'late' : 'ontime';
+  }
+  if (isCoachAbsence(item)) return 'absent';
+  return null;
+};
+
+/**
+ * Cette absence a-t-elle ete POSEE PAR UN ENCADRANT, ou constatee par le cron ?
+ *
+ * 🔒 La distinction n est pas cosmetique : « Non pointé » est un fait (personne
+ * n a rien dit), « Absent » est un CONSTAT signe. Les confondre ferait dire a
+ * l ecran que le coach a declare absents les vingt joueurs qu il a simplement
+ * oublies de pointer.
+ * @param {any} item - La ligne rendue par `list`.
+ * @returns {boolean}
+ */
+export const isCoachAbsence = (item) => (
+  item?.attendanceStatus === 'no_show'
+  && !item?.attendance?.arrivedAt
+  && String(item?.attendance?.source || '') === 'coach_manual'
+);
+
+/**
+ * Les lignes reellement POINTEES par l encadrant — celles que le compteur du
+ * header et le pied comptent.
+ *
+ * ⚠️ Ce n est pas `isMarked` : une absence posee a la main n a pas d
+ * `arrivedAt` et compte pourtant comme un pointage. Le compteur « x / N » du
+ * pack porte sur « etat different de « a pointer » », pas sur « est arrive ».
+ * @param {any[]} items
+ * @returns {number}
+ */
+export const countCalled = (items) => (items || []).reduce(
+  (total, item) => (resolveRowState(item) === null ? total : total + 1),
+  0,
+);
+
+/**
  * Les compteurs de REPONSES (echelle du cadre 2A — avant l heure).
  * @param {any[]} items
  * @returns {{ answeredNo: number, answeredYes: number, unanswered: number }}
@@ -391,21 +451,21 @@ export const countPresence = (items) => (items || []).reduce((totals, item) => {
 export const listNeverSeen = (items) => (items || []).filter((item) => !isMarked(item));
 
 /**
- * Les lignes « sans reponse » : l onglet du cadre 2C.
- * @param {any[]} items
- * @returns {any[]}
- */
-export const listUnanswered = (items) => (items || []).filter(
-  (item) => item?.rsvpStatus !== 'participating' && item?.rsvpStatus !== 'missing',
-);
-
-/**
- * Les identifiants a envoyer a `bulk` : les NON pointes de la liste donnee.
+ * Les identifiants a envoyer a `bulk` : ceux qui n ont AUCUN etat.
+ *
+ * 🔒 D3 (26/08) — « TOUT LE MONDE EST LA » N ECRASE RIEN. Le pack proposait de
+ * marquer TOUS les joueurs a l heure ; ce filtre ne rend que les « a pointer ».
+ * Un coach qui saisit deux retards puis appuie sur le bouton ne doit pas les
+ * perdre — et le bouton reste utile pour tout le reste de l equipe.
+ *
+ * ⚠️ Le critere est l ETAT, pas `arrivedAt` : une absence posee a la main
+ * (D7bis) n a pas d heure d arrivee et ne doit surtout pas etre reecrite en
+ * « arrive a l heure ».
  * @param {any[]} items
  * @returns {string[]}
  */
-export const listUnmarkedIds = (items) => (items || [])
-  .filter((item) => !isMarked(item))
+export const listUncalledIds = (items) => (items || [])
+  .filter((item) => resolveRowState(item) === null)
   .map((item) => String(item?.user?.documentId || ''))
   .filter(Boolean);
 
@@ -432,26 +492,6 @@ export const chunkUserIds = (userIds) => {
     chunks.push(source.slice(index, index + BULK_MAX_USERS));
   }
   return chunks;
-};
-
-/**
- * Le retard, en minutes, deduit d une heure d arrivee MURALE saisie a la main
- * (le palier « Autre heure » du cadre 2E).
- *
- * 🧭 Meme principe que `resolveDurationMinutes` : on compare deux heures
- * murales du meme jour, ce qui ne depend d aucun fuseau. Une heure anterieure
- * au debut se lit comme le lendemain — un tournoi qui commence a 23:00 et un
- * joueur qui arrive a 00:15 font +75 min, pas -1365.
- * @param {{ arrivalTime: unknown, eventStartMs: number | null, timeZone?: string }} input
- * @returns {number | null}
- */
-export const resolveLateMinutesFromArrivalTime = ({ arrivalTime, eventStartMs, timeZone }) => {
-  const arrivalMinutes = toMinutesOfDay(arrivalTime);
-  if (arrivalMinutes === null) return null;
-  const startMinutes = toMinutesOfDay(formatTimeInZone(eventStartMs, timeZone));
-  if (startMinutes === null) return null;
-  const delta = arrivalMinutes - startMinutes;
-  return delta >= 0 ? delta : delta + DAY_MINUTES;
 };
 
 /**

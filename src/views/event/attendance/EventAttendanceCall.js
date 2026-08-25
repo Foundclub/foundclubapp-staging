@@ -4,7 +4,7 @@ import {
 } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  ScrollView, StyleSheet, Text, TouchableOpacity, View,
+  Image, ScrollView, StyleSheet, Text, TouchableOpacity, View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -13,20 +13,19 @@ import useTheme from '@/theme/themeContext';
 
 import HeaderBackButton from '@/components/atoms/headerBackButton/HeaderBackButton';
 import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
-import SegmentedControl from '@/components/molecules/segmentedControl/SegmentedControl';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
 import { useGetEvent, useGetEventAttendance } from '@/services/event/eventQueries';
 
 import {
+  buildArrivedAtIso,
   countAnswers,
-  countPresence,
+  countCalled,
   describeBulkOutcome,
   formatShortDateInZone,
   formatTimeInZone,
   isMarked,
-  listUnanswered,
-  listUnmarkedIds,
+  listUncalledIds,
   resolveAttendanceWindow,
   resolveCallMode,
   resolveEventEndMs,
@@ -35,13 +34,8 @@ import {
   toMsOrNull,
 } from './attendanceCallModel';
 import AttendanceRow from './AttendanceRow';
-import {
-  AttendanceCloseSheet, AttendanceCorrectSheet, AttendanceLateSheet,
-} from './AttendanceSheets';
+import { AttendanceCloseSheet, AttendanceLateSheet } from './AttendanceSheets';
 import { useAttendanceCallMutations } from './useAttendanceCallMutations';
-
-const TAB_EXPECTED = 'expected';
-const TAB_UNANSWERED = 'unanswered';
 
 // L horloge serveur avance d elle-meme, par pas de 30 s — c est le motif
 // d `EventDetails` (AC10), recopie ici parce que ce fichier-la est verrouille.
@@ -49,6 +43,13 @@ const CLOCK_TICK_MS = 30000;
 
 const styles = StyleSheet.create({
   banner: { borderRadius: 12, gap: 8, padding: 16 },
+  closeButton: {
+    alignItems: 'center',
+    borderRadius: 100,
+    height: 52,
+    justifyContent: 'center',
+    paddingHorizontal: 24,
+  },
   counter: {
     alignItems: 'center', borderRadius: 12, flex: 1, gap: 4, paddingVertical: 12,
   },
@@ -67,21 +68,23 @@ const styles = StyleSheet.create({
   },
   headerTexts: { flex: 1 },
   list: { gap: 8 },
-  pill: { borderRadius: 100, paddingHorizontal: 12, paddingVertical: 4 },
+  massAction: {
+    alignItems: 'center',
+    borderRadius: 14,
+    borderWidth: 1.5,
+    flexDirection: 'row',
+    gap: 8,
+    height: 52,
+    justifyContent: 'center',
+  },
+  massIcon: { height: 20, width: 20 },
+  pill: {
+    borderRadius: 100, borderWidth: 1, paddingHorizontal: 12, paddingVertical: 4,
+  },
   screen: { flex: 1 },
   scroll: { gap: 16, paddingBottom: 24, paddingHorizontal: 16 },
   signalledRow: {
     alignItems: 'center', flexDirection: 'row', gap: 12, minHeight: 52,
-  },
-  toolbar: { flexDirection: 'row', gap: 8 },
-  toolbarButton: {
-    alignItems: 'center',
-    borderRadius: 100,
-    borderWidth: 1,
-    flex: 1,
-    justifyContent: 'center',
-    minHeight: 44,
-    paddingHorizontal: 12,
   },
 });
 
@@ -96,17 +99,33 @@ const styles = StyleSheet.create({
  * 🕐 DEUX MODES, JAMAIS MELANGES :
  *   · avant la fenetre (2A) : un bouton DESACTIVE qui dit a quelle heure ca
  *     ouvre, et les compteurs de REPONSES ;
- *   · dans la fenetre (2B/2C) : l appel, et les compteurs de PRESENCE REELLE.
- * « Réponse ≠ présence » est la confusion majeure que cette planche corrige :
+ *   · dans la fenetre (2B/2C) : l appel minimaliste — UNE liste, UNE ligne par
+ *     joueur, TROIS actions.
+ * « Réponse ≠ présence » reste la confusion majeure que cette planche corrige :
  * les deux echelles ne se voient jamais ensemble.
  *
- * ⛔ CET ECRAN NE POSE JAMAIS UNE ABSENCE A LA PLACE DU JOUEUR. Pointer, c est
- * constater une presence ; ne pas pointer, c est « Non pointé » — un fait, pas
- * un jugement. Il n y a donc aucun bouton « Absent » ici.
+ * 🔴 CET ECRAN POSE DESORMAIS UNE ABSENCE — LA REGLE A ETE RENVERSEE LE 26/08,
+ * ET C EST ECRIT ICI PARCE QUE LE CONTRAIRE Y ETAIT ECRIT.
+ *
+ * Ce fichier a porte pendant des mois : « CET ECRAN NE POSE JAMAIS UNE ABSENCE
+ * A LA PLACE DU JOUEUR […] il n y a donc aucun bouton Absent ici ». Le
+ * raisonnement etait honnete — pointer constate une presence, ne pas pointer
+ * est un fait et pas un jugement. Le pack de design d Adel tranche autrement :
+ * un coach au bord d un terrain SAIT qui n est pas venu, et le lui faire taire
+ * l oblige a laisser une feuille fausse derriere lui.
+ *
+ * ⚠️ CE QUI PROTEGE CE RENVERSEMENT, et il faut le garder :
+ *   · l absence est ECRITE PAR UN HUMAIN et le dit — `source: 'coach_manual'`
+ *     + `manualOverride: true`. Le `no_show` du cron de fin de match, lui,
+ *     porte `system_finalization`. Les confondre ferait dire a l ecran que le
+ *     coach a declare absents les vingt joueurs qu il a oublie de pointer ;
+ *   · elle est REVERSIBLE en un tap (re-taper la croix depointe, D2) ;
+ *   · elle NE TOUCHE PAS la parole du joueur : ni `participations`, ni
+ *     `missings`. Ce qu il a declare lui-meme lui reste.
  * @returns {import('react').ReactElement} - L ecran.
  */
 function EventAttendanceCall() {
-  const { Colors, Fonts } = useTheme();
+  const { Colors, Fonts, Images } = useTheme();
   const { t } = useTranslation();
   const navigation = useNavigation();
   const route = useRoute();
@@ -122,12 +141,14 @@ function EventAttendanceCall() {
   // affiche « Ouvre à 17:30 » alors qu il est 17:35.
   const { data: attendancePayload } = useGetEventAttendance(eventId, { refetchOnMount: 'always' });
 
-  const [activeTab, setActiveTab] = useState(TAB_EXPECTED);
   const [elapsedMs, setElapsedMs] = useState(0);
   const [bulkMessage, setBulkMessage] = useState('');
-  // Les trois feuilles. `sheetItem` porte la ligne visee par 2E et 2F.
+  // Les deux feuilles restantes. `sheetItem` porte la ligne visee par 2E, et
+  // `sheetPosition` son rang — la feuille NOMME le joueur, elle doit donc
+  // pouvoir dire « Participant·e 4 » quand les identites sont masquees.
   const [openSheet, setOpenSheet] = useState('');
   const [sheetItem, setSheetItem] = useState(/** @type {any} */ (null));
+  const [sheetPosition, setSheetPosition] = useState(1);
 
   const payloadData = attendancePayload?.data;
   const items = /** @type {any[]} */ (
@@ -137,7 +158,7 @@ function EventAttendanceCall() {
   const identitiesHidden = Boolean(payloadData?.participantIdentitiesHidden);
 
   const {
-    bulkMutation, coachArrivalMutation, lateMinutesMutation, resetMutation,
+    absenceMutation, bulkMutation, coachArrivalMutation, lateMinutesMutation, resetMutation,
   } = useAttendanceCallMutations(eventId);
 
   // AC10 — l horloge du SERVEUR, ou rien. Remise a zero a chaque nouveau
@@ -158,23 +179,10 @@ function EventAttendanceCall() {
   const mode = resolveCallMode({ serverNowMs, window: attendanceWindow });
 
   const answers = useMemo(() => countAnswers(items), [items]);
-  const presence = useMemo(() => countPresence(items), [items]);
-  const markedCount = items.length - presence.waiting;
-
-  const unansweredItems = useMemo(() => listUnanswered(items), [items]);
-  const unmarkedItems = useMemo(
-    () => items.filter((/** @type {any} */ item) => !isMarked(item)),
-    [items],
-  );
-  const markedItems = useMemo(() => items.filter(isMarked), [items]);
-
-  // Onglet « Sans réponse » : on garde AUSSI ceux qu on vient de pointer, pour
-  // que la liste ne se derobe pas sous le pouce (cadre 2C de la maquette).
-  const visibleUnmarked = activeTab === TAB_UNANSWERED ? unansweredItems : unmarkedItems;
-  // …et la section « DÉJÀ POINTÉS » ne les redit donc pas une seconde fois.
-  const markedSectionItems = activeTab === TAB_UNANSWERED
-    ? markedItems.filter((/** @type {any} */ item) => !unansweredItems.includes(item))
-    : markedItems;
+  // 🔢 APPEL (26/08) — LE COMPTEUR COMPTE LES POINTES, PAS LES ARRIVES.
+  // `items.length - presence.waiting` ne voyait que les `arrivedAt` ; une
+  // absence posee a la main (D7bis) n en a pas et compte pourtant.
+  const markedCount = useMemo(() => countCalled(items), [items]);
 
   const teamName = event?.team?.name || '';
   const heureDebut = formatTimeInZone(payloadData?.eventStartAt || event?.date, timezone);
@@ -188,40 +196,97 @@ function EventAttendanceCall() {
     answersYes: t('eventDetails.attendanceCall.answers.yes', 'Présent·e·s'),
     closeCall: t('eventDetails.attendanceCall.footer.close', "Clôturer l'appel"),
     declaredLate: t('eventDetails.attendanceCall.row.declaredLate', 'Retard annoncé'),
-    markedOf: t('eventDetails.attendanceCall.header.markedOf', 'pointé sur'),
-    markedSection: t('eventDetails.attendanceCall.markedSection', 'DÉJÀ POINTÉS'),
+    everyoneHere: t('eventDetails.attendanceCall.actions.everyoneHere', 'Tout le monde est là'),
     markSomeone: t(
       'eventDetails.attendanceCall.footer.markSomeone',
       'Pointe au moins une personne',
     ),
     outOf: t('eventDetails.attendanceCall.footer.outOf', 'sur'),
-    presenceArrived: t('eventDetails.attendanceCall.presence.arrived', 'Arrivé·e·s'),
-    presenceLate: t('eventDetails.attendanceCall.presence.late', 'En retard'),
-    presenceWaiting: t('eventDetails.attendanceCall.presence.waiting', 'En attente'),
-    tabExpected: t('eventDetails.attendanceCall.tabs.expected', 'Attendus'),
-    tabUnanswered: t('eventDetails.attendanceCall.tabs.unanswered', 'Sans réponse'),
     title: t('eventDetails.attendanceCall.header.title', 'APPEL'),
   };
 
-  const handleMark = useCallback((/** @type {any} */ item) => {
-    coachArrivalMutation.mutate({ payload: {}, userId: item?.user?.documentId });
-  }, [coachArrivalMutation]);
-
-  const handleMarkAll = useCallback(() => {
-    const userIds = listUnmarkedIds(visibleUnmarked);
-    if (userIds.length === 0) return;
-    bulkMutation.mutate({ userIds }, {
-      onSuccess: (/** @type {any} */ summary) => setBulkMessage(describeBulkOutcome(summary, t)),
-    });
-  }, [bulkMutation, t, visibleUnmarked]);
+  // 🏷️ D5 — « Clôturer l'appel · x sur N », SANS le compteur quand tout est
+  // pointe : a ce moment-la « 15 sur 15 » n apprend plus rien et allonge un
+  // libelle qui doit tenir sur une seule ligne.
+  const libelleCloture = markedCount === items.length
+    ? mots.closeCall
+    : `${mots.closeCall} · ${markedCount} ${mots.outOf} ${items.length}`;
 
   const eventStartMs = toMsOrNull(payloadData?.eventStartAt) ?? toMsOrNull(event?.date);
 
+  /**
+   * 🧨 « À L HEURE » DOIT DIRE L HEURE, SINON IL POSE UN RETARD.
+   *
+   * Sans `lateMinutes` ni `arrivedAt`, `performCoachArrival` prend sa branche
+   * automatique : il pose SON instant courant et RECALCULE le retard depuis le
+   * debut. Un coach qui appuie sur ✓ a 18h07 pour un match de 18h00 ecrivait
+   * donc « arrivé en retard, +7 min » — pour un joueur qu il vient de declarer
+   * a l heure, et sur le bouton qui porte une COCHE VERTE.
+   *
+   * ⛔ Ce n est pas un cas de bord : c est le geste le plus frequent de
+   * l ecran, et il se produit des la premiere minute de jeu.
+   *
+   * `buildArrivedAtIso` existait deja (attendanceCallModel.js) et servait la
+   * feuille de retard : le chemin est CONSERVE (decision D7-c), il est
+   * simplement employe aussi ici.
+   */
+  const handleMark = useCallback((/** @type {any} */ item) => {
+    coachArrivalMutation.mutate({
+      payload: {
+        arrivedAt: buildArrivedAtIso({ eventStartMs, lateMinutes: 0 }),
+        lateMinutes: 0,
+      },
+      userId: item?.user?.documentId,
+    });
+  }, [coachArrivalMutation, eventStartMs]);
+
+  const handleUnmarkOne = useCallback((/** @type {any} */ item) => {
+    resetMutation.mutate({ userId: item?.user?.documentId });
+  }, [resetMutation]);
+
+  /**
+   * 🔴 D7bis — POSER UNE ABSENCE. Aucun corps a envoyer : il n y a ni heure ni
+   * duree a declarer, seulement un constat. Le serveur pose son marqueur
+   * d origine lui-meme.
+   */
+  const handleAbsent = useCallback((/** @type {any} */ item) => {
+    absenceMutation.mutate({ userId: item?.user?.documentId });
+  }, [absenceMutation]);
+
+  /**
+   * 🟢 D3 — « TOUT LE MONDE EST LA », SANS RIEN ECRASER.
+   *
+   * Le pack proposait de marquer TOUS les joueurs a l heure, en assumant
+   * d ecraser les etats deja saisis. C est le contraire de ce dont un coach a
+   * besoin : il pointe d abord les deux retards qu il vient de voir, PUIS il
+   * appuie pour le reste de l equipe. Ecraser lui ferait perdre exactement le
+   * travail qu il vient de faire — et rendrait le bouton dangereux au lieu
+   * d utile. ⇒ Seuls les « a pointer » basculent (`listUncalledIds`).
+   *
+   * 🧨 ET L ENVOI PORTE L HEURE. Sans `lateMinutes: 0` + `arrivedAt` = debut,
+   * le serveur recalcule le retard depuis SON instant courant et bascule toute
+   * la feuille en « +7 min » pour un appui a 18h07. C est le defaut corrige
+   * cote serveur au bloc 1 ; ici c est le corps qui l evite.
+   */
+  const handleMarkAll = useCallback(() => {
+    const userIds = listUncalledIds(items);
+    if (userIds.length === 0) return;
+    bulkMutation.mutate({
+      arrivedAt: buildArrivedAtIso({ eventStartMs, lateMinutes: 0 }),
+      lateMinutes: 0,
+      userIds,
+    }, {
+      onSuccess: (/** @type {any} */ summary) => setBulkMessage(describeBulkOutcome(summary, t)),
+    });
+  }, [bulkMutation, eventStartMs, items, t]);
+
   const handleLateSubmit = useCallback((/** @type {any} */ envoi) => {
+    // ⛔ Plus de `note` : la feuille du pack n en porte plus (D4). L envoyer a
+    // `null` EFFACERAIT une note posee ailleurs — on ne transmet donc pas le
+    // champ du tout, et le serveur laisse celle qui existe en place.
     const payload = {
       arrivedAt: envoi.arrivedAt,
       lateMinutes: envoi.lateMinutes,
-      note: envoi.note,
     };
     // 🧭 Pointer et CORRIGER ne sont pas la meme route : `coachArrival` cree
     // le pointage, `patchLate` retouche celui qui existe deja.
@@ -229,32 +294,6 @@ function EventAttendanceCall() {
     else coachArrivalMutation.mutate({ payload, userId: envoi.userId });
     setOpenSheet('');
   }, [coachArrivalMutation, lateMinutesMutation]);
-
-  const handleClearNote = useCallback(() => {
-    // 🧨 `patchLate` EXIGE `lateMinutes` : on renvoie celui qui est en place.
-    // Envoyer 0 pour effacer une note effacerait aussi le retard.
-    lateMinutesMutation.mutate({
-      payload: {
-        lateMinutes: Number(sheetItem?.attendance?.lateMinutes || 0),
-        note: null,
-      },
-      userId: sheetItem?.user?.documentId,
-    });
-    setOpenSheet('');
-  }, [lateMinutesMutation, sheetItem]);
-
-  const handleUnmark = useCallback(() => {
-    resetMutation.mutate({ userId: sheetItem?.user?.documentId });
-    setOpenSheet('');
-  }, [resetMutation, sheetItem]);
-
-  const handleUnmarkAll = useCallback(() => {
-    // 🔒 On ne vise QUE les lignes qui portent un `arrivedAt` : `reset` efface
-    // aussi la declaration que le joueur avait faite lui-meme.
-    markedItems.forEach(
-      (/** @type {any} */ item) => resetMutation.mutate({ userId: item?.user?.documentId }),
-    );
-  }, [markedItems, resetMutation]);
 
   const renderCounter = (
     /** @type {number} */ valeur,
@@ -375,132 +414,85 @@ function EventAttendanceCall() {
   /* ---------------- CADRES 2B / 2C — l appel ---------------- */
   const renderOpenCall = () => (
     <>
-      {/* ⚖️ Echelle des PRESENCES REELLES — jamais celle des reponses ici. */}
-      <View style={styles.counters}>
-        {renderCounter(presence.arrived, mots.presenceArrived, Colors.success500)}
-        {renderCounter(presence.late, mots.presenceLate, Colors.warning500)}
-        {renderCounter(presence.waiting, mots.presenceWaiting, Colors.neutral300)}
-      </View>
-
-      <View style={styles.toolbar}>
-        <TouchableOpacity
-          accessibilityRole="button"
-          onPress={handleMarkAll}
-          style={[styles.toolbarButton, { borderColor: Colors.success500 }]}
-        >
-          <Text style={[Fonts.p3Bold, { color: Colors.success500 }]}>
-            {t('eventDetails.attendanceCall.actions.markAll', 'Tout pointer')}
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          accessibilityRole="button"
-          onPress={handleUnmarkAll}
-          style={[styles.toolbarButton, { borderColor: Colors.neutral500 }]}
-        >
-          <Text style={[Fonts.p3Bold, { color: Colors.neutral200 }]}>
-            {t('eventDetails.attendanceCall.actions.unmarkAll', 'Tout dépointer')}
-          </Text>
-        </TouchableOpacity>
-      </View>
-
-      <SegmentedControl
-        onChange={setActiveTab}
-        options={[
-          {
-            label: `${mots.tabExpected} · ${items.length}`,
-            value: TAB_EXPECTED,
-          },
-          {
-            label: `${mots.tabUnanswered} · ${unansweredItems.length}`,
-            value: TAB_UNANSWERED,
-          },
-        ]}
-        value={activeTab}
-      />
-
-      {activeTab === TAB_UNANSWERED && (
-        <View style={[styles.banner, { backgroundColor: withAlpha(Colors.warning500, 0.12) }]}>
-          <Text style={[Fonts.p3Bold, { color: Colors.neutral00 }]}>
-            {t('eventDetails.attendanceCall.unanswered.title', "Ils n'ont jamais répondu")}
-          </Text>
-          {/* 🧨 La maquette annonce « Ils reçoivent une notification ». C est
-              FAUX : `performCoachArrival` n envoie rien au joueur. La phrase
-              est retiree — promettre une notification qui n arrive pas est
-              pire que ne rien promettre. */}
-          <Text style={[Fonts.p4, { color: Colors.neutral200 }]}>
-            {t(
-              'eventDetails.attendanceCall.unanswered.explain',
-              'Si tu les pointes, ils passent en Présent·e et Arrivé·e en même temps.',
-            )}
-          </Text>
-        </View>
-      )}
+      {/* 🟢 L ACTION DE MASSE DU PACK — UN bouton, pas deux.
+          Les trois compteurs de presence et la paire « Tout pointer » /
+          « Tout dépointer » disparaissent : le chiffre vit maintenant dans la
+          pastille de l entete, et « Tout dépointer » etait un geste
+          destructeur de masse offert au meme rang qu un geste utile.
+          ⚠️ Le bouton reste affiche meme quand tout est pointe : il ne
+          disparait pas sous le doigt au dernier joueur. Il est simplement
+          sans effet, et `handleMarkAll` sort tout de suite. */}
+      <TouchableOpacity
+        accessibilityLabel={mots.everyoneHere}
+        accessibilityRole="button"
+        onPress={handleMarkAll}
+        style={[styles.massAction, {
+          backgroundColor: withAlpha(Colors.success500, 0.14),
+          borderColor: withAlpha(Colors.success500, 0.5),
+        }]}
+      >
+        <Image
+          resizeMode="contain"
+          source={Images.check}
+          style={[styles.massIcon, { tintColor: Colors.success500 }]}
+        />
+        <Text style={[Fonts.p1Bold, { color: Colors.success500 }]}>{mots.everyoneHere}</Text>
+      </TouchableOpacity>
 
       {bulkMessage !== '' && (
         <Text style={[Fonts.p4, { color: Colors.warning500 }]}>{bulkMessage}</Text>
       )}
 
+      {/* 🧱 UNE SEULE LISTE, DANS L ORDRE DE LA FEUILLE DE PRESENCE.
+          Les deux onglets (« Attendus » / « Sans réponse ») et la section
+          « DÉJÀ POINTÉS » disparaissent : ils faisaient SAUTER une ligne
+          d une pile a l autre au moment precis ou le doigt la touchait, et
+          obligeaient le coach a chercher deux fois la meme personne. Une
+          ligne pointee reste desormais exactement ou elle etait — c est ce
+          qui rend les trois boutons corrigeables en un tap. */}
       <View style={styles.list}>
-        {visibleUnmarked.map((/** @type {any} */ item, /** @type {number} */ index) => (
+        {items.map((/** @type {any} */ item, /** @type {number} */ index) => (
           <AttendanceRow
             identitiesHidden={identitiesHidden}
             item={item}
             key={item?.user?.documentId || index}
-            onCorrect={(/** @type {any} */ cible) => {
-              setSheetItem(cible); setOpenSheet('correct');
+            onAbsent={handleAbsent}
+            onLate={(/** @type {any} */ cible) => {
+              setSheetItem(cible); setSheetPosition(index + 1); setOpenSheet('late');
             }}
-            onLate={(/** @type {any} */ cible) => { setSheetItem(cible); setOpenSheet('late'); }}
-            onMark={handleMark}
+            onOnTime={handleMark}
+            onUnmark={handleUnmarkOne}
             position={index + 1}
-            stayInPlace={activeTab === TAB_UNANSWERED}
             t={t}
-            timezone={timezone}
           />
         ))}
       </View>
-
-      {markedSectionItems.length > 0 && (
-        <View style={styles.list}>
-          <Text style={[Fonts.p4Bold, { color: Colors.neutral400 }]}>
-            {`${mots.markedSection} · ${markedSectionItems.length}`}
-          </Text>
-          {markedSectionItems.map((/** @type {any} */ item, /** @type {number} */ index) => (
-            <AttendanceRow
-              identitiesHidden={identitiesHidden}
-              item={item}
-              key={item?.user?.documentId || index}
-              onCorrect={(/** @type {any} */ cible) => {
-                setSheetItem(cible); setOpenSheet('correct');
-              }}
-              position={index + 1}
-              t={t}
-              timezone={timezone}
-            />
-          ))}
-        </View>
-      )}
     </>
   );
 
   return (
     <ScreenContainer bgImage="bg2" bottomInsetMode="edge-to-edge" style={[styles.screen]}>
+      {/* 📐 L ENTETE DU PACK : le titre dit CE QUE C EST, le sous-titre dit
+          POUR QUI, et la pastille dit OU ON EN EST. L ancienne version
+          inversait les deux premiers — le titre portait « 0 pointé sur 22 »
+          et le mot « APPEL » etait relegue en sous-titre, colle au nom de
+          l equipe. Le chiffre a maintenant sa place a lui. */}
       <View style={styles.header}>
         <HeaderBackButton onPress={() => navigation.goBack()} />
         <View style={styles.headerTexts}>
-          <Text style={[Fonts.h4Bold, { color: Colors.neutral00 }]}>
-            {mode === 'open'
-              ? `${markedCount} ${mots.markedOf} ${items.length}`
-              : t('eventDetails.attendanceCall.header.title', 'APPEL')}
-          </Text>
+          <Text style={[Fonts.h3Black, { color: Colors.neutral00 }]}>{mots.title}</Text>
           <Text numberOfLines={1} style={[Fonts.p3, { color: Colors.neutral300 }]}>
-            {[mode === 'open' ? mots.title : '', teamName, heureDebut]
-              .filter(Boolean).join(' · ')}
+            {[teamName, heureDebut].filter(Boolean).join(' · ')}
           </Text>
         </View>
         {mode === 'open' && (
-          <View style={[styles.pill, { backgroundColor: Colors.success500 }]}>
-            <Text style={[Fonts.p4Bold, { color: Colors.primary900 }]}>
-              {t('eventDetails.attendanceCall.header.open', 'Ouvert')}
+          <View style={[styles.pill, {
+            backgroundColor: Colors.primary800,
+            borderColor: withAlpha(Colors.neutral00, 0.12),
+          }]}
+          >
+            <Text style={[Fonts.p3Black, { color: Colors.neutral200 }]}>
+              {`${markedCount} / ${items.length}`}
             </Text>
           </View>
         )}
@@ -512,22 +504,35 @@ function EventAttendanceCall() {
 
       {mode === 'open' && (
         <View style={[styles.footer, { paddingBottom: insets.bottom + 12 }]}>
-          {markedCount === 0 ? (
-            <View style={[styles.disabledButton, { backgroundColor: Colors.neutral700 }]}>
-              <Text style={[Fonts.p2Bold, { color: Colors.neutral400 }]}>
-                {mots.markSomeone}
-              </Text>
-            </View>
-          ) : (
-            <TouchableOpacity
-              accessibilityRole="button"
-              onPress={() => setOpenSheet('close')}
-              style={[styles.disabledButton, { backgroundColor: Colors.primary500 }]}
-            >
-              <Text style={[Fonts.p2Bold, { color: Colors.primary900 }]}>
-                {`${mots.closeCall} · ${markedCount} ${mots.outOf} ${items.length}`}
-              </Text>
-            </TouchableOpacity>
+          {/* 🚪 D5 — LE PIED NE BLOQUE PAS UN APPEL PARTIEL.
+              Le pack hesitait a exiger que tout le monde soit pointe. Un appel
+              partiel est un cas REEL : le coach attend encore deux joueurs
+              qu il sait en route. Le seul refus est donc « personne n a ete
+              pointe » — au-dela, le bouton passe.
+              ⛔ ET IL NE MENT PAS SUR CE QU IL FAIT (D7ter) : aucune notion de
+              cloture n existe cote serveur, chaque pointage est deja enregistre
+              au fil de l eau. Ce bouton FERME L ECRAN. C est la feuille
+              ci-dessous qui dit qui passera en « Non pointé », quand, et
+              jusqu a quand on peut encore corriger. */}
+          <TouchableOpacity
+            accessibilityLabel={libelleCloture}
+            accessibilityRole="button"
+            accessibilityState={{ disabled: markedCount === 0 }}
+            disabled={markedCount === 0}
+            onPress={() => setOpenSheet('close')}
+            style={[styles.closeButton, {
+              backgroundColor: Colors.primary500,
+              opacity: markedCount === 0 ? 0.4 : 1,
+            }]}
+          >
+            <Text style={[Fonts.p1Bold, { color: Colors.primary900 }]}>{libelleCloture}</Text>
+          </TouchableOpacity>
+
+          {/* ⛔ « Jamais un bouton muet » — la lecon est deja payee sur le
+              cadre « avant l heure » de cet ecran. Un bouton grise sans un mot
+              laisse le coach chercher ce qui manque. */}
+          {markedCount === 0 && (
+            <Text style={[Fonts.p4, { color: Colors.neutral400 }]}>{mots.markSomeone}</Text>
           )}
         </View>
       )}
@@ -544,24 +549,16 @@ function EventAttendanceCall() {
 
       <AttendanceLateSheet
         eventStartMs={eventStartMs}
+        identitiesHidden={identitiesHidden}
         isCorrection={Boolean(sheetItem && isMarked(sheetItem))}
         isVisible={openSheet === 'late'}
         item={sheetItem}
         onClose={() => setOpenSheet('')}
         onSubmit={handleLateSubmit}
+        position={sheetPosition}
         t={t}
-        timezone={timezone}
       />
 
-      <AttendanceCorrectSheet
-        isVisible={openSheet === 'correct'}
-        item={sheetItem}
-        onChangeTime={() => setOpenSheet('late')}
-        onClearNote={handleClearNote}
-        onClose={() => setOpenSheet('')}
-        onUnmark={handleUnmark}
-        t={t}
-      />
     </ScreenContainer>
   );
 }

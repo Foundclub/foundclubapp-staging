@@ -7,12 +7,14 @@ import EventAttendanceCall from '../EventAttendanceCall';
  *
  * 🔬 CE QUE CES TEMOINS TIENNENT :
  *   1. 2A — avant l heure, le bouton DIT quand ca ouvre. Jamais un bouton muet.
- *   2. 2B — dans la fenetre, le depart : « 0 pointé sur 22 », les compteurs de
- *      PRESENCE (jamais ceux de reponse en meme temps), et un pied desactive.
+ *   2. 2B — dans la fenetre, le depart : la pastille « 0 / 22 », les compteurs
+ *      de PRESENCE (jamais ceux de reponse en meme temps), et un pied desactive.
  *   3. 2C — un sans-reponse se pointe D UN GESTE (c est l ouverture serveur
- *      AD04 : le verrou est l audience, plus « a dit oui »).
- *   4. « Tout pointer » passe par l envoi GROUPE, et un refus s affiche.
- *   5. La ligne n est PAS cliquable ; ses deux cibles font 44.
+ *      AD04 : le verrou est l audience, plus « a dit oui »), et la coche envoie
+ *      `lateMinutes: 0` — sans quoi le serveur lui poserait un retard.
+ *   4. « Tout le monde est là » passe par l envoi GROUPE, n ECRASE PAS un
+ *      etat deja saisi (D3), porte l heure du debut, et un refus s affiche.
+ *   5. La ligne n est PAS cliquable ; ses cibles font 44 x 44, radius 12.
  *   6. `participantIdentitiesHidden` est respecte : aucun nom rendu.
  *   7. L horloge du TELEPHONE ne decide de rien.
  *   7b. Un non-pointe passe `no_show` par le cron reste POINTABLE.
@@ -33,6 +35,7 @@ let mockEvent;
 /** @type {any} */
 let mockAttendance;
 
+const mockAbsenceMutate = jest.fn();
 const mockBulkMutate = jest.fn();
 const mockCoachArrivalMutate = jest.fn();
 const mockLateMutate = jest.fn();
@@ -78,6 +81,7 @@ jest.mock('@/services/event/eventQueries', () => ({
 // et non transforme : la SUITE ENTIERE meurt au chargement, 0 test execute.
 jest.mock('../useAttendanceCallMutations', () => ({
   useAttendanceCallMutations: () => ({
+    absenceMutation: { isPending: false, mutate: mockAbsenceMutate },
     bulkMutation: { isPending: false, mutate: mockBulkMutate },
     coachArrivalMutation: { isPending: false, mutate: mockCoachArrivalMutate },
     invalidateAll: jest.fn(),
@@ -101,7 +105,9 @@ jest.mock('@/theme/themeContext', () => {
       ApplicationStyle: genererStyles(couleurs),
       Colors: couleurs,
       Fonts: genererPolices(couleurs),
-      Images: { arrowLeft: 1, chevronLeft: 1 },
+      Images: {
+        arrowLeft: 1, check: 1, chevronLeft: 1, clock: 1, close: 1,
+      },
       Spaces: espaces,
     }),
   };
@@ -377,7 +383,7 @@ describe('L5-A · fenetre DEJA FERMEE — le bouton ne raconte pas l ouverture',
     expect(texte).toContain("L'appel est clos");
 
     // Et on ne bascule pas non plus dans le mode d appel.
-    expect(texte).not.toContain('Tout pointer');
+    expect(texte).not.toContain('Tout le monde est là');
   });
 });
 
@@ -402,7 +408,15 @@ describe('L5-A · 2A — le bandeau dit CE QU ON VA POINTER', () => {
 });
 
 describe('L5-A · 2B — dans la fenetre, le depart', () => {
-  test('« 0 pointé sur 22 », compteurs de PRESENCE, pied desactive', async () => {
+  // 📐 APPEL (26/08) — MEME INTENTION, NOUVEL ATTENDU. Le temoin disait
+  // « 0 pointé sur 22 » dans le TITRE, exigeait les TROIS compteurs de
+  // presence et la paire « Tout pointer » / « Tout dépointer ». Le pack
+  // minimaliste rend le titre au mot « APPEL », deplace le chiffre dans une
+  // pastille « 0 / 22 », retire les compteurs (le chiffre est deja dans la
+  // pastille) et remplace la paire par UN bouton. Ce qui est mesure reste :
+  // au depart l ecran dit ou on en est, il ne melange pas les deux echelles,
+  // et le pied est desactive tant que personne n est pointe.
+  test('la pastille dit « 0 / 22 », une seule action de masse, pied desactive', async () => {
     mockAttendance = reponseAttendance({
       items: Array.from({ length: 22 }, (_valeur, index) => ligne({
         firstname: `Joueur${index}`,
@@ -414,25 +428,40 @@ describe('L5-A · 2B — dans la fenetre, le depart', () => {
     const arbre = await monter();
     const texte = aplatirTexte(arbre.toJSON());
 
-    expect(texte).toContain('0 pointé sur 22');
-    // Le mot « APPEL » ne disparait pas quand l appel s ouvre (entete 2B).
+    expect(texte).toContain('0 / 22');
+    // Le mot « APPEL » est le TITRE de l ecran, il ne disparait pas.
     expect(texte).toContain('APPEL');
-    expect(texte).toContain('Arrivé·e·s');
-    expect(texte).toContain('En retard');
-    expect(texte).toContain('En attente');
 
-    // ⛔ Jamais l echelle des reponses ici.
+    // ⛔ Jamais l echelle des REPONSES sur l appel ouvert : c est la confusion
+    // majeure que la planche 02 corrige, et le pack ne la rouvre pas.
     expect(texte).not.toContain('Absent·e·s');
+    expect(texte).not.toContain('Présent·e·s');
+    // ⛔ Et plus de compteurs de presence non plus : le chiffre vit dans la
+    // pastille, le detail se lit ligne par ligne.
+    expect(texte).not.toContain('Arrivé·e·s');
+    expect(texte).not.toContain('En attente');
 
-    expect(appuyable(arbre, 'Tout pointer')).toBeTruthy();
-    expect(appuyable(arbre, 'Tout dépointer')).toBeTruthy();
+    // UNE action de masse, pas deux. « Tout dépointer » etait un geste
+    // destructeur de masse offert au meme rang qu un geste utile.
+    expect(appuyable(arbre, 'Tout le monde est là')).toBeTruthy();
+    expect(appuyable(arbre, 'Tout dépointer')).toBeFalsy();
 
     expect(texte).toContain('Pointe au moins une personne');
   });
 });
 
 describe('L5-A · 2C — un sans-reponse se pointe d un geste', () => {
-  test('l onglet « Sans réponse » explique AVANT le geste, et « Là » pointe', async () => {
+  // 📐 APPEL (26/08) — MEME INTENTION, NOUVEL ATTENDU. Le temoin passait par
+  // l onglet « Sans réponse » et son bandeau d explication ; le pack supprime
+  // les deux. Ce qui est mesure reste L OUVERTURE SERVEUR AD04 elle-meme :
+  // quelqu un qui n a JAMAIS repondu est dans la liste, et sa coche le pointe
+  // d un seul geste.
+  //
+  // 🧨 ET LE TEMOIN GAGNE CE QUE L ANCIEN NE VOYAIT PAS : le corps envoye.
+  // Sans `lateMinutes: 0` + `arrivedAt`, le serveur recalcule le retard depuis
+  // le debut et ecrit « en retard +6 min » pour un joueur qu on vient de
+  // declarer a l heure — sur un bouton qui porte une COCHE VERTE.
+  test('un sans-reponse est dans LA liste, et la coche le pointe A L HEURE', async () => {
     mockAttendance = reponseAttendance({
       items: [
         ligne({ firstname: 'Leo', rsvpStatus: 'participating', userId: 'u1' }),
@@ -442,30 +471,44 @@ describe('L5-A · 2C — un sans-reponse se pointe d un geste', () => {
     });
 
     const arbre = await monter();
-    await act(async () => { appuyable(arbre, 'Sans réponse').props.onPress(); });
-
     const texte = aplatirTexte(arbre.toJSON());
-    expect(texte).toContain("Ils n'ont jamais répondu");
-    expect(texte).toContain('Présent·e et Arrivé·e en même temps');
 
-    // 🧨 La maquette annonce « Ils reçoivent une notification ». C est FAUX :
-    // `performCoachArrival` n envoie rien au joueur. La phrase est retiree.
-    expect(texte).not.toContain('reçoivent une notification');
+    // ⛔ Plus d onglets : tout le monde est dans la meme liste.
+    expect(texte).not.toContain('Attendus ·');
+    expect(texte).toContain('Ilan');
+    // Le statut de reponse survit en sous-ligne (decision D8).
+    expect(texte).toContain('Sans réponse');
 
-    await act(async () => { appuyable(arbre, 'Là').props.onPress(); });
+    await act(async () => { appuyable(arbre, "À l'heure Ilan").props.onPress(); });
 
     expect(mockCoachArrivalMutate).toHaveBeenCalledTimes(1);
-    expect(mockCoachArrivalMutate.mock.calls[0][0]).toEqual(
-      expect.objectContaining({ userId: 'u9' }),
-    );
+    const envoi = mockCoachArrivalMutate.mock.calls[0][0];
+    expect(envoi).toEqual(expect.objectContaining({ userId: 'u9' }));
+    expect(envoi.payload.lateMinutes).toBe(0);
+    // L heure envoyee est le DEBUT de l evenement, pas l instant du tap :
+    // c est ce qui empeche « À l'heure » d ecrire un retard de 6 minutes.
+    expect(envoi.payload.arrivedAt).toBe(DEBUT_ISO);
   });
 });
 
-describe('L5-A · « Tout pointer » passe par l envoi groupe', () => {
-  test('3 non-pointes -> UN appel groupe avec 3 identifiants', async () => {
+describe('L5-A · « Tout le monde est là » passe par l envoi groupe', () => {
+  // 📐 APPEL (26/08) — MEME INTENTION, ET DEUX GARDES EN PLUS (decision D3).
+  // Le temoin tenait deja « un seul appel groupe, et seulement les
+  // non-pointes ». Il tient maintenant AUSSI : (1) un joueur deja pointe en
+  // RETARD n est pas ecrase — c est le travail que le coach vient de faire ;
+  // (2) l envoi porte `lateMinutes: 0` + `arrivedAt` = debut, sans quoi le
+  // serveur bascule toute la feuille en « +6 min ».
+  test('seuls les « a pointer » partent, et l envoi porte l heure du DEBUT', async () => {
     mockAttendance = reponseAttendance({
       items: [
         ligne({ arrivedAt: '2026-08-19T15:56:00.000Z', firstname: 'Leo', userId: 'u1' }),
+        ligne({
+          arrivedAt: '2026-08-19T16:10:00.000Z',
+          firstname: 'Kais',
+          isLate: true,
+          lateMinutes: 10,
+          userId: 'u5',
+        }),
         ligne({ firstname: 'Enzo', userId: 'u2' }),
         ligne({ firstname: 'Nina', userId: 'u3' }),
         ligne({ firstname: 'Adam', userId: 'u4' }),
@@ -474,12 +517,19 @@ describe('L5-A · « Tout pointer » passe par l envoi groupe', () => {
     });
 
     const arbre = await monter();
-    await act(async () => { appuyable(arbre, 'Tout pointer').props.onPress(); });
+    await act(async () => { appuyable(arbre, 'Tout le monde est là').props.onPress(); });
 
     expect(mockBulkMutate).toHaveBeenCalledTimes(1);
-    expect(mockBulkMutate.mock.calls[0][0]).toEqual(
-      expect.objectContaining({ userIds: ['u2', 'u3', 'u4'] }),
-    );
+    const envoi = mockBulkMutate.mock.calls[0][0];
+
+    // 🔒 D3 — Leo (a l heure) et Kais (+10 min) gardent leur etat.
+    expect(envoi.userIds).toEqual(['u2', 'u3', 'u4']);
+    expect(envoi.userIds).not.toContain('u5');
+
+    // 🧨 Sans ces deux champs, `performCoachArrival` recalcule le retard
+    // depuis 18:06 et ecrit « +6 min » pour TOUT LE MONDE.
+    expect(envoi.lateMinutes).toBe(0);
+    expect(envoi.arrivedAt).toBe(DEBUT_ISO);
   });
 
   test('22 refus pour la MEME cause donnent UNE phrase, pas vingt-deux', async () => {
@@ -492,7 +542,7 @@ describe('L5-A · « Tout pointer » passe par l envoi groupe', () => {
     });
 
     const arbre = await monter();
-    await act(async () => { appuyable(arbre, 'Tout pointer').props.onPress(); });
+    await act(async () => { appuyable(arbre, 'Tout le monde est là').props.onPress(); });
 
     // Le rappel de succes recoit le bilan : 22 refus, une seule cause.
     const options = mockBulkMutate.mock.calls[0][1];
@@ -517,8 +567,13 @@ describe('L5-A · « Tout pointer » passe par l envoi groupe', () => {
   });
 });
 
-describe('L5-A · la ligne n est pas cliquable, ses 2 cibles font 44', () => {
-  test('deux cibles par ligne, 44 de haut, et aucun appui sur la ligne', async () => {
+describe('L5-A · la ligne n est pas cliquable, ses cibles font 44', () => {
+  // 📐 APPEL (26/08) — MEME INTENTION, NOUVEL ATTENDU. Le pack remplace les
+  // deux cibles « Là » + horloge par les boutons d etat du minimaliste, et
+  // leur donne une taille FIXE de 44 avec un radius 12 (l ancienne version
+  // etait un `minHeight` sur une pastille ronde). Ce qui est mesure reste :
+  // des cibles atteignables au pouce, et une ligne qui ne se clique pas.
+  test('les cibles de la ligne font 44 x 44, et aucun appui sur la ligne', async () => {
     mockAttendance = reponseAttendance({
       items: [ligne({ firstname: 'Leo', userId: 'u1' })],
       serverNow: '2026-08-19T16:06:00.000Z',
@@ -529,16 +584,21 @@ describe('L5-A · la ligne n est pas cliquable, ses 2 cibles font 44', () => {
       String(noeud.props?.accessibilityLabel || '').includes('Leo')
     ));
 
-    expect(cibles).toHaveLength(2);
+    // 🔴 TROIS depuis D7bis (26/08) : la coche, l horloge et la croix. La
+    // troisieme n existe que parce qu une route serveur la porte — un bouton
+    // visible sans route derriere serait un menteur.
+    expect(cibles).toHaveLength(3);
     cibles.forEach((/** @type {any} */ cible) => {
       const styles = [cible.props.style].flat(Infinity).filter(Boolean);
-      const hauteur = styles.reduce(
+      const lire = (/** @type {string} */ clef) => styles.reduce(
         (/** @type {number} */ trouvee, /** @type {any} */ style) => (
-          style?.minHeight ? Number(style.minHeight) : trouvee
+          style?.[clef] ? Number(style[clef]) : trouvee
         ),
         0,
       );
-      expect(hauteur).toBeGreaterThanOrEqual(44);
+      expect(lire('height')).toBe(44);
+      expect(lire('width')).toBe(44);
+      expect(lire('borderRadius')).toBe(12);
     });
 
     // ⛔ La ligne elle-meme n est pas cliquable : au bord d un terrain, un
@@ -550,6 +610,166 @@ describe('L5-A · la ligne n est pas cliquable, ses 2 cibles font 44', () => {
     );
     expect(rangee).toHaveLength(1);
     expect(rangee[0].props.onPress).toBeUndefined();
+  });
+});
+
+describe('L5-A · le pied ne bloque pas un appel PARTIEL', () => {
+  // 📐 APPEL (26/08) — TEMOIN NEUF (decision D5). Le pack hesitait a exiger que
+  // TOUT le monde soit pointe avant de clore. Un appel partiel est un cas reel
+  // — le coach attend encore deux joueurs qu il sait en route — et le bloquer
+  // l enfermerait sur cet ecran. Le seul refus est « personne n a ete pointe ».
+  test('2 pointes sur 4 : le bouton passe, et il dit « 2 sur 4 »', async () => {
+    mockAttendance = reponseAttendance({
+      items: [
+        ligne({ arrivedAt: '2026-08-19T16:00:00.000Z', firstname: 'Leo', userId: 'u1' }),
+        ligne({ arrivedAt: '2026-08-19T16:00:00.000Z', firstname: 'Hugo', userId: 'u2' }),
+        ligne({ firstname: 'Nina', userId: 'u3' }),
+        ligne({ firstname: 'Adam', userId: 'u4' }),
+      ],
+      serverNow: '2026-08-19T16:06:00.000Z',
+    });
+
+    const arbre = await monter();
+    const cible = bouton(arbre, "Clôturer l'appel · 2 sur 4");
+
+    expect(cible).toBeTruthy();
+    expect(cible.props.accessibilityState?.disabled).toBe(false);
+    // ⛔ Et il n y a aucune phrase qui reclamerait un appel complet.
+    expect(aplatirTexte(arbre.toJSON())).not.toContain('Pointe au moins une personne');
+  });
+
+  test('0 pointe : le bouton est desactive, et il DIT pourquoi', async () => {
+    mockAttendance = reponseAttendance({
+      items: [
+        ligne({ firstname: 'Nina', userId: 'u3' }),
+        ligne({ firstname: 'Adam', userId: 'u4' }),
+      ],
+      serverNow: '2026-08-19T16:06:00.000Z',
+    });
+
+    const arbre = await monter();
+    const cible = bouton(arbre, "Clôturer l'appel · 0 sur 2");
+
+    expect(cible).toBeTruthy();
+    expect(cible.props.accessibilityState?.disabled).toBe(true);
+    // ⛔ « Jamais un bouton muet » : la lecon est deja payee sur cet ecran.
+    expect(aplatirTexte(arbre.toJSON())).toContain('Pointe au moins une personne');
+  });
+
+  test('tout le monde pointe : le compteur DISPARAIT du libelle', async () => {
+    mockAttendance = reponseAttendance({
+      items: [
+        ligne({ arrivedAt: '2026-08-19T16:00:00.000Z', firstname: 'Leo', userId: 'u1' }),
+        ligne({ arrivedAt: '2026-08-19T16:00:00.000Z', firstname: 'Hugo', userId: 'u2' }),
+      ],
+      serverNow: '2026-08-19T16:06:00.000Z',
+    });
+
+    const arbre = await monter();
+    const texte = aplatirTexte(arbre.toJSON());
+
+    expect(texte).toContain("Clôturer l'appel");
+    // « 2 sur 2 » n apprend rien et allonge un libelle qui tient sur une ligne.
+    expect(texte).not.toContain('2 sur 2');
+  });
+});
+
+describe('L5-A · 🔴 D7bis — l encadrant declare quelqu un absent', () => {
+  // 🔴 CE BLOC MESURE UN RENVERSEMENT DE REGLE (26/08, dessin d Adel).
+  // Ce fichier a porte pendant des mois « aucun bouton Absent ici ». Le
+  // commentaire d en-tete de l ecran a ete reecrit dans le meme commit : un
+  // commentaire qui contredit le code est le piege que la methode interdit.
+  test('la croix appelle la route d absence, sans aucun corps', async () => {
+    mockAttendance = reponseAttendance({
+      items: [ligne({ firstname: 'Malo', userId: 'u7' })],
+      serverNow: '2026-08-19T16:06:00.000Z',
+    });
+
+    const arbre = await monter();
+    await act(async () => { appuyable(arbre, 'Absent Malo').props.onPress(); });
+
+    expect(mockAbsenceMutate).toHaveBeenCalledTimes(1);
+    expect(mockAbsenceMutate.mock.calls[0][0]).toEqual({ userId: 'u7' });
+    // ⛔ Poser une absence n est ni une arrivee ni un retard.
+    expect(mockCoachArrivalMutate).not.toHaveBeenCalled();
+    expect(mockLateMutate).not.toHaveBeenCalled();
+  });
+
+  test('une absence posee A LA MAIN se lit « Absent », le no_show du cron « Non pointé »', async () => {
+    mockAttendance = reponseAttendance({
+      items: [
+        // Posee par l encadrant : marqueur `coach_manual`, aucune arrivee.
+        {
+          ...ligne({ attendanceStatus: 'no_show', firstname: 'Malo', userId: 'u7' }),
+          attendance: {
+            arrivedAt: null, lateMinutes: 0, manualOverride: true, source: 'coach_manual',
+          },
+        },
+        // Balayee par le cron de fin de match : c est un FAIT, pas un jugement.
+        ligne({ attendanceStatus: 'no_show', firstname: 'Nina', userId: 'u3' }),
+      ],
+      serverNow: '2026-08-19T19:30:00.000Z',
+    });
+
+    const arbre = await monter();
+    const texte = aplatirTexte(arbre.toJSON());
+
+    expect(texte).toContain('Absent');
+    expect(texte).toContain('Non pointé');
+
+    // 🏷️ LA MESURE QUI COMPTE : les deux lignes n ont PAS le meme etat. Sans
+    // le marqueur d origine, l ecran signerait un jugement que le coach n a
+    // jamais porte sur tous ceux qu il a juste oublie de pointer.
+    const pastilles = arbre.root.findAll(
+      (/** @type {any} */ noeud) => typeof noeud.type === 'string'
+        && String(noeud.props?.testID || '').startsWith('attendance-dot-'),
+      { deep: true },
+    ).map((/** @type {any} */ noeud) => noeud.props.testID);
+
+    expect(pastilles).toEqual(['attendance-dot-absent', 'attendance-dot-none']);
+    // Et l absence COMPTE dans le pointage : 1 sur 2.
+    expect(texte).toContain('1 / 2');
+  });
+
+  test('re-taper la croix DEPOINTE (D2), il ne repose pas une absence', async () => {
+    mockAttendance = reponseAttendance({
+      items: [{
+        ...ligne({ attendanceStatus: 'no_show', firstname: 'Malo', userId: 'u7' }),
+        attendance: {
+          arrivedAt: null, lateMinutes: 0, manualOverride: true, source: 'coach_manual',
+        },
+      }],
+      serverNow: '2026-08-19T16:06:00.000Z',
+    });
+
+    const arbre = await monter();
+    await act(async () => { appuyable(arbre, 'Absent Malo').props.onPress(); });
+
+    expect(mockResetMutate).toHaveBeenCalledTimes(1);
+    expect(mockResetMutate.mock.calls[0][0]).toEqual({ userId: 'u7' });
+    expect(mockAbsenceMutate).not.toHaveBeenCalled();
+  });
+
+  test('« Tout le monde est là » N ECRASE PAS une absence posee a la main', async () => {
+    mockAttendance = reponseAttendance({
+      items: [
+        {
+          ...ligne({ attendanceStatus: 'no_show', firstname: 'Malo', userId: 'u7' }),
+          attendance: {
+            arrivedAt: null, lateMinutes: 0, manualOverride: true, source: 'coach_manual',
+          },
+        },
+        ligne({ firstname: 'Enzo', userId: 'u2' }),
+      ],
+      serverNow: '2026-08-19T16:06:00.000Z',
+    });
+
+    const arbre = await monter();
+    await act(async () => { appuyable(arbre, 'Tout le monde est là').props.onPress(); });
+
+    // 🔒 C est le cas que `listUncalledIds` protege : une absence n a pas
+    // d `arrivedAt`, un filtre base dessus l aurait reecrite « a l heure ».
+    expect(mockBulkMutate.mock.calls[0][0].userIds).toEqual(['u2']);
   });
 });
 
@@ -597,7 +817,7 @@ describe('L5-A · l horloge du telephone ne decide de rien', () => {
 });
 
 describe('L5-A · un non-pointe passe no_show par le cron reste pointable', () => {
-  test('range dans « En attente », pastille « Non pointé », bouton actif', async () => {
+  test('pastille grise, sous-ligne « Non pointé », et cible toujours active', async () => {
     mockAttendance = reponseAttendance({
       items: [ligne({ attendanceStatus: 'no_show', firstname: 'Malo', userId: 'u7' })],
       serverNow: '2026-08-19T19:30:00.000Z', // apres la fin, DANS la fenetre encore
@@ -607,7 +827,18 @@ describe('L5-A · un non-pointe passe no_show par le cron reste pointable', () =
     const texte = aplatirTexte(arbre.toJSON());
 
     expect(texte).toContain('Non pointé');
-    expect(texte).toContain('En attente');
+
+    // 📐 APPEL (26/08) — le compteur « En attente » a disparu avec les trois
+    // compteurs de presence. La propriete mesuree est la meme, et se lit
+    // maintenant PLUS DIRECTEMENT : la ligne n a AUCUN etat, donc sa pastille
+    // est grise. Un `no_show` pose par le cron n est pas un pointage.
+    const pastilles = arbre.root.findAll(
+      (/** @type {any} */ noeud) => typeof noeud.type === 'string'
+        && String(noeud.props?.testID || '').startsWith('attendance-dot-'),
+      { deep: true },
+    );
+    expect(pastilles).toHaveLength(1);
+    expect(pastilles[0].props.testID).toBe('attendance-dot-none');
 
     // La cible existe bien avec son role et son etat (noeud hote)…
     const hote = bouton(arbre, 'Malo');

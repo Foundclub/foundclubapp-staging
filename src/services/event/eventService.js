@@ -1485,6 +1485,22 @@ export const updateCoachLateMinutes = async (eventId, userId, payload) => {
 };
 
 /**
+ * APPEL / D7bis (26/08) — L encadrant declare quelqu un ABSENT.
+ *
+ * 🔴 C est une OUVERTURE : jusqu ici aucune route ne permettait ce geste. Le
+ * serveur ecrit `no_show` avec un marqueur d origine `coach_manual`, qui le
+ * distingue du `no_show` pose automatiquement par le cron de fin de match.
+ * « Non pointé » est un fait ; « Absent » est un constat signe.
+ * @param {string} eventId
+ * @param {string} userId
+ * @returns {Promise<any>}
+ */
+export const markCoachAbsence = async (eventId, userId) => {
+  const response = await client.post(`/events/${eventId}/attendance/${userId}/coach-absence`);
+  return response.data;
+};
+
+/**
  * Coach resets attendance data for a participant.
  * @param {string} eventId
  * @param {string} userId
