@@ -47,6 +47,14 @@ jest.mock('@/services/event/eventService', () => ({
   updateCoachLateMinutes: jest.fn(),
 }));
 
+// 🗺️ S3-bis — CONDITION DE DEMARRAGE (meme motif que les mocks ci-dessus).
+// Depuis S3-bis, `EventParticipants` porte le bouton « Faire l'appel » et monte
+// donc `useNavigation()`. Sans conteneur de navigation dans le harnais, le vrai
+// module jette « useNavigation is not a function » et toute la suite tombe.
+jest.mock('@react-navigation/native', () => ({
+  useNavigation: () => ({ navigate: jest.fn() }),
+}));
+
 jest.mock('react-i18next', () => ({
   initReactI18next: { init: jest.fn(), type: '3rdParty' },
   useTranslation: () => ({ t: (/** @type {string} */ key) => key }),

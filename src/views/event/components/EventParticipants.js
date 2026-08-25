@@ -1,4 +1,5 @@
 // @ts-nocheck
+import { useNavigation } from '@react-navigation/native';
 import { useIsMutating, useMutationState } from '@tanstack/react-query';
 import { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -7,6 +8,7 @@ import {
 } from 'react-native';
 
 import { REMIND_EVENT_MUTATION_KEY } from '@/domains/event/remindReport';
+import { RouteNames } from '@/navigation/routeNames';
 import { withAlpha } from '@/theme/colors';
 import useTheme from '@/theme/themeContext';
 
@@ -460,7 +462,27 @@ function EventParticipants({
   // doivent desormais mocker `eventService` en plus de `licenseQueries` — le
   // vrai module jette au CHARGEMENT quand `.env` est absent, ce qui est le cas
   // de toute copie de travail.
+  const navigation = useNavigation();
   const identifiantEvenement = event?.documentId || '';
+
+  /**
+   * 🚪 S3-bis — LA PORTE VERS L ECRAN D APPEL.
+   *
+   * ⛔ On ne recopie AUCUNE logique de fenetre ici : savoir si l appel est
+   * ouvert, ferme, ou pas encore commence est le travail de l ecran d appel et
+   * du serveur qui lui rend ses bornes. Ce bouton ne fait qu une chose — y
+   * mener — et c est exactement la meme destination que la carte
+   * « Faire l appel » de l Apercu (`RouteNames.EventAttendanceCall`).
+   * 🧭 Il vit ICI plutot que descendu par la fiche evenement parce que
+   * `EventDetails.js` est verrouille par une file d attente : y ajouter une
+   * prop aurait bloque ce lot derriere trois autres.
+   * @returns {void}
+   */
+  const ouvrirLAppel = useCallback(() => {
+    if (!identifiantEvenement) return;
+    // @ts-ignore: FIXME: Baseline TS regression
+    navigation.navigate(RouteNames.EventAttendanceCall, { eventId: identifiantEvenement });
+  }, [identifiantEvenement, navigation]);
   const { coachArrivalMutation } = useAttendanceCallMutations(identifiantEvenement);
   const pointerALHeure = useCallback((/** @type {User} */ joueur) => {
     const identifiant = joueur?.documentId;
@@ -1404,6 +1426,20 @@ function EventParticipants({
         </TouchableOpacity>
       )}
 
+      {/* 📢 S3-bis (vague S, 25/08, retour de recette d Adel) — LA PORTE VERS
+          L APPEL, EN TETE DE LISTE. Les rangees ne portent plus de bouton de
+          pointage : le geste se fait sur son ecran, et on y va d ici.
+          🧭 Place AVANT le bloc de compteurs, donc avant la legende
+          « reponses sur » qui sert de COUPE a trois temoins d ordre (AD06, AE02) :
+          il n entre pas dans leur lecture de la liste. */}
+      {canEdit && (
+        <Button
+          onPress={ouvrirLAppel}
+          title={t('eventDetails.nextAction.action', 'Faire l’appel')}
+          variant="Primary"
+        />
+      )}
+
       <View style={[Spaces.gap[12]]}>
         <View style={[Alignments.row, Spaces.gap[8]]}>
           {renderCounterTile(
@@ -1629,39 +1665,25 @@ function ParticipantItem({
         ) : null}
       </TouchableOpacity>
 
-      {/* 🎯 R7-d (vague R, 24/08) — UN SEUL POINT D ENTREE PAR JOUEUR.
-          Avant, « Pointer l arrivée » et « Modifier » vivaient cote a cote et
-          appelaient `openCoachLateModal(joueur, 'coach_mark' | 'coach_edit')` :
-          le MEME modal, au titre pres. Deux boutons, un seul geste — et aucun
-          des deux ne disait « il est arrivé à l heure », qui est pourtant le
-          cas le plus frequent au bord d un terrain.
-          Desormais c est l ETAT qui decide, exactement comme sur l ecran
-          d appel (AttendanceRow : « Là » + l horloge, puis « Corriger »). */}
-      {canEdit && (
+      {/* 🎯 R7-d (vague R, 24/08) puis S3-bis (vague S, 25/08) — POINTER N EST
+          PLUS UN GESTE DE CETTE LISTE.
+          R7-d avait deja fusionne les deux boutons qui ouvraient le MEME modal.
+          Adel, en recette de la 2.6.27, est alle plus loin : « pour l entraineur
+          il faut cacher les boutons "a l heure" et "en retard" ». Cette liste
+          est un ecran de LECTURE — qui vient, qui manque, qui est arrive ;
+          pointer est un geste suivi, ligne apres ligne, et il a son ecran. Le
+          bouton « Faire l appel » en tete de liste y mene.
+          ⚠️ « Modifier » RESTE : Adel a nomme deux boutons, pas trois, et
+          corriger une erreur de saisie sans quitter la liste n a rien a voir
+          avec pointer une rangee. */}
+      {canEdit && dejaPointe && (
         <View style={[Alignments.row, Spaces.gap[8], Alignments.justifyEnd]}>
-          {dejaPointe ? (
-            <Button
-              onPress={() => onEditLate && onEditLate(player)}
-              size="sm"
-              title={t('eventDetails.attendanceActions.edit', 'Modifier')}
-              variant="SecondaryLight"
-            />
-          ) : (
-            <>
-              <Button
-                onPress={() => onMarkOnTime && onMarkOnTime(player)}
-                size="sm"
-                title={t('eventDetails.attendanceActions.onTime', "À l'heure")}
-                variant="Primary"
-              />
-              <Button
-                onPress={() => onMarkArrival && onMarkArrival(player)}
-                size="sm"
-                title={t('eventDetails.attendanceActions.late', 'En retard')}
-                variant="SecondaryLight"
-              />
-            </>
-          )}
+          <Button
+            onPress={() => onEditLate && onEditLate(player)}
+            size="sm"
+            title={t('eventDetails.attendanceActions.edit', 'Modifier')}
+            variant="SecondaryLight"
+          />
         </View>
       )}
 

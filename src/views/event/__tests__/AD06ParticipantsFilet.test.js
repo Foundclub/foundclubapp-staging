@@ -52,6 +52,14 @@ jest.mock('@/services/event/eventService', () => ({
   updateCoachLateMinutes: jest.fn(),
 }));
 
+// 🗺️ S3-bis — CONDITION DE DEMARRAGE (meme motif que les mocks ci-dessus).
+// Depuis S3-bis, `EventParticipants` porte le bouton « Faire l'appel » et monte
+// donc `useNavigation()`. Sans conteneur de navigation dans le harnais, le vrai
+// module jette « useNavigation is not a function » et toute la suite tombe.
+jest.mock('@react-navigation/native', () => ({
+  useNavigation: () => ({ navigate: jest.fn() }),
+}));
+
 jest.mock('react-i18next', () => {
   const traductions = jest.requireActual('@/theme/strings/translations/fr').default;
   /**
@@ -464,27 +472,28 @@ describe('AD06 · temoin 4 — les deux boutons des demandes font 44', () => {
     });
   });
 
-  test('en revanche les DEUX boutons coach d une ligne ne font que 39 px', () => {
+  test('en revanche le bouton coach d une ligne ne fait que 39 px', () => {
     // 📏 CONSTAT POSE POUR UN LOT SUIVANT, PAS UNE REGRESSION D AD06 :
     // les actions coach portent `size="sm"`, qui vaut 39 px (Button.js:61-72)
     // — sous la cible tactile de 44. Le temoin fige la mesure pour qu on n ait
     // pas a la redecouvrir ; le jour ou un lot les passe a 44, c est CE chiffre
     // qu il change.
-    // 🔁 R7-d (24/08) : les libelles ont change (« Pointer l arrivée » et
-    // « Modifier », qui ouvraient le MEME modal, sont devenus « À l'heure » et
-    // « En retard »). La MESURE, elle, est inchangee.
+    // R7-d (24/08) avait renomme les deux boutons de la rangee.
+    // S3-bis (vague S, 25/08) les a RETIRES : Adel a demande que le pointage
+    // se fasse sur l ecran d appel, pas ligne par ligne. Il ne reste que
+    // Modifier, sur quelqu un de DEJA pointe - d ou l heure d arrivee dans le
+    // montage. La MESURE, elle, est toujours la meme.
     const arbre = monter({
+      attendanceByUserId: { 'p-arrive': { arrivedAt: new Date(DEBUT_MS).toISOString() } },
+      eventStartAt: new Date(DEBUT_MS),
       teamParticipationSections: [section({ participating: [P_ARRIVE] })],
     });
 
     const boutonsCoach = arbre.root
       .findAllByType(Button)
-      .filter((/** @type {any} */ noeud) => [
-        'À l\'heure',
-        'En retard',
-      ].includes(noeud.props.title));
+      .filter((/** @type {any} */ noeud) => ['Modifier'].includes(noeud.props.title));
 
-    expect(boutonsCoach.length).toBe(2);
+    expect(boutonsCoach.length).toBe(1);
     boutonsCoach.forEach((/** @type {any} */ noeud) => {
       expect(noeud.props.size).toBe('sm');
       const hauteurs = aplatir(noeud.findAllByType(TouchableOpacity)[0].props.style)

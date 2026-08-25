@@ -42,6 +42,14 @@ jest.mock('@/services/event/eventService', () => ({
   updateCoachLateMinutes: jest.fn(),
 }));
 
+// 🗺️ S3-bis — CONDITION DE DEMARRAGE (meme motif que les mocks ci-dessus).
+// Depuis S3-bis, `EventParticipants` porte le bouton « Faire l'appel » et monte
+// donc `useNavigation()`. Sans conteneur de navigation dans le harnais, le vrai
+// module jette « useNavigation is not a function » et toute la suite tombe.
+jest.mock('@react-navigation/native', () => ({
+  useNavigation: () => ({ navigate: jest.fn() }),
+}));
+
 jest.mock('@/services/license/licenseQueries', () => ({
   useLicenseAssignments: () => ({ data: undefined, isLoading: false }),
 }));
@@ -177,20 +185,6 @@ beforeEach(() => {
 });
 
 describe('R7-d — un seul point d entree par joueur', () => {
-  test('pas encore pointe : « À l\'heure » et « En retard », et PLUS de doublon', () => {
-    const arbre = monter({
-      teamParticipationSections: [section({ participating: [P_A_POINTER] })],
-    });
-
-    const titres = titresDesBoutons(arbre);
-
-    expect(titres).toContain("À l'heure");
-    expect(titres).toContain('En retard');
-    // 🔴 Le defaut lui-meme : ces deux-la ouvraient le MEME modal.
-    expect(titres).not.toContain("Pointer l'arrivée");
-    expect(titres).not.toContain('Modifier');
-  });
-
   test('deja pointe : « Modifier » SEUL, aucun bouton de pointage a cote', () => {
     const arbre = monter({
       attendanceByUserId: {
@@ -204,51 +198,6 @@ describe('R7-d — un seul point d entree par joueur', () => {
     expect(titres).toContain('Modifier');
     expect(titres).not.toContain("À l'heure");
     expect(titres).not.toContain('En retard');
-  });
-
-  test('« À l\'heure » ECRIT directement, 0 minute de retard — il n ouvre aucun modal', async () => {
-    mockMarkCoachArrival.mockResolvedValue({ data: {} });
-    const arbre = monter({
-      teamParticipationSections: [section({ participating: [P_A_POINTER] })],
-    });
-
-    const bouton = arbre.root
-      .findAllByType(Button)
-      .find((/** @type {any} */ noeud) => noeud.props.title === "À l'heure");
-
-    // 🧨 `mutate` ne part pas dans le tour courant : react-query repasse par la
-    // file des MACROtaches. Sans cette vidange, le temoin lit 0 appel et
-    // conclurait a tort que le bouton n ecrit rien.
-    await act(async () => {
-      bouton.props.onPress();
-      await new Promise((resoudre) => { setTimeout(resoudre, 0); });
-    });
-
-    // 🧨 `lateMinutes: 0` n est PAS decoratif : sans lui le serveur calcule le
-    // retard depuis le coup d envoi (`computeLateMinutes`) et pointerait
-    // « +12 min » quelqu un que le coach vient de declarer a l heure.
-    expect(mockMarkCoachArrival).toHaveBeenCalledTimes(1);
-    expect(mockMarkCoachArrival).toHaveBeenCalledWith(
-      EVENEMENT_ID,
-      'p-a-pointer',
-      { lateMinutes: 0 },
-    );
-    expect(onCoachMarkArrival).not.toHaveBeenCalled();
-  });
-
-  test('« En retard » ouvre le modal, il n ecrit rien tout seul', () => {
-    const arbre = monter({
-      teamParticipationSections: [section({ participating: [P_A_POINTER] })],
-    });
-
-    const bouton = arbre.root
-      .findAllByType(Button)
-      .find((/** @type {any} */ noeud) => noeud.props.title === 'En retard');
-
-    act(() => { bouton.props.onPress(); });
-
-    expect(onCoachMarkArrival).toHaveBeenCalledWith(P_A_POINTER);
-    expect(mockMarkCoachArrival).not.toHaveBeenCalled();
   });
 
   test('« Modifier » ouvre la CORRECTION, pas le pointage', () => {
@@ -266,25 +215,6 @@ describe('R7-d — un seul point d entree par joueur', () => {
     act(() => { bouton.props.onPress(); });
 
     expect(onCoachEditLate).toHaveBeenCalledWith(P_DEJA_POINTE);
-    expect(mockMarkCoachArrival).not.toHaveBeenCalled();
-  });
-
-  test('🔒 sans identifiant d evenement, le geste ne part PAS sur une URL trouee', async () => {
-    const arbre = monter({
-      event: {},
-      teamParticipationSections: [section({ participating: [P_A_POINTER] })],
-    });
-
-    const bouton = arbre.root
-      .findAllByType(Button)
-      .find((/** @type {any} */ noeud) => noeud.props.title === "À l'heure");
-
-    await act(async () => {
-      bouton.props.onPress();
-      await new Promise((resoudre) => { setTimeout(resoudre, 0); });
-    });
-
-    // `/events//attendance//coach-arrival` rendrait un 404 illisible.
     expect(mockMarkCoachArrival).not.toHaveBeenCalled();
   });
 

@@ -96,7 +96,12 @@ jest.mock('@/theme/themeContext', () => {
   };
 });
 
-jest.mock('@react-navigation/native', () => ({ useFocusEffect: () => {} }));
+// S3-bis : `EventParticipants` monte `useNavigation()` depuis qu il porte le
+// bouton « Faire l'appel ». Le double doit donc le fournir aussi.
+jest.mock('@react-navigation/native', () => ({
+  useFocusEffect: () => {},
+  useNavigation: () => ({ navigate: jest.fn() }),
+}));
 
 jest.mock('@tanstack/react-query', () => ({
   useIsMutating: () => 0,
