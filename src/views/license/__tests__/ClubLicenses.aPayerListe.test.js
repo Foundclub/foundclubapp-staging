@@ -130,7 +130,7 @@ jest.mock('@/components/molecules/profileAvatar/ProfileAvatar', () => function A
 jest.mock('@/components/molecules/segmentedControl/SegmentedControl', () => function SegMock() {
   return null;
 });
-jest.mock('../MyLicense', () => function MyLicenseMock() { return null; });
+jest.mock('../MyLicenses', () => function MyLicensesMock() { return null; });
 
 jest.mock('@/components/atoms/button/Button', () => function ButtonMock(/** @type {any} */ props) {
   mockBoutons.push(props);
