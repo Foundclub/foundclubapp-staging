@@ -21,6 +21,7 @@ import { useCallback, useMemo, useState } from 'react';
 import {
   Alert, Pressable, ScrollView, Text, View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { withAlpha } from '@/theme/colors';
 import useTheme from '@/theme/themeContext';
@@ -28,6 +29,7 @@ import useTheme from '@/theme/themeContext';
 import Button from '@/components/atoms/button/Button';
 import GlyphIcon from '@/components/atoms/glyphIcon/GlyphIcon';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
+import WebFloatingOverlay from '@/components/atoms/webFloatingOverlay/WebFloatingOverlay';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
 import { RouteNames } from '@/navigation/routeNames';
@@ -206,7 +208,10 @@ function AmountCard({ assignment, footer }) {
  * @returns {import('react').ReactElement}
  */
 function MyLicenseDetail({ navigation, route }) {
-  const { Alignments, Colors, Fonts } = useTheme();
+  const {
+    Alignments, ApplicationStyle, Colors, Fonts,
+  } = useTheme();
+  const insets = useSafeAreaInsets();
   const type = memberType(Fonts);
   const routeAssignmentId = route?.params?.assignmentId;
   const listQuery = useMyLicenses();
@@ -495,6 +500,11 @@ function MyLicenseDetail({ navigation, route }) {
   const canPayOnline = onlineMethods.length > 0 && isOpen;
   const canDeclare = manualMethods.length > 0 && isOpen;
   const showActionBar = !isSettledAssignment(current) && (canPayOnline || canDeclare);
+  // 📐 S9-ter — LES MESURES DU FLOTTANT, ECRITES UNE SEULE FOIS.
+  // Un calque RECOUVRE : le degagement du contenu et la position du bouton
+  // doivent venir du MEME calcul, sinon ils divergent au premier reglage.
+  const floatingBottom = insets.bottom + 12;
+  const floatingClearance = showActionBar ? 52 + floatingBottom + 24 : 32;
 
   // Le pied de la carte de montant : UNE seule ligne, celle qui compte.
   let cardFooter = null;
@@ -557,13 +567,24 @@ function MyLicenseDetail({ navigation, route }) {
         onPress: () => navigation.navigate(RouteNames.MyLicenses),
       }
       : null,
-    // ⚠️ ECART ASSUME AVEC LA PLANCHE 02 (« trois entrees, pas plus »), ET IL
-    // EST DELIBERE : quand le club encaisse en ligne, la barre du bas du pack
-    // ne porte que « Payer » et « J ai paye hors app ». « Quelqu un paie pour
-    // moi » y perdrait sa seule porte, alors que le lien EXISTE et FONCTIONNE
-    // aujourd hui. Supprimer en silence une fonctionnalite qui touche a
-    // l argent serait pire qu une quatrieme entree de menu.
-    canPayOnline && payerLink
+    // S9-ter — L ACTION SECONDAIRE DESCEND ICI.
+    // Quand « Payer » est le bouton flottant, « J ai paye hors app » n a plus de
+    // place a l ecran : Adel veut UN seul element visible fort. Un lien discret
+    // sous le flottant aurait recree le « plusieurs blocs » qu il vient de faire
+    // retirer — et il aurait flotte, lui aussi, au-dessus du contenu.
+    canDeclare && canPayOnline
+      ? {
+        glyph: 'landmark',
+        label: 'J’ai payé hors app',
+        onPress: () => setDeclareSheetVisible(true),
+      }
+      : null,
+    // S9-ter — « QUELQU UN PAIE POUR MOI » : LE BOUTON PART, LA FONCTION RESTE.
+    // 🗣️ Adel : « le bouton "Quelqu un paie pour moi", enleve-le ».
+    // ⛔ Il a demande de retirer LE BOUTON, pas la fonctionnalite — et il y a de
+    // l argent derriere. L entree est donc GENERALISEE : elle n est plus reservee
+    // au cas « le club encaisse en ligne », elle apparait des que le lien existe.
+    payerLink
       ? {
         glyph: 'creditCard',
         label: 'Quelqu’un paie pour moi',
@@ -579,7 +600,9 @@ function MyLicenseDetail({ navigation, route }) {
   ].filter(Boolean);
 
   return (
-    <ScreenContainer bottomInsetMode="screen" withHeaderPadding>
+    // ⛔ `edge-to-edge` : le calque flottant applique DEJA `insets.bottom`.
+    // Laisser `screen` le compterait deux fois et decollerait le bouton du bord.
+    <ScreenContainer bottomInsetMode="edge-to-edge" withHeaderPadding>
       <MemberTopBar onBack={goBack} onMenu={() => setMenuVisible(true)} title="Ma cotisation" />
       {/*
         S9-bis / defaut 1 — POURQUOI CE `Alignments.fill` N EST PAS DECORATIF.
@@ -595,7 +618,10 @@ function MyLicenseDetail({ navigation, route }) {
         🔒 Temoin : `MyLicenseDetail.S9bis.defilement.test.js`.
       */}
       <ScrollView
-        contentContainerStyle={{ gap: memberSpacing.section, paddingBottom: 32 }}
+        contentContainerStyle={{
+          gap: memberSpacing.section,
+          paddingBottom: floatingClearance,
+        }}
         showsVerticalScrollIndicator={false}
         style={Alignments.fill}
       >
@@ -963,48 +989,48 @@ function MyLicenseDetail({ navigation, route }) {
         </View>
       </ScrollView>
 
-      {/* ── LA BARRE DU BAS — pilotee par ce que le club autorise (D7) ─────── */}
+      {/*
+        S9-ter — UN SEUL BEAU BOUTON, ET IL FLOTTE.
+        🗣️ Adel, recette du 25/08 : la barre du bas faisait « trop de blocs
+        separes ». Sur un ecran qui empile deja carte de montant, echeancier,
+        dossier et paiements, un 5e bandeau a fond plein tranchait.
+        ⇒ Plus de bandeau : UN bouton, en calque au-dessus du contenu defilant.
+        L action secondaire et le tiers payeur descendent au menu ⋯ — la
+        fonctionnalite survit, le bouton s en va (c est ce qu Adel a demande).
+
+        🧱 POURQUOI `WebFloatingOverlay` ET PAS UN SIMPLE `View` : c est la brique
+        maison qui rend un calque identique sur le telephone et sur le site
+        (`WebFloatingOverlay.web.js` l ancre au viewport).
+        ⛔ POURQUOI PAS `getFloatingActionContainerStyle` : ce helper est taille
+        pour un BOUTON ROND ancre a droite, et il degage la hauteur du DOCK —
+        que cet ecran n a pas (il vit hors des onglets, cf. PrivateNavigator).
+        Ici le bouton fait toute la largeur et n a aucun dock a franchir.
+      */}
       {showActionBar ? (
-        <View style={{
-          backgroundColor: Colors.primary800,
-          borderTopColor: withAlpha(Colors.neutral00, 0.08),
-          borderTopWidth: 1,
-          gap: memberSpacing.rowGap,
-          paddingBottom: 24,
-          paddingHorizontal: 16,
-          paddingTop: 12,
-        }}
+        <WebFloatingOverlay
+          style={{
+            bottom: floatingBottom,
+            left: 16,
+            position: 'absolute',
+            right: 16,
+            zIndex: 1000,
+          }}
         >
           {canPayOnline ? (
-            <>
-              <Button
-                isLoading={checkoutMutation.isPending}
-                onPress={() => setPaySheetVisible(true)}
-                title={`Payer ${remainingLabel}`}
-              />
-              {canDeclare ? (
-                <Button
-                  onPress={() => setDeclareSheetVisible(true)}
-                  title="J'ai payé hors app"
-                  variant="Ghost"
-                />
-              ) : null}
-            </>
+            <Button
+              isLoading={checkoutMutation.isPending}
+              onPress={() => setPaySheetVisible(true)}
+              style={ApplicationStyle.shadow200}
+              title={`Payer ${remainingLabel}`}
+            />
           ) : (
-            <>
-              {canDeclare ? (
-                <Button onPress={() => setDeclareSheetVisible(true)} title="J'ai payé hors app" />
-              ) : null}
-              {payerLink ? (
-                <Button
-                  onPress={() => setPayerSheetVisible(true)}
-                  title="Quelqu&#39;un paie pour moi"
-                  variant="Ghost"
-                />
-              ) : null}
-            </>
+            <Button
+              onPress={() => setDeclareSheetVisible(true)}
+              style={ApplicationStyle.shadow200}
+              title="J'ai payé hors app"
+            />
           )}
-        </View>
+        </WebFloatingOverlay>
       ) : null}
 
       {menuVisible ? (

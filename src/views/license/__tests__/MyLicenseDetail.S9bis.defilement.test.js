@@ -5,6 +5,7 @@ import { colors as COULEURS } from '@/theme/colors';
 
 import GlyphIcon from '@/components/atoms/glyphIcon/GlyphIcon';
 import HeaderBackButton from '@/components/atoms/headerBackButton/HeaderBackButton';
+import WebFloatingOverlay from '@/components/atoms/webFloatingOverlay/WebFloatingOverlay';
 
 import MyLicenseDetail from '../MyLicenseDetail';
 
@@ -59,6 +60,14 @@ jest.mock('@/services/license/licenseQueries', () => ({
 const mockNavigationContexte = { goBack: jest.fn(), navigate: jest.fn() };
 jest.mock('@react-navigation/native', () => ({
   useNavigation: () => mockNavigationContexte,
+}));
+
+// S9-ter — le bouton flottant lit le retrait bas systeme. Meme mock que les
+// suites qui montent deja un calque (ClubDetails.AB05, ClubDetails.V01...).
+jest.mock('react-native-safe-area-context', () => ({
+  useSafeAreaInsets: () => ({
+    bottom: 0, left: 0, right: 0, top: 0,
+  }),
 }));
 
 jest.mock('@/theme/themeContext', () => {
@@ -234,23 +243,27 @@ describe('S9-bis / defaut 1 — le detail doit defiler', () => {
     expect(style.flexShrink).not.toBe(0);
   });
 
-  it('la barre d action est un FRERE de la zone defilante, jamais un calque', () => {
-    // 🧱 Un calque en `position: absolute` couvrirait le dernier bloc. En frere,
-    // il prend sa propre place et ne peut RIEN recouvrir.
+  it('le bouton flottant vit HORS de la zone defilante', () => {
+    // 🔁 S9-ter a remplace le bandeau-frere par un CALQUE flottant (« un seul beau
+    // bouton », Adel 25/08). Ce que S9-bis doit encore garantir a change de nature :
+    // le calque ne doit pas etre DANS le ScrollView, sinon il defilerait avec le
+    // contenu et cesserait de flotter — un « bouton flottant » qui disparait au
+    // premier glissement est pire qu une barre fixe.
+    // ⛔ L ancienne version de ce temoin cherchait un noeud a `borderTopWidth: 1` :
+    // depuis le retrait du bandeau, ce selecteur attrape le PIED DE LA CARTE DE
+    // MONTANT. Il passait donc au vert sans plus rien prouver.
     monter();
-    const barre = arbre.root.findAll((/** @type {any} */ noeud) => {
-      const style = aplatir(noeud.props?.style);
-      return style.borderTopWidth === 1 && typeof style.paddingTop === 'number';
-    })[0];
-    expect(barre).toBeTruthy();
-    expect(aplatir(barre.props.style).position).toBeUndefined();
+    const zone = arbre.root.findByType(ScrollView);
+    expect(zone.findAllByType(WebFloatingOverlay).length).toBe(0);
+    expect(arbre.root.findAllByType(WebFloatingOverlay).length).toBe(1);
   });
 
   it('le contenu garde un degagement bas sous son dernier bloc', () => {
     monter();
     const zone = arbre.root.findByType(ScrollView);
     const contenu = aplatir(zone.props.contentContainerStyle);
-    expect(contenu.paddingBottom).toBeGreaterThanOrEqual(24);
+    // Depuis S9-ter le degagement doit couvrir le CALQUE, pas une simple marge.
+    expect(contenu.paddingBottom).toBeGreaterThanOrEqual(88);
   });
 });
 
