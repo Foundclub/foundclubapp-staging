@@ -208,7 +208,7 @@ function AssignmentCard({ assignment, onPress }) {
  * @returns {import('react').ReactElement}
  */
 function MyLicenses({ navigation }) {
-  const { Colors, Fonts } = useTheme();
+  const { Alignments, Colors, Fonts } = useTheme();
   const type = memberType(Fonts);
   const query = useMyLicenses();
   const assignments = useMemo(() => query.data || [], [query.data]);
@@ -272,9 +272,12 @@ function MyLicenses({ navigation }) {
   return (
     <ScreenContainer bottomInsetMode="tab-scene" withHeaderPadding>
       <MemberTopBar onBack={goBack} title="Mes cotisations" />
+      {/* S9-bis : meme borne de hauteur que le detail — cf. le temoin
+          `MyLicenseDetail.S9bis.defilement.test.js` pour la cause. */}
       <ScrollView
         contentContainerStyle={{ gap: memberSpacing.section, paddingBottom: 40 }}
         showsVerticalScrollIndicator={false}
+        style={Alignments.fill}
       >
         {active.length ? <TotalCard assignments={active} /> : null}
 

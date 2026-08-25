@@ -1980,7 +1980,9 @@ function ClubLicenses({ navigation, route }) {
   }, [clubId, navigation, refetchUserData, switchClubMutation]);
 
   if (showMemberLicense) {
-    return <MyLicenses navigation={navigation} route={route} />;
+    // ⛔ Pas de `route` : la LISTE n a aucun parametre. C est le DETAIL
+    // (`MyLicenseDetail`) qui lit un `assignmentId`.
+    return <MyLicenses navigation={navigation} />;
   }
 
   // Sur le hub, l'ecran ne rend plus de titre : le navigateur en pose deja un

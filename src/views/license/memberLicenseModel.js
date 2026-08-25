@@ -27,6 +27,13 @@ import { formatLicenseMoney } from './licenseDesignSystem';
 // fait ICI, une seule fois :
 //   · `overdue`       (serveur) = « late »   (pack) → EN RETARD
 //   · `manual_review` (serveur) = declaration en attente → DECLAREE
+/**
+ * Les six statuts que le pack MEMBRE sait nommer.
+ * @typedef {'cancelled' | 'manual_review' | 'overdue' | 'paid' | 'partial'
+ *   | 'pending' | 'waived'} MemberLicenseStatus
+ */
+
+/** @type {Record<string, string>} */
 export const MEMBER_STATUS_LABELS = {
   cancelled: 'Annulée',
   manual_review: 'Déclarée',
@@ -40,6 +47,7 @@ export const MEMBER_STATUS_LABELS = {
 // Le surtitre de la carte de montant change avec le statut (planche 02).
 // « RESTE A PAYER » sur zero euro serait absurde ; un libelle faux coute plus
 // cher qu un libelle long.
+/** @type {Record<string, string>} */
 export const MEMBER_STATUS_OVERLINES = {
   cancelled: 'MONTANT ANNULÉ',
   manual_review: 'RESTE À PAYER',
@@ -230,6 +238,7 @@ export const getInstallmentState = (installment, context) => {
  * @returns {any} l echeance, ou null
  */
 export const getNextInstallment = (assignment) => {
+  /** @type {any[]} */
   const list = assignment?.installments || [];
   const open = list.filter((item) => !['cancelled', 'paid'].includes(String(item?.status || '')));
   if (!open.length) return null;

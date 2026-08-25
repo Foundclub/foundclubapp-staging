@@ -88,123 +88,33 @@ function GlyphIcon({
     // l un ni l autre n existe dans ce depot (mesure du 25/08). Seule la
     // convention de la maison compte, et c est celle-ci.
     case 'ban':
+      // Pack de design : `fc-ban` (glyphes.svg), translation cuite.
       return (
         <Svg height={size} viewBox="0 0 24 24" width={size}>
-          <Circle
-            cx="12"
-            cy="12"
-            fill="none"
-            r="8.6"
-            stroke={strokeColor}
-            strokeWidth={strokeWidth}
-          />
-          <Line
-            fill="none"
-            stroke={strokeColor}
-            strokeLinecap="round"
-            strokeWidth={strokeWidth}
-            x1="6"
-            x2="18"
-            y1="18"
-            y2="6"
+          <Path
+            d="M 12 20 C 7.6 20 4 16.4 4 12 L 2 12 C 2 17.5 6.5 22 12 22 L 12 20 Z M 12 4 C 16.4 4 20 7.6 20 12 L 22 12 C 22 6.5 17.5 2 12 2 L 12 4 Z M 20 12 C 20 14.2 19.1 16.2 17.7 17.7 L 19.1 19.1 C 20.9 17.3 22 14.8 22 12 L 20 12 Z M 17.7 17.7 C 16.2 19.1 14.2 20 12 20 L 12 22 C 14.8 22 17.3 20.9 19.1 19.1 L 17.7 17.7 Z M 4.9 6.3 L 17.7 19.1 L 19.1 17.7 L 6.3 4.9 L 4.9 6.3 Z M 4 12 C 4 9.8 4.9 7.8 6.3 6.3 L 4.9 4.9 C 3.1 6.7 2 9.2 2 12 L 4 12 Z M 6.3 6.3 C 7.8 4.9 9.8 4 12 4 L 12 2 C 9.2 2 6.7 3.1 4.9 4.9 L 6.3 6.3 Z"
+            fill={strokeColor}
           />
         </Svg>
       );
     case 'calendar':
+      // Pack de design : `fc-calendar` (glyphes.svg), translation cuite.
       return (
         <Svg height={size} viewBox="0 0 24 24" width={size}>
-          <Rect
-            fill="none"
-            height="15"
-            rx="2.4"
-            stroke={strokeColor}
-            strokeLinejoin="round"
-            strokeWidth={strokeWidth}
-            width="17"
-            x="3.5"
-            y="5"
-          />
-          <Line
-            fill="none"
-            stroke={strokeColor}
-            strokeLinecap="round"
-            strokeWidth={strokeWidth}
-            x1="3.5"
-            x2="20.5"
-            y1="9.6"
-            y2="9.6"
-          />
-          <Line
-            fill="none"
-            stroke={strokeColor}
-            strokeLinecap="round"
-            strokeWidth={strokeWidth}
-            x1="8.2"
-            x2="8.2"
-            y1="2.9"
-            y2="6.4"
-          />
-          <Line
-            fill="none"
-            stroke={strokeColor}
-            strokeLinecap="round"
-            strokeWidth={strokeWidth}
-            x1="15.8"
-            x2="15.8"
-            y1="2.9"
-            y2="6.4"
+          <Path
+            d="M 4.1 20.8 L 4.5 19.9 L 4.1 20.8 Z M 3.2 19.9 L 4.1 19.5 L 3.2 19.9 Z M 20.8 19.9 L 19.9 19.5 L 20.8 19.9 Z M 19.9 20.8 L 19.5 19.9 L 19.9 20.8 Z M 19.9 5.2 L 19.5 6.1 L 19.9 5.2 Z M 20.8 6.1 L 19.9 6.5 L 20.8 6.1 Z M 4.1 5.2 L 4.5 6.1 L 4.1 5.2 Z M 3.2 6.1 L 4.1 6.5 L 3.2 6.1 Z M 3 9 C 2.4 9 2 9.4 2 10 C 2 10.6 2.4 11 3 11 L 3 9 Z M 21 11 C 21.6 11 22 10.6 22 10 C 22 9.4 21.6 9 21 9 L 21 11 Z M 8 3 C 8 2.4 7.6 2 7 2 C 6.4 2 6 2.4 6 3 L 8 3 Z M 6 5 C 6 5.6 6.4 6 7 6 C 7.6 6 8 5.6 8 5 L 6 5 Z M 18 3 C 18 2.4 17.6 2 17 2 C 16.4 2 16 2.4 16 3 L 18 3 Z M 16 5 C 16 5.6 16.4 6 17 6 C 17.6 6 18 5.6 18 5 L 16 5 Z M 6.2 6 L 17.8 6 L 17.8 4 L 6.2 4 L 6.2 6 Z M 20 8.2 L 20 17.8 L 22 17.8 L 22 8.2 L 20 8.2 Z M 17.8 20 L 6.2 20 L 6.2 22 L 17.8 22 L 17.8 20 Z M 4 17.8 L 4 8.2 L 2 8.2 L 2 17.8 L 4 17.8 Z M 6.2 20 C 5.6 20 5.3 20 5 20 C 4.7 20 4.6 19.9 4.5 19.9 L 3.6 21.7 C 4 21.9 4.4 21.9 4.8 22 C 5.2 22 5.7 22 6.2 22 L 6.2 20 Z M 2 17.8 C 2 18.3 2 18.8 2 19.2 C 2.1 19.6 2.1 20 2.3 20.4 L 4.1 19.5 C 4.1 19.4 4 19.3 4 19 C 4 18.7 4 18.4 4 17.8 L 2 17.8 Z M 4.5 19.9 C 4.4 19.8 4.2 19.6 4.1 19.5 L 2.3 20.4 C 2.6 20.9 3.1 21.4 3.6 21.7 L 4.5 19.9 Z M 20 17.8 C 20 18.4 20 18.7 20 19 C 20 19.3 19.9 19.4 19.9 19.5 L 21.7 20.4 C 21.9 20 21.9 19.6 22 19.2 C 22 18.8 22 18.3 22 17.8 L 20 17.8 Z M 17.8 22 C 18.3 22 18.8 22 19.2 22 C 19.6 21.9 20 21.9 20.4 21.7 L 19.5 19.9 C 19.4 19.9 19.3 20 19 20 C 18.7 20 18.4 20 17.8 20 L 17.8 22 Z M 19.9 19.5 C 19.8 19.6 19.6 19.8 19.5 19.9 L 20.4 21.7 C 20.9 21.4 21.4 20.9 21.7 20.4 L 19.9 19.5 Z M 17.8 6 C 18.4 6 18.7 6 19 6 C 19.3 6 19.4 6.1 19.5 6.1 L 20.4 4.3 C 20 4.1 19.6 4.1 19.2 4 C 18.8 4 18.3 4 17.8 4 L 17.8 6 Z M 22 8.2 C 22 7.7 22 7.2 22 6.8 C 21.9 6.4 21.9 6 21.7 5.6 L 19.9 6.5 C 19.9 6.6 20 6.7 20 7 C 20 7.3 20 7.6 20 8.2 L 22 8.2 Z M 19.5 6.1 C 19.6 6.2 19.8 6.4 19.9 6.5 L 21.7 5.6 C 21.4 5.1 20.9 4.6 20.4 4.3 L 19.5 6.1 Z M 6.2 4 C 5.7 4 5.2 4 4.8 4 C 4.4 4.1 4 4.1 3.6 4.3 L 4.5 6.1 C 4.6 6.1 4.7 6 5 6 C 5.3 6 5.6 6 6.2 6 L 6.2 4 Z M 4 8.2 C 4 7.6 4 7.3 4 7 C 4 6.7 4.1 6.6 4.1 6.5 L 2.3 5.6 C 2.1 6 2.1 6.4 2 6.8 C 2 7.2 2 7.7 2 8.2 L 4 8.2 Z M 3.6 4.3 C 3.1 4.6 2.6 5.1 2.3 5.6 L 4.1 6.5 C 4.2 6.4 4.4 6.2 4.5 6.1 L 3.6 4.3 Z M 3 11 L 21 11 L 21 9 L 3 9 L 3 11 Z M 6 3 L 6 5 L 8 5 L 8 3 L 6 3 Z M 16 3 L 16 5 L 18 5 L 18 3 L 16 3 Z"
+            fill={strokeColor}
           />
         </Svg>
       );
     case 'calendarDays':
+      // Pack de design : `fc-calendarDays` (glyphes.svg), translation cuite.
       return (
         <Svg height={size} viewBox="0 0 24 24" width={size}>
-          <Rect
-            fill="none"
-            height="15"
-            rx="2.4"
-            stroke={strokeColor}
-            strokeLinejoin="round"
-            strokeWidth={strokeWidth}
-            width="17"
-            x="3.5"
-            y="5"
+          <Path
+            d="M 3 8 C 2.4 8 2 8.4 2 9 C 2 9.6 2.4 10 3 10 L 3 8 Z M 21 10 C 21.6 10 22 9.6 22 9 C 22 8.4 21.6 8 21 8 L 21 10 Z M 4.1 20.8 L 4.5 19.9 L 4.1 20.8 Z M 3.2 19.9 L 4.1 19.5 L 3.2 19.9 Z M 20.8 19.9 L 19.9 19.5 L 20.8 19.9 Z M 19.9 20.8 L 19.5 19.9 L 19.9 20.8 Z M 19.9 5.2 L 19.5 6.1 L 19.9 5.2 Z M 20.8 6.1 L 19.9 6.5 L 20.8 6.1 Z M 4.1 5.2 L 4.5 6.1 L 4.1 5.2 Z M 3.2 6.1 L 4.1 6.5 L 3.2 6.1 Z M 8 3 C 8 2.4 7.6 2 7 2 C 6.4 2 6 2.4 6 3 L 8 3 Z M 6 5 C 6 5.6 6.4 6 7 6 C 7.6 6 8 5.6 8 5 L 6 5 Z M 18 3 C 18 2.4 17.6 2 17 2 C 16.4 2 16 2.4 16 3 L 18 3 Z M 16 5 C 16 5.6 16.4 6 17 6 C 17.6 6 18 5.6 18 5 L 16 5 Z M 6 11 C 5.4 11 5 11.4 5 12 C 5 12.6 5.4 13 6 13 L 6 11 Z M 8 13 C 8.6 13 9 12.6 9 12 C 9 11.4 8.6 11 8 11 L 8 13 Z M 11 11 C 10.4 11 10 11.4 10 12 C 10 12.6 10.4 13 11 13 L 11 11 Z M 13 13 C 13.6 13 14 12.6 14 12 C 14 11.4 13.6 11 13 11 L 13 13 Z M 16 11 C 15.4 11 15 11.4 15 12 C 15 12.6 15.4 13 16 13 L 16 11 Z M 18 13 C 18.6 13 19 12.6 19 12 C 19 11.4 18.6 11 18 11 L 18 13 Z M 6 14 C 5.4 14 5 14.4 5 15 C 5 15.6 5.4 16 6 16 L 6 14 Z M 8 16 C 8.6 16 9 15.6 9 15 C 9 14.4 8.6 14 8 14 L 8 16 Z M 11 14 C 10.4 14 10 14.4 10 15 C 10 15.6 10.4 16 11 16 L 11 14 Z M 13 16 C 13.6 16 14 15.6 14 15 C 14 14.4 13.6 14 13 14 L 13 16 Z M 16 14 C 15.4 14 15 14.4 15 15 C 15 15.6 15.4 16 16 16 L 16 14 Z M 18 16 C 18.6 16 19 15.6 19 15 C 19 14.4 18.6 14 18 14 L 18 16 Z M 6 17 C 5.4 17 5 17.4 5 18 C 5 18.6 5.4 19 6 19 L 6 17 Z M 8 19 C 8.6 19 9 18.6 9 18 C 9 17.4 8.6 17 8 17 L 8 19 Z M 11 17 C 10.4 17 10 17.4 10 18 C 10 18.6 10.4 19 11 19 L 11 17 Z M 13 19 C 13.6 19 14 18.6 14 18 C 14 17.4 13.6 17 13 17 L 13 19 Z M 16 17 C 15.4 17 15 17.4 15 18 C 15 18.6 15.4 19 16 19 L 16 17 Z M 18 19 C 18.6 19 19 18.6 19 18 C 19 17.4 18.6 17 18 17 L 18 19 Z M 3 10 L 21 10 L 21 8 L 3 8 L 3 10 Z M 6.2 6 L 17.8 6 L 17.8 4 L 6.2 4 L 6.2 6 Z M 20 8.2 L 20 17.8 L 22 17.8 L 22 8.2 L 20 8.2 Z M 17.8 20 L 6.2 20 L 6.2 22 L 17.8 22 L 17.8 20 Z M 4 17.8 L 4 8.2 L 2 8.2 L 2 17.8 L 4 17.8 Z M 6.2 20 C 5.6 20 5.3 20 5 20 C 4.7 20 4.6 19.9 4.5 19.9 L 3.6 21.7 C 4 21.9 4.4 21.9 4.8 22 C 5.2 22 5.7 22 6.2 22 L 6.2 20 Z M 2 17.8 C 2 18.3 2 18.8 2 19.2 C 2.1 19.6 2.1 20 2.3 20.4 L 4.1 19.5 C 4.1 19.4 4 19.3 4 19 C 4 18.7 4 18.4 4 17.8 L 2 17.8 Z M 4.5 19.9 C 4.4 19.8 4.2 19.6 4.1 19.5 L 2.3 20.4 C 2.6 20.9 3.1 21.4 3.6 21.7 L 4.5 19.9 Z M 20 17.8 C 20 18.4 20 18.7 20 19 C 20 19.3 19.9 19.4 19.9 19.5 L 21.7 20.4 C 21.9 20 21.9 19.6 22 19.2 C 22 18.8 22 18.3 22 17.8 L 20 17.8 Z M 17.8 22 C 18.3 22 18.8 22 19.2 22 C 19.6 21.9 20 21.9 20.4 21.7 L 19.5 19.9 C 19.4 19.9 19.3 20 19 20 C 18.7 20 18.4 20 17.8 20 L 17.8 22 Z M 19.9 19.5 C 19.8 19.6 19.6 19.8 19.5 19.9 L 20.4 21.7 C 20.9 21.4 21.4 20.9 21.7 20.4 L 19.9 19.5 Z M 17.8 6 C 18.4 6 18.7 6 19 6 C 19.3 6 19.4 6.1 19.5 6.1 L 20.4 4.3 C 20 4.1 19.6 4.1 19.2 4 C 18.8 4 18.3 4 17.8 4 L 17.8 6 Z M 22 8.2 C 22 7.7 22 7.2 22 6.8 C 21.9 6.4 21.9 6 21.7 5.6 L 19.9 6.5 C 19.9 6.6 20 6.7 20 7 C 20 7.3 20 7.6 20 8.2 L 22 8.2 Z M 19.5 6.1 C 19.6 6.2 19.8 6.4 19.9 6.5 L 21.7 5.6 C 21.4 5.1 20.9 4.6 20.4 4.3 L 19.5 6.1 Z M 6.2 4 C 5.7 4 5.2 4 4.8 4 C 4.4 4.1 4 4.1 3.6 4.3 L 4.5 6.1 C 4.6 6.1 4.7 6 5 6 C 5.3 6 5.6 6 6.2 6 L 6.2 4 Z M 4 8.2 C 4 7.6 4 7.3 4 7 C 4 6.7 4.1 6.6 4.1 6.5 L 2.3 5.6 C 2.1 6 2.1 6.4 2 6.8 C 2 7.2 2 7.7 2 8.2 L 4 8.2 Z M 3.6 4.3 C 3.1 4.6 2.6 5.1 2.3 5.6 L 4.1 6.5 C 4.2 6.4 4.4 6.2 4.5 6.1 L 3.6 4.3 Z M 6 3 L 6 5 L 8 5 L 8 3 L 6 3 Z M 16 3 L 16 5 L 18 5 L 18 3 L 16 3 Z M 6 13 L 8 13 L 8 11 L 6 11 L 6 13 Z M 11 13 L 13 13 L 13 11 L 11 11 L 11 13 Z M 16 13 L 18 13 L 18 11 L 16 11 L 16 13 Z M 6 16 L 8 16 L 8 14 L 6 14 L 6 16 Z M 11 16 L 13 16 L 13 14 L 11 14 L 11 16 Z M 16 16 L 18 16 L 18 14 L 16 14 L 16 16 Z M 6 19 L 8 19 L 8 17 L 6 17 L 6 19 Z M 11 19 L 13 19 L 13 17 L 11 17 L 11 19 Z M 16 19 L 18 19 L 18 17 L 16 17 L 16 19 Z"
+            fill={strokeColor}
           />
-          <Line
-            fill="none"
-            stroke={strokeColor}
-            strokeLinecap="round"
-            strokeWidth={strokeWidth}
-            x1="3.5"
-            x2="20.5"
-            y1="9.6"
-            y2="9.6"
-          />
-          <Line
-            fill="none"
-            stroke={strokeColor}
-            strokeLinecap="round"
-            strokeWidth={strokeWidth}
-            x1="8.2"
-            x2="8.2"
-            y1="2.9"
-            y2="6.4"
-          />
-          <Line
-            fill="none"
-            stroke={strokeColor}
-            strokeLinecap="round"
-            strokeWidth={strokeWidth}
-            x1="15.8"
-            x2="15.8"
-            y1="2.9"
-            y2="6.4"
-          />
-          <Circle cx="8.3" cy="13.4" fill={strokeColor} r="1.05" />
-          <Circle cx="12" cy="13.4" fill={strokeColor} r="1.05" />
-          <Circle cx="15.7" cy="13.4" fill={strokeColor} r="1.05" />
-          <Circle cx="8.3" cy="17" fill={strokeColor} r="1.05" />
-          <Circle cx="12" cy="17" fill={strokeColor} r="1.05" />
         </Svg>
       );
     case 'chartColumn':
@@ -254,129 +164,65 @@ function GlyphIcon({
         </Svg>
       );
     case 'chevronLeft':
+      // ⚠️ AUCUN asset au pack : il ne livre que `fc-arrowLeft`, desormais
+      // porte par `HeaderBackButton`. Ce chevron est donc le MIROIR EXACT de
+      // `fc-chevronRight` (x' = 24 - x) : meme trait, meme graisse, meme
+      // famille — pas un dessin invente.
       return (
         <Svg height={size} viewBox="0 0 24 24" width={size}>
-          <Polyline
-            fill="none"
-            points="15,4.5 7.5,12 15,19.5"
-            stroke={strokeColor}
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={strokeWidth}
+          <Path
+            d="M 14.3 5.3 C 14.7 4.9 15.3 4.9 15.7 5.3 C 16.1 5.7 16.1 6.3 15.7 6.7 L 14.3 5.3 Z M 9 12 L 8.3 12.7 C 7.9 12.3 7.9 11.7 8.3 11.3 L 9 12 Z M 15.7 17.3 C 16.1 17.7 16.1 18.3 15.7 18.7 C 15.3 19.1 14.7 19.1 14.3 18.7 L 15.7 17.3 Z M 15.7 6.7 L 9.7 12.7 L 8.3 11.3 L 14.3 5.3 L 15.7 6.7 Z M 9.7 11.3 L 15.7 17.3 L 14.3 18.7 L 8.3 12.7 L 9.7 11.3 Z"
+            fill={strokeColor}
           />
         </Svg>
       );
     case 'chevronRight':
+      // Pack de design : `fc-chevronRight` (glyphes.svg), translation cuite.
       return (
         <Svg height={size} viewBox="0 0 24 24" width={size}>
-          <Polyline
-            fill="none"
-            points="9,4.5 16.5,12 9,19.5"
-            stroke={strokeColor}
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={strokeWidth}
+          <Path
+            d="M 9.7 5.3 C 9.3 4.9 8.7 4.9 8.3 5.3 C 7.9 5.7 7.9 6.3 8.3 6.7 L 9.7 5.3 Z M 15 12 L 15.7 12.7 C 16.1 12.3 16.1 11.7 15.7 11.3 L 15 12 Z M 8.3 17.3 C 7.9 17.7 7.9 18.3 8.3 18.7 C 8.7 19.1 9.3 19.1 9.7 18.7 L 8.3 17.3 Z M 8.3 6.7 L 14.3 12.7 L 15.7 11.3 L 9.7 5.3 L 8.3 6.7 Z M 14.3 11.3 L 8.3 17.3 L 9.7 18.7 L 15.7 12.7 L 14.3 11.3 Z"
+            fill={strokeColor}
           />
         </Svg>
       );
     case 'circleCheck':
+      // Pack de design : `fc-circleCheck` (glyphes.svg), translation cuite.
       return (
         <Svg height={size} viewBox="0 0 24 24" width={size}>
-          <Circle
-            cx="12"
-            cy="12"
-            fill="none"
-            r="8.6"
-            stroke={strokeColor}
-            strokeWidth={strokeWidth}
-          />
-          <Polyline
-            fill="none"
-            points="8,12.2 10.9,15.1 16.2,9.2"
-            stroke={strokeColor}
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={strokeWidth}
+          <Path
+            d="M 8.7 11.7 C 8.4 11.2 7.7 11.2 7.3 11.6 C 6.9 12 6.9 12.6 7.3 13 L 8.7 11.7 Z M 10.5 15 L 9.7 15.7 C 9.9 15.9 10.2 16 10.5 16 C 10.7 16 11 15.9 11.2 15.7 L 10.5 15 Z M 16.7 9.7 C 17.1 9.3 17.1 8.6 16.7 8.3 C 16.3 7.9 15.6 7.9 15.3 8.3 L 16.7 9.7 Z M 20 12 C 20 16.4 16.4 20 12 20 L 12 22 C 17.5 22 22 17.5 22 12 L 20 12 Z M 12 20 C 7.6 20 4 16.4 4 12 L 2 12 C 2 17.5 6.5 22 12 22 L 12 20 Z M 4 12 C 4 7.6 7.6 4 12 4 L 12 2 C 6.5 2 2 6.5 2 12 L 4 12 Z M 12 4 C 16.4 4 20 7.6 20 12 L 22 12 C 22 6.5 17.5 2 12 2 L 12 4 Z M 7.3 13 L 9.7 15.7 L 11.2 14.3 L 8.7 11.7 L 7.3 13 Z M 11.2 15.7 L 16.7 9.7 L 15.3 8.3 L 9.7 14.3 L 11.2 15.7 Z"
+            fill={strokeColor}
           />
         </Svg>
       );
     case 'circleInformation':
+      // Pack de design : `fc-info` (glyphes.svg), translation cuite.
       return (
         <Svg height={size} viewBox="0 0 24 24" width={size}>
-          <Circle
-            cx="12"
-            cy="12"
-            fill="none"
-            r="8.6"
-            stroke={strokeColor}
-            strokeWidth={strokeWidth}
-          />
-          <Circle cx="12" cy="8.1" fill={strokeColor} r="1.05" />
-          <Line
-            fill="none"
-            stroke={strokeColor}
-            strokeLinecap="round"
-            strokeWidth={strokeWidth}
-            x1="12"
-            x2="12"
-            y1="11.2"
-            y2="16.4"
+          <Path
+            d="M 12 7 C 11.4 7 11 7.4 11 8 C 11 8.6 11.4 9 12 9 L 12 7 Z M 12 9 C 12.6 9 13 8.6 13 8 C 13 7.4 12.6 7 12 7 L 12 9 Z M 13 11 C 13 10.4 12.6 10 12 10 C 11.4 10 11 10.4 11 11 L 13 11 Z M 11 16 C 11 16.6 11.4 17 12 17 C 12.6 17 13 16.6 13 16 L 11 16 Z M 20 12 C 20 16.4 16.4 20 12 20 L 12 22 C 17.5 22 22 17.5 22 12 L 20 12 Z M 12 20 C 7.6 20 4 16.4 4 12 L 2 12 C 2 17.5 6.5 22 12 22 L 12 20 Z M 4 12 C 4 7.6 7.6 4 12 4 L 12 2 C 6.5 2 2 6.5 2 12 L 4 12 Z M 12 4 C 16.4 4 20 7.6 20 12 L 22 12 C 22 6.5 17.5 2 12 2 L 12 4 Z M 12 9 L 12 9 L 12 7 L 12 7 L 12 9 Z M 11 11 L 11 16 L 13 16 L 13 11 L 11 11 Z"
+            fill={strokeColor}
           />
         </Svg>
       );
     case 'clock':
+      // Pack de design : `fc-clock` (glyphes.svg), translation cuite.
       return (
         <Svg height={size} viewBox="0 0 24 24" width={size}>
-          <Circle
-            cx="12"
-            cy="12"
-            fill="none"
-            r="8.6"
-            stroke={strokeColor}
-            strokeWidth={strokeWidth}
-          />
-          <Polyline
-            fill="none"
-            points="12,6.9 12,12 15.8,14.1"
-            stroke={strokeColor}
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={strokeWidth}
+          <Path
+            d="M 12 12 L 11 12 C 11 12.4 11.2 12.7 11.5 12.9 L 12 12 Z M 13 7 C 13 6.4 12.6 6 12 6 C 11.4 6 11 6.4 11 7 L 13 7 Z M 14 14.4 C 14.5 14.6 15.1 14.5 15.4 14 C 15.6 13.5 15.5 12.9 15 12.6 L 14 14.4 Z M 20 12 C 20 16.4 16.4 20 12 20 L 12 22 C 17.5 22 22 17.5 22 12 L 20 12 Z M 12 20 C 7.6 20 4 16.4 4 12 L 2 12 C 2 17.5 6.5 22 12 22 L 12 20 Z M 4 12 C 4 7.6 7.6 4 12 4 L 12 2 C 6.5 2 2 6.5 2 12 L 4 12 Z M 12 4 C 16.4 4 20 7.6 20 12 L 22 12 C 22 6.5 17.5 2 12 2 L 12 4 Z M 13 12 L 13 7 L 11 7 L 11 12 L 13 12 Z M 11.5 12.9 L 14 14.4 L 15 12.6 L 12.5 11.1 L 11.5 12.9 Z"
+            fill={strokeColor}
           />
         </Svg>
       );
     case 'creditCard':
+      // Pack de design : `fc-creditCard` (glyphes.svg), translation cuite.
       return (
         <Svg height={size} viewBox="0 0 24 24" width={size}>
-          <Rect
-            fill="none"
-            height="13"
-            rx="2.4"
-            stroke={strokeColor}
-            strokeLinejoin="round"
-            strokeWidth={strokeWidth}
-            width="18"
-            x="3"
-            y="5.5"
-          />
-          <Line
-            fill="none"
-            stroke={strokeColor}
-            strokeWidth={strokeWidth}
-            x1="3"
-            x2="21"
-            y1="10"
-            y2="10"
-          />
-          <Line
-            fill="none"
-            stroke={strokeColor}
-            strokeLinecap="round"
-            strokeWidth={strokeWidth}
-            x1="6.6"
-            x2="10.2"
-            y1="14.6"
-            y2="14.6"
+          <Path
+            d="M 4.1 18.8 L 4.5 17.9 L 4.1 18.8 Z M 3.2 17.9 L 4.1 17.5 L 3.2 17.9 Z M 20.8 17.9 L 19.9 17.5 L 20.8 17.9 Z M 19.9 18.8 L 19.5 17.9 L 19.9 18.8 Z M 19.9 5.2 L 19.5 6.1 L 19.9 5.2 Z M 20.8 6.1 L 19.9 6.5 L 20.8 6.1 Z M 4.1 5.2 L 4.5 6.1 L 4.1 5.2 Z M 3.2 6.1 L 4.1 6.5 L 3.2 6.1 Z M 3 8 C 2.4 8 2 8.4 2 9 C 2 9.6 2.4 10 3 10 L 3 8 Z M 21 10 C 21.6 10 22 9.6 22 9 C 22 8.4 21.6 8 21 8 L 21 10 Z M 7 14 C 6.4 14 6 14.4 6 15 C 6 15.6 6.4 16 7 16 L 7 14 Z M 9 16 C 9.6 16 10 15.6 10 15 C 10 14.4 9.6 14 9 14 L 9 16 Z M 6.2 6 L 17.8 6 L 17.8 4 L 6.2 4 L 6.2 6 Z M 20 8.2 L 20 15.8 L 22 15.8 L 22 8.2 L 20 8.2 Z M 17.8 18 L 6.2 18 L 6.2 20 L 17.8 20 L 17.8 18 Z M 4 15.8 L 4 8.2 L 2 8.2 L 2 15.8 L 4 15.8 Z M 6.2 18 C 5.6 18 5.3 18 5 18 C 4.7 18 4.6 17.9 4.5 17.9 L 3.6 19.7 C 4 19.9 4.4 19.9 4.8 20 C 5.2 20 5.7 20 6.2 20 L 6.2 18 Z M 2 15.8 C 2 16.3 2 16.8 2 17.2 C 2.1 17.6 2.1 18 2.3 18.4 L 4.1 17.5 C 4.1 17.4 4 17.3 4 17 C 4 16.7 4 16.4 4 15.8 L 2 15.8 Z M 4.5 17.9 C 4.4 17.8 4.2 17.6 4.1 17.5 L 2.3 18.4 C 2.6 18.9 3.1 19.4 3.6 19.7 L 4.5 17.9 Z M 20 15.8 C 20 16.4 20 16.7 20 17 C 20 17.3 19.9 17.4 19.9 17.5 L 21.7 18.4 C 21.9 18 21.9 17.6 22 17.2 C 22 16.8 22 16.3 22 15.8 L 20 15.8 Z M 17.8 20 C 18.3 20 18.8 20 19.2 20 C 19.6 19.9 20 19.9 20.4 19.7 L 19.5 17.9 C 19.4 17.9 19.3 18 19 18 C 18.7 18 18.4 18 17.8 18 L 17.8 20 Z M 19.9 17.5 C 19.8 17.6 19.6 17.8 19.5 17.9 L 20.4 19.7 C 20.9 19.4 21.4 18.9 21.7 18.4 L 19.9 17.5 Z M 17.8 6 C 18.4 6 18.7 6 19 6 C 19.3 6 19.4 6.1 19.5 6.1 L 20.4 4.3 C 20 4.1 19.6 4.1 19.2 4 C 18.8 4 18.3 4 17.8 4 L 17.8 6 Z M 22 8.2 C 22 7.7 22 7.2 22 6.8 C 21.9 6.4 21.9 6 21.7 5.6 L 19.9 6.5 C 19.9 6.6 20 6.7 20 7 C 20 7.3 20 7.6 20 8.2 L 22 8.2 Z M 19.5 6.1 C 19.6 6.2 19.8 6.4 19.9 6.5 L 21.7 5.6 C 21.4 5.1 20.9 4.6 20.4 4.3 L 19.5 6.1 Z M 6.2 4 C 5.7 4 5.2 4 4.8 4 C 4.4 4.1 4 4.1 3.6 4.3 L 4.5 6.1 C 4.6 6.1 4.7 6 5 6 C 5.3 6 5.6 6 6.2 6 L 6.2 4 Z M 4 8.2 C 4 7.6 4 7.3 4 7 C 4 6.7 4.1 6.6 4.1 6.5 L 2.3 5.6 C 2.1 6 2.1 6.4 2 6.8 C 2 7.2 2 7.7 2 8.2 L 4 8.2 Z M 3.6 4.3 C 3.1 4.6 2.6 5.1 2.3 5.6 L 4.1 6.5 C 4.2 6.4 4.4 6.2 4.5 6.1 L 3.6 4.3 Z M 3 10 L 21 10 L 21 8 L 3 8 L 3 10 Z M 7 16 L 9 16 L 9 14 L 7 14 L 7 16 Z"
+            fill={strokeColor}
           />
         </Svg>
       );
@@ -389,326 +235,82 @@ function GlyphIcon({
         </Svg>
       );
     case 'envelope':
+      // Pack de design : `fc-mail` (glyphes.svg), translation cuite.
       return (
         <Svg height={size} viewBox="0 0 24 24" width={size}>
-          <Rect
-            fill="none"
-            height="14"
-            rx="2.4"
-            stroke={strokeColor}
-            strokeLinejoin="round"
-            strokeWidth={strokeWidth}
-            width="18"
-            x="3"
-            y="5"
-          />
-          <Polyline
-            fill="none"
-            points="3.6,6.4 12,12.8 20.4,6.4"
-            stroke={strokeColor}
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={strokeWidth}
+          <Path
+            d="M 4 20 C 3.5 20 3 19.8 2.6 19.4 C 2.2 19 2 18.6 2 18 L 2 6 C 2 5.5 2.2 5 2.6 4.6 C 3 4.2 3.5 4 4 4 L 20 4 C 20.6 4 21 4.2 21.4 4.6 C 21.8 5 22 5.5 22 6 L 22 18 C 22 18.6 21.8 19 21.4 19.4 C 21 19.8 20.6 20 20 20 L 4 20 Z M 12 13 L 4 8 L 4 18 L 20 18 L 20 8 L 12 13 Z M 12 11 L 20 6 L 4 6 L 12 11 Z M 4 8 L 4 6 L 4 18 L 4 8 Z"
+            fill={strokeColor}
           />
         </Svg>
       );
     case 'euroCircle':
+      // Pack de design : `fc-euroCircle` (glyphes.svg), translation cuite.
       return (
         <Svg height={size} viewBox="0 0 24 24" width={size}>
-          <Circle
-            cx="12"
-            cy="12"
-            fill="none"
-            r="8.6"
-            stroke={strokeColor}
-            strokeWidth={strokeWidth}
-          />
           <Path
-            d="M15.4 8.6a4.2 4.2 0 0 0-6 1.4 5.6 5.6 0 0 0 0 4 4.2 4.2 0 0 0 6 1.4"
-            fill="none"
-            stroke={strokeColor}
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={strokeWidth}
-          />
-          <Line
-            fill="none"
-            stroke={strokeColor}
-            strokeLinecap="round"
-            strokeWidth={strokeWidth}
-            x1="7.6"
-            x2="13"
-            y1="10.8"
-            y2="10.8"
-          />
-          <Line
-            fill="none"
-            stroke={strokeColor}
-            strokeLinecap="round"
-            strokeWidth={strokeWidth}
-            x1="7.6"
-            x2="13"
-            y1="13.4"
-            y2="13.4"
+            d="M 15.2 9.5 C 15.5 10 16.1 10.1 16.6 9.8 C 17 9.5 17.1 8.8 16.8 8.4 L 15.2 9.5 Z M 16.8 15.6 C 17.1 15.2 17 14.5 16.6 14.2 C 16.1 13.9 15.5 14 15.2 14.5 L 16.8 15.6 Z M 7 9.5 C 6.4 9.5 6 9.9 6 10.5 C 6 11.1 6.4 11.5 7 11.5 L 7 9.5 Z M 11 11.5 C 11.6 11.5 12 11.1 12 10.5 C 12 9.9 11.6 9.5 11 9.5 L 11 11.5 Z M 7 12.5 C 6.4 12.5 6 12.9 6 13.5 C 6 14.1 6.4 14.5 7 14.5 L 7 12.5 Z M 11 14.5 C 11.6 14.5 12 14.1 12 13.5 C 12 12.9 11.6 12.5 11 12.5 L 11 14.5 Z M 12.5 16 C 10.7 16 9 14.3 9 12 L 7 12 C 7 15.2 9.3 18 12.5 18 L 12.5 16 Z M 9 12 C 9 9.7 10.7 8 12.5 8 L 12.5 6 C 9.3 6 7 8.8 7 12 L 9 12 Z M 12.5 8 C 13.5 8 14.5 8.6 15.2 9.5 L 16.8 8.4 C 15.8 7 14.3 6 12.5 6 L 12.5 8 Z M 15.2 14.5 C 14.5 15.4 13.5 16 12.5 16 L 12.5 18 C 14.3 18 15.8 17 16.8 15.6 L 15.2 14.5 Z M 7 11.5 L 11 11.5 L 11 9.5 L 7 9.5 L 7 11.5 Z M 7 14.5 L 11 14.5 L 11 12.5 L 7 12.5 L 7 14.5 Z M 20 12 C 20 16.4 16.4 20 12 20 L 12 22 C 17.5 22 22 17.5 22 12 L 20 12 Z M 12 20 C 7.6 20 4 16.4 4 12 L 2 12 C 2 17.5 6.5 22 12 22 L 12 20 Z M 4 12 C 4 7.6 7.6 4 12 4 L 12 2 C 6.5 2 2 6.5 2 12 L 4 12 Z M 12 4 C 16.4 4 20 7.6 20 12 L 22 12 C 22 6.5 17.5 2 12 2 L 12 4 Z"
+            fill={strokeColor}
           />
         </Svg>
       );
     case 'fileArrowUp':
+      // Pack de design : `fc-fileArrowUp` (glyphes.svg), translation cuite.
       return (
         <Svg height={size} viewBox="0 0 24 24" width={size}>
           <Path
-            d="M13.6 3.2H7.4a2 2 0 0 0-2 2v13.6a2 2 0 0 0 2 2h9.2a2 2 0 0 0 2-2V8.2Z"
-            fill="none"
-            stroke={strokeColor}
-            strokeLinejoin="round"
-            strokeWidth={strokeWidth}
-          />
-          <Polyline
-            fill="none"
-            points="13.4,3.4 13.4,8.4 18.4,8.4"
-            stroke={strokeColor}
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={strokeWidth}
-          />
-          <Line
-            fill="none"
-            stroke={strokeColor}
-            strokeLinecap="round"
-            strokeWidth={strokeWidth}
-            x1="12"
-            x2="12"
-            y1="17.6"
-            y2="11.6"
-          />
-          <Polyline
-            fill="none"
-            points="9.6,14 12,11.6 14.4,14"
-            stroke={strokeColor}
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={strokeWidth}
+            d="M 11 18 C 11 18.6 11.4 19 12 19 C 12.6 19 13 18.6 13 18 L 11 18 Z M 12 12 L 12.7 11.3 C 12.3 10.9 11.7 10.9 11.3 11.3 L 12 12 Z M 13.3 14.7 C 13.7 15.1 14.3 15.1 14.7 14.7 C 15.1 14.3 15.1 13.7 14.7 13.3 L 13.3 14.7 Z M 9.3 13.3 C 8.9 13.7 8.9 14.3 9.3 14.7 C 9.7 15.1 10.3 15.1 10.7 14.7 L 9.3 13.3 Z M 13 3 L 13.7 2.3 C 13.5 2.1 13.3 2 13 2 L 13 3 Z M 19 9 L 20 9 C 20 8.7 19.9 8.5 19.7 8.3 L 19 9 Z M 17.9 20.8 L 17.5 19.9 L 17.5 19.9 L 17.9 20.8 Z M 18.8 19.9 L 19.7 20.4 L 19.7 20.4 L 18.8 19.9 Z M 5.2 19.9 L 4.3 20.4 L 4.3 20.4 L 5.2 19.9 Z M 6.1 20.8 L 6.5 19.9 L 6.5 19.9 L 6.1 20.8 Z M 6.1 3.2 L 5.6 2.3 L 5.6 2.3 L 6.1 3.2 Z M 5.2 4.1 L 4.3 3.6 L 4.3 3.6 L 5.2 4.1 Z M 13.1 8.5 L 14 8 L 14 8 L 13.1 8.5 Z M 13.5 8.9 L 14 8 L 14 8 L 13.5 8.9 Z M 13 18 L 13 12 L 11 12 L 11 18 L 13 18 Z M 14.7 13.3 L 12.7 11.3 L 11.3 12.7 L 13.3 14.7 L 14.7 13.3 Z M 11.3 11.3 L 9.3 13.3 L 10.7 14.7 L 12.7 12.7 L 11.3 11.3 Z M 13 2 L 8.2 2 L 8.2 4 L 13 4 L 13 2 Z M 4 6.2 L 4 17.8 L 6 17.8 L 6 6.2 L 4 6.2 Z M 8.2 22 L 15.8 22 L 15.8 20 L 8.2 20 L 8.2 22 Z M 20 17.8 L 20 9 L 18 9 L 18 17.8 L 20 17.8 Z M 19.7 8.3 L 13.7 2.3 L 12.3 3.7 L 18.3 9.7 L 19.7 8.3 Z M 15.8 22 C 16.3 22 16.8 22 17.2 22 C 17.6 21.9 18 21.9 18.4 21.7 L 17.5 19.9 C 17.4 19.9 17.3 20 17 20 C 16.7 20 16.4 20 15.8 20 L 15.8 22 Z M 18 17.8 C 18 18.4 18 18.7 18 19 C 18 19.3 17.9 19.4 17.9 19.5 L 19.7 20.4 C 19.9 20 19.9 19.6 20 19.2 C 20 18.8 20 18.3 20 17.8 L 18 17.8 Z M 18.4 21.7 C 18.9 21.4 19.4 20.9 19.7 20.4 L 17.9 19.5 C 17.8 19.6 17.6 19.8 17.5 19.9 L 18.4 21.7 Z M 4 17.8 C 4 18.3 4 18.8 4 19.2 C 4.1 19.6 4.1 20 4.3 20.4 L 6.1 19.5 C 6.1 19.4 6 19.3 6 19 C 6 18.7 6 18.4 6 17.8 L 4 17.8 Z M 8.2 20 C 7.6 20 7.3 20 7 20 C 6.7 20 6.6 19.9 6.5 19.9 L 5.6 21.7 C 6 21.9 6.4 21.9 6.8 22 C 7.2 22 7.7 22 8.2 22 L 8.2 20 Z M 4.3 20.4 C 4.6 20.9 5.1 21.4 5.6 21.7 L 6.5 19.9 C 6.4 19.8 6.2 19.6 6.1 19.5 L 4.3 20.4 Z M 8.2 2 C 7.7 2 7.2 2 6.8 2 C 6.4 2.1 6 2.1 5.6 2.3 L 6.5 4.1 C 6.6 4.1 6.7 4 7 4 C 7.3 4 7.6 4 8.2 4 L 8.2 2 Z M 6 6.2 C 6 5.6 6 5.3 6 5 C 6 4.7 6.1 4.6 6.1 4.5 L 4.3 3.6 C 4.1 4 4.1 4.4 4 4.8 C 4 5.2 4 5.7 4 6.2 L 6 6.2 Z M 5.6 2.3 C 5.1 2.6 4.6 3.1 4.3 3.6 L 6.1 4.5 C 6.2 4.4 6.4 4.2 6.5 4.1 L 5.6 2.3 Z M 12 3 L 12 7.4 L 14 7.4 L 14 3 L 12 3 Z M 14.6 10 L 19 10 L 19 8 L 14.6 8 L 14.6 10 Z M 12 7.4 C 12 7.7 12 7.9 12 8.1 C 12 8.4 12.1 8.6 12.2 8.9 L 14 8 C 14 8.1 14 8.1 14 8 C 14 7.9 14 7.7 14 7.4 L 12 7.4 Z M 14.6 8 C 14.3 8 14.1 8 14 8 C 13.9 8 13.9 8 14 8 L 13.1 9.8 C 13.4 9.9 13.6 10 13.9 10 C 14.1 10 14.3 10 14.6 10 L 14.6 8 Z M 12.2 8.9 C 12.4 9.3 12.7 9.6 13.1 9.8 L 14 8 L 14 8 L 12.2 8.9 Z"
+            fill={strokeColor}
           />
         </Svg>
       );
     case 'fileCheck':
+      // Pack de design : `fc-fileCheck` (glyphes.svg), translation cuite.
       return (
         <Svg height={size} viewBox="0 0 24 24" width={size}>
           <Path
-            d="M13.6 3.2H7.4a2 2 0 0 0-2 2v13.6a2 2 0 0 0 2 2h9.2a2 2 0 0 0 2-2V8.2Z"
-            fill="none"
-            stroke={strokeColor}
-            strokeLinejoin="round"
-            strokeWidth={strokeWidth}
-          />
-          <Polyline
-            fill="none"
-            points="13.4,3.4 13.4,8.4 18.4,8.4"
-            stroke={strokeColor}
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={strokeWidth}
-          />
-          <Polyline
-            fill="none"
-            points="8.8,14.6 11,16.8 15.2,12.6"
-            stroke={strokeColor}
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={strokeWidth}
+            d="M 9.7 14.3 C 9.3 13.9 8.7 13.9 8.3 14.3 C 7.9 14.7 7.9 15.3 8.3 15.7 L 9.7 14.3 Z M 11 17 L 10.3 17.7 C 10.7 18.1 11.3 18.1 11.7 17.7 L 11 17 Z M 15.7 13.7 C 16.1 13.3 16.1 12.7 15.7 12.3 C 15.3 11.9 14.7 11.9 14.3 12.3 L 15.7 13.7 Z M 13 3 L 13.7 2.3 C 13.5 2.1 13.3 2 13 2 L 13 3 Z M 19 9 L 20 9 C 20 8.7 19.9 8.5 19.7 8.3 L 19 9 Z M 17.9 20.8 L 17.5 19.9 L 17.5 19.9 L 17.9 20.8 Z M 18.8 19.9 L 19.7 20.4 L 19.7 20.4 L 18.8 19.9 Z M 5.2 19.9 L 4.3 20.4 L 4.3 20.4 L 5.2 19.9 Z M 6.1 20.8 L 6.5 19.9 L 6.5 19.9 L 6.1 20.8 Z M 6.1 3.2 L 5.6 2.3 L 5.6 2.3 L 6.1 3.2 Z M 5.2 4.1 L 4.3 3.6 L 4.3 3.6 L 5.2 4.1 Z M 13.1 8.5 L 14 8 L 14 8 L 13.1 8.5 Z M 13.5 8.9 L 14 8 L 14 8 L 13.5 8.9 Z M 8.3 15.7 L 10.3 17.7 L 11.7 16.3 L 9.7 14.3 L 8.3 15.7 Z M 11.7 17.7 L 15.7 13.7 L 14.3 12.3 L 10.3 16.3 L 11.7 17.7 Z M 13 2 L 8.2 2 L 8.2 4 L 13 4 L 13 2 Z M 4 6.2 L 4 17.8 L 6 17.8 L 6 6.2 L 4 6.2 Z M 8.2 22 L 15.8 22 L 15.8 20 L 8.2 20 L 8.2 22 Z M 20 17.8 L 20 9 L 18 9 L 18 17.8 L 20 17.8 Z M 19.7 8.3 L 13.7 2.3 L 12.3 3.7 L 18.3 9.7 L 19.7 8.3 Z M 15.8 22 C 16.3 22 16.8 22 17.2 22 C 17.6 21.9 18 21.9 18.4 21.7 L 17.5 19.9 C 17.4 19.9 17.3 20 17 20 C 16.7 20 16.4 20 15.8 20 L 15.8 22 Z M 18 17.8 C 18 18.4 18 18.7 18 19 C 18 19.3 17.9 19.4 17.9 19.5 L 19.7 20.4 C 19.9 20 19.9 19.6 20 19.2 C 20 18.8 20 18.3 20 17.8 L 18 17.8 Z M 18.4 21.7 C 18.9 21.4 19.4 20.9 19.7 20.4 L 17.9 19.5 C 17.8 19.6 17.6 19.8 17.5 19.9 L 18.4 21.7 Z M 4 17.8 C 4 18.3 4 18.8 4 19.2 C 4.1 19.6 4.1 20 4.3 20.4 L 6.1 19.5 C 6.1 19.4 6 19.3 6 19 C 6 18.7 6 18.4 6 17.8 L 4 17.8 Z M 8.2 20 C 7.6 20 7.3 20 7 20 C 6.7 20 6.6 19.9 6.5 19.9 L 5.6 21.7 C 6 21.9 6.4 21.9 6.8 22 C 7.2 22 7.7 22 8.2 22 L 8.2 20 Z M 4.3 20.4 C 4.6 20.9 5.1 21.4 5.6 21.7 L 6.5 19.9 C 6.4 19.8 6.2 19.6 6.1 19.5 L 4.3 20.4 Z M 8.2 2 C 7.7 2 7.2 2 6.8 2 C 6.4 2.1 6 2.1 5.6 2.3 L 6.5 4.1 C 6.6 4.1 6.7 4 7 4 C 7.3 4 7.6 4 8.2 4 L 8.2 2 Z M 6 6.2 C 6 5.6 6 5.3 6 5 C 6 4.7 6.1 4.6 6.1 4.5 L 4.3 3.6 C 4.1 4 4.1 4.4 4 4.8 C 4 5.2 4 5.7 4 6.2 L 6 6.2 Z M 5.6 2.3 C 5.1 2.6 4.6 3.1 4.3 3.6 L 6.1 4.5 C 6.2 4.4 6.4 4.2 6.5 4.1 L 5.6 2.3 Z M 12 3 L 12 7.4 L 14 7.4 L 14 3 L 12 3 Z M 14.6 10 L 19 10 L 19 8 L 14.6 8 L 14.6 10 Z M 12 7.4 C 12 7.7 12 7.9 12 8.1 C 12 8.4 12.1 8.6 12.2 8.9 L 14 8 C 14 8.1 14 8.1 14 8 C 14 7.9 14 7.7 14 7.4 L 12 7.4 Z M 14.6 8 C 14.3 8 14.1 8 14 8 C 13.9 8 13.9 8 14 8 L 13.1 9.8 C 13.4 9.9 13.6 10 13.9 10 C 14.1 10 14.3 10 14.6 10 L 14.6 8 Z M 12.2 8.9 C 12.4 9.3 12.7 9.6 13.1 9.8 L 14 8 L 14 8 L 12.2 8.9 Z"
+            fill={strokeColor}
           />
         </Svg>
       );
     case 'gift':
+      // Pack de design : `fc-gift` (glyphes.svg), translation cuite.
       return (
         <Svg height={size} viewBox="0 0 24 24" width={size}>
-          <Rect
-            fill="none"
-            height="10.4"
-            rx="1.6"
-            stroke={strokeColor}
-            strokeLinejoin="round"
-            strokeWidth={strokeWidth}
-            width="16"
-            x="4"
-            y="10.2"
-          />
-          <Rect
-            fill="none"
-            height="3.4"
-            rx="1"
-            stroke={strokeColor}
-            strokeLinejoin="round"
-            strokeWidth={strokeWidth}
-            width="18"
-            x="3"
-            y="6.8"
-          />
-          <Line
-            fill="none"
-            stroke={strokeColor}
-            strokeWidth={strokeWidth}
-            x1="12"
-            x2="12"
-            y1="6.8"
-            y2="20.6"
-          />
           <Path
-            d="M12 6.8C11.4 4.6 10.3 3.4 9 3.4a1.7 1.7 0 0 0 0 3.4Z"
-            fill="none"
-            stroke={strokeColor}
-            strokeLinejoin="round"
-            strokeWidth={strokeWidth}
-          />
-          <Path
-            d="M12 6.8c0.6-2.2 1.7-3.4 3-3.4a1.7 1.7 0 0 1 0 3.4Z"
-            fill="none"
-            stroke={strokeColor}
-            strokeLinejoin="round"
-            strokeWidth={strokeWidth}
+            d="M 5 12 L 5 11 C 4.4 11 4 11.4 4 12 L 5 12 Z M 19 12 L 20 12 C 20 11.4 19.6 11 19 11 L 19 12 Z M 6.1 20.8 L 6.5 19.9 L 6.1 20.8 Z M 5.2 19.9 L 6.1 19.5 L 5.2 19.9 Z M 18.8 19.9 L 17.9 19.5 L 18.8 19.9 Z M 17.9 20.8 L 17.5 19.9 L 17.9 20.8 Z M 3.5 11.9 L 4 11 L 3.5 11.9 Z M 3.1 11.5 L 4 11 L 3.1 11.5 Z M 20.9 11.5 L 20 11 L 20.9 11.5 Z M 20.5 11.9 L 20 11 L 20.5 11.9 Z M 20.5 7.1 L 20 8 L 20.5 7.1 Z M 20.9 7.5 L 20 8 L 20.9 7.5 Z M 3.5 7.1 L 4 8 L 3.5 7.1 Z M 3.1 7.5 L 4 8 L 3.1 7.5 Z M 11 20 C 11 20.6 11.4 21 12 21 C 12.6 21 13 20.6 13 20 L 11 20 Z M 8.5 7 L 8.5 6 L 8.5 7 Z M 6.5 5 L 5.5 5 L 6.5 5 Z M 8.5 3 L 8.5 2 L 8.5 3 Z M 15.5 7 L 15.5 6 L 15.5 7 Z M 5 13 L 19 13 L 19 11 L 5 11 L 5 13 Z M 18 12 L 18 17.8 L 20 17.8 L 20 12 L 18 12 Z M 15.8 20 L 8.2 20 L 8.2 22 L 15.8 22 L 15.8 20 Z M 6 17.8 L 6 12 L 4 12 L 4 17.8 L 6 17.8 Z M 8.2 20 C 7.6 20 7.3 20 7 20 C 6.7 20 6.6 19.9 6.5 19.9 L 5.6 21.7 C 6 21.9 6.4 21.9 6.8 22 C 7.2 22 7.7 22 8.2 22 L 8.2 20 Z M 4 17.8 C 4 18.3 4 18.8 4 19.2 C 4.1 19.6 4.1 20 4.3 20.4 L 6.1 19.5 C 6.1 19.4 6 19.3 6 19 C 6 18.7 6 18.4 6 17.8 L 4 17.8 Z M 6.5 19.9 C 6.4 19.8 6.2 19.6 6.1 19.5 L 4.3 20.4 C 4.6 20.9 5.1 21.4 5.6 21.7 L 6.5 19.9 Z M 18 17.8 C 18 18.4 18 18.7 18 19 C 18 19.3 17.9 19.4 17.9 19.5 L 19.7 20.4 C 19.9 20 19.9 19.6 20 19.2 C 20 18.8 20 18.3 20 17.8 L 18 17.8 Z M 15.8 22 C 16.3 22 16.8 22 17.2 22 C 17.6 21.9 18 21.9 18.4 21.7 L 17.5 19.9 C 17.4 19.9 17.3 20 17 20 C 16.7 20 16.4 20 15.8 20 L 15.8 22 Z M 17.9 19.5 C 17.8 19.6 17.6 19.8 17.5 19.9 L 18.4 21.7 C 18.9 21.4 19.4 20.9 19.7 20.4 L 17.9 19.5 Z M 4.6 8 L 19.4 8 L 19.4 6 L 4.6 6 L 4.6 8 Z M 20 8.6 L 20 10.4 L 22 10.4 L 22 8.6 L 20 8.6 Z M 19.4 11 L 4.6 11 L 4.6 13 L 19.4 13 L 19.4 11 Z M 4 10.4 L 4 8.6 L 2 8.6 L 2 10.4 L 4 10.4 Z M 4.6 11 C 4.3 11 4.1 11 4 11 C 3.9 11 3.9 11 4 11 L 3.1 12.8 C 3.4 12.9 3.6 13 3.9 13 C 4.1 13 4.3 13 4.6 13 L 4.6 11 Z M 2 10.4 C 2 10.7 2 10.9 2 11.1 C 2 11.4 2.1 11.6 2.2 11.9 L 4 11 C 4 11.1 4 11.1 4 11 C 4 10.9 4 10.7 4 10.4 L 2 10.4 Z M 4 11 L 4 11 L 2.2 11.9 C 2.4 12.3 2.7 12.6 3.1 12.8 L 4 11 Z M 20 10.4 C 20 10.7 20 10.9 20 11 C 20 11.1 20 11.1 20 11 L 21.8 11.9 C 21.9 11.6 22 11.4 22 11.1 C 22 10.9 22 10.7 22 10.4 L 20 10.4 Z M 19.4 13 C 19.7 13 19.9 13 20.1 13 C 20.4 13 20.6 12.9 20.9 12.8 L 20 11 C 20.1 11 20.1 11 20 11 C 19.9 11 19.7 11 19.4 11 L 19.4 13 Z M 20 11 L 20 11 L 20.9 12.8 C 21.3 12.6 21.6 12.3 21.8 11.9 L 20 11 Z M 19.4 8 C 19.7 8 19.9 8 20 8 C 20.1 8 20.1 8 20 8 L 20.9 6.2 C 20.6 6.1 20.4 6 20.1 6 C 19.9 6 19.7 6 19.4 6 L 19.4 8 Z M 22 8.6 C 22 8.3 22 8.1 22 7.9 C 22 7.6 21.9 7.4 21.8 7.1 L 20 8 C 20 7.9 20 7.9 20 8 C 20 8.1 20 8.3 20 8.6 L 22 8.6 Z M 20 8 L 20 8 L 21.8 7.1 C 21.6 6.7 21.3 6.4 20.9 6.2 L 20 8 Z M 4.6 6 C 4.3 6 4.1 6 3.9 6 C 3.6 6 3.4 6.1 3.1 6.2 L 4 8 C 3.9 8 3.9 8 4 8 C 4.1 8 4.3 8 4.6 8 L 4.6 6 Z M 4 8.6 C 4 8.3 4 8.1 4 8 C 4 7.9 4 7.9 4 8 L 2.2 7.1 C 2.1 7.4 2 7.6 2 7.9 C 2 8.1 2 8.3 2 8.6 L 4 8.6 Z M 3.1 6.2 C 2.7 6.4 2.4 6.7 2.2 7.1 L 4 8 L 4 8 L 3.1 6.2 Z M 11 7 L 11 20 L 13 20 L 13 7 L 11 7 Z M 12 6 L 8.5 6 L 8.5 8 L 12 8 L 12 6 Z M 8.5 6 C 8.2 6 8 5.9 7.8 5.7 L 6.4 7.1 C 6.9 7.7 7.7 8 8.5 8 L 8.5 6 Z M 7.8 5.7 C 7.6 5.5 7.5 5.3 7.5 5 L 5.5 5 C 5.5 5.8 5.8 6.6 6.4 7.1 L 7.8 5.7 Z M 7.5 5 C 7.5 4.7 7.6 4.5 7.8 4.3 L 6.4 2.9 C 5.8 3.4 5.5 4.2 5.5 5 L 7.5 5 Z M 7.8 4.3 C 8 4.1 8.2 4 8.5 4 L 8.5 2 C 7.7 2 6.9 2.3 6.4 2.9 L 7.8 4.3 Z M 8.5 4 C 9.3 4 9.9 4.6 10.4 5.5 C 10.6 5.9 10.8 6.3 10.9 6.7 C 10.9 6.8 11 7 11 7.1 C 11 7.1 11 7.1 11 7.2 C 11 7.2 11 7.2 11 7.2 C 11 7.2 11 7.2 11 7.2 C 11 7.2 11 7.2 11 7.2 C 11 7.2 11 7.2 11 7.2 C 11 7.2 11 7.2 11 7.2 C 11 7.2 11 7.2 12 7 C 13 6.8 13 6.8 13 6.8 C 13 6.8 13 6.8 13 6.8 C 13 6.8 13 6.8 13 6.8 C 13 6.8 13 6.8 13 6.8 C 13 6.8 13 6.8 13 6.8 C 13 6.8 13 6.8 13 6.7 C 13 6.7 12.9 6.7 12.9 6.6 C 12.9 6.5 12.9 6.3 12.8 6.1 C 12.7 5.7 12.5 5.1 12.1 4.5 C 11.5 3.4 10.4 2 8.5 2 L 8.5 4 Z M 12 8 L 15.5 8 L 15.5 6 L 12 6 L 12 8 Z M 15.5 8 C 16.3 8 17.1 7.7 17.6 7.1 L 16.2 5.7 C 16 5.9 15.8 6 15.5 6 L 15.5 8 Z M 17.6 7.1 C 18.2 6.6 18.5 5.8 18.5 5 L 16.5 5 C 16.5 5.3 16.4 5.5 16.2 5.7 L 17.6 7.1 Z M 18.5 5 C 18.5 4.2 18.2 3.4 17.6 2.9 L 16.2 4.3 C 16.4 4.5 16.5 4.7 16.5 5 L 18.5 5 Z M 17.6 2.9 C 17.1 2.3 16.3 2 15.5 2 L 15.5 4 C 15.8 4 16 4.1 16.2 4.3 L 17.6 2.9 Z M 15.5 2 C 13.6 2 12.5 3.4 11.9 4.5 C 11.5 5.1 11.3 5.7 11.2 6.1 C 11.1 6.3 11.1 6.5 11.1 6.6 C 11.1 6.7 11 6.7 11 6.7 C 11 6.8 11 6.8 11 6.8 C 11 6.8 11 6.8 11 6.8 C 11 6.8 11 6.8 11 6.8 C 11 6.8 11 6.8 11 6.8 C 11 6.8 11 6.8 11 6.8 C 11 6.8 11 6.8 12 7 C 13 7.2 13 7.2 13 7.2 C 13 7.2 13 7.2 13 7.2 C 13 7.2 13 7.2 13 7.2 C 13 7.2 13 7.2 13 7.2 C 13 7.2 13 7.2 13 7.2 C 13 7.2 13 7.2 13 7.2 C 13 7.1 13 7.1 13 7.1 C 13 7 13.1 6.8 13.1 6.7 C 13.2 6.3 13.4 5.9 13.6 5.5 C 14.1 4.6 14.7 4 15.5 4 L 15.5 2 Z"
+            fill={strokeColor}
           />
         </Svg>
       );
     case 'hourglass':
+      // Pack de design : `fc-hourglass` (glyphes.svg), translation cuite.
       return (
         <Svg height={size} viewBox="0 0 24 24" width={size}>
-          <Line
-            fill="none"
-            stroke={strokeColor}
-            strokeLinecap="round"
-            strokeWidth={strokeWidth}
-            x1="6.4"
-            x2="17.6"
-            y1="3.4"
-            y2="3.4"
-          />
-          <Line
-            fill="none"
-            stroke={strokeColor}
-            strokeLinecap="round"
-            strokeWidth={strokeWidth}
-            x1="6.4"
-            x2="17.6"
-            y1="20.6"
-            y2="20.6"
-          />
           <Path
-            d="M7.6 3.4v3a4.4 4.4 0 0 0 4.4 4.4 4.4 4.4 0 0 0 4.4-4.4v-3"
-            fill="none"
-            stroke={strokeColor}
-            strokeLinejoin="round"
-            strokeWidth={strokeWidth}
-          />
-          <Path
-            d="M7.6 20.6v-3a4.4 4.4 0 0 1 4.4-4.4 4.4 4.4 0 0 1 4.4 4.4v3"
-            fill="none"
-            stroke={strokeColor}
-            strokeLinejoin="round"
-            strokeWidth={strokeWidth}
+            d="M 20 4 C 20.6 4 21 3.6 21 3 C 21 2.4 20.6 2 20 2 L 20 4 Z M 4 2 C 3.4 2 3 2.4 3 3 C 3 3.6 3.4 4 4 4 L 4 2 Z M 20 22 C 20.6 22 21 21.6 21 21 C 21 20.4 20.6 20 20 20 L 20 22 Z M 4 20 C 3.4 20 3 20.4 3 21 C 3 21.6 3.4 22 4 22 L 4 20 Z M 15.7 14.7 L 15.2 15.5 L 15.7 14.7 Z M 8.3 9.3 L 8.8 8.5 L 8.3 9.3 Z M 6 3 C 6 2.4 5.6 2 5 2 C 4.4 2 4 2.4 4 3 L 6 3 Z M 18 21 C 18 21.6 18.4 22 19 22 C 19.6 22 20 21.6 20 21 L 18 21 Z M 8.3 14.7 L 8.8 15.5 L 8.3 14.7 Z M 15.7 9.3 L 15.2 8.5 L 15.7 9.3 Z M 20 3 C 20 2.4 19.6 2 19 2 C 18.4 2 18 2.4 18 3 L 20 3 Z M 4 21 C 4 21.6 4.4 22 5 22 C 5.6 22 6 21.6 6 21 L 4 21 Z M 20 2 L 4 2 L 4 4 L 20 4 L 20 2 Z M 20 20 L 4 20 L 4 22 L 20 22 L 20 20 Z M 16.3 13.9 L 8.8 8.5 L 7.7 10.1 L 15.2 15.5 L 16.3 13.9 Z M 8.8 8.5 C 7.1 7.2 6 5.2 6 3 L 4 3 C 4 5.8 5.4 8.5 7.7 10.1 L 8.8 8.5 Z M 20 21 C 20 18.2 18.6 15.5 16.3 13.9 L 15.2 15.5 C 16.9 16.8 18 18.8 18 21 L 20 21 Z M 8.8 15.5 L 16.3 10.1 L 15.2 8.5 L 7.7 13.9 L 8.8 15.5 Z M 16.3 10.1 C 18.6 8.5 20 5.8 20 3 L 18 3 C 18 5.2 16.9 7.2 15.2 8.5 L 16.3 10.1 Z M 6 21 C 6 18.8 7.1 16.8 8.8 15.5 L 7.7 13.9 C 5.4 15.5 4 18.2 4 21 L 6 21 Z"
+            fill={strokeColor}
           />
         </Svg>
       );
     case 'idCard':
+      // Pack de design : `fc-idCard` (glyphes.svg), translation cuite.
       return (
         <Svg height={size} viewBox="0 0 24 24" width={size}>
-          <Rect
-            fill="none"
-            height="14"
-            rx="2.4"
-            stroke={strokeColor}
-            strokeLinejoin="round"
-            strokeWidth={strokeWidth}
-            width="18"
-            x="3"
-            y="5"
-          />
-          <Circle
-            cx="8.6"
-            cy="11"
-            fill="none"
-            r="2.1"
-            stroke={strokeColor}
-            strokeWidth={strokeWidth}
-          />
           <Path
-            d="M5.4 16.6a3.4 3.4 0 0 1 6.4 0"
-            fill="none"
-            stroke={strokeColor}
-            strokeLinecap="round"
-            strokeWidth={strokeWidth}
-          />
-          <Line
-            fill="none"
-            stroke={strokeColor}
-            strokeLinecap="round"
-            strokeWidth={strokeWidth}
-            x1="14.6"
-            x2="18.4"
-            y1="10.4"
-            y2="10.4"
-          />
-          <Line
-            fill="none"
-            stroke={strokeColor}
-            strokeLinecap="round"
-            strokeWidth={strokeWidth}
-            x1="14.6"
-            x2="18.4"
-            y1="14"
-            y2="14"
+            d="M 4.1 18.8 L 3.6 19.7 L 4.1 18.8 Z M 3.2 17.9 L 4.1 17.5 L 3.2 17.9 Z M 20.8 17.9 L 19.9 17.5 L 20.8 17.9 Z M 19.9 18.8 L 19.5 17.9 L 19.9 18.8 Z M 19.9 5.2 L 19.5 6.1 L 19.9 5.2 Z M 20.8 6.1 L 19.9 6.5 L 20.8 6.1 Z M 4.1 5.2 L 4.5 6.1 L 4.1 5.2 Z M 3.2 6.1 L 4.1 6.5 L 3.2 6.1 Z M 18 13 C 18.6 13 19 12.6 19 12 C 19 11.4 18.6 11 18 11 L 18 13 Z M 15 11 C 14.4 11 14 11.4 14 12 C 14 12.6 14.4 13 15 13 L 15 11 Z M 21 9 C 21.6 9 22 8.6 22 8 C 22 7.4 21.6 7 21 7 L 21 9 Z M 3 7 C 2.4 7 2 7.4 2 8 C 2 8.6 2.4 9 3 9 L 3 7 Z M 18 17 C 18.6 17 19 16.6 19 16 C 19 15.4 18.6 15 18 15 L 18 17 Z M 15 15 C 14.4 15 14 15.4 14 16 C 14 16.6 14.4 17 15 17 L 15 15 Z M 12 19.2 C 12.1 19.8 12.7 20.1 13.2 20 C 13.8 19.9 14.1 19.3 14 18.8 L 12 19.2 Z M 9 11 C 8.4 11 8 11.4 8 12 C 8 12.6 8.4 13 9 13 L 9 11 Z M 9 13 C 9.6 13 10 12.6 10 12 C 10 11.4 9.6 11 9 11 L 9 13 Z M 6.2 6 L 17.8 6 L 17.8 4 L 6.2 4 L 6.2 6 Z M 20 8.2 L 20 15.8 L 22 15.8 L 22 8.2 L 20 8.2 Z M 17.8 18 L 6.2 18 L 6.2 20 L 17.8 20 L 17.8 18 Z M 4 15.8 L 4 8.2 L 2 8.2 L 2 15.8 L 4 15.8 Z M 2 15.8 C 2 16.3 2 16.8 2 17.2 C 2.1 17.6 2.1 18 2.3 18.4 L 4.1 17.5 C 4.1 17.4 4 17.3 4 17 C 4 16.7 4 16.4 4 15.8 L 2 15.8 Z M 4.5 17.9 C 4.4 17.8 4.2 17.6 4.1 17.5 L 2.3 18.4 C 2.6 18.9 3.1 19.4 3.6 19.7 L 4.5 17.9 Z M 20 15.8 C 20 16.4 20 16.7 20 17 C 20 17.3 19.9 17.4 19.9 17.5 L 21.7 18.4 C 21.9 18 21.9 17.6 22 17.2 C 22 16.8 22 16.3 22 15.8 L 20 15.8 Z M 17.8 20 C 18.3 20 18.8 20 19.2 20 C 19.6 19.9 20 19.9 20.4 19.7 L 19.5 17.9 C 19.4 17.9 19.3 18 19 18 C 18.7 18 18.4 18 17.8 18 L 17.8 20 Z M 19.9 17.5 C 19.8 17.6 19.6 17.8 19.5 17.9 L 20.4 19.7 C 20.9 19.4 21.4 18.9 21.7 18.4 L 19.9 17.5 Z M 17.8 6 C 18.4 6 18.7 6 19 6 C 19.3 6 19.4 6.1 19.5 6.1 L 20.4 4.3 C 20 4.1 19.6 4.1 19.2 4 C 18.8 4 18.3 4 17.8 4 L 17.8 6 Z M 22 8.2 C 22 7.7 22 7.2 22 6.8 C 21.9 6.4 21.9 6 21.7 5.6 L 19.9 6.5 C 19.9 6.6 20 6.7 20 7 C 20 7.3 20 7.6 20 8.2 L 22 8.2 Z M 19.5 6.1 C 19.6 6.2 19.8 6.4 19.9 6.5 L 21.7 5.6 C 21.4 5.1 20.9 4.6 20.4 4.3 L 19.5 6.1 Z M 6.2 4 C 5.7 4 5.2 4 4.8 4 C 4.4 4.1 4 4.1 3.6 4.3 L 4.5 6.1 C 4.6 6.1 4.7 6 5 6 C 5.3 6 5.6 6 6.2 6 L 6.2 4 Z M 4 8.2 C 4 7.6 4 7.3 4 7 C 4 6.7 4.1 6.6 4.1 6.5 L 2.3 5.6 C 2.1 6 2.1 6.4 2 6.8 C 2 7.2 2 7.7 2 8.2 L 4 8.2 Z M 3.6 4.3 C 3.1 4.6 2.6 5.1 2.3 5.6 L 4.1 6.5 C 4.2 6.4 4.4 6.2 4.5 6.1 L 3.6 4.3 Z M 18 11 L 15 11 L 15 13 L 18 13 L 18 11 Z M 21 7 L 3 7 L 3 9 L 21 9 L 21 7 Z M 18 15 L 15 15 L 15 17 L 18 17 L 18 15 Z M 9 12 L 9 14 C 10.1 14 11 13.1 11 12 L 9 12 Z M 9 12 L 7 12 C 7 13.1 7.9 14 9 14 L 9 12 Z M 9 12 L 9 10 C 7.9 10 7 10.9 7 12 L 9 12 Z M 9 12 L 11 12 C 11 10.9 10.1 10 9 10 L 9 12 Z M 9 17 C 10.6 17 11.8 18 12 19.2 L 14 18.8 C 13.5 16.6 11.4 15 9 15 L 9 17 Z M 9 13 L 9 13 L 9 11 L 9 11 L 9 13 Z M 6 19.2 C 6.3 18 7.5 17 9 17 L 9 15 C 6.6 15 4.5 16.6 4 18.8 L 6 19.2 Z M 6.2 18 C 5.7 18 5.3 18 5.1 18 L 4.9 20 C 5.3 20 5.7 20 6.2 20 L 6.2 18 Z M 5.1 18 C 4.7 18 4.6 17.9 4.5 17.9 L 3.6 19.7 C 4.1 19.9 4.5 20 4.9 20 L 5.1 18 Z"
+            fill={strokeColor}
           />
         </Svg>
       );
     case 'landmark':
+      // Pack de design : `fc-landmark` (glyphes.svg), translation cuite.
       return (
         <Svg height={size} viewBox="0 0 24 24" width={size}>
-          <Polyline
-            fill="none"
-            points="2.8,9 12,3.6 21.2,9"
-            stroke={strokeColor}
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={strokeWidth}
-          />
-          <Line
-            fill="none"
-            stroke={strokeColor}
-            strokeLinecap="round"
-            strokeWidth={strokeWidth}
-            x1="6"
-            x2="6"
-            y1="11.4"
-            y2="17"
-          />
-          <Line
-            fill="none"
-            stroke={strokeColor}
-            strokeLinecap="round"
-            strokeWidth={strokeWidth}
-            x1="12"
-            x2="12"
-            y1="11.4"
-            y2="17"
-          />
-          <Line
-            fill="none"
-            stroke={strokeColor}
-            strokeLinecap="round"
-            strokeWidth={strokeWidth}
-            x1="18"
-            x2="18"
-            y1="11.4"
-            y2="17"
-          />
-          <Line
-            fill="none"
-            stroke={strokeColor}
-            strokeLinecap="round"
-            strokeWidth={strokeWidth}
-            x1="3.4"
-            x2="20.6"
-            y1="20.2"
-            y2="20.2"
+          <Path
+            d="M 3 20 C 2.4 20 2 20.5 2 21 C 2 21.6 2.4 22 3 22 L 3 20 Z M 21 22 C 21.6 22 22 21.6 22 21 C 22 20.5 21.6 20 21 20 L 21 22 Z M 3 17 C 2.4 17 2 17.5 2 18 C 2 18.6 2.4 19 3 19 L 3 17 Z M 21 19 C 21.6 19 22 18.6 22 18 C 22 17.5 21.6 17 21 17 L 21 19 Z M 21 10 L 21 11 C 21.4 11 21.8 10.8 21.9 10.4 C 22.1 10 22 9.6 21.7 9.3 L 21 10 Z M 3 10 L 2.3 9.3 C 2 9.6 1.9 10 2.1 10.4 C 2.2 10.8 2.6 11 3 11 L 3 10 Z M 14.1 3.9 L 13.5 4.7 L 13.5 4.7 L 14.1 3.9 Z M 12.6 2.8 L 12.3 3.7 L 12.3 3.7 L 12.6 2.8 Z M 9.9 3.9 L 9.2 3.2 L 9.9 3.9 Z M 11.4 2.8 L 11.7 3.7 L 11.7 3.7 L 11.4 2.8 Z M 5 18 C 5 18.6 5.4 19 6 19 C 6.6 19 7 18.6 7 18 L 5 18 Z M 7 13 C 7 12.5 6.6 12 6 12 C 5.4 12 5 12.5 5 13 L 7 13 Z M 9 18 C 9 18.6 9.4 19 10 19 C 10.6 19 11 18.6 11 18 L 9 18 Z M 11 13 C 11 12.5 10.6 12 10 12 C 9.4 12 9 12.5 9 13 L 11 13 Z M 13 18 C 13 18.6 13.4 19 14 19 C 14.6 19 15 18.6 15 18 L 13 18 Z M 15 13 C 15 12.5 14.6 12 14 12 C 13.4 12 13 12.5 13 13 L 15 13 Z M 17 18 C 17 18.6 17.4 19 18 19 C 18.6 19 19 18.6 19 18 L 17 18 Z M 19 13 C 19 12.5 18.6 12 18 12 C 17.4 12 17 12.5 17 13 L 19 13 Z M 3 22 L 21 22 L 21 20 L 3 20 L 3 22 Z M 3 19 L 21 19 L 21 17 L 3 17 L 3 19 Z M 13.5 4.7 L 20.3 10.8 L 21.7 9.3 L 14.8 3.2 L 13.5 4.7 Z M 21 9 L 3 9 L 3 11 L 21 11 L 21 9 Z M 3.7 10.8 L 10.5 4.7 L 9.2 3.2 L 2.3 9.3 L 3.7 10.8 Z M 14.8 3.2 C 14.4 2.8 14.1 2.6 13.8 2.3 C 13.5 2.1 13.2 1.9 12.9 1.8 L 12.3 3.7 C 12.3 3.8 12.4 3.8 12.6 3.9 C 12.8 4.1 13.1 4.3 13.5 4.7 L 14.8 3.2 Z M 10.5 4.7 C 10.9 4.3 11.2 4.1 11.4 3.9 C 11.6 3.8 11.7 3.8 11.7 3.7 L 11.1 1.8 C 10.8 1.9 10.5 2.1 10.2 2.3 C 9.9 2.6 9.6 2.8 9.2 3.2 L 10.5 4.7 Z M 12.9 1.8 C 12.3 1.7 11.7 1.7 11.1 1.8 L 11.7 3.7 C 11.9 3.7 12.1 3.7 12.3 3.7 L 12.9 1.8 Z M 7 18 L 7 13 L 5 13 L 5 18 L 7 18 Z M 11 18 L 11 13 L 9 13 L 9 18 L 11 18 Z M 15 18 L 15 13 L 13 13 L 13 18 L 15 18 Z M 19 18 L 19 13 L 17 13 L 17 18 L 19 18 Z"
+            fill={strokeColor}
           />
         </Svg>
       );
@@ -749,34 +351,12 @@ function GlyphIcon({
         </Svg>
       );
     case 'receiptAlt':
+      // Pack de design : `fc-fileAlt` (glyphes.svg), translation cuite.
       return (
         <Svg height={size} viewBox="0 0 24 24" width={size}>
           <Path
-            d="M5.4 3.4h13.2v17.2l-2.2-1.6-2.2 1.6-2.2-1.6-2.2 1.6-2.2-1.6-2.2 1.6Z"
-            fill="none"
-            stroke={strokeColor}
-            strokeLinejoin="round"
-            strokeWidth={strokeWidth}
-          />
-          <Line
-            fill="none"
-            stroke={strokeColor}
-            strokeLinecap="round"
-            strokeWidth={strokeWidth}
-            x1="8.6"
-            x2="15.4"
-            y1="8.4"
-            y2="8.4"
-          />
-          <Line
-            fill="none"
-            stroke={strokeColor}
-            strokeLinecap="round"
-            strokeWidth={strokeWidth}
-            x1="8.6"
-            x2="15.4"
-            y1="12.4"
-            y2="12.4"
+            d="M 9 16 C 8.4 16 8 16.4 8 17 C 8 17.6 8.4 18 9 18 L 9 16 Z M 15 18 C 15.6 18 16 17.6 16 17 C 16 16.4 15.6 16 15 16 L 15 18 Z M 9 12 C 8.4 12 8 12.4 8 13 C 8 13.6 8.4 14 9 14 L 9 12 Z M 15 14 C 15.6 14 16 13.6 16 13 C 16 12.4 15.6 12 15 12 L 15 14 Z M 9 8 C 8.4 8 8 8.4 8 9 C 8 9.6 8.4 10 9 10 L 9 8 Z M 10 10 C 10.6 10 11 9.6 11 9 C 11 8.4 10.6 8 10 8 L 10 10 Z M 13 3 L 13.7 2.3 C 13.5 2.1 13.3 2 13 2 L 13 3 Z M 19 9 L 20 9 C 20 8.7 19.9 8.5 19.7 8.3 L 19 9 Z M 17.9 20.8 L 17.5 19.9 L 17.5 19.9 L 17.9 20.8 Z M 18.8 19.9 L 19.7 20.4 L 19.7 20.4 L 18.8 19.9 Z M 5.2 19.9 L 4.3 20.4 L 4.3 20.4 L 5.2 19.9 Z M 6.1 20.8 L 6.5 19.9 L 6.5 19.9 L 6.1 20.8 Z M 6.1 3.2 L 5.6 2.3 L 5.6 2.3 L 6.1 3.2 Z M 5.2 4.1 L 4.3 3.6 L 4.3 3.6 L 5.2 4.1 Z M 13.1 8.5 L 14 8 L 14 8 L 13.1 8.5 Z M 13.5 8.9 L 14 8 L 14 8 L 13.5 8.9 Z M 9 18 L 15 18 L 15 16 L 9 16 L 9 18 Z M 9 14 L 15 14 L 15 12 L 9 12 L 9 14 Z M 9 10 L 10 10 L 10 8 L 9 8 L 9 10 Z M 13 2 L 8.2 2 L 8.2 4 L 13 4 L 13 2 Z M 4 6.2 L 4 17.8 L 6 17.8 L 6 6.2 L 4 6.2 Z M 8.2 22 L 15.8 22 L 15.8 20 L 8.2 20 L 8.2 22 Z M 20 17.8 L 20 9 L 18 9 L 18 17.8 L 20 17.8 Z M 19.7 8.3 L 13.7 2.3 L 12.3 3.7 L 18.3 9.7 L 19.7 8.3 Z M 15.8 22 C 16.3 22 16.8 22 17.2 22 C 17.6 21.9 18 21.9 18.4 21.7 L 17.5 19.9 C 17.4 19.9 17.3 20 17 20 C 16.7 20 16.4 20 15.8 20 L 15.8 22 Z M 18 17.8 C 18 18.4 18 18.7 18 19 C 18 19.3 17.9 19.4 17.9 19.5 L 19.7 20.4 C 19.9 20 19.9 19.6 20 19.2 C 20 18.8 20 18.3 20 17.8 L 18 17.8 Z M 18.4 21.7 C 18.9 21.4 19.4 20.9 19.7 20.4 L 17.9 19.5 C 17.8 19.6 17.6 19.8 17.5 19.9 L 18.4 21.7 Z M 4 17.8 C 4 18.3 4 18.8 4 19.2 C 4.1 19.6 4.1 20 4.3 20.4 L 6.1 19.5 C 6.1 19.4 6 19.3 6 19 C 6 18.7 6 18.4 6 17.8 L 4 17.8 Z M 8.2 20 C 7.6 20 7.3 20 7 20 C 6.7 20 6.6 19.9 6.5 19.9 L 5.6 21.7 C 6 21.9 6.4 21.9 6.8 22 C 7.2 22 7.7 22 8.2 22 L 8.2 20 Z M 4.3 20.4 C 4.6 20.9 5.1 21.4 5.6 21.7 L 6.5 19.9 C 6.4 19.8 6.2 19.6 6.1 19.5 L 4.3 20.4 Z M 8.2 2 C 7.7 2 7.2 2 6.8 2 C 6.4 2.1 6 2.1 5.6 2.3 L 6.5 4.1 C 6.6 4.1 6.7 4 7 4 C 7.3 4 7.6 4 8.2 4 L 8.2 2 Z M 6 6.2 C 6 5.6 6 5.3 6 5 C 6 4.7 6.1 4.6 6.1 4.5 L 4.3 3.6 C 4.1 4 4.1 4.4 4 4.8 C 4 5.2 4 5.7 4 6.2 L 6 6.2 Z M 5.6 2.3 C 5.1 2.6 4.6 3.1 4.3 3.6 L 6.1 4.5 C 6.2 4.4 6.4 4.2 6.5 4.1 L 5.6 2.3 Z M 12 3 L 12 7.4 L 14 7.4 L 14 3 L 12 3 Z M 14.6 10 L 19 10 L 19 8 L 14.6 8 L 14.6 10 Z M 12 7.4 C 12 7.7 12 7.9 12 8.1 C 12 8.4 12.1 8.6 12.2 8.9 L 14 8 C 14 8.1 14 8.1 14 8 C 14 7.9 14 7.7 14 7.4 L 12 7.4 Z M 14.6 8 C 14.3 8 14.1 8 14 8 C 13.9 8 13.9 8 14 8 L 13.1 9.8 C 13.4 9.9 13.6 10 13.9 10 C 14.1 10 14.3 10 14.6 10 L 14.6 8 Z M 12.2 8.9 C 12.4 9.3 12.7 9.6 13.1 9.8 L 14 8 L 14 8 L 12.2 8.9 Z"
+            fill={strokeColor}
           />
         </Svg>
       );

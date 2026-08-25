@@ -20,6 +20,7 @@ import { withAlpha } from '@/theme/colors';
 import useTheme from '@/theme/themeContext';
 
 import GlyphIcon from '@/components/atoms/glyphIcon/GlyphIcon';
+import HeaderBackButton from '@/components/atoms/headerBackButton/HeaderBackButton';
 
 import {
   getMemberStatusLabel,
@@ -95,7 +96,7 @@ export const memberType = (Fonts) => ({
  * @returns {import('react').ReactElement}
  */
 export function MemberTopBar({ onBack, onMenu, title }) {
-  const { Colors, Fonts } = useTheme();
+  const { ApplicationStyle, Colors, Fonts } = useTheme();
   const type = memberType(Fonts);
 
   return (
@@ -106,23 +107,25 @@ export function MemberTopBar({ onBack, onMenu, title }) {
       marginBottom: 8,
     }}
     >
-      <Pressable
+      {/*
+        S9-bis / defaut 2a — LA FLECHE RETOUR EST CELLE DE LA MAISON.
+        🗣️ Adel, recette du 25/08 : « les assets ne sont pas ceux du design
+        system, tout comme les fleches retours ».
+        🔬 Mesure : `HeaderBackButton` est utilise par 65 ecrans. J en avais
+        fabrique un 66e a la main — carre a rayon 12, bordure 1,5 et un
+        `chevronLeft` vectoriel — la ou la maison pose un ROND a bordure 1 avec
+        `Images.arrowLeft` en 16 px. Ce n est pas un detail de peinture : deux
+        fleches retour differentes dans la meme app, c est une app qui parait
+        bricolee.
+        ⛔ `withDefaultMargin={false}` : le composant pose 16 pt de marge gauche
+        par defaut (pour les entetes du navigateur). Ici la marge laterale vient
+        deja de `ScreenContainer`, elle serait comptee deux fois.
+      */}
+      <HeaderBackButton
         accessibilityLabel="Retour"
-        accessibilityRole="button"
-        hitSlop={8}
         onPress={onBack}
-        style={{
-          alignItems: 'center',
-          borderColor: Colors.primary500,
-          borderRadius: memberRadius.row,
-          borderWidth: 1.5,
-          height: memberSpacing.target,
-          justifyContent: 'center',
-          width: memberSpacing.target,
-        }}
-      >
-        <GlyphIcon color={Colors.primary500} name="chevronLeft" size={20} />
-      </Pressable>
+        withDefaultMargin={false}
+      />
       <Text
         numberOfLines={1}
         style={[type.screenTitle, Fonts.neutral00, { flex: 1, textAlign: 'center' }]}
@@ -133,13 +136,15 @@ export function MemberTopBar({ onBack, onMenu, title }) {
         <Pressable
           accessibilityLabel="Plus d options"
           accessibilityRole="button"
-          hitSlop={8}
+          // 🎯 MEME GEOMETRIE QUE LA FLECHE : 32 pt visibles, 44 pt touchables.
+          // Sans ca, le titre centre se decale de 6 pt vers la gauche.
+          hitSlop={ApplicationStyle.hitSlop.min44From32}
           onPress={onMenu}
           style={{
             alignItems: 'center',
-            height: memberSpacing.target,
+            height: 32,
             justifyContent: 'center',
-            width: memberSpacing.target,
+            width: 32,
           }}
         >
           <GlyphIcon color={Colors.neutral200} name="dotsVertical" size={20} />
@@ -147,7 +152,7 @@ export function MemberTopBar({ onBack, onMenu, title }) {
       ) : (
         // Le carre d equilibre : il ne se voit pas, mais sans lui le titre
         // centre ne l est plus.
-        <View style={{ height: memberSpacing.target, width: memberSpacing.target }} />
+        <View style={{ height: 32, width: 32 }} />
       )}
     </View>
   );
