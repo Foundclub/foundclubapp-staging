@@ -2105,6 +2105,34 @@ function EventDetails({ navigation, route }) {
       .forEach((participation) => {
         const userKey = getUserKey(participation?.user);
         if (!userKey || trainerKeysForEvent.has(userKey)) return;
+
+        // 🎯 S1 (constat d Adel du 2026-08-25) — UNE REPONSE ACTIVE EFFACE LA
+        // TRACE DE CELLE QU ELLE REMPLACE.
+        //
+        // 📸 LE DEFAUT : un joueur qui passait de « present » a « absent »
+        // apparaissait DEUX FOIS — dans les absents, ET dans « Historique
+        // equipe retiree », avec son ancien pointage « Arrive » en prime.
+        // Le serveur est sain (verifie le 25/08) : `declareMissing` DESACTIVE
+        // l ancienne reponse puis cree l absence. C est ICI que les deux
+        // etaient rangees cote a cote : la boucle versait TOUTE ligne inactive
+        // dans l historique sans jamais regarder s il en existait une active.
+        //
+        // 🔒 CE QUI CONTINUE DE S AFFICHER, et c est tout le sujet de la
+        // section : l historique de qui n a AUCUNE reponse active — une equipe
+        // retiree de l evenement (`archiveResponsesBySourceTeams` cote serveur),
+        // une inscription archivee jamais reprise. Une histoire, ce n est pas
+        // la reponse d il y a trois secondes.
+        //
+        // ⛔ LA DONNEE NE BOUGE PAS : `includeInactive: true` reste. C est le
+        // filtre qui manquait, pas la matiere.
+        //
+        // 🪢 Pose AVANT le partage `isExternal` : le meme garde couvre donc les
+        // deux historiques, celui des equipes et celui des externes.
+        const aDejaUneReponseActive = participatingKeys.has(userKey)
+          || missingKeys.has(userKey)
+          || pendingByUserKey.has(userKey);
+        if (aDejaUneReponseActive) return;
+
         const sourceTeamId = participation?.sourceTeam?.documentId;
         const sourceTeamKnown = Boolean(
           sourceTeamId && knownTeamSectionKeys.has(sourceTeamId),
@@ -4828,10 +4856,6 @@ function EventDetails({ navigation, route }) {
     setLateModalArrivedAt(null);
     setLateModalNote('');
   }, []);
-
-  const handleCoachMarkArrival = useCallback((/** @type {User | null | undefined} */ targetUser) => {
-    openCoachLateModal(targetUser, 'coach_mark');
-  }, [openCoachLateModal]);
 
   const handleCoachEditLate = useCallback((/** @type {User | null | undefined} */ targetUser) => {
     openCoachLateModal(targetUser, 'coach_edit');
@@ -7743,7 +7767,6 @@ function EventDetails({ navigation, route }) {
                   nowMs={serverNowMs}
                   onCandidatePress={handleOpenDetectionCandidate}
                   onCoachEditLate={handleCoachEditLate}
-                  onCoachMarkArrival={handleCoachMarkArrival}
                   participantsSummary={participantsSummary}
                   participationsByStatus={participationsByStatus}
                   pendingParticipations={pendingParticipations}

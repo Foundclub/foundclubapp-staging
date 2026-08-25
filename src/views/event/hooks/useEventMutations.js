@@ -49,6 +49,18 @@ export const useEventMutations = (eventId, refetch, refetchParticipations) => {
     if (eventId) {
       queryClient.invalidateQueries({ queryKey: ['event', eventId] });
       queryClient.invalidateQueries({ queryKey: ['eventParticipations', eventId] });
+      // 🧊 S1 (constat d Adel du 2026-08-25) — LE BADGE « ARRIVE » FANTOME.
+      //
+      // Changer sa reponse change AUSSI ce que le pointage raconte : le serveur
+      // range le `rsvpStatus` de l instantane de pointage a cote du pointage
+      // lui-meme. Sans cette clef, l ecran gardait l ancien instantane et
+      // affichait « Arrive » a quelqu un qui venait de se declarer absent.
+      //
+      // 🎯 POSE DANS LA FONCTION PARTAGEE, pas dans la seule mutation
+      // d absence : les cinq portes de participation passent par ici. Ne
+      // reparer que celle du constat aurait laisse quatre freres casses.
+      // Le motif se recopie tel quel des mutations de pointage, plus bas.
+      queryClient.invalidateQueries({ queryKey: ['eventAttendance', eventId] });
     }
     invalidatePersonalPlanning();
   };
