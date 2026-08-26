@@ -19,6 +19,7 @@ import AutocompleteAddressInput from '@/components/organisms/autocompleteAddress
 import { useGetFacilityOccupancy } from '@/services/facility/facilityQueries';
 import { getCMFacilities, getFacilities } from '@/services/facility/facilityService';
 
+import { getAddressText, getFacilityAddressLabel } from '@/utils/facilityAddressLabel';
 import { resolveFacilityPlanningColor } from '@/utils/facilityPlanningColor';
 
 /**
@@ -136,19 +137,10 @@ function FacilitySelector({
     enabled: mode === 'club' && Boolean(facilityId && occupancyWindow?.start && occupancyWindow?.end),
   });
 
-  const getFacilityAddressLabel = (address) => {
-    if (!address) return t('eventWizard.steps.location.addressMissing', 'Adresse non renseignée');
-    if (typeof address === 'string') return address;
-    if (typeof address === 'object') {
-      return (
-        address?.label
-        || address?.description
-        || address?.address
-        || t('eventWizard.steps.location.addressMissing', 'Adresse non renseignée')
-      );
-    }
-    return t('eventWizard.steps.location.addressMissing', 'Adresse non renseignée');
-  };
+  const addressMissingLabel = t(
+    'eventWizard.steps.location.addressMissing',
+    'Adresse non renseignée',
+  );
 
   useEffect(() => {
     if (facilityId) {
@@ -180,7 +172,7 @@ function FacilitySelector({
     onChange({
       facilityId: selectedId,
       location: {
-        label: selectedFacility.address,
+        label: getAddressText(selectedFacility.address),
         value: '',
       },
     });
@@ -435,7 +427,7 @@ function FacilitySelector({
                         ) : null}
                       </View>
                       <Text numberOfLines={2} style={[Fonts.p2, Fonts.neutral200]}>
-                        {getFacilityAddressLabel(facility.address)}
+                        {getFacilityAddressLabel(facility.address, addressMissingLabel)}
                       </Text>
                     </TouchableOpacity>
                   );

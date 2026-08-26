@@ -14,6 +14,8 @@ import { RouteNames } from '@/navigation/routeNames';
 
 import { useClubFacilityContext } from '@/services/facility/facilityQueries';
 
+import { getFacilityAddressLabel } from '@/utils/facilityAddressLabel';
+
 import { useAdWizard } from './AdWizardContext';
 import {
   getAdWizardLocationStepIndex,
@@ -22,17 +24,6 @@ import {
   isAdWizardLocationComplete,
 } from './adWizardStepUtils';
 /* eslint-enable perfectionist/sort-imports */
-
-const getFacilityAddressLabel = (address) => {
-  if (!address) return 'Adresse non renseignée';
-  if (typeof address === 'string') return address;
-  return (
-    address?.label
-    || address?.description
-    || address?.address
-    || 'Adresse non renseignée'
-  );
-};
 
 const getSelectedFacilityIdFromState = (state) => {
   const facilityValue = state?.facility;

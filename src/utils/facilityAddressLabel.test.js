@@ -13,7 +13,11 @@
  * - le fabricant, qui promettait un libelle et rendait un objet ;
  * - l'affichage, qui doit reparer les lignes deja ecrites en base.
  */
-import { getFacilityAddressLabel, resolveLocationDisplayLabel } from './facilityAddressLabel';
+import {
+  getAddressText,
+  getFacilityAddressLabel,
+  resolveLocationDisplayLabel,
+} from './facilityAddressLabel';
 
 // La charge EXACTE relevee le 26/08 dans `recruitment_ads.address`.
 const AD_ADDRESS_CORROMPUE = {
@@ -91,6 +95,21 @@ describe('getFacilityAddressLabel — le fabricant ne peut rendre que du texte',
   test('descend dans un label lui-meme objet', () => {
     expect(getFacilityAddressLabel({ label: { description: 'Gymnase Ruffi' } }))
       .toBe('Gymnase Ruffi');
+  });
+});
+
+describe('getAddressText — la forme a utiliser quand on ECRIT une donnee', () => {
+  test('rend le texte trouve, ou une chaine vide — jamais un repli habille', () => {
+    expect(getAddressText(FACILITY_ADDRESS_REELLE)).toBe('21 Rue fortia 13001 Marseille');
+    expect(getAddressText(null)).toBe('');
+    expect(getAddressText({ geometry: {} })).toBe('');
+    expect(getAddressText({})).not.toBe('Adresse non renseignée');
+  });
+
+  test('ne rend JAMAIS un objet, quelle que soit la forme recue', () => {
+    TOUTES_LES_FORMES.forEach((forme) => {
+      expect(typeof getAddressText(forme)).toBe('string');
+    });
   });
 });
 
