@@ -63,7 +63,7 @@ export const invalidateEventAnswerQueries = (queryClient, eventId) => {
  * @returns {{
  *   missingEventMutation: any,
  *   respondToEventRsvpMutation: any,
- *   submittingAnswer: string,
+ *   submittingAnswer: 'present' | 'absent' | '',
  *   submittingEventId: string,
  * }} Les mutations, la carte qui attend sa réponse, et laquelle des deux.
  */
@@ -110,10 +110,16 @@ export const useEventAnswerMutations = (onAnswered) => {
   // de la mutation portent l événement visé — c est le motif que tient déjà
   // `AdminClaimList.js:102-115` pour la même question (« quelle ligne tourne ? »).
   let submittingEventId = '';
+  // Le type étroit n est pas cosmétique : c est lui qui garantit à
+  // `EventAnswerButtons` qu il ne recevra jamais autre chose que ses deux
+  // réponses, sans avoir à s en défendre.
+  /** @type {'present' | 'absent' | ''} */
   let submittingAnswer = '';
   if (respondToEventRsvpMutation.isPending) {
     submittingEventId = String(respondToEventRsvpMutation.variables?.eventId || '');
-    submittingAnswer = String(respondToEventRsvpMutation.variables?.answer || '');
+    submittingAnswer = respondToEventRsvpMutation.variables?.answer === 'absent'
+      ? 'absent'
+      : 'present';
   } else if (missingEventMutation.isPending) {
     submittingEventId = String(missingEventMutation.variables || '');
     // Cette porte-là ne dit qu une chose, et c est déjà dans son nom.

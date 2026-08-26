@@ -421,6 +421,7 @@ function ParticipantEventList({ navigation }) {
     // la candidature aux postes. Les postes vivent sur l écran de l événement.
     if (participationFlow?.submitMode === 'detection-slot-picker') {
       if (event?.documentId) {
+        // @ts-ignore
         navigation.navigate(RouteNames.EventStack, {
           params: { eventId: event.documentId },
           screen: RouteNames.EventDetails,
@@ -486,7 +487,7 @@ function ParticipantEventList({ navigation }) {
   // Le geste est celui du frère (`EventListContent.js:1011-1021`) : une séance
   // d un stage se répond par la porte des réponses, tout le reste passe par
   // `POST /events/:id/missing`.
-  const handleDeclineEvent = useCallback((event) => {
+  const handleDeclineEvent = useCallback((/** @type {any} */ event) => {
     if (!event?.documentId) return;
     if (String(event?.eventFormat || '').toLowerCase() === 'stage_day') {
       respondToEventRsvpMutation.mutate({
@@ -565,11 +566,15 @@ function ParticipantEventList({ navigation }) {
     userData,
   ]);
 
-  /**
-   * Handle event press
-   * @param {import('@/domains/event/types').FCEvent} event
-   */
-  const handleEventPress = useCallback((event) => {
+  // 🪤 LE TYPE EST SUR LE PARAMÈTRE, ET PAS DANS UN BLOC AU-DESSUS : un bloc
+  // JSDoc posé sur un `const` ne traverse pas `useCallback`, et le paramètre
+  // redevient implicitement `any` (TS7006) — c'est ce qui est arrivé en
+  // mémoïsant cette fonction pour D4. Même forme que `handleEventSelect` chez
+  // le frère (`EventListContent.js:806`).
+  // Handle event press.
+  const handleEventPress = useCallback((
+    /** @type {import('@/domains/event/types').FCEvent} */ event,
+  ) => {
     if (!event?.documentId) {
       participantEventListLogger.warn('Navigation blocked: missing event documentId');
       return;
@@ -595,7 +600,7 @@ function ParticipantEventList({ navigation }) {
   // le tranche déjà pour la fiche et pour la liste de recherche. Une seule
   // règle, trois surfaces — le libellé ne peut pas promettre autre chose que
   // ce que le geste fait.
-  const handleEditAnswer = useCallback((event) => {
+  const handleEditAnswer = useCallback((/** @type {any} */ event) => {
     const { kind } = resolveOwnAnswerAction({
       // `participationRequests` n est pas déclaré sur `FCEvent` alors que l API
       // le rend : le même accès existe déjà dans `EventAnswerButtons`.
