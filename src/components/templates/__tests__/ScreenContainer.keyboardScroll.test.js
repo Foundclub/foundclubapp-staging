@@ -24,9 +24,9 @@ import ScreenContainer from '../ScreenContainer';
 //
 // 🧨 POURQUOI L'OPTION EST OPT-IN, ET C'EST UNE MESURE, PAS UN GOUT :
 // `keyboardAvoiding` est actif sur 20 ecrans (19 via FormScreenContainer + 1
-// direct), et 12 de ces 20 portent DEJA leur propre ScrollView / FlatList. Un
+// direct), et 13 de ces 20 portent DEJA leur propre ScrollView / FlatList. Un
 // ScrollView pose sans condition dans le conteneur partage imbriquerait donc
-// deux defilements verticaux sur 12 ecrans — physique de defilement cassee et
+// deux defilements verticaux sur 13 ecrans — physique de defilement cassee et
 // virtualisation des listes perdue. Le balayage du bas fige cette regle.
 
 const HAUTEUR_ENCOCHE_BASSE = 34;
@@ -311,7 +311,7 @@ describe('⛔ Jamais deux defilements verticaux l un dans l autre', () => {
     ({ source }) => {
       if (!source.includes('keyboardScroll')) return;
 
-      // 12 des 20 ecrans a clavier portent deja un ScrollView ou une FlatList.
+      // 13 des 20 ecrans a clavier portent deja un ScrollView ou une FlatList.
       // Leur ajouter celui du conteneur casserait la physique du defilement et
       // la virtualisation des listes. C'est pour EUX que l'option est opt-in.
       expect(source).not.toMatch(/<(ScrollView|FlatList|FlashList|SectionList)/);

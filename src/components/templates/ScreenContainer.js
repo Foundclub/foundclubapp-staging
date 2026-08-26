@@ -17,8 +17,10 @@ import { getFloatingTabBarScenePaddingBottom } from '@/navigation/commonOptions'
 // pixel ne le dit. `flexGrow: 1` rend exactement la MEME image tant que le
 // contenu tient dans l'ecran, et le laisse depasser quand il deborde.
 // La conversion vit ICI, dans le conteneur partage, pour qu'aucun ecran n'ait
-// a connaitre ce piege : 15 ecrans du tunnel passent `Alignments.fill`.
+// a connaitre ce piege : 18 ecrans du tunnel ecrivent `Alignments.fill`.
 /**
+ * Traduit un style de contenu ecrit pour une View en style de contenu de
+ * ScrollView, en remplacant `flex` par `flexGrow`.
  * @param {Array<any>} styles Le style de contenu passe par l'ecran.
  * @returns {Array<any>} Le meme style, utilisable comme contenu de ScrollView.
  */
@@ -57,7 +59,7 @@ const toScrollableContentStyle = (styles) => {
  * @param {boolean} [props.keyboardAvoiding]
  * Defilement sous le clavier (U02). Sans lui, l'evitement COMPRIME le contenu
  * et ce qui depasse devient inatteignable — le defaut d'Adel du 2026-08-26.
- * ⛔ Il reste OPT-IN, et c'est une mesure : 12 des 20 ecrans a `keyboardAvoiding`
+ * ⛔ Il reste OPT-IN, et c'est une mesure : 13 des 20 ecrans a `keyboardAvoiding`
  * portent DEJA leur propre ScrollView / FlatList. L'imposer a tous imbriquerait
  * deux defilements verticaux et casserait leur physique de defilement.
  * @param {boolean} [props.keyboardScroll]
