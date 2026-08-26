@@ -1,7 +1,8 @@
 import { HeaderHeightContext } from '@react-navigation/elements';
 import { useContext, useMemo } from 'react';
 import {
-  ImageBackground, KeyboardAvoidingView, Platform, useWindowDimensions, View,
+  ImageBackground, KeyboardAvoidingView, Platform, ScrollView, StyleSheet,
+  useWindowDimensions, View,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -9,6 +10,29 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import useTheme from '@/theme/themeContext';
 
 import { getFloatingTabBarScenePaddingBottom } from '@/navigation/commonOptions';
+
+// U02 — UN STYLE ECRIT POUR UNE VIEW NE SE TRANSPOSE PAS TEL QUEL DANS UN
+// SCROLLVIEW. `flex: 1` y BORNE le contenu a la hauteur visible : le contenu ne
+// peut alors plus depasser, donc plus rien ne defile — en silence, et aucun
+// pixel ne le dit. `flexGrow: 1` rend exactement la MEME image tant que le
+// contenu tient dans l'ecran, et le laisse depasser quand il deborde.
+// La conversion vit ICI, dans le conteneur partage, pour qu'aucun ecran n'ait
+// a connaitre ce piege : 18 ecrans du tunnel ecrivent `Alignments.fill`.
+/**
+ * Traduit un style de contenu ecrit pour une View en style de contenu de
+ * ScrollView, en remplacant `flex` par `flexGrow`.
+ * @param {Array<any>} styles Le style de contenu passe par l'ecran.
+ * @returns {Array<any>} Le meme style, utilisable comme contenu de ScrollView.
+ */
+const toScrollableContentStyle = (styles) => {
+  const flattened = StyleSheet.flatten(styles) || {};
+
+  if (flattened.flex === undefined) return [flattened];
+
+  const { flex: valeurFlex, ...reste } = flattened;
+
+  return [{ ...reste, flexGrow: valeurFlex }];
+};
 
 /**
  * The ScreenContainer component is a template for all screens in the application.
@@ -33,6 +57,12 @@ import { getFloatingTabBarScenePaddingBottom } from '@/navigation/commonOptions'
  * @param {'none' | 'screen' | 'tab-scene' | 'edge-to-edge'} [props.bottomInsetMode]
  * @param {number} [props.bottomInsetExtra]
  * @param {boolean} [props.keyboardAvoiding]
+ * Defilement sous le clavier (U02). Sans lui, l'evitement COMPRIME le contenu
+ * et ce qui depasse devient inatteignable — le defaut d'Adel du 2026-08-26.
+ * ⛔ Il reste OPT-IN, et c'est une mesure : 13 des 20 ecrans a `keyboardAvoiding`
+ * portent DEJA leur propre ScrollView / FlatList. L'imposer a tous imbriquerait
+ * deux defilements verticaux et casserait leur physique de defilement.
+ * @param {boolean} [props.keyboardScroll]
  * @param {boolean} [props.responsiveHorizontalPadding]
  * @param {string[] | null} [props.gradient]
  * @param {boolean} [props.withHeaderPadding]
@@ -47,6 +77,7 @@ function ScreenContainer({
   contentContainerStyle = [],
   gradient = null, // Default to no gradient
   keyboardAvoiding = false,
+  keyboardScroll = false,
   responsiveHorizontalPadding = false,
   responsivePadding,
   style = [],
@@ -132,21 +163,50 @@ function ScreenContainer({
   //    `WizardStepLayout` passe `0` pour la meme raison.
   //    Toute valeur ecrite en dur (110, 100, 30...) est ce meme calcul, fige
   //    sur UN modele de telephone.
+  //
+  // U02 (recette du 2026-08-26) — L'EVITEMENT SEUL NE SUFFIT PAS.
+  // Il retire le recouvrement du clavier, donc il COMPRIME la zone de contenu.
+  // Sans rien pour defiler dedans, ce qui depasse de la hauteur restante est
+  // simplement INATTEIGNABLE : sur « Qui es-tu ? », la date de naissance etait
+  // a moitie recouverte et « Continuer » ecrase sous le clavier.
+  // Le motif ci-dessous est celui de `WizardStepLayout`, deja en service dans
+  // ce depot : un ScrollView DANS l'evitement, jamais autour.
+  // ⛔ `keyboardShouldPersistTaps="handled"` n'est pas decoratif : sans lui, le
+  //    premier appui sur « Continuer » ne ferait que refermer le clavier.
+  // ⛔ `automaticallyAdjustKeyboardInsets` est ce qui remonte le champ actif
+  //    au-dessus du clavier, et c'est iOS qui le fait — pas une hauteur de
+  //    clavier calculee a la main, pas une dependance de plus.
+  const staticContent = (
+    <View style={[Alignments.grow1, ...safeContentContainerStyle]}>
+      {children}
+    </View>
+  );
+
   const body = keyboardAvoiding ? (
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       keyboardVerticalOffset={0}
       style={Alignments.fill}
     >
-      <View style={[Alignments.grow1, ...safeContentContainerStyle]}>
-        {children}
-      </View>
+      {keyboardScroll ? (
+        <ScrollView
+          automaticallyAdjustKeyboardInsets
+          contentContainerStyle={[
+            Alignments.grow1,
+            ...toScrollableContentStyle(safeContentContainerStyle),
+          ]}
+          keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
+          keyboardShouldPersistTaps="handled"
+          // Clavier ferme, l'ecran doit rester celui d'hier : pas de barre de
+          // defilement qui apparaitrait sur un contenu qui tient deja.
+          showsVerticalScrollIndicator={false}
+          style={Alignments.fill}
+        >
+          {children}
+        </ScrollView>
+      ) : staticContent}
     </KeyboardAvoidingView>
-  ) : (
-    <View style={[Alignments.grow1, ...safeContentContainerStyle]}>
-      {children}
-    </View>
-  );
+  ) : staticContent;
 
   if (gradient) {
     return (

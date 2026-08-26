@@ -9,6 +9,10 @@ import ScreenContainer from '@/components/templates/ScreenContainer';
  * @param {'top' | 'center'} [props.desktopAlignment]
  * @param {'none' | 'screen' | 'tab-scene' | 'edge-to-edge'} [props.bottomInsetMode]
  * @param {boolean} [props.keyboardAvoiding]
+ * Defilement sous le clavier (U02). ⛔ Il ne s'HERITE pas : un ecran qui porte
+ * deja son propre ScrollView / FlatList ne doit PAS le demander, sinon deux
+ * defilements verticaux s'imbriquent. Un temoin de balayage le verifie.
+ * @param {boolean} [props.keyboardScroll]
  * @param {'none' | 'card'} [props.surface]
  * @returns {import('react').ReactElement}
  */
@@ -22,6 +26,7 @@ function FormScreenContainer({
   desktopMinHeight = 640,
   gradient = null,
   keyboardAvoiding = true,
+  keyboardScroll = false,
   responsiveHorizontalPadding = true,
   responsivePadding = true,
   style = [],
@@ -38,6 +43,7 @@ function FormScreenContainer({
       desktopMinHeight={desktopMinHeight}
       gradient={gradient}
       keyboardAvoiding={keyboardAvoiding}
+      keyboardScroll={keyboardScroll}
       responsiveHorizontalPadding={responsiveHorizontalPadding}
       responsivePadding={responsivePadding}
       style={style}

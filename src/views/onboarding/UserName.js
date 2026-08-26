@@ -301,6 +301,12 @@ function UserName({ navigation }) {
         Alignments.justifySpaceBetween,
         Alignments.fill,
       ]}
+      // U02 — le constat d'Adel du 26/08 : « quand on clique sur un champ qui
+      // est en bas, il faut qu'il aille au-dessus du clavier ». Cet ecran porte
+      // 5 champs (prenom, nom, JJ / MM / AAAA) plus le bouton : clavier ouvert,
+      // la zone restante ne les contient plus. Il n'a AUCUN scroller a lui, le
+      // conteneur peut donc lui en donner un sans rien imbriquer.
+      keyboardScroll
     >
       <View style={[Spaces.gap[40]]}>
         <View style={[Spaces.gap[16]]}>
