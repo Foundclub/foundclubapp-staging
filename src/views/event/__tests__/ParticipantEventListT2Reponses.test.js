@@ -367,4 +367,13 @@ describe('T2 — les boutons de réponse de la carte « Mon planning »', () => 
     // instantané et affiche « Arrivé » à qui vient de répondre.
     expect(clesInvalidees).toContain(JSON.stringify(['eventAttendance', 'evt-1']));
   });
+
+  it('D4 — qui a déjà répondu peut revenir en arrière depuis la carte', () => {
+    mockDejaJoint.mockReturnValue(true);
+    const arbre = monter([entrainementDeMonEquipe('evt-1')]);
+
+    // Sans `onEditAnswer`, cet état n offrait AUCUN bouton : une étiquette, et
+    // rien d autre. Le bouton n apparaît que si l écran branche la sortie.
+    expect(boutons(arbre, 'eventDetails.actions.cancelResponse')).toHaveLength(1);
+  });
 });

@@ -42,6 +42,7 @@ import { joinReservation } from '@/services/reservation/reservationService';
 import { createLogger } from '@/utils/logger/logger';
 
 import { useEventAnswerMutations } from './hooks/useEventAnswerMutations';
+import { OwnAnswerAction, resolveOwnAnswerAction } from './ownAnswerAction';
 
 const participantEventListLogger = createLogger('participant-event-list');
 const FEATURED_PLANNING_SCOPES = ['SECTION', 'CM'];
@@ -542,7 +543,7 @@ function ParticipantEventList({ navigation }) {
    * Handle event press
    * @param {import('@/domains/event/types').FCEvent} event
    */
-  const handleEventPress = (event) => {
+  const handleEventPress = useCallback((event) => {
     if (!event?.documentId) {
       participantEventListLogger.warn('Navigation blocked: missing event documentId');
       return;
@@ -553,7 +554,43 @@ function ParticipantEventList({ navigation }) {
       params: { eventId: event.documentId },
       screen: RouteNames.EventDetails,
     });
-  };
+  }, [navigation]);
+
+  // ↩️ T2/D4 — ON PEUT ENFIN REVENIR EN ARRIÈRE.
+  //
+  // `EventAnswerButtons` n offre « Annuler ma réponse » que si l appelant lui
+  // passe `onDeleteParticipation`, et `EventCardNew:636` le dérive
+  // d `onEditAnswer`. Cet écran ne l a JAMAIS passé : qui avait répondu y
+  // lisait une étiquette (« Je participe ! ») et n avait plus AUCUN bouton.
+  // C est la moitié « on ne sait pas » du constat d Adel : pas de retour
+  // visuel, et pas de sortie.
+  //
+  // ⛔ Ce que fait le bouton ne se décide pas ici : `resolveOwnAnswerAction`
+  // le tranche déjà pour la fiche et pour la liste de recherche. Une seule
+  // règle, trois surfaces — le libellé ne peut pas promettre autre chose que
+  // ce que le geste fait.
+  const handleEditAnswer = useCallback((event) => {
+    const { kind } = resolveOwnAnswerAction({
+      // `participationRequests` n est pas déclaré sur `FCEvent` alors que l API
+      // le rend : le même accès existe déjà dans `EventAnswerButtons`.
+      activeEventParticipations: /** @type {any} */ (event)?.participationRequests,
+      event,
+      user: userData,
+    });
+
+    if (kind === OwnAnswerAction.switchToPresent && event?.documentId) {
+      respondToEventRsvpMutation.mutate({
+        answer: 'present',
+        eventId: event.documentId,
+      });
+      return;
+    }
+
+    // Annuler demande une confirmation et la suppression de la ligne : tout
+    // cela vit déjà sur la fiche. On y emmène plutôt que d en écrire une
+    // seconde version ici.
+    handleEventPress(event);
+  }, [handleEventPress, respondToEventRsvpMutation, userData]);
 
   /**
    * @param {{ item: import('@/domains/event/types').FCEvent }} props
@@ -594,6 +631,7 @@ function ParticipantEventList({ navigation }) {
             displayProfile="teamFocused"
             item={item}
             onDecline={() => handleDeclineEvent(item)}
+            onEditAnswer={() => handleEditAnswer(item)}
             onJoin={() => handleJoinEvent(item)}
             onLogin={() => {}}
             onParticipate={() => handleParticipateToEvent(item)}
