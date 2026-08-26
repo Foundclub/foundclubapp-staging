@@ -368,7 +368,7 @@ function ParticipantEventList({ navigation }) {
   // 🎯 Les branches ci-dessous sont celles d `EventListContent` (:881-887 et
   // :943-953), à l identique — pas une réécriture. Les deux mutations viennent
   // d un hook partagé pour qu il n y ait pas de cinquième copie.
-  const { respondToEventRsvpMutation } = useEventAnswerMutations();
+  const { missingEventMutation, respondToEventRsvpMutation } = useEventAnswerMutations();
 
   const handleParticipateToEvent = useCallback(async (event) => {
     const isStageDayEvent = String(event?.eventFormat || '').toLowerCase() === 'stage_day';
@@ -448,6 +448,28 @@ function ParticipantEventList({ navigation }) {
       }
     }
   }, [createEventParticipationMutation, navigation, respondToEventRsvpMutation, userData]);
+
+  // 🔇 T2/D2 — « ABSENT·E » N ÉTAIT BRANCHÉ SUR RIEN.
+  //
+  // Les deux cartes de cet écran passaient `onDecline={() => {}}` : une
+  // fonction VIDE. Le bouton s enfonçait, et il ne se passait rien — ni appel,
+  // ni message, ni changement à l écran. C est la moitié « ça ne marche pas »
+  // du constat d Adel, et elle ne se voyait dans AUCUN témoin.
+  //
+  // Le geste est celui du frère (`EventListContent.js:1011-1021`) : une séance
+  // d un stage se répond par la porte des réponses, tout le reste passe par
+  // `POST /events/:id/missing`.
+  const handleDeclineEvent = useCallback((event) => {
+    if (!event?.documentId) return;
+    if (String(event?.eventFormat || '').toLowerCase() === 'stage_day') {
+      respondToEventRsvpMutation.mutate({
+        answer: 'absent',
+        eventId: event.documentId,
+      });
+      return;
+    }
+    missingEventMutation.mutate(event.documentId);
+  }, [missingEventMutation, respondToEventRsvpMutation]);
 
   const handleJoinEvent = useCallback((event) => {
     const participationFlow = resolveParticipationFlow(event, { user: userData });
@@ -544,7 +566,7 @@ function ParticipantEventList({ navigation }) {
             <EventCardNew
               item={item.reservation}
               // @ts-ignore
-              onDecline={() => {}}
+              onDecline={() => handleDeclineEvent(item.reservation)}
               onJoin={() => handleJoinEvent(item.reservation)}
               onLogin={() => {}}
               onParticipate={() => handleParticipateToEvent(item.reservation)}
@@ -561,7 +583,7 @@ function ParticipantEventList({ navigation }) {
           <EventCardNew
             displayProfile="teamFocused"
             item={item}
-            onDecline={() => {}}
+            onDecline={() => handleDeclineEvent(item)}
             onJoin={() => handleJoinEvent(item)}
             onLogin={() => {}}
             onParticipate={() => handleParticipateToEvent(item)}

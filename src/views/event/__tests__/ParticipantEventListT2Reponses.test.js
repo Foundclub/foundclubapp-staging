@@ -338,6 +338,19 @@ describe('T2 — les boutons de réponse de la carte « Mon planning »', () => 
     expect(mockCreerDemande).not.toHaveBeenCalled();
   });
 
+  it('D2 — « Absent » appelle vraiment le serveur (il était branché sur du vide)', async () => {
+    const arbre = monter([entrainementDeMonEquipe('evt-1')]);
+
+    const absent = boutons(arbre, 'eventList.actions.absent');
+    expect(absent).toHaveLength(1);
+
+    await act(async () => {
+      absent[0].props.onPress();
+    });
+
+    expect(mockDeclarerAbsent).toHaveBeenCalledWith('evt-1');
+  });
+
   it('D3 — répondre invalide AUSSI le pointage de cet événement', async () => {
     const arbre = monter([entrainementDeMonEquipe('evt-1')]);
 
