@@ -452,13 +452,16 @@ function ParticipantEventList({ navigation }) {
     // pas » — et c est pour ça qu il fallait le fermer AUSSI : sinon il restait
     // un chemin capable de reproduire le constat après le correctif.
     if (!event?.documentId || !userData?.documentId) {
+      // 🔎 LE DÉTAIL VA AU JOURNAL, PAS À L ÉCRAN : ce garde couvre DEUX
+      // manques (l événement ou le profil), et une phrase qui en nommerait un
+      // seul serait fausse une fois sur deux. Le journal, lui, dit lequel.
       participantEventListLogger.warn('Participation blocked: incomplete identity', {
         hasEventId: Boolean(event?.documentId),
         hasUserId: Boolean(userData?.documentId),
       });
       Alert.alert(
         'Erreur',
-        "Ta réponse n'a pas pu être envoyée : cet événement est incomplet.",
+        "Ta réponse n'a pas pu être envoyée. Réessaie dans un instant.",
       );
       return;
     }
