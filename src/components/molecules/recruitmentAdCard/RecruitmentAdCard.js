@@ -21,6 +21,7 @@ import { RouteNames } from '@/navigation/routeNames';
 import { resolveRecruitmentAdApplicationState } from '@/services/recruitment/recruitmentService';
 
 import { formatDateWithDayPrefix } from '@/utils/date';
+import { resolveLocationDisplayLabel } from '@/utils/facilityAddressLabel';
 import { getImageUrl } from '@/utils/imageUrl';
 import { getShortAddress } from '@/utils/location';
 
@@ -95,9 +96,10 @@ function RecruitmentAdCard({
   const sectionName = ad.section?.name || ad.section || '';
   const sportName = ad.sport || team?.sport || 'Football';
   const address = getShortAddress(ad.city || club?.city || '');
-  const locationLabel = (
-    typeof ad.address === 'object' ? ad.address?.label : ad.address
-  ) || address || 'Lieu non précisé';
+  // T8 : 6 annonces portent « Gymnase - [object Object] » ECRIT EN BASE (releve du
+  // 26/08). Tant que ces lignes ne sont pas reparees, l'affichage recompose le
+  // libelle depuis les champs restes sains de la MEME charge.
+  const locationLabel = resolveLocationDisplayLabel(ad.address, address || 'Lieu non précisé');
   const isDetectionLinked = normalizeTypeLabel(ad?.event?.type?.name).includes('detection');
   const detectionDateLabel = ad?.event?.date
     ? formatDateWithDayPrefix(new Date(ad.event.date))

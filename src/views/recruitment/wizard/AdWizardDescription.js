@@ -11,6 +11,8 @@ import WizardStepLayout from '@/components/molecules/wizardStepLayout/WizardStep
 
 import { RouteNames } from '@/navigation/routeNames';
 
+import { resolveLocationDisplayLabel } from '@/utils/facilityAddressLabel';
+
 import { useAdWizard } from './AdWizardContext';
 import {
   getAdWizardDescriptionStepIndex,
@@ -57,13 +59,14 @@ function AdWizardDescription({ navigation }) {
     backgroundColor: 'rgba(4, 31, 44, 0.82)',
     borderColor: 'rgba(1, 179, 244, 0.24)',
   };
+  const locationHighlight = resolveLocationDisplayLabel(state.address);
   const contextualHighlights = [
     state.team?.name ? `Équipe : ${state.team.name}` : null,
     state.positions.length > 0
       ? `${state.positions.length} poste${state.positions.length > 1 ? 's' : ''} sélectionné${state.positions.length > 1 ? 's' : ''}`
       : null,
     isCoachAd && state.coachRole ? `Rôle : ${state.coachRoleOther || state.coachRole}` : null,
-    state.address?.label ? `Lieu : ${state.address.label}` : null,
+    locationHighlight ? `Lieu : ${locationHighlight}` : null,
   ].filter(Boolean);
   const descriptionTips = isCoachAd
     ? [
