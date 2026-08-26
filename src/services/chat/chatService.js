@@ -17,7 +17,15 @@ const chatMessageSchema = Joi.object({
   // Some chat entries (attachments/polls/compositions) can carry an empty textual message.
   message: Joi.string().allow('').allow(null).required(),
   replyTo: Joi.object().allow(null).optional(),
-  sender: Joi.object().required(),
+  // 🧾 S10-C / D4 — UN MESSAGE SYSTEME N'A PAS D'EXPEDITEUR.
+  // Le serveur en poste deja (`sender: null` — matchmaking-engine.js:1343,
+  // post-slot-resolution.js:159) et S10-A (D8bis) va en poster dans le fil de
+  // chaque equipe invitee. Sans `.allow(null)`, UNE ligne systeme faisait
+  // basculer la PAGE ENTIERE dans le repli non valide (:203 ci-dessous) : les
+  // bulles restaient a l'ecran, mais plus rien n'etait verifie et un
+  // avertissement partait a chaque ouverture. `.required()` est CONSERVE : la
+  // clef doit etre presente, c'est sa VALEUR nulle qui devient legitime.
+  sender: Joi.object().allow(null).required(),
   updatedAt: Joi.date().required(),
 }).required();
 

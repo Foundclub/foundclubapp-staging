@@ -57,6 +57,8 @@ const getTypeLabel = (type, t) => {
       return t('requestsHub.types.interest', 'Interet');
     case 'team':
       return t('requestsHub.types.team', 'Équipe');
+    case 'teamInvite':
+      return t('requestsHub.types.teamInvite', 'Invitation');
     default:
       return t('requestsHub.types.unknown', 'Demande');
   }
@@ -126,6 +128,12 @@ function RequestFeedItem({
   const isInstallationRequest = item?.type === 'installation';
   const isInterestRequest = item?.type === 'interest';
   const isMembershipRequest = item?.type === 'team' || item?.type === 'club';
+  const isTeamInvitation = item?.type === 'teamInvite';
+  // S10-C / D1 — la date de l evenement, avec LE formateur deja present dans ce
+  // fichier plutot qu un second dans le mappeur.
+  const invitationDateLabel = isTeamInvitation
+    ? formatWindowLabel(item?.meta?.eventDate, null)
+    : '';
   const isEventParticipationRequest = item?.type === 'event'
     && Boolean(requesterId || requesterName || requesterAvatarUrl);
   const canOpenEvent = Boolean(item?.meta?.eventId && onEventPress);
@@ -220,6 +228,19 @@ function RequestFeedItem({
         <Text numberOfLines={3} style={[Fonts.p2, Fonts.neutral100]}>
           {item?.subtitle}
         </Text>
+      </View>
+    );
+  } else if (isTeamInvitation) {
+    bodyContent = (
+      <View style={[Spaces.gap[4]]}>
+        <Text numberOfLines={3} style={[Fonts.p2, Fonts.neutral100]}>
+          {item?.subtitle}
+        </Text>
+        {invitationDateLabel ? (
+          <Text numberOfLines={1} style={[Fonts.p3, Fonts.primary200]}>
+            {invitationDateLabel}
+          </Text>
+        ) : null}
       </View>
     );
   } else if (isInstallationRequest) {
@@ -386,7 +407,9 @@ function RequestFeedItem({
             disabled={isBusy}
             onPress={() => onEventPress && onEventPress(item)}
             size="small"
-            title={t('requestsHub.actions.viewEvent', "Voir l'événement")}
+            title={isTeamInvitation
+              ? t('requestsHub.invitations.respond', "Répondre à l'invitation")
+              : t('requestsHub.actions.viewEvent', "Voir l'événement")}
             variant="Secondary"
           />
         </View>

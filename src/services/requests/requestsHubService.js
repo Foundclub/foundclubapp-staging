@@ -3,6 +3,7 @@ import {
   mapClubInterestRequestToHubItem,
   mapClubMembershipRequestToHubItem,
   mapEventParticipationRequestToHubItem,
+  mapEventTeamInvitationToHubItem,
   mapFacilityOverrideRequestToHubItem,
   mapFeaturedRequestToHubItem,
   mapFriendlyMatchApplicationToHubItem,
@@ -13,7 +14,11 @@ import {
 
 import { getClubInterestRequests } from '@/services/clubInterestRequest/clubInterestRequestService';
 import { getClubMembershipRequests } from '@/services/clubMembershipRequest/clubMembershipRequestService';
-import { getEvents, getPendingFeaturedRequests } from '@/services/event/eventService';
+import {
+  getEvents,
+  getMyPendingEventTeamInvitations,
+  getPendingFeaturedRequests,
+} from '@/services/event/eventService';
 import { getPendingFacilityOverrideRequests } from '@/services/facility/facilityService';
 import {
   getMyFriendlyMatchAds,
@@ -328,6 +333,15 @@ export const getRequestsHubData = async (rawContext = {}) => {
       }),
       key: 'friendly',
     },
+    {
+      // 🎟️ S10-C / D1 — LES INVITATIONS D EQUIPE. Meme porte que `team` et
+      // `interest` : le serveur, lui, recalcule le perimetre (equipe que
+      // j entraine OU club que je dirige) et ne croit rien de ce qu on lui
+      // enverrait. Cette source ne lui passe donc AUCUN parametre.
+      enabled: context.teamIds.length > 0 || Boolean(context.clubId),
+      fetcher: () => getMyPendingEventTeamInvitations(),
+      key: 'teamInvite',
+    },
   ];
 
   const enabledSources = sources.filter((source) => source.enabled);
@@ -347,6 +361,17 @@ export const getRequestsHubData = async (rawContext = {}) => {
       // ⚠️ Elle ne couvre QUE 403. Un 400 (requete refusee) et un 5xx (serveur
       // tombe) restent annonces : ceux-la, un « Reessayer » peut les resoudre.
       if (toErrorStatus(result.reason) === 403) {
+        return;
+      }
+      // 🕓 S10-C / D1 — LES DEUX MOITIES NE VOYAGENT PAS A LA MEME VITESSE.
+      // `/event-team-audiences/mine` n existe qu une fois S10-A deploye sur la
+      // recette (sa permission est creee au demarrage — contrat S10-A, section
+      // 7). Tant que l app y arrive avant le serveur, la route rend 404 :
+      // annoncer « Invitations indisponible » a tout le monde serait un faux
+      // defaut, et le bouton « Reessayer » ne pourrait rien y faire. La
+      // rubrique reste simplement vide. ⚠️ Tolerance limitee a CETTE source :
+      // partout ailleurs, un 404 reste une panne qui se dit.
+      if (source.key === 'teamInvite' && toErrorStatus(result.reason) === 404) {
         return;
       }
       errors.push({
@@ -386,6 +411,16 @@ export const getRequestsHubData = async (rawContext = {}) => {
             ...pendingRequests.map((request) => mapEventParticipationRequestToHubItem(event, request)),
           );
         });
+    }
+
+    // 🔒 S10-C / D1 — AUCUN FILTRE ICI, ET C EST LE POINT ENTIER.
+    // La pastille d accueil (`invitationsEquipe`) et cette liste posent la
+    // MEME question cote serveur — un temoin serveur compare les deux requetes
+    // (contrat S10-A, section 5). Ajouter le moindre tri cote app (statut,
+    // date, equipe) ferait diverger le compteur de la liste : c est exactement
+    // le compteur fantome deja paye (piege Q1).
+    if (source.key === 'teamInvite') {
+      items.push(...entries.map(mapEventTeamInvitationToHubItem));
     }
 
     if (source.key === 'featured') {

@@ -92,6 +92,10 @@ const getSourceErrorLabel = (source, t) => {
       return t('requestsHub.types.interest', 'Interet');
     case 'team':
       return t('requestsHub.types.team', 'Équipe');
+    // S10-C — sans ce libelle, une invitation d equipe indisponible se
+    // presenterait sous le nom fourre-tout « Demande ».
+    case 'teamInvite':
+      return t('requestsHub.types.teamInvite', 'Invitation');
     default:
       return t('requestsHub.types.unknown', 'Demande');
   }
@@ -655,6 +659,7 @@ function RequestsHub({ navigation, route }) {
     { key: 'installation', label: t('requestsHub.filters.installation', 'Installation') },
     { key: 'interest', label: t('requestsHub.filters.interest', 'Interets') },
     { key: 'friendly', label: t('requestsHub.filters.friendly', 'Amicaux') },
+    { key: 'teamInvite', label: t('requestsHub.filters.teamInvite', 'Invitations') },
   ]).filter((chip) => availableFilters.includes(/** @type {any} */ (chip.key))), [availableFilters, t]);
 
   const sourceErrors = requestsQuery?.data?.errors || [];

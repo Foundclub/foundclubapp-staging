@@ -3,6 +3,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useMemo } from 'react';
 import { Alert, Text, View } from 'react-native';
 
+import { canUserEditClub } from '@/domains/auth/authUseCases';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -36,13 +37,30 @@ const isTeamTrainerForUser = (team, user) => {
   return Array.isArray(team?.trainers) && team.trainers.some((trainer) => getUserKey(trainer) === userKey);
 };
 
+/**
+ * S10-C / D5 — QUI PEUT REPONDRE, LU COMME LE SERVEUR LE LIT.
+ *
+ * Le serveur n'interroge pas la liste des entraineurs : il appelle
+ * `canManageTeam(acteur, equipe)` (admin/event-team-audience.ts:135-144), qui
+ * dit oui a l'entraineur de l'equipe ET au dirigeant de son club. Ne regarder
+ * que `trainers` cacherait donc les boutons a un dirigeant que le serveur
+ * laisserait passer.
+ * @param {any} team
+ * @param {any} user
+ * @returns {boolean}
+ */
+const isTeamManagerForUser = (team, user) => {
+  if (!getUserKey(user)) return false;
+  if (isTeamTrainerForUser(team, user)) return true;
+  return canUserEditClub(user, team?.club?.documentId || '');
+};
+
 function EventTeamAudiencesSection({ canManageEvent = false, event, userData }) {
   const {
     Alignments, ApplicationStyle, Colors, Fonts, Spaces,
   } = useTheme();
   const queryClient = useQueryClient();
   const audiences = useMemo(() => (Array.isArray(event?.teamAudiences) ? event.teamAudiences : []), [event?.teamAudiences]);
-  const currentUserKey = getUserKey(userData);
 
   const refreshEvent = () => {
     queryClient.invalidateQueries({ queryKey: ['event', event?.documentId] });
@@ -67,12 +85,20 @@ function EventTeamAudiencesSection({ canManageEvent = false, event, userData }) 
       <View style={Spaces.gap[12]}>
         {audiences.map((audience) => {
           const team = audience?.team || null;
+          const audienceId = audience?.documentId || audience?.id;
           const selectedMembers = Array.isArray(audience?.selectedMembers) ? audience.selectedMembers : [];
-          const canRespond = Boolean(
-            canManageEvent
-            || isTeamTrainerForUser(team, userData)
-            || currentUserKey === getUserKey(audience?.respondedBy),
-          );
+          // S10-C / D5 — TROIS CHANGEMENTS, TROIS RAISONS MESUREES :
+          //  1. `canManageEvent` sort : apres S10-A (D2) l'organisateur ne peut
+          //     plus s'auto-accepter, ses boutons rendraient 403 ;
+          //  2. la comparaison a `respondedBy` sort : sur un PENDING elle
+          //     comparait DEUX chaines vides des que le lecteur n'avait pas
+          //     d'identite chargee, et montrait les boutons a n'importe qui ;
+          //  3. le dirigeant du club invite entre : c'est la regle du serveur.
+          const isPending = String(audience?.status || '').toUpperCase() === 'PENDING';
+          const canRespond = isPending && isTeamManagerForUser(team, userData);
+          // L'organisateur garde l'annulation (S10-A D2). Sans ce bouton, la
+          // route `cancel` ne serait atteinte par RIEN dans l'app.
+          const canCancel = isPending && !canRespond && canManageEvent;
 
           return (
             <View
@@ -104,17 +130,28 @@ function EventTeamAudiencesSection({ canManageEvent = false, event, userData }) 
                 <Text style={[Fonts.p3, Fonts.neutral200]}>{audience.team.club.name}</Text>
               ) : null}
 
-              {canRespond && String(audience?.status || '').toUpperCase() === 'PENDING' ? (
+              {canRespond ? (
                 <View style={[Alignments.row, Spaces.gap[8], { flexWrap: 'wrap' }]}>
                   <Button
                     disabled={respondMutation.isPending}
-                    onPress={() => respondMutation.mutate({ action: 'accept', audienceId: audience.documentId || audience.id })}
+                    onPress={() => respondMutation.mutate({ action: 'accept', audienceId })}
                     title="Accepter"
                   />
                   <Button
                     disabled={respondMutation.isPending}
-                    onPress={() => respondMutation.mutate({ action: 'refuse', audienceId: audience.documentId || audience.id })}
+                    onPress={() => respondMutation.mutate({ action: 'refuse', audienceId })}
                     title="Refuser"
+                    variant="Secondary"
+                  />
+                </View>
+              ) : null}
+
+              {canCancel ? (
+                <View style={[Alignments.row, Spaces.gap[8], { flexWrap: 'wrap' }]}>
+                  <Button
+                    disabled={respondMutation.isPending}
+                    onPress={() => respondMutation.mutate({ action: 'cancel', audienceId })}
+                    title="Annuler l'invitation"
                     variant="Secondary"
                   />
                 </View>

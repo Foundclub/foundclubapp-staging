@@ -234,7 +234,7 @@ describe('requestMappers', () => {
     // et s envoie d equipe a equipe, jamais au nom d un club seul.
     expect(getAvailableRequestHubFilters({
       teamIds: ['team-1'],
-    })).toEqual(['all', 'team', 'interest', 'friendly']);
+    })).toEqual(['all', 'team', 'interest', 'friendly', 'teamInvite']);
   });
 
   // 🎁 Y04 — LE TEMOIN QUE R02 A LAISSE, RETOURNE. Il disait « sans equipe
@@ -250,10 +250,20 @@ describe('requestMappers', () => {
   test('returns club and event filters only when a club context exists', () => {
     expect(getAvailableRequestHubFilters({
       clubId: 'club-1',
-    })).toEqual(['all', 'team', 'interest', 'friendly', 'club', 'event', 'featured']);
+    })).toEqual(['all', 'team', 'interest', 'friendly', 'teamInvite', 'club', 'event', 'featured']);
     expect(getAvailableRequestHubFilters({
       cmId: 'cm-1',
     })).toEqual(['all', 'featured']);
+  });
+
+  // 🎟️ S10-C / D1 — l onglet « Invitations » suit la MEME porte que le serveur :
+  // equipe que j entraine OU club que je dirige. Un compte sans les deux ne
+  // peut rien accepter, donc rien ne s affiche.
+  test('S10-C — le filtre des invitations d equipe suit le perimetre du serveur', () => {
+    expect(getAvailableRequestHubFilters({ teamIds: ['team-1'] })).toContain('teamInvite');
+    expect(getAvailableRequestHubFilters({ clubId: 'club-1' })).toContain('teamInvite');
+    expect(getAvailableRequestHubFilters({ cmId: 'cm-1' })).not.toContain('teamInvite');
+    expect(getAvailableRequestHubFilters({})).not.toContain('teamInvite');
   });
 
   test('adds the installation filter only for installation managers', () => {
@@ -261,6 +271,8 @@ describe('requestMappers', () => {
       canManageInstallationRequests: true,
       clubId: 'club-1',
       teamIds: ['team-1'],
-    })).toEqual(['all', 'team', 'interest', 'friendly', 'club', 'event', 'featured', 'installation']);
+    })).toEqual([
+      'all', 'team', 'interest', 'friendly', 'teamInvite', 'club', 'event', 'featured', 'installation',
+    ]);
   });
 });
