@@ -42,6 +42,7 @@ import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrap
 import EventFiltersSheet from '@/components/organisms/filtersSheet/EventFiltersSheet';
 import FeaturedEvents from '@/components/organisms/featuredEvents/FeaturedEvents';
 import SearchComponent from '@/components/organisms/searchComponent/searchComponent';
+import { useEventAnswerMutations } from '@/views/event/hooks/useEventAnswerMutations';
 import { OwnAnswerAction, resolveOwnAnswerAction } from '@/views/event/ownAnswerAction';
 
 import { openPublicAuthFlow } from '@/navigation/public/publicAuthNavigation';
@@ -49,7 +50,7 @@ import { RouteNames } from '@/navigation/routeNames';
 import useBottomDockLayout from '@/navigation/useBottomDockLayout';
 
 import { getEventsQueryKey, useGetEvents } from '@/services/event/eventQueries';
-import { getEvents, missingEvent, respondToEventRsvp } from '@/services/event/eventService';
+import { getEvents } from '@/services/event/eventService';
 import { createEventParticipation } from '@/services/eventParticipation/eventParticipationService';
 import { keepPreviousPageData } from '@/services/queryOptions';
 import { joinReservation } from '@/services/reservation/reservationService';
@@ -759,51 +760,42 @@ function EventListContent({
     onLoadMore,
   ]);
 
-  /**
-   * Mutation for marking an event as missing
-   * @type {import('@tanstack/react-query').UseMutationResult<any, Error, string, unknown>}
-   */
-  const missingEventMutation = useMutation({
-    mutationFn: missingEvent,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['events'] });
-      queryClient.invalidateQueries({ queryKey: ['planning', 'personal'] });
-      if (!propEvents) {
-        if (isViewportListMode) {
-          refetchViewport();
-        } else if (isSmartSearchEnabled) {
-          refetchSearch();
-        } else {
-          refetch();
-        }
-      }
-    },
-  });
+  // 🧊 T2/D3 — LES DEUX LISTES PARTAGENT DÉSORMAIS LEURS INVALIDATIONS.
+  //
+  // Ces deux mutations vivaient ici, et leur jumelle sur « Mon planning »
+  // ailleurs. Les DEUX oubliaient `['eventAttendance', eventId]`, que la fiche
+  // invalide depuis S1 : après avoir répondu depuis une liste, le pointage
+  // gardait son ancien instantané et pouvait afficher « Arrivé » à quelqu un
+  // qui venait de se déclarer absent. Corriger la seule liste du constat
+  // aurait laissé l autre cassée — d où la fonction partagée.
+  //
+  // ⛔ CE QUI NE BOUGE PAS : le rafraîchissement propre à cet écran (viewport,
+  // recherche, ou la requête simple) reste ici, au caractère près ; il est
+  // seulement passé au hook au lieu d être recopié dans deux `onSuccess`.
+  // ✅ CE QUI CHANGE EN PLUS : `missingEvent` n avait AUCUN `onError` ici — un
+  // échec d absence était muet. Il en hérite un, comme son jumeau.
+  const refetchAfterAnswer = useCallback(() => {
+    if (propEvents) return;
+    if (isViewportListMode) {
+      refetchViewport();
+    } else if (isSmartSearchEnabled) {
+      refetchSearch();
+    } else {
+      refetch();
+    }
+  }, [
+    isSmartSearchEnabled,
+    isViewportListMode,
+    propEvents,
+    refetch,
+    refetchSearch,
+    refetchViewport,
+  ]);
 
-  const respondToEventRsvpMutation = useMutation({
-    mutationFn: (
-      /** @type {{ answer: 'present' | 'absent', eventId: string }} */ { answer, eventId },
-    ) => respondToEventRsvp(eventId, answer),
-    onError: (mutationError) => {
-      Alert.alert(
-        t('common.error', 'Erreur'),
-        getParticipationErrorMessage(mutationError, t('common.errorOccurred')),
-      );
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['events'] });
-      queryClient.invalidateQueries({ queryKey: ['planning', 'personal'] });
-      if (!propEvents) {
-        if (isViewportListMode) {
-          refetchViewport();
-        } else if (isSmartSearchEnabled) {
-          refetchSearch();
-        } else {
-          refetch();
-        }
-      }
-    },
-  });
+  const {
+    missingEventMutation,
+    respondToEventRsvpMutation,
+  } = useEventAnswerMutations(refetchAfterAnswer);
 
   const handleEventSelect = useCallback((/** @type {FCEvent} */ event) => {
     if (!event?.documentId) {
