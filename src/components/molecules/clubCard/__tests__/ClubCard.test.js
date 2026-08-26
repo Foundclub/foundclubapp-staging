@@ -2,6 +2,7 @@ import { Children } from 'react';
 import { StyleSheet, TouchableOpacity } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
+import MarqueeText, { getActiveMarqueeCount } from '@/components/atoms/marqueeText/MarqueeText';
 import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 
 import ClubCard from '../ClubCard';
@@ -227,5 +228,92 @@ describe('ClubCard — enveloppe visuelle (R07 gelé)', () => {
     ));
     expect(clipped.length).toBeGreaterThan(0);
     expect(clipped[0].type).toBe('View');
+  });
+});
+
+// U01 — LE DÉFAUT VU PAR ADEL LE 26/08 : « quand un nom de club est trop long
+// on doit cliquer pour le voir en entier ». Le nom était rendu avec
+// `numberOfLines={1}` + `ellipsizeMode="tail"` : la carte le coupait par « … »
+// et le nom complet n'existait plus qu'au fond de la fiche.
+//
+// La correction ne fabrique PAS une animation de plus : elle réutilise la
+// mécanique du pied sponsors, déjà présente dans cette même carte (registre des
+// boucles compris). Ces témoins gèlent les deux bords du comportement.
+describe('ClubCard — U01 : un nom trop long DÉFILE', () => {
+  const mesurerLeNom = (tree, { largeurTexte, largeurVisible }) => {
+    const marquee = tree.root.findByType(MarqueeText);
+    const enveloppe = marquee.find(
+      (node) => node.type === 'View' && typeof node.props?.onLayout === 'function',
+    );
+    const sonde = marquee.find(
+      (node) => node.type === 'Text' && typeof node.props?.onLayout === 'function',
+    );
+    act(() => {
+      enveloppe.props.onLayout({ nativeEvent: { layout: { width: largeurVisible } } });
+      sonde.props.onLayout({ nativeEvent: { layout: { width: largeurTexte } } });
+    });
+  };
+
+  const NOM_FLEUVE = 'Association Sportive et Culturelle de Villeneuve-sur-Lot Football';
+
+  it('le nom passe par la mécanique PARTAGÉE, jamais par une seconde', () => {
+    const tree = renderCard({ item: baseClub });
+    const marquees = tree.root.findAllByType(MarqueeText);
+
+    expect(marquees).toHaveLength(1);
+    expect(marquees[0].props.text).toBe('FC Marseille Nord');
+    act(() => {
+      tree.unmount();
+    });
+  });
+
+  it('nom trop long pour la carte : il défile', () => {
+    const tree = renderCard({ item: { ...baseClub, name: NOM_FLEUVE } });
+    expect(getActiveMarqueeCount()).toBe(0);
+
+    mesurerLeNom(tree, { largeurTexte: 480, largeurVisible: 210 });
+
+    expect(getActiveMarqueeCount()).toBe(1);
+    expect(textsOf(tree)).toContain(NOM_FLEUVE);
+    act(() => {
+      tree.unmount();
+    });
+    expect(getActiveMarqueeCount()).toBe(0);
+  });
+
+  it('nom qui tient dans la carte : strictement immobile', () => {
+    const tree = renderCard({ item: baseClub });
+    mesurerLeNom(tree, { largeurTexte: 140, largeurVisible: 210 });
+
+    expect(getActiveMarqueeCount()).toBe(0);
+    act(() => {
+      tree.unmount();
+    });
+  });
+
+  it('D5 — sans mesure de largeur : la carte retombe sur la troncature « … »', () => {
+    const tree = renderCard({ item: { ...baseClub, name: NOM_FLEUVE } });
+    const tronquees = tree.root.findAll(
+      (node) => node.type === 'Text' && node.props?.ellipsizeMode === 'tail',
+    );
+
+    expect(tronquees).toHaveLength(1);
+    expect(getActiveMarqueeCount()).toBe(0);
+    act(() => {
+      tree.unmount();
+    });
+  });
+
+  it('D4 — le nom COMPLET reste porté par le libellé d\'accessibilité de la carte', () => {
+    const tree = renderCard({ item: { ...baseClub, name: NOM_FLEUVE } });
+    const carte = tree.root.findAllByType(TouchableOpacity)[0];
+
+    expect(carte.props.accessibilityLabel).toBe(`${NOM_FLEUVE}, 13008 Marseille`);
+    mesurerLeNom(tree, { largeurTexte: 480, largeurVisible: 210 });
+    expect(carte.props.accessibilityLabel).toBe(`${NOM_FLEUVE}, 13008 Marseille`);
+
+    act(() => {
+      tree.unmount();
+    });
   });
 });

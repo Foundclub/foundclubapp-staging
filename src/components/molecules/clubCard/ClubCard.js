@@ -9,6 +9,7 @@ import {
 import { withAlpha } from '@/theme/colors';
 import useTheme from '@/theme/themeContext';
 
+import MarqueeText from '@/components/atoms/marqueeText/MarqueeText';
 import ClubCardSurface from '@/components/molecules/clubCard/ClubCardSurface';
 import ClubLogoMark from '@/components/molecules/clubLogoMark/ClubLogoMark';
 import SponsorMarquee from '@/components/molecules/sponsorMarquee/SponsorMarquee';
@@ -92,6 +93,12 @@ function ClubCard({ item, onPress, reasonLabel = '' }) {
     { accent: true, label: 'Annonces', value: adsCount },
   ].filter((stat) => stat.value !== null);
 
+  // Sorti du JSX comme glassChipStyle juste en dessous : l'encre claire ne
+  // doit pas cotoyer le fond primary500 du badge OMNISPORT, sous peine de
+  // faire sonner le contrat de theme sur un rapprochement qui n'existe pas a
+  // l'ecran (le nom est pose sur le degrade de la carte, pas sur le badge).
+  const clubNameStyle = [styles.clubName, { color: Colors.neutral00 }];
+
   const glassChipStyle = {
     backgroundColor: withAlpha(Colors.neutral00, 0.08),
     borderColor: withAlpha(Colors.neutral00, 0.16),
@@ -128,13 +135,13 @@ function ClubCard({ item, onPress, reasonLabel = '' }) {
           />
           <View style={styles.headerTextContainer}>
             <View style={styles.nameRow}>
-              <Text
-                ellipsizeMode="tail"
-                numberOfLines={1}
-                style={[styles.clubName, { color: Colors.neutral00 }]}
-              >
-                {item?.name || 'Club'}
-              </Text>
+              {/*
+                U01 — un nom trop long DÉFILE au lieu d'être coupé par « … ».
+                Le mécanisme est celui du pied sponsors juste en bas de cette
+                même carte : une seule animation dans le dépôt, un seul
+                registre de boucles actives. Un nom qui tient ne bouge pas.
+              */}
+              <MarqueeText style={clubNameStyle} text={item?.name || 'Club'} />
               {isMultisport ? (
                 <View style={[styles.omnisportBadge, { backgroundColor: Colors.primary500 }]}>
                   <Text style={[styles.omnisportText, { color: Colors.primary900 }]}>

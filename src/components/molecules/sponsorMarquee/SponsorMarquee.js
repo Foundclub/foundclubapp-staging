@@ -1,12 +1,6 @@
-import { useIsFocused } from '@react-navigation/native';
-import {
-  useEffect, useMemo, useRef, useState,
-} from 'react';
+import { useMemo, useState } from 'react';
 import {
   Animated,
-  AppState,
-  Easing,
-  Platform,
   StyleSheet,
   Text,
   View,
@@ -18,6 +12,8 @@ import useTheme from '@/theme/themeContext';
 
 import SponsorLogoTile from '@/components/atoms/sponsorLogoTile/SponsorLogoTile';
 
+import useMarqueeLoop, { getActiveMarqueeCount } from '@/hooks/useMarqueeLoop';
+
 // Pied sponsors du handoff « Cartes Rechercher » (section 4a) : une seule
 // ligne défilante, ~4 s par logo, contenu dupliqué pour une boucle continue,
 // fondus de 18 px aux bords, masqué sans sponsor.
@@ -26,13 +22,12 @@ const MIN_LOOP_ITEMS = 4;
 const FADE_WIDTH = 18;
 const TILE_SIZE = 22;
 
-// Registre des boucles réellement actives. C'est la preuve mesurable de la
-// contrainte de performance : une carte hors écran (démontée par la liste
-// virtualisée, écran non focus, app en arrière-plan ou prop paused) ne doit
-// entretenir AUCUNE animation.
-const activeLoops = new Set();
-
-export const getActiveMarqueeCount = () => activeLoops.size;
+// Le registre des boucles réellement actives — la preuve mesurable de la
+// contrainte de performance — vit désormais dans la mécanique partagée
+// (U01) : une carte hors écran, un écran non focus, une app en arrière-plan
+// ou la prop `paused` ne doivent entretenir AUCUNE animation. Ce re-export
+// garde le point d'observation là où ses témoins le cherchent.
+export { getActiveMarqueeCount };
 
 /**
  * Nom affichable d'un sponsor.
@@ -60,11 +55,7 @@ function SponsorMarquee({
   style,
 }) {
   const { Colors } = useTheme();
-  const isFocused = useIsFocused();
   const [copyWidth, setCopyWidth] = useState(0);
-  const [isAppActive, setIsAppActive] = useState(AppState.currentState !== 'background');
-  const translateX = useRef(new Animated.Value(0)).current;
-  const loopIdRef = useRef({});
 
   const items = useMemo(() => {
     const list = (sponsors || []).filter(Boolean);
@@ -85,42 +76,11 @@ function SponsorMarquee({
     return loop;
   }, [sponsors]);
 
-  useEffect(() => {
-    const subscription = AppState.addEventListener('change', (nextState) => {
-      setIsAppActive(nextState === 'active');
-    });
-    return () => subscription?.remove?.();
-  }, []);
-
-  const shouldAnimate = items.length > 0
-    && copyWidth > 0
-    && !paused
-    && isAppActive
-    && isFocused;
-
-  useEffect(() => {
-    if (!shouldAnimate) return undefined;
-
-    const loopId = loopIdRef.current;
-    translateX.setValue(0);
-    const loop = Animated.loop(
-      Animated.timing(translateX, {
-        duration: items.length * MS_PER_LOGO,
-        easing: Easing.linear,
-        toValue: -copyWidth,
-        // react-native-web ne supporte pas le driver natif : repli JS
-        // silencieux plutôt qu'un avertissement en boucle.
-        useNativeDriver: Platform.OS !== 'web',
-      }),
-    );
-    activeLoops.add(loopId);
-    loop.start();
-
-    return () => {
-      loop.stop();
-      activeLoops.delete(loopId);
-    };
-  }, [copyWidth, items.length, shouldAnimate, translateX]);
+  const { translateX } = useMarqueeLoop({
+    distance: copyWidth,
+    durationMs: items.length * MS_PER_LOGO,
+    enabled: items.length > 0 && !paused,
+  });
 
   if (!items.length) return null;
 
