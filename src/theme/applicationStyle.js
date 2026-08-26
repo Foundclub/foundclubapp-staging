@@ -238,6 +238,8 @@ export const staticStyle = {
     min44From32: hitSlopToMinTarget(32),
     // Cibles de 40px (roundIcon40) -> +2px.
     min44From40: hitSlopToMinTarget(40),
+    // Boutons `size="sm"`, rendus a 39px (buttonStyle.js) -> +3px.
+    min44From39: hitSlopToMinTarget(39),
   },
   // Shadows
   shadow100: buildShadowStyle({ elevation: 5, opacity: 0.05 }),

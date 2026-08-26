@@ -11,6 +11,7 @@ import Loader from '@/components/atoms/loader/Loader';
  * @param {object} props
  * @param {boolean} [props.isLoading]
  * @param {boolean} [props.disabled]
+ * @param {import('react-native').Insets} [props.hitSlop]
  * @param {string} [props.title]
  * @param {'Primary' | 'PrimaryLight' | 'Secondary' | 'SecondaryLight' | 'Ghost'} [props.variant]
  * @param {import('react-native').ViewStyle | import('react-native').ViewStyle[]} [props.style]
@@ -32,6 +33,7 @@ function Button({
   accessibilityLabel,
   accessibilityRole = 'button',
   disabled,
+  hitSlop,
   icon,
   iconColor,
   iconPosition,
@@ -97,6 +99,7 @@ function Button({
       accessibilityRole={accessibilityRole}
       disabled={isDisabled}
       focusable={!isDisabled}
+      hitSlop={hitSlop}
       onKeyDown={handleKeyDown}
       onPress={onPress}
       style={[
