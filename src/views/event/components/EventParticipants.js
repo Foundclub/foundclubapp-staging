@@ -151,12 +151,6 @@ function getUserDisplayName(user) {
   return 'Utilisateur';
 }
 
-const getStaffDisplayName = (user) => {
-  const firstname = String(user?.firstname || '').trim();
-  const lastname = String(user?.lastname || '').trim();
-  return [firstname, lastname].filter(Boolean).join(' ').trim() || 'Staff';
-};
-
 // 🧨 AE02 — POURQUOI CE HOOK EST RESOLU ICI, ET PAS APPELE DIRECTEMENT.
 // 20 suites de temoins montent `@tanstack/react-query` avec un mock PARTIEL
 // (`useIsMutating`, `useMutation`, `useQueryClient`) et AUCUNE ne fournit
@@ -1539,7 +1533,6 @@ function ParticipantItem({
     : '';
   const tonDePaiement = tonStatutPaiement(Colors, String(paymentStatus || ''));
   const arrivalTime = formatArrivalTime(attendance?.arrivedAt);
-  const hasStaffMeta = canEdit && (attendance?.note || attendance?.manualOverride || attendance?.updatedBy);
   const dejaPointe = Boolean(attendance?.arrivedAt);
 
   return (
@@ -1549,8 +1542,8 @@ function ParticipantItem({
         ApplicationStyle.backgroundColor.primary700,
         Alignments.fill,
         Spaces.padding[16],
-        Spaces.gap[12],
       ]}
+      testID={`COMPACT-rangee-${player?.documentId || ''}`}
     >
       <TouchableOpacity
         disabled={player?.isAnonymous === true}
@@ -1562,10 +1555,17 @@ function ParticipantItem({
           Alignments.row,
           Alignments.alignCenter,
           Alignments.justifySpaceBetween,
-          Spaces.gap[16],
+          Spaces.gap[8],
         ]}
       >
-        <View style={[Alignments.row, Spaces.gap[16], Alignments.alignCenter, { flex: 1 }]}>
+        <View
+          style={[
+            Alignments.row,
+            Spaces.gap[12],
+            Alignments.alignCenter,
+            { flexBasis: 'auto', flexGrow: 1, flexShrink: 1 },
+          ]}
+        >
           <ProfileAvatar
             imageStyle={{ borderRadius: 40 }}
             imageUrl={player?.avatar?.url}
@@ -1573,37 +1573,52 @@ function ParticipantItem({
             size={40}
             style={[ApplicationStyle.borderWidth1, ApplicationStyle.borderColor.neutral00, { borderRadius: 40 }]}
           />
-          <Text numberOfLines={2} style={[Fonts.p1Bold, Fonts.neutral00, { flex: 1 }]}>
+          <Text numberOfLines={1} style={[Fonts.p1Bold, Fonts.neutral00, { flex: 1 }]}>
             {getUserDisplayName(player)}
           </Text>
         </View>
         <View
           style={[
             ApplicationStyle.borderRadius16,
+            Alignments.row,
             Alignments.alignCenter,
+            Spaces.gap[8],
+            Spaces.paddingHorizontal[8],
+            Spaces.paddingVertical[4],
             {
               backgroundColor: badge.backgroundColor,
               borderColor: badge.borderColor,
               borderWidth: 1,
-              minWidth: badge.value ? 132 : 96,
-              paddingHorizontal: badge.value ? 14 : 12,
-              paddingVertical: badge.value ? 8 : 6,
+              flexShrink: 1,
             },
           ]}
+          testID={`COMPACT-pastille-${player?.documentId || ''}`}
         >
-          <Text style={[Fonts.p3, { color: badge.textColor, textAlign: 'center' }]}>
+          {/* 🛡️ L ETAT NE MAIGRIT JAMAIS (`flexShrink: 0`). « Arrivé »,
+              « Absent », « À pointer » : c est la seule information dont on ne
+              peut rien retirer. Les deux suivantes, si — et dans cet ordre. */}
+          <Text
+            numberOfLines={1}
+            style={[Fonts.p3, { color: badge.textColor, flexShrink: 0, textAlign: 'center' }]}
+          >
             {badge.title}
           </Text>
           {badge.value ? (
             <Text
-              style={[Fonts.p3Bold, { color: badge.textColor, marginTop: 2, textAlign: 'center' }]}
+              adjustsFontSizeToFit
+              minimumFontScale={0.75}
+              numberOfLines={1}
+              style={[Fonts.p3Bold, { color: badge.textColor, flexShrink: 1, textAlign: 'center' }]}
             >
               {badge.value}
             </Text>
           ) : null}
           {arrivalTime ? (
             <Text
-              style={[Fonts.p4, { color: badge.textColor, marginTop: 2, textAlign: 'center' }]}
+              adjustsFontSizeToFit
+              minimumFontScale={0.75}
+              numberOfLines={1}
+              style={[Fonts.p4, { color: badge.textColor, flexShrink: 4, textAlign: 'center' }]}
             >
               {arrivalTime}
             </Text>
@@ -1636,9 +1651,7 @@ function ParticipantItem({
             </Text>
           </View>
         ) : null}
-      </TouchableOpacity>
-
-      {/* 🎯 R7-d (vague R, 24/08) puis S3-bis (vague S, 25/08) — POINTER N EST
+        {/* 🎯 R7-d (vague R, 24/08) puis S3-bis (vague S, 25/08) — POINTER N EST
           PLUS UN GESTE DE CETTE LISTE.
           R7-d avait deja fusionne les deux boutons qui ouvraient le MEME modal.
           Adel, en recette de la 2.6.27, est alle plus loin : « pour l entraineur
@@ -1648,39 +1661,21 @@ function ParticipantItem({
           bouton « Faire l appel » en tete de liste y mene.
           ⚠️ « Modifier » RESTE : Adel a nomme deux boutons, pas trois, et
           corriger une erreur de saisie sans quitter la liste n a rien a voir
-          avec pointer une rangee. */}
-      {canEdit && dejaPointe && (
-        <View style={[Alignments.row, Spaces.gap[8], Alignments.justifyEnd]}>
+          avec pointer une rangee.
+          📏 COMPACT (vague U, 26/08) : il ne s offre plus un etage a lui — il
+          vit DANS la ligne. Sa hauteur rendue reste 39 (c est elle qui garde la
+          rangee a la hauteur de l avatar, et AD06 la fige) ; c est le `hitSlop`
+          qui porte la zone tactile a 45, au-dessus des 44 exigees. */}
+        {canEdit && dejaPointe ? (
           <Button
+            hitSlop={ApplicationStyle.hitSlop.min44From39}
             onPress={() => onEditLate && onEditLate(player)}
             size="sm"
             title={t('eventDetails.attendanceActions.edit', 'Modifier')}
             variant="SecondaryLight"
           />
-        </View>
-      )}
-
-      {hasStaffMeta ? (
-        <View style={[Spaces.gap[4]]}>
-          {attendance?.manualOverride ? (
-            <Text style={[Fonts.p4, Fonts.warning500]}>
-              Correction manuelle staff
-            </Text>
-          ) : null}
-          {attendance?.updatedBy ? (
-            <Text style={[Fonts.p4, Fonts.neutral300]}>
-              Corrige par
-              {' '}
-              {getStaffDisplayName(attendance.updatedBy)}
-            </Text>
-          ) : null}
-          {attendance?.note ? (
-            <Text style={[Fonts.p4, Fonts.neutral200]}>
-              {attendance.note}
-            </Text>
-          ) : null}
-        </View>
-      ) : null}
+        ) : null}
+      </TouchableOpacity>
     </View>
   );
 }

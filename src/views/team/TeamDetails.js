@@ -79,6 +79,7 @@ import {
 } from '@/services/teamMembershipRequest/teamMembershipRequestService';
 
 import { isVerifiedClub } from '@/utils/clubCertification';
+import { formatDateTimeWithDayPrefix } from '@/utils/date';
 import { getErrorMessage as getDisplayErrorMessage } from '@/utils/errors/displayError';
 import { getImageUrl } from '@/utils/imageUrl';
 
@@ -1328,11 +1329,14 @@ function TeamDetails({ navigation, route }) {
     };
   }, [teamStatsData?.baselineAt, teamStatsData?.totalEvents, teamStatsData?.totals, teamStatsRows]);
 
+  // 🕐 D8c — « 26/08/2026 19:28:52 » : les secondes d une date de REFERENCE ne
+  // servent a personne. Le depot a deja son formateur, qui rend
+  // « mer 26/08/2026 a 19h28 » — c est lui, pas un troisieme.
   const statsBaselineLabel = useMemo(() => {
     if (!statsSummary.baselineAt) return '';
     const parsed = new Date(statsSummary.baselineAt);
     if (Number.isNaN(parsed.getTime())) return '';
-    return parsed.toLocaleString('fr-FR');
+    return formatDateTimeWithDayPrefix(parsed);
   }, [statsSummary.baselineAt]);
 
   const teamPerformancePlayers = useMemo(
@@ -4279,7 +4283,15 @@ function TeamDetails({ navigation, route }) {
 
                 {statsBaselineLabel ? (
                   <Text style={[Fonts.p3, Fonts.primary100]}>
-                    {t('teamDetails.stats.baselineLabel', 'Depuis le {{date}}', { date: statsBaselineLabel })}
+                    {/* 🔤 D8b — la date NE passe PAS par le 3e argument de `t()` :
+                        i18next echappe les valeurs interpolees et chaque `/`
+                        ressortait en `&#x2F;`. Motif maison, comme les 5 autres
+                        phrases a date du depot. ⛔ Surtout pas `escapeValue: false`,
+                        qui l ouvrirait pour TOUTES les interpolations. */}
+                    {t(
+                      'teamDetails.stats.baselineLabel',
+                      'Depuis le {{date}}',
+                    ).replace('{{date}}', statsBaselineLabel)}
                   </Text>
                 ) : null}
 
