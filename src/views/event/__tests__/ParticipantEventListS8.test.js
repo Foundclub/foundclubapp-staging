@@ -56,6 +56,24 @@ jest.mock('@/services/event/eventQueries', () => ({
   ),
 }));
 
+// 🪤 T2 — CETTE DOUBLURE N'EST PAS DÉCORATIVE, elle empêche la suite de ne pas
+// se charger du tout. `.env` est dans `.gitignore` : il n'existe dans AUCUNE
+// copie de travail. Le vrai `eventService` tire `@/services/client` et
+// `react-native-blob-util`, et la suite meurt AVANT d'exécuter un seul témoin
+// (« Test Suites: 1 failed / Tests: 0 total »). Tout module de service atteint
+// par cet écran doit être doublé ici.
+jest.mock('@/services/event/eventService', () => ({
+  missingEvent: jest.fn(),
+  respondToEventRsvp: jest.fn(),
+}));
+
+jest.mock('react-i18next', () => ({
+  initReactI18next: { init: jest.fn(), type: '3rdParty' },
+  useTranslation: () => ({
+    t: (/** @type {any} */ _key, /** @type {any} */ fallback) => fallback || _key,
+  }),
+}));
+
 jest.mock('@tanstack/react-query', () => ({
   useMutation: () => ({ isPending: false, mutate: jest.fn(), mutateAsync: jest.fn() }),
   useQueryClient: () => ({ invalidateQueries: jest.fn(), setQueryData: jest.fn() }),

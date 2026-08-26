@@ -41,6 +41,8 @@ import { joinReservation } from '@/services/reservation/reservationService';
 
 import { createLogger } from '@/utils/logger/logger';
 
+import { useEventAnswerMutations } from './hooks/useEventAnswerMutations';
+
 const participantEventListLogger = createLogger('participant-event-list');
 const FEATURED_PLANNING_SCOPES = ['SECTION', 'CM'];
 
@@ -353,7 +355,35 @@ function ParticipantEventList({ navigation }) {
     },
   });
 
+  // 🎯 T2 (constat d Adel du 2026-08-26) — « appuyer sur présent, ça ne marche pas ».
+  //
+  // Cet écran est le SEUL des quatre qui font répondre un joueur à n avoir
+  // jamais reçu les deux correctifs d août (AA01 le 20/08, R9 le 25/08 —
+  // `git show --stat` le prouve : les trois frères y sont, celui-ci non).
+  // Il envoyait donc tout le monde sur `POST /event-participations`, la porte
+  // des DEMANDES, où le serveur pose `pending` ; or il ne recopie dans
+  // `event.participations` que les `accepted`. La carte affichait « Demande en
+  // attente » là où le joueur attendait « Je participe ! ».
+  //
+  // 🎯 Les branches ci-dessous sont celles d `EventListContent` (:881-887 et
+  // :943-953), à l identique — pas une réécriture. Les deux mutations viennent
+  // d un hook partagé pour qu il n y ait pas de cinquième copie.
+  const { respondToEventRsvpMutation } = useEventAnswerMutations();
+
   const handleParticipateToEvent = useCallback(async (event) => {
+    const isStageDayEvent = String(event?.eventFormat || '').toLowerCase() === 'stage_day';
+    if (isStageDayEvent && event?.documentId) {
+      try {
+        await respondToEventRsvpMutation.mutateAsync({
+          answer: 'present',
+          eventId: event.documentId,
+        });
+      } catch {
+        // Error feedback is handled by the mutation.
+      }
+      return;
+    }
+
     const participationFlow = resolveParticipationFlow(event, { user: userData });
 
     if (!participationFlow?.canAct) {
@@ -376,6 +406,37 @@ function ParticipantEventList({ navigation }) {
       return;
     }
 
+    // R9 — LE MÊME TROU QUE CHEZ LE FRÈRE, ET POUR LA MÊME RAISON.
+    //
+    // `handleJoinEvent`, plus bas dans ce fichier, porte cette branche depuis
+    // longtemps ; ce gestionnaire-ci ne l avait pas, et c est LUI que la carte
+    // appelle quand on répond « Présent ». Sans elle, on tombait sur le chemin
+    // générique du bas : une participation SANS poste, qui verrouille ensuite
+    // la candidature aux postes. Les postes vivent sur l écran de l événement.
+    if (participationFlow?.submitMode === 'detection-slot-picker') {
+      if (event?.documentId) {
+        navigation.navigate(RouteNames.EventStack, {
+          params: { eventId: event.documentId },
+          screen: RouteNames.EventDetails,
+        });
+      }
+      return;
+    }
+
+    // AA01 — LA BONNE PORTE : un membre convié RÉPOND, il ne demande pas.
+    // `POST /events/:id/rsvp` l inscrit immédiatement (`event-rsvp.ts:161-166`).
+    if (participationFlow?.submitMode === 'rsvpPresent' && event?.documentId) {
+      try {
+        await respondToEventRsvpMutation.mutateAsync({
+          answer: 'present',
+          eventId: event.documentId,
+        });
+      } catch {
+        // Error feedback is handled by the mutation.
+      }
+      return;
+    }
+
     if (event?.documentId && userData?.documentId) {
       try {
         await createEventParticipationMutation.mutateAsync({
@@ -386,7 +447,7 @@ function ParticipantEventList({ navigation }) {
         Alert.alert('Erreur', getParticipationErrorMessage(error, 'Une erreur est survenue.'));
       }
     }
-  }, [createEventParticipationMutation, navigation, userData]);
+  }, [createEventParticipationMutation, navigation, respondToEventRsvpMutation, userData]);
 
   const handleJoinEvent = useCallback((event) => {
     const participationFlow = resolveParticipationFlow(event, { user: userData });
