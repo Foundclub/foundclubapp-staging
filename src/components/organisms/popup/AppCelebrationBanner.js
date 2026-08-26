@@ -16,6 +16,7 @@ import {
   View,
 } from 'react-native';
 
+import { withAlpha } from '@/theme/colors';
 import useTheme from '@/theme/themeContext';
 
 const DEFAULT_DURATION_MS = 3200;
@@ -47,10 +48,15 @@ const resolveBannerPalette = (tone, variant, Colors) => {
   // branche, il retombait sur le repli neutre — le meme bleu qu'un simple
   // « evenement mis a jour », pour un message qui coute des adhesions.
   if (tone === 'warning') {
+    // ⚠️ Les quatre branches soeurs ecrivent leur fond en rgba() litteral. Celle-ci
+    // passe par les JETONS du theme : le lot S12-B interdit tout hex/rgb neuf, et
+    // c'est de toute facon plus juste — `primary900` est deja LE fond sombre de
+    // l'app (le panneau du CTA des offres l'emploie tel quel). Le ton se lit sur
+    // l'accent, la bordure et la barre, pas sur une teinte de fond inventee.
     return {
       accent: Colors.gold500,
-      background: 'rgba(45, 33, 8, 0.98)',
-      border: 'rgba(255, 176, 32, 0.38)',
+      background: Colors.primary900,
+      border: withAlpha(Colors.gold500, 0.38),
       progress: Colors.gold500,
     };
   }
