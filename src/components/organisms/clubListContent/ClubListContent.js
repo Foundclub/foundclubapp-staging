@@ -94,6 +94,14 @@ const mergeClubCollections = (...collections) => {
 };
 
 /**
+ * La poignee de defilement de la liste, telle que flash-list l expose. Le type
+ * vient de la bibliotheque : on ne le re-declare pas.
+ * ⚠️ Il annonce `scrollToOffset` comme toujours present, mais le rendu web n a
+ * pas la meme implementation : la garde `typeof` reste obligatoire a l execution.
+ * @typedef {import('@shopify/flash-list').FlashListRef<any>} PoigneeDefilementListe
+ */
+
+/**
  * Club list element to inject on home page or a dedicated one.
  * @param {{ enableMapMode?: boolean; refreshSignal?: number; screenActive?: boolean }} [props]
  * @returns {import('react').ReactElement}
@@ -117,6 +125,9 @@ function ClubListContent({
   const primaryQuerySignatureRef = useRef('');
   const firstResultsSignatureRef = useRef('');
   const secondaryQuerySignatureRef = useRef('');
+  const listeRef = useRef(
+    /** @type {PoigneeDefilementListe | null} */ (null),
+  );
 
   const viewportSession = searchMapSessions?.clubs || {};
   const viewportExecutedQuery = viewportSession?.executedQuery
@@ -362,6 +373,24 @@ function ClubListContent({
     refreshHandler();
   }, [refreshHandler, refreshSignal, screenActive]);
 
+  // HAUT (26/08) - quand la recherche change, la liste doit repartir du 1er
+  // resultat. Sans ca elle garde la position de la recherche PRECEDENTE, et les
+  // meilleurs resultats restent hors ecran, au-dessus (constat d Adel : « ce que
+  // je vois en premier c est le 6e meilleur resultat »).
+  // On ne touche NI a `data`, NI a une `key` : flash-list relache son verrou de
+  // pagination des que l identite de `data` change (une liste vide a deja
+  // deroule 3 pages entieres a cause de ca). C est un simple appel imperatif.
+  // La garde `typeof` est obligatoire : la reference peut manquer au premier
+  // rendu et le web n a pas la meme implementation - motif deja en service dans
+  // VenueProposalModal.js:255 et Conversation.js:4480.
+  const remonterEnHautDeLaListe = useCallback(() => {
+    const liste = listeRef.current;
+    if (!liste || typeof liste.scrollToOffset !== 'function') return;
+    // `animated: false` : un saut instantane. Une remontee animee ferait defiler
+    // l ancienne liste sous les yeux avant d afficher la nouvelle.
+    liste.scrollToOffset({ animated: false, offset: 0 });
+  }, []);
+
   useEffect(() => {
     if (!screenActive) return;
 
@@ -379,7 +408,11 @@ function ClubListContent({
       networkCount: 1,
       type: 'clubs',
     });
-  }, [activeMode, activeSearchText, displayedClubs.length, isViewportListMode, screenActive, viewportListParams]);
+    // Branche sur la SIGNATURE de requete, pas sur l arrivee des donnees :
+    // remonter a chaque page recue ramenerait l utilisateur en haut pendant
+    // qu il fait defiler. Au montage, la liste est deja en haut : sans effet.
+    remonterEnHautDeLaListe();
+  }, [activeMode, activeSearchText, displayedClubs.length, isViewportListMode, remonterEnHautDeLaListe, screenActive, viewportListParams]);
 
   useEffect(() => {
     if (!screenActive || activeIsLoading) return;
@@ -670,6 +703,7 @@ function ClubListContent({
           onEndReached={handleEndReached}
           onEndReachedThreshold={0.5}
           onRefresh={refreshHandler}
+          ref={listeRef}
           refreshing={isActiveQueryBusy && !activeIsFetchingNext}
           renderItem={renderItem}
           showsVerticalScrollIndicator={false}
