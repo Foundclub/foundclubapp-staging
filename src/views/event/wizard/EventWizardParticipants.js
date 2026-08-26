@@ -16,6 +16,7 @@ import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 import SegmentedControl from '@/components/molecules/segmentedControl/SegmentedControl';
 import WizardStepLayout from '@/components/molecules/wizardStepLayout/WizardStepLayout';
 import PositionSelectionList from '@/components/organisms/positionSelectionList/PositionSelectionList';
+import EventWizardInternalInvites from '@/views/event/wizard/components/EventWizardInternalInvites';
 
 import { RouteNames } from '@/navigation/routeNames';
 
@@ -649,6 +650,13 @@ function EventWizardParticipants({ navigation, route }) {
             </Text>
           </View>
         ) : null}
+
+        {/* S10-B — INVITER UNE EQUIPE DE MON CLUB, dans l'etape qui demande
+            deja "qui vient ?". La section vivait sur un ecran a part
+            (`EventWizardInvites`) qu'on ne rejoignait qu'APRES avoir tout
+            regle. Cadre d'Adel du 2026-08-25 : une SEULE etape pour choisir qui
+            vient, et AUCUN externe ici. */}
+        <EventWizardInternalInvites surfaceStyle={surfaceStyle} />
 
         {shouldCollectInternalPlayers ? (
           <View style={[ApplicationStyle.card, Spaces.padding[16], Spaces.gap[12], surfaceStyle]}>

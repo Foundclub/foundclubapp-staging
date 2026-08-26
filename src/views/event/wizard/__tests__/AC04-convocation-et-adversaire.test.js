@@ -215,6 +215,20 @@ jest.mock(
   },
 );
 
+// S10-B — les deux etapes montees ici portent desormais les sections
+// d'invitation : Participants lit `getTeams` (equipes de mon club) et
+// "Contre qui ?" lit `getClubs` puis `getTeams` (equipe adverse).
+// ⛔ Doublures OBLIGATOIRES, pas confortables : en copie de travail `.env` est
+// absent, et tout service reellement charge TUE LA SUITE au chargement
+// (0 test execute). Lire `Test Suites:`, pas seulement `Tests:`.
+jest.mock('@/services/team/teamService', () => ({
+  getTeams: () => Promise.resolve({ data: [] }),
+}));
+
+jest.mock('@/services/club/clubService', () => ({
+  getClubs: () => Promise.resolve({ data: [] }),
+}));
+
 jest.mock('@/components/molecules/profileAvatar/ProfileAvatar', () => () => null);
 
 jest.mock('@/components/molecules/bottomModal/BottomModal', () => function FeuilleMock(

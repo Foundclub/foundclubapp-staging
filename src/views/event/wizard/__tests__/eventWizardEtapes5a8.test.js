@@ -123,6 +123,13 @@ jest.mock('@/services/team/teamQueries', () => ({
 
 // ⛔ Jamais `requireActual` sur un service : le client HTTP exige `API_URL` et
 // la suite entiere meurt au chargement.
+// S10-B — l'etape Participants porte desormais la section "inviter une equipe
+// de mon club", qui lit `getTeams`. Meme raison que la doublure ci-dessus : le
+// vrai service exige API_URL et fait mourir la suite entiere au CHARGEMENT.
+jest.mock('@/services/team/teamService', () => ({
+  getTeams: () => Promise.resolve({ data: [] }),
+}));
+
 jest.mock('@/services/event/eventService', () => ({
   createEventsWithConcurrency: () => Promise.resolve({ created: [], failed: [] }),
   getEventById: () => Promise.resolve(null),

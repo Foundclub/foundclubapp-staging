@@ -121,6 +121,14 @@ jest.mock('@/services/team/teamQueries', () => ({
   ),
 }));
 
+// S10-B — PASSE-PLAT. L'etape Participants porte desormais la section
+// "inviter une equipe de mon club" ; elle a son propre filet
+// (`S10B-tunnel-fusion.test.js`) et tirerait ici `useAuth` + `teamService`,
+// c'est-a-dire le client HTTP qui exige API_URL et TUE LA SUITE au chargement
+// (0 test execute). Elle rend aussi des avatars, que la doublure ci-dessous
+// compte : ce fichier mesure les avatars de la CONVOCATION, pas les siens.
+jest.mock('@/views/event/wizard/components/EventWizardInternalInvites', () => () => null);
+
 // LA DOUBLURE QUI VOIT. Elle note ce que l'ecran lui passe, puis ne rend rien.
 jest.mock('@/components/molecules/profileAvatar/ProfileAvatar', () => function AvatarMock(
   /** @type {any} */ props,
