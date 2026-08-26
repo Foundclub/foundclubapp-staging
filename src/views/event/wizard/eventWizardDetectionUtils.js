@@ -187,12 +187,13 @@ export const getDefaultSessionStatusForEventType = (typeName = '') => {
  * de ce fichier — le nombre d'etapes, la place de chaque ecran, l'ecran suivant
  * — se deduit desormais de cette seule liste.
  *
- * `EventWizardInvites` n'y figure QUE POUR UN MATCH depuis AA10 (constat ② du
- * 2026-08-20 : « il faut ici rajouter la case invitation […] ca existe deja
- * dans le code, il faut juste le mettre au bon endroit »). Pour tous les autres
- * types il reste ce qu'en avait fait D08 : hors chaine, sans numero d'etape,
- * rejoint depuis le Recap. C'est la CHAINE qui le rend joignable, jamais un
- * `navigate` ecrit a la main — sinon on recree le defaut que D08 a supprime.
+ * 🚚 S10-B (2026-08-26) — L'ETAPE « INVITATIONS » N'EXISTE PLUS. Elle a
+ * fondu dans « Participants » (cadre d'Adel du 25/08 : « une SEULE etape pour
+ * choisir qui vient »), et l'invitation d'une equipe ADVERSE est devenue une
+ * option de « Contre qui ? ». Un match passe donc de 10 a 9 ecrans, et aucun
+ * autre type ne bouge : l'ecran n'etait dans leur chaine pour aucun d'eux.
+ * C'est la CHAINE qui rend un ecran joignable, jamais un `navigate` ecrit a la
+ * main — sinon on recree le defaut que D08 a supprime.
  * @param {any} state Etat courant du tunnel.
  * @returns {string[]} Les ecrans traverses, dans l'ordre.
  */
@@ -225,14 +226,6 @@ export const getEventWizardStepRoutes = (state = {}) => {
     routes.push(RouteNames.EventWizardParticipants);
   }
 
-  // AA10 ② — LES INVITATIONS, JUSTE APRES LES PARTICIPANTS, ET SEULEMENT POUR
-  // UN MATCH. C'est la que se pense « qui vient » : l'equipe d'abord, puis les
-  // autres equipes du club et leurs joueurs un par un. L'ecran existait deja et
-  // n'etait joignable que depuis le Recap, c'est-a-dire APRES avoir tout regle.
-  if (isMatchEventType(state?.type?.name)) {
-    routes.push(RouteNames.EventWizardInvites);
-  }
-
   routes.push(
     RouteNames.EventWizardAccess,
     RouteNames.EventWizardDescription,
@@ -254,8 +247,9 @@ export const getEventWizardStepIndex = (routeName, state = {}) => (
 
 /**
  * L'ecran vers lequel envoie le bouton « Suivant ».
- * Un ecran hors chaine (aujourd'hui `EventWizardInvites`, rejoint depuis le
- * Recap) rend la main au Recap : c'est de la qu'on y est entre.
+ * Un ecran hors chaine — aujourd'hui l'etape « Participants » d'un entrainement
+ * prive, ouverte depuis le Recap pour ses seules invitations — rend la main au
+ * Recap : c'est de la qu'on y est entre.
  * @param {string} routeName Ecran courant.
  * @param {any} state Etat courant du tunnel.
  * @returns {string} Nom de la route suivante.
@@ -330,19 +324,6 @@ export const getEventWizardTournamentStructureStepIndex = (/** @type {any} */ st
 
 export const getEventWizardParticipantsStepIndex = (/** @type {any} */ state = {}) => (
   getEventWizardStepIndex(RouteNames.EventWizardParticipants, state)
-);
-
-/**
- * La place de l'ecran « Invitations » — AA10.
- *
- * ⚠️ Il rend `0` quand l'ecran n'appartient pas au parcours courant (tout type
- * autre qu'un match, ou l'ecran est ouvert depuis le Recap). L'appelant ne doit
- * alors PAS afficher de compteur : « Étape 0/8 » serait un mensonge.
- * @param {any} state Etat courant du tunnel.
- * @returns {number} Le rang de l'ecran, ou 0 s'il est hors chaine.
- */
-export const getEventWizardInvitesStepIndex = (state = {}) => (
-  getEventWizardStepIndex(RouteNames.EventWizardInvites, state)
 );
 
 export const getEventWizardStageProgramStepIndex = (/** @type {any} */ state = {}) => (

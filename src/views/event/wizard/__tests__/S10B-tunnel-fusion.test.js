@@ -1,6 +1,8 @@
 import { createElement } from 'react';
 import renderer, { act } from 'react-test-renderer';
 
+import { RouteNames } from '@/navigation/routeNames';
+
 import { EventWizardProvider, useEventWizard } from '../EventWizardContext';
 import EventWizardParticipants from '../EventWizardParticipants';
 
@@ -134,9 +136,13 @@ jest.mock('@/services/team/teamQueries', () => ({
   useGetTeam: () => ({ data: undefined, isLoading: false }),
 }));
 
+/** Proprietes recues par le gabarit d'etape, dans l'ordre du rendu. */
+const mockProprietesDuGabarit = [];
+
 jest.mock('@/components/molecules/wizardStepLayout/WizardStepLayout', () => function GabaritMock(
   /** @type {any} */ props,
 ) {
+  mockProprietesDuGabarit.push(props);
   return props.children;
 });
 
@@ -228,9 +234,10 @@ const textesSous = (noeud) => {
  * ⚠️ Deux temps, et l'ordre compte : chaque ecran lit l'etat du tunnel dans le
  * `useState` de son PREMIER rendu. Semer apres coup ne changerait rien.
  * @param {any} etatSeme L'etat du tunnel au moment de l'ouverture.
+ * @param {any} [parametresDEcran] Les `route.params` (dont le billet `returnTo`).
  * @returns {Promise<any>} L'ecran monte et ses aides.
  */
-const monterParticipants = async (etatSeme) => {
+const monterParticipants = async (etatSeme, parametresDEcran = {}) => {
   /** @type {string[]} */
   const destinations = [];
   const navigation = {
@@ -255,7 +262,7 @@ const monterParticipants = async (etatSeme) => {
   await act(async () => {
     arbre.update(rendre(createElement(EventWizardParticipants, {
       navigation,
-      route: { params: {} },
+      route: { params: parametresDEcran },
     })));
   });
   // La section appelle `getTeams` dans un effet : on laisse la promesse rendre.
@@ -283,6 +290,7 @@ const monterParticipants = async (etatSeme) => {
   return {
     demonter: () => act(() => arbre.unmount()),
     destinations,
+    gabarit: () => mockProprietesDuGabarit[mockProprietesDuGabarit.length - 1] || {},
     presserLeTexte,
     textes: () => textesSous(arbre.root),
   };
@@ -292,6 +300,7 @@ const ETAT_MATCH = { team: EQUIPE_ORGANISATRICE, type: TYPE_MATCH };
 
 beforeEach(() => {
   mockReponseEquipes.data = EQUIPES_DU_CLUB;
+  mockProprietesDuGabarit.length = 0;
 });
 
 describe('S10-B D1 — inviter une equipe de mon club, DANS l etape Participants', () => {
@@ -434,6 +443,94 @@ describe('S10-B D1 — inviter une equipe de mon club, DANS l etape Participants
     const { demonter, textes } = await monterParticipants(ETAT_MATCH);
 
     expect(textes()).toContain('eventWizard.errors.noOtherTeams');
+
+    demonter();
+  });
+});
+
+describe('S10-B D3 — un entrainement PRIVE peut encore inviter une equipe', () => {
+  // 🧨 LE PIEGE MORTEL DU LOT, ET IL ETAIT INVISIBLE.
+  //
+  // `shouldSkipEventWizardParticipantsStep` saute l'etape Participants pour un
+  // entrainement FERME : il n'a ni capacite ni quota a demander. Mais depuis
+  // S10-B, cette etape est AUSSI la seule porte vers « inviter une equipe de mon
+  // club ». Et le redirect de saut IGNORAIT le billet `returnTo` : la rangee du
+  // Recap aurait ouvert l'etape, qui serait repartie vers « Acces » avant meme
+  // d'avoir rendu quoi que ce soit.
+  //
+  // → Un entrainement prive n'aurait plus JAMAIS pu inviter une equipe interne,
+  //   et aucune porte du depot ne l'aurait vu : la chaine reste juste, le Recap
+  //   reste nomme, l'ecran redirige en silence.
+  const ETAT_ENTRAINEMENT_PRIVE = {
+    sessionStatus: 'closed',
+    team: EQUIPE_ORGANISATRICE,
+    type: { documentId: 'type-entrainement', name: 'Entrainement' },
+  };
+  const BILLET_DU_RECAP = { returnTo: RouteNames.EventWizardRecap };
+
+  test('temoin 10 🔒 — ouverte depuis le Recap, l etape SE REND au lieu de fuir', async () => {
+    const { demonter, destinations, textes } = await monterParticipants(
+      ETAT_ENTRAINEMENT_PRIVE,
+      BILLET_DU_RECAP,
+    );
+
+    expect(destinations).toEqual([]);
+    expect(textes()).toContain('Inviter des membres d une équipe de mon club');
+    expect(textes()).toContain('U17 B');
+
+    demonter();
+  });
+
+  test('temoin 11 — et elle invite pour de vrai, pas seulement a l ecran', async () => {
+    const { demonter, presserLeTexte } = await monterParticipants(
+      ETAT_ENTRAINEMENT_PRIVE,
+      BILLET_DU_RECAP,
+    );
+
+    await presserLeTexte('U17 B');
+    await presserLeTexte('Inviter tous les membres');
+    await presserLeTexte('Enregistrer');
+
+    expect(etatCourant.invitedTeams).toEqual(['equipe-2']);
+
+    demonter();
+  });
+
+  test('temoin 12 🔒 — SANS le billet, elle saute toujours vers Acces', async () => {
+    // Le garde-fou du correctif : le saut normal du tunnel ne doit pas bouger.
+    // Un entrainement prive traverse en 7 ecrans, sans passer par Participants.
+    const { demonter, destinations } = await monterParticipants(ETAT_ENTRAINEMENT_PRIVE);
+
+    expect(destinations).toEqual([RouteNames.EventWizardAccess]);
+
+    demonter();
+  });
+
+  test('temoin 13 — l etape hors chaine n annonce AUCUN numero', async () => {
+    // Son rang vaut 0 : afficher « Étape 0/7 » serait un mensonge. Le meme piege
+    // qu'AA10 avait nomme sur l'ecran des invitations.
+    const { demonter, gabarit } = await monterParticipants(
+      ETAT_ENTRAINEMENT_PRIVE,
+      BILLET_DU_RECAP,
+    );
+
+    expect(gabarit().stepIndex).toBeUndefined();
+    expect(gabarit().stepCount).toBeUndefined();
+
+    demonter();
+  });
+
+  test('temoin 14 — un entrainement OUVERT garde son etape entiere', async () => {
+    // Le jumeau : l'etape n'est PAS sautee, donc elle annonce son rang et garde
+    // tout ce qu'elle demandait avant le lot.
+    const { demonter, gabarit, textes } = await monterParticipants({
+      ...ETAT_ENTRAINEMENT_PRIVE,
+      sessionStatus: 'open',
+    });
+
+    expect(gabarit().stepIndex).toBe(5);
+    expect(gabarit().stepCount).toBe(8);
+    expect(textes()).toContain('Inviter des membres d une équipe de mon club');
 
     demonter();
   });

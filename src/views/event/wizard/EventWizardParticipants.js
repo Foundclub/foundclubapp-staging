@@ -215,7 +215,24 @@ function EventWizardParticipants({ navigation, route }) {
   if (!isTraining && capacityMode !== 'unlimited') {
     normalizedCapacity = clampedCapacity;
   }
-  const shouldCollectInternalPlayers = isReservation || (isTraining && !isOpenTraining);
+  // 🧨 S10-B — LE PIEGE QUE CE BILLET DESAMORCE, ET IL ETAIT MORTEL.
+  // `shouldSkipEventWizardParticipantsStep` saute cette etape pour un
+  // entrainement FERME : il n'a ni capacite ni quota a demander. Mais depuis
+  // S10-B c'est AUSSI la seule porte vers « inviter une equipe de mon club ».
+  // Sans ce billet, un entrainement prive ne pourrait plus JAMAIS inviter une
+  // equipe interne : la rangee du Recap ouvrirait l'etape, qui se redirigerait
+  // aussitot vers « Acces ».
+  //
+  // ⚠️ Le redirect ci-dessous IGNORAIT `returnTo` — c'est ce qui rendait le
+  // defaut invisible : l'etape partait avant meme d'avoir rendu quoi que ce soit.
+  const estOuverteDepuisLeRecap = route?.params?.returnTo === RouteNames.EventWizardRecap;
+  const doitRedirigerVersLaSuite = shouldSkipParticipantsStep && !estOuverteDepuisLeRecap;
+  // Sautee, mais ouverte depuis le Recap : l'etape se rend avec la SEULE section
+  // qui a encore quelque chose a demander.
+  const invitationsSeules = shouldSkipParticipantsStep && estOuverteDepuisLeRecap;
+
+  const shouldCollectInternalPlayers = !invitationsSeules
+    && (isReservation || (isTraining && !isOpenTraining));
   const normalizedTotalPlayers = shouldCollectInternalPlayers ? clampedTotalPlayers : null;
   let normalizedExternalParticipantLimit = null;
   if (isTraining) {
@@ -341,6 +358,12 @@ function EventWizardParticipants({ navigation, route }) {
     participantsSubtitleKey = 'eventWizard.steps.participants.trainingSubtitle';
     participantsSubtitleFallback = 'Définis tes joueurs attendus pour cet entraînement.';
   }
+  if (invitationsSeules) {
+    // S10-B — l'etape ne demande plus que « qui vient » : le dire, plutot que de
+    // laisser un sous-titre qui parle d'un compteur absent de l'ecran.
+    participantsSubtitleKey = 'eventWizard.steps.participants.invitesOnlySubtitle';
+    participantsSubtitleFallback = 'Invite une équipe de ton club à cet entraînement.';
+  }
 
   const surfaceStyle = {
     backgroundColor: 'rgba(4, 31, 44, 0.82)',
@@ -424,7 +447,7 @@ function EventWizardParticipants({ navigation, route }) {
   };
 
   useEffect(() => {
-    if (!shouldSkipParticipantsStep) return;
+    if (!doitRedirigerVersLaSuite) return;
 
     // Garde-fou : quand l'etape est sautee, elle ne figure plus dans la chaine
     // et `getEventWizardNextRoute` ne saurait pas d'ou repartir. C'est le seul
@@ -435,9 +458,9 @@ function EventWizardParticipants({ navigation, route }) {
     }
 
     navigation.navigate(RouteNames.EventWizardAccess);
-  }, [navigation, shouldSkipParticipantsStep]);
+  }, [doitRedirigerVersLaSuite, navigation]);
 
-  if (shouldSkipParticipantsStep) {
+  if (doitRedirigerVersLaSuite) {
     return null;
   }
 
@@ -447,8 +470,13 @@ function EventWizardParticipants({ navigation, route }) {
       isNextDisabled={hasInvalidPlayersConfig || slotsExceedCapacity}
       onBack={() => navigation.goBack()}
       onNext={handleNext}
-      stepCount={getEventWizardStepCount(projectedState)}
-      stepIndex={getEventWizardParticipantsStepIndex(projectedState)}
+      // ⚠️ Hors chaine (entrainement prive ouvert depuis le Recap), le rang vaut
+      // 0 : passer 0 au gabarit afficherait « Étape 0/7 », c'est-a-dire un
+      // mensonge. `undefined` eteint le compteur.
+      stepCount={invitationsSeules ? undefined : getEventWizardStepCount(projectedState)}
+      stepIndex={invitationsSeules
+        ? undefined
+        : getEventWizardParticipantsStepIndex(projectedState)}
       subtitle={t(participantsSubtitleKey, participantsSubtitleFallback)}
       title={t('eventWizard.steps.participants.title', 'Participants')}
     >
@@ -718,9 +746,11 @@ function EventWizardParticipants({ navigation, route }) {
             modifier » par UNE ligne, qui dit la consequence du reglage courant.
             Rien n'est perdu : le Recap (etape 8) recapitule tout, et les
             valeurs saisies restent affichees dans leurs propres compteurs. */}
-        <Text style={[Fonts.p3, Fonts.neutral300, { lineHeight: 18 }]}>
-          {capacityLabel}
-        </Text>
+        {invitationsSeules ? null : (
+          <Text style={[Fonts.p3, Fonts.neutral300, { lineHeight: 18 }]}>
+            {capacityLabel}
+          </Text>
+        )}
 
         {hasInvalidPlayersConfig ? (
           <Text style={[Fonts.p3, Fonts.error700]}>

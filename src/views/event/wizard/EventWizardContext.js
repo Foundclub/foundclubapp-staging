@@ -139,6 +139,48 @@ const canUseWizardStorage = () => (
   && typeof window.sessionStorage !== 'undefined'
 );
 
+/**
+ * Les champs que le tunnel PARCOURT (`map`, `filter`, `length`). Un brouillon
+ * d'une version precedente peut ne pas les porter, ou les porter abimes.
+ */
+const CHAMPS_LISTE_RESTAURES = ['invitedTeams', 'matchCallUpPlayerIds', 'teamAudiences'];
+
+const aUneEquipe = (/** @type {any} */ audience) => Boolean(
+  audience?.team?.documentId || audience?.team?.id
+  || (typeof audience?.team === 'string' && audience.team.trim()),
+);
+
+/**
+ * LE BROUILLON WEB QUI SURVIT — garde de compatibilite S10-B.
+ *
+ * 🧊 Le tunnel se persiste en `sessionStorage` a chaque changement d'etat. Un
+ * brouillon commence AVANT ce lot est donc relu APRES : il peut ne pas porter
+ * les champs que les deux sections d'invitation parcourent desormais depuis
+ * deux ecrans differents. `{ ...initialState, ...parsed }` couvre le champ
+ * ABSENT ; il ne couvre PAS le champ present mais abime (`null`, un objet, un
+ * nombre), qui ECRASE la valeur de depart et fait jeter le premier `.map`.
+ *
+ * ⚠️ Et `sessionStorage` est cote NAVIGATEUR : son contenu est modifiable a la
+ * main. Ce n'est donc pas seulement de la compatibilite, c'est une frontiere de
+ * confiance — on valide ce qu'on relit, on ne le suppose pas.
+ * @param {any} initialState L'etat neuf du tunnel.
+ * @param {any} parsed Ce qui a ete relu du stockage.
+ * @returns {any} L'etat restaure, utilisable tel quel.
+ */
+const restorePersistedState = (initialState, parsed) => {
+  const merged = { ...initialState, ...parsed };
+
+  CHAMPS_LISTE_RESTAURES.forEach((champ) => {
+    if (!Array.isArray(merged[champ])) merged[champ] = [];
+  });
+
+  // Une invitation sans equipe ne peut ni s'afficher (une carte sans nom) ni
+  // s'envoyer : le serveur recevrait une invitation qui ne designe personne.
+  merged.teamAudiences = merged.teamAudiences.filter(aUneEquipe);
+
+  return merged;
+};
+
 const loadPersistedState = () => {
   const initialState = createInitialState();
 
@@ -153,10 +195,7 @@ const loadPersistedState = () => {
     const parsed = safeJsonParse(raw, null);
     if (!parsed || typeof parsed !== 'object') return initialState;
 
-    return {
-      ...initialState,
-      ...parsed,
-    };
+    return restorePersistedState(initialState, parsed);
   } catch (_error) {
     return initialState;
   }

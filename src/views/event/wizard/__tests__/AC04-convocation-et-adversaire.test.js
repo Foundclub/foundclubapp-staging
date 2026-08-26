@@ -201,7 +201,7 @@ jest.mock('@/services/club/clubQueries', () => ({
 }));
 
 // La carte de club rendue comme un pressable portant le nom du club — meme
-// doublure que `EventWizardInvites.rechercheClub.test.js`.
+// doublure que `EventWizardOpponent.rechercheClub.test.js`.
 jest.mock(
   '@/components/molecules/clubSearchResultCard/ClubSearchResultCard',
   () => function CarteClubMock(/** @type {any} */ props) {
@@ -832,7 +832,13 @@ describe('AC04 ② — chercher un club pour trouver l adversaire', () => {
 // ---------------------------------------------------------------------------
 
 describe('AC04 — le compteur d etapes ne bouge pas', () => {
-  test('temoin 7 — la chaine du match est inchangee, 10 etapes', () => {
+  // 🚚 S10-B (2026-08-26) — AC04 avait fige « la chaine du match est
+  // INCHANGEE » parce que son lot ne devait pas y toucher. S10-B, lui, a
+  // precisement pour mission d'y toucher : « Invitations » fond dans
+  // « Participants », 10 → 9. Ce que le temoin garde reste le meme — la FORME
+  // exacte de la chaine, et le fait qu'AC04 (convocation + adversaire) n'a rien
+  // ajoute ni retire de son cote.
+  test('temoin 7 — la chaine du match, 9 etapes depuis S10-B', () => {
     const etat = { sessionStatus: 'closed', type: TYPE_MATCH };
 
     expect(getEventWizardStepRoutes(etat)).toEqual([
@@ -842,12 +848,11 @@ describe('AC04 — le compteur d etapes ne bouge pas', () => {
       RouteNames.EventWizardOpponent,
       RouteNames.EventWizardLocation,
       RouteNames.EventWizardParticipants,
-      RouteNames.EventWizardInvites,
       RouteNames.EventWizardAccess,
       RouteNames.EventWizardDescription,
       RouteNames.EventWizardRecap,
     ]);
-    expect(getEventWizardStepCount(etat)).toBe(10);
+    expect(getEventWizardStepCount(etat)).toBe(9);
   });
 
   test('temoin 7 bis — aucun autre type ne change de longueur', () => {
@@ -869,8 +874,9 @@ describe('AC04 — le compteur d etapes ne bouge pas', () => {
       ['Entraînement', 7],
       ['Stage', 8],
       ['Tournoi', 10],
-      ['Match', 10],
-      ['Match amical', 10],
+      // S10-B : 10 → 9 pour les deux formes de match, et pour elles seules.
+      ['Match', 9],
+      ['Match amical', 9],
       ['Autre', 8],
       ['Réservation', 8],
     ]);

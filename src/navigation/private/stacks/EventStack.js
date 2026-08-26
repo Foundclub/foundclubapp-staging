@@ -18,7 +18,6 @@ import TournamentTeamDetails from '@/views/event/TournamentTeamDetails';
 import EventWizardAccess from '@/views/event/wizard/EventWizardAccess';
 import { EventWizardProvider } from '@/views/event/wizard/EventWizardContext';
 import EventWizardDescription from '@/views/event/wizard/EventWizardDescription';
-import EventWizardInvites from '@/views/event/wizard/EventWizardInvites';
 import EventWizardLocation from '@/views/event/wizard/EventWizardLocation';
 import EventWizardLogistics from '@/views/event/wizard/EventWizardLogistics';
 import EventWizardOpponent from '@/views/event/wizard/EventWizardOpponent';
@@ -241,11 +240,6 @@ function EventStack() {
           options={{ headerShown: false }}
         />
         <Stack.Screen
-          component={EventWizardInvites}
-          name={RouteNames.EventWizardInvites}
-          options={{ headerShown: false }}
-        />
-        <Stack.Screen
           component={EventWizardLogistics}
           name={RouteNames.EventWizardLogistics}
           options={{ headerShown: false }}
@@ -280,7 +274,7 @@ function EventStack() {
         {/* Y02 : « Contre qui ? ». L'ecran est toujours ENREGISTRE ; c'est la
             chaine (`getEventWizardStepRoutes`) qui ne le traverse que pour un
             match. Un ecran enregistre mais hors chaine reste atteignable depuis
-            le recapitulatif, comme `EventWizardInvites`. */}
+            le recapitulatif. */}
         <Stack.Screen
           component={EventWizardOpponent}
           name={RouteNames.EventWizardOpponent}

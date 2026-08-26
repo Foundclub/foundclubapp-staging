@@ -2,7 +2,6 @@ import {
   getActiveStageScheduleDays,
   getEventWizardAccessStepIndex,
   getEventWizardDescriptionStepIndex,
-  getEventWizardInvitesStepIndex,
   getEventWizardLocationStepIndex,
   getEventWizardLogisticsStepIndex,
   getEventWizardOpponentStepIndex,
@@ -36,9 +35,15 @@ import {
 // pas dire « premier » mais « cet ecran n'appartient pas a ce parcours ».
 //
 // ETAT DU 2026-08-06, APRES D08. Le lot a ramene l'evenement simple a 8 etapes,
-// en sortant `EventWizardInvites` de la chaine (il se rejoint depuis le Recap)
-// et en fusionnant « Visibilite » et « Mode de validation » dans un seul ecran
-// `EventWizardAccess`. Les tournois et les stages gardent tous leurs ecrans.
+// en sortant `EventWizardInvites` de la chaine (il se rejoignait depuis le
+// Recap) et en fusionnant « Visibilite » et « Mode de validation » dans un seul
+// ecran `EventWizardAccess`. Les tournois et les stages gardent tous leurs
+// ecrans.
+//
+// 🚚 S10-B (2026-08-26) : l'ecran « Invitations » n'existe plus du tout. Sa
+// section « equipes de mon club » est passee dans « Participants », son
+// invitation d'equipe adverse dans « Contre qui ? ». UN SEUL parcours change de
+// longueur : le match, 10 → 9. Toute autre ligne qui bouge est une regression.
 //
 // La moitie TRANSITIONS du filet (quel ecran mene a quel ecran) vit dans
 // `eventWizardChain.test.js`. Depuis D08 les deux moities decoulent de la MEME
@@ -104,8 +109,11 @@ describe('D08 — getEventWizardStepCount : combien d etapes, par parcours', () 
   // parcours ne la traverse — c'est la non-regression du lot.
   // 🔁 AA10 : 9 → 10. L'etape « Invitations », que D08 avait sortie de la chaine,
   // y revient POUR LE MATCH SEUL (constat ② d'Adel du 2026-08-20).
-  test('un match compte 10 etapes depuis AA10 : « Contre qui ? » et « Invitations »', () => {
-    expect(getEventWizardStepCount({ type: typeMatch })).toBe(10);
+  // 🚚 S10-B : 10 → 9. Elle en RESSORT, fondue dans « Participants » (cadre
+  // d'Adel du 2026-08-25). Le match retrouve la longueur que Y02 lui avait
+  // donnee, sans rien perdre : les invitations sont dans l'etape d'a cote.
+  test('un match compte 9 etapes : « Contre qui ? » en plus, S10-B en moins', () => {
+    expect(getEventWizardStepCount({ type: typeMatch })).toBe(9);
   });
 
   test('un stage compte 8 etapes : il garde son programme, il gagne la fusion', () => {
@@ -172,7 +180,8 @@ const etatDetectionSansPostes = { ...etatDetectionAvecCreneaux, team: equipeSans
 
 describe('D58 — le compteur d etapes, un cas par type d evenement', () => {
   test.each([
-    ['match officiel', { type: typeMatch }, 10],
+    // S10-B : 10 → 9, l'etape « Invitations » a fondu dans « Participants ».
+    ['match officiel', { type: typeMatch }, 9],
     ['entrainement ouvert', { type: typeEntrainement }, 8],
     ['entrainement prive', etatEntrainementFerme, 7],
     ['stage', { type: typeStage }, 8],
@@ -208,9 +217,9 @@ describe('D58 — le compteur d etapes, un cas par type d evenement', () => {
     );
     // Les deux seuls a depasser 8, et chacun pour une raison nommee : le
     // tournoi pour ses deux ecrans de reglages, le match pour son adversaire
-    // (Y02) ET ses invitations (AA10).
+    // (Y02). S10-B lui a repris l'etape « Invitations » : 10 → 9.
     expect(getEventWizardStepCount({ type: typeTournoi })).toBe(10);
-    expect(getEventWizardStepCount({ type: typeMatch })).toBe(10);
+    expect(getEventWizardStepCount({ type: typeMatch })).toBe(9);
   });
 });
 
@@ -230,16 +239,15 @@ describe('D08 — la chaine est ecrite une seule fois, tout en decoule', () => {
 
   // Y02 : le match, c'est le meme parcours PLUS un ecran, glisse entre la date
   // et le lieu. Savoir qui l'on recoit aide a choisir ou l'on joue.
-  test('un match traverse 10 ecrans : « Contre qui ? » puis « Invitations »', () => {
+  test('un match traverse 9 ecrans : « Contre qui ? » en plus, S10-B en moins', () => {
     expect(getEventWizardStepRoutes({ type: typeMatch })).toEqual([
       'EventWizardType',
       'EventWizardTeam',
       'EventWizardLogistics',
       'EventWizardOpponent',
       'EventWizardLocation',
+      // S10-B : « qui vient » se repond ICI, et nulle part ailleurs.
       'EventWizardParticipants',
-      // AA10 ② : juste apres les participants, la ou se pense « qui vient ».
-      'EventWizardInvites',
       'EventWizardAccess',
       'EventWizardDescription',
       'EventWizardRecap',
@@ -253,16 +261,14 @@ describe('D08 — la chaine est ecrite une seule fois, tout en decoule', () => {
       });
   });
 
-  // 🔁 AA10 a rouvert cette porte, mais POUR LE MATCH SEULEMENT. Partout
-  // ailleurs la regle de D08 tient : l'ecran reste enregistre et joignable
-  // depuis le Recap, sans numero d'etape.
-  test('EventWizardInvites n appartient qu au parcours MATCH', () => {
-    [typeStage, typeTournoi, typeEntrainement, typeDetection, typeAutre]
+  // 🚚 S10-B — L'ECRAN N'EXISTE PLUS, POUR AUCUN PARCOURS. AA10 en avait fait
+  // une etape du match ; la fusion l'a supprime. Ce temoin garde la SUPPRESSION
+  // elle-meme : une route ressuscitee sans ecran derriere serait un cul-de-sac.
+  test('EventWizardInvites n appartient a AUCUN parcours — il n existe plus', () => {
+    [typeStage, typeTournoi, typeEntrainement, typeDetection, typeAutre, typeMatch]
       .forEach((type) => {
         expect(getEventWizardStepRoutes({ type })).not.toContain('EventWizardInvites');
       });
-
-    expect(getEventWizardStepRoutes({ type: typeMatch })).toContain('EventWizardInvites');
   });
 
   test('le nombre d etapes est la longueur de la chaine, par construction', () => {
@@ -293,18 +299,16 @@ describe('D08 — a quelle place se trouve chaque ecran (index 1-BASE)', () => {
 
   // Y02 : la colonne `match` est decalee de +1 a partir du LIEU, parce que
   // « Contre qui ? » s'intercale en 4e position.
-  // AA10 : elle est decalee de +1 DE PLUS a partir de l'ACCES, parce que
-  // « Invitations » s'intercale juste apres les participants. Les colonnes des
-  // autres parcours n'ont toujours pas bouge d'un chiffre.
+  // 🚚 S10-B : le +1 de plus qu'AA10 avait pose apres les participants est
+  // REPRIS — « Invitations » a fondu dans « Participants ». La colonne `match`
+  // recule donc d'un cran a partir de l'ACCES, et la ligne `invites` disparait.
+  // Les colonnes des autres parcours n'ont toujours pas bouge d'un chiffre.
   const attendu = {
     access: {
-      detection: 6, match: 8, stage: 6, standard: 6, tournoi: 8,
+      detection: 6, match: 7, stage: 6, standard: 6, tournoi: 8,
     },
     description: {
-      detection: 7, match: 9, stage: 7, standard: 7, tournoi: 9,
-    },
-    invites: {
-      detection: 0, match: 7, stage: 0, standard: 0, tournoi: 0,
+      detection: 7, match: 8, stage: 7, standard: 7, tournoi: 9,
     },
     location: {
       detection: 4, match: 5, stage: 4, standard: 4, tournoi: 4,
@@ -321,7 +325,7 @@ describe('D08 — a quelle place se trouve chaque ecran (index 1-BASE)', () => {
       detection: 5, match: 6, stage: 5, standard: 5, tournoi: 7,
     },
     recap: {
-      detection: 8, match: 10, stage: 8, standard: 8, tournoi: 10,
+      detection: 8, match: 9, stage: 8, standard: 8, tournoi: 10,
     },
     stageProgram: {
       detection: 0, match: 0, stage: 3, standard: 0, tournoi: 0,
@@ -337,7 +341,6 @@ describe('D08 — a quelle place se trouve chaque ecran (index 1-BASE)', () => {
   const fonctions = {
     access: getEventWizardAccessStepIndex,
     description: getEventWizardDescriptionStepIndex,
-    invites: getEventWizardInvitesStepIndex,
     location: getEventWizardLocationStepIndex,
     logistics: getEventWizardLogisticsStepIndex,
     opponent: getEventWizardOpponentStepIndex,

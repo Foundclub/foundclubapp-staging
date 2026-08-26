@@ -8,7 +8,6 @@ import { RouteNames } from '@/navigation/routeNames';
 import { EventWizardProvider, useEventWizard } from '../EventWizardContext';
 import {
   getDefaultSessionStatusForEventType,
-  getEventWizardInvitesStepIndex,
   getEventWizardStepCount,
   getEventWizardStepRoutes,
   isMatchEventType,
@@ -493,7 +492,11 @@ describe('AA10 ① — une seule rangee « Match amical », celle des annonces',
 });
 
 describe('AA10 ② — les invitations, a leur place, pour un match', () => {
-  test('temoin 7 — l ecran des invitations est une etape du match', () => {
+  // 🚚 S10-B (2026-08-26) — AA10 avait mis les invitations JUSTE APRES les
+  // participants, parce que c'est la qu'on pense « qui vient ». Le cadre d'Adel
+  // du 25/08 va au bout de la meme idee : ce n'est plus une etape VOISINE, c'est
+  // la MEME. Le constat ② reste donc satisfait — par une etape de moins.
+  test('temoin 7 — les invitations sont DANS l etape Participants du match', () => {
     const chaineDuMatch = getEventWizardStepRoutes({
       sessionStatus: 'closed',
       type: { documentId: 'type-match', name: 'Match' },
@@ -506,30 +509,21 @@ describe('AA10 ② — les invitations, a leur place, pour un match', () => {
       RouteNames.EventWizardOpponent,
       RouteNames.EventWizardLocation,
       RouteNames.EventWizardParticipants,
-      RouteNames.EventWizardInvites,
       RouteNames.EventWizardAccess,
       RouteNames.EventWizardDescription,
       RouteNames.EventWizardRecap,
     ]);
-    // Elle arrive JUSTE APRES les participants : c'est la qu'on pense « qui
-    // vient », et non une fois tout regle depuis le recapitulatif.
-    expect(getEventWizardInvitesStepIndex({
-      sessionStatus: 'closed',
-      type: { name: 'Match' },
-    })).toBe(7);
+    expect(chaineDuMatch).not.toContain(RouteNames.EventWizardInvites);
   });
 
-  test('hors match, l ecran reste hors chaine et n affiche aucun numero', () => {
-    ['Entraînement', 'Stage', 'Tournoi', "Détection / Séance d'essai", 'Autre']
+  test('AUCUN type ne traverse plus l ecran des invitations', () => {
+    ['Match', 'Entraînement', 'Stage', 'Tournoi', "Détection / Séance d'essai", 'Autre']
       .forEach((nomDuType) => {
         const etat = {
           sessionStatus: getDefaultSessionStatusForEventType(nomDuType),
           type: { name: nomDuType },
         };
         expect(getEventWizardStepRoutes(etat)).not.toContain(RouteNames.EventWizardInvites);
-        // 0 = hors chaine. C'est ce zero que l'ecran traduit en « pas de
-        // compteur » plutot qu'en « Étape 0/8 ».
-        expect(getEventWizardInvitesStepIndex(etat)).toBe(0);
       });
   });
 
@@ -585,9 +579,12 @@ describe('AA10 — le compteur d etapes, avant et apres', () => {
       ['Entraînement', 7],
       ['Stage', 8],
       ['Tournoi', 10],
-      // 9 → 10 : l'etape « Invitations » entre dans la chaine.
-      ['Match', 10],
-      ['Match amical', 10],
+      // AA10 avait fait 9 → 10 en faisant entrer « Invitations » dans la chaine.
+      // 🚚 S10-B refait 10 → 9 en la fondant dans « Participants » : le match
+      // retrouve sa longueur d'avant AA10, sans rien perdre de ce qu'il sait
+      // faire.
+      ['Match', 9],
+      ['Match amical', 9],
       ['Autre', 8],
       ['Réservation', 8],
     ]);

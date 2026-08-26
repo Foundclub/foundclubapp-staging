@@ -1575,8 +1575,8 @@ function EventWizardRecap({ navigation }) {
               deux cartes en HAUT du Recap et une en bas — soit les premiers
               blocs qu'on lisait, pour les reglages qu'on utilise le moins.
               ⛔ La carte, elle, n'est PAS repliee : ses trois rangees sont
-              toujours a l'ecran, valeur comprise. C'est ce qui garantit que
-              `EventWizardInvites` reste a UNE pression du Recap. */}
+              toujours a l'ecran, valeur comprise. C'est ce qui garantit que les
+              invitations restent a UNE pression du Recap. */}
           <View style={[ApplicationStyle.card, Spaces.padding[16], Spaces.gap[4], cardSurfaceStyle]}>
             <Text style={[Fonts.h4, Fonts.neutral00, Spaces.marginBottom[4]]}>
               {t('eventWizard.recap.advanced.title', 'Options avancées')}
@@ -1590,18 +1590,19 @@ function EventWizardRecap({ navigation }) {
               onPress: () => openStepFromRecap(RouteNames.EventWizardOpponent),
               value: opponentSummary,
             }) : null}
-            {/* D08 : les invitations ne sont pas une etape du tunnel. Cette
-                rangee est le SEUL chemin vers `EventWizardInvites` — la
-                retirer rendrait l'ecran (1 474 lignes) injoignable.
-                ⚠️ AA10 ② : « seul chemin » reste vrai pour tous les types SAUF
-                le match, ou l'ecran est devenu une etape numerotee. La rangee
-                ne bouge pas pour autant — elle reste le raccourci de tout le
-                monde, et le retour au Recap est assure par le billet
-                `EVENT_WIZARD_RETURN_TO_RECAP` que `push` depose. */}
+            {/* 🚚 S10-B — LA RANGEE RESTE, SA DESTINATION CHANGE. Les
+                invitations ne sont plus un ecran a part : elles sont une section
+                de l'etape « Participants ». La rangee y mene donc desormais, et
+                elle garde exactement sa mission d'avant — l'ATTEIGNABILITE.
+                ⚠️ Le billet `EVENT_WIZARD_RETURN_TO_RECAP` que `push` depose ne
+                sert plus seulement au retour : sur un entrainement PRIVE, dont
+                l'etape Participants est sautee, c'est lui qui autorise l'etape a
+                se rendre au lieu de rediriger. Sans lui, un entrainement prive ne
+                pourrait plus jamais inviter une equipe. */}
             {renderAdvancedRow({
               isFirst: !isMatch,
               label: t('eventWizard.recap.advanced.invites', 'Invitations'),
-              onPress: () => openStepFromRecap(RouteNames.EventWizardInvites),
+              onPress: () => openStepFromRecap(RouteNames.EventWizardParticipants),
               value: invitesSummary,
             })}
             {renderAdvancedRow({
