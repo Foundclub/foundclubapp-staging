@@ -105,8 +105,10 @@ function MatchCompositionBoard() {
   /** @type {any} */
   const params = useMemo(() => route.params || {}, [route.params]);
   const {
+    canEdit = false,
     eventId,
     magnetEnabled = false,
+    readOnly = false,
     selectedPlayers = EMPTY_LIST,
     sport = 'football',
     startPlacements = EMPTY_LIST,
@@ -114,6 +116,22 @@ function MatchCompositionBoard() {
     teamId,
     teamName = '',
   } = params;
+
+  // COMPOLECT (D1) — LE MODE CONSULTATION.
+  //
+  // 🗣️ Adel, 26/08 : « quand on ouvre une convocation avec composition, on doit
+  // voir vraiment la composition en plein ecran avec le banc — pas le reste ».
+  // Cet ecran dessinait deja exactement ca ; il n'avait simplement AUCUNE notion
+  // de lecture seule (`grep -c readOnly` rendait 0). C'est ce mode-la qui est
+  // cree ici, et c'est lui le vrai travail du lot : le branchement n'en est que
+  // la consequence.
+  //
+  // Ce qui RESTE en consultation : le terrain, les jetons, les pastilles de
+  // comptage et le bandeau des remplacants.
+  // Ce qui DISPARAIT : tout ce qui ecrit — le glisser-deposer, « Enregistrer »,
+  // « Publier », et la consigne « Glisse un joueur… », qui promettrait un geste
+  // qui n'existe plus.
+  const isReadOnly = Boolean(readOnly);
 
   const [placements, setPlacements] = useState(() => (
     Array.isArray(startPlacements) ? startPlacements : EMPTY_LIST
@@ -324,7 +342,11 @@ function MatchCompositionBoard() {
     );
   }, [t]);
 
+  // 🔒 COMPOLECT — LE VERROU EST ICI, PAS SEULEMENT SUR LE BOUTON. Retirer un
+  // bouton cache un geste ; le fermer a la source le supprime. Les 2 seules
+  // ecritures de l'ecran passent par ces 2 fonctions.
   const handleSave = useCallback(async () => {
+    if (isReadOnly) return;
     if (!eventId || !teamId || isBusy) return;
     setIsBusy(true);
     try {
@@ -339,9 +361,10 @@ function MatchCompositionBoard() {
     } finally {
       setIsBusy(false);
     }
-  }, [buildPack, eventId, handleActionError, isBusy, t, teamId]);
+  }, [buildPack, eventId, handleActionError, isBusy, isReadOnly, t, teamId]);
 
   const handlePublish = useCallback(async () => {
+    if (isReadOnly) return;
     if (!eventId || !teamId || isBusy) return;
     setIsBusy(true);
     try {
@@ -422,6 +445,7 @@ function MatchCompositionBoard() {
     eventId,
     handleActionError,
     isBusy,
+    isReadOnly,
     navigation,
     queryClient,
     startTeamChat,
@@ -482,27 +506,36 @@ function MatchCompositionBoard() {
               🧨 S04 — ET LE TERRAIN PART AVEC. Depiler cet ecran DETRUIT son
               `useState` : sans ce parametre, les jetons poses a la main
               n'existent plus nulle part, et le retour les reconstruisait depuis
-              une rangee de depart. */}
-          <TouchableOpacity
-            accessibilityRole="button"
-            activeOpacity={0.8}
-            // @ts-ignore
-            onPress={() => navigation.navigate(RouteNames.MatchCallUpSelection, {
-              ...params,
-              startPlacements: placements,
-            })}
-            style={[
-              styles.editButton,
-              {
-                backgroundColor: withAlpha(Colors.primary500, 0.12),
-                borderColor: withAlpha(Colors.primary500, 0.45),
-              },
-            ]}
-          >
-            <Text style={[Fonts.p4Bold, { color: Colors.primary500 }]}>
-              {t('matchComposition.board.edit')}
-            </Text>
-          </TouchableOpacity>
+              une rangee de depart.
+              🚪 COMPOLECT (D2) — EN CONSULTATION, C'EST LA SEULE PORTE VERS
+              L'ECRITURE, et elle n'existe que pour qui peut vraiment modifier.
+              🧨 ET ELLE DOIT EFFACER `readOnly` : `MatchCallUpSelection`
+              retransmet `...params` au terrain (`:318`). Un `readOnly` oublie
+              ici reviendrait par la bande et rendrait l'EDITION consultable. */}
+          {isReadOnly && !canEdit ? null : (
+            <TouchableOpacity
+              accessibilityRole="button"
+              activeOpacity={0.8}
+              // @ts-ignore
+              onPress={() => navigation.navigate(RouteNames.MatchCallUpSelection, {
+                ...params,
+                canEdit: true,
+                readOnly: false,
+                startPlacements: placements,
+              })}
+              style={[
+                styles.editButton,
+                {
+                  backgroundColor: withAlpha(Colors.primary500, 0.12),
+                  borderColor: withAlpha(Colors.primary500, 0.45),
+                },
+              ]}
+            >
+              <Text style={[Fonts.p4Bold, { color: Colors.primary500 }]}>
+                {t('matchComposition.board.edit')}
+              </Text>
+            </TouchableOpacity>
+          )}
         </View>
 
         <View style={styles.chipRow}>
@@ -511,7 +544,10 @@ function MatchCompositionBoard() {
           }), true)}
           {renderChip(t('matchComposition.board.chips.bench', { count: counters.bench }), false)}
           <View style={styles.chipSpacer} />
-          {renderChip(magnetEnabled
+          {/* La pastille d'aimantation decrit un GESTE de placement : en
+              consultation elle n'aurait plus d'objet. Les 2 pastilles de
+              COMPTAGE, elles, restent — c'est la lecture du terrain. */}
+          {isReadOnly ? null : renderChip(magnetEnabled
             ? t('matchComposition.board.chips.magnet')
             : t('matchComposition.board.chips.freePlacement'), false)}
         </View>
@@ -527,22 +563,30 @@ function MatchCompositionBoard() {
               {placements.map((/** @type {any} */ placement) => {
                 const player = playerById.get(String(placement?.playerId || ''));
                 if (!player) return null;
+                const jeton = (
+                  <View
+                    accessibilityLabel={t('matchComposition.board.tokenOnField', {
+                      name: `${player?.firstname || ''} ${player?.lastname || ''}`.trim(),
+                    })}
+                    key={`placed-${placement.playerId}`}
+                    style={[
+                      styles.fieldToken,
+                      { left: `${placement.positionX}%`, top: `${placement.positionY}%` },
+                    ]}
+                  >
+                    <DraggableToken isOnField player={player} />
+                  </View>
+                );
+                // 🔒 COMPOLECT — en consultation le jeton n'est plus qu'un
+                // dessin : sans `GestureDetector` autour de lui, aucun appui
+                // long ne peut le decoller.
+                if (isReadOnly) return jeton;
                 return (
                   <GestureDetector
                     gesture={createDragGesture(player, String(placement.playerId))}
                     key={`placed-${placement.playerId}`}
                   >
-                    <View
-                      accessibilityLabel={t('matchComposition.board.tokenOnField', {
-                        name: `${player?.firstname || ''} ${player?.lastname || ''}`.trim(),
-                      })}
-                      style={[
-                        styles.fieldToken,
-                        { left: `${placement.positionX}%`, top: `${placement.positionY}%` },
-                      ]}
-                    >
-                      <DraggableToken isOnField player={player} />
-                    </View>
+                    {jeton}
                   </GestureDetector>
                 );
               })}
@@ -563,9 +607,13 @@ function MatchCompositionBoard() {
             <Text style={[Fonts.p3Bold, styles.benchTitle, { color: Colors.neutral00 }]}>
               {t('matchComposition.board.bench.title', { count: counters.bench }).toUpperCase()}
             </Text>
-            <Text numberOfLines={1} style={[Fonts.p4, { color: Colors.neutral300 }]}>
-              {t('matchComposition.board.bench.hint')}
-            </Text>
+            {/* « Glisse un joueur sur le terrain » promet un geste : en
+                consultation il n'existe pas, la consigne mentirait. */}
+            {isReadOnly ? null : (
+              <Text numberOfLines={1} style={[Fonts.p4, { color: Colors.neutral300 }]}>
+                {t('matchComposition.board.bench.hint')}
+              </Text>
+            )}
           </View>
           <ScrollView
             contentContainerStyle={styles.benchContent}
@@ -577,39 +625,50 @@ function MatchCompositionBoard() {
                 {t('matchComposition.board.bench.empty')}
               </Text>
             ) : null}
-            {benchPlayers.map((/** @type {any} */ player) => (
-              <GestureDetector
-                gesture={createDragGesture(player, SOURCE_BENCH)}
-                key={`bench-${getCompositionPlayerId(player)}`}
-              >
+            {benchPlayers.map((/** @type {any} */ player) => {
+              const jeton = (
                 <View
                   accessibilityLabel={t('matchComposition.board.tokenOnBench', {
                     name: `${player?.firstname || ''} ${player?.lastname || ''}`.trim(),
                   })}
+                  key={`bench-${getCompositionPlayerId(player)}`}
                 >
                   <DraggableToken player={player} />
                 </View>
-              </GestureDetector>
-            ))}
+              );
+              if (isReadOnly) return jeton;
+              return (
+                <GestureDetector
+                  gesture={createDragGesture(player, SOURCE_BENCH)}
+                  key={`bench-${getCompositionPlayerId(player)}`}
+                >
+                  {jeton}
+                </GestureDetector>
+              );
+            })}
           </ScrollView>
         </View>
 
-        <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 12) }]}>
-          <Button
-            onPress={handleSave}
-            style={styles.footerSave}
-            title={t('matchComposition.board.actions.save')}
-            variant="Secondary"
-          />
-          <Button
-            icon="send"
-            iconPosition="before"
-            onPress={() => setIsSheetVisible(true)}
-            style={styles.footerPublish}
-            title={t('matchComposition.board.actions.publish')}
-            variant="Primary"
-          />
-        </View>
+        {/* 🔒 COMPOLECT (D1) — EN CONSULTATION, LE PIED D'ECRAN NE PORTE PLUS
+            AUCUNE ACTION D'ECRITURE. Le terrain gagne la place. */}
+        {isReadOnly ? null : (
+          <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 12) }]}>
+            <Button
+              onPress={handleSave}
+              style={styles.footerSave}
+              title={t('matchComposition.board.actions.save')}
+              variant="Secondary"
+            />
+            <Button
+              icon="send"
+              iconPosition="before"
+              onPress={() => setIsSheetVisible(true)}
+              style={styles.footerPublish}
+              title={t('matchComposition.board.actions.publish')}
+              variant="Primary"
+            />
+          </View>
+        )}
       </ScreenContainer>
 
       {/* ECRAN 6 — la feuille. Le terrain reste derriere : c'est `BottomModal`
