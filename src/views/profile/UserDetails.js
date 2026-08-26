@@ -80,6 +80,29 @@ const parseDate = (value) => {
   return Number.isNaN(parsed.getTime()) ? null : parsed;
 };
 
+/**
+ * L AGE DU PROFIL REGARDE — la derivee du serveur d abord (SECU-2).
+ *
+ * Depuis SECU-2, le serveur ne rend PLUS la date de naissance d un tiers : il
+ * rend `age`, calcule chez lui (porte 1). La date, elle, n arrive plus que pour
+ * SON PROPRIETAIRE, par `/me` — et c est ce profil-la que l ecran affiche quand
+ * `isSelfProfile` est vrai (voir `const user = isSelfProfile ? ... ` plus bas).
+ *
+ * ⛔ On n invente donc aucun calcul sur une donnee absente : on prend l age
+ * quand il est la, et on retombe sur la date UNIQUEMENT dans le cas ou elle
+ * arrive encore.
+ * @param {object | null | undefined} profil le compte regarde
+ * @returns {number | null} annees revolues, ou null si on ne peut pas savoir
+ */
+const readProfileAge = (profil) => {
+  if (typeof profil?.age === 'number' && Number.isFinite(profil.age)) {
+    return profil.age;
+  }
+
+  const birthdate = parseDate(profil?.birthdate);
+  return birthdate ? differenceInYears(new Date(), birthdate) : null;
+};
+
 const formatRoleLabel = (roleName) => {
   const normalized = String(roleName || '').trim().toLowerCase();
   if (!normalized) return 'UTILISATEUR';
@@ -383,7 +406,7 @@ function UserDetails({ navigation, route }) {
   const scrollBottomPadding = canContact ? insets.bottom + 128 : insets.bottom + 24;
 
   const birthdate = parseDate(user?.birthdate);
-  const age = birthdate ? differenceInYears(new Date(), birthdate) : null;
+  const age = readProfileAge(user);
   const roleLabel = formatRoleLabel(user?.role?.name);
   // D54 — le pack fait de la separation des roles un CONTRAT de recette : les
   // blocs joueur (stats de match, poste, section, categorie, taille, poids)
@@ -591,8 +614,11 @@ function UserDetails({ navigation, route }) {
   const handleContactUser = async () => {
     if (!user || !currentUser) return;
 
-    const profileBirthdate = parseDate(user.birthdate);
-    const computedAge = profileBirthdate ? differenceInYears(new Date(), profileBirthdate) : 18;
+    // ⚠️ Le repli reste 18 : un age inconnu ne doit PAS ouvrir la voie du
+    // contact direct par erreur, il doit se comporter comme un adulte
+    // (comportement d avant SECU-2, conserve tel quel).
+    const profileAge = readProfileAge(user);
+    const computedAge = typeof profileAge === 'number' ? profileAge : 18;
 
     if (computedAge < 13) {
       if (user.parentAccount?.documentId) {

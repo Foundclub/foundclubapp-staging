@@ -187,6 +187,11 @@ const userSchema = Joi.object({
  */
 
 const publicUserSchema = Joi.object({
+  // SECU-2 porte 1 — le serveur rend desormais `age` et NON `birthdate` :
+  // la date de naissance exacte d un tiers (mineurs compris) ne sort plus.
+  // `birthdate` reste declare et optionnel pour qu une app a jour continue
+  // de fonctionner contre un serveur qui ne l est pas encore.
+  age: Joi.number().integer().allow(null).optional(),
   avatar: appImageSummarySchema.optional(),
   bestLevel: Joi.string().allow(null, '').optional(),
   birthdate: Joi.string().isoDate().allow(null).optional(),

@@ -428,3 +428,75 @@ describe('D54 · temoin 3 — l\'APERCU dit la verite : il montre ce que voient 
     expect(texteVisible(arbre)).not.toContain(DATE_NAISSANCE_AFFICHEE);
   });
 });
+
+describe('SECU-2 · porte 1 — le serveur ne rend plus la date, il rend l\'AGE', () => {
+  // D54 avait ferme la fuite A L\'ECRAN : la page publique n\'AFFICHAIT plus la
+  // date exacte. Mais le serveur l\'ENVOYAIT toujours — n\'importe qui pouvait la
+  // lire dans la reponse reseau. SECU-2 la coupe a la source
+  // (`sanitizePublicUserProfile` rend `age`, plus `birthdate`).
+  //
+  // Ces temoins decrivent donc la charge d\'APRES : celle ou la date n\'arrive
+  // plus du tout pour un tiers. Ils echoueraient si l\'ecran continuait de
+  // calculer l\'age depuis une date qu\'il ne recoit plus.
+
+  /** Un profil tel que le serveur le rend DESORMAIS : un age, aucune date. */
+  const joueurSansDate = {
+    age: 12,
+    documentId: 'autre-2',
+    firstname: 'Zoe',
+    lastname: 'Bonnet',
+    role: { name: 'Joueur', type: 'player' },
+  };
+
+  it('affiche l\'age venu du serveur, alors qu\'AUCUNE date n\'arrive plus', async () => {
+    mockFetchedUser = joueurSansDate;
+
+    const arbre = await rendre(dirigeantConnecte, { userId: 'autre-2' });
+
+    expect(texteVisible(arbre)).toContain('12 ans');
+  });
+
+  it('ne porte plus rien a masquer : ni ligne « Date de naissance », ni date', async () => {
+    mockFetchedUser = joueurSansDate;
+
+    const arbre = await rendre(dirigeantConnecte, { userId: 'autre-2' });
+    const texte = texteVisible(arbre);
+
+    expect(texte).not.toContain('Date de naissance');
+    expect(texte).not.toContain(DATE_NAISSANCE_AFFICHEE);
+  });
+
+  it('sans age NI date, l\'ecran dit « non renseigne » — il n\'invente aucun age', async () => {
+    mockFetchedUser = { ...joueurSansDate, age: null };
+
+    const arbre = await rendre(dirigeantConnecte, { userId: 'autre-2' });
+    const texte = texteVisible(arbre);
+
+    expect(texte).toContain('Non renseigné');
+    expect(texte).not.toContain('NaN');
+    expect(texte).not.toMatch(/\d+\s+ans/);
+  });
+
+  it('MON propre profil garde son age : la date m\'arrive encore par /me', async () => {
+    // ⚠️ LE JUMEAU QUI COMPTE. Couper la date pour les tiers ne doit RIEN me
+    // retirer. Ici on est en APERCU : `isSelfProfile` est vrai (les donnees
+    // viennent de MON compte, qui porte encore `birthdate` et n\'a pas d\'`age`)
+    // mais `isOwnerView` est faux, donc l\'ecran rend bien cette page-ci et non
+    // le profil personnel. C\'est exactement le chemin de repli de
+    // `readProfileAge` : pas d\'`age` dans la charge, une date -> un age.
+    const moiAvecMaDate = {
+      birthdate: DATE_NAISSANCE_ISO,
+      documentId: 'user-1',
+      firstname: 'Moi',
+      lastname: 'Joueur',
+      role: { name: 'Joueur', type: 'player' },
+    };
+
+    const arbre = await rendre(moiAvecMaDate, { preview: true, userId: 'user-1' });
+    const texte = texteVisible(arbre);
+
+    expect(texte).toContain(`${ageAttendu} ans`);
+    // Et l\'apercu continue de dire la verite : la date exacte reste masquee.
+    expect(texte).not.toContain(DATE_NAISSANCE_AFFICHEE);
+  });
+});
