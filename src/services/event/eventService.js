@@ -391,6 +391,24 @@ export const inviteEventTeamAudience = async (eventId, payload) => {
 };
 
 /**
+ * S10-C / D1 — LES INVITATIONS D EQUIPE QUI ATTENDENT MA REPONSE.
+ *
+ * Contrat S10-A du 2026-08-26 (`CONTRAT_S10A_invitations_serveur.md`, section 5) :
+ * la route rend les audiences `PENDING` dont je suis encadrant de l equipe
+ * invitee OU dirigeant de son club, sur un evenement a venir et non annule.
+ *
+ * 🔒 LE PERIMETRE EST CALCULE PAR LE SERVEUR, JAMAIS ENVOYE PAR L APP — c est
+ * ce qui garantit que la pastille d accueil (`invitationsEquipe`) et cette
+ * liste posent EXACTEMENT la meme question. Ajouter ici le moindre parametre
+ * de filtrage rouvrirait le compteur fantome deja paye (piege Q1).
+ * @returns {Promise<any>}
+ */
+export const getMyPendingEventTeamInvitations = async () => {
+  const response = await client.get('/event-team-audiences/mine');
+  return Array.isArray(response?.data?.data) ? response.data.data : [];
+};
+
+/**
  * Update a team audience invitation response.
  * @param {string} audienceId
  * @param {'accept' | 'refuse' | 'cancel'} action

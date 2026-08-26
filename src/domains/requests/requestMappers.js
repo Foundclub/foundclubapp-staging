@@ -1,6 +1,8 @@
 /**
- * @typedef {'all' | 'team' | 'club' | 'event' | 'featured' | 'installation' | 'interest' | 'friendly'} RequestHubFilter
- * @typedef {'team' | 'club' | 'event' | 'featured' | 'installation' | 'interest' | 'friendly'} RequestHubType
+ * @typedef {'all' | 'team' | 'club' | 'event' | 'featured' | 'installation' | 'interest'
+ *  | 'friendly' | 'teamInvite'} RequestHubFilter
+ * @typedef {'team' | 'club' | 'event' | 'featured' | 'installation' | 'interest'
+ *  | 'friendly' | 'teamInvite'} RequestHubType
  * @typedef {'pending'} RequestHubStatus
  * @typedef {'accept' | 'reject' | 'validate' | 'respond' | 'chat' | 'open'} RequestHubAction
  * @typedef {object} RequestHubItem
@@ -14,7 +16,9 @@
  * @property {Record<string, any>} meta
  */
 
-export const REQUEST_HUB_FILTERS = /** @type {const} */ (['all', 'team', 'club', 'event', 'featured', 'installation', 'interest', 'friendly']);
+export const REQUEST_HUB_FILTERS = /** @type {const} */ ([
+  'all', 'team', 'club', 'event', 'featured', 'installation', 'interest', 'friendly', 'teamInvite',
+]);
 
 /**
  * @param {{
@@ -47,6 +51,12 @@ export const getAvailableRequestHubFilters = (context = {}) => {
   // ne permettait de les isoler. Meme porte que la source du meme nom.
   if ((Array.isArray(teamIds) && teamIds.length > 0) || clubId) {
     filters.push('friendly');
+  }
+  // S10-C / D1 — MEME PORTE QUE LE SERVEUR. Le contrat S10-A calcule le
+  // perimetre comme « equipe que j entraine OU club que je dirige » : l onglet
+  // s ouvre exactement dans ces deux cas, jamais pour un joueur.
+  if ((Array.isArray(teamIds) && teamIds.length > 0) || clubId) {
+    filters.push('teamInvite');
   }
   if (clubId) {
     filters.push('club', 'event');
@@ -488,6 +498,58 @@ export const mapMyFriendlyMatchProposalToHubItem = (ad = {}) => {
 };
 
 /**
+ * S10-C / D1 — UNE INVITATION D EQUIPE QUI ATTEND MA REPONSE.
+ *
+ * Forme d entree : celle de `GET /event-team-audiences/mine` (contrat S10-A du
+ * 2026-08-26, section 5). Elle ne porte AUCUNE donnee personnelle — ni membres
+ * coches, ni joueurs, ni encadrants : la rangee n en affiche donc aucune.
+ *
+ * 🚪 ELLE N EMBARQUE PAS SES BOUTONS (decision D5) : accepter et refuser vivent
+ * a UN seul endroit, la section « Invitations d equipe » de la fiche
+ * evenement. `meta.eventId` suffit a y mener en un appui — deux jeux de boutons
+ * pour un meme geste, c est deux endroits ou diverger, et le meme motif que
+ * les propositions de match amical (D92).
+ * @param {Record<string, any>} audience
+ * @returns {RequestHubItem}
+ */
+export const mapEventTeamInvitationToHubItem = (audience = {}) => {
+  const event = audience?.event || {};
+  const invitedTeam = audience?.team || {};
+  const audienceId = String(audience?.audienceId || audience?.documentId || audience?.id || '');
+  const eventId = String(event?.id || event?.documentId || '');
+  const typeName = normalizeString(event?.typeName);
+  const eventName = normalizeString(event?.name) || typeName || 'Evenement';
+  const invitedTeamName = normalizeString(invitedTeam?.name) || 'Ton equipe';
+  const organizerTeamName = normalizeString(event?.teamName);
+
+  return {
+    actions: {},
+    // Le contrat ne promet pas de date de creation : la date de l evenement
+    // range les invitations entre elles plutot que de les jeter toutes au
+    // fond de la liste (`createdAt` absent vaut moins l infini au tri).
+    createdAt: toIsoString(audience?.createdAt) || toIsoString(event?.date),
+    id: `teamInvite:${audienceId}`,
+    meta: {
+      audienceId,
+      eventDate: toIsoString(event?.date),
+      eventId,
+      eventName,
+      invitedTeamName,
+      organizerTeamName,
+      raw: audience,
+      teamId: normalizeString(invitedTeam?.id || invitedTeam?.documentId),
+      teamName: invitedTeamName,
+    },
+    status: 'pending',
+    subtitle: organizerTeamName
+      ? `${organizerTeamName} invite ${invitedTeamName}.`
+      : `${invitedTeamName} est invitee a cet evenement.`,
+    title: `Invitation - ${eventName}`,
+    type: 'teamInvite',
+  };
+};
+
+/**
  * @param {RequestHubItem[]} items
  * @returns {RequestHubItem[]}
  */
@@ -516,6 +578,7 @@ export const buildRequestHubCounts = (items = []) => {
     installation: 0,
     interest: 0,
     team: 0,
+    teamInvite: 0,
     total: 0,
   };
 

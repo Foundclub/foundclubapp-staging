@@ -20,6 +20,7 @@ jest.mock('@/services/clubMembershipRequest/clubMembershipRequestService', () =>
 
 jest.mock('@/services/event/eventService', () => ({
   getEvents: jest.fn(),
+  getMyPendingEventTeamInvitations: jest.fn(async () => []),
   getPendingFeaturedRequests: jest.fn(),
 }));
 
@@ -126,6 +127,7 @@ describe('requestsHubService', () => {
       installation: 0,
       interest: 0,
       team: 0,
+      teamInvite: 0,
       total: 0,
     });
   });

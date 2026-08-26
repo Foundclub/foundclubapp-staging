@@ -3679,8 +3679,15 @@ export default {
       event: 'Événement',
       featured: 'À la une',
       team: 'Équipe',
+      teamInvite: 'Invitations',
     },
     forbidden: 'Cet onglet est réservé aux entraîneur·e·s et aux dirigeant·e·s.',
+    // S10-C — les invitations d'équipe reçues. Le libellé du bouton dit où l'on
+    // va ET ce qu'on y fera : accepter et refuser vivent à UN seul endroit, la
+    // section « Invitations d'équipe » de la fiche événement (décision D5).
+    invitations: {
+      respond: "Répondre à l'invitation",
+    },
     migratedBannerAction: "Ouvrir l'onglet Demandes",
     migratedBannerTitle: 'Ce flux a été migré vers Demandes.',
     partialError: 'Source indisponible',
@@ -3704,6 +3711,7 @@ export default {
       installation: 'Installation',
       interest: 'Intérêt',
       team: 'Équipe',
+      teamInvite: 'Invitation',
       unknown: 'Demande',
     },
   },

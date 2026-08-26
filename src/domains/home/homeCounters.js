@@ -25,6 +25,7 @@
 /**
  * @typedef {object} HomeCounters
  * @property {number} demandes
+ * @property {number} invitationsEquipe
  * @property {{ amount: number, count: number }} impayes
  * @property {number} candidatures
  * @property {number} reservations
@@ -43,6 +44,7 @@ export const EMPTY_HOME_COUNTERS = {
   candidatures: 0,
   demandes: 0,
   impayes: { amount: 0, count: 0 },
+  invitationsEquipe: 0,
   maCotisationDue: 0,
   mesReponses: 0,
   moderation: {
@@ -82,6 +84,7 @@ export const normalizeHomeCounters = (payload) => {
       amount: toCount(payload.impayes?.amount),
       count: toCount(payload.impayes?.count),
     },
+    invitationsEquipe: toCount(payload.invitationsEquipe),
     maCotisationDue: toCount(payload.maCotisationDue),
     mesReponses: toCount(payload.mesReponses),
     moderation: {
@@ -150,7 +153,18 @@ export const formatBannerShortTime = (startsAt) => {
 const ALERT_SOURCES = {
   'manage-licenses': (/** @type {HomeCounters} */ c) => c.impayes.count,
   'manage-my-ads': (/** @type {HomeCounters} */ c) => c.candidatures,
-  'manage-requests': (/** @type {HomeCounters} */ c) => c.demandes,
+  // 🎟️ S10-C / D2 — LES INVITATIONS D EQUIPE ENTRENT DANS LA PASTILLE
+  // « Demandes », parce que c est la carte qui ouvre l ecran ou elles se
+  // trouvent. Les deux compteurs s ADDITIONNENT : le contrat S10-A (section 5)
+  // livre `invitationsEquipe` comme un champ A PART, jamais fondu dans
+  // `demandes`.
+  // 🔒 CE QUI EMPECHE LA PASTILLE FANTOME : l app n applique AUCUN filtre a ce
+  // nombre. Le serveur pose la meme question au compteur et a la liste
+  // (`GET /event-team-audiences/mine`) — un temoin serveur compare les deux
+  // requetes. Un tri ajoute ici les ferait diverger sur-le-champ (piege Q1).
+  // ⚠️ Un champ absent vaut 0 : la pastille ne bouge donc pas d un pouce tant
+  // que le serveur ne l envoie pas.
+  'manage-requests': (/** @type {HomeCounters} */ c) => c.demandes + c.invitationsEquipe,
   'profile-license': (/** @type {HomeCounters} */ c) => c.maCotisationDue,
   'search-amicaux': (/** @type {HomeCounters} */ c) => c.propositionsMatch,
   'search-my-activities': (/** @type {HomeCounters} */ c) => c.mesReponses,
