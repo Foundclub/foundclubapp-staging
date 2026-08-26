@@ -565,8 +565,18 @@ function ParticipantEventList({ navigation }) {
           <Suspense fallback={<DeferredFallback height={HAUTEUR_CARTE_EVENEMENT} />}>
             <EventCardNew
               item={item.reservation}
+              // ⛔ PAS `handleDeclineEvent` ICI, ET CE N EST PAS UN OUBLI (T2/D2).
+              //
+              // Cette carte porte une RÉSERVATION : son `documentId` est un
+              // identifiant de réservation, pas d événement. Le brancher
+              // enverrait `POST /events/<idDeRéservation>/missing`, c est-à-dire
+              // la mauvaise ressource — et depuis D3 cet échec parlerait, en
+              // affichant une erreur là où il n y a rien à décliner. Aucune
+              // route « je ne viens pas » n existe pour une réservation ; le
+              // frère (`EventListContent.js:1250-1259`) la laisse inerte pour
+              // la même raison. Le vrai « Absent·e » est sur la carte d à côté.
               // @ts-ignore
-              onDecline={() => handleDeclineEvent(item.reservation)}
+              onDecline={() => {}}
               onJoin={() => handleJoinEvent(item.reservation)}
               onLogin={() => {}}
               onParticipate={() => handleParticipateToEvent(item.reservation)}
