@@ -2,28 +2,29 @@ import { Text } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
 // ==========================================================================
-// AC08 — LA PORTE. Temoins 1, 2, 5 et 6 du lot.
+// COMPOLECT — OUVRIR UNE CONVOCATION PUBLIEE DOIT MONTRER LE VRAI TERRAIN.
 //
-// 🗣️ Adel, trois fois : « pour voir la composition, l'ecran n'est pas bon du
-// tout » (7b) · « c'est nul, l'ecran est mauvais » (D-22) · « je dois VRAIMENT
-// voir la compo : le terrain avec les joueurs places et le banc » (D-23).
+// 🗣️ Adel, 26/08 (captures 19h46 / 19h49) : « pour les convocations avec
+// composition, quand on ouvre, on doit voir vraiment la composition en plein
+// ecran avec le banc, comme ca — pas le reste ».
 //
-// 🧨 CE QUE LA MESURE A TROUVE, et qui explique le constat : l'ecran demande
-// EXISTE deja, entier (`PlayerConvocationScreen`, 414 lignes, teste). Mais la
-// page d'un evenement n'y menait JAMAIS — seule une notification poussee y
-// conduisait, et le bouton « Voir la composition d'equipes » deposait le joueur
-// sur le TABLEAU DU COACH desactive (1 974 lignes), sans bouton pour repondre.
-// Convoque et non-convoque lisaient exactement le meme bloc.
+// 🧨 CE QUE LA MESURE A TROUVE : `openPublishedConvocation` a TROIS branches,
+// et une seule n'avait aucun terrain — celle du COACH (`canEdit`), qui est
+// exactement celle d'Adel. Elle atterrissait sur `MatchConvocationPublished`,
+// un ecran de REPONSES qui ne dessine rien.
 //
-// 🎯 Ce fichier ne verrouille pas un dessin : il verrouille UN CHEMIN.
-//   1. 🥇 un joueur convoque atteint le terrain en UN appui ;
-//   2. 🔒 un joueur NON convoque n'est PAS envoye la-bas (il y serait repose
-//      aussitot : ce serait un aller-retour pour rien) ;
-//   5. convoque et non convoque ne lisent PLUS la meme chose ;
-//   6. 🔒 NON-REGRESSION : le tableau du COACH n'a pas bouge d'un pouce.
+// Ce fichier verrouille LE CHEMIN, jamais un dessin :
+//   · D3 — le coach atterrit sur le plateau neuf, en lecture seule ;
+//   · D5 — le non-editeur SANS role y va aussi : une seule destination de
+//     lecture, pas deux ;
+//   · D6 — 🔒 une convocation publiee SANS placement ne change PAS de
+//     comportement : un terrain vide ferait croire a une compo perdue ;
+//   · 🔒 NON-REGRESSION — la branche du JOUEUR CONVOQUE ne bouge pas d'un
+//     pouce (elle a deja son terrain et son propre lot).
 //
-// La couture est le TEXTE VISIBLE et la ROUTE EMPRUNTEE, jamais la forme de
-// l'arbre — le meme choix que `EventDetailsCompoReminder.test.js`.
+// ⚠️ ET LE PLATEAU NE DESSINE QU'UN TERRAIN : quand DEUX branches portent des
+// titulaires, on garde la vue agregee. Y envoyer le plateau cacherait une
+// equipe entiere sans le dire.
 // ==========================================================================
 
 const mockUseAuth = jest.fn();
@@ -501,8 +502,176 @@ afterEach(() => {
   }
 });
 
-describe('AC08 · TEMOIN 1 — 🥇 le convoque atteint le terrain en UN appui', () => {
-  test('un titulaire part sur SON ecran, avec l evenement et l equipe', () => {
+// Une convocation publiee SANS aucun placement — le chemin S5-c, legitime.
+const PACK_SANS_PLACEMENT = {
+  ...PACK,
+  reservePlayerIds: [JOUEUR, REMPLACANT],
+  teams: [{ id: 'team_1', name: 'U15', placements: [] }],
+};
+
+const convocationDe = (/** @type {any} */ pack) => ({
+  ...CONVOCATION,
+  branches: [{ ...CONVOCATION.branches[0], published: pack }],
+});
+
+// Deux equipes publiees, chacune avec ses titulaires : le plateau neuf ne sait
+// dessiner qu'UN terrain, il ne doit donc pas etre choisi ici.
+const CONVOCATION_DEUX_BRANCHES = {
+  ...CONVOCATION,
+  branches: [
+    CONVOCATION.branches[0],
+    {
+      published: {
+        ...PACK,
+        teams: [{
+          id: 'team_2',
+          name: 'U17',
+          placements: [{
+            playerId: JOUEUR, positionX: 20, positionY: 40, slotId: 'team_2:slot_1',
+          }],
+        }],
+      },
+      responses: { byPlayerId: {}, counts: { absent: 0, pending: 0, present: 0 } },
+      team: { documentId: 'team-2', name: 'U17' },
+      viewer: { inReserve: false, teamEntryIds: [] },
+    },
+  ],
+};
+
+const derniersParametres = () => {
+  const call = [...mockNavigate.mock.calls].pop();
+  return call ? call[1] : null;
+};
+
+const evenementSansRole = () => buildMatch({
+  team: {
+    club: { documentId: CLUB_ID },
+    documentId: TEAM_ID,
+    name: 'U15',
+    players: [{ documentId: JOUEUR }, { documentId: SPECTATEUR }],
+    trainers: [],
+  },
+});
+
+describe('COMPOLECT · D3 — 🥇 le COACH atterrit enfin sur le terrain', () => {
+  test('appuyer sur la convocation publiee ouvre le plateau, pas la page de reponses', () => {
+    const root = monter({ auth: authPour('coach-1', true) });
+
+    allerSurLOnglet(root, 'callUp');
+    appuyer(root, 'matchConvocation.published.openCta');
+
+    expect(derniereRoute()).toBe('MatchCompositionBoard');
+  });
+
+  test('et il y arrive en LECTURE SEULE, avec le droit de modifier', () => {
+    const root = monter({ auth: authPour('coach-1', true) });
+
+    allerSurLOnglet(root, 'callUp');
+    appuyer(root, 'matchConvocation.published.openCta');
+
+    const parametres = derniersParametres();
+    expect(parametres.readOnly).toBe(true);
+    expect(parametres.canEdit).toBe(true);
+  });
+
+  test('🥇 le plateau recoit de quoi DESSINER : les placements et les joueurs', () => {
+    const root = monter({ auth: authPour('coach-1', true) });
+
+    allerSurLOnglet(root, 'callUp');
+    appuyer(root, 'matchConvocation.published.openCta');
+
+    const parametres = derniersParametres();
+    // Le titulaire publie, avec sa position exacte.
+    expect(parametres.startPlacements).toEqual([
+      expect.objectContaining({ playerId: JOUEUR, positionX: 50, positionY: 93 }),
+    ]);
+    // Le titulaire ET le remplacant : sans lui, le banc serait vide.
+    const idsAuBoard = parametres.selectedPlayers.map((/** @type {any} */ p) => p.documentId);
+    expect(idsAuBoard).toEqual(expect.arrayContaining([JOUEUR, REMPLACANT]));
+    expect(parametres.eventId).toBe('event-1');
+    expect(parametres.teamId).toBe(TEAM_ID);
+    expect(parametres.sport).toBe('football');
+  });
+
+  test('🚪 et de quoi repartir MODIFIER : le pack publie voyage avec lui', () => {
+    const root = monter({ auth: authPour('coach-1', true) });
+
+    allerSurLOnglet(root, 'callUp');
+    appuyer(root, 'matchConvocation.published.openCta');
+
+    // `MatchCallUpSelection` pre-coche depuis `existingComposition` : sans lui,
+    // « Modifier » rouvrirait une selection VIDE.
+    expect(derniersParametres().existingComposition).toBe(PACK);
+  });
+});
+
+describe('COMPOLECT · D5 — le non-editeur SANS role suit la MEME route', () => {
+  test('il ouvre le plateau neuf, plus l ancien terrain', () => {
+    const root = monter({ auth: authPour(SPECTATEUR), event: evenementSansRole() });
+
+    allerSurLOnglet(root, 'callUp');
+    appuyer(root, "Voir la composition d'équipes");
+
+    expect(derniereRoute()).toBe('MatchCompositionBoard');
+    expect(derniereRoute()).not.toBe('TacticalBoardV2');
+  });
+
+  test('🔒 mais SANS le droit de modifier : il n aura ni « Modifier » ni les reponses', () => {
+    const root = monter({ auth: authPour(SPECTATEUR), event: evenementSansRole() });
+
+    allerSurLOnglet(root, 'callUp');
+    appuyer(root, "Voir la composition d'équipes");
+
+    const parametres = derniersParametres();
+    expect(parametres.readOnly).toBe(true);
+    expect(parametres.canEdit).toBe(false);
+  });
+});
+
+describe('COMPOLECT · D6 — 🔒 sans placement, RIEN ne change', () => {
+  test('le coach garde sa page de reponses : un terrain vide dirait « compo perdue »', () => {
+    const root = monter({
+      auth: authPour('coach-1', true),
+      convocation: convocationDe(PACK_SANS_PLACEMENT),
+    });
+
+    allerSurLOnglet(root, 'callUp');
+    appuyer(root, 'matchConvocation.published.openCta');
+
+    expect(derniereRoute()).toBe('MatchConvocationPublished');
+  });
+
+  test('et le non-editeur sans role garde la vue qu il avait', () => {
+    const root = monter({
+      auth: authPour(SPECTATEUR),
+      convocation: convocationDe(PACK_SANS_PLACEMENT),
+      event: evenementSansRole(),
+    });
+
+    allerSurLOnglet(root, 'callUp');
+    appuyer(root, "Voir la composition d'équipes");
+
+    expect(derniereRoute()).not.toBe('MatchCompositionBoard');
+  });
+});
+
+describe('COMPOLECT · le plateau ne dessine qu UN terrain', () => {
+  test('🔒 avec DEUX equipes publiees, on garde la vue agregee', () => {
+    const root = monter({
+      auth: authPour(SPECTATEUR),
+      convocation: CONVOCATION_DEUX_BRANCHES,
+      event: evenementSansRole(),
+    });
+
+    allerSurLOnglet(root, 'callUp');
+    appuyer(root, "Voir la composition d'équipes");
+
+    expect(derniereRoute()).not.toBe('MatchCompositionBoard');
+  });
+});
+
+describe('COMPOLECT · NON-REGRESSION — le JOUEUR CONVOQUE ne bouge pas', () => {
+  test('🥇 un titulaire part TOUJOURS sur son ecran a lui', () => {
     const root = monter();
 
     allerSurLOnglet(root, 'callUp');
@@ -514,7 +683,7 @@ describe('AC08 · TEMOIN 1 — 🥇 le convoque atteint le terrain en UN appui',
     );
   });
 
-  test('un remplacant aussi — le banc est une convocation, pas un lot de consolation', () => {
+  test('🥇 un remplacant aussi', () => {
     const root = monter({ auth: authPour(REMPLACANT) });
 
     allerSurLOnglet(root, 'callUp');
@@ -522,108 +691,13 @@ describe('AC08 · TEMOIN 1 — 🥇 le convoque atteint le terrain en UN appui',
 
     expect(derniereRoute()).toBe('PlayerConvocation');
   });
-});
 
-describe('AC08 · TEMOIN 2 — 🔒 le non-convoque ne tombe pas dans un cul-de-sac', () => {
-  test('il n est PAS envoye sur l ecran du convoque, qui le reposerait aussitot', () => {
-    const root = monter({
-      auth: authPour(SPECTATEUR),
-      event: buildMatch({
-        team: {
-          club: { documentId: CLUB_ID },
-          documentId: TEAM_ID,
-          name: 'U15',
-          players: [{ documentId: JOUEUR }, { documentId: SPECTATEUR }],
-          trainers: [],
-        },
-      }),
-    });
-
-    allerSurLOnglet(root, 'callUp');
-    appuyer(root, "Voir la composition d'équipes");
-
-    expect(derniereRoute()).not.toBe('PlayerConvocation');
-  });
-});
-
-describe('AC08 · TEMOIN 5 — convoque et non convoque ne lisent PLUS la meme page', () => {
-  test('le convoque lit « Tu es convoque · Titulaire »', () => {
-    const textes = textesVisibles(monter()).join(' | ');
-
-    expect(textes).toContain('Tu es convoqué · Titulaire');
-  });
-
-  test('le remplacant lit « Tu es convoque · Remplacant »', () => {
-    const textes = textesVisibles(monter({ auth: authPour(REMPLACANT) })).join(' | ');
-
-    expect(textes).toContain('Tu es convoqué · Remplaçant');
-  });
-
-  test('celui qui n y est pas le lit AUSSI, en clair — le silence etait le defaut', () => {
-    const textes = textesVisibles(monter({
-      auth: authPour(SPECTATEUR),
-      event: buildMatch({
-        team: {
-          club: { documentId: CLUB_ID },
-          documentId: TEAM_ID,
-          name: 'U15',
-          players: [{ documentId: JOUEUR }, { documentId: SPECTATEUR }],
-          trainers: [],
-        },
-      }),
-    })).join(' | ');
-
-    expect(textes).toContain('Tu n’es pas dans la composition publiée.');
-    expect(textes).not.toContain('Tu es convoqué');
-  });
-});
-
-describe('AC08 · TEMOIN 6 — 🔒 le tableau du COACH n a pas bouge', () => {
-  // 🔄 COMPOLECT (26/08) — CE TEMOIN CHANGE DE DESTINATION, PAS DE ROLE.
-  //
-  // Il s'intitulait « l entraineur part toujours sur « Convocation publiee »,
-  // jamais ailleurs ». La decision D3 d'Adel change EXACTEMENT cette ligne :
-  // « quand on ouvre une convocation avec composition, on doit voir vraiment la
-  // composition en plein ecran avec le banc — pas le reste ». Avec des
-  // placements publies, le coach part donc sur le TERRAIN en lecture seule.
-  //
-  // 🔒 CE QUE AC08 PROTEGEAIT VRAIMENT RESTE TENU, et c'est la 2e assertion :
-  // le coach n'atterrit JAMAIS sur l'ecran du convoque. Et le cas SANS
-  // placement, lui, n'a pas bouge d'un pouce — c'est le temoin suivant, qui
-  // reprend la phrase d'origine.
-  test('avec des placements, il part sur le TERRAIN — jamais sur l ecran du convoque', () => {
+  test('🔒 et le coach n est JAMAIS envoye sur l ecran du convoque', () => {
     const root = monter({ auth: authPour('coach-1', true) });
 
     allerSurLOnglet(root, 'callUp');
     appuyer(root, 'matchConvocation.published.openCta');
 
-    expect(derniereRoute()).toBe('MatchCompositionBoard');
     expect(mockNavigate).not.toHaveBeenCalledWith('PlayerConvocation', expect.anything());
-  });
-
-  test('🔒 SANS placement, il part toujours sur « Convocation publiee », jamais ailleurs', () => {
-    const root = monter({
-      auth: authPour('coach-1', true),
-      convocation: {
-        ...CONVOCATION,
-        branches: [{
-          ...CONVOCATION.branches[0],
-          published: { ...PACK, teams: [{ id: 'team_1', name: 'U15', placements: [] }] },
-        }],
-      },
-    });
-
-    allerSurLOnglet(root, 'callUp');
-    appuyer(root, 'matchConvocation.published.openCta');
-
-    expect(derniereRoute()).toBe('MatchConvocationPublished');
-    expect(mockNavigate).not.toHaveBeenCalledWith('PlayerConvocation', expect.anything());
-  });
-
-  test('et il ne lit AUCUNE ligne « Tu es convoque » — ce n est pas son ecran', () => {
-    const textes = textesVisibles(monter({ auth: authPour('coach-1', true) })).join(' | ');
-
-    expect(textes).not.toContain('Tu es convoqué');
-    expect(textes).not.toContain('Tu n’es pas dans la composition publiée.');
   });
 });
