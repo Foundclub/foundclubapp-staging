@@ -408,15 +408,22 @@ function EventWizardParticipants({ navigation, route }) {
       return;
     }
 
-    dispatch({
-      payload: {
-        capacity: normalizedCapacity,
-        capacityMode,
-        externalParticipantLimit: normalizedExternalParticipantLimit,
-        totalPlayers: normalizedTotalPlayers,
-      },
-      type: 'SET_PARTICIPANTS',
-    });
+    // ⛔ S10-B — l'etape rendue POUR SES SEULES INVITATIONS ne pose aucune de
+    // ces questions : elle ne doit donc rien ecrire dans ces champs-la. Sans
+    // cette garde, « Suivant » remettrait `totalPlayers` a `null` sur un
+    // brouillon qui en portait un (type change en cours de route) — une perte
+    // silencieuse, invisible a l'ecran.
+    if (!invitationsSeules) {
+      dispatch({
+        payload: {
+          capacity: normalizedCapacity,
+          capacityMode,
+          externalParticipantLimit: normalizedExternalParticipantLimit,
+          totalPlayers: normalizedTotalPlayers,
+        },
+        type: 'SET_PARTICIPANTS',
+      });
+    }
 
     // AC04 — le choix de convocation, garde en memoire jusqu'a la creation.
     // ⛔ Meme garde que les postes : on n'ecrit que si la section etait offerte.

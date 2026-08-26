@@ -58,6 +58,11 @@ const monterSurLeBrouillon = (brouillon) => {
   return () => act(() => arbre.unmount());
 };
 
+/** Le `window` d'origine du bac a sable, a rendre en partant. */
+let fenetreDOrigine;
+/** Vrai quand c'est CE fichier qui a fabrique `window`. */
+let fenetreFabriquee = false;
+
 beforeAll(() => {
   // Le tunnel ne se persiste que si `window.sessionStorage` existe : on lui en
   // donne un, qui sert ce que le temoin courant a pose.
@@ -67,11 +72,30 @@ beforeAll(() => {
     setItem: () => {},
   };
   if (typeof global.window === 'undefined') {
+    fenetreFabriquee = true;
     // @ts-expect-error — on fabrique le minimum dont le tunnel a besoin.
     global.window = { sessionStorage: faux };
     return;
   }
+  fenetreDOrigine = global.window.sessionStorage;
   Object.defineProperty(global.window, 'sessionStorage', { value: faux, writable: true });
+});
+
+// 🧨 ON REND LE BAC A SABLE COMME ON L'A TROUVE. `--runInBand` fait tourner
+// TOUTES les suites dans le MEME processus : un `global.window` laisse derriere
+// soi ferait croire aux suites suivantes qu'elles tournent sur le WEB, et
+// chacune prendrait l'autre branche de ses `Platform`/`typeof window`. C'est
+// exactement le motif « deux lots verts, une recolte rouge ».
+afterAll(() => {
+  if (fenetreFabriquee) {
+    // @ts-expect-error — on retire ce qu'on avait ajoute.
+    delete global.window;
+    return;
+  }
+  Object.defineProperty(global.window, 'sessionStorage', {
+    value: fenetreDOrigine,
+    writable: true,
+  });
 });
 
 beforeEach(() => {

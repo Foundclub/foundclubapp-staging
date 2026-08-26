@@ -520,7 +520,24 @@ describe('S10-B D3 — un entrainement PRIVE peut encore inviter une equipe', ()
     demonter();
   });
 
-  test('temoin 14 — un entrainement OUVERT garde son etape entiere', async () => {
+  test('temoin 15 🔒 — elle n ECRIT PAS les reglages qu elle ne demande pas', async () => {
+    // ⛔ L'etape rendue pour ses seules invitations ne pose ni la question de la
+    // capacite ni celle du quota. Si son « Suivant » ecrivait quand meme ces
+    // champs, il remettrait `totalPlayers` a `null` sur un brouillon qui en
+    // portait un — une perte silencieuse, invisible a l'ecran.
+    const { demonter, gabarit } = await monterParticipants(
+      { ...ETAT_ENTRAINEMENT_PRIVE, totalPlayers: 8 },
+      BILLET_DU_RECAP,
+    );
+
+    await act(async () => { gabarit().onNext(); });
+
+    expect(etatCourant.totalPlayers).toBe(8);
+
+    demonter();
+  });
+
+  test('temoin 16 — un entrainement OUVERT garde son etape entiere', async () => {
     // Le jumeau : l'etape n'est PAS sautee, donc elle annonce son rang et garde
     // tout ce qu'elle demandait avant le lot.
     const { demonter, gabarit, textes } = await monterParticipants({
