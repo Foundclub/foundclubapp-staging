@@ -239,4 +239,72 @@ describe('U06 — la demande d adhesion a une equipe a enfin une porte', () => {
       route: RouteNames.TeamStack,
     });
   });
+  // ==========================================================================
+  // 🎟️ S10-C / D3 — « TON EQUIPE EST INVITEE » SORT DU GROUPE.
+  //
+  // Avant ce lot, ce type partageait un `case` avec une vingtaine d autres et
+  // ne pouvait rien faire d autre que retomber sur la fiche, meme sans
+  // identifiant d evenement — c est-a-dire NULLE PART. Sa charge porte
+  // desormais un statut (contrat S10-A, section 4).
+  // ==========================================================================
+  test('S10-C — une invitation en attente mene a la fiche, la ou l on accepte', () => {
+    const destination = resolveNotificationDestination({
+      audienceId: 'audience-1',
+      eventId: 'event-77',
+      invitationStatus: 'pending',
+      type: NOTIFICATION_TYPES.EVENT_TEAM_INVITED,
+    });
+
+    expect(destination).toEqual({
+      params: {
+        params: { eventId: 'event-77' },
+        screen: RouteNames.EventDetails,
+      },
+      route: RouteNames.EventStack,
+    });
+  });
+
+  test('S10-C — une invitation acceptee mene a la fiche elle aussi', () => {
+    const destination = resolveNotificationDestination({
+      eventId: 'event-77',
+      invitationStatus: 'accepted',
+      type: NOTIFICATION_TYPES.EVENT_TEAM_INVITED,
+    });
+
+    expect(destination).toEqual({
+      params: {
+        params: { eventId: 'event-77' },
+        screen: RouteNames.EventDetails,
+      },
+      route: RouteNames.EventStack,
+    });
+  });
+
+  // 🚪 LA DIFFERENCE QUI COMPTE : sans identifiant d evenement, l ancienne
+  // regle rendait `null` — l appui sur la notification ne faisait RIEN.
+  test('S10-C — sans evenement, une invitation en attente ouvre l ecran Demandes', () => {
+    const destination = resolveNotificationDestination({
+      invitationStatus: 'pending',
+      type: NOTIFICATION_TYPES.EVENT_TEAM_INVITED,
+    });
+
+    expect(destination).toEqual({
+      params: {
+        initialFilter: 'teamInvite',
+        source: 'notification',
+      },
+      route: RouteNames.RequestsHub,
+    });
+  });
+
+  // ... mais une invitation DEJA acceptee n a plus rien a trancher : la
+  // renvoyer vers une liste d invitations en attente montrerait un ecran vide.
+  test('S10-C — sans evenement, une invitation acceptee ne promet rien', () => {
+    const destination = resolveNotificationDestination({
+      invitationStatus: 'accepted',
+      type: NOTIFICATION_TYPES.EVENT_TEAM_INVITED,
+    });
+
+    expect(destination).toBeNull();
+  });
 });

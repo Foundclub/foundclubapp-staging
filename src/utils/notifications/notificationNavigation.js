@@ -330,6 +330,44 @@ const playerConvocationDestination = (eventId, teamId) => {
 };
 
 /**
+ * 🎟️ S10-C / D3 — OU MENE « TON EQUIPE EST INVITEE ».
+ *
+ * Ce type etait noye dans le groupe d une vingtaine d autres qui retombent tous
+ * sur la fiche de l evenement : impossible d y distinguer quoi que ce soit. Il
+ * en sort, parce que sa charge porte maintenant un statut (contrat S10-A du
+ * 2026-08-26, section 4 : `invitationStatus` vaut `pending` ou `accepted`).
+ *
+ * · `pending`  ⇒ la FICHE, ou vit la section « Invitations d equipe » — le seul
+ *                endroit ou l on accepte ou refuse (decision D5). Si
+ *                l identifiant de l evenement manque, on ne laisse pas
+ *                l invite sur un ecran mort : l ecran « Demandes », ouvert sur
+ *                ses invitations, sait encore la retrouver.
+ * · `accepted` ⇒ la FICHE, et rien d autre : il n y a plus rien a trancher, et
+ *                une liste d invitations en attente lui serait vide.
+ *
+ * ⚠️ CE QUE CE LOT NE FAIT PAS, ET IL FAUT LE SAVOIR : la fiche ne DEFILE PAS
+ * jusqu a la section. L ancre se pose dans `EventDetails.js`, ferme a ce lot
+ * (S5-d puis S11-bis y travaillent). Consigne au chef.
+ * @param {NotificationPayload} payload
+ * @returns {{ route: string, params: Record<string, unknown> } | null}
+ */
+const eventTeamInvitationDestination = (payload) => {
+  const eventDestination = eventDetailsDestination(payload.eventId);
+  if (eventDestination) return eventDestination;
+
+  const status = String(payload.invitationStatus || payload.status || '').trim().toLowerCase();
+  if (status !== 'pending') return null;
+
+  return {
+    params: {
+      initialFilter: 'teamInvite',
+      source: 'notification',
+    },
+    route: RouteNames.RequestsHub,
+  };
+};
+
+/**
  * @param {NotificationPayload} payload
  */
 const notificationDetailsDestination = (payload) => {
@@ -658,7 +696,6 @@ export const resolveNotificationDestination = (rawPayload = {}) => {
     case NOTIFICATION_TYPES.EVENT_PUBLISHED:
     case NOTIFICATION_TYPES.EVENT_REMINDER:
     case NOTIFICATION_TYPES.EVENT_RSVP_STATUS_CHANGED:
-    case NOTIFICATION_TYPES.EVENT_TEAM_INVITED:
     case NOTIFICATION_TYPES.EVENT_UPDATED:
     case NOTIFICATION_TYPES.FEATURED_APPROVED:
     case NOTIFICATION_TYPES.FEATURED_REJECTED:
@@ -693,6 +730,8 @@ export const resolveNotificationDestination = (rawPayload = {}) => {
         return adaptDestinationForCurrentPlatform(payload, notificationDetailsDestination(payload));
       }
       return adaptDestinationForCurrentPlatform(payload, eventDetailsDestination(payload.eventId));
+    case NOTIFICATION_TYPES.EVENT_TEAM_INVITED:
+      return adaptDestinationForCurrentPlatform(payload, eventTeamInvitationDestination(payload));
     case NOTIFICATION_TYPES.LEAGUE_COUNTER_PROPOSAL_RECEIVED:
       return adaptDestinationForCurrentPlatform(payload, {
         params: {
