@@ -94,12 +94,11 @@ const mergeClubCollections = (...collections) => {
 };
 
 /**
- * La poignee de defilement d une liste. Le web et les anciens rendus n exposent
- * pas toujours `scrollToOffset` : elle est donc optionnelle, et l appelant
- * verifie avant d appeler (motif deja en service dans VenueProposalModal).
- * @typedef {{
- *  scrollToOffset?: (options: { offset: number; animated?: boolean }) => void;
- * }} PoigneeDefilementListe
+ * La poignee de defilement de la liste, telle que flash-list l expose. Le type
+ * vient de la bibliotheque : on ne le re-declare pas.
+ * ⚠️ Il annonce `scrollToOffset` comme toujours present, mais le rendu web n a
+ * pas la meme implementation : la garde `typeof` reste obligatoire a l execution.
+ * @typedef {import('@shopify/flash-list').FlashListRef<any>} PoigneeDefilementListe
  */
 
 /**
