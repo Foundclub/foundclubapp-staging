@@ -2,6 +2,13 @@
  * W07 — l'ecran « Inviter une equipe » telechargeait la table des equipes de
  * toute la France, en parallele.
  *
+ * 🚚 S10-B (2026-08-26) — CE FILET A DEMENAGE AVEC LA SECTION QU'IL GARDE.
+ * La recherche de club externe vivait dans `EventWizardInvites` ; elle est
+ * desormais l'option « inviter l'equipe adverse » de l'etape « Contre qui ? »
+ * (cadre d'Adel du 25/08 : les externes UNIQUEMENT sur un match). Les six
+ * temoins sont DEPLACES, pas reecrits : ils mesurent toujours le nombre et la
+ * forme des requetes, seule la porte d'entree a change.
+ *
  * 🔴 LE DEFAUT, tel que le code le produisait
  * (`EventWizardInvites.js:389-438`, avant ce lot) :
  *  · `loadInviteableExternalClubs` appelait `getTeams({ page: 1, pageSize: 100 })`
@@ -36,7 +43,7 @@ import { createElement } from 'react';
 import renderer, { act } from 'react-test-renderer';
 
 import { EventWizardProvider, useEventWizard } from '../EventWizardContext';
-import EventWizardInvites from '../EventWizardInvites';
+import EventWizardOpponent from '../EventWizardOpponent';
 
 jest.setTimeout(30000);
 
@@ -213,6 +220,14 @@ jest.mock('@/domains/auth/useAuth', () => ({
       trainedTeams: [{ documentId: 'eq-moi-1', name: 'U15 A' }],
     },
   }),
+}));
+
+// L'etape « Contre qui ? » porte SA PROPRE recherche de club, sous le champ
+// libre (AC04). Elle est muette ici : ce fichier mesure les requetes de la
+// SECTION d'invitation, et deux listes de clubs a l'ecran melangeraient les
+// pressables vises par les temoins.
+jest.mock('@/services/club/clubQueries', () => ({
+  useSearchClubs: () => ({ data: undefined, isLoading: false }),
 }));
 
 jest.mock('@/domains/places/usePlaces', () => ({
@@ -404,13 +419,13 @@ const ouvrirLaRechercheDeClub = async () => {
     EventWizardProvider,
     null,
     createElement(PriseDeCourant),
-    createElement(EventWizardInvites, { navigation, route: { params: {} } }),
+    createElement(EventWizardOpponent, { navigation, route: { params: {} } }),
   );
 
   await act(async () => { arbre = renderer.create(element); });
   await laisserLeReseauRepondre();
   mockJournal.length = 0;
-  await act(async () => { presserLeTexte('Inviter une équipe externe'); });
+  await act(async () => { presserLeTexte('Inviter l équipe adverse sur FoundClub'); });
   await laisserLeReseauRepondre();
 };
 
@@ -468,6 +483,8 @@ describe('W07 — la recherche de club externe ne telecharge plus la table des e
   });
 
   test('TEMOIN 3 🔒 — on peut toujours inviter l equipe d un club qui n est pas le mien', async () => {
+    // 🔒 S10-B : l'equipe invitee EST l'adversaire — elle donne son nom au
+    // match, et son invitation part en `PENDING` (son coach doit accepter).
     await ouvrirLaRechercheDeClub();
 
     await act(async () => { taperDans('Rechercher un club externe', 'Voisine'); });

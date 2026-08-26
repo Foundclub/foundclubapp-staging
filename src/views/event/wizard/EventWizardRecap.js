@@ -57,6 +57,7 @@ import {
   isTournamentEventType,
   shouldSkipEventWizardParticipantsStep,
 } from './eventWizardDetectionUtils';
+import { keepAudiencesForEventType } from './useEventWizardAudiences';
 
 const CREATE_EVENT_BATCH_CONCURRENCY = 3;
 const FEATURED_SCOPE_OPTIONS = [
@@ -288,7 +289,13 @@ const buildWizardFormData = (wizardState) => {
       : '',
     startTime: format(start, 'HH:mm'),
     team: isTournament && tournamentScopeMode === 'autonomous' ? undefined : wizardState.team?.documentId,
-    teamAudiences: Array.isArray(wizardState.teamAudiences) ? wizardState.teamAudiences : [],
+    // 🔒 S10-B — LES EXTERNES N'EXISTENT QUE SUR UN MATCH, et le filtre est ICI
+    // parce que c'est la DERNIERE ligne avant le serveur. Un brouillon web
+    // persiste en `sessionStorage` : on peut donc commencer un match, inviter
+    // une equipe adverse, puis repasser le type en « Entrainement » — l'audience
+    // externe resterait dans l'etat, invisible a l'ecran (plus aucune etape ne
+    // la montre) et partirait quand meme a la creation.
+    teamAudiences: keepAudiencesForEventType(wizardState),
     totalPlayers: trainingOpenConfig.isOpenTraining ? null : (wizardState.totalPlayers ?? null),
     tournamentActivity: isTournament && tournamentScopeMode === 'autonomous'
       ? wizardState.tournamentActivity?.documentId

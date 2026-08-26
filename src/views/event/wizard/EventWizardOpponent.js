@@ -7,6 +7,7 @@ import useTheme from '@/theme/themeContext';
 
 import ClubSearchResultCard from '@/components/molecules/clubSearchResultCard/ClubSearchResultCard';
 import WizardStepLayout from '@/components/molecules/wizardStepLayout/WizardStepLayout';
+import EventWizardOpponentInvite from '@/views/event/wizard/components/EventWizardOpponentInvite';
 
 import { RouteNames } from '@/navigation/routeNames';
 
@@ -44,6 +45,12 @@ const MAX_CLUBS_PROPOSES = 5;
  * de recherche, les clubs trouves s'affichent dessous, et en choisir un remplit
  * le champ. 🔒 Le champ reste libre a la lettre pres — c'est le garde-fou du
  * lot, et le chiffre ci-dessus dit pourquoi.
+ *
+ * 🆕 S10-B — ET L'INVITATION DE L'EQUIPE ADVERSE (cadre d'Adel du 2026-08-25,
+ * reponse 4). Quand l'adversaire EST sur FoundClub, on peut l'inviter d'ici :
+ * chercher son club, choisir SON EQUIPE, et le coach d'en face recevra une
+ * invitation a ce match. C'est le SEUL endroit du tunnel ou une equipe externe
+ * s'invite — les equipes de mon club se convient a l'etape « Participants ».
  *
  * 📌 CE QU'ON STOCKE. Le NOM part au serveur (`opponentName`, le seul champ que
  * le schema porte). L'IDENTIFIANT du club, lui, reste dans le tunnel : il
@@ -94,6 +101,10 @@ function EventWizardOpponent({ navigation, route }) {
   const shouldShowSuggestions = !selectedClub && clubSuggestions.length > 0;
 
   // 🔒 LE GARDE-FOU : taper reste toujours possible, et taper LACHE le club.
+  // ⛔ S10-B : taper ne RETIRE PAS l'invitation deja envoyee. Le nom affiche est
+  // du texte libre ; l'invitation, elle, est partie chez un vrai coach. La
+  // supprimer en silence parce qu'on a corrige une majuscule serait une perte
+  // de donnee — elle se retire explicitement, dans la section ci-dessous.
   const handleChangeName = (/** @type {string} */ valeur) => {
     setOpponentName(valeur);
     setOpponentClubId(null);
@@ -104,7 +115,29 @@ function EventWizardOpponent({ navigation, route }) {
     setOpponentClubId(String(club?.documentId || club?.id || '') || null);
   };
 
-  const goNext = (valeur) => {
+  /**
+   * S10-B — l'equipe adverse vient d'etre invitee : elle donne son nom au match.
+   *
+   * ⏱️ On ecrit dans le tunnel TOUT DE SUITE, sans attendre « Suivant » : la
+   * section vient d'y poser l'invitation. Si le nom attendait la sortie de
+   * l'etape, un retour arriere laisserait une invitation partie chez un coach
+   * et un adversaire toujours « Pas encore connu » sur le recapitulatif.
+   * @param {any} team L'equipe invitee.
+   */
+  const handleTeamInvited = (team) => {
+    const nomDeLEquipe = String(team?.name || '').trim().slice(0, OPPONENT_NAME_MAX_LENGTH);
+    if (!nomDeLEquipe) return;
+    const clubDeLEquipe = String(team?.club?.documentId || team?.club?.id || '') || null;
+
+    setOpponentName(nomDeLEquipe);
+    setOpponentClubId(clubDeLEquipe);
+    dispatch({
+      payload: { opponentClubId: clubDeLEquipe, opponentName: nomDeLEquipe },
+      type: 'SET_META',
+    });
+  };
+
+  const goNext = (/** @type {string} */ valeur) => {
     dispatch({
       // ⛔ `opponentClubId` ne part PAS au serveur : `buildWizardFormData` ne
       // lit que des champs nommes, et `event` ne porte que `opponentName`.
@@ -189,6 +222,13 @@ function EventWizardOpponent({ navigation, route }) {
             'Tu ne le connais pas encore ? Passe cette étape, tu pourras l’ajouter plus tard.',
           )}
         </Text>
+
+        {/* S10-B — L'ADVERSAIRE EST SUR FOUNDCLUB ? On l'invite d'ici, et c'est
+            le SEUL endroit du tunnel ou une equipe externe s'invite. */}
+        <EventWizardOpponentInvite
+          onTeamInvited={handleTeamInvited}
+          surfaceStyle={fieldSurfaceStyle}
+        />
       </View>
     </WizardStepLayout>
   );

@@ -1,6 +1,7 @@
 import { useCallback, useMemo } from 'react';
 
 import { useEventWizard } from './EventWizardContext';
+import { isMatchEventType } from './eventWizardDetectionUtils';
 
 /**
  * La marque qui separe les deux familles d'audience. Elle vient du serveur
@@ -29,6 +30,28 @@ export const getInvitedTeamIds = (audiences = []) => audiences
   .filter((audience) => !isExternalAudience(audience))
   .map((audience) => getAudienceTeamId(audience?.team))
   .filter(Boolean);
+
+/**
+ * Les audiences qu'un evenement de ce TYPE a le droit d'emporter.
+ *
+ * 🔒 S10-B — une equipe d'un AUTRE club ne se convie que sur un match
+ * (cadre d'Adel du 2026-08-25, reponse 4), et c'est la regle que le serveur
+ * durcit en parallele. Les audiences internes, elles, passent partout.
+ *
+ * ⚠️ Le filtre existe parce que l'etat du tunnel SURVIT au changement de
+ * type : le brouillon web persiste en `sessionStorage`, on peut donc commencer
+ * un match, inviter une equipe adverse, puis repasser le type en
+ * « Entrainement ». L'audience externe resterait alors dans l'etat, invisible
+ * a l'ecran (plus aucune etape ne la montre) et partirait quand meme a la
+ * creation.
+ * @param {any} wizardState Etat du tunnel.
+ * @returns {any[]} Les audiences a envoyer au serveur.
+ */
+export const keepAudiencesForEventType = (wizardState) => {
+  const audiences = Array.isArray(wizardState?.teamAudiences) ? wizardState.teamAudiences : [];
+  if (isMatchEventType(wizardState?.type?.name)) return audiences;
+  return audiences.filter((audience) => !isExternalAudience(audience));
+};
 
 /**
  * LES DEUX FAMILLES D'AUDIENCE, ET LA GARANTIE QU'ELLES NE SE MELANGENT PAS.

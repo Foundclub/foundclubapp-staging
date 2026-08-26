@@ -229,6 +229,30 @@ jest.mock('@/services/club/clubService', () => ({
   getClubs: () => Promise.resolve({ data: [] }),
 }));
 
+// S10-B — la section « inviter l'equipe adverse » ouvre une feuille de filtres
+// (ville, rayon, sport). ⛔ `AutocompleteSelect` tire `react-native-bouncy-
+// checkbox`, publie en ESM et NON transforme par jest : sans ces passe-plats,
+// la suite entiere refuse de se charger (0 test execute). Le filet de la
+// recherche vit dans `EventWizardOpponent.rechercheClub.test.js`.
+jest.mock('@/domains/places/usePlaces', () => ({
+  __esModule: true,
+  default: () => ({ getGeohashForPointAndRadius: () => '' }),
+}));
+
+jest.mock('@/services/activity/activityQueries', () => ({
+  useGetActivities: () => ({
+    data: [], error: null, isLoading: false, refetch: () => {},
+  }),
+}));
+
+jest.mock('@/components/molecules/autocompleteSelect/AutocompleteSelect', () => () => null);
+jest.mock('@/components/molecules/searchBar/SearchBar', () => () => null);
+jest.mock(
+  '@/components/organisms/autocompleteAddressInput/autocompleteAddressInput',
+  () => () => null,
+);
+jest.mock('@react-native-community/slider', () => () => null);
+
 jest.mock('@/components/molecules/profileAvatar/ProfileAvatar', () => () => null);
 
 jest.mock('@/components/molecules/bottomModal/BottomModal', () => function FeuilleMock(
