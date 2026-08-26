@@ -227,6 +227,21 @@ const monter = async () => {
   });
 };
 
+const rendreDeNouveau = async () => {
+  await act(async () => { monte.update(<ClubListContent />); });
+};
+
+/**
+ * Tape un texte dans le champ, comme le doigt d Adel, puis laisse la liste se
+ * re-rendre avec les resultats que le serveur double vient de recevoir.
+ * @param {string} texte - ce qui est tape dans le champ de recherche
+ * @returns {Promise<void>} rien
+ */
+const chercher = async (texte) => {
+  act(() => { mockChamp.props.handleSearchField(texte); });
+  await rendreDeNouveau();
+};
+
 const texteRendu = () => JSON.stringify(monte.toJSON());
 
 beforeEach(() => {
@@ -298,5 +313,73 @@ describe('ClubListContent — filet de caracterisation (etat au 2026-08-26)', ()
     expect(mockDispatch).toHaveBeenCalledTimes(1);
     expect(mockDispatch.mock.calls[0][0].type).toBe('SET_CLUB_FILTERS');
     expect(mockDispatch.mock.calls[0][0].payload.name).toBe('paris');
+  });
+});
+
+describe('HAUT — la liste remonte au 1er resultat quand la recherche change', () => {
+  // 🎯 LE CONSTAT D ADEL (26/08) : « il m arrive de taper quelque chose et ce que
+  // je vois en premier c est le 6e meilleur resultat — il faut que je remonte a
+  // la main pour voir les premiers ». La liste garde la position de defilement
+  // de la recherche PRECEDENTE alors que les resultats, eux, ont change.
+
+  test('temoin 6 — une nouvelle recherche demande la remontee, une seule fois', async () => {
+    mockEtat.pagesPertinence = { pages: [{ data: [club('Avant')] }] };
+    mockEtat.recherche = 'av';
+    await monter();
+    // Le passage de montage ne compte pas : la liste est deja en haut.
+    mockListe.poignee.scrollToOffset.mockClear();
+
+    mockEtat.pagesPertinence = { pages: [{ data: [club('Apres')] }] };
+    await chercher('paris');
+
+    expect(mockListe.poignee.scrollToOffset).toHaveBeenCalledTimes(1);
+    expect(mockListe.poignee.scrollToOffset).toHaveBeenCalledWith({
+      animated: false,
+      offset: 0,
+    });
+  });
+
+  test('temoin 7 — deux recherches successives : une remontee par recherche', async () => {
+    mockEtat.pagesPertinence = { pages: [{ data: [club('Un')] }] };
+    mockEtat.recherche = 'un';
+    await monter();
+    mockListe.poignee.scrollToOffset.mockClear();
+
+    mockEtat.pagesPertinence = { pages: [{ data: [club('Deux')] }] };
+    await chercher('deux');
+    expect(mockListe.poignee.scrollToOffset).toHaveBeenCalledTimes(1);
+
+    mockEtat.pagesPertinence = { pages: [{ data: [club('Trois')] }] };
+    await chercher('trois');
+    expect(mockListe.poignee.scrollToOffset).toHaveBeenCalledTimes(2);
+  });
+
+  test('temoin 8 — un re-rendu SANS changement de recherche ne remonte rien', async () => {
+    // 🔒 La borne du lot : on remonte quand la REQUETE change, pas a chaque rendu.
+    // C est aussi ce qui protege le retour d onglet : la position est gardee.
+    mockEtat.pagesPertinence = { pages: [{ data: [club('Stable')] }] };
+    mockEtat.recherche = 'st';
+    await monter();
+    mockListe.poignee.scrollToOffset.mockClear();
+
+    await rendreDeNouveau();
+    await rendreDeNouveau();
+
+    expect(mockListe.poignee.scrollToOffset).not.toHaveBeenCalled();
+  });
+
+  test('temoin 9 (D3) — sans poignee de defilement, rien ne plante et rien n est appele', async () => {
+    // 🛟 Le repli honnete : la reference peut manquer au premier rendu, et le web
+    // n a pas la meme implementation. Motif deja en service dans le depot
+    // (VenueProposalModal.js:255, Conversation.js:4480).
+    mockListe.poignee = {};
+    mockEtat.pagesPertinence = { pages: [{ data: [club('SansPoignee')] }] };
+    mockEtat.recherche = 'sa';
+    await monter();
+
+    mockEtat.pagesPertinence = { pages: [{ data: [club('Autre')] }] };
+    await expect(chercher('autre')).resolves.toBeUndefined();
+
+    expect(texteRendu()).toContain('carte:Autre');
   });
 });
