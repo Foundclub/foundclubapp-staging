@@ -443,15 +443,33 @@ function ParticipantEventList({ navigation }) {
       return;
     }
 
-    if (event?.documentId && userData?.documentId) {
-      try {
-        await createEventParticipationMutation.mutateAsync({
-          event: event.documentId,
-          user: userData.documentId,
-        });
-      } catch (error) {
-        Alert.alert('Erreur', getParticipationErrorMessage(error, 'Une erreur est survenue.'));
-      }
+    // 🔇 T2/D6 — UN GARDE SANS `else` EST UNE PANNE SILENCIEUSE.
+    //
+    // Cette condition gardait le dernier chemin sans jamais dire ce qu elle
+    // refusait : identité incomplète (profil pas encore chargé, session en
+    // cours de reprise) et le bouton ne faisait RIEN. Vu du canapé, c est
+    // exactement le même symptôme que la mauvaise porte de D1 — « ça ne marche
+    // pas » — et c est pour ça qu il fallait le fermer AUSSI : sinon il restait
+    // un chemin capable de reproduire le constat après le correctif.
+    if (!event?.documentId || !userData?.documentId) {
+      participantEventListLogger.warn('Participation blocked: incomplete identity', {
+        hasEventId: Boolean(event?.documentId),
+        hasUserId: Boolean(userData?.documentId),
+      });
+      Alert.alert(
+        'Erreur',
+        "Ta réponse n'a pas pu être envoyée : cet événement est incomplet.",
+      );
+      return;
+    }
+
+    try {
+      await createEventParticipationMutation.mutateAsync({
+        event: event.documentId,
+        user: userData.documentId,
+      });
+    } catch (error) {
+      Alert.alert('Erreur', getParticipationErrorMessage(error, 'Une erreur est survenue.'));
     }
   }, [createEventParticipationMutation, navigation, respondToEventRsvpMutation, userData]);
 

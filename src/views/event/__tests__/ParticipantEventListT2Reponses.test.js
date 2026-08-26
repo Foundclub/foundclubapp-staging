@@ -398,4 +398,30 @@ describe('T2 — les boutons de réponse de la carte « Mon planning »', () => 
     expect(present[1].props.isLoading).toBeFalsy();
     expect(absent[1].props.disabled).toBeFalsy();
   });
+
+  it('D6 — identité incomplète : on le DIT, au lieu de ne rien faire en silence', async () => {
+    // 🪤 LE SEUL CHEMIN QUI ATTEINT VRAIMENT CE GARDE, et il a fallu le
+    // chercher : un joueur ÉTRANGER à l équipe n arrive jamais jusqu ici, car
+    // `resolveParticipationFlow` le refuse plus haut sur une séance fermée
+    // (« Cet événement fermé est réservé aux équipes concernées »,
+    // participationFlow.js:278) et la carte n affiche alors aucun bouton.
+    // Reste le cas que le garde visait pour de bon : une charge incomplète —
+    // ici un événement sans `documentId`, que la liste garde parce qu elle
+    // déduplique sur `documentId || id`.
+    const evenementIncomplet = entrainementDeMonEquipe('evt-1');
+    delete evenementIncomplet.documentId;
+    evenementIncomplet.id = 41;
+
+    const arbre = monter([evenementIncomplet]);
+
+    await act(async () => {
+      boutons(arbre, 'eventList.actions.present')[0].props.onPress();
+    });
+
+    // Avant : ce chemin ne faisait RIEN, sans un mot — le symptôme exact du
+    // constat d Adel, qui aurait survécu au correctif de D1.
+    expect(mockCreerDemande).not.toHaveBeenCalled();
+    expect(mockRepondreRsvp).not.toHaveBeenCalled();
+    expect(Alert.alert).toHaveBeenCalled();
+  });
 });
