@@ -3995,6 +3995,54 @@ function EventDetails({ navigation, route }) {
     };
   }), [convocationBranches]);
 
+  // ⚽ COMPOLECT (D3 · D5 · D6) — CE QU'IL FAUT POUR OUVRIR LE VRAI TERRAIN.
+  //
+  // 🗣️ Adel, 26/08 : « pour les convocations avec composition, quand on ouvre,
+  // on doit voir vraiment la composition en plein ecran avec le banc — pas le
+  // reste ». Le plateau qu'il montre existe (`MatchCompositionBoard`) ; ce qui
+  // manquait, c'est une destination de LECTURE qui y mene.
+  //
+  // ⛔ CETTE CIBLE VAUT `null` DANS DEUX CAS, ET LES DEUX SONT VOULUS :
+  //   · aucun placement — chemin S5-c, legitime. Un terrain vide ferait croire
+  //     a une compo perdue : on garde alors le comportement d'avant (D6), c'est
+  //     la meme regle que l'apercu de l'onglet (`:6092`) ;
+  //   · plusieurs equipes publiees avec des titulaires — le plateau ne dessine
+  //     QU'UN terrain. Y envoyer un pack a deux equipes en cacherait une sans
+  //     rien dire ; la vue agregee reste la pour ce cas-la.
+  //
+  // ♻️ ZERO CALCUL NEUF : `publishedConvocationRoster` apparie DEJA placements
+  // et personnes (S5-D), `convocationBranches` porte le pack brut dont
+  // `MatchCallUpSelection` a besoin pour pre-cocher. Les deux listes sont
+  // alignees par construction — la premiere est le `map` de la seconde.
+  const publishedBoardTarget = useMemo(() => {
+    const drawable = publishedConvocationRoster
+      .map((branch, index) => ({
+        branch,
+        published: convocationBranches[index]?.published || null,
+      }))
+      .filter((entry) => entry.branch.starters.length > 0);
+    if (drawable.length !== 1) return null;
+
+    const [{ branch, published }] = drawable;
+    return {
+      existingComposition: published,
+      // Titulaires PUIS remplacants : le plateau retrouve le banc tout seul en
+      // retirant de cette liste ceux que les placements portent (`getBenchPlayers`).
+      selectedPlayers: [
+        ...branch.starters.map((/** @type {any} */ token) => token.player),
+        ...branch.bench.map((/** @type {any} */ entry) => entry.player),
+      ],
+      sport: branch.sportContext || compositionSport,
+      startPlacements: branch.starters.map((/** @type {any} */ token) => token.placement),
+      teamName: branch.teamName || compositionEditorTeam?.name || '',
+    };
+  }, [
+    compositionEditorTeam?.name,
+    compositionSport,
+    convocationBranches,
+    publishedConvocationRoster,
+  ]);
+
   // AC08 — « SUIS-JE CONVOQUE ? », enfin repondu SUR LA PAGE.
   //
   // 🚨 Jusqu'ici, convoque et non-convoque lisaient exactement le meme bloc —
@@ -4446,6 +4494,38 @@ function EventDetails({ navigation, route }) {
       return;
     }
 
+    // ⚽ COMPOLECT (D3 + D5) — LE TERRAIN, EN PLEIN ECRAN, POUR TOUS CEUX QUI
+    // LISENT. C'est LA correction du lot, et elle repare deux branches d'un coup :
+    //   · le COACH (`canEdit`) n'avait AUCUN terrain — il atterrissait sur
+    //     `MatchConvocationPublished`, un ecran de REPONSES qui ne dessine rien.
+    //     C'est exactement le constat d'Adel du 26/08 ;
+    //   · le non-editeur SANS role tombait sur l'ANCIEN terrain (`TacticalBoardV2`),
+    //     ce que le commentaire de `openCompositionBoard` (:4413) annoncait
+    //     lui-meme comme « repris par le lot C-F ».
+    // ⇒ Une seule destination de lecture, la meme pour les deux.
+    //
+    // ⛔ LES REPONSES NE SONT PAS PERDUES : le plateau porte le bouton qui mene
+    // a `MatchConvocationPublished` (D4). Un ecran qu'aucun bouton n'atteint
+    // n'existe pas — le depot a deja paye cette erreur trois fois.
+    // ⛔ Et sans placement, `publishedBoardTarget` vaut `null` : les deux
+    // branches d'origine ci-dessous reprennent la main, inchangees (D6).
+    if (publishedBoardTarget) {
+      navigation.navigate(RouteNames.MatchCompositionBoard, {
+        ...publishedBoardTarget,
+        canEdit: Boolean(canEdit),
+        clubId: event?.team?.club?.documentId || null,
+        eventId,
+        eventLabel: compositionEventLabel,
+        eventTypeLabel: event?.type?.name || null,
+        // La liste ou « Modifier » ira repecher des convoques : c'est l'effectif
+        // eligible, pas les seuls publies.
+        players: compositionEditorPlayers,
+        readOnly: true,
+        teamId: compositionTeamId,
+      });
+      return;
+    }
+
     if (!canEdit) {
       openCompositionBoard(convocationBranches[0]?.published || null, {
         aggregateBranches: convocationBranches,
@@ -4475,10 +4555,12 @@ function EventDetails({ navigation, route }) {
     compositionTeamId,
     convocationBranches,
     event?.team?.club?.documentId,
+    event?.type?.name,
     eventId,
     getCompositionSourceLabel,
     navigation,
     openCompositionBoard,
+    publishedBoardTarget,
     viewerConvocationRole,
   ]);
 

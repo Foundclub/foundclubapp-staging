@@ -579,8 +579,39 @@ describe('AC08 · TEMOIN 5 — convoque et non convoque ne lisent PLUS la meme p
 });
 
 describe('AC08 · TEMOIN 6 — 🔒 le tableau du COACH n a pas bouge', () => {
-  test('l entraineur part toujours sur « Convocation publiee », jamais ailleurs', () => {
+  // 🔄 COMPOLECT (26/08) — CE TEMOIN CHANGE DE DESTINATION, PAS DE ROLE.
+  //
+  // Il s'intitulait « l entraineur part toujours sur « Convocation publiee »,
+  // jamais ailleurs ». La decision D3 d'Adel change EXACTEMENT cette ligne :
+  // « quand on ouvre une convocation avec composition, on doit voir vraiment la
+  // composition en plein ecran avec le banc — pas le reste ». Avec des
+  // placements publies, le coach part donc sur le TERRAIN en lecture seule.
+  //
+  // 🔒 CE QUE AC08 PROTEGEAIT VRAIMENT RESTE TENU, et c'est la 2e assertion :
+  // le coach n'atterrit JAMAIS sur l'ecran du convoque. Et le cas SANS
+  // placement, lui, n'a pas bouge d'un pouce — c'est le temoin suivant, qui
+  // reprend la phrase d'origine.
+  test('avec des placements, l entraineur part sur le TERRAIN, jamais sur l ecran du convoque', () => {
     const root = monter({ auth: authPour('coach-1', true) });
+
+    allerSurLOnglet(root, 'callUp');
+    appuyer(root, 'matchConvocation.published.openCta');
+
+    expect(derniereRoute()).toBe('MatchCompositionBoard');
+    expect(mockNavigate).not.toHaveBeenCalledWith('PlayerConvocation', expect.anything());
+  });
+
+  test('🔒 SANS placement, il part toujours sur « Convocation publiee », jamais ailleurs', () => {
+    const root = monter({
+      auth: authPour('coach-1', true),
+      convocation: {
+        ...CONVOCATION,
+        branches: [{
+          ...CONVOCATION.branches[0],
+          published: { ...PACK, teams: [{ id: 'team_1', name: 'U15', placements: [] }] },
+        }],
+      },
+    });
 
     allerSurLOnglet(root, 'callUp');
     appuyer(root, 'matchConvocation.published.openCta');
