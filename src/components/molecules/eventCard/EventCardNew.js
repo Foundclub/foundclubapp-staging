@@ -361,6 +361,9 @@ const resolveCapacityGauge = (eventItem, { isReservation, isTournamentEvent }) =
  * @param {'default' | 'share'} [props.mode]
  * @param {'default' | 'teamFocused'} [props.displayProfile]
  * @param {boolean} [props.useFacilityAccentColor]
+ * @param {'present' | 'absent' | ''} [props.submittingAnswer] - T2 : la réponse
+ *   que cette carte est en train d envoyer. Simple passe-plat vers
+ *   `EventAnswerButtons`, qui en fait l état de chargement de ses deux boutons.
  * @returns {import('react').ReactElement}
  */
 function EventCardNew({
@@ -377,6 +380,7 @@ function EventCardNew({
   onRefuse,
   onValidate,
   showClubHeader = false,
+  submittingAnswer = '',
   useFacilityAccentColor = false,
 }) {
   const {
@@ -638,6 +642,7 @@ function EventCardNew({
           onLogin={onLogin}
           onParticipate={() => onParticipate?.(item)}
           participationFlow={participationFlow}
+          submittingAnswer={submittingAnswer}
         />
       );
     }

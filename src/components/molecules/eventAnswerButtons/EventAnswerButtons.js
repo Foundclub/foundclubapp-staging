@@ -26,6 +26,10 @@ import Tag from '@/components/atoms/tag/Tag';
  * @param {() => void} [props.onEdit] - Callback when user wants to edit the event
  * @param {() => void} [props.onCancel] - Callback when user wants to cancel the event
  * @param {ReturnType<typeof resolveParticipationFlow>} [props.participationFlow]
+ * @param {'present' | 'absent' | ''} [props.submittingAnswer] - T2 : la réponse
+ *   en cours d envoi. Elle allume le bouton correspondant et prend les deux, le
+ *   temps de l aller-retour. ⛔ Ce n est PAS un état optimiste : rien n est
+ *   affiché comme acquis avant que le serveur ait répondu.
  * @returns {import('react').ReactElement} Event answer buttons component
  */
 function EventAnswerButtons({
@@ -41,6 +45,7 @@ function EventAnswerButtons({
   onLogin,
   onParticipate,
   participationFlow,
+  submittingAnswer = '',
 }) {
   // hooks
   const { t } = useTranslation();
@@ -78,6 +83,17 @@ function EventAnswerButtons({
   });
   const declinedAnswer = ownAnswer?.requestStatus === 'declined' ? ownAnswer.activeRequest : null;
   const isStageDayEvent = String(event?.eventFormat || '').trim().toLowerCase() === 'stage_day';
+  // 🕐 T2/D5 — L ÉCRAN RÉPOND TOUT DE SUITE, MÊME QUAND LE SERVEUR TARDE.
+  //
+  // Constat d Adel : « ça ne met pas directement le statut, donc on ne sait
+  // pas ». Entre l appui et la réponse du serveur, ces deux boutons ne
+  // changeaient RIEN — le doute (« est-ce que ça a marché ? ») faisait
+  // ré-appuyer. On allume celui qu on vient d appuyer, et on prend les deux.
+  //
+  // ⛔ PAS D ÉTAT OPTIMISTE : aucune des quatre surfaces de participation n en
+  // a un (0 `onMutate` dans le dépôt). En inventer un ici ferait diverger cet
+  // écran des trois autres. Le retour visuel suffit à lever le constat.
+  const isSubmitting = Boolean(submittingAnswer);
   // T02 — CETTE ECHELLE A DEUX LECTEURS DEPUIS LE 2026-08-17, elle ne vit donc
   // plus ici : le bandeau de l'accueil doit afficher le meme etat que cette
   // fiche, et deux echelles ecrites separement finissent toujours par diverger.
@@ -168,7 +184,8 @@ function EventAnswerButtons({
           <View style={[Alignments.row, Alignments.fullWidth, Spaces.gap[12]]}>
             <View style={{ flex: 1 }}>
               <Button
-                disabled={dailyRsvpStatus === 'present'}
+                disabled={dailyRsvpStatus === 'present' || isSubmitting}
+                isLoading={submittingAnswer === 'present'}
                 onPress={onParticipate}
                 style={Alignments.fullWidth}
                 title={t('eventList.actions.present')}
@@ -177,7 +194,8 @@ function EventAnswerButtons({
             </View>
             <View style={{ flex: 1 }}>
               <Button
-                disabled={dailyRsvpStatus === 'absent'}
+                disabled={dailyRsvpStatus === 'absent' || isSubmitting}
+                isLoading={submittingAnswer === 'absent'}
                 onPress={onDecline}
                 style={Alignments.fullWidth}
                 title={t('eventList.actions.absent')}
@@ -293,6 +311,8 @@ function EventAnswerButtons({
           <View style={[Alignments.row, Alignments.fullWidth, Spaces.gap[12]]}>
             <View style={{ flex: 1 }}>
               <Button
+                disabled={isSubmitting}
+                isLoading={submittingAnswer === 'present'}
                 onPress={onParticipate}
                 style={Alignments.fullWidth}
                 title={t('eventList.actions.present')}
@@ -301,6 +321,8 @@ function EventAnswerButtons({
             </View>
             <View style={{ flex: 1 }}>
               <Button
+                disabled={isSubmitting}
+                isLoading={submittingAnswer === 'absent'}
                 onPress={onDecline}
                 style={Alignments.fullWidth}
                 title={t('eventList.actions.absent')}

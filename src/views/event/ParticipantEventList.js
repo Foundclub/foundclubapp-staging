@@ -41,6 +41,9 @@ import { joinReservation } from '@/services/reservation/reservationService';
 
 import { createLogger } from '@/utils/logger/logger';
 
+import { useEventAnswerMutations } from './hooks/useEventAnswerMutations';
+import { OwnAnswerAction, resolveOwnAnswerAction } from './ownAnswerAction';
+
 const participantEventListLogger = createLogger('participant-event-list');
 const FEATURED_PLANNING_SCOPES = ['SECTION', 'CM'];
 
@@ -353,7 +356,40 @@ function ParticipantEventList({ navigation }) {
     },
   });
 
+  // 🎯 T2 (constat d Adel du 2026-08-26) — « appuyer sur présent, ça ne marche pas ».
+  //
+  // Cet écran est le SEUL des quatre qui font répondre un joueur à n avoir
+  // jamais reçu les deux correctifs d août (AA01 le 20/08, R9 le 25/08 —
+  // `git show --stat` le prouve : les trois frères y sont, celui-ci non).
+  // Il envoyait donc tout le monde sur `POST /event-participations`, la porte
+  // des DEMANDES, où le serveur pose `pending` ; or il ne recopie dans
+  // `event.participations` que les `accepted`. La carte affichait « Demande en
+  // attente » là où le joueur attendait « Je participe ! ».
+  //
+  // 🎯 Les branches ci-dessous sont celles d `EventListContent` (:881-887 et
+  // :943-953), à l identique — pas une réécriture. Les deux mutations viennent
+  // d un hook partagé pour qu il n y ait pas de cinquième copie.
+  const {
+    missingEventMutation,
+    respondToEventRsvpMutation,
+    submittingAnswer,
+    submittingEventId,
+  } = useEventAnswerMutations();
+
   const handleParticipateToEvent = useCallback(async (event) => {
+    const isStageDayEvent = String(event?.eventFormat || '').toLowerCase() === 'stage_day';
+    if (isStageDayEvent && event?.documentId) {
+      try {
+        await respondToEventRsvpMutation.mutateAsync({
+          answer: 'present',
+          eventId: event.documentId,
+        });
+      } catch {
+        // Error feedback is handled by the mutation.
+      }
+      return;
+    }
+
     const participationFlow = resolveParticipationFlow(event, { user: userData });
 
     if (!participationFlow?.canAct) {
@@ -376,17 +412,92 @@ function ParticipantEventList({ navigation }) {
       return;
     }
 
-    if (event?.documentId && userData?.documentId) {
-      try {
-        await createEventParticipationMutation.mutateAsync({
-          event: event.documentId,
-          user: userData.documentId,
+    // R9 — LE MÊME TROU QUE CHEZ LE FRÈRE, ET POUR LA MÊME RAISON.
+    //
+    // `handleJoinEvent`, plus bas dans ce fichier, porte cette branche depuis
+    // longtemps ; ce gestionnaire-ci ne l avait pas, et c est LUI que la carte
+    // appelle quand on répond « Présent ». Sans elle, on tombait sur le chemin
+    // générique du bas : une participation SANS poste, qui verrouille ensuite
+    // la candidature aux postes. Les postes vivent sur l écran de l événement.
+    if (participationFlow?.submitMode === 'detection-slot-picker') {
+      if (event?.documentId) {
+        // @ts-ignore
+        navigation.navigate(RouteNames.EventStack, {
+          params: { eventId: event.documentId },
+          screen: RouteNames.EventDetails,
         });
-      } catch (error) {
-        Alert.alert('Erreur', getParticipationErrorMessage(error, 'Une erreur est survenue.'));
       }
+      return;
     }
-  }, [createEventParticipationMutation, navigation, userData]);
+
+    // AA01 — LA BONNE PORTE : un membre convié RÉPOND, il ne demande pas.
+    // `POST /events/:id/rsvp` l inscrit immédiatement (`event-rsvp.ts:161-166`).
+    if (participationFlow?.submitMode === 'rsvpPresent' && event?.documentId) {
+      try {
+        await respondToEventRsvpMutation.mutateAsync({
+          answer: 'present',
+          eventId: event.documentId,
+        });
+      } catch {
+        // Error feedback is handled by the mutation.
+      }
+      return;
+    }
+
+    // 🔇 T2/D6 — UN GARDE SANS `else` EST UNE PANNE SILENCIEUSE.
+    //
+    // Cette condition gardait le dernier chemin sans jamais dire ce qu elle
+    // refusait : identité incomplète (profil pas encore chargé, session en
+    // cours de reprise) et le bouton ne faisait RIEN. Vu du canapé, c est
+    // exactement le même symptôme que la mauvaise porte de D1 — « ça ne marche
+    // pas » — et c est pour ça qu il fallait le fermer AUSSI : sinon il restait
+    // un chemin capable de reproduire le constat après le correctif.
+    if (!event?.documentId || !userData?.documentId) {
+      // 🔎 LE DÉTAIL VA AU JOURNAL, PAS À L ÉCRAN : ce garde couvre DEUX
+      // manques (l événement ou le profil), et une phrase qui en nommerait un
+      // seul serait fausse une fois sur deux. Le journal, lui, dit lequel.
+      participantEventListLogger.warn('Participation blocked: incomplete identity', {
+        hasEventId: Boolean(event?.documentId),
+        hasUserId: Boolean(userData?.documentId),
+      });
+      Alert.alert(
+        'Erreur',
+        "Ta réponse n'a pas pu être envoyée. Réessaie dans un instant.",
+      );
+      return;
+    }
+
+    try {
+      await createEventParticipationMutation.mutateAsync({
+        event: event.documentId,
+        user: userData.documentId,
+      });
+    } catch (error) {
+      Alert.alert('Erreur', getParticipationErrorMessage(error, 'Une erreur est survenue.'));
+    }
+  }, [createEventParticipationMutation, navigation, respondToEventRsvpMutation, userData]);
+
+  // 🔇 T2/D2 — « ABSENT·E » N ÉTAIT BRANCHÉ SUR RIEN.
+  //
+  // Les deux cartes de cet écran passaient `onDecline={() => {}}` : une
+  // fonction VIDE. Le bouton s enfonçait, et il ne se passait rien — ni appel,
+  // ni message, ni changement à l écran. C est la moitié « ça ne marche pas »
+  // du constat d Adel, et elle ne se voyait dans AUCUN témoin.
+  //
+  // Le geste est celui du frère (`EventListContent.js:1011-1021`) : une séance
+  // d un stage se répond par la porte des réponses, tout le reste passe par
+  // `POST /events/:id/missing`.
+  const handleDeclineEvent = useCallback((/** @type {any} */ event) => {
+    if (!event?.documentId) return;
+    if (String(event?.eventFormat || '').toLowerCase() === 'stage_day') {
+      respondToEventRsvpMutation.mutate({
+        answer: 'absent',
+        eventId: event.documentId,
+      });
+      return;
+    }
+    missingEventMutation.mutate(event.documentId);
+  }, [missingEventMutation, respondToEventRsvpMutation]);
 
   const handleJoinEvent = useCallback((event) => {
     const participationFlow = resolveParticipationFlow(event, { user: userData });
@@ -455,11 +566,15 @@ function ParticipantEventList({ navigation }) {
     userData,
   ]);
 
-  /**
-   * Handle event press
-   * @param {import('@/domains/event/types').FCEvent} event
-   */
-  const handleEventPress = (event) => {
+  // 🪤 LE TYPE EST SUR LE PARAMÈTRE, ET PAS DANS UN BLOC AU-DESSUS : un bloc
+  // JSDoc posé sur un `const` ne traverse pas `useCallback`, et le paramètre
+  // redevient implicitement `any` (TS7006) — c'est ce qui est arrivé en
+  // mémoïsant cette fonction pour D4. Même forme que `handleEventSelect` chez
+  // le frère (`EventListContent.js:806`).
+  // Handle event press.
+  const handleEventPress = useCallback((
+    /** @type {import('@/domains/event/types').FCEvent} */ event,
+  ) => {
     if (!event?.documentId) {
       participantEventListLogger.warn('Navigation blocked: missing event documentId');
       return;
@@ -470,7 +585,43 @@ function ParticipantEventList({ navigation }) {
       params: { eventId: event.documentId },
       screen: RouteNames.EventDetails,
     });
-  };
+  }, [navigation]);
+
+  // ↩️ T2/D4 — ON PEUT ENFIN REVENIR EN ARRIÈRE.
+  //
+  // `EventAnswerButtons` n offre « Annuler ma réponse » que si l appelant lui
+  // passe `onDeleteParticipation`, et `EventCardNew:636` le dérive
+  // d `onEditAnswer`. Cet écran ne l a JAMAIS passé : qui avait répondu y
+  // lisait une étiquette (« Je participe ! ») et n avait plus AUCUN bouton.
+  // C est la moitié « on ne sait pas » du constat d Adel : pas de retour
+  // visuel, et pas de sortie.
+  //
+  // ⛔ Ce que fait le bouton ne se décide pas ici : `resolveOwnAnswerAction`
+  // le tranche déjà pour la fiche et pour la liste de recherche. Une seule
+  // règle, trois surfaces — le libellé ne peut pas promettre autre chose que
+  // ce que le geste fait.
+  const handleEditAnswer = useCallback((/** @type {any} */ event) => {
+    const { kind } = resolveOwnAnswerAction({
+      // `participationRequests` n est pas déclaré sur `FCEvent` alors que l API
+      // le rend : le même accès existe déjà dans `EventAnswerButtons`.
+      activeEventParticipations: /** @type {any} */ (event)?.participationRequests,
+      event,
+      user: userData,
+    });
+
+    if (kind === OwnAnswerAction.switchToPresent && event?.documentId) {
+      respondToEventRsvpMutation.mutate({
+        answer: 'present',
+        eventId: event.documentId,
+      });
+      return;
+    }
+
+    // Annuler demande une confirmation et la suppression de la ligne : tout
+    // cela vit déjà sur la fiche. On y emmène plutôt que d en écrire une
+    // seconde version ici.
+    handleEventPress(event);
+  }, [handleEventPress, respondToEventRsvpMutation, userData]);
 
   /**
    * @param {{ item: import('@/domains/event/types').FCEvent }} props
@@ -482,6 +633,16 @@ function ParticipantEventList({ navigation }) {
           <Suspense fallback={<DeferredFallback height={HAUTEUR_CARTE_EVENEMENT} />}>
             <EventCardNew
               item={item.reservation}
+              // ⛔ PAS `handleDeclineEvent` ICI, ET CE N EST PAS UN OUBLI (T2/D2).
+              //
+              // Cette carte porte une RÉSERVATION : son `documentId` est un
+              // identifiant de réservation, pas d événement. Le brancher
+              // enverrait `POST /events/<idDeRéservation>/missing`, c est-à-dire
+              // la mauvaise ressource — et depuis D3 cet échec parlerait, en
+              // affichant une erreur là où il n y a rien à décliner. Aucune
+              // route « je ne viens pas » n existe pour une réservation ; le
+              // frère (`EventListContent.js:1250-1259`) la laisse inerte pour
+              // la même raison. Le vrai « Absent·e » est sur la carte d à côté.
               // @ts-ignore
               onDecline={() => {}}
               onJoin={() => handleJoinEvent(item.reservation)}
@@ -500,11 +661,16 @@ function ParticipantEventList({ navigation }) {
           <EventCardNew
             displayProfile="teamFocused"
             item={item}
-            onDecline={() => {}}
+            onDecline={() => handleDeclineEvent(item)}
+            onEditAnswer={() => handleEditAnswer(item)}
             onJoin={() => handleJoinEvent(item)}
             onLogin={() => {}}
             onParticipate={() => handleParticipateToEvent(item)}
             onPress={() => handleEventPress(item)}
+            // 🕐 T2/D5 — SEULE la carte qui attend s éteint. `isPending` est vrai
+            // pour la mutation entière : s en servir tel quel ferait clignoter
+            // la liste complète pour un seul appui.
+            submittingAnswer={submittingEventId === item.documentId ? submittingAnswer : ''}
             useFacilityAccentColor
           />
         </Suspense>
