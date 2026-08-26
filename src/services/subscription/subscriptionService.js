@@ -88,6 +88,29 @@ export const restoreSubscriptionPurchases = async (payload = {}) => {
 };
 
 /**
+ * S12-B/D5 — AUGMENTER LE NOMBRE DE LICENCIES COUVERTS, EN COURS D'ABONNEMENT.
+ *
+ * Le serveur facture la difference au prorata immediatement (Stripe
+ * `proration_behavior: always_invoice`), met a jour le plafond local que lit le
+ * portier d'adhesions, puis synchronise RevenueCat pour le prochain
+ * renouvellement — dans cet ordre (subscription-stripe.ts:269-315).
+ *
+ * ⚠️ Il REFUSE toute diminution en v1 : elle prendra effet au renouvellement.
+ * L'ecran ne la propose donc pas.
+ * @param {{ licenseeCount: number; subscriptionDocumentId: string }} payload
+ * @returns {Promise<{
+ *   licenseeCount: number;
+ *   previousLicenseeCount: number;
+ *   status: string;
+ * }>} Reponse SUPERSET du contrat (elle porte aussi stripeSubscriptionId et
+ *   subscriptionDocumentId) : la lire en `toMatchObject`, jamais en egalite stricte.
+ */
+export const increaseSubscriptionLicenseeCount = async (payload) => {
+  const response = await client.post('/subscriptions/licensee-count/increase', payload);
+  return getResponsePayload(response);
+};
+
+/**
  * @param {Record<string, any>} payload
  * @returns {Promise<any>}
  */

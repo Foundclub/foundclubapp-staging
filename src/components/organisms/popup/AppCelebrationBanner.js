@@ -16,6 +16,7 @@ import {
   View,
 } from 'react-native';
 
+import { withAlpha } from '@/theme/colors';
 import useTheme from '@/theme/themeContext';
 
 const DEFAULT_DURATION_MS = 3200;
@@ -39,6 +40,24 @@ const resolveBannerPalette = (tone, variant, Colors) => {
       background: 'rgba(54, 17, 24, 0.98)',
       border: 'rgba(255, 40, 79, 0.34)',
       progress: Colors.error500,
+    };
+  }
+
+  // S12-B/D7 — le ton `warning` : ce n'est pas une erreur (rien n'a echoue) et
+  // ce n'est pas une reussite. C'est « attention, ca va bloquer ». Sans cette
+  // branche, il retombait sur le repli neutre — le meme bleu qu'un simple
+  // « evenement mis a jour », pour un message qui coute des adhesions.
+  if (tone === 'warning') {
+    // ⚠️ Les quatre branches soeurs ecrivent leur fond en rgba() litteral. Celle-ci
+    // passe par les JETONS du theme : le lot S12-B interdit tout hex/rgb neuf, et
+    // c'est de toute facon plus juste — `primary900` est deja LE fond sombre de
+    // l'app (le panneau du CTA des offres l'emploie tel quel). Le ton se lit sur
+    // l'accent, la bordure et la barre, pas sur une teinte de fond inventee.
+    return {
+      accent: Colors.gold500,
+      background: Colors.primary900,
+      border: withAlpha(Colors.gold500, 0.38),
+      progress: Colors.gold500,
     };
   }
 

@@ -80,6 +80,142 @@ export const getSubscriptionEntryPeriod = (entry) => (
   String(entry?.billingPeriod || '').trim().toLowerCase()
 );
 
+// S12-B — L'OFFRE AU LICENCIE, ET POURQUOI ELLE NE PASSE PAS PAR LES PALIERS.
+//
+// Le catalogue serveur porte desormais DEUX modeles de prix
+// (admin/src/api/subscription/services/subscription-catalog.ts:8-11) :
+//   `flat`         : le prix affiche EST le prix paye (les 3 paliers Club, les 3 Equipe) ;
+//   `per_licensee` : le prix est UNITAIRE et se multiplie par le nombre de
+//                    licencies saisi a la souscription.
+//
+// ⚠️ C'est `pricingModel` qui fait foi, JAMAIS le code de plan. Les sept regex
+// `tier_(\d+)` de l'app restent intactes : `fc_club_licensee_*` ne les traverse
+// pas (son rang de palier vaut donc 0, ce qui l'ecarte tout seul des rangees de
+// paliers S/M/L, et c'est voulu — ce n'est pas un palier).
+const PER_LICENSEE_PRICING_MODEL = 'per_licensee';
+
+// Bornes de la saisie. Le serveur exige un entier >= 1 sans plafond
+// (subscription-billing.ts:37-41) ; le plafond ci-dessous n'est pas une regle
+// metier mais un GARDE-FOU DE FRAPPE : le plus gros club francais compte
+// quelques milliers de licencies, et « 2500000 » tape par erreur engagerait des
+// milliers d'euros. Un plafond qui laisse passer tous les vrais clubs et arrete
+// les fautes de frappe.
+export const SUBSCRIPTION_LICENSEE_COUNT_MIN = 1;
+export const SUBSCRIPTION_LICENSEE_COUNT_MAX = 20000;
+
+/**
+ * @param {any} entry
+ * @returns {string} 'per_licensee', 'flat' ou ''.
+ */
+export const getSubscriptionEntryPricingModel = (entry) => (
+  String(entry?.pricingModel || '').trim().toLowerCase()
+);
+
+/**
+ * Cette offre se facture-t-elle AU LICENCIE ?
+ * @param {any} entry
+ * @returns {boolean}
+ */
+export const isPerLicenseeSubscriptionEntry = (entry) => (
+  getSubscriptionEntryPricingModel(entry) === PER_LICENSEE_PRICING_MODEL
+);
+
+/**
+ * Prix UNITAIRE par licencie, en centimes, ou null.
+ *
+ * Le serveur pose la meme valeur dans `unitPriceEurCents` ET dans
+ * `referencePriceEurCents` (subscription-catalog.ts:118-124) : on lit le champ
+ * qui porte le sens, et on se replie sur l'autre plutot que de rendre null pour
+ * un catalogue un peu plus ancien.
+ * @param {any} entry
+ * @returns {number | null}
+ */
+export const getSubscriptionEntryUnitPriceEurCents = (entry) => {
+  if (!isPerLicenseeSubscriptionEntry(entry)) return null;
+  const declared = Number(entry?.unitPriceEurCents);
+  if (Number.isFinite(declared) && declared > 0) return declared;
+  const reference = Number(entry?.referencePriceEurCents);
+  return Number.isFinite(reference) && reference > 0 ? reference : null;
+};
+
+/**
+ * Nombre de licencies ramene dans les bornes, ou null si ce n'est pas un nombre.
+ * @param {any} value
+ * @returns {number | null}
+ */
+export const clampSubscriptionLicenseeCount = (value) => {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return null;
+  return Math.min(
+    SUBSCRIPTION_LICENSEE_COUNT_MAX,
+    Math.max(SUBSCRIPTION_LICENSEE_COUNT_MIN, Math.floor(parsed)),
+  );
+};
+
+/**
+ * Ce que le doigt vient de taper, ramene a des chiffres.
+ *
+ * Un champ de saisie doit pouvoir etre VIDE le temps qu'on efface pour
+ * retaper : on rend donc la chaine, jamais un nombre force. Le clavier
+ * numerique d'Android laisse passer des separateurs sur certains modeles, d'ou
+ * le filtrage plutot qu'une confiance aveugle au `keyboardType`.
+ * @param {string} value
+ * @returns {string}
+ */
+export const sanitizeSubscriptionLicenseeCountInput = (value) => String(value ?? '')
+  .replace(/[^0-9]/g, '')
+  .replace(/^0+(?=\d)/, '')
+  .slice(0, String(SUBSCRIPTION_LICENSEE_COUNT_MAX).length);
+
+/**
+ * Prix unitaire tel qu'il se lit sur une carte : « 2,50 € par licencié ».
+ * @param {number | null | undefined} unitPriceEurCents
+ * @returns {string}
+ */
+export const formatSubscriptionUnitPriceLabel = (unitPriceEurCents) => {
+  // ⛔ `formatSubscriptionPriceLabel` accepte ZERO, volontairement : c'est la
+  // carte « Gratuit » qui en a besoin (SubscriptionOffers.js:969). Un prix
+  // UNITAIRE a zero, lui, annoncerait une offre gratuite a quelqu'un qui va
+  // payer — on rend '' plutot qu'un « 0,00 EUR par licencie ».
+  const cents = Number(unitPriceEurCents);
+  if (!Number.isFinite(cents) || cents <= 0) return '';
+  const amountLabel = formatSubscriptionPriceLabel(cents, '');
+  return amountLabel ? `${amountLabel} par licencié` : '';
+};
+
+/**
+ * LE CALCUL SOUS LES YEUX (decision D3 du 2026-08-25) :
+ * « 250 licencies x 2,50 EUR = 625,00 EUR/an ».
+ *
+ * Il vit ICI, et pas dans les ecrans, parce que TROIS surfaces en ont besoin
+ * (la carte Club du carrousel, la feuille de vente, la feuille « augmenter ») —
+ * c'est la meme regle L33/L38 qui a fait descendre `findSubscriptionMonthlySibling
+ * Entry` et la lecture d'enveloppe dans ce fichier. Un calcul recopie trois fois
+ * finit toujours par diverger d'un centime quelque part, et c'est de l'ARGENT.
+ *
+ * Rend '' des qu'un des deux termes manque : on n'affiche jamais un total invente.
+ * @param {number | null | undefined} unitPriceEurCents - Prix unitaire en centimes.
+ * @param {number | null | undefined} licenseeCount - Nombre de licencies saisi.
+ * @param {'monthly' | 'yearly' | string} [billingPeriod] - Periode, pour le suffixe.
+ * @returns {string}
+ */
+export const formatSubscriptionPerMemberPriceLabel = (
+  unitPriceEurCents,
+  licenseeCount,
+  billingPeriod = '',
+) => {
+  const unitCents = Number(unitPriceEurCents);
+  const count = Number(licenseeCount);
+  if (!Number.isFinite(unitCents) || unitCents <= 0) return '';
+  if (!Number.isInteger(count) || count < SUBSCRIPTION_LICENSEE_COUNT_MIN) return '';
+
+  const unitLabel = formatSubscriptionPriceLabel(unitCents, '');
+  const totalLabel = formatSubscriptionPriceLabel(unitCents * count, billingPeriod);
+  if (!unitLabel || !totalLabel) return '';
+
+  return `${count} licencié${count > 1 ? 's' : ''} × ${unitLabel} = ${totalLabel}`;
+};
+
 /**
  * Rang du palier dans sa famille : nombre d'equipes couvertes cote Equipe,
  * numero de tier cote Club (`fc_club_tier_2_yearly` -> 2).
@@ -206,6 +342,12 @@ export const resolveSubscriptionCatalogPrices = ({ serverEntries, storePricesEur
    * @returns {boolean}
    */
   const hasSellableServerPrice = (entry) => {
+    // S12-B — une offre AU LICENCIE n'a aucun package store, et ce n'est pas un
+    // reglage de boutique oublie : les stores Apple/Google ne savent pas vendre
+    // « N x 2,50 EUR » a l'unite (paliers fixes seulement), c'est precisement
+    // pourquoi elle s'achete sur le web. Sans cette garde, `missingFromStore
+    // PlanCodes` la signalait A CHAQUE RENDU DE CHAQUE SURFACE, pour toujours.
+    if (isPerLicenseeSubscriptionEntry(entry)) return false;
     const cents = Number(entry?.referencePriceEurCents);
     return Number.isFinite(cents) && cents > 0;
   };

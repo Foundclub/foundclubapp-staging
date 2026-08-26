@@ -1,7 +1,9 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { format as formatDate } from 'date-fns';
 import { fr as frLocale } from 'date-fns/locale';
-import { useCallback, useEffect, useMemo } from 'react';
+import {
+  useCallback, useEffect, useMemo, useState,
+} from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Alert, Image, ScrollView, Text, TouchableOpacity, View,
@@ -9,7 +11,14 @@ import {
 
 import { getUserRoleKey } from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
-import { getSubscriptionBillingErrorMessage } from '@/domains/subscription/subscriptionBilling';
+import {
+  clampSubscriptionLicenseeCount,
+  formatSubscriptionPerMemberPriceLabel,
+  getSubscriptionBillingErrorMessage,
+  getSubscriptionEntryUnitPriceEurCents,
+  isPerLicenseeSubscriptionEntry,
+  sanitizeSubscriptionLicenseeCountInput,
+} from '@/domains/subscription/subscriptionBilling';
 import {
   formatSubscriptionPlanLabel,
   getCoveredTeamCount,
@@ -17,16 +26,23 @@ import {
   getSubscriptionTeamSlotSummary,
   hasActiveClubOffer,
 } from '@/domains/subscription/subscriptionDecision';
-import { restoreAllSubscriptionPurchases } from '@/domains/subscription/subscriptionPurchaseRail';
+import {
+  performSubscriptionLicenseeIncrease,
+  restoreAllSubscriptionPurchases,
+} from '@/domains/subscription/subscriptionPurchaseRail';
 import {
   invalidateSubscriptionState,
   scheduleSubscriptionStateRefresh,
 } from '@/domains/subscription/subscriptionRefresh';
+import { useSubscriptionCatalog } from '@/domains/subscription/useSubscriptionCatalog';
 import { withAlpha } from '@/theme/colors';
 import useTheme from '@/theme/themeContext';
 
+import Button from '@/components/atoms/button/Button';
 import GlyphIcon from '@/components/atoms/glyphIcon/GlyphIcon';
+import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 import LegalFooter from '@/components/molecules/legalFooter/LegalFooter';
+import LicenseeCountField from '@/components/molecules/licenseeCountField/LicenseeCountField';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 import SubscriptionCoveredHero from '@/views/profile/SubscriptionCoveredHero';
 
@@ -129,15 +145,21 @@ function SubscriptionTrialBanner({ trialSubscription }) {
 }
 
 /**
- * Ecran 1 du parcours Abonnement (L33) : GERER. Aucun catalogue ici — la vente
- * vit dans le carrousel, la comparaison dans la matrice.
+ * Ecran 1 du parcours Abonnement (L33) : GERER. Aucun catalogue a VENDRE ici —
+ * la vente vit dans le carrousel, la comparaison dans la matrice.
+ *
+ * S12-B/D5 — il porte desormais UN geste d'argent : augmenter le nombre de
+ * licenciés couverts. Il est pose ICI et pas sur une route neuve, parce que les
+ * routes sont des carrefours (E4 : `routeNames`, `webRoutes`, le registre du
+ * site) et qu'une feuille suffit. La notification de quota y mene par
+ * `openLicenseeIncrease`.
  *
  * Cette route garde son nom et son URL web `/profile/subscription` : trois
  * fichiers de test et la table des routes du site en dependent.
- * @param {{ navigation?: any }} props
+ * @param {{ navigation?: any, route?: any }} props
  * @returns {import('react').ReactElement | null}
  */
-function SubscriptionOverview({ navigation }) {
+function SubscriptionOverview({ navigation, route }) {
   const {
     Alignments, Colors, Fonts, Images, Spaces,
   } = useTheme();
@@ -295,6 +317,126 @@ function SubscriptionOverview({ navigation }) {
       { locale: frLocale },
     )
     : '';
+
+  /* ================================================================== */
+  /* S12-B/D5 — AUGMENTER LE NOMBRE DE LICENCIES COUVERTS                */
+  /* ================================================================== */
+
+  // Le catalogue est lu ICI pour UNE raison : savoir si l'offre payee se facture
+  // AU LICENCIE. C'est `pricingModel` qui le dit, jamais le code de plan — et
+  // c'est lui aussi qui porte le prix unitaire du recap. Point de lecture unique
+  // (L39), donc partage avec les surfaces de vente et mis en cache 10 min.
+  const catalogEntries = useSubscriptionCatalog({
+    enabled: canShowSubscriptionExperience,
+  }).entries;
+
+  // L'abonnement au licencie que CETTE personne paie. On croise le detail des
+  // abonnements payes avec le catalogue : le resume serveur ne dit pas quel
+  // modele de prix porte un plan.
+  const licenseeSubscription = useMemo(() => {
+    const payerSubscriptions = Array.isArray(subscriptionSummary?.payerSubscriptionsSummary)
+      ? subscriptionSummary.payerSubscriptionsSummary
+      : [];
+    return payerSubscriptions.find(/** @param {any} entry */ (entry) => {
+      const planCode = String(entry?.planCode || '').trim();
+      const isActive = ['active', 'grace_period'].includes(
+        String(entry?.status || '').trim().toLowerCase(),
+      );
+      return isActive && catalogEntries.some(
+        (catalogEntry) => String(catalogEntry?.planCode || '').trim() === planCode
+          && isPerLicenseeSubscriptionEntry(catalogEntry),
+      );
+    }) || null;
+  }, [catalogEntries, subscriptionSummary?.payerSubscriptionsSummary]);
+
+  const licenseeCatalogEntry = useMemo(
+    () => catalogEntries.find(
+      (entry) => String(entry?.planCode || '').trim() === String(licenseeSubscription?.planCode || '').trim(),
+    ) || null,
+    [catalogEntries, licenseeSubscription?.planCode],
+  );
+  const licenseeUnitPriceEurCents = getSubscriptionEntryUnitPriceEurCents(licenseeCatalogEntry);
+
+  // ⚠️ LE NOMBRE ACTUELLEMENT SOUSCRIT NE VIENT PAS DU BOOTSTRAP.
+  // `payerSubscriptionsSummary` n'expose PAS `licenseeCount`
+  // (subscription-permission.ts:1150-1159), et aucune route ne le lit. Les deux
+  // seuls porteurs sont le REFUS de quota et la NOTIFICATION — tous deux
+  // arrivent ici en parametre de route. Sans eux, on ne l'invente pas : on
+  // demande le nouveau total, et le serveur refuse tout seul une diminution.
+  const knownLicenseeCount = clampSubscriptionLicenseeCount(route?.params?.licenseeCount);
+  const knownMemberCount = clampSubscriptionLicenseeCount(route?.params?.memberCount);
+
+  const [isLicenseeSheetVisible, setIsLicenseeSheetVisible] = useState(false);
+  const [licenseeCountText, setLicenseeCountText] = useState('');
+
+  // La notification de quota et le mur payant ouvrent la feuille directement :
+  // deux taps de moins entre « ton club est plein » et la reparation.
+  useEffect(() => {
+    if (route?.params?.openLicenseeIncrease && licenseeSubscription) {
+      setIsLicenseeSheetVisible(true);
+    }
+  }, [licenseeSubscription, route?.params?.openLicenseeIncrease]);
+
+  const typedLicenseeCount = licenseeCountText === ''
+    ? null
+    : clampSubscriptionLicenseeCount(licenseeCountText);
+  // Le serveur REFUSE une diminution (subscription-stripe.ts:247-253) : le
+  // plancher de l'ecran est donc « strictement plus que ce qui est deja
+  // couvert », quand on le connait.
+  const minimumLicenseeCount = knownLicenseeCount === null ? 1 : knownLicenseeCount + 1;
+  const isTypedLicenseeCountValid = typedLicenseeCount !== null
+    && String(typedLicenseeCount) === licenseeCountText
+    && typedLicenseeCount >= minimumLicenseeCount;
+
+  const increaseMutation = useMutation({
+    mutationFn: async (/** @type {{ licenseeCount: number; subscriptionDocumentId: string }} */ payload) => (
+      performSubscriptionLicenseeIncrease(payload)
+    ),
+  });
+
+  const closeLicenseeSheet = useCallback(() => {
+    setIsLicenseeSheetVisible(false);
+    setLicenseeCountText('');
+  }, []);
+
+  const handleIncreaseLicensees = useCallback(async () => {
+    const subscriptionDocumentId = String(licenseeSubscription?.documentId || '').trim();
+    if (!subscriptionDocumentId || !isTypedLicenseeCountValid || increaseMutation.isPending) {
+      return;
+    }
+
+    try {
+      const result = await increaseMutation.mutateAsync({
+        licenseeCount: /** @type {number} */ (typedLicenseeCount),
+        subscriptionDocumentId,
+      });
+      // Le plafond d'adhesions est relu par le serveur : on rearme le calendrier
+      // de convergence comme apres un achat (L08).
+      scheduleSubscriptionStateRefresh(queryClient);
+      await invalidateSubscriptionState(queryClient);
+      closeLicenseeSheet();
+
+      // La CONFIRMATION dit le mouvement, pas seulement le resultat : « 120 →
+      // 150 » se verifie d'un coup d'oeil, « 150 » ne se verifie pas.
+      const previousCount = Number(result?.previousLicenseeCount);
+      const nextCount = Number(result?.licenseeCount || typedLicenseeCount);
+      Alert.alert(
+        'Nouveau nombre de licenciés enregistré',
+        Number.isFinite(previousCount) && previousCount > 0
+          ? `Ton club passe de ${previousCount} à ${nextCount} licenciés. La différence est facturée tout de suite, au prorata, et les adhésions rouvrent.`
+          : `Ton club couvre maintenant ${nextCount} licenciés. La différence est facturée tout de suite, au prorata, et les adhésions rouvrent.`,
+      );
+    } catch (error) {
+      Alert.alert('Erreur abonnement', getSubscriptionBillingErrorMessage(error));
+    }
+  }, [
+    closeLicenseeSheet,
+    increaseMutation,
+    isTypedLicenseeCountValid,
+    licenseeSubscription?.documentId,
+    queryClient,
+    typedLicenseeCount,
+  ]);
 
   const restoreMutation = useMutation({
     mutationFn: async () => restoreAllSubscriptionPurchases(),
@@ -548,6 +690,16 @@ function SubscriptionOverview({ navigation }) {
                 onPress: () => navigation.navigate(RouteNames.SubscriptionCompare),
                 withDivider: true,
               })}
+              {/* S12-B/D5 — LA PORTE VERS L'AUGMENTATION. Elle n'existe QUE
+                  pour qui paie vraiment au licencié : proposer d'augmenter un
+                  nombre a quelqu'un qui n'en a pas serait une impasse. */}
+              {licenseeSubscription ? renderActionRow({
+                icon: 'users',
+                label: 'Augmenter mes licenciés',
+                onPress: () => setIsLicenseeSheetVisible(true),
+                right: knownLicenseeCount === null ? '' : `${knownLicenseeCount} couverts`,
+                withDivider: true,
+              }) : null}
               {renderActionRow({
                 icon: 'search',
                 label: t('profile.subscription.actions.restore', 'Restaurer mes achats'),
@@ -570,6 +722,69 @@ function SubscriptionOverview({ navigation }) {
 
         <LegalFooter restore={false} />
       </ScrollView>
+
+      {/* S12-B/D5 — LA FEUILLE « AUGMENTER », pas une route neuve.
+          Nombre actuel (quand on le connait) -> nouveau nombre -> ce que ca
+          coute -> l'appel -> la confirmation. */}
+      <BottomModal
+        close={closeLicenseeSheet}
+        isVisible={isLicenseeSheetVisible}
+        scrollable
+        snapPoints={['72%']}
+      >
+        <View style={[Spaces.gap[16], Spaces.paddingBottom[24]]}>
+          <View style={Spaces.gap[4]}>
+            <Text style={[Fonts.h4Black, Fonts.neutral00]}>
+              Augmenter mes licenciés
+            </Text>
+            <Text style={[Fonts.p2, Fonts.neutral200]}>
+              {knownLicenseeCount === null
+                ? 'Indique le nouveau nombre TOTAL de licenciés que ton club doit couvrir.'
+                : `Ton abonnement couvre ${knownLicenseeCount} licenciés${knownMemberCount === null ? '' : `, et ton club compte ${knownMemberCount} membres`}. Indique le nouveau total.`}
+            </Text>
+          </View>
+
+          <LicenseeCountField
+            billingPeriod={licenseeSubscription?.billingPeriod || ''}
+            helperText={'La différence est facturée tout de suite, au prorata du temps restant. '
+              + 'Une baisse, elle, prend effet au prochain renouvellement.'}
+            label="Nouveau nombre de licenciés"
+            minCount={minimumLicenseeCount}
+            onChangeText={
+              (value) => setLicenseeCountText(sanitizeSubscriptionLicenseeCountInput(value))
+            }
+            unitPriceEurCents={licenseeUnitPriceEurCents}
+            value={licenseeCountText}
+          />
+
+          {/* CE QUE CA AJOUTE, quand on connait le point de depart : le total
+              seul ne dit pas ce qu'on va payer EN PLUS. */}
+          {knownLicenseeCount !== null && isTypedLicenseeCountValid ? (
+            <Text style={[Fonts.p3Bold, Fonts.primary200]}>
+              {`+ ${formatSubscriptionPerMemberPriceLabel(
+                licenseeUnitPriceEurCents,
+                /** @type {number} */ (typedLicenseeCount) - knownLicenseeCount,
+                licenseeSubscription?.billingPeriod || '',
+              )} sur une année pleine`}
+            </Text>
+          ) : null}
+
+          <View style={Spaces.gap[8]}>
+            <Button
+              disabled={!isTypedLicenseeCountValid}
+              isLoading={increaseMutation.isPending}
+              onPress={handleIncreaseLicensees}
+              title="Confirmer l'augmentation"
+              variant="PrimaryLight"
+            />
+            <Button
+              onPress={closeLicenseeSheet}
+              title="Annuler"
+              variant="SecondaryLight"
+            />
+          </View>
+        </View>
+      </BottomModal>
     </ScreenContainer>
   );
 }

@@ -37,6 +37,9 @@ import {
  *  targetUserId?: string | number,
  *  targetUserLabel?: string,
  *  dedupeKey?: string,
+ *  celebrationKey?: string,
+ *  licenseeCount?: number | string,
+ *  memberCount?: number | string,
  *  matchId?: string | number,
  *  sourceDocumentId?: string | number,
  *  sourceType?: string,
@@ -475,6 +478,37 @@ export const resolveNotificationDestination = (rawPayload = {}) => {
     return adaptDestinationForCurrentPlatform(payload, {
       params: toParamsObject(payload.params),
       route: String(payload.route),
+    });
+  }
+
+  // S12-B/D5+D7 — LA NOTIFICATION DE QUOTA MENE A LA REPARATION.
+  //
+  // Le serveur envoie ces deux notifications en type `celebration`, avec la cle
+  // dans `celebrationKey` (admin/src/utils/celebration-service.ts:692). Aucun
+  // traitement n'existait ici : appuyer dessus ne faisait RIEN — `default`
+  // rendait `null`, et le dirigeant restait avec un club bloque sans savoir ou
+  // aller. Elle ouvre desormais la feuille d'augmentation, DIRECTEMENT.
+  //
+  // 🔢 Et elle transporte les deux nombres : ils ne vivent NI dans le bootstrap
+  // (`payerSubscriptionsSummary` n'expose pas `licenseeCount`) NI dans aucune
+  // route de lecture. Sans eux, l'ecran ne saurait pas de combien augmenter.
+  const licenseeQuotaCelebrationKeys = new Set([
+    'club_licensee_quota_approaching',
+    'club_licensee_quota_reached',
+  ]);
+
+  if (licenseeQuotaCelebrationKeys.has(toSafeString(payload.celebrationKey).trim())) {
+    return adaptDestinationForCurrentPlatform(payload, {
+      params: {
+        ...(payload.licenseeCount === undefined || payload.licenseeCount === null
+          ? {}
+          : { licenseeCount: Number(payload.licenseeCount) }),
+        ...(payload.memberCount === undefined || payload.memberCount === null
+          ? {}
+          : { memberCount: Number(payload.memberCount) }),
+        openLicenseeIncrease: true,
+      },
+      route: RouteNames.SubscriptionOverview,
     });
   }
 

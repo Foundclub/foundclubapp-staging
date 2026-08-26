@@ -40,10 +40,22 @@ const routesViseesPar = (cheminRelatif) => (
 // Les sept points d'entree mesures le 2026-08-05, et la decision prise pour
 // chacun. « offers » = le carrousel (on vend), « overview » = le hub (on gere).
 const POINTS_D_ENTREE = [
+  // S12-B/D6 — LA FEUILLE VISE DESORMAIS DEUX ECRANS, ET C'EST UNE DECISION.
+  //
+  // Ce garde-fou a fait exactement son travail : il a refuse la deuxieme
+  // destination tant qu'elle n'etait pas ecrite ici. La voici.
+  //
+  // Par defaut la feuille VEND, donc elle vise le carrousel — inchange, c'est le
+  // trou que L10-A a comble. MAIS le refus `CLUB_LICENSEE_LIMIT` vient de
+  // quelqu'un qui PAIE DEJA au licencié : son club est plein, il n'a rien a
+  // acheter. Le carrousel lui reproposerait l'offre qu'il a. Ce qu'il lui faut
+  // est le geste d'AUGMENTATION, et il vit sur le hub (D5).
+  //
+  // ⚠️ L'ordre compte : le carrousel reste la PREMIERE route citee du fichier.
   {
-    attendu: 'SubscriptionOffers',
+    attendu: ['SubscriptionOffers', 'SubscriptionOverview'],
     fichier: 'components/molecules/subscriptionPaywallSheet/SubscriptionPaywallSheet.js',
-    pourquoi: 'elle vient de buter sur un mur payant',
+    pourquoi: 'elle vend (carrousel), sauf quand le club est plein (hub, D5)',
   },
   {
     attendu: 'SubscriptionOffers',
@@ -99,13 +111,27 @@ const POINTS_D_ENTREE = [
     fichier: 'views/subscription/CompositionPaywallScreen.js',
     pourquoi: 'elle vient de buter sur le mur payant de la composition',
   },
+  // S12-B/D5 — le 11e point d'entree : LA NOTIFICATION DE QUOTA AU LICENCIE.
+  //
+  // Elle vise le HUB, et c'est le seul choix juste : elle s'adresse a un
+  // dirigeant qui PAIE DEJA et dont le club vient de se remplir. Le carrousel
+  // lui reproposerait l'offre qu'il a ; ce qu'il lui faut est la feuille
+  // d'augmentation, qui vit sur le hub. Elle y arrive avec les deux nombres —
+  // ils n'existent NI dans le bootstrap NI dans aucune route de lecture.
+  {
+    attendu: 'SubscriptionOverview',
+    fichier: 'utils/notifications/notificationNavigation.js',
+    pourquoi: 'son club est plein : il augmente, il n achete pas',
+  },
 ];
 
 describe('Points d\'entree de l\'abonnement — chacun atterrit au bon endroit', () => {
   it.each(POINTS_D_ENTREE)(
     '$fichier vise $attendu ($pourquoi)',
     ({ attendu, fichier }) => {
-      expect(routesViseesPar(fichier)).toEqual([attendu]);
+      // Un point d'entree vise UNE route, sauf decision ecrite ci-dessus : le
+      // tableau reste alors la liste EXACTE et ORDONNEE de ce qu'il cite.
+      expect(routesViseesPar(fichier)).toEqual(Array.isArray(attendu) ? attendu : [attendu]);
     },
   );
 

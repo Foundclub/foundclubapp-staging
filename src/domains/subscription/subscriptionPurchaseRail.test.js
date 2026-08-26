@@ -1,4 +1,4 @@
-import { Platform } from 'react-native';
+import { Linking, Platform } from 'react-native';
 
 import {
   isRevenueCatEnabled,
@@ -23,7 +23,10 @@ import {
 } from './subscriptionPurchaseRail';
 
 // Platform.OS est mute test par test : le rail depend d'abord de la plateforme.
-jest.mock('react-native', () => ({ Platform: { OS: 'ios' } }));
+jest.mock('react-native', () => ({
+  Linking: { openURL: jest.fn() },
+  Platform: { OS: 'ios' },
+}));
 
 let mockRuntimeEnv = 'production';
 
@@ -444,6 +447,120 @@ describe('subscriptionPurchaseRail', () => {
         purchase: { productIdentifier: 'fc_team_1:monthly', transactionIdentifier: 'GPA.1234' },
         validationError: true,
       });
+    });
+
+    // ---------------------------------------------------------------------
+    // S12-B/D4 — L'OFFRE AU LICENCIE PASSE PAR LA CAISSE WEB, DEPUIS LE TELEPHONE
+    // ---------------------------------------------------------------------
+    const buildLicenseeEntry = () => ({
+      billingPeriod: 'yearly',
+      planCode: 'fc_club_licensee_yearly',
+      pricingModel: 'per_licensee',
+      providerProductId: 'fc_club_licensee_yearly',
+      referencePriceEurCents: 250,
+      unitPriceEurCents: 250,
+    });
+
+    it.each(['ios', 'android'])('LE TEMOIN — sur %s, l offre au licencie ouvre le navigateur, jamais le store', async (os) => {
+      mockRuntimeEnv = 'production';
+      Platform.OS = os;
+
+      const result = await performSubscriptionPurchase({
+        catalogEntry: buildLicenseeEntry(),
+        clubDocumentId: 'club-1',
+        licenseeCount: 250,
+      });
+
+      // Les stores ne savent pas vendre « N x 2,50 EUR » : aucun passage par eux.
+      expect(purchaseSubscriptionViaRevenueCat).not.toHaveBeenCalled();
+      expect(validateSubscriptionPurchase).not.toHaveBeenCalled();
+      expect(Linking.openURL).toHaveBeenCalledWith('https://checkout.stripe.com/c/pay/cs_test_1');
+      expect(result).toEqual({ checkoutRedirect: true, sessionId: 'cs_test_1' });
+    });
+
+    it('le nombre de licencies saisi arrive JUSQU A la caisse', async () => {
+      mockRuntimeEnv = 'production';
+      Platform.OS = 'ios';
+
+      await performSubscriptionPurchase({
+        catalogEntry: buildLicenseeEntry(),
+        clubDocumentId: 'club-1',
+        licenseeCount: 250,
+      });
+
+      // Sans `licenseeCount`, le serveur REFUSE (subscription-stripe.ts:140-144).
+      expect(createStripeWebCheckoutSession).toHaveBeenCalledWith({
+        clubDocumentId: 'club-1',
+        licenseeCount: 250,
+        planCode: 'fc_club_licensee_yearly',
+        teamDocumentIds: [],
+      });
+    });
+
+    it('meme en MODE TEST, l offre au licencie ne prend pas le rail de confiance', async () => {
+      // Une validation « de confiance » n'aurait aucun montant a valider : le
+      // prix depend du nombre saisi, et lui seul.
+      mockRuntimeEnv = 'staging';
+      Platform.OS = 'android';
+
+      await performSubscriptionPurchase({
+        catalogEntry: buildLicenseeEntry(),
+        clubDocumentId: 'club-1',
+        licenseeCount: 12,
+      });
+
+      expect(validateSubscriptionPurchase).not.toHaveBeenCalled();
+      expect(createStripeWebCheckoutSession).toHaveBeenCalledWith(
+        expect.objectContaining({ licenseeCount: 12 }),
+      );
+    });
+
+    it('un nombre de licencies aberrant est BORNE avant d atteindre la caisse', async () => {
+      mockRuntimeEnv = 'production';
+      Platform.OS = 'ios';
+
+      await performSubscriptionPurchase({
+        catalogEntry: buildLicenseeEntry(),
+        clubDocumentId: 'club-1',
+        licenseeCount: 2500000,
+      });
+
+      // Garde-fou de frappe : 2 500 000 licencies engagerait 6,25 M EUR.
+      expect(createStripeWebCheckoutSession).toHaveBeenCalledWith(
+        expect.objectContaining({ licenseeCount: 20000 }),
+      );
+    });
+
+    it('TEMOIN DE NON-CONTAMINATION — une offre forfaitaire garde sa charge d origine', async () => {
+      mockRuntimeEnv = 'production';
+      Platform.OS = 'web';
+      stubWindowLocation();
+
+      await performSubscriptionPurchase({
+        catalogEntry: buildCatalogEntry({ pricingModel: 'flat' }),
+        clubDocumentId: 'club-1',
+        licenseeCount: 250,
+      });
+
+      // `licenseeCount` n'a aucun sens pour un forfait : il ne doit pas voyager.
+      expect(createStripeWebCheckoutSession).toHaveBeenCalledWith({
+        clubDocumentId: 'club-1',
+        planCode: 'fc_team_1_monthly',
+        teamDocumentIds: [],
+      });
+    });
+
+    it('caisse web injoignable : l erreur est claire, aucun navigateur ouvert', async () => {
+      mockRuntimeEnv = 'production';
+      Platform.OS = 'ios';
+      createStripeWebCheckoutSession.mockResolvedValue({ id: 'cs_test_1', url: '' });
+
+      await expect(performSubscriptionPurchase({
+        catalogEntry: buildLicenseeEntry(),
+        clubDocumentId: 'club-1',
+        licenseeCount: 250,
+      })).rejects.toThrow('Paiement web indisponible pour le moment.');
+      expect(Linking.openURL).not.toHaveBeenCalled();
     });
 
     it('rail RevenueCat : une erreur d achat store remonte telle quelle', async () => {

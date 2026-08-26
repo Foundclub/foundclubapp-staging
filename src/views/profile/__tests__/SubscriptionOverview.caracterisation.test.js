@@ -33,6 +33,18 @@ const mockRestorePurchases = jest.fn();
 const mockInvalidate = jest.fn();
 const mockScheduleRefresh = jest.fn();
 
+// La feuille basse repose sur @gorhom/bottom-sheet (module natif) : la doublure
+// garde le seul contrat qui compte ici — le contenu n'existe que si `isVisible`.
+jest.mock('@/components/molecules/bottomModal/BottomModal', () => {
+  const { View } = jest.requireActual('react-native');
+  return {
+    __esModule: true,
+    default: (/** @type {any} */ { children, isVisible }) => (
+      isVisible ? <View>{children}</View> : null
+    ),
+  };
+});
+
 jest.mock('@tanstack/react-query', () => ({
   useMutation: (/** @type {any} */ options) => ({
     isPending: false,
@@ -65,6 +77,20 @@ jest.mock('react-i18next', () => {
 jest.mock('@/domains/auth/useAuth', () => ({
   __esModule: true,
   default: () => mockAuthValue,
+}));
+
+// S12-B — le hub lit desormais le CATALOGUE (pour savoir si l'offre payee se
+// facture au licencié, et a quel prix unitaire). Sans cette doublure, le vrai
+// module tire `subscriptionService` -> AsyncStorage, un module natif : la SUITE
+// ENTIERE tombe, « Tests: 0 total », sans qu'aucun temoin ne soit rouge.
+jest.mock('@/domains/subscription/useSubscriptionCatalog', () => ({
+  useSubscriptionCatalog: () => ({
+    entries: [],
+    error: null,
+    isError: false,
+    isLoading: false,
+    refetch: jest.fn(),
+  }),
 }));
 
 jest.mock('@/domains/subscription/subscriptionPurchaseRail', () => ({

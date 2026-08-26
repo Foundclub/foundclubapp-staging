@@ -4,6 +4,7 @@ import { ScrollView, Text, View } from 'react-native';
 import {
   getSubscriptionEntryPeriod,
   getSubscriptionEntryScope,
+  isPerLicenseeSubscriptionEntry,
 } from '@/domains/subscription/subscriptionBilling';
 import { useSubscriptionCatalog } from '@/domains/subscription/useSubscriptionCatalog';
 import { withAlpha } from '@/theme/colors';
@@ -65,7 +66,12 @@ const ROW_MIN_HEIGHT = 44;
 const getStartingMonthlyPriceLabel = (entries, scopeType) => {
   const prices = entries
     .filter((entry) => getSubscriptionEntryScope(entry) === scopeType
-      && getSubscriptionEntryPeriod(entry) === 'monthly')
+      && getSubscriptionEntryPeriod(entry) === 'monthly'
+      // S12-B — ⛔ LE PRIX AU LICENCIE N'EST PAS UN PRIX D'APPEL.
+      // Il est UNITAIRE (0,25 EUR/mois par licencie) : le laisser entrer dans ce
+      // `Math.min` faisait annoncer « Club : des 0,25 EUR » au lieu de 19,99 EUR
+      // — un facteur 80 sur l'entete de la colonne la plus chere.
+      && !isPerLicenseeSubscriptionEntry(entry))
     .map((entry) => Number(entry?.referencePriceEurCents))
     .filter((cents) => Number.isFinite(cents) && cents > 0);
 

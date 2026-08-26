@@ -177,3 +177,39 @@ describe('Matrice comparative', () => {
     expect(mockNavigate).toHaveBeenCalledWith('SubscriptionOffers');
   });
 });
+
+describe('S12-B — l offre au licencie ne casse pas le prix d appel de la colonne Club', () => {
+  it('LE TEMOIN — « Club : dès 19,99 € », jamais le prix UNITAIRE au licencie', async () => {
+    // Defaut mesure le 2026-08-26, apporte par S12-A : l entree au licencie est
+    // de portee CLUB et son `referencePriceEurCents` vaut 25 (0,25 EUR/mois PAR
+    // LICENCIE). Le `Math.min` de l entete la prenait pour un prix d appel et
+    // annoncait « Club : dès 0,25 € » — un facteur 80 sur la colonne la plus
+    // chere de la matrice.
+    mockCatalogQueryState = {
+      data: {
+        data: [
+          ...CATALOG_ENTRIES,
+          {
+            billingPeriod: 'monthly',
+            planCode: 'fc_club_licensee_monthly',
+            pricingModel: 'per_licensee',
+            referencePriceEurCents: 25,
+            scopeType: 'CLUB',
+            slotCount: null,
+            unitPriceEurCents: 25,
+          },
+        ],
+      },
+    };
+
+    const texte = texteVisible(await rendre());
+
+    expect(texte).toContain('dès 19,99 €');
+    expect(texte).not.toContain('dès 0,25 €');
+  });
+
+  it('⛔ et la colonne Équipe n a pas bouge non plus', async () => {
+    const texte = texteVisible(await rendre());
+    expect(texte).toContain('dès 7,99 €');
+  });
+});

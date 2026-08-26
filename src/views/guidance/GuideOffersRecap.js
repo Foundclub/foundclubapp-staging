@@ -13,6 +13,7 @@ import {
   formatSubscriptionYearlyDiscountLabel,
   getInitialTeamSelection,
   getSubscriptionBillingErrorMessage,
+  isPerLicenseeSubscriptionEntry,
 } from '@/domains/subscription/subscriptionBilling';
 import { getSubscriptionTeamSlotSummary } from '@/domains/subscription/subscriptionDecision';
 import {
@@ -198,9 +199,21 @@ function GuideOffersRecap({ navigation }) {
     .sort((left, right) => (
       Number(left?.slotCount || 0) - Number(right?.slotCount || 0)
     )), [billingPeriod, catalogEntries]);
+  // S12-B — ⛔ L'OFFRE AU LICENCIE N'EST PAS UN PALIER CLUB, ET DEUX CHOSES
+  // CASSAIENT ICI DEPUIS S12-A (mesure du 2026-08-26) :
+  //   1. cette liste alimente les pilules de palier SANS filtre de rang
+  //      (l. 347-351, contrairement au carrousel et a la feuille qui, eux,
+  //      ecartent le rang 0) : une 4e pilule « Tier 0 » apparaissait ;
+  //   2. le tri par numero de palier la placait EN TETE (rang 0), donc
+  //      `firstEntry` la designait et la carte repliee annoncait
+  //      « a partir de 2,50 EUR/an » pour l'offre Club — au lieu de 199,99 EUR.
+  // Le recap du tour guide vend les PALIERS (decision D1 : le mode au licencie
+  // vit dans le carrousel et la feuille de vente, pas ici). On l'ecarte donc,
+  // par `pricingModel` et jamais par son code de plan.
   const clubTierEntries = useMemo(() => catalogEntries
     .filter((entry) => getCatalogEntryScopeType(entry) === 'CLUB'
-      && getCatalogEntryBillingPeriod(entry) === billingPeriod)
+      && getCatalogEntryBillingPeriod(entry) === billingPeriod
+      && !isPerLicenseeSubscriptionEntry(entry))
     .sort((left, right) => (
       getCatalogEntryClubTier(left) - getCatalogEntryClubTier(right)
     )), [billingPeriod, catalogEntries]);

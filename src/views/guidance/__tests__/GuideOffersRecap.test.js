@@ -330,3 +330,59 @@ describe('GuideOffersRecap — la remise annoncee est celle DE LA CARTE (L38)', 
     expect(hasTextContaining(tree, 'soit ')).toBe(false);
   });
 });
+
+describe('S12-B — le recap du tour guide vend les PALIERS, pas l offre au licencie', () => {
+  // Le catalogue de recette, plus les deux entrees au licencie que S12-A a
+  // ajoutees cote serveur (subscription-catalog.ts:107-125).
+  const CATALOGUE_AVEC_LICENCIE = [
+    ...CATALOG_ENTRIES,
+    ...['monthly', 'yearly'].map((billingPeriod) => ({
+      billingPeriod,
+      displayName: `Club au licencié · équipes illimitées (${billingPeriod === 'yearly' ? 'annuel' : 'mensuel'})`,
+      isActive: true,
+      maxTeams: null,
+      planCode: `fc_club_licensee_${billingPeriod}`,
+      pricingModel: 'per_licensee',
+      providerProductId: `fc_club_licensee_${billingPeriod}`,
+      referencePriceEurCents: billingPeriod === 'yearly' ? 250 : 25,
+      requiresClubVerification: true,
+      scopeType: 'CLUB',
+      slotCount: null,
+      unitPriceEurCents: billingPeriod === 'yearly' ? 250 : 25,
+    })),
+  ];
+
+  beforeEach(() => {
+    mockCatalogQueryState = {
+      data: { data: CATALOGUE_AVEC_LICENCIE },
+      isError: false,
+      isLoading: false,
+    };
+  });
+
+  it('LE TEMOIN — aucune pilule « Tier 0 » ne s invite dans les paliers Club', () => {
+    // Defaut mesure le 2026-08-26 : cette liste alimente les pilules SANS
+    // filtre de rang, contrairement au carrousel et a la feuille de vente. Le
+    // rang de l offre au licencie vaut 0 (elle n a pas de palier), et son
+    // libelle sortait donc en repli : « Tier 0 ».
+    const arbre = renderRecap();
+    const carteClub = findByText(arbre, 'Club');
+    act(() => {
+      carteClub.props.onPress();
+    });
+
+    expect(allTexts(arbre)).not.toContain('Tier 0');
+    expect(allTexts(arbre)).toEqual(expect.arrayContaining(['S · ≤ 3', 'M · ≤ 8', 'L · illim.']));
+  });
+
+  it('⛔ et la carte repliee annonce 199,99 €, pas le prix UNITAIRE', () => {
+    // Le tri par numero de palier placait l offre au licencie EN TETE (rang 0) :
+    // `firstEntry` la designait, et la carte Club repliee affichait
+    // « a partir de 2,50 €/an » au lieu de 199,99 €.
+    const arbre = renderRecap();
+
+    // Équipe est selectionne par defaut : la carte Club est donc repliee.
+    expect(hasTextContaining(arbre, '199,99 €')).toBe(true);
+    expect(hasTextContaining(arbre, '2,50 €')).toBe(false);
+  });
+});

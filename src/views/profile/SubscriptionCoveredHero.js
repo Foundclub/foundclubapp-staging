@@ -31,6 +31,12 @@ const getHeroOfferLabel = (planCode) => {
     const slotCount = Number(teamMatch[1] || 0);
     return `Offre Équipe · ${slotCount} équipe${slotCount > 1 ? 's' : ''}`;
   }
+  // S12-B — l'offre au licencie AVANT les paliers, et sans toucher a leur regex :
+  // elle n'a pas de palier. Sinon elle retombait sur « Offre FoundClub », un nom
+  // qui ne dit rien a quelqu'un a qui on annonce que tout est deja paye pour lui.
+  if (/^fc_club_licensee_/.test(normalized)) {
+    return 'Offre Club au licencié · équipes illimitées';
+  }
   const clubMatch = normalized.match(/^fc_club_tier_(\d+)_/);
   if (clubMatch) {
     return CLUB_TIER_HERO_LABELS[Number(clubMatch[1] || 0)] || 'Offre Club';

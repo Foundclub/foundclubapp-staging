@@ -1,4 +1,4 @@
-import { Text, TouchableOpacity } from 'react-native';
+import { Text, TextInput, TouchableOpacity } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
 import {
@@ -200,6 +200,29 @@ jest.mock('@/components/atoms/button/Button', () => {
       >
         <TexteRN>{title}</TexteRN>
       </PressableRN>
+    ),
+  };
+});
+
+// S12-B — le champ de saisie du nombre de licencies passe par le VRAI `Input`
+// du depot, qui monte un TextInput natif. La doublure garde le seul contrat qui
+// compte ici : le libelle, la valeur, et la frappe qui remonte.
+jest.mock('@/components/molecules/input/Input', () => {
+  const { Text: TexteRN, TextInput: SaisieRN, View: VueRN } = jest.requireActual('react-native');
+  return {
+    __esModule: true,
+    default: (/** @type {any} */ {
+      accessibilityLabel, error, label, onChangeText, value,
+    }) => (
+      <VueRN>
+        {label ? <TexteRN>{label}</TexteRN> : null}
+        <SaisieRN
+          accessibilityLabel={accessibilityLabel}
+          onChangeText={onChangeText}
+          value={value}
+        />
+        {error ? <TexteRN>{error}</TexteRN> : null}
+      </VueRN>
     ),
   };
 });
@@ -1223,5 +1246,189 @@ describe('R07 — le bas de l\'ecran des offres', () => {
     // reservait encore (mode `screen`), il serait compte DEUX FOIS et la bande
     // de fond reviendrait — c'est le defaut qu'Adel a vu.
     expect(cadre.bottomInsetMode).toBe('edge-to-edge');
+  });
+});
+
+// =====================================================================
+// S12-B — L'OFFRE AU LICENCIE EST UN MODE DE LA CARTE CLUB (D1 a D4)
+// =====================================================================
+describe('S12-B — la carte Club porte DEUX facons d acheter', () => {
+  // Copie fidele des deux entrees ajoutees par S12-A
+  // (admin/src/api/subscription/services/subscription-catalog.ts:107-125).
+  const ENTREES_LICENCIE = ['monthly', 'yearly'].map((billingPeriod) => ({
+    billingPeriod,
+    displayName: `Club au licencié · équipes illimitées (${billingPeriod === 'yearly' ? 'annuel' : 'mensuel'})`,
+    featureKeys: CLUB_FEATURE_KEYS,
+    isActive: true,
+    maxTeams: null,
+    planCode: `fc_club_licensee_${billingPeriod}`,
+    pricingModel: 'per_licensee',
+    providerProductId: `fc_club_licensee_${billingPeriod}`,
+    referencePriceEurCents: billingPeriod === 'yearly' ? 250 : 25,
+    requiresClubVerification: true,
+    scopeType: 'CLUB',
+    slotCount: null,
+    unitPriceEurCents: billingPeriod === 'yearly' ? 250 : 25,
+  }));
+
+  /**
+   * Va sur la carte Club et bascule en mode « Au licencie ».
+   * @param {any} arbre
+   * @returns {Promise<void>}
+   */
+  const passerAuLicencie = async (arbre) => {
+    await allerALaCarte(arbre, 2);
+    await appuyerSur(arbre, 'Au licencié');
+  };
+
+  /**
+   * Tape un nombre dans le champ de saisie.
+   * @param {any} arbre
+   * @param {string} texte
+   * @returns {Promise<void>}
+   */
+  const taperNombre = async (arbre, texte) => {
+    const champ = arbre.root.findAllByType(TextInput)
+      .find((/** @type {any} */ noeud) => noeud.props.accessibilityLabel === 'Nombre de licenciés');
+    await act(async () => {
+      champ.props.onChangeText(texte);
+    });
+  };
+
+  beforeEach(() => {
+    mockCatalogQueryState = {
+      data: { data: [...CATALOG_ENTRIES, ...ENTREES_LICENCIE] },
+      error: null,
+      isLoading: false,
+    };
+  });
+
+  it('D1 — LE TEMOIN : le carrousel reste a TROIS cartes, la bascule est DANS la carte Club', async () => {
+    const arbre = await rendre();
+
+    // Une 4e carte aurait casse les points de position et l'index d'ouverture
+    // des murs payants. Le mode se choisit dans la carte, pas a cote d'elle.
+    expect(pressableParLibelleA11y(arbre, 'Carte 4 sur 4')).toBeUndefined();
+    expect(pressableParLibelleA11y(arbre, 'Carte 3 sur 3')).toBeDefined();
+    expect(pressablesPortant(arbre, 'Par palier').length).toBe(1);
+    expect(pressablesPortant(arbre, 'Au licencié').length).toBe(1);
+  });
+
+  it('D1 — par defaut la carte Club n a PAS bouge : les paliers S/M/L sont la', async () => {
+    const texte = texteVisible(await rendre());
+
+    expect(texte).toContain('Taille du club');
+    expect(texte).toContain('199,99 €/an');
+    // Le mode au licencie ne s'impose a personne : il faut aller le chercher.
+    expect(texte).not.toContain('par licencié');
+  });
+
+  it('D2/D3 — LE TEMOIN : le prix se calcule SOUS LES YEUX a chaque frappe', async () => {
+    const arbre = await rendre();
+    await passerAuLicencie(arbre);
+
+    // Avant toute frappe : le prix unitaire, jamais un total invente.
+    expect(texteVisible(arbre)).toContain('2,50 € par licencié');
+    expect(texteVisible(arbre)).not.toContain(' = ');
+
+    await taperNombre(arbre, '250');
+
+    expect(texteVisible(arbre)).toContain('250 licenciés × 2,50 € = 625,00 €/an');
+  });
+
+  it('D2 — on TAPE le nombre, on ne clique pas 250 fois', async () => {
+    const arbre = await rendre();
+    await passerAuLicencie(arbre);
+
+    const champ = arbre.root.findAllByType(TextInput)
+      .find((/** @type {any} */ noeud) => noeud.props.accessibilityLabel === 'Nombre de licenciés');
+    expect(champ).toBeDefined();
+
+    // Un clavier qui laisserait passer des separateurs ne casse rien.
+    await taperNombre(arbre, '2 5 0');
+    expect(texteVisible(arbre)).toContain('625,00 €/an');
+  });
+
+  it('D1 — en mode licencie, la carte annonce les equipes ILLIMITEES', async () => {
+    const arbre = await rendre();
+    await passerAuLicencie(arbre);
+    const texte = texteVisible(arbre);
+
+    expect(texte).toContain('toutes les équipes du club');
+    // La borne des paliers ne doit pas trainer : elle serait fausse ici.
+    expect(texte).not.toContain('3 équipes du club');
+    expect(texte).not.toContain('Taille du club');
+  });
+
+  it('⛔ le CTA reste ETEINT tant qu aucun nombre n est tape', async () => {
+    const arbre = await rendre();
+    await passerAuLicencie(arbre);
+
+    const cta = pressablesPortant(arbre, 'Indique ton nombre de licenciés')[0];
+    expect(cta).toBeDefined();
+    expect(cta.props.accessibilityState.disabled).toBe(true);
+  });
+
+  it('D4 — LE TEMOIN : acheter au licencie passe par la caisse, avec le nombre saisi', async () => {
+    const arbre = await rendre();
+    await passerAuLicencie(arbre);
+    await taperNombre(arbre, '250');
+
+    await appuyerSur(arbre, 'Souscrire · 625,00 €/an');
+
+    expect(mockPerformPurchase).toHaveBeenCalledWith(expect.objectContaining({
+      catalogEntry: expect.objectContaining({ planCode: 'fc_club_licensee_yearly' }),
+      // Sans club, le plafond d'adhesions ne s'appliquerait JAMAIS.
+      clubDocumentId: 'club-1',
+      licenseeCount: 250,
+    }));
+  });
+
+  it('D4 — et on n annonce PAS un succes : le paiement n a pas encore eu lieu', async () => {
+    const arbre = await rendre();
+    await passerAuLicencie(arbre);
+    await taperNombre(arbre, '250');
+    await appuyerSur(arbre, 'Souscrire · 625,00 €/an');
+
+    // On vient d'OUVRIR une page de paiement, rien de plus.
+    expect(mockNavigate).not.toHaveBeenCalled();
+    expect(mockAlert).toHaveBeenCalledWith(
+      'Paiement ouvert dans ton navigateur',
+      expect.stringContaining('Termine le paiement'),
+    );
+  });
+
+  it('sans club rattache, on refuse AVANT d ouvrir la caisse', async () => {
+    const arbre = await rendre({
+      clubVerificationSummary: { clubDocumentId: '', clubVerified: false },
+      userData: { club: null, documentId: 'user-1', role: { name: 'Dirigeant', type: 'president' } },
+    });
+    await passerAuLicencie(arbre);
+    await taperNombre(arbre, '250');
+    await appuyerSur(arbre, 'Souscrire · 625,00 €/an');
+
+    // Un abonnement au licencie sans club serait paye et ne limiterait rien :
+    // le plafond se lit SUR LE CLUB (subscription-permission.ts:826-829).
+    expect(mockPerformPurchase).not.toHaveBeenCalled();
+    expect(mockAlert).toHaveBeenCalledWith('Club requis', expect.stringContaining('licenciés'));
+  });
+
+  it('la periode suit la bascule Mensuel/Annuel, prix unitaire compris', async () => {
+    const arbre = await rendre();
+    await appuyerSur(arbre, 'Mensuel');
+    await passerAuLicencie(arbre);
+    await taperNombre(arbre, '100');
+
+    expect(texteVisible(arbre)).toContain('0,25 € par licencié');
+    expect(texteVisible(arbre)).toContain('100 licenciés × 0,25 € = 25,00 €/mois');
+  });
+
+  it('CATALOGUE SANS L OFFRE : la bascule n existe pas, la carte est celle d avant', async () => {
+    // On n'affiche jamais une offre que le serveur ne vend pas.
+    mockCatalogQueryState = { data: { data: CATALOG_ENTRIES }, error: null, isLoading: false };
+    const arbre = await rendre();
+
+    expect(pressablesPortant(arbre, 'Au licencié').length).toBe(0);
+    expect(texteVisible(arbre)).toContain('Taille du club');
   });
 });
