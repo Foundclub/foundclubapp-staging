@@ -18,6 +18,7 @@ import { RouteNames } from '@/navigation/routeNames';
 
 import { createRecruitmentAd } from '@/services/recruitment/recruitmentService';
 
+import { resolveLocationDisplayLabel } from '@/utils/facilityAddressLabel';
 import { getShortAddress } from '@/utils/location';
 
 import { useAppFeedback } from '@/context/AppFeedbackContext';
@@ -173,7 +174,7 @@ function AdWizardRecap({ navigation }) {
   const totalCoachOpenings = Math.max(1, Number(state.coachQuantity || 1));
 
   const displayAddress = state.address
-    ? (state.address.label || getShortAddress(state.address))
+    ? resolveLocationDisplayLabel(state.address, getShortAddress(state.address))
     : getShortAddress(state.team?.club?.address || state.team?.club?.addressDetails);
   const selectedFacilityName = state.address?.facilityName || state.facility?.name || '';
   const shortAddress = state.address ? getShortAddress(state.address) : '';
