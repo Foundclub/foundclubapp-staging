@@ -376,4 +376,26 @@ describe('T2 — les boutons de réponse de la carte « Mon planning »', () => 
     // rien d autre. Le bouton n apparaît que si l écran branche la sortie.
     expect(boutons(arbre, 'eventDetails.actions.cancelResponse')).toHaveLength(1);
   });
+
+  it('D5 — pendant l appel, SEULE la carte qui attend est éteinte', () => {
+    mockEnVol.cle = 'rsvp';
+    // @ts-ignore — la charge de la mutation en vol
+    mockEnVol.variables = { answer: 'present', eventId: 'evt-1' };
+
+    const arbre = monter([
+      entrainementDeMonEquipe('evt-1'),
+      entrainementDeMonEquipe('evt-2'),
+    ]);
+
+    const present = boutons(arbre, 'eventList.actions.present');
+    const absent = boutons(arbre, 'eventList.actions.absent');
+    expect(present).toHaveLength(2);
+
+    // La carte visée répond tout de suite, à l œil : ses deux boutons sont pris.
+    expect(present[0].props.isLoading).toBe(true);
+    expect(absent[0].props.disabled).toBe(true);
+    // ⛔ Et la liste entière ne clignote pas pour autant.
+    expect(present[1].props.isLoading).toBeFalsy();
+    expect(absent[1].props.disabled).toBeFalsy();
+  });
 });

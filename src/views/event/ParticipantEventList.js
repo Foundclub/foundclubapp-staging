@@ -369,7 +369,12 @@ function ParticipantEventList({ navigation }) {
   // 🎯 Les branches ci-dessous sont celles d `EventListContent` (:881-887 et
   // :943-953), à l identique — pas une réécriture. Les deux mutations viennent
   // d un hook partagé pour qu il n y ait pas de cinquième copie.
-  const { missingEventMutation, respondToEventRsvpMutation } = useEventAnswerMutations();
+  const {
+    missingEventMutation,
+    respondToEventRsvpMutation,
+    submittingAnswer,
+    submittingEventId,
+  } = useEventAnswerMutations();
 
   const handleParticipateToEvent = useCallback(async (event) => {
     const isStageDayEvent = String(event?.eventFormat || '').toLowerCase() === 'stage_day';
@@ -636,6 +641,10 @@ function ParticipantEventList({ navigation }) {
             onLogin={() => {}}
             onParticipate={() => handleParticipateToEvent(item)}
             onPress={() => handleEventPress(item)}
+            // 🕐 T2/D5 — SEULE la carte qui attend s éteint. `isPending` est vrai
+            // pour la mutation entière : s en servir tel quel ferait clignoter
+            // la liste complète pour un seul appui.
+            submittingAnswer={submittingEventId === item.documentId ? submittingAnswer : ''}
             useFacilityAccentColor
           />
         </Suspense>

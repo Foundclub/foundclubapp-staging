@@ -63,8 +63,9 @@ export const invalidateEventAnswerQueries = (queryClient, eventId) => {
  * @returns {{
  *   missingEventMutation: any,
  *   respondToEventRsvpMutation: any,
+ *   submittingAnswer: string,
  *   submittingEventId: string,
- * }} Les mutations, et la carte qui attend sa réponse.
+ * }} Les mutations, la carte qui attend sa réponse, et laquelle des deux.
  */
 export const useEventAnswerMutations = (onAnswered) => {
   const { t } = useTranslation();
@@ -109,13 +110,22 @@ export const useEventAnswerMutations = (onAnswered) => {
   // de la mutation portent l événement visé — c est le motif que tient déjà
   // `AdminClaimList.js:102-115` pour la même question (« quelle ligne tourne ? »).
   let submittingEventId = '';
+  let submittingAnswer = '';
   if (respondToEventRsvpMutation.isPending) {
     submittingEventId = String(respondToEventRsvpMutation.variables?.eventId || '');
+    submittingAnswer = String(respondToEventRsvpMutation.variables?.answer || '');
   } else if (missingEventMutation.isPending) {
     submittingEventId = String(missingEventMutation.variables || '');
+    // Cette porte-là ne dit qu une chose, et c est déjà dans son nom.
+    submittingAnswer = 'absent';
   }
 
-  return { missingEventMutation, respondToEventRsvpMutation, submittingEventId };
+  return {
+    missingEventMutation,
+    respondToEventRsvpMutation,
+    submittingAnswer,
+    submittingEventId,
+  };
 };
 
 export default useEventAnswerMutations;
