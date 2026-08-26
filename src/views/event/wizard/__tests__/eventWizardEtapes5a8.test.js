@@ -23,7 +23,8 @@ import EventWizardRecap from '../EventWizardRecap';
 //
 // Les deux temoins d'arret du lot y vivent aussi :
 //   1. les liens « Modifier » du Recap menent tous quelque part ;
-//   2. `EventWizardInvites` reste atteignable depuis le Recap.
+//   2. les invitations restent atteignables depuis le Recap (S10-B : elles
+//      vivent desormais DANS l'etape « Participants »).
 
 /** Proprietes recues par le gabarit d'etape, dans l'ordre du rendu. */
 const mockProprietesDuGabarit = [];
@@ -123,6 +124,13 @@ jest.mock('@/services/team/teamQueries', () => ({
 
 // ⛔ Jamais `requireActual` sur un service : le client HTTP exige `API_URL` et
 // la suite entiere meurt au chargement.
+// S10-B — l'etape Participants porte desormais la section "inviter une equipe
+// de mon club", qui lit `getTeams`. Meme raison que la doublure ci-dessus : le
+// vrai service exige API_URL et fait mourir la suite entiere au CHARGEMENT.
+jest.mock('@/services/team/teamService', () => ({
+  getTeams: () => Promise.resolve({ data: [] }),
+}));
+
 jest.mock('@/services/event/eventService', () => ({
   createEventsWithConcurrency: () => Promise.resolve({ created: [], failed: [] }),
   getEventById: () => Promise.resolve(null),
@@ -956,7 +964,6 @@ describe('D10 — etape 8 · Recapitulatif', () => {
         RouteNames.EventWizardLocation,
         RouteNames.EventWizardParticipants,
         RouteNames.EventWizardDescription,
-        RouteNames.EventWizardInvites,
       ]));
     });
 
@@ -993,9 +1000,12 @@ describe('D10 — etape 8 · Recapitulatif', () => {
     });
   });
 
-  // ⛔ TEMOIN D ARRET numero 2 — `EventWizardInvites` fait 1 474 lignes et
-  // n a plus qu UN chemin depuis que D08 l a sorti de la chaine : ce lien.
-  // Le perdre rendrait l ecran injoignable — la pire regression du projet.
+  // ⛔ TEMOIN D ARRET numero 2 — SA MISSION N A PAS BOUGE : L ATTEIGNABILITE.
+  // 🚚 S10-B a change la DESTINATION, pas le devoir : les invitations ne sont
+  // plus un ecran a part, elles sont une section de l etape « Participants », et
+  // la rangee du Recap y mene. Le lien reste vital — un entrainement PRIVE saute
+  // cette etape dans la chaine, donc sans cette rangee il ne pourrait plus
+  // JAMAIS inviter une equipe de son club.
   it('temoin d arret 2 — les invitations restent ATTEIGNABLES depuis le Recap', () => {
     const { arbre, demonter, nav } = monter(EventWizardRecap, ETAT_COMPLET);
     const pressables = arbre.root.findAll(
@@ -1009,7 +1019,8 @@ describe('D10 — etape 8 · Recapitulatif', () => {
       });
     });
 
-    expect(destinationsDe(nav)).toContain(RouteNames.EventWizardInvites);
+    expect(destinationsDe(nav)).toContain(RouteNames.EventWizardParticipants);
+    expect(destinationsDe(nav)).not.toContain(RouteNames.EventWizardInvites);
     // Et la porte est NOMMEE : un lien atteignable mais anonyme ne sert personne.
     expect(contenuDe(arbre)).toContain('Invitations');
     demonter();

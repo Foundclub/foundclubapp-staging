@@ -92,7 +92,6 @@ const WEB_ROUTE_PATTERNS = {
   [RouteNames.EventFilters]: '/events/filters',
   [RouteNames.EventWizardType]: '/events/wizard/type',
   [RouteNames.EventWizardTeam]: '/events/wizard/team',
-  [RouteNames.EventWizardInvites]: '/events/wizard/invites',
   [RouteNames.EventWizardLogistics]: '/events/wizard/logistics',
   [RouteNames.EventWizardStageProgram]: '/events/wizard/stage-program',
   [RouteNames.EventWizardTournamentSettings]: '/events/wizard/tournament/settings',

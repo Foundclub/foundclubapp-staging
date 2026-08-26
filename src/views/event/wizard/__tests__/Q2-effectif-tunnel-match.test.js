@@ -118,6 +118,16 @@ jest.mock('@/components/molecules/segmentedControl/SegmentedControl', () => () =
 
 jest.mock('@/components/molecules/profileAvatar/ProfileAvatar', () => () => null);
 
+// S10-B — PASSE-PLAT. L'etape Participants porte desormais la section
+// "inviter une equipe de mon club" ; elle a son propre filet
+// (`S10B-tunnel-fusion.test.js`) et tirerait ici `useAuth` + `teamService`,
+// c'est-a-dire le client HTTP qui exige API_URL et TUE LA SUITE au chargement.
+// 🧨 Elle rend AUSSI un indicateur de chargement pendant qu'elle appelle
+// `getTeams` : sans ce passe-plat, le temoin "plus d'indicateur une fois
+// l'effectif arrive" compterait la roue de l'AUTRE section et virerait au rouge
+// alors que rien ne serait casse.
+jest.mock('@/views/event/wizard/components/EventWizardInternalInvites', () => () => null);
+
 // ⛔ Jamais `requireActual` sur un service : le client HTTP exige `API_URL` et
 // la suite entiere meurt au chargement (0 test execute).
 jest.mock('@/services/team/teamQueries', () => ({

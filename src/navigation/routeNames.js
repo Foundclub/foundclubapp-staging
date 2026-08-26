@@ -227,7 +227,6 @@ export const RouteNames = /** @type {const} */ ({
   // apres avoir prouve par grep qu'aucun appelant ne subsistait.
   EventWizardAccess: 'EventWizardAccess',
   EventWizardDescription: 'EventWizardDescription',
-  EventWizardInvites: 'EventWizardInvites',
   EventWizardLocation: 'EventWizardLocation',
   EventWizardLogistics: 'EventWizardLogistics',
   // Y02 : l'etape « Contre qui ? », posee UNIQUEMENT sur le parcours d'un match.

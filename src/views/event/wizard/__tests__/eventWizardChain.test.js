@@ -11,7 +11,6 @@ import {
   getEventWizardNextRoute,
   getEventWizardStepRoutes,
 } from '../eventWizardDetectionUtils';
-import EventWizardInvites from '../EventWizardInvites';
 import EventWizardLocation from '../EventWizardLocation';
 import EventWizardLogistics from '../EventWizardLogistics';
 import EventWizardOpponent from '../EventWizardOpponent';
@@ -33,8 +32,8 @@ import EventWizardType from '../EventWizardType';
 //
 // Il prouve aussi que les ecrans hors chemin standard sont ATTEIGNABLES :
 // StageProgram, TournamentSettings et TournamentStructure par un parcours reel,
-// et `EventWizardInvites` — que D08 a sorti de la chaine — par le lien
-// « Modifier » du Recap. C'est le garde-fou contre la pire regression du
+// et l'etape « Participants » — qu'un entrainement PRIVE saute — par la rangee
+// « Invitations » du Recap. C'est le garde-fou contre la pire regression du
 // projet, du code devenu inatteignable.
 //
 // ETAT DU 2026-08-06, APRES D08.
@@ -196,10 +195,10 @@ jest.mock('@/services/team/teamService', () => ({
   getTeams: () => Promise.resolve([]),
 }));
 
-// W07 — `EventWizardInvites` cherche desormais les clubs externes par la
-// recherche serveur `getClubs`. Comme `teamService` juste au-dessus, ce service
-// est double : sans lui, son `client` reclamerait une API_URL au chargement du
-// module et la suite entiere refuserait de demarrer.
+// W07 — la section « inviter l'equipe adverse » (etape « Contre qui ? ») cherche
+// les clubs par la recherche serveur `getClubs`. Comme `teamService` juste
+// au-dessus, ce service est double : sans lui, son `client` reclamerait une
+// API_URL au chargement du module et la suite entiere refuserait de demarrer.
 jest.mock('@/services/club/clubService', () => ({
   getClubs: () => Promise.resolve({
     data: [],
@@ -325,7 +324,6 @@ jest.mock('@/components/atoms/button/Button', () => function BoutonMock(/** @typ
 const ECRANS = {
   [RouteNames.EventWizardAccess]: EventWizardAccess,
   [RouteNames.EventWizardDescription]: EventWizardDescription,
-  [RouteNames.EventWizardInvites]: EventWizardInvites,
   [RouteNames.EventWizardLocation]: EventWizardLocation,
   [RouteNames.EventWizardLogistics]: EventWizardLogistics,
   [RouteNames.EventWizardOpponent]: EventWizardOpponent,
@@ -580,13 +578,12 @@ describe('D08 — la chaine reelle du tunnel, type par type', () => {
       RouteNames.EventWizardDescription,
       RouteNames.EventWizardRecap,
     ]);
-    expect(chaine).not.toContain(RouteNames.EventWizardInvites);
     expect(chaine).not.toContain(RouteNames.EventWizardOpponent);
     expect(totalAnnonceALaFin(marche)).toBe(7);
   });
 
   // 🎯 Y02 — le parcours qui change de forme, marche pour de vrai.
-  test('match : 10 ecrans — « Contre qui ? » puis « Invitations »', () => {
+  test('match : 9 ecrans — « Contre qui ? » en plus, S10-B en moins', () => {
     const marche = marcherDansLeTunnel({ nomDuType: 'Match' });
     const { chaine } = marche;
 
@@ -596,14 +593,15 @@ describe('D08 — la chaine reelle du tunnel, type par type', () => {
       RouteNames.EventWizardLogistics,
       RouteNames.EventWizardOpponent,
       RouteNames.EventWizardLocation,
+      // 🚚 S10-B — les invitations SONT cette etape : elle porte desormais
+      // « inviter une equipe de mon club ».
       RouteNames.EventWizardParticipants,
-      // AA10 ② — les invitations sont entrees dans la chaine, pour le match seul.
-      RouteNames.EventWizardInvites,
       RouteNames.EventWizardAccess,
       RouteNames.EventWizardDescription,
       RouteNames.EventWizardRecap,
     ]);
-    expect(totalAnnonceALaFin(marche)).toBe(10);
+    expect(marche.chaine).not.toContain(RouteNames.EventWizardInvites);
+    expect(totalAnnonceALaFin(marche)).toBe(9);
   });
 
   test('stage : 8 ecrans, et il GARDE son programme de stage', () => {
@@ -700,9 +698,10 @@ describe('D08 — la chaine reelle du tunnel, type par type', () => {
 // ---------------------------------------------------------------------------
 describe('D58 — chaque type traverse son parcours, et annonce son compte', () => {
   test.each([
-    // AA10 : le match gagne « Invitations » (9 → 10), l'entrainement perd
-    // « Participants » parce qu'il naît prive (8 → 7).
-    ['Match', 10],
+    // AA10 avait fait gagner « Invitations » au match (9 → 10) ; S10-B la lui
+    // reprend en la fondant dans « Participants » (10 → 9). L'entrainement, lui,
+    // perd « Participants » parce qu'il naît prive (8 → 7).
+    ['Match', 9],
     ['Entrainement', 7],
     ['Stage', 8],
     ['Tournoi', 10],
@@ -778,12 +777,14 @@ describe('D08 — les ecrans hors chemin standard restent ATTEIGNABLES', () => {
     expect(marcherDansLeTunnel({ nomDuType }).chaine).toContain(ecran);
   });
 
-  test('le Recap mene aux invitations — le seul chemin hors match', () => {
-    // D08 a sorti `EventWizardInvites` de la chaine. Si ce lien disparait,
-    // l'ecran (1 474 lignes) devient injoignable pour tous les types SAUF le
-    // match, ou AA10 en a refait une etape : c'est exactement la pire
-    // regression du projet, du code que plus rien n'atteint.
-    expect(destinationsDesLiensModifier()).toContain(RouteNames.EventWizardInvites);
+  test('le Recap mene aux invitations — desormais l etape « Participants »', () => {
+    // 🚚 S10-B — LA RANGEE RESTE, SA DESTINATION CHANGE. Les invitations sont
+    // une section de « Participants » ; la rangee y mene donc. Sa mission n'a pas
+    // bouge d'un pouce : l'ATTEIGNABILITE. Un entrainement PRIVE saute cette
+    // etape dans la chaine — sans ce lien, il ne pourrait plus jamais inviter
+    // une equipe, et c'est exactement la pire regression du projet.
+    expect(destinationsDesLiensModifier()).toContain(RouteNames.EventWizardParticipants);
+    expect(destinationsDesLiensModifier()).not.toContain(RouteNames.EventWizardInvites);
   });
 
   test('le Recap ne pointe plus vers les deux ecrans fusionnes', () => {
@@ -796,7 +797,7 @@ describe('D08 — les ecrans hors chemin standard restent ATTEIGNABLES', () => {
 
 describe('D08 — les positions annoncees a l ecran suivent la chaine reelle', () => {
   test.each([
-    ['Match', 10],
+    ['Match', 9],
     ['Stage', 8],
     ['Tournoi', 10],
     ['Detection', 8],
@@ -831,7 +832,6 @@ describe('D08 — les positions annoncees a l ecran suivent la chaine reelle', (
 
 const TYPE_MATCH = { documentId: 'type-match', name: 'Match' };
 const TYPE_TOURNOI = { documentId: 'type-tournoi', name: 'Tournoi' };
-const TYPE_DETECTION = { documentId: 'type-detection', name: 'Detection' };
 const EQUIPE_A_POSTES = mockDonnees.equipes[0];
 
 /**
