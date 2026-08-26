@@ -26,7 +26,9 @@ const mockEtat = {
 };
 
 const mockChamp = { props: null };
-const mockListe = { poignee: { scrollToOffset: jest.fn() }, props: null };
+// `montages` compte les MONTAGES de la liste : c est le detecteur de `key` neuve
+// (une `key` qui change remonte le composant, et flash-list repart alors de zero).
+const mockListe = { montages: 0, poignee: { scrollToOffset: jest.fn() }, props: null };
 const mockPageSuivanteListe = jest.fn();
 const mockPageSuivantePertinence = jest.fn();
 const mockRien = jest.fn();
@@ -85,6 +87,7 @@ jest.mock('@shopify/flash-list', () => {
     FlashList: React.forwardRef((/** @type {any} */ props, /** @type {any} */ ref) => {
       mockListe.props = props;
       React.useImperativeHandle(ref, () => mockListe.poignee);
+      React.useEffect(() => { mockListe.montages += 1; }, []);
       return (
         <View>
           {props.ListHeaderComponent || null}
@@ -251,6 +254,7 @@ beforeEach(() => {
   mockEtat.recherche = '';
   mockChamp.props = null;
   mockListe.props = null;
+  mockListe.montages = 0;
   mockListe.poignee = { scrollToOffset: jest.fn() };
   mockPageSuivanteListe.mockClear();
   mockPageSuivantePertinence.mockClear();
@@ -368,7 +372,7 @@ describe('HAUT — la liste remonte au 1er resultat quand la recherche change', 
     expect(mockListe.poignee.scrollToOffset).not.toHaveBeenCalled();
   });
 
-  test('temoin 9 (D3) — sans poignee de defilement, rien ne plante et rien n est appele', async () => {
+  test('temoin 9 (D3) — sans poignee de defilement, rien ne plante', async () => {
     // 🛟 Le repli honnete : la reference peut manquer au premier rendu, et le web
     // n a pas la meme implementation. Motif deja en service dans le depot
     // (VenueProposalModal.js:255, Conversation.js:4480).
@@ -381,5 +385,69 @@ describe('HAUT — la liste remonte au 1er resultat quand la recherche change', 
     await expect(chercher('autre')).resolves.toBeUndefined();
 
     expect(texteRendu()).toContain('carte:Autre');
+  });
+});
+
+describe('HAUT / D2 — la remontee ne doit RIEN faire a la pagination', () => {
+  // 🧨 LE PIEGE DEJA PAYE : flash-list v2 relache son verrou de pagination des
+  // que l IDENTITE de `data` change. Une liste vide a deja relance sa pagination
+  // en boucle sur 3 pages entieres. Ces temoins gardent les trois voies par
+  // lesquelles un lot futur pourrait rouvrir ce trou.
+
+  test('temoin 10 — l arrivee de la page 2 ne demande AUCUNE remontee', async () => {
+    // 🔒 Le defaut qui serait PIRE que celui d Adel : remonter quand la page
+    // suivante arrive ramenerait l utilisateur en haut pendant qu il defile.
+    mockEtat.pagesPertinence = { pages: [{ data: [club('Page1')] }] };
+    mockEtat.recherche = 'pa';
+    await monter();
+    mockListe.poignee.scrollToOffset.mockClear();
+
+    mockEtat.pagesPertinence = {
+      pages: [{ data: [club('Page1')] }, { data: [club('Page2')] }],
+    };
+    await rendreDeNouveau();
+
+    expect(mockListe.props.data).toHaveLength(2);
+    expect(mockListe.poignee.scrollToOffset).not.toHaveBeenCalled();
+  });
+
+  test('temoin 11 — une nouvelle recherche ne REMONTE pas le composant de liste', async () => {
+    // 🔒 Le detecteur de `key` neuve : une `key` qui change demonterait la liste
+    // et flash-list repartirait de zero (pagination comprise).
+    mockEtat.pagesPertinence = { pages: [{ data: [club('Un')] }] };
+    mockEtat.recherche = 'un';
+    await monter();
+    expect(mockListe.montages).toBe(1);
+
+    mockEtat.pagesPertinence = { pages: [{ data: [club('Deux')] }] };
+    await chercher('deux');
+
+    expect(mockListe.montages).toBe(1);
+  });
+
+  test('temoin 12 — a resultats inchanges, `data` garde la MEME identite', async () => {
+    // 🔒 Le detecteur de tableau recree a chaque rendu : c est cette identite
+    // qui tient le verrou de pagination de flash-list.
+    mockEtat.pagesPertinence = { pages: [{ data: [club('Stable')] }] };
+    mockEtat.recherche = 'st';
+    await monter();
+    const avant = mockListe.props.data;
+
+    await rendreDeNouveau();
+
+    expect(mockListe.props.data).toBe(avant);
+  });
+
+  test('temoin 13 — une nouvelle recherche ne demande aucune page', async () => {
+    mockEtat.pagesPertinence = { pages: [{ data: [club('Un')] }] };
+    mockEtat.recherche = 'un';
+    await monter();
+    await act(async () => { mockListe.props.onEndReached(); });
+    expect(mockPageSuivantePertinence).toHaveBeenCalledTimes(1);
+
+    mockEtat.pagesPertinence = { pages: [{ data: [club('Deux')] }] };
+    await chercher('deux');
+
+    expect(mockPageSuivantePertinence).toHaveBeenCalledTimes(1);
   });
 });
