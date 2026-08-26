@@ -211,6 +211,7 @@ function EventWizardParticipants({ navigation, route }) {
   const clampedCapacity = clampParticipants(capacityValue);
   const clampedExternalParticipantLimit = clampParticipants(externalParticipantLimitValue);
   const clampedTotalPlayers = clampParticipants(totalPlayersValue);
+  /** @type {number | null} */
   let normalizedCapacity = null;
   if (!isTraining && capacityMode !== 'unlimited') {
     normalizedCapacity = clampedCapacity;
@@ -234,6 +235,7 @@ function EventWizardParticipants({ navigation, route }) {
   const shouldCollectInternalPlayers = !invitationsSeules
     && (isReservation || (isTraining && !isOpenTraining));
   const normalizedTotalPlayers = shouldCollectInternalPlayers ? clampedTotalPlayers : null;
+  /** @type {number | null} */
   let normalizedExternalParticipantLimit = null;
   if (isTraining) {
     normalizedExternalParticipantLimit = isOpenTraining

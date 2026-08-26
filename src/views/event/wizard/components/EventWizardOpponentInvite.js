@@ -211,7 +211,12 @@ function EventWizardOpponentInvite({ onTeamInvited, surfaceStyle }) {
       try {
         const response = await getClubs({
           activity: filters.activity || undefined,
-          geohash: filters.geohash || undefined,
+          // ⚠️ `getClubs` ANNONCE `geohash?: string[]` (`clubService.js:314`)
+          // mais l'UTILISE en `$contains` (`:254-257`), c'est-a-dire sur une
+          // CHAINE. L'ecran d'ou vient cette section passait deja une chaine et
+          // la recherche marche (temoins W07). On nomme l'ecart plutot que de
+          // changer le contrat d'un service partage depuis un seul appelant.
+          geohash: /** @type {any} */ (filters.geohash || undefined),
           // Une equipe appartient a un `club`, jamais a un club multisport :
           // les inclure ajouterait une requete et des resultats dont on ne
           // peut inviter personne.

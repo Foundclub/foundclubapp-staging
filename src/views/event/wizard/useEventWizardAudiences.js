@@ -50,7 +50,7 @@ export const getInvitedTeamIds = (audiences = []) => audiences
 export const keepAudiencesForEventType = (wizardState) => {
   const audiences = Array.isArray(wizardState?.teamAudiences) ? wizardState.teamAudiences : [];
   if (isMatchEventType(wizardState?.type?.name)) return audiences;
-  return audiences.filter((audience) => !isExternalAudience(audience));
+  return audiences.filter((/** @type {any} */ audience) => !isExternalAudience(audience));
 };
 
 /**
@@ -73,7 +73,7 @@ export default function useEventWizardAudiences() {
     [state.teamAudiences],
   );
   const internalAudiences = useMemo(
-    () => allAudiences.filter((audience) => !isExternalAudience(audience)),
+    () => allAudiences.filter((/** @type {any} */ audience) => !isExternalAudience(audience)),
     [allAudiences],
   );
   const externalAudiences = useMemo(

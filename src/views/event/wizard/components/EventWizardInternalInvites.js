@@ -406,6 +406,7 @@ function EventWizardInternalInvites({ surfaceStyle }) {
                           ]}
                         >
                           <Checkbox
+                            disabled={false}
                             onValueChange={() => toggleMemberSelection(memberId)}
                             value={checked}
                           />
