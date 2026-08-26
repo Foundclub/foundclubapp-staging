@@ -151,12 +151,6 @@ function getUserDisplayName(user) {
   return 'Utilisateur';
 }
 
-const getStaffDisplayName = (user) => {
-  const firstname = String(user?.firstname || '').trim();
-  const lastname = String(user?.lastname || '').trim();
-  return [firstname, lastname].filter(Boolean).join(' ').trim() || 'Staff';
-};
-
 // 🧨 AE02 — POURQUOI CE HOOK EST RESOLU ICI, ET PAS APPELE DIRECTEMENT.
 // 20 suites de temoins montent `@tanstack/react-query` avec un mock PARTIEL
 // (`useIsMutating`, `useMutation`, `useQueryClient`) et AUCUNE ne fournit
@@ -1539,7 +1533,6 @@ function ParticipantItem({
     : '';
   const tonDePaiement = tonStatutPaiement(Colors, String(paymentStatus || ''));
   const arrivalTime = formatArrivalTime(attendance?.arrivedAt);
-  const hasStaffMeta = canEdit && (attendance?.note || attendance?.manualOverride || attendance?.updatedBy);
   const dejaPointe = Boolean(attendance?.arrivedAt);
 
   return (
@@ -1659,28 +1652,6 @@ function ParticipantItem({
           />
         </View>
       )}
-
-      {hasStaffMeta ? (
-        <View style={[Spaces.gap[4]]}>
-          {attendance?.manualOverride ? (
-            <Text style={[Fonts.p4, Fonts.warning500]}>
-              Correction manuelle staff
-            </Text>
-          ) : null}
-          {attendance?.updatedBy ? (
-            <Text style={[Fonts.p4, Fonts.neutral300]}>
-              Corrige par
-              {' '}
-              {getStaffDisplayName(attendance.updatedBy)}
-            </Text>
-          ) : null}
-          {attendance?.note ? (
-            <Text style={[Fonts.p4, Fonts.neutral200]}>
-              {attendance.note}
-            </Text>
-          ) : null}
-        </View>
-      ) : null}
     </View>
   );
 }
