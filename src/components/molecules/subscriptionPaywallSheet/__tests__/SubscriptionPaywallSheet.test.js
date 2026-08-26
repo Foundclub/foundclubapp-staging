@@ -1,4 +1,4 @@
-import { Text, TouchableOpacity } from 'react-native';
+import { Text, TextInput, TouchableOpacity } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
 import SubscriptionPaywallSheet from '../SubscriptionPaywallSheet';
@@ -78,6 +78,29 @@ jest.mock('@/components/molecules/bottomModal/BottomModal', () => {
 
 // Le vrai Button rend un TouchableOpacity + Text : le mock garde ce contrat pour
 // que la recherche « bouton portant ce libelle » soit la meme partout.
+// S12-B — le champ de saisie du nombre de licencies passe par le VRAI `Input`
+// du depot. La doublure garde le seul contrat qui compte : libelle, valeur,
+// frappe qui remonte.
+jest.mock('@/components/molecules/input/Input', () => {
+  const { Text: TexteRN, TextInput: SaisieRN, View: VueRN } = jest.requireActual('react-native');
+  return {
+    __esModule: true,
+    default: (/** @type {any} */ {
+      accessibilityLabel, error, label, onChangeText, value,
+    }) => (
+      <VueRN>
+        {label ? <TexteRN>{label}</TexteRN> : null}
+        <SaisieRN
+          accessibilityLabel={accessibilityLabel}
+          onChangeText={onChangeText}
+          value={value}
+        />
+        {error ? <TexteRN>{error}</TexteRN> : null}
+      </VueRN>
+    ),
+  };
+});
+
 jest.mock('@/components/atoms/button/Button', () => {
   const { Text: RNText, TouchableOpacity: RNTouchable } = jest.requireActual('react-native');
   return {
@@ -129,9 +152,12 @@ jest.mock('@/theme/themeContext', () => {
         primary900: 'couleur-encre',
         success500: 'couleur-succes',
       },
+      // S12-B — `p4` et `paddingHorizontal` s'ajoutent pour le champ de saisie du
+      // nombre de licencies. ⚠️ Un jeton absent ne rend pas un style vide : il
+      // rend `undefined`, et la lecture `[16]` fait TOMBER la suite entiere.
       Fonts: emptyStyles([
         'h1Bold', 'h3Bold', 'neutral00', 'neutral100', 'neutral300',
-        'p1', 'p1Bold', 'p2', 'p2Bold', 'p3', 'p3Bold', 'p4Bold',
+        'p1', 'p1Bold', 'p2', 'p2Bold', 'p3', 'p3Bold', 'p4', 'p4Bold',
         'primary100', 'primary200', 'primary500',
       ]),
       Spaces: {
@@ -139,6 +165,7 @@ jest.mock('@/theme/themeContext', () => {
         marginTop: emptyStyles([4]),
         padding: emptyStyles([16]),
         paddingBottom: emptyStyles([8, 24]),
+        paddingHorizontal: emptyStyles([16]),
         paddingTop: emptyStyles([16, 24]),
         paddingVertical: emptyStyles([12]),
       },
@@ -581,5 +608,159 @@ describe('SubscriptionPaywallSheet — la remise annoncee est celle DU PALIER (L
 
     expect(hasTextContaining(tree, '%')).toBe(false);
     expect(hasTextContaining(tree, 'soit ')).toBe(false);
+  });
+});
+
+/* ================================================================== */
+/* S12-B — LE BLOCAGE DE QUOTA (D6) ET LE MODE AU LICENCIE (D1)       */
+/* ================================================================== */
+
+describe('SubscriptionPaywallSheet — S12-B/D6 : le club est plein', () => {
+  // Forme exacte du refus serveur (subscription-permission.ts:831-839).
+  const QUOTA_DECISION = {
+    allowed: false,
+    licenseeCount: 120,
+    memberCount: 120,
+    paywall: 'CLUB_LICENSEE_LIMIT',
+    reason: 'CLUB_LICENSEE_LIMIT_REACHED',
+    remainingFreeUses: 0,
+    requiredPlan: ['CLUB'],
+  };
+
+  it('LE TEMOIN — il MONTRE les deux nombres, il ne refuse pas en silence', () => {
+    const tree = renderSheet({ decision: QUOTA_DECISION });
+
+    expect(allTexts(tree)).toContain('Ton club est complet');
+    expect(hasTextContaining(tree, '120 membres')).toBe(true);
+    expect(hasTextContaining(tree, '120 licenciés souscrits')).toBe(true);
+  });
+
+  it('il RASSURE : les membres deja inscrits ne perdent rien', () => {
+    const tree = renderSheet({ decision: QUOTA_DECISION });
+
+    expect(hasTextContaining(tree, 'nouvelles adhésions sont en pause')).toBe(true);
+    expect(hasTextContaining(tree, 'membres déjà inscrits gardent tout')).toBe(true);
+  });
+
+  it('D6 — le bouton dit « Augmenter », et il mene a la feuille d augmentation', () => {
+    const tree = renderSheet({ decision: QUOTA_DECISION });
+
+    const bouton = findButtonByText(tree, 'Augmenter mes licenciés');
+    expect(bouton).toBeDefined();
+    act(() => {
+      bouton.props.onPress();
+    });
+
+    // Ce club PAIE deja : le carrousel lui reproposerait ce qu'il a.
+    expect(mockNavigate).toHaveBeenCalledWith('ProfileStack', {
+      params: { openLicenseeIncrease: true },
+      screen: 'SubscriptionOverview',
+    });
+  });
+
+  it('⛔ et il ne lui revend PAS l offre qu il paie deja', () => {
+    const tree = renderSheet({ decision: QUOTA_DECISION });
+
+    expect(findButtonByText(tree, 'Voir les offres')).toBeUndefined();
+    expect(hasTextContaining(tree, 'Débloquer')).toBe(false);
+  });
+});
+
+describe('SubscriptionPaywallSheet — S12-B/D1 : le mode au licencie', () => {
+  const ENTREES_LICENCIE = ['monthly', 'yearly'].map((billingPeriod) => ({
+    billingPeriod,
+    displayName: `Club au licencié · équipes illimitées (${billingPeriod === 'yearly' ? 'annuel' : 'mensuel'})`,
+    isActive: true,
+    maxTeams: null,
+    planCode: `fc_club_licensee_${billingPeriod}`,
+    pricingModel: 'per_licensee',
+    providerProductId: `fc_club_licensee_${billingPeriod}`,
+    referencePriceEurCents: billingPeriod === 'yearly' ? 250 : 25,
+    requiresClubVerification: true,
+    scopeType: 'CLUB',
+    slotCount: null,
+    unitPriceEurCents: billingPeriod === 'yearly' ? 250 : 25,
+  }));
+
+  beforeEach(() => {
+    mockCatalogQueryState = {
+      data: { data: [...CATALOG_ENTRIES, ...ENTREES_LICENCIE] },
+      isError: false,
+      isLoading: false,
+    };
+  });
+
+  const basculer = (tree) => {
+    act(() => {
+      findButtonByText(tree, 'Au licencié').props.onPress();
+    });
+  };
+
+  const taper = (tree, texte) => {
+    const champ = tree.root.findAllByType(TextInput)
+      .find((/** @type {any} */ noeud) => noeud.props.accessibilityLabel === 'Nombre de licenciés');
+    act(() => {
+      champ.props.onChangeText(texte);
+    });
+  };
+
+  it('D1 — une feuille CLUB porte les DEUX facons d acheter', () => {
+    const tree = renderSheet({ decision: FACILITY_DECISION });
+
+    expect(findButtonByText(tree, 'Par palier')).toBeDefined();
+    expect(findButtonByText(tree, 'Au licencié')).toBeDefined();
+    // Par defaut, rien n'a bouge : les paliers Club sont la.
+    expect(hasTextContaining(tree, 'Club S')).toBe(true);
+  });
+
+  it('⛔ une feuille EQUIPE ne propose pas ce mode : il n existe pas cote Equipe', () => {
+    const tree = renderSheet({ decision: TEAM_QUOTA_DECISION });
+
+    expect(findButtonByText(tree, 'Au licencié')).toBeUndefined();
+  });
+
+  it('D3 — le prix se calcule sous les yeux, dans la feuille aussi', () => {
+    const tree = renderSheet({ decision: FACILITY_DECISION });
+    basculer(tree);
+
+    expect(hasTextContaining(tree, '2,50 € par licencié')).toBe(true);
+
+    taper(tree, '250');
+    expect(hasTextContaining(tree, '250 licenciés × 2,50 € = 625,00 €/an')).toBe(true);
+  });
+
+  it('D4 — acheter passe par la caisse avec le nombre saisi, et n annonce pas un succes', async () => {
+    const tree = renderSheet({ decision: FACILITY_DECISION });
+    basculer(tree);
+    taper(tree, '250');
+
+    await act(async () => {
+      findButtonByText(tree, 'Souscrire · 625,00 €/an').props.onPress();
+    });
+
+    expect(mockPerformPurchase).toHaveBeenCalledWith(expect.objectContaining({
+      catalogEntry: expect.objectContaining({ planCode: 'fc_club_licensee_yearly' }),
+      clubDocumentId: 'club-1',
+      licenseeCount: 250,
+    }));
+    // Le paiement n'a pas encore eu lieu : aucun ecran de succes.
+    expect(mockNavigate).not.toHaveBeenCalled();
+  });
+
+  it('le CTA reste ETEINT tant qu aucun nombre valide n est tape', () => {
+    const tree = renderSheet({ decision: FACILITY_DECISION });
+    basculer(tree);
+
+    const cta = findButtonByText(tree, 'Indique ton nombre de licenciés');
+    expect(cta).toBeDefined();
+    expect(cta.props.accessibilityState.disabled).toBe(true);
+  });
+
+  it('CATALOGUE SANS L OFFRE : la bascule n existe pas', () => {
+    mockCatalogQueryState = { data: { data: CATALOG_ENTRIES }, isError: false, isLoading: false };
+    const tree = renderSheet({ decision: FACILITY_DECISION });
+
+    expect(findButtonByText(tree, 'Au licencié')).toBeUndefined();
+    expect(hasTextContaining(tree, 'Club S')).toBe(true);
   });
 });

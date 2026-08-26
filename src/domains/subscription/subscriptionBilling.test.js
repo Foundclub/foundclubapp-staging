@@ -449,7 +449,7 @@ describe('S12-B — le prix au licencie se calcule SOUS LES YEUX', () => {
     expect(getSubscriptionEntryUnitPriceEurCents(CLUB_TIER_YEARLY)).toBeNull();
   });
 
-  test('🔒 les sept regex `tier_(\d+)` de l app ne voient PAS cette offre', () => {
+  test('🔒 les sept regex de palier de l app ne voient PAS cette offre', () => {
     // Son rang vaut 0 : c'est ce qui l'ecarte tout seul des rangees de paliers
     // S/M/L, sans qu'aucune regex n'ait ete elargie.
     expect(getSubscriptionEntryTierRank(LICENSEE_YEARLY)).toBe(0);

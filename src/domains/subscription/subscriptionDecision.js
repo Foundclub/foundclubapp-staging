@@ -348,14 +348,6 @@ export const getSubscriptionPaywallContent = (decision) => {
   const withRequiredPlan = (sentence) => `${sentence}${requiredPlanSuffix}`.trim();
 
   switch (paywall.paywallKey) {
-    case 'club-roles-manage-required':
-      return {
-        ctaLabel: 'Voir mon abonnement',
-        description: withRequiredPlan(
-          'La gestion des rôles et des droits du club est réservée a l offre Club.',
-        ),
-        title: 'Rôles club reserves',
-      };
     case 'club-licensee-limit': {
       // S12-B/D6 — LE BLOCAGE RACONTE, IL NE REFUSE PAS SEULEMENT.
       // « X membres / Y licencies souscrits » : sans ces deux nombres, le
@@ -371,6 +363,14 @@ export const getSubscriptionPaywallContent = (decision) => {
         title: 'Ton club est complet',
       };
     }
+    case 'club-roles-manage-required':
+      return {
+        ctaLabel: 'Voir mon abonnement',
+        description: withRequiredPlan(
+          'La gestion des rôles et des droits du club est réservée a l offre Club.',
+        ),
+        title: 'Rôles club reserves',
+      };
     case 'club-tier-team-limit':
       return {
         ctaLabel: 'Voir mon abonnement',

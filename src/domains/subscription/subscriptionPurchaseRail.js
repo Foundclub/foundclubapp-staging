@@ -18,6 +18,7 @@ import {
 import {
   changeSubscriptionPlan,
   createStripeWebCheckoutSession,
+  increaseSubscriptionLicenseeCount,
   restoreSubscriptionPurchases,
   validateSubscriptionPurchase,
 } from '@/services/subscription/subscriptionService';
@@ -335,6 +336,37 @@ export const performSubscriptionPlanChange = async ({
   });
 
   return { pendingWebhook: true, purchase: purchaseResult };
+};
+
+/**
+ * S12-B/D5 — AUGMENTER LE NOMBRE DE LICENCIES COUVERTS.
+ *
+ * Elle passe par le RAIL et pas par le service, pour la meme raison que les
+ * achats : c'est un geste d'argent (le serveur facture la difference au prorata
+ * immediatement), et le rail est le point d'entree unique que les ecrans
+ * connaissent deja — ils le doublent tous en test.
+ *
+ * ⚠️ Aucun store n'intervient : ce nombre vit dans la QUANTITE Stripe. Le rail
+ * actif n'est donc pas consulte, et c'est volontaire.
+ * @param {{ licenseeCount: number; subscriptionDocumentId: string }} input
+ * @returns {Promise<any>} Reponse SUPERSET du contrat : la lire en `toMatchObject`.
+ */
+export const performSubscriptionLicenseeIncrease = async ({
+  licenseeCount,
+  subscriptionDocumentId,
+}) => {
+  // On ne poste JAMAIS un nombre que le serveur refusera : il rendrait une
+  // erreur technique la ou l'ecran doit dire quoi taper. Et c'est de l'argent —
+  // un `null` qui passe ici serait une facture au hasard.
+  const normalizedLicenseeCount = clampSubscriptionLicenseeCount(licenseeCount);
+  if (normalizedLicenseeCount === null) {
+    throw new Error('Nombre de licenciés invalide (entier, minimum 1).');
+  }
+
+  return increaseSubscriptionLicenseeCount({
+    licenseeCount: normalizedLicenseeCount,
+    subscriptionDocumentId: String(subscriptionDocumentId || '').trim(),
+  });
 };
 
 /**

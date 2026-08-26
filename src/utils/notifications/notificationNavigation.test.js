@@ -240,3 +240,63 @@ describe('U06 — la demande d adhesion a une equipe a enfin une porte', () => {
     });
   });
 });
+
+describe('S12-B — la notification de quota au licencie mene a la reparation', () => {
+  // Charge exacte envoyee par le serveur
+  // (admin/src/utils/celebration-service.ts:339-355 et 691-715).
+  const chargeQuota = (celebrationKey) => ({
+    celebrationKey,
+    celebrationTone: celebrationKey.endsWith('reached') ? 'warning' : 'info',
+    celebrationVariant: 'banner',
+    clubId: 'club-doc-1',
+    clubName: 'AS Test',
+    licenseeCount: 120,
+    memberCount: 120,
+    remaining: 0,
+    type: 'celebration',
+  });
+
+  it.each([
+    'club_licensee_quota_approaching',
+    'club_licensee_quota_reached',
+  ])('LE TEMOIN — %s ouvre la feuille d augmentation, pas le neant', (celebrationKey) => {
+    // Avant S12-B : aucun traitement des cles de quota ici, `default` rendait
+    // null, et appuyer sur la notification ne faisait RIEN.
+    expect(resolveNotificationDestination(chargeQuota(celebrationKey))).toEqual({
+      params: {
+        licenseeCount: 120,
+        memberCount: 120,
+        openLicenseeIncrease: true,
+      },
+      route: 'SubscriptionOverview',
+    });
+  });
+
+  it('elle TRANSPORTE les deux nombres : ils n existent nulle part ailleurs', () => {
+    // `payerSubscriptionsSummary` n'expose pas `licenseeCount`
+    // (subscription-permission.ts:1150-1159) : sans ce transport, l'ecran ne
+    // saurait pas de combien augmenter.
+    const destination = resolveNotificationDestination(chargeQuota('club_licensee_quota_reached'));
+    expect(destination.params.licenseeCount).toBe(120);
+    expect(destination.params.memberCount).toBe(120);
+  });
+
+  it('sans les nombres, on ouvre quand meme la feuille (on n invente pas de zero)', () => {
+    const destination = resolveNotificationDestination({
+      celebrationKey: 'club_licensee_quota_reached',
+      type: 'celebration',
+    });
+    expect(destination).toEqual({
+      params: { openLicenseeIncrease: true },
+      route: 'SubscriptionOverview',
+    });
+  });
+
+  it('TEMOIN NEGATIF — une autre celebration ne detourne pas vers l abonnement', () => {
+    expect(resolveNotificationDestination({
+      celebrationKey: 'club_membership_confirmed',
+      clubId: 'club-doc-1',
+      type: 'celebration',
+    })).toBeNull();
+  });
+});

@@ -18,16 +18,22 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getUserRoleKey } from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
 import {
+  clampSubscriptionLicenseeCount,
   findSubscriptionMonthlySiblingEntry,
   formatSubscriptionMonthlyEquivalentLabel,
+  formatSubscriptionPerMemberPriceLabel,
   formatSubscriptionPriceLabel,
+  formatSubscriptionUnitPriceLabel,
   formatSubscriptionYearlyDiscountLabel,
   getInitialTeamSelection,
   getSubscriptionBillingErrorMessage,
   getSubscriptionEntryPeriod,
   getSubscriptionEntryScope,
   getSubscriptionEntryTierRank,
+  getSubscriptionEntryUnitPriceEurCents,
   getSubscriptionSelectableTeams,
+  isPerLicenseeSubscriptionEntry,
+  sanitizeSubscriptionLicenseeCountInput,
 } from '@/domains/subscription/subscriptionBilling';
 import {
   getSubscriptionQuotaItems,
@@ -52,6 +58,7 @@ import Button from '@/components/atoms/button/Button';
 import Checkable from '@/components/atoms/checkable/Checkable';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 import LegalFooter from '@/components/molecules/legalFooter/LegalFooter';
+import LicenseeCountField from '@/components/molecules/licenseeCountField/LicenseeCountField';
 import TierSelector from '@/components/molecules/tierSelector/TierSelector';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
@@ -104,6 +111,19 @@ const CLUB_TIER_LETTERS = { 1: 'S', 2: 'M', 3: 'L' };
 const BILLING_PERIOD_OPTIONS = [
   { id: 'monthly', label: 'Mensuel' },
   { id: 'yearly', label: 'Annuel' },
+];
+
+// S12-B/D1 — L'OFFRE AU LICENCIE EST UN MODE DE LA CARTE CLUB, PAS UNE 4e CARTE.
+//
+// Decision du 2026-08-25. Le carrousel reste a TROIS cartes : une quatrieme
+// aurait double la largeur a balayer, casse les indicateurs de position
+// (`CARD_KEYS`, l. 119) et l'index d'ouverture des murs payants
+// (`CARD_INDEX_BY_FOCUS_SCOPE`, l. 125). Deux facons d'acheter la MEME chose —
+// les droits club — se choisissent dans la carte, pas a cote d'elle.
+const CLUB_PRICING_MODES = { LICENSEE: 'licensee', TIER: 'tier' };
+const CLUB_PRICING_MODE_OPTIONS = [
+  { id: CLUB_PRICING_MODES.TIER, label: 'Par palier' },
+  { id: CLUB_PRICING_MODES.LICENSEE, label: 'Au licencié' },
 ];
 
 // R07 point 6 — la reserve posee SOUS le CTA collant, en plus du retrait
@@ -207,6 +227,10 @@ function SubscriptionOffers({ navigation, route }) {
   const [billingPeriod, setBillingPeriod] = useState('yearly');
   const [teamSlotCount, setTeamSlotCount] = useState(1);
   const [clubTier, setClubTier] = useState(1);
+  // S12-B/D2 — la saisie est une CHAINE : un champ doit pouvoir etre vide le
+  // temps qu'on efface pour retaper. Le nombre n'existe qu'au moment de payer.
+  const [clubPricingMode, setClubPricingMode] = useState(CLUB_PRICING_MODES.TIER);
+  const [licenseeCountText, setLicenseeCountText] = useState('');
   const [activeActionPlanCode, setActiveActionPlanCode] = useState('');
   const [teamPlanModalState, setTeamPlanModalState] = useState(
     /** @type {{ actionMode: string; catalogEntry: SubscriptionCatalogEntry | null; selectedTeamDocumentIds: string[] }} */ ({
@@ -273,6 +297,30 @@ function SubscriptionOffers({ navigation, route }) {
 
   const teamTiers = useMemo(() => buildTiers('TEAM'), [buildTiers]);
   const clubTiers = useMemo(() => buildTiers('CLUB'), [buildTiers]);
+
+  // S12-B/D1 — L'ENTREE AU LICENCIE DE LA PERIODE CHOISIE.
+  //
+  // ⚠️ Elle n'apparait PAS dans `buildTiers` et c'est voulu : son rang de palier
+  // vaut 0 (elle n'a pas de palier), et le `.filter(option.id > 0)` l'ecarte.
+  // On la cherche donc a part, par `pricingModel` — jamais par son code de plan.
+  // 🔒 Absente du catalogue = le mode n'existe pas a l'ecran. On n'affiche
+  // jamais une offre que le serveur ne vend pas.
+  const licenseeEntry = useMemo(
+    () => catalogEntries.find((entry) => isPerLicenseeSubscriptionEntry(entry)
+      && getSubscriptionEntryPeriod(entry) === billingPeriod) || null,
+    [billingPeriod, catalogEntries],
+  );
+  const licenseeUnitPriceEurCents = getSubscriptionEntryUnitPriceEurCents(licenseeEntry);
+  const isLicenseeModeAvailable = Boolean(licenseeEntry && licenseeUnitPriceEurCents);
+  const isLicenseeModeActive = isLicenseeModeAvailable
+    && clubPricingMode === CLUB_PRICING_MODES.LICENSEE;
+  // Le nombre valide, ou null tant qu'il ne l'est pas : c'est LUI qui autorise
+  // le paiement, et lui seul part a la caisse.
+  const typedLicenseeCount = licenseeCountText === ''
+    ? null
+    : clampSubscriptionLicenseeCount(licenseeCountText);
+  const isTypedLicenseeCountValid = typedLicenseeCount !== null
+    && String(typedLicenseeCount) === licenseeCountText;
 
   // Le palier retenu retombe sur le premier disponible : bascule mensuel/annuel
   // ou catalogue incomplet ne doivent jamais laisser une carte vide.
@@ -473,6 +521,69 @@ function SubscriptionOffers({ navigation, route }) {
       }),
     });
   }, [teamOptions, teamSlotSummary.coveredTeamDocumentIds]);
+
+  /**
+   * ACHETER AU LICENCIE (decision D4) : la caisse WEB, meme depuis le telephone.
+   *
+   * Elle ne passe PAS par `commitSubscriptionMutation`, et la raison est nette :
+   * cette fonction pousse vers l'ecran de succes des que la promesse resout. Or
+   * ici, rien n'est paye a ce moment-la — on vient seulement d'OUVRIR une page
+   * de paiement dans le navigateur. Annoncer « c'est bon ! » a quelqu'un qui n'a
+   * pas encore sorti sa carte serait le mensonge le plus cher de l'ecran.
+   * @returns {Promise<void>}
+   */
+  const handlePurchaseLicenseeOffer = useCallback(async () => {
+    if (!licenseeEntry) return;
+
+    // 🔒 LE CLUB EST OBLIGATOIRE EN PRATIQUE, MEME SI LE SERVEUR L'ACCEPTE SANS.
+    // Le plafond d'adhesions se lit SUR LE CLUB (subscription-permission.ts
+    // :826-829) : un abonnement au licencie sans club rattache serait paye et ne
+    // limiterait jamais rien. C'est l'ecran qui le garantit.
+    if (!currentClubDocumentId) {
+      Alert.alert(
+        'Club requis',
+        'Rattache d abord ton compte a un club : c est sur lui que se compte le nombre de licenciés.',
+      );
+      return;
+    }
+
+    if (!isTypedLicenseeCountValid) {
+      Alert.alert(
+        'Nombre de licenciés requis',
+        'Indique combien de licenciés ton club doit couvrir avant de continuer.',
+      );
+      return;
+    }
+
+    setActiveActionPlanCode(String(licenseeEntry?.planCode || '').trim());
+    try {
+      await subscriptionMutation.mutateAsync({
+        action: 'purchase',
+        input: {
+          catalogEntry: licenseeEntry,
+          clubDocumentId: currentClubDocumentId,
+          licenseeCount: typedLicenseeCount,
+          payerUserDocumentId: String(userData?.documentId || '').trim(),
+          teamDocumentIds: [],
+        },
+      });
+      Alert.alert(
+        'Paiement ouvert dans ton navigateur',
+        'Termine le paiement dans la page qui vient de s ouvrir, puis reviens ici. Tes droits s ouvrent dans la minute qui suit.',
+      );
+    } catch (error) {
+      Alert.alert('Erreur abonnement', getSubscriptionBillingErrorMessage(error));
+    } finally {
+      setActiveActionPlanCode('');
+    }
+  }, [
+    currentClubDocumentId,
+    isTypedLicenseeCountValid,
+    licenseeEntry,
+    subscriptionMutation,
+    typedLicenseeCount,
+    userData?.documentId,
+  ]);
 
   /**
    * @param {SubscriptionCatalogEntry | null} catalogEntry
@@ -826,7 +937,13 @@ function SubscriptionOffers({ navigation, route }) {
   /**
    * CTA collant de la carte active. Il ne ment jamais : desactive quand il n'y a
    * rien a acheter, et absent de tout prix quand le catalogue n'en donne pas.
-   * @returns {{ disabled: boolean; entry: SubscriptionCatalogEntry | null; label: string; sub: string }}
+   * @returns {{
+   *   disabled: boolean;
+   *   entry: SubscriptionCatalogEntry | null;
+   *   label: string;
+   *   mode: string;
+   *   sub: string;
+   * }}
    */
   const getActiveCta = () => {
     if (activeIndex === 0) {
@@ -834,9 +951,32 @@ function SubscriptionOffers({ navigation, route }) {
         disabled: true,
         entry: null,
         label: isFreeLevel ? 'Ton offre actuelle' : 'Gérer dans le store',
+        mode: CLUB_PRICING_MODES.TIER,
         sub: isFreeLevel
           ? 'Publie en quantité limitée, sans carte bancaire.'
           : 'Le retour au gratuit se gère dans ton store.',
+      };
+    }
+
+    // S12-B/D1 — LE MODE AU LICENCIE A SON PROPRE CTA, ET IL NE MENT PAS NON PLUS.
+    // Il reste eteint tant qu'aucun nombre valide n'est tape, et son sous-texte
+    // dit ou l'on va : le navigateur, pas le store.
+    if (activeIndex === 2 && isLicenseeModeActive) {
+      const totalLabel = formatSubscriptionPerMemberPriceLabel(
+        licenseeUnitPriceEurCents,
+        typedLicenseeCount,
+        billingPeriod,
+      );
+      return {
+        disabled: !isTypedLicenseeCountValid,
+        entry: licenseeEntry,
+        label: isTypedLicenseeCountValid && totalLabel
+          ? `Souscrire · ${totalLabel.split(' = ')[1] || totalLabel}`
+          : 'Indique ton nombre de licenciés',
+        mode: CLUB_PRICING_MODES.LICENSEE,
+        sub: isTypedLicenseeCountValid
+          ? 'Le paiement s ouvre dans ton navigateur. Équipes illimitées, résiliable a tout moment.'
+          : 'Le prix se calcule sur le nombre de licenciés de ton club.',
       };
     }
 
@@ -851,6 +991,7 @@ function SubscriptionOffers({ navigation, route }) {
         disabled: true,
         entry: null,
         label: 'Offre indisponible',
+        mode: CLUB_PRICING_MODES.TIER,
         sub: 'Ce palier n\'est pas proposé pour cette période.',
       };
     }
@@ -870,6 +1011,7 @@ function SubscriptionOffers({ navigation, route }) {
           disabled: !isPurchaseAvailable,
           entry,
           label: 'Gérer mes équipes couvertes',
+          mode: CLUB_PRICING_MODES.TIER,
           sub: isPurchaseAvailable
             ? 'Change les équipes couvertes par ton offre, sans repayer.'
             : purchaseHelperText,
@@ -880,6 +1022,7 @@ function SubscriptionOffers({ navigation, route }) {
         disabled: true,
         entry,
         label: 'Ton offre actuelle',
+        mode: CLUB_PRICING_MODES.TIER,
         sub: 'Change de palier ou de période pour la remplacer.',
       };
     }
@@ -889,6 +1032,7 @@ function SubscriptionOffers({ navigation, route }) {
       disabled: !isPurchaseAvailable,
       entry,
       label: `Choisir ${familyLabel} · ${priceLabel}`,
+      mode: CLUB_PRICING_MODES.TIER,
       sub: purchaseHelperText,
     };
   };
@@ -1048,19 +1192,54 @@ function SubscriptionOffers({ navigation, route }) {
                 })}
               </View>
               <Text style={[Fonts.p4, Fonts.neutral400, Spaces.marginTop[4]]}>
-                {`Pour les dirigeants — ${clubCoverageLabel}`}
+                {isLicenseeModeActive
+                  ? 'Pour les dirigeants — toutes les équipes du club, sans limite'
+                  : `Pour les dirigeants — ${clubCoverageLabel}`}
               </Text>
-              {clubEntry ? renderPrice(clubEntry) : (
-                <Text style={[Fonts.p3, Fonts.neutral300, Spaces.marginTop[12]]}>
-                  Aucune offre Club pour cette période.
-                </Text>
+
+              {/* S12-B/D1 — LA BASCULE. Elle n'existe QUE si le catalogue vend
+                  vraiment l'offre au licencie : sans entree serveur, la carte
+                  Club est exactement celle d'avant, au pixel pres. */}
+              {isLicenseeModeAvailable ? (
+                <View style={Spaces.marginTop[12]}>
+                  <TierSelector
+                    onChange={(modeId) => setClubPricingMode(String(modeId))}
+                    options={CLUB_PRICING_MODE_OPTIONS}
+                    value={clubPricingMode}
+                  />
+                </View>
+              ) : null}
+
+              {isLicenseeModeActive ? (
+                <View style={[Spaces.gap[12], Spaces.marginTop[12]]}>
+                  <Text style={[Fonts.h3Bold, Fonts.neutral00]}>
+                    {formatSubscriptionUnitPriceLabel(licenseeUnitPriceEurCents)}
+                  </Text>
+                  <LicenseeCountField
+                    billingPeriod={billingPeriod}
+                    helperText="Tous les membres du club comptent : joueurs, coachs et dirigeants."
+                    onChangeText={
+                      (value) => setLicenseeCountText(sanitizeSubscriptionLicenseeCountInput(value))
+                    }
+                    unitPriceEurCents={licenseeUnitPriceEurCents}
+                    value={licenseeCountText}
+                  />
+                </View>
+              ) : (
+                <>
+                  {clubEntry ? renderPrice(clubEntry) : (
+                    <Text style={[Fonts.p3, Fonts.neutral300, Spaces.marginTop[12]]}>
+                      Aucune offre Club pour cette période.
+                    </Text>
+                  )}
+                  {renderTierRow({
+                    legend: 'Taille du club',
+                    onChange: (id) => setClubTier(Number(id)),
+                    options: clubTiers,
+                    value: resolvedClubTier,
+                  })}
+                </>
               )}
-              {renderTierRow({
-                legend: 'Taille du club',
-                onChange: (id) => setClubTier(Number(id)),
-                options: clubTiers,
-                value: resolvedClubTier,
-              })}
               {/* R07 point 5 — l'amorce dit ce que l'offre Club EST : l'offre
                   Equipe, appliquee a plusieurs equipes, plus des capacites de
                   club. Les capacites en dessous viennent du catalogue serveur
@@ -1075,8 +1254,13 @@ function SubscriptionOffers({ navigation, route }) {
                 // « Toutes les equipes du club ». La couverture est desormais dite
                 // deux fois et avec precision au-dessus : la repeter en plus vague
                 // n'ajoutait rien et semait le doute.
-                items: getEntryFeatureLabels(clubEntry, [...teamFeatureKeys, 'club.multi_teams']),
-                lead: `Tout ce que fait l'offre Équipe, pour ${clubCoverageLabel}, plus :`,
+                items: getEntryFeatureLabels(
+                  isLicenseeModeActive ? licenseeEntry : clubEntry,
+                  [...teamFeatureKeys, 'club.multi_teams'],
+                ),
+                // S12-B — l'amorce SUIT le mode : au licencie, la couverture
+                // n'est plus « jusqu'a 3 equipes » mais toutes, sans borne.
+                lead: `Tout ce que fait l'offre Équipe, pour ${isLicenseeModeActive ? 'toutes les équipes du club' : clubCoverageLabel}, plus :`,
               })}
             </View>
           </ScrollView>
@@ -1136,7 +1320,9 @@ function SubscriptionOffers({ navigation, route }) {
             disabled={activeCta.disabled}
             isLoading={subscriptionMutation.isPending
               && activeActionPlanCode === String(activeCta.entry?.planCode || '')}
-            onPress={() => handleChooseOffer(activeCta.entry)}
+            onPress={() => (activeCta.mode === CLUB_PRICING_MODES.LICENSEE
+              ? handlePurchaseLicenseeOffer()
+              : handleChooseOffer(activeCta.entry))}
             title={activeCta.label}
             variant="Primary"
           />

@@ -10,15 +10,21 @@ import {
 import { getUserRoleKey } from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
 import {
+  clampSubscriptionLicenseeCount,
   findSubscriptionMonthlySiblingEntry,
   formatSubscriptionMonthlyEquivalentLabel,
+  formatSubscriptionPerMemberPriceLabel,
   formatSubscriptionPriceLabel,
+  formatSubscriptionUnitPriceLabel,
   formatSubscriptionYearlyDiscountLabel,
   getInitialTeamSelection,
   getSubscriptionBillingErrorMessage,
   getSubscriptionCatalogEntryMeta,
+  getSubscriptionEntryUnitPriceEurCents,
   getSubscriptionPreselectedSlotCount,
   getSubscriptionTierAbBucket,
+  isPerLicenseeSubscriptionEntry,
+  sanitizeSubscriptionLicenseeCountInput,
   SUBSCRIPTION_TIER_AB_TEST_ENABLED,
 } from '@/domains/subscription/subscriptionBilling';
 import {
@@ -44,6 +50,7 @@ import useTheme from '@/theme/themeContext';
 import Button from '@/components/atoms/button/Button';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 import LegalFooter from '@/components/molecules/legalFooter/LegalFooter';
+import LicenseeCountField from '@/components/molecules/licenseeCountField/LicenseeCountField';
 import TierSelector from '@/components/molecules/tierSelector/TierSelector';
 
 import { RouteNames } from '@/navigation/routeNames';
@@ -94,6 +101,16 @@ const getTierOptionsForPeriod = (entries, scopeType, billingPeriod) => entries
 const BILLING_PERIOD_OPTIONS = [
   { id: 'yearly', label: 'Annuel' },
   { id: 'monthly', label: 'Mensuel' },
+];
+
+// S12-B/D1 — les MEMES deux mots que la carte Club du carrousel
+// (SubscriptionOffers.js). Deux surfaces de vente ne doivent pas nommer la meme
+// chose de deux facons : c'est la regle qui a fait descendre la phrase
+// « jusqu'a N equipes » dans un helper partage.
+const CLUB_PRICING_MODES = { LICENSEE: 'licensee', TIER: 'tier' };
+const CLUB_PRICING_MODE_OPTIONS = [
+  { id: CLUB_PRICING_MODES.TIER, label: 'Par palier' },
+  { id: CLUB_PRICING_MODES.LICENSEE, label: 'Au licencié' },
 ];
 
 /**
@@ -202,7 +219,18 @@ function SubscriptionPaywallSheet({
   }, [catalogEntries, decision]);
 
   const [selectedTierId, setSelectedTierId] = useState(0);
+  const [clubPricingMode, setClubPricingMode] = useState(CLUB_PRICING_MODES.TIER);
+  const [licenseeCountText, setLicenseeCountText] = useState('');
   const funnelAbBucket = getSubscriptionTierAbBucket(userData?.documentId);
+
+  // S12-B/D1 — l'entree au licencie de la periode choisie, cherchee par
+  // `pricingModel` et jamais par son code de plan. Elle n'est PAS dans
+  // `tierOptions` : son rang de palier vaut 0, et le filtre `id > 0` l'ecarte.
+  const licenseeEntry = useMemo(
+    () => catalogEntries.find((entry) => isPerLicenseeSubscriptionEntry(entry)
+      && String(entry?.billingPeriod || '').trim().toLowerCase() === billingPeriod) || null,
+    [billingPeriod, catalogEntries],
+  );
 
   // Palier preselectionne a chaque ouverture (2e equipe -> palier 2 ; offre Club ->
   // le palier le moins cher qui debloque), borne au catalogue, et retour a la
@@ -212,6 +240,10 @@ function SubscriptionPaywallSheet({
       return;
     }
     setBillingPeriod('yearly');
+    // Chaque ouverture repart des paliers : le mode au licencie se choisit, il
+    // ne se souvient pas d'un mur payant a l'autre.
+    setClubPricingMode(CLUB_PRICING_MODES.TIER);
+    setLicenseeCountText('');
     const availableTierIds = yearlyTierOptions.map((option) => option.id);
     let wantedTierId = quotaSheetContent ? quotaSheetContent.preselectedSlotCount : 1;
     if (quotaSheetContent && SUBSCRIPTION_TIER_AB_TEST_ENABLED) {
@@ -305,6 +337,13 @@ function SubscriptionPaywallSheet({
     navigation.navigate(RouteNames.GuideOffersRecap);
   };
 
+  // Une offre Club couvre un club : le club du contexte de l'action d'abord (les
+  // installations qu'on voulait gerer), a defaut celui du compte. Le serveur refuse
+  // l'achat sans lui (subscription-billing.ts:427).
+  const purchaseClubDocumentId = String(
+    clubDocumentId || userData?.club?.documentId || '',
+  ).trim();
+
   const handleDismissLater = () => {
     trackSubscriptionFunnelEvent('paywall_dismissed', {
       abBucket: funnelAbBucket,
@@ -314,12 +353,93 @@ function SubscriptionPaywallSheet({
     close();
   };
 
-  // Une offre Club couvre un club : le club du contexte de l'action d'abord (les
-  // installations qu'on voulait gerer), a defaut celui du compte. Le serveur refuse
-  // l'achat sans lui (subscription-billing.ts:427).
-  const purchaseClubDocumentId = String(
-    clubDocumentId || userData?.club?.documentId || '',
-  ).trim();
+  // S12-B/D1 — LE MODE AU LICENCIE DE LA FEUILLE DE VENTE CLUB.
+  // Il n'existe que sur une feuille Club ET si le catalogue vend vraiment
+  // l'offre : on ne propose jamais ce que le serveur ne sait pas encaisser.
+  const licenseeUnitPriceEurCents = getSubscriptionEntryUnitPriceEurCents(licenseeEntry);
+  const isLicenseeModeAvailable = sellingScope === 'CLUB'
+    && Boolean(licenseeEntry && licenseeUnitPriceEurCents);
+  const isLicenseeModeActive = isLicenseeModeAvailable
+    && clubPricingMode === CLUB_PRICING_MODES.LICENSEE;
+  const typedLicenseeCount = licenseeCountText === ''
+    ? null
+    : clampSubscriptionLicenseeCount(licenseeCountText);
+  const isTypedLicenseeCountValid = typedLicenseeCount !== null
+    && String(typedLicenseeCount) === licenseeCountText;
+
+  /**
+   * ACHETER AU LICENCIE (D4) : la caisse WEB, meme depuis le telephone.
+   *
+   * Elle ne pousse PAS vers l'ecran de succes : a ce moment-la on vient
+   * seulement d'OUVRIR une page de paiement dans le navigateur. Rien n'est paye.
+   * @returns {Promise<void>}
+   */
+  const handlePurchaseLicenseeOffer = async () => {
+    if (!licenseeEntry || purchaseMutation.isPending) {
+      return;
+    }
+
+    // 🔒 Le plafond d'adhesions se lit SUR LE CLUB (subscription-permission.ts
+    // :826-829) : sans club rattache, l'abonnement serait paye et ne limiterait
+    // jamais rien. C'est l'ecran qui le garantit, pas le serveur.
+    if (!purchaseClubDocumentId) {
+      Alert.alert(
+        'Club requis',
+        "Rattache d'abord ton compte à un club : c'est sur lui que se compte le nombre de licenciés.",
+      );
+      return;
+    }
+
+    if (!isTypedLicenseeCountValid) {
+      Alert.alert(
+        'Nombre de licenciés requis',
+        'Indique combien de licenciés ton club doit couvrir avant de continuer.',
+      );
+      return;
+    }
+
+    trackSubscriptionFunnelEvent('paywall_purchase_started', {
+      abBucket: funnelAbBucket,
+      licenseeCount: typedLicenseeCount,
+      paywallKey: paywall.paywallKey,
+      planCode: String(licenseeEntry?.planCode || ''),
+    });
+
+    try {
+      await purchaseMutation.mutateAsync({
+        catalogEntry: licenseeEntry,
+        clubDocumentId: purchaseClubDocumentId,
+        licenseeCount: typedLicenseeCount,
+        payerUserDocumentId: String(userData?.documentId || '').trim(),
+        teamDocumentIds: [],
+      });
+      close();
+      Alert.alert(
+        'Paiement ouvert dans ton navigateur',
+        "Termine le paiement dans la page qui vient de s'ouvrir, puis reviens ici. Tes droits s'ouvrent dans la minute qui suit.",
+      );
+    } catch (error) {
+      trackSubscriptionFunnelEvent('paywall_purchase_failed', {
+        abBucket: funnelAbBucket,
+        paywallKey: paywall.paywallKey,
+        planCode: String(licenseeEntry?.planCode || ''),
+      });
+      Alert.alert('Erreur abonnement', getSubscriptionBillingErrorMessage(error));
+    }
+  };
+
+  // S12-B/D6 — LE BLOCAGE MENE A LA REPARATION, PAS AU CATALOGUE.
+  // Ce club PAIE deja au licencie : l'envoyer au carrousel lui reproposerait
+  // d'acheter ce qu'il a. Ce qu'il lui faut, c'est AUGMENTER son nombre — et
+  // ca vit sur « Mon abonnement » (D5).
+  const isLicenseeQuotaPaywall = paywall.paywallKey === 'club-licensee-limit';
+  const handleIncreaseLicensees = () => {
+    close();
+    navigation.navigate(RouteNames.ProfileStack, {
+      params: { openLicenseeIncrease: true },
+      screen: RouteNames.SubscriptionOverview,
+    });
+  };
 
   // Achat direct dans la sheet. Aujourd'hui : mode test backend (trustedValidation) —
   // Purchases.purchase (RevenueCat) se branchera ici a l'item 14 du plan.
@@ -443,8 +563,19 @@ function SubscriptionPaywallSheet({
         ? `Jusqu'à ${clubTierMaxTeams} équipes du club`
         : 'Équipes du club illimitées';
     }
+    // S12-B/D3 — le total au licencie, calcule par le helper partage : aucun
+    // calcul de prix ne vit dans un ecran.
+    const licenseeTotalLabel = formatSubscriptionPerMemberPriceLabel(
+      licenseeUnitPriceEurCents,
+      typedLicenseeCount,
+      billingPeriod,
+    );
     let ctaLabel = 'Chargement des tarifs…';
-    if (!isCatalogLoading && !isCatalogUnavailable) {
+    if (isLicenseeModeActive) {
+      ctaLabel = isTypedLicenseeCountValid && licenseeTotalLabel
+        ? `Souscrire · ${licenseeTotalLabel.split(' = ')[1] || licenseeTotalLabel}`
+        : 'Indique ton nombre de licenciés';
+    } else if (!isCatalogLoading && !isCatalogUnavailable) {
       ctaLabel = (sellingScope === 'TEAM' && selectedTierId === 1)
         ? 'Débloquer mon équipe'
         : `Débloquer ${selectedTierLabel}`;
@@ -531,7 +662,42 @@ function SubscriptionPaywallSheet({
             </View>
           ) : null}
 
-          {!isCatalogLoading && !isCatalogUnavailable ? (
+          {/* S12-B/D1 — LA BASCULE, exactement les memes deux mots que la carte
+              Club du carrousel. Elle n'apparait que si le catalogue vend
+              vraiment l'offre au licencie. */}
+          {isLicenseeModeAvailable && !isCatalogLoading ? (
+            <TierSelector
+              onChange={(modeId) => setClubPricingMode(String(modeId))}
+              options={CLUB_PRICING_MODE_OPTIONS}
+              value={clubPricingMode}
+            />
+          ) : null}
+
+          {isLicenseeModeActive ? (
+            <View style={Spaces.gap[12]}>
+              {hasMonthlyTierOptions ? (
+                <TierSelector
+                  onChange={(periodId) => setBillingPeriod(String(periodId))}
+                  options={BILLING_PERIOD_OPTIONS}
+                  value={billingPeriod}
+                />
+              ) : null}
+              <Text style={[Fonts.h3Bold, Fonts.neutral00]}>
+                {formatSubscriptionUnitPriceLabel(licenseeUnitPriceEurCents)}
+              </Text>
+              <LicenseeCountField
+                billingPeriod={billingPeriod}
+                helperText="Équipes illimitées. Tous les membres du club comptent : joueurs, coachs et dirigeants."
+                onChangeText={
+                  (value) => setLicenseeCountText(sanitizeSubscriptionLicenseeCountInput(value))
+                }
+                unitPriceEurCents={licenseeUnitPriceEurCents}
+                value={licenseeCountText}
+              />
+            </View>
+          ) : null}
+
+          {!isLicenseeModeActive && !isCatalogLoading && !isCatalogUnavailable ? (
             <>
               {hasMonthlyTierOptions ? (
                 <TierSelector
@@ -601,9 +767,9 @@ function SubscriptionPaywallSheet({
               />
             ) : (
               <Button
-                disabled={isCatalogLoading}
+                disabled={isLicenseeModeActive ? !isTypedLicenseeCountValid : isCatalogLoading}
                 isLoading={purchasing}
-                onPress={handlePurchase}
+                onPress={isLicenseeModeActive ? handlePurchaseLicenseeOffer : handlePurchase}
                 title={purchasing ? 'Achat en cours…' : ctaLabel}
                 variant="Primary"
               />
@@ -665,7 +831,12 @@ function SubscriptionPaywallSheet({
   // (0 occurrence dans admin/src). Un seul bouton, une seule destination.
   // L33 — le bouton dit ou il mene : depuis un mur payant, il ouvre le
   // carrousel d'offres, pas la page de gestion.
-  const primaryActionLabel = t('profile.subscription.actions.viewOffers', 'Voir les offres');
+  // S12-B/D6 — un club deja abonne au licencie n'a rien a acheter : il a a
+  // AUGMENTER. Le bouton porte donc le verbe du refus lui-meme
+  // (`ctaLabel` = « Augmenter mes licenciés », subscriptionDecision.js).
+  const primaryActionLabel = isLicenseeQuotaPaywall
+    ? paywallContent.ctaLabel
+    : t('profile.subscription.actions.viewOffers', 'Voir les offres');
 
   return (
     <BottomModal
@@ -763,7 +934,7 @@ function SubscriptionPaywallSheet({
 
         <View style={Spaces.gap[12]}>
           <Button
-            onPress={handleOpenSubscription}
+            onPress={isLicenseeQuotaPaywall ? handleIncreaseLicensees : handleOpenSubscription}
             title={primaryActionLabel}
             variant="Primary"
           />
