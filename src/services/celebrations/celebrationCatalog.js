@@ -66,6 +66,59 @@ export const celebrationCatalog = {
     tone: 'success',
     variant: 'celebration',
   },
+  // S12-B/D7 — SANS CES DEUX ENTREES, LA BANNIERE EST JETEE EN SILENCE.
+  //
+  // Le serveur (S12-A) envoie deja les deux notifications avec leur
+  // `celebrationKey` (admin/src/utils/celebration-service.ts:692). Cote app,
+  // `buildCelebrationPayload` rend `null` pour tout actionKey absent de CE
+  // catalogue (l. 543-545) et `celebrate` s'arrete la (celebrationRuntime.js
+  // :39-42) : aucun ecran, aucune erreur, rien du tout. Le dirigeant ne savait
+  // jamais que son club etait plein.
+  //
+  // `buildCopy` porte un titre de REPLI : le push du serveur fournit le sien,
+  // mais une entree sans titre rend `null` (l. 548) — la banniere doit survivre
+  // a un push sans bloc `notification`.
+  club_licensee_quota_approaching: {
+    buildCopy: (context) => {
+      const remaining = Number(context?.remaining || 0);
+      const licenseeCount = Number(context?.licenseeCount || 0);
+      return {
+        body: remaining > 0 && licenseeCount > 0
+          ? `${toLabel(context?.clubName, 'Ton club')} n'a plus que ${pluralize(remaining, 'place')} sur les ${licenseeCount} licenciés de son abonnement.`
+          : '',
+        eyebrow: 'ABONNEMENT',
+        title: 'Bientôt au complet',
+      };
+    },
+    category: 'club',
+    channels: 'both',
+    cooldownMs: 86400000,
+    durationMs: DEFAULT_DURATION_MS,
+    priority: 5,
+    tone: 'info',
+    variant: 'banner',
+  },
+  club_licensee_quota_reached: {
+    buildCopy: (context) => {
+      const licenseeCount = Number(context?.licenseeCount || 0);
+      return {
+        body: licenseeCount > 0
+          ? `${toLabel(context?.clubName, 'Ton club')} a atteint ses ${licenseeCount} licenciés. Les nouvelles adhésions sont en pause.`
+          : '',
+        eyebrow: 'ABONNEMENT',
+        title: 'Plafond de licenciés atteint',
+      };
+    },
+    category: 'club',
+    channels: 'both',
+    cooldownMs: 86400000,
+    durationMs: CELEBRATION_DURATION_MS,
+    // Au-dessus des celebrations (5) : celle-ci coute des adhesions tant qu'elle
+    // n'est pas lue. C'est la priorite que le serveur lui donne deja (7).
+    priority: 7,
+    tone: 'warning',
+    variant: 'banner',
+  },
   club_member_milestone: {
     buildCopy: (context) => ({
       body: `${toLabel(context?.clubName, 'Ton club')} atteint ${Number(context?.milestone || 0) || 0} membres.`,

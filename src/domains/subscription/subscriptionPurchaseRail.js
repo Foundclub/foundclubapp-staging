@@ -1,10 +1,12 @@
-import { Platform } from 'react-native';
+import { Linking, Platform } from 'react-native';
 
 import {
   buildSubscriptionBillingWindow,
   buildSubscriptionChangePlanPayload,
   buildSubscriptionPurchasePayload,
+  clampSubscriptionLicenseeCount,
   getSubscriptionTestProvider,
+  isPerLicenseeSubscriptionEntry,
   isSubscriptionBillingTestModeEnabled,
 } from '@/domains/subscription/subscriptionBilling';
 import {
@@ -87,6 +89,62 @@ export const isSubscriptionPurchaseAvailable = () => {
 const getStoreProvider = () => (Platform.OS === 'ios' ? 'apple' : 'google');
 
 /**
+ * LA CAISSE WEB, ET LE SEUL ENDROIT QUI SACHE L'OUVRIR.
+ *
+ * Elle avait UN appelant (le rail web) ; elle en a deux depuis S12-B, parce que
+ * l'offre AU LICENCIE y passe meme depuis un telephone (decision D4) : les
+ * stores Apple/Google ne vendent que des paliers fixes, ils ne savent pas
+ * facturer « N x 2,50 EUR ». Seul Stripe le sait.
+ *
+ * ⚠️ Ouvrir l'URL ne se fait PAS de la meme facon des deux cotes :
+ *  - web      : on REMPLACE la page (le retour se joue sur /subscription/web-success) ;
+ *  - telephone: on sort vers le NAVIGATEUR — `window.location` n'existe pas, et
+ *               un `assign` silencieux laissait l'utilisateur devant un bouton
+ *               qui ne fait rien.
+ * @param {{
+ *   catalogEntry: any;
+ *   clubDocumentId?: string | null;
+ *   licenseeCount?: number | null;
+ *   teamDocumentIds?: string[];
+ * }} input
+ * @returns {Promise<{ checkoutRedirect: boolean; sessionId?: string }>}
+ */
+const openSubscriptionWebCheckout = async ({
+  catalogEntry,
+  clubDocumentId,
+  licenseeCount,
+  teamDocumentIds = [],
+}) => {
+  // Le serveur REFUSE l'offre au licencie sans ce nombre
+  // (subscription-stripe.ts:140-144). Mais il ne voyage QUE pour ce modele de
+  // prix : sur un forfait, `licenseeCount` ne veut rien dire, et la regle vit
+  // ici plutot que chez les deux appelants — deux copies finissent par diverger.
+  const normalizedLicenseeCount = isPerLicenseeSubscriptionEntry(catalogEntry)
+    ? clampSubscriptionLicenseeCount(licenseeCount)
+    : null;
+  const session = await createStripeWebCheckoutSession({
+    clubDocumentId: String(clubDocumentId || '').trim() || undefined,
+    ...(normalizedLicenseeCount === null ? {} : { licenseeCount: normalizedLicenseeCount }),
+    planCode: String(catalogEntry?.planCode || '').trim(),
+    teamDocumentIds,
+  });
+  const checkoutUrl = String(session?.url || '').trim();
+  if (!checkoutUrl) {
+    throw new Error('Paiement web indisponible pour le moment.');
+  }
+
+  if (Platform.OS === 'web') {
+    if (typeof window !== 'undefined' && window.location) {
+      window.location.assign(checkoutUrl);
+    }
+  } else {
+    await Linking.openURL(checkoutUrl);
+  }
+
+  return { checkoutRedirect: true, sessionId: session?.id };
+};
+
+/**
  * Confirmation client post-achat RevenueCat : fenêtre approximative (le webhook
  * posera les dates exactes du store via l'upsert par providerTransactionId).
  * @param {{
@@ -122,6 +180,7 @@ const buildRevenueCatValidationPayload = ({
  * @param {{
  *   catalogEntry: any;
  *   clubDocumentId?: string | null;
+ *   licenseeCount?: number | null;
  *   payerUserDocumentId?: string | null;
  *   teamDocumentIds?: string[];
  * }} input
@@ -130,10 +189,29 @@ const buildRevenueCatValidationPayload = ({
 export const performSubscriptionPurchase = async ({
   catalogEntry,
   clubDocumentId,
+  licenseeCount,
   payerUserDocumentId,
   teamDocumentIds = [],
 }) => {
   const rail = getActiveSubscriptionPurchaseRail();
+
+  // S12-B/D4 — UNE OFFRE AU LICENCIE S'ACHETE PAR LE WEB, DEPUIS N'IMPORTE OU.
+  //
+  // Ce n'est pas une preference : les stores Apple/Google ne savent vendre que
+  // des paliers fixes, jamais « N x 2,50 EUR » a l'unite (contrainte mesuree a
+  // la reconnaissance du 25/08). Le rail actif est donc ignore ICI, et
+  // seulement pour ce modele de prix — le mode test compris, parce qu'une
+  // validation « de confiance » n'aurait aucun montant a valider.
+  // ⚠️ RISQUE STORES consigne au compte rendu : renvoyer vers le web depuis
+  // l'app peut etre conteste a la soumission. Cette decision appartient a Adel.
+  if (isPerLicenseeSubscriptionEntry(catalogEntry)) {
+    return openSubscriptionWebCheckout({
+      catalogEntry,
+      clubDocumentId,
+      licenseeCount,
+      teamDocumentIds,
+    });
+  }
 
   if (rail === SUBSCRIPTION_PURCHASE_RAILS.TRUSTED_TEST) {
     const payload = buildSubscriptionPurchasePayload({
@@ -147,20 +225,14 @@ export const performSubscriptionPurchase = async ({
   }
 
   if (rail === SUBSCRIPTION_PURCHASE_RAILS.STRIPE_WEB) {
-    const session = await createStripeWebCheckoutSession({
-      clubDocumentId: String(clubDocumentId || '').trim() || undefined,
-      planCode: String(catalogEntry?.planCode || '').trim(),
-      teamDocumentIds,
-    });
-    if (!session?.url) {
-      throw new Error('Paiement web indisponible pour le moment.');
-    }
     // Redirection pleine page vers Stripe Checkout : la suite se joue au retour
     // sur /subscription/web-success (finalisation + webhook RevenueCat).
-    if (typeof window !== 'undefined' && window.location) {
-      window.location.assign(session.url);
-    }
-    return { checkoutRedirect: true, sessionId: session?.id };
+    return openSubscriptionWebCheckout({
+      catalogEntry,
+      clubDocumentId,
+      licenseeCount,
+      teamDocumentIds,
+    });
   }
 
   const purchaseResult = await purchaseSubscriptionViaRevenueCat({

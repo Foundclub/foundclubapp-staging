@@ -1,15 +1,21 @@
 import {
   buildSubscriptionChangePlanPayload,
   buildSubscriptionPurchasePayload,
+  clampSubscriptionLicenseeCount,
   findSubscriptionMonthlySiblingEntry,
+  formatSubscriptionPerMemberPriceLabel,
+  formatSubscriptionUnitPriceLabel,
   formatSubscriptionYearlyDiscountLabel,
   getInitialTeamSelection,
   getSubscriptionBillingErrorMessage,
   getSubscriptionCatalogEntryMeta,
   getSubscriptionEntryTierRank,
+  getSubscriptionEntryUnitPriceEurCents,
   getSubscriptionTestProvider,
+  isPerLicenseeSubscriptionEntry,
   isSubscriptionBillingTestModeEnabled,
   resolveSubscriptionCatalogPrices,
+  sanitizeSubscriptionLicenseeCountInput,
   sortSubscriptionCatalogEntries,
 } from './subscriptionBilling';
 
@@ -382,5 +388,97 @@ describe('resolveSubscriptionCatalogPrices', () => {
       'fc_club_tier_1_yearly',
     ]);
     expect(pricesByPlanCode(resolved.entries).fc_club_tier_1_yearly).toBe(19999);
+  });
+});
+
+// =====================================================================
+// S12-B — L'OFFRE AU LICENCIE (decisions D2 et D3 du 2026-08-25)
+// =====================================================================
+describe('S12-B — le prix au licencie se calcule SOUS LES YEUX', () => {
+  // Copie fidele du catalogue serveur (subscription-catalog.ts:107-125).
+  const LICENSEE_YEARLY = {
+    billingPeriod: 'yearly',
+    displayName: 'Club au licencié · équipes illimitées (annuel)',
+    maxTeams: null,
+    planCode: 'fc_club_licensee_yearly',
+    pricingModel: 'per_licensee',
+    referencePriceEurCents: 250,
+    scopeType: 'CLUB',
+    slotCount: null,
+    unitPriceEurCents: 250,
+  };
+  const CLUB_TIER_YEARLY = {
+    billingPeriod: 'yearly',
+    displayName: 'Club S',
+    maxTeams: 3,
+    planCode: 'fc_club_tier_1_yearly',
+    pricingModel: 'flat',
+    referencePriceEurCents: 19999,
+    scopeType: 'CLUB',
+    slotCount: null,
+    unitPriceEurCents: null,
+  };
+
+  test('LE TEMOIN D3 — 250 licencies x 2,50 EUR fait bien 625,00 EUR par an', () => {
+    expect(formatSubscriptionPerMemberPriceLabel(250, 250, 'yearly'))
+      .toBe('250 licenciés × 2,50 € = 625,00 €/an');
+  });
+
+  test('le mensuel dit /mois, et un seul licencie ne prend pas de « s »', () => {
+    expect(formatSubscriptionPerMemberPriceLabel(25, 1, 'monthly'))
+      .toBe('1 licencié × 0,25 € = 0,25 €/mois');
+  });
+
+  test('⛔ aucun total INVENTE : sans prix ou sans nombre valide, la ligne est vide', () => {
+    expect(formatSubscriptionPerMemberPriceLabel(null, 250, 'yearly')).toBe('');
+    expect(formatSubscriptionPerMemberPriceLabel(250, 0, 'yearly')).toBe('');
+    expect(formatSubscriptionPerMemberPriceLabel(250, 12.5, 'yearly')).toBe('');
+    expect(formatSubscriptionPerMemberPriceLabel(250, undefined, 'yearly')).toBe('');
+  });
+
+  test('le prix unitaire se lit « 2,50 EUR par licencie », sans periode', () => {
+    expect(formatSubscriptionUnitPriceLabel(250)).toBe('2,50 € par licencié');
+    expect(formatSubscriptionUnitPriceLabel(null)).toBe('');
+  });
+
+  test('c est `pricingModel` qui fait foi, jamais le code de plan', () => {
+    expect(isPerLicenseeSubscriptionEntry(LICENSEE_YEARLY)).toBe(true);
+    expect(isPerLicenseeSubscriptionEntry(CLUB_TIER_YEARLY)).toBe(false);
+    expect(isPerLicenseeSubscriptionEntry(null)).toBe(false);
+    expect(getSubscriptionEntryUnitPriceEurCents(LICENSEE_YEARLY)).toBe(250);
+    expect(getSubscriptionEntryUnitPriceEurCents(CLUB_TIER_YEARLY)).toBeNull();
+  });
+
+  test('🔒 les sept regex `tier_(\d+)` de l app ne voient PAS cette offre', () => {
+    // Son rang vaut 0 : c'est ce qui l'ecarte tout seul des rangees de paliers
+    // S/M/L, sans qu'aucune regex n'ait ete elargie.
+    expect(getSubscriptionEntryTierRank(LICENSEE_YEARLY)).toBe(0);
+    expect(getSubscriptionEntryTierRank(CLUB_TIER_YEARLY)).toBe(1);
+  });
+
+  test('la saisie ne garde que des chiffres et reste bornee', () => {
+    expect(sanitizeSubscriptionLicenseeCountInput('2 5 0')).toBe('250');
+    expect(sanitizeSubscriptionLicenseeCountInput('12,5')).toBe('125');
+    expect(sanitizeSubscriptionLicenseeCountInput('007')).toBe('7');
+    // Un champ doit pouvoir etre VIDE le temps qu'on efface pour retaper.
+    expect(sanitizeSubscriptionLicenseeCountInput('')).toBe('');
+    expect(clampSubscriptionLicenseeCount(0)).toBe(1);
+    expect(clampSubscriptionLicenseeCount(2500000)).toBe(20000);
+    expect(clampSubscriptionLicenseeCount('abc')).toBeNull();
+  });
+
+  test('🔇 elle ne se plaint PLUS en boucle d etre absente du store', () => {
+    // Aucun package store n'existe ni ne peut exister pour « N x 2,50 EUR » :
+    // la signaler etait une alarme qui sonne a chaque rendu de chaque surface.
+    const resolved = resolveSubscriptionCatalogPrices({
+      serverEntries: [CLUB_TIER_YEARLY, LICENSEE_YEARLY],
+      storePricesEurCents: { fc_club_tier_1_yearly: 19999 },
+    });
+
+    expect(resolved.missingFromStorePlanCodes).toEqual([]);
+    expect(resolved.mismatches).toEqual([]);
+    // Et son prix unitaire serveur reste intact.
+    expect(resolved.entries.find((entry) => entry.planCode === 'fc_club_licensee_yearly')
+      .referencePriceEurCents).toBe(250);
   });
 });

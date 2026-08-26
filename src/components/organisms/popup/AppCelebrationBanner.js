@@ -42,6 +42,19 @@ const resolveBannerPalette = (tone, variant, Colors) => {
     };
   }
 
+  // S12-B/D7 — le ton `warning` : ce n'est pas une erreur (rien n'a echoue) et
+  // ce n'est pas une reussite. C'est « attention, ca va bloquer ». Sans cette
+  // branche, il retombait sur le repli neutre — le meme bleu qu'un simple
+  // « evenement mis a jour », pour un message qui coute des adhesions.
+  if (tone === 'warning') {
+    return {
+      accent: Colors.gold500,
+      background: 'rgba(45, 33, 8, 0.98)',
+      border: 'rgba(255, 176, 32, 0.38)',
+      progress: Colors.gold500,
+    };
+  }
+
   if (tone === 'league' || variant === 'celebration') {
     return {
       accent: Colors.gold500,

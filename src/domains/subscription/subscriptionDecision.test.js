@@ -48,6 +48,11 @@ describe('subscriptionDecision', () => {
       requiredPlan: ['TEAM', 'CLUB'],
     })).toEqual({
       allowed: false,
+      // S12-B — deux champs de plus depuis le refus de quota au licencie. Un
+      // refus qui ne les porte pas les rend `null`, jamais zero : « absent »
+      // et « zero licencie » ne veulent pas dire la meme chose.
+      licenseeCount: null,
+      memberCount: null,
       message: 'Quota gratuit épuisé',
       paywall: 'EVENT_LIMIT',
       paywallKey: 'event-limit',
@@ -474,5 +479,97 @@ describe('subscriptionDecision', () => {
         requiresClubVerification: false,
       },
     })).toBe('FREE');
+  });
+});
+
+// =====================================================================
+// S12-B/D6 — LE BLOCAGE RACONTE, IL NE REFUSE PAS SEULEMENT
+// =====================================================================
+describe('S12-B — le refus de quota au licencie', () => {
+  // Forme exacte rendue par le serveur
+  // (admin/src/api/subscription/services/subscription-permission.ts:831-839).
+  const QUOTA_DECISION = {
+    allowed: false,
+    licenseeCount: 120,
+    memberCount: 120,
+    paywall: 'CLUB_LICENSEE_LIMIT',
+    reason: 'CLUB_LICENSEE_LIMIT_REACHED',
+    remainingFreeUses: 0,
+    requiredPlan: ['CLUB'],
+  };
+
+  test('LE TEMOIN — il ne retombe plus sur le gabarit generique', () => {
+    expect(mapSubscriptionDecisionToPaywall(QUOTA_DECISION).paywallKey)
+      .toBe('club-licensee-limit');
+  });
+
+  test('LES DEUX NOMBRES traversent le mapping', () => {
+    // Ils ne vivent QUE dans la decision : `payerSubscriptionsSummary` n'expose
+    // pas `licenseeCount` (subscription-permission.ts:1150-1159).
+    const paywall = mapSubscriptionDecisionToPaywall(QUOTA_DECISION);
+    expect(paywall.licenseeCount).toBe(120);
+    expect(paywall.memberCount).toBe(120);
+  });
+
+  test('le message NOMME les deux nombres et dit quoi faire', () => {
+    const content = getSubscriptionPaywallContent(QUOTA_DECISION);
+    expect(content.title).toBe('Ton club est complet');
+    expect(content.description).toContain('120 membres');
+    expect(content.description).toContain('120 licenciés souscrits');
+    expect(content.ctaLabel).toBe('Augmenter mes licenciés');
+  });
+
+  test('⛔ il RASSURE sur ce qui n est PAS bloque', () => {
+    // Un dirigeant qui lit « ton club est plein » doit savoir, dans la meme
+    // phrase, que ses membres actuels ne perdent rien.
+    const content = getSubscriptionPaywallContent(QUOTA_DECISION);
+    expect(content.description).toContain('nouvelles adhésions sont en pause');
+    expect(content.description).toContain('membres déjà inscrits gardent tout');
+  });
+
+  test('🔒 des nombres ABSENTS ne fabriquent pas « 0 membre pour 0 licencie »', () => {
+    // `Number(null)` vaut zero : sans garde, un refus relaye sans compteurs
+    // affichait une phrase fausse la ou l on veut des nombres justes.
+    const sansNombres = { ...QUOTA_DECISION, licenseeCount: undefined, memberCount: null };
+    const paywall = mapSubscriptionDecisionToPaywall(sansNombres);
+    expect(paywall.licenseeCount).toBeNull();
+    expect(paywall.memberCount).toBeNull();
+
+    const content = getSubscriptionPaywallContent(sansNombres);
+    expect(content.title).toBe('Ton club est complet');
+    expect(content.description).not.toContain('0 membre');
+    expect(content.description).not.toContain('undefined');
+  });
+
+  test('ses benefices ne REVENDENT rien : ce club paie deja', () => {
+    expect(getSubscriptionPaywallBenefits(QUOTA_DECISION)).toEqual([
+      'Les membres deja inscrits gardent tout',
+      'Seules les NOUVELLES adhesions sont en pause',
+      'Augmente ton nombre de licencies pour rouvrir',
+    ]);
+  });
+
+  test('le refus arrive bien du serveur, dans son enveloppe HTTP', () => {
+    // ctx.forbidden(message, { code, decision }) cote Strapi
+    // (subscription-permission-denial.ts:5-8).
+    const erreur = {
+      response: {
+        data: { error: { details: { code: 'SUBSCRIPTION_PERMISSION_DENIED', decision: QUOTA_DECISION } } },
+      },
+    };
+    expect(extractSubscriptionDecisionFromError(erreur)).toEqual(QUOTA_DECISION);
+  });
+});
+
+describe('S12-B — « Mon abonnement » nomme l offre au licencie', () => {
+  test('LE TEMOIN — plus jamais « Fc Club Licensee Yearly »', () => {
+    expect(formatSubscriptionPlanLabel('fc_club_licensee_yearly')).toBe('Club au licencié / an');
+    expect(formatSubscriptionPlanLabel('fc_club_licensee_monthly')).toBe('Club au licencié / mois');
+  });
+
+  test('⛔ et les paliers S/M/L ne bougent pas d un mot', () => {
+    expect(formatSubscriptionPlanLabel('fc_club_tier_1_yearly')).toBe('Club S / an');
+    expect(formatSubscriptionPlanLabel('fc_club_tier_3_monthly')).toBe('Club L / mois');
+    expect(formatSubscriptionPlanLabel('fc_team_2_yearly')).toBe('Équipe · 2 équipes / an');
   });
 });

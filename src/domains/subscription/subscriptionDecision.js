@@ -54,6 +54,11 @@ const DEFAULT_REASON_LABELS = {
 // suffixee `_REQUIRED` (ex. `facility.manage` -> `FACILITY_MANAGE_REQUIRED`).
 // Toute cle absente de cette table retombe sur le paywall generique.
 const DEFAULT_PAYWALL_KEYS = {
+  // S12-B/D6 — sans cette ligne, le refus de quota au licencie retombait sur le
+  // gabarit generique (« Cette action demande une offre FoundClub active »), qui
+  // ne dit NI que le club est plein, NI combien de places il a. Les deux nombres
+  // sont pourtant dans la decision.
+  CLUB_LICENSEE_LIMIT: 'club-licensee-limit',
   CLUB_ROLES_MANAGE_REQUIRED: 'club-roles-manage-required',
   CLUB_TIER_TEAM_LIMIT: 'club-tier-team-limit',
   COMPOSITION_MANAGE_REQUIRED: 'composition-required',
@@ -76,6 +81,13 @@ const CLUB_PAYWALL_BENEFITS = [
 
 /** @type {Record<string, string[]>} */
 const PAYWALL_BENEFITS_BY_KEY = {
+  // Ce club PAIE deja : ses benefices ne sont pas un argumentaire de vente, ce
+  // sont les consequences du plafond — dites dans l'ordre ou elles inquietent.
+  'club-licensee-limit': [
+    'Les membres deja inscrits gardent tout',
+    'Seules les NOUVELLES adhesions sont en pause',
+    'Augmente ton nombre de licencies pour rouvrir',
+  ],
   'club-tier-team-limit': CLUB_PAYWALL_BENEFITS,
   'composition-required': [
     'Composition et convocations en 2 taps',
@@ -187,9 +199,26 @@ const SUBSCRIPTION_STATUS_META = {
 };
 
 /**
+ * Compteur d'une decision, ou null.
+ *
+ * `Number(null)` vaut ZERO : sans ce garde, un champ absent devenait « 0 membre
+ * pour 0 licencie » — une phrase fausse la ou l'on veut precisement des nombres
+ * justes. Absent veut dire « je ne sais pas », jamais « zero ».
+ * @param {any} value
+ * @returns {number | null}
+ */
+const readDecisionCount = (value) => {
+  if (value === null || value === undefined || value === '') return null;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+};
+
+/**
  * @param {any} decision
  * @returns {{
  *   allowed: boolean;
+ *   licenseeCount: number | null;
+ *   memberCount: number | null;
  *   message: string;
  *   paywall: string;
  *   paywallKey: string;
@@ -205,6 +234,12 @@ export const mapSubscriptionDecisionToPaywall = (decision) => {
 
   return {
     allowed: safeDecision?.allowed === true,
+    // S12-B/D6 — les deux nombres du refus de quota. Ils vivent dans la decision
+    // (subscription-permission.ts:833-834) et nulle part ailleurs : le bootstrap
+    // n'expose PAS `licenseeCount`. Les perdre ici, c'est afficher « ton club est
+    // plein » sans jamais pouvoir dire de combien.
+    licenseeCount: readDecisionCount(safeDecision?.licenseeCount),
+    memberCount: readDecisionCount(safeDecision?.memberCount),
     message: DEFAULT_REASON_LABELS[reason] || 'Accès refuse',
     paywall,
     paywallKey: DEFAULT_PAYWALL_KEYS[paywall] || 'subscription-required',
@@ -321,6 +356,21 @@ export const getSubscriptionPaywallContent = (decision) => {
         ),
         title: 'Rôles club reserves',
       };
+    case 'club-licensee-limit': {
+      // S12-B/D6 — LE BLOCAGE RACONTE, IL NE REFUSE PAS SEULEMENT.
+      // « X membres / Y licencies souscrits » : sans ces deux nombres, le
+      // dirigeant ne sait pas de combien augmenter, et le demandeur refuse croit
+      // a un bug. Les nombres manquent (vieille decision, refus relaye) : on
+      // garde la phrase sans eux plutot que d'ecrire « undefined ».
+      const countsSentence = paywall.memberCount !== null && paywall.licenseeCount !== null
+        ? ` Ton club compte ${paywall.memberCount} membre${paywall.memberCount > 1 ? 's' : ''} pour ${paywall.licenseeCount} licencié${paywall.licenseeCount > 1 ? 's' : ''} souscrit${paywall.licenseeCount > 1 ? 's' : ''}.`
+        : '';
+      return {
+        ctaLabel: 'Augmenter mes licenciés',
+        description: `Les nouvelles adhésions sont en pause : ton club a atteint le nombre de licenciés couverts par son abonnement.${countsSentence} Les membres déjà inscrits gardent tout.`,
+        title: 'Ton club est complet',
+      };
+    }
     case 'club-tier-team-limit':
       return {
         ctaLabel: 'Voir mon abonnement',
@@ -654,6 +704,17 @@ export const formatSubscriptionPlanLabel = (planCode) => {
     const slotCount = Number(teamMatch[1] || 0);
     const period = PLAN_PERIOD_LABELS[teamMatch[2]] || teamMatch[2];
     return `Équipe · ${slotCount} équipe${slotCount > 1 ? 's' : ''} / ${period}`;
+  }
+
+  // S12-B — L'OFFRE AU LICENCIE, NOMMEE A COTE DES PALIERS, PAS DEDANS.
+  // Sans cette branche, l'ecran « Mon abonnement » affichait le repli en
+  // capitales du bas de fonction : « Fc Club Licensee Yearly ». Le client ne
+  // reconnait pas ce qu'il paie. ⛔ On n'ELARGIT PAS la regex des paliers
+  // ci-dessous : un plan au licencie n'a pas de palier, il a un nombre.
+  const licenseeMatch = normalizedPlanCode.match(/^fc_club_licensee_(monthly|yearly)$/);
+  if (licenseeMatch) {
+    const period = PLAN_PERIOD_LABELS[licenseeMatch[1]] || licenseeMatch[1];
+    return `Club au licencié / ${period}`;
   }
 
   const clubMatch = normalizedPlanCode.match(/^fc_club(?:_tier_(\d+))?_(monthly|yearly)$/);

@@ -19,7 +19,7 @@ const BANNER_DEDUPE_FALLBACK_WINDOW_MS = 4000;
 /**
  * @typedef {{
  *   id: string;
- *   tone?: 'success' | 'error' | 'info' | 'league';
+ *   tone?: 'success' | 'error' | 'info' | 'league' | 'warning';
  *   variant?: 'banner' | 'celebration';
  *   eyebrow?: string;
  *   title: string;
