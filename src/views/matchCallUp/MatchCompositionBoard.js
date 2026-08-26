@@ -106,7 +106,9 @@ function MatchCompositionBoard() {
   const params = useMemo(() => route.params || {}, [route.params]);
   const {
     canEdit = false,
+    clubId = null,
     eventId,
+    eventLabel = '',
     magnetEnabled = false,
     readOnly = false,
     selectedPlayers = EMPTY_LIST,
@@ -648,6 +650,35 @@ function MatchCompositionBoard() {
             })}
           </ScrollView>
         </View>
+
+        {/* 🚪 COMPOLECT (D4) — LES REPONSES DES CONVOQUES RESTENT ATTEIGNABLES.
+            `MatchConvocationPublished` porte les reponses et la relance, et
+            Adel s'en sert : deplacer l'ouverture de la convocation vers ce
+            terrain sans laisser de porte l'aurait rendu inatteignable. Un ecran
+            qu'aucun bouton n'atteint n'existe pas — le depot a deja paye cette
+            erreur trois fois.
+            🔒 Reserve a `canEdit`, et ce n'est pas une precaution de style :
+            l'ecran 7 lit `GET /events/:id/composition`, que le serveur ferme
+            par `ensureCanManageTeam`. Un simple membre y recevrait un 403. */}
+        {isReadOnly && canEdit ? (
+          <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 12) }]}>
+            <Button
+              // @ts-ignore — `navigate` est bien la sur un ecran de pile.
+              onPress={() => navigation.navigate(RouteNames.MatchConvocationPublished, {
+                clubId,
+                eventId,
+                eventLabel,
+                players: selectedPlayers,
+                sport,
+                teamId,
+                teamName,
+              })}
+              style={styles.footerPublish}
+              title={t('matchConvocation.published.openCta')}
+              variant="Secondary"
+            />
+          </View>
+        ) : null}
 
         {/* 🔒 COMPOLECT (D1) — EN CONSULTATION, LE PIED D'ECRAN NE PORTE PLUS
             AUCUNE ACTION D'ECRITURE. Le terrain gagne la place. */}
