@@ -591,7 +591,7 @@ describe('AC08 · TEMOIN 6 — 🔒 le tableau du COACH n a pas bouge', () => {
   // le coach n'atterrit JAMAIS sur l'ecran du convoque. Et le cas SANS
   // placement, lui, n'a pas bouge d'un pouce — c'est le temoin suivant, qui
   // reprend la phrase d'origine.
-  test('avec des placements, l entraineur part sur le TERRAIN, jamais sur l ecran du convoque', () => {
+  test('avec des placements, il part sur le TERRAIN — jamais sur l ecran du convoque', () => {
     const root = monter({ auth: authPour('coach-1', true) });
 
     allerSurLOnglet(root, 'callUp');

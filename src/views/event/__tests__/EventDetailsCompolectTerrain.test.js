@@ -502,7 +502,6 @@ afterEach(() => {
   }
 });
 
-
 // Une convocation publiee SANS aucun placement — le chemin S5-c, legitime.
 const PACK_SANS_PLACEMENT = {
   ...PACK,

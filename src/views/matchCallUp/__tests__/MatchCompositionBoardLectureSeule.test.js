@@ -406,7 +406,7 @@ describe('COMPOLECT · D2 — « Modifier » n apparait que pour qui peut modifi
     expect(texte).not.toContain('Modifier');
   });
 
-  test('🥇 « Modifier » repart sur le chemin d EDITION, sans emporter la lecture seule', async () => {
+  test('🥇 « Modifier » repart en EDITION, sans emporter la lecture seule', async () => {
     const arbre = await rendreEnLecture();
     await appuyerSur(arbre, 'Modifier');
 
