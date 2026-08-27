@@ -27,6 +27,30 @@ const activeLoops = new Set();
  */
 export const getActiveMarqueeCount = () => activeLoops.size;
 
+// CE QUI EMPÊCHAIT L'OUTIL DE SORTIR DE SA CARTE (MARQUEE, 27/08).
+//
+// `useIsFocused()` ne rend pas `false` quand il n'y a pas de navigateur : il
+// JETTE (« Couldn't find a navigation object »). Tant que le défilement ne
+// servait qu'à ClubCard — toujours rendue dans un écran — personne ne pouvait
+// le voir. Au premier écran branché ailleurs, 36 témoins déjà verts sont
+// devenus rouges d'un coup : ils montent l'écran SEUL, sans conteneur de
+// navigation, ce qui est le cas normal d'un test d'écran.
+//
+// Le repli est volontairement « visible » : un composant rendu hors navigateur
+// (test, aperçu web, bloc monté à part) est à l'écran, donc il a le droit de
+// défiler. Le vrai garde-fou du budget reste ailleurs — plafond, `paused`,
+// app en arrière-plan.
+const useIsFocusedSafely = () => {
+  // L'appel est INCONDITIONNEL : le `try` ne couvre que l'absence de
+  // navigateur, qui ne change jamais pendant la vie du composant. L'ordre des
+  // crochets est donc le même à chaque rendu.
+  try {
+    return useIsFocused();
+  } catch {
+    return true;
+  }
+};
+
 /**
  * Boucle de défilement horizontale, suspendue dès qu'elle n'est pas vue.
  * @param {object} params - Réglages de la boucle.
@@ -36,7 +60,7 @@ export const getActiveMarqueeCount = () => activeLoops.size;
  * @returns {{ translateX: import('react-native').Animated.Value }} - Décalage à appliquer.
  */
 const useMarqueeLoop = ({ distance, durationMs, enabled = true }) => {
-  const isFocused = useIsFocused();
+  const isFocused = useIsFocusedSafely();
   const [isAppActive, setIsAppActive] = useState(AppState.currentState !== 'background');
   const translateX = useRef(new Animated.Value(0)).current;
   const loopIdRef = useRef({});
