@@ -9,6 +9,7 @@ import LinearGradient from 'react-native-linear-gradient';
 import { withAlpha } from '@/theme/colors';
 import useTheme from '@/theme/themeContext';
 
+import MarqueeText from '@/components/atoms/marqueeText/MarqueeText';
 import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 
 // Carte annonce du handoff « Cartes Rechercher » (tour 5b), adaptée aux
@@ -89,14 +90,11 @@ function MercatoCard({ onPress, user }) {
             size={styles.avatar.width}
           />
           <View style={styles.profileTextContainer}>
-            <Text
-              numberOfLines={1}
+            {/* MARQUEE — le nom du joueur se lit en entier. */}
+            <MarqueeText
               style={[styles.userName, { color: Colors.neutral00 }]}
-            >
-              {user.firstname}
-              {' '}
-              {user.lastname}
-            </Text>
+              text={[user.firstname, user.lastname].filter(Boolean).join(' ')}
+            />
             <View
               style={[styles.clubBadge, { backgroundColor: withAlpha(Colors.primary500, 0.12) }]}
             >

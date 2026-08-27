@@ -435,7 +435,11 @@ describe('L5-A · 2C — une ligne pointee ne se derobe pas sous le pouce', () =
     expect(texte.indexOf('Ilan')).toBeLessThan(texte.indexOf('Kais'));
     expect(texte.indexOf('Kais')).toBeLessThan(texte.indexOf('Malo'));
     // …et il n est pas redit une seconde fois ailleurs.
-    expect(texte.split('Kais')).toHaveLength(3); // avatar + nom, une seule ligne
+    // 🪤 3 occurrences, pas 2, depuis que le nom DEFILE (MARQUEE, 27/08) :
+    // l avatar, la SONDE DE MESURE de MarqueeText (hors flux, `opacity: 0`,
+    // c est elle qui dit si le nom depasse) et la ligne visible. Une rangee
+    // reellement dedoublee en donnerait 6 — c est ca que ce temoin garde.
+    expect(texte.split('Kais')).toHaveLength(4); // avatar + sonde + nom visible
     // Son etat se lit en toutes lettres, pas seulement a la pastille.
     expect(texte).toContain("À l'heure");
   });

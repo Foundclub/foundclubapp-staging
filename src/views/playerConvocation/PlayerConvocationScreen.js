@@ -20,6 +20,7 @@ import useTheme from '@/theme/themeContext';
 import Button from '@/components/atoms/button/Button';
 import HeaderBackButton from '@/components/atoms/headerBackButton/HeaderBackButton';
 import Loader from '@/components/atoms/loader/Loader';
+import MarqueeText from '@/components/atoms/marqueeText/MarqueeText';
 import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 import RenderedTacticalField from '@/components/tactical/RenderedTacticalField';
 import ScreenContainer from '@/components/templates/ScreenContainer';
@@ -354,13 +355,13 @@ function PlayerConvocationScreen() {
                       name={[player?.firstname, player?.lastname].filter(Boolean).join(' ')}
                       size={32}
                     />
-                    <Text
-                      numberOfLines={1}
-                      style={[Fonts.p3Bold, styles.reserveName, { color: Colors.neutral00 }]}
-                    >
-                      {[player?.firstname, player?.lastname].filter(Boolean).join(' ')
+                    {/* MARQUEE — le nom du remplaçant se lit en entier. */}
+                    <MarqueeText
+                      containerStyle={styles.reserveName}
+                      style={[Fonts.p3Bold, { color: Colors.neutral00 }]}
+                      text={[player?.firstname, player?.lastname].filter(Boolean).join(' ')
                         || getCompositionPlayerInitials(player)}
-                    </Text>
+                    />
                     {player?.number === 0 || player?.number ? (
                       <Text style={[Fonts.p3, { color: Colors.neutral300 }]}>
                         {t('playerConvocation.card.number', { number: String(player.number) })}

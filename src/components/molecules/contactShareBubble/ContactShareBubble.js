@@ -6,6 +6,8 @@ import {
 
 import useTheme from '@/theme/themeContext';
 
+import MarqueeText from '@/components/atoms/marqueeText/MarqueeText';
+
 const getInitials = (firstname, lastname) => {
   const firstInitial = String(firstname || '').trim().charAt(0);
   const lastInitial = String(lastname || '').trim().charAt(0);
@@ -14,7 +16,6 @@ const getInitials = (firstname, lastname) => {
 
 /**
  * Contact share message bubble.
- *
  * @param {object} props
  * @param {any} props.composition
  * @param {boolean} [props.isMe]
@@ -78,9 +79,11 @@ function ContactShareBubble({
             </Text>
           </View>
           <View style={{ flex: 1, marginLeft: 10 }}>
-            <Text numberOfLines={1} style={[Fonts.p2Bold, { color: Colors.neutral00 }]}>
-              {fullName}
-            </Text>
+            {/* MARQUEE — le nom du contact partagé se lit en entier. */}
+            <MarqueeText
+              style={[Fonts.p2Bold, { color: Colors.neutral00 }]}
+              text={fullName}
+            />
             {roleLabel ? (
               <Text numberOfLines={1} style={[Fonts.p4, { color: Colors.neutral300 }]}>
                 {roleLabel}

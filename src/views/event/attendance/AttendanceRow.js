@@ -5,6 +5,7 @@ import {
 import { withAlpha } from '@/theme/colors';
 import useTheme from '@/theme/themeContext';
 
+import MarqueeText from '@/components/atoms/marqueeText/MarqueeText';
 import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 
 import { isNoShow, resolveRowState } from './attendanceCallModel';
@@ -217,7 +218,8 @@ function AttendanceRow({
       </View>
 
       <View style={styles.identity}>
-        <Text numberOfLines={1} style={[Fonts.h5Bold, { color: Colors.neutral00 }]}>{nom}</Text>
+        {/* MARQUEE — le nom du participant se lit en entier pendant l'appel. */}
+        <MarqueeText style={[Fonts.h5Bold, { color: Colors.neutral00 }]} text={nom} />
         <Text numberOfLines={1} style={[Fonts.p3Bold, { color: couleurSousLigne }]}>
           {sousLigne}
         </Text>
