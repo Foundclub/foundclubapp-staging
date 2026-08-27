@@ -30,7 +30,12 @@ jest.mock('@/store/authRuntime', () => ({
 
 jest.mock('@/components/tactical/RenderedTacticalField', () => {
   const { View } = jest.requireActual('react-native');
-  return { __esModule: true, default: (/** @type {any} */ { children }) => <View>{children}</View> };
+  return {
+    __esModule: true,
+    // 🏷️ Le `testID` sert au temoin COMPOLECT-2 qui verifie que la pastille du
+    // compte n'est plus posee DEDANS, ou elle cachait les jetons.
+    default: (/** @type {any} */ { children }) => <View testID="mini-terrain">{children}</View>,
+  };
 });
 
 jest.mock('@/theme/themeContext', () => {
@@ -119,26 +124,170 @@ describe('AC08 · TEMOIN 7 — la bulle du tchat mene au bon ecran', () => {
     expect(derniereRoute()?.screen).toBe('PlayerConvocation');
   });
 
-  test('🔒 un non-convoque garde la vue d ensemble en lecture seule', () => {
+  // 🔄 COMPOLECT-2 — CES DEUX TEMOINS CHANGENT DE DESTINATION, PAS D'INTENTION.
+  // Ce qu'ils gardaient : « un non-convoque ne repond pas, il LIT ». Ce qui est
+  // corrige : ce qu'il lisait etait `TacticalBoardV2`, un AUTRE plateau que celui
+  // de la creation. Adel (27/08) veut le MEME ecran partout. La 2e assertion —
+  // `readOnly: true` — est intacte : c'est elle qui porte la promesse.
+  test('🥇 COMPOLECT-2 — un non-convoque (le COACH) part sur LE terrain de creation', () => {
     mockSnapshot = { auth: { user: { documentId: 'spectateur-9' } } };
 
     appuyerSurLaCarte();
 
-    expect(derniereRoute()?.screen).toBe('TacticalBoardV2');
+    expect(derniereRoute()?.screen).toBe('MatchCompositionBoard');
     expect(derniereRoute()?.params?.readOnly).toBe(true);
   });
 
-  test('🔒 sans personne connectee, rien ne change non plus', () => {
+  test('🔒 sans personne connectee, meme terrain, toujours en lecture seule', () => {
     mockSnapshot = { auth: undefined };
 
     appuyerSurLaCarte();
 
-    expect(derniereRoute()?.screen).toBe('TacticalBoardV2');
+    expect(derniereRoute()?.screen).toBe('MatchCompositionBoard');
+    expect(derniereRoute()?.params?.readOnly).toBe(true);
   });
 
   test('⛔ une carte SANS evenement rattache ne peut mener a aucune convocation', () => {
     appuyerSurLaCarte({ ...COMPO, eventId: undefined });
 
     expect(derniereRoute()?.screen).toBe('TacticalBoardV2');
+  });
+});
+
+// ==========================================================================
+// COMPOLECT-2 — LA CARTE DU TCHAT PORTE LE MEME TERRAIN QUE LA CREATION.
+//
+// 🗣️ Adel, 27/08 : « quand je clique sur "ouvrir la compo", je vois le terrain
+// avec le banc en plein ecran, COMME QUAND JE CREE LA COMPO. »
+//
+// 🧨 CE QUE LA MESURE A TROUVE : COMPOLECT-1 a rebranche l'onglet
+// « Convocation » de l'evenement, mais PAS cette carte. Or un coach n'est
+// jamais convoque sur sa propre compo — il prenait donc TOUJOURS la branche du
+// non-convoque, celle qui menait a l'ANCIEN plateau.
+//
+// ⛔ ET LES DEUX GARDE-FOUS DE D6 SONT REPRIS TELS QUELS : sans titulaire
+// dessinable, et avec plusieurs equipes, l'ancien plateau garde la main.
+// ==========================================================================
+describe('COMPOLECT-2 · la carte du tchat mene au plateau de creation', () => {
+  test('le terrain recoit les titulaires ET le banc, avec leurs placements', () => {
+    mockSnapshot = { auth: { user: { documentId: 'spectateur-9' } } };
+
+    appuyerSurLaCarte();
+    const params = derniereRoute()?.params;
+
+    expect(params?.startPlacements).toEqual([
+      { playerId: JOUEUR, positionX: 50, positionY: 90 },
+    ]);
+    expect(params?.selectedPlayers.map((/** @type {any} */ p) => p.documentId))
+      .toEqual([JOUEUR, REMPLACANT]);
+    expect(params?.canEdit).toBe(false);
+    expect(params?.teamName).toBe('U15 A');
+  });
+
+  test('⛔ D6 — SANS titulaire dessinable, l ancien plateau garde la main', () => {
+    mockSnapshot = { auth: { user: { documentId: 'spectateur-9' } } };
+
+    appuyerSurLaCarte({ ...COMPO, teams: [{ id: 't1', name: 'U15 A', placements: [] }] });
+
+    expect(derniereRoute()?.screen).toBe('TacticalBoardV2');
+  });
+
+  test('⛔ D6 — avec PLUSIEURS equipes publiees, l ancien plateau garde la main', () => {
+    mockSnapshot = { auth: { user: { documentId: 'spectateur-9' } } };
+
+    appuyerSurLaCarte({
+      ...COMPO,
+      teams: [
+        COMPO.teams[0],
+        {
+          id: 't2',
+          name: 'U15 B',
+          placements: [{ playerId: REMPLACANT, positionX: 20, positionY: 40 }],
+        },
+      ],
+    });
+
+    expect(derniereRoute()?.screen).toBe('TacticalBoardV2');
+  });
+});
+
+// ==========================================================================
+// COMPOLECT-2 — LA MINI-CARTE RESTE UNE VIGNETTE, MAIS ELLE SE LIT.
+//
+// 🗣️ Adel, 27/08, capture a l appui : « titre tronque » (« Composition
+// d equipes publi… »), « une pastille bleue 1 equipe(s) posee PAR-DESSUS le
+// terrain », « un jeton JM grand comme rien ».
+//
+// ⛔ ELLE NE DEVIENT PAS UN ECRAN : c est un message dans un fil. Le jeton de
+// la creation fait 58 x 72 pt et couvrirait un tiers d une carte de 250 pt de
+// large. On agrandit, on donne la photo, on sort la pastille du terrain.
+// ==========================================================================
+describe('COMPOLECT-2 · la mini-carte du fil se lit', () => {
+  const rendreLaCarte = (/** @type {any} */ compo = COMPO) => {
+    act(() => {
+      monte = renderer.create(<CompositionMessageBubble composition={compo} />);
+    });
+    return monte;
+  };
+
+  const texteVisible = (/** @type {any} */ arbre) => {
+    const { Text } = jest.requireActual('react-native');
+    return arbre.root.findAllByType(Text)
+      .map((/** @type {any} */ n) => {
+        const enfants = Array.isArray(n.props.children) ? n.props.children : [n.props.children];
+        return enfants.map((/** @type {any} */ e) => String(e ?? '')).join('');
+      })
+      .join(' | ');
+  };
+
+  test('🥇 le titre n est plus coupe : il a droit a DEUX lignes', () => {
+    const { Text } = jest.requireActual('react-native');
+    const arbre = rendreLaCarte();
+
+    const titre = arbre.root.findAllByType(Text)
+      .find((/** @type {any} */ n) => String(n.props.children) === "Composition d'équipes publiée");
+
+    expect(titre).toBeDefined();
+    expect(titre.props.numberOfLines).toBe(2);
+  });
+
+  test('🥇 la pastille du compte n est PLUS posee sur le terrain', () => {
+    const arbre = rendreLaCarte();
+    const [terrain] = arbre.root.findAll(
+      (/** @type {any} */ n) => n.props?.testID === 'mini-terrain',
+    );
+    const { Text } = jest.requireActual('react-native');
+
+    const texteDuTerrain = terrain.findAllByType(Text)
+      .map((/** @type {any} */ n) => JSON.stringify(n.props.children))
+      .join(' ');
+
+    expect(texteDuTerrain).not.toContain('equipe(s)');
+    // ⛔ Et elle n a pas disparu pour autant : elle est juste remontee.
+    expect(texteVisible(arbre)).toContain('equipe(s)');
+  });
+
+  test('🥇 le jeton porte la PHOTO du joueur quand il y en a une', () => {
+    const { Image } = jest.requireActual('react-native');
+    const arbre = rendreLaCarte({
+      ...COMPO,
+      snapshotPlayers: [{
+        avatar: '/uploads/josan.jpg',
+        documentId: JOUEUR,
+        firstname: 'Josan',
+        lastname: 'Micheal',
+      }],
+    });
+
+    const images = arbre.root.findAllByType(Image);
+
+    expect(images.length).toBeGreaterThan(0);
+    expect(String(images[0].props.source?.uri)).toContain('/uploads/josan.jpg');
+  });
+
+  test('🔒 sans photo, le jeton retombe sur les initiales — jamais un trou', () => {
+    const arbre = rendreLaCarte();
+
+    expect(texteVisible(arbre)).toContain('KS');
   });
 });

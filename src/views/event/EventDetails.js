@@ -6210,6 +6210,11 @@ function EventDetails({ navigation, route }) {
             seule, la modification vit sur l ecran complet. */}
         {branch.starters.length ? (
           <ConvocationFieldPreview
+            /* 🪑 COMPOLECT-2 — LE BANC DESCEND AVEC LE TERRAIN (capture d'Adel
+               du 27/08 : « on ne voit pas le banc »). `branch.bench` est deja
+               assemble par `buildConvocationReserveList` juste au-dessus : on
+               lui passe les personnes, aucun calcul neuf. */
+            benchPlayers={branch.bench.map((/** @type {any} */ entry) => entry.player)}
             placements={branch.placements}
             snapshotPlayers={branch.snapshotPlayers}
             sportContext={branch.sportContext}

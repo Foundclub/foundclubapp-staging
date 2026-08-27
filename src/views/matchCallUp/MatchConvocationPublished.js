@@ -109,6 +109,17 @@ function MatchConvocationPublished() {
   // ecran qui n'aurait rien a montrer.
   const withdrawn = useMemo(() => getWithdrawnStarters(roster), [roster]);
 
+  // COMPOLECT-2 (D5) - Y A-T-IL SEULEMENT QUELQU'UN SUR LE TERRAIN ?
+  // Ouvrir une convocation publiee mene normalement au plateau plein ecran
+  // (`MatchCompositionBoard`). Deux cas y echappent et retombent ICI : une
+  // convocation dont personne n'est place, et une publication a plusieurs
+  // equipes que le plateau ne sait pas dessiner d'un seul terrain. Le
+  // comportement ne change pas (D6) - mais il cesse d'etre muet.
+  const hasFieldPlacements = useMemo(
+    () => roster.some((/** @type {any} */ row) => row.role === CONVOCATION_ROLE_STARTER),
+    [roster],
+  );
+
   const resolvedTeamName = composition?.team?.name || teamName || '';
 
   // Le pack ecrit « Envoyee dans le canal Senior 1 · 18:02 ». L'heure vient de
@@ -405,6 +416,32 @@ function MatchConvocationPublished() {
           </TouchableOpacity>
         ) : null}
 
+        {/* COMPOLECT-2 (D5) - ON DIT POURQUOI IL N'Y A PAS DE TERRAIN.
+            Deposer le coach sur une liste de reponses, sans un mot, apres qu'il
+            a demande a voir sa compo, c'est exactement ce qui fait croire que
+            l'ecran est casse. La phrase nomme les deux causes possibles et
+            montre la sortie (« Modifier »).
+            La note ne s'affiche pas pendant le chargement : un roster encore
+            vide n'est pas une compo sans titulaire. */}
+        {!isFetching && roster.length > 0 && !hasFieldPlacements ? (
+          <View
+            style={[
+              styles.noFieldNote,
+              {
+                backgroundColor: withAlpha(Colors.primary500, 0.08),
+                borderColor: withAlpha(Colors.primary500, 0.24),
+              },
+            ]}
+          >
+            <Text style={[Fonts.p2Bold, { color: Colors.neutral00 }]}>
+              {t('matchConvocation.published.noField.title')}
+            </Text>
+            <Text style={[Fonts.p3, { color: Colors.neutral300 }]}>
+              {t('matchConvocation.published.noField.message')}
+            </Text>
+          </View>
+        ) : null}
+
         <Text style={[Fonts.p4Bold, styles.sectionLabel, { color: Colors.neutral300 }]}>
           {t('matchConvocation.published.sections.responses').toUpperCase()}
         </Text>
@@ -489,6 +526,12 @@ const styles = StyleSheet.create({
   },
   headerTexts: {
     flex: 1,
+  },
+  noFieldNote: {
+    borderRadius: 16,
+    borderWidth: 1,
+    gap: 4,
+    padding: 12,
   },
   playerAvatar: {
     borderWidth: 2,

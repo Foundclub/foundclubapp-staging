@@ -1,6 +1,7 @@
 import {
   buildDraftPayloadFromPack,
   buildEmptyMultiTeamPack,
+  buildPublishedBranchesFromPack,
   getReservePlayersForPack,
   inferIsMultiTeamComposition,
   normalizeMultiTeamPack,
@@ -377,5 +378,82 @@ describe('D47 — la charge envoyee au serveur', () => {
 
     expect(payload.selectedPlayerIds).toContain('manual_1754700000000');
     expect(payload.selectedPlayerIds).toEqual(['p1', 'p2', 'manual_1754700000000']);
+  });
+});
+
+// ==========================================================================
+// COMPOLECT-2 — 🔴 « TOUS LES POSTES AFFICHENT LIBRE », capture d Adel du 27/08.
+//
+// 🗣️ Sa compo de recette ne porte QU UN joueur place (Josan Micheal) sur 5
+// postes — « c est mon test », ce n est PAS un defaut. Le defaut, c est que
+// meme CE joueur-la s affiche « Libre » : celui qui EXISTE n apparait pas.
+//
+// 🧨 CAUSE MESUREE : `normalizeMultiTeamPack` ne RECOPIE PAS `snapshotPlayers`.
+// Le champ arrive du serveur, traverse le normaliseur, et disparait. Or l ecran
+// construit son index de personnes sur `branch.published.snapshotPlayers`
+// (`MultiTeamCompositionBoard.js:1164`) : index vide ⇒ aucun placement ne
+// retrouve sa personne ⇒ TOUS les postes tombent sur « Libre », placements
+// intacts pourtant.
+//
+// 🔒 ET VOICI POURQUOI LA CORRECTION EST SANS DANGER : ce normaliseur est un
+// objet d ENTREE. Ce qui part au serveur est bati champ par champ par
+// `buildDraftPayloadFromPack`, qui ne recopie JAMAIS le pack en bloc et
+// n emporte pas `snapshotPlayers`. Le dernier temoin ci-dessous le fige : sans
+// lui, ajouter ce champ risquerait d envoyer au serveur un instantane fabrique
+// par le client, alors que le serveur en est la seule autorite.
+// ==========================================================================
+describe('COMPOLECT-2 — un pack publie garde ses PERSONNES, pas seulement ses placements', () => {
+  const JOSAN = { documentId: 'josan-1', firstname: 'Josan', lastname: 'Micheal' };
+
+  const packPublieUnSeulPlace = {
+    manualPlayers: [],
+    reservePlayerIds: [],
+    schemaVersion: 3,
+    snapshotPlayers: [JOSAN],
+    sportContext: 'handball',
+    teams: [{
+      id: 'team_1',
+      name: 'U18 RM1',
+      placements: [{
+        playerId: 'josan-1', positionX: 50, positionY: 12, slotId: 'team_1:slot_1',
+      }],
+    }],
+  };
+
+  test('🥇 LE TEMOIN D ARRET : la personne du SEUL joueur place survit au normaliseur', () => {
+    const normalise = normalizeMultiTeamPack(packPublieUnSeulPlace, {
+      availablePresets: [],
+      sportContext: 'handball',
+    });
+
+    expect(normalise.snapshotPlayers).toEqual([JOSAN]);
+  });
+
+  test('🥇 et elle survit jusqu a la branche que lit l ecran de lecture seule', () => {
+    const [branche] = buildPublishedBranchesFromPack(packPublieUnSeulPlace, 'U18 RM1');
+
+    // C'est EXACTEMENT la lecture que fait `MultiTeamCompositionBoard:1164`.
+    const index = new Map(
+      (branche?.published?.snapshotPlayers || []).map((p) => [p.documentId, p]),
+    );
+    const placement = branche.published.teams[0].placements[0];
+
+    expect(index.get(placement.playerId)).toEqual(JOSAN);
+  });
+
+  test('🔒 le placement lui-meme n a jamais bouge — ce n est pas lui qui manquait', () => {
+    const [branche] = buildPublishedBranchesFromPack(packPublieUnSeulPlace, 'U18 RM1');
+
+    expect(branche.published.teams[0].placements).toHaveLength(1);
+    expect(branche.published.teams[0].placements[0].playerId).toBe('josan-1');
+  });
+
+  test('🔒 LE GARDE-FOU : la charge envoyee au serveur n emporte PAS snapshotPlayers', () => {
+    // ⛔ Le serveur est la SEULE autorite sur l instantane (`buildSnapshotPlayer`).
+    // Si un jour cette charge se mettait a le porter, le client ecraserait la
+    // photo des personnes prise a la publication.
+    const charge = buildDraftPayloadFromPack(packPublieUnSeulPlace, [JOSAN]);
+
+    expect(charge.snapshotPlayers).toBeUndefined();
   });
 });

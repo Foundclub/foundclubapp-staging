@@ -373,6 +373,19 @@ describe('COMPOLECT · D1 — mais on VOIT tout : terrain, compteurs, banc', () 
     expect(texte).toContain('JETON:Remplacant');
   });
 
+  // 🧨 COMPOLECT-2 (§1.3) — LE BANC EXISTE MEME QUAND IL EST VIDE.
+  // Adel a montre une capture ou le bandeau dit « REMPLACANTS · 0 » et « Tout le
+  // monde est sur le terrain ». Un bandeau qui DISPARAITRAIT a zero donnerait
+  // exactement la sensation « ce n'est pas le meme ecran que la creation » —
+  // c'est le genre de trou qu'aucun temoin ne voyait, celui de 1 remplacant
+  // etant le seul ecrit.
+  test('🧨 le bandeau des remplacants reste la MEME quand le banc est VIDE', async () => {
+    const texte = texteVisible(await rendreEnLecture({ selectedPlayers: ONZE }));
+
+    expect(texte).toContain('Remplaçants · 0'.toUpperCase());
+    expect(texte).toContain('Tout le monde est sur le terrain.');
+  });
+
   test('les pastilles de comptage restent', async () => {
     const texte = texteVisible(await rendreEnLecture());
 
