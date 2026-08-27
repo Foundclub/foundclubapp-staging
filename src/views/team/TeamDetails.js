@@ -26,6 +26,7 @@ import {
 import useAuth from '@/domains/auth/useAuth';
 import useClub from '@/domains/club/useClub';
 import useMessaging from '@/domains/messaging/useMessaging';
+import { invalidateAfterAction } from '@/domains/refresh/afterAction';
 import {
   extractSubscriptionDecisionFromError,
   hasActiveClubOffer,
@@ -598,6 +599,23 @@ function TeamDetails({ navigation, route }) {
   const createTeamMembershipRequestMutation = /** @type {any} */ (useMutation({
     mutationFn: createTeamMembershipRequest,
     onSuccess: () => {
+      // 🌐 LOT INSTANT (2026-08-27) — LE DEFAUT DU SITE WEB, ET IL EST ICI.
+      //
+      // Ces trois lignes vivaient dans le `onPress` du bouton « OK » de
+      // l'alerte ci-dessous. Sur le web, `Alert.alert()` est une FONCTION
+      // VIDE (react-native-web, exports/Alert/index.js : `static alert() {}`)
+      // : ce bouton n'existe pas, `onPress` n'est jamais appele, et le
+      // rafraichissement ne partait JAMAIS. Le bouton restait « Rejoindre »
+      // jusqu'au rechargement de la page — donc on ré-appuyait, et le
+      // serveur repondait « tu as deja une demande en cours ».
+      //
+      // Le rafraichissement part desormais du SUCCES de la demande, pas d'un
+      // bouton que personne ne verra. `joinTeam` (8 racines) etait ecrite
+      // dans le registre depuis T08 et n'avait AUCUN appelant.
+      invalidateAfterAction(queryClient, 'joinTeam').catch(() => {});
+      refetchUserData();
+      refetch();
+
       Alert.alert(
         t('teamDetails.alerts.joinRequest.title'),
         currentUser?.role?.name === AUTH_USER_ROLES.coach && isMyClub && !isMyTeam
@@ -608,10 +626,12 @@ function TeamDetails({ navigation, route }) {
           : t('teamDetails.alerts.joinRequest.description'),
         [{
           onPress: () => {
-            refetchUserData();
-            refetch();
             // C21 : rester sur la fiche pour que le bouton passe « Demande en
             // attente » (avant : goBack cachait le changement d'état).
+            // ⚠️ La NAVIGATION reste ici, et c'est voulu : sur mobile elle doit
+            // attendre que la personne ait lu l'alerte. Le web ne l'atteint pas
+            // — trou connu du tunnel d'inscription, mesure et rapporte au chef,
+            // hors du perimetre de ce lot qui ne touche que le rafraichissement.
             if (fromOnboardingAffiliation) {
               handleGoToNextOnboardingStep();
             }

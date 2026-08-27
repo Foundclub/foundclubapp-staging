@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { useFocusEffect } from '@react-navigation/native';
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -12,6 +12,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { markOnboardingComplete } from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
 import useMessaging from '@/domains/messaging/useMessaging';
+import { invalidateAfterAction } from '@/domains/refresh/afterAction';
 import { extractSubscriptionDecisionFromError } from '@/domains/subscription/subscriptionDecision';
 import { withAlpha } from '@/theme/colors';
 import useTheme from '@/theme/themeContext';
@@ -193,6 +194,7 @@ function ClubDetails({ navigation, route }) {
   const routeClubId = route?.params?.clubId;
   const clubId = routeClubId || activeClubId || clubs?.[0]?.documentId || clubs?.[0]?.id || null;
   const { startClubChat } = useMessaging();
+  const queryClient = useQueryClient();
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const isAuthenticated = Boolean(userData?.documentId);
@@ -409,6 +411,14 @@ function ClubDetails({ navigation, route }) {
     },
     onSuccess: async () => {
       setJoinRequestPending(true);
+      // LOT INSTANT (2026-08-27) — LA RECETTE QUI DORMAIT. `joinClub` etait
+      // ecrite dans le registre depuis le lot T08 et n'avait AUCUN appelant :
+      // cet ecran ne posait aucune invalidation. La demande partait, et
+      // « Demandes » / « Accueil » / « Mes equipes » n'en savaient rien tant
+      // que l'ecran restait ouvert — alors on revenait ici et on ré-appuyait.
+      // ⚠️ Hors du `onPress` d'une alerte, volontairement : sur le site web
+      // `Alert.alert()` est une fonction vide, et rien ne partirait jamais.
+      invalidateAfterAction(queryClient, 'joinClub').catch(() => {});
       let refreshedUser = userData;
 
       try {

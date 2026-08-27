@@ -53,6 +53,10 @@ jest.mock('@tanstack/react-query', () => ({
     },
   }),
   useQuery: () => ({ data: [], isLoading: false, refetch: jest.fn() }),
+  // LOT INSTANT (2026-08-27) — l'ecran demande desormais le cache pour
+  // rafraichir « Demandes », « Accueil » et « Mes equipes » apres une demande
+  // d'adhesion (`joinClub`). Sans cette doublure, le rendu jette.
+  useQueryClient: () => ({ invalidateQueries: jest.fn() }),
 }));
 
 // Quelques cles sont appelees SANS repli : sans cette table, la doublure rendrait

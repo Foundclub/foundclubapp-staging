@@ -166,9 +166,10 @@ export const AFTER_ACTION_CACHES = Object.freeze({
    * entree), alors que sur l'appareil qui accepte elle ne bouge pas. D'ou
    * `app-bootstrap` et `get-me`, absents de `acceptRequest`.
    *
-   * ⛔ NE SE DECLENCHE QUE SUR LES TYPES D'APPARTENANCE (`teamMembershipRequest`,
-   * `clubMembershipRequest`, `addToTeam`). Le brancher sur toutes les
-   * notifications ferait payer dix requetes a chaque message de discussion.
+   * ⛔ NE SE DECLENCHE QUE SUR LES QUATRE TYPES D'APPARTENANCE
+   * (`teamMembershipRequest`, `clubRequest`, `clubMembershipRequest`,
+   * `addToTeam`). Le brancher sur toutes les notifications ferait payer dix
+   * requetes a chaque message de discussion.
    */
   membershipChanged: [
     ['requestsHub'],
@@ -211,14 +212,33 @@ export const AFTER_ACTION_CACHES = Object.freeze({
  * Les valeurs viennent de `NOTIFICATION_TYPES` (`domains/auth/authUseCases.js`),
  * et le serveur les emet ici :
  *  · `teamMembershipRequest` — reponse a MA demande d'equipe
- *    (admin/src/api/team-membership-request/services/notification.ts:97) ;
- *  · `clubMembershipRequest` — reponse a MA demande de club ;
+ *    (admin/src/api/team-membership-request/services/notification.ts:134) ;
+ *  · `clubRequest` — reponse a MA demande de club : c'est la notification
+ *    « ta demande est acceptee », envoyee au `userId` du DEMANDEUR
+ *    (admin/src/api/club-membership-request/services/notification.ts:119) ;
+ *  · `clubMembershipRequest` — une demande de club ARRIVE chez le dirigeant
+ *    (meme fichier, :52, destinataires `findLivingClubManagers`) ;
  *  · `addToTeam` — on m'a ajoute comme encadrant
  *    (admin/src/api/team/services/notification.ts:88).
  *
- * ⛔ `teamRequest` et `clubRequest` n'y sont PAS : ce sont les demandes qui
- * ARRIVENT chez un encadrant. Elles ne changent aucune appartenance, seulement
- * une liste a traiter — et cette liste, `RequestsHub` la relit deja.
+ * 🧨 LOT INSTANT (2026-08-27) — LE PIEGE EST DANS LES NOMS, et il a coute
+ * le defaut n°1 d'Adel : « quand on est accepte, c'est hyper long ». Ce
+ * commentaire affirmait que `clubRequest` etait une demande qui ARRIVE chez un
+ * encadrant. C'est vrai de `teamRequest` ; c'est FAUX de `clubRequest`, que le
+ * serveur envoie a la personne ACCEPTEE. L'etiquette manquait donc a la liste,
+ * et la seule personne dont l'appartenance venait de changer ne rafraichissait
+ * RIEN : la cloche sonnait, l'ecran ne bougeait pas.
+ *
+ * ⛔ `teamRequest` n'y est PAS, et c'est volontaire : c'est la demande qui
+ * ARRIVE chez un encadrant. Son appartenance a lui ne change pas, et cette
+ * liste-la, `RequestsHub` la relit deja.
+ *
+ * ⚠️ `clubMembershipRequest` RESTE dans la liste bien qu'elle arrive chez le
+ * dirigeant. Mesure du 2026-08-27 : c'est le SEUL rafraichissement en direct de
+ * sa boite de reception quand il a deja l'ecran « Demandes » ouvert —
+ * `RequestsHub.js:255-260` ne relit qu'a la PRISE de focus, et un ecran deja
+ * focalise n'y repasse pas. La retirer ferait donc disparaitre l'arrivee d'une
+ * demande sous ses yeux.
  *
  * ⚠️ Pas d'annotation `@type` ici : `Object.freeze` infere `readonly string[]`,
  * et l'ecrire a la main fait tomber la porte des types (TS4104) sans rien
@@ -227,6 +247,7 @@ export const AFTER_ACTION_CACHES = Object.freeze({
 export const MEMBERSHIP_NOTIFICATION_TYPES = Object.freeze([
   'addToTeam',
   'clubMembershipRequest',
+  'clubRequest',
   'teamMembershipRequest',
 ]);
 

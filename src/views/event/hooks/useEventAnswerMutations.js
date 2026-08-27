@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Alert } from 'react-native';
 
 import { getParticipationErrorMessage } from '@/domains/participation/participationFlow';
+import { invalidateAfterAction } from '@/domains/refresh/afterAction';
 
 import { missingEvent, respondToEventRsvp } from '@/services/event/eventService';
 
@@ -32,16 +33,33 @@ export const EVENT_ANSWER_MUTATION_KEYS = Object.freeze({
  * pointage gardait l ancien instantané et affichait « Arrivé » à quelqu un qui
  * venait de se déclarer absent — le même défaut que S1 a corrigé sur la fiche.
  * Une seule définition ici : la cinquième copie n aura pas lieu.
+ *
+ * 🧨 LOT INSTANT (2026-08-27) — L APP QUI SE CONTREDISAIT ELLE-MEME.
+ *
+ * Cette fonction n invalidait que TROIS racines : `events`,
+ * `planning.personal` et `eventAttendance`. Ni `['event', id]` (la fiche) ni
+ * `['eventParticipations', id]` (la liste du coach) n en faisaient partie.
+ * Consequence mesuree : on repond « present » depuis une liste, on ouvre la
+ * fiche, elle affiche « sans reponse » — et la fermer puis la rouvrir n y
+ * change RIEN, parce qu elle porte `staleTime: 30 000` ET
+ * `refetchOnMount: false` (eventQueries.js:17,47-48).
+ *
+ * ⚠️ CE N EST PAS UNE NOUVELLE MECANIQUE : `answerEvent` declare deja ces six
+ * racines dans le registre, et la FICHE les applique de son cote depuis le
+ * lot S1 (`useEventMutations.js`). C est la liste qui avait diverge.
+ *
+ * 🎁 Effet de bord voulu : le registre pose `['planning']` tout court, la ou
+ * cet appel posait `['planning','personal']`. Le planning PLEIN ECRAN, qui
+ * pose `['planning','fullscreen',…]`, suit donc enfin.
+ *
+ * ⛔ L identifiant d evenement n est plus utile : la correspondance de
+ * react-query est PREFIXEE, `['event']` couvre `['event', id]`. Le garder
+ * serait un parametre mort que le prochain lecteur croirait signifiant.
  * @param {import('@tanstack/react-query').QueryClient} queryClient
- * @param {string} [eventId] - L événement répondu, quand on le connaît.
  * @returns {void}
  */
-export const invalidateEventAnswerQueries = (queryClient, eventId) => {
-  queryClient.invalidateQueries({ queryKey: ['events'] });
-  queryClient.invalidateQueries({ queryKey: ['planning', 'personal'] });
-  if (eventId) {
-    queryClient.invalidateQueries({ queryKey: ['eventAttendance', eventId] });
-  }
+export const invalidateEventAnswerQueries = (queryClient) => {
+  invalidateAfterAction(queryClient, 'answerEvent').catch(() => {});
 };
 
 /**
@@ -80,8 +98,8 @@ export const useEventAnswerMutations = (onAnswered) => {
         getParticipationErrorMessage(error, t('common.errorOccurred')),
       );
     },
-    onSuccess: (/** @type {any} */ _data, /** @type {any} */ eventId) => {
-      invalidateEventAnswerQueries(queryClient, String(eventId || ''));
+    onSuccess: () => {
+      invalidateEventAnswerQueries(queryClient);
       onAnswered?.();
     },
   });
@@ -97,8 +115,8 @@ export const useEventAnswerMutations = (onAnswered) => {
         getParticipationErrorMessage(error, t('common.errorOccurred')),
       );
     },
-    onSuccess: (/** @type {any} */ _data, /** @type {any} */ variables) => {
-      invalidateEventAnswerQueries(queryClient, String(variables?.eventId || ''));
+    onSuccess: () => {
+      invalidateEventAnswerQueries(queryClient);
       onAnswered?.();
     },
   });
