@@ -376,30 +376,51 @@ function EventEdit({ navigation, route }) {
     );
   };
 
-  const invalidateEventQueries = async () => {
-    // Meme jeu d'invalidations que EventEdit.web : sans elles le planning et les
-    // listes restent perimes apres creation/edition (refetchOnWindowFocus desactive).
-    await Promise.all([
-      queryClient.invalidateQueries({ queryKey: ['events'] }),
-      queryClient.invalidateQueries({ queryKey: ['planning'] }),
-      queryClient.invalidateQueries({ queryKey: ['event'] }),
-    ]);
+  /**
+   * Marque comme perimees les listes que cet enregistrement vient de changer.
+   *
+   * 🥇 R1 — ON LANCE, ON N'ATTEND PAS. C'est le plus gros gain de tout l'audit,
+   * pour trois lignes. Ces trois clefs sont des PREFIXES : elles touchent la
+   * liste principale, les listes « a la une », le planning personnel, la fiche
+   * en dessous, et toutes les listes d'evenements deja visitees — rien ne se
+   * demonte dans cette application (`unmountOnBlur`, `freezeOnBlur`,
+   * `detachInactiveScreens` : ZERO occurrence dans tout `src`, verifie), donc
+   * tout ce qui a ete ouvert reste actif et se recharge. L'ecran attendait ces
+   * 5 a 9 rechargements avant de rendre la main : le rond tournait pendant
+   * toute la vague, et la navigation venait derriere.
+   *
+   * ✅ ET ON NE PERD RIEN. `invalidateQueries` marque de facon SYNCHRONE ; seul
+   * le rechargement est asynchrone, et le `queryClient` est un singleton qui
+   * survit au demontage de cet ecran. Ce n'est pas une deduction : le depot
+   * l'ecrit deja pour lui-meme dans `domains/refresh/afterAction.js`, dont les
+   * sept sites d'appel font tous « lance et oublie », avec la mesure du 07/08
+   * a l'appui — 205 ms d'attente pure, jusqu'a 1,8 s sur reseau reel.
+   *
+   * ⛔ AUCUNE INVALIDATION N'EST RETIREE, et les deux prefixes larges le
+   * restent pour une raison nommee :
+   *   · `['events']` est la SEULE qui rafraichit l'onglet Planning, la
+   *     recherche d'evenements, la fiche equipe et le selecteur en conversation ;
+   *   · `['planning']` LARGE est exigee par le planning plein ecran, qui lit
+   *     quatre clefs distinctes sous ce prefixe.
+   * Les resserrer casserait la fraicheur pour de vrai.
+   * @returns {void}
+   */
+  const invalidateEventQueries = () => {
+    queryClient.invalidateQueries({ queryKey: ['events'] });
+    queryClient.invalidateQueries({ queryKey: ['planning'] });
+    queryClient.invalidateQueries({ queryKey: ['event'] });
   };
 
   const createEventMutation = useMutation({
     mutationFn: createEvent,
     onError: signalerEchecEnregistrement,
-    onSuccess: async () => {
-      await invalidateEventQueries();
-    },
+    onSuccess: invalidateEventQueries,
   });
 
   const updateEventMutation = useMutation({
     mutationFn: updateEvent,
     onError: signalerEchecEnregistrement,
-    onSuccess: async () => {
-      await invalidateEventQueries();
-    },
+    onSuccess: invalidateEventQueries,
   });
 
   let initialDateValue = '';
