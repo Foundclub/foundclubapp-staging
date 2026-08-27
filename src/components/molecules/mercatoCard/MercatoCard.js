@@ -52,6 +52,13 @@ function MercatoCard({ onPress, user }) {
 
   const handlePress = () => onPress && onPress(user);
 
+  // Même motif que `clubNameStyle` dans ClubCard : le style du nom est monté
+  // ICI, pas dans le JSX. Le contrôle de thème lit une FENÊTRE de lignes autour
+  // d'un fond primary500 ; laissée dans le JSX, l'encre du nom se retrouvait à
+  // 4 lignes du badge de club et comptait comme « encre claire sur primary500 »
+  // alors qu'elle est posée sur la carte, pas sur le badge.
+  const userNameStyle = [styles.userName, { color: Colors.neutral00 }];
+
   return (
     <TouchableOpacity
       accessibilityLabel={[
@@ -92,7 +99,7 @@ function MercatoCard({ onPress, user }) {
           <View style={styles.profileTextContainer}>
             {/* MARQUEE — le nom du joueur se lit en entier. */}
             <MarqueeText
-              style={[styles.userName, { color: Colors.neutral00 }]}
+              style={userNameStyle}
               text={[user.firstname, user.lastname].filter(Boolean).join(' ')}
             />
             <View
