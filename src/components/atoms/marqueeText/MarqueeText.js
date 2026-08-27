@@ -70,7 +70,7 @@ function MarqueeText({ paused = false, style = null, text }) {
     && textWidth > viewportWidth + OVERFLOW_EPSILON;
   const loopDistance = isOverflowing ? textWidth + COPY_GAP : 0;
 
-  const { translateX } = useMarqueeLoop({
+  const { isRunning, translateX } = useMarqueeLoop({
     distance: loopDistance,
     durationMs: Math.round((loopDistance / PIXELS_PER_SECOND) * 1000),
     enabled: !paused,
@@ -104,7 +104,13 @@ function MarqueeText({ paused = false, style = null, text }) {
         </Text>
       </View>
 
-      {isOverflowing ? (
+      {/*
+        `isRunning`, et pas seulement « ça dépasse » : une boucle peut être
+        refusée (plafond atteint) ou interdite (« réduire les animations »).
+        Dans ces deux cas le texte NE DOIT PAS rester figé au bord, coupé net
+        et sans « … » — il retombe sur la troncature d'origine.
+      */}
+      {isOverflowing && isRunning ? (
         <Animated.View style={[styles.track, { transform: [{ translateX }] }]}>
           {/*
             Le texte est rendu DEUX fois : quand la première copie sort par la
