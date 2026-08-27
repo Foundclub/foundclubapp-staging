@@ -194,7 +194,11 @@ describe('COMPOLECT-2 · la carte du tchat mene au plateau de creation', () => {
       ...COMPO,
       teams: [
         COMPO.teams[0],
-        { id: 't2', name: 'U15 B', placements: [{ playerId: REMPLACANT, positionX: 20, positionY: 40 }] },
+        {
+          id: 't2',
+          name: 'U15 B',
+          placements: [{ playerId: REMPLACANT, positionX: 20, positionY: 40 }],
+        },
       ],
     });
 

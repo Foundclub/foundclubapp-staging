@@ -2829,7 +2829,7 @@ export default {
         roleAndNumber: '{{role}} · N°{{number}}',
       },
       noField: {
-        message: 'Personne n’est placé sur le terrain, ou plusieurs équipes ont été publiées ensemble. Ouvre « Modifier » pour poser les joueurs.',
+        message: 'Aucun joueur n’est placé, ou plusieurs équipes ont été publiées ensemble.',
         title: 'Pas de terrain à afficher pour cette convocation',
       },
       offAppNote: 'Hors app — il ne peut pas répondre',

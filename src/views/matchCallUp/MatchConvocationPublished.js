@@ -524,6 +524,12 @@ const styles = StyleSheet.create({
   headerTexts: {
     flex: 1,
   },
+  noFieldNote: {
+    borderRadius: 16,
+    borderWidth: 1,
+    gap: 4,
+    padding: 12,
+  },
   playerAvatar: {
     borderWidth: 2,
   },
@@ -543,12 +549,6 @@ const styles = StyleSheet.create({
   },
   playerTexts: {
     flex: 1,
-  },
-  noFieldNote: {
-    borderRadius: 16,
-    borderWidth: 1,
-    gap: 4,
-    padding: 12,
   },
   recapBadge: {
     alignItems: 'center',

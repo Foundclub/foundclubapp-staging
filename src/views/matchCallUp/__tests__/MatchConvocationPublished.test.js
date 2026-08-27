@@ -546,7 +546,11 @@ describe('COMPOLECT-2 · D5 — sans terrain, l ecran le DIT', () => {
 
   test('🔒 une convocation VIDE ne declenche pas la note non plus', async () => {
     mockComposition = {
-      published: { ...PACK_PUBLIE, reservePlayerIds: [], teams: [{ id: 'team_1', placements: [] }] },
+      published: {
+        ...PACK_PUBLIE,
+        reservePlayerIds: [],
+        teams: [{ id: 'team_1', placements: [] }],
+      },
       responses: { byPlayerId: {}, counts: {} },
       team: { documentId: 'team_1', name: 'Senior 1' },
     };
