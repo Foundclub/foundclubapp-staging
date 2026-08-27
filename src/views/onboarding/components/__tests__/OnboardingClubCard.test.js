@@ -2,6 +2,7 @@ import { Children } from 'react';
 import { StyleSheet } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
+import MarqueeText from '@/components/atoms/marqueeText/MarqueeText';
 import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 import SponsorMarquee, {
   getActiveMarqueeCount,
@@ -261,5 +262,90 @@ describe('OnboardingClubCard — enveloppe visuelle (R18)', () => {
     // dégradé, lui, reste vide (vérifié par le premier test de ce bloc). C'est
     // ce qui fait que la hauteur de la carte suit son contenu.
     expect(garni).toBeGreaterThan(maigre);
+  });
+});
+
+// MARQUEE (27/08) — « trouver mon club » coupait encore les noms longs à « … ».
+// Cause : cette carte est la JUMELLE de ClubCard et n'avait jamais été reliée à
+// la mécanique partagée par U01.
+//
+// ⚠️ Le cas « ⛔ mais JAMAIS le marquee » plus haut reste vrai et n'est pas
+// contredit : il parle du PIED SPONSORS, qui ne défile toujours pas dans la
+// carte compacte. Ce bloc-ci parle du NOM DU CLUB, qui lui doit défiler.
+describe('OnboardingClubCard — MARQUEE : un nom trop long DÉFILE', () => {
+  const NOM_FLEUVE = 'Association Sportive et Culturelle de Villeneuve-sur-Lot Football';
+
+  /**
+   * Joue les DEUX mesures que le moteur de mise en page ne fait pas en test.
+   * @param {any} tree - Arbre rendu.
+   * @param {{ largeurTexte: number, largeurVisible: number }} mesures - Largeurs simulées.
+   * @returns {void}
+   */
+  const mesurerLeNom = (tree, { largeurTexte, largeurVisible }) => {
+    const marquee = tree.root.findByType(MarqueeText);
+    const mesurable = (/** @type {string} */ type) => (/** @type {any} */ node) => (
+      node.type === type && typeof node.props?.onLayout === 'function'
+    );
+    const enveloppe = marquee.find(mesurable('View'));
+    const sonde = marquee.find(mesurable('Text'));
+    act(() => {
+      enveloppe.props.onLayout({ nativeEvent: { layout: { width: largeurVisible } } });
+      sonde.props.onLayout({ nativeEvent: { layout: { width: largeurTexte } } });
+    });
+  };
+
+  it('le nom passe par la mécanique PARTAGÉE, jamais par une seconde', () => {
+    const tree = renderCard({ item: baseClub });
+    const marquees = tree.root.findAllByType(MarqueeText);
+
+    expect(marquees).toHaveLength(1);
+    expect(marquees[0].props.text).toBe('FC Marseille Nord');
+    act(() => { tree.unmount(); });
+  });
+
+  it('nom trop long pour la carte : il défile, et il est rendu EN ENTIER', () => {
+    const tree = renderCard({ item: { ...baseClub, name: NOM_FLEUVE } });
+    expect(getActiveMarqueeCount()).toBe(0);
+
+    mesurerLeNom(tree, { largeurTexte: 480, largeurVisible: 210 });
+
+    expect(getActiveMarqueeCount()).toBe(1);
+    expect(textsOf(tree)).toContain(NOM_FLEUVE);
+    act(() => { tree.unmount(); });
+    expect(getActiveMarqueeCount()).toBe(0);
+  });
+
+  it('nom qui tient dans la carte : strictement immobile (D6)', () => {
+    const tree = renderCard({ item: baseClub });
+    mesurerLeNom(tree, { largeurTexte: 140, largeurVisible: 210 });
+
+    expect(getActiveMarqueeCount()).toBe(0);
+    act(() => { tree.unmount(); });
+  });
+
+  it('sans mesure : la carte retombe sur la troncature « … » d\'avant', () => {
+    const tree = renderCard({ item: { ...baseClub, name: NOM_FLEUVE } });
+    const tronquees = tree.root.findAll(
+      (/** @type {any} */ node) => node.type === 'Text' && node.props?.ellipsizeMode === 'tail',
+    );
+
+    expect(tronquees.length).toBeGreaterThan(0);
+    expect(getActiveMarqueeCount()).toBe(0);
+    act(() => { tree.unmount(); });
+  });
+
+  it('liste recyclée : le nouveau nom ne prend PAS la mesure du précédent', () => {
+    const tree = renderCard({ item: { ...baseClub, name: NOM_FLEUVE } });
+    mesurerLeNom(tree, { largeurTexte: 480, largeurVisible: 210 });
+    expect(getActiveMarqueeCount()).toBe(1);
+
+    // La même carte est recyclée pour un club au nom court : la largeur de
+    // l'ancien nom ne doit surtout pas s'appliquer au nouveau.
+    act(() => {
+      tree.update(<OnboardingClubCard item={{ ...baseClub, name: 'FC Lyon' }} />);
+    });
+
+    expect(getActiveMarqueeCount()).toBe(0);
+    act(() => { tree.unmount(); });
   });
 });
