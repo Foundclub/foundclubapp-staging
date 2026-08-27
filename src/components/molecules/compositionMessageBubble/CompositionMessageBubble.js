@@ -41,6 +41,7 @@ const MINI_TOKEN_SIZE = 34;
  *   snapshotPlayers?: CompositionPlayer[];
  *   sport?: string;
  *   sportContext?: string;
+ *   teamId?: string;
  *   teamName?: string;
  *   teamPlayers?: CompositionPlayer[];
  *   teams?: Array<{ id?: string; name?: string; placements?: CompositionPlacement[] }>;
@@ -154,6 +155,7 @@ function CompositionMessageBubble({ composition, isMe = false }) {
     snapshotPlayers = [],
     sport = 'football',
     sportContext,
+    teamId,
     teamName,
     teamPlayers = [],
     teams = [],
@@ -217,6 +219,28 @@ function CompositionMessageBubble({ composition, isMe = false }) {
   // ♻️ L'identite se lit dans l'instantane d'authentification — le MEME que
   // `client.native.js` interroge avant chaque requete. `useAuth` tirerait tout le
   // client HTTP dans une carte de tchat qui n'appelle rien.
+  // 🎒 COMPOMODIF (M1) — LE PACK QUE LA CARTE EMPORTE, ASSEMBLE UNE SEULE FOIS.
+  //
+  // Il servait deja a l'ancien plateau ; il part maintenant AUSSI vers le
+  // plateau neuf, parce qu'un coach qui appuie sur « Modifier » doit retrouver
+  // ses convoques. Sans lui, l'ecran de selection repartirait de zero — c'est
+  // exactement le defaut M4, qu'ouvrir la porte recreerait ici.
+  const packDeLaCarte = isMultiTeamComposition
+    ? {
+      manualPlayers,
+      reservePlayerIds: reservePlayers.map((player) => getPlayerId(player)).filter(Boolean),
+      reserveSnapshotPlayers: reservePlayers,
+      schemaVersion: 3,
+      snapshotPlayers,
+      sportContext,
+      teams,
+    }
+    : {
+      manualPlayers,
+      placements,
+      sportContext,
+    };
+
   const handlePress = () => {
     const { auth } = getAuthRuntimeSnapshot();
     const viewerConvocationRole = getViewerConvocationRole(
@@ -254,13 +278,39 @@ function CompositionMessageBubble({ composition, isMe = false }) {
     // d'`EventDetails` (D6) : sans titulaire dessinable, un terrain vide ferait
     // croire a une compo perdue ; avec plusieurs equipes, le plateau ne dessine
     // QU'UN terrain et en cacherait une sans rien dire.
+    // 🚪 COMPOMODIF (M1) — LE COACH RETROUVE SA PORTE, ICI AUSSI.
+    //
+    // 🗣️ Adel, 27/08 : « des qu'il peut voir la compo, il manque un petit
+    // bouton Modifier, a chaque fois ».
+    //
+    // ⛔ ON N'EN FABRIQUE PAS UN DEUXIEME : le bouton existe deja sur le
+    // plateau plein ecran (COMPOLECT-2), reserve a `canEdit`. Cette carte
+    // l'ETEIGNAIT en envoyant `canEdit: false` en dur — sur les 3 vues d'une
+    // compo publiee, c'etait la seule a le faire.
+    //
+    // ♻️ Le droit se lit dans l'instantane deja ouvert deux lignes plus haut :
+    // ce lecteur entraine-t-il l'equipe de cette compo ?
+    //
+    // ⚠️ VOLONTAIREMENT ETROIT : un president de club qui n'entraine pas cette
+    // equipe n'aura pas le bouton ICI — la carte ne porte pas le club, et
+    // inventer un droit qu'on ne peut pas verifier vaut moins qu'un bouton
+    // manquant. Il l'a dans les 2 autres vues, ou `canManageEvent` tranche avec
+    // l'evenement entier en main.
+    const peutModifier = Boolean(teamId) && (auth?.user?.trainedTeams || []).some(
+      (equipe) => String(equipe?.documentId || '') === String(teamId),
+    );
+
     if (eventId && starters.length > 0 && otherTeamsCount === 0) {
       navigation.navigate(RouteNames.EventStack, {
         params: {
-          canEdit: false,
+          canEdit: peutModifier,
           eventId,
           eventLabel: eventName,
+          // Sans ces deux-la, « Modifier » ouvrirait un ecran incapable de
+          // retrouver les convoques, puis de publier faute d'equipe.
+          existingComposition: packDeLaCarte,
           readOnly: true,
+          teamId,
           // Titulaires PUIS remplacants : le plateau retrouve le banc tout seul
           // en retirant de cette liste ceux que les placements portent.
           selectedPlayers: [...starters.map((token) => token.player), ...benchPlayers],
@@ -281,21 +331,7 @@ function CompositionMessageBubble({ composition, isMe = false }) {
         editorSourceLabel: type === 'lineup_share' ? "Composition d'équipes publiée" : null,
         eventId,
         eventName,
-        existingComposition: isMultiTeamComposition
-          ? {
-            manualPlayers,
-            reservePlayerIds: reservePlayers.map((player) => getPlayerId(player)).filter(Boolean),
-            reserveSnapshotPlayers: reservePlayers,
-            schemaVersion: 3,
-            snapshotPlayers,
-            sportContext,
-            teams,
-          }
-          : {
-            manualPlayers,
-            placements,
-            sportContext,
-          },
+        existingComposition: packDeLaCarte,
         multiTeamComposition: isMultiTeamComposition,
         players: allPlayers,
         readOnly: true,
