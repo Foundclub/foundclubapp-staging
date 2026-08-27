@@ -24,6 +24,7 @@ import { formatThreadUnreadBadge } from '@/domains/messaging/useUnreadMessages';
 import { TutorialIds } from '@/domains/tutorial/tutorialIds';
 import useTheme from '@/theme/themeContext';
 
+import MarqueeText from '@/components/atoms/marqueeText/MarqueeText';
 import WebFloatingOverlay from '@/components/atoms/webFloatingOverlay/WebFloatingOverlay';
 import ClubLogoMark from '@/components/molecules/clubLogoMark/ClubLogoMark';
 import LeagueHeaderSwitch from '@/components/molecules/header/LeagueHeaderSwitch';
@@ -666,16 +667,18 @@ function Messaging({ navigation, route }) {
             </TouchableOpacity>
             <View style={[Alignments.fill, Alignments.column]}>
               <View style={{ alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between' }}>
-                <Text
-                  numberOfLines={1}
+                {/*
+                  MARQUEE — le nom de la conversation (club, équipe, groupe) se
+                  lit en entier : c'est lui qui dit à qui on parle.
+                */}
+                <MarqueeText
+                  containerStyle={{ flex: 1 }}
                   style={[
                     Fonts.p2Bold,
                     Fonts.neutral00,
                     hasUnread && Fonts.neutral00,
-                    { flex: 1 },
                   ]}
-                >
-                  {getConversationName({
+                  text={getConversationName({
                     chatClub: chat.club,
                     chatGroupName: chat.groupName,
                     chatLeagueMatch: chat.league_match,
@@ -685,7 +688,7 @@ function Messaging({ navigation, route }) {
                     chatType: chat.type,
                     meId: userData?.documentId,
                   })}
-                </Text>
+                />
                 {chatIsLeague && (
                 <View style={{
                   backgroundColor: Colors.gold500,

@@ -21,6 +21,7 @@ import useTheme from '@/theme/themeContext';
 import Button from '@/components/atoms/button/Button';
 import EmptyState from '@/components/atoms/emptyState/EmptyState';
 import Loader from '@/components/atoms/loader/Loader';
+import MarqueeText from '@/components/atoms/marqueeText/MarqueeText';
 import SubscriptionPaywallSheet
   from '@/components/molecules/subscriptionPaywallSheet/SubscriptionPaywallSheet';
 import ScreenContainer from '@/components/templates/ScreenContainer';
@@ -339,12 +340,11 @@ function FacilityList() {
             ]}
           >
             <View style={{ flex: 1, minWidth: 0 }}>
-              <Text
-                numberOfLines={1}
+              {/* MARQUEE — le nom de l installation se lit en entier */}
+              <MarqueeText
                 style={[Fonts.p1Black, Fonts.neutral00]}
-              >
-                {item?.name || t('facilityList.defaults.facilityName', 'Installation')}
-              </Text>
+                text={item?.name || t('facilityList.defaults.facilityName', 'Installation')}
+              />
               <Text
                 numberOfLines={2}
                 style={[Fonts.p3, Fonts.neutral400, Spaces.marginTop[4]]}

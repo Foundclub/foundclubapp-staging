@@ -10,10 +10,10 @@ import {
 } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 
-import { getRecruitAthleteNoun } from '@/constants/positions';
 import useAuth from '@/domains/auth/useAuth';
 import useTheme from '@/theme/themeContext';
 
+import MarqueeText from '@/components/atoms/marqueeText/MarqueeText';
 import ClubLogoMark from '@/components/molecules/clubLogoMark/ClubLogoMark';
 
 import { RouteNames } from '@/navigation/routeNames';
@@ -26,6 +26,7 @@ import { getImageUrl } from '@/utils/imageUrl';
 import { getShortAddress } from '@/utils/location';
 
 import CARD_BACKGROUND from '@/assets/background-card-event/card-autre.png';
+import { getRecruitAthleteNoun } from '@/constants/positions';
 
 const normalizeTypeLabel = (value = '') => String(value || '')
   .toLowerCase()
@@ -226,15 +227,18 @@ function RecruitmentAdCard({
             </View>
 
             <View style={styles.clubTextContainer}>
-              <Text numberOfLines={1} style={styles.clubName}>
-                {clubName}
-              </Text>
+              {/* MARQUEE — le nom du club de l annonce se lit en entier */}
+              <MarqueeText
+                style={styles.clubName}
+                text={clubName}
+              />
 
               <View style={styles.subHeaderRow}>
                 {team?.name ? (
-                  <Text numberOfLines={1} style={styles.category}>
-                    {team.name}
-                  </Text>
+                  <MarqueeText
+                    style={styles.category}
+                    text={team.name}
+                  />
                 ) : null}
 
                 <View style={styles.typeBadge}>

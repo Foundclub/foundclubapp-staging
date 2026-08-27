@@ -10,6 +10,7 @@ import { horizontalScale, moderateScale, verticalScale } from '@/theme/scaling';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
+import MarqueeText from '@/components/atoms/marqueeText/MarqueeText';
 import SponsorLogoTile from '@/components/atoms/sponsorLogoTile/SponsorLogoTile';
 import Tag from '@/components/atoms/tag/Tag';
 import ClubLogoMark from '@/components/molecules/clubLogoMark/ClubLogoMark';
@@ -224,14 +225,18 @@ function FeaturedReservationCard({
               source={Images.pin}
               style={[{ height: moderateScale(22), width: moderateScale(22) }, ApplicationStyle.tintColor.neutral00]}
             />
-            <Text
-              numberOfLines={1}
+            {/* MARQUEE — le lieu de la reservation se lit en entier */}
+            <MarqueeText
+              // ⚠️ `maxWidth` est de la PLACE : laissé dans `style`, il aurait
+              // aussi bridé la SONDE de mesure, qui aurait alors mesuré 150 au
+              // lieu de la largeur réelle du nom — et rien n'aurait jamais
+              // semblé dépasser.
+              containerStyle={{ maxWidth: horizontalScale(150) }}
               style={[Fonts.p2, {
-                color: '#FFFFFF', fontSize: moderateScale(12), lineHeight: moderateScale(14), maxWidth: horizontalScale(150),
+                color: '#FFFFFF', fontSize: moderateScale(12), lineHeight: moderateScale(14),
               }]}
-            >
-              {getLocation() || 'Lieu non défini'}
-            </Text>
+              text={getLocation() || 'Lieu non défini'}
+            />
           </View>
         </View>
       </View>

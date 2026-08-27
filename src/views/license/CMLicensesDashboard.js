@@ -1,5 +1,5 @@
 // @ts-nocheck
-/* eslint-disable import/order, no-nested-ternary, object-curly-newline, perfectionist/sort-imports, perfectionist/sort-modules, perfectionist/sort-named-imports */
+/* eslint-disable no-nested-ternary, object-curly-newline, perfectionist/sort-imports, perfectionist/sort-named-imports */
 import { useCallback, useMemo, useState } from 'react';
 import {
   Alert,
@@ -12,6 +12,7 @@ import {
 
 import useTheme from '@/theme/themeContext';
 
+import MarqueeText from '@/components/atoms/marqueeText/MarqueeText';
 import Button from '@/components/atoms/button/Button';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
@@ -58,6 +59,13 @@ const firstReviewPayment = (assignment) => (
   assignment?.payments || []
 ).find((payment) => payment?.status === 'manual_review') || null;
 
+/**
+ *
+ * @param root0
+ * @param root0.label
+ * @param root0.tone
+ * @param root0.value
+ */
 function StatCard({ label, tone, value }) {
   const {
     ApplicationStyle, Colors, Fonts, Spaces,
@@ -80,6 +88,14 @@ function StatCard({ label, tone, value }) {
   );
 }
 
+/**
+ *
+ * @param root0
+ * @param root0.onOpen
+ * @param root0.onOpenPayments
+ * @param root0.onOpenSettings
+ * @param root0.section
+ */
 function SectionLicenseCard({
   onOpen,
   onOpenPayments,
@@ -112,7 +128,11 @@ function SectionLicenseCard({
       >
         <View style={[Alignments.row, Alignments.alignStart, Alignments.justifySpaceBetween]}>
           <View style={[Spaces.gap[4], { flex: 1, paddingRight: 12 }]}>
-            <Text numberOfLines={1} style={[Fonts.p1Bold, Fonts.neutral00]}>{section?.clubName || 'Section'}</Text>
+            {/* MARQUEE — le nom de la section se lit en entier */}
+            <MarqueeText
+              style={[Fonts.p1Bold, Fonts.neutral00]}
+              text={section?.clubName || 'Section'}
+            />
             <Text style={[Fonts.p3, Fonts.neutral200]}>
               {campaign?.seasonLabel || 'Aucune campagne'}
               {campaign?.paymentOwner === 'multisport' ? ' - encaissement central' : ''}
@@ -142,6 +162,14 @@ function SectionLicenseCard({
   );
 }
 
+/**
+ *
+ * @param root0
+ * @param root0.assignment
+ * @param root0.onApprove
+ * @param root0.onOpen
+ * @param root0.onReject
+ */
 function ReviewCard({
   assignment,
   onApprove,
@@ -185,6 +213,12 @@ function ReviewCard({
   );
 }
 
+/**
+ *
+ * @param root0
+ * @param root0.navigation
+ * @param root0.route
+ */
 function CMLicensesDashboard({ navigation, route }) {
   const {
     Alignments, Colors, Fonts, Spaces,

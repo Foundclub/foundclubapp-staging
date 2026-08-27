@@ -14,6 +14,7 @@ import { withAlpha } from '@/theme/colors';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
+import MarqueeText from '@/components/atoms/marqueeText/MarqueeText';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 import ClubSelector from '@/components/molecules/clubSelector/ClubSelector';
 import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
@@ -616,8 +617,16 @@ function AssignmentCard({
             <ProfileAvatar enablePreview={false} imageUrl={avatarUrl} name={name} size={48} />
           </View>
           <View style={[Spaces.gap[4], { flex: 1 }]}>
-            <Text numberOfLines={1} style={[Fonts.p1Bold, Fonts.neutral00]}>{name}</Text>
-            <Text numberOfLines={1} style={[Fonts.p3, Fonts.neutral200]}>{item?.team?.name || 'Sans équipe'}</Text>
+            {/* MARQUEE — le nom du licencie se lit en entier */}
+            <MarqueeText
+              style={[Fonts.p1Bold, Fonts.neutral00]}
+              text={name}
+            />
+            {/* MARQUEE — l equipe du licencie se lit en entier */}
+            <MarqueeText
+              style={[Fonts.p3, Fonts.neutral200]}
+              text={item?.team?.name || 'Sans équipe'}
+            />
           </View>
           <View style={[Spaces.gap[4], { alignItems: 'flex-end', maxWidth: 120 }]}>
             <Text numberOfLines={1} style={[Fonts.p2Bold, { color: tone }]}>{statusLabel[item?.status] || item?.status}</Text>
@@ -721,8 +730,16 @@ function AssignmentSignalCard({
             <ProfileAvatar enablePreview={false} imageUrl={avatarUrl} name={name} size={40} />
           </View>
           <View style={[Spaces.gap[4], { flex: 1 }]}>
-            <Text numberOfLines={1} style={[Fonts.p1Bold, Fonts.neutral00]}>{name}</Text>
-            <Text numberOfLines={1} style={[Fonts.p3, Fonts.neutral200]}>{item?.team?.name || 'Sans équipe'}</Text>
+            {/* MARQUEE — le nom du licencie se lit en entier */}
+            <MarqueeText
+              style={[Fonts.p1Bold, Fonts.neutral00]}
+              text={name}
+            />
+            {/* MARQUEE — l equipe du licencie se lit en entier */}
+            <MarqueeText
+              style={[Fonts.p3, Fonts.neutral200]}
+              text={item?.team?.name || 'Sans équipe'}
+            />
           </View>
           <Text style={[Fonts.p3Bold, { color: tone }]}>{label}</Text>
         </View>

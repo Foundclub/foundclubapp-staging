@@ -4,6 +4,7 @@ import { Text, TouchableOpacity, View } from 'react-native';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
+import MarqueeText from '@/components/atoms/marqueeText/MarqueeText';
 import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 
 /**
@@ -218,9 +219,10 @@ function RequestFeedItem({
                 {requesterName}
               </Text>
               {sourceTeamName ? (
-                <Text numberOfLines={1} style={[Fonts.p3, Fonts.neutral200]}>
-                  {sourceTeamName}
-                </Text>
+                <MarqueeText
+                  style={[Fonts.p3, Fonts.neutral200]}
+                  text={sourceTeamName}
+                />
               ) : null}
             </View>
           </>,

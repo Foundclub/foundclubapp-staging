@@ -2663,9 +2663,11 @@ function TeamDetails({ navigation, route }) {
         Alignments.justifyCenter,
         Alignments.alignCenter]}
       >
-        <Text numberOfLines={1} style={[Fonts.h3Bold, Fonts.neutral00, { letterSpacing: 1 }]}>
-          {String(team?.name || t(`teamDetails.${isMyTeam ? 'myTitle' : 'title'}`)).toUpperCase()}
-        </Text>
+        {/* MARQUEE — le nom de l equipe se lit en entier dans l entete */}
+        <MarqueeText
+          style={[Fonts.h3Bold, Fonts.neutral00, { letterSpacing: 1 }]}
+          text={String(team?.name || t(`teamDetails.${isMyTeam ? 'myTitle' : 'title'}`)).toUpperCase()}
+        />
         <View style={[
           ApplicationStyle.separator,
           ApplicationStyle.backgroundColor.neutral00,
@@ -3343,16 +3345,15 @@ function TeamDetails({ navigation, route }) {
                                 </Text>
                               </View>
                               <View style={[Alignments.row, Alignments.alignCenter, { columnGap: 7, flex: 1, minWidth: 0 }]}>
-                                <Text
-                                  numberOfLines={1}
+                                {/* MARQUEE — le nom de l equipe se lit en entier */}
+                                <MarqueeText
                                   style={[
                                     isMyRow ? Fonts.p2Bold : Fonts.p2,
                                     isMyRow ? Fonts.neutral00 : Fonts.neutral100,
                                     { flexShrink: 1 },
                                   ]}
-                                >
-                                  {row.teamName}
-                                </Text>
+                                  text={row.teamName}
+                                />
                                 {isMyRow ? (
                                   <View
                                     style={{

@@ -24,6 +24,7 @@ import { withAlpha } from '@/theme/colors';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
+import MarqueeText from '@/components/atoms/marqueeText/MarqueeText';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 import ClubLogoMark from '@/components/molecules/clubLogoMark/ClubLogoMark';
 import Input from '@/components/molecules/input/Input';
@@ -702,17 +703,16 @@ function SelfProfileUnified({ navigation }) {
                     name={team?.club?.name || team?.name}
                     size={ICON_TILE}
                   />
-                  <Text
-                    numberOfLines={1}
+                  {/* MARQUEE — le nom de mon équipe se lit en entier. */}
+                  <MarqueeText
+                    containerStyle={{ flex: 1 }}
                     style={{
                       color: Colors.neutral00,
-                      flex: 1,
                       fontFamily: 'Montserrat-Bold',
                       fontSize: 13.5,
                     }}
-                  >
-                    {team?.name}
-                  </Text>
+                    text={team?.name}
+                  />
                   <Image
                     source={Images.arrowRight}
                     style={{ height: 14, tintColor: Colors.neutral400, width: 14 }}

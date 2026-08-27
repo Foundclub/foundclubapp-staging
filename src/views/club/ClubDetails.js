@@ -19,6 +19,7 @@ import useTheme from '@/theme/themeContext';
 import Button from '@/components/atoms/button/Button';
 import Checkable from '@/components/atoms/checkable/Checkable';
 import Loader from '@/components/atoms/loader/Loader';
+import MarqueeText from '@/components/atoms/marqueeText/MarqueeText';
 import SponsorLogoTile from '@/components/atoms/sponsorLogoTile/SponsorLogoTile';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 import ClubLogoMark from '@/components/molecules/clubLogoMark/ClubLogoMark';
@@ -2525,9 +2526,11 @@ function ClubDetails({ navigation, route }) {
                                 width: 4,
                               }}
                             />
-                            <Text numberOfLines={1} style={[Fonts.p1Bold, Fonts.neutral00]}>
-                              {facility?.name || 'Installation'}
-                            </Text>
+                            {/* MARQUEE — le nom de l installation se lit en entier */}
+                            <MarqueeText
+                              style={[Fonts.p1Bold, Fonts.neutral00]}
+                              text={facility?.name || 'Installation'}
+                            />
                             <View style={[Alignments.row, Alignments.wrap, Spaces.gap[8]]}>
                               <View
                                 style={[
@@ -2834,9 +2837,11 @@ function ClubDetails({ navigation, route }) {
                               size={60}
                             />
                             <View style={{ flex: 1 }}>
-                              <Text numberOfLines={1} style={[Fonts.p1Bold, Fonts.neutral00]}>
-                                {team.name}
-                              </Text>
+                              {/* MARQUEE — le nom de l equipe se lit en entier */}
+                              <MarqueeText
+                                style={[Fonts.p1Bold, Fonts.neutral00]}
+                                text={team.name}
+                              />
                               {getTeamMetaSummary(team) ? (
                                 <Text
                                   numberOfLines={1}
@@ -3452,9 +3457,11 @@ function ClubDetails({ navigation, route }) {
                       size={60}
                     />
                     <View style={{ flex: 1 }}>
-                      <Text numberOfLines={1} style={[Fonts.p1Bold, Fonts.neutral00]}>
-                        {teamItem?.name || t('common.team', 'Équipe')}
-                      </Text>
+                      {/* MARQUEE — le nom de l equipe se lit en entier */}
+                      <MarqueeText
+                        style={[Fonts.p1Bold, Fonts.neutral00]}
+                        text={teamItem?.name || t('common.team', 'Équipe')}
+                      />
                       <Text numberOfLines={2} style={[Fonts.p3, Fonts.neutral200]}>
                         {getTeamMetaSummary(teamItem) || teamItem?.club?.name || t('common.messages.noData', 'Aucune donnée disponible')}
                       </Text>
@@ -3593,9 +3600,11 @@ function ClubDetails({ navigation, route }) {
                       size={60}
                     />
                     <View style={{ flex: 1 }}>
-                      <Text numberOfLines={1} style={[Fonts.p1Bold, Fonts.neutral00]}>
-                        {teamItem?.name || t('common.team', 'Équipe')}
-                      </Text>
+                      {/* MARQUEE — le nom de l equipe se lit en entier */}
+                      <MarqueeText
+                        style={[Fonts.p1Bold, Fonts.neutral00]}
+                        text={teamItem?.name || t('common.team', 'Équipe')}
+                      />
                       <Text numberOfLines={2} style={[Fonts.p3, Fonts.neutral200]}>
                         {getTeamMetaSummary(teamItem) || teamItem?.club?.name || t('common.messages.noData', 'Aucune donnée disponible')}
                       </Text>

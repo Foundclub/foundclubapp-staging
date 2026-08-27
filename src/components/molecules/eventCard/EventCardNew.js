@@ -23,6 +23,7 @@ import { resolveParticipationFlow } from '@/domains/participation/participationF
 import { withAlpha } from '@/theme/colors';
 import useTheme from '@/theme/themeContext';
 
+import MarqueeText from '@/components/atoms/marqueeText/MarqueeText';
 import Tag from '@/components/atoms/tag/Tag';
 import ClubLogoMark from '@/components/molecules/clubLogoMark/ClubLogoMark';
 import EventAnswerButtons from '@/components/molecules/eventAnswerButtons/EventAnswerButtons';
@@ -797,9 +798,10 @@ function EventCardNew({
                 {primaryTitle}
               </Text>
               {secondaryTitle ? (
-                <Text numberOfLines={1} style={[styles.clubSubLine, { color: Colors.neutral200 }]}>
-                  {secondaryTitle}
-                </Text>
+                <MarqueeText
+                  style={[styles.clubSubLine, { color: Colors.neutral200 }]}
+                  text={secondaryTitle}
+                />
               ) : null}
               {teamMetaLine ? (
                 <Text numberOfLines={1} style={[styles.clubSubLine, { color: Colors.neutral200 }]}>

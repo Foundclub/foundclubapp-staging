@@ -7,6 +7,7 @@ import {
 
 import useTheme from '@/theme/themeContext';
 
+import MarqueeText from '@/components/atoms/marqueeText/MarqueeText';
 import SponsorLogoTile from '@/components/atoms/sponsorLogoTile/SponsorLogoTile';
 import SvgIcon from '@/components/atoms/SvgIcon/SvgIcon';
 import Tag from '@/components/atoms/tag/Tag';
@@ -73,9 +74,11 @@ function ReservationCard({ item, onParticipate, onPress }) {
           </View>
           {/* Nom + Catégorie */}
           <View style={styles.headerTextContainer}>
-            <Text numberOfLines={1} style={styles.clubName}>
-              {item.team?.club?.name || 'FoundClub'}
-            </Text>
+            {/* MARQUEE — le nom du club se lit en entier */}
+            <MarqueeText
+              style={styles.clubName}
+              text={item.team?.club?.name || 'FoundClub'}
+            />
             <Text style={styles.category}>
               {item.team?.category?.name || 'Masculin'}
             </Text>

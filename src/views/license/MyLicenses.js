@@ -23,6 +23,7 @@ import {
 import { withAlpha } from '@/theme/colors';
 import useTheme from '@/theme/themeContext';
 
+import MarqueeText from '@/components/atoms/marqueeText/MarqueeText';
 import GlyphIcon from '@/components/atoms/glyphIcon/GlyphIcon';
 import Button from '@/components/atoms/button/Button';
 import ScreenContainer from '@/components/templates/ScreenContainer';
@@ -293,9 +294,12 @@ function MyLicenses({ navigation }) {
               }}
               >
                 <MemberClubCrest name={group.clubName} />
-                <Text numberOfLines={1} style={[type.clubName, Fonts.neutral00, { flex: 1 }]}>
-                  {group.clubName}
-                </Text>
+                {/* MARQUEE — le nom du club se lit en entier */}
+                <MarqueeText
+                  containerStyle={{ flex: 1 }}
+                  style={[type.clubName, Fonts.neutral00]}
+                  text={group.clubName}
+                />
               </View>
               <Text style={[type.metaBold, group.remainingCents > 0
                 ? Fonts.neutral200
