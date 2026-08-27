@@ -135,6 +135,7 @@ function MatchCallUpSelection() {
     existingComposition = null,
     pendingManualPlayer = null,
     players: playersParam = EMPTY_LIST,
+    selectedPlayers: convoquesRecus = null,
     sport = 'football',
     teamId,
     teamName = '',
@@ -215,9 +216,28 @@ function MatchCallUpSelection() {
   // Pre-cochage depuis la composition existante : meme lecture que
   // `TacticalSelection` (placements + selectedPlayerIds + reservePlayerIds),
   // pour qu'ouvrir l'un ou l'autre montre la meme selection.
+  //
+  // 🧨 COMPOMODIF (M4) — ET SURTOUT : QUELLE SOURCE DIT LA VERITE.
+  //
+  // 🗣️ Adel, 27/08 : « quand on ajoute des joueurs de la liste, ca efface de la
+  // liste les anciens ». Mesure : le 1er tour etait bon, le 2e perdait tout.
+  //
+  // `existingComposition` est le pack PUBLIE — il ne bouge plus. La porte
+  // « Modifier » du plateau renvoie ici ce MEME pack fige a chaque tour, et cet
+  // ecran se remonte a neuf a chaque fois (`navigate` depile, il ne garde pas
+  // l'ecran). Amorcer depuis le pack, c'est donc RECOMMENCER a la compo
+  // d'origine : le joueur ajoute au tour precedent disparait, et celui qu'on
+  // venait de retirer revient tout seul.
+  //
+  // ♻️ La verite du moment voyageait DEJA : `selectedPlayers`, la liste que
+  // l'ecran du terrain renvoie a chaque aller-retour (`:318`). Rien de neuf
+  // n'est cree — on lit un parametre qui etait transmis et jamais relu.
   useEffect(() => {
     if (bootstrapped) return;
-    if (!existingComposition || typeof existingComposition !== 'object') return;
+    const convoquesDuMoment = Array.isArray(convoquesRecus) ? convoquesRecus : null;
+    if (!convoquesDuMoment && (!existingComposition || typeof existingComposition !== 'object')) {
+      return;
+    }
 
     /** @type {any[]} */
     const placements = existingComposition?.placements
@@ -227,16 +247,35 @@ function MatchCallUpSelection() {
     const selected = existingComposition?.selectedPlayerIds || EMPTY_LIST;
     /** @type {any[]} */
     const reserve = existingComposition?.reservePlayerIds || EMPTY_LIST;
-    const knownIds = [
-      ...placements.map((placement) => String(placement?.playerId || '').trim()),
-      ...selected.map((value) => String(value || '').trim()),
-      ...reserve.map((value) => String(value || '').trim()),
-    ].filter(Boolean);
+    const knownIds = convoquesDuMoment
+      ? convoquesDuMoment.map(getCompositionPlayerId).filter(Boolean)
+      : [
+        ...placements.map((placement) => String(placement?.playerId || '').trim()),
+        ...selected.map((value) => String(value || '').trim()),
+        ...reserve.map((value) => String(value || '').trim()),
+      ].filter(Boolean);
+
+    // ⚠️ LES JOUEURS HORS APP SE PERDENT EN PREMIER : aucun effectif ne les
+    // porte, ils n'existent que dans le pack et dans la liste des convoques. On
+    // reunit les deux sources, sans doublon, plutot que d'en choisir une.
+    /** @type {any[]} */
+    const horsApp = [];
+    /** @type {Set<string>} */
+    const horsAppVus = new Set();
+    [
+      ...(existingComposition?.manualPlayers || EMPTY_LIST),
+      ...(convoquesDuMoment || EMPTY_LIST).filter(isManualCallUpPlayer),
+    ].forEach((/** @type {any} */ player) => {
+      const playerId = getCompositionPlayerId(player);
+      if (!playerId || horsAppVus.has(playerId)) return;
+      horsAppVus.add(playerId);
+      horsApp.push(player);
+    });
 
     setSelectedIds(new Set(knownIds));
-    setManualPlayers(existingComposition?.manualPlayers || EMPTY_LIST);
+    setManualPlayers(horsApp.length > 0 ? horsApp : EMPTY_LIST);
     setBootstrapped(true);
-  }, [bootstrapped, existingComposition]);
+  }, [bootstrapped, convoquesRecus, existingComposition]);
 
   // Retour de l'ecran 3 : le joueur hors app arrive par les parametres, on le
   // range puis on efface le parametre pour qu'un re-rendu ne l'ajoute pas deux fois.
@@ -287,11 +326,33 @@ function MatchCallUpSelection() {
     });
   }, [navigation, params, teamName]);
 
-  const selectedPlayers = useMemo(
-    () => [...squadPlayers, ...reinforcementPlayers, ...manualPlayers]
-      .filter((player) => selectedIds.has(getCompositionPlayerId(player))),
-    [manualPlayers, reinforcementPlayers, selectedIds, squadPlayers],
-  );
+  // 🧨 COMPOMODIF (M4) — LA 4e SOURCE, ET C'EST ELLE QUI EMPECHE LA PERTE.
+  //
+  // Un convoque coche doit ressortir d'ici, sinon il est efface EN SILENCE.
+  // Trois listes seulement ne suffisent pas : un joueur hors app n'appartient a
+  // aucun effectif, et un renfort disparait tant que la requete des equipes du
+  // club n'est pas revenue. Les personnes qu'on nous a REMISES bouchent ce trou.
+  //
+  // ⚠️ Elles arrivent EN DERNIER et on ne garde que la premiere occurrence de
+  // chaque identifiant : l'ordre des listes connues — donc le terrain et le banc
+  // qui en decoulent — ne bouge pas d'un pouce.
+  const selectedPlayers = useMemo(() => {
+    /** @type {Map<string, any>} */
+    const parIdentifiant = new Map();
+    [
+      ...squadPlayers,
+      ...reinforcementPlayers,
+      ...manualPlayers,
+      ...(Array.isArray(convoquesRecus) ? convoquesRecus : EMPTY_LIST),
+    ].forEach((/** @type {any} */ player) => {
+      const playerId = getCompositionPlayerId(player);
+      if (!playerId || parIdentifiant.has(playerId)) return;
+      parIdentifiant.set(playerId, player);
+    });
+
+    return [...parIdentifiant.values()]
+      .filter((player) => selectedIds.has(getCompositionPlayerId(player)));
+  }, [convoquesRecus, manualPlayers, reinforcementPlayers, selectedIds, squadPlayers]);
 
   const goToComposition = useCallback(() => {
     setAbsentsToConfirm(null);

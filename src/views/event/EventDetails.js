@@ -4742,6 +4742,51 @@ function EventDetails({ navigation, route }) {
     viewerConvocationRole,
   ]);
 
+  // 🚪 COMPOMODIF (M1) — « Modifier », SANS PASSER PAR LE PLEIN ECRAN.
+  //
+  // 🗣️ Adel, 27/08 : « si c'est le coach qui ouvre, il manque un petit bouton
+  // Modifier, a chaque fois, des qu'il peut voir la compo ».
+  //
+  // ⛔ CE N'EST PAS UNE 2e PORTE D'ECRITURE : c'est EXACTEMENT le geste du
+  // bouton « Modifier » du plateau (`MatchCompositionBoard`) — meme route, meme
+  // libelle (`matchComposition.board.edit`), memes 3 bascules (`canEdit`,
+  // `readOnly: false`, le terrain en point de depart). Ce qui change, c'est
+  // qu'on n'oblige plus le coach a ouvrir le plein ecran d'abord.
+  //
+  // ♻️ ZERO CALCUL NEUF : `publishedBoardTarget` (:4048) porte deja le pack
+  // publie, les convoques, le sport et les placements. C'est le MEME objet que
+  // l'ouverture en lecture, avec `readOnly` retourne.
+  //
+  // ⛔ ET IL VAUT `null` SANS PLACEMENT : la porte n'aurait pas de terrain a
+  // rouvrir, on garde alors le comportement d'avant (D6).
+  const openCompositionEdit = useCallback(() => {
+    if (!eventId || !compositionTeamId || !publishedBoardTarget) return;
+
+    navigation.navigate(RouteNames.MatchCallUpSelection, {
+      ...publishedBoardTarget,
+      canEdit: true,
+      clubId: event?.team?.club?.documentId || null,
+      eventId,
+      eventLabel: compositionEventLabel,
+      eventName: compositionEventLabel,
+      eventTypeLabel: event?.type?.name || null,
+      // La liste ou le coach va repecher un convoque : l'effectif ELIGIBLE, pas
+      // les seuls publies.
+      players: compositionEditorPlayers,
+      readOnly: false,
+      teamId: compositionTeamId,
+    });
+  }, [
+    compositionEditorPlayers,
+    compositionEventLabel,
+    compositionTeamId,
+    event?.team?.club?.documentId,
+    event?.type?.name,
+    eventId,
+    navigation,
+    publishedBoardTarget,
+  ]);
+
   const handleManageComposition = useCallback(() => {
     if (!eventId || !compositionTeamId) return;
 
@@ -8483,11 +8528,27 @@ function EventDetails({ navigation, route }) {
                           defaut. Le bouton reste, pour le terrain et le detail. */}
                       {renderPublishedRoster()}
                       {publishedCompositionTeamCount > 0 ? (
-                        <Button
-                          onPress={openPublishedConvocation}
-                          title={publishedCompositionCtaTitle}
-                          variant={viewerConvocationRole && !canEdit ? 'Primary' : 'Secondary'}
-                        />
+                        <View style={[Alignments.row, Spaces.gap[8]]}>
+                          <Button
+                            onPress={openPublishedConvocation}
+                            style={{ flex: 1 }}
+                            title={publishedCompositionCtaTitle}
+                            variant={viewerConvocationRole && !canEdit ? 'Primary' : 'Secondary'}
+                          />
+                          {/* 🚪 COMPOMODIF (M1) — le petit bouton « Modifier »,
+                              la ou le coach LIT sa compo. Reserve a qui peut
+                              vraiment modifier, et seulement s'il y a un terrain
+                              a rouvrir. */}
+                          {canEdit && publishedBoardTarget ? (
+                            <Button
+                              isOption
+                              onPress={openCompositionEdit}
+                              style={{ flex: 1 }}
+                              title={t('matchComposition.board.edit', 'Modifier')}
+                              variant="Primary"
+                            />
+                          ) : null}
+                        </View>
                       ) : null}
                     </View>
                   ) : (
