@@ -16,6 +16,8 @@ import { Calendar, LocaleConfig } from 'react-native-calendars';
 
 import useTheme from '@/theme/themeContext';
 
+import MarqueeText from '@/components/atoms/marqueeText/MarqueeText';
+
 import { resolveFacilityPlanningColor } from '@/utils/facilityPlanningColor';
 import {
   getPlanningDefaultDate,
@@ -284,9 +286,11 @@ function PlanningCalendarView({
         ) : null}
 
         {facilityName ? (
-          <Text numberOfLines={1} style={[Fonts.p3Bold, { color: accentColor, marginTop: 6 }]}>
-            {facilityName}
-          </Text>
+          <MarqueeText
+            containerStyle={{ marginTop: 6 }}
+            style={[Fonts.p3Bold, { color: accentColor }]}
+            text={facilityName}
+          />
         ) : null}
 
         <Text numberOfLines={1} style={[Fonts.p3, { color: Colors.neutral300, marginTop: 6 }]}>

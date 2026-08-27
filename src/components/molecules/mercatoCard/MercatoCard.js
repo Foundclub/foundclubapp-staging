@@ -9,6 +9,7 @@ import LinearGradient from 'react-native-linear-gradient';
 import { withAlpha } from '@/theme/colors';
 import useTheme from '@/theme/themeContext';
 
+import MarqueeText from '@/components/atoms/marqueeText/MarqueeText';
 import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 
 // Carte annonce du handoff « Cartes Rechercher » (tour 5b), adaptée aux
@@ -51,6 +52,13 @@ function MercatoCard({ onPress, user }) {
 
   const handlePress = () => onPress && onPress(user);
 
+  // Même motif que `clubNameStyle` dans ClubCard : le style du nom est monté
+  // ICI, pas dans le JSX. Le contrôle de thème lit une FENÊTRE de lignes autour
+  // d'un fond primary500 ; laissée dans le JSX, l'encre du nom se retrouvait à
+  // 4 lignes du badge de club et comptait comme « encre claire sur primary500 »
+  // alors qu'elle est posée sur la carte, pas sur le badge.
+  const userNameStyle = [styles.userName, { color: Colors.neutral00 }];
+
   return (
     <TouchableOpacity
       accessibilityLabel={[
@@ -89,14 +97,11 @@ function MercatoCard({ onPress, user }) {
             size={styles.avatar.width}
           />
           <View style={styles.profileTextContainer}>
-            <Text
-              numberOfLines={1}
-              style={[styles.userName, { color: Colors.neutral00 }]}
-            >
-              {user.firstname}
-              {' '}
-              {user.lastname}
-            </Text>
+            {/* MARQUEE — le nom du joueur se lit en entier. */}
+            <MarqueeText
+              style={userNameStyle}
+              text={[user.firstname, user.lastname].filter(Boolean).join(' ')}
+            />
             <View
               style={[styles.clubBadge, { backgroundColor: withAlpha(Colors.primary500, 0.12) }]}
             >

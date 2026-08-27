@@ -14,6 +14,7 @@ import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
 import HeaderBackButton from '@/components/atoms/headerBackButton/HeaderBackButton';
+import MarqueeText from '@/components/atoms/marqueeText/MarqueeText';
 import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 // eslint-disable-next-line max-len
 import SubscriptionPaywallSheet from '@/components/molecules/subscriptionPaywallSheet/SubscriptionPaywallSheet';
@@ -197,9 +198,11 @@ function MatchCompositionAmend() {
           style={[styles.moveAvatar, { borderColor: tone }]}
         />
         <View style={styles.moveTexts}>
-          <Text numberOfLines={1} style={[Fonts.p2Bold, { color: Colors.neutral00 }]}>
-            {nomDe(row.player)}
-          </Text>
+          {/* MARQUEE — le nom du joueur déplacé se lit en entier. */}
+          <MarqueeText
+            style={[Fonts.p2Bold, { color: Colors.neutral00 }]}
+            text={nomDe(row.player)}
+          />
           <Text numberOfLines={1} style={[Fonts.p4Bold, { color: tone }]}>
             {isLeaving
               ? t('matchConvocation.amend.moves.starterToAbsent')

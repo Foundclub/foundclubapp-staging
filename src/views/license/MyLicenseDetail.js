@@ -26,6 +26,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { withAlpha } from '@/theme/colors';
 import useTheme from '@/theme/themeContext';
 
+import MarqueeText from '@/components/atoms/marqueeText/MarqueeText';
 import Button from '@/components/atoms/button/Button';
 import GlyphIcon from '@/components/atoms/glyphIcon/GlyphIcon';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
@@ -164,9 +165,11 @@ function AmountCard({ assignment, footer }) {
           <Text numberOfLines={2} style={[type.title, Fonts.neutral00]}>
             {campaignTitleOf(assignment)}
           </Text>
-          <Text numberOfLines={1} style={[type.meta, Fonts.neutral300]}>
-            {clubNameOf(assignment)}
-          </Text>
+          {/* MARQUEE — le nom du club se lit en entier */}
+          <MarqueeText
+            style={[type.meta, Fonts.neutral300]}
+            text={clubNameOf(assignment)}
+          />
         </View>
         <MemberStatusPill status={assignment.status} />
       </View>

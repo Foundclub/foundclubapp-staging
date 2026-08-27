@@ -15,6 +15,7 @@ import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
 import HeaderBackButton from '@/components/atoms/headerBackButton/HeaderBackButton';
+import MarqueeText from '@/components/atoms/marqueeText/MarqueeText';
 import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 // eslint-disable-next-line max-len
 import SubscriptionPaywallSheet from '@/components/molecules/subscriptionPaywallSheet/SubscriptionPaywallSheet';
@@ -280,9 +281,11 @@ function MatchConvocationPublished() {
             ]}
           />
           <View style={styles.playerTexts}>
-            <Text numberOfLines={1} style={[Fonts.p2Bold, { color: Colors.neutral00 }]}>
-              {name || t('matchConvocation.published.unknownPlayer')}
-            </Text>
+            {/* MARQUEE — le nom du joueur convoqué se lit en entier. */}
+            <MarqueeText
+              style={[Fonts.p2Bold, { color: Colors.neutral00 }]}
+              text={name || t('matchConvocation.published.unknownPlayer')}
+            />
             <Text numberOfLines={1} style={[Fonts.p4, { color: Colors.neutral300 }]}>
               {meta}
             </Text>

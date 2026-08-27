@@ -12,6 +12,7 @@ import { withAlpha } from '@/theme/colors';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
+import MarqueeText from '@/components/atoms/marqueeText/MarqueeText';
 import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 import SearchBar from '@/components/molecules/searchBar/SearchBar';
 
@@ -1573,9 +1574,12 @@ function ParticipantItem({
             size={40}
             style={[ApplicationStyle.borderWidth1, ApplicationStyle.borderColor.neutral00, { borderRadius: 40 }]}
           />
-          <Text numberOfLines={1} style={[Fonts.p1Bold, Fonts.neutral00, { flex: 1 }]}>
-            {getUserDisplayName(player)}
-          </Text>
+          {/* MARQUEE — le nom du participant se lit en entier. */}
+          <MarqueeText
+            containerStyle={{ flex: 1 }}
+            style={[Fonts.p1Bold, Fonts.neutral00]}
+            text={getUserDisplayName(player)}
+          />
         </View>
         <View
           style={[

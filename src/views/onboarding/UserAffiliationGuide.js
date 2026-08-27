@@ -28,6 +28,7 @@ import { withAlpha } from '@/theme/colors';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
+import MarqueeText from '@/components/atoms/marqueeText/MarqueeText';
 import Stepper from '@/components/atoms/stepper/Stepper';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 import ClubLogoMark from '@/components/molecules/clubLogoMark/ClubLogoMark';
@@ -1455,9 +1456,15 @@ function UserAffiliationGuideContent({ navigation, route }) {
               <Text style={[Fonts.p3, Fonts.neutral300]}>
                 {t('onboardingAffiliation.selectedClubLabel', 'Club sélectionné')}
               </Text>
-              <Text numberOfLines={1} style={[Fonts.p1Bold, Fonts.neutral00]}>
-                {selectedClub.name || '-'}
-              </Text>
+              {/*
+                MARQUEE — le club retenu est le SEUL endroit du récapitulatif
+                où l'utilisateur relit son choix : le couper à « … » lui cache
+                précisément ce qu'il doit vérifier avant de continuer.
+              */}
+              <MarqueeText
+                style={[Fonts.p1Bold, Fonts.neutral00]}
+                text={selectedClub.name || '-'}
+              />
             </View>
             <TouchableOpacity
               accessibilityRole="button"

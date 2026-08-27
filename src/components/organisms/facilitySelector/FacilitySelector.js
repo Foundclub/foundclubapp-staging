@@ -14,6 +14,7 @@ import {
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
+import MarqueeText from '@/components/atoms/marqueeText/MarqueeText';
 import AutocompleteAddressInput from '@/components/organisms/autocompleteAddressInput/autocompleteAddressInput';
 
 import { useGetFacilityOccupancy } from '@/services/facility/facilityQueries';
@@ -404,12 +405,12 @@ function FacilitySelector({
                           justifyContent: 'space-between',
                         }}
                       >
-                        <Text
-                          numberOfLines={1}
-                          style={[Fonts.p2Bold, Fonts.neutral00, { flex: 1, marginRight: 12 }]}
-                        >
-                          {facility.isShared ? `${facility.name} (CM)` : facility.name}
-                        </Text>
+                        {/* MARQUEE — le nom du gymnase se lit en entier */}
+                        <MarqueeText
+                          containerStyle={{ flex: 1, marginRight: 12 }}
+                          style={[Fonts.p2Bold, Fonts.neutral00]}
+                          text={facility.isShared ? `${facility.name} (CM)` : facility.name}
+                        />
                         {isSelected ? (
                           <View style={{ alignItems: 'center', flexDirection: 'row' }}>
                             <View style={selectedCheckStyle}>

@@ -216,6 +216,11 @@ const texteDe = (noeud) => {
       morceaux.push(String(enfant));
       return;
     }
+    // 🪤 Un nom qui DEFILE ne porte pas son texte dans `children` mais dans la
+    // prop `text` (MarqueeText, 27/08). Sans cette ligne, ce collecteur rend une
+    // chaine SANS le nom du joueur : la rangee ne se retrouve plus, et le
+    // temoin echoue en disant « undefined » au lieu de « pas trouve ».
+    if (typeof enfant?.props?.text === 'string') morceaux.push(enfant.props.text);
     const enfants = enfant?.props?.children;
     if (Array.isArray(enfants)) enfants.forEach(descendre);
     else descendre(enfants);

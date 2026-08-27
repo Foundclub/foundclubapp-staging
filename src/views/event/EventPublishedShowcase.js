@@ -29,7 +29,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  AccessibilityInfo, ActivityIndicator, Image, KeyboardAvoidingView, Platform,
+  ActivityIndicator, Image, KeyboardAvoidingView, Platform,
   ScrollView, StyleSheet, Text, TouchableOpacity, useWindowDimensions, View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -46,6 +46,7 @@ import { celebrate } from '@/services/celebrations/celebrationRuntime';
 
 import { buildPublicEventUrl, buildShareMessageWithUrl } from '@/utils/shareLinks';
 
+import useReduceMotion from '@/hooks/useReduceMotion';
 import {
   FILE_SHARE_CAPABILITIES, FILE_SHARE_FAILURES, FILE_SHARE_OUTCOMES, getFileShareCapability,
 } from '@/platform/share/fileShareContract';
@@ -632,32 +633,12 @@ export default function EventPublishedShowcase({ navigation, route }) {
   );
 }
 
-/**
- * Suit le réglage système « réduire les animations ».
- * Un balayage de squelette est décoratif : quand l'utilisateur demande moins de
- * mouvement, on garde la FORME (les blocs) et on coupe l'animation.
- * @returns {boolean} - true si le système demande de réduire les animations.
- */
-const useReduceMotion = () => {
-  const [reduceMotion, setReduceMotion] = useState(false);
-
-  useEffect(() => {
-    let cancelled = false;
-    Promise.resolve(AccessibilityInfo.isReduceMotionEnabled?.())
-      .then((enabled) => { if (!cancelled) setReduceMotion(!!enabled); })
-      .catch(() => {});
-    const subscription = AccessibilityInfo.addEventListener?.(
-      'reduceMotionChanged',
-      (enabled) => setReduceMotion(!!enabled),
-    );
-    return () => {
-      cancelled = true;
-      subscription?.remove?.();
-    };
-  }, []);
-
-  return reduceMotion;
-};
+// Le suivi de « réduire les animations » vivait ICI, enfermé dans cet écran.
+// Il est parti dans `@/hooks/useReduceMotion` le jour où le défilement des noms
+// longs en a eu besoin à son tour : deux exemplaires du même réglage, c'est un
+// des deux qu'on oublie de corriger. Le comportement de cet écran ne change
+// pas — un balayage de squelette reste décoratif, et se coupe toujours quand
+// l'utilisateur demande moins de mouvement.
 
 /** Cadence du repère d'attente : 4 pas par seconde — assez fin pour ne pas saccader. */
 const PROGRESS_TICK_MS = 250;

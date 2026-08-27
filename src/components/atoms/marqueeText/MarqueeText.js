@@ -51,12 +51,18 @@ export { getActiveMarqueeCount };
 /**
  * Texte d'une ligne, défilant seulement s'il dépasse de la place disponible.
  * @param {object} props
+ * @param {import('react-native').StyleProp<import('react-native').ViewStyle>} [props.containerStyle]
  * @param {boolean} [props.paused] - Suspension forcée (carte connue hors écran).
  * @param {import('react-native').StyleProp<import('react-native').TextStyle>} [props.style]
  * @param {string} props.text - Texte à afficher.
  * @returns {import('react').ReactElement}
  */
-function MarqueeText({ paused = false, style = null, text }) {
+function MarqueeText({
+  containerStyle = null,
+  paused = false,
+  style = null,
+  text,
+}) {
   const [viewportWidth, setViewportWidth] = useState(0);
   // La mesure est retenue AVEC le texte qu'elle décrit. Une liste de clubs est
   // virtualisée : la même carte est recyclée pour un autre club, et la largeur
@@ -70,7 +76,7 @@ function MarqueeText({ paused = false, style = null, text }) {
     && textWidth > viewportWidth + OVERFLOW_EPSILON;
   const loopDistance = isOverflowing ? textWidth + COPY_GAP : 0;
 
-  const { translateX } = useMarqueeLoop({
+  const { isRunning, translateX } = useMarqueeLoop({
     distance: loopDistance,
     durationMs: Math.round((loopDistance / PIXELS_PER_SECOND) * 1000),
     enabled: !paused,
@@ -87,7 +93,11 @@ function MarqueeText({ paused = false, style = null, text }) {
       accessibilityElementsHidden
       importantForAccessibility="no-hide-descendants"
       onLayout={(event) => setViewportWidth(readWidth(event))}
-      style={styles.viewport}
+      // `containerStyle` porte la PLACE (flex, marges, largeur), `style` porte
+      // la POLICE. Sans cette séparation, un `flex: 1` écrit pour l'ancien
+      // `<Text>` atterrirait sur la copie intérieure : l'enveloppe cesserait de
+      // prendre la largeur disponible, et la colonne du nom s'effondrerait.
+      style={[styles.viewport, containerStyle]}
     >
       {/*
         Sonde de mesure : hors flux, invisible, et posée dans une place très
@@ -104,7 +114,13 @@ function MarqueeText({ paused = false, style = null, text }) {
         </Text>
       </View>
 
-      {isOverflowing ? (
+      {/*
+        `isRunning`, et pas seulement « ça dépasse » : une boucle peut être
+        refusée (plafond atteint) ou interdite (« réduire les animations »).
+        Dans ces deux cas le texte NE DOIT PAS rester figé au bord, coupé net
+        et sans « … » — il retombe sur la troncature d'origine.
+      */}
+      {isOverflowing && isRunning ? (
         <Animated.View style={[styles.track, { transform: [{ translateX }] }]}>
           {/*
             Le texte est rendu DEUX fois : quand la première copie sort par la

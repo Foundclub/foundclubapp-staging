@@ -14,6 +14,7 @@ import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
 import Checkable from '@/components/atoms/checkable/Checkable';
+import MarqueeText from '@/components/atoms/marqueeText/MarqueeText';
 import ClubLogoMark from '@/components/molecules/clubLogoMark/ClubLogoMark';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
 import ScreenContainer from '@/components/templates/ScreenContainer';
@@ -238,9 +239,11 @@ function AssignCoachTeams({ navigation, route }) {
             size={60}
           />
           <View style={[Alignments.fill, Spaces.gap[4]]}>
-            <Text numberOfLines={1} style={[Fonts.p1Bold, Fonts.neutral00]}>
-              {getTeamDisplayName(item)}
-            </Text>
+            {/* MARQUEE — le nom de l equipe se lit en entier */}
+            <MarqueeText
+              style={[Fonts.p1Bold, Fonts.neutral00]}
+              text={getTeamDisplayName(item)}
+            />
             <Text style={[Fonts.p3, Fonts.primary100]}>
               {item?.activities?.[0]?.name || 'Équipe'}
             </Text>

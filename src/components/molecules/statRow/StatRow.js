@@ -3,6 +3,7 @@ import { Text, View } from 'react-native';
 
 import useTheme from '@/theme/themeContext';
 
+import MarqueeText from '@/components/atoms/marqueeText/MarqueeText';
 import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 
 /**
@@ -55,12 +56,15 @@ function StatRow({ columns, isEven = false, player }) {
           }}
         />
         <View style={{ flex: 1 }}>
-          <Text numberOfLines={1} style={[Fonts.p2Bold, { color: Colors.neutral100 }]}>
-            {player.user?.firstname}
-          </Text>
-          <Text numberOfLines={1} style={[Fonts.p2Bold, { color: Colors.neutral100 }]}>
-            {player.user?.lastname}
-          </Text>
+          {/* MARQUEE — un prénom ou un nom long se lit en entier. */}
+          <MarqueeText
+            style={[Fonts.p2Bold, { color: Colors.neutral100 }]}
+            text={player.user?.firstname || ''}
+          />
+          <MarqueeText
+            style={[Fonts.p2Bold, { color: Colors.neutral100 }]}
+            text={player.user?.lastname || ''}
+          />
           {player.user?.position && (
             <Text numberOfLines={1} style={[Fonts.p4, { color: Colors.neutral300, marginTop: 2 }]}>
               {player.user.position}

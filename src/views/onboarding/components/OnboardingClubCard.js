@@ -9,6 +9,7 @@ import {
 import { withAlpha } from '@/theme/colors';
 import useTheme from '@/theme/themeContext';
 
+import MarqueeText from '@/components/atoms/marqueeText/MarqueeText';
 import SponsorLogoTile from '@/components/atoms/sponsorLogoTile/SponsorLogoTile';
 import ClubCardSurface from '@/components/molecules/clubCard/ClubCardSurface';
 import ClubLogoMark from '@/components/molecules/clubLogoMark/ClubLogoMark';
@@ -163,13 +164,17 @@ function OnboardingClubCard({
             size={44}
           />
           <View style={styles.headerTextContainer}>
-            <Text
-              ellipsizeMode="tail"
-              numberOfLines={1}
+            {/*
+              MARQUEE — cette carte est la JUMELLE de ClubCard : elle n'avait
+              jamais été reliée à la mécanique partagée, et c'est exactement
+              pour ça que « trouver mon club » coupait encore les noms longs.
+              Même composant, même registre de boucles. Un nom qui tient rend
+              ce qu'il rendait avant, au pixel : une ligne coupée par « … ».
+            */}
+            <MarqueeText
               style={[styles.clubName, { color: Colors.neutral00 }]}
-            >
-              {clubName}
-            </Text>
+              text={clubName}
+            />
             {shortAddress || distanceLabel ? (
               <View style={styles.addressRow}>
                 <Image

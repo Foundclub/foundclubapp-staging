@@ -25,6 +25,7 @@ import useMessaging from '@/domains/messaging/useMessaging';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
+import MarqueeText from '@/components/atoms/marqueeText/MarqueeText';
 import TabButton from '@/components/atoms/tabButton/TabButton';
 import ClubLogoMark from '@/components/molecules/clubLogoMark/ClubLogoMark';
 import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
@@ -728,9 +729,12 @@ function UserDetails({ navigation, route }) {
           name={team?.club?.name || team?.name}
           size={60}
         />
-        <Text numberOfLines={1} style={[Fonts.p1Bold, Fonts.neutral00, { flex: 1 }]}>
-          {team?.name || fallbackValue}
-        </Text>
+        {/* MARQUEE — le nom de l equipe se lit en entier */}
+        <MarqueeText
+          containerStyle={{ flex: 1 }}
+          style={[Fonts.p1Bold, Fonts.neutral00]}
+          text={team?.name || fallbackValue}
+        />
       </View>
       <Image
         source={Images.arrowRight}
@@ -825,9 +829,12 @@ function UserDetails({ navigation, route }) {
                     style={[Alignments.row, Alignments.alignCenter, Spaces.gap[8]]}
                   >
                     <ClubLogoMark club={user.club} size={60} />
-                    <Text numberOfLines={1} style={[Fonts.p2, Fonts.neutral200, { flex: 1 }]}>
-                      {user.club.name}
-                    </Text>
+                    {/* MARQUEE — le nom du club se lit en entier */}
+                    <MarqueeText
+                      containerStyle={{ flex: 1 }}
+                      style={[Fonts.p2, Fonts.neutral200]}
+                      text={user.club.name}
+                    />
                   </TouchableOpacity>
                 ) : (
                   <Text style={[Fonts.p2, Fonts.neutral300]}>

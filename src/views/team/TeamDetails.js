@@ -37,6 +37,7 @@ import useTheme from '@/theme/themeContext';
 import Button from '@/components/atoms/button/Button';
 import Checkable from '@/components/atoms/checkable/Checkable';
 import Loader from '@/components/atoms/loader/Loader';
+import MarqueeText from '@/components/atoms/marqueeText/MarqueeText';
 import SponsorLogoTile from '@/components/atoms/sponsorLogoTile/SponsorLogoTile';
 import TeamLocationIcon from '@/components/atoms/SvgIcon/SvgIcon';
 import TeamShield from '@/components/atoms/teamShield/TeamShield';
@@ -2662,9 +2663,11 @@ function TeamDetails({ navigation, route }) {
         Alignments.justifyCenter,
         Alignments.alignCenter]}
       >
-        <Text numberOfLines={1} style={[Fonts.h3Bold, Fonts.neutral00, { letterSpacing: 1 }]}>
-          {String(team?.name || t(`teamDetails.${isMyTeam ? 'myTitle' : 'title'}`)).toUpperCase()}
-        </Text>
+        {/* MARQUEE — le nom de l equipe se lit en entier dans l entete */}
+        <MarqueeText
+          style={[Fonts.h3Bold, Fonts.neutral00, { letterSpacing: 1 }]}
+          text={String(team?.name || t(`teamDetails.${isMyTeam ? 'myTitle' : 'title'}`)).toUpperCase()}
+        />
         <View style={[
           ApplicationStyle.separator,
           ApplicationStyle.backgroundColor.neutral00,
@@ -3342,16 +3345,15 @@ function TeamDetails({ navigation, route }) {
                                 </Text>
                               </View>
                               <View style={[Alignments.row, Alignments.alignCenter, { columnGap: 7, flex: 1, minWidth: 0 }]}>
-                                <Text
-                                  numberOfLines={1}
+                                {/* MARQUEE — le nom de l equipe se lit en entier */}
+                                <MarqueeText
                                   style={[
                                     isMyRow ? Fonts.p2Bold : Fonts.p2,
                                     isMyRow ? Fonts.neutral00 : Fonts.neutral100,
                                     { flexShrink: 1 },
                                   ]}
-                                >
-                                  {row.teamName}
-                                </Text>
+                                  text={row.teamName}
+                                />
                                 {isMyRow ? (
                                   <View
                                     style={{
@@ -4236,9 +4238,11 @@ function TeamDetails({ navigation, route }) {
                                 />
                                 <View style={[Alignments.fill, { minWidth: 0 }]}>
                                   <View style={[Alignments.row, { alignItems: 'baseline', columnGap: 7 }]}>
-                                    <Text numberOfLines={1} style={[Fonts.p2Bold, Fonts.neutral00, { flexShrink: 1 }]}>
-                                      {playerName}
-                                    </Text>
+                                    {/* MARQUEE — le nom du joueur se lit en entier. */}
+                                    <MarqueeText
+                                      style={[Fonts.p2Bold, Fonts.neutral00]}
+                                      text={playerName}
+                                    />
                                     {lateCount > 0 ? (
                                       <Text style={[Fonts.p4Bold, Fonts.warning400]}>
                                         {`${lateCount} retard${lateCount > 1 ? 's' : ''}`}

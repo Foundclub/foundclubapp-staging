@@ -566,6 +566,32 @@ function ClubListContent({
     });
   }, [appDispatch]);
 
+  // 🔋 CE QUI EST REELLEMENT A L'ECRAN (decision d'Adel du 2026-08-27 : le nom
+  // defile EN BOUCLE, sans fin). Une boucle sans fin sur une carte que
+  // personne ne regarde, c'est de la batterie brulee pour rien.
+  //
+  // La liste est virtualisee : elle garde montees quelques cartes AU-DELA du
+  // bord de l'ecran. Le plafond de `useMarqueeLoop` les bornait deja a 6, mais
+  // rien ne garantissait que ces 6 places aillent aux cartes VUES. C'est cette
+  // liste qui sait lesquelles le sont — elle le dit maintenant.
+  //
+  // ⚠️ Tant qu'aucun rapport de visibilite n'est arrive (premier rendu), la
+  // liste ne sait rien : on considere tout comme visible. Sans ce repli, aucun
+  // nom ne defilerait tant que l'utilisateur n'a pas touche a la liste.
+  const [idsVisibles, setIdsVisibles] = useState(/** @type {Set<string> | null} */ (null));
+
+  const rapportDeVisibilite = useRef((
+    /** @type {{ viewableItems?: Array<{ item?: any }> }} */ { viewableItems },
+  ) => {
+    setIdsVisibles(new Set(
+      (viewableItems || [])
+        .map((/** @type {{ item?: any }} */ entree) => entree?.item?.documentId)
+        .filter(Boolean),
+    ));
+  }).current;
+
+  const reglageDeVisibilite = useRef({ itemVisiblePercentThreshold: 10 }).current;
+
   const renderItem = useCallback(({ item }) => {
     const isMultisport = Reflect.get(item || {}, '_type') === 'multisport';
     const searchMeta = Reflect.get(item || {}, '__search');
@@ -577,10 +603,11 @@ function ClubListContent({
         onPress={() => (isMultisport
           ? handleMultisportSelection(item.documentId)
           : handleClubSelection(item.documentId))}
+        paused={idsVisibles !== null && !idsVisibles.has(item?.documentId)}
         reasonLabel={primaryReasonLabel ? `Tri pertinence: ${primaryReasonLabel}` : ''}
       />
     );
-  }, [handleClubSelection, handleMultisportSelection]);
+  }, [handleClubSelection, handleMultisportSelection, idsVisibles]);
 
   const renderEmptyList = useCallback(() => {
     if (showLoadingPlaceholder) {
@@ -703,10 +730,14 @@ function ClubListContent({
           onEndReached={handleEndReached}
           onEndReachedThreshold={0.5}
           onRefresh={refreshHandler}
+          // ⚠️ Ces deux-la sont FIGES dans un `ref` : react-native refuse
+          // qu'ils changent d'identite en cours de route.
+          onViewableItemsChanged={rapportDeVisibilite}
           ref={listeRef}
           refreshing={isActiveQueryBusy && !activeIsFetchingNext}
           renderItem={renderItem}
           showsVerticalScrollIndicator={false}
+          viewabilityConfig={reglageDeVisibilite}
         />
       </WithDataWrapper>
 

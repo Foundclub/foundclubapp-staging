@@ -15,6 +15,7 @@ import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
 import LeagueCard from '@/components/atoms/league/LeagueCard';
+import MarqueeText from '@/components/atoms/marqueeText/MarqueeText';
 import SectionHeader from '@/components/atoms/SectionHeader/SectionHeader';
 import TeamShield from '@/components/atoms/teamShield/TeamShield';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
@@ -663,9 +664,11 @@ function LeagueDashboard() {
             <Text style={[Fonts.p4Bold, { color: Colors.gold500, marginBottom: 4, textTransform: 'uppercase' }]}>
               Vue squad active
             </Text>
-            <Text numberOfLines={1} style={[Fonts.p1Bold, { color: Colors.neutral00 }]}>
-              {userTeam?.name || 'Ta squad'}
-            </Text>
+            {/* MARQUEE — le nom de ma squad se lit en entier */}
+            <MarqueeText
+              style={[Fonts.p1Bold, { color: Colors.neutral00 }]}
+              text={userTeam?.name || 'Ta squad'}
+            />
             <Text numberOfLines={1} style={[Fonts.p3, { color: Colors.neutral300, marginTop: 3 }]}>
               {userTeam?.sport || 'Sport'}
               {' - Div '}
@@ -803,9 +806,12 @@ function LeagueDashboard() {
 
               <View style={{ flex: 1, minWidth: 0 }}>
                 <View style={{ alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between' }}>
-                  <Text numberOfLines={1} style={[Fonts.p1Bold, { color: Colors.neutral00, flex: 1, marginRight: 8 }]}>
-                    {squad?.name || 'Squad'}
-                  </Text>
+                  {/* MARQUEE — le nom de la squad se lit en entier */}
+                  <MarqueeText
+                    containerStyle={{ flex: 1, marginRight: 8 }}
+                    style={[Fonts.p1Bold, { color: Colors.neutral00 }]}
+                    text={squad?.name || 'Squad'}
+                  />
                   {isActiveSquad ? (
                     <View
                       style={{
@@ -910,9 +916,11 @@ function LeagueDashboard() {
           )}
 
           <View style={{ flex: 1, marginLeft: 12, paddingRight: 12 }}>
-            <Text numberOfLines={1} style={[Fonts.p1Bold, { color: Colors.neutral00 }]}>
-              {squadName}
-            </Text>
+            {/* MARQUEE — le nom de la squad se lit en entier */}
+            <MarqueeText
+              style={[Fonts.p1Bold, { color: Colors.neutral00 }]}
+              text={squadName}
+            />
             <Text numberOfLines={1} style={[Fonts.p3, { color: Colors.neutral300, marginTop: 4 }]}>
               {sportLabel}
               {' · '}

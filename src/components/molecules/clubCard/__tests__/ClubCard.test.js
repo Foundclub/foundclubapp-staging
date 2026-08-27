@@ -317,3 +317,69 @@ describe('ClubCard — U01 : un nom trop long DÉFILE', () => {
     });
   });
 });
+
+// 🔋 DECISION D'ADEL DU 2026-08-27 : le nom defile EN BOUCLE, sans fin, tant
+// qu'il est visible. « Tant qu'il est visible » est la moitie qui coute cher :
+// une boucle sans fin sur une carte que personne ne regarde brule la batterie
+// pour rien. La liste de recherche dit maintenant a chaque carte si elle est
+// vue ; ce bloc prouve que la carte en tient compte.
+describe('ClubCard — MARQUEE : une carte HORS ECRAN n\'anime rien', () => {
+  const NOM_FLEUVE = 'Association Sportive et Culturelle de Villeneuve-sur-Lot Football';
+
+  /**
+   * Joue les deux mesures de largeur sur le nom de la carte.
+   * @param {any} tree - Arbre rendu.
+   * @returns {void}
+   */
+  const mesurer = (tree) => {
+    const marquee = tree.root.findByType(MarqueeText);
+    const mesurable = (/** @type {string} */ type) => (/** @type {any} */ node) => (
+      node.type === type && typeof node.props?.onLayout === 'function'
+    );
+    act(() => {
+      marquee.find(mesurable('View')).props.onLayout({
+        nativeEvent: { layout: { width: 210 } },
+      });
+      marquee.find(mesurable('Text')).props.onLayout({
+        nativeEvent: { layout: { width: 480 } },
+      });
+    });
+  };
+
+  it('carte VUE : le nom trop long defile', () => {
+    const tree = renderCard({ item: { ...baseClub, name: NOM_FLEUVE } });
+    mesurer(tree);
+
+    expect(getActiveMarqueeCount()).toBe(1);
+    act(() => { tree.unmount(); });
+    expect(getActiveMarqueeCount()).toBe(0);
+  });
+
+  it('carte HORS ECRAN : le meme nom n\'anime RIEN, et retombe sur « … »', () => {
+    const tree = renderCard({ item: { ...baseClub, name: NOM_FLEUVE }, paused: true });
+    mesurer(tree);
+
+    expect(getActiveMarqueeCount()).toBe(0);
+    const tronquees = tree.root.findAll(
+      (node) => node.type === 'Text' && node.props?.ellipsizeMode === 'tail',
+    );
+    expect(tronquees.length).toBeGreaterThan(0);
+
+    act(() => { tree.unmount(); });
+  });
+
+  it('la carte revient a l\'ecran : le defilement REPREND', () => {
+    const tree = renderCard({ item: { ...baseClub, name: NOM_FLEUVE }, paused: true });
+    mesurer(tree);
+    expect(getActiveMarqueeCount()).toBe(0);
+
+    act(() => {
+      tree.update(<ClubCard item={{ ...baseClub, name: NOM_FLEUVE }} paused={false} />);
+    });
+    mesurer(tree);
+
+    expect(getActiveMarqueeCount()).toBe(1);
+    act(() => { tree.unmount(); });
+    expect(getActiveMarqueeCount()).toBe(0);
+  });
+});

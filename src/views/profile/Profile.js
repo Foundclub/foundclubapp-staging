@@ -24,6 +24,7 @@ import { useAppContext } from '@/store/appContext';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
+import MarqueeText from '@/components/atoms/marqueeText/MarqueeText';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 import ClubLogoMark from '@/components/molecules/clubLogoMark/ClubLogoMark';
 import OnboardingWrapper from '@/components/molecules/onboardingWrapper/OnboardingWrapper';
@@ -324,9 +325,11 @@ function Profile({ navigation, route }) {
         ]}
       />
       <View style={{ flex: 1, gap: 2, minWidth: 0 }}>
-        <Text numberOfLines={1} style={[Fonts.neutral00, { fontFamily: 'Montserrat-Bold', fontSize: 17 }]}>
-          {identityFullName}
-        </Text>
+        {/* MARQUEE — mon propre nom se lit en entier, sans manger le bouton. */}
+        <MarqueeText
+          style={[Fonts.neutral00, { fontFamily: 'Montserrat-Bold', fontSize: 17 }]}
+          text={identityFullName}
+        />
         <Text numberOfLines={1} style={{ color: Colors.neutral300, fontSize: 12 }}>
           {identitySubline}
         </Text>

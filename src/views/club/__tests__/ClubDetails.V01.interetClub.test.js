@@ -396,7 +396,12 @@ const texteBrutDeLElement = (element) => {
   if (typeof element === 'string' || typeof element === 'number') return String(element);
   if (Array.isArray(element)) return element.map(texteBrutDeLElement).join(' ');
   const titre = typeof element.props?.title === 'string' ? element.props.title : '';
-  return `${titre} ${texteBrutDeLElement(element.props?.children)}`;
+  // 🪤 Un nom qui DEFILE ne porte pas son texte dans `children` mais dans la
+  // prop `text` (MarqueeText, 27/08). Sans cette lecture, la rangee « Seniors A »
+  // de la feuille devient introuvable : le temoin rend `undefined`, pas « pas
+  // le bon libelle ».
+  const texteDefilant = typeof element.props?.text === 'string' ? element.props.text : '';
+  return `${titre} ${texteDefilant} ${texteBrutDeLElement(element.props?.children)}`;
 };
 
 /**

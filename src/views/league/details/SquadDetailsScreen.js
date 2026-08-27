@@ -18,6 +18,7 @@ import useTheme from '@/theme/themeContext';
 import Button from '@/components/atoms/button/Button';
 import HeaderBackButton from '@/components/atoms/headerBackButton/HeaderBackButton';
 import DivisionBadge from '@/components/atoms/league/DivisionBadge';
+import MarqueeText from '@/components/atoms/marqueeText/MarqueeText';
 import TeamShield from '@/components/atoms/teamShield/TeamShield';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
@@ -2819,9 +2820,11 @@ function SquadDetailsScreen({ navigation, route }) {
                     size={40}
                   />
                   <View style={{ flex: 1, minWidth: 0 }}>
-                    <Text numberOfLines={1} style={[Fonts.p1Bold, { color: Colors.neutral00 }]}>
-                      {getPlayerDisplayName(player)}
-                    </Text>
+                    {/* MARQUEE — le nom du joueur se lit en entier */}
+                    <MarqueeText
+                      style={[Fonts.p1Bold, { color: Colors.neutral00 }]}
+                      text={getPlayerDisplayName(player)}
+                    />
                     <View style={{
                       alignSelf: 'flex-start',
                       backgroundColor: playerIsCaptain ? uiTone.captainBadgeBg : uiTone.playerBadgeBg,

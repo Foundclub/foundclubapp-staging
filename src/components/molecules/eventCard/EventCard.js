@@ -7,6 +7,7 @@ import {
 
 import useTheme from '@/theme/themeContext';
 
+import MarqueeText from '@/components/atoms/marqueeText/MarqueeText';
 import SponsorLogoTile from '@/components/atoms/sponsorLogoTile/SponsorLogoTile';
 import SvgIcon from '@/components/atoms/SvgIcon/SvgIcon';
 import Tag from '@/components/atoms/tag/Tag';
@@ -126,13 +127,10 @@ function EventCard({
               {primaryTitle}
             </Text>
             {secondaryTitle && (
-            <Text
-              ellipsizeMode="tail"
-              numberOfLines={1}
+            <MarqueeText
               style={[Fonts.p2, Fonts.neutral200]}
-            >
-              {secondaryTitle}
-            </Text>
+              text={secondaryTitle}
+            />
             )}
           </View>
         </View>

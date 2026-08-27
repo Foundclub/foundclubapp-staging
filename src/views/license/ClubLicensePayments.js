@@ -6,6 +6,7 @@ import {
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
+import MarqueeText from '@/components/atoms/marqueeText/MarqueeText';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
@@ -171,8 +172,16 @@ function ClubLicensePayments({ navigation, route }) {
           }}
           >
             <View style={[Spaces.gap[4], { flex: 1 }]}>
-              <Text numberOfLines={1} style={[Fonts.p1Bold, Fonts.neutral00]}>{memberName(item.user)}</Text>
-              <Text numberOfLines={1} style={[Fonts.p3, Fonts.neutral200]}>{item.team?.name || 'Sans équipe'}</Text>
+              {/* MARQUEE — le nom du licencie se lit en entier */}
+              <MarqueeText
+                style={[Fonts.p1Bold, Fonts.neutral00]}
+                text={memberName(item.user)}
+              />
+              {/* MARQUEE — l equipe du licencie se lit en entier */}
+              <MarqueeText
+                style={[Fonts.p3, Fonts.neutral200]}
+                text={item.team?.name || 'Sans équipe'}
+              />
             </View>
             <LicenseStatusChip status={item.status} />
           </View>
