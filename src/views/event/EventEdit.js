@@ -403,12 +403,21 @@ function EventEdit({ navigation, route }) {
    *   · `['planning']` LARGE est exigee par le planning plein ecran, qui lit
    *     quatre clefs distinctes sous ce prefixe.
    * Les resserrer casserait la fraicheur pour de vrai.
+   *
+   * 🎯 R2 — LA SEULE QUI SE RESSERRE, ET LA MESURE LE DIT : `['event']` nu est
+   * le SEUL de tout `src` (grep : une occurrence, celle-ci). Les vingt autres
+   * sites du depot ecrivent `['event', eventId]`. En prefixe nu, enregistrer un
+   * seul evenement perimait la fiche de TOUS ceux deja consultes — chacune se
+   * rechargeant ensuite pour elle-meme.
+   *
+   * ⛔ A la CREATION il n'y a pas encore d'identifiant : on garde alors le
+   * prefixe large, exactement comme avant. Rien ne change de ce cote.
    * @returns {void}
    */
   const invalidateEventQueries = () => {
     queryClient.invalidateQueries({ queryKey: ['events'] });
     queryClient.invalidateQueries({ queryKey: ['planning'] });
-    queryClient.invalidateQueries({ queryKey: ['event'] });
+    queryClient.invalidateQueries({ queryKey: eventId ? ['event', eventId] : ['event'] });
   };
 
   const createEventMutation = useMutation({
