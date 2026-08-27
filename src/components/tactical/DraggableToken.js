@@ -1,4 +1,3 @@
-import { useMemo } from 'react';
 import {
   Image, StyleSheet, Text, View,
 } from 'react-native';
@@ -8,7 +7,7 @@ import Animated, {
 
 import useTheme from '@/theme/themeContext';
 
-import { getImageUrl } from '@/utils/imageUrl';
+import TacticalPlayerToken, { useTokenIdentity } from './TacticalPlayerToken';
 
 /**
  * @typedef {import('./types').TacticalPlayer} TacticalPlayer
@@ -26,6 +25,15 @@ export const GHOST_TOKEN_SIZE = Object.freeze({ height: 88, width: 70 });
 /**
  * DraggableToken - Player token for tactical board
  * Stateless component - position controlled by parent via Animated style
+ *
+ * 🧩 COMPOLECT-2 — CE FICHIER NE PORTE PLUS QUE LE FANTOME. Les deux autres
+ * apparences (terrain, banc) vivent dans `TacticalPlayerToken`, qui n a AUCUNE
+ * dependance au moteur d animation. Motif : `react-native-reanimated` n est pas
+ * analysable par jest, et ne servait qu au fantome — le faire suivre le jeton
+ * partout rendait 21 suites rouges des qu un ecran sans glissement voulait
+ * dessiner un joueur (mesure du 27/08).
+ * ⚠️ L API de ce composant est INCHANGEE, volontairement : les 6 ecrans qui
+ * l emploient et leurs doubles de test n ont pas une ligne a modifier.
  * @param {object} props
  * @param {TacticalPlayer} props.player
  * @param {boolean} [props.isOnField] - Different style for field vs bench
@@ -45,35 +53,7 @@ function DraggableToken({
   translateY,
 }) {
   const { Colors } = useTheme();
-
-  // Initials
-  const initials = useMemo(() => {
-    const first = player?.firstname?.charAt(0)?.toUpperCase() || '';
-    const last = player?.lastname?.charAt(0)?.toUpperCase() || '';
-    return first + last || '?';
-  }, [player]);
-
-  // Check if player is manually added (no profile photo for manual players)
-  const isManualPlayer = useMemo(() => player?.isManual || String(player?.id || '').startsWith('manual_'), [player]);
-
-  // Handle avatar source (string vs object vs null)
-  // Manual players always show initials, never a photo
-  const avatarUri = useMemo(() => {
-    if (isManualPlayer) return null; // Force initials for manual players
-    if (!player?.avatar) return null;
-
-    let rawUrl = null;
-    if (typeof player.avatar === 'string') {
-      rawUrl = player.avatar;
-    } else if (player.avatar?.url && typeof player.avatar.url === 'string') {
-      rawUrl = player.avatar.url;
-    } else if (player.avatar?.formats?.thumbnail?.url && typeof player.avatar.formats.thumbnail.url === 'string') {
-      rawUrl = player.avatar.formats.thumbnail.url;
-    }
-
-    // Use getImageUrl to properly prefix relative URLs
-    return rawUrl ? getImageUrl(rawUrl) : null;
-  }, [player?.avatar, isManualPlayer]);
+  const { avatarUri, initials } = useTokenIdentity(player);
 
   // Animated style for ghost token (follows finger)
   const animatedStyle = useAnimatedStyle(() => {
@@ -118,83 +98,7 @@ function DraggableToken({
     );
   }
 
-  // Field Token - Round floating head style
-  if (isOnField) {
-    return (
-      <View
-        style={[
-          styles.fieldToken,
-          {
-            backgroundColor: Colors.primary700 || Colors.primary500,
-            borderColor: Colors.neutral00,
-            shadowColor: Colors.primary500,
-          },
-        ]}
-      >
-        <View style={styles.fieldAvatarContainer}>
-          {avatarUri ? (
-            <Image source={{ uri: avatarUri }} style={styles.fieldAvatar} />
-          ) : (
-            <View style={[styles.fieldInitialsContainer, { backgroundColor: Colors.primary600 || Colors.primary500 }]}>
-              <Text style={styles.fieldInitials}>{initials}</Text>
-            </View>
-          )}
-        </View>
-
-        {player?.number && (
-          <View style={[styles.jerseyBadge, { backgroundColor: Colors.primary900 || Colors.neutral900 }]}>
-            <Text style={styles.jerseyNumber}>{player.number}</Text>
-          </View>
-        )}
-
-        <View style={[styles.fieldNameBadge, { backgroundColor: `${Colors.primary900 || Colors.neutral900}A6` }]}>
-          <Text numberOfLines={1} style={styles.fieldName}>
-            {player?.firstname || ''}
-          </Text>
-        </View>
-      </View>
-    );
-  }
-
-  // Bench Token - Card style
-  return (
-    <View
-      style={[
-        styles.benchToken,
-        {
-          backgroundColor: Colors.primary900 || Colors.neutral800,
-          borderColor: `${Colors.primary500}55`,
-          shadowColor: Colors.primary500,
-        },
-      ]}
-    >
-      <View style={[styles.benchAvatarCircle, { backgroundColor: `${Colors.primary500}22`, borderColor: `${Colors.primary500}40` }]}>
-        {avatarUri ? (
-          <Image source={{ uri: avatarUri }} style={styles.benchAvatar} />
-        ) : (
-          <Text style={[styles.benchInitials, { color: Colors.neutral00 }]}>{initials}</Text>
-        )}
-      </View>
-
-      {player?.number && (
-        <View style={[styles.benchJerseyBadge, { backgroundColor: Colors.primary500 }]}>
-          {/* Encre unique sur primary500 : '#FFF' = 2,40:1 (echec AA), primary900 = 7,96:1. */}
-          <Text style={[styles.benchJerseyNumber, { color: Colors.primary900 }]}>
-            {player.number}
-          </Text>
-        </View>
-      )}
-
-      <View style={styles.benchNameContainer}>
-        <Text numberOfLines={1} style={[styles.benchFirstName, { color: Colors.neutral00 }]}>
-          {player?.firstname || ''}
-        </Text>
-        <Text numberOfLines={1} style={[styles.benchLastName, { color: Colors.neutral300 }]}>
-          {player?.lastname || ''}
-        </Text>
-      </View>
-    </View>
-  );
+  return <TacticalPlayerToken isOnField={isOnField} player={player} />;
 }
 
 const styles = StyleSheet.create({
@@ -239,143 +143,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.6,
     shadowRadius: 24,
     width: GHOST_TOKEN_SIZE.width,
-  },
-
-  // === FIELD TOKEN (On pitch) ===
-  fieldAvatar: {
-    borderRadius: 20,
-    height: 40,
-    width: 40,
-  },
-  fieldAvatarContainer: {
-    borderColor: '#FFF',
-    borderRadius: 22,
-    borderWidth: 2,
-    height: 44,
-    overflow: 'hidden',
-    width: 44,
-  },
-  fieldInitials: {
-    color: '#FFF',
-    fontSize: 14,
-    fontWeight: '800',
-  },
-  fieldInitialsContainer: {
-    alignItems: 'center',
-    borderRadius: 20,
-    height: 40,
-    justifyContent: 'center',
-    width: 40,
-  },
-  fieldName: {
-    color: '#FFF',
-    fontSize: 9,
-    fontWeight: '700',
-    textAlign: 'center',
-    textShadowColor: 'rgba(0,0,0,0.5)',
-    textShadowOffset: { height: 1, width: 0 },
-    textShadowRadius: 2,
-  },
-  fieldNameBadge: {
-    alignItems: 'center',
-    borderRadius: 999,
-    marginTop: 2,
-    maxWidth: 65,
-    minWidth: 42,
-    paddingHorizontal: 7,
-    paddingVertical: 2,
-  },
-  fieldToken: {
-    alignItems: 'center',
-    borderRadius: 29,
-    borderWidth: 3,
-    elevation: 12,
-    height: 72,
-    paddingTop: 4,
-    shadowOffset: { height: 8, width: 0 },
-    shadowOpacity: 0.28,
-    shadowRadius: 14,
-    width: 58,
-  },
-  jerseyBadge: {
-    alignItems: 'center',
-    borderColor: '#FFF',
-    borderRadius: 10,
-    borderWidth: 2,
-    height: 20,
-    justifyContent: 'center',
-    position: 'absolute',
-    right: -2,
-    top: -2,
-    width: 20,
-  },
-  jerseyNumber: {
-    color: '#FFF',
-    fontSize: 9,
-    fontWeight: '800',
-  },
-
-  // === BENCH TOKEN ===
-  benchAvatar: {
-    borderRadius: 22,
-    height: 44,
-    width: 44,
-  },
-  benchAvatarCircle: {
-    alignItems: 'center',
-    borderRadius: 22,
-    borderWidth: 1,
-    height: 44,
-    justifyContent: 'center',
-    overflow: 'hidden',
-    width: 44,
-  },
-  benchFirstName: {
-    fontSize: 10,
-    fontWeight: '700',
-    textAlign: 'center',
-  },
-  benchInitials: {
-    fontSize: 14,
-    fontWeight: '700',
-  },
-  benchJerseyBadge: {
-    alignItems: 'center',
-    borderRadius: 9,
-    height: 18,
-    justifyContent: 'center',
-    position: 'absolute',
-    right: 4,
-    top: 4,
-    width: 18,
-  },
-  benchJerseyNumber: {
-    fontSize: 9,
-    fontWeight: '700',
-  },
-  benchLastName: {
-    fontSize: 8,
-    fontWeight: '500',
-    textAlign: 'center',
-  },
-  benchNameContainer: {
-    alignItems: 'center',
-    marginTop: 4,
-    paddingHorizontal: 4,
-    width: '100%',
-  },
-  benchToken: {
-    alignItems: 'center',
-    borderRadius: 16,
-    borderWidth: 2,
-    elevation: 6,
-    height: 88,
-    marginHorizontal: 4,
-    paddingTop: 9,
-    shadowOffset: { height: 4, width: 0 },
-    shadowOpacity: 0.22,
-    shadowRadius: 10,
-    width: 72,
   },
 });
 
