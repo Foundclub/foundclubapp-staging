@@ -359,13 +359,34 @@ describe('T2 — les boutons de réponse de la carte « Mon planning »', () => 
     });
 
     const clesInvalidees = mockInvalider.mock.calls
-      .map((/** @type {any} */ appel) => JSON.stringify(appel[0]?.queryKey));
+      .map((/** @type {any} */ appel) => appel[0]?.queryKey);
 
-    expect(clesInvalidees).toContain(JSON.stringify(['events']));
-    expect(clesInvalidees).toContain(JSON.stringify(['planning', 'personal']));
+    // LOT INSTANT (2026-08-27) — ON MESURE LA COUVERTURE, PLUS LE LIBELLE.
+    //
+    // Cet ecran passe desormais par le registre `afterAction` (`answerEvent`),
+    // qui pose des racines COURTES : `['planning']` au lieu de
+    // `['planning','personal']`, `['eventAttendance']` au lieu de
+    // `['eventAttendance','evt-1']`. La correspondance de react-query etant
+    // PREFIXEE, une racine courte couvre la longue : la garantie de D3 est
+    // intacte, et meme elargie (le planning plein ecran suit enfin).
+    // ⛔ Comparer la chaine exacte mesurait l'orthographe de l'appel, pas ce
+    // qui est reellement rafraichi.
+    const couvre = (/** @type {any[]} */ cible) => clesInvalidees.some(
+      (/** @type {any} */ posee) => Array.isArray(posee)
+        && posee.length <= cible.length
+        && posee.every((/** @type {any} */ part, i) => part === cible[i]),
+    );
+
+    expect({ cle: 'events', couverte: couvre(['events']) })
+      .toEqual({ cle: 'events', couverte: true });
+    expect({ cle: 'planning/personal', couverte: couvre(['planning', 'personal']) })
+      .toEqual({ cle: 'planning/personal', couverte: true });
     // 🧊 Celle qui manquait : sans elle, le pointage garde son ancien
     // instantané et affiche « Arrivé » à qui vient de répondre.
-    expect(clesInvalidees).toContain(JSON.stringify(['eventAttendance', 'evt-1']));
+    expect({
+      cle: 'eventAttendance/evt-1',
+      couverte: couvre(['eventAttendance', 'evt-1']),
+    }).toEqual({ cle: 'eventAttendance/evt-1', couverte: true });
   });
 
   it('D4 — qui a déjà répondu peut revenir en arrière depuis la carte', () => {

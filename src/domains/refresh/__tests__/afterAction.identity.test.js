@@ -147,11 +147,14 @@ describe('U05 — la notification d\'acceptation relit l\'appartenance', () => {
     queryClient.clear();
   });
 
-  it('temoin 2 — les trois types d\'appartenance declenchent le rafraichissement', () => {
+  it('temoin 2 — les quatre types d\'appartenance declenchent le rafraichissement', () => {
     expect(resolveNotificationRefreshAction('teamMembershipRequest')).toBe('membershipChanged');
     expect(resolveNotificationRefreshAction('clubMembershipRequest')).toBe('membershipChanged');
     expect(resolveNotificationRefreshAction('addToTeam')).toBe('membershipChanged');
-    expect(MEMBERSHIP_NOTIFICATION_TYPES.length).toBe(3);
+    // LOT INSTANT (2026-08-27) — la QUATRIEME, et c'est celle qui manquait :
+    // le serveur envoie `clubRequest` a la personne ACCEPTEE, pas a l'encadrant.
+    expect(resolveNotificationRefreshAction('clubRequest')).toBe('membershipChanged');
+    expect(MEMBERSHIP_NOTIFICATION_TYPES.length).toBe(4);
   });
 
   it("temoin 2 bis — elle relit l'appartenance ET l'identite", async () => {
