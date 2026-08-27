@@ -30,7 +30,7 @@ import {
   resolveEventDisplayName,
   resolveEventOpponentName,
 } from '@/domains/event/eventDisplayName';
-import { resolveTrainingOpenConfig } from '@/domains/event/eventUseCases';
+import { getEventEditSupport, resolveTrainingOpenConfig } from '@/domains/event/eventUseCases';
 import { getCurrentUserEventParticipationState } from '@/domains/event/participationState';
 import useMessaging from '@/domains/messaging/useMessaging';
 import {
@@ -2577,6 +2577,34 @@ function EventDetails({ navigation, route }) {
   }, [eventStartAt]);
 
   const handleEditEvent = useCallback(() => {
+    // 🧱 D3 — LE REFUS SE CONSULTE ICI, LA OU LE BOUTON SE DECIDE.
+    //
+    // Constat de l'audit du 2026-08-26 : sur un STAGE ou un TOURNOI, le bouton
+    // s'affichait, l'ecran s'ouvrait, les DEUX lectures ci-dessous partaient
+    // pour rien, le formulaire se remplissait, on pouvait tout saisir — et
+    // « Enregistrer » etait GRIS. Le refus n'arrivait qu'au bout du parcours,
+    // sous la forme d'un bandeau au milieu du formulaire.
+    //
+    // ⚠️ LE BOUTON NE DISPARAIT PAS, ET C'EST DELIBERE. Un bouton qui s'evapore
+    // sans explication serait un DEUXIEME defaut : on chercherait ce qu'on a
+    // perdu. Il reste, et il DIT pourquoi c'est ferme — avec le motif exact que
+    // porte deja `getEventEditSupport`, seul juge de la question dans le depot.
+    //
+    // ⛔ Ce garde-fou est place AVANT le prechargement : c'est lui qui rend les
+    // deux lectures inutiles, pas l'inverse.
+    const editSupport = getEventEditSupport(event);
+    if (!editSupport.isSupported) {
+      Alert.alert(
+        t('eventDetails.editUnsupported.title', 'Modification limitée'),
+        editSupport.reason
+          || t(
+            'eventDetails.editUnsupported.description',
+            "Ce type d'événement ne se modifie pas encore depuis cette fiche.",
+          ),
+      );
+      return;
+    }
+
     // R5 (b) — LE DEPART ANTICIPE DES DEUX LECTURES DE L'ECRAN DE MODIFICATION.
     //
     // Constat de recette (2.6.26) : « tous les boutons de modifier un evenement
@@ -2616,7 +2644,10 @@ function EventDetails({ navigation, route }) {
       params: { eventId },
       screen: RouteNames.EventEdit,
     });
-  }, [eventId, navigation, queryClient]);
+    // ⚠️ `event` et `t` ENTRENT dans les dependances : sans eux, le refus serait
+    // calcule sur l'evenement du premier rendu — donc sur `undefined`, donc
+    // jamais.
+  }, [event, eventId, navigation, queryClient, t]);
 
   // @ts-ignore: FIXME: Baseline TS regression
   const handleOpenTournamentTeam = useCallback((teamDocumentId) => {
