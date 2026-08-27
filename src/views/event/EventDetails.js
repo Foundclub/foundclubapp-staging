@@ -579,6 +579,41 @@ const resolveEventStartAt = (event) => {
 };
 
 /**
+ * 🕳️ EVEDIT-2 / D1 — LE SIGNAL DE FIN DE FERMETURE DE LA FEUILLE.
+ *
+ * Il ne dessine RIEN. Il vit dans le contenu de la feuille de gestion, et son
+ * seul travail est de prevenir a l'instant precis ou ce contenu quitte l'arbre.
+ *
+ * 🧱 POURQUOI IL EXISTE, alors que `BottomModal` offre deja `onDismissed` :
+ * cette poignee-la n'est branchee que sur la feuille NATIVE. Le remplacant web
+ * (`BottomModal.web.js`) n'a pas d'animation : il retire son contenu tout de
+ * suite et n'emet jamais de fermeture. Une action qui n'attendrait QUE
+ * `onDismissed` ne repartirait donc JAMAIS sur le site.
+ *
+ * 🎯 CE QU'IL MESURE EST EXACTEMENT LE DEFAUT : ce qui avale l'appui, c'est la
+ * feuille MONTEE. Son depart de l'arbre est donc le signal juste, et il vaut
+ * sur les deux plateformes — a la fin de l'animation sur telephone
+ * (`BottomModal.js` ne fait `setShouldRender(false)` que dans `handleDismiss`),
+ * immediatement sur le web, ou il n'y a rien a attendre.
+ *
+ * ⛔ CE N'EST PAS UN MINUTEUR. Aucune duree n'est pariee nulle part : un
+ * `setTimeout` en dur marcherait sur un telephone rapide et raterait sur un
+ * lent, ce qui est precisement le defaut qu'on corrige.
+ * @param {{ onExit: () => void }} props - Le rappel de sortie.
+ * @returns {null} - Rien : ce composant n'a pas de rendu.
+ */
+function SheetExitSignal({ onExit }) {
+  const onExitRef = useRef(onExit);
+  onExitRef.current = onExit;
+
+  useEffect(() => () => {
+    onExitRef.current?.();
+  }, []);
+
+  return null;
+}
+
+/**
  * @param {{ navigation: import('@react-navigation/native').NavigationProp<any>; route: { params?: { eventId?: string, fromEventCreation?: boolean, eventCampaignCreationSuggested?: boolean, creationCelebration?: { actionKey?: string, payload?: Record<string, any> }, subscriptionFollowUp?: { beforeRemaining?: number, consumedCount?: number, quotaType?: string, total?: number } | null } } }} props
  */
 function EventDetails({ navigation, route }) {
@@ -641,6 +676,80 @@ function EventDetails({ navigation, route }) {
   // c'est une FEUILLE ouverte par le ⋯ de la barre du haut. Elle part fermee,
   // pour la meme raison qu'avant D4 : ouverte, elle cache la page entiere.
   const [isEventActionsSheetOpen, setIsEventActionsSheetOpen] = useState(false);
+  // 🎯 EVEDIT-2 (D1 + D2) — L'ACTION CHOISIE ATTEND QUE LA FEUILLE SOIT PARTIE.
+  //
+  // 🧱 LE DEFAUT, TEL QU'ADEL LE VIT (recette du 27/08) : « la pop reste
+  // ouverte, et quand je clique sur un champ il ne s'ouvre pas instantanement.
+  // Mais si je clique deux fois ca marche. » Et, sur « Enregistrer » : « si je
+  // fais une action, pour qu'elle soit prise en compte je dois faire une AUTRE
+  // action. » Les deux phrases decrivent LE MEME defaut, et ce n'est pas de la
+  // lenteur : la feuille n'etait jamais fermee avant de naviguer, elle restait
+  // montee PAR-DESSUS l'ecran d'arrivee, et sa couche mangeait le premier
+  // contact. Le second appui passait parce que la couche avait fini de partir.
+  //
+  // 🔑 LE REMEDE : on ne lance plus l'action au toucher. On l'ARME, on demande
+  // la fermeture, et on ne la lance qu'a la SORTIE REELLE de la feuille.
+  //
+  // ⛔ PAS DE MINUTEUR, ET C'EST LE POINT DUR. Un `setTimeout` « le temps que
+  // l'animation joue » est un pari sur la vitesse du telephone : juste sur un
+  // appareil recent, faux sur un lent — donc exactement le defaut d'origine,
+  // rendu intermittent. On attend l'evenement, jamais une duree.
+  //
+  // ⛔ ET FERMER JUSTE AVANT DE NAVIGUER NE SUFFIT PAS NON PLUS : la fermeture
+  // est ANIMEE, la couche survit quelques images. C'est la forme qu'avait
+  // « Voir mon abonnement » (§D3), et elle est traitee par le meme mecanisme.
+  //
+  // 🚪 LE POINT DE SORTIE COMMUN (D2) : les six rangees du menu passent TOUTES
+  // par `renderManageRow`, donc par ici. Corriger « Modifier » seul aurait
+  // laisse les cinq autres portes cassees (§1 bis — la cause racine, une fois).
+  //
+  // Le motif est celui du depot, deja eprouve sur le menu de pieces jointes de
+  // la messagerie (`Conversation.js` : `runAttachmentAction` +
+  // `handleAttachmentSheetDismissed`). Rien de neuf n'est invente ici.
+  //
+  // 🏷️ L'ETIQUETTE N'EST PAS DECORATIVE : deux feuilles de cet ecran se servent
+  // du meme rangement. Sans elle, une feuille qui se ferme lancerait l'action
+  // armee par l'AUTRE.
+  /** @type {{ current: null | { action: () => void, sheet: string } }} */
+  const pendingSheetActionRef = useRef(null);
+
+  const armSheetAction = useCallback((
+    /** @type {string} */ sheet,
+    /** @type {() => void} */ action,
+    /** @type {() => void} */ hideSheet,
+  ) => {
+    if (typeof action !== 'function') return;
+    pendingSheetActionRef.current = { action, sheet };
+    hideSheet();
+  }, []);
+
+  // Idempotent PAR CONSTRUCTION : le rangement est vide AVANT l'appel. Les deux
+  // signaux de sortie d'une feuille (son rappel `onDismissed` et le depart de
+  // `SheetExitSignal`) peuvent donc arriver tous les deux sans que l'action
+  // parte deux fois.
+  const runPendingSheetAction = useCallback((/** @type {string} */ sheet) => {
+    const queued = pendingSheetActionRef.current;
+    if (!queued || queued.sheet !== sheet) return;
+    pendingSheetActionRef.current = null;
+    queued.action();
+  }, []);
+
+  const closeManageSheet = useCallback(() => setIsEventActionsSheetOpen(false), []);
+  const runManageSheetExit = useCallback(
+    () => runPendingSheetAction('manage'),
+    [runPendingSheetAction],
+  );
+
+  // Rouvrir la feuille DESARME ce qui attendait. Sans ca, un appui suivi d'une
+  // reouverture immediate laisserait l'action en embuscade : la bibliotheque
+  // represente alors la meme feuille sans emettre sa fermeture
+  // (`staleDismissUntilRef`, `BottomModal.js`), et l'action serait repartie
+  // plus tard, sur une fermeture qui n'a rien a voir avec elle.
+  const openManageSheet = useCallback(() => {
+    pendingSheetActionRef.current = null;
+    setIsEventActionsSheetOpen(true);
+  }, []);
+
   // N4 (D5) : `null` = feuille fermee ; une CHAINE (meme vide) = feuille
   // ouverte, la chaine etant l'equipe a pre-cocher. Un booleen a cote d'une
   // clef ferait deux etats a garder d'accord — et un jour ils divergeraient.
@@ -847,8 +956,26 @@ function EventDetails({ navigation, route }) {
   // ramene sur CET evenement au lieu de l'accueil. La cible s'exprime depuis la
   // RACINE (`EventStack` + l'ecran), le seul niveau que l'ecran de succes sache
   // viser — un nom de feuille y echouerait en silence (R06).
-  const handleOpenSubscriptionOverview = useCallback(() => {
-    setIsSubscriptionFollowUpVisible(false);
+  // 🚪 EVEDIT-2 / D3 — LA MEME PORTE, SUR LA FEUILLE DE FIN DE CREATION.
+  //
+  // Le balayage du lot a trouve UNE seule autre sortie de feuille de cet
+  // ecran : celle-ci. Elle fermait la feuille et naviguait dans la FOULEE —
+  // ce qui parait correct, et ne l est pas : la fermeture est animee, la
+  // couche survit quelques images, et elle avale le premier appui sur
+  // l ecran des offres. C est le defaut de G1, en plus discret.
+  //
+  // ⛔ Le geste ne ferme donc plus lui-meme : il ARME, et la feuille le
+  // lance en partant — meme mecanisme que les six rangees du menu.
+  const closeSubscriptionFollowUp = useCallback(
+    () => setIsSubscriptionFollowUpVisible(false),
+    [],
+  );
+  const runSubscriptionFollowUpExit = useCallback(
+    () => runPendingSheetAction('subscriptionFollowUp'),
+    [runPendingSheetAction],
+  );
+
+  const openSubscriptionOverview = useCallback(() => {
     navigation.navigate(RouteNames.ProfileStack, {
       params: {
         resumeRouteName: RouteNames.EventStack,
@@ -857,6 +984,26 @@ function EventDetails({ navigation, route }) {
       screen: RouteNames.SubscriptionOffers,
     });
   }, [eventId, navigation]);
+
+  // 🪤 DEUX APPELANTS, DEUX BESOINS — et les confondre casse le premier.
+  // Celui-ci est appele depuis la PAGE (la carte de rappel de compo, au
+  // forfait gratuit) : la personne n a aucune feuille devant elle, donc rien
+  // n a a etre attendu. Il part tout de suite, comme avant ce lot.
+  const handleOpenSubscriptionOverview = useCallback(() => {
+    closeSubscriptionFollowUp();
+    openSubscriptionOverview();
+  }, [closeSubscriptionFollowUp, openSubscriptionOverview]);
+
+  // Celui-ci est appele DEPUIS LA FEUILLE de fin de creation : la couche est
+  // devant l ecran des offres, il faut donc attendre qu elle soit partie.
+  const handleOpenSubscriptionOverviewFromSheet = useCallback(
+    () => armSheetAction(
+      'subscriptionFollowUp',
+      openSubscriptionOverview,
+      closeSubscriptionFollowUp,
+    ),
+    [armSheetAction, closeSubscriptionFollowUp, openSubscriptionOverview],
+  );
 
   useEffect(() => {
     const safeEventId = String(eventId || '');
@@ -6480,11 +6627,16 @@ function EventDetails({ navigation, route }) {
       // laisse place aux rangees pleine largeur de la maquette 04 · 4C — une
       // demi-chip ne peut pas porter un libelle ET sa destination.
       <View key={chip.key} style={{ width: '100%' }} testID="event-manage-chip">
+        {/* 🚪 EVEDIT-2 (D2) — LE POINT DE SORTIE COMMUN DES SIX ACTIONS.
+            La rangee n execute plus au toucher : elle ARME l action et
+            demande la fermeture de la feuille. C est ici, et nulle part
+            ailleurs, que le defaut se corrige — six rustines auraient
+            laisse la prochaine action ajoutee cassee des sa naissance. */}
         <TouchableOpacity
           accessibilityRole="button"
           activeOpacity={0.82}
           disabled={chip.disabled}
-          onPress={chip.onPress}
+          onPress={() => armSheetAction('manage', chip.onPress, closeManageSheet)}
           style={[
             Alignments.row,
             Alignments.alignCenter,
@@ -6605,9 +6757,10 @@ function EventDetails({ navigation, route }) {
 
     return (
       <BottomModal
-        close={() => setIsEventActionsSheetOpen(false)}
+        close={closeManageSheet}
         isVisible={isEventActionsSheetOpen}
         maxContentHeightRatio={plafondUtile}
+        onDismissed={runManageSheetExit}
       >
         {/* Le titre est le PREMIER enfant du contenu : c est ce qui le fait
             entrer dans la mesure de la feuille. Les marges rendent l espacement
@@ -6644,6 +6797,19 @@ function EventDetails({ navigation, route }) {
             index === manageChips.length - 1,
           ))}
         </View>
+
+        {/* 🚪 EVEDIT-2 (D1) — LE SIGNAL DE SORTIE, DANS LE CONTENU.
+            `onDismissed` ci-dessus est la poignee du depot (elle sert deja
+            au menu de pieces jointes de la messagerie), mais elle n existe
+            que sur la feuille NATIVE : le remplacant web n a pas
+            d animation et n emet jamais de fermeture. Ce temoin-ci part
+            quand le CONTENU quitte l arbre — c est-a-dire au moment exact
+            ou la couche cesse d avaler les appuis, sur les deux
+            plateformes. Les deux signaux menent au meme appel, qui est
+            idempotent : l action ne peut pas partir deux fois.
+            ⛔ IL EST LE DERNIER ENFANT, ET IL NE REND RIEN : le titre reste
+            le PREMIER, comme S2 l exige pour la mesure de la feuille. */}
+        <SheetExitSignal onExit={runManageSheetExit} />
       </BottomModal>
     );
   };
@@ -7516,7 +7682,7 @@ function EventDetails({ navigation, route }) {
             accessibilityLabel={t('eventDetails.managePanel.title', "Gérer l'événement")}
             accessibilityRole="button"
             activeOpacity={0.7}
-            onPress={() => setIsEventActionsSheetOpen(true)}
+            onPress={openManageSheet}
             style={[
               Alignments.alignCenter,
               Alignments.justifyCenter,
@@ -7529,7 +7695,7 @@ function EventDetails({ navigation, route }) {
         ) : null}
       </View>
     ),
-    [Alignments, Colors.neutral00, hasManageActions, Spaces, t],
+    [Alignments, Colors.neutral00, hasManageActions, openManageSheet, Spaces, t],
   );
 
   useLayoutEffect(() => {
@@ -8804,10 +8970,14 @@ function EventDetails({ navigation, route }) {
       />
 
       <BottomModal
-        close={() => setIsSubscriptionFollowUpVisible(false)}
+        close={closeSubscriptionFollowUp}
         isVisible={isSubscriptionFollowUpVisible}
+        onDismissed={runSubscriptionFollowUpExit}
         snapPoints={['70%']}
       >
+        {/* 🚪 EVEDIT-2 / D3 — meme signal de sortie que le menu ⋯ :
+            il ne rend rien, et il part quand la feuille quitte l arbre. */}
+        <SheetExitSignal onExit={runSubscriptionFollowUpExit} />
         <View style={[Spaces.gap[16], Spaces.paddingBottom[12]]}>
           <View style={[Spaces.gap[4]]}>
             <Text style={[Fonts.h3Bold, Fonts.neutral00]}>
@@ -8841,12 +9011,12 @@ function EventDetails({ navigation, route }) {
           </View>
 
           <Button
-            onPress={handleOpenSubscriptionOverview}
+            onPress={handleOpenSubscriptionOverviewFromSheet}
             title="Voir mon abonnement"
             variant="Primary"
           />
           <Button
-            onPress={() => setIsSubscriptionFollowUpVisible(false)}
+            onPress={closeSubscriptionFollowUp}
             title="Continuer"
             variant="Secondary"
           />
