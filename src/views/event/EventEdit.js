@@ -652,12 +652,30 @@ function EventEdit({ navigation, route }) {
 
       if (eventId) {
         // Mise à jour d'un événement existant
+        // 🔴 D2 — LE CHEMIN QUI N'AVAIT AUCUN `catch`, ET IL EST INVISIBLE A LA
+        // RELECTURE. Sur un evenement recurrent, l'envoi ne part pas d'ici : il
+        // part du `onPress` de l'alerte ouverte juste en dessous. Ce `onPress`
+        // est rappele PLUS TARD, par le systeme — donc HORS du `try` qui
+        // entoure cette fonction. Une promesse rejetee la n'avait personne pour
+        // l'attraper : rejet non traite, et STRICTEMENT RIEN a l'ecran.
+        //
+        // 🔑 LE `catch` REVIENT DANS LA FONCTION ELLE-MEME, pas chez chacun de
+        // ses quatre appelants : le chemin qui capte est ainsi le meme qu'on
+        // l'appelle avec `await` (evenement simple) ou depuis un bouton
+        // d'alerte (les trois portees). Le message, lui, est deja affiche par
+        // le `onError` de la mutation (D1) — un seul endroit, une seule fenetre.
         const updateEventWithMode = async (/** @type {'future' | 'all'} */ recurrenceMode) => {
-          await updateEventMutation.mutateAsync({
-            documentId: eventId,
-            eventData: normalizedEvents[0],
-            recurrenceMode,
-          });
+          try {
+            await updateEventMutation.mutateAsync({
+              documentId: eventId,
+              eventData: normalizedEvents[0],
+              recurrenceMode,
+            });
+          } catch {
+            // ⛔ On ne navigue pas, et on ne reparle pas : `onError` vient de le
+            // dire. La personne reste sur son formulaire, avec ses saisies.
+            return;
+          }
           navigation.replace(RouteNames.EventDetails, { eventId });
         };
 
@@ -701,7 +719,12 @@ function EventEdit({ navigation, route }) {
           },
         );
 
-        const results = await Promise.all(promises);
+        let results;
+        try {
+          results = await Promise.all(promises);
+        } catch {
+          return;
+        }
         console.log('Events created:', results);
 
         // Navigation après succès
@@ -710,8 +733,13 @@ function EventEdit({ navigation, route }) {
         }
       }
     } catch (error) {
-      console.error('Error in handleFormSubmit:', error);
-      // L'erreur de création/mise à jour de l'événement est gérée par les mutations
+      // ⚠️ CE COMMENTAIRE A ETE FAUX LONGTEMPS : il affirmait que « les mutations
+      // gerent », alors qu'elles ne faisaient qu'un `console.error`. Depuis D1
+      // c'est vrai, et les deux chemins d'envoi captent desormais eux-memes —
+      // donc ce qui arrive ici n'est plus un echec reseau, mais un imprevu de
+      // la mise en forme de la charge, AVANT tout appel. Une date illisible
+      // suffit : `format` jette, et jusqu'ici l'ecran n'en disait rien.
+      signalerEchecEnregistrement(error);
     }
   };
 
