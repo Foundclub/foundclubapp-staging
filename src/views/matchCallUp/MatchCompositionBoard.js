@@ -138,6 +138,34 @@ function MatchCompositionBoard() {
   const [placements, setPlacements] = useState(() => (
     Array.isArray(startPlacements) ? startPlacements : EMPTY_LIST
   ));
+
+  // 🧨 COMPOMODIF (M3) — LE TERRAIN DOIT SUIVRE QUAND ON REVIENT SUR CET ECRAN.
+  //
+  // 🗣️ Adel, 27/08 : « le message que ca envoie apres modif, c'est la compo
+  // D'AVANT la modif ».
+  //
+  // 🧭 CE QUI A ETE ECARTE PAR LA MESURE : le serveur est HORS DE CAUSE.
+  // `publishConvocation` relit le brouillon qu'on vient d'ecrire, en fabrique
+  // `published`, et c'est CE pack — jamais un cache — que le controleur passe a
+  // `publishLineupShareToTeamChat`. Et l'ordre des 2 appels de l'app est bon :
+  // la compo part avant la convocation. Le message ne peut donc porter que ce
+  // que CET ecran a envoye.
+  //
+  // 🧨 LA CAUSE : depuis COMPOLECT-2, la lecture d'une compo publiee ouvre ce
+  // plateau, et sa porte « Modifier » EMPILE l'ecran de selection PAR-DESSUS.
+  // « Suivant » y REVIENT en depilant (`navigate` vers un ecran deja empile) :
+  // le composant n'est jamais remonte, l'amorce de ce `useState` ne rejoue pas,
+  // et le terrain d'AVANT reste en place — c'est lui qui part au serveur, donc
+  // dans le message de toute l'equipe.
+  //
+  // ⚠️ On compare les IDENTITES, pas le contenu : `resumeFieldForSelection`
+  // rend toujours un tableau NEUF, alors qu'un simple re-rendu (un jeton qu'on
+  // deplace) garde le meme. Poser un jeton a la main n'est donc jamais efface.
+  const [rangeeRecue, setRangeeRecue] = useState(startPlacements);
+  if (startPlacements !== rangeeRecue) {
+    setRangeeRecue(startPlacements);
+    setPlacements(Array.isArray(startPlacements) ? startPlacements : EMPTY_LIST);
+  }
   const [isSheetVisible, setIsSheetVisible] = useState(false);
   const [requireResponse, setRequireResponse] = useState(true);
   const [isBusy, setIsBusy] = useState(false);
