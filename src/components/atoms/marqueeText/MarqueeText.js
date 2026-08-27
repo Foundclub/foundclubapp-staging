@@ -51,12 +51,18 @@ export { getActiveMarqueeCount };
 /**
  * Texte d'une ligne, défilant seulement s'il dépasse de la place disponible.
  * @param {object} props
+ * @param {import('react-native').StyleProp<import('react-native').ViewStyle>} [props.containerStyle]
  * @param {boolean} [props.paused] - Suspension forcée (carte connue hors écran).
  * @param {import('react-native').StyleProp<import('react-native').TextStyle>} [props.style]
  * @param {string} props.text - Texte à afficher.
  * @returns {import('react').ReactElement}
  */
-function MarqueeText({ paused = false, style = null, text }) {
+function MarqueeText({
+  containerStyle = null,
+  paused = false,
+  style = null,
+  text,
+}) {
   const [viewportWidth, setViewportWidth] = useState(0);
   // La mesure est retenue AVEC le texte qu'elle décrit. Une liste de clubs est
   // virtualisée : la même carte est recyclée pour un autre club, et la largeur
@@ -87,7 +93,11 @@ function MarqueeText({ paused = false, style = null, text }) {
       accessibilityElementsHidden
       importantForAccessibility="no-hide-descendants"
       onLayout={(event) => setViewportWidth(readWidth(event))}
-      style={styles.viewport}
+      // `containerStyle` porte la PLACE (flex, marges, largeur), `style` porte
+      // la POLICE. Sans cette séparation, un `flex: 1` écrit pour l'ancien
+      // `<Text>` atterrirait sur la copie intérieure : l'enveloppe cesserait de
+      // prendre la largeur disponible, et la colonne du nom s'effondrerait.
+      style={[styles.viewport, containerStyle]}
     >
       {/*
         Sonde de mesure : hors flux, invisible, et posée dans une place très

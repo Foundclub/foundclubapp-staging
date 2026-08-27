@@ -28,6 +28,7 @@ import { withAlpha } from '@/theme/colors';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
+import MarqueeText from '@/components/atoms/marqueeText/MarqueeText';
 import Tag from '@/components/atoms/tag/Tag';
 import TeamShield from '@/components/atoms/teamShield/TeamShield';
 import WebFloatingOverlay from '@/components/atoms/webFloatingOverlay/WebFloatingOverlay';
@@ -753,13 +754,17 @@ function TeamListContent({
           <View style={styles.identityRow}>
             <View>{identityAvatar}</View>
             <View style={styles.identityText}>
-              <Text numberOfLines={1} style={[Fonts.p1Bold, Fonts.neutral00, styles.teamName]}>
-                {item.name}
-              </Text>
+              {/* MARQUEE — nom d'équipe et nom de club se lisent en entier. */}
+              <MarqueeText
+                style={[Fonts.p1Bold, Fonts.neutral00, styles.teamName]}
+                text={item.name}
+              />
               {item?.club?.name ? (
-                <Text numberOfLines={1} style={[Fonts.p4, Fonts.neutral300, styles.clubName]}>
-                  {item.club.name}
-                </Text>
+                <MarqueeText
+                  containerStyle={styles.clubName}
+                  style={[Fonts.p4, Fonts.neutral300]}
+                  text={item.club.name}
+                />
               ) : null}
             </View>
             {badge ? (
@@ -1042,9 +1047,11 @@ function TeamListContent({
           size={40}
         />
         <View style={styles.compactText}>
-          <Text numberOfLines={1} style={[Fonts.p2Bold, Fonts.neutral00]}>
-            {item?.name}
-          </Text>
+          {/* MARQUEE — même règle sur le gabarit compact de la même liste. */}
+          <MarqueeText
+            style={[Fonts.p2Bold, Fonts.neutral00]}
+            text={item?.name}
+          />
           {metaLine ? (
             <Text numberOfLines={1} style={[Fonts.p4, Fonts.neutral300]}>
               {metaLine}

@@ -6,6 +6,7 @@ import {
 
 import useTheme from '@/theme/themeContext';
 
+import MarqueeText from '@/components/atoms/marqueeText/MarqueeText';
 import ClubLogoMark from '@/components/molecules/clubLogoMark/ClubLogoMark';
 
 import {
@@ -86,13 +87,12 @@ function ClubSearchResultCard({
         ) : null}
 
         <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[8]]}>
-          <Text
-            ellipsizeMode="tail"
-            numberOfLines={1}
-            style={[Fonts.p1Bold, { color: Colors.neutral00, flex: 1 }]}
-          >
-            {item?.name || 'Club'}
-          </Text>
+          {/* MARQUEE — un nom de club trop long se lit en entier, sans ouvrir la fiche. */}
+          <MarqueeText
+            containerStyle={{ flex: 1 }}
+            style={[Fonts.p1Bold, { color: Colors.neutral00 }]}
+            text={item?.name || 'Club'}
+          />
           {isMultisport ? (
             <View
               style={{

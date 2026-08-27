@@ -1,5 +1,7 @@
-import { Text } from 'react-native';
+import { StyleSheet, Text } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
+
+import MarqueeText, { getActiveMarqueeCount } from '@/components/atoms/marqueeText/MarqueeText';
 
 import ClubSearchResultCard from '../ClubSearchResultCard';
 
@@ -103,5 +105,42 @@ describe('ClubSearchResultCard — données affichées (caractérisation)', () =
       pressable.props.onPress();
     });
     expect(onPress).toHaveBeenCalled();
+  });
+});
+
+// MARQUEE (27/08) — « ça doit être PARTOUT ». Cette rangée est la SECONDE carte
+// de club de l'app (celle servie aux wizards) : elle coupait encore les noms
+// longs alors que la carte de recherche, elle, les faisait défiler depuis U01.
+describe('ClubSearchResultCard — MARQUEE : le nom du club défile', () => {
+  const NOM_FLEUVE = 'Association Sportive et Culturelle de Villeneuve-sur-Lot Football';
+
+  it('le nom passe par la mécanique partagée, et par elle seule', () => {
+    const tree = renderCard({ item: { ...baseClub, name: NOM_FLEUVE } });
+    const marquees = tree.root.findAllByType(MarqueeText);
+
+    expect(marquees).toHaveLength(1);
+    expect(marquees[0].props.text).toBe(NOM_FLEUVE);
+    act(() => { tree.unmount(); });
+  });
+
+  it('la PLACE reste à l\'enveloppe : la colonne du nom ne s\'effondre pas', () => {
+    const tree = renderCard({ item: baseClub });
+    const marquee = tree.root.findByType(MarqueeText);
+
+    // Le `flex: 1` de l'ancien <Text> doit habiller l'enveloppe, pas la copie
+    // intérieure — sinon le nom cesse de pousser le badge vers la droite.
+    expect(StyleSheet.flatten(marquee.props.containerStyle)).toMatchObject({ flex: 1 });
+    act(() => { tree.unmount(); });
+  });
+
+  it('sans mesure de largeur, la carte rend la troncature « … » d\'avant', () => {
+    const tree = renderCard({ item: { ...baseClub, name: NOM_FLEUVE } });
+    const tronquees = tree.root.findAll(
+      (node) => node.type === 'Text' && node.props?.ellipsizeMode === 'tail',
+    );
+
+    expect(tronquees.length).toBeGreaterThan(0);
+    expect(getActiveMarqueeCount()).toBe(0);
+    act(() => { tree.unmount(); });
   });
 });

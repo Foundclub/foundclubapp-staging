@@ -1,4 +1,4 @@
-import { Animated, AppState } from 'react-native';
+import { Animated, AppState, StyleSheet } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
 import MarqueeText, { getActiveMarqueeCount } from '../MarqueeText';
@@ -293,5 +293,41 @@ describe('MarqueeText — D4 : le lecteur d\'écran ne lit pas un texte qui boug
     act(() => {
       tree.unmount();
     });
+  });
+});
+
+// MARQUEE (27/08) — POURQUOI UNE DEUXIÈME PROP DE STYLE.
+// En propageant le défilement, 11 appelants sur 56 portaient de la PLACE dans
+// le style de leur `<Text>` (`flex: 1`, marges, largeur). Passée telle quelle,
+// elle atterrissait sur la copie intérieure : l'enveloppe cessait de prendre la
+// largeur disponible et la colonne du nom s'effondrait. La place va donc à
+// l'enveloppe, la police au texte.
+describe('MarqueeText — la PLACE va à l\'enveloppe, la POLICE au texte', () => {
+  beforeEach(() => {
+    mockIsFocused.mockReturnValue(true);
+  });
+
+  it('containerStyle habille l\'enveloppe, sans toucher au texte', () => {
+    const tree = renderMarquee({ containerStyle: { flex: 1, marginRight: 12 } });
+    const enveloppe = enveloppeDe(tree);
+
+    expect(StyleSheet.flatten(enveloppe.props.style)).toMatchObject({
+      flex: 1,
+      marginRight: 12,
+      overflow: 'hidden',
+    });
+
+    act(() => { tree.unmount(); });
+  });
+
+  it('sans containerStyle, l\'enveloppe reste EXACTEMENT ce qu\'elle était', () => {
+    const tree = renderMarquee({});
+
+    expect(StyleSheet.flatten(enveloppeDe(tree).props.style)).toMatchObject({
+      flexShrink: 1,
+      overflow: 'hidden',
+    });
+
+    act(() => { tree.unmount(); });
   });
 });

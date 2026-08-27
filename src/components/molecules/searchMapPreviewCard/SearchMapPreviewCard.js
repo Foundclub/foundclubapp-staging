@@ -8,6 +8,8 @@ import {
 
 import useTheme from '@/theme/themeContext';
 
+import MarqueeText from '@/components/atoms/marqueeText/MarqueeText';
+
 /**
  * @param {string} value
  * @returns {string}
@@ -134,9 +136,12 @@ function SearchMapPreviewCard({
 
             <View style={[Alignments.grow1, Spaces.gap[4]]}>
               <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[8]]}>
-                <Text numberOfLines={1} style={[Fonts.p2Bold, Fonts.neutral00, { flex: 1 }]}>
-                  {item.title}
-                </Text>
+                {/* MARQUEE — le nom posé sur le plan se lit en entier. */}
+                <MarqueeText
+                  containerStyle={{ flex: 1 }}
+                  style={[Fonts.p2Bold, Fonts.neutral00]}
+                  text={item.title}
+                />
                 {item.badge ? (
                   <View
                     style={{

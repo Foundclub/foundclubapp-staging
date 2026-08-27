@@ -429,14 +429,19 @@ const derniersParams = () => mockParamsRecus[mockParamsRecus.length - 1] || {};
  * @param {any} tree - Arbre rendu.
  * @returns {string[]} - Les noms trouves.
  */
-const equipesAffichees = (tree) => tree.root.findAllByType(Text)
+const equipesAffichees = (tree) => [...new Set(tree.root.findAllByType(Text)
   .map((/** @type {any} */ noeud) => noeud.props.children)
   .filter((/** @type {any} */ valeur) => typeof valeur === 'string')
   .filter((/** @type {string} */ valeur) => (
     valeur === 'MON EQUIPE A MOI'
     || valeur.startsWith('Equipe etrangere ')
     || valeur.startsWith('Autre equipe du club ')
-  ));
+  )))];
+// ⚠️ Les doublons sont ECARTES depuis que le nom d'equipe DEFILE (MARQUEE,
+// 27/08). `MarqueeText` rend le texte DEUX fois : une sonde de mesure hors flux
+// (`opacity: 0`, c'est elle qui dit si le nom depasse) et la ligne visible.
+// A l'ecran il n'y a toujours qu'UNE equipe — ce que ce temoin verifie. Compter
+// les noeuds Text compterait la sonde, pas une equipe de plus.
 
 describe('TeamListContent — l onglet « Equipe » d un joueur (lot U03)', () => {
   beforeEach(() => {
