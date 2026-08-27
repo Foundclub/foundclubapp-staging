@@ -390,6 +390,25 @@ function EventEdit({ navigation, route }) {
     [event, getEventEditSupport, selectedTypeData?.name],
   );
 
+  // 🛡️ D5 — TANT QUE LA FICHE N'EST PAS ARRIVEE, ON N'ENREGISTRE PAS.
+  //
+  // Le formulaire nait AVANT sa donnee : `useForm` s'execute au premier rendu,
+  // quand `event` vaut encore `undefined`, et le `reset` qui le remplit
+  // n'arrive qu'apres la reponse reseau. Entre les deux, l'ecran est affiche,
+  // complet, et pre-rempli A VIDE.
+  //
+  // 🧨 CE QUE ENREGISTRER LA DETRUIT, et ce n'est pas une hypothese — c'est la
+  // charge mesuree par le temoin : `eventTasks: []`, `teamAudiences: []`,
+  // `invitedTeams: []`, `facility: null`, et `sessionStatus` retombe sur
+  // « ouvert ». Cote serveur, une liste vide n'est pas ignoree, elle est
+  // SYNCHRONISEE : les taches et leurs affectations sont supprimees, les
+  // audiences annulees, les equipes conviees deconnectees puis leurs reponses
+  // archivees — et un evenement prive devient public.
+  //
+  // ⛔ La condition porte sur `eventId` : a la CREATION il n'y a aucune fiche
+  // a attendre, et le bouton doit rester actif.
+  const ficheEnAttente = Boolean(eventId) && !event;
+
   useEffect(() => {
     if (isRecurrent && selectedDate) {
       const parsedDate = getDateFromDateInput(selectedDate);
@@ -548,6 +567,21 @@ function EventEdit({ navigation, route }) {
    */
   const handleFormSubmit = async (data) => {
     try {
+      // 🛡️ D5 — LA GARDE QUI PROTEGE LA DONNEE. Le `disabled` du bouton est la
+      // moitie visible ; celle-ci est celle qui tient quel que soit le chemin
+      // par lequel la soumission arrive.
+      if (ficheEnAttente) {
+        Alert.alert(
+          t('eventEdit.modals.stillLoading.title', 'La fiche n\'est pas encore chargée'),
+          t(
+            'eventEdit.modals.stillLoading.description',
+            "Laisse l'événement finir de s'afficher : enregistrer maintenant "
+            + 'effacerait ses tâches, ses équipes conviées et son lieu.',
+          ),
+        );
+        return;
+      }
+
       if (eventId && !editSupport?.isSupported) {
         Alert.alert(
           t('eventEdit.modals.unsupportedEdit.title', 'Modification limitée'),
@@ -1366,8 +1400,23 @@ function EventEdit({ navigation, route }) {
           </View>
         </ScrollView>
         <View style={[Spaces.gap[8]]}>
+          {ficheEnAttente ? (
+            <View style={[
+              Spaces.padding[16],
+              ApplicationStyle.backgroundColor.primary700,
+              { borderColor: Colors.primary500, borderRadius: 8, borderWidth: 1 },
+            ]}
+            >
+              <Text style={[Fonts.p2, Fonts.primary200]}>
+                {t(
+                  'eventEdit.loading.description',
+                  "Chargement de l'événement… Le bouton s'active dès que tout est affiché.",
+                )}
+              </Text>
+            </View>
+          ) : null}
           <Button
-            disabled={Boolean(eventId && !editSupport?.isSupported)}
+            disabled={Boolean(eventId && !editSupport?.isSupported) || ficheEnAttente}
             isLoading={
               createEventMutation.isPending
               || updateEventMutation.isPending
