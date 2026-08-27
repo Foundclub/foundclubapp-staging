@@ -17,6 +17,7 @@ import {
 import useClub from '@/domains/club/useClub';
 import useTheme from '@/theme/themeContext';
 
+import MarqueeText from '@/components/atoms/marqueeText/MarqueeText';
 import DivisionBadge from '@/components/atoms/league/DivisionBadge';
 import TeamShield from '@/components/atoms/teamShield/TeamShield';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
@@ -2760,14 +2761,14 @@ function MatchCenterScreen() {
           </View>
           <View style={{ flex: 1 }}>
             <View style={{ alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between' }}>
-              <Text
-                numberOfLines={1}
+              {/* MARQUEE — le nom de ma squad se lit en entier. */}
+              <MarqueeText
+                containerStyle={{ flexShrink: 1, marginRight: 12 }}
                 style={[Fonts.h1Bold, {
-                  color: Colors.neutral00, flexShrink: 1, lineHeight: 32, marginRight: 12, textTransform: 'uppercase',
+                  color: Colors.neutral00, lineHeight: 32, textTransform: 'uppercase',
                 }]}
-              >
-                {mySquad ? mySquad.name : 'Team Alpha'}
-              </Text>
+                text={mySquad ? mySquad.name : 'Team Alpha'}
+              />
               <TouchableOpacity
                 accessibilityHint="Ouvre la liste des squads"
                 accessibilityLabel="Squad"
@@ -3102,7 +3103,7 @@ function MatchCenterScreen() {
                 padding: 12,
               }}
             >
-              <Text numberOfLines={1} style={[Fonts.p1Bold, { color: Colors.neutral00, flex: 1, marginRight: 8 }]}>
+              <Text numberOfLines={1} style={[Fonts.p1Bold, { color: Colors.neutral00 }]}>
                 Lieu:
                 {' '}
                 {displayLabel}
@@ -3427,9 +3428,12 @@ function MatchCenterScreen() {
               </View>
               <View style={{ flex: 1 }}>
                 <View style={{ alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between' }}>
-                  <Text numberOfLines={1} style={[Fonts.p1Bold, { color: Colors.neutral00, flex: 1, marginRight: 8 }]}>
-                    {squad?.name || 'Squad'}
-                  </Text>
+                  {/* MARQUEE — le nom de la squad se lit en entier */}
+                  <MarqueeText
+                    containerStyle={{ flex: 1, marginRight: 8 }}
+                    style={[Fonts.p1Bold, { color: Colors.neutral00 }]}
+                    text={squad?.name || 'Squad'}
+                  />
                   {isActiveSquad && (
                     <View style={{
                       alignItems: 'center',

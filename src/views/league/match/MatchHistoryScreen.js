@@ -24,6 +24,9 @@ import { loadLeagueTeamContextWithCache } from '@/services/leagueTeam/leagueTeam
 
 import { getEntityDocumentId } from '@/utils/entityId';
 
+/**
+ *
+ */
 function MatchHistoryScreen() {
   const { Colors, Fonts } = useTheme();
   const navigation = /** @type {any} */ (useNavigation());

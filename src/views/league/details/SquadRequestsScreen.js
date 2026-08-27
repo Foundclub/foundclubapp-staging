@@ -10,6 +10,7 @@ import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
 import HeaderBackButton from '@/components/atoms/headerBackButton/HeaderBackButton';
+import MarqueeText from '@/components/atoms/marqueeText/MarqueeText';
 import Tag from '@/components/atoms/tag/Tag';
 import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 import ScreenContainer from '@/components/templates/ScreenContainer';
@@ -142,9 +143,11 @@ function SquadRequestsScreen({ navigation, route }) {
           />
 
           <View style={{ flex: 1 }}>
-            <Text numberOfLines={1} style={[Fonts.h4Black, { color: Colors.neutral00 }]}>
-              {requesterName}
-            </Text>
+            {/* MARQUEE — le nom du demandeur se lit en entier */}
+            <MarqueeText
+              style={[Fonts.h4Black, { color: Colors.neutral00 }]}
+              text={requesterName}
+            />
             <Text numberOfLines={2} style={[Fonts.p2, { color: Colors.neutral200 }]}>
               Souhaite rejoindre ta squad.
             </Text>

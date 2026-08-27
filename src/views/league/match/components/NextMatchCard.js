@@ -10,6 +10,7 @@ import useAuth from '@/domains/auth/useAuth';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
+import MarqueeText from '@/components/atoms/marqueeText/MarqueeText';
 import TeamShield from '@/components/atoms/teamShield/TeamShield';
 import { navigateToEndMatchScreen } from '@/views/league/match/utils/leagueNavigation';
 import buildLeagueWorkflowViewModel from '@/views/league/match/utils/leagueWorkflowPresenter';
@@ -341,172 +342,180 @@ function NextMatchCard({
 
   return (
     <>
-    <TouchableOpacity
-      activeOpacity={0.9}
-      onPress={onPress}
-      style={styles.container}
-    >
-      <ImageBackground
-        imageStyle={{ borderRadius: 24 }}
-        resizeMode="cover"
-        source={/** @type {any} */ (BG_MATCH)}
-        style={StyleSheet.absoluteFill}
-      />
+      <TouchableOpacity
+        activeOpacity={0.9}
+        onPress={onPress}
+        style={styles.container}
+      >
+        <ImageBackground
+          imageStyle={{ borderRadius: 24 }}
+          resizeMode="cover"
+          source={/** @type {any} */ (BG_MATCH)}
+          style={StyleSheet.absoluteFill}
+        />
 
-      {/* Overlay */}
-      <View style={styles.overlay} />
+        {/* Overlay */}
+        <View style={styles.overlay} />
 
-      <View style={styles.content}>
-        {/* Header */}
-        <View style={styles.header}>
-          <Text style={styles.headerTitle}>PROCHAIN MATCH</Text>
-          <View style={{ flexDirection: 'row', gap: 8 }}>
-            {derivedPhase === 'confirmed_upcoming' && (
-            <View style={[styles.badge, { backgroundColor: '#4CAF50' }]}>
-              <Text style={styles.badgeText}>À venir</Text>
+        <View style={styles.content}>
+          {/* Header */}
+          <View style={styles.header}>
+            <Text style={styles.headerTitle}>PROCHAIN MATCH</Text>
+            <View style={{ flexDirection: 'row', gap: 8 }}>
+              {derivedPhase === 'confirmed_upcoming' && (
+              <View style={[styles.badge, { backgroundColor: '#4CAF50' }]}>
+                <Text style={styles.badgeText}>À venir</Text>
+              </View>
+              )}
+              {derivedPhase === 'waiting_venue' && (
+              <View style={[styles.badge, { backgroundColor: '#FFC107' }]}>
+                <Text style={[styles.badgeText, { color: '#0B1820' }]}>EN ATTENTE TERRAIN</Text>
+              </View>
+              )}
+              {derivedPhase === 'pending_validation' && (
+              <View style={[styles.badge, { backgroundColor: '#FFC107' }]}>
+                <Text style={[styles.badgeText, { color: '#0B1820' }]}>SCORE EN ATTENTE</Text>
+              </View>
+              )}
+              {derivedPhase === 'disputed' && (
+              <View style={[styles.badge, { backgroundColor: '#EF4444' }]}>
+                <Text style={styles.badgeText}>LITIGE</Text>
+              </View>
+              )}
             </View>
-            )}
-            {derivedPhase === 'waiting_venue' && (
-            <View style={[styles.badge, { backgroundColor: '#FFC107' }]}>
-              <Text style={[styles.badgeText, { color: '#0B1820' }]}>EN ATTENTE TERRAIN</Text>
-            </View>
-            )}
-            {derivedPhase === 'pending_validation' && (
-            <View style={[styles.badge, { backgroundColor: '#FFC107' }]}>
-              <Text style={[styles.badgeText, { color: '#0B1820' }]}>SCORE EN ATTENTE</Text>
-            </View>
-            )}
-            {derivedPhase === 'disputed' && (
-            <View style={[styles.badge, { backgroundColor: '#EF4444' }]}>
-              <Text style={styles.badgeText}>LITIGE</Text>
-            </View>
-            )}
           </View>
-        </View>
-        <View style={styles.progressChipsRow}>
-          {progressSteps.map((step) => (
-            <View
-              key={step.key}
-              style={[
-                styles.progressChip,
-                step.done ? styles.progressChipDone : styles.progressChipTodo,
-              ]}
-            >
-              <Text
-                numberOfLines={1}
+          <View style={styles.progressChipsRow}>
+            {progressSteps.map((step) => (
+              <View
+                key={step.key}
                 style={[
-                  styles.progressChipText,
-                  step.done ? styles.progressChipTextDone : styles.progressChipTextTodo,
+                  styles.progressChip,
+                  step.done ? styles.progressChipDone : styles.progressChipTodo,
                 ]}
               >
-                {step.label}
-              </Text>
-            </View>
-          ))}
-        </View>
-
-        {/* Matchup */}
-        <View style={styles.matchup}>
-          <View style={styles.teamContainer}>
-            <TeamShield
-              imageUrl={myTeam.crest?.url}
-              initials={myTeam.name?.substring(0, 2) || '??'}
-              isGold
-              size={50}
-            />
-            <Text numberOfLines={1} style={styles.teamName}>{myTeam.name}</Text>
-          </View>
-          <Text style={styles.vsText}>VS</Text>
-          <View style={styles.teamContainer}>
-            {/* Anonymization Logic */}
-            {isAnonymous ? (
-              <>
-                <View style={{
-                  alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.12)', borderColor: 'rgba(255,255,255,0.24)', borderRadius: 25, borderWidth: 1, height: 50, justifyContent: 'center', width: 50,
-                }}
+                <Text
+                  numberOfLines={1}
+                  style={[
+                    styles.progressChipText,
+                    step.done ? styles.progressChipTextDone : styles.progressChipTextTodo,
+                  ]}
                 >
-                  <Text style={{ fontSize: 24 }}>❓</Text>
-                </View>
-                <Text numberOfLines={1} style={[styles.teamName, { color: '#ADB1B2', fontStyle: 'italic' }]}>Adversaire Mystère</Text>
-              </>
-            ) : (
-              <>
-                {opponent.crest?.url ? (
-                  <Image source={{ uri: getImageUrl(opponent.crest.url) }} style={{ height: 50, resizeMode: 'contain', width: 50 }} />
-                ) : (
-                  <TeamShield initials={opponent.name?.substring(0, 2) || '??'} isGold size={50} />
-                )}
-                <Text numberOfLines={1} style={styles.teamName}>{opponent.name}</Text>
-              </>
-            )}
-          </View>
-        </View>
-
-        {/* Details */}
-        <View style={styles.details}>
-          <View style={styles.row}>
-            <Image source={ThemeImages.calendar} style={styles.icon} />
-            <Text style={[styles.detailText, { color: Colors.gold500 }]}>
-              {`${format(new Date(event?.date || match?.date || new Date()), 'EEEE d MMMM', { locale: fr }).toUpperCase()} • ${startTimeLabel}-${endTimeLabel}`}
-            </Text>
-          </View>
-          <View style={styles.row}>
-            <Image source={ThemeImages.pin} style={styles.icon} />
-            <View>
-              <Text style={styles.detailText}>
-                {venueLabel}
-              </Text>
-              {/* Address Display */}
-              {showAddressDetails ? (
-                <Text style={styles.detailSubText}>
-                  {matchAddressLabel}
+                  {step.label}
                 </Text>
-              ) : null}
+              </View>
+            ))}
+          </View>
+
+          {/* Matchup */}
+          <View style={styles.matchup}>
+            <View style={styles.teamContainer}>
+              <TeamShield
+                imageUrl={myTeam.crest?.url}
+                initials={myTeam.name?.substring(0, 2) || '??'}
+                isGold
+                size={50}
+              />
+              {/* MARQUEE — le nom de mon equipe se lit en entier */}
+              <MarqueeText
+                style={styles.teamName}
+                text={myTeam.name}
+              />
+            </View>
+            <Text style={styles.vsText}>VS</Text>
+            <View style={styles.teamContainer}>
+              {/* Anonymization Logic */}
+              {isAnonymous ? (
+                <>
+                  <View style={{
+                    alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.12)', borderColor: 'rgba(255,255,255,0.24)', borderRadius: 25, borderWidth: 1, height: 50, justifyContent: 'center', width: 50,
+                  }}
+                  >
+                    <Text style={{ fontSize: 24 }}>❓</Text>
+                  </View>
+                  <Text numberOfLines={1} style={[styles.teamName, { color: '#ADB1B2', fontStyle: 'italic' }]}>Adversaire Mystère</Text>
+                </>
+              ) : (
+                <>
+                  {opponent.crest?.url ? (
+                    <Image source={{ uri: getImageUrl(opponent.crest.url) }} style={{ height: 50, resizeMode: 'contain', width: 50 }} />
+                  ) : (
+                    <TeamShield initials={opponent.name?.substring(0, 2) || '??'} isGold size={50} />
+                  )}
+                  {/* MARQUEE — le nom de l adversaire se lit en entier */}
+                  <MarqueeText
+                    style={styles.teamName}
+                    text={opponent.name}
+                  />
+                </>
+              )}
             </View>
           </View>
-        </View>
-        {/* Attendance Gauge */}
-        <View style={styles.attendance}>
-          <Text style={styles.attendanceTitle}>
-            Presences joueurs confirmees (
-            <Text style={{ color: Colors.gold500 }}>
-              {confirmedCount}
-              /
-              {requiredPlayers}
-            </Text>
-            )
-          </Text>
-          <Text style={[styles.attendanceHint, { color: Colors.gold500 }]}>
-            {isQuorumReached
-              ? 'Quorum atteint. Équipe prête.'
-              : `Minimum requis: ${requiredPlayers} joueurs. Il manque ${Math.max(requiredPlayers - confirmedCount, 0)} joueur(s).`}
-          </Text>
-          <View style={styles.gaugeBg}>
-            <View style={[styles.gaugeFill, { backgroundColor: isQuorumReached ? '#4CAF50' : '#FFC107', width: `${Math.min((confirmedCount / Math.max(requiredPlayers, 1)) * 100, 100)}%` }]} />
+
+          {/* Details */}
+          <View style={styles.details}>
+            <View style={styles.row}>
+              <Image source={ThemeImages.calendar} style={styles.icon} />
+              <Text style={[styles.detailText, { color: Colors.gold500 }]}>
+                {`${format(new Date(event?.date || match?.date || new Date()), 'EEEE d MMMM', { locale: fr }).toUpperCase()} • ${startTimeLabel}-${endTimeLabel}`}
+              </Text>
+            </View>
+            <View style={styles.row}>
+              <Image source={ThemeImages.pin} style={styles.icon} />
+              <View>
+                <Text style={styles.detailText}>
+                  {venueLabel}
+                </Text>
+                {/* Address Display */}
+                {showAddressDetails ? (
+                  <Text style={styles.detailSubText}>
+                    {matchAddressLabel}
+                  </Text>
+                ) : null}
+              </View>
+            </View>
           </View>
-        </View>
-        <TouchableOpacity
-          onPress={handlePrimaryWorkflowAction}
-          style={[
-            styles.bookingButton,
-            workflowViewModel.isBlockingAction
-              ? { backgroundColor: 'rgba(1, 179, 244, 0.15)', borderColor: Colors.primary500 }
-              : { backgroundColor: 'rgba(255,255,255,0.06)', borderColor: Colors.neutral600 },
-          ]}
-        >
-          <Text
-            adjustsFontSizeToFit
-            numberOfLines={1}
+          {/* Attendance Gauge */}
+          <View style={styles.attendance}>
+            <Text style={styles.attendanceTitle}>
+              Presences joueurs confirmees (
+              <Text style={{ color: Colors.gold500 }}>
+                {confirmedCount}
+                /
+                {requiredPlayers}
+              </Text>
+              )
+            </Text>
+            <Text style={[styles.attendanceHint, { color: Colors.gold500 }]}>
+              {isQuorumReached
+                ? 'Quorum atteint. Équipe prête.'
+                : `Minimum requis: ${requiredPlayers} joueurs. Il manque ${Math.max(requiredPlayers - confirmedCount, 0)} joueur(s).`}
+            </Text>
+            <View style={styles.gaugeBg}>
+              <View style={[styles.gaugeFill, { backgroundColor: isQuorumReached ? '#4CAF50' : '#FFC107', width: `${Math.min((confirmedCount / Math.max(requiredPlayers, 1)) * 100, 100)}%` }]} />
+            </View>
+          </View>
+          <TouchableOpacity
+            onPress={handlePrimaryWorkflowAction}
             style={[
-              styles.bookingButtonText,
-              { color: workflowViewModel.isBlockingAction ? Colors.primary500 : Colors.neutral100 },
+              styles.bookingButton,
+              workflowViewModel.isBlockingAction
+                ? { backgroundColor: 'rgba(1, 179, 244, 0.15)', borderColor: Colors.primary500 }
+                : { backgroundColor: 'rgba(255,255,255,0.06)', borderColor: Colors.neutral600 },
             ]}
           >
-            {workflowViewModel.primaryCta || 'Voir le match'}
-          </Text>
-        </TouchableOpacity>
-      </View>
-    </TouchableOpacity>
+            <Text
+              adjustsFontSizeToFit
+              numberOfLines={1}
+              style={[
+                styles.bookingButtonText,
+                { color: workflowViewModel.isBlockingAction ? Colors.primary500 : Colors.neutral100 },
+              ]}
+            >
+              {workflowViewModel.primaryCta || 'Voir le match'}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </TouchableOpacity>
       {leagueLegalAcceptanceModal}
     </>
   );
