@@ -119,25 +119,84 @@ describe('AC08 · TEMOIN 7 — la bulle du tchat mene au bon ecran', () => {
     expect(derniereRoute()?.screen).toBe('PlayerConvocation');
   });
 
-  test('🔒 un non-convoque garde la vue d ensemble en lecture seule', () => {
+  // 🔄 COMPOLECT-2 — CES DEUX TEMOINS CHANGENT DE DESTINATION, PAS D'INTENTION.
+  // Ce qu'ils gardaient : « un non-convoque ne repond pas, il LIT ». Ce qui est
+  // corrige : ce qu'il lisait etait `TacticalBoardV2`, un AUTRE plateau que celui
+  // de la creation. Adel (27/08) veut le MEME ecran partout. La 2e assertion —
+  // `readOnly: true` — est intacte : c'est elle qui porte la promesse.
+  test('🥇 COMPOLECT-2 — un non-convoque (le COACH) part sur LE terrain de creation', () => {
     mockSnapshot = { auth: { user: { documentId: 'spectateur-9' } } };
 
     appuyerSurLaCarte();
 
-    expect(derniereRoute()?.screen).toBe('TacticalBoardV2');
+    expect(derniereRoute()?.screen).toBe('MatchCompositionBoard');
     expect(derniereRoute()?.params?.readOnly).toBe(true);
   });
 
-  test('🔒 sans personne connectee, rien ne change non plus', () => {
+  test('🔒 sans personne connectee, meme terrain, toujours en lecture seule', () => {
     mockSnapshot = { auth: undefined };
 
     appuyerSurLaCarte();
 
-    expect(derniereRoute()?.screen).toBe('TacticalBoardV2');
+    expect(derniereRoute()?.screen).toBe('MatchCompositionBoard');
+    expect(derniereRoute()?.params?.readOnly).toBe(true);
   });
 
   test('⛔ une carte SANS evenement rattache ne peut mener a aucune convocation', () => {
     appuyerSurLaCarte({ ...COMPO, eventId: undefined });
+
+    expect(derniereRoute()?.screen).toBe('TacticalBoardV2');
+  });
+});
+
+// ==========================================================================
+// COMPOLECT-2 — LA CARTE DU TCHAT PORTE LE MEME TERRAIN QUE LA CREATION.
+//
+// 🗣️ Adel, 27/08 : « quand je clique sur "ouvrir la compo", je vois le terrain
+// avec le banc en plein ecran, COMME QUAND JE CREE LA COMPO. »
+//
+// 🧨 CE QUE LA MESURE A TROUVE : COMPOLECT-1 a rebranche l'onglet
+// « Convocation » de l'evenement, mais PAS cette carte. Or un coach n'est
+// jamais convoque sur sa propre compo — il prenait donc TOUJOURS la branche du
+// non-convoque, celle qui menait a l'ANCIEN plateau.
+//
+// ⛔ ET LES DEUX GARDE-FOUS DE D6 SONT REPRIS TELS QUELS : sans titulaire
+// dessinable, et avec plusieurs equipes, l'ancien plateau garde la main.
+// ==========================================================================
+describe('COMPOLECT-2 · la carte du tchat mene au plateau de creation', () => {
+  test('le terrain recoit les titulaires ET le banc, avec leurs placements', () => {
+    mockSnapshot = { auth: { user: { documentId: 'spectateur-9' } } };
+
+    appuyerSurLaCarte();
+    const params = derniereRoute()?.params;
+
+    expect(params?.startPlacements).toEqual([
+      { playerId: JOUEUR, positionX: 50, positionY: 90 },
+    ]);
+    expect(params?.selectedPlayers.map((/** @type {any} */ p) => p.documentId))
+      .toEqual([JOUEUR, REMPLACANT]);
+    expect(params?.canEdit).toBe(false);
+    expect(params?.teamName).toBe('U15 A');
+  });
+
+  test('⛔ D6 — SANS titulaire dessinable, l ancien plateau garde la main', () => {
+    mockSnapshot = { auth: { user: { documentId: 'spectateur-9' } } };
+
+    appuyerSurLaCarte({ ...COMPO, teams: [{ id: 't1', name: 'U15 A', placements: [] }] });
+
+    expect(derniereRoute()?.screen).toBe('TacticalBoardV2');
+  });
+
+  test('⛔ D6 — avec PLUSIEURS equipes publiees, l ancien plateau garde la main', () => {
+    mockSnapshot = { auth: { user: { documentId: 'spectateur-9' } } };
+
+    appuyerSurLaCarte({
+      ...COMPO,
+      teams: [
+        COMPO.teams[0],
+        { id: 't2', name: 'U15 B', placements: [{ playerId: REMPLACANT, positionX: 20, positionY: 40 }] },
+      ],
+    });
 
     expect(derniereRoute()?.screen).toBe('TacticalBoardV2');
   });

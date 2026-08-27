@@ -174,6 +174,42 @@ function CompositionMessageBubble({ composition, isMe = false }) {
       return;
     }
 
+    // COMPOLECT-2 (D1) - LA CARTE MENE AU MEME TERRAIN QUE PARTOUT AILLEURS.
+    //
+    // Adel, 27/08 : « quand je clique sur "ouvrir la compo", je vois le terrain
+    // avec le banc en plein ecran, COMME QUAND JE CREE LA COMPO ». COMPOLECT-1 a
+    // rebranche l'onglet « Convocation » de l'evenement, mais PAS cette carte :
+    // elle envoyait encore sur `TacticalBoardV2`, un AUTRE plateau (1864 lignes,
+    // panneau de banc de 276 pt) qui ne ressemble pas a l'ecran de creation.
+    // Un coach n'est JAMAIS convoque sur sa propre compo : c'est donc toujours
+    // cette branche-ci qu'il prenait, et jamais celle du dessus.
+    //
+    // ZERO CALCUL NEUF : `starters` et `benchPlayers` sont deja assembles plus
+    // haut pour dessiner le mini-terrain de la carte elle-meme.
+    //
+    // DEUX CAS GARDENT L'ANCIEN PLATEAU, et ce sont exactement ceux
+    // d'`EventDetails` (D6) : sans titulaire dessinable, un terrain vide ferait
+    // croire a une compo perdue ; avec plusieurs equipes, le plateau ne dessine
+    // QU'UN terrain et en cacherait une sans rien dire.
+    if (eventId && starters.length > 0 && otherTeamsCount === 0) {
+      navigation.navigate(RouteNames.EventStack, {
+        params: {
+          canEdit: false,
+          eventId,
+          eventLabel: eventName,
+          readOnly: true,
+          // Titulaires PUIS remplacants : le plateau retrouve le banc tout seul
+          // en retirant de cette liste ceux que les placements portent.
+          selectedPlayers: [...starters.map((token) => token.player), ...benchPlayers],
+          sport: sportContext || sport,
+          startPlacements: starters.map((token) => token.placement),
+          teamName,
+        },
+        screen: RouteNames.MatchCompositionBoard,
+      });
+      return;
+    }
+
     navigation.navigate(RouteNames.EventStack, {
       params: {
         canEdit: false,

@@ -506,3 +506,53 @@ describe('🖼️ C-B ecran 7 — la photo du joueur arrive entiere jusqu a l av
     expect(avatar.imageUrl).toBe('/uploads/malik.jpg');
   });
 });
+
+// ==========================================================================
+// COMPOLECT-2 (D5) — CET ECRAN DIT POURQUOI IL N'A PAS DE TERRAIN.
+//
+// 🗣️ Adel, 27/08 : « quand je clique sur "ouvrir la compo", je vois le terrain
+// avec le banc en plein ecran ». Ouvrir une convocation publiee mene bien au
+// plateau plein ecran — SAUF dans deux cas, ou l'on retombe ICI :
+//   · aucun joueur place sur le terrain ;
+//   · plusieurs equipes publiees, que le plateau ne dessine pas d'un seul coup.
+//
+// 🧨 Le comportement ne change pas (D6) : ce qui change, c'est qu'il cesse
+// d'etre MUET. Deposer le coach sur une liste de reponses, sans un mot, apres
+// qu'il a demande a voir sa compo, c'est ce qui fait croire que l'ecran est
+// casse. La note nomme la cause et montre la sortie.
+// ==========================================================================
+describe('COMPOLECT-2 · D5 — sans terrain, l ecran le DIT', () => {
+  test('🥇 aucun joueur place : la note explique pourquoi, et ou aller', async () => {
+    mockComposition = {
+      published: {
+        ...PACK_PUBLIE,
+        reservePlayerIds: ['p1', 'p2', 'p3'],
+        teams: [{ id: 'team_1', placements: [] }],
+      },
+      responses: REPONSES,
+      team: { documentId: 'team_1', name: 'Senior 1' },
+    };
+
+    const texte = texteVisible(await rendre());
+
+    expect(texte).toContain('Pas de terrain');
+  });
+
+  test('🔒 NON-REGRESSION : avec des joueurs places, aucune note ne s affiche', async () => {
+    const texte = texteVisible(await rendre());
+
+    expect(texte).not.toContain('Pas de terrain');
+  });
+
+  test('🔒 une convocation VIDE ne declenche pas la note non plus', async () => {
+    mockComposition = {
+      published: { ...PACK_PUBLIE, reservePlayerIds: [], teams: [{ id: 'team_1', placements: [] }] },
+      responses: { byPlayerId: {}, counts: {} },
+      team: { documentId: 'team_1', name: 'Senior 1' },
+    };
+
+    const texte = texteVisible(await rendre());
+
+    expect(texte).not.toContain('Pas de terrain');
+  });
+});

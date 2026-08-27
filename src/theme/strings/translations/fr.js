@@ -2828,6 +2828,10 @@ export default {
       meta: {
         roleAndNumber: '{{role}} · N°{{number}}',
       },
+      noField: {
+        message: 'Personne n’est placé sur le terrain, ou plusieurs équipes ont été publiées ensemble. Ouvre « Modifier » pour poser les joueurs.',
+        title: 'Pas de terrain à afficher pour cette convocation',
+      },
       offAppNote: 'Hors app — il ne peut pas répondre',
       openCta: 'Voir la convocation et les réponses',
       recap: {
