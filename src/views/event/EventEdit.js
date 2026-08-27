@@ -92,6 +92,78 @@ const defaultValues = {
   validationMode: 'auto',
 };
 
+// 🗣️ D8 — CHAQUE CHAMP SAIT DIRE SON NOM, AVEC LES MOTS DE L'ECRAN.
+//
+// Une erreur de saisie ouvrait une fenetre contenant le JSON brut de la
+// bibliotheque de formulaire : `{"date":{"type":"required","message":…}}`.
+// Illisible, et surtout : ca ne disait pas QUOI corriger.
+//
+// 📖 Chaque entree est `[clef, repli]`. La clef est CELLE QUE L'ECRAN UTILISE
+// DEJA pour etiqueter le champ — c'est tout l'interet : le message nomme le
+// champ avec les memes mots que ceux ecrits juste au-dessus de la case. Le
+// repli n'est renseigne que pour les champs absents de `fr.js`, pour qu'aucun
+// message ne puisse rendre une clef technique.
+const LIBELLES_DES_CHAMPS = /** @type {Record<string, [string, string?]>} */ ({
+  capacity: ['eventEdit.fields.capacity.label'],
+  date: ['eventEdit.fields.date.label'],
+  description: ['eventEdit.fields.description.label'],
+  endTime: ['eventEdit.fields.endTime.label'],
+  eventTasks: ['eventEdit.fields.eventTasks.label', 'Tâches'],
+  externalParticipantLimit: ['eventEdit.trainingOpen.externalLimitLabel', 'Places externes'],
+  externalParticipantValidationMode: ['eventEdit.fields.validationMode.label'],
+  facility: ['eventEdit.fields.location.label'],
+  invitedTeams: ['eventEdit.fields.invitedTeams.label'],
+  isRecurrent: ['eventEdit.fields.isRecurrent.label'],
+  location: ['eventEdit.fields.location.label'],
+  participantIdentityVisibility: [
+    'eventEdit.fields.participantIdentityVisibility.label',
+    'Identités des participants',
+  ],
+  pricePerPerson: ['eventEdit.fields.pricePerPerson.label'],
+  recurrenceDay: ['eventEdit.fields.recurrenceDay.label'],
+  recurrenceDays: ['eventEdit.fields.recurrenceDay.label'],
+  recurrenceEndDate: ['eventEdit.fields.recurrenceEndDate.label'],
+  recurrenceFrequency: ['eventEdit.fields.recurrenceFrequency.label'],
+  recurrenceInterval: ['eventEdit.fields.recurrenceFrequency.label'],
+  recurrenceStartDate: ['eventEdit.fields.recurrenceStartDate.label'],
+  reservationMode: ['eventEdit.fields.sessionStatus.label'],
+  sessionStatus: ['eventEdit.fields.sessionStatus.label'],
+  startTime: ['eventEdit.fields.startTime.label'],
+  team: ['eventEdit.fields.team.label'],
+  teamAudiences: ['eventEdit.fields.teamAudiences.label', 'Équipes conviées'],
+  totalPlayers: ['eventEdit.fields.totalPlayers.label'],
+  type: ['eventEdit.fields.type.label'],
+  validationMode: ['eventEdit.fields.validationMode.label'],
+});
+
+/**
+ * La phrase a montrer quand le formulaire refuse de partir.
+ *
+ * ⛔ Ce qui disparait : les accolades, les guillemets, et le vocabulaire de la
+ * bibliotheque (`type`, `ref`, `message`). ✅ Ce qui apparait : le nom du champ,
+ * tel qu'il est ecrit a l'ecran.
+ *
+ * Un champ inconnu de la table sort sous son nom technique plutot que d'etre
+ * tu : mieux vaut un mot etrange qu'un message qui ne dit rien.
+ * @param {Record<string, any>} errors - Les erreurs rendues par le formulaire.
+ * @param {(clef: string, repli?: string) => string} traduire - Le `t` de l'ecran.
+ * @returns {string} - Une phrase, jamais du JSON.
+ */
+const decrireLesChampsFautifs = (errors, traduire) => {
+  const noms = Object.keys(errors || {}).map((champ) => {
+    const entree = LIBELLES_DES_CHAMPS[champ];
+    return entree ? traduire(entree[0], entree[1]) : champ;
+  });
+
+  if (noms.length === 0) {
+    return 'Vérifie ta saisie avant d\'enregistrer.';
+  }
+  if (noms.length === 1) {
+    return `Vérifie le champ « ${noms[0]} », puis appuie de nouveau sur Enregistrer.`;
+  }
+  return `Vérifie ces champs : ${noms.join(', ')}.`;
+};
+
 const buildOccupancyWindow = (dateValue, startTime, endTime, getDateFromDateInput) => {
   if (!dateValue || !startTime || !endTime || typeof getDateFromDateInput !== 'function') {
     return null;
@@ -1485,8 +1557,11 @@ function EventEdit({ navigation, route }) {
               || updateEventMutation.isPending
             }
             onPress={handleSubmit(handleFormSubmit, (errors) => {
-              console.log('Form errors:', errors);
-              Alert.alert('Erreur de validation', JSON.stringify(errors, null, 2));
+              // 🗣️ D8 — UNE PHRASE, JAMAIS LE JSON DE LA BIBLIOTHEQUE.
+              Alert.alert(
+                t('eventEdit.modals.invalidForm.title', 'Il manque quelque chose'),
+                decrireLesChampsFautifs(errors, t),
+              );
             })}
             title={t('eventEdit.actions.save')}
             variant="Primary"
