@@ -68,7 +68,7 @@ export const useTokenIdentity = (player) => {
       rawUrl = player.avatar.formats.thumbnail.url;
     }
 
-    return rawUrl ? getImageUrl(rawUrl) : null;
+    return rawUrl ? (getImageUrl(rawUrl) ?? null) : null;
   }, [player?.avatar, isManualPlayer]);
 
   return { avatarUri, initials };
@@ -127,7 +127,12 @@ function TacticalPlayerToken({ isOnField = false, player }) {
           </View>
         )}
 
-        <View style={[styles.fieldNameBadge, { backgroundColor: `${Colors.primary900 || Colors.neutral900}A6` }]}>
+        <View
+          style={[
+            styles.fieldNameBadge,
+            { backgroundColor: `${Colors.primary900 || Colors.neutral900}A6` },
+          ]}
+        >
           <Text numberOfLines={1} style={[styles.fieldName, { color: Colors.neutral00 }]}>
             {player?.firstname || ''}
           </Text>
@@ -148,7 +153,12 @@ function TacticalPlayerToken({ isOnField = false, player }) {
         },
       ]}
     >
-      <View style={[styles.benchAvatarCircle, { backgroundColor: `${Colors.primary500}22`, borderColor: `${Colors.primary500}40` }]}>
+      <View
+        style={[
+          styles.benchAvatarCircle,
+          { backgroundColor: `${Colors.primary500}22`, borderColor: `${Colors.primary500}40` },
+        ]}
+      >
         {avatarUri ? (
           <Image source={{ uri: avatarUri }} style={styles.benchAvatar} />
         ) : (

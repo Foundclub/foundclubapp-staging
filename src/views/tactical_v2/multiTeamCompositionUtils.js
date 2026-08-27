@@ -243,6 +243,20 @@ export const normalizeMultiTeamPack = (source, options = {}) => {
       ? legacySource.reserveSnapshotPlayers
       : [],
     schemaVersion: 3,
+    // 🔴 COMPOLECT-2 — LE CHAMP QUI MANQUAIT, ET QUI FAISAIT ECRIRE « Libre »
+    // SUR UN POSTE OCCUPE. Ce normaliseur recopiait les PLACEMENTS mais jetait
+    // les PERSONNES : `snapshotPlayers` entrait et ne ressortait pas. Or
+    // l ecran de lecture seule bati son index sur `branch.published
+    // .snapshotPlayers` (`MultiTeamCompositionBoard.js:1164`) — index vide,
+    // donc aucun placement ne retrouvait sa personne, et TOUS les postes
+    // tombaient sur « Libre » alors que les placements etaient intacts.
+    // 🔒 SANS DANGER POUR LE SERVEUR : c est un objet d ENTREE. Ce qui part au
+    // serveur est bati champ par champ par `buildDraftPayloadFromPack`, qui ne
+    // recopie jamais le pack en bloc et n emporte pas ce champ — le serveur
+    // reste la seule autorite sur l instantane. Un temoin fige ce garde-fou.
+    snapshotPlayers: Array.isArray(legacySource?.snapshotPlayers)
+      ? legacySource.snapshotPlayers
+      : [],
     sportContext: normalizeText(legacySource?.sportContext || sportContext) || null,
     teams,
     updatedAt: legacySource?.updatedAt || null,
