@@ -85,7 +85,6 @@ const hexToRgba = (hex, alpha) => {
  * @param root0.onPress
  * @param root0.selectedDate
  * @param root0.state
- * @param root0.todayKey
  */
 function PlanningCalendarDay({
   colors,

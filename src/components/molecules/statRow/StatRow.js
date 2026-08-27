@@ -59,11 +59,11 @@ function StatRow({ columns, isEven = false, player }) {
           {/* MARQUEE — un prénom ou un nom long se lit en entier. */}
           <MarqueeText
             style={[Fonts.p2Bold, { color: Colors.neutral100 }]}
-            text={player.user?.firstname}
+            text={player.user?.firstname || ''}
           />
           <MarqueeText
             style={[Fonts.p2Bold, { color: Colors.neutral100 }]}
-            text={player.user?.lastname}
+            text={player.user?.lastname || ''}
           />
           {player.user?.position && (
             <Text numberOfLines={1} style={[Fonts.p4, { color: Colors.neutral300, marginTop: 2 }]}>
