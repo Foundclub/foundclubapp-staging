@@ -58,10 +58,13 @@ const resolveStatValue = (...candidates) => {
  * @param {object} props
  * @param {any} props.item - Club (ou club multisport, `_type: 'multisport'`).
  * @param {() => void} [props.onPress]
+ * @param {boolean} [props.paused] - Vrai quand la carte n'est PAS a l'ecran : elle n'anime alors rien.
  * @param {string} [props.reasonLabel] - Raison de pertinence (recherche intelligente).
  * @returns {import('react').ReactElement}
  */
-function ClubCard({ item, onPress, reasonLabel = '' }) {
+function ClubCard({
+  item, onPress, paused = false, reasonLabel = '',
+}) {
   const { Colors, Images } = useTheme();
 
   const isMultisport = Reflect.get(item || {}, '_type') === 'multisport';
@@ -141,7 +144,7 @@ function ClubCard({ item, onPress, reasonLabel = '' }) {
                 même carte : une seule animation dans le dépôt, un seul
                 registre de boucles actives. Un nom qui tient ne bouge pas.
               */}
-              <MarqueeText style={clubNameStyle} text={item?.name || 'Club'} />
+              <MarqueeText paused={paused} style={clubNameStyle} text={item?.name || 'Club'} />
               {isMultisport ? (
                 <View style={[styles.omnisportBadge, { backgroundColor: Colors.primary500 }]}>
                   <Text style={[styles.omnisportText, { color: Colors.primary900 }]}>
@@ -224,7 +227,7 @@ function ClubCard({ item, onPress, reasonLabel = '' }) {
         ) : null}
 
         {/* Pied sponsors — marquee continue, masqué sans sponsor */}
-        <SponsorMarquee fadeColor={Colors.primary900} sponsors={sponsors} />
+        <SponsorMarquee fadeColor={Colors.primary900} paused={paused} sponsors={sponsors} />
       </ClubCardSurface>
     </TouchableOpacity>
   );
