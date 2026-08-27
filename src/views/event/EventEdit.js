@@ -600,10 +600,20 @@ function EventEdit({ navigation, route }) {
     return trainedTeams;
   }, [clubTeams, isClubManager, trainedTeams]);
 
-  const teamOptions = manageableTeams.map((team) => ({
+  // ⚡ R6 — UNE IDENTITE NEUVE A CHAQUE RENDU, ET ELLE EST UNE DEPENDANCE.
+  //
+  // Ce tableau etait reconstruit a chaque frappe. En soi ce serait sans
+  // consequence — sauf qu'il est cite dans les dependances du `useMemo` qui
+  // fabrique `invitedTeamOptions` juste en dessous : une identite neuve suffit
+  // a le faire recalculer, et avec lui toute la liste des equipes conviees, a
+  // chaque caractere saisi. C'est ce qui fait « accrocher » la saisie.
+  //
+  // 📌 Releve une premiere fois le 2026-08-17 (AUDIT_LENTEUR, item 8) et jamais
+  // fait ; les numeros de ligne y sont perimes, le defaut ne l'etait pas.
+  const teamOptions = useMemo(() => manageableTeams.map((team) => ({
     label: team.name,
     value: team.documentId || '',
-  }));
+  })), [manageableTeams]);
 
   // Construct invited team options with headers
   const invitedTeamOptions = useMemo(() => {
