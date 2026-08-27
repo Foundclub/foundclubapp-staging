@@ -39,6 +39,7 @@ import {
 import { createEvent, updateEvent } from '@/services/event/eventService';
 import { getTeams } from '@/services/team/teamService';
 
+import { getApiErrorTranslation } from '@/utils/errors/displayError';
 import { getFieldError } from '@/utils/form/formUtils';
 import safeJsonParse from '@/utils/safeJsonParse';
 
@@ -265,6 +266,44 @@ function EventEdit({ navigation, route }) {
 
   const queryClient = useQueryClient();
 
+  /**
+   * Dit a l'ecran que l'enregistrement n'est pas passe.
+   *
+   * 🔴 D1 — LE DEFAUT LE PLUS VISIBLE DU DOSSIER, ET C'ETAIT UN SILENCE. Le
+   * `onError` des deux mutations ne faisait qu'un `console.error`, et le
+   * `catch` de la soumission portait un commentaire affirmant que « les
+   * mutations gerent ». Elles ne geraient pas : le rond de chargement
+   * s'eteignait, l'ecran restait sur le formulaire, et rien ne disait si
+   * c'etait passe. C'est exactement la sensation « c'est bugue ».
+   *
+   * 📍 UN SEUL ENDROIT, ET C'EST VOULU : pose dans le `onError` des mutations,
+   * ce message couvre TOUS les chemins d'echec — y compris celui du recurrent
+   * (D2), qui part du `onPress` d'une alerte et n'a jamais eu de `catch`.
+   * L'afficher aussi ailleurs ouvrirait deux fenetres pour un seul echec.
+   *
+   * ⛔ Aucune navigation ici : la personne RESTE sur son formulaire, avec ses
+   * saisies. C'est la moitie du remede qui evite de refaire le travail.
+   * @param {any} error - L'erreur rendue par la mutation.
+   * @returns {void}
+   */
+  const signalerEchecEnregistrement = (error) => {
+    console.error('Echec de l enregistrement de l evenement:', error);
+    const motifDuServeur = getApiErrorTranslation(error);
+    Alert.alert(
+      t('eventEdit.modals.saveFailed.title', "L'enregistrement n'est pas passé"),
+      [
+        motifDuServeur || t(
+          'eventEdit.modals.saveFailed.reason',
+          'Ça n\'a pas marché. Vérifie ta connexion, puis appuie de nouveau sur Enregistrer.',
+        ),
+        t(
+          'eventEdit.modals.saveFailed.keepsInput',
+          "Tes saisies sont toujours à l'écran : rien n'est perdu.",
+        ),
+      ].join('\n\n'),
+    );
+  };
+
   const invalidateEventQueries = async () => {
     // Meme jeu d'invalidations que EventEdit.web : sans elles le planning et les
     // listes restent perimes apres creation/edition (refetchOnWindowFocus desactive).
@@ -277,9 +316,7 @@ function EventEdit({ navigation, route }) {
 
   const createEventMutation = useMutation({
     mutationFn: createEvent,
-    onError: (error) => {
-      console.error('Error creating event:', error);
-    },
+    onError: signalerEchecEnregistrement,
     onSuccess: async () => {
       await invalidateEventQueries();
     },
@@ -287,9 +324,7 @@ function EventEdit({ navigation, route }) {
 
   const updateEventMutation = useMutation({
     mutationFn: updateEvent,
-    onError: (error) => {
-      console.error('Error updating event:', error);
-    },
+    onError: signalerEchecEnregistrement,
     onSuccess: async () => {
       await invalidateEventQueries();
     },
