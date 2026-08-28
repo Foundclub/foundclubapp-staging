@@ -356,6 +356,24 @@ describe('MSG1 / N5 — brider la frappe', () => {
     act(() => { arbre.unmount(); });
   });
 
+  it('T9 — apres un envoi, le message SUIVANT reprevient tout de suite', () => {
+    // Envoyer emet un `typing-stop`. Si le ralentisseur n etait pas rearme la,
+    // le premier caractere du message suivant ne previendrait personne pendant
+    // une seconde : le « ... » n apparaitrait plus chez l autre.
+    mockSendMessage.mockReturnValue('temp-1');
+    const { arbre } = monterConversation();
+
+    taper('a');
+    appuyerSurEnvoyer('a');
+    expect(mockSendTypingStop).toHaveBeenCalled();
+
+    mockSendTypingStart.mockClear();
+    taper('b');
+
+    expect(mockSendTypingStart).toHaveBeenCalledTimes(1);
+    act(() => { arbre.unmount(); });
+  });
+
   it('T8 — vider le champ arrete l indicateur, sans ralentisseur', () => {
     // `typing-stop` est le signal qui ETEINT le « ... » chez l'autre : le
     // brider laisserait un indicateur allume chez quelqu'un qui n'ecrit plus.

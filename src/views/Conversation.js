@@ -1298,6 +1298,15 @@ function Conversation({ navigation, route }) {
     deleteVoiceNoteFile(currentDraftUri).catch(() => {});
   }, [pendingVoiceDraft?.uri]);
 
+  // MSG1/N5 — ARRETER LA FRAPPE REARME LE RALENTISSEUR. Sans ca, le caractere
+  // tape juste apres un envoi ne reprevient personne pendant une seconde : le
+  // « ... » n apparaitrait plus chez l autre au debut du message suivant.
+  // Les 4 endroits qui arretent la frappe passent par ici, une seule fois.
+  const stopTyping = (/** @type {string} */ conversationId) => {
+    lastTypingStartSentAtRef.current = 0;
+    sendTypingStop(conversationId);
+  };
+
   // Handle Input Text Change for Typing Indicator
   //
   // MSG1/N5 — LE RALENTISSEUR. Le serveur n'accepte que 10 evenements par
@@ -1320,8 +1329,7 @@ function Conversation({ navigation, route }) {
       lastTypingStartSentAtRef.current = maintenant;
       sendTypingStart(chatId);
     } else {
-      lastTypingStartSentAtRef.current = 0;
-      sendTypingStop(chatId);
+      stopTyping(chatId);
     }
   };
 
@@ -4194,7 +4202,7 @@ function Conversation({ navigation, route }) {
       await clearPendingVoiceDraft();
       setReplyingTo(null);
       setComposerText('');
-      sendTypingStop(chatId);
+      stopTyping(chatId);
     } catch (error) {
       if (String(error?.message || '') !== 'VOICE_SOCKET_UNAVAILABLE') {
         removeLocalPendingMessage(optimisticMessageId);
@@ -4293,7 +4301,7 @@ function Conversation({ navigation, route }) {
     clearPendingMediaDraft();
     setReplyingTo(null);
     setComposerText('');
-    sendTypingStop(chatId);
+    stopTyping(chatId);
     logAttachmentDebug('sendPendingMediaDraft success', {
       chatId,
     });
@@ -4333,7 +4341,7 @@ function Conversation({ navigation, route }) {
         messagesRefuses += 1;
         return;
       }
-      sendTypingStop(chatId);
+      stopTyping(chatId);
     });
 
     if (messagesRefuses > 0) {
