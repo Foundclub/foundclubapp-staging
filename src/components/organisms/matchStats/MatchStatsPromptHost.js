@@ -516,7 +516,14 @@ function MatchStatsPromptHost({ skipInitialFetch = false } = {}) {
               variant="Secondary"
             />
           ) : null}
-          {totalPending > 1 ? (
+          {/*
+            H8 — CETTE PORTE ETAIT LA SEULE, ET ELLE S OUVRAIT A PARTIR DE DEUX.
+            Avec un seul match en retard, l ecran « Matchs en attente » existait
+            (378 lignes) et RIEN N Y MENAIT : `git grep "PendingMatchStats"` ne
+            rendait qu une seule navigation, celle-ci. Seuil ramene a 1, pour que
+            la liste soit atteignable des qu elle a quelque chose a montrer.
+          */}
+          {totalPending > 0 ? (
             <Button
               onPress={() => {
                 dismissPromptForSession();

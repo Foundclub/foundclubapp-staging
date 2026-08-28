@@ -194,6 +194,38 @@ export const AFTER_ACTION_CACHES = Object.freeze({
   ],
 
   /**
+   * SCORE1 / H9 — ENVOYER UN SCORE, UN BILAN OU SA REPONSE PERSO.
+   *
+   * 🧨 CE QUE CETTE ENTREE REPARE : `MatchStatsEditor` et
+   * `PlayerMatchResponseScreen` recopiaient CHACUN sa propre liste de cles, et
+   * les deux copies avaient DERIVE — chacune oubliait ce que l'autre pensait a
+   * invalider. L'editeur oubliait `eventMyMatchResponse` (le coach publie, la
+   * reponse perso du joueur reste perimee a l'ecran) ; l'ecran joueur oubliait
+   * `eventMatchResult` et `leagueTeamPerformanceStats`. Une seule liste, ici.
+   *
+   * Les deux rails — match de club (`event`) et championnat (`league`) — sont
+   * declares ensemble : le meme bouton sert les deux, et se tromper de rail
+   * coute une liste perimee, pas une requete de moins.
+   *
+   * ⚠️ `pendingMatchStatsPrompts` est la cle qui compte : c'est elle qui nourrit
+   * la fenetre de rappel. Sans elle, on saisit son score et la fenetre revient
+   * le redemander.
+   */
+  submitMatchStats: [
+    ['event'],
+    ['eventMatchResult'],
+    ['eventMatchStats'],
+    ['eventMyMatchResponse'],
+    ['league-match'],
+    ['leagueMatchStats'],
+    ['leagueMyMatchResponse'],
+    ['leagueTeamPerformanceStats'],
+    ['pendingMatchStatsPrompts'],
+    ['personalStats'],
+    ['teamPerformanceStats'],
+  ],
+
+  /**
    * S'abonner. Les deux memes cles que `SUBSCRIPTION_STATE_QUERY_KEYS`, et
    * c'est deliberement TOUT : l'abonnement ne change que les droits.
    * ⚠️ Pour un achat, passer par `scheduleSubscriptionStateRefresh` — la verite

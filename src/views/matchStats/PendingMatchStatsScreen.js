@@ -18,6 +18,8 @@ import { RouteNames } from '@/navigation/routeNames';
 
 import { useGetPendingMatchStatsPrompts } from '@/services/matchStats/matchStatsQueries';
 
+import { describeMatchStatsEmptyReason } from '@/utils/matchStatsEmptyReason';
+
 const formatPromptDate = (value) => {
   if (!value) return 'Date indisponible';
 
@@ -149,6 +151,13 @@ function PendingMatchStatsScreen({ navigation }) {
   const teamPromptItems = useMemo(
     () => promptItems.filter((item) => item?.actionType !== 'player_self_report'),
     [promptItems],
+  );
+
+  // H1 — quand il n'y a rien, on DIT pourquoi. Huit verrous peuvent fermer cette
+  // liste et ils étaient tous muets : un écran blanc ne se distingue pas d'une panne.
+  const emptyExplanation = useMemo(
+    () => describeMatchStatsEmptyReason(pendingPayload?.emptyReason),
+    [pendingPayload?.emptyReason],
   );
 
   const handleOpenPrompt = useCallback((prompt) => {
@@ -352,9 +361,9 @@ function PendingMatchStatsScreen({ navigation }) {
               { flex: 1, minHeight: 220 },
             ]}
           >
-            <Text style={[Fonts.h4Bold, Fonts.neutral00, Fonts.textCenter]}>Aucune action en attente</Text>
+            <Text style={[Fonts.h4Bold, Fonts.neutral00, Fonts.textCenter]}>{emptyExplanation.title}</Text>
             <Text style={[Fonts.p2, Fonts.neutral100, Fonts.textCenter]}>
-              Quand un match terminé demandera encore une action, elle apparaîtra ici automatiquement.
+              {emptyExplanation.body}
             </Text>
           </View>
         )}

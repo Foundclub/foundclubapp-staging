@@ -4866,6 +4866,11 @@ function EventDetails({ navigation, route }) {
     staffCompositionPayload,
   ]);
 
+  // H8 — la liste des bilans en attente, atteignable depuis la page du match.
+  const openPendingMatchStatsList = useCallback(() => {
+    navigation.navigate(RouteNames.PendingMatchStats);
+  }, [navigation]);
+
   const openMatchStatsEditor = useCallback(() => {
     if (!eventId || !compositionTeamId) return;
 
@@ -8364,6 +8369,26 @@ function EventDetails({ navigation, route }) {
                     statsFinalisees={isMatchStatsFinal}
                     verificationRequise={isMatchStatsReviewRequired}
                   />
+
+                  {/* 🚪 H8 — LA DEUXIEME PORTE VERS « MATCHS EN ATTENTE ».
+                      Jusqu ici l ecran (378 lignes) n avait qu UNE entree, dans la
+                      fenetre de rappel, et elle ne s affichait qu a partir de DEUX
+                      matchs en retard : avec un seul, l ecran etait physiquement
+                      inatteignable. Celle-ci part de la page du match, la ou on est
+                      quand on se demande « et mes autres matchs ? ».
+                      Elle NOMME le brouillon : le mot n apparaissait nulle part sur
+                      cette page, alors que c est l etat le plus frequent. */}
+                  <TouchableOpacity
+                    accessibilityRole="button"
+                    onPress={openPendingMatchStatsList}
+                    style={[Alignments.row, Alignments.alignCenter, Alignments.justifyCenter, Spaces.gap[8]]}
+                  >
+                    <Text style={[Fonts.p3Bold, Fonts.primary200]}>
+                      {matchStatsReport?.status === 'draft'
+                        ? 'Ce bilan est un brouillon — voir tous mes matchs en attente'
+                        : 'Voir tous mes matchs en attente'}
+                    </Text>
+                  </TouchableOpacity>
 
                   {/* Le DETAIL du rapport, sous le parcours. Son cadre disparait quand il
                       n'y a encore rien a detailler : une boite bordee et vide se lit comme
