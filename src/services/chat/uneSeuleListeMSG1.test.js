@@ -2,9 +2,8 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { createElement } from 'react';
 import renderer, { act } from 'react-test-renderer';
 
-import { getChats } from './chatService';
-
 import { useGetChats } from './chatQueriesCompat';
+import { getChats } from './chatService';
 
 // MSG1 / N3 (audit M6) — UNE SEULE LISTE AU LIEU DE DEUX.
 //
@@ -60,19 +59,24 @@ const monterLesConsommateurs = async (listeParams) => {
     defaultOptions: { queries: { gcTime: Infinity, retry: false } },
   });
 
-  const Consommateur = (/** @type {any} */ { params }) => {
+  /**
+   * Un consommateur de la liste : la pastille, l'ecran, une fenetre de partage.
+   * @param {any} proprietes - Les parametres passes au hook.
+   * @returns {null} Il ne dessine rien : seul son appel reseau nous interesse.
+   */
+  function Consommateur(/** @type {any} */ { params }) {
     useGetChats(params);
     return null;
-  };
+  }
 
   let arbre;
   await act(async () => {
     arbre = renderer.create(createElement(
       QueryClientProvider,
       { client: clientRequetes },
-      ...listeParams.map((params, index) => createElement(
+      ...listeParams.map((params) => createElement(
         Consommateur,
-        { key: String(index), params },
+        { key: JSON.stringify(params), params },
       )),
     ));
   });
