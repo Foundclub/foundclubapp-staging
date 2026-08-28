@@ -378,6 +378,19 @@ describe('Event Use Cases', () => {
       }));
     });
 
+    // 🗣️ D10 (EVEDIT-3) — LE REFUS N'ENVOIE PLUS CHERCHER UNE PORTE QUI
+    // N'EXISTE PAS. L'audit du 26/08 a verifie que le « flow dédié » promis
+    // par l'ancien message n'existait nulle part : les trois ecrans
+    // d'assistant de stage sont creation-seule, et aucun ecran d'edition de
+    // stage n'est enregistre. Ce temoin empeche la promesse de revenir.
+    test('le refus d un STAGE ne promet plus un ecran qui n existe pas', () => {
+      const refus = getEventEditSupport({ eventFormat: 'stage_parent' });
+
+      expect(refus.reason).toEqual(expect.any(String));
+      expect(refus.reason.toLowerCase()).not.toContain('flow');
+      expect(refus.reason.toLowerCase()).not.toContain('dédié');
+    });
+
     test('should keep standard events editable', () => {
       expect(getEventEditSupport({
         eventFormat: 'single',
