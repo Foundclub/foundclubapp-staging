@@ -4,9 +4,7 @@ import {
 import { useTranslation } from 'react-i18next';
 import {
   Image,
-  InteractionManager,
   Keyboard,
-  Platform,
   Text,
   TouchableOpacity,
   View,
@@ -114,20 +112,7 @@ const AutocompleteSelect = forwardRef(
 
     // refs
     const searchInputRef = useRef(null);
-    const openModalTaskRef = useRef(/** @type {{ cancel?: () => void } | null} */ (null));
-    const openModalTimeoutRef = useRef(/** @type {ReturnType<typeof setTimeout> | null} */ (null));
     const wasValuesVisibleRef = useRef(false);
-
-    useEffect(() => () => {
-      if (openModalTaskRef.current?.cancel) {
-        openModalTaskRef.current.cancel();
-      }
-      openModalTaskRef.current = null;
-      if (openModalTimeoutRef.current) {
-        clearTimeout(openModalTimeoutRef.current);
-        openModalTimeoutRef.current = null;
-      }
-    }, []);
 
     /**
      * @param {unknown} value
@@ -193,47 +178,41 @@ const AutocompleteSelect = forwardRef(
     }, [areValuesVisible, hydrateSelectedOptionsFromProps]);
 
     // methods
-    const clearPendingOpen = useCallback(() => {
-      if (openModalTaskRef.current?.cancel) {
-        openModalTaskRef.current.cancel();
-      }
-      openModalTaskRef.current = null;
-      if (openModalTimeoutRef.current) {
-        clearTimeout(openModalTimeoutRef.current);
-        openModalTimeoutRef.current = null;
-      }
-    }, []);
-
-    const scheduleOpen = useCallback(() => {
-      clearPendingOpen();
-
-      const openModal = () => {
-        if (props.isSearchable) {
-          openModalTimeoutRef.current = setTimeout(() => {
-            setAreValuesVisible(true);
-            openModalTimeoutRef.current = null;
-          }, 80);
-          return;
-        }
-
-        setAreValuesVisible(true);
-      };
-
-      if (Platform.OS === 'web') {
-        openModal();
-        return;
-      }
-
-      openModalTaskRef.current = InteractionManager.runAfterInteractions(() => {
-        openModalTaskRef.current = null;
-        openModal();
-      });
-    }, [clearPendingOpen, props.isSearchable]);
-
+    // 🎯 EVEDIT-3 (R5) — LE PREMIER APPUI OUVRE LE CHAMP. TOUT DE SUITE.
+    //
+    // 🧱 LE CONSTAT D'ADEL, TROIS JOURS DE SUITE : « il faut cliquer plusieurs
+    // fois pour pouvoir ouvrir et modifier un des champs ». Ce composant sert
+    // 31 ecrans, dont les HUIT listes deroulantes de la modification d'un
+    // evenement — c'est-a-dire tous les champs qu'on y « ouvre ».
+    //
+    // ⛔ CE QUI VIVAIT ICI, ET QUI EST PARTI : l'ouverture etait remise a
+    // `InteractionManager.runAfterInteractions`, c'est-a-dire « attends que
+    // TOUTES les animations en cours soient finies ». Or l'appui commence par
+    // `Keyboard.dismiss()` juste au-dessus, et l'ecran de modification anime sa
+    // hauteur dans la foulee (`KeyboardAvoidingView`) : la liste ne s'ouvrait
+    // donc JAMAIS au moment du doigt. Le second appui passait parce que les
+    // animations avaient fini entre-temps. Les champs cherchables portaient
+    // meme une attente DE PLUS — 80 ms de minuterie par-dessus.
+    //
+    // 🕳️ ET CE `searchInputRef` NE JUSTIFIAIT RIEN : on aurait pu croire que
+    // les 80 ms servaient a donner le clavier au champ de recherche, mais cette
+    // reference n'est jamais mise au point (`.focus()` : zero occurrence). La
+    // minuterie n'attendait personne.
+    //
+    // 📅 Les deux attentes ont ete posees le 2026-06-09 par `9ddbabec`
+    // (« V0906 »), un fourre-tout de 15 fichiers, SANS UNE LIGNE d'explication.
+    // Avant lui, l'ouverture etait deja synchrone : ceci est un RETOUR, pas une
+    // invention. Et c'est sans risque de presentation, parce que la feuille est
+    // un `BottomSheetModal` de `@gorhom/bottom-sheet` — un composant rendu DANS
+    // l'arbre, pas une fenetre native que le systeme refuserait d'empiler
+    // pendant une animation.
+    //
+    // ⛔ `disabled` reste la seule porte : « ouvrir tout de suite » ne veut pas
+    // dire « ouvrir toujours ».
     const handleFocus = () => {
       if (!props.disabled) {
         Keyboard.dismiss();
-        scheduleOpen();
+        setAreValuesVisible(true);
         if (props?.onFocus) {
           props?.onFocus();
         }
@@ -260,8 +239,8 @@ const AutocompleteSelect = forwardRef(
     };
 
     const handleCloseModal = (persistSelection = true) => {
-      clearPendingOpen();
-
+      // ⛔ Plus rien a annuler ici : l'ouverture n'est plus differee, donc il
+      // n'existe plus d'ouverture « en attente » a rattraper a la fermeture.
       if (persistSelection) {
         props.setValue(selectedOptions);
       }

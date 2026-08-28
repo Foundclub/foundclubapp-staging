@@ -583,3 +583,56 @@ describe('D3 — tout le reste ouvre exactement comme avant', () => {
     expect(mockNavigate).toHaveBeenCalled();
   });
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// EVEDIT-3 (E6) — LE PRECHARGEMENT QUI REPART A CHAQUE APPUI.
+//
+// 🧨 L'AMPLIFICATEUR DE « CA CHARGE PENDANT DES HEURES ». Les deux
+// prechargements poses par EVEDIT-1 sont une bonne idee, mais un seul des deux
+// porte une duree de fraicheur. Le commentaire du code EXPLIQUE pourquoi
+// `event-types` en a besoin — « sans elle, ce prechargement-ci repartirait au
+// reseau a CHAQUE appui sur Modifier » — et la meme phrase vaut mot pour mot
+// pour la fiche elle-meme, qui n'en a pas. La regle a ete ecrite, puis
+// appliquee a une ligne sur deux.
+//
+// 🔗 POURQUOI CA COMPTE MAINTENANT : le lot FCMSTORM a mesure 27 refus `429`
+// en rafale le 28/08. Un appui qui n'a pas l'air d'agir se rejoue — et chaque
+// rejeu relancait une lecture complete de l'evenement. C'est exactement la
+// forme de charge que la protection anti-abus du serveur punit, et un `429`
+// sur cette lecture-la fige l'ecran de modification (voir
+// `EventEditEvedit3Ouverture.test.js`).
+//
+// ⛔ CE TEMOIN NE MESURE AUCUNE MILLISECONDE : il verifie qu'une duree de
+// fraicheur est DEMANDEE. Ce que react-query en fait est son affaire, pas
+// celle de cet ecran.
+describe('EVEDIT-3 — le prechargement de la fiche ne repart pas a chaque appui', () => {
+  test('la lecture de l evenement porte une duree de fraicheur, comme sa voisine', () => {
+    toucherModifier(buildEvent());
+
+    const lectureFiche = mockPrefetch.mock.calls
+      .map((/** @type {any} */ appel) => appel[0])
+      .find((/** @type {any} */ options) => options.queryKey?.[2] === 'edit');
+
+    expect(lectureFiche).toBeDefined();
+    // 🔴 ROUGE AVANT : `staleTime` valait `undefined`, donc zero — la lecture
+    // repartait au reseau meme deux secondes apres la precedente.
+    expect(typeof lectureFiche.staleTime).toBe('number');
+    expect(lectureFiche.staleTime).toBeGreaterThan(0);
+  });
+
+  test('deux appuis de suite ne redemandent pas deux fois la meme fiche', () => {
+    toucherModifier(buildEvent());
+    toucherModifier(buildEvent());
+
+    // La fraicheur demandee doit etre la MEME aux deux appuis : c'est elle qui
+    // permet a react-query de servir le second sans repartir au reseau.
+    const fraicheurs = mockPrefetch.mock.calls
+      .map((/** @type {any} */ appel) => appel[0])
+      .filter((/** @type {any} */ options) => options.queryKey?.[2] === 'edit')
+      .map((/** @type {any} */ options) => options.staleTime);
+
+    expect(fraicheurs).toHaveLength(2);
+    expect(fraicheurs[0]).toBe(fraicheurs[1]);
+    expect(fraicheurs[0]).toBeGreaterThan(0);
+  });
+});

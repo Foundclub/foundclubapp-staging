@@ -1,5 +1,6 @@
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 
+import { EVENT_DETAIL_STALE_MS } from '@/services/event/eventCacheDurations';
 import { getPlaceholderDataOption } from '@/services/queryOptions';
 
 import { buildNormalizedQueryKey } from '@/utils/queryKey';
@@ -14,7 +15,6 @@ import {
   getEventTypes,
 } from './eventService';
 
-const EVENT_DETAIL_STALE_MS = 30_000;
 const EVENT_ATTENDANCE_STALE_MS = 15_000;
 const EVENT_LIST_STALE_MS = 60_000;
 

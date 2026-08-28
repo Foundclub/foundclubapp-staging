@@ -73,6 +73,7 @@ import { openPublicAuthFlow } from '@/navigation/public/publicAuthNavigation';
 import { RouteNames } from '@/navigation/routeNames';
 
 import { celebrate } from '@/services/celebrations/celebrationRuntime';
+import { EVENT_DETAIL_STALE_MS } from '@/services/event/eventCacheDurations';
 import {
   useGetEvent,
   useGetEventAttendance,
@@ -2776,6 +2777,19 @@ function EventDetails({ navigation, route }) {
       queryClient.prefetchQuery({
         queryFn: () => getEventByIdForEdit(eventId),
         queryKey: ['event', eventId, 'edit'],
+        // 🔑 EVEDIT-3 — LA MEME FRAICHEUR QUE LE LECTEUR (`useGetEventForEdit`).
+        //
+        // ⚠️ LA REGLE ETAIT DEJA ECRITE JUSTE EN DESSOUS, POUR `event-types`, ET
+        // ELLE N'AVAIT ETE APPLIQUEE QU'A UNE LIGNE SUR DEUX. Sans duree de
+        // fraicheur, un prechargement repart au reseau A CHAQUE appui sur
+        // « Modifier », meme deux secondes apres le precedent.
+        //
+        // 🔗 CE QUE CA COUTAIT VRAIMENT : un appui qui n'a pas l'air d'agir se
+        // rejoue, et chaque rejeu relancait une lecture complete de
+        // l'evenement. Le lot FCMSTORM a mesure 27 refus `429` en rafale le
+        // 28/08 — et un `429` sur CETTE lecture-la fige l'ecran de
+        // modification, puisque `queryClient.js` ne retente jamais un 429.
+        staleTime: EVENT_DETAIL_STALE_MS,
       });
       queryClient.prefetchQuery({
         queryFn: () => getEventTypes(),

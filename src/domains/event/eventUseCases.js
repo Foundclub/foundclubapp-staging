@@ -529,7 +529,19 @@ export const getEventEditSupport = (event, eventTypeName = '') => {
   if (eventFormat === 'stage_parent' || eventFormat === 'stage_day' || isStageEventType(resolvedTypeName)) {
     return {
       isSupported: false,
-      reason: "La modification complète des stages passe encore par un flow dédié. Cette fiche ne permet pas d'éditer ce type d'événement pour l'instant.",
+      // 🗣️ D10 (EVEDIT-3) — ON NE PROMET PLUS UN ECRAN QUI N'EXISTE PAS.
+      //
+      // 🧨 L'ANCIEN TEXTE DISAIT : « la modification complete des stages passe
+      // encore par un FLOW DEDIE ». L'audit du 26/08 est alle le chercher : ce
+      // flow n'existe nulle part. Les trois ecrans d'assistant de stage sont
+      // CREATION SEULE (zero occurrence de `eventId`, zero `mode: 'edit'`), et
+      // aucun ecran d'edition de stage n'est enregistre dans la navigation.
+      //
+      // ⛔ Envoyer quelqu'un chercher une porte qui n'a jamais ete percee est
+      // pire qu'un refus : il cherche, il ne trouve pas, et il conclut que
+      // l'application est cassee. Un manque annonce franchement se supporte ;
+      // une fausse piste, non.
+      reason: "La modification d'un stage n'est pas encore possible, ni ici ni ailleurs dans l'application. C'est un manque connu de notre côté, pas une erreur de ta part.",
       reasonKey: 'stage',
     };
   }
@@ -537,7 +549,11 @@ export const getEventEditSupport = (event, eventTypeName = '') => {
   if (isTournamentEventType(resolvedTypeName)) {
     return {
       isSupported: false,
-      reason: 'La modification complète des tournois reste limitée à leurs écrans dedies. Cette fiche ne prend pas encore en charge ce format.',
+      // 🗣️ D10 (EVEDIT-3) — ICI LA PORTE EXISTE VRAIMENT, on la nomme donc.
+      // Contrairement au stage, un tournoi a bien un ecran de reglages
+      // atteignable depuis sa fiche (« Gérer le tournoi »). Il ne couvre pas
+      // tout, et le texte ne pretend pas le contraire.
+      reason: "La modification complète d'un tournoi n'est pas encore possible ici. Depuis sa fiche, « Gérer le tournoi » permet déjà d'ajuster une partie de ses réglages.",
       reasonKey: 'tournament',
     };
   }
