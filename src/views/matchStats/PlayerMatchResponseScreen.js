@@ -16,6 +16,7 @@ import {
   View,
 } from 'react-native';
 
+import { invalidateAfterAction } from '@/domains/refresh/afterAction';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -34,6 +35,8 @@ import {
   saveLeagueMyMatchResponse,
 } from '@/services/matchStats/matchStatsService';
 
+import { clampMatchStatsValue, getMatchStatsFieldMax } from '@/utils/matchStatsBounds';
+
 const FOOTBALL_FIELDS = [
   { key: 'goals', label: 'Buts' },
   { key: 'assists', label: 'Passes décisives' },
@@ -47,7 +50,11 @@ const BASKETBALL_FIELDS = [
   { key: 'threePointsMade', label: '3 pts' },
 ];
 
-const sanitizeNumericInput = (value) => String(value || '').replace(/[^\d]/g, '');
+// H6 — cet ecran n avait AUCUNE borne haute : `sanitizeNumericInput` retirait
+// bien le signe moins et la virgule, mais laissait passer 9999 minutes. Le
+// serveur les REFUSE desormais : sans plafond ici, le joueur remplirait tout son
+// formulaire pour se prendre un refus a l envoi.
+const sanitizeNumericInput = (value, field) => clampMatchStatsValue(value, getMatchStatsFieldMax(field));
 
 const normalizeSport = (value) => {
   const raw = String(value || '').toLowerCase();
@@ -262,7 +269,7 @@ function PlayerMatchResponseScreen({ navigation, route }) {
   const updateField = useCallback((field, value) => {
     setQuantitative((current) => ({
       ...current,
-      [field]: field === 'cleanSheet' ? Boolean(value) : sanitizeNumericInput(value),
+      [field]: field === 'cleanSheet' ? Boolean(value) : sanitizeNumericInput(value, field),
     }));
   }, []);
 
@@ -283,39 +290,20 @@ function PlayerMatchResponseScreen({ navigation, route }) {
       const nextValue = Math.max(0, (Number.parseInt(String(current?.[field] || '0'), 10) || 0) + delta);
       return {
         ...current,
-        [field]: String(nextValue),
+        // H6 — le bouton « + » butait sur rien : il faut la MEME borne que la frappe.
+        [field]: clampMatchStatsValue(String(nextValue), getMatchStatsFieldMax(field)),
       };
     });
   }, []);
 
-  const invalidateQueries = useCallback(async () => {
-    const invalidations = [
-      queryClient.invalidateQueries({ queryKey: ['pendingMatchStatsPrompts'] }),
-      queryClient.invalidateQueries({ queryKey: ['personalStats'] }),
-    ];
-    const teamDocumentId = responsePayload?.team?.documentId || requestedTeamId;
-    if (teamDocumentId) {
-      invalidations.push(queryClient.invalidateQueries({ queryKey: ['teamPerformanceStats', teamDocumentId] }));
-    }
-
-    if (sourceType === 'event' && eventId) {
-      invalidations.push(
-        queryClient.invalidateQueries({ queryKey: ['event', eventId] }),
-        queryClient.invalidateQueries({ queryKey: ['eventMatchStats', eventId] }),
-        queryClient.invalidateQueries({ queryKey: ['eventMyMatchResponse', eventId] }),
-      );
-    }
-
-    if (sourceType === 'league' && matchId) {
-      invalidations.push(
-        queryClient.invalidateQueries({ queryKey: ['league-match', matchId] }),
-        queryClient.invalidateQueries({ queryKey: ['leagueMatchStats', matchId] }),
-        queryClient.invalidateQueries({ queryKey: ['leagueMyMatchResponse', matchId] }),
-      );
-    }
-
-    await Promise.all(invalidations);
-  }, [eventId, matchId, queryClient, requestedTeamId, responsePayload?.team?.documentId, sourceType]);
+  // H9 — LA MEME LISTE QUE `MatchStatsEditor`, et c est le but.
+  // Cet ecran tenait sa propre copie, qui oubliait `eventMatchResult` et
+  // `leagueTeamPerformanceStats` ; l editeur oubliait `eventMyMatchResponse`.
+  // Deux copies d une meme liste finissent toujours par diverger.
+  const invalidateQueries = useCallback(
+    () => invalidateAfterAction(queryClient, 'submitMatchStats'),
+    [queryClient],
+  );
 
   const buildPayload = useCallback((status) => {
     let quantitativeState = 'not_applicable';

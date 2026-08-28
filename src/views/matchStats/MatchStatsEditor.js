@@ -17,6 +17,7 @@ import {
   View,
 } from 'react-native';
 
+import { invalidateAfterAction } from '@/domains/refresh/afterAction';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -38,6 +39,13 @@ import {
   submitEventMatchStats,
   submitLeagueMatchStats,
 } from '@/services/matchStats/matchStatsService';
+
+import {
+  clampMatchStatsValue,
+  getMatchStatsFieldMax,
+  MAX_MATCH_SCORE,
+  MAX_STAT_VALUE,
+} from '@/utils/matchStatsBounds';
 
 /**
  * @typedef {Record<string, any>} MatchStatsLine
@@ -70,7 +78,7 @@ const getFieldConfig = (/** @type {any} */ sport) => (normalizeSport(sport) === 
 
 const sanitizeNumericInput = (/** @type {any} */ value) => String(value || '').replace(/[^\d]/g, '');
 
-const shiftNumericStringValue = (/** @type {any} */ value, /** @type {number} */ delta, max = 999) => {
+const shiftNumericStringValue = (/** @type {any} */ value, /** @type {number} */ delta, max = MAX_MATCH_SCORE) => {
   const parsed = Number.parseInt(String(value || '0'), 10) || 0;
   const nextValue = Math.max(0, Math.min(max, parsed + delta));
   return String(nextValue);
@@ -199,7 +207,7 @@ const getNullableNumericStatValue = (/** @type {any} */ value) => {
   return Math.max(0, parsed);
 };
 
-const clampNumericInput = (/** @type {any} */ value, max = 999) => {
+const clampNumericInput = (/** @type {any} */ value, max = MAX_STAT_VALUE) => {
   const sanitized = sanitizeNumericInput(value);
   if (!sanitized) return '';
   const parsed = Number.parseInt(sanitized, 10) || 0;
@@ -556,33 +564,15 @@ function MatchStatsEditor({ navigation, route }) {
     return 'Le brouillon reste modifiable tant que tu ne publies pas ce rapport.';
   }, [hasConsistencyIssues, isReadOnly, isReviewRequired]);
 
-  const invalidateRelatedQueries = useCallback(async () => {
-    if (sourceType === 'event' && eventId) {
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ['event', eventId] }),
-        queryClient.invalidateQueries({ queryKey: ['eventMatchResult', eventId] }),
-        queryClient.invalidateQueries({ queryKey: ['eventMatchStats', eventId] }),
-        queryClient.invalidateQueries({ queryKey: ['pendingMatchStatsPrompts'] }),
-        queryClient.invalidateQueries({ queryKey: ['personalStats'] }),
-        requestedTeamId
-          ? queryClient.invalidateQueries({ queryKey: ['teamPerformanceStats', requestedTeamId] })
-          : Promise.resolve(),
-      ]);
-      return;
-    }
-
-    if (sourceType === 'league' && matchId) {
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ['league-match', matchId] }),
-        queryClient.invalidateQueries({ queryKey: ['leagueMatchStats', matchId] }),
-        queryClient.invalidateQueries({ queryKey: ['pendingMatchStatsPrompts'] }),
-        queryClient.invalidateQueries({ queryKey: ['personalStats'] }),
-        requestedTeamId
-          ? queryClient.invalidateQueries({ queryKey: ['teamPerformanceStats', requestedTeamId] })
-          : Promise.resolve(),
-      ]);
-    }
-  }, [eventId, matchId, queryClient, requestedTeamId, sourceType]);
+  // H9 — UNE SEULE LISTE DE CLES, PARTAGEE AVEC L ECRAN JOUEUR.
+  // Cet ecran tenait sa propre liste, `PlayerMatchResponseScreen` la sienne, et
+  // les deux avaient derive : celle-ci oubliait `eventMyMatchResponse`. Le motif
+  // du lot INSTANT (`invalidateAfterAction`) existait deja — on le REUTILISE
+  // plutot que d entretenir un troisieme mecanisme.
+  const invalidateRelatedQueries = useCallback(
+    () => invalidateAfterAction(queryClient, 'submitMatchStats'),
+    [queryClient],
+  );
 
   const buildPayload = useCallback(() => ({
     coachPlayerReviews: coachReviews.map(serializeCoachReview).filter(Boolean),
@@ -672,7 +662,7 @@ function MatchStatsEditor({ navigation, route }) {
 
     if (normalizeSport(sport) === 'basketball') {
       if (field === 'points') {
-        if (resolvedScoreFor === null) return 999;
+        if (resolvedScoreFor === null) return MAX_STAT_VALUE;
         const otherPoints = otherLines.reduce(
           (/** @type {number} */ accumulator, /** @type {MatchStatsLine} */ line) => accumulator + getNumericStatValue(line?.points),
           0,
@@ -693,11 +683,11 @@ function MatchStatsEditor({ navigation, route }) {
         return Math.max(0, Math.min(maxByLinePoints, maxByScore));
       }
 
-      return 999;
+      return MAX_STAT_VALUE;
     }
 
     if (field === 'goals') {
-      if (resolvedScoreFor === null) return 999;
+      if (resolvedScoreFor === null) return MAX_STAT_VALUE;
       const otherGoals = otherLines.reduce(
         (/** @type {number} */ accumulator, /** @type {MatchStatsLine} */ line) => accumulator + getNumericStatValue(line?.goals),
         0,
@@ -720,11 +710,14 @@ function MatchStatsEditor({ navigation, route }) {
     }
 
     if (field === 'goalsConceded') {
-      if (resolvedScoreAgainst === null) return 999;
+      if (resolvedScoreAgainst === null) return MAX_STAT_VALUE;
       return resolvedScoreAgainst;
     }
 
-    return 999;
+    // H6 — le filet de dernier recours rendait 999 pour TOUT, minutes comprises :
+    // 999 minutes pour un match de 90 etaient publiables. Le serveur les REFUSE
+    // desormais, donc la borne affichee doit etre la MEME que la sienne.
+    return getMatchStatsFieldMax(field);
   }, [scoreAgainst, scoreFor, sport]);
 
   const updateLineNumericValue = useCallback((/** @type {string} */ lineKey, /** @type {string} */ field, /** @type {any} */ value) => {
@@ -755,6 +748,18 @@ function MatchStatsEditor({ navigation, route }) {
   const adjustScoreValue = useCallback((/** @type {string} */ field, /** @type {number} */ delta) => {
     const setter = field === 'scoreFor' ? setScoreFor : setScoreAgainst;
     setter((current) => shiftNumericStringValue(current, delta));
+  }, []);
+
+  // H6 — la frappe au clavier n avait AUCUN plafond : `999999999 - 0` etait
+  // accepte, envoye, et ecrit en base. Le serveur le REFUSE desormais ; la
+  // saisie doit donc s arreter a la meme borne, sinon on remplit tout le
+  // formulaire pour se prendre un refus a l envoi.
+  const updateScoreFor = useCallback((/** @type {string} */ value) => {
+    setScoreFor(clampMatchStatsValue(value, MAX_MATCH_SCORE));
+  }, []);
+
+  const updateScoreAgainst = useCallback((/** @type {string} */ value) => {
+    setScoreAgainst(clampMatchStatsValue(value, MAX_MATCH_SCORE));
   }, []);
 
   /**
@@ -1124,7 +1129,7 @@ function MatchStatsEditor({ navigation, route }) {
                   disabled: isScoreLocked || isReadOnly,
                   label: 'Notre score',
                   large: true,
-                  onChangeText: setScoreFor,
+                  onChangeText: updateScoreFor,
                   onDecrement: () => adjustScoreValue('scoreFor', -1),
                   onIncrement: () => adjustScoreValue('scoreFor', 1),
                   value: scoreFor,
@@ -1135,7 +1140,7 @@ function MatchStatsEditor({ navigation, route }) {
                   disabled: isScoreLocked || isReadOnly,
                   label: 'Score adverse',
                   large: true,
-                  onChangeText: setScoreAgainst,
+                  onChangeText: updateScoreAgainst,
                   onDecrement: () => adjustScoreValue('scoreAgainst', -1),
                   onIncrement: () => adjustScoreValue('scoreAgainst', 1),
                   value: scoreAgainst,

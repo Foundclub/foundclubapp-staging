@@ -215,6 +215,13 @@ describe('T08 — ce qui devient faux apres une action', () => {
       'leaveTeam',
       'membershipChanged',
       'publishComposition',
+      // SCORE1/H9 — `submitMatchStats` : envoyer un score, un bilan d'equipe ou
+      // sa reponse perso. Elle ne s'ajoute pas a la liste, elle en REMPLACE deux
+      // qui vivaient hors de ce fichier : `MatchStatsEditor` et
+      // `PlayerMatchResponseScreen` recopiaient chacun ses cles, et les deux
+      // copies avaient deja derive (l'un oubliait `eventMyMatchResponse`, l'autre
+      // `eventMatchResult`). C'est ce fichier-ci qui les tient desormais.
+      'submitMatchStats',
       'subscribe',
     ]);
   });
