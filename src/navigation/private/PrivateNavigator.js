@@ -951,7 +951,20 @@ function PrivateNavigator() {
           initialParams={{
             resumeCtaLabel: 'Continuer',
             resumeRouteName: RouteNames.Welcome,
-            skipRouteName: RouteNames.Welcome,
+            // ESSAI (2026-08-28) — LA SEULE LIGNE QUI BRANCHE LE CADEAU.
+            //
+            // `skipRouteName` = ou va celui qui PASSE SANS ACHETER. C'est
+            // EXACTEMENT la population d'Adel : « si le dirigeant ne s'est pas
+            // abonne, on lui met une page felicitation ». La page cadeau se
+            // glisse donc ICI, entre l'offre et la bienvenue, sans deplacer une
+            // seule etape ni toucher `resumeRouteName` — celui qui a PAYE va
+            // toujours droit a la bienvenue, et ne verra jamais de cadeau.
+            //
+            // ⚠️ Un entraineur passe aussi par cet ecran (les deux roles y sont
+            // servis). Il atterrira donc sur la page cadeau — qui, elle, se
+            // sait reservee au dirigeant et rend la main a `Welcome` sans rien
+            // afficher (meme filet que l. 795 de SubscriptionOffers).
+            skipRouteName: RouteNames.OnboardingGift,
           }}
           key={onboardingViews?.totalViews}
           name={RouteNames.SubscriptionOffers}
@@ -965,6 +978,39 @@ function PrivateNavigator() {
             // titre de `ProfileStack` (« Changer d'offre ») serait faux : cette
             // personne n'a pas d'offre a changer, elle vient de s'inscrire.
             headerTitle: t('profile.subscription.onboardingHeaderTitle', 'Choisis ton offre'),
+          }}
+        />
+
+        {/*
+          ESSAI (2026-08-28) - LA PAGE CADEAU, 2e MARCHE DU SAS.
+
+          MONTEE SANS CONDITION, pour la meme raison que les deux ecrans qui
+          l'encadrent : le sas n'est une etape comptee d'aucun parcours,
+          `canShowView` rendrait donc `false` et l'ecran deviendrait
+          INJOIGNABLE - le motif d'ecran orphelin que R2 designe comme la
+          regression la plus chere du projet.
+
+          `initialParams` est le COLIS (motif L40) : la porte dit ou l'on va,
+          l'ecran ne le devine jamais. Une seule destination ici, parce qu'il
+          n'y a qu'une seule sortie - le bouton. Elle vise la BIENVENUE, qui
+          termine l'inscription (`hasSeenWelcome_` + `markOnboardingComplete`)
+          et lance le tour guide.
+        */}
+        <Stack.Screen
+          getComponent={() => require('@/views/subscription/OnboardingGiftScreen').default}
+          initialParams={{
+            resumeRouteName: RouteNames.Welcome,
+          }}
+          key={onboardingViews?.totalViews}
+          name={RouteNames.OnboardingGift}
+          options={{
+            ...commonOptions,
+            // Aucun stepper (le sas n'est compte nulle part), et un titre POSE :
+            // sans lui l'entete retombe sur le logo FOUNDCLUB de
+            // `commonOptions`, qui est aussi la bascule vers LEAGUE. Un
+            // interrupteur de mode n'a rien a faire sur une page cadeau.
+            headerLeft: () => null,
+            headerTitle: t('profile.subscription.gift.headerTitle', 'Votre cadeau'),
           }}
         />
 

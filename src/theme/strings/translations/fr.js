@@ -3625,6 +3625,24 @@ export default {
       },
       compareHeaderTitle: 'Comparer',
       cta: 'Voir le détail des offres',
+      // ESSAI (28/08) — LA PAGE CADEAU. Les mots sont ceux d'Adel, et les sept
+      // usages sont dans SON ordre : infos du club · équipes · membres ·
+      // campagnes de cotisations · événements · recherche de matchs ·
+      // communication aux licenciés.
+      gift: {
+        cta: 'Débloquer mon offre',
+        headerTitle: 'Votre cadeau',
+        intro: 'Profitez-en pour :',
+        subtitle: 'Vous avez reçu un cadeau : un abonnement club illimité.',
+        title: 'Félicitations !',
+        usage1: 'Mettre à jour les infos de votre club',
+        usage2: 'Créer vos équipes',
+        usage3: 'Ajouter vos membres',
+        usage4: 'Créer vos campagnes de cotisations',
+        usage5: 'Publier vos événements',
+        usage6: 'Rechercher des matchs',
+        usage7: 'Communiquer à tous vos licenciés',
+      },
       headerTitle: 'Abonnement',
       offersHeaderTitle: 'Changer d\'offre',
       quota: {

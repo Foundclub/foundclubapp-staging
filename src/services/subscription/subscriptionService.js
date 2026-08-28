@@ -118,3 +118,17 @@ export const changeSubscriptionPlan = async (payload) => {
   const response = await client.post('/subscriptions/change-plan', payload);
   return getResponsePayload(response);
 };
+
+/**
+ * LE BOUTON « DEBLOQUER MON OFFRE » — lot ESSAI, decision d'Adel du 28/08.
+ *
+ * AUCUN PARAMETRE, ET C'EST VOLONTAIRE : le serveur prend le club DU COMPTE
+ * AUTHENTIFIE, jamais un identifiant venu du telephone. Laisser le client
+ * choisir le club ferait d'un cadeau une porte ouverte (offrir l'illimite au
+ * club d'un autre, ou en boucle sur des clubs successifs).
+ * @returns {Promise<{granted: boolean, reason: string, subscriptionDocumentId: string | null}>} Le verdict du serveur.
+ */
+export const claimOnboardingGift = async () => {
+  const response = await client.post('/subscriptions/gift/claim', {});
+  return getResponsePayload(response);
+};

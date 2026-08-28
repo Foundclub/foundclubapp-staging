@@ -944,6 +944,26 @@ export const resolveNotificationDestination = (rawPayload = {}) => {
       if (payload.profileId) return adaptDestinationForCurrentPlatform(payload, profileDestination(payload.profileId));
       return adaptDestinationForCurrentPlatform(payload, { params: {}, route: RouteNames.SearchAlerts });
     }
+    case NOTIFICATION_TYPES.SUBSCRIPTION_ENDED:
+    case NOTIFICATION_TYPES.SUBSCRIPTION_PAYMENT_FAILED: {
+      // ESSAI/E6 (28/08) — « votre abonnement est termine, profitez des offres
+      // FoundClub », et la notification OUVRE l'ecran des offres.
+      // Ces deux etiquettes existaient cote serveur depuis longtemps et
+      // n'etaient routees NULLE PART : la cloche sonnait, l'appui ne faisait
+      // rien. C'est le defaut que le lot INSTANT a mesure le 27/08.
+      //
+      // `focusScope` fait ouvrir le carrousel sur la BONNE famille d'offre.
+      // Le serveur envoie deja `planCode` dans la notification
+      // (subscription-billing.notifyPayerSubscriptionState) : on le lit plutot
+      // que de deviner. Un abonnement club termine ne doit pas reposer son
+      // ancien dirigeant sur la carte Equipe.
+      const endedPlanCode = String(payload.planCode || '').trim().toLowerCase();
+      const isClubPlan = endedPlanCode.includes('club');
+      return adaptDestinationForCurrentPlatform(payload, {
+        params: { focusScope: isClubPlan ? 'CLUB' : 'TEAM' },
+        route: RouteNames.SubscriptionOffers,
+      });
+    }
     case NOTIFICATION_TYPES.TEAM_FIRST_EVENT_CREATED:
       return adaptDestinationForCurrentPlatform(payload, {
         route: RouteNames.AdminDashboard,

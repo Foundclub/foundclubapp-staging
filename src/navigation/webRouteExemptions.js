@@ -67,6 +67,18 @@ const MOBILE_ONLY_SCREENS = {
   [RouteNames.MyActivities]:
     'TODO(web) ecran de gestion ecrit et monte cote app ; attend son entree dans web/src/routes/screenRegistry.tsx',
 
+  // TODO(web) ESSAI (2026-08-28) — la page cadeau du dirigeant DOIT exister sur
+  // le web : l'inscription s'y fait aussi, et un dirigeant qui s'inscrit depuis
+  // le navigateur a droit au meme cadeau. Elle est exemptee par SEQUENCEMENT,
+  // pas par principe, exactement comme MyActivities ci-dessus : l'enregistrer
+  // cote app ferait passer `check:routes` au rouge tant que
+  // web/src/routes/screenRegistry.tsx ne porte pas son entree, et ce fichier
+  // vit dans l'autre depot — hors du perimetre de ce lot.
+  // A retirer d'ici DES QUE le registre web declare OnboardingGift (une ligne),
+  // puis ajouter son motif dans webRoutes.js (ex. /onboarding/gift).
+  [RouteNames.OnboardingGift]:
+    'TODO(web) page cadeau ecrite et montee cote app ; attend son entree dans web/src/routes/screenRegistry.tsx',
+
   // --- Alias interne de navigateur ---
   // Accueil du membre connecte (HomeHub), initialRouteName de SearchStack. Depuis le
   // 2026-07-19 ce nom est declare dans routeNames.js (il etait une chaine en dur) ; sa
