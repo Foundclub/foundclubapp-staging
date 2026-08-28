@@ -311,6 +311,15 @@ describe('🥇 AA04 — un entraineur neuf va de l inscription a sa premiere equ
     alerteEspionnee.mockRestore();
     if (arbre) act(() => arbre.unmount());
     arbre = null;
+    // ATTENTION -- ce `clear()` n est pas un doublon de celui du `beforeEach`.
+    // Le cache n etait vide QU AVANT chaque test : le DERNIER test laissait donc
+    // sa requete vivante, et react-query arme un minuteur de ramassage de
+    // 5 minutes par requete (`gcTime` par defaut, query-core/removable.ts:15).
+    // Ce minuteur tenait la boucle d evenements de Node eveillee : la suite
+    // complete finissait en 5 min 44 mais le processus ne rendait la main que
+    // 4 min 24 plus tard, avec « Jest did not exit ». Nomme le 2026-08-28 par
+    // `--detectOpenHandles`, qui pointait la ligne 305 de ce fichier.
+    mockCacheRequetes.clear();
   });
 
   it('le parcours entier passe : club cree -> rattache -> equipe POUR ce club', async () => {

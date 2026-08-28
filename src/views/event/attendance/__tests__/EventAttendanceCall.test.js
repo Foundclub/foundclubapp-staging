@@ -245,6 +245,22 @@ const reponseAttendance = ({
 });
 
 /**
+ * Les arbres montes par `monter()`, en attente de demontage.
+ *
+ * ATTENTION -- ce tableau n est pas du confort : sans lui, la CI ne s eteint
+ * plus. `EventAttendanceCall` ouvre une horloge `setInterval(30 s)` (voir
+ * `EventAttendanceCall.js:168`) que son `useEffect` n annule QU AU DEMONTAGE.
+ * Un arbre jamais demonte laisse donc un minuteur VIVANT sur la boucle
+ * d evenements de Node : les tests passent, puis le minuteur se reveille dans
+ * un environnement Jest deja demoli et jette
+ * « You are trying to import a file after the Jest environment has been torn
+ * down ». Jest attend, GitHub attend, puis tue le processus (code 1).
+ * Mesure du 2026-08-28 : 19 tests = 19 minuteurs ; la suite dure 9 s et le
+ * processus rendait la main au bout de 1 min 12 s, en EXIT=1.
+ */
+const arbresMontes = [];
+
+/**
  * Monte l ecran et rend l arbre.
  * @returns {Promise<any>} - L arbre monte.
  */
@@ -254,6 +270,7 @@ const monter = async () => {
   await act(async () => {
     arbre = renderer.create(<EventAttendanceCall />);
   });
+  arbresMontes.push(arbre);
   return arbre;
 };
 
@@ -303,6 +320,15 @@ const appuyable = (arbre, texte) => arbre.root.findAll(
     && decrire(noeud).includes(texte),
   { deep: true },
 )[0];
+
+afterEach(async () => {
+  // Demonte TOUT ce qui a ete monte : c est ce demontage qui execute le
+  // `clearInterval` de l ecran. Sans lui, le processus Jest ne s eteint pas.
+  const arbres = arbresMontes.splice(0);
+  await act(async () => {
+    arbres.forEach((arbre) => arbre?.unmount?.());
+  });
+});
 
 beforeEach(() => {
   jest.clearAllMocks();

@@ -368,6 +368,19 @@ const defaultAuth = (/** @type {any} */ overrides = {}) => ({
 /** @type {any} */
 let mounted = null;
 
+/**
+ * TOUS les arbres montes, et pas seulement le dernier.
+ *
+ * ATTENTION -- `mounted` ne retient que le DERNIER montage. Un test qui monte
+ * deux fois (`monterEtOuvrirLeMenu` appele deux fois) ecrasait la reference du
+ * premier arbre, qui n etait alors JAMAIS demonte. Or `EventDetails` ouvre une
+ * horloge `setInterval` : l arbre orphelin gardait son minuteur vivant sur la
+ * boucle d evenements de Node, et le processus Jest ne rendait plus la main
+ * (« Jest did not exit one second after the test run has completed », puis
+ * GitHub tue la CI). Mesure du 2026-08-28.
+ */
+const arbresMontes = [];
+
 const mountScreen = (/** @type {any} */ { auth, event } = {}) => {
   mockEventQuery.data = event === undefined ? buildEvent() : event;
   mockUseAuth.mockReturnValue(defaultAuth(auth));
@@ -386,6 +399,7 @@ const mountScreen = (/** @type {any} */ { auth, event } = {}) => {
     );
   });
 
+  arbresMontes.push(mounted);
   return mounted.root;
 };
 
@@ -496,7 +510,12 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-  if (mounted) act(() => mounted.unmount());
+  // Demonte TOUS les arbres du test, pas seulement le dernier : c est ce
+  // demontage qui execute le `clearInterval` de l ecran.
+  const arbres = arbresMontes.splice(0);
+  act(() => {
+    arbres.forEach((arbre) => arbre?.unmount?.());
+  });
   mounted = null;
   if (alerte) alerte.mockRestore();
   alerte = null;
