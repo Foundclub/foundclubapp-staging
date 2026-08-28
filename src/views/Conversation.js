@@ -176,6 +176,8 @@ const isLocationShareEnabled = isFlagEnabled(process.env.FC_CHAT_SHARE_LOCATION,
 const isContactShareEnabled = isFlagEnabled(process.env.FC_CHAT_SHARE_CONTACT, true);
 const isEventShareEnabled = isFlagEnabled(process.env.FC_CHAT_SHARE_EVENT, true);
 const isAttachmentDebugEnabled = isFlagEnabled(process.env.FC_CHAT_ATTACHMENT_DEBUG, false);
+// MSG1/N5 — au plus un « untel ecrit... » par seconde et par personne.
+const TYPING_START_THROTTLE_MS = 1000;
 const VOICE_GESTURE_CANCEL_THRESHOLD = -64;
 const VOICE_GESTURE_LOCK_THRESHOLD = -64;
 const VOICE_WAVEFORM_MAX_BARS = 32;
@@ -446,6 +448,8 @@ function Conversation({ navigation, route }) {
   const [isMenuVisible, setIsMenuVisible] = useState(false);
   const [conversationPrompt, setConversationPrompt] = useState(/** @type {any | null} */ (null));
   const uploadInFlightRef = useRef(false);
+  // MSG1/N5 — la derniere fois qu'on a prevenu le serveur qu'on ecrit.
+  const lastTypingStartSentAtRef = useRef(0);
   const closeConversationPrompt = useCallback(() => {
     setConversationPrompt(null);
   }, []);
@@ -1294,15 +1298,38 @@ function Conversation({ navigation, route }) {
     deleteVoiceNoteFile(currentDraftUri).catch(() => {});
   }, [pendingVoiceDraft?.uri]);
 
+  // MSG1/N5 — ARRETER LA FRAPPE REARME LE RALENTISSEUR. Sans ca, le caractere
+  // tape juste apres un envoi ne reprevient personne pendant une seconde : le
+  // « ... » n apparaitrait plus chez l autre au debut du message suivant.
+  // Les 4 endroits qui arretent la frappe passent par ici, une seule fois.
+  const stopTyping = (/** @type {string} */ conversationId) => {
+    lastTypingStartSentAtRef.current = 0;
+    sendTypingStop(conversationId);
+  };
+
   // Handle Input Text Change for Typing Indicator
+  //
+  // MSG1/N5 — LE RALENTISSEUR. Le serveur n'accepte que 10 evenements par
+  // seconde et par personne (admin/src/socket/constants.ts:67), et ce quota est
+  // PARTAGE avec l'envoi de messages. Or on prevenait le serveur A CHAQUE
+  // TOUCHE : taper vite, ou coller un texte, epuisait le quota et le message
+  // envoye juste apres etait REFUSE (bulle rouge immediate).
+  // Le premier caractere previent tout de suite — c'est ce qui fait apparaitre
+  // le « ... » chez l'autre sans retard — puis au plus une fois par seconde.
+  // `typing-stop`, lui, n'est JAMAIS bride : c'est le signal qui ETEINT
+  // l'indicateur, le retarder laisserait un « ... » allume chez quelqu'un qui
+  // n'ecrit plus.
   const handleInputTextChanged = (/** @type {string} */ text) => {
     setComposerText(text);
     if (!isSocketReadTypingEnabled) return;
 
     if (text.length > 0) {
+      const maintenant = Date.now();
+      if (maintenant - lastTypingStartSentAtRef.current < TYPING_START_THROTTLE_MS) return;
+      lastTypingStartSentAtRef.current = maintenant;
       sendTypingStart(chatId);
     } else {
-      sendTypingStop(chatId);
+      stopTyping(chatId);
     }
   };
 
@@ -4175,7 +4202,7 @@ function Conversation({ navigation, route }) {
       await clearPendingVoiceDraft();
       setReplyingTo(null);
       setComposerText('');
-      sendTypingStop(chatId);
+      stopTyping(chatId);
     } catch (error) {
       if (String(error?.message || '') !== 'VOICE_SOCKET_UNAVAILABLE') {
         removeLocalPendingMessage(optimisticMessageId);
@@ -4274,7 +4301,7 @@ function Conversation({ navigation, route }) {
     clearPendingMediaDraft();
     setReplyingTo(null);
     setComposerText('');
-    sendTypingStop(chatId);
+    stopTyping(chatId);
     logAttachmentDebug('sendPendingMediaDraft success', {
       chatId,
     });
@@ -4290,15 +4317,40 @@ function Conversation({ navigation, route }) {
       return;
     }
 
+    // MSG1/N1 — LE TEXTE NE S'EFFACE PLUS DANS LE VIDE.
+    // Avant, le champ etait vide INCONDITIONNELLEMENT, sans jamais regarder si
+    // le message etait parti. Quand le fil temps reel est coupe, `sendMessage`
+    // abandonne en silence (`return null`, useMessaging.js:851-858) : le texte
+    // disparaissait de l'ecran sans etre envoye nulle part, et rien ne le
+    // disait. Une lenteur se rattrape, un message perdu non.
+    // On reprend ici exactement le garde que font deja les TROIS autres
+    // chemins d'envoi — piece jointe (:1694), piece jointe avec vignette
+    // (:1803), note vocale (:4066) — y compris leur banniere, celle qui existe
+    // deja dans cet ecran.
+    let messagesRefuses = 0;
     msgs.forEach((msg) => {
-      if (chatId) {
-        sendMessage(chatId, msg.text, {
-          replyTo: replyingTo ? { documentId: replyingTo.documentId } : null,
-          sender: userData, // for optimistic
-        });
-        sendTypingStop(chatId);
+      if (!chatId) {
+        messagesRefuses += 1;
+        return;
       }
+      const queuedMessageId = sendMessage(chatId, msg.text, {
+        replyTo: replyingTo ? { documentId: replyingTo.documentId } : null,
+        sender: userData, // for optimistic
+      });
+      if (!queuedMessageId) {
+        messagesRefuses += 1;
+        return;
+      }
+      stopTyping(chatId);
     });
+
+    if (messagesRefuses > 0) {
+      // On ne vide RIEN : ni le champ, ni la citation. Le texte reste sous les
+      // yeux de celui qui l'a ecrit, et il peut le renvoyer d'un appui.
+      showErrorBanner('Connexion messagerie indisponible. Réessaie dans quelques secondes.');
+      return;
+    }
+
     setReplyingTo(null);
     setComposerText('');
   };

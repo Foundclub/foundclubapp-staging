@@ -136,8 +136,10 @@ const useUnreadMessages = () => {
     [allMyTeams],
   );
 
+  // MSG1/N3 — MEME CLEF QUE L'ECRAN, donc un seul telechargement. On ne passe
+  // plus `chatScope` : il n'atteignait pas le serveur et ne servait qu'a
+  // fabriquer une 2e entree de cache pour la meme reponse.
   useGetChats({
-    chatScope: 'all',
     currentUserClubId: userData?.club?.documentId,
     currentUserId: userData?.documentId,
     currentUserTeamIds: safeTeamIds,

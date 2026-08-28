@@ -32,14 +32,15 @@ const useFallbackGetChats = (params, options = {}) => {
       return pagination.page < pagination.pageCount ? pagination.page + 1 : undefined;
     },
     initialPageParam: 1,
-    queryFn: ({ pageParam = 1 }) => getChats(pageParam, params?.pageSize, {
-      chatScope: params?.chatScope,
-      currentUserClubId: params?.currentUserClubId,
-      currentUserId: params?.currentUserId,
-      currentUserTeamIds: params?.currentUserTeamIds,
-    }),
+    queryFn: ({ pageParam = 1 }) => getChats(pageParam, params?.pageSize),
+    // MSG1/N3 — `chatScope` N'EST PAS dans la clef, et c'est voulu.
+    // Il n'atteint jamais le serveur : `getChats` ne prend que
+    // (page, pageSize) — chatService.js:52. Le laisser ici fabriquait une
+    // 2e entree de cache pour une requete HTTP RIGOUREUSEMENT identique,
+    // donc un 2e telechargement de la meme liste a chaque ouverture (la
+    // pastille demandait 'all', l'ecran 'classic'). Le tri Toutes /
+    // Classique / League se fait cote app (Messaging.js:343-344).
     queryKey: buildNormalizedQueryKey('chats', {
-      chatScope: params?.chatScope,
       currentUserClubId: params?.currentUserClubId,
       currentUserId: params?.currentUserId,
       currentUserTeamIds: params?.currentUserTeamIds,
