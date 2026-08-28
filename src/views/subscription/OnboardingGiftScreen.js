@@ -3,7 +3,7 @@ import {
   useCallback, useEffect, useRef, useState,
 } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Text, View } from 'react-native';
+import { ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import {
@@ -11,6 +11,7 @@ import {
   getUserRoleKey,
 } from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
+import { ONBOARDING_GIFT_DURATION_DAYS } from '@/domains/subscription/onboardingGift';
 import { scheduleSubscriptionStateRefresh } from '@/domains/subscription/subscriptionRefresh';
 import { withAlpha } from '@/theme/colors';
 import useTheme from '@/theme/themeContext';
@@ -30,14 +31,24 @@ import { claimOnboardingGift } from '@/services/subscription/subscriptionService
 const USAGE_KEYS = ['usage1', 'usage2', 'usage3', 'usage4', 'usage5', 'usage6', 'usage7'];
 
 /**
- * Le seul espacement dont on ait besoin en NOMBRE (il s'additionne au retrait
- * bas du telephone). Partout ailleurs, `Spaces.<type>[n]` rend un objet de
- * style, jamais un nombre.
- * ⛔ La rampe a des TROUS assumes (ni 6, ni 10, ni 14, ni 20...) : un jeton
- * absent rend `undefined` et React Native l'ignore EN SILENCE.
+ * Le retrait latéral de l'écran, en NOMBRE. Il vaut celui de `ScreenContainer`,
+ * et il est repris ici parce que le panneau du bouton doit toucher les deux
+ * bords : on annule la marge du conteneur (`marginHorizontal: -24`) puis on la
+ * réapplique au contenu, exactement comme l'écran des offres (l. 1059).
+ * ⛔ `Spaces.<type>[n]` rend un objet de style, jamais un nombre : il ne peut
+ * pas servir ici.
  * @type {number}
  */
-const SPACE_24 = 24;
+const SCREEN_SIDE_PADDING = 24;
+
+/**
+ * La réserve posée SOUS le bouton, en plus du retrait système. Même nombre que
+ * le `bottomInsetExtra` par défaut de `ScreenContainer` et que la réserve du
+ * panneau collant de l'écran des offres : les deux écrans se suivent, leur
+ * plancher est le même.
+ * @type {number}
+ */
+const CTA_BOTTOM_RESERVE = 12;
 
 /**
  * ===========================================================================
@@ -49,9 +60,22 @@ const SPACE_24 = 24;
  * Et là un bouton, et rien d'autre : "Débloquer mon offre" […]. Après, c'est la
  * suite logique comme d'habitude. »
  *
+ * 🔴 CE QUE LA RECETTE D'ADEL A CORRIGÉ (lot CADEAU-2, 2026-08-28) : l'écran
+ * annonçait « un abonnement club illimité » SANS AUCUNE BORNE. On pouvait
+ * légitimement croire à un abonnement définitif. La durée et la gratuité se
+ * lisent désormais AVANT la liste des usages, et la durée vient de
+ * `ONBOARDING_GIFT_DURATION_DAYS` — jamais d'un nombre recopié dans une phrase.
+ *
+ * 🎨 LE LANGAGE VISUEL EST CELUI DE L'ÉCRAN QUI PRÉCÈDE (`SubscriptionOffers`),
+ * et ce n'est pas une préférence : les deux écrans se suivent dans le sas, ils
+ * doivent sembler être le même produit. On lui reprend, à l'identique, la
+ * carcasse de carte (fond `primary800` à 72 %, rayon 20, bord 1,5, retrait 16),
+ * la pastille arrondie, la coche verte des bénéfices, et le panneau de bouton
+ * ancré en bas — fond `primary900`, trait clair en haut, bords à bords.
+ *
  * ⛔ UN SEUL BOUTON, ET AUCUNE AUTRE SORTIE. Pas de « plus tard », pas de croix,
- * pas de lien gris en pied de page. C'est une consigne explicite, et elle est
- * tenue par un témoin qui COMPTE les boutons rendus
+ * pas de lien gris en pied de page. C'est une consigne explicite, répétée deux
+ * fois par Adel, et elle est tenue par un témoin qui COMPTE les boutons rendus
  * (`__tests__/OnboardingGiftScreen.test.js`).
  * ⚠️ Ce n'est pas un cul-de-sac pour autant : l'écran PRÉCÉDENT
  * (`SubscriptionOffers`) porte déjà « Continuer gratuitement », et celui-ci
@@ -151,74 +175,148 @@ function OnboardingGiftScreen({ navigation, route }) {
   }
 
   return (
-    <ScreenContainer>
-      <View
-        style={[
-          Alignments.fill,
-          Alignments.justifyCenter,
-          Spaces.paddingHorizontal[24],
-          Spaces.gap[24],
-          // Le retrait bas du telephone n'est jamais ecrit en dur : il change
-          // d'un modele a l'autre (R07 point 6).
-          { paddingBottom: SPACE_24 + insets.bottom },
-        ]}
-      >
-        <View style={Spaces.gap[8]}>
-          <Text style={[Fonts.h2, Fonts.neutral00, Fonts.textCenter]}>
-            {t('profile.subscription.gift.title', 'Félicitations !')}
-          </Text>
-          <Text style={[Fonts.p1, Fonts.neutral100, Fonts.textCenter]}>
-            {t(
-              'profile.subscription.gift.subtitle',
-              'Vous avez reçu un cadeau : un abonnement club illimité.',
-            )}
-          </Text>
-        </View>
+    <ScreenContainer
+      bgImage="bg2"
+      // Le panneau du bouton descend jusqu'au bord et porte LUI-MEME le retrait
+      // systeme : sans `edge-to-edge`, ce retrait serait compte deux fois et une
+      // bande d'image de fond reapparaitrait sous le panneau. Contrat ecrit dans
+      // `ScreenContainer`, et deja tenu par l'ecran des offres (l. 1055).
+      bottomInsetMode="edge-to-edge"
+      contentContainerStyle={[Spaces.paddingBottom[0], Spaces.paddingTop[0]]}
+    >
+      <View style={[Alignments.fill, { marginHorizontal: -SCREEN_SIDE_PADDING }]}>
+        <ScrollView
+          contentContainerStyle={[Spaces.paddingBottom[24]]}
+          showsVerticalScrollIndicator={false}
+          style={Alignments.fill}
+        >
+          <View
+            style={[Spaces.gap[16], { paddingHorizontal: SCREEN_SIDE_PADDING }]}
+          >
+            {/* LE BLOC DE TITRE. La durée et la gratuité s'y lisent AVANT la
+                liste des usages : c'est la correction du lot CADEAU-2. */}
+            <View style={[Alignments.alignCenter, Spaces.gap[8]]}>
+              <View
+                style={{
+                  // Pastille de l'ecran des offres (`renderChip`, ton « club »).
+                  // Violet = Club dans le code couleur du catalogue (cyan =
+                  // Equipe) : le cadeau EST une offre Club, il porte sa couleur.
+                  backgroundColor: withAlpha(Colors.violet500, 0.14),
+                  borderColor: withAlpha(Colors.violet500, 0.45),
+                  borderRadius: 999,
+                  borderWidth: 1,
+                  paddingHorizontal: 11,
+                  paddingVertical: 4,
+                }}
+              >
+                <Text style={[Fonts.p4Bold, { color: Colors.violet200 }]}>
+                  {t(
+                    'profile.subscription.gift.duration',
+                    '{{count}} jours offerts',
+                    { count: ONBOARDING_GIFT_DURATION_DAYS },
+                  )}
+                </Text>
+              </View>
 
+              <Text style={[Fonts.h2, Fonts.neutral00, Fonts.textCenter]}>
+                {t('profile.subscription.gift.title', 'Félicitations !')}
+              </Text>
+              <Text style={[Fonts.p1, Fonts.neutral100, Fonts.textCenter]}>
+                {t(
+                  'profile.subscription.gift.subtitle',
+                  'Vous avez reçu un cadeau : un abonnement club illimité.',
+                )}
+              </Text>
+
+              {/* L'ancre de l'ecran, a la place exacte qu'occupe le prix sur les
+                  cartes du voisin (`renderPrice`, `Fonts.h3Bold`). Ici le prix
+                  EST le message : Adel a insisté sur « il n'a même pas besoin de
+                  mettre sa carte bleue ». */}
+              <Text style={[Fonts.h3Bold, Fonts.neutral00, Fonts.textCenter]}>
+                {t('profile.subscription.gift.free', 'Gratuit, sans carte bancaire')}
+              </Text>
+            </View>
+
+            {/* LA CARTE. Carcasse identique aux cartes de l'écran des offres
+                (`cardBaseStyle`, l. 807), bord violet de la carte Club active. */}
+            <View
+              style={{
+                backgroundColor: withAlpha(Colors.primary800, 0.72),
+                borderColor: Colors.violet500,
+                borderRadius: 20,
+                borderWidth: 1.5,
+                padding: 16,
+              }}
+            >
+              <Text style={[Fonts.p4, Fonts.neutral300]}>
+                {t('profile.subscription.gift.intro', 'Profitez-en pour :')}
+              </Text>
+
+              <View style={[Spaces.gap[8], Spaces.marginTop[12]]}>
+                {USAGE_KEYS.map((usageKey) => (
+                  <View key={usageKey} style={[Alignments.row, Spaces.gap[8]]}>
+                    <Text style={[Fonts.p3Bold, { color: Colors.success500 }]}>✓</Text>
+                    <Text style={[Alignments.fill, Fonts.p2, Fonts.neutral100]}>
+                      {t(`profile.subscription.gift.${usageKey}`, usageKey)}
+                    </Text>
+                  </View>
+                ))}
+              </View>
+
+              {/* CE QUI SE PASSE À LA FIN. Une ligne, calme et honnête : ni
+                  menace, ni compte à rebours. Décision d'Adel du 2026-08-28 —
+                  les équipes créées restent, on ne peut plus en créer. */}
+              <View
+                style={[
+                  Spaces.marginTop[12],
+                  Spaces.paddingTop[12],
+                  {
+                    borderTopColor: withAlpha(Colors.neutral00, 0.08),
+                    borderTopWidth: 1,
+                  },
+                ]}
+              >
+                <Text style={[Fonts.p3, Fonts.neutral300]}>
+                  {t(
+                    'profile.subscription.gift.ending',
+                    'À la fin du cadeau, les équipes que vous avez créées restent :'
+                      + ' vous ne pourrez simplement plus en créer de nouvelles.',
+                  )}
+                </Text>
+              </View>
+            </View>
+          </View>
+        </ScrollView>
+
+        {/* LE PANNEAU DU BOUTON, ancré en bas et en flux normal sous le
+            défilement — le motif exact de l'écran des offres (l. 1301) : rien ne
+            peut se cacher dessous, et aucune hauteur n'est réservée au jugé.
+            ⛔ RIEN D'AUTRE QU'UN BOUTON ICI. Voir la bannière en tête. */}
         <View
           style={[
-            Spaces.padding[16],
-            Spaces.gap[12],
+            Spaces.gap[8],
+            Spaces.paddingTop[12],
             {
-              // Violet = Club dans le code couleur des offres (cyan = Equipe).
-              // Le cadeau EST une offre Club : il porte donc sa couleur.
-              backgroundColor: withAlpha(Colors.violet500, 0.09),
-              borderColor: withAlpha(Colors.violet500, 0.38),
-              borderRadius: 16,
-              borderWidth: 1,
+              backgroundColor: Colors.primary900,
+              borderTopColor: withAlpha(Colors.neutral00, 0.08),
+              borderTopWidth: 1,
+              paddingBottom: insets.bottom + CTA_BOTTOM_RESERVE,
+              paddingHorizontal: SCREEN_SIDE_PADDING,
             },
           ]}
         >
-          <Text style={[Fonts.p3, Fonts.neutral200]}>
-            {t('profile.subscription.gift.intro', 'Profitez-en pour :')}
+          <Button
+            isLoading={isClaiming}
+            onPress={handleClaim}
+            title={t('profile.subscription.gift.cta', 'Débloquer mon offre')}
+            variant="Primary"
+          />
+          {/* La phrase qui lève la méfiance au moment précis de l'appui, à la
+              place du sous-texte du bouton de l'écran des offres. */}
+          <Text style={[Fonts.p4, Fonts.neutral300, Fonts.textCenter]}>
+            {t('profile.subscription.gift.ctaHint', 'Aucune carte bancaire demandée.')}
           </Text>
-          {USAGE_KEYS.map((usageKey) => (
-            <View
-              key={usageKey}
-              style={[Alignments.row, Alignments.alignCenter, Spaces.gap[12]]}
-            >
-              <View
-                style={{
-                  backgroundColor: Colors.violet200,
-                  borderRadius: 4,
-                  height: 8,
-                  width: 8,
-                }}
-              />
-              <Text style={[Fonts.p2, Fonts.neutral00, Alignments.fill]}>
-                {t(`profile.subscription.gift.${usageKey}`, usageKey)}
-              </Text>
-            </View>
-          ))}
         </View>
-
-        {/* ⛔ RIEN D'AUTRE SOUS CE BOUTON. Voir la bannière en tête. */}
-        <Button
-          isLoading={isClaiming}
-          onPress={handleClaim}
-          title={t('profile.subscription.gift.cta', 'Débloquer mon offre')}
-          variant="Primary"
-        />
       </View>
     </ScreenContainer>
   );

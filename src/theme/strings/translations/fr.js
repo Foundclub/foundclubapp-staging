@@ -3631,6 +3631,12 @@ export default {
       // communication aux licenciés.
       gift: {
         cta: 'Débloquer mon offre',
+        ctaHint: 'Aucune carte bancaire demandée.',
+        duration_one: '{{count}} jour offert',
+        duration_other: '{{count}} jours offerts',
+        ending: 'À la fin du cadeau, les équipes que vous avez créées restent :'
+          + ' vous ne pourrez simplement plus en créer de nouvelles.',
+        free: 'Gratuit, sans carte bancaire',
         headerTitle: 'Votre cadeau',
         intro: 'Profitez-en pour :',
         subtitle: 'Vous avez reçu un cadeau : un abonnement club illimité.',
