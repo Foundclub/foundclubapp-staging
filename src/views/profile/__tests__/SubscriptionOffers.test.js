@@ -256,15 +256,20 @@ const TEAM_PRICES = {
   2: { monthly: 1299, yearly: 9999 },
   3: { monthly: 1699, yearly: 12999 },
 };
+// LOT CATALOGUE (2026-08-28) — les 4 tranches de LICENCIES. Equipes illimitees
+// dans les quatre (`maxTeams: null`) : ce qui les distingue est `licenseeCap`.
 const CLUB_TIERS = {
   1: {
-    label: 'Club S', maxTeams: 3, monthly: 1999, yearly: 19999,
+    label: 'Club 100', licenseeCap: 100, monthly: 2499, yearly: 24999,
   },
   2: {
-    label: 'Club M', maxTeams: 8, monthly: 3499, yearly: 34999,
+    label: 'Club 500', licenseeCap: 500, monthly: 5999, yearly: 59999,
   },
   3: {
-    label: 'Club L', maxTeams: null, monthly: 5499, yearly: 54999,
+    label: 'Club 1000', licenseeCap: 1000, monthly: 8999, yearly: 89999,
+  },
+  4: {
+    label: 'Club Illimité', licenseeCap: null, monthly: 9399, yearly: 93999,
   },
 };
 
@@ -292,6 +297,7 @@ const CATALOG_ENTRIES = [
     displayName: `Équipe · ${slotCount} équipe${slotCount > 1 ? 's' : ''}`,
     featureKeys: TEAM_FEATURE_KEYS,
     isActive: true,
+    licenseeCap: null,
     maxTeams: null,
     planCode: `fc_team_${slotCount}_${billingPeriod}`,
     providerProductId: `fc_team_${slotCount}_${billingPeriod}`,
@@ -300,12 +306,13 @@ const CATALOG_ENTRIES = [
     scopeType: 'TEAM',
     slotCount,
   }))),
-  ...[1, 2, 3].flatMap((tier) => ['monthly', 'yearly'].map((billingPeriod) => ({
+  ...[1, 2, 3, 4].flatMap((tier) => ['monthly', 'yearly'].map((billingPeriod) => ({
     billingPeriod,
     displayName: CLUB_TIERS[tier].label,
     featureKeys: CLUB_FEATURE_KEYS,
     isActive: true,
-    maxTeams: CLUB_TIERS[tier].maxTeams,
+    licenseeCap: CLUB_TIERS[tier].licenseeCap,
+    maxTeams: null,
     planCode: `fc_club_tier_${tier}_${billingPeriod}`,
     providerProductId: `fc_club_tier_${tier}_${billingPeriod}`,
     referencePriceEurCents: CLUB_TIERS[tier][billingPeriod],
@@ -504,13 +511,13 @@ describe('Carrousel d\'offres — le temoin anti-regression de L10-A', () => {
     });
     await allerALaCarte(arbre, 2);
 
-    expect(libelleDuCta(arbre)).toBe('Choisir Club S · 199,99 €/an');
+    expect(libelleDuCta(arbre)).toBe('Choisir Club 100 · 249,99 €/an');
   });
 
   it('acheter Club part vraiment vers le rail d\'achat', async () => {
     const arbre = await rendre();
     await allerALaCarte(arbre, 2);
-    await appuyerSur(arbre, 'Choisir Club S · 199,99 €/an');
+    await appuyerSur(arbre, 'Choisir Club 100 · 249,99 €/an');
 
     expect(mockPerformPurchase).toHaveBeenCalledWith(expect.objectContaining({
       clubDocumentId: 'club-1',
@@ -539,7 +546,7 @@ describe('Carrousel d\'offres — il s\'ouvre sur l\'offre que le mur exigeait (
   it('un mur exigeant CLUB ouvre le carrousel centre sur Club', async () => {
     const arbre = await rendre({}, { focusScope: 'CLUB' });
 
-    expect(libelleDuCta(arbre)).toBe('Choisir Club S · 199,99 €/an');
+    expect(libelleDuCta(arbre)).toBe('Choisir Club 100 · 249,99 €/an');
   });
 
   it('un mur exigeant TEAM ouvre le carrousel centre sur Équipe', async () => {
@@ -563,26 +570,26 @@ describe('Carrousel d\'offres — il s\'ouvre sur l\'offre que le mur exigeait (
 });
 
 describe('Carrousel d\'offres — les prix viennent du catalogue', () => {
-  it('affiche les six paliers de la grille serveur, jamais un prix ecrit en dur', async () => {
+  it('affiche les paliers de la grille serveur, jamais un prix ecrit en dur', async () => {
     const arbre = await rendre();
     const texteAnnuel = texteVisible(arbre);
 
     expect(texteAnnuel).toContain('59,99 €/an');
-    expect(texteAnnuel).toContain('199,99 €/an');
+    expect(texteAnnuel).toContain('249,99 €/an');
 
     await appuyerSur(arbre, 'Mensuel');
     const texteMensuel = texteVisible(arbre);
 
     expect(texteMensuel).toContain('7,99 €/mois');
-    expect(texteMensuel).toContain('19,99 €/mois');
+    expect(texteMensuel).toContain('24,99 €/mois');
   });
 
   it('donne l\'equivalence mensuelle exacte de chaque annuel', async () => {
     const arbre = await rendre();
 
-    // 5 999 / 12 = 4,999… -> 5,00 € ; 19 999 / 12 = 16,665… -> 16,67 €.
+    // 5 999 / 12 = 4,999… -> 5,00 € ; 24 999 / 12 = 20,8325 -> 20,83 €.
     expect(texteVisible(arbre)).toContain('soit 5,00 €/mois');
-    expect(texteVisible(arbre)).toContain('soit 16,67 €/mois');
+    expect(texteVisible(arbre)).toContain('soit 20,83 €/mois');
   });
 
   it('REMISE PAR CARTE — Équipe et Club n\'ont PAS la meme, et aucun tag global ne ment', async () => {
@@ -607,7 +614,7 @@ describe('Carrousel d\'offres — les prix viennent du catalogue', () => {
   });
 
   it('un palier absent du catalogue est MASQUE, jamais invente', async () => {
-    // Le serveur ne rend que l'annuel Equipe 1 equipe et l'annuel Club S.
+    // Le serveur ne rend que l'annuel Equipe 1 equipe et l'annuel Club 100.
     mockCatalogQueryState = {
       data: {
         data: CATALOG_ENTRIES.filter((entry) => entry.billingPeriod === 'yearly'
@@ -641,13 +648,13 @@ describe('Carrousel d\'offres — apres l\'achat, l\'ecran de succes (L38)', () 
   it('un achat Club pousse vers SubscriptionSuccess, sans alerte systeme', async () => {
     const arbre = await rendre();
     await allerALaCarte(arbre, 2);
-    await appuyerSur(arbre, 'Choisir Club S · 199,99 €/an');
+    await appuyerSur(arbre, 'Choisir Club 100 · 249,99 €/an');
 
     expect(mockNavigate).toHaveBeenCalledWith('SubscriptionSuccess', expect.objectContaining({
       // La portee vient de l'ACHAT, pas du cache d'abonnement : le webhook du
       // store n'a pas encore converge (L08).
       clubDocumentId: 'club-1',
-      offerLabel: 'Club S',
+      offerLabel: 'Club 100',
       offerScope: 'CLUB',
     }));
     expect(mockAlert).not.toHaveBeenCalled();
@@ -668,7 +675,7 @@ describe('Carrousel d\'offres — apres l\'achat, l\'ecran de succes (L38)', () 
   it('le calendrier de convergence L08 est arme AVANT la bascule d\'ecran', async () => {
     const arbre = await rendre();
     await allerALaCarte(arbre, 2);
-    await appuyerSur(arbre, 'Choisir Club S · 199,99 €/an');
+    await appuyerSur(arbre, 'Choisir Club 100 · 249,99 €/an');
 
     expect(mockScheduleRefresh).toHaveBeenCalled();
   });
@@ -677,7 +684,7 @@ describe('Carrousel d\'offres — apres l\'achat, l\'ecran de succes (L38)', () 
     mockPerformPurchase.mockRejectedValue(new Error('CLUB_ALREADY_COVERED'));
     const arbre = await rendre();
     await allerALaCarte(arbre, 2);
-    await appuyerSur(arbre, 'Choisir Club S · 199,99 €/an');
+    await appuyerSur(arbre, 'Choisir Club 100 · 249,99 €/an');
 
     expect(mockNavigate).not.toHaveBeenCalled();
     expect(mockAlert).toHaveBeenCalledWith('Erreur abonnement', expect.any(String));
@@ -701,12 +708,14 @@ describe('L39 — le prix affiche vient du STORE, et l ecart est signale', () =>
      ou il est VOLONTAIREMENT different (1,99 €/mois et 12,99 €/an au lieu de
      7,99 € et 59,99 €). Si l'ecran affiche 12,99, c'est bien le store qui parle. */
   const PRIX_STORE = {
-    fc_club_tier_1_monthly: 1999,
-    fc_club_tier_1_yearly: 19999,
-    fc_club_tier_2_monthly: 3499,
-    fc_club_tier_2_yearly: 34999,
-    fc_club_tier_3_monthly: 5499,
-    fc_club_tier_3_yearly: 54999,
+    fc_club_tier_1_monthly: 2499,
+    fc_club_tier_1_yearly: 24999,
+    fc_club_tier_2_monthly: 5999,
+    fc_club_tier_2_yearly: 59999,
+    fc_club_tier_3_monthly: 8999,
+    fc_club_tier_3_yearly: 89999,
+    fc_club_tier_4_monthly: 9399,
+    fc_club_tier_4_yearly: 93999,
     fc_team_1_monthly: 199,
     fc_team_1_yearly: 1299,
     fc_team_2_monthly: 1299,
@@ -747,7 +756,7 @@ describe('L39 — le prix affiche vient du STORE, et l ecart est signale', () =>
 
     // Le palier Club, lui, est d'accord des deux cotes : il ne bouge pas.
     await allerALaCarte(arbre, 2);
-    expect(libelleDuCta(arbre)).toBe('Choisir Club S · 199,99 €/an');
+    expect(libelleDuCta(arbre)).toBe('Choisir Club 100 · 249,99 €/an');
   });
 
   it('TEMOIN DE REPLI — store muet : un prix s affiche et l ecran reste vendable', async () => {
@@ -1023,7 +1032,7 @@ describe('L40 — le catalogue transporte l origine jusqu a l ecran de succes', 
       resumeRouteParams: { screen: 'EventWizardType' },
     });
     await allerALaCarte(arbre, 2);
-    await appuyerSur(arbre, 'Choisir Club S · 199,99 €/an');
+    await appuyerSur(arbre, 'Choisir Club 100 · 249,99 €/an');
 
     expect(mockNavigate).toHaveBeenCalledWith('SubscriptionSuccess', expect.objectContaining({
       // Le libelle doit dire ou il mene : « C'est parti ! » promet l'accueil.
@@ -1037,7 +1046,7 @@ describe('L40 — le catalogue transporte l origine jusqu a l ecran de succes', 
   it('TEMOIN — sans origine, on repart de l accueil exactement comme avant', async () => {
     const arbre = await rendre();
     await allerALaCarte(arbre, 2);
-    await appuyerSur(arbre, 'Choisir Club S · 199,99 €/an');
+    await appuyerSur(arbre, 'Choisir Club 100 · 249,99 €/an');
 
     const params = mockNavigate.mock.calls[0][1];
     expect(params.resumeMode).toBe('home');
@@ -1052,12 +1061,13 @@ describe('Carrousel d\'offres — ce que chaque carte annonce', () => {
     await allerALaCarte(arbre, 2);
     const texte = texteVisible(arbre);
 
-    // R07 — l'amorce nomme desormais la COUVERTURE de la taille choisie
-    // (« jusqu'a 3 equipes du club » pour Club S) au lieu du vague « toutes les
-    // equipes du club ». Ce que ce temoin garde, lui, est inchange : la carte
+    // R07 — l'amorce nomme la COUVERTURE de la tranche choisie. Depuis le
+    // 28/08 c'est un nombre de LICENCIES, plus un nombre d'equipes : les quatre
+    // tranches donnent toutes des equipes illimitees, et les compter ne
+    // distinguerait plus rien. Ce que ce temoin garde est inchange : la carte
     // Club n'affiche que le DELTA sur l'offre Equipe.
     expect(texte).toContain(
-      "Tout ce que fait l'offre Équipe, pour jusqu'à 3 équipes du club, plus :",
+      "Tout ce que fait l'offre Équipe, pour jusqu'à 100 licenciés du club, plus :",
     );
     expect(texte).toContain('Fiche club complète');
     expect(texte).toContain('Installations');
@@ -1092,31 +1102,31 @@ describe('Carrousel d\'offres — ce que chaque carte annonce', () => {
 // faisant varier le catalogue, jamais en figeant un chiffre dans le code.
 // ⛔ Aucun prix, aucun palier, aucune regle d'abonnement touches : du TEXTE.
 describe('R07 — la carte Club nomme ce qu\'elle couvre', () => {
-  it('LE TEMOIN : la taille choisie annonce SON nombre d\'equipes', async () => {
+  it('LE TEMOIN : la tranche choisie annonce SON nombre de licencies', async () => {
     const arbre = await rendre();
     await allerALaCarte(arbre, 2);
 
-    // Club S, `maxTeams: 3` au catalogue.
-    expect(texteVisible(arbre)).toContain("jusqu'à 3 équipes du club");
+    // Club 100, `licenseeCap: 100` au catalogue.
+    expect(texteVisible(arbre)).toContain("jusqu'à 100 licenciés du club");
   });
 
-  it('changer de taille change le nombre annonce', async () => {
+  it('changer de tranche change le nombre annonce', async () => {
     const arbre = await rendre();
     await allerALaCarte(arbre, 2);
-    await appuyerSur(arbre, 'M');
+    await appuyerSur(arbre, '500');
 
-    // Club M, `maxTeams: 8` au catalogue.
-    expect(texteVisible(arbre)).toContain("jusqu'à 8 équipes du club");
-    expect(texteVisible(arbre)).not.toContain("jusqu'à 3 équipes du club");
+    // Club 500, `licenseeCap: 500` au catalogue.
+    expect(texteVisible(arbre)).toContain("jusqu'à 500 licenciés du club");
+    expect(texteVisible(arbre)).not.toContain("jusqu'à 100 licenciés du club");
   });
 
-  it('une taille SANS borne au catalogue ne va pas inventer un chiffre', async () => {
+  it('une tranche SANS borne au catalogue ne va pas inventer un chiffre', async () => {
     const arbre = await rendre();
     await allerALaCarte(arbre, 2);
-    await appuyerSur(arbre, 'L');
+    await appuyerSur(arbre, 'illim.');
 
-    // Club L, `maxTeams: null` au catalogue : aucune borne a annoncer.
-    expect(texteVisible(arbre)).toContain('toutes les équipes du club');
+    // Club Illimite, `licenseeCap: null` au catalogue : aucune borne a annoncer.
+    expect(texteVisible(arbre)).toContain('un nombre illimité de licenciés');
     expect(texteVisible(arbre)).not.toContain("jusqu'à null");
   });
 
@@ -1154,13 +1164,16 @@ describe('R07 — la carte Club nomme ce qu\'elle couvre', () => {
     expect(apresAmorce).toContain('Cotisations du club');
   });
 
-  it('⛔ ET AUCUNE CONTRADICTION : la couverture bornee ne cotoie pas « toutes »', async () => {
+  it('⛔ ET LA COUVERTURE N EST DITE QU UNE FOIS, jamais repetee en plus vague', async () => {
     const arbre = await rendre();
     await allerALaCarte(arbre, 2);
     const apresAmorce = texteVisible(arbre).split('plus :')[1] || '';
 
-    // Club S couvre 3 equipes. Le libelle « Toutes les équipes du club » de
-    // `club.multi_teams` disait litteralement l'inverse, deux lignes plus bas.
+    // Avant le 28/08, « Toutes les equipes du club » (libelle de
+    // `club.multi_teams`) contredisait une couverture bornee a 3 equipes.
+    // Depuis les tranches, les equipes SONT illimitees : la phrase ne ment
+    // plus, mais la ligne du haut la dit deja. On la garde EN HAUT, une fois.
+    expect(texteVisible(arbre)).toContain('équipes illimitées');
     expect(apresAmorce).not.toContain('Toutes les équipes du club');
   });
 });
@@ -1314,11 +1327,11 @@ describe('S12-B — la carte Club porte DEUX facons d acheter', () => {
     expect(pressablesPortant(arbre, 'Au licencié').length).toBe(1);
   });
 
-  it('D1 — par defaut la carte Club n a PAS bouge : les paliers S/M/L sont la', async () => {
+  it('D1 — par defaut la carte Club n a PAS bouge : les tranches sont la', async () => {
     const texte = texteVisible(await rendre());
 
     expect(texte).toContain('Taille du club');
-    expect(texte).toContain('199,99 €/an');
+    expect(texte).toContain('249,99 €/an');
     // Le mode au licencie ne s'impose a personne : il faut aller le chercher.
     expect(texte).not.toContain('par licencié');
   });
@@ -1349,14 +1362,15 @@ describe('S12-B — la carte Club porte DEUX facons d acheter', () => {
     expect(texteVisible(arbre)).toContain('625,00 €/an');
   });
 
-  it('D1 — en mode licencie, la carte annonce les equipes ILLIMITEES', async () => {
+  it('D1 — en mode licencie, la carte couvre TOUS les licencies', async () => {
     const arbre = await rendre();
     await passerAuLicencie(arbre);
     const texte = texteVisible(arbre);
 
-    expect(texte).toContain('toutes les équipes du club');
-    // La borne des paliers ne doit pas trainer : elle serait fausse ici.
-    expect(texte).not.toContain('3 équipes du club');
+    expect(texte).toContain('tous les licenciés du club');
+    // La borne d'une tranche ne doit pas trainer : elle serait fausse ici, ou
+    // le nombre est saisi par le dirigeant et non choisi dans une grille.
+    expect(texte).not.toContain('100 licenciés du club');
     expect(texte).not.toContain('Taille du club');
   });
 

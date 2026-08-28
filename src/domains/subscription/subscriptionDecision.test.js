@@ -218,7 +218,7 @@ describe('subscriptionDecision', () => {
         coveredTeamDocumentIds: ['team-1'],
         total: 2,
       },
-    })).toEqual(['Équipe · 2 équipes / an', 'Club S / mois']);
+    })).toEqual(['Équipe · 2 équipes / an', 'Club 100 / mois']);
     expect(getSubscriptionTeamSlotSummary({
       teamSlotSummary: {
         assigned: 1,
@@ -516,7 +516,7 @@ describe('S12-B — le refus de quota au licencie', () => {
     expect(content.title).toBe('Ton club est complet');
     expect(content.description).toContain('120 membres');
     expect(content.description).toContain('120 licenciés souscrits');
-    expect(content.ctaLabel).toBe('Augmenter mes licenciés');
+    expect(content.ctaLabel).toBe('Passer à la tranche supérieure');
   });
 
   test('⛔ il RASSURE sur ce qui n est PAS bloque', () => {
@@ -545,7 +545,7 @@ describe('S12-B — le refus de quota au licencie', () => {
     expect(getSubscriptionPaywallBenefits(QUOTA_DECISION)).toEqual([
       'Les membres deja inscrits gardent tout',
       'Seules les NOUVELLES adhesions sont en pause',
-      'Augmente ton nombre de licencies pour rouvrir',
+      'Passe a la tranche superieure pour rouvrir',
     ]);
   });
 
@@ -567,9 +567,13 @@ describe('S12-B — « Mon abonnement » nomme l offre au licencie', () => {
     expect(formatSubscriptionPlanLabel('fc_club_licensee_monthly')).toBe('Club au licencié / mois');
   });
 
-  test('⛔ et les paliers S/M/L ne bougent pas d un mot', () => {
-    expect(formatSubscriptionPlanLabel('fc_club_tier_1_yearly')).toBe('Club S / an');
-    expect(formatSubscriptionPlanLabel('fc_club_tier_3_monthly')).toBe('Club L / mois');
+  test('⛔ et « Mon abonnement » nomme les tranches comme le catalogue les vend', () => {
+    // Lot CATALOGUE (28/08) : le NUMERO du code de plan n'est PAS le nom de
+    // l'offre. `fc_club_tier_1` s'appelle « Club 100 » — un identifiant de
+    // magasin ne se renomme jamais, mais le nom vendu, lui, a change.
+    expect(formatSubscriptionPlanLabel('fc_club_tier_1_yearly')).toBe('Club 100 / an');
+    expect(formatSubscriptionPlanLabel('fc_club_tier_3_monthly')).toBe('Club 1000 / mois');
+    expect(formatSubscriptionPlanLabel('fc_club_tier_4_yearly')).toBe('Club Illimité / an');
     expect(formatSubscriptionPlanLabel('fc_team_2_yearly')).toBe('Équipe · 2 équipes / an');
   });
 });

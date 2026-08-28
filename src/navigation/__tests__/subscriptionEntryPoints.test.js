@@ -46,16 +46,19 @@ const POINTS_D_ENTREE = [
   // destination tant qu'elle n'etait pas ecrite ici. La voici.
   //
   // Par defaut la feuille VEND, donc elle vise le carrousel — inchange, c'est le
-  // trou que L10-A a comble. MAIS le refus `CLUB_LICENSEE_LIMIT` vient de
-  // quelqu'un qui PAIE DEJA au licencié : son club est plein, il n'a rien a
-  // acheter. Le carrousel lui reproposerait l'offre qu'il a. Ce qu'il lui faut
-  // est le geste d'AUGMENTATION, et il vit sur le hub (D5).
+  // trou que L10-A a comble.
   //
-  // ⚠️ L'ordre compte : le carrousel reste la PREMIERE route citee du fichier.
+  // ⚠️ LOT CATALOGUE (2026-08-28) — LA SECONDE DESTINATION A DISPARU, ET C'EST
+  // UNE REPARATION. Le refus `CLUB_LICENSEE_LIMIT` menait au hub « Mon
+  // abonnement » pour y AUGMENTER un nombre de licencies : un club au licencie
+  // n'avait rien a acheter. Cette feuille d'augmentation ne s'ouvre que pour
+  // l'offre au licencie, supprimee le 28/08 — le bouton menait donc a un ecran
+  // ou il ne se passait rien. Un club plein a de nouveau quelque chose a
+  // acheter : la TRANCHE SUPERIEURE, qui vit dans le carrousel.
   {
-    attendu: ['SubscriptionOffers', 'SubscriptionOverview'],
+    attendu: 'SubscriptionOffers',
     fichier: 'components/molecules/subscriptionPaywallSheet/SubscriptionPaywallSheet.js',
-    pourquoi: 'elle vend (carrousel), sauf quand le club est plein (hub, D5)',
+    pourquoi: 'elle vend, y compris au club plein : la tranche superieure',
   },
   {
     attendu: 'SubscriptionOffers',

@@ -9,6 +9,7 @@ import {
 import useAuth from '@/domains/auth/useAuth';
 import {
   findSubscriptionMonthlySiblingEntry,
+  formatSubscriptionClubTierShortLabel,
   formatSubscriptionMonthlyEquivalentLabel,
   formatSubscriptionYearlyDiscountLabel,
   getInitialTeamSelection,
@@ -44,25 +45,18 @@ const TEAM_BENEFITS = [
   "Cotisation d'équipe encaissée dans l'app",
 ];
 const CLUB_BENEFITS = [
-  'Toutes les équipes du club incluses',
+  'Équipes du club illimitées',
   'Installations et réservations',
   'Sponsors et partenaires du club',
   "Cotisations du club encaissées dans l'app",
 ];
 
-// Segments de palier Club (S/M/L) par numero de tier du planCode.
-/** @type {Record<number, string>} */
-const CLUB_TIER_SEGMENT_LABELS = {
-  1: 'S · ≤ 3',
-  2: 'M · ≤ 8',
-  3: 'L · illim.',
-};
-/** @type {Record<number, string>} */
-const CLUB_TIER_OFFER_LABELS = {
-  1: 'Club S',
-  2: 'Club M',
-  3: 'Club L',
-};
+// LOT CATALOGUE (2026-08-28) — CE QUI A REMPLACE LA TABLE ECRITE EN DUR. Cet
+// ecran portait « S · ≤ 3 » / « M · ≤ 8 » / « L · illim. », une grille recopiee
+// dans l'app : le 28/08, les prix et les paliers ont change QUATRE fois dans la
+// journee, et une table recopiee est fausse le lendemain. Les pilules se
+// deduisent desormais du catalogue serveur (`formatSubscriptionClubTierShortLabel`,
+// partage avec le carrousel des offres).
 
 // Selecteur de periode de facturation, global a l'ecran (defaut produit : annuel).
 // L38 — la pilule ne porte PLUS de tag de remise : le catalogue a deux grilles
@@ -241,7 +235,10 @@ function GuideOffersRecap({ navigation }) {
 
   const selectedEntry = selectedOffer === 'club' ? selectedClubEntry : selectedTeamEntry;
   const selectedOfferName = selectedOffer === 'club'
-    ? (CLUB_TIER_OFFER_LABELS[getCatalogEntryClubTier(selectedClubEntry)] || 'Club')
+    // Le nom vendu est celui du catalogue serveur (« Club 100 »), jamais un nom
+    // reconstruit ici : l'ecran des offres et « Mon abonnement » doivent dire
+    // le meme mot que ce recap.
+    ? (String(selectedClubEntry?.displayName || '').trim() || 'Club')
     : 'Équipe';
   const selectedPriceAmountLabel = getEntryPriceAmountLabel(selectedEntry);
   const isYearlyPeriod = billingPeriod === 'yearly';
@@ -360,7 +357,7 @@ function GuideOffersRecap({ navigation }) {
     const tierOptions = isClub
       ? entries.map((entry) => {
         const tier = getCatalogEntryClubTier(entry);
-        return { id: tier, label: CLUB_TIER_SEGMENT_LABELS[tier] || `Tier ${tier}` };
+        return { id: tier, label: formatSubscriptionClubTierShortLabel(entry) };
       })
       : entries.map((entry) => {
         const slotCount = Number(entry?.slotCount || 0);

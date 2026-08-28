@@ -197,11 +197,12 @@ const CATALOG_ENTRIES = [
   },
   {
     billingPeriod: 'yearly',
-    displayName: 'Club S',
+    displayName: 'Club 100',
     featureKeys: ['club.profile'],
-    maxTeams: 3,
+    licenseeCap: 100,
+    maxTeams: null,
     planCode: 'fc_club_tier_1_yearly',
-    referencePriceEurCents: 19999,
+    referencePriceEurCents: 24999,
     scopeType: 'CLUB',
     slotCount: null,
   },
@@ -307,7 +308,7 @@ const allerALaCarte = async (arbre, index) => {
  */
 const acheterClub = async (arbre) => {
   await allerALaCarte(arbre, 2);
-  await appuyerSur(arbre, 'Choisir Club S · 199,99 €/an');
+  await appuyerSur(arbre, 'Choisir Club 100 · 249,99 €/an');
 };
 
 /**

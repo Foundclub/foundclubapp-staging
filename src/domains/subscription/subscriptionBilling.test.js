@@ -409,11 +409,12 @@ describe('S12-B — le prix au licencie se calcule SOUS LES YEUX', () => {
   };
   const CLUB_TIER_YEARLY = {
     billingPeriod: 'yearly',
-    displayName: 'Club S',
-    maxTeams: 3,
+    displayName: 'Club 100',
+    licenseeCap: 100,
+    maxTeams: null,
     planCode: 'fc_club_tier_1_yearly',
     pricingModel: 'flat',
-    referencePriceEurCents: 19999,
+    referencePriceEurCents: 24999,
     scopeType: 'CLUB',
     slotCount: null,
     unitPriceEurCents: null,
@@ -451,7 +452,7 @@ describe('S12-B — le prix au licencie se calcule SOUS LES YEUX', () => {
 
   test('🔒 les sept regex de palier de l app ne voient PAS cette offre', () => {
     // Son rang vaut 0 : c'est ce qui l'ecarte tout seul des rangees de paliers
-    // S/M/L, sans qu'aucune regex n'ait ete elargie.
+    // des tranches, sans qu'aucune regex n'ait ete elargie.
     expect(getSubscriptionEntryTierRank(LICENSEE_YEARLY)).toBe(0);
     expect(getSubscriptionEntryTierRank(CLUB_TIER_YEARLY)).toBe(1);
   });
@@ -472,7 +473,7 @@ describe('S12-B — le prix au licencie se calcule SOUS LES YEUX', () => {
     // la signaler etait une alarme qui sonne a chaque rendu de chaque surface.
     const resolved = resolveSubscriptionCatalogPrices({
       serverEntries: [CLUB_TIER_YEARLY, LICENSEE_YEARLY],
-      storePricesEurCents: { fc_club_tier_1_yearly: 19999 },
+      storePricesEurCents: { fc_club_tier_1_yearly: 24999 },
     });
 
     expect(resolved.missingFromStorePlanCodes).toEqual([]);

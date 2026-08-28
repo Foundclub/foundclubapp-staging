@@ -535,6 +535,14 @@ export const resolveNotificationDestination = (rawPayload = {}) => {
     'club_licensee_quota_reached',
   ]);
 
+  // ⛔ LOT CATALOGUE (2026-08-28) — `openLicenseeIncrease` a ete RETIRE d'ici.
+  // Il demandait a l'ecran d'ouvrir la feuille d'augmentation du nombre de
+  // licencies, qui ne s'affiche que pour un abonnement AU LICENCIE : offre
+  // supprimee. L'alerte, elle, part maintenant pour les clubs a la TRANCHE (le
+  // portier leur calcule un plafond depuis ce lot) — c'etait donc un ordre sans
+  // effet sur une notification bien reelle.
+  // La destination ne bouge pas : « Mon abonnement » montre « 95 sur 100 », et
+  // ces deux nombres ne vivent nulle part ailleurs.
   if (licenseeQuotaCelebrationKeys.has(toSafeString(payload.celebrationKey).trim())) {
     return adaptDestinationForCurrentPlatform(payload, {
       params: {
@@ -544,7 +552,6 @@ export const resolveNotificationDestination = (rawPayload = {}) => {
         ...(payload.memberCount === undefined || payload.memberCount === null
           ? {}
           : { memberCount: Number(payload.memberCount) }),
-        openLicenseeIncrease: true,
       },
       route: RouteNames.SubscriptionOverview,
     });
