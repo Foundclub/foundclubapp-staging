@@ -161,6 +161,10 @@ export const RouteNames = /** @type {const} */ ({
   // `SubscriptionCompare` (matrice) et `SubscriptionOffers` (carrousel de
   // vente) sont neufs. Toute surface qui vient d'un mur payant ou d'un
   // compteur doit viser SubscriptionOffers, jamais le hub : le hub ne vend rien.
+  // ESSAI (2026-08-28) — la page cadeau du dirigeant. Elle vit ENTRE l'ecran des
+  // offres et la bienvenue : c'est la 2e marche du sas D89, et elle n'est
+  // atteinte que par celui qui n'a PAS pris d'offre.
+  OnboardingGift: 'OnboardingGift',
   SubscriptionCompare: 'SubscriptionCompare',
   SubscriptionOffers: 'SubscriptionOffers',
   SubscriptionOverview: 'SubscriptionOverview',

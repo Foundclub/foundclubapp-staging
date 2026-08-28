@@ -852,6 +852,42 @@ export const canShowOnboardingSubscriptionOffer = ({ roleKey, subscriptionAccess
 };
 
 /**
+ * LE CADEAU DE BIENVENUE EST-IL POUR CETTE PERSONNE ? — lot ESSAI, 2026-08-28.
+ *
+ * Adel : « n'importe quel DIRIGEANT a droit à une offre : abonnement illimité
+ * gratuit ». Trois conditions, et chacune ferme une porte précise :
+ *
+ *  1. `president` — et PAS `coach`, alors que l'écran des offres juste avant
+ *     sert les deux. Le cadeau est un abonnement CLUB : un entraîneur sans club
+ *     recevrait un droit sans portée où s'appliquer. C'est aussi ce que la carte
+ *     de rôle applique côté serveur (`claimOnboardingGift`, Dirigeant seul).
+ *  2. `FREE` — « si le dirigeant ne s'est pas abonné ». Quelqu'un qui vient de
+ *     payer ne doit pas voir une page qui lui offre ce qu'il a acheté.
+ *  3. un club — sans lui le serveur répondrait `club-missing`, et la page aurait
+ *     promis un cadeau que personne ne peut poser.
+ *
+ * ⚠️ CE N'EST PAS LA BARRIÈRE DE SÉCURITÉ, c'est la barrière d'AFFICHAGE. La
+ * vraie vit dans la carte de rôle du manifeste : cette fonction évite de montrer
+ * une page inutile, elle n'accorde rien.
+ * @param {object} params - Les entrées de la décision.
+ * @param {string} [params.clubDocumentId] - Le club dirigé, s'il existe.
+ * @param {string} [params.roleKey] - Le rôle, tel que rendu par `getUserRoleKey`.
+ * @param {string} [params.subscriptionAccessLevel] - Le niveau d'accès (`getSubscriptionAccessLevel`).
+ * @returns {boolean} `true` si la page cadeau doit être montrée.
+ */
+export const canReceiveOnboardingClubGift = ({
+  clubDocumentId,
+  roleKey,
+  subscriptionAccessLevel,
+}) => {
+  if (String(roleKey || '') !== 'president') return false;
+  if (!String(clubDocumentId || '').trim()) return false;
+
+  return String(subscriptionAccessLevel || '').trim().toUpperCase()
+    === ONBOARDING_SUBSCRIPTION_FREE_LEVEL;
+};
+
+/**
  * LE SAS D'ARRIVÉE — quelle route après la dernière étape comptée ?
  *
  * D16 : `Welcome` n'est plus une étape numérotée des parcours joueur,
@@ -1136,6 +1172,16 @@ export const NOTIFICATION_TYPES = {
   LICENSE_PAYMENT_REJECTED: 'licensePaymentRejected',
   LICENSE_PAYMENT_REMINDER: 'licensePaymentReminder',
   LICENSE_PAYMENT_SUBMITTED: 'licensePaymentSubmitted',
+
+  // Abonnement — les deux seuls messages qui vont au PAYEUR.
+  // ⚠️ Ces chaines doivent etre IDENTIQUES a celles du serveur
+  // (admin/src/api/user-fcm-token/types/index.ts:98-99). Mesure du lot INSTANT
+  // le 27/08 : une etiquette absente d'ici fait sonner la cloche et n'ouvre
+  // RIEN — `resolveNotificationDestination` retombe sur `default: null`, sans
+  // la moindre erreur. C'est exactement ce qui serait arrive a la notification
+  // de fin du cadeau de bienvenue (lot ESSAI, 28/08).
+  SUBSCRIPTION_ENDED: 'subscriptionEnded',
+  SUBSCRIPTION_PAYMENT_FAILED: 'subscriptionPaymentFailed',
 
   // Messages
   NEW_GROUP_MESSAGE: 'newGroupMessage',

@@ -118,10 +118,23 @@ const POINTS_D_ENTREE = [
   // lui reproposerait l'offre qu'il a ; ce qu'il lui faut est la feuille
   // d'augmentation, qui vit sur le hub. Elle y arrive avec les deux nombres —
   // ils n'existent NI dans le bootstrap NI dans aucune route de lecture.
+  // ESSAI/E6 (28/08) — LE ROUTEUR DE NOTIFICATIONS VISE DESORMAIS DEUX ECRANS,
+  // et le garde-fou a encore fait son travail : il a refuse la seconde
+  // destination tant qu'elle n'etait pas ecrite ici.
+  //
+  // 1. Le HUB (inchange, cite en premier dans le fichier) : quota au licencie —
+  //    un dirigeant qui PAIE DEJA et dont le club se remplit doit AUGMENTER.
+  // 2. Le CARROUSEL (neuf) : `subscriptionEnded` / `subscriptionPaymentFailed` —
+  //    la demande d'Adel est explicite, « votre abonnement est termine,
+  //    profitez des offres FoundClub », puis l'ecran des offres. Le hub serait
+  //    le mauvais ecran : cette personne n'a plus rien a gerer, elle a quelque
+  //    chose a reprendre, et le hub ne porte aucun catalogue (L33).
+  //
+  // ⚠️ L'ordre compte : le hub reste la PREMIERE route citee du fichier.
   {
-    attendu: 'SubscriptionOverview',
+    attendu: ['SubscriptionOverview', 'SubscriptionOffers'],
     fichier: 'utils/notifications/notificationNavigation.js',
-    pourquoi: 'son club est plein : il augmente, il n achete pas',
+    pourquoi: 'club plein => hub (augmenter) ; abonnement termine => carrousel (reprendre)',
   },
 ];
 
@@ -216,7 +229,42 @@ describe('L40 — une porte dit d ou elle part, ou assume l accueil', () => {
   it('le sas d inscription nomme AUSSI la sortie de celui qui ne paie pas', () => {
     const source = lireSource('navigation/private/PrivateNavigator.js');
 
-    expect(source).toContain('skipRouteName: RouteNames.Welcome');
+    // ESSAI (2026-08-28) — LA DESTINATION DE SORTIE A CHANGE, PAS LA REGLE.
+    // Celui qui passe sans acheter va desormais sur la PAGE CADEAU au lieu
+    // d'aller droit a la bienvenue : c'est exactement la population d'Adel
+    // (« si le dirigeant ne s'est pas abonne… »). Ce que ce temoin garde reste
+    // le meme — une sortie NOMMEE, donc pas de cul-de-sac — et la page cadeau
+    // rend la main a `Welcome` dans tous les cas, y compris quand elle n'a rien
+    // a offrir (entraineur, deja abonne, sans club).
+    expect(source).toContain('skipRouteName: RouteNames.OnboardingGift');
     expect(source).toContain('resumeRouteName: RouteNames.Welcome');
+  });
+
+  // ESSAI (2026-08-28) — LE SAS A TROIS MARCHES, ET AUCUNE NE DOIT DISPARAITRE.
+  // Les trois ecrans sont montes dans LA MEME pile : un nom nu ne se resout que
+  // la (piege R06, deja paye et documente dans SubscriptionSuccess.js:95).
+  it('les trois marches du sas sont montees dans la pile du tunnel', () => {
+    const source = lireSource('navigation/private/PrivateNavigator.js');
+
+    ['SubscriptionOffers', 'OnboardingGift', 'Welcome'].forEach((marche) => {
+      expect(source).toContain(`name={RouteNames.${marche}}`);
+    });
+  });
+
+  // ESSAI/E4 — « UN BOUTON, ET RIEN D'AUTRE » VAUT AUSSI POUR L'ENTETE.
+  // `commonOptions` pose une fleche retour (`headerBackImage`) sur TOUS les
+  // ecrans de cette pile. Sur la page cadeau elle ramenerait dans le tunnel
+  // d'inscription qu'on vient de finir : c'est une seconde sortie, et Adel n'en
+  // a demande aucune. Elle est donc explicitement retiree.
+  it('la page cadeau n a pas de fleche retour', () => {
+    const source = lireSource('navigation/private/PrivateNavigator.js');
+    const debut = source.indexOf('name={RouteNames.OnboardingGift}');
+    expect(debut).toBeGreaterThan(0);
+
+    // Du nom de la route jusqu'a la fermeture de SA declaration, et pas plus
+    // loin : une option lue chez le voisin ne prouverait rien.
+    const blocCadeau = source.slice(debut, source.indexOf('/>', debut));
+
+    expect(blocCadeau).toContain('headerLeft: () => null');
   });
 });

@@ -48,10 +48,23 @@ import SubscriptionCoveredHero from '@/views/profile/SubscriptionCoveredHero';
 
 import { RouteNames } from '@/navigation/routeNames';
 
-/** @type {Record<string, string>} */
+/**
+ * ESSAI (2026-08-28) — LA DUREE SORT DE CES DEUX LIBELLES, ET C'EST UNE
+ * CORRECTION, PAS UNE PREFERENCE.
+ *
+ * Ils annonçaient « essai 30 jours » EN DUR. Depuis le cadeau de bienvenue du
+ * dirigeant, le MEME `fc_trial_club` peut durer 7 jours
+ * (`subscription-trial.ts`, `ONBOARDING_GIFT_DURATION_DAYS`) : l'ecran aurait
+ * promis 30 jours pour un droit qui s'eteint au 7e, et le client aurait eu
+ * raison de se plaindre.
+ * ⛔ Ne JAMAIS y recrire un nombre de jours : la vraie duree est deja affichee
+ * juste a cote, en « J-N », et elle est calculee sur `currentPeriodEnd` — donc
+ * elle est vraie quelle que soit la decision d'Adel sur 7 ou 30 jours.
+ * @type {Record<string, string>}
+ */
 const TRIAL_PLAN_LABELS = {
-  fc_trial_club: 'Aperçu Club (essai 30 jours)',
-  fc_trial_team: 'Aperçu Équipe (essai 30 jours)',
+  fc_trial_club: 'Aperçu Club (offert)',
+  fc_trial_team: 'Aperçu Équipe (offert)',
 };
 
 /**
