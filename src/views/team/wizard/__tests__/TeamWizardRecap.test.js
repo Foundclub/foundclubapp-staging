@@ -1,4 +1,5 @@
 import { createElement } from 'react';
+import { Alert } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
 import { TeamWizardProvider, useTeamWizard } from '../TeamWizardContext';
@@ -364,5 +365,71 @@ describe('D25 — etape 8/8 « Recapitulatif »', () => {
     expect(textesSous(arbre.root)).toContain(
       'Cette équipe utilise ta création gratuite (1/1).',
     );
+  });
+});
+
+// ---------------------------------------------------------------------------
+// LOT EQUIPES (E6) — Q6 : JAMAIS UN ECRAN MUET.
+//
+// Demande d Adel du 28/08, mot pour mot :
+//   « Felicitations, votre equipe est creee. Vous pourrez en profiter une fois
+//     qu elle sera validee par votre dirigeant. »
+//
+// Avant ce lot, la creation reussie ne disait RIEN : l ecran se reinitialisait
+// et la navigation repartait. C est le defaut qu Adel avait deja signale
+// ailleurs (« l onboarding qui passe a l etape suivante sans rien dire »).
+// ---------------------------------------------------------------------------
+describe('EQUIPES — Q6 : la creation se dit', () => {
+  /** @type {any} */
+  let alerte;
+
+  beforeEach(() => {
+    alerte = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    alerte.mockRestore();
+  });
+
+  test('creation normale : l ecran felicite, il ne part pas en silence', async () => {
+    mockReponse.team = { documentId: 'team-1', isAwaitingClubApproval: false };
+    afficherLEcran();
+
+    creerLEquipe();
+    await laisserRespirer();
+
+    expect(alerte).toHaveBeenCalled();
+    const [titre, message] = alerte.mock.calls[0];
+    expect(titre).toMatch(/Félicitations/i);
+    expect(message).toMatch(/Félicitations/i);
+    // ⛔ Et surtout PAS la phrase de validation : personne n attend ici.
+    expect(message).not.toMatch(/validée par votre dirigeant/i);
+  });
+
+  test('equipe en attente : le texte est celui d Adel, MOT POUR MOT', async () => {
+    // ⚠️ C est le SERVEUR qui tranche : l app lit `isAwaitingClubApproval` sur
+    // l equipe rendue, elle ne le devine pas.
+    mockReponse.team = { documentId: 'team-1', isAwaitingClubApproval: true };
+    afficherLEcran();
+
+    creerLEquipe();
+    await laisserRespirer();
+
+    const [, message] = alerte.mock.calls[0];
+    expect(message).toContain('Félicitations, votre équipe est créée.');
+    expect(message).toContain(
+      "Vous pourrez en profiter une fois qu'elle sera validée par votre dirigeant.",
+    );
+  });
+
+  test('un refus ne felicite JAMAIS', async () => {
+    mockReponse.erreur = new Error('Ton adhésion à ce club n est pas encore validée');
+    afficherLEcran();
+
+    creerLEquipe();
+    await laisserRespirer();
+
+    const titres = alerte.mock.calls.map((/** @type {any[]} */ appel) => String(appel[0]));
+    expect(titres.join(' ')).not.toMatch(/Félicitations/i);
   });
 });

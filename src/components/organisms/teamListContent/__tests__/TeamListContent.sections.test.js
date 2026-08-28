@@ -119,8 +119,13 @@ jest.mock('@/navigation/commonOptions', () => ({
 }));
 
 const mockTeams = jest.fn();
+const mockValider = jest.fn();
+const mockEnAttenteDeValidation = jest.fn(() => ({ data: [], error: null, isLoading: false }));
 jest.mock('@/services/team/teamQueries', () => ({
+  // LOT EQUIPES (Q7) — la file de validation du dirigeant.
+  useApproveTeamCreation: () => ({ isPending: false, mutate: mockValider, variables: undefined }),
   useGetTeams: () => mockTeams(),
+  useTeamsAwaitingClubApproval: (/** @type {any} */ ...args) => mockEnAttenteDeValidation(...args),
 }));
 
 const mockLeagueContext = jest.fn();
@@ -263,10 +268,12 @@ let mountedTree = null;
  * @param {boolean} [options.isLeagueMode] - Rend les squads au lieu des equipes.
  * @param {any} [options.leagueContext] - Contexte LEAGUE renvoye par le service.
  * @param {any[]} [options.teams] - Equipes renvoyees par la requete paginee.
+ * @param options.clubId
  * @returns {Promise<any>} - Arbre rendu.
  */
 const renderList = async ({
   auth = {},
+  clubId = undefined,
   isLeagueMode = false,
   leagueContext = null,
   teams = [TEAM_JOUEUR, TEAM_COACH, TEAM_AUTRE, TEAM_NUE],
@@ -295,7 +302,9 @@ const renderList = async ({
   });
 
   await act(async () => {
-    mountedTree = renderer.create(<TeamListContent isLeagueMode={isLeagueMode} />);
+    mountedTree = renderer.create(
+      <TeamListContent clubId={clubId} isLeagueMode={isLeagueMode} />,
+    );
   });
   return mountedTree;
 };
@@ -807,5 +816,77 @@ describe('TeamListContent — les 4 sections (filet E6)', () => {
       expect(surfaceStyle(findCard(tree, '& DANSE ENCORPS')).borderColor).toBe('couleur-alerte');
       expect(cardTexts(findCard(tree, 'U15 Masculins')).join(' | ')).not.toContain('Ta demande');
     });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// LOT EQUIPES (E6) — Q7 : LE DIRIGEANT VOIT CE QU IL A A VALIDER, ET IL PEUT.
+//
+// ⛔ La regle du depot, payee trois fois : « ne livre JAMAIS une file d attente
+// que personne ne regarde ». Ces temoins verifient les DEUX moities : elle
+// s affiche la ou il regarde deja, et un bouton la vide.
+// ---------------------------------------------------------------------------
+describe('EQUIPES — Q7 : la file de validation du dirigeant', () => {
+  const EQUIPE_A_VALIDER = {
+    activities: [{ name: 'Football' }],
+    club: CLUB_AVEC_SPONSORS,
+    documentId: 't-a-valider',
+    name: 'U11 du coach',
+    players: [],
+    trainers: [{ documentId: 'u-77' }],
+  };
+
+  afterEach(() => {
+    mockEnAttenteDeValidation.mockReturnValue({ data: [], error: null, isLoading: false });
+    mockValider.mockClear();
+  });
+
+  it('le dirigeant voit l equipe en attente, avec ce qui se passe et le geste a faire', async () => {
+    mockEnAttenteDeValidation.mockReturnValue({
+      data: [EQUIPE_A_VALIDER], error: null, isLoading: false,
+    });
+
+    const tree = await renderList({ clubId: 'c-1' });
+    const textes = collectText(tree.toJSON());
+
+    expect(textes).toContain('Demandes en attente');
+    expect(textes.join(' | ')).toContain('U11 du coach');
+    // Ce qui se passe, dit en mots :
+    expect(textes.join(' ')).toMatch(/créée par un·e entraîneur·e/i);
+    // Et le geste, atteignable :
+    expect(textes).toContain('Valider cette équipe');
+  });
+
+  it('le bouton valide BIEN cette equipe-la', async () => {
+    mockEnAttenteDeValidation.mockReturnValue({
+      data: [EQUIPE_A_VALIDER], error: null, isLoading: false,
+    });
+
+    const tree = await renderList({ clubId: 'c-1' });
+    // Le bouton se reconnait a son LIBELLE, pas a sa place dans l arbre.
+    const bouton = tree.root.findAll((/** @type {any} */ n) => (
+      typeof n.props?.onPress === 'function' && n.props?.title === 'Valider cette équipe'
+    ));
+
+    expect(bouton.length).toBeGreaterThan(0);
+    await act(async () => { bouton[0].props.onPress(); });
+
+    expect(mockValider).toHaveBeenCalledWith('t-a-valider');
+  });
+
+  it('la file n est meme pas demandee quand on ne dirige pas ce club', async () => {
+    // ⚠️ Le serveur rend deja une liste vide a qui ne dirige pas le club vise ;
+    // ici on verifie qu on ne lui pose meme pas la question.
+    await renderList({ auth: { userData: { ...UTILISATEUR, role: { name: 'Entraineur' } } }, clubId: 'c-1' });
+
+    const appels = mockEnAttenteDeValidation.mock.calls;
+    expect(appels.every((/** @type {any[]} */ appel) => appel[1]?.enabled === false)).toBe(true);
+  });
+
+  it('sans equipe en attente, la section ne change pas d un pouce', async () => {
+    const tree = await renderList({ clubId: 'c-1' });
+    const textes = collectText(tree.toJSON());
+
+    expect(textes).not.toContain('Valider cette équipe');
   });
 });

@@ -612,6 +612,57 @@ export const claimTeamAsCoach = async (teamId) => {
 };
 
 /**
+ * LES EQUIPES DU CLUB QUI ATTENDENT LA VALIDATION DU DIRIGEANT — lot EQUIPES (Q7).
+ *
+ * ⚠️ Aucune route neuve : c est `GET /teams`, avec le filtre `approvalState`. Le
+ * serveur (`admin/src/api/team/controllers/team.ts`) traite ce filtre comme une
+ * DEMANDE NOMINATIVE : il ne rend la file que si le compte peut gerer LE club
+ * vise, et rend une liste vide sinon. L app ne peut donc pas se tromper de
+ * perimetre, meme en insistant.
+ *
+ * ⛔ Volontairement en dehors de `getTeams` : cette liste a un filtre que les
+ * autres ecrans ne doivent JAMAIS envoyer par megarde.
+ * @param {string} clubId L identifiant du club.
+ * @returns {Promise<object[]>} Les equipes en attente, ou une liste vide.
+ */
+export const getTeamsAwaitingClubApproval = async (clubId) => {
+  const normalizedClubId = String(clubId || '').trim();
+  if (!normalizedClubId) return [];
+
+  const response = await client.get('/teams', {
+    params: {
+      filters: {
+        approvalState: { $eq: 'PENDING_CLUB_APPROVAL' },
+        club: { documentId: { $eq: normalizedClubId } },
+      },
+      pagination: { page: 1, pageSize: 50 },
+      populate: {
+        club: { fields: ['documentId', 'name'] },
+        trainers: { fields: ['documentId', 'firstname', 'lastname'] },
+      },
+    },
+  });
+
+  return Array.isArray(response.data?.data) ? response.data.data : [];
+};
+
+/**
+ * VALIDER L EQUIPE CREEE PAR UN ENTRAINEUR — lot EQUIPES (Q7).
+ *
+ * Passe par `PUT /teams/:id`, la route qui existe deja. C est le SERVEUR qui
+ * verifie que le demandeur dirige bien le club : un coach qui posterait le meme
+ * corps verrait simplement le champ ignore (motif W02).
+ * @param {string} teamId L identifiant de l equipe a valider.
+ * @returns {Promise<object>} L equipe mise a jour.
+ */
+export const approveTeamCreation = async (teamId) => {
+  const response = await client.put(`/teams/${teamId}`, {
+    data: { approvalState: 'APPROVED' },
+  });
+  return response.data;
+};
+
+/**
  * Remove a player from a team
  * @param {string} teamId
  * @param {string} playerId

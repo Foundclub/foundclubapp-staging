@@ -47,7 +47,7 @@ const LOGO_PREVIEW_HEIGHT = 110;
 const LOGO_PREVIEW_MIN_RATIO = 0.5;
 const LOGO_PREVIEW_MAX_RATIO = 2.5;
 
-/** @type {{ name: string; email: string; phoneNumber: string; addressDetails: string; activites: string[]; clubMembersPublicVisibility: boolean; membershipRequestManagementMode: 'CLUB_OWNER_ONLY'|'COACH_ALLOWED_BY_TEAM' }} */
+/** @type {{ name: string; email: string; phoneNumber: string; addressDetails: string; activites: string[]; clubMembersPublicVisibility: boolean; membershipRequestManagementMode: 'CLUB_OWNER_ONLY'|'COACH_ALLOWED_BY_TEAM'; teamCreationManagementMode: 'CLUB_OWNER_ONLY'|'COACH_ALLOWED'; teamCreationByCoachesRequiresValidation: boolean }} */
 const defaultValues = {
   activites: [],
   addressDetails: '',
@@ -56,6 +56,12 @@ const defaultValues = {
   membershipRequestManagementMode: 'COACH_ALLOWED_BY_TEAM',
   name: '',
   phoneNumber: '',
+  // ⚠️ LOT EQUIPES (Q3/Q5) — CES DEUX DEFAUTS SONT LE COMPORTEMENT D AUJOURD HUI,
+  // et ils ne se changent pas : le serveur accepte deja `entraineur` pour creer
+  // une equipe, et aucune equipe n attend de validation. Un dirigeant qui ouvre
+  // cet ecran sans y toucher ne doit RIEN modifier pour son club.
+  teamCreationByCoachesRequiresValidation: false,
+  teamCreationManagementMode: 'COACH_ALLOWED',
 };
 
 const clubSchema = Joi.object({
@@ -66,6 +72,8 @@ const clubSchema = Joi.object({
   membershipRequestManagementMode: Joi.string().valid('CLUB_OWNER_ONLY', 'COACH_ALLOWED_BY_TEAM').required(),
   name: Joi.string().required(),
   phoneNumber: Joi.string().allow('').optional(),
+  teamCreationByCoachesRequiresValidation: Joi.boolean().required(),
+  teamCreationManagementMode: Joi.string().valid('CLUB_OWNER_ONLY', 'COACH_ALLOWED').required(),
 }).unknown(true);
 
 /**
@@ -198,6 +206,8 @@ function ClubEdit({ navigation, route }) {
         membershipRequestManagementMode: clubData.membershipRequestManagementMode || 'COACH_ALLOWED_BY_TEAM',
         name: clubData.name || '',
         phoneNumber: clubData.phoneNumber || '',
+        teamCreationByCoachesRequiresValidation: clubData.teamCreationByCoachesRequiresValidation === true,
+        teamCreationManagementMode: clubData.teamCreationManagementMode || 'COACH_ALLOWED',
       });
     }
   }, [clubData, reset]);
@@ -566,6 +576,100 @@ function ClubEdit({ navigation, route }) {
                     </View>
                   )}
                 />
+              </View>
+
+              {/* LOT EQUIPES (Q3 et Q5, demande d Adel du 28/08) — CE QUE LE */}
+              {/* DIRIGEANT AUTORISE A SES ENTRAINEUR·ES SUR LA CREATION D EQUIPE. */}
+              {/* Pose juste apres son frere « Demandes d adhesion » : meme famille, */}
+              {/* meme proprietaire, meme endroit — on ne cree pas un 2e tiroir de */}
+              {/* reglages ailleurs dans l app. */}
+              <View style={[Spaces.gap[12]]}>
+                <Text style={[Fonts.p3Bold, Fonts.primary200]}>
+                  {t('clubEdit.teamCreation.title', "Création d'équipes")}
+                </Text>
+
+                <View
+                  style={[
+                    ApplicationStyle.card,
+                    Spaces.padding[16],
+                    Spaces.gap[12],
+                    {
+                      backgroundColor: 'rgba(4, 31, 44, 0.82)',
+                      borderColor: withAlpha(Colors.primary500, 0.24),
+                      borderWidth: 1,
+                    },
+                  ]}
+                >
+                  <View style={[Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween, Spaces.gap[16]]}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
+                        {t(
+                          'clubEdit.teamCreation.coachAllowed.switchLabel',
+                          'Mes entraîneur·es peuvent créer des équipes',
+                        )}
+                      </Text>
+                      <Text style={[Fonts.p3, Fonts.neutral200, Spaces.marginTop[4]]}>
+                        {t(
+                          'clubEdit.teamCreation.coachAllowed.description',
+                          'Désactive si tu préfères créer toi-même toutes les équipes du club. '
+                          + 'Les équipes déjà créées ne changent pas.',
+                        )}
+                      </Text>
+                    </View>
+                    <Controller
+                      control={control}
+                      name="teamCreationManagementMode"
+                      render={({ field: { onChange, value } }) => (
+                        <Switch
+                          accessibilityLabel={t(
+                            'clubEdit.teamCreation.coachAllowed.switchLabel',
+                            'Mes entraîneur·es peuvent créer des équipes',
+                          )}
+                          accessibilityRole="switch"
+                          onValueChange={(isOn) => onChange(isOn ? 'COACH_ALLOWED' : 'CLUB_OWNER_ONLY')}
+                          thumbColor={value !== 'CLUB_OWNER_ONLY' ? Colors.primary500 : Colors.neutral300}
+                          trackColor={{ false: Colors.neutral500, true: `${Colors.primary500}66` }}
+                          value={value !== 'CLUB_OWNER_ONLY'}
+                        />
+                      )}
+                    />
+                  </View>
+
+                  <View style={[Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween, Spaces.gap[16]]}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
+                        {t(
+                          'clubEdit.teamCreation.requiresValidation.switchLabel',
+                          'Leurs équipes doivent être validées par moi',
+                        )}
+                      </Text>
+                      <Text style={[Fonts.p3, Fonts.neutral200, Spaces.marginTop[4]]}>
+                        {t(
+                          'clubEdit.teamCreation.requiresValidation.description',
+                          "L'équipe est bien créée, mais elle n'apparaît dans le club qu'une fois "
+                          + "que tu l'as validée.",
+                        )}
+                      </Text>
+                    </View>
+                    <Controller
+                      control={control}
+                      name="teamCreationByCoachesRequiresValidation"
+                      render={({ field: { onChange, value } }) => (
+                        <Switch
+                          accessibilityLabel={t(
+                            'clubEdit.teamCreation.requiresValidation.switchLabel',
+                            'Leurs équipes doivent être validées par moi',
+                          )}
+                          accessibilityRole="switch"
+                          onValueChange={onChange}
+                          thumbColor={value ? Colors.primary500 : Colors.neutral300}
+                          trackColor={{ false: Colors.neutral500, true: `${Colors.primary500}66` }}
+                          value={value === true}
+                        />
+                      )}
+                    />
+                  </View>
+                </View>
               </View>
             </View>
           </ScrollView>

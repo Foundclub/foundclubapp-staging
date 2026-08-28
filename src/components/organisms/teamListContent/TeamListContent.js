@@ -15,7 +15,7 @@ import {
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 
-import { getUserRoleKey } from '@/domains/auth/authUseCases';
+import { canUserEditClub, getUserRoleKey } from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
 import useClub from '@/domains/club/useClub';
 import {
@@ -50,7 +50,11 @@ import useBottomDockLayout from '@/navigation/useBottomDockLayout';
 import {
   useGetLeagueTeamContext,
 } from '@/services/leagueTeam/leagueTeamQueries';
-import { useGetTeams } from '@/services/team/teamQueries';
+import {
+  useApproveTeamCreation,
+  useGetTeams,
+  useTeamsAwaitingClubApproval,
+} from '@/services/team/teamQueries';
 
 import { getTeamMemberCount } from '@/utils/teamMemberCount';
 import { sortTeamsForDisplay } from '@/utils/teamSort';
@@ -231,6 +235,28 @@ function TeamListContent({
     // ramenerait la table entiere.
     enabled: !isLeagueMode && (!scopeToMyTeams || myProfileTeamIds.length > 0),
   });
+
+  // 🚦 Q7 (lot EQUIPES, 2026-08-28) — LE DIRIGEANT VOIT CE QU IL A A VALIDER.
+  //
+  // ⛔ La regle du depot : « ne livre JAMAIS une file d attente que personne ne
+  // regarde ». Elle est donc posee LA OU IL REGARDE DEJA — la section
+  // « Demandes en attente » de cette liste, qui existe depuis les squads de ligue
+  // et que P10 a deja reutilisee pour les invitations. Aucun ecran neuf, aucune
+  // route neuve, aucun bouton orphelin.
+  //
+  // ⚠️ `canUserEditClub` — et pas « est-ce que je suis membre » : seul un
+  // dirigeant valide. Le serveur redit non de toute facon (il rend une liste
+  // vide a qui ne dirige pas le club), mais on ne lui pose meme pas la question.
+  const approvalClubId = String(clubId || '').trim();
+  const canApproveClubTeams = Boolean(approvalClubId) && canUserEditClub(userData, approvalClubId);
+  const pendingApprovalQuery = useTeamsAwaitingClubApproval(approvalClubId, {
+    enabled: canApproveClubTeams && !isLeagueMode,
+  });
+  const approveTeamMutation = useApproveTeamCreation();
+  const teamsAwaitingApproval = useMemo(() => {
+    const rendu = /** @type {any} */ (pendingApprovalQuery)?.data;
+    return Array.isArray(rendu) ? rendu.filter(Boolean) : [];
+  }, [pendingApprovalQuery]);
 
   const {
     data: leagueTeamContext,
@@ -555,7 +581,10 @@ function TeamListContent({
     subscriptionAccessLevel,
   ]);
 
-  const renderTeamCard = useCallback((/** @type {Team} */ item, stateVariant = null) => {
+  const renderTeamCard = useCallback((
+    /** @type {Team} */ item,
+    /** @type {'invited' | 'pending' | null} */ stateVariant = null,
+  ) => {
     const isPending = stateVariant === 'pending';
     const isInvitation = stateVariant === 'invited';
     const pendingBorderColor = Colors.warning500 || Colors.gold500;
@@ -1103,7 +1132,7 @@ function TeamListContent({
         </View>
       ) : null}
 
-      {pendingTeams.length > 0 ? (
+      {pendingTeams.length > 0 || teamsAwaitingApproval.length > 0 ? (
         <View>
           <Text style={[
             Fonts.h3,
@@ -1114,6 +1143,28 @@ function TeamListContent({
           >
             Demandes en attente
           </Text>
+          {/* Q7 — les equipes creees par un entraineur, que le dirigeant doit */}
+          {/* valider. La carte est celle de tout le monde (badge EN ATTENTE */}
+          {/* compris) ; ce qu on ajoute, c est le GESTE, juste en dessous. */}
+          {teamsAwaitingApproval.map((/** @type {any} */ team) => (
+            <View key={`awaiting-approval-${team.documentId}`} style={[Spaces.marginBottom[16]]}>
+              {renderTeamCard(team, 'pending')}
+              <Text style={[Fonts.p3, Fonts.neutral200, Spaces.marginTop[8], Spaces.marginBottom[8]]}>
+                {t(
+                  'teamList.awaitingApproval.explanation',
+                  'Cette équipe a été créée par un·e entraîneur·e de ton club. Elle '
+                  + "n'apparaîtra pour les autres qu'une fois que tu l'auras validée.",
+                )}
+              </Text>
+              <Button
+                isLoading={approveTeamMutation.isPending
+                  && approveTeamMutation.variables === team.documentId}
+                onPress={() => approveTeamMutation.mutate(team.documentId)}
+                title={t('teamList.awaitingApproval.approveCta', 'Valider cette équipe')}
+                variant="Primary"
+              />
+            </View>
+          ))}
           {pendingTeams.map((team) => (
             <View key={`pending-${team.documentId}`}>
               {renderTeamCard(team, 'pending')}
@@ -1142,6 +1193,7 @@ function TeamListContent({
       ) : null}
     </View>
   ), [
+    approveTeamMutation,
     filterNumber,
     Fonts,
     Spaces,
@@ -1156,6 +1208,7 @@ function TeamListContent({
     renderTeamCard,
     searchValue,
     teamFilters?.name,
+    teamsAwaitingApproval,
     t,
   ]);
 
