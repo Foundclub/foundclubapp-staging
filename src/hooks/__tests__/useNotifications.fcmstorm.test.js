@@ -326,11 +326,9 @@ describe('FCMSTORM — un refus ne doit JAMAIS devenir un bombardement', () => {
 
     await monterEtLaisserTourner({ dureeMs: 600000 });
 
-    // Attente qui double (1s, 2s, 4s…), plafonnee, et un nombre d'essais maximum :
-    // sur dix minutes simulees on doit compter une poignee d'appels, jamais des dizaines.
-    // Meme compte avec le churn que sans lui : le silencieux ne depend pas des rendus.
+    // Attente qui double (1 s, 2 s, 4 s), plafonnee, et un nombre d'essais
+    // maximum NOMME. Sur dix minutes simulees : quatre appels, pas un de plus.
     expect(mockAddDeviceToken).toHaveBeenCalledTimes(TOKEN_SYNC_MAX_ATTEMPTS);
-    expect(mockAddDeviceToken.mock.calls.length).toBeGreaterThanOrEqual(1);
     demonterCeQuiTraine();
   });
 
