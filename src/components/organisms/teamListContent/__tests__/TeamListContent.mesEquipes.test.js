@@ -294,6 +294,11 @@ jest.mock('@/services/team/teamQueries', () => {
   const React = require('react');
 
   return {
+  // LOT EQUIPES (Q7) — la file de validation du dirigeant. Ce temoin ne la
+  // regarde pas ; il doit juste fournir les deux crochets, sinon l ecran appelle
+  // `undefined` et la SUITE tombe.
+    useApproveTeamCreation: () => ({ isPending: false, mutate: jest.fn(), variables: undefined }),
+    useTeamsAwaitingClubApproval: () => ({ data: [], error: null, isLoading: false }),
     /**
      * Requete paginee simulee : elle NOTE ce qu'on lui demande, puis sert le
      * serveur fictif. Les enveloppes sont figees par `useMemo`, sinon l'ecran

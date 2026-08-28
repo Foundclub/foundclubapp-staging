@@ -15,6 +15,7 @@ import {
   extractSubscriptionDecisionFromError,
   getSubscriptionQuotaItem,
 } from '@/domains/subscription/subscriptionDecision';
+import { resolveTeamCreationGate } from '@/domains/team/teamCreationGate';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -103,6 +104,10 @@ function TeamWizardRecap({ navigation }) {
   const { data: sections } = sectionsQuery;
   const { data: clubData } = clubQuery;
   const [subscriptionPaywallDecision, setSubscriptionPaywallDecision] = useState(null);
+  const teamCreationGate = useMemo(
+    () => resolveTeamCreationGate({ club: clubData, userData }),
+    [clubData, userData],
+  );
   const freeTeamQuotaItem = useMemo(
     () => getSubscriptionQuotaItem(freeUsageSummary, 'FREE_TEAM', subscriptionAccessLevel),
     [freeUsageSummary, subscriptionAccessLevel],
@@ -135,10 +140,43 @@ function TeamWizardRecap({ navigation }) {
         : t('APIerrors.unknown');
       Alert.alert(t('common.error', 'Erreur'), message);
     },
-    onSuccess: () => {
+    onSuccess: (createdTeam) => {
       emitGuidanceAction('team.created');
       refreshCachesAfterTeamCreation(queryClient);
       const targetClubId = selectedOverview.clubId;
+
+      // 🎉 Q6 (demande d Adel du 28/08) — JAMAIS UN ECRAN MUET.
+      //
+      // L equipe partait, l ecran se reinitialisait, et rien ne disait ce qui
+      // venait de se passer. C est le defaut qu Adel a deja signale ailleurs
+      // (« l onboarding qui passe a l etape suivante sans rien dire »).
+      //
+      // Le texte de la validation est le SIEN, mot pour mot. On lit d abord ce
+      // que le SERVEUR a decide (`isAwaitingClubApproval` sur l equipe creee) et
+      // la prevision de l app ne sert que de repli : c est le serveur qui
+      // tranche, l app ne fait que raconter.
+      const createdTeamPayload = /** @type {any} */ (createdTeam);
+      const isAwaitingApproval = createdTeamPayload?.isAwaitingClubApproval === true
+        || createdTeamPayload?.data?.isAwaitingClubApproval === true
+        || (createdTeamPayload === undefined && teamCreationGate.requiresClubApproval);
+
+      Alert.alert(
+        isAwaitingApproval
+          ? t('teamWizard.created.pendingTitle', 'Félicitations')
+          : t('teamWizard.created.title', 'Félicitations'),
+        isAwaitingApproval
+          ? t(
+            'teamWizard.created.pendingMessage',
+            'Félicitations, votre équipe est créée. Vous pourrez en profiter une fois '
+            + "qu'elle sera validée par votre dirigeant.",
+          )
+          : t(
+            'teamWizard.created.message',
+            'Félicitations, ton équipe est créée. Tu peux dès maintenant y ajouter tes '
+            + 'joueur·ses et créer tes premiers événements.',
+          ),
+      );
+
       dispatch({ type: 'RESET' });
       const rootRoute = isGold ? RouteNames.LeagueHomeTab : RouteNames.HomeTab;
       const targetScreen = isGold ? RouteNames.LeagueSquadTab : RouteNames.MyTeamList;

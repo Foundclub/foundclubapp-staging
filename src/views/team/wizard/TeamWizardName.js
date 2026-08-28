@@ -11,6 +11,7 @@ import { resolveMyClubDocumentId } from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
 import { emitGuidanceAction } from '@/domains/guidance/guidanceRuntime';
 import { extractSubscriptionDecisionFromError } from '@/domains/subscription/subscriptionDecision';
+import { resolveTeamCreationGate } from '@/domains/team/teamCreationGate';
 import { isMyTeam } from '@/domains/team/teamMembership';
 import { isDeletedAccount } from '@/domains/user/deletedAccount';
 import useTheme from '@/theme/themeContext';
@@ -87,6 +88,29 @@ function TeamWizardName({ navigation, route }) {
     [clubQuery.data],
   );
   const shouldOfferChooser = clubTeams.length > 0 && !isChooserDismissed;
+
+  // 🔴 Q2 (recette d Adel du 28/08) — LE REFUS ARRIVE ICI, PAS A LA 8/8.
+  //
+  // Adel a rempli HUIT ecrans avant d apprendre qu il n avait pas le droit : la
+  // fenetre « Erreur » de l etape 8/8 disait, en anglais,
+  // `User is not an authorized staff member of this club`.
+  //
+  // ⚠️ Le controle SERVEUR reste, entier (`is-team-staff-create.ts`) : on en
+  // AJOUTE un a l entree, on n en retire aucun. Celui-ci ne fait que dire tout de
+  // suite ce que l autre dirait a la fin.
+  //
+  // ⛔ Il ne juge JAMAIS la place (le quota d abonnement) : l app ignore les
+  // creneaux d equipe payes, et bloquer ici sur un compteur gratuit a zero
+  // refuserait un abonne qui a parfaitement le droit de creer. Cette question-la
+  // reste au serveur, et c est son refus qui ouvre le mur payant.
+  const teamCreationGate = useMemo(
+    () => resolveTeamCreationGate({ club: clubQuery.data, userData }),
+    [clubQuery.data, userData],
+  );
+  // Tant que le club n est pas revenu, on n affirme rien : un blocage qui
+  // clignote avant de disparaitre est pire qu un blocage tardif.
+  const isGateSettled = Boolean(state.clubId) && clubQuery.isFetched;
+  const isBlockedAtEntry = isGateSettled && !teamCreationGate.isAllowed;
 
   // D25 ② — « ca ouvre le clavier en meme temps que le pop-up ».
   //
@@ -237,9 +261,28 @@ function TeamWizardName({ navigation, route }) {
     );
   }
 
+  // Q2 — le droit se verifie AVANT de faire saisir quoi que ce soit.
+  if (isBlockedAtEntry) {
+    return (
+      <WizardStepLayout
+        onClose={handleExitWizard}
+        subtitle={teamCreationGate.message}
+        title={teamCreationGate.title}
+      >
+        <View style={[Spaces.gap[12], Spaces.marginTop[8]]}>
+          <Button
+            onPress={handleExitWizard}
+            title={t('teamWizard.blocked.backCta', "J'ai compris")}
+            variant="Primary"
+          />
+        </View>
+      </WizardStepLayout>
+    );
+  }
+
   return (
     <WizardStepLayout
-      isNextDisabled={!state.name?.trim() || !hasClubContext}
+      isNextDisabled={!state.name?.trim() || !hasClubContext || isBlockedAtEntry}
       nextLabel={t('common.next', 'Suivant')}
       onClose={handleExitWizard}
       onNext={handleNext}

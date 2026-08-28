@@ -97,6 +97,10 @@ jest.mock('@/navigation/commonOptions', () => ({
 }));
 
 jest.mock('@/services/team/teamQueries', () => ({
+  // LOT EQUIPES (Q7) — la file de validation du dirigeant. Ce temoin ne la
+  // regarde pas ; il doit juste fournir les deux crochets, sinon l ecran appelle
+  // `undefined` et la SUITE tombe.
+  useApproveTeamCreation: () => ({ isPending: false, mutate: jest.fn(), variables: undefined }),
   useGetTeams: () => ({
     data: { pages: [{ data: [] }] },
     error: null,
@@ -106,6 +110,7 @@ jest.mock('@/services/team/teamQueries', () => ({
     isLoading: false,
     refetch: jest.fn(),
   }),
+  useTeamsAwaitingClubApproval: () => ({ data: [], error: null, isLoading: false }),
 }));
 
 jest.mock('@/services/leagueTeam/leagueTeamQueries', () => ({

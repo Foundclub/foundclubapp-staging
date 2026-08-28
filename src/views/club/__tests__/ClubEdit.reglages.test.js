@@ -280,3 +280,68 @@ describe('ClubEdit — les reglages du club (fige avant la refonte D34)', () => 
     expect(mockMutate).not.toHaveBeenCalled();
   });
 });
+
+// ---------------------------------------------------------------------------
+// LOT EQUIPES (E6) — Q3 et Q5 : CE QUE LE DIRIGEANT AUTORISE A SES ENTRAINEUR·ES.
+//
+// Demande d Adel du 28/08 : « si le dirigeant autorise les entraineurs dans son
+// club », et « sinon, le dirigeant peut cocher une case qui fait que l equipe
+// doit etre VALIDEE pour apparaitre vraiment ».
+//
+// ⚠️ LE CLIQUET EST LE COEUR DE CES TEMOINS : les 222 294 clubs de production
+// n ont aucune de ces deux colonnes. Un dirigeant qui ouvre cet ecran et
+// enregistre SANS RIEN TOUCHER ne doit rien changer pour son club.
+// ---------------------------------------------------------------------------
+describe('EQUIPES — les deux reglages de creation d equipe', () => {
+  it('montre les deux interrupteurs, avec ce qu ils font', async () => {
+    const arbre = await monter();
+    const textes = texteDe(arbre.root);
+
+    expect(textes).toContain('Mes entraîneur·es peuvent créer des équipes');
+    expect(textes).toContain('Leurs équipes doivent être validées par moi');
+    // Une bascule sans sa consequence est une etiquette, pas un reglage.
+    expect(textes).toContain('créer toi-même toutes les équipes');
+    expect(textes).toContain("n'apparaît dans le club qu'une fois que tu l'as validée");
+  });
+
+  it('LE CLIQUET — enregistrer sans rien toucher renvoie le comportement d aujourd hui', async () => {
+    const arbre = await monter();
+
+    await appuyerSur(arbre, 'Enregistrer');
+
+    expect(mockMutate.mock.calls[0][0]).toMatchObject({
+      teamCreationByCoachesRequiresValidation: false,
+      teamCreationManagementMode: 'COACH_ALLOWED',
+    });
+  });
+
+  it('un club sans reglage enregistre retombe lui aussi sur AUTORISE', async () => {
+    const arbre = await monter({
+      ...CLUB,
+      teamCreationByCoachesRequiresValidation: null,
+      teamCreationManagementMode: null,
+    });
+
+    await appuyerSur(arbre, 'Enregistrer');
+
+    expect(mockMutate.mock.calls[0][0]).toMatchObject({
+      teamCreationByCoachesRequiresValidation: false,
+      teamCreationManagementMode: 'COACH_ALLOWED',
+    });
+  });
+
+  it('le reglage deja pose par le dirigeant est RELU et renvoye tel quel', async () => {
+    const arbre = await monter({
+      ...CLUB,
+      teamCreationByCoachesRequiresValidation: true,
+      teamCreationManagementMode: 'CLUB_OWNER_ONLY',
+    });
+
+    await appuyerSur(arbre, 'Enregistrer');
+
+    expect(mockMutate.mock.calls[0][0]).toMatchObject({
+      teamCreationByCoachesRequiresValidation: true,
+      teamCreationManagementMode: 'CLUB_OWNER_ONLY',
+    });
+  });
+});

@@ -85,8 +85,8 @@
  * @property {ExternalSyncReportItem[]} [scoreUpdatedEvents]
  * @property {number} [standingCount]
  * @property {string} [syncedAt]
-  * @property {ExternalSyncReportItem[]} [updatedEvents]
-  * @property {ExternalSyncReportItem[]} [archivedFutureEvents]
+ * @property {ExternalSyncReportItem[]} [updatedEvents]
+ * @property {ExternalSyncReportItem[]} [archivedFutureEvents]
  * @property {Array<{
  *   archivedFuture?: number,
  *   competitionName?: string | null,

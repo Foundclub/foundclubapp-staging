@@ -378,3 +378,87 @@ describe('D25 — etape 1/8 « Nom de l equipe »', () => {
     expect(textes).toContain('Rechercher mon club');
   });
 });
+
+// ---------------------------------------------------------------------------
+// LOT EQUIPES (E6) — Q2 : LE REFUS ARRIVE A L ENTREE, PAS A LA 8/8.
+//
+// Recette d Adel du 28/08 (club SMUC) : huit ecrans remplis, puis une fenetre
+// « Erreur » affichant, en anglais,
+// `User is not an authorized staff member of this club`.
+//
+// Mesure faite avant : le serveur avait RAISON de refuser (une
+// `club-membership-request` a l etat `pending` n est PAS une affiliation, cf.
+// `admin/src/api/club/services/auth.ts`). Ce que ces temoins figent, c est que
+// l app le dise AVANT de faire saisir quoi que ce soit.
+// ---------------------------------------------------------------------------
+describe('EQUIPES — Q2 : le droit se verifie a l ENTREE du tunnel', () => {
+  test('adhesion encore en attente : l ecran BLOQUE, en francais, et ne demande aucun nom', () => {
+    mockCompte.club = null;
+    (/** @type {any} */ (mockCompte)).clubMembershipRequests = [
+      { club: { documentId: 'club-1' }, state: 'pending' },
+    ];
+    mockReseau.club = { documentId: 'club-1', name: 'SMUC' };
+
+    const { gabarit } = afficherLEcran({ params: { clubId: 'club-1' } });
+
+    // 1. aucun formulaire : l ecran final n a plus de marche « Suivant ».
+    //    ⚠️ On observe le GABARIT et non `champ` : la doublure du champ accumule
+    //    les props de TOUS les rendus, y compris celui d avant l arrivee du club.
+    expect(gabarit.nextLabel).toBeUndefined();
+    // 2. le texte est francais, et il nomme la sortie
+    const texteEntier = `${gabarit.title} ${gabarit.subtitle}`;
+    expect(texteEntier).not.toMatch(/authorized staff member/i);
+    expect(texteEntier).toMatch(/adhésion/i);
+    expect(texteEntier).toMatch(/dirigeant/i);
+    // 3. et il nomme le club concerne
+    expect(texteEntier).toMatch(/SMUC/);
+  });
+
+  test('club qui reserve la creation aux dirigeants : le coach est arrete des l entree', () => {
+    mockCompte.club = { documentId: 'club-1', name: 'SMUC' };
+    mockReseau.club = {
+      documentId: 'club-1',
+      name: 'SMUC',
+      teamCreationManagementMode: 'CLUB_OWNER_ONLY',
+    };
+
+    const { gabarit } = afficherLEcran({ params: { clubId: 'club-1' } });
+
+    expect(gabarit.nextLabel).toBeUndefined();
+    expect(`${gabarit.title} ${gabarit.subtitle}`).toMatch(/dirigeant/i);
+  });
+
+  test('LE CLIQUET — sans reglage, l entraineur affilie entre comme avant', () => {
+    // ⚠️ Les 222 294 clubs de production n ont pas la colonne. Son absence doit
+    // valoir « autorise », sinon ce lot coupe la creation d equipe a tout le monde.
+    mockCompte.club = { documentId: 'club-1', name: 'FC Test' };
+    mockReseau.club = { documentId: 'club-1', name: 'FC Test' };
+
+    expect(afficherLEcran({ params: { clubId: 'club-1' } }).gabarit.nextLabel).toBeDefined();
+  });
+
+  test('un DIRIGEANT n est jamais arrete, meme par le reglage le plus ferme', () => {
+    mockCompte.club = { documentId: 'club-1', name: 'SMUC' };
+    (/** @type {any} */ (mockCompte)).role = { name: 'Dirigeant', type: 'president' };
+    mockReseau.club = {
+      documentId: 'club-1',
+      name: 'SMUC',
+      teamCreationManagementMode: 'CLUB_OWNER_ONLY',
+    };
+
+    expect(afficherLEcran({ params: { clubId: 'club-1' } }).gabarit.nextLabel).toBeDefined();
+    (/** @type {any} */ (mockCompte)).role = { name: 'Entraineur', type: 'coach' };
+  });
+
+  test('tant que le club n est pas revenu, on n affirme RIEN (pas de blocage qui clignote)', () => {
+    mockCompte.club = null;
+    (/** @type {any} */ (mockCompte)).clubMembershipRequests = [
+      { club: { documentId: 'club-1' }, state: 'pending' },
+    ];
+    mockReseau.club = { documentId: 'club-1', name: 'SMUC' };
+    mockReseau.clubRecu = false;
+
+    // Reponse pas encore arrivee : l ecran reste celui de tout le monde.
+    expect(afficherLEcran({ params: { clubId: 'club-1' } }).gabarit.nextLabel).toBeDefined();
+  });
+});
