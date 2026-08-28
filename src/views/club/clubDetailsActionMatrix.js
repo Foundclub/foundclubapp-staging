@@ -28,6 +28,49 @@ export const canCreateTeamInClub = ({
   isClubStaffRole = false,
 }) => Boolean(canEdit || (isClubStaffRole && hasAdministrativeClubAccess));
 
+/**
+ * AFFIL A1 — « JE DIRIGE CE CLUB » : ADHESION OU REVENDICATION ?
+ *
+ * Regle d Adel, redite le 2026-08-28 : « quand un club n a pas de dirigeant, il
+ * doit etre directement affilie comme dirigeant de celui-ci. Nous, ca nous
+ * envoie une demande de verification. »
+ *
+ * 🎯 Cette regle EXISTE DEJA cote serveur, et elle reconnait le dirigeant depuis
+ * U03/D4 (`canClaimClubWithoutManager`). Elle etait inatteignable pour une
+ * raison mesurable : `canJoinClub` (useAuth.js:626) ne vaut vrai que pour un
+ * ENTRAINEUR, donc la matrice n allume pour un dirigeant que
+ * `showEmptyClubClaimAction` — le bouton qui envoie une REVENDICATION. Or
+ * l affiliation d office exige `type: 'join'`
+ * (`club-membership-request.ts:665`) : le seul bouton qu il voyait etait le seul
+ * qui ne pouvait pas l affilier.
+ *
+ * ⛔ CE QUE CETTE FONCTION N ELARGIT PAS, ET C EST VOULU :
+ *  · un club QUI A un dirigeant garde sa demande a valider — `ownerCount === 0`
+ *    est la condition exacte enoncee par Adel (« aucun dirigeant affilie ») ;
+ *  · un club dont les membres sont MASQUES n est pas un club sans dirigeant :
+ *    on ne sait pas, donc on ne presume pas ;
+ *  · un compte SANS ROLE (40 sur 118 en production au 2026-08-13) garde sa
+ *    revendication. Le serveur refuserait son adhesion
+ *    (`resolveOrphanClubJoinRefusal`) : lui retirer le claim lui retirerait son
+ *    seul chemin.
+ *
+ * 🔒 Le serveur reste l arbitre : il recompte les dirigeants VIVANTS lui-meme
+ * (`clubHasLivingManager`) et refuse en nommant le motif. Cette fonction choisit
+ * un GESTE, jamais un droit.
+ * @param {object} params - Ce que la fiche sait du club et de la personne.
+ * @param {boolean} [params.areClubMembersHidden] - Le club masque-t-il ses membres.
+ * @param {boolean} [params.isClubStaffRole] - Elle encadre : entraineur ou dirigeant.
+ * @param {number} [params.ownerCount] - Le nombre de dirigeants visibles du club.
+ * @returns {'join' | 'claim'} Le geste a envoyer.
+ */
+export const resolveEmptyClubClaimGesture = ({
+  areClubMembersHidden = false,
+  isClubStaffRole = false,
+  ownerCount = 0,
+}) => (
+  (isClubStaffRole && ownerCount === 0 && !areClubMembersHidden) ? 'join' : 'claim'
+);
+
 export const resolveClubDetailsActionMatrix = ({
   areClubMembersHidden = false,
   canContactAdmin = false,

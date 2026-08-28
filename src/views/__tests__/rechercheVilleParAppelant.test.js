@@ -188,6 +188,12 @@ jest.mock('@/domains/auth/useAuth', () => ({
 jest.mock('@/domains/auth/authUseCases', () => ({
   getAuthTokens: () => ({ token: 'jeton' }),
   getClubRoleKey: () => 'player',
+  // AFFIL (2026-08-28) — `SelfProfileUnified` liste desormais les demandes de
+  // club EN ATTENTE sous ses clubs. Cette doublure enumere les exports du
+  // module : sans cette ligne, l'ecran monte sur `undefined` et les 5 appelants
+  // de ce temoin tombent d'un coup. Ici, aucune demande en attente : ce filet-ci
+  // parle de la recherche de ville, pas de l'affiliation.
+  getPendingClubRequests: () => [],
   getProfileClubs: (/** @type {any} */ utilisateur) => (
     utilisateur?.club ? [utilisateur.club] : []
   ),

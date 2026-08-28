@@ -14,6 +14,7 @@ import {
 
 import {
   getClubRoleKey,
+  getPendingClubRequests,
   getProfileClubs,
   getUserRoleKey,
   profileFieldToDisplay,
@@ -276,6 +277,7 @@ function SelfProfileUnified({ navigation }) {
   // `getMemberClubIds`, mais elle garde les OBJETS : on ne dessine pas un
   // ecusson avec un identifiant.
   const profileClubs = useMemo(() => getProfileClubs(userData), [userData]);
+  const pendingClubRequests = useMemo(() => getPendingClubRequests(userData), [userData]);
   const fullName = `${userData?.firstname || ''} ${userData?.lastname || ''}`.trim();
   // Meme lecture du role que `Profile.js:84` : la chip suit le role reel, elle
   // n'est jamais figee sur « Dirigeant » — cet ecran sert aussi les joueurs et
@@ -624,6 +626,52 @@ function SelfProfileUnified({ navigation }) {
                   chip: t('profile.identity.verified', 'Certifié'), tone: 'verified',
                 })
                 : null}
+            </View>
+          ))}
+
+          {/* AFFIL A3 (Adel, 2026-08-28) — LA DEMANDE QUI ATTEND, SUR SON PROFIL.
+              « sur mon profil je ne suis toujours pas affilie [...] il a fallu
+              que je change de compte, que j'aille dans le superadmin sur les
+              revendications, puis que je revienne pour voir la demande en
+              attente. »
+              La liste au-dessus ne connait que les rattachements REELS : une
+              demande en attente n'y avait, par construction, aucune place.
+              🔒 La pastille ci-dessous dit ou en est MA demande ; celle du
+              dessus, « Certifie », dit que le CLUB est verifie. Adel a nomme ces
+              deux choses comme differentes le 28/08 : elles ne partagent ni la
+              rangee, ni le mot. */}
+          {pendingClubRequests.map(({ club: clubDemande }) => (
+            <View
+              key={`demande-${String(
+                clubDemande?.documentId || clubDemande?.id || clubDemande?.name,
+              )}`}
+              style={[
+                Alignments.row,
+                Alignments.alignCenter,
+                {
+                  borderTopColor: surfaces.divider,
+                  borderTopWidth: 1,
+                  gap: 10,
+                  marginTop: 8,
+                  paddingTop: 12,
+                },
+              ]}
+            >
+              <ClubLogoMark club={clubDemande} name={clubDemande?.name} size={ICON_TILE} />
+              <Text style={{
+                color: Colors.neutral00,
+                flex: 1,
+                fontFamily: 'Montserrat-Bold',
+                fontSize: 12.5,
+                lineHeight: 17,
+              }}
+              >
+                {clubDemande?.name}
+              </Text>
+              {renderChip({
+                chip: t('profile.identity.pendingRequest', 'Demande en attente'),
+                tone: 'role',
+              })}
             </View>
           ))}
         </View>

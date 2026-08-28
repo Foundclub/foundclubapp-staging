@@ -327,7 +327,40 @@ export default {
       requestJoin: 'Demander à rejoindre ce club',
       requestPending: 'Demande en attente',
     },
+    // AFFIL (2026-08-28) — LES TROIS ISSUES D'UNE DEMANDE D'AFFILIATION, ET
+    // ELLES NE SE RESSEMBLENT PAS. Devenir dirigeant sur-le-champ, attendre
+    // qu'un dirigeant valide, et partir en verification chez un administrateur
+    // sont trois choses differentes ; l'app les disait pareil, et depuis
+    // l'onboarding elle n'en disait aucune (constat d'Adel du 28/08).
+    // La phrase du SERVEUR gagne quand il en envoie une (`meta.affiliation`) :
+    // ces valeurs sont le repli. Table : `services/requests/clubAffiliationOutcome.js`.
+    affiliation: {
+      autoAffiliated: {
+        description: 'Tu es maintenant dirigeant de {{club}}.',
+        title: 'C’est fait !',
+      },
+      pendingAdminReview: {
+        description: 'Ta demande de gestion de {{club}} est partie.'
+          + ' Tu n’es pas encore dirigeant : un administrateur FoundClub doit la valider.',
+        title: 'Demande envoyée',
+      },
+      pendingManagerReview: {
+        description: 'Ta demande est partie. Un dirigeant de {{club}} doit la valider.',
+        title: 'Demande envoyée',
+      },
+      unknown: {
+        description: 'Ta demande est partie.',
+        title: 'Demande envoyée',
+      },
+    },
     alerts: {
+      // AFFIL A1 — le club SANS dirigeant : ce qui va se passer est une
+      // AFFILIATION, pas une verification. Promettre une verification, c'est
+      // promettre autre chose que ce que fait le bouton.
+      claimClub: {
+        confirmDirectAffiliation: 'Ce club n’a aucun dirigeant :'
+          + ' tu en deviendras le dirigeant tout de suite.',
+      },
       // S02 — la 2e porte parle de CE QU'ON FAIT DE L'INTERET : on previent la
       // personne, et le club voit combien de gens l'attendent. Rien n'est promis
       // d'autre : elle n'est rattachee a rien, et le texte le dit.
@@ -3545,6 +3578,10 @@ export default {
       },
     },
     identity: {
+      // AFFIL A3 — la demande qui attend, sur le profil du dirigeant. Elle ne
+      // dit RIEN de la certification du club : ce sont deux pastilles, deux
+      // rangees, deux mots (Adel, 2026-08-28).
+      pendingRequest: 'Demande en attente',
       roles: {
         coach: 'Entraîneur',
         new: 'Membre',

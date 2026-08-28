@@ -293,6 +293,55 @@ export const getProfileClubs = (/** @type {any} */ userData) => {
 };
 
 /**
+ * LES CLUBS DONT MA DEMANDE ATTEND ENCORE — AFFIL A3 (Adel, 2026-08-28).
+ *
+ * « sur mon profil je ne suis toujours pas affilie [...] il a fallu que je
+ * change de compte, que j'aille dans le superadmin sur les revendications, puis
+ * que je revienne pour voir la demande en attente sur mon profil. »
+ *
+ * 🎯 CE QUE LA CARTE DU 28/08 A MESURE : le profil ne pouvait PAS la montrer.
+ * `getProfileClubs` ne lit que des rattachements REELS — `club`, `clubs`,
+ * `clubAffiliations`, et les clubs des equipes. Une demande en attente n'y a,
+ * par construction, aucune place. Le seul endroit de l'app qui l'affichait etait
+ * « Mes equipes » (`TeamListContent.js:349`), un autre onglet.
+ *
+ * ⛔ UNE DEMANDE N'EST PAS UN RATTACHEMENT. Cette fonction sert a AFFICHER une
+ * attente, jamais a autoriser quoi que ce soit — comme `resolveMyClubDocumentId`
+ * juste au-dessus, et pour la meme raison.
+ *
+ * 🔒 Les clubs deja rejoints sont RETIRES : une fois la demande traitee, le club
+ * est dans `getProfileClubs`, et laisser la rangee d'attente afficherait deux
+ * fois le meme club, dont une en mensonge.
+ * @param {any} userData - Le profil, tel que `sanitizeUser` le rend.
+ * @returns {{ club: any, requestType: 'claim' | 'join' }[]} Les demandes en attente.
+ */
+export const getPendingClubRequests = (/** @type {any} */ userData) => {
+  const dejaRejoints = new Set(
+    getProfileClubs(userData)
+      .map((/** @type {any} */ club) => String(club?.documentId || club?.id || '').trim())
+      .filter(Boolean),
+  );
+
+  /** @type {Set<string>} */
+  const vus = new Set();
+
+  return (Array.isArray(userData?.clubMembershipRequests) ? userData.clubMembershipRequests : [])
+    .filter((/** @type {any} */ demande) => demande?.state === 'pending' && demande?.club)
+    .map((/** @type {any} */ demande) => ({
+      club: demande.club,
+      requestType: demande?.type === 'claim' ? 'claim' : 'join',
+    }))
+    .filter((/** @type {any} */ entree) => {
+      const identifiant = String(
+        entree.club?.documentId || entree.club?.id || '',
+      ).trim();
+      if (!identifiant || dejaRejoints.has(identifiant) || vus.has(identifiant)) return false;
+      vus.add(identifiant);
+      return true;
+    });
+};
+
+/**
  * QUEL ROLE DANS CE CLUB-LA ? — le cas limite d'AA11 : joueur ici, dirigeant la.
  *
  * 🔴 CE QUE LE SERVEUR N'ENVOIE PAS : la table `club_affiliations` ne porte que

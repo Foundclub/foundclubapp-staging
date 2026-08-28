@@ -53,6 +53,7 @@ import { createClubMembershipRequest } from '@/services/clubMembershipRequest/cl
 import { createClubRequest, getPendingClubCreationRequests } from '@/services/clubRequest/clubRequestService';
 import { useClubFacilityContext } from '@/services/facility/facilityQueries';
 import { getFacilitySections } from '@/services/facility/facilityService';
+import { resolveClubAffiliationOutcome } from '@/services/requests/clubAffiliationOutcome';
 import { resolveClubAffiliationRefusal } from '@/services/requests/clubAffiliationRefusal';
 import { createTeamMembershipRequest } from '@/services/teamMembershipRequest/teamMembershipRequestService';
 
@@ -65,7 +66,11 @@ import { resolveFacilityPlanningColor } from '@/utils/facilityPlanningColor';
 import safeJsonParse from '@/utils/safeJsonParse';
 import { buildPublicWebUrl } from '@/utils/shareLinks';
 
-import { canCreateTeamInClub, resolveClubDetailsActionMatrix } from './clubDetailsActionMatrix';
+import {
+  canCreateTeamInClub,
+  resolveClubDetailsActionMatrix,
+  resolveEmptyClubClaimGesture,
+} from './clubDetailsActionMatrix';
 import ClubPlanning from './ClubPlanningScreen';
 import { ClubHubGroup, ClubHubRow } from './components/ClubHubRow';
 
@@ -409,7 +414,7 @@ function ClubDetails({ navigation, route }) {
         [{ text: t('common.ok', 'OK') }],
       );
     },
-    onSuccess: async () => {
+    onSuccess: async (reponseServeur) => {
       setJoinRequestPending(true);
       // LOT INSTANT (2026-08-27) — LA RECETTE QUI DORMAIT. `joinClub` etait
       // ecrite dans le registre depuis le lot T08 et n'avait AUCUN appelant :
@@ -419,39 +424,42 @@ function ClubDetails({ navigation, route }) {
       // ⚠️ Hors du `onPress` d'une alerte, volontairement : sur le site web
       // `Alert.alert()` est une fonction vide, et rien ne partirait jamais.
       invalidateAfterAction(queryClient, 'joinClub').catch(() => {});
-      let refreshedUser = userData;
 
       try {
-        const refreshedUserResult = await refetchUserData();
-        refreshedUser = refreshedUserResult?.data || refreshedUser;
+        await refetchUserData();
       } catch {
-        refreshedUser = userData;
+        // Le rafraichissement du profil n'est pas ce qui decide du message :
+        // c'est le serveur qui l'a dit. Un echec ici ne doit rien changer a
+        // l'ecran.
       }
 
       refetch();
-      const refreshedUserClubId = String(
-        refreshedUser?.club?.documentId || refreshedUser?.club?.id || '',
-      ).trim();
-      const joinedImmediately = Boolean(
-        userData?.role?.name === USER_ROLES.coach
-        && !isPartnerClub(club)
-        && refreshedUserClubId
-        && refreshedUserClubId === String(clubId || '').trim(),
-      );
 
-      if (fromOnboardingAffiliation) {
-        handleGoToNextOnboardingStep();
-        return;
-      }
+      // AFFIL A2 (2026-08-28) — 🔑 ON LIT CE QUE LE SERVEUR A REPONDU.
+      //
+      // Avant ce lot, l'ecran DEDUISAIT l'affiliation en comparant le club du
+      // profil RE-LU au club regarde (`joinedImmediately`). Une deduction qui
+      // depend d'un rafraichissement est fausse des que ce rafraichissement est
+      // lent — et le profil est servi depuis un cache serveur. Le serveur, lui,
+      // nomme l'issue depuis U03/D3 (`meta.affiliation.outcome`).
+      const resultat = resolveClubAffiliationOutcome(reponseServeur, t, {
+        clubName: club?.name,
+      });
 
+      // 🗣️ AFFIL A2 — ON LE DIT, MEME DEPUIS L'ONBOARDING.
+      //
+      // Constat d'Adel du 2026-08-28 : « Je n'ai meme pas eu de pop-up de
+      // felicitation, ca m'a juste passe a l'etape suivante. » Ces trois lignes
+      // etaient un `return` pose AVANT l'alerte : le tunnel enchainait en
+      // silence, et rien ne distinguait « tu es dirigeant » de « ta demande
+      // attend ». Le passage a l'etape suivante vit desormais DANS le bouton
+      // « OK », comme partout ailleurs dans le tunnel.
+      // ⚠️ Le web n'atteint pas ce `onPress` (`Alert.alert` y est vide) : c'est
+      // le trou connu du tunnel d'inscription, deja mesure par le lot INSTANT.
+      // Ce qui compte — l'invalidation et la relecture — est parti plus haut.
       Alert.alert(
-        t('clubDetails.alerts.joinClub.title'),
-        joinedImmediately
-          ? t(
-            'clubDetails.alerts.joinClub.autoAffiliatedDescription',
-            'Tu as été ajouté directement à ce club. Tu peux maintenant créer des équipes et compléter ton organisation.',
-          )
-          : t('clubDetails.alerts.joinClub.description'),
+        resultat.title,
+        resultat.message,
         [
           {
             onPress: () => {
@@ -615,17 +623,35 @@ function ClubDetails({ navigation, route }) {
         [{ text: t('common.ok', 'OK') }],
       );
     },
-    onSuccess: () => {
-      if (fromOnboardingAffiliation) {
-        refetch();
-        refetchUserData();
-        handleGoToNextOnboardingStep();
-        return;
-      }
+    onSuccess: (reponseServeur) => {
+      // AFFIL A5 (2026-08-28) — 🔑 LE DECLENCHEMENT QUI MANQUAIT.
+      //
+      // Le lot INSTANT (27/08) a branche la recette `joinClub` sur la mutation
+      // d'ADHESION, quelques lignes plus haut, et sur elle seule. La
+      // REVENDICATION, elle, n'avait AUCUNE recette — elle n'apparaissait donc
+      // dans aucun recensement de « recettes qui dorment ». Resultat mesure le
+      // 28/08 : la demande existait en base a 06:44 et « Demandes », « Accueil »
+      // et « Mes equipes » l'ignoraient jusqu'au redemarrage de l'app.
+      //
+      // ⛔ On ne raccourcit AUCUNE duree de cache : on purge A L'EVENEMENT, avec
+      // le mecanisme qui existe deja. Un second serait un defaut, pas un
+      // correctif.
+      // ⚠️ Hors du `onPress` de l'alerte : `Alert.alert()` est vide sur le web.
+      invalidateAfterAction(queryClient, 'joinClub').catch(() => {});
+      refetch();
+      refetchUserData();
+
+      // AFFIL A2/A4 — LA PHRASE DIT CE QUI S'EST PASSE, ET CE QUI N'A PAS EU
+      // LIEU. Une revendication n'affilie personne : elle part en verification.
+      // Le serveur le nomme desormais (`meta.affiliation.outcome`), l'ecran ne
+      // le devine plus.
+      const resultat = resolveClubAffiliationOutcome(reponseServeur, t, {
+        clubName: club?.name,
+      });
 
       Alert.alert(
-        t('clubDetails.alerts.claimClub.title', 'Demande envoyée'),
-        t('clubDetails.alerts.claimClub.description', 'Ta demande pour revendiquer ce club a été envoyée aux administrateurs.'),
+        resultat.title,
+        resultat.message,
         [
           {
             onPress: () => {
@@ -643,6 +669,47 @@ function ClubDetails({ navigation, route }) {
   const handleClaimClub = () => {
     if (!isAuthenticated) {
       openClubAuthFlow('club-claim-login');
+      return;
+    }
+
+    // AFFIL A1 (2026-08-28) — 🎯 LE MEME BOUTON, DEUX GESTES.
+    //
+    // Regle d'Adel : « quand un club n'a pas de dirigeant, il doit etre
+    // directement affilie comme dirigeant de celui-ci ». Le juge vit dans
+    // `clubDetailsActionMatrix.js`, avec le reste des decisions de cette fiche ;
+    // il ne decide QUE du geste, jamais du droit — le serveur recompte les
+    // dirigeants vivants lui-meme et refuse en nommant le motif.
+    const geste = resolveEmptyClubClaimGesture({
+      areClubMembersHidden,
+      isClubStaffRole,
+      ownerCount: owners.length,
+    });
+
+    if (geste === 'join') {
+      Alert.alert(
+        t('clubDetails.alerts.claimClub.confirmTitle', 'Tu diriges ce club ?'),
+        t(
+          'clubDetails.alerts.claimClub.confirmDirectAffiliation',
+          'Ce club n’a aucun dirigeant : tu en deviendras le dirigeant tout de suite.',
+        ),
+        [
+          {
+            style: 'cancel',
+            text: t('common.cancel', 'Annuler'),
+          },
+          {
+            onPress: () => {
+              if (clubId) {
+                // ⛔ Le MEME appel que « Je fais partie de ce club » : c'est lui
+                // que le serveur sait affilier d'office. En inventer un second
+                // rouvrirait l'ecart que ce lot vient de fermer.
+                createClubMembershipRequestMutation.mutate({ club: clubId });
+              }
+            },
+            text: t('common.confirm', 'Confirmer'),
+          },
+        ],
+      );
       return;
     }
 
