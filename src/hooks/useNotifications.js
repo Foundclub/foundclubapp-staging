@@ -61,6 +61,12 @@ import {
   resolveNotificationDestination,
 } from '@/utils/notifications/notificationNavigation';
 import { NOTIFICATION_TYPES } from '@/utils/notifications/notificationTypes';
+import {
+  classifyTokenSyncError,
+  getBackoffDelayMs,
+  getRetryAfterMs,
+  TOKEN_SYNC_MAX_ATTEMPTS,
+} from '@/utils/notifications/tokenSyncBackoff';
 
 import {
   POPUP_DISMISS_SCOPES,
@@ -265,29 +271,92 @@ const useNotifications = ({ navigate, onSmartNotification }) => {
   } = useSafeTimers();
   const { isStartupWindowActive } = usePopupManager();
 
+  /**
+   * FCMSTORM (2026-08-28) — LE SILENCIEUX.
+   *
+   * Ce que le serveur a repondu la derniere fois, et jusqu'a quand on se tait :
+   *   - `reason: 'denied'`    -> refus de DROIT, definitif : `until = Infinity`.
+   *     Seul un EVENEMENT rouvre (le role change, le compte change, l'app
+   *     revient au premier plan) — jamais un minuteur qui tourne dans le vide.
+   *   - `reason: 'throttled'` -> 429 : on attend `until`, l'attente double a
+   *     chaque essai, et au bout de TOKEN_SYNC_MAX_ATTEMPTS on se tait pour de bon.
+   *   - `key` -> l'identite ET le role du compte concerne. Le role change =>
+   *     la cle change => le silence ne s'applique plus. C'est exactement le cas
+   *     ROLE403 : refuse tant qu'on est `Authenticated`, autorise apres promotion.
+   * @type {import('react').MutableRefObject<{attempts: number, key: string, reason: string, until: number}>}
+   */
+  const tokenSyncMuteRef = useRef({
+    attempts: 0, key: '', reason: '', until: 0,
+  });
+
+  const tokenSyncMuteKey = `${getUserNotificationIdentity(userData)}:${userData?.role?.name || userData?.role?.type || ''}`;
+
+  const isTokenSyncMuted = useCallback(() => {
+    const mute = tokenSyncMuteRef.current;
+    if (!mute.reason || mute.key !== tokenSyncMuteKey) return false;
+
+    return mute.until === Infinity || Date.now() < mute.until;
+  }, [tokenSyncMuteKey]);
+
+  const clearTokenSyncMute = useCallback(() => {
+    tokenSyncMuteRef.current = {
+      attempts: 0, key: '', reason: '', until: 0,
+    };
+  }, []);
+
   const { mutateAsync: saveTokenMutationAsync } = useMutation({
     meta: { preventToastError: true },
     mutationFn: addDeviceToken,
     onError: (error) => {
       const typedError = /** @type {any} */ (error);
-      const statusCode = typedError?.status || typedError?.response?.status;
-      if (statusCode === 401 || statusCode === 403) {
+      const failureKind = classifyTokenSyncError(typedError);
+      const previous = tokenSyncMuteRef.current;
+      const attempts = previous.key === tokenSyncMuteKey ? previous.attempts + 1 : 1;
+
+      if (failureKind === 'denied') {
+        // Un 403 veut dire « non, et ce sera non tant que rien ne change ».
+        // Le reessayer sature la protection anti-abus du serveur, ce qui peut
+        // faire rejeter d'AUTRES appels legitimes du meme utilisateur.
         notificationsLogger.warn('[FCM] Token registration denied by backend permissions/auth. Notifications disabled for this session.');
+        tokenSyncMuteRef.current = {
+          attempts, key: tokenSyncMuteKey, reason: 'denied', until: Infinity,
+        };
+      } else if (failureKind === 'throttled') {
+        const epuise = attempts >= TOKEN_SYNC_MAX_ATTEMPTS;
+        const delayMs = getBackoffDelayMs(attempts, getRetryAfterMs(typedError));
+        notificationsLogger.warn(`[FCM] Token registration rate-limited by backend. attempt=${attempts} nextDelayMs=${epuise ? 'none' : delayMs}`);
+        tokenSyncMuteRef.current = {
+          attempts,
+          key: tokenSyncMuteKey,
+          reason: 'throttled',
+          until: epuise ? Infinity : Date.now() + delayMs,
+        };
       } else if (isNetworkError(typedError)) {
         notificationsLogger.warn('[FCM] Failed to save token to backend: network unavailable. Token sync will retry later.');
       } else {
         notificationsLogger.error('[FCM] Failed to save token to backend:', typedError);
       }
+
       dispatch({ payload: undefined, type: 'SET_FCM_TOKEN' });
     },
     onSuccess: (_, token) => {
       notificationsLogger.debug('[FCM] Token saved to backend successfully');
+      clearTokenSyncMute();
       dispatch({ payload: token, type: 'SET_FCM_TOKEN' });
     },
   });
 
   const saveToken = useCallback(async (token) => {
     if (!token) return false;
+    // Le point de passage OBLIGE : le rafraichissement de jeton par Firebase
+    // n'emprunte pas `syncTokenIfNeeded`, il appelle `saveToken` directement.
+    // Le silencieux doit donc etre lu ici aussi, pas seulement plus haut.
+    if (isTokenSyncMuted()) {
+      notificationsLogger.info('[FCM] Token registration skipped: backend refused earlier.', {
+        reason: tokenSyncMuteRef.current.reason,
+      });
+      return false;
+    }
     notificationsLogger.debug('[FCM] Calling saveTokenMutation with token:', `${token.substring(0, 20)}...`);
     try {
       await saveTokenMutationAsync(token);
@@ -296,7 +365,7 @@ const useNotifications = ({ navigate, onSmartNotification }) => {
     } catch (_error) {
       return false;
     }
-  }, [saveTokenMutationAsync, syncLinkedSessionsWithToken]);
+  }, [isTokenSyncMuted, saveTokenMutationAsync, syncLinkedSessionsWithToken]);
 
   const smartNotifEnabled = useRef(ENABLE_SMART_NOTIFICATIONS);
   const [pendingCalendarPrompts, setPendingCalendarPrompts] = useState([]);
@@ -461,6 +530,14 @@ const useNotifications = ({ navigate, onSmartNotification }) => {
     const bypassPrepromptForLocal = APP_RUNTIME_ENV === 'local';
     const force = Boolean(options?.force);
 
+    // FCMSTORM — le silencieux passe AVANT le frein de 30 s, parce que `force`
+    // court-circuite ce frein (l'effet de connexion appelle toujours avec
+    // `force: true`). C'est cette combinaison qui transformait un refus en
+    // bombardement : 31 appels mesures sur le temoin, 27 x 429 en recette.
+    if (isTokenSyncMuted()) {
+      return 'muted';
+    }
+
     const now = Date.now();
     if (
       tokenSyncInFlightRef.current
@@ -559,9 +636,9 @@ const useNotifications = ({ navigate, onSmartNotification }) => {
     } finally {
       tokenSyncInFlightRef.current = false;
     }
-  }, [requestPushPermissionPrePrompt, saveToken, userData]);
+  }, [isTokenSyncMuted, requestPushPermissionPrePrompt, saveToken, userData]);
 
-  const scheduleTokenSyncRetry = useCallback((userIdentity, reason = 'retry') => {
+  const scheduleTokenSyncRetry = useCallback((userIdentity, reason = 'retry', delayMs = 15000) => {
     if (!userIdentity || tokenSyncRetryTimerRef.current) {
       return;
     }
@@ -581,9 +658,31 @@ const useNotifications = ({ navigate, onSmartNotification }) => {
       const retryStatus = await syncTokenIfNeeded(`retry_${reason}`, { force: true });
       if (retryStatus === 'success') {
         lastSyncedUserIdRef.current = userIdentity;
+        return;
       }
-    }, 15000);
+
+      // FCMSTORM — un 429 se rejoue quelques fois, avec une attente qui double,
+      // puis se tait. Le silencieux porte le compteur et la date de reprise :
+      // ici on ne fait que reposer le minuteur qu'il a calcule.
+      const mute = tokenSyncMuteRef.current;
+      if (mute.reason === 'throttled' && Number.isFinite(mute.until)) {
+        scheduleTokenSyncRetryRef.current?.(
+          userIdentity,
+          'rate_limited',
+          Math.max(0, mute.until - Date.now()),
+        );
+      }
+    }, delayMs);
   }, [setSafeTimeout, syncTokenIfNeeded, userData]);
+
+  // `scheduleTokenSyncRetry` doit pouvoir se rappeler elle-meme sans se citer
+  // dans ses propres dependances (ce qui la recreerait a chaque rendu, et
+  // rouvrirait exactement la porte qu'on vient de fermer). La mise a jour se
+  // fait dans un effet, jamais pendant le rendu.
+  const scheduleTokenSyncRetryRef = useRef(scheduleTokenSyncRetry);
+  useEffect(() => {
+    scheduleTokenSyncRetryRef.current = scheduleTokenSyncRetry;
+  }, [scheduleTokenSyncRetry]);
 
   /**
    * @typedef {{
@@ -863,6 +962,11 @@ const useNotifications = ({ navigate, onSmartNotification }) => {
       ENABLE_PUSH_NOTIFICATIONS
       && currentUserNotificationIdentity
       && lastSyncedUserIdRef.current !== currentUserNotificationIdentity
+      // FCMSTORM — tant qu'un refus est en cours, cet effet est INERTE. Sans
+      // cette ligne il repart a chaque changement d'ecran et, trois lignes plus
+      // bas, il EFFACE le minuteur de reprise du 429 avant qu'il ait sonne :
+      // le 429 n'obtenait alors qu'un seul essai au lieu des quatre prevus.
+      && !isTokenSyncMuted()
     ) {
       if (tokenSyncRetryTimerRef.current) {
         clearSafeTimer(tokenSyncRetryTimerRef.current);
@@ -876,8 +980,22 @@ const useNotifications = ({ navigate, onSmartNotification }) => {
           return;
         }
 
-        if (syncStatus === 'failed') {
+        // FCMSTORM — on ne repose un minuteur QUE pour une panne qui se repare
+        // toute seule (reseau coupe, 5xx). Sur un refus de droit ou un 429, le
+        // silencieux a deja tranche : reprogrammer ici, c'est remettre une piece
+        // dans la machine a marteler.
+        const mute = tokenSyncMuteRef.current;
+        const refusFerme = mute.key === tokenSyncMuteKey && Boolean(mute.reason);
+        if (syncStatus === 'failed' && !refusFerme) {
           scheduleTokenSyncRetry(currentUserNotificationIdentity, 'login');
+        }
+
+        if (syncStatus === 'failed' && mute.reason === 'throttled' && Number.isFinite(mute.until)) {
+          scheduleTokenSyncRetry(
+            currentUserNotificationIdentity,
+            'rate_limited',
+            Math.max(0, mute.until - Date.now()),
+          );
         }
       })();
     }
@@ -957,6 +1075,11 @@ const useNotifications = ({ navigate, onSmartNotification }) => {
 
     const appStateSubscription = AppState.addEventListener('change', (state) => {
       if (state === 'active') {
+        // FCMSTORM — L'EVENEMENT QUI ROUVRE. Revenir au premier plan est le seul
+        // moment ou l'on a une vraie raison de croire que quelque chose a change
+        // (droit accorde entre-temps, session reprise, reseau revenu). C'est la,
+        // et nulle part ailleurs, qu'on redonne une chance a l'enregistrement.
+        clearTokenSyncMute();
         syncTokenIfNeeded('app_active');
         invalidateNotificationQueries();
       }
@@ -969,12 +1092,15 @@ const useNotifications = ({ navigate, onSmartNotification }) => {
     };
   }, [
     clearSafeTimer,
+    clearTokenSyncMute,
     currentUserNotificationIdentity,
+    isTokenSyncMuted,
     dispatch,
     invalidateNotificationQueries,
     saveToken,
     scheduleTokenSyncRetry,
     syncTokenIfNeeded,
+    tokenSyncMuteKey,
     userData,
   ]);
 
