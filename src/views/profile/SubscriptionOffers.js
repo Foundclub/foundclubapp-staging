@@ -20,6 +20,8 @@ import useAuth from '@/domains/auth/useAuth';
 import {
   clampSubscriptionLicenseeCount,
   findSubscriptionMonthlySiblingEntry,
+  formatSubscriptionClubCoverageLabel,
+  formatSubscriptionClubTierShortLabel,
   formatSubscriptionMonthlyEquivalentLabel,
   formatSubscriptionPerMemberPriceLabel,
   formatSubscriptionPriceLabel,
@@ -101,9 +103,6 @@ const FREE_PLAN_INCLUDED_LABELS = [
   'Événements et matchs en quantité limitée',
   'Annonces de recrutement limitées',
 ];
-
-/** @type {Record<number, string>} */
-const CLUB_TIER_LETTERS = { 1: 'S', 2: 'M', 3: 'L' };
 
 // L33 — la pilule « Annuel » ne porte PLUS de tag de remise : le catalogue a
 // deux grilles (Club x10, Equipe x7,5-7,7) et un tag unique serait faux pour la
@@ -289,8 +288,11 @@ function SubscriptionOffers({ navigation, route }) {
     .map((entry) => ({
       entry,
       id: getSubscriptionEntryTierRank(entry),
+      // Cote Club, la pilule porte le nombre de licenciés couverts (lot
+      // CATALOGUE du 28/08) : les lettres S / M / L ne disaient rien de ce
+      // qu'on achetait, et les 4 tranches ont toutes les equipes illimitees.
       label: scopeType === 'CLUB'
-        ? (CLUB_TIER_LETTERS[getSubscriptionEntryTierRank(entry)] || String(getSubscriptionEntryTierRank(entry)))
+        ? formatSubscriptionClubTierShortLabel(entry)
         : String(getSubscriptionEntryTierRank(entry)),
     }))
     .filter((option) => option.id > 0), [billingPeriod, catalogEntries]);
@@ -333,24 +335,23 @@ function SubscriptionOffers({ navigation, route }) {
   const teamEntry = teamTiers.find((option) => option.id === resolvedTeamTier)?.entry || null;
   const clubEntry = clubTiers.find((option) => option.id === resolvedClubTier)?.entry || null;
 
-  // R07 point 5 — COMBIEN D'EQUIPES COMPREND LA TAILLE CHOISIE.
+  // R07 point 5 — CE QUE COMPREND LA TAILLE CHOISIE.
   //
   // Constat d'Adel du 2026-08-13 : « il faut mieux expliquer l'offre Club :
   // dire que c'est la meme chose que l'offre Equipe, en indiquant selon
   // l'offre que tu choisis le nombre d'equipes que ca comprend ». La carte
   // n'affichait que les lettres S / M / L : un palier sans critere de choix.
   //
+  // ⚠️ LOT CATALOGUE (28/08) — LE CRITERE A CHANGE DE NATURE. Les quatre
+  // tranches donnent toutes des equipes ILLIMITEES : compter les equipes ferait
+  // dire la meme phrase aux quatre cartes, de 249,99 EUR a 939,99 EUR. Ce qui
+  // les separe est le nombre de LICENCIES couverts.
+  //
   // ⚠️ LE NOMBRE N'EST PAS UNE CONSTANTE DE L'APP : il vient du catalogue
-  // SERVEUR (`maxTeams` de l'entree). Rien ici ne code en dur « S = 3 ». On
-  // l'affiche donc tel que le catalogue le donne — et « illimitees » quand il
-  // ne borne rien.
-  // Phrase reprise MOT POUR MOT de `SubscriptionPaywallSheet.js` (l. 439-445),
-  // qui la sert deja : deux surfaces de vente ne doivent pas dire la meme
-  // chose de deux facons.
-  const clubMaxTeams = Number(clubEntry?.maxTeams);
-  const clubCoverageLabel = Number.isFinite(clubMaxTeams) && clubMaxTeams > 0
-    ? `jusqu'à ${clubMaxTeams} équipes du club`
-    : 'toutes les équipes du club';
+  // SERVEUR (`licenseeCap` de l'entree), via un helper partage avec la feuille
+  // de vente et le recap du tour guide — deux surfaces de vente ne doivent pas
+  // dire la meme chose de deux facons.
+  const clubCoverageLabel = formatSubscriptionClubCoverageLabel(clubEntry);
 
   /**
    * Badge de remise d'une carte : calcule sur SES deux prix, jamais global.
@@ -433,8 +434,11 @@ function SubscriptionOffers({ navigation, route }) {
 
     return {
       clubDocumentId: isClubOffer ? currentClubDocumentId : undefined,
+      // Le nom de l'offre est celui que VEND le catalogue serveur (« Club 100 »),
+      // jamais un nom reconstruit ici : l'ecran de succes et « Mon abonnement »
+      // doivent lire le meme mot que la carte sur laquelle il vient d'appuyer.
       offerLabel: isClubOffer
-        ? `Club ${CLUB_TIER_LETTERS[getSubscriptionEntryTierRank(catalogEntry)] || ''}`.trim()
+        ? (String(catalogEntry?.displayName || '').trim() || 'Club')
         : `Équipe · ${slotCount} équipe${slotCount > 1 ? 's' : ''}`,
       offerScope: isClubOffer ? 'CLUB' : 'TEAM',
       // L40 — une simple reassignation de creneaux ne DEPLACE PAS l'echeance :
@@ -984,7 +988,7 @@ function SubscriptionOffers({ navigation, route }) {
     const isActivePlan = activeIndex === 1 ? isTeamEntryActivePlan : isClubEntryActivePlan;
     const familyLabel = activeIndex === 1
       ? 'Équipe'
-      : `Club ${CLUB_TIER_LETTERS[resolvedClubTier] || ''}`.trim();
+      : (String(clubEntry?.displayName || '').trim() || 'Club');
 
     if (!entry) {
       return {
@@ -1193,8 +1197,8 @@ function SubscriptionOffers({ navigation, route }) {
               </View>
               <Text style={[Fonts.p4, Fonts.neutral400, Spaces.marginTop[4]]}>
                 {isLicenseeModeActive
-                  ? 'Pour les dirigeants — toutes les équipes du club, sans limite'
-                  : `Pour les dirigeants — ${clubCoverageLabel}`}
+                  ? 'Pour les dirigeants — équipes illimitées, sans limite'
+                  : `Pour les dirigeants — équipes illimitées, ${clubCoverageLabel}`}
               </Text>
 
               {/* S12-B/D1 — LA BASCULE. Elle n'existe QUE si le catalogue vend
@@ -1248,19 +1252,18 @@ function SubscriptionOffers({ navigation, route }) {
                   retiree de la liste pour que « plus : » reste vrai. */}
               {renderBenefits({
                 // `club.multi_teams` est RETIRE de la liste, et ce n'est pas un
-                // oubli : son libelle « Toutes les equipes du club » CONTREDISAIT
-                // la couverture reelle des qu'elle est bornee. La carte annoncait
-                // « jusqu'a 3 equipes du club » et, deux lignes plus bas,
-                // « Toutes les equipes du club ». La couverture est desormais dite
-                // deux fois et avec precision au-dessus : la repeter en plus vague
-                // n'ajoutait rien et semait le doute.
+                // oubli. Avant le 28/08, son libelle « Toutes les equipes du
+                // club » CONTREDISAIT une couverture bornee a 3 ou 8 equipes.
+                // Depuis les tranches de licencies il ne contredit plus rien —
+                // mais la ligne au-dessus dit deja « equipes illimitees » : le
+                // repeter en plus vague deux lignes plus bas n'ajoute rien.
                 items: getEntryFeatureLabels(
                   isLicenseeModeActive ? licenseeEntry : clubEntry,
                   [...teamFeatureKeys, 'club.multi_teams'],
                 ),
                 // S12-B — l'amorce SUIT le mode : au licencie, la couverture
-                // n'est plus « jusqu'a 3 equipes » mais toutes, sans borne.
-                lead: `Tout ce que fait l'offre Équipe, pour ${isLicenseeModeActive ? 'toutes les équipes du club' : clubCoverageLabel}, plus :`,
+                // n'est plus une tranche mais un nombre saisi par le dirigeant.
+                lead: `Tout ce que fait l'offre Équipe, pour ${isLicenseeModeActive ? 'tous les licenciés du club' : clubCoverageLabel}, plus :`,
               })}
             </View>
           </ScrollView>

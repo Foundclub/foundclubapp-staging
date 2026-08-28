@@ -137,14 +137,21 @@ const REQUIRED_PLAN_LABELS = {
   TEAM: 'Équipe',
 };
 
-// Lettre de palier Club, telle que le catalogue serveur la vend : « Club S » /
-// « Club M » / « Club L » (subscription-catalog.ts:26-28). Le code de palier
-// (1/2/3) ne sort jamais a l'ecran.
+// Nom de tranche Club, tel que le catalogue serveur la vend : « Club 100 » /
+// « Club 500 » / « Club 1000 » / « Club Illimité » (subscription-catalog.ts,
+// CLUB_TIER_CONFIG). Le code de palier (1/2/3/4) ne sort jamais a l'ecran.
+//
+// ⚠️ LE NUMERO DU CODE N'EST PAS LE NOM DE L'OFFRE, et c'est voulu :
+// `fc_club_tier_1` s'appelle « Club 100 ». Un identifiant de magasin ne se
+// renomme JAMAIS une fois cree (Apple ne les libere pas), il est invisible du
+// client, et le renommer casserait tous les abonnements en cours. Le nom
+// affiche, lui, est celui du 2026-08-28 : le nombre de LICENCIES couverts.
 /** @type {Record<number, string>} */
-const CLUB_TIER_LETTERS = {
-  1: 'S',
-  2: 'M',
-  3: 'L',
+const CLUB_TIER_NAMES = {
+  1: '100',
+  2: '500',
+  3: '1000',
+  4: 'Illimité',
 };
 
 /** @type {Record<string, string>} */
@@ -721,10 +728,10 @@ export const formatSubscriptionPlanLabel = (planCode) => {
   if (clubMatch) {
     const tier = Number(clubMatch[1] || 0);
     const period = PLAN_PERIOD_LABELS[clubMatch[2]] || clubMatch[2];
-    // Un palier inconnu retombe sur « Club » nu plutot que d'inventer une
-    // lettre : mieux vaut un nom incomplet qu'un nom faux.
-    const tierLetter = CLUB_TIER_LETTERS[tier] || '';
-    return tierLetter ? `Club ${tierLetter} / ${period}` : `Club / ${period}`;
+    // Une tranche inconnue retombe sur « Club » nu plutot que d'inventer un
+    // nombre : mieux vaut un nom incomplet qu'un nom faux.
+    const tierName = CLUB_TIER_NAMES[tier] || '';
+    return tierName ? `Club ${tierName} / ${period}` : `Club / ${period}`;
   }
 
   return normalizedPlanCode

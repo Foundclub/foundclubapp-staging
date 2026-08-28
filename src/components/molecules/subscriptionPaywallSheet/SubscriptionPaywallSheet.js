@@ -12,6 +12,7 @@ import useAuth from '@/domains/auth/useAuth';
 import {
   clampSubscriptionLicenseeCount,
   findSubscriptionMonthlySiblingEntry,
+  formatSubscriptionClubCoverageLabel,
   formatSubscriptionMonthlyEquivalentLabel,
   formatSubscriptionPerMemberPriceLabel,
   formatSubscriptionPriceLabel,
@@ -86,7 +87,8 @@ const getTierOptionsForPeriod = (entries, scopeType, billingPeriod) => entries
     return {
       entry,
       id: getCatalogEntryTierRank(entry),
-      // Cote Club, le catalogue serveur porte deja les noms de paliers (Club S/M/L).
+      // Cote Club, le catalogue serveur porte deja les noms des tranches
+      // (Club 100 / 500 / 1000 / Illimité).
       label: scopeType === 'CLUB'
         ? String(entry?.displayName || '').trim()
         : `${slotCount} équipe${slotCount > 1 ? 's' : ''}`,
@@ -554,14 +556,20 @@ function SubscriptionPaywallSheet({
     // Sans cet etat, la feuille restait bloquee sur « Chargement des tarifs… ».
     const isCatalogUnavailable = !isCatalogLoading && tierOptions.length === 0;
     const purchasing = purchaseMutation.isPending;
-    // Ce qui distingue Club S / M / L : le nombre d'equipes couvertes. Sans lui,
-    // le palier n'est qu'un prix sans critere de choix.
-    const clubTierMaxTeams = Number(selectedEntry?.maxTeams);
+    // Ce qui distingue les quatre tranches Club : le nombre de LICENCIES
+    // couverts (lot CATALOGUE du 28/08 — les equipes sont illimitees dans les
+    // quatre, les compter ne dirait plus rien). Sans cette ligne, la tranche
+    // n'est qu'un prix sans critere de choix.
+    //
+    // La phrase vient du helper partage avec le carrousel : elle est rendue en
+    // minuscules pour s'inserer dans une phrase, et c'est ici — ou elle occupe
+    // sa propre ligne — qu'on lui met la majuscule.
     let clubTierCoverageLabel = '';
     if (sellingScope === 'CLUB' && selectedEntry) {
-      clubTierCoverageLabel = Number.isFinite(clubTierMaxTeams) && clubTierMaxTeams > 0
-        ? `Jusqu'à ${clubTierMaxTeams} équipes du club`
-        : 'Équipes du club illimitées';
+      const couverture = formatSubscriptionClubCoverageLabel(selectedEntry);
+      clubTierCoverageLabel = couverture
+        ? `${couverture.charAt(0).toUpperCase()}${couverture.slice(1)}`
+        : '';
     }
     // S12-B/D3 — le total au licencie, calcule par le helper partage : aucun
     // calcul de prix ne vit dans un ecran.

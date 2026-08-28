@@ -229,6 +229,66 @@ export const getSubscriptionEntryTierRank = (entry) => (
 );
 
 /**
+ * Plafond de LICENCIES d'une offre, ou null quand elle n'en borne aucun.
+ *
+ * LOT CATALOGUE (2026-08-28) — c'est le champ qui a remplace `maxTeams` comme
+ * critere de choix cote Club. Le serveur le pose sur chaque entree
+ * (subscription-catalog.ts, `licenseeCap`) ; rien ici ne code en dur
+ * « Club 100 = 100 ».
+ * @param {any} entry
+ * @returns {number | null}
+ */
+export const getSubscriptionEntryLicenseeCap = (entry) => {
+  const cap = Number(entry?.licenseeCap);
+  return Number.isFinite(cap) && cap > 0 ? cap : null;
+};
+
+/**
+ * Etiquette COURTE d'une tranche Club, pour une pilule de selection.
+ *
+ * Elle porte le nombre de licenciés couverts (« 100 », « 500 », « 1000 ») ou
+ * « illim. ». C'est ce que remplacent les lettres S / M / L, qui ne disaient
+ * rien de ce qu'on achetait.
+ *
+ * ⚠️ AUCUNE table de correspondance dans l'app : le nombre vient du catalogue
+ * serveur. Les prix et les paliers ont change QUATRE fois le 28/08 — une table
+ * recopiee serait fausse le lendemain.
+ * @param {any} entry
+ * @returns {string}
+ */
+export const formatSubscriptionClubTierShortLabel = (entry) => {
+  const licenseeCap = getSubscriptionEntryLicenseeCap(entry);
+  return licenseeCap === null ? 'illim.' : String(licenseeCap);
+};
+
+/**
+ * CE QUE COUVRE UNE OFFRE CLUB, en une phrase, pour TOUTES les surfaces de vente.
+ *
+ * Constat qui a cree ce helper : jusqu'au 27/08, les offres Club se
+ * distinguaient par le nombre d'EQUIPES (« jusqu'a 3 equipes du club »). Depuis
+ * le 28/08 les quatre tranches donnent des equipes illimitees — les quatre
+ * cartes auraient donc affiche la MEME phrase, et le client n'aurait plus eu
+ * aucun critere pour choisir entre 249,99 EUR et 939,99 EUR. Ce qui les separe
+ * est le nombre de licencies : c'est lui que la phrase doit porter.
+ *
+ * ⚠️ Elle vit ici, pas dans un ecran : le carrousel, la feuille de vente et le
+ * recap du tour guide la servent tous les trois, et deux surfaces de vente ne
+ * doivent pas nommer la meme chose de deux facons.
+ *
+ * Rend une phrase EN MINUSCULES, faite pour s'inserer dans « pour … , plus : ».
+ * Un appelant qui la pose seule sur sa ligne met la majuscule lui-meme.
+ * @param {any} entry
+ * @returns {string}
+ */
+export const formatSubscriptionClubCoverageLabel = (entry) => {
+  if (!entry) return '';
+  const licenseeCap = getSubscriptionEntryLicenseeCap(entry);
+  return licenseeCap === null
+    ? 'un nombre illimité de licenciés'
+    : `jusqu'à ${licenseeCap} licenciés du club`;
+};
+
+/**
  * Remise reelle de l'annuel face a douze mensualites, arrondie a l'entier.
  *
  * L33 — pourquoi ce calcul plutot qu'un tag « 2 mois offerts » pose une fois

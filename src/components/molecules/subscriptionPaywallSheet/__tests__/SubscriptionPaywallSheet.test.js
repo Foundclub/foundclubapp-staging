@@ -187,15 +187,20 @@ const TEAM_PRICES = {
   2: { monthly: 1299, yearly: 9999 },
   3: { monthly: 1699, yearly: 12999 },
 };
+// LOT CATALOGUE (2026-08-28) — les 4 tranches de LICENCIES. Equipes illimitees
+// dans les quatre : ce qui les distingue est `licenseeCap`.
 const CLUB_TIERS = {
   1: {
-    label: 'Club S', maxTeams: 3, monthly: 1999, yearly: 19999,
+    label: 'Club 100', licenseeCap: 100, monthly: 2499, yearly: 24999,
   },
   2: {
-    label: 'Club M', maxTeams: 8, monthly: 3499, yearly: 34999,
+    label: 'Club 500', licenseeCap: 500, monthly: 5999, yearly: 59999,
   },
   3: {
-    label: 'Club L', maxTeams: null, monthly: 5499, yearly: 54999,
+    label: 'Club 1000', licenseeCap: 1000, monthly: 8999, yearly: 89999,
+  },
+  4: {
+    label: 'Club Illimité', licenseeCap: null, monthly: 9399, yearly: 93999,
   },
 };
 
@@ -204,6 +209,7 @@ const CATALOG_ENTRIES = [
     billingPeriod,
     displayName: `Équipe · ${slotCount} équipe${slotCount > 1 ? 's' : ''}`,
     isActive: true,
+    licenseeCap: null,
     maxTeams: null,
     planCode: `fc_team_${slotCount}_${billingPeriod}`,
     providerProductId: `fc_team_${slotCount}_${billingPeriod}`,
@@ -212,11 +218,12 @@ const CATALOG_ENTRIES = [
     scopeType: 'TEAM',
     slotCount,
   }))),
-  ...[1, 2, 3].flatMap((tier) => ['monthly', 'yearly'].map((billingPeriod) => ({
+  ...[1, 2, 3, 4].flatMap((tier) => ['monthly', 'yearly'].map((billingPeriod) => ({
     billingPeriod,
     displayName: CLUB_TIERS[tier].label,
     isActive: true,
-    maxTeams: CLUB_TIERS[tier].maxTeams,
+    licenseeCap: CLUB_TIERS[tier].licenseeCap,
+    maxTeams: null,
     planCode: `fc_club_tier_${tier}_${billingPeriod}`,
     providerProductId: `fc_club_tier_${tier}_${billingPeriod}`,
     referencePriceEurCents: CLUB_TIERS[tier][billingPeriod],
@@ -403,13 +410,14 @@ describe('SubscriptionPaywallSheet — murs qui exigent l\'offre Club', () => {
 
     expect(texts).toContain('Offre Club');
     expect(hasTextContaining(tree, sentence)).toBe(true);
-    // Les 3 paliers du catalogue serveur, avec le prix annuel du palier retenu.
-    expect(texts).toContain('Club S');
-    expect(texts).toContain('Club M');
-    expect(texts).toContain('Club L');
-    expect(texts).toContain('199,99 €');
+    // Les 4 tranches du catalogue serveur, avec le prix annuel de la retenue.
+    expect(texts).toContain('Club 100');
+    expect(texts).toContain('Club 500');
+    expect(texts).toContain('Club 1000');
+    expect(texts).toContain('Club Illimité');
+    expect(texts).toContain('249,99 €');
     expect(texts).toContain('/an');
-    expect(findButtonByText(tree, 'Débloquer Club S')).toBeTruthy();
+    expect(findButtonByText(tree, 'Débloquer Club 100')).toBeTruthy();
     // La porte de sortie decidee par Adel (Q3) reste en place.
     expect(findButtonByText(tree, 'Comparer les offres')).toBeTruthy();
     expect(findButtonByText(tree, 'Plus tard')).toBeTruthy();
@@ -422,7 +430,7 @@ describe('SubscriptionPaywallSheet — murs qui exigent l\'offre Club', () => {
     });
 
     await act(async () => {
-      findButtonByText(tree, 'Débloquer Club S').props.onPress();
+      findButtonByText(tree, 'Débloquer Club 100').props.onPress();
     });
 
     expect(mockPerformPurchase).toHaveBeenCalledTimes(1);
@@ -439,7 +447,7 @@ describe('SubscriptionPaywallSheet — murs qui exigent l\'offre Club', () => {
     const tree = renderSheet({ clubDocumentId: null, decision: FACILITY_DECISION });
 
     await act(async () => {
-      findButtonByText(tree, 'Débloquer Club S').props.onPress();
+      findButtonByText(tree, 'Débloquer Club 100').props.onPress();
     });
 
     expect(mockPerformPurchase.mock.calls[0][0].clubDocumentId).toBe('club-du-payeur');
@@ -451,47 +459,47 @@ describe('SubscriptionPaywallSheet — murs qui exigent l\'offre Club', () => {
     const tree = renderSheet({ auth, clubDocumentId: null, decision: FACILITY_DECISION });
 
     await act(async () => {
-      findButtonByText(tree, 'Débloquer Club S').props.onPress();
+      findButtonByText(tree, 'Débloquer Club 100').props.onPress();
     });
 
     expect(mockPerformPurchase).not.toHaveBeenCalled();
     expect(mockAlert).toHaveBeenCalled();
   });
 
-  it('le palier Club choisi pilote le prix et le plan achete', async () => {
+  it('la tranche Club choisie pilote le prix et le plan achete', async () => {
     const tree = renderSheet({ decision: FACILITY_DECISION });
 
-    act(() => { findButtonByText(tree, 'Club M').props.onPress(); });
-    expect(allTexts(tree)).toContain('349,99 €');
+    act(() => { findButtonByText(tree, 'Club 500').props.onPress(); });
+    expect(allTexts(tree)).toContain('599,99 €');
 
     await act(async () => {
-      findButtonByText(tree, 'Débloquer Club M').props.onPress();
+      findButtonByText(tree, 'Débloquer Club 500').props.onPress();
     });
     expect(purchasedPlanCode()).toBe('fc_club_tier_2_yearly');
   });
 
-  it('ne repete pas « Offre conseillée » : les paliers Club sont deja a l\'ecran', () => {
+  it('ne repete pas « Offre conseillée » : les tranches Club sont deja a l\'ecran', () => {
     const tree = renderSheet({ decision: FACILITY_DECISION });
     expect(hasTextContaining(tree, 'Offre conseillée')).toBe(false);
   });
 
-  it('dit ce qui distingue les paliers Club : le nombre d\'equipes couvertes', () => {
+  it('dit ce qui distingue les tranches Club : le nombre de licencies couverts', () => {
     const tree = renderSheet({ decision: FACILITY_DECISION });
-    expect(hasTextContaining(tree, "Jusqu'à 3 équipes du club")).toBe(true);
+    expect(hasTextContaining(tree, "Jusqu'à 100 licenciés du club")).toBe(true);
 
-    act(() => { findButtonByText(tree, 'Club L').props.onPress(); });
-    expect(hasTextContaining(tree, 'Équipes du club illimitées')).toBe(true);
+    act(() => { findButtonByText(tree, 'Club Illimité').props.onPress(); });
+    expect(hasTextContaining(tree, 'Un nombre illimité de licenciés')).toBe(true);
   });
 
   it('le mensuel Club est proposable et change le plan achete', async () => {
     const tree = renderSheet({ decision: FACILITY_DECISION });
 
     act(() => { findButtonByText(tree, 'Mensuel').props.onPress(); });
-    expect(allTexts(tree)).toContain('19,99 €');
+    expect(allTexts(tree)).toContain('24,99 €');
     expect(allTexts(tree)).toContain('/mois');
 
     await act(async () => {
-      findButtonByText(tree, 'Débloquer Club S').props.onPress();
+      findButtonByText(tree, 'Débloquer Club 100').props.onPress();
     });
     expect(purchasedPlanCode()).toBe('fc_club_tier_1_monthly');
   });
@@ -525,7 +533,7 @@ describe('SubscriptionPaywallSheet — palier Club plein (CLUB_TIER_TEAM_LIMIT)'
       params: { focusScope: 'CLUB' },
       screen: 'SubscriptionOffers',
     });
-    expect(findButtonByText(tree, 'Débloquer Club S')).toBeFalsy();
+    expect(findButtonByText(tree, 'Débloquer Club 100')).toBeFalsy();
   });
 
   it('TEMOIN — un mur qui n\'exige que l\'offre Équipe ouvre sur Équipe', () => {
@@ -710,7 +718,7 @@ describe('SubscriptionPaywallSheet — S12-B/D1 : le mode au licencie', () => {
     expect(findButtonByText(tree, 'Par palier')).toBeDefined();
     expect(findButtonByText(tree, 'Au licencié')).toBeDefined();
     // Par defaut, rien n'a bouge : les paliers Club sont la.
-    expect(hasTextContaining(tree, 'Club S')).toBe(true);
+    expect(hasTextContaining(tree, 'Club 100')).toBe(true);
   });
 
   it('⛔ une feuille EQUIPE ne propose pas ce mode : il n existe pas cote Equipe', () => {
@@ -761,6 +769,6 @@ describe('SubscriptionPaywallSheet — S12-B/D1 : le mode au licencie', () => {
     const tree = renderSheet({ decision: FACILITY_DECISION });
 
     expect(findButtonByText(tree, 'Au licencié')).toBeUndefined();
-    expect(hasTextContaining(tree, 'Club S')).toBe(true);
+    expect(hasTextContaining(tree, 'Club 100')).toBe(true);
   });
 });

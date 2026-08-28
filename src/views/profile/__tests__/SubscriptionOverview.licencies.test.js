@@ -199,14 +199,15 @@ const ENTREES_LICENCIE = ['monthly', 'yearly'].map((billingPeriod) => ({
   unitPriceEurCents: billingPeriod === 'yearly' ? 250 : 25,
 }));
 
-const ENTREE_PALIER = {
+const ENTREE_TRANCHE = {
   billingPeriod: 'yearly',
-  displayName: 'Club S',
+  displayName: 'Club 100',
   isActive: true,
-  maxTeams: 3,
+  licenseeCap: 100,
+  maxTeams: null,
   planCode: 'fc_club_tier_1_yearly',
   pricingModel: 'flat',
-  referencePriceEurCents: 19999,
+  referencePriceEurCents: 24999,
   scopeType: 'CLUB',
   slotCount: null,
   unitPriceEurCents: null,
@@ -331,7 +332,7 @@ const rendre = async (surcharges = {}, parametres = undefined) => {
 
 beforeEach(() => {
   jest.clearAllMocks();
-  mockCatalogEntries = [ENTREE_PALIER, ...ENTREES_LICENCIE];
+  mockCatalogEntries = [ENTREE_TRANCHE, ...ENTREES_LICENCIE];
   mockIncrease.mockResolvedValue({
     licenseeCount: 150,
     previousLicenseeCount: 120,
@@ -374,7 +375,7 @@ describe('S12-B/D5 — la porte vers l augmentation', () => {
   it('c est `pricingModel` qui tranche, jamais le code de plan', async () => {
     // Catalogue qui ne porte PAS l'offre au licencie : meme planCode actif, mais
     // rien ne prouve son modele de prix -> on ne propose pas le geste.
-    mockCatalogEntries = [ENTREE_PALIER];
+    mockCatalogEntries = [ENTREE_TRANCHE];
     expect(texteVisible(await rendre())).not.toContain('Augmenter mes licenciés');
   });
 

@@ -13,11 +13,21 @@ import MemberAvatar from '@/components/molecules/memberAvatar/MemberAvatar';
 import { RouteNames } from '@/navigation/routeNames';
 
 // Libelles d'offre du heros « deja couvert » (handoff 7b).
+//
+// LOT CATALOGUE (2026-08-28) — les 4 tranches de LICENCIES ont remplace
+// Club S / M / L. Les equipes sont illimitees dans les quatre : ce qui distingue
+// une tranche d'une autre est le nombre de licenciés couverts.
+//
+// ⚠️ Cet ecran ne recoit qu'un CODE DE PLAN (l'entitlement qui couvre la
+// personne), jamais l'entree de catalogue : il doit donc porter les noms. Le
+// numero du code n'est PAS le nom de l'offre — `fc_club_tier_1` s'appelle
+// « Club 100 », parce qu'un identifiant de magasin ne se renomme jamais.
 /** @type {Record<number, string>} */
 const CLUB_TIER_HERO_LABELS = {
-  1: "Offre Club S · jusqu'à 3 équipes",
-  2: "Offre Club M · jusqu'à 8 équipes",
-  3: 'Offre Club L · équipes illimitées',
+  1: "Offre Club 100 · jusqu'à 100 licenciés",
+  2: "Offre Club 500 · jusqu'à 500 licenciés",
+  3: "Offre Club 1000 · jusqu'à 1 000 licenciés",
+  4: 'Offre Club Illimité · licenciés illimités',
 };
 
 /**

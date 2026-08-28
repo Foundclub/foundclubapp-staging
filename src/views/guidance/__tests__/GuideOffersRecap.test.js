@@ -120,15 +120,20 @@ const TEAM_PRICES = {
   2: { monthly: 1299, yearly: 9999 },
   3: { monthly: 1699, yearly: 12999 },
 };
+// LOT CATALOGUE (2026-08-28) — les 4 tranches de LICENCIES. Equipes illimitees
+// dans les quatre : ce qui les distingue est `licenseeCap`.
 const CLUB_TIERS = {
   1: {
-    label: 'Club S', maxTeams: 3, monthly: 1999, yearly: 19999,
+    label: 'Club 100', licenseeCap: 100, monthly: 2499, yearly: 24999,
   },
   2: {
-    label: 'Club M', maxTeams: 8, monthly: 3499, yearly: 34999,
+    label: 'Club 500', licenseeCap: 500, monthly: 5999, yearly: 59999,
   },
   3: {
-    label: 'Club L', maxTeams: null, monthly: 5499, yearly: 54999,
+    label: 'Club 1000', licenseeCap: 1000, monthly: 8999, yearly: 89999,
+  },
+  4: {
+    label: 'Club Illimité', licenseeCap: null, monthly: 9399, yearly: 93999,
   },
 };
 
@@ -137,6 +142,7 @@ const CATALOG_ENTRIES = [
     billingPeriod,
     displayName: `Équipe · ${slotCount} équipe${slotCount > 1 ? 's' : ''}`,
     isActive: true,
+    licenseeCap: null,
     maxTeams: null,
     planCode: `fc_team_${slotCount}_${billingPeriod}`,
     providerProductId: `fc_team_${slotCount}_${billingPeriod}`,
@@ -145,11 +151,12 @@ const CATALOG_ENTRIES = [
     scopeType: 'TEAM',
     slotCount,
   }))),
-  ...[1, 2, 3].flatMap((tier) => ['monthly', 'yearly'].map((billingPeriod) => ({
+  ...[1, 2, 3, 4].flatMap((tier) => ['monthly', 'yearly'].map((billingPeriod) => ({
     billingPeriod,
     displayName: CLUB_TIERS[tier].label,
     isActive: true,
-    maxTeams: CLUB_TIERS[tier].maxTeams,
+    licenseeCap: CLUB_TIERS[tier].licenseeCap,
+    maxTeams: null,
     planCode: `fc_club_tier_${tier}_${billingPeriod}`,
     providerProductId: `fc_club_tier_${tier}_${billingPeriod}`,
     referencePriceEurCents: CLUB_TIERS[tier][billingPeriod],
@@ -243,7 +250,7 @@ describe('GuideOffersRecap — l\'offre Club ne depend plus de la verification d
     expect(clubCard.props.disabled).toBeFalsy();
 
     act(() => { clubCard.props.onPress(); });
-    expect(ctaTitles(tree)).toContain('Débloquer Club S · 199,99 €/an');
+    expect(ctaTitles(tree)).toContain('Débloquer Club 100 · 249,99 €/an');
   });
 
   it('l\'argument de vente Club reste lisible sans verification', () => {
@@ -260,7 +267,7 @@ describe('GuideOffersRecap — l\'offre Club ne depend plus de la verification d
     expect(clubCard.props.disabled).toBeFalsy();
     act(() => { clubCard.props.onPress(); });
     await act(async () => {
-      findByText(tree, 'Débloquer Club S · 199,99 €/an').props.onPress();
+      findByText(tree, 'Débloquer Club 100 · 249,99 €/an').props.onPress();
     });
 
     expect(mockPerformPurchase).toHaveBeenCalledTimes(1);
@@ -288,7 +295,7 @@ describe('GuideOffersRecap — l\'offre Club ne depend plus de la verification d
 
     act(() => { findByText(tree, 'Club').props.onPress(); });
     await act(async () => {
-      findByText(tree, 'Débloquer Club S · 199,99 €/an').props.onPress();
+      findByText(tree, 'Débloquer Club 100 · 249,99 €/an').props.onPress();
     });
 
     expect(mockPerformPurchase).not.toHaveBeenCalled();
@@ -372,17 +379,19 @@ describe('S12-B — le recap du tour guide vend les PALIERS, pas l offre au lice
     });
 
     expect(allTexts(arbre)).not.toContain('Tier 0');
-    expect(allTexts(arbre)).toEqual(expect.arrayContaining(['S · ≤ 3', 'M · ≤ 8', 'L · illim.']));
+    // Les pilules portent le nombre de LICENCIES couvert par la tranche : c'est
+    // ce qui a remplace S / M / L, qui ne disaient rien de ce qu'on achetait.
+    expect(allTexts(arbre)).toEqual(expect.arrayContaining(['100', '500', '1000', 'illim.']));
   });
 
-  it('⛔ et la carte repliee annonce 199,99 €, pas le prix UNITAIRE', () => {
+  it('⛔ et la carte repliee annonce 249,99 €, pas le prix UNITAIRE', () => {
     // Le tri par numero de palier placait l offre au licencie EN TETE (rang 0) :
     // `firstEntry` la designait, et la carte Club repliee affichait
-    // « a partir de 2,50 €/an » au lieu de 199,99 €.
+    // « a partir de 2,50 €/an » au lieu du prix de la premiere tranche.
     const arbre = renderRecap();
 
     // Équipe est selectionne par defaut : la carte Club est donc repliee.
-    expect(hasTextContaining(arbre, '199,99 €')).toBe(true);
+    expect(hasTextContaining(arbre, '249,99 €')).toBe(true);
     expect(hasTextContaining(arbre, '2,50 €')).toBe(false);
   });
 });
