@@ -118,8 +118,14 @@ export const getChats = async (page = 1, pageSize = 20) => {
  */
 export const getChatById = async (chatId, options = {}) => {
   const response = await client.get(`/chats/${chatId}`, {
+    // MSG1/N4 (audit M7) — LE PARAMETRE `chat=<id>` A ETE RETIRE.
+    // Il ne servait a rien (le serveur lit l identifiant dans l URL), mais sa
+    // seule presence faisait echouer le test du chemin rapide cote serveur
+    // (`isSimpleChatDetailFastPathQuery`, chat.ts) : Strapi repassait par
+    // `validateQuery` + `sanitizeQuery` a CHAQUE ouverture de conversation.
+    // ⛔ Ne rien remettre ici : toute clef autre que `includeMessages` reperd
+    // le chemin rapide, en silence.
     params: {
-      chat: chatId,
       ...(options?.includeMessages === true ? { includeMessages: true } : {}),
     },
   });

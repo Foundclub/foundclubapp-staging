@@ -54,10 +54,10 @@ describe('chatService', () => {
       type: 'multisport',
     });
 
+    // MSG1/N4 — `chat: <id>` a ete RETIRE : il ne servait a rien et faisait
+    // echouer le chemin rapide du serveur a chaque ouverture de conversation.
     expect(mockGet).toHaveBeenCalledWith('/chats/chat-multisport-1', {
-      params: {
-        chat: 'chat-multisport-1',
-      },
+      params: {},
     });
   });
   // 🧾 S10-C / D4 — LE MESSAGE SYSTEME DU FIL D'EQUIPE.
@@ -111,5 +111,54 @@ describe('chatService', () => {
     expect(mockLoggerWarn).not.toHaveBeenCalled();
     expect(result.data).toHaveLength(2);
     expect(result.data[0].sender).toBeNull();
+  });
+});
+
+describe('MSG1 / N4 — ouvrir une conversation ne saborde plus le chemin rapide', () => {
+  // Audit M7, seconde moitie. `getChatById` ajoutait un parametre `chat=<id>`
+  // a `GET /chats/:id`. Il ne SERT a rien — le serveur lit l identifiant dans
+  // l URL — mais sa seule presence fait echouer le test du chemin rapide
+  // (`isSimpleChatDetailFastPathQuery`, chat.ts) : le serveur repasse alors par
+  // `validateQuery` + `sanitizeQuery` de Strapi a CHAQUE ouverture de fil.
+  beforeEach(() => { jest.clearAllMocks(); });
+
+  test('T1 — aucun parametre parasite dans la requete de detail', async () => {
+    mockGet.mockResolvedValueOnce({
+      data: {
+        data: {
+          createdAt: '2026-08-28T09:00:00.000Z',
+          documentId: 'chat-1',
+          messages: [],
+          type: 'team',
+          updatedAt: '2026-08-28T10:00:00.000Z',
+        },
+      },
+    });
+
+    await getChatById('chat-1');
+
+    const [url, config] = mockGet.mock.calls[0];
+    expect(url).toBe('/chats/chat-1');
+    // Le chemin rapide n accepte AUCUNE clef en dehors de `includeMessages`.
+    expect(Object.keys(config?.params || {})).toEqual([]);
+  });
+
+  test('T2 — `includeMessages` reste possible : c est la seule clef toleree', async () => {
+    mockGet.mockResolvedValueOnce({
+      data: {
+        data: {
+          createdAt: '2026-08-28T09:00:00.000Z',
+          documentId: 'chat-1',
+          messages: [],
+          type: 'team',
+          updatedAt: '2026-08-28T10:00:00.000Z',
+        },
+      },
+    });
+
+    await getChatById('chat-1', { includeMessages: true });
+
+    const [, config] = mockGet.mock.calls[0];
+    expect(config.params).toEqual({ includeMessages: true });
   });
 });
