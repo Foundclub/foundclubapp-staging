@@ -291,7 +291,24 @@ function EventEdit({ navigation, route }) {
   } = useTheme();
   const { t } = useTranslation();
   const { userData } = useAuth();
-  const { data: event } = useGetEventForEdit(eventId);
+  // 🔴 EVEDIT-3 (R4) — ON LIT AUSSI L'ECHEC, PAS SEULEMENT LA DONNEE.
+  //
+  // 🧨 « CA CHARGE PENDANT DES HEURES » (Adel, 28/08) ETAIT LITTERALEMENT VRAI.
+  // Cet ecran ne lisait que `data`. Quand la lecture rate, `data` reste
+  // `undefined` — exactement comme lorsqu'elle est encore en vol. « En train de
+  // charger » et « ca a rate » etaient donc LE MEME ECRAN, pour toujours : le
+  // bandeau restait, le bouton restait gris, et plus rien ne bougeait.
+  //
+  // 🔗 LE CHEMIN LE PLUS COURT POUR Y TOMBER, mesure ailleurs dans le depot :
+  // le lot FCMSTORM a releve 27 refus `429` en rafale le 28/08, et
+  // `app/queryClient.js` EXCLUT le 429 des reprises (`status >= 500`). Un seul
+  // refus suffit donc — il n'y a meme pas de seconde tentative. Sur une simple
+  // coupure reseau, c'est 48 s de tentatives puis le meme ecran fige.
+  const {
+    data: event,
+    isError: laFicheARate,
+    refetch: relireLaFiche,
+  } = useGetEventForEdit(eventId);
   // R5 (b) — LA LISTE DES TYPES NE SE RECHARGE PLUS A CHAQUE OUVERTURE.
   // C est une table de reference (Match, Entrainement, Reservation...) : elle ne
   // bouge pas de la vie de l application. Sans duree de fraicheur, react-query
@@ -546,6 +563,20 @@ function EventEdit({ navigation, route }) {
   // a attendre, et le bouton doit rester actif.
   const ficheEnAttente = Boolean(eventId) && !event;
 
+  // 🚦 EVEDIT-3 (R4) — LES TROIS ETATS, ENFIN DISTINGUES.
+  //
+  //   · fiche en vol   → on le dit, et « Enregistrer » refuse   (garde D5)
+  //   · fiche en echec → on le DIT AUTREMENT, et on offre une sortie
+  //   · fiche arrivee  → aucun bandeau, « Enregistrer » accepte
+  //
+  // ⚠️ LE VERROU NE S'OUVRE PAS POUR AUTANT, et c'est le piege de ce lot :
+  // dire « ca a rate » sans garder `ficheEnAttente` dans le `disabled`
+  // reouvrirait le defaut le plus cher de l'audit (D5). Sans fiche, le
+  // formulaire est pre-rempli A VIDE, et cote serveur une liste vide n'est pas
+  // ignoree, elle est SYNCHRONISEE : taches supprimees, audiences annulees,
+  // equipes conviees deconnectees, installation detachee.
+  const ficheEnEchec = ficheEnAttente && Boolean(laFicheARate);
+
   useEffect(() => {
     if (isRecurrent && selectedDate) {
       const parsedDate = getDateFromDateInput(selectedDate);
@@ -718,13 +749,25 @@ function EventEdit({ navigation, route }) {
       // moitie visible ; celle-ci est celle qui tient quel que soit le chemin
       // par lequel la soumission arrive.
       if (ficheEnAttente) {
+        // 🗣️ EVEDIT-3 (R4) — LE MESSAGE DIT L'ETAT REEL, PAS UN ETAT ESPERE.
+        // « Laisse l'evenement finir de s'afficher » est un mensonge quand la
+        // lecture a DEJA echoue : il n'y a plus rien a attendre, il faut
+        // reessayer. Deux situations, deux phrases.
         Alert.alert(
-          t('eventEdit.modals.stillLoading.title', 'La fiche n\'est pas encore chargée'),
-          t(
-            'eventEdit.modals.stillLoading.description',
-            "Laisse l'événement finir de s'afficher : enregistrer maintenant "
-            + 'effacerait ses tâches, ses équipes conviées et son lieu.',
-          ),
+          ficheEnEchec
+            ? t('eventEdit.modals.loadFailed.title', "L'événement n'a pas pu être chargé")
+            : t('eventEdit.modals.stillLoading.title', 'La fiche n\'est pas encore chargée'),
+          ficheEnEchec
+            ? t(
+              'eventEdit.modals.loadFailed.description',
+              'Appuie sur Réessayer : enregistrer maintenant effacerait ses tâches, '
+              + 'ses équipes conviées et son lieu.',
+            )
+            : t(
+              'eventEdit.modals.stillLoading.description',
+              "Laisse l'événement finir de s'afficher : enregistrer maintenant "
+              + 'effacerait ses tâches, ses équipes conviées et son lieu.',
+            ),
         );
         return;
       }
@@ -1575,7 +1618,34 @@ function EventEdit({ navigation, route }) {
           </View>
         </ScrollView>
         <View style={[Spaces.gap[8]]}>
-          {ficheEnAttente ? (
+          {/* 🚦 EVEDIT-3 (R4) — UN ECRAN NE RESTE JAMAIS FIGE SANS EXPLICATION.
+              Trois etats, trois affichages, et JAMAIS deux bandeaux a la fois :
+              l'echec remplace le chargement, il ne s'ajoute pas a lui. */}
+          {ficheEnEchec ? (
+            <View style={[
+              Spaces.padding[16],
+              Spaces.gap[12],
+              ApplicationStyle.backgroundColor.primary700,
+              { borderColor: Colors.error500, borderRadius: 8, borderWidth: 1 },
+            ]}
+            >
+              <Text style={[Fonts.p2, Fonts.neutral00]}>
+                {t(
+                  'eventEdit.loadFailed.description',
+                  "L'événement n'a pas pu être chargé. Vérifie ta connexion, puis appuie sur Réessayer.",
+                )}
+              </Text>
+              {/* ⛔ SANS CE BOUTON, LA SEULE ISSUE EST DE QUITTER L'ECRAN ET D'Y
+                  REVENIR — personne ne devine ca. `refetch` relit la fiche sans
+                  toucher a ce qui est deja saisi : rien n'est perdu. */}
+              <Button
+                onPress={() => { relireLaFiche(); }}
+                title={t('eventEdit.loadFailed.retry', 'Réessayer')}
+                variant="Secondary"
+              />
+            </View>
+          ) : null}
+          {ficheEnAttente && !ficheEnEchec ? (
             <View style={[
               Spaces.padding[16],
               ApplicationStyle.backgroundColor.primary700,
