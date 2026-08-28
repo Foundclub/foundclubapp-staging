@@ -327,14 +327,16 @@ describe('S12-B — la notification de quota au licencie mene a la reparation', 
   it.each([
     'club_licensee_quota_approaching',
     'club_licensee_quota_reached',
-  ])('LE TEMOIN — %s ouvre la feuille d augmentation, pas le neant', (celebrationKey) => {
+  ])('LE TEMOIN — %s mene a l abonnement du club, pas au neant', (celebrationKey) => {
     // Avant S12-B : aucun traitement des cles de quota ici, `default` rendait
     // null, et appuyer sur la notification ne faisait RIEN.
+    // Lot CATALOGUE (28/08) : plus d'`openLicenseeIncrease` — il ouvrait la
+    // feuille d'augmentation, qui n'existe que pour l'offre au licencie
+    // supprimee ce jour-la. L'ecran montre « 95 sur 100 » et rien ne bloque.
     expect(resolveNotificationDestination(chargeQuota(celebrationKey))).toEqual({
       params: {
         licenseeCount: 120,
         memberCount: 120,
-        openLicenseeIncrease: true,
       },
       route: 'SubscriptionOverview',
     });
@@ -342,20 +344,20 @@ describe('S12-B — la notification de quota au licencie mene a la reparation', 
 
   it('elle TRANSPORTE les deux nombres : ils n existent nulle part ailleurs', () => {
     // `payerSubscriptionsSummary` n'expose pas `licenseeCount`
-    // (subscription-permission.ts:1150-1159) : sans ce transport, l'ecran ne
-    // saurait pas de combien augmenter.
+    // (subscription-permission.ts) : sans ce transport, l'ecran ne saurait pas
+    // dire ou en est le club.
     const destination = resolveNotificationDestination(chargeQuota('club_licensee_quota_reached'));
     expect(destination.params.licenseeCount).toBe(120);
     expect(destination.params.memberCount).toBe(120);
   });
 
-  it('sans les nombres, on ouvre quand meme la feuille (on n invente pas de zero)', () => {
+  it('sans les nombres, on ouvre quand meme l ecran (on n invente pas de zero)', () => {
     const destination = resolveNotificationDestination({
       celebrationKey: 'club_licensee_quota_reached',
       type: 'celebration',
     });
     expect(destination).toEqual({
-      params: { openLicenseeIncrease: true },
+      params: {},
       route: 'SubscriptionOverview',
     });
   });

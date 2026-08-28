@@ -650,19 +650,24 @@ describe('SubscriptionPaywallSheet — S12-B/D6 : le club est plein', () => {
     expect(hasTextContaining(tree, 'membres déjà inscrits gardent tout')).toBe(true);
   });
 
-  it('D6 — le bouton dit « Augmenter », et il mene a la feuille d augmentation', () => {
+  it('D6 — le bouton mene la ou on peut VRAIMENT rouvrir : les tranches', () => {
     const tree = renderSheet({ decision: QUOTA_DECISION });
 
-    const bouton = findButtonByText(tree, 'Augmenter mes licenciés');
+    const bouton = findButtonByText(tree, 'Passer à la tranche supérieure');
     expect(bouton).toBeDefined();
     act(() => {
       bouton.props.onPress();
     });
 
-    // Ce club PAIE deja : le carrousel lui reproposerait ce qu'il a.
+    // ⛔ LE CUL-DE-SAC QUE CE TEMOIN INTERDIT : jusqu'au 28/08 ce bouton
+    // ouvrait la feuille d'augmentation de « Mon abonnement ». Cette feuille ne
+    // s'affiche que pour un abonnement AU LICENCIE - offre supprimee ce jour-la.
+    // Le dirigeant arrivait donc sur un ecran ou il ne se passait rien.
+    // Et sur la carte CLUB : atterrir sur Équipe montrerait la mauvaise offre a
+    // quelqu'un a qui le serveur vient de dire que son club est plein.
     expect(mockNavigate).toHaveBeenCalledWith('ProfileStack', {
-      params: { openLicenseeIncrease: true },
-      screen: 'SubscriptionOverview',
+      params: { focusScope: 'CLUB' },
+      screen: 'SubscriptionOffers',
     });
   });
 

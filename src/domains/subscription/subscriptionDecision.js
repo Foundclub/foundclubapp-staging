@@ -86,7 +86,7 @@ const PAYWALL_BENEFITS_BY_KEY = {
   'club-licensee-limit': [
     'Les membres deja inscrits gardent tout',
     'Seules les NOUVELLES adhesions sont en pause',
-    'Augmente ton nombre de licencies pour rouvrir',
+    'Passe a la tranche superieure pour rouvrir',
   ],
   'club-tier-team-limit': CLUB_PAYWALL_BENEFITS,
   'composition-required': [
@@ -364,8 +364,11 @@ export const getSubscriptionPaywallContent = (decision) => {
       const countsSentence = paywall.memberCount !== null && paywall.licenseeCount !== null
         ? ` Ton club compte ${paywall.memberCount} membre${paywall.memberCount > 1 ? 's' : ''} pour ${paywall.licenseeCount} licencié${paywall.licenseeCount > 1 ? 's' : ''} souscrit${paywall.licenseeCount > 1 ? 's' : ''}.`
         : '';
+      // Lot CATALOGUE (28/08) : le verbe a change avec l'offre. On n'augmente
+      // plus un nombre saisi, on passe a la tranche au-dessus (Club 100 -> 500
+      // -> 1000 -> Illimite), et c'est le magasin qui fait la bascule.
       return {
-        ctaLabel: 'Augmenter mes licenciés',
+        ctaLabel: 'Passer à la tranche supérieure',
         description: `Les nouvelles adhésions sont en pause : ton club a atteint le nombre de licenciés couverts par son abonnement.${countsSentence} Les membres déjà inscrits gardent tout.`,
         title: 'Ton club est complet',
       };

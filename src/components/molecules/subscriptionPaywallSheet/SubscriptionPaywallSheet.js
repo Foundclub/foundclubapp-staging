@@ -430,18 +430,20 @@ function SubscriptionPaywallSheet({
     }
   };
 
-  // S12-B/D6 — LE BLOCAGE MENE A LA REPARATION, PAS AU CATALOGUE.
-  // Ce club PAIE deja au licencie : l'envoyer au carrousel lui reproposerait
-  // d'acheter ce qu'il a. Ce qu'il lui faut, c'est AUGMENTER son nombre — et
-  // ca vit sur « Mon abonnement » (D5).
+  // S12-B/D6, REVU PAR LE LOT CATALOGUE (2026-08-28) — OU MENE « TON CLUB EST
+  // PLEIN ».
+  //
+  // Avant : le club plein payait AU LICENCIE, et sa sortie etait d'augmenter
+  // son nombre sur « Mon abonnement ». Cette feuille-la ne s'ouvre que pour un
+  // abonnement au licencie — offre supprimee le 28/08, elle ne s'ouvrira donc
+  // plus JAMAIS. Le bouton menait a un ecran ou il ne se passait rien.
+  //
+  // Depuis les tranches, la sortie est d'acheter la tranche SUPERIEURE : Club
+  // 100 -> Club 500 -> Club 1000 -> Illimite. C'est le carrousel des offres, ou
+  // `handleOpenSubscription` menait deja — sur la bonne carte (`focusScope`) et
+  // en transportant l'origine. On a donc SUPPRIME le second chemin au lieu de
+  // le reparer : il ne restait de propre a ce refus que son libelle de bouton.
   const isLicenseeQuotaPaywall = paywall.paywallKey === 'club-licensee-limit';
-  const handleIncreaseLicensees = () => {
-    close();
-    navigation.navigate(RouteNames.ProfileStack, {
-      params: { openLicenseeIncrease: true },
-      screen: RouteNames.SubscriptionOverview,
-    });
-  };
 
   // Achat direct dans la sheet. Aujourd'hui : mode test backend (trustedValidation) —
   // Purchases.purchase (RevenueCat) se branchera ici a l'item 14 du plan.
@@ -839,9 +841,9 @@ function SubscriptionPaywallSheet({
   // (0 occurrence dans admin/src). Un seul bouton, une seule destination.
   // L33 — le bouton dit ou il mene : depuis un mur payant, il ouvre le
   // carrousel d'offres, pas la page de gestion.
-  // S12-B/D6 — un club deja abonne au licencie n'a rien a acheter : il a a
-  // AUGMENTER. Le bouton porte donc le verbe du refus lui-meme
-  // (`ctaLabel` = « Augmenter mes licenciés », subscriptionDecision.js).
+  // S12-B/D6, revu le 28/08 — le bouton porte le verbe du refus lui-meme
+  // (`ctaLabel`, subscriptionDecision.js) parce qu'un club deja abonne ne
+  // « decouvre » pas les offres : il en change.
   const primaryActionLabel = isLicenseeQuotaPaywall
     ? paywallContent.ctaLabel
     : t('profile.subscription.actions.viewOffers', 'Voir les offres');
@@ -942,7 +944,7 @@ function SubscriptionPaywallSheet({
 
         <View style={Spaces.gap[12]}>
           <Button
-            onPress={isLicenseeQuotaPaywall ? handleIncreaseLicensees : handleOpenSubscription}
+            onPress={handleOpenSubscription}
             title={primaryActionLabel}
             variant="Primary"
           />

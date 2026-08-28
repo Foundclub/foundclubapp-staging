@@ -516,7 +516,7 @@ describe('S12-B — le refus de quota au licencie', () => {
     expect(content.title).toBe('Ton club est complet');
     expect(content.description).toContain('120 membres');
     expect(content.description).toContain('120 licenciés souscrits');
-    expect(content.ctaLabel).toBe('Augmenter mes licenciés');
+    expect(content.ctaLabel).toBe('Passer à la tranche supérieure');
   });
 
   test('⛔ il RASSURE sur ce qui n est PAS bloque', () => {
@@ -545,7 +545,7 @@ describe('S12-B — le refus de quota au licencie', () => {
     expect(getSubscriptionPaywallBenefits(QUOTA_DECISION)).toEqual([
       'Les membres deja inscrits gardent tout',
       'Seules les NOUVELLES adhesions sont en pause',
-      'Augmente ton nombre de licencies pour rouvrir',
+      'Passe a la tranche superieure pour rouvrir',
     ]);
   });
 
