@@ -89,7 +89,6 @@ function Messaging({ navigation, route }) {
     isLoading,
     refetch,
   } = useGetChats({
-    chatScope: chatScopeFilter,
     currentUserClubId: userData?.club?.documentId,
     currentUserId: userData?.documentId,
     currentUserTeamIds: safeTeamIds,
