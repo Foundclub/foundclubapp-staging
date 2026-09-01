@@ -3636,6 +3636,9 @@ export default {
         duration_other: '{{count}} jours offerts',
         ending: 'À la fin du cadeau, les équipes que vous avez créées restent :'
           + ' vous ne pourrez simplement plus en créer de nouvelles.',
+        errorBody: 'Nous n\'avons pas pu activer votre cadeau. Vous retrouverez'
+          + ' l\'offre dans votre profil, rubrique Mon abonnement.',
+        errorTitle: 'Cadeau non appliqué',
         free: 'Gratuit, sans carte bancaire',
         headerTitle: 'Votre cadeau',
         intro: 'Profitez-en pour :',
