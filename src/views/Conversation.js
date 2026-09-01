@@ -72,6 +72,7 @@ import LocationShareBubble from '@/components/molecules/locationShareBubble/Loca
 import PollMessageBubble from '@/components/molecules/pollMessageBubble/PollMessageBubble';
 import ProposalMessageBubble from '@/components/molecules/proposalMessageBubble/ProposalMessageBubble';
 import VoiceNoteBubble from '@/components/molecules/voiceNoteBubble/VoiceNoteBubble';
+import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
 import AutocompleteAddressInput from '@/components/organisms/autocompleteAddressInput/autocompleteAddressInput';
 import ChatAttachmentSheet from '@/components/organisms/chatAttachmentSheet/ChatAttachmentSheet';
 import JoinEventModal from '@/components/organisms/joinEventModal/JoinEventModal';
@@ -423,6 +424,32 @@ const isDocumentPickerCancellation = (documentPicker, error) => (
   )
   || (typeof documentPicker?.isCancel === 'function' && documentPicker.isCancel(error))
 );
+
+/**
+ * PERF2 — une bulle factice du squelette de premiere ouverture.
+ *
+ * Une `View` avec son propre fond, JAMAIS du texte ni une vraie bulle :
+ * tant que `SkeletonLoader` n a pas mesure son cadre, il rend ses enfants
+ * NUS — du contenu factice ferait un eclair de faux fil.
+ * @param {object} props
+ * @param {number} props.height
+ * @param {boolean} [props.mine] la bulle part-elle de moi (alignee a droite) ?
+ * @param {string} props.width
+ * @returns {import('react').ReactElement}
+ */
+function SkeletonBubble({ height, mine = false, width }) {
+  const { Colors } = useTheme();
+  return (
+    <View style={{
+      alignSelf: mine ? 'flex-end' : 'flex-start',
+      backgroundColor: Colors.primary700,
+      borderRadius: 16,
+      height,
+      width,
+    }}
+    />
+  );
+}
 
 /**
  * Chat conversation screen component
@@ -6094,16 +6121,19 @@ function Conversation({ navigation, route }) {
           </ErrorWrapper>
         ) : null}
         {!hasMessagesLoadingError && isMessagesFirstLoad ? (
-          <View style={[
-            Alignments.fill,
-            Alignments.justifyCenter,
-            Alignments.alignCenter,
-          ]}
+          // PERF2 — premiere ouverture : la FORME d un fil (des bulles qui
+          // balayent), plus une roue plein ecran qui ne montre rien.
+          <View
+            style={[Alignments.fill, { padding: 16 }]}
+            testID="conversation-messages-skeleton"
           >
-            <ActivityIndicator color={Colors.primary500} size="large" />
-            <Text style={[Fonts.p2, { color: Colors.neutral300, marginTop: 12 }]}>
-              Chargement des messages...
-            </Text>
+            <WithDataWrapper isLoading wrapperStyle={[{ gap: 12 }]}>
+              <SkeletonBubble height={44} width="62%" />
+              <SkeletonBubble height={36} width="44%" />
+              <SkeletonBubble height={44} mine width="55%" />
+              <SkeletonBubble height={36} width="40%" />
+              <SkeletonBubble height={56} mine width="65%" />
+            </WithDataWrapper>
           </View>
         ) : null}
         {!hasMessagesLoadingError && !isMessagesFirstLoad ? (
