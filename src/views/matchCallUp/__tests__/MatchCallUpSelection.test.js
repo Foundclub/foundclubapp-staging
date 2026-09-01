@@ -83,6 +83,16 @@ jest.mock('@/services/team/teamQueries', () => ({
   useGetTeams: () => ({ data: mockClubTeams, isFetching: false }),
 }));
 
+// PERF2 - l ecran importe desormais WithDataWrapper -> SkeletonLoader, qui
+// tire MaskedView / LinearGradient / Reanimated : hors sujet dans cette
+// suite. ⚠️ Cette fabrique est A FORME FIXE (pas de cle isLoading) : les
+// temoins d etat de chargement vivent dans MatchCallUpSelection.PERF2.
+// chargement.test.js, avec des requetes pilotables — ne pas en ecrire ici.
+jest.mock(
+  '@/components/atoms/skeletonLoader/SkeletonLoader',
+  () => function SkeletonLoaderMock() { return null; },
+);
+
 jest.mock('@/theme/themeContext', () => {
   const genererCouleurs = jest.requireActual('@/theme/colors').default;
   const genererPolices = jest.requireActual('@/theme/fonts').default;
