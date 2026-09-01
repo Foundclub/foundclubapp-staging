@@ -101,8 +101,12 @@ describe('EVEDIT-5 — l editeur d audiences ne boucle pas', () => {
           // Les props EXACTES d'EventEdit.js — surtout SANS `allowedAudienceKinds`.
           createElement(EventTeamAudiencesEditor, {
             availableTeams: [
-              { documentId: 'equipe-a', name: 'Seniors A', players: [], trainers: [] },
-              { documentId: 'equipe-b', name: 'Seniors B', players: [], trainers: [] },
+              {
+                documentId: 'equipe-a', name: 'Seniors A', players: [], trainers: [],
+              },
+              {
+                documentId: 'equipe-b', name: 'Seniors B', players: [], trainers: [],
+              },
             ],
             clubId: 'club-test',
             currentTeamId: 'equipe-a',
