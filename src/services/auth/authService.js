@@ -30,10 +30,13 @@ import {
 } from './otpSendThrottle';
 
 const isLocalAppEnvironment = () => getResolvedAuthAppEnv() === 'local';
+// PERF3 — « timeout » compte comme une panne réseau : l'abandon de 15 s posé par
+// l'intercepteur (message 'Request timeout - please retry.', status 0) ne
+// contient pas « network » et se journalisait en anomalie inattendue.
 const isNetworkError = (error) => {
   const statusCode = error?.status || error?.response?.status;
   const message = String(error?.message || error || '').toLowerCase();
-  return !statusCode && message.includes('network');
+  return !statusCode && (message.includes('network') || message.includes('timeout'));
 };
 
 const WEB_QA_BYPASS_FLAG = '__webQaBypass';
