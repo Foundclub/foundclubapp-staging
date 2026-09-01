@@ -10,6 +10,7 @@ import {
   BOOT_REQUEST_BLOCKED_CODE,
   BOOT_REQUEST_NO_SESSION_CODE,
 } from '@/services/bootRequestGuard';
+import { REQUEST_TIMEOUT_ABANDON_CODE } from '@/utils/errors/apiError';
 
 // Les intercepteurs de réponse (client.native.js / client.web.js) rejettent la
 // charge DÉBALLÉE `error.response.data.error`, jamais l'erreur axios : une
@@ -35,13 +36,25 @@ const isLocallyBlocked = (/** @type {any} */ error) => (
   || error?.code === BOOT_REQUEST_NO_SESSION_CODE
 );
 
+// PERF3 — l'abandon posé par l'intercepteur (objet à code dédié), et sa forme
+// historique en chaîne nue au cas où un chemin la produirait encore. Le test du
+// message ne tourne que sur les erreurs SANS status : un 5xx dont le message
+// contient « timeout » n'arrive jamais ici.
+const isTimeoutAbandon = (/** @type {any} */ error) => (
+  error?.code === REQUEST_TIMEOUT_ABANDON_CODE
+  || String(error?.message || error || '').toLowerCase().includes('timeout')
+);
+
 /**
  * @param {number} failureCount
  * @param {unknown} error
  * @returns {boolean}
  */
 export const shouldRetryQuery = (failureCount, error) => {
-  if (failureCount >= 2) {
+  // PERF3 — UNE reprise au lieu de deux (GO Adel 01/09) : la 2e reprise triplait
+  // la demande précisément quand le serveur ralentit. Ce qu'on perd : une
+  // micro-coupure réseau passagère se rattrape moins souvent toute seule.
+  if (failureCount >= 1) {
     return false;
   }
 
@@ -59,12 +72,19 @@ export const shouldRetryQuery = (failureCount, error) => {
 
   const status = getErrorStatus(typedError);
   if (status === null || status === 0) {
-    // Panne réseau ou timeout : aucun status, ça vaut le coup de retenter.
+    // PERF3 — un ABANDON (timeout client de 15 s) ne se retente JAMAIS : le
+    // serveur n'a aucun timeout de requête (ni Caddyfile ni config/server.ts),
+    // il continue de fabriquer la réponse que plus personne n'attend. Chaque
+    // reprise ajoutait 15 s d'attente et 1 requête (48 s / 3 appels mesurés).
+    if (isTimeoutAbandon(typedError)) {
+      return false;
+    }
+    // Panne réseau franche (échec immédiat, sans réponse) : ça vaut le coup.
     return true;
   }
 
-  // 429 exclu : le retryDelay (max 4 s) retombe dans la fenêtre de blocage du
-  // rate-limiter (60 s) et ne fait qu'amplifier la charge.
+  // 429 exclu : le retryDelay (1 s au premier essai) retombe dans la fenêtre de
+  // blocage du rate-limiter (60 s) et ne fait qu'amplifier la charge.
   if (status === 408 || status === 425) {
     return true;
   }
