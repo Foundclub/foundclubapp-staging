@@ -1,7 +1,14 @@
 // @ts-nocheck
 import { getApiBaseUrl, getPublicApiOrigin } from '@/config/runtimeUrls';
+import { DEFAULT_PUBLIC_ORIGIN } from '@/config/runtimeUrls.shared';
 
-const DEFAULT_PUBLIC_ORIGIN = 'https://foundclub.com';
+// 🔒 TRIO — `DEFAULT_PUBLIC_ORIGIN` est IMPORTE, plus recopie. Ce fichier s'en
+// sert comme d'un temoin dans `isWebAppCandidateOrigin` (« cette origine est le
+// repli, donc rien n'est configure, donc ce n'est pas le site ») : une seconde
+// copie qui divergerait ferait cesser ce temoin de reconnaitre son propre
+// repli, sans qu'aucune porte ne le voie.
+// ⚠️ Les deux valeurs ne designent PAS la meme chose : celle du dessus est le
+// SERVEUR (medias, /install.html), celle du dessous est le SITE.
 const DEFAULT_WEB_APP_ORIGIN = 'https://foundclub.app';
 
 const normalizeOrigin = (value) => String(value || '').trim().replace(/\/+$/g, '');
