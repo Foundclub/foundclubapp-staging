@@ -14,6 +14,7 @@ import {
   recordBootRequestSuccess,
 } from '@/services/bootRequestGuard';
 
+import { buildRequestTimeoutAbandon } from '@/utils/errors/apiError';
 import { trackBootNetworkRequest } from '@/utils/performance/bootPerformance';
 
 import { getApiBaseUrl } from '@/config/runtimeUrls';
@@ -80,14 +81,15 @@ const resetAuth = async (axiosError) => {
     }
   }
 
-  const timeoutMessage = axiosError?.code === 'ECONNABORTED'
-    ? 'Request timeout - please retry.'
-    : null;
+  // PERF3 — un abandon (timeout client de 15 s) est rejeté en OBJET portant
+  // `status: 0` et un code dédié, plus jamais en chaîne nue : sans status ni
+  // code, la politique de reprise le retentait (48 s d'attente, 3 requêtes).
+  const timeoutError = buildRequestTimeoutAbandon(axiosError);
 
   return Promise.reject(
     axiosError?.response?.data?.error
     || axiosError?.response?.data
-    || timeoutMessage
+    || timeoutError
     || axiosError?.message
     || 'Unknown error',
   );

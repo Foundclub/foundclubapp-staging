@@ -12,6 +12,38 @@
  * @param {string} messagePrefix - Le prefixe de journalisation, ex. 'Failed to update club'.
  * @returns {Error & { code: any, decision: any, details: any, status: number | null }}
  */
+/**
+ * PERF3 — Code dédié posé par les intercepteurs HTTP sur un ABANDON : la requête
+ * a dépassé le timeout client de 15 s (client.native.js:26, client.web.js:24).
+ * Avant, l'abandon était rejeté en CHAÎNE NUE ('Request timeout - please retry.')
+ * — sans status ni code, la politique de reprise le retentait comme une panne
+ * réseau : 15+1+15+2+15 = 48 s et 3 requêtes, précisément quand le serveur rame.
+ */
+export const REQUEST_TIMEOUT_ABANDON_CODE = 'REQUEST_TIMEOUT_ABANDONED';
+
+/**
+ * Construit l'objet d'abandon à rejeter par l'intercepteur, ou null si l'erreur
+ * axios n'est pas un timeout.
+ *
+ * axios 1.13.5 : l'adaptateur XHR code un timeout `ECONNABORTED`, l'adaptateur
+ * fetch `ETIMEDOUT` (message 'timeout of 15000ms exceeded'). L'ordre par défaut
+ * ['xhr','http','fetch'] rend le premier quasi certain en React Native, mais un
+ * client qui ne lit qu'un des deux codes rate l'autre.
+ * @param {any} axiosError - L'erreur axios brute, AVANT déballage.
+ * @returns {{ code: string, message: string, name: string, status: number } | null}
+ */
+export const buildRequestTimeoutAbandon = (axiosError) => {
+  if (axiosError?.code !== 'ECONNABORTED' && axiosError?.code !== 'ETIMEDOUT') {
+    return null;
+  }
+  return {
+    code: REQUEST_TIMEOUT_ABANDON_CODE,
+    message: 'Request timeout - please retry.',
+    name: 'RequestTimeoutAbandonError',
+    status: 0,
+  };
+};
+
 export const buildPreservedApiError = (error, messagePrefix) => {
   const responseError = error?.response?.data?.error;
   const responseData = error?.response?.data;
