@@ -286,7 +286,7 @@ describe('PERF2 — l onglet renforts pendant le chargement', () => {
       .toBe(0);
   });
 
-  test('l onglet PRINCIPAL n a jamais de squelette : son effectif vient des parametres', async () => {
+  test('l onglet PRINCIPAL n a jamais de squelette (effectif des parametres)', async () => {
     const arbre = await rendre({ isLoading: true });
 
     // On reste sur l onglet par defaut (effectif). Les joueurs des parametres

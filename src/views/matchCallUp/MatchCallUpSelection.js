@@ -118,16 +118,6 @@ const normalizePlayer = (/** @type {any} */ player, /** @type {any} */ extra = {
   };
 };
 
-// PERF2 — une rangee factice pour l onglet renforts : une View avec son
-// propre fond, jamais du texte ni une vraie rangee (SkeletonLoader rend ses
-// enfants NUS avant onLayout — du contenu factice ferait un eclair de faux).
-function SkeletonRow() {
-  const { Colors } = useTheme();
-  return (
-    <View style={{ backgroundColor: Colors.primary700, borderRadius: 12, height: 64 }} />
-  );
-}
-
 function MatchCallUpSelection() {
   const { Colors, Fonts } = useTheme();
   const { t } = useTranslation();
@@ -1001,5 +991,17 @@ const styles = StyleSheet.create({
     paddingTop: 12,
   },
 });
+
+// PERF2 — une rangee factice pour l onglet renforts : une View avec son
+// propre fond, jamais du texte ni une vraie rangee (SkeletonLoader rend ses
+// enfants NUS avant onLayout — du contenu factice ferait un eclair de faux).
+// Declaree APRES le composant (perfectionist/sort-modules) : une declaration
+// de fonction est hissee, l usage plus haut est sain.
+function SkeletonRow() {
+  const { Colors } = useTheme();
+  return (
+    <View style={{ backgroundColor: Colors.primary700, borderRadius: 12, height: 64 }} />
+  );
+}
 
 export default MatchCallUpSelection;

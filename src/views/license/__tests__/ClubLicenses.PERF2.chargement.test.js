@@ -192,8 +192,10 @@ const monter = ({ etats = {}, params = {} }) => {
     refetchUserData: jest.fn(),
   };
   mockCampagneCourante = etats.campagneCourante || requeteVide();
-  mockCampagnes = etats.campagnes || { data: { data: [CAMPAGNE] }, isError: false, isLoading: false };
-  mockCampagneChoisie = etats.campagneChoisie || { data: CAMPAGNE, isError: false, isLoading: false };
+  mockCampagnes = etats.campagnes
+    || { data: { data: [CAMPAGNE] }, isError: false, isLoading: false };
+  mockCampagneChoisie = etats.campagneChoisie
+    || { data: CAMPAGNE, isError: false, isLoading: false };
   mockTableauDeBord = etats.tableauDeBord || requeteVide();
   mockAffectations = etats.affectations || requeteVide();
   mockValidations = etats.validations || requeteVide();
