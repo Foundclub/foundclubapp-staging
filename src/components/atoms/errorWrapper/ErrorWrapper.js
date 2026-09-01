@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Text, View } from 'react-native';
 // Hooks
 import useTheme from '@/theme/themeContext';
@@ -31,6 +31,26 @@ function ErrorWrapper({
   } = useTheme();
 
   const [childrenDimensions, setChildrenDimensions] = useState({ height: 0, width: 0 });
+
+  // PERF3 — anti-rebond : UN geste ici couvre les 30 écrans qui passent par
+  // WithDataWrapper. Sans lui, chaque appui relançait TOUTES les requêtes en
+  // échec — marteler le bouton multipliait la demande quand le serveur rame.
+  // Le ref garde le verrou SYNCHRONE (deux appuis dans la même frame lisent le
+  // même état React) ; le state, lui, désactive visuellement le bouton.
+  const retryInFlightRef = useRef(false);
+  const [isRetrying, setIsRetrying] = useState(false);
+
+  const handleRetryPress = async () => {
+    if (retryInFlightRef.current || typeof onRetry !== 'function') return;
+    retryInFlightRef.current = true;
+    setIsRetrying(true);
+    try {
+      await onRetry();
+    } finally {
+      retryInFlightRef.current = false;
+      setIsRetrying(false);
+    }
+  };
 
   /**
    * Handle children layout event.
@@ -74,8 +94,9 @@ function ErrorWrapper({
           {onRetry ? (
             <View style={Spaces.marginTop[12]}>
               <Button
+                isLoading={isRetrying}
                 isOption
-                onPress={onRetry}
+                onPress={handleRetryPress}
                 size="sm"
                 title={retryLabel}
               />

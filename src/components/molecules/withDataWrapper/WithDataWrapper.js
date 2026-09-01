@@ -56,12 +56,20 @@ function WithDataWrapper({
 }) {
   const queryClient = useContext(QueryClientContext);
 
-  const retryFailedQueries = useCallback(() => {
-    queryClient?.refetchQueries({ predicate: isFailedQuery });
-  }, [queryClient]);
+  // PERF3 — le balayage est BORNÉ aux requêtes OBSERVÉES (`type: 'active'`) :
+  // sans ce filtre, une requête en échec dont l'écran est démonté (gcTime 5 min)
+  // repartait aussi — le seul balayage non borné de l'app, déclenché par le
+  // bouton « Réessayer ». La promesse est rendue à ErrorWrapper, qui grise le
+  // bouton tant que la relance est en vol (anti-rebond).
+  const retryFailedQueries = useCallback(
+    () => queryClient?.refetchQueries({ predicate: isFailedQuery, type: 'active' }),
+    [queryClient],
+  );
 
   const hasFailedQuery = Boolean(
-    queryClient?.getQueryCache().getAll().some(isFailedQuery),
+    queryClient?.getQueryCache()
+      .findAll({ predicate: isFailedQuery, type: 'active' })
+      .length,
   );
   const handleRetry = onRetry || (hasFailedQuery ? retryFailedQueries : undefined);
 
