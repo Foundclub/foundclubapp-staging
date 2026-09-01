@@ -26,6 +26,7 @@ import useTheme from '@/theme/themeContext';
 import MarqueeText from '@/components/atoms/marqueeText/MarqueeText';
 import GlyphIcon from '@/components/atoms/glyphIcon/GlyphIcon';
 import Button from '@/components/atoms/button/Button';
+import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
 import { RouteNames } from '@/navigation/routeNames';
@@ -203,6 +204,51 @@ function AssignmentCard({ assignment, onPress }) {
 }
 
 /**
+ * PERF2 — LE CHARGEMENT MONTRE LA FORME DE LA LISTE, IL N AFFIRME RIEN.
+ *
+ * 🧨 Avant : `LicenseEmptyState` pendant `isLoading` — une carte `muted`
+ * visuellement IDENTIQUE a « tu n as aucune cotisation ». L utilisateur
+ * croyait n avoir rien, le temps d un aller-retour reseau.
+ *
+ * Des `View` avec leur propre fond, JAMAIS du texte ni des cartes reelles :
+ * tant que `SkeletonLoader` n a pas mesure son cadre, il rend ses enfants
+ * NUS — du texte factice ferait un eclair de faux contenu.
+ * @returns {import('react').ReactElement}
+ */
+function ListSkeleton() {
+  const { Colors } = useTheme();
+  const bloc = { backgroundColor: Colors.primary700, borderRadius: memberRadius.card };
+
+  return (
+    <View style={{ gap: memberSpacing.section }} testID="my-licenses-skeleton">
+      <WithDataWrapper isLoading wrapperStyle={[{ gap: memberSpacing.section }]}>
+        {/* La carte de total, puis un groupe : ecusson + nom, et deux cartes. */}
+        <View style={[bloc, { height: 104 }]} />
+        <View style={{ gap: memberSpacing.rowGap }}>
+          <View style={{ alignItems: 'center', flexDirection: 'row', gap: 8 }}>
+            <View style={{
+              backgroundColor: Colors.primary700,
+              borderRadius: memberRadius.pill,
+              height: 28,
+              width: 28,
+            }}
+            />
+            <View style={{
+              backgroundColor: Colors.primary700, borderRadius: 6, height: 12, width: '40%',
+            }}
+            />
+          </View>
+          <View style={{ gap: memberSpacing.cardGap }}>
+            <View style={[bloc, { height: 136 }]} />
+            <View style={[bloc, { height: 136 }]} />
+          </View>
+        </View>
+      </WithDataWrapper>
+    </View>
+  );
+}
+
+/**
  * ECRAN 1 — « Mes cotisations ».
  * @param {object} props
  * @param {any} props.navigation
@@ -237,10 +283,7 @@ function MyLicenses({ navigation }) {
     return (
       <ScreenContainer bottomInsetMode="tab-scene" withHeaderPadding>
         <MemberTopBar onBack={goBack} title="Mes cotisations" />
-        <LicenseEmptyState
-          description="On récupère tes cotisations."
-          title="Chargement"
-        />
+        <ListSkeleton />
       </ScreenContainer>
     );
   }
