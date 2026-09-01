@@ -1,9 +1,12 @@
 import { QueryObserver } from '@tanstack/react-query';
 
 import { BOOT_REQUEST_BLOCKED_CODE } from '@/services/bootRequestGuard';
+
 import { buildRequestTimeoutAbandon } from '@/utils/errors/apiError';
 
-import createFoundClubQueryClient, { shouldRetryQuery, shouldSkipMutationErrorAlert } from './queryClient';
+// Le même alias qu'App.js:32 : importer le défaut sous son nom exporté déclenche
+// import/no-named-as-default — c'est la raison d'être de ce nom.
+import buildFoundClubQueryClient, { shouldRetryQuery, shouldSkipMutationErrorAlert } from './queryClient';
 
 // L'intercepteur de réponse des clients HTTP (client.native.js:83, client.web.js:81)
 // REJETTE la charge déballée `error.response.data.error`, pas l'erreur axios.
@@ -114,7 +117,7 @@ describe('PERF3 — une lecture qui abandonne ne repart PAS au réseau', () => {
    * @returns {Promise<number>} Le nombre d'invocations du queryFn.
    */
   const countNetworkCalls = async (abandonError) => {
-    const queryClient = createFoundClubQueryClient();
+    const queryClient = buildFoundClubQueryClient();
     const queryFn = jest.fn().mockRejectedValue(abandonError);
     const observer = new QueryObserver(queryClient, {
       queryFn,

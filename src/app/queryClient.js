@@ -10,6 +10,7 @@ import {
   BOOT_REQUEST_BLOCKED_CODE,
   BOOT_REQUEST_NO_SESSION_CODE,
 } from '@/services/bootRequestGuard';
+
 import { REQUEST_TIMEOUT_ABANDON_CODE } from '@/utils/errors/apiError';
 
 // Les intercepteurs de réponse (client.native.js / client.web.js) rejettent la

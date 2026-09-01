@@ -42,15 +42,23 @@ const adapterTimeoutError = (code, message) => Object.assign(
   { code, isAxiosError: true },
 );
 
+// no-param-reassign interdit d'écrire sur `client.defaults` quand `client` est
+// un paramètre du describe.each : on résout le client par son nom, localement.
+const CLIENTS = {
+  'client.native': clientNative,
+  'client.web': clientWeb,
+};
+
 // PERF3 — avant ce lot, un abandon de 15 s était rejeté en CHAÎNE NUE
 // ('Request timeout - please retry.') : sans status ni code, la politique de
 // reprise (queryClient.js) le retentait comme une panne réseau — 48 s d'attente
 // et 3 requêtes, précisément quand le serveur rame. Le site web compile les
 // mêmes sources : les DEUX intercepteurs doivent rester strictement symétriques.
-describe.each([
-  ['client.native', clientNative],
-  ['client.web', clientWeb],
-])('%s : un abandon est rejeté en OBJET triable, plus jamais en chaîne nue', (_name, client) => {
+describe.each(
+  Object.keys(CLIENTS),
+)('%s : un abandon est rejeté en OBJET triable, plus jamais en chaîne nue', (clientName) => {
+  const client = CLIENTS[clientName];
+
   beforeEach(() => {
     resetBootRequestGuard();
     jest.spyOn(console, 'warn').mockImplementation(() => {});
