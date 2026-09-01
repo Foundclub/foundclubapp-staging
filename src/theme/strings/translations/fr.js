@@ -3618,6 +3618,11 @@ export default {
       actions: {
         changeOffer: 'Changer d\'offre',
         compareOffers: 'Comparer les offres',
+        manageWeb: 'Gérer ou résilier mon abonnement',
+        manageWebErrorBody: 'La gestion en ligne de cet abonnement n\'est pas disponible'
+          + ' pour le moment. Écrivez-nous et nous nous en occupons.',
+        manageWebErrorTitle: 'Gestion indisponible',
+        manageWebHint: 'Site de paiement',
         restore: 'Restaurer mes achats',
         viewClub: 'Voir mon club',
         viewClubHint: 'Demandes · certification',

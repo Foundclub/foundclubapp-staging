@@ -9,6 +9,7 @@ import {
 import {
   changeSubscriptionPlan,
   createStripeWebCheckoutSession,
+  openSubscriptionBillingPortal,
   restoreSubscriptionPurchases,
   validateSubscriptionPurchase,
 } from '@/services/subscription/subscriptionService';
@@ -16,6 +17,7 @@ import {
 import {
   getActiveSubscriptionPurchaseRail,
   isSubscriptionPurchaseAvailable,
+  openSubscriptionManagementPortal,
   performSubscriptionPlanChange,
   performSubscriptionPurchase,
   restoreAllSubscriptionPurchases,
@@ -47,6 +49,7 @@ jest.mock('@/domains/subscription/subscriptionRevenueCat', () => ({
 jest.mock('@/services/subscription/subscriptionService', () => ({
   changeSubscriptionPlan: jest.fn(),
   createStripeWebCheckoutSession: jest.fn(),
+  openSubscriptionBillingPortal: jest.fn(),
   restoreSubscriptionPurchases: jest.fn(),
   validateSubscriptionPurchase: jest.fn(),
 }));
@@ -760,5 +763,61 @@ describe('subscriptionPurchaseRail', () => {
       expect(restoreRevenueCatPurchases).not.toHaveBeenCalled();
       expect(restoreSubscriptionPurchases).toHaveBeenCalledTimes(2);
     });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// ABO-FIX / R3 — LE PORTAIL DE RESILIATION.
+//
+// Avant ce lot, un abonne pris sur le site n'avait AUCUNE porte de sortie (0
+// occurrence de `billing_portal` dans les 3 depots), pendant que l'app lui
+// promet « resiliable a tout moment ».
+//
+// LE DANGER N'EST PAS LE PORTAIL, c'est ce qui se passe quand il MANQUE : il
+// n'y a AUCUNE cle Stripe en production. Le serveur repond alors 200 avec
+// `available: false`, et cette fonction doit rendre un verdict lisible SANS
+// ouvrir quoi que ce soit — jamais une exception, jamais un onglet vide.
+// ---------------------------------------------------------------------------
+describe('openSubscriptionManagementPortal', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it('ouvre le portail Stripe quand le serveur en rend l\'adresse', async () => {
+    openSubscriptionBillingPortal.mockResolvedValue({
+      available: true,
+      reason: 'ok',
+      url: 'https://billing.stripe.com/session/abc',
+    });
+
+    const resultat = await openSubscriptionManagementPortal();
+
+    expect(resultat).toEqual({ opened: true, reason: 'ok' });
+    expect(Linking.openURL).toHaveBeenCalledWith('https://billing.stripe.com/session/abc');
+  });
+
+  it('n\'ouvre RIEN quand le portail est indisponible, et dit pourquoi', async () => {
+    // Le cas reel d'aujourd'hui : aucune cle Stripe posee en production.
+    openSubscriptionBillingPortal.mockResolvedValue({
+      available: false,
+      reason: 'stripe-not-configured',
+      url: null,
+    });
+
+    const resultat = await openSubscriptionManagementPortal();
+
+    expect(resultat).toEqual({ opened: false, reason: 'stripe-not-configured' });
+    expect(Linking.openURL).not.toHaveBeenCalled();
+  });
+
+  it('n\'ouvre RIEN sur une adresse vide, meme si le serveur dit disponible', async () => {
+    // Ceinture et bretelles : `available: true` sans URL ouvrirait un onglet
+    // vide, ce qui ressemble a une panne cote utilisateur.
+    openSubscriptionBillingPortal.mockResolvedValue({ available: true, reason: 'ok', url: '' });
+
+    const resultat = await openSubscriptionManagementPortal();
+
+    expect(resultat.opened).toBe(false);
+    expect(Linking.openURL).not.toHaveBeenCalled();
   });
 });

@@ -19,6 +19,7 @@ import {
   changeSubscriptionPlan,
   createStripeWebCheckoutSession,
   increaseSubscriptionLicenseeCount,
+  openSubscriptionBillingPortal,
   restoreSubscriptionPurchases,
   validateSubscriptionPurchase,
 } from '@/services/subscription/subscriptionService';
@@ -383,4 +384,29 @@ export const restoreAllSubscriptionPurchases = async () => {
     }
   }
   return restoreSubscriptionPurchases({});
+};
+
+/**
+ * ABO-FIX / R3 — OUVRIR LE PORTAIL DE RESILIATION D UN ABONNEMENT WEB.
+ *
+ * ELLE VIT ICI, ET PAS DANS L'ECRAN, pour deux raisons. La premiere est le
+ * contrat de ce module : un seul point d'entree pour tout ce qui touche a
+ * l'argent d'un abonnement — resilier en fait partie. La seconde est
+ * mecanique : un import de `subscriptionService` de plus dans un ecran tire
+ * AsyncStorage et fait tomber la SUITE ENTIERE de ses temoins voisins. Ce
+ * module, lui, importe deja le service ET `Linking`.
+ *
+ * ⚠️ LE SERVEUR REPOND 200 MEME QUAND LE PORTAIL EST INDISPONIBLE : il n'y a
+ * AUCUNE cle Stripe en production aujourd hui. On lit donc `available`, on ne
+ * suppose pas, et on rend un verdict que l ecran sait raconter.
+ * @returns {Promise<{opened: boolean, reason: string}>} Ce qui s est passe.
+ */
+export const openSubscriptionManagementPortal = async () => {
+  const portal = await openSubscriptionBillingPortal();
+  const url = String(portal?.url || '').trim();
+  if (!portal?.available || !url) {
+    return { opened: false, reason: String(portal?.reason || 'unavailable') };
+  }
+  await Linking.openURL(url);
+  return { opened: true, reason: 'ok' };
 };
