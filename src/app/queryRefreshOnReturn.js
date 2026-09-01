@@ -3,6 +3,8 @@ import { AppState } from 'react-native';
 
 import { AFTER_ACTION_CACHES } from '@/domains/refresh/afterAction';
 
+import { reviveSharedSocket } from '@/services/socket/socketManager';
+
 import { createLogger } from '@/utils/logger/logger';
 
 /**
@@ -243,6 +245,13 @@ export const startQueryRefreshBridge = (queryClient, deps = {}) => {
       focus.setFocused(nextState === 'active');
 
       if (!isReturnToForeground(previousState, nextState)) return;
+
+      // PERF1 - la socket d'abord, AVANT le retour anticipe hors-ligne : un
+      // redemarrage serveur fait justement passer online a false, et c'est
+      // exactement le cas ou socket.io a abandonne (reconnect_failed, aucun
+      // minuteur replanifie). Pas de verrou anti-rafale ici : le reveil est
+      // deja un no-op quand la socket est connectee ou absente.
+      reviveSharedSocket();
 
       // Revenir dans l'app est aussi la meilleure occasion de sortir d'un « hors
       // ligne » deduit a tort : on se redeclare joignable avant de relire.
