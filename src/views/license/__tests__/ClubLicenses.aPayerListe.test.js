@@ -38,6 +38,14 @@ const mockMutationFigee = {
   mutateAsync: jest.fn(),
 };
 
+// PERF2 - l ecran importe desormais WithDataWrapper -> SkeletonLoader, qui
+// tire MaskedView / LinearGradient / Reanimated : hors sujet dans cette
+// suite. Meme mock que les suites EventPublishedShowcase.
+jest.mock(
+  '@/components/atoms/skeletonLoader/SkeletonLoader',
+  () => function SkeletonLoaderMock() { return null; },
+);
+
 jest.mock('@tanstack/react-query', () => ({ useMutation: () => mockMutationFigee }));
 
 // ⚠️ `FlatList` planifie un `Batchinator` qui reveille `InteractionManager` APRES
