@@ -24,6 +24,16 @@ const KIND_OPTIONS = [
   { label: 'Externe', value: 'external_invited' },
 ];
 
+// ⚠️ EVEDIT-5 — ces valeurs par defaut DOIVENT etre des constantes de module.
+// Un litteral en parametre par defaut est recree a chaque rendu ; comme
+// `normalizedAllowedKinds` puis les effets externes en dependent, une identite
+// neuve a chaque rendu relance l'effet apres CHAQUE rendu, dont le setState
+// relance un rendu : boucle infinie (« Maximum update depth »), fil JS sature,
+// formulaire d'edition fige ~80 s (observe a l'emulateur le 01/09).
+const DEFAULT_ALLOWED_AUDIENCE_KINDS = ['internal_invited', 'external_invited'];
+const AUCUNE_EQUIPE_DISPONIBLE = [];
+const AUCUNE_AUDIENCE = [];
+
 const SELECTION_OPTIONS = [
   { label: 'Tous', value: 'ALL_MEMBERS' },
   { label: 'Choisis', value: 'SELECTED_MEMBERS' },
@@ -79,15 +89,15 @@ const getAudienceStatusLabel = (status) => {
 };
 
 function EventTeamAudiencesEditor({
-  allowedAudienceKinds = ['internal_invited', 'external_invited'],
-  availableTeams = [],
+  allowedAudienceKinds = DEFAULT_ALLOWED_AUDIENCE_KINDS,
+  availableTeams = AUCUNE_EQUIPE_DISPONIBLE,
   clubId = '',
   currentTeamId = '',
   editable = true,
   emptyStateText = 'Aucune invitation avancée pour le moment.',
   onChange,
   title = "Invitations d'équipe",
-  value = [],
+  value = AUCUNE_AUDIENCE,
 }) {
   const {
     Alignments, ApplicationStyle, Colors, Fonts, Spaces,
@@ -106,7 +116,7 @@ function EventTeamAudiencesEditor({
     const nextKinds = Array.isArray(allowedAudienceKinds)
       ? allowedAudienceKinds.filter((kind) => kind === 'internal_invited' || kind === 'external_invited')
       : [];
-    return nextKinds.length ? nextKinds : ['internal_invited', 'external_invited'];
+    return nextKinds.length ? nextKinds : DEFAULT_ALLOWED_AUDIENCE_KINDS;
   }, [allowedAudienceKinds]);
   const defaultAudienceKind = normalizedAllowedKinds[0] || 'internal_invited';
   const [draft, setDraft] = useState(() => createEmptyDraft(defaultAudienceKind));
@@ -171,14 +181,17 @@ function EventTeamAudiencesEditor({
   useEffect(() => {
     let cancelled = false;
     const run = async () => {
+      // EVEDIT-5 : vider en PRESERVANT l'identite quand c'est deja vide —
+      // un `[]` neuf a chaque passage relance un rendu, donc l'effet, donc
+      // la boucle, des qu'une dependance a une identite instable.
       if (draft.audienceKind !== 'external_invited' || !normalizedAllowedKinds.includes('external_invited')) {
-        setExternalClubs([]);
+        setExternalClubs((prev) => (prev.length ? [] : prev));
         return;
       }
 
       const query = String(clubSearch || '').trim();
       if (query.length < 2) {
-        setExternalClubs([]);
+        setExternalClubs((prev) => (prev.length ? [] : prev));
         return;
       }
 
@@ -210,14 +223,16 @@ function EventTeamAudiencesEditor({
   useEffect(() => {
     let cancelled = false;
     const run = async () => {
+      // EVEDIT-5 : meme regle que l'effet des clubs — identite preservee,
+      // sinon `setExternalTeams([])` relance le rendu qui relance l'effet.
       if (draft.audienceKind !== 'external_invited' || !normalizedAllowedKinds.includes('external_invited')) {
-        setExternalTeams([]);
+        setExternalTeams((prev) => (prev.length ? [] : prev));
         return;
       }
 
       const selectedClub = externalClubs.find((club) => getDocumentId(club) === getDocumentId(draft.clubId));
       if (!selectedClub?.documentId) {
-        setExternalTeams([]);
+        setExternalTeams((prev) => (prev.length ? [] : prev));
         return;
       }
 
