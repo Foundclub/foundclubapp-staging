@@ -30,10 +30,29 @@ const notifyConnectionSubscribers = (isConnected) => {
   });
 };
 
+/**
+ * PERF1 - l'abandon de reconnexion est un evenement de MANAGER, pas de socket.
+ *
+ * Apres `reconnectionAttempts: 5`, le Manager emet `reconnect_failed`, met
+ * `_reconnecting = false` et ne replanifie AUCUN minuteur (socket.io-client
+ * `manager.js:365-369`). Et la socket ne relaie que `open/packet/error/close`
+ * (`socket.js:152-162`) : un `socket.on('reconnect_failed')` ne se
+ * declencherait JAMAIS. D'ou l'ecoute sur `socket.io`, et le reveil dedie
+ * `reviveSharedSocket` branche sur le retour au premier plan.
+ * @returns {void}
+ */
+const handleManagerReconnectFailed = () => {
+  socketLogger.warn('Reconnection abandoned after max attempts');
+  notifyConnectionSubscribers(false);
+};
+
 const removeInternalListeners = (socket) => {
   socket.off('connect');
   socket.off('connect_error');
   socket.off('disconnect');
+  // L'ecouteur du Manager se retire PAR REFERENCE : un off par nom seul
+  // retirerait aussi tout autre ecouteur pose sur cet evenement.
+  socket.io?.off?.('reconnect_failed', handleManagerReconnectFailed);
 };
 
 const attachInternalListeners = (socket) => {
@@ -42,8 +61,10 @@ const attachInternalListeners = (socket) => {
     notifyConnectionSubscribers(true);
   });
 
-  socket.on('disconnect', () => {
-    socketLogger.debug('Disconnected');
+  // La raison repond a « le serveur ferme-t-il en io server disconnect pendant
+  // un deploiement ? » - si oui, socket.io ne retente meme pas les 5 fois.
+  socket.on('disconnect', (reason) => {
+    socketLogger.debug('Disconnected', { reason });
     notifyConnectionSubscribers(false);
   });
 
@@ -51,6 +72,11 @@ const attachInternalListeners = (socket) => {
     socketLogger.warn('Connection error', { message: error?.message });
     notifyConnectionSubscribers(false);
   });
+
+  // Se (re)pose PAR SOCKET : un changement de jeton construit un Manager NEUF
+  // (socket.io-client index.js:31-39), un ecouteur pose une fois au chargement
+  // du module serait perdu.
+  socket.io?.on?.('reconnect_failed', handleManagerReconnectFailed);
 };
 
 /**
@@ -113,6 +139,30 @@ export const connectSharedSocket = (token) => {
   sharedToken = token;
   attachInternalListeners(sharedSocket);
   return sharedSocket;
+};
+
+/**
+ * PERF1 - reveille une socket abandonnee par socket.io.
+ *
+ * Apres la 5e tentative (~34 s a ~134 s selon le timeout par tentative), la
+ * socket reste morte pour toujours alors que le serveur met 60 a 150 s a
+ * redemarrer. `connectSharedSocket(memeJeton)` ne la ranime pas (elle est
+ * rendue telle quelle) : ce reveil est le seul chemin, et il est branche sur
+ * le retour au premier plan (`queryRefreshOnReturn`) - le seul moment utile,
+ * iOS suspendant les minuteurs en arriere-plan.
+ *
+ * Sans danger si une reconnexion est encore en vol : `socket.connect()` ne
+ * rouvre pas quand le Manager est deja en `_reconnecting` (socket.io-client
+ * `socket.js:193-198`).
+ * @returns {boolean} Vrai si un reveil a ete tente, faux sinon.
+ */
+export const reviveSharedSocket = () => {
+  if (!sharedSocket || sharedSocket.connected) {
+    return false;
+  }
+  socketLogger.debug('Reviving abandoned socket');
+  sharedSocket.connect();
+  return true;
 };
 
 export const disconnectSharedSocket = () => {
