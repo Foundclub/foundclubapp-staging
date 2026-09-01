@@ -19,6 +19,7 @@ import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 import ClubSelector from '@/components/molecules/clubSelector/ClubSelector';
 import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 import SegmentedControl from '@/components/molecules/segmentedControl/SegmentedControl';
+import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
 import { RouteNames } from '@/navigation/routeNames';
@@ -1030,6 +1031,23 @@ function SetupStep({ description, index, title }) {
         </View>
       </View>
     </View>
+  );
+}
+
+/**
+ * PERF2 — un bloc factice de chargement : une `View` avec son propre fond.
+ *
+ * JAMAIS du texte ni une vraie carte : tant que `SkeletonLoader` n a pas
+ * mesure son cadre, il rend ses enfants NUS — du contenu factice ferait un
+ * eclair de faux contenu. Le rayon 16 est celui des cartes du pack.
+ * @param {object} props
+ * @param {number} props.height
+ * @returns {import('react').ReactElement}
+ */
+function SkeletonBlock({ height }) {
+  const { Colors } = useTheme();
+  return (
+    <View style={{ backgroundColor: Colors.primary700, borderRadius: 16, height }} />
   );
 }
 
@@ -2322,7 +2340,14 @@ function ClubLicenses({ navigation, route }) {
                   </View>
                 ) : null}
                 {assignmentsQuery.isLoading ? (
-                  <Text style={[Fonts.p2, Fonts.neutral200]}>Chargement des membres...</Text>
+                  // PERF2 — la FORME des lignes de membres, pas une phrase.
+                  <View testID="club-licenses-members-skeleton">
+                    <WithDataWrapper isLoading wrapperStyle={[Spaces.gap[12]]}>
+                      <SkeletonBlock height={64} />
+                      <SkeletonBlock height={64} />
+                      <SkeletonBlock height={64} />
+                    </WithDataWrapper>
+                  </View>
                 ) : null}
                 {!assignmentsQuery.isLoading && memberListSummary && (search.trim() || activeMemberFilterPills.length) ? (
                   <Text style={[Fonts.p3, Fonts.neutral200]}>{memberListSummary}</Text>
@@ -2403,7 +2428,15 @@ function ClubLicenses({ navigation, route }) {
                 title="Paiements à valider maintenant"
               >
                 <View style={Spaces.gap[12]}>
-                  {paymentReviewsQuery.isLoading ? <Text style={[Fonts.p2, Fonts.neutral200]}>Chargement des validations...</Text> : null}
+                  {paymentReviewsQuery.isLoading ? (
+                    // PERF2 — la FORME des cartes a valider, pas une phrase.
+                    <View testID="club-licenses-reviews-skeleton">
+                      <WithDataWrapper isLoading wrapperStyle={[Spaces.gap[12]]}>
+                        <SkeletonBlock height={76} />
+                        <SkeletonBlock height={76} />
+                      </WithDataWrapper>
+                    </View>
+                  ) : null}
                   {!paymentReviewsQuery.isLoading && paymentReviewAssignments.length ? paymentReviewAssignments.slice(0, 5).map((item) => (
                     <AssignmentSignalCard
                       helper={`${(item?.payments || []).filter((payment) => payment?.status === 'manual_review').length} déclaration(s) - ${money(sumPaymentReviewCents(item), item?.currency || campaign?.currency || 'EUR')}`}
@@ -2709,10 +2742,15 @@ function ClubLicenses({ navigation, route }) {
 
   const renderStaticContent = () => {
     if (isLoading) {
+      // PERF2 — les deux vagues de requetes n affichent plus deux phrases
+      // nues : la FORME du tableau de bord qui arrive (un en-tete, des cartes).
       return (
-        <View style={[Spaces.gap[12], { marginTop: 8 }]}>
-          <Text style={[Fonts.p1Bold, Fonts.neutral00]}>Chargement des cotisations</Text>
-          <Text style={[Fonts.p2, Fonts.neutral200]}>On vérifie la campagne et les cotisations déjà générées.</Text>
+        <View style={{ marginTop: 8 }} testID="club-licenses-skeleton">
+          <WithDataWrapper isLoading wrapperStyle={[Spaces.gap[12]]}>
+            <SkeletonBlock height={120} />
+            <SkeletonBlock height={84} />
+            <SkeletonBlock height={84} />
+          </WithDataWrapper>
         </View>
       );
     }

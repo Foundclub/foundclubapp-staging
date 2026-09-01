@@ -29,6 +29,7 @@ import HeaderBackButton from '@/components/atoms/headerBackButton/HeaderBackButt
 import Tag from '@/components/atoms/tag/Tag';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
+import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
 import { RouteNames } from '@/navigation/routeNames';
@@ -117,6 +118,16 @@ const normalizePlayer = (/** @type {any} */ player, /** @type {any} */ extra = {
   };
 };
 
+// PERF2 — une rangee factice pour l onglet renforts : une View avec son
+// propre fond, jamais du texte ni une vraie rangee (SkeletonLoader rend ses
+// enfants NUS avant onLayout — du contenu factice ferait un eclair de faux).
+function SkeletonRow() {
+  const { Colors } = useTheme();
+  return (
+    <View style={{ backgroundColor: Colors.primary700, borderRadius: 12, height: 64 }} />
+  );
+}
+
 function MatchCallUpSelection() {
   const { Colors, Fonts } = useTheme();
   const { t } = useTranslation();
@@ -163,7 +174,9 @@ function MatchCallUpSelection() {
 
   // Les renforts : les AUTRES equipes du club, avec leurs joueurs. C'est la
   // seule requete neuve de l'ecran, et elle ne part que si le club est connu.
-  const { data: clubTeamsPages } = useGetTeams(
+  // PERF2 — `isLoading` reste false sur une requete desactivee (pas de clubId) :
+  // le squelette de l'onglet renforts ne peut pas rester allume pour toujours.
+  const { data: clubTeamsPages, isLoading: isClubTeamsLoading } = useGetTeams(
     { clubId, pageSize: 50 },
     { enabled: Boolean(clubId) },
   );
@@ -718,9 +731,24 @@ function MatchCallUpSelection() {
             {renderSectionTitle(t('matchCallUp.selection.sections.reinforcements', {
               count: reinforcementPlayers.length,
             }))}
-            {reinforcementPlayers.length > 0
+            {isClubTeamsLoading ? (
+              // PERF2 — tant que la requete des equipes vole, la FORME des
+              // rangees qui arrivent. Avant, l onglet affichait le message
+              // d ABSENCE (« Aucune autre équipe ») pendant le chargement.
+              <View testID="matchcallup-reinforcements-skeleton">
+                <WithDataWrapper isLoading wrapperStyle={[{ gap: 8 }]}>
+                  <SkeletonRow />
+                  <SkeletonRow />
+                  <SkeletonRow />
+                </WithDataWrapper>
+              </View>
+            ) : null}
+            {!isClubTeamsLoading && reinforcementPlayers.length > 0
               ? reinforcementPlayers.map(renderPlayerRow)
-              : renderEmpty(t('matchCallUp.selection.empty.reinforcements'))}
+              : null}
+            {!isClubTeamsLoading && reinforcementPlayers.length === 0
+              ? renderEmpty(t('matchCallUp.selection.empty.reinforcements'))
+              : null}
           </>
         ) : null}
 

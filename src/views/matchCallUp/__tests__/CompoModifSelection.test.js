@@ -39,6 +39,14 @@ let mockClubTeams;
 /** @type {any} */
 let mockAlert;
 
+// PERF2 - l ecran importe desormais WithDataWrapper -> SkeletonLoader, qui
+// tire MaskedView / LinearGradient / Reanimated : hors sujet dans cette
+// suite. Meme mock que les suites EventPublishedShowcase.
+jest.mock(
+  '@/components/atoms/skeletonLoader/SkeletonLoader',
+  () => function SkeletonLoaderMock() { return null; },
+);
+
 // 🧨 L'objet `navigation` est FIGE : le recreer a chaque rendu relance les
 // effets qui en dependent, et Jest part en boucle infinie SANS message utile.
 const mockNavigation = {

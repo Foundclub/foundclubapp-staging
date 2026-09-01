@@ -63,6 +63,14 @@ jest.mock('react-native-svg', () => {
   };
 });
 
+// PERF2 — l ecran importe desormais WithDataWrapper → SkeletonLoader, qui tire
+// MaskedView / LinearGradient / Reanimated : hors sujet ici (cette suite ne
+// monte que des fils charges). Meme mock que les suites EventPublishedShowcase.
+jest.mock(
+  '@/components/atoms/skeletonLoader/SkeletonLoader',
+  () => function SkeletonLoaderMock() { return null; },
+);
+
 // Sans cette doublure la SUITE ENTIERE meurt au CHARGEMENT : `client` lit
 // `.env`, qui est gitignore donc absent de toute copie de travail.
 jest.mock('@/services/client', () => ({

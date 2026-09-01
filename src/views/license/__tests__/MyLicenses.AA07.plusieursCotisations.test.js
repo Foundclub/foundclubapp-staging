@@ -62,6 +62,14 @@ jest.mock('@/components/templates/ScreenContainer', () => function ScreenMock(
   return children;
 });
 
+// PERF2 — l ecran importe desormais WithDataWrapper → SkeletonLoader, qui tire
+// MaskedView / LinearGradient / Reanimated : hors sujet ici (cette suite ne
+// monte que des etats charges). Meme mock que les suites EventPublishedShowcase.
+jest.mock(
+  '@/components/atoms/skeletonLoader/SkeletonLoader',
+  () => function SkeletonLoaderMock() { return null; },
+);
+
 const cotisation = ({
   campaign, club, documentId, status,
 }) => ({

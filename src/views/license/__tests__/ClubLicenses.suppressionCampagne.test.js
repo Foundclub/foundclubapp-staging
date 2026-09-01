@@ -40,6 +40,14 @@ const mockInsetsFiges = {
   bottom: 0, left: 0, right: 0, top: 0,
 };
 
+// PERF2 - l ecran importe desormais WithDataWrapper -> SkeletonLoader, qui
+// tire MaskedView / LinearGradient / Reanimated : hors sujet dans cette
+// suite. Meme mock que les suites EventPublishedShowcase.
+jest.mock(
+  '@/components/atoms/skeletonLoader/SkeletonLoader',
+  () => function SkeletonLoaderMock() { return null; },
+);
+
 jest.mock('@tanstack/react-query', () => ({
   useMutation: () => mockMutationFigee,
 }));
