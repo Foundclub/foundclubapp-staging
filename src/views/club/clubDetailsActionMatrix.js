@@ -37,12 +37,22 @@ export const canCreateTeamInClub = ({
  *
  * 🎯 Cette regle EXISTE DEJA cote serveur, et elle reconnait le dirigeant depuis
  * U03/D4 (`canClaimClubWithoutManager`). Elle etait inatteignable pour une
- * raison mesurable : `canJoinClub` (useAuth.js:626) ne vaut vrai que pour un
- * ENTRAINEUR, donc la matrice n allume pour un dirigeant que
- * `showEmptyClubClaimAction` — le bouton qui envoie une REVENDICATION. Or
- * l affiliation d office exige `type: 'join'`
- * (`club-membership-request.ts:665`) : le seul bouton qu il voyait etait le seul
- * qui ne pouvait pas l affilier.
+ * raison mesurable : `canJoinClub` ne valait vrai que pour un ENTRAINEUR, donc
+ * la matrice n allumait pour un dirigeant que `showEmptyClubClaimAction` — le
+ * bouton qui envoie une REVENDICATION. Or l affiliation d office exige
+ * `type: 'join'` (`club-membership-request.ts`) : le seul bouton qu il voyait
+ * etait le seul qui ne pouvait pas l affilier.
+ *
+ * ⚠️ ETAT DEPUIS LE LOT TRIO (2026-09-01) : `canJoinClub` reconnait desormais
+ * le dirigeant (`useAuth.js`), donc `showEmptyClubClaimAction` — qui exige
+ * `!canJoinClub` — ne s allume plus que pour un compte SANS ROLE, dont
+ * `isClubStaffRole` vaut faux. Depuis `ClubDetails`, cette fonction rend donc
+ * TOUJOURS `'claim'` : sa branche `'join'` est devenue inatteignable, et le
+ * geste d affiliation d office passe maintenant par `showJoinClubAction` ->
+ * `handleAskToJoinClub`, qui appelle exactement le meme endpoint. ⛔ Elle est
+ * CONSERVEE telle quelle (ses temoins la couvrent, et la retirer serait une
+ * suppression de comportement sans rapport avec le defaut corrige) : c est un
+ * nettoyage a faire, pas une correction.
  *
  * ⛔ CE QUE CETTE FONCTION N ELARGIT PAS, ET C EST VOULU :
  *  · un club QUI A un dirigeant garde sa demande a valider — `ownerCount === 0`
