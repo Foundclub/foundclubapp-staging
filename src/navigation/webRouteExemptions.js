@@ -106,7 +106,8 @@ const MOBILE_ONLY_SCREENS = {
   // A retirer d ici DES QUE le registre web declare cet ecran, puis ajouter son
   // motif dans webRoutes.js (ex. /onboarding/parent-account-required).
   [RouteNames.UserParentAccountRequired]:
-    'TODO(web) ecran « compte parent requis » (palier 13) ecrit et monte cote app ; attend son entree dans web/src/routes/screenRegistry.tsx',
+    'TODO(web) ecran « compte parent requis » (palier 13) ecrit et monte cote app ;'
+      + ' attend son entree dans web/src/routes/screenRegistry.tsx',
 
   // --- Alias interne de navigateur ---
   // Accueil du membre connecte (HomeHub), initialRouteName de SearchStack. Depuis le

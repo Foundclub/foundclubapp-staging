@@ -208,7 +208,8 @@ export default {
     // francaise DEJA adaptee a celui qu il refuse. Cette clef est le repli :
     // elle sert quand le message du serveur ne remonte pas, et surtout elle
     // empeche le refus de retomber sur le « Accès refusé. » du statut 403.
-    MINOR_DIRECT_CHAT_FORBIDDEN: 'Discussion privée impossible : un mineur ne peut échanger en privé '
+    MINOR_DIRECT_CHAT_FORBIDDEN: 'Discussion privée impossible : un mineur ne peut '
+      + 'échanger en privé '
       + "qu'avec son parent ou les encadrants de son club.",
     RATE_LIMIT_EXCEEDED: 'Limite de taux dépassée.',
     USER_NOT_PARTICIPANT_OF_CHAT: 'L\'utilisateur·rice n\'est pas participant·e du chat.',

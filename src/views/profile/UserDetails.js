@@ -692,7 +692,10 @@ function UserDetails({ navigation, route }) {
 
     let contactFailureBody;
     if (code === 'CHAT_BLOCKED_BETWEEN_USERS') {
-      contactFailureBody = t('userBlock.errors.blocked', 'Tu as bloqué cette personne. Débloque-la pour lui réécrire.');
+      contactFailureBody = t(
+        'userBlock.errors.blocked',
+        'Tu as bloqué cette personne. Débloque-la pour lui réécrire.',
+      );
     } else if (code === 'MINOR_DIRECT_CHAT_FORBIDDEN') {
       contactFailureBody = minorRefusalMessage || t(
         'APIerrors.MINOR_DIRECT_CHAT_FORBIDDEN',
