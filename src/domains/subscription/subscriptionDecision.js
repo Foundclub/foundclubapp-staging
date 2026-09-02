@@ -567,6 +567,14 @@ const CLUB_PURCHASE_PAYWALL_KEYS = new Set([
   // `club.roles.manage` : la cle est calculee par le serveur mais jetee par ses 9
   // branches muettes (§1.3a) — elle redeviendra atteignable avec ce chantier-la.
   'club-roles-manage-required',
+  // ABO-FIX / R4 (01/09) — `dues-limit` RESTE ici, et c'est deliberé : un achat
+  // Club leve bien ce mur, dans TOUS les cas. Ce qui a change, c'est qu'il n'est
+  // plus le seul : une campagne qui ne vise QU'UNE equipe est aussi debloquee par
+  // une offre Equipe (admin/src/.../license.ts, assertDuesCampaignSubscription).
+  // ⛔ NE PAS retirer cette cle pour « corriger » l'ecart : on supprimerait le
+  // chemin d'achat direct a des gens qui l'ont aujourd'hui. L'offre reellement
+  // conseillee arrive du serveur dans `requiredPlan`, calculee sur la RESSOURCE
+  // (resolveRequiredPlans) — l'ecran l'affiche telle quelle.
   'dues-limit',
   'facility-manage-required',
   'sponsor-manage-required',
