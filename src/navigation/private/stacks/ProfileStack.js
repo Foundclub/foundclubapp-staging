@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 
 import { HistoryWizardProvider } from '@/views/historyWizard/HistoryWizardContext';
 import HistoryWizardSingle from '@/views/historyWizard/HistoryWizardSingle';
+import BlockedUsers from '@/views/profile/BlockedUsers';
 import PlayerCardScreen from '@/views/profile/PlayerCardScreen';
 import Profile from '@/views/profile/Profile';
 import ProfileEdit from '@/views/profile/ProfileEdit';
@@ -73,6 +74,16 @@ function ProfileStack() {
           options={{
             ...commonOptions,
             headerTitle: t('profile.subscription.compareHeaderTitle', 'Comparer'),
+          }}
+        />
+        {/* 🚫 BLOQUER — la porte de sortie exigee par les deux magasins :
+            voir qui l on a bloque, et le debloquer. */}
+        <Stack.Screen
+          component={BlockedUsers}
+          name={RouteNames.BlockedUsers}
+          options={{
+            ...commonOptions,
+            headerTitle: '',
           }}
         />
         <Stack.Screen

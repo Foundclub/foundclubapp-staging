@@ -4442,6 +4442,31 @@ export default {
     noData: 'Aucune demande d\'adhésion en attente',
     title: 'Demandes d\'adhésion',
   },
+  // BLOQUER (02/09) — un bloc A PART, volontairement : les lots ENFANTS et
+  // HYGIENE ajoutent au meme moment dans `userDetails` et dans `profile`.
+  // Aucune cle existante n'est touchee ici.
+  userBlock: {
+    actions: {
+      block: 'Bloquer cette personne',
+      unblock: 'Débloquer cette personne',
+    },
+    confirm: {
+      block: 'Bloquer',
+      cancel: 'Annuler',
+      message: '{{name}} ne pourra plus t’écrire ni ouvrir de discussion avec toi, et tu ne verras plus ses messages. Tu pourras le débloquer quand tu veux depuis ton profil.',
+      messageNoName: 'Cette personne ne pourra plus t’écrire ni ouvrir de discussion avec toi, et tu ne verras plus ses messages. Tu pourras la débloquer quand tu veux depuis ton profil.',
+      title: 'Bloquer cette personne ?',
+    },
+    errors: {
+      blocked: 'Tu as bloqué cette personne. Débloque-la pour lui réécrire.',
+    },
+    screen: {
+      empty: 'Tu n’as bloqué personne.',
+      hint: 'Une personne bloquée ne peut plus t’écrire, et tu ne vois plus ses messages. Les discussions de groupe et de club ne sont pas fermées.',
+      title: 'Personnes bloquées',
+      unblock: 'Débloquer',
+    },
+  },
   userDetails: {
     actions: {
       contact: 'Contacter',

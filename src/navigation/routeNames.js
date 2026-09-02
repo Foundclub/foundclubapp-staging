@@ -65,6 +65,7 @@ export const RouteNames = /** @type {const} */ ({
   AuthStackAccount: 'AuthStackAccount',
   AuthStackMessaging: 'AuthStackMessaging',
   AuthStackPlanning: 'AuthStackPlanning',
+  BlockedUsers: 'BlockedUsers',
   BookingCalendar: 'BookingCalendar',
   Chat: 'Chat',
   Club: 'Club',

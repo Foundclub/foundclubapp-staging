@@ -22,6 +22,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getUserRoleKey } from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
 import useMessaging from '@/domains/messaging/useMessaging';
+import { toBlockedUserIdSet } from '@/domains/userBlock/userBlockFilters';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -41,10 +42,16 @@ import { useGetUserById } from '@/services/auth/authQueries';
 import { useUserCurrentLicense } from '@/services/license/licenseQueries';
 import { useGetPersonalStats } from '@/services/matchStats/matchStatsQueries';
 import {
+  useBlockUser,
+  useGetMyBlockedUsers,
+  useUnblockUser,
+} from '@/services/userBlock/userBlockQueries';
+import {
   useGetMyHistories,
   useGetUserHistories,
 } from '@/services/userHistory/userHistoryQueries';
 
+import { getErrorMessage } from '@/utils/errors/displayError';
 import safeJsonParse from '@/utils/safeJsonParse';
 
 const resolveProfileStatValue = ({
@@ -396,15 +403,58 @@ function UserDetails({ navigation, route }) {
     return t('common.user', 'Utilisateur');
   }, [t, user?.firstname, user?.lastname, user?.phoneNumber, user?.username]);
 
-  const canContact = useMemo(() => {
+  const canContactByRole = useMemo(() => {
     if (!currentUser || !user || isSelfProfile) return false;
     const roleName = String(currentUser?.role?.name || '').toLowerCase();
     const coachRole = String(USER_ROLES.coach || '').toLowerCase();
     const presidentRole = String(USER_ROLES.president || '').toLowerCase();
     return roleName === coachRole || roleName === presidentRole;
   }, [USER_ROLES.coach, USER_ROLES.president, currentUser, isSelfProfile, user]);
+
+  // 🚫 BLOQUER (K3) — LE GESTE N'EST PAS RESERVE AUX ENCADRANTS.
+  // « Contacter » l'est (seuls un entraîneur ou un dirigeant écrivent en
+  // premier) ; bloquer ne peut pas l'être — un joueur qui reçoit des messages
+  // déplacés doit pouvoir se protéger. Apple 1.2 et Google Play l'exigent pour
+  // TOUT utilisateur.
+  const canBlock = Boolean(currentUser && user && !isSelfProfile && targetUserId);
+  const { data: myBlockedRows } = useGetMyBlockedUsers({ enabled: canBlock });
+  const isTargetBlocked = useMemo(
+    () => toBlockedUserIdSet(myBlockedRows).has(String(targetUserId || '').trim()),
+    [myBlockedRows, targetUserId],
+  );
+  const { isPending: isBlocking, mutate: blockTargetUser } = useBlockUser();
+  const { isPending: isUnblocking, mutate: unblockTargetUser } = useUnblockUser();
+
+  // Une personne bloquée ne se contacte plus : le serveur refuserait de toute
+  // façon, autant ne pas montrer un bouton qui mène à une erreur.
+  const canContact = canContactByRole && !isTargetBlocked;
+
+  const handleBlockUser = useCallback(() => {
+    if (!targetUserId) return;
+    Alert.alert(
+      t('userBlock.confirm.title', 'Bloquer cette personne ?'),
+      t('userBlock.confirm.message', {
+        defaultValue: '{{name}} ne pourra plus t’écrire ni ouvrir de discussion avec toi, et tu ne verras plus ses messages.',
+        name: displayName,
+      }),
+      [
+        { style: 'cancel', text: t('userBlock.confirm.cancel', 'Annuler') },
+        {
+          onPress: () => blockTargetUser(targetUserId),
+          style: 'destructive',
+          text: t('userBlock.confirm.block', 'Bloquer'),
+        },
+      ],
+    );
+  }, [blockTargetUser, displayName, t, targetUserId]);
+
+  const handleUnblockUser = useCallback(() => {
+    if (!targetUserId) return;
+    unblockTargetUser(targetUserId);
+  }, [targetUserId, unblockTargetUser]);
+
   const isCompactScreen = screenWidth <= 375;
-  const scrollBottomPadding = canContact ? insets.bottom + 128 : insets.bottom + 24;
+  const scrollBottomPadding = canContact || canBlock ? insets.bottom + 128 : insets.bottom + 24;
 
   const birthdate = parseDate(user?.birthdate);
   const age = readProfileAge(user);
@@ -612,6 +662,26 @@ function UserDetails({ navigation, route }) {
     refetchUserData,
   ]);
 
+  // 🚧 BLOQUER — un 403 du serveur ne doit pas partir en promesse non
+  // rattrapee. Le cas neuf : la personne EN FACE m a bloque (je ne le sais pas,
+  // et c est voulu). Le cas qui existait deja et qui n etait pas rattrape non
+  // plus : la porte de l abonnement. Un seul filet pour les deux.
+  const notifyContactFailure = useCallback((error) => {
+    const code = String(
+      error?.details?.code
+      || error?.response?.data?.error?.details?.code
+      || error?.code
+      || '',
+    ).trim();
+
+    Alert.alert(
+      t('common.errors.error', 'Erreur'),
+      code === 'CHAT_BLOCKED_BETWEEN_USERS'
+        ? t('userBlock.errors.blocked', 'Tu as bloqué cette personne. Débloque-la pour lui réécrire.')
+        : getErrorMessage(error),
+    );
+  }, [t]);
+
   const handleContactUser = async () => {
     if (!user || !currentUser) return;
 
@@ -624,14 +694,18 @@ function UserDetails({ navigation, route }) {
     if (computedAge < 13) {
       if (user.parentAccount?.documentId) {
         const participants = [user.documentId, user.parentAccount.documentId];
-        const newChat = isGroupChatEnabled
-          ? await startGroupChat({
-            groupName: 'Contact mineur',
-            participants,
-          })
-          : await startWhisperChat(participants);
-        if (newChat?.documentId) {
-          navigation.navigate(RouteNames.Conversation, { chatId: newChat.documentId });
+        try {
+          const newChat = isGroupChatEnabled
+            ? await startGroupChat({
+              groupName: 'Contact mineur',
+              participants,
+            })
+            : await startWhisperChat(participants);
+          if (newChat?.documentId) {
+            navigation.navigate(RouteNames.Conversation, { chatId: newChat.documentId });
+          }
+        } catch (error) {
+          notifyContactFailure(error);
         }
         return;
       }
@@ -646,9 +720,13 @@ function UserDetails({ navigation, route }) {
       return;
     }
 
-    const newChat = await startWhisperChat([user.documentId]);
-    if (newChat?.documentId) {
-      navigation.navigate(RouteNames.Conversation, { chatId: newChat.documentId });
+    try {
+      const newChat = await startWhisperChat([user.documentId]);
+      if (newChat?.documentId) {
+        navigation.navigate(RouteNames.Conversation, { chatId: newChat.documentId });
+      }
+    } catch (error) {
+      notifyContactFailure(error);
     }
   };
 
@@ -1306,11 +1384,12 @@ function UserDetails({ navigation, route }) {
         </WithDataWrapper>
       </ScrollView>
 
-      {canContact ? (
+      {canContact || canBlock ? (
         <View
           style={[
             Alignments.absolute,
             Spaces.padding[16],
+            Spaces.gap[12],
             {
               backgroundColor: Colors.transparent,
               bottom: insets.bottom + 8,
@@ -1319,13 +1398,29 @@ function UserDetails({ navigation, route }) {
             },
           ]}
         >
-          <Button
-            icon="envelope"
-            iconPosition="before"
-            onPress={handleContactUser}
-            title={t('userDetails.actions.contact', 'Contacter')}
-            variant="Primary"
-          />
+          {canContact ? (
+            <Button
+              icon="envelope"
+              iconPosition="before"
+              onPress={handleContactUser}
+              title={t('userDetails.actions.contact', 'Contacter')}
+              variant="Primary"
+            />
+          ) : null}
+
+          {/* 🚫 BLOQUER (K3) — l'un des DEUX endroits qu'Apple regarde. L'autre
+              est le menu de la conversation. */}
+          {canBlock ? (
+            <Button
+              disabled={isBlocking || isUnblocking}
+              isLoading={isBlocking || isUnblocking}
+              onPress={isTargetBlocked ? handleUnblockUser : handleBlockUser}
+              title={isTargetBlocked
+                ? t('userBlock.actions.unblock', 'Débloquer cette personne')
+                : t('userBlock.actions.block', 'Bloquer cette personne')}
+              variant="SecondaryLight"
+            />
+          ) : null}
         </View>
       ) : null}
     </ScreenContainer>

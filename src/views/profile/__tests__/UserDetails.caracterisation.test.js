@@ -34,6 +34,17 @@ let mockFetchedUser;
 let mockPersonalStats;
 const mockNavigate = jest.fn();
 
+// BLOQUER (02/09) — `UserDetails` lit desormais la liste des personnes que j ai
+// bloquees. Ce module-la importe le client HTTP, qui refuse de se charger sans
+// `.env` — absent de TOUT worktree. Sans cette doublure, la suite ENTIERE
+// echoue AU CHARGEMENT, sans executer un seul test (« Test Suites: 1 failed,
+// Tests: 0 »).
+jest.mock('@/services/userBlock/userBlockQueries', () => ({
+  useBlockUser: () => ({ isPending: false, mutate: jest.fn() }),
+  useGetMyBlockedUsers: () => ({ data: [], refetch: jest.fn() }),
+  useUnblockUser: () => ({ isPending: false, mutate: jest.fn() }),
+}));
+
 jest.mock('react-i18next', () => {
   const traductions = jest.requireActual('@/theme/strings/translations/fr').default;
   return {
