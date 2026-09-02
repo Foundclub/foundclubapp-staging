@@ -74,3 +74,27 @@ export const buildMinorParentalDeclarationPayload = ({
   targetDocumentId,
   targetType,
 });
+
+/**
+ * Ce refus du serveur est-il le 400 << declaration parentale >> ?
+ *
+ * B7-A — C EST LA SEULE CHOSE QUI DISTINGUE CE REFUS D UNE PANNE. Le serveur
+ * repond 400 en rangeant la portee dans les details de l erreur ; l app doit la
+ * lire pour ouvrir l ecran de declaration au lieu d afficher << Erreur >>.
+ *
+ * Plusieurs chemins sont essayes, et ce n est pas de la prudence decorative :
+ * Strapi range le second argument de ctx.badRequest dans error.details, et ce
+ * second argument porte lui-meme une clef details -- la portee se retrouve donc
+ * DEUX crans plus bas (error.details.details.scope). Selon que l erreur a
+ * traverse buildPreservedApiError ou qu elle arrive brute d axios, elle n est
+ * pas au meme endroit. Meme convention que
+ * extractSubscriptionDecisionFromError (subscriptionDecision.js:319).
+ * @param {any} error - L erreur telle que le service la rejette.
+ * @returns {boolean} Vrai si le serveur reclame la declaration parentale.
+ */
+export const isMinorParentalDeclarationError = (error) => [
+  error?.details?.details?.scope,
+  error?.details?.scope,
+  error?.response?.data?.error?.details?.details?.scope,
+  error?.response?.data?.error?.details?.scope,
+].some((portee) => portee === MINOR_PARENTAL_DECLARATION_SCOPE);

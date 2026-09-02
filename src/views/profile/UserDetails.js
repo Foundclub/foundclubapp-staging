@@ -646,9 +646,27 @@ function UserDetails({ navigation, route }) {
       return;
     }
 
-    const newChat = await startWhisperChat([user.documentId]);
-    if (newChat?.documentId) {
-      navigation.navigate(RouteNames.Conversation, { chatId: newChat.documentId });
+    // B6 — LE SERVEUR PEUT REFUSER, ET UN REFUS DOIT SE VOIR.
+    //
+    // Depuis le lot ENFANTS, la creation d un fil seul a seul est arbitree par
+    // le serveur (`admin/src/api/chat/services/minor-chat-guard.ts`) : moins de
+    // 13 ans sans le compte du parent, ou age inconnu, et il repond 403 avec sa
+    // raison en francais. Sans ce filet, le rejet remontait dans le vide : le
+    // bouton << Contacter >> ne faisait RIEN, sans un mot -- exactement le
+    // cul-de-sac que la methode interdit.
+    try {
+      const newChat = await startWhisperChat([user.documentId]);
+      if (newChat?.documentId) {
+        navigation.navigate(RouteNames.Conversation, { chatId: newChat.documentId });
+      }
+    } catch (error) {
+      Alert.alert(
+        t('common.errors.error', 'Erreur'),
+        error?.message || t(
+          'userDetails.errors.contactFailed',
+          "Impossible d'ouvrir la discussion pour le moment.",
+        ),
+      );
     }
   };
 

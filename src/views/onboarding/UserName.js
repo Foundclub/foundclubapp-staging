@@ -24,7 +24,10 @@ import { updateMe } from '@/services/auth/authService';
 
 import { getFieldError } from '@/utils/form/formUtils';
 
-import { isBirthdateUnderParentalAge } from '@/constants/parentalDeclaration';
+import {
+  isBirthdateUnderParentalAge,
+  isMinorParentalDeclarationError,
+} from '@/constants/parentalDeclaration';
 
 // D15 - ECRAN FUSIONNE « Qui es-tu ? ».
 // Prenom, nom et date de naissance tenaient sur DEUX etapes (UserName puis
@@ -159,6 +162,21 @@ function UserName({ navigation }) {
   const updateUserMutation = useMutation({
     mutationFn: updateMe,
     onError: (error) => {
+      // B7-A — CE REFUS-LA N EST PAS UNE PANNE, C EST UNE ETAPE.
+      //
+      // ☠️ Le defaut, mesure le 02/09 : pour un moins de 15 ans, le serveur
+      // refuse et demande la declaration parentale. L ecran tombait ici,
+      // affichait « Erreur », et comme il ne navigue vers la declaration que
+      // dans `onSuccess`, l ecran de declaration etait INATTEIGNABLE : aucun
+      // enfant de moins de 15 ans ne pouvait s inscrire.
+      //
+      // Le serveur laisse desormais passer nom + date (B7-B), donc ce chemin
+      // devient le filet : il tient meme face a un serveur non mis a jour, et
+      // face a tout autre refus portant la meme demande.
+      if (isMinorParentalDeclarationError(error)) {
+        navigation.navigate(RouteNames.UserParentalDeclaration);
+        return;
+      }
       Alert.alert('Erreur', error?.message || 'Impossible de mettre à jour ton profil.');
     },
     onSuccess: (unused, submitted) => {
