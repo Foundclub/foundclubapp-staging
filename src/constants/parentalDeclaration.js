@@ -54,6 +54,35 @@ export const isBirthdateUnderParentalAge = (value) => (
   isBirthdateUnderAge(value, MINOR_PARENTAL_DECLARATION_MIN_AGE)
 );
 
+// PARENT (2026-09-02) — LE PALIER 13, decision d Adel : « en dessous de 13 ans,
+// pas le choix d avoir un compte parent pour creer un compte ».
+//
+// C est un palier DE PLUS, pas un deplacement du seuil 15 ci-dessus : sous
+// 13 ans, le serveur refuse TOUTE ecriture tant qu aucun `parentAccount` n est
+// rattache — et il le dit avec SA propre portee, distincte de celle de la
+// declaration. L ecran « Qui es-tu ? » lit cette portee pour ouvrir l ecran
+// « compte parent requis » (chemin A : le parent cree le compte depuis le
+// sien) au lieu de l ecran de declaration.
+export const MINOR_PARENT_ACCOUNT_REQUIRED_SCOPE = 'minor_parent_account_required';
+export const MINOR_PARENT_ACCOUNT_REQUIRED_UNDER_AGE = 13;
+
+export const isBirthdateUnderParentAccountAge = (value) => (
+  isBirthdateUnderAge(value, MINOR_PARENT_ACCOUNT_REQUIRED_UNDER_AGE)
+);
+
+/**
+ * Ce refus du serveur est-il le 400 « compte parent requis » ?
+ * Memes quatre chemins que `isMinorParentalDeclarationError` ci-dessous.
+ * @param {any} error - L erreur telle que le service la rejette.
+ * @returns {boolean} Vrai si le serveur reclame un compte parent rattache.
+ */
+export const isMinorParentAccountRequiredError = (error) => [
+  error?.details?.details?.scope,
+  error?.details?.scope,
+  error?.response?.data?.error?.details?.details?.scope,
+  error?.response?.data?.error?.details?.scope,
+].some((portee) => portee === MINOR_PARENT_ACCOUNT_REQUIRED_SCOPE);
+
 export const buildMinorParentalDeclarationPayload = ({
   metadata = {},
   sourceScreen = 'minor_parental_declaration',

@@ -26,6 +26,7 @@ import { getFieldError } from '@/utils/form/formUtils';
 
 import {
   isBirthdateUnderParentalAge,
+  isMinorParentAccountRequiredError,
   isMinorParentalDeclarationError,
 } from '@/constants/parentalDeclaration';
 
@@ -173,6 +174,14 @@ function UserName({ navigation }) {
       // Le serveur laisse desormais passer nom + date (B7-B), donc ce chemin
       // devient le filet : il tient meme face a un serveur non mis a jour, et
       // face a tout autre refus portant la meme demande.
+      // PARENT (2026-09-02) — LE PALIER 13 : sous 13 ans sans compte parent, le
+      // serveur refuse TOUT (identite comprise) avec SA propre portee. Ce n est
+      // pas une declaration a cocher, c est un compte PARENT a rattacher : on
+      // ouvre l ecran qui explique comment, et qui n offre aucune echappatoire.
+      if (isMinorParentAccountRequiredError(error)) {
+        navigation.navigate(RouteNames.UserParentAccountRequired);
+        return;
+      }
       if (isMinorParentalDeclarationError(error)) {
         navigation.navigate(RouteNames.UserParentalDeclaration);
         return;

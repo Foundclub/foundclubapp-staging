@@ -3295,6 +3295,18 @@ export default {
     subtitle: 'Entre le code reçu par SMS.',
     title: 'Confirme ton numéro',
   },
+  // PARENT (2026-09-02) — le palier 13 : l ecran ou atterrit un moins de 13 ans.
+  // Il n y a pas de compte sous 13 ans (decision d Adel, version A) : le parent
+  // declare son enfant depuis SON compte. Deux sorties, aucune echappatoire.
+  parentAccountRequired: {
+    body: 'Tu as moins de 13 ans. Sur FoundClub, tu n’as pas besoin de compte : '
+      + 'c’est ton parent qui te déclare depuis le sien.',
+    fixBirthdate: 'Corriger ma date de naissance',
+    logout: 'Se déconnecter',
+    steps: 'Il installe l’app, choisit « Parent » à l’inscription, puis te déclare '
+      + 'comme joueur. Tu apparaîtras sous ton prénom dans ton équipe.',
+    title: 'Un compte parent est nécessaire',
+  },
   permissions: {
     camera: {
       denied: 'Permission caméra refusée',
@@ -3592,6 +3604,7 @@ export default {
       },
       types: {
         coach: 'Entraîneur·e',
+        parent: 'Parent',
         player: 'Joueur·se',
         president: 'Dirigeant·e',
       },
@@ -3608,6 +3621,7 @@ export default {
       roles: {
         coach: 'Entraîneur',
         new: 'Membre',
+        parent: 'Parent',
         player: 'Joueur',
         president: 'Dirigeant',
         superAdmin: 'Administrateur',

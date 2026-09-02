@@ -238,6 +238,28 @@ describe('authUseCases', () => {
       expect(getUserRoleKey('')).toBe('new');
     });
 
+    // PARENT (2026-09-02) — un vrai role Parent. Mesure du 02/09 avant ce lot :
+    // getUserRoleKey('Parent') rendait 'new', donc un compte Parent etait
+    // renvoye au choix de role (qui ne le proposait pas) et
+    // findRoleByKey(roles, 'parent') selectionnait le role AUTHENTICATED,
+    // par collision sur la cle 'new'.
+    it('reconnait le role Parent, par son type comme par son nom', () => {
+      expect(getUserRoleKey('Parent')).toBe('parent');
+      expect(getUserRoleKey('parent')).toBe('parent');
+      expect(USER_ROLES.parent).toBe('Parent');
+    });
+
+    it('un Parent ne se confond JAMAIS avec un compte neuf ni avec un joueur', () => {
+      const roles = [
+        { documentId: 'role-authenticated', name: 'Authenticated', type: 'authenticated' },
+        { documentId: 'role-joueur', name: 'Joueur', type: 'joueur' },
+        { documentId: 'role-parent', name: 'Parent', type: 'parent' },
+      ];
+      expect(getRoleDocumentIdByKey(roles, USER_ROLES.parent)).toBe('role-parent');
+      expect(getRoleDocumentIdByKey(roles, USER_ROLES.new)).toBe('role-authenticated');
+      expect(onboardingCollectsBirthdate({ name: 'Parent' })).toBe(true);
+    });
+
     it('finds coach role document id from role aliases and backend type', () => {
       const roles = [
         { documentId: 'role-player', name: 'Joueur', type: 'joueur' },
@@ -709,6 +731,21 @@ describe('authUseCases', () => {
           ],
           totalViews: 13,
           totalViewsMineur: 14,
+        },
+        // PARENT (2026-09-02) — le parcours du parent : son identite (avec sa
+        // date de naissance : un parent est un adulte CONNU, et le garde-fou
+        // tchat traite un age inconnu comme un enfant), puis sa photo. Rien
+        // d autre : ni section, ni sport, ni club — ce sont les etapes de son
+        // enfant, pas les siennes. « Declarer mon enfant » (fiche joueur sans
+        // identifiants) est le second lot. `Welcome` reste le sas de sortie.
+        {
+          roleName: USER_ROLES.parent,
+          routes: [
+            RouteNames.UserName,
+            RouteNames.UserAvatar,
+          ],
+          totalViews: 2,
+          totalViewsMineur: 3,
         },
       ];
 
