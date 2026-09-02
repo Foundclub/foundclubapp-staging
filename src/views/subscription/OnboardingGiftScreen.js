@@ -181,7 +181,7 @@ function OnboardingGiftScreen({ navigation, route }) {
       // de l'app (défaut L08, mesuré sur la build 2.6.1).
       scheduleSubscriptionStateRefresh(queryClient);
     } catch (error) {
-      // ⛔ CE CATCH A ETE VIDE PENDANT 5 JOURS, ET CE VIDE A CACHE UNE PANNE DE
+      // ⛔ CE CATCH A ETE VIDE DU 28/08 AU 01/09, ET CE VIDE A CACHE UNE PANNE DE
       // PRODUCTION (ABO-FIX / G2). Le serveur repondait 200 meme sur un refus,
       // cet ecran jetait la reponse : ZERO cadeau accorde entre le 28/08 et le
       // 01/09, sans une seule trace nulle part. Le commentaire d'origine
