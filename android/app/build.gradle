@@ -3,6 +3,22 @@ apply plugin: "org.jetbrains.kotlin.android"
 apply plugin: "com.facebook.react"
 apply plugin: 'com.google.gms.google-services'
 
+// R18 (02/09/2026) - CE N EST PAS UNE CLE, C EST UN TROU BOUCHE AVEC DU PAPIER.
+// Quand ni GOOGLE_MAPS_ANDROID_API_KEY_PRODUCTION (variable d environnement ou
+// propriete gradle googleMapsApiKeyProduction) n est fournie, cette chaine part
+// telle quelle dans le manifeste, meta-data com.google.android.geo.API_KEY
+// (AndroidManifest.xml:34) - et AUCUN workflow ne la fournit aujourd hui.
+//
+// Pourquoi ca ne casse rien pour l instant : la carte de recherche est rendue
+// par TOMTOM (FC_SEARCH_MAP_PROVIDER=tomtom dans les 2 fichiers .env produits
+// par la CI, et searchMapProvider.js retombe de toute facon sur tomtom). Le seul
+// fichier qui importe react-native-maps est LegacySearchMapNative.js, qui n est
+// monte que sur le provider "legacy". La cle est donc INERTE.
+// ATTENTION : Elle redeviendra bloquante le jour ou on repasse sur le provider legacy :
+// carte grise et "Authorization failure" sur tous les telephones Android.
+//
+// La vraie cle est un secret d Adel : elle se pose en secret de depot
+// GOOGLE_MAPS_ANDROID_API_KEY_PRODUCTION, jamais dans ce fichier.
 def MAPS_API_KEY_PLACEHOLDER = "CLE_TEMPORAIRE_A_REMPLACER"
 def productionGoogleServicesFile = file("src/production/google-services.json")
 def hasProductionGoogleServices = productionGoogleServicesFile.exists()
