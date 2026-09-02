@@ -7,10 +7,15 @@ import { TourProvider, useTour } from '../TourContext';
 // Décision : startTour refuse de démarrer sur le web tant que le bandeau n'y
 // est pas monté (Welcome navigue alors vers l'accueil, son chemin `!started`).
 
-jest.mock('react-native/Libraries/Utilities/Platform', () => ({
-  OS: 'web',
-  select: (spec) => ('web' in spec ? spec.web : spec.default),
-}));
+jest.mock('react-native/Libraries/Utilities/Platform', () => {
+  const mockModule = {
+    OS: 'web',
+    select: (spec) => ('web' in spec ? spec.web : spec.default),
+  };
+  // RN 0.79 lit `require(module).default` la ou 0.78 lisait le module entier :
+  // le mock sert les DEUX formes, pour survivre aux deux versions.
+  return { ...mockModule, default: mockModule };
+});
 
 const mockNavigate = jest.fn(() => true);
 jest.mock('@/navigation/navigationService', () => ({

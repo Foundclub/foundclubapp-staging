@@ -209,14 +209,18 @@ const openKeyboard = async (os) => {
       height: KEYBOARD_HEIGHT,
       screenX: 0,
       screenY: KEYBOARD_SCREEN_Y,
-      // iOS ecarte les claviers flottants en comparant cette largeur a celle
-      // de la fenetre : la faire mentir renverrait un decalage de 0.
+      // Jusqu a RN 0.78, iOS ecartait les claviers flottants en comparant cette
+      // largeur a celle de la fenetre ; RN 0.79 a retire ce garde-fou. On garde
+      // la largeur juste : elle reste vraie, et le test survit aux deux versions.
       width: Dimensions.get('window').width,
     },
   };
   await act(async () => {
     DeviceEventEmitter.emit(
-      os === 'ios' ? 'keyboardWillChangeFrame' : 'keyboardDidShow',
+      // RN 0.79 n ecoute PLUS `keyboardWillChangeFrame` sur iOS : le composant
+      // s abonne desormais a `keyboardWillShow` / `keyboardWillHide`
+      // (KeyboardAvoidingView.js, componentDidMount). Android n a pas bouge.
+      os === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
       event,
     );
   });
