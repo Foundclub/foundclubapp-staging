@@ -102,7 +102,7 @@ Diffs récupérés depuis l'Upgrade Helper (`rn-diff-purge`, branche `diffs`), p
 |---|---|---|---|---|
 | 0 | Base 0.78.0 (copie désolidarisée) | ✅ **VERTE** | **468 / 5 516** | rien — la copie reproduit la référence |
 | 1 | 0.78.0 → 0.79.7 | ✅ **VERTE** | **468 / 5 516** | 13 suites rouges, **2 causes** — voir §M1 |
-| 2 | 0.79.7 → 0.80.3 | ⬜ pas commencée | — | — |
+| 2 | 0.79.7 → 0.80.3 | ✅ **VERTE** | **468 / 5 516** | **rien du tout** — voir §M2 |
 | 3 | 0.80.3 → 0.81.6 | ⬜ pas commencée | — | — |
 | 4 | `targetSdk 36` + edge-to-edge (A3) | ⬜ pas commencée | — | — |
 | 5 | Permissions `notifee` + cleartext (A4) | ⬜ pas commencée | — | — |
@@ -184,6 +184,35 @@ pas changé** — c'est toujours « la marge basse vaut exactement le recouvreme
 
 ---
 
+## M2. MARCHE 2 — 0.79.7 → 0.80.3 : **rien n'a cassé**
+
+**Zéro suite rouge, zéro fichier de test à corriger.** Les quatre portes rendent des chiffres
+**strictement identiques** à ceux de la base 0.78 :
+
+| Porte | Marche 2 | Base 0.78 | Écart |
+|---|---|---|---|
+| jest | 468 / 5 516, exit 0 | 468 / 5 516 | **aucun** |
+| lint | 1 288 / 1 290 · 7 786 / 7 809 | idem | **aucun** |
+| types | 5 336 / 5 424 | idem | **aucun** |
+| thème | OK | OK | **aucun** |
+| autolinking | 32 deps · 31 non-null · 1 null (voulu) | idem | **aucun** |
+
+Ce qui a été appliqué : `react` 19.0.0 → **19.1.0**, `react-native` 0.80.3, CLI 18.0.0 → **19.1.2**,
+`@react-native/*` 0.80.3, `@types/react` ^19.1.0, `react-test-renderer` 19.1.0,
+`kotlinVersion` **2.0.21 → 2.1.20**, wrapper Gradle **8.13 → 8.14.1** (et cette fois `gradlew` et
+`gradlew.bat` changent pour de vrai : Gradle 8.14 lance le wrapper par `-jar` au lieu du
+`CLASSPATH`). `gradlew.bat` a été réécrit **en CRLF**, comme le dépôt le stocke.
+
+### 🔶 Deux hunks du guide volontairement non appliqués
+
+| Ce que le helper propose | Décision | La mesure qui la justifie |
+|---|---|---|
+| `MainApplication.kt` : remplacer `SoLoader.init(...)` + `load(bridgelessEnabled = false)` par `loadReactNative(this)` | ⛔ **non appliqué — c'est la décision la plus importante de ce chantier** | Voir §3 D2 ci-dessous. |
+| `.prettierrc.js` : retirer `bracketSameLine` et `bracketSpacing` | **non appliqué** | Prettier est **dormant** ici : aucun script `format`, absent d'ESLint, absent des workflows — il n'est qu'une dépendance de développement. Changer sa configuration ne ferait rien aujourd'hui, et surprendrait le jour où quelqu'un le lancerait. C'est un choix de style du gabarit, pas une exigence de la montée. |
+| `tsconfig.json` | **sans objet** | Ce projet n'a pas de `tsconfig.json` : il vérifie ses types avec **`jsconfig.json`** (`tsc --allowJs --noEmit -p jsconfig.json`). |
+
+---
+
 ## 3. LES DÉCISIONS PRISES EN COURS DE ROUTE
 
 ### 🔶 D1 — L'`AppDelegate.swift` n'est PAS migré, et c'est délibéré
@@ -203,8 +232,111 @@ iOS — celui qui démarre Firebase et fixe l'orientation — sans jamais pouvoi
 exactement le pari que la méthode interdit. La migration reste à faire **le jour où RN retire
 `RCTAppDelegate`** (0.82 ou au-delà), sur une machine qui compile iOS.
 
+### 🚨 D2 — Le mode « bridgeless » reste COUPÉ, et le gabarit voulait le rallumer en silence
+
+C'est la décision la plus lourde de conséquence de tout le chantier.
+
+**Ce que dit notre code** (`android/app/src/main/java/com/foundclub/MainApplication.kt:40-43`) :
+
+```kotlin
+if (BuildConfig.IS_NEW_ARCHITECTURE_ENABLED) {
+  // Keep the New Architecture enabled but opt out of bridgeless until Nitro is stable there.
+  load(bridgelessEnabled = false)
+}
+```
+
+L'app tourne donc en **nouvelle architecture MAIS avec l'ancien pont**, volontairement, à cause de
+`react-native-nitro-modules` (dont dépendent `react-native-nitro-sound` et `react-native-mmkv`).
+
+**Ce que le gabarit 0.80 propose** : remplacer tout ce bloc par `loadReactNative(this)` — une
+fonction qui **n'a pas de paramètre `bridgelessEnabled`** et qui rallume donc le mode bridgeless.
+
+⛔ **Refusé.** Appliquer ce hunk changerait **le moteur d'exécution de l'app** au milieu d'un
+chantier qui parle d'autre chose. C'est exactement le genre de modification qui voyage en
+passager clandestin et qu'on ne retrouve plus quand quelque chose casse trois semaines plus tard.
+
+**Mesuré, pour savoir combien de temps ce refus tient** — lecture de
+`DefaultNewArchitectureEntryPoint.kt` aux trois balises :
+
+| Version | État de `load(… bridgelessEnabled = false)` |
+|---|---|
+| **0.79.7** | présent, **non déprécié** |
+| **0.80.3** | présent, **non déprécié** |
+| **0.81.6** | présent et **toujours honoré**, mais **`@Deprecated`** : « *Loading the entry point with different flags for Fabric, TurboModule and Bridgeless is deprecated. Please use load() instead.* » |
+
+⇒ **Le réglage survit jusqu'au bout de ce chantier** (une alerte de compilation Kotlin, pas une
+erreur). Mais il est **condamné** : à la version suivante, il faudra soit que Nitro soit stable en
+bridgeless, soit renoncer à Nitro. **C'est un sujet à part entière, à ouvrir avant 0.82.**
+
+Vérifié aussi que les deux symboles que notre fichier importe existent encore en 0.81.6 :
+`OpenSourceMergedSoMapping` (HTTP 200 sur la balise `v0.81.6`) et `SoLoader`.
+
 ---
 
-## 4. CE QUI RESTE, POUR CELUI QUI REPREND
+## 4. LE TERRAIN DE A3 (edge-to-edge) ET A4 (permissions) — reconnu d'avance
+
+Ces deux lots viennent **après** la marche 3. Le terrain est déjà mesuré, pour que celui qui les
+fait n'ait pas à recommencer la reconnaissance.
+
+### 🎨 A3 — edge-to-edge : l'app est déjà presque prête, et la dette tient en 2 fichiers
+
+| Mesure | Nombre |
+|---|---|
+| Fichiers qui utilisent `useSafeAreaInsets` *(la bonne façon)* | **185** |
+| Fichiers qui utilisent encore le `SafeAreaView` de `react-native` *(le legacy)* | **2** |
+| Fichiers qui touchent à `StatusBar` | 3 |
+
+Les 2 fichiers legacy sont **`src/views/league/match/LeagueMatchDetails.js`** et
+**`src/views/league/match/PastMatchDetails.js`** — les deux écrans de match du mode LEAGUE, tous
+deux **atteignables** (`LeagueNavigator.js:61`, `PrivateNavigator.js:662`, et 6 appels à
+`navigate(RouteNames.LeagueMatchDetails, …)` depuis `LeagueActionPromptHost.js`).
+
+> 🧨 **Le fait qui change la nature du problème.** Le `SafeAreaView` de React Native est
+> `Platform.select({ ios: <composant natif>, default: View })` — autrement dit, **sur Android il
+> ne fait rien du tout**. Ces deux écrans dessinent donc **déjà** sous les barres système sur
+> Android, aujourd'hui, en `targetSdk 35`. R17 n'est pas un risque à venir : c'est un défaut
+> présent que personne n'a vu parce qu'aucune build Android n'a été ouverte sur Android 15.
+
+⚠️ **`PrivateNavigator.js` est un fichier-carrefour (E4) : ne pas y toucher pour ça.** Les deux
+écrans se corrigent chez eux.
+
+### 🔕 A4 — les 3 permissions et le trafic en clair : d'où ça vient, exactement
+
+**Les 3 permissions ne sont écrites nulle part dans le dépôt.** Elles arrivent par fusion de
+manifeste depuis le fichier binaire de `notifee` :
+`node_modules/@notifee/react-native/android/libs/app/notifee/core/202108261754/core-202108261754.aar`,
+dont le manifeste déclare `RECEIVE_BOOT_COMPLETED`, `FOREGROUND_SERVICE` et `SCHEDULE_EXACT_ALARM`.
+⇒ `tools:node="remove"` dans notre manifeste est bien le seul moyen de les retirer.
+
+**Elles ne servent à rien, mesuré** :
+
+| Ce qu'on a cherché dans `src/` | Occurrences |
+|---|---|
+| `createTriggerNotification`, `TriggerType`, `TimestampTrigger`, `AlarmType` | **0** |
+| `registerForegroundService`, `asForegroundService` | **0** |
+
+**Le trafic en clair : la moitié du travail est déjà faite, et personne ne l'a vue.**
+Le dépôt a **déjà** un `android/app/src/debug/AndroidManifest.xml` qui pose
+`usesCleartextTraffic="true"` **pour le debug seulement**. Mais le manifeste **principal** le pose
+aussi, en dur (ligne 32) — et c'est *celui-là* qui l'emporte jusque dans la build de production.
+
+⇒ **Il suffit de retirer cette ligne du manifeste principal.** Le debug garde le clair par son
+propre manifeste ; la production le perd. Vérifié qu'aucune build signée n'en a besoin :
+
+| Variante | URL de l'API |
+|---|---|
+| staging release | `https://api-staging.foundclubpro.com/api` |
+| production | `https://…` (secret `API_URL`) |
+
+Les seuls `http://` du code sont des **replis de développement** (`localhost:1337`, l'hôte de
+l'émulateur) et un lien `maps.apple.com` ouvert par le système, pas par l'app.
+
+> 🎁 C'est plus simple que ce que propose le gabarit 0.81 (qui supprime le manifeste de debug et
+> passe par un placeholder) : le mécanisme équivalent existe déjà ici, il est juste court-circuité
+> par une ligne en trop.
+
+---
+
+## 5. CE QUI RESTE, POUR CELUI QUI REPREND
 
 *(rempli au fur et à mesure)*
