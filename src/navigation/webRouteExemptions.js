@@ -79,6 +79,22 @@ const MOBILE_ONLY_SCREENS = {
   [RouteNames.OnboardingGift]:
     'TODO(web) page cadeau ecrite et montee cote app ; attend son entree dans web/src/routes/screenRegistry.tsx',
 
+  // TODO(web) BLOQUER (2026-09-02) — « Personnes bloquees » DOIT exister sur le
+  // web : la messagerie y tourne aussi, et Apple comme Google exigent qu on
+  // puisse DEBLOQUER aussi facilement qu on bloque. Elle est exemptee par
+  // SEQUENCEMENT, pas par principe, exactement comme MyActivities et
+  // OnboardingGift ci-dessus : l enregistrer cote app ferait passer
+  // `check:routes` au rouge tant que web/src/routes/screenRegistry.tsx ne porte
+  // pas son entree, et ce fichier vit dans l autre depot — hors du perimetre
+  // de ce lot.
+  // ⚠️ Ce n est PAS un trou de conformite : les DEUX boutons de blocage
+  // (fiche d une personne, menu d une conversation) sont routes cote web, et le
+  // serveur REFUSE de lui-meme. Seul l ecran de gestion attend.
+  // A retirer d ici DES QUE le registre web declare BlockedUsers (une ligne),
+  // puis ajouter son motif dans webRoutes.js (ex. /profile/blocked).
+  [RouteNames.BlockedUsers]:
+    'TODO(web) ecran « Personnes bloquees » ecrit et monte cote app ; attend son entree dans web/src/routes/screenRegistry.tsx',
+
   // --- Alias interne de navigateur ---
   // Accueil du membre connecte (HomeHub), initialRouteName de SearchStack. Depuis le
   // 2026-07-19 ce nom est declare dans routeNames.js (il etait une chaine en dur) ; sa

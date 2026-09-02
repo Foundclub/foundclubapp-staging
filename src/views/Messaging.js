@@ -22,6 +22,7 @@ import {
 import useMessaging from '@/domains/messaging/useMessaging';
 import { formatThreadUnreadBadge } from '@/domains/messaging/useUnreadMessages';
 import { TutorialIds } from '@/domains/tutorial/tutorialIds';
+import { hideBlockedChats, toBlockedUserIdSet } from '@/domains/userBlock/userBlockFilters';
 import useTheme from '@/theme/themeContext';
 
 import MarqueeText from '@/components/atoms/marqueeText/MarqueeText';
@@ -42,6 +43,7 @@ import { RouteNames } from '@/navigation/routeNames';
 import useBottomDockLayout from '@/navigation/useBottomDockLayout';
 
 import { useGetChats } from '@/services/chat/chatQueriesCompat';
+import { useGetMyBlockedUsers } from '@/services/userBlock/userBlockQueries';
 
 import { getErrorMessage } from '@/utils/errors/displayError';
 import { markMessagingPerf } from '@/utils/performance/messagingPerformance';
@@ -124,6 +126,15 @@ function Messaging({ navigation, route }) {
       value: 'league',
     },
   ], [t]);
+
+  // 🙈 BLOQUER (K4) — les personnes que j ai bloquees, pour retirer leur
+  // tete-a-tete de la liste. Une seule requete, partagee avec la fiche d une
+  // personne et le menu d une conversation (meme clef react-query).
+  const { data: myBlockedRows } = useGetMyBlockedUsers({
+    enabled: Boolean(userData?.documentId),
+  });
+  const blockedUserIds = useMemo(() => toBlockedUserIdSet(myBlockedRows), [myBlockedRows]);
+
   const allChats = useMemo(() => {
     const chats = chatsData?.pages ? chatsData?.pages?.reduce(
       (acc, page) => acc.concat(page.data || []),
@@ -143,7 +154,13 @@ function Messaging({ navigation, route }) {
       whisper: 3,
     };
 
-    return chats
+    // 🙈 BLOQUER (K4) — un tete-a-tete avec une personne bloquee quitte la
+    // liste. Ce n est pas la barriere (le serveur REFUSE deja d ouvrir ce fil) :
+    // sans ca, la ligne resterait affichee et mener a une erreur au premier
+    // appui. 🧒 K5 : seuls les fils STRICTEMENT a deux disparaissent — un
+    // groupe, un club, une equipe et la discussion a trois du mineur avec son
+    // parent restent en place.
+    return hideBlockedChats(chats, userData?.documentId, blockedUserIds)
       .filter((chat) => !chat.archivedBy?.some((u) => u.documentId === userData?.documentId))
       .sort((a, b) => {
         const isPinnedA = a.pinnedBy?.some((u) => u.documentId === userData?.documentId);
@@ -159,7 +176,7 @@ function Messaging({ navigation, route }) {
 
         return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
       });
-  }, [chatsData?.pages, userData]);
+  }, [blockedUserIds, chatsData?.pages, userData]);
 
   useEffect(() => {
     if (routeChatScope == null) return;

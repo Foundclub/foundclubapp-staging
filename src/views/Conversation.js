@@ -55,6 +55,11 @@ import {
   getParticipationErrorMessage,
   resolveParticipationFlow,
 } from '@/domains/participation/participationFlow';
+import {
+  hideBlockedMessages,
+  resolveOtherParticipantId,
+  toBlockedUserIdSet,
+} from '@/domains/userBlock/userBlockFilters';
 import i18n from '@/theme/strings';
 import useTheme from '@/theme/themeContext';
 
@@ -113,6 +118,11 @@ import {
 } from '@/services/league/leagueMatchService';
 import { createMessageReport } from '@/services/messageReport/messageReportService';
 import { joinReservation } from '@/services/reservation/reservationService';
+import {
+  useBlockUser,
+  useGetMyBlockedUsers,
+  useUnblockUser,
+} from '@/services/userBlock/userBlockQueries';
 
 import {
   getDocumentCaption,
@@ -801,6 +811,25 @@ function Conversation({ navigation, route }) {
       .filter(Boolean);
   }, [chatData?.groupAdmins]);
   const isGroupAdmin = isGroupChat && groupAdminIds.includes(String(userData?.documentId || ''));
+
+  // 🚫 BLOQUER (K3) — LE SECOND ENDROIT QU APPLE REGARDE : le menu du fil.
+  //
+  // 🧒 K5 — « strictement a deux ». `resolveOtherParticipantId` ne rend
+  // quelqu un que pour un `whisper` a EXACTEMENT deux participants : le fil
+  // « Contact mineur » (enfant + parent + encadrant) en compte trois, il n a
+  // donc pas de bouton « Bloquer » et ne se ferme jamais. Meme regle, meme
+  // condition, qu au serveur.
+  const otherParticipantId = useMemo(
+    () => resolveOtherParticipantId(chatData, userData?.documentId),
+    [chatData, userData?.documentId],
+  );
+  const { data: myBlockedRows } = useGetMyBlockedUsers({ enabled: Boolean(userData?.documentId) });
+  const blockedUserIds = useMemo(() => toBlockedUserIdSet(myBlockedRows), [myBlockedRows]);
+  const isOtherParticipantBlocked = Boolean(
+    otherParticipantId && blockedUserIds.has(otherParticipantId),
+  );
+  const { isPending: isBlockingUser, mutate: blockOtherParticipant } = useBlockUser();
+  const { isPending: isUnblockingUser, mutate: unblockOtherParticipant } = useUnblockUser();
 
   useEffect(() => {
     if (!isGroupChat) return;
@@ -3545,7 +3574,12 @@ function Conversation({ navigation, route }) {
   };
 
   /** @type {any[]} */
-  const messages = useMemo(() => (messagesPages ? messagesPages?.pages?.reduce((/** @type {any[]} */ acc, /** @type {any} */ page) => {
+  // 🙈 BLOQUER (K4) — LE BLOCAGE CACHE, IL NE SUPPRIME PAS. Les bulles d une
+  // personne bloquee sortent de l AFFICHAGE ; elles restent en base, ou elles
+  // peuvent servir a un signalement. Utile surtout dans un fil COLLECTIF : un
+  // groupe ou un fil de club reste ouvert, mais on n y lit plus la personne
+  // bloquee. Pour un tete-a-tete, le serveur a deja ferme la porte.
+  const messages = useMemo(() => hideBlockedMessages((messagesPages ? messagesPages?.pages?.reduce((/** @type {any[]} */ acc, /** @type {any} */ page) => {
     const formattedMessages = page.data.map((/** @type {any} */ msg) => {
       const rawAttachments = msg.attachments;
       const normalizedAttachments = normalizeMessageAttachments(msg.attachments);
@@ -3603,7 +3637,7 @@ function Conversation({ navigation, route }) {
       };
     });
     return [...acc, ...formattedMessages];
-  }, /** @type {any[]} */ ([])) : []), [messagesPages, getAnonymizedName, getPrimaryImageUriFromMessage, isImageAttachmentMessage, logAttachmentDebug, normalizeMessageAttachments, resolveMediaUri]);
+  }, /** @type {any[]} */ ([])) : []), blockedUserIds), [blockedUserIds, messagesPages, getAnonymizedName, getPrimaryImageUriFromMessage, isImageAttachmentMessage, logAttachmentDebug, normalizeMessageAttachments, resolveMediaUri]);
 
   // Impasse corrigee : sans ces etats, un chargement en echec laissait une
   // conversation vide et muette, sans aucune issue autre que tuer l'app.
@@ -4757,6 +4791,53 @@ function Conversation({ navigation, route }) {
       tone: 'critical',
     });
   }, [closeConversationPrompt, deleteMessage, isSelectedMessageOwn, openConversationPrompt, resetEditMessageState, selectedMessageDocumentId, showErrorBanner, t]);
+
+  // 🚫 BLOQUER (K3) — la confirmation passe par `openConversationPrompt`,
+  // exactement comme la suppression d un message juste au-dessus : c est la
+  // mecanique de confirmation DEJA en place dans cet ecran.
+  // Debloquer, lui, ne demande rien : le geste ne detruit rien.
+  const handleToggleBlockFromMenu = useCallback(() => {
+    if (!otherParticipantId) return;
+    setIsMenuVisible(false);
+
+    if (isOtherParticipantBlocked) {
+      unblockOtherParticipant(otherParticipantId);
+      return;
+    }
+
+    openConversationPrompt({
+      // ⚠️ Pas de `common.user` ici : le filet AD10 refuse qu une meme clef
+      // partagee soit appelee avec deux textes de repli differents. Dans un
+      // tete-a-tete on est deja dans le fil de la personne : la phrase n a
+      // besoin d aucun nom.
+      body: t(
+        'userBlock.confirm.messageNoName',
+        'Cette personne ne pourra plus t’écrire ni ouvrir de discussion avec toi, et tu ne verras plus ses messages.',
+      ),
+      primaryAction: {
+        label: t('userBlock.confirm.block', 'Bloquer'),
+        onPress: () => {
+          closeConversationPrompt();
+          blockOtherParticipant(otherParticipantId);
+        },
+      },
+      secondaryAction: {
+        label: t('userBlock.confirm.cancel', 'Annuler'),
+        onPress: closeConversationPrompt,
+        variant: 'Secondary',
+      },
+      title: t('userBlock.confirm.title', 'Bloquer cette personne ?'),
+      tone: 'critical',
+    });
+  }, [
+    blockOtherParticipant,
+    closeConversationPrompt,
+    isOtherParticipantBlocked,
+    openConversationPrompt,
+    otherParticipantId,
+    t,
+    unblockOtherParticipant,
+  ]);
 
   const handleSubmitReport = () => {
     if (selectedMessage?.documentId) {
@@ -6314,6 +6395,22 @@ function Conversation({ navigation, route }) {
               title={t('conversation.actions.report', 'Signaler')}
               variant="SecondaryLight"
             />
+
+            {/* 🚫 BLOQUER (K3) — le second des deux endroits qu Apple regarde.
+                Il n apparait QUE pour un tete-a-tete : un fil de club, d equipe
+                ou de groupe n a personne a bloquer, et la discussion a trois du
+                mineur avec son parent n en a pas non plus (K5). */}
+            {otherParticipantId ? (
+              <Button
+                disabled={isBlockingUser || isUnblockingUser}
+                isLoading={isBlockingUser || isUnblockingUser}
+                onPress={handleToggleBlockFromMenu}
+                title={isOtherParticipantBlocked
+                  ? t('userBlock.actions.unblock', 'Débloquer cette personne')
+                  : t('userBlock.actions.block', 'Bloquer cette personne')}
+                variant="SecondaryLight"
+              />
+            ) : null}
 
             <Button
               onPress={() => setIsMenuVisible(false)}

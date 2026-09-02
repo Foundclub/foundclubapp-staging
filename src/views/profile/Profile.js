@@ -624,6 +624,15 @@ function Profile({ navigation, route }) {
       label: t('profile.actions.switchAccount'),
       onPress: handleToggleAccountSwitcher,
     },
+    // 🚫 BLOQUER (K3) — la porte de sortie. Apple et Google demandent que
+    // l on puisse DEBLOQUER aussi facilement que bloquer : c est ici que la
+    // liste se relit et se defait.
+    {
+      icon: Images.shield,
+      key: 'blockedUsers',
+      label: t('userBlock.screen.title', 'Personnes bloquées'),
+      onPress: () => navigation.navigate(RouteNames.BlockedUsers),
+    },
     ...(isSuperAdmin ? [
       {
         icon: Images.shield,
