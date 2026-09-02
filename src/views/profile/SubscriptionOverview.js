@@ -27,6 +27,7 @@ import {
   hasActiveClubOffer,
 } from '@/domains/subscription/subscriptionDecision';
 import {
+  openSubscriptionManagementPortal,
   performSubscriptionLicenseeIncrease,
   restoreAllSubscriptionPurchases,
 } from '@/domains/subscription/subscriptionPurchaseRail';
@@ -362,6 +363,22 @@ function SubscriptionOverview({ navigation, route }) {
     }) || null;
   }, [catalogEntries, subscriptionSummary?.payerSubscriptionsSummary]);
 
+  // ABO-FIX / R3 — L ABONNEMENT PRIS SUR LE SITE, et lui seul.
+  // La porte de sortie n a de sens que pour un abonnement Stripe : celui qui
+  // a paye sur iPhone resilie chez Apple, celui qui a paye sur Android chez
+  // Google, et leur montrer un bouton qui ne peut pas les servir serait pire
+  // que pas de bouton. `provider` est deja dans le resume du serveur
+  // (subscription-permission.ts) : on ne devine rien, on le lit.
+  const webSubscription = useMemo(() => {
+    const payerSubscriptions = Array.isArray(subscriptionSummary?.payerSubscriptionsSummary)
+      ? subscriptionSummary.payerSubscriptionsSummary
+      : [];
+    return payerSubscriptions.find(/** @param {any} entry */ (entry) => (
+      String(entry?.provider || '').trim().toLowerCase() === 'web'
+      && ['active', 'grace_period'].includes(String(entry?.status || '').trim().toLowerCase())
+    )) || null;
+  }, [subscriptionSummary?.payerSubscriptionsSummary]);
+
   const licenseeCatalogEntry = useMemo(
     () => catalogEntries.find(
       (entry) => String(entry?.planCode || '').trim() === String(licenseeSubscription?.planCode || '').trim(),
@@ -476,6 +493,34 @@ function SubscriptionOverview({ navigation, route }) {
       Alert.alert('Erreur abonnement', getSubscriptionBillingErrorMessage(error));
     }
   }, [queryClient, restoreMutation]);
+
+  /**
+   * ABO-FIX / R3 — OUVRIR LE PORTAIL DE RESILIATION.
+   *
+   * Le portail est heberge par Stripe : resiliation, factures et moyen de
+   * paiement compris, donc aucun ecran a maintenir de notre cote.
+   *
+   * ⚠️ LE SERVEUR REPOND 200 MEME QUAND LE PORTAIL EST INDISPONIBLE (il n y a
+   * AUCUNE cle Stripe en production aujourd'hui) : on lit `available`, on ne
+   * suppose pas. Et on ne laisse jamais la personne devant un bouton muet —
+   * si on ne peut pas ouvrir, on DIT pourquoi.
+   */
+  const handleManageWebSubscription = useCallback(async () => {
+    try {
+      const portal = await openSubscriptionManagementPortal();
+      if (portal?.opened) return;
+      Alert.alert(
+        t('profile.subscription.actions.manageWebErrorTitle', 'Gestion indisponible'),
+        t(
+          'profile.subscription.actions.manageWebErrorBody',
+          'La gestion en ligne de cet abonnement n\'est pas disponible pour le moment.'
+            + ' Ecrivez-nous et nous nous en occupons.',
+        ),
+      );
+    } catch (error) {
+      Alert.alert('Erreur abonnement', getSubscriptionBillingErrorMessage(error));
+    }
+  }, [t]);
 
   if (!canShowSubscriptionExperience) {
     return null;
@@ -719,6 +764,18 @@ function SubscriptionOverview({ navigation, route }) {
                 onPress: handleRestorePurchases,
                 withDivider: true,
               })}
+              {/* ABO-FIX / R3 — LA SEULE PORTE DE SORTIE D UN ABONNE WEB.
+                  Avant ce lot il n'en existait AUCUNE : ni ecran, ni route,
+                  pendant que l'app promet « resiliable a tout moment ». Elle
+                  n'apparait que pour un abonnement pris sur le site — un
+                  abonnement iPhone ou Android se resilie chez son magasin. */}
+              {webSubscription ? renderActionRow({
+                icon: 'euroCircle',
+                label: t('profile.subscription.actions.manageWeb', 'Gerer ou resilier mon abonnement'),
+                onPress: handleManageWebSubscription,
+                right: t('profile.subscription.actions.manageWebHint', 'Site de paiement'),
+                withDivider: true,
+              }) : null}
             </>
           ),
         )}

@@ -369,3 +369,43 @@ describe('TEMOIN 4 — le refus d abonnement ouvre l ECRAN PLEIN, pas une alerte
     expect(mockAlert).toHaveBeenCalled();
   });
 });
+
+describe('ABO-FIX/R5 — la boucle entre les deux moities du lot est fermee', () => {
+  // ⚠️ CE TEMOIN EXISTE PARCE QUE LE PIEGE DU DOMAINE EST « du code qui existe
+  // et n est JAMAIS atteint ». Jusqu au 01/09, ce mur payant etait INATTEIGNABLE :
+  // le serveur ne gardait pas `PUT /teams/:id/default-composition` (aucun
+  // canPerform, policy is-team-staff = role seul), donc la sauvegarde passait
+  // toujours et `CompositionPaywall` ne s ouvrait jamais.
+  //
+  // Le temoin voisin (TEMOIN 4) utilise une forme d erreur ecrite a la main.
+  // Celui-ci utilise EXACTEMENT ce que l app recoit du serveur reel : le rail
+  // ABO-FIX/R5 repond `ctx.forbidden(message, buildSubscriptionPermissionDenied
+  // Details(decision))`, et l intercepteur du client (`client.native.js`) rejette
+  // avec `response.data.error` — soit `{ details: { code, decision } }`.
+  test('le refus REEL du serveur (ABO-FIX/R5) ouvre bien l ecran de vente', () => {
+    mockSaveError = {
+      details: {
+        code: 'SUBSCRIPTION_PERMISSION_DENIED',
+        decision: {
+          allowed: false,
+          paywall: 'COMPOSITION_MANAGE_REQUIRED',
+          reason: 'SUBSCRIPTION_REQUIRED',
+          remainingFreeUses: 0,
+          requiredPlan: ['TEAM', 'CLUB'],
+        },
+      },
+      message: 'Cette fonctionnalite necessite une offre FoundClub active.',
+      name: 'ForbiddenError',
+      status: 403,
+    };
+
+    const arbre = rendre();
+    act(() => {
+      bouton(arbre, 'Enregistrer la compo type').props.onPress();
+    });
+
+    expect(mockNavigate).toHaveBeenCalledWith('CompositionPaywall', expect.anything());
+    // ⛔ Jamais une alerte muette : c est tout l objet de R5.
+    expect(mockAlert).not.toHaveBeenCalled();
+  });
+});

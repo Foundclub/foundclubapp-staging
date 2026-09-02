@@ -132,3 +132,22 @@ export const claimOnboardingGift = async () => {
   const response = await client.post('/subscriptions/gift/claim', {});
   return getResponsePayload(response);
 };
+
+/**
+ * LA PORTE DE SORTIE DU CLIENT WEB - lot ABO-FIX / R3.
+ *
+ * AUCUN PARAMETRE, ET C'EST LA MEME RAISON QUE LE CADEAU : le serveur prend
+ * l'abonnement web DU COMPTE AUTHENTIFIE. Laisser le telephone nommer un
+ * identifiant client Stripe ouvrirait le portail de facturation de quelqu'un
+ * d'autre - factures et moyen de paiement compris.
+ *
+ * ⚠️ CETTE ROUTE NE JETTE PAS QUAND LE PORTAIL EST INDISPONIBLE : elle repond
+ * 200 avec `available: false` et un motif. Il n'y a AUCUNE cle Stripe en
+ * production aujourd'hui, et un ecran « Mon abonnement » ne doit pas casser
+ * pour une fonction qui ne concerne que les abonnes web.
+ * @returns {Promise<{available: boolean, reason: string, url: string|null}>} Le verdict.
+ */
+export const openSubscriptionBillingPortal = async () => {
+  const response = await client.post('/subscriptions/stripe/billing-portal', {});
+  return getResponsePayload(response);
+};

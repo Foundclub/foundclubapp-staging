@@ -295,3 +295,49 @@ describe('ESSAI/E1 — qui voit cette page, et qui ne la voit pas', () => {
     expect(texteVisible(arbre)).toContain('Félicitations');
   });
 });
+
+describe('ABO-FIX/G2 — un cadeau qui echoue ne disparait plus en silence', () => {
+  /**
+   * Le `catch` de cet ecran etait VIDE, et c'est ce vide qui a cache une panne
+   * de production 5 jours durant : le serveur repondait 200 sur un refus, la
+   * reponse etait jetee, ZERO cadeau accorde et pas une trace nulle part.
+   * Ces deux temoins tiennent le nouveau contrat SANS toucher a l'ancien :
+   * le dirigeant avance toujours, et il n'y a toujours qu'un seul bouton.
+   * @returns {any} L'espion pose sur Alert.alert.
+   */
+  const espionnerAlerte = () => {
+    const { Alert } = jest.requireActual('react-native');
+    return jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+  };
+
+  test('une anomalie serveur est DITE au dirigeant — et il avance quand meme', async () => {
+    const alerte = espionnerAlerte();
+    // Le 422 du serveur : l'intercepteur du client rend le corps tel quel.
+    mockClaim.mockRejectedValue({ granted: false, reason: 'club-missing' });
+    const arbre = rendre();
+
+    await act(async () => {
+      boutons(arbre)[0].props.onPress();
+    });
+
+    expect(alerte).toHaveBeenCalledTimes(1);
+    expect(mockReplace).toHaveBeenCalledWith(RouteNames.Welcome, undefined);
+    // La consigne d'Adel tient : toujours UN seul bouton, aucune sortie ajoutee.
+    expect(boutons(arbre)).toHaveLength(1);
+    alerte.mockRestore();
+  });
+
+  test('un refus LEGITIME reste silencieux : deja recu n est pas une panne', async () => {
+    const alerte = espionnerAlerte();
+    mockClaim.mockRejectedValue({ granted: false, reason: 'already-claimed' });
+    const arbre = rendre();
+
+    await act(async () => {
+      boutons(arbre)[0].props.onPress();
+    });
+
+    expect(alerte).not.toHaveBeenCalled();
+    expect(mockReplace).toHaveBeenCalledWith(RouteNames.Welcome, undefined);
+    alerte.mockRestore();
+  });
+});

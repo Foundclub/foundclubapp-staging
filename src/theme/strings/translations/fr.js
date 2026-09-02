@@ -3633,6 +3633,11 @@ export default {
       actions: {
         changeOffer: 'Changer d\'offre',
         compareOffers: 'Comparer les offres',
+        manageWeb: 'Gérer ou résilier mon abonnement',
+        manageWebErrorBody: 'La gestion en ligne de cet abonnement n\'est pas disponible'
+          + ' pour le moment. Écrivez-nous et nous nous en occupons.',
+        manageWebErrorTitle: 'Gestion indisponible',
+        manageWebHint: 'Site de paiement',
         restore: 'Restaurer mes achats',
         viewClub: 'Voir mon club',
         viewClubHint: 'Demandes · certification',
@@ -3651,6 +3656,9 @@ export default {
         duration_other: '{{count}} jours offerts',
         ending: 'À la fin du cadeau, les équipes que vous avez créées restent :'
           + ' vous ne pourrez simplement plus en créer de nouvelles.',
+        errorBody: 'Nous n\'avons pas pu activer votre cadeau. Vous retrouverez'
+          + ' l\'offre dans votre profil, rubrique Mon abonnement.',
+        errorTitle: 'Cadeau non appliqué',
         free: 'Gratuit, sans carte bancaire',
         headerTitle: 'Votre cadeau',
         intro: 'Profitez-en pour :',

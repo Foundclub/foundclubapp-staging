@@ -3,7 +3,9 @@ import {
   useCallback, useEffect, useRef, useState,
 } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ScrollView, Text, View } from 'react-native';
+import {
+  Alert, ScrollView, Text, View,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import {
@@ -23,12 +25,30 @@ import { RouteNames } from '@/navigation/routeNames';
 
 import { claimOnboardingGift } from '@/services/subscription/subscriptionService';
 
+import { createLogger } from '@/utils/logger/logger';
+
 /**
  * Les sept usages listés par Adel, DANS SON ORDRE. Ce n'est pas une mise en
  * page : c'est la description qu'il a dictée, et l'ordre en fait partie.
  * @type {string[]}
  */
 const USAGE_KEYS = ['usage1', 'usage2', 'usage3', 'usage4', 'usage5', 'usage6', 'usage7'];
+
+/**
+ * Le journal de cet ecran. Il n'existait pas, et c'est exactement ce qui
+ * manquait : le `catch` etait vide, donc un cadeau jamais accorde ne laissait
+ * AUCUNE trace, ni au serveur (qui repondait 200) ni ici.
+ */
+const giftLogger = createLogger('onboarding-gift');
+
+/**
+ * LES DEUX REFUS QUI NE SONT PAS DES PANNES. La personne a deja recu son
+ * cadeau, ou son club est deja couvert par une offre active : lui montrer une
+ * alerte serait mentir sur la nature de l'evenement. Tout autre motif est une
+ * anomalie, et il doit se voir.
+ * @type {string[]}
+ */
+const SILENT_GIFT_REFUSALS = ['already-claimed', 'club-already-covered'];
 
 /**
  * Le retrait latéral de l'écran, en NOMBRE. Il vaut celui de `ScreenContainer`,
@@ -160,15 +180,39 @@ function OnboardingGiftScreen({ navigation, route }) {
       // « Mon abonnement » afficherait encore « Gratuit » jusqu'au redémarrage
       // de l'app (défaut L08, mesuré sur la build 2.6.1).
       scheduleSubscriptionStateRefresh(queryClient);
-    } catch {
-      // ⛔ AUCUNE ALERTE, ET C'EST DÉLIBÉRÉ. Un cadeau qu'on n'a pas pu poser
-      // n'est pas une faute du dirigeant, et lui montrer une erreur à la
-      // dernière marche de son inscription serait le pire moment de tout le
-      // parcours. Le serveur journalise, le cron répare, la personne avance.
+    } catch (error) {
+      // ⛔ CE CATCH A ETE VIDE DU 28/08 AU 01/09, ET CE VIDE A CACHE UNE PANNE DE
+      // PRODUCTION (ABO-FIX / G2). Le serveur repondait 200 meme sur un refus,
+      // cet ecran jetait la reponse : ZERO cadeau accorde entre le 28/08 et le
+      // 01/09, sans une seule trace nulle part. Le commentaire d'origine
+      // annoncait que "le cron repare" - il n'y avait rien a reparer, aucune
+      // ligne n'avait jamais ete creee.
+      //
+      // CE QUI NE CHANGE PAS, et c'est une consigne d'Adel repetee deux fois :
+      // le dirigeant AVANCE quoi qu'il arrive. `leaveGift()` est HORS du try,
+      // aucun deuxieme bouton n'apparait, aucune porte de sortie n'est ajoutee.
+      // On ne le retient pas : on lui DIT, et le parcours continue.
+      //
+      // Le serveur rejette desormais en 422 avec son motif, et l'intercepteur
+      // du client rend le corps tel quel quand il ne porte pas de cle `error`
+      // (`client.native.js`) : `error.reason` se lit donc directement.
+      const reason = String(error?.reason || '').trim() || 'unavailable';
+      giftLogger.error('claim refused', { reason });
+
+      if (!SILENT_GIFT_REFUSALS.includes(reason)) {
+        Alert.alert(
+          t('profile.subscription.gift.errorTitle', 'Cadeau non appliqué'),
+          t(
+            'profile.subscription.gift.errorBody',
+            'Nous n\'avons pas pu activer votre cadeau. Vous retrouverez'
+              + ' l\'offre dans votre profil, rubrique Mon abonnement.',
+          ),
+        );
+      }
     }
 
     leaveGift();
-  }, [leaveGift, queryClient]);
+  }, [leaveGift, queryClient, t]);
 
   if (!canShowGift) {
     return null;
