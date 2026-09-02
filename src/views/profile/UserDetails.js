@@ -674,12 +674,36 @@ function UserDetails({ navigation, route }) {
       || '',
     ).trim();
 
-    Alert.alert(
-      t('common.errors.error', 'Erreur'),
-      code === 'CHAT_BLOCKED_BETWEEN_USERS'
-        ? t('userBlock.errors.blocked', 'Tu as bloqué cette personne. Débloque-la pour lui réécrire.')
-        : getErrorMessage(error),
-    );
+    // 🧒 CONVAVERT — LE REFUS D UN MINEUR DIT POURQUOI, ET DANS LE BON SENS.
+    //
+    // Le serveur sait QUI demande : il envoie « Tu ne peux écrire qu'aux
+    // encadrants de ton club. » à l'ado, et une phrase différente à l'adulte
+    // qui voulait le joindre (`admin/src/api/chat/services/minor-chat-guard.ts`).
+    // On la préfère donc au repli, qui ne sait pas de quel côté du refus on est.
+    //
+    // ⚠️ SANS CETTE BRANCHE, LE REFUS EST MUET : `getErrorMessage` ne recopie le
+    // message du serveur que sous `__DEV__`, et retombe sinon sur le statut 403,
+    // c'est-à-dire « Accès refusé. » — le refus perdait sa raison en chemin.
+    const minorRefusalMessage = String(
+      error?.response?.data?.error?.message
+      || error?.details?.message
+      || '',
+    ).trim();
+
+    let contactFailureBody;
+    if (code === 'CHAT_BLOCKED_BETWEEN_USERS') {
+      contactFailureBody = t('userBlock.errors.blocked', 'Tu as bloqué cette personne. Débloque-la pour lui réécrire.');
+    } else if (code === 'MINOR_DIRECT_CHAT_FORBIDDEN') {
+      contactFailureBody = minorRefusalMessage || t(
+        'APIerrors.MINOR_DIRECT_CHAT_FORBIDDEN',
+        "Discussion privée impossible : un mineur ne peut échanger en privé qu'avec son parent "
+        + 'ou les encadrants de son club.',
+      );
+    } else {
+      contactFailureBody = getErrorMessage(error);
+    }
+
+    Alert.alert(t('common.errors.error', 'Erreur'), contactFailureBody);
   }, [t]);
 
   const handleContactUser = async () => {

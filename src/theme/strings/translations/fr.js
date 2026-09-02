@@ -202,6 +202,14 @@ export default {
     FAILED_TO_JOIN_CHAT: 'Impossible de rejoindre le chat.',
     FAILED_TO_SEND_MESSAGE: 'Impossible d\'envoyer le message.',
     MESSAGE_TOO_LONG: 'Le message est trop long.',
+    // CONVAVERT — LE REFUS DU GARDE-FOU DES MINEURS, ENFIN LISIBLE.
+    // Le serveur pose ce code pour les deux ages (moins de 13 ans sans le
+    // compte du parent, et 13-17 ans hors encadrants du club) avec une phrase
+    // francaise DEJA adaptee a celui qu il refuse. Cette clef est le repli :
+    // elle sert quand le message du serveur ne remonte pas, et surtout elle
+    // empeche le refus de retomber sur le « Accès refusé. » du statut 403.
+    MINOR_DIRECT_CHAT_FORBIDDEN: 'Discussion privée impossible : un mineur ne peut échanger en privé '
+      + "qu'avec son parent ou les encadrants de son club.",
     RATE_LIMIT_EXCEEDED: 'Limite de taux dépassée.',
     USER_NOT_PARTICIPANT_OF_CHAT: 'L\'utilisateur·rice n\'est pas participant·e du chat.',
 
@@ -738,6 +746,10 @@ export default {
       title: 'Ajouter',
       unavailable: 'Bientôt disponible',
     },
+    // CONVAVERT (C4) — l'avertissement permanent en tête de fil. Il ne
+    // s'affiche QUE sur un fil rattaché à un club (fil de club, fil d'équipe) :
+    // ailleurs, aucun dirigeant ne peut lire, et la phrase serait fausse.
+    clubReadNotice: 'Les conversations de ce club peuvent être consultées par son dirigeant.',
     messagePlaceholder: 'Message',
     modals: {
       actions: {

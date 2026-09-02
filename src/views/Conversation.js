@@ -804,6 +804,30 @@ function Conversation({ navigation, route }) {
     userData?.team?.documentId,
   ]);
   const isGroupChat = chatData?.type === 'group';
+
+  // 🔒 CONVAVERT (C4) — CE FIL EST-IL RATTACHE A UN CLUB ?
+  //
+  // Adel, le 2026-09-02 : « un message pour avertir que n'importe quelle
+  // conversation peut être vue par le dirigeant ». L'avertissement est la
+  // CONDITION qui rend cette lecture acceptable — il doit donc se voir dans la
+  // conversation, en permanence, jamais dans un réglage ni dans les CGU.
+  //
+  // ⛔ MAIS IL NE DOIT PAS MENTIR. Un tête-à-tête ou un groupe libre n'est
+  // rattaché à AUCUN club (`createWhisperChat` écrit `club: null, team: null`) :
+  // aucun dirigeant ne peut le lire, et l'y afficher serait faux. Un fil
+  // d'équipe, lui, hérite du club de son équipe — le serveur le renvoie déjà
+  // (`admin/src/api/chat/controllers/chat.ts`, `toSafeTeamDetailPreview`), donc
+  // rien de neuf n'est demandé à l'API.
+  //
+  // ⚠️ Une équipe de championnat libre n'a PAS de club (`team/lifecycles.ts`) :
+  // son fil ne porte donc pas l'avertissement non plus.
+  const clubReadNoticeClubId = String(
+    chatData?.club?.documentId
+    || chatData?.club?.id
+    || chatData?.team?.club?.documentId
+    || chatData?.team?.club?.id
+    || '',
+  ).trim();
   const groupAdminIds = useMemo(() => {
     if (!Array.isArray(chatData?.groupAdmins)) return [];
     return chatData.groupAdmins
@@ -6076,6 +6100,35 @@ function Conversation({ navigation, route }) {
     }, 120);
   }, [setSafeTimeout]);
 
+  /**
+   * L'avertissement de lecture par le dirigeant, en tête du fil.
+   * @returns {React.ReactNode} La ligne, ou rien si le fil n'a pas de club.
+   */
+  const renderClubReadNotice = () => {
+    if (!clubReadNoticeClubId) return null;
+
+    return (
+      <View style={[
+        Alignments.row,
+        Alignments.alignCenter,
+        Spaces.paddingHorizontal[16],
+        Spaces.paddingVertical[8],
+        { backgroundColor: 'rgba(255,255,255,0.06)' },
+      ]}
+      >
+        <Text
+          style={[Fonts.p4, { color: Colors.neutral300, flex: 1 }]}
+          testID="conversation-club-read-notice"
+        >
+          {t(
+            'conversation.clubReadNotice',
+            'Les conversations de ce club peuvent être consultées par son dirigeant.',
+          )}
+        </Text>
+      </View>
+    );
+  };
+
   const renderLeagueNegotiationBanner = () => {
     if (!isLeagueConversation || !leagueConversationMatch) return null;
     return (
@@ -6221,6 +6274,7 @@ function Conversation({ navigation, route }) {
       </View>
 
       <View style={[Alignments.fill]}>
+        {renderClubReadNotice()}
         {renderLeagueNegotiationBanner()}
         {hasMessagesLoadingError ? (
           <ErrorWrapper
