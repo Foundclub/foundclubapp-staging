@@ -181,7 +181,12 @@ jest.mock('@/components/atoms/checkable/Checkable', () => {
   };
 });
 
-jest.mock('react-native/Libraries/Alert/Alert', () => ({ alert: jest.fn() }));
+jest.mock('react-native/Libraries/Alert/Alert', () => {
+  const mockModule = { alert: jest.fn() };
+  // RN 0.79 lit `require(module).default` la ou 0.78 lisait le module entier :
+  // le mock sert les DEUX formes, pour survivre aux deux versions.
+  return { ...mockModule, default: mockModule };
+});
 
 // Un catalogue MINIMAL : ce fichier ne mesure pas les prix (c'est le travail de
 // `SubscriptionOffers.test.js`), seulement les portes de sortie.

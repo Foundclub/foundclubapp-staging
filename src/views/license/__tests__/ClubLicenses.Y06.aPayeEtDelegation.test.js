@@ -59,23 +59,28 @@ jest.mock('@tanstack/react-query', () => ({ useMutation: () => mockMutationFigee
 // la fin du test : en suite complete, ça tue le worker (« environment has been
 // torn down »). On rend donc les elements directement — c est la CARTE qu on
 // observe, pas la virtualisation.
-jest.mock('react-native/Libraries/Lists/FlatList', () => function FlatListMock(
-  /** @type {any} */ {
-    data, ListEmptyComponent, ListHeaderComponent, renderItem,
-  },
-) {
-  const { View } = jest.requireActual('react-native');
-  const elements = data || [];
-  return (
-    <View>
-      {ListHeaderComponent || null}
-      {elements.length
-        ? elements.map((/** @type {any} */ item, /** @type {number} */ index) => (
-          renderItem({ index, item })
-        ))
-        : ListEmptyComponent || null}
-    </View>
-  );
+jest.mock('react-native/Libraries/Lists/FlatList', () => {
+  const mockModule = function FlatListMock(
+    /** @type {any} */ {
+      data, ListEmptyComponent, ListHeaderComponent, renderItem,
+    },
+  ) {
+    const { View } = jest.requireActual('react-native');
+    const elements = data || [];
+    return (
+      <View>
+        {ListHeaderComponent || null}
+        {elements.length
+          ? elements.map((/** @type {any} */ item, /** @type {number} */ index) => (
+            renderItem({ index, item })
+          ))
+          : ListEmptyComponent || null}
+      </View>
+    );
+  };
+  // RN 0.79 lit `require(module).default` la ou 0.78 lisait le module entier :
+  // le mock sert les DEUX formes, pour survivre aux deux versions.
+  return Object.assign(mockModule, { default: mockModule });
 });
 
 jest.mock('react-native-safe-area-context', () => ({

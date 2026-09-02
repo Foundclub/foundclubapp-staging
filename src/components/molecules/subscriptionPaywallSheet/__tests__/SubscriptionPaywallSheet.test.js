@@ -173,9 +173,14 @@ jest.mock('@/theme/themeContext', () => {
   };
 });
 
-jest.mock('react-native/Libraries/Alert/Alert', () => ({
-  alert: (/** @type {any} */ ...args) => mockAlert(...args),
-}));
+jest.mock('react-native/Libraries/Alert/Alert', () => {
+  const mockModule = {
+    alert: (/** @type {any} */ ...args) => mockAlert(...args),
+  };
+  // RN 0.79 lit `require(module).default` la ou 0.78 lisait le module entier :
+  // le mock sert les DEUX formes, pour survivre aux deux versions.
+  return { ...mockModule, default: mockModule };
+});
 
 /* ------------------------------------------------------------------ */
 /* Catalogue : copie fidele du catalogue STATIQUE du serveur           */
