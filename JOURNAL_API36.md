@@ -149,9 +149,10 @@ grand écran, opt-out ignoré). Cela demanderait une image système API 36.
 | 1 | 0.78.0 → 0.79.7 | ✅ **VERTE** | **468 / 5 516** | 13 suites rouges, **2 causes** — voir §M1 |
 | 2 | 0.79.7 → 0.80.3 | ✅ **VERTE** | **468 / 5 516** | **rien du tout** — voir §M2 |
 | 3 | 0.80.3 → 0.81.6 *(+ `compileSdk` 36)* | ✅ **VERTE** | **468 / 5 516** | 3 suites, **1 cause** (`Pressable`) — voir §M3 |
-| 4 | `targetSdk 36` + edge-to-edge (A3) | ⬜ pas commencée | — | — |
-| 5 | Permissions `notifee` + cleartext (A4) | ⬜ pas commencée | — | — |
-| 6 | APK de debug sur l'émulateur (A5) | ⬜ pas commencée | — | — |
+| 4 | `targetSdk 36` (A3) | ✅ **FAIT — prouvé dans le binaire** | — | rien · edge-to-edge ⛔ voir §A3bis |
+| 5 | Permissions `notifee` + cleartext (A4) | ✅ **FAIT — prouvé dans le binaire** | — | rien |
+| 6 | APK (A5) | ✅ **CONSTRUIT** — 1 280 tâches, `BUILD SUCCESSFUL` | — | 3 murs tiers + 1 dans notre Kotlin — voir §APK |
+| 7 | APK **installé** sur l'émulateur + captures | ⛔ **bloqué** | — | le banc d'essai d'une autre session occupe le même nom de paquet — arbitrage d'Adel |
 
 ---
 
@@ -358,6 +359,191 @@ Contrôle ciblé sur les 3 seuls fichiers touchés (`eslint -f json`), puis corr
 
 ---
 
+## APK. LA CONSTRUCTION DE L'APK — ce que les 4 portes vertes ne pouvaient PAS dire
+
+> 🧨 **Le fait le plus important de tout ce chantier.** Les quatre portes étaient vertes
+> **trois marches de suite** — 468 suites, 5 516 tests, à chaque fois. Et pourtant **l'app ne
+> compilait pas**. Les tests vérifient le JavaScript ; ils ne touchent **jamais** le C++.
+> Sans l'étape A5, on aurait poussé une branche « verte » qui ne produit aucun binaire.
+
+Commande : `./gradlew.bat assembleStagingRelease --no-daemon` dans `D:/App/fc/.worktrees/API36-app/android`.
+
+**Pourquoi la variante `stagingRelease` et pas `stagingDebug`**, alors que la consigne dit « APK de
+debug » : une build *debug* charge son JavaScript depuis Metro — **et le Metro qui tourne sur cette
+machine sert `D:/App/fc/app`, c'est-à-dire du JavaScript compilé pour RN 0.78**. Un binaire 0.81
+qui charge un bundle 0.78 ne prouve rien. La variante `stagingRelease` **embarque son propre
+bundle**, ne dépend d'aucun Metro, ne dérange pas le banc d'essai du voisin — et c'est **exactement
+ce que construit la CI** (`android-staging-distribution.yml`). Elle est signée avec
+`debug.keystore` (`signingConfigs.staging`), donc elle s'installe sans rien demander.
+
+### Les 4 tentatives, et ce que chacune a appris
+
+| # | Résultat | Cause | Ce qu'on en retient |
+|---|---|---|---|
+| 1 | ⛔ échec en **13 s** | Cache Gradle partagé corrompu : `metadata.bin` manquant dans `caches/8.14.3/transforms/c82eb49d…` | **Rien à voir avec le code.** Voir le paragraphe « cache partagé » ci-dessous. |
+| 2 | ⛔ échec en **10 min** | **`react-native-reanimated` 3.17.1 ne compile pas contre RN 0.81** | La vraie découverte. Voir ci-dessous. |
+| 3 | ⛔ échec en **16 min** | **Le jeton Sentry du tiers** (R1) fait échouer la tâche d'envoi, et rien n'ignore cet échec | Confirme R1 **de première main**. Voir ci-dessous. |
+| 4 | *(en cours)* | avec `SENTRY_DISABLE_AUTO_UPLOAD=true` | — |
+
+### 🧨 La vraie découverte — `react-native-reanimated` 3.17.1 est incompatible avec RN 0.81
+
+Épinglée **à l'exact** dans `package.json` (`"3.17.1"`, sans accent circonflexe), donc jamais montée
+toute seule. Son C++ échoue sur `:react-native-reanimated:buildCMakeRelWithDebInfo[arm64-v8a]`.
+
+**Et ce ne sont pas de simples avertissements de dépréciation** — il y a de vrais trous :
+
+| Ce que reanimated appelle | Ce que dit le compilateur |
+|---|---|
+| `rawProps` | `no member named 'rawProps' in 'facebook::react::Props'` |
+| `shadowNodeFromValue` | `use of undeclared identifier` — *did you mean `shadowNodeListFromValue`?* |
+| `ReanimatedMountHook` | `field type … is an abstract class` |
+| `ShadowNode::Shared` / `Unshared` / `ListOfShared` | dépréciés, et comme la compilation est en `-Werror`, une dépréciation **est** une erreur |
+
+⇒ Monté à **3.19.5**, la **dernière de la même génération**. ⛔ Pas la 4.x : elle change le greffon
+Babel (`react-native-worklets/plugin`) et la configuration de compilation. Le plus petit pas qui
+répare, pas le plus grand pas possible. Vérifié après installation : `react-native-reanimated/plugin`
+existe toujours (`babel.config.js` n'a pas à bouger) et 3.19.5 n'exige **aucun** paquet
+`react-native-worklets` séparé.
+
+> 📌 **Note pour Adel** : la consigne du lot dit « ⛔ ne pas monter une dépendance non liée à RN tant
+> qu'on y est ». Celle-ci **est** liée à RN — c'est RN 0.81 qui la casse — donc elle est dans le
+> périmètre. Mais c'est la bibliothèque qui anime **tous** les mouvements de l'app : deux versions
+> mineures d'écart, **ça se voit à l'œil**. À regarder en recette.
+
+✅ **Tout le reste de la chaîne native compile en RN 0.81** : à la tentative 2, **125 tâches**
+étaient passées avant de buter, et à la tentative 3, **512 tâches** (462 exécutées) — Firebase,
+les cartes, Nitro, le son, la messagerie. Il n'y avait **qu'un seul mur**.
+
+### 🔴 Le jeton Sentry du tiers (R1) — confirmé de première main, et sa mise en garde aussi
+
+La tâche `…_SentryUpload_com.foundclub.staging@1.0.0-staging+1_1` **fait échouer le build**.
+Ce que le journal montre :
+
+```
+Loaded file referenced by SENTRY_PROPERTIES (…/android/sentry.properties)
+  defaults.org     = zolteam
+  defaults.project = faciliciti-app
+  auth.token       = sntrys_eyJpY…  (145 caracteres)
+```
+
+| Constat | Détail |
+|---|---|
+| 🟢 **Rien n'est parti** | La tâche a échoué **avant tout envoi**, sur `error: Le fichier spécifié est introuvable. (os error 2)`. Recherche de `Uploaded files to Sentry` dans le journal → **0**. Aucune source map de FoundClub n'a quitté cette machine. |
+| 🔴 **Mais le mécanisme est armé** | Le jeton a bien été chargé et `sentry-cli` lancé. Sur un runner CI, où le fichier attendu existe, l'envoi part — c'est le « jusqu'à 147 envois » de R1. |
+| ⚠️ **La mise en garde de R1 est VRAIE, vérifiée ici** | `sentry.gradle:11` lit `SENTRY_DISABLE_AUTO_UPLOAD`, et **rien n'ignore l'échec de la tâche**. Révoquer le jeton **sans avoir posé ce garde-fou d'abord tuerait le prochain build Android.** Ce build vient d'en faire la démonstration : l'ordre imposé par R1 (garde-fou d'abord, révocation ensuite) n'est pas une précaution de style. |
+
+⇒ Build relancé avec `SENTRY_DISABLE_AUTO_UPLOAD=true` — ce qui répare **et** garantit que rien ne
+part chez le tiers.
+
+### 🧹 Le cache Gradle partagé — ce qui a été touché, et pourquoi c'était sûr
+
+Première tentative morte en 13 s sur `Could not read workspace metadata from
+C:\Users\adelf\.gradle\caches\8.14.3\transforms\c82eb49d…\metadata.bin` — une entrée **à moitié
+écrite** (le dossier existait, son index manquait). `C:\Users\adelf\.gradle` est un cache **commun à
+toute la machine** : on n'y touche pas sans contrôle.
+
+| Contrôle avant de supprimer | Résultat |
+|---|---|
+| L'échec est-il reproductible ? | **Oui**, deux fois à l'identique |
+| Gradle lui-même est-il cassé ? | Non — `gradlew --version` → exit 0 |
+| Un autre build utilise-t-il cette entrée ? | Un seul processus Java tourne : un service **Gradle 8.13**, qui travaille dans `caches/8.13/`. **Aucun contact** avec `caches/8.14.3/` |
+| Est-ce un lien déguisé ? | **Non** — `LinkType` vide, vrai dossier de 84 Ko *(le contrôle qui avait manqué le 20/08 sur le `node_modules` partagé)* |
+
+⇒ **Cette seule entrée** supprimée. Le cache (5,6 Go, 13 autres entrées) est intact, et Gradle
+reconstruit ce qu'il a perdu.
+
+### ✅ LES DEUX AUTRES MURS, ET LE BUILD QUI PASSE
+
+**Mur 3 — `countLines is not a function` (le MÊME piège que la marche 1).**
+`metro.config.js` enveloppe la configuration avec `withSentryConfig`. Le sérialiseur de
+`@sentry/react-native` 6.21.0 fait :
+
+```js
+countLines = require('metro/src/lib/countLines');
+```
+
+Or le Metro livré avec RN 0.81 (**0.83.8**) exporte cette fonction en `.default`
+(`exports.default = countLines`, `__esModule: true`). Sentry reçoit donc **un objet là où il attend
+une fonction** — exactement le changement qui avait cassé `Alert` en marche 1 et `Pressable` en
+marche 3. **Trois fois le même mécanisme.**
+
+⚠️ **Et j'avais mal lu le journal du build 3** : j'avais annoncé que le bundle JavaScript s'était
+fabriqué et que seul l'envoi Sentry échouait. **Faux.** La tâche de bundle avait échoué *elle aussi*,
+et l'envoi ne plantait qu'ensuite faute de fichier. Je m'étais arrêté au **dernier** échec affiché
+au lieu de remonter au **premier**.
+
+⇒ `@sentry/react-native` monté de **^6.9.1 (6.21.0) à ^7.13.0**. Le correctif est arrivé en
+**7.2.0** — leur note de version dit mot pour mot : *« Vendor `metro/countLines` function to avoid
+issues with the private import »*. ⚠️ 6.20.0 annonçait pourtant « Support Metro 0.83 » : **l'annonce
+était en avance sur le correctif**.
+
+**Le risque de cette montée majeure, mesuré avant de la faire** :
+
+| Question | Réponse |
+|---|---|
+| Combien de fichiers de l'app importent Sentry ? | **1** — `src/App.js` |
+| Combien d'appels ? | **5** : `init`, `wrap`, `reactNavigationIntegration`, `captureException` ×2 — tous stables en 7.x |
+| Sentry est-il seulement actif dans les builds ? | **Non** : `SENTRY_DSN=` est **vide** dans les deux workflows (`android-staging-distribution.yml:60`, `android-play-release.yml:121`) |
+
+**Mur 4 — notre PROPRE code Kotlin.** `PlanningOrientationModule.kt` (le module qui bascule le
+planning en paysage) : `Unresolved reference 'currentActivity'`, deux fois.
+
+RN 0.81 a réécrit `ReactContextBaseJavaModule` **en Kotlin**. Or Kotlin ne fabrique de propriété
+synthétique **que pour les getters Java** : `getCurrentActivity()` étant devenu une *fonction
+Kotlin*, le raccourci `currentActivity` a disparu.
+
+**Le remplacement n'a pas été deviné — React Native l'écrit lui-même** :
+
+```kotlin
+@Deprecated(
+    "Deprecated in 0.80.0. Use getReactApplicationContext.getCurrentActivity() instead.",
+    ReplaceWith("reactApplicationContext.currentActivity"))
+```
+
+⇒ appliqué tel quel aux 2 sites. Vérifié pourquoi ça marche : `ReactContext.getCurrentActivity()`
+et `BaseJavaModule.getReactApplicationContext()` sont **restés en Java**, donc leurs propriétés
+synthétiques existent toujours.
+
+⚠️ **NON VÉRIFIÉ, et ça ne peut pas l'être ici** : c'est du code Android natif. **Aucun des 5 516
+tests ne le couvre**, et aucune porte ne le mesure. Le compilateur dit qu'il est *correct* ; il ne
+dit pas que **l'écran tourne encore en paysage**. ⇒ **à vérifier à la main en recette** : ouvrir le
+planning, basculer en paysage.
+
+### 🏁 LE RÉSULTAT — `BUILD SUCCESSFUL`, et ce que le binaire prouve
+
+`BUILD SUCCESSFUL in 2m 1s` · **1 280 tâches** — *exactement le compte du run CI n°251*.
+APK : `android/app/build/outputs/apk/staging/release/app-staging-release.apk`.
+
+**Lu dans le binaire lui-même** (`aapt2 dump badging`), avant/après le lot A4 :
+
+| Ce qu'on vérifie | APK d'avant A4 | APK final | |
+|---|---|---|---|
+| `compileSdkVersion` | 36 | **36** | ✅ compilé contre Android 16 |
+| **`targetSdkVersion`** | 35 | **36** | 🎯 **LE BUT DU CHANTIER, dans le binaire** |
+| `SCHEDULE_EXACT_ALARM` | **présente** | **absente** | ✅ R12 |
+| `FOREGROUND_SERVICE` | **présente** | **absente** | ✅ R12 |
+| `RECEIVE_BOOT_COMPLETED` | **présente** | **absente** | ✅ R12 |
+| `usesCleartextTraffic` | présent | **absent du manifeste de release** | ✅ R12 |
+
+> 🎯 Ce n'est pas « le fichier dit 36 » : c'est **le binaire fabriqué** qui le dit, et les
+> permissions étaient **mesurées présentes dans l'APK précédent**. Un avant/après, pas une
+> affirmation.
+
+⚠️ **Taille : 120 Mo**, alors que l'APK du run CI n°251 faisait **65,6 Mo**. Écart **non
+expliqué** — probablement les symboles de débogage natifs non retirés en local. À regarder avant
+tout envoi réel ; sans effet sur la validité de la compilation.
+
+### 📋 Fichiers ajoutés à la copie pour pouvoir construire — tous ignorés par git
+
+`.env.staging`, `android/app/src/staging/google-services.json` (copiés depuis `D:/App/fc/app`, en
+lecture) et `android/local.properties` (chemin du SDK). ✅ `git status` reste propre : ils sont dans
+le `.gitignore`.
+🔒 `android/app/src/production/google-services.json` est **absent** de cette copie — le `variantFilter`
+(`android/app/build.gradle:170-174`) écarte donc entièrement la saveur production. **Aucun risque
+de fabriquer quoi que ce soit qui vise la production.**
+
+---
+
 ## 3. LES DÉCISIONS PRISES EN COURS DE ROUTE
 
 ### 🔶 D1 — L'`AppDelegate.swift` n'est PAS migré, et c'est délibéré
@@ -482,6 +668,70 @@ l'émulateur) et un lien `maps.apple.com` ouvert par le système, pas par l'app.
 
 ---
 
+## A3bis. ⛔ LE REMPLACEMENT DES 2 `SafeAreaView` N'A PAS ÉTÉ FAIT — et le refuser est le bon geste
+
+La consigne A3 dit : « remplace les 2 `SafeAreaView` legacy par `react-native-safe-area-context` ».
+**Appliquée telle quelle, elle introduirait sur Android le défaut qu'elle prétend corriger.**
+
+**Ce que j'ai mesuré dans `ScreenContainer.js`** (le conteneur qui enveloppe ces 2 écrans) :
+
+| Ligne | Ce qu'il fait |
+|---|---|
+| `:90` | `const insets = useSafeAreaInsets()` |
+| `:106` | `if (withHeaderPadding) nextSpaces.paddingTop = headerHeightNative \|\| insets.top` |
+| `:112` | `let paddingBottom = insets.bottom` — **un plancher, appliqué TOUJOURS** |
+
+Et dans les 2 écrans, le `SafeAreaView` est **à l'intérieur** de ce `ScreenContainer`
+(`LeagueMatchDetails.js:1866-1867`, `PastMatchDetails.js:300-301`).
+
+| Plateforme | Aujourd'hui | Après le remplacement demandé |
+|---|---|---|
+| **Android** | Le `SafeAreaView` de RN est `Platform.select({ ios: natif, default: View })` ⇒ **il ne fait rien**. Le conteneur fournit les marges. **C'est juste.** | Le composant de `safe-area-context` **ajoute** sa propre marge par-dessus celle du conteneur ⇒ **marge basse DOUBLÉE. Une régression visible, causée par le correctif.** |
+| **iOS** | Marge native + marge du conteneur ⇒ **peut-être déjà doublée** | Inchangé (toujours doublé) |
+
+**L'idiome de la maison tranche dans le même sens** : les 3 écrans voisins du même dossier —
+`MatchCenterScreen.js`, `MatchHistoryScreen.js`, `ComingSoonLeagueScreen.js` — utilisent
+`ScreenContainer` **sans aucun `SafeAreaView`**. Ce sont eux qui ont raison.
+⚠️ `EndMatchScreen.js`, que j'avais d'abord cité comme modèle à copier, importe bien
+`SafeAreaView` depuis `react-native-safe-area-context` — **mais il est lui aussi dans un
+`ScreenContainer`**, donc il porte probablement déjà la marge doublée. **Mauvais modèle.**
+
+### Pourquoi je n'ai rien touché
+
+1. 🔴 Le geste demandé **ajouterait un défaut** sur Android (mesuré ci-dessus).
+2. 🔴 **Ces 2 fichiers n'ont aucun test** — `find` → 0 fichier de test les concernant. La règle E6
+   et le garde-fou §1 bis imposent un **test caractérisant d'abord**.
+3. 🔴 Ce sont des écrans **visuels**, sur un mode (LEAGUE) que je ne peux pas ouvrir d'ici.
+
+⇒ **Question remontée à Adel, chemin le plus sûr pris : ne rien casser.** Les 3 options, avec la
+recommandation, sont dans le compte rendu. **La branche reste verte.**
+
+---
+
 ## 5. CE QUI RESTE, POUR CELUI QUI REPREND
 
-*(rempli au fur et à mesure)*
+| # | Ce qui reste | Pourquoi ça n'a pas été fait | Taille |
+|---|---|---|---|
+| 1 | 🎨 **Les 2 `SafeAreaView` des écrans LEAGUE** | Voir §A3bis — le geste demandé serait une régression ; **arbitrage d'Adel demandé** | 1 test de caractérisation par écran, puis 1 ligne |
+| 2 | 📱 **Installer l'APK sur l'émulateur + captures** | L'émulateur héberge le **banc d'essai d'une autre fenêtre** (`com.foundclub.staging`, Metro allumé). Mon APK porte **le même nom de paquet** : l'installer écraserait leur banc. **Arbitrage d'Adel demandé** (emprunter/rendre · attendre · 2e émulateur) | 10 min une fois tranché |
+| 3 | 🤖 **Les comportements propres à Android 16** | L'émulateur de la machine est un **Android 15 (API 35)**. Il suffit pour voir l'edge-to-edge (Android 15 l'impose déjà) mais **pas** pour les restrictions d'orientation sur grand écran | 1 image système API 36 (~1,5 Go) |
+| 4 | 🍎 **Vérifier qu'iOS compile encore** | **Impossible sous Windows** : ni `pod install`, ni Xcode. Aucun fichier iOS n'a été modifié par ce chantier | 1 build sur macOS |
+| 5 | 🔄 **`Podfile.lock` ne connaît pas `react-native-geolocation`** (R18) | Même raison qu'au-dessus | idem |
+| 6 | 📦 **L'APK fait 120 Mo contre 65,6 Mo en CI** | Écart non expliqué ; probablement les symboles natifs non retirés en local | à regarder avant tout envoi |
+| 7 | 🧭 **Le mode « bridgeless » condamné** | Voir §3 D2 — le réglage survit à 0.81 mais pas au-delà. **Sujet à ouvrir avant RN 0.82** | un chantier à part |
+| 8 | 🧪 **301 fichiers de test sur `react-test-renderer`** | React l'a déprécié ; **0 fichier** utilise `@testing-library`. Autre falaise de 0.82 | un chantier à part |
+| 9 | 🔴 **Le jeton Sentry du tiers** (R1) | C'est le lot **HYGIÈNE** d'une autre session. Ce chantier a **confirmé son ordre d'opérations** : garde-fou d'abord, révocation ensuite — sinon le build Android meurt (démontré ici) | son lot |
+
+### 🔑 Ce qu'il faut savoir pour reconstruire l'APK
+
+```
+cd D:/App/fc/.worktrees/API36-app/android
+$env:ANDROID_HOME = "C:\Users\adelf\AppData\Local\Android\Sdk"
+$env:APP_ENV = "staging"
+$env:SENTRY_DISABLE_AUTO_UPLOAD = "true"     # <-- SANS LUI, LE BUILD MEURT (R1)
+.\gradlew.bat assembleStagingRelease --no-daemon --console=plain
+```
+
+Et les 3 fichiers non versionnés qu'il faut avoir copiés dans la copie de travail :
+`.env.staging`, `android/app/src/staging/google-services.json` (depuis `D:/App/fc/app`) et
+`android/local.properties` (`sdk.dir=C:/Users/adelf/AppData/Local/Android/Sdk`).

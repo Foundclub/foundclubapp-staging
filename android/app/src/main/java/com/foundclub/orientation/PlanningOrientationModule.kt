@@ -20,7 +20,8 @@ class PlanningOrientationModule(
 
   @ReactMethod
   fun lockToLandscape() {
-    val currentRotation = currentActivity?.display?.rotation ?: Surface.ROTATION_0
+    val currentRotation = reactApplicationContext.currentActivity?.display?.rotation
+      ?: Surface.ROTATION_0
     val requestedOrientation = if (currentRotation == Surface.ROTATION_270) {
       ActivityInfo.SCREEN_ORIENTATION_REVERSE_LANDSCAPE
     } else {
@@ -37,7 +38,7 @@ class PlanningOrientationModule(
 
   private fun setRequestedOrientation(requestedOrientation: Int) {
     UiThreadUtil.runOnUiThread {
-      currentActivity?.requestedOrientation = requestedOrientation
+      reactApplicationContext.currentActivity?.requestedOrientation = requestedOrientation
     }
   }
 

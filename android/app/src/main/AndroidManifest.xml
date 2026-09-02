@@ -12,6 +12,15 @@
   <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" tools:replace="android:maxSdkVersion" />
   <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="32" tools:replace="android:maxSdkVersion" />
   <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+
+  <!-- R12 : notifee apporte ces trois permissions par fusion de manifeste, depuis son
+       binaire (android/libs/app/notifee/core/202108261754/core-202108261754.aar).
+       L app ne s en sert PAS : 0 createTriggerNotification, 0 TriggerType, 0 TimestampTrigger,
+       0 registerForegroundService dans src/. Les laisser, c est demander a l utilisateur et aux
+       magasins des droits qu on n exerce jamais. -->
+  <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" tools:node="remove" />
+  <uses-permission android:name="android.permission.FOREGROUND_SERVICE" tools:node="remove" />
+  <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" tools:node="remove" />
   <uses-feature android:name="android.hardware.camera" android:required="false"/>
   <uses-feature android:name="android.hardware.camera.front" android:required="false"/>
 
@@ -29,7 +38,6 @@
   android:roundIcon="@mipmap/ic_launcher_round"
   android:allowBackup="false"
   android:theme="@style/AppTheme"
-  android:usesCleartextTraffic="true"
   android:supportsRtl="true">
     <meta-data android:name="com.google.android.geo.API_KEY" android:value="${googleMapsApiKey}" />
     <meta-data  android:name="com.google.firebase.messaging.default_notification_icon" android:resource="@drawable/ic_notification" />
