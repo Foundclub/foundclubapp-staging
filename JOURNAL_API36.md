@@ -81,14 +81,14 @@ Diffs récupérés depuis l'Upgrade Helper (`rn-diff-purge`, branche `diffs`), p
 
 ### Marche 3 — 0.80.3 → 0.81.6 — **c'est celle qui porte l'API 36**
 
-| Fichier | Ce qui change |
-|---|---|
-| `android/build.gradle` | `buildToolsVersion` **36.0.0** · `compileSdkVersion` **36** · `targetSdkVersion` **36** |
-| `android/gradle.properties` | **ajout de `edgeToEdgeEnabled=false`** — ⚠️ **ce n'est PAS un opt-out**, voir §E2E |
-| `android/app/src/main/AndroidManifest.xml` | `usesCleartextTraffic` devient un **placeholder** |
-| `android/app/src/debug/AndroidManifest.xml` | **supprimé** (le cleartext passe par le placeholder) |
-| `package.json` | `react` **19.1.4** · `react-native` 0.81.6 · cli **20.0.0** · `typescript` ^5.8.3 · `node >= 20` |
-| wrapper | gradle 8.14.1 → 8.14.3 |
+| Fichier | Ce que le guide demande | Ce que j'ai fait |
+|---|---|---|
+| `android/build.gradle` | `buildToolsVersion` **36.0.0** · `compileSdkVersion` **36** · `targetSdkVersion` **36** | ✅ les deux premiers · 🔶 **`targetSdk` reporté au lot A3** — voir §M3 |
+| `android/gradle.properties` | ajout de `edgeToEdgeEnabled=false` | ✅ appliqué, avec un commentaire qui dit ce qu'il fait **vraiment** — ⚠️ **ce n'est PAS un opt-out**, voir §E2E |
+| `android/app/src/main/AndroidManifest.xml` | `usesCleartextTraffic` devient un **placeholder** | 🔶 **reporté au lot A4** — ce dépôt a déjà un manifeste de debug, la solution y est plus simple (voir §4) |
+| `android/app/src/debug/AndroidManifest.xml` | **supprimé** | 🔶 **conservé** — c'est justement lui qui rend le placeholder inutile ici |
+| `package.json` | `react` **19.1.4** · `react-native` 0.81.6 · cli **20.0.0** · `typescript` ^5.8.3 · `node >= 20` | ✅ tout, **sauf `typescript`** : laissé en 5.0.4 et **la mesure a prouvé que c'était le bon choix** (voir §M3) |
+| wrapper | gradle 8.14.1 → 8.14.3 | ✅ (`gradlew`, `gradlew.bat` et le `.jar` sont **identiques** entre 0.80.3 et 0.81.6) |
 
 > 🎁 **Un point de la liste stores devient plus simple en 0.81** : le `usesCleartextTraffic="true"`
 > écrit en dur (R12) devient un placeholder faux en release.
@@ -148,7 +148,7 @@ grand écran, opt-out ignoré). Cela demanderait une image système API 36.
 | 0 | Base 0.78.0 (copie désolidarisée) | ✅ **VERTE** | **468 / 5 516** | rien — la copie reproduit la référence |
 | 1 | 0.78.0 → 0.79.7 | ✅ **VERTE** | **468 / 5 516** | 13 suites rouges, **2 causes** — voir §M1 |
 | 2 | 0.79.7 → 0.80.3 | ✅ **VERTE** | **468 / 5 516** | **rien du tout** — voir §M2 |
-| 3 | 0.80.3 → 0.81.6 *(+  36)* | ✅ **VERTE** | **468 / 5 516** | 3 suites, **1 cause** () — voir §M3 |
+| 3 | 0.80.3 → 0.81.6 *(+ `compileSdk` 36)* | ✅ **VERTE** | **468 / 5 516** | 3 suites, **1 cause** (`Pressable`) — voir §M3 |
 | 4 | `targetSdk 36` + edge-to-edge (A3) | ⬜ pas commencée | — | — |
 | 5 | Permissions `notifee` + cleartext (A4) | ⬜ pas commencée | — | — |
 | 6 | APK de debug sur l'émulateur (A5) | ⬜ pas commencée | — | — |
