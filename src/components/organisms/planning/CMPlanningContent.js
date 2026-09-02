@@ -387,6 +387,14 @@ function CMPlanningContent({
                   <EventCardNew
                     item={event}
                     key={event.documentId || `${event.id || 'event'}-${event.startAt || event.date || ''}`}
+                    // ⛔ LES QUATRE SONT VIDES, ET C EST COHERENT (recense par
+                    // TRIO le 2026-09-01). Ce planning est celui d un CLUB
+                    // MULTISPORT vu par son administrateur : il regarde les
+                    // evenements de SES sections, il n y participe pas. La
+                    // carte est une porte de navigation (`onPress`), pas un
+                    // formulaire de reponse. ⚠️ N en brancher qu UNE seule
+                    // serait pire que zero : « Absent » repondrait pendant que
+                    // « Present » resterait mort.
                     onDecline={() => {}}
                     onJoin={() => {}}
                     onLogin={() => {}}

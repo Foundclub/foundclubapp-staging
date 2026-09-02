@@ -125,6 +125,15 @@ jest.mock('@/services/messageReport/messageReportService', () => ({
 }));
 jest.mock('@/services/reservation/reservationService', () => ({ joinReservation: jest.fn() }));
 jest.mock('@/services/event/eventQueries', () => ({ useGetEvents: () => ({ data: null }) }));
+// TRIO — l'ecran repond desormais « Absent » sur la carte d'evenement du fil, via
+// `useEventAnswerMutations`. Ce hook importe `eventService`, qui charge
+// `react-native-blob-util` (module ESM que Jest ne transforme pas) : sans cette
+// doublure c'est la SUITE ENTIERE qui meurt au chargement, sans un seul test rouge.
+// Meme motif que la ligne du dessus : ce fil-la ne mesure pas les evenements.
+jest.mock('@/services/event/eventService', () => ({
+  missingEvent: jest.fn(),
+  respondToEventRsvp: jest.fn(),
+}));
 jest.mock('@/platform/share', () => ({ __esModule: true, default: { share: jest.fn() } }));
 
 // LA BANNIERE, celle qui existe deja dans l'ecran. On capture ce qu'elle recoit.

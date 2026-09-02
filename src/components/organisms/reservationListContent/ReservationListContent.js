@@ -443,6 +443,9 @@ function ReservationListContent({
         <EventCardNew
           actionLabel={isManager ? t('eventList.actions.about') : undefined}
           item={item}
+          // Carte de RESERVATION : aucune route « je ne viens pas » n existe pour
+          // une reservation, et `EventCardNew` ne rend pas ce bouton pour elle.
+          // Recense par TRIO le 2026-09-01 : ce n est pas un oubli.
           onDecline={() => {}}
           onJoin={() => {}}
           onLogin={() => {}}
@@ -510,6 +513,7 @@ function ReservationListContent({
                   <EventCardNew
                     actionLabel={isManager ? t('eventList.actions.about') : undefined}
                     item={item}
+                    // Meme raison que la carte du dessus : c est une RESERVATION.
                     onDecline={() => {}}
                     onJoin={() => {}}
                     onLogin={() => {}}

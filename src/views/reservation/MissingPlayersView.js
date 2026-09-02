@@ -146,6 +146,10 @@ function MissingPlayersView({ navigation }) {
   const renderItem = useCallback((/** @type {{ item: FCEvent }} */ { item }) => (
     <EventCardNew
       item={item}
+      // Ecran des RESERVATIONS qui cherchent des joueurs (`useGetReservations`) :
+      // aucune route « je ne viens pas » n existe pour une reservation, et
+      // `EventCardNew` ne rend pas ce bouton pour elle. Recense par TRIO le
+      // 2026-09-01 : ce n est pas un oubli.
       onDecline={() => {}}
       onJoin={() => {}}
       onLogin={() => {}}
