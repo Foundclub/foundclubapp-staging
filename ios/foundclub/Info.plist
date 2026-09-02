@@ -52,9 +52,9 @@
 	<key>NSMicrophoneUsageDescription</key>
 	<string>L'application Foundclub a besoin d'acceder au microphone pour envoyer des notes vocales.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>L'application Foundclub a besoin de votre position pour vous proposer les clubs et les evenements autour de vous. Elle n'est jamais enregistree ni partagee.</string>
+	<string>FoundClub utilise votre position pour centrer la carte et vous proposer les clubs et les événements autour de vous. La zone recherchée est envoyée à nos serveurs pour calculer ces résultats.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>L'application Foundclub a besoin d'accéder à votre gallerie photo pour vous permettre de prendre une photo de profil.</string>
+	<string>FoundClub a besoin d'accéder à votre galerie photo pour votre photo de profil et pour envoyer des images dans vos conversations.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
 	<string>FoundClub enregistre ta carte de collection dans ta phototheque quand tu le demandes.</string>
 	<key>UIAppFonts</key>
@@ -65,7 +65,6 @@
 	</array>
 	<key>UIBackgroundModes</key>
 	<array>
-		<string>fetch</string>
 		<string>remote-notification</string>
 	</array>
 	<key>UILaunchStoryboardName</key>
