@@ -1,4 +1,27 @@
-const DEFAULT_PUBLIC_ORIGIN = 'https://foundclub.com';
+/**
+ * L'origine de DERNIER RECOURS quand aucune variable d'environnement ne dit ou
+ * vit l'API.
+ *
+ * 🎯 CE N'EST PAS L'ADRESSE DU SITE, et c'est tout l'enjeu. Cette valeur sert a
+ * fabriquer `uploadUrl` (`<origine>/api/upload`), le `socketUrl`, les URL de
+ * medias (`imageUrl.js`, `mediaUrl.js`, pieces jointes du tchat) et la page
+ * `/install.html`, qui vit dans `admin/public/`. Autrement dit : le SERVEUR.
+ * Le site, lui, est `DEFAULT_WEB_APP_ORIGIN` dans `utils/shareLinks.js`, et il
+ * vaut bien `https://foundclub.app`.
+ *
+ * 🧨 TRIO (2026-09-01) — elle valait `https://foundclub.com` : ni l'API, ni le
+ * site. Un domaine mort. En production le repli n'est jamais atteint
+ * (`.env.production` porte `API_URL=https://api.foundclubpro.com/api`, dont
+ * `publicOrigin` est derive), mais une construction sans `API_URL` l'aurait
+ * envoye tel quel dans chaque media et chaque page d'installation.
+ *
+ * ⛔ `shareLinks.js` l'IMPORTE au lieu d'en tenir une copie : il s'en sert comme
+ * d'un temoin (« cette origine est le repli, donc rien n'est configure, donc ce
+ * n'est pas le site »), et deux copies qui divergent cassent ce temoin en
+ * silence. C'etait deja le cas avant ce lot.
+ * @type {string}
+ */
+export const DEFAULT_PUBLIC_ORIGIN = 'https://api.foundclubpro.com';
 const LOOPBACK_HOSTS = new Set(['10.0.2.2', '127.0.0.1', 'localhost']);
 const PRIVATE_IPV4_HOST_PATTERN = /^(10(?:\.\d{1,3}){3}|192\.168(?:\.\d{1,3}){2}|172\.(1[6-9]|2\d|3[0-1])(?:\.\d{1,3}){2})$/i;
 

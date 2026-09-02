@@ -79,6 +79,7 @@ import JoinEventModal from '@/components/organisms/joinEventModal/JoinEventModal
 import PollCreationModal from '@/components/organisms/pollCreationModal/PollCreationModal';
 import GlobalPromptModal from '@/components/organisms/popup/GlobalPromptModal';
 import VenueProposalModal from '@/components/organisms/venueProposalModal/VenueProposalModal';
+import { useEventAnswerMutations } from '@/views/event/hooks/useEventAnswerMutations';
 import {
   buildFriendlyProposalConfirmation,
   canAcceptFriendlyProposal,
@@ -1209,6 +1210,36 @@ function Conversation({ navigation, route }) {
         );
       }
     }
+  };
+
+  // 🔇 TRIO/D3 — « ABSENT » N'ETAIT BRANCHE SUR RIEN.
+  //
+  // La carte d'evenement du fil recevait `onDecline={() => {}}`, une fonction
+  // VIDE : le bouton s'enfoncait et il ne se passait rien. Ses deux voisines de
+  // la meme carte (`onJoin`, `onParticipate`) etaient branchees, et les deux
+  // bulles de proposition, quarante lignes plus bas dans ce fichier, branchent
+  // le meme bouton correctement — c'etait donc un oubli, pas un choix.
+  //
+  // ⛔ Aucun appel invente : on reprend le hook partage que les deux AUTRES
+  // ecrans qui repondent depuis une carte utilisent deja
+  // (`EventListContent`, `ParticipantEventList`). Il porte la regle — une
+  // seance de stage se repond par la porte des reponses, tout le reste par
+  // `POST /events/:id/missing` — ET l'invalidation complete des six racines de
+  // requetes, celle qui avait deja diverge trois fois.
+  const { missingEventMutation, respondToEventRsvpMutation } = useEventAnswerMutations();
+
+  const handleDeclineEvent = (
+    /** @type {{ documentId?: string; eventFormat?: string }} */ event,
+  ) => {
+    if (!event?.documentId) return;
+    if (String(event?.eventFormat || '').toLowerCase() === 'stage_day') {
+      respondToEventRsvpMutation.mutate({
+        answer: 'absent',
+        eventId: event.documentId,
+      });
+      return;
+    }
+    missingEventMutation.mutate(event.documentId);
   };
 
   const handleJoinEvent = (/** @type {{ documentId?: string; team?: Team; parentEvent?: { documentId?: string } }} */ event) => {
@@ -4892,7 +4923,7 @@ function Conversation({ navigation, route }) {
             <EventMessageBubble
               event={resolvedMessageEvent}
               isMe={!isLeft}
-              onDecline={() => {}}
+              onDecline={() => handleDeclineEvent(resolvedMessageEvent)}
               onJoin={() => handleJoinEvent(resolvedMessageEvent)}
               onParticipate={() => handleParticipateToEvent(resolvedMessageEvent)}
             />

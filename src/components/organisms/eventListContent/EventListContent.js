@@ -1251,6 +1251,14 @@ function EventListContent({
       <EventCardNew
         actionLabel={showAbout ? t('eventList.actions.about') : undefined}
         item={item}
+        // ⛔ PAS `handleDeclineEvent` ICI, ET CE N EST PAS UN OUBLI (recense par
+        // TRIO le 2026-09-01). Cette carte porte une RESERVATION : son
+        // `documentId` est un identifiant de reservation, pas d evenement, et
+        // aucune route « je ne viens pas » n existe pour une reservation. La
+        // brancher enverrait `POST /events/<idDeReservation>/missing`, la
+        // mauvaise ressource. `EventCardNew` ne rend d ailleurs meme pas le
+        // bouton pour une reservation. Meme raison pour `onJoin`. Le frere
+        // `ParticipantEventList` porte le meme commentaire.
         onDecline={() => {}}
         onJoin={() => {}}
         onLogin={handleGoLogin}

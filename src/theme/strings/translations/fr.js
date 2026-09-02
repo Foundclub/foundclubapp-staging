@@ -113,6 +113,16 @@ export default {
     CLUB_NOT_FOUND: 'Club introuvable.',
     CLUB_SPONSOR_ERROR: 'Erreur concernant le partenaire du club.',
     CLUB_UPDATE_ERROR: 'Erreur lors de la mise à jour du club.',
+    // TRIO — LES DEUX REFUS DU CLUB SANS DIRIGEANT. Sans ces deux clefs, l'app
+    // ne trouvait rien à traduire, retombait sur le statut 403 et affichait
+    // « Ton compte n'a pas encore de rôle » — faux, et il envoyait la personne
+    // chercher un problème qui n'existe pas. Le serveur les pose dans
+    // `resolveOrphanClubJoinRefusal` (admin, club-membership-request.ts).
+    CLUB_WITHOUT_MANAGER_IS_PARTNER: 'Ce club utilise déjà FoundClub, mais il n’a plus '
+      + 'de dirigeant. Contacte-nous pour qu’on te confie sa gestion.',
+    CLUB_WITHOUT_MANAGER_NOT_CLAIMABLE: 'Ce club n’a aucun dirigeant pour valider ta demande. '
+      + 'Seul un entraîneur ou un dirigeant peut le rejoindre directement : vérifie ton rôle dans '
+      + 'ton profil, puis réessaie.',
     USER_NOT_IN_CLUB: "L'utilisateur n'est pas membre du club.",
 
     // Membership request errors
@@ -125,7 +135,12 @@ export default {
 
     // Trainer errors
     NOT_A_TRAINER: "L'utilisateur n'est pas un·e entraîneur·e.",
-    TRAINER_ALREADY_IN_CLUB: "L'entraîneur·e est déjà membre d'un club.",
+    // TRIO — la clef ne bouge pas, la phrase si : le serveur pose ce MEME code
+    // pour un dirigeant déjà affilié (admin, trainer-management.ts, « Manager is
+    // already associated with a club »). L'appeler « entraîneur·e » nommait le
+    // mauvais rôle, et la phrase ne disait pas comment s'en sortir.
+    TRAINER_ALREADY_IN_CLUB: 'Tu fais déjà partie d’un club. '
+      + 'Quitte-le depuis sa fiche avant de rejoindre celui-ci.',
     TRAINER_HAS_TEAMS: "L'entraîneur·e est associé·e à des équipes.",
     TRAINER_IS_UNIQUE_TEAM_TRAINER: "L'entraîneur·e est le/la seul·e entraîneur·e de l'équipe.",
     TRAINER_NOT_FOUND: 'Entraîneur·e introuvable.',

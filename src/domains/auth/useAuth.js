@@ -623,8 +623,25 @@ const useAuth = () => {
     return invitedTeamIds.some((/** @type {any} */ teamId) => trainedTeamIds.has(teamId));
   }, [userData, userRoleKey]);
 
+  // TRIO/A2 — « C'EST MON CLUB ! » N'ETAIT OUVERT QU'A L'ENTRAINEUR.
+  //
+  // Un DIRIGEANT recevait `false` et la fiche club ne lui proposait donc que la
+  // REVENDICATION, celle qu'un SuperAdmin valide a la main. Le geste n°1 du
+  // produit etait ferme a la moitie de ceux a qui il s'adresse.
+  //
+  // 🔓 LE SERVEUR, LUI, ACCEPTE LES DEUX ROLES — verifie le 2026-09-01 :
+  //   · `canClaimClubWithoutManager` vaut `isCoachRole(role) || isPresidentRole(role)`
+  //     depuis U03/D4 (admin, club-membership-request.ts) ;
+  //   · le Dirigeant declare `club-membership-request.create` depuis AB05
+  //     (admin, src/index.ts : « le seul verbe qui manquait au dirigeant etait
+  //     demander »).
+  // ⇒ Ce lot n'elargit AUCUN droit serveur : il ouvre un bouton sur une porte
+  // que le serveur tenait deja ouverte.
+  //
+  // 🔤 Meme mot que `canContactAdmin` juste en dessous et que `canManageTeam` /
+  // `canManageEvents` juste apres : `'president'`.
   const canJoinClub = useMemo(
-    () => userRoleKey === 'coach',
+    () => userRoleKey === 'coach' || userRoleKey === 'president',
     [userRoleKey],
   );
 
