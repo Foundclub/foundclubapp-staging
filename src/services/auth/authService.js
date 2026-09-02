@@ -541,7 +541,21 @@ export const updateMe = async (userData) => {
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
       const errorMessage = errorData?.error?.message || errorData?.message || `HTTP error ${response.status}`;
-      throw new Error(errorMessage);
+      // B7-A — LA RAISON DU REFUS DOIT SURVIVRE A CE `throw`.
+      //
+      // Cette ligne jetait le corps de la reponse aussitot apres l avoir lu :
+      // `new Error(message)` ne garde qu un texte. Pour un moins de 15 ans, le
+      // serveur repond 400 en disant PRECISEMENT pourquoi
+      // (`details.details.scope = 'minor_parental_declaration'`) ; sans cette
+      // raison, l ecran d inscription ne pouvait que dire << Erreur >>, et
+      // aucun enfant de moins de 15 ans ne pouvait finir son inscription.
+      //
+      // On rend l erreur a la forme qu attend `buildPreservedApiError` (celle
+      // d axios), pour que le `catch` plus bas la reconstruise SANS RIEN PERDRE
+      // -- c est exactement ce que ce fichier existe pour faire.
+      const httpError = /** @type {any} */ (new Error(errorMessage));
+      httpError.response = { data: errorData, status: response.status };
+      throw httpError;
     }
 
     const result = { data: await response.json() };
@@ -550,8 +564,11 @@ export const updateMe = async (userData) => {
     });
     return validationResult;
   } catch (error) {
-    const errorToDisplay = error && typeof error === 'object' && 'message' in error ? error.message : JSON.stringify(error);
-    throw new Error(`Failed to update user data: ${errorToDisplay}`);
+    // Le message affiche ne change pas d un caractere (`Failed to update user
+    // data: <message du serveur>`) : ce lot AJOUTE `details`, `code` et
+    // `status` a l erreur, il n en retire rien. Deux temoins le figent
+    // (`authService.updateMeMinorError.test.js`).
+    throw buildPreservedApiError(error, 'Failed to update user data');
   }
 };
 

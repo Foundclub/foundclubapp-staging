@@ -1,4 +1,6 @@
-import { Text, TextInput, TouchableOpacity } from 'react-native';
+import {
+  Alert, Text, TextInput, TouchableOpacity,
+} from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
 import { updateMe } from '@/services/auth/authService';
@@ -391,5 +393,75 @@ describe('UserName — un refus se voit toujours a l ecran (D66)', () => {
     // message. Un bouton qui refuse sans rien dire est un cul-de-sac.
     expect(updateMe).not.toHaveBeenCalled();
     expect(textes(arbre).length).toBeGreaterThan(avant.length);
+  });
+});
+
+// LOT ENFANTS — B7-A : LE 400 « DECLARATION PARENTALE » N EST PAS UNE PANNE.
+//
+// ☠️ LE DEFAUT, MESURE LE 2026-09-02 : cet ecran envoie prenom + nom + date en
+// UN SEUL appel. Pour un moins de 15 ans, le serveur refuse cette premiere
+// ecriture avec un 400 qui porte sa raison dans `details.details.scope`
+// (`minor_parental_declaration`). L ecran, lui, ne navigue vers la declaration
+// parentale QUE dans `onSuccess` : il tombait donc dans `onError`, affichait
+// « Erreur », et AUCUN enfant de moins de 15 ans ne pouvait s inscrire.
+//
+// ⚠️ Ce temoin ne remplace pas le correctif serveur (B7-B, qui laisse passer
+// nom + date). Il tient l autre bout : quel que soit le serveur en face, ce
+// refus-la ouvre la declaration, il n affiche jamais « Erreur ».
+describe('UserName — un mineur atteint la declaration parentale (B7-A)', () => {
+  /**
+   * L erreur telle que `updateMe` la rejette apres le correctif de service.
+   * @returns {any} L erreur portant sa portee.
+   */
+  const refusDeclarationParentale = () => {
+    const erreur = /** @type {any} */ (new Error(
+      'Failed to update user data: Parental declaration is required for users under 15 years old',
+    ));
+    erreur.code = 'VALIDATION_ERROR';
+    erreur.details = {
+      code: 'VALIDATION_ERROR',
+      details: { requiredUnderAge: 15, scope: 'minor_parental_declaration' },
+      error: 'Parental declaration is required for users under 15 years old',
+    };
+    erreur.status = 400;
+    return erreur;
+  };
+
+  it('sur ce refus, l ecran ouvre la declaration parentale, pas « Erreur »', async () => {
+    const alerte = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+    /** @type {any} */ (updateMe).mockRejectedValue(refusDeclarationParentale());
+
+    const arbre = rendre('Joueur');
+
+    await saisir(arbre, 'Prénom', 'Léa');
+    await saisir(arbre, 'Nom', 'Martin');
+    await saisir(arbre, 'JJ', '12');
+    await saisir(arbre, 'MM', '06');
+    await saisir(arbre, 'AAAA', '2012');
+    await act(async () => { bouton(arbre, LIBELLE_CTA).props.onPress(); });
+
+    expect(mockNavigation.navigate).toHaveBeenCalledWith('UserParentalDeclaration');
+    expect(alerte).not.toHaveBeenCalled();
+
+    alerte.mockRestore();
+  });
+
+  it('une VRAIE panne continue d alerter : le lot ne rend pas l ecran muet', async () => {
+    const alerte = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+    /** @type {any} */ (updateMe).mockRejectedValue(new Error('Network request failed'));
+
+    const arbre = rendre('Joueur');
+
+    await saisir(arbre, 'Prénom', 'Léa');
+    await saisir(arbre, 'Nom', 'Martin');
+    await saisir(arbre, 'JJ', '12');
+    await saisir(arbre, 'MM', '06');
+    await saisir(arbre, 'AAAA', '2012');
+    await act(async () => { bouton(arbre, LIBELLE_CTA).props.onPress(); });
+
+    expect(alerte).toHaveBeenCalled();
+    expect(mockNavigation.navigate).not.toHaveBeenCalledWith('UserParentalDeclaration');
+
+    alerte.mockRestore();
   });
 });
