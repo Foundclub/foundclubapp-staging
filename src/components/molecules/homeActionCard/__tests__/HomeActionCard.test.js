@@ -44,6 +44,17 @@ jest.mock('@/theme/themeContext', () => {
  * @param {any} node
  * @returns {string[]}
  */
+/**
+ * RN 0.81 a retire le `forwardRef` autour de `Pressable` : React expose desormais
+ * la fonction INTERNE du memo dans l'arbre de test, la ou 0.78 exposait l'objet
+ * memo lui-meme. La recherche par type rendait donc 0 apres la montee.
+ * Ce predicat accepte les DEUX formes, pour survivre aux deux versions.
+ * @param {any} noeud Un noeud de l arbre rendu par react-test-renderer.
+ * @returns {boolean} Vrai si ce noeud est un Pressable, quelle que soit la version de RN.
+ */
+const estPressable = (noeud) => noeud.type === Pressable
+  || noeud.type === /** @type {any} */ (Pressable).type;
+
 const collectText = (node) => {
   if (node === null || node === undefined) return [];
   if (typeof node === 'string') return [node];
@@ -99,7 +110,7 @@ const halosDe = (tree) => tree.root.findAllByType(View).filter(
  * @returns {any}
  */
 const rootStyle = (tree) => {
-  const style = tree.root.findByType(Pressable).props.style({ pressed: false });
+  const style = tree.root.find(estPressable).props.style({ pressed: false });
   return (Array.isArray(style) ? style : [style])
     .reduce((/** @type {any} */ merged, /** @type {any} */ entry) => Object.assign(
       merged,
@@ -113,9 +124,9 @@ describe('HomeActionCard — le grisage d un point d entree (L10-C)', () => {
     const tree = await renderCard({ onPress });
 
     expect(rootStyle(tree).opacity).toBeUndefined();
-    expect(tree.root.findByType(Pressable).props.disabled).toBe(false);
+    expect(tree.root.find(estPressable).props.disabled).toBe(false);
 
-    await act(async () => { tree.root.findByType(Pressable).props.onPress(); });
+    await act(async () => { tree.root.find(estPressable).props.onPress(); });
     expect(onPress).toHaveBeenCalledTimes(1);
   });
 
@@ -125,9 +136,9 @@ describe('HomeActionCard — le grisage d un point d entree (L10-C)', () => {
 
     expect(rootStyle(tree).opacity).toBe(0.55);
     // C'est tout l'objet du lot : l'appui doit encore ouvrir la feuille de vente.
-    expect(tree.root.findByType(Pressable).props.disabled).toBe(false);
+    expect(tree.root.find(estPressable).props.disabled).toBe(false);
 
-    await act(async () => { tree.root.findByType(Pressable).props.onPress(); });
+    await act(async () => { tree.root.find(estPressable).props.onPress(); });
     expect(onPress).toHaveBeenCalledTimes(1);
   });
 
@@ -143,7 +154,7 @@ describe('HomeActionCard — le grisage d un point d entree (L10-C)', () => {
 
     // Publication non autorisee par le club : ni gris de quota, ni vente.
     expect(rootStyle(tree).opacity).toBe(0.5);
-    expect(tree.root.findByType(Pressable).props.disabled).toBe(true);
+    expect(tree.root.find(estPressable).props.disabled).toBe(true);
   });
 });
 

@@ -47,6 +47,17 @@ jest.mock('@/components/atoms/button/Button', () => {
  * @param {any} props
  * @returns {Promise<any>}
  */
+/**
+ * RN 0.81 a retire le `forwardRef` autour de `Pressable` : React expose desormais
+ * la fonction INTERNE du memo dans l'arbre de test, la ou 0.78 exposait l'objet
+ * memo lui-meme. La recherche par type rendait donc 0 apres la montee.
+ * Ce predicat accepte les DEUX formes, pour survivre aux deux versions.
+ * @param {any} noeud Un noeud de l arbre rendu par react-test-renderer.
+ * @returns {boolean} Vrai si ce noeud est un Pressable, quelle que soit la version de RN.
+ */
+const estPressable = (noeud) => noeud.type === Pressable
+  || noeud.type === /** @type {any} */ (Pressable).type;
+
 const monter = async (props) => {
   let tree;
   await act(async () => {
@@ -138,7 +149,7 @@ describe('D72 — la variante « liste » (dirigeant, super admin)', () => {
       variant: 'list',
     });
 
-    const rangees = tree.root.findAllByType(Pressable)
+    const rangees = tree.root.findAll(estPressable)
       .filter((/** @type {any} */ node) => node.props.accessibilityRole === 'button');
 
     expect(rangees).toHaveLength(1);

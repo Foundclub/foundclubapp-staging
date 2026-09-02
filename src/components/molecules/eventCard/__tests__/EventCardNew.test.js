@@ -72,6 +72,17 @@ jest.mock('react-i18next', () => ({
   }),
 }));
 
+/**
+ * RN 0.81 a retire le `forwardRef` autour de `Pressable` : React expose desormais
+ * la fonction INTERNE du memo dans l'arbre de test, la ou 0.78 exposait l'objet
+ * memo lui-meme. La recherche par type rendait donc 0 apres la montee.
+ * Ce predicat accepte les DEUX formes, pour survivre aux deux versions.
+ * @param {any} noeud Un noeud de l arbre rendu par react-test-renderer.
+ * @returns {boolean} Vrai si ce noeud est un Pressable, quelle que soit la version de RN.
+ */
+const estPressable = (noeud) => noeud.type === Pressable
+  || noeud.type === /** @type {any} */ (Pressable).type;
+
 const mockUserData = jest.fn();
 jest.mock('@/domains/auth/useAuth', () => ({
   __esModule: true,
@@ -174,7 +185,7 @@ describe('EventCardNew — données affichées (caractérisation)', () => {
   it('appuie sur la carte -> onPress(item)', () => {
     const onPress = jest.fn();
     const tree = renderCard({ item: baseEvent, onPress });
-    const pressables = tree.root.findAllByType(Pressable);
+    const pressables = tree.root.findAll(estPressable);
     act(() => {
       pressables[0].props.onPress();
     });

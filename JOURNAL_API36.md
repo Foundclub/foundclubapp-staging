@@ -84,15 +84,60 @@ Diffs récupérés depuis l'Upgrade Helper (`rn-diff-purge`, branche `diffs`), p
 | Fichier | Ce qui change |
 |---|---|
 | `android/build.gradle` | `buildToolsVersion` **36.0.0** · `compileSdkVersion` **36** · `targetSdkVersion` **36** |
-| `android/gradle.properties` | **ajout de `edgeToEdgeEnabled=false`** — le gabarit 0.81 pose l'opt-out lui-même |
+| `android/gradle.properties` | **ajout de `edgeToEdgeEnabled=false`** — ⚠️ **ce n'est PAS un opt-out**, voir §E2E |
 | `android/app/src/main/AndroidManifest.xml` | `usesCleartextTraffic` devient un **placeholder** |
 | `android/app/src/debug/AndroidManifest.xml` | **supprimé** (le cleartext passe par le placeholder) |
 | `package.json` | `react` **19.1.4** · `react-native` 0.81.6 · cli **20.0.0** · `typescript` ^5.8.3 · `node >= 20` |
 | wrapper | gradle 8.14.1 → 8.14.3 |
 
-> 🎁 **Deux points de la liste stores tombent tout seuls en 0.81** : le `usesCleartextTraffic="true"`
-> écrit en dur (R12) devient un placeholder faux en release, et l'opt-out edge-to-edge (R17)
-> devient un réglage officiel au lieu d'un bricolage de thème.
+> 🎁 **Un point de la liste stores devient plus simple en 0.81** : le `usesCleartextTraffic="true"`
+> écrit en dur (R12) devient un placeholder faux en release.
+> ⛔ **Mais PAS l'edge-to-edge.** J'avais écrit le contraire en lisant le gabarit ; c'est faux, et
+> la mesure est en §E2E ci-dessous.
+
+---
+
+## E2E. `edgeToEdgeEnabled=false` N'EST PAS UN OPT-OUT — la mesure qui corrige une lecture trop rapide
+
+En lisant le diff du gabarit 0.81, j'ai d'abord cru que la ligne `edgeToEdgeEnabled=false` était
+l'échappatoire à l'edge-to-edge forcé d'Android 16. **C'est faux.** Voici ce que le drapeau fait
+réellement, lu dans le code installé :
+
+| Étape | Fichier | Ce qui se passe |
+|---|---|---|
+| 1 | `@react-native/gradle-plugin/.../utils/PropertyUtils.kt:22` | `edgeToEdgeEnabled` est une propriété publique du plugin |
+| 2 | `.../utils/AgpConfiguratorUtils.kt:74-75` | elle devient le champ `BuildConfig.IS_EDGE_TO_EDGE_ENABLED` |
+| 3 | `react-native/ReactAndroid/.../ReactActivityDelegate.java:140-142` | `if (isEdgeToEdgeFeatureFlagOn()) { enableEdgeToEdge(window); }` |
+
+⇒ Le drapeau sert à **ALLUMER** l'edge-to-edge depuis React Native. Mis à `false`, React Native
+**s'abstient simplement de l'allumer lui-même**. Il ne dit rien à Android.
+
+**Or c'est Android qui l'impose**, et le seul moyen d'y échapper est l'attribut de thème
+`android:windowOptOutEdgeToEdgeEnforcement`. Recherché partout :
+
+| Où | Occurrences de `windowOptOutEdgeToEdgeEnforcement` |
+|---|---|
+| `node_modules/react-native/` (tout React Native) | **0** |
+| `android/` (tout notre projet, thèmes compris) | **0** |
+
+### 🧨 Ce que ça veut dire, en clair
+
+**L'app dessine DÉJÀ sous les barres système sur Android 15**, aujourd'hui, en `targetSdk 35` —
+parce qu'Android 15 impose l'edge-to-edge à toute app qui vise 35, que personne n'a posé l'opt-out,
+et qu'**aucune build Android n'a jamais été ouverte sur un Android 15**. R17 décrit donc un défaut
+**présent**, pas un risque futur.
+
+Passer à `targetSdk 36` **ne change rien à ce point précis** : c'est la même contrainte, sur une
+version où l'échappatoire n'existe plus de toute façon.
+
+⇒ **Il n'y a pas de raccourci.** Le seul vrai travail est celui d'A3 : que chaque écran respecte
+les encoches. La bonne nouvelle, mesurée, c'est que **185 fichiers le font déjà** et que **2**
+seulement sont en retard.
+
+⚠️ **Et il faudra le voir de ses yeux** : l'émulateur de cette machine est un **Android 15
+(API 35)**, pas un Android 16. Il suffit pour constater l'edge-to-edge (Android 15 l'impose déjà),
+mais **pas** pour vérifier les nouveautés propres à Android 16 (restrictions d'orientation sur
+grand écran, opt-out ignoré). Cela demanderait une image système API 36.
 
 ---
 
@@ -103,7 +148,7 @@ Diffs récupérés depuis l'Upgrade Helper (`rn-diff-purge`, branche `diffs`), p
 | 0 | Base 0.78.0 (copie désolidarisée) | ✅ **VERTE** | **468 / 5 516** | rien — la copie reproduit la référence |
 | 1 | 0.78.0 → 0.79.7 | ✅ **VERTE** | **468 / 5 516** | 13 suites rouges, **2 causes** — voir §M1 |
 | 2 | 0.79.7 → 0.80.3 | ✅ **VERTE** | **468 / 5 516** | **rien du tout** — voir §M2 |
-| 3 | 0.80.3 → 0.81.6 | ⬜ pas commencée | — | — |
+| 3 | 0.80.3 → 0.81.6 *(+  36)* | ✅ **VERTE** | **468 / 5 516** | 3 suites, **1 cause** () — voir §M3 |
 | 4 | `targetSdk 36` + edge-to-edge (A3) | ⬜ pas commencée | — | — |
 | 5 | Permissions `notifee` + cleartext (A4) | ⬜ pas commencée | — | — |
 | 6 | APK de debug sur l'émulateur (A5) | ⬜ pas commencée | — | — |
@@ -210,6 +255,106 @@ Ce qui a été appliqué : `react` 19.0.0 → **19.1.0**, `react-native` 0.80.3,
 | `MainApplication.kt` : remplacer `SoLoader.init(...)` + `load(bridgelessEnabled = false)` par `loadReactNative(this)` | ⛔ **non appliqué — c'est la décision la plus importante de ce chantier** | Voir §3 D2 ci-dessous. |
 | `.prettierrc.js` : retirer `bracketSameLine` et `bracketSpacing` | **non appliqué** | Prettier est **dormant** ici : aucun script `format`, absent d'ESLint, absent des workflows — il n'est qu'une dépendance de développement. Changer sa configuration ne ferait rien aujourd'hui, et surprendrait le jour où quelqu'un le lancerait. C'est un choix de style du gabarit, pas une exigence de la montée. |
 | `tsconfig.json` | **sans objet** | Ce projet n'a pas de `tsconfig.json` : il vérifie ses types avec **`jsconfig.json`** (`tsc --allowJs --noEmit -p jsconfig.json`). |
+
+---
+
+## M3. MARCHE 3 — 0.80.3 → 0.81.6 : la version qui **rend l'API 36 possible**
+
+Appliqué : `react` 19.1.0 → **19.1.4**, `react-native` **0.81.6**, CLI 19.1.2 → **20.0.0**,
+`@react-native/*` 0.81.6, `@types/react` ^19.1.4, `engines.node` `>=18` → **`>=20`**,
+wrapper Gradle **8.14.1 → 8.14.3** (`gradlew`, `gradlew.bat` et le `.jar` sont **identiques** entre
+0.80.3 et 0.81.6 : rien à toucher), et côté Android :
+
+```
+buildToolsVersion = "36.0.0"   (etait 35.0.0)
+compileSdkVersion = 36         (etait 35)
+targetSdkVersion  = 35         <-- VOLONTAIREMENT INCHANGE
+```
+
+> 🎯 **Pourquoi séparer `compileSdk` et `targetSdk`, alors que le gabarit les monte ensemble.**
+> Ce ne sont pas la même chose : `compileSdk` dit *contre quelle version d'Android on compile*
+> (React Native 0.81 l'exige en 36), `targetSdk` dit *quel comportement système on accepte* — et
+> c'est **lui seul** qui change ce que voit l'utilisateur. Les monter ensemble, ce serait mêler
+> « ça compile » et « ça se comporte autrement » dans un seul commit. La consigne du chef est
+> d'ailleurs explicite : `targetSdk 36` **en dernier**, quand tout le reste est vert. Il monte
+> donc au lot **A3**, seul, avec l'edge-to-edge.
+
+### 🧨 Ce qui a cassé — 3 suites, une seule cause
+
+`EventCardNew.test.js`, `HomeActionCard.test.js`, `HomeHeadBanner.test.js` — 5 tests, tous sur
+`TypeError: Cannot read properties of undefined (reading 'props')` : la recherche du bouton dans
+l'arbre rendait **une liste vide**.
+
+**La cause, lue dans les deux versions de `Pressable.js` :**
+
+| Version | Comment `Pressable` est exporté |
+|---|---|
+| **0.78.0** | `React.memo(React.forwardRef(Pressable))` |
+| **0.81.6** | `memo(Pressable)` — le `forwardRef` a disparu (React 19 permet de recevoir `ref` comme une simple propriété) |
+
+Cette couche en moins change ce que React expose dans l'arbre de test : avec `memo(forwardRef(f))`
+React exposait **l'objet memo** ; avec `memo(f)` il optimise et expose **la fonction interne**.
+
+**Mesuré par une sonde jetable** (un test de 15 lignes, écrit, exécuté, puis supprimé) :
+
+```
+findAllByType(Pressable)      -> 0
+findAllByType(Pressable.type) -> 1
+types réellement dans l'arbre : Pressable, View, View, Text, Text, PressabilityDebugView
+```
+
+⇒ **6 recherches corrigées dans 3 fichiers**, avec un prédicat qui accepte **les deux formes** :
+
+```js
+const estPressable = (noeud) => noeud.type === Pressable
+  || noeud.type === /** @type {any} */ (Pressable).type;
+```
+
+> 🔍 **Comment les 3 fichiers ont été trouvés AVANT de lancer la suite complète.** Une recherche de
+> `findAllByType(Pressable)` / `findByType(Pressable)` dans tout `src/` a rendu exactement ces 3
+> fichiers. La suite complète a ensuite confirmé : **3 rouges, ni plus ni moins**. C'est la
+> différence entre corriger la cause et courir après les symptômes un par un.
+
+⚠️ **Pas de fichier d'aide partagé** : ce dépôt écrit ses tests **autonomes** (chacun porte ses
+propres simulations, aucun `import` d'utilitaire de test nulle part). Le prédicat est donc posé
+**dans chaque fichier**, à l'idiome de la maison, plutôt qu'en module commun.
+
+### 🔶 Le `typescript` du gabarit N'A PAS été monté — et c'est un choix mesuré
+
+Le gabarit 0.81 demande `typescript` `^5.8.3` ; ce dépôt est en **5.0.4**. **Volontairement laissé
+tel quel, pour l'instant** : la porte des types compare à un **plafond figé** (`maxErrors: 5424`,
+`.ci/typecheck-baseline.json`) et **changer de version de TypeScript, c'est changer d'instrument de
+mesure**. Si 5.8 comptait plus de 5 424 erreurs, la porte deviendrait rouge sans qu'une seule ligne
+de code ait empiré — et **remonter ce plafond exige un GO daté d'Adel** (R6 / D4), pas une décision
+d'agent.
+
+⇒ **On essaie d'abord le minimum** : garder 5.0.4 et regarder si la porte tient. Si elle tient, il
+n'y a rien à faire (le gabarit propose, il n'impose pas). Si elle casse, c'est une question pour
+Adel, pas un plafond qu'on relève en passant.
+
+✅ **RÉPONDU PAR LA MESURE : elle tient.** `typecheck-no-regression: baseline=5424 current=5336
+delta=-88` en RN 0.81.6 — **exactement le même chiffre qu'en 0.78**. TypeScript 5.0.4 compile
+l'app contre les types de React Native 0.81 sans une erreur de plus.
+⇒ **Rien à monter, aucun plafond à toucher, aucune question à poser à Adel.** Le pari « essayer le
+minimum d'abord » a économisé un arbitrage inutile.
+
+### 🧮 Le détail de la porte lint — pourquoi il a fallu y revenir
+
+Au premier passage, la porte était **verte** (7 791 alertes contre un plafond de 7 809) mais elle
+était passée de 7 786 à **7 791** : **+5 alertes**, toutes dans mes 3 fichiers. Un cliquet **total**
+peut cacher une dérive **par fichier** — il restait de la marge, donc rien n'aurait protesté.
+
+Contrôle ciblé sur les 3 seuls fichiers touchés (`eslint -f json`), puis correction :
+
+| Étape | Alertes sur les 3 fichiers |
+|---|---|
+| Avant ma correction | 3 *(préexistantes : 2 `max-len`, 1 `require-description`)* |
+| Après le prédicat, sans JSDoc | **9** *(+6 : `require-param` et `require-returns`)* |
+| Après avoir écrit le JSDoc | **6** *(+3 : `tag-lines`, une ligne vide de trop avant `@param`)* |
+| Après avoir retiré la ligne vide | **3** — ✅ **exactement les préexistantes, zéro ajoutée** |
+
+> 🎯 On ne consomme pas la marge d'un cliquet parce qu'elle est là. Le plafond mesure une dette
+> qu'on a promis de ne pas creuser, pas un budget d'alertes à dépenser.
 
 ---
 
