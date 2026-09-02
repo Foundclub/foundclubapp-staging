@@ -4,9 +4,8 @@ on:
   workflow_dispatch:
     inputs:
       marketing_version:
-        description: "Version iOS a envoyer sur TestFlight"
+        description: "Version iOS a envoyer sur TestFlight (ex 2.6.33) — AUCUN defaut, a saisir"
         required: true
-        default: "1.7.13"
       api_env:
         description: "Cible API du build (production, ou staging pour la recette sandbox sur api-staging)"
         required: false
@@ -152,7 +151,25 @@ jobs:
           test -n "${{ secrets.APPSTORE_ISSUER_ID }}" || (echo "Missing secret: APPSTORE_ISSUER_ID" && exit 1)
           test -n "${{ secrets.APPSTORE_PRIVATE_KEY_BASE64 }}" || (echo "Missing secret: APPSTORE_PRIVATE_KEY_BASE64" && exit 1)
           test -n "${{ secrets.TOMTOM_API_KEY_PRODUCTION }}" || (echo "Missing secret: TOMTOM_API_KEY_PRODUCTION" && exit 1)
+          # R9a — sans cette cle, le SDK RevenueCat demarre a vide et la caisse
+          # est MORTE dans une build par ailleurs verte. Mieux vaut un build rouge
+          # qu une version sur l App Store qui ne sait rien vendre.
+          test -n "${{ secrets.REVENUECAT_APPLE_API_KEY }}" || (echo "Missing secret: REVENUECAT_APPLE_API_KEY — la caisse serait morte dans la build" && exit 1)
           echo "All required iOS release secrets are present."
+
+      # R9d — le champ n a plus de defaut, mais un envoi par API peut encore
+      # arriver vide ou malforme : MARKETING_VERSION = ; dans le pbxproj.
+      - name: Validate marketing version
+        shell: bash
+        env:
+          IOS_MARKETING_VERSION: ${{ env.IOS_MARKETING_VERSION }}
+        run: |
+          set -euo pipefail
+          if ! [[ "${IOS_MARKETING_VERSION:-}" =~ ^[0-9]+(\.[0-9]+){1,2}$ ]]; then
+            echo "::error::marketing_version doit etre X.Y ou X.Y.Z (recu: '${IOS_MARKETING_VERSION:-}')."
+            exit 1
+          fi
+          echo "Version marketing iOS demandee : ${IOS_MARKETING_VERSION}"
 
       - name: Create production env file
         shell: bash
