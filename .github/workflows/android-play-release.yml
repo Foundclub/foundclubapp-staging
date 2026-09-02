@@ -52,6 +52,14 @@ jobs:
       PLAY_TRACK: ${{ github.event.inputs.track }}
       PLAY_RELEASE_STATUS: ${{ github.event.inputs.release_status }}
       PLAY_RELEASE_NAME: ${{ github.event.inputs.release_name }}
+      # Garde-fou Sentry (R1, 02/09/2026) : le jeton du projet TIERS
+      # zolteam/faciliciti-app a ete retire du depot (android/sentry.properties
+      # et ios/sentry.properties). sentry.gradle lance sentry-cli SANS
+      # ignoreExitValue : sans cette variable, la tache d envoi tourne, echoue
+      # faute de jeton, et la build Android devient ROUGE.
+      # Cette variable desactive la tache (onlyIf shouldSentryAutoUploadGeneral,
+      # node_modules/@sentry/react-native/sentry.gradle:11 et :110).
+      SENTRY_DISABLE_AUTO_UPLOAD: "true"
 
     steps:
       - name: Checkout

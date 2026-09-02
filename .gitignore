@@ -121,3 +121,7 @@ NUL
 .codex-tmp/encoding-copy-pass/
 .codex-tmp/encoding-fix/
 .codex-tmp/team-actions/
+
+# Jetons Sentry : ne JAMAIS reversionner (R1, 02/09/2026)
+android/sentry.properties
+ios/sentry.properties
