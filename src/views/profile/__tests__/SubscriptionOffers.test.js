@@ -173,14 +173,19 @@ jest.mock('@/components/molecules/bottomModal/BottomModal', () => {
   };
 });
 
+// R3 — la doublure obeit desormais au prop `restore`, sinon le masquage que ce
+// lot corrige serait invisible depuis les tests de cet ecran.
 jest.mock('@/components/molecules/legalFooter/LegalFooter', () => {
-  const { Text: TexteRN } = jest.requireActual('react-native');
+  const { Text: TexteRN, View: VueRN } = jest.requireActual('react-native');
   return {
     __esModule: true,
-    default: () => (
-      <TexteRN>
-        Prix TTC. Renouvellement automatique, résiliable à tout moment.
-      </TexteRN>
+    default: (/** @type {any} */ { restore = true }) => (
+      <VueRN>
+        <TexteRN>
+          Prix TTC. Renouvellement automatique, résiliable à tout moment.
+        </TexteRN>
+        {restore ? <TexteRN>Restaurer mes achats</TexteRN> : null}
+      </VueRN>
     ),
   };
 });
@@ -1444,5 +1449,17 @@ describe('S12-B — la carte Club porte DEUX facons d acheter', () => {
 
     expect(pressablesPortant(arbre, 'Au licencié').length).toBe(0);
     expect(texteVisible(arbre)).toContain('Taille du club');
+  });
+});
+
+describe('R3 — « Restaurer mes achats » est visible sur l ecran d abonnement', () => {
+  // Apple regarde la restauration SUR l'ecran d'abonnement lui-meme. Ici elle
+  // etait masquee (`restore={false}`) et aucun autre bouton ne la portait :
+  // un acheteur qui reinstalle l'app n'avait plus aucun moyen de recuperer son
+  // abonnement, et l'examinateur non plus.
+  it('le pied de page legal porte le lien de restauration', async () => {
+    const arbre = await rendre();
+
+    expect(texteVisible(arbre)).toContain('Restaurer mes achats');
   });
 });

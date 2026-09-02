@@ -1345,7 +1345,10 @@ function SubscriptionOffers({ navigation, route }) {
               variant="SecondaryLight"
             />
           ) : null}
-          <LegalFooter restore={false} />
+          {/* R3 — « Restaurer mes achats » DOIT rester visible sur l'ecran
+              d'abonnement : c'est la que l'examinateur Apple le cherche, et
+              cet ecran n'a aucun autre bouton de restauration. */}
+          <LegalFooter />
         </View>
       </View>
 
