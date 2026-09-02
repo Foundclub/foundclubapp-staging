@@ -465,3 +465,43 @@ describe('UserName — un mineur atteint la declaration parentale (B7-A)', () =>
     alerte.mockRestore();
   });
 });
+
+// PARENT (2026-09-02) — LE PALIER 13 : « inscris un compte de 10 ans : il doit
+// demander un compte parent, et refuser de continuer sans » (Adel).
+//
+// Le serveur refuse avec SA propre portee (`minor_parent_account_required`).
+// Sans cette branche, l ecran tombait dans le cas generique et affichait
+// « Erreur » : l enfant ne savait ni pourquoi, ni quoi faire.
+describe('UserName — un moins de 13 ans est envoye vers « compte parent requis » (PARENT)', () => {
+  const refusCompteParent = () => {
+    const erreur = /** @type {any} */ (new Error(
+      'Failed to update user data: A parent account is required for users under 13 years old',
+    ));
+    erreur.code = 'VALIDATION_ERROR';
+    erreur.details = {
+      code: 'VALIDATION_ERROR',
+      details: { requiredUnderAge: 13, scope: 'minor_parent_account_required' },
+      error: 'A parent account is required for users under 13 years old',
+    };
+    erreur.status = 400;
+    return erreur;
+  };
+
+  it('sur ce refus, l ecran ouvre « compte parent requis », pas la declaration, pas « Erreur »', async () => {
+    const alerte = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+    /** @type {any} */ (updateMe).mockRejectedValue(refusCompteParent());
+    const arbre = rendre('Joueur');
+
+    await saisir(arbre, 'Prénom', 'Zoé');
+    await saisir(arbre, 'Nom', 'Bonnet');
+    await saisir(arbre, 'JJ', '12');
+    await saisir(arbre, 'MM', '06');
+    await saisir(arbre, 'AAAA', '2016');
+    await act(async () => { bouton(arbre, LIBELLE_CTA).props.onPress(); });
+
+    expect(mockNavigation.navigate).toHaveBeenCalledWith('UserParentAccountRequired');
+    expect(mockNavigation.navigate).not.toHaveBeenCalledWith('UserParentalDeclaration');
+    expect(alerte).not.toHaveBeenCalled();
+    alerte.mockRestore();
+  });
+});

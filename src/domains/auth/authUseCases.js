@@ -13,6 +13,9 @@ import { positionsBelongToSport, sportHasPositions } from '@/constants/positions
 export const USER_ROLES = /** @type {const} */({
   coach: 'Entraineur',
   new: 'Authenticated',
+  // PARENT (2026-09-02) \u2014 un vrai role Parent (decision d Adel) : il gere le
+  // compte de ses enfants de moins de 13 ans. Cote serveur : type 'parent'.
+  parent: 'Parent',
   player: 'Joueur',
   president: 'Dirigeant',
   superAdmin: 'SuperAdmin',
@@ -29,6 +32,10 @@ export const getUserRoleKey = (roleName) => {
 
   if (!normalized || normalized === 'authenticated') return 'new';
   if (normalized.includes('super')) return 'superAdmin';
+  // PARENT \u2014 avant cette ligne, 'Parent' retombait sur 'new' : le compte etait
+  // renvoye au choix de role (qui ne le proposait pas) et
+  // findRoleByKey(roles, 'parent') rendait le role AUTHENTICATED.
+  if (normalized.includes('parent')) return 'parent';
   if (
     normalized.includes('dirigeant')
     || normalized.includes('president')
@@ -654,6 +661,23 @@ export const getOnboardingViews = ({
             route: RouteNames.UserTrainedTeams,
           },
         ];
+      // PARENT (2026-09-02) — le parcours du parent : son identite (AVEC sa
+      // date de naissance : un parent est un adulte CONNU, et le garde-fou
+      // tchat du serveur traite un age inconnu comme un enfant), puis sa
+      // photo. Rien d autre : ni section, ni sport, ni club — ce sont les
+      // etapes de son ENFANT, pas les siennes. `Welcome` reste le sas de sortie.
+      // « Declarer mon enfant » (une fiche joueur sans identifiants, version A
+      // d Adel du 02/09) est le second lot : il s inserera ici, apres la photo.
+      // La declaration parentale ne s insere que si le « parent » est lui-meme
+      // un mineur de moins de 15 ans : le seuil 15 vaut pour tout le monde.
+      case 'parent':
+        return [
+          { canShow: true, index: 1, route: RouteNames.UserName },
+          ...(needsParentalDeclaration
+            ? [{ canShow: true, index: 2, route: RouteNames.UserParentalDeclaration }]
+            : []),
+          { canShow: true, index: needsParentalDeclaration ? 3 : 2, route: RouteNames.UserAvatar },
+        ];
       case 'player':
         return [
           { canShow: true, index: 1, route: RouteNames.UserName },
@@ -1022,6 +1046,15 @@ export const profileFieldToDisplay = (role) => {
         'avatar',
         'nationality',
         'preferredSport',
+      ];
+    // PARENT — l identite et la date de naissance (un parent est un adulte
+    // CONNU), rien du profil sportif : ce sont les champs de son enfant.
+    case 'parent':
+      return [
+        'firstname',
+        'lastname',
+        'birthdate',
+        'avatar',
       ];
     case 'player':
       return [

@@ -20,6 +20,7 @@ import UserCategory from '@/views/onboarding/UserCategory';
 import UserClubSearch from '@/views/onboarding/UserClubSearch';
 import UserLevel from '@/views/onboarding/UserLevel';
 import UserName from '@/views/onboarding/UserName';
+import UserParentAccountRequired from '@/views/onboarding/UserParentAccountRequired';
 import UserParentalDeclaration from '@/views/onboarding/UserParentalDeclaration';
 import UserPhysique from '@/views/onboarding/UserPhysique';
 import UserPosition from '@/views/onboarding/UserPosition';
@@ -744,6 +745,22 @@ function PrivateNavigator() {
             headerRight: () => renderStepperIndicator(RouteNames.UserParentalDeclaration),
             headerTitle: () => renderStepper(RouteNames.UserParentalDeclaration),
             headerTitleAlign: 'left',
+          }}
+        />
+        {/*
+          PARENT (2026-09-02) — LE PALIER 13. Monte SANS condition, pour la meme
+          raison que la declaration parentale juste au-dessus : ce n est pas une
+          etape comptee (`canShowView` rendrait `false`), c est l ecran ou
+          « Qui es-tu ? » envoie un moins de 13 ans quand le serveur refuse
+          faute de compte parent. Aucun stepper : il n y a pas d etape suivante.
+        */}
+        <Stack.Screen
+          component={UserParentAccountRequired}
+          key={onboardingViews?.totalViews}
+          name={RouteNames.UserParentAccountRequired}
+          options={{
+            ...commonOptions,
+            headerTitle: '',
           }}
         />
 

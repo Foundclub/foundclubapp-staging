@@ -205,6 +205,10 @@ export const RouteNames = /** @type {const} */ ({
   UserDetails: 'UserDetails',
   UserLevel: 'UserLevel',
   UserName: 'UserName',
+  // PARENT (2026-09-02) — le palier 13 : l ecran ou atterrit un moins de 13 ans
+  // sans compte parent. Pas une etape comptee : monte sans condition, atteint
+  // sur le refus du serveur (portee `minor_parent_account_required`).
+  UserParentAccountRequired: 'UserParentAccountRequired',
   UserParentalDeclaration: 'UserParentalDeclaration',
   UserPhysique: 'UserPhysique',
   UserPosition: 'UserPosition',

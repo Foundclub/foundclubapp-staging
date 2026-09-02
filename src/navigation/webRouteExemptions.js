@@ -95,6 +95,19 @@ const MOBILE_ONLY_SCREENS = {
   [RouteNames.BlockedUsers]:
     'TODO(web) ecran « Personnes bloquees » ecrit et monte cote app ; attend son entree dans web/src/routes/screenRegistry.tsx',
 
+  // TODO(web) PARENT (2026-09-02) — l ecran « compte parent requis » du palier 13
+  // DOIT exister sur le web : le tunnel d inscription y tourne aussi. Exempte par
+  // SEQUENCEMENT, exactement comme BlockedUsers juste au-dessus :
+  // web/src/routes/screenRegistry.tsx vit dans l autre depot, hors du perimetre
+  // du lot PARENT (admin + app).
+  // ⚠️ Le serveur porte seul le palier 13 (refus 400 sur toute ecriture sous
+  // 13 ans) : un site sans cet ecran ne contourne rien, il affiche seulement une
+  // erreur generique la ou l app affiche l explication.
+  // A retirer d ici DES QUE le registre web declare cet ecran, puis ajouter son
+  // motif dans webRoutes.js (ex. /onboarding/parent-account-required).
+  [RouteNames.UserParentAccountRequired]:
+    'TODO(web) ecran « compte parent requis » (palier 13) ecrit et monte cote app ; attend son entree dans web/src/routes/screenRegistry.tsx',
+
   // --- Alias interne de navigateur ---
   // Accueil du membre connecte (HomeHub), initialRouteName de SearchStack. Depuis le
   // 2026-07-19 ce nom est declare dans routeNames.js (il etait une chaine en dur) ; sa

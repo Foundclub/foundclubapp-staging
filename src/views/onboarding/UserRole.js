@@ -93,6 +93,9 @@ function UserRole({ navigation }) {
   const playerRoleId = getRoleDocumentIdByKey(roles, USER_ROLES.player);
   const coachRoleId = getRoleDocumentIdByKey(roles, USER_ROLES.coach);
   const presidentRoleId = getRoleDocumentIdByKey(roles, USER_ROLES.president);
+  // PARENT (2026-09-02) — le 4e choix : « un compte parent dans les roles ».
+  // Il n apparait que si le serveur porte ce role (liste `/users-permissions/roles`).
+  const parentRoleId = getRoleDocumentIdByKey(roles, USER_ROLES.parent);
 
   if (userDataLoading) {
     return (
@@ -191,6 +194,13 @@ function UserRole({ navigation }) {
               label={t('profile.fields.types.president')}
               onPress={() => handleSelection(USER_ROLES.president)}
             />
+            {parentRoleId ? (
+              <OnboardingRadioRow
+                checked={Boolean(role) && role === parentRoleId}
+                label={t('profile.fields.types.parent', 'Parent')}
+                onPress={() => handleSelection(USER_ROLES.parent)}
+              />
+            ) : null}
           </View>
         </WithDataWrapper>
       </ScrollView>
