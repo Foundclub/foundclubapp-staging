@@ -120,9 +120,16 @@ jest.mock('@/components/atoms/button/Button', () => {
   };
 });
 
+// R3 — la doublure obeit desormais au prop `restore` : sans cela, le masquage
+// que ce lot corrige ne se verrait dans aucun test de cette feuille.
 jest.mock('@/components/molecules/legalFooter/LegalFooter', () => {
-  const { View } = jest.requireActual('react-native');
-  return { __esModule: true, default: () => <View /> };
+  const { Text: TexteRN, View: VueRN } = jest.requireActual('react-native');
+  return {
+    __esModule: true,
+    default: (/** @type {any} */ { restore = true }) => (
+      <VueRN>{restore ? <TexteRN>Restaurer mes achats</TexteRN> : null}</VueRN>
+    ),
+  };
 });
 
 jest.mock('@/theme/themeContext', () => {
@@ -775,5 +782,15 @@ describe('SubscriptionPaywallSheet — S12-B/D1 : le mode au licencie', () => {
 
     expect(findButtonByText(tree, 'Au licencié')).toBeUndefined();
     expect(hasTextContaining(tree, 'Club 100')).toBe(true);
+  });
+});
+
+describe('R3 — « Restaurer mes achats » est visible sur la feuille de vente', () => {
+  // La feuille v2 (paywall quota) masquait la restauration et ne portait aucun
+  // autre bouton pour la remplacer. Apple demande la restauration LA OU on vend.
+  it('le pied de page legal porte le lien de restauration', () => {
+    const tree = renderSheet({ decision: TEAM_QUOTA_DECISION });
+
+    expect(allTexts(tree)).toContain('Restaurer mes achats');
   });
 });

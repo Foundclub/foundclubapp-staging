@@ -52,6 +52,14 @@ jobs:
       PLAY_TRACK: ${{ github.event.inputs.track }}
       PLAY_RELEASE_STATUS: ${{ github.event.inputs.release_status }}
       PLAY_RELEASE_NAME: ${{ github.event.inputs.release_name }}
+      # Garde-fou Sentry (R1, 02/09/2026) : le jeton du projet TIERS
+      # zolteam/faciliciti-app a ete retire du depot (android/sentry.properties
+      # et ios/sentry.properties). sentry.gradle lance sentry-cli SANS
+      # ignoreExitValue : sans cette variable, la tache d envoi tourne, echoue
+      # faute de jeton, et la build Android devient ROUGE.
+      # Cette variable desactive la tache (onlyIf shouldSentryAutoUploadGeneral,
+      # node_modules/@sentry/react-native/sentry.gradle:11 et :110).
+      SENTRY_DISABLE_AUTO_UPLOAD: "true"
 
     steps:
       - name: Checkout
@@ -76,7 +84,29 @@ jobs:
           test -n "${{ secrets.ANDROID_RELEASE_KEY_PASSWORD }}" || (echo "Missing secret: ANDROID_RELEASE_KEY_PASSWORD" && exit 1)
           test -n "${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON_BASE64 }}" || (echo "Missing secret: GOOGLE_PLAY_SERVICE_ACCOUNT_JSON_BASE64" && exit 1)
           test -n "${{ secrets.TOMTOM_API_KEY_PRODUCTION }}" || (echo "Missing secret: TOMTOM_API_KEY_PRODUCTION" && exit 1)
+          # R9a — sans cette cle, le SDK RevenueCat demarre a vide et la caisse
+          # est MORTE dans un AAB par ailleurs vert. Mieux vaut un build rouge
+          # qu une version sur Google Play qui ne sait rien vendre.
+          test -n "${{ secrets.REVENUECAT_GOOGLE_API_KEY }}" || (echo "Missing secret: REVENUECAT_GOOGLE_API_KEY — la caisse serait morte dans l AAB" && exit 1)
           echo "All Android Play release secrets are present."
+
+      # R9b — LE croisement qui manquait. Deux menus deroulants suffisent a
+      # envoyer sur le track production un AAB qui parle a api-staging : les
+      # vrais utilisateurs atterrissent alors sur le serveur de recette, sans
+      # leurs donnees, et rien dans le journal ne le dit.
+      - name: Refuser un envoi production vers un serveur qui ne l est pas
+        shell: bash
+        env:
+          PLAY_TRACK_INPUT: ${{ github.event.inputs.track }}
+          API_ENV_INPUT: ${{ github.event.inputs.api_env }}
+        run: |
+          set -euo pipefail
+          API_ENV="${API_ENV_INPUT:-production}"
+          if [ "${PLAY_TRACK_INPUT}" = "production" ] && [ "${API_ENV}" != "production" ]; then
+            echo "::error::track=production avec api_env=${API_ENV} : cet AAB parlerait a un serveur de recette pour de VRAIS utilisateurs. Arret."
+            exit 1
+          fi
+          echo "Track Play : ${PLAY_TRACK_INPUT} — cible API : ${API_ENV}"
 
       - name: Validate release inputs
         shell: bash
@@ -130,12 +160,59 @@ jobs:
           CONTACT_URL=https://foundclubpro.com
           EOF
 
-      - name: Restore production google-services.json
+          # R9e — le heredoc n affiche que le SCRIPT. Sans ces deux lignes, aucun
+          # journal de build Android ne dit quel serveur a ete embarque, alors que
+          # le workflow iOS l imprime depuis le 2026-07-29.
+          echo "CIBLE API DU BUILD : ${API_URL}"
+          grep -E '^(API_URL|SOCKET_URL)=' .env.production
+
+      - name: Restore production google-services.json (apparie a la cible API)
         shell: bash
         run: |
+          set -euo pipefail
           mkdir -p android/app/src/production
           printf '%s' "${{ secrets.ANDROID_PRODUCTION_GOOGLE_SERVICES_JSON_BASE64 }}" | base64 --decode > android/app/src/production/google-services.json
           test -s android/app/src/production/google-services.json
+
+          # R9c — APPARIEMENT client <-> serveur, ce que le workflow iOS fait
+          # depuis la 2.5.6 et qu Android n avait pas. Le serveur verifie le claim
+          # "aud" du jeton Firebase contre son FIREBASE_PROJECT_ID ; un decalage
+          # rend la connexion SMS impossible (400 a chaque tentative) et RIEN dans
+          # l app ne le signale. Jusqu ici ce workflow ne faisait qu un `test -s` :
+          # il acceptait n importe quel google-services.json non vide.
+          #
+          # Ce workflow restaure TOUJOURS le fichier de PRODUCTION, y compris quand
+          # api_env=staging : la valeur attendue est donc found-club dans les deux
+          # cas. Mesure du 2026-09-02 sur la copie locale
+          # android/app/src/production/google-services.json : project_id=found-club,
+          # package com.foundclub.
+          # (Le fichier de la distribution staging, lui, porte foundclub-staging et
+          # le package com.foundclub.staging — c est un AUTRE workflow.)
+          #
+          # ETAT DES SERVEURS, a re-verifier par
+          #   docker exec <conteneur> printenv FIREBASE_PROJECT_ID
+          #   api.foundclubpro.com          -> found-club
+          #   api-staging.foundclubpro.com  -> found-club (voie A-prime, GO Adel du
+          #     2026-07-30). Si staging retrouve un jour son projet propre, changer
+          #     EXPECTED_PROJECT ici ET FIREBASE_PROJECT_ID sur le serveur.
+          EXPECTED_PROJECT=found-club python3 - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          data = json.loads(
+              Path("android/app/src/production/google-services.json").read_text(encoding="utf-8")
+          )
+          actual = str(data.get("project_info", {}).get("project_id", "")).strip()
+          expected = os.environ["EXPECTED_PROJECT"]
+          print(f"PROJET FIREBASE DU BUILD : {actual}")
+          if actual != expected:
+              raise SystemExit(
+                  f"::error::google-services.json porte le projet '{actual}' alors que le "
+                  f"serveur vise attend '{expected}'. La connexion SMS echouerait avec "
+                  "'incorrect aud claim' : arret."
+              )
+          PY
 
       - name: Restore Android upload keystore
         shell: bash

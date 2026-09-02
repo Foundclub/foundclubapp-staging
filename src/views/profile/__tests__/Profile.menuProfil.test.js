@@ -1,4 +1,4 @@
-import { Text } from 'react-native';
+import { Linking, Text, TouchableOpacity } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
 import Profile from '../Profile';
@@ -167,7 +167,7 @@ const aplatirTexte = (enfants) => {
  * @param {{ name: string, type: string }} role Le role du compte connecte.
  * @returns {Promise<string[]>} Les textes affiches.
  */
-const libellesDuMenu = async (role) => {
+const monterProfil = async (role) => {
   mockUserData = {
     club: null,
     documentId: 'user-doc-1',
@@ -185,10 +185,29 @@ const libellesDuMenu = async (role) => {
     );
   });
 
-  return arbre.root
-    .findAllByType(Text)
-    .map((/** @type {any} */ texte) => aplatirTexte(texte.props.children).trim());
+  return arbre;
 };
+
+/**
+ * Monte « Mon compte » pour un role donne et rend ses libelles visibles.
+ * @param {{ name: string, type: string }} role Le role du compte connecte.
+ * @returns {Promise<string[]>} Les textes affiches.
+ */
+const libellesDuMenu = async (role) => (await monterProfil(role)).root
+  .findAllByType(Text)
+  .map((/** @type {any} */ texte) => aplatirTexte(texte.props.children).trim());
+
+/**
+ * La rangee de menu qui porte exactement ce libelle.
+ * @param {any} arbre
+ * @param {string} libelle
+ * @returns {any}
+ */
+const rangeePortant = (arbre, libelle) => arbre.root
+  .findAllByType(TouchableOpacity)
+  .find((/** @type {any} */ noeud) => noeud
+    .findAllByType(Text)
+    .some((/** @type {any} */ texte) => aplatirTexte(texte.props.children).trim() === libelle));
 
 const ROLE_DIRIGEANT = { name: 'Dirigeant', type: 'dirigeant' };
 const ROLE_JOUEUR = { name: 'Joueur', type: 'joueur' };
@@ -234,5 +253,32 @@ describe('D41 ① — « Modifier mon profil » disparait quand la page profil e
     const libelles = await libellesDuMenu(ROLE_SANS_PROFIL_EDITABLE);
 
     expect(libelles).toContain('Modifier mon profil');
+  });
+});
+
+describe('R24 — un moyen de nous joindre existe DANS l app (Apple 1.5)', () => {
+  // Avant ce lot, le seul bouton nomme « Nous contacter » vivait dans le tunnel
+  // d'affiliation et ouvrait la fenetre « je ne trouve pas mon club » : une
+  // demande aux superadmins, pas un canal vers l'editeur, et introuvable une
+  // fois l'onboarding passe. La section « Mon compte » est, elle, permanente.
+  it.each([
+    ['dirigeant', ROLE_DIRIGEANT],
+    ['joueur', ROLE_JOUEUR],
+    ['entraineur', ROLE_ENTRAINEUR],
+    ['compte sans role', ROLE_SANS_PROFIL_EDITABLE],
+  ])('propose « Nous contacter » a un %s', async (_nom, role) => {
+    const libelles = await libellesDuMenu(role);
+
+    expect(libelles).toContain('Nous contacter');
+  });
+
+  it('ouvre vraiment un e-mail vers contact@foundclubpro.com', async () => {
+    const arbre = await monterProfil(ROLE_DIRIGEANT);
+
+    await act(async () => {
+      rangeePortant(arbre, 'Nous contacter').props.onPress();
+    });
+
+    expect(Linking.openURL).toHaveBeenCalledWith('mailto:contact@foundclubpro.com');
   });
 });

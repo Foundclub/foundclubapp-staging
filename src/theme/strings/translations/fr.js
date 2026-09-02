@@ -3458,6 +3458,7 @@ export default {
       addAccount: 'Ajouter un compte',
       adminDashboardClassic: 'Dashboard admin classique',
       confirmDeleteAvatar: 'Es-tu sûr de vouloir supprimer cette image ?',
+      contactSupport: 'Nous contacter',
       deleteAccount: 'Supprimer mon compte',
       edit: 'Modifier mon profil',
       findClub: 'Trouver mon club',
@@ -3507,6 +3508,13 @@ export default {
     // d'identite le nomme deja, et une liste d'un element serait du bruit.
     clubs: {
       title: 'Mes clubs',
+    },
+    // R24 — le repli quand aucune application e-mail ne s'ouvre. Un lien de
+    // contact qui ne fait rien vaut un lien absent : on donne alors l'adresse
+    // en toutes lettres pour qu'elle reste recopiable.
+    contactSupport: {
+      unavailableBody: "Aucune application e-mail n'a pu s'ouvrir. Écris-nous à contact@foundclubpro.com.",
+      unavailableTitle: "Impossible d'ouvrir l'e-mail",
     },
     fields: {
       // AA11 — ces six libelles vivaient en REPLI dans le code des ecrans

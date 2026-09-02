@@ -12,6 +12,27 @@
   <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" tools:replace="android:maxSdkVersion" />
   <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="32" tools:replace="android:maxSdkVersion" />
   <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+
+  <!-- R12 (02/09/2026) - TROIS PERMISSIONS QUE PERSONNE N A DEMANDEES.
+       Elles arrivent par la fusion de manifestes depuis l AAR de notifee
+       (node_modules/@notifee/react-native/android/libs/app/notifee/core/
+       202108261754/core-202108261754.aar), pas par ce fichier. Elles
+       apparaissent donc dans le rapport de pre-lancement Play et dans le
+       formulaire de donnees, sans qu aucun ecran ne s en serve :
+         . SCHEDULE_EXACT_ALARM et RECEIVE_BOOT_COMPLETED ne servent qu aux
+           notifications PLANIFIEES. Mesure : 0 createTriggerNotification,
+           0 TimestampTrigger, 0 TriggerType dans src/. Toutes nos
+           notifications viennent du serveur par FCM, en temps reel.
+         . FOREGROUND_SERVICE ne sert qu a notifee.registerForegroundService.
+           Mesure : 0 appel dans src/.
+       tools:node="remove" les retire du manifeste FUSIONNE, sans toucher a
+       la bibliotheque. Le jour ou on planifie une notification, il faudra
+       retirer la ligne correspondante ICI - sinon elle ne partira jamais.
+       Precision de politique : le formulaire Play "alarmes exactes" ne
+       concerne que USE_EXACT_ALARM, absent du projet. -->
+  <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" tools:node="remove" />
+  <uses-permission android:name="android.permission.FOREGROUND_SERVICE" tools:node="remove" />
+  <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" tools:node="remove" />
   <uses-feature android:name="android.hardware.camera" android:required="false"/>
   <uses-feature android:name="android.hardware.camera.front" android:required="false"/>
 
@@ -22,6 +43,12 @@
     </intent>
   </queries>
 
+  <!-- R12 (02/09/2026) - android:usesCleartextTraffic="true" a ete RETIRE de
+       cette balise. Il autorisait le HTTP en clair dans l AAB de production,
+       alors que les deux fichiers .env produits par la CI ne portent que des
+       URL https. Le debogage garde le sien : src/debug/AndroidManifest.xml:6
+       le pose pour le type de build debug, donc Metro et le rechargement a
+       chaud ne changent pas. -->
   <application
   android:name=".MainApplication"
   android:label="@string/app_name"
@@ -29,7 +56,6 @@
   android:roundIcon="@mipmap/ic_launcher_round"
   android:allowBackup="false"
   android:theme="@style/AppTheme"
-  android:usesCleartextTraffic="true"
   android:supportsRtl="true">
     <meta-data android:name="com.google.android.geo.API_KEY" android:value="${googleMapsApiKey}" />
     <meta-data  android:name="com.google.firebase.messaging.default_notification_icon" android:resource="@drawable/ic_notification" />

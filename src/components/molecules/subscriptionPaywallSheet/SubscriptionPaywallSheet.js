@@ -811,7 +811,9 @@ function SubscriptionPaywallSheet({
                 </Text>
               </TouchableOpacity>
             </View>
-            <LegalFooter restore={false} />
+            {/* R3 — meme motif que SubscriptionOffers : cette feuille vend, et
+                elle n'a aucun autre bouton de restauration. */}
+            <LegalFooter />
           </View>
         </View>
       </BottomModal>

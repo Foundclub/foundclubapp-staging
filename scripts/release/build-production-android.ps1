@@ -103,6 +103,12 @@ Write-Host "[release] SOCKET_URL=$($env:SOCKET_URL)"
 Push-Location $repoRoot
 try {
   node $runtimeValidator
+  # R18 — $ErrorActionPreference = 'Stop' ne couvre PAS le code de sortie d'un
+  # executable externe. Sans cette lecture, un validateur en echec passait pour
+  # un succes.
+  if ($LASTEXITCODE -ne 0) {
+    throw "validate-runtime-env.js a echoue (code de sortie $LASTEXITCODE)"
+  }
 } finally {
   Pop-Location
 }
@@ -115,11 +121,28 @@ try {
     "-PRELEASE_KEY_PASSWORD=$ReleaseKeyPassword" `
     "-PversionCode=$VersionCode" `
     "-PversionName=$VersionName"
+
+  # R18 — LE defaut : gradlew.bat est un executable externe. Son echec ne leve
+  # aucune exception PowerShell, le script continuait, et « [release] Done »
+  # s'imprimait sur une build MORTE. Le code de sortie est desormais la seule
+  # chose qui decide.
+  if ($LASTEXITCODE -ne 0) {
+    throw "gradlew bundleProductionRelease a echoue (code de sortie $LASTEXITCODE)"
+  }
 } finally {
   Pop-Location
 }
 
 $bundleOutput = Join-Path $appDir 'build\\outputs\\bundle\\productionRelease'
 
+# R18 — « Expected output folder » annoncait un dossier sans jamais le regarder.
+# Un AAB absent est un echec, meme quand gradle rend 0.
+$producedBundles = @(Get-ChildItem -Path $bundleOutput -Filter '*.aab' -ErrorAction SilentlyContinue)
+if ($producedBundles.Count -eq 0) {
+  throw "Aucun .aab produit dans $bundleOutput"
+}
+
 Write-Host '[release] Done'
-Write-Host "[release] Expected output folder: $bundleOutput"
+foreach ($bundle in $producedBundles) {
+  Write-Host "[release] AAB produit : $($bundle.FullName)"
+}
