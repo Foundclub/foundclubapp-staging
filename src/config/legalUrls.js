@@ -17,3 +17,15 @@ export const LEGAL_TERMS_URL = 'https://foundclubpro.com/cgu.html';
 
 /** @see LEGAL_TERMS_URL — meme page tant que l'URL dediee n'existe pas. */
 export const LEGAL_PRIVACY_URL = 'https://foundclubpro.com/cgu.html';
+
+/**
+ * L'adresse a laquelle on peut nous joindre depuis l'application.
+ *
+ * 🍎 Apple 1.5 exige un moyen FACILE de joindre l'editeur DANS l'app. C'est
+ * aussi l'adresse que la fiche Google Play declare deja, et celle du formulaire
+ * de `foundclubpro.com/contact.html`.
+ */
+export const SUPPORT_CONTACT_EMAIL = 'contact@foundclubpro.com';
+
+/** @see SUPPORT_CONTACT_EMAIL */
+export const SUPPORT_CONTACT_MAILTO = `mailto:${SUPPORT_CONTACT_EMAIL}`;

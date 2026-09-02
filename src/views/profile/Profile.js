@@ -10,11 +10,13 @@ import { useTranslation } from 'react-i18next';
 import {
   Alert,
   Image,
+  Linking,
   Platform,
   RefreshControl, Text, TouchableOpacity, View,
 } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
 
+import { SUPPORT_CONTACT_MAILTO } from '@/config/legalUrls';
 import { getUserRoleKey } from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
 import { navigateToRequestsHub } from '@/domains/requests/requestNavigation';
@@ -264,6 +266,18 @@ function Profile({ navigation, route }) {
     }
 
     setIsAccountModalVisible(true);
+  };
+
+  // R24 — un lien de contact qui n'ouvre rien vaut un lien absent : si aucune
+  // application e-mail ne repond (simulateur, telephone sans compte configure),
+  // on affiche l'adresse en toutes lettres au lieu de ne rien faire.
+  const handleContactSupport = () => {
+    Promise.resolve(Linking.openURL(SUPPORT_CONTACT_MAILTO)).catch(() => {
+      Alert.alert(
+        t('profile.contactSupport.unavailableTitle'),
+        t('profile.contactSupport.unavailableBody'),
+      );
+    });
   };
 
   useFocusEffect(
@@ -623,6 +637,16 @@ function Profile({ navigation, route }) {
       key: 'switchAccount',
       label: t('profile.actions.switchAccount'),
       onPress: handleToggleAccountSwitcher,
+    },
+    // R24 — Apple 1.5 exige un moyen FACILE de joindre l'editeur DANS l'app.
+    // Le seul bouton nomme « Nous contacter » ouvrait jusqu'ici la fenetre
+    // « je ne trouve pas mon club » du tunnel d'affiliation : une demande aux
+    // superadmins, pas un canal vers nous, et invisible hors onboarding.
+    {
+      icon: Images.envelope,
+      key: 'contactSupport',
+      label: t('profile.actions.contactSupport', 'Nous contacter'),
+      onPress: handleContactSupport,
     },
     ...(isSuperAdmin ? [
       {
