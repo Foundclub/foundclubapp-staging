@@ -3,10 +3,11 @@ import {
   Alert, Linking, Text, TouchableOpacity, View,
 } from 'react-native';
 
-import { LEGAL_PRIVACY_URL, LEGAL_TERMS_URL } from '@/config/legalUrls';
 import { getSubscriptionBillingErrorMessage } from '@/domains/subscription/subscriptionBilling';
 import { restoreAllSubscriptionPurchases } from '@/domains/subscription/subscriptionPurchaseRail';
 import useTheme from '@/theme/themeContext';
+
+import { LEGAL_PRIVACY_URL, LEGAL_TERMS_URL } from '@/config/legalUrls';
 
 /**
  * Mention legale partagee de toute surface d'achat (handoff design) :

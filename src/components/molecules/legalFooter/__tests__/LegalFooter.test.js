@@ -46,7 +46,7 @@ jest.mock('@/theme/themeContext', () => ({
       neutral300: {}, neutral400: {}, p4: {}, textCenter: {},
     },
     Spaces: {
-      paddingHorizontal: { 8: {}, 16: {} },
+      paddingHorizontal: { 16: {}, 8: {} },
       paddingTop: { 8: {} },
       paddingVertical: { 8: {} },
     },

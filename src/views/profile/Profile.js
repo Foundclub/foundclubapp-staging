@@ -16,7 +16,6 @@ import {
 } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
 
-import { SUPPORT_CONTACT_MAILTO } from '@/config/legalUrls';
 import { getUserRoleKey } from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
 import { navigateToRequestsHub } from '@/domains/requests/requestNavigation';
@@ -38,6 +37,8 @@ import ScreenContainer from '@/components/templates/ScreenContainer';
 import { RouteNames } from '@/navigation/routeNames';
 
 import { deleteAccount } from '@/services/auth/authService';
+
+import { SUPPORT_CONTACT_MAILTO } from '@/config/legalUrls';
 
 /** @typedef {import('@/store/types').AuthSession} AuthSession */
 

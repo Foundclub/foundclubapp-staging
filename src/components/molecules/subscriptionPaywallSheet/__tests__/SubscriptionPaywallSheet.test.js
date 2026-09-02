@@ -123,11 +123,11 @@ jest.mock('@/components/atoms/button/Button', () => {
 // R3 — la doublure obeit desormais au prop `restore` : sans cela, le masquage
 // que ce lot corrige ne se verrait dans aucun test de cette feuille.
 jest.mock('@/components/molecules/legalFooter/LegalFooter', () => {
-  const { Text, View } = jest.requireActual('react-native');
+  const { Text: TexteRN, View: VueRN } = jest.requireActual('react-native');
   return {
     __esModule: true,
     default: (/** @type {any} */ { restore = true }) => (
-      <View>{restore ? <Text>Restaurer mes achats</Text> : null}</View>
+      <VueRN>{restore ? <TexteRN>Restaurer mes achats</TexteRN> : null}</VueRN>
     ),
   };
 });
