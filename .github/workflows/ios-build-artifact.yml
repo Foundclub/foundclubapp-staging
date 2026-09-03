@@ -260,6 +260,52 @@ jobs:
           path: ios/build/xcodebuild-archive.log
           if-no-files-found: ignore
 
+      - name: Compile check sans signature (diagnostic RN 0.81)
+        if: always()
+        shell: bash
+        env:
+          SENTRY_ALLOW_FAILURE: "true"
+          SENTRY_DISABLE_AUTO_UPLOAD: "true"
+        run: |
+          set -o pipefail
+          # DIAGNOSTIC SEULEMENT - cette etape ne remplace PAS la porte 'Build archive'.
+          # Le profil de provisionnement ad-hoc du secret BUILD_PROVISION_PROFILE_BASE64 n a
+          # pas la capacite Associated Domains, ajoutee aux entitlements le 2026-08-20 par
+          # 6dbf07fb (liens d invitation Y03). Consequence mesuree au run 33767885529 :
+          # 'Build archive' s arrete a la validation de signature AVANT de compiler le
+          # moindre fichier (CompileC=0, SwiftCompile=0, Ld=0). La seule question du lot -
+          # est-ce que le natif de RN 0.81.6 compile sur iPhone ? - restait donc sans reponse.
+          # Cette etape compile SANS signature pour y repondre. Le rouge de 'Build archive'
+          # reste visible et honnete : il attend un profil corrige, que seul Adel peut creer.
+          mkdir -p ios/build
+          LOG_PATH="ios/build/xcodebuild-compile-check.log"
+
+          if ! xcodebuild \
+            -workspace "${IOS_WORKSPACE}" \
+            -scheme "${IOS_SCHEME}" \
+            -configuration "${IOS_CONFIGURATION}" \
+            -destination "generic/platform=iOS" \
+            -sdk iphoneos \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            PROVISIONING_PROFILE_SPECIFIER="" \
+            ENTITLEMENTS_REQUIRED=NO \
+            build 2>&1 | tee "$LOG_PATH"; then
+            echo "compile check ECHOUE. Les 20 premieres lignes error: :"
+            grep -nE '(^|[^a-zA-Z-])error:' "$LOG_PATH" | head -20 || true
+            exit 1
+          fi
+          echo "compile check VERT : le natif de RN 0.81.6 compile sur iphoneos."
+
+      - name: Upload compile check log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: xcodebuild-compile-check-log
+          path: ios/build/xcodebuild-compile-check.log
+          if-no-files-found: ignore
+
       - name: Export IPA
         run: |
           xcodebuild -exportArchive \
