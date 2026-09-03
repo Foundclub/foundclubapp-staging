@@ -6,9 +6,27 @@
   <uses-permission android:name="android.permission.CAMERA"/>
   <uses-permission android:name="android.permission.RECORD_AUDIO"/>
 
-  <uses-permission android:name="android.permission.READ_MEDIA_IMAGES"/>
-  <uses-permission android:name="android.permission.READ_MEDIA_VIDEO"/>
-  <uses-permission android:name="android.permission.READ_MEDIA_AUDIO"/>
+  <!-- PERMS (03/09/2026) - LES TROIS PERMISSIONS DE LECTURE MEDIA (images,
+       video, audio) ONT ETE RETIREES D ICI, VOLONTAIREMENT. Elles etaient
+       declarees sans qu une seule ligne de code les demande, et la politique
+       Play "Photos et videos" (obligatoire depuis le 28/05/2025) impose un
+       formulaire a toute app qui les declare sans besoin central.
+       Choisir une photo continue de marcher sur tout le parc (minSdk 24) :
+       react-native-image-picker 7.2.3 passe par PickVisualMedia d AndroidX,
+       qui n exige aucune permission de lecture. La camera garde CAMERA.
+       ATTENTION - NE PAS LES REMETTRE sans rouvrir le dossier Play. Le garde-fou
+       executable, qui porte les noms exacts, la mesure et la raison, est
+       src/platform/media/__tests__/androidMediaPermissions.test.js : il
+       rougit si elles reviennent, ET si du code demande un jour une
+       permission que ce fichier ne declare pas.
+       (Les noms exacts ne sont pas ecrits ici : le fusionneur recopie les
+       commentaires dans le manifeste fusionne, et un grep de controle
+       rendrait une reponse non vide pour un simple commentaire.) -->
+
+  <!-- READ/WRITE_EXTERNAL_STORAGE sont injectees par react-native-blob-util et
+       react-native-nitro-sound sans plafond ; on les borne. WRITE reste
+       DEMANDEE par le code sur Android 9 et anterieur (useShareCard.js:44 et
+       shareLocalFile.native.js:125 : au-dela, MediaStore ecrit sans permission). -->
   <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" tools:replace="android:maxSdkVersion" />
   <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="32" tools:replace="android:maxSdkVersion" />
   <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>

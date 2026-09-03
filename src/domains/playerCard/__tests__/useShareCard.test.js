@@ -295,3 +295,37 @@ describe('HORS SUJET L27, fige pour surveillance — l enregistrement en galerie
     );
   });
 });
+
+describe('PERMS — enregistrer sa carte apres le retrait des permissions media', () => {
+  // 🖼️ 2026-09-03 — LE TEMOIN QUI REPOND A « on pourra toujours publier des
+  // photos ? » du cote de la carte joueur. Les trois READ_MEDIA_* ont ete
+  // retirees du manifeste (android/app/src/main/AndroidManifest.xml) : cet
+  // enregistrement doit continuer a marcher SANS rien demander.
+  //
+  // ⛔ Il rougit le jour ou quelqu'un « repare » l'enregistrement en ajoutant
+  // une demande de permission : sur Android 10+, PermissionsAndroid.request
+  // rendrait 'never_ask_again' pour une permission que le manifeste ne declare
+  // plus, et le garde-fou du code bloquerait l'enregistrement lui-meme.
+  //
+  // 33 = Android 13 (premiere version a exiger READ_MEDIA_IMAGES pour LIRE la
+  // galerie) · 36 = Android 16, la version de l'emulateur de recette.
+  const TITRE = 'Android API %i : la carte s enregistre sans rien demander';
+
+  it.each([33, 36])(TITRE, async (version) => {
+    const { CameraRoll } = jest.requireMock('@react-native-camera-roll/camera-roll');
+    CameraRoll.saveAsset.mockResolvedValue({ node: { image: { uri: 'content://media/42' } } });
+    Platform.OS = 'android';
+    Platform.Version = version;
+    const { saveCardToGallery } = monterHook();
+
+    const { erreur, resultat } = await executer(() => saveCardToGallery());
+
+    expect(PermissionsAndroid.request).not.toHaveBeenCalled();
+    expect(CameraRoll.saveAsset).toHaveBeenCalledWith(
+      FICHIER_CAPTURE,
+      { album: 'FoundClub', type: 'photo' },
+    );
+    expect(erreur).toBeUndefined();
+    expect(resultat).toBe('content://media/42');
+  });
+});
