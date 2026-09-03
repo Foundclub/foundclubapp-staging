@@ -18,6 +18,70 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Select Xcode 26
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          REQUIRED_XCODE_MAJOR=26
+          XCODE_CANDIDATE=""
+
+          echo "Installed Xcode applications:"
+          ls -1d /Applications/Xcode*.app 2>/dev/null || true
+
+          # Ordre CROISSANT : on prend le Xcode 26 le PLUS ANCIEN qui satisfait l'exigence Apple
+          # (majeure >= 26 pour les uploads apres 2026-04-28). RAISON : le pod `fmt` (11.0.2, impose
+          # par RCT-Folly de RN 0.78) NE COMPILE PAS avec le Clang des Xcode 26 recents (26.6) ->
+          # "call to consteval function ... is not a constant expression" dans format-inl.h.
+          # Xcode 26.0.x compile fmt correctement. La plateforme iOS eventuellement manquante est
+          # installee par l'etape suivante (-downloadPlatform), donc prendre un Xcode ancien est sans risque.
+          for candidate in $(ls -d /Applications/Xcode_26*.app 2>/dev/null | sort -V) /Applications/Xcode.app; do
+            if [ ! -x "$candidate/Contents/Developer/usr/bin/xcodebuild" ]; then
+              continue
+            fi
+
+            version_output="$("$candidate/Contents/Developer/usr/bin/xcodebuild" -version)"
+            version="$(printf '%s\n' "$version_output" | awk '/^Xcode /{print $2; exit}')"
+            major="${version%%.*}"
+            echo "$candidate -> Xcode $version"
+
+            if [[ "$major" =~ ^[0-9]+$ ]] && [ "$major" -ge "$REQUIRED_XCODE_MAJOR" ]; then
+              XCODE_CANDIDATE="$candidate"
+              break
+            fi
+          done
+
+          if [ -z "$XCODE_CANDIDATE" ]; then
+            echo "::error::Xcode 26 not found on this GitHub Actions runner. Use a macOS runner image that includes Xcode 26+ before uploading iOS builds after 2026-04-28."
+            exit 1
+          fi
+
+          sudo xcode-select -s "$XCODE_CANDIDATE/Contents/Developer"
+          echo "DEVELOPER_DIR=$XCODE_CANDIDATE/Contents/Developer" >> "$GITHUB_ENV"
+          echo "Selected $XCODE_CANDIDATE"
+
+      - name: Ensure iOS platform (SDK) is installed
+        shell: bash
+        run: |
+          set -uo pipefail
+          # ⚠️ NE PAS conditionner sur `xcodebuild -showsdks` : il LISTE le SDK iOS meme quand la
+          # PLATEFORME n'est pas installee. Le SDK suffit a compiler le C/ObjC (les pods passent),
+          # mais ibtool echoue ensuite avec "LaunchScreen.storyboard: error: iOS 26.0 Platform Not
+          # Installed". On lance donc le telechargement INCONDITIONNELLEMENT (idempotent : no-op
+          # rapide si la plateforme est deja la, ~10 min sinon).
+          echo "SDKs avant :"
+          xcodebuild -showsdks 2>/dev/null | grep -i ios || echo "  (aucun)"
+
+          sudo xcodebuild -runFirstLaunch || true
+          echo "Verification/telechargement de la plateforme iOS..."
+          xcodebuild -downloadPlatform iOS || sudo xcodebuild -downloadPlatform iOS || {
+            echo "::error::Echec de xcodebuild -downloadPlatform iOS sur ce runner."
+            exit 1
+          }
+
+          echo "SDKs apres :"
+          xcodebuild -showsdks 2>/dev/null | grep -i ios || true
+
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
@@ -32,6 +96,14 @@ jobs:
         run: |
           cd ios
           pod install
+
+      - name: Upload regenerated Podfile.lock
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-podfile-lock
+          path: ios/Podfile.lock
+          if-no-files-found: error
 
       - name: Validate required signing secrets
         shell: bash
@@ -140,10 +212,12 @@ jobs:
           text = pbxproj.read_text()
 
           replacements = {
-              'DEVELOPMENT_TEAM = "";': f'DEVELOPMENT_TEAM = "{os.environ["APPLE_TEAM_ID"]}";',
               'PROVISIONING_PROFILE_SPECIFIER = "";': f'PROVISIONING_PROFILE_SPECIFIER = "{os.environ["PROFILE_NAME"]}";',
               '"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";': '"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "Apple Distribution";',
           }
+
+          if 'DEVELOPMENT_TEAM = "";' in text:
+              text = text.replace('DEVELOPMENT_TEAM = "";', f'DEVELOPMENT_TEAM = "{os.environ["APPLE_TEAM_ID"]}";')
 
           for old, new in replacements.items():
               if old not in text:
@@ -184,6 +258,52 @@ jobs:
         with:
           name: xcodebuild-archive-log
           path: ios/build/xcodebuild-archive.log
+          if-no-files-found: ignore
+
+      - name: Compile check sans signature (diagnostic RN 0.81)
+        if: always()
+        shell: bash
+        env:
+          SENTRY_ALLOW_FAILURE: "true"
+          SENTRY_DISABLE_AUTO_UPLOAD: "true"
+        run: |
+          set -o pipefail
+          # DIAGNOSTIC SEULEMENT - cette etape ne remplace PAS la porte 'Build archive'.
+          # Le profil de provisionnement ad-hoc du secret BUILD_PROVISION_PROFILE_BASE64 n a
+          # pas la capacite Associated Domains, ajoutee aux entitlements le 2026-08-20 par
+          # 6dbf07fb (liens d invitation Y03). Consequence mesuree au run 33767885529 :
+          # 'Build archive' s arrete a la validation de signature AVANT de compiler le
+          # moindre fichier (CompileC=0, SwiftCompile=0, Ld=0). La seule question du lot -
+          # est-ce que le natif de RN 0.81.6 compile sur iPhone ? - restait donc sans reponse.
+          # Cette etape compile SANS signature pour y repondre. Le rouge de 'Build archive'
+          # reste visible et honnete : il attend un profil corrige, que seul Adel peut creer.
+          mkdir -p ios/build
+          LOG_PATH="ios/build/xcodebuild-compile-check.log"
+
+          if ! xcodebuild \
+            -workspace "${IOS_WORKSPACE}" \
+            -scheme "${IOS_SCHEME}" \
+            -configuration "${IOS_CONFIGURATION}" \
+            -destination "generic/platform=iOS" \
+            -sdk iphoneos \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            PROVISIONING_PROFILE_SPECIFIER="" \
+            ENTITLEMENTS_REQUIRED=NO \
+            build 2>&1 | tee "$LOG_PATH"; then
+            echo "compile check ECHOUE. Les 20 premieres lignes error: :"
+            grep -nE '(^|[^a-zA-Z-])error:' "$LOG_PATH" | head -20 || true
+            exit 1
+          fi
+          echo "compile check VERT : le natif de RN 0.81.6 compile sur iphoneos."
+
+      - name: Upload compile check log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: xcodebuild-compile-check-log
+          path: ios/build/xcodebuild-compile-check.log
           if-no-files-found: ignore
 
       - name: Export IPA

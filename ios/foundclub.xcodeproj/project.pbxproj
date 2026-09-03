@@ -210,7 +210,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "set -e\n\nWITH_ENVIRONMENT=\"$REACT_NATIVE_PATH/scripts/xcode/with-environment.sh\"\nREACT_NATIVE_XCODE=\"$REACT_NATIVE_PATH/scripts/react-native-xcode.sh\"\n\n/bin/sh -c \"$WITH_ENVIRONMENT \\\"/bin/sh ../node_modules/@sentry/react-native/scripts/sentry-xcode.sh $REACT_NATIVE_XCODE\\\"\"\n";
+			shellScript = "set -e\n\nWITH_ENVIRONMENT=\"$REACT_NATIVE_PATH/scripts/xcode/with-environment.sh\"\nREACT_NATIVE_XCODE=\"$REACT_NATIVE_PATH/scripts/react-native-xcode.sh\"\nSENTRY_XCODE=\"../node_modules/@sentry/react-native/scripts/sentry-xcode.sh\"\n\n# RN 0.81 : with-environment.sh execute \"$1\" ENTRE GUILLEMETS ; il faisait $1 nu en 0.78.\n# Il ne peut donc plus recevoir une LIGNE DE COMMANDE (il la prend pour un nom de fichier\n# et repond \"No such file or directory\"). On le SOURCE pour charger l environnement\n# (NODE_BINARY, .xcode.env, .xcode.env.local), puis on lance la commande nous-memes.\n. \"$WITH_ENVIRONMENT\"\n/bin/sh \"$SENTRY_XCODE\" \"$REACT_NATIVE_XCODE\"\n";
 		};
 		16CEB4ABE4610D7A151CF430 /* [CP] Check Pods Manifest.lock */ = {
 			isa = PBXShellScriptBuildPhase;
