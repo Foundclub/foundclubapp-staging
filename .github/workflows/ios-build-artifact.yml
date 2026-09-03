@@ -212,10 +212,12 @@ jobs:
           text = pbxproj.read_text()
 
           replacements = {
-              'DEVELOPMENT_TEAM = "";': f'DEVELOPMENT_TEAM = "{os.environ["APPLE_TEAM_ID"]}";',
               'PROVISIONING_PROFILE_SPECIFIER = "";': f'PROVISIONING_PROFILE_SPECIFIER = "{os.environ["PROFILE_NAME"]}";',
               '"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";': '"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "Apple Distribution";',
           }
+
+          if 'DEVELOPMENT_TEAM = "";' in text:
+              text = text.replace('DEVELOPMENT_TEAM = "";', f'DEVELOPMENT_TEAM = "{os.environ["APPLE_TEAM_ID"]}";')
 
           for old, new in replacements.items():
               if old not in text:
