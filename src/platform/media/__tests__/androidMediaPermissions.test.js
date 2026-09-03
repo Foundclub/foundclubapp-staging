@@ -35,6 +35,22 @@ import { join } from 'path';
 // jamais une permission que le manifeste n'a pas » — qui est exactement ce que
 // retirer une ligne du manifeste peut casser. Ce qu'accorde le téléphone se
 // constate sur un téléphone.
+//
+// ✅ RECETTE DU 2026-09-03 — ELLE A ÉTÉ FAITE, et voici ce qu'elle a donné.
+// Sur `emulator-5556` (Android 16, API 36), avec l'APK construit depuis ce
+// manifeste, les trois gestes photo APRÈS le retrait des trois permissions :
+//   (a) « Choisir depuis la galerie » → le sélecteur SYSTÈME s'ouvre
+//       (`com.google.android.photopicker`), AUCUNE permission demandée, et
+//       Android affiche de lui-même « FoundClub Staging will only have access
+//       to the photos you select ». La photo choisie s'affiche dans l'app.
+//   (b) « Prendre une photo » → Android demande CAMERA (celle qu'on garde),
+//       la caméra s'ouvre, la photo prise s'affiche.
+//   (c) « Ma carte de collection » → « Enregistrer l'image » → « Ta carte a
+//       été ajoutée aux photos de ton téléphone (album FoundClub) », AUCUNE
+//       permission demandée, et MediaStore contient bien la carte dans le
+//       dossier `FoundClub`.
+// `dumpsys package com.foundclub.staging` : AVANT 4 entrées READ_MEDIA
+// (VISUAL_USER_SELECTED, IMAGES, AUDIO, VIDEO), APRÈS aucune.
 
 const RACINE_SRC = join(__dirname, '..', '..', '..');
 const RACINE_APP = join(RACINE_SRC, '..');
