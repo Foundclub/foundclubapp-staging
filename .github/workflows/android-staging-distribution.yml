@@ -65,7 +65,7 @@ jobs:
           SOCKET_URL=https://api-staging.foundclubpro.com
           WEB_APP_URL=https://staging.foundclub.app
           BYPASS_FIREBASE_AUTH=false
-          SENTRY_DSN=
+          SENTRY_DSN=${{ secrets.SENTRY_DSN }}
           LEAGUE_SMART_NOTIF_V1=false
           FC_ENABLE_PUSH_NOTIFICATIONS=1
           FC_ENABLE_SMART_NOTIFICATIONS=1
