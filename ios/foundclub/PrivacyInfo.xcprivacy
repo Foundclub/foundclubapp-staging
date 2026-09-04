@@ -14,6 +14,14 @@
 				<string>C56D.1</string>
 			</array>
 		</dict>
+		<!--
+		  PLIST (04/09). `0A2A.1` ajoute : le selecteur de documents
+		  (@react-native-documents/picker) n embarque AUCUN manifeste — mesure du
+		  04/09, `PrivacyInfo.xcprivacy` absent du paquet — et lit `.fileSizeKey`
+		  sur un fichier choisi par l utilisateur (`ios/swift/DocPicker.swift:39`).
+		  C est le motif « metadonnees d un fichier auquel l utilisateur a donne
+		  acces », que ni C617.1 (conteneur de l app) ni 3B52.1 ne couvrent.
+		-->
 		<dict>
 			<key>NSPrivacyAccessedAPIType</key>
 			<string>NSPrivacyAccessedAPICategoryFileTimestamp</string>
@@ -21,6 +29,7 @@
 			<array>
 				<string>C617.1</string>
 				<string>3B52.1</string>
+				<string>0A2A.1</string>
 			</array>
 		</dict>
 		<dict>
@@ -47,18 +56,33 @@
 	  l app, cite en commentaire. Rien n est declare qui n ait ete constate
 	  dans le code.
 
-	  Toutes les entrees partagent les memes reponses, et elles sont vraies
-	  pour toutes : la donnee est rattachee a l identite (Linked = true), elle
-	  ne sert PAS au pistage (Tracking = false, coherent avec NSPrivacyTracking
-	  plus bas), et son seul usage est le fonctionnement de l app.
+	  LOT PLIST (2026-09-04). Le tableau declarait 10 types quand la fiche App
+	  Store en cochait 15 : CoarseLocation, AudioData, SearchHistory,
+	  PurchaseHistory, CrashData et Fitness manquaient. Ils sont ajoutes
+	  ci-dessous, chacun adosse a la ligne de code qui le collecte.
+
+	  Sauf mention contraire, chaque entree repond pareil, et c est vrai pour
+	  toutes : la donnee est rattachee a l identite (Linked = true), elle ne sert
+	  PAS au pistage (Tracking = false, coherent avec NSPrivacyTracking plus
+	  bas), et son seul usage est le fonctionnement de l app. Les DEUX
+	  exceptions sont nommees sur place : CrashData n est pas lie a l identite,
+	  PurchaseHistory porte une seconde finalite.
 
 	  ATTENTION : ce fichier doit rester COHERENT avec les reponses « Confidentialite de
 	  l app » d App Store Connect. Un manifeste qui contredit App Store Connect
 	  est pire qu un manifeste vide.
+
+	  DEUX ECARTS RESTENT, et ils se ferment chez Apple, pas ici :
+	  1. DeviceID est declare ici (le jeton de notification part et reste sur le
+	     serveur) mais la fiche ne coche PAS « Identifiant de l appareil ».
+	  2. Le contenu des messages est declare sous OtherUserContent. Apple a un
+	     type dedie, EmailsOrTextMessages ; l ajouter ici suppose de cocher la
+	     case correspondante sur la fiche dans le meme geste.
+	  Le garde-fou de tout ce fichier : `__tests__/iosPrivacyManifest.test.js`.
 	-->
 	<key>NSPrivacyCollectedDataTypes</key>
 	<array>
-		<!-- firstname, lastname — ProfileEdit.js:257,262 (charge de `updateMe`) -->
+		<!-- firstname, lastname — ProfileEdit.js:255,260 (charge de `updateMe`) -->
 		<dict>
 			<key>NSPrivacyCollectedDataType</key>
 			<string>NSPrivacyCollectedDataTypeName</string>
@@ -71,7 +95,8 @@
 				<string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
 			</array>
 		</dict>
-		<!-- email — champ editable SelfProfileUnified.js:317, envoye par `updateMe` -->
+		<!-- email — champ editable SelfProfileUnified.js:356-359, envoye par `updateMe`
+		     (authService.js:455) -->
 		<dict>
 			<key>NSPrivacyCollectedDataType</key>
 			<string>NSPrivacyCollectedDataTypeEmailAddress</string>
@@ -84,7 +109,7 @@
 				<string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
 			</array>
 		</dict>
-		<!-- phoneNumber — authService.js:233 (`signInWithPhoneNumber`) et :314
+		<!-- phoneNumber — authService.js:241 (`signInWithPhoneNumber`) et :322
 		     (POST /firebase-auth/login-bypass). C est l identifiant de connexion. -->
 		<dict>
 			<key>NSPrivacyCollectedDataType</key>
@@ -98,7 +123,7 @@
 				<string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
 			</array>
 		</dict>
-		<!-- address — ProfileEdit.js:252 (adresse postale saisie au profil) -->
+		<!-- address — ProfileEdit.js:250 (adresse postale saisie au profil) -->
 		<dict>
 			<key>NSPrivacyCollectedDataType</key>
 			<string>NSPrivacyCollectedDataTypePhysicalAddress</string>
@@ -111,14 +136,18 @@
 				<string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
 			</array>
 		</dict>
-		<!-- geohash — ProfileEdit.js:243-247 puis :258.
+		<!-- geohash du profil — ProfileEdit.js:229-238 puis :256.
 		     PRECISE et non Coarse, et c est une MESURE, pas une lecture : l app
 		     appelle `getGeohashForPointAndRadius(lat, lon, 0.001)`, or un rayon
 		     sous 0,076 km donne la precision 8 (placesUseCases.js:19-28). Sortie
 		     mesuree : 8 caracteres (« u09tvw0f » pour Paris), soit une cellule de
 		     ~38 m x 19 m. Le serveur, lui, n utilise que 6 caracteres pour les
 		     clubs et evenements (~1,2 km x 0,6 km) — mais c est bien la valeur a
-		     8 produite par l app qui atterrit sur le champ `geohash` du profil. -->
+		     8 produite par l app qui atterrit sur le champ `geohash` du profil.
+		     Second usage, celui du capteur : « Autour de moi » lit la position
+		     GPS avec `enableHighAccuracy: true` (searchMapGeolocation.js:20) puis
+		     la donne au centre de la carte, envoye au serveur comme
+		     `centerLat` / `centerLon` (searchService.js:328-329). -->
 		<dict>
 			<key>NSPrivacyCollectedDataType</key>
 			<string>NSPrivacyCollectedDataTypePreciseLocation</string>
@@ -131,8 +160,9 @@
 				<string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
 			</array>
 		</dict>
-		<!-- avatar — ProfileEdit.js:253, televerse par authService.js:496
-		     (`formData.append('avatar', fileToUpload)`) -->
+		<!-- avatar — ProfileEdit.js:251, televerse par authService.js:504
+		     (`formData.append('avatar', fileToUpload)`). Meme type : les photos
+		     envoyees en conversation (Conversation.js:2237, 1800, 1900). -->
 		<dict>
 			<key>NSPrivacyCollectedDataType</key>
 			<string>NSPrivacyCollectedDataTypePhotosorVideos</string>
@@ -145,8 +175,16 @@
 				<string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
 			</array>
 		</dict>
-		<!-- historique sportif — userHistoryService.js:56 (POST /user-histories),
-		     alimente par le tunnel HistoryWizard (clubs, periodes, niveaux). -->
+		<!-- contenu ecrit par l utilisateur, DEUX sources :
+		     · le texte des messages — chatService.js:259 (POST /chat-messages,
+		       champ `message`), conserve cote serveur et rattache a l auteur ;
+		     · l historique sportif — userHistoryService.js:56
+		       (POST /user-histories), alimente par le tunnel HistoryWizard
+		       (clubs, periodes, niveaux).
+		     ⚠️ Apple a un type DEDIE au contenu des messages,
+		     EmailsOrTextMessages. Il n est pas declare ici parce que la fiche App
+		     Store ne coche pas encore la case : les deux doivent bouger ensemble,
+		     sinon on remplace un ecart par un autre. -->
 		<dict>
 			<key>NSPrivacyCollectedDataType</key>
 			<string>NSPrivacyCollectedDataTypeOtherUserContent</string>
@@ -159,9 +197,9 @@
 				<string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
 			</array>
 		</dict>
-		<!-- birthdate, category, height, nationality, weight — ProfileEdit.js:255,
-		     256, 259, 263, 278. Meme charge : jerseyNumber (:261), position (:275),
-		     preferredSport (:276), bestLevel (:254), isLookingForClub (:260). -->
+		<!-- birthdate, category, height, nationality, weight — ProfileEdit.js:253,
+		     254, 257, 261, 276. Meme charge : jerseyNumber (:259), position (:273),
+		     preferredSport (:274), bestLevel (:252), isLookingForClub (:258). -->
 		<dict>
 			<key>NSPrivacyCollectedDataType</key>
 			<string>NSPrivacyCollectedDataTypeOtherDataTypes</string>
@@ -174,7 +212,7 @@
 				<string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
 			</array>
 		</dict>
-		<!-- firebaseUid — authService.js:368-370 : `getIdToken()` puis
+		<!-- firebaseUid — authService.js:376-378 : `getIdToken()` puis
 		     POST /firebase-auth/login { idToken }. Le jeton porte l identifiant
 		     de compte, que le serveur range dans `firebaseUid`. -->
 		<dict>
@@ -189,11 +227,140 @@
 				<string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
 			</array>
 		</dict>
-		<!-- fcmTokens — useNotifications.js:266 (`addDeviceToken`) : le jeton de
-		     notification de l appareil est envoye au serveur et conserve. -->
+		<!-- jeton de notification — authService.js:832-839
+		     (POST /user-fcm-token/me/device, appele par useNotifications.js:312) :
+		     le jeton part avec le compte et RESTE sur le serveur. C est bien un
+		     identifiant de niveau APPAREIL — il designe une installation precise
+		     et sert a la joindre.
+		     ⚠️ Ce qui, en revanche, n est PAS un identifiant : le champ `device`
+		     de la meme charge vaut `DeviceInfo.getDeviceId()`
+		     (platform/device/device.native.js:4), qui rend un code de MODELE du
+		     genre « iPhone14,2 », partage par des millions d appareils.
+		     `getUniqueId()` n est appele nulle part dans src/.
+		     ⚠️ La fiche App Store ne coche pas encore « Identifiant de l
+		     appareil ». C est cette case-la qu il faut cocher, pas cette entree
+		     qu il faut retirer : le jeton part vraiment. -->
 		<dict>
 			<key>NSPrivacyCollectedDataType</key>
 			<string>NSPrivacyCollectedDataTypeDeviceID</string>
+			<key>NSPrivacyCollectedDataTypeLinked</key>
+			<true/>
+			<key>NSPrivacyCollectedDataTypeTracking</key>
+			<false/>
+			<key>NSPrivacyCollectedDataTypePurposes</key>
+			<array>
+				<string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
+			</array>
+		</dict>
+		<!-- ================= LOT PLIST (2026-09-04) : LES 6 QUI MANQUAIENT =================
+		     Chacun est adosse a un envoi REEL, cite en clair. Rien n est declare
+		     ici qui n ait ete lu dans le code a la date du lot. -->
+		<!-- zone de recherche — MercatoFilters.js:200-204 : la ville choisie et le
+		     rayon sont convertis en geohash par
+		     `getGeohashForPointAndRadius(lat, lon, radius)`. Le rayon commande la
+		     precision (placesUseCases.js:19-28) : au-dela de 0,6 km la sortie
+		     tombe a 6 caracteres ou moins, soit des cellules de 1,2 km a 156 km —
+		     COARSE, et non Precise, dont le seuil Apple est la resolution d une
+		     latitude a trois decimales (~110 m).
+		     Cette zone n est pas seulement transmise : elle est CONSERVEE quand
+		     l utilisateur enregistre une alerte (searchAlertService.js:26, les
+		     memes `filters`), rattachee a son compte. -->
+		<dict>
+			<key>NSPrivacyCollectedDataType</key>
+			<string>NSPrivacyCollectedDataTypeCoarseLocation</string>
+			<key>NSPrivacyCollectedDataTypeLinked</key>
+			<true/>
+			<key>NSPrivacyCollectedDataTypeTracking</key>
+			<false/>
+			<key>NSPrivacyCollectedDataTypePurposes</key>
+			<array>
+				<string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
+			</array>
+		</dict>
+		<!-- notes vocales — voiceNoteService.js:406 (`recorder.startRecorder`,
+		     micro autorise par NSMicrophoneUsageDescription, Info.plist:52) puis
+		     Conversation.js:4274 (`uploadAttachmentAsset`) : le fichier m4a
+		     enregistre est televerse et devient une piece jointe du message. -->
+		<dict>
+			<key>NSPrivacyCollectedDataType</key>
+			<string>NSPrivacyCollectedDataTypeAudioData</string>
+			<key>NSPrivacyCollectedDataTypeLinked</key>
+			<true/>
+			<key>NSPrivacyCollectedDataTypeTracking</key>
+			<false/>
+			<key>NSPrivacyCollectedDataTypePurposes</key>
+			<array>
+				<string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
+			</array>
+		</dict>
+		<!-- alertes de recherche — searchAlertService.js:26
+		     (POST /search-alerts { label, filters, type }) : les criteres d une
+		     recherche et le nom que l utilisateur lui donne sont ENREGISTRES cote
+		     serveur sur son compte, puis relus (`getSearchAlerts`, :16) pour le
+		     notifier. Ce n est pas une requete de passage, c est une recherche
+		     conservee. -->
+		<dict>
+			<key>NSPrivacyCollectedDataType</key>
+			<string>NSPrivacyCollectedDataTypeSearchHistory</string>
+			<key>NSPrivacyCollectedDataTypeLinked</key>
+			<true/>
+			<key>NSPrivacyCollectedDataTypeTracking</key>
+			<false/>
+			<key>NSPrivacyCollectedDataTypePurposes</key>
+			<array>
+				<string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
+			</array>
+		</dict>
+		<!-- abonnements — subscriptionRevenueCat.js:358
+		     (`Purchases.purchasePackage`), precede de :304 (`Purchases.logIn`)
+		     qui rattache l achat au compte FoundClub, et de :336
+		     (`Purchases.setAttributes`) qui y joint le club et les equipes.
+		     L achat est donc conserve chez un TIERS (RevenueCat), sous
+		     l identifiant du compte.
+		     ⚠️ Seule entree a porter DEUX finalites : le fonctionnement (ouvrir
+		     les ecrans payants) et « Autre », parce que la meme trace sert a la
+		     facturation et au support. -->
+		<dict>
+			<key>NSPrivacyCollectedDataType</key>
+			<string>NSPrivacyCollectedDataTypePurchaseHistory</string>
+			<key>NSPrivacyCollectedDataTypeLinked</key>
+			<true/>
+			<key>NSPrivacyCollectedDataTypeTracking</key>
+			<false/>
+			<key>NSPrivacyCollectedDataTypePurposes</key>
+			<array>
+				<string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
+				<string>NSPrivacyCollectedDataTypePurposeOther</string>
+			</array>
+		</dict>
+		<!-- rapports de plantage — App.js:118 (`Sentry.init`, actif des que
+		     SENTRY_DSN existe, App.js:81) et App.js:160 / :283
+		     (`Sentry.captureException`). Le DSN est bien injecte dans la build
+		     iOS de production : .github/workflows/ios-testflight-release.yml:194.
+		     ⚠️ SEULE entree avec Linked = false : `Sentry.setUser` n est appele
+		     nulle part dans src/, donc le rapport ne porte pas l identite. C est
+		     aussi ce que declare le manifeste de Sentry lui-meme. -->
+		<dict>
+			<key>NSPrivacyCollectedDataType</key>
+			<string>NSPrivacyCollectedDataTypeCrashData</string>
+			<key>NSPrivacyCollectedDataTypeLinked</key>
+			<false/>
+			<key>NSPrivacyCollectedDataTypeTracking</key>
+			<false/>
+			<key>NSPrivacyCollectedDataTypePurposes</key>
+			<array>
+				<string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
+			</array>
+		</dict>
+		<!-- activite physique — PlayerMatchResponseScreen.js:325 :
+		     `payload.minutesPlayed`, les minutes que le joueur declare avoir
+		     jouees, envoyees avec ses statistiques du match (buts, passes,
+		     rebonds, :326-331) par matchStatsService.js:103
+		     (POST /events/:id/my-match-response) et :193 pour les matchs de
+		     championnat. C est de la donnee d exercice, rattachee au compte. -->
+		<dict>
+			<key>NSPrivacyCollectedDataType</key>
+			<string>NSPrivacyCollectedDataTypeFitness</string>
 			<key>NSPrivacyCollectedDataTypeLinked</key>
 			<true/>
 			<key>NSPrivacyCollectedDataTypeTracking</key>
