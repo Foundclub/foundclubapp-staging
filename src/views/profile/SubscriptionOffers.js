@@ -419,10 +419,17 @@ function SubscriptionOffers({ navigation, route }) {
    * encaissee. La portee vient de l'ACHAT, jamais du cache d'abonnement : juste
    * apres l'achat, le webhook du store n'a pas encore converge (L08).
    * @param {SubscriptionCatalogEntry | null} catalogEntry
-   * @param {{ isTeamSlotUpdate?: boolean }} [options]
+   * @param {{ isTeamSlotUpdate?: boolean; takesEffectAtRenewal?: boolean }} [options]
    * @returns {Record<string, any>}
    */
-  const buildPurchaseSuccessParams = useCallback((catalogEntry, options = {}) => {
+  // Le type est REPOSE sur le parametre, et pas seulement dans le bloc JSDoc
+  // ci-dessus : passe a useCallback, la fonction perd le type de son @param et
+  // TS retombe sur `{}` deduit du defaut — piege deja paye sur ce depot. Sans
+  // ce rappel, chaque option se lit « Property does not exist on type '{}' ».
+  const buildPurchaseSuccessParams = useCallback((
+    catalogEntry,
+    /** @type {{ isTeamSlotUpdate?: boolean; takesEffectAtRenewal?: boolean }} */ options = {},
+  ) => {
     const isClubOffer = getSubscriptionEntryScope(catalogEntry) === 'CLUB';
     const slotCount = Number(catalogEntry?.slotCount || 0);
     const renewalDate = new Date();
@@ -445,7 +452,10 @@ function SubscriptionOffers({ navigation, route }) {
       // le serveur preserve la fenetre quand le payload omet les dates
       // (subscription-billing.ts:1181). Annoncer « aujourd'hui + 1 an » serait
       // un mensonge d'etiquette ; on prefere ne rien annoncer.
-      renewalDateLabel: options.isTeamSlotUpdate
+      // ABOFIX2/T3 — meme raison, un cran plus loin : un changement DIFFERE ne
+      // deplace pas non plus l'echeance (il prend effet A l'echeance existante,
+      // que l'app ne connait pas ici). « Aujourd'hui + 1 an » serait faux.
+      renewalDateLabel: options.isTeamSlotUpdate || options.takesEffectAtRenewal
         ? undefined
         : format(renewalDate, 'd MMMM yyyy', { locale: fr }),
       // Sous cet ecran, dans la pile, il y a le CATALOGUE : « revenir » y
@@ -461,6 +471,7 @@ function SubscriptionOffers({ navigation, route }) {
       resumeMode: resumeRouteName ? 'route' : 'home',
       resumeRouteName: resumeRouteName || undefined,
       resumeRouteParams: resumeRouteName ? resumeRouteParams : undefined,
+      takesEffectAtRenewal: options.takesEffectAtRenewal === true,
     };
   }, [currentClubDocumentId, resumeCtaLabel, resumeRouteName, resumeRouteParams]);
 
@@ -488,9 +499,26 @@ function SubscriptionOffers({ navigation, route }) {
       // c'est la reassignation de creneaux, sans passage store ni facturation
       // (subscriptionPurchaseRail.js:241). L'ecran de succes ne doit alors
       // annoncer aucune nouvelle echeance.
+      // ABOFIX2/T3 — UN CHANGEMENT D'OFFRE N'EST PAS TOUJOURS ENCAISSE.
+      // Vers une offre EGALE OU MOINS CHERE, Apple n'encaisse rien : il note
+      // une preference de renouvellement, et le changement ne prend effet qu'a
+      // l'echeance (mesure de recette du 2026-09-04 : RevenueCat a enregistre
+      // « Changed their renewal preference », AUCUN achat, et l'ecran a
+      // celebre quand meme).
+      // Le signal existe deja dans ce que rend le rail : sans transaction
+      // store, `purchase.transactionIdentifier` est vide
+      // (subscriptionRevenueCat.js:362). On ne touche pas au rail, on le LIT.
+      // Le garde-fou `action === 'change'` est indispensable : un ACHAT dont la
+      // transaction est inconnue du client rend le meme `pendingWebhook: true`
+      // alors qu'il EST encaisse (subscriptionPurchaseRail.js:247-250).
+      const isDeferredPlanChange = action === 'change'
+        && result?.pendingWebhook === true
+        && !String(result?.purchase?.transactionIdentifier || '').trim();
+
       leaveOffers(RouteNames.SubscriptionSuccess, buildPurchaseSuccessParams(catalogEntry, {
         isTeamSlotUpdate: action === 'change'
           && String(input?.currentPlanCode || '') === String(catalogEntry?.planCode || ''),
+        takesEffectAtRenewal: isDeferredPlanChange,
       }));
 
       return result;

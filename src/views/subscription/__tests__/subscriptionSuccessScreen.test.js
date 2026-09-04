@@ -480,3 +480,64 @@ describe('SubscriptionSuccess — tour 7a, grille 2 colonnes et premiers pas', (
     expect(navigation.navigate).toHaveBeenCalledTimes(expectedSources.length);
   });
 });
+
+/* ABOFIX2 / T3 — NE PAS PROMETTRE CE QUI N ARRIVERA PAS.
+
+   Mesure de recette du 2026-09-04 : sur un changement d offre vers une offre
+   EGALE OU MOINS CHERE, Apple n encaisse rien. Il enregistre une « preference
+   de renouvellement » (RevenueCat a note « Changed their renewal preference to
+   Club M - Annuel », AUCUN achat) et le changement ne prend effet qu a
+   l echeance. L ecran celebrait quand meme « C'est débloqué ! » et listait ce
+   que l offre « débloque » — au present.
+
+   Le drapeau arrive en PARAMETRE (`takesEffectAtRenewal`), pose par
+   SubscriptionOffers quand le rail rend un changement sans transaction
+   encaissee. Cet ecran ne devine rien : il dit ce qu on lui dit. */
+describe('SubscriptionSuccess — ABOFIX2/T3, un changement differe ne se celebre pas', () => {
+  it('changement DIFFERE : aucune promesse de deblocage immediat', async () => {
+    const tree = await renderScreen({
+      offerLabel: 'Club M · Annuel',
+      offerScope: 'CLUB',
+      takesEffectAtRenewal: true,
+    });
+    const text = renderedText(tree);
+
+    // Les trois mensonges du 04/09, un par un.
+    expect(text).not.toContain("C'est débloqué !");
+    expect(text).not.toContain('dès maintenant');
+    expect(text).not.toContain('Ton offre débloque :');
+
+    // Ce qui est vrai, a la place.
+    expect(text).toContain('prochaine échéance');
+    expect(text).toContain('Club M · Annuel');
+  });
+
+  it('changement DIFFERE : la liste des capacites reste, au FUTUR', async () => {
+    // La personne doit toujours voir ce que son nouveau plan lui apportera —
+    // on ne lui cache pas l offre, on corrige le TEMPS du verbe.
+    const tree = await renderScreen({ offerScope: 'CLUB', takesEffectAtRenewal: true });
+    const text = renderedText(tree);
+
+    expect(text).toContain('Installations');
+    expect(text).toContain('Sponsors');
+    expect(unlockCells(tree)).toHaveLength(
+      getSubscriptionUnlockedCapabilities('CLUB').length,
+    );
+  });
+
+  it('TEMOIN — un achat IMMEDIAT garde exactement sa celebration', async () => {
+    // Le garde-fou du lot : la correction ne doit toucher QUE le cas differe.
+    const tree = await renderScreen({ offerLabel: 'Équipe · 2 équipes', offerScope: 'TEAM' });
+    const text = renderedText(tree);
+
+    expect(text).toContain("C'est débloqué !");
+    expect(text).toContain('dès maintenant');
+    expect(text).toContain('Ton offre débloque :');
+    expect(text).not.toContain('prochaine échéance');
+  });
+
+  it('TEMOIN — `takesEffectAtRenewal` absent ou faux = achat immediat', async () => {
+    const tree = await renderScreen({ offerScope: 'TEAM', takesEffectAtRenewal: false });
+    expect(renderedText(tree)).toContain("C'est débloqué !");
+  });
+});
