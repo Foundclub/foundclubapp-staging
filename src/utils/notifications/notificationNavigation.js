@@ -562,11 +562,9 @@ export const resolveNotificationDestination = (rawPayload = {}) => {
     NOTIFICATION_TYPES.LEAGUE_SCORE_ADMIN_ESCALATED,
     NOTIFICATION_TYPES.LEAGUE_SCORE_DEADLINE_WARNING,
     NOTIFICATION_TYPES.LEAGUE_SCORE_DISPUTED_BY_OPPONENT,
-    NOTIFICATION_TYPES.LEAGUE_SCORE_DUE,
     NOTIFICATION_TYPES.LEAGUE_SCORE_END_DUE,
     NOTIFICATION_TYPES.LEAGUE_SCORE_REMINDER_2H,
     NOTIFICATION_TYPES.LEAGUE_SCORE_START_INFO,
-    NOTIFICATION_TYPES.LEAGUE_SCORE_SUBMITTED_BY_OPPONENT,
     NOTIFICATION_TYPES.LEAGUE_SCORE_VALIDATION_REQUIRED,
   ]);
 
@@ -591,7 +589,6 @@ export const resolveNotificationDestination = (rawPayload = {}) => {
     NOTIFICATION_TYPES.LEAGUE_QUORUM_REMINDER,
     NOTIFICATION_TYPES.LEAGUE_SCORE_ADMIN_ESCALATED,
     NOTIFICATION_TYPES.LEAGUE_SCORE_DEADLINE_WARNING,
-    NOTIFICATION_TYPES.LEAGUE_SCORE_DUE,
     NOTIFICATION_TYPES.LEAGUE_SCORE_END_DUE,
     NOTIFICATION_TYPES.LEAGUE_SCORE_REMINDER_2H,
     NOTIFICATION_TYPES.LEAGUE_SCORE_START_INFO,
@@ -731,7 +728,6 @@ export const resolveNotificationDestination = (rawPayload = {}) => {
     case NOTIFICATION_TYPES.EVENT_ABSENCE_FINAL:
     case NOTIFICATION_TYPES.EVENT_CANCELLATION:
     case NOTIFICATION_TYPES.EVENT_CONVOCATION_PUBLISHED:
-    case NOTIFICATION_TYPES.EVENT_CREATED:
     case NOTIFICATION_TYPES.EVENT_LINEUP_PUBLISH_REMINDER:
     case NOTIFICATION_TYPES.EVENT_PARTICIPANT_REMINDER:
     case NOTIFICATION_TYPES.EVENT_PUBLISHED:
@@ -808,7 +804,6 @@ export const resolveNotificationDestination = (rawPayload = {}) => {
       return adaptDestinationForCurrentPlatform(payload, { params: {}, route: RouteNames.LeagueMatchTab });
     }
     case NOTIFICATION_TYPES.LEAGUE_MATCH_FOUND:
-    case NOTIFICATION_TYPES.MATCH_FOUND:
       return adaptDestinationForCurrentPlatform(payload, {
         params: {
           params: {
@@ -871,7 +866,6 @@ export const resolveNotificationDestination = (rawPayload = {}) => {
         }
         : { params: {}, route: RouteNames.LeagueMatchTab });
     case NOTIFICATION_TYPES.LEAGUE_SCORE_DISPUTED_BY_OPPONENT:
-    case NOTIFICATION_TYPES.LEAGUE_SCORE_SUBMITTED_BY_OPPONENT:
     case NOTIFICATION_TYPES.LEAGUE_SCORE_VALIDATION_REQUIRED:
       return adaptDestinationForCurrentPlatform(payload, payload.matchId
         ? {
@@ -935,7 +929,6 @@ export const resolveNotificationDestination = (rawPayload = {}) => {
     case NOTIFICATION_TYPES.NEW_GROUP_MESSAGE:
     case NOTIFICATION_TYPES.NEW_LEAGUE_MATCH_MESSAGE:
     case NOTIFICATION_TYPES.NEW_TEAM_MESSAGE:
-    case NOTIFICATION_TYPES.NEW_TEAM_PLAYER_MESSAGE:
     case NOTIFICATION_TYPES.NEW_WHISPER:
       return adaptDestinationForCurrentPlatform(payload, chatDestination(payload.chatId || payload.conversationId));
 

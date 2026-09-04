@@ -585,7 +585,7 @@ export const inferCelebrationActionFromNotification = (notificationType, context
   if (type === NOTIFICATION_TYPES.EVENT_PUBLISHED) return 'event_published';
   if (type === NOTIFICATION_TYPES.EVENT_CONVOCATION_PUBLISHED) return 'event_convocation_published';
   if (type === NOTIFICATION_TYPES.LICENSE_PAYMENT_CONFIRMED) return 'license_payment_confirmed';
-  if (type === NOTIFICATION_TYPES.LEAGUE_MATCH_FOUND || type === NOTIFICATION_TYPES.MATCH_FOUND) return 'league_match_found';
+  if (type === NOTIFICATION_TYPES.LEAGUE_MATCH_FOUND) return 'league_match_found';
   if (type === NOTIFICATION_TYPES.LEAGUE_PROPOSAL_ACCEPTED) return 'league_proposal_accepted';
   if (type === NOTIFICATION_TYPES.LEAGUE_QUORUM_REACHED) return 'league_quorum_reached';
   if (type === NOTIFICATION_TYPES.LEAGUE_MATCH_VALIDATED) return 'league_match_validated';
