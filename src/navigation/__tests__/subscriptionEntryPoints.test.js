@@ -148,7 +148,7 @@ const POINTS_D_ENTREE = [
   {
     attendu: ['SubscriptionOverview', 'SubscriptionOverview', 'SubscriptionOffers'],
     fichier: 'utils/notifications/notificationNavigation.js',
-    pourquoi: 'club plein => hub ; couverture remplacee => hub (resilier) ; abonnement termine => carrousel',
+    pourquoi: 'club plein => hub ; remplacee => hub (resilier) ; terminee => carrousel',
   },
 ];
 
