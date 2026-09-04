@@ -34,9 +34,22 @@ export const SUBSCRIPTION_STATE_QUERY_KEYS = [['app-bootstrap'], ['get-me']];
  * Première tentative immédiate (rail de test backend : la vérité est déjà
  * posée), puis la fenêtre de convergence du webhook store — mesurée à ~2-3 s
  * en recette, jusqu'à une vingtaine de secondes quand le store est lent.
+ *
+ * ABOFIX / A3 — POURQUOI IL Y A UN CRAN DE PLUS QUE CE QU'ON CROIT NÉCESSAIRE.
+ * Ces valeurs sont des ATTENTES SUCCESSIVES, pas des instants : les relectures
+ * tombent donc à 0, 2, 7, 17, 37 puis 52 secondes. Le palier de 15 s ajouté le
+ * 2026-09-04 n'est pas une marge de confort, c'est une soustraction :
+ *  - le serveur sert `/app/bootstrap` depuis un cache mémoire FRAIS pendant
+ *    30 s + jusqu'à 20 % de gigue, soit jusqu'à 36 s (`runtime-cache.js`) ;
+ *  - une fenêtre qui s'arrêtait à 37 s ne laissait donc qu'UNE SECONDE utile,
+ *    et un webhook store un peu lent la manquait à tous les coups.
+ * ⚠️ Ce palier ne suffit PAS à lui seul : passé les 36 s, le même cache ressert
+ * la vieille valeur pendant 4 MINUTES (stale-while-revalidate). Ce qui rend
+ * cette fenêtre utile, c'est la purge posée côté serveur au traitement de
+ * l'achat (`subscription-billing.ts`, `invalidateMeProfileCache`).
  * @type {number[]}
  */
-export const SUBSCRIPTION_REFRESH_DELAYS_MS = [0, 2000, 5000, 10000, 20000];
+export const SUBSCRIPTION_REFRESH_DELAYS_MS = [0, 2000, 5000, 10000, 20000, 15000];
 
 /**
  * Invalide les queries qui portent l'état d'abonnement, une fois.
@@ -134,8 +147,12 @@ export const scheduleSubscriptionStateRefresh = async (queryClient, options = {}
   // L'achat est passé côté store mais le serveur n'a rien ouvert dans la
   // fenêtre : le cron de réconciliation prendra le relais. Trace laissée pour
   // que ce cas se voie dans le journal au lieu de se deviner.
+  // ABOFIX / A3 — la fenêtre écoulée est la SOMME des attentes, pas la dernière
+  // d'entre elles. Ce libellé annonçait « 20000ms » pour une fenêtre de 37 s :
+  // il rendait le diagnostic faux pour qui lisait le journal.
+  const fenetreEcouleeMs = delaysMs.reduce((total, delaiMs) => total + delaiMs, 0);
   subscriptionRefreshLogger.warn(
-    `[SUBSCRIPTION_REFRESH] état inchangé après ${delaysMs[delaysMs.length - 1]}ms`,
+    `[SUBSCRIPTION_REFRESH] état inchangé après ${fenetreEcouleeMs}ms`,
   );
   return false;
 };

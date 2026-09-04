@@ -24,6 +24,8 @@ import {
   validateSubscriptionPurchase,
 } from '@/services/subscription/subscriptionService';
 
+import { createLogger } from '@/utils/logger/logger';
+
 import { APP_RUNTIME_ENV } from '@/constants/runtimeFlags';
 
 /**
@@ -38,6 +40,22 @@ import { APP_RUNTIME_ENV } from '@/constants/runtimeFlags';
  * (recette sandbox stores). Aucune vue ne doit appeler
  * validateSubscriptionPurchase/changeSubscriptionPlan directement pour un achat.
  */
+
+/**
+ * ABOFIX / A2 — CE MODULE ETAIT ENTIEREMENT MUET, ET CA A COUTE UNE JOURNEE.
+ *
+ * Le 2026-09-04, Adel achete un abonnement en bac a sable : l app dit « c est
+ * bon » et rien ne change. Le serveur, lui, avait bien repondu 400
+ * (« Subscription source introuvable pour changement d offre », 09:59 et 10:06).
+ * Ce message n existait QUE dans les journaux du VPS : le rail avalait l erreur,
+ * `grep -c createLogger` rendait 0, et ni `pendingWebhook` ni `validationError`
+ * n avaient le moindre lecteur dans tout `app/src`.
+ *
+ * ⚠️ CES JOURNAUX NE CHANGENT AUCUN COMPORTEMENT. Les deux `return` concernes
+ * rendent exactement ce qu ils rendaient : un achat store reussi ne doit jamais
+ * etre presente comme un echec a l utilisateur.
+ */
+const subscriptionPurchaseRailLogger = createLogger('subscription-purchase-rail');
 
 export const SUBSCRIPTION_PURCHASE_RAILS = {
   REVENUECAT: 'revenuecat',
@@ -178,6 +196,83 @@ const buildRevenueCatValidationPayload = ({
 });
 
 /**
+ * Normalise une date du SDK store en ISO.
+ * @param {any} value - Une date rendue par le SDK store.
+ * @returns {string | null} La meme date en ISO, ou null si elle est inexploitable.
+ */
+const toIsoDateOrNull = (value) => {
+  const raw = String(value || '').trim();
+  if (!raw) return null;
+  const parsed = new Date(raw);
+  return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString();
+};
+
+/**
+ * Traduit le magasin RevenueCat en provider serveur.
+ * @param {any} store - Le champ `store` d un entitlement RevenueCat.
+ * @returns {'apple' | 'google'} Le provider attendu par le serveur.
+ */
+const mapRevenueCatStoreToProvider = (store) => {
+  const normalized = String(store || '').trim().toUpperCase();
+  if (normalized === 'APP_STORE' || normalized === 'MAC_APP_STORE') return 'apple';
+  if (normalized === 'PLAY_STORE') return 'google';
+  return getStoreProvider();
+};
+
+/**
+ * ABOFIX / A4 — CE QUE LE STORE SAIT, TRADUIT EN CE QUE LE SERVEUR ATTEND.
+ *
+ * `restoreRevenueCatPurchases()` rend un `customerInfo` : la liste des droits que
+ * le store reconnait a ce compte. C est la seule source de verite disponible
+ * quand le webhook n est jamais arrive — et le rail la jetait pour poster `{}`.
+ *
+ * ⚠️ LIMITE CONNUE, ET ELLE EST DANS LE SDK, PAS ICI : un `customerInfo` ne
+ * porte AUCUN identifiant de transaction store (seul un achat en direct en rend
+ * un, via `result.transaction`). On fabrique donc un identifiant DETERMINISTE a
+ * partir de ce que le store garantit stable — produit + date d achat d origine —
+ * pour que deux restaurations de suite visent la meme ligne en base au lieu d en
+ * creer une par appui. `providerEventId` embarque en plus la date d echeance :
+ * une nouvelle periode de facturation redevient donc un evenement neuf, sans
+ * changer la ligne visee.
+ * ponytail: identifiant synthetique, plafond assume — un abonnement deja connu
+ * du serveur sous son vrai identifiant store pourrait etre vu comme un second
+ * abonnement. Voie de sortie : lire `store_transaction_id` dans la reponse
+ * `/subscribers` que le serveur interroge deja (`verifyPurchaseWithApi`).
+ * @param {any} customerInfo - Ce que rend le SDK RevenueCat.
+ * @returns {Record<string, any>[]} Les achats a transmettre, ou une liste vide.
+ */
+const buildRestoredPurchasesPayload = (customerInfo) => {
+  const activeEntitlements = customerInfo?.entitlements?.active;
+  if (!activeEntitlements || typeof activeEntitlements !== 'object') return [];
+
+  return Object.values(activeEntitlements)
+    .map((/** @type {any} */ entitlement) => {
+      const providerProductId = String(entitlement?.productIdentifier || '').trim();
+      const currentPeriodStart = toIsoDateOrNull(entitlement?.latestPurchaseDate);
+      // Sans produit ni date de debut, le serveur refuserait la charge utile :
+      // on ne poste pas une ligne qu on sait invalide.
+      if (!providerProductId || !currentPeriodStart) return null;
+
+      const provider = mapRevenueCatStoreToProvider(entitlement?.store);
+      const currentPeriodEnd = toIsoDateOrNull(entitlement?.expirationDate);
+      const ancrage = toIsoDateOrNull(entitlement?.originalPurchaseDate) || currentPeriodStart;
+      const providerTransactionId = `rc-restore-${provider}-${providerProductId}-${ancrage}`;
+
+      return {
+        autoRenew: entitlement?.willRenew === true,
+        currentPeriodEnd,
+        currentPeriodStart,
+        provider,
+        providerEventId: `${providerTransactionId}-${currentPeriodEnd || currentPeriodStart}`,
+        providerProductId,
+        providerTransactionId,
+        status: 'active',
+      };
+    })
+    .filter(Boolean);
+};
+
+/**
  * Achat d'abonnement via le rail actif.
  * @param {{
  *   catalogEntry: any;
@@ -245,6 +340,17 @@ export const performSubscriptionPurchase = async ({
   });
 
   if (!purchaseResult.transactionIdentifier) {
+    // ABOFIX / A2 — SORTIE MUETTE N 1 : on ne poste RIEN au serveur ici.
+    // Tout repose alors sur le webhook du store. S il n arrive pas, le compte
+    // reste sans droits et personne ne le sait.
+    subscriptionPurchaseRailLogger.error(
+      '[ABOFIX] achat store sans identifiant de transaction : aucun POST /validate,'
+      + ' tout repose sur le webhook',
+      {
+        planCode: String(catalogEntry?.planCode || ''),
+        productIdentifier: String(purchaseResult?.productIdentifier || ''),
+      },
+    );
     // Transaction store inconnue côté client : la vérité arrive par le webhook.
     return { pendingWebhook: true, purchase: purchaseResult };
   }
@@ -257,6 +363,17 @@ export const performSubscriptionPurchase = async ({
       teamDocumentIds,
     }));
   } catch (error) {
+    // ABOFIX / A2 — SORTIE MUETTE N 2 : c est ICI que le 400 du 2026-09-04 a
+    // disparu. Le message du serveur est la seule chose qui dise POURQUOI, et il
+    // etait jete. Le contrat de retour ne bouge pas d un pouce (voir plus bas).
+    subscriptionPurchaseRailLogger.error(
+      '[ABOFIX] le serveur a refuse la validation de l achat store',
+      {
+        message: String(error?.message || error || ''),
+        productIdentifier: String(purchaseResult?.productIdentifier || ''),
+        transactionIdentifier: String(purchaseResult?.transactionIdentifier || ''),
+      },
+    );
     // L'achat store a réussi : ne jamais le présenter comme un échec. Le webhook
     // + le cron de réconciliation activeront les droits.
     return { pendingWebhook: true, purchase: purchaseResult, validationError: true };
@@ -376,14 +493,20 @@ export const performSubscriptionLicenseeIncrease = async ({
  * @returns {Promise<any>}
  */
 export const restoreAllSubscriptionPurchases = async () => {
+  let purchases = [];
+
   if (getActiveSubscriptionPurchaseRail() === SUBSCRIPTION_PURCHASE_RAILS.REVENUECAT) {
     try {
-      await restoreRevenueCatPurchases();
+      // ABOFIX / A4 — CE QUE LE SDK REND EST LA VERITE DU STORE, ET ON LA JETAIT.
+      purchases = buildRestoredPurchasesPayload(await restoreRevenueCatPurchases());
     } catch (error) {
       // Le restore backend reste pertinent même si le SDK échoue (hors ligne, etc.).
     }
   }
-  return restoreSubscriptionPurchases({});
+
+  // Liste vide = on garde le comportement d avant (le serveur relit sa propre
+  // base). C est le bon repli quand le store ne connait aucun droit actif.
+  return restoreSubscriptionPurchases(purchases.length > 0 ? { purchases } : {});
 };
 
 /**
