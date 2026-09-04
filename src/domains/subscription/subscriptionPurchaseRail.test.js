@@ -14,6 +14,8 @@ import {
   validateSubscriptionPurchase,
 } from '@/services/subscription/subscriptionService';
 
+import { createLogger } from '@/utils/logger/logger';
+
 import {
   getActiveSubscriptionPurchaseRail,
   isSubscriptionPurchaseAvailable,
@@ -53,6 +55,21 @@ jest.mock('@/services/subscription/subscriptionService', () => ({
   restoreSubscriptionPurchases: jest.fn(),
   validateSubscriptionPurchase: jest.fn(),
 }));
+
+// ABOFIX / A2 — un SEUL journal, partage par le module et par le temoin.
+// La fabrique rend toujours le meme objet : `createLogger()` appele ici et
+// `createLogger()` appele dans le rail designent donc le meme mouchard.
+jest.mock('@/utils/logger/logger', () => {
+  const journal = {
+    debug: jest.fn(),
+    error: jest.fn(),
+    info: jest.fn(),
+    warn: jest.fn(),
+  };
+  return { createLogger: () => journal };
+});
+
+const journalDuRail = createLogger('subscription-purchase-rail');
 
 const FORCE_RAIL_ENV_KEY = 'FC_FORCE_REVENUECAT_RAIL';
 const ORIGINAL_FORCE_RAIL_VALUE = process.env[FORCE_RAIL_ENV_KEY];
@@ -453,6 +470,55 @@ describe('subscriptionPurchaseRail', () => {
     });
 
     // ---------------------------------------------------------------------
+    // ABOFIX / A2 — LES DEUX SORTIES MUETTES DU RAIL
+    //
+    // Mesure le 2026-09-04 : Adel achete, l app dit « c est bon », et rien ne
+    // change. Les deux `return` ci-dessous sont les seuls chemins possibles, et
+    // AUCUN des deux ne laissait la moindre trace — ni journal, ni lecteur de
+    // `pendingWebhook` / `validationError` dans tout `app/src`. Le serveur a bien
+    // repondu 400 (« Subscription source introuvable pour changement d offre »,
+    // 09:59 et 10:06) : ce message n existait QUE dans les journaux du VPS.
+    //
+    // ⚠️ CES DEUX TEMOINS EXIGENT AUSSI QUE LE COMPORTEMENT NE CHANGE PAS :
+    // un achat store reussi ne doit JAMAIS etre presente comme un echec.
+    // ---------------------------------------------------------------------
+    it('rail RevenueCat : transaction inconnue = une erreur JOURNALISEE', async () => {
+      mockRuntimeEnv = 'production';
+      Platform.OS = 'ios';
+      const purchase = { productIdentifier: 'fc_team_1:monthly', transactionIdentifier: '' };
+      purchaseSubscriptionViaRevenueCat.mockResolvedValue(purchase);
+
+      const result = await performSubscriptionPurchase({ catalogEntry: buildCatalogEntry() });
+
+      expect(journalDuRail.error).toHaveBeenCalledTimes(1);
+      const [message, meta] = journalDuRail.error.mock.calls[0];
+      expect(`${message} ${JSON.stringify(meta)}`).toContain('fc_team_1:monthly');
+      // Le contrat de retour est INCHANGE : l achat store a reussi.
+      expect(result).toEqual({ pendingWebhook: true, purchase });
+    });
+
+    it('rail RevenueCat : backend KO = le message du serveur arrive dans le journal', async () => {
+      mockRuntimeEnv = 'production';
+      Platform.OS = 'ios';
+      validateSubscriptionPurchase.mockRejectedValue(
+        new Error('Subscription source introuvable pour changement d offre.'),
+      );
+
+      const result = await performSubscriptionPurchase({ catalogEntry: buildCatalogEntry() });
+
+      expect(journalDuRail.error).toHaveBeenCalledTimes(1);
+      const [message, meta] = journalDuRail.error.mock.calls[0];
+      expect(`${message} ${JSON.stringify(meta)}`)
+        .toContain('Subscription source introuvable pour changement d offre.');
+      // Le contrat de retour est INCHANGE : l achat store a reussi.
+      expect(result).toEqual({
+        pendingWebhook: true,
+        purchase: { productIdentifier: 'fc_team_1:monthly', transactionIdentifier: 'GPA.1234' },
+        validationError: true,
+      });
+    });
+
+    // ---------------------------------------------------------------------
     // S12-B/D4 — L'OFFRE AU LICENCIE PASSE PAR LA CAISSE WEB, DEPUIS LE TELEPHONE
     // ---------------------------------------------------------------------
     const buildLicenseeEntry = () => ({
@@ -740,6 +806,84 @@ describe('subscriptionPurchaseRail', () => {
       expect(restoreRevenueCatPurchases).toHaveBeenCalledTimes(1);
       expect(restoreSubscriptionPurchases).toHaveBeenCalledWith({});
       expect(result).toEqual({ restored: true });
+    });
+
+    // -----------------------------------------------------------------------
+    // ABOFIX / A4 — « RESTAURER MES ACHATS » NE RESTAURAIT RIEN
+    //
+    // Le SDK rend la VERITE DU STORE (`customerInfo`), et le rail la jetait pour
+    // poster un objet VIDE. Le serveur, devant une liste vide, se contentait de
+    // relire sa propre base — c est-a-dire de ne rien restaurer du tout — et
+    // repondait quand meme « Restauration terminee ».
+    //
+    // C est le SEUL geste par lequel un utilisateur peut reparer un compte dont
+    // le webhook n est jamais arrive. ⚠️ Le serveur revalide CHAQUE achat aupres
+    // de l API RevenueCat (`verifyPurchaseWithApi`) : aucun droit ne s ouvre sur
+    // parole du client.
+    // -----------------------------------------------------------------------
+    const CLIENT_INFO_AVEC_ABONNEMENT = {
+      entitlements: {
+        active: {
+          team: {
+            expirationDate: '2026-10-04T10:00:00Z',
+            identifier: 'team',
+            isActive: true,
+            latestPurchaseDate: '2026-09-04T10:00:00Z',
+            originalPurchaseDate: '2026-09-04T10:00:00Z',
+            productIdentifier: 'fc_team_1:monthly',
+            store: 'APP_STORE',
+            willRenew: true,
+          },
+        },
+      },
+    };
+
+    it('rail RevenueCat : les achats lus dans le customerInfo partent au serveur', async () => {
+      mockRuntimeEnv = 'production';
+      Platform.OS = 'ios';
+      restoreRevenueCatPurchases.mockResolvedValue(CLIENT_INFO_AVEC_ABONNEMENT);
+
+      await restoreAllSubscriptionPurchases();
+
+      expect(restoreSubscriptionPurchases).toHaveBeenCalledTimes(1);
+      const [payload] = restoreSubscriptionPurchases.mock.calls[0];
+      expect(payload.purchases).toHaveLength(1);
+      expect(payload.purchases[0]).toEqual(expect.objectContaining({
+        autoRenew: true,
+        currentPeriodEnd: '2026-10-04T10:00:00.000Z',
+        currentPeriodStart: '2026-09-04T10:00:00.000Z',
+        provider: 'apple',
+        providerProductId: 'fc_team_1:monthly',
+        status: 'active',
+      }));
+      // Sans cette cle, le serveur leve « providerTransactionId obligatoire ».
+      expect(String(payload.purchases[0].providerTransactionId)).not.toBe('');
+    });
+
+    it('rail RevenueCat : identifiant de transaction STABLE entre restaurations', async () => {
+      mockRuntimeEnv = 'production';
+      Platform.OS = 'ios';
+      restoreRevenueCatPurchases.mockResolvedValue(CLIENT_INFO_AVEC_ABONNEMENT);
+
+      await restoreAllSubscriptionPurchases();
+      await restoreAllSubscriptionPurchases();
+
+      const [premier] = restoreSubscriptionPurchases.mock.calls[0];
+      const [second] = restoreSubscriptionPurchases.mock.calls[1];
+      // Deux restaurations de suite doivent viser LA MEME ligne en base, sinon
+      // chaque appui sur le bouton creerait un abonnement de plus.
+      expect(second.purchases[0].providerTransactionId)
+        .toBe(premier.purchases[0].providerTransactionId);
+    });
+
+    it('rail RevenueCat : aucun droit actif = on garde le restore « liste » d avant', async () => {
+      mockRuntimeEnv = 'production';
+      Platform.OS = 'ios';
+      restoreRevenueCatPurchases.mockResolvedValue({ entitlements: { active: {} } });
+
+      await restoreAllSubscriptionPurchases();
+
+      expect(restoreSubscriptionPurchases).toHaveBeenCalledWith({});
     });
 
     it('rail RevenueCat : un echec SDK ne bloque pas le restore backend', async () => {
