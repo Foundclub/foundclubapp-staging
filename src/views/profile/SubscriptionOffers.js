@@ -18,6 +18,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getUserRoleKey } from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
 import {
+  buildSubscriptionTeamOptions,
   clampSubscriptionLicenseeCount,
   findSubscriptionMonthlySiblingEntry,
   formatSubscriptionClubCoverageLabel,
@@ -269,6 +270,16 @@ function SubscriptionOffers({ navigation, route }) {
   const teamSlotSummary = useMemo(
     () => getSubscriptionTeamSlotSummary(subscriptionSummary),
     [subscriptionSummary],
+  );
+  // CLUBEQ / C3 (2026-09-04) : la meme liste, mais chaque equipe sait si l offre
+  // Club de son club la couvre deja. Le serveur refuse desormais de la vendre
+  // (`TEAM_COVERED_BY_CLUB_PLAN`) : la modale ne doit plus la proposer.
+  const teamSelectionOptions = useMemo(
+    () => buildSubscriptionTeamOptions({
+      availableTeams: allMyTeams,
+      clubCoveredTeamDocumentIds: teamSlotSummary.clubCoveredTeamDocumentIds,
+    }),
+    [allMyTeams, teamSlotSummary.clubCoveredTeamDocumentIds],
   );
   const quotaItems = useMemo(
     () => getSubscriptionQuotaItems(freeUsageSummary, subscriptionAccessLevel),
@@ -548,11 +559,17 @@ function SubscriptionOffers({ navigation, route }) {
       catalogEntry,
       selectedTeamDocumentIds: getInitialTeamSelection({
         availableTeams: teamOptions,
+        // CLUBEQ / C3 : ne jamais pre-cocher une equipe que le club paie deja.
+        clubCoveredTeamDocumentIds: teamSlotSummary.clubCoveredTeamDocumentIds,
         coveredTeamDocumentIds: teamSlotSummary.coveredTeamDocumentIds,
         slotCount: Number(catalogEntry?.slotCount || 0),
       }),
     });
-  }, [teamOptions, teamSlotSummary.coveredTeamDocumentIds]);
+  }, [
+    teamOptions,
+    teamSlotSummary.clubCoveredTeamDocumentIds,
+    teamSlotSummary.coveredTeamDocumentIds,
+  ]);
 
   /**
    * ACHETER AU LICENCIE (decision D4) : la caisse WEB, meme depuis le telephone.
@@ -1412,14 +1429,21 @@ function SubscriptionOffers({ navigation, route }) {
             </Text>
           ) : (
             <View style={[Spaces.gap[12]]}>
-              {teamOptions.map((team) => {
-                const teamDocumentId = String(team?.documentId || '').trim();
+              {teamSelectionOptions.map(({
+                coverageNotice,
+                isSelectable,
+                team,
+                teamDocumentId,
+              }) => {
                 const isSelected = selectedTeamIds.includes(teamDocumentId);
                 const teamClubName = String(team?.club?.name || '').trim();
 
                 return (
                   <Checkable
                     disableBounceAnimation
+                    // CLUBEQ / C3 : `disabled` est le motif deja porte par ce
+                    // composant (`Checkable.js:30`), on n en invente pas un autre.
+                    disabled={!isSelectable}
                     isChecked={isSelected}
                     key={teamDocumentId}
                     setIsChecked={() => handleToggleTeamSelection(teamDocumentId)}
@@ -1429,6 +1453,7 @@ function SubscriptionOffers({ navigation, route }) {
                       backgroundColor: isSelected
                         ? Colors.primary500
                         : withAlpha(Colors.neutral00, 0.04),
+                      opacity: isSelectable ? 1 : 0.45,
                     }}
                   >
                     <View style={[Alignments.fill, Spaces.gap[4]]}>
@@ -1438,6 +1463,11 @@ function SubscriptionOffers({ navigation, route }) {
                       {teamClubName ? (
                         <Text style={[Fonts.p4, isSelected ? Fonts.primary900 : Fonts.neutral200]}>
                           {teamClubName}
+                        </Text>
+                      ) : null}
+                      {coverageNotice ? (
+                        <Text style={[Fonts.p4, Fonts.neutral300]}>
+                          {coverageNotice}
                         </Text>
                       ) : null}
                     </View>

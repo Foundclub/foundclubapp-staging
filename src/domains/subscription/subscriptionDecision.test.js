@@ -229,6 +229,9 @@ describe('subscriptionDecision', () => {
     })).toEqual({
       assigned: 1,
       available: 1,
+      // CLUBEQ / C2 (2026-09-04) : champ AJOUTE, alimente par `coveredTeams`
+      // cote serveur. Vide ici : aucune offre Club ne couvre ces equipes.
+      clubCoveredTeamDocumentIds: [],
       coveredTeamDocumentIds: ['team-1'],
       total: 2,
     });
@@ -575,5 +578,36 @@ describe('S12-B — « Mon abonnement » nomme l offre au licencie', () => {
     expect(formatSubscriptionPlanLabel('fc_club_tier_3_monthly')).toBe('Club 1000 / mois');
     expect(formatSubscriptionPlanLabel('fc_club_tier_4_yearly')).toBe('Club Illimité / an');
     expect(formatSubscriptionPlanLabel('fc_team_2_yearly')).toBe('Équipe · 2 équipes / an');
+  });
+});
+
+/**
+ * CLUBEQ / C2 — CE QUE L APP RETIENT DE LA NOUVELLE LISTE DU SERVEUR.
+ *
+ * Le serveur rend desormais `coveredTeams` avec une RAISON. Seule la raison
+ * `club` interdit l achat : c est elle, et elle seule, que l ecran doit griser.
+ */
+describe('CLUBEQ — la raison de la couverture', () => {
+  test('seules les equipes couvertes par le CLUB sont retenues comme non achetables', () => {
+    expect(getSubscriptionTeamSlotSummary({
+      teamSlotSummary: {
+        assigned: 1,
+        available: 0,
+        coveredTeamDocumentIds: ['team-perso'],
+        coveredTeams: [
+          { reason: 'club', teamDocumentId: 'team-du-club' },
+          { reason: 'team', teamDocumentId: 'team-perso' },
+        ],
+        total: 1,
+      },
+    }).clubCoveredTeamDocumentIds).toEqual(['team-du-club']);
+  });
+
+  test('un serveur qui ne dit pas encore la raison ne casse pas l ecran', () => {
+    // Un telephone a jour peut parler a un serveur qui ne l est pas : la liste
+    // est alors vide, et la modale se comporte comme avant.
+    expect(getSubscriptionTeamSlotSummary({
+      teamSlotSummary: { coveredTeamDocumentIds: ['team-1'], total: 1 },
+    }).clubCoveredTeamDocumentIds).toEqual([]);
   });
 });

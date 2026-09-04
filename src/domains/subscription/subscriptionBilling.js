@@ -613,14 +613,57 @@ export const getSubscriptionSelectableTeams = (teams) => {
 };
 
 /**
+ * CLUBEQ / C3 — CE QU ON PEUT ENCORE COCHER, ET CE QUI EST DEJA PAYE PAR LE CLUB.
+ *
+ * Depuis la decision d Adel du 2026-09-04, le serveur REFUSE l achat d une offre
+ * Equipe pour une equipe deja couverte par l offre Club de son club
+ * (`TEAM_COVERED_BY_CLUB_PLAN`). Une modale qui la propose quand meme envoie
+ * l utilisateur choisir puis payer pour se faire jeter : on la grise a la source.
+ *
+ * ⚠️ « COUVERTE » VEUT DIRE DEUX CHOSES, ET LES CONFONDRE INVERSE LE COMPORTEMENT :
+ *  - couverte par MON offre Equipe  ⇒ elle reste COCHEE (je gere mes places) ;
+ *  - couverte par L OFFRE DU CLUB   ⇒ elle est GRISEE et jamais cochee.
+ * D ou deux entrees distinctes, jamais une seule liste.
+ * @param {object} params - les equipes et ce qui les couvre.
+ * @param {any[]} params.availableTeams - les equipes du compte.
+ * @param {string[]} [params.clubCoveredTeamDocumentIds] - celles que le CLUB paie deja.
+ * @returns {{ coverageNotice: string | null, isSelectable: boolean, team: any,
+ *   teamDocumentId: string }[]} - les options a afficher.
+ */
+export const buildSubscriptionTeamOptions = ({
+  availableTeams,
+  clubCoveredTeamDocumentIds,
+}) => {
+  const clubCoveredIds = new Set(
+    (Array.isArray(clubCoveredTeamDocumentIds) ? clubCoveredTeamDocumentIds : [])
+      .map((teamDocumentId) => String(teamDocumentId || '').trim())
+      .filter(Boolean),
+  );
+
+  return getSubscriptionSelectableTeams(availableTeams).map((team) => {
+    const teamDocumentId = String(team?.documentId || '').trim();
+    const isCoveredByClub = clubCoveredIds.has(teamDocumentId);
+
+    return {
+      coverageNotice: isCoveredByClub ? 'Déjà couverte par ton club' : null,
+      isSelectable: !isCoveredByClub,
+      team,
+      teamDocumentId,
+    };
+  });
+};
+
+/**
  * @param {object} params
  * @param {any[]} params.availableTeams
+ * @param {string[]} [params.clubCoveredTeamDocumentIds]
  * @param {string[]} [params.coveredTeamDocumentIds]
  * @param {number} params.slotCount
  * @returns {string[]}
  */
 export const getInitialTeamSelection = ({
   availableTeams,
+  clubCoveredTeamDocumentIds,
   coveredTeamDocumentIds,
   slotCount,
 }) => {
@@ -637,9 +680,19 @@ export const getInitialTeamSelection = ({
     return normalizedCoveredTeamIds.slice(0, normalizedSlotCount);
   }
 
+  // CLUBEQ / C3 : sans ce filtre, la pre-selection par defaut cocherait les
+  // premieres equipes de la liste — y compris celles que le club paie deja, que
+  // le serveur refusera. On pre-coche uniquement ce qui est achetable.
+  const clubCoveredIds = new Set(
+    (Array.isArray(clubCoveredTeamDocumentIds) ? clubCoveredTeamDocumentIds : [])
+      .map((teamDocumentId) => String(teamDocumentId || '').trim())
+      .filter(Boolean),
+  );
+
   return teamOptions
     .map((team) => String(team?.documentId || '').trim())
     .filter(Boolean)
+    .filter((teamDocumentId) => !clubCoveredIds.has(teamDocumentId))
     .slice(0, normalizedSlotCount);
 };
 
@@ -769,6 +822,16 @@ export const getSubscriptionBillingErrorMessage = (error) => {
 
   if (message === 'CLUB_ALREADY_COVERED') {
     return 'Ce club est déjà couvert par une offre Club active (souscrite par un autre membre). Inutile de payer deux fois : les droits sont partages.';
+  }
+
+  // CLUBEQ (decision d Adel du 2026-09-04) : code DISTINCT de
+  // `TEAM_ALREADY_COVERED`, et pas par gout du neuf. Le message generique
+  // conseille « libere sa place actuelle » — un conseil IMPOSSIBLE a suivre ici :
+  // une offre Club n a aucune place a liberer. Un mauvais conseil coute plus
+  // cher qu un code de plus.
+  if (message === 'TEAM_COVERED_BY_CLUB_PLAN') {
+    return 'Cette équipe est déjà couverte par l\'offre Club de son club : '
+      + 'tu as déjà ces droits, inutile de payer une offre Équipe pour elle.';
   }
 
   if (message === 'TEAM_ALREADY_COVERED') {
