@@ -762,7 +762,8 @@ export const getSubscriptionPlanLabels = (subscriptionSummary) => normalizeDecis
 
 /**
  * @param {any} subscriptionSummary
- * @returns {{ assigned: number; available: number; coveredTeamDocumentIds: string[]; total: number }}
+ * @returns {{ assigned: number; available: number; clubCoveredTeamDocumentIds: string[];
+ *   coveredTeamDocumentIds: string[]; total: number }}
  */
 export const getSubscriptionTeamSlotSummary = (subscriptionSummary) => {
   const rawSummary = subscriptionSummary?.teamSlotSummary && typeof subscriptionSummary.teamSlotSummary === 'object'
@@ -773,6 +774,16 @@ export const getSubscriptionTeamSlotSummary = (subscriptionSummary) => {
       .map((teamDocumentId) => String(teamDocumentId || '').trim())
       .filter(Boolean),
   ));
+  // CLUBEQ / C2 (2026-09-04) : le serveur dit desormais POURQUOI une equipe est
+  // couverte. `reason === 'club'` = payee par l offre Club de son club, donc
+  // impossible a racheter en offre Equipe. Une version de serveur qui ne le dit
+  // pas encore rend simplement une liste vide : l ecran reste utilisable.
+  const clubCoveredTeamDocumentIds = Array.from(new Set(
+    normalizeDecisionArray(rawSummary?.coveredTeams)
+      .filter((entry) => String(entry?.reason || '').trim() === 'club')
+      .map((entry) => String(entry?.teamDocumentId || '').trim())
+      .filter(Boolean),
+  ));
   const total = Number(rawSummary?.total || 0);
   const assigned = Number(rawSummary?.assigned || 0);
   const available = Number(rawSummary?.available ?? Math.max(0, total - assigned));
@@ -780,6 +791,7 @@ export const getSubscriptionTeamSlotSummary = (subscriptionSummary) => {
   return {
     assigned: Number.isFinite(assigned) ? assigned : 0,
     available: Number.isFinite(available) ? Math.max(0, available) : 0,
+    clubCoveredTeamDocumentIds,
     coveredTeamDocumentIds,
     total: Number.isFinite(total) ? Math.max(0, total) : 0,
   };

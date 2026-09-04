@@ -1,6 +1,7 @@
 import {
   buildSubscriptionChangePlanPayload,
   buildSubscriptionPurchasePayload,
+  buildSubscriptionTeamOptions,
   clampSubscriptionLicenseeCount,
   findSubscriptionMonthlySiblingEntry,
   formatSubscriptionPerMemberPriceLabel,
@@ -481,5 +482,77 @@ describe('S12-B — le prix au licencie se calcule SOUS LES YEUX', () => {
     // Et son prix unitaire serveur reste intact.
     expect(resolved.entries.find((entry) => entry.planCode === 'fc_club_licensee_yearly')
       .referencePriceEurCents).toBe(250);
+  });
+});
+
+/**
+ * CLUBEQ / C3 — LA MODALE NE PROPOSE PLUS CE QU ON NE VENDRA PAS.
+ *
+ * DECISION D ADEL DU 2026-09-04 : une equipe deja couverte par l offre CLUB de
+ * son club ne peut plus etre achetee en offre EQUIPE — le serveur la refuse
+ * (`TEAM_COVERED_BY_CLUB_PLAN`). Une modale qui la propose quand meme envoie
+ * l utilisateur droit dans un refus : c est le pire des deux mondes, il croit
+ * acheter et il se fait jeter apres avoir choisi.
+ *
+ * ⚠️ LE PIEGE QUE CES TEMOINS VERROUILLENT : « couverte » veut dire DEUX choses.
+ *  - couverte par MON offre Equipe ⇒ elle doit rester COCHEE (on gere ses places) ;
+ *  - couverte par L OFFRE DU CLUB   ⇒ elle doit etre GRISEE et JAMAIS cochee.
+ * Les confondre pre-cocherait exactement ce qu on veut interdire.
+ */
+describe('CLUBEQ — les equipes couvertes par le club', () => {
+  test('T3 — une equipe couverte par le club est rendue NON selectionnable, avec sa mention', () => {
+    const options = buildSubscriptionTeamOptions({
+      availableTeams: [
+        { club: { name: 'AS Test' }, documentId: 'team-1', name: 'Alpha' },
+        { club: { name: 'AS Test' }, documentId: 'team-2', name: 'Beta' },
+      ],
+      clubCoveredTeamDocumentIds: ['team-2'],
+    });
+
+    expect(options).toEqual([
+      expect.objectContaining({
+        coverageNotice: null,
+        isSelectable: true,
+        teamDocumentId: 'team-1',
+      }),
+      expect.objectContaining({
+        coverageNotice: 'Déjà couverte par ton club',
+        isSelectable: false,
+        teamDocumentId: 'team-2',
+      }),
+    ]);
+  });
+
+  test('T3 bis — une equipe couverte par le club n est JAMAIS pre-cochee', () => {
+    expect(getInitialTeamSelection({
+      availableTeams: [
+        { documentId: 'team-1', name: 'Alpha' },
+        { documentId: 'team-2', name: 'Beta' },
+      ],
+      clubCoveredTeamDocumentIds: ['team-1'],
+      slotCount: 2,
+    })).toEqual(['team-2']);
+  });
+
+  test('T3 ter — une equipe couverte par MON offre Equipe reste cochee (elle, on la gere)', () => {
+    expect(getInitialTeamSelection({
+      availableTeams: [
+        { documentId: 'team-1', name: 'Alpha' },
+        { documentId: 'team-2', name: 'Beta' },
+      ],
+      clubCoveredTeamDocumentIds: ['team-1'],
+      coveredTeamDocumentIds: ['team-2'],
+      slotCount: 2,
+    })).toEqual(['team-2']);
+  });
+
+  test('T3 quater — le refus du serveur se lit en francais, sans conseil impossible', () => {
+    // Le message generique existant conseille « libere sa place actuelle » :
+    // impossible pour une offre Club, qui n a aucune place a liberer.
+    expect(getSubscriptionBillingErrorMessage({ message: 'TEAM_COVERED_BY_CLUB_PLAN' }))
+      .toBe(
+        'Cette équipe est déjà couverte par l\'offre Club de son club : '
+        + 'tu as déjà ces droits, inutile de payer une offre Équipe pour elle.',
+      );
   });
 });
