@@ -1222,7 +1222,6 @@ export const NOTIFICATION_TYPES = {
   EVENT_ABSENCE_FINAL: 'eventAbsenceFinal',
   EVENT_CANCELLATION: 'eventCancellation',
   EVENT_CONVOCATION_PUBLISHED: 'eventConvocationPublished',
-  EVENT_CREATED: 'eventCreated',
   EVENT_LINEUP_PUBLISH_REMINDER: 'eventLineupPublishReminder',
   EVENT_PARTICIPANT_REMINDER: 'eventParticipantReminder',
   EVENT_PUBLISHED: 'eventPublished',
@@ -1269,7 +1268,6 @@ export const NOTIFICATION_TYPES = {
   NEW_GROUP_MESSAGE: 'newGroupMessage',
   NEW_LEAGUE_MATCH_MESSAGE: 'newLeagueMatchMessage',
   NEW_TEAM_MESSAGE: 'newTeamMessage',
-  NEW_TEAM_PLAYER_MESSAGE: 'newTeamPlayerMessage',
   NEW_WHISPER: 'newWhisper',
 
   // Matchmaking
@@ -1292,11 +1290,9 @@ export const NOTIFICATION_TYPES = {
   LEAGUE_SCORE_ADMIN_ESCALATED: 'leagueScoreAdminEscalated',
   LEAGUE_SCORE_DEADLINE_WARNING: 'leagueScoreDeadlineWarning',
   LEAGUE_SCORE_DISPUTED_BY_OPPONENT: 'leagueScoreDisputedByOpponent',
-  LEAGUE_SCORE_DUE: 'leagueScoreDue',
   LEAGUE_SCORE_END_DUE: 'leagueScoreEndDue',
   LEAGUE_SCORE_REMINDER_2H: 'leagueScoreReminder2h',
   LEAGUE_SCORE_START_INFO: 'leagueScoreStartInfo',
-  LEAGUE_SCORE_SUBMITTED_BY_OPPONENT: 'leagueScoreSubmittedByOpponent',
   LEAGUE_SCORE_VALIDATION_REQUIRED: 'leagueScoreValidationRequired',
   LEAGUE_SEARCH_RELAUNCH_PROMPT: 'leagueSearchRelaunchPrompt',
   LEAGUE_SEARCH_STARTED: 'leagueSearchStarted',
@@ -1318,8 +1314,6 @@ export const NOTIFICATION_TYPES = {
   FRIENDLY_MATCH_TERMS_UPDATED: 'friendly_match_terms_updated',
   REMATCH_REQUEST: 'REMATCH_REQUEST',
   RSVP_ALERT: 'RSVP_ALERT',
-  // Legacy alias kept for backward compatibility
-  MATCH_FOUND: 'MATCH_FOUND',
 };
 
 export { sanitizeUser };
