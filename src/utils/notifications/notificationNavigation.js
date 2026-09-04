@@ -944,6 +944,18 @@ export const resolveNotificationDestination = (rawPayload = {}) => {
       if (payload.profileId) return adaptDestinationForCurrentPlatform(payload, profileDestination(payload.profileId));
       return adaptDestinationForCurrentPlatform(payload, { params: {}, route: RouteNames.SearchAlerts });
     }
+    case NOTIFICATION_TYPES.SUBSCRIPTION_REPLACED:
+      // UPGRADE (2026-09-04) — CELUI-LA NE VA PAS SUR LES OFFRES, ET C'EST TOUT
+      // L'ECART. Les deux etiquettes du dessous disent « tu n'as plus rien,
+      // reprends un abonnement » et ouvrent donc le carrousel de vente. Celle-ci
+      // dit l'inverse : cette personne a un abonnement bien vivant chez son
+      // magasin, qui la preleve pour une couverture qu'un autre assure
+      // desormais. Ce qu'il lui faut, c'est la page qui porte « Gérer ou
+      // résilier mon abonnement » — lui revendre quelque chose serait indecent.
+      return adaptDestinationForCurrentPlatform(payload, {
+        params: {},
+        route: RouteNames.SubscriptionOverview,
+      });
     case NOTIFICATION_TYPES.SUBSCRIPTION_ENDED:
     case NOTIFICATION_TYPES.SUBSCRIPTION_PAYMENT_FAILED: {
       // ESSAI/E6 (28/08) — « votre abonnement est termine, profitez des offres

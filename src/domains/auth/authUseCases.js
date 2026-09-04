@@ -1263,6 +1263,12 @@ export const NOTIFICATION_TYPES = {
   // de fin du cadeau de bienvenue (lot ESSAI, 28/08).
   SUBSCRIPTION_ENDED: 'subscriptionEnded',
   SUBSCRIPTION_PAYMENT_FAILED: 'subscriptionPaymentFailed',
+  // UPGRADE (2026-09-04) — le TROISIEME message qui va au payeur, et le seul
+  // qui lui demande d'agir chez son magasin : quelqu'un d'autre a pris une
+  // offre MEILLEURE pour le meme club, sa couverture est remplacee, mais Apple
+  // ou Google continue de le prelever. Sans cette etiquette ici, la cloche
+  // sonnerait et l'appui n'ouvrirait RIEN (mesure du lot INSTANT, 27/08).
+  SUBSCRIPTION_REPLACED: 'subscriptionReplaced',
 
   // Messages
   NEW_GROUP_MESSAGE: 'newGroupMessage',

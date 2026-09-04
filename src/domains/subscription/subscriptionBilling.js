@@ -657,6 +657,149 @@ export const buildSubscriptionTeamOptions = ({
 };
 
 /**
+ * UPGRADE / U5 — CE QUE VAUT UNE OFFRE CLUB, en un seul nombre comparable.
+ *
+ * Le critere est LE PLAFOND DE LICENCIES, jamais le prix ni la duree : c'est la
+ * decision d'Adel du 2026-09-04, et c'est ce que le serveur applique
+ * (admin/src/api/subscription/services/subscription-catalog.ts,
+ * `getClubOfferRank`). Un Club 1000 mensuel bat un Club 100 annuel, meme s'il
+ * coute trois fois moins cher a la souscription.
+ *
+ * 🧨 `licenseeCap: null` ne veut pas dire « zero », il veut dire LE SOMMET.
+ * Une comparaison naive classerait « Club Illimite » DERNIER — donc griserait
+ * la seule offre qui passe toujours. D'ou l'infini.
+ *
+ * ⚠️ AUCUN NOMBRE EN DUR ICI : le plafond vient de l'entree de catalogue rendue
+ * par le serveur. Les paliers ont change quatre fois le 28/08.
+ * @param {any} entry - une entree de catalogue.
+ * @returns {number | null} - le rang, ou null quand ce n'est pas une offre CLUB.
+ */
+export const getSubscriptionClubOfferRank = (entry) => {
+  if (!entry || getSubscriptionEntryScope(entry) !== 'CLUB') return null;
+  const licenseeCap = getSubscriptionEntryLicenseeCap(entry);
+  return licenseeCap === null ? Number.POSITIVE_INFINITY : licenseeCap;
+};
+
+/**
+ * UPGRADE / U5 — LA COUVERTURE QUI EMPECHE VRAIMENT D'ACHETER, ou rien.
+ *
+ * Trois situations ressemblent a « mon club est deja couvert » et UNE SEULE
+ * fait refuser un paiement par le serveur :
+ *  - 💳 quelqu'un d'AUTRE paie une offre Club  ⇒ BLOQUE (sauf montee en gamme) ;
+ *  - 🙋 c'est MOI qui paie                     ⇒ ne bloque pas : changer sa propre
+ *    offre passe par `changePlan`, qui n'a jamais eu ce garde-fou ;
+ *  - 🎁 un CADEAU couvre le club               ⇒ ne bloque pas (decision U4 du
+ *    04/09 : un abonnement `manual` ne doit jamais faire refuser de l'argent).
+ *
+ * ⚠️ On lit `paidBy` et non `activePlanCodes` : cette liste-la porte TOUS les
+ * droits actifs du compte, y compris ceux payes par quelqu'un d'autre — c'est
+ * le piege VITRINE/W4 qui avait rendu un ecran entier inatteignable.
+ * @param {object} params - ce que le serveur dit des droits du compte.
+ * @param {any[]} [params.entitlementsSummary] - les droits actifs, avec leur payeur.
+ * @param {string} [params.userDocumentId] - moi.
+ * @returns {string} - le code de plan qui bloque, ou '' quand rien ne bloque.
+ */
+export const getBlockingClubCoveragePlanCode = ({ entitlementsSummary, userDocumentId }) => {
+  const myDocumentId = String(userDocumentId || '').trim();
+  const blocking = (Array.isArray(entitlementsSummary) ? entitlementsSummary : []).find((entry) => {
+    if (String(entry?.scopeType || '').trim().toUpperCase() !== 'CLUB') return false;
+    const payerDocumentId = String(entry?.paidBy?.documentId || '').trim();
+    // Payeur inconnu : on ne devine pas, et on ne grise rien sur une supposition.
+    if (!payerDocumentId) return false;
+    if (myDocumentId && payerDocumentId === myDocumentId) return false;
+    const planCode = String(entry?.subscriptionPlanCode || '').trim();
+    return planCode !== '' && !planCode.startsWith('fc_trial_');
+  });
+
+  return blocking ? String(blocking.subscriptionPlanCode || '').trim() : '';
+};
+
+/**
+ * UPGRADE / U5 — UNE OFFRE EST-ELLE ENCORE ACHETABLE, ET SINON POURQUOI.
+ *
+ * Depuis le 2026-09-04 le serveur accepte l'argent quand l'offre achetee est
+ * STRICTEMENT meilleure que la couverture en place, et le refuse sinon
+ * (`CLUB_ALREADY_COVERED`). Une surface de vente qui propose quand meme les
+ * quatre tranches envoie l'utilisateur payer PUIS se faire jeter — c'est le
+ * scenario exact qui a coute de l'argent ce jour-la.
+ *
+ * ⚠️ REUTILISE LE MOTIF DE DESACTIVATION DE CLUBEQ (`isSelectable` + mention) :
+ * les trois surfaces de vente le lisent deja pour les equipes.
+ *
+ * ⚠️ EN CAS DE DOUTE, ON PROPOSE. Un plan qu'on ne sait pas classer (cadeau,
+ * offre historique) rend `isSelectable: true` : le serveur, lui, accepte ces
+ * cas-la. Le mauvais cote de l'erreur serait de griser une offre qu'il aurait
+ * prise — c'est-a-dire de perdre une vente en silence.
+ * @param {object} params - l'offre et ce qui couvre deja le club.
+ * @param {string} [params.blockingClubPlanCode] - la couverture qui bloque (getBlockingClubCoveragePlanCode).
+ * @param {any[]} [params.catalogEntries] - le catalogue, pour classer la couverture en place.
+ * @param {any} params.entry - l'offre a juger.
+ * @returns {{ coverageNotice: string | null, isSelectable: boolean }} - le verdict.
+ */
+export const buildClubOfferAvailability = ({ blockingClubPlanCode, catalogEntries, entry }) => {
+  const AVAILABLE = { coverageNotice: null, isSelectable: true };
+  const blockingPlanCode = String(blockingClubPlanCode || '').trim();
+  if (!blockingPlanCode) return AVAILABLE;
+  // La regle d'Adel porte sur les offres CLUB. Une offre EQUIPE a la sienne,
+  // posee par CLUBEQ, et elle passe par une autre porte.
+  if (getSubscriptionEntryScope(entry) !== 'CLUB') return AVAILABLE;
+
+  const blockingEntry = (Array.isArray(catalogEntries) ? catalogEntries : [])
+    .find((candidate) => String(candidate?.planCode || '').trim() === blockingPlanCode) || null;
+  const blockingRank = getSubscriptionClubOfferRank(blockingEntry);
+  const offerRank = getSubscriptionClubOfferRank(entry);
+  if (blockingRank === null || offerRank === null) return AVAILABLE;
+  if (offerRank > blockingRank) return AVAILABLE;
+
+  return {
+    coverageNotice: offerRank === blockingRank
+      ? 'Ton club a déjà cette offre'
+      : 'Ton club a déjà une offre supérieure',
+    isSelectable: false,
+  };
+};
+
+/**
+ * UPGRADE / U6 — CE QUI ARRIVE AU CADEAU DE 7 JOURS QUAND ON ACHETE.
+ *
+ * Constat d'Adel du 2026-09-03 (ligne 45 du suivi stores) : pendant le cadeau,
+ * l'ecran des offres ne dit RIEN de ce qui se passe si on achete. On ne sait ni
+ * quand on est debite, ni ce que devient le cadeau — donc on n'achete pas.
+ *
+ * ⚠️ LA PHRASE DIT LA VERITE DE LA CAISSE, PAS UNE VERITE CONFORTABLE. Le
+ * magasin encaisse AU MOMENT DE L'ACHAT (mesure de production du 04/09 : Apple
+ * a encaisse a 14:22:44, le serveur a ete prevenu 3 s plus tard). Ecrire « ton
+ * abonnement prendra le relais a la fin du cadeau » serait faux : il prend le
+ * relais tout de suite, et le cadeau se ferme (subscription-billing,
+ * `closeSupersededClubCoverage`). On le dit tel quel — un client surpris par un
+ * prelevement est un client perdu, et il a raison de l'etre.
+ *
+ * Rend '' quand aucun cadeau n'est en cours : une surface qui n'a rien a dire
+ * n'affiche rien.
+ * @param {any} subscriptionSummary - le resume d'abonnement rendu par le serveur.
+ * @returns {string} - la phrase a afficher, ou ''.
+ */
+export const formatSubscriptionTrialHandoverNotice = (subscriptionSummary) => {
+  const payerSubscriptions = Array.isArray(subscriptionSummary?.payerSubscriptionsSummary)
+    ? subscriptionSummary.payerSubscriptionsSummary
+    : [];
+  const activeTrial = payerSubscriptions.find((entry) => entry?.isTrial === true
+    && ['active', 'grace_period'].includes(String(entry?.status || '').trim().toLowerCase()));
+  if (!activeTrial) return '';
+
+  const endTime = new Date(String(activeTrial?.currentPeriodEnd || '')).getTime();
+  // Une date illisible ne devient jamais « Invalid Date » a l'ecran : on dit la
+  // meme chose sans elle.
+  const deadline = Number.isFinite(endTime)
+    ? ` (il court jusqu'au ${new Date(endTime).toLocaleDateString('fr-FR')})`
+    : '';
+
+  return `Ton essai gratuit est en cours${deadline}. L'offre que tu choisis est facturée `
+    + 'tout de suite par ton magasin et prend le relais immédiatement : ton club garde ses '
+    + 'droits sans coupure.';
+};
+
+/**
  * @param {object} params
  * @param {any[]} params.availableTeams
  * @param {string[]} [params.clubCoveredTeamDocumentIds]

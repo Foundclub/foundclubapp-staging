@@ -1,4 +1,5 @@
 import {
+  buildClubOfferAvailability,
   buildSubscriptionChangePlanPayload,
   buildSubscriptionPurchasePayload,
   buildSubscriptionTeamOptions,
@@ -8,8 +9,10 @@ import {
   formatSubscriptionUnitPriceLabel,
   formatSubscriptionYearlyDiscountLabel,
   getInitialTeamSelection,
+  getBlockingClubCoveragePlanCode,
   getSubscriptionBillingErrorMessage,
   getSubscriptionCatalogEntryMeta,
+  getSubscriptionClubOfferRank,
   getSubscriptionEntryTierRank,
   getSubscriptionEntryUnitPriceEurCents,
   getSubscriptionTestProvider,
@@ -554,5 +557,147 @@ describe('CLUBEQ — les equipes couvertes par le club', () => {
         'Cette équipe est déjà couverte par l\'offre Club de son club : '
         + 'tu as déjà ces droits, inutile de payer une offre Équipe pour elle.',
       );
+  });
+});
+
+/**
+ * UPGRADE / U5 — L ECRAN PROPOSE CE QUI PASSERA, ET GRISE CE QUI SERA REFUSE.
+ *
+ * DECISION D ADEL DU 2026-09-04 : « on accepte les montees en gamme, on refuse
+ * l egal et le moins cher ». Le serveur applique desormais cette regle
+ * (`assertClubNotAlreadyCovered`). Un ecran qui continue de proposer les quatre
+ * tranches envoie l utilisateur PAYER puis se faire jeter — c est exactement le
+ * scenario qui a coute de l argent le 04/09.
+ *
+ * ⚠️ LE PIEGE : « Club Illimite » porte `licenseeCap: null`. `null` veut dire LE
+ * SOMMET. Une comparaison naive le classerait dernier et griserait la seule
+ * offre qui, elle, passe toujours.
+ */
+describe('UPGRADE — ce que l ecran des offres a le droit de proposer', () => {
+  const CLUB_100 = { licenseeCap: 100, planCode: 'fc_club_tier_1_yearly', scopeType: 'CLUB' };
+  const CLUB_100_MENSUEL = { licenseeCap: 100, planCode: 'fc_club_tier_1_monthly', scopeType: 'CLUB' };
+  const CLUB_500 = { licenseeCap: 500, planCode: 'fc_club_tier_2_yearly', scopeType: 'CLUB' };
+  const CLUB_ILLIMITE = { licenseeCap: null, planCode: 'fc_club_tier_4_yearly', scopeType: 'CLUB' };
+  const EQUIPE = { licenseeCap: null, planCode: 'fc_team_1_yearly', scopeType: 'TEAM', slotCount: 1 };
+  const CATALOGUE = [CLUB_100, CLUB_100_MENSUEL, CLUB_500, CLUB_ILLIMITE, EQUIPE];
+
+  const disponibilite = (entry, blockingClubPlanCode) => buildClubOfferAvailability({
+    blockingClubPlanCode,
+    catalogEntries: CATALOGUE,
+    entry,
+  });
+
+  test('T6 — « Club Illimite » (plafond null) est au SOMMET du classement', () => {
+    expect(getSubscriptionClubOfferRank(CLUB_100)).toBe(100);
+    expect(getSubscriptionClubOfferRank(CLUB_500)).toBe(500);
+    expect(getSubscriptionClubOfferRank(CLUB_ILLIMITE)).toBe(Number.POSITIVE_INFINITY);
+    expect(getSubscriptionClubOfferRank(EQUIPE)).toBeNull();
+  });
+
+  test('T6 bis — club couvert en « Club 100 » : les offres SUPERIEURES restent achetables', () => {
+    expect(disponibilite(CLUB_500, 'fc_club_tier_1_yearly')).toEqual({
+      coverageNotice: null,
+      isSelectable: true,
+    });
+    expect(disponibilite(CLUB_ILLIMITE, 'fc_club_tier_1_yearly')).toEqual({
+      coverageNotice: null,
+      isSelectable: true,
+    });
+  });
+
+  test('T6 ter — club couvert en « Club 100 » : l EGAL et l INFERIEUR sont grises, avec leur mention', () => {
+    expect(disponibilite(CLUB_100, 'fc_club_tier_1_yearly')).toEqual({
+      coverageNotice: 'Ton club a déjà cette offre',
+      isSelectable: false,
+    });
+    // Meme tranche, autre periode : c est un EGAL, pas une montee en gamme.
+    expect(disponibilite(CLUB_100_MENSUEL, 'fc_club_tier_1_yearly')).toEqual({
+      coverageNotice: 'Ton club a déjà cette offre',
+      isSelectable: false,
+    });
+    expect(disponibilite(CLUB_100, 'fc_club_tier_2_yearly')).toEqual({
+      coverageNotice: 'Ton club a déjà une offre supérieure',
+      isSelectable: false,
+    });
+  });
+
+  test('T6 quater — sans couverture bloquante, RIEN n est grise', () => {
+    expect(disponibilite(CLUB_100, '')).toEqual({ coverageNotice: null, isSelectable: true });
+    expect(disponibilite(CLUB_100, null)).toEqual({ coverageNotice: null, isSelectable: true });
+  });
+
+  test('T6 quinquies — une offre EQUIPE n est jamais grisee par une couverture CLUB', () => {
+    // La regle d Adel porte sur les offres CLUB. Le cas EQUIPE a sa propre
+    // regle, posee par CLUBEQ, et elle passe par une autre porte.
+    expect(disponibilite(EQUIPE, 'fc_club_tier_4_yearly')).toEqual({
+      coverageNotice: null,
+      isSelectable: true,
+    });
+  });
+
+  test('T6 sexies — un plan qu on ne sait pas classer ne grise RIEN', () => {
+    // Un cadeau (`fc_trial_club`, absent du catalogue vendable) ou un plan
+    // historique : le serveur ACCEPTE l achat dans ces cas-la. Griser ferait
+    // perdre une vente qu il aurait prise.
+    expect(disponibilite(CLUB_100, 'fc_trial_club')).toEqual({
+      coverageNotice: null,
+      isSelectable: true,
+    });
+  });
+});
+
+/**
+ * UPGRADE / U5 — QUI BLOQUE, ET QUI NE BLOQUE PAS.
+ *
+ * Le serveur ne refuse que quand la couverture en place appartient a UN AUTRE
+ * ABONNEMENT. Changer sa PROPRE offre passe par un autre chemin
+ * (`changePlan`), qui n a jamais eu ce garde-fou : celui qui paie doit pouvoir
+ * descendre de gamme s il le veut.
+ */
+describe('UPGRADE — la couverture qui empeche vraiment d acheter', () => {
+  const MOI = 'user-moi';
+
+  test('T6 septies — la couverture payee par QUELQU UN D AUTRE bloque', () => {
+    expect(getBlockingClubCoveragePlanCode({
+      entitlementsSummary: [{
+        paidBy: { documentId: 'user-autre', firstname: 'Sofiane' },
+        scopeType: 'CLUB',
+        subscriptionPlanCode: 'fc_club_tier_1_yearly',
+      }],
+      userDocumentId: MOI,
+    })).toBe('fc_club_tier_1_yearly');
+  });
+
+  test('T6 octies — MA PROPRE couverture ne me bloque pas (je change d offre quand je veux)', () => {
+    expect(getBlockingClubCoveragePlanCode({
+      entitlementsSummary: [{
+        paidBy: { documentId: MOI, firstname: 'Adel' },
+        scopeType: 'CLUB',
+        subscriptionPlanCode: 'fc_club_tier_4_yearly',
+      }],
+      userDocumentId: MOI,
+    })).toBe('');
+  });
+
+  test('T6 nonies — un CADEAU ne bloque jamais un paiement', () => {
+    expect(getBlockingClubCoveragePlanCode({
+      entitlementsSummary: [{
+        paidBy: { documentId: 'user-autre' },
+        scopeType: 'CLUB',
+        subscriptionPlanCode: 'fc_trial_club',
+      }],
+      userDocumentId: MOI,
+    })).toBe('');
+  });
+
+  test('T6 decies — une couverture d EQUIPE ne bloque pas une offre Club', () => {
+    expect(getBlockingClubCoveragePlanCode({
+      entitlementsSummary: [{
+        paidBy: { documentId: 'user-autre' },
+        scopeType: 'TEAM',
+        subscriptionPlanCode: 'fc_team_1_yearly',
+      }],
+      userDocumentId: MOI,
+    })).toBe('');
   });
 });

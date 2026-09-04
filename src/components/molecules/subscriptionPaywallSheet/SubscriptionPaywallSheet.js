@@ -8,14 +8,17 @@ import {
 import { getUserRoleKey } from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
 import {
+  buildClubOfferAvailability,
   clampSubscriptionLicenseeCount,
   findSubscriptionMonthlySiblingEntry,
   formatSubscriptionClubCoverageLabel,
   formatSubscriptionMonthlyEquivalentLabel,
   formatSubscriptionPerMemberPriceLabel,
   formatSubscriptionPriceLabel,
+  formatSubscriptionTrialHandoverNotice,
   formatSubscriptionUnitPriceLabel,
   formatSubscriptionYearlyDiscountLabel,
+  getBlockingClubCoveragePlanCode,
   getInitialTeamSelection,
   getSubscriptionBillingErrorMessage,
   getSubscriptionCatalogEntryMeta,
@@ -72,18 +75,26 @@ const getCatalogEntryTierRank = (entry) => (
 /**
  * Paliers d'une famille d'offre pour une periode de facturation donnee, du moins
  * cher au plus cher.
+ *
+ * UPGRADE / U5 (2026-09-04) — chaque palier sait desormais s'il est ACHETABLE.
+ * Quand un autre membre du club paie deja une offre Club, le serveur n'accepte
+ * plus que les offres SUPERIEURES (`CLUB_ALREADY_COVERED`) : proposer les autres
+ * enverrait payer puis se faire jeter.
  * @param {any[]} entries
  * @param {'TEAM' | 'CLUB'} scopeType
  * @param {string} billingPeriod - 'monthly' ou 'yearly'.
- * @returns {Array<{ entry: any; id: number; label: string }>}
+ * @param {string} [blockingClubPlanCode] - l'offre Club qu'un autre paie deja.
+ * @returns {Array<{ coverageNotice: string | null; entry: any; id: number;
+ *   isSelectable: boolean; label: string }>}
  */
-const getTierOptionsForPeriod = (entries, scopeType, billingPeriod) => entries
+const getTierOptionsForPeriod = (entries, scopeType, billingPeriod, blockingClubPlanCode = '') => entries
   .filter((entry) => String(entry?.scopeType || '').trim().toUpperCase() === scopeType
     && String(entry?.billingPeriod || '').trim().toLowerCase() === billingPeriod)
   .sort((left, right) => getCatalogEntryTierRank(left) - getCatalogEntryTierRank(right))
   .map((entry) => {
     const slotCount = Number(entry?.slotCount || 0);
     return {
+      ...buildClubOfferAvailability({ blockingClubPlanCode, catalogEntries: entries, entry }),
       entry,
       id: getCatalogEntryTierRank(entry),
       // Cote Club, le catalogue serveur porte deja les noms des tranches
@@ -154,7 +165,7 @@ function SubscriptionPaywallSheet({
   } = useTheme();
   const { t } = useTranslation();
   const queryClient = useQueryClient();
-  const { subscriptionSummary, userData } = useAuth();
+  const { entitlementsSummary, subscriptionSummary, userData } = useAuth();
   const roleKey = getUserRoleKey(userData?.role?.type || userData?.role?.name);
   const canShowSubscriptionPaywall = roleKey === 'coach'
     || roleKey === 'president'
@@ -199,15 +210,25 @@ function SubscriptionPaywallSheet({
   });
   const catalogEntries = catalogQuery.entries;
   const [billingPeriod, setBillingPeriod] = useState('yearly');
+  // UPGRADE / U5 — l'offre Club qu'un AUTRE membre paie deja, ou ''.
+  const blockingClubPlanCode = useMemo(
+    () => getBlockingClubCoveragePlanCode({
+      entitlementsSummary,
+      userDocumentId: userData?.documentId,
+    }),
+    [entitlementsSummary, userData?.documentId],
+  );
+  // UPGRADE / U6 — ce qui arrive au cadeau si on achete maintenant, ou ''.
+  const trialHandoverNotice = formatSubscriptionTrialHandoverNotice(subscriptionSummary);
   const tierOptions = useMemo(
-    () => getTierOptionsForPeriod(catalogEntries, sellingScope, billingPeriod),
-    [billingPeriod, catalogEntries, sellingScope],
+    () => getTierOptionsForPeriod(catalogEntries, sellingScope, billingPeriod, blockingClubPlanCode),
+    [billingPeriod, blockingClubPlanCode, catalogEntries, sellingScope],
   );
   // Paliers annuels : base stable pour la preselection (les paliers sont les memes
   // d'une periode a l'autre, on ne reset pas le palier au toggle).
   const yearlyTierOptions = useMemo(
-    () => getTierOptionsForPeriod(catalogEntries, sellingScope, 'yearly'),
-    [catalogEntries, sellingScope],
+    () => getTierOptionsForPeriod(catalogEntries, sellingScope, 'yearly', blockingClubPlanCode),
+    [blockingClubPlanCode, catalogEntries, sellingScope],
   );
   const hasMonthlyTierOptions = useMemo(
     () => getTierOptionsForPeriod(catalogEntries, sellingScope, 'monthly').length > 0,
@@ -245,7 +266,15 @@ function SubscriptionPaywallSheet({
     // ne se souvient pas d'un mur payant a l'autre.
     setClubPricingMode(CLUB_PRICING_MODES.TIER);
     setLicenseeCountText('');
-    const availableTierIds = yearlyTierOptions.map((option) => option.id);
+    // UPGRADE / U5 : la preselection atterrit sur un palier ACHETABLE. Ouvrir la
+    // feuille sur une offre grisee laisserait un bouton eteint sans expliquer
+    // qu'il suffit de monter d'un cran.
+    const selectableTierIds = yearlyTierOptions
+      .filter((option) => option.isSelectable !== false)
+      .map((option) => option.id);
+    const availableTierIds = selectableTierIds.length > 0
+      ? selectableTierIds
+      : yearlyTierOptions.map((option) => option.id);
     let wantedTierId = quotaSheetContent ? quotaSheetContent.preselectedSlotCount : 1;
     if (quotaSheetContent && SUBSCRIPTION_TIER_AB_TEST_ENABLED) {
       wantedTierId = getSubscriptionPreselectedSlotCount(funnelAbBucket);
@@ -596,16 +625,28 @@ function SubscriptionPaywallSheet({
       typedLicenseeCount,
       billingPeriod,
     );
+    // UPGRADE / U5 — le palier retenu est-il encore achetable ?
+    const lockedNotice = selectedTierOption?.isSelectable === false
+      ? String(selectedTierOption?.coverageNotice || '')
+      : '';
     let ctaLabel = 'Chargement des tarifs…';
     if (isLicenseeModeActive) {
       ctaLabel = isTypedLicenseeCountValid && licenseeTotalLabel
         ? `Souscrire · ${licenseeTotalLabel.split(' = ')[1] || licenseeTotalLabel}`
         : 'Indique ton nombre de licenciés';
+    } else if (lockedNotice) {
+      ctaLabel = 'Déjà couvert par ton club';
     } else if (!isCatalogLoading && !isCatalogUnavailable) {
       ctaLabel = (sellingScope === 'TEAM' && selectedTierId === 1)
         ? 'Débloquer mon équipe'
         : `Débloquer ${selectedTierLabel}`;
     }
+    // UPGRADE — la phrase posee juste au-dessus du bouton : elle dit ce qui
+    // bloque (U5) ou ce qui arrive au cadeau (U6). Jamais les deux : un ecran
+    // deja bloque n'a rien a raconter sur un achat qui n'aura pas lieu.
+    const purchaseNotice = lockedNotice
+      ? `${lockedNotice} : payée par un autre membre. Seule une offre supérieure peut la remplacer.`
+      : trialHandoverNotice;
 
     return (
       <BottomModal
@@ -785,6 +826,13 @@ function SubscriptionPaywallSheet({
           </View>
 
           <View style={Spaces.gap[4]}>
+            {/* UPGRADE — la derniere phrase lue avant que le magasin s'ouvre :
+                ce qui bloque (U5) ou ce que devient le cadeau (U6). */}
+            {purchaseNotice && !isCatalogUnavailable ? (
+              <Text style={[Fonts.p4, Fonts.neutral300, Spaces.marginBottom[4]]}>
+                {purchaseNotice}
+              </Text>
+            ) : null}
             {isCatalogUnavailable ? (
               <Button
                 onPress={() => catalogQuery.refetch?.()}
@@ -793,7 +841,9 @@ function SubscriptionPaywallSheet({
               />
             ) : (
               <Button
-                disabled={isLicenseeModeActive ? !isTypedLicenseeCountValid : isCatalogLoading}
+                disabled={isLicenseeModeActive
+                  ? !isTypedLicenseeCountValid
+                  : (isCatalogLoading || Boolean(lockedNotice))}
                 isLoading={purchasing}
                 onPress={isLicenseeModeActive ? handlePurchaseLicenseeOffer : handlePurchase}
                 title={purchasing ? 'Achat en cours…' : ctaLabel}
