@@ -1,7 +1,6 @@
 import {
   buildClubOfferAvailability,
   buildSubscriptionChangePlanPayload,
-  getBlockingClubCoveragePlanCode,
   buildSubscriptionPurchasePayload,
   buildSubscriptionTeamOptions,
   clampSubscriptionLicenseeCount,
@@ -9,6 +8,7 @@ import {
   formatSubscriptionPerMemberPriceLabel,
   formatSubscriptionUnitPriceLabel,
   formatSubscriptionYearlyDiscountLabel,
+  getBlockingClubCoveragePlanCode,
   getInitialTeamSelection,
   getSubscriptionBillingErrorMessage,
   getSubscriptionCatalogEntryMeta,

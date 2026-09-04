@@ -137,7 +137,9 @@ const POINTS_D_ENTREE = [
   // encore fait son travail : il a refuse la troisieme destination tant qu'elle
   // n'etait pas ecrite ici.
   //
-  // 3. Le HUB, une seconde fois (`subscriptionReplaced`) : un autre membre du
+  // 3. Le HUB, une seconde fois (`subscriptionReplaced`, cite EN DERNIER dans le
+  //    fichier — l'ordre des `case` est impose par `perfectionist/sort-switch-case`,
+  //    pas choisi) : un autre membre du
   //    club a pris une offre MEILLEURE, la couverture de cette personne est
   //    remplacee — mais Apple ou Google continue de la prelever, et FoundClub
   //    ne peut pas resilier a sa place. Le carrousel serait le pire ecran
@@ -146,9 +148,9 @@ const POINTS_D_ENTREE = [
   //
   // ⚠️ L'ordre compte : le hub reste la PREMIERE route citee du fichier.
   {
-    attendu: ['SubscriptionOverview', 'SubscriptionOverview', 'SubscriptionOffers'],
+    attendu: ['SubscriptionOverview', 'SubscriptionOffers', 'SubscriptionOverview'],
     fichier: 'utils/notifications/notificationNavigation.js',
-    pourquoi: 'club plein => hub ; remplacee => hub (resilier) ; terminee => carrousel',
+    pourquoi: 'club plein => hub ; terminee => carrousel ; remplacee => hub (resilier)',
   },
 ];
 
