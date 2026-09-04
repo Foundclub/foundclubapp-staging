@@ -1,6 +1,4 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { format } from 'date-fns';
-import { fr } from 'date-fns/locale';
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -25,6 +23,7 @@ import {
   getSubscriptionPreselectedSlotCount,
   getSubscriptionTierAbBucket,
   isPerLicenseeSubscriptionEntry,
+  readSubscriptionRenewalAnnouncement,
   sanitizeSubscriptionLicenseeCountInput,
   SUBSCRIPTION_TIER_AB_TEST_ENABLED,
 } from '@/domains/subscription/subscriptionBilling';
@@ -479,7 +478,7 @@ function SubscriptionPaywallSheet({
     const availableTeams = (userData?.myTeams || []).concat(userData?.trainedTeams || []);
 
     try {
-      await purchaseMutation.mutateAsync({
+      const result = await purchaseMutation.mutateAsync({
         catalogEntry: selectedEntry,
         clubDocumentId: isClubPurchase ? purchaseClubDocumentId : undefined,
         payerUserDocumentId: String(userData?.documentId || '').trim(),
@@ -491,6 +490,25 @@ function SubscriptionPaywallSheet({
           slotCount,
         }),
       });
+
+      // VITRINE / W1 — LA TROISIEME SURFACE QUI FELICITAIT SANS RIEN VERIFIER.
+      // Le mur payant vend depuis n'importe quel ecran : il doit se taire de la
+      // meme facon quand le serveur a REPONDU non. La feuille reste ouverte, pour
+      // que le message soit lu la ou la personne vient d'appuyer.
+      if (result?.serverRefused === true) {
+        trackSubscriptionFunnelEvent('paywall_purchase_failed', {
+          abBucket: funnelAbBucket,
+          paywallKey: paywall.paywallKey,
+          planCode: String(selectedEntry?.planCode || ''),
+          slotCount,
+        });
+        Alert.alert(
+          'Erreur abonnement',
+          String(result?.validationErrorMessage || '') || getSubscriptionBillingErrorMessage(null),
+        );
+        return;
+      }
+
       trackSubscriptionFunnelEvent('paywall_purchase_succeeded', {
         abBucket: funnelAbBucket,
         paywallKey: paywall.paywallKey,
@@ -502,12 +520,9 @@ function SubscriptionPaywallSheet({
       // l'etat bouge, sans dependre de l'ecran affiche (L08).
       scheduleSubscriptionStateRefresh(queryClient);
       close();
-      const renewalDate = new Date();
-      if (String(selectedEntry?.billingPeriod || '').trim().toLowerCase() === 'monthly') {
-        renewalDate.setMonth(renewalDate.getMonth() + 1);
-      } else {
-        renewalDate.setFullYear(renewalDate.getFullYear() + 1);
-      }
+      // VITRINE / W5 — l'echeance etait calculee sur l'horloge du telephone.
+      // Elle vient desormais du serveur, ou n'est pas annoncee du tout.
+      const renewal = readSubscriptionRenewalAnnouncement(result);
       navigation.navigate(RouteNames.SubscriptionSuccess, {
         // La portee vient de l'ACHAT, pas du cache d'abonnement : juste apres
         // l'achat, le webhook du store n'a pas encore converge (L08). L'ecran
@@ -517,7 +532,8 @@ function SubscriptionPaywallSheet({
           ? String(selectedTierOption?.label || 'Club')
           : `Équipe · ${slotCount} équipe${slotCount > 1 ? 's' : ''}`,
         offerScope: isClubPurchase ? 'CLUB' : 'TEAM',
-        renewalDateLabel: format(renewalDate, 'd MMMM yyyy', { locale: fr }),
+        pendingActivation: renewal.pendingActivation,
+        renewalDateLabel: renewal.renewalDateLabel,
         resumeCtaLabel: sellingSheet?.successCtaLabel || 'Reprendre',
       });
     } catch (error) {

@@ -1,6 +1,4 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { format } from 'date-fns';
-import { fr } from 'date-fns/locale';
 import { useEffect, useMemo, useState } from 'react';
 import {
   Alert, ScrollView, Text, TouchableOpacity, View,
@@ -15,6 +13,7 @@ import {
   getInitialTeamSelection,
   getSubscriptionBillingErrorMessage,
   isPerLicenseeSubscriptionEntry,
+  readSubscriptionRenewalAnnouncement,
 } from '@/domains/subscription/subscriptionBilling';
 import { getSubscriptionTeamSlotSummary } from '@/domains/subscription/subscriptionDecision';
 import {
@@ -289,7 +288,7 @@ function GuideOffersRecap({ navigation }) {
     const availableTeams = (userData?.myTeams || []).concat(userData?.trainedTeams || []);
 
     try {
-      await purchaseMutation.mutateAsync({
+      const result = await purchaseMutation.mutateAsync({
         catalogEntry: selectedEntry,
         clubDocumentId: isClubPurchase ? currentClubDocumentId : undefined,
         payerUserDocumentId: String(userData?.documentId || '').trim(),
@@ -300,6 +299,25 @@ function GuideOffersRecap({ navigation }) {
           slotCount,
         }),
       });
+
+      // VITRINE / W1 — LE MEME DEFAUT QU'AU CATALOGUE, ET LE MEME CORRECTIF.
+      // Le rail rendait le refus du serveur au lieu de le jeter, mais personne ne
+      // le lisait : ce Recap partait vers « C'est debloque ! » quoi qu'il arrive.
+      // ⚠️ `serverRefused` n'est vrai que si le serveur a REPONDU non : une
+      // coupure reseau reste un silence, jamais une accusation.
+      if (result?.serverRefused === true) {
+        trackSubscriptionFunnelEvent('recap_unlock_failed', {
+          planCode: String(selectedEntry?.planCode || ''),
+          slotCount,
+          source: selectedOffer,
+        });
+        Alert.alert(
+          'Erreur abonnement',
+          String(result?.validationErrorMessage || '') || getSubscriptionBillingErrorMessage(null),
+        );
+        return;
+      }
+
       trackSubscriptionFunnelEvent('recap_unlock_succeeded', {
         planCode: String(selectedEntry?.planCode || ''),
         slotCount,
@@ -309,12 +327,9 @@ function GuideOffersRecap({ navigation }) {
       // reussite cote client : le calendrier de convergence relit jusqu'a ce que
       // l'etat bouge, sans dependre de l'ecran affiche (L08).
       scheduleSubscriptionStateRefresh(queryClient);
-      const renewalDate = new Date();
-      if (getCatalogEntryBillingPeriod(selectedEntry) === 'monthly') {
-        renewalDate.setMonth(renewalDate.getMonth() + 1);
-      } else {
-        renewalDate.setFullYear(renewalDate.getFullYear() + 1);
-      }
+      // VITRINE / W5 — l'echeance etait calculee sur l'horloge du telephone.
+      // Elle vient desormais du serveur, ou n'est pas annoncee du tout.
+      const renewal = readSubscriptionRenewalAnnouncement(result);
       navigation.navigate(RouteNames.SubscriptionSuccess, {
         // La portee vient de l'ACHAT, pas du cache d'abonnement : juste apres
         // l'achat, le webhook du store n'a pas encore converge (L08). L'ecran
@@ -324,7 +339,8 @@ function GuideOffersRecap({ navigation }) {
           ? selectedOfferName
           : `Équipe · ${slotCount} équipe${slotCount > 1 ? 's' : ''}`,
         offerScope: isClubPurchase ? 'CLUB' : 'TEAM',
-        renewalDateLabel: format(renewalDate, 'd MMMM yyyy', { locale: fr }),
+        pendingActivation: renewal.pendingActivation,
+        renewalDateLabel: renewal.renewalDateLabel,
         resumeCtaLabel: "C'est parti !",
         resumeMode: 'home',
       });

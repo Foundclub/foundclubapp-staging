@@ -443,7 +443,7 @@ describe('subscriptionPurchaseRail', () => {
       });
     });
 
-    it('rail RevenueCat : transaction inconnue = attente du webhook', async () => {
+    it('rail RevenueCat : transaction inconnue = on POSTE quand meme (VITRINE/W3)', async () => {
       mockRuntimeEnv = 'production';
       Platform.OS = 'ios';
       const purchase = { productIdentifier: 'fc_team_1:monthly', transactionIdentifier: '' };
@@ -451,8 +451,12 @@ describe('subscriptionPurchaseRail', () => {
 
       const result = await performSubscriptionPurchase({ catalogEntry: buildCatalogEntry() });
 
-      expect(validateSubscriptionPurchase).not.toHaveBeenCalled();
-      expect(result).toEqual({ pendingWebhook: true, purchase });
+      // VITRINE / W3 — CETTE ATTENTE ETAIT UNE SORTIE MUETTE. Le rail ne postait
+      // rien et tout reposait sur le webhook du store ; s il n arrivait pas, le
+      // compte restait sans droits et personne ne le savait. On pose desormais la
+      // question au serveur, et c est lui qui tranche.
+      expect(validateSubscriptionPurchase).toHaveBeenCalledTimes(1);
+      expect(result).toEqual({ validated: true });
     });
 
     it('rail RevenueCat : achat store reussi mais backend KO = jamais un echec', async () => {
@@ -465,7 +469,12 @@ describe('subscriptionPurchaseRail', () => {
       expect(result).toEqual({
         pendingWebhook: true,
         purchase: { productIdentifier: 'fc_team_1:monthly', transactionIdentifier: 'GPA.1234' },
+        // VITRINE / W1 — un backend injoignable n a RIEN refuse : aucun status
+        // dans cette erreur. On ne dira donc pas « ton achat a ete refuse » a
+        // quelqu un qui vient de payer, et aucun message ne part vers l ecran.
+        serverRefused: false,
         validationError: true,
+        validationErrorMessage: '',
       });
     });
 
@@ -493,8 +502,9 @@ describe('subscriptionPurchaseRail', () => {
       expect(journalDuRail.error).toHaveBeenCalledTimes(1);
       const [message, meta] = journalDuRail.error.mock.calls[0];
       expect(`${message} ${JSON.stringify(meta)}`).toContain('fc_team_1:monthly');
-      // Le contrat de retour est INCHANGE : l achat store a reussi.
-      expect(result).toEqual({ pendingWebhook: true, purchase });
+      // VITRINE / W3 — le journal RESTE (l anomalie est reelle), mais le rail ne
+      // se contente plus de la noter dans son coin : il pose la question.
+      expect(result).toEqual({ validated: true });
     });
 
     it('rail RevenueCat : backend KO = le message du serveur arrive dans le journal', async () => {
@@ -510,11 +520,15 @@ describe('subscriptionPurchaseRail', () => {
       const [message, meta] = journalDuRail.error.mock.calls[0];
       expect(`${message} ${JSON.stringify(meta)}`)
         .toContain('Subscription source introuvable pour changement d offre.');
-      // Le contrat de retour est INCHANGE : l achat store a reussi.
+      // L achat store a reussi : le contrat garde `pendingWebhook` et `purchase`.
+      // ⚠️ `Error` NU = aucun status : on ne sait pas si le serveur a refuse ou
+      // s il n a pas repondu. Le doute profite a celui qui a paye.
       expect(result).toEqual({
         pendingWebhook: true,
         purchase: { productIdentifier: 'fc_team_1:monthly', transactionIdentifier: 'GPA.1234' },
+        serverRefused: false,
         validationError: true,
+        validationErrorMessage: '',
       });
     });
 
@@ -746,17 +760,19 @@ describe('subscriptionPurchaseRail', () => {
       }));
     });
 
-    it('rail RevenueCat : catalogEntry absent = achat store, pas de reassignation', async () => {
+    it('rail RevenueCat : catalogEntry absent = passage store, pas la reassignation', async () => {
       mockRuntimeEnv = 'production';
       Platform.OS = 'ios';
 
       await performSubscriptionPlanChange({ catalogEntry: null, currentPlanCode: null });
 
-      expect(changeSubscriptionPlan).not.toHaveBeenCalled();
+      // Ce qui distingue les deux branches est le PASSAGE STORE, pas l appel au
+      // serveur : depuis VITRINE/W2, les deux previennent le serveur.
       expect(purchaseSubscriptionViaRevenueCat).toHaveBeenCalledTimes(1);
+      expect(changeSubscriptionPlan).toHaveBeenCalledTimes(1);
     });
 
-    it('rail RevenueCat, plan different : achat store et attente du webhook', async () => {
+    it('rail RevenueCat, plan different : achat store PUIS changement d offre', async () => {
       mockRuntimeEnv = 'production';
       Platform.OS = 'ios';
 
@@ -765,10 +781,10 @@ describe('subscriptionPurchaseRail', () => {
         clubDocumentId: 'club-1',
         currentPlanCode: 'fc_team_1_monthly',
         payerUserDocumentId: 'user-1',
+        subscriptionDocumentId: 'sub-1',
         teamDocumentIds: ['team-1'],
       });
 
-      expect(changeSubscriptionPlan).not.toHaveBeenCalled();
       expect(purchaseSubscriptionViaRevenueCat).toHaveBeenCalledWith({
         catalogEntry: expect.objectContaining({ planCode: 'fc_club_tier_2_yearly' }),
         clubDocumentId: 'club-1',
@@ -776,10 +792,14 @@ describe('subscriptionPurchaseRail', () => {
         payerUserDocumentId: 'user-1',
         teamDocumentIds: ['team-1'],
       });
-      expect(result).toEqual({
-        pendingWebhook: true,
-        purchase: { productIdentifier: 'fc_team_1:monthly', transactionIdentifier: 'GPA.1234' },
-      });
+      // VITRINE / W2 — LE 04/09, CET APPEL N EXISTAIT PAS. Le telephone achetait
+      // le nouveau palier puis rendait un objet ; le serveur ne voyait passer que
+      // le webhook du store, qu il refusait faute de savoir quoi remplacer.
+      expect(changeSubscriptionPlan).toHaveBeenCalledWith(expect.objectContaining({
+        nextPlanCode: 'fc_club_tier_2_yearly',
+        subscriptionDocumentId: 'sub-1',
+      }));
+      expect(result).toEqual({ changed: true });
     });
 
     it('rail RevenueCat, planCode vide des deux cotes : passe par l achat store', async () => {
@@ -791,8 +811,8 @@ describe('subscriptionPurchaseRail', () => {
         currentPlanCode: '',
       });
 
-      expect(changeSubscriptionPlan).not.toHaveBeenCalled();
       expect(purchaseSubscriptionViaRevenueCat).toHaveBeenCalledTimes(1);
+      expect(changeSubscriptionPlan).toHaveBeenCalledTimes(1);
     });
   });
 

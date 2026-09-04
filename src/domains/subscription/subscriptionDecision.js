@@ -823,7 +823,7 @@ export const getCoveredTeamCount = (entitlementsSummary, subscriptionSummary) =>
  *  1. le niveau d'acces est CONNU et n'est pas `FREE` — c'est le juge unique de
  *     l'application (`getSubscriptionAccessLevel`) qui l'affirme, pas nous. Tant
  *     que le bootstrap n'a pas repondu, on ne dit rien ;
- *  2. la personne ne paie AUCUN plan elle-meme — sinon « tu n'as rien a payer »
+ *  2. la personne ne PAIE rien elle-meme — sinon « tu n'as rien a payer »
  *     serait faux : elle paie, justement ;
  *  3. un entitlement est paye par quelqu'un d'AUTRE, et ce quelqu'un porte un
  *     nom. Sans nom, pas de message : on ne peut pas expliquer d'ou vient la
@@ -856,15 +856,32 @@ export const getCoveringEntitlement = ({
     return null;
   }
 
-  // 2. Cette personne paie quelque chose : ce n'est pas quelqu'un de couvert.
-  const activePlanCodes = normalizeDecisionArray(subscriptionSummary?.activePlanCodes);
-  if (activePlanCodes.length > 0) {
+  // 2. CETTE PERSONNE PAIE-T-ELLE ELLE-MEME ?
+  //
+  // 🧨 VITRINE / W4 — `activePlanCodes` NE REPOND PAS A CETTE QUESTION, et c est
+  // ce qui rendait cet ecran STRUCTURELLEMENT INATTEIGNABLE. Le serveur construit
+  // cette liste a partir de TOUS les droits actifs du compte, y compris ceux
+  // payes par quelqu un d autre (`getSubscriptionSummary`,
+  // admin/src/api/subscription/services/subscription-permission.ts). Etre couvert
+  // par l offre Club de son club suffisait donc a la remplir — donc a se voir
+  // refuser la page qui explique justement cette couverture.
+  //
+  // Les deux listes qui repondent vraiment existent deja : `payerSubscriptionIds`
+  // (les abonnements dont CE compte est le payeur) et, en repli pour un serveur
+  // qui ne la rendrait pas encore, les entitlements dont `paidBy` c est moi.
+  const myDocumentId = String(userDocumentId || '').trim();
+  const entitlements = normalizeDecisionArray(entitlementsSummary);
+  const payerSubscriptionIds = normalizeDecisionArray(subscriptionSummary?.payerSubscriptionIds);
+  const paysSomethingHimself = payerSubscriptionIds.length > 0
+    || (myDocumentId !== '' && entitlements.some(
+      (entry) => String(entry?.paidBy?.documentId || '').trim() === myDocumentId,
+    ));
+  if (paysSomethingHimself) {
     return null;
   }
 
   // 3. Un entitlement paye par un tiers NOMME.
-  const myDocumentId = String(userDocumentId || '').trim();
-  const candidates = normalizeDecisionArray(entitlementsSummary).filter((entry) => {
+  const candidates = entitlements.filter((entry) => {
     const payerDocumentId = String(entry?.paidBy?.documentId || '').trim();
     return payerDocumentId
       && payerDocumentId !== myDocumentId

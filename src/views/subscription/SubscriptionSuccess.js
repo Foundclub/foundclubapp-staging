@@ -132,7 +132,10 @@ const FIRST_ACTION_FALLBACK_LABELS = {
  *   Stripe web), l'ecran ne montre que le socle commun aux deux offres
  * - clubDocumentId : club couvert par un achat Club (porte « Gérer mon club »)
  * - resumeCtaLabel : ex. « Créer ma 2ᵉ équipe » (defaut « Reprendre »)
- * - renewalDateLabel : ex. « 10 juillet 2027 » (optionnel)
+ * - renewalDateLabel : ex. « 10 juillet 2027 » (optionnel) — CELLE DU SERVEUR,
+ *   jamais une date calculee sur l'horloge du telephone (VITRINE/W5)
+ * - pendingActivation : vrai quand le serveur n'a rendu AUCUNE date — l'ecran
+ *   annonce alors une activation en cours, et n'affiche aucune echeance
  * - takesEffectAtRenewal : vrai quand le changement d'offre n'a RIEN encaisse
  *   (ABOFIX2/T3) — l'ecran annonce alors l'echeance, pas un deblocage
  * - resumeMode : 'back' (defaut) | 'home' | 'route' (L40)
@@ -165,7 +168,22 @@ function SubscriptionSuccess({ navigation, route }) {
   // lui dit (SubscriptionOffers.buildPurchaseSuccessParams). Rien ne change
   // pour un achat immediat.
   const takesEffectAtRenewal = route?.params?.takesEffectAtRenewal === true;
+  // VITRINE / W5 — AUCUNE DATE VAUT MIEUX QU UNE DATE INVENTEE.
+  // L echeance affichee ici etait calculee sur l horloge du TELEPHONE, et elle
+  // s affichait meme quand le serveur n avait rien valide. Quand il n a rendu
+  // aucune date, on ne promet plus un renouvellement : on dit ou en est l achat.
+  const pendingActivation = route?.params?.pendingActivation === true;
   const storeLabel = Platform.OS === 'ios' ? 'App Store' : 'Google Play';
+  // Le pied de page, en trois etats et un seul endroit : l echeance rendue par
+  // le serveur · l activation en cours · rien de plus que le store.
+  let receiptLead = `${storeLabel} — détails dans `;
+  if (renewalDateLabel) {
+    receiptLead = `Renouvellement le ${renewalDateLabel} · ${storeLabel} — détails dans `;
+  } else if (pendingActivation) {
+    receiptLead = `On vérifie ton achat : ton abonnement s'active dans un instant · ${storeLabel}`
+      + ' — détails dans ';
+  }
+
   const queryClient = useQueryClient();
 
   const unlockedCapabilities = getSubscriptionUnlockedCapabilities(offerScope);
@@ -478,9 +496,7 @@ function SubscriptionSuccess({ navigation, route }) {
             </Text>
           </TouchableOpacity>
           <Text style={[Fonts.p4, Fonts.neutral400, Fonts.textCenter]}>
-            {renewalDateLabel
-              ? `Renouvellement le ${renewalDateLabel} · ${storeLabel} — détails dans `
-              : `${storeLabel} — détails dans `}
+            {receiptLead}
             <Text onPress={handleOpenSubscription} style={[Fonts.p4Bold, Fonts.primary500]}>
               Mon abonnement
             </Text>

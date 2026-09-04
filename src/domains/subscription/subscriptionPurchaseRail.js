@@ -5,6 +5,7 @@ import {
   buildSubscriptionChangePlanPayload,
   buildSubscriptionPurchasePayload,
   clampSubscriptionLicenseeCount,
+  getSubscriptionBillingErrorMessage,
   getSubscriptionTestProvider,
   isPerLicenseeSubscriptionEntry,
   isSubscriptionBillingTestModeEnabled,
@@ -273,6 +274,80 @@ const buildRestoredPurchasesPayload = (customerInfo) => {
 };
 
 /**
+ * VITRINE / W1 — LE SERVEUR A-T-IL REPONDU NON, OU N A-T-IL RIEN DIT ?
+ *
+ * ⚠️ CE N EST PAS LA MEME CHOSE, ET LES CONFONDRE COUTE DES DEUX COTES :
+ * celebrer un refus fait croire a des droits qui n existent pas ; annoncer un
+ * refus sur une coupure reseau accuse quelqu un qui vient de payer.
+ *
+ * L intercepteur HTTP rejette la charge Strapi DEBALLEE — `{ status, name,
+ * message }` — quand le serveur a REPONDU, et sinon la chaine nue d axios
+ * (« Network Error », aucun status) ou l objet d abandon a 15 s (`status: 0`,
+ * client.native.js / client.web.js). Le status est donc le seul juge honnete.
+ *
+ * Un 5xx reste un SILENCE : le serveur s est casse, il n a rien tranche — et le
+ * webhook du store peut encore ouvrir les droits.
+ * @param {any} error - L erreur telle que rejetee par le client HTTP.
+ * @returns {boolean} Vrai seulement si le serveur a explicitement dit non.
+ */
+const isExplicitServerRefusal = (error) => {
+  const status = Number(error?.status ?? error?.response?.status ?? NaN);
+  return Number.isFinite(status) && status >= 400 && status < 500;
+};
+
+/**
+ * Le verdict qu un ecran doit savoir lire quand la validation n a pas abouti.
+ *
+ * `serverRefused` est le SEUL champ qui autorise un ecran a barrer la route :
+ * `validationError` seul ne distingue pas un « non » d un « je n ai pas pu
+ * demander ». Et `validationErrorMessage` n est rempli QUE sur un vrai refus,
+ * pour qu il soit impossible d afficher une accusation sur un silence.
+ * @param {any} error - L erreur rejetee par le service.
+ * @param {any} purchaseResult - Ce que le SDK store a rendu (l achat, lui, a eu lieu).
+ * @returns {Record<string, any>} Le contrat rendu a l ecran.
+ */
+const buildValidationRefusal = (error, purchaseResult) => {
+  const serverRefused = isExplicitServerRefusal(error);
+  return {
+    pendingWebhook: true,
+    purchase: purchaseResult,
+    serverRefused,
+    validationError: true,
+    validationErrorMessage: serverRefused ? getSubscriptionBillingErrorMessage(error) : '',
+  };
+};
+
+/**
+ * VITRINE / W3 — CE QU ON A ENCORE QUAND LE SDK NE REND PAS DE TRANSACTION.
+ *
+ * `purchasePackage` peut resoudre sans `result.transaction` (le SDK ne le
+ * garantit pas), et le rail sortait alors EN SILENCE : aucun POST, serveur
+ * totalement aveugle sur un achat pourtant encaisse (mesure du 2026-09-04,
+ * « Club Illimite » a 14:22:44, zero requete de l app).
+ *
+ * Mais le meme resultat porte un `customerInfo` — la liste des droits que le
+ * store reconnait a ce compte. On en derive EXACTEMENT l identifiant
+ * deterministe deja utilise par « Restaurer mes achats » (ABOFIX/A4), pour que
+ * deux envois de suite visent la meme ligne en base au lieu d en creer deux.
+ * @param {any} purchaseResult - Ce que rend `purchaseSubscriptionViaRevenueCat`.
+ * @returns {{ providerEventId: string, providerTransactionId: string } | null}
+ */
+const buildFallbackTransactionIdentity = (purchaseResult) => {
+  const restoredPurchases = buildRestoredPurchasesPayload(purchaseResult?.customerInfo);
+  const productIdentifier = String(purchaseResult?.productIdentifier || '').trim();
+  const match = restoredPurchases.find(
+    (/** @type {any} */ entry) => entry.providerProductId === productIdentifier,
+  ) || restoredPurchases[0];
+  if (!match?.providerTransactionId) {
+    return null;
+  }
+  return {
+    providerEventId: String(match.providerEventId || ''),
+    providerTransactionId: String(match.providerTransactionId || ''),
+  };
+};
+
+/**
  * Achat d'abonnement via le rail actif.
  * @param {{
  *   catalogEntry: any;
@@ -339,33 +414,44 @@ export const performSubscriptionPurchase = async ({
     teamDocumentIds,
   });
 
+  // VITRINE / W3 — LA SORTIE MUETTE N 1 EST FERMEE : ON POSTE CE QU ON A.
+  // Sans identifiant de transaction, le rail ne postait RIEN et tout reposait
+  // sur le webhook du store ; s il n arrivait pas, le compte restait sans droits
+  // et personne ne le savait. Desormais on pose la question au serveur avec ce
+  // que le SDK garantit encore (son `customerInfo`), et c est LUI qui tranche.
+  const fallbackTransactionIdentity = purchaseResult.transactionIdentifier
+    ? null
+    : buildFallbackTransactionIdentity(purchaseResult);
+
   if (!purchaseResult.transactionIdentifier) {
-    // ABOFIX / A2 — SORTIE MUETTE N 1 : on ne poste RIEN au serveur ici.
-    // Tout repose alors sur le webhook du store. S il n arrive pas, le compte
-    // reste sans droits et personne ne le sait.
     subscriptionPurchaseRailLogger.error(
-      '[ABOFIX] achat store sans identifiant de transaction : aucun POST /validate,'
-      + ' tout repose sur le webhook',
+      '[VITRINE] achat store sans identifiant de transaction : on poste quand meme,'
+      + ' au serveur de trancher',
       {
+        fallbackTransactionId: String(fallbackTransactionIdentity?.providerTransactionId || ''),
         planCode: String(catalogEntry?.planCode || ''),
         productIdentifier: String(purchaseResult?.productIdentifier || ''),
       },
     );
-    // Transaction store inconnue côté client : la vérité arrive par le webhook.
-    return { pendingWebhook: true, purchase: purchaseResult };
   }
 
   try {
-    return await validateSubscriptionPurchase(buildRevenueCatValidationPayload({
-      catalogEntry,
-      clubDocumentId,
-      purchaseResult,
-      teamDocumentIds,
-    }));
+    return await validateSubscriptionPurchase({
+      ...buildRevenueCatValidationPayload({
+        catalogEntry,
+        clubDocumentId,
+        purchaseResult,
+        teamDocumentIds,
+      }),
+      ...(fallbackTransactionIdentity || {}),
+    });
   } catch (error) {
     // ABOFIX / A2 — SORTIE MUETTE N 2 : c est ICI que le 400 du 2026-09-04 a
     // disparu. Le message du serveur est la seule chose qui dise POURQUOI, et il
-    // etait jete. Le contrat de retour ne bouge pas d un pouce (voir plus bas).
+    // etait jete.
+    // VITRINE / W1 — il ne l est plus : le verdict REMONTE jusqu a l ecran.
+    // L achat store a bien eu lieu, donc le contrat garde `pendingWebhook` et
+    // `purchase` ; ce qui s ajoute, c est de quoi ne plus feliciter un refus.
     subscriptionPurchaseRailLogger.error(
       '[ABOFIX] le serveur a refuse la validation de l achat store',
       {
@@ -374,9 +460,7 @@ export const performSubscriptionPurchase = async ({
         transactionIdentifier: String(purchaseResult?.transactionIdentifier || ''),
       },
     );
-    // L'achat store a réussi : ne jamais le présenter comme un échec. Le webhook
-    // + le cron de réconciliation activeront les droits.
-    return { pendingWebhook: true, purchase: purchaseResult, validationError: true };
+    return buildValidationRefusal(error, purchaseResult);
   }
 };
 
@@ -426,23 +510,28 @@ export const performSubscriptionPlanChange = async ({
   const targetPlanCode = String(catalogEntry?.planCode || '').trim();
   const targetProviderProductId = String(catalogEntry?.providerProductId || '').trim() || targetPlanCode;
 
+  // La MEME charge utile pour les deux branches ci-dessous : reassignation de
+  // creneaux et changement de palier posent au serveur exactement la meme
+  // question — « change CET abonnement-la ». Deux copies finiraient par diverger.
+  const changePlanPayload = {
+    autoRenew: true,
+    billingPeriod: String(catalogEntry?.billingPeriod || '').trim().toLowerCase(),
+    clubDocumentId: String(clubDocumentId || '').trim() || undefined,
+    nextPlanCode: targetPlanCode,
+    nextProviderProductId: targetProviderProductId,
+    planCode: targetPlanCode,
+    provider: getStoreProvider(),
+    providerProductId: targetProviderProductId,
+    status: 'active',
+    subscriptionDocumentId,
+    teamDocumentIds,
+  };
+
   // Même plan = réassignation d'équipes (slots), pas un changement de facturation :
   // aucun passage store. Le backend revalide l'abonnement actif via l'API RevenueCat
   // et préserve la fenêtre de facturation réelle (payload sans dates).
   if (targetPlanCode && targetPlanCode === String(currentPlanCode || '').trim()) {
-    return changeSubscriptionPlan({
-      autoRenew: true,
-      billingPeriod: String(catalogEntry?.billingPeriod || '').trim().toLowerCase(),
-      clubDocumentId: String(clubDocumentId || '').trim() || undefined,
-      nextPlanCode: targetPlanCode,
-      nextProviderProductId: targetProviderProductId,
-      planCode: targetPlanCode,
-      provider: getStoreProvider(),
-      providerProductId: targetProviderProductId,
-      status: 'active',
-      subscriptionDocumentId,
-      teamDocumentIds,
-    });
+    return changeSubscriptionPlan(changePlanPayload);
   }
 
   const purchaseResult = await purchaseSubscriptionViaRevenueCat({
@@ -453,7 +542,31 @@ export const performSubscriptionPlanChange = async ({
     teamDocumentIds,
   });
 
-  return { pendingWebhook: true, purchase: purchaseResult };
+  // VITRINE / W2 — LA SECONDE SORTIE MUETTE : ON REPARLE AU SERVEUR.
+  // Le rail achetait le nouveau palier au store puis rendait un objet, SANS
+  // jamais appeler la route de changement d offre — alors qu il tient
+  // `subscriptionDocumentId` en main depuis le premier parametre de cette
+  // fonction. Cote FoundClub il ne restait donc que le webhook du store, refuse
+  // le 2026-09-04 faute de savoir quel abonnement remplacer.
+  // ⚠️ On passe l identifiant TEL QUEL : depuis ABOFIX3, la route exige que le
+  // compte soit proprietaire de l abonnement source. Fabriquer un identifiant de
+  // repli ferait echouer cette preuve au lieu de l apporter.
+  try {
+    return await changeSubscriptionPlan(changePlanPayload);
+  } catch (error) {
+    // `catch` rend `{}` sous ce jsconfig : le cast garde `?.message` lisible sans
+    // ajouter une alerte de type (meme motif que subscriptionRevenueCat.js).
+    const refusalError = /** @type {any} */ (error);
+    subscriptionPurchaseRailLogger.error(
+      '[VITRINE] le serveur a refuse le changement d offre',
+      {
+        message: String(refusalError?.message || refusalError || ''),
+        nextPlanCode: targetPlanCode,
+        subscriptionDocumentId: String(subscriptionDocumentId || ''),
+      },
+    );
+    return buildValidationRefusal(error, purchaseResult);
+  }
 };
 
 /**
