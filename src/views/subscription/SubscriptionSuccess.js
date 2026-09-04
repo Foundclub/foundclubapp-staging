@@ -133,6 +133,8 @@ const FIRST_ACTION_FALLBACK_LABELS = {
  * - clubDocumentId : club couvert par un achat Club (porte « Gérer mon club »)
  * - resumeCtaLabel : ex. « Créer ma 2ᵉ équipe » (defaut « Reprendre »)
  * - renewalDateLabel : ex. « 10 juillet 2027 » (optionnel)
+ * - takesEffectAtRenewal : vrai quand le changement d'offre n'a RIEN encaisse
+ *   (ABOFIX2/T3) — l'ecran annonce alors l'echeance, pas un deblocage
  * - resumeMode : 'back' (defaut) | 'home' | 'route' (L40)
  * - resumeRouteName / resumeRouteParams : en mode 'route', l'ecran d'ORIGINE,
  *   exprime depuis le navigateur racine (cf. RESUME_ROOT_ROUTES)
@@ -157,6 +159,12 @@ function SubscriptionSuccess({ navigation, route }) {
   const resumeMode = String(route?.params?.resumeMode || 'back');
   const resumeRouteName = String(route?.params?.resumeRouteName || '').trim();
   const resumeRouteParams = route?.params?.resumeRouteParams;
+  // ABOFIX2/T3 — un changement d'offre vers une offre EGALE OU MOINS CHERE
+  // n'est pas encaisse : Apple note une preference de renouvellement et le
+  // changement ne prend effet qu'a l'echeance. L'ecran ne le devine pas, on le
+  // lui dit (SubscriptionOffers.buildPurchaseSuccessParams). Rien ne change
+  // pour un achat immediat.
+  const takesEffectAtRenewal = route?.params?.takesEffectAtRenewal === true;
   const storeLabel = Platform.OS === 'ios' ? 'App Store' : 'Google Play';
   const queryClient = useQueryClient();
 
@@ -346,14 +354,16 @@ function SubscriptionSuccess({ navigation, route }) {
           </View>
 
           <Text style={[Fonts.h2Bold, Fonts.neutral00, Fonts.textCenter]}>
-            C&apos;est débloqué !
+            {takesEffectAtRenewal ? 'C\'est enregistré !' : 'C\'est débloqué !'}
           </Text>
           <Text style={[Fonts.p2, Fonts.neutral200, Fonts.textCenter, styles.offerLine]}>
             Offre
             {' '}
             <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{offerLabel}</Text>
             {' '}
-            — active pour toute l&apos;équipe, dès maintenant.
+            {takesEffectAtRenewal
+              ? '— elle prendra effet à ta prochaine échéance. D\'ici là, ton offre actuelle continue.'
+              : '— active pour toute l\'équipe, dès maintenant.'}
           </Text>
 
           <View
@@ -380,7 +390,12 @@ function SubscriptionSuccess({ navigation, route }) {
               ]}
             />
             <Text style={[Fonts.p3Bold, Fonts.neutral00]}>
-              {t('subscriptionSuccess.unlockedTitle', 'Ton offre débloque :')}
+              {takesEffectAtRenewal
+                // La liste RESTE : on ne cache pas l'offre choisie, on corrige
+                // le TEMPS du verbe. Cle + repli, motif documente en tete de
+                // fichier — le repli suffit tant que la cle n'existe pas.
+                ? t('subscriptionSuccess.unlockedAtRenewalTitle', 'À ta prochaine échéance, tu auras :')
+                : t('subscriptionSuccess.unlockedTitle', 'Ton offre débloque :')}
             </Text>
             <View style={styles.unlockGrid}>
               {unlockedCapabilities.map((capabilityId) => (
