@@ -16,6 +16,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getUserRoleKey } from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
 import {
+  buildClubOfferAvailability,
   buildSubscriptionTeamOptions,
   clampSubscriptionLicenseeCount,
   findSubscriptionMonthlySiblingEntry,
@@ -24,8 +25,10 @@ import {
   formatSubscriptionMonthlyEquivalentLabel,
   formatSubscriptionPerMemberPriceLabel,
   formatSubscriptionPriceLabel,
+  formatSubscriptionTrialHandoverNotice,
   formatSubscriptionUnitPriceLabel,
   formatSubscriptionYearlyDiscountLabel,
+  getBlockingClubCoveragePlanCode,
   getInitialTeamSelection,
   getSubscriptionBillingErrorMessage,
   getSubscriptionEntryPeriod,
@@ -183,6 +186,7 @@ function SubscriptionOffers({ navigation, route }) {
   const {
     allMyTeams,
     clubVerificationSummary,
+    entitlementsSummary,
     freeUsageSummary,
     subscriptionAccessLevel,
     subscriptionSummary,
@@ -285,6 +289,23 @@ function SubscriptionOffers({ navigation, route }) {
     [freeUsageSummary, subscriptionAccessLevel],
   );
 
+  // UPGRADE / U6 — CE QUI ARRIVE AU CADEAU SI ON ACHETE MAINTENANT.
+  // Constat d'Adel du 03/09 : pendant le cadeau, l'ecran ne disait ni quand on
+  // est debite, ni ce que devient le cadeau. Vide quand aucun cadeau ne court.
+  const trialHandoverNotice = formatSubscriptionTrialHandoverNotice(subscriptionSummary);
+
+  // UPGRADE / U5 — L'OFFRE CLUB QU'UN AUTRE PAIE DEJA, quand il y en a une.
+  // Vide quand c'est MOI qui paie (changer sa propre offre passe par
+  // `changePlan`, qui n'a jamais eu ce garde-fou) et quand c'est un CADEAU
+  // (decision U4 : un abonnement offert ne fait jamais refuser un paiement).
+  const blockingClubPlanCode = useMemo(
+    () => getBlockingClubCoveragePlanCode({
+      entitlementsSummary,
+      userDocumentId: userData?.documentId,
+    }),
+    [entitlementsSummary, userData?.documentId],
+  );
+
   /**
    * Paliers d'une famille pour la periode choisie, du moins cher au plus cher.
    * Un palier absent du catalogue n'est JAMAIS affiche : mieux vaut une pilule
@@ -296,6 +317,11 @@ function SubscriptionOffers({ navigation, route }) {
       && Number(entry?.referencePriceEurCents) > 0)
     .sort((left, right) => getSubscriptionEntryTierRank(left) - getSubscriptionEntryTierRank(right))
     .map((entry) => ({
+      // UPGRADE / U5 (2026-09-04) : quand quelqu'un d'autre paie deja une offre
+      // Club, le serveur n'accepte plus que les offres SUPERIEURES. Une pilule
+      // qui reste tapable sur une offre egale ou inferieure envoie payer PUIS
+      // se faire jeter — le scenario exact qui a coute de l'argent le 04/09.
+      ...buildClubOfferAvailability({ blockingClubPlanCode, catalogEntries, entry }),
       entry,
       id: getSubscriptionEntryTierRank(entry),
       // Cote Club, la pilule porte le nombre de licenciés couverts (lot
@@ -305,7 +331,7 @@ function SubscriptionOffers({ navigation, route }) {
         ? formatSubscriptionClubTierShortLabel(entry)
         : String(getSubscriptionEntryTierRank(entry)),
     }))
-    .filter((option) => option.id > 0), [billingPeriod, catalogEntries]);
+    .filter((option) => option.id > 0), [billingPeriod, blockingClubPlanCode, catalogEntries]);
 
   const teamTiers = useMemo(() => buildTiers('TEAM'), [buildTiers]);
   const clubTiers = useMemo(() => buildTiers('CLUB'), [buildTiers]);
@@ -339,9 +365,16 @@ function SubscriptionOffers({ navigation, route }) {
   const resolvedTeamTier = teamTiers.some((option) => option.id === teamSlotCount)
     ? teamSlotCount
     : (teamTiers[0]?.id || 0);
-  const resolvedClubTier = clubTiers.some((option) => option.id === clubTier)
+  // UPGRADE / U5 : la selection par defaut atterrit sur le premier palier
+  // ACHETABLE. Sans ce filtre, un club deja couvert en « Club 500 » ouvrirait
+  // l'ecran sur « Club 100 », grise, avec un bouton eteint et aucune idee de
+  // quoi faire — alors que deux paliers plus haut sont disponibles.
+  const selectableClubTiers = clubTiers.filter((option) => option.isSelectable !== false);
+  const resolvedClubTier = clubTiers.some(
+    (option) => option.id === clubTier && option.isSelectable !== false,
+  )
     ? clubTier
-    : (clubTiers[0]?.id || 0);
+    : (selectableClubTiers[0]?.id || clubTiers[0]?.id || 0);
   const teamEntry = teamTiers.find((option) => option.id === resolvedTeamTier)?.entry || null;
   const clubEntry = clubTiers.find((option) => option.id === resolvedClubTier)?.entry || null;
 
@@ -1001,12 +1034,26 @@ function SubscriptionOffers({ navigation, route }) {
   }) => {
     if (options.length <= 1) return null;
 
+    // UPGRADE / U5 — LA MENTION VIT SOUS LA RANGEE, PAS DANS LA PILULE.
+    // Une pilule fait 40 px de large et porte un nombre : « Ton club a deja une
+    // offre superieure » n'y tient pas. Elle est donc posee une fois sous la
+    // rangee (et voyage en plus dans le libelle d'accessibilite de chaque
+    // pilule grisee — un lecteur d'ecran ne voit pas l'opacite).
+    const lockedNotice = options
+      .find((option) => option.isSelectable === false)?.coverageNotice || '';
+
     return (
       <View style={[Spaces.gap[8], Spaces.marginTop[12]]}>
         <Text style={[Fonts.p4Bold, Fonts.neutral300, { letterSpacing: 0.8, textTransform: 'uppercase' }]}>
           {legend}
         </Text>
         <TierSelector onChange={onChange} options={options} value={value} />
+        {lockedNotice ? (
+          <Text style={[Fonts.p4, Fonts.neutral300]}>
+            {lockedNotice}
+            {' — seules les offres supérieures restent disponibles.'}
+          </Text>
+        ) : null}
       </View>
     );
   };
@@ -1107,13 +1154,34 @@ function SubscriptionOffers({ navigation, route }) {
       };
     }
 
+    // UPGRADE / U5 — LE BOUTON NE PROPOSE PAS D'ACHETER CE QUE LE SERVEUR
+    // REFUSERA. Le cas se produit quand TOUTES les tranches Club sont bloquees
+    // (un autre membre paie deja « Club Illimite ») : il n'y a alors aucun
+    // palier de repli sur lequel atterrir, et le bouton doit dire pourquoi.
+    const lockedOption = activeIndex === 1
+      ? null
+      : clubTiers.find((option) => option.entry === entry && option.isSelectable === false);
+    if (lockedOption) {
+      return {
+        disabled: true,
+        entry,
+        label: 'Déjà couvert par ton club',
+        mode: CLUB_PRICING_MODES.TIER,
+        sub: `${lockedOption.coverageNotice} : payée par un autre membre de ton club. `
+          + 'Seule une offre supérieure peut la remplacer.',
+      };
+    }
+
     const priceLabel = formatSubscriptionPriceLabel(entry?.referencePriceEurCents, billingPeriod);
     return {
       disabled: !isPurchaseAvailable,
       entry,
       label: `Choisir ${familyLabel} · ${priceLabel}`,
       mode: CLUB_PRICING_MODES.TIER,
-      sub: purchaseHelperText,
+      // UPGRADE / U6 — la derniere ligne lue avant que le magasin s'ouvre.
+      // C'est ici, et pas ailleurs, qu'un cadeau en cours doit dire ce qu'il
+      // devient : apres ce bouton il n'y a plus d'ecran FoundClub.
+      sub: trialHandoverNotice || purchaseHelperText,
     };
   };
 

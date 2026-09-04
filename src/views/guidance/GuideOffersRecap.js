@@ -6,10 +6,13 @@ import {
 
 import useAuth from '@/domains/auth/useAuth';
 import {
+  buildClubOfferAvailability,
   findSubscriptionMonthlySiblingEntry,
   formatSubscriptionClubTierShortLabel,
   formatSubscriptionMonthlyEquivalentLabel,
+  formatSubscriptionTrialHandoverNotice,
   formatSubscriptionYearlyDiscountLabel,
+  getBlockingClubCoveragePlanCode,
   getInitialTeamSelection,
   getSubscriptionBillingErrorMessage,
   isPerLicenseeSubscriptionEntry,
@@ -172,7 +175,18 @@ function GuideOffersRecap({ navigation }) {
     Alignments, Colors, Fonts, Spaces,
   } = useTheme();
   const queryClient = useQueryClient();
-  const { getPostOnboardingHomeRoute, subscriptionSummary, userData } = useAuth();
+  const {
+    entitlementsSummary, getPostOnboardingHomeRoute, subscriptionSummary, userData,
+  } = useAuth();
+  // UPGRADE / U5 — l'offre Club qu'un AUTRE membre paie deja, ou ''. Le serveur
+  // ne prend plus que les offres SUPERIEURES a celle-la (`CLUB_ALREADY_COVERED`).
+  const blockingClubPlanCode = useMemo(
+    () => getBlockingClubCoveragePlanCode({
+      entitlementsSummary,
+      userDocumentId: userData?.documentId,
+    }),
+    [entitlementsSummary, userData?.documentId],
+  );
 
   const [selectedOffer, setSelectedOffer] = useState('team');
 
@@ -220,11 +234,23 @@ function GuideOffersRecap({ navigation }) {
       || null,
     [teamSlotCount, teamTierEntries],
   );
+  // UPGRADE / U5 — les tranches Club que le serveur accepterait encore.
+  const selectableClubTierEntries = useMemo(
+    () => clubTierEntries.filter((entry) => buildClubOfferAvailability({
+      blockingClubPlanCode, catalogEntries, entry,
+    }).isSelectable),
+    [blockingClubPlanCode, catalogEntries, clubTierEntries],
+  );
   const selectedClubEntry = useMemo(
-    () => clubTierEntries.find((entry) => getCatalogEntryClubTier(entry) === clubTier)
+    () => selectableClubTierEntries.find((entry) => getCatalogEntryClubTier(entry) === clubTier)
+      // Le repli va sur la premiere tranche ACHETABLE, pas sur la premiere tout
+      // court : ouvrir le recap sur une offre grisee laisserait un bouton eteint
+      // sans dire qu'il suffit de monter d'un cran.
+      || selectableClubTierEntries[0]
+      || clubTierEntries.find((entry) => getCatalogEntryClubTier(entry) === clubTier)
       || clubTierEntries[0]
       || null,
-    [clubTier, clubTierEntries],
+    [clubTier, clubTierEntries, selectableClubTierEntries],
   );
 
   const currentClubDocumentId = String(userData?.club?.documentId || '').trim();
@@ -373,7 +399,12 @@ function GuideOffersRecap({ navigation }) {
     const tierOptions = isClub
       ? entries.map((entry) => {
         const tier = getCatalogEntryClubTier(entry);
-        return { id: tier, label: formatSubscriptionClubTierShortLabel(entry) };
+        return {
+          // UPGRADE / U5 : une tranche que le serveur refusera n'est plus tapable.
+          ...buildClubOfferAvailability({ blockingClubPlanCode, catalogEntries, entry }),
+          id: tier,
+          label: formatSubscriptionClubTierShortLabel(entry),
+        };
       })
       : entries.map((entry) => {
         const slotCount = Number(entry?.slotCount || 0);
@@ -555,11 +586,30 @@ function GuideOffersRecap({ navigation }) {
     );
   };
 
+  // UPGRADE / U5 — l'offre retenue est-elle encore achetable ? Le cas se produit
+  // quand un autre membre du club paie deja une offre au moins equivalente : il
+  // ne reste alors AUCUNE tranche a proposer.
+  const selectedOfferAvailability = buildClubOfferAvailability({
+    blockingClubPlanCode,
+    catalogEntries,
+    entry: selectedEntry,
+  });
+  const isSelectedOfferLocked = selectedOffer === 'club'
+    && selectedOfferAvailability.isSelectable === false;
+  // UPGRADE / U6 — ce qui arrive au cadeau si on achete maintenant, ou ''.
+  const trialHandoverNotice = formatSubscriptionTrialHandoverNotice(subscriptionSummary);
+  const purchaseNotice = isSelectedOfferLocked
+    ? `${selectedOfferAvailability.coverageNotice} : payée par un autre membre de ton club. `
+      + 'Seule une offre supérieure peut la remplacer.'
+    : trialHandoverNotice;
+
   let ctaTitle = `Débloquer ${selectedOfferName}`;
   if (isCatalogLoading) {
     ctaTitle = 'Chargement des tarifs…';
   } else if (isCatalogError) {
     ctaTitle = 'Tarifs indisponibles';
+  } else if (isSelectedOfferLocked) {
+    ctaTitle = 'Déjà couvert par ton club';
   } else if (selectedPriceAmountLabel) {
     ctaTitle = `Débloquer ${selectedOfferName} · ${selectedPriceAmountLabel}${billingPeriodSuffix}`;
   }
@@ -628,8 +678,15 @@ function GuideOffersRecap({ navigation }) {
         </ScrollView>
 
         <View style={[Spaces.gap[4], Spaces.paddingTop[8]]}>
+          {/* UPGRADE — la derniere phrase lue avant que le magasin s'ouvre :
+              ce qui bloque (U5) ou ce que devient le cadeau (U6). */}
+          {purchaseNotice && !isCatalogError ? (
+            <Text style={[Fonts.p4, Fonts.neutral300, Fonts.textCenter]}>
+              {purchaseNotice}
+            </Text>
+          ) : null}
           <Button
-            disabled={isCatalogLoading || isCatalogError}
+            disabled={isCatalogLoading || isCatalogError || isSelectedOfferLocked}
             isLoading={purchaseMutation.isPending}
             onPress={handleUnlock}
             title={purchaseMutation.isPending ? 'Achat en cours…' : ctaTitle}

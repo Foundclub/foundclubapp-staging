@@ -7,7 +7,13 @@ import useTheme from '@/theme/themeContext';
  * Variante « plain » uniquement : les segments n'affichent JAMAIS de prix —
  * l'ancre prix unique vit ailleurs sur la surface.
  * @param {object} props
- * @param {Array<{ id: string | number; label: string }>} props.options - Paliers.
+ * @param {Array<{ coverageNotice?: string | null; id: string | number; isSelectable?: boolean;
+ *   label: string }>} props.options - Paliers. UPGRADE (2026-09-04) : un palier
+ *   peut etre INDIVIDUELLEMENT indisponible (`isSelectable: false`) — c'est le
+ *   motif de desactivation pose par CLUBEQ, applique ici aux offres Club qu'un
+ *   club deja couvert ne peut plus acheter. `coverageNotice` dit pourquoi, et
+ *   part dans le libelle d'accessibilite : un lecteur d'ecran ne voit pas
+ *   l'opacite.
  * @param {string | number | null} props.value - Palier selectionne.
  * @param {(id: string | number) => void} [props.onChange] - Selection d'un palier.
  * @param {boolean} [props.disabled] - Desactive la selection (opacite reduite).
@@ -40,11 +46,16 @@ function TierSelector({
     >
       {options.map((option) => {
         const isSelected = option.id === value;
+        const isOptionSelectable = option.isSelectable !== false;
+        const isOptionDisabled = disabled || !isOptionSelectable;
         return (
           <TouchableOpacity
+            accessibilityLabel={option.coverageNotice
+              ? `${option.label} — ${option.coverageNotice}`
+              : undefined}
             accessibilityRole="button"
-            accessibilityState={{ disabled, selected: isSelected }}
-            disabled={disabled || !onChange}
+            accessibilityState={{ disabled: isOptionDisabled, selected: isSelected }}
+            disabled={isOptionDisabled || !onChange}
             key={String(option.id)}
             onPress={() => onChange?.(option.id)}
             style={{
@@ -54,6 +65,7 @@ function TierSelector({
               flex: 1,
               justifyContent: 'center',
               minHeight: 44,
+              opacity: isOptionSelectable ? 1 : 0.45,
               paddingHorizontal: 2,
               paddingVertical: 4,
             }}
