@@ -1,3 +1,6 @@
+import { format } from 'date-fns';
+import { fr as frLocale } from 'date-fns/locale';
+
 import { formatSubscriptionPlanLabel } from './subscriptionDecision';
 
 const TEAM_SCOPE = 'TEAM';
@@ -846,9 +849,62 @@ export const getSubscriptionBillingErrorMessage = (error) => {
     return 'Le changement d offre web public n est pas encore ouvert sur cet environnement.';
   }
 
+  // VITRINE (2026-09-04) — LES TROIS REFUS QUE L APP NE MONTRAIT JAMAIS.
+  //
+  // Ils existaient deja cote serveur, mot pour mot, et n arrivaient nulle part :
+  // le rail avalait l erreur et l ecran felicitait. Maintenant qu ils remontent
+  // (W1), ils doivent se lire comme une phrase, pas comme un nom de champ.
+  // Chacun nomme AUSSI la sortie de secours — « Restaurer mes achats », le seul
+  // geste par lequel quelqu un repare un compte dont le webhook n est pas arrive.
+  if (message === 'Subscription source introuvable pour changement d offre.') {
+    return 'Nous n avons pas retrouvé l abonnement à changer sur ce compte. Ton achat est bien '
+      + 'enregistré par le store : ouvre « Mon abonnement » puis « Restaurer mes achats ».';
+  }
+
+  if (message === 'providerTransactionId obligatoire.'
+    || message === 'providerTransactionId obligatoire pour traiter cet achat.') {
+    return 'Le store ne nous a pas transmis le numéro de ta transaction. Ton paiement est bien '
+      + 'enregistré chez lui : tes droits s ouvriront automatiquement, et « Restaurer mes achats » '
+      + 'les débloque tout de suite.';
+  }
+
+  const REFUS_SOURCE_STORE = 'Abonnement source introuvable chez le store pour ce compte :'
+    + ' changement d offre refuse.';
+  if (message === REFUS_SOURCE_STORE) {
+    return 'Le store ne reconnaît pas cet abonnement sur ton compte. Vérifie que tu es connecté au '
+      + 'même compte App Store ou Google Play qu au moment de l achat, puis réessaie.';
+  }
+
   if (message) {
     return message;
   }
 
   return 'Impossible de mettre à jour ton abonnement pour le moment.';
+};
+
+/**
+ * VITRINE / W5 — CE QUE L ECRAN DE SUCCES A LE DROIT D ANNONCER SUR L ECHEANCE.
+ *
+ * 🧨 LA DATE ETAIT CALCULEE SUR L HORLOGE DU TELEPHONE (`new Date()` + 1 mois ou
+ * + 1 an), et elle s affichait MEME quand le serveur n avait rien valide — donc
+ * meme quand aucun abonnement n existait. Trois ecrans faisaient ce calcul, mot
+ * pour mot ; il vit desormais ici, une seule fois, et il ne calcule plus rien :
+ * il LIT ce que le serveur vient de rendre.
+ *
+ * Sans date connue, on n en invente aucune et on le dit : l abonnement est en
+ * cours d activation (les droits arrivent par le webhook du store).
+ * @param {any} result - Ce que rend le rail d achat.
+ * @returns {{ pendingActivation: boolean, renewalDateLabel: string | undefined }}
+ */
+export const readSubscriptionRenewalAnnouncement = (result) => {
+  const rawDate = String(result?.subscription?.currentPeriodEnd || '').trim();
+  const serverDate = rawDate ? new Date(rawDate) : null;
+  if (!serverDate || Number.isNaN(serverDate.getTime())) {
+    return { pendingActivation: true, renewalDateLabel: undefined };
+  }
+
+  return {
+    pendingActivation: false,
+    renewalDateLabel: format(serverDate, 'd MMMM yyyy', { locale: frLocale }),
+  };
 };

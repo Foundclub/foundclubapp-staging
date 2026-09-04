@@ -193,6 +193,24 @@ describe('SubscriptionSuccess — comportement livre (handoff 6a)', () => {
     });
   });
 
+  // VITRINE / W5 — LA DATE NE S'INVENTE PAS, ET SON ABSENCE SE DIT.
+  // Elle etait calculee sur l'horloge du TELEPHONE par les trois surfaces de
+  // vente, et s'affichait meme quand le serveur n'avait rien valide. Les deux
+  // temoins ci-dessous verrouillent les deux etats du pied de page.
+  it('sans date du serveur, l ecran annonce une activation et AUCUNE echeance', async () => {
+    const tree = await renderScreen({ pendingActivation: true });
+
+    expect(renderedText(tree)).toContain('On vérifie ton achat');
+    expect(renderedText(tree)).not.toContain('Renouvellement le');
+  });
+
+  it('sans date ET sans activation en cours, le pied ne promet rien du tout', async () => {
+    const tree = await renderScreen({});
+
+    expect(renderedText(tree)).not.toContain('On vérifie ton achat');
+    expect(renderedText(tree)).not.toContain('Renouvellement le');
+  });
+
   it('la ligne de renouvellement porte la date et ouvre Mon abonnement', async () => {
     const tree = await renderScreen({ renewalDateLabel: '10 juillet 2027' });
     expect(renderedText(tree)).toContain('Renouvellement le 10 juillet 2027');

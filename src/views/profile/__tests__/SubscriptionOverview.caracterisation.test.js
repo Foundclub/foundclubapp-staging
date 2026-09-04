@@ -394,6 +394,16 @@ describe('Hub Abonnement — les trois chemins qui en partent', () => {
 
 describe('Hub Abonnement — les deux sorties de secours', () => {
   it('quelqu\'un couvert par un tiers voit le heros dedie, pas la gestion', async () => {
+    // VITRINE / W4 (2026-09-04) — LE DECOR A CHANGE, PAS CE QUE DIT LE TEMOIN.
+    // Cet ecran passe desormais par le selecteur partage `getCoveringEntitlement`,
+    // qui exige d'abord que le JUGE de l'application (`subscriptionAccessLevel`)
+    // reconnaisse un acces payant. Un decor a la fois « couvert par Zoe » ET
+    // « niveau GRATUIT » n'existe pas en vrai : le serveur derive le niveau des
+    // entitlements EUX-MEMES (getSubscriptionAccessLevel), donc un droit CLUB
+    // paye par Zoe rend forcement le niveau CLUB. On le dit maintenant tout haut.
+    // ⚠️ `activePlanCodes` est volontairement REMPLI : c'est exactement ce que
+    // rend le serveur pour quelqu'un couvert par autrui, et c'est ce qui fermait
+    // la porte de cet ecran. `payerSubscriptionIds` reste VIDE — je ne paie rien.
     const arbre = await rendre({
       entitlementsSummary: [
         {
@@ -401,6 +411,14 @@ describe('Hub Abonnement — les deux sorties de secours', () => {
           scopeType: 'CLUB',
         },
       ],
+      subscriptionAccessLevel: 'CLUB',
+      subscriptionSummary: {
+        activePlanCodes: ['fc_club_tier_1_monthly'],
+        payerSubscriptionIds: [],
+        teamSlotSummary: {
+          assigned: 0, available: 0, coveredTeamDocumentIds: [], total: 0,
+        },
+      },
     });
     const texte = texteVisible(arbre);
 

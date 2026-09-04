@@ -1,6 +1,4 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { format } from 'date-fns';
-import { fr } from 'date-fns/locale';
 import {
   useCallback, useEffect, useMemo, useRef, useState,
 } from 'react';
@@ -36,6 +34,7 @@ import {
   getSubscriptionEntryUnitPriceEurCents,
   getSubscriptionSelectableTeams,
   isPerLicenseeSubscriptionEntry,
+  readSubscriptionRenewalAnnouncement,
   sanitizeSubscriptionLicenseeCountInput,
 } from '@/domains/subscription/subscriptionBilling';
 import {
@@ -439,16 +438,24 @@ function SubscriptionOffers({ navigation, route }) {
   // ce rappel, chaque option se lit « Property does not exist on type '{}' ».
   const buildPurchaseSuccessParams = useCallback((
     catalogEntry,
-    /** @type {{ isTeamSlotUpdate?: boolean; takesEffectAtRenewal?: boolean }} */ options = {},
+    /**
+     * @type {{ isTeamSlotUpdate?: boolean; result?: any; takesEffectAtRenewal?: boolean }}
+     */
+    options = {},
   ) => {
     const isClubOffer = getSubscriptionEntryScope(catalogEntry) === 'CLUB';
     const slotCount = Number(catalogEntry?.slotCount || 0);
-    const renewalDate = new Date();
-    if (getSubscriptionEntryPeriod(catalogEntry) === 'monthly') {
-      renewalDate.setMonth(renewalDate.getMonth() + 1);
-    } else {
-      renewalDate.setFullYear(renewalDate.getFullYear() + 1);
-    }
+    // VITRINE / W5 — LA DATE NE SE CALCULE PLUS, ELLE SE LIT.
+    // Elle etait fabriquee ici avec `new Date()` + la periode de l offre : une
+    // echeance tiree de l horloge du TELEPHONE, affichee meme quand le serveur
+    // n avait rien valide. On lit desormais celle que le serveur vient de rendre,
+    // et sans elle on n annonce aucune date (l ecran dit alors l activation).
+    const renewal = readSubscriptionRenewalAnnouncement(options.result);
+    // Les deux cas qui masquaient DEJA l echeance la masquent toujours, et pour
+    // la meme raison : ni la reassignation de creneaux (L40) ni un changement
+    // differe (ABOFIX2/T3) ne DEPLACENT l echeance existante.
+    const hidesRenewalDate = options.isTeamSlotUpdate === true
+      || options.takesEffectAtRenewal === true;
 
     return {
       clubDocumentId: isClubOffer ? currentClubDocumentId : undefined,
@@ -459,6 +466,10 @@ function SubscriptionOffers({ navigation, route }) {
         ? (String(catalogEntry?.displayName || '').trim() || 'Club')
         : `Équipe · ${slotCount} équipe${slotCount > 1 ? 's' : ''}`,
       offerScope: isClubOffer ? 'CLUB' : 'TEAM',
+      // VITRINE / W5 — « on verifie ton achat » plutot qu une fausse echeance.
+      // Vrai quand le serveur n a rendu AUCUNE date : validation partie en
+      // silence (reseau, panne), ou droits encore a ouvrir par le webhook.
+      pendingActivation: !hidesRenewalDate && renewal.pendingActivation,
       // L40 — une simple reassignation de creneaux ne DEPLACE PAS l'echeance :
       // le serveur preserve la fenetre quand le payload omet les dates
       // (subscription-billing.ts:1181). Annoncer « aujourd'hui + 1 an » serait
@@ -466,9 +477,7 @@ function SubscriptionOffers({ navigation, route }) {
       // ABOFIX2/T3 — meme raison, un cran plus loin : un changement DIFFERE ne
       // deplace pas non plus l'echeance (il prend effet A l'echeance existante,
       // que l'app ne connait pas ici). « Aujourd'hui + 1 an » serait faux.
-      renewalDateLabel: options.isTeamSlotUpdate || options.takesEffectAtRenewal
-        ? undefined
-        : format(renewalDate, 'd MMMM yyyy', { locale: fr }),
+      renewalDateLabel: hidesRenewalDate ? undefined : renewal.renewalDateLabel,
       // Sous cet ecran, dans la pile, il y a le CATALOGUE : « revenir » y
       // rouvrirait des offres a quelqu'un qui vient de payer. Sans origine
       // connue, on repart donc de l'accueil, comme le Recap du tour guide.
@@ -502,7 +511,26 @@ function SubscriptionOffers({ navigation, route }) {
       await refreshSubscriptionContext();
       closeTeamPlanModal();
 
+      // VITRINE / W1 — ON NE FELICITE PLUS QUELQU UN A QUI LE SERVEUR A DIT NON.
+      //
+      // Le rail avalait l erreur de validation et rendait `validationError`, qui
+      // n avait AUCUN lecteur dans tout `app/src` : l ecran partait vers « C est
+      // debloque ! » avec la liste des droits gagnes, alors que rien n existait
+      // cote serveur (mesure du 2026-09-04).
+      // ⚠️ `serverRefused` est le SEUL champ qui autorise ce demi-tour : il n est
+      // vrai que si le serveur a REPONDU non (4xx). Une coupure reseau ou une
+      // panne serveur ne sont pas des refus — accuser quelqu un qui vient de
+      // payer serait le defaut inverse, et il coute aussi cher.
+      if (result?.serverRefused === true) {
+        Alert.alert(
+          'Erreur abonnement',
+          String(result?.validationErrorMessage || '') || getSubscriptionBillingErrorMessage(null),
+        );
+        return null;
+      }
+
       // L38 — l'ecran de succes (refondu par L11 puis par le lot design D1), et
+
       // non plus une alerte systeme. Le decalage d'ouverture des droits par le
       // webhook du store y est deja gere (calendrier de relances 0/2/5/10/20 s) :
       // on passe par le meme chemin que le Recap du tour guide.
@@ -529,6 +557,9 @@ function SubscriptionOffers({ navigation, route }) {
       leaveOffers(RouteNames.SubscriptionSuccess, buildPurchaseSuccessParams(catalogEntry, {
         isTeamSlotUpdate: action === 'change'
           && String(input?.currentPlanCode || '') === String(catalogEntry?.planCode || ''),
+        // VITRINE / W5 — la reponse du serveur voyage jusqu a l ecran de succes :
+        // c est la seule source d une date de renouvellement.
+        result,
         takesEffectAtRenewal: isDeferredPlanChange,
       }));
 

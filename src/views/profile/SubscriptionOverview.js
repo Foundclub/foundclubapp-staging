@@ -22,6 +22,7 @@ import {
 import {
   formatSubscriptionPlanLabel,
   getCoveredTeamCount,
+  getCoveringEntitlement,
   getSubscriptionStatusMeta,
   getSubscriptionTeamSlotSummary,
   hasActiveClubOffer,
@@ -201,20 +202,20 @@ function SubscriptionOverview({ navigation, route }) {
   );
 
   // « Deja couvert » (handoff 7b) : quelqu'un d'autre paie pour mon equipe/club
-  // et je n'ai aucun plan actif en tant que payeur -> page heros dediee.
-  const coveringEntitlement = useMemo(() => {
-    if (activePlanCodes.length > 0) {
-      return null;
-    }
-    const myDocumentId = String(userData?.documentId || '').trim();
-    const candidates = entitlementsSummary.filter(
-      /** @param {any} entry */ (entry) => entry?.paidBy?.documentId
-        && entry.paidBy.documentId !== myDocumentId,
-    );
-    return candidates.find(/** @param {any} entry */ (entry) => entry?.scopeType === 'CLUB')
-      || candidates[0]
-      || null;
-  }, [activePlanCodes, entitlementsSummary, userData?.documentId]);
+  // et je ne paie rien moi-meme -> page heros dediee.
+  //
+  // 🧨 VITRINE / W4 — CE CALCUL VIVAIT ICI EN DOUBLE, ET LES DEUX COPIES AVAIENT
+  // LA MEME ERREUR : « si des offres sont actives, on n'affiche rien ». Or
+  // `activePlanCodes` inclut les droits payes par QUELQU'UN D'AUTRE (le serveur
+  // la construit a partir de tous les droits actifs du compte) : etre couvert
+  // suffisait a fermer la porte de l'ecran qui explique la couverture. Une seule
+  // copie desormais, dans `subscriptionDecision`, ou le motif est ecrit en clair.
+  const coveringEntitlement = useMemo(() => getCoveringEntitlement({
+    entitlementsSummary,
+    subscriptionAccessLevel,
+    subscriptionSummary,
+    userDocumentId: String(userData?.documentId || '').trim(),
+  }), [entitlementsSummary, subscriptionAccessLevel, subscriptionSummary, userData?.documentId]);
   const coveredByOtherTeamNames = useMemo(() => Array.from(new Set(
     entitlementsSummary
       .filter(/** @param {any} entry */ (entry) => entry?.scopeType === 'TEAM' && entry?.scopeTeamName)
