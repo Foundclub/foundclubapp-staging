@@ -133,11 +133,22 @@ const POINTS_D_ENTREE = [
   //    le mauvais ecran : cette personne n'a plus rien a gerer, elle a quelque
   //    chose a reprendre, et le hub ne porte aucun catalogue (L33).
   //
+  // UPGRADE (04/09) — LE ROUTEUR VISE MAINTENANT TROIS FOIS, et le garde-fou a
+  // encore fait son travail : il a refuse la troisieme destination tant qu'elle
+  // n'etait pas ecrite ici.
+  //
+  // 3. Le HUB, une seconde fois (`subscriptionReplaced`) : un autre membre du
+  //    club a pris une offre MEILLEURE, la couverture de cette personne est
+  //    remplacee — mais Apple ou Google continue de la prelever, et FoundClub
+  //    ne peut pas resilier a sa place. Le carrousel serait le pire ecran
+  //    possible : lui revendre quelque chose au moment ou elle paie pour rien.
+  //    Le hub est le seul qui porte « Gérer ou résilier mon abonnement ».
+  //
   // ⚠️ L'ordre compte : le hub reste la PREMIERE route citee du fichier.
   {
-    attendu: ['SubscriptionOverview', 'SubscriptionOffers'],
+    attendu: ['SubscriptionOverview', 'SubscriptionOverview', 'SubscriptionOffers'],
     fichier: 'utils/notifications/notificationNavigation.js',
-    pourquoi: 'club plein => hub (augmenter) ; abonnement termine => carrousel (reprendre)',
+    pourquoi: 'club plein => hub ; couverture remplacee => hub (resilier) ; abonnement termine => carrousel',
   },
 ];
 

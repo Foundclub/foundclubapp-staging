@@ -731,12 +731,17 @@ export const getBlockingClubCoveragePlanCode = ({ entitlementsSummary, userDocum
  * cas-la. Le mauvais cote de l'erreur serait de griser une offre qu'il aurait
  * prise — c'est-a-dire de perdre une vente en silence.
  * @param {object} params - l'offre et ce qui couvre deja le club.
- * @param {string} [params.blockingClubPlanCode] - la couverture qui bloque (getBlockingClubCoveragePlanCode).
+ * @param {string} [params.blockingClubPlanCode] - la couverture qui bloque.
+ *   Elle se lit avec `getBlockingClubCoveragePlanCode`.
  * @param {any[]} [params.catalogEntries] - le catalogue, pour classer la couverture en place.
  * @param {any} params.entry - l'offre a juger.
  * @returns {{ coverageNotice: string | null, isSelectable: boolean }} - le verdict.
  */
-export const buildClubOfferAvailability = ({ blockingClubPlanCode, catalogEntries, entry }) => {
+export const buildClubOfferAvailability = ({
+  blockingClubPlanCode,
+  catalogEntries,
+  entry,
+}) => {
   const AVAILABLE = { coverageNotice: null, isSelectable: true };
   const blockingPlanCode = String(blockingClubPlanCode || '').trim();
   if (!blockingPlanCode) return AVAILABLE;

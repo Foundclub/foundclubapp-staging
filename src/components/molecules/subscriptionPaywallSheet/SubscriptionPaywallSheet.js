@@ -87,7 +87,12 @@ const getCatalogEntryTierRank = (entry) => (
  * @returns {Array<{ coverageNotice: string | null; entry: any; id: number;
  *   isSelectable: boolean; label: string }>}
  */
-const getTierOptionsForPeriod = (entries, scopeType, billingPeriod, blockingClubPlanCode = '') => entries
+const getTierOptionsForPeriod = (
+  entries,
+  scopeType,
+  billingPeriod,
+  blockingClubPlanCode = '',
+) => entries
   .filter((entry) => String(entry?.scopeType || '').trim().toUpperCase() === scopeType
     && String(entry?.billingPeriod || '').trim().toLowerCase() === billingPeriod)
   .sort((left, right) => getCatalogEntryTierRank(left) - getCatalogEntryTierRank(right))
@@ -220,10 +225,12 @@ function SubscriptionPaywallSheet({
   );
   // UPGRADE / U6 — ce qui arrive au cadeau si on achete maintenant, ou ''.
   const trialHandoverNotice = formatSubscriptionTrialHandoverNotice(subscriptionSummary);
-  const tierOptions = useMemo(
-    () => getTierOptionsForPeriod(catalogEntries, sellingScope, billingPeriod, blockingClubPlanCode),
-    [billingPeriod, blockingClubPlanCode, catalogEntries, sellingScope],
-  );
+  const tierOptions = useMemo(() => getTierOptionsForPeriod(
+    catalogEntries,
+    sellingScope,
+    billingPeriod,
+    blockingClubPlanCode,
+  ), [billingPeriod, blockingClubPlanCode, catalogEntries, sellingScope]);
   // Paliers annuels : base stable pour la preselection (les paliers sont les memes
   // d'une periode a l'autre, on ne reset pas le palier au toggle).
   const yearlyTierOptions = useMemo(

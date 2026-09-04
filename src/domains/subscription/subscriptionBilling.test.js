@@ -1,6 +1,7 @@
 import {
   buildClubOfferAvailability,
   buildSubscriptionChangePlanPayload,
+  getBlockingClubCoveragePlanCode,
   buildSubscriptionPurchasePayload,
   buildSubscriptionTeamOptions,
   clampSubscriptionLicenseeCount,
@@ -9,7 +10,6 @@ import {
   formatSubscriptionUnitPriceLabel,
   formatSubscriptionYearlyDiscountLabel,
   getInitialTeamSelection,
-  getBlockingClubCoveragePlanCode,
   getSubscriptionBillingErrorMessage,
   getSubscriptionCatalogEntryMeta,
   getSubscriptionClubOfferRank,
@@ -574,11 +574,21 @@ describe('CLUBEQ — les equipes couvertes par le club', () => {
  * offre qui, elle, passe toujours.
  */
 describe('UPGRADE — ce que l ecran des offres a le droit de proposer', () => {
-  const CLUB_100 = { licenseeCap: 100, planCode: 'fc_club_tier_1_yearly', scopeType: 'CLUB' };
-  const CLUB_100_MENSUEL = { licenseeCap: 100, planCode: 'fc_club_tier_1_monthly', scopeType: 'CLUB' };
-  const CLUB_500 = { licenseeCap: 500, planCode: 'fc_club_tier_2_yearly', scopeType: 'CLUB' };
-  const CLUB_ILLIMITE = { licenseeCap: null, planCode: 'fc_club_tier_4_yearly', scopeType: 'CLUB' };
-  const EQUIPE = { licenseeCap: null, planCode: 'fc_team_1_yearly', scopeType: 'TEAM', slotCount: 1 };
+  const CLUB_100 = {
+    licenseeCap: 100, planCode: 'fc_club_tier_1_yearly', scopeType: 'CLUB',
+  };
+  const CLUB_100_MENSUEL = {
+    licenseeCap: 100, planCode: 'fc_club_tier_1_monthly', scopeType: 'CLUB',
+  };
+  const CLUB_500 = {
+    licenseeCap: 500, planCode: 'fc_club_tier_2_yearly', scopeType: 'CLUB',
+  };
+  const CLUB_ILLIMITE = {
+    licenseeCap: null, planCode: 'fc_club_tier_4_yearly', scopeType: 'CLUB',
+  };
+  const EQUIPE = {
+    licenseeCap: null, planCode: 'fc_team_1_yearly', scopeType: 'TEAM', slotCount: 1,
+  };
   const CATALOGUE = [CLUB_100, CLUB_100_MENSUEL, CLUB_500, CLUB_ILLIMITE, EQUIPE];
 
   const disponibilite = (entry, blockingClubPlanCode) => buildClubOfferAvailability({
@@ -605,7 +615,7 @@ describe('UPGRADE — ce que l ecran des offres a le droit de proposer', () => {
     });
   });
 
-  test('T6 ter — club couvert en « Club 100 » : l EGAL et l INFERIEUR sont grises, avec leur mention', () => {
+  test('T6 ter — l EGAL et l INFERIEUR sont grises, avec leur mention', () => {
     expect(disponibilite(CLUB_100, 'fc_club_tier_1_yearly')).toEqual({
       coverageNotice: 'Ton club a déjà cette offre',
       isSelectable: false,
@@ -668,7 +678,7 @@ describe('UPGRADE — la couverture qui empeche vraiment d acheter', () => {
     })).toBe('fc_club_tier_1_yearly');
   });
 
-  test('T6 octies — MA PROPRE couverture ne me bloque pas (je change d offre quand je veux)', () => {
+  test('T6 octies — MA PROPRE couverture ne me bloque pas (je change quand je veux)', () => {
     expect(getBlockingClubCoveragePlanCode({
       entitlementsSummary: [{
         paidBy: { documentId: MOI, firstname: 'Adel' },

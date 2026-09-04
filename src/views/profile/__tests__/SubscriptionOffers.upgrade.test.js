@@ -202,8 +202,8 @@ const trancheClub = (tier, displayName, licenseeCap, priceEurCents) => ({
   isActive: true,
   licenseeCap,
   maxTeams: null,
-  planCode: 'fc_club_tier_' + tier + '_yearly',
-  providerProductId: 'fc_club_tier_' + tier + '_yearly',
+  planCode: `fc_club_tier_${tier}_yearly`,
+  providerProductId: `fc_club_tier_${tier}_yearly`,
   referencePriceEurCents: priceEurCents,
   requiresClubVerification: true,
   scopeType: 'CLUB',
@@ -274,27 +274,6 @@ const aplatirTexte = (enfants) => {
 };
 
 /**
- * Appuie sur le DERNIER pressable dont le libelle commence ainsi (le CTA collant).
- * @param {any} arbre
- * @param {string} debutDuLibelle
- * @returns {Promise<void>} Quand le rendu a fini de reagir.
- */
-const appuyerSurLeCta = async (arbre, debutDuLibelle) => {
-  const cible = arbre.root
-    .findAllByType(TouchableOpacity)
-    .filter((/** @type {any} */ noeud) => noeud
-      .findAllByType(Text)
-      .some((/** @type {any} */ texte) => aplatirTexte(texte.props.children)
-        .trim()
-        .startsWith(debutDuLibelle)))
-    .pop();
-  if (!cible) {
-    throw new Error(`Aucun pressable ne commence par « ${debutDuLibelle} »`);
-  }
-  await act(async () => { cible.props.onPress(); });
-};
-
-/**
  * Va sur la carte Club (index 2 du carrousel : Gratuit, Équipe, Club).
  * @param {any} arbre
  * @returns {Promise<void>}
@@ -323,7 +302,6 @@ const rendre = async (surcharges = {}) => {
   return arbre;
 };
 
-
 /**
  * Le droit CLUB actif d un club, paye par quelqu un, tel que le serveur le rend.
  * @param {string} planCode - l offre qui couvre le club.
@@ -347,7 +325,7 @@ const couvertureClub = (planCode, payeurDocumentId) => ({
  */
 const pilulesDePalier = (arbre) => arbre.root
   .findAllByType(TouchableOpacity)
-  .filter((/** @type {any} */ noeud) => ['100', '500', '1000', 'illim.'].includes(
+  .filter((/** @type {any} */ noeud) => ['100', '1000', '500', 'illim.'].includes(
     aplatirTexte(noeud.findAllByType(Text)[0]?.props?.children).trim(),
   ))
   .map((/** @type {any} */ noeud) => ({
@@ -372,7 +350,7 @@ beforeEach(() => {
 });
 
 describe('UPGRADE / U5 — un club deja couvert par QUELQU UN D AUTRE', () => {
-  it('T6 — couvert en Club 100 : les tranches SUPERIEURES restent tapables, l egale est grisee', async () => {
+  it('T6 — couvert en Club 100 : les SUPERIEURES restent tapables, l egale grisee', async () => {
     const arbre = await rendre({
       entitlementsSummary: [couvertureClub('fc_club_tier_1_yearly', 'user-autre')],
       subscriptionAccessLevel: 'CLUB',
@@ -397,7 +375,7 @@ describe('UPGRADE / U5 — un club deja couvert par QUELQU UN D AUTRE', () => {
     expect(texteDeLEcran(arbre)).toContain('Ton club a déjà une offre supérieure');
   });
 
-  it('T6 ter — couvert en Club Illimite : TOUT est grise, y compris l illimite lui-meme', async () => {
+  it('T6 ter — couvert en Club Illimite : TOUT est grise, l illimite compris', async () => {
     // Le piege du `null` : si le rang de l illimite etait lu comme zero, les
     // trois tranches chiffrees passeraient pour des montees en gamme.
     const arbre = await rendre({
@@ -418,7 +396,7 @@ describe('UPGRADE / U5 — un club deja couvert par QUELQU UN D AUTRE', () => {
     expect(texteDeLEcran(arbre)).not.toContain('Ton club a déjà');
   });
 
-  it('T6 quinquies — MA PROPRE couverture ne grise rien : je change d offre quand je veux', async () => {
+  it('T6 quinquies — MA PROPRE couverture ne grise rien : je change quand je veux', async () => {
     const arbre = await rendre({
       entitlementsSummary: [couvertureClub('fc_club_tier_3_yearly', 'user-1')],
       subscriptionAccessLevel: 'CLUB',

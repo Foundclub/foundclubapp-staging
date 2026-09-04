@@ -1039,7 +1039,8 @@ function SubscriptionOffers({ navigation, route }) {
     // offre superieure » n'y tient pas. Elle est donc posee une fois sous la
     // rangee (et voyage en plus dans le libelle d'accessibilite de chaque
     // pilule grisee — un lecteur d'ecran ne voit pas l'opacite).
-    const lockedNotice = options.find((option) => option.isSelectable === false)?.coverageNotice || '';
+    const lockedNotice = options
+      .find((option) => option.isSelectable === false)?.coverageNotice || '';
 
     return (
       <View style={[Spaces.gap[8], Spaces.marginTop[12]]}>
