@@ -293,6 +293,20 @@ const appuyerSur = (arbre, libelle) => {
 
 const allerAuTerrain = (arbre) => appuyerSur(arbre, 'Suivant');
 
+// Appuie sur la LIGNE d'un poste, dans la liste sous le terrain. C'est la seule
+// porte vers un poste DEJA TENU : son repere sur le terrain n'est plus dessine
+// des qu'un jeton l'occupe.
+const appuyerSurLaLigneDePoste = (arbre, libelle) => {
+  const lignes = arbre.root.findAll(
+    (noeud) => typeof noeud.props?.onPress === 'function'
+      && noeud.findAll((enfant) => enfant.props?.children === libelle).length > 0,
+  );
+  if (lignes.length === 0) throw new Error(`Aucune ligne de poste « ${libelle} »`);
+  act(() => {
+    lignes[lignes.length - 1].props.onPress();
+  });
+};
+
 // Declenche la mesure du terrain, comme le ferait la mise en page native.
 //
 // 🪤 LE PIEGE QUI M'A COUTE UN TOUR : le preset Jest de React Native remplace
@@ -520,5 +534,30 @@ describe('COMPO — poser un joueur sur un poste DEJA OCCUPE', () => {
     expect(parJoueur.get('p-nino')).toBe('team_1:st');
     expect(parJoueur.get('p-zoe')).toBe('team_1:gk');
     expect(joueursAuBanc(arbre)).toEqual([nomDe(LEA)]);
+  });
+
+  // 🤝 LE TEMOIN QUI FIGE L'ACCORD ENTRE LES DEUX GESTES DU MEME ECRAN.
+  //
+  // Taper faisait DEJA (b) avant ce lot (`handleSlotPress`) : c'est ce desaccord
+  // avec le glisser qui prouve que le glisser etait un bug, et pas un autre
+  // choix de dessin. On fige donc les deux ensemble : le jour ou l'un des deux
+  // repart de son cote, ce temoin le dit.
+  test('T1 quater — TAPER sur un poste occupe rend aussi l ancien au banc', async () => {
+    const arbre = monter(parametresEdition());
+    allerAuTerrain(arbre);
+    mesurerLeTerrain(arbre);
+
+    // Zoe prend l'Avant-centre en TAPANT : on la choisit, puis on tape le poste.
+    appuyerSur(arbre, nomDe(ZOE));
+    appuyerSur(arbre, 'BU');
+    expect(postesTenus(await packEnvoyeAuServeur(arbre))).toHaveLength(1);
+
+    // Puis Nino, sur le MEME poste, par sa ligne dans la liste.
+    appuyerSur(arbre, nomDe(NINO));
+    appuyerSurLaLigneDePoste(arbre, 'BU');
+    const pack = await packEnvoyeAuServeur(arbre);
+
+    expect(postesTenus(pack).map((placement) => placement.playerId)).toEqual(['p-nino']);
+    expect(joueursAuBanc(arbre)).toContain(nomDe(ZOE));
   });
 });

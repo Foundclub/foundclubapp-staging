@@ -262,9 +262,17 @@ export const getDefaultStartFromKey = (options) => {
 };
 
 /**
- * Le poste libre le plus proche du point lache, dans le rayon d'aimantation.
+ * Le poste le plus proche du point lache, dans le rayon d'aimantation. Les
+ * postes nommes dans `occupiedSlotIds` sont ECARTES de la recherche.
+ *
+ * ⚠️ MISE A JOUR HONNETE (lot COMPO, 2026-09-05) : depuis que `placePlayerAt`
+ * traite un poste tenu comme une CIBLE, plus personne en production ne passe
+ * `occupiedSlotIds`. Le parametre reste — il repond a une VRAIE question
+ * (« quel poste est encore libre ? ») et son temoin le fige — mais il n'a plus
+ * d'appelant. Le prochain qui lit ceci sait donc que cette branche n'est
+ * exercee que par le temoin, et pas par l'ecran.
  * @param {object} input
- * @param {Set<string> | string[]} [input.occupiedSlotIds]
+ * @param {Set<string> | string[]} [input.occupiedSlotIds] Postes a ne pas viser.
  * @param {any[]} [input.slots]
  * @param {number} input.x Pourcentage horizontal.
  * @param {number} input.y Pourcentage vertical.
@@ -333,8 +341,7 @@ export const placePlayerAt = ({
   const previous = current.find((placement) => String(placement?.playerId || '') === id) || null;
   const others = current.filter((placement) => String(placement?.playerId || '') !== id);
   // ⚠️ Aucun `occupiedSlotIds` ici, et c'est LA correction : un poste tenu est
-  // une cible, plus un obstacle qu'on contourne en silence. `snapToNearestSlot`
-  // garde son contrat (« le poste LIBRE le plus proche ») pour ses autres usages.
+  // une cible, plus un obstacle qu'on contourne en silence.
   const snapped = magnetEnabled ? snapToNearestSlot({ slots, x, y }) : null;
 
   if (!snapped) {
