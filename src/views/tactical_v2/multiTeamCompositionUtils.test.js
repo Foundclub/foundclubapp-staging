@@ -457,3 +457,53 @@ describe('COMPOLECT-2 — un pack publie garde ses PERSONNES, pas seulement ses 
     expect(charge.snapshotPlayers).toBeUndefined();
   });
 });
+
+// 👥 LOT COMPO (2026-09-05) — LE BANC NE COMPTE PAS DEUX FOIS LA MEME PERSONNE.
+//
+// 🚨 CE QUE J'AI VU EN CHEMIN, en lisant `getReservePlayersForPack` pour le
+// defaut du poste occupe : la liste du banc part de `reservePlayerIds` TEL QUEL,
+// puis y ajoute les non-affectes. Or `reservePlayerIds` est ecrit a
+// l'ENREGISTREMENT et n'est jamais nettoye quand un jeton part sur le terrain.
+// ⇒ On rouvre une compo enregistree, on glisse un remplacant sur un poste, et il
+// reste AUSSI affiche au banc. Le coach voit 12 noms au banc pour 11 personnes,
+// et il ne peut pas savoir laquelle est en double.
+//
+// C'est le meme symptome que le defaut principal vu par l'autre bout : le
+// compteur du banc ment.
+describe('COMPO — pose sur le terrain, il quitte le banc meme s il etait en reserve', () => {
+  const AVEC_RESERVE_PERIMEE = {
+    manualPlayers: [],
+    mode: 'manual',
+    placementMode: 'slots',
+    // Ce que l'enregistrement precedent avait fige : les 2 etaient au banc.
+    reservePlayerIds: ['player-1', 'player-2'],
+    reserveSnapshotPlayers: [],
+    schemaVersion: 3,
+    sportContext: 'football',
+    teams: [{
+      id: 'team_1',
+      name: 'Equipe 1',
+      // ... et depuis, player-1 a ete pose sur un poste.
+      placements: [{
+        playerId: 'player-1', positionX: 50, positionY: 12, slotId: 'team_1:gk',
+      }],
+      presetKey: '4-4-2',
+      presetLabel: '4-4-2',
+      slots: [],
+    }],
+  };
+  const JOUEURS = [
+    { documentId: 'player-1', firstname: 'Ana', lastname: 'Bern' },
+    { documentId: 'player-2', firstname: 'Chloe', lastname: 'Diaz' },
+  ];
+
+  test('le banc ne montre QUE les joueurs qui ne sont pas sur le terrain', () => {
+    expect(getReservePlayersForPack(AVEC_RESERVE_PERIMEE, JOUEURS).map((p) => p.documentId))
+      .toEqual(['player-2']);
+  });
+
+  test('et la charge envoyee au serveur ne le range pas au banc non plus', () => {
+    expect(buildDraftPayloadFromPack(AVEC_RESERVE_PERIMEE, JOUEURS).reservePlayerIds)
+      .toEqual(['player-2']);
+  });
+});

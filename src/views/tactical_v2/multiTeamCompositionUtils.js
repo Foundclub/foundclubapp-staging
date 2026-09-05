@@ -284,6 +284,21 @@ export const getAssignedPlayerIdsFromPack = (pack) => uniqueIds(
     .map((placement) => placement?.playerId),
 );
 
+/**
+ * 👥 LOT COMPO (2026-09-05) — LE BANC, ET RIEN QUE LE BANC.
+ *
+ * 🚨 CE QUI CLOCHAIT : cette liste partait de `reservePlayerIds` TEL QUEL. Or ce
+ * champ est fige a l'ENREGISTREMENT et n'est jamais nettoye quand un jeton part
+ * sur le terrain. Rouvrir une compo enregistree puis glisser un remplacant sur
+ * un poste le laissait donc AUSSI au banc : 12 noms au banc pour 11 personnes,
+ * et rien pour dire laquelle est en double. Le meme champ partait au serveur,
+ * ou le joueur etait a la fois titulaire et remplacant.
+ *
+ * ✅ `assignedIds` tranche desormais les DEUX sources, pas seulement la seconde.
+ * @param {any} pack Le pack de composition en cours.
+ * @param {any[]} [players] Les convoques connus.
+ * @returns {any[]} Les joueurs du banc, sans aucun de ceux que le terrain porte.
+ */
 export const getReservePlayersForPack = (pack, players = []) => {
   const playerMap = buildCompositionPlayerMap([
     ...(Array.isArray(players) ? players : []),
@@ -293,8 +308,8 @@ export const getReservePlayersForPack = (pack, players = []) => {
   const assignedIds = new Set(getAssignedPlayerIdsFromPack(pack));
   const orderedIds = uniqueIds([
     ...(Array.isArray(pack?.reservePlayerIds) ? pack.reservePlayerIds : []),
-    ...Array.from(playerMap.keys()).filter((playerId) => !assignedIds.has(playerId)),
-  ]);
+    ...Array.from(playerMap.keys()),
+  ]).filter((playerId) => !assignedIds.has(playerId));
 
   return orderedIds
     .map((playerId) => playerMap.get(playerId))
@@ -307,10 +322,14 @@ export const buildDraftPayloadFromPack = (pack, players = []) => {
     ...(Array.isArray(pack?.manualPlayers) ? pack.manualPlayers : []),
   ]);
   const assignedIds = new Set(getAssignedPlayerIdsFromPack(pack));
+  // ⚠️ Le filtre porte sur les DEUX sources : `reservePlayerIds` est fige a
+  // l'enregistrement precedent, donc il peut encore nommer quelqu'un que le
+  // terrain porte maintenant. Sans ce filtre, le meme joueur partait au serveur
+  // titulaire ET remplacant (lot COMPO, 2026-09-05).
   const reservePlayerIds = uniqueIds([
     ...(Array.isArray(pack?.reservePlayerIds) ? pack.reservePlayerIds : []),
-    ...Array.from(playerMap.keys()).filter((playerId) => !assignedIds.has(playerId)),
-  ]);
+    ...Array.from(playerMap.keys()),
+  ]).filter((playerId) => !assignedIds.has(playerId));
 
   // D47 — QUI est convoque. `players` est deja la liste des joueurs coches au
   // temps 1 (« Qui joue ? ») : le board en retire les ecartes avant d'appeler.

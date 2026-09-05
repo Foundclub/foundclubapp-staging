@@ -262,9 +262,17 @@ export const getDefaultStartFromKey = (options) => {
 };
 
 /**
- * Le poste libre le plus proche du point lache, dans le rayon d'aimantation.
+ * Le poste le plus proche du point lache, dans le rayon d'aimantation. Les
+ * postes nommes dans `occupiedSlotIds` sont ECARTES de la recherche.
+ *
+ * ⚠️ MISE A JOUR HONNETE (lot COMPO, 2026-09-05) : depuis que `placePlayerAt`
+ * traite un poste tenu comme une CIBLE, plus personne en production ne passe
+ * `occupiedSlotIds`. Le parametre reste — il repond a une VRAIE question
+ * (« quel poste est encore libre ? ») et son temoin le fige — mais il n'a plus
+ * d'appelant. Le prochain qui lit ceci sait donc que cette branche n'est
+ * exercee que par le temoin, et pas par l'ecran.
  * @param {object} input
- * @param {Set<string> | string[]} [input.occupiedSlotIds]
+ * @param {Set<string> | string[]} [input.occupiedSlotIds] Postes a ne pas viser.
  * @param {any[]} [input.slots]
  * @param {number} input.x Pourcentage horizontal.
  * @param {number} input.y Pourcentage vertical.
@@ -293,8 +301,25 @@ export const snapToNearestSlot = ({
 
 /**
  * Pose un joueur sur le terrain : il quitte d'abord toute position qu'il
- * occupait, puis il est place — aimante au poste libre le plus proche si
- * l'aimantation est allumee, a l'endroit exact du doigt sinon.
+ * occupait, puis il est place — aimante au poste le plus proche si l'aimantation
+ * est allumee, a l'endroit exact du doigt sinon.
+ *
+ * 👻 LOT COMPO (2026-09-05) — POSER SUR UN POSTE OCCUPE NE PERD PLUS PERSONNE.
+ *
+ * 🚨 CE QUI SE PASSAIT AVANT : l'aimantation ne visait que les postes LIBRES.
+ * Lacher quelqu'un sur un poste deja tenu ne trouvait donc rien dans le rayon,
+ * et fabriquait un placement SANS POSTE, pose au pixel du doigt — donc DESSINE
+ * PAR-DESSUS l'occupant. A l'ecran : le nouveau venu a quitte le banc, ne tient
+ * aucun poste, et son jeton est cache sous l'autre. Le coach le voit disparaitre,
+ * et le pack part tel quel au serveur.
+ *
+ * ✅ CE QUI SE PASSE MAINTENANT : le nouveau venu PREND le poste ; l'ancien
+ * occupant reprend la place que le nouveau vient de quitter (les deux ECHANGENT)
+ * ou, s'il venait du banc, y RETOURNE. Personne ne disparait, dans aucun des
+ * deux cas.
+ *
+ * ⚠️ Le placement libre n'a pas bouge : aimantation eteinte, ou lacher hors du
+ * rayon de tout poste, le jeton reste exactement ou le doigt l'a laisse.
  * @param {object} input
  * @param {boolean} [input.magnetEnabled]
  * @param {any[]} [input.placements]
@@ -310,30 +335,37 @@ export const placePlayerAt = ({
   const id = String(playerId || '');
   if (!id) return Array.isArray(placements) ? placements : [];
 
-  const others = (Array.isArray(placements) ? placements : [])
-    .filter((placement) => String(placement?.playerId || '') !== id);
-  const snapped = magnetEnabled
-    ? snapToNearestSlot({
-      occupiedSlotIds: others.map((placement) => placement?.slotId).filter(Boolean),
-      slots,
-      x,
-      y,
-    })
-    : null;
+  const current = Array.isArray(placements) ? placements : [];
+  // D'ou vient le jeton, lu AVANT de le decrocher : c'est cette place-la que
+  // l'ancien occupant reprendra en cas d'echange.
+  const previous = current.find((placement) => String(placement?.playerId || '') === id) || null;
+  const others = current.filter((placement) => String(placement?.playerId || '') !== id);
+  // ⚠️ Aucun `occupiedSlotIds` ici, et c'est LA correction : un poste tenu est
+  // une cible, plus un obstacle qu'on contourne en silence.
+  const snapped = magnetEnabled ? snapToNearestSlot({ slots, x, y }) : null;
 
-  return [...others, snapped
-    ? {
-      playerId: id,
-      positionX: clampPercent(snapped.positionX),
-      positionY: clampPercent(snapped.positionY),
-      slotId: snapped.slotId,
-    }
-    : {
+  if (!snapped) {
+    return [...others, {
       playerId: id,
       positionX: clampPercent(x),
       positionY: clampPercent(y),
       slotId: null,
     }];
+  }
+
+  const displaced = others.find((placement) => placement?.slotId === snapped.slotId) || null;
+  const kept = others.filter((placement) => placement !== displaced);
+  const arrival = {
+    playerId: id,
+    positionX: clampPercent(snapped.positionX),
+    positionY: clampPercent(snapped.positionY),
+    slotId: snapped.slotId,
+  };
+  const swapped = displaced && previous
+    ? [{ ...previous, playerId: String(displaced.playerId) }]
+    : [];
+
+  return [...kept, arrival, ...swapped];
 };
 
 /**

@@ -226,18 +226,38 @@ describe('l aimantation est un interrupteur, pas une fatalite', () => {
     expect(pose.positionY).toBe(44);
   });
 
-  test('un poste DEJA occupe n aimante pas un second joueur', () => {
+  test('`snapToNearestSlot` ne rend QUE des postes libres', () => {
     const gardien = postes[0];
-    const occupe = [{
-      playerId: 'p1', positionX: gardien.positionX, positionY: gardien.positionY, slotId: gardien.slotId,
-    }];
     expect(snapToNearestSlot({
       occupiedSlotIds: [gardien.slotId],
       slots: [gardien],
       x: gardien.positionX,
       y: gardien.positionY,
     })).toBeNull();
-    const [, pose] = placePlayerAt({
+  });
+
+  // 👻 LOT COMPO (2026-09-05) — CE TEMOIN A CHANGE D'ATTENTE, ET C'EST VOULU.
+  //
+  // Jusqu'ici il s'appelait « un poste DEJA occupe n aimante pas un second
+  // joueur » et FIGEAIT `slotId: null`. Ce que cette ligne decrivait comme un
+  // repli tranquille produit a l'ecran : le nouveau venu quitte le banc, ne
+  // tient aucun poste, et son jeton se dessine AU PIXEL PRES sur l'occupant.
+  // Le coach voit quelqu'un disparaitre — mesure sur la recette le 09/08, puis
+  // reproduite sans aucun doigt sur le plateau jumeau
+  // (`tactical_v2/MultiTeamCompositionBoard.caseOccupee.test.js`, 6 rouges).
+  //
+  // ⚠️ `snapToNearestSlot` garde son contrat (temoin ci-dessus) : c'est la
+  // question « quel poste est LIBRE », et elle reste utile. Ce qui change, c'est
+  // que le DEPOT ne la pose plus — un poste tenu est une cible, pas un obstacle.
+  test('poser sur un poste occupe : le nouveau le prend, l ancien retourne au banc', () => {
+    const gardien = postes[0];
+    const occupe = [{
+      playerId: 'p1',
+      positionX: gardien.positionX,
+      positionY: gardien.positionY,
+      slotId: gardien.slotId,
+    }];
+    const apres = placePlayerAt({
       magnetEnabled: true,
       placements: occupe,
       playerId: 'p0',
@@ -245,7 +265,64 @@ describe('l aimantation est un interrupteur, pas une fatalite', () => {
       x: gardien.positionX,
       y: gardien.positionY,
     });
-    expect(pose.slotId).toBeNull();
+
+    expect(apres).toHaveLength(1);
+    expect(apres[0].playerId).toBe('p0');
+    expect(apres[0].slotId).toBe(gardien.slotId);
+    // p1 n'est plus sur le terrain : `getBenchPlayers` le rendra donc au banc.
+    expect(getBenchPlayers([joueur('p0', 'A', 'A'), joueur('p1', 'B', 'B')], apres)
+      .map((player) => player.documentId)).toEqual(['p1']);
+  });
+
+  test('deux joueurs deja poses ECHANGENT leurs postes', () => {
+    const gardien = postes[0];
+    const arriere = postes[1];
+    const terrain = [
+      {
+        playerId: 'p1',
+        positionX: gardien.positionX,
+        positionY: gardien.positionY,
+        slotId: gardien.slotId,
+      },
+      {
+        playerId: 'p0',
+        positionX: arriere.positionX,
+        positionY: arriere.positionY,
+        slotId: arriere.slotId,
+      },
+    ];
+    const apres = placePlayerAt({
+      magnetEnabled: true,
+      placements: terrain,
+      playerId: 'p0',
+      slots: postes,
+      x: gardien.positionX,
+      y: gardien.positionY,
+    });
+
+    const parJoueur = new Map(apres.map((placement) => [placement.playerId, placement.slotId]));
+    expect(apres).toHaveLength(2);
+    expect(parJoueur.get('p0')).toBe(gardien.slotId);
+    expect(parJoueur.get('p1')).toBe(arriere.slotId);
+  });
+
+  test('deux jetons ne partagent JAMAIS le meme poste', () => {
+    const gardien = postes[0];
+    const apres = placePlayerAt({
+      magnetEnabled: true,
+      placements: [{
+        playerId: 'p1',
+        positionX: gardien.positionX,
+        positionY: gardien.positionY,
+        slotId: gardien.slotId,
+      }],
+      playerId: 'p0',
+      slots: [gardien],
+      x: gardien.positionX,
+      y: gardien.positionY,
+    });
+    const postesTenus = apres.map((placement) => placement.slotId).filter(Boolean);
+    expect(new Set(postesTenus).size).toBe(postesTenus.length);
   });
 });
 
