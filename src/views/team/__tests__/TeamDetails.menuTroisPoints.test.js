@@ -101,7 +101,7 @@ const AUTH_VISITEUR = Object.freeze({
 // 🧭 L'ENTRAINEUR DU CLUB QUI REGARDE UNE EQUIPE VOISINE. Ce cas existe parce
 // que « Contacter l'entraîneur·e » exige `role === coach && isMyClub &&
 // !isMyTeam` : il est donc MUTUELLEMENT EXCLUSIF du cas dirigeant ci-dessus.
-// Aucun ecran ne montre les 10 actions a la fois — l'inventaire se compte donc
+// Aucun ecran ne montre les 11 actions a la fois — l'inventaire se compte donc
 // sur DEUX scenes, pas une.
 const AUTH_ENTRAINEUR_DU_CLUB = Object.freeze({
   canEditClub: () => false,
@@ -353,16 +353,25 @@ const LIBELLE_ENTETE_MENU = "Actions d'équipe";
 const LIBELLE_PORTE_VISITEUR = "C'est mon équipe";
 
 // 📋 L'INVENTAIRE D'AVANT, RELEVE SUR LE PANNEAU DU BAS : 10 rangees et
-// 2 en-tetes de groupe. C'est lui qui prouve « aucune action retiree ».
+// 2 en-tetes de groupe (11 depuis le lot INVIT, voir plus bas).
+// C'est lui qui prouve « aucune action retiree ».
 //
 // ⚠️ IL SE COMPTE SUR DEUX SCENES, et ce n'est pas un contournement : les
 // conditions d'affichage du code le rendent IMPOSSIBLE a compter sur une seule.
-// « Contacter l'entraîneur·e » exige `!isMyTeam` ; les 9 autres exigent
+// « Contacter l'entraîneur·e » exige `!isMyTeam` ; les 10 autres exigent
 // `isMyTeam` ou `canManageTeam`. Un inventaire pris sur la seule scene du
-// dirigeant afficherait 9, et ferait croire a une action perdue.
+// dirigeant afficherait 10, et ferait croire a une action perdue.
+// 🔁 REVU PAR LE LOT INVIT (2026-09-05). « Inviter des joueur·se·s » a ete
+// SCINDEE en deux rangees, elle n'a pas ete retiree — et c'est precisement ce
+// que ce filet doit continuer de garantir. L'ancienne rangee promettait une
+// invitation et ouvrait en realite le partage SMS : elle garde son geste sous
+// son vrai nom (« Partager un lien d'invitation ») pendant que la vraie
+// invitation serveur prend le sien (« Inviter un membre du club »).
+// ⇒ L'inventaire passe donc de 9 a 10 rangees sur la scene du dirigeant.
 const ACTIONS_DU_DIRIGEANT = [
   "Modifier l'équipe",
-  'Inviter des joueur·se·s',
+  'Inviter un membre du club',
+  "Partager un lien d'invitation",
   "Discussion d'équipe",
   'Composition type',
   'Convocations',
@@ -528,7 +537,7 @@ describe("AC01 — les actions d'équipe passent en trois points, en haut à dro
   });
 
   // 🔒 AUCUNE ACTION PERDUE — 9 sur la scène du dirigeant...
-  test('aucune action du dirigeant n’a disparu : 9 rangées et 2 en-têtes', () => {
+  test('aucune action du dirigeant n’a disparu : 10 rangées et 2 en-têtes', () => {
     const racine = monterLaFiche();
     ouvrirLeMenu(racine);
 
@@ -541,11 +550,11 @@ describe("AC01 — les actions d'équipe passent en trois points, en haut à dro
 
     expect(manquantes).toEqual([]);
     expect(entetesManquantes).toEqual([]);
-    expect(ACTIONS_DU_DIRIGEANT).toHaveLength(9);
+    expect(ACTIONS_DU_DIRIGEANT).toHaveLength(10);
   });
 
-  // ... et la 10ᵉ sur celle de l'entraîneur voisin, la seule qui la montre.
-  test('la 10ᵉ action, « Contacter l’entraîneur·e », est là elle aussi', () => {
+  // ... et la 11ᵉ sur celle de l'entraîneur voisin, la seule qui la montre.
+  test('la 11ᵉ action, « Contacter l’entraîneur·e », est là elle aussi', () => {
     mockAuthCourant = AUTH_ENTRAINEUR_DU_CLUB;
     mockEstMonEquipe = false;
 

@@ -142,13 +142,29 @@ describe('INSTANT / R1 — l\'etiquette qui manquait a la demande de club', () =
     });
   });
 
-  it('R1 — les QUATRE etiquettes d\'adhesion, et rien de plus', () => {
+  // 🔁 REVU PAR LE LOT INVIT (2026-09-05) : elles etaient QUATRE, elles sont
+  // CINQ. `teamMembershipInvitation` a ete ajoutee parce qu'elle change bien
+  // une appartenance A L'ECRAN : la banniere « Accepter / Refuser » de la fiche
+  // d'equipe lit `currentUser.teamMembershipRequests`, donc `app-bootstrap` /
+  // `get-me` — tous deux dans `membershipChanged`. Sans elle, la personne
+  // invitee touchait sa notification et arrivait sur une fiche SANS banniere.
+  // ⛔ L'esprit du garde-fou ne change pas : on n'ajoute une etiquette que si
+  // elle rend un cache FAUX, jamais « au cas ou ».
+  it('R1 — les CINQ etiquettes d\'adhesion, et rien de plus', () => {
     expect([...MEMBERSHIP_NOTIFICATION_TYPES].sort()).toEqual([
       'addToTeam',
       'clubMembershipRequest',
       'clubRequest',
+      'teamMembershipInvitation',
       'teamMembershipRequest',
     ]);
+  });
+
+  it('R1 — recevoir une INVITATION d\'equipe relit bien le profil', () => {
+    // C'est `app-bootstrap` / `get-me` qui portent la banniere : si l'un des
+    // deux sortait un jour de `membershipChanged`, ce temoin rougirait.
+    expect(resolveNotificationRefreshAction('teamMembershipInvitation'))
+      .toBe('membershipChanged');
   });
 });
 

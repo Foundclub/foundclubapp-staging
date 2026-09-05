@@ -280,6 +280,18 @@ export const MEMBERSHIP_NOTIFICATION_TYPES = Object.freeze([
   'addToTeam',
   'clubMembershipRequest',
   'clubRequest',
+  // INVIT (2026-09-05) — CELUI-CI MANQUAIT, et il se voyait a l ecran. La
+  // banniere « Accepter / Refuser » de la fiche d equipe n est pas remplie par
+  // une requete dediee : elle lit `currentUser.teamMembershipRequests`, qui
+  // vient de `app-bootstrap` / `get-me`. A l arrivee du push d invitation,
+  // seules la cloche et le compteur etaient rafraichis : la personne invitee
+  // touchait la notification, arrivait sur la fiche… et n y voyait AUCUNE
+  // banniere tant que le profil n avait pas vieilli tout seul.
+  // `membershipChanged` porte deja `app-bootstrap` et `get-me` : il suffisait
+  // d ajouter l etiquette.
+  // ⚠️ Le cache SERVEUR ressert du perime jusqu a 4 min : cette ligne supprime
+  // l attente cote app, pas celle-la.
+  'teamMembershipInvitation',
   'teamMembershipRequest',
 ]);
 

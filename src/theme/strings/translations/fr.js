@@ -4270,10 +4270,12 @@ export default {
       contactTeam: 'Contacter',
       defaultComposition: 'Composition type',
       edit: 'Modifier',
+      inviteMember: 'Inviter un membre du club',
       join: "C'est mon équipe !",
       leave: "Quitter l'équipe",
       openPanel: 'Ouvrir',
       panelTitle: "Actions d'équipe",
+      shareInviteLink: "Partager un lien d'invitation",
       stats: 'Statistiques',
       teamChat: 'Équipe',
     },
@@ -4326,6 +4328,29 @@ export default {
       message: 'Le staff de cette équipe t\'invite à la rejoindre. À toi de décider.',
       refuse: 'Refuser',
       title: 'Invitation',
+    },
+    // INVIT (2026-09-05) — les mots de la feuille qui envoie une VRAIE
+    // invitation. ⚠️ Ne pas confondre avec `invitation` juste au-dessus, qui
+    // est le sens INVERSE : ce que voit la personne INVITÉE.
+    invite: {
+      action: 'Inviter',
+      emptyClub: "Personne d'autre dans ton club pour l'instant.",
+      emptyExplanation: 'Tu peux inviter directement les personnes déjà rattachées à ton club.'
+        + " Pour quelqu'un d'un autre club, envoie-lui plutôt un lien d'invitation :"
+        + " il·elle pourra demander à rejoindre l'équipe.",
+      emptyHidden: 'Ce club masque ses membres : impossible de les proposer ici.',
+      emptySearch: 'Personne de ce nom dans ton club.',
+      emptyTeamHint: "Invite un membre du club, ou partage un lien d'invitation.",
+      errorTitle: 'Invitation impossible',
+      searchPlaceholder: 'Rechercher un membre du club',
+      sentBadge: 'Invitation envoyée',
+      sentMessage: '{{name}} va recevoir une notification.'
+        + " Elle rejoindra l'équipe si elle accepte.",
+      sentTitle: 'Invitation envoyée',
+      sheetIntro: 'Choisis une personne de ton club :'
+        + " elle reçoit une invitation, et c'est elle qui accepte.",
+      sheetTitle: "Inviter dans l'équipe",
+      someone: 'Cette personne',
     },
     myTitle: 'Mon équipe',
     sections: {
