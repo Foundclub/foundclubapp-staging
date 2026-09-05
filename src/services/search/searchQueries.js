@@ -1,5 +1,7 @@
 import { useInfiniteQuery } from '@tanstack/react-query';
 
+import { getAuthTokens } from '@/domains/auth/authUseCases';
+
 import { getPlaceholderDataOption } from '@/services/queryOptions';
 
 import { buildNormalizedQueryKey } from '@/utils/queryKey';
@@ -31,11 +33,62 @@ const hasAnyActiveSearchParam = (params = {}) => Object.entries(params).some(([k
 });
 
 /**
+ * Les deux conditions métier historiques, sorties une seule fois : elles
+ * étaient recopiées telles quelles dans plusieurs crochets.
+ * @param {Record<string, any>} [params]
+ * @returns {boolean} Vrai si la saisie fait au moins 2 caractères.
+ */
+const hasSearchText = (params = {}) => Boolean(
+  params?.q && String(params.q).trim().length >= 2,
+);
+
+/**
+ * Dit si les bornes de la carte sont toutes lisibles.
+ * @param {Record<string, any>} [params]
+ * @returns {boolean} Vrai si les 5 bornes sont des nombres finis.
+ */
+const hasMapBounds = (params = {}) => (
+  Number.isFinite(Number(params?.north))
+  && Number.isFinite(Number(params?.south))
+  && Number.isFinite(Number(params?.east))
+  && Number.isFinite(Number(params?.west))
+  && Number.isFinite(Number(params?.zoom))
+);
+
+/**
+ * SENTRY1 — la recherche EXIGE une session, et aucun de ces crochets ne le
+ * regardait. Mesure du 2026-09-05 : 8 refus `403` sur `GET /api/search/events`
+ * dans les journaux de production, et le serveur a raison —
+ * `api::search.search.events` est accordé à `Authenticated` et aux 5 rôles
+ * métier, jamais à `Public`. Vérifié le même jour, sans jeton :
+ * `curl https://api.foundclubpro.com/api/search/events?q=foot` → **403**.
+ *
+ * ⛔ Ce défaut ne se filtre pas côté Sentry, il se corrige ici : on ne part
+ * plus tant que la session n'est pas là. Même motif qu'`authQueries.js:13`.
+ * @returns {boolean}
+ */
+const hasSession = () => Boolean(getAuthTokens()?.token);
+
+/**
+ * Compose la garde de session avec la condition métier du crochet.
+ *
+ * ⚠️ À poser APRÈS `...options` dans chaque crochet : un appelant passe son
+ * propre `enabled` (ConversationPublicEventPicker.js:71) et l'étalement
+ * l'écraserait sinon. La session est un plancher que personne ne lève ; le
+ * droit d'ÉTEINDRE une requête, lui, reste à l'appelant.
+ * @param {any} options
+ * @param {boolean} fallbackEnabled - La condition métier historique du crochet.
+ * @returns {boolean}
+ */
+const enabledWithSession = (options, fallbackEnabled) => (
+  hasSession() && (options?.enabled ?? fallbackEnabled)
+);
+
+/**
  * @param {Record<string, any>} params
  * @param {any} [options]
  */
 export const useSearchEvents = (params = {}, options = {}) => useInfiniteQuery({
-  enabled: Boolean(params?.q && String(params.q).trim().length >= 2),
   getNextPageParam,
   placeholderData: getPlaceholderDataOption(options),
   queryFn: (/** @type {any} */ { pageParam = 1, signal }) => searchEvents({ ...params, page: pageParam }, { signal }),
@@ -45,6 +98,7 @@ export const useSearchEvents = (params = {}, options = {}) => useInfiniteQuery({
   retry: options.retry ?? 0,
   staleTime: 30_000,
   ...options,
+  enabled: enabledWithSession(options, hasSearchText(params)),
 });
 
 /**
@@ -52,13 +106,6 @@ export const useSearchEvents = (params = {}, options = {}) => useInfiniteQuery({
  * @param {any} [options]
  */
 export const useSearchEventsMap = (params = {}, options = {}) => useInfiniteQuery({
-  enabled: options.enabled ?? (
-    Number.isFinite(Number(params?.north))
-    && Number.isFinite(Number(params?.south))
-    && Number.isFinite(Number(params?.east))
-    && Number.isFinite(Number(params?.west))
-    && Number.isFinite(Number(params?.zoom))
-  ),
   getNextPageParam,
   placeholderData: getPlaceholderDataOption(options),
   queryFn: (/** @type {any} */ { pageParam = 1, signal }) => searchEventsMap({ ...params, page: pageParam }, { signal }),
@@ -68,6 +115,7 @@ export const useSearchEventsMap = (params = {}, options = {}) => useInfiniteQuer
   retry: options.retry ?? 0,
   staleTime: 30_000,
   ...options,
+  enabled: enabledWithSession(options, hasMapBounds(params)),
 });
 
 /**
@@ -75,7 +123,6 @@ export const useSearchEventsMap = (params = {}, options = {}) => useInfiniteQuer
  * @param {any} [options]
  */
 export const useSearchClubs = (params = {}, options = {}) => useInfiniteQuery({
-  enabled: Boolean(params?.q && String(params.q).trim().length >= 2),
   getNextPageParam,
   placeholderData: getPlaceholderDataOption(options),
   queryFn: (/** @type {any} */ { pageParam = 1, signal }) => searchClubs({ ...params, page: pageParam }, { signal }),
@@ -85,6 +132,7 @@ export const useSearchClubs = (params = {}, options = {}) => useInfiniteQuery({
   retry: options.retry ?? 0,
   staleTime: 30_000,
   ...options,
+  enabled: enabledWithSession(options, hasSearchText(params)),
 });
 
 /**
@@ -92,13 +140,6 @@ export const useSearchClubs = (params = {}, options = {}) => useInfiniteQuery({
  * @param {any} [options]
  */
 export const useSearchClubsMap = (params = {}, options = {}) => useInfiniteQuery({
-  enabled: options.enabled ?? (
-    Number.isFinite(Number(params?.north))
-    && Number.isFinite(Number(params?.south))
-    && Number.isFinite(Number(params?.east))
-    && Number.isFinite(Number(params?.west))
-    && Number.isFinite(Number(params?.zoom))
-  ),
   getNextPageParam,
   placeholderData: getPlaceholderDataOption(options),
   queryFn: (/** @type {any} */ { pageParam = 1, signal }) => searchClubsMap({ ...params, page: pageParam }, { signal }),
@@ -108,6 +149,7 @@ export const useSearchClubsMap = (params = {}, options = {}) => useInfiniteQuery
   retry: options.retry ?? 0,
   staleTime: 30_000,
   ...options,
+  enabled: enabledWithSession(options, hasMapBounds(params)),
 });
 
 /**
@@ -115,7 +157,6 @@ export const useSearchClubsMap = (params = {}, options = {}) => useInfiniteQuery
  * @param {any} [options]
  */
 export const useSearchReservations = (params = {}, options = {}) => useInfiniteQuery({
-  enabled: Boolean(params?.q && String(params.q).trim().length >= 2),
   getNextPageParam,
   placeholderData: getPlaceholderDataOption(options),
   queryFn: (/** @type {any} */ { pageParam = 1, signal }) => searchReservations({ ...params, page: pageParam }, { signal }),
@@ -125,6 +166,7 @@ export const useSearchReservations = (params = {}, options = {}) => useInfiniteQ
   retry: options.retry ?? 0,
   staleTime: 30_000,
   ...options,
+  enabled: enabledWithSession(options, hasSearchText(params)),
 });
 
 /**
@@ -132,7 +174,6 @@ export const useSearchReservations = (params = {}, options = {}) => useInfiniteQ
  * @param {any} [options]
  */
 export const useSearchRecruitment = (params = {}, options = {}) => useInfiniteQuery({
-  enabled: options.enabled ?? hasAnyActiveSearchParam(params),
   getNextPageParam,
   placeholderData: getPlaceholderDataOption(options),
   queryFn: (/** @type {any} */ { pageParam = 1, signal }) => searchRecruitment({ ...params, page: pageParam }, { signal }),
@@ -142,6 +183,7 @@ export const useSearchRecruitment = (params = {}, options = {}) => useInfiniteQu
   retry: options.retry ?? 0,
   staleTime: 30_000,
   ...options,
+  enabled: enabledWithSession(options, hasAnyActiveSearchParam(params)),
 });
 
 /**
@@ -149,7 +191,6 @@ export const useSearchRecruitment = (params = {}, options = {}) => useInfiniteQu
  * @param {any} [options]
  */
 export const useSearchProfiles = (params = {}, options = {}) => useInfiniteQuery({
-  enabled: options.enabled ?? true,
   getNextPageParam,
   placeholderData: getPlaceholderDataOption(options),
   queryFn: (/** @type {any} */ { pageParam = 1, signal }) => searchProfiles({ ...params, page: pageParam }, { signal }),
@@ -159,4 +200,5 @@ export const useSearchProfiles = (params = {}, options = {}) => useInfiniteQuery
   retry: options.retry ?? 0,
   staleTime: 30_000,
   ...options,
+  enabled: enabledWithSession(options, true),
 });

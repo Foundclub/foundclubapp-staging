@@ -1,5 +1,7 @@
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 
+import { getAuthTokens } from '@/domains/auth/authUseCases';
+
 import { getPlaceholderDataOption } from '@/services/queryOptions';
 
 import { buildNormalizedQueryKey } from '@/utils/queryKey';
@@ -48,6 +50,13 @@ export const useGetMultisportClubs = (params, options) => useInfiniteQuery({
   refetchOnMount: options?.refetchOnMount ?? false,
   staleTime: options?.staleTime ?? 30_000,
   ...options,
+  // SENTRY1 — ce crochet n'avait AUCUN `enabled` propre : il partait sans
+  // session et le serveur refusait. Mesure du 2026-09-05 : 4 refus `403` sur
+  // `GET /api/multisport-clubs` en production, et le refus se reproduit sans
+  // jeton (`curl https://api.foundclubpro.com/api/multisport-clubs` → 403).
+  // Posé APRÈS `...options` : ClubListContent.js:176 passe son propre
+  // `enabled`, qui garde le droit d'éteindre mais pas celui de rallumer.
+  enabled: Boolean(getAuthTokens()?.token) && (options?.enabled ?? true),
 });
 
 /**

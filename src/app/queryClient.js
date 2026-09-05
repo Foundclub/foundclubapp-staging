@@ -118,7 +118,7 @@ export const shouldSkipMutationErrorAlert = (error, mutation) => {
 
 /**
  * @param {{
- *   captureQueryError?: (error: unknown) => void,
+ *   captureQueryError?: (error: unknown, query?: any) => void,
  *   onMutationError?: (error: unknown, fallbackMessage?: string) => void
  * }} [options]
  * @returns {import('@tanstack/react-query').QueryClient}
@@ -166,9 +166,12 @@ export const createFoundClubQueryClient = (options = {}) => {
       },
     }),
     queryCache: new QueryCache({
-      onError: (error) => {
+      // SENTRY1 — la `query` voyage avec l'erreur : c'est elle qui dit d'OU
+      // vient le refus. Le code seul ne suffit pas, `EVENT_FIND_ERROR` etant le
+      // fourre-tout du controleur d'evenements (voir sentryAllowList.js).
+      onError: (error, query) => {
         if (typeof captureQueryError === 'function') {
-          captureQueryError(error);
+          captureQueryError(error, query);
         }
       },
     }),
