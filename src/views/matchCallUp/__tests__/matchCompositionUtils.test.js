@@ -252,7 +252,10 @@ describe('l aimantation est un interrupteur, pas une fatalite', () => {
   test('poser sur un poste occupe : le nouveau le prend, l ancien retourne au banc', () => {
     const gardien = postes[0];
     const occupe = [{
-      playerId: 'p1', positionX: gardien.positionX, positionY: gardien.positionY, slotId: gardien.slotId,
+      playerId: 'p1',
+      positionX: gardien.positionX,
+      positionY: gardien.positionY,
+      slotId: gardien.slotId,
     }];
     const apres = placePlayerAt({
       magnetEnabled: true,
@@ -276,10 +279,16 @@ describe('l aimantation est un interrupteur, pas une fatalite', () => {
     const arriere = postes[1];
     const terrain = [
       {
-        playerId: 'p1', positionX: gardien.positionX, positionY: gardien.positionY, slotId: gardien.slotId,
+        playerId: 'p1',
+        positionX: gardien.positionX,
+        positionY: gardien.positionY,
+        slotId: gardien.slotId,
       },
       {
-        playerId: 'p0', positionX: arriere.positionX, positionY: arriere.positionY, slotId: arriere.slotId,
+        playerId: 'p0',
+        positionX: arriere.positionX,
+        positionY: arriere.positionY,
+        slotId: arriere.slotId,
       },
     ];
     const apres = placePlayerAt({
@@ -302,7 +311,10 @@ describe('l aimantation est un interrupteur, pas une fatalite', () => {
     const apres = placePlayerAt({
       magnetEnabled: true,
       placements: [{
-        playerId: 'p1', positionX: gardien.positionX, positionY: gardien.positionY, slotId: gardien.slotId,
+        playerId: 'p1',
+        positionX: gardien.positionX,
+        positionY: gardien.positionY,
+        slotId: gardien.slotId,
       }],
       playerId: 'p0',
       slots: [gardien],

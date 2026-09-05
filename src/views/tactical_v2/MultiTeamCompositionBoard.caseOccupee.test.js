@@ -1,9 +1,10 @@
 // @ts-nocheck
 import renderer, { act } from 'react-test-renderer';
 
+import { saveEventCompositionDraft } from '@/services/event/eventService';
+
 import MultiTeamCompositionBoard from './MultiTeamCompositionBoard';
 import { normalizeMultiTeamPack } from './multiTeamCompositionUtils';
-import { saveEventCompositionDraft } from '@/services/event/eventService';
 
 // 👻 LOT COMPO — « UN JOUEUR POSE SUR UNE CASE OCCUPEE DISPARAIT ».
 //
@@ -21,6 +22,12 @@ import { saveEventCompositionDraft } from '@/services/event/eventService';
 //   T2 — il y a autant de jetons DESSINES que d'occupants ENREGISTRES : c'est le
 //        temoin qui aurait attrape le « 4 visibles pour 3 occupants ».
 //   T3 — ce qui part au serveur, relu comme au rechargement, reste coherent.
+
+// ⏱️ Ce plateau fait 1 986 lignes et chaque temoin le monte en entier. Sous
+// charge — trois lots qui tournent sur la meme machine — un montage a depasse
+// les 5 s par defaut de Jest et la suite est tombee SANS aucun test rouge.
+// 30 s est le seuil deja retenu par les autres suites lourdes du depot.
+jest.setTimeout(30000);
 
 /** @type {any[]} */
 const mockPaywallProps = [];
@@ -40,13 +47,13 @@ jest.mock('react-native-gesture-handler', () => {
   const reactActuel = jest.requireActual('react');
   const { View: VueRN } = jest.requireActual('react-native');
   const constructeurGeste = () => {
-    const geste = { __estUnPan: true, __onEnd: null };
+    const geste = { estUnPan: true, rappelDeFin: null };
     ['activateAfterLongPress', 'minDistance', 'onStart', 'onUpdate', 'onFinalize']
       .forEach((nom) => {
         geste[nom] = () => geste;
       });
     geste.onEnd = (rappel) => {
-      geste.__onEnd = rappel;
+      geste.rappelDeFin = rappel;
       return geste;
     };
     return geste;
@@ -58,7 +65,7 @@ jest.mock('react-native-gesture-handler', () => {
       VueRN,
       {
         accessibilityLabel: 'zone-glissable',
-        onLacher: (absoluteX, absoluteY) => gesture?.__onEnd?.({ absoluteX, absoluteY }),
+        onLacher: (absoluteX, absoluteY) => gesture?.rappelDeFin?.({ absoluteX, absoluteY }),
       },
       children,
     ),
@@ -193,17 +200,39 @@ const PRESET_433 = {
   key: '4-3-3',
   label: '4-3-3',
   slots: [
-    { key: 'gk', label: 'GB', positionX: 50, positionY: 92 },
-    { key: 'lb', label: 'DG', positionX: 18, positionY: 74 },
-    { key: 'lcb', label: 'DC', positionX: 38, positionY: 74 },
-    { key: 'rcb', label: 'DC2', positionX: 62, positionY: 74 },
-    { key: 'rb', label: 'DD', positionX: 82, positionY: 74 },
-    { key: 'lm', label: 'MG', positionX: 30, positionY: 52 },
-    { key: 'cm', label: 'MC', positionX: 50, positionY: 55 },
-    { key: 'rm', label: 'MD', positionX: 70, positionY: 52 },
-    { key: 'lw', label: 'AG', positionX: 20, positionY: 26 },
-    { key: 'st', label: 'BU', positionX: 50, positionY: 18 },
-    { key: 'rw', label: 'AD', positionX: 80, positionY: 26 },
+    {
+      key: 'gk', label: 'GB', positionX: 50, positionY: 92,
+    },
+    {
+      key: 'lb', label: 'DG', positionX: 18, positionY: 74,
+    },
+    {
+      key: 'lcb', label: 'DC', positionX: 38, positionY: 74,
+    },
+    {
+      key: 'rcb', label: 'DC2', positionX: 62, positionY: 74,
+    },
+    {
+      key: 'rb', label: 'DD', positionX: 82, positionY: 74,
+    },
+    {
+      key: 'lm', label: 'MG', positionX: 30, positionY: 52,
+    },
+    {
+      key: 'cm', label: 'MC', positionX: 50, positionY: 55,
+    },
+    {
+      key: 'rm', label: 'MD', positionX: 70, positionY: 52,
+    },
+    {
+      key: 'lw', label: 'AG', positionX: 20, positionY: 26,
+    },
+    {
+      key: 'st', label: 'BU', positionX: 50, positionY: 18,
+    },
+    {
+      key: 'rw', label: 'AD', positionX: 80, positionY: 26,
+    },
   ],
 };
 
@@ -250,7 +279,8 @@ const monter = (params) => {
 };
 
 const trouverParLibelle = (arbre, libelle) => arbre.root.findAll(
-  (noeud) => noeud.props?.accessibilityLabel === libelle && typeof noeud.props?.onPress === 'function',
+  (noeud) => noeud.props?.accessibilityLabel === libelle
+    && typeof noeud.props?.onPress === 'function',
 );
 
 const appuyerSur = (arbre, libelle) => {
@@ -263,36 +293,35 @@ const appuyerSur = (arbre, libelle) => {
 
 const allerAuTerrain = (arbre) => appuyerSur(arbre, 'Suivant');
 
-/**
- * Declenche la mesure du terrain, comme le ferait la mise en page native.
- *
- * 🪤 LE PIEGE QUI M'A COUTE UN TOUR : le preset Jest de React Native remplace
- * `View` par une CLASSE, donc la `ref` du terrain recoit l'instance de cette
- * classe — pas le noeud hote. `createNodeMock` n'est alors jamais consulte et
- * `measureInWindow` n'existe nulle part : `measureField` sortait aussitot, le
- * rectangle du terrain restait vide, et TOUS les lachers tombaient « hors
- * terrain ». On pose donc la mesure sur l'instance elle-meme.
- */
+// Declenche la mesure du terrain, comme le ferait la mise en page native.
+//
+// 🪤 LE PIEGE QUI M'A COUTE UN TOUR : le preset Jest de React Native remplace
+// `View` par une CLASSE, donc la `ref` du terrain recoit l'instance de cette
+// classe — pas le noeud hote. `createNodeMock` n'est alors jamais consulte et
+// `measureInWindow` n'existe nulle part : `measureField` sortait aussitot, le
+// rectangle du terrain restait vide, et TOUS les lachers tombaient « hors
+// terrain ». On pose donc la mesure sur l'instance elle-meme.
 const mesurerLeTerrain = (arbre) => {
   const surfaces = arbre.root.findAll(
-    (noeud) => typeof noeud.props?.onLayout === 'function' && noeud.props?.collapsable === false,
+    (noeud) => typeof noeud.props?.onLayout === 'function'
+      && noeud.props?.collapsable === false,
   );
   act(() => {
     surfaces.forEach((surface) => {
-      if (surface.instance) {
-        surface.instance.measureInWindow = (rappel) => rappel(
-          TERRAIN.x, TERRAIN.y, TERRAIN.width, TERRAIN.height,
-        );
+      const { instance } = surface;
+      const {
+        height, width, x, y,
+      } = TERRAIN;
+      if (instance) {
+        instance.measureInWindow = (rappel) => rappel(x, y, width, height);
       }
       surface.props.onLayout();
     });
   });
 };
 
-/**
- * Lache le joueur nomme `nom` sur le terrain, au point (`xPct`, `yPct`).
- * Entre par le MEME `onEnd` que le fil UI : aucun doigt, aucun `adb`.
- */
+// Lache le joueur nomme `nom` sur le terrain, au point (`xPct`, `yPct`).
+// Entre par le MEME `onEnd` que le fil UI : aucun doigt, aucun `adb`.
 const lacherSurLeTerrain = (arbre, nom, xPct, yPct) => {
   const zones = arbre.root.findAll(
     (noeud) => noeud.props?.accessibilityLabel === 'zone-glissable'
@@ -312,7 +341,7 @@ const lacherSurLeTerrain = (arbre, nom, xPct, yPct) => {
   });
 };
 
-/** Tous les noeuds « jeton de joueur » dessines a l'interieur d'un terrain. */
+// Tous les noeuds « jeton de joueur » dessines a l'interieur d'un terrain.
 const noeudsDesJetons = (arbre) => {
   const surfaces = arbre.root.findAll(
     (noeud) => noeud.props?.accessibilityLabel === 'surface-terrain',
@@ -324,16 +353,14 @@ const noeudsDesJetons = (arbre) => {
   ));
 };
 
-/**
- * Les joueurs DESSINES sur le terrain, une fois chacun (ce que l'oeil compte).
- * On dedoublonne : l'arbre de test rend le meme jeton sous plusieurs noeuds
- * imbriques, et on mesure des PERSONNES, pas des noeuds.
- */
+// Les joueurs DESSINES sur le terrain, une fois chacun (ce que l'oeil compte).
+// On dedoublonne : l'arbre de test rend le meme jeton sous plusieurs noeuds
+// imbriques, et on mesure des PERSONNES, pas des noeuds.
 const jetonsDessinesSurLeTerrain = (arbre) => Array.from(new Set(
   noeudsDesJetons(arbre).map((noeud) => noeud.props.accessibilityLabel),
 ));
 
-/** Ou chaque joueur est dessine, en « gauche/haut ». */
+// Ou chaque joueur est dessine, en « gauche/haut ».
 const positionDesJetons = (arbre) => {
   const parJoueur = new Map();
   noeudsDesJetons(arbre).forEach((noeud) => {
@@ -343,7 +370,7 @@ const positionDesJetons = (arbre) => {
   return parJoueur;
 };
 
-/** Les noms encore proposes au banc (les pastilles de la reserve). */
+// Les noms encore proposes au banc (les pastilles de la reserve).
 const joueursAuBanc = (arbre) => JOUEURS
   .map(nomDe)
   .filter((nom) => {
@@ -356,19 +383,24 @@ const joueursAuBanc = (arbre) => JOUEURS
     return !surLeTerrain && trouverParLibelle(arbre, nom).length > 0;
   });
 
-/** Le pack tel qu'il partirait au serveur si on appuyait sur « Sauvegarder ». */
+// Le pack tel qu'il partirait au serveur si on appuyait sur « Sauvegarder ».
+//
+// 🔒 On VIDE les appels avant d'appuyer, et on exige qu'il y en ait exactement
+// un apres. Sans ce garde-fou, un appui sans effet rendrait silencieusement le
+// pack de l'appui PRECEDENT : le temoin mesurerait alors un etat perime en
+// croyant lire le neuf — un faux vert, la pire des sorties.
 const packEnvoyeAuServeur = async (arbre) => {
+  saveEventCompositionDraft.mockClear();
   saveEventCompositionDraft.mockResolvedValue({ draft: null });
   await act(async () => {
     appuyerSur(arbre, 'Sauvegarder');
   });
-  const [, charge] = saveEventCompositionDraft.mock.calls[
-    saveEventCompositionDraft.mock.calls.length - 1
-  ];
+  expect(saveEventCompositionDraft).toHaveBeenCalledTimes(1);
+  const [, charge] = saveEventCompositionDraft.mock.calls[0];
   return charge.draft;
 };
 
-/** Les postes REELLEMENT tenus dans un pack : un placement accroche a un poste. */
+// Les postes REELLEMENT tenus dans un pack : un placement accroche a un poste.
 const postesTenus = (pack) => (pack?.teams?.[0]?.placements || [])
   .filter((placement) => Boolean(placement?.slotId));
 
@@ -490,4 +522,3 @@ describe('COMPO — poser un joueur sur un poste DEJA OCCUPE', () => {
     expect(joueursAuBanc(arbre)).toEqual([nomDe(LEA)]);
   });
 });
-
