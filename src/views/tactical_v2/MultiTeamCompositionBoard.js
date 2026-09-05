@@ -731,23 +731,51 @@ function MultiTeamCompositionBoard({ routeParams = null }) {
     setActiveDragPlayer(player);
   }, [measureAllFields, readOnly]);
 
+  // 👻 COMPO — POSER QUELQU'UN SUR UN POSTE OCCUPE NE FAIT PLUS DISPARAITRE PERSONNE.
+  //
+  // 🚨 LE DEFAUT, MESURE (temoin `MultiTeamCompositionBoard.caseOccupee.test.js`,
+  // 6 rouges) : l'aimantation IGNORAIT les postes tenus (`if (occupied.has(...))
+  // return`). Lacher un joueur sur l'Avant-centre deja pris ne trouvait donc
+  // aucun poste libre dans le rayon — les voisins sont a 31 points pour un rayon
+  // de 14 — et fabriquait un placement SANS POSTE, pose au pixel du doigt, donc
+  // DESSINE PAR-DESSUS l'occupant. Resultat a l'ecran : le nouveau venu a quitte
+  // le banc, ne tient aucun poste, et son jeton est cache sous l'autre. Le coach
+  // le voit disparaitre. Et comme le pack part tel quel au serveur, c'est
+  // ENREGISTRE : l'app rouverte reaffiche la meme incoherence.
+  //
+  // ✅ LA REGLE ECRITE ICI (choix (b) du lot, defendu dans le compte rendu) :
+  // le nouveau venu PREND le poste, et l'ancien occupant ne disparait jamais —
+  // il reprend la place que le nouveau venait de quitter sur ce meme terrain
+  // (les deux ECHANGENT), et a defaut — le nouveau venait du banc — il RETOURNE
+  // AU BANC. Aucun des deux n'est perdu, dans aucun des deux cas.
+  //
+  // ⚠️ Ce qui n'a PAS change : le placement libre. Hors du rayon d'un poste, ou
+  // en mode `free`, le jeton se pose toujours a l'endroit exact du doigt. C'est
+  // le modele hybride assume par `normalizePlacement` — on ne le touche pas.
   const dropPlayerOnTeam = useCallback((playerId, targetTeamEntryId, xPct, yPct) => {
     updateDraftPack((currentPack) => {
       const teams = Array.isArray(currentPack?.teams) ? currentPack.teams : [];
+      // D'ou vient le joueur SUR CE TERRAIN, lu AVANT de le decrocher : c'est
+      // cette place-la que l'ancien occupant reprendra en cas d'echange.
+      const targetTeam = teams.find((team) => team?.id === targetTeamEntryId) || null;
+      const previousPlacement = (Array.isArray(targetTeam?.placements)
+        ? targetTeam.placements : [])
+        .find((entry) => String(entry?.playerId || '') === String(playerId)) || null;
       const detached = detachPlayerEverywhere(teams, playerId);
       const useSlots = currentPack?.placementMode !== 'free';
       const nextTeams = detached.map((team) => {
         if (team?.id !== targetTeamEntryId) return team;
         const slots = Array.isArray(team?.slots) ? team.slots : [];
         const placements = Array.isArray(team?.placements) ? team.placements : [];
-        const occupied = new Set(placements.map((entry) => entry?.slotId).filter(Boolean));
 
-        // Mode « sur postes » : on accroche au poste libre le plus proche (dans le rayon).
+        // Mode « sur postes » : on accroche au poste le plus proche dans le
+        // rayon, QU'IL SOIT TENU OU NON. C'est la ligne qui repare le defaut :
+        // un poste occupe est une CIBLE, plus un obstacle qu'on contourne en
+        // silence.
         let snappedSlot = null;
         if (useSlots) {
           let bestDist = Infinity;
           slots.forEach((slot) => {
-            if (occupied.has(slot?.slotId)) return;
             const dx = clampPercent(slot?.positionX) - xPct;
             const dy = clampPercent(slot?.positionY) - yPct;
             const dist = Math.sqrt((dx * dx) + (dy * dy));
@@ -759,20 +787,33 @@ function MultiTeamCompositionBoard({ routeParams = null }) {
           if (!snappedSlot || bestDist > SNAP_RADIUS) snappedSlot = null;
         }
 
-        const placement = snappedSlot
-          ? {
-            playerId: String(playerId),
-            positionX: clampPercent(snappedSlot.positionX),
-            positionY: clampPercent(snappedSlot.positionY),
-            slotId: snappedSlot.slotId,
-          }
-          : {
-            playerId: String(playerId),
-            positionX: xPct,
-            positionY: yPct,
-            slotId: null,
+        if (!snappedSlot) {
+          return {
+            ...team,
+            placements: [...placements, {
+              playerId: String(playerId),
+              positionX: xPct,
+              positionY: yPct,
+              slotId: null,
+            }],
           };
-        return { ...team, placements: [...placements, placement] };
+        }
+
+        const displaced = placements
+          .find((entry) => entry?.slotId === snappedSlot.slotId) || null;
+        const kept = placements.filter((entry) => entry !== displaced);
+        const arrival = {
+          playerId: String(playerId),
+          positionX: clampPercent(snappedSlot.positionX),
+          positionY: clampPercent(snappedSlot.positionY),
+          slotId: snappedSlot.slotId,
+        };
+        // L'ancien occupant : a la place laissee libre par le nouveau venu, ou
+        // au banc quand il n'y en a pas. Jamais nulle part.
+        const swapped = displaced && previousPlacement
+          ? [{ ...previousPlacement, playerId: String(displaced.playerId) }]
+          : [];
+        return { ...team, placements: [...kept, arrival, ...swapped] };
       });
       return { ...currentPack, teams: nextTeams };
     });
