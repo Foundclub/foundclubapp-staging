@@ -51,12 +51,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { formatBootMeta, markBootStep } from '@/utils/performance/bootPerformance';
 
-const isAxiosError = (error) => Boolean(
-  error
-  && typeof error === 'object'
-  && /** @type {{ isAxiosError?: unknown }} */ (error).isAxiosError === true,
-);
-
 /**
  * @param {unknown} rawValue
  * @param {number} fallbackValue
@@ -153,10 +147,15 @@ if (__DEV__) {
 }
 
 const queryClient = buildFoundClubQueryClient({
-  captureQueryError: (/** @type {unknown} */ error) => {
-    const typedError = /** @type {any} */ (error);
-    const shouldSkip = isAxiosError(typedError) && isInSentryExceptionsAllowList(typedError);
-    if (isSentryEnabled && !shouldSkip) {
+  // SENTRY1 — le garde `isAxiosError(...)` qui se trouvait ici rendait la liste
+  // blanche INATTEIGNABLE. Les intercepteurs de reponse rejettent la charge
+  // DEBALLEE `error.response.data.error` (client.native.js:88), donc une erreur
+  // applicative Strapi n'a jamais `isAxiosError` : la condition etait toujours
+  // fausse et TOUT partait, y compris les 401 qu'on croyait filtres depuis des
+  // mois. Preuve : Sentry REACT-NATIVE-2 du 2026-09-05, « Object captured as
+  // exception with keys: details, message, name, status ».
+  captureQueryError: (/** @type {unknown} */ error, /** @type {any} */ query) => {
+    if (isSentryEnabled && !isInSentryExceptionsAllowList(error, query)) {
       Sentry.captureException(error);
     }
   },
