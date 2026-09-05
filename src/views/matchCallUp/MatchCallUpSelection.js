@@ -321,14 +321,6 @@ function MatchCallUpSelection() {
     [manualPlayers, reinforcementPlayers, selectedIds, sport],
   );
 
-  const openManualPlayerScreen = useCallback(() => {
-    // @ts-ignore
-    navigation.navigate(RouteNames.MatchCallUpManualPlayer, {
-      returnParams: params,
-      teamName,
-    });
-  }, [navigation, params, teamName]);
-
   // 🧨 COMPOMODIF (M4) — LA 4e SOURCE, ET C'EST ELLE QUI EMPECHE LA PERTE.
   //
   // Un convoque coche doit ressortir d'ici, sinon il est efface EN SILENCE.
@@ -356,6 +348,33 @@ function MatchCallUpSelection() {
     return [...parIdentifiant.values()]
       .filter((player) => selectedIds.has(getCompositionPlayerId(player)));
   }, [convoquesRecus, manualPlayers, reinforcementPlayers, selectedIds, squadPlayers]);
+
+  // 👻 LOT COMPO (2026-09-05) — LE 2e JOUEUR HORS APP EFFACAIT LE 1er.
+  //
+  // 🔬 Mesure sur l'emulateur, reproduite 3 fois : on ajoute Zoe Roux, la liste
+  // dit « DÉJÀ AJOUTÉS · 1 » ; on ajoute Nino Garcia, elle dit encore
+  // « DÉJÀ AJOUTÉS · 1 » — et Zoe n'y est plus. Un coach ne pouvait donc pas
+  // composer une equipe de joueurs hors app : il n'en gardait qu'un.
+  //
+  // 🧨 LA CAUSE est celle que COMPOMODIF (M4) a deja corrigee POUR L'AUTRE
+  // PORTE, et elle etait restee ici : on transmettait `params` TEL QUEL, donc
+  // l'instantane des parametres au moment de l'ouverture. L'ecran 3 revient par
+  // `navigate`, qui REMONTE cet ecran a neuf (voir le commentaire de l'amorce
+  // ci-dessus) : l'amorce repart de cet instantane perime, ou le joueur du tour
+  // precedent n'existe pas, et seul `pendingManualPlayer` en rajoute UN.
+  //
+  // ♻️ Rien de neuf n'est fabrique : `selectedPlayers` — la verite du moment —
+  // est deja calculee juste au-dessus et deja transmise au terrain par
+  // `goToComposition`. On la transmet aussi a l'ecran 3.
+  // 🔒 `pendingManualPlayer: undefined` est efface expres : sans ca, l'ancien
+  // joueur reviendrait en parametre au tour suivant et se rajouterait deux fois.
+  const openManualPlayerScreen = useCallback(() => {
+    // @ts-ignore
+    navigation.navigate(RouteNames.MatchCallUpManualPlayer, {
+      returnParams: { ...params, pendingManualPlayer: undefined, selectedPlayers },
+      teamName,
+    });
+  }, [navigation, params, selectedPlayers, teamName]);
 
   const goToComposition = useCallback(() => {
     setAbsentsToConfirm(null);

@@ -1050,3 +1050,58 @@ describe('AC09 — voir qui a repondu avant de convoquer', () => {
     },
   );
 });
+
+// 👻 LOT COMPO (2026-09-05) — LE 2e JOUEUR HORS APP EFFACAIT LE 1er.
+//
+// 🔬 MESURE SUR LE BANC D'ESSAI, reproduite 3 fois de suite (emulateur, compte
+// Dirigeant +33644444444) : on ajoute Zoe Roux, la liste dit « DÉJÀ AJOUTÉS · 1 ».
+// On ajoute Nino Garcia, elle dit encore « DÉJÀ AJOUTÉS · 1 » — et Zoe n'y est
+// plus. Un coach ne pouvait donc PAS composer une equipe de joueurs hors app.
+//
+// 🧨 LA CAUSE, et c'est exactement le defaut que COMPOMODIF (M4) avait deja
+// corrige POUR L'AUTRE PORTE : `openManualPlayerScreen` transmettait
+// `returnParams: params` — l'INSTANTANE des parametres au moment de l'ouverture.
+// L'ecran 3 revient par `navigate`, qui REMONTE cet ecran a neuf ; l'amorce
+// repart alors de cet instantane perime, ou le joueur du tour precedent n'existe
+// pas, et seul `pendingManualPlayer` en rajoute UN.
+//
+// ♻️ Rien de neuf : `goToComposition` transmettait DEJA `selectedPlayers`, la
+// verite du moment. On la transmet aussi a l'ecran 3 (§1 bis, barreau 2).
+describe('COMPO — ajouter un 2e joueur hors app ne perd pas le 1er', () => {
+  const zoe = {
+    documentId: 'manual_1', firstname: 'Zoe', id: 'manual_1', isManual: true, lastname: 'Roux',
+  };
+  const nino = {
+    documentId: 'manual_2', firstname: 'Nino', id: 'manual_2', isManual: true, lastname: 'Garcia',
+  };
+
+  test('l ecran 3 recoit la verite du moment, pas l instantane de l ouverture', async () => {
+    const arbre = await rendre({ pendingManualPlayer: zoe });
+    await appuyerSur(arbre, "Nom, prénom et numéro, pour un joueur sans l'app");
+
+    const [, parametres] = mockNavigate.mock.calls[0];
+    const nomsRendus = (parametres.returnParams.selectedPlayers || [])
+      .map((/** @type {any} */ personne) => `${personne.firstname} ${personne.lastname}`);
+    expect(nomsRendus).toContain('Zoe Roux');
+  });
+
+  test('le tour complet : les DEUX joueurs restent dans la liste', async () => {
+    // Tour 1 : Zoe arrive de l'ecran 3.
+    const premier = await rendre({ pendingManualPlayer: zoe });
+    await appuyerSur(premier, "Nom, prénom et numéro, pour un joueur sans l'app");
+    const [, parametres] = mockNavigate.mock.calls[0];
+
+    // Tour 2 : l'ecran 3 revient avec Nino, en rendant les parametres qu'il a
+    // recus — c'est le VRAI chemin, et il remonte cet ecran a neuf.
+    const second = await rendre({
+      ...parametres.returnParams,
+      pendingManualPlayer: nino,
+    });
+
+    const texte = texteVisible(second);
+    expect(texte).toContain('Zoe Roux');
+    expect(texte).toContain('Nino Garcia');
+    expect(texte).toContain('DÉJÀ AJOUTÉS · 2');
+    expect(texte).toContain('2 convoqués');
+  });
+});
