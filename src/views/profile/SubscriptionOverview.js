@@ -6,7 +6,7 @@ import {
 } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  Alert, Image, ScrollView, Text, TouchableOpacity, View,
+  Alert, Image, Platform, ScrollView, Text, TouchableOpacity, View,
 } from 'react-native';
 
 import { getUserRoleKey } from '@/domains/auth/authUseCases';
@@ -507,6 +507,27 @@ function SubscriptionOverview({ navigation, route }) {
    * si on ne peut pas ouvrir, on DIT pourquoi.
    */
   const handleManageWebSubscription = useCallback(async () => {
+    // 🍎 Apple 3.1.3(a) — une app iOS ne renvoie pas vers une page de PAIEMENT
+    // externe. Cette ligne ouvrait le portail de facturation Stripe dans le
+    // navigateur, depuis un ecran iPhone.
+    //
+    // ⚠️ On ne SUPPRIME pas la ligne : elle est la seule porte de sortie d'un
+    // abonne web (ABO-FIX/R3), et l'app lui promet « resiliable a tout moment ».
+    // On garde la porte et on change ce qu'il y a derriere : sur iOS on DIT ou
+    // aller, sans ouvrir le navigateur et sans montrer d'adresse de paiement.
+    // Android et le web gardent le portail : leurs magasins n'interdisent rien ici.
+    if (Platform.OS === 'ios') {
+      Alert.alert(
+        t('profile.subscription.actions.manageWebIosTitle', 'Abonnement pris sur notre site'),
+        t(
+          'profile.subscription.actions.manageWebIosBody',
+          'Cet abonnement n\'a pas ete achete sur l\'App Store : il a ete souscrit sur notre site.'
+            + ' Vous pouvez le gerer ou le resilier depuis votre navigateur, avec le meme compte.'
+            + ' Ecrivez-nous si vous avez besoin d\'aide.',
+        ),
+      );
+      return;
+    }
     try {
       const portal = await openSubscriptionManagementPortal();
       if (portal?.opened) return;
@@ -774,7 +795,12 @@ function SubscriptionOverview({ navigation, route }) {
                 icon: 'euroCircle',
                 label: t('profile.subscription.actions.manageWeb', 'Gerer ou resilier mon abonnement'),
                 onPress: handleManageWebSubscription,
-                right: t('profile.subscription.actions.manageWebHint', 'Site de paiement'),
+                // 🍎 « Site de paiement » est exactement le mot qu'un examinateur
+                // Apple releve sous 3.1.3(a). Sur iOS on nomme la MEME chose sans
+                // pointer une caisse : l'origine de l'abonnement.
+                right: Platform.OS === 'ios'
+                  ? t('profile.subscription.actions.manageWebHintIos', 'Souscrit sur notre site')
+                  : t('profile.subscription.actions.manageWebHint', 'Site de paiement'),
                 withDivider: true,
               }) : null}
             </>

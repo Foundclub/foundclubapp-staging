@@ -3673,6 +3673,13 @@ export default {
           + ' pour le moment. Écrivez-nous et nous nous en occupons.',
         manageWebErrorTitle: 'Gestion indisponible',
         manageWebHint: 'Site de paiement',
+        // 🍎 Apple 3.1.3(a) : sur iOS on ne pointe pas une caisse externe. Ces
+        // deux clés disent la même chose sans ouvrir de page de paiement.
+        manageWebHintIos: 'Souscrit sur notre site',
+        manageWebIosBody: 'Cet abonnement n\'a pas été acheté sur l\'App Store : il a été souscrit'
+          + ' sur notre site. Vous pouvez le gérer ou le résilier depuis votre navigateur, avec le'
+          + ' même compte. Écrivez-nous si vous avez besoin d\'aide.',
+        manageWebIosTitle: 'Abonnement pris sur notre site',
         restore: 'Restaurer mes achats',
         viewClub: 'Voir mon club',
         viewClubHint: 'Demandes · certification',

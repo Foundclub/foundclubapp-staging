@@ -1,4 +1,4 @@
-import { Text, TouchableOpacity } from 'react-native';
+import { Platform, Text, TouchableOpacity } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
 import SubscriptionOverview from '../SubscriptionOverview';
@@ -240,10 +240,17 @@ const rendre = () => {
   return arbre;
 };
 
+const plateformeDorigine = Platform.OS;
+
 beforeEach(() => {
   jest.clearAllMocks();
   mockPortal.mockResolvedValue({ opened: true, reason: 'ok' });
   mockAuthValue = contexteAuth('web');
+  Platform.OS = 'android';
+});
+
+afterAll(() => {
+  Platform.OS = plateformeDorigine;
 });
 
 describe('ABO-FIX/R3 — la porte de sortie de l\'abonne web', () => {
@@ -279,5 +286,49 @@ describe('ABO-FIX/R3 — la porte de sortie de l\'abonne web', () => {
 
     expect(mockAlert).toHaveBeenCalledTimes(1);
     expect(String(mockAlert.mock.calls[0][0])).toContain('Gestion indisponible');
+  });
+
+  // 🍎 R3/d — AJOUTE LE 2026-09-06, apres le refus d'Apple sur la regle 3.1.2.
+  //
+  // La regle voisine, 3.1.3(a), interdit a une app iOS de renvoyer vers une
+  // page de PAIEMENT externe. Or cette ligne ouvrait le portail de facturation
+  // Stripe dans le navigateur — depuis un ecran iPhone.
+  //
+  // ⚠️ CE QU'ON NE FAIT PAS : supprimer la ligne. Elle est la SEULE porte de
+  // sortie d'un abonne web (c'est tout l'objet de R3/a ci-dessus), et l'app lui
+  // promet « resiliable a tout moment ». On garde la porte, on change ce qu'il y
+  // a derriere : sur iOS on EXPLIQUE au lieu d'ouvrir le navigateur.
+  describe('🍎 R3/d — sur iOS, aucune sortie vers une page de paiement', () => {
+    beforeEach(() => {
+      Platform.OS = 'ios';
+    });
+
+    test('la ligne existe toujours : l\'abonne web n\'est pas laisse sans issue', () => {
+      expect(pressablesPortant(rendre(), LIBELLE_LIGNE)).toHaveLength(1);
+    });
+
+    test('elle N\'OUVRE PAS le navigateur et dit ou gerer l\'abonnement', async () => {
+      const arbre = rendre();
+
+      await act(async () => {
+        pressablesPortant(arbre, LIBELLE_LIGNE)[0].props.onPress();
+      });
+
+      expect(mockPortal).not.toHaveBeenCalled();
+      expect(mockAlert).toHaveBeenCalledTimes(1);
+      expect(String(mockAlert.mock.calls[0][1])).toMatch(/navigateur/i);
+    });
+
+    test('aucune adresse de paiement n\'est montree a l\'ecran', async () => {
+      const arbre = rendre();
+
+      await act(async () => {
+        pressablesPortant(arbre, LIBELLE_LIGNE)[0].props.onPress();
+      });
+
+      const dit = mockAlert.mock.calls[0].join(' ');
+      expect(dit).not.toMatch(/https?:\/\//);
+      expect(dit).not.toMatch(/stripe/i);
+    });
   });
 });
