@@ -88,6 +88,9 @@ import {
   rejectFeatured,
 } from '@/services/event/eventService';
 import { useGetEventParticipations } from '@/services/eventParticipation/eventParticipationQueries';
+
+// import statique (pas require) : require n'existe pas sur le rendu web ESM.
+import SharePlatform from '@/platform/share';
 // 🧾 N2 — AUCUN MODULE NOUVEAU N'ENTRE ICI : `licenseQueries` etait deja
 // importe pour `useLicenseCampaigns`. Les deux fonctions de service qui
 // s'ajoutent sont des RE-EXPORTS du meme fichier, et elles ne sont appelees que
@@ -165,9 +168,6 @@ import {
   isTournamentTeamNonCompliant,
   normalizeTournamentText,
 } from './tournamentUtils';
-
-// import statique (pas require) : require n'existe pas sur le rendu web ESM.
-import SharePlatform from '@/platform/share';
 
 const EVENT_DETAILS_STALE_MS = 30_000;
 // D53 — `FLOATING_MANAGE_CLEARANCE = 80` a disparu d'ici, et le motif est
@@ -407,7 +407,6 @@ const getStageDayStatusSummary = (stageDay) => {
  * ⛔ Un compteur absent (`null`, `undefined`, `NaN`) rend le libelle NU plutot
  * que « Répartition · 0 » : la planche 04 donne un effectif a tous les onglets
  * SAUF « Répartition », qui ne compte rien.
- *
  * @param {string} label Le nom de l'onglet.
  * @param {number} [count] L'effectif, quand cet onglet en a un.
  * @returns {string} Le libelle a afficher.
@@ -6903,7 +6902,6 @@ function EventDetails({ navigation, route }) {
    * ⛔ AUCUN LIBELLE N'EST INVENTE ICI : les six existaient deja dans le
    * panneau de tete. C'est un DEPLACEMENT, pas un elargissement de droits —
    * les conditions sont reprises telles quelles, dans le meme ordre.
-   *
    * @returns {{ onPress: () => void, title: string } | null}
    */
   const getTournamentPrimaryAction = () => {
