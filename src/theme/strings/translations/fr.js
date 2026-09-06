@@ -2762,18 +2762,29 @@ export default {
     sports: {
       basketball: 'Basketball',
       football: 'Football',
+      futsal: 'Futsal',
       generic: 'Terrain',
       handball: 'Handball',
-      rugby: 'Rugby',
+      rugby: 'Rugby à XV',
+      rugby13: 'Rugby à XIII',
       volleyball: 'Volleyball',
     },
     start: {
       actions: {
         openField: 'Ouvrir le terrain',
       },
+      autoPlace: {
+        none: 'Aucun convoqué n’a renseigné son poste : ils partent tous du banc.',
+        subtitle_one: '{{count}} convoqué a renseigné son poste. Les autres restent au banc.',
+        subtitle_other: '{{count}} convoqués ont renseigné leur poste. Les autres restent au banc.',
+        title: 'Placer les joueurs sur leur poste',
+      },
       calledUpCount_one: '{{count}} convoqué',
       calledUpCount_other: '{{count}} convoqués',
       eventLabel: 'Match',
+      formationSlots_one: '{{count}} poste à remplir.',
+      formationSlots_other: '{{count}} postes à remplir.',
+      formationsTitle: 'Compos type',
       magnet: {
         disabled: 'Disponible quand tu pars d’une formation.',
         subtitle: 'Le jeton colle au poste le plus proche. Tu peux toujours le poser où tu veux.',
@@ -2794,6 +2805,7 @@ export default {
           title: 'Dernier match',
         },
       },
+      noFormationForSport: 'Ce sport n’a pas encore de disposition de terrain — place tes joueurs librement.',
       preview: 'Aperçu',
       previewEmpty: 'Tout le monde part du banc.',
       progress: '{{current}}/{{total}}',
@@ -2801,6 +2813,7 @@ export default {
       unavailable: {
         noDefaultComposition: 'Cette équipe n’a pas encore de compo type.',
         noLastMatch: 'Aucune compo déjà publiée à reprendre.',
+        notEnoughPlayers: 'Le {{label}} demande {{needed}} joueurs, tu en as convoqué {{selected}}.',
       },
     },
   },

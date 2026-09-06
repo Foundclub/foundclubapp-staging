@@ -25,8 +25,13 @@ import { getCompositionPlayerId } from '@/utils/compositionPlayer';
 export const MATCH_SQUAD_SIZES = {
   basketball: { bench: 5, starters: 5 },
   football: { bench: 5, starters: 11 },
+  // 🎁 LOT TERRAIN (2026-09-05) — les 2 disciplines qui n'avaient AUCUN
+  // effectif, et qui recevaient donc celui d'un autre sport : le futsal se joue
+  // a 5, le rugby a XIII a 13 (avec 4 remplacants, c'est sa regle).
+  futsal: { bench: 5, starters: 5 },
   handball: { bench: 5, starters: 7 },
   rugby: { bench: 5, starters: 15 },
+  rugby13: { bench: 4, starters: 13 },
   volleyball: { bench: 4, starters: 6 },
 };
 

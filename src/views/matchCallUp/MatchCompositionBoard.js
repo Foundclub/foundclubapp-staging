@@ -55,11 +55,13 @@ import { isManualCallUpPlayer } from './matchCallUpUtils';
 import {
   buildFormationSlots,
   buildMatchCompositionPack,
+  buildSlotsFromFormation,
   getBenchPlayers,
   getBoardCounters,
   placePlayerAt,
   removePlayerFromField,
 } from './matchCompositionUtils';
+import { getMatchFormationByKey } from './matchFormationCatalog';
 
 /**
  * D79 — ECRANS 5 et 6 du pack composition : le terrain + banc, et la feuille
@@ -109,11 +111,13 @@ function MatchCompositionBoard() {
     clubId = null,
     eventId,
     eventLabel = '',
+    formationKey = null,
     magnetEnabled = false,
     readOnly = false,
     selectedPlayers = EMPTY_LIST,
     sport = 'football',
     startPlacements = EMPTY_LIST,
+    teamCategory = '',
     teamComposition = null,
     teamId,
     teamName = '',
@@ -172,7 +176,32 @@ function MatchCompositionBoard() {
   const [activeDragPlayer, setActiveDragPlayer] = useState(null);
   const [subscriptionPaywallDecision, setSubscriptionPaywallDecision] = useState(null);
 
-  const slots = useMemo(() => buildFormationSlots(sport), [sport]);
+  // 🎁 LOT TERRAIN — LE TERRAIN PORTE LA COMPO TYPE CHOISIE A L'ECRAN 4.
+  //
+  // Avant ce lot, ce plateau ne connaissait QUE l'unique disposition du sport :
+  // choisir un 4-4-2 a l'ecran precedent n'avait aucun effet ici, et
+  // l'aimantation visait toujours les memes 11 points. On relit donc la compo
+  // type par sa cle — la passer en entier dans les parametres de navigation
+  // dupliquerait la donnee au lieu de la nommer.
+  const formation = useMemo(
+    () => getMatchFormationByKey(sport, teamCategory, formationKey),
+    [formationKey, sport, teamCategory],
+  );
+  const slots = useMemo(
+    () => (formation ? buildSlotsFromFormation(formation) : buildFormationSlots(sport)),
+    [formation, sport],
+  );
+  // Les postes ENCORE LIBRES : ce sont eux qu'on dessine en creux sur le
+  // terrain. Un poste tenu disparait sous son jeton — deux dessins au meme
+  // endroit seraient illisibles.
+  const freeSlots = useMemo(() => {
+    const taken = new Set(
+      (Array.isArray(placements) ? placements : [])
+        .map((/** @type {any} */ placement) => placement?.slotId)
+        .filter(Boolean),
+    );
+    return slots.filter((entry) => !taken.has(entry.slotId));
+  }, [placements, slots]);
   // Le parametre `sport` arrive parfois ecrit a la main (« Football à 11 ») : la
   // cle de traduction se prend sur le sport NORMALISE, jamais sur le libelle brut.
   const sportLabel = t(`matchComposition.sports.${getTacticalSportKey(sport)}`);
@@ -185,9 +214,12 @@ function MatchCompositionBoard() {
       .filter(isManualCallUpPlayer),
     [selectedPlayers],
   );
+  // 🎁 LOT TERRAIN — LE DENOMINATEUR DE « N/M places » SUIT LA COMPO TYPE.
+  // Sans cela, un 4-2-3-1 choisi a l'ecran 4 affichait « 0/11 » venu de
+  // l'effectif theorique du sport, meme quand la formation en demandait 8.
   const counters = useMemo(() => getBoardCounters({
-    manualPlayers, placements, players: selectedPlayers, sport,
-  }), [manualPlayers, placements, selectedPlayers, sport]);
+    manualPlayers, placements, players: selectedPlayers, sport, starters: formation?.starters,
+  }), [formation?.starters, manualPlayers, placements, selectedPlayers, sport]);
 
   const playerById = useMemo(() => {
     const map = new Map();
@@ -590,6 +622,40 @@ function MatchCompositionBoard() {
             style={[styles.fieldSurface, { aspectRatio: 1 / getTacticalFieldAspectRatio(sport) }]}
           >
             <RenderedTacticalField sport={sport} style={styles.fieldFill}>
+              {/* 🎁 LOT TERRAIN — LES POSTES SE VOIENT ENFIN.
+                  Le plateau ne dessinait QUE les jetons poses : le coach ne
+                  savait pas ou l'aimantation allait coller, ni combien de
+                  postes restaient. On dessine donc les postes ENCORE LIBRES, en
+                  creux. Un poste tenu disparait sous son jeton — deux dessins
+                  au meme endroit seraient illisibles. */}
+              {freeSlots.map((/** @type {any} */ entry) => (
+                <View
+                  key={`slot-${entry.slotId}`}
+                  // 🪤 `box-none` et NON `none`, et ce n'est pas un detail : le
+                  // temoin V03 entre dans l'arbre par « la premiere vue qui se
+                  // declare intraversable au doigt » pour retrouver le jeton
+                  // fantome. Un `pointerEvents="none"` ici se serait glisse
+                  // AVANT lui et aurait fait mesurer un repere de poste a la
+                  // place du fantome. `box-none` dit la meme chose pour une vue
+                  // sans enfant — jamais une cible — sans voler cette entree.
+                  pointerEvents="box-none"
+                  style={[
+                    styles.fieldSlot,
+                    {
+                      borderColor: withAlpha(Colors.neutral00, 0.45),
+                      left: `${entry.positionX}%`,
+                      top: `${entry.positionY}%`,
+                    },
+                  ]}
+                >
+                  <Text
+                    numberOfLines={1}
+                    style={[Fonts.p4Bold, { color: withAlpha(Colors.neutral00, 0.75) }]}
+                  >
+                    {entry.label}
+                  </Text>
+                </View>
+              ))}
               {placements.map((/** @type {any} */ placement) => {
                 const player = playerById.get(String(placement?.playerId || ''));
                 if (!player) return null;
@@ -919,6 +985,21 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     borderRadius: 16,
     maxWidth: '100%',
+  },
+  // 🎁 LOT TERRAIN — le repere d'un poste LIBRE. Un cercle en pointilles de
+  // 34 pt, centre sur son point : plus petit que le jeton (58 pt) pour qu'on
+  // voie d'un coup d'oeil ce qui est tenu et ce qui ne l'est pas.
+  fieldSlot: {
+    alignItems: 'center',
+    borderRadius: 17,
+    borderStyle: 'dashed',
+    borderWidth: 1.5,
+    height: 34,
+    justifyContent: 'center',
+    marginLeft: -17,
+    marginTop: -17,
+    position: 'absolute',
+    width: 34,
   },
   fieldToken: {
     marginLeft: -29,

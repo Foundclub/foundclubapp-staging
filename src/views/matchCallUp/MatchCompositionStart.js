@@ -33,8 +33,10 @@ import {
   buildStartFromOptions,
   getDefaultStartFromKey,
   START_FROM_EMPTY,
+  START_FROM_FORMATION,
   START_FROM_LAST_MATCH,
 } from './matchCompositionUtils';
+import { getMatchFormations } from './matchFormationCatalog';
 
 /**
  * D79 — ECRAN 4 du pack composition : « Partir de… ».
@@ -76,6 +78,7 @@ function MatchCompositionStart() {
   const {
     selectedPlayers = EMPTY_LIST,
     sport = 'football',
+    teamCategory = '',
     teamComposition = null,
     teamId,
     teamName = '',
@@ -85,19 +88,51 @@ function MatchCompositionStart() {
     enabled: Boolean(teamId),
   });
 
-  const options = useMemo(() => buildStartFromOptions({
-    bootstrap: teamComposition?.bootstrap,
-    defaultComposition: defaultCompositionPayload,
-    players: selectedPlayers,
-    sport,
-  }), [defaultCompositionPayload, selectedPlayers, sport, teamComposition?.bootstrap]);
+  // 🎁 LOT TERRAIN — LE FORMAT SE LIT DANS LA CATEGORIE, et le nom d'equipe est
+  // le repli. Mesure du 05/09 : `category` n'est pas toujours peuplee dans la
+  // charge de l'evenement, alors que les equipes s'appellent « U15 Filles » ou
+  // « Senior 1 ». Un repli sur le nom vaut mieux qu'un format faux.
+  const category = String(teamCategory || teamName || '');
 
   const [pickedKey, setPickedKey] = useState(null);
   const [magnetOverride, setMagnetOverride] = useState(null);
+  // 🔄 DECISION 4 DU LOT — LA REVERSIBILITE. Le coach eteint cet interrupteur et
+  // l'apercu se vide SOUS SES YEUX, avant meme d'ouvrir le terrain.
+  const [autoPlaceByPosition, setAutoPlaceByPosition] = useState(true);
+
+  const options = useMemo(() => buildStartFromOptions({
+    autoPlaceByPosition,
+    bootstrap: teamComposition?.bootstrap,
+    category,
+    defaultComposition: defaultCompositionPayload,
+    players: selectedPlayers,
+    sport,
+  }), [
+    autoPlaceByPosition, category, defaultCompositionPayload,
+    selectedPlayers, sport, teamComposition?.bootstrap,
+  ]);
+
+  // 🕳️ LES ~130 ACTIVITES SANS TERRAIN A POSTES (hockey, roller, danse, judo,
+  // football americain…). ⛔ On n'invente aucun terrain — mais on le DIT : une
+  // phrase, et un silence devient une information.
+  const hasFormations = useMemo(
+    () => getMatchFormations(sport, category).length > 0,
+    [category, sport],
+  );
+
+  // Combien de convoques ont vraiment renseigne leur poste : c'est ce chiffre,
+  // et pas une promesse, qui explique ce que le placement automatique peut faire.
+  const declaredPositionCount = useMemo(
+    () => (Array.isArray(selectedPlayers) ? selectedPlayers : EMPTY_LIST)
+      .filter((/** @type {any} */ player) => String(player?.position || '').trim().length > 0)
+      .length,
+    [selectedPlayers],
+  );
 
   const activeKey = pickedKey || getDefaultStartFromKey(options);
   const activeOption = options.find((option) => option.key === activeKey) || options[0];
   const startsFromFormation = activeKey !== START_FROM_EMPTY;
+  const startsFromCatalogFormation = String(activeKey).startsWith(`${START_FROM_FORMATION}:`);
 
   // 🚦 L'aimantation n'est ACTIVABLE que si on part d'une formation : sur terrain
   // vide il n'y a aucun poste ou coller. Elle suit donc le choix, sauf si le
@@ -127,11 +162,19 @@ function MatchCompositionStart() {
     // @ts-ignore — `navigate` est bien la sur un ecran de pile.
     navigation.navigate(RouteNames.MatchCompositionBoard, {
       ...params,
+      // 🎁 LOT TERRAIN — c'est CE parametre qui fait apparaitre les postes sur
+      // le terrain de l'ecran 5. Sans lui, le plateau retombait sur l'unique
+      // disposition du sport, et l'aimantation n'avait rien a viser.
+      formationKey: activeOption?.formationKey || null,
       magnetEnabled,
       startFrom: activeKey,
       startPlacements: activeOption?.placements || EMPTY_LIST,
+      teamCategory: category,
     });
-  }, [activeKey, activeOption?.placements, magnetEnabled, navigation, params]);
+  }, [
+    activeKey, activeOption?.formationKey, activeOption?.placements,
+    category, magnetEnabled, navigation, params,
+  ]);
 
   const subtitle = [
     t('matchComposition.start.eventLabel'),
@@ -143,6 +186,9 @@ function MatchCompositionStart() {
   // joint l'evenement a sa reprise ; sans elle on dit « du dernier match »,
   // jamais une date inventee.
   const optionSubtitle = (/** @type {any} */ option) => {
+    // 🎁 LOT TERRAIN — « 11 postes à remplir » : une compo type dit ce qu'elle
+    // demande, la ou les 3 rangees d'origine decrivent une source.
+    if (option.subtitleKey) return t(option.subtitleKey, option.subtitleParams);
     if (option.key === START_FROM_LAST_MATCH && option.detail) {
       const parsed = new Date(option.detail);
       if (!Number.isNaN(parsed.getTime())) {
@@ -181,15 +227,27 @@ function MatchCompositionStart() {
       >
         <View style={styles.optionTexts}>
           {/* Le pack ecrit « Compo type · 4-3-3 » : le schema est une donnee, on
-              ne l'affiche que si le pack enregistre le porte vraiment. */}
+              ne l'affiche que si le pack enregistre le porte vraiment.
+              🎁 LOT TERRAIN — une rangee de compo type porte son NOM PROPRE
+              (« 4-3-3 », « Réception en W ») : il vient du catalogue, pas d'une
+              cle de traduction, parce qu'un schema de jeu ne se traduit pas. */}
           <Text style={[Fonts.p2Bold, { color: Colors.neutral00 }]}>
-            {[t(`matchComposition.start.options.${option.key}.title`), option.detail]
-              .filter(Boolean).join(' · ')}
+            {[
+              option.title || t(`matchComposition.start.options.${option.key}.title`),
+              option.detail,
+            ].filter(Boolean).join(' · ')}
           </Text>
+          {/* `String(…)` et non le retour brut : avec des parametres,
+              `t()` se declare `string | object` cote types, et un `object` ne
+              peut pas entrer dans un `<Text>`. Il ne rend jamais d'objet ici
+              (aucune cle n'est un tableau), on le dit donc au verificateur. */}
           <Text style={[Fonts.p3, styles.optionSubtitle, { color: Colors.neutral300 }]}>
             {isDisabled
-              ? t(`matchComposition.start.unavailable.${option.unavailableReason}`)
-              : optionSubtitle(option)}
+              ? String(t(
+                `matchComposition.start.unavailable.${option.unavailableReason}`,
+                { ...(option.unavailableParams || {}) },
+              ))
+              : String(optionSubtitle(option))}
           </Text>
         </View>
         <View
@@ -250,7 +308,23 @@ function MatchCompositionStart() {
         showsVerticalScrollIndicator={false}
         style={styles.list}
       >
-        {options.map(renderOption)}
+        {options.filter((option) => !option.formationKey).map(renderOption)}
+
+        {/* 🎁 LOT TERRAIN — LE CATALOGUE DES COMPOS TYPE.
+            Avant ce lot, un sport n'avait QU'UNE disposition, ecrite en dur, et
+            cet ecran n'offrait qu'une option grisee. Les ~130 activites sans
+            terrain a postes, elles, ne recevaient pas un mot d'explication. */}
+        <Text style={[Fonts.p4, styles.sectionTitle, { color: Colors.neutral300 }]}>
+          {t('matchComposition.start.formationsTitle').toUpperCase()}
+        </Text>
+
+        {hasFormations
+          ? options.filter((option) => option.formationKey).map(renderOption)
+          : (
+            <Text style={[Fonts.p3, styles.noFormation, { color: Colors.neutral300 }]}>
+              {t('matchComposition.start.noFormationForSport')}
+            </Text>
+          )}
 
         <Text style={[Fonts.p4, styles.sectionTitle, { color: Colors.neutral300 }]}>
           {t('matchComposition.start.preview').toUpperCase()}
@@ -286,6 +360,42 @@ function MatchCompositionStart() {
             </Text>
           ) : null}
         </View>
+
+        {/* 🥇 LOT TERRAIN — CHANTIER C : « PLACER LES JOUEURS SUR LEUR POSTE ».
+            Mesure du 05/09 en production : 35 joueurs sur 133 renseignent leur
+            poste. Le sous-titre affiche CE chiffre-la pour les convoques du
+            match, jamais une promesse.
+            🔄 C'est aussi la reversibilite (decision 4) : un doigt, et l'apercu
+            se vide sous les yeux du coach — avant meme d'ouvrir le terrain. */}
+        {startsFromCatalogFormation ? (
+          <View
+            style={[
+              styles.magnetCard,
+              {
+                backgroundColor: withAlpha(Colors.neutral00, 0.04),
+                borderColor: withAlpha(Colors.neutral00, 0.1),
+              },
+            ]}
+          >
+            <View style={styles.magnetTexts}>
+              <Text style={[Fonts.p2Bold, { color: Colors.neutral00 }]}>
+                {t('matchComposition.start.autoPlace.title')}
+              </Text>
+              <Text style={[Fonts.p3, { color: Colors.neutral300 }]}>
+                {declaredPositionCount > 0
+                  ? t('matchComposition.start.autoPlace.subtitle', { count: declaredPositionCount })
+                  : t('matchComposition.start.autoPlace.none')}
+              </Text>
+            </View>
+            <Switch
+              accessibilityLabel={t('matchComposition.start.autoPlace.title')}
+              onValueChange={setAutoPlaceByPosition}
+              thumbColor={Colors.neutral00}
+              trackColor={{ false: Colors.neutral700, true: Colors.primary500 }}
+              value={autoPlaceByPosition}
+            />
+          </View>
+        ) : null}
 
         <View
           style={[
@@ -369,6 +479,9 @@ const styles = StyleSheet.create({
   },
   magnetTexts: {
     flex: 1,
+  },
+  noFormation: {
+    paddingBottom: 4,
   },
   optionRow: {
     alignItems: 'center',
