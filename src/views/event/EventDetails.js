@@ -4645,11 +4645,19 @@ function EventDetails({ navigation, route }) {
       sport: composition?.sportContext || compositionSport,
       // @ts-ignore: FIXME: Baseline TS regression
       teamComposition: options.teamComposition || staffCompositionPayload || null,
+      // 🎁 LOT TERRAIN — LA CATEGORIE DECIDE DU FORMAT AU FOOTBALL (a 5, a 8, a
+      // 11). Elle n'est pas toujours peuplee dans la charge de l'evenement :
+      // l'ecran « Partir de… » retombe alors sur le NOM de l'equipe, qui porte
+      // presque toujours la categorie (« U15 Filles »).
+      teamCategory: compositionEditorTeam?.category?.name
+        || compositionEditorTeam?.category
+        || null,
       teamId: compositionTeamId,
       teamName: compositionEditorTeam?.name || staffCompositionPayload?.team?.name || null,
     });
   }, [
     compositionEditorPlayers,
+    compositionEditorTeam?.category,
     compositionEditorTeam?.name,
     compositionSport,
     compositionTeamId,

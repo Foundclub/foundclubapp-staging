@@ -11,7 +11,7 @@ import Svg, {
   Stop,
 } from 'react-native-svg';
 
-import { getTacticalSportKey } from '@/utils/tacticalField';
+import { getTacticalFieldFamilyKey } from '@/utils/tacticalField';
 
 const LINE_WIDTH = 0.9;
 
@@ -216,7 +216,12 @@ function RenderedTacticalField({
   sport = 'generic',
   style,
 }) {
-  const sportKey = useMemo(() => getTacticalSportKey(sport), [sport]);
+  // 🎨 LOT TERRAIN — la famille de DESSIN, pas la discipline. Le futsal a
+  // desormais sa propre cle de sport (il se joue a 5) mais il se dessine comme
+  // un terrain de foot, et le rugby a XIII comme un terrain de rugby. Sans
+  // cette distinction, les 3 tables ci-dessous seraient retombees sur
+  // `generic` : un terrain GRIS pour 1 712 clubs de futsal.
+  const sportKey = useMemo(() => getTacticalFieldFamilyKey(sport), [sport]);
   const palette = SPORT_PALETTES[sportKey] || SPORT_PALETTES.generic;
   const gradientId = `field-gradient-${sportKey}`;
   const glowId = `field-glow-${sportKey}`;

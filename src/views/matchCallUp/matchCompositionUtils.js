@@ -15,6 +15,25 @@ import { getCompositionPlayerId } from '@/utils/compositionPlayer';
 import { getTacticalSportKey } from '@/utils/tacticalField';
 
 import { getMatchSquadSizes } from './matchCallUpUtils';
+import {
+  buildAutoPlacementsByDeclaredPosition,
+  buildLegacyFormationTables,
+  getMatchFormations,
+} from './matchFormationCatalog';
+
+/**
+ * 🔒 LOT TERRAIN (2026-09-05) — CES DEUX TABLES SONT DESORMAIS DERIVEES.
+ *
+ * Elles etaient ecrites en dur ici, et elles restent lues par 4 autres ecrans
+ * (`teamCompoTemplateUtils`, `playerConvocationUtils`, les 2 plateaux de
+ * detection). Elles valent maintenant la PREMIERE compo type de chaque sport
+ * dans `matchFormationCatalog` — une seule source de verite, jamais deux tables
+ * qui se ressemblent et finissent par diverger.
+ *
+ * ✅ Le contenu ne bouge pas d'un pixel pour les 5 sports existants (un temoin
+ * le fige) ; s'y AJOUTENT `futsal` et `rugby13`, qui n'avaient rien.
+ */
+const LEGACY_TABLES = buildLegacyFormationTables();
 
 /**
  * Positions de depart en pourcentage `[x, y]`, reprises TELLES QUELLES de
@@ -22,35 +41,14 @@ import { getMatchSquadSizes } from './matchCallUpUtils';
  * terrain, donc elles ne dependent pas de sa hauteur.
  * @type {Record<string, Array<[number, number]>>}
  */
-export const MATCH_FORMATIONS = {
-  basketball: [[50, 76], [19, 60], [81, 60], [30, 32], [66, 27]],
-  football: [
-    [50, 93], [86, 76], [62, 79], [38, 79], [14, 76], [72, 57],
-    [50, 61], [28, 57], [82, 30], [50, 20], [18, 30],
-  ],
-  handball: [[50, 92], [27, 62], [50, 66], [73, 62], [50, 30], [10, 45], [90, 45]],
-  rugby: [
-    [50, 92], [10, 74], [88, 82], [50, 68], [66, 76], [34, 60], [50, 52], [34, 16],
-    [50, 16], [66, 16], [42, 28], [58, 28], [20, 28], [80, 28], [50, 41],
-  ],
-  volleyball: [[22, 28], [50, 22], [78, 28], [22, 66], [50, 76], [78, 66]],
-};
+export const MATCH_FORMATIONS = LEGACY_TABLES.formations;
 
 /**
  * Libelles de poste par sport, dans l'ordre de `MATCH_FORMATIONS` — repris tels
  * quels de `design_reference/fields.jsx` (`POSTES`).
  * @type {Record<string, string[]>}
  */
-export const MATCH_POSITION_LABELS = {
-  basketball: ['MEN', 'ARR', 'AIL', 'AF', 'PIV'],
-  football: ['GB', 'DD', 'DC', 'DC', 'DG', 'MD', 'MC', 'MG', 'AD', 'BU', 'AG'],
-  handball: ['GB', 'ARG', 'ARC', 'ARD', 'PIV', 'AIG', 'AID'],
-  rugby: [
-    'ARR', 'AI G', 'AI D', 'CE 1', 'CE 2', 'OUV', 'MÊL', 'PIL G',
-    'TAL', 'PIL D', '2L G', '2L D', '3L G', '3L D', 'N°8',
-  ],
-  volleyball: ['P4', 'P3', 'P2', 'P5', 'P6', 'P1'],
-};
+export const MATCH_POSITION_LABELS = LEGACY_TABLES.labels;
 
 /**
  * Rayon d'accroche de l'aimantation, en pourcentage de terrain. Meme valeur que
@@ -59,10 +57,31 @@ export const MATCH_POSITION_LABELS = {
  */
 export const MAGNET_RADIUS = 14;
 
+/**
+ * Une rangee de l'ecran « Partir de… ».
+ *
+ * Les 3 premieres decrivent une SOURCE (terrain vide, compo type, dernier
+ * match) ; celles que le lot TERRAIN ajoute decrivent une COMPO TYPE et
+ * portent en plus `formationKey`, leur nom propre et leur nombre de postes.
+ * @typedef {object} StartFromOption
+ * @property {boolean} available
+ * @property {string} [detail] Precision affichee apres un « · ».
+ * @property {string | null} [formationKey] La compo type a ouvrir, s'il y en a une.
+ * @property {string} key
+ * @property {any[]} placements
+ * @property {string} [subtitleKey] Cle de traduction du sous-titre.
+ * @property {any} [subtitleParams]
+ * @property {string} [title] Nom propre affiche tel quel (« 4-3-3 »).
+ * @property {any} [unavailableParams] De quoi ecrire la raison du grisage.
+ * @property {string | null} unavailableReason
+ */
+
 /** Les 3 points de depart de l'ecran 4, dans l'ordre du pack. */
 export const START_FROM_EMPTY = 'empty';
 export const START_FROM_DEFAULT = 'default_composition';
 export const START_FROM_LAST_MATCH = 'last_match';
+/** Prefixe des rangees « compo type » ajoutees par le lot TERRAIN. */
+export const START_FROM_FORMATION = 'formation';
 
 const clampPercent = (/** @type {any} */ value) => Math.max(0, Math.min(100, Number(value) || 0));
 
@@ -97,6 +116,26 @@ export const buildFormationSlots = (sport, teamEntryId = 'team_1') => {
     slotId: `${teamEntryId}:slot_${index + 1}`,
   }));
 };
+
+/**
+ * Les reperes de poste d'une compo type CHOISIE (lot TERRAIN).
+ *
+ * ♻️ Meme forme de sortie que `buildFormationSlots`, et surtout **le meme
+ * `slotId`** : un jeton pose par le placement automatique se deplace, s'echange
+ * et s'enregistre exactement comme un jeton pose a la main.
+ * @param {any} [formation] Une entree de `matchFormationCatalog`.
+ * @param {string} [teamEntryId]
+ * @returns {Array<{ label: string, positionX: number, positionY: number, slotId: string }>}
+ */
+export const buildSlotsFromFormation = (formation, teamEntryId = 'team_1') => (
+  (Array.isArray(formation?.slots) ? formation.slots : [])
+    .map((/** @type {any} */ entry, /** @type {number} */ index) => ({
+      label: normalizeLabel(entry?.label) || `Poste ${index + 1}`,
+      positionX: clampPercent(entry?.positionX),
+      positionY: clampPercent(entry?.positionY),
+      slotId: `${teamEntryId}:slot_${index + 1}`,
+    }))
+);
 
 /**
  * Place les joueurs sur la formation de depart, dans l'ordre ou ils arrivent.
@@ -176,6 +215,58 @@ export const keepPlacementsOfCalledUpPlayers = (placements, players = []) => {
 };
 
 /**
+ * 🎁 LOT TERRAIN — LES RANGEES « COMPO TYPE » de l'ecran « Partir de… ».
+ *
+ * Une rangee par compo type du sport, dans l'ordre du catalogue. Ce qu'elles
+ * apportent par rapport a l'ancien ecran :
+ *   · le terrain s'ouvre AVEC SES POSTES, donc l'aimantation s'allume ;
+ *   · quand `autoPlaceByPosition` est vrai, les convoques sont DEJA poses sur
+ *     leur poste declare ;
+ *   · une formation trop grande est **grisee ET expliquee** — « le 4-3-3
+ *     demande 11 joueurs, tu en as convoque 3 » — au lieu du « 0/11 places »
+ *     muet mesure le 05/09 sur le banc d'essai.
+ * @param {object} input
+ * @param {boolean} [input.autoPlaceByPosition]
+ * @param {string} [input.category]
+ * @param {any[]} [input.players]
+ * @param {string} [input.sport]
+ * @returns {any[]}
+ */
+const buildFormationOptions = ({
+  autoPlaceByPosition = true, category = '', players = [], sport,
+}) => {
+  const calledUp = (Array.isArray(players) ? players : []).length;
+
+  return getMatchFormations(sport, category).map((formation) => {
+    const available = calledUp >= formation.starters;
+    const { placements } = autoPlaceByPosition && available
+      ? buildAutoPlacementsByDeclaredPosition({ formation, players })
+      : { placements: [] };
+
+    return {
+      available,
+      detail: '',
+      formationKey: formation.key,
+      key: `${START_FROM_FORMATION}:${formation.key}`,
+      placements,
+      // Le nom d'une compo type est un nom propre du sport (« 4-3-3 »,
+      // « 2-3 zone », « Réception en W ») : il vit dans le catalogue, comme
+      // les libelles de poste, et ne se traduit pas.
+      subtitleKey: 'matchComposition.start.formationSlots',
+      subtitleParams: { count: formation.starters },
+      title: formation.label,
+      // ⚠️ `needed` et non `count` : i18next traite `count` comme un selecteur
+      // de pluriel et irait chercher une cle `…_one` / `…_other` qui n'existe
+      // pas. Le nombre de postes n'est pas un pluriel, c'est une donnee.
+      unavailableParams: {
+        label: formation.label, needed: formation.starters, selected: calledUp,
+      },
+      unavailableReason: available ? null : 'notEnoughPlayers',
+    };
+  });
+};
+
+/**
  * Les 3 rangees de l'ecran 4, avec — pour chacune — ses placements de depart et,
  * quand elle n'a pas de source, la RAISON qui la grise.
  *
@@ -189,16 +280,23 @@ export const keepPlacementsOfCalledUpPlayers = (placements, players = []) => {
  * donc atteignable que si l'equipe n'a NI brouillon NI compo type — il n'existe
  * aucune route qui la donne separement.
  * @param {object} input
+ * @param {boolean} [input.autoPlaceByPosition] Placer les convoques sur leur poste declare.
  * @param {any} [input.bootstrap] `bootstrap` de `GET /events/:id/composition`.
+ * @param {string} [input.category] La categorie de l'equipe — elle decide du FORMAT au football.
  * @param {any} [input.defaultComposition] Charge de `GET /teams/:id/default-composition`.
  * @param {any[]} [input.players] Les convoques de l'ecran 1.
- * @returns {Array<{ available: boolean, key: string, placements: any[], unavailableReason: string | null }>}
+ * @param {string} [input.sport]
+ * @returns {StartFromOption[]}
  */
 export const buildStartFromOptions = ({
+  autoPlaceByPosition = true,
   bootstrap = null,
+  category = '',
   defaultComposition = null,
   players = [],
+  sport,
 }) => {
+  const calledUpPlayers = Array.isArray(players) ? players : [];
   const defaultPlacements = keepPlacementsOfCalledUpPlayers(
     readPlacementsFromPack(defaultComposition?.composition || defaultComposition),
     players,
@@ -245,6 +343,9 @@ export const buildStartFromOptions = ({
       placements: lastMatchPlacements,
       unavailableReason: lastMatchPlacements.length > 0 ? null : 'noLastMatch',
     },
+    ...buildFormationOptions({
+      autoPlaceByPosition, category, players: calledUpPlayers, sport,
+    }),
   ];
 };
 
@@ -445,16 +546,20 @@ export const getBenchPlayers = (players = [], placements = []) => {
  * @param {any[]} [input.placements]
  * @param {any[]} [input.players] Les convoques.
  * @param {string} [input.sport]
+ * @param {number} [input.starters] Le nombre de postes de la compo type CHOISIE.
+ *   Il l'emporte sur l'effectif theorique du sport : un 3-1-3 a 8 doit afficher
+ *   « N/8 », pas « N/11 » (lot TERRAIN).
  * @returns {{ bench: number, calledUp: number, offApp: number, placed: number, starters: number }}
  */
 export const getBoardCounters = ({
-  manualPlayers = [], placements = [], players = [], sport,
+  manualPlayers = [], placements = [], players = [], sport, starters: chosenStarters,
 }) => {
   const calledUpList = Array.isArray(players) ? players : [];
   const calledUpIds = new Set(calledUpList.map(getCompositionPlayerId).filter(Boolean));
   const bench = getBenchPlayers(calledUpList, placements).length;
   const placed = calledUpList.length - bench;
   const sizes = getMatchSquadSizes(getTacticalSportKey(sport));
+  const sportStarters = sizes ? sizes.starters : placed;
 
   // Seuls les joueurs hors app REELLEMENT convoques comptent : la liste des
   // joueurs saisis a la main peut en contenir que le coach a decoche.
@@ -467,9 +572,10 @@ export const getBoardCounters = ({
     calledUp: calledUpList.length,
     offApp,
     placed,
-    // Le denominateur de la pastille « N/M places ». Sport inconnu = pas de
-    // theorie : on ne montre que ce qui est vraiment sur le terrain.
-    starters: sizes ? sizes.starters : placed,
+    // Le denominateur de la pastille « N/M places ». La compo type choisie
+    // l'emporte ; sinon l'effectif du sport ; sport inconnu = pas de theorie,
+    // on ne montre que ce qui est vraiment sur le terrain.
+    starters: Number(chosenStarters) > 0 ? Number(chosenStarters) : sportStarters,
   };
 };
 
