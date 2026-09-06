@@ -166,7 +166,13 @@ describe('B4 — les liens legaux sont dans le binaire, la ou on vend', () => {
       findPressableByLabel(tree, 'Confidentialité').props.onPress();
     });
 
-    expect(Linking.openURL).toHaveBeenCalledWith('https://foundclubpro.com/cgu.html');
+    // 🍎 Pointait sur `cgu.html` tant que la politique de confidentialite
+    // n'existait pas. Elle existe depuis le 2026-09-04 : un bouton intitule
+    // « Confidentialite » qui ouvre les conditions generales est exactement ce
+    // qu'Apple releve sous 3.1.2. Voir `config/__tests__/legalUrls.test.js`.
+    expect(Linking.openURL).toHaveBeenCalledWith(
+      'https://foundclubpro.com/confidentialite.html',
+    );
   });
 
   it('garde les liens legaux meme quand restore vaut false', () => {

@@ -6,17 +6,20 @@
  * 2.4.0 est passee sans : elle ne vendait aucun abonnement, la regle ne
  * s'appliquait pas. Elle s'applique des qu'on vend.
  *
- * 📄 `cgu.html` est la page que la fiche Google Play declare deja comme
- * politique de confidentialite. Les deux liens pointent donc pour l'instant sur
- * la MEME page — c'est volontaire et provisoire : une URL dediee
- * « confidentialite » arrivera avec le brouillon en cours de redaction. Le jour
- * ou elle existe, seule `LEGAL_PRIVACY_URL` change, et les cinq surfaces
- * d'achat suivent.
+ * 📄 Les deux liens ont pointe sur la MEME page (`cgu.html`) tant que la
+ * politique de confidentialite n'existait pas. ✅ Elle existe depuis le
+ * 2026-09-04 et repond 200 (39 935 o, mesure le 2026-09-06) : les deux
+ * constantes sont donc separees, comme prevu. Le temoin qui l'empeche de
+ * regresser est `__tests__/legalUrls.test.js`.
  */
 export const LEGAL_TERMS_URL = 'https://foundclubpro.com/cgu.html';
 
-/** @see LEGAL_TERMS_URL — meme page tant que l'URL dediee n'existe pas. */
-export const LEGAL_PRIVACY_URL = 'https://foundclubpro.com/cgu.html';
+/**
+ * @see LEGAL_TERMS_URL
+ * 🍎 Doit rester DIFFERENTE de `LEGAL_TERMS_URL` : sinon les cinq surfaces
+ * d'achat ouvrent les conditions generales sous un bouton « Confidentialite ».
+ */
+export const LEGAL_PRIVACY_URL = 'https://foundclubpro.com/confidentialite.html';
 
 /**
  * L'adresse a laquelle on peut nous joindre depuis l'application.
