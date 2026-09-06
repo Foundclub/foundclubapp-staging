@@ -44,6 +44,23 @@ jest.mock('react-native-safe-area-context', () => ({
   }),
 }));
 
+// 🪤 `LegalFooter` (ajoute le 2026-09-06 pour la regle Apple 3.1.2) tire le rail
+// d'achat, qui tire `subscriptionService`, qui tire AsyncStorage : sans ces
+// bouchons la suite entiere meurt au CHARGEMENT, avant le premier temoin.
+// On ne bouchonne PAS `LegalFooter` lui-meme : c'est son rendu qu'on verifie.
+jest.mock('@tanstack/react-query', () => ({
+  useMutation: () => ({ isPending: false, mutateAsync: jest.fn() }),
+  useQueryClient: () => ({ invalidateQueries: jest.fn() }),
+}));
+
+jest.mock('@/domains/subscription/subscriptionPurchaseRail', () => ({
+  restoreAllSubscriptionPurchases: jest.fn(),
+}));
+
+jest.mock('@/domains/subscription/subscriptionBilling', () => ({
+  getSubscriptionBillingErrorMessage: () => 'Erreur de facturation.',
+}));
+
 jest.mock('@/theme/themeContext', () => {
   const genererCouleurs = jest.requireActual('@/theme/colors').default;
   const genererPolices = jest.requireActual('@/theme/fonts').default;
@@ -194,5 +211,20 @@ describe('ECRAN 12 — le mur payant de la composition, en ecran plein', () => {
 
     expect(texteVisible(rendre()))
       .toContain('La composition d’équipe est réservée à l’offre Équipe.');
+  });
+
+  // 🍎 Apple a REFUSE la 2.6.35 le 2026-09-06 au titre de la regle 3.1.2 :
+  // pas de lien fonctionnel vers les conditions d'utilisation. Cet ecran est
+  // un mur payant PLEIN ECRAN, et c'est tres probablement la PREMIERE surface
+  // d'abonnement qu'un examinateur rencontre — elle s'ouvre sur un geste normal
+  // de composition d'equipe, et le compte de demonstration est un dirigeant.
+  //
+  // ⚠️ Le pied legal ne porte NI prix NI palier : il ne contredit pas le temoin
+  // « il n affiche AUCUN prix » ci-dessus, qui reste la regle de cet ecran.
+  test('🍎 3.1.2 — les deux liens legaux sont sur l ecran', () => {
+    const texte = texteVisible(rendre());
+
+    expect(texte).toContain('Conditions générales');
+    expect(texte).toContain('Confidentialité');
   });
 });

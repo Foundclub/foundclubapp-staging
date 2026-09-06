@@ -17,6 +17,7 @@ import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
 import HeaderBackButton from '@/components/atoms/headerBackButton/HeaderBackButton';
+import LegalFooter from '@/components/molecules/legalFooter/LegalFooter';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
 import { RouteNames } from '@/navigation/routeNames';
@@ -164,6 +165,13 @@ function CompositionPaywallScreen() {
             {t('compositionPaywall.actions.compare')}
           </Text>
         </TouchableOpacity>
+        {/*
+          🍎 Apple 3.1.2 exige les deux liens legaux sur la surface d'abonnement.
+          Cet ecran ne vend pas lui-meme, mais c'est le premier mur payant qu'un
+          examinateur rencontre. `restore={false}` : la restauration a sa place
+          sur les ecrans qui vendent, pas sur une page d'arguments.
+        */}
+        <LegalFooter restore={false} />
       </View>
     </ScreenContainer>
   );
