@@ -81,17 +81,37 @@ jobs:
           # ⚠️ NE PAS conditionner sur `xcodebuild -showsdks` : il LISTE le SDK iOS meme quand la
           # PLATEFORME n'est pas installee. Le SDK suffit a compiler le C/ObjC (les pods passent),
           # mais ibtool echoue ensuite avec "LaunchScreen.storyboard: error: iOS 26.0 Platform Not
-          # Installed". On lance donc le telechargement INCONDITIONNELLEMENT (idempotent : no-op
-          # rapide si la plateforme est deja la, ~10 min sinon).
+          # Installed". On lance donc le telechargement INCONDITIONNELLEMENT.
+          #
+          # 🧨 2026-09-06 : ce telechargement N'EST PLUS un no-op quand la plateforme est deja la.
+          # Mesure comparee de deux executions du MEME workflow :
+          #   · 33912662536 (04/09, VERTE) — « SDKs avant » ne listait RIEN : la plateforme
+          #     manquait vraiment, le telechargement a dure 3 min 53 et a reussi.
+          #   · 34037523104 (06/09, ROUGE deux fois) — « SDKs avant » listait deja
+          #     « iOS 26.0 » ET « Simulator - iOS 26.0 », et la commande a repondu
+          #     « Unable to connect to simulator. » puis code 1.
+          # Autrement dit : l'image du runner a change, la plateforme est desormais preinstallee,
+          # et `-downloadPlatform` echoue au lieu de ne rien faire. Un echec de TELECHARGEMENT ne
+          # doit donc plus tuer le build quand la plateforme est DEJA presente.
+          #
+          # ⚠️ Le controle de presence NE PEUT PAS etre `-showsdks` (voir l'avertissement ci-dessus).
+          # On interroge les RUNTIMES simulateur, qui sont exactement ce que `-downloadPlatform`
+          # installe : c'est le seul temoin qui distingue « SDK la » de « plateforme la ».
           echo "SDKs avant :"
           xcodebuild -showsdks 2>/dev/null | grep -i ios || echo "  (aucun)"
 
           sudo xcodebuild -runFirstLaunch || true
           echo "Verification/telechargement de la plateforme iOS..."
-          xcodebuild -downloadPlatform iOS || sudo xcodebuild -downloadPlatform iOS || {
-            echo "::error::Echec de xcodebuild -downloadPlatform iOS sur ce runner."
-            exit 1
-          }
+          if ! xcodebuild -downloadPlatform iOS && ! sudo xcodebuild -downloadPlatform iOS; then
+            echo "Le telechargement a echoue — la plateforme est-elle deja installee ?"
+            xcrun simctl list runtimes || true
+            if xcrun simctl list runtimes 2>/dev/null | grep -q 'SimRuntime\.iOS'; then
+              echo "✅ Un runtime iOS est deja installe : on continue."
+            else
+              echo "::error::Echec de xcodebuild -downloadPlatform iOS ET aucun runtime iOS installe sur ce runner."
+              exit 1
+            fi
+          fi
 
           echo "SDKs apres :"
           xcodebuild -showsdks 2>/dev/null | grep -i ios || true
