@@ -109,6 +109,39 @@ const MOBILE_ONLY_SCREENS = {
     'TODO(web) ecran « compte parent requis » (palier 13) ecrit et monte cote app ;'
       + ' attend son entree dans web/src/routes/screenRegistry.tsx',
 
+  // TODO(web) PERF « Entrainement perso » (2026-09-06) — les six ecrans de la
+  // section Entrainement sont exemptes par SEQUENCEMENT, comme les quatre
+  // au-dessus, mais avec UNE raison de plus, et elle est technique, pas
+  // organisationnelle :
+  //   1. `web/src/routes/screenRegistry.tsx` vit dans l autre depot, hors du
+  //      perimetre de ce lot (app + admin) ;
+  //   2. ⚠️ le pont SVG du site (`web/src/shims/react-native-svg.tsx`) N EXPORTE
+  //      PAS `SvgXml` — verifie le 2026-09-06, il ne porte que des primitives
+  //      (`Circle`, `Path`, `Rect`...). Or les fiches de test affichent les
+  //      schemas cotes du guide en SVG brut venu du serveur. Router ces ecrans
+  //      sur le web AVANT d avoir ajoute `SvgXml` au pont ferait tomber la page.
+  //   3. Et cet ajout n est pas une ligne : sur le web, poser du SVG venu du
+  //      serveur dans le DOM ouvre une injection (`<script>`, `onload=`) que
+  //      `SvgXml` ferme toute seule cote natif. Il faudra donc l assainir, et
+  //      c est une decision de securite a prendre a part.
+  // Ce n est PAS un trou fonctionnel : l entrainement se fait sur un terrain, un
+  // telephone a la main. Le site le rendra quand le pont saura dessiner.
+  // A retirer d ici DES QUE le pont web porte `SvgXml` assaini ET que le
+  // registre web declare ces ecrans, puis ajouter leurs motifs dans webRoutes.js
+  // (ex. /training, /training/catalog, /training/programs/:programId).
+  [RouteNames.TrainingCatalog]:
+    'TODO(web) catalogue des programmes ; attend `SvgXml` au pont web + son entree dans screenRegistry.tsx',
+  [RouteNames.TrainingDay]:
+    'TODO(web) journee d entrainement ; attend `SvgXml` au pont web + son entree dans screenRegistry.tsx',
+  [RouteNames.TrainingLogbook]:
+    'TODO(web) carnet de resultats ; attend `SvgXml` au pont web + son entree dans screenRegistry.tsx',
+  [RouteNames.TrainingPlan]:
+    'TODO(web) plan « mon entrainement » ; attend `SvgXml` au pont web + son entree dans screenRegistry.tsx',
+  [RouteNames.TrainingProgramDetail]:
+    'TODO(web) fiche d un programme ; attend `SvgXml` au pont web + son entree dans screenRegistry.tsx',
+  [RouteNames.TrainingTest]:
+    'TODO(web) fiche d un test ; attend `SvgXml` au pont web + son entree dans screenRegistry.tsx',
+
   // --- Alias interne de navigateur ---
   // Accueil du membre connecte (HomeHub), initialRouteName de SearchStack. Depuis le
   // 2026-07-19 ce nom est declare dans routeNames.js (il etait une chaine en dur) ; sa

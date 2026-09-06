@@ -80,6 +80,7 @@ import { useOnboarding } from '@/context/OnboardingContext';
 import { usePopupEligibility } from '@/context/PopupManagerContext';
 import { useStartupPhase } from '@/context/StartupPhaseContext';
 import { useTour } from '@/context/TourContext';
+import { useMyTraining } from '@/hooks/useTraining';
 
 const ScreenContainerView = /** @type {any} */ (ScreenContainer);
 
@@ -2069,7 +2070,50 @@ function HomeHubContent({ auth, navigation, route }) {
     teamCardPremiumScope,
   ]);
 
+  /*
+    ENTRAINEMENT PERSO (2026-09-06) — la section n a AUCUN garde de role, et c est
+    une decision, pas un oubli : c est un entrainement PERSONNEL, et le Joueur est
+    precisement la cible. `hasManageSection` et `canShowSubscriptionExperience`
+    ci-dessus sont reserves au coach et au president ; celle-ci est pour tout le
+    monde. Elle est aussi entierement GRATUITE : l ecran d abonnement etant
+    verrouille sur coach/president/superAdmin, un Joueur qui verrait un mur payant
+    ici n aurait AUCUN chemin vers l achat.
+  */
+  const { enrollment: trainingEnrollment, nextSession: trainingNextSession } = useMyTraining();
+
   /** @type {HomeCard[]} */
+  const trainingCards = useMemo(() => {
+    const nextDay = trainingNextSession?.day;
+    const nextDate = trainingNextSession?.plannedDate
+      ? new Date(`${String(trainingNextSession.plannedDate).slice(0, 10)}T00:00:00`)
+        .toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })
+      : '';
+
+    return [
+      {
+        accentColor: Colors.primary500,
+        highlighted: Boolean(trainingEnrollment),
+        icon: 'running',
+        key: 'training-mine',
+        onPress: () => navigation.navigate(
+          trainingEnrollment ? RouteNames.TrainingPlan : RouteNames.TrainingCatalog,
+        ),
+        subtitle: trainingEnrollment && nextDay
+          ? t('training.home.myCard.subtitle', { date: nextDate, day: nextDay.title })
+          : t('training.home.myCard.emptySubtitle'),
+        title: t('training.home.myCard.title'),
+      },
+      {
+        accentColor: Colors.primary500,
+        icon: 'trophy',
+        key: 'training-find',
+        onPress: () => navigation.navigate(RouteNames.TrainingCatalog),
+        subtitle: t('training.home.findCard.subtitle'),
+        title: t('training.home.findCard.title'),
+      },
+    ];
+  }, [Colors.primary500, navigation, t, trainingEnrollment, trainingNextSession]);
+
   const searchCards = useMemo(() => {
     const cards = [
       {
@@ -2468,6 +2512,7 @@ function HomeHubContent({ auth, navigation, route }) {
           <HomeSection Alignments={Alignments} cards={manageSectionCards} Fonts={Fonts} registerTutorialTargetNode={registerTutorialTargetNode} Spaces={Spaces} title={manageSectionTitle} />
         </View>
         <View onLayout={(event) => registerSectionAnchor('search', event)} ref={(node) => registerSectionViewRef('search', node)}>
+          <HomeSection Alignments={Alignments} cards={trainingCards} Fonts={Fonts} registerTutorialTargetNode={registerTutorialTargetNode} Spaces={Spaces} title={t('homeHub.sections.training')} />
           <HomeSection Alignments={Alignments} cards={searchCards} Fonts={Fonts} registerTutorialTargetNode={registerTutorialTargetNode} Spaces={Spaces} title={t('homeHub.sections.search')} />
         </View>
         <View onLayout={(event) => registerSectionAnchor('league', event)} ref={(node) => registerSectionViewRef('league', node)}>

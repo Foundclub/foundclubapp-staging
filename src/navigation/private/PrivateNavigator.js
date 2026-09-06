@@ -1042,6 +1042,19 @@ function PrivateNavigator() {
           entete ne montre rien tant qu'il n'est dans aucun parcours
           (`renderStepperIndicator` rend `null` quand `stepNumber` vaut 0).
         */}
+        {/*
+          ENTRAINEMENT PERSO (2026-09-06) — le TUNNEL DE TEST monte a la pile
+          racine, pas dans l onglet. C est une TACHE : on est sur un terrain,
+          chronometre en main, et le dock du bas n a rien a y faire (meme regle
+          que les ecrans de detail, D5). Les cinq autres ecrans d entrainement
+          sont dans SearchStack, ou le dock reste visible.
+        */}
+        <Stack.Screen
+          getComponent={() => require('@/views/training/TrainingTest').default}
+          name={RouteNames.TrainingTest}
+          options={{ ...commonOptions, headerTitle: '' }}
+        />
+
         <Stack.Screen
           component={Welcome}
           key={onboardingViews?.totalViews}

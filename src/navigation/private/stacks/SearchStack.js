@@ -64,6 +64,33 @@ function SearchStack() {
         getComponent={() => require('@/views/search/MyActivitiesScreen').default}
         name={RouteNames.MyActivities}
       />
+      {/*
+        ENTRAINEMENT PERSO (2026-09-06) — CONSULTATION, donc DANS l onglet : le
+        dock reste visible pendant qu on regarde son planning ou le catalogue.
+        ⛔ `TrainingTest` n est PAS ici : le tunnel de test est une TACHE, il
+        monte a la pile racine pour que le dock s efface (meme regle que les
+        ecrans de detail, D5).
+      */}
+      <Stack.Screen
+        getComponent={() => require('@/views/training/TrainingPlan').default}
+        name={RouteNames.TrainingPlan}
+      />
+      <Stack.Screen
+        getComponent={() => require('@/views/training/TrainingCatalog').default}
+        name={RouteNames.TrainingCatalog}
+      />
+      <Stack.Screen
+        getComponent={() => require('@/views/training/TrainingProgramDetail').default}
+        name={RouteNames.TrainingProgramDetail}
+      />
+      <Stack.Screen
+        getComponent={() => require('@/views/training/TrainingDay').default}
+        name={RouteNames.TrainingDay}
+      />
+      <Stack.Screen
+        getComponent={() => require('@/views/training/TrainingLogbook').default}
+        name={RouteNames.TrainingLogbook}
+      />
     </Stack.Navigator>
   );
 }

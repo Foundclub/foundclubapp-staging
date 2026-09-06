@@ -82,6 +82,10 @@ const SECTIONS = {
   searchHorsStaff: clefsDeCartes(entre(SEARCH, 'if (!hasManageSection) {', '// Matchs amicaux')),
   searchQueue: clefsDeCartes(entre(SEARCH, '// Matchs amicaux', null)),
   searchStaff: clefsDeCartes(entre(SEARCH, 'if (hasManageSection) {', 'if (!hasManageSection) {')),
+  // PERF (2026-09-06) — la section « Entrainement » : DEUX cases, les MEMES pour
+  // tous les roles. C est la seule section de l accueil sans garde de role, et
+  // c est voulu : un entrainement personnel s adresse d abord au Joueur.
+  training: clefsDeCartes(corpsDuMemo('trainingCards')),
 };
 
 /**
@@ -111,7 +115,7 @@ const accueilDe = (role) => {
   if (!estAdmin) profil.push(...SECTIONS.profileCotisation);
   if (estStaff) profil.unshift(...SECTIONS.profileAbonnement);
 
-  return [gerer, rechercher, SECTIONS.league, profil, SECTIONS.account];
+  return [gerer, SECTIONS.training, rechercher, SECTIONS.league, profil, SECTIONS.account];
 };
 
 /**
@@ -125,6 +129,7 @@ const toutesLesCartes = (role) => accueilDe(role).flat();
 const ATTENDU = {
   coach: [
     ['manage-club', 'manage-requests', 'manage-add-event', 'manage-add-ad', 'manage-my-ads', 'manage-licenses'],
+    ['training-mine', 'training-find'],
     ['search-events', 'search-clubs', 'search-reservations', 'search-profiles', 'search-amicaux'],
     ['league-entry'],
     ['profile-subscription', 'profile-view', 'profile-edit', 'profile-history', 'profile-alerts', 'profile-license'],
@@ -132,6 +137,7 @@ const ATTENDU = {
   ],
   player: [
     [],
+    ['training-mine', 'training-find'],
     ['search-events', 'search-clubs', 'search-reservations', 'search-ads', 'search-my-activities', 'search-amicaux'],
     ['league-entry'],
     ['profile-view', 'profile-history', 'profile-alerts', 'profile-license'],
@@ -139,6 +145,7 @@ const ATTENDU = {
   ],
   president: [
     ['manage-club', 'manage-requests', 'manage-add-event', 'manage-add-ad', 'manage-my-ads', 'manage-licenses'],
+    ['training-mine', 'training-find'],
     ['search-events', 'search-clubs', 'search-reservations', 'search-profiles', 'search-amicaux'],
     ['league-entry'],
     ['profile-subscription', 'profile-view', 'profile-edit', 'profile-history', 'profile-alerts', 'profile-license'],
@@ -146,6 +153,7 @@ const ATTENDU = {
   ],
   superAdmin: [
     ['admin-triage', 'admin-users-clubs', 'admin-dashboard', 'admin-league'],
+    ['training-mine', 'training-find'],
     ['search-events', 'search-clubs', 'search-reservations', 'search-ads', 'search-my-activities', 'search-amicaux'],
     ['league-entry'],
     ['profile-view', 'profile-edit', 'profile-history', 'profile-alerts'],
@@ -155,10 +163,10 @@ const ATTENDU = {
 
 describe('D72 — critere 1 : le bon nombre de cases, dans le bon ordre', () => {
   it.each([
-    ['president', 20],
-    ['coach', 20],
-    ['player', 13],
-    ['superAdmin', 17],
+    ['president', 22],
+    ['coach', 22],
+    ['player', 15],
+    ['superAdmin', 19],
   ])('%s affiche exactement %i cartes', (role, attendu) => {
     expect(toutesLesCartes(/** @type {any} */ (role))).toHaveLength(attendu);
   });

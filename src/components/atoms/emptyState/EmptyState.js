@@ -5,13 +5,20 @@ import useTheme from '@/theme/themeContext';
 import Button from '@/components/atoms/button/Button';
 
 /**
+ * L'ecran « il n'y a rien ici » : un titre, et tout le reste est facultatif.
  *
- * @param root0
- * @param root0.actionLabel
- * @param root0.description
- * @param root0.icon
- * @param root0.onAction
- * @param root0.title
+ * ⚠️ Le bloc precedent etait auto-genere (`@param root0.actionLabel`, sans type
+ * ni crochets), et TypeScript lisait donc les CINQ proprietes comme obligatoires
+ * alors que les appelants du depot en omettent trois depuis toujours. Les
+ * crochets retablis disent la verite : seul `title` est requis.
+ * Comportement fige par `__tests__/EmptyState.test.js` avant cette correction.
+ * @param {object} props
+ * @param {string} [props.actionLabel] libelle du bouton ; sans lui, aucun bouton
+ * @param {string} [props.description] phrase sous le titre
+ * @param {any} [props.icon] source d'image de l'illustration
+ * @param {() => void} [props.onAction] action du bouton ; sans elle, aucun bouton
+ * @param {string} props.title la seule propriete obligatoire
+ * @returns {React.ReactElement} l'etat vide rendu
  */
 function EmptyState({
   actionLabel,
