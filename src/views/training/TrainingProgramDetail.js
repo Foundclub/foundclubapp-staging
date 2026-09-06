@@ -1,6 +1,10 @@
 import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Text, View } from 'react-native';
+import {
+  ScrollView,
+  Text,
+  View,
+} from 'react-native';
 
 import useTheme from '@/theme/themeContext';
 
@@ -35,6 +39,7 @@ import { useChooseTrainingProgram, useMyTraining, useTrainingProgram } from '@/h
  */
 function DayRow({ day }) {
   const { Colors, Fonts, Spaces } = useTheme();
+  const { t } = useTranslation();
   return (
     <View
       style={[
@@ -62,7 +67,9 @@ function DayRow({ day }) {
         {[
           day.place,
           day.durationMinutes ? `${day.durationMinutes} min` : null,
-          `${Array.isArray(day.tests) ? day.tests.length : 0} tests`,
+          t('training.program.tests', {
+            count: Array.isArray(day.tests) ? day.tests.length : 0,
+          }),
         ].filter(Boolean).join(' · ')}
       </Text>
     </View>
@@ -107,34 +114,39 @@ function TrainingProgramDetail({ navigation, route }) {
   }, [choose, navigation, programId]);
 
   return (
-    <ScreenContainer bgImage="bg2">
-      <WithDataWrapper error={error} isLoading={isLoading} onRetry={refetch}>
-        {program ? (
-          <View style={Spaces.gap[16]}>
-            <View style={Spaces.gap[4]}>
-              <Text style={[Fonts.h2Bold, { color: Colors.neutral00 }]}>{program.title}</Text>
-              {Boolean(program.subtitle) && (
+    <ScreenContainer bgImage="bg2" bottomInsetMode="tab-scene">
+      <ScrollView
+        contentContainerStyle={[Spaces.paddingBottom[40]]}
+        showsVerticalScrollIndicator={false}
+        style={{ flex: 1 }}
+      >
+        <WithDataWrapper error={error} isLoading={isLoading} onRetry={refetch}>
+          {program ? (
+            <View style={Spaces.gap[16]}>
+              <View style={Spaces.gap[4]}>
+                <Text style={[Fonts.h2Bold, { color: Colors.neutral00 }]}>{program.title}</Text>
+                {Boolean(program.subtitle) && (
                 <Text style={[Fonts.p3, { color: Colors.neutral300 }]}>{program.subtitle}</Text>
-              )}
-            </View>
+                )}
+              </View>
 
-            {Boolean(program.summary) && (
+              {Boolean(program.summary) && (
               <Text style={[Fonts.p2, { color: Colors.neutral200 }]}>{program.summary}</Text>
-            )}
+              )}
 
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
-              <Text style={[Fonts.caption, { color: Colors.neutral400 }]}>
-                {t('training.program.days', { count: program.sessionsCount || 0 })}
-              </Text>
-              <Text style={[Fonts.caption, { color: Colors.neutral400 }]}>
-                {t('training.program.tests', { count: program.testsCount || 0 })}
-              </Text>
-              <Text style={[Fonts.caption, { color: Colors.neutral400 }]}>
-                {t(`training.program.level.${program.level || 'intermediaire'}`)}
-              </Text>
-            </View>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
+                <Text style={[Fonts.caption, { color: Colors.neutral400 }]}>
+                  {t('training.program.days', { count: program.sessionsCount || 0 })}
+                </Text>
+                <Text style={[Fonts.caption, { color: Colors.neutral400 }]}>
+                  {t('training.program.tests', { count: program.testsCount || 0 })}
+                </Text>
+                <Text style={[Fonts.caption, { color: Colors.neutral400 }]}>
+                  {t(`training.program.level.${program.level || 'intermediaire'}`)}
+                </Text>
+              </View>
 
-            {Boolean(program.equipmentSummary) && (
+              {Boolean(program.equipmentSummary) && (
               <View style={Spaces.gap[4]}>
                 <Text style={[Fonts.h4Bold, { color: Colors.neutral00 }]}>
                   {t('training.program.equipment')}
@@ -143,45 +155,46 @@ function TrainingProgramDetail({ navigation, route }) {
                   {program.equipmentSummary}
                 </Text>
               </View>
-            )}
+              )}
 
-            <View style={Spaces.gap[4]}>
-              <Text style={[Fonts.h4Bold, { color: Colors.neutral00 }]}>
-                {t('training.program.contains')}
-              </Text>
-              {(Array.isArray(program.days) ? program.days : []).map((day) => (
-                <DayRow day={day} key={day.documentId || day.code} />
-              ))}
-            </View>
+              <View style={Spaces.gap[4]}>
+                <Text style={[Fonts.h4Bold, { color: Colors.neutral00 }]}>
+                  {t('training.program.contains')}
+                </Text>
+                {(Array.isArray(program.days) ? program.days : []).map((day) => (
+                  <DayRow day={day} key={day.documentId || day.code} />
+                ))}
+              </View>
 
-            {failed && (
+              {failed && (
               <Text style={[Fonts.p3, { color: Colors.error500 }]}>
                 {t('training.catalog.error.description')}
               </Text>
-            )}
+              )}
 
-            {alreadyChosen ? (
-              <Button
-                onPress={() => navigation.navigate(RouteNames.TrainingPlan)}
-                title={t('training.actions.resume')}
-                variant="Primary"
-              />
-            ) : (
-              <View style={Spaces.gap[8]}>
-                <Text style={[Fonts.caption, { color: Colors.neutral400 }]}>
-                  {t('training.program.startsToday')}
-                </Text>
+              {alreadyChosen ? (
                 <Button
-                  isLoading={choose.isPending}
-                  onPress={onChoose}
-                  title={t('training.actions.choose')}
+                  onPress={() => navigation.navigate(RouteNames.TrainingPlan)}
+                  title={t('training.actions.resume')}
                   variant="Primary"
                 />
-              </View>
-            )}
-          </View>
-        ) : null}
-      </WithDataWrapper>
+              ) : (
+                <View style={Spaces.gap[8]}>
+                  <Text style={[Fonts.caption, { color: Colors.neutral400 }]}>
+                    {t('training.program.startsToday')}
+                  </Text>
+                  <Button
+                    isLoading={choose.isPending}
+                    onPress={onChoose}
+                    title={t('training.actions.choose')}
+                    variant="Primary"
+                  />
+                </View>
+              )}
+            </View>
+          ) : null}
+        </WithDataWrapper>
+      </ScrollView>
     </ScreenContainer>
   );
 }

@@ -1,12 +1,17 @@
 import { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Text, TouchableOpacity, View } from 'react-native';
+import {
+  ScrollView,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
-import TrainingBlocks from '@/components/organisms/training/TrainingBlocks';
+import TrainingBlocks, { RichText } from '@/components/organisms/training/TrainingBlocks';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
 import { RouteNames } from '@/navigation/routeNames';
@@ -184,26 +189,39 @@ function TrainingDay({ navigation, route }) {
   }, [day, navigation, sessionId]);
 
   return (
-    <ScreenContainer bgImage="bg2">
-      <WithDataWrapper error={error} isLoading={isLoading} onRetry={refetch}>
-        {day ? (
-          <View style={Spaces.gap[16]}>
-            <View style={Spaces.gap[4]}>
-              {Boolean(day.kicker) && (
-                <Text style={[Fonts.caption, { color: Colors.primary400 }]}>{day.kicker}</Text>
-              )}
-              <Text style={[Fonts.h2Bold, { color: Colors.neutral00 }]}>{day.title}</Text>
-              {Boolean(day.lead) && (
-                <Text style={[Fonts.p3, { color: Colors.neutral300 }]}>{day.lead}</Text>
-              )}
-              <Text style={[Fonts.caption, { color: Colors.neutral400 }]}>
-                {t('training.day.progress', {
-                  count: doneTestCodes.size, done: doneTestCodes.size, total: tests.length,
-                })}
-              </Text>
-            </View>
+    <ScreenContainer bgImage="bg2" bottomInsetMode="tab-scene">
+      <ScrollView
+        contentContainerStyle={[Spaces.paddingBottom[40]]}
+        showsVerticalScrollIndicator={false}
+        style={{ flex: 1 }}
+      >
+        <WithDataWrapper error={error} isLoading={isLoading} onRetry={refetch}>
+          {day ? (
+            <View style={Spaces.gap[16]}>
+              <View style={Spaces.gap[4]}>
+                {Boolean(day.kicker) && (
+                <RichText
+                  color={Colors.neutral00}
+                  style={[Fonts.caption, { color: Colors.primary400 }]}
+                  text={day.kicker}
+                />
+                )}
+                <Text style={[Fonts.h2Bold, { color: Colors.neutral00 }]}>{day.title}</Text>
+                {Boolean(day.lead) && (
+                <RichText
+                  color={Colors.neutral00}
+                  style={[Fonts.p3, { color: Colors.neutral300 }]}
+                  text={day.lead}
+                />
+                )}
+                <Text style={[Fonts.caption, { color: Colors.neutral400 }]}>
+                  {t('training.day.progress', {
+                    count: doneTestCodes.size, done: doneTestCodes.size, total: tests.length,
+                  })}
+                </Text>
+              </View>
 
-            {day.requiresFreshnessCheck && (
+              {day.requiresFreshnessCheck && (
               <View
                 style={{
                   backgroundColor: Colors.neutral800,
@@ -217,23 +235,23 @@ function TrainingDay({ navigation, route }) {
                   {t('training.day.freshnessRequired')}
                 </Text>
               </View>
-            )}
+              )}
 
-            <View style={Spaces.gap[8]}>
-              <Text style={[Fonts.h4Bold, { color: Colors.neutral00 }]}>
-                {t('training.day.testsTitle')}
-              </Text>
-              {/** @type {Record<string, any>[]} */ (tests).map((test, index) => (
-                <TestRow
-                  done={doneTestCodes.has(test.code)}
-                  key={test.documentId || test.code}
-                  onPress={() => openTest(index)}
-                  test={test}
-                />
-              ))}
-            </View>
+              <View style={Spaces.gap[8]}>
+                <Text style={[Fonts.h4Bold, { color: Colors.neutral00 }]}>
+                  {t('training.day.testsTitle')}
+                </Text>
+                {/** @type {Record<string, any>[]} */ (tests).map((test, index) => (
+                  <TestRow
+                    done={doneTestCodes.has(test.code)}
+                    key={test.documentId || test.code}
+                    onPress={() => openTest(index)}
+                    test={test}
+                  />
+                ))}
+              </View>
 
-            {Array.isArray(day.markers) && day.markers.length > 0 && (
+              {Array.isArray(day.markers) && day.markers.length > 0 && (
               <Section defaultOpen title={t('training.day.markers')}>
                 <View style={Spaces.gap[8]}>
                   {/** @type {Record<string, any>[]} */ (day.markers).map((marker) => (
@@ -241,52 +259,57 @@ function TrainingDay({ navigation, route }) {
                       <Text style={[Fonts.captionBold, { color: Colors.primary400 }]}>
                         {marker.label}
                       </Text>
-                      <Text style={[Fonts.p3, { color: Colors.neutral300 }]}>{marker.value}</Text>
+                      <RichText
+                        color={Colors.neutral00}
+                        style={[Fonts.p3, { color: Colors.neutral300 }]}
+                        text={marker.value}
+                      />
                     </View>
                   ))}
                 </View>
               </Section>
-            )}
+              )}
 
-            <Section title={t('training.day.timeline')}>
-              <TrainingBlocks blocks={day.timeline} />
-            </Section>
+              <Section title={t('training.day.timeline')}>
+                <TrainingBlocks blocks={day.timeline} />
+              </Section>
 
-            <Section title={t('training.day.warmup')}>
-              <TrainingBlocks blocks={day.warmup} />
-            </Section>
+              <Section title={t('training.day.warmup')}>
+                <TrainingBlocks blocks={day.warmup} />
+              </Section>
 
-            <Section title={t('training.day.logbook')}>
-              <TrainingBlocks blocks={day.logbook} />
-            </Section>
+              <Section title={t('training.day.logbook')}>
+                <TrainingBlocks blocks={day.logbook} />
+              </Section>
 
-            {session?.status === 'done' ? (
-              <Text style={[Fonts.p3, { color: Colors.success500 }]}>
-                {t('training.day.alreadyDone')}
-              </Text>
-            ) : (
-              <View style={Spaces.gap[8]}>
-                {session?.status !== 'in_progress' && (
+              {session?.status === 'done' ? (
+                <Text style={[Fonts.p3, { color: Colors.success500 }]}>
+                  {t('training.day.alreadyDone')}
+                </Text>
+              ) : (
+                <View style={Spaces.gap[8]}>
+                  {session?.status !== 'in_progress' && (
                   <Button
                     isLoading={updateSession.isPending}
                     onPress={start}
                     title={t('training.actions.startDay')}
                     variant="Primary"
                   />
-                )}
-                {session?.status === 'in_progress' && (
+                  )}
+                  {session?.status === 'in_progress' && (
                   <Button
                     isLoading={updateSession.isPending}
                     onPress={finish}
                     title={t('training.actions.finishDay')}
                     variant="Secondary"
                   />
-                )}
-              </View>
-            )}
-          </View>
-        ) : null}
-      </WithDataWrapper>
+                  )}
+                </View>
+              )}
+            </View>
+          ) : null}
+        </WithDataWrapper>
+      </ScrollView>
     </ScreenContainer>
   );
 }

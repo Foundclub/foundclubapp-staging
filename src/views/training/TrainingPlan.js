@@ -1,6 +1,11 @@
 import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Text, TouchableOpacity, View } from 'react-native';
+import {
+  ScrollView,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 
 import useTheme from '@/theme/themeContext';
 
@@ -133,74 +138,81 @@ function TrainingPlan({ navigation }) {
   }, [navigation]);
 
   return (
-    <ScreenContainer bgImage="bg2">
-      <WithDataWrapper error={error} isLoading={isLoading} onRetry={refetch}>
-        {enrollment ? (
-          <View style={Spaces.gap[16]}>
-            <View style={Spaces.gap[4]}>
-              <Text style={[Fonts.h2Bold, { color: Colors.neutral00 }]}>
-                {enrollment.program?.title || t('training.plan.title')}
-              </Text>
-              <Text style={[Fonts.p3, { color: Colors.neutral300 }]}>
-                {t('training.plan.progress', {
-                  count: progress.done,
-                  done: progress.done,
-                  total: progress.total,
-                })}
-              </Text>
-              <View style={{
-                backgroundColor: Colors.neutral700, borderRadius: 3, height: 6, overflow: 'hidden',
-              }}
-              >
-                <View
-                  style={{
-                    backgroundColor: Colors.primary500,
-                    height: 6,
-                    width: `${Math.round(progress.ratio * 100)}%`,
-                  }}
-                />
+    <ScreenContainer bgImage="bg2" bottomInsetMode="tab-scene">
+      <ScrollView
+        contentContainerStyle={[Spaces.paddingBottom[40]]}
+        showsVerticalScrollIndicator={false}
+        style={{ flex: 1 }}
+      >
+        <WithDataWrapper error={error} isLoading={isLoading} onRetry={refetch}>
+          {enrollment ? (
+            <View style={Spaces.gap[16]}>
+              <View style={Spaces.gap[4]}>
+                <Text style={[Fonts.h2Bold, { color: Colors.neutral00 }]}>
+                  {enrollment.program?.title || t('training.plan.title')}
+                </Text>
+                <Text style={[Fonts.p3, { color: Colors.neutral300 }]}>
+                  {t('training.plan.progress', {
+                    count: progress.done,
+                    done: progress.done,
+                    total: progress.total,
+                  })}
+                </Text>
+                <View style={{
+                  backgroundColor: Colors.neutral700,
+                  borderRadius: 3,
+                  height: 6,
+                  overflow: 'hidden',
+                }}
+                >
+                  <View
+                    style={{
+                      backgroundColor: Colors.primary500,
+                      height: 6,
+                      width: `${Math.round(progress.ratio * 100)}%`,
+                    }}
+                  />
+                </View>
               </View>
-            </View>
 
-            {Boolean(nextSession) && (
+              {/*
+                🪤 DEFAUT VU A L ECRAN LE 2026-09-06 : « A faire ensuite » etait un
+                encart SEPARE, pose juste au-dessus de la liste — qui contenait la
+                MEME journee. Jour T s affichait donc deux fois, l une sous l autre.
+                Une seule liste, et c est la prochaine journee qui s y entoure.
+              */}
               <View style={Spaces.gap[8]}>
                 <Text style={[Fonts.h4Bold, { color: Colors.neutral00 }]}>
-                  {t('training.plan.nextUp')}
+                  {t('training.plan.days')}
                 </Text>
-                <SessionRow
-                  isNext
-                  onPress={() => openSession(nextSession)}
-                  session={nextSession || {}}
-                />
+                <View style={Spaces.gap[12]}>
+                  {sessions.map((session) => (
+                    <SessionRow
+                      isNext={session.documentId === nextSession?.documentId}
+                      key={session.documentId}
+                      onPress={() => openSession(session)}
+                      session={session}
+                    />
+                  ))}
+                </View>
               </View>
-            )}
 
-            <View style={Spaces.gap[12]}>
-              {sessions.map((session) => (
-                <SessionRow
-                  isNext={false}
-                  key={session.documentId}
-                  onPress={() => openSession(session)}
-                  session={session}
-                />
-              ))}
+              <Button
+                onPress={() => navigation.navigate(RouteNames.TrainingLogbook)}
+                title={t('training.logbook.title')}
+                variant="Secondary"
+              />
             </View>
-
-            <Button
-              onPress={() => navigation.navigate(RouteNames.TrainingLogbook)}
-              title={t('training.logbook.title')}
-              variant="Secondary"
+          ) : (
+            <EmptyState
+              actionLabel={t('training.plan.empty.action')}
+              description={t('training.plan.empty.description')}
+              onAction={() => navigation.navigate(RouteNames.TrainingCatalog)}
+              title={t('training.plan.empty.title')}
             />
-          </View>
-        ) : (
-          <EmptyState
-            actionLabel={t('training.plan.empty.action')}
-            description={t('training.plan.empty.description')}
-            onAction={() => navigation.navigate(RouteNames.TrainingCatalog)}
-            title={t('training.plan.empty.title')}
-          />
-        )}
-      </WithDataWrapper>
+          )}
+        </WithDataWrapper>
+      </ScrollView>
     </ScreenContainer>
   );
 }

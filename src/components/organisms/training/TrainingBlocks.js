@@ -51,7 +51,18 @@ function RichTextBase({ color, style, text }) {
   );
 }
 
+/**
+ * Le rendu de gras, exporte pour les textes qui ne sont PAS des blocs.
+ *
+ * 🪤 DEFAUT VU A L ECRAN LE 2026-09-06 : le chapeau d une journee, son
+ * accroche et ses reperes sortaient du serveur avec leurs `**` VISIBLES
+ * (« **≈ 160 min** » s affichait tel quel). Ces trois champs ne passent pas
+ * par `TrainingBlocks` — ils avaient donc besoin du meme rendu, sans ses
+ * espacements. C est exactement ce que fait `RichText`.
+ */
 const RichText = memo(RichTextBase);
+
+export { RichText };
 
 /**
  * Une entrée de liste : son marqueur (numéro ou point) puis son texte, alignés en colonnes.

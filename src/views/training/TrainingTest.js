@@ -2,7 +2,12 @@ import {
   useCallback, useEffect, useMemo, useState,
 } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Text, TouchableOpacity, View } from 'react-native';
+import {
+  ScrollView,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 
 import useTheme from '@/theme/themeContext';
 
@@ -208,114 +213,123 @@ function TrainingTest({ navigation, route }) {
   const pending = results.pendingCount();
 
   return (
-    <ScreenContainer bgImage="bg2">
-      <WithDataWrapper error={error} isLoading={isLoading} onRetry={refetch}>
-        {test ? (
-          <View style={Spaces.gap[16]}>
-            <View style={Spaces.gap[4]}>
-              <Text style={[Fonts.caption, { color: Colors.primary400 }]}>
-                {t('training.test.step', { current: index + 1, total: tests.length })}
-              </Text>
-              <View style={{ alignItems: 'center', flexDirection: 'row', gap: 8 }}>
-                <View style={{
-                  backgroundColor: Colors.primary500,
-                  borderRadius: 6,
-                  paddingHorizontal: 8,
-                  paddingVertical: 3,
-                }}
-                >
-                  <Text style={[Fonts.captionBold, { color: Colors.neutral00 }]}>{test.code}</Text>
-                </View>
-                <Text style={[Fonts.h3Bold, { color: Colors.neutral00, flex: 1 }]}>
-                  {test.name}
+    <ScreenContainer bgImage="bg2" bottomInsetMode="screen">
+      <ScrollView
+        contentContainerStyle={[Spaces.paddingBottom[40]]}
+        showsVerticalScrollIndicator={false}
+        style={{ flex: 1 }}
+      >
+        <WithDataWrapper error={error} isLoading={isLoading} onRetry={refetch}>
+          {test ? (
+            <View style={Spaces.gap[16]}>
+              <View style={Spaces.gap[4]}>
+                <Text style={[Fonts.caption, { color: Colors.primary400 }]}>
+                  {t('training.test.step', { current: index + 1, total: tests.length })}
                 </Text>
-              </View>
-            </View>
-
-            <View style={{
-              backgroundColor: Colors.neutral800,
-              borderRadius: 10,
-              flexDirection: 'row',
-              padding: 4,
-            }}
-            >
-              <Tab
-                active={tab === 'do'}
-                label={t('training.test.protocol')}
-                onPress={() => setTab('do')}
-              />
-              <Tab
-                active={tab === 'learn'}
-                label={t('training.test.why')}
-                onPress={() => setTab('learn')}
-              />
-            </View>
-
-            {tab === 'do' ? (
-              <View style={Spaces.gap[16]}>
-                <Block blocks={test.protocol} title={t('training.test.protocol')} />
-                <Block blocks={test.invalidIf} title={t('training.test.invalidIf')} />
-
-                <View style={Spaces.gap[8]}>
-                  <Text style={[Fonts.h4Bold, { color: Colors.neutral00 }]}>
-                    {t('training.timer.recovery')}
-                  </Text>
-                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
-                    {RECOVERY_PRESETS.map((seconds) => (
-                      <TouchableOpacity
-                        accessibilityRole="button"
-                        key={seconds}
-                        onPress={() => setRecovery(seconds)}
-                        style={{
-                          backgroundColor: recovery === seconds ? Colors.primary500 : 'transparent',
-                          borderColor: recovery === seconds ? Colors.primary500 : Colors.neutral600,
-                          borderRadius: 8,
-                          borderWidth: 1,
-                          paddingHorizontal: 10,
-                          paddingVertical: 6,
-                        }}
-                      >
-                        <Text
-                          style={[
-                            Fonts.caption,
-                            {
-                              color: recovery === seconds
-                                ? Colors.neutral00
-                                : Colors.neutral300,
-                            },
-                          ]}
-                        >
-                          {seconds >= 60 ? `${seconds / 60} min` : `${seconds} s`}
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
+                <View style={{ alignItems: 'center', flexDirection: 'row', gap: 8 }}>
+                  <View style={{
+                    backgroundColor: Colors.primary500,
+                    borderRadius: 6,
+                    paddingHorizontal: 8,
+                    paddingVertical: 3,
+                  }}
+                  >
+                    <Text style={[Fonts.captionBold, { color: Colors.neutral00 }]}>
+                      {test.code}
+                    </Text>
                   </View>
-                  <TrainingTimer seconds={recovery} />
-                </View>
-
-                <View style={Spaces.gap[12]}>
-                  <Text style={[Fonts.h4Bold, { color: Colors.neutral00 }]}>
-                    {t('training.test.results')}
+                  <Text style={[Fonts.h3Bold, { color: Colors.neutral00, flex: 1 }]}>
+                    {test.name}
                   </Text>
-                  {measuresByGroup.map(({ group, measures }) => (
-                    <View key={group} style={Spaces.gap[12]}>
-                      <Text style={[Fonts.captionBold, { color: Colors.neutral400 }]}>
-                        {t(GROUP_LABELS[/** @type {keyof GROUP_LABELS} */ (group)])}
-                      </Text>
-                      {measures.map((measure) => (
-                        <TrainingMeasureInput
-                          key={measure.key}
-                          measure={measure}
-                          onRecord={record}
-                          onToggleInvalid={toggleInvalid}
-                          values={valuesFor(measure.key)}
-                        />
+                </View>
+              </View>
+
+              <View style={{
+                backgroundColor: Colors.neutral800,
+                borderRadius: 10,
+                flexDirection: 'row',
+                padding: 4,
+              }}
+              >
+                <Tab
+                  active={tab === 'do'}
+                  label={t('training.test.protocol')}
+                  onPress={() => setTab('do')}
+                />
+                <Tab
+                  active={tab === 'learn'}
+                  label={t('training.test.why')}
+                  onPress={() => setTab('learn')}
+                />
+              </View>
+
+              {tab === 'do' ? (
+                <View style={Spaces.gap[16]}>
+                  <Block blocks={test.protocol} title={t('training.test.protocol')} />
+                  <Block blocks={test.invalidIf} title={t('training.test.invalidIf')} />
+
+                  <View style={Spaces.gap[8]}>
+                    <Text style={[Fonts.h4Bold, { color: Colors.neutral00 }]}>
+                      {t('training.timer.recovery')}
+                    </Text>
+                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+                      {RECOVERY_PRESETS.map((seconds) => (
+                        <TouchableOpacity
+                          accessibilityRole="button"
+                          key={seconds}
+                          onPress={() => setRecovery(seconds)}
+                          style={{
+                            backgroundColor: recovery === seconds
+                              ? Colors.primary500 : 'transparent',
+                            borderColor: recovery === seconds
+                              ? Colors.primary500 : Colors.neutral600,
+                            borderRadius: 8,
+                            borderWidth: 1,
+                            paddingHorizontal: 10,
+                            paddingVertical: 6,
+                          }}
+                        >
+                          <Text
+                            style={[
+                              Fonts.caption,
+                              {
+                                color: recovery === seconds
+                                  ? Colors.neutral00
+                                  : Colors.neutral300,
+                              },
+                            ]}
+                          >
+                            {seconds >= 60 ? `${seconds / 60} min` : `${seconds} s`}
+                          </Text>
+                        </TouchableOpacity>
                       ))}
                     </View>
-                  ))}
-                </View>
+                    <TrainingTimer seconds={recovery} />
+                  </View>
 
-                {pending > 0 && (
+                  <View style={Spaces.gap[12]}>
+                    <Text style={[Fonts.h4Bold, { color: Colors.neutral00 }]}>
+                      {t('training.test.results')}
+                    </Text>
+                    {measuresByGroup.map(({ group, measures }) => (
+                      <View key={group} style={Spaces.gap[12]}>
+                        <Text style={[Fonts.captionBold, { color: Colors.neutral400 }]}>
+                          {t(GROUP_LABELS[/** @type {keyof GROUP_LABELS} */ (group)])}
+                        </Text>
+                        {measures.map((measure) => (
+                          <TrainingMeasureInput
+                            key={measure.key}
+                            measure={measure}
+                            onRecord={record}
+                            onToggleInvalid={toggleInvalid}
+                            values={valuesFor(measure.key)}
+                          />
+                        ))}
+                      </View>
+                    ))}
+                  </View>
+
+                  {pending > 0 && (
                   <View style={Spaces.gap[8]}>
                     <Text style={[Fonts.caption, { color: Colors.gold500 }]}>
                       {t('training.sync.offline', { count: pending })}
@@ -332,56 +346,57 @@ function TrainingTest({ navigation, route }) {
                       variant="Primary"
                     />
                   </View>
-                )}
-              </View>
-            ) : (
-              <View style={Spaces.gap[16]}>
-                <Block blocks={test.why} title={t('training.test.why')} />
-                <Block blocks={test.setup} title={t('training.test.setup')} />
-                <Block blocks={test.reading} title={t('training.test.reading')} />
-                {Array.isArray(test.links) && test.links.length > 0 && (
+                  )}
+                </View>
+              ) : (
+                <View style={Spaces.gap[16]}>
+                  <Block blocks={test.why} title={t('training.test.why')} />
+                  <Block blocks={test.setup} title={t('training.test.setup')} />
+                  <Block blocks={test.reading} title={t('training.test.reading')} />
+                  {Array.isArray(test.links) && test.links.length > 0 && (
                   <View style={Spaces.gap[8]}>
                     <Text style={[Fonts.h4Bold, { color: Colors.neutral00 }]}>
                       {t('training.test.links')}
                     </Text>
                     <TrainingLinks links={test.links} />
                   </View>
-                )}
-              </View>
-            )}
+                  )}
+                </View>
+              )}
 
-            <View style={{ flexDirection: 'row', gap: 8 }}>
-              <View style={{ flex: 1 }}>
-                <Button
-                  disabled={index === 0}
-                  onPress={() => { setIndex((value) => Math.max(0, value - 1)); setTab('do'); }}
-                  title={t('training.actions.previous')}
-                  variant="Secondary"
-                />
+              <View style={{ flexDirection: 'row', gap: 8 }}>
+                <View style={{ flex: 1 }}>
+                  <Button
+                    disabled={index === 0}
+                    onPress={() => { setIndex((value) => Math.max(0, value - 1)); setTab('do'); }}
+                    title={t('training.actions.previous')}
+                    variant="Secondary"
+                  />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Button
+                    disabled={index >= tests.length - 1}
+                    onPress={() => {
+                      setIndex((value) => Math.min(tests.length - 1, value + 1));
+                      setTab('do');
+                    }}
+                    title={t('training.actions.nextTest')}
+                    variant="Primary"
+                  />
+                </View>
               </View>
-              <View style={{ flex: 1 }}>
-                <Button
-                  disabled={index >= tests.length - 1}
-                  onPress={() => {
-                    setIndex((value) => Math.min(tests.length - 1, value + 1));
-                    setTab('do');
-                  }}
-                  title={t('training.actions.nextTest')}
-                  variant="Primary"
-                />
-              </View>
-            </View>
 
-            {index >= tests.length - 1 && (
+              {index >= tests.length - 1 && (
               <Button
                 onPress={() => navigation.goBack()}
                 title={t('training.actions.finishTest')}
                 variant="Secondary"
               />
-            )}
-          </View>
-        ) : null}
-      </WithDataWrapper>
+              )}
+            </View>
+          ) : null}
+        </WithDataWrapper>
+      </ScrollView>
     </ScreenContainer>
   );
 }

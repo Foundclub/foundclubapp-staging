@@ -1,6 +1,11 @@
 import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Text, TouchableOpacity, View } from 'react-native';
+import {
+  ScrollView,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 
 import useTheme from '@/theme/themeContext';
 
@@ -113,7 +118,7 @@ function TrainingCatalog({ navigation }) {
   }, [navigation]);
 
   return (
-    <ScreenContainer bgImage="bg2">
+    <ScreenContainer bgImage="bg2" bottomInsetMode="tab-scene">
       <View style={Spaces.gap[16]}>
         <View style={Spaces.gap[4]}>
           <Text style={[Fonts.h2Bold, { color: Colors.neutral00 }]}>
@@ -124,25 +129,33 @@ function TrainingCatalog({ navigation }) {
           </Text>
         </View>
 
-        <WithDataWrapper error={error} isLoading={isLoading} onRetry={refetch}>
-          {Array.isArray(programs) && programs.length > 0 ? (
-            <View style={Spaces.gap[12]}>
-              {programs.map((program) => (
-                <ProgramCard
-                  current={program.documentId === currentProgramId}
-                  key={program.documentId}
-                  onPress={() => openProgram(program)}
-                  program={program}
-                />
-              ))}
-            </View>
-          ) : (
-            <EmptyState
-              description={t('training.catalog.empty.description')}
-              title={t('training.catalog.empty.title')}
-            />
-          )}
-        </WithDataWrapper>
+        <ScrollView
+          contentContainerStyle={[Spaces.paddingBottom[40]]}
+          showsVerticalScrollIndicator={false}
+          style={{ flex: 1 }}
+
+        >
+
+          <WithDataWrapper error={error} isLoading={isLoading} onRetry={refetch}>
+            {Array.isArray(programs) && programs.length > 0 ? (
+              <View style={Spaces.gap[12]}>
+                {programs.map((program) => (
+                  <ProgramCard
+                    current={program.documentId === currentProgramId}
+                    key={program.documentId}
+                    onPress={() => openProgram(program)}
+                    program={program}
+                  />
+                ))}
+              </View>
+            ) : (
+              <EmptyState
+                description={t('training.catalog.empty.description')}
+                title={t('training.catalog.empty.title')}
+              />
+            )}
+          </WithDataWrapper>
+        </ScrollView>
       </View>
     </ScreenContainer>
   );

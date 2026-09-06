@@ -51,7 +51,13 @@ const sanitize = (raw, type) => {
  * @returns {number|null} le nombre, ou `null` si la saisie n'en est pas un
  */
 const toNumber = (raw) => {
-  const parsed = Number(String(raw ?? '').replace(',', '.'));
+  // 🚨 DEFAUT VU A L ECRAN LE 2026-09-06 : `Number('')` vaut ZERO, pas NaN. Un
+  // champ VIDE etait donc lu comme la valeur 0, tombait sous la borne basse, et
+  // l ecran s ouvrait couvert d alertes rouges « Valeur inhabituelle » AVANT
+  // toute saisie. Un champ vide n est pas une valeur : il ne rend rien.
+  const texte = String(raw ?? '').trim();
+  if (!texte) return null;
+  const parsed = Number(texte.replace(',', '.'));
   return Number.isFinite(parsed) ? parsed : null;
 };
 
@@ -214,11 +220,14 @@ function TrainingMeasureInput({
         ]}
       >
         <Text style={[Fonts.p3, { color: Colors.neutral300 }]}>
-          {measure.label}
-          {measure.unit ? ` (${measure.unit})` : ''}
-          {' '}
-          ·
-          {t('training.measures.computed')}
+          {/*
+            🪤 VU A L ECRAN LE 2026-09-06 : le point median collait au mot suivant
+            (« (m/s) ·Calcule »). JSX rogne les blancs de bord d une ligne, donc un
+            « · » seul sur sa ligne perd l espace qui le suivait. Une seule
+            expression, une seule chaine : plus rien a rogner.
+          */}
+          {`${measure.label}${measure.unit ? ` (${measure.unit})` : ''}`}
+          {` · ${t('training.measures.computed')}`}
         </Text>
         {Boolean(measure.formula) && (
           <Text style={[Fonts.caption, { color: Colors.neutral400 }]}>{measure.formula}</Text>
