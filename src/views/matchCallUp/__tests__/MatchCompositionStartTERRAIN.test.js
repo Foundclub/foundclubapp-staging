@@ -229,8 +229,12 @@ describe('TERRAIN — une formation trop grande est GRISEE et EXPLIQUEE', () => 
   test('avec 3 convoques, le 4-3-3 dit POURQUOI il n est pas proposable', async () => {
     const arbre = await rendre({ selectedPlayers: ONZE_AVEC_POSTES.slice(0, 3) });
 
+    // 🔓 Message reformule le 07/09 avec l'assouplissement : il ne suffit plus
+    // de dire l'effectif complet, il faut nommer le MINIMUM — sinon le coach ne
+    // sait pas combien de convoques il lui manque pour debloquer la formation.
+    // L'intention du temoin est inchangee : la rangee grisee DIT pourquoi.
     expect(texteVisible(arbre))
-      .toContain('Le 4-3-3 demande 11 joueurs, tu en as convoqué 3.');
+      .toContain('Le 4-3-3 se joue à 11 ; il faut au moins 6 convoqués, tu en as 3.');
     expect(rangee(arbre, '4-3-3').props.accessibilityState.disabled).toBe(true);
     // ⛔ Et « Terrain vide » reste choisissable : on ne bloque jamais le coach.
     expect(rangee(arbre, 'Terrain vide').props.accessibilityState.disabled).toBe(false);
@@ -239,6 +243,50 @@ describe('TERRAIN — une formation trop grande est GRISEE et EXPLIQUEE', () => 
   test('avec 11 convoques, elle redevient choisissable', async () => {
     const arbre = await rendre();
     expect(rangee(arbre, '4-3-3').props.accessibilityState.disabled).toBe(false);
+  });
+});
+
+// 🔓 ASSOUPLISSEMENT — decide par Adel le 2026-09-07.
+//
+// LE DEFAUT QUE LE LOT TERRAIN AVAIT LUI-MEME REMONTE : applique a la lettre,
+// « une formation trop grande est grisee » bloquait TOUT. Un coach qui convoque
+// 10 joueurs pour un match a 11 ne pouvait proposer AUCUNE formation, et
+// retombait sur le terrain vide — soit exactement l'ecran que ce lot devait
+// remplacer, le jour ou il en avait le plus besoin.
+//
+// LA VRAIE VIE : les reponses arrivent au compte-gouttes jusqu'au dernier
+// moment. Le coach prepare sa compo avec ce qu'il a et complete ensuite.
+//
+// ⚠️ LA CONDITION FERME POSEE AVEC LA DECISION : le trou doit rester VISIBLE.
+// On ouvre la formation, mais l'ecran DIT combien de postes resteront vides.
+// Sans ca, on remplacerait un blocage par un oubli silencieux — et l'oubli est
+// pire, parce que le coach croit sa compo faite.
+describe('TERRAIN — une formation s ouvre des la MOITIE de l effectif, et elle le dit', () => {
+  test('avec 6 convoques sur 11, le 4-3-3 devient CHOISISSABLE', async () => {
+    const arbre = await rendre({ selectedPlayers: ONZE_AVEC_POSTES.slice(0, 6) });
+
+    expect(rangee(arbre, '4-3-3').props.accessibilityState.disabled).toBe(false);
+  });
+
+  test('et il ANNONCE combien de postes resteront vides', async () => {
+    const arbre = await rendre({ selectedPlayers: ONZE_AVEC_POSTES.slice(0, 6) });
+
+    expect(texteVisible(arbre)).toContain('5 postes resteront vides');
+  });
+
+  test('a effectif complet, aucune promesse de trou : on annonce les postes a remplir', async () => {
+    const arbre = await rendre();
+
+    expect(texteVisible(arbre)).toContain('11 postes à remplir.');
+    expect(texteVisible(arbre)).not.toContain('resteront vides');
+  });
+
+  test('sous la moitie, elle reste grisee — et le message nomme le MINIMUM', async () => {
+    const arbre = await rendre({ selectedPlayers: ONZE_AVEC_POSTES.slice(0, 5) });
+
+    expect(rangee(arbre, '4-3-3').props.accessibilityState.disabled).toBe(true);
+    expect(texteVisible(arbre))
+      .toContain('Le 4-3-3 se joue à 11 ; il faut au moins 6 convoqués, tu en as 5.');
   });
 });
 

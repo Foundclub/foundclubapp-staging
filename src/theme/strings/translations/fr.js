@@ -2782,6 +2782,11 @@ export default {
       calledUpCount_one: '{{count}} convoqué',
       calledUpCount_other: '{{count}} convoqués',
       eventLabel: 'Match',
+      // 🕳️ La contrepartie de l'assouplissement du 07/09 : quand on ouvre une
+      // formation a effectif incomplet, on DIT le trou. Sans ca, un blocage
+      // deviendrait un oubli silencieux.
+      formationPartial_one: '{{count}} poste restera vide — tu pourras le compléter.',
+      formationPartial_other: '{{count}} postes resteront vides — tu pourras les compléter.',
       formationSlots_one: '{{count}} poste à remplir.',
       formationSlots_other: '{{count}} postes à remplir.',
       formationsTitle: 'Compos type',
@@ -2813,7 +2818,7 @@ export default {
       unavailable: {
         noDefaultComposition: 'Cette équipe n’a pas encore de compo type.',
         noLastMatch: 'Aucune compo déjà publiée à reprendre.',
-        notEnoughPlayers: 'Le {{label}} demande {{needed}} joueurs, tu en as convoqué {{selected}}.',
+        notEnoughPlayers: 'Le {{label}} se joue à {{needed}} ; il faut au moins {{minimum}} convoqués, tu en as {{selected}}.',
       },
     },
   },

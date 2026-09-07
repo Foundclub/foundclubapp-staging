@@ -238,7 +238,18 @@ const buildFormationOptions = ({
   const calledUp = (Array.isArray(players) ? players : []).length;
 
   return getMatchFormations(sport, category).map((formation) => {
-    const available = calledUp >= formation.starters;
+    // 🔓 ASSOUPLI le 2026-09-07 (decision d'Adel). AVANT : `calledUp >= starters`,
+    // donc un coach a 10 convoques pour un match a 11 n'avait AUCUNE formation
+    // proposable et retombait sur le terrain vide — l'ecran meme que ce lot
+    // devait remplacer. Les reponses arrivent au compte-gouttes jusqu'au dernier
+    // moment : on ouvre la formation des la MOITIE de l'effectif, et le coach
+    // complete ensuite.
+    //
+    // ⚠️ La moitie ARRONDIE AU SUPERIEUR, parce qu'elle doit valoir pour toutes
+    // les tailles du catalogue : 5, 6, 7, 8, 11, 13 et 15 postes.
+    const minimumStarters = Math.ceil(formation.starters / 2);
+    const available = calledUp >= minimumStarters;
+    const missing = Math.max(0, formation.starters - calledUp);
     const { placements } = autoPlaceByPosition && available
       ? buildAutoPlacementsByDeclaredPosition({ formation, players })
       : { placements: [] };
@@ -252,14 +263,24 @@ const buildFormationOptions = ({
       // Le nom d'une compo type est un nom propre du sport (« 4-3-3 »,
       // « 2-3 zone », « Réception en W ») : il vit dans le catalogue, comme
       // les libelles de poste, et ne se traduit pas.
-      subtitleKey: 'matchComposition.start.formationSlots',
-      subtitleParams: { count: formation.starters },
+      //
+      // 🕳️ LA CONDITION FERME DE L'ASSOUPLISSEMENT : quand on ouvre une
+      // formation incomplete, l'ecran DIT combien de postes resteront vides.
+      // Sans ca on remplacerait un blocage par un oubli silencieux — et l'oubli
+      // est pire, parce que le coach croit sa compo faite.
+      subtitleKey: available && missing > 0
+        ? 'matchComposition.start.formationPartial'
+        : 'matchComposition.start.formationSlots',
+      subtitleParams: { count: available && missing > 0 ? missing : formation.starters },
       title: formation.label,
       // ⚠️ `needed` et non `count` : i18next traite `count` comme un selecteur
       // de pluriel et irait chercher une cle `…_one` / `…_other` qui n'existe
       // pas. Le nombre de postes n'est pas un pluriel, c'est une donnee.
       unavailableParams: {
-        label: formation.label, needed: formation.starters, selected: calledUp,
+        label: formation.label,
+        minimum: minimumStarters,
+        needed: formation.starters,
+        selected: calledUp,
       },
       unavailableReason: available ? null : 'notEnoughPlayers',
     };
