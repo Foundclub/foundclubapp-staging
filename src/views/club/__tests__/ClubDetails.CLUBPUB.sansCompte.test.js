@@ -1,7 +1,5 @@
-import { Alert, ScrollView, Text } from 'react-native';
+import { Alert, Text } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
-
-import Button from '@/components/atoms/button/Button';
 
 import ClubDetails from '../ClubDetails';
 // CLUBPUB — LA FICHE D UN CLUB DOIT ETRE VISIBLE SANS COMPTE, ET SANS FUITE.
@@ -344,29 +342,6 @@ const CLUB_SANS_EQUIPE = {
   trainers: [],
 };
 
-/** Le meme club, mais avec une equipe ET un dirigeant : le club « installe ». */
-const CLUB_AVEC_EQUIPE = {
-  ...CLUB_SANS_EQUIPE,
-  members: [{ documentId: 'u-9', role: { name: 'president' } }],
-  teams: [{
-    category: 'Sénior',
-    documentId: 't-1',
-    level: 'National',
-    name: 'Seniors A',
-    section: 'Masculine',
-  }],
-};
-
-const PIED_ACTIONS = 'club-details-actions-footer';
-
-/** Le repli de `floatingClubActionsBottomInset` : les encoches sont a 0 ici. */
-const RESERVE_BASSE = 12;
-/** La hauteur reservee au premier bouton, puis a chacun des suivants. */
-const RESERVE_PREMIER_BOUTON = 128;
-const RESERVE_BOUTON_SUIVANT = 72;
-/** Ce qui est reserve quand aucun bouton d'action ne sort. */
-const RESERVE_SANS_BOUTON = 40;
-
 /** @type {any[]} */
 const arbresMontes = [];
 
@@ -387,67 +362,6 @@ const monter = () => {
   });
   arbresMontes.push(arbre);
   return arbre;
-};
-
-/**
- * Compte les noeuds REELLEMENT rendus qui portent ce testID.
- * `toJSON` ne rend que les elements natifs : un composant et l'element qu'il
- * produit ne peuvent donc pas etre comptes deux fois.
- * @param {any} noeud - Un noeud de l'arbre rendu en JSON.
- * @param {string} identifiant - Le testID cherche.
- * @returns {number} Le nombre de noeuds trouves.
- */
-const compterNoeuds = (noeud, identifiant) => {
-  if (!noeud || typeof noeud !== 'object') return 0;
-  if (Array.isArray(noeud)) {
-    return noeud.reduce((total, enfant) => total + compterNoeuds(enfant, identifiant), 0);
-  }
-  const soi = noeud.props?.testID === identifiant ? 1 : 0;
-  return soi + compterNoeuds(noeud.children, identifiant);
-};
-
-/**
- * Vrai si l'un des ancetres du noeud satisfait le predicat.
- * @param {any} noeud - Le noeud observe.
- * @param {(ancetre: any) => boolean} predicat - Le test applique aux ancetres.
- * @returns {boolean} Vrai si un ancetre correspond.
- */
-const aPourAncetre = (noeud, predicat) => {
-  let courant = noeud.parent;
-  while (courant) {
-    if (predicat(courant)) return true;
-    courant = courant.parent;
-  }
-  return false;
-};
-
-/**
- * Tous les boutons rendus par la fiche.
- * @param {any} arbre - L'arbre monte.
- * @returns {any[]} Les instances de bouton.
- */
-const tousLesBoutons = (arbre) => arbre.root.findAllByType(Button);
-
-/**
- * Les boutons qui ne defilent PAS : ceux qui restent colles en bas de l'ecran.
- * @param {any} arbre - L'arbre monte.
- * @returns {any[]} Les boutons hors du defilement.
- */
-const boutonsHorsDefilement = (arbre) => tousLesBoutons(arbre).filter(
-  (bouton) => !aPourAncetre(bouton, (ancetre) => ancetre.type === ScrollView),
-);
-
-/**
- * La place reservee en bas du contenu qui defile.
- * @param {any} arbre - L'arbre monte.
- * @returns {number} La reserve, en points.
- */
-const reserveBasseDuDefilement = (arbre) => {
-  const styles = arbre.root.findAllByType(ScrollView)[0].props.contentContainerStyle;
-  const trouve = [styles].flat(Infinity).reverse().find(
-    (/** @type {any} */ style) => style && typeof style.paddingBottom === 'number',
-  );
-  return trouve.paddingBottom;
 };
 
 /**
@@ -526,7 +440,9 @@ const CLUB_AVEC_CONTACT = {
   ...CLUB_SANS_EQUIPE,
   email: 'president.dupont@gmail.com',
   members: [
-    { documentId: 'm-1', firstname: 'Killian', lastname: 'Mercier', role: { name: 'coach' } },
+    {
+      documentId: 'm-1', firstname: 'Killian', lastname: 'Mercier', role: { name: 'coach' },
+    },
   ],
   phoneNumber: '0612345678',
 };
