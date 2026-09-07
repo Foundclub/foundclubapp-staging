@@ -118,6 +118,7 @@ function TrainingTest({ navigation, route }) {
   const [recovery, setRecovery] = useState(120);
   /** @type {[Record<string, Record<string, any>>, Function]} */
   const [values, setValues] = useState({});
+  const [saveFailed, setSaveFailed] = useState(false);
   const [syncError, setSyncError] = useState(false);
 
   const {
@@ -173,7 +174,15 @@ function TrainingTest({ navigation, route }) {
   const record = useCallback((/** @type {Record<string, any>} */ row) => {
     if (!test?.documentId) return;
     const full = { ...row, testDocumentId: test.documentId };
-    results.record(full);
+    // Si le telephone refuse d'ecrire, on le DIT et on n'affiche pas la valeur
+    // comme enregistree : un chiffre vert sur une saisie perdue est le pire cas.
+    try {
+      results.record(full);
+    } catch {
+      setSaveFailed(true);
+      return;
+    }
+    setSaveFailed(false);
     setValues((/** @type {Record<string, any>} */ previous) => ({
       ...previous,
       [`${row.measureKey}|${row.attempt ?? 1}|${row.side || 'none'}`]: { ...full, isValid: true },
@@ -187,7 +196,13 @@ function TrainingTest({ navigation, route }) {
     const next = {
       ...current, ...row, isValid: current.isValid === false, testDocumentId: test.documentId,
     };
-    results.record(next);
+    try {
+      results.record(next);
+    } catch {
+      setSaveFailed(true);
+      return;
+    }
+    setSaveFailed(false);
     setValues((/** @type {Record<string, any>} */ previous) => ({ ...previous, [key]: next }));
   }, [results, test, values]);
 
@@ -311,6 +326,11 @@ function TrainingTest({ navigation, route }) {
                     <Text style={[Fonts.h4Bold, { color: Colors.neutral00 }]}>
                       {t('training.test.results')}
                     </Text>
+                    {saveFailed && (
+                      <Text style={[Fonts.p3, { color: Colors.error500 }]}>
+                        {t('training.sync.localFailed')}
+                      </Text>
+                    )}
                     {measuresByGroup.map(({ group, measures }) => (
                       <View key={group} style={Spaces.gap[12]}>
                         <Text style={[Fonts.captionBold, { color: Colors.neutral400 }]}>

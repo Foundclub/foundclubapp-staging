@@ -32,6 +32,8 @@ const {
   removeLocalResult,
 } = require('@/services/training/trainingLocalStore');
 
+const { setItem } = require('@/platform/storage');
+
 const SESSION = 'session-abc';
 const TEST_ID = 'test-b1';
 
@@ -179,5 +181,39 @@ describe('la remise à zéro', () => {
 
     expect(getLocalResults(SESSION)).toEqual({});
     expect(getPendingSessions()).not.toContain(SESSION);
+  });
+});
+
+/**
+ * 🚨 LA SEULE PROMESSE DONT L'ÉCHEC EST IRRATTRAPABLE, mesurée le 2026-09-07.
+ *
+ * `writeJson` rendait déjà `true` ou `false` selon qu'elle avait réussi. Les
+ * QUATRE endroits qui l'appelaient ignoraient tous cette réponse : l'écran
+ * affichait « enregistré » en vert même quand rien n'avait été écrit sur le
+ * téléphone. Une séance entière pouvait disparaître pendant que les chiffres
+ * s'affichaient normalement.
+ *
+ * On ne redemande pas à quelqu'un de refaire trois sprints maximaux. Une
+ * sauvegarde qui rate doit donc SE DIRE, tout de suite.
+ */
+describe('une sauvegarde locale qui rate ne fait jamais semblant', () => {
+  afterEach(() => {
+    setItem.mockImplementation((/** @type {string} */ key, /** @type {string} */ value) => {
+      store[key] = value;
+    });
+  });
+
+  it('LÈVE une erreur quand le téléphone refuse d écrire', () => {
+    setItem.mockImplementation(() => { throw new Error('storage full'); });
+
+    expect(() => putLocalResult('seance-1', {
+      attempt: 1, measureKey: 'temps_30m', testDocumentId: 'test-1',
+    })).toThrow(/carnet local/i);
+  });
+
+  it('ne dit rien quand tout va bien', () => {
+    expect(() => putLocalResult('seance-1', {
+      attempt: 1, measureKey: 'temps_30m', testDocumentId: 'test-1',
+    })).not.toThrow();
   });
 });

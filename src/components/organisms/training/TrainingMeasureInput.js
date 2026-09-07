@@ -63,6 +63,22 @@ const toNumber = (raw) => {
 
 const SIDES = ['left', 'right'];
 
+// Une mesure « oui/non » est une liste de choix a deux entrees : meme rangee de
+// pastilles, meme rangement. La valeur ENREGISTREE reste en minuscules — c'est
+// celle qui part au carnet et que le protocole relit.
+const BOOLEAN_CHOICES = ['oui', 'non'];
+const BOOLEAN_LABELS = { non: 'Non', oui: 'Oui' };
+
+/**
+ * Les valeurs proposees par une mesure a pastilles.
+ * @param {Record<string, any>} measure définition venue du serveur
+ * @returns {string[]} les choix du protocole, ou « oui / non »
+ */
+const choicesOf = (measure) => {
+  if (measure.type === 'boolean') return BOOLEAN_CHOICES;
+  return Array.isArray(measure.choices) ? measure.choices : [];
+};
+
 /**
  * Un essai nul se voit en or, une valeur hors bornes en rouge, le reste est neutre.
  * @param {Record<string, string>} Colors palette du thème courant
@@ -178,6 +194,67 @@ function AttemptField({
 }
 
 /**
+ * Les pastilles d'UN essai : « Oui / Non », ou la liste de choix du protocole.
+ *
+ * 🪤 Jusqu'au 2026-09-07 ces pastilles écrivaient `attempt: 1` en dur et relisaient
+ * toujours `saved['1|none']` : sur une mesure à 12 essais, les 12 appuis
+ * s'écrasaient sur la ligne du premier. 110 cases du programme étaient perdues en
+ * silence. Ce composant reçoit désormais son essai, exactement comme `AttemptField`.
+ * @param {object} props
+ * @param {Record<string, string>} props.Colors couleurs du thème
+ * @param {string[]} props.choices les valeurs proposées, dans l'ordre du protocole
+ * @param {Record<string, any>} props.Fonts polices du thème
+ * @param {Record<string, string>} [props.labels] libellé affiché pour une valeur, si différent
+ * @param {(choice: string) => void} props.onPick enregistre le choix de cet essai
+ * @param {string|null} props.side côté mesuré (`left`, `right`), ou `null` si sans côté
+ * @param {Record<string, Record<string, any>>} props.Spaces espacements du thème
+ * @param {(key: string, options?: Record<string, any>) => string} props.t fonction de traduction
+ * @param {Record<string, any>|undefined} props.value valeur déjà enregistrée pour cet essai
+ * @returns {React.ReactElement} la rangée de pastilles de l'essai
+ */
+function ChoiceField({
+  choices, Colors, Fonts, labels, onPick, side, Spaces, t, value,
+}) {
+  return (
+    <View style={[Spaces.gap[4], { alignItems: 'center', flexDirection: 'row', gap: 6 }]}>
+      {Boolean(side) && (
+        <Text style={[Fonts.caption, { color: Colors.neutral300, minWidth: 46 }]}>
+          {t(`training.measures.side.${side}`)}
+        </Text>
+      )}
+      <View
+        style={{
+          flex: 1, flexDirection: 'row', flexWrap: 'wrap', gap: 8,
+        }}
+      >
+        {choices.map((choice) => {
+          const active = value?.textValue === choice;
+          return (
+            <TouchableOpacity
+              accessibilityRole="button"
+              key={choice}
+              onPress={() => onPick(choice)}
+              style={{
+                backgroundColor: active ? Colors.primary500 : 'transparent',
+                borderColor: active ? Colors.primary500 : Colors.neutral600,
+                borderRadius: 8,
+                borderWidth: 1,
+                paddingHorizontal: 12,
+                paddingVertical: 8,
+              }}
+            >
+              <Text style={[Fonts.p3, { color: active ? Colors.neutral00 : Colors.neutral300 }]}>
+                {labels?.[choice] ?? choice}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+    </View>
+  );
+}
+
+/**
  * Rend une mesure du protocole et tous ses essais, prête à être remplie sur le terrain.
  * Une mesure calculée s'affiche seulement, avec sa formule ; les autres se saisissent.
  * @param {object} props
@@ -251,90 +328,41 @@ function TrainingMeasureInput({
         <Text style={[Fonts.caption, { color: Colors.neutral400 }]}>{measure.helper}</Text>
       )}
 
-      {measure.type === 'boolean' ? (
-        <View style={{ flexDirection: 'row', gap: 8 }}>
-          {[true, false].map((flag) => {
-            const current = saved['1|none']?.textValue;
-            const active = current === (flag ? 'oui' : 'non');
-            return (
-              <TouchableOpacity
-                accessibilityRole="button"
-                key={String(flag)}
-                onPress={() => onRecord({
-                  attempt: 1,
-                  measureKey: measure.key,
-                  side: 'none',
-                  textValue: flag ? 'oui' : 'non',
-                  unit: measure.unit,
-                })}
-                style={{
-                  backgroundColor: active ? Colors.primary500 : 'transparent',
-                  borderColor: active ? Colors.primary500 : Colors.neutral600,
-                  borderRadius: 8,
-                  borderWidth: 1,
-                  paddingHorizontal: 16,
-                  paddingVertical: 8,
-                }}
-              >
-                <Text style={[Fonts.p3, { color: active ? Colors.neutral00 : Colors.neutral300 }]}>
-                  {flag ? 'Oui' : 'Non'}
+      {/*
+        Les TROIS types d'essai passent par la meme boucle : un essai (et un cote)
+        par rangee. Les pastilles s'en ecartaient, et perdaient 110 cases.
+      */}
+      <View style={Spaces.gap[8]}>
+        {rows.map(({ attempt, side }) => {
+          const key = `${attempt}|${side || 'none'}`;
+          const showAttemptLabel = attempts > 1 && (!measure.sides || side === SIDES[0]);
+          const isPastille = measure.type === 'boolean' || measure.type === 'choice';
+          return (
+            <View key={key} style={Spaces.gap[4]}>
+              {showAttemptLabel && (
+                <Text style={[Fonts.caption, { color: Colors.neutral400 }]}>
+                  {t('training.measures.attempt', { number: attempt })}
                 </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-      ) : null}
-
-      {measure.type === 'choice' ? (
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-          {(Array.isArray(measure.choices) ? measure.choices : []).map((choice) => {
-            const active = saved['1|none']?.textValue === choice;
-            return (
-              <TouchableOpacity
-                accessibilityRole="button"
-                key={choice}
-                onPress={() => onRecord({
-                  attempt: 1,
-                  measureKey: measure.key,
-                  side: 'none',
-                  textValue: choice,
-                  unit: measure.unit,
-                })}
-                style={{
-                  backgroundColor: active ? Colors.primary500 : 'transparent',
-                  borderColor: active ? Colors.primary500 : Colors.neutral600,
-                  borderRadius: 8,
-                  borderWidth: 1,
-                  paddingHorizontal: 12,
-                  paddingVertical: 8,
-                }}
-              >
-                <Text
-                  style={[
-                    Fonts.p3,
-                    { color: active ? Colors.neutral00 : Colors.neutral300 },
-                  ]}
-                >
-                  {choice}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-      ) : null}
-
-      {measure.type !== 'boolean' && measure.type !== 'choice' ? (
-        <View style={Spaces.gap[8]}>
-          {rows.map(({ attempt, side }) => {
-            const key = `${attempt}|${side || 'none'}`;
-            const showAttemptLabel = attempts > 1 && (!measure.sides || side === SIDES[0]);
-            return (
-              <View key={key} style={Spaces.gap[4]}>
-                {showAttemptLabel && (
-                  <Text style={[Fonts.caption, { color: Colors.neutral400 }]}>
-                    {t('training.measures.attempt', { number: attempt })}
-                  </Text>
-                )}
+              )}
+              {isPastille ? (
+                <ChoiceField
+                  choices={choicesOf(measure)}
+                  Colors={Colors}
+                  Fonts={Fonts}
+                  labels={measure.type === 'boolean' ? BOOLEAN_LABELS : undefined}
+                  onPick={(choice) => onRecord({
+                    attempt,
+                    measureKey: measure.key,
+                    side: side || 'none',
+                    textValue: choice,
+                    unit: measure.unit,
+                  })}
+                  side={side}
+                  Spaces={Spaces}
+                  t={t}
+                  value={saved[key]}
+                />
+              ) : (
                 <AttemptField
                   Colors={Colors}
                   disabled={false}
@@ -358,11 +386,11 @@ function TrainingMeasureInput({
                   t={t}
                   value={saved[key]}
                 />
-              </View>
-            );
-          })}
-        </View>
-      ) : null}
+              )}
+            </View>
+          );
+        })}
+      </View>
     </View>
   );
 }

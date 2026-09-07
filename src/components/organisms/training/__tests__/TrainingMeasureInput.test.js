@@ -246,3 +246,96 @@ describe('les autres composants de la fiche', () => {
     expect(Text).toBeDefined();
   });
 });
+
+/**
+ * 🚨 LE DEFAUT LE PLUS CHER DE LA SECTION, MESURE LE 2026-09-07.
+ *
+ * Les branches `boolean` et `choice` ecrivaient `attempt: 1` EN DUR et relisaient
+ * `saved['1|none']`. Sur la frappe de puissance, le joueur tire 12 fois, appuie
+ * 12 fois sur « quel coin as-tu touche ? », et le carnet ne gardait QUE la
+ * douziemme — ecrasee sur la ligne de la premiere. Aucun message, rien a l'ecran.
+ *
+ * Mesure sur le programme reel : 230 cases a pastilles ou Oui/Non, dont 110
+ * PERDUES, reparties sur 22 mesures — presque toutes sur le Jour T, la journee
+ * qui ouvre le programme.
+ *
+ * La branche des champs a taper, elle, depliait deja correctement `rows`
+ * (essais x cotes). Ces temoins figent le fait que les TROIS branches se
+ * comportent pareil.
+ */
+describe('une mesure a pastilles garde CHAQUE essai', () => {
+  const CHOIX = {
+    attempts: 3,
+    choices: ['gauche', 'droite'],
+    key: 'coin_touche_fort',
+    label: 'Coin touche',
+    type: 'choice',
+  };
+
+  it('rend UN groupe de pastilles PAR ESSAI, pas un seul pour tous', () => {
+    const arbre = rendre(CHOIX);
+
+    // 3 essais x 2 choix = 6 pastilles, et non 2.
+    expect(arbre.root.findAllByType(TouchableOpacity)).toHaveLength(6);
+  });
+
+  it('numerote les essais a l ecran, comme le font les champs a taper', () => {
+    expect(textes(rendre(CHOIX)).filter((t) => t.startsWith('training.measures.attempt')))
+      .toHaveLength(3);
+  });
+
+  it('ENREGISTRE L ESSAI SUR LEQUEL ON APPUIE, et non toujours le premier', () => {
+    const onRecord = jest.fn();
+    const arbre = rendre(CHOIX, {}, { onRecord });
+
+    // La 3e pastille est le premier choix du 2e essai (2 choix par essai).
+    act(() => { arbre.root.findAllByType(TouchableOpacity)[2].props.onPress(); });
+
+    expect(onRecord).toHaveBeenCalledWith(expect.objectContaining({
+      attempt: 2, measureKey: 'coin_touche_fort', side: 'none', textValue: 'gauche',
+    }));
+  });
+
+  it('deplie les deux cotes quand la mesure en a, comme les champs a taper', () => {
+    const arbre = rendre({ ...CHOIX, attempts: 2, sides: true });
+
+    // 2 essais x 2 cotes x 2 choix = 8 pastilles.
+    expect(arbre.root.findAllByType(TouchableOpacity)).toHaveLength(8);
+  });
+
+  it('n allume que la pastille de SON essai, jamais celle du premier', () => {
+    const arbre = rendre(CHOIX, { '2|none': { textValue: 'droite' } });
+    const allumees = arbre.root.findAllByType(TouchableOpacity)
+      .map((n, i) => [i, n.props.style.borderWidth === 1 && n.props.style.backgroundColor !== 'transparent'])
+      .filter(([, active]) => active)
+      .map(([i]) => i);
+
+    // Seule la 4e pastille (2e essai, 2e choix) doit etre allumee.
+    expect(allumees).toEqual([3]);
+  });
+});
+
+describe('une mesure Oui/Non garde CHAQUE essai', () => {
+  const BOOLEEN = {
+    attempts: 4,
+    key: 'dans_le_cadre',
+    label: 'Dans le cadre',
+    type: 'boolean',
+  };
+
+  it('rend une paire Oui/Non PAR ESSAI', () => {
+    expect(rendre(BOOLEEN).root.findAllByType(TouchableOpacity)).toHaveLength(8);
+  });
+
+  it('ENREGISTRE L ESSAI SUR LEQUEL ON APPUIE', () => {
+    const onRecord = jest.fn();
+    const arbre = rendre(BOOLEEN, {}, { onRecord });
+
+    // La 8e pastille est le « Non » du 4e essai.
+    act(() => { arbre.root.findAllByType(TouchableOpacity)[7].props.onPress(); });
+
+    expect(onRecord).toHaveBeenCalledWith(expect.objectContaining({
+      attempt: 4, side: 'none', textValue: 'non',
+    }));
+  });
+});

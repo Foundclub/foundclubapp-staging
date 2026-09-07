@@ -4675,6 +4675,7 @@ export default {
     },
     sync: {
       failed: 'Envoi impossible. Tes mesures sont gardées ici, elles partiront plus tard.',
+      localFailed: 'Ton téléphone n\'a pas pu enregistrer cette valeur. Note-la sur papier et libère de la place avant de continuer.',
       offline_one: '{{count}} mesure en attente d\'envoi',
       offline_other: '{{count}} mesures en attente d\'envoi',
       success: 'Mesures envoyées',

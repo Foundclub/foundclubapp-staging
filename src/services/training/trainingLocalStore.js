@@ -94,7 +94,12 @@ export const putLocalResult = (sessionDocumentId, row) => {
     side: row.side || 'none',
     synced: false,
   };
-  writeJson(`${PREFIX}${sessionDocumentId}`, all);
+  // 🚨 Une ecriture qui rate ne doit JAMAIS passer pour une reussite : c'est la
+  // seule promesse de ce lot dont l'echec est irrattrapable — on ne redemande pas
+  // a quelqu'un de refaire trois sprints maximaux. L'ecran doit pouvoir le dire.
+  if (!writeJson(`${PREFIX}${sessionDocumentId}`, all)) {
+    throw new Error(`Le carnet local n'a pas pu etre ecrit (seance ${sessionDocumentId}).`);
+  }
   markSessionPending(sessionDocumentId);
   return all;
 };
