@@ -7,10 +7,12 @@ import {
   View,
 } from 'react-native';
 
+import { withAlpha } from '@/theme/colors';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
 import EmptyState from '@/components/atoms/emptyState/EmptyState';
+import ClubCardSurface from '@/components/molecules/clubCard/ClubCardSurface';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
@@ -64,53 +66,59 @@ function SessionRow({ isNext, onPress, session }) {
   const statusColor = Colors[/** @type {keyof Colors} */ (STATUS_COLORS[etat] || 'neutral500')];
 
   return (
-    <TouchableOpacity
-      accessibilityRole="button"
-      onPress={onPress}
-      style={[
-        Spaces.gap[4],
-        {
-          backgroundColor: Colors.neutral800,
-          borderColor: isNext ? Colors.primary500 : Colors.neutral700,
-          borderRadius: 12,
-          borderWidth: isNext ? 2 : 1,
-          padding: 14,
-        },
-      ]}
-    >
-      <View style={{ alignItems: 'center', flexDirection: 'row', gap: 8 }}>
-        <View style={{
-          backgroundColor: statusColor, borderRadius: 6, paddingHorizontal: 8, paddingVertical: 2,
-        }}
-        >
-          <Text style={[Fonts.captionBold, { color: Colors.neutral00 }]}>{day.code}</Text>
-        </View>
-        <Text
-          numberOfLines={2}
-          style={[Fonts.p2, { color: Colors.neutral00, flex: 1 }]}
-        >
-          {day.title}
-        </Text>
-      </View>
-
-      <View style={{ alignItems: 'center', flexDirection: 'row', gap: 10 }}>
-        <Text style={[Fonts.caption, { color: Colors.neutral300 }]}>
-          {formatDate(session.plannedDate)}
-        </Text>
-        {Boolean(day.place) && (
-          <Text style={[Fonts.caption, { color: Colors.neutral400 }]}>{day.place}</Text>
-        )}
-        {Boolean(day.durationMinutes) && (
-          <Text style={[Fonts.caption, { color: Colors.neutral400 }]}>
-            {day.durationMinutes}
-            {' '}
-            min
+    <TouchableOpacity accessibilityRole="button" onPress={onPress}>
+      {/*
+        🎨 La carte d'une séance passe par `ClubCardSurface`, le POINT DE VÉRITÉ
+        UNIQUE des cartes de l'app : dégradé `primary700` → `primary900` et liseré
+        cyan. Elle posait avant un `neutral800` écrit à la main — un gris que plus
+        aucun autre écran n'emploie comme surface, ce qui faisait de la section
+        une île visuelle. Il n'y avait rien à inventer, seulement à s'en servir.
+      */}
+      <ClubCardSurface
+        style={[
+          Spaces.gap[4],
+          {
+            borderColor: isNext ? Colors.primary500 : withAlpha(Colors.primary500, 0.25),
+            borderRadius: 12,
+            borderWidth: isNext ? 2 : 1,
+            padding: 14,
+          },
+        ]}
+      >
+        <View style={{ alignItems: 'center', flexDirection: 'row', gap: 8 }}>
+          <View style={{
+            backgroundColor: statusColor, borderRadius: 6, paddingHorizontal: 8, paddingVertical: 2,
+          }}
+          >
+            <Text style={[Fonts.captionBold, { color: Colors.neutral00 }]}>{day.code}</Text>
+          </View>
+          <Text
+            numberOfLines={2}
+            style={[Fonts.p2, { color: Colors.neutral00, flex: 1 }]}
+          >
+            {day.title}
           </Text>
-        )}
-        <Text style={[Fonts.caption, { color: statusColor, marginLeft: 'auto' }]}>
-          {t(`training.status.${session.status || 'planned'}`)}
-        </Text>
-      </View>
+        </View>
+
+        <View style={{ alignItems: 'center', flexDirection: 'row', gap: 10 }}>
+          <Text style={[Fonts.caption, { color: Colors.neutral300 }]}>
+            {formatDate(session.plannedDate)}
+          </Text>
+          {Boolean(day.place) && (
+            <Text style={[Fonts.caption, { color: Colors.neutral400 }]}>{day.place}</Text>
+          )}
+          {Boolean(day.durationMinutes) && (
+            <Text style={[Fonts.caption, { color: Colors.neutral400 }]}>
+              {day.durationMinutes}
+              {' '}
+              min
+            </Text>
+          )}
+          <Text style={[Fonts.caption, { color: statusColor, marginLeft: 'auto' }]}>
+            {t(`training.status.${session.status || 'planned'}`)}
+          </Text>
+        </View>
+      </ClubCardSurface>
     </TouchableOpacity>
   );
 }
