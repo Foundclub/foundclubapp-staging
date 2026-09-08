@@ -415,6 +415,57 @@ export const getMultisportClubs = async (params = {}) => {
  * @param {string|number} id - The club ID
  * @returns {Promise<Club>} - The club data
  */
+/**
+ * 🔒 CLUBPUB — la fiche d'un club pour quelqu'un qui n'a PAS de compte.
+ *
+ * DECISION D'ADEL DU 2026-09-07 : « oui, une fiche club doit etre visible sans
+ * compte ». La porte privee `/clubs/:id` rend **403** a un visiteur (mesure du
+ * 2026-09-07 : le role visiteur porte `club.find` mais PAS `club.findOne`), et
+ * c'est l'un des refus qui alimentent les groupes Sentry REACT-NATIVE-1 et -2.
+ *
+ * ⛔ ON N'OUVRE PAS LA PORTE PRIVEE. Elle renvoie `members` (avec avatar et
+ * role), `phoneNumber` et `email` : 37 705 clubs portent un telephone en
+ * production, dont 30 771 en 06/07 — des mobiles PERSONNELS.
+ *
+ * ♻️ ON REUTILISE la porte publique qui sert deja les ~28 000 pages indexees,
+ * verifiee le 2026-09-07 : elle repond 200 en anonyme et ne contient AUCUNE
+ * donnee personnelle (zero `phone`, `email`, `firstname`, `lastname`,
+ * `birthdate` dans la reponse).
+ *
+ * Cette fonction TRADUIT sa forme vers celle qu'attend l'ecran — c'est le seul
+ * endroit ou les deux vocabulaires se rencontrent (`sports` -> `activites`,
+ * `sponsors` -> `sponsor`, `addressLabel` -> `addressDetails`, `logoUrl` ->
+ * `logo`).
+ * @param {string} id - Le documentId du club.
+ * @returns {Promise<any>} La fiche publique, ou `null` si le club est introuvable.
+ */
+export const getPublicClubById = async (id) => {
+  const response = await client.get(`/public-directory/clubs/${id}`);
+  const club = response?.data?.data?.club || null;
+  if (!club) return null;
+
+  return {
+    activites: Array.isArray(club.sports) ? club.sports : [],
+    // L'ecran fait `safeJsonParse(addressDetails)` puis se rabat sur la chaine
+    // brute : une adresse en texte simple s'affiche donc telle quelle.
+    addressDetails: club.addressLabel || '',
+    clubVerified: club.clubVerified === true,
+    documentId: club.documentId,
+    logo: club.logoUrl ? { url: club.logoUrl } : null,
+    // ⛔ VOLONTAIREMENT VIDES. Le garde-fou de l'ecran
+    // (`showsPrivateClubDetails`) les cache deja ; les laisser vides ici est la
+    // SECONDE ceinture, celle qui tient meme si quelqu'un retire la premiere.
+    email: undefined,
+    members: [],
+    membersAreHidden: false,
+    membersCount: 0,
+    name: club.name || '',
+    phoneNumber: undefined,
+    sponsor: Array.isArray(club.sponsors) ? club.sponsors : [],
+    teams: Array.isArray(club.teams) ? club.teams : [],
+  };
+};
+
 export const getClubById = async (id) => {
   const response = await client.get(`/clubs/${id}`, {
     params: {
