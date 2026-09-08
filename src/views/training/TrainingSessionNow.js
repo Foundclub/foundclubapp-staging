@@ -208,7 +208,7 @@ function TrainingSessionNow({ navigation, route }) {
   }, [enrollment, route?.params?.dayId, session]);
 
   const etapes = useMemo(
-    () => etapesDuJour(day, session?.results),
+    () => etapesDuJour(day, session?.results, session?.conditions?.stepsDone),
     [day, session],
   );
   const courante = useMemo(() => etapeCourante(etapes), [etapes]);

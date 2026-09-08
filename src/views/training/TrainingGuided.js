@@ -189,6 +189,50 @@ function TrainingGuided({ navigation, route }) {
   }, []);
 
   /**
+   * 🔴 NOTER L ÉTAPE QU'ON VIENT DE FRANCHIR — sans ça, rien ne s'en souvient.
+   *
+   * Mesuré à l'écran le 2026-09-08 : on faisait la mise en place, l'échauffement,
+   * l'essai 1, la récupération — on sortait du parcours, et le tableau de bord
+   * affichait toujours « 0 test fait, étape 0 ». L'avancement se déduisait
+   * UNIQUEMENT des mesures enregistrées, or 9 tests sur 33 n'écrivent rien sur le
+   * terrain : leur seule mesure « par essai » se lit plus tard sur la vidéo. Les
+   * journées E et D3 étaient à 100 % dans ce cas — faisables en entier sans laisser
+   * la moindre trace.
+   *
+   * 🔎 Rangé dans `conditions`, le champ JSON que la séance porte déjà : c'est le
+   * même chemin que les repères cochés et que les tests validés. Aucune migration,
+   * et l'avancement survit au changement de téléphone.
+   *
+   * ⚠️ ON NE NOTE QUE CE QUI EST VRAIMENT FRANCHI, jamais un simple changement
+   * d'écran : le ruban permet de REVENIR sur un essai déjà passé, et marquer là
+   * l'arrêt qu'on quitte déclarerait fait un essai qu'on n'a pas terminé.
+   */
+  const franchir = useCallback((cleEtape) => {
+    if (!session?.documentId || !cleEtape) return;
+    const deja = Array.isArray(session.conditions?.stepsDone)
+      ? session.conditions.stepsDone : [];
+    if (deja.includes(cleEtape)) return;
+    majSeance.mutate({
+      payload: {
+        conditions: { ...(session.conditions || {}), stepsDone: [...deja, cleEtape] },
+      },
+      sessionDocumentId: session.documentId,
+    });
+  }, [majSeance, session]);
+
+  /**
+   * Le bouton principal : on note l'arrêt qu'on termine, PUIS on avance.
+   * Seuls la mise en place et les essais ont une étape au tableau de bord ;
+   * l'échauffement, la récupération et la fin n'en ont pas, et n'écrivent rien.
+   */
+  const avancer = useCallback(() => {
+    const code = test?.code;
+    if (code && courant?.type === ARRETS.PREP) franchir(`${code}-prep`);
+    if (code && courant?.type === ARRETS.ATTEMPT) franchir(`${code}-e${courant.essai}`);
+    aller(arretSuivant?.cle);
+  }, [aller, arretSuivant, courant, franchir, test]);
+
+  /**
    * 🔎 « POURQUOI ? » SORT LE PROTOCOLE DU PARCOURS. Pendant un essai, on ne lit pas
    * quatre écrans d'explication — mais on veut pouvoir y aller en un geste, et
    * REVENIR exactement où on était. D'où un bouton, pas une rubrique dépliée.
@@ -810,7 +854,7 @@ function TrainingGuided({ navigation, route }) {
               <>
                 <Button
                   disabled={manquantes > 0}
-                  onPress={() => aller(arretSuivant?.cle)}
+                  onPress={avancer}
                   title={t(`training.guided.go.${courant?.type}`, {
                     count: (courant?.essai || 0) + 1,
                   })}

@@ -2,6 +2,7 @@ import { TouchableOpacity } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
 import Button from '@/components/atoms/button/Button';
+import TrainingStepRail from '@/components/organisms/training/TrainingStepRail';
 
 import TrainingGuided from '../TrainingGuided';
 
@@ -129,6 +130,10 @@ const SEANCE = {
  * @param {string} [options.step] l arret ouvert
  * @returns {any} l arbre rendu
  */
+/** Les arbres montes par ce fichier, demontes apres chaque temoin. */
+/** @type {any[]} */
+const montes = [];
+
 const rendre = ({ navigation = {}, seance = SEANCE, step = 'prep' } = {}) => {
   mockEntrainement = {
     enrollment: { program: { days: [JOURNEE] } },
@@ -157,8 +162,30 @@ const rendre = ({ navigation = {}, seance = SEANCE, step = 'prep' } = {}) => {
       />,
     );
   });
+  montes.push(arbre);
   return arbre;
 };
+
+/*
+ * 🧨 ON DEMONTE CE QU ON A MONTE, et ce n est pas de la coquetterie.
+ *
+ * Des qu un temoin avance jusqu a la RECUPERATION, le chronometre demarre tout
+ * seul. L arbre reste monte apres la fin du test, jest demonte son environnement,
+ * et la minuterie qui se reveille rend « You are trying to import a file after
+ * the Jest environment has been torn down » : la SUITE sort en code 1 alors que
+ * tous ses temoins sont VERTS. C est exactement le defaut deja consigne dans ce
+ * depot — une CI rouge sans un seul test rouge, et introuvable si on ne lit que
+ * la ligne « Tests: ».
+ */
+afterEach(() => {
+  montes.splice(0).forEach((arbre) => {
+    try {
+      act(() => { arbre.unmount(); });
+    } catch {
+      // Un arbre deja demonte n est pas une erreur : on nettoie, on ne verifie pas.
+    }
+  });
+});
 
 /**
  * Tout le texte affiche, a plat.
@@ -404,5 +431,84 @@ describe('le bouton ETEINT qui DIT POURQUOI', () => {
 describe('ce qui ne doit rien faire tomber', () => {
   it('traverse un test introuvable', () => {
     expect(() => rendre({ seance: { documentId: 'seance-9' } })).not.toThrow();
+  });
+});
+
+describe('🔴 CE QUI EST FRANCHI EST NOTE SUR LA SEANCE', () => {
+  /*
+   * DEFAUT MESURE A L ECRAN LE 2026-09-08 : on faisait la mise en place,
+   * l echauffement, l essai 1, la recuperation — on sortait du parcours, et le
+   * tableau de bord affichait toujours « 0 test fait, etape 0 ». L avancement se
+   * deduisait UNIQUEMENT des mesures enregistrees, or 9 tests sur 33 n ecrivent
+   * rien sur le terrain. Journees E et D3 : 100 % de leurs etapes.
+   */
+
+  /**
+   * Le bouton du pied qui fait avancer, trouve par son libelle.
+   * @param {any} arbre l arbre rendu
+   * @param {string} type le type d arret quitte
+   * @returns {any} le bouton
+   */
+  const bouton = (arbre, type) => arbre.root.findAllByType(Button)
+    .find((b) => String(b.props.title).startsWith(`training.guided.go.${type}`));
+
+  it('quitter la MISE EN PLACE note l etape sur la seance', () => {
+    const arbre = rendre({ step: 'prep' });
+
+    act(() => { bouton(arbre, 'prep').props.onPress(); });
+
+    expect(mockMaj.mutate).toHaveBeenCalledWith({
+      payload: { conditions: { stepsDone: ['B1-prep'] } },
+      sessionDocumentId: 'seance-9',
+    });
+  });
+
+  it('valider un ESSAI note l essai, avec son numero', () => {
+    const arbre = rendre({ step: 'attempt-2' });
+
+    act(() => { bouton(arbre, 'attempt').props.onPress(); });
+
+    expect(mockMaj.mutate).toHaveBeenCalledWith({
+      payload: { conditions: { stepsDone: ['B1-e2'] } },
+      sessionDocumentId: 'seance-9',
+    });
+  });
+
+  it('n ecrase JAMAIS ce que la seance porte deja', () => {
+    // `conditions` porte aussi les reperes coches et les tests valides : ecrire la
+    // liste seule les effacerait tous.
+    const arbre = rendre({
+      seance: { ...SEANCE, conditions: { prepared: ['Avant'], stepsDone: ['B1-prep'] } },
+      step: 'attempt-1',
+    });
+
+    act(() => { bouton(arbre, 'attempt').props.onPress(); });
+
+    expect(mockMaj.mutate).toHaveBeenCalledWith({
+      payload: { conditions: { prepared: ['Avant'], stepsDone: ['B1-prep', 'B1-e1'] } },
+      sessionDocumentId: 'seance-9',
+    });
+  });
+
+  it('ne note pas deux fois la meme etape', () => {
+    const arbre = rendre({
+      seance: { ...SEANCE, conditions: { stepsDone: ['B1-prep'] } },
+      step: 'prep',
+    });
+
+    act(() => { bouton(arbre, 'prep').props.onPress(); });
+
+    expect(mockMaj.mutate).not.toHaveBeenCalled();
+  });
+
+  it('🪤 REVENIR EN ARRIERE PAR LE RUBAN N ECRIT RIEN', () => {
+    // Le ruban permet de relire un essai deja passe. Marquer la l arret qu on
+    // quitte declarerait fait un essai qu on n a pas termine.
+    const arbre = rendre({ step: 'attempt-2' });
+    const ruban = arbre.root.findByType(TrainingStepRail);
+
+    act(() => { ruban.props.onPress({ cle: 'prep' }); });
+
+    expect(mockMaj.mutate).not.toHaveBeenCalled();
   });
 });

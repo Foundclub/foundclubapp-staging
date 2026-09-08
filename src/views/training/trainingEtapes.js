@@ -62,11 +62,30 @@ const mesuresAttendues = (test, essai) => {
  * @param {Record<string, any>[]} resultats les lignes déjà saisies pour cette séance
  * @returns {Record<string, any>[]} les étapes, chacune avec son état
  */
-export const etapesDuJour = (day, resultats) => {
+export const etapesDuJour = (day, resultats, franchies) => {
   /** @type {Record<string, any>[]} */
   const tests = Array.isArray(day?.tests) ? day.tests : [];
   /** @type {Record<string, any>[]} */
   const lignes = Array.isArray(resultats) ? resultats : [];
+
+  /**
+   * 🔴 LES ETAPES FRANCHIES — la deuxieme source, et sans elle deux journees
+   * entieres ne gardaient AUCUNE trace.
+   *
+   * Mesure a l ecran le 2026-09-08 : on faisait la mise en place, l echauffement,
+   * l essai 1, la recuperation — on sortait de l ecran, et le tableau de bord
+   * affichait toujours « 0 test fait, etape 0 ». L avancement se deduisait
+   * uniquement des mesures enregistrees ; or 9 tests sur 33 n ecrivent RIEN sur le
+   * terrain, leur seule mesure « par essai » se lisant plus tard sur la video.
+   * Journees E et D3 : 100 % de leurs etapes etaient dans ce cas.
+   *
+   * ⚠️ CETTE LISTE VIENT DU SERVEUR, dans un champ JSON libre : elle peut etre
+   * absente, nulle, ou contenir n importe quoi. On la filtre donc aux chaines, et
+   * une cle inconnue n invente aucune etape — elle ne fait rien du tout.
+   */
+  const passees = new Set(
+    (Array.isArray(franchies) ? franchies : []).filter((c) => typeof c === 'string'),
+  );
 
   // Combien de lignes saisies, par test et par essai. C'est ce qui dit ce qui est
   // fait — pas un drapeau qu'il faudrait poser et qu'on oublierait de poser.
@@ -95,7 +114,9 @@ export const etapesDuJour = (day, resultats) => {
     etapes.push({
       calculSeul,
       cle: `${test.code}-prep`,
-      etat: entame ? 'done' : 'todo',
+      // Les deux sources se CUMULENT : ce que les mesures prouvent, et ce que le
+      // parcours guide a note en passant. Aucune ne remplace l autre.
+      etat: entame || passees.has(`${test.code}-prep`) ? 'done' : 'todo',
       // La mise en place ne produit aucune mesure : elle se déduit du fait que le
       // test a commencé, elle ne se coche pas à la main.
       testCode: test.code,
@@ -111,7 +132,8 @@ export const etapesDuJour = (day, resultats) => {
         calculSeul,
         cle: `${test.code}-e${essai}`,
         essai,
-        etat: attendues > 0 && faites >= attendues ? 'done' : 'todo',
+        etat: (attendues > 0 && faites >= attendues) || passees.has(`${test.code}-e${essai}`)
+          ? 'done' : 'todo',
         testCode: test.code,
         testIndex,
         titre: test.name || test.code,

@@ -170,3 +170,74 @@ describe('ce qui ne doit rien faire tomber', () => {
     expect(etapeCourante(etapes).cle).toBe('B1-prep');
   });
 });
+
+describe('🔴 L AVANCEMENT SURVIT A LA SORTIE DE L ECRAN', () => {
+  /*
+   * DEFAUT MESURE A L ECRAN LE 2026-09-08, et GO d Adel le meme jour pour le fermer.
+   *
+   * On faisait la mise en place, l echauffement, l essai 1, la recuperation — on
+   * sortait du parcours (telephone verrouille, coup d oeil au carnet, un appel) et
+   * TOUT ETAIT OUBLIE : le tableau de bord affichait encore « 0 test fait, etape 0 ».
+   *
+   * 🔎 LA CAUSE. L avancement se deduisait UNIQUEMENT des mesures enregistrees. Or
+   * 9 tests sur 33 n ecrivent RIEN sur le terrain : leur seule mesure « par essai »
+   * se lit plus tard sur la video. Deux journees entieres (E et D3) etaient dans ce
+   * cas a 100 % — on pouvait les faire en entier sans laisser la moindre trace.
+   *
+   * ✅ LA REPARATION. Le parcours guide note les etapes FRANCHIES sur la seance, dans
+   * le meme champ `conditions` qui porte deja les reperes coches et les tests
+   * valides. Une etape est faite si ses mesures sont completes OU si elle a ete
+   * franchie. Les deux sources se cumulent, aucune ne remplace l autre.
+   */
+
+  it('une etape FRANCHIE compte comme faite, meme sans une seule mesure', () => {
+    // Personne n a rien saisi : sans les etapes franchies, tout serait « a faire ».
+    const etapes = etapesDuJour(JOURNEE, [], ['B1-prep', 'B1-e1']);
+    const parCle = Object.fromEntries(etapes.map((e) => [e.cle, e.etat]));
+
+    expect(parCle['B1-prep']).toBe('done');
+    expect(parCle['B1-e1']).toBe('done');
+    expect(parCle['B1-e2']).toBe('current');
+  });
+
+  it('les deux sources se CUMULENT : la mesure ET le passage', () => {
+    // `B1-e1` est prouve par ses mesures, `B2-prep` seulement par le passage.
+    const etapes = etapesDuJour(
+      JOURNEE,
+      [ligne('B1', 1, 'haut'), ligne('B1', 1, 'masse')],
+      ['B2-prep'],
+    );
+    const parCle = Object.fromEntries(etapes.map((e) => [e.cle, e.etat]));
+
+    expect(parCle['B1-e1']).toBe('done');
+    expect(parCle['B2-prep']).toBe('done');
+  });
+
+  it('« en cours » reste la premiere etape PAS faite, franchissements compris', () => {
+    const etapes = etapesDuJour(JOURNEE, [], ['B1-prep', 'B1-e1', 'B1-e2']);
+
+    expect(etapeCourante(etapes).cle).toBe('B1-e3');
+  });
+
+  it('compte les etapes franchies dans l avancement', () => {
+    // 7 etapes en tout : B1 (prep + 3 essais) et B2 (prep + 2 essais).
+    expect(avancement(etapesDuJour(JOURNEE, [], [])).faites).toBe(0);
+    expect(avancement(etapesDuJour(JOURNEE, [], ['B1-prep', 'B1-e1'])).faites).toBe(2);
+  });
+
+  it('ne tombe pas quand la liste est absente, vide ou mal formee', () => {
+    // Elle vient du serveur, dans un champ JSON libre : elle peut etre n importe quoi.
+    expect(() => etapesDuJour(JOURNEE, [])).not.toThrow();
+    expect(() => etapesDuJour(JOURNEE, [], null)).not.toThrow();
+    expect(() => etapesDuJour(JOURNEE, [], 'B1-prep')).not.toThrow();
+    expect(() => etapesDuJour(JOURNEE, [], [null, 42, {}])).not.toThrow();
+    expect(avancement(etapesDuJour(JOURNEE, [], 'B1-prep')).faites).toBe(0);
+  });
+
+  it('une cle inconnue n invente aucune etape', () => {
+    const etapes = etapesDuJour(JOURNEE, [], ['B9-prep', 'B1-e99']);
+
+    expect(etapes).toHaveLength(7);
+    expect(etapes.every((e) => e.etat !== 'done')).toBe(true);
+  });
+});
