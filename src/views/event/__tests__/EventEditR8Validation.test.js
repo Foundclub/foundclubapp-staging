@@ -216,8 +216,23 @@ const evenement = (sessionStatus, typeId, typeName, enPlus = {}) => ({
  */
 const monterSur = async (evenementRendu) => {
   eventService.getEventByIdForEdit.mockResolvedValue(evenementRendu);
+  // 🧨 LES MUTATIONS AUSSI ARMENT UN MINUTEUR, ET C EST LUI QUI RENDAIT LA CI ROUGE.
+  //
+  // `gcTime: Infinity` etait pose sur les QUERIES seulement. Les MUTATIONS gardaient
+  // le defaut de react-query — 5 minutes — et chacune arme un `setTimeout` via
+  // `Mutation.scheduleGc` (query-core/src/removable.ts:15). Jest ne peut pas
+  // s'eteindre tant qu'ils vivent.
+  // Constate le 2026-09-08 par `jest --detectOpenHandles` : « 6 open handles »,
+  // toutes designant l'`afterEach` de ce fichier, toutes venant de
+  // `Mutation.scheduleGc`. La CI de l'app etait rouge depuis le 2026-09-03 —
+  // 20 executions d'affilee — avec 5 965 temoins VERTS et un code de sortie 1.
+  // ⛔ Le remede n'est PAS `--forceExit` : ca masquerait une fuite qui existe aussi
+  // dans la vraie app.
   const client = new QueryClient({
-    defaultOptions: { queries: { gcTime: Infinity, retry: false } },
+    defaultOptions: {
+      mutations: { gcTime: Infinity, retry: false },
+      queries: { gcTime: Infinity, retry: false },
+    },
   });
 
   act(() => {

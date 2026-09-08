@@ -111,6 +111,28 @@ jest.mock(
 );
 
 /**
+ * 🧨 UN ARBRE JAMAIS DEMONTE FAIT ROUGIR LA CI SANS QU AUCUN TEMOIN NE SOIT ROUGE.
+ *
+ * Le `clearInterval` d un ecran vit dans le retour de son `useEffect` : il ne
+ * tourne QU AU DEMONTAGE. Un arbre laisse en vie garde donc son minuteur, qui se
+ * reveille dans un environnement Jest deja demoli et jette « You are trying to
+ * import a file after the Jest environment has been torn down ». C est CETTE
+ * exception qui fait le code de sortie 1, pas l attente.
+ *
+ * 🪤 On garde une LISTE, pas une variable : un test qui monte DEUX fois ecraserait
+ * la variable et le premier arbre ne serait jamais demonte.
+ * @type {any[]}
+ */
+const arbresMontes = [];
+
+afterEach(() => {
+  while (arbresMontes.length) {
+    const arbre = arbresMontes.pop();
+    act(() => { arbre.unmount(); });
+  }
+});
+
+/**
  * Monte la fiche.
  * @returns {any} L arbre rendu.
  */
@@ -118,6 +140,7 @@ const monter = () => {
   /** @type {any} */
   let arbre;
   act(() => { arbre = renderer.create(<AdminUserDetail />); });
+  arbresMontes.push(arbre);
   return arbre;
 };
 
