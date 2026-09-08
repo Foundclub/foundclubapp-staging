@@ -115,7 +115,13 @@ const accueilDe = (role) => {
   if (!estAdmin) profil.push(...SECTIONS.profileCotisation);
   if (estStaff) profil.unshift(...SECTIONS.profileAbonnement);
 
-  return [gerer, SECTIONS.training, rechercher, SECTIONS.league, profil, SECTIONS.account];
+  // 🏁 « Entrainement » EST LA DERNIERE SECTION depuis le 2026-09-08 (decision
+  // d Adel : « tout en bas, c est en bonus »). ⚠️ Ce temoin fabrique l ordre
+  // LUI-MEME a partir des corps de memo : il ne lit PAS le JSX. Il ne peut donc
+  // pas attraper un deplacement dans le rendu — c est justement pourquoi cette
+  // ligne et les quatre tableaux ci-dessous doivent etre corriges A LA MAIN
+  // quand une section bouge, sinon ils restent VERTS en decrivant un ecran faux.
+  return [gerer, rechercher, SECTIONS.league, profil, SECTIONS.account, SECTIONS.training];
 };
 
 /**
@@ -129,35 +135,35 @@ const toutesLesCartes = (role) => accueilDe(role).flat();
 const ATTENDU = {
   coach: [
     ['manage-club', 'manage-requests', 'manage-add-event', 'manage-add-ad', 'manage-my-ads', 'manage-licenses'],
-    ['training-mine', 'training-find', 'training-logbook'],
     ['search-events', 'search-clubs', 'search-reservations', 'search-profiles', 'search-amicaux'],
     ['league-entry'],
     ['profile-subscription', 'profile-view', 'profile-edit', 'profile-history', 'profile-alerts', 'profile-license'],
     ['account-switch', 'account-logout'],
+    ['training-mine', 'training-find', 'training-logbook'],
   ],
   player: [
     [],
-    ['training-mine', 'training-find', 'training-logbook'],
     ['search-events', 'search-clubs', 'search-reservations', 'search-ads', 'search-my-activities', 'search-amicaux'],
     ['league-entry'],
     ['profile-view', 'profile-history', 'profile-alerts', 'profile-license'],
     ['account-switch', 'account-logout'],
+    ['training-mine', 'training-find', 'training-logbook'],
   ],
   president: [
     ['manage-club', 'manage-requests', 'manage-add-event', 'manage-add-ad', 'manage-my-ads', 'manage-licenses'],
-    ['training-mine', 'training-find', 'training-logbook'],
     ['search-events', 'search-clubs', 'search-reservations', 'search-profiles', 'search-amicaux'],
     ['league-entry'],
     ['profile-subscription', 'profile-view', 'profile-edit', 'profile-history', 'profile-alerts', 'profile-license'],
     ['account-switch', 'account-logout'],
+    ['training-mine', 'training-find', 'training-logbook'],
   ],
   superAdmin: [
     ['admin-triage', 'admin-users-clubs', 'admin-dashboard', 'admin-league'],
-    ['training-mine', 'training-find', 'training-logbook'],
     ['search-events', 'search-clubs', 'search-reservations', 'search-ads', 'search-my-activities', 'search-amicaux'],
     ['league-entry'],
     ['profile-view', 'profile-edit', 'profile-history', 'profile-alerts'],
     ['account-switch', 'account-logout'],
+    ['training-mine', 'training-find', 'training-logbook'],
   ],
 };
 
