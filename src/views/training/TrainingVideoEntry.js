@@ -125,28 +125,50 @@ function TrainingVideoEntry({ navigation, route }) {
     return [...vus].sort((a, b) => a - b);
   }, [session, test]);
 
+  /**
+   * TOUTES LES VALEURS A RELEVER, dans l ordre : essai par essai, et dans chaque
+   * essai, mesure par mesure.
+   *
+   * 🚨 L ECRAN N EN MONTRAIT QU UNE PAR ESSAI — la premiere. Vu a l ecran le
+   * 2026-09-08 : le test T1 du programme reel porte QUATRE mesures a lire sur la
+   * video, et trois n avaient AUCUN chemin. Aucune porte ne pouvait le dire : le
+   * jeu d essai des temoins n avait qu une seule mesure differee.
+   */
+  const valeurs = useMemo(() => essais.flatMap((numero) => mesures
+    // Une mesure a deux essais n a rien a relever sur un troisieme.
+    .filter((m) => numero <= (Number(m.attempts) || 1))
+    .map((m) => ({ essai: numero, mesure: m }))), [essais, mesures]);
+
   const [rang, setRang] = useState(0);
   const [saisie, setSaisie] = useState('');
-  const essai = essais[rang];
-  const mesure = mesures[0] || null;
+  const courant = valeurs[rang] || null;
+  const essai = courant?.essai;
+  const mesure = courant?.mesure || null;
   const outil = mesure ? outilDeLaMesure(mesure) : null;
+  // Ou l on en est DANS l essai courant : « mesure 2 sur 4 ».
+  const dansLEssai = valeurs.filter((v) => v.essai === essai);
+  const rangDansLEssai = dansLEssai.findIndex((v) => v.mesure?.key === mesure?.key) + 1;
 
-  /** Ce qui est déjà relevé, par essai. */
+  /**
+   * Ce qui est déjà relevé, indexé par COUPLE `mesure|essai`.
+   *
+   * 🪤 C'était indexé par essai seul : deux mesures du même essai se marchaient
+   * dessus, et la seconde affichait la valeur de la première.
+   */
   const dejaRelevé = useMemo(() => {
-    /** @type {Record<number, any>} */
-    const parEssai = {};
+    /** @type {Record<string, any>} */
+    const parCouple = {};
     const brutes = Array.isArray(session?.results) ? session.results : [];
     const fusion = results.merge([...brutes]);
     /** @type {Record<string, any>[]} */ (Object.values(fusion)).forEach((row) => {
-      if (row.measureKey !== mesure?.key) return;
       const rowTestId = row.test?.documentId || row.testDocumentId;
       if (rowTestId && test?.documentId && rowTestId !== test.documentId) return;
-      parEssai[row.attempt ?? 1] = row;
+      parCouple[`${row.measureKey}|${row.attempt ?? 1}`] = row;
     });
-    return parEssai;
+    return parCouple;
     // `results` est recréé à chaque rendu : le dépendre relancerait la boucle.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mesure?.key, session?.results, test?.documentId]);
+  }, [session?.results, test?.documentId]);
 
   /**
    * En changeant d'essai, le champ reprend ce qui est déjà noté : sans ça, on
@@ -158,13 +180,14 @@ function TrainingVideoEntry({ navigation, route }) {
    * chiffre qu'on était en train de taper. Attrapé par le témoin du pavé
    * numérique : deux touches enfoncées, une seule visible.
    */
-  const dernierEssaiRef = useRef(null);
+  const dernierCoupleRef = useRef(null);
   useEffect(() => {
-    if (dernierEssaiRef.current === essai) return;
-    dernierEssaiRef.current = essai;
-    const existante = dejaRelevé[essai];
+    const couple = `${mesure?.key}|${essai}`;
+    if (dernierCoupleRef.current === couple) return;
+    dernierCoupleRef.current = couple;
+    const existante = dejaRelevé[couple];
     setSaisie(existante?.value != null ? String(existante.value) : (existante?.textValue || ''));
-  }, [dejaRelevé, essai]);
+  }, [dejaRelevé, essai, mesure?.key]);
 
   const taper = useCallback((touche) => {
     setSaisie((avant) => {
@@ -187,11 +210,11 @@ function TrainingVideoEntry({ navigation, route }) {
       unit: mesure.unit,
       value: Number.isFinite(nombre) ? nombre : null,
     });
-    if (rang < essais.length - 1) setRang(rang + 1);
-  }, [essai, essais, mesure, rang, results, saisie, test]);
+    if (rang < valeurs.length - 1) setRang(rang + 1);
+  }, [essai, mesure, rang, results, saisie, test, valeurs]);
 
-  const restantes = essais.filter((n) => {
-    const ligne = dejaRelevé[n];
+  const restantes = valeurs.filter(({ essai: n, mesure: m }) => {
+    const ligne = dejaRelevé[`${m.key}|${n}`];
     return !(ligne?.value != null || ligne?.textValue);
   }).length;
 
@@ -223,7 +246,7 @@ function TrainingVideoEntry({ navigation, route }) {
                   {/* LE REPÈRE : « T2 · 5 sur 12 ». Il dit toujours où on en est
                       dans la série, y compris quand on revient dessus demain. */}
                   <Text style={[Fonts.caption, { color: Colors.neutral400 }]}>
-                    {`${test.code} · ${rang + 1}/${essais.length}`}
+                    {`${test.code} · ${rang + 1}/${valeurs.length}`}
                   </Text>
                   {Boolean(outil) && (
                     <View style={{
@@ -247,10 +270,15 @@ function TrainingVideoEntry({ navigation, route }) {
                 {/* LE RAIL DES ESSAIS : vert pour ce qui est relevé, or pour
                     l'essai en cours, gris pour la suite. */}
                 <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 4 }}>
-                  {essais.map((numero, position) => {
-                    const ligne = dejaRelevé[numero];
-                    const fait = ligne?.value != null || ligne?.textValue;
-                    const encours = position === rang;
+                  {essais.map((numero) => {
+                    // Un essai n est VERT que si TOUTES ses mesures sont relevées :
+                    // le marquer vert dès la première ferait croire qu'il est fini.
+                    const siennes = valeurs.filter((v) => v.essai === numero);
+                    const fait = siennes.length > 0 && siennes.every(({ mesure: m }) => {
+                      const l = dejaRelevé[`${m.key}|${numero}`];
+                      return l?.value != null || l?.textValue;
+                    });
+                    const encours = numero === essai;
                     return (
                       <TouchableOpacity
                         // 🪤 L etiquette porte le mot « essai » et pas le seul
@@ -264,7 +292,7 @@ function TrainingVideoEntry({ navigation, route }) {
                         accessibilityRole="button"
                         accessibilityState={{ selected: encours }}
                         key={numero}
-                        onPress={() => setRang(position)}
+                        onPress={() => setRang(valeurs.findIndex((v) => v.essai === numero))}
                         style={{
                           backgroundColor: (() => {
                             if (encours) return Colors.gold500;
@@ -295,7 +323,20 @@ function TrainingVideoEntry({ navigation, route }) {
                   >
                     {t('training.attempt.title', { current: essai, total: essais.length })}
                   </Text>
-                  <Text style={[Fonts.p3, { color: Colors.neutral200 }]}>{mesure.label}</Text>
+                  <View style={{ alignItems: 'baseline', flexDirection: 'row', gap: 8 }}>
+                    <Text style={[Fonts.p3, { color: Colors.neutral200, flex: 1 }]}>
+                      {mesure.label}
+                    </Text>
+                    {/* 🚨 CE COMPTEUR MANQUAIT, et trois mesures sur quatre étaient
+                        inatteignables. Il dit où l'on en est DANS l'essai. */}
+                    {dansLEssai.length > 1 && (
+                      <Text style={[Fonts.caption, { color: Colors.gold500 }]}>
+                        {t('training.video.measureOf', {
+                          current: rangDansLEssai, total: dansLEssai.length,
+                        })}
+                      </Text>
+                    )}
+                  </View>
                   {Boolean(mesure.helper) && (
                     <Text style={[Fonts.caption, { color: Colors.neutral400 }]}>
                       {mesure.helper}
@@ -341,22 +382,23 @@ function TrainingVideoEntry({ navigation, route }) {
         </ScrollView>
 
         {test && mesure && essai ? (
-          <View style={[Spaces.gap[8], { paddingHorizontal: 16, paddingTop: 8 }]}>
-            {/* ⌨️ LE PAVÉ, TOUJOURS OUVERT. Sa place est réservée dès le premier
-                affichage : rien ne se déplace quand on commence à taper, et le
-                champ ne peut pas se retrouver caché. */}
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
-              {TOUCHES.map((touche) => (
-                <Touche key={touche} libelle={touche} onPress={() => taper(touche)} />
-              ))}
-            </View>
-
+          <View style={[
+            Spaces.gap[8],
+            // 🚨 `flexShrink: 0` : SANS LUI, le pave poussait « Enregistrer » SOUS
+            // la barre d onglets et le bouton devenait inatteignable. Vu a l ecran
+            // le 2026-09-08 — aucun temoin ne pouvait le dire, `react-test-renderer`
+            // ne calcule aucune mise en page.
+            { flexShrink: 0, paddingHorizontal: 16, paddingTop: 8 },
+          ]}
+          >
             <View style={{ flexDirection: 'row', gap: 8 }}>
               <View style={{ flex: 1 }}>
                 <Button
                   disabled={rang === 0}
                   onPress={() => setRang(Math.max(0, rang - 1))}
-                  title={t('training.video.previous', { count: essais[rang - 1] || 1 })}
+                  title={t('training.video.previous', {
+                    count: valeurs[rang - 1]?.essai || 1,
+                  })}
                   variant="Secondary"
                 />
               </View>
@@ -368,6 +410,15 @@ function TrainingVideoEntry({ navigation, route }) {
                   variant="Primary"
                 />
               </View>
+            </View>
+
+            {/* ⌨️ LE PAVÉ, TOUJOURS OUVERT. Sa place est réservée dès le premier
+                affichage : rien ne se déplace quand on commence à taper, et le
+                champ ne peut pas se retrouver caché. */}
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+              {TOUCHES.map((touche) => (
+                <Touche key={touche} libelle={touche} onPress={() => taper(touche)} />
+              ))}
             </View>
 
             <Text style={[Fonts.caption, {

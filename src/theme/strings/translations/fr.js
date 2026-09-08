@@ -5030,6 +5030,9 @@ export default {
       backToQueue: 'Revenir aux relevés',
       hint: 'Ce que tu relèves ici part au même carnet que le terrain : '
         + 'même ligne, même test, même essai.',
+      // 🚨 Ce compteur manquait, et trois mesures sur quatre etaient
+      // inatteignables : l ecran n affichait que la PREMIERE mesure d un essai.
+      measureOf: 'mesure {{current}} sur {{total}}',
       lead_one: 'mesure à relever sur tes vidéos.',
       lead_other: 'mesures à relever sur tes vidéos.',
       nothingHere: 'Ce test n’a rien à relever sur la vidéo.',

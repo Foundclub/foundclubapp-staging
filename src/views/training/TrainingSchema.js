@@ -3,12 +3,12 @@ import { useTranslation } from 'react-i18next';
 import {
   Linking, ScrollView, Text, TouchableOpacity, View,
 } from 'react-native';
-import { SvgXml } from 'react-native-svg';
 
 import { withAlpha } from '@/theme/colors';
 import useTheme from '@/theme/themeContext';
 
 import { familleDuSchema } from '@/components/organisms/training/TrainingBlocks';
+import TrainingSchemaImage from '@/components/organisms/training/TrainingSchemaImage';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
 /**
@@ -115,15 +115,11 @@ function TrainingSchema({ navigation, route }) {
           }}
         >
           {xml ? (
-            <View style={{
-              transform: [
-                { rotate: pivote ? '90deg' : '0deg' },
-                { scale: PALIERS[palier] },
-              ],
-            }}
-            >
-              <SvgXml width="100%" xml={xml} />
-            </View>
+            <TrainingSchemaImage
+              rotate={pivote ? '90deg' : '0deg'}
+              scale={PALIERS[palier]}
+              xml={xml}
+            />
           ) : (
             <Text style={[Fonts.p3, { color: Colors.neutral900, padding: 16 }]}>
               {t('training.schema.missing')}

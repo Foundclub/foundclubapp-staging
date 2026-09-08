@@ -1055,6 +1055,39 @@ function PrivateNavigator() {
           options={{ ...commonOptions, headerTitle: '' }}
         />
         {/*
+          🚨 QUATRE ECRANS DE PLUS, MONTES ICI LE 2026-09-08 — et c est un defaut
+          vu A L ECRAN, pas par une porte : sur le releve video, la derniere
+          rangee du pave numerique passait SOUS le dock. Aucun temoin ne pouvait
+          le dire, `react-test-renderer` ne calcule aucune mise en page.
+
+          La regle est la meme que pour le tunnel de test : ce sont des TACHES.
+          On y entre, on fait UNE chose, on en sort. Le parcours guide tient un
+          chronometre ; le releve video tient un pave numerique qui doit rester
+          entier ; le schema se regarde plein ecran, accroupi ; les cinq
+          questions de forme decident si la seance a lieu. Le dock n a rien a
+          faire sous aucun des quatre — et il leur volait de la hauteur.
+        */}
+        <Stack.Screen
+          getComponent={() => require('@/views/training/TrainingGuided').default}
+          name={RouteNames.TrainingGuided}
+          options={{ ...commonOptions, headerTitle: '' }}
+        />
+        <Stack.Screen
+          getComponent={() => require('@/views/training/TrainingVideoEntry').default}
+          name={RouteNames.TrainingVideoEntry}
+          options={{ ...commonOptions, headerShown: false }}
+        />
+        <Stack.Screen
+          getComponent={() => require('@/views/training/TrainingSchema').default}
+          name={RouteNames.TrainingSchema}
+          options={{ ...commonOptions, headerShown: false }}
+        />
+        <Stack.Screen
+          getComponent={() => require('@/views/training/TrainingFreshness').default}
+          name={RouteNames.TrainingFreshness}
+          options={{ ...commonOptions, headerTitle: '' }}
+        />
+        {/*
           ⛔ « C est dans ton entrainement » monte a la pile RACINE, pas dans
           l onglet : l inscription est faite, il n y a rien a annuler. Le dessin
           retire donc la fleche de retour ET le dock, et les deux boutons de

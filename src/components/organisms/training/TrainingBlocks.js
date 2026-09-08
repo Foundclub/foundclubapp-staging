@@ -2,9 +2,12 @@ import { memo, useMemo } from 'react';
 import {
   Linking, ScrollView, Text, TouchableOpacity, View,
 } from 'react-native';
-import { SvgXml } from 'react-native-svg';
 
 import useTheme from '@/theme/themeContext';
+
+import TrainingSchemaImage, {
+  ratioDuSchema,
+} from '@/components/organisms/training/TrainingSchemaImage';
 
 /**
  * LE RENDU DU CONTENU D'UNE FICHE — blocs typés, sans aucune dépendance de rendu.
@@ -182,13 +185,7 @@ function BlockTable({ block, Colors, Fonts }) {
  * @param {string} xml le dessin
  * @returns {'field'|'body'} la famille
  */
-export const familleDuSchema = (xml) => {
-  const boite = /viewBox=["']([^"']+)["']/.exec(String(xml || ''));
-  if (!boite) return 'field';
-  const [, , largeur, hauteur] = boite[1].trim().split(/[\s,]+/).map(Number);
-  if (!Number.isFinite(largeur) || !Number.isFinite(hauteur) || !hauteur) return 'field';
-  return largeur >= hauteur ? 'field' : 'body';
-};
+export const familleDuSchema = (xml) => (ratioDuSchema(xml) >= 1 ? 'field' : 'body');
 
 /**
  * Un schéma coté. Le SVG vient du serveur : s'il est illisible, on ne casse pas l'écran.
@@ -217,7 +214,14 @@ function BlockSvg({
         {famille === 'field' ? 'Plan de terrain' : 'Position du corps'}
       </Text>
       <View style={{ backgroundColor: Colors.neutral00, borderRadius: 8, padding: 4 }}>
-        <SvgXml width="100%" xml={xml} />
+        {/*
+          🚨 LE DESSIN N AVAIT AUCUNE HAUTEUR. Les 27 schemas du programme declarent
+          `viewBox` et `width="100%"` mais pas de hauteur, et `react-native-svg` ne
+          la devine pas : il rendait une bande de quelques pixels. Vu a l ecran le
+          2026-09-08 — les dessins partaient du serveur, arrivaient dans l app, et
+          personne ne les voyait depuis le 06/09.
+        */}
+        <TrainingSchemaImage xml={xml} />
         {typeof onZoom === 'function' && (
           <TouchableOpacity
             accessibilityRole="button"

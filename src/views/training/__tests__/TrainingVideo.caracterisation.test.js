@@ -100,6 +100,19 @@ const TEST = {
       moment: 'differe',
       unit: 'images',
     },
+    // 🚨 UNE SECONDE MESURE VIDEO, ET ELLE EST LA RAISON D ETRE DE CE JEU
+    // D ESSAI. Il n en avait qu UNE — et l ecran n affichait que la premiere
+    // mesure de chaque essai. Sur le test T1 du vrai programme, qui en porte
+    // QUATRE, trois valeurs n avaient AUCUN chemin. Vu a l ecran le 2026-09-08,
+    // jamais par une porte.
+    {
+      attempts: 3,
+      helper: 'angle mesure dans Kinovea',
+      key: 'angle',
+      label: 'Angle du genou',
+      moment: 'differe',
+      unit: 'deg',
+    },
   ],
   name: 'Tir cadre',
 };
@@ -186,8 +199,8 @@ describe('LA FILE — « Relevés vidéo »', () => {
   it('annonce le COMPTE en gros chiffre : c est la seule chose qu on veut savoir', () => {
     const vus = textes(rendre());
 
-    // 3 essais faits × 1 mesure differee = 3 valeurs a relever.
-    expect(vus).toContain('3');
+    // 3 essais faits × 2 mesures differees = 6 valeurs a relever.
+    expect(vus).toContain('6');
     expect(vus.some((v) => String(v).startsWith('training.video.lead'))).toBe(true);
   });
 
@@ -197,7 +210,8 @@ describe('LA FILE — « Relevés vidéo »', () => {
     expect(vus).toContain('T');
     expect(vus).toContain('Tir cadre');
     expect(vus).toContain('Kinovea');
-    expect(vus).toContain('training.video.testLine|{"attempts":3,"count":3,"measures":3}');
+    // 3 essais faits × 2 mesures video = 6 valeurs a relever.
+    expect(vus).toContain('training.video.testLine|{"attempts":3,"count":3,"measures":6}');
   });
 
   it('ouvre le releve du bon test', () => {
@@ -255,7 +269,8 @@ describe('UN ESSAI A LA FOIS', () => {
     // dossier trie par nom.
     expect(vus).toContain('T2_essai01.mp4');
     expect(vus).toContain('Kinovea');
-    expect(vus).toContain('T2 · 1/3');
+    // Le repere compte les VALEURS, pas les essais : 6 a relever en tout.
+    expect(vus).toContain('T2 · 1/6');
   });
 
   it('pose UN SEUL gros champ, avec son intitule et son unite', () => {
@@ -326,7 +341,35 @@ describe('UN ESSAI A LA FOIS', () => {
     expect(mockCarnet.record).toHaveBeenCalledWith(expect.objectContaining({
       attempt: 1, measureKey: 'images', testDocumentId: 'test-t2', unit: 'images', value: 14,
     }));
-    expect(textes(arbre)).toContain('T2 · 2/3');
+    expect(textes(arbre)).toContain('T2 · 2/6');
+  });
+
+  it('🚨 atteint TOUTES les mesures d un essai, pas seulement la premiere', () => {
+    // LE DEFAUT QUE CE TEMOIN FERME, vu a l ecran le 2026-09-08 : l ecran
+    // n affichait que `mesures[0]`. Sur le test T1 du vrai programme, qui porte
+    // QUATRE mesures a lire sur la video, trois n avaient AUCUN chemin — et
+    // aucune porte ne pouvait le dire, parce que ce jeu d essai n avait qu une
+    // seule mesure differee.
+    const arbre = rendre();
+    const vus = textes(arbre);
+
+    expect(vus).toContain('Images entre lacher et impact');
+    expect(vus).toContain('training.video.measureOf|{"current":1,"total":2}');
+
+    // Enregistrer passe a la MESURE SUIVANTE du meme essai, pas a l essai suivant.
+    const touche = (libelle) => arbre.root.findAll((n) => n.type === TouchableOpacity
+      && n.props.accessibilityLabel === libelle)[0];
+    act(() => { touche('9').props.onPress(); });
+    act(() => {
+      arbre.root.findAllByType(Button)
+        .find((b) => b.props.title === 'training.video.save').props.onPress();
+    });
+
+    const apres = textes(arbre);
+    expect(apres).toContain('Angle du genou');
+    expect(apres).toContain('training.video.measureOf|{"current":2,"total":2}');
+    // On est TOUJOURS sur l essai 1 : c est la mesure qui a avance.
+    expect(apres).toContain('T2_essai01.mp4');
   });
 
   it('le rail compte ce qui est FAIT, pas ce que le programme prevoit', () => {
