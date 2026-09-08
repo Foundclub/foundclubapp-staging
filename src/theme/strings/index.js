@@ -18,6 +18,35 @@
 //
 // ⛔ Il doit rester AVANT `i18next` : i18next lit `Intl.PluralRules` à l'init, et un
 // import posé après ne serait jamais vu.
+//
+// 🚨🚨 AVIS AU RÉCOLTEUR — À LIRE AVANT DE FUSIONNER CETTE BRANCHE 🚨🚨
+//
+// **CE PAQUET N'EST PAS INSTALLÉ DANS `D:/App/fc/app`.** Mesuré le 2026-09-08 :
+// `require.resolve('intl-pluralrules')` y rend MODULE_NOT_FOUND. Fusionner sans rien
+// faire casse TOUT ce qui charge ce fichier — 35 fichiers l'importent directement, et
+// l'app entière en dépend.
+//
+// 🪤 POURQUOI, ET C'EST UNE ERREUR DE MA PART QUE JE CORRIGE ICI : le message du commit
+// `053d7cb6` affirme « node_modules est une JONCTION vers D:/App/fc/app — installer ici
+// écrit dans la copie principale ». **C'ÉTAIT VRAI AVANT L'INSTALLATION, ET FAUX APRÈS.**
+// `npm install` a REMPLACÉ la jonction par un arbre privé de 741 paquets (dossier créé
+// le 08/09 à 15:41:37, la seconde même de l'installation). Le paquet a donc atterri dans
+// le worktree SEUL. La copie principale est restée à 740 paquets, intacte — et les
+// 203 autres worktrees qui partagent sa jonction n'ont rien vu passer.
+//
+// ✅ LE GESTE QUI MANQUE, et il est sur la liste noire (R4 n° 6, GO d'Adel obligatoire) :
+//
+//     cd D:/App/fc/app && npx npm@10 install intl-pluralrules@2.0.1
+//
+// ⛔ SURTOUT PAS `npm ci` NI `npm install` SANS ARGUMENT dans `D:/App/fc/app` : son
+// `node_modules` est la cible de **203 jonctions** de worktrees. Un `npm ci` efface et
+// reconstruit l'arbre pour les 203 en même temps. L'ajout d'un seul paquet, lui, est
+// purement additif.
+// ⛔ Et `npm@10`, jamais le npm 11 local : la CI refuse un lock écrit par npm 11.
+//
+// 🧪 LA PREUVE D'ARRÊT, à coller :
+//     cd D:/App/fc/app && node -e "console.log(require.resolve('intl-pluralrules'))"
+//     → doit imprimer un chemin (aujourd'hui : MODULE_NOT_FOUND)
 import 'intl-pluralrules';
 
 import { setDefaultOptions } from 'date-fns';
