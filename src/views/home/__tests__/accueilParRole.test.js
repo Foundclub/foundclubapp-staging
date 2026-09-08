@@ -99,9 +99,11 @@ const SECTIONS = {
   searchParent: clefsDeCartes(entre(SEARCH, 'if (isParent) {', null)),
   searchQueue: clefsDeCartes(entre(SEARCH, '// Matchs amicaux', 'if (isParent) {')),
   searchStaff: clefsDeCartes(entre(SEARCH, 'if (hasManageSection) {', 'if (!hasManageSection) {')),
-  // PERF (2026-09-06) — la section « Entrainement » : DEUX cases, les MEMES pour
-  // tous les roles. C est la seule section de l accueil sans garde de role, et
-  // c est voulu : un entrainement personnel s adresse d abord au Joueur.
+  // PERF (2026-09-06) — la section « Entrainement » : TROIS cases (corrige le
+  // 2026-09-08 : elle en portait deux a l ecriture, elle en porte trois depuis),
+  // les MEMES pour tous les roles, PARENT COMPRIS. C est la seule section de
+  // l accueil sans garde de role, et c est voulu : un entrainement personnel
+  // s adresse d abord au Joueur.
   training: clefsDeCartes(corpsDuMemo('trainingCards')),
 };
 
@@ -137,23 +139,32 @@ const accueilDe = (role) => {
   // La section League tombe a zero carte ; `HomeSection` ne rend alors ni son
   // titre ni son rayon (`if (!cards.length) return null`).
   //
-  // 🤝 RESOLU A LA FUSION DU 2026-09-08, et les DEUX promesses sont tenues :
-  //  · celle du lot PARENT P0 — le parent ne recoit PAS la section Entrainement ;
-  //    son accueil est bati autour de son enfant. Choix du chef d orchestre,
-  //    reversible, et je ne l ai pas touche.
-  //  · celle du lot PERF — pour TOUS LES AUTRES roles, « Entrainement » est la
-  //    DERNIERE section (decision d Adel : « tout en bas, c est en bonus »).
-  // Les deux ne parlent pas de la meme chose : l une dit QUI la voit, l autre OU
-  // elle se pose. Elles se cumulent sans se contredire.
+  // 🤝 RESOLU A LA FUSION DU 2026-09-08. La resolution avait garde une phrase
+  // FAUSSE, corrigee le soir meme apres verification dans le rendu :
+  //  · le lot PARENT P0 retire au parent SIX cases, listees dans
+  //    `CARTES_MASQUEES_AU_PARENT` — et AUCUNE n est une case d entrainement ;
+  //  · le lot PERF pose « Entrainement » en DERNIERE section (decision d Adel :
+  //    « tout en bas, c est en bonus »), SANS aucun garde de role.
+  // ⇒ Le parent la voit, comme tout le monde. Adel l a confirme deux fois :
+  //   « pour tout le monde ». Ce tableau disait le contraire et restait vert.
   if (role === 'parent') {
     const horsMasque = (/** @type {string} */ clef) => !MASQUEES_AU_PARENT.includes(clef);
 
+    // 🩹 CORRIGE LE 2026-09-08 : ce tableau AFFIRMAIT que le parent n avait pas
+    // la section Entrainement. C ETAIT FAUX, et le temoin restait vert parce
+    // qu il ne lit pas le JSX — il se compare a un second tableau ecrit a la
+    // main (`ATTENDU`). Le rendu, lui, pose `<HomeSection cards={trainingCards}>`
+    // SANS AUCUN garde de role : le parent la voit depuis toujours.
+    // C est aussi ce qu Adel a tranche, deux fois : « pour tout le monde ».
+    // Le temoin « la section Entrainement n est gardee par aucun role » ci-dessous
+    // lit le JSX, lui, et empechera ce mensonge de revenir.
     return [
       gerer,
       [...SECTIONS.searchParent, ...rechercher].filter(horsMasque),
       [],
       profil.filter(horsMasque),
       SECTIONS.account,
+      SECTIONS.training,
     ];
   }
 
@@ -192,6 +203,7 @@ const ATTENDU = {
     [],
     ['profile-view', 'profile-alerts'],
     ['account-switch', 'account-logout'],
+    ['training-mine', 'training-find', 'training-logbook'],
   ],
   player: [
     [],
@@ -222,12 +234,13 @@ const ATTENDU = {
 describe('D72 — critere 1 : le bon nombre de cases, dans le bon ordre', () => {
   it.each([
     // RECOLTE 2026-09-08 : les comptes viennent de PERF, et « parent » du lot P0.
-    // Le parent ne recoit PAS la section Entrainement (choix du chef d orchestre a
-    // la fusion, reversible) ; les autres roles la recoivent, EN DERNIER.
+    // 🩹 CORRIGE le meme jour : le parent etait compte a 8, comme s il n avait pas
+    // la section Entrainement. Il l a — le rendu ne la garde par AUCUN role.
+    // 8 + 3 = 11. Tous les roles la recoivent, EN DERNIER.
     ['president', 23],
     ['coach', 23],
     ['player', 16],
-    ['parent', 8],
+    ['parent', 11],
     ['superAdmin', 20],
   ])('%s affiche exactement %i cartes', (role, attendu) => {
     expect(toutesLesCartes(/** @type {any} */ (role))).toHaveLength(attendu);
@@ -239,6 +252,56 @@ describe('D72 — critere 1 : le bon nombre de cases, dans le bon ordre', () => 
       expect(accueilDe(/** @type {any} */ (role))).toEqual(ATTENDU[role]);
     },
   );
+});
+
+describe('🩹 LE MENSONGE DU 2026-09-08 — ces deux temoins lisent le RENDU, pas un tableau', () => {
+  // POURQUOI ILS EXISTENT. Les deux tableaux ci-dessus sont ecrits A LA MAIN et
+  // se comparent l un a l autre : ils peuvent donc etre FAUX TOUS LES DEUX et
+  // rester verts. C est exactement ce qui est arrive — ils affirmaient que le
+  // parent n avait pas la section Entrainement, alors que le rendu la lui donne
+  // depuis toujours. Le fichier l avoue lui-meme plus haut : « il ne lit PAS le
+  // JSX ». Ces deux-la le lisent.
+
+  /**
+   * Le rendu de la section Entrainement, tel qu il est ecrit dans le JSX,
+   * COMMENTAIRES RETIRES.
+   *
+   * 🪤 Sans ce nettoyage le temoin se trompe de cible : le long commentaire qui
+   * precede ce rendu NOMME les drapeaux de role (« le couple `hasManageSection`,
+   * `isSuperAdmin` existe deja »). Un test qui cherche un garde y trouverait des
+   * mots au lieu de code, et tomberait sur du texte explicatif.
+   */
+  const RENDU_ENTRAINEMENT = (() => {
+    const marque = 'cards={trainingCards}';
+    const i = SOURCE.indexOf(marque);
+    if (i === -1) throw new Error('HomeHub ne rend plus « cards={trainingCards} »');
+    const debutBalise = SOURCE.lastIndexOf('<HomeSection', i);
+    if (debutBalise === -1) throw new Error('Le rendu de l entrainement n est plus une HomeSection');
+    // On part de la FIN du commentaire qui precede, pas d une fenetre de taille
+    // fixe : une fenetre fixe tombe AU MILIEU du commentaire, et plus aucune
+    // expression reguliere ne peut alors le retirer — elle n en voit pas le debut.
+    const finCommentaire = SOURCE.lastIndexOf('*/}', debutBalise);
+    const debut = finCommentaire === -1 ? Math.max(0, debutBalise - 300) : finCommentaire + 3;
+    return SOURCE.slice(debut, i + marque.length);
+  })();
+
+  it('la section Entrainement n est gardee par AUCUN role', () => {
+    // Si un lot futur veut la reserver a certains roles, ce temoin tombe et la
+    // discussion a lieu — au lieu d une divergence silencieuse entre l ecran et
+    // le tableau qui pretend le decrire.
+    const gardes = ['isParent', 'isPlayer', 'isCoach', 'isPresident', 'isSuperAdmin', 'roleKey ==='];
+    const trouves = gardes.filter((garde) => RENDU_ENTRAINEMENT.includes(garde));
+
+    expect(trouves).toEqual([]);
+  });
+
+  it('elle est rendue en DERNIER, apres la section Compte', () => {
+    // La decision d Adel du 2026-09-08 : « tout en bas, c est en bonus ».
+    const compte = SOURCE.indexOf('cards={accountCards}');
+    const entrainement = SOURCE.indexOf('cards={trainingCards}');
+
+    expect(compte).toBeLessThan(entrainement);
+  });
 });
 
 describe('P0 — l accueil du PARENT (2 comptes reels en production le 07/09)', () => {
