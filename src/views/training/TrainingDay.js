@@ -15,6 +15,7 @@ import Button from '@/components/atoms/button/Button';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
 import TrainingBlocks, { RichText } from '@/components/organisms/training/TrainingBlocks';
 import TrainingProgressBar from '@/components/organisms/training/TrainingProgressBar';
+import { formatSessionDate } from '@/components/organisms/training/TrainingSessionRow';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
 import { RouteNames } from '@/navigation/routeNames';
@@ -52,7 +53,11 @@ import { useMyTraining, useUpdateTrainingSession } from '@/hooks/useTraining';
  */
 const SECTIONS = [
   { clef: 'markers', ouverteAuDepart: true, unite: 'points' },
-  { clef: 'timeline', ouverteAuDepart: false, unite: 'lines' },
+  // 🪤 LE DEROULE S OUVRE D EMBLEE. Il etait plie comme les autres, alors que
+  // c est un TABLEAU a quatre colonnes — heure, bloc, duree, recuperation — et
+  // que c est la seule chose qu on relit vraiment la veille. Un depliant sur un
+  // tableau demande un geste pour voir qu il y a un tableau.
+  { clef: 'timeline', ouverteAuDepart: true, unite: 'lines' },
   { clef: 'warmup', ouverteAuDepart: false, unite: 'blocks' },
   { clef: 'logbook', ouverteAuDepart: false, unite: 'lines' },
 ];
@@ -71,12 +76,13 @@ const compter = (contenu) => (Array.isArray(contenu) ? contenu.length : 0);
  *   est dépliée.
  * @param {number} props.compte Le nombre d'éléments, annoncé avant qu'on déplie.
  * @param {boolean} [props.defaultOpen] Déplie la section dès le premier affichage.
+ * @param {number} [props.faits] Quand la section se coche, combien de lignes le sont.
  * @param {string} props.title L'intitulé cliquable qui plie et déplie la section.
  * @param {string} props.unite La clef de traduction du compteur (`points`, `lines`, `blocks`).
  * @returns {React.ReactElement} une section dépliable avec son entête cliquable
  */
 function Section({
-  children, compte, defaultOpen = false, title, unite,
+  children, compte, defaultOpen = false, faits, title, unite,
 }) {
   const {
     Colors, Fonts, Images, Spaces,
@@ -106,8 +112,13 @@ function Section({
         }}
       >
         <Text style={[Fonts.h4Bold, { color: Colors.neutral00, flex: 1 }]}>{title}</Text>
-        <Text style={[Fonts.caption, { color: Colors.neutral400 }]}>
-          {t(`training.day.${unite}`, { count: compte })}
+        <Text style={[Fonts.caption, {
+          color: faits === compte ? Colors.success500 : Colors.neutral400,
+        }]}
+        >
+          {faits === undefined
+            ? t(`training.day.${unite}`, { count: compte })
+            : t('training.day.prepared', { done: faits, total: compte })}
         </Text>
         {/*
           🪤 Le signe était « + » et « − », deux caractères typographiques : le
@@ -136,12 +147,13 @@ function Section({
  * @param {object} props Les propriétés de la ligne.
  * @param {'done'|'in_progress'|'todo'} props.etat Où en est ce test.
  * @param {(index: number) => void} props.onPress Ouvre l'écran de saisie du test.
+ * @param {(index: number) => void} props.onWhy Ouvre le test sur son onglet « Pourquoi ».
  * @param {number} props.rang La position du test dans la journée, pour l'ouvrir.
  * @param {Record<string, any>} props.test Le test du catalogue.
  * @returns {React.ReactElement} une ligne cliquable décrivant un test
  */
 function TestRow({
-  etat, onPress, rang, test,
+  etat, onPress, onWhy, rang, test,
 }) {
   const {
     Colors, Fonts, Images, Spaces,
@@ -240,6 +252,24 @@ function TestRow({
             {t('training.test.optional')}
           </Text>
         )}
+        {/*
+          🪤 TOUCHER UN TEST LE LANCAIT. L explication de ce qu il mesure et de
+          pourquoi il existe etait ecrite, complete, et atteignable UNIQUEMENT en
+          demarrant le test — c est-a-dire au moment ou on n a plus le temps de
+          lire. Le « Pourquoi » ouvre le meme ecran sur son autre onglet.
+        */}
+        <TouchableOpacity
+          accessibilityRole="link"
+          hitSlop={{
+            bottom: 10, left: 10, right: 10, top: 10,
+          }}
+          onPress={() => onWhy(rang)}
+          style={{ marginLeft: 'auto' }}
+        >
+          <Text style={[Fonts.caption, { color: Colors.primary400 }]}>
+            {t('training.test.why')}
+          </Text>
+        </TouchableOpacity>
       </View>
     </TouchableOpacity>
   );
@@ -346,6 +376,30 @@ function TrainingDay({ navigation, route }) {
     return date || lieu;
   }, [day, session, t]);
 
+  /**
+   * CE QUI EST DEJA PREPARE — les reperes coches, gardes sur la seance.
+   *
+   * 🔎 OU C EST RANGE, ET POURQUOI CA NE COUTE RIEN : dans `conditions`, un champ
+   * JSON qui existait DEJA sur la seance et que le serveur acceptait deja. Aucune
+   * migration, aucune colonne neuve — et la liste survit au changement de
+   * telephone, ce qu une memoire locale ne ferait pas.
+   */
+  const prepares = useMemo(() => {
+    const brut = session?.conditions?.prepared;
+    return new Set(Array.isArray(brut) ? brut : []);
+  }, [session]);
+
+  const cocher = useCallback((/** @type {string} */ repere) => {
+    if (!session?.documentId) return;
+    const apres = new Set(prepares);
+    if (apres.has(repere)) apres.delete(repere);
+    else apres.add(repere);
+    updateSession.mutate({
+      payload: { conditions: { ...(session.conditions || {}), prepared: [...apres] } },
+      sessionDocumentId: session.documentId,
+    });
+  }, [prepares, session, updateSession]);
+
   const start = useCallback(async () => {
     if (!session?.documentId) return;
     // ⛔ LA BARRIÈRE EST OBLIGATOIRE quand la journée la réclame : on ne mesure pas
@@ -373,13 +427,19 @@ function TrainingDay({ navigation, route }) {
     });
   }, [session, updateSession]);
 
-  const openTest = useCallback((/** @type {number} */ index) => {
+  const openTest = useCallback((/** @type {number} */ index, /** @type {string} */ tab) => {
     navigation.navigate(RouteNames.TrainingTest, {
       dayId: day?.documentId,
       sessionId,
+      tab,
       testIndex: index,
     });
   }, [day, navigation, sessionId]);
+
+  const openWhy = useCallback(
+    (/** @type {number} */ index) => openTest(index, 'learn'),
+    [openTest],
+  );
 
   return (
     <ScreenContainer bgImage="bg2" bottomInsetMode="tab-scene">
@@ -542,26 +602,79 @@ function TrainingDay({ navigation, route }) {
                       if (compte === 0) return null;
                       return (
                         <Section
+                          // Les reperes annoncent « 2 faites sur 6 » : c est le seul
+                          // compteur qui dise ou en est la PREPARATION. Les autres
+                          // sections annoncent leur volume.
                           compte={compte}
                           defaultOpen={ouverteAuDepart}
+                          faits={clef === 'markers' ? prepares.size : undefined}
                           key={clef}
                           title={t(`training.day.${clef}`)}
                           unite={unite}
                         >
                           {clef === 'markers' ? (
                             <View style={Spaces.gap[8]}>
-                              {/** @type {Record<string, any>[]} */ (day.markers).map((marker) => (
-                                <View key={marker.label} style={Spaces.gap[4]}>
-                                  <Text style={[Fonts.captionBold, { color: Colors.primary400 }]}>
-                                    {marker.label}
-                                  </Text>
-                                  <RichText
-                                    color={Colors.neutral00}
-                                    style={[Fonts.p3, { color: Colors.neutral300 }]}
-                                    text={marker.value}
-                                  />
-                                </View>
-                              ))}
+                              {/*
+                                🪤 CES LIGNES SE COCHENT. C etait du texte a lire :
+                                on relisait les six points la veille, on en
+                                preparait quatre, et le lendemain rien ne disait
+                                lesquels. Une liste de preparatifs qui ne garde
+                                pas ce qui est fait n est pas une liste, c est un
+                                rappel qu il faut relire en entier.
+                              */}
+                              {/** @type {Record<string, any>[]} */ (day.markers).map((marker) => {
+                                const fait = prepares.has(marker.label);
+                                return (
+                                  <TouchableOpacity
+                                    accessibilityRole="checkbox"
+                                    accessibilityState={{ checked: fait }}
+                                    key={marker.label}
+                                    onPress={() => cocher(marker.label)}
+                                    style={[
+                                      Spaces.gap[4],
+                                      {
+                                        borderColor: fait
+                                          ? Colors.success500
+                                          : withAlpha(Colors.primary500, 0.2),
+                                        borderRadius: 8,
+                                        borderWidth: 1,
+                                        // 44 points : on coche ces lignes la veille,
+                                        // souvent d une main, en preparant un sac.
+                                        minHeight: 44,
+                                        padding: 10,
+                                      },
+                                    ]}
+                                  >
+                                    <View style={{
+                                      alignItems: 'center', flexDirection: 'row', gap: 8,
+                                    }}
+                                    >
+                                      <View style={{
+                                        backgroundColor: fait ? Colors.success500 : 'transparent',
+                                        borderColor: fait
+                                          ? Colors.success500 : Colors.neutral500,
+                                        borderRadius: 4,
+                                        borderWidth: 1,
+                                        height: 18,
+                                        width: 18,
+                                      }}
+                                      />
+                                      <Text style={[
+                                        Fonts.captionBold,
+                                        { color: fait ? Colors.success500 : Colors.primary400 },
+                                      ]}
+                                      >
+                                        {marker.label}
+                                      </Text>
+                                    </View>
+                                    <RichText
+                                      color={Colors.neutral00}
+                                      style={[Fonts.p3, { color: Colors.neutral300 }]}
+                                      text={marker.value}
+                                    />
+                                  </TouchableOpacity>
+                                );
+                              })}
                             </View>
                           ) : (
                             <TrainingBlocks blocks={day[clef]} />
@@ -618,6 +731,7 @@ function TrainingDay({ navigation, route }) {
                           etat={etats[test.code] || 'todo'}
                           key={test.documentId || test.code}
                           onPress={openTest}
+                          onWhy={openWhy}
                           rang={index}
                           test={test}
                         />
@@ -654,12 +768,29 @@ function TrainingDay({ navigation, route }) {
                 variant="Secondary"
               />
             ) : (
-              <Button
-                isLoading={updateSession.isPending}
-                onPress={enCours ? finish : start}
-                title={t(enCours ? 'training.actions.finishDay' : 'training.actions.startDay')}
-                variant={enCours ? 'Secondary' : 'Primary'}
-              />
+              <View style={Spaces.gap[4]}>
+                <Button
+                  isLoading={updateSession.isPending}
+                  onPress={enCours ? finish : start}
+                  title={t(enCours ? 'training.actions.finishDay' : 'training.actions.startDay')}
+                  variant={enCours ? 'Secondary' : 'Primary'}
+                />
+                {/*
+                  LA DEUXIEME SORTIE. Le pied n en avait qu une : « Commencer ».
+                  Quelqu un qui ouvre la journee la VEILLE pour la preparer n a
+                  aucune facon de dire « pas maintenant » — il devait revenir en
+                  arriere, ce que l onglet ne propose meme pas.
+                */}
+                {!enCours && (
+                  <Button
+                    onPress={() => navigation.navigate(RouteNames.TrainingPlan)}
+                    title={t('training.day.later', {
+                      date: formatSessionDate(session?.plannedDate),
+                    })}
+                    variant="Ghost"
+                  />
+                )}
+              </View>
             )}
           </View>
         ) : null}

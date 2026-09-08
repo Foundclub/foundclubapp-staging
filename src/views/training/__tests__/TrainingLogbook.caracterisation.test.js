@@ -1,9 +1,9 @@
 import { ScrollView, TouchableOpacity } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
-import Button from '@/components/atoms/button/Button';
-
 import genererCouleurs from '@/theme/colors';
+
+import Button from '@/components/atoms/button/Button';
 
 import TrainingLogbook from '../TrainingLogbook';
 

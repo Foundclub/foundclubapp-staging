@@ -72,6 +72,18 @@ jest.mock('react-i18next', () => ({
   }),
 }));
 
+// 🪤 La fiche d une journee lit maintenant `formatSessionDate` dans la rangee de
+// seance, qui tire un degrade natif : sans cette doublure, la suite ne MONTE meme
+// pas — elle echoue avant le premier temoin.
+jest.mock('react-native-linear-gradient', () => {
+  const reactActuel = jest.requireActual('react');
+  const { View: VueRN } = jest.requireActual('react-native');
+  return {
+    __esModule: true,
+    default: (/** @type {any} */ props) => reactActuel.createElement(VueRN, props),
+  };
+});
+
 // Le gabarit d'ecran pose un fond et des marges : il n'apporte rien a observer
 // ici, et il tire des dependances natives (degrade, image de fond).
 jest.mock('@/components/templates/ScreenContainer', () => {
@@ -242,6 +254,13 @@ const textes = (arbre) => {
 };
 
 /**
+ * Le bouton principal du pied — celui qui commence ou termine la journee.
+ * @param {any} arbre l arbre rendu
+ * @returns {any} le premier bouton du pied
+ */
+const boutonPrincipal = (arbre) => arbre.root.findAllByType(Button)[0];
+
+/**
  * Appuie sur l onglet demande.
  * @param {any} arbre l arbre rendu
  * @param {string} clef `prepare` ou `onSite`
@@ -394,9 +413,17 @@ describe('les sections du cote « Preparer »', () => {
   it('annonce le volume de chaque section AVANT qu on la deplie', () => {
     const vus = textes(rendre());
 
-    expect(vus).toContain('training.day.points|{"count":2}');
     expect(vus).toContain('training.day.lines|{"count":1}');
     expect(vus).toContain('training.day.blocks|{"count":1}');
+  });
+
+  it('mais les REPERES annoncent ou en est la preparation, pas leur volume', () => {
+    // C est le seul compteur de l ecran qui parle de la VEILLE. Les autres disent
+    // combien il y a a lire ; celui-la dit combien de preparatifs sont faits.
+    const vus = textes(rendre());
+
+    expect(vus).toContain('training.day.prepared|{"done":0,"total":2}');
+    expect(vus).not.toContain('training.day.points|{"count":2}');
   });
 
   it('n affiche PAS un titre dont la section est vide', () => {
@@ -409,11 +436,106 @@ describe('les sections du cote « Preparer »', () => {
     expect(vus).toContain('training.day.logbook');
   });
 
-  it('deplie les reperes d entree, et garde les autres fermees', () => {
+  it('deplie les reperes ET le deroule d entree, garde le reste ferme', () => {
+    // Le deroule est un TABLEAU a quatre colonnes, et c est ce qu on relit
+    // vraiment la veille : le plier demandait un geste pour decouvrir qu il
+    // existait. L echauffement, lui, se lit sur place.
     const vus = textes(rendre());
 
     expect(vus).toContain('au moins 7 h');
-    expect(vus).not.toContain('Echauffement puis blocs');
+    expect(vus).toContain('Echauffement puis blocs');
+    expect(vus).not.toContain('Mobilite des hanches');
+  });
+});
+
+describe('les reperes se COCHENT, et la coche survit', () => {
+  /**
+   * Les cases a cocher des reperes.
+   * @param {any} arbre l arbre rendu
+   * @returns {any[]} les rangees cochables
+   */
+  const reperes = (arbre) => arbre.root.findAll((n) => n.type === TouchableOpacity
+    && n.props.accessibilityRole === 'checkbox');
+
+  it('chaque repere est une case, pas un paragraphe a lire', () => {
+    expect(reperes(rendre())).toHaveLength(JOURNEE.markers.length);
+  });
+
+  it('cocher envoie la liste au serveur, dans le champ qui existait deja', () => {
+    // 🔎 `conditions` est un champ JSON deja porte par la seance et deja accepte
+    // par le serveur : aucune migration, et la liste survit au changement de
+    // telephone — ce qu une memoire locale ne ferait pas.
+    const mutate = jest.fn();
+    const arbre = rendre({ miseAJour: { mutate } });
+
+    act(() => { reperes(arbre)[0].props.onPress(); });
+
+    expect(mutate).toHaveBeenCalledWith({
+      payload: { conditions: { prepared: ['Sommeil'] } },
+      sessionDocumentId: 'seance-9',
+    });
+  });
+
+  it('affiche COCHE ce que la seance dit deja prepare', () => {
+    const arbre = rendre({
+      etat: avec(JOURNEE, { ...SEANCE, conditions: { prepared: ['Cafe'] } }),
+    });
+    const etats = reperes(arbre).map((n) => n.props.accessibilityState.checked);
+
+    expect(etats).toEqual([false, true]);
+    expect(textes(arbre)).toContain('training.day.prepared|{"done":1,"total":2}');
+  });
+
+  it('decocher RETIRE la ligne au lieu de la rajouter', () => {
+    const mutate = jest.fn();
+    const arbre = rendre({
+      etat: avec(JOURNEE, { ...SEANCE, conditions: { prepared: ['Cafe'] } }),
+      miseAJour: { mutate },
+    });
+
+    act(() => { reperes(arbre)[1].props.onPress(); });
+
+    expect(mutate).toHaveBeenCalledWith({
+      payload: { conditions: { prepared: [] } },
+      sessionDocumentId: 'seance-9',
+    });
+  });
+
+  it('garde le reste de `conditions` intact : on n ecrase pas ce qu on ne lit pas', () => {
+    const mutate = jest.fn();
+    const arbre = rendre({
+      etat: avec(JOURNEE, { ...SEANCE, conditions: { meteo: 'pluie' } }),
+      miseAJour: { mutate },
+    });
+
+    act(() => { reperes(arbre)[0].props.onPress(); });
+
+    expect(mutate).toHaveBeenCalledWith({
+      payload: { conditions: { meteo: 'pluie', prepared: ['Sommeil'] } },
+      sessionDocumentId: 'seance-9',
+    });
+  });
+});
+
+describe('le « Pourquoi » de chaque test', () => {
+  it('ouvre le test sur son onglet d explication, sans le lancer', () => {
+    // 🪤 L explication etait complete et atteignable UNIQUEMENT en demarrant le
+    // test — c est-a-dire au moment ou on n a plus le temps de lire.
+    const navigate = jest.fn();
+    const arbre = rendre({
+      etat: avec(JOURNEE, { ...SEANCE, status: 'in_progress' }),
+      navigation: { navigate },
+    });
+    const liens = arbre.root.findAll((n) => n.type === TouchableOpacity
+      && n.props.accessibilityRole === 'link');
+
+    expect(liens).toHaveLength(TESTS.length);
+    act(() => { liens[1].props.onPress(); });
+
+    expect(navigate).toHaveBeenCalledWith('TrainingTest', expect.objectContaining({
+      tab: 'learn',
+      testIndex: 1,
+    }));
   });
 });
 
@@ -435,7 +557,7 @@ describe('la barriere des cinq questions', () => {
     const navigate = jest.fn();
     const arbre = rendre({ miseAJour: { mutateAsync }, navigation: { navigate } });
 
-    await act(async () => { arbre.root.findByType(Button).props.onPress(); });
+    await act(async () => { boutonPrincipal(arbre).props.onPress(); });
 
     expect(navigate).toHaveBeenCalledWith('TrainingFreshness', { sessionId: 'seance-9' });
     expect(mutateAsync).not.toHaveBeenCalled();
@@ -448,7 +570,7 @@ describe('la barriere des cinq questions', () => {
       miseAJour: { mutateAsync },
     });
 
-    await act(async () => { arbre.root.findByType(Button).props.onPress(); });
+    await act(async () => { boutonPrincipal(arbre).props.onPress(); });
 
     expect(mutateAsync).toHaveBeenCalledWith({
       payload: { status: 'in_progress' },
@@ -468,13 +590,29 @@ describe('le pied de page', () => {
     const arbre = rendre();
 
     expect(arbre.root.findByType(ScrollView).findAllByType(Button)).toHaveLength(0);
+    // Deux sorties : « Commencer », et « je la ferai <date> ».
+    expect(arbre.root.findAllByType(Button)).toHaveLength(2);
+  });
+
+  it('propose « Terminer » quand la seance tourne, et RIEN d autre', () => {
+    const arbre = rendre({ etat: avec(JOURNEE, { ...SEANCE, status: 'in_progress' }) });
+
+    expect(boutonPrincipal(arbre).props.title).toBe('training.actions.finishDay');
+    // ⛔ Plus de « je la ferai plus tard » une fois la seance lancee : on ne
+    // reporte pas une journee dont le chronometre tourne deja.
     expect(arbre.root.findAllByType(Button)).toHaveLength(1);
   });
 
-  it('propose « Terminer » quand la seance tourne', () => {
-    const arbre = rendre({ etat: avec(JOURNEE, { ...SEANCE, status: 'in_progress' }) });
+  it('offre une DEUXIEME sortie a qui prepare la veille', () => {
+    // Le pied n avait qu un bouton : « Commencer ». Quelqu un qui ouvre la
+    // journee pour la preparer n avait aucune facon de dire « pas maintenant ».
+    const navigate = jest.fn();
+    const arbre = rendre({ navigation: { navigate } });
+    const [, secondaire] = arbre.root.findAllByType(Button);
 
-    expect(arbre.root.findByType(Button).props.title).toBe('training.actions.finishDay');
+    expect(secondaire.props.title).toBe('training.day.later|{"date":"mer. 9 sept."}');
+    act(() => { secondaire.props.onPress(); });
+    expect(navigate).toHaveBeenCalledWith('TrainingPlan');
   });
 
   it('« Terminer » ne fait PLUS sortir de l ecran', async () => {
@@ -486,7 +624,7 @@ describe('le pied de page', () => {
       navigation: { goBack },
     });
 
-    await act(async () => { arbre.root.findByType(Button).props.onPress(); });
+    await act(async () => { boutonPrincipal(arbre).props.onPress(); });
 
     expect(mutateAsync).toHaveBeenCalledWith({
       payload: { status: 'done' },
@@ -501,7 +639,7 @@ describe('le pied de page', () => {
       etat: avec(JOURNEE, { ...SEANCE, status: 'done' }),
       navigation: { navigate },
     });
-    const bouton = arbre.root.findByType(Button);
+    const bouton = boutonPrincipal(arbre);
 
     expect(bouton.props.title).toBe('training.day.seeMeasures|{"count":6}');
     act(() => { bouton.props.onPress(); });

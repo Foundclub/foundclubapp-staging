@@ -40,7 +40,13 @@ const PROGRAMME = [
  * @returns {Record<string, any>} la ligne complete
  */
 const ligne = (champs) => ({
-  attempt: 1, isValid: true, measureKey: 'temps', side: 'none', test: { code: 'T1' }, value: 1.72, ...champs,
+  attempt: 1,
+  isValid: true,
+  measureKey: 'temps',
+  side: 'none',
+  test: { code: 'T1' },
+  value: 1.72,
+  ...champs,
 });
 
 describe('les noms viennent du PROGRAMME, jamais du carnet', () => {

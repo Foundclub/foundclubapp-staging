@@ -4605,6 +4605,7 @@ export default {
       freshnessRequired: 'Avant de commencer, cinq questions sur ta forme du jour.',
       heading: '{{date}} · {{place}}',
       inProgress: 'en cours',
+      later: 'Je la ferai {{date}}',
       lines_one: '{{count}} ligne',
       lines_other: '{{count}} lignes',
       logbook: 'À noter dans le carnet',
@@ -4613,6 +4614,10 @@ export default {
       measures_other: '{{count}} mesures',
       points_one: '{{count}} point',
       points_other: '{{count}} points',
+      // Le seul compteur de l ecran comptait les TESTS faits pendant la seance.
+      // Celui-ci compte les PREPARATIFS, la veille : ce n est pas le meme geste,
+      // ni le meme moment.
+      prepared: '{{done}} faites sur {{total}}',
       progress_one: '{{done}} test sur {{total}} fait',
       progress_other: '{{done}} tests sur {{total}} faits',
       seeMeasures_one: 'Voir la mesure au carnet',

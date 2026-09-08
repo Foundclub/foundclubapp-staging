@@ -114,7 +114,9 @@ function TrainingTest({ navigation, route }) {
 
   const sessionId = route?.params?.sessionId;
   const [index, setIndex] = useState(Number(route?.params?.testIndex) || 0);
-  const [tab, setTab] = useState('do');
+  // On peut arriver ici pour COMPRENDRE, pas pour faire : la fiche d une journee
+  // ouvre le « Pourquoi » depuis sa liste, la veille, quand on a le temps de lire.
+  const [tab, setTab] = useState(route?.params?.tab === 'learn' ? 'learn' : 'do');
   const [recovery, setRecovery] = useState(120);
   /** @type {[Record<string, Record<string, any>>, Function]} */
   const [values, setValues] = useState({});
