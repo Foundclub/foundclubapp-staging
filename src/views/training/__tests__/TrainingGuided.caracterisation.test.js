@@ -512,3 +512,48 @@ describe('🔴 CE QUI EST FRANCHI EST NOTE SUR LA SEANCE', () => {
     expect(mockMaj.mutate).not.toHaveBeenCalled();
   });
 });
+
+describe('🧑‍⚖️ LA BASCULE DU TERRAIN SIGNE SON VERDICT', () => {
+  /*
+   * Decision d Adel du 2026-09-08 (« 1- ok B »). Un essai a deux juges possibles, et
+   * ils ne jugent pas au meme moment : le terrain voit un plot touche, la video lit
+   * un ballon hors image. Sur 22 des 33 tests, les deux criteres coexistent.
+   * ⚠️ Leur PORTEE differe aussi : sur le terrain, un plot touche annule TOUT
+   * l essai ; a la lecture, « le score reste, la vitesse est notee — ».
+   */
+
+  /**
+   * La carte d essai, et sa bascule.
+   * @param {any} arbre l arbre rendu
+   * @returns {any} la bascule
+   */
+  const bascule = (arbre) => arbre.root.findAll(
+    (n) => n.props?.accessibilityRole === 'switch' && typeof n.props?.onPress === 'function',
+  )[0];
+
+  it('marque TOUT l essai, et signe « terrain »', () => {
+    const arbre = rendre({ step: 'attempt-1' });
+
+    act(() => { bascule(arbre).props.onPress(); });
+
+    expect(mockCarnet.record).toHaveBeenCalledWith(expect.objectContaining({
+      invalidatedBy: 'terrain',
+      isValid: false,
+    }));
+  });
+
+  it('efface la signature quand on decoche', () => {
+    // 🪤 On fait l ALLER-RETOUR reel plutot que de forcer un etat de depart : le
+    // double de `merge` rend un objet vide, une seance montee avec une ligne nulle
+    // n arriverait donc jamais jusqu au calcul.
+    const arbre = rendre({ step: 'attempt-1' });
+
+    act(() => { bascule(arbre).props.onPress(); });
+    act(() => { bascule(arbre).props.onPress(); });
+
+    expect(mockCarnet.record).toHaveBeenLastCalledWith(expect.objectContaining({
+      invalidatedBy: null,
+      isValid: true,
+    }));
+  });
+});

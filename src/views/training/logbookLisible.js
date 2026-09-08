@@ -70,6 +70,14 @@ export const rangerLeCarnet = (sessions, journees) => {
         cote: ligne.side && ligne.side !== 'none' ? ligne.side : null,
         essai: Number.isFinite(ligne.attempt) ? ligne.attempt : null,
         label: mesure.label || ligne.measureKey || '',
+        // 🧑‍⚖️ QUI A JUGE. Un essai s annule sur le terrain (« un plot est touche »,
+        // ca se voit tout de suite) ou a la lecture de la video le soir (« ballon
+        // hors image entre les plots »). Sans ce mot, le carnet garde le verdict
+        // mais pas son juge — et sur 22 des 33 tests du programme, les deux sortes
+        // de criteres coexistent sur le MEME essai.
+        jugePar: ligne.invalidatedBy === 'terrain' || ligne.invalidatedBy === 'video'
+          ? ligne.invalidatedBy
+          : null,
         motif: ligne.invalidReason || '',
         nulle: ligne.isValid === false,
         unit: ligne.unit || mesure.unit || '',

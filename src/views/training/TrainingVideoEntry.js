@@ -230,6 +230,43 @@ function TrainingVideoEntry({ navigation, route }) {
     if (rang < valeurs.length - 1) setRang(rang + 1);
   }, [essai, mesure, rang, results, saisie, test, valeurs]);
 
+  /**
+   * 🧑‍⚖️ LE SECOND JUGE : LA VIDÉO — décision d'Adel du 2026-09-08 (« 1- ok B »).
+   *
+   * 🔎 POURQUOI DEUX JUGES, et pourquoi ils ne jugent PAS la même chose. Un essai a
+   * deux sortes de ratés, et ils ne se voient pas au même moment. Mesuré sur les
+   * 33 tests du programme : 169 critères « essai nul si », dont **22 tests** portent
+   * les deux sortes à la fois — c'est là qu'une case unique avait deux juges sans
+   * qu'on sache lequel avait parlé.
+   *
+   * ⚖️ ET LEUR PORTÉE DIFFÈRE, c'est la donnée elle-même qui le dit. Sur le terrain,
+   * « un plot est touché » annule TOUT l'essai — d'où une bascule par essai. À la
+   * lecture, le programme écrit noir sur blanc pour les coups francs :
+   * « vitesse illisible (ballon hors image entre les plots) : **le score reste, la
+   * vitesse est notée "—"** ». Une case par essai jetterait donc un score valide.
+   * ⇒ Ici, on annule **la mesure courante SEULE**, jamais l'essai entier.
+   *
+   * @returns {void} rien
+   */
+  const illisible = useCallback(() => {
+    if (!mesure?.key || !test?.documentId || !essai) return;
+    const dejaNulle = dejaRelevé[`${mesure.key}|${essai}`]?.isValid === false;
+    results.record({
+      attempt: essai,
+      invalidatedBy: dejaNulle ? null : 'video',
+      isValid: dejaNulle,
+      measureKey: mesure.key,
+      side: 'none',
+      testDocumentId: test.documentId,
+      unit: mesure.unit,
+      value: null,
+    });
+    if (!dejaNulle && rang < valeurs.length - 1) setRang(rang + 1);
+  }, [dejaRelevé, essai, mesure, rang, results, test, valeurs]);
+
+  /** Vrai quand la mesure affichée a déjà été déclarée illisible. */
+  const estIllisible = dejaRelevé[`${mesure?.key}|${essai}`]?.isValid === false;
+
   const restantes = valeurs.filter(({ essai: n, mesure: m }) => {
     const ligne = dejaRelevé[`${m.key}|${n}`];
     return !(ligne?.value != null || ligne?.textValue);
@@ -381,6 +418,38 @@ function TrainingVideoEntry({ navigation, route }) {
                       <Text style={[Fonts.p2, { color: Colors.neutral300 }]}>{mesure.unit}</Text>
                     )}
                   </View>
+
+                  {/*
+                    🧑‍⚖️ LA CASE DU SECOND JUGE. Elle vit ICI et nulle part ailleurs :
+                    on ne juge pas une vidéo sur le terrain. Sur place, rien ne change.
+                  */}
+                  <TouchableOpacity
+                    accessibilityRole="checkbox"
+                    accessibilityState={{ checked: estIllisible }}
+                    onPress={illisible}
+                    style={{
+                      alignItems: 'center',
+                      borderColor: estIllisible ? Colors.gold500 : withAlpha(Colors.gold500, 0.35),
+                      borderRadius: 8,
+                      borderWidth: 1,
+                      flexDirection: 'row',
+                      gap: 10,
+                      padding: 10,
+                    }}
+                  >
+                    <View style={{
+                      backgroundColor: estIllisible ? Colors.gold500 : 'transparent',
+                      borderColor: Colors.gold500,
+                      borderRadius: 4,
+                      borderWidth: 1,
+                      height: 18,
+                      width: 18,
+                    }}
+                    />
+                    <Text style={[Fonts.p3, { color: Colors.gold500, flex: 1 }]}>
+                      {t('training.video.unreadable')}
+                    </Text>
+                  </TouchableOpacity>
                 </View>
               </View>
             ) : (

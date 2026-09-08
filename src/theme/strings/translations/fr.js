@@ -4804,7 +4804,7 @@ export default {
       // 🪤 Le titre du vide redisait « Mon carnet », juste sous le vrai titre : on
       // lisait deux fois la meme chose et on croyait a un defaut d affichage.
       emptyTitle: 'Rien au carnet',
-      rawHint: '11 colonnes, une mesure par ligne, point-virgule. Il existe pour être '
+      rawHint: '12 colonnes, une mesure par ligne, point-virgule. Il existe pour être '
         + 'collé ailleurs, analysé, puis réimporté.',
       readableHint: 'La vue lisible est un confort de relecture — elle ne remplace pas '
         + 'le carnet brut.',
@@ -4821,6 +4821,12 @@ export default {
         readable: 'Lisible',
       },
       void: 'nul',
+      // 🧑‍⚖️ QUI A JUGE. Le carnet ne dit plus seulement « nul », il dit d'où vient le
+      // verdict : ce qu'on a vu sur place, ou ce qu'on a lu le soir sur la vidéo.
+      voidBy: {
+        terrain: 'nul · vu sur place',
+        video: 'nul · vu à la vidéo',
+      },
     },
     measures: {
       attempt: 'Essai {{number}}',
@@ -5060,6 +5066,9 @@ export default {
       remaining_other: '{{count}} mesures à relever',
       save: 'Enregistrer',
       testDone: '{{test}} relevé',
+      // 🧑‍⚖️ LA CASE DU SECOND JUGE, et elle n'annule QUE cette mesure : le programme
+      // écrit lui-même « vitesse illisible … : le score reste, la vitesse est notée — ».
+      unreadable: 'Illisible à la lecture — cette mesure seule est annulée',
       // 🐞 L ENTETE COMPTE CE QUI RESTE, la ligne comptait le TOTAL : « 3 mesures a
       // relever » en haut, « 4 mesures a lire » en dessous, et une barre a 25 %.
       // On dit maintenant les deux nombres, comme la barre juste en dessous.

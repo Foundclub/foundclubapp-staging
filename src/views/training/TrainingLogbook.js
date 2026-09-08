@@ -92,7 +92,9 @@ function LigneLisible({ ligne }) {
       )}
       {ligne.nulle ? (
         <Text style={[Fonts.caption, { color: Colors.gold500 }]}>
-          {t('training.logbook.void')}
+          {ligne.jugePar
+            ? t(`training.logbook.voidBy.${ligne.jugePar}`)
+            : t('training.logbook.void')}
         </Text>
       ) : (
         <Text style={[Fonts.caption, { color: Colors.success500 }]}>✓</Text>

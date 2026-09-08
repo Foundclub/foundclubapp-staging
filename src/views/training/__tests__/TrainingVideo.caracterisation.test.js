@@ -398,3 +398,76 @@ describe('UN ESSAI A LA FOIS', () => {
     expect(goBack).toHaveBeenCalled();
   });
 });
+
+describe('🧑‍⚖️ LE SECOND JUGE : LA VIDEO', () => {
+  /*
+   * Decision d Adel du 2026-09-08 (« 1- ok B »), apres avoir vu les chiffres :
+   * sur les 33 tests du programme, 169 criteres « essai nul si » — dont 22 tests
+   * portent A LA FOIS un critere visible sur place (« un plot est touche ») et un
+   * critere qui ne se lit que sur la video (« ballon hors image »). Une case unique
+   * avait donc deux juges, et le carnet ne savait pas lequel avait parle.
+   *
+   * ⚖️ ET LEUR PORTEE DIFFERE, c est la donnee elle-meme qui le dit. Le programme
+   * ecrit pour les coups francs : « vitesse illisible (ballon hors image entre les
+   * plots) : LE SCORE RESTE, la vitesse est notee "—" ». Annuler tout l essai
+   * jetterait donc un score valide. Le juge de la video n annule QUE sa mesure.
+   */
+
+  /**
+   * Monte l ecran d un essai.
+   * @returns {any} l arbre rendu
+   */
+  const rendreEssai = () => {
+    preparer();
+    /** @type {any} */
+    let arbre;
+    act(() => {
+      arbre = renderer.create(
+        <TrainingVideoEntry
+          navigation={{ goBack: jest.fn(), navigate: jest.fn() }}
+          route={{ params: { sessionId: 'seance-1', testIndex: 0 } }}
+        />,
+      );
+    });
+    return arbre;
+  };
+
+  /**
+   * La case « illisible », trouvee par son role et son etiquette.
+   * @param {any} arbre l arbre rendu
+   * @returns {any} la case
+   */
+  const caseIllisible = (arbre) => arbre.root.findAll(
+    (n) => n.props?.accessibilityRole === 'checkbox' && typeof n.props?.onPress === 'function',
+  )[0];
+
+  it('la case existe sur l ecran du soir', () => {
+    expect(caseIllisible(rendreEssai())).toBeTruthy();
+    expect(textes(rendreEssai()).some((v) => String(v).startsWith('training.video.unreadable')))
+      .toBe(true);
+  });
+
+  it('elle annule LA MESURE COURANTE SEULE, et signe « video »', () => {
+    const arbre = rendreEssai();
+
+    act(() => { caseIllisible(arbre).props.onPress(); });
+
+    // ⚠️ Une SEULE ligne : l essai entier n est pas touche.
+    expect(mockCarnet.record).toHaveBeenCalledTimes(1);
+    expect(mockCarnet.record).toHaveBeenCalledWith(expect.objectContaining({
+      invalidatedBy: 'video',
+      isValid: false,
+      value: null,
+    }));
+  });
+
+  it('elle ne signe JAMAIS « terrain » : ce juge-la vit sur un autre ecran', () => {
+    const arbre = rendreEssai();
+
+    act(() => { caseIllisible(arbre).props.onPress(); });
+
+    expect(mockCarnet.record).not.toHaveBeenCalledWith(expect.objectContaining({
+      invalidatedBy: 'terrain',
+    }));
+  });
+});

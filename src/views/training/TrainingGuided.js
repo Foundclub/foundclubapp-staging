@@ -181,7 +181,16 @@ function TrainingGuided({ navigation, route }) {
         attempt: essai, measureKey: m.key, side: m.sides ? 'left' : 'none',
       }));
     const devientNul = !lignes.some((row) => row.isValid === false);
-    cibles.forEach((row) => record({ ...row, isValid: !devientNul }));
+    // 🧑‍⚖️ ON SIGNE LE VERDICT. Cette bascule est celle du TERRAIN : on l'actionne
+    // sur place, parce qu'on a VU quelque chose (un plot touché, un départ anticipé).
+    // L'autre juge est la vidéo, le soir, sur l'écran des relevés — et sur 22 des
+    // 33 tests du programme, les deux sortes de critères coexistent sur le même
+    // essai. Sans signature, le carnet garde le verdict mais pas son auteur.
+    cibles.forEach((row) => record({
+      ...row,
+      invalidatedBy: devientNul ? 'terrain' : null,
+      isValid: !devientNul,
+    }));
   }, [familles, lignesDeLEssai, record]);
 
   const aller = useCallback((cle) => {

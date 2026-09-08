@@ -149,6 +149,33 @@ describe('ce qui distingue une ligne nulle et un cote', () => {
     expect(range[0].tests[0].lignes[0]).toMatchObject({ motif: 'faux depart', nulle: true });
   });
 
+  it('🧑‍⚖️ garde QUI a juge : le terrain, ou la video', () => {
+    // Sans ce mot, le carnet garde le verdict mais pas son auteur — et sur 22 des
+    // 33 tests du programme, un essai porte a la fois un critere visible sur place
+    // et un critere qui ne se lit que sur la video.
+    const range = rangerLeCarnet(
+      [{
+        day: { code: 'T' },
+        results: [ligne({ invalidatedBy: 'video', isValid: false })],
+      }],
+      PROGRAMME,
+    );
+
+    expect(range[0].tests[0].lignes[0]).toMatchObject({ jugePar: 'video', nulle: true });
+  });
+
+  it('ne garde QUE les deux juges connus : le champ vient du serveur', () => {
+    const juge = (valeur) => rangerLeCarnet(
+      [{ day: { code: 'T' }, results: [ligne({ invalidatedBy: valeur, isValid: false })] }],
+      PROGRAMME,
+    )[0].tests[0].lignes[0].jugePar;
+
+    expect(juge('terrain')).toBe('terrain');
+    expect(juge('video')).toBe('video');
+    expect(juge('n importe quoi')).toBeNull();
+    expect(juge(undefined)).toBeNull();
+  });
+
   it('n ecrit un cote QUE quand il y en a un : « none » n est pas un cote', () => {
     const range = rangerLeCarnet(
       [{
