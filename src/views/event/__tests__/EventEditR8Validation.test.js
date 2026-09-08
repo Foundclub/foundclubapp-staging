@@ -1,8 +1,9 @@
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryClientProvider } from '@tanstack/react-query';
 import { createElement } from 'react';
 import { Alert } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
+import { creerQueryClientDeTest } from '@/testSupport/queryClientDeTest';
 import EventEdit from '../EventEdit';
 
 // R8 — L'ECRAN DE MODIFICATION DIT-IL LA VERITE SUR LA VALIDATION ?
@@ -193,6 +194,7 @@ let arbre = null;
  * @param {string} sessionStatus - 'open' (public) ou 'closed' (prive).
  * @param {string} typeId - Le type, tel que `getEventTypes` le rend.
  * @param {string} typeName - Son nom, celui qui decide « entrainement » ou non.
+ * @param enPlus
  * @returns {any} - L'evenement rendu par le service.
  */
 const evenement = (sessionStatus, typeId, typeName, enPlus = {}) => ({
@@ -228,12 +230,7 @@ const monterSur = async (evenementRendu) => {
   // 20 executions d'affilee — avec 5 965 temoins VERTS et un code de sortie 1.
   // ⛔ Le remede n'est PAS `--forceExit` : ca masquerait une fuite qui existe aussi
   // dans la vraie app.
-  const client = new QueryClient({
-    defaultOptions: {
-      mutations: { gcTime: Infinity, retry: false },
-      queries: { gcTime: Infinity, retry: false },
-    },
-  });
+  const client = creerQueryClientDeTest();
 
   act(() => {
     arbre = renderer.create(createElement(
