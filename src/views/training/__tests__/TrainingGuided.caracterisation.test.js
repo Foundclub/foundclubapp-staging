@@ -236,10 +236,13 @@ describe('AVANT DE COMMENCER', () => {
       && n.props.accessibilityRole === 'checkbox');
 
     expect(cases).toHaveLength(2);
-    expect(textes(arbre)).toContain('training.day.prepared|{"done":0,"total":2}');
+    // 🐞 `count` accompagne desormais le compte : en francais zero prend le
+    // SINGULIER, et le moteur du telephone applique la regle anglaise.
+    // Cf. `src/theme/strings/accordFrancais.js`.
+    expect(textes(arbre)).toContain('training.day.prepared|{"count":1,"done":0,"total":2}');
 
     act(() => { cases[0].props.onPress(); });
-    expect(textes(arbre)).toContain('training.day.prepared|{"done":1,"total":2}');
+    expect(textes(arbre)).toContain('training.day.prepared|{"count":1,"done":1,"total":2}');
   });
 
   it('encadre en OR ce qui annule un essai, AVANT qu on le fasse', () => {

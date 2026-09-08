@@ -211,7 +211,12 @@ describe('LA FILE — « Relevés vidéo »', () => {
     expect(vus).toContain('Tir cadre');
     expect(vus).toContain('Kinovea');
     // 3 essais faits × 2 mesures video = 6 valeurs a relever.
-    expect(vus).toContain('training.video.testLine|{"attempts":3,"count":3,"measures":6}');
+    // 🐞 LA LIGNE DIT MAINTENANT LES DEUX NOMBRES. Elle annoncait le TOTAL pendant
+    // que l entete comptait ce qui RESTE : « 3 mesures a relever » en haut,
+    // « 4 mesures a lire » juste en dessous, et une barre a 25 %. Vu le 2026-09-08.
+    expect(vus).toContain(
+      'training.video.testLine|{"attempts":3,"count":3,"done":0,"measures":6}',
+    );
   });
 
   it('ouvre le releve du bon test', () => {

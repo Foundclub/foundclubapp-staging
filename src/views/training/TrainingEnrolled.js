@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next';
 import { ScrollView, Text, View } from 'react-native';
 
 import { withAlpha } from '@/theme/colors';
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -72,8 +73,15 @@ function TrainingEnrolled({ navigation, route = undefined }) {
             {t('training.enrolled.title')}
           </Text>
 
+          {/*
+            🐞 LE TITRE NE DOIT PAS ETRE ECHAPPE. i18next echappe les valeurs
+            interpolees : un « / » dans le nom d un programme ressort en « &#x2F; »
+            a l ecran — defaut vu le 2026-09-08. `SANS_ECHAPPEMENT` leve la regle
+            POUR CET APPEL SEULEMENT ; l appel suivant reste protege.
+          */}
           <Text style={[Fonts.p2, { color: Colors.neutral200, textAlign: 'center' }]}>
             {t('training.enrolled.recap', {
+              ...SANS_ECHAPPEMENT,
               count: sessionsCount || 0,
               end: formatSessionDate(endDate),
               program: programTitle || '',
@@ -84,6 +92,7 @@ function TrainingEnrolled({ navigation, route = undefined }) {
           {Boolean(firstSession) && (
             <Text style={[Fonts.p3, { color: Colors.primary200, textAlign: 'center' }]}>
               {t('training.enrolled.firstSession', {
+                ...SANS_ECHAPPEMENT,
                 date: formatSessionDate(startDate),
                 day: firstSession,
               })}

@@ -7,6 +7,7 @@ import {
 } from 'react-native';
 
 import { withAlpha } from '@/theme/colors';
+import accordFrancais from '@/theme/strings/accordFrancais';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -52,10 +53,52 @@ const TEINTES = { current: 'primary500', done: 'success500', todo: 'neutral600' 
  * @param {(clef: string, options?: any) => string} t la traduction
  * @returns {string} le libellé de l'étape
  */
+/**
+ * DEPUIS COMBIEN DE TEMPS LA SEANCE EST OUVERTE.
+ *
+ * 🐞 DEFAUT VU A L ECRAN LE 2026-09-08 : « T+2352 min ». Une seance ouverte
+ * l avant-veille et jamais terminee affichait trente-neuf heures EN MINUTES, en
+ * vert, comme une performance. Personne ne lit un nombre pareil.
+ *
+ * Trois paliers, parce que le chiffre ne sert pas a la meme chose selon l echelle :
+ * pendant la seance, la minute compte (« T+42 min ») ; au-dela de deux heures on
+ * pense en heures ; au-dela d un jour, la seule information utile est « ca traine
+ * depuis des jours », et c est un rappel, plus un chronometre.
+ * @param {number} minutes le temps ecoule depuis le depart
+ * @param {(clef: string, options?: Record<string, any>) => string} t la traduction
+ * @returns {string} le temps ecoule, a l echelle qui se lit
+ */
+const depuisQuand = (minutes, t) => {
+  if (minutes >= 1440) {
+    return t('training.now.elapsedLong', { days: Math.floor(minutes / 1440) });
+  }
+  if (minutes >= 120) {
+    return t('training.now.elapsedHours', {
+      hours: Math.floor(minutes / 60),
+      minutes: String(minutes % 60).padStart(2, '0'),
+    });
+  }
+  return t('training.now.elapsed', { count: minutes });
+};
+
 const nommer = (etape, t) => (etape.type === 'prep'
-  ? t('training.now.step.prep', { test: etape.titre })
+  // 🎯 LE CODE DU TEST, PAS SON TITRE, et pour DEUX raisons mesurées le 2026-09-08.
+  //
+  // 1. LISIBILITÉ. La ligne portait « <titre du test> — mise en place », coupée à
+  //    une seule ligne. Sur « Calibrations caméra — 10 min, pendant ton
+  //    échauffement », le suffixe qui distingue les étapes tombait dans les points
+  //    de suspension : les quatre premières étapes de la journée s'affichaient
+  //    RIGOUREUSEMENT identiques. On ne savait plus laquelle était laquelle.
+  //
+  // 2. ÉCHAPPEMENT. i18next échappe les valeurs interpolées : chaque « / » d'un
+  //    titre ressortait en « &#x2F; » à l'écran — « Rotations de hanche assis
+  //    90°&#x2F;90° » était affiché tel quel. Le dépôt connaît ce piège
+  //    (`TeamDetails.js`, motif maison) ; un code de test n'a pas de « / ».
+  //
+  // Le titre, lui, est rendu tel quel sur une seconde ligne, sans interpolation.
+  ? t('training.now.step.prep', { test: etape.testCode })
   : t('training.now.step.attempt', {
-    current: etape.essai, test: etape.titre, total: etape.total,
+    current: etape.essai, test: etape.testCode, total: etape.total,
   }));
 
 /**
@@ -121,6 +164,10 @@ function Pastille({
           ]}
         >
           {nommer(etape, t)}
+        </Text>
+        {/* Le titre du test, en second : il situe, il ne distingue pas. */}
+        <Text numberOfLines={1} style={[Fonts.caption, { color: Colors.neutral400 }]}>
+          {etape.titre}
         </Text>
         {etape.calculSeul && etape.type === 'prep' && (
           <Text style={[Fonts.caption, { color: Colors.neutral400 }]}>
@@ -243,7 +290,7 @@ function TrainingSessionNow({ navigation, route }) {
                     </Text>
                     {ecoule !== null && (
                       <Text style={[Fonts.p2Bold, { color: Colors.success500 }]}>
-                        {t('training.now.elapsed', { count: ecoule })}
+                        {depuisQuand(ecoule, t)}
                       </Text>
                     )}
                   </View>
@@ -279,7 +326,7 @@ function TrainingSessionNow({ navigation, route }) {
                   <View style={{ alignItems: 'center', flexDirection: 'row', gap: 8 }}>
                     <Text style={[Fonts.p3, { color: Colors.neutral300, flex: 1 }]}>
                       {t('training.now.progress', {
-                        count: chiffres.testsFaits,
+                        count: accordFrancais(chiffres.testsFaits),
                         done: chiffres.faites,
                         tests: chiffres.testsFaits,
                         total: chiffres.total,
@@ -318,7 +365,7 @@ function TrainingSessionNow({ navigation, route }) {
         {day ? (
           <View
             style={{
-              backgroundColor: withAlpha(Colors.neutral900, 0.92),
+              backgroundColor: 'rgba(9, 24, 35, 0.94)',
               borderTopColor: withAlpha(Colors.primary500, 0.2),
               borderTopWidth: 1,
               gap: 4,

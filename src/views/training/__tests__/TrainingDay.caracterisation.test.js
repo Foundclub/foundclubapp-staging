@@ -422,7 +422,10 @@ describe('les sections du cote « Preparer »', () => {
     // combien il y a a lire ; celui-la dit combien de preparatifs sont faits.
     const vus = textes(rendre());
 
-    expect(vus).toContain('training.day.prepared|{"done":0,"total":2}');
+    // 🐞 `count` accompagne desormais le compte : en francais zero prend le
+    // SINGULIER, et le moteur du telephone applique la regle anglaise.
+    // Cf. `src/theme/strings/accordFrancais.js`.
+    expect(vus).toContain('training.day.prepared|{"count":1,"done":0,"total":2}');
     expect(vus).not.toContain('training.day.points|{"count":2}');
   });
 
@@ -483,7 +486,7 @@ describe('les reperes se COCHENT, et la coche survit', () => {
     const etats = reperes(arbre).map((n) => n.props.accessibilityState.checked);
 
     expect(etats).toEqual([false, true]);
-    expect(textes(arbre)).toContain('training.day.prepared|{"done":1,"total":2}');
+    expect(textes(arbre)).toContain('training.day.prepared|{"count":1,"done":1,"total":2}');
   });
 
   it('decocher RETIRE la ligne au lieu de la rajouter', () => {
@@ -690,6 +693,7 @@ describe('ce qui ne doit jamais faire tomber l ecran', () => {
       etat: avec({ ...JOURNEE, tests: [] }, { ...SEANCE, status: 'in_progress' }),
     });
 
-    expect(textes(arbre)).toContain('training.day.progress|{"count":0,"done":0,"total":0}');
+    // `count` vaut 1 a zero : le francais met le singulier, cf. `accordFrancais`.
+    expect(textes(arbre)).toContain('training.day.progress|{"count":1,"done":0,"total":0}');
   });
 });

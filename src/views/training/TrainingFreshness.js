@@ -11,6 +11,7 @@ import Button from '@/components/atoms/button/Button';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
+import allerDansLOnglet from '@/navigation/allerDansLOnglet';
 import { RouteNames } from '@/navigation/routeNames';
 
 import { useMyTraining, useUpdateTrainingSession } from '@/hooks/useTraining';
@@ -216,13 +217,17 @@ function TrainingFreshness({ navigation, route }) {
     if (etat === 'postponed') {
       // On n'abandonne pas la personne sur un « c'est reporté » : on l'emmène là
       // où elle CHOISIT de combien, avec la question de la chaîne déjà posée.
-      navigation.navigate(RouteNames.TrainingSessions, { postponeSessionId: session.documentId });
+      allerDansLOnglet(navigation, RouteNames.TrainingSessions, {
+        postponeSessionId: session.documentId,
+      });
       return;
     }
     // ⛔ PAS la fiche de la journee : elle sert a LIRE. Une seance qui demarre
     // s ouvre sur le tableau de bord, le seul ecran qui reponde a « je fais quoi
     // maintenant ? ». C est la porte d entree que le pack decrit.
-    navigation.navigate(RouteNames.TrainingSessionNow, { sessionId: session.documentId });
+    allerDansLOnglet(navigation, RouteNames.TrainingSessionNow, {
+      sessionId: session.documentId,
+    });
   }, [bilan, enregistrer, navigation, notes, session]);
 
   const couleurVerdict = bilan && {

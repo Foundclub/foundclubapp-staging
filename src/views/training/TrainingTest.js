@@ -26,6 +26,7 @@ import {
   aSaisirPlusTard, ceQueCeTestAlimente, mesuresParFamille,
 } from '@/views/training/trainingTestModel';
 
+import allerDansLOnglet from '@/navigation/allerDansLOnglet';
 import { RouteNames } from '@/navigation/routeNames';
 
 import { useMyTraining, useTrainingResults } from '@/hooks/useTraining';
@@ -876,7 +877,9 @@ function TrainingTest({ navigation, route }) {
               */}
               {session?.status === 'in_progress' ? (
                 <Button
-                  onPress={() => navigation.navigate(RouteNames.TrainingSessionNow, { sessionId })}
+                  onPress={() => allerDansLOnglet(navigation, RouteNames.TrainingSessionNow, {
+                    sessionId,
+                  })}
                   title={t('training.now.back')}
                   variant="Secondary"
                 />
@@ -901,7 +904,7 @@ function TrainingTest({ navigation, route }) {
       {test && saisieOuverte && cases.total > BEAUCOUP_DE_CASES && (
         <View
           style={{
-            backgroundColor: withAlpha(Colors.neutral900, 0.94),
+            backgroundColor: 'rgba(9, 24, 35, 0.94)',
             borderTopColor: withAlpha(Colors.primary500, 0.2),
             borderTopWidth: 1,
             gap: 6,

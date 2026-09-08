@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 
 import { withAlpha } from '@/theme/colors';
+import accordFrancais from '@/theme/strings/accordFrancais';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -118,7 +119,9 @@ function Section({
         >
           {faits === undefined
             ? t(`training.day.${unite}`, { count: compte })
-            : t('training.day.prepared', { done: faits, total: compte })}
+            : t('training.day.prepared', {
+              count: accordFrancais(faits), done: faits, total: compte,
+            })}
         </Text>
         {/*
           🪤 Le signe était « + » et « − », deux caractères typographiques : le
@@ -688,7 +691,7 @@ function TrainingDay({ navigation, route }) {
                       <View style={{ alignItems: 'center', flexDirection: 'row', gap: 8 }}>
                         <Text style={[Fonts.p3, { color: Colors.neutral300, flex: 1 }]}>
                           {t('training.day.progress', {
-                            count: chiffres.faits,
+                            count: accordFrancais(chiffres.faits),
                             done: chiffres.faits,
                             total: chiffres.total,
                           })}
@@ -749,7 +752,7 @@ function TrainingDay({ navigation, route }) {
         {day ? (
           <View
             style={{
-              backgroundColor: withAlpha(Colors.neutral900, 0.92),
+              backgroundColor: 'rgba(9, 24, 35, 0.94)',
               borderTopColor: withAlpha(Colors.primary500, 0.2),
               borderTopWidth: 1,
               paddingHorizontal: 16,

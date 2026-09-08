@@ -371,7 +371,15 @@ describe('les DEUX sorties du cas « on reporte »', () => {
       payload: expect.objectContaining({ status: 'postponed' }),
       sessionDocumentId: 'seance-9',
     }));
-    expect(navigate).toHaveBeenCalledWith('TrainingSessions', { postponeSessionId: 'seance-9' });
+    // 🔴 LA FORME IMBRIQUEE, et c est un DEFAUT REPARE, pas un detail de style :
+    // cet ecran vit sur la pile RACINE (c est ce qui cache le dock) tandis que
+    // « Toutes mes seances » vit dans l onglet, deux niveaux plus bas. L appel
+    // direct ne trouvait RIEN — l appareil disait « The action 'NAVIGATE' … was
+    // not handled by any navigator » et l ecran ne bougeait pas.
+    expect(navigate).toHaveBeenCalledWith('HomeTab', {
+      params: { params: { postponeSessionId: 'seance-9' }, screen: 'TrainingSessions' },
+      screen: 'Search',
+    });
   });
 
   it('🪤 « Je la fais quand meme » passe, MAIS l etat reel part quand meme', async () => {
@@ -433,7 +441,10 @@ describe('ce qui part au serveur', () => {
 
     // ⛔ Pas la fiche de la journee : elle sert a LIRE. Une seance qui demarre
     // s ouvre sur le seul ecran qui reponde a « je fais quoi maintenant ? ».
-    expect(navigate).toHaveBeenCalledWith('TrainingSessionNow', { sessionId: 'seance-9' });
+    expect(navigate).toHaveBeenCalledWith('HomeTab', {
+      params: { params: { sessionId: 'seance-9' }, screen: 'TrainingSessionNow' },
+      screen: 'Search',
+    });
   });
 
   it('🪤 ne fait PAS partir la personne quand l envoi echoue', async () => {

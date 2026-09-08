@@ -200,12 +200,20 @@ describe('la carte « Maintenant »', () => {
     const vus = textes(arbre);
 
     expect(vus).toContain('training.now.label');
-    expect(vus).toContain('training.now.step.attempt|{"current":2,"test":"Squat Jump","total":2}');
+    // 🐞 LE CODE DU TEST, PAS SON TITRE — defaut vu a l ecran le 2026-09-08. La ligne
+    // etant coupee a UNE ligne, un titre long noyait le suffixe qui distingue les
+    // etapes : « Calibrations camera — 10 min, pendant ton echauffement — mise en
+    // place » et « … — essai 1 sur 3 » s affichaient RIGOUREUSEMENT identiques. Le
+    // titre est desormais rendu tel quel sur une SECONDE ligne.
+    expect(vus).toContain('training.now.step.attempt|{"current":2,"test":"B1","total":2}');
+    expect(vus).toContain('Squat Jump');
   });
 
   it('commence par la MISE EN PLACE quand rien n a ete saisi', () => {
-    expect(textes(rendre()))
-      .toContain('training.now.step.prep|{"test":"Squat Jump"}');
+    const vus = textes(rendre());
+
+    expect(vus).toContain('training.now.step.prep|{"test":"B1"}');
+    expect(vus).toContain('Squat Jump');
   });
 
   it('dit que tout est fait quand il ne reste rien', () => {
@@ -232,8 +240,10 @@ describe('l avancement se compte en ETAPES', () => {
     });
 
     // 5 etapes en tout (B1 : prep + 2 essais ; B2 : prep + 1 essai), 2 faites.
+    // 🐞 `count` vaut 1 quand rien n est fait : en francais zero prend le SINGULIER,
+    // et le moteur du telephone applique la regle anglaise. Cf. `accordFrancais`.
     expect(textes(arbre)).toContain(
-      'training.now.progress|{"count":0,"done":2,"tests":0,"total":5}',
+      'training.now.progress|{"count":1,"done":2,"tests":0,"total":5}',
     );
   });
 

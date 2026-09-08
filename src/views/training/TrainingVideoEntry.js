@@ -14,6 +14,7 @@ import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrap
 import ScreenContainer from '@/components/templates/ScreenContainer';
 import { nomDuFichier, outilDeLaMesure } from '@/views/training/trainingVideo';
 
+import allerDansLOnglet from '@/navigation/allerDansLOnglet';
 import { RouteNames } from '@/navigation/routeNames';
 
 import { useMyTraining, useTrainingResults } from '@/hooks/useTraining';
@@ -138,6 +139,22 @@ function TrainingVideoEntry({ navigation, route }) {
     // Une mesure a deux essais n a rien a relever sur un troisieme.
     .filter((m) => numero <= (Number(m.attempts) || 1))
     .map((m) => ({ essai: numero, mesure: m }))), [essais, mesures]);
+
+  const [echecEnvoi, setEchecEnvoi] = useState(false);
+
+  // Ce qui attend d'être envoyé au serveur — pas ce qui reste à lire sur la vidéo.
+  // Les deux compteurs vivent côte à côte sur cet écran et ne disent PAS la même
+  // chose : l'un parle du travail restant, l'autre du réseau.
+  const enAttente = results.pendingCount();
+
+  const envoyer = useCallback(async () => {
+    setEchecEnvoi(false);
+    try {
+      await results.sync.mutateAsync();
+    } catch {
+      setEchecEnvoi(true);
+    }
+  }, [results]);
 
   const [rang, setRang] = useState(0);
   const [saisie, setSaisie] = useState('');
@@ -412,6 +429,46 @@ function TrainingVideoEntry({ navigation, route }) {
               </View>
             </View>
 
+            {/*
+              🔴 LE DÉFAUT RÉPARÉ, mesuré le 2026-09-08 avec preuve en base : on
+              relevait ses vidéos le soir, on appuyait sur « Enregistrer », et
+              RIEN NE PARTAIT. `results.sync` n'était branché que dans la fiche
+              d'un test — cet écran-ci savait écrire dans le magasin local, jamais
+              l'envoyer. Il fallait rouvrir la fiche du test correspondant et y
+              trouver « Envoyer les mesures », sans que rien ne le dise.
+              ⚠️ Même bandeau et mêmes mots que la fiche d'un test : c'est le
+              même geste, il doit se reconnaître au premier coup d'œil.
+              ⚠️ ET IL EST POSÉ ICI, AVANT LE PAVÉ. Placé sous lui, il tombait
+              hors de l'écran — et ce bas de page ne défile pas : le bouton
+              existait sans être atteignable. Vu à l'écran le 2026-09-08, sur ma
+              propre réparation. L'espace entre la carte et le pavé est vide et
+              toujours visible : c'est la seule place qui tienne.
+            */}
+            {enAttente > 0 && (
+              <View style={[Spaces.gap[8], {
+                borderColor: withAlpha(Colors.gold500, 0.4),
+                borderRadius: 12,
+                borderWidth: 1,
+                padding: 12,
+              }]}
+              >
+                <Text style={[Fonts.caption, { color: Colors.gold500 }]}>
+                  {t('training.sync.offline', { count: enAttente })}
+                </Text>
+                {echecEnvoi && (
+                  <Text style={[Fonts.caption, { color: Colors.error500 }]}>
+                    {t('training.sync.failed')}
+                  </Text>
+                )}
+                <Button
+                  isLoading={results.sync.isPending}
+                  onPress={envoyer}
+                  title={t('training.actions.sync')}
+                  variant="Primary"
+                />
+              </View>
+            )}
+
             {/* ⌨️ LE PAVÉ, TOUJOURS OUVERT. Sa place est réservée dès le premier
                 affichage : rien ne se déplace quand on commence à taper, et le
                 champ ne peut pas se retrouver caché. */}
@@ -429,9 +486,10 @@ function TrainingVideoEntry({ navigation, route }) {
                 count: restantes, test: test.code,
               })}
             </Text>
+
             {restantes === 0 && (
               <Button
-                onPress={() => navigation.navigate(RouteNames.TrainingVideoQueue)}
+                onPress={() => allerDansLOnglet(navigation, RouteNames.TrainingVideoQueue)}
                 title={t('training.video.backToQueue')}
                 variant="Secondary"
               />

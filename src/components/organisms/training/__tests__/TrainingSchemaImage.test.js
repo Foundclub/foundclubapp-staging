@@ -1,6 +1,9 @@
 import renderer, { act } from 'react-test-renderer';
 
-import TrainingSchemaImage, { ratioDuSchema } from '../TrainingSchemaImage';
+import TrainingSchemaImage, {
+  desamorcerLeSchema,
+  ratioDuSchema,
+} from '../TrainingSchemaImage';
 
 /**
  * LE SCHEMA COTE, ET SA HAUTEUR.
@@ -100,5 +103,61 @@ describe('ce qui ne doit rien faire tomber', () => {
     // Le SVG vient du serveur : un dessin casse ne doit pas casser l ecran.
     expect(cadre({ xml: null })).toBeNull();
     expect(cadre({ xml: 'ceci n est pas un dessin' })).toBeNull();
+  });
+});
+
+describe('🔴 LE DESSIN QUI FERMAIT L APPLICATION', () => {
+  /*
+   * Mesure du 2026-09-08, en ouvrant le parcours guide de T0 sur l emulateur :
+   * l app disparaissait, ecran d accueil Android. Le journal :
+   *
+   *   java.lang.NumberFormatException: For input string: "auto-start-reverse"
+   *       at com.horcrux.svg.MarkerView.renderMarker(MarkerView.java:125)
+   *
+   * La bibliotheque lit `orient` comme ceci, et ne connait QUE le mot « auto » :
+   *   double markerAngle = "auto".equals(mOrient) ? -1 : Double.parseDouble(mOrient);
+   *
+   * ⛔ Ce n est PAS une erreur JavaScript : c est une exception native levee pendant
+   * le dessin. Aucune barriere React ne la rattrape, le processus meurt. 10 des 27
+   * dessins du programme la portaient — dont le tout premier.
+   */
+  const AVEC_MARQUEUR = '<svg viewBox="0 0 600 300">'
+    + '<marker id="a" refX="9" refY="5" orient="auto-start-reverse"><path d="M0,0" /></marker>'
+    + '</svg>';
+
+  it('neutralise la valeur qui fait planter, AVANT de la donner au dessin', () => {
+    expect(desamorcerLeSchema(AVEC_MARQUEUR)).not.toContain('auto-start-reverse');
+    expect(desamorcerLeSchema(AVEC_MARQUEUR)).toContain('orient="auto"');
+  });
+
+  it('le dessin monte a l ecran deja desamorce', () => {
+    const enfant = cadre({ xml: AVEC_MARQUEUR }).children[0];
+
+    expect(enfant.props.xml).not.toContain('auto-start-reverse');
+  });
+
+  it('laisse tranquille les deux formes que la bibliotheque SAIT lire', () => {
+    // « auto » est le seul mot accepte ; un angle en degres passe par parseDouble.
+    expect(desamorcerLeSchema('<svg orient="auto" />')).toContain('orient="auto"');
+    expect(desamorcerLeSchema('<svg orient="45" />')).toContain('orient="45"');
+    expect(desamorcerLeSchema("<svg orient='-90.5' />")).toContain("orient='-90.5'");
+  });
+
+  it('rabat TOUTE autre valeur, pas seulement celle qu on a rencontree', () => {
+    // Les dessins viennent du serveur : un programme publie demain peut porter
+    // n importe quoi. Le garde-fou ne connait pas la liste des valeurs fautives,
+    // il connait la liste des DEUX valeurs sures.
+    expect(desamorcerLeSchema('<svg orient="auto-start-reverse" />')).toContain('orient="auto"');
+    expect(desamorcerLeSchema('<svg orient="" />')).toContain('orient="auto"');
+    expect(desamorcerLeSchema('<svg orient="12deg" />')).toContain('orient="auto"');
+    expect(desamorcerLeSchema('<svg orient = "n importe quoi" />')).toContain('orient="auto"');
+  });
+
+  it('ne touche a rien d autre dans le dessin', () => {
+    const propre = desamorcerLeSchema(AVEC_MARQUEUR);
+
+    expect(propre).toContain('viewBox="0 0 600 300"');
+    expect(propre).toContain('refX="9"');
+    expect(propre).toContain('<path d="M0,0" />');
   });
 });

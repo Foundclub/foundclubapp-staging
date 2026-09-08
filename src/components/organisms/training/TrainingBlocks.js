@@ -3,6 +3,7 @@ import {
   Linking, ScrollView, Text, TouchableOpacity, View,
 } from 'react-native';
 
+import { withAlpha } from '@/theme/colors';
 import useTheme from '@/theme/themeContext';
 
 import TrainingSchemaImage, {
@@ -222,24 +223,32 @@ function BlockSvg({
           personne ne les voyait depuis le 06/09.
         */}
         <TrainingSchemaImage xml={xml} />
-        {typeof onZoom === 'function' && (
-          <TouchableOpacity
-            accessibilityRole="button"
-            onPress={() => onZoom(block)}
-            style={{
-              backgroundColor: Colors.neutral900,
-              borderRadius: 8,
-              bottom: 8,
-              paddingHorizontal: 12,
-              paddingVertical: 8,
-              position: 'absolute',
-              right: 8,
-            }}
-          >
-            <Text style={[Fonts.caption, { color: Colors.neutral00 }]}>Agrandir</Text>
-          </TouchableOpacity>
-        )}
       </View>
+      {/*
+        🐞 « AGRANDIR » ETAIT POSE SUR LE DESSIN, et il en masquait le coin bas
+        droit — vu a l ecran le 2026-09-08 sur le plan de T0, ou il cachait
+        « camera a 3,0 m », « 108 ± 2 images » et « ecart ≥ 3 images ». Ces plans
+        sont cotes au centimetre : rien ne doit se poser dessus. Le bouton descend
+        donc SOUS le dessin, aligne a droite.
+      */}
+      {typeof onZoom === 'function' && (
+        <TouchableOpacity
+          accessibilityRole="button"
+          onPress={() => onZoom(block)}
+          style={{
+            alignSelf: 'flex-end',
+            borderColor: withAlpha(Colors.primary500, 0.5),
+            borderRadius: 999,
+            borderWidth: 1,
+            paddingHorizontal: 12,
+            paddingVertical: 5,
+          }}
+        >
+          <Text style={[Fonts.caption, { color: Colors.primary400 }]}>
+            Agrandir
+          </Text>
+        </TouchableOpacity>
+      )}
       {Boolean(block.caption) && (
         <RichText
           color={Colors.neutral200}

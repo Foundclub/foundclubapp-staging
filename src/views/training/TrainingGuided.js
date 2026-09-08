@@ -7,12 +7,13 @@ import {
 } from 'react-native';
 
 import { withAlpha } from '@/theme/colors';
+import accordFrancais from '@/theme/strings/accordFrancais';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
 import TrainingAttemptCard from '@/components/organisms/training/TrainingAttemptCard';
-import TrainingBlocks from '@/components/organisms/training/TrainingBlocks';
+import TrainingBlocks, { RichText } from '@/components/organisms/training/TrainingBlocks';
 import TrainingStepRail from '@/components/organisms/training/TrainingStepRail';
 import TrainingTimer from '@/components/organisms/training/TrainingTimer';
 import ScreenContainer from '@/components/templates/ScreenContainer';
@@ -22,6 +23,7 @@ import {
 } from '@/views/training/trainingParcours';
 import { mesuresParFamille } from '@/views/training/trainingTestModel';
 
+import allerDansLOnglet from '@/navigation/allerDansLOnglet';
 import { RouteNames } from '@/navigation/routeNames';
 
 import { useMyTraining, useTrainingResults, useUpdateTrainingSession } from '@/hooks/useTraining';
@@ -343,6 +345,9 @@ function TrainingGuided({ navigation, route }) {
                           }]}
                           >
                             {t('training.day.prepared', {
+                              count: accordFrancais(
+                                Object.values(coches).filter(Boolean).length,
+                              ),
                               done: Object.values(coches).filter(Boolean).length,
                               total: misesEnPlace.length,
                             })}
@@ -376,9 +381,18 @@ function TrainingGuided({ navigation, route }) {
                               width: 18,
                             }}
                             />
-                            <Text style={[Fonts.p3, { color: Colors.neutral200, flex: 1 }]}>
-                              {ligne}
-                            </Text>
+                            {/*
+                              🐞 DEFAUT VU A L ECRAN LE 2026-09-08 : ces lignes
+                              s affichaient avec leurs `**asterisques**` en toutes
+                              lettres. Elles viennent des memes donnees que la fiche
+                              de journee — qui, elle, passait bien par `RichText`.
+                              Sur du texte technique dense, le gras porte l essentiel.
+                            */}
+                            <RichText
+                              color={Colors.neutral00}
+                              style={[Fonts.p3, { color: Colors.neutral200, flex: 1 }]}
+                              text={ligne}
+                            />
                           </TouchableOpacity>
                         ))}
                       </View>
@@ -470,9 +484,11 @@ function TrainingGuided({ navigation, route }) {
                                 {rang + 1}
                               </Text>
                             </View>
-                            <Text style={[Fonts.p3, { color: Colors.neutral200, flex: 1 }]}>
-                              {consigne}
-                            </Text>
+                            <RichText
+                              color={Colors.neutral00}
+                              style={[Fonts.p3, { color: Colors.neutral200, flex: 1 }]}
+                              text={consigne}
+                            />
                           </View>
                         ))}
                       </View>
@@ -662,7 +678,7 @@ function TrainingGuided({ navigation, route }) {
                     {enAttenteDeVideo > 0 && (
                       <TouchableOpacity
                         accessibilityRole="button"
-                        onPress={() => navigation.navigate(RouteNames.TrainingVideoQueue)}
+                        onPress={() => allerDansLOnglet(navigation, RouteNames.TrainingVideoQueue)}
                         style={{
                           backgroundColor: withAlpha(Colors.gold500, 0.1),
                           borderColor: withAlpha(Colors.gold500, 0.4),
@@ -760,7 +776,7 @@ function TrainingGuided({ navigation, route }) {
         {test ? (
           <View
             style={{
-              backgroundColor: withAlpha(Colors.neutral900, 0.94),
+              backgroundColor: 'rgba(9, 24, 35, 0.94)',
               borderTopColor: withAlpha(Colors.primary500, 0.2),
               borderTopWidth: 1,
               gap: 4,
@@ -780,7 +796,9 @@ function TrainingGuided({ navigation, route }) {
                   variant="Primary"
                 />
                 <Button
-                  onPress={() => navigation.navigate(RouteNames.TrainingSessionNow, { sessionId })}
+                  onPress={() => allerDansLOnglet(navigation, RouteNames.TrainingSessionNow, {
+                    sessionId,
+                  })}
                   title={t('training.guided.finishLater')}
                   variant="Ghost"
                 />

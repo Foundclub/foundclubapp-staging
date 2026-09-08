@@ -4625,7 +4625,8 @@ export default {
       // Le seul compteur de l ecran comptait les TESTS faits pendant la seance.
       // Celui-ci compte les PREPARATIFS, la veille : ce n est pas le meme geste,
       // ni le meme moment.
-      prepared: '{{done}} faites sur {{total}}',
+      prepared_one: '{{done}} faite sur {{total}}',
+      prepared_other: '{{done}} faites sur {{total}}',
       progress_one: '{{done}} test sur {{total}} fait',
       progress_other: '{{done}} tests sur {{total}} faits',
       seeMeasures_one: 'Voir la mesure au carnet',
@@ -4840,20 +4841,24 @@ export default {
     now: {
       allDone: 'Tout est fait',
       back: 'Revenir à ma séance',
+      // 🐞 « T+2352 min » s affichait sur une seance ouverte l avant-veille : au-dela
+      // de deux heures, plus personne ne lit des minutes. On bascule en heures.
       elapsed_one: 'T+{{count}} min',
       elapsed_other: 'T+{{count}} min',
+      elapsedHours: 'T+{{hours}} h {{minutes}}',
+      elapsedLong: 'ouverte depuis {{days}} j',
       // Une seule question se pose sur un terrain, entre deux essais, avec un
       // partenaire qui attend. L ecran ne repond qu a celle-la.
       hint: 'Une seule question ici : qu’est-ce que je fais maintenant ?',
       label: 'Maintenant',
-      progress_one: '{{tests}} test fait · {{done}} étapes sur {{total}}',
-      progress_other: '{{tests}} tests faits · {{done}} étapes sur {{total}}',
+      progress_one: '{{tests}} test fait · étape {{done}} sur {{total}}',
+      progress_other: '{{tests}} tests faits · étape {{done}} sur {{total}}',
       resume: 'Continuer : {{test}}, {{what}}',
       resumeAttempt: 'essai {{count}}',
       resumePrep: 'mise en place',
       step: {
-        attempt: '{{test}} — essai {{current}} sur {{total}}',
-        prep: '{{test}} — mise en place',
+        attempt: '{{test}} · Essai {{current}} sur {{total}}',
+        prep: '{{test}} · Mise en place',
       },
       title: 'Ma séance',
       whatNext: 'La suite, dans l’ordre',
@@ -4890,7 +4895,12 @@ export default {
       // montrait la meme journee que la liste juste en dessous. La clef reprend
       // du service comme etiquette de la grande carte du haut.
       nextUp: 'Prochaine séance · {{date}}',
-      offline: 'Sans réseau — tu peux saisir, tout est gardé sur le téléphone.',
+      // 🐞 CE BANDEAU NE PARLE PAS DE RESEAU. Sa condition est « des mesures
+      // attendent d'être envoyées » — l'app n'a aucun detecteur de reseau. Il
+      // s'affichait « Sans réseau » avec quatre barres de wifi, ce qui envoie
+      // chercher la panne au mauvais endroit.
+      offline: 'Des mesures attendent d’être envoyées — '
+        + 'elles sont gardées sur le téléphone.',
       progress_one: '{{done}} séance faite sur {{total}}',
       progress_other: '{{done}} séances faites sur {{total}}',
       title: 'Mon entraînement',
@@ -4906,8 +4916,10 @@ export default {
       confirmSkip: 'Sauter cette séance',
       // LA PHRASE QUI EST TOUT L'INTERET DE LA FEUILLE : elle dit AVANT ce que le
       // geste change a la date de fin. Sans elle, on decale a l'aveugle.
+      // 🐞 PAS DE POINT FINAL : une date abregee en francais se termine deja par
+      // un point (« sam. 19 sept. »). On lisait « … le sam. 19 sept.. » a l ecran.
       consequence: 'Les séances suivantes se décalent d’autant. '
-        + 'Le programme finira le {{date}}.',
+        + 'Le programme finira le {{date}}',
       consequenceAlone: 'Seule cette séance bouge. La fin du programme ne change pas.',
       hint: 'La date est indicative — tu décides quand.',
       scope: 'Décaler aussi les séances suivantes, pour garder les écarts du programme.',
@@ -5032,18 +5044,24 @@ export default {
         + 'même ligne, même test, même essai.',
       // 🚨 Ce compteur manquait, et trois mesures sur quatre etaient
       // inatteignables : l ecran n affichait que la PREMIERE mesure d un essai.
-      measureOf: 'mesure {{current}} sur {{total}}',
       lead_one: 'mesure à relever sur tes vidéos.',
       lead_other: 'mesures à relever sur tes vidéos.',
+      measureOf: 'mesure {{current}} sur {{total}}',
       nothingHere: 'Ce test n’a rien à relever sur la vidéo.',
       notStarted: 'Journée pas encore commencée — rien à relever pour l’instant.',
       previous: '← Essai {{count}}',
-      remaining_one: '{{count}} mesure en attente',
-      remaining_other: '{{count}} mesures en attente',
+      // 🐞 « en attente » disait la MEME chose que le bandeau d envoi juste au-dessus
+      // (« 2 mesures en attente » / « 2 mesures en attente d'envoi ») alors que les
+      // deux comptent des choses differentes : le travail restant, et le reseau.
+      remaining_one: '{{count}} mesure à relever',
+      remaining_other: '{{count}} mesures à relever',
       save: 'Enregistrer',
       testDone: '{{test}} relevé',
-      testLine_one: '{{attempts}} essai · {{measures}} mesures à lire',
-      testLine_other: '{{attempts}} essais · {{measures}} mesures à lire',
+      // 🐞 L ENTETE COMPTE CE QUI RESTE, la ligne comptait le TOTAL : « 3 mesures a
+      // relever » en haut, « 4 mesures a lire » en dessous, et une barre a 25 %.
+      // On dit maintenant les deux nombres, comme la barre juste en dessous.
+      testLine_one: '{{attempts}} essai · {{done}} sur {{measures}} relevées',
+      testLine_other: '{{attempts}} essais · {{done}} sur {{measures}} relevées',
       testsCount_one: '{{count}} test',
       testsCount_other: '{{count}} tests',
       title: 'Relevés vidéo',

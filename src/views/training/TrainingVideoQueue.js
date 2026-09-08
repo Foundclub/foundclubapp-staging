@@ -167,7 +167,10 @@ function TrainingVideoQueue({ navigation }) {
                     </View>
                     <Text style={[Fonts.caption, { color: Colors.neutral400 }]}>
                       {t('training.video.testLine', {
-                        attempts: test.essais, count: test.essais, measures: test.total,
+                        attempts: test.essais,
+                        count: test.essais,
+                        done: test.faites,
+                        measures: test.total,
                       })}
                     </Text>
                     <TrainingProgressBar
