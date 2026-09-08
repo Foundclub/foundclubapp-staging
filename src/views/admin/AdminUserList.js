@@ -43,27 +43,17 @@ function AdminUserList() {
 
   const users = data?.data || data || [];
 
-  if (isLoading && !users.length) {
-    return (
-      <AdminStateView
-        description="Nous chargeons la liste des utilisateurs."
-        isLoading
-        title="Chargement des utilisateurs"
-      />
-    );
-  }
-
-  if (error && !users.length) {
-    return (
-      <AdminStateView
-        actionLabel="Réessayer"
-        description={getErrorMessage(error, 'generic') || 'Impossible de charger les utilisateurs.'}
-        onAction={refetch}
-        title="Chargement impossible"
-      />
-    );
-  }
-
+  // 🪝 CES DEUX BLOCS DOIVENT RESTER AU-DESSUS DES SORTIES ANTICIPEES CI-DESSOUS.
+  //
+  // Le 2026-09-08, `renderItem` vivait APRES les deux `if (...) return`. Au premier rendu
+  // la liste chargeait, la sortie etait prise, et `useCallback` n etait jamais appele. Au
+  // rendu suivant les donnees arrivaient, la sortie n etait plus prise, et le crochet
+  // s executait : React comptait UN crochet de plus qu au tour precedent et JETAIT.
+  // Sentry REACT-NATIVE-4, version des magasins 2.6.35+1221 — l ecran plantait entierement.
+  //
+  // La regle n a pas d exception : dans un composant, TOUS les crochets s appellent AVANT
+  // le premier return, toujours, et dans le meme ordre.
+  // Temoin : src/views/admin/__tests__/AdminUserList.crochetApresRetour.test.js
   const getRoleBadgeColor = (roleType) => {
     switch (roleType) {
       case 'admin': return Colors.error500;
@@ -133,6 +123,28 @@ function AdminUserList() {
       </TouchableOpacity>
     );
   }, [navigation, Colors, Fonts, Spaces, ApplicationStyle, Alignments]);
+
+  if (isLoading && !users.length) {
+    return (
+      <AdminStateView
+        description="Nous chargeons la liste des utilisateurs."
+        isLoading
+        title="Chargement des utilisateurs"
+      />
+    );
+  }
+
+  if (error && !users.length) {
+    return (
+      <AdminStateView
+        actionLabel="Réessayer"
+        description={getErrorMessage(error, 'generic') || 'Impossible de charger les utilisateurs.'}
+        onAction={refetch}
+        title="Chargement impossible"
+      />
+    );
+  }
+
 
   return (
     <ScreenContainer bgImage="bg2">
