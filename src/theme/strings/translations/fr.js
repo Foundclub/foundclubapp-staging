@@ -4658,10 +4658,13 @@ export default {
         title: 'Avant la première séance',
         tripod: 'Prépare un trépied — les mesures se lisent sur des vidéos stables.',
       },
-      firstSession: 'Ça commence par {{day}}, le {{date}}.',
+      // 🐞 AUCUN POINT FINAL APRES UNE DATE : en francais, une date abregee se
+      // termine deja par un point (« dim. 20 sept. »). On lisait « … au dim.
+      // 20 sept.. » a l ecran. Meme correction que la feuille « Décaler ».
+      firstSession: 'Ça commence par {{day}}, le {{date}}',
       later: 'Plus tard',
-      recap_one: '{{program}} — {{count}} séance planifiée du {{start}} au {{end}}.',
-      recap_other: '{{program}} — {{count}} séances planifiées du {{start}} au {{end}}.',
+      recap_one: '{{program}} — {{count}} séance planifiée du {{start}} au {{end}}',
+      recap_other: '{{program}} — {{count}} séances planifiées du {{start}} au {{end}}',
       seeSessions: 'Voir mes séances',
       title: 'C’est dans ton entraînement',
     },

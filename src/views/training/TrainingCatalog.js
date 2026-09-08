@@ -191,7 +191,26 @@ function TrainingCatalog({ navigation }) {
 
   return (
     <ScreenContainer bgImage="bg2" bottomInsetMode="tab-scene">
-      <View style={Spaces.gap[16]}>
+      {/*
+        🔴 `flex: 1` ICI, ET C EST TOUT L ECRAN QUI EN DEPEND. Vu a l ecran le
+        2026-09-08 : « Choisir un entraînement » etait une PAGE BLANCHE — ni carte,
+        ni etat vide, ni erreur, ni chargement. Juste le titre, et du noir.
+
+        Ce conteneur n avait pas de hauteur : il se dimensionnait sur son contenu.
+        Or son second enfant est une `ScrollView` en `flex: 1` — et `flex` ne
+        distribue que l espace DISPONIBLE. Dans un parent qui epouse son contenu,
+        cet espace vaut zero : la liste, l etat vide et le squelette existaient
+        tous, parfaitement rendus, dans un cadre de ZERO PIXEL DE HAUT.
+
+        ⚠️ C est EXACTEMENT le meme mecanisme que les 27 schemas invisibles repares
+        le meme jour, et aucune porte ne voit ni l un ni l autre :
+        `react-test-renderer` ne calcule aucune mise en page. Un conteneur de
+        hauteur nulle lui parait parfaitement rendu.
+
+        Les ecrans qui marchent le font tous ainsi (`TrainingDay.js`) : un
+        `<View style={{ flex: 1 }}>` entre le conteneur d ecran et le defilement.
+      */}
+      <View style={[Spaces.gap[16], { flex: 1 }]}>
         <View style={Spaces.gap[4]}>
           <Text style={[Fonts.h2Bold, { color: Colors.neutral00 }]}>
             {t('training.catalog.title')}
@@ -205,9 +224,7 @@ function TrainingCatalog({ navigation }) {
           contentContainerStyle={[Spaces.paddingBottom[40]]}
           showsVerticalScrollIndicator={false}
           style={{ flex: 1 }}
-
         >
-
           <WithDataWrapper
             error={error}
             errorMessage={t('training.catalog.error.description')}

@@ -427,3 +427,48 @@ describe('le chargement et l erreur ont enfin la forme de CET ecran', () => {
     expect(enveloppe.length).toBeGreaterThan(0);
   });
 });
+
+describe('🔴 LE CADRE QUI RENDAIT L ECRAN BLANC', () => {
+  /*
+   * Mesure a l ecran le 2026-09-08 : « Choisir un entraînement » etait une PAGE
+   * BLANCHE. Ni carte, ni etat vide, ni erreur, ni chargement — juste le titre, et
+   * du noir. Le serveur repondait pourtant : GET /api/training-programs rendait
+   * bien le programme, verifie au curl avec un jeton.
+   *
+   * 🔎 LA CAUSE. Le conteneur entre l ecran et le defilement n avait pas de
+   * hauteur : il epousait son contenu. Or son second enfant est une `ScrollView`
+   * en `flex: 1`, et `flex` ne distribue que l espace DISPONIBLE — dans un parent
+   * qui epouse son contenu, cet espace vaut ZERO. La liste, l etat vide et le
+   * squelette existaient tous, parfaitement rendus, dans un cadre de zero pixel.
+   *
+   * ⚠️ ET C EST LE MEME MECANISME QUE LES 27 SCHEMAS INVISIBLES du meme jour.
+   * `react-test-renderer` ne calcule AUCUNE mise en page : un cadre de hauteur
+   * nulle lui parait parfaitement rendu, et ses enfants aussi. Ce filet ne peut
+   * donc pas voir l ecran — il verifie la seule chose qui separe un ecran vivant
+   * d un ecran blanc : le `flex: 1` pose sur le cadre.
+   */
+
+  /**
+   * Aplatit un style, qu il soit un objet ou un tableau.
+   * @param {any} style le style rendu
+   * @returns {Record<string, any>} un seul objet
+   */
+  const aplatir = (style) => (Array.isArray(style)
+    ? style.reduce((tout, part) => ({ ...tout, ...(part || {}) }), {})
+    : (style || {}));
+
+  it('le cadre qui contient le defilement porte `flex: 1`', () => {
+    const defilement = rendre().root.findByType(ScrollView);
+    const cadre = defilement.parent;
+
+    expect(aplatir(cadre.props.style).flex).toBe(1);
+  });
+
+  it('et le defilement lui-meme le porte aussi : c est le COUPLE qui compte', () => {
+    // `flex: 1` sur le seul enfant ne suffit pas, `flex: 1` sur le seul parent non
+    // plus. Le defaut du 08/09 etait exactement la moitie manquante du couple.
+    const defilement = rendre().root.findByType(ScrollView);
+
+    expect(aplatir(defilement.props.style).flex).toBe(1);
+  });
+});
