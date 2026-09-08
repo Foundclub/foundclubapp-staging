@@ -80,6 +80,7 @@ function Porte({
 }
 
 /**
+ * L'écran lui-même.
  * @param {object} props
  * @param {Record<string, any>} props.navigation
  * @returns {React.ReactElement} le tableau de bord de l'entraînement suivi
@@ -183,7 +184,9 @@ function TrainingPlan({ navigation }) {
                   <Text style={[Fonts.caption, { color: Colors.primary500 }]}>
                     {jourJ
                       ? t('training.plan.today')
-                      : t('training.plan.nextUp', { date: formatSessionDate(nextSession.plannedDate) })}
+                      : t('training.plan.nextUp', {
+                        date: formatSessionDate(nextSession.plannedDate),
+                      })}
                   </Text>
                   <Text style={[Fonts.h4Bold, { color: Colors.neutral00 }]}>
                     {nextSession.day?.title || ''}
@@ -195,7 +198,9 @@ function TrainingPlan({ navigation }) {
                   </Text>
                   <Button
                     onPress={() => openSession(nextSession)}
-                    title={jourJ ? t('training.actions.startSession') : t('training.actions.prepare')}
+                    title={jourJ
+                      ? t('training.actions.startSession')
+                      : t('training.actions.prepare')}
                     variant="Primary"
                   />
                   {!jourJ && (

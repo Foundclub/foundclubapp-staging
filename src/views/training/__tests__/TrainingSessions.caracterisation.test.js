@@ -108,7 +108,11 @@ jest.mock('@/components/molecules/bottomModal/BottomModal', () => {
 const SEANCES = [
   {
     day: {
-      code: 'T', documentId: 'jour-t', durationMinutes: 160, place: 'terrain', title: 'Jour T — Technique',
+      code: 'T',
+      documentId: 'jour-t',
+      durationMinutes: 160,
+      place: 'terrain',
+      title: 'Jour T — Technique',
     },
     documentId: 'seance-1',
     plannedDate: '2026-09-06',
@@ -116,7 +120,11 @@ const SEANCES = [
   },
   {
     day: {
-      code: 'A', documentId: 'jour-a', durationMinutes: 75, place: 'salle', title: 'Jour A — Structure',
+      code: 'A',
+      documentId: 'jour-a',
+      durationMinutes: 75,
+      place: 'salle',
+      title: 'Jour A — Structure',
     },
     documentId: 'seance-2',
     plannedDate: '2026-09-07',
@@ -124,7 +132,11 @@ const SEANCES = [
   },
   {
     day: {
-      code: 'B', documentId: 'jour-b', durationMinutes: 120, place: 'salle', title: 'Jour B — Détente',
+      code: 'B',
+      documentId: 'jour-b',
+      durationMinutes: 120,
+      place: 'salle',
+      title: 'Jour B — Détente',
     },
     documentId: 'seance-3',
     plannedDate: '2026-09-08',

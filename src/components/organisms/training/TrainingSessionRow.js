@@ -59,6 +59,7 @@ export const formatSessionDate = (iso) => {
 };
 
 /**
+ * La rangée elle-même.
  * @param {object} props
  * @param {boolean} [props.isNext] Vrai pour la prochaine séance, mise en avant.
  * @param {() => void} props.onPress Ouvre le détail de la journée.

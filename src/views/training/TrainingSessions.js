@@ -10,7 +10,9 @@ import useTheme from '@/theme/themeContext';
 import Button from '@/components/atoms/button/Button';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
-import TrainingSessionRow, { formatSessionDate } from '@/components/organisms/training/TrainingSessionRow';
+import TrainingSessionRow, {
+  formatSessionDate,
+} from '@/components/organisms/training/TrainingSessionRow';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
 import { RouteNames } from '@/navigation/routeNames';
@@ -35,6 +37,7 @@ import { useMyTraining, useUpdateTrainingSession } from '@/hooks/useTraining';
 const DECALAGES = [1, 2, 7];
 
 /**
+ * L'écran lui-même.
  * @param {object} props
  * @param {Record<string, any>} props.navigation
  * @returns {React.ReactElement} la liste de toutes les séances du programme suivi

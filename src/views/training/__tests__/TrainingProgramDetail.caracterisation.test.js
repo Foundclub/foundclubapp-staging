@@ -252,23 +252,37 @@ describe('la fiche montre le programme designe par la route', () => {
     ]));
   });
 
-  it('affiche les trois chiffres du bandeau : journees, tests, niveau', () => {
+  it('affiche les TROIS PAVES : journees, tests et MESURES', () => {
+    // 🪤 Le troisieme chiffre du dessin est le nombre de MESURES. L app y mettait
+    // le niveau, qui est deja affiche ailleurs — le chiffre le plus parlant du
+    // programme n apparaissait donc nulle part.
     const vus = textes(rendre());
 
     expect(vus).toEqual(expect.arrayContaining([
-      'training.program.days|{"count":8}',
-      'training.program.tests|{"count":12}',
-      'training.program.level.avance',
+      'training.catalog.stat.days',
+      'training.catalog.stat.tests',
+      'training.program.stat.measures',
     ]));
   });
 
-  it('affiche le materiel exige avec son intitule', () => {
+  it('la carte « ce que ca demande » calcule TOUT depuis les journees', () => {
+    // 🪤 Le dessin du pack ecrivait « 4 seances sur un terrain, 4 en salle ».
+    // C est faux, et faux dans le sens qui MINIMISE l effort : le programme reel
+    // en compte 3 sur un terrain et 5 en salle. Rien n est ecrit en dur ici.
     const vus = textes(rendre());
 
-    expect(vus).toEqual(expect.arrayContaining([
-      'training.program.equipment',
-      'Un chronometre, 4 plots, un metre',
-    ]));
+    expect(vus).toContain('training.program.demands.title');
+    expect(vus.some((v) => String(v).includes('training.program.demands.total'))).toBe(true);
+    expect(vus.some((v) => String(v).includes('training.program.demands.longest'))).toBe(true);
+  });
+
+  it('affiche le materiel EN LISTE A COCHER, avec son compteur et son avertissement', () => {
+    // 🪤 Il arrivait en UNE SEULE PHRASE de quinze mots : impossible de verifier
+    // qu on a tout avant de partir.
+    const vus = textes(rendre());
+
+    expect(vus).toContain('training.program.equipmentCheck');
+    expect(vus).toContain('training.program.equipmentWarning');
   });
 });
 
@@ -287,20 +301,15 @@ describe('les blocs facultatifs disparaissent au lieu d afficher du vide', () =>
     expect(vus).not.toContain('Six semaines, trois seances');
   });
 
-  it('remplace les chiffres absents par zero et le niveau par « intermediaire »', () => {
-    // Ces trois valeurs par defaut sont du comportement, pas de la decoration :
-    // sans elles la fiche afficherait « undefined » a trois endroits.
-    const maigre = {
-      ...PROGRAMME_CHARGE,
-      data: { days: [], title: 'Programme nu' },
-    };
-    const vus = textes(rendre({ programme: maigre }));
+  it('la carte d exigences ADDITIONNE les journees, elle ne recopie rien', () => {
+    // Les trois journees de l exemple durent 160, 75 et 120 minutes : le total
+    // affiche doit valoir 355. Un chiffre ecrit en dur ne suivrait pas.
+    const vus = textes(rendre());
 
-    expect(vus).toEqual(expect.arrayContaining([
-      'training.program.days|{"count":0}',
-      'training.program.tests|{"count":0}',
-      'training.program.level.intermediaire',
-    ]));
+    expect(vus).toContain('· training.program.demands.total|{"total":355}');
+    expect(vus).toContain('· training.program.demands.longest|{"duration":160}');
+    // Et les lieux se comptent, ils ne se devinent pas.
+    expect(vus.some((v) => String(v).includes('1 terrain, 2 salle'))).toBe(true);
   });
 
   it('garde le titre « ce que contient le programme » meme sans aucune journee', () => {
@@ -351,6 +360,26 @@ describe('la liste des journees', () => {
   });
 });
 
+/**
+ * Ouvre la feuille « Quand veux-tu commencer ? » et confirme.
+ *
+ * 🔎 L INSCRIPTION SE FAIT EN DEUX TEMPS depuis le 2026-09-08 : le bouton de la
+ * fiche n inscrit plus directement, il OUVRE la feuille. Personne ne choisissait
+ * sa date de depart, et personne ne lisait a quoi il s engageait.
+ * @param {any} arbre l arbre rendu
+ * @returns {Promise<void>} rien
+ */
+const inscrire = async (arbre) => {
+  await act(async () => {
+    arbre.root.findAllByProps({ title: 'training.actions.choose' })
+      .find((n) => typeof n.props.onPress === 'function').props.onPress();
+  });
+  await act(async () => {
+    arbre.root.findAllByProps({ title: 'training.enroll.confirm' })
+      .find((n) => typeof n.props.onPress === 'function').props.onPress();
+  });
+};
+
 describe('le bouton : un seul, et deux visages', () => {
   it('sans inscription, propose de choisir ce programme et annonce le depart du jour', () => {
     const arbre = rendre();
@@ -385,25 +414,50 @@ describe('le bouton : un seul, et deux visages', () => {
     expect(arbre.root.findAllByType(Button)[0].props.title).toBe('training.actions.choose');
   });
 
-  it('grise le bouton pendant que l inscription est en vol', () => {
-    const arbre = rendre({
-      choix: { isPending: true, mutateAsync: async () => ({}) },
+  it('grise le bouton de la FEUILLE pendant que l inscription est en vol', async () => {
+    const arbre = rendre({ choix: { isPending: true, mutateAsync: async () => ({}) } });
+
+    await act(async () => {
+      arbre.root.findAllByProps({ title: 'training.actions.choose' })
+        .find((n) => typeof n.props.onPress === 'function').props.onPress();
     });
 
-    expect(arbre.root.findAllByType(Button)[0].props.isLoading).toBe(true);
+    expect(arbre.root.findAllByProps({ title: 'training.enroll.confirm' })
+      .some((n) => n.props.isLoading === true)).toBe(true);
   });
 });
 
 describe('choisir le programme', () => {
-  it('envoie l identifiant du programme au serveur, puis file vers le plan', async () => {
-    const mutateAsync = jest.fn(async () => ({}));
+  it('demande D ABORD la date de depart, et annonce ce que ca entraine', async () => {
+    const arbre = rendre();
+
+    await act(async () => {
+      arbre.root.findAllByProps({ title: 'training.actions.choose' })
+        .find((n) => typeof n.props.onPress === 'function').props.onPress();
+    });
+
+    const vus = textes(arbre);
+    expect(vus).toContain('training.enroll.when');
+    expect(vus.some((v) => String(v).startsWith('training.enroll.consequence'))).toBe(true);
+    expect(vus).toContain('training.enroll.today');
+    expect(vus).toContain('training.enroll.tomorrow');
+    expect(vus).toContain('training.enroll.notNow');
+  });
+
+  it('envoie la DATE choisie, et aboutit sur la confirmation', async () => {
+    const mutateAsync = jest.fn(async () => ({ sessions: [] }));
     const navigate = jest.fn();
     const arbre = rendre({ choix: { isPending: false, mutateAsync }, navigation: { navigate } });
 
-    await act(async () => { arbre.root.findAllByType(Button)[0].props.onPress(); });
+    await inscrire(arbre);
 
-    expect(mutateAsync).toHaveBeenCalledWith({ programDocumentId: 'prog-1' });
-    expect(navigate).toHaveBeenCalledWith('TrainingPlan');
+    expect(mutateAsync).toHaveBeenCalledWith(expect.objectContaining({
+      programDocumentId: 'prog-1',
+      startDate: expect.stringMatching(/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/),
+    }));
+    // ⛔ Plus directement sur le planning : on passe par « C est dans ton
+    // entrainement », qui dit a quoi on vient de s engager.
+    expect(navigate).toHaveBeenCalledWith('TrainingEnrolled', expect.any(Object));
   });
 
   it('affiche un message d echec et NE NAVIGUE PAS quand le serveur refuse', async () => {
@@ -413,9 +467,9 @@ describe('choisir le programme', () => {
       navigation: { navigate },
     });
 
-    await act(async () => { arbre.root.findAllByType(Button)[0].props.onPress(); });
+    await inscrire(arbre);
 
-    expect(textes(arbre)).toContain('training.catalog.error.description');
+    expect(textes(arbre)).toContain('training.program.enrollFailed');
     expect(navigate).not.toHaveBeenCalled();
   });
 
@@ -430,13 +484,16 @@ describe('choisir le programme', () => {
     });
     const arbre = rendre({ choix: { isPending: false, mutateAsync } });
 
-    await act(async () => { arbre.root.findAllByType(Button)[0].props.onPress(); });
-    expect(textes(arbre)).toContain('training.catalog.error.description');
+    await inscrire(arbre);
+    expect(textes(arbre)).toContain('training.program.enrollFailed');
 
     doitEchouer = false;
-    await act(async () => { arbre.root.findAllByType(Button)[0].props.onPress(); });
+    await act(async () => {
+      arbre.root.findAllByProps({ title: 'training.enroll.confirm' })
+        .find((n) => typeof n.props.onPress === 'function').props.onPress();
+    });
 
-    expect(textes(arbre)).not.toContain('training.catalog.error.description');
+    expect(textes(arbre)).not.toContain('training.program.enrollFailed');
   });
 
   it('reprendre mene au plan sans rien demander au serveur', async () => {
@@ -519,7 +576,10 @@ describe('chargement, erreur, et le vide qui n a personne pour le remplir', () =
  * — sans qu aucun ecran ne les affiche jamais.
  */
 describe('quitter cet entrainement', () => {
-  /** L ecran, avec ce programme deja suivi. */
+  /**
+   * L ecran, avec ce programme deja suivi.
+   * @returns {any} l arbre rendu
+   */
   const suivi = () => rendre({
     inscription: { enrollment: { program: { documentId: 'prog-1' } } },
   });
@@ -583,5 +643,48 @@ describe('quitter cet entrainement', () => {
 
     expect(textes(arbre)).toContain('training.plan.abandonConfirm.failed');
     mockDepart = { isError: false, isPending: false, mutate: jest.fn() };
+  });
+});
+
+describe('le troisieme choix : une date libre', () => {
+  /**
+   * Ouvre la feuille « Quand veux-tu commencer ? ».
+   * @param {any} arbre l arbre rendu
+   * @returns {Promise<void>} rien
+   */
+  const ouvrir = async (arbre) => {
+    await act(async () => {
+      arbre.root.findAllByProps({ title: 'training.actions.choose' })
+        .find((n) => typeof n.props.onPress === 'function').props.onPress();
+    });
+  };
+
+  it('propose « Choisir une date » a cote d aujourd hui et demain', async () => {
+    const arbre = rendre();
+    await ouvrir(arbre);
+
+    expect(textes(arbre)).toContain('training.enroll.custom');
+  });
+
+  it('le selecteur n apparait QUE si on choisit ce troisieme cas', async () => {
+    const arbre = rendre();
+    await ouvrir(arbre);
+
+    expect(textes(arbre)).not.toContain('training.enroll.pickDate');
+  });
+
+  it('BLOQUE l engagement tant qu aucune date libre n est choisie', async () => {
+    const arbre = rendre();
+    await ouvrir(arbre);
+
+    const choix = arbre.root.findAllByProps({ accessibilityRole: 'radio' })
+      .filter((n) => typeof n.props.onPress === 'function');
+    await act(async () => { choix[choix.length - 1].props.onPress(); });
+
+    // 🪤 Sans ce garde-fou, l ecran enverrait une date VIDE au serveur, et
+    // l inscription echouerait sans que personne ne comprenne pourquoi.
+    expect(arbre.root.findAllByProps({ title: 'training.enroll.confirm' })
+      .some((n) => n.props.disabled === true)).toBe(true);
+    expect(textes(arbre)).toContain('training.enroll.pickDate');
   });
 });

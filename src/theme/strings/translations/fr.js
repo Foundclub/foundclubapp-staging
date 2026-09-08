@@ -4562,7 +4562,9 @@ export default {
       watchVideo: 'Voir le geste',
     },
     catalog: {
+      demands: '{{places}} · de {{min}} à {{max}} min par séance',
       empty: {
+        action: 'Revenir',
         description: 'Aucun entraînement n\'est publié pour le moment. Reviens bientôt.',
         title: 'Rien à afficher',
       },
@@ -4570,8 +4572,21 @@ export default {
         description: 'Les entraînements n\'ont pas pu être chargés.',
         title: 'Connexion impossible',
       },
+      legend_one: 'Un seul programme est publié pour l’instant. Tu suis un programme '
+        + 'à la fois — il s’ajoute dans « Mon entraînement ».',
+      legend_other: 'Tu suis un programme à la fois — il s’ajoute dans '
+        + '« Mon entraînement ».',
+      published_one: 'Publié · {{count}} programme',
+      published_other: 'Publiés · {{count}} programmes',
+      rhythm: '{{sessions}} rendez-vous sur {{days}} jours',
+      seeDetail: 'Voir le détail',
+      stat: {
+        days: 'journées',
+        level: 'niveau',
+        tests: 'tests',
+      },
       subtitle: 'Choisis un entraînement, il apparaîtra dans « Mon entraînement ».',
-      title: 'Rechercher un entraînement',
+      title: 'Choisir un entraînement',
     },
     day: {
       alreadyDone: 'Journée terminée',
@@ -4583,6 +4598,32 @@ export default {
       testsTitle: 'Les tests, dans l\'ordre',
       timeline: 'Le déroulé, minute par minute',
       warmup: 'Échauffement',
+    },
+    enroll: {
+      confirm: 'Ajouter à mon entraînement',
+      consequence: 'Les {{sessions}} séances seront planifiées à partir de cette date, '
+        + 'sur {{days}} jours. Tu pourras décaler chacune, ou en commencer une autre.',
+      custom: 'Choisir une date',
+      notNow: 'Pas maintenant',
+      pickDate: 'La date de ta première séance',
+      today: 'Aujourd’hui',
+      tomorrow: 'Demain',
+      until: '{{start}} — fin le {{end}}',
+      when: 'Quand veux-tu commencer ?',
+    },
+    enrolled: {
+      before: {
+        partner: 'Trouve un partenaire : il filme et chronomètre à chaque séance.',
+        phone: 'Charge un smartphone qui filme en 240 images par seconde.',
+        title: 'Avant la première séance',
+        tripod: 'Prépare un trépied — les mesures se lisent sur des vidéos stables.',
+      },
+      firstSession: 'Ça commence par {{day}}, le {{date}}.',
+      later: 'Plus tard',
+      recap_one: '{{program}} — {{count}} séance planifiée du {{start}} au {{end}}.',
+      recap_other: '{{program}} — {{count}} séances planifiées du {{start}} au {{end}}.',
+      seeSessions: 'Voir mes séances',
+      title: 'C’est dans ton entraînement',
     },
     freshness: {
       decision: {
@@ -4620,7 +4661,8 @@ export default {
         title: 'Mon carnet',
       },
       myCard: {
-        emptySubtitle: 'Un protocole de tests athlétiques, avec un partenaire, sur plusieurs journées.',
+        emptySubtitle: 'Un protocole de tests athlétiques, avec un partenaire, '
+          + 'sur plusieurs journées.',
         emptyTitle: 'Choisir un entraînement',
         // Le lieu et la durée viennent du serveur ; le compte de préparatifs n'apparaît
         // que si la journée en porte, sinon la phrase se coupe d'elle-même.
@@ -4705,7 +4747,24 @@ export default {
       contains: 'Ce que contient le programme',
       days_one: '{{count}} journée',
       days_other: '{{count}} journées',
+      demands: {
+        days_one: '{{count}} jour du premier au dernier rendez-vous',
+        days_other: '{{count}} jours du premier au dernier rendez-vous',
+        longest: 'la plus longue dure {{duration}} min',
+        partner: 'un partenaire, présent à chaque séance : il filme et chronomètre',
+        sessions_one: '{{count}} séance — {{places}}',
+        sessions_other: '{{count}} séances — {{places}}',
+        title: 'Ce que ça demande',
+        total: '{{total}} minutes en tout, installation et récupérations comprises',
+      },
+      enrollFailed: 'On n’a pas pu t’inscrire à cet entraînement. '
+        + 'Rien n’est perdu — réessaie.',
       equipment: 'Le matériel',
+      equipmentCheck: 'As-tu ce qu’il faut ?',
+      equipmentCount_one: '{{count}} ligne',
+      equipmentCount_other: '{{count}} lignes',
+      equipmentWarning: 'Il te faut l’accès à une salle de musculation : sans elle, '
+        + 'cinq séances sur huit sont impossibles.',
       level: {
         avance: 'Avancé',
         decouverte: 'Découverte',
@@ -4713,6 +4772,9 @@ export default {
         intermediaire: 'Intermédiaire',
       },
       startsToday: 'Il commencera aujourd\'hui. Tu pourras décaler chaque journée.',
+      stat: {
+        measures: 'mesures',
+      },
       tests_one: '{{count}} test',
       tests_other: '{{count}} tests',
     },

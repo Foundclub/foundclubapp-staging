@@ -1054,6 +1054,17 @@ function PrivateNavigator() {
           name={RouteNames.TrainingTest}
           options={{ ...commonOptions, headerTitle: '' }}
         />
+        {/*
+          ⛔ « C est dans ton entrainement » monte a la pile RACINE, pas dans
+          l onglet : l inscription est faite, il n y a rien a annuler. Le dessin
+          retire donc la fleche de retour ET le dock, et les deux boutons de
+          l ecran REMPLACENT le geste de retour.
+        */}
+        <Stack.Screen
+          getComponent={() => require('@/views/training/TrainingEnrolled').default}
+          name={RouteNames.TrainingEnrolled}
+          options={{ ...commonOptions, headerLeft: () => null, headerTitle: '' }}
+        />
 
         <Stack.Screen
           component={Welcome}

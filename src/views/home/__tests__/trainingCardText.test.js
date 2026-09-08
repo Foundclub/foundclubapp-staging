@@ -18,8 +18,13 @@ const { compteARebours, joursAvant, sousTitreSeance } = require('../trainingCard
  * ca prend.
  */
 
-/** Une traduction de test : elle rend la clef et ses options, pour qu'on les voie. */
-const t = (/** @type {string} */ clef, /** @type {any} */ options) => (
+/**
+ * Une traduction de test : elle rend la clef et ses options, pour qu'on les voie.
+ * @param {string} clef la clef demandee
+ * @param {any} [options] les valeurs a interpoler
+ * @returns {string} la clef, suivie de ses options quand il y en a
+ */
+const t = (clef, options) => (
   options ? `${clef}|${JSON.stringify(options)}` : clef
 );
 

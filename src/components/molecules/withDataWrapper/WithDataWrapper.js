@@ -39,6 +39,7 @@ const isFailedQuery = (query) => query?.state?.status === 'error';
  * @param {import('react').ReactNode} props.children
  * @param {boolean} props.isLoading
  * @param {unknown} [props.error]
+ * @param {string} [props.errorMessage] - Le message de CET ecran, quand il en a un.
  * @param {string} [props.backgroundColor]
  * @param {() => void} [props.onRetry] - Relance choisie par l'ecran. Prioritaire.
  * @param {string} [props.retryLabel]
@@ -49,6 +50,7 @@ function WithDataWrapper({
   backgroundColor,
   children,
   error,
+  errorMessage = undefined,
   isLoading,
   onRetry = undefined,
   retryLabel = 'Réessayer',
@@ -89,6 +91,7 @@ function WithDataWrapper({
     return (
       <ErrorWrapper
         error={error}
+        message={errorMessage}
         onRetry={handleRetry}
         retryLabel={retryLabel}
         wrapperStyle={wrapperStyle}

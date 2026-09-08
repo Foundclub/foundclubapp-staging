@@ -99,18 +99,28 @@ const PLUS_TARD = '2099-09-09';
 
 const SEANCES = [
   {
-    day: { code: 'T', title: 'Jour T' }, documentId: 's1', plannedDate: '2026-09-06', results: [1, 2, 3],
+    day: { code: 'T', title: 'Jour T' },
+    documentId: 's1',
+    plannedDate: '2026-09-06',
+    results: [1, 2, 3],
   },
   {
     day: {
-      code: 'A', documentId: 'jour-a', durationMinutes: 75, place: 'salle', title: 'Jour A — Structure',
+      code: 'A',
+      documentId: 'jour-a',
+      durationMinutes: 75,
+      place: 'salle',
+      title: 'Jour A — Structure',
     },
     documentId: 's2',
     plannedDate: PLUS_TARD,
     results: [],
   },
   {
-    day: { code: 'B', title: 'Jour B' }, documentId: 's3', plannedDate: '2099-09-20', results: [4, 5],
+    day: { code: 'B', title: 'Jour B' },
+    documentId: 's3',
+    plannedDate: '2099-09-20',
+    results: [4, 5],
   },
 ];
 

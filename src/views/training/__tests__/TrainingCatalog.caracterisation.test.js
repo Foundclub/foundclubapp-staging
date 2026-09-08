@@ -77,6 +77,17 @@ jest.mock('react-i18next', () => ({
 
 // Le gabarit d'ecran pose un fond et des marges : rien a observer ici, et il
 // tire des dependances natives (degrade, image de fond, retraits systeme).
+// Le degrade natif n est pas transpile par Jest ; `ClubCardSurface` s en sert
+// depuis que la carte du catalogue est devenue une carte vedette.
+jest.mock('react-native-linear-gradient', () => {
+  const reactActuel = jest.requireActual('react');
+  const { View: VueRN } = jest.requireActual('react-native');
+  return {
+    __esModule: true,
+    default: (/** @type {any} */ props) => reactActuel.createElement(VueRN, props),
+  };
+});
+
 jest.mock('@/components/templates/ScreenContainer', () => {
   const reactActuel = jest.requireActual('react');
   const { View: VueRN } = jest.requireActual('react-native');
@@ -223,14 +234,30 @@ describe('une carte tactile par programme, dans l ordre du serveur', () => {
     expect(titres).toEqual(['Reprise athletique', 'Explosivite', 'Programme nu']);
   });
 
-  it('affiche le titre, le sous-titre, les deux compteurs et le niveau', () => {
-    expect(textes(rendre())).toEqual(expect.arrayContaining([
+  it('affiche le titre, le sous-titre et les TROIS PAVES de chiffres', () => {
+    // 🪤 Les trois chiffres etaient une seule petite ligne de texte gris. Ils sont
+    // maintenant trois gros paves encadres : le chiffre se lit d un coup d oeil,
+    // le mot dessous l explique.
+    const vus = textes(rendre());
+
+    expect(vus).toEqual(expect.arrayContaining([
       'Reprise athletique',
-      'Huit journees pour reprendre',
-      'training.program.days|{"count":8}',
-      'training.program.tests|{"count":4}',
-      'training.program.level.debutant',
+      '8', 'training.catalog.stat.days',
+      '4', 'training.catalog.stat.tests',
+      'training.program.level.debutant', 'training.catalog.stat.level',
     ]));
+    expect(vus.some((v) => String(v).startsWith('Huit journees pour reprendre'))).toBe(true);
+  });
+
+  it('la carte porte un VRAI BOUTON : on ne devine plus qu on peut appuyer', () => {
+    expect(textes(rendre())).toContain('training.catalog.seeDetail');
+  });
+
+  it('dit ce qui est publie, et pourquoi il n y en a qu un', () => {
+    const vus = textes(rendre());
+
+    expect(vus.some((v) => String(v).startsWith('training.catalog.published'))).toBe(true);
+    expect(vus.some((v) => String(v).startsWith('training.catalog.legend'))).toBe(true);
   });
 });
 
@@ -239,18 +266,27 @@ describe('un programme nu ne fait pas tomber l ecran', () => {
     // 🪤 Le repli est ecrit avec `||` : un compteur a 0 comme un compteur absent
     // donnent la MEME chaine. Un futur `??` changerait ce comportement.
     expect(textes(rendre())).toEqual(expect.arrayContaining([
-      'training.program.days|{"count":0}',
-      'training.program.tests|{"count":0}',
+      '0', 'training.catalog.stat.days',
+      'training.catalog.stat.tests',
       'training.program.level.intermediaire',
     ]));
   });
 
   it('n affiche PAS de ligne de sous-titre quand il n y en a pas', () => {
-    const cartes = rendre().root.findAllByType(TouchableOpacity);
+    const vus = textes(rendre());
 
-    // Carte pleine : titre + sous-titre + 3 etiquettes. Carte nue : titre + 3.
-    expect(textesSous(cartes[0])).toHaveLength(5);
-    expect(textesSous(cartes[2])).toHaveLength(4);
+    // Le programme nu n a ni sous-titre ni frise ni ligne « ce que ca demande » :
+    // rien ne doit s afficher a vide, ni « undefined », ni un trou entre points.
+    expect(vus).not.toContain('undefined');
+    expect(vus.filter((v) => String(v).startsWith('training.catalog.demands')))
+      .toHaveLength(0);
+  });
+
+  it('la frise des rendez-vous n apparait QUE si le serveur envoie les journees', () => {
+    // 🪤 La liste du catalogue ne renvoyait AUCUNE journee : la frise et la ligne
+    // « ce que ca demande » etaient indessinables. Le serveur envoie desormais un
+    // resume de trois champs par journee — code, lieu, duree.
+    expect(textes(rendre())).not.toContain('T');
   });
 });
 
@@ -261,7 +297,9 @@ describe('la pastille dit lequel on suit deja', () => {
       .findAllByType(TouchableOpacity);
 
     expect(vus.filter((v) => v === 'training.status.in_progress')).toHaveLength(1);
-    expect(textesSous(cartes[1])).toContain('training.status.in_progress');
+    // Et le bouton de CETTE carte dit « Reprendre », pas « Voir le detail » :
+    // le pack veut que la carte du programme suivi mene droit a son planning.
+    expect(textesSous(cartes[1])).toContain('training.actions.resume');
   });
 
   it('n en pose AUCUNE quand on ne suit aucun programme', () => {
@@ -310,12 +348,11 @@ describe('l etat vide, et ce qu il ne propose PAS', () => {
     ]));
   });
 
-  it('⛔ est un CUL-DE-SAC : aucun bouton, aucune sortie depuis l etat vide', () => {
-    // 🧨 A savoir AVANT de refondre : `EmptyState` sait rendre un bouton
-    // (`actionLabel` + `onAction`), mais l'ecran ne lui en donne pas. Quelqu'un
-    // qui arrive ici sans programme publie n'a que le retour systeme.
-    expect(rendre(catalogueAvec([])).root.findAllByType(TouchableOpacity))
-      .toHaveLength(0);
+  it('l etat vide a enfin UNE SORTIE', () => {
+    // 🪤 C etait un CUL-DE-SAC : `EmptyState` sait rendre un bouton
+    // (`actionLabel` + `onAction`), mais l ecran ne lui en donnait pas. Quelqu un
+    // qui arrivait ici sans programme publie n avait que le retour systeme.
+    expect(textes(rendre(catalogueAvec([])))).toContain('training.catalog.empty.action');
   });
 });
 
@@ -360,5 +397,33 @@ describe('la structure de defilement', () => {
     expect(zonesDefilantes).toHaveLength(1);
     expect(textesSous(zonesDefilantes[0])).not.toContain('training.catalog.title');
     expect(textes(arbre)).toContain('training.catalog.title');
+  });
+});
+
+describe('le chargement et l erreur ont enfin la forme de CET ecran', () => {
+  it('garde la carcasse pendant le chargement, plus l etat vide qui scintille', () => {
+    // 🪤 `SkeletonLoader` fait scintiller SES ENFANTS. Tant que l ecran ne rendait
+    // sa liste qu avec des programmes en main, le chargement montrait l etat VIDE
+    // en train de scintiller : le squelette ne ressemblait pas a l ecran.
+    const vus = textes(rendre({
+      data: undefined, error: null, isLoading: true, refetch: () => {},
+    }));
+
+    expect(vus.some((v) => String(v).startsWith('training.catalog.published'))).toBe(true);
+    expect(vus).not.toContain('training.catalog.empty.title');
+  });
+
+  it('donne a l enveloppe le message d erreur ECRIT POUR LUI', () => {
+    // 🪤 Les deux clefs `training.catalog.error.*` existaient depuis le debut et
+    // n etaient lues NULLE PART : l ecran affichait le message generique de
+    // l enveloppe, jamais celui qu on avait ecrit pour lui.
+    const arbre = rendre({
+      data: undefined, error: new Error('boum'), isLoading: false, refetch: () => {},
+    });
+    const enveloppe = arbre.root.findAllByProps({
+      errorMessage: 'training.catalog.error.description',
+    });
+
+    expect(enveloppe.length).toBeGreaterThan(0);
   });
 });
