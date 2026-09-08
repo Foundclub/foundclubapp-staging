@@ -620,44 +620,11 @@ function TrainingTest({ navigation, route }) {
                     </View>
                   )}
 
-                  <View style={Spaces.gap[8]}>
-                    <Text style={[Fonts.h4Bold, { color: Colors.neutral00 }]}>
-                      {t('training.timer.recovery')}
-                    </Text>
-                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
-                      {RECOVERY_PRESETS.map((seconds) => (
-                        <TouchableOpacity
-                          accessibilityRole="button"
-                          key={seconds}
-                          onPress={() => setRecovery(seconds)}
-                          style={{
-                            backgroundColor: recovery === seconds
-                              ? Colors.primary500 : 'transparent',
-                            borderColor: recovery === seconds
-                              ? Colors.primary500 : Colors.neutral600,
-                            borderRadius: 8,
-                            borderWidth: 1,
-                            paddingHorizontal: 10,
-                            paddingVertical: 6,
-                          }}
-                        >
-                          <Text
-                            style={[
-                              Fonts.caption,
-                              {
-                                color: recovery === seconds
-                                  ? Colors.neutral00
-                                  : Colors.neutral300,
-                              },
-                            ]}
-                          >
-                            {seconds >= 60 ? `${seconds / 60} min` : `${seconds} s`}
-                          </Text>
-                        </TouchableOpacity>
-                      ))}
-                    </View>
-                    <TrainingTimer seconds={recovery} />
-                  </View>
+                  <TrainingTimer
+                    onPick={setRecovery}
+                    presets={RECOVERY_PRESETS}
+                    seconds={recovery}
+                  />
 
                   {saveFailed && (
                     <Text style={[Fonts.p3, { color: Colors.error500 }]}>

@@ -13,6 +13,7 @@ import ClubCardSurface from '@/components/molecules/clubCard/ClubCardSurface';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
 import { formatSessionDate } from '@/components/organisms/training/TrainingSessionRow';
 import ScreenContainer from '@/components/templates/ScreenContainer';
+import { fileDesRelevés, totalARelever } from '@/views/training/trainingVideo';
 
 import { RouteNames } from '@/navigation/routeNames';
 
@@ -91,6 +92,12 @@ function TrainingPlan({ navigation }) {
   const {
     enrollment, error, isLoading, nextSession, progress, refetch, sessions,
   } = useMyTraining();
+
+  /** Combien de mesures attendent encore d etre lues sur une video. */
+  const aRelever = useMemo(
+    () => totalARelever(fileDesRelevés(sessions, enrollment?.program?.days)),
+    [enrollment, sessions],
+  );
 
   const openSession = useCallback((/** @type {Record<string, any>|null} */ session) => {
     navigation.navigate(RouteNames.TrainingDay, {
@@ -252,6 +259,21 @@ function TrainingPlan({ navigation }) {
 
               {/* 3 — LES PORTES. */}
               <View style={Spaces.gap[8]}>
+                {/*
+                  🟡 LA PORTE OR. Elle n apparait QUE s il reste des mesures a lire
+                  sur une video : une porte permanente vers une file vide fait
+                  croire a un travail en retard qui n existe pas. Les 58 mesures
+                  differees du programme s oublient sinon — et un test dont il
+                  manque la moitie des mesures ne vaut rien, alors que le terrain
+                  a bien ete fait.
+                */}
+                {aRelever > 0 && (
+                  <Porte
+                    onPress={() => navigation.navigate(RouteNames.TrainingVideoQueue)}
+                    subtitle={t('training.plan.doors.videoSubtitle', { count: aRelever })}
+                    title={t('training.plan.doors.video')}
+                  />
+                )}
                 <Porte
                   onPress={() => navigation.navigate(RouteNames.TrainingSessions)}
                   subtitle={t('training.plan.doors.sessionsSubtitle', {

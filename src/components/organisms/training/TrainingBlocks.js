@@ -80,9 +80,27 @@ function Bullet({
 }) {
   return (
     <View style={[{ flexDirection: 'row' }, Spaces.gap[8]]}>
-      <Text style={[Fonts.p2, { color: Colors.primary500, minWidth: 18 }]}>
-        {ordered ? `${index + 1}.` : '•'}
-      </Text>
+      {/*
+        🎨 UNE PASTILLE RONDE PLEINE, pas un « 1. » ni un point médian. Le pack
+        l'impose et il a raison : ces listes se lisent debout, en diagonale, et un
+        chiffre suivi d'un point se confond avec le texte de la ligne précédente.
+        Une pastille pleine crée une colonne que l'œil suit sans lire.
+      */}
+      <View style={{
+        alignItems: 'center',
+        backgroundColor: Colors.primary500,
+        borderRadius: 11,
+        height: 22,
+        justifyContent: 'center',
+        marginTop: 2,
+        minWidth: 22,
+        paddingHorizontal: 4,
+      }}
+      >
+        <Text style={[Fonts.caption, { color: Colors.neutral00 }]}>
+          {ordered ? `${index + 1}` : '•'}
+        </Text>
+      </View>
       <RichText
         color={Colors.neutral00}
         style={[Fonts.p2, { color: Colors.neutral200, flex: 1 }]}

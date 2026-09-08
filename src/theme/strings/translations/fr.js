@@ -4713,6 +4713,46 @@ export default {
       totalLabel: 'Total',
       totalMax: 'sur 25',
     },
+    guided: {
+      attemptsSummary_one: '{{done}} essai bon sur {{total}} · {{voided}} nul',
+      attemptsSummary_other: '{{done}} essais bons sur {{total}} · {{voided}} nuls',
+      betweenTests: '{{count}} s avant {{test}}',
+      checkTest: '{{test}} — vérifie avant de valider',
+      doneTest: '{{test}} fait',
+      // Le bouton unique du bas change de mot selon l arret : c est ce qui dit
+      // toujours ou on va, au lieu d un « Suivant » qui ne dit rien.
+      endHint: 'Valider ferme le test et propose le suivant. Finir plus tard le laisse '
+        + 'ouvert : tu peux y revenir depuis ta séance.',
+      finishLater: 'Finir plus tard',
+      gesture: 'Le geste',
+      go: {
+        attempt: 'Enregistrer et récupérer',
+        prep: 'Tout est en place',
+        recovery: 'Commencer l’essai {{count}}',
+        warmup: 'Commencer l’essai 1',
+      },
+      judgedLater: 'Les critères qui se voient sur la vidéo se jugent le soir, pas ici.',
+      missing_one: 'Il reste {{count}} mesure à noter pour cet essai.',
+      missing_other: 'Il reste {{count}} mesures à noter pour cet essai.',
+      next: 'Ensuite',
+      nextTest: 'Test suivant',
+      prepHint: 'Ton partenaire compte à voix haute et filme ; toi, tu ne regardes '
+        + 'plus l’écran.',
+      prescribed: 'Prescrite : {{count}} s entre tentatives',
+      redo: 'Refaire l’essai {{count}}',
+      saved: 'Essai {{current}} enregistré',
+      skipTest: 'Passer ce test aujourd’hui',
+      stopHere: 'Arrêter le test ici',
+      validate: 'Valider — {{test}} fait',
+      videoLater_one: '{{count}} mesure se lira sur ta vidéo, plus tard.',
+      videoLater_other: '{{count}} mesures se liront sur ta vidéo, plus tard.',
+      videoQueue_one: '{{count}} mesure t’attend dans Relevés vidéo',
+      videoQueue_other: '{{count}} mesures t’attendent dans Relevés vidéo',
+      warmupHint: 'Le protocole complet reste lisible dans « Comprendre ». Ici, '
+        + 'seulement ce que tu fais maintenant.',
+      whatWeMeasure: 'Ce qu’on mesure',
+      why: 'Pourquoi ?',
+    },
     home: {
       countdown_one: 'dans {{count}} jour',
       countdown_other: 'dans {{count}} jours',
@@ -4911,6 +4951,9 @@ export default {
       tests_one: '{{count}} test',
       tests_other: '{{count}} tests',
     },
+    // ⚠️ « Relevés vidéo » et jamais « dépouiller » : le pack interdit ce mot
+    // devant l utilisateur, et il a raison — personne ne dit qu il « depouille »
+    // ses mesures.
     schema: {
       close: 'Fermer',
       family: {
@@ -4976,10 +5019,31 @@ export default {
     },
     timer: {
       done: 'C\'est parti',
+      endsWith: 'À 0:00 · deux vibrations',
       recovery: 'Récupération',
       reset: 'Remettre à zéro',
       start: 'Lancer',
       stop: 'Arrêter',
+    },
+    video: {
+      allDone: 'Tout est relevé',
+      backToQueue: 'Revenir aux relevés',
+      hint: 'Ce que tu relèves ici part au même carnet que le terrain : '
+        + 'même ligne, même test, même essai.',
+      lead_one: 'mesure à relever sur tes vidéos.',
+      lead_other: 'mesures à relever sur tes vidéos.',
+      nothingHere: 'Ce test n’a rien à relever sur la vidéo.',
+      notStarted: 'Journée pas encore commencée — rien à relever pour l’instant.',
+      previous: '← Essai {{count}}',
+      remaining_one: '{{count}} mesure en attente',
+      remaining_other: '{{count}} mesures en attente',
+      save: 'Enregistrer',
+      testDone: '{{test}} relevé',
+      testLine_one: '{{attempts}} essai · {{measures}} mesures à lire',
+      testLine_other: '{{attempts}} essais · {{measures}} mesures à lire',
+      testsCount_one: '{{count}} test',
+      testsCount_other: '{{count}} tests',
+      title: 'Relevés vidéo',
     },
   },
   userBlock: {

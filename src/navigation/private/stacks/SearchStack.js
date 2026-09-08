@@ -125,6 +125,25 @@ function SearchStack() {
         getComponent={() => require('@/views/training/TrainingSchema').default}
         name={RouteNames.TrainingSchema}
       />
+      {/*
+        Le PARCOURS GUIDE d un test : une seule route pour les cinq arrets du
+        pack (preparation, echauffement, essai, recuperation, fin). Le `step` en
+        parametre choisit le corps ; le ruban, le bandeau et le bouton du bas
+        sont ecrits une fois.
+      */}
+      <Stack.Screen
+        getComponent={() => require('@/views/training/TrainingGuided').default}
+        name={RouteNames.TrainingGuided}
+      />
+      {/* Les RELEVES VIDEO : la file du soir, et l ecran d un essai a la fois. */}
+      <Stack.Screen
+        getComponent={() => require('@/views/training/TrainingVideoQueue').default}
+        name={RouteNames.TrainingVideoQueue}
+      />
+      <Stack.Screen
+        getComponent={() => require('@/views/training/TrainingVideoEntry').default}
+        name={RouteNames.TrainingVideoEntry}
+      />
     </Stack.Navigator>
   );
 }

@@ -138,6 +138,9 @@ const MOBILE_ONLY_SCREENS = {
   [RouteNames.TrainingFreshness]:
     'TODO(web) les cinq questions de forme ; attend `SvgXml` au pont web'
     + ' + son entree dans screenRegistry.tsx',
+  [RouteNames.TrainingGuided]:
+    'TODO(web) le parcours guide d un test ; attend `SvgXml` au pont web'
+    + ' + son entree dans screenRegistry.tsx',
   [RouteNames.TrainingLogbook]:
     'TODO(web) carnet de resultats ; attend `SvgXml` au pont web + son entree dans screenRegistry.tsx',
   [RouteNames.TrainingPlan]:
@@ -154,6 +157,12 @@ const MOBILE_ONLY_SCREENS = {
     'TODO(web) toutes mes seances ; attend `SvgXml` au pont web + son entree dans screenRegistry.tsx',
   [RouteNames.TrainingTest]:
     'TODO(web) fiche d un test ; attend `SvgXml` au pont web + son entree dans screenRegistry.tsx',
+  [RouteNames.TrainingVideoEntry]:
+    'TODO(web) le releve d un essai ; attend `SvgXml` au pont web'
+    + ' + son entree dans screenRegistry.tsx',
+  [RouteNames.TrainingVideoQueue]:
+    'TODO(web) la file des releves video ; attend `SvgXml` au pont web'
+    + ' + son entree dans screenRegistry.tsx',
 
   // --- Alias interne de navigateur ---
   // Accueil du membre connecte (HomeHub), initialRouteName de SearchStack. Depuis le

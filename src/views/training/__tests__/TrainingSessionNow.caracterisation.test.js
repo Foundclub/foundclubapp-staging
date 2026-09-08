@@ -258,9 +258,11 @@ describe('la frise « La suite, dans l ordre »', () => {
     expect(enCours).toHaveLength(1);
   });
 
-  it('ouvre une etape FAITE sur son explication, les autres sur la saisie', () => {
+  it('ouvre une etape FAITE sur son explication, les autres sur le PARCOURS', () => {
     // On revient sur un essai deja fait pour COMPRENDRE un resultat, pas pour le
     // refaire : l ouvrir sur la saisie inviterait a ecraser une mesure valide.
+    // Le reste passe par le parcours guide, qui enchaine la mise en place,
+    // l echauffement, l essai et sa recuperation sans demander « et maintenant ? ».
     const navigate = jest.fn();
     const arbre = rendre({
       navigation: { navigate },
@@ -274,8 +276,8 @@ describe('la frise « La suite, dans l ordre »', () => {
     }));
 
     act(() => { pastilles(arbre)[4].props.onPress(); });
-    expect(navigate).toHaveBeenCalledWith('TrainingTest', expect.objectContaining({
-      tab: 'do',
+    expect(navigate).toHaveBeenCalledWith('TrainingGuided', expect.objectContaining({
+      step: 'attempt-1',
       testIndex: 1,
     }));
   });
@@ -301,8 +303,8 @@ describe('l unique bouton qui sait ou reprendre', () => {
 
     act(() => { arbre.root.findAllByType(Button)[0].props.onPress(); });
 
-    expect(navigate).toHaveBeenCalledWith('TrainingTest', expect.objectContaining({
-      tab: 'do',
+    expect(navigate).toHaveBeenCalledWith('TrainingGuided', expect.objectContaining({
+      step: 'attempt-2',
       testIndex: 0,
     }));
   });

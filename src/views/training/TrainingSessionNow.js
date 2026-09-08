@@ -196,12 +196,22 @@ function TrainingSessionNow({ navigation, route }) {
    * @returns {void} rien
    */
   const ouvrir = useCallback((etape) => {
-    navigation.navigate(RouteNames.TrainingTest, {
+    // 🔎 UNE ÉTAPE FAITE S'OUVRE SUR L'EXPLICATION, jamais sur la saisie : on y
+    // revient pour COMPRENDRE un résultat, pas pour le refaire — et l'ouvrir sur
+    // la saisie inviterait à écraser une mesure valide.
+    if (etape.etat === 'done') {
+      navigation.navigate(RouteNames.TrainingTest, {
+        dayId: day?.documentId, sessionId, tab: 'learn', testIndex: etape.testIndex,
+      });
+      return;
+    }
+    // Le reste passe par le PARCOURS GUIDÉ : c'est lui qui enchaîne la mise en
+    // place, l'échauffement, l'essai et sa récupération sans jamais demander
+    // « et maintenant ? ».
+    navigation.navigate(RouteNames.TrainingGuided, {
       dayId: day?.documentId,
       sessionId,
-      // Une étape FAITE s'ouvre sur l'explication : on y revient pour comprendre
-      // un résultat, pas pour le refaire. Les autres s'ouvrent sur la saisie.
-      tab: etape.etat === 'done' ? 'learn' : 'do',
+      step: etape.type === 'prep' ? 'prep' : `attempt-${etape.essai}`,
       testIndex: etape.testIndex,
     });
   }, [day, navigation, sessionId]);

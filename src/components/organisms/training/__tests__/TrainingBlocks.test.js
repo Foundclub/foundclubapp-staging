@@ -126,8 +126,12 @@ describe('le rendu des blocs', () => {
   it('numerote une liste ordonnee', () => {
     const rendu = textes(rendre([{ items: ['se placer', 'sauter'], type: 'ol' }]));
 
-    expect(rendu).toContain('1.');
-    expect(rendu).toContain('2.');
+    // 🎨 LE NUMERO EST NU, dans une pastille ronde pleine — plus « 1. » suivi
+    // d un point. Ces listes se lisent debout, en diagonale : un chiffre suivi
+    // d un point se confond avec la fin de la ligne precedente, alors qu une
+    // pastille pleine cree une colonne que l oeil suit sans lire.
+    expect(rendu).toContain('1');
+    expect(rendu).toContain('2');
   });
 
   it('rend TOUTES les cellules d un tableau, en-tetes compris', () => {
