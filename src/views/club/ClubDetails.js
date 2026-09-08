@@ -747,6 +747,22 @@ function ClubDetails({ navigation, route }) {
     [club, USER_ROLES.president],
   );
   const areClubMembersHidden = club?.membersAreHidden === true;
+  /**
+   * 🔒 CLUBPUB (decision d'Adel du 2026-09-07 : « une fiche club doit etre
+   * visible sans compte ») — un visiteur voit la fiche, JAMAIS le carnet
+   * d'adresses.
+   *
+   * MESURE QUI JUSTIFIE CE GARDE-FOU (base de production, 2026-09-07) :
+   * 37 705 clubs portent un telephone, dont 30 771 commencent par 06/07 —
+   * des mobiles PERSONNELS, pas des standards ; 42 069 portent un e-mail.
+   * Ces deux champs etaient rendus sans aucune condition de connexion.
+   *
+   * ⚠️ VOLONTAIREMENT DISTINCT de `areClubMembersHidden` : celui-la veut dire
+   * « le club a choisi de masquer », et son ecran l'ecrit noir sur blanc.
+   * Le dire a un visiteur serait faux — ce n'est pas le club qui masque,
+   * c'est lui qui n'a pas de compte.
+   */
+  const showsPrivateClubDetails = isAuthenticated;
   // Club sans dirigeant visible : l'affiliation coach est instantanee cote serveur,
   // le bouton doit donc dire « C'est mon club ! » plutot que « Demander a rejoindre ».
   const isClubWithoutVisibleOwner = owners.length === 0 && !areClubMembersHidden;
@@ -2360,7 +2376,7 @@ function ClubDetails({ navigation, route }) {
                 Alignments.alignCenter,
                 Spaces.paddingHorizontal[24]]}
               >
-                {club?.phoneNumber ? (
+                {showsPrivateClubDetails && club?.phoneNumber ? (
                   <View style={[Alignments.row, Spaces.gap[4]]}>
                     <Image source={Images.phone} style={[ApplicationStyle.icon20]} />
                     <TouchableOpacity
@@ -2377,7 +2393,7 @@ function ClubDetails({ navigation, route }) {
                     </TouchableOpacity>
                   </View>
                 ) : null}
-                {club?.email ? (
+                {showsPrivateClubDetails && club?.email ? (
                   <View style={[
                     Alignments.row, Spaces.gap[4]]}
                   >
@@ -2980,7 +2996,7 @@ function ClubDetails({ navigation, route }) {
                 </View>
               ) : null}
 
-              {showsClubSection('staff') && areClubMembersHidden ? (
+              {showsClubSection('staff') && showsPrivateClubDetails && areClubMembersHidden ? (
                 <View style={[Spaces.gap[16]]}>
                   <View style={[Alignments.row, Alignments.alignCenter, Alignments.scrollSpaceBetween, Spaces.gap[16]]}>
                     <Text style={[Fonts.h4Black, Fonts.neutral00]}>
@@ -3010,25 +3026,26 @@ function ClubDetails({ navigation, route }) {
               ) : null}
 
               {/* Coachs */}
-              {showsClubSection('staff') && (coachs?.length || canEdit) ? (
-                <View style={[Spaces.gap[16]]}>
-                  <View style={[Alignments.row,
-                    Alignments.alignCenter, Alignments.scrollSpaceBetween, Spaces.gap[16]]}
-                  >
-                    <Text style={[Fonts.h4Black, Fonts.neutral00]}>{t('clubDetails.titles.coachs')}</Text>
-                    {canEdit ? (
-                      <Button
-                        icon="plus"
-                        isOption
-                        onPress={handleCreateCoach}
-                        variant="Primary"
-                      />
-                    ) : null}
-                  </View>
-                  <View
-                    style={[Spaces.gap[16]]}
-                  >
-                    {
+              {showsClubSection('staff') && showsPrivateClubDetails
+                && (coachs?.length || canEdit) ? (
+                  <View style={[Spaces.gap[16]]}>
+                    <View style={[Alignments.row,
+                      Alignments.alignCenter, Alignments.scrollSpaceBetween, Spaces.gap[16]]}
+                    >
+                      <Text style={[Fonts.h4Black, Fonts.neutral00]}>{t('clubDetails.titles.coachs')}</Text>
+                      {canEdit ? (
+                        <Button
+                          icon="plus"
+                          isOption
+                          onPress={handleCreateCoach}
+                          variant="Primary"
+                        />
+                      ) : null}
+                    </View>
+                    <View
+                      style={[Spaces.gap[16]]}
+                    >
+                      {
                       coachs?.map((/** @type {User} */ user) => (
                         <TouchableOpacity
                           key={user.documentId}
@@ -3087,22 +3104,22 @@ function ClubDetails({ navigation, route }) {
                         </TouchableOpacity>
                       ))
                     }
+                    </View>
+                    {/* D62 (recette Adel du 09/08) : ce bouton etait rendu HORS de la */}
+                    {/* ScrollView, colle en bas du hub — il masquait la rangee « Staff ». */}
+                    {/* Il ne disparait pas pour autant : `startClubChat` n'a AUCUN autre */}
+                    {/* appelant (useMessaging.js:1148), donc le retirer rendrait la */}
+                    {/* conversation du club impossible a ouvrir. Il redescend ici, dans le */}
+                    {/* flux qui defile, sous les entraineur·e·s qu'il contacte. */}
+                    {coachs?.length && canEdit ? (
+                      <Button
+                        onPress={handleStartChat}
+                        title={t('clubDetails.actions.contactTrainers')}
+                        variant="Primary"
+                      />
+                    ) : null}
                   </View>
-                  {/* D62 (recette Adel du 09/08) : ce bouton etait rendu HORS de la */}
-                  {/* ScrollView, colle en bas du hub — il masquait la rangee « Staff ». */}
-                  {/* Il ne disparait pas pour autant : `startClubChat` n'a AUCUN autre */}
-                  {/* appelant (useMessaging.js:1148), donc le retirer rendrait la */}
-                  {/* conversation du club impossible a ouvrir. Il redescend ici, dans le */}
-                  {/* flux qui defile, sous les entraineur·e·s qu'il contacte. */}
-                  {coachs?.length && canEdit ? (
-                    <Button
-                      onPress={handleStartChat}
-                      title={t('clubDetails.actions.contactTrainers')}
-                      variant="Primary"
-                    />
-                  ) : null}
-                </View>
-              ) : null}
+                ) : null}
               {/* president */}
               {showsClubSection('staff') && (owners?.length || canEdit) ? (
                 <View style={[Spaces.gap[16]]}>

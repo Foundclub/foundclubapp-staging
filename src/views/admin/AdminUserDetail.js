@@ -47,8 +47,17 @@ function AdminUserDetail() {
   const roles = rolesData?.roles || rolesData || [];
   const deleteMutation = useDeleteAdminUser();
   const selfDocumentId = String(currentUser?.documentId || currentUser?.id || '').trim();
-  const viewedUserDocumentId = String(user?.documentId || userId || '').trim();
-  const isSelfAccount = Boolean(selfDocumentId) && selfDocumentId === viewedUserDocumentId;
+  // ⚠️ DEUX IDENTIFIANTS, DEUX PORTES.
+  // Depuis le 2026-09-08 la liste passe le NUMERO (`item.id`) : c'est ce
+  // qu'exige `/api/users/:id`. Mais la SUPPRESSION appelle notre route maison
+  // `/superadmin/users/:documentId`, qui veut l'identifiant document.
+  // On le lit donc sur la personne CHARGEE, et JAMAIS sur le parametre de
+  // navigation : y retomber enverrait un numero a une porte qui attend une
+  // chaine, sur un geste irreversible.
+  const viewedUserDocumentId = String(user?.documentId || '').trim();
+  const isSelfAccount = Boolean(selfDocumentId)
+    && (selfDocumentId === viewedUserDocumentId
+      || String(currentUser?.id || '') === String(user?.id || userId || ''));
 
   const [selectedRole, setSelectedRole] = useState(null);
   const [isBlocked, setIsBlocked] = useState(false);
@@ -75,7 +84,7 @@ function AdminUserDetail() {
                   blocked: isBlocked,
                   role: selectedRole,
                 },
-                documentId: userId,
+                documentId: viewedUserDocumentId,
               },
               {
                 onError: (err) => {
@@ -103,7 +112,10 @@ function AdminUserDetail() {
         {
           onPress: () => {
             deleteMutation.mutate(
-              { documentId: userId, reason: 'Suppression par un superadmin' },
+              {
+                documentId: viewedUserDocumentId,
+                reason: 'Suppression par un superadmin',
+              },
               {
                 onError: (err) => {
                   Alert.alert('Erreur', getErrorMessage(err, 'generic'));
@@ -347,8 +359,11 @@ function AdminUserDetail() {
           />
         </View>
 
-        {!isSelfAccount && (
+        {/* Sans identifiant document, la porte de suppression ne peut pas etre
+            visee : on n'offre pas un geste irreversible qu'on ne sait pas adresser. */}
+        {!isSelfAccount && Boolean(viewedUserDocumentId) && (
           <TouchableOpacity
+            accessibilityLabel="Supprimer le compte"
             disabled={deleteMutation.isPending}
             onPress={handleDelete}
             style={[

@@ -2398,6 +2398,12 @@ export default {
           subtitle: 'Trouve la page d\u2019un club.',
           title: 'Club',
         },
+        // P0 — la case du parent. Elle ouvre la recherche de clubs qui existe
+        // deja : c'est un raccourci mis en avant, pas un ecran de plus.
+        clubForChild: {
+          subtitle: 'Trouve le club où il jouera cette saison.',
+          title: 'Chercher un club pour mon enfant',
+        },
         events: {
           subtitle: 'Détections, séances d\u2019essai, matchs\u2026',
           title: 'Événement',
@@ -2414,6 +2420,9 @@ export default {
     },
     roles: {
       coach: 'Entraîneur',
+      // P0 — cette clef MANQUAIT, et c'est tout le defaut : `roleLabel` se
+      // repliait sur « Joueur » pour les deux comptes Parent de production.
+      parent: 'Parent',
       player: 'Joueur',
       president: 'Dirigeant',
       superAdmin: 'Super admin',
