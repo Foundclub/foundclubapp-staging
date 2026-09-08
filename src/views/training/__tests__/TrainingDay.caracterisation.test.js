@@ -1,28 +1,33 @@
-import { TouchableOpacity } from 'react-native';
+import { ScrollView, TouchableOpacity } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
+import fr from '@/theme/strings/translations/fr';
+
 import Button from '@/components/atoms/button/Button';
+import TrainingProgressBar from '@/components/organisms/training/TrainingProgressBar';
 
 import TrainingDay from '../TrainingDay';
 
 /**
- * « LA FICHE D UNE JOURNEE » — FILET DE CARACTERISATION (E6).
+ * « LA FICHE D UNE JOURNEE » — LE FILET.
  *
- * 🔎 POURQUOI CE FICHIER EXISTE : `TrainingDay.js` n'avait AUCUN test, et le pack
- * de design va le reecrire. La regle du projet est mecanique : sur un fichier sans
- * filet, on ecrit d'abord un temoin qui decrit le comportement ACTUEL, ensuite
- * seulement on touche. Sans lui, rien ne dirait qu'une branche retiree servait.
- *
- * CE QUE CE FILET FIGE — le COMPORTEMENT, jamais la peinture :
- *   1. l'ordre des blocs de l'ecran et la condition d'affichage de chacun ;
- *   2. une ligne par test du jour, et ou mene l'appui dessus ;
- *   3. quel bouton apparait selon l'etat de la seance, et ce qu'il envoie ;
- *   4. quelles sections sont dépliées d'entree et lesquelles sont fermees ;
- *   5. les vides et les absences que l'ecran traverse aujourd'hui SANS rien dire.
- *
- * ⚠️ Deux temoins disent une ABSENCE (pas d'etat vide, pas de message quand la
- * journee est introuvable). Ce n'est pas un oubli du filet : c'est l'information
- * la plus utile a la refonte, parce que l'ecran affiche alors une page blanche.
+ * 🔎 CE QU IL PROTEGE, ET POURQUOI CHAQUE POINT COMPTE :
+ *   1. LA BASCULE « Preparer » / « Sur place ». C est le coeur du dessin, et le
+ *      seul element de l ecran qui ne se voit pas sur une capture : deux
+ *      organisations differentes des memes donnees. Le texte long se lit la
+ *      veille, assis ; la liste des tests se manipule debout, sur le terrain.
+ *   2. LE PIED HORS DU DEFILEMENT. Sur une journee de six tests avec ses quatre
+ *      sections depliees, « Commencer » etait a quarante lignes du bas.
+ *   3. LA BARRIERE OBLIGATOIRE. « Commencer » n a plus le droit de demarrer une
+ *      journee qui reclame les cinq questions de forme : sans elles, on mesure
+ *      quelqu un sans savoir dans quel etat il est.
+ *   4. « TERMINER » NE FAIT PLUS SORTIR. L etat « journee finie » n etait jamais
+ *      visible : on etait renvoye au planning avant de le voir.
+ *   5. UN TITRE SANS CONTENU NE S AFFICHE PAS. On depliait « Le deroule » sur du
+ *      vide, et on en concluait que l app avait perdu le programme.
+ *   6. LES MOTS INTERDITS. Le pack bannit « fraicheur » et « depouiller » devant
+ *      l utilisateur. Le temoin lit les VALEURS de `fr.js`, pas l ecran : c est
+ *      la seule facon d attraper une clef reintroduite ailleurs.
  */
 
 /** @type {any} */
@@ -43,8 +48,9 @@ jest.mock('@/theme/themeContext', () => {
   const Spaces = jest.requireActual('@/theme/spaces').default;
   const Colors = genererCouleurs();
 
-  // Le vrai theme rend cinq objets, pas trois : `Button` lit `ApplicationStyle`
-  // et tombe sans lui. On sert donc le theme REEL, pas une version amputee.
+  // Le vrai theme rend CINQ objets et un jeu d images : `Button` lit
+  // `ApplicationStyle`, les accordeons et les cartes de test lisent `Images`.
+  // On sert le theme REEL, pas une version amputee.
   return {
     __esModule: true,
     default: () => ({
@@ -52,6 +58,7 @@ jest.mock('@/theme/themeContext', () => {
       ApplicationStyle: genererStyle(Colors),
       Colors,
       Fonts: genererPolices(Colors),
+      Images: { chevronDown: 1 },
       Spaces,
     }),
   };
@@ -88,8 +95,49 @@ jest.mock('@/components/molecules/withDataWrapper/WithDataWrapper', () => {
   };
 });
 
+/**
+ * Trois tests qui couvrent les trois etats possibles d une ligne.
+ *
+ * 🔎 LE NOMBRE DE MESURES EST CE QUI SEPARE « fait » de « entame » : un test qui
+ * porte trois mesures et dont une seule est saisie n est PAS fait. La version
+ * precedente confondait les deux et annoncait la journee terminee au premier
+ * chiffre saisi.
+ */
+const TESTS = [
+  {
+    code: 'S10',
+    documentId: 't-1',
+    estimatedMinutes: 12,
+    measures: [{ key: 'a', moment: 'terrain' }, { key: 'b', moment: 'terrain' }],
+    name: 'Sprint 10 metres',
+  },
+  {
+    code: 'CMJ',
+    documentId: 't-2',
+    estimatedMinutes: 8,
+    isOptional: true,
+    measures: [
+      { key: 'c', moment: 'terrain' },
+      { key: 'd', moment: 'terrain' },
+      { key: 'e', moment: 'terrain' },
+    ],
+    name: 'Detente verticale',
+  },
+  {
+    code: 'IDX',
+    documentId: 't-3',
+    // Tout se calcule au bureau : rien a mesurer sur le terrain. C est la
+    // definition de « calcul seul », et aucun test du programme d aujourd hui ne
+    // remplit cette condition — le temoin la garde vivante en attendant.
+    measures: [{ key: 'f', moment: 'differe' }],
+    name: 'Indice de reactivite',
+  },
+];
+
 const JOURNEE = {
+  code: 'B',
   documentId: 'jour-b',
+  durationMinutes: 120,
   kicker: 'Jour B',
   lead: 'Detente et remise en route',
   logbook: [{ text: 'Note ta sensation du jour', type: 'p' }],
@@ -97,20 +145,9 @@ const JOURNEE = {
     { label: 'Sommeil', value: 'au moins 7 h' },
     { label: 'Cafe', value: 'aucun le matin' },
   ],
+  place: 'SALLE',
   requiresFreshnessCheck: true,
-  tests: [
-    {
-      code: 'S10', documentId: 't-1', estimatedMinutes: 12, name: 'Sprint 10 metres',
-    },
-    {
-      code: 'CMJ',
-      documentId: 't-2',
-      estimatedMinutes: 8,
-      isOptional: true,
-      name: 'Detente verticale',
-    },
-    { code: 'YOYO', documentId: 't-3', name: 'Yo-Yo intermittent' },
-  ],
+  tests: TESTS,
   timeline: [{ text: 'Echauffement puis blocs', type: 'p' }],
   title: 'Jour B - Detente',
   warmup: [{ text: 'Mobilite des hanches', type: 'p' }],
@@ -119,7 +156,14 @@ const JOURNEE = {
 const SEANCE = {
   day: { documentId: 'jour-b' },
   documentId: 'seance-9',
-  results: [{ test: { code: 'S10' } }],
+  plannedDate: '2026-09-09',
+  // S10 a ses DEUX mesures : il est fait. CMJ n en a qu une sur trois : il est
+  // entame. IDX n en a aucune : il reste a faire.
+  results: [
+    { test: { code: 'S10' } },
+    { test: { code: 'S10' } },
+    { test: { code: 'CMJ' } },
+  ],
   status: 'planned',
 };
 
@@ -134,17 +178,16 @@ const INSCRIT = {
 const ROUTE = { params: { sessionId: 'seance-9' } };
 
 /**
- * L'etat du crochet pour une journee de catalogue donnee.
- * @param {any} journee la journee que le programme doit contenir
+ * L'etat du crochet pour une journee et une seance donnees.
+ * @param {any} [journee] la journee que le programme doit contenir
+ * @param {any} [seance] la seance correspondante
  * @returns {any} ce que rend `useMyTraining`
  */
-const avecJournee = (journee) => ({ ...INSCRIT, enrollment: { program: { days: [journee] } } });
-
-// Le signe rendu par une section DEPLIEE est un vrai signe moins mathematique
-// (U+2212), pas un tiret d'ecriture : on l'ecrit en code d'echappement pour que
-// ce fichier reste lisible et comparable octet pour octet.
-const REPLIER = '−';
-const DEPLIER = '+';
+const avec = (journee = JOURNEE, seance = SEANCE) => ({
+  ...INSCRIT,
+  enrollment: { program: { days: [journee] } },
+  sessions: [seance],
+});
 
 /**
  * Monte l'ecran et rend l'arbre de test.
@@ -198,174 +241,211 @@ const textes = (arbre) => {
   return sortie;
 };
 
-describe('les blocs du haut de la fiche, dans l ordre de l ecran', () => {
-  it('rend le chapeau, le titre, l accroche puis la progression, dans CET ordre', () => {
+/**
+ * Appuie sur l onglet demande.
+ * @param {any} arbre l arbre rendu
+ * @param {string} clef `prepare` ou `onSite`
+ * @returns {void} rien
+ */
+const basculer = (arbre, clef) => {
+  // Les DEUX seuls noeuds de l ecran qui portent `selected` sont les onglets :
+  // les accordeons portent `expanded`, les cartes de test ne portent rien.
+  const onglets = arbre.root.findAll((n) => n.type === TouchableOpacity
+    && n.props.accessibilityState?.selected !== undefined);
+  act(() => { onglets[clef === 'prepare' ? 0 : 1].props.onPress(); });
+};
+
+describe('la bascule « Preparer » / « Sur place »', () => {
+  it('ouvre sur PREPARER tant que la seance n a pas commence', () => {
     const vus = textes(rendre());
 
-    // On compare des RANGS, pas des marges : l'ordre est le seul element de
-    // presentation qui porte du sens ici (voir l'entete de TrainingDay.js).
-    const rang = (/** @type {string} */ debut) => vus.findIndex((v) => v.startsWith(debut));
-    expect(rang('Jour B')).toBeGreaterThanOrEqual(0);
-    expect(rang('Jour B')).toBeLessThan(rang('Jour B - Detente'));
-    expect(rang('Jour B - Detente')).toBeLessThan(rang('Detente et remise'));
-    expect(rang('Detente et remise')).toBeLessThan(rang('training.day.progress'));
+    // Le deroule est la, la liste des tests n y est pas : on est chez soi.
+    expect(vus).toContain('training.day.timeline');
+    expect(vus).not.toContain('training.day.testsTitle');
   });
 
-  it('n affiche NI chapeau NI accroche quand le serveur ne les donne pas', () => {
-    const nue = { ...JOURNEE, kicker: '', lead: '' };
-    const vus = textes(rendre({ etat: avecJournee(nue) }));
+  it('ouvre sur SUR PLACE des que la seance est lancee', () => {
+    const vus = textes(rendre({ etat: avec(JOURNEE, { ...SEANCE, status: 'in_progress' }) }));
 
-    expect(vus).not.toContain('Jour B');
-    expect(vus).not.toContain('Detente et remise en route');
-    // Le titre, lui, n'est jamais conditionne : il reste meme vide.
+    expect(vus).toContain('training.day.testsTitle');
+    expect(vus).not.toContain('training.day.timeline');
+  });
+
+  it('ouvre sur SUR PLACE quand la journee est finie', () => {
+    const vus = textes(rendre({ etat: avec(JOURNEE, { ...SEANCE, status: 'done' }) }));
+
+    expect(vus).toContain('training.day.testsTitle');
+  });
+
+  it('un appui bascule d un onglet a l autre, et le choix TIENT', () => {
+    const arbre = rendre();
+    basculer(arbre, 'onSite');
+
+    const vus = textes(arbre);
+    expect(vus).toContain('training.day.testsTitle');
+    expect(vus).not.toContain('training.day.timeline');
+  });
+});
+
+describe('le chapeau', () => {
+  it('met le CODE en titre, pas le nom de la journee', () => {
+    expect(textes(rendre())).toContain('training.day.code|{"code":"B"}');
+  });
+
+  it('donne la date et le lieu en une seule ligne, le lieu en minuscules', () => {
+    const ligne = textes(rendre()).find((v) => String(v).startsWith('training.day.heading'));
+
+    expect(ligne).toContain('"place":"salle"');
+    expect(ligne).toContain('mercredi 9 septembre');
+  });
+
+  it('annonce la duree', () => {
+    expect(textes(rendre())).toContain('training.day.duration|{"count":120}');
+  });
+
+  it('se rabat sur le nom quand la journee n a pas de code', () => {
+    const vus = textes(rendre({ etat: avec({ ...JOURNEE, code: '' }) }));
+
     expect(vus).toContain('Jour B - Detente');
-  });
-
-  it('compte dans la progression les tests DEJA faits de la seance', () => {
-    // La seance porte un resultat pour S10 : 1 fait sur 3 tests du catalogue.
-    expect(textes(rendre())).toContain('training.day.progress|{"count":1,"done":1,"total":3}');
-  });
-
-  it('compte ZERO quand la seance n a pas de tableau de resultats', () => {
-    const sansResultats = { ...INSCRIT, sessions: [{ ...SEANCE, results: undefined }] };
-
-    expect(textes(rendre({ etat: sansResultats })))
-      .toContain('training.day.progress|{"count":0,"done":0,"total":3}');
+    expect(vus.some((v) => String(v).startsWith('training.day.code'))).toBe(false);
   });
 });
 
-describe('l encart de controle de fraicheur', () => {
-  it('apparait quand la journee l exige', () => {
-    expect(textes(rendre())).toContain('training.day.freshnessRequired');
+describe('ou j en suis, du cote « Sur place »', () => {
+  it('compte UN test fait sur trois : deux mesures sur deux, pas une sur trois', () => {
+    const arbre = rendre({ etat: avec(JOURNEE, { ...SEANCE, status: 'in_progress' }) });
+
+    expect(textes(arbre)).toContain('training.day.progress|{"count":1,"done":1,"total":3}');
   });
 
-  it('disparait completement quand la journee ne l exige pas', () => {
-    const sansControle = { ...JOURNEE, requiresFreshnessCheck: false };
+  it('dessine la barre a la meme hauteur que le compte', () => {
+    const arbre = rendre({ etat: avec(JOURNEE, { ...SEANCE, status: 'in_progress' }) });
 
-    expect(textes(rendre({ etat: avecJournee(sansControle) })))
-      .not.toContain('training.day.freshnessRequired');
-  });
-});
-
-describe('la liste des tests du jour', () => {
-  it('rend UNE ligne par test, avec son code, son nom et sa duree', () => {
-    const vus = textes(rendre());
-
-    expect(vus).toEqual(expect.arrayContaining([
-      'training.day.testsTitle',
-      'S10', 'CMJ', 'YOYO',
-      'Sprint 10 metres', 'Detente verticale', 'Yo-Yo intermittent',
-      // Les durees sont rendues en TEXTE par JSX, jamais en nombre.
-      '12', '8',
-    ]));
+    expect(arbre.root.findByType(TrainingProgressBar).props.ratio).toBeCloseTo(1 / 3);
   });
 
-  it('ne marque « facultatif » que le test qui l est', () => {
-    expect(textes(rendre()).filter((v) => v === 'training.test.optional')).toHaveLength(1);
+  it('annonce le total des mesures de la journee', () => {
+    const arbre = rendre({ etat: avec(JOURNEE, { ...SEANCE, status: 'in_progress' }) });
+
+    // 2 + 3 + 1 = 6 mesures sur les trois tests.
+    expect(textes(arbre)).toContain('training.day.measures|{"count":6}');
   });
 
-  it('n affiche aucune duree quand elle est absente ou vaut zero', () => {
-    const aZero = {
-      ...JOURNEE,
-      tests: [{ code: 'S10', documentId: 't-1', estimatedMinutes: 0 }],
-    };
-    const vus = textes(rendre({ etat: avecJournee(aZero) }));
+  it('compte les tests, a cote du titre de la liste', () => {
+    const arbre = rendre({ etat: avec(JOURNEE, { ...SEANCE, status: 'in_progress' }) });
 
-    // `Boolean(0)` est faux : ni le nombre ni son unite ne sont rendus.
-    expect(vus).not.toContain('0');
-    expect(vus).not.toContain(' min');
-  });
-
-  it('garde son titre mais reste MUET quand la journee n a aucun test', () => {
-    const vide = { ...JOURNEE, tests: [] };
-    const arbre = rendre({ etat: avecJournee(vide) });
-
-    // ⚠️ Aucun message d'etat vide : le titre surplombe le neant. C'est le
-    // comportement d'AUJOURD HUI, et c'est exactement ce que la refonte devra
-    // decider de garder ou de combler.
-    expect(textes(arbre)).toContain('training.day.testsTitle');
-    expect(textes(arbre)).not.toContain('S10');
+    expect(textes(arbre)).toContain('3');
   });
 });
 
-describe('appuyer sur un test ouvre CE test', () => {
-  it('passe le rang du test, l identifiant du jour et celui de la seance', () => {
+describe('les cartes de test', () => {
+  /**
+   * Les trois cartes de test, dans l ordre de l ecran.
+   * @param {any} arbre l arbre rendu
+   * @returns {any[]} les noeuds cliquables des cartes
+   */
+  const cartes = (arbre) => arbre.root.findAll((n) => n.type === TouchableOpacity
+    && String(n.props.style?.[1]?.borderRadius) === '10');
+
+  it('marque le test ENTAME d un cadre de deux points, les autres d un seul', () => {
+    const arbre = rendre({ etat: avec(JOURNEE, { ...SEANCE, status: 'in_progress' }) });
+    const [fait, entame, aFaire] = cartes(arbre).map((c) => c.props.style[1].borderWidth);
+
+    expect(entame).toBe(2);
+    expect(fait).toBe(1);
+    expect(aFaire).toBe(1);
+  });
+
+  it('ecrit « en cours » sur le test entame, et sur lui seul', () => {
+    const arbre = rendre({ etat: avec(JOURNEE, { ...SEANCE, status: 'in_progress' }) });
+
+    expect(textes(arbre).filter((v) => v === 'training.day.inProgress')).toHaveLength(1);
+  });
+
+  it('met un « ≈ » devant la duree : c est une estimation, pas un horaire', () => {
+    const arbre = rendre({ etat: avec(JOURNEE, { ...SEANCE, status: 'in_progress' }) });
+
+    expect(textes(arbre)).toContain('≈ 12 min');
+  });
+
+  it('marque « calcul seul » le test dont AUCUNE mesure ne se prend sur le terrain', () => {
+    const arbre = rendre({ etat: avec(JOURNEE, { ...SEANCE, status: 'in_progress' }) });
+
+    expect(textes(arbre).filter((v) => v === 'training.day.computeOnly')).toHaveLength(1);
+  });
+
+  it('ouvre le bon test : le RANG, pas le code', () => {
     const navigate = jest.fn();
-    const arbre = rendre({ navigation: { navigate } });
-
-    // Les lignes de test sont les premieres zones cliquables de l'ecran : les
-    // entetes de section et le bouton viennent apres.
-    act(() => { arbre.root.findAllByType(TouchableOpacity)[1].props.onPress(); });
-
-    expect(navigate).toHaveBeenCalledWith('TrainingTest', {
-      dayId: 'jour-b',
-      sessionId: 'seance-9',
-      testIndex: 1,
+    const arbre = rendre({
+      etat: avec(JOURNEE, { ...SEANCE, status: 'in_progress' }),
+      navigation: { navigate },
     });
+
+    act(() => { cartes(arbre)[1].props.onPress(); });
+
+    expect(navigate).toHaveBeenCalledWith('TrainingTest', expect.objectContaining({ testIndex: 1 }));
   });
 });
 
-describe('les sections repliables', () => {
-  it('n ouvre d entree QUE les reperes : les trois autres restent fermees', () => {
+describe('les sections du cote « Preparer »', () => {
+  it('annonce le volume de chaque section AVANT qu on la deplie', () => {
     const vus = textes(rendre());
 
-    expect(vus.filter((v) => v === REPLIER)).toHaveLength(1);
-    expect(vus.filter((v) => v === DEPLIER)).toHaveLength(3);
-    // Les reperes sont lisibles tout de suite, la chronologie non.
+    expect(vus).toContain('training.day.points|{"count":2}');
+    expect(vus).toContain('training.day.lines|{"count":1}');
+    expect(vus).toContain('training.day.blocks|{"count":1}');
+  });
+
+  it('n affiche PAS un titre dont la section est vide', () => {
+    const vus = textes(rendre({ etat: avec({ ...JOURNEE, timeline: [], warmup: null }) }));
+
+    expect(vus).not.toContain('training.day.timeline');
+    expect(vus).not.toContain('training.day.warmup');
+    // Celles qui ont du contenu restent.
+    expect(vus).toContain('training.day.markers');
+    expect(vus).toContain('training.day.logbook');
+  });
+
+  it('deplie les reperes d entree, et garde les autres fermees', () => {
+    const vus = textes(rendre());
+
     expect(vus).toContain('au moins 7 h');
     expect(vus).not.toContain('Echauffement puis blocs');
   });
-
-  it('appuyer sur l entete d une section montre son contenu', () => {
-    const arbre = rendre();
-    const entetes = arbre.root.findAllByType(TouchableOpacity).slice(JOURNEE.tests.length);
-
-    act(() => { entetes[1].props.onPress(); });
-
-    expect(textes(arbre)).toContain('Echauffement puis blocs');
-  });
-
-  it('retire la section des reperes quand la liste est vide, mais garde les trois autres', () => {
-    const sansReperes = { ...JOURNEE, markers: [] };
-    const vus = textes(rendre({
-      etat: avecJournee(sansReperes),
-    }));
-
-    expect(vus).not.toContain('training.day.markers');
-    expect(vus).toEqual(expect.arrayContaining([
-      'training.day.timeline', 'training.day.warmup', 'training.day.logbook',
-    ]));
-  });
-
-  it('affiche les trois sections MEME sans aucun contenu a y montrer', () => {
-    // ⚠️ Piege pour la refonte : `TrainingBlocks` rend `null` sur une liste
-    // vide, mais la section, elle, s'affiche quand meme. On peut donc ouvrir
-    // un accordeon sur du vide, sans le moindre message.
-    const creuse = {
-      ...JOURNEE, logbook: [], timeline: undefined, warmup: null,
-    };
-    const arbre = rendre({ etat: avecJournee(creuse) });
-    const entetes = arbre.root.findAllByType(TouchableOpacity).slice(JOURNEE.tests.length);
-
-    act(() => { entetes[1].props.onPress(); });
-
-    expect(textes(arbre)).toContain('training.day.timeline');
-  });
 });
 
-describe('les boutons de seance', () => {
-  it('propose de DEMARRER quand la seance est planifiee', () => {
-    const boutons = rendre().root.findAllByType(Button);
+describe('la barriere des cinq questions', () => {
+  it('l encart d or est un BOUTON, et il y mene', () => {
+    const navigate = jest.fn();
+    const arbre = rendre({ navigation: { navigate } });
+    // Le liseré d or de trois points ne se trouve nulle part ailleurs sur l ecran.
+    const encart = arbre.root.findAll((n) => n.type === TouchableOpacity
+      && n.props.style?.borderLeftWidth === 3)[0];
 
-    expect(boutons).toHaveLength(1);
-    expect(boutons[0].props.title).toBe('training.actions.startDay');
+    act(() => { encart.props.onPress(); });
+
+    expect(navigate).toHaveBeenCalledWith('TrainingFreshness', { sessionId: 'seance-9' });
   });
 
-  it('envoie « en cours » au serveur quand on demarre', async () => {
+  it('« Commencer » N A PAS le droit de demarrer une journee qui la reclame', async () => {
     const mutateAsync = jest.fn().mockResolvedValue(undefined);
-    const arbre = rendre({ miseAJour: { mutateAsync } });
+    const navigate = jest.fn();
+    const arbre = rendre({ miseAJour: { mutateAsync }, navigation: { navigate } });
 
-    await act(async () => { await arbre.root.findAllByType(Button)[0].props.onPress(); });
+    await act(async () => { arbre.root.findByType(Button).props.onPress(); });
+
+    expect(navigate).toHaveBeenCalledWith('TrainingFreshness', { sessionId: 'seance-9' });
+    expect(mutateAsync).not.toHaveBeenCalled();
+  });
+
+  it('demarre DIRECTEMENT quand la journee ne la reclame pas', async () => {
+    const mutateAsync = jest.fn().mockResolvedValue(undefined);
+    const arbre = rendre({
+      etat: avec({ ...JOURNEE, requiresFreshnessCheck: false }),
+      miseAJour: { mutateAsync },
+    });
+
+    await act(async () => { arbre.root.findByType(Button).props.onPress(); });
 
     expect(mutateAsync).toHaveBeenCalledWith({
       payload: { status: 'in_progress' },
@@ -373,137 +453,89 @@ describe('les boutons de seance', () => {
     });
   });
 
-  it('propose de TERMINER quand la seance est en cours, et revient en arriere', async () => {
+  it('cache l encart une fois la journee finie : il n y a plus rien a decider', () => {
+    const vus = textes(rendre({ etat: avec(JOURNEE, { ...SEANCE, status: 'done' }) }));
+
+    expect(vus).not.toContain('training.day.freshnessRequired');
+  });
+});
+
+describe('le pied de page', () => {
+  it('vit HORS du defilement : il ne descend pas du ScrollView', () => {
+    const arbre = rendre();
+
+    expect(arbre.root.findByType(ScrollView).findAllByType(Button)).toHaveLength(0);
+    expect(arbre.root.findAllByType(Button)).toHaveLength(1);
+  });
+
+  it('propose « Terminer » quand la seance tourne', () => {
+    const arbre = rendre({ etat: avec(JOURNEE, { ...SEANCE, status: 'in_progress' }) });
+
+    expect(arbre.root.findByType(Button).props.title).toBe('training.actions.finishDay');
+  });
+
+  it('« Terminer » ne fait PLUS sortir de l ecran', async () => {
     const goBack = jest.fn();
     const mutateAsync = jest.fn().mockResolvedValue(undefined);
-    const enCours = { ...INSCRIT, sessions: [{ ...SEANCE, status: 'in_progress' }] };
-    const arbre = rendre({ etat: enCours, miseAJour: { mutateAsync }, navigation: { goBack } });
-    const bouton = arbre.root.findAllByType(Button)[0];
+    const arbre = rendre({
+      etat: avec(JOURNEE, { ...SEANCE, status: 'in_progress' }),
+      miseAJour: { mutateAsync },
+      navigation: { goBack },
+    });
 
-    expect(bouton.props.title).toBe('training.actions.finishDay');
-    await act(async () => { await bouton.props.onPress(); });
+    await act(async () => { arbre.root.findByType(Button).props.onPress(); });
 
     expect(mutateAsync).toHaveBeenCalledWith({
       payload: { status: 'done' },
       sessionDocumentId: 'seance-9',
     });
-    expect(goBack).toHaveBeenCalledTimes(1);
+    expect(goBack).not.toHaveBeenCalled();
   });
 
-  it('remplace tout bouton par une phrase quand la seance est deja faite', () => {
-    const faite = { ...INSCRIT, sessions: [{ ...SEANCE, status: 'done' }] };
-    const arbre = rendre({ etat: faite });
-
-    expect(arbre.root.findAllByType(Button)).toHaveLength(0);
-    expect(textes(arbre)).toContain('training.day.alreadyDone');
-  });
-
-  it('fait tourner le bouton pendant l envoi', () => {
-    const arbre = rendre({ miseAJour: { isPending: true } });
-
-    expect(arbre.root.findAllByType(Button)[0].props.isLoading).toBe(true);
-  });
-
-  it('affiche quand meme « demarrer » SANS aucune seance — et il ne fait alors RIEN', async () => {
-    // 🪤 Defaut fige tel quel : quand on arrive par `dayId` seul (depuis le
-    // catalogue), aucune seance n'existe, le bouton s'affiche pourtant, et
-    // `start` sort immediatement faute de `documentId`. Un bouton visible qui
-    // n'envoie rien : a trancher a la refonte, pas a corriger ici.
-    const mutateAsync = jest.fn().mockResolvedValue(undefined);
+  it('prend sa TROISIEME forme quand la journee est finie : la porte du carnet', () => {
+    const navigate = jest.fn();
     const arbre = rendre({
-      etat: { ...INSCRIT, sessions: [] },
-      miseAJour: { mutateAsync },
-      route: { params: { dayId: 'jour-b' } },
+      etat: avec(JOURNEE, { ...SEANCE, status: 'done' }),
+      navigation: { navigate },
     });
-    const boutons = arbre.root.findAllByType(Button);
+    const bouton = arbre.root.findByType(Button);
 
-    expect(boutons[0].props.title).toBe('training.actions.startDay');
-    await act(async () => { await boutons[0].props.onPress(); });
-
-    expect(mutateAsync).not.toHaveBeenCalled();
+    expect(bouton.props.title).toBe('training.day.seeMeasures|{"count":6}');
+    act(() => { bouton.props.onPress(); });
+    expect(navigate).toHaveBeenCalledWith('TrainingLogbook');
   });
 });
 
-describe('d ou vient la journee affichee', () => {
-  it('suit le `dayId` de la route quand aucune seance ne correspond', () => {
-    const arbre = rendre({
-      etat: { ...INSCRIT, sessions: [] },
-      route: { params: { dayId: 'jour-b' } },
-    });
+describe('les mots que le pack interdit devant l utilisateur', () => {
+  /**
+   * Toutes les phrases du bloc `training` de `fr.js`, a plat.
+   * @param {any} noeud un objet de traductions ou une chaine
+   * @returns {string[]} les phrases rencontrees
+   */
+  const phrases = (noeud) => {
+    if (typeof noeud === 'string') return [noeud];
+    if (!noeud || typeof noeud !== 'object') return [];
+    return Object.values(noeud).flatMap(phrases);
+  };
 
-    expect(textes(arbre)).toContain('Jour B - Detente');
-  });
+  it('« fraicheur » et « depouiller » ne sont plus dans AUCUNE phrase', () => {
+    const fautives = phrases(fr.training)
+      .filter((p) => /fra[iî]cheur|d[ée]pouill/i.test(p));
 
-  it('retombe sur la journee PORTEE PAR LA SEANCE quand le catalogue ne l a pas', () => {
-    // Le programme ne contient pas cette journee : c'est la copie embarquee
-    // dans la seance qui sert de secours.
-    const secours = {
-      ...INSCRIT,
-      enrollment: { program: { days: [] } },
-      sessions: [{ ...SEANCE, day: { documentId: 'jour-b', title: 'Copie de secours' } }],
-    };
-
-    expect(textes(rendre({ etat: secours }))).toContain('Copie de secours');
+    expect(fautives).toEqual([]);
   });
 });
 
-describe('les vides que l ecran traverse sans rien dire', () => {
-  it('n affiche ABSOLUMENT RIEN quand la journee est introuvable', () => {
-    // ⚠️ Il n'y a NI etat vide NI message d'erreur propre a l'ecran : le
-    // contenu vaut `null`, donc l'utilisateur voit une page blanche. Ce temoin
-    // existe pour que la refonte sache qu'elle comble un trou, pas qu'elle
-    // remplace un message.
-    const arbre = rendre({ etat: { ...INSCRIT, enrollment: null, sessions: [] } });
-
-    expect(textes(arbre)).toEqual([]);
-    expect(arbre.root.findAllByType(TouchableOpacity)).toHaveLength(0);
-    expect(arbre.root.findAllByType(Button)).toHaveLength(0);
+describe('ce qui ne doit jamais faire tomber l ecran', () => {
+  it('traverse une journee introuvable sans exploser', () => {
+    expect(() => rendre({ etat: { ...INSCRIT, enrollment: null, sessions: [] } })).not.toThrow();
   });
 
-  it('tient debout sans route, sans parametres et sans programme', () => {
+  it('traverse une journee sans aucun test', () => {
     const arbre = rendre({
-      etat: {
-        enrollment: undefined, error: null, isLoading: false, refetch: () => {}, sessions: [],
-      },
-      route: undefined,
+      etat: avec({ ...JOURNEE, tests: [] }, { ...SEANCE, status: 'in_progress' }),
     });
 
-    expect(textes(arbre)).toEqual([]);
-  });
-
-  it('tient debout quand le programme rend autre chose qu une liste de journees', () => {
-    // 🪤 Mesure du 2026-09-08 : l'ecran ne tombe pas, mais il ne montre pas non
-    // plus une page blanche — il retombe sur la copie de journee portee par la
-    // seance, qui n'a QUE son identifiant. On obtient une fiche sans titre,
-    // avec ses trois sections vides et son bouton « demarrer ». C'est le pire
-    // des deux mondes, et la refonte doit le savoir.
-    const casse = { ...INSCRIT, enrollment: { program: { days: 'pas-une-liste' } } };
-    const vus = textes(rendre({ etat: casse }));
-
-    expect(vus).not.toContain('Jour B - Detente');
-    expect(vus).toEqual(expect.arrayContaining([
-      'training.day.testsTitle', 'training.actions.startDay',
-    ]));
-  });
-
-  it('tient debout quand la journee n a aucun tableau de tests', () => {
-    const sansTests = { ...JOURNEE, tests: undefined };
-    const arbre = rendre({
-      etat: avecJournee(sansTests),
-    });
-
-    expect(textes(arbre)).toContain('training.day.progress|{"count":1,"done":1,"total":0}');
-  });
-});
-
-describe('ce que l ecran ne dessine PAS lui-meme', () => {
-  it('delegue chargement et erreur a l enveloppe, sans les traiter', () => {
-    // Le crochet est en attente ET en erreur : l'ecran rend malgre tout son
-    // contenu, parce qu'il ne regarde jamais `isLoading` ni `error`. Ces deux
-    // etats appartiennent entierement a `WithDataWrapper`, qui recoit aussi
-    // `refetch` pour son bouton de reprise.
-    const enPanne = { ...INSCRIT, error: new Error('reseau'), isLoading: true };
-
-    expect(textes(rendre({ etat: enPanne }))).toContain('Jour B - Detente');
+    expect(textes(arbre)).toContain('training.day.progress|{"count":0,"done":0,"total":0}');
   });
 });

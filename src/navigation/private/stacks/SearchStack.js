@@ -99,6 +99,15 @@ function SearchStack() {
         getComponent={() => require('@/views/training/TrainingSessions').default}
         name={RouteNames.TrainingSessions}
       />
+      {/*
+        « Comment tu te sens ? » est la BARRIERE posee avant une journee qui
+        mesure. Elle vit ici, dans la pile de l onglet : on y entre depuis la
+        journee et on y revient, ce n est pas un tunnel qui coupe l app.
+      */}
+      <Stack.Screen
+        getComponent={() => require('@/views/training/TrainingFreshness').default}
+        name={RouteNames.TrainingFreshness}
+      />
     </Stack.Navigator>
   );
 }

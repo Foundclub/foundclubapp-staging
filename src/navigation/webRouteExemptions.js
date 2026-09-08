@@ -135,6 +135,9 @@ const MOBILE_ONLY_SCREENS = {
     'TODO(web) journee d entrainement ; attend `SvgXml` au pont web + son entree dans screenRegistry.tsx',
   [RouteNames.TrainingEnrolled]:
     'TODO(web) confirmation d inscription ; attend `SvgXml` au pont web + son entree dans screenRegistry.tsx',
+  [RouteNames.TrainingFreshness]:
+    'TODO(web) les cinq questions de forme ; attend `SvgXml` au pont web'
+    + ' + son entree dans screenRegistry.tsx',
   [RouteNames.TrainingLogbook]:
     'TODO(web) carnet de resultats ; attend `SvgXml` au pont web + son entree dans screenRegistry.tsx',
   [RouteNames.TrainingPlan]:

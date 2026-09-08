@@ -4590,11 +4590,37 @@ export default {
     },
     day: {
       alreadyDone: 'Journée terminée',
-      freshnessRequired: 'Cette journée commence par un contrôle de fraîcheur.',
+      blocks_one: '{{count}} bloc',
+      // Le CODE est le titre de l'\'ecran, pas le nom de la journee : c'\'est
+      // ce qu'\'on cherche au bord du terrain, et ce qui est ecrit sur la feuille
+      // de route du programme.
+      blocks_other: '{{count}} blocs',
+      code: 'Jour {{code}}',
+      computeOnly: 'calcul seul',
+      duration: '{{count}} min',
+      // ⛔ « Contrôle de fraîcheur » a disparu : le pack interdit ce mot devant
+      // l'utilisateur, et il a raison — personne ne parle comme ça. On pose la
+      // question telle qu'on la poserait de vive voix.
+      freshnessAction: 'Répondre aux 5 questions',
+      freshnessRequired: 'Avant de commencer, cinq questions sur ta forme du jour.',
+      heading: '{{date}} · {{place}}',
+      inProgress: 'en cours',
+      lines_one: '{{count}} ligne',
+      lines_other: '{{count}} lignes',
       logbook: 'À noter dans le carnet',
       markers: 'À savoir avant de partir',
+      measures_one: '{{count}} mesure',
+      measures_other: '{{count}} mesures',
+      points_one: '{{count}} point',
+      points_other: '{{count}} points',
       progress_one: '{{done}} test sur {{total}} fait',
       progress_other: '{{done}} tests sur {{total}} faits',
+      seeMeasures_one: 'Voir la mesure au carnet',
+      seeMeasures_other: 'Voir les {{count}} mesures au carnet',
+      tab: {
+        onSite: 'Sur place',
+        prepare: 'Préparer',
+      },
       testsTitle: 'Les tests, dans l\'ordre',
       timeline: 'Le déroulé, minute par minute',
       warmup: 'Échauffement',
@@ -4626,12 +4652,31 @@ export default {
       title: 'C’est dans ton entraînement',
     },
     freshness: {
+      anyway: 'Je la fais quand même',
       decision: {
         go: 'C\'est bon, tu peux y aller.',
         postpone: 'Reporte la séance : une mesure prise fatigué serait fausse.',
         restricted: 'Vas-y, mais arrête les séries lourdes à une répétition de la réserve.',
       },
-      intro: 'Deux minutes, avant de t\'échauffer. C\'est ce qui décide si la séance mesure toi, ou ta fatigue.',
+      // Le titre COURT du verdict, en gros, avec sa couleur. La phrase au-dessus
+      // explique ; ces trois mots-là se lisent d'un coup d'œil.
+      decisionTitle: {
+        go: 'On y va',
+        postpone: 'On reporte',
+        restricted: 'Version allégée',
+      },
+      // Les deux bouts de chaque échelle : sans eux, « 1 » ne veut rien dire. Et
+      // ils changent de sens d'une question à l'autre — 5 en courbatures veut dire
+      // « aucune », 5 en sommeil veut dire « très bon ».
+      ends: {
+        fatigue: { high: 'Frais', low: 'Épuisé' },
+        mood: { high: 'Très bonne', low: 'Très mauvaise' },
+        sleep: { high: 'Très bon', low: 'Très mauvais' },
+        soreness: { high: 'Aucune', low: 'Très douloureux' },
+        stress: { high: 'Serein', low: 'Très tendu' },
+      },
+      intro: 'Réponds assis, avant de sortir le matériel. Tes réponses décident '
+        + 'si la séance a lieu aujourd\'hui.',
       items: {
         fatigue: 'Fatigue',
         mood: 'Humeur',
@@ -4639,6 +4684,8 @@ export default {
         soreness: 'Courbatures',
         stress: 'Stress',
       },
+      postponeAction: 'Reporter ma séance',
+      saveFailed: 'Tes réponses n\'ont pas pu partir. Réessaie.',
       scale: {
         1: 'Très mauvais',
         2: 'Mauvais',
@@ -4646,8 +4693,12 @@ export default {
         4: 'Bon',
         5: 'Très bon',
       },
-      title: 'Contrôle de fraîcheur',
+      start: 'Commencer ma séance',
+      startLight: 'Commencer en version allégée',
+      title: 'Comment tu te sens ?',
       total: 'Total : {{score}} sur 25',
+      totalLabel: 'Total',
+      totalMax: 'sur 25',
     },
     home: {
       countdown_one: 'dans {{count}} jour',
@@ -4737,10 +4788,23 @@ export default {
       today: 'Aujourd’hui',
     },
     postpone: {
-      byDays_one: 'Repousser d’{{count}} jour',
-      byDays_other: 'Repousser de {{count}} jours',
+      // 🪤 i18next choisit `_one` a partir de count=1 : la premiere rangee dit donc
+      // « Demain », pas « Dans 1 jour ». Les deux clefs restent, les deux servent.
+      byDays_one: 'Demain',
+      byDays_other: 'Dans {{count}} jours',
+      chooseDate: 'Choisir une date',
+      confirm: 'Décaler au {{date}}',
+      confirmSkip: 'Sauter cette séance',
+      // LA PHRASE QUI EST TOUT L'INTERET DE LA FEUILLE : elle dit AVANT ce que le
+      // geste change a la date de fin. Sans elle, on decale a l'aveugle.
+      consequence: 'Les séances suivantes se décalent d’autant. '
+        + 'Le programme finira le {{date}}.',
+      consequenceAlone: 'Seule cette séance bouge. La fin du programme ne change pas.',
       hint: 'La date est indicative — tu décides quand.',
       scope: 'Décaler aussi les séances suivantes, pour garder les écarts du programme.',
+      skip: 'Sauter cette séance',
+      skipWarning: 'Elle restera marquée « Sautée ». '
+        + 'Les séances suivantes ne bougent pas.',
       title: 'Décaler la séance du {{date}}',
     },
     program: {

@@ -1,6 +1,7 @@
 import { TouchableOpacity } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
+import Button from '@/components/atoms/button/Button';
 import ClubCardSurface from '@/components/molecules/clubCard/ClubCardSurface';
 import TrainingSessionRow from '@/components/organisms/training/TrainingSessionRow';
 
@@ -236,39 +237,128 @@ describe('la liste des seances a survecu au demenagement', () => {
   });
 });
 
-describe('decaler une seance', () => {
-  it('chaque rangee porte sa propre porte « Decaler »', () => {
+/**
+ * Ouvre la feuille de decalage sur la rangee demandee.
+ * @param {any} arbre l arbre rendu
+ * @param {number} rang la position de la seance dans la liste
+ * @returns {void} rien
+ */
+const ouvrir = (arbre, rang) => {
+  const portes = arbre.root.findAllByType(TouchableOpacity)
+    .filter((n) => JSON.stringify(n.props.style || {}).includes('flex-end'));
+  act(() => { portes[rang].props.onPress(); });
+};
+
+/**
+ * Les quatre rangees de choix de la feuille.
+ * @param {any} arbre l arbre rendu
+ * @returns {any[]} les rangees, dans l ordre du dessin
+ */
+const rangees = (arbre) => arbre.root.findAll((n) => n.type === TouchableOpacity
+  && n.props.accessibilityRole === 'radio');
+
+/**
+ * Le bouton du pied de la feuille.
+ * @param {any} arbre l arbre rendu
+ * @returns {any} le bouton
+ */
+const pied = (arbre) => arbre.root.findByType(Button);
+
+describe('la feuille de decalage', () => {
+  it('chaque rangee de la liste porte sa propre porte, en pastille bordee', () => {
     expect(textes(rendre()).filter((v) => v === 'training.actions.postpone'))
       .toHaveLength(SEANCES.length);
   });
 
-  it('la feuille reste FERMEE tant qu on ne la demande pas', () => {
+  it('reste FERMEE tant qu on ne la demande pas', () => {
     expect(rendre().root.findAllByProps({ testID: 'feuille' })).toHaveLength(0);
   });
 
-  it('elle s ouvre sur la seance choisie, et DIT sa portee reelle', () => {
+  it('s ouvre sur la seance choisie, et porte sa vraie date en titre', () => {
     const arbre = rendre();
-    const portes = arbre.root.findAllByType(TouchableOpacity)
-      .filter((n) => JSON.stringify(n.props.style || {}).includes('flex-end'));
+    ouvrir(arbre, 2);
 
-    act(() => { portes[2].props.onPress(); });
-
-    const vus = textes(arbre);
-    expect(vus).toContain('training.postpone.scope');
-    expect(vus.some((v) => v.startsWith('training.postpone.title'))).toBe(true);
+    const titre = textes(arbre).find((v) => String(v).startsWith('training.postpone.title'));
+    expect(titre).toBeDefined();
+    expect(textes(arbre)).toContain('training.postpone.scope');
   });
 
-  it('repousser envoie la NOUVELLE date, calculee depuis celle de la seance', () => {
+  it('offre QUATRE choix, et pas un de plus', () => {
     const arbre = rendre();
-    const portes = arbre.root.findAllByType(TouchableOpacity)
-      .filter((n) => JSON.stringify(n.props.style || {}).includes('flex-end'));
+    ouvrir(arbre, 0);
 
-    act(() => { portes[0].props.onPress(); });
-    const boutons = arbre.root.findAllByProps({ variant: 'SecondaryLight' })
-      .filter((n) => typeof n.props.onPress === 'function');
-    act(() => { boutons[0].props.onPress(); });
+    const vus = textes(arbre);
+    expect(rangees(arbre)).toHaveLength(4);
+    // « Demain » vient de la forme _one : i18next la choisit a partir de count=1.
+    expect(vus).toContain('training.postpone.byDays|{"count":1}');
+    expect(vus).toContain('training.postpone.byDays|{"count":2}');
+    expect(vus).toContain('training.postpone.chooseDate');
+    expect(vus).toContain('training.postpone.skip');
+  });
 
-    // La 1re seance est prevue le 06/09 ; le premier decalage est de 1 jour.
+  it('ecrit la DATE VISEE a droite de chaque delai', () => {
+    const arbre = rendre();
+    ouvrir(arbre, 0);
+
+    // La 1re seance est prevue le 06/09 : demain c est le 7, dans 2 jours le 8.
+    const vus = textes(arbre);
+    expect(vus).toContain('lun. 7 sept.');
+    expect(vus).toContain('mar. 8 sept.');
+  });
+
+  it('n agit PAS au toucher : le choix se voit d abord', () => {
+    const arbre = rendre();
+    ouvrir(arbre, 0);
+    act(() => { rangees(arbre)[0].props.onPress(); });
+
+    expect(mockDecaler.mutate).not.toHaveBeenCalled();
+    expect(rangees(arbre)[0].props.accessibilityState.selected).toBe(true);
+    expect(rangees(arbre)[1].props.accessibilityState.selected).toBe(false);
+  });
+
+  it('garde le bouton ETEINT tant qu aucun choix n est fait', () => {
+    const arbre = rendre();
+    ouvrir(arbre, 0);
+
+    expect(pied(arbre).props.disabled).toBe(true);
+  });
+
+  it('le bouton du bas DIT ou on va, il ne dit pas « valider »', () => {
+    const arbre = rendre();
+    ouvrir(arbre, 0);
+    act(() => { rangees(arbre)[0].props.onPress(); });
+
+    expect(pied(arbre).props.title).toBe('training.postpone.confirm|{"date":"lun. 7 sept."}');
+  });
+
+  it('ANNONCE la nouvelle date de fin du programme AVANT le geste', () => {
+    const arbre = rendre();
+    ouvrir(arbre, 0);
+    act(() => { rangees(arbre)[0].props.onPress(); });
+
+    // La derniere seance du jeu est au 08/09 ; un decalage d un jour la met au 9.
+    const phrase = textes(arbre)
+      .find((v) => String(v).startsWith('training.postpone.consequence|'));
+    expect(phrase).toContain('mer. 9 sept.');
+  });
+
+  it('dit au contraire que la fin NE BOUGE PAS quand la chaine est decochee', () => {
+    const arbre = rendre();
+    ouvrir(arbre, 0);
+    act(() => {
+      arbre.root.findAllByProps({ accessibilityRole: 'checkbox' })[0].props.onPress();
+    });
+    act(() => { rangees(arbre)[0].props.onPress(); });
+
+    expect(textes(arbre)).toContain('training.postpone.consequenceAlone');
+  });
+
+  it('envoie la NOUVELLE date, calculee depuis celle de la seance', () => {
+    const arbre = rendre();
+    ouvrir(arbre, 0);
+    act(() => { rangees(arbre)[0].props.onPress(); });
+    act(() => { pied(arbre).props.onPress(); });
+
     expect(mockDecaler.mutate).toHaveBeenCalledWith(
       expect.objectContaining({
         payload: { plannedDate: '2026-09-07', shiftFollowing: true },
@@ -279,13 +369,8 @@ describe('decaler une seance', () => {
   });
 
   it('DECALE LES SUIVANTES par defaut : c est ce qui preserve les ecarts du programme', () => {
-    // 🔗 Le programme prescrit des ecarts (« au moins 24 h apres le dernier
-    // entrainement »). Repousser une seule seance les ecrase en silence : la
-    // suivante se retrouve collee a celle qu on vient de bouger.
     const arbre = rendre();
-    const portes = arbre.root.findAllByType(TouchableOpacity)
-      .filter((n) => JSON.stringify(n.props.style || {}).includes('flex-end'));
-    act(() => { portes[0].props.onPress(); });
+    ouvrir(arbre, 0);
 
     const cases = arbre.root.findAllByProps({ accessibilityRole: 'checkbox' });
     expect(cases[0].props.accessibilityState.checked).toBe(true);
@@ -293,31 +378,33 @@ describe('decaler une seance', () => {
 
   it('mais on peut ne bouger QUE cette seance, en decochant', () => {
     const arbre = rendre();
-    const portes = arbre.root.findAllByType(TouchableOpacity)
-      .filter((n) => JSON.stringify(n.props.style || {}).includes('flex-end'));
-    act(() => { portes[0].props.onPress(); });
-    act(() => { arbre.root.findAllByProps({ accessibilityRole: 'checkbox' })[0].props.onPress(); });
-
-    const boutons = arbre.root.findAllByProps({ variant: 'SecondaryLight' })
-      .filter((n) => typeof n.props.onPress === 'function');
-    act(() => { boutons[0].props.onPress(); });
+    ouvrir(arbre, 0);
+    act(() => {
+      arbre.root.findAllByProps({ accessibilityRole: 'checkbox' })[0].props.onPress();
+    });
+    act(() => { rangees(arbre)[1].props.onPress(); });
+    act(() => { pied(arbre).props.onPress(); });
 
     expect(mockDecaler.mutate).toHaveBeenCalledWith(
-      expect.objectContaining({ payload: expect.objectContaining({ shiftFollowing: false }) }),
+      expect.objectContaining({
+        payload: { plannedDate: '2026-09-08', shiftFollowing: false },
+      }),
       expect.anything(),
     );
   });
 
-  it('sauter une seance la marque « skipped », elle ne disparait pas', () => {
+  it('SAUTER N EST PAS REPORTER : aucune date ne part, donc rien ne se decale', () => {
+    // Le decalage en chaine du serveur ne se declenche que sur un changement de
+    // date. Ne pas envoyer `plannedDate` est donc ce qui garantit, dans le tuyau
+    // lui-meme, que les seances suivantes ne bougent pas.
     const arbre = rendre();
-    const portes = arbre.root.findAllByType(TouchableOpacity)
-      .filter((n) => JSON.stringify(n.props.style || {}).includes('flex-end'));
-    act(() => { portes[0].props.onPress(); });
+    ouvrir(arbre, 0);
+    act(() => { rangees(arbre)[3].props.onPress(); });
 
-    const sauter = arbre.root.findAllByProps({ title: 'training.actions.skipSession' })
-      .filter((n) => typeof n.props.onPress === 'function');
-    act(() => { sauter[0].props.onPress(); });
+    expect(textes(arbre)).toContain('training.postpone.skipWarning');
+    expect(pied(arbre).props.title).toBe('training.postpone.confirmSkip');
 
+    act(() => { pied(arbre).props.onPress(); });
     expect(mockDecaler.mutate).toHaveBeenCalledWith(
       expect.objectContaining({
         payload: { status: 'skipped' },
@@ -345,19 +432,18 @@ describe('ce qui ne doit jamais faire tomber l ecran', () => {
     expect(() => rendre({ ...INSCRIT, sessions: undefined })).not.toThrow();
   });
 
-  it('n ouvre rien quand la seance choisie n a pas de date', () => {
+  it('n envoie rien quand la seance choisie n a pas de date', () => {
     const arbre = rendre({
       ...INSCRIT,
       sessions: [{ day: { code: 'X', title: 'Sans date' }, documentId: 'x' }],
     });
-    const portes = arbre.root.findAllByType(TouchableOpacity)
-      .filter((n) => JSON.stringify(n.props.style || {}).includes('flex-end'));
+    ouvrir(arbre, 0);
+    act(() => { rangees(arbre)[0].props.onPress(); });
 
-    act(() => { portes[0].props.onPress(); });
-    const boutons = arbre.root.findAllByProps({ variant: 'SecondaryLight' })
-      .filter((n) => typeof n.props.onPress === 'function');
-    act(() => { boutons[0].props.onPress(); });
-
+    // Sans date de depart, aucun delai ne mene nulle part : le bouton reste
+    // eteint, et l appuyer de force n envoie rien.
+    expect(pied(arbre).props.disabled).toBe(true);
+    act(() => { pied(arbre).props.onPress(); });
     expect(mockDecaler.mutate).not.toHaveBeenCalled();
   });
 });

@@ -200,6 +200,7 @@ export const RouteNames = /** @type {const} */ ({
   TrainingCatalog: 'TrainingCatalog',
   TrainingDay: 'TrainingDay',
   TrainingEnrolled: 'TrainingEnrolled',
+  TrainingFreshness: 'TrainingFreshness',
   TrainingLogbook: 'TrainingLogbook',
   TrainingPlan: 'TrainingPlan',
   TrainingProgramDetail: 'TrainingProgramDetail',
