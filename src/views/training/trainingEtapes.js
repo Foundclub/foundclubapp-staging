@@ -60,6 +60,7 @@ const mesuresAttendues = (test, essai) => {
  * TOUTES LES ÉTAPES D'UNE JOURNÉE, dans l'ordre où on les fait.
  * @param {Record<string, any>} day la journée du programme, avec ses tests
  * @param {Record<string, any>[]} resultats les lignes déjà saisies pour cette séance
+ * @param {string[]} [franchies] les clés d'étapes notées par le parcours guidé
  * @returns {Record<string, any>[]} les étapes, chacune avec son état
  */
 export const etapesDuJour = (day, resultats, franchies) => {

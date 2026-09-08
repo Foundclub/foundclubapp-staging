@@ -245,7 +245,6 @@ function TrainingVideoEntry({ navigation, route }) {
    * « vitesse illisible (ballon hors image entre les plots) : **le score reste, la
    * vitesse est notée "—"** ». Une case par essai jetterait donc un score valide.
    * ⇒ Ici, on annule **la mesure courante SEULE**, jamais l'essai entier.
-   *
    * @returns {void} rien
    */
   const illisible = useCallback(() => {
