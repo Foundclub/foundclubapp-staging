@@ -52,6 +52,7 @@
     "date-fns": "^4.1.0",
     "firebase": "^12.11.0",
     "i18next": "25.4.1",
+    "intl-pluralrules": "^2.0.1",
     "joi": "^17.13.3",
     "leaflet": "^1.9.4",
     "libphonenumber-js": "^1.12.6",

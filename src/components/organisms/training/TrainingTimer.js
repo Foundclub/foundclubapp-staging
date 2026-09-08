@@ -6,7 +6,10 @@ import {
   Text, TouchableOpacity, Vibration, View,
 } from 'react-native';
 
+import { withAlpha } from '@/theme/colors';
 import useTheme from '@/theme/themeContext';
+
+import TrainingProgressBar from '@/components/organisms/training/TrainingProgressBar';
 
 import useSafeTimers from '@/hooks/useSafeTimers';
 
@@ -44,11 +47,16 @@ const format = (seconds) => {
  * arrêt, remise à zéro), en relisant l'horloge au lieu de décrémenter un compteur.
  * @param {object} props
  * @param {number} props.seconds durée de récupération prescrite
+ * @param {boolean} [props.autoStart] démarre tout seul à l'affichage
+ * @param {number[]} [props.presets] les durées proposées d'un geste, en secondes
+ * @param {(seconds: number) => void} [props.onPick] retient la durée choisie
  * @param {string} [props.label] ce qu'on attend pendant ce temps
  * @param {() => void} [props.onDone] appelé une fois, quand le compte atteint zéro
  * @returns {React.ReactElement}
  */
-function TrainingTimer({ label, onDone, seconds }) {
+function TrainingTimer({
+  autoStart = false, label, onDone, onPick, presets, seconds,
+}) {
   const { Colors, Fonts, Spaces } = useTheme();
   const { t } = useTranslation();
   const { clearSafeTimer, setSafeInterval } = useSafeTimers();
@@ -102,16 +110,42 @@ function TrainingTimer({ label, onDone, seconds }) {
   useEffect(() => () => stop(), [stop]);
   useEffect(() => { setRemaining(seconds); }, [seconds]);
 
+  /**
+   * ⏱️ LE DÉPART TOUT SEUL, sur les écrans de récupération.
+   *
+   * 🪤 C'est la seule différence qui compte entre un chronomètre et une
+   * récupération : une récupération qu'il faut penser à lancer ne se lance pas.
+   * On sort de l'essai en soufflant, le téléphone à la main, et on le pose — le
+   * compte doit déjà tourner. Il ne part qu'UNE fois : le relancer à chaque
+   * rendu remettrait le compteur à zéro pendant qu'on souffle.
+   */
+  const demarreRef = useRef(false);
+  useEffect(() => {
+    if (!autoStart || demarreRef.current) return;
+    demarreRef.current = true;
+    start();
+  }, [autoStart, start]);
+
   const finished = remaining <= 0 && !running;
   const color = finished ? Colors.success500 : Colors.neutral00;
+  // La barre se VIDE : elle part pleine et rétrécit. Une barre qui se remplit
+  // dirait « avancement », pas « temps restant » — et sur un terrain on lit la
+  // forme avant le chiffre.
+  const reste = Math.max(0, Math.min(1, seconds ? remaining / seconds : 0));
 
   return (
     <View
       style={[
         Spaces.gap[8],
         {
-          backgroundColor: Colors.neutral800,
-          borderColor: running ? Colors.primary500 : Colors.neutral600,
+          // ⏰ LE FOND PASSE AU VERT QUAND CA SONNE. On ne regarde pas le
+          // telephone pendant une recuperation : on le pose. Ce qui doit
+          // rattraper l oeil, c est un aplat de couleur, pas un chiffre.
+          backgroundColor: finished ? withAlpha(Colors.success500, 0.15) : Colors.neutral800,
+          borderColor: (() => {
+            if (finished) return Colors.success500;
+            return running ? Colors.primary500 : Colors.neutral600;
+          })(),
           borderRadius: 10,
           borderWidth: 1,
           padding: 12,
@@ -122,8 +156,55 @@ function TrainingTimer({ label, onDone, seconds }) {
         {label || t('training.timer.recovery')}
       </Text>
 
+      {/*
+        🪤 LES PASTILLES DISPARAISSENT PENDANT QUE LE COMPTE TOURNE. On ne change
+        pas de durée en cours de récupération, et un appui malheureux remettrait
+        le compteur à zéro au milieu du repos — donc fausserait l essai suivant.
+      */}
+      {Array.isArray(presets) && !running && !finished && (
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+          {presets.map((valeur) => (
+            <TouchableOpacity
+              accessibilityRole="button"
+              accessibilityState={{ selected: seconds === valeur }}
+              key={valeur}
+              onPress={() => typeof onPick === 'function' && onPick(valeur)}
+              style={{
+                backgroundColor: seconds === valeur ? Colors.primary500 : 'transparent',
+                borderColor: seconds === valeur ? Colors.primary500 : Colors.neutral600,
+                borderRadius: 8,
+                borderWidth: 1,
+                paddingHorizontal: 10,
+                paddingVertical: 6,
+              }}
+            >
+              <Text style={[Fonts.caption, {
+                color: seconds === valeur ? Colors.neutral00 : Colors.neutral300,
+              }]}
+              >
+                {valeur >= 60 ? `${valeur / 60} min` : `${valeur} s`}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      )}
+
       <View style={{ alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between' }}>
-        <Text style={[Fonts.h2Bold, { color, fontVariant: ['tabular-nums'] }]}>
+        {/*
+          72 points : on lit ce chiffre a bout de bras, pose par terre, entre deux
+          sauts. A la taille courante il fallait se pencher — donc on ne le
+          regardait pas, donc la minuterie ne servait a rien.
+        */}
+        <Text style={[
+          Fonts.h2Bold,
+          {
+            color,
+            fontSize: finished ? 32 : 72,
+            fontVariant: ['tabular-nums'],
+            lineHeight: finished ? 38 : 78,
+          },
+        ]}
+        >
           {finished ? t('training.timer.done') : format(remaining)}
         </Text>
 
@@ -166,6 +247,20 @@ function TrainingTimer({ label, onDone, seconds }) {
           </TouchableOpacity>
         </View>
       </View>
+
+      <TrainingProgressBar
+        color={finished ? Colors.success500 : Colors.primary500}
+        ratio={finished ? 1 : reste}
+      />
+
+      {/* Ce que le téléphone fera À LA FIN, écrit avant la fin : sans cette
+          ligne, on garde l'écran allumé pour ne pas rater le zéro — alors que
+          deux vibrations suffisent, et qu'on peut ranger le téléphone. */}
+      {finished ? null : (
+        <Text style={[Fonts.caption, { color: Colors.neutral400 }]}>
+          {t('training.timer.endsWith')}
+        </Text>
+      )}
     </View>
   );
 }

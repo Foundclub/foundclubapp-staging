@@ -12,6 +12,9 @@ import { getErrorMessage } from '@/utils/errors/displayError';
  * @param {object} props
  * @param {import('react').ReactNode} props.children
  * @param {unknown} props.error
+ * @param {string} [props.message] - Le message de CET ecran. Sans lui, on retombe
+ *   sur le message generique tire de l erreur — utile pour un imprevu, mais muet
+ *   sur ce que la personne peut faire. Les ecrans qui savent quoi dire le disent.
  * @param {Array<import('react-native').ViewStyle>} [props.wrapperStyle]
  * @param {() => void} [props.onRetry] - Optional retry handler. When omitted,
  * the rendering is strictly identical to the previous behaviour.
@@ -21,6 +24,7 @@ import { getErrorMessage } from '@/utils/errors/displayError';
 function ErrorWrapper({
   children,
   error,
+  message = undefined,
   onRetry = undefined,
   retryLabel = 'Réessayer',
   wrapperStyle = [],
@@ -89,7 +93,7 @@ function ErrorWrapper({
               { width: childrenDimensions.width - 48 },
             ]}
           >
-            {getErrorMessage(error)}
+            {message || getErrorMessage(error)}
           </Text>
           {onRetry ? (
             <View style={Spaces.marginTop[12]}>

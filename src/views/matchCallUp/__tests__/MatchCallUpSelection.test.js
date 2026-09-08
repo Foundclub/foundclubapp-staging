@@ -58,7 +58,11 @@ jest.mock('react-i18next', () => {
         const compte = options?.count;
         let valeur = lire(cle);
         if (typeof valeur !== 'string' && compte !== undefined) {
-          valeur = lire(`${cle}${compte === 1 ? '_one' : '_other'}`);
+          // 🔤 LA REGLE FRANCAISE : zero ET un prennent le singulier. Ce double
+          // appliquait la regle anglaise (1 seul) — il decrivait donc un ecran
+          // que l app ne montre plus depuis qu elle embarque `intl-pluralrules`
+          // (2026-09-08). Un double qui ment est pire qu un double absent.
+          valeur = lire(`${cle}${compte === 0 || compte === 1 ? '_one' : '_other'}`);
         }
         if (typeof valeur !== 'string') return cle;
         return valeur.replace(/{{(\w+)}}/g, (_correspondance, nom) => (
@@ -311,7 +315,9 @@ describe('D77 ecran 1 — selection des convoques', () => {
     const arbre = await rendre();
     const texte = texteVisible(arbre);
 
-    expect(texte).toContain('0 convoqués');
+    // 🔤 « 0 convoqué », au SINGULIER : c est la regle francaise, et c est ce que
+    // l app affiche depuis qu elle embarque `intl-pluralrules` (2026-09-08).
+    expect(texte).toContain('0 convoqué');
     // Masque si zero : pas de « 0 titulaires » en vitrine.
     expect(texte).not.toContain('titulaires ·');
   });
@@ -676,7 +682,7 @@ describe('D84 — la barre du bas reste atteignable, quel que soit l effectif', 
     expect(texteDuNoeud(defilant)).not.toContain('Suivant');
     expect(texteDuNoeud(defilant)).not.toContain('convoqués');
     expect(texteDuNoeud(racine)).toContain('Suivant');
-    expect(texteDuNoeud(racine)).toContain('0 convoqués');
+    expect(texteDuNoeud(racine)).toContain('0 convoqué');
   });
 
   test('⛔ la barre n est PAS une surimpression, et son plancher bas n est pas zero', async () => {

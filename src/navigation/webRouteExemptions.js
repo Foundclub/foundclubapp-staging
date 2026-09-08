@@ -133,14 +133,38 @@ const MOBILE_ONLY_SCREENS = {
     'TODO(web) catalogue des programmes ; attend `SvgXml` au pont web + son entree dans screenRegistry.tsx',
   [RouteNames.TrainingDay]:
     'TODO(web) journee d entrainement ; attend `SvgXml` au pont web + son entree dans screenRegistry.tsx',
+  [RouteNames.TrainingEnrolled]:
+    'TODO(web) confirmation d inscription ; attend `SvgXml` au pont web '
+    + '+ son entree dans screenRegistry.tsx',
+  [RouteNames.TrainingFreshness]:
+    'TODO(web) les cinq questions de forme ; attend `SvgXml` au pont web'
+    + ' + son entree dans screenRegistry.tsx',
+  [RouteNames.TrainingGuided]:
+    'TODO(web) le parcours guide d un test ; attend `SvgXml` au pont web'
+    + ' + son entree dans screenRegistry.tsx',
   [RouteNames.TrainingLogbook]:
     'TODO(web) carnet de resultats ; attend `SvgXml` au pont web + son entree dans screenRegistry.tsx',
   [RouteNames.TrainingPlan]:
     'TODO(web) plan « mon entrainement » ; attend `SvgXml` au pont web + son entree dans screenRegistry.tsx',
   [RouteNames.TrainingProgramDetail]:
     'TODO(web) fiche d un programme ; attend `SvgXml` au pont web + son entree dans screenRegistry.tsx',
+  [RouteNames.TrainingSchema]:
+    'TODO(web) le schema en grand ; attend `SvgXml` au pont web'
+    + ' + son entree dans screenRegistry.tsx',
+  [RouteNames.TrainingSessionNow]:
+    'TODO(web) le tableau de bord d une seance en cours ; attend `SvgXml` au pont web'
+    + ' + son entree dans screenRegistry.tsx',
+  [RouteNames.TrainingSessions]:
+    'TODO(web) toutes mes seances ; attend `SvgXml` au pont web '
+    + '+ son entree dans screenRegistry.tsx',
   [RouteNames.TrainingTest]:
     'TODO(web) fiche d un test ; attend `SvgXml` au pont web + son entree dans screenRegistry.tsx',
+  [RouteNames.TrainingVideoEntry]:
+    'TODO(web) le releve d un essai ; attend `SvgXml` au pont web'
+    + ' + son entree dans screenRegistry.tsx',
+  [RouteNames.TrainingVideoQueue]:
+    'TODO(web) la file des releves video ; attend `SvgXml` au pont web'
+    + ' + son entree dans screenRegistry.tsx',
 
   // --- Alias interne de navigateur ---
   // Accueil du membre connecte (HomeHub), initialRouteName de SearchStack. Depuis le

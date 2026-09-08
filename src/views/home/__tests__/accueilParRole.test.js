@@ -136,6 +136,15 @@ const accueilDe = (role) => {
   // il OTE les cases du masque, et il AJOUTE une case en tete de « Rechercher ».
   // La section League tombe a zero carte ; `HomeSection` ne rend alors ni son
   // titre ni son rayon (`if (!cards.length) return null`).
+  //
+  // 🤝 RESOLU A LA FUSION DU 2026-09-08, et les DEUX promesses sont tenues :
+  //  · celle du lot PARENT P0 — le parent ne recoit PAS la section Entrainement ;
+  //    son accueil est bati autour de son enfant. Choix du chef d orchestre,
+  //    reversible, et je ne l ai pas touche.
+  //  · celle du lot PERF — pour TOUS LES AUTRES roles, « Entrainement » est la
+  //    DERNIERE section (decision d Adel : « tout en bas, c est en bonus »).
+  // Les deux ne parlent pas de la meme chose : l une dit QUI la voit, l autre OU
+  // elle se pose. Elles se cumulent sans se contredire.
   if (role === 'parent') {
     const horsMasque = (/** @type {string} */ clef) => !MASQUEES_AU_PARENT.includes(clef);
 
@@ -148,7 +157,12 @@ const accueilDe = (role) => {
     ];
   }
 
-  return [gerer, SECTIONS.training, rechercher, SECTIONS.league, profil, SECTIONS.account];
+  // ⚠️ Ce temoin fabrique l ordre LUI-MEME a partir des corps de memo : il ne lit
+  // PAS le JSX. Il ne peut donc pas attraper un deplacement dans le rendu — c est
+  // justement pourquoi cette ligne et les tableaux ci-dessous doivent etre
+  // corriges A LA MAIN quand une section bouge, sinon ils restent VERTS en
+  // decrivant un ecran faux.
+  return [gerer, rechercher, SECTIONS.league, profil, SECTIONS.account, SECTIONS.training];
 };
 
 /**
@@ -162,11 +176,11 @@ const toutesLesCartes = (role) => accueilDe(role).flat();
 const ATTENDU = {
   coach: [
     ['manage-club', 'manage-requests', 'manage-add-event', 'manage-add-ad', 'manage-my-ads', 'manage-licenses'],
-    ['training-mine', 'training-find'],
     ['search-events', 'search-clubs', 'search-reservations', 'search-profiles', 'search-amicaux'],
     ['league-entry'],
     ['profile-subscription', 'profile-view', 'profile-edit', 'profile-history', 'profile-alerts', 'profile-license'],
     ['account-switch', 'account-logout'],
+    ['training-mine', 'training-find', 'training-logbook'],
   ],
   // PARENT — 8 cases, contre 13 au joueur. Ce que le lot P0 lui retire :
   // « Offres de recrutement », « Mes reponses », « Matchs amicaux », League,
@@ -181,41 +195,40 @@ const ATTENDU = {
   ],
   player: [
     [],
-    ['training-mine', 'training-find'],
     ['search-events', 'search-clubs', 'search-reservations', 'search-ads', 'search-my-activities', 'search-amicaux'],
     ['league-entry'],
     ['profile-view', 'profile-history', 'profile-alerts', 'profile-license'],
     ['account-switch', 'account-logout'],
+    ['training-mine', 'training-find', 'training-logbook'],
   ],
   president: [
     ['manage-club', 'manage-requests', 'manage-add-event', 'manage-add-ad', 'manage-my-ads', 'manage-licenses'],
-    ['training-mine', 'training-find'],
     ['search-events', 'search-clubs', 'search-reservations', 'search-profiles', 'search-amicaux'],
     ['league-entry'],
     ['profile-subscription', 'profile-view', 'profile-edit', 'profile-history', 'profile-alerts', 'profile-license'],
     ['account-switch', 'account-logout'],
+    ['training-mine', 'training-find', 'training-logbook'],
   ],
   superAdmin: [
     ['admin-triage', 'admin-users-clubs', 'admin-dashboard', 'admin-league'],
-    ['training-mine', 'training-find'],
     ['search-events', 'search-clubs', 'search-reservations', 'search-ads', 'search-my-activities', 'search-amicaux'],
     ['league-entry'],
     ['profile-view', 'profile-edit', 'profile-history', 'profile-alerts'],
     ['account-switch', 'account-logout'],
+    ['training-mine', 'training-find', 'training-logbook'],
   ],
 };
 
 describe('D72 — critere 1 : le bon nombre de cases, dans le bon ordre', () => {
   it.each([
-    // RECOLTE 2026-09-08 : les comptes viennent de PERF (chacun +2 pour la section
-    // « Entrainement »), et « parent » vient du lot P0. Le parent ne recoit PAS la
-    // section Entrainement : son accueil est bati autour de son enfant, pas autour de
-    // sa propre preparation physique. Choix du chef d orchestre a la fusion, reversible.
-    ['president', 22],
-    ['coach', 22],
-    ['player', 15],
+    // RECOLTE 2026-09-08 : les comptes viennent de PERF, et « parent » du lot P0.
+    // Le parent ne recoit PAS la section Entrainement (choix du chef d orchestre a
+    // la fusion, reversible) ; les autres roles la recoivent, EN DERNIER.
+    ['president', 23],
+    ['coach', 23],
+    ['player', 16],
     ['parent', 8],
-    ['superAdmin', 19],
+    ['superAdmin', 20],
   ])('%s affiche exactement %i cartes', (role, attendu) => {
     expect(toutesLesCartes(/** @type {any} */ (role))).toHaveLength(attendu);
   });

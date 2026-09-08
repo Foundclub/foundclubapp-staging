@@ -23,6 +23,12 @@ const buttonOptionStyle = {
  * @inheritdoc
  */
 const getStyle = (colors) => ({
+  buttonDanger: {
+    ...buttonCommonStyle,
+    backgroundColor: 'transparent',
+    borderColor: colors.error500,
+    borderWidth: 1,
+  },
   buttonDisabled: {
     opacity: 0.5,
   },
@@ -46,15 +52,16 @@ const getStyle = (colors) => ({
     padding: 0,
     width: 44,
   },
+
   buttonPrimary: {
     ...buttonCommonStyle,
     backgroundColor: colors.primary500,
   },
-
   buttonPrimaryLight: {
     ...buttonCommonStyle,
     backgroundColor: colors.primary200,
   },
+
   buttonPrimaryLightOption: {
     ...buttonOptionStyle,
     backgroundColor: colors.primary200,
@@ -64,13 +71,13 @@ const getStyle = (colors) => ({
     ...buttonOptionStyle,
     backgroundColor: colors.primary500,
   },
-
   buttonSecondary: {
     ...buttonCommonStyle,
     backgroundColor: 'transparent',
     borderColor: colors.primary500,
     borderWidth: 1,
   },
+
   buttonSecondaryLight: {
     ...buttonCommonStyle,
     backgroundColor: 'transparent',
@@ -109,6 +116,15 @@ const getStyle = (colors) => ({
 
   buttonTextSecondaryLight: {
     color: colors.primary200,
+  },
+
+  // 🔴 L HABIT DES GESTES QU ON NE VEUT PAS FAIRE PAR ERREUR — quitter un
+  // programme, effacer, abandonner. Il n existait pas : la boite ne connaissait
+  // que cinq habits, tous bleus ou transparents, et un ecran qui voulait du
+  // rouge devait le peindre a la main. Ajout PUREMENT ADDITIF : aucun bouton
+  // existant ne change d apparence.
+  buttonTextDanger: {
+    color: colors.error500,
   },
 
 });

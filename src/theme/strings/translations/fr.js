@@ -2440,7 +2440,7 @@ export default {
       // comparaison des ENSEMBLES de clefs, pas le compte de lignes).
       quickNav: 'Navigation rapide',
       search: 'Rechercher',
-      training: 'Entraînement',
+      training: 'Mon entraînement',
     },
     title: 'Accueil',
   },
@@ -2806,6 +2806,7 @@ export default {
         subtitle: 'Le jeton colle au poste le plus proche. Tu peux toujours le poser où tu veux.',
         title: 'Aimanter aux postes',
       },
+      noFormationForSport: 'Ce sport n’a pas encore de disposition de terrain — place tes joueurs librement.',
       options: {
         default_composition: {
           subtitle: 'Le modèle par défaut de {{teamName}}.',
@@ -2821,7 +2822,6 @@ export default {
           title: 'Dernier match',
         },
       },
-      noFormationForSport: 'Ce sport n’a pas encore de disposition de terrain — place tes joueurs librement.',
       preview: 'Aperçu',
       previewEmpty: 'Tout le monde part du banc.',
       progress: '{{current}}/{{total}}',
@@ -4555,18 +4555,33 @@ export default {
       nextTest: 'Test suivant',
       openDay: 'Ouvrir la journée',
       openProgram: 'Voir le programme',
+      postpone: 'Décaler',
+      prepare: 'Préparer ma séance',
       previous: 'Précédent',
       resume: 'Reprendre',
       retry: 'Réessayer',
       save: 'Enregistrer',
       seeAll: 'Tout voir',
+      skipSession: 'Sauter cette séance',
       startDay: 'Commencer la journée',
+      startNow: 'Commencer maintenant',
+      startSession: 'Commencer ma séance',
       startTest: 'Commencer le test',
       sync: 'Envoyer les mesures',
       watchVideo: 'Voir le geste',
     },
+    attempt: {
+      reason: 'Pourquoi cet essai est nul',
+      title: 'Essai {{current}} sur {{total}}',
+      // ⛔ Pas une petite croix : une rangee entiere. Une croix de douze points au
+      // bout d un champ se rate avec les doigts froids, et surtout elle se lit
+      // comme « effacer » alors qu elle veut dire « garder, mais nul ».
+      void: 'Essai nul — je le garde au carnet',
+    },
     catalog: {
+      demands: '{{places}} · de {{min}} à {{max}} min par séance',
       empty: {
+        action: 'Revenir',
         description: 'Aucun entraînement n\'est publié pour le moment. Reviens bientôt.',
         title: 'Rien à afficher',
       },
@@ -4574,27 +4589,120 @@ export default {
         description: 'Les entraînements n\'ont pas pu être chargés.',
         title: 'Connexion impossible',
       },
+      legend_one: 'Un seul programme est publié pour l’instant. Tu suis un programme '
+        + 'à la fois — il s’ajoute dans « Mon entraînement ».',
+      legend_other: 'Tu suis un programme à la fois — il s’ajoute dans '
+        + '« Mon entraînement ».',
+      published_one: 'Publié · {{count}} programme',
+      published_other: 'Publiés · {{count}} programmes',
+      rhythm: '{{sessions}} rendez-vous sur {{days}} jours',
+      seeDetail: 'Voir le détail',
+      stat: {
+        days: 'journées',
+        level: 'niveau',
+        tests: 'tests',
+      },
       subtitle: 'Choisis un entraînement, il apparaîtra dans « Mon entraînement ».',
-      title: 'Rechercher un entraînement',
+      title: 'Choisir un entraînement',
     },
     day: {
       alreadyDone: 'Journée terminée',
-      freshnessRequired: 'Cette journée commence par un contrôle de fraîcheur.',
+      blocks_one: '{{count}} bloc',
+      // Le CODE est le titre de l'\'ecran, pas le nom de la journee : c'\'est
+      // ce qu'\'on cherche au bord du terrain, et ce qui est ecrit sur la feuille
+      // de route du programme.
+      blocks_other: '{{count}} blocs',
+      code: 'Jour {{code}}',
+      computeOnly: 'calcul seul',
+      duration: '{{count}} min',
+      // ⛔ « Contrôle de fraîcheur » a disparu : le pack interdit ce mot devant
+      // l'utilisateur, et il a raison — personne ne parle comme ça. On pose la
+      // question telle qu'on la poserait de vive voix.
+      freshnessAction: 'Répondre aux 5 questions',
+      freshnessRequired: 'Avant de commencer, cinq questions sur ta forme du jour.',
+      heading: '{{date}} · {{place}}',
+      inProgress: 'en cours',
+      later: 'Je la ferai {{date}}',
+      lines_one: '{{count}} ligne',
+      lines_other: '{{count}} lignes',
       logbook: 'À noter dans le carnet',
       markers: 'À savoir avant de partir',
+      measures_one: '{{count}} mesure',
+      measures_other: '{{count}} mesures',
+      points_one: '{{count}} point',
+      points_other: '{{count}} points',
+      // Le seul compteur de l ecran comptait les TESTS faits pendant la seance.
+      // Celui-ci compte les PREPARATIFS, la veille : ce n est pas le meme geste,
+      // ni le meme moment.
+      prepared_one: '{{done}} faite sur {{total}}',
+      prepared_other: '{{done}} faites sur {{total}}',
       progress_one: '{{done}} test sur {{total}} fait',
       progress_other: '{{done}} tests sur {{total}} faits',
+      seeMeasures_one: 'Voir la mesure au carnet',
+      seeMeasures_other: 'Voir les {{count}} mesures au carnet',
+      tab: {
+        onSite: 'Sur place',
+        prepare: 'Préparer',
+      },
       testsTitle: 'Les tests, dans l\'ordre',
       timeline: 'Le déroulé, minute par minute',
       warmup: 'Échauffement',
     },
+    enroll: {
+      confirm: 'Ajouter à mon entraînement',
+      consequence: 'Les {{sessions}} séances seront planifiées à partir de cette date, '
+        + 'sur {{days}} jours. Tu pourras décaler chacune, ou en commencer une autre.',
+      custom: 'Choisir une date',
+      notNow: 'Pas maintenant',
+      pickDate: 'La date de ta première séance',
+      today: 'Aujourd’hui',
+      tomorrow: 'Demain',
+      until: '{{start}} — fin le {{end}}',
+      when: 'Quand veux-tu commencer ?',
+    },
+    enrolled: {
+      before: {
+        partner: 'Trouve un partenaire : il filme et chronomètre à chaque séance.',
+        phone: 'Charge un smartphone qui filme en 240 images par seconde.',
+        title: 'Avant la première séance',
+        tripod: 'Prépare un trépied — les mesures se lisent sur des vidéos stables.',
+      },
+      // 🐞 AUCUN POINT FINAL APRES UNE DATE : en francais, une date abregee se
+      // termine deja par un point (« dim. 20 sept. »). On lisait « … au dim.
+      // 20 sept.. » a l ecran. Meme correction que la feuille « Décaler ».
+      firstSession: 'Ça commence par {{day}}, le {{date}}',
+      later: 'Plus tard',
+      recap_one: '{{program}} — {{count}} séance planifiée du {{start}} au {{end}}',
+      recap_other: '{{program}} — {{count}} séances planifiées du {{start}} au {{end}}',
+      seeSessions: 'Voir mes séances',
+      title: 'C’est dans ton entraînement',
+    },
     freshness: {
+      anyway: 'Je la fais quand même',
       decision: {
         go: 'C\'est bon, tu peux y aller.',
         postpone: 'Reporte la séance : une mesure prise fatigué serait fausse.',
         restricted: 'Vas-y, mais arrête les séries lourdes à une répétition de la réserve.',
       },
-      intro: 'Deux minutes, avant de t\'échauffer. C\'est ce qui décide si la séance mesure toi, ou ta fatigue.',
+      // Le titre COURT du verdict, en gros, avec sa couleur. La phrase au-dessus
+      // explique ; ces trois mots-là se lisent d'un coup d'œil.
+      decisionTitle: {
+        go: 'On y va',
+        postpone: 'On reporte',
+        restricted: 'Version allégée',
+      },
+      // Les deux bouts de chaque échelle : sans eux, « 1 » ne veut rien dire. Et
+      // ils changent de sens d'une question à l'autre — 5 en courbatures veut dire
+      // « aucune », 5 en sommeil veut dire « très bon ».
+      ends: {
+        fatigue: { high: 'Frais', low: 'Épuisé' },
+        mood: { high: 'Très bonne', low: 'Très mauvaise' },
+        sleep: { high: 'Très bon', low: 'Très mauvais' },
+        soreness: { high: 'Aucune', low: 'Très douloureux' },
+        stress: { high: 'Serein', low: 'Très tendu' },
+      },
+      intro: 'Réponds assis, avant de sortir le matériel. Tes réponses décident '
+        + 'si la séance a lieu aujourd\'hui.',
       items: {
         fatigue: 'Fatigue',
         mood: 'Humeur',
@@ -4602,6 +4710,8 @@ export default {
         soreness: 'Courbatures',
         stress: 'Stress',
       },
+      postponeAction: 'Reporter ma séance',
+      saveFailed: 'Tes réponses n\'ont pas pu partir. Réessaie.',
       scale: {
         1: 'Très mauvais',
         2: 'Mauvais',
@@ -4609,34 +4719,133 @@ export default {
         4: 'Bon',
         5: 'Très bon',
       },
-      title: 'Contrôle de fraîcheur',
+      start: 'Commencer ma séance',
+      startLight: 'Commencer en version allégée',
+      title: 'Comment tu te sens ?',
       total: 'Total : {{score}} sur 25',
+      totalLabel: 'Total',
+      totalMax: 'sur 25',
+    },
+    guided: {
+      attemptsSummary_one: '{{done}} essai bon sur {{total}} · {{voided}} nul',
+      attemptsSummary_other: '{{done}} essais bons sur {{total}} · {{voided}} nuls',
+      betweenTests: '{{count}} s avant {{test}}',
+      checkTest: '{{test}} — vérifie avant de valider',
+      doneTest: '{{test}} fait',
+      // Le bouton unique du bas change de mot selon l arret : c est ce qui dit
+      // toujours ou on va, au lieu d un « Suivant » qui ne dit rien.
+      endHint: 'Valider ferme le test et propose le suivant. Finir plus tard le laisse '
+        + 'ouvert : tu peux y revenir depuis ta séance.',
+      finishLater: 'Finir plus tard',
+      gesture: 'Le geste',
+      go: {
+        attempt: 'Enregistrer et récupérer',
+        prep: 'Tout est en place',
+        recovery: 'Commencer l’essai {{count}}',
+        warmup: 'Commencer l’essai 1',
+      },
+      judgedLater: 'Les critères qui se voient sur la vidéo se jugent le soir, pas ici.',
+      missing_one: 'Il reste {{count}} mesure à noter pour cet essai.',
+      missing_other: 'Il reste {{count}} mesures à noter pour cet essai.',
+      next: 'Ensuite',
+      nextTest: 'Test suivant',
+      prepHint: 'Ton partenaire compte à voix haute et filme ; toi, tu ne regardes '
+        + 'plus l’écran.',
+      prescribed: 'Prescrite : {{count}} s entre tentatives',
+      redo: 'Refaire l’essai {{count}}',
+      saved: 'Essai {{current}} enregistré',
+      skipTest: 'Passer ce test aujourd’hui',
+      stopHere: 'Arrêter le test ici',
+      validate: 'Valider — {{test}} fait',
+      videoLater_one: '{{count}} mesure se lira sur ta vidéo, plus tard.',
+      videoLater_other: '{{count}} mesures se liront sur ta vidéo, plus tard.',
+      videoQueue_one: '{{count}} mesure t’attend dans Relevés vidéo',
+      videoQueue_other: '{{count}} mesures t’attendent dans Relevés vidéo',
+      warmupHint: 'Le protocole complet reste lisible dans « Comprendre ». Ici, '
+        + 'seulement ce que tu fais maintenant.',
+      whatWeMeasure: 'Ce qu’on mesure',
+      why: 'Pourquoi ?',
     },
     home: {
+      countdown_one: 'dans {{count}} jour',
+      countdown_other: 'dans {{count}} jours',
       findCard: {
         subtitle: 'Les programmes publiés',
-        title: 'Rechercher un entraînement',
+        title: 'Choisir un entraînement',
+      },
+      logbookCard: {
+        subtitle: 'Toutes tes mesures, prêtes à coller.',
+        title: 'Mon carnet',
       },
       myCard: {
-        emptySubtitle: 'Choisis un entraînement pour commencer',
-        subtitle: '{{day}} · {{date}}',
-        title: 'Mon entraînement',
+        emptySubtitle: 'Un protocole de tests athlétiques, avec un partenaire, '
+          + 'sur plusieurs journées.',
+        emptyTitle: 'Choisir un entraînement',
+        // Le lieu et la durée viennent du serveur ; le compte de préparatifs n'apparaît
+        // que si la journée en porte, sinon la phrase se coupe d'elle-même.
+        subtitle: '{{day}} · {{place}} · {{duration}} min',
+        title: '{{program}} — {{day}} {{countdown}}',
+        today: 'aujourd’hui',
+        tomorrow: 'demain',
+        toPrepare_one: '{{count}} chose à préparer d’ici là',
+        toPrepare_other: '{{count}} choses à préparer d’ici là',
       },
-      section: 'Entraînement',
+      section: 'Mon entraînement',
+    },
+    links: {
+      // L etiquette dit ce qu on va ouvrir AVANT de l ouvrir : sans elle, trois
+      // liens bleus se ressemblent tous.
+      nature: {
+        geste: 'Le geste en vidéo',
+        logiciel: 'Le logiciel',
+        source: 'La source',
+      },
     },
     logbook: {
+      attempt: 'essai {{count}}',
+      // La pastille cyan qui dit qu une valeur ne vient pas d un chronometre mais
+      // d un calcul de l app. Sans elle, on cherche a se rappeler si on l a saisie.
+      computed: 'calculé',
       copied: 'Carnet copié',
       description: 'Une mesure par ligne, prête à coller.',
-      empty: 'Aucune mesure enregistrée pour l\'instant.',
+      empty: 'Tes mesures apparaîtront ici, séance après séance.',
+      emptyAction: 'Voir ma prochaine séance',
+      // 🪤 Le titre du vide redisait « Mon carnet », juste sous le vrai titre : on
+      // lisait deux fois la meme chose et on croyait a un defaut d affichage.
+      emptyTitle: 'Rien au carnet',
+      rawHint: '12 colonnes, une mesure par ligne, point-virgule. Il existe pour être '
+        + 'collé ailleurs, analysé, puis réimporté.',
+      readableHint: 'La vue lisible est un confort de relecture — elle ne remplace pas '
+        + 'le carnet brut.',
       rows_one: '{{count}} mesure',
       rows_other: '{{count}} mesures',
+      side: {
+        both: 'les deux',
+        left: 'gauche',
+        right: 'droite',
+      },
       title: 'Mon carnet',
+      view: {
+        raw: 'Brut',
+        readable: 'Lisible',
+      },
+      void: 'nul',
+      // 🧑‍⚖️ QUI A JUGE. Le carnet ne dit plus seulement « nul », il dit d'où vient le
+      // verdict : ce qu'on a vu sur place, ou ce qu'on a lu le soir sur la vidéo.
+      voidBy: {
+        terrain: 'nul · vu sur place',
+        video: 'nul · vu à la vidéo',
+      },
     },
     measures: {
       attempt: 'Essai {{number}}',
       computed: 'Calculé',
       context: 'À noter une fois',
       invalidReason: 'Pourquoi l\'essai est nul',
+      // 🪤 « À saisir plus tard » n est PAS un concept neuf : c est le champ
+      // `moment` du serveur, deja rempli sur les 413 mesures du programme. Il
+      // manquait juste le mot pour le dire a l ecran.
+      later: 'À saisir plus tard',
       noValue: 'Pas encore saisi',
       outOfRange: 'Valeur inhabituelle : {{min}} à {{max}} attendu. Vérifie avant d\'enregistrer.',
       performance: 'Ce que tu chronomètres ou mesures',
@@ -4647,29 +4856,118 @@ export default {
         right: 'Droite',
       },
     },
+    now: {
+      allDone: 'Tout est fait',
+      back: 'Revenir à ma séance',
+      // 🐞 « T+2352 min » s affichait sur une seance ouverte l avant-veille : au-dela
+      // de deux heures, plus personne ne lit des minutes. On bascule en heures.
+      elapsed_one: 'T+{{count}} min',
+      elapsed_other: 'T+{{count}} min',
+      elapsedHours: 'T+{{hours}} h {{minutes}}',
+      elapsedLong: 'ouverte depuis {{days}} j',
+      // Une seule question se pose sur un terrain, entre deux essais, avec un
+      // partenaire qui attend. L ecran ne repond qu a celle-la.
+      hint: 'Une seule question ici : qu’est-ce que je fais maintenant ?',
+      label: 'Maintenant',
+      progress_one: '{{tests}} test fait · étape {{done}} sur {{total}}',
+      progress_other: '{{tests}} tests faits · étape {{done}} sur {{total}}',
+      resume: 'Continuer : {{test}}, {{what}}',
+      resumeAttempt: 'essai {{count}}',
+      resumePrep: 'mise en place',
+      step: {
+        attempt: '{{test}} · Essai {{current}} sur {{total}}',
+        prep: '{{test}} · Mise en place',
+      },
+      title: 'Ma séance',
+      whatNext: 'La suite, dans l’ordre',
+    },
     plan: {
       abandonConfirm: {
         cancel: 'Non, je continue',
         confirm: 'Oui, quitter',
         description: 'Tes mesures déjà saisies sont conservées. Tu pourras choisir un autre entraînement.',
+        failed: 'On n’a pas pu te désinscrire. Rien n’est perdu — réessaie.',
         title: 'Quitter cet entraînement ?',
       },
-      days: 'Les journées, dans l’ordre',
+      // La clef reste : ⛔ aucune suppression dans fr.js. Elle titre desormais la
+      // porte vers « Toutes mes seances », la ou elle titrait la liste elle-meme.
+      dateHint: 'La date est indicative — tu décides quand.',
+      days: 'Toutes mes séances',
+      doors: {
+        logbook: 'Mon carnet',
+        logbookSubtitle_one: '{{count}} mesure enregistrée',
+        logbookSubtitle_other: '{{count}} mesures enregistrées',
+        sessionsSubtitle_one: '{{count}} séance au programme',
+        sessionsSubtitle_other: '{{count}} séances au programme',
+        video: 'Relevés vidéo à faire',
+        videoSubtitle_one: '{{count}} mesure à lire sur ta vidéo',
+        videoSubtitle_other: '{{count}} mesures à lire sur ta vidéo',
+      },
       empty: {
-        action: 'Rechercher un entraînement',
-        description: 'Tu n\'as pas encore choisi d\'entraînement.',
+        action: 'Choisir un entraînement',
+        description: 'Choisis un programme : il apparaîtra ici, séance par séance.',
         title: 'Aucun entraînement en cours',
       },
-      nextUp: 'À faire ensuite',
-      progress_one: '{{done}} journée sur {{total}}',
-      progress_other: '{{done}} journées sur {{total}}',
+      endsOn: 'fin le {{date}}',
+      // 🪤 « À faire ensuite » titrait un encart SUPPRIME le 06/09 parce qu il
+      // montrait la meme journee que la liste juste en dessous. La clef reprend
+      // du service comme etiquette de la grande carte du haut.
+      nextUp: 'Prochaine séance · {{date}}',
+      // 🐞 CE BANDEAU NE PARLE PAS DE RESEAU. Sa condition est « des mesures
+      // attendent d'être envoyées » — l'app n'a aucun detecteur de reseau. Il
+      // s'affichait « Sans réseau » avec quatre barres de wifi, ce qui envoie
+      // chercher la panne au mauvais endroit.
+      offline: 'Des mesures attendent d’être envoyées — '
+        + 'elles sont gardées sur le téléphone.',
+      progress_one: '{{done}} séance faite sur {{total}}',
+      progress_other: '{{done}} séances faites sur {{total}}',
       title: 'Mon entraînement',
+      today: 'Aujourd’hui',
+    },
+    postpone: {
+      // 🪤 i18next choisit `_one` a partir de count=1 : la premiere rangee dit donc
+      // « Demain », pas « Dans 1 jour ». Les deux clefs restent, les deux servent.
+      byDays_one: 'Demain',
+      byDays_other: 'Dans {{count}} jours',
+      chooseDate: 'Choisir une date',
+      confirm: 'Décaler au {{date}}',
+      confirmSkip: 'Sauter cette séance',
+      // LA PHRASE QUI EST TOUT L'INTERET DE LA FEUILLE : elle dit AVANT ce que le
+      // geste change a la date de fin. Sans elle, on decale a l'aveugle.
+      // 🐞 PAS DE POINT FINAL : une date abregee en francais se termine deja par
+      // un point (« sam. 19 sept. »). On lisait « … le sam. 19 sept.. » a l ecran.
+      consequence: 'Les séances suivantes se décalent d’autant. '
+        + 'Le programme finira le {{date}}',
+      consequenceAlone: 'Seule cette séance bouge. La fin du programme ne change pas.',
+      hint: 'La date est indicative — tu décides quand.',
+      scope: 'Décaler aussi les séances suivantes, pour garder les écarts du programme.',
+      skip: 'Sauter cette séance',
+      skipWarning: 'Elle restera marquée « Sautée ». '
+        + 'Les séances suivantes ne bougent pas.',
+      title: 'Décaler la séance du {{date}}',
     },
     program: {
       contains: 'Ce que contient le programme',
       days_one: '{{count}} journée',
       days_other: '{{count}} journées',
+      demands: {
+        days_one: '{{count}} jour du premier au dernier rendez-vous',
+        days_other: '{{count}} jours du premier au dernier rendez-vous',
+        longest: 'la plus longue dure {{duration}} min',
+        partner: 'un partenaire, présent à chaque séance : il filme et chronomètre',
+        sessions_one: '{{count}} séance — {{places}}',
+        sessions_other: '{{count}} séances — {{places}}',
+        title: 'Ce que ça demande',
+        total: '{{total}} minutes en tout, installation et récupérations comprises',
+      },
+      enrollFailed: 'On n’a pas pu t’inscrire à cet entraînement. '
+        + 'Rien n’est perdu — réessaie.',
       equipment: 'Le matériel',
+      equipmentCheck: 'As-tu ce qu’il faut ?',
+      equipmentCount_one: '{{count}} ligne',
+      equipmentCount_other: '{{count}} lignes',
+      equipmentWarning: 'Il te faut l’accès à une salle de musculation : sans elle, '
+        + 'cinq séances sur huit sont impossibles.',
       level: {
         avance: 'Avancé',
         decouverte: 'Découverte',
@@ -4677,8 +4975,35 @@ export default {
         intermediaire: 'Intermédiaire',
       },
       startsToday: 'Il commencera aujourd\'hui. Tu pourras décaler chaque journée.',
+      stat: {
+        measures: 'mesures',
+      },
       tests_one: '{{count}} test',
       tests_other: '{{count}} tests',
+    },
+    // ⚠️ « Relevés vidéo » et jamais « dépouiller » : le pack interdit ce mot
+    // devant l utilisateur, et il a raison — personne ne dit qu il « depouille »
+    // ses mesures.
+    schema: {
+      close: 'Fermer',
+      family: {
+        body: 'Position du corps',
+        field: 'Plan de terrain',
+      },
+      hint: {
+        body: 'Lecture rapide, debout. Pas de pivot : faire tourner quelqu’un '
+          + 'debout ne rend pas le dessin plus lisible.',
+        field: 'Pince pour zoomer. Pivoté, il se lit accroupi, les plots à la main.',
+      },
+      missing: 'Ce dessin n’est pas arrivé.',
+      reset: '1:1',
+      rotate: 'Pivoter',
+      video: 'Vidéo du geste',
+      zoomIn: 'Agrandir',
+    },
+    sessions: {
+      lead: 'Dans l’ordre conseillé — mais tu peux en commencer n’importe laquelle.',
+      title: 'Toutes mes séances',
     },
     status: {
       done: 'Fait',
@@ -4688,29 +5013,80 @@ export default {
       skipped: 'Sauté',
     },
     sync: {
+      allSent: 'Tout est envoyé',
       failed: 'Envoi impossible. Tes mesures sont gardées ici, elles partiront plus tard.',
-      localFailed: 'Ton téléphone n\'a pas pu enregistrer cette valeur. Note-la sur papier et libère de la place avant de continuer.',
+      localFailed: 'Ton téléphone n\'a pas pu enregistrer cette valeur. '
+        + 'Note-la sur papier et libère de la place avant de continuer.',
       offline_one: '{{count}} mesure en attente d\'envoi',
       offline_other: '{{count}} mesures en attente d\'envoi',
       success: 'Mesures envoyées',
     },
     test: {
+      attempts_one: '{{count}} essai',
+      attempts_other: '{{count}} essais',
+      attemptsDone: '{{done}} notés · {{left}} restants',
+      cells: 'Case {{done}} sur {{total}}',
+      feeds: 'Ce que ce test alimente',
       invalidIf: 'Essai nul si',
       links: 'Pour voir le geste',
+      offlineBody: 'Tes mesures déjà notées sont sur ton téléphone et repartiront '
+        + 'toutes seules. La minuterie et le carnet local marchent sans réseau.',
+      offlineTitle: 'Ce test n’est pas encore sur ton téléphone',
       optional: 'Facultatif',
       protocol: 'Le protocole',
       reading: 'Lire le résultat',
+      recap: 'Ce qui est déjà noté',
       results: 'Tes mesures',
+      seriesResult: 'Résultat de la série',
+      // Les onglets s appelaient « Le protocole » et « Pourquoi ce test » : deux
+      // titres de rubrique, pas deux modes. Ce qu ils separent, c est FAIRE et
+      // COMPRENDRE — et c est ce qu ils doivent dire.
       setup: 'La mise en place',
       step: 'Test {{current}} sur {{total}}',
+      tabDo: 'Faire',
+      tabLearn: 'Comprendre',
+      toEntry: 'Passer à la saisie',
       why: 'Pourquoi ce test',
     },
     timer: {
       done: 'C\'est parti',
+      endsWith: 'À 0:00 · deux vibrations',
       recovery: 'Récupération',
       reset: 'Remettre à zéro',
       start: 'Lancer',
       stop: 'Arrêter',
+    },
+    video: {
+      allDone: 'Tout est relevé',
+      backToQueue: 'Revenir aux relevés',
+      hint: 'Ce que tu relèves ici part au même carnet que le terrain : '
+        + 'même ligne, même test, même essai.',
+      // 🚨 Ce compteur manquait, et trois mesures sur quatre etaient
+      // inatteignables : l ecran n affichait que la PREMIERE mesure d un essai.
+      lead_one: 'mesure à relever sur tes vidéos.',
+      lead_other: 'mesures à relever sur tes vidéos.',
+      measureOf: 'mesure {{current}} sur {{total}}',
+      nothingHere: 'Ce test n’a rien à relever sur la vidéo.',
+      notStarted: 'Journée pas encore commencée — rien à relever pour l’instant.',
+      previous: '← Essai {{count}}',
+      // 🐞 « en attente » disait la MEME chose que le bandeau d envoi juste au-dessus
+      // (« 2 mesures en attente » / « 2 mesures en attente d'envoi ») alors que les
+      // deux comptent des choses differentes : le travail restant, et le reseau.
+      remaining_one: '{{count}} mesure à relever',
+      remaining_other: '{{count}} mesures à relever',
+      save: 'Enregistrer',
+      testDone: '{{test}} relevé',
+      // 🧑‍⚖️ LA CASE DU SECOND JUGE, et elle n'annule QUE cette mesure : le programme
+      // écrit lui-même « vitesse illisible … : le score reste, la vitesse est notée — ».
+      unreadable: 'Illisible à la lecture — cette mesure seule est annulée',
+      // 🐞 L ENTETE COMPTE CE QUI RESTE, la ligne comptait le TOTAL : « 3 mesures a
+      // relever » en haut, « 4 mesures a lire » en dessous, et une barre a 25 %.
+      // On dit maintenant les deux nombres, comme la barre juste en dessous.
+      testLine_one: '{{attempts}} essai · {{done}} sur {{measures}} relevées',
+      testLine_other: '{{attempts}} essais · {{done}} sur {{measures}} relevées',
+      testsCount_one: '{{count}} test',
+      testsCount_other: '{{count}} tests',
+      title: 'Relevés vidéo',
     },
   },
   userBlock: {

@@ -1,10 +1,14 @@
 import { memo, useMemo } from 'react';
 import {
-  Linking, ScrollView, Text, View,
+  Linking, ScrollView, Text, TouchableOpacity, View,
 } from 'react-native';
-import { SvgXml } from 'react-native-svg';
 
+import { withAlpha } from '@/theme/colors';
 import useTheme from '@/theme/themeContext';
+
+import TrainingSchemaImage, {
+  ratioDuSchema,
+} from '@/components/organisms/training/TrainingSchemaImage';
 
 /**
  * LE RENDU DU CONTENU D'UNE FICHE — blocs typés, sans aucune dépendance de rendu.
@@ -80,9 +84,27 @@ function Bullet({
 }) {
   return (
     <View style={[{ flexDirection: 'row' }, Spaces.gap[8]]}>
-      <Text style={[Fonts.p2, { color: Colors.primary500, minWidth: 18 }]}>
-        {ordered ? `${index + 1}.` : '•'}
-      </Text>
+      {/*
+        🎨 UNE PASTILLE RONDE PLEINE, pas un « 1. » ni un point médian. Le pack
+        l'impose et il a raison : ces listes se lisent debout, en diagonale, et un
+        chiffre suivi d'un point se confond avec le texte de la ligne précédente.
+        Une pastille pleine crée une colonne que l'œil suit sans lire.
+      */}
+      <View style={{
+        alignItems: 'center',
+        backgroundColor: Colors.primary500,
+        borderRadius: 11,
+        height: 22,
+        justifyContent: 'center',
+        marginTop: 2,
+        minWidth: 22,
+        paddingHorizontal: 4,
+      }}
+      >
+        <Text style={[Fonts.caption, { color: Colors.neutral00 }]}>
+          {ordered ? `${index + 1}` : '•'}
+        </Text>
+      </View>
       <RichText
         color={Colors.neutral00}
         style={[Fonts.p2, { color: Colors.neutral200, flex: 1 }]}
@@ -153,24 +175,80 @@ function BlockTable({ block, Colors, Fonts }) {
 }
 
 /**
+ * LA FAMILLE D'UN SCHÉMA, déduite de sa FORME.
+ *
+ * 🪤 Aucun champ du serveur ne dit si un dessin est un plan de terrain ou une
+ * position du corps — je l'ai vérifié sur les 27 schémas du programme. Mais la
+ * forme le dit : un plan de terrain est LARGE (on regarde un rectangle de jeu),
+ * une position du corps est HAUTE (on regarde quelqu'un debout). Et c'est
+ * exactement la distinction qui compte, puisque c'est elle qui décide si pivoter
+ * l'écran aide à lire accroupi, plots en main.
+ * @param {string} xml le dessin
+ * @returns {'field'|'body'} la famille
+ */
+export const familleDuSchema = (xml) => (ratioDuSchema(xml) >= 1 ? 'field' : 'body');
+
+/**
  * Un schéma coté. Le SVG vient du serveur : s'il est illisible, on ne casse pas l'écran.
  * @param {object} props
  * @param {Record<string, any>} props.block bloc de type `svg`, portant `svg` et `caption`
  * @param {Record<string, any>} props.Colors palette de couleurs du thème
  * @param {Record<string, any>} props.Fonts styles typographiques du thème
+ * @param {(block: Record<string, any>) => void} [props.onZoom] ouvre le dessin en grand
  * @param {Record<string, any>} props.Spaces échelle d'espacement du thème
  * @returns {React.ReactElement|null} le schéma et sa légende, ou rien si le SVG est inutilisable
  */
 function BlockSvg({
-  block, Colors, Fonts, Spaces,
+  block, Colors, Fonts, onZoom, Spaces,
 }) {
   const xml = typeof block.svg === 'string' && block.svg.includes('<svg') ? block.svg : null;
   if (!xml) return null;
+  const famille = familleDuSchema(xml);
   return (
     <View style={Spaces.gap[4]}>
+      {/*
+        L'ÉTIQUETTE DE FAMILLE sur le PETIT cadre, pas seulement sur l'écran en
+        grand : c'est elle qui dit s'il faut pivoter le téléphone avant même de
+        l'ouvrir.
+      */}
+      <Text style={[Fonts.caption, { color: Colors.primary400 }]}>
+        {famille === 'field' ? 'Plan de terrain' : 'Position du corps'}
+      </Text>
       <View style={{ backgroundColor: Colors.neutral00, borderRadius: 8, padding: 4 }}>
-        <SvgXml width="100%" xml={xml} />
+        {/*
+          🚨 LE DESSIN N AVAIT AUCUNE HAUTEUR. Les 27 schemas du programme declarent
+          `viewBox` et `width="100%"` mais pas de hauteur, et `react-native-svg` ne
+          la devine pas : il rendait une bande de quelques pixels. Vu a l ecran le
+          2026-09-08 — les dessins partaient du serveur, arrivaient dans l app, et
+          personne ne les voyait depuis le 06/09.
+        */}
+        <TrainingSchemaImage xml={xml} />
       </View>
+      {/*
+        🐞 « AGRANDIR » ETAIT POSE SUR LE DESSIN, et il en masquait le coin bas
+        droit — vu a l ecran le 2026-09-08 sur le plan de T0, ou il cachait
+        « camera a 3,0 m », « 108 ± 2 images » et « ecart ≥ 3 images ». Ces plans
+        sont cotes au centimetre : rien ne doit se poser dessus. Le bouton descend
+        donc SOUS le dessin, aligne a droite.
+      */}
+      {typeof onZoom === 'function' && (
+        <TouchableOpacity
+          accessibilityRole="button"
+          onPress={() => onZoom(block)}
+          style={{
+            alignSelf: 'flex-end',
+            borderColor: withAlpha(Colors.primary500, 0.5),
+            borderRadius: 999,
+            borderWidth: 1,
+            paddingHorizontal: 12,
+            paddingVertical: 5,
+          }}
+        >
+          <Text style={[Fonts.caption, { color: Colors.primary400 }]}>
+            Agrandir
+          </Text>
+        </TouchableOpacity>
+      )}
       {Boolean(block.caption) && (
         <RichText
           color={Colors.neutral200}
@@ -222,10 +300,11 @@ function BlockNote({ block, Colors, Fonts }) {
  * Rend le contenu d'une fiche d'entraînement en aiguillant chaque bloc vers son type.
  * @param {object} props
  * @param {Array<Record<string, any>>} props.blocks blocs typés venus du serveur
+ * @param {(block: Record<string, any>) => void} [props.onZoom] ouvre un schéma en grand
  * @param {boolean} [props.compact] resserre les espacements (usage en accordéon)
  * @returns {React.ReactElement|null} la suite de blocs rendus, ou rien si la liste est vide
  */
-function TrainingBlocks({ blocks, compact = false }) {
+function TrainingBlocks({ blocks, compact = false, onZoom }) {
   const { Colors, Fonts, Spaces } = useTheme();
   const list = Array.isArray(blocks) ? blocks : [];
   if (!list.length) return null;
@@ -276,6 +355,7 @@ function TrainingBlocks({ blocks, compact = false }) {
               Colors={Colors}
               Fonts={Fonts}
               key={key}
+              onZoom={onZoom}
               Spaces={Spaces}
             />
           );

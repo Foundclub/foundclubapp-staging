@@ -91,6 +91,32 @@ function SearchStack() {
         getComponent={() => require('@/views/training/TrainingLogbook').default}
         name={RouteNames.TrainingLogbook}
       />
+      {/*
+        « Toutes mes seances » vit ici et pas a la racine : c est une CONSULTATION,
+        pas une tache. Le dock reste visible, comme sur le plan dont elle sort.
+      */}
+      <Stack.Screen
+        getComponent={() => require('@/views/training/TrainingSessions').default}
+        name={RouteNames.TrainingSessions}
+      />
+      {/*
+        « Maintenant » est la PLACE DU VILLAGE d une seance en cours : onze pages
+        du parcours guide y reviennent. Elle vit donc dans la pile de l onglet,
+        avec le dock visible — on en part et on y revient sans arret.
+      */}
+      <Stack.Screen
+        getComponent={() => require('@/views/training/TrainingSessionNow').default}
+        name={RouteNames.TrainingSessionNow}
+      />
+      {/*
+        La FILE des releves video reste ici : c est une CONSULTATION du soir, on
+        y revient entre deux tests, et le dock est ce qui permet d en sortir sans
+        reflechir. L ecran d UN essai, lui, est une tache : il monte a la racine.
+      */}
+      <Stack.Screen
+        getComponent={() => require('@/views/training/TrainingVideoQueue').default}
+        name={RouteNames.TrainingVideoQueue}
+      />
     </Stack.Navigator>
   );
 }
