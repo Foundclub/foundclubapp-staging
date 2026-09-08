@@ -4561,6 +4561,14 @@ export default {
       sync: 'Envoyer les mesures',
       watchVideo: 'Voir le geste',
     },
+    attempt: {
+      reason: 'Pourquoi cet essai est nul',
+      title: 'Essai {{current}} sur {{total}}',
+      // ⛔ Pas une petite croix : une rangee entiere. Une croix de douze points au
+      // bout d un champ se rate avec les doigts froids, et surtout elle se lit
+      // comme « effacer » alors qu elle veut dire « garder, mais nul ».
+      void: 'Essai nul — je le garde au carnet',
+    },
     catalog: {
       demands: '{{places}} · de {{min}} à {{max}} min par séance',
       empty: {
@@ -4731,6 +4739,15 @@ export default {
       },
       section: 'Mon entraînement',
     },
+    links: {
+      // L etiquette dit ce qu on va ouvrir AVANT de l ouvrir : sans elle, trois
+      // liens bleus se ressemblent tous.
+      nature: {
+        geste: 'Le geste en vidéo',
+        logiciel: 'Le logiciel',
+        source: 'La source',
+      },
+    },
     logbook: {
       attempt: 'essai {{count}}',
       // La pastille cyan qui dit qu une valeur ne vient pas d un chronometre mais
@@ -4766,6 +4783,10 @@ export default {
       computed: 'Calculé',
       context: 'À noter une fois',
       invalidReason: 'Pourquoi l\'essai est nul',
+      // 🪤 « À saisir plus tard » n est PAS un concept neuf : c est le champ
+      // `moment` du serveur, deja rempli sur les 413 mesures du programme. Il
+      // manquait juste le mot pour le dire a l ecran.
+      later: 'À saisir plus tard',
       noValue: 'Pas encore saisi',
       outOfRange: 'Valeur inhabituelle : {{min}} à {{max}} attendu. Vérifie avant d\'enregistrer.',
       performance: 'Ce que tu chronomètres ou mesures',
@@ -4890,6 +4911,23 @@ export default {
       tests_one: '{{count}} test',
       tests_other: '{{count}} tests',
     },
+    schema: {
+      close: 'Fermer',
+      family: {
+        body: 'Position du corps',
+        field: 'Plan de terrain',
+      },
+      hint: {
+        body: 'Lecture rapide, debout. Pas de pivot : faire tourner quelqu’un '
+          + 'debout ne rend pas le dessin plus lisible.',
+        field: 'Pince pour zoomer. Pivoté, il se lit accroupi, les plots à la main.',
+      },
+      missing: 'Ce dessin n’est pas arrivé.',
+      reset: '1:1',
+      rotate: 'Pivoter',
+      video: 'Vidéo du geste',
+      zoomIn: 'Agrandir',
+    },
     sessions: {
       lead: 'Dans l’ordre conseillé — mais tu peux en commencer n’importe laquelle.',
       title: 'Toutes mes séances',
@@ -4902,6 +4940,7 @@ export default {
       skipped: 'Sauté',
     },
     sync: {
+      allSent: 'Tout est envoyé',
       failed: 'Envoi impossible. Tes mesures sont gardées ici, elles partiront plus tard.',
       localFailed: 'Ton téléphone n\'a pas pu enregistrer cette valeur. Note-la sur papier et libère de la place avant de continuer.',
       offline_one: '{{count}} mesure en attente d\'envoi',
@@ -4909,14 +4948,30 @@ export default {
       success: 'Mesures envoyées',
     },
     test: {
+      attempts_one: '{{count}} essai',
+      attempts_other: '{{count}} essais',
+      attemptsDone: '{{done}} notés · {{left}} restants',
+      cells: 'Case {{done}} sur {{total}}',
+      feeds: 'Ce que ce test alimente',
       invalidIf: 'Essai nul si',
       links: 'Pour voir le geste',
+      offlineBody: 'Tes mesures déjà notées sont sur ton téléphone et repartiront '
+        + 'toutes seules. La minuterie et le carnet local marchent sans réseau.',
+      offlineTitle: 'Ce test n’est pas encore sur ton téléphone',
       optional: 'Facultatif',
       protocol: 'Le protocole',
       reading: 'Lire le résultat',
+      recap: 'Ce qui est déjà noté',
       results: 'Tes mesures',
+      seriesResult: 'Résultat de la série',
+      // Les onglets s appelaient « Le protocole » et « Pourquoi ce test » : deux
+      // titres de rubrique, pas deux modes. Ce qu ils separent, c est FAIRE et
+      // COMPRENDRE — et c est ce qu ils doivent dire.
       setup: 'La mise en place',
       step: 'Test {{current}} sur {{total}}',
+      tabDo: 'Faire',
+      tabLearn: 'Comprendre',
+      toEntry: 'Passer à la saisie',
       why: 'Pourquoi ce test',
     },
     timer: {

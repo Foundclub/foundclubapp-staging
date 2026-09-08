@@ -1,6 +1,6 @@
 import { memo, useMemo } from 'react';
 import {
-  Linking, ScrollView, Text, View,
+  Linking, ScrollView, Text, TouchableOpacity, View,
 } from 'react-native';
 import { SvgXml } from 'react-native-svg';
 
@@ -153,23 +153,70 @@ function BlockTable({ block, Colors, Fonts }) {
 }
 
 /**
+ * LA FAMILLE D'UN SCHÉMA, déduite de sa FORME.
+ *
+ * 🪤 Aucun champ du serveur ne dit si un dessin est un plan de terrain ou une
+ * position du corps — je l'ai vérifié sur les 27 schémas du programme. Mais la
+ * forme le dit : un plan de terrain est LARGE (on regarde un rectangle de jeu),
+ * une position du corps est HAUTE (on regarde quelqu'un debout). Et c'est
+ * exactement la distinction qui compte, puisque c'est elle qui décide si pivoter
+ * l'écran aide à lire accroupi, plots en main.
+ * @param {string} xml le dessin
+ * @returns {'field'|'body'} la famille
+ */
+export const familleDuSchema = (xml) => {
+  const boite = /viewBox=["']([^"']+)["']/.exec(String(xml || ''));
+  if (!boite) return 'field';
+  const [, , largeur, hauteur] = boite[1].trim().split(/[\s,]+/).map(Number);
+  if (!Number.isFinite(largeur) || !Number.isFinite(hauteur) || !hauteur) return 'field';
+  return largeur >= hauteur ? 'field' : 'body';
+};
+
+/**
  * Un schéma coté. Le SVG vient du serveur : s'il est illisible, on ne casse pas l'écran.
  * @param {object} props
  * @param {Record<string, any>} props.block bloc de type `svg`, portant `svg` et `caption`
  * @param {Record<string, any>} props.Colors palette de couleurs du thème
  * @param {Record<string, any>} props.Fonts styles typographiques du thème
+ * @param {(block: Record<string, any>) => void} [props.onZoom] ouvre le dessin en grand
  * @param {Record<string, any>} props.Spaces échelle d'espacement du thème
  * @returns {React.ReactElement|null} le schéma et sa légende, ou rien si le SVG est inutilisable
  */
 function BlockSvg({
-  block, Colors, Fonts, Spaces,
+  block, Colors, Fonts, onZoom, Spaces,
 }) {
   const xml = typeof block.svg === 'string' && block.svg.includes('<svg') ? block.svg : null;
   if (!xml) return null;
+  const famille = familleDuSchema(xml);
   return (
     <View style={Spaces.gap[4]}>
+      {/*
+        L'ÉTIQUETTE DE FAMILLE sur le PETIT cadre, pas seulement sur l'écran en
+        grand : c'est elle qui dit s'il faut pivoter le téléphone avant même de
+        l'ouvrir.
+      */}
+      <Text style={[Fonts.caption, { color: Colors.primary400 }]}>
+        {famille === 'field' ? 'Plan de terrain' : 'Position du corps'}
+      </Text>
       <View style={{ backgroundColor: Colors.neutral00, borderRadius: 8, padding: 4 }}>
         <SvgXml width="100%" xml={xml} />
+        {typeof onZoom === 'function' && (
+          <TouchableOpacity
+            accessibilityRole="button"
+            onPress={() => onZoom(block)}
+            style={{
+              backgroundColor: Colors.neutral900,
+              borderRadius: 8,
+              bottom: 8,
+              paddingHorizontal: 12,
+              paddingVertical: 8,
+              position: 'absolute',
+              right: 8,
+            }}
+          >
+            <Text style={[Fonts.caption, { color: Colors.neutral00 }]}>Agrandir</Text>
+          </TouchableOpacity>
+        )}
       </View>
       {Boolean(block.caption) && (
         <RichText
@@ -222,10 +269,11 @@ function BlockNote({ block, Colors, Fonts }) {
  * Rend le contenu d'une fiche d'entraînement en aiguillant chaque bloc vers son type.
  * @param {object} props
  * @param {Array<Record<string, any>>} props.blocks blocs typés venus du serveur
+ * @param {(block: Record<string, any>) => void} [props.onZoom] ouvre un schéma en grand
  * @param {boolean} [props.compact] resserre les espacements (usage en accordéon)
  * @returns {React.ReactElement|null} la suite de blocs rendus, ou rien si la liste est vide
  */
-function TrainingBlocks({ blocks, compact = false }) {
+function TrainingBlocks({ blocks, compact = false, onZoom }) {
   const { Colors, Fonts, Spaces } = useTheme();
   const list = Array.isArray(blocks) ? blocks : [];
   if (!list.length) return null;
@@ -276,6 +324,7 @@ function TrainingBlocks({ blocks, compact = false }) {
               Colors={Colors}
               Fonts={Fonts}
               key={key}
+              onZoom={onZoom}
               Spaces={Spaces}
             />
           );

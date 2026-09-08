@@ -6,7 +6,10 @@ import {
   Text, TouchableOpacity, Vibration, View,
 } from 'react-native';
 
+import { withAlpha } from '@/theme/colors';
 import useTheme from '@/theme/themeContext';
+
+import TrainingProgressBar from '@/components/organisms/training/TrainingProgressBar';
 
 import useSafeTimers from '@/hooks/useSafeTimers';
 
@@ -104,14 +107,24 @@ function TrainingTimer({ label, onDone, seconds }) {
 
   const finished = remaining <= 0 && !running;
   const color = finished ? Colors.success500 : Colors.neutral00;
+  // La barre se VIDE : elle part pleine et rétrécit. Une barre qui se remplit
+  // dirait « avancement », pas « temps restant » — et sur un terrain on lit la
+  // forme avant le chiffre.
+  const reste = Math.max(0, Math.min(1, seconds ? remaining / seconds : 0));
 
   return (
     <View
       style={[
         Spaces.gap[8],
         {
-          backgroundColor: Colors.neutral800,
-          borderColor: running ? Colors.primary500 : Colors.neutral600,
+          // ⏰ LE FOND PASSE AU VERT QUAND CA SONNE. On ne regarde pas le
+          // telephone pendant une recuperation : on le pose. Ce qui doit
+          // rattraper l oeil, c est un aplat de couleur, pas un chiffre.
+          backgroundColor: finished ? withAlpha(Colors.success500, 0.15) : Colors.neutral800,
+          borderColor: (() => {
+            if (finished) return Colors.success500;
+            return running ? Colors.primary500 : Colors.neutral600;
+          })(),
           borderRadius: 10,
           borderWidth: 1,
           padding: 12,
@@ -123,7 +136,21 @@ function TrainingTimer({ label, onDone, seconds }) {
       </Text>
 
       <View style={{ alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between' }}>
-        <Text style={[Fonts.h2Bold, { color, fontVariant: ['tabular-nums'] }]}>
+        {/*
+          72 points : on lit ce chiffre a bout de bras, pose par terre, entre deux
+          sauts. A la taille courante il fallait se pencher — donc on ne le
+          regardait pas, donc la minuterie ne servait a rien.
+        */}
+        <Text style={[
+          Fonts.h2Bold,
+          {
+            color,
+            fontSize: finished ? 32 : 72,
+            fontVariant: ['tabular-nums'],
+            lineHeight: finished ? 38 : 78,
+          },
+        ]}
+        >
           {finished ? t('training.timer.done') : format(remaining)}
         </Text>
 
@@ -166,6 +193,11 @@ function TrainingTimer({ label, onDone, seconds }) {
           </TouchableOpacity>
         </View>
       </View>
+
+      <TrainingProgressBar
+        color={finished ? Colors.success500 : Colors.primary500}
+        ratio={finished ? 1 : reste}
+      />
     </View>
   );
 }

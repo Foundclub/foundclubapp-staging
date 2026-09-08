@@ -258,6 +258,8 @@ function ChoiceField({
  * Rend une mesure du protocole et tous ses essais, prête à être remplie sur le terrain.
  * Une mesure calculée s'affiche seulement, avec sa formule ; les autres se saisissent.
  * @param {object} props
+ * @param {number} [props.attempt] N'affiche QUE cet essai-là. Sans lui, la mesure rend
+ *   tous ses essais, comme avant — c'est encore la forme utile hors d'une carte d'essai.
  * @param {Record<string, any>} props.measure définition venue du serveur
  * @param {(row: Record<string, any>) => void} props.onRecord enregistre une valeur (locale d'abord)
  * @param {(row: Record<string, any>) => void} props.onToggleInvalid marque ou démarque un essai nul
@@ -266,7 +268,7 @@ function ChoiceField({
  * @returns {React.ReactElement|null} la mesure affichée, ou rien si elle n'a pas de clé
  */
 function TrainingMeasureInput({
-  measure, onRecord, onToggleInvalid, values,
+  attempt: essaiUnique, measure, onRecord, onToggleInvalid, values,
 }) {
   const { Colors, Fonts, Spaces } = useTheme();
   const { t } = useTranslation();
@@ -277,9 +279,16 @@ function TrainingMeasureInput({
 
   const rows = useMemo(() => {
     const sides = hasSides ? SIDES : [null];
-    return Array.from({ length: attempts }, (_, i) => i + 1)
-      .flatMap((attempt) => sides.map((side) => ({ attempt, side })));
-  }, [attempts, hasSides]);
+    // 🔎 LA BOUCLE PEUT S INVERSER. Le pack veut UNE CARTE PAR ESSAI contenant
+    // toutes les mesures de cet essai-là, quand cette brique-ci rend UNE MESURE
+    // et tous ses essais. Plutôt que d'écrire un second composant de saisie —
+    // deux briques de saisie divergent, et c'est la plus délicate de l'app — on
+    // laisse la carte d'essai demander UN essai précis.
+    const numeros = essaiUnique
+      ? [essaiUnique].filter((n) => n <= attempts)
+      : Array.from({ length: attempts }, (_, i) => i + 1);
+    return numeros.flatMap((attempt) => sides.map((side) => ({ attempt, side })));
+  }, [attempts, essaiUnique, hasSides]);
 
   if (!measure?.key) return null;
 
@@ -335,7 +344,10 @@ function TrainingMeasureInput({
       <View style={Spaces.gap[8]}>
         {rows.map(({ attempt, side }) => {
           const key = `${attempt}|${side || 'none'}`;
-          const showAttemptLabel = attempts > 1 && (!measure.sides || side === SIDES[0]);
+          // Dans une carte d'essai, le numéro est déjà en titre de la carte : le
+          // répéter sur chaque ligne remplirait la carte de « Essai 2 ».
+          const showAttemptLabel = !essaiUnique
+            && attempts > 1 && (!measure.sides || side === SIDES[0]);
           const isPastille = measure.type === 'boolean' || measure.type === 'choice';
           return (
             <View key={key} style={Spaces.gap[4]}>

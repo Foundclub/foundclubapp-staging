@@ -117,6 +117,14 @@ function SearchStack() {
         getComponent={() => require('@/views/training/TrainingSessionNow').default}
         name={RouteNames.TrainingSessionNow}
       />
+      {/*
+        Le schema en grand est un cul-de-sac volontaire : on l ouvre, on regarde
+        accroupi les plots a la main, on ferme par la croix.
+      */}
+      <Stack.Screen
+        getComponent={() => require('@/views/training/TrainingSchema').default}
+        name={RouteNames.TrainingSchema}
+      />
     </Stack.Navigator>
   );
 }

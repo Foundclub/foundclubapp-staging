@@ -54,6 +54,9 @@ jest.mock('@/theme/themeContext', () => {
       ApplicationStyle: genererStyle(Colors),
       Colors,
       Fonts: genererPolices(Colors),
+      // Les rangees de liens portent desormais un chevron : sans ce jeu
+      // d images, l onglet « Comprendre » ne monte meme pas.
+      Images: { chevronDown: 1 },
       Spaces,
     }),
   };
@@ -292,46 +295,73 @@ describe('la chaine qui mene au test affiche', () => {
   });
 });
 
-describe('AUCUN ETAT VIDE : le test introuvable rend une PAGE BLANCHE', () => {
+describe('✅ LE TEST INTROUVABLE A ENFIN UN ETAT VIDE', () => {
   /**
-   * Verifie qu'il ne reste RIEN a l'ecran : ni un mot, ni un bouton.
-   * @param {any} arbre l'arbre rendu
+   * Verifie que l ecran DIT ce qui se passe et propose de reessayer.
+   *
+   * 🚨 CE TEMOIN DISAIT L INVERSE, et c etait le plus important du fichier :
+   * l ecran rendait `null` des que `tests[index]` n existait pas. Aucun message,
+   * aucun bouton, aucune porte de sortie. Le joueur restait devant un fond vide
+   * et devait deviner qu il fallait revenir en arriere — au stade, sans reseau,
+   * apres avoir vide le cache ou ouvert un lien depuis une notification.
+   * @param {any} arbre l arbre rendu
    * @returns {void} rien : les attentes sont posees ici
    */
-  const attendreUnePageBlanche = (arbre) => {
-    expect(textes(arbre)).toEqual([]);
-    expect(arbre.root.findAllByType(TouchableOpacity)).toHaveLength(0);
+  const attendreUnEtatVide = (arbre) => {
+    const vus = textes(arbre);
+    expect(vus).toContain('training.test.offlineTitle');
+    // Et il rappelle ce qui marche QUAND MEME : les mesures deja saisies sont
+    // sur le telephone et repartiront toutes seules.
+    expect(vus.some((v) => String(v).startsWith('training.test.offlineBody'))).toBe(true);
+    expect(bouton(arbre, 'training.actions.retry')).toBeDefined();
   };
 
-  it('la seance est introuvable, ET la journee aussi : page blanche', () => {
-    // 🚨 CE TEMOIN EST LE PLUS IMPORTANT DU FICHIER. L'ecran rend `null` des
-    // que `tests[index]` n'existe pas : aucun message, aucun bouton, aucune
-    // porte de sortie. Le joueur reste devant un fond vide et doit deviner
-    // qu'il faut revenir en arriere. La refonte doit lui donner un etat vide.
-    attendreUnePageBlanche(rendre({ params: { sessionId: 'inconnue' } }));
+  it('la seance est introuvable, ET la journee aussi', () => {
+    attendreUnEtatVide(rendre({ params: { sessionId: 'inconnue' } }));
   });
 
-  it('la journee existe mais n a AUCUN test : page blanche', () => {
+  it('la journee existe mais n a AUCUN test', () => {
     const journeeVide = {
       ...INSCRIT,
       enrollment: { program: { days: [{ documentId: 'jour-t', tests: [] }] } },
     };
 
-    attendreUnePageBlanche(rendre({ etat: journeeVide }));
+    attendreUnEtatVide(rendre({ etat: journeeVide }));
   });
 
-  it('`testIndex` deborde la liste : page blanche, mais aucun plantage', () => {
-    // `index` n'est jamais borne a la longueur de la liste au montage : un lien
-    // qui pointe au-dela vide l'ecran au lieu d'afficher le dernier test.
-    attendreUnePageBlanche(rendre({ params: { sessionId: 'seance-1', testIndex: 9 } }));
+  it('`testIndex` deborde la liste : etat vide, aucun plantage', () => {
+    attendreUnEtatVide(rendre({ params: { sessionId: 'seance-1', testIndex: 9 } }));
   });
 
-  it('aucune inscription du tout : page blanche, mais aucun plantage', () => {
+  it('aucune inscription du tout', () => {
     const sansInscription = {
       enrollment: null, error: null, isLoading: false, refetch: () => {}, sessions: [],
     };
 
-    attendreUnePageBlanche(rendre({ etat: sansInscription }));
+    attendreUnEtatVide(rendre({ etat: sansInscription }));
+  });
+
+  it('« Reessayer » relance vraiment la lecture', () => {
+    const relire = jest.fn();
+    const arbre = rendre({
+      etat: {
+        enrollment: null, error: null, isLoading: false, refetch: relire, sessions: [],
+      },
+    });
+
+    act(() => { bouton(arbre, 'training.actions.retry').props.onPress(); });
+
+    expect(relire).toHaveBeenCalled();
+  });
+
+  it('⛔ ne montre RIEN pendant le chargement : l attente n est pas une absence', () => {
+    // Afficher « ce test n est pas sur ton telephone » pendant qu il arrive
+    // ferait fermer l ecran a quelqu un qui n avait qu a attendre deux secondes.
+    const enAttente = {
+      enrollment: null, error: null, isLoading: true, refetch: () => {}, sessions: [],
+    };
+
+    expect(textes(rendre({ etat: enAttente }))).not.toContain('training.test.offlineTitle');
   });
 });
 
@@ -356,6 +386,20 @@ describe('le chargement et l erreur sont DELEGUES, l ecran n en ecrit aucun', ()
   });
 });
 
+/**
+ * Passe de la lecture du protocole a la saisie.
+ *
+ * 🔎 « FAIRE » SE FAIT EN DEUX TEMPS DEPUIS LE 2026-09-08 : on lit le protocole, on
+ * appuie, on arrive sur la boucle d essais. Tout sur une seule page obligeait a
+ * faire defiler quatre ecrans de texte pour retrouver la case ou taper 31,4 — a
+ * chaque essai, huit fois de suite.
+ * @param {any} arbre l arbre rendu
+ * @returns {void} rien
+ */
+const ouvrirLaSaisie = (arbre) => {
+  act(() => { bouton(arbre, 'training.test.toEntry').props.onPress(); });
+};
+
 describe('les deux onglets « Faire » et « Comprendre »', () => {
   it('sont exactement DEUX, et « Faire » est selectionne a l ouverture', () => {
     const [faire, comprendre] = onglets(rendre());
@@ -365,16 +409,28 @@ describe('les deux onglets « Faire » et « Comprendre »', () => {
     expect(comprendre.props.accessibilityState).toEqual({ selected: false });
   });
 
-  it('« Faire » montre le protocole, la minuterie et la saisie', () => {
+  it('« Faire » ouvre sur le PROTOCOLE, pas sur les cases', () => {
     const arbre = rendre();
     const vus = textes(arbre);
 
     expect(vus).toContain('Deux essais, 3 minutes de recuperation');
     expect(vus).toContain('Depart anticipe');
-    expect(vus).toContain('training.test.results');
+    // ⛔ Aucune case a ce stade : on lit avant de saisir.
+    expect(arbre.root.findAllByType(TextInput)).toHaveLength(0);
     // Le contenu de l'onglet « Comprendre » n'est PAS monte en meme temps.
     expect(vus).not.toContain('Mesurer l acceleration');
+  });
+
+  it('« Passer a la saisie » remplace le protocole par la boucle d essais', () => {
+    const arbre = rendre();
+    ouvrirLaSaisie(arbre);
+    const vus = textes(arbre);
+
+    expect(vus).toContain('training.attempt.title|{"current":1,"total":2}');
+    expect(vus).toContain('training.attempt.title|{"current":2,"total":2}');
+    // Deux essais (une mesure chacun) + la valeur calculee, qui a enfin sa case.
     expect(arbre.root.findAllByType(TextInput)).toHaveLength(3);
+    expect(vus).not.toContain('Deux essais, 3 minutes de recuperation');
   });
 
   it('appuyer sur « Comprendre » remplace le contenu, minuterie comprise', () => {
@@ -407,18 +463,68 @@ describe('les deux onglets « Faire » et « Comprendre »', () => {
 });
 
 describe('la minuterie de recuperation', () => {
-  it('propose HUIT durees, et le decompte demarre a 2 minutes', () => {
-    const vus = textes(rendre());
+  it('propose ONZE durees, et le decompte demarre a 2 minutes', () => {
+    // 🪤 Les trois plus COURTES manquaient (10, 15, 45 s), et ce sont celles des
+    // recuperations entre deux tirs ou deux appuis — exactement les cas ou on
+    // n a pas le temps de regler une minuterie a la main.
+    const arbre = rendre();
+    ouvrirLaSaisie(arbre);
+    const vus = textes(arbre);
 
     expect(vus).toEqual(expect.arrayContaining([
       // 90 s se lit « 1.5 min » : la division est brute, sans mise en forme.
-      '30 s', '1 min', '1.5 min', '2 min', '3 min', '4 min', '5 min', '8 min',
+      '10 s', '15 s', '30 s', '45 s',
+      '1 min', '1.5 min', '2 min', '3 min', '4 min', '5 min', '8 min',
     ]));
     expect(vus).toContain('2:00');
   });
 
+  it('✅ part sur la duree PRESCRITE par le protocole, plus sur 2:00 en dur', () => {
+    // 🪤 La donnee existait deja, mais pas au bon endroit : le tableau du deroule
+    // de chaque journee porte une recuperation par BLOC, et chaque ligne commence
+    // par le code du test. Le lien n etait jamais fait.
+    const avecDuree = {
+      ...INSCRIT,
+      enrollment: {
+        program: {
+          days: [{
+            documentId: 'jour-t',
+            tests: [{ ...TEST_SPRINT, recoverySeconds: 240 }, TEST_NORDIC],
+          }],
+        },
+      },
+    };
+    const arbre = rendre({ etat: avecDuree });
+    ouvrirLaSaisie(arbre);
+
+    expect(textes(arbre)).toContain('4:00');
+  });
+
+  it('remet la minuterie en changeant de test : chacun a SA recuperation', () => {
+    // Passer au suivant sans la remettre laisserait le chrono du sprint sur un
+    // test de force.
+    const avecDuree = {
+      ...INSCRIT,
+      enrollment: {
+        program: {
+          days: [{
+            documentId: 'jour-t',
+            tests: [{ ...TEST_SPRINT, recoverySeconds: 240 }, TEST_NORDIC],
+          }],
+        },
+      },
+    };
+    const arbre = rendre({ etat: avecDuree });
+    act(() => { bouton(arbre, 'training.actions.nextTest').props.onPress(); });
+    ouvrirLaSaisie(arbre);
+
+    // Le second test n en declare aucune : retour au defaut assume.
+    expect(textes(arbre)).toContain('2:00');
+  });
+
   it('appuyer sur une duree change le decompte affiche', () => {
     const arbre = rendre();
+    ouvrirLaSaisie(arbre);
 
     act(() => { pastille(arbre, '5 min').props.onPress(); });
 
@@ -427,59 +533,58 @@ describe('la minuterie de recuperation', () => {
   });
 });
 
-/** Les trois titres de famille, et EUX SEULS : les essais portent un libelle voisin. */
-const TITRES_DE_FAMILLE = [
-  'training.measures.computed',
-  'training.measures.context',
-  'training.measures.performance',
-];
+describe('la boucle d essais, dans le bon sens', () => {
+  it('rend UNE CARTE PAR ESSAI, chacune avec ses mesures', () => {
+    // 🪤 C etait l inverse : une mesure et tous ses essais. Il fallait remonter
+    // et redescendre l ecran entre chaque saut, avec le risque de taper la
+    // hauteur du saut 2 dans la case du saut 1.
+    const arbre = rendre();
+    ouvrirLaSaisie(arbre);
+    const cartes = textes(arbre)
+      .filter((v) => String(v).startsWith('training.attempt.title'));
 
-/**
- * Les titres de famille de mesures RENDUS, dans l'ordre de l'ecran.
- * @param {any} arbre l'arbre rendu
- * @returns {string[]} une entree par titre affiche
- */
-const familles = (arbre) => textes(arbre)
-  .filter((v) => TITRES_DE_FAMILLE.includes(String(v)));
-
-describe('les mesures, leur ordre et leurs familles', () => {
-  it('range TOUJOURS performance, puis contexte, puis calcule', () => {
-    // Le serveur les a envoyees dans l'ordre inverse : c'est l'ecran qui range.
-    expect(familles(rendre())).toEqual([
-      'training.measures.performance',
-      'training.measures.context',
-      'training.measures.computed',
-    ]);
+    expect(cartes).toHaveLength(2);
   });
 
-  it('une famille sans mesure ne laisse aucun titre orphelin', () => {
-    const uneSeuleFamille = {
-      ...INSCRIT,
-      enrollment: {
-        program: {
-          days: [{
-            documentId: 'jour-t',
-            tests: [{ ...TEST_SPRINT, measures: [TEST_SPRINT.measures[0]] }],
-          }],
-        },
-      },
-    };
-    expect(familles(rendre({ etat: uneSeuleFamille }))).toEqual(['training.measures.context']);
+  it('donne a chaque carte SA bascule « essai nul », pleine largeur', () => {
+    const arbre = rendre();
+    ouvrirLaSaisie(arbre);
+    const bascules = arbre.root.findAll((n) => n.type === TouchableOpacity
+      && n.props.accessibilityRole === 'switch');
+
+    expect(bascules).toHaveLength(2);
+    expect(textes(arbre).filter((v) => v === 'training.attempt.void')).toHaveLength(2);
   });
 
-  it('une mesure calculee ne se saisit pas : elle montre sa formule', () => {
-    const vus = textes(rendre());
+  it('range « a noter une fois » a part, et REPLIE', () => {
+    // Ce sont des cases qu on remplit au debut et qu on ne rouvre plus :
+    // deployees, elles separaient les cartes d essai les unes des autres.
+    const arbre = rendre();
+    ouvrirLaSaisie(arbre);
 
+    expect(textes(arbre)).toContain('training.measures.context');
+    // La mesure de contexte reste rangee : seuls les deux essais et la valeur
+    // calculee portent une case.
+    expect(arbre.root.findAllByType(TextInput)).toHaveLength(3);
+  });
+
+  it('🪤 donne enfin une CASE a la valeur calculee, sous sa formule', () => {
+    // Elle n affichait que son libelle et sa formule, jamais un chiffre — et
+    // l app ne peut pas la calculer : la formule est ecrite en francais, pas en
+    // code. On lit le resultat sur le logiciel, on le recopie.
+    const arbre = rendre();
+    ouvrirLaSaisie(arbre);
+    const vus = textes(arbre);
+
+    expect(vus).toContain('training.test.seriesResult');
     expect(vus).toContain('10 / temps10m');
-    // Trois champs pour quatre lignes de mesure : la calculee n'en a pas.
-    expect(rendre().root.findAllByType(TextInput)).toHaveLength(3);
   });
 
-  it('deux essais donnent DEUX champs pour la meme mesure', () => {
-    const champs = rendre().root.findAllByType(TextInput)
-      .filter((/** @type {any} */ noeud) => noeud.props.accessibilityLabel === 'Temps 10 m');
+  it('la frise dit combien d essais sont notes et combien restent', () => {
+    const arbre = rendre();
+    ouvrirLaSaisie(arbre);
 
-    expect(champs).toHaveLength(2);
+    expect(textes(arbre)).toContain('training.test.attemptsDone|{"done":0,"left":2}');
   });
 });
 
@@ -487,6 +592,7 @@ describe('la saisie ecrit dans le carnet LOCAL, avec le test en clair', () => {
   it('taper une valeur enregistre l essai, son cote et le test', () => {
     const carnet = carnetNeutre();
     const arbre = rendre({ carnet });
+    ouvrirLaSaisie(arbre);
     const champ = arbre.root.findAllByType(TextInput)
       .filter((/** @type {any} */ n) => n.props.accessibilityLabel === 'Temps 10 m')[1];
 
@@ -502,31 +608,30 @@ describe('la saisie ecrit dans le carnet LOCAL, avec le test en clair', () => {
     }));
   });
 
-  it('« essai nul » bascule l essai en invalide, puis le remet valide', () => {
+  it('🪤 « essai nul » bascule TOUT L ESSAI, pas une mesure', () => {
+    // Un faux depart annule le saut entier. Marquer une seule de ses mesures
+    // laisserait au carnet un essai a moitie valide, qui fausse toutes les
+    // moyennes sans que rien ne le signale.
     const carnet = carnetNeutre();
     const arbre = rendre({ carnet });
-    const croix = arbre.root.findAllByType(TouchableOpacity)
-      .filter((/** @type {any} */ n) => (
-        n.props.accessibilityLabel === 'training.actions.invalidAttempt'
-      ))[0];
+    ouvrirLaSaisie(arbre);
+    const bascule = arbre.root.findAll((/** @type {any} */ n) => n.type === TouchableOpacity
+      && n.props.accessibilityRole === 'switch')[0];
 
-    act(() => { croix.props.onPress(); });
+    act(() => { bascule.props.onPress(); });
 
     expect(carnet.record).toHaveBeenLastCalledWith(expect.objectContaining({
-      isValid: false, measureKey: 'temps10m', testDocumentId: 'test-sprint',
+      attempt: 1, isValid: false, measureKey: 'temps10m', testDocumentId: 'test-sprint',
     }));
-
-    act(() => { croix.props.onPress(); });
-
-    expect(carnet.record).toHaveBeenLastCalledWith(expect.objectContaining({ isValid: true }));
   });
 
   it('si le telephone refuse d ecrire, l ecran le DIT au lieu de faire semblant', () => {
     // Un chiffre affiche comme enregistre alors que rien ne l'a ete est le pire
     // cas possible sur un terrain : la mesure est perdue sans que personne le voie.
     const carnet = carnetNeutre();
-    carnet.record = jest.fn(() => { throw new Error('disque plein'); });
     const arbre = rendre({ carnet });
+    ouvrirLaSaisie(arbre);
+    carnet.record = jest.fn(() => { throw new Error('disque plein'); });
     const champ = arbre.root.findAllByType(TextInput)[0];
 
     expect(textes(arbre)).not.toContain('training.sync.localFailed');
@@ -538,10 +643,14 @@ describe('la saisie ecrit dans le carnet LOCAL, avec le test en clair', () => {
 });
 
 describe('l envoi differe des mesures', () => {
-  it('ne montre RIEN tant que rien n attend d etre envoye', () => {
+  it('dit « tout est envoye » quand rien n attend — et ne propose PAS d envoyer', () => {
+    // 🪤 Le bandeau n avait que DEUX etats et melangeait « en attente » et
+    // « garde sur le telephone » : on ne savait pas si le carnet etait a jour
+    // ou si quelque chose n etait pas parti.
     const arbre = rendre();
+    ouvrirLaSaisie(arbre);
 
-    expect(textes(arbre)).not.toContain('training.sync.offline|{"count":0}');
+    expect(textes(arbre)).toContain('training.sync.allSent');
     expect(bouton(arbre, 'training.actions.sync')).toBeUndefined();
   });
 
@@ -549,6 +658,7 @@ describe('l envoi differe des mesures', () => {
     const carnet = carnetNeutre();
     carnet.pendingCount = jest.fn(() => 4);
     const arbre = rendre({ carnet });
+    ouvrirLaSaisie(arbre);
 
     expect(textes(arbre)).toContain('training.sync.offline|{"count":4}');
     expect(bouton(arbre, 'training.actions.sync')).toBeDefined();
@@ -558,6 +668,7 @@ describe('l envoi differe des mesures', () => {
     const carnet = carnetNeutre();
     carnet.pendingCount = jest.fn(() => 2);
     const arbre = rendre({ carnet });
+    ouvrirLaSaisie(arbre);
 
     await act(async () => { await bouton(arbre, 'training.actions.sync').props.onPress(); });
 
@@ -572,6 +683,7 @@ describe('l envoi differe des mesures', () => {
     carnet.pendingCount = jest.fn(() => 2);
     carnet.sync.mutateAsync = jest.fn(async () => { throw new Error('pas de reseau'); });
     const arbre = rendre({ carnet });
+    ouvrirLaSaisie(arbre);
 
     await act(async () => { await bouton(arbre, 'training.actions.sync').props.onPress(); });
     const vus = textes(arbre);
@@ -589,18 +701,21 @@ describe('la navigation d un test a l autre', () => {
     expect(bouton(arbre, 'training.actions.nextTest').props.disabled).toBe(false);
   });
 
-  it('« suivant » change de test ET revient a l onglet « Faire »', () => {
+  it('« suivant » change de test, revient a « Faire » ET REFERME la saisie', () => {
+    // 🪤 La saisie devait se refermer : rester dans la boucle d essais du test
+    // precedent en changeant de test ferait taper les valeurs du T2 dans les
+    // cases du T1 — le defaut exact que la refonte cherche a fermer.
     const arbre = rendre();
-
+    ouvrirLaSaisie(arbre);
     act(() => { onglets(arbre)[1].props.onPress(); });
     act(() => { bouton(arbre, 'training.actions.nextTest').props.onPress(); });
     const vus = textes(arbre);
 
     expect(vus).toContain('Nordic hamstring');
     expect(vus).toContain('training.test.step|{"current":2,"total":2}');
-    // L'onglet est retombe sur « Faire » : la minuterie est de nouveau la.
     expect(onglets(arbre)[0].props.accessibilityState).toEqual({ selected: true });
-    expect(vus).toContain('2:00');
+    // On est revenu a la LECTURE du protocole : le bouton d entree est la.
+    expect(bouton(arbre, 'training.test.toEntry')).toBeDefined();
   });
 
   it('« precedent » revient en arriere et rallume « suivant »', () => {
@@ -659,12 +774,17 @@ describe('ce qui a deja ete saisi, au retour sur la fiche', () => {
     expect(carnet.merge).toHaveBeenCalledWith([]);
   });
 
-  it('🚨 une valeur DEJA enregistree ne se reaffiche PAS dans le champ', () => {
-    // 🪤 DEFAUT FIGE ICI, ET IL FAUT LE REPARER A LA REFONTE. La fusion se fait
-    // dans un `useEffect`, donc APRES le premier rendu ; or le champ garde sa
-    // valeur dans un `useState` initialise UNE fois, au montage. Le chiffre
-    // arrive donc trop tard et n'est jamais montre : au retour sur la fiche,
-    // le joueur voit des cases vides et croit avoir tout perdu.
+  it('✅ une valeur DEJA enregistree se reaffiche — le defaut est REPARE', () => {
+    // 🪤 CE TEMOIN DISAIT L INVERSE, et il figeait un vrai defaut : la fusion se
+    // fait dans un `useEffect`, donc APRES le premier rendu, alors que le champ
+    // gardait sa valeur dans un `useState` initialise UNE fois au montage. Le
+    // chiffre arrivait trop tard : au retour sur la fiche, le joueur voyait des
+    // cases vides et croyait avoir tout perdu.
+    //
+    // ✅ LA REFONTE L A FERME SANS QU ON LE CHERCHE, et c est instructif : la
+    // saisie se monte maintenant APRES un appui sur « Passer a la saisie »,
+    // donc apres que la fusion a eu lieu. Le champ nait avec la bonne valeur.
+    // Le pack de design a resolu un bug d etat en changeant l ergonomie.
     const carnet = carnetNeutre();
     carnet.merge = jest.fn(() => ({
       'temps10m|1|none': {
@@ -677,19 +797,21 @@ describe('ce qui a deja ete saisi, au retour sur la fiche', () => {
       },
     }));
     const arbre = rendre({ carnet });
+    ouvrirLaSaisie(arbre);
     const champs = arbre.root.findAllByType(TextInput)
       .filter((/** @type {any} */ n) => n.props.accessibilityLabel === 'Temps 10 m');
 
-    expect(champs[0].props.value).toBe('');
+    expect(champs[0].props.value).toBe('1.72');
   });
 });
 
 describe('les cas limites ne font pas tomber l ecran', () => {
-  it('une route SANS aucun parametre rend une page blanche, sans exception', () => {
+  it('une route SANS aucun parametre rend l etat vide, sans exception', () => {
     // `route.params` absent est lu partout en chainage optionnel : l'ecran ne
-    // leve pas, il se vide. C'est le cas d'une notification mal formee.
+    // leve pas. C'est le cas d'une notification mal formee — et depuis la
+    // refonte, il ne laisse plus la personne devant un fond vide.
     expect(() => rendre({ params: null })).not.toThrow();
-    expect(textes(rendre({ params: null }))).toEqual([]);
+    expect(textes(rendre({ params: null }))).toContain('training.test.offlineTitle');
   });
 
   it('une journee dont `tests` n est pas une liste est traitee comme vide', () => {
@@ -698,14 +820,20 @@ describe('les cas limites ne font pas tomber l ecran', () => {
       enrollment: { program: { days: [{ documentId: 'jour-t', tests: null }] } },
     };
 
-    expect(textes(rendre({ etat: testsCasses }))).toEqual([]);
+    expect(textes(rendre({ etat: testsCasses }))).toContain('training.test.offlineTitle');
   });
 
-  it('un test sans mesures affiche quand meme sa fiche et sa minuterie', () => {
-    const vus = textes(rendre({ params: { sessionId: 'seance-1', testIndex: 1 } }));
+  it('un test sans AUCUNE mesure affiche quand meme sa fiche et sa minuterie', () => {
+    const arbre = rendre({ params: { sessionId: 'seance-1', testIndex: 1 } });
+    expect(textes(arbre)).toContain('Nordic hamstring');
 
-    expect(vus).toContain('Nordic hamstring');
+    ouvrirLaSaisie(arbre);
+    const vus = textes(arbre);
+
     expect(vus).toContain('2:00');
-    expect(vus).toContain('training.test.results');
+    // Aucune carte d essai, aucune valeur calculee : rien a saisir, et l ecran
+    // ne pose donc aucun titre orphelin au-dessus du vide.
+    expect(vus.some((v) => String(v).startsWith('training.attempt.title'))).toBe(false);
+    expect(vus).not.toContain('training.test.seriesResult');
   });
 });
