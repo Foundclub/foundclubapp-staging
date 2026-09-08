@@ -15,6 +15,7 @@ import {
   View,
 } from 'react-native';
 
+import { formatSubscriptionPriceLabel } from '@/domains/subscription/subscriptionBilling';
 import useTheme from '@/theme/themeContext';
 
 import ScreenContainer from '@/components/templates/ScreenContainer';
@@ -307,7 +308,27 @@ function AdminDashboard() {
     || 0;
 
   const eventsTodayCount = stats?.eventsToday || 0;
-  const generatedRevenue = stats?.revenue || 0;
+  // LE CHIFFRE D'AFFAIRES — ce qu'il est, et pourquoi il est ecrit comme ca.
+  //
+  // Le serveur envoie DEUX formes du meme montant : `revenue` en euros (parce que
+  // l'app deja installee chez les gens ecrit le nombre brut suivi de « EUR ») et
+  // `revenueEurCents` en centimes, exact. Ici on lit les centimes, et on retombe
+  // sur les euros seulement si un serveur plus ancien repond — sans ce filet, une
+  // app neuve face a un serveur pas encore deploye afficherait un vide.
+  //
+  // ⚠️ « indisponible » n'est PAS « zero ». C'est toute la lecon de ce compteur :
+  // il a affiche « 0 EUR » pendant des mois, et personne ne pouvait dire si ca
+  // voulait dire « aucun client » ou « je ne sais pas compter ».
+  const revenueEurCents = Number.isFinite(Number(stats?.revenueEurCents))
+    ? Number(stats.revenueEurCents)
+    : Math.round(Number(stats?.revenue || 0) * 100);
+  const revenueLabel = stats?.revenueKind === 'indisponible'
+    ? 'indisponible'
+    : formatSubscriptionPriceLabel(revenueEurCents, 'monthly');
+  const payingSubscriptionCount = Number(stats?.payingSubscriptionCount || 0);
+  const trialSubscriptionCount = Number(stats?.trialSubscriptionCount || 0);
+  const revenueMeta = `${payingSubscriptionCount} payant${payingSubscriptionCount > 1 ? 's' : ''}`
+    + ` · ${trialSubscriptionCount} essai${trialSubscriptionCount > 1 ? 's' : ''}`;
   const reportsCount = stats?.reportsCount || 0;
   const claimsCount = claimsData?.meta?.pagination?.total || 0;
   const clubOnboardingCount = clubOnboardingData?.meta?.pagination?.total || 0;
@@ -1514,10 +1535,10 @@ function AdminDashboard() {
         <View style={styles.dashboardGrid}>
           <DashboardCard
             color={Colors.success500}
-            meta="Finance"
+            meta={revenueMeta}
             onPress={() => navigation.navigate(RouteNames.AdminRevenue)}
-            title="CA génère"
-            value={`${generatedRevenue} EUR`}
+            title="CA par mois"
+            value={revenueLabel}
           />
           <DashboardCard
             color={Colors.primary500}
