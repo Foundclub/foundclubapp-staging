@@ -1,7 +1,7 @@
 import { useNavigation } from '@react-navigation/native';
 import React, { useCallback, useEffect, useState } from 'react';
 import {
-  FlatList, RefreshControl, Text, TextInput, TouchableOpacity, View,
+  FlatList, RefreshControl, ScrollView, Text, TextInput, TouchableOpacity, View,
 } from 'react-native';
 
 import useTheme from '@/theme/themeContext';
@@ -18,6 +18,36 @@ import { useGetAdminUsers } from '@/services/admin/adminQueries';
 import { getErrorMessage } from '@/utils/errors/displayError';
 
 /**
+ * Les roles reellement poses en base, releves en production le 2026-09-08 :
+ * joueur (74) · authenticated (46) · dirigeant (14) · entraineur (2) ·
+ * parent (2) · superadmin (1). `authenticated` est le role d un compte qui n a
+ * pas encore choisi : il merite sa pastille, c est lui qu on veut relancer.
+ * @type {{ label: string, type: string }[]}
+ */
+const ROLES_FILTRABLES = [
+  { label: 'Dirigeant', type: 'dirigeant' },
+  { label: 'Entraineur', type: 'entraineur' },
+  { label: 'Joueur', type: 'joueur' },
+  { label: 'Parent', type: 'parent' },
+  { label: 'Sans rôle', type: 'authenticated' },
+  { label: 'SuperAdmin', type: 'superadmin' },
+];
+
+/**
+ * La date d inscription, en francais et courte.
+ * @param {string | null | undefined} valeur - La date brute.
+ * @returns {string} La date lisible, ou '' si elle est absente ou illisible.
+ */
+const formatInscription = (valeur) => {
+  if (!valeur) return '';
+  const date = new Date(valeur);
+  if (Number.isNaN(date.getTime())) return '';
+  const jour = String(date.getDate()).padStart(2, '0');
+  const mois = String(date.getMonth() + 1).padStart(2, '0');
+  return `${jour}/${mois}/${date.getFullYear()}`;
+};
+
+/**
  *
  */
 function AdminUserList() {
@@ -27,6 +57,10 @@ function AdminUserList() {
   const navigation = useNavigation();
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
+  // Demandes d'Adel du 2026-09-08, apres essai de la 2.6.36 : voir les derniers
+  // inscrits d'abord, et pouvoir filtrer au moins par role.
+  const [roleFilter, setRoleFilter] = useState('');
+  const [newestFirst, setNewestFirst] = useState(true);
 
   // Simple debounce
   useEffect(() => {
@@ -39,7 +73,11 @@ function AdminUserList() {
     error,
     isLoading,
     refetch,
-  } = useGetAdminUsers({ q: debouncedSearch });
+  } = useGetAdminUsers({
+    q: debouncedSearch,
+    role: roleFilter,
+    sort: [newestFirst ? 'createdAt:desc' : 'createdAt:asc'],
+  });
 
   const users = data?.data || data || [];
 
@@ -58,8 +96,12 @@ function AdminUserList() {
     switch (roleType) {
       case 'admin': return Colors.error500;
       case 'dirigeant': return Colors.primary500;
-      case 'entraîneur': return Colors.warning500;
+      // ⚠️ « entraineur » N'A PAS D'ACCENT en base (releve en production le
+      // 2026-09-08 : up_roles.type vaut bien `entraineur`). Le code cherchait
+      // « entraîneur » : cette pastille n'a JAMAIS pris sa couleur.
+      case 'entraineur': return Colors.warning500;
       case 'joueur': return Colors.success500;
+      case 'parent': return Colors.primary300;
       case 'superadmin': return Colors.error500;
       default: return Colors.neutral300;
     }
@@ -68,11 +110,22 @@ function AdminUserList() {
   const renderItem = useCallback(({ item }) => {
     const { role } = item;
     const { club } = item;
+    const nomComplet = [item.firstname, item.lastname].filter(Boolean).join(' ').trim()
+      || 'Personne sans nom';
 
     return (
       <TouchableOpacity
+        accessibilityLabel={`Ouvrir la fiche de ${nomComplet}`}
+        // 🐛 LE NUMERO, PAS L IDENTIFIANT DOCUMENT.
+        // On passait `item.documentId`, et la fiche appelle `/api/users/:id`.
+        // Cette route du greffon users-permissions cherche par NUMERO
+        // (services/user.js:88, `where: { $and: [{ id }] }`) : PostgreSQL
+        // recevait une chaine la ou il attend un entier et refusait tout.
+        // Sentry SERVEUR-STRAPI-7 le 2026-09-08, 6 fois en 14 secondes.
+        // ⚠️ La SUPPRESSION, elle, passe par notre route `/superadmin/users/
+        // :documentId` : la fiche relit `user.documentId` une fois chargee.
         onPress={() => navigation.navigate(RouteNames.AdminUserDetail, {
-          userId: item.documentId || item.id,
+          userId: item.id,
         })}
         style={[
           ApplicationStyle.backgroundColor.neutral800,
@@ -99,15 +152,25 @@ function AdminUserList() {
             </Text>
             <View style={[Alignments.row, Alignments.alignCenter, Spaces.marginTop[4], Spaces.gap[8]]}>
               {role && (
-              <View style={[
-                Spaces.paddingHorizontal[8],
-                Spaces.paddingVertical[4],
-                { backgroundColor: getRoleBadgeColor(role.type), borderRadius: 4 },
-              ]}
+              <View
+                accessibilityLabel={`Role ${role.name}`}
+                style={[
+                  Spaces.paddingHorizontal[8],
+                  Spaces.paddingVertical[4],
+                  { backgroundColor: getRoleBadgeColor(role.type), borderRadius: 4 },
+                ]}
               >
                 <Text style={[Fonts.p2, { color: 'white', fontSize: 12 }]}>{role.name}</Text>
               </View>
               )}
+              {/* LA DATE D INSCRIPTION. Sans elle, l ordre de la liste est
+                  invisible : Adel demandait « les derniers d abord » alors que
+                  le tri etait deja bon — il ne pouvait simplement pas le voir. */}
+              {formatInscription(item.createdAt) ? (
+                <Text style={[Fonts.p2, { color: Colors.neutral300, fontSize: 12 }]}>
+                  {`📅 ${formatInscription(item.createdAt)}`}
+                </Text>
+              ) : null}
               {club && (
               <Text style={[Fonts.p2, { color: Colors.neutral300, fontSize: 12 }]}>
                 🏟️
@@ -182,6 +245,56 @@ function AdminUserList() {
           )}
         </View>
       </View>
+
+      {/* TRI ET ROLES — demande d'Adel du 2026-09-08. Une seule rangee qui
+          defile : le bouton de tri d'abord, puis les six roles reellement
+          presents en base. Appuyer deux fois sur un role le retire. */}
+      <ScrollView
+        contentContainerStyle={[Spaces.paddingHorizontal[16], Spaces.gap[8], Alignments.row]}
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={[Spaces.marginBottom[12], { flexGrow: 0 }]}
+      >
+        <TouchableOpacity
+          accessibilityLabel="Trier par date d inscription"
+          onPress={() => setNewestFirst((valeur) => !valeur)}
+          style={[
+            Spaces.paddingHorizontal[12],
+            Spaces.paddingVertical[8],
+            {
+              backgroundColor: Colors.primary500,
+              borderRadius: 999,
+            },
+          ]}
+        >
+          <Text style={[Fonts.p2, { color: 'white', fontSize: 12 }]}>
+            {newestFirst ? '↓ Derniers inscrits' : '↑ Plus anciens'}
+          </Text>
+        </TouchableOpacity>
+
+        {ROLES_FILTRABLES.map((entree) => {
+          const actif = roleFilter === entree.type;
+          return (
+            <TouchableOpacity
+              accessibilityLabel={`Filtrer sur le role ${entree.label}`}
+              key={entree.type}
+              onPress={() => setRoleFilter((valeur) => (valeur === entree.type ? '' : entree.type))}
+              style={[
+                Spaces.paddingHorizontal[12],
+                Spaces.paddingVertical[8],
+                {
+                  backgroundColor: actif ? getRoleBadgeColor(entree.type) : Colors.neutral800,
+                  borderColor: getRoleBadgeColor(entree.type),
+                  borderRadius: 999,
+                  borderWidth: 1,
+                },
+              ]}
+            >
+              <Text style={[Fonts.p2, { color: 'white', fontSize: 12 }]}>{entree.label}</Text>
+            </TouchableOpacity>
+          );
+        })}
+      </ScrollView>
 
       <FlatList
         contentContainerStyle={[Spaces.paddingHorizontal[16]]}

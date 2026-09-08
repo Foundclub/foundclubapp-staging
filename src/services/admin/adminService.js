@@ -16,7 +16,7 @@ import {
 import deviceRuntime from '@/platform/device';
 
 /**
- * @typedef {{ q?: string; role?: string; page?: number; pageSize?: number }} AdminUsersParams
+ * @typedef {{ q?: string; role?: string; page?: number; pageSize?: number; sort?: string[] }} AdminUsersParams
  * @typedef {{ q?: string; page?: number; pageSize?: number }} AdminClubsParams
  */
 
@@ -652,13 +652,16 @@ export const refuseAffiliationHelpRequest = async (documentId, payload = {}) => 
  */
 export const getAdminUsers = async (params = {}) => {
   const {
-    page = 1, pageSize = 20, q, role,
+    page = 1, pageSize = 20, q, role, sort,
   } = params;
   const filters = /** @type {any} */ ({
     filters: {},
     pagination: { page, pageSize },
     populate: ['avatar', 'role', 'club'],
-    sort: ['createdAt:desc'],
+    // Le tri est CHOISI PAR L ECRAN depuis le 2026-09-08 (demande d Adel), avec
+    // les derniers inscrits par defaut. Verifie : l app envoie bien
+    // `sort[]=createdAt:desc` dans l URL.
+    sort: Array.isArray(sort) && sort.length ? sort : ['createdAt:desc'],
   });
 
   if (q) {
