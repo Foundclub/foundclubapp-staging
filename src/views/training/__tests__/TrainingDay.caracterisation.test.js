@@ -594,10 +594,21 @@ describe('le pied de page', () => {
     expect(arbre.root.findAllByType(Button)).toHaveLength(2);
   });
 
-  it('propose « Terminer » quand la seance tourne, et RIEN d autre', () => {
-    const arbre = rendre({ etat: avec(JOURNEE, { ...SEANCE, status: 'in_progress' }) });
+  it('pendant la seance, RAMENE au tableau de bord au lieu de terminer ici', () => {
+    // 🪤 Cette fiche sert a RELIRE un protocole en cours de route. Le geste, lui,
+    // se fait sur le tableau de bord — c est la qu on voit ce qui reste, et donc
+    // la que la decision de terminer se prend.
+    const navigate = jest.fn();
+    const arbre = rendre({
+      etat: avec(JOURNEE, { ...SEANCE, status: 'in_progress' }),
+      navigation: { navigate },
+    });
+    const bouton = boutonPrincipal(arbre);
 
-    expect(boutonPrincipal(arbre).props.title).toBe('training.actions.finishDay');
+    expect(bouton.props.title).toBe('training.now.back');
+    act(() => { bouton.props.onPress(); });
+    expect(navigate).toHaveBeenCalledWith('TrainingSessionNow', { sessionId: 'seance-9' });
+
     // ⛔ Plus de « je la ferai plus tard » une fois la seance lancee : on ne
     // reporte pas une journee dont le chronometre tourne deja.
     expect(arbre.root.findAllByType(Button)).toHaveLength(1);
@@ -615,22 +626,24 @@ describe('le pied de page', () => {
     expect(navigate).toHaveBeenCalledWith('TrainingPlan');
   });
 
-  it('« Terminer » ne fait PLUS sortir de l ecran', async () => {
-    const goBack = jest.fn();
+  it('demarrer une journee sans barriere OUVRE le tableau de bord', async () => {
+    // 🪤 « Commencer » ne faisait que changer une etiquette d etat : on restait
+    // sur la meme page de lecture, sans savoir quoi faire ensuite.
     const mutateAsync = jest.fn().mockResolvedValue(undefined);
+    const navigate = jest.fn();
     const arbre = rendre({
-      etat: avec(JOURNEE, { ...SEANCE, status: 'in_progress' }),
+      etat: avec({ ...JOURNEE, requiresFreshnessCheck: false }),
       miseAJour: { mutateAsync },
-      navigation: { goBack },
+      navigation: { navigate },
     });
 
     await act(async () => { boutonPrincipal(arbre).props.onPress(); });
 
     expect(mutateAsync).toHaveBeenCalledWith({
-      payload: { status: 'done' },
+      payload: { status: 'in_progress' },
       sessionDocumentId: 'seance-9',
     });
-    expect(goBack).not.toHaveBeenCalled();
+    expect(navigate).toHaveBeenCalledWith('TrainingSessionNow', { sessionId: 'seance-9' });
   });
 
   it('prend sa TROISIEME forme quand la journee est finie : la porte du carnet', () => {

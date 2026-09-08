@@ -219,7 +219,10 @@ function TrainingFreshness({ navigation, route }) {
       navigation.navigate(RouteNames.TrainingSessions, { postponeSessionId: session.documentId });
       return;
     }
-    navigation.navigate(RouteNames.TrainingDay, { sessionId: session.documentId });
+    // ⛔ PAS la fiche de la journee : elle sert a LIRE. Une seance qui demarre
+    // s ouvre sur le tableau de bord, le seul ecran qui reponde a « je fais quoi
+    // maintenant ? ». C est la porte d entree que le pack decrit.
+    navigation.navigate(RouteNames.TrainingSessionNow, { sessionId: session.documentId });
   }, [bilan, enregistrer, navigation, notes, session]);
 
   const couleurVerdict = bilan && {

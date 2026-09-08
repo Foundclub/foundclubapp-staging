@@ -108,6 +108,15 @@ function SearchStack() {
         getComponent={() => require('@/views/training/TrainingFreshness').default}
         name={RouteNames.TrainingFreshness}
       />
+      {/*
+        « Maintenant » est la PLACE DU VILLAGE d une seance en cours : onze pages
+        du parcours guide y reviennent. Elle vit donc dans la pile de l onglet,
+        avec le dock visible — on en part et on y revient sans arret.
+      */}
+      <Stack.Screen
+        getComponent={() => require('@/views/training/TrainingSessionNow').default}
+        name={RouteNames.TrainingSessionNow}
+      />
     </Stack.Navigator>
   );
 }

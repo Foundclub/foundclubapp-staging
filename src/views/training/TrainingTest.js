@@ -18,6 +18,8 @@ import TrainingMeasureInput from '@/components/organisms/training/TrainingMeasur
 import TrainingTimer from '@/components/organisms/training/TrainingTimer';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
+import { RouteNames } from '@/navigation/routeNames';
+
 import { useMyTraining, useTrainingResults } from '@/hooks/useTraining';
 
 /**
@@ -408,12 +410,28 @@ function TrainingTest({ navigation, route }) {
                 </View>
               </View>
 
-              {index >= tests.length - 1 && (
-              <Button
-                onPress={() => navigation.goBack()}
-                title={t('training.actions.finishTest')}
-                variant="Secondary"
-              />
+              {/*
+                🔎 LE POINT DE RETOUR. Le pack fait revenir ONZE pages du parcours
+                guide sur le tableau de bord : c est la place du village, le seul
+                endroit qui dise ce qui precede, ce qui suit et combien il reste.
+                Un simple retour en arriere ne suffit pas — on peut etre arrive ici
+                par le lien « Pourquoi » de la veille, et le tableau de bord n a
+                alors aucun sens : la seance n a pas commence.
+              */}
+              {session?.status === 'in_progress' ? (
+                <Button
+                  onPress={() => navigation.navigate(RouteNames.TrainingSessionNow, { sessionId })}
+                  title={t('training.now.back')}
+                  variant="Secondary"
+                />
+              ) : (
+                index >= tests.length - 1 && (
+                  <Button
+                    onPress={() => navigation.goBack()}
+                    title={t('training.actions.finishTest')}
+                    variant="Secondary"
+                  />
+                )
               )}
             </View>
           ) : null}

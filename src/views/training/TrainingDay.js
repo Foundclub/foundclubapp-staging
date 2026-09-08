@@ -413,19 +413,17 @@ function TrainingDay({ navigation, route }) {
       payload: { status: 'in_progress' },
       sessionDocumentId: session.documentId,
     });
+    // Meme porte que depuis les cinq questions : demarrer une seance mene au
+    // tableau de bord, jamais a une simple etiquette d etat qui ne change rien.
+    navigation.navigate(RouteNames.TrainingSessionNow, { sessionId: session.documentId });
   }, [day, navigation, session, updateSession]);
 
-  const finish = useCallback(async () => {
-    if (!session?.documentId) return;
-    // 🪤 ON NE QUITTE PLUS L'ÉCRAN. La version précédente renvoyait au planning dès
-    // la journée terminée : l'état « finie » — celui qui montre le récapitulatif et
-    // la porte vers le carnet — n'était donc jamais visible, sauf à revenir à la
-    // main sur une journée qu'on croyait close.
-    await updateSession.mutateAsync({
-      payload: { status: 'done' },
-      sessionDocumentId: session.documentId,
-    });
-  }, [session, updateSession]);
+  /*
+   * 🪤 « TERMINER » N EST PLUS ICI, et ce n est pas un oubli. Le cliquet du dépôt
+   * a signalé que la fonction était devenue INATTEIGNABLE quand le pied de cette
+   * fiche s'est mis à ramener au tableau de bord. On termine une séance là où on
+   * voit ce qu'il reste à faire — pas au fond d'une page de lecture.
+   */
 
   const openTest = useCallback((/** @type {number} */ index, /** @type {string} */ tab) => {
     navigation.navigate(RouteNames.TrainingTest, {
@@ -769,11 +767,20 @@ function TrainingDay({ navigation, route }) {
               />
             ) : (
               <View style={Spaces.gap[4]}>
+                {/*
+                  🪤 PENDANT LA SEANCE, CETTE FICHE N EST PLUS L ECRAN DE TRAVAIL.
+                  Elle sert a relire un protocole en cours de route ; le geste,
+                  lui, se fait sur le tableau de bord. Terminer depuis ici serait
+                  possible, mais on y arrive par le tableau de bord, ou l on voit
+                  ce qui reste — c est la que la decision se prend.
+                */}
                 <Button
                   isLoading={updateSession.isPending}
-                  onPress={enCours ? finish : start}
-                  title={t(enCours ? 'training.actions.finishDay' : 'training.actions.startDay')}
-                  variant={enCours ? 'Secondary' : 'Primary'}
+                  onPress={enCours
+                    ? () => navigation.navigate(RouteNames.TrainingSessionNow, { sessionId })
+                    : start}
+                  title={t(enCours ? 'training.now.back' : 'training.actions.startDay')}
+                  variant="Primary"
                 />
                 {/*
                   LA DEUXIEME SORTIE. Le pied n en avait qu une : « Commencer ».

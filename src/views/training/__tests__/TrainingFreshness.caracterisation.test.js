@@ -422,7 +422,7 @@ describe('ce qui part au serveur', () => {
     });
   });
 
-  it('file sur la journee une fois les reponses parties', async () => {
+  it('file sur le TABLEAU DE BORD une fois les reponses parties', async () => {
     const navigate = jest.fn();
     const arbre = rendre({ navigation: { navigate } });
     repondreATout(arbre, {
@@ -431,7 +431,9 @@ describe('ce qui part au serveur', () => {
 
     await act(async () => { arbre.root.findByType(Button).props.onPress(); });
 
-    expect(navigate).toHaveBeenCalledWith('TrainingDay', { sessionId: 'seance-9' });
+    // ⛔ Pas la fiche de la journee : elle sert a LIRE. Une seance qui demarre
+    // s ouvre sur le seul ecran qui reponde a « je fais quoi maintenant ? ».
+    expect(navigate).toHaveBeenCalledWith('TrainingSessionNow', { sessionId: 'seance-9' });
   });
 
   it('🪤 ne fait PAS partir la personne quand l envoi echoue', async () => {

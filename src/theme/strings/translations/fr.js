@@ -4776,6 +4776,27 @@ export default {
         right: 'Droite',
       },
     },
+    now: {
+      allDone: 'Tout est fait',
+      back: 'Revenir à ma séance',
+      elapsed_one: 'T+{{count}} min',
+      elapsed_other: 'T+{{count}} min',
+      // Une seule question se pose sur un terrain, entre deux essais, avec un
+      // partenaire qui attend. L ecran ne repond qu a celle-la.
+      hint: 'Une seule question ici : qu’est-ce que je fais maintenant ?',
+      label: 'Maintenant',
+      progress_one: '{{tests}} test fait · {{done}} étapes sur {{total}}',
+      progress_other: '{{tests}} tests faits · {{done}} étapes sur {{total}}',
+      resume: 'Continuer : {{test}}, {{what}}',
+      resumeAttempt: 'essai {{count}}',
+      resumePrep: 'mise en place',
+      step: {
+        attempt: '{{test}} — essai {{current}} sur {{total}}',
+        prep: '{{test}} — mise en place',
+      },
+      title: 'Ma séance',
+      whatNext: 'La suite, dans l’ordre',
+    },
     plan: {
       abandonConfirm: {
         cancel: 'Non, je continue',
