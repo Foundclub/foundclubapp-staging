@@ -82,7 +82,11 @@ jest.mock('react-i18next', () => {
         const compte = options && typeof options === 'object' ? Number(options.count) : NaN;
         let valeur = lire(chemin);
         if (typeof valeur !== 'string' && Number.isFinite(compte)) {
-          const suffixe = compte === 1 ? '_one' : '_other';
+          // 🔤 LA REGLE FRANCAISE : zero ET un prennent le singulier. Ce double
+          // appliquait la regle anglaise (1 seul) — il decrivait donc un ecran
+          // que l app ne montre plus depuis qu elle embarque `intl-pluralrules`
+          // (2026-09-08). Un double qui ment est pire qu un double absent.
+          const suffixe = compte === 0 || compte === 1 ? '_one' : '_other';
           valeur = lire([...chemin.slice(0, -1), `${chemin[chemin.length - 1]}${suffixe}`]);
         }
         if (typeof valeur !== 'string') {
