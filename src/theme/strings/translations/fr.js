@@ -4727,12 +4727,34 @@ export default {
       section: 'Mon entraînement',
     },
     logbook: {
+      attempt: 'essai {{count}}',
+      // La pastille cyan qui dit qu une valeur ne vient pas d un chronometre mais
+      // d un calcul de l app. Sans elle, on cherche a se rappeler si on l a saisie.
+      computed: 'calculé',
       copied: 'Carnet copié',
       description: 'Une mesure par ligne, prête à coller.',
-      empty: 'Aucune mesure enregistrée pour l\'instant.',
+      empty: 'Tes mesures apparaîtront ici, séance après séance.',
+      emptyAction: 'Voir ma prochaine séance',
+      // 🪤 Le titre du vide redisait « Mon carnet », juste sous le vrai titre : on
+      // lisait deux fois la meme chose et on croyait a un defaut d affichage.
+      emptyTitle: 'Rien au carnet',
+      rawHint: '11 colonnes, une mesure par ligne, point-virgule. Il existe pour être '
+        + 'collé ailleurs, analysé, puis réimporté.',
+      readableHint: 'La vue lisible est un confort de relecture — elle ne remplace pas '
+        + 'le carnet brut.',
       rows_one: '{{count}} mesure',
       rows_other: '{{count}} mesures',
+      side: {
+        both: 'les deux',
+        left: 'gauche',
+        right: 'droite',
+      },
       title: 'Mon carnet',
+      view: {
+        raw: 'Brut',
+        readable: 'Lisible',
+      },
+      void: 'nul',
     },
     measures: {
       attempt: 'Essai {{number}}',

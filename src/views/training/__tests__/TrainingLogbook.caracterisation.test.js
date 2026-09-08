@@ -1,54 +1,45 @@
-import { ScrollView, TextInput } from 'react-native';
+import { ScrollView, TouchableOpacity } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
 import Button from '@/components/atoms/button/Button';
-import EmptyState from '@/components/atoms/emptyState/EmptyState';
+
+import genererCouleurs from '@/theme/colors';
 
 import TrainingLogbook from '../TrainingLogbook';
 
 /**
- * « MON CARNET » — FILET DE CARACTERISATION (E6).
+ * « MON CARNET » — LE FILET DES DEUX VUES.
  *
- * 🔎 POURQUOI CE FICHIER EXISTE : cinq des six ecrans de la section n'avaient
- * AUCUN test, et le pack de design les reecrit. La regle du projet est
- * mecanique : sur un fichier sans filet, on ecrit d'abord un temoin qui decrit
- * le comportement ACTUEL, ensuite seulement on touche. Sans lui, rien ne dirait
- * qu'une branche retiree servait.
- *
- * CE QUE CES TEMOINS FIGENT, et qui ne doit PAS bouger avec la peinture :
- *   1. l'entete (titre, phrase, compteur) est rendue DANS TOUS LES CAS ;
- *   2. le carnet est du texte BRUT, rendu caractere pour caractere, jamais
- *      reformate — c'est ce qui permet de le coller ailleurs puis de le
- *      reimporter ;
- *   3. il vit dans sa PROPRE boite qui defile, l'ecran lui-meme ne defile pas ;
- *   4. le bouton copie le carnet EXACT et son libelle bascule sur « copie » ;
- *   5. sans presse-papiers dans le build, l'appui ne casse rien et ne ment pas ;
- *   6. sans mesure, l'ecran montre un etat vide SANS AUCUNE porte de sortie ;
- *   7. chargement et erreur ne sont PAS dessines par l'ecran : il les delegue
- *      entierement a l'enveloppe de donnees.
- *
- * ⛔ Aucun temoin ne fige une couleur ni une marge : elles vont changer.
+ * 🔎 CE QU IL PROTEGE, ET POURQUOI :
+ *   1. LE CARNET BRUT NE CHANGE PAS D UN CARACTERE. C est un format d echange :
+ *      on le colle ailleurs, on l analyse, on le reimporte. Un espace ajoute par
+ *      l ecran casserait la reimportation sans que rien ne le dise.
+ *   2. LA VUE LISIBLE NE LE REMPLACE PAS, elle le double. Les deux existent, et
+ *      le bouton de copie reste attache au BRUT.
+ *   3. LA PAGE DEFILE. Elle ne defilait pas : sur un carnet de huit journees,
+ *      tout ce qui depassait l ecran — le bouton « Copier » compris — etait
+ *      simplement inatteignable.
+ *   4. L ECRAN VIDE A UNE PORTE DE SORTIE. C etait un cul-de-sac.
+ *   5. LE CHARGEMENT ET L ERREUR SONT DELEGUES, jamais redessines.
  */
 
 /** @type {any} */
 let mockCarnet;
-
-/** @type {any} */
-let mockPressePapiers;
-
 /** @type {any[]} */
 let mockOptionsCrochet;
-
 /** @type {any[]} */
-let mockPropsGabarit;
-
+let mockPressePapiers;
 /** @type {any[]} */
 let mockPropsEnveloppe;
+/** @type {any} */
+let mockEntrainement;
 
 // ⚠️ Jest refuse toute variable citee dans une doublure qui ne commence pas par
-// « mock ». Les cinq ci-dessus portent donc ce prefixe, y compris les journaux
-// de props.
+// « mock ». Les cinq ci-dessus portent donc ce prefixe.
 jest.mock('@/hooks/useTraining', () => ({
+  // La vue LISIBLE recolle les codes du carnet avec les noms du programme : elle
+  // a donc besoin du programme, que seul ce crochet-la porte.
+  useMyTraining: () => mockEntrainement,
   useTrainingExport: (/** @type {any} */ options) => {
     mockOptionsCrochet.push(options);
     return mockCarnet;
@@ -58,13 +49,11 @@ jest.mock('@/hooks/useTraining', () => ({
 jest.mock('@/theme/themeContext', () => {
   const Alignments = jest.requireActual('@/theme/alignements').default;
   const genererStyle = jest.requireActual('@/theme/applicationStyle').default;
-  const genererCouleurs = jest.requireActual('@/theme/colors').default;
+  const couleurs = jest.requireActual('@/theme/colors').default;
   const genererPolices = jest.requireActual('@/theme/fonts').default;
   const Spaces = jest.requireActual('@/theme/spaces').default;
-  const Colors = genererCouleurs();
+  const Colors = couleurs();
 
-  // Le vrai theme rend cinq objets, pas trois : `Button` lit `ApplicationStyle`
-  // et tombe sans lui. On sert donc le theme REEL, pas une version amputee.
   return {
     __esModule: true,
     default: () => ({
@@ -72,6 +61,7 @@ jest.mock('@/theme/themeContext', () => {
       ApplicationStyle: genererStyle(Colors),
       Colors,
       Fonts: genererPolices(Colors),
+      Images: { chevronDown: 1 },
       Spaces,
     }),
   };
@@ -85,31 +75,35 @@ jest.mock('react-i18next', () => ({
   }),
 }));
 
-// Le presse-papiers est charge A LA DEMANDE par l'ecran, dans un `try`. Cette
-// doublure sert les DEUX branches de ce `try` avec une seule variable :
-//   . 'ABSENT' -> l'acces au module leve, comme un build ou la dependance
-//     facultative n'a pas ete embarquee ;
-//   . null -> le module repond, mais sans `setString`.
 jest.mock('@react-native-clipboard/clipboard', () => ({
   __esModule: true,
-  get default() {
-    if (mockPressePapiers === 'ABSENT') throw new Error('presse-papiers absent du build');
-    return mockPressePapiers;
+  default: {
+    setString: (/** @type {string} */ texte) => {
+      mockPressePapiers.push(texte);
+    },
   },
 }));
 
-// Le gabarit d'ecran pose un fond et des marges : rien a observer, et il tire
-// des dependances natives. On garde ses props pour pouvoir affirmer que l'ecran
-// ne demande AUCUN defilement de page.
+// La rangee de seance tire un degrade natif : il n a rien a dire ici.
+jest.mock('react-native-linear-gradient', () => {
+  const reactActuel = jest.requireActual('react');
+  const { View: VueRN } = jest.requireActual('react-native');
+  return {
+    __esModule: true,
+    default: (/** @type {any} */ props) => reactActuel.createElement(VueRN, props),
+  };
+});
+
 jest.mock('@/components/templates/ScreenContainer', () => {
   const reactActuel = jest.requireActual('react');
   const { View: VueRN } = jest.requireActual('react-native');
   return {
     __esModule: true,
-    default: (/** @type {any} */ props) => {
-      mockPropsGabarit.push(props);
-      return reactActuel.createElement(VueRN, null, props.children);
-    },
+    default: (/** @type {any} */ props) => reactActuel.createElement(
+      VueRN,
+      { bgImage: props.bgImage, bottomInsetMode: props.bottomInsetMode },
+      props.children,
+    ),
   };
 });
 
@@ -128,14 +122,80 @@ jest.mock('@/components/molecules/withDataWrapper/WithDataWrapper', () => {
   };
 });
 
+const Colors = genererCouleurs();
+
 // Le format exact decrit par le guide de terrain : un en-tete, puis une mesure
 // par ligne. Il est fige tel quel parce que l'ecran ne doit RIEN en changer.
+// ⚠️ La NEUVIEME colonne est « valide » : elle vaut V ou N, et c est elle qui
+// colore une ligne nulle en or dans la vue brute.
 const CSV = [
-  'date;jour;test;mesure;unite;cote;essai;valeur;valide',
-  '2026-09-06;T;sprint10m;temps;s;;1;1.72;oui',
-  '2026-09-06;T;cmj;hauteur;cm;;1;38;oui',
-  '2026-09-07;A;souplesse;distance;cm;gauche;1;12;non',
+  'date;jour;test;mesure;unite;cote;essai;valeur;valide;motif_nul;commentaire',
+  '2026-09-06;T;T1;temps;s;;1;1.72;V;;',
+  '2026-09-06;T;T0;hauteur;m;;1;0.4;V;;',
+  '2026-09-07;A;T1;temps;s;;2;1.90;N;faux depart;',
 ].join('\n');
+
+const PROGRAMME = {
+  program: {
+    days: [{
+      code: 'T',
+      tests: [
+        {
+          code: 'T0',
+          measures: [{
+            computed: true, key: 'hauteur', label: 'Hauteur de chute', unit: 'm',
+          }],
+          name: 'Calibrations camera',
+        },
+        {
+          code: 'T1',
+          measures: [{ key: 'temps', label: 'Temps sur 10 m', unit: 's' }],
+          name: 'Sprint 10 metres',
+        },
+      ],
+    }],
+  },
+};
+
+const SEANCES = [
+  {
+    day: { code: 'T', title: 'Jour T' },
+    documentId: 's1',
+    plannedDate: '2026-09-06',
+    results: [
+      {
+        attempt: 1,
+        isValid: true,
+        measureKey: 'temps',
+        side: 'none',
+        test: { code: 'T1' },
+        value: 1.72,
+      },
+      {
+        attempt: 1,
+        isValid: true,
+        measureKey: 'hauteur',
+        side: 'none',
+        test: { code: 'T0' },
+        value: 0.4,
+      },
+    ],
+  },
+  {
+    day: { code: 'A', title: 'Jour A' },
+    documentId: 's2',
+    plannedDate: '2026-09-07',
+    results: [{
+      attempt: 2,
+      invalidReason: 'faux depart',
+      isValid: false,
+      measureKey: 'temps',
+      side: 'none',
+      test: { code: 'T1' },
+      value: 1.9,
+    }],
+  },
+];
 
 const REMPLI = {
   data: { csv: CSV, rows: 3 },
@@ -154,14 +214,17 @@ const VIDE = {
 /**
  * Monte l'ecran et rend l'arbre de test.
  * @param {any} [etat] ce que rend le crochet `useTrainingExport`
+ * @param {any} [navigation] la navigation moquee
  * @returns {any} l'arbre react-test-renderer
  */
-const rendre = (etat = REMPLI) => {
+const rendre = (etat = REMPLI, navigation = {}) => {
   mockCarnet = etat;
+  mockEntrainement = { enrollment: PROGRAMME, sessions: SEANCES };
+  const nav = { navigate: jest.fn(), ...navigation };
   /** @type {any} */
   let arbre;
   act(() => {
-    arbre = renderer.create(<TrainingLogbook />);
+    arbre = renderer.create(<TrainingLogbook navigation={nav} />);
   });
   return arbre;
 };
@@ -188,235 +251,243 @@ const textes = (arbre) => {
   return sortie;
 };
 
+/**
+ * Les deux onglets de l ecran.
+ * @param {any} arbre l arbre rendu
+ * @returns {any[]} les onglets, « Lisible » puis « Brut »
+ */
+const onglets = (arbre) => arbre.root.findAll((n) => n.type === TouchableOpacity
+  && n.props.accessibilityState?.selected !== undefined);
+
+/**
+ * Les styles a plat d un noeud rendu.
+ * @param {any} noeud un noeud
+ * @returns {any[]} ses styles, aplatis
+ */
+const styles = (noeud) => [].concat(noeud.props?.style || []).flat(3).filter(Boolean);
+
+/**
+ * Les noeuds RENDUS qui portent un style donne.
+ *
+ * 🪤 On ne garde que les noeuds HOTES : chaque `<Text>` de React Native apparait
+ * deux fois dans l arbre — le composant et l element rendu — et compter les deux
+ * double tous les resultats.
+ * @param {any} arbre l arbre rendu
+ * @param {(style: any) => boolean} test ce qu on cherche dans le style
+ * @returns {any[]} les noeuds hotes qui correspondent
+ */
+const hotesAvec = (arbre, test) => arbre.root.findAll(
+  (n) => typeof n.type === 'string' && styles(n).some((s) => s && test(s)),
+);
+
 beforeEach(() => {
   mockOptionsCrochet = [];
-  mockPropsGabarit = [];
+  mockPressePapiers = [];
   mockPropsEnveloppe = [];
-  mockPressePapiers = { setString: jest.fn() };
 });
 
-describe('l entete est rendue dans TOUS les cas', () => {
-  it('affiche le titre, la phrase d explication et le compteur de mesures', () => {
-    const vus = textes(rendre());
+describe('l entete', () => {
+  it('met le compte A COTE du titre, pas sur sa propre ligne', () => {
+    const arbre = rendre();
+    const vus = textes(arbre);
 
     expect(vus).toContain('training.logbook.title');
-    expect(vus).toContain('training.logbook.description');
-    // Le compteur passe par `count` : c'est lui qui choisit le pluriel.
-    expect(vus).toContain('training.logbook.rows|{"count":3}');
-  });
-
-  it('garde le compteur quand le carnet est vide, et il annonce ZERO', () => {
-    // Ce temoin dit qu'un carnet vide n'efface pas l'entete : le joueur voit
-    // toujours de quoi on parle, pas seulement un pave « rien ici ».
-    expect(textes(rendre(VIDE))).toContain('training.logbook.rows|{"count":0}');
+    expect(vus).toContain('3');
+    // 🔊 Le chiffre nu ne dit rien a la voix : la phrase entiere vit dans l etiquette.
+    expect(arbre.root.findAllByProps({
+      accessibilityLabel: 'training.logbook.rows|{"count":3}',
+    }).length).toBeGreaterThan(0);
   });
 
   it('demande le carnet des l ouverture, sans condition', () => {
     rendre();
 
-    // `enabled: true` en dur : l'ecran ne differe pas sa requete. Si la refonte
-    // le rend paresseux, ce temoin doit changer volontairement.
     expect(mockOptionsCrochet[0]).toEqual({ enabled: true });
   });
 });
 
-describe('le carnet rempli', () => {
-  it('rend le texte BRUT tel quel, caractere pour caractere', () => {
-    // 🔒 LE TEMOIN LE PLUS IMPORTANT DU FICHIER : tout l'interet du carnet est
-    // d'etre collable ailleurs puis reimportable. Un « joli tableau » qui
-    // remplacerait ce texte casserait l'usage sans casser aucun autre temoin.
-    expect(textes(rendre())).toContain(CSV);
+describe('la vue LISIBLE, celle qui s ouvre en premier', () => {
+  it('s ouvre sur elle : on relit avant de copier', () => {
+    const arbre = rendre();
+
+    expect(onglets(arbre)[0].props.accessibilityState.selected).toBe(true);
+    expect(textes(arbre)).toContain('Sprint 10 metres');
+  });
+
+  it('remplace les CODES du carnet par les vrais noms', () => {
+    const vus = textes(rendre());
+
+    expect(vus).toContain('Jour T');
+    expect(vus).toContain('Sprint 10 metres');
+    expect(vus).toContain('Temps sur 10 m · training.logbook.attempt|{"count":1}');
+    // Et le code brut n apparait plus tel quel.
+    expect(vus).not.toContain('T1');
+  });
+
+  it('ecrit la valeur AVEC son unite', () => {
+    expect(textes(rendre())).toContain('1.72 s');
+  });
+
+  it('pose « calculé » sur la mesure que l app calcule, et sur elle seule', () => {
+    const vus = textes(rendre());
+
+    expect(vus.filter((v) => v === 'training.logbook.computed')).toHaveLength(1);
+  });
+
+  it('BARRE un essai nul et le marque, au lieu de le cacher', () => {
+    const arbre = rendre();
+    const barres = arbre.root.findAll(
+      (n) => styles(n).some((s) => s && s.textDecorationLine === 'line-through'),
+    );
+
+    expect(barres.length).toBeGreaterThan(0);
+    expect(textes(arbre)).toContain('training.logbook.void');
+  });
+
+  it('dit qu elle NE REMPLACE PAS le carnet brut', () => {
+    expect(textes(rendre())).toContain('training.logbook.readableHint');
+  });
+
+  it('ne montre AUCUN bouton de copie : la copie appartient au brut', () => {
+    expect(rendre().root.findAllByType(Button)).toHaveLength(0);
+  });
+});
+
+describe('la vue BRUTE, celle qui se colle ailleurs', () => {
+  /**
+   * Bascule sur l onglet brut.
+   * @param {any} arbre l arbre rendu
+   * @returns {void} rien
+   */
+  const versLeBrut = (arbre) => {
+    act(() => { onglets(arbre)[1].props.onPress(); });
+  };
+
+  it('rend le texte brut LIGNE POUR LIGNE, sans en changer un caractere', () => {
+    const arbre = rendre();
+    versLeBrut(arbre);
+    const vus = textes(arbre);
+
+    CSV.split('\n').forEach((ligne) => expect(vus).toContain(ligne));
+  });
+
+  it('detache la ligne des TITRES DE COLONNES, en cyan et soulignee', () => {
+    const arbre = rendre();
+    versLeBrut(arbre);
+    const entete = hotesAvec(
+      arbre,
+      (s) => s.borderBottomWidth === 1 && s.fontFamily === 'monospace',
+    );
+
+    expect(entete).toHaveLength(1);
+  });
+
+  it('teinte en OR la ligne dont la neuvieme colonne dit « nul »', () => {
+    const arbre = rendre();
+    versLeBrut(arbre);
+    const ors = hotesAvec(
+      arbre,
+      (s) => s.fontFamily === 'monospace' && s.color === Colors.gold500,
+    );
+
+    // Une seule des trois lignes porte « N » en neuvieme colonne.
+    expect(ors).toHaveLength(1);
   });
 
   it('laisse le texte selectionnable a la main', () => {
-    // Seul recours quand le presse-papiers n'est pas dans le build : sans
-    // `selectable`, l'ecran deviendrait un cul-de-sac sur ces appareils.
-    const selectionnables = rendre().root.findAll(
-      (/** @type {any} */ noeud) => noeud.props?.selectable === true,
-    );
-
-    expect(selectionnables.length).toBeGreaterThan(0);
-    expect(selectionnables[0].props.children).toBe(CSV);
-  });
-
-  it('enferme le carnet dans sa propre boite, qui defile dans les deux sens', () => {
-    // Deux defilements IMBRIQUES : l'exterieur horizontal (les lignes sont
-    // longues), l'interieur vertical. La boite est bornee en hauteur, sinon
-    // elle pousserait le bouton hors de l'ecran — et l'ecran, lui, ne defile
-    // pas (voir le temoin suivant).
-    const boites = rendre().root.findAllByType(ScrollView);
-
-    expect(boites).toHaveLength(2);
-    expect(boites[0].props.horizontal).toBe(true);
-    expect(boites[1].props.horizontal).toBeFalsy();
-    expect(typeof boites[0].props.style.maxHeight).toBe('number');
-  });
-
-  it('n offre qu UNE seule zone cliquable : le bouton de copie', () => {
     const arbre = rendre();
+    versLeBrut(arbre);
 
-    expect(arbre.root.findAllByType(Button)).toHaveLength(1);
-    expect(arbre.root.findByType(Button).props.title)
-      .toBe('training.actions.copyLogbook');
+    expect(arbre.root.findAllByProps({ selectable: true }).length).toBeGreaterThan(0);
   });
 
-  it('n affiche PAS l etat vide quand il y a des mesures', () => {
-    expect(rendre().root.findAllByType(EmptyState)).toHaveLength(0);
-  });
-});
-
-describe('l ecran lui-meme ne defile pas et n a aucun champ de saisie', () => {
-  it('demande un fond, et AUCUN defilement de page', () => {
-    // ⚠️ A savoir avant la refonte : le gabarit ne defile QUE si on lui passe
-    // `keyboardScroll`. Tout bloc ajoute sous le bouton deviendra donc
-    // inatteignable sur un petit telephone.
-    rendre();
-
-    expect(mockPropsGabarit[0].bgImage).toBe('bg2');
-    expect(mockPropsGabarit[0].keyboardScroll).toBeUndefined();
-    expect(mockPropsGabarit[0].keyboardAvoiding).toBeUndefined();
-  });
-
-  it('ne pose aucun champ de saisie : la question du clavier ne se pose pas', () => {
-    expect(rendre().root.findAllByType(TextInput)).toHaveLength(0);
-  });
-});
-
-describe('copier le carnet', () => {
   it('pousse le carnet EXACT dans le presse-papiers et bascule le libelle', () => {
     const arbre = rendre();
-
+    versLeBrut(arbre);
     act(() => { arbre.root.findByType(Button).props.onPress(); });
 
-    expect(mockPressePapiers.setString).toHaveBeenCalledWith(CSV);
+    expect(mockPressePapiers).toEqual([CSV]);
     expect(arbre.root.findByType(Button).props.title).toBe('training.logbook.copied');
   });
 
-  it('garde « copie » meme apres que le carnet a change', () => {
-    // 🪤 L'etat `copied` ne se reinitialise JAMAIS : une fois vrai, il reste
-    // vrai pour la duree de vie de l'ecran, meme si les mesures ont ete
-    // rechargees depuis. C'est le comportement actuel, fige tel quel.
+  it('explique a quoi sert le brut', () => {
+    const arbre = rendre();
+    versLeBrut(arbre);
+
+    expect(textes(arbre)).toContain('training.logbook.rawHint');
+  });
+});
+
+describe('la page defile, et elle reserve la place de la barre du bas', () => {
+  it('pose un defilement de PAGE, et pas seulement autour du carnet', () => {
     const arbre = rendre();
 
-    act(() => { arbre.root.findByType(Button).props.onPress(); });
-    mockCarnet = { ...REMPLI, data: { csv: 'date;jour\n2026-09-08;B', rows: 1 } };
-    act(() => { arbre.update(<TrainingLogbook />); });
-
-    expect(arbre.root.findByType(Button).props.title).toBe('training.logbook.copied');
+    expect(arbre.root.findAllByType(ScrollView)[0].props.style).toEqual({ flex: 1 });
   });
 
-  it('ne casse pas quand le presse-papiers n est pas dans le build', () => {
-    // La dependance est facultative dans ce depot. L'appui doit rester
-    // silencieux : pas d'exception, et surtout pas de « copie » mensonger.
-    mockPressePapiers = 'ABSENT';
-    const arbre = rendre();
-
-    act(() => { arbre.root.findByType(Button).props.onPress(); });
-
-    expect(arbre.root.findByType(Button).props.title)
-      .toBe('training.actions.copyLogbook');
-  });
-
-  it('ne casse pas quand le module repond sans savoir ecrire', () => {
-    mockPressePapiers = null;
-    const arbre = rendre();
-
-    act(() => { arbre.root.findByType(Button).props.onPress(); });
-
-    expect(arbre.root.findByType(Button).props.title)
-      .toBe('training.actions.copyLogbook');
-  });
-
-  it('ne touche a rien quand le compteur annonce des lignes mais le texte est vide', () => {
-    // Cas limite REEL : le compteur et le texte viennent de deux champs
-    // separes du serveur. L'ecran affiche alors sa boite et son bouton, mais la
-    // copie se garde toute seule.
-    const arbre = rendre({ ...REMPLI, data: { csv: '', rows: 2 } });
-
-    act(() => { arbre.root.findByType(Button).props.onPress(); });
-
-    expect(mockPressePapiers.setString).not.toHaveBeenCalled();
-    expect(arbre.root.findByType(Button).props.title)
-      .toBe('training.actions.copyLogbook');
+  it('reserve la place de la barre du bas', () => {
+    expect(rendre().root.findAllByProps({ bottomInsetMode: 'tab-scene' }).length)
+      .toBeGreaterThan(0);
   });
 });
 
 describe('l etat vide', () => {
-  it('remplace le carnet par un pave « aucune mesure »', () => {
+  it('a son PROPRE titre : il ne redit pas « Mon carnet »', () => {
+    const vus = textes(rendre(VIDE));
+
+    expect(vus).toContain('training.logbook.emptyTitle');
+    expect(vus.filter((v) => v === 'training.logbook.title')).toHaveLength(1);
+  });
+
+  it('a une porte de sortie, et elle mene au planning', () => {
+    const navigate = jest.fn();
+    const arbre = rendre(VIDE, { navigate });
+
+    const bouton = arbre.root.findByType(Button);
+    expect(bouton.props.title).toBe('training.logbook.emptyAction');
+    act(() => { bouton.props.onPress(); });
+    expect(navigate).toHaveBeenCalledWith('TrainingPlan');
+  });
+
+  it('ne montre NI onglets NI carnet quand il n y a rien a montrer', () => {
     const arbre = rendre(VIDE);
 
-    expect(arbre.root.findAllByType(EmptyState)).toHaveLength(1);
-    expect(textes(arbre)).toContain('training.logbook.empty');
-  });
-
-  it('n offre AUCUNE porte de sortie : zero zone cliquable dans tout l ecran', () => {
-    // ⚠️ A savoir avant la refonte : contrairement au planning, le carnet vide
-    // est un cul-de-sac. Rien ne propose d'aller faire une mesure.
-    expect(rendre(VIDE).root.findAllByType(Button)).toHaveLength(0);
-  });
-
-  it('n affiche ni boite ni texte de carnet', () => {
-    const arbre = rendre(VIDE);
-
-    expect(arbre.root.findAllByType(ScrollView)).toHaveLength(0);
-    expect(textes(arbre)).not.toContain(CSV);
-  });
-});
-
-describe('les donnees absentes ou incompletes ne font pas tomber l ecran', () => {
-  it('tient debout quand le serveur n a encore rien rendu', () => {
-    const arbre = rendre({
-      data: undefined, error: null, isLoading: false, refetch: () => {},
-    });
-
-    expect(arbre.root.findAllByType(EmptyState)).toHaveLength(1);
-    expect(textes(arbre)).toContain('training.logbook.rows|{"count":0}');
-  });
-
-  it('tient debout quand la reponse est un objet sans carnet ni compteur', () => {
-    const arbre = rendre({
-      data: {}, error: null, isLoading: false, refetch: () => {},
-    });
-
-    expect(arbre.root.findAllByType(EmptyState)).toHaveLength(1);
-  });
-
-  it('tient debout quand le compteur est absent mais le texte present', () => {
-    // `rows` seul commande l'affichage : un carnet non vide dont le compteur
-    // manque est donc rendu comme VIDE, et son texte n'apparait jamais.
-    const arbre = rendre({ ...REMPLI, data: { csv: CSV } });
-
-    expect(arbre.root.findAllByType(EmptyState)).toHaveLength(1);
-    expect(textes(arbre)).not.toContain(CSV);
+    expect(onglets(arbre)).toHaveLength(0);
+    expect(textes(arbre)).not.toContain('training.logbook.view.raw');
   });
 });
 
 describe('chargement et erreur : l ecran ne les dessine pas, il les delegue', () => {
-  it('passe l attente, l erreur et la relance a l enveloppe de donnees', () => {
-    const refetch = () => {};
-    const erreur = new Error('reseau');
+  it('passe l erreur, l attente et la relance a l enveloppe', () => {
+    const relire = jest.fn();
     rendre({
-      data: undefined, error: erreur, isLoading: true, refetch,
+      data: null, error: new Error('reseau'), isLoading: true, refetch: relire,
     });
 
     expect(mockPropsEnveloppe[0].isLoading).toBe(true);
-    expect(mockPropsEnveloppe[0].error).toBe(erreur);
-    // La relance est celle du crochet : le bouton « Reessayer » de l'enveloppe
-    // rejoue la requete du carnet, pas un balayage global.
-    expect(mockPropsEnveloppe[0].onRetry).toBe(refetch);
+    expect(mockPropsEnveloppe[0].error).toBeInstanceOf(Error);
+    expect(mockPropsEnveloppe[0].onRetry).toBe(relire);
+  });
+});
+
+describe('ce qui ne doit pas faire tomber l ecran', () => {
+  it('traverse un programme absent : la vue lisible se vide, le brut reste', () => {
+    mockCarnet = REMPLI;
+    mockEntrainement = { enrollment: null, sessions: [] };
+    /** @type {any} */
+    let arbre;
+    act(() => {
+      arbre = renderer.create(<TrainingLogbook navigation={{ navigate: jest.fn() }} />);
+    });
+
+    expect(textes(arbre)).toContain('training.logbook.readableHint');
+    act(() => { onglets(arbre)[1].props.onPress(); });
+    expect(textes(arbre)).toContain(CSV.split('\n')[0]);
   });
 
-  it('n a AUCUNE branche a lui pour l attente : il construit son contenu quand meme', () => {
-    // 🔎 Information a connaitre avant de refondre : il n'existe ni squelette
-    // ni message d'erreur ECRIT DANS CET ECRAN. Tout vient de l'enveloppe.
-    const arbre = rendre({ ...REMPLI, isLoading: true });
-
-    expect(textes(arbre)).toContain(CSV);
-  });
-
-  it('n a AUCUNE branche a lui pour l erreur non plus', () => {
-    const arbre = rendre({ ...REMPLI, error: new Error('reseau') });
-
-    expect(textes(arbre)).toContain(CSV);
+  it('traverse des donnees absentes', () => {
+    expect(() => rendre({
+      data: null, error: null, isLoading: false, refetch: () => {},
+    })).not.toThrow();
   });
 });

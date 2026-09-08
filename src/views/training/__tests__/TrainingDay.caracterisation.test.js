@@ -383,7 +383,10 @@ describe('les cartes de test', () => {
 
     act(() => { cartes(arbre)[1].props.onPress(); });
 
-    expect(navigate).toHaveBeenCalledWith('TrainingTest', expect.objectContaining({ testIndex: 1 }));
+    expect(navigate).toHaveBeenCalledWith(
+      'TrainingTest',
+      expect.objectContaining({ testIndex: 1 }),
+    );
   });
 });
 
