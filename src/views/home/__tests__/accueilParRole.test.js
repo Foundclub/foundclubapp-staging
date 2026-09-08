@@ -64,6 +64,19 @@ const entre = (texte, depuis, jusqu) => {
   return texte.slice(a, b);
 };
 
+/**
+ * Les clefs que l'accueil RETIRE au parent. Elles sont lues dans la source de
+ * HomeHub, jamais recopiees ici : une liste doublee finirait par diverger de
+ * celle qui agit vraiment a l'ecran.
+ * @type {string[]}
+ */
+const MASQUEES_AU_PARENT = (() => {
+  const debut = SOURCE.indexOf('const CARTES_MASQUEES_AU_PARENT = new Set([');
+  if (debut === -1) throw new Error('HomeHub n a plus de liste « CARTES_MASQUEES_AU_PARENT »');
+  const bloc = SOURCE.slice(debut, SOURCE.indexOf(']);', debut));
+  return (bloc.match(/'[a-z-]+'/g) || []).map((occurrence) => occurrence.slice(1, -1));
+})();
+
 const MANAGE = corpsDuMemo('manageSectionCards');
 const SEARCH = corpsDuMemo('searchCards');
 const PROFILE = corpsDuMemo('profileCards');
@@ -80,7 +93,11 @@ const SECTIONS = {
   profileEdition: clefsDeCartes(entre(PROFILE, 'if (hasManageSection || isSuperAdmin) {', 'if (!isSuperAdmin) {')),
   searchBase: clefsDeCartes(entre(SEARCH, null, 'if (hasManageSection) {')),
   searchHorsStaff: clefsDeCartes(entre(SEARCH, 'if (!hasManageSection) {', '// Matchs amicaux')),
-  searchQueue: clefsDeCartes(entre(SEARCH, '// Matchs amicaux', null)),
+  // PARENT — la carte d'appel est ECRITE en dernier mais LUE en premier
+  // (`unshift`). Son repere borne aussi `searchQueue` : sans cela, les quatre
+  // accueils d'origine compteraient une case de plus qu'ils n'en affichent.
+  searchParent: clefsDeCartes(entre(SEARCH, 'if (isParent) {', null)),
+  searchQueue: clefsDeCartes(entre(SEARCH, '// Matchs amicaux', 'if (isParent) {')),
   searchStaff: clefsDeCartes(entre(SEARCH, 'if (hasManageSection) {', 'if (!hasManageSection) {')),
   // PERF (2026-09-06) — la section « Entrainement » : DEUX cases, les MEMES pour
   // tous les roles. C est la seule section de l accueil sans garde de role, et
@@ -90,7 +107,7 @@ const SECTIONS = {
 
 /**
  * L'accueil d'un role, section par section, dans l'ordre de l'ecran.
- * @param {'president' | 'coach' | 'player' | 'superAdmin'} role
+ * @param {'president' | 'coach' | 'player' | 'parent' | 'superAdmin'} role
  * @returns {string[][]}
  */
 const accueilDe = (role) => {
@@ -115,11 +132,27 @@ const accueilDe = (role) => {
   if (!estAdmin) profil.push(...SECTIONS.profileCotisation);
   if (estStaff) profil.unshift(...SECTIONS.profileAbonnement);
 
+  // PARENT — l'accueil part de celui du joueur, puis deux gestes seulement :
+  // il OTE les cases du masque, et il AJOUTE une case en tete de « Rechercher ».
+  // La section League tombe a zero carte ; `HomeSection` ne rend alors ni son
+  // titre ni son rayon (`if (!cards.length) return null`).
+  if (role === 'parent') {
+    const horsMasque = (/** @type {string} */ clef) => !MASQUEES_AU_PARENT.includes(clef);
+
+    return [
+      gerer,
+      [...SECTIONS.searchParent, ...rechercher].filter(horsMasque),
+      [],
+      profil.filter(horsMasque),
+      SECTIONS.account,
+    ];
+  }
+
   return [gerer, SECTIONS.training, rechercher, SECTIONS.league, profil, SECTIONS.account];
 };
 
 /**
- * @param {'president' | 'coach' | 'player' | 'superAdmin'} role
+ * @param {'president' | 'coach' | 'player' | 'parent' | 'superAdmin'} role
  * @returns {string[]}
  */
 const toutesLesCartes = (role) => accueilDe(role).flat();
@@ -133,6 +166,17 @@ const ATTENDU = {
     ['search-events', 'search-clubs', 'search-reservations', 'search-profiles', 'search-amicaux'],
     ['league-entry'],
     ['profile-subscription', 'profile-view', 'profile-edit', 'profile-history', 'profile-alerts', 'profile-license'],
+    ['account-switch', 'account-logout'],
+  ],
+  // PARENT — 8 cases, contre 13 au joueur. Ce que le lot P0 lui retire :
+  // « Offres de recrutement », « Mes reponses », « Matchs amicaux », League,
+  // « Historique sportif » et « Mes cotisations ». Ce qu'il lui donne :
+  // « Chercher un club pour mon enfant », en tete de « Rechercher ».
+  parent: [
+    [],
+    ['search-club-for-child', 'search-events', 'search-clubs', 'search-reservations'],
+    [],
+    ['profile-view', 'profile-alerts'],
     ['account-switch', 'account-logout'],
   ],
   player: [
@@ -163,20 +207,74 @@ const ATTENDU = {
 
 describe('D72 — critere 1 : le bon nombre de cases, dans le bon ordre', () => {
   it.each([
+    // RECOLTE 2026-09-08 : les comptes viennent de PERF (chacun +2 pour la section
+    // « Entrainement »), et « parent » vient du lot P0. Le parent ne recoit PAS la
+    // section Entrainement : son accueil est bati autour de son enfant, pas autour de
+    // sa propre preparation physique. Choix du chef d orchestre a la fusion, reversible.
     ['president', 22],
     ['coach', 22],
     ['player', 15],
+    ['parent', 8],
     ['superAdmin', 19],
   ])('%s affiche exactement %i cartes', (role, attendu) => {
     expect(toutesLesCartes(/** @type {any} */ (role))).toHaveLength(attendu);
   });
 
-  it.each(['president', 'coach', 'player', 'superAdmin'])(
+  it.each(['president', 'coach', 'player', 'parent', 'superAdmin'])(
     'l ordre des cases de %s est celui du tableau du pack, section par section',
     (role) => {
       expect(accueilDe(/** @type {any} */ (role))).toEqual(ATTENDU[role]);
     },
   );
+});
+
+describe('P0 — l accueil du PARENT (2 comptes reels en production le 07/09)', () => {
+  it('LE TEMOIN : il ne lit plus « JOUEUR » en haut, mais « PARENT »', () => {
+    expect(SOURCE).toContain("t('homeHub.roles.parent', 'Parent')");
+  });
+
+  it('le libelle du parent est teste AVANT le repli sur « Joueur »', () => {
+    expect(SOURCE.indexOf('homeHub.roles.parent')).toBeLessThan(SOURCE.indexOf('homeHub.roles.player'));
+  });
+
+  it.each([
+    ['search-ads', 'les offres de recrutement — il ne cherche pas a etre recrute'],
+    ['search-my-activities', 'ses candidatures — il n en depose aucune'],
+    ['search-amicaux', 'les matchs amicaux — il n a pas d equipe'],
+    ['league-entry', 'League — la competition n est pas la sienne'],
+    ['profile-history', 'son historique sportif — il ne joue pas'],
+    ['profile-license', 'ses cotisations — il n en a aucune a lui'],
+  ])('il ne voit plus « %s » : %s', (clef) => {
+    expect(toutesLesCartes('parent')).not.toContain(clef);
+  });
+
+  it('mais il garde ce qui le concerne : chercher, son profil, son compte', () => {
+    const cartes = toutesLesCartes('parent');
+
+    expect(cartes).toContain('search-clubs');
+    expect(cartes).toContain('search-events');
+    expect(cartes).toContain('profile-view');
+    expect(cartes).toContain('account-logout');
+  });
+
+  it('et il gagne UNE case, la premiere de « Rechercher »', () => {
+    expect(accueilDe('parent')[1][0]).toBe('search-club-for-child');
+  });
+
+  // ⛔ Le lot P0 ne cree AUCUN ecran : la case est un raccourci vers la
+  // recherche de clubs qui existe deja. Si un lot futur la branche ailleurs,
+  // ce temoin doit etre la discussion, pas un effet de bord.
+  it('cette case ouvre la recherche de clubs EXISTANTE, rien de neuf', () => {
+    const bloc = SOURCE.slice(SOURCE.indexOf("key: 'search-club-for-child'"));
+
+    expect(bloc.slice(0, 400)).toContain('RouteNames.SearchClubs');
+  });
+
+  it('LE GARDE-FOU : le masque ne touche AUCUN autre role', () => {
+    ['player', 'coach', 'president', 'superAdmin'].forEach((role) => {
+      expect(toutesLesCartes(/** @type {any} */ (role))).toContain('league-entry');
+    });
+  });
 });
 
 describe('D72 — critere 5 : « Navigation rapide » n existe plus', () => {

@@ -84,6 +84,40 @@ import { useMyTraining } from '@/hooks/useTraining';
 
 const ScreenContainerView = /** @type {any} */ (ScreenContainer);
 
+// P0 PARENT — LES CASES QUE L'ACCUEIL RETIRE AU PARENT.
+//
+// Le role Parent est en production depuis le 03/09, et deux personnes reelles
+// le portent. Elles lisaient « JOUEUR » en haut de l'ecran et recevaient les
+// 13 cases du joueur, dont ces six qui ne veulent rien dire pour elles : un
+// parent ne se fait pas recruter, ne depose pas de candidature, n'a pas
+// d'historique sportif, ne cotise pas, n'a pas d'equipe pour un amical, et ne
+// joue pas en League.
+//
+// ⚠️ Cette liste ne decide AUCUN droit — decision d'Adel du 2026-09-07 : « le
+// role decide de l'INSISTANCE, jamais du DROIT ». Rien n'est verrouille ici,
+// les ecrans restent atteignables par la recherche et par les liens ; seule la
+// mise en avant change. Un autre role qui deviendrait parent plus tard garde
+// donc son accueil entier.
+//
+// 🧪 Le temoin qui la lit : `src/views/home/__tests__/accueilParRole.test.js`.
+// Il la prend ICI plutot que d'en recopier une seconde, qui divergerait.
+// ⚠️ Ordre ALPHABETIQUE, impose par `perfectionist/sort-sets` — ce n'est pas
+// l'ordre de l'ecran. C'est un ensemble : l'ordre n'a aucun effet.
+const CARTES_MASQUEES_AU_PARENT = new Set([
+  'league-entry',
+  'profile-history',
+  'profile-license',
+  'search-ads',
+  'search-amicaux',
+  'search-my-activities',
+]);
+
+/**
+ * @param {HomeCard} card
+ * @returns {boolean}
+ */
+const estVisiblePourLeParent = (card) => !CARTES_MASQUEES_AU_PARENT.has(card.key);
+
 /**
  * @typedef {{
  *  id: string;
@@ -391,6 +425,9 @@ function HomeHubContent({ auth, navigation, route }) {
   const isCoach = roleKey === 'coach';
   const isPresident = roleKey === 'president';
   const isSuperAdmin = roleKey === 'superAdmin';
+  // P0 — `getUserRoleKey` rend deja 'parent' (authUseCases.js:37) : le trou
+  // n'etait pas la, il etait ici, ou personne ne lisait cette valeur.
+  const isParent = roleKey === 'parent';
   // D72 — « Mon abonnement » et « Ma cotisation » sont RETIREES du super admin
   // (pack accueil, tache 3) : il ne paie ni l'un ni l'autre.
   const canShowSubscriptionExperience = isCoach || isPresident;
@@ -1458,8 +1495,12 @@ function HomeHubContent({ auth, navigation, route }) {
     // D72 — le super admin lisait « JOUEUR » sous le titre : il n'avait aucun
     // libelle de role. Le pack demande « ACCUEIL — SUPER ADMIN » (capture 04).
     if (isSuperAdmin) return t('homeHub.roles.superAdmin', 'Super admin');
+    // P0 — le meme defaut que celui repare pour le super admin par D72, et il
+    // durait depuis le 03/09 : faute de clef `homeHub.roles.parent`, un parent
+    // lisait « JOUEUR » sous le titre de son propre accueil.
+    if (isParent) return t('homeHub.roles.parent', 'Parent');
     return t('homeHub.roles.player', 'Joueur');
-  }, [isCoach, isPresident, isSuperAdmin, t]);
+  }, [isCoach, isParent, isPresident, isSuperAdmin, t]);
 
   // D72 — le rayon de tete change de nom avec le role : « Gerer mon club » pour
   // le dirigeant, « Mon club » pour l'entraineur (il n'administre pas, il y
@@ -2236,11 +2277,40 @@ function HomeHubContent({ auth, navigation, route }) {
       ),
     });
 
+    // P0 PARENT — LA SEULE CASE AJOUTEE PAR CE LOT, et elle ne cache aucun
+    // ecran neuf : elle ouvre la recherche de clubs qui existe deja. C'est un
+    // raccourci mis en avant, pas une fonctionnalite.
+    //
+    // Elle passe EN TETE (`unshift`) parce que c'est le seul geste qui a du
+    // sens pour un parent qui vient d'arriver : trouver un club a son enfant.
+    // « Rechercher un club » reste dans la liste, deux cases plus bas — le
+    // parent n'a donc rien de moins, il a une porte plus visible.
+    //
+    // ⛔ Volontairement SANS `tutorial` : les cases voisines se tiennent par
+    // `nextTargetStepId`, et s'inserer au milieu de cette chaine la casserait
+    // (meme raison que « Mes reponses », posee par D57).
+    if (isParent) {
+      cards.unshift({
+        accentColor: Colors.primary500,
+        emphasis: 'primary',
+        icon: 'shield',
+        key: 'search-club-for-child',
+        layout: 'full',
+        onPress: () => navigation.navigate(RouteNames.SearchClubs),
+        subtitle: t('homeHub.cards.search.clubForChild.subtitle', 'Trouve le club où il jouera cette saison.'),
+        subtitleLines: 2,
+        title: t('homeHub.cards.search.clubForChild.title', 'Chercher un club pour mon enfant'),
+      });
+
+      return cards.filter(estVisiblePourLeParent);
+    }
+
     return cards;
   }, [
     Colors.primary500,
     hasManageSection,
     homeAlerts,
+    isParent,
     makeTutorial,
     navigation,
     scrollDownLabel,
@@ -2250,8 +2320,12 @@ function HomeHubContent({ auth, navigation, route }) {
   ]);
 
   /** @type {HomeCard[]} */
-  const leagueCards = useMemo(() => ([
-    {
+  const leagueCards = useMemo(() => {
+    // P0 — la section entiere disparait pour le parent : `HomeSection` rend
+    // `null` des que la liste est vide, titre compris (HomeHub.js:159).
+    if (isParent) return [];
+
+    return [{
       accentColor: Colors.gold500,
       icon: 'trophy',
       key: 'league-entry',
@@ -2271,8 +2345,8 @@ function HomeHubContent({ auth, navigation, route }) {
           onNext: scrollToProfileSection,
         },
       ),
-    },
-  ]), [Colors.gold500, handleOpenLeague, makeTutorial, scrollDownLabel, scrollToProfileSection, t]);
+    }];
+  }, [Colors.gold500, handleOpenLeague, isParent, makeTutorial, scrollDownLabel, scrollToProfileSection, t]);
 
   /** @type {HomeCard[]} */
   const profileCards = useMemo(() => {
@@ -2370,6 +2444,11 @@ function HomeHubContent({ auth, navigation, route }) {
       });
     }
 
+    // P0 PARENT — un parent n'a ni historique de joueur ni cotisation a lui.
+    // Le filtre est pose ICI, en bout de chaine, plutot qu'en garde sur chaque
+    // case : une garde oubliee ne fait rougir aucun test, une liste nommee si.
+    if (isParent) return cards.filter(estVisiblePourLeParent);
+
     return cards;
   }, [
     Colors.primary500,
@@ -2383,6 +2462,7 @@ function HomeHubContent({ auth, navigation, route }) {
     handleOpenSubscriptionOverview,
     hasManageSection,
     homeAlerts,
+    isParent,
     isSuperAdmin,
     makeTutorial,
     scrollDownLabel,
