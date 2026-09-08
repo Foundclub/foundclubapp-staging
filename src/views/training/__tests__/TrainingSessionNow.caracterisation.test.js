@@ -240,10 +240,10 @@ describe('l avancement se compte en ETAPES', () => {
     });
 
     // 5 etapes en tout (B1 : prep + 2 essais ; B2 : prep + 1 essai), 2 faites.
-    // 🐞 `count` vaut 1 quand rien n est fait : en francais zero prend le SINGULIER,
-    // et le moteur du telephone applique la regle anglaise. Cf. `accordFrancais`.
+    // 🔤 `count` porte le compte REEL : l app embarque `intl-pluralrules` depuis le
+    // 2026-09-08, et le moteur applique enfin la regle francaise (zero → singulier).
     expect(textes(arbre)).toContain(
-      'training.now.progress|{"count":1,"done":2,"tests":0,"total":5}',
+      'training.now.progress|{"count":0,"done":2,"tests":0,"total":5}',
     );
   });
 

@@ -7,7 +7,6 @@ import {
 } from 'react-native';
 
 import { withAlpha } from '@/theme/colors';
-import accordFrancais from '@/theme/strings/accordFrancais';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -326,7 +325,7 @@ function TrainingSessionNow({ navigation, route }) {
                   <View style={{ alignItems: 'center', flexDirection: 'row', gap: 8 }}>
                     <Text style={[Fonts.p3, { color: Colors.neutral300, flex: 1 }]}>
                       {t('training.now.progress', {
-                        count: accordFrancais(chiffres.testsFaits),
+                        count: chiffres.testsFaits,
                         done: chiffres.faites,
                         tests: chiffres.testsFaits,
                         total: chiffres.total,

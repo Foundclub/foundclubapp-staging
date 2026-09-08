@@ -7,7 +7,6 @@ import {
 } from 'react-native';
 
 import { withAlpha } from '@/theme/colors';
-import accordFrancais from '@/theme/strings/accordFrancais';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -345,9 +344,7 @@ function TrainingGuided({ navigation, route }) {
                           }]}
                           >
                             {t('training.day.prepared', {
-                              count: accordFrancais(
-                                Object.values(coches).filter(Boolean).length,
-                              ),
+                              count: Object.values(coches).filter(Boolean).length,
                               done: Object.values(coches).filter(Boolean).length,
                               total: misesEnPlace.length,
                             })}

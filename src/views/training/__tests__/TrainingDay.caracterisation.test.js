@@ -422,10 +422,10 @@ describe('les sections du cote « Preparer »', () => {
     // combien il y a a lire ; celui-la dit combien de preparatifs sont faits.
     const vus = textes(rendre());
 
-    // 🐞 `count` accompagne desormais le compte : en francais zero prend le
-    // SINGULIER, et le moteur du telephone applique la regle anglaise.
-    // Cf. `src/theme/strings/accordFrancais.js`.
-    expect(vus).toContain('training.day.prepared|{"count":1,"done":0,"total":2}');
+    // 🔤 `count` porte le compte RÉEL. Depuis le 2026-09-08, l app embarque
+    // `intl-pluralrules` : le moteur du telephone connait enfin la regle du
+    // francais, ou ZERO prend le singulier. Il n y a plus d adaptateur.
+    expect(vus).toContain('training.day.prepared|{"count":0,"done":0,"total":2}');
     expect(vus).not.toContain('training.day.points|{"count":2}');
   });
 
@@ -693,7 +693,6 @@ describe('ce qui ne doit jamais faire tomber l ecran', () => {
       etat: avec({ ...JOURNEE, tests: [] }, { ...SEANCE, status: 'in_progress' }),
     });
 
-    // `count` vaut 1 a zero : le francais met le singulier, cf. `accordFrancais`.
-    expect(textes(arbre)).toContain('training.day.progress|{"count":1,"done":0,"total":0}');
+    expect(textes(arbre)).toContain('training.day.progress|{"count":0,"done":0,"total":0}');
   });
 });

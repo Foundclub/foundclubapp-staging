@@ -236,10 +236,10 @@ describe('AVANT DE COMMENCER', () => {
       && n.props.accessibilityRole === 'checkbox');
 
     expect(cases).toHaveLength(2);
-    // 🐞 `count` accompagne desormais le compte : en francais zero prend le
-    // SINGULIER, et le moteur du telephone applique la regle anglaise.
-    // Cf. `src/theme/strings/accordFrancais.js`.
-    expect(textes(arbre)).toContain('training.day.prepared|{"count":1,"done":0,"total":2}');
+    // 🔤 `count` porte le compte RÉEL. Depuis le 2026-09-08, l app embarque
+    // `intl-pluralrules` : le moteur du telephone connait enfin la regle du
+    // francais, ou ZERO prend le singulier. Il n y a plus d adaptateur.
+    expect(textes(arbre)).toContain('training.day.prepared|{"count":0,"done":0,"total":2}');
 
     act(() => { cases[0].props.onPress(); });
     expect(textes(arbre)).toContain('training.day.prepared|{"count":1,"done":1,"total":2}');
