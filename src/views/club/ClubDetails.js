@@ -3026,25 +3026,26 @@ function ClubDetails({ navigation, route }) {
               ) : null}
 
               {/* Coachs */}
-              {showsClubSection('staff') && showsPrivateClubDetails && (coachs?.length || canEdit) ? (
-                <View style={[Spaces.gap[16]]}>
-                  <View style={[Alignments.row,
-                    Alignments.alignCenter, Alignments.scrollSpaceBetween, Spaces.gap[16]]}
-                  >
-                    <Text style={[Fonts.h4Black, Fonts.neutral00]}>{t('clubDetails.titles.coachs')}</Text>
-                    {canEdit ? (
-                      <Button
-                        icon="plus"
-                        isOption
-                        onPress={handleCreateCoach}
-                        variant="Primary"
-                      />
-                    ) : null}
-                  </View>
-                  <View
-                    style={[Spaces.gap[16]]}
-                  >
-                    {
+              {showsClubSection('staff') && showsPrivateClubDetails
+                && (coachs?.length || canEdit) ? (
+                  <View style={[Spaces.gap[16]]}>
+                    <View style={[Alignments.row,
+                      Alignments.alignCenter, Alignments.scrollSpaceBetween, Spaces.gap[16]]}
+                    >
+                      <Text style={[Fonts.h4Black, Fonts.neutral00]}>{t('clubDetails.titles.coachs')}</Text>
+                      {canEdit ? (
+                        <Button
+                          icon="plus"
+                          isOption
+                          onPress={handleCreateCoach}
+                          variant="Primary"
+                        />
+                      ) : null}
+                    </View>
+                    <View
+                      style={[Spaces.gap[16]]}
+                    >
+                      {
                       coachs?.map((/** @type {User} */ user) => (
                         <TouchableOpacity
                           key={user.documentId}
@@ -3103,22 +3104,22 @@ function ClubDetails({ navigation, route }) {
                         </TouchableOpacity>
                       ))
                     }
+                    </View>
+                    {/* D62 (recette Adel du 09/08) : ce bouton etait rendu HORS de la */}
+                    {/* ScrollView, colle en bas du hub — il masquait la rangee « Staff ». */}
+                    {/* Il ne disparait pas pour autant : `startClubChat` n'a AUCUN autre */}
+                    {/* appelant (useMessaging.js:1148), donc le retirer rendrait la */}
+                    {/* conversation du club impossible a ouvrir. Il redescend ici, dans le */}
+                    {/* flux qui defile, sous les entraineur·e·s qu'il contacte. */}
+                    {coachs?.length && canEdit ? (
+                      <Button
+                        onPress={handleStartChat}
+                        title={t('clubDetails.actions.contactTrainers')}
+                        variant="Primary"
+                      />
+                    ) : null}
                   </View>
-                  {/* D62 (recette Adel du 09/08) : ce bouton etait rendu HORS de la */}
-                  {/* ScrollView, colle en bas du hub — il masquait la rangee « Staff ». */}
-                  {/* Il ne disparait pas pour autant : `startClubChat` n'a AUCUN autre */}
-                  {/* appelant (useMessaging.js:1148), donc le retirer rendrait la */}
-                  {/* conversation du club impossible a ouvrir. Il redescend ici, dans le */}
-                  {/* flux qui defile, sous les entraineur·e·s qu'il contacte. */}
-                  {coachs?.length && canEdit ? (
-                    <Button
-                      onPress={handleStartChat}
-                      title={t('clubDetails.actions.contactTrainers')}
-                      variant="Primary"
-                    />
-                  ) : null}
-                </View>
-              ) : null}
+                ) : null}
               {/* president */}
               {showsClubSection('staff') && (owners?.length || canEdit) ? (
                 <View style={[Spaces.gap[16]]}>

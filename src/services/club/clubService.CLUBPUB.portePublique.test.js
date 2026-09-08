@@ -131,7 +131,8 @@ describe('CLUBPUB · T2 — la fiche publique arrive dans le vocabulaire de l’
     expect(fiche.teams[0].name).toBe('Futsal 1');
   });
 
-  it('« sports » devient « activites » — sinon l’écran s’affiche vide sans rien casser', async () => {
+  // Sans cette traduction, l ecran s affiche VIDE sans que rien ne casse ni ne rougisse.
+  it('« sports » devient « activites »', async () => {
     const fiche = await getPublicClubById('club-1');
 
     expect(fiche.activites).toHaveLength(1);
@@ -150,7 +151,7 @@ describe('CLUBPUB · T2 — la fiche publique arrive dans le vocabulaire de l’
 // ---------------------------------------------------------------------------
 
 describe('CLUBPUB · T3 — aucune donnée personnelle ne franchit la traduction', () => {
-  it('même si la réponse publique en portait, ni téléphone ni e-mail ni membres ne sortent', async () => {
+  it('ni telephone ni e-mail ni membres ne sortent', async () => {
     mockGet.mockResolvedValue({
       data: {
         data: {

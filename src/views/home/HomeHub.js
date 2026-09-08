@@ -2297,7 +2297,10 @@ function HomeHubContent({ auth, navigation, route }) {
         key: 'search-club-for-child',
         layout: 'full',
         onPress: () => navigation.navigate(RouteNames.SearchClubs),
-        subtitle: t('homeHub.cards.search.clubForChild.subtitle', 'Trouve le club où il jouera cette saison.'),
+        subtitle: t(
+          'homeHub.cards.search.clubForChild.subtitle',
+          'Trouve le club où il jouera cette saison.',
+        ),
         subtitleLines: 2,
         title: t('homeHub.cards.search.clubForChild.title', 'Chercher un club pour mon enfant'),
       });
@@ -2346,7 +2349,10 @@ function HomeHubContent({ auth, navigation, route }) {
         },
       ),
     }];
-  }, [Colors.gold500, handleOpenLeague, isParent, makeTutorial, scrollDownLabel, scrollToProfileSection, t]);
+  }, [
+    Colors.gold500, handleOpenLeague, isParent, makeTutorial,
+    scrollDownLabel, scrollToProfileSection, t,
+  ]);
 
   /** @type {HomeCard[]} */
   const profileCards = useMemo(() => {
