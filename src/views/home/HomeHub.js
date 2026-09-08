@@ -58,6 +58,7 @@ import TutorialFlowBoundary from '@/components/molecules/tutorial/TutorialFlowBo
 import ExternalCompetitionPromptGate from '@/components/organisms/externalCompetitionPromptGate/ExternalCompetitionPromptGate';
 import GlobalPromptModal from '@/components/organisms/popup/GlobalPromptModal';
 import ScreenContainer from '@/components/templates/ScreenContainer';
+import { compteARebours, sousTitreSeance } from '@/views/home/trainingCardText';
 import { useHomeEventAnswer } from '@/views/home/useHomeEventAnswer';
 import { resolveLegacySearchTarget } from '@/views/search/searchRouteHelpers';
 
@@ -2084,32 +2085,52 @@ function HomeHubContent({ auth, navigation, route }) {
   /** @type {HomeCard[]} */
   const trainingCards = useMemo(() => {
     const nextDay = trainingNextSession?.day;
-    const nextDate = trainingNextSession?.plannedDate
-      ? new Date(`${String(trainingNextSession.plannedDate).slice(0, 10)}T00:00:00`)
-        .toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })
-      : '';
+    const suitUnProgramme = Boolean(trainingEnrollment) && Boolean(nextDay);
 
     return [
       {
         accentColor: Colors.primary500,
-        highlighted: Boolean(trainingEnrollment),
-        icon: 'running',
+        // 🪤 La mise en avant etait branchee sur « est-ce que je suis un programme ».
+        // C etait a l envers : le joueur qu il faut convaincre est justement celui
+        // qui n a rien commence, et il voyait la carte la plus eteinte de l ecran.
+        highlighted: true,
+        icon: 'clock',
         key: 'training-mine',
+        layout: 'full',
         onPress: () => navigation.navigate(
           trainingEnrollment ? RouteNames.TrainingPlan : RouteNames.TrainingCatalog,
         ),
-        subtitle: trainingEnrollment && nextDay
-          ? t('training.home.myCard.subtitle', { date: nextDate, day: nextDay.title })
+        subtitle: suitUnProgramme
+          ? sousTitreSeance(nextDay, t)
           : t('training.home.myCard.emptySubtitle'),
-        title: t('training.home.myCard.title'),
+        title: suitUnProgramme
+          ? t('training.home.myCard.title', {
+            countdown: compteARebours(trainingNextSession.plannedDate, t),
+            day: nextDay.title,
+            program: trainingEnrollment.program?.title || '',
+          })
+          : t('training.home.myCard.emptyTitle'),
       },
       {
         accentColor: Colors.primary500,
-        icon: 'trophy',
+        // 🪤 La loupe et le chronometre que le pack demande n existent PAS dans le
+        // jeu d illustrations de l app (12 familles, aucune des deux). On prend ce
+        // qui existe et qui dit la meme chose : le coureur pour « choisir un
+        // entrainement », l horloge pour le compte a rebours de la prochaine
+        // seance. Les deux dessins manquants sont a demander au designer.
+        icon: 'running',
         key: 'training-find',
         onPress: () => navigation.navigate(RouteNames.TrainingCatalog),
         subtitle: t('training.home.findCard.subtitle'),
         title: t('training.home.findCard.title'),
+      },
+      {
+        accentColor: Colors.primary500,
+        icon: 'chart',
+        key: 'training-logbook',
+        onPress: () => navigation.navigate(RouteNames.TrainingLogbook),
+        subtitle: t('training.home.logbookCard.subtitle'),
+        title: t('training.home.logbookCard.title'),
       },
     ];
   }, [Colors.primary500, navigation, t, trainingEnrollment, trainingNextSession]);

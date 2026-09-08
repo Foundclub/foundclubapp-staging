@@ -2431,7 +2431,7 @@ export default {
       // comparaison des ENSEMBLES de clefs, pas le compte de lignes).
       quickNav: 'Navigation rapide',
       search: 'Rechercher',
-      training: 'Entraînement',
+      training: 'Mon entraînement',
     },
     title: 'Accueil',
   },
@@ -2797,6 +2797,7 @@ export default {
         subtitle: 'Le jeton colle au poste le plus proche. Tu peux toujours le poser où tu veux.',
         title: 'Aimanter aux postes',
       },
+      noFormationForSport: 'Ce sport n’a pas encore de disposition de terrain — place tes joueurs librement.',
       options: {
         default_composition: {
           subtitle: 'Le modèle par défaut de {{teamName}}.',
@@ -2812,7 +2813,6 @@ export default {
           title: 'Dernier match',
         },
       },
-      noFormationForSport: 'Ce sport n’a pas encore de disposition de terrain — place tes joueurs librement.',
       preview: 'Aperçu',
       previewEmpty: 'Tout le monde part du banc.',
       progress: '{{current}}/{{total}}',
@@ -4546,12 +4546,17 @@ export default {
       nextTest: 'Test suivant',
       openDay: 'Ouvrir la journée',
       openProgram: 'Voir le programme',
+      postpone: 'Décaler',
+      prepare: 'Préparer ma séance',
       previous: 'Précédent',
       resume: 'Reprendre',
       retry: 'Réessayer',
       save: 'Enregistrer',
       seeAll: 'Tout voir',
+      skipSession: 'Sauter cette séance',
       startDay: 'Commencer la journée',
+      startNow: 'Commencer maintenant',
+      startSession: 'Commencer ma séance',
       startTest: 'Commencer le test',
       sync: 'Envoyer les mesures',
       watchVideo: 'Voir le geste',
@@ -4604,16 +4609,29 @@ export default {
       total: 'Total : {{score}} sur 25',
     },
     home: {
+      countdown_one: 'dans {{count}} jour',
+      countdown_other: 'dans {{count}} jours',
       findCard: {
         subtitle: 'Les programmes publiés',
-        title: 'Rechercher un entraînement',
+        title: 'Choisir un entraînement',
+      },
+      logbookCard: {
+        subtitle: 'Toutes tes mesures, prêtes à coller.',
+        title: 'Mon carnet',
       },
       myCard: {
-        emptySubtitle: 'Choisis un entraînement pour commencer',
-        subtitle: '{{day}} · {{date}}',
-        title: 'Mon entraînement',
+        emptySubtitle: 'Un protocole de tests athlétiques, avec un partenaire, sur plusieurs journées.',
+        emptyTitle: 'Choisir un entraînement',
+        // Le lieu et la durée viennent du serveur ; le compte de préparatifs n'apparaît
+        // que si la journée en porte, sinon la phrase se coupe d'elle-même.
+        subtitle: '{{day}} · {{place}} · {{duration}} min',
+        title: '{{program}} — {{day}} {{countdown}}',
+        today: 'aujourd’hui',
+        tomorrow: 'demain',
+        toPrepare_one: '{{count}} chose à préparer d’ici là',
+        toPrepare_other: '{{count}} choses à préparer d’ici là',
       },
-      section: 'Entraînement',
+      section: 'Mon entraînement',
     },
     logbook: {
       copied: 'Carnet copié',
@@ -4643,18 +4661,45 @@ export default {
         cancel: 'Non, je continue',
         confirm: 'Oui, quitter',
         description: 'Tes mesures déjà saisies sont conservées. Tu pourras choisir un autre entraînement.',
+        failed: 'On n’a pas pu te désinscrire. Rien n’est perdu — réessaie.',
         title: 'Quitter cet entraînement ?',
       },
-      days: 'Les journées, dans l’ordre',
+      // La clef reste : ⛔ aucune suppression dans fr.js. Elle titre desormais la
+      // porte vers « Toutes mes seances », la ou elle titrait la liste elle-meme.
+      dateHint: 'La date est indicative — tu décides quand.',
+      days: 'Toutes mes séances',
+      doors: {
+        logbook: 'Mon carnet',
+        logbookSubtitle_one: '{{count}} mesure enregistrée',
+        logbookSubtitle_other: '{{count}} mesures enregistrées',
+        sessionsSubtitle_one: '{{count}} séance au programme',
+        sessionsSubtitle_other: '{{count}} séances au programme',
+        video: 'Relevés vidéo à faire',
+        videoSubtitle_one: '{{count}} mesure à lire sur ta vidéo',
+        videoSubtitle_other: '{{count}} mesures à lire sur ta vidéo',
+      },
       empty: {
-        action: 'Rechercher un entraînement',
-        description: 'Tu n\'as pas encore choisi d\'entraînement.',
+        action: 'Choisir un entraînement',
+        description: 'Choisis un programme : il apparaîtra ici, séance par séance.',
         title: 'Aucun entraînement en cours',
       },
-      nextUp: 'À faire ensuite',
-      progress_one: '{{done}} journée sur {{total}}',
-      progress_other: '{{done}} journées sur {{total}}',
+      endsOn: 'fin le {{date}}',
+      // 🪤 « À faire ensuite » titrait un encart SUPPRIME le 06/09 parce qu il
+      // montrait la meme journee que la liste juste en dessous. La clef reprend
+      // du service comme etiquette de la grande carte du haut.
+      nextUp: 'Prochaine séance · {{date}}',
+      offline: 'Sans réseau — tu peux saisir, tout est gardé sur le téléphone.',
+      progress_one: '{{done}} séance faite sur {{total}}',
+      progress_other: '{{done}} séances faites sur {{total}}',
       title: 'Mon entraînement',
+      today: 'Aujourd’hui',
+    },
+    postpone: {
+      byDays_one: 'Repousser d’{{count}} jour',
+      byDays_other: 'Repousser de {{count}} jours',
+      hint: 'La date est indicative — tu décides quand.',
+      scope: 'Décaler aussi les séances suivantes, pour garder les écarts du programme.',
+      title: 'Décaler la séance du {{date}}',
     },
     program: {
       contains: 'Ce que contient le programme',
@@ -4670,6 +4715,10 @@ export default {
       startsToday: 'Il commencera aujourd\'hui. Tu pourras décaler chaque journée.',
       tests_one: '{{count}} test',
       tests_other: '{{count}} tests',
+    },
+    sessions: {
+      lead: 'Dans l’ordre conseillé — mais tu peux en commencer n’importe laquelle.',
+      title: 'Toutes mes séances',
     },
     status: {
       done: 'Fait',

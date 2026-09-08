@@ -91,6 +91,14 @@ function SearchStack() {
         getComponent={() => require('@/views/training/TrainingLogbook').default}
         name={RouteNames.TrainingLogbook}
       />
+      {/*
+        « Toutes mes seances » vit ici et pas a la racine : c est une CONSULTATION,
+        pas une tache. Le dock reste visible, comme sur le plan dont elle sort.
+      */}
+      <Stack.Screen
+        getComponent={() => require('@/views/training/TrainingSessions').default}
+        name={RouteNames.TrainingSessions}
+      />
     </Stack.Navigator>
   );
 }

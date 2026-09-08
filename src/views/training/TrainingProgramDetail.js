@@ -9,12 +9,15 @@ import {
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
+import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
 import { RouteNames } from '@/navigation/routeNames';
 
-import { useChooseTrainingProgram, useMyTraining, useTrainingProgram } from '@/hooks/useTraining';
+import {
+  useChooseTrainingProgram, useLeaveTrainingProgram, useMyTraining, useTrainingProgram,
+} from '@/hooks/useTraining';
 
 /**
  * Une journée du programme, telle que le serveur la rend.
@@ -99,6 +102,10 @@ function TrainingProgramDetail({ navigation, route }) {
   } = useTrainingProgram(programId);
   const { enrollment } = useMyTraining();
   const choose = useChooseTrainingProgram();
+  const quitter = useLeaveTrainingProgram();
+  // La feuille de confirmation : quitter un programme efface un engagement, ce
+  // geste ne se declenche jamais d un seul appui.
+  const [confirmeDepart, setConfirmeDepart] = useState(false);
   const [failed, setFailed] = useState(false);
 
   const alreadyChosen = enrollment?.program?.documentId === programId;
@@ -173,11 +180,23 @@ function TrainingProgramDetail({ navigation, route }) {
               )}
 
               {alreadyChosen ? (
-                <Button
-                  onPress={() => navigation.navigate(RouteNames.TrainingPlan)}
-                  title={t('training.actions.resume')}
-                  variant="Primary"
-                />
+                <View style={Spaces.gap[8]}>
+                  <Button
+                    onPress={() => navigation.navigate(RouteNames.TrainingPlan)}
+                    title={t('training.actions.resume')}
+                    variant="Primary"
+                  />
+                  {/*
+                    🔴 Le depart se pose SOUS « Reprendre », en rouge et en plus
+                    discret : c est un geste qu on doit pouvoir trouver, jamais un
+                    geste qu on fait par erreur.
+                  */}
+                  <Button
+                    onPress={() => setConfirmeDepart(true)}
+                    title={t('training.actions.abandon')}
+                    variant="Danger"
+                  />
+                </View>
               ) : (
                 <View style={Spaces.gap[8]}>
                   <Text style={[Fonts.caption, { color: Colors.neutral400 }]}>
@@ -195,6 +214,42 @@ function TrainingProgramDetail({ navigation, route }) {
           ) : null}
         </WithDataWrapper>
       </ScrollView>
+
+      <BottomModal close={() => setConfirmeDepart(false)} isVisible={confirmeDepart}>
+        <View style={[Spaces.gap[12], Spaces.paddingBottom[24]]}>
+          <Text style={[Fonts.h4Bold, { color: Colors.neutral00 }]}>
+            {t('training.plan.abandonConfirm.title')}
+          </Text>
+          {/*
+            LA PHRASE QUI RASSURE, et c est le role meme de cet ecran : personne
+            ne quitte un programme s il craint de perdre ce qu il a deja mesure.
+          */}
+          <Text style={[Fonts.p3, { color: Colors.neutral300 }]}>
+            {t('training.plan.abandonConfirm.description')}
+          </Text>
+          {Boolean(quitter.isError) && (
+            <Text style={[Fonts.p3, { color: Colors.error500 }]}>
+              {t('training.plan.abandonConfirm.failed')}
+            </Text>
+          )}
+          <Button
+            isLoading={quitter.isPending}
+            onPress={() => quitter.mutate(undefined, {
+              onSuccess: () => {
+                setConfirmeDepart(false);
+                navigation.navigate(RouteNames.TrainingPlan);
+              },
+            })}
+            title={t('training.plan.abandonConfirm.confirm')}
+            variant="Danger"
+          />
+          <Button
+            onPress={() => setConfirmeDepart(false)}
+            title={t('training.plan.abandonConfirm.cancel')}
+            variant="Ghost"
+          />
+        </View>
+      </BottomModal>
     </ScreenContainer>
   );
 }
