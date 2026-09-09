@@ -70,12 +70,19 @@ function MercatoCard({ onPress, user }) {
       activeOpacity={0.85}
       onPress={handlePress}
     >
-      <LinearGradient
-        colors={[withAlpha(Colors.primary700, 0.9), withAlpha(Colors.primary900, 0.96)]}
-        end={{ x: 0, y: 1 }}
-        start={{ x: 0, y: 0 }}
-        style={[styles.container, { borderColor: withAlpha(Colors.primary500, 0.3) }]}
-      >
+      <View style={[styles.container, { borderColor: withAlpha(Colors.primary500, 0.3) }]}>
+        {/* S04 gele : le degrade est un FOND, jamais le conteneur. Une View
+            ordinaire porte la taille, l arrondi et la bordure ; le degrade est
+            derriere en absoluteFill, sans enfant, et n intercepte aucun appui.
+            Sinon, sur iPhone, il tranche la carte (bouton coupe, double cadre).
+            Motif repris tel quel de ClubCardSurface.js:37-51. */}
+        <LinearGradient
+          colors={[withAlpha(Colors.primary700, 0.9), withAlpha(Colors.primary900, 0.96)]}
+          end={{ x: 0, y: 1 }}
+          pointerEvents="none"
+          start={{ x: 0, y: 0 }}
+          style={StyleSheet.absoluteFill}
+        />
         {/* Cadre poste — la signature de la carte 5b */}
         <View style={[styles.positionFrame, { borderColor: Colors.primary500 }]}>
           <Text
@@ -134,7 +141,7 @@ function MercatoCard({ onPress, user }) {
             Voir le profil
           </Text>
         </View>
-      </LinearGradient>
+      </View>
     </TouchableOpacity>
   );
 }
@@ -166,6 +173,9 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     borderWidth: 1,
     gap: 11,
+    // Le degrade est en absoluteFill derriere le contenu : sans cette decoupe
+    // il depasserait des coins arrondis.
+    overflow: 'hidden',
     paddingHorizontal: 18,
     paddingVertical: 16,
   },

@@ -1,4 +1,5 @@
-import { TouchableOpacity } from 'react-native';
+import { Children } from 'react';
+import { StyleSheet, TouchableOpacity } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
 import MercatoCard from '../MercatoCard';
@@ -105,5 +106,30 @@ describe('MercatoCard — données affichées (caractérisation)', () => {
       pressable.props.onPress();
     });
     expect(onPress).toHaveBeenCalledWith(baseUser);
+  });
+});
+
+// S04 gelé (17/08) : le correctif « le carré convocation publiée cesse d'être un
+// dégradé » nommait CETTE carte comme dernier exemplaire du défaut
+// (MercatoCard.js:65). Vu à l'écran le 09/09 sur la 2.6.37 : le bouton « Voir le
+// profil » coupé, un double cadre. Mêmes termes que ClubCard.test.js:214.
+describe('MercatoCard — enveloppe visuelle (S04 gelé)', () => {
+  it('le dégradé est un FOND, jamais le conteneur', () => {
+    const tree = renderCard({ user: baseUser });
+    const gradients = tree.root.findAllByType('LinearGradient');
+    expect(gradients).toHaveLength(1);
+
+    expect(Children.count(gradients[0].props.children)).toBe(0);
+    expect(StyleSheet.flatten(gradients[0].props.style)).toMatchObject({ position: 'absolute' });
+    expect(gradients[0].props.pointerEvents).toBe('none');
+  });
+
+  it('un conteneur ordinaire porte la taille et découpe les coins arrondis', () => {
+    const clipped = renderCard({ user: baseUser }).root.findAll((node) => (
+      typeof node.type === 'string'
+      && StyleSheet.flatten(node.props?.style)?.overflow === 'hidden'
+    ));
+    expect(clipped.length).toBeGreaterThan(0);
+    expect(clipped[0].type).toBe('View');
   });
 });
