@@ -509,6 +509,13 @@ const allerSurLOnglet = (/** @type {any} */ root, /** @type {string} */ valeur) 
   });
 };
 
+// AVIS (09/09) - EventDetails lit desormais les avis d entrainement. Sans ce
+// double, l import tire `@/services/client`, qui JETTE sans `.env` et fait
+// tomber la suite ENTIERE avant le premier temoin.
+jest.mock('@/services/trainingReview/trainingReviewQueries', () => ({
+  useGetTrainingReviews: () => ({ data: null }),
+}));
+
 describe('L4 · temoin 4 — trois onglets sur un match, zero ailleurs', () => {
   // 🔢 MIS A JOUR PAR N2 : l'onglet des personnes porte desormais son EFFECTIF.
   // C'est une regle de la planche 04 qui vaut pour les quatre types ranges, pas

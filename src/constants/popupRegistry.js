@@ -37,6 +37,7 @@ export const POPUP_IDS = {
   SMART_LINEUP_REMINDER: 'smart-lineup-reminder',
   SMART_MATCH_RECAP: 'smart-match-recap',
   TEAM_ASSIGN_TRAINER_GUIDE: 'team-assign-trainer-guide',
+  TRAINING_REVIEW_PROMPT: 'training-review-prompt',
 };
 
 /**
@@ -180,6 +181,18 @@ export const POPUP_REGISTRY = {
     priority: 35,
     surface: POPUP_SURFACES.MODAL,
     surfacePolicy: POPUP_SURFACE_POLICIES.STANDARD,
+  },
+  // AVIS (09/09) — « note ton entrainement ». Priorite 64, JUSTE SOUS le rappel
+  // post-match (65) : quand les deux attendent, le bilan de match passe devant.
+  // Un avis d entrainement peut attendre le lendemain, pas un score a saisir.
+  [POPUP_IDS.TRAINING_REVIEW_PROMPT]: {
+    allowedStartupPhases: ['screen_local_prompts', 'steady_state'],
+    blocking: true,
+    id: POPUP_IDS.TRAINING_REVIEW_PROMPT,
+    kind: POPUP_KINDS.STARTUP_BLOCKING,
+    priority: 64,
+    surface: POPUP_SURFACES.BOTTOM_SHEET,
+    surfacePolicy: POPUP_SURFACE_POLICIES.DEFERRED_BOTTOM_SHEET,
   },
 };
 

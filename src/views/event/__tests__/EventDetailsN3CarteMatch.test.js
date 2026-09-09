@@ -509,6 +509,13 @@ const pastille = () => String(/** @type {any} */ (mockTagProps.value)?.text || '
  */
 const resume = () => /** @type {any} */ (mockHeaderProps.value)?.matchScoreSummary || null;
 
+// AVIS (09/09) - EventDetails lit desormais les avis d entrainement. Sans ce
+// double, l import tire `@/services/client`, qui JETTE sans `.env` et fait
+// tomber la suite ENTIERE avant le premier temoin.
+jest.mock('@/services/trainingReview/trainingReviewQueries', () => ({
+  useGetTrainingReviews: () => ({ data: null }),
+}));
+
 describe('N3 - la carte du match : ce que l ecran calcule', () => {
   test('N3 · temoin 1 — la pastille porte le lieu, sur isHome TRI-ETAT (D1/D2)', () => {
     monter({ event: buildMatch({ isHome: true }) });

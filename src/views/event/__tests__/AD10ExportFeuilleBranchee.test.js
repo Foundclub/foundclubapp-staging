@@ -486,6 +486,13 @@ afterEach(() => {
 // 🪢 TEMOIN 0 — le VRAI bouton d `EventParticipants` appelle son declencheur.
 // ---------------------------------------------------------------------------
 
+// AVIS (09/09) - EventDetails lit desormais les avis d entrainement. Sans ce
+// double, l import tire `@/services/client`, qui JETTE sans `.env` et fait
+// tomber la suite ENTIERE avant le premier temoin.
+jest.mock('@/services/trainingReview/trainingReviewQueries', () => ({
+  useGetTrainingReviews: () => ({ data: null }),
+}));
+
 describe('AD10 · temoin 0 — le maillon entre la liste et l ecran', () => {
   test('le vrai bouton « Exporter la liste » appelle handleExportParticipants', () => {
     const VraiEventParticipants = jest.requireActual('../components/EventParticipants').default;

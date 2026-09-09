@@ -517,6 +517,13 @@ const ouvrirLeMenu = () => {
  */
 const rangeesDeLaFeuille = (/** @type {any} */ root) => parTestID(root, 'event-manage-chip');
 
+// AVIS (09/09) - EventDetails lit desormais les avis d entrainement. Sans ce
+// double, l import tire `@/services/client`, qui JETTE sans `.env` et fait
+// tomber la suite ENTIERE avant le premier temoin.
+jest.mock('@/services/trainingReview/trainingReviewQueries', () => ({
+  useGetTrainingReviews: () => ({ data: null }),
+}));
+
 describe('L4 · temoin 1 — le trois-points ouvre la feuille', () => {
   test('l organisateur a un trois-points dans la barre du haut, a cote de signaler', () => {
     monter();

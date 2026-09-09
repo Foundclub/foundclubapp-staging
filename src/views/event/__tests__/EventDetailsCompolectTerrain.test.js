@@ -553,6 +553,13 @@ const evenementSansRole = () => buildMatch({
   },
 });
 
+// AVIS (09/09) - EventDetails lit desormais les avis d entrainement. Sans ce
+// double, l import tire `@/services/client`, qui JETTE sans `.env` et fait
+// tomber la suite ENTIERE avant le premier temoin.
+jest.mock('@/services/trainingReview/trainingReviewQueries', () => ({
+  useGetTrainingReviews: () => ({ data: null }),
+}));
+
 describe('COMPOLECT · D3 — 🥇 le COACH atterrit enfin sur le terrain', () => {
   test('appuyer sur la convocation publiee ouvre le plateau, pas la page de reponses', () => {
     const root = monter({ auth: authPour('coach-1', true) });

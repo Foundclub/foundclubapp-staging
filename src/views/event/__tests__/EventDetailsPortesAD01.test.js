@@ -684,6 +684,13 @@ const presserLaRangee = (/** @type {any} */ root, /** @type {string} */ cle) => 
   });
 };
 
+// AVIS (09/09) - EventDetails lit desormais les avis d entrainement. Sans ce
+// double, l import tire `@/services/client`, qui JETTE sans `.env` et fait
+// tomber la suite ENTIERE avant le premier temoin.
+jest.mock('@/services/trainingReview/trainingReviewQueries', () => ({
+  useGetTrainingReviews: () => ({ data: null }),
+}));
+
 describe('AD01 · TEMOIN 1 — 🥇 le convoque le sait SANS faire defiler', () => {
   // L4-A : « avant le bloc du bas » devient « AU MONTAGE, sans un seul appui ».
   // La garantie de fond ne bouge pas d'un pouce — elle se renforce meme : la

@@ -623,6 +623,13 @@ const allerSurLOnglet = (/** @type {any} */ root, /** @type {string} */ valeur) 
   });
 };
 
+// AVIS (09/09) - EventDetails lit desormais les avis d entrainement. Sans ce
+// double, l import tire `@/services/client`, qui JETTE sans `.env` et fait
+// tomber la suite ENTIERE avant le premier temoin.
+jest.mock('@/services/trainingReview/trainingReviewQueries', () => ({
+  useGetTrainingReviews: () => ({ data: null }),
+}));
+
 describe('N2 · 4F — LE STAGE PARENT SE RANGE EN TROIS ONGLETS', () => {
   // ♻️ REECRITS PAR L'ETAPE 3. Les quatre temoins de caracterisation disaient :
   // deux pastilles maison, pas d'onglets · les puces « 2 jour(s) / 2 inscrit(s) »

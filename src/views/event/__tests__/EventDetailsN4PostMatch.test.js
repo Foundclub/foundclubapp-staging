@@ -465,6 +465,13 @@ afterEach(() => {
 // E6/1 — LES BLOCS POST-MATCH, ET LES CHIFFRES QUI DOIVENT SURVIVRE
 // ---------------------------------------------------------------------------
 
+// AVIS (09/09) - EventDetails lit desormais les avis d entrainement. Sans ce
+// double, l import tire `@/services/client`, qui JETTE sans `.env` et fait
+// tomber la suite ENTIERE avant le premier temoin.
+jest.mock('@/services/trainingReview/trainingReviewQueries', () => ({
+  useGetTrainingReviews: () => ({ data: null }),
+}));
+
 describe('N4/E6 — ce que la page dit apres un match fini', () => {
   test('le suivi post-match est la des que le lecteur peut le voir', () => {
     const textes = textesVisibles(monter());

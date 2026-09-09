@@ -587,6 +587,13 @@ afterEach(() => {
 // ---------------------------------------------------------------------------
 // D5 / D1 — LA FEUILLE PART D'ABORD, L'ECRAN S'OUVRE ENSUITE
 // ---------------------------------------------------------------------------
+// AVIS (09/09) - EventDetails lit desormais les avis d entrainement. Sans ce
+// double, l import tire `@/services/client`, qui JETTE sans `.env` et fait
+// tomber la suite ENTIERE avant le premier temoin.
+jest.mock('@/services/trainingReview/trainingReviewQueries', () => ({
+  useGetTrainingReviews: () => ({ data: null }),
+}));
+
 describe('EVEDIT-2 / D1 — la feuille part AVANT que l ecran suivant s ouvre', () => {
   test('choisir « Modifier » demande tout de suite la fermeture de la feuille', () => {
     const root = monterEtOuvrirLeMenu(buildEvent());

@@ -705,6 +705,13 @@ afterEach(() => {
   conteneur = null;
 });
 
+// AVIS (09/09) - EventDetails lit desormais les avis d entrainement. Sans ce
+// double, l import tire `@/services/client`, qui JETTE sans `.env` et fait
+// tomber la suite ENTIERE avant le premier temoin.
+jest.mock('@/services/trainingReview/trainingReviewQueries', () => ({
+  useGetTrainingReviews: () => ({ data: null }),
+}));
+
 describe('EVEDIT-4 · le geste d Adel, avec la VRAIE feuille et un VRAI routeur', () => {
   test('temoin 1 — le menu ⋯ ouvre la feuille, et « Modifier » y est', async () => {
     await monter();

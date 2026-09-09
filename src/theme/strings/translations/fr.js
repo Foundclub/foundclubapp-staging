@@ -1627,6 +1627,18 @@ export default {
       lead: 'Référent·e : {{name}}',
       pending: 'À VÉRIFIER',
     },
+    // AVIS (2026-09-09) — l avis anonyme des joueurs sur un entrainement.
+    // ⚠️ Pluriel en `_one` / `_other` (`cle_plural` est morte depuis i18next 21),
+    // et l appelant passe `count` — sans lui, la forme choisie est toujours la meme.
+    trainingReview: {
+      average: 'Note moyenne',
+      empty: 'Aucun avis pour l’instant. Tes joueurs reçoivent une invitation après chaque séance.',
+      noComment: 'Note laissée sans commentaire',
+      outOfTen: '{{rating}}/10',
+      title: 'Avis des joueurs',
+      waiting_one: '{{count}} avis reçu. Il en faut {{minimum}} pour l’afficher anonymement.',
+      waiting_other: '{{count}} avis reçus. Il en faut {{minimum}} pour les afficher anonymement.',
+    },
     typeTag: {
       capacity: '{{taken}}/{{total}} PLACES',
       matchAway: 'À L\'EXTÉRIEUR',
@@ -5088,6 +5100,18 @@ export default {
       testsCount_other: '{{count}} tests',
       title: 'Relevés vidéo',
     },
+  },
+  // AVIS (2026-09-09) — le pop-up « note ton entrainement ». Adel : « note sur
+  // dix, ils peuvent laisser un commentaire, ce n est pas obligatoire ».
+  trainingReviewPrompt: {
+    anonymous: 'Ton avis est anonyme : ton entraîneur voit la note, jamais qui l’a mise.',
+    commentPlaceholder: 'Un mot sur la séance ? (facultatif)',
+    later: 'Plus tard',
+    ratingLabel: 'Ta note sur 10',
+    sending: 'Envoi…',
+    submit: 'Envoyer mon avis',
+    subtitle: '{{team}} · terminé {{date}}',
+    title: 'Comment s’est passé ton entraînement ?',
   },
   userBlock: {
     actions: {

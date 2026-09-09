@@ -527,6 +527,13 @@ const rangee = (/** @type {any} */ root, /** @type {string} */ extrait) => range
 // La clef du titre, telle que la doublure `t` la rend (aucun repli textuel).
 const TITRE_DESCRIPTION = 'eventDetails.fields.description';
 
+// AVIS (09/09) - EventDetails lit desormais les avis d entrainement. Sans ce
+// double, l import tire `@/services/client`, qui JETTE sans `.env` et fait
+// tomber la suite ENTIERE avant le premier temoin.
+jest.mock('@/services/trainingReview/trainingReviewQueries', () => ({
+  useGetTrainingReviews: () => ({ data: null }),
+}));
+
 describe('P1 · item 1 — la phrase-robot FFF ne sert plus de description', () => {
   test('sur un match synchronise, la phrase-robot N EST PLUS affichee et le bloc disparait', () => {
     const root = monter({ event: buildMatchFFF() });

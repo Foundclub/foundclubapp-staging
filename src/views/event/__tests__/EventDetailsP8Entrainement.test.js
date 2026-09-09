@@ -520,6 +520,13 @@ const boutonAvecTitre = (
   .find((/** @type {any} */ noeud) => noeud.props?.accessibilityRole === 'button'
     && texteDe(noeud).includes(titre));
 
+// AVIS (09/09) - EventDetails lit desormais les avis d entrainement. Sans ce
+// double, l import tire `@/services/client`, qui JETTE sans `.env` et fait
+// tomber la suite ENTIERE avant le premier temoin.
+jest.mock('@/services/trainingReview/trainingReviewQueries', () => ({
+  useGetTrainingReviews: () => ({ data: null }),
+}));
+
 describe('P8 · la carte d ouverture, face ORGANISATEUR', () => {
   test('(a) un entrainement OUVERT : l etat, les places restantes, les demandes', () => {
     // 🎯 8 places offertes, 2 prises ⇒ 6 restantes. 1 demande en attente.

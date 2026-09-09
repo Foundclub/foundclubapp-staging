@@ -42,6 +42,7 @@ const SESSION_REQUIRED_PATHS = [
   '/app/bootstrap',
   '/firebase-auth/me',
   '/firebase-auth/me/pending-match-stats',
+  '/firebase-auth/me/pending-training-reviews',
   '/in-app-popup-campaigns/active',
   '/league-actions/pending',
   '/notifications',

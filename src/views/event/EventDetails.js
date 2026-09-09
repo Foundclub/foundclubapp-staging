@@ -57,6 +57,9 @@ import JoinEventModal from '@/components/organisms/joinEventModal/JoinEventModal
 import RefuseParticipationModal from '@/components/organisms/refuseParticipationModal/RefuseParticipationModal';
 import ReportEventModal from '@/components/organisms/reportEventModal/ReportEventModal';
 import ShareEventModal from '@/components/organisms/shareEventModal/ShareEventModal';
+import TrainingReviewsCard, {
+  peutVoirLesAvisDEntrainement,
+} from '@/components/organisms/trainingReview/TrainingReviewsCard';
 import ConvocationFieldPreview from '@/components/tactical/ConvocationFieldPreview';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 import {
@@ -110,6 +113,7 @@ import {
   applyToRecruitmentAd,
   getRecruitmentApplications,
 } from '@/services/recruitment/recruitmentService';
+import { useGetTrainingReviews } from '@/services/trainingReview/trainingReviewQueries';
 // R9 — LE RAIL D INVITATION DU LOT P10, recolte et deploye. Comme pour N2
 // plus haut, ces deux fonctions ne sont appelees que dans une fermeture (le
 // rendu de la fiche et la mutation), jamais au montage — mais l IMPORT, lui,
@@ -1454,6 +1458,20 @@ function EventDetails({ navigation, route }) {
   const isMatchFinished = useMemo(
     () => resolveIsMatchFinished({ eventEndedAt, serverNowMs: serverClockMs }),
     [eventEndedAt, serverClockMs],
+  );
+
+  // AVIS (09/09) — LE BLOC « AVIS DES JOUEURS », et sa porte.
+  // Les trois conditions vivent dans `peutVoirLesAvisDEntrainement` plutot qu ici :
+  // c est la SEULE facon de les tester sans monter les 8 000 lignes de cet ecran
+  // (temoins AVIS-APP/1 et AVIS-APP/2). La requete ne part que si la porte est
+  // ouverte — un joueur ne doit jamais l appeler, la policy la lui refuserait.
+  const peutVoirLesAvisDEntrainementIci = peutVoirLesAvisDEntrainement({
+    canEdit,
+    isFinished: isMatchFinished,
+    isTraining: trainingOpenConfig.isTraining,
+  });
+  const { data: avisDEntrainement } = useGetTrainingReviews(
+    peutVoirLesAvisDEntrainementIci ? eventId : null,
   );
 
   // Le compte a rebours d'arrivee, lui, doit rester affichable meme sans le
@@ -8526,6 +8544,13 @@ function EventDetails({ navigation, route }) {
 
                   </View>
                 </View>
+              ) : null}
+
+              {/* AVIS (09/09) — l avis anonyme des joueurs sur cet entrainement.
+                  Il se pose a cote de « Stats du match », qui est son exact
+                  equivalent cote match. La porte est calculee plus haut. */}
+              {showOverviewTab && peutVoirLesAvisDEntrainementIci ? (
+                <TrainingReviewsCard donnees={avisDEntrainement} />
               ) : null}
 
               {showCallUpTab && showPublishedComposition ? (

@@ -24,6 +24,41 @@ describe('notificationNavigation', () => {
     });
   });
 
+  // LOT AVIS (E6) — l avis anonyme sur un entrainement. Les DEUX notifications
+  // menent a la fiche de l entrainement : celle du joueur parce que le pop-up
+  // peut avoir ete ferme, celle de l entraineur parce que c est la que le bloc
+  // « Avis des joueurs » vit. Sans ces deux lignes, un appui sur la notification
+  // ouvre l accueil, et personne ne trouve jamais l ecran.
+  test('AVIS-APP/7 — la sollicitation d avis ouvre la fiche de l entrainement', () => {
+    const destination = resolveNotificationDestination({
+      eventId: 'evt-training',
+      type: NOTIFICATION_TYPES.TRAINING_REVIEW_REQUEST,
+    });
+
+    expect(destination).toEqual({
+      params: {
+        params: { eventId: 'evt-training' },
+        screen: RouteNames.EventDetails,
+      },
+      route: RouteNames.EventStack,
+    });
+  });
+
+  test('AVIS-APP/8 — l avis recu ouvre la fiche de l entrainement pour l entraineur', () => {
+    const destination = resolveNotificationDestination({
+      eventId: 'evt-training',
+      type: NOTIFICATION_TYPES.TRAINING_REVIEW_RECEIVED,
+    });
+
+    expect(destination).toEqual({
+      params: {
+        params: { eventId: 'evt-training' },
+        screen: RouteNames.EventDetails,
+      },
+      route: RouteNames.EventStack,
+    });
+  });
+
   test('routes validated league matches to past match details', () => {
     const destination = resolveNotificationDestination({
       matchId: 'match-99',

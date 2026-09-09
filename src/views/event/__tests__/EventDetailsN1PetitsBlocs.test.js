@@ -536,6 +536,13 @@ const parTestID = (
   /** @type {string} */ id,
 ) => racine.findAll((/** @type {any} */ noeud) => noeud.props?.testID === id, { deep: false });
 
+// AVIS (09/09) - EventDetails lit desormais les avis d entrainement. Sans ce
+// double, l import tire `@/services/client`, qui JETTE sans `.env` et fait
+// tomber la suite ENTIERE avant le premier temoin.
+jest.mock('@/services/trainingReview/trainingReviewQueries', () => ({
+  useGetTrainingReviews: () => ({ data: null }),
+}));
+
 describe('N1 · (a) — le branchement du bloc des postes de detection', () => {
   const detectionSansPoste = () => buildEvent({ recruitmentAds: [], type: { name: 'Détection' } });
 

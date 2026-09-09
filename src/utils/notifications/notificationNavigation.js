@@ -743,6 +743,12 @@ export const resolveNotificationDestination = (rawPayload = {}) => {
     case NOTIFICATION_TYPES.RESERVATION_COMPLETE:
     case NOTIFICATION_TYPES.RESERVATION_PLAYER_JOINED:
     case NOTIFICATION_TYPES.RESERVATION_SOS_ALERT:
+    case NOTIFICATION_TYPES.TRAINING_REVIEW_RECEIVED:
+    case NOTIFICATION_TYPES.TRAINING_REVIEW_REQUEST:
+      // AVIS (09/09) — les DEUX avis d entrainement menent a la fiche de
+      // l evenement : celle du joueur parce que le pop-up peut avoir ete ferme,
+      // celle de l entraineur parce que c est la que vit le bloc « Avis des
+      // joueurs ». Ils tombent donc dans le repli commun, tout en bas.
       if (type === NOTIFICATION_TYPES.COACH_REPORT_PUBLISHED) {
         return adaptDestinationForCurrentPlatform(payload, coachReportPublishedDestination(payload));
       }
