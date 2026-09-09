@@ -22,6 +22,7 @@ import Button from '@/components/atoms/button/Button';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 
 import { getCurrentRouteName, navigationRef } from '@/navigation/navigationService';
+import { RouteNames } from '@/navigation/routeNames';
 
 import {
   PENDING_TRAINING_REVIEWS_QUERY_KEY,
@@ -55,7 +56,7 @@ import { usePopupEligibility } from '@/context/PopupManagerContext';
  * L ecran de la fiche d un evenement : y superposer une feuille qui parle du
  * meme evenement n aurait aucun sens.
  */
-const BLOCKED_ROUTES = /** @type {Set<string>} */ (new Set(['EventDetails']));
+const BLOCKED_ROUTES = /** @type {Set<string>} */ (new Set([RouteNames.EventDetails]));
 
 /**
  * Une date de fin lisible, ou rien du tout.

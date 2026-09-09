@@ -8549,7 +8549,9 @@ function EventDetails({ navigation, route }) {
               {/* AVIS (09/09) — l avis anonyme des joueurs sur cet entrainement.
                   Il se pose a cote de « Stats du match », qui est son exact
                   equivalent cote match. La porte est calculee plus haut. */}
-              {showOverviewTab && peutVoirLesAvisDEntrainementIci ? (
+              {/* `avisDEntrainement` gate le rendu : sans lui, la carte annoncerait
+                  « aucun avis » pendant le chargement, puis se contredirait. */}
+              {showOverviewTab && peutVoirLesAvisDEntrainementIci && avisDEntrainement ? (
                 <TrainingReviewsCard donnees={avisDEntrainement} />
               ) : null}
 
