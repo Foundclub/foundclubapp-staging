@@ -34,6 +34,11 @@ let lienCree = null;
 
 beforeEach(() => {
   jest.clearAllMocks();
+  // 🧨 Chaque appel arme un VRAI `setTimeout` de 10 s (la révocation de l'URL,
+  // `visualRender.web.js:105`). Sans faux minuteurs, ces 10 s survivent au
+  // fichier et retiennent Jest en `--runInBand` : mesuré le 2026-09-09,
+  // « 3 open handles », 12 s pour rendre la main au lieu de 2.
+  jest.useFakeTimers();
   lienCree = null;
   global.fetch = jest.fn();
   global.URL.createObjectURL = jest.fn(() => 'blob:objet-1');
@@ -47,7 +52,11 @@ beforeEach(() => {
   };
 });
 
-afterEach(() => { delete global.document; });
+afterEach(() => {
+  jest.runOnlyPendingTimers();
+  jest.useRealTimers();
+  delete global.document;
+});
 
 describe('T04 — sur le web aussi, les octets déjà à l écran ne sont pas redemandés', () => {
   it('🔒 avec l affiche déjà en main, AUCUN appel au serveur', async () => {
@@ -57,6 +66,11 @@ describe('T04 — sur le web aussi, les octets déjà à l écran ne sont pas re
 
     expect(global.fetch).not.toHaveBeenCalled();
     expect(lienCree.click).toHaveBeenCalledTimes(1);
+    // L'URL n'est révoquée qu'APRÈS le délai qui laisse le navigateur amorcer le
+    // téléchargement — jamais avant, sinon le fichier arrive vide.
+    expect(global.URL.revokeObjectURL).not.toHaveBeenCalled();
+    jest.advanceTimersByTime(10000);
+    expect(global.URL.revokeObjectURL).toHaveBeenCalledWith('blob:objet-1');
   });
 
   // 🧨 LE PIÈGE DE CETTE VERSION : sur le web, il faut RECONSTRUIRE un Blob
