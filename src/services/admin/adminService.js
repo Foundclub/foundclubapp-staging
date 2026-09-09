@@ -189,14 +189,22 @@ export const getAdminReports = async () => {
     client.get('/event-reports', {
       params: {
         pagination: { page: 1, pageSize: 100 },
-        populate: ['event', 'event.team', 'event.team.club', 'event.club', 'user', 'author', 'createdBy'],
+        // ⛔ Ces cles sont celles du modele `event-report` : user, reason, event.
+        // Strapi 5 REFUSE la requete entiere sur une cle inconnue (400
+        // « Invalid key … »), il ne l ignore pas. `author` et `createdBy`
+        // faisaient donc echouer l ecran « A traiter » en entier — constate en
+        // production le 2026-09-09 (Sentry SERVEUR-STRAPI-8).
+        populate: ['event', 'event.team', 'event.team.club', 'event.club', 'user'],
         sort: ['createdAt:desc'],
       },
     }),
     client.get('/chat-message-reports', {
       params: {
         pagination: { page: 1, pageSize: 100 },
-        populate: ['message', 'message.chat', 'message.author', 'chat', 'user', 'author', 'createdBy'],
+        // Modele `chat-message-report` : message, user — et rien d autre.
+        // L auteur du message signale s appelle `sender` sur `chat-message`,
+        // jamais `author` : c est cette cle-la que le serveur refusait.
+        populate: ['message', 'message.chat', 'message.sender', 'user'],
         sort: ['createdAt:desc'],
       },
     }),
@@ -344,9 +352,16 @@ const mapMessageReportItem = (item = {}) => {
   const report = toEntity(item) || {};
   const messageEntity = toEntity(report.message) || toEntity(report.chatMessage) || {};
   const chat = toEntity(messageEntity.chat) || toEntity(report.chat) || {};
-  const author = toEntity(messageEntity.author) || toEntity(messageEntity.user) || {};
+  // `sender` d abord : c est le nom REEL du champ sur `chat-message`.
+  const author = toEntity(messageEntity.sender)
+    || toEntity(messageEntity.author)
+    || toEntity(messageEntity.user)
+    || {};
   const chatDocumentId = pickDocumentId(chat);
   const messagePreview = pickFirstText(
+    // Le texte d un message vit dans `message`. Les trois noms suivants sont
+    // gardes comme filet, mais aucun n existe au schema.
+    messageEntity.message,
     messageEntity.content,
     messageEntity.text,
     messageEntity.body,
