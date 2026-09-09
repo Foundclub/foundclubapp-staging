@@ -1,5 +1,10 @@
 module.exports = {
   preset: 'react-native',
+  // Le filet de fin de temoin (2026-09-09) : referme les ecrans ouverts et
+  // desarme les minuteurs de react-query, pour que Jest puisse S'ETEINDRE en
+  // `--runInBand`. Six jours de CI rouge sans un seul temoin rouge, l'histoire
+  // complete est en tete du fichier.
+  setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
   // supercluster (et sa dépendance kdbush) sont publiés en ESM pur : ils doivent
   // passer par Babel comme les modules react-native, sinon Jest ne peut pas les charger.
   //
