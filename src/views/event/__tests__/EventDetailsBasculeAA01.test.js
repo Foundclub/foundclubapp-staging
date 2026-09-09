@@ -527,6 +527,13 @@ afterEach(() => {
   jest.restoreAllMocks();
 });
 
+// AVIS (09/09) - EventDetails lit desormais les avis d entrainement. Sans ce
+// double, l import tire `@/services/client`, qui JETTE sans `.env` et fait
+// tomber la suite ENTIERE avant le premier temoin.
+jest.mock('@/services/trainingReview/trainingReviewQueries', () => ({
+  useGetTrainingReviews: () => ({ data: null }),
+}));
+
 describe('AA01 — la bascule d une reponse passe par la porte des reponses', () => {
   test('AA01/1 — 🥇 absent -> present frappe la porte des REPONSES, pas celle des demandes', () => {
     const root = mountScreen({

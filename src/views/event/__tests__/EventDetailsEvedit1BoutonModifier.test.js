@@ -521,6 +521,13 @@ afterEach(() => {
   alerte = null;
 });
 
+// AVIS (09/09) - EventDetails lit desormais les avis d entrainement. Sans ce
+// double, l import tire `@/services/client`, qui JETTE sans `.env` et fait
+// tomber la suite ENTIERE avant le premier temoin.
+jest.mock('@/services/trainingReview/trainingReviewQueries', () => ({
+  useGetTrainingReviews: () => ({ data: null }),
+}));
+
 describe('D3 — un STAGE n ouvre plus un formulaire mort', () => {
   test('le bouton « Modifier » est TOUJOURS la — il ne disparait pas', () => {
     const root = monterEtOuvrirLeMenu(STAGE());

@@ -501,6 +501,13 @@ afterEach(() => {
   }
 });
 
+// AVIS (09/09) - EventDetails lit desormais les avis d entrainement. Sans ce
+// double, l import tire `@/services/client`, qui JETTE sans `.env` et fait
+// tomber la suite ENTIERE avant le premier temoin.
+jest.mock('@/services/trainingReview/trainingReviewQueries', () => ({
+  useGetTrainingReviews: () => ({ data: null }),
+}));
+
 describe('AC08 · TEMOIN 1 — 🥇 le convoque atteint le terrain en UN appui', () => {
   test('un titulaire part sur SON ecran, avec l evenement et l equipe', () => {
     const root = monter();

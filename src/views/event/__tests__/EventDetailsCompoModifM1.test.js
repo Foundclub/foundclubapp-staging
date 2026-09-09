@@ -530,6 +530,13 @@ const evenementSansRole = () => buildMatch({
 // Le harnais ci-dessus est celui de `EventDetailsCompolectTerrain.test.js` :
 // meme ecran, memes doublures. Ce fichier n'ajoute que les temoins de M1.
 
+// AVIS (09/09) - EventDetails lit desormais les avis d entrainement. Sans ce
+// double, l import tire `@/services/client`, qui JETTE sans `.env` et fait
+// tomber la suite ENTIERE avant le premier temoin.
+jest.mock('@/services/trainingReview/trainingReviewQueries', () => ({
+  useGetTrainingReviews: () => ({ data: null }),
+}));
+
 describe('COMPOMODIF · M1 — « Modifier » dans l onglet Convocation', () => {
   test('🥇 le COACH voit le bouton « Modifier » a cote de la compo publiee', () => {
     const root = monter({ auth: authPour('coach-1', true) });

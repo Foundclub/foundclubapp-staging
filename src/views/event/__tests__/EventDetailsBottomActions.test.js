@@ -779,6 +779,13 @@ const ouvrirLaFeuilleDeGestion = () => {
   });
 };
 
+// AVIS (09/09) - EventDetails lit desormais les avis d entrainement. Sans ce
+// double, l import tire `@/services/client`, qui JETTE sans `.env` et fait
+// tomber la suite ENTIERE avant le premier temoin.
+jest.mock('@/services/trainingReview/trainingReviewQueries', () => ({
+  useGetTrainingReviews: () => ({ data: null }),
+}));
+
 describe('EventDetails — bas de page : ce qui est atteignable (invariant D21)', () => {
   test('organisateur, campagne suggeree : les 5 actions livrees restent atteignables', () => {
     const root = asOrganiser({ params: { eventCampaignCreationSuggested: true } });

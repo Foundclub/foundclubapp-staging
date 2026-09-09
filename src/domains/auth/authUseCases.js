@@ -1240,6 +1240,11 @@ export const NOTIFICATION_TYPES = {
   RESERVATION_SOS_ALERT: 'reservationSosAlert',
   SEARCH_ALERT_MATCH: 'searchAlertMatch',
   TEAM_FIRST_EVENT_CREATED: 'teamFirstEventCreated',
+  // AVIS (09/09) — l avis anonyme sur un entrainement. Les deux jumelles du
+  // serveur (user-fcm-token/types/index.ts) : la sollicitation du participant
+  // apres l heure de fin, et l alerte de l entraineur au premier avis recu.
+  TRAINING_REVIEW_RECEIVED: 'trainingReviewReceived',
+  TRAINING_REVIEW_REQUEST: 'trainingReviewRequest',
 
   // Licences
   LICENSE_CAMPAIGN_CLOSED: 'licenseCampaignClosed',

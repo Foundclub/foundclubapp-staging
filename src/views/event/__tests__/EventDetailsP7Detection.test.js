@@ -614,6 +614,13 @@ const allerSurLOnglet = (/** @type {any} */ root, /** @type {string} */ valeur) 
   });
 };
 
+// AVIS (09/09) - EventDetails lit desormais les avis d entrainement. Sans ce
+// double, l import tire `@/services/client`, qui JETTE sans `.env` et fait
+// tomber la suite ENTIERE avant le premier temoin.
+jest.mock('@/services/trainingReview/trainingReviewQueries', () => ({
+  useGetTrainingReviews: () => ({ data: null }),
+}));
+
 describe('P7 - le tableau de bord du recrutement descend jusqu a l entete', () => {
   test('P7 · temoin 1 — les deux chiffres du metier arrivent a l entete', () => {
     monter({ event: buildDetection() });

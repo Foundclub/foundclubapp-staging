@@ -526,6 +526,13 @@ const allerSurLOnglet = (/** @type {any} */ root, /** @type {string} */ valeur) 
   });
 };
 
+// AVIS (09/09) - EventDetails lit desormais les avis d entrainement. Sans ce
+// double, l import tire `@/services/client`, qui JETTE sans `.env` et fait
+// tomber la suite ENTIERE avant le premier temoin.
+jest.mock('@/services/trainingReview/trainingReviewQueries', () => ({
+  useGetTrainingReviews: () => ({ data: null }),
+}));
+
 describe('R6 · (b) une convocation publiee NOMME ses convoques', () => {
   test('les titulaires et le banc sont a l ecran, sans un appui de plus', () => {
     const root = monter({ auth: authPour('coach-1', true), convocation: CONVOCATION });

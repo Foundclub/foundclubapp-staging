@@ -680,6 +680,13 @@ const ouvrirLaFeuilleDeGestion = () => {
 // (planche 04) en fait le COEUR de l'onglet Convocation : il coute donc
 // desormais UN appui d'onglet. Ce temoin existe pour que ce prix soit VISIBLE
 // dans le filet — pas enfoui dans un helper de montage.
+// AVIS (09/09) - EventDetails lit desormais les avis d entrainement. Sans ce
+// double, l import tire `@/services/client`, qui JETTE sans `.env` et fait
+// tomber la suite ENTIERE avant le premier temoin.
+jest.mock('@/services/trainingReview/trainingReviewQueries', () => ({
+  useGetTrainingReviews: () => ({ data: null }),
+}));
+
 describe('L4-A — le rappel de compo coute UN appui d onglet, et pas plus', () => {
   test('il n est PAS dans l onglet Aperçu, il EST dans l onglet Convocation', () => {
     const root = mountScreen({ auth: asOrganiser() });

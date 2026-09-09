@@ -532,6 +532,13 @@ afterEach(() => {
 // TEMOIN 1 — le principal.
 // ---------------------------------------------------------------------------
 
+// AVIS (09/09) - EventDetails lit desormais les avis d entrainement. Sans ce
+// double, l import tire `@/services/client`, qui JETTE sans `.env` et fait
+// tomber la suite ENTIERE avant le premier temoin.
+jest.mock('@/services/trainingReview/trainingReviewQueries', () => ({
+  useGetTrainingReviews: () => ({ data: null }),
+}));
+
 test('AA02 temoin 1 — une ligne sans personne n apparait dans AUCUNE liste', () => {
   const props = mountScreen();
   const rendus = affiches(props);

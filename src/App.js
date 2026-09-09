@@ -12,6 +12,8 @@ import AppBannerHost from '@/components/organisms/popup/AppBannerHost';
 import GlobalPromptModal from '@/components/organisms/popup/GlobalPromptModal';
 import RemotePopupCampaignHost from '@/components/organisms/popup/RemotePopupCampaignHost';
 import StartupPromptBoundary from '@/components/organisms/popup/StartupPromptBoundary';
+import TrainingReviewPromptHost
+  from '@/components/organisms/trainingReview/TrainingReviewPromptHost';
 import ErrorScreen from '@/views/Error';
 
 import AppNavigator from '@/navigation/appNavigator';
@@ -370,6 +372,7 @@ function DeferredStartupHosts() {
         skipInitialFetch={shouldSkipBootstrapBackedInitialFetch}
       />
       <MatchStatsPromptHost skipInitialFetch={shouldSkipBootstrapBackedInitialFetch} />
+      <TrainingReviewPromptHost skipInitialFetch={shouldSkipBootstrapBackedInitialFetch} />
       <LeagueActionPromptHost skipInitialFetch={shouldSkipBootstrapBackedInitialFetch} />
       <NotificationBootstrap />
       <SmartNotificationHost />
