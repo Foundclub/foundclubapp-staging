@@ -56,7 +56,7 @@ beforeEach(() => {
 });
 
 describe('PARENT P2 — le service des fiches enfants', () => {
-  test('① une fiche entièrement nulle (club, équipe, photo, poste, numéro) reste LISIBLE', async () => {
+  test('① une fiche tout en nuls (club, équipe, photo, poste, n°) reste LISIBLE', async () => {
     client.get.mockResolvedValue({ data: { data: [unEnfant()] } });
 
     const enfants = await getMyDeclaredChildren();
@@ -112,7 +112,7 @@ describe('PARENT P2 — le service des fiches enfants', () => {
     expect(payload.position).toBe('Gardienne');
   });
 
-  test('③ une modification SANS date de naissance ne l\'envoie pas — le serveur garde la sienne', async () => {
+  test("③ modifier SANS la date ne l'envoie pas : le serveur garde la sienne", async () => {
     client.put.mockResolvedValue({ data: { data: unEnfant({ number: 7 }) } });
 
     await updateDeclaredChild('enfant-1', buildChildPayload({

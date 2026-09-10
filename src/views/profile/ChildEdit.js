@@ -47,7 +47,7 @@ function ChildEdit() {
   const navigation = useNavigation();
   const route = useRoute();
   const {
-    Alignments, Fonts, Spaces,
+    Alignments, Colors, Fonts, Spaces,
   } = useTheme();
 
   const documentIdVise = String(route?.params?.childDocumentId || '').trim();
@@ -98,7 +98,10 @@ function ChildEdit() {
     // ① Les trois obligatoires. En modification, la date PEUT rester vide : le
     //    serveur garde la sienne (il ne nous l'a jamais rendue).
     if (!firstname.trim() || !lastname.trim() || (!estUneModification && !naissance)) {
-      setErreur(t('myChildren.form.errors.required', 'Le prénom, le nom et la date de naissance sont obligatoires.'));
+      setErreur(t(
+        'myChildren.form.errors.required',
+        'Le prénom, le nom et la date de naissance sont obligatoires.',
+      ));
       return;
     }
 
@@ -117,7 +120,10 @@ function ChildEdit() {
 
       // ③ 🧒 LE PALIER 13, DIT AVANT L'ALLER-RETOUR.
       if (!isBirthdateUnderParentAccountAge(naissance)) {
-        setErreur(t('myChildren.form.errors.tooOld', 'Une fiche enfant est réservée aux moins de 13 ans.'));
+        setErreur(t(
+          'myChildren.form.errors.tooOld',
+          'Une fiche enfant est réservée aux moins de 13 ans.',
+        ));
         return;
       }
     }
@@ -130,7 +136,10 @@ function ChildEdit() {
       position,
     });
 
-    const surErreur = () => setErreur(t('myChildren.form.errors.save', 'Impossible d’enregistrer cette fiche pour le moment.'));
+    const surErreur = () => setErreur(t(
+      'myChildren.form.errors.save',
+      'Impossible d’enregistrer cette fiche pour le moment.',
+    ));
     const surSucces = () => navigation.goBack();
 
     if (estUneModification) {
@@ -236,7 +245,7 @@ function ChildEdit() {
         />
 
         {erreur ? (
-          <Text style={[Fonts.p3, { color: '#ff284f' }]}>{erreur}</Text>
+          <Text style={[Fonts.p3, { color: Colors.error500 }]}>{erreur}</Text>
         ) : null}
 
         <Button

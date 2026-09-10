@@ -45,10 +45,13 @@ jest.mock('react-i18next', () => {
         );
         const valeur = lire(cheminPluriel) ?? lire(brut);
         if (typeof valeur === 'string') {
-          return valeur.replace(/\{\{(\w+)\}\}/g, (/** @type {string} */ _tout, /** @type {string} */ clef) => {
-            const source = (repli && typeof repli === 'object' ? repli : options) || {};
-            return String(source[clef] ?? '');
-          });
+          return valeur.replace(
+            /\{\{(\w+)\}\}/g,
+            (/** @type {string} */ _tout, /** @type {string} */ clef) => {
+              const source = (repli && typeof repli === 'object' ? repli : options) || {};
+              return String(source[clef] ?? '');
+            },
+          );
         }
         return typeof repli === 'string' ? repli : cle;
       },
@@ -213,7 +216,7 @@ test('P2/7 ④ MOINS DE 13 ANS : « chercher un club » est proposé', async () 
   expect(texte).not.toContain('fait ses demandes lui-même');
 });
 
-test('P2/7 ⑤ 13 À 17 ANS : plus de bouton « chercher un club », et l\'écran EXPLIQUE pourquoi', async () => {
+test("P2/7 ⑤ 13 À 17 ANS : plus de bouton, et l'écran EXPLIQUE pourquoi", async () => {
   mockEnfants = [unEnfant({ age: 15 })];
 
   const texte = texteVisible(await rendre());

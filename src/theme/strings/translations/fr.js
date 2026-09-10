@@ -467,7 +467,8 @@ export default {
     // E17 -- on EXPLIQUE l'absence de la porte au lieu de la faire
     // disparaitre sans un mot.
     hints: {
-      teenAsksAlone: 'À partir de 13 ans, ton enfant fait sa demande lui-même depuis son propre compte.',
+      teenAsksAlone: 'À partir de 13 ans, ton enfant fait sa demande'
+        + ' lui-même depuis son propre compte.',
     },
     playerNoTeamRequest: {
       clubLabel: 'Club que tu attends',
@@ -3544,7 +3545,6 @@ export default {
       // PARENT P2 — la rangée qui manquait : aucune des 8 rangées du menu ne
       // parlait d'enfant, alors que « mes enfants » est la raison d'être du
       // compte parent.
-      myChildren: 'Mes enfants',
       manageAlerts: 'Gérer mes alertes',
       manageClub: 'Gérer mon club',
       manageClubJoinRequests: 'Gérer les demandes d\'affiliation au club',
@@ -3552,6 +3552,7 @@ export default {
       manageRequests: 'Gérer mes demandes',
       manageTeamJoinRequests: 'Gérer les demandes d\'adhésion aux équipes',
       manageTeams: 'Gérer mes équipes',
+      myChildren: 'Mes enfants',
       myTeams: 'Mes équipes',
       save: 'Continuer',
       superAdminLeagueDashboard: 'Dashboard League',
@@ -5147,7 +5148,9 @@ export default {
       // §B7 du plan : l'effacement est RÉEL (le serveur supprime la ligne, il
       // n'anonymise pas). Mais une feuille de match passée garde le prénom : on
       // ne réécrit pas l'histoire d'un match, et on le dit AVANT de supprimer.
-      message: 'La fiche de {{firstname}} sera effacée : son prénom, son nom et sa date de naissance. Une composition déjà jouée gardera son prénom — on ne réécrit pas la feuille d’un match passé.',
+      message: 'La fiche de {{firstname}} sera effacée : son prénom, son nom'
+        + ' et sa date de naissance. Une composition déjà jouée gardera son'
+        + ' prénom — on ne réécrit pas la feuille d’un match passé.',
       title: 'Supprimer la fiche de {{firstname}} ?',
     },
     errors: {
@@ -5167,15 +5170,17 @@ export default {
         required: 'Le prénom, le nom et la date de naissance sont obligatoires.',
         // 🧒 Le palier 13, dit AVANT d'envoyer. Jusqu'ici l'app ne prevenait
         // jamais : le palier ne tenait que sur le refus du serveur (§4.5 du plan).
-        tooOld: 'Une fiche enfant est réservée aux moins de 13 ans. À partir de 13 ans, ton enfant a droit à son propre compte.',
         save: 'Impossible d’enregistrer cette fiche pour le moment.',
+        tooOld: 'Une fiche enfant est réservée aux moins de 13 ans.'
+          + ' À partir de 13 ans, ton enfant a droit à son propre compte.',
       },
       firstnameLabel: 'Prénom',
       firstnamePlaceholder: 'Léa',
       // 🔒 La minimisation n'est pas un confort, c'est la loi (C10 du plan) :
       // trois champs obligatoires, trois facultatifs, et RIEN d'autre. On le
       // dit au parent, parce qu'un formulaire court sur un mineur se remarque.
-      hint: 'Trois informations suffisent. On ne demande ni téléphone, ni adresse : c’est toi qu’on contacte.',
+      hint: 'Trois informations suffisent. On ne demande ni téléphone,'
+        + ' ni adresse : c’est toi qu’on contacte.',
       lastnameLabel: 'Nom',
       lastnamePlaceholder: 'Martin',
       numberLabel: 'Numéro de maillot (facultatif)',
@@ -5190,14 +5195,17 @@ export default {
       count_one: '{{count}} enfant déclaré',
       count_other: '{{count}} enfants déclarés',
       empty: 'Tu n’as pas encore déclaré d’enfant.',
-      emptyHint: 'Déclare-le ici, puis cherche-lui un club. Tu peux en ajouter autant que tu veux.',
-      hint: 'Tu déclares tes enfants depuis TON compte : avant 13 ans, ils n’ont pas de compte à eux.',
+      emptyHint: 'Déclare-le ici, puis cherche-lui un club.'
+        + ' Tu peux en ajouter autant que tu veux.',
+      hint: 'Tu déclares tes enfants depuis TON compte :'
+        + ' avant 13 ans, ils n’ont pas de compte à eux.',
       noTeam: 'Pas encore d’équipe',
       title: 'Mes enfants',
       // Les deux tranches où le parent n'agit plus (E17). Elles ne sont pas des
       // erreurs : ce sont des explications, et l'écran les donne au lieu de
       // faire disparaître un bouton sans un mot.
-      tooOldHint: 'À partir de 13 ans, {{firstname}} fait ses demandes lui-même depuis son propre compte.',
+      tooOldHint: 'À partir de 13 ans, {{firstname}} fait ses demandes'
+        + ' lui-même depuis son propre compte.',
       years_one: '{{count}} an',
       years_other: '{{count}} ans',
       // 18 ans : le lien parental s'éteint tout seul, c'est la loi.

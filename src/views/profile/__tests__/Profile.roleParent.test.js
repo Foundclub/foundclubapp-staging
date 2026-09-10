@@ -197,7 +197,7 @@ describe('Profile — le profil d un Parent (PARENT)', () => {
     expect(libelles).toContain('Mes enfants');
   });
 
-  it('P2/11 un JOUEUR aussi : avoir des enfants est une capacite, pas un privilege de role', async () => {
+  it('P2/11 un JOUEUR aussi : c est une capacite, pas un privilege de role', async () => {
     // Le serveur declare les 4 gestes « enfant declare » dans les QUATRE cartes
     // (Joueur, Entraineur, Dirigeant, Parent). Cacher la rangee aux trois autres
     // creerait un ecran INATTEIGNABLE alors que le droit existe — exactement le

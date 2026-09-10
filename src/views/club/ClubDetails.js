@@ -3900,7 +3900,10 @@ function ClubDetails({ navigation, route }) {
                     defaultValue: 'Demander à rejoindre au nom de {{firstname}}',
                     firstname: prenomEnfantUnique,
                   })
-                  : t('clubDetails.actions.joinForChildren', 'Demander à rejoindre pour mes enfants');
+                  : t(
+                    'clubDetails.actions.joinForChildren',
+                    'Demander à rejoindre pour mes enfants',
+                  );
               })()}
               variant="Primary"
             />

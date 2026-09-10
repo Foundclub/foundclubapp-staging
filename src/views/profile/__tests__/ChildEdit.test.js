@@ -243,7 +243,7 @@ test('P2/8 ③ 🔢 un numéro de maillot laissé VIDE ne part pas en zéro', as
   expect(Object.prototype.hasOwnProperty.call(charge, 'number')).toBe(false);
 });
 
-test('P2/8 ④ 🧒 LE PALIER 13 EST DIT AVANT D\'ENVOYER : un enfant de 25 ans n\'atteint pas le serveur', async () => {
+test("P2/8 ④ 🧒 LE PALIER 13 EST DIT AVANT D'ENVOYER : 25 ans n'atteint pas le serveur", async () => {
   const arbre = await rendre();
 
   await saisir(arbre, 'child-firstname', 'Paul');
@@ -260,7 +260,12 @@ test('P2/8 ④ 🧒 LE PALIER 13 EST DIT AVANT D\'ENVOYER : un enfant de 25 ans 
 test('P2/8 ⑤ MODIFIER : l\'écran DIT pourquoi la date de naissance est vide', async () => {
   mockParams = { childDocumentId: 'enfant-1' };
   mockEnfants = [{
-    age: 9, documentId: 'enfant-1', firstname: 'Léa', lastname: 'Martin', number: 10, position: 'Gardienne',
+    age: 9,
+    documentId: 'enfant-1',
+    firstname: 'Léa',
+    lastname: 'Martin',
+    number: 10,
+    position: 'Gardienne',
   }];
 
   const arbre = await rendre();
@@ -278,7 +283,12 @@ test('P2/8 ⑤ MODIFIER : l\'écran DIT pourquoi la date de naissance est vide',
 test('P2/8 ⑥ MODIFIER sans retoucher la date : la date n\'est PAS envoyée', async () => {
   mockParams = { childDocumentId: 'enfant-1' };
   mockEnfants = [{
-    age: 9, documentId: 'enfant-1', firstname: 'Léa', lastname: 'Martin', number: null, position: null,
+    age: 9,
+    documentId: 'enfant-1',
+    firstname: 'Léa',
+    lastname: 'Martin',
+    number: null,
+    position: null,
   }];
 
   const arbre = await rendre();
