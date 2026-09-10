@@ -164,6 +164,11 @@ const Input = forwardRef(
                   { minHeight: isCompact ? 24 : 30 },
                   props.style,
                 ]}
+                // PARENT P2 — le repere de test manquait, et sans lui un temoin
+                // ne peut pas designer UN champ parmi cinq. Aucun appelant
+                // existant ne le passe : la valeur reste `undefined`, donc le
+                // rendu ne change pour personne.
+                testID={props.testID}
                 textAlignVertical={props.textAlignVertical}
                 value={props.value}
               />

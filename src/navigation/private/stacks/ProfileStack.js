@@ -4,6 +4,8 @@ import { useTranslation } from 'react-i18next';
 import { HistoryWizardProvider } from '@/views/historyWizard/HistoryWizardContext';
 import HistoryWizardSingle from '@/views/historyWizard/HistoryWizardSingle';
 import BlockedUsers from '@/views/profile/BlockedUsers';
+import ChildEdit from '@/views/profile/ChildEdit';
+import MyChildren from '@/views/profile/MyChildren';
 import PlayerCardScreen from '@/views/profile/PlayerCardScreen';
 import Profile from '@/views/profile/Profile';
 import ProfileEdit from '@/views/profile/ProfileEdit';
@@ -81,6 +83,26 @@ function ProfileStack() {
         <Stack.Screen
           component={BlockedUsers}
           name={RouteNames.BlockedUsers}
+          options={{
+            ...commonOptions,
+            headerTitle: '',
+          }}
+        />
+        {/* 👨‍👧 PARENT P2 — « Mes enfants ». Les deux ecrans vivent ICI, dans le
+            profil : declarer son enfant est un geste de compte, pas un geste de
+            club. L entete NATIF porte deja la fleche de retour, aucun des deux
+            ne dessine la sienne (sinon deux fleches empilees, defaut du lot D2). */}
+        <Stack.Screen
+          component={MyChildren}
+          name={RouteNames.MyChildren}
+          options={{
+            ...commonOptions,
+            headerTitle: '',
+          }}
+        />
+        <Stack.Screen
+          component={ChildEdit}
+          name={RouteNames.ChildEdit}
           options={{
             ...commonOptions,
             headerTitle: '',
