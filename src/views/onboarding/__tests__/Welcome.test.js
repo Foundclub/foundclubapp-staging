@@ -305,3 +305,46 @@ describe('Welcome — le chemin en 3 etapes remplace les 3 cartes (D59 ②)', ()
     expect(textes(tree)).toContain('Gratuit · 2 min — tu configures ton club en chemin');
   });
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 🖥️ TROUVES SUR L EMULATEUR le 2026-09-10, en refaisant l inscription PARENT.
+// ─────────────────────────────────────────────────────────────────────────────
+describe('Welcome — l ecran de bienvenue parle a la BONNE personne', () => {
+  it('un PARENT ne lit pas une promesse de joueur', () => {
+    // 🐞 CE QU IL LISAIT : « Prêt·e à trouver ton club et évoluer dans le
+    // sport ? », « Inscris-toi à des entraînements et détections »,
+    // « Rejoins un club et progresse dans ta carrière sportive ».
+    // Un parent ne progresse pas dans sa carriere sportive — c est son ENFANT
+    // qui joue. C est le meme defaut que P0 avait repare sur l accueil, reste
+    // entier sur cet ecran-ci.
+    mockRole.current = 'parent';
+    const { tree } = rendre();
+    const lus = textes(tree).join(' | ');
+
+    expect(lus).not.toContain('ta carrière sportive');
+    expect(lus).not.toContain('Inscris-toi');
+    expect(lus).toContain('ton enfant');
+  });
+
+  it('un JOUEUR, lui, garde exactement ce qu il lisait', () => {
+    mockRole.current = 'player';
+    const lus = textes(rendre().tree).join(' | ');
+
+    expect(lus).toContain('ta carrière sportive');
+  });
+});
+
+describe('fr.js — les quatre phrases de bienvenue se recollent sans faute', () => {
+  // 🐞 « Rejoins un clubet progresse » — mesure a l ecran le 2026-09-10.
+  // Trois des quatre `regular` commencent par une espace, la quatrieme non :
+  // le gras et le maigre se collaient. Une faute que seul l ecran montre, parce
+  // que chaque moitie, prise seule, est correcte.
+  const catalogue = jest.requireActual('@/theme/strings/translations/fr').default;
+
+  it.each(['search', 'register', 'club', 'info'])(
+    '« %s » : le maigre commence par une espace, sinon il se colle au gras',
+    (clef) => {
+      expect(catalogue.welcome.descriptions[clef].regular).toMatch(/^ /);
+    },
+  );
+});

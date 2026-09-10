@@ -2421,6 +2421,11 @@ export default {
           subtitle: 'Trouve la page d\u2019un club.',
           title: 'Club',
         },
+        // PARENT P2 — la porte vers « Mes enfants » depuis l accueil du parent.
+        myChildren: {
+          subtitle: 'Déclare-les, corrige leur fiche, cherche-leur un club.',
+          title: 'Mes enfants',
+        },
         // P0 — la case du parent. Elle ouvre la recherche de clubs qui existe
         // deja : c'est un raccourci mis en avant, pas un ecran de plus.
         clubForChild: {
@@ -5293,7 +5298,12 @@ export default {
     descriptions: {
       club: {
         bold: '- Rejoins un club',
-        regular: 'et progresse dans ta carrière sportive.',
+        // 🐞 L ESPACE DE TETE MANQUAIT, et elle seule : les trois autres
+        // `regular` en portent une. A l ecran le gras et le maigre se
+        // recollaient — « Rejoins un clubet progresse » (vu le 2026-09-10).
+        // Chaque moitie, prise seule, etait pourtant correcte : c est pour ca
+        // qu aucune relecture ne l attrape.
+        regular: ' et progresse dans ta carrière sportive.',
       },
       info: {
         bold: '- Reste informé·e',
@@ -5307,6 +5317,31 @@ export default {
         bold: '- Recherche',
         regular: ' des clubs et des événements près de chez toi.',
       },
+    },
+    // 👨‍👧 LA VERSION DU PARENT. L ecran promettait a un parent d « evoluer dans
+    // le sport » et de « progresser dans sa carriere sportive » : ce n est pas
+    // lui qui joue. Meme defaut que celui que P0 a repare sur l accueil, reste
+    // entier ici (vu sur emulateur le 2026-09-10).
+    parent: {
+      descriptions: {
+        club: {
+          bold: '- Demande à rejoindre un club',
+          regular: ' en son nom, et le club te répond.',
+        },
+        declare: {
+          bold: '- Déclare ton enfant',
+          regular: ' depuis ton compte : avant 13 ans, il n’a pas de compte à lui.',
+        },
+        info: {
+          bold: '- Reste informé·e',
+          regular: ' de ses convocations grâce aux notifications.',
+        },
+        search: {
+          bold: '- Cherche un club',
+          regular: ' près de chez toi, pour la saison qui vient.',
+        },
+      },
+      subtitle: 'Prêt·e à trouver le club de ton enfant ?',
     },
     subtitle: 'Prêt·e à trouver ton club et évoluer dans le sport ?',
     title: 'Bienvenu·e sur',

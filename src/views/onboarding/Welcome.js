@@ -49,6 +49,65 @@ function Welcome({ navigation }) {
   // Seuls coach et dirigeant demarrent le tour guide v2 (joueur = tour leger a venir).
   const shouldOfferGuidedTour = roleKey === 'coach' || roleKey === 'president';
 
+  /**
+   * 👨‍👧 LES QUATRE PHRASES DE BIENVENUE, POUR LA BONNE PERSONNE.
+   *
+   * 🐞 Trouve sur emulateur le 2026-09-10 : un PARENT lisait « Prêt·e à trouver
+   * ton club et évoluer dans le sport ? », « Inscris-toi à des entraînements »
+   * et « progresse dans ta carrière sportive ». Ce n est pas lui qui joue —
+   * c est son enfant. C est exactement le defaut que P0 a repare sur l accueil,
+   * reste entier sur cet ecran-ci.
+   *
+   * ⚠️ Chaque `t()` porte son REPLI : sans lui, une clef absente rend la clef
+   * elle-meme a l ecran (« welcome.descriptions.club.regular »).
+   */
+  const estParent = roleKey === 'parent';
+  const phrasesDeBienvenue = estParent
+    ? [
+      {
+        cle: 'welcome.parent.descriptions.search',
+        repliBold: '- Cherche un club',
+        repliRegular: ' près de chez toi, pour la saison qui vient.',
+      },
+      {
+        cle: 'welcome.parent.descriptions.declare',
+        repliBold: '- Déclare ton enfant',
+        repliRegular: ' depuis ton compte : avant 13 ans, il n’a pas de compte à lui.',
+      },
+      {
+        cle: 'welcome.parent.descriptions.club',
+        repliBold: '- Demande à rejoindre un club',
+        repliRegular: ' en son nom, et le club te répond.',
+      },
+      {
+        cle: 'welcome.parent.descriptions.info',
+        repliBold: '- Reste informé·e',
+        repliRegular: ' de ses convocations grâce aux notifications.',
+      },
+    ]
+    : [
+      {
+        cle: 'welcome.descriptions.search',
+        repliBold: '- Recherche',
+        repliRegular: ' des clubs et des événements près de chez toi.',
+      },
+      {
+        cle: 'welcome.descriptions.register',
+        repliBold: '- Inscris-toi',
+        repliRegular: ' à des entraînements et détections ouverts',
+      },
+      {
+        cle: 'welcome.descriptions.club',
+        repliBold: '- Rejoins un club',
+        repliRegular: ' et progresse dans ta carrière sportive.',
+      },
+      {
+        cle: 'welcome.descriptions.info',
+        repliBold: '- Reste informé·e',
+        repliRegular: ' des nouveautés grâce aux notifications',
+      },
+    ];
+
   // D23 — défaut ⑤ de la recette du 2026-08-07 : « l'écran de bienvenue se
   // saute tout seul ».
   //
@@ -400,32 +459,18 @@ function Welcome({ navigation }) {
 
             </View>
             <Text style={[Fonts.h3Bold, Fonts.neutral00]}>
-              {t('welcome.subtitle')}
+              {estParent
+                ? t('welcome.parent.subtitle', 'Prêt·e à trouver le club de ton enfant ?')
+                : t('welcome.subtitle', 'Prêt·e à trouver ton club et évoluer dans le sport ?')}
             </Text>
-            <Text style={[Fonts.p1Black, Fonts.neutral00]}>
-              {t('welcome.descriptions.search.bold')}
-              <Text style={[Fonts.p1, Fonts.neutral00]}>
-                {t('welcome.descriptions.search.regular')}
+            {phrasesDeBienvenue.map((phrase) => (
+              <Text key={phrase.cle} style={[Fonts.p1Black, Fonts.neutral00]}>
+                {t(`${phrase.cle}.bold`, phrase.repliBold)}
+                <Text style={[Fonts.p1, Fonts.neutral00]}>
+                  {t(`${phrase.cle}.regular`, phrase.repliRegular)}
+                </Text>
               </Text>
-            </Text>
-            <Text style={[Fonts.p1Black, Fonts.neutral00]}>
-              {t('welcome.descriptions.register.bold')}
-              <Text style={[Fonts.p1, Fonts.neutral00]}>
-                {t('welcome.descriptions.register.regular')}
-              </Text>
-            </Text>
-            <Text style={[Fonts.p1Black, Fonts.neutral00]}>
-              {t('welcome.descriptions.club.bold')}
-              <Text style={[Fonts.p1, Fonts.neutral00]}>
-                {t('welcome.descriptions.club.regular')}
-              </Text>
-            </Text>
-            <Text style={[Fonts.p1Black, Fonts.neutral00]}>
-              {t('welcome.descriptions.info.bold')}
-              <Text style={[Fonts.p1, Fonts.neutral00]}>
-                {t('welcome.descriptions.info.regular')}
-              </Text>
-            </Text>
+            ))}
           </ScrollView>
           <View style={[Spaces.gap[12]]}>
             <Button

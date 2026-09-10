@@ -197,9 +197,15 @@ const ATTENDU = {
   // « Offres de recrutement », « Mes reponses », « Matchs amicaux », League,
   // « Historique sportif » et « Mes cotisations ». Ce qu'il lui donne :
   // « Chercher un club pour mon enfant », en tete de « Rechercher ».
+  // PARENT P2 (10/09) — « Mes enfants » entre sur l accueil, EN TETE.
+  // 🖥️ Trouve sur emulateur : l accueil du parent n avait AUCUNE porte vers
+  // « Mes enfants ». Il fallait passer par le profil — pour quelqu un dont
+  // c est la SEULE raison d etre dans l app. Le plan (A3) le demandait deja :
+  // « Mes enfants : une carte par enfant, ou un grand bouton s il n y en a
+  // aucun ». C est la premiere moitie : la porte.
   parent: [
     [],
-    ['search-club-for-child', 'search-events', 'search-clubs', 'search-reservations'],
+    ['search-my-children', 'search-club-for-child', 'search-events', 'search-clubs', 'search-reservations'],
     [],
     ['profile-view', 'profile-alerts'],
     ['account-switch', 'account-logout'],
@@ -240,7 +246,7 @@ describe('D72 — critere 1 : le bon nombre de cases, dans le bon ordre', () => 
     ['president', 23],
     ['coach', 23],
     ['player', 16],
-    ['parent', 11],
+    ['parent', 12],
     ['superAdmin', 20],
   ])('%s affiche exactement %i cartes', (role, attendu) => {
     expect(toutesLesCartes(/** @type {any} */ (role))).toHaveLength(attendu);
@@ -333,8 +339,15 @@ describe('P0 — l accueil du PARENT (2 comptes reels en production le 07/09)', 
     expect(cartes).toContain('account-logout');
   });
 
-  it('et il gagne UNE case, la premiere de « Rechercher »', () => {
-    expect(accueilDe('parent')[1][0]).toBe('search-club-for-child');
+  // 🩹 CORRIGE LE 2026-09-10 par PARENT P2. Ce temoin figeait « chercher un
+  // club » EN PREMIER — c etait juste tant que le parent n avait rien d autre.
+  // Depuis qu il peut declarer ses enfants, « Mes enfants » passe devant : c est
+  // l ordre que le plan demandait deja (A3, GO Adel du 07/09), et l ordre
+  // logique — on declare, PUIS on cherche un club pour la personne declaree.
+  // Les DEUX cases sont la ; c est leur rang qui change.
+  it('P2 — « Mes enfants » ouvre la marche, « chercher un club » la suit', () => {
+    expect(accueilDe('parent')[1][0]).toBe('search-my-children');
+    expect(accueilDe('parent')[1][1]).toBe('search-club-for-child');
   });
 
   // ⛔ Le lot P0 ne cree AUCUN ecran : la case est un raccourci vers la

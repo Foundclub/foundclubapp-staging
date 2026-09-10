@@ -2311,6 +2311,36 @@ function HomeHubContent({ auth, navigation, route }) {
     // `nextTargetStepId`, et s'inserer au milieu de cette chaine la casserait
     // (meme raison que « Mes reponses », posee par D57).
     if (isParent) {
+      // 👨‍👧 PARENT P2 (10/09) — LA PORTE QUI MANQUAIT.
+      //
+      // 🖥️ Trouve sur emulateur : l accueil du parent n avait AUCUN chemin vers
+      // « Mes enfants ». Il fallait passer par le menu du profil — pour
+      // quelqu un dont c est la SEULE raison d etre dans l app. Le plan le
+      // demandait deja (A3) : « Mes enfants » sur l accueil du parent.
+      //
+      // ⛔ Elle ne lit PAS la liste des enfants : ce serait une requete de plus
+      // sur le premier ecran de l app, pour un libelle. C est une PORTE, et
+      // l ecran qu elle ouvre sait dire s il est vide.
+      // ⛔ Volontairement SANS `tutorial`, meme raison que la case voisine : les
+      // cases se tiennent par `nextTargetStepId`, s inserer au milieu de la
+      // chaine la casserait.
+      cards.unshift({
+        accentColor: Colors.primary500,
+        emphasis: 'primary',
+        icon: 'users',
+        key: 'search-my-children',
+        layout: 'full',
+        onPress: () => navigation.navigate(RouteNames.ProfileStack, {
+          screen: RouteNames.MyChildren,
+        }),
+        subtitle: t(
+          'homeHub.cards.search.myChildren.subtitle',
+          'Declare-les, corrige leur fiche, cherche-leur un club.',
+        ),
+        subtitleLines: 2,
+        title: t('homeHub.cards.search.myChildren.title', 'Mes enfants'),
+      });
+
       cards.unshift({
         accentColor: Colors.primary500,
         emphasis: 'primary',
