@@ -2324,7 +2324,14 @@ function HomeHubContent({ auth, navigation, route }) {
       // ⛔ Volontairement SANS `tutorial`, meme raison que la case voisine : les
       // cases se tiennent par `nextTargetStepId`, s inserer au milieu de la
       // chaine la casserait.
-      cards.unshift({
+      //
+      // 🧨 LES DEUX CASES ENTRENT PAR UN SEUL `unshift`, ET C EST UNE LECON
+      // PAYEE LE 2026-09-10 : ecrites en DEUX `unshift` successifs, elles
+      // sortaient dans l ordre INVERSE de leur ordre d ecriture. Le temoin, lui,
+      // restait VERT — il lit `HomeHub.js` COMME DU TEXTE et releve les `key:`
+      // dans l ordre de la SOURCE, jamais celui de l execution. C est l ecran
+      // qui a montre l inversion.
+      const carteMesEnfants = {
         accentColor: Colors.primary500,
         emphasis: 'primary',
         icon: 'users',
@@ -2339,9 +2346,9 @@ function HomeHubContent({ auth, navigation, route }) {
         ),
         subtitleLines: 2,
         title: t('homeHub.cards.search.myChildren.title', 'Mes enfants'),
-      });
+      };
 
-      cards.unshift({
+      const carteChercherUnClub = {
         accentColor: Colors.primary500,
         emphasis: 'primary',
         icon: 'shield',
@@ -2354,7 +2361,12 @@ function HomeHubContent({ auth, navigation, route }) {
         ),
         subtitleLines: 2,
         title: t('homeHub.cards.search.clubForChild.title', 'Chercher un club pour mon enfant'),
-      });
+      };
+
+      // ⚠️ UN SEUL `unshift`, DANS L ORDRE QU ON VEUT LIRE : on declare son
+      // enfant, PUIS on lui cherche un club. Deux `unshift` successifs
+      // rendraient l ordre inverse — c est le defaut vu a l ecran le 10/09.
+      cards.unshift(carteMesEnfants, carteChercherUnClub);
 
       return cards.filter(estVisiblePourLeParent);
     }
