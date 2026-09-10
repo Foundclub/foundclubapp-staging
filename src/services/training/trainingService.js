@@ -107,12 +107,39 @@ export const saveTrainingResults = async (sessionDocumentId, results) => {
   return data?.data || { rejected: [], results: [], saved: 0 };
 };
 
+/** Un carnet qu'on n'a pas encore commence : la forme rendue, une seule fois. */
+const CARNET_VIDE = { csv: '', rows: 0 };
+
 /**
  * Le carnet complet, une mesure par ligne, pret a coller.
+ *
+ * 🧨 UN 404 N'EST PAS UNE PANNE ICI, ET LE CONFONDRE COUTE UN ECRAN.
+ * Le serveur rend `notFound('Aucun entrainement en cours')` tant que la personne
+ * n'a choisi aucun programme — c'est l'etat de depart de TOUT LE MONDE, pas une
+ * erreur. Sans cette traduction, l'ecran passait ce 404 a `WithDataWrapper`, qui
+ * affichait son pave d'erreur AVANT d'atteindre l'etat vide pourtant deja ecrit
+ * (`TrainingLogbook.js`, `training.logbook.emptyTitle`).
+ *
+ * 🩸 Vu par Adel le 2026-09-10 sur la 2.6.40 : « La ressource demandee est
+ * introuvable » et un bouton « Reessayer » qui ne pouvait rien reparer.
+ *
+ * ⛔ SEUL le 404 devient un carnet vide. Une coupure reseau ou un 500 doivent
+ * continuer a remonter : les faire passer pour un carnet vide dirait a quelqu'un
+ * que ses mesures ont disparu.
  * @returns {Promise<{csv: string, rows: number}>} Le carnet au format CSV et son nombre
  *   de lignes.
  */
 export const exportTrainingResults = async () => {
-  const { data } = await client.get('/training/export');
-  return data?.data || { csv: '', rows: 0 };
+  try {
+    const { data } = await client.get('/training/export');
+    return data?.data || { ...CARNET_VIDE };
+  } catch (erreur) {
+    // 🪰 Le code se lit a DEUX endroits : a la racine, et dans le corps deballe
+    //    par l'intercepteur de reponse. Les deux formes arrivent vraiment ici.
+    const code = Number(
+      erreur?.status ?? erreur?.response?.status ?? erreur?.response?.data?.error?.status,
+    );
+    if (code === 404) return { ...CARNET_VIDE };
+    throw erreur;
+  }
 };
