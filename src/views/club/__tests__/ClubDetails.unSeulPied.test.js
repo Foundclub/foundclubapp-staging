@@ -362,6 +362,9 @@ const CLUB_AVEC_EQUIPE = {
 const PIED_ACTIONS = 'club-details-actions-footer';
 
 /** Le repli de `floatingClubActionsBottomInset` : les encoches sont a 0 ici. */
+// eslint-disable-next-line import/order
+const { floatingActionsScrollPadding } = require('../clubDetailsActionMatrix');
+
 const RESERVE_BASSE = 12;
 /** La hauteur reservee au premier bouton, puis a chacun des suivants. */
 const RESERVE_PREMIER_BOUTON = 128;
@@ -610,9 +613,14 @@ describe('Z01 · temoin 6 — la reserve basse compte tous les boutons', () => {
    * @param {number} nombre - Le nombre de boutons colles en bas.
    * @returns {number} La reserve attendue.
    */
-  const reserveAttendue = (nombre) => (nombre === 0
-    ? RESERVE_SANS_BOUTON
-    : RESERVE_BASSE + RESERVE_PREMIER_BOUTON + ((nombre - 1) * RESERVE_BOUTON_SUIVANT));
+  //
+  // 🔗 ON APPELLE LA FONCTION DU CODE, ON NE LA RECOPIE PLUS.
+  // Ce temoin portait sa PROPRE copie de l arithmetique (`RESERVE_BOUTON_SUIVANT
+  // = 72`). Elle est donc restee verte le 2026-09-10 alors que la vraie reserve
+  // etait fausse de plus de la moitie et que les boutons flottants
+  // RECOUVRAIENT le contenu de la fiche club a l ecran. Une formule ecrite a
+  // deux endroits ne prouve que sa propre copie.
+  const reserveAttendue = (nombre) => floatingActionsScrollPadding(nombre, RESERVE_BASSE);
 
   it('l’entraineur d’un club AVEC equipes : la reserve couvre ses 2 boutons', () => {
     devenirEntraineur();

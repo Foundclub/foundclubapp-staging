@@ -70,6 +70,7 @@ import { buildPublicWebUrl } from '@/utils/shareLinks';
 import {
   canCreateTeamInClub,
   countChildrenByAgeBand,
+  floatingActionsScrollPadding,
   resolveClubDetailsActionMatrix,
   resolveEmptyClubClaimGesture,
 } from './clubDetailsActionMatrix';
@@ -1724,7 +1725,7 @@ function ClubDetails({ navigation, route }) {
   const hasFloatingClubActions = floatingClubActionsCount > 0;
   const floatingClubActionsBottomInset = Math.max(insets.bottom, 12);
   const floatingClubActionsScrollPaddingBottom = hasFloatingClubActions
-    ? floatingClubActionsBottomInset + 128 + ((floatingClubActionsCount - 1) * 72)
+    ? floatingActionsScrollPadding(floatingClubActionsCount, floatingClubActionsBottomInset)
     : 40;
   const floatingClubActionButtonStyle = {
     elevation: 18,

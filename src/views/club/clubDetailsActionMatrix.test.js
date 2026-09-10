@@ -1,4 +1,7 @@
-import { resolveClubDetailsActionMatrix } from './clubDetailsActionMatrix';
+import {
+  floatingActionsScrollPadding,
+  resolveClubDetailsActionMatrix,
+} from './clubDetailsActionMatrix';
 
 describe('resolveClubDetailsActionMatrix', () => {
   // V01 (2026-08-18) — REECRIT. Ce test disait « sans le repli d'interet » : il
@@ -753,5 +756,36 @@ describe('resolveClubDetailsActionMatrix', () => {
         showTeenSelfRequestHint: false,
       });
     });
+  });
+});
+
+describe('floatingActionsScrollPadding — la place reservee sous le defilement', () => {
+  // 🖥️ MESURE PRISE SUR L EMULATEUR le 2026-09-10, sur la fiche de « TEST FC ».
+  // Deux boutons voisins occupaient [63,1710][1017,1833] et [63,1865][1017,1988] :
+  // 123 px de haut, et surtout un PAS de 1865 - 1710 = 155 px d un bouton au
+  // suivant. La formule d avant reservait 72 px par bouton supplementaire —
+  // moins de la MOITIE. Consequence a l ecran : les boutons flottants
+  // RECOUVRAIENT « Installations », « Stade marseillais », « Sports »,
+  // « Football », tous illisibles.
+  const PAS_MESURE = 155;
+
+  it('reserve zero place quand il n y a aucun bouton', () => {
+    expect(floatingActionsScrollPadding(0, 24)).toBe(40);
+  });
+
+  it('un seul bouton : le socle, plus le retrait bas de l appareil', () => {
+    expect(floatingActionsScrollPadding(1, 24)).toBe(24 + 128);
+  });
+
+  it('chaque bouton de plus reserve son PAS REEL, pas la moitie', () => {
+    expect(floatingActionsScrollPadding(2, 24) - floatingActionsScrollPadding(1, 24))
+      .toBe(PAS_MESURE);
+    expect(floatingActionsScrollPadding(3, 24) - floatingActionsScrollPadding(2, 24))
+      .toBe(PAS_MESURE);
+  });
+
+  it('trois boutons : la place couvre ce que trois boutons occupent VRAIMENT', () => {
+    // 3 boutons empiles = 2 pas + la hauteur du dernier ⇒ 2x155 + 123 = 433.
+    expect(floatingActionsScrollPadding(3, 24) - 24).toBeGreaterThanOrEqual(433);
   });
 });

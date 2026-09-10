@@ -84,6 +84,32 @@ export const resolveEmptyClubClaimGesture = ({
 );
 
 /**
+ * LA PLACE A RESERVER SOUS LE DEFILEMENT POUR LES BOUTONS FLOTTANTS.
+ *
+ * 🖥️ MESURE PRISE SUR L EMULATEUR le 2026-09-10, fiche de « TEST FC » : deux
+ * boutons voisins occupaient [63,1710][1017,1833] et [63,1865][1017,1988] —
+ * 123 px de haut, et un PAS de 155 px de l un a l autre.
+ * La formule d avant reservait 72 px par bouton supplementaire, MOINS DE LA
+ * MOITIE du pas reel. Sur une fiche club courte, les boutons flottants
+ * recouvraient donc « Installations », « Stade marseillais », « Sports »,
+ * « Football » : le contenu passait derriere, illisible.
+ *
+ * ⚠️ Aucune porte ne mesure ca : `react-test-renderer` ne calcule aucune mise
+ * en page. Il a fallu regarder l ecran. D ou cette fonction PURE, pour qu au
+ * moins l arithmetique soit tenue par un temoin.
+ * @param {number} count - Le nombre de boutons flottants affiches.
+ * @param {number} bottomInset - Le retrait bas de l appareil, deja plancher.
+ * @returns {number} La place a reserver au bas du defilement.
+ */
+export const floatingActionsScrollPadding = (count, bottomInset) => {
+  const nombre = Number.isFinite(count) ? count : 0;
+  if (nombre <= 0) return 40;
+  // 128 = le socle d un bouton seul (sa hauteur plus sa marge) ; 155 = le pas
+  // reel d un bouton au suivant, mesure a l ecran.
+  return bottomInset + 128 + ((nombre - 1) * 155);
+};
+
+/**
  * PARENT P2 — COMBIEN D ENFANTS, ET DANS QUELLE TRANCHE D AGE.
  *
  * Le comptage vit ICI, a cote de la matrice qui le consomme, et pas dans
