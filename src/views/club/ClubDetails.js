@@ -1602,6 +1602,11 @@ function ClubDetails({ navigation, route }) {
     childrenUnder13Count,
     clubHasTeams: clubTeamIds.length > 0,
     hasParentMultisportClub,
+    // 🖥️ Trouve sur l emulateur : mon bouton envoie la MEME demande que la
+    // porte d interet existante. Quand elle est deja partie, l autre le dit —
+    // afficher un 3e « Demande en attente » identique ne faisait qu empiler un
+    // bouton flottant de plus PAR-DESSUS les informations du club.
+    hasPendingChildInterest: hasPendingClubArrivalInterest,
     isAuthenticated,
     isClubStaffRole,
     isMultisportAdmin,
@@ -1612,6 +1617,7 @@ function ClubDetails({ navigation, route }) {
     ownerCount: owners.length,
   }), [
     childrenUnder13Count,
+    hasPendingClubArrivalInterest,
     minorChildrenCount,
     areClubMembersHidden,
     canContactAdmin,

@@ -123,6 +123,10 @@ export const resolveClubDetailsActionMatrix = ({
   childrenUnder13Count = 0,
   clubHasTeams = false,
   hasParentMultisportClub = false,
+  // PARENT P2 — la demande d interet de CE parent pour CE club est-elle deja
+  // partie ? Mon bouton envoie exactement la meme, la porte existante le dit
+  // deja : quand c est vrai, la mienne s efface au lieu de faire doublon.
+  hasPendingChildInterest = false,
   isAuthenticated = false,
   isClubStaffRole = false,
   isMultisportAdmin = false,
@@ -256,10 +260,18 @@ export const resolveClubDetailsActionMatrix = ({
   // rattacherait LE PARENT au club : la mauvaise personne dans l effectif.
   // Le rail d interet, lui, ne rattache PERSONNE : il previent les dirigeants,
   // qui repondent au parent. C est le partage tranche en C9 du plan.
+  //
+  // 🖥️ `!hasPendingChildInterest` VIENT DE L EMULATEUR, le 2026-09-10. Une fois
+  // l interet envoye, la fiche club montrait TROIS boutons au libelle identique
+  // « Demande en attente » — le mien et les deux existants — et ces quatre
+  // boutons flottants RECOUVRAIENT les informations du club, illisibles.
+  // Mon bouton declenche la MEME demande que la porte d interet existante :
+  // quand elle est deja partie, l autre l annonce, la mienne n ajoute rien.
   const showChildInterestAction = Boolean(
     canShowAffiliationAction
     && childrenUnder13Count > 0
     && !canEdit
+    && !hasPendingChildInterest
     && !isUserAlreadyAttachedToViewedClub,
   );
   // On EXPLIQUE l absence de la porte au lieu de la faire disparaitre sans un
