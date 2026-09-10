@@ -219,7 +219,11 @@ export const RouteNames = /** @type {const} */ ({
   UserAddress: 'UserAddress',
   UserAffiliationGuide: 'UserAffiliationGuide',
   UserAvatar: 'UserAvatar',
+  // PARENT P2 — l etape « declare ton enfant » du tunnel parent. Elle monte
+  // l ecran `ChildEdit`, le MEME que celui du profil : un formulaire qui
+  // manipule des donnees de mineur ne s ecrit pas deux fois.
   UserCategory: 'UserCategory',
+  UserChild: 'UserChild',
   UserClubSearch: 'UserClubSearch',
   UserDetails: 'UserDetails',
   UserLevel: 'UserLevel',

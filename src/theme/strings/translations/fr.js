@@ -5174,8 +5174,13 @@ export default {
         tooOld: 'Une fiche enfant est réservée aux moins de 13 ans.'
           + ' À partir de 13 ans, ton enfant a droit à son propre compte.',
       },
+      // ⚖️ « Plus tard » plutot que « Passer cette etape » : ce n est pas une
+      // etape qu on saute, c est un geste qu on remet. Un parent peut s inscrire
+      // juste pour CHERCHER un club avant de decider (C8 du plan).
       firstnameLabel: 'Prénom',
       firstnamePlaceholder: 'Léa',
+      later: 'Plus tard',
+      laterHint: 'Tu pourras le déclarer quand tu veux, depuis ton profil.',
       // 🔒 La minimisation n'est pas un confort, c'est la loi (C10 du plan) :
       // trois champs obligatoires, trois facultatifs, et RIEN d'autre. On le
       // dit au parent, parce qu'un formulaire court sur un mineur se remarque.

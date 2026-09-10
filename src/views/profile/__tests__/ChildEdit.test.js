@@ -27,8 +27,13 @@ let mockEnfants;
 const mockCreer = jest.fn();
 const mockModifier = jest.fn();
 const mockGoBack = jest.fn();
+const mockNavigate = jest.fn();
 /** @type {any} */
 let mockParams;
+/** @type {any} */
+let mockRouteName;
+/** @type {any} */
+let mockProchaineEtape;
 
 jest.mock('react-i18next', () => {
   const traductions = jest.requireActual('@/theme/strings/translations/fr').default;
@@ -63,8 +68,17 @@ jest.mock('@/services/declaredChild/declaredChildQueries', () => ({
 }));
 
 jest.mock('@react-navigation/native', () => ({
-  useNavigation: () => ({ goBack: mockGoBack, navigate: jest.fn() }),
-  useRoute: () => ({ params: mockParams }),
+  useNavigation: () => ({ goBack: mockGoBack, navigate: mockNavigate }),
+  useRoute: () => ({ name: mockRouteName, params: mockParams }),
+}));
+
+jest.mock('@/domains/auth/useAuth', () => ({
+  __esModule: true,
+  default: () => ({
+    getNextOnboardingRoute: () => mockProchaineEtape,
+    getPostOnboardingHomeRoute: () => 'HomeTab',
+    userData: { documentId: 'parent-1' },
+  }),
 }));
 
 jest.mock('@/theme/themeContext', () => {
@@ -177,6 +191,8 @@ beforeEach(() => {
   jest.clearAllMocks();
   mockEnfants = [];
   mockParams = undefined;
+  mockRouteName = 'ChildEdit';
+  mockProchaineEtape = null;
 });
 
 test("P2/8 ① l'écran ne demande QUE les champs autorisés", async () => {
@@ -315,4 +331,71 @@ test('P2/8 ⑦ 🎨 le bouton du bas reste ATTEIGNABLE clavier ouvert', async ()
   ));
   expect(conteneur.length).toBeGreaterThan(0);
   expect(conteneur[0].props.keyboardAvoiding).toBe(true);
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PARENT P2 — LE MEME ECRAN, EN ETAPE D INSCRIPTION (decision d Adel du 10/09).
+//
+// ⚖️ « PLUS TARD » N EST PAS DU CONFORT. Un parent peut s inscrire juste pour
+// CHERCHER un club avant de decider. Lui arracher le prenom, le nom et la date
+// de naissance de son enfant avant qu il y ait un besoin reel, c est ce que la
+// minimisation interdit (C8 du plan). L etape se VOIT ; elle ne s impose pas.
+//
+// 🔁 Et c est le MEME ecran que celui du profil, pas une copie : un formulaire
+// qui manipule des donnees de mineur ne s ecrit pas deux fois — deux copies,
+// c est deux endroits ou se tromper sur le palier des 13 ans.
+// ─────────────────────────────────────────────────────────────────────────────
+describe('PARENT P2 — « declare ton enfant » pendant l inscription', () => {
+  test("P2/inscription ① l'etape offre une sortie « plus tard »", async () => {
+    mockRouteName = 'UserChild';
+
+    const texte = texteVisible(await rendre());
+
+    expect(texte).toContain('Plus tard');
+  });
+
+  test('P2/inscription ② hors inscription, aucun « plus tard »', async () => {
+    const texte = texteVisible(await rendre());
+
+    expect(texte).not.toContain('Plus tard');
+  });
+
+  test('P2/inscription ③ « plus tard » AVANCE le tunnel, il ne recule pas', async () => {
+    mockRouteName = 'UserChild';
+    mockProchaineEtape = 'Welcome';
+    const arbre = await rendre();
+
+    const lien = arbre.root.findAll((/** @type {any} */ noeud) => (
+      typeof noeud.props?.onPress === 'function'
+      && aplatirTexte(noeud.props?.children).includes('Plus tard')
+    ))[0];
+    expect(lien).toBeTruthy();
+
+    await act(async () => { lien.props.onPress(); });
+
+    expect(mockNavigate).toHaveBeenCalledWith('Welcome');
+    expect(mockGoBack).not.toHaveBeenCalled();
+  });
+
+  test('P2/inscription ④ enfant declare : on AVANCE, on ne renvoie pas au profil', async () => {
+    mockRouteName = 'UserChild';
+    mockProchaineEtape = 'Welcome';
+    const arbre = await rendre();
+
+    await saisir(arbre, 'child-firstname', 'Lea');
+    await saisir(arbre, 'child-lastname', 'Martin');
+    await saisir(arbre, 'child-day', '04');
+    await saisir(arbre, 'child-month', '05');
+    await saisir(arbre, 'child-year', '2019');
+    await enregistrer(arbre);
+
+    expect(mockCreer).toHaveBeenCalledTimes(1);
+    // Le succes de la mutation est simule par le mock : on declenche son
+    // `onSuccess` a la main pour lire OU l ecran envoie ensuite.
+    const options = mockCreer.mock.calls[0][1];
+    await act(async () => { options.onSuccess(); });
+
+    expect(mockNavigate).toHaveBeenCalledWith('Welcome');
+    expect(mockGoBack).not.toHaveBeenCalled();
+  });
 });

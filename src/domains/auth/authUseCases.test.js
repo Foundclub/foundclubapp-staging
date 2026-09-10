@@ -272,6 +272,38 @@ describe('authUseCases', () => {
       expect(getRoleDocumentIdByKey(roles, 'coach')).toBe('role-coach');
     });
 
+    // PARENT P2 (10/09) — L ETAPE « DECLARE TON ENFANT », DECISION D ADEL.
+    //
+    // Le tunnel du parent s arretait a la photo : il arrivait sur un accueil qui
+    // ne pouvait rien lui montrer, puisqu il n avait declare personne. Le geste
+    // entre donc DANS l inscription — mais avec un « plus tard », et ce n est pas
+    // un detail de confort : un parent peut s inscrire juste pour CHERCHER un
+    // club avant de decider. Collecter le prenom, le nom et la date de naissance
+    // d un enfant avant qu il y ait un besoin, c est exactement ce que la
+    // minimisation interdit (C8 du plan). L etape se voit, elle ne s impose pas.
+    it('P2 — le tunnel du PARENT finit par « declare ton enfant »', () => {
+      const result = getOnboardingViews({
+        documentId: 'user-doc',
+        role: { name: 'Parent' },
+      });
+
+      const routes = result.views.map((vue) => vue.route);
+      expect(routes).toContain(RouteNames.UserChild);
+      // ⛔ Elle vient APRES la photo : on ne demande pas les donnees d un enfant
+      // avant que le parent ait fini de se declarer lui-meme.
+      expect(routes.indexOf(RouteNames.UserChild))
+        .toBeGreaterThan(routes.indexOf(RouteNames.UserAvatar));
+    });
+
+    it('P2 — un JOUEUR n a pas cette etape : elle appartient au chemin guide du parent', () => {
+      const result = getOnboardingViews({
+        documentId: 'user-doc',
+        role: { name: USER_ROLES.player },
+      });
+
+      expect(result.views.map((vue) => vue.route)).not.toContain(RouteNames.UserChild);
+    });
+
     it('returns empty views when onboarding is marked completed', () => {
       storage.getBoolean.mockReturnValue(true);
       const result = getOnboardingViews({
@@ -736,16 +768,22 @@ describe('authUseCases', () => {
         // date de naissance : un parent est un adulte CONNU, et le garde-fou
         // tchat traite un age inconnu comme un enfant), puis sa photo. Rien
         // d autre : ni section, ni sport, ni club — ce sont les etapes de son
-        // enfant, pas les siennes. « Declarer mon enfant » (fiche joueur sans
-        // identifiants) est le second lot. `Welcome` reste le sas de sortie.
+        // enfant, pas les siennes. `Welcome` reste le sas de sortie.
+        //
+        // PARENT P2 (10/09, decision d Adel) — « declare ton enfant » REJOINT le
+        // tunnel, en DERNIER : on ne demande pas les donnees d un enfant avant
+        // que le parent ait fini de se declarer lui-meme. Elle porte un
+        // « plus tard » (C8 du plan : un parent peut s inscrire juste pour
+        // CHERCHER un club avant de decider).
         {
           roleName: USER_ROLES.parent,
           routes: [
             RouteNames.UserName,
             RouteNames.UserAvatar,
+            RouteNames.UserChild,
           ],
-          totalViews: 2,
-          totalViewsMineur: 3,
+          totalViews: 3,
+          totalViewsMineur: 4,
         },
       ];
 

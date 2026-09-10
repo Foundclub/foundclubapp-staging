@@ -4,11 +4,13 @@ import { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Text, View } from 'react-native';
 
+import useAuth from '@/domains/auth/useAuth';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
 import Input from '@/components/molecules/input/Input';
 import ScreenContainer from '@/components/templates/ScreenContainer';
+import OnboardingSkipLink from '@/views/onboarding/components/OnboardingSkipLink';
 
 import {
   useCreateDeclaredChild,
@@ -52,6 +54,27 @@ function ChildEdit() {
 
   const documentIdVise = String(route?.params?.childDocumentId || '').trim();
   const estUneModification = Boolean(documentIdVise);
+
+  /**
+   * 🧭 LE MEME ECRAN SERT DEUX FOIS, et il le sait par le NOM DE SA ROUTE.
+   *
+   * Depuis le profil il s appelle `ChildEdit` et revient en arriere ; monte en
+   * derniere etape de l inscription du parent il s appelle `UserChild`, offre un
+   * « plus tard » et AVANCE le tunnel. Un formulaire qui manipule des donnees de
+   * mineur ne s ecrit pas deux fois : deux copies, c est deux endroits ou se
+   * tromper sur le palier des 13 ans.
+   */
+  const estUneEtapeDInscription = route?.name === 'UserChild';
+  const { getNextOnboardingRoute, getPostOnboardingHomeRoute } = useAuth();
+
+  /**
+   * Où aller une fois l etape passee — declaree ou remise a plus tard.
+   * @returns {void}
+   */
+  const continuerLInscription = useCallback(() => {
+    const suivante = getNextOnboardingRoute?.('UserChild');
+    navigation.navigate(suivante || getPostOnboardingHomeRoute?.());
+  }, [getNextOnboardingRoute, getPostOnboardingHomeRoute, navigation]);
 
   const { data: enfantsBruts } = useGetMyDeclaredChildren();
   const enfantExistant = useMemo(() => (
@@ -140,7 +163,11 @@ function ChildEdit() {
       'myChildren.form.errors.save',
       'Impossible d’enregistrer cette fiche pour le moment.',
     ));
-    const surSucces = () => navigation.goBack();
+    // Depuis le profil on revient d ou l on vient ; pendant l inscription on
+    // AVANCE — revenir en arriere renverrait le parent sur la photo.
+    const surSucces = () => (estUneEtapeDInscription
+      ? continuerLInscription()
+      : navigation.goBack());
 
     if (estUneModification) {
       modifierEnfant(
@@ -151,8 +178,8 @@ function ChildEdit() {
     }
     creerEnfant(payload, { onError: surErreur, onSuccess: surSucces });
   }, [
-    creerEnfant, dateSaisie, documentIdVise, estUneModification, firstname, lastname,
-    modifierEnfant, navigation, number, position, t,
+    continuerLInscription, creerEnfant, dateSaisie, documentIdVise, estUneEtapeDInscription,
+    estUneModification, firstname, lastname, modifierEnfant, navigation, number, position, t,
   ]);
 
   const caseDate = (valeur, poser, repere, indication, longueur) => (
@@ -248,6 +275,12 @@ function ChildEdit() {
           <Text style={[Fonts.p3, { color: Colors.error500 }]}>{erreur}</Text>
         ) : null}
 
+        {/* ⚖️ LA SORTIE « PLUS TARD », ET ELLE N EST PAS DU CONFORT.
+            Un parent peut s inscrire juste pour CHERCHER un club avant de
+            decider. Lui arracher le prenom, le nom et la date de naissance de
+            son enfant avant qu il y ait un besoin reel, c est exactement ce que
+            la minimisation interdit (C8 du plan). L etape se VOIT dans le
+            tunnel ; elle ne s impose pas. */}
         <Button
           disabled={creationEnCours || modificationEnCours}
           onPress={enregistrer}
@@ -256,6 +289,16 @@ function ChildEdit() {
             ? t('myChildren.form.submitEdit', 'Enregistrer')
             : t('myChildren.form.submitAdd', 'Déclarer mon enfant')}
         />
+        {estUneEtapeDInscription ? (
+          <OnboardingSkipLink
+            hint={t(
+              'myChildren.form.laterHint',
+              'Tu pourras le declarer quand tu veux, depuis ton profil.',
+            )}
+            label={t('myChildren.form.later', 'Plus tard')}
+            onPress={continuerLInscription}
+          />
+        ) : null}
       </View>
     </ScreenContainer>
   );

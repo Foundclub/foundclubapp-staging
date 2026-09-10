@@ -30,6 +30,7 @@ import UserSport from '@/views/onboarding/UserSport';
 import UserSportHistory from '@/views/onboarding/UserSportHistory';
 import UserTrainedTeams from '@/views/onboarding/UserTrainedTeams';
 import Welcome from '@/views/onboarding/Welcome';
+import ChildEdit from '@/views/profile/ChildEdit';
 
 import { commonOptions } from '@/navigation/commonOptions';
 import { navigate as navigateRoot, navigationRef } from '@/navigation/navigationService';
@@ -789,6 +790,27 @@ function PrivateNavigator() {
               headerTitle: () => renderStepper(RouteNames.UserAvatar),
               headerTitleAlign: 'left',
 
+            }}
+          />
+        ) : null}
+
+        {/* 👨‍👧 PARENT P2 — « declare ton enfant », derniere etape du tunnel du
+            parent. Elle monte `ChildEdit`, le MEME ecran que celui du profil :
+            l ecran se reconnait a son NOM DE ROUTE (`UserChild`) et offre alors
+            un « plus tard » qui AVANCE le tunnel au lieu de revenir en arriere.
+            ⛔ Un formulaire qui manipule des donnees de mineur ne s ecrit pas
+            deux fois : deux copies, c est deux endroits ou se tromper sur le
+            palier des 13 ans. */}
+        {canShowView(RouteNames.UserChild) ? (
+          <Stack.Screen
+            component={ChildEdit}
+            key={onboardingViews?.totalViews}
+            name={RouteNames.UserChild}
+            options={{
+              ...commonOptions,
+              headerRight: () => renderStepperIndicator(RouteNames.UserChild),
+              headerTitle: () => renderStepper(RouteNames.UserChild),
+              headerTitleAlign: 'left',
             }}
           />
         ) : null}

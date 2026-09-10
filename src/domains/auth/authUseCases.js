@@ -677,6 +677,15 @@ export const getOnboardingViews = ({
             ? [{ canShow: true, index: 2, route: RouteNames.UserParentalDeclaration }]
             : []),
           { canShow: true, index: needsParentalDeclaration ? 3 : 2, route: RouteNames.UserAvatar },
+          // PARENT P2 (10/09, decision d Adel) — « declare ton enfant », posee
+          // ICI, a la place que ce fichier lui reservait depuis le 02/09.
+          //
+          // ⚖️ AVEC UN « PLUS TARD », ET CE N EST PAS DU CONFORT. Un parent peut
+          // s inscrire juste pour CHERCHER un club avant de decider. Collecter le
+          // prenom, le nom et la date de naissance d un enfant avant qu il y ait
+          // un besoin reel, c est ce que la minimisation interdit (C8 du plan).
+          // L etape se VOIT dans le tunnel ; elle ne s impose pas.
+          { canShow: true, index: needsParentalDeclaration ? 4 : 3, route: RouteNames.UserChild },
         ];
       case 'player':
         return [

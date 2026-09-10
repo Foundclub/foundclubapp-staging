@@ -366,9 +366,10 @@ const PIED_ACTIONS = 'club-details-actions-footer';
 const { floatingActionsScrollPadding } = require('../clubDetailsActionMatrix');
 
 const RESERVE_BASSE = 12;
-/** La hauteur reservee au premier bouton, puis a chacun des suivants. */
-const RESERVE_PREMIER_BOUTON = 128;
-const RESERVE_BOUTON_SUIVANT = 72;
+// ⛔ `RESERVE_PREMIER_BOUTON` et `RESERVE_BOUTON_SUIVANT` ont ete RETIREES le
+// 2026-09-10 : c etait la copie locale de l arithmetique, et c est precisement
+// elle qui a laisse passer une reserve fausse de plus de la moitie. Le temoin
+// appelle desormais `floatingActionsScrollPadding`, la vraie fonction.
 /** Ce qui est reserve quand aucun bouton d'action ne sort. */
 const RESERVE_SANS_BOUTON = 40;
 
