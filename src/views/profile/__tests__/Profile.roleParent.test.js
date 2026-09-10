@@ -8,8 +8,11 @@ import Profile from '../Profile';
 // Un compte de role Parent se presente comme « Parent » (et non « Membre »,
 // ce que rendait getUserRoleKey('Parent') → 'new' avant ce lot), et ne voit
 // aucune rangee de gestion de club : un Parent n est pas un dirigeant.
-// « Declarer mon enfant » (fiche joueur sans identifiants, version A d Adel)
-// est le second lot : aucune rangee « Mes enfants » n existe encore.
+// PARENT P2 (10/09) — la rangee « Mes enfants » EXISTE desormais, et elle est
+// visible des QUATRE roles : « avoir des enfants » est une CAPACITE, pas un
+// privilege de role (GO Adel du 07/09, repris dans les quatre cartes de role
+// du serveur). Ce qui change d un role a l autre, c est l INSISTANCE — le
+// parent a en plus une case dediee sur son accueil (P0) — jamais le droit.
 //
 // Copie des doublures de Profile.menuProfil.test.js : `t` resout dans le VRAI
 // `fr.js`, une cle absente ferait echouer le test au lieu de le rendre vert.
@@ -187,6 +190,20 @@ describe('Profile — le profil d un Parent (PARENT)', () => {
   it('un Parent ne voit pas « Gérer mon club » : un Parent n est pas un dirigeant', async () => {
     const libelles = await libellesDuMenu(ROLE_PARENT);
     expect(libelles).not.toContain('Gérer mon club');
+  });
+
+  it('P2/11 un Parent trouve « Mes enfants » dans son menu', async () => {
+    const libelles = await libellesDuMenu(ROLE_PARENT);
+    expect(libelles).toContain('Mes enfants');
+  });
+
+  it('P2/11 un JOUEUR aussi : avoir des enfants est une capacite, pas un privilege de role', async () => {
+    // Le serveur declare les 4 gestes « enfant declare » dans les QUATRE cartes
+    // (Joueur, Entraineur, Dirigeant, Parent). Cacher la rangee aux trois autres
+    // creerait un ecran INATTEIGNABLE alors que le droit existe — exactement le
+    // defaut « une fonctionnalite qu aucun bouton n atteint » (§2 quinquies).
+    const libelles = await libellesDuMenu(ROLE_JOUEUR);
+    expect(libelles).toContain('Mes enfants');
   });
 
   it('un joueur, lui, ne se presente pas comme Parent', async () => {

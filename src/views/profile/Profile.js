@@ -609,6 +609,24 @@ function Profile({ navigation, route }) {
       label: t('profile.actions.manageClub'),
       onPress: () => handleOpenMultisportClub(firstMultisportClub.documentId),
     }] : []),
+    // 👨‍👧 PARENT P2 — LA RANGEE QUI MANQUAIT. Aucune des 8 rangees ne parlait
+    // d'enfant, alors qu'un enfant de moins de 13 ans n'a PAS de compte : il
+    // vit comme une fiche portee par celui de son parent, et c'est donc ici,
+    // dans le menu du compte, que ca se gere.
+    //
+    // 🔓 VISIBLE DES QUATRE ROLES, et ce n'est pas un oubli de garde : le
+    // serveur declare les 4 gestes « enfant declare » dans les QUATRE cartes
+    // applicatives (GO Adel du 07/09 — « avoir des enfants » est une CAPACITE,
+    // pas un privilege de role). La cacher aux trois autres rendrait un ecran
+    // INATTEIGNABLE alors que le droit existe. Ce qui change d'un role a
+    // l'autre, c'est l'INSISTANCE : le parent a en plus une case dediee sur son
+    // accueil (P0). Jamais la permission.
+    {
+      icon: Images.users,
+      key: 'myChildren',
+      label: t('profile.actions.myChildren', 'Mes enfants'),
+      onPress: () => navigation.navigate(RouteNames.MyChildren),
+    },
     {
       icon: Images.bell,
       key: 'alerts',
