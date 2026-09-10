@@ -65,9 +65,13 @@ export const RouteNames = /** @type {const} */ ({
   AuthStackAccount: 'AuthStackAccount',
   AuthStackMessaging: 'AuthStackMessaging',
   AuthStackPlanning: 'AuthStackPlanning',
+  // PARENT P2 — les deux ecrans de « Mes enfants ». Ils vivent dans
+  // ProfileStack : c est de la que le parent gere son compte, et un enfant
+  // de moins de 13 ans n a pas d espace a lui (il n a pas de compte).
   BlockedUsers: 'BlockedUsers',
   BookingCalendar: 'BookingCalendar',
   Chat: 'Chat',
+  ChildEdit: 'ChildEdit',
   Club: 'Club',
   ClubEdit: 'ClubEditPage',
   ClubFilters: 'ClubFilters',
@@ -93,6 +97,7 @@ export const RouteNames = /** @type {const} */ ({
   CreateSection: 'CreateSection',
   CreateSquad: 'CreateSquad',
   EndMatchScreen: 'EndMatchScreen',
+  MyChildren: 'MyChildren',
   // L5-A — « Faire l appel » (planche 02) : un ECRAN PLEIN, pas une feuille.
   // C est un MODE — deux cibles de 44 par ligne, la ligne elle-meme n est pas
   // cliquable — et un mode ne se pose pas par-dessus l ecran de detail.

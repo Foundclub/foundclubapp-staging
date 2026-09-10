@@ -17,6 +17,94 @@ describe('resolveClubDetailsActionMatrix', () => {
     });
   });
 
+  // ─────────────────────────────────────────────────────────────────────────
+  // PARENT P2 (2026-09-10) — DEMANDER UN CLUB AU NOM DE SON ENFANT.
+  //
+  // 🔒 LES TROIS TRANCHES D AGE (E17 du plan, tranche par Adel le 07/09), et
+  // elles se decident ICI parce que c est ici que vivent toutes les portes de
+  // la fiche club. Le pouvoir se CALCULE a partir de l age rendu par le
+  // serveur : rien n est stocke, donc rien ne peut etre en retard le jour d un
+  // anniversaire.
+  //
+  // ⛔ CE N EST PAS UNE DEMANDE D ADHESION. `club-membership-request` porte un
+  // `user` (un COMPTE), et l acceptation mute ce compte : un enfant de moins de
+  // 13 ans n a pas de compte, et faire signer la demande par le parent
+  // rattacherait LE PARENT au club. On passe donc par le rail d INTERET, qui
+  // ne rattache personne et dont le tiroir dit lui-meme : « sans affiliation
+  // automatique ».
+  // ─────────────────────────────────────────────────────────────────────────
+  it('P2/10 MOINS DE 13 ANS : la porte « au nom de mon enfant » s allume', () => {
+    expect(resolveClubDetailsActionMatrix({
+      childrenUnder13Count: 1,
+      clubHasTeams: true,
+      isAuthenticated: true,
+      minorChildrenCount: 1,
+    })).toMatchObject({
+      showChildInterestAction: true,
+      showTeenSelfRequestHint: false,
+    });
+  });
+
+  it('P2/10 13 A 17 ANS : plus de porte, et l ecran EXPLIQUE que l ado demande lui-meme', () => {
+    expect(resolveClubDetailsActionMatrix({
+      childrenUnder13Count: 0,
+      clubHasTeams: true,
+      isAuthenticated: true,
+      minorChildrenCount: 1,
+    })).toMatchObject({
+      showChildInterestAction: false,
+      showTeenSelfRequestHint: true,
+    });
+  });
+
+  it('P2/10 18 ANS ET PLUS : ni porte ni explication -- le lien parental est eteint', () => {
+    expect(resolveClubDetailsActionMatrix({
+      childrenUnder13Count: 0,
+      clubHasTeams: true,
+      isAuthenticated: true,
+      minorChildrenCount: 0,
+    })).toMatchObject({
+      showChildInterestAction: false,
+      showTeenSelfRequestHint: false,
+    });
+  });
+
+  it('P2/10 sans aucun enfant declare, la fiche club ne change PAS', () => {
+    expect(resolveClubDetailsActionMatrix({
+      clubHasTeams: true,
+      isAuthenticated: true,
+    })).toMatchObject({
+      showChildInterestAction: false,
+      showTeenSelfRequestHint: false,
+    });
+  });
+
+  it('P2/10 visiteur NON CONNECTE : aucune porte enfant, meme avec un cache', () => {
+    // Une fiche club est publique (~28 500 pages indexables). Rien qui touche a
+    // un enfant ne doit s allumer sans compte.
+    expect(resolveClubDetailsActionMatrix({
+      childrenUnder13Count: 2,
+      clubHasTeams: true,
+      isAuthenticated: false,
+      minorChildrenCount: 2,
+    })).toMatchObject({
+      showChildInterestAction: false,
+      showTeenSelfRequestHint: false,
+    });
+  });
+
+  it('P2/10 deja rattache a CE club : la porte ne sert plus a rien', () => {
+    expect(resolveClubDetailsActionMatrix({
+      childrenUnder13Count: 1,
+      clubHasTeams: true,
+      isAuthenticated: true,
+      isUserAlreadyAttachedToViewedClub: true,
+      minorChildrenCount: 1,
+    })).toMatchObject({
+      showChildInterestAction: false,
+    });
+  });
+
   it('shows leave only for an attached dirigeant', () => {
     expect(resolveClubDetailsActionMatrix({
       canContactAdmin: true,
@@ -166,6 +254,7 @@ describe('resolveClubDetailsActionMatrix', () => {
       isPlayerRole: true,
       ownerCount: 3,
     })).toEqual({
+      showChildInterestAction: false,
       showClubArrivalInterestAction: false,
       showClubInterestAction: false,
       showClubPartneringAction: false,
@@ -177,6 +266,7 @@ describe('resolveClubDetailsActionMatrix', () => {
       showPlayerNoTeamAction: false,
       showPublicClaimLogin: true,
       showPublicPlayerLogin: true,
+      showTeenSelfRequestHint: false,
     });
   });
 
@@ -198,8 +288,10 @@ describe('resolveClubDetailsActionMatrix', () => {
         isAuthenticated: true,
         isPlayerRole: true,
       })).toMatchObject({
+        showChildInterestAction: false,
         showClubArrivalInterestAction: true,
         showPlayerNoTeamAction: true,
+        showTeenSelfRequestHint: false,
       });
     });
 
@@ -211,8 +303,10 @@ describe('resolveClubDetailsActionMatrix', () => {
         clubHasTeams: false,
         isAuthenticated: true,
       })).toMatchObject({
+        showChildInterestAction: false,
         showClubArrivalInterestAction: true,
         showEmptyClubClaimAction: true,
+        showTeenSelfRequestHint: false,
       });
     });
 
@@ -225,8 +319,10 @@ describe('resolveClubDetailsActionMatrix', () => {
         isAuthenticated: true,
         ownerCount: 1,
       })).toMatchObject({
+        showChildInterestAction: false,
         showClubArrivalInterestAction: false,
         showClubInterestAction: true,
+        showTeenSelfRequestHint: false,
       });
     });
 
@@ -237,7 +333,9 @@ describe('resolveClubDetailsActionMatrix', () => {
         clubHasTeams: false,
         isAuthenticated: false,
       })).toMatchObject({
+        showChildInterestAction: false,
         showClubArrivalInterestAction: false,
+        showTeenSelfRequestHint: false,
       });
     });
 
@@ -249,7 +347,9 @@ describe('resolveClubDetailsActionMatrix', () => {
         isAuthenticated: true,
         isUserAlreadyAttachedToViewedClub: true,
       })).toMatchObject({
+        showChildInterestAction: false,
         showClubArrivalInterestAction: false,
+        showTeenSelfRequestHint: false,
       });
     });
   });
@@ -273,6 +373,7 @@ describe('resolveClubDetailsActionMatrix', () => {
         isAuthenticated: true,
         isPlayerRole: true,
       })).toEqual({
+        showChildInterestAction: false,
         showClubArrivalInterestAction: false,
         showClubInterestAction: true,
         showClubPartneringAction: false,
@@ -284,6 +385,7 @@ describe('resolveClubDetailsActionMatrix', () => {
         showPlayerNoTeamAction: false,
         showPublicClaimLogin: false,
         showPublicPlayerLogin: false,
+        showTeenSelfRequestHint: false,
       });
     });
 
@@ -296,6 +398,7 @@ describe('resolveClubDetailsActionMatrix', () => {
         isAuthenticated: true,
         isPlayerRole: true,
       })).toEqual({
+        showChildInterestAction: false,
         showClubArrivalInterestAction: true,
         showClubInterestAction: false,
         showClubPartneringAction: false,
@@ -307,6 +410,7 @@ describe('resolveClubDetailsActionMatrix', () => {
         showPlayerNoTeamAction: true,
         showPublicClaimLogin: false,
         showPublicPlayerLogin: false,
+        showTeenSelfRequestHint: false,
       });
     });
 
@@ -318,6 +422,7 @@ describe('resolveClubDetailsActionMatrix', () => {
         isAuthenticated: true,
         ownerCount: 1,
       })).toEqual({
+        showChildInterestAction: false,
         showClubArrivalInterestAction: false,
         showClubInterestAction: false,
         showClubPartneringAction: false,
@@ -329,6 +434,7 @@ describe('resolveClubDetailsActionMatrix', () => {
         showPlayerNoTeamAction: false,
         showPublicClaimLogin: false,
         showPublicPlayerLogin: false,
+        showTeenSelfRequestHint: false,
       });
     });
 
@@ -340,6 +446,7 @@ describe('resolveClubDetailsActionMatrix', () => {
         clubHasTeams: false,
         isAuthenticated: true,
       })).toEqual({
+        showChildInterestAction: false,
         showClubArrivalInterestAction: true,
         showClubInterestAction: false,
         showClubPartneringAction: true,
@@ -351,6 +458,7 @@ describe('resolveClubDetailsActionMatrix', () => {
         showPlayerNoTeamAction: false,
         showPublicClaimLogin: false,
         showPublicPlayerLogin: false,
+        showTeenSelfRequestHint: false,
       });
     });
   });
@@ -462,6 +570,7 @@ describe('resolveClubDetailsActionMatrix', () => {
         isClubStaffRole: true,
         ownerCount: 0,
       })).toEqual({
+        showChildInterestAction: false,
         showClubArrivalInterestAction: false,
         showClubInterestAction: false,
         showClubPartneringAction: false,
@@ -473,6 +582,7 @@ describe('resolveClubDetailsActionMatrix', () => {
         showPlayerNoTeamAction: false,
         showPublicClaimLogin: false,
         showPublicPlayerLogin: false,
+        showTeenSelfRequestHint: false,
       });
     });
 
@@ -487,6 +597,7 @@ describe('resolveClubDetailsActionMatrix', () => {
         isClubStaffRole: true,
         ownerCount: 0,
       })).toEqual({
+        showChildInterestAction: false,
         showClubArrivalInterestAction: false,
         showClubInterestAction: false,
         showClubPartneringAction: false,
@@ -498,6 +609,7 @@ describe('resolveClubDetailsActionMatrix', () => {
         showPlayerNoTeamAction: false,
         showPublicClaimLogin: false,
         showPublicPlayerLogin: false,
+        showTeenSelfRequestHint: false,
       });
     });
 
@@ -512,6 +624,7 @@ describe('resolveClubDetailsActionMatrix', () => {
         isPlayerRole: true,
         ownerCount: 0,
       })).toEqual({
+        showChildInterestAction: false,
         showClubArrivalInterestAction: true,
         showClubInterestAction: false,
         showClubPartneringAction: false,
@@ -523,6 +636,7 @@ describe('resolveClubDetailsActionMatrix', () => {
         showPlayerNoTeamAction: true,
         showPublicClaimLogin: false,
         showPublicPlayerLogin: false,
+        showTeenSelfRequestHint: false,
       });
     });
 
@@ -535,8 +649,10 @@ describe('resolveClubDetailsActionMatrix', () => {
         isAuthenticated: true,
         ownerCount: 0,
       })).toMatchObject({
+        showChildInterestAction: false,
         showClubArrivalInterestAction: true,
         showEmptyClubClaimAction: true,
+        showTeenSelfRequestHint: false,
       });
     });
 
@@ -550,6 +666,7 @@ describe('resolveClubDetailsActionMatrix', () => {
         isClubStaffRole: true,
         ownerCount: 0,
       })).toEqual({
+        showChildInterestAction: false,
         showClubArrivalInterestAction: false,
         showClubInterestAction: false,
         showClubPartneringAction: false,
@@ -561,6 +678,7 @@ describe('resolveClubDetailsActionMatrix', () => {
         showPlayerNoTeamAction: false,
         showPublicClaimLogin: true,
         showPublicPlayerLogin: true,
+        showTeenSelfRequestHint: false,
       });
     });
 
@@ -578,6 +696,7 @@ describe('resolveClubDetailsActionMatrix', () => {
         isUserAlreadyAttachedToViewedClub: true,
         ownerCount: 1,
       })).toEqual({
+        showChildInterestAction: false,
         showClubArrivalInterestAction: false,
         showClubInterestAction: false,
         showClubPartneringAction: false,
@@ -589,6 +708,7 @@ describe('resolveClubDetailsActionMatrix', () => {
         showPlayerNoTeamAction: false,
         showPublicClaimLogin: false,
         showPublicPlayerLogin: false,
+        showTeenSelfRequestHint: false,
       });
     });
 
@@ -603,10 +723,12 @@ describe('resolveClubDetailsActionMatrix', () => {
         isUserAlreadyAttachedToViewedClub: true,
         ownerCount: 1,
       })).toMatchObject({
+        showChildInterestAction: false,
         showClubArrivalInterestAction: false,
         showClubInterestAction: false,
         showJoinClubAction: false,
         showLeaveClubAction: true,
+        showTeenSelfRequestHint: false,
       });
     });
   });

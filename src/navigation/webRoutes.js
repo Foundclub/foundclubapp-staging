@@ -9,6 +9,11 @@ const WEB_ROUTE_PATTERNS = {
   [RouteNames.LeagueHomeTab]: '/league',
   [RouteNames.Profile]: '/profile',
   [RouteNames.ProfileEdit]: '/profile/edit',
+  // PARENT P2 — « Mes enfants ». Ecrans PRIVES : les quatre routes du tiroir
+  // exigent toutes un compte, et une fiche enfant n a AUCUNE page publique
+  // (D15 du plan). L URL n expose donc rien par elle-meme.
+  [RouteNames.MyChildren]: '/profile/children',
+  [RouteNames.ChildEdit]: '/profile/children/edit',
   [RouteNames.PlayerCard]: '/profile/player-card',
   [RouteNames.SubscriptionOverview]: '/profile/subscription',
   [RouteNames.SubscriptionOffers]: '/profile/subscription/offers',

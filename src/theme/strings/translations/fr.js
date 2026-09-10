@@ -345,6 +345,11 @@ export default {
       editInfo: 'Modifier',
       join: "C'est mon club !",
       joinAsMyClub: "C'est mon club !",
+      // PARENT P2 -- la porte du parent. Le prenom n'apparait QUE s'il n'y a
+      // QU'UN enfant concerne : avec deux, en nommer un serait faux, la
+      // demande ne porte pas l'enfant.
+      joinForChild: 'Demander à rejoindre au nom de {{firstname}}',
+      joinForChildren: 'Demander à rejoindre pour mes enfants',
       leave: 'Quitter le club',
       manageJoinRequests: 'Voir les demandes d\'affiliation',
       playAtClub: 'Je joue dans ce club',
@@ -458,6 +463,12 @@ export default {
         description: 'Les dirigeants du club ont reçu ton intérêt et pourront te répondre.'
           + ' Tu n’es rattaché·e à rien pour le moment.',
       },
+    },
+    // E17 -- on EXPLIQUE l'absence de la porte au lieu de la faire
+    // disparaitre sans un mot.
+    hints: {
+      teenAsksAlone: 'À partir de 13 ans, ton enfant fait sa demande'
+        + ' lui-même depuis son propre compte.',
     },
     playerNoTeamRequest: {
       clubLabel: 'Club que tu attends',
@@ -3531,6 +3542,9 @@ export default {
       findTeam: 'Trouver une équipe',
       ignore: 'Ignorer',
       logout: 'Déconnexion',
+      // PARENT P2 — la rangée qui manquait : aucune des 8 rangées du menu ne
+      // parlait d'enfant, alors que « mes enfants » est la raison d'être du
+      // compte parent.
       manageAlerts: 'Gérer mes alertes',
       manageClub: 'Gérer mon club',
       manageClubJoinRequests: 'Gérer les demandes d\'affiliation au club',
@@ -3538,6 +3552,7 @@ export default {
       manageRequests: 'Gérer mes demandes',
       manageTeamJoinRequests: 'Gérer les demandes d\'adhésion aux équipes',
       manageTeams: 'Gérer mes équipes',
+      myChildren: 'Mes enfants',
       myTeams: 'Mes équipes',
       save: 'Continuer',
       superAdminLeagueDashboard: 'Dashboard League',
@@ -5112,6 +5127,90 @@ export default {
     submit: 'Envoyer mon avis',
     subtitle: '{{team}} · terminé {{date}}',
     title: 'Comment s’est passé ton entraînement ?',
+  },
+  // PARENT P2 (10/09) — « MES ENFANTS » et « un club pour mon enfant ».
+  //
+  // 🔒 Un enfant de moins de 13 ans n'a PAS de compte : le serveur le refuse.
+  // Il vit ici sous forme de FICHE portée par le compte de son parent. Les
+  // libellés parlent donc toujours d'un enfant, jamais d'un « utilisateur ».
+  myChildren: {
+    actions: {
+      add: 'Ajouter un enfant',
+      delete: 'Supprimer',
+      edit: 'Modifier',
+      // Le prénom est DANS le libellé : un parent de trois enfants doit voir
+      // pour lequel il agit, sans avoir à se souvenir de l'ordre des cartes.
+      searchClub: 'Chercher un club pour {{firstname}}',
+    },
+    confirmDelete: {
+      cancel: 'Annuler',
+      confirm: 'Supprimer',
+      // §B7 du plan : l'effacement est RÉEL (le serveur supprime la ligne, il
+      // n'anonymise pas). Mais une feuille de match passée garde le prénom : on
+      // ne réécrit pas l'histoire d'un match, et on le dit AVANT de supprimer.
+      message: 'La fiche de {{firstname}} sera effacée : son prénom, son nom'
+        + ' et sa date de naissance. Une composition déjà jouée gardera son'
+        + ' prénom — on ne réécrit pas la feuille d’un match passé.',
+      title: 'Supprimer la fiche de {{firstname}} ?',
+    },
+    errors: {
+      delete: 'Impossible de supprimer cette fiche pour le moment.',
+    },
+    // L'ECRAN 8 — ajouter ou modifier une fiche.
+    form: {
+      addTitle: 'Ajouter un enfant',
+      editTitle: 'Modifier la fiche',
+      // 🔒 Le serveur ne rend JAMAIS la date de naissance (il rend un age
+      // calcule). L'ecran de modification ne peut donc pas la pre-remplir : il
+      // le DIT, au lieu d'afficher trois cases vides sans explication.
+      birthdateKeepHint: 'Laisse vide pour ne pas la changer.',
+      birthdateLabel: 'Date de naissance',
+      errors: {
+        invalidDate: 'Cette date n’existe pas.',
+        required: 'Le prénom, le nom et la date de naissance sont obligatoires.',
+        // 🧒 Le palier 13, dit AVANT d'envoyer. Jusqu'ici l'app ne prevenait
+        // jamais : le palier ne tenait que sur le refus du serveur (§4.5 du plan).
+        save: 'Impossible d’enregistrer cette fiche pour le moment.',
+        tooOld: 'Une fiche enfant est réservée aux moins de 13 ans.'
+          + ' À partir de 13 ans, ton enfant a droit à son propre compte.',
+      },
+      firstnameLabel: 'Prénom',
+      firstnamePlaceholder: 'Léa',
+      // 🔒 La minimisation n'est pas un confort, c'est la loi (C10 du plan) :
+      // trois champs obligatoires, trois facultatifs, et RIEN d'autre. On le
+      // dit au parent, parce qu'un formulaire court sur un mineur se remarque.
+      hint: 'Trois informations suffisent. On ne demande ni téléphone,'
+        + ' ni adresse : c’est toi qu’on contacte.',
+      lastnameLabel: 'Nom',
+      lastnamePlaceholder: 'Martin',
+      numberLabel: 'Numéro de maillot (facultatif)',
+      positionLabel: 'Poste (facultatif)',
+      positionPlaceholder: 'Gardienne, attaquant…',
+      submitAdd: 'Déclarer mon enfant',
+      submitEdit: 'Enregistrer',
+    },
+    screen: {
+      // ⚠️ Pluriel i18next : « _one » / « _other », jamais « _plural » (morte depuis
+      // i18next 21), et l'appelant DOIT passer « count ».
+      count_one: '{{count}} enfant déclaré',
+      count_other: '{{count}} enfants déclarés',
+      empty: 'Tu n’as pas encore déclaré d’enfant.',
+      emptyHint: 'Déclare-le ici, puis cherche-lui un club.'
+        + ' Tu peux en ajouter autant que tu veux.',
+      hint: 'Tu déclares tes enfants depuis TON compte :'
+        + ' avant 13 ans, ils n’ont pas de compte à eux.',
+      noTeam: 'Pas encore d’équipe',
+      title: 'Mes enfants',
+      // Les deux tranches où le parent n'agit plus (E17). Elles ne sont pas des
+      // erreurs : ce sont des explications, et l'écran les donne au lieu de
+      // faire disparaître un bouton sans un mot.
+      tooOldHint: 'À partir de 13 ans, {{firstname}} fait ses demandes'
+        + ' lui-même depuis son propre compte.',
+      years_one: '{{count}} an',
+      years_other: '{{count}} ans',
+      // 18 ans : le lien parental s'éteint tout seul, c'est la loi.
+      adultHint: '{{firstname}} est majeur : il gère son compte seul.',
+    },
   },
   userBlock: {
     actions: {

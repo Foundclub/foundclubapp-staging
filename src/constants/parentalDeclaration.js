@@ -71,6 +71,49 @@ export const isBirthdateUnderParentAccountAge = (value) => (
 );
 
 /**
+ * PARENT P2 — L AGE OU LE LIEN PARENTAL S ETEINT.
+ *
+ * L autorite parentale cesse a la majorite : garder l acces apres 18 ans serait
+ * traiter les donnees d un ADULTE sans son accord. Ce n est pas un confort,
+ * c est la raison pour laquelle le pouvoir se CALCULE au lieu de se stocker.
+ */
+export const PARENTAL_POWER_ENDS_AGE = 18;
+
+/**
+ * Ce qu un parent peut faire pour un enfant de cet age (E17 du plan PARENT,
+ * tranche par Adel le 2026-09-07).
+ *
+ * 🧠 LE POUVOIR NE SE STOCKE JAMAIS, IL SE CALCULE. Aucun cron, aucune
+ * migration : le jour des 13 ans et le jour des 18 ans, l app change de
+ * comportement toute seule, et rien ne peut etre « en retard ».
+ *
+ *   · `full` — moins de 13 ans : tout ce qui existe, y compris demander a
+ *     rejoindre un club. L enfant n a pas de compte, le serveur le refuse.
+ *   · `view` — 13 a 17 ans : le parent VOIT le planning, il n agit plus.
+ *     L ado repond lui-meme.
+ *   · `none` — 18 ans et plus : le lien s eteint.
+ *
+ * 🔢 UN AGE INCONNU REND `view`, ET C EST DELIBERE. `Number('')` vaut 0, et
+ * zero an tomberait dans « moins de 13 » — c est-a-dire dans la tranche la plus
+ * PERMISSIVE. Sur des donnees d enfant, ce qu on ne sait pas doit fermer la
+ * main, jamais l ouvrir.
+ * @param {unknown} age - L age en annees revolues, tel que le serveur le rend.
+ * @returns {'full' | 'view' | 'none'} Ce que le parent peut faire.
+ */
+export const parentalPowerForAge = (age) => {
+  // ⛔ L ORDRE COMPTE : le vide se teste AVANT la conversion. `Number('')` et
+  // `Number(null)` valent tous les deux 0 — donc « moins de 13 ans », la
+  // tranche la plus permissive. Convertir d abord ouvrirait la main sur une
+  // fiche dont on ignore l age.
+  if (age === null || age === undefined || age === '') return 'view';
+  const annees = typeof age === 'number' ? age : Number(age);
+  if (!Number.isFinite(annees)) return 'view';
+  if (annees >= PARENTAL_POWER_ENDS_AGE) return 'none';
+  if (annees >= MINOR_PARENT_ACCOUNT_REQUIRED_UNDER_AGE) return 'view';
+  return 'full';
+};
+
+/**
  * Ce refus du serveur est-il le 400 « compte parent requis » ?
  * Memes quatre chemins que `isMinorParentalDeclarationError` ci-dessous.
  * @param {any} error - L erreur telle que le service la rejette.

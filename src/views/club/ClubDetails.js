@@ -51,6 +51,7 @@ import { useGetMyClubInterestRequests } from '@/services/clubInterestRequest/clu
 import { createClubInterestRequest } from '@/services/clubInterestRequest/clubInterestRequestService';
 import { createClubMembershipRequest } from '@/services/clubMembershipRequest/clubMembershipRequestService';
 import { createClubRequest, getPendingClubCreationRequests } from '@/services/clubRequest/clubRequestService';
+import { useGetMyDeclaredChildren } from '@/services/declaredChild/declaredChildQueries';
 import { useClubFacilityContext } from '@/services/facility/facilityQueries';
 import { getFacilitySections } from '@/services/facility/facilityService';
 import { resolveClubAffiliationOutcome } from '@/services/requests/clubAffiliationOutcome';
@@ -68,12 +69,12 @@ import { buildPublicWebUrl } from '@/utils/shareLinks';
 
 import {
   canCreateTeamInClub,
+  countChildrenByAgeBand,
   resolveClubDetailsActionMatrix,
   resolveEmptyClubClaimGesture,
 } from './clubDetailsActionMatrix';
 import ClubPlanning from './ClubPlanningScreen';
 import { ClubHubGroup, ClubHubRow } from './components/ClubHubRow';
-
 // D34 ecran 07 : la rangee partenaire du pack fait 56 pt de haut — assez pour
 // un logo rond de 38 et une corbeille de 40 sans les serrer.
 const SPONSOR_ROW_HEIGHT = 56;
@@ -1543,7 +1544,40 @@ function ClubDetails({ navigation, route }) {
     return Boolean(clubId && hasClubAccess(clubId))
       && (currentRole === USER_ROLES.coach || currentRole === USER_ROLES.president);
   }, [USER_ROLES.coach, USER_ROLES.president, clubId, hasClubAccess, userData?.role?.name]);
+  // 👨‍👧 PARENT P2 — COMBIEN D ENFANTS, ET DANS QUELLE TRANCHE D AGE.
+  //
+  // La MEME clef react-query que l ecran « Mes enfants » (`declaredChildren/
+  // mine`, `staleTime` 60 s) : un parent qui vient de sa liste ne declenche
+  // aucune requete de plus.
+  // 🔒 `enabled` sur `isAuthenticated` : une fiche club est PUBLIQUE (~28 500
+  // pages indexables) et les quatre routes du tiroir exigent un compte. Sans
+  // cette garde, chaque visiteur anonyme se prendrait un 401 a l ouverture.
+  const { data: mesEnfantsBruts } = useGetMyDeclaredChildren({
+    enabled: Boolean(isAuthenticated),
+  });
+  // ⛔ On ne remonte QUE des tranches : ni la matrice ni cette fiche n ont de
+  // raison de manipuler le prenom ou la date de naissance d un mineur.
+  const { childrenUnder13Count, minorChildrenCount } = useMemo(
+    () => countChildrenByAgeBand(mesEnfantsBruts),
+    [mesEnfantsBruts],
+  );
+
+  // Le prenom ne sert qu au LIBELLE, et seulement s il n y a qu un seul enfant
+  // concerne : la demande d interet, elle, ne porte pas l enfant (le serveur ne
+  // sait pas le representer -- question remontee a Adel).
+  const prenomEnfantUnique = useMemo(() => {
+    const fiches = Array.isArray(mesEnfantsBruts) ? mesEnfantsBruts : [];
+    // Un seul enfant concerne ⇒ on peut le nommer. Deux ou plus ⇒ en nommer un
+    // serait faux, la demande ne porte pas l enfant.
+    if (childrenUnder13Count !== 1) return '';
+    const eligible = fiches.find(
+      (enfant) => countChildrenByAgeBand([enfant]).childrenUnder13Count === 1,
+    );
+    return String(eligible?.firstname || '').trim();
+  }, [childrenUnder13Count, mesEnfantsBruts]);
+
   const {
+    showChildInterestAction,
     showClubArrivalInterestAction,
     showClubInterestAction,
     showClubPartneringAction,
@@ -1555,6 +1589,7 @@ function ClubDetails({ navigation, route }) {
     showPlayerNoTeamAction,
     showPublicClaimLogin,
     showPublicPlayerLogin,
+    showTeenSelfRequestHint,
   } = useMemo(() => resolveClubDetailsActionMatrix({
     areClubMembersHidden,
     canContactAdmin,
@@ -1564,6 +1599,7 @@ function ClubDetails({ navigation, route }) {
     canPlayerSignalClubTeam,
     canPlayerSignalMissingTeam,
     canUseClubPartneringFlow,
+    childrenUnder13Count,
     clubHasTeams: clubTeamIds.length > 0,
     hasParentMultisportClub,
     isAuthenticated,
@@ -1572,8 +1608,11 @@ function ClubDetails({ navigation, route }) {
     isParentClubAdmin,
     isPlayerRole,
     isUserAlreadyAttachedToViewedClub,
+    minorChildrenCount,
     ownerCount: owners.length,
   }), [
+    childrenUnder13Count,
+    minorChildrenCount,
     areClubMembersHidden,
     canContactAdmin,
     canEdit,
@@ -1671,6 +1710,10 @@ function ClubDetails({ navigation, route }) {
     showEmptyClubClaimAction,
     showClubInterestAction,
     showClubArrivalInterestAction,
+    // PARENT P2 — Z01 dit « TOUS les boutons, sans exception » : c est ce
+    // compteur qui reserve leur place en bas du defilement. Un bouton absent
+    // d ici finit sous le pied de page.
+    showChildInterestAction,
   ].filter(Boolean).length;
   const hasFloatingClubActions = floatingClubActionsCount > 0;
   const floatingClubActionsBottomInset = Math.max(insets.bottom, 12);
@@ -3813,6 +3856,74 @@ function ClubDetails({ navigation, route }) {
                 : t('clubDetails.actions.manageClub', 'Je dirige ce club')}
               variant="Primary"
             />
+          ) : null}
+
+          {/* 👨‍👧 PARENT P2 — « DEMANDER A REJOINDRE AU NOM DE MON ENFANT ».
+              (2026-09-10, demande d'Adel : « il doit pouvoir rejoindre un club
+              au nom de son enfant ».)
+
+              ⛔ CE N'EST PAS UNE DEMANDE D'ADHESION, et la difference est
+              structurelle : `club-membership-request` porte un COMPTE, et son
+              acceptation mute ce compte (role, club). Un enfant de moins de
+              13 ans n'a pas de compte — le serveur le refuse — donc la demande
+              signee par le parent rattacherait LE PARENT au club.
+              On reutilise donc le rail d'INTERET, tel quel : il ne rattache
+              personne (« sans affiliation automatique », dit son tiroir), il
+              previent les dirigeants du club, et ils repondent au PARENT. C'est
+              le partage tranche en C9 du plan : le parent demande, le club
+              decide, le rattachement reste un geste separe.
+
+              ♻️ AUCUNE MUTATION NEUVE : `createClubArrivalInterestMutation`
+              fait deja exactement ce geste, dedoublonnage et messages compris. */}
+          {showChildInterestAction ? (
+            <Button
+              disabled={clubArrivalInterestIsBusy}
+              onPress={() => createClubArrivalInterestMutation.mutate()}
+              style={[
+                floatingClubActionButtonStyle,
+                clubArrivalInterestIsBusy ? { opacity: 0.7 } : null,
+              ]}
+              testID="club-details-child-interest"
+              title={(() => {
+                if (hasPendingClubArrivalInterest) {
+                  return t('clubDetails.actions.requestPending', 'Demande en attente');
+                }
+                // Le prenom n'apparait QUE s'il n'y a qu'un enfant concerne :
+                // avec deux, nommer l'un d'eux serait faux — la demande ne porte
+                // pas l'enfant (le serveur ne sait pas le representer).
+                // Forme OBJET (`{ defaultValue, ...variables }`) et non
+                // `t(clef, repli, options)` : c'est celle que ce fichier emploie
+                // deja pour toutes ses phrases a variable, et la seule que les
+                // temoins de la fiche club savent interpoler.
+                return prenomEnfantUnique
+                  ? t('clubDetails.actions.joinForChild', {
+                    defaultValue: 'Demander à rejoindre au nom de {{firstname}}',
+                    firstname: prenomEnfantUnique,
+                  })
+                  : t(
+                    'clubDetails.actions.joinForChildren',
+                    'Demander à rejoindre pour mes enfants',
+                  );
+              })()}
+              variant="Primary"
+            />
+          ) : null}
+
+          {/* 🔒 E17 — 13 a 17 ans : on EXPLIQUE l'absence de la porte au lieu de
+              la faire disparaitre sans un mot. Un ado de 16 ans qui ne pourrait
+              pas dire lui-meme qu'il vient a l'entrainement, « ca ne tient pas
+              debout » (plan, E17). A 18 ans il n'y a plus rien a dire : le lien
+              parental est eteint, et l'app se tait. */}
+          {showTeenSelfRequestHint ? (
+            <Text
+              style={[Fonts.p3, Fonts.neutral200, { paddingHorizontal: 8, textAlign: 'center' }]}
+              testID="club-details-teen-self-request-hint"
+            >
+              {t(
+                'clubDetails.hints.teenAsksAlone',
+                'À partir de 13 ans, ton enfant fait sa demande lui-même depuis son propre compte.',
+              )}
+            </Text>
           ) : null}
 
           {/* Z01 — les deux portes primaires arrivees du pied du flux. Elles

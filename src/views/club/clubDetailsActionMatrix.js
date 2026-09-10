@@ -1,3 +1,5 @@
+import { parentalPowerForAge } from '@/constants/parentalDeclaration';
+
 /**
  * AA04 ③ — LA PORTE VERS LA PREMIERE EQUIPE, sur SON club.
  *
@@ -81,6 +83,30 @@ export const resolveEmptyClubClaimGesture = ({
   (isClubStaffRole && ownerCount === 0 && !areClubMembersHidden) ? 'join' : 'claim'
 );
 
+/**
+ * PARENT P2 — COMBIEN D ENFANTS, ET DANS QUELLE TRANCHE D AGE.
+ *
+ * Le comptage vit ICI, a cote de la matrice qui le consomme, et pas dans
+ * `ClubDetails` : c est ce qui evite d ajouter la-bas un import de
+ * `@/constants/*` que `perfectionist/sort-imports` et `import/order` classent a
+ * deux endroits CONTRAIRES (mesure le 2026-09-10 : les deux regles se renvoient
+ * la ligne l une a l autre, aucune position ne les satisfait toutes les deux).
+ *
+ * ⛔ Il rend DEUX NOMBRES, jamais des fiches : ni la matrice ni la fiche club
+ * n ont de raison de manipuler le prenom ou la date de naissance d un mineur.
+ * @param {any[]} enfants - Les fiches enfants du compte, telles que le serveur les rend.
+ * @returns {{ childrenUnder13Count: number, minorChildrenCount: number }} Les deux compteurs.
+ */
+export const countChildrenByAgeBand = (enfants) => {
+  const fiches = Array.isArray(enfants) ? enfants : [];
+  return {
+    childrenUnder13Count: fiches
+      .filter((enfant) => parentalPowerForAge(enfant?.age) === 'full').length,
+    minorChildrenCount: fiches
+      .filter((enfant) => parentalPowerForAge(enfant?.age) !== 'none').length,
+  };
+};
+
 export const resolveClubDetailsActionMatrix = ({
   areClubMembersHidden = false,
   canContactAdmin = false,
@@ -90,6 +116,11 @@ export const resolveClubDetailsActionMatrix = ({
   canPlayerSignalClubTeam = false,
   canPlayerSignalMissingTeam = false,
   canUseClubPartneringFlow = false,
+  // PARENT P2 — les deux seuls chiffres dont la matrice a besoin sur les
+  // enfants : combien ont MOINS DE 13 ANS, et combien sont MINEURS. Deux
+  // nombres, jamais une liste de fiches : une matrice de decision n a aucune
+  // raison de voir le prenom ni la date de naissance d un mineur.
+  childrenUnder13Count = 0,
   clubHasTeams = false,
   hasParentMultisportClub = false,
   isAuthenticated = false,
@@ -98,6 +129,7 @@ export const resolveClubDetailsActionMatrix = ({
   isParentClubAdmin = false,
   isPlayerRole = false,
   isUserAlreadyAttachedToViewedClub = false,
+  minorChildrenCount = 0,
   ownerCount = 0,
 }) => {
   const showLeaveClubAction = Boolean(isAuthenticated && canLeaveClub);
@@ -204,7 +236,44 @@ export const resolveClubDetailsActionMatrix = ({
     && !(hasParentMultisportClub && isMultisportAdmin),
   );
 
+  // ───────────────────────────────────────────────────────────────────────
+  // PARENT P2 (2026-09-10) — « DEMANDER A REJOINDRE AU NOM DE MON ENFANT ».
+  //
+  // 🔒 LES TROIS TRANCHES D AGE (E17, tranche par Adel le 07/09) :
+  //   moins de 13 ans → la porte s allume : l enfant n a pas de compte, c est
+  //                     le parent qui parle pour lui ;
+  //   13 a 17 ans     → PLUS de porte, mais une EXPLICATION : l ado fait sa
+  //                     demande lui-meme. Un ado de 16 ans qui ne pourrait pas
+  //                     dire qu il vient a l entrainement, « ca ne tient pas
+  //                     debout » (plan, E17) ;
+  //   18 ans et plus  → ni porte ni phrase : le lien parental est ETEINT, et
+  //                     l app n a plus rien a dire sur un adulte.
+  //
+  // ⛔ CE N EST PAS UNE DEMANDE D ADHESION, et la difference est structurelle :
+  // `club-membership-request` porte un `user` (un COMPTE) et son acceptation
+  // MUTE ce compte (role, club). Un enfant de moins de 13 ans n a pas de
+  // compte — le serveur le refuse — donc faire signer la demande par le parent
+  // rattacherait LE PARENT au club : la mauvaise personne dans l effectif.
+  // Le rail d interet, lui, ne rattache PERSONNE : il previent les dirigeants,
+  // qui repondent au parent. C est le partage tranche en C9 du plan.
+  const showChildInterestAction = Boolean(
+    canShowAffiliationAction
+    && childrenUnder13Count > 0
+    && !canEdit
+    && !isUserAlreadyAttachedToViewedClub,
+  );
+  // On EXPLIQUE l absence de la porte au lieu de la faire disparaitre sans un
+  // mot — mais seulement tant qu il reste un mineur a qui ca s applique.
+  const showTeenSelfRequestHint = Boolean(
+    canShowAffiliationAction
+    && childrenUnder13Count === 0
+    && minorChildrenCount > 0
+    && !canEdit
+    && !isUserAlreadyAttachedToViewedClub,
+  );
+
   return {
+    showChildInterestAction,
     showClubArrivalInterestAction,
     showClubInterestAction,
     showClubPartneringAction,
@@ -216,5 +285,6 @@ export const resolveClubDetailsActionMatrix = ({
     showPlayerNoTeamAction,
     showPublicClaimLogin,
     showPublicPlayerLogin,
+    showTeenSelfRequestHint,
   };
 };
