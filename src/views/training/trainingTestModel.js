@@ -45,6 +45,29 @@ export const mesuresParFamille = (test) => {
 };
 
 /**
+ * LES MESURES QUE LA CARTE D'ESSAI PORTE — celles du parcours guidé.
+ *
+ * 🧨 UN TEST À UN SEUL ESSAI N'AVAIT AUCUNE CASE. La carte ne lisait que `parEssai` :
+ * un test dont pas une mesure ne se répète affichait « Essai 1/1 » sans rien à
+ * remplir, et son chiffre ne se saisissait que dans la section repliée « À noter une
+ * fois » de l'ancienne page de test. Mesuré le 2026-09-09 : **16 des 24 passages** du
+ * programme « Football simple » (squat, pompes, frappe, VMA, 30-30, tractions,
+ * contrôle-passe) et **6 des 33 tests** du programme expert (A5, A6, C4, E0, E1, D3).
+ *
+ * ⛔ QUAND `parEssai` N'EST PAS VIDE, RIEN NE CHANGE. Répéter les mesures « une fois »
+ * sur chaque carte d'essai est exactement ce que la famille sert à éviter : la hauteur
+ * de la box ne se ressaisit pas à chaque saut.
+ * @param {{parEssai?: Record<string, any>[], uneFois?: Record<string, any>[]}} familles
+ *   les trois familles du test, telles que `mesuresParFamille` les rend
+ * @returns {Record<string, any>[]} les mesures de la carte, avant tout filtre de moment
+ */
+export const mesuresDeLaCarte = (familles) => {
+  const parEssai = Array.isArray(familles?.parEssai) ? familles.parEssai : [];
+  if (parEssai.length) return parEssai;
+  return Array.isArray(familles?.uneFois) ? familles.uneFois : [];
+};
+
+/**
  * Vrai quand une mesure ne se remplit pas sur le terrain.
  * @param {Record<string, any>} measure la mesure
  * @returns {boolean} vrai si elle se saisit plus tard, au bureau
