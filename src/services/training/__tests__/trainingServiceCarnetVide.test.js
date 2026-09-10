@@ -36,9 +36,12 @@ describe('Le carnet d\'entrainement d\'une personne qui n\'a rien commence', () 
     client.get.mockReset();
   });
 
-  test('un 404 « aucun entrainement en cours » rend un carnet VIDE, jamais une erreur', async () => {
+  test('un 404 « aucun entrainement en cours » rend un carnet VIDE', async () => {
     client.get.mockRejectedValue({
-      response: { data: { error: { message: 'Aucun entrainement en cours', status: 404 } }, status: 404 },
+      response: {
+        data: { error: { message: 'Aucun entrainement en cours', status: 404 } },
+        status: 404,
+      },
       status: 404,
     });
 
@@ -55,7 +58,7 @@ describe('Le carnet d\'entrainement d\'une personne qui n\'a rien commence', () 
     await expect(exportTrainingResults()).resolves.toEqual({ csv: '', rows: 0 });
   });
 
-  test('⛔ une VRAIE panne remonte encore : elle ne doit surtout pas passer pour un carnet vide', async () => {
+  test('⛔ une VRAIE panne remonte encore, elle n est pas un carnet vide', async () => {
     const panne = { message: 'Network Error' };
     client.get.mockRejectedValue(panne);
     await expect(exportTrainingResults()).rejects.toBe(panne);
@@ -66,11 +69,9 @@ describe('Le carnet d\'entrainement d\'une personne qui n\'a rien commence', () 
   });
 
   test('un carnet qui a des lignes est rendu tel quel', async () => {
-    client.get.mockResolvedValue({ data: { data: { csv: 'date;test\n2026-09-10;SAUT', rows: 1 } } });
+    const csv = 'date;test\n2026-09-10;SAUT';
+    client.get.mockResolvedValue({ data: { data: { csv, rows: 1 } } });
 
-    await expect(exportTrainingResults()).resolves.toEqual({
-      csv: 'date;test\n2026-09-10;SAUT',
-      rows: 1,
-    });
+    await expect(exportTrainingResults()).resolves.toEqual({ csv, rows: 1 });
   });
 });

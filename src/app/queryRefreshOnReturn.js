@@ -3,7 +3,10 @@ import { AppState } from 'react-native';
 
 import { AFTER_ACTION_CACHES } from '@/domains/refresh/afterAction';
 
-import { BOOT_REQUEST_BLOCKED_CODE, BOOT_REQUEST_NO_SESSION_CODE } from '@/services/bootRequestGuard';
+import {
+  BOOT_REQUEST_BLOCKED_CODE,
+  BOOT_REQUEST_NO_SESSION_CODE,
+} from '@/services/bootRequestGuard';
 import { reviveSharedSocket } from '@/services/socket/socketManager';
 
 import { createLogger } from '@/utils/logger/logger';

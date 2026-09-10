@@ -328,7 +328,7 @@ describe('Y05 — le retour au premier plan relit ce qui bouge, et rien d\'autre
     arreter();
   });
 
-  test('HORS-LIGNE-FANTOME 2 — apres ce refus, un ecran qui s ouvre INTERROGE encore le serveur', async () => {
+  test('HORS-LIGNE-FANTOME 2 — apres ce refus, un ecran INTERROGE encore', async () => {
     const bascules = [];
     online.subscribe((valeur) => bascules.push(valeur));
 
@@ -484,12 +484,12 @@ describe('Y05 — les regles de base', () => {
     ────────────────────────────────────────────────────────────────────────────
   */
 
-  test('HORS-LIGNE-FANTOME 1 — le refus de notre PROPRE garde-fou n est pas une coupure reseau', () => {
+  test('HORS-LIGNE-FANTOME 1 — notre garde-fou n est pas une coupure', () => {
     // La forme exacte que `bootRequestGuard.js` rejette (buildBlockedError).
     const refusDuGardeFou = {
       code: 'BOOT_REQUEST_BLOCKED',
       isBootRequestBlocked: true,
-      message: 'Appels de demarrage suspendus 5s apres une rafale d echecs reseau (/app/bootstrap).',
+      message: 'Appels de demarrage suspendus 5s (/app/bootstrap).',
       response: {
         data: {
           error: {
@@ -517,5 +517,4 @@ describe('Y05 — les regles de base', () => {
     expect(isNetworkOutageError({ message: 'Network Error' })).toBe(true);
     expect(isNetworkOutageError({ status: 0 })).toBe(true);
   });
-
 });
