@@ -122,9 +122,43 @@ const SEANCE = {
   conditions: {}, day: { documentId: 'jour-b' }, documentId: 'seance-9', results: [],
 };
 
+/*
+ * 🧨 UN TEST A UN SEUL ESSAI — la carte etait VIDE, et rien ne le disait.
+ *
+ * Le squat a charge fixe se fait UNE fois : une charge, un nombre de repetitions.
+ * Aucune de ses deux mesures ne se repete, donc les deux partaient dans « une fois »,
+ * que le parcours guide ne dessinait nulle part : la carte affichait « Essai 1/1 »
+ * sans une seule case, et le chiffre ne se saisissait que dans la section repliee de
+ * l ancienne page de test. Mesure le 2026-09-09 : 16 des 24 passages du programme
+ * « Football simple » et 6 des 33 tests du programme expert sont dans ce cas.
+ */
+const TEST_UN_ESSAI = {
+  code: 'SQ',
+  documentId: 'test-sq',
+  estimatedMinutes: 12,
+  measures: [
+    {
+      attempts: 1, key: 'charge_kg', label: 'Charge', moment: 'terrain',
+    },
+    {
+      attempts: 1, key: 'repetitions', label: 'Repetitions propres', moment: 'terrain',
+    },
+  ],
+  name: 'Squat a charge fixe',
+  why: [{ text: 'Mesurer la force des jambes', type: 'p' }],
+};
+
+const JOURNEE_UN_ESSAI = {
+  code: 'B',
+  documentId: 'jour-b',
+  tests: [TEST_UN_ESSAI, SUIVANT],
+  warmup: [{ text: 'RAMP', type: 'p' }],
+};
+
 /**
  * Monte l ecran sur un arret donne.
  * @param {object} [options] ce qu on fait varier
+ * @param {any} [options.journee] la journee dont on ouvre le premier test
  * @param {any} [options.navigation] la navigation moquee
  * @param {any} [options.seance] la seance affichee
  * @param {string} [options.step] l arret ouvert
@@ -134,9 +168,11 @@ const SEANCE = {
 /** @type {any[]} */
 const montes = [];
 
-const rendre = ({ navigation = {}, seance = SEANCE, step = 'prep' } = {}) => {
+const rendre = ({
+  journee = JOURNEE, navigation = {}, seance = SEANCE, step = 'prep',
+} = {}) => {
   mockEntrainement = {
-    enrollment: { program: { days: [JOURNEE] } },
+    enrollment: { program: { days: [journee] } },
     error: null,
     isLoading: false,
     refetch: () => {},
@@ -322,6 +358,46 @@ describe('UN ESSAI', () => {
     expect(arbre.root.findAll((n) => n.type === TouchableOpacity
       && n.props.accessibilityRole === 'switch')).toHaveLength(1);
     expect(textes(arbre)).toContain('training.guided.stopHere');
+  });
+});
+
+describe('🧨 UN TEST A UN SEUL ESSAI garde ses cases', () => {
+  it('dessine les mesures « une fois » du terrain sur la carte de l essai 1', () => {
+    // Sans ca, « Essai 1/1 » s affiche SANS UNE SEULE CASE : le joueur croit que
+    // l app est cassee, ou que le test n a rien a saisir.
+    const arbre = rendre({ journee: JOURNEE_UN_ESSAI, step: 'attempt-1' });
+    const vus = textes(arbre);
+
+    expect(vus).toContain('Charge');
+    expect(vus).toContain('Repetitions propres');
+  });
+
+  it('les COMPTE dans ce qui manque, donc le bouton refuse d avancer a vide', () => {
+    const arbre = rendre({ journee: JOURNEE_UN_ESSAI, step: 'attempt-1' });
+
+    expect(principal(arbre).props.disabled).toBe(true);
+    expect(textes(arbre)).toContain('training.guided.missing|{"count":2}');
+  });
+
+  it('la bascule « essai nul » les CIBLE, sinon elle ne marque rien du tout', () => {
+    const arbre = rendre({ journee: JOURNEE_UN_ESSAI, step: 'attempt-1' });
+    const bascule = arbre.root.findAll((n) => n.type === TouchableOpacity
+      && n.props.accessibilityRole === 'switch')[0];
+
+    act(() => { bascule.props.onPress(); });
+
+    expect(mockCarnet.record).toHaveBeenCalledWith(expect.objectContaining({
+      invalidatedBy: 'terrain', isValid: false, measureKey: 'charge_kg',
+    }));
+  });
+
+  it('⛔ mais un test A PLUSIEURS essais ne gagne AUCUNE case en plus', () => {
+    // La carte d essai ne doit pas se mettre a repeter les mesures « une fois »
+    // sur chaque essai : c est exactement ce que la famille sert a eviter.
+    const arbre = rendre({ step: 'attempt-1' });
+
+    expect(textes(arbre)).toContain('Hauteur');
+    expect(textes(arbre)).not.toContain('Images');
   });
 });
 

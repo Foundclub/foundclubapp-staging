@@ -20,7 +20,7 @@ import {
   ARRETS, arretsDuTest, dureeEchauffement, etatsDuRuban, gesteEnTroisLignes,
   lignesDeMiseEnPlace, mesuresQuiAttendentLaVideo, RECUP_PAR_DEFAUT, situer,
 } from '@/views/training/trainingParcours';
-import { mesuresParFamille } from '@/views/training/trainingTestModel';
+import { mesuresDeLaCarte, mesuresParFamille } from '@/views/training/trainingTestModel';
 
 import allerDansLOnglet from '@/navigation/allerDansLOnglet';
 import { RouteNames } from '@/navigation/routeNames';
@@ -177,7 +177,7 @@ function TrainingGuided({ navigation, route }) {
     const lignes = lignesDeLEssai(essai);
     const cibles = lignes.length
       ? lignes
-      : familles.parEssai.map((m) => ({
+      : mesuresDeLaCarte(familles).map((m) => ({
         attempt: essai, measureKey: m.key, side: m.sides ? 'left' : 'none',
       }));
     const devientNul = !lignes.some((row) => row.isValid === false);
@@ -288,7 +288,7 @@ function TrainingGuided({ navigation, route }) {
   const manquantes = useMemo(() => {
     if (courant?.type !== ARRETS.ATTEMPT) return 0;
     if (etatsDesEssais[courant.essai - 1] === 'void') return 0;
-    const attendues = familles.parEssai.filter((m) => m.moment === 'terrain');
+    const attendues = mesuresDeLaCarte(familles).filter((m) => m.moment === 'terrain');
     const saisies = lignesDeLEssai(courant.essai)
       .filter((row) => row.value != null || row.textValue).length;
     return Math.max(0, attendues.length - saisies);
@@ -545,11 +545,13 @@ function TrainingGuided({ navigation, route }) {
                     )}
                     {/* 🔎 SEULEMENT LES MESURES DU TERRAIN. Pendant un essai, on ne
                         montre que ce qui se prend MAINTENANT : une case qu'on ne
-                        peut pas remplir fait croire qu'on a raté quelque chose. */}
+                        peut pas remplir fait croire qu'on a raté quelque chose.
+                        🧨 Et sur un test à UN essai, ce sont les mesures « une fois »
+                        qui portent le chiffre : sans elles la carte est VIDE. */}
                     <TrainingAttemptCard
                       enCours
                       essai={courant.essai}
-                      measures={familles.parEssai.filter((m) => m.moment === 'terrain')}
+                      measures={mesuresDeLaCarte(familles).filter((m) => m.moment === 'terrain')}
                       nul={etatsDesEssais[courant.essai - 1] === 'void'}
                       onReason={() => {}}
                       onRecord={record}
