@@ -19,8 +19,59 @@ export const ParticipationFlowKind = Object.freeze({
 
 const getUserDocumentId = (user) => String(user?.documentId || '').trim();
 
-const getTeamBuckets = (event) => [event?.team, ...(Array.isArray(event?.invitedTeams) ? event.invitedTeams : [])]
-  .filter(Boolean);
+// MATCHRSVP (constat d Adel au banc du 2026-09-05, defaut n° 16) — LE CLIENT NE
+// LISAIT QUE DEUX REGISTRES D EQUIPES CONVIEES, LE SERVEUR EN LIT TROIS.
+//
+// 🧨 Le serveur empile `event.team`, `event.invitedTeams` ET
+// `event.teamAudiences[].team` (`event-audience.ts:433-435`), et son propre
+// commentaire dit pourquoi la 3e ligne existe : « une equipe que seul le nouveau
+// registre convie est ajoutee — sans quoi ses membres repondaient dans le vide ».
+// Ici, la 3e ligne manquait. Consequence mesuree, deux defauts pour un oubli :
+//   1. le joueur d une equipe conviee par ce seul registre n avait AUCUN bouton
+//      Present / Absent — il tombait sur « Participer », le chemin des gens
+//      EXTERIEURS — alors que le serveur, lui, repondait `viewerCanRespond: true` ;
+//   2. Y07 etait CONTOURNE dans l autre sens : faute d equipe d origine, un
+//      encadrant ne recevait meme plus sa phrase.
+// 🎯 Ca se voyait sur les MATCHS parce que ce sont eux qui convient par
+// audiences ; un entrainement porte son equipe dans `event.team`. Le type
+// d evenement n y est pour rien — c est le REGISTRE utilise.
+//
+// ⚠️ CE QUI RESTE DIVERGENT, ET C EST VOULU ICI : le serveur reduit AUSSI
+// l effectif d `event.team` quand une audience le cible. Ne pas le faire laisse
+// le client plus permissif sur ce chemin-la — exactement comme avant ce lot. Le
+// corriger RETIRERAIT des boutons a des gens qui en ont aujourd hui : c est un
+// autre sujet, et il se tranche avec une mesure en base, pas ici.
+const isConveningAudience = (audience) => (
+  String(audience?.status || 'ACCEPTED').trim().toUpperCase() === 'ACCEPTED'
+);
+
+/**
+ * L equipe telle que l audience la convie : entiere, ou reduite aux personnes
+ * citees. Miroir de `applyAudienceToTeam` (`event-audience.ts:293`) :
+ * l encadrement n est JAMAIS reduit — un ciblage designe des joueurs.
+ * @param {any} audience L audience lue sur l evenement.
+ * @returns {any} L equipe conviee, ou `null`.
+ */
+const getAudienceTeam = (audience) => {
+  const team = audience?.team;
+  if (!team) return null;
+  if (String(audience?.selectionMode || '').trim().toUpperCase() !== 'SELECTED_MEMBERS') {
+    return team;
+  }
+
+  return {
+    ...team,
+    players: Array.isArray(audience?.selectedMembers) ? audience.selectedMembers : [],
+  };
+};
+
+const getTeamBuckets = (event) => [
+  event?.team,
+  ...(Array.isArray(event?.invitedTeams) ? event.invitedTeams : []),
+  ...(Array.isArray(event?.teamAudiences) ? event.teamAudiences : [])
+    .filter(isConveningAudience)
+    .map(getAudienceTeam),
+].filter(Boolean);
 
 const getEntityIdentifiers = (entity) => [
   entity?.documentId,
