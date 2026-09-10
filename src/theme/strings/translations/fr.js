@@ -345,6 +345,11 @@ export default {
       editInfo: 'Modifier',
       join: "C'est mon club !",
       joinAsMyClub: "C'est mon club !",
+      // PARENT P2 -- la porte du parent. Le prenom n'apparait QUE s'il n'y a
+      // QU'UN enfant concerne : avec deux, en nommer un serait faux, la
+      // demande ne porte pas l'enfant.
+      joinForChild: 'Demander à rejoindre au nom de {{firstname}}',
+      joinForChildren: 'Demander à rejoindre pour mes enfants',
       leave: 'Quitter le club',
       manageJoinRequests: 'Voir les demandes d\'affiliation',
       playAtClub: 'Je joue dans ce club',
@@ -458,6 +463,11 @@ export default {
         description: 'Les dirigeants du club ont reçu ton intérêt et pourront te répondre.'
           + ' Tu n’es rattaché·e à rien pour le moment.',
       },
+    },
+    // E17 -- on EXPLIQUE l'absence de la porte au lieu de la faire
+    // disparaitre sans un mot.
+    hints: {
+      teenAsksAlone: 'À partir de 13 ans, ton enfant fait sa demande lui-même depuis son propre compte.',
     },
     playerNoTeamRequest: {
       clubLabel: 'Club que tu attends',

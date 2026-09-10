@@ -175,6 +175,21 @@ jest.mock('@/services/club/clubService', () => ({
   updateClub: jest.fn(),
 }));
 
+// PARENT P2 — la doublure OBLIGATOIRE, et sa raison est structurelle :
+// `declaredChildQueries` tire le service, qui tire `services/client`, qui
+// appelle `assertRuntimeEndpointsReady()` AU CHARGEMENT. `.env` etant
+// gitignore donc absent de tout worktree, sans cette doublure la SUITE
+// ENTIERE meurt avant le premier temoin — et le compteur `Tests:` reste
+// VERT pendant ce temps, seul `Test Suites:` le dit. Meme motif que les
+// doublures de services juste au-dessus.
+jest.mock('@/services/declaredChild/declaredChildQueries', () => ({
+  useGetMyDeclaredChildren: () => ({
+    data: mockEnfantsDeclares,
+    error: undefined,
+    isLoading: false,
+  }),
+}));
+
 jest.mock('@/services/clubInterestRequest/clubInterestRequestQueries', () => ({
   useGetMyClubInterestRequests: () => ({ data: { data: [] }, refetch: jest.fn() }),
 }));
@@ -379,6 +394,9 @@ const texteDeLElement = (element) => {
   return texteDeLElement(element.props?.children);
 };
 
+/** @type {any} */
+let mockEnfantsDeclares = [];
+
 /** @type {any[]} */
 const arbresMontes = [];
 
@@ -428,6 +446,7 @@ const derniereFeuilleDuClubSansEquipe = () => [...mockFeuillesRendues]
 
 beforeEach(() => {
   jest.clearAllMocks();
+  mockEnfantsDeclares = [];
   mockFeuillesRendues.length = 0;
   mockHasClubAccess.mockReturnValue(false);
   jest.spyOn(Alert, 'alert').mockImplementation(() => {});
@@ -531,5 +550,62 @@ describe('S02 — un club AVEC equipe garde exactement ses boutons d\'avant', ()
     const arbre = monter();
 
     expect(pressableAvecTexte(arbre, 'Je fais partie de ce club')).toBeDefined();
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 👨‍👧 PARENT P2 — « DEMANDER A REJOINDRE AU NOM DE MON ENFANT » (ecran 10).
+//
+// 👁️ CES TEMOINS LISENT L ECRAN. La matrice de decision est prouvee a part
+// (`clubDetailsActionMatrix.test.js`), mais savoir que la REGLE est bonne ne dit
+// pas que le bouton ARRIVE a l ecran : c est la lecon payee le 08/09 sur ce
+// meme chantier (un temoin vert qui ne lisait pas le rendu).
+// ─────────────────────────────────────────────────────────────────────────────
+describe('PARENT P2 — la porte du parent sur la fiche club', () => {
+  it('P2/10 MOINS DE 13 ANS : le bouton est la, et il NOMME l enfant', () => {
+    mockEnfantsDeclares = [{ age: 9, documentId: 'enf-1', firstname: 'Lea' }];
+
+    const arbre = monter();
+
+    expect(pressableAvecTexte(arbre, 'Demander à rejoindre au nom de Lea')).toBeDefined();
+  });
+
+  it('P2/10 DEUX enfants de moins de 13 ans : le bouton n en nomme AUCUN', () => {
+    // La demande d interet ne porte pas l enfant (le serveur ne sait pas le
+    // representer) : nommer l un des deux serait faux.
+    mockEnfantsDeclares = [
+      { age: 9, documentId: 'enf-1', firstname: 'Lea' },
+      { age: 6, documentId: 'enf-2', firstname: 'Tom' },
+    ];
+
+    const arbre = monter();
+
+    expect(pressableAvecTexte(arbre, 'Demander à rejoindre pour mes enfants')).toBeDefined();
+    expect(pressableAvecTexte(arbre, 'Demander à rejoindre au nom de Lea')).toBeUndefined();
+  });
+
+  it('P2/10 13 A 17 ANS : plus de bouton, mais l ecran EXPLIQUE pourquoi', () => {
+    mockEnfantsDeclares = [{ age: 15, documentId: 'enf-1', firstname: 'Lea' }];
+
+    const arbre = monter();
+
+    expect(pressableAvecTexte(arbre, 'Demander à rejoindre au nom de Lea')).toBeUndefined();
+    expect(texteDe(arbre.root)).toContain('ton enfant fait sa demande lui-même');
+  });
+
+  it('P2/10 18 ANS ET PLUS : ni bouton ni phrase -- le lien parental est eteint', () => {
+    mockEnfantsDeclares = [{ age: 18, documentId: 'enf-1', firstname: 'Lea' }];
+
+    const arbre = monter();
+
+    expect(pressableAvecTexte(arbre, 'Demander à rejoindre au nom de Lea')).toBeUndefined();
+    expect(texteDe(arbre.root)).not.toContain('ton enfant fait sa demande lui-même');
+  });
+
+  it('P2/10 sans aucun enfant declare, la fiche club ne change PAS', () => {
+    const arbre = monter();
+
+    expect(texteDe(arbre.root)).not.toContain('Demander à rejoindre au nom de');
+    expect(texteDe(arbre.root)).not.toContain('ton enfant fait sa demande lui-même');
   });
 });

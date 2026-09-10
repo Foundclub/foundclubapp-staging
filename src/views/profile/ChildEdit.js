@@ -98,7 +98,7 @@ function ChildEdit() {
     // ① Les trois obligatoires. En modification, la date PEUT rester vide : le
     //    serveur garde la sienne (il ne nous l'a jamais rendue).
     if (!firstname.trim() || !lastname.trim() || (!estUneModification && !naissance)) {
-      setErreur(t('myChildren.form.errors.required', ''));
+      setErreur(t('myChildren.form.errors.required', 'Le prénom, le nom et la date de naissance sont obligatoires.'));
       return;
     }
 
@@ -111,13 +111,13 @@ function ChildEdit() {
         && date.getUTCMonth() === m - 1
         && date.getUTCDate() === j;
       if (!existe) {
-        setErreur(t('myChildren.form.errors.invalidDate', ''));
+        setErreur(t('myChildren.form.errors.invalidDate', 'Cette date n’existe pas.'));
         return;
       }
 
       // ③ 🧒 LE PALIER 13, DIT AVANT L'ALLER-RETOUR.
       if (!isBirthdateUnderParentAccountAge(naissance)) {
-        setErreur(t('myChildren.form.errors.tooOld', ''));
+        setErreur(t('myChildren.form.errors.tooOld', 'Une fiche enfant est réservée aux moins de 13 ans.'));
         return;
       }
     }
@@ -130,7 +130,7 @@ function ChildEdit() {
       position,
     });
 
-    const surErreur = () => setErreur(t('myChildren.form.errors.save', ''));
+    const surErreur = () => setErreur(t('myChildren.form.errors.save', 'Impossible d’enregistrer cette fiche pour le moment.'));
     const surSucces = () => navigation.goBack();
 
     if (estUneModification) {
@@ -180,7 +180,7 @@ function ChildEdit() {
               : t('myChildren.form.addTitle', 'Ajouter un enfant')}
           </Text>
           <Text style={[Fonts.p3, Fonts.neutral200]}>
-            {t('myChildren.form.hint', '')}
+            {t('myChildren.form.hint', 'Trois informations suffisent.')}
           </Text>
         </View>
 

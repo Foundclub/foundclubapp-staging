@@ -84,7 +84,7 @@ function MyChildren() {
     const prenom = enfant?.firstname || '';
     Alert.alert(
       t('myChildren.confirmDelete.title', 'Supprimer cette fiche ?', { firstname: prenom }),
-      t('myChildren.confirmDelete.message', '', { firstname: prenom }),
+      t('myChildren.confirmDelete.message', 'Cette fiche sera effacée.', { firstname: prenom }),
       [
         { style: 'cancel', text: t('myChildren.confirmDelete.cancel', 'Annuler') },
         {
@@ -160,7 +160,7 @@ function MyChildren() {
                   singulier (piège maison, « cle_plural » est morte depuis
                   i18next 21). */}
               <Text style={[Fonts.p3, Fonts.neutral200]}>
-                {t('myChildren.screen.count', '', { count: enfants.length })}
+                {t('myChildren.screen.count', '{{count}} enfants déclarés', { count: enfants.length })}
               </Text>
 
               {enfants.map((enfant) => {
@@ -184,7 +184,7 @@ function MyChildren() {
                         </Text>
                         <Text style={[Fonts.p3, Fonts.neutral200]}>
                           {aUnAge
-                            ? t('myChildren.screen.years', '', { count: enfant.age })
+                            ? t('myChildren.screen.years', '{{count}} ans', { count: enfant.age })
                             : ''}
                           {aUnAge ? ' · ' : ''}
                           {enfant?.team?.name
@@ -197,7 +197,7 @@ function MyChildren() {
                     {pouvoir === 'full' ? (
                       <TouchableOpacity onPress={() => chercherUnClub(enfant)}>
                         <Text style={[Fonts.p2Bold, { color: Colors.primary300 }]}>
-                          {t('myChildren.actions.searchClub', '', { firstname: prenom })}
+                          {t('myChildren.actions.searchClub', 'Chercher un club pour {{firstname}}', { firstname: prenom })}
                         </Text>
                       </TouchableOpacity>
                     ) : null}
@@ -205,12 +205,12 @@ function MyChildren() {
                     {/* On EXPLIQUE l'absence du bouton, on ne la subit pas. */}
                     {pouvoir === 'view' ? (
                       <Text style={[Fonts.p3, Fonts.neutral200]}>
-                        {t('myChildren.screen.tooOldHint', '', { firstname: prenom })}
+                        {t('myChildren.screen.tooOldHint', 'À partir de 13 ans, {{firstname}} fait ses demandes lui-même.', { firstname: prenom })}
                       </Text>
                     ) : null}
                     {pouvoir === 'none' ? (
                       <Text style={[Fonts.p3, Fonts.neutral200]}>
-                        {t('myChildren.screen.adultHint', '', { firstname: prenom })}
+                        {t('myChildren.screen.adultHint', '{{firstname}} est majeur : il gère son compte seul.', { firstname: prenom })}
                       </Text>
                     ) : null}
 

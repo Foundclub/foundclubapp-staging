@@ -203,6 +203,17 @@ jest.mock('@/services/club/clubService', () => ({
   updateClub: jest.fn(),
 }));
 
+// PARENT P2 — la doublure OBLIGATOIRE, et sa raison est structurelle :
+// `declaredChildQueries` tire le service, qui tire `services/client`, qui
+// appelle `assertRuntimeEndpointsReady()` AU CHARGEMENT. `.env` etant
+// gitignore donc absent de tout worktree, sans cette doublure la SUITE
+// ENTIERE meurt avant le premier temoin — et le compteur `Tests:` reste
+// VERT pendant ce temps, seul `Test Suites:` le dit. Meme motif que les
+// doublures de services juste au-dessus.
+jest.mock('@/services/declaredChild/declaredChildQueries', () => ({
+  useGetMyDeclaredChildren: () => ({ data: [], error: undefined, isLoading: false }),
+}));
+
 jest.mock('@/services/clubInterestRequest/clubInterestRequestQueries', () => ({
   useGetMyClubInterestRequests: () => ({ data: [] }),
 }));
