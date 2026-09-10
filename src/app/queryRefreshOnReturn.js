@@ -3,6 +3,7 @@ import { AppState } from 'react-native';
 
 import { AFTER_ACTION_CACHES } from '@/domains/refresh/afterAction';
 
+import { BOOT_REQUEST_BLOCKED_CODE, BOOT_REQUEST_NO_SESSION_CODE } from '@/services/bootRequestGuard';
 import { reviveSharedSocket } from '@/services/socket/socketManager';
 
 import { createLogger } from '@/utils/logger/logger';
@@ -153,6 +154,25 @@ export const refreshOnReturn = (queryClient, reason = 'foreground', now = Date.n
   return true;
 };
 
+/** Les refus que l app se prononce a elle-meme, sans jamais sortir sur le reseau. */
+const CODES_DE_REFUS_LOCAL = [BOOT_REQUEST_BLOCKED_CODE, BOOT_REQUEST_NO_SESSION_CODE];
+
+/**
+ * Ce rejet vient-il de NOTRE garde-fou plutot que du reseau ?
+ *
+ * 🪤 Le code se cherche a DEUX endroits, et les deux sont reels : le rejet brut
+ * le porte a la racine, et l intercepteur de reponse le deballe depuis
+ * `response.data.error` — c est cette seconde forme que les couches du dessus
+ * voient. En lire une seule laisserait la moitie des cas passer.
+ * @param {any} error L erreur remontee par le cache de requetes.
+ * @returns {boolean} Vrai si c est un refus local, pas une coupure.
+ */
+const estUnRefusDeNotreGardeFou = (error) => {
+  if (error?.isBootRequestBlocked === true) return true;
+  const code = error?.code ?? error?.response?.data?.error?.code ?? error?.error?.code;
+  return CODES_DE_REFUS_LOCAL.includes(code);
+};
+
 /**
  * L'erreur ressemble-t-elle a une coupure reseau ?
  *
@@ -166,11 +186,32 @@ export const refreshOnReturn = (queryClient, reason = 'foreground', now = Date.n
  * compte comme hors ligne. La consequence est bornee (les requetes patientent au
  * lieu d'echouer, et la sonde ci-dessous les relance toute seule). Voie de
  * sortie : installer `@react-native-community/netinfo`, geste a GO d'Adel (R4).
+ *
+ * 🧨 ET L EXCEPTION QUI A COUTE UNE SOIREE, mesuree en PRODUCTION le 2026-09-10 :
+ * NOTRE PROPRE GARDE-FOU ne compte pas comme une coupure. `bootRequestGuard`
+ * rejette `sans reseau` quand il ouvre son circuit — donc sans code HTTP — et ce
+ * rejet arrivait ici deguise en panne de reseau. La suite etait automatique :
+ * `setOnline(false)`, TOUTES les requetes de l app en pause, et chaque ecran
+ * affichant son etat VIDE (une requete en pause rend `data: undefined`,
+ * `error: null`, `isLoading: false` — jamais une erreur).
+ *
+ * 🩸 Ce qu Adel a vu : « aucun entrainement n est publie » alors que deux
+ * programmes etaient en base et que la requete n etait JAMAIS PARTIE. Zero appel
+ * a `/api/training-programs` en 90 minutes de journaux serveur.
+ *
+ * 🔁 Et c etait une BOUCLE : le circuit se rouvre, la rafale repart, il se
+ * referme, on se redeclare hors ligne. Sans cette condition, l app pouvait rester
+ * sourde indefiniment.
+ *
+ * ⛔ Ne jamais elargir cette exception a un code HTTP reel : un 429 ou un 503 SONT
+ * des reponses du serveur, et ils ne doivent pas non plus declarer une coupure —
+ * ils ne le font deja pas, puisqu ils portent un status.
  * @param {any} error L'erreur remontee par le cache de requetes.
  * @returns {boolean} Vrai si aucune reponse HTTP n'a ete recue.
  */
 export const isNetworkOutageError = (error) => {
   if (!error) return false;
+  if (estUnRefusDeNotreGardeFou(error)) return false;
   const rawStatus = error?.status ?? error?.response?.status ?? error?.error?.status;
   const parsedStatus = Number(rawStatus);
   return !(Number.isFinite(parsedStatus) && parsedStatus > 0);

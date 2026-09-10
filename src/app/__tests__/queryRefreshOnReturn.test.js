@@ -328,6 +328,37 @@ describe('Y05 — le retour au premier plan relit ce qui bouge, et rien d\'autre
     arreter();
   });
 
+  test('HORS-LIGNE-FANTOME 2 — apres ce refus, un ecran qui s ouvre INTERROGE encore le serveur', async () => {
+    const bascules = [];
+    online.subscribe((valeur) => bascules.push(valeur));
+
+    // Le garde-fou rejette une requete de demarrage, sans reseau.
+    const refuse = new QueryObserver(queryClient, {
+      queryFn: jest.fn().mockRejectedValue({
+        code: 'BOOT_REQUEST_BLOCKED',
+        isBootRequestBlocked: true,
+        response: { data: { error: { code: 'BOOT_REQUEST_BLOCKED', status: 0 } } },
+      }),
+      queryKey: ['app', 'bootstrap'],
+      retry: false,
+    });
+    const arreterRefus = refuse.subscribe(() => {});
+    await jest.advanceTimersByTimeAsync(50);
+
+    // 1. L app ne s est PAS declaree hors ligne.
+    expect(bascules).toEqual([]);
+    expect(online.isOnline()).toBe(true);
+
+    // 2. Et la consequence qui compte pour Adel : l ecran suivant demande vraiment
+    //    ses donnees. C est CE compteur qui etait a zero en production.
+    const catalogue = mountQuery(queryClient, ['training', 'catalog']);
+    await jest.advanceTimersByTimeAsync(50);
+    expect(catalogue.queryFn).toHaveBeenCalledTimes(1);
+
+    catalogue.unsubscribe();
+    arreterRefus();
+  });
+
   test('debrancher le pont arrete tout', async () => {
     const requests = mountQuery(queryClient, ['requestsHub']);
     await jest.runOnlyPendingTimersAsync();
@@ -425,4 +456,66 @@ describe('Y05 — les regles de base', () => {
     expect(isNetworkOutageError({ response: { status: 500 } })).toBe(false);
     expect(isNetworkOutageError(null)).toBe(false);
   });
+
+  /*
+    ────────────────────────────────────────────────────────────────────────────
+    🧨 « L APP SE CROIT HORS LIGNE » — mesure en PRODUCTION le 2026-09-10, sur la
+    version 2.6.40, telephone d Adel.
+
+    La chaine, bout en bout :
+      1. l enregistrement des notifications part en rafale : 9 appels en 11 s,
+         9 refus 429 lus dans les journaux du serveur ;
+      2. `bootRequestGuard` compte le 429 comme un echec (isCountableFailure) et
+         OUVRE son circuit apres 5 echecs en 10 s ;
+      3. il rejette alors SANS RESEAU, et son rejet range son code dans
+         `response.data.error.status`, PAS dans `response.status` ;
+      4. `isNetworkOutageError` n y trouve donc aucun code HTTP et repond
+         « coupure reseau » ⇒ `onlineManager.setOnline(false)` ;
+      5. TOUTES les requetes de l app passent en pause. Une requete en pause rend
+         `data: undefined`, `error: null`, `isLoading: false` — l ecran affiche
+         donc son etat VIDE, jamais son etat d erreur.
+
+    🩸 Ce qu Adel a vu : « Choisir un entrainement » annoncait « aucun entrainement
+    n est publie » alors que DEUX programmes etaient en base et que la requete
+    n etait JAMAIS PARTIE. Verifie dans les journaux serveur : zero appel a
+    `/api/training-programs` en 90 minutes.
+
+    ⛔ C est le pire mode de panne possible : un ecran vide a l air NORMAL.
+    ────────────────────────────────────────────────────────────────────────────
+  */
+
+  test('HORS-LIGNE-FANTOME 1 — le refus de notre PROPRE garde-fou n est pas une coupure reseau', () => {
+    // La forme exacte que `bootRequestGuard.js` rejette (buildBlockedError).
+    const refusDuGardeFou = {
+      code: 'BOOT_REQUEST_BLOCKED',
+      isBootRequestBlocked: true,
+      message: 'Appels de demarrage suspendus 5s apres une rafale d echecs reseau (/app/bootstrap).',
+      response: {
+        data: {
+          error: {
+            code: 'BOOT_REQUEST_BLOCKED',
+            details: { retryAfterSeconds: 5 },
+            message: 'Appels de demarrage suspendus 5s.',
+            name: 'BootRequestBlockedError',
+            status: 0,
+          },
+        },
+      },
+    };
+
+    expect(isNetworkOutageError(refusDuGardeFou)).toBe(false);
+
+    // Et la MEME erreur une fois deballee par l intercepteur de reponse : c est
+    // elle que les couches du dessus voient reellement (piege connu du projet,
+    // « l erreur qui arrive en haut n est PAS celle d axios »).
+    expect(isNetworkOutageError(refusDuGardeFou.response.data.error)).toBe(false);
+
+    // Le refus « pas de session » vient du meme garde-fou et suit la meme regle.
+    expect(isNetworkOutageError({ code: 'BOOT_REQUEST_NO_SESSION', status: 0 })).toBe(false);
+
+    // ⛔ CE QUI NE DOIT PAS BOUGER : une VRAIE coupure reste une coupure.
+    expect(isNetworkOutageError({ message: 'Network Error' })).toBe(true);
+    expect(isNetworkOutageError({ status: 0 })).toBe(true);
+  });
+
 });
