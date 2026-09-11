@@ -161,7 +161,16 @@ describe('les deux boutons REMPLACENT la fleche de retour', () => {
         .find((n) => typeof n.props.onPress === 'function').props.onPress();
     });
 
-    expect(navigate).toHaveBeenCalledWith('TrainingSessions');
+    // NAVMORTE (2026-09-11, constate sur iPhone, TestFlight 2.6.41) : l ecran vit sur
+    // la pile RACINE. `navigate('TrainingSessions')` en direct n y est traite par
+    // AUCUN navigateur -- le bouton ne faisait RIEN. Ce temoin affirmait l appel
+    // direct, donc il restait vert en figeant la panne. La forme imbriquee passe par
+    // l onglet d accueil (src/navigation/allerDansLOnglet.js).
+    expect(navigate).toHaveBeenCalledWith('HomeTab', {
+      params: { params: undefined, screen: 'TrainingSessions' },
+      screen: 'Search',
+    });
+    expect(navigate).not.toHaveBeenCalledWith('TrainingSessions');
   });
 
   it('le discret ramene a l accueil', () => {
@@ -173,7 +182,12 @@ describe('les deux boutons REMPLACENT la fleche de retour', () => {
         .find((n) => typeof n.props.onPress === 'function').props.onPress();
     });
 
-    expect(navigate).toHaveBeenCalledWith('SearchHome');
+    // Meme panne, meme remede : « Plus tard » ne faisait rien non plus.
+    expect(navigate).toHaveBeenCalledWith('HomeTab', {
+      params: { params: undefined, screen: 'SearchHome' },
+      screen: 'Search',
+    });
+    expect(navigate).not.toHaveBeenCalledWith('SearchHome');
   });
 });
 

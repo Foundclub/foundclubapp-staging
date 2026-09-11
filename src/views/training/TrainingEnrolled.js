@@ -10,6 +10,7 @@ import ClubCardSurface from '@/components/molecules/clubCard/ClubCardSurface';
 import { formatSessionDate } from '@/components/organisms/training/TrainingSessionRow';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
+import allerDansLOnglet from '@/navigation/allerDansLOnglet';
 import { RouteNames } from '@/navigation/routeNames';
 
 /**
@@ -128,13 +129,18 @@ function TrainingEnrolled({ navigation, route = undefined }) {
           </ClubCardSurface>
 
           <View style={[Spaces.gap[8], { marginTop: 'auto' }]}>
+            {/*
+              NAVMORTE (2026-09-11) : cet ecran vit sur la pile RACINE. Un
+              navigate direct vers un ecran d onglet n y est traite par aucun
+              navigateur -- les deux boutons ne faisaient RIEN sur iPhone.
+            */}
             <Button
-              onPress={() => navigation.navigate(RouteNames.TrainingSessions)}
+              onPress={() => allerDansLOnglet(navigation, RouteNames.TrainingSessions)}
               title={t('training.enrolled.seeSessions')}
               variant="Primary"
             />
             <Button
-              onPress={() => navigation.navigate(RouteNames.SearchHome)}
+              onPress={() => allerDansLOnglet(navigation, RouteNames.SearchHome)}
               title={t('training.enrolled.later')}
               variant="Ghost"
             />
