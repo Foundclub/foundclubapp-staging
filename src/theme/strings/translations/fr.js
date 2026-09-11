@@ -464,6 +464,23 @@ export default {
           + ' Tu n’es rattaché·e à rien pour le moment.',
       },
     },
+    // 👶 PARENT P3 — une place demandee POUR un enfant, dans une equipe du club.
+    childInterest: {
+      alreadyPlaced: 'Ton enfant a déjà une équipe.',
+      alreadySentShort: 'Demande envoyée',
+      cardHint: 'Les responsables accepteront ou refuseront la demande.',
+      confirmDescription: 'Les responsables de {{teamName}} verront son prénom et son âge,'
+        + ' et pourront accepter ou refuser.',
+      confirmTitle: 'Demander une place pour {{firstname}} ?',
+      pickerDescription: 'Choisis l’équipe. Ses responsables verront le prénom et l’âge'
+        + ' de ton enfant, et pourront accepter ou refuser.',
+      pickerTitle: 'Une place pour ton enfant',
+      pickerTitleNamed: 'Une place pour {{firstname}}',
+      sendAction: 'Demander une place',
+      sentDescription: 'Les responsables de {{teamName}} vont examiner la demande pour'
+        + ' {{firstname}}. Tu recevras leur réponse.',
+      sentTitle: 'Demande envoyée',
+    },
     // E17 -- on EXPLIQUE l'absence de la porte au lieu de la faire
     // disparaitre sans un mot.
     hints: {

@@ -69,8 +69,12 @@ import { buildPublicWebUrl } from '@/utils/shareLinks';
 
 import {
   canCreateTeamInClub,
+  childIdsWithPendingRequest,
   countChildrenByAgeBand,
+  eligibleChildrenForTeamRequest,
   floatingActionsScrollPadding,
+  pendingChildRequestKey,
+  pendingChildRequestKeys,
   resolveClubDetailsActionMatrix,
   resolveEmptyClubClaimGesture,
 } from './clubDetailsActionMatrix';
@@ -215,6 +219,13 @@ function ClubDetails({ navigation, route }) {
   const [clubPartnerForm, setClubPartnerForm] = useState(() => buildDefaultClubPartnerForm(userData));
   const [isClubPartnerRequestVisible, setIsClubPartnerRequestVisible] = useState(false);
   const [isClubInterestTeamPickerVisible, setIsClubInterestTeamPickerVisible] = useState(false);
+  // 👶 PARENT P3 — la feuille d'interet sert aussi a demander une place POUR un
+  // enfant : `modeDemandeEnfant` dit qu'elle a ete ouverte par le bouton du
+  // parent, `enfantPourDemande` est l'enfant choisi.
+  const [modeDemandeEnfant, setModeDemandeEnfant] = useState(false);
+  const [enfantPourDemande, setEnfantPourDemande] = useState(
+    /** @type {{ documentId: string, firstname: string } | null} */ (null),
+  );
   const [isPlayerTeamPickerVisible, setIsPlayerTeamPickerVisible] = useState(false);
   // D95 — « ce club n'a pas encore d'equipe ». Les deux champs de contact sont
   // FACULTATIFS : la demande part avec la seule identite du joueur si on les laisse
@@ -1331,8 +1342,11 @@ function ClubDetails({ navigation, route }) {
   // clubs qui ont une equipe (`clubTeamIds.length > 0`) ; or la 2e porte vit
   // justement sur les clubs qui n'en ont AUCUNE. Le serveur filtre deja par
   // club (`/club-interest-requests/mine?clubId=`), il n'y a rien a ajouter.
+  // 👶 PARENT P3 — `includeChildRequests` : la feuille doit savoir POUR QUI une
+  // demande de place est deja partie. Ces lignes restent HORS des deux portes
+  // d'avant (voir `pendingClubInterestTeamIds`).
   const myClubInterestRequestsQuery = useGetMyClubInterestRequests(
-    { clubId },
+    { clubId, includeChildRequests: true },
     {
       enabled: Boolean(isAuthenticated && clubId && !isUserAlreadyAttachedToViewedClub),
       retry: 0,
@@ -1344,6 +1358,8 @@ function ClubDetails({ navigation, route }) {
 
     (myClubInterestRequestsQuery?.data?.data || []).forEach((request) => {
       const requestTeamId = getTeamIdentity(request?.team);
+      // 👶 PARENT P3 — une demande POUR UN ENFANT n'est pas l'interet du parent.
+      if (request?.declaredChild) return;
       if (request?.status === 'pending' && requestTeamId && clubTeamIdsSet.has(requestTeamId)) {
         pendingIds.add(requestTeamId);
       }
@@ -1362,7 +1378,11 @@ function ClubDetails({ navigation, route }) {
   );
 
   const createClubInterestRequestMutation = useMutation({
-    mutationFn: ({ teamId }) => createClubInterestRequest({ team: teamId }),
+    // 👶 PARENT P3 — `declaredChildId` : la meme porte envoie une place POUR un enfant.
+    mutationFn: ({ declaredChildId, teamId }) => createClubInterestRequest({
+      team: teamId,
+      ...(declaredChildId ? { declaredChild: declaredChildId } : {}),
+    }),
     onError: (mutationError) => {
       const rawMessage = mutationError?.response?.data?.error?.message
         || mutationError?.response?.data?.message
@@ -1382,7 +1402,12 @@ function ClubDetails({ navigation, route }) {
       );
       const isDuplicate = normalizedMessage.includes('already pending')
         || normalizedMessage.includes('deja');
-      const isAlreadyMember = normalizedMessage.includes('already belongs');
+      // 👶 PARENT P3 — deux refus qui n'existent que pour une place demandee POUR un
+      // enfant, et que « Tu es deja rattache a ce club » dirait de travers.
+      const isChildAlreadyPlaced = normalizedMessage.includes('already belongs to a team');
+      const isChildTooOld = normalizedMessage.includes('reserved to children under');
+      const isAlreadyMember = !isChildAlreadyPlaced
+        && normalizedMessage.includes('already belongs');
       const isForbidden = statusCode === 403 || normalizedMessage.includes('forbidden');
       const isTeamNotFound = statusCode === 404
         || normalizedMessage.includes('team not found')
@@ -1394,6 +1419,16 @@ function ClubDetails({ navigation, route }) {
       );
       if (isDuplicate) {
         alertMessage = t('clubDetails.clubInterest.alreadySent', 'Intérêt déjà envoyé.');
+      } else if (isChildAlreadyPlaced) {
+        alertMessage = t(
+          'clubDetails.childInterest.alreadyPlaced',
+          'Ton enfant a déjà une équipe.',
+        );
+      } else if (isChildTooOld) {
+        alertMessage = t(
+          'clubDetails.hints.teenAsksAlone',
+          'À partir de 13 ans, ton enfant fait sa demande lui-même depuis son propre compte.',
+        );
       } else if (isAlreadyMember) {
         alertMessage = t(
           'clubDetails.clubInterest.alreadyMember',
@@ -1423,6 +1458,23 @@ function ClubDetails({ navigation, route }) {
 
       myClubInterestRequestsQuery.refetch();
       setIsClubInterestTeamPickerVisible(false);
+      setModeDemandeEnfant(false);
+      setEnfantPourDemande(null);
+
+      // 👶 PARENT P3 — la place demandee POUR un enfant le dit, et dit la suite.
+      if (variables?.declaredChildId) {
+        Alert.alert(
+          t('clubDetails.childInterest.sentTitle', 'Demande envoyée'),
+          t('clubDetails.childInterest.sentDescription', {
+            defaultValue: 'Les responsables de {{teamName}} vont examiner la demande'
+              + ' pour {{firstname}}. Tu recevras leur réponse.',
+            firstname: variables?.childFirstname || '',
+            teamName: selectedTeamName,
+          }),
+          [{ text: t('common.actions.ok', 'OK') }],
+        );
+        return;
+      }
 
       Alert.alert(
         t('clubDetails.clubInterest.sentTitle', 'Intérêt envoyé'),
@@ -1563,19 +1615,28 @@ function ClubDetails({ navigation, route }) {
     [mesEnfantsBruts],
   );
 
-  // Le prenom ne sert qu au LIBELLE, et seulement s il n y a qu un seul enfant
-  // concerne : la demande d interet, elle, ne porte pas l enfant (le serveur ne
-  // sait pas le representer -- question remontee a Adel).
-  const prenomEnfantUnique = useMemo(() => {
-    const fiches = Array.isArray(mesEnfantsBruts) ? mesEnfantsBruts : [];
-    // Un seul enfant concerne ⇒ on peut le nommer. Deux ou plus ⇒ en nommer un
-    // serait faux, la demande ne porte pas l enfant.
-    if (childrenUnder13Count !== 1) return '';
-    const eligible = fiches.find(
-      (enfant) => countChildrenByAgeBand([enfant]).childrenUnder13Count === 1,
-    );
-    return String(eligible?.firstname || '').trim();
-  }, [childrenUnder13Count, mesEnfantsBruts]);
+  // 👶 PARENT P3 (11/09) — LA DEMANDE PORTE L ENFANT (decision d Adel « 1- a »).
+  // `enfantsAPlacer` : les enfants de moins de 13 ans qui n'ont pas encore
+  // d'equipe, avec leur PRENOM et leur identifiant — rien de plus.
+  const enfantsAPlacer = useMemo(
+    () => eligibleChildrenForTeamRequest(mesEnfantsBruts),
+    [mesEnfantsBruts],
+  );
+  const demandesEnfantEnAttente = useMemo(
+    () => pendingChildRequestKeys(myClubInterestRequestsQuery?.data?.data),
+    [myClubInterestRequestsQuery?.data?.data],
+  );
+  const enfantsAvecDemande = useMemo(
+    () => childIdsWithPendingRequest(myClubInterestRequestsQuery?.data?.data),
+    [myClubInterestRequestsQuery?.data?.data],
+  );
+  // Chaque enfant a placer a deja une demande en cours : la porte du parent s'efface.
+  const toutesLesDemandesEnfantSontParties = enfantsAPlacer.length > 0
+    && enfantsAPlacer.every((enfant) => enfantsAvecDemande.has(enfant.documentId));
+
+  // Le prenom ne sert au LIBELLE que s'il n'y a qu'UN enfant a placer : avec deux
+  // ou plus, la feuille demande « pour qui ».
+  const prenomEnfantUnique = enfantsAPlacer.length === 1 ? enfantsAPlacer[0].firstname : '';
 
   const {
     showChildInterestAction,
@@ -1600,14 +1661,14 @@ function ClubDetails({ navigation, route }) {
     canPlayerSignalClubTeam,
     canPlayerSignalMissingTeam,
     canUseClubPartneringFlow,
+    childrenAwaitingTeamCount: enfantsAPlacer.length,
     childrenUnder13Count,
     clubHasTeams: clubTeamIds.length > 0,
     hasParentMultisportClub,
-    // 🖥️ Trouve sur l emulateur : mon bouton envoie la MEME demande que la
-    // porte d interet existante. Quand elle est deja partie, l autre le dit —
-    // afficher un 3e « Demande en attente » identique ne faisait qu empiler un
-    // bouton flottant de plus PAR-DESSUS les informations du club.
-    hasPendingChildInterest: hasPendingClubArrivalInterest,
+    // 👶 PARENT P3 — la porte du parent s'efface quand CHAQUE enfant a placer a deja
+    // une demande en cours. (P2 la liait a l'interet « club en general » : elle
+    // envoie desormais une demande d'EQUIPE qui porte l'enfant.)
+    hasPendingChildInterest: toutesLesDemandesEnfantSontParties,
     isAuthenticated,
     isClubStaffRole,
     isMultisportAdmin,
@@ -1618,8 +1679,9 @@ function ClubDetails({ navigation, route }) {
     ownerCount: owners.length,
   }), [
     childrenUnder13Count,
-    hasPendingClubArrivalInterest,
+    enfantsAPlacer.length,
     minorChildrenCount,
+    toutesLesDemandesEnfantSontParties,
     areClubMembersHidden,
     canContactAdmin,
     canEdit,
@@ -2040,14 +2102,65 @@ function ClubDetails({ navigation, route }) {
     setIsClubInterestTeamPickerVisible(true);
   }, [clubTeamIds.length, isAuthenticated, openClubAuthFlow, t]);
 
+  // 👶 PARENT P3 — LE BOUTON DU PARENT OUVRE LA MEME FEUILLE, EN MODE « POUR UN
+  // ENFANT » : on choisit l'enfant (s'il y en a plusieurs), puis l'equipe. Une place
+  // se demande toujours dans une EQUIPE : sans equipe, rien a demander.
+  const handlePressChildInterest = useCallback(() => {
+    if (!clubTeamIds.length) {
+      Alert.alert(
+        t('common.error', 'Erreur'),
+        t(
+          'clubDetails.clubInterest.noTeams',
+          "Aucune équipe n'est disponible dans ce club pour le moment.",
+        ),
+      );
+      return;
+    }
+    setModeDemandeEnfant(true);
+    setEnfantPourDemande(enfantsAPlacer.length === 1 ? enfantsAPlacer[0] : null);
+    setIsClubInterestTeamPickerVisible(true);
+  }, [clubTeamIds.length, enfantsAPlacer, t]);
+
   const handleCloseClubInterestTeamPicker = useCallback(() => {
     if (createClubInterestRequestMutation.isPending) return;
     setIsClubInterestTeamPickerVisible(false);
+    setModeDemandeEnfant(false);
+    setEnfantPourDemande(null);
   }, [createClubInterestRequestMutation.isPending]);
 
   const handleSelectClubInterestTeam = useCallback((teamItem) => {
     const teamDocumentId = getTeamIdentity(teamItem);
     if (!teamDocumentId || createClubInterestRequestMutation.isPending) return;
+
+    // 👶 PARENT P3 — une place POUR un enfant : la confirmation dit ce que les
+    // responsables de l'equipe verront (son prenom et son age), puis on envoie.
+    if (modeDemandeEnfant) {
+      if (!enfantPourDemande?.documentId) return;
+      const teamName = teamItem?.name || t('common.team', 'Équipe');
+      Alert.alert(
+        t('clubDetails.childInterest.confirmTitle', {
+          defaultValue: 'Demander une place pour {{firstname}} ?',
+          firstname: enfantPourDemande.firstname,
+        }),
+        t('clubDetails.childInterest.confirmDescription', {
+          defaultValue: 'Les responsables de {{teamName}} verront son prénom et son âge,'
+            + ' et pourront accepter ou refuser.',
+          teamName,
+        }),
+        [
+          { style: 'cancel', text: t('common.actions.cancel', 'Annuler') },
+          {
+            onPress: () => createClubInterestRequestMutation.mutate({
+              childFirstname: enfantPourDemande.firstname,
+              declaredChildId: enfantPourDemande.documentId,
+              teamId: teamDocumentId,
+            }),
+            text: t('clubDetails.childInterest.sendAction', 'Demander une place'),
+          },
+        ],
+      );
+      return;
+    }
 
     if (hasPendingClubInterestRequest(teamDocumentId)) {
       Alert.alert(
@@ -2077,7 +2190,13 @@ function ClubDetails({ navigation, route }) {
         },
       ],
     );
-  }, [createClubInterestRequestMutation, hasPendingClubInterestRequest, t]);
+  }, [
+    createClubInterestRequestMutation,
+    enfantPourDemande,
+    hasPendingClubInterestRequest,
+    modeDemandeEnfant,
+    t,
+  ]);
 
   const handleToggleActivityToAdd = useCallback((activityId) => {
     const normalizedId = String(activityId || '').trim();
@@ -3648,7 +3767,18 @@ function ClubDetails({ navigation, route }) {
         headerComponent={(
           <View style={[Alignments.row, Alignments.alignCenter]}>
             <Text numberOfLines={1} style={[Fonts.h3Bold, Fonts.neutral00, Spaces.marginRight[16], { flex: 1 }]}>
-              {t('clubDetails.clubInterest.pickerTitle', 'Qu’est-ce qui t’intéresse ?')}
+              {(() => {
+                // 👶 PARENT P3 — la feuille dit POUR QUI elle demande une place.
+                if (!modeDemandeEnfant) {
+                  return t('clubDetails.clubInterest.pickerTitle', 'Qu’est-ce qui t’intéresse ?');
+                }
+                return enfantPourDemande?.firstname
+                  ? t('clubDetails.childInterest.pickerTitleNamed', {
+                    defaultValue: 'Une place pour {{firstname}}',
+                    firstname: enfantPourDemande.firstname,
+                  })
+                  : t('clubDetails.childInterest.pickerTitle', 'Une place pour ton enfant');
+              })()}
             </Text>
           </View>
         )}
@@ -3659,12 +3789,36 @@ function ClubDetails({ navigation, route }) {
       >
         <View style={[Spaces.gap[16]]}>
           <Text style={[Fonts.p2, Fonts.neutral200]}>
-            {t(
-              'clubDetails.clubInterest.pickerDescription',
-              'Sélectionne une équipe, ou le club en général, pour signaler ton intérêt'
-              + ' sans créer de demande d’adhésion.',
-            )}
+            {modeDemandeEnfant
+              ? t(
+                'clubDetails.childInterest.pickerDescription',
+                'Choisis l’équipe. Ses responsables verront le prénom et l’âge de ton enfant,'
+                + ' et pourront accepter ou refuser.',
+              )
+              : t(
+                'clubDetails.clubInterest.pickerDescription',
+                'Sélectionne une équipe, ou le club en général, pour signaler ton intérêt'
+                + ' sans créer de demande d’adhésion.',
+              )}
           </Text>
+
+          {/* 👶 PARENT P3 — POUR QUI ? Seulement s'il y a plusieurs enfants a placer. */}
+          {modeDemandeEnfant && enfantsAPlacer.length > 1 ? (
+            <View style={[Alignments.row, Spaces.gap[12], { flexWrap: 'wrap' }]}>
+              {enfantsAPlacer.map((enfant) => (
+                <Button
+                  key={`enfant-${enfant.documentId}`}
+                  onPress={() => setEnfantPourDemande(enfant)}
+                  size="small"
+                  testID={`club-details-child-choice-${enfant.documentId}`}
+                  title={enfant.firstname}
+                  variant={
+                    enfantPourDemande?.documentId === enfant.documentId ? 'Primary' : 'Secondary'
+                  }
+                />
+              ))}
+            </View>
+          ) : null}
 
           {/* V01 — « le club en general », EN PREMIER et en Secondary : c'est
               le choix de celui qui ne vise aucune equipe precise, et il part
@@ -3684,6 +3838,9 @@ function ClubDetails({ navigation, route }) {
               {
                 opacity: clubArrivalInterestIsBusy ? 0.65 : 1,
               },
+              // 👶 PARENT P3 — pas de « club en general » pour un enfant : une place se
+              // demande dans une EQUIPE.
+              modeDemandeEnfant ? { display: 'none' } : null,
             ]}
           >
             <View style={{ flex: 1 }}>
@@ -3714,11 +3871,24 @@ function ClubDetails({ navigation, route }) {
           <View style={[Spaces.gap[12], Spaces.paddingBottom[8]]}>
             {sortedClubTeams.map((teamItem) => {
               const teamDocumentId = getTeamIdentity(teamItem);
-              const isPending = hasPendingClubInterestRequest(teamDocumentId);
-              const isDisabled = isPending || createClubInterestRequestMutation.isPending;
-              const actionLabel = isPending
+              // 👶 PARENT P3 — en mode « pour un enfant », l'attente se lit par equipe
+              // ET par enfant, et rien ne part tant que l'enfant n'est pas choisi.
+              const isPending = modeDemandeEnfant
+                ? demandesEnfantEnAttente.has(
+                  pendingChildRequestKey(teamDocumentId, enfantPourDemande?.documentId),
+                )
+                : hasPendingClubInterestRequest(teamDocumentId);
+              const isDisabled = isPending
+                || createClubInterestRequestMutation.isPending
+                || (modeDemandeEnfant && !enfantPourDemande);
+              let actionLabel = isPending
                 ? t('clubDetails.clubInterest.alreadySentShort', 'Intérêt déjà envoyé')
                 : t('clubDetails.clubInterest.sendAction', 'Envoyer mon intérêt');
+              if (modeDemandeEnfant) {
+                actionLabel = isPending
+                  ? t('clubDetails.childInterest.alreadySentShort', 'Demande envoyée')
+                  : t('clubDetails.childInterest.sendAction', 'Demander une place');
+              }
 
               return (
                 <TouchableOpacity
@@ -3753,10 +3923,15 @@ function ClubDetails({ navigation, route }) {
                         {getTeamMetaSummary(teamItem) || teamItem?.club?.name || t('common.messages.noData', 'Aucune donnée disponible')}
                       </Text>
                       <Text numberOfLines={2} style={[Fonts.p4, Fonts.primary200, Spaces.marginTop[4]]}>
-                        {t(
-                          'clubDetails.clubInterest.cardHint',
-                          'Le staff pourra répondre avec un message ou ouvrir une conversation.',
-                        )}
+                        {modeDemandeEnfant
+                          ? t(
+                            'clubDetails.childInterest.cardHint',
+                            'Les responsables accepteront ou refuseront la demande.',
+                          )
+                          : t(
+                            'clubDetails.clubInterest.cardHint',
+                            'Le staff pourra répondre avec un message ou ouvrir une conversation.',
+                          )}
                       </Text>
                     </View>
                   </View>
@@ -3880,29 +4055,26 @@ function ClubDetails({ navigation, route }) {
               le partage tranche en C9 du plan : le parent demande, le club
               decide, le rattachement reste un geste separe.
 
-              ♻️ AUCUNE MUTATION NEUVE : `createClubArrivalInterestMutation`
-              fait deja exactement ce geste, dedoublonnage et messages compris. */}
+              👶 PARENT P3 (11/09) — la demande PORTE l'enfant desormais (decision
+              d'Adel « 1- a ») : le bouton ouvre la feuille des equipes en mode
+              « pour un enfant », et la place demandee arrive chez les responsables
+              de l'equipe avec le prenom et l'age de l'enfant. */}
           {showChildInterestAction ? (
             <Button
-              disabled={clubArrivalInterestIsBusy}
-              onPress={() => createClubArrivalInterestMutation.mutate()}
+              disabled={createClubInterestRequestMutation.isPending}
+              onPress={handlePressChildInterest}
               style={[
                 floatingClubActionButtonStyle,
-                clubArrivalInterestIsBusy ? { opacity: 0.7 } : null,
+                createClubInterestRequestMutation.isPending ? { opacity: 0.7 } : null,
               ]}
               testID="club-details-child-interest"
-              title={(() => {
-                if (hasPendingClubArrivalInterest) {
-                  return t('clubDetails.actions.requestPending', 'Demande en attente');
-                }
-                // Le prenom n'apparait QUE s'il n'y a qu'un enfant concerne :
-                // avec deux, nommer l'un d'eux serait faux — la demande ne porte
-                // pas l'enfant (le serveur ne sait pas le representer).
-                // Forme OBJET (`{ defaultValue, ...variables }`) et non
-                // `t(clef, repli, options)` : c'est celle que ce fichier emploie
-                // deja pour toutes ses phrases a variable, et la seule que les
-                // temoins de la fiche club savent interpoler.
-                return prenomEnfantUnique
+              title={
+                // Le prenom n'apparait QUE s'il n'y a qu'un enfant a placer : avec
+                // deux ou plus, la feuille demande « pour qui ». Forme OBJET
+                // (`{ defaultValue, ...variables }`) et non `t(clef, repli, options)` :
+                // celle que ce fichier emploie pour ses phrases a variable, et la seule
+                // que les temoins de la fiche club savent interpoler.
+                prenomEnfantUnique
                   ? t('clubDetails.actions.joinForChild', {
                     defaultValue: 'Demander à rejoindre au nom de {{firstname}}',
                     firstname: prenomEnfantUnique,
@@ -3910,8 +4082,8 @@ function ClubDetails({ navigation, route }) {
                   : t(
                     'clubDetails.actions.joinForChildren',
                     'Demander à rejoindre pour mes enfants',
-                  );
-              })()}
+                  )
+              }
               variant="Primary"
             />
           ) : null}
