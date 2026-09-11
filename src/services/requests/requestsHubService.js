@@ -142,8 +142,11 @@ const fetchClubRequests = async (clubId) => {
 const fetchClubInterestRequests = async ({ clubId = '', teamIds = [] }) => {
   const jobs = [];
 
+  // 👶 PARENT P3 — cet ecran sait TRANCHER une place demandee pour un enfant : il
+  // le dit au serveur, qui ne rend ces lignes qu'aux clients qui le demandent.
   if (teamIds.length) {
     jobs.push(fetchAllPages((/** @type {number} */ page) => getClubInterestRequests({
+      includeChildRequests: true,
       page,
       pageSize: 50,
       teamIds,
@@ -153,6 +156,7 @@ const fetchClubInterestRequests = async ({ clubId = '', teamIds = [] }) => {
   if (clubId) {
     jobs.push(fetchAllPages((/** @type {number} */ page) => getClubInterestRequests({
       clubId,
+      includeChildRequests: true,
       page,
       pageSize: 50,
     })));

@@ -433,6 +433,55 @@ function RequestsHub({ navigation, route }) {
       return;
     }
 
+    // 👶 PARENT P3 (11/09) — UNE PLACE DEMANDEE POUR UN ENFANT SE TRANCHE. Accepter
+    // fait entrer l'enfant dans l'equipe ; refuser EFFACE la demande — d'ou la
+    // confirmation, le geste ne se rattrape pas. Et aucune fenetre de message type.
+    const estDecisionEnfant = item?.type === 'interest'
+      && Boolean(item?.meta?.childId)
+      && (action === 'accept' || action === 'reject');
+    if (estDecisionEnfant) {
+      if (action === 'reject' && actionPosition === 'secondary') {
+        Alert.alert(
+          t('requestsHub.childInterest.refuseTitle', 'Refuser la demande ?'),
+          t('requestsHub.childInterest.refuseMessage', {
+            defaultValue: 'La demande pour {{firstname}} sera effacée. Son parent sera prévenu.',
+            firstname: item?.meta?.childFirstname || '',
+          }),
+          [
+            { style: 'cancel', text: t('common.actions.cancel', 'Annuler') },
+            {
+              onPress: () => {
+                runItemAction(item, 'secondary-confirmed');
+              },
+              style: 'destructive',
+              text: t('common.actions.confirm', 'Confirmer'),
+            },
+          ],
+        );
+        return;
+      }
+
+      try {
+        setProcessingItemId(itemId);
+        if (!requestId) throw new Error('Missing club interest request identifier');
+        await respondClubInterestRequest(requestId, {
+          responseType: action === 'accept' ? 'accept_child' : 'refuse_child',
+        });
+        if (action === 'accept') celebrateAcceptance(item);
+        invalidateRequestsInBackground();
+        emitGuidanceAction('requests.processed', { requestType: 'interest' });
+      } catch (childDecisionError) {
+        Alert.alert(
+          t('common.error', 'Erreur'),
+          /** @type {any} */ (childDecisionError)?.message
+            || t('requestsHub.actionError', 'Impossible de traiter la demande.'),
+        );
+      } finally {
+        setProcessingItemId('');
+      }
+      return;
+    }
+
     if (action === 'reject' && item?.type === 'installation' && actionPosition === 'secondary') {
       setInstallationRefusalItem(item);
       setInstallationRefusalReason(item?.meta?.reason || '');
