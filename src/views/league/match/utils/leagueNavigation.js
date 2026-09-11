@@ -74,6 +74,46 @@ export const navigateToLeagueMatchDetails = (navigation, matchOrMatchId) => {
  * @param {LeagueMatch | string} matchOrMatchId
  * @returns {boolean}
  */
+/**
+ * NAVMORTE (2026-09-11) -- ouvre un ecran de la pile LEAGUE d ou qu on soit.
+ * Meme recette que navigateToLeagueMatchDetails : l ecran directement s il est a
+ * portee (les ecrans montes DANS la pile LEAGUE ne changent pas de comportement),
+ * sinon par le tableau de bord, sinon par l onglet LEAGUE. Sans elle, les ecrans
+ * montes a la RACINE (LeagueMatchDetails, SquadDetails) appelaient la route en
+ * direct et le bouton ne faisait RIEN.
+ * @param {any} navigation
+ * @param {string} routeName une route de LeagueNavigator
+ * @param {Record<string, unknown>} [params]
+ * @returns {boolean} vrai si un navigateur a pris l action
+ */
+export const navigateToLeagueStackScreen = (navigation, routeName, params) => {
+  if (!navigation || !routeName) return false;
+
+  if (safeNavigate(navigation, routeName, params)) {
+    return true;
+  }
+
+  if (safeNavigate(navigation, RouteNames.LeagueDashboard, {
+    params,
+    screen: routeName,
+  })) {
+    return true;
+  }
+
+  return safeNavigate(navigation, RouteNames.LeagueHomeTab, {
+    params: {
+      params,
+      screen: routeName,
+    },
+    screen: RouteNames.LeagueDashboard,
+  });
+};
+
+/**
+ * @param {any} navigation
+ * @param {LeagueMatch | string} matchOrMatchId
+ * @returns {boolean}
+ */
 export const navigateToEndMatchScreen = (navigation, matchOrMatchId) => {
   if (!navigation) return false;
 

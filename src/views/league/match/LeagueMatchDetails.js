@@ -30,7 +30,10 @@ import SegmentedControl from '@/components/molecules/segmentedControl/SegmentedC
 import VenueProposalModal from '@/components/organisms/venueProposalModal/VenueProposalModal';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 import LeagueStateView from '@/views/league/components/LeagueStateView';
-import { navigateToEndMatchScreen } from '@/views/league/match/utils/leagueNavigation';
+import {
+  navigateToEndMatchScreen,
+  navigateToLeagueStackScreen,
+} from '@/views/league/match/utils/leagueNavigation';
 import buildWorkflowViewModel from '@/views/league/match/utils/leagueWorkflowPresenter';
 import {
   getMatchDerivedPhase,
@@ -51,6 +54,7 @@ import {
   formatScoreFlowCountdown,
 } from '@/views/league/match/utils/scoreFlow';
 
+import { navigateToStackScreenOrScreen } from '@/navigation/navigationAvailability';
 import { RouteNames } from '@/navigation/routeNames';
 import useBottomDockLayout from '@/navigation/useBottomDockLayout';
 
@@ -1746,7 +1750,7 @@ function LeagueMatchDetails({ navigation, route }) {
   const handleOpenMatchStats = useCallback(() => {
     if (!myTeamId) return;
 
-    navigation.navigate(RouteNames.MatchStatsEditor, {
+    navigateToLeagueStackScreen(navigation, RouteNames.MatchStatsEditor, {
       matchId,
       matchLabel: `${match?.team_a?.name || 'Équipe A'} VS ${match?.team_b?.name || 'Équipe B'}`,
       sourceType: 'league',
@@ -1759,7 +1763,7 @@ function LeagueMatchDetails({ navigation, route }) {
   const handleOpenMyMatchResponse = useCallback(() => {
     if (!myTeamId) return;
 
-    navigation.navigate(RouteNames.PlayerMatchResponse, {
+    navigateToLeagueStackScreen(navigation, RouteNames.PlayerMatchResponse, {
       matchId,
       matchLabel: `${match?.team_a?.name || 'Équipe A'} VS ${match?.team_b?.name || 'Équipe B'}`,
       sourceType: 'league',
@@ -1856,7 +1860,10 @@ function LeagueMatchDetails({ navigation, route }) {
       <LeagueStateView
         actionLabel="Retour aux matchs"
         description="Ce match n'existe plus ou n'est pas accessible depuis ce lien."
-        onAction={() => navigation.navigate(RouteNames.LeagueMatchTab)}
+        onAction={() => navigateToStackScreenOrScreen(navigation, {
+          screen: RouteNames.LeagueMatchTab,
+          stack: RouteNames.LeagueHomeTab,
+        })}
         title="Match introuvable"
       />
     );
