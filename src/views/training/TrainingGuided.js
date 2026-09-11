@@ -878,7 +878,8 @@ function TrainingGuided({ navigation, route }) {
                 )}
                 {courant?.type === ARRETS.PREP && (
                   <Button
-                    onPress={() => navigation.navigate(
+                    onPress={() => allerDansLOnglet(
+                      navigation,
                       RouteNames.TrainingSessionNow,
                       { sessionId },
                     )}
