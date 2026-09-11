@@ -2298,18 +2298,16 @@ function HomeHubContent({ auth, navigation, route }) {
       ),
     });
 
-    // P0 PARENT — LA SEULE CASE AJOUTEE PAR CE LOT, et elle ne cache aucun
-    // ecran neuf : elle ouvre la recherche de clubs qui existe deja. C'est un
-    // raccourci mis en avant, pas une fonctionnalite.
-    //
-    // Elle passe EN TETE (`unshift`) parce que c'est le seul geste qui a du
-    // sens pour un parent qui vient d'arriver : trouver un club a son enfant.
-    // « Rechercher un club » reste dans la liste, deux cases plus bas — le
-    // parent n'a donc rien de moins, il a une porte plus visible.
-    //
-    // ⛔ Volontairement SANS `tutorial` : les cases voisines se tiennent par
-    // `nextTargetStepId`, et s'inserer au milieu de cette chaine la casserait
-    // (meme raison que « Mes reponses », posee par D57).
+    // 🧹 LE DOUBLON RETIRE LE 2026-09-11, vu a l ecran par Adel. Le lot P0 avait
+    // pose ici « Chercher un club pour mon enfant », EN TETE : un raccourci vers
+    // la recherche de clubs, en laissant « Club » deux cases plus bas. Les deux
+    // ouvraient le MEME ecran (`RouteNames.SearchClubs`), sans aucun filtre pour
+    // l enfant : deux portes pour une seule piece.
+    // ⇒ Le parent cherche un club par « Club », comme tout le monde, ou depuis
+    // la carte de SON enfant dans « Mes enfants » : ce chemin-la emmene l enfant
+    // jusqu a la fiche du club (`MyChildren.js`, `chercherUnClub`).
+    // 🧪 `accueilParRole.test.js` compte les cases qui ouvrent la recherche de
+    // clubs : il en exige UNE.
     if (isParent) {
       // 👨‍👧 PARENT P2 (10/09) — LA PORTE QUI MANQUAIT.
       //
@@ -2321,16 +2319,9 @@ function HomeHubContent({ auth, navigation, route }) {
       // ⛔ Elle ne lit PAS la liste des enfants : ce serait une requete de plus
       // sur le premier ecran de l app, pour un libelle. C est une PORTE, et
       // l ecran qu elle ouvre sait dire s il est vide.
-      // ⛔ Volontairement SANS `tutorial`, meme raison que la case voisine : les
-      // cases se tiennent par `nextTargetStepId`, s inserer au milieu de la
-      // chaine la casserait.
-      //
-      // 🧨 LES DEUX CASES ENTRENT PAR UN SEUL `unshift`, ET C EST UNE LECON
-      // PAYEE LE 2026-09-10 : ecrites en DEUX `unshift` successifs, elles
-      // sortaient dans l ordre INVERSE de leur ordre d ecriture. Le temoin, lui,
-      // restait VERT — il lit `HomeHub.js` COMME DU TEXTE et releve les `key:`
-      // dans l ordre de la SOURCE, jamais celui de l execution. C est l ecran
-      // qui a montre l inversion.
+      // ⛔ Volontairement SANS `tutorial` : les cases se tiennent par
+      // `nextTargetStepId`, s inserer au milieu de la chaine la casserait
+      // (meme raison que « Mes reponses », posee par D57).
       const carteMesEnfants = {
         accentColor: Colors.primary500,
         emphasis: 'primary',
@@ -2348,25 +2339,10 @@ function HomeHubContent({ auth, navigation, route }) {
         title: t('homeHub.cards.search.myChildren.title', 'Mes enfants'),
       };
 
-      const carteChercherUnClub = {
-        accentColor: Colors.primary500,
-        emphasis: 'primary',
-        icon: 'shield',
-        key: 'search-club-for-child',
-        layout: 'full',
-        onPress: () => navigation.navigate(RouteNames.SearchClubs),
-        subtitle: t(
-          'homeHub.cards.search.clubForChild.subtitle',
-          'Trouve le club où il jouera cette saison.',
-        ),
-        subtitleLines: 2,
-        title: t('homeHub.cards.search.clubForChild.title', 'Chercher un club pour mon enfant'),
-      };
-
-      // ⚠️ UN SEUL `unshift`, DANS L ORDRE QU ON VEUT LIRE : on declare son
-      // enfant, PUIS on lui cherche un club. Deux `unshift` successifs
-      // rendraient l ordre inverse — c est le defaut vu a l ecran le 10/09.
-      cards.unshift(carteMesEnfants, carteChercherUnClub);
+      // ⚠️ Pour poser une 2e case en tete : UN SEUL `unshift(a, b)`. Deux
+      // `unshift` successifs sortent dans l ordre INVERSE, et le temoin, qui lit
+      // la source comme du texte, reste VERT (vu a l ecran le 10/09).
+      cards.unshift(carteMesEnfants);
 
       return cards.filter(estVisiblePourLeParent);
     }

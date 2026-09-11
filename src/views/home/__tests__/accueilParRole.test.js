@@ -193,19 +193,19 @@ const ATTENDU = {
     ['account-switch', 'account-logout'],
     ['training-mine', 'training-find', 'training-logbook'],
   ],
-  // PARENT — 8 cases, contre 13 au joueur. Ce que le lot P0 lui retire :
-  // « Offres de recrutement », « Mes reponses », « Matchs amicaux », League,
-  // « Historique sportif » et « Mes cotisations ». Ce qu'il lui donne :
-  // « Chercher un club pour mon enfant », en tete de « Rechercher ».
+  // PARENT — le lot P0 lui retire « Offres de recrutement », « Mes reponses »,
+  // « Matchs amicaux », League, « Historique sportif » et « Mes cotisations ».
   // PARENT P2 (10/09) — « Mes enfants » entre sur l accueil, EN TETE.
   // 🖥️ Trouve sur emulateur : l accueil du parent n avait AUCUNE porte vers
   // « Mes enfants ». Il fallait passer par le profil — pour quelqu un dont
   // c est la SEULE raison d etre dans l app. Le plan (A3) le demandait deja :
   // « Mes enfants : une carte par enfant, ou un grand bouton s il n y en a
   // aucun ». C est la premiere moitie : la porte.
+  // 🧹 11/09 (Adel) : « Chercher un club pour mon enfant », posee par P0, est
+  // RETIREE — elle ouvrait le MEME ecran que « Club », deux cases plus bas.
   parent: [
     [],
-    ['search-my-children', 'search-club-for-child', 'search-events', 'search-clubs', 'search-reservations'],
+    ['search-my-children', 'search-events', 'search-clubs', 'search-reservations'],
     [],
     ['profile-view', 'profile-alerts'],
     ['account-switch', 'account-logout'],
@@ -246,7 +246,9 @@ describe('D72 — critere 1 : le bon nombre de cases, dans le bon ordre', () => 
     ['president', 23],
     ['coach', 23],
     ['player', 16],
-    ['parent', 12],
+    // 🧹 11/09 : 12 → 11. La case « Chercher un club pour mon enfant » est
+    // retiree : elle doublait « Club ».
+    ['parent', 11],
     ['superAdmin', 20],
   ])('%s affiche exactement %i cartes', (role, attendu) => {
     expect(toutesLesCartes(/** @type {any} */ (role))).toHaveLength(attendu);
@@ -339,24 +341,23 @@ describe('P0 — l accueil du PARENT (2 comptes reels en production le 07/09)', 
     expect(cartes).toContain('account-logout');
   });
 
-  // 🩹 CORRIGE LE 2026-09-10 par PARENT P2. Ce temoin figeait « chercher un
-  // club » EN PREMIER — c etait juste tant que le parent n avait rien d autre.
-  // Depuis qu il peut declarer ses enfants, « Mes enfants » passe devant : c est
-  // l ordre que le plan demandait deja (A3, GO Adel du 07/09), et l ordre
-  // logique — on declare, PUIS on cherche un club pour la personne declaree.
-  // Les DEUX cases sont la ; c est leur rang qui change.
-  it('P2 — « Mes enfants » ouvre la marche, « chercher un club » la suit', () => {
+  // 🩹 CORRIGE LE 2026-09-10 par PARENT P2 : « Mes enfants » passe devant —
+  // l ordre que le plan demandait deja (A3, GO Adel du 07/09).
+  it('P2 — « Mes enfants » ouvre la marche', () => {
     expect(accueilDe('parent')[1][0]).toBe('search-my-children');
-    expect(accueilDe('parent')[1][1]).toBe('search-club-for-child');
   });
 
-  // ⛔ Le lot P0 ne cree AUCUN ecran : la case est un raccourci vers la
-  // recherche de clubs qui existe deja. Si un lot futur la branche ailleurs,
-  // ce temoin doit etre la discussion, pas un effet de bord.
-  it('cette case ouvre la recherche de clubs EXISTANTE, rien de neuf', () => {
-    const bloc = SOURCE.slice(SOURCE.indexOf("key: 'search-club-for-child'"));
+  // 🧹 LE DOUBLON RETIRE LE 2026-09-11, vu a l ecran par Adel. Le lot P0 avait
+  // pose « Chercher un club pour mon enfant » en tete, raccourci vers la
+  // recherche de clubs EXISTANTE — en laissant « Club » deux cases plus bas.
+  // Deux cases, UN SEUL ecran, et aucun filtre pour l enfant.
+  // ⚠️ On compte la DESTINATION, pas la clef : une case renommee qui rouvrirait
+  // le meme ecran rendrait ce temoin rouge, lui aussi.
+  it('une seule case de « Rechercher » ouvre la recherche de clubs', () => {
+    const ouvertures = SEARCH.match(/navigation\.navigate\(RouteNames\.SearchClubs\b/g) || [];
 
-    expect(bloc.slice(0, 400)).toContain('RouteNames.SearchClubs');
+    expect(ouvertures).toHaveLength(1);
+    expect(toutesLesCartes('parent')).not.toContain('search-club-for-child');
   });
 
   it('LE GARDE-FOU : le masque ne touche AUCUN autre role', () => {

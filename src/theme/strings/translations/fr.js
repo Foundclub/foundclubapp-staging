@@ -2421,20 +2421,14 @@ export default {
           subtitle: 'Trouve la page d\u2019un club.',
           title: 'Club',
         },
+        events: {
+          subtitle: 'Détections, séances d\u2019essai, matchs\u2026',
+          title: 'Événement',
+        },
         // PARENT P2 — la porte vers « Mes enfants » depuis l accueil du parent.
         myChildren: {
           subtitle: 'Déclare-les, corrige leur fiche, cherche-leur un club.',
           title: 'Mes enfants',
-        },
-        // P0 — la case du parent. Elle ouvre la recherche de clubs qui existe
-        // deja : c'est un raccourci mis en avant, pas un ecran de plus.
-        clubForChild: {
-          subtitle: 'Trouve le club où il jouera cette saison.',
-          title: 'Chercher un club pour mon enfant',
-        },
-        events: {
-          subtitle: 'Détections, séances d\u2019essai, matchs\u2026',
-          title: 'Événement',
         },
         profiles: {
           subtitle: 'Trouve des profils ouverts.',
