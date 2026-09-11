@@ -16,6 +16,7 @@ export const getMyClubInterestRequestsQueryKey = (params = {}) => [
 export const useGetMyClubInterestRequests = (params = {}, options = {}) => {
   const normalizedParams = {
     clubId: String(params?.clubId || '').trim(),
+    includeChildRequests: params?.includeChildRequests === true,
     includeHistory: params?.includeHistory === true,
     teamId: String(params?.teamId || '').trim(),
   };
