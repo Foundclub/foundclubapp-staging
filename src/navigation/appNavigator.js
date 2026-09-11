@@ -1,6 +1,7 @@
 import { NavigationContainer } from '@react-navigation/native';
 import { Platform, StatusBar } from 'react-native';
 
+import { readInviteLink } from '@/domains/invitations/inviteLink';
 import { useAppContext } from '@/store/appContext';
 import useTheme from '@/theme/themeContext';
 
@@ -41,46 +42,67 @@ function AppNavigator({ navigationIntegration, onReady, onStateChange }) {
 
   const linking = {
     config: {
-      screens: {
-        [RouteNames.AdminStack]: {
-          screens: {
-            [RouteNames.SuperAdminDashboard]: 'superadmin/dashboard',
-            [RouteNames.SuperAdminHome]: 'superadmin',
-            [RouteNames.SuperAdminLeagueDisputes]: 'superadmin/disputes',
-            [RouteNames.SuperAdminLeagueDivisions]: 'superadmin/divisions',
-            [RouteNames.SuperAdminLeagueMatches]: 'superadmin/matches',
-            [RouteNames.SuperAdminLeagueSquads]: 'superadmin/squads',
-            [RouteNames.SuperAdminSettings]: 'superadmin/settings',
-          },
-        },
-        [RouteNames.Club]: 'club/:clubId',
-        [RouteNames.EventStack]: {
-          screens: {
-            [RouteNames.EventDetails]: 'event/:eventId',
-          },
-        },
-        [RouteNames.Login]: 'login',
-        [RouteNames.Register]: 'register',
-        [RouteNames.SquadDetails]: 'squad/:teamId',
-        // En mode connecte, TeamDetails est imbrique dans PrivateNavigator > TeamStack :
-        // le mapping linking doit refleter cette hierarchie pour que foundclub://team/:teamId
-        // resolve. En mode public, TeamDetails reste a la racine du navigateur.
-        // Le meme pattern ne peut pas etre declare deux fois (React Navigation le rejette),
-        // d'ou le mapping conditionnel ; le NavigationContainer est re-monte au changement
-        // d'auth (via navigationContainerKey), la config est donc reevaluee.
-        ...(isPrivateMode
-          ? {
-            [RouteNames.TeamStack]: {
-              screens: {
-                [RouteNames.TeamDetails]: 'team/:teamId',
-              },
+      // Chaque lien doit viser un ecran que le navigateur du MODE COURANT porte
+      // a sa racine, ou le declarer sous la pile qui l heberge : React Navigation
+      // abandonne sans rien faire si une route du chemin n est pas dans les routes
+      // racine (useLinking.native.tsx:189). Le meme motif ne peut pas etre declare
+      // deux fois, d ou une forme PAR MODE ; le NavigationContainer est re-monte au
+      // changement d auth (navigationContainerKey), la config est donc reevaluee.
+      // NAVMORTE2 (2026-09-11) : en mode connecte, club/ visait Club a la racine
+      // alors qu il ne vit que dans ClubStack -- le lien ne menait nulle part. En
+      // mode public, event/, login et register visaient des routes absentes de
+      // la racine publique, et superadmin/* une pile qui n y existe pas.
+      // Temoin : src/navigation/__tests__/linking.routesAtteignables.test.js.
+      screens: isPrivateMode
+        ? {
+          [RouteNames.AdminStack]: {
+            screens: {
+              [RouteNames.SuperAdminDashboard]: 'superadmin/dashboard',
+              [RouteNames.SuperAdminHome]: 'superadmin',
+              [RouteNames.SuperAdminLeagueDisputes]: 'superadmin/disputes',
+              [RouteNames.SuperAdminLeagueDivisions]: 'superadmin/divisions',
+              [RouteNames.SuperAdminLeagueMatches]: 'superadmin/matches',
+              [RouteNames.SuperAdminLeagueSquads]: 'superadmin/squads',
+              [RouteNames.SuperAdminSettings]: 'superadmin/settings',
             },
-          }
-          : {
-            [RouteNames.TeamDetails]: 'team/:teamId',
-          }),
-      },
+          },
+          [RouteNames.ClubStack]: {
+            screens: {
+              [RouteNames.Club]: 'club/:clubId',
+            },
+          },
+          [RouteNames.EventStack]: {
+            screens: {
+              [RouteNames.EventDetails]: 'event/:eventId',
+            },
+          },
+          [RouteNames.SquadDetails]: 'squad/:teamId',
+          [RouteNames.TeamStack]: {
+            screens: {
+              [RouteNames.TeamDetails]: 'team/:teamId',
+            },
+          },
+        }
+        : {
+          [RouteNames.Club]: 'club/:clubId',
+          [RouteNames.EventDetails]: 'event/:eventId',
+          [RouteNames.PublicAuthStack]: {
+            screens: {
+              [RouteNames.Login]: 'login',
+              [RouteNames.Register]: 'register',
+            },
+          },
+          [RouteNames.SquadDetails]: 'squad/:teamId',
+          [RouteNames.TeamDetails]: 'team/:teamId',
+        },
     },
+    // NAVMORTE2, relecture adverse (constat 3) -- une invitation n est PAS un lien de
+    // navigation. La fenetre d invitation la lit aussi, et sa regle est « lire un lien ne
+    // fait RIEN » (InvitationLinkHost.js:7-10) : l ecran ne s ouvre qu apres l appui.
+    // readInviteLink est le seul juge (inviteLink.js:2) ; React Navigation ne prend que ce
+    // qu il refuse. Sans ce filtre, foundclub://club/<id>?invite=true ouvrait la fiche
+    // AVANT la reponse. Temoin : src/navigation/__tests__/linking.routesAtteignables.test.js.
+    filter: (/** @type {string} */ url) => !readInviteLink(url).ok,
     prefixes: [
       'foundclub://',
     ],

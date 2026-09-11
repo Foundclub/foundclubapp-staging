@@ -25,7 +25,8 @@ import {
 
 import GlobalPromptModal from '@/components/organisms/popup/GlobalPromptModal';
 
-import { navigate } from '@/navigation/navigationService';
+import { imbriquerDepuisLaRacine } from '@/navigation/hotesDepuisLaRacine';
+import { navigate, navigationRef } from '@/navigation/navigationService';
 import { RouteNames } from '@/navigation/routeNames';
 
 /**
@@ -188,7 +189,14 @@ function InvitationLinkHost() {
     if (!destination) return;
 
     clearPendingInvite();
-    navigate(destination.route, destination.params);
+    // NAVMORTE2 -- on navigue depuis la RACINE. Connecte, Club, EventDetails et TeamDetails
+    // n y sont pas (ils vivent dans leur pile) : le nom nu n etait pris par personne et
+    // « Voir » ne faisait rien. La racine montee dit la forme a prendre ; pas prete, on
+    // garde le nom nu (navigate refuse de toute facon). Le web a sa propre reference
+    // (web/src/shims/react-navigation/native.tsx:52), sans getRootState : nom nu aussi.
+    const racine = navigationRef?.isReady?.() ? navigationRef.getRootState?.() : null;
+    const cible = imbriquerDepuisLaRacine(destination, racine?.routeNames || []) || destination;
+    navigate(cible.route || destination.route, cible.params);
   }, [pendingInvite]);
 
   if (problem) {

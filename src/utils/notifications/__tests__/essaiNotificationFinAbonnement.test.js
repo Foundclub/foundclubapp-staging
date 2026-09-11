@@ -37,9 +37,12 @@ describe('ESSAI/E6 — la notification de fin d\'abonnement ouvre l\'écran des 
       type: 'subscriptionEnded',
     });
 
+    // NAVMORTE2 : les offres ordinaires vivent dans ProfileStack. La copie montee a la
+    // racine est le sas de fin d inscription (PrivateNavigator.js:988-1009) : un nom nu
+    // l ouvrait, et « Continuer gratuitement » menait a la page cadeau puis a Welcome.
     expect(destination).toEqual({
-      params: { focusScope: 'CLUB' },
-      route: RouteNames.SubscriptionOffers,
+      params: { params: { focusScope: 'CLUB' }, screen: RouteNames.SubscriptionOffers },
+      route: RouteNames.ProfileStack,
     });
   });
 
@@ -52,7 +55,7 @@ describe('ESSAI/E6 — la notification de fin d\'abonnement ouvre l\'écran des 
       type: 'subscriptionEnded',
     });
 
-    expect(destination?.params?.focusScope).toBe('TEAM');
+    expect(/** @type {any} */ (destination)?.params?.params?.focusScope).toBe('TEAM');
   });
 
   test('elle ouvre les offres même sans identifiant ni plan', () => {
@@ -60,7 +63,8 @@ describe('ESSAI/E6 — la notification de fin d\'abonnement ouvre l\'écran des 
     // rejouée ou tronquée ne doit pas retomber sur un écran vide.
     const destination = resolveNotificationDestination({ type: 'subscriptionEnded' });
 
-    expect(destination?.route).toBe(RouteNames.SubscriptionOffers);
+    expect(destination?.route).toBe(RouteNames.ProfileStack);
+    expect(/** @type {any} */ (destination)?.params?.screen).toBe(RouteNames.SubscriptionOffers);
   });
 
   test('l\'échec de paiement mène AUSSI aux offres, pas au néant', () => {
@@ -72,6 +76,7 @@ describe('ESSAI/E6 — la notification de fin d\'abonnement ouvre l\'écran des 
       type: 'subscriptionPaymentFailed',
     });
 
-    expect(destination?.route).toBe(RouteNames.SubscriptionOffers);
+    expect(destination?.route).toBe(RouteNames.ProfileStack);
+    expect(/** @type {any} */ (destination)?.params?.screen).toBe(RouteNames.SubscriptionOffers);
   });
 });

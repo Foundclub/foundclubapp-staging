@@ -17,6 +17,12 @@ const mockAddEventListener = jest.fn((eventName, listener) => {
   return { remove: jest.fn() };
 });
 const mockNavigate = jest.fn(() => true);
+// La racine REELLE au moment de l appui (navigationService.js:6). Par defaut pas prete :
+// les temoins historiques ci-dessous gardent donc la forme nue.
+const mockNavigationRef = {
+  getRootState: jest.fn(() => undefined),
+  isReady: jest.fn(() => false),
+};
 const mockClearPendingInvite = jest.fn();
 const mockReadPendingInvite = jest.fn(() => null);
 const mockSavePendingInvite = jest.fn();
@@ -31,6 +37,7 @@ jest.mock('react-native', () => ({
 
 jest.mock('@/navigation/navigationService', () => ({
   navigate: (...args) => mockNavigate(...args),
+  navigationRef: mockNavigationRef,
 }));
 
 jest.mock('@/domains/invitations/pendingInvite', () => ({
@@ -246,6 +253,113 @@ describe('InvitationLinkHost — la fenetre d invitation', () => {
       });
 
       expect(mockClearPendingInvite).toHaveBeenCalled();
+    });
+  });
+
+  describe('4 bis. NAVMORTE2 -- « Voir » mene a l ecran depuis la racine REELLE', () => {
+    // Connecte, Club, EventDetails et TeamDetails ne vivent que dans leur pile : un nom nu
+    // lance depuis la racine n etait pris par personne, l appui ne faisait rien (relecture
+    // adverse NAVMORTE2, constat 1). Deconnecte, la racine publique les porte nus. Le rejeu
+    // avec le vrai routeur est dans
+    // src/navigation/__tests__/notificationNavigation.depuisLaRacine.test.js.
+    const RACINE_CONNECTEE = [
+      RouteNames.HomeTab,
+      RouteNames.ClubStack,
+      RouteNames.EventStack,
+      RouteNames.TeamStack,
+      RouteNames.SquadDetails,
+    ];
+    const RACINE_PUBLIQUE = [
+      RouteNames.HomeTab,
+      RouteNames.Club,
+      RouteNames.EventDetails,
+      RouteNames.TeamDetails,
+      RouteNames.SquadDetails,
+    ];
+
+    afterEach(() => {
+      mockNavigationRef.isReady.mockImplementation(() => false);
+      mockNavigationRef.getRootState.mockImplementation(() => undefined);
+    });
+
+    /**
+     * Ouvre la fenetre sur ce lien, avec cette racine prete, et appuie sur « Voir ».
+     * @param {string} url le lien d invitation
+     * @param {string[]} routeNames les routes de la racine montee
+     * @returns {Promise<void>}
+     */
+    const accepter = async (url, routeNames) => {
+      mockNavigationRef.isReady.mockImplementation(() => true);
+      mockNavigationRef.getRootState.mockImplementation(() => ({ routeNames }));
+      mockGetInitialURL.mockResolvedValue(url);
+      await renderHost();
+      await act(async () => {
+        lastModalProps.primaryAction.onPress();
+      });
+    };
+
+    it.each([
+      [
+        'https://foundclub.app/i/club/c-1',
+        RouteNames.ClubStack,
+        RouteNames.Club,
+        { clubId: 'c-1' },
+      ],
+      [
+        'https://foundclub.app/i/event/e-1',
+        RouteNames.EventStack,
+        RouteNames.EventDetails,
+        { eventId: 'e-1' },
+      ],
+      [
+        'https://foundclub.app/i/team/t-1',
+        RouteNames.TeamStack,
+        RouteNames.TeamDetails,
+        { invite: true, teamId: 't-1' },
+      ],
+    ])('connecte : %s ouvre %s > %s', async (url, pile, ecran, params) => {
+      await accepter(url, RACINE_CONNECTEE);
+
+      expect(mockNavigate).toHaveBeenCalledWith(pile, { params, screen: ecran });
+    });
+
+    it('web : la reference du shim n a pas getRootState, le nom nu reste', async () => {
+      // Le web compile ces sources avec son propre createNavigationContainerRef
+      // (web/src/shims/react-navigation/native.tsx:52-59) : isReady rend true, et
+      // getRootState N EXISTE PAS. L appui ne doit ni planter ni changer de forme.
+      mockNavigationRef.isReady.mockImplementation(() => true);
+      const { getRootState } = mockNavigationRef;
+      delete /** @type {any} */ (mockNavigationRef).getRootState;
+      try {
+        mockGetInitialURL.mockResolvedValue('https://foundclub.app/i/club/c-1');
+        await renderHost();
+        await act(async () => {
+          lastModalProps.primaryAction.onPress();
+        });
+
+        expect(mockNavigate).toHaveBeenCalledWith(RouteNames.Club, { clubId: 'c-1' });
+      } finally {
+        mockNavigationRef.getRootState = getRootState;
+      }
+    });
+
+    it('connecte : une squad, portee par la racine, reste nue', async () => {
+      await accepter('https://foundclub.app/i/squad/s-1', RACINE_CONNECTEE);
+
+      expect(mockNavigate).toHaveBeenCalledWith(
+        RouteNames.SquadDetails,
+        { invite: true, teamId: 's-1' },
+      );
+    });
+
+    it.each([
+      ['https://foundclub.app/i/club/c-1', RouteNames.Club, { clubId: 'c-1' }],
+      ['https://foundclub.app/i/event/e-1', RouteNames.EventDetails, { eventId: 'e-1' }],
+      ['https://foundclub.app/i/team/t-1', RouteNames.TeamDetails, { invite: true, teamId: 't-1' }],
+    ])('deconnecte : %s ouvre %s nu', async (url, ecran, params) => {
+      await accepter(url, RACINE_PUBLIQUE);
+
+      expect(mockNavigate).toHaveBeenCalledWith(ecran, params);
     });
   });
 

@@ -152,6 +152,17 @@ const POINTS_D_ENTREE = [
     fichier: 'utils/notifications/notificationNavigation.js',
     pourquoi: 'club plein => hub ; terminee => carrousel ; remplacee => hub (resilier)',
   },
+  // NAVMORTE2 (2026-09-11) -- la TABLE des hotes vus de la racine. Elle ne choisit pas
+  // l ecran (c est notificationNavigation.js, ci-dessus) : elle dit dans QUELLE pile
+  // l ouvrir, parce qu un nom nu lance depuis la racine n ouvrait rien (le hub) ou ouvrait
+  // le sas de fin d inscription (le carrousel, PrivateNavigator.js:988). Inscrite ICI et
+  // non dans la liste des fichiers autorises : une route d abonnement de plus dans la
+  // table doit faire rougir ce temoin (relecture adverse, constat 7).
+  {
+    attendu: ['SubscriptionOffers', 'SubscriptionOverview'],
+    fichier: 'navigation/hotesDepuisLaRacine.js',
+    pourquoi: 'ou ouvrir carrousel et hub depuis la racine : dans ProfileStack',
+  },
 ];
 
 describe('Points d\'entree de l\'abonnement — chacun atterrit au bon endroit', () => {

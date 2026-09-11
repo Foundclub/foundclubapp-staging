@@ -15,12 +15,21 @@ describe('notificationNavigation', () => {
       type: NOTIFICATION_TYPES.LEAGUE_SCORE_START_INFO,
     });
 
+    // NAVMORTE2 : EndMatchScreen ne vit que dans la pile LEAGUE. Depuis la racine, la
+    // destination nue n etait traitee par aucun navigateur : elle est desormais
+    // imbriquee (onglet LEAGUE, tableau de bord, puis l ecran), memes parametres.
     expect(destination).toEqual({
       params: {
-        matchId: 'match-42',
-        scoreFlowState: 'opponent_score_pending',
+        params: {
+          params: {
+            matchId: 'match-42',
+            scoreFlowState: 'opponent_score_pending',
+          },
+          screen: RouteNames.EndMatchScreen,
+        },
+        screen: RouteNames.LeagueDashboard,
       },
-      route: RouteNames.EndMatchScreen,
+      route: RouteNames.LeagueHomeTab,
     });
   });
 
@@ -368,12 +377,16 @@ describe('S12-B — la notification de quota au licencie mene a la reparation', 
     // Lot CATALOGUE (28/08) : plus d'`openLicenseeIncrease` — il ouvrait la
     // feuille d'augmentation, qui n'existe que pour l'offre au licencie
     // supprimee ce jour-la. L'ecran montre « 95 sur 100 » et rien ne bloque.
+    // NAVMORTE2 : l abonnement vit dans ProfileStack -- destination imbriquee.
     expect(resolveNotificationDestination(chargeQuota(celebrationKey))).toEqual({
       params: {
-        licenseeCount: 120,
-        memberCount: 120,
+        params: {
+          licenseeCount: 120,
+          memberCount: 120,
+        },
+        screen: 'SubscriptionOverview',
       },
-      route: 'SubscriptionOverview',
+      route: RouteNames.ProfileStack,
     });
   });
 
@@ -382,8 +395,9 @@ describe('S12-B — la notification de quota au licencie mene a la reparation', 
     // (subscription-permission.ts) : sans ce transport, l'ecran ne saurait pas
     // dire ou en est le club.
     const destination = resolveNotificationDestination(chargeQuota('club_licensee_quota_reached'));
-    expect(destination.params.licenseeCount).toBe(120);
-    expect(destination.params.memberCount).toBe(120);
+    // Imbriques sous l ecran d abonnement (NAVMORTE2), mais toujours transportes.
+    expect(destination.params.params.licenseeCount).toBe(120);
+    expect(destination.params.params.memberCount).toBe(120);
   });
 
   it('sans les nombres, on ouvre quand meme l ecran (on n invente pas de zero)', () => {
@@ -392,8 +406,8 @@ describe('S12-B — la notification de quota au licencie mene a la reparation', 
       type: 'celebration',
     });
     expect(destination).toEqual({
-      params: {},
-      route: 'SubscriptionOverview',
+      params: { params: {}, screen: 'SubscriptionOverview' },
+      route: RouteNames.ProfileStack,
     });
   });
 
