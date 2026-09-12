@@ -255,6 +255,42 @@ export const mapClubInterestRequestToHubItem = (request = {}) => {
   const requesterName = resolveRequesterName(requester);
   const requesterAvatarUrl = resolveRequesterAvatarUrl(requester);
 
+  // 👶 PARENT P3 (11/09) — UNE PLACE DEMANDEE POUR UN ENFANT. Decision d'Adel « 1- a » :
+  // les responsables voient son PRENOM et son AGE, et ils TRANCHENT. La ligne dit
+  // donc pour qui, et propose Accepter / Refuser — pas « Repondre », qui laisserait
+  // la demande traitee sans que l'enfant soit jamais entre dans l'equipe.
+  const child = request?.declaredChild;
+  const childId = normalizeString(child?.documentId);
+  if (childId) {
+    const childFirstname = normalizeString(child?.firstname);
+    const childAge = Number.isFinite(child?.age) ? child.age : null;
+    const childLabel = childAge === null ? childFirstname : `${childFirstname} (${childAge} ans)`;
+    const destination = teamName || clubName;
+    return {
+      actions: { primary: 'accept', secondary: 'reject' },
+      createdAt: toIsoString(request?.createdAt),
+      id: `interest:${requestId}`,
+      meta: {
+        childAge,
+        childFirstname,
+        childId,
+        clubId: normalizeString(request?.club?.documentId || request?.team?.club?.documentId),
+        clubName,
+        raw: request,
+        requesterAvatarUrl,
+        requesterId: normalizeString(requester?.documentId),
+        requesterName,
+        requestId,
+        teamId: normalizeString(request?.team?.documentId),
+        teamName,
+      },
+      status: 'pending',
+      subtitle: `${requesterName} demande une place pour ${childLabel} dans ${destination}.`,
+      title: 'Place pour un enfant',
+      type: 'interest',
+    };
+  }
+
   return {
     actions: { primary: 'respond', secondary: 'chat' },
     createdAt: toIsoString(request?.createdAt),

@@ -29,6 +29,14 @@ export const CLUB_INTEREST_RESPONSE_PRESETS = [
 const clubInterestRequestSchema = Joi.object({
   club: Joi.object().allow(null).optional(),
   createdAt: Joi.string().allow('', null).optional(),
+  // 👶 PARENT P3 — POUR QUI est la demande, quand c'est un enfant : son prenom et
+  // son age, jamais plus. Volontairement TOLERANT : une ligne d'enfant abimee ne
+  // doit pas faire tomber la liste entiere (defaut deja paye).
+  declaredChild: Joi.object({
+    age: Joi.number().allow(null).optional(),
+    documentId: Joi.string().allow('').optional(),
+    firstname: Joi.string().allow('').optional(),
+  }).unknown(true).allow(null).optional(),
   documentId: Joi.string().required(),
   presetKey: Joi.string().allow('', null).optional(),
   respondedAt: Joi.string().allow('', null).optional(),
@@ -98,6 +106,7 @@ const validatePaginatedResponse = async (responseData) => {
 
 const normalizeListParams = ({
   clubId = '',
+  includeChildRequests = false,
   includeHistory = false,
   page = 1,
   pageSize = 50,
@@ -131,6 +140,9 @@ const normalizeListParams = ({
 
   return {
     ...(Object.keys(filters).length > 0 ? { filters } : {}),
+    // 👶 PARENT P3 — sans cette option, le serveur ne rend AUCUNE demande pour un
+    // enfant : c'est ce qui les cache aux apps deja installees.
+    ...(includeChildRequests ? { includeChildRequests: true } : {}),
     ...(includeHistory ? { includeHistory: true } : {}),
     pagination: {
       page,
@@ -149,16 +161,31 @@ const normalizeListParams = ({
  * ⛔ On n'envoie JAMAIS la clef absente : le serveur distingue les deux cas par
  * la presence de `team`, une clef `team: undefined` serialisee en `null` par
  * axios le ferait retomber dans le mauvais.
- * @param {{ club?: string, team?: string }} params
+ * 👶 PARENT P3 — et un troisieme : `{ team, declaredChild }`, une place demandee
+ * POUR un enfant.
+ * @param {{ club?: string, declaredChild?: string, team?: string }} params
  * @returns {Promise<any>}
  */
-export const createClubInterestRequest = async ({ club, team } = {}) => {
+export const createClubInterestRequest = async ({ club, declaredChild, team } = {}) => {
   const normalizedTeam = String(team || '').trim();
   const normalizedClub = String(club || '').trim();
+  const normalizedChild = String(declaredChild || '').trim();
 
-  const response = await client.post('/club-interest-requests', {
-    data: normalizedTeam ? { team: normalizedTeam } : { club: normalizedClub },
-  });
+  // 👶 PARENT P3 — une demande POUR UN ENFANT vise toujours une EQUIPE. Sans
+  // equipe, on refuse ICI : envoyee avec le seul club, elle deviendrait en
+  // silence l'interet du parent lui-meme.
+  if (normalizedChild && !normalizedTeam) {
+    throw new Error('Team is required for a child request');
+  }
+
+  let data = { club: normalizedClub };
+  if (normalizedTeam) {
+    data = normalizedChild
+      ? { declaredChild: normalizedChild, team: normalizedTeam }
+      : { team: normalizedTeam };
+  }
+
+  const response = await client.post('/club-interest-requests', { data });
   return response.data;
 };
 
@@ -187,6 +214,7 @@ export const getPendingClubArrivalInterests = async (params = {}) => (
 export const getMyClubInterestRequests = async (params = {}) => {
   const {
     clubId = '',
+    includeChildRequests = false,
     includeHistory = false,
     page = 1,
     pageSize = 100,
@@ -196,6 +224,7 @@ export const getMyClubInterestRequests = async (params = {}) => {
   const response = await client.get('/club-interest-requests/mine', {
     params: {
       clubId,
+      ...(includeChildRequests ? { includeChildRequests: true } : {}),
       includeHistory,
       pagination: {
         page,

@@ -133,6 +133,74 @@ export const countChildrenByAgeBand = (enfants) => {
   };
 };
 
+/**
+ * 👶 PARENT P3 (2026-09-11) — LES ENFANTS QUI PEUVENT ENCORE DEMANDER UNE PLACE.
+ *
+ * Decision d'Adel du 11/09 (« 1- a ») : la demande porte l'enfant. Pour dire
+ * « Une place pour Léa » et envoyer la demande, la fiche club a besoin de son
+ * PRENOM et de son IDENTIFIANT — et de rien d'autre : ni nom, ni age, ni equipe.
+ *
+ * Deux conditions, les memes que celles du serveur : moins de 13 ans (E17 :
+ * ensuite, l'enfant demande lui-meme), et pas deja dans une equipe (le serveur
+ * refuserait une seconde equipe).
+ * @param {any[]} enfants - Les fiches enfants du compte, telles que le serveur les rend.
+ * @returns {Array<{ documentId: string, firstname: string }>} Les enfants a placer.
+ */
+export const eligibleChildrenForTeamRequest = (enfants) => {
+  const fiches = Array.isArray(enfants) ? enfants : [];
+  return fiches
+    .filter((enfant) => enfant?.documentId
+      && parentalPowerForAge(enfant?.age) === 'full'
+      && !enfant?.team?.documentId)
+    .map((enfant) => ({
+      documentId: String(enfant.documentId),
+      firstname: String(enfant?.firstname || '').trim(),
+    }));
+};
+
+/**
+ * La clef d'une demande pour un enfant : une EQUIPE et un ENFANT. Deux freres pour
+ * la meme equipe font deux demandes ; le meme enfant pour deux equipes aussi.
+ * @param {string} teamId - L'equipe visee.
+ * @param {string} childId - L'enfant.
+ * @returns {string} La clef.
+ */
+export const pendingChildRequestKey = (teamId, childId) => (
+  `${String(teamId || '')}::${String(childId || '')}`
+);
+
+/**
+ * Les demandes pour un enfant encore EN ATTENTE. Une demande sans enfant n'en est
+ * pas une : c'est l'interet du parent lui-meme.
+ * @param {any[]} demandes - « Mes demandes », telles que le serveur les rend.
+ * @returns {any[]} Les demandes pour un enfant, en attente.
+ */
+const pendingChildRequests = (demandes) => (Array.isArray(demandes) ? demandes : [])
+  .filter((demande) => demande?.status === 'pending'
+    && demande?.declaredChild?.documentId
+    && demande?.team?.documentId);
+
+/**
+ * Les clefs « equipe + enfant » des demandes pour un enfant encore en attente.
+ * @param {any[]} demandes - « Mes demandes ».
+ * @returns {Set<string>} Les clefs equipe + enfant des demandes en attente.
+ */
+export const pendingChildRequestKeys = (demandes) => new Set(
+  pendingChildRequests(demandes).map((demande) => pendingChildRequestKey(
+    demande.team.documentId,
+    demande.declaredChild.documentId,
+  )),
+);
+
+/**
+ * Les enfants qui ont au moins une demande de place encore en attente.
+ * @param {any[]} demandes - « Mes demandes ».
+ * @returns {Set<string>} Les enfants qui ont au moins une demande en attente.
+ */
+export const childIdsWithPendingRequest = (demandes) => new Set(
+  pendingChildRequests(demandes).map((demande) => String(demande.declaredChild.documentId)),
+);
+
 export const resolveClubDetailsActionMatrix = ({
   areClubMembersHidden = false,
   canContactAdmin = false,
@@ -142,6 +210,10 @@ export const resolveClubDetailsActionMatrix = ({
   canPlayerSignalClubTeam = false,
   canPlayerSignalMissingTeam = false,
   canUseClubPartneringFlow = false,
+  // 👶 PARENT P3 — combien d'enfants de moins de 13 ans n'ont PAS encore
+  // d'equipe. Absent, il vaut `childrenUnder13Count` : la regle de P2 reste
+  // intacte pour qui ne le fournit pas.
+  childrenAwaitingTeamCount = null,
   // PARENT P2 — les deux seuls chiffres dont la matrice a besoin sur les
   // enfants : combien ont MOINS DE 13 ANS, et combien sont MINEURS. Deux
   // nombres, jamais une liste de fiches : une matrice de decision n a aucune
@@ -293,9 +365,14 @@ export const resolveClubDetailsActionMatrix = ({
   // boutons flottants RECOUVRAIENT les informations du club, illisibles.
   // Mon bouton declenche la MEME demande que la porte d interet existante :
   // quand elle est deja partie, l autre l annonce, la mienne n ajoute rien.
+  // 👶 PARENT P3 — un enfant deja place dans une equipe n'a plus de place a
+  // demander : le serveur refuserait une seconde equipe.
+  const childrenToPlaceCount = Number.isFinite(childrenAwaitingTeamCount)
+    ? childrenAwaitingTeamCount
+    : childrenUnder13Count;
   const showChildInterestAction = Boolean(
     canShowAffiliationAction
-    && childrenUnder13Count > 0
+    && childrenToPlaceCount > 0
     && !canEdit
     && !hasPendingChildInterest
     && !isUserAlreadyAttachedToViewedClub,
