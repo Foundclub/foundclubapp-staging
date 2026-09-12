@@ -604,13 +604,15 @@ function RequestsHub({ navigation, route }) {
     }
   }, [celebrateAcceptance, closeInstallationRefusalModal, handleClubAssignPrompt, invalidateRequestsInBackground, navigation, openSubscriptionPaywall, startWhisperChat, t]);
 
-  const handlePrimaryPress = useCallback((item) => {
-    runItemAction(item, 'primary');
-  }, [runItemAction]);
+  const handlePrimaryPress = useCallback(
+    (item) => runItemAction(item, 'primary'),
+    [runItemAction],
+  );
 
-  const handleSecondaryPress = useCallback((item) => {
-    runItemAction(item, 'secondary');
-  }, [runItemAction]);
+  const handleSecondaryPress = useCallback(
+    (item) => runItemAction(item, 'secondary'),
+    [runItemAction],
+  );
 
   const handleInstallationRefusalConfirm = useCallback(() => {
     if (!installationRefusalItem) return;
