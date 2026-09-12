@@ -26,6 +26,7 @@ const WEB_ROUTE_PATTERNS = {
   [RouteNames.UserLevel]: '/onboarding/level',
   [RouteNames.UserCategory]: '/onboarding/category',
   [RouteNames.UserParentalDeclaration]: '/onboarding/parental-declaration',
+  [RouteNames.UserParentAccountRequired]: '/onboarding/parent-account-required',
   [RouteNames.UserAvatar]: '/onboarding/avatar',
   // PARENT P2 — la derniere etape du tunnel parent.
   [RouteNames.UserChild]: '/onboarding/child',
