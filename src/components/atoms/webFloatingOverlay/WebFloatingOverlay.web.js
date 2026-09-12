@@ -1,11 +1,10 @@
 /* eslint-disable import/no-unresolved */
 import { createPortal } from 'react-dom';
-import { View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 /**
  * Web overlay rendered directly in document.body so fixed-position FABs stay
  * anchored to the viewport even when React Native Web containers scroll.
- *
  * @param {object} props
  * @param {React.ReactNode} props.children
  * @param {import('react-native').ViewStyle} [props.style]
@@ -15,7 +14,11 @@ function WebFloatingOverlay({
   children,
   style,
 }) {
-  const overlayZIndex = typeof style?.zIndex === 'number' ? style.zIndex : 1100;
+  // RN style props may be arrays. Spreading an array into a DOM style object
+  // leaks numeric keys (0, 1, …), which React then tries to assign to
+  // CSSStyleDeclaration and crashes on web (notably on League squad cards).
+  const flattenedStyle = StyleSheet.flatten(style) || {};
+  const overlayZIndex = typeof flattenedStyle.zIndex === 'number' ? flattenedStyle.zIndex : 1100;
   const overlay = (
     <View
       pointerEvents="box-none"
@@ -32,7 +35,7 @@ function WebFloatingOverlay({
       <View
         pointerEvents="box-none"
         style={{
-          ...style,
+          ...flattenedStyle,
           position: 'absolute',
         }}
       >
