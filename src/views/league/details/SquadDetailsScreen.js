@@ -27,7 +27,9 @@ import TeamSlotList from '@/components/molecules/teamSlotList/TeamSlotList';
 import TeamSlotCreationForm from '@/components/organisms/teamSlotCreationForm/TeamSlotCreationForm';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 import LeagueStateView from '@/views/league/components/LeagueStateView';
+import { navigateToLeagueStackScreen } from '@/views/league/match/utils/leagueNavigation';
 
+import { navigateToStackScreenOrScreen } from '@/navigation/navigationAvailability';
 import {
   clearPendingSquadInviteLink,
   savePendingSquadInviteLink,
@@ -1259,7 +1261,7 @@ function SquadDetailsScreen({ navigation, route }) {
   }, [handleScrollToSection]);
 
   const handleOpenFullHistory = useCallback(() => {
-    navigation.navigate(RouteNames.MatchHistoryScreen);
+    navigateToLeagueStackScreen(navigation, RouteNames.MatchHistoryScreen);
   }, [navigation]);
 
   useEffect(() => {
@@ -1473,7 +1475,11 @@ function SquadDetailsScreen({ navigation, route }) {
           text: t('squadDetails.actions.invitePlayer', 'Inviter un joueur'),
         },
         {
-          onPress: () => navigation.navigate(RouteNames.SquadEdit, { teamId: safeTeamId }),
+          onPress: () => navigateToStackScreenOrScreen(navigation, {
+            params: { teamId: safeTeamId },
+            screen: RouteNames.SquadEdit,
+            stack: RouteNames.TeamStack,
+          }),
           text: t('squadDetails.actions.editTeam', 'Modifier l\'équipe'),
         },
         ...(isFootball11

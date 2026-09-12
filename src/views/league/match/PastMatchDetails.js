@@ -27,6 +27,7 @@ import ScreenContainer from '@/components/templates/ScreenContainer';
 import LeagueStateView from '@/views/league/components/LeagueStateView';
 import { getProposalLocationLabel } from '@/views/league/match/utils/proposalPayload';
 
+import { navigateToStackScreenOrScreen } from '@/navigation/navigationAvailability';
 import { RouteNames } from '@/navigation/routeNames';
 import useBottomDockLayout from '@/navigation/useBottomDockLayout';
 
@@ -326,7 +327,10 @@ function PastMatchDetails() {
       <LeagueStateView
         actionLabel="Retour au dashboard"
         description="Ce match terminé n'est plus accessible depuis ce lien."
-        onAction={() => navigation.navigate(RouteNames.LeagueDashboard)}
+        onAction={() => navigateToStackScreenOrScreen(navigation, {
+          screen: RouteNames.LeagueDashboard,
+          stack: RouteNames.LeagueHomeTab,
+        })}
         title="Match introuvable"
       />
     );

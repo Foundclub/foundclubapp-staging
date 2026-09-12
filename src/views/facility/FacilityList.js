@@ -26,6 +26,7 @@ import SubscriptionPaywallSheet
   from '@/components/molecules/subscriptionPaywallSheet/SubscriptionPaywallSheet';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
+import { navigateToStackScreenOrScreen } from '@/navigation/navigationAvailability';
 import { RouteNames } from '@/navigation/routeNames';
 import useBottomDockLayout from '@/navigation/useBottomDockLayout';
 
@@ -171,10 +172,15 @@ function FacilityList() {
     const facilityId = facility?.documentId || facility?.id;
     if (!facilityId) return;
 
-    navigation.navigate(RouteNames.Club, {
-      clubId: contextClubId,
-      planningFacilityId: facilityId,
-      planningScope: facility?.isShared ? 'shared' : 'club',
+    // NAVMORTE : l ecran est aussi monte a la RACINE, ou Club n existe pas.
+    navigateToStackScreenOrScreen(navigation, {
+      params: {
+        clubId: contextClubId,
+        planningFacilityId: facilityId,
+        planningScope: facility?.isShared ? 'shared' : 'club',
+      },
+      screen: RouteNames.Club,
+      stack: RouteNames.ClubStack,
     });
   }, [contextClubId, navigation]);
 
@@ -557,7 +563,10 @@ function FacilityList() {
           Impossible de determiner pour quel club afficher les installations.
         </Text>
         <Button
-          onPress={() => navigation.navigate(RouteNames.TeamList)}
+          onPress={() => navigateToStackScreenOrScreen(navigation, {
+            screen: RouteNames.TeamList,
+            stack: RouteNames.TeamStack,
+          })}
           title="Retour aux équipes"
           variant="Secondary"
         />

@@ -1,5 +1,6 @@
 import { Platform } from 'react-native';
 
+import { imbriquerDepuisLaRacine } from '@/navigation/hotesDepuisLaRacine';
 import { RouteNames } from '@/navigation/routeNames';
 
 import { isFootballElevenSport } from '@/utils/leagueSportConfig';
@@ -501,7 +502,7 @@ const adaptDestinationForCurrentPlatform = (payload, destination) => {
 /**
  * @param {unknown} rawPayload
  */
-export const resolveNotificationDestination = (rawPayload = {}) => {
+const resolveBareNotificationDestination = (rawPayload = {}) => {
   const payload = normalizeNotificationPayload(rawPayload);
   const { type } = payload;
 
@@ -1014,4 +1015,24 @@ export const resolveNotificationDestination = (rawPayload = {}) => {
     default:
       return null;
   }
+};
+
+/**
+ * La destination d une notification, prete a etre donnee a navigate DEPUIS LA RACINE.
+ *
+ * NAVMORTE2 (2026-09-11) -- les appelants natifs (liste, bulle, hote intelligent,
+ * appui sur un push) naviguent depuis la pile racine. Plusieurs destinations nues
+ * -- calculees ici OU envoyees par le serveur dans ctaRoute -- visaient un ecran que
+ * seul un navigateur imbrique porte : l appui ne faisait RIEN (38 couples mesures).
+ * On les enveloppe UNE fois, a la sortie, dans leurs hotes
+ * (src/navigation/hotesDepuisLaRacine.js). Le web garde sa forme :
+ * adaptDestinationForCurrentPlatform y traduit deja les ecrans LEAGUE en routes web.
+ * Temoin : src/navigation/__tests__/notificationNavigation.depuisLaRacine.test.js.
+ * @param {unknown} rawPayload
+ * @returns {ReturnType<typeof resolveBareNotificationDestination>} la destination, imbriquee
+ *   sous ses hotes en natif
+ */
+export const resolveNotificationDestination = (rawPayload = {}) => {
+  const destination = resolveBareNotificationDestination(rawPayload);
+  return Platform.OS === 'web' ? destination : imbriquerDepuisLaRacine(destination);
 };
