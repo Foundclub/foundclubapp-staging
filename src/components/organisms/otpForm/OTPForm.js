@@ -1,6 +1,6 @@
 import { joiResolver } from '@hookform/resolvers/joi';
 import {
-  useCallback, useEffect, useRef, useState,
+  useCallback, useEffect, useState,
 } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
@@ -24,9 +24,6 @@ const otpLogger = createLogger('otp-form');
 const defaultValues = {
   code: '',
 };
-
-const WEB_QA_BYPASS_FLAG = '__webQaBypass';
-const LOCAL_FIREBASE_FALLBACK_FLAG = '__localFirebaseFallbackBypass';
 
 const otpSchema = Joi.object({
   code: Joi.string().length(6).required(),
@@ -57,25 +54,12 @@ function OTPForm({
   const [resendCooldownSeconds, setResendCooldownSeconds] = useState(
     () => getOtpCooldownRemainingSeconds(phoneNumber),
   );
-  const hasAutoSubmittedRef = useRef(false);
-  const bypassConfirmation = /** @type {any} */ (confirm);
-  const bypassPrefilledCode = (
-    bypassConfirmation?.[WEB_QA_BYPASS_FLAG] === true
-    || bypassConfirmation?.[LOCAL_FIREBASE_FALLBACK_FLAG] === true
-  )
-    ? '123456'
-    : '';
-
   const {
     control,
     formState: { errors: formErrors },
     handleSubmit,
-    setValue,
   } = useForm({
-    defaultValues: {
-      ...defaultValues,
-      code: bypassPrefilledCode,
-    },
+    defaultValues,
     mode: 'onBlur',
     resolver: joiResolver(otpSchema),
     shouldFocusError: false,
@@ -89,15 +73,6 @@ function OTPForm({
 
     return () => clearSafeTimer(intervalId);
   }, [clearSafeTimer, phoneNumber, setSafeInterval]);
-
-  useEffect(() => {
-    if (!bypassPrefilledCode) return;
-    setValue('code', bypassPrefilledCode, {
-      shouldDirty: true,
-      shouldTouch: true,
-      shouldValidate: true,
-    });
-  }, [bypassPrefilledCode, setValue]);
 
   /**
    * Handle form submit
@@ -121,15 +96,6 @@ function OTPForm({
       }
     }
   }, [confirm, isLocalSubmitting, loginMutation, phoneNumber]);
-
-  useEffect(() => {
-    if (!bypassPrefilledCode || hasAutoSubmittedRef.current || isLocalSubmitting) {
-      return;
-    }
-
-    hasAutoSubmittedRef.current = true;
-    handleSubmit(handleFormSubmit)();
-  }, [bypassPrefilledCode, handleFormSubmit, handleSubmit, isLocalSubmitting]);
 
   return (
     <View style={[Spaces.gap[24], Alignments.fullWidth]}>
