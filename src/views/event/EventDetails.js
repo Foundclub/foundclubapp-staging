@@ -42,6 +42,8 @@ import { getSubscriptionQuotaItem, hasActiveClubOffer } from '@/domains/subscrip
 import { hasLivingUser, withoutDeletedAccounts } from '@/domains/user/deletedAccount';
 import { getEventShowcaseTemplate, isEventShowcaseOffered } from '@/domains/visuals/eventShowcaseTemplate';
 import { withAlpha } from '@/theme/colors';
+import localeDesFormats from '@/theme/strings/localeDesFormats';
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -212,7 +214,7 @@ const DEFAULT_EXTERNAL_PARTICIPANT_LIMIT = 3;
  */
 const formatCampaignAmount = (amountCents, currency = 'EUR') => {
   try {
-    return new Intl.NumberFormat('fr-FR', { currency, style: 'currency' }).format((Number(amountCents) || 0) / 100);
+    return new Intl.NumberFormat(localeDesFormats(), { currency, style: 'currency' }).format((Number(amountCents) || 0) / 100);
   } catch (_) {
     return `${((Number(amountCents) || 0) / 100).toFixed(2)} ${currency}`;
   }
@@ -255,6 +257,7 @@ function TrainingOpenBottomSheet({
   onSubmit,
   Spaces,
 }) {
+  const { t } = useTranslation();
   const resolveInitialLimit = useCallback(
     () => clampParticipants(Number(initialLimit) || DEFAULT_EXTERNAL_PARTICIPANT_LIMIT),
     [initialLimit],
@@ -290,14 +293,21 @@ function TrainingOpenBottomSheet({
     >
       <View style={[Spaces.gap[16], Spaces.paddingBottom[12]]}>
         <View style={[Spaces.gap[4]]}>
-          <Text style={[Fonts.h3Bold, Fonts.neutral00]}>Ouvrir l entraînement</Text>
+          <Text style={[Fonts.h3Bold, Fonts.neutral00]}>
+            {t('eventDetails.openTheTrainingSession', 'Ouvrir l entraînement')}
+          </Text>
           <Text style={[Fonts.p2, Fonts.neutral100]}>
-            Définis combien de joueurs externes peuvent rejoindre cet entraînement.
+            {t(
+              'eventDetails.setHowManyExternalPlayers',
+              'Définis combien de joueurs externes peuvent rejoindre cet entraînement.',
+            )}
           </Text>
         </View>
 
         <View style={[Spaces.gap[8]]}>
-          <Text style={[Fonts.p3Bold, Fonts.neutral00]}>Places externes</Text>
+          <Text style={[Fonts.p3Bold, Fonts.neutral00]}>
+            {t('eventDetails.externalSpots', 'Places externes')}
+          </Text>
           <View style={[Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween]}>
             <TouchableOpacity
               disabled={!canDecreaseLimit}
@@ -312,7 +322,7 @@ function TrainingOpenBottomSheet({
                 {limitValue}
               </Text>
               <Text style={[Fonts.p3, Fonts.neutral200, { textAlign: 'center' }]}>
-                joueurs externes max
+                {t('eventDetails.externalPlayersMax', 'joueurs externes max')}
               </Text>
             </View>
 
@@ -327,9 +337,14 @@ function TrainingOpenBottomSheet({
         </View>
 
         <View style={[Spaces.gap[4]]}>
-          <Text style={[Fonts.p3Bold, Fonts.neutral00]}>Demandes extérieures</Text>
+          <Text style={[Fonts.p3Bold, Fonts.neutral00]}>
+            {t('eventDetails.externalRequests', 'Demandes extérieures')}
+          </Text>
           <Text style={[Fonts.p2, Fonts.neutral100]}>
-            Les demandes extérieures sont validées par toi.
+            {t(
+              'eventDetails.externalRequestsAreApprovedBy',
+              'Les demandes extérieures sont validées par toi.',
+            )}
           </Text>
         </View>
 
@@ -343,13 +358,13 @@ function TrainingOpenBottomSheet({
               // facon ; l'envoyer explicitement garde la base d'accord avec lui.
               externalParticipantValidationMode: 'manual',
             })}
-            title="Confirmer l ouverture"
+            title={t('eventDetails.confirmOpening', 'Confirmer l ouverture')}
             variant="Primary"
           />
           <Button
             disabled={isSubmitting}
             onPress={onClose}
-            title="Annuler"
+            title={t('eventDetails.cancel', 'Annuler')}
             variant="Secondary"
           />
         </View>
@@ -1075,7 +1090,7 @@ function EventDetails({ navigation, route }) {
     const start = new Date(event.stageStartDate);
     const end = new Date(event.stageEndDate);
     if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return '';
-    return `${start.toLocaleDateString('fr-FR')} - ${end.toLocaleDateString('fr-FR')}`;
+    return `${start.toLocaleDateString(localeDesFormats())} - ${end.toLocaleDateString(localeDesFormats())}`;
   }, [event?.stageEndDate, event?.stageStartDate, isStageParentEvent]);
   const stageHoursSummary = useMemo(() => {
     if (!isStageParentEvent) return '';
@@ -1086,10 +1101,10 @@ function EventDetails({ navigation, route }) {
       String(day?.startTime || '').slice(0, 5) !== defaultStart
       || String(day?.endTime || '').slice(0, 5) !== defaultEnd
     ));
-    if (hasVariableHours) return 'Horaires variables';
+    if (hasVariableHours) return t('eventDetails.variableTimes', 'Horaires variables');
     if (defaultStart && defaultEnd) return `${defaultStart} - ${defaultEnd}`;
     return '';
-  }, [event?.stageDefaultEndTime, event?.stageDefaultStartTime, isStageParentEvent, stageChildDays]);
+  }, [event?.stageDefaultEndTime, event?.stageDefaultStartTime, isStageParentEvent, stageChildDays, t]);
   const isTournamentEvent = normalizeEventTypeLabel(event?.type?.name).includes('tournoi');
   const tournamentTeams = useMemo(
     () => (Array.isArray(event?.tournamentTeams) ? [...event.tournamentTeams] : [])
@@ -1563,7 +1578,10 @@ function EventDetails({ navigation, route }) {
     if (!Number.isFinite(externalParticipantLimit) || externalParticipantLimit < 1) {
       Alert.alert(
         t('common.error', 'Erreur'),
-        'Indique combien de places externes tu veux ouvrir pour cet entraînement.',
+        t(
+          'eventDetails.sayHowManyExternalSpots',
+          'Indique combien de places externes tu veux ouvrir pour cet entraînement.',
+        ),
       );
       return;
     }
@@ -1581,7 +1599,10 @@ function EventDetails({ navigation, route }) {
     } catch (trainingOpenError) {
       Alert.alert(
         t('common.error', 'Erreur'),
-        trainingOpenError?.message || 'Impossible d\'ouvrir cet entraînement pour le moment.',
+        trainingOpenError?.message || t(
+          'eventDetails.unableToOpenThisTraining',
+          "Impossible d'ouvrir cet entraînement pour le moment.",
+        ),
       );
     }
   }, [
@@ -1602,14 +1623,23 @@ function EventDetails({ navigation, route }) {
     } catch (trainingCloseError) {
       Alert.alert(
         t('common.error', 'Erreur'),
-        trainingCloseError?.message || 'Impossible de fermer cet entraînement pour le moment.',
+        trainingCloseError?.message || t(
+          'eventDetails.unableToCloseThisTraining',
+          'Impossible de fermer cet entraînement pour le moment.',
+        ),
       );
     }
   }, [eventId, mutations.updateEventNoNavMutation, t]);
   const approveFeaturedRequestMutation = useMutation({
     mutationFn: approveFeatured,
     onError: (mutationError) => {
-      Alert.alert('Erreur', mutationError?.message || 'Impossible de valider cette demande.');
+      Alert.alert(t(
+        'common.error',
+        'Erreur',
+      ), mutationError?.message || t(
+        'eventDetails.unableToApproveThisRequest',
+        'Impossible de valider cette demande.',
+      ));
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['events'] });
@@ -1623,7 +1653,13 @@ function EventDetails({ navigation, route }) {
   const rejectFeaturedRequestMutation = useMutation({
     mutationFn: rejectFeatured,
     onError: (mutationError) => {
-      Alert.alert('Erreur', mutationError?.message || 'Impossible de refuser cette demande.');
+      Alert.alert(t(
+        'common.error',
+        'Erreur',
+      ), mutationError?.message || t(
+        'eventDetails.unableToDeclineThisRequest',
+        'Impossible de refuser cette demande.',
+      ));
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['events'] });
@@ -1638,7 +1674,13 @@ function EventDetails({ navigation, route }) {
     // @ts-ignore: FIXME: Baseline TS regression
     mutationFn: ({ sourceTeamId }) => registerClubTeamToTournament(eventId, sourceTeamId),
     onError: (mutationError) => {
-      Alert.alert('Erreur', mutationError?.message || 'Impossible d inscrire cette équipe au tournoi.');
+      Alert.alert(t(
+        'common.error',
+        'Erreur',
+      ), mutationError?.message || t(
+        'eventDetails.unableToRegisterThisTeam',
+        'Impossible d inscrire cette équipe au tournoi.',
+      ));
     },
     onSuccess: () => {
       setIsTournamentRegisterModalVisible(false);
@@ -1650,7 +1692,10 @@ function EventDetails({ navigation, route }) {
     // @ts-ignore: FIXME: Baseline TS regression
     mutationFn: ({ acceptRiskDeclaration, name }) => createCustomTournamentTeam(eventId, { acceptRiskDeclaration, name }),
     onError: (mutationError) => {
-      setJoinModalError(mutationError?.message || 'Impossible de créer cette équipe de tournoi.');
+      setJoinModalError(mutationError?.message || t(
+        'eventDetails.unableToCreateThisTournament',
+        'Impossible de créer cette équipe de tournoi.',
+      ));
     },
     onSuccess: (createdTeam) => {
       setIsJoinModalVisible(false);
@@ -1674,7 +1719,10 @@ function EventDetails({ navigation, route }) {
     // @ts-ignore: FIXME: Baseline TS regression
     mutationFn: ({ acceptRiskDeclaration, teamDocumentId }) => requestJoinTournamentTeam(teamDocumentId, { acceptRiskDeclaration }),
     onError: (mutationError) => {
-      setJoinModalError(mutationError?.message || 'Impossible d envoyer cette demande pour le moment.');
+      setJoinModalError(mutationError?.message || t(
+        'eventDetails.unableToSendThisRequest',
+        'Impossible d envoyer cette demande pour le moment.',
+      ));
     },
     onSuccess: (updatedTeam) => {
       setIsJoinModalVisible(false);
@@ -1696,7 +1744,13 @@ function EventDetails({ navigation, route }) {
     // @ts-ignore: FIXME: Baseline TS regression
     mutationFn: ({ status, teamDocumentId }) => reviewTournamentTeamRegistration(teamDocumentId, status),
     onError: (mutationError) => {
-      Alert.alert('Erreur', mutationError?.message || 'Impossible de mettre à jour cette inscription.');
+      Alert.alert(t(
+        'common.error',
+        'Erreur',
+      ), mutationError?.message || t(
+        'eventDetails.unableToUpdateThisRegistration',
+        'Impossible de mettre à jour cette inscription.',
+      ));
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['event', eventId] });
@@ -1707,7 +1761,13 @@ function EventDetails({ navigation, route }) {
     // @ts-ignore: FIXME: Baseline TS regression
     mutationFn: ({ status, teamDocumentId }) => respondToTournamentTeam(teamDocumentId, status),
     onError: (mutationError) => {
-      Alert.alert('Erreur', mutationError?.message || 'Impossible d enregistrer ta réponse tournoi.');
+      Alert.alert(t(
+        'common.error',
+        'Erreur',
+      ), mutationError?.message || t(
+        'eventDetails.unableToSaveYourTournament',
+        'Impossible d enregistrer ta réponse tournoi.',
+      ));
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['event', eventId] });
@@ -1792,10 +1852,14 @@ function EventDetails({ navigation, route }) {
         accentColor: Colors.error500 || 'rgb(248, 113, 113)',
         badgeBackgroundColor: `${Colors.error500 || 'rgb(248, 113, 113)'}22`,
         badgeBorderColor: `${Colors.error500 || 'rgb(248, 113, 113)'}38`,
-        badgeLabel: 'Absence enregistrée',
+        badgeLabel: t('eventDetails.absenceRecorded', 'Absence enregistrée'),
         badgeTextColor: Colors.error500 || 'rgb(248, 113, 113)',
         badgeValue: null,
-        description: "L'événement est terminé et aucune arrivée n'a été confirmée. Un coach doit corriger le pointage si besoin.",
+        description: t(
+          'eventDetails.theEventIsOverAnd',
+          "L'événement est terminé et aucune arrivée n'a été confirmée. Un coach doit corriger "
+            + 'le pointage si besoin.',
+        ),
         hasArrived: false,
         primaryAction: null,
         secondaryAction: null,
@@ -1815,7 +1879,11 @@ function EventDetails({ navigation, route }) {
           badgeLabel: 'Arrive',
           badgeTextColor: Colors.success500 || 'rgb(34, 197, 94)',
           badgeValue: null,
-          description: `${earlyMinutes} min avant le début de l'événement.`,
+          description: t(
+            'eventDetails.minBeforeTheStartOf',
+            "{{earlyMinutes}} min avant le début de l'événement.",
+            { earlyMinutes, ...SANS_ECHAPPEMENT },
+          ),
           hasArrived: true,
           primaryAction: null,
           secondaryAction: null,
@@ -1836,7 +1904,10 @@ function EventDetails({ navigation, route }) {
           badgeLabel: 'Arrive',
           badgeTextColor: Colors.warning500 || 'rgb(245, 158, 11)',
           badgeValue: `+${lateMinutes} min`,
-          description: 'Ton arrivée réelle a bien été enregistrée.',
+          description: t(
+            'eventDetails.yourActualArrivalHasBeen',
+            'Ton arrivée réelle a bien été enregistrée.',
+          ),
           hasArrived: true,
           primaryAction: null,
           secondaryAction: null,
@@ -1850,7 +1921,7 @@ function EventDetails({ navigation, route }) {
         badgeLabel: 'Arrive',
         badgeTextColor: Colors.success500 || 'rgb(34, 197, 94)',
         badgeValue: null,
-        description: 'Tu es signale present a l\'heure.',
+        description: t('eventDetails.youAreMarkedPresentOn', "Tu es signale present a l'heure."),
         hasArrived: true,
         primaryAction: null,
         secondaryAction: null,
@@ -1866,10 +1937,15 @@ function EventDetails({ navigation, route }) {
         badgeLabel: 'Retard annonce',
         badgeTextColor: Colors.warning500 || 'rgb(245, 158, 11)',
         badgeValue: `+${declaredLateMinutes} min`,
-        description: `Retard signale : +${declaredLateMinutes} min. Confirme ton arrivée une fois sur place.`,
+        description: t(
+          'eventDetails.lateArrivalReportedMinConfirm',
+          'Retard signale : +{{declaredLateMinutes}} min. Confirme ton arrivée une fois sur '
+            + 'place.',
+          { declaredLateMinutes, ...SANS_ECHAPPEMENT },
+        ),
         hasArrived: false,
         primaryAction: {
-          title: 'Mettre à jour',
+          title: t('eventDetails.update', 'Mettre à jour'),
           type: 'declare-late',
         },
         secondaryAction: {
@@ -1886,17 +1962,21 @@ function EventDetails({ navigation, route }) {
         accentColor: Colors.primary500,
         badgeBackgroundColor: `${Colors.primary500}22`,
         badgeBorderColor: `${Colors.primary500}38`,
-        badgeLabel: 'Aucun signalement',
+        badgeLabel: t('eventDetails.nothingReported', 'Aucun signalement'),
         badgeTextColor: Colors.primary500,
         badgeValue: null,
-        description: `Il te reste ${minutesLeft} min pour signaler ton arrivée ou ton retard.`,
+        description: t(
+          'eventDetails.youHaveMinLeftTo',
+          'Il te reste {{minutesLeft}} min pour signaler ton arrivée ou ton retard.',
+          { minutesLeft, ...SANS_ECHAPPEMENT },
+        ),
         hasArrived: false,
         primaryAction: {
           title: t('eventDetails.attendanceBadge.selfArrived'),
           type: 'arrived',
         },
         secondaryAction: {
-          title: 'Je serai en retard',
+          title: t('eventDetails.iLlBeLate', 'Je serai en retard'),
           type: 'declare-late',
         },
       };
@@ -1910,14 +1990,17 @@ function EventDetails({ navigation, route }) {
       badgeLabel: 'En attente',
       badgeTextColor: Colors.error500 || 'rgb(248, 113, 113)',
       badgeValue: liveLateMinutes > 0 ? `+${liveLateMinutes} min` : null,
-      description: 'Le début est passé. Signale ton retard ou confirme ton arrivée.',
+      description: t(
+        'eventDetails.theStartHasPassedReport',
+        'Le début est passé. Signale ton retard ou confirme ton arrivée.',
+      ),
       hasArrived: false,
       primaryAction: {
         title: t('eventDetails.attendanceBadge.selfArrived'),
         type: 'arrived',
       },
       secondaryAction: {
-        title: 'Je serai en retard',
+        title: t('eventDetails.iLlBeLate', 'Je serai en retard'),
         type: 'declare-late',
       },
     };
@@ -2123,24 +2206,24 @@ function EventDetails({ navigation, route }) {
     if (managedTournamentTeam?.documentId) {
       return {
         ...currentParticipationFlow,
-        actionLabel: 'Gérer mon équipe tournoi',
-        confirmLabel: 'Gérer mon équipe tournoi',
+        actionLabel: t('eventDetails.manageMyTournamentTeam', 'Gérer mon équipe tournoi'),
+        confirmLabel: t('eventDetails.manageMyTournamentTeam', 'Gérer mon équipe tournoi'),
       };
     }
 
     if (currentUserTournamentTeam?.documentId) {
       return {
         ...currentParticipationFlow,
-        actionLabel: 'Voir mon équipe tournoi',
-        confirmLabel: 'Voir mon équipe tournoi',
+        actionLabel: t('eventDetails.seeMyTournamentTeam', 'Voir mon équipe tournoi'),
+        confirmLabel: t('eventDetails.seeMyTournamentTeam', 'Voir mon équipe tournoi'),
       };
     }
 
     if (currentUserPendingTournamentTeam?.documentId) {
       return {
         ...currentParticipationFlow,
-        actionLabel: 'Suivre ma demande',
-        confirmLabel: 'Suivre ma demande',
+        actionLabel: t('eventDetails.followMyRequest', 'Suivre ma demande'),
+        confirmLabel: t('eventDetails.followMyRequest', 'Suivre ma demande'),
       };
     }
 
@@ -2156,7 +2239,7 @@ function EventDetails({ navigation, route }) {
     isStageDayEvent,
     isTournamentEvent,
     managedTournamentTeam?.documentId,
-    userData?.role?.name,
+    userData?.role?.name, t,
   ]);
 
   const pendingParticipations = useMemo(
@@ -2192,13 +2275,13 @@ function EventDetails({ navigation, route }) {
         isHome: true,
         key: event.team.documentId || 'home-team',
         players: getEligibleTeamPlayers(event.team),
-        teamName: event.team.name || 'Équipe organisatrice',
+        teamName: event.team.name || t('eventDetails.organisingTeam', 'Équipe organisatrice'),
       } : null,
       ...((event?.invitedTeams || []).map((/** @type {any} */ team) => ({
         isHome: false,
         key: team?.documentId || `invited-${team?.name || 'team'}`,
         players: getEligibleTeamPlayers(team),
-        teamName: team?.name || 'Équipe invitée',
+        teamName: team?.name || t('eventDetails.invitedTeam', 'Équipe invitée'),
       }))),
     ].filter(Boolean);
 
@@ -2298,7 +2381,7 @@ function EventDetails({ navigation, route }) {
         }
 
         const teamKey = resolvedTeamKey;
-        const teamName = resolvedTeamName || 'Équipe retirée';
+        const teamName = resolvedTeamName || t('eventDetails.removedTeam', 'Équipe retirée');
         const current = historicalByTeam.get(teamKey) || {
           key: teamKey,
           missing: [],
@@ -2417,7 +2500,7 @@ function EventDetails({ navigation, route }) {
       },
       teamParticipationSections: sections,
     };
-  }, [canEdit, event, inactiveEventParticipations, pendingParticipations, trainerKeysForEvent]);
+  }, [canEdit, event, inactiveEventParticipations, pendingParticipations, trainerKeysForEvent, t]);
 
   // 🎯 N4 (D5) — LES EQUIPES QU'IL Y A QUELQUE CHOSE A RELANCER.
   // C'est cette liste, et elle seule, qui decide si « Relancer » ouvre une
@@ -2627,7 +2710,10 @@ function EventDetails({ navigation, route }) {
       Alert.alert(
         'Detection',
         // @ts-ignore: FIXME: Baseline TS regression
-        result?.message || 'Ta participation a bien été envoyée sur ce poste.',
+        result?.message || t(
+          'eventDetails.yourParticipationForThisPosition',
+          'Ta participation a bien été envoyée sur ce poste.',
+        ),
       );
     },
   });
@@ -2635,21 +2721,21 @@ function EventDetails({ navigation, route }) {
   const featuredScopeOptions = useMemo(() => ([
     {
       kind: 'PUBLIC',
-      label: 'À la une publique',
+      label: t('eventDetails.featuredPublicly', 'À la une publique'),
       status: featuredRequestsSummary.PUBLIC.status,
       summary: featuredRequestsSummary.PUBLIC,
       visible: canManageFeatured,
     },
     {
       kind: 'SECTION',
-      label: 'À la une dans mon club',
+      label: t('eventDetails.featuredInMyClub', 'À la une dans mon club'),
       status: featuredRequestsSummary.SECTION.status,
       summary: featuredRequestsSummary.SECTION,
       visible: canManageFeatured && Boolean(eventClubId),
     },
     {
       kind: 'CM',
-      label: 'À la une dans le club multisport',
+      label: t('eventDetails.featuredInTheMultisportClub', 'À la une dans le club multisport'),
       status: featuredRequestsSummary.CM.status,
       summary: featuredRequestsSummary.CM,
       visible: canManageFeatured && Boolean(eventMultisportId),
@@ -2660,7 +2746,7 @@ function EventDetails({ navigation, route }) {
     eventMultisportId,
     featuredRequestsSummary.CM,
     featuredRequestsSummary.PUBLIC,
-    featuredRequestsSummary.SECTION,
+    featuredRequestsSummary.SECTION, t,
   ]);
 
   const canRequestFeatured = useMemo(
@@ -2908,7 +2994,10 @@ function EventDetails({ navigation, route }) {
     if (!canCreateCustomTournamentTeam && joinableTournamentTeams.length === 0) {
       Alert.alert(
         'Tournoi',
-        'Aucune équipe tournoi ouverte ne peut être rejointe pour le moment.',
+        t(
+          'eventDetails.noOpenTournamentTeamCan',
+          'Aucune équipe tournoi ouverte ne peut être rejointe pour le moment.',
+        ),
       );
       return;
     }
@@ -2922,7 +3011,7 @@ function EventDetails({ navigation, route }) {
   }, [
     canCreateCustomTournamentTeam,
     joinableTournamentTeams.length,
-    userData?.role?.name,
+    userData?.role?.name, t,
   ]);
 
   // @ts-ignore: FIXME: Baseline TS regression
@@ -2932,17 +3021,23 @@ function EventDetails({ navigation, route }) {
       // @ts-ignore: FIXME: Baseline TS regression
       mode: 'join_existing',
       teamDocumentId: team.documentId,
-      teamName: team?.name || 'Équipe tournoi',
+      teamName: team?.name || t('eventDetails.tournamentTeam', 'Équipe tournoi'),
     });
     setIsTournamentJoinSelectorVisible(false);
     setJoinModalError('');
     setIsJoinModalVisible(true);
-  }, []);
+  }, [t]);
 
   const handleCreateTournamentTeam = useCallback(() => {
     const trimmedName = String(tournamentTeamNameDraft || '').trim();
     if (!trimmedName) {
-      Alert.alert('Équipe tournoi', 'Ajoute un nom d équipe avant de continuer.');
+      Alert.alert(t(
+        'eventDetails.tournamentTeam',
+        'Équipe tournoi',
+      ), t(
+        'eventDetails.addATeamNameBefore',
+        'Ajoute un nom d équipe avant de continuer.',
+      ));
       return;
     }
 
@@ -2955,7 +3050,7 @@ function EventDetails({ navigation, route }) {
     setIsTournamentCreateModalVisible(false);
     setJoinModalError('');
     setIsJoinModalVisible(true);
-  }, [tournamentTeamNameDraft]);
+  }, [tournamentTeamNameDraft, t]);
 
   // @ts-ignore: FIXME: Baseline TS regression
   const handleReviewTournamentTeam = useCallback((teamDocumentId, status) => {
@@ -2984,18 +3079,18 @@ function EventDetails({ navigation, route }) {
   const handleRejectFeaturedApproval = useCallback(() => {
     if (!pendingFeaturedApproval?.requestId) return;
     Alert.alert(
-      'Refuser la demande ?',
-      'Le demandeur sera notifié du refus.',
+      t('eventDetails.declineTheRequest', 'Refuser la demande ?'),
+      t('eventDetails.theRequesterWillBeNotified', 'Le demandeur sera notifié du refus.'),
       [
-        { style: 'cancel', text: 'Annuler' },
+        { style: 'cancel', text: t('eventDetails.cancel', 'Annuler') },
         {
           onPress: () => rejectFeaturedRequestMutation.mutate({ requestId: pendingFeaturedApproval.requestId }),
           style: 'destructive',
-          text: 'Refuser',
+          text: t('eventDetails.decline', 'Refuser'),
         },
       ],
     );
-  }, [pendingFeaturedApproval?.requestId, rejectFeaturedRequestMutation]);
+  }, [pendingFeaturedApproval?.requestId, rejectFeaturedRequestMutation, t]);
 
   // @ts-ignore: FIXME: Baseline TS regression
   const handleApplyToDetectionSlot = useCallback((slot) => {
@@ -3129,7 +3224,10 @@ function EventDetails({ navigation, route }) {
       setPendingDetectionSlot(null);
     } catch (mutationError) {
       setJoinModalError(
-        getParticipationErrorMessage(mutationError, 'Impossible de confirmer ta participation pour le moment.'),
+        getParticipationErrorMessage(mutationError, t(
+          'eventDetails.unableToConfirmYourParticipation',
+          'Impossible de confirmer ta participation pour le moment.',
+        )),
       );
     }
   }, [
@@ -3138,7 +3236,7 @@ function EventDetails({ navigation, route }) {
     handleBlockedParticipationFlow,
     mutations.createEventParticipationMutation,
     mutations.joinReservationMutation,
-    userData?.documentId,
+    userData?.documentId, t,
   ]);
 
   // 🎯 R9 — POSTULER SANS VISER UN POSTE.
@@ -3472,7 +3570,10 @@ function EventDetails({ navigation, route }) {
 
     Alert.alert(
       t('common.error'),
-      'Impossible de retrouver ta réponse pour cet événement. Recharge la page et réessaie.',
+      t(
+        'eventDetails.unableToFindYourAnswer',
+        'Impossible de retrouver ta réponse pour cet événement. Recharge la page et réessaie.',
+      ),
     );
   }, [
     activeEventParticipations,
@@ -3507,7 +3608,10 @@ function EventDetails({ navigation, route }) {
       );
       if (Platform.OS === 'ios') {
         setTimeout(() => {
-          SharePlatform.share({ title: 'Participants', url: path }).catch(() => undefined);
+          SharePlatform.share({
+            title: t('eventDetails.participants', 'Participants'),
+            url: path,
+          }).catch(() => undefined);
         }, 500);
       } else {
         ReactNativeBlobUtil.android
@@ -3615,13 +3719,17 @@ function EventDetails({ navigation, route }) {
 
     if (eventLicenseCampaigns.length > 0) {
       Alert.alert(
-        'Campagne déjà liée',
-        'Cet événement a déjà une campagne de cotisation. Crée-en une autre seulement si tu veux un paiement distinct.',
+        t('eventDetails.campaignAlreadyLinked', 'Campagne déjà liée'),
+        t(
+          'eventDetails.thisEventAlreadyHasA',
+          'Cet événement a déjà une campagne de cotisation. Crée-en une autre seulement si tu '
+            + 'veux un paiement distinct.',
+        ),
         [
           { style: 'cancel', text: t('common.cancel', 'Annuler') },
           {
             onPress: navigateToCampaignSettings,
-            text: 'Créer quand même',
+            text: t('eventDetails.createAnyway', 'Créer quand même'),
           },
         ],
       );
@@ -3682,13 +3790,13 @@ function EventDetails({ navigation, route }) {
       case 'default_composition':
         return t('eventDetails.compositionSource.defaultComposition', 'Composition type');
       case 'draft':
-        return 'Brouillon';
+        return t('eventDetails.draft', 'Brouillon');
       case 'last_match':
-        return 'Dernier match';
+        return t('eventDetails.lastMatch', 'Dernier match');
       case 'published':
-        return "Composition d'équipes publiée";
+        return t('eventDetails.teamLineUpPublished', "Composition d'équipes publiée");
       default:
-        return 'Nouvelle composition';
+        return t('eventDetails.newLineUp', 'Nouvelle composition');
     }
   }, [t]);
 
@@ -3835,8 +3943,8 @@ function EventDetails({ navigation, route }) {
       return preferredLabel.trim();
     }
 
-    return event?.type?.name || 'Evenement';
-  }, [event, eventDescriptionText]);
+    return event?.type?.name || t('eventDetails.eventFallback', 'Evenement');
+  }, [event, eventDescriptionText, t]);
 
   const {
     data: staffCompositionPayload,
@@ -3961,14 +4069,14 @@ function EventDetails({ navigation, route }) {
   const canManageMatchStats = Boolean(matchStatsPayload?.permissions?.canManage);
   const matchStatsScoreLabel = useMemo(() => {
     if (!matchStatsPayload?.score?.available) {
-      return 'Score à compléter';
+      return t('eventDetails.scoreToComplete', 'Score à compléter');
     }
 
     return `${matchStatsPayload?.score?.scoreFor ?? '-'} - ${matchStatsPayload?.score?.scoreAgainst ?? '-'}`;
   }, [
     matchStatsPayload?.score?.available,
     matchStatsPayload?.score?.scoreAgainst,
-    matchStatsPayload?.score?.scoreFor,
+    matchStatsPayload?.score?.scoreFor, t,
   ]);
   // ✍️ N3 (D9) — NOMMER L'ADVERSAIRE, DEPUIS LA CARTE.
   //
@@ -4080,10 +4188,19 @@ function EventDetails({ navigation, route }) {
     if (!available) {
       return {
         awaitingOpponent,
-        badgeLabel: waitingOfficial ? 'Score officiel' : 'Score du match',
+        badgeLabel: waitingOfficial ? t(
+          'eventDetails.officialScore',
+          'Score officiel',
+        ) : t(
+          'eventDetails.matchScore2',
+          'Score du match',
+        ),
         // Le repli disait « Score en attente » ICI ET dans `value` : la meme
         // phrase deux fois dans un encart de 172 px. Une seule suffit.
-        helperText: waitingOfficial ? 'Score en attente de synchronisation' : null,
+        helperText: waitingOfficial ? t(
+          'eventDetails.scoreWaitingToSync',
+          'Score en attente de synchronisation',
+        ) : null,
         onNameOpponent,
         opponentName: matchOpponentName,
         value: 'Score en attente',
@@ -4091,7 +4208,7 @@ function EventDetails({ navigation, route }) {
       };
     }
 
-    let badgeLabel = 'Score du match';
+    let badgeLabel = t('eventDetails.matchScore2', 'Score du match');
     if (resolvedSource === 'external_sync') {
       badgeLabel = 'Score officiel';
     } else if (resolvedSource === 'manual') {
@@ -4101,7 +4218,10 @@ function EventDetails({ navigation, route }) {
     return {
       awaitingOpponent,
       badgeLabel,
-      helperText: waitingOfficial ? 'Synchronise automatiquement depuis la source officielle' : null,
+      helperText: waitingOfficial ? t(
+        'eventDetails.syncedAutomaticallyFromTheOfficial',
+        'Synchronise automatiquement depuis la source officielle',
+      ) : null,
       onNameOpponent,
       opponentName: matchOpponentName,
       value: `${resolvedScoreFor} - ${resolvedScoreAgainst}`,
@@ -4119,7 +4239,7 @@ function EventDetails({ navigation, route }) {
     isMatchEvent,
     isViewerFromInvitedTeam,
     matchOpponentName,
-    matchStatsPayload?.score,
+    matchStatsPayload?.score, t,
   ]);
   // N4 (D6) : `matchStatsSummaryText`, `matchStatsStatusMeta` et
   // `matchStatsCardButtonTitle` ont QUITTE ce fichier. Ils decrivaient l'entete
@@ -4269,10 +4389,20 @@ function EventDetails({ navigation, route }) {
   );
 
   const viewerConvocationLine = useMemo(() => {
-    if (viewerConvocationRole === CONVOCATION_ROLE_STARTER) return 'Tu es convoqué · Titulaire';
-    if (viewerConvocationRole) return 'Tu es convoqué · Remplaçant';
-    return 'Tu n’es pas dans la composition publiée.';
-  }, [viewerConvocationRole]);
+    if (viewerConvocationRole === CONVOCATION_ROLE_STARTER) {
+      return t(
+        'eventDetails.youReCalledUpStarter',
+        'Tu es convoqué · Titulaire',
+      );
+    }
+    if (viewerConvocationRole) {
+      return t(
+        'eventDetails.youReCalledUpSubstitute',
+        'Tu es convoqué · Remplaçant',
+      );
+    }
+    return t('eventDetails.youReNotInThe', 'Tu n’es pas dans la composition publiée.');
+  }, [viewerConvocationRole, t]);
 
   // AD01 — LA MEME PHRASE, MAIS EN HAUT DE LA PAGE.
   //
@@ -4295,7 +4425,13 @@ function EventDetails({ navigation, route }) {
 
   const publishedCompositionCtaTitle = useMemo(() => {
     if (canEdit) return t('matchConvocation.published.openCta');
-    return viewerConvocationRole ? 'Voir ma convocation' : "Voir la composition d'équipes";
+    return viewerConvocationRole ? t(
+      'eventDetails.seeMyCallUp',
+      'Voir ma convocation',
+    ) : t(
+      'eventDetails.seeTheTeamLineUp',
+      "Voir la composition d'équipes",
+    );
   }, [canEdit, t, viewerConvocationRole]);
   // ==========================================================================
   // C2 — LE RAPPEL DE COMPO. Un bandeau, jamais une fenetre.
@@ -4437,39 +4573,57 @@ function EventDetails({ navigation, route }) {
     if (!isMatchFinished) {
       return {
         disabled: true,
-        subtitle: 'Les stats seront disponibles à la fin du match.',
+        subtitle: t(
+          'eventDetails.statsWillBeAvailableAt',
+          'Les stats seront disponibles à la fin du match.',
+        ),
       };
     }
     if (matchStatsPayload?.score?.waitingOfficial) {
       return {
         disabled: true,
-        subtitle: 'En attente du score officiel synchronise.',
+        subtitle: t(
+          'eventDetails.waitingForTheSyncedOfficial',
+          'En attente du score officiel synchronise.',
+        ),
       };
     }
     if (isMatchStatsReviewRequired) {
       return {
         disabled: false,
-        subtitle: 'Le score officiel a changé. Vérifie puis republie cette version.',
+        subtitle: t(
+          'eventDetails.theOfficialScoreChangedCheck',
+          'Le score officiel a changé. Vérifie puis republie cette version.',
+        ),
       };
     }
     if (isMatchStatsFinal) {
       return {
         disabled: false,
         subtitle: matchStatsReport?.finalizedAt
-          ? `Rapport finalise le ${new Date(matchStatsReport.finalizedAt).toLocaleString('fr-FR')}`
-          : 'Rapport finalise',
+          ? t('eventDetails.reportFinalisedOn', 'Rapport finalise le {{date}}', {
+            date: new Date(matchStatsReport.finalizedAt).toLocaleString(localeDesFormats()),
+            ...SANS_ECHAPPEMENT,
+          })
+          : t('eventDetails.reportFinalised', 'Rapport finalise'),
       };
     }
     if (!canManageMatchStats) {
       return {
         disabled: true,
-        subtitle: 'Les membres de ton équipe peuvent encore finaliser ce rapport.',
+        subtitle: t(
+          'eventDetails.yourTeamMembersCanStill',
+          'Les membres de ton équipe peuvent encore finaliser ce rapport.',
+        ),
       };
     }
     if (matchStatsPayload?.score?.available) {
       return {
         disabled: false,
-        subtitle: 'Complète le temps de jeu et les stats clés de ton équipe.',
+        subtitle: t(
+          'eventDetails.completePlayingTimeAndYour',
+          'Complète le temps de jeu et les stats clés de ton équipe.',
+        ),
       };
     }
     // AD01 (✍️) — LE SEUL CAS QUE LA FEUILLE COURTE DETOURNE. Ce drapeau vit
@@ -4478,7 +4632,10 @@ function EventDetails({ navigation, route }) {
     return {
       disabled: false,
       isScoreEntry: true,
-      subtitle: 'Commence par enregistrer le score du match.',
+      subtitle: t(
+        'eventDetails.startBySavingTheMatch',
+        'Commence par enregistrer le score du match.',
+      ),
     };
   }, [
     isMatchFinished,
@@ -4487,14 +4644,14 @@ function EventDetails({ navigation, route }) {
     isMatchStatsReviewRequired,
     matchStatsPayload?.score?.available,
     matchStatsPayload?.score?.waitingOfficial,
-    matchStatsReport?.finalizedAt,
+    matchStatsReport?.finalizedAt, t,
   ]);
   const myMatchResponseStatusMeta = useMemo(() => {
     if (myMatchResponse?.status === 'draft') {
       return {
         backgroundColor: `${Colors.primary500}20`,
         borderColor: `${Colors.primary500}45`,
-        label: 'Brouillon',
+        label: t('eventDetails.draft', 'Brouillon'),
         textColor: Colors.primary500,
       };
     }
@@ -4503,7 +4660,7 @@ function EventDetails({ navigation, route }) {
         return {
           backgroundColor: `${Colors.neutral00}14`,
           borderColor: `${Colors.neutral00}24`,
-          label: 'Non concerne',
+          label: t('eventDetails.notInvolved', 'Non concerne'),
           textColor: Colors.neutral00,
         };
       }
@@ -4511,58 +4668,84 @@ function EventDetails({ navigation, route }) {
         return {
           backgroundColor: `${Colors.gold500}20`,
           borderColor: `${Colors.gold500}45`,
-          label: 'Je ne sais pas',
+          label: t('eventDetails.iDonTKnow', 'Je ne sais pas'),
           textColor: Colors.gold500,
         };
       }
       return {
         backgroundColor: `${Colors.success500}20`,
         borderColor: `${Colors.success500}45`,
-        label: 'Envoye',
+        label: t('eventDetails.sent', 'Envoye'),
         textColor: Colors.success500,
       };
     }
     return {
       backgroundColor: `${Colors.primary500}20`,
       borderColor: `${Colors.primary500}45`,
-      label: 'A faire',
+      label: t('eventDetails.toDo', 'A faire'),
       textColor: Colors.primary500,
     };
-  }, [Colors.gold500, Colors.neutral00, Colors.primary500, Colors.success500, myMatchResponse]);
+  }, [Colors.gold500, Colors.neutral00, Colors.primary500, Colors.success500, myMatchResponse, t]);
   const myMatchResponseSummary = useMemo(() => {
     if (myMatchResponse?.status === 'submitted') {
       if (myMatchResponse?.participation === 'not_involved') {
-        return 'Tu as indique ne pas être concerne par ce match.';
+        return t(
+          'eventDetails.youSaidYouWerenT',
+          'Tu as indique ne pas être concerne par ce match.',
+        );
       }
       if (myMatchResponse?.participation === 'present_no_play') {
-        return 'Tu as indique que tu etais la sans jouer.';
+        return t('eventDetails.youSaidYouWereThere', 'Tu as indique que tu etais la sans jouer.');
       }
       if (myMatchResponse?.quantitativeState === 'unknown') {
-        return 'Ton ressenti est enregistré, sans stats quantitatives.';
+        return t(
+          'eventDetails.yourFeelingIsSavedWithout',
+          'Ton ressenti est enregistré, sans stats quantitatives.',
+        );
       }
-      return 'Tes stats personnelles et ta note sont enregistrées.';
+      return t(
+        'eventDetails.yourPersonalStatsAndRating',
+        'Tes stats personnelles et ta note sont enregistrées.',
+      );
     }
     if (myMatchResponse?.status === 'draft') {
-      return 'Ton brouillon perso post-match attend encore une validation.';
+      return t(
+        'eventDetails.yourPersonalPostMatchDraft',
+        'Ton brouillon perso post-match attend encore une validation.',
+      );
     }
-    return 'Renseigne ton retour individuel, puis ajoute une note sur 10.';
-  }, [myMatchResponse]);
+    return t(
+      'eventDetails.enterYourIndividualFeedbackThen',
+      'Renseigne ton retour individuel, puis ajoute une note sur 10.',
+    );
+  }, [myMatchResponse, t]);
   const myMatchResponseButtonTitle = useMemo(() => {
-    if (myMatchResponse?.status === 'draft') return 'Reprendre';
-    if (myMatchResponse?.status === 'submitted') return 'Voir';
-    return 'Renseigner';
-  }, [myMatchResponse]);
+    if (myMatchResponse?.status === 'draft') return t('eventDetails.resume', 'Reprendre');
+    if (myMatchResponse?.status === 'submitted') return t('eventDetails.view', 'Voir');
+    return t('eventDetails.fillIn', 'Renseigner');
+  }, [myMatchResponse, t]);
   const matchStatsPromptMessage = useMemo(() => {
     if (matchStatsPayload?.score?.available) {
       if (isMatchStatsReviewRequired) {
-        return 'Le score officiel a changé. Vérifie les lignes puis republie ce rapport.';
+        return t(
+          'eventDetails.theOfficialScoreChangedCheck2',
+          'Le score officiel a changé. Vérifie les lignes puis republie ce rapport.',
+        );
       }
 
-      return 'Le score est prêt. Tu peux maintenant compléter le temps de jeu et les stats clés de ton équipe.';
+      return t(
+        'eventDetails.theScoreIsReadyYou',
+        'Le score est prêt. Tu peux maintenant compléter le temps de jeu et les stats clés de '
+          + 'ton équipe.',
+      );
     }
 
-    return 'Le match est terminé. Enregistre d abord le score puis complète les statistiques de ton équipe.';
-  }, [isMatchStatsReviewRequired, matchStatsPayload?.score?.available]);
+    return t(
+      'eventDetails.theMatchIsOverSave',
+      'Le match est terminé. Enregistre d abord le score puis complète les statistiques de ton '
+        + 'équipe.',
+    );
+  }, [isMatchStatsReviewRequired, matchStatsPayload?.score?.available, t]);
   const matchStatsPromptSessionKey = useMemo(() => {
     if (!eventId || !compositionTeamId) return '';
 
