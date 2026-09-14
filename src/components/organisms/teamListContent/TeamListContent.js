@@ -1165,8 +1165,12 @@ function TeamListContent({
               />
             </View>
           ))}
-          {pendingTeams.map((team) => (
-            <View key={`pending-${team.documentId}`}>
+          {/* CLEF14 : rejoindre et gérer le MÊME club donnent deux cartes */}
+          {/* au même documentId : la nature de la demande entre dans la clef. */}
+          {pendingTeams.map((/** @type {any} */ team) => (
+            <View
+              key={`pending-${team.type || 'team'}-${team.requestType || ''}-${team.documentId}`}
+            >
               {renderTeamCard(team, 'pending')}
             </View>
           ))}

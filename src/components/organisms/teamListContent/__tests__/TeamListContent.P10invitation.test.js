@@ -357,3 +357,47 @@ describe('P10 — une invitation recue ne se confond pas avec une demande envoye
     expect(textes).toContain('LES DEMANDES');
   });
 });
+
+// CLEF14 — vu sur l'émulateur le 14/09 (recette, compte de test « Test Fc ») :
+// une demande pour REJOINDRE un club et une demande pour le GÉRER portent le même
+// club, donc la même clef React `pending-<club>`. React le signale (« two children
+// with the same key ») et peut confondre les deux cartes à la mise à jour.
+describe('CLEF14 — deux demandes sur le même club gardent chacune leur carte', () => {
+  test('rejoindre + gérer le même club : aucune clef en double, deux cartes', async () => {
+    const club = { activities: [], documentId: 'club-test-fc', name: 'CLUB DOUBLE' };
+    const erreurs = jest.spyOn(console, 'error').mockImplementation(() => {});
+    mockUseAuth.mockReturnValue({
+      ...AUTH([]),
+      userData: {
+        ...utilisateurAvec([]),
+        clubMembershipRequests: [
+          {
+            club, documentId: 'cmr-join', state: 'pending', type: 'join',
+          },
+          {
+            club, documentId: 'cmr-claim', state: 'pending', type: 'claim',
+          },
+        ],
+      },
+    });
+    let arbre;
+    await act(async () => {
+      arbre = renderer.create(<TeamListContent showOnlyMyTeams={false} />);
+    });
+    await act(async () => {});
+    const textes = arbre.root.findAllByType(Text)
+      .flatMap((noeud) => noeud.props.children)
+      .filter((enfant) => typeof enfant === 'string');
+    const clefsEnDouble = erreurs.mock.calls
+      .filter((appel) => String(appel[0]).includes('same key'));
+    arbre.unmount();
+    erreurs.mockRestore();
+
+    expect(clefsEnDouble).toEqual([]);
+    // Chaque carte cite le club plusieurs fois (titre, sous-titre…) : deux cartes
+    // identiques donnent un compte PAIR et non nul.
+    const mentions = textes.filter((texte) => texte === 'CLUB DOUBLE').length;
+    expect(mentions).toBeGreaterThan(0);
+    expect(mentions % 2).toBe(0);
+  });
+});
