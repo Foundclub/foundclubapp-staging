@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { Image, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -37,6 +38,7 @@ function SearchMapFab({
     Images,
   } = useTheme();
   const insets = useSafeAreaInsets();
+  const { t } = useTranslation();
 
   if (!visible) {
     return null;
@@ -47,8 +49,8 @@ function SearchMapFab({
   const secondaryIconKey = mode === 'map' ? 'pin' : listIconKey;
   const bottomOffset = getFloatingActionBottomOffset(insets.bottom, 14);
   const accessibilityLabel = mode === 'map'
-    ? 'Revenir à la liste'
-    : 'Passer en mode carte';
+    ? t('searchMapFab.backToList', 'Revenir à la liste')
+    : t('searchMapFab.switchToMap', 'Passer en mode carte');
 
   return (
     <View
@@ -60,7 +62,7 @@ function SearchMapFab({
       }}
     >
       <TouchableOpacity
-        accessibilityHint="Bascule entre la liste et la carte."
+        accessibilityHint={t('searchMapFab.hint', 'Bascule entre la liste et la carte.')}
         accessibilityLabel={accessibilityLabel}
         activeOpacity={0.85}
         onPress={onPress}

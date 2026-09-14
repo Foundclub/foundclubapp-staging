@@ -1,6 +1,7 @@
 /* eslint-disable perfectionist/sort-imports */
 import * as Sentry from '@sentry/react-native';
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { InteractionManager, Platform } from 'react-native';
 
 import SessionManager from '@/components/atoms/sessionManager/SessionManager';
@@ -174,6 +175,7 @@ const queryClient = buildFoundClubQueryClient({
  * @returns {null}
  */
 function BootErrorAlertHost() {
+  const { t } = useTranslation();
   const [pendingBootError, setPendingBootError] = useState(null);
   const { phase } = useStartupPhase();
   const popup = usePopupEligibility(
@@ -230,14 +232,14 @@ function BootErrorAlertHost() {
   return (
     <GlobalPromptModal
       body={summary.slice(0, 500)}
-      eyebrow="Crash précédent"
+      eyebrow={t('app.bootError.eyebrow', 'Crash précédent')}
       inlineOnAndroid
       onRequestClose={finalize}
       primaryAction={{
         label: 'OK',
         onPress: finalize,
       }}
-      title="FoundClub a détecté un crash précédent"
+      title={t('app.bootError.title', 'FoundClub a détecté un crash précédent')}
       tone="critical"
       visible={Boolean(summary && isVisible)}
     />

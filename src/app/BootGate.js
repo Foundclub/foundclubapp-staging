@@ -1,4 +1,5 @@
 import { useEffect, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import ErrorScreen from '@/views/Error';
 
@@ -22,6 +23,7 @@ const buildConfigError = (errors) => new Error(
  * @returns {import('react').ReactElement}
  */
 function BootGate({ children }) {
+  const { t } = useTranslation();
   const runtimeEndpoints = useMemo(() => resolveRuntimeEndpoints(), []);
   const errors = useMemo(
     () => (Array.isArray(runtimeEndpoints?.errors) ? runtimeEndpoints.errors : []),
@@ -48,10 +50,10 @@ function BootGate({ children }) {
   if (hasBlockingError) {
     return (
       <ErrorScreen
-        actionTitle="Recharger"
+        actionTitle={t('bootGate.reload', 'Recharger')}
         details={__DEV__ ? errors.join('\n') : ''}
-        subtitle="La configuration réseau de ce build est invalide. L'app est bloquée proprement pour éviter un crash au démarrage."
-        title="Configuration invalide"
+        subtitle={t('bootGate.subtitle', "La configuration réseau de ce build est invalide. L'app est bloquée proprement pour éviter un crash au démarrage.")}
+        title={t('bootGate.title', 'Configuration invalide')}
       />
     );
   }

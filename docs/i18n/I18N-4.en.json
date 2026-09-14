@@ -1,0 +1,13 @@
+{
+  "app.bootError.eyebrow": "Previous crash",
+  "app.bootError.title": "FoundClub detected a previous crash",
+  "bootGate.reload": "Reload",
+  "bootGate.subtitle": "This build's network configuration is invalid. The app has been safely blocked to avoid a crash on startup.",
+  "bootGate.title": "Invalid configuration",
+  "errorWrapper.retry": "Retry",
+  "searchMapFab.backToList": "Back to the list",
+  "searchMapFab.hint": "Switches between the list and the map.",
+  "searchMapFab.switchToMap": "Switch to map view",
+  "selectPicker.placeholder": "Select",
+  "stepper.progress": "Step {{filled}} of {{total}}"
+}

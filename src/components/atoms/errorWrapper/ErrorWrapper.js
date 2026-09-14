@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Text, View } from 'react-native';
 // Hooks
 import useTheme from '@/theme/themeContext';
@@ -26,13 +27,14 @@ function ErrorWrapper({
   error,
   message = undefined,
   onRetry = undefined,
-  retryLabel = 'Réessayer',
+  retryLabel = undefined,
   wrapperStyle = [],
 }) {
   // hooks
   const {
     Alignments, ApplicationStyle, Fonts, Spaces,
   } = useTheme();
+  const { t } = useTranslation();
 
   const [childrenDimensions, setChildrenDimensions] = useState({ height: 0, width: 0 });
 
@@ -102,7 +104,7 @@ function ErrorWrapper({
                 isOption
                 onPress={handleRetryPress}
                 size="sm"
-                title={retryLabel}
+                title={retryLabel ?? t('errorWrapper.retry', 'Réessayer')}
               />
             </View>
           ) : null}

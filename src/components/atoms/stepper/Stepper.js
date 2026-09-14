@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { Dimensions, View } from 'react-native';
 
 import useTheme from '../../../theme/themeContext';
@@ -19,6 +20,7 @@ import useTheme from '../../../theme/themeContext';
  */
 function Stepper({ currentStep, steps }) {
   const { Alignments, ApplicationStyle } = useTheme();
+  const { t } = useTranslation();
   const windowWidth = Dimensions.get('window').width;
 
   const total = Math.max(0, Math.trunc(Number(steps) || 0));
@@ -33,7 +35,7 @@ function Stepper({ currentStep, steps }) {
 
   return (
     <View
-      accessibilityLabel={`Étape ${filled} sur ${total}`}
+      accessibilityLabel={t('stepper.progress', 'Étape {{filled}} sur {{total}}', { filled, total })}
       accessibilityRole="progressbar"
       style={[
         Alignments.fullWidth,
