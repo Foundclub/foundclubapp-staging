@@ -1,6 +1,11 @@
+import i18next from 'i18next';
+
 const selectFile = (accept, options = {}) => new Promise((resolve, reject) => {
   if (typeof document === 'undefined') {
-    reject(new Error('Le navigateur ne supporte pas le sélecteur de fichiers.'));
+    reject(new Error(i18next.t(
+      'media.errors.noFilePicker',
+      'Le navigateur ne supporte pas le sélecteur de fichiers.',
+    )));
     return;
   }
 
@@ -58,11 +63,17 @@ const stopMediaTracks = (stream) => {
 
 export const recordVoiceNote = async () => {
   if (typeof window === 'undefined' || typeof navigator === 'undefined') {
-    throw new Error('Le navigateur est requis pour enregistrer une note vocale.');
+    throw new Error(i18next.t(
+      'media.errors.browserRequired',
+      'Le navigateur est requis pour enregistrer une note vocale.',
+    ));
   }
 
   if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === 'undefined') {
-    throw new Error('L enregistrement vocal web n est pas pris en charge par ce navigateur.');
+    throw new Error(i18next.t(
+      'media.errors.voiceNoteUnsupported',
+      'L enregistrement vocal web n est pas pris en charge par ce navigateur.',
+    ));
   }
 
   const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -91,7 +102,10 @@ export const recordVoiceNote = async () => {
 
   recorder.addEventListener('error', (event) => {
     stopMediaTracks(stream);
-    rejectResult(event?.error || new Error('L enregistrement vocal a échoué.'));
+    rejectResult(event?.error || new Error(i18next.t(
+      'media.errors.voiceNoteFailed',
+      'L enregistrement vocal a échoué.',
+    )));
   });
 
   recorder.addEventListener('stop', () => {

@@ -1,3 +1,5 @@
+import i18next from 'i18next';
+
 const buildShareText = (payload = {}) => [
   payload?.title,
   payload?.message || payload?.text,
@@ -36,7 +38,10 @@ export const share = async (payload = {}) => {
     return;
   }
 
-  throw new Error('Le partage web n est pas disponible dans ce navigateur.');
+  throw new Error(i18next.t(
+    'share.errors.webUnavailable',
+    'Le partage web n est pas disponible dans ce navigateur.',
+  ));
 };
 
 export default {

@@ -1,3 +1,5 @@
+import i18next from 'i18next';
+
 const SCOPE_TITLES = Object.freeze({
   clubs: 'Carte des clubs',
   events: 'Carte des événements',
@@ -44,42 +46,84 @@ export const getSearchMapActiveFiltersSummary = (filterCount, geolocatableCount)
 };
 
 export const getSearchMapLoadingCopy = () => ({
-  body: 'Nous préparons l’affichage cartographique de tes résultats géolocalisés.',
-  title: 'Chargement de la carte',
+  body: i18next.t(
+    'searchMapCopy.loading.body',
+    'Nous préparons l’affichage cartographique de tes résultats géolocalisés.',
+  ),
+  title: i18next.t('searchMapCopy.loading.title', 'Chargement de la carte'),
 });
 
-export const getSearchMapUpdatingResultsCopy = () => 'Mise à jour des résultats…';
+export const getSearchMapUpdatingResultsCopy = () => i18next.t(
+  'searchMapCopy.updatingResults',
+  'Mise à jour des résultats…',
+);
 
 export const getSearchMapSearchAreaLabel = (isLoading = false) => (
-  isLoading ? 'Mise à jour…' : 'Rechercher dans cette zone'
+  isLoading ? i18next.t('searchMapCopy.searchArea.updating', 'Mise à jour…') : i18next.t(
+    'searchMapCopy.searchArea.search',
+    'Rechercher dans cette zone',
+  )
 );
 
 export const getSearchMapProviderErrorMessage = (errorReason) => {
   switch (errorReason) {
     case SEARCH_MAP_ERROR_REASONS.invalidApiKey:
-      return 'La clé TomTom utilisée par ce build n’est pas validé ou n’a pas accès à Map Display API.';
+      return i18next.t(
+        'searchMapCopy.errors.invalidApiKey',
+        'La clé TomTom utilisée par ce build n’est pas validé ou n’a pas accès à Map Display API.',
+      );
     case SEARCH_MAP_ERROR_REASONS.invalidTileRequest:
-      return 'La requête envoyée au provider cartographique est invalide. Vérifie la configuration TomTom.';
+      return i18next.t(
+        'searchMapCopy.errors.invalidTileRequest',
+        'La requête envoyée au provider cartographique est invalide. Vérifie la configuration TomTom.', // eslint-disable-line max-len
+      );
     case SEARCH_MAP_ERROR_REASONS.leafletUnavailable:
-      return 'Le moteur cartographique n’a pas pu démarrer correctement dans ce build.';
+      return i18next.t(
+        'searchMapCopy.errors.leafletUnavailable',
+        'Le moteur cartographique n’a pas pu démarrer correctement dans ce build.',
+      );
     case SEARCH_MAP_ERROR_REASONS.missingApiKey:
-      return 'La clé TomTom est manquante pour ce build. Ajoute TOMTOM_API_KEY avant de tester la carte.';
+      return i18next.t(
+        'searchMapCopy.errors.missingApiKey',
+        'La clé TomTom est manquante pour ce build. Ajoute TOMTOM_API_KEY avant de tester la carte.', // eslint-disable-line max-len
+      );
     case SEARCH_MAP_ERROR_REASONS.networkError:
-      return 'Le réseau de la carte est indisponible pour le moment. Vérifie la connexion puis réessaie.';
+      return i18next.t(
+        'searchMapCopy.errors.networkError',
+        'Le réseau de la carte est indisponible pour le moment. Vérifie la connexion puis réessaie.', // eslint-disable-line max-len
+      );
     case SEARCH_MAP_ERROR_REASONS.providerUnavailable:
-      return 'Le service cartographique TomTom est momentanément indisponible. Réessaie plus tard.';
+      return i18next.t(
+        'searchMapCopy.errors.providerUnavailable',
+        'Le service cartographique TomTom est momentanément indisponible. Réessaie plus tard.',
+      );
     case SEARCH_MAP_ERROR_REASONS.rateLimited:
-      return 'Le quota TomTom a été atteint pour le moment. Réessaie un peu plus tard.';
+      return i18next.t(
+        'searchMapCopy.errors.rateLimited',
+        'Le quota TomTom a été atteint pour le moment. Réessaie un peu plus tard.',
+      );
     case SEARCH_MAP_ERROR_REASONS.tilesUnavailable:
-      return 'La carte a démarré, mais aucune tuile exploitable n’a pu être chargée. Réessaie ou reviens à la liste.';
+      return i18next.t(
+        'searchMapCopy.errors.tilesUnavailable',
+        'La carte a démarré, mais aucune tuile exploitable n’a pu être chargée. Réessaie ou reviens à la liste.', // eslint-disable-line max-len
+      );
     case SEARCH_MAP_ERROR_REASONS.webViewError:
-      return 'Le moteur web de la carte a échoué au chargement. Ferme puis rouvre la carte.';
+      return i18next.t(
+        'searchMapCopy.errors.webViewError',
+        'Le moteur web de la carte a échoué au chargement. Ferme puis rouvre la carte.',
+      );
     case SEARCH_MAP_ERROR_REASONS.webViewProcessGone:
-      return 'Le moteur web de la carte a été interrompu. Recharge la carte ou reviens à la liste.';
+      return i18next.t(
+        'searchMapCopy.errors.webViewProcessGone',
+        'Le moteur web de la carte a été interrompu. Recharge la carte ou reviens à la liste.',
+      );
     case SEARCH_MAP_ERROR_REASONS.runtimeError:
     case SEARCH_MAP_ERROR_REASONS.tileError:
     default:
-      return 'Les tuiles TomTom ne répondent pas pour le moment. Réessaie ou reviens à la liste.';
+      return i18next.t(
+        'searchMapCopy.errors.tilesNotResponding',
+        'Les tuiles TomTom ne répondent pas pour le moment. Réessaie ou reviens à la liste.',
+      );
   }
 };
 
