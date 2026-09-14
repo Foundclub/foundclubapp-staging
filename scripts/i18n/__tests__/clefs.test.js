@@ -120,6 +120,14 @@ describe('I18N-0 — classerLesReplis', () => {
 
     expect(classerLesReplis({}, appels).illisibles).toEqual(['a.b']);
   });
+
+  it('compte un repli IGNORÉ : clef déjà prise dans fr.js avec un autre texte', () => {
+    const appels = relever("t('a.b', 'Mon texte');\nt('a.c', 'Pareil');");
+
+    const bilan = classerLesReplis({ 'a.b': 'Autre texte', 'a.c': 'Pareil' }, appels);
+
+    expect(bilan.ignores).toEqual(['a.b (src/Ecran.js:1)']);
+  });
 });
 
 describe('I18N-0 — bilanDesTraductions (la porte d’un lot)', () => {

@@ -11,12 +11,13 @@
 //   node scripts/i18n/francais-en-dur.js              → la porte (code 1 si hausse)
 //   node scripts/i18n/francais-en-dur.js --baseline   → réécrit la baseline
 //   node scripts/i18n/francais-en-dur.js --rapport x.json → détail par fichier
+// Ses fonctions servent aussi à scripts/i18n/extraction-fidele.js.
 //
 // 🧮 L'HEURISTIQUE, et ses limites (elle compte des LIGNES, pas des phrases) :
 // - on lit chaque fichier de production sous src/ (tests, doublures et
 //   dictionnaires exclus) avec Babel ;
-// - on examine les textes : littéraux '…' "…", morceaux de gabarit `…`, et
-//   texte JSX ;
+// - on examine les textes : littéraux '…' "…", gabarits `…` (les ${…} y
+//   deviennent {{}}), et texte JSX ;
 // - on IGNORE les arguments de `t()` / `i18n.t()` / `i18next.t()` (le repli est
 //   déjà traduisible), de `console.*`, de `require()`, les sources d'import et
 //   les noms de propriétés ;
@@ -55,6 +56,13 @@ const MOT_OUTIL = new RegExp(
 );
 const ELISION = /(^|[^\p{L}])(d|l|n|s|c|j|m|t|qu)['’]\p{L}/iu;
 
+// Un texte ramené à sa forme comparable : espaces tassées, et toute interpolation
+// (`${x}` d'un gabarit, `{{x}}` d'un repli) réduite à `{{}}`.
+const normaliser = (texte) => String(texte)
+  .replace(/\{\{[^}]*\}\}/g, '{{}}')
+  .replace(/\s+/g, ' ')
+  .trim();
+
 const estFrancais = (texte) => {
   const propre = String(texte).trim();
   if (!/\p{L}{2}/u.test(propre)) return false;
@@ -91,17 +99,16 @@ const nomAppele = (appel) => {
 const APPELS_IGNORES = /^(t|i18n\.t|i18next\.t|require|console\.\w+)$/;
 const CHAMPS_IGNORES = ['innerComments', 'leadingComments', 'loc', 'trailingComments'];
 
-// Les numéros de ligne qui portent au moins un texte français hors `t()`.
-const lignesFrancaises = (fichier) => {
-  const source = fs.readFileSync(fichier, 'utf8');
+// Les textes français hors `t()` d'une source : [{ ligne, texte }], texte normalisé.
+const textesFrancais = (fichier, source) => {
   const ast = parse(source, {
     errorRecovery: true,
     plugins: /\.tsx?$/.test(fichier) ? ['jsx', 'typescript'] : ['jsx'],
     sourceType: 'module',
   });
-  const lignes = new Set();
+  const textes = [];
   const noter = (noeud, texte) => {
-    if (estFrancais(texte)) lignes.add(noeud.loc.start.line);
+    if (estFrancais(texte)) textes.push({ ligne: noeud.loc.start.line, texte: normaliser(texte) });
   };
   const visiter = (noeud) => {
     if (!noeud || typeof noeud.type !== 'string') return;
@@ -127,8 +134,9 @@ const lignesFrancaises = (fichier) => {
       case 'StringLiteral':
         noter(noeud, noeud.value);
         return;
-      case 'TemplateElement':
-        noter(noeud, noeud.value.cooked);
+      case 'TemplateLiteral':
+        noter(noeud, noeud.quasis.map((morceau) => morceau.value.cooked).join('{{}}'));
+        noeud.expressions.forEach(visiter);
         return;
       default:
         break;
@@ -141,8 +149,13 @@ const lignesFrancaises = (fichier) => {
     });
   };
   visiter(ast.program);
-  return [...lignes].sort((a, b) => a - b);
+  return textes;
 };
+
+// Les numéros de ligne qui portent au moins un texte français hors `t()`.
+const lignesFrancaises = (fichier) => [
+  ...new Set(textesFrancais(fichier, fs.readFileSync(fichier, 'utf8')).map((t) => t.ligne)),
+].sort((a, b) => a - b);
 
 const mesurer = () => {
   const parFichier = {};
@@ -188,7 +201,8 @@ const run = () => {
   const { fichiers: plafonds, totalLignes } = JSON.parse(fs.readFileSync(BASELINE, 'utf8'));
   const hausses = Object.entries(comptes)
     .filter(([f, n]) => n > (plafonds[f] || 0))
-    .map(([f, n]) => `${f} : ${plafonds[f] || 0} -> ${n} (lignes ${mesure[f].join(', ')})`);
+    .map(([f, n]) => `${f} : ${plafonds[f] || 0} -> ${n}`
+      + ` (lignes ${mesure[f].slice(0, 15).join(', ')}${n > 15 ? ', …' : ''})`);
   const baisses = Object.entries(plafonds).filter(([f, n]) => (comptes[f] || 0) < n).length;
 
   console.log(`francais-en-dur: baselineLignes=${totalLignes} currentLignes=${total(comptes)}`
@@ -201,4 +215,6 @@ const run = () => {
   }
 };
 
-run();
+if (require.main === module) run();
+
+module.exports = { estFrancais, normaliser, textesFrancais };

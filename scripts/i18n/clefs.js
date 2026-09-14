@@ -9,6 +9,8 @@
 //   node scripts/i18n/clefs.js replis --ecrire [--sortie a-traduire.json]
 //       Ajoute les clefs ajoutables à fr.js (valeur = le repli, mot pour mot) et
 //       écrit la liste { clef: texte français } qui reste à traduire.
+//   node scripts/i18n/clefs.js replis --ignores
+//       Liste aussi les replis IGNORÉS (clef déjà dans fr.js, texte différent).
 //   node scripts/i18n/clefs.js replis --controle --traductions I18N-1.en.json
 //       N'écrit RIEN. Vérifie que chaque clef ajoutable a sa traduction anglaise
 //       dans le fichier, avec les mêmes {{jetons}}. Code 1 sinon. C'est la porte
@@ -351,12 +353,22 @@ const classerLesReplis = (plat, appels = releverLesAppels()) => {
     });
   });
   const tous = [...appels.values()].flat();
+  // 🪤 Un repli IGNORÉ : la clef existe déjà dans fr.js avec un autre texte, et
+  // i18next affiche celui de fr.js. Un lot qui choisit une clef déjà prise voit
+  // ce compteur monter — et son texte remplacé sans bruit.
+  const ignores = [...appels.entries()]
+    .filter(([clef]) => typeof plat[clef] === 'string')
+    .flatMap(([clef, usages]) => usages
+      .filter((u) => u.repli && u.repli.textes && typeof u.repli.textes[''] === 'string'
+        && u.repli.textes[''] !== plat[clef])
+      .map((u) => `${clef} (${u.endroit})`));
   return {
     absentes: absentes.length,
     ajoutables,
     appelsAvecRepli: tous.filter((u) => u.repli).length,
     appelsLitteraux: tous.length,
     clefsAppelees: appels.size,
+    ignores: ignores.sort(),
     illisibles: illisibles.sort(),
     minees: minees.sort(),
     nues: nues.sort(),
@@ -403,13 +415,14 @@ const commandeReplis = () => {
     + ` appelsAvecRepli=${bilan.appelsAvecRepli}`);
   console.log(`replis: clefsAbsentesDeFr=${bilan.absentes} ajoutables=${nbAjoutables}`
     + ` minees=${bilan.minees.length} illisibles=${bilan.illisibles.length}`
-    + ` nues=${bilan.nues.length}`);
+    + ` nues=${bilan.nues.length} replisIgnores=${bilan.ignores.length}`);
   const lister = (titre, clefs) => {
     if (clefs.length) console.log(`replis: ${titre} = ${clefs.join(', ')}`);
   };
   lister('minees (jamais ajoutees)', bilan.minees);
   lister('illisibles (jamais ajoutees)', bilan.illisibles);
   lister("NUES (l'ecran affiche la clef)", bilan.nues);
+  if (process.argv.includes('--ignores')) lister('replis ignores', bilan.ignores);
   if (process.argv.includes('--controle')) {
     controlerLesTraductions(bilan.ajoutables);
     return;
