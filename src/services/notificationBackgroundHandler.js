@@ -1,4 +1,5 @@
 import notifee, { EventType } from '@notifee/react-native';
+import i18next from 'i18next';
 import { getApp } from '@react-native-firebase/app';
 import { getMessaging, setBackgroundMessageHandler } from '@react-native-firebase/messaging';
 import { Platform } from 'react-native';
@@ -34,7 +35,9 @@ const getMessagingInstanceSafe = () => {
  * @param {Record<string, any>} data
  * @returns {string}
  */
-const resolvePushTitle = (remoteMessage, data) => remoteMessage?.notification?.title || data?.title || 'Rappel événement';
+const resolvePushTitle = (remoteMessage, data) => remoteMessage?.notification?.title
+  || data?.title
+  || i18next.t('notificationBackgroundHandler.defaultTitle', 'Rappel événement');
 
 /**
  * @param {any} remoteMessage
@@ -43,7 +46,10 @@ const resolvePushTitle = (remoteMessage, data) => remoteMessage?.notification?.t
  */
 const resolvePushBody = (remoteMessage, data) => remoteMessage?.notification?.body
   || data?.body
-  || 'Réponds rapidement : present ou absent.';
+  || i18next.t(
+    'notificationBackgroundHandler.defaultBody',
+    'Réponds rapidement : present ou absent.',
+  );
 
 // This handler must be outside of the React lifecycle to handle background/quit state messages
 export const registerBackgroundHandler = () => {

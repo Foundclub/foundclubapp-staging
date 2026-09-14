@@ -1,3 +1,5 @@
+import i18next from 'i18next';
+
 import client from '@/services/client';
 
 const getFacilities = async (clubId) => {
@@ -86,8 +88,14 @@ const normalizeSharedFacility = (facility) => ({
 const getFacilitySections = (facilities, labels = {}) => {
   if (!Array.isArray(facilities) || facilities.length === 0) return [];
 
-  const clubTitle = labels.clubTitle || 'Installations du club';
-  const sharedTitle = labels.sharedTitle || 'Installations partagées';
+  const clubTitle = labels.clubTitle || i18next.t(
+    'facilityService.sections.club',
+    'Installations du club',
+  );
+  const sharedTitle = labels.sharedTitle || i18next.t(
+    'facilityService.sections.shared',
+    'Installations partagées',
+  );
   const editableFacilities = facilities.filter((facility) => !facility?.isShared);
   const sharedFacilities = facilities.filter((facility) => facility?.isShared);
 

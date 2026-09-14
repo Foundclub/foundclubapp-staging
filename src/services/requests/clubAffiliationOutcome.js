@@ -105,7 +105,7 @@ export const resolveClubAffiliationOutcome = (reponse, t, contexte = {}) => {
 
   const nomDuClub = String(
     enveloppe?.clubName || contexte?.clubName || '',
-  ).trim() || 'ce club';
+  ).trim() || t('clubAffiliationOutcome.thisClub', { defaultValue: 'ce club' });
 
   // La phrase du serveur d abord : elle est ecrite au plus pres de ce qui vient
   // de se passer. Le repli traduit ne sert que lorsqu il n y en a aucune.

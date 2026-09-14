@@ -1,3 +1,5 @@
+import i18next from 'i18next';
+
 import client from '@/services/client';
 
 const normalizeApplicationStatus = (/** @type {any} */ value) => {
@@ -518,7 +520,7 @@ export const createRecruitmentAd = async (adData) => {
     const backendMessage = responseError?.message
       || responseData?.message
       || requestError?.message
-      || "Impossible de créer l'annonce";
+      || i18next.t('recruitmentService.errors.createAd', "Impossible de créer l'annonce");
     const nextError = /** @type {any} */ (new Error(backendMessage));
     nextError.code = responseError?.code || responseData?.code || requestError?.code || null;
     nextError.details = responseError?.details || responseData?.details || requestError?.details || null;

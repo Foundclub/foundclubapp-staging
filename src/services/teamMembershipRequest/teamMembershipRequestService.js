@@ -1,3 +1,4 @@
+import i18next from 'i18next';
 import Joi from 'joi';
 
 import { celebrate } from '@/services/celebrations/celebrationRuntime';
@@ -263,7 +264,10 @@ export const inviteToTeam = async (invitation) => {
     });
     return response.data;
   } catch (error) {
-    throw toReadableError(error, 'Impossible d\'envoyer l\'invitation pour le moment.');
+    throw toReadableError(error, i18next.t(
+      'teamMembershipRequestService.errors.invite',
+      "Impossible d'envoyer l'invitation pour le moment.",
+    ));
   }
 };
 
@@ -277,7 +281,10 @@ export const acceptTeamInvitation = async (requestId) => {
     const response = await client.post(`/team-membership-requests/${requestId}/accept-invite`);
     return response.data;
   } catch (error) {
-    throw toReadableError(error, 'Impossible d\'accepter cette invitation pour le moment.');
+    throw toReadableError(error, i18next.t(
+      'teamMembershipRequestService.errors.accept',
+      "Impossible d'accepter cette invitation pour le moment.",
+    ));
   }
 };
 
@@ -291,7 +298,10 @@ export const refuseTeamInvitation = async (requestId) => {
     const response = await client.post(`/team-membership-requests/${requestId}/refuse-invite`);
     return response.data;
   } catch (error) {
-    throw toReadableError(error, 'Impossible de refuser cette invitation pour le moment.');
+    throw toReadableError(error, i18next.t(
+      'teamMembershipRequestService.errors.decline',
+      'Impossible de refuser cette invitation pour le moment.',
+    ));
   }
 };
 

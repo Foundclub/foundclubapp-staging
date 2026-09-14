@@ -1,3 +1,5 @@
+import i18next from 'i18next';
+
 import client from '@/services/client';
 
 const DEFAULT_PAGE_SIZE = 15;
@@ -473,27 +475,27 @@ export const mapSearchPayload = (searchResponse) => (searchResponse?.data || [])
 export const getMatchReasonLabel = (reason) => {
   switch (reason) {
     case 'ACTIVITY_MATCH':
-      return 'Correspond à l\'activité';
+      return i18next.t('searchService.matchReason.activity', "Correspond à l'activité");
     case 'CITY_MATCH':
-      return 'Correspond à la ville';
+      return i18next.t('searchService.matchReason.city', 'Correspond à la ville');
     case 'CLUB_MATCH':
-      return 'Correspond au club';
+      return i18next.t('searchService.matchReason.club', 'Correspond au club');
     case 'DESCRIPTION_MATCH':
-      return 'Correspond à la description';
+      return i18next.t('searchService.matchReason.description', 'Correspond à la description');
     case 'GEO_NEARBY':
-      return 'A proximite';
+      return i18next.t('searchService.matchReason.nearby', 'A proximite');
     case 'LOCATION_FUZZY':
-      return 'Lieu proche de la recherche';
+      return i18next.t('searchService.matchReason.locationFuzzy', 'Lieu proche de la recherche');
     case 'LOCATION_MATCH':
-      return 'Correspond au lieu';
+      return i18next.t('searchService.matchReason.location', 'Correspond au lieu');
     case 'NAME_EXACT':
-      return 'Correspondance exacte du nom';
+      return i18next.t('searchService.matchReason.nameExact', 'Correspondance exacte du nom');
     case 'NAME_FUZZY':
-      return 'Nom proche de la recherche';
+      return i18next.t('searchService.matchReason.nameFuzzy', 'Nom proche de la recherche');
     case 'NAME_PREFIX':
-      return 'Correspondance du nom';
+      return i18next.t('searchService.matchReason.namePrefix', 'Correspondance du nom');
     case 'TEAM_MATCH':
-      return 'Correspond à l équipe';
+      return i18next.t('searchService.matchReason.team', 'Correspond à l équipe');
     default:
       return '';
   }
