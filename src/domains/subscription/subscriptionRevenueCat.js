@@ -222,7 +222,7 @@ export const mapRevenueCatStorePricesInCents = (offerings, catalogEntries) => {
     const currencyCode = String(storeProduct?.currencyCode || '').trim().toUpperCase() || 'EUR';
     storeCurrencyCode = storeCurrencyCode || currencyCode;
     if (currencyCode !== storeCurrencyCode) {
-      logger.warn('prix store ignore : deux devises dans le meme store', {
+      logger.warn('store price ignored: two currencies in the same store', {
         currencyCode,
         planCode,
         storeCurrencyCode,
