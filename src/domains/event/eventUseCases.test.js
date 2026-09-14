@@ -18,6 +18,12 @@ import {
   VALIDATION_MODE_OPTIONS,
 } from './eventUseCases';
 
+// I18N-2 : ces phrases passent par i18next.t — la doublure rend le français de l app
+// (fr.js, sinon le repli, jetons et pluriel français), sans initialiser i18next.
+jest.mock('i18next', () => (
+  jest.requireActual('@/theme/strings/__mocks__/doublureTraduction').i18next
+));
+
 jest.mock('@/theme/strings', () => ({
   t: (key) => key,
 }));

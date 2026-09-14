@@ -7,6 +7,7 @@ import {
   startOfWeek,
 } from 'date-fns';
 import { fr } from 'date-fns/locale';
+import i18next from 'i18next';
 
 import {
   getShortAddress,
@@ -168,7 +169,7 @@ export const getPlanningDisplayTitle = (item) => (
   || item?.team?.name
   || item?.club?.name
   || item?.facility?.name
-  || 'Événement'
+  || i18next.t('planningSlots.event', 'Événement')
 );
 
 export const getPlanningTypeLabel = (item) => {
@@ -360,7 +361,10 @@ export const resolvePlanningCardContent = (item, { profile = 'default' } = {}) =
   const secondaryDateTimeLabel = [dateLabel, timeLabel].filter(Boolean).join(' • ');
   const compactDateTimeLabel = timeLabel || dateLabel || '';
 
-  const defaultPrimaryLabel = typeLabel || title || 'Evenement';
+  const defaultPrimaryLabel = typeLabel || title || i18next.t(
+    'planningSlots.eventFallback',
+    'Evenement',
+  );
   const defaultContextLabel = (() => {
     const secondaryLabel = getPlanningItemSecondaryLabel(item);
 
