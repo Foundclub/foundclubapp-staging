@@ -1,5 +1,9 @@
 import { format } from 'date-fns';
 import { fr as frLocale } from 'date-fns/locale';
+import i18next from 'i18next';
+
+import localeDesFormats from '@/theme/strings/localeDesFormats';
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 
 import { formatSubscriptionPlanLabel } from './subscriptionDecision';
 
@@ -183,7 +187,11 @@ export const formatSubscriptionUnitPriceLabel = (unitPriceEurCents) => {
   const cents = Number(unitPriceEurCents);
   if (!Number.isFinite(cents) || cents <= 0) return '';
   const amountLabel = formatSubscriptionPriceLabel(cents, '');
-  return amountLabel ? `${amountLabel} par licencié` : '';
+  return amountLabel ? i18next.t(
+    'subscriptionBilling.unitPrice',
+    '{{amountLabel}} par licencié',
+    { amountLabel, ...SANS_ECHAPPEMENT },
+  ) : '';
 };
 
 /**
@@ -216,7 +224,14 @@ export const formatSubscriptionPerMemberPriceLabel = (
   const totalLabel = formatSubscriptionPriceLabel(unitCents * count, billingPeriod);
   if (!unitLabel || !totalLabel) return '';
 
-  return `${count} licencié${count > 1 ? 's' : ''} × ${unitLabel} = ${totalLabel}`;
+  return i18next.t('subscriptionBilling.perMemberTotal', {
+    count,
+    defaultValue_one: '{{count}} licencié × {{unitLabel}} = {{totalLabel}}',
+    defaultValue_other: '{{count}} licenciés × {{unitLabel}} = {{totalLabel}}',
+    totalLabel,
+    unitLabel,
+    ...SANS_ECHAPPEMENT,
+  });
 };
 
 /**
@@ -261,7 +276,10 @@ export const getSubscriptionEntryLicenseeCap = (entry) => {
  */
 export const formatSubscriptionClubTierShortLabel = (entry) => {
   const licenseeCap = getSubscriptionEntryLicenseeCap(entry);
-  return licenseeCap === null ? 'illim.' : String(licenseeCap);
+  return licenseeCap === null ? i18next.t(
+    'subscriptionBilling.clubTierShortUnlimited',
+    'illim.',
+  ) : String(licenseeCap);
 };
 
 /**
@@ -287,8 +305,12 @@ export const formatSubscriptionClubCoverageLabel = (entry) => {
   if (!entry) return '';
   const licenseeCap = getSubscriptionEntryLicenseeCap(entry);
   return licenseeCap === null
-    ? 'un nombre illimité de licenciés'
-    : `jusqu'à ${licenseeCap} licenciés du club`;
+    ? i18next.t('subscriptionBilling.clubCoverage.unlimited', 'un nombre illimité de licenciés')
+    : i18next.t(
+      'subscriptionBilling.clubCoverage.upTo',
+      "jusqu'à {{licenseeCap}} licenciés du club",
+      { licenseeCap, ...SANS_ECHAPPEMENT },
+    );
 };
 
 /**
@@ -605,9 +627,9 @@ export const formatSubscriptionPriceLabel = (priceEurCents, billingPeriod, curre
   const normalizedPeriod = String(billingPeriod || '').trim().toLowerCase();
   let periodSuffix = '';
   if (normalizedPeriod === 'yearly') {
-    periodSuffix = '/an';
+    periodSuffix = i18next.t('subscriptionBilling.periodSuffix.yearly', '/an');
   } else if (normalizedPeriod === 'monthly') {
-    periodSuffix = '/mois';
+    periodSuffix = i18next.t('subscriptionBilling.periodSuffix.monthly', '/mois');
   }
   return `${amount} ${getCurrencySymbol(currencyCode)}${periodSuffix}`;
 };
@@ -626,7 +648,11 @@ export const formatSubscriptionMonthlyEquivalentLabel = (yearlyPriceEurCents, cu
     return '';
   }
   const amount = (cents / 12 / 100).toFixed(2).replace('.', ',');
-  return `soit ${amount} ${getCurrencySymbol(currencyCode)}/mois`;
+  return i18next.t(
+    'subscriptionBilling.monthlyEquivalent',
+    'soit {{amount}} {{currency}}/mois',
+    { amount, currency: getCurrencySymbol(currencyCode), ...SANS_ECHAPPEMENT },
+  );
 };
 
 /**
@@ -637,7 +663,13 @@ export const getSubscriptionCatalogEntryMeta = (entry) => {
   const scopeType = String(entry?.scopeType || '').trim().toUpperCase();
   const billingPeriod = String(entry?.billingPeriod || '').trim().toLowerCase();
   const slotCount = Number(entry?.slotCount || 0);
-  const periodLabel = billingPeriod === 'yearly' ? 'Annuel' : 'Mensuel';
+  const periodLabel = billingPeriod === 'yearly' ? i18next.t(
+    'subscriptionBilling.period.yearly',
+    'Annuel',
+  ) : i18next.t(
+    'subscriptionBilling.period.monthly',
+    'Mensuel',
+  );
   const displayName = String(entry?.displayName || '').trim();
   const priceLabel = formatSubscriptionPriceLabel(
     entry?.referencePriceEurCents,
@@ -646,9 +678,16 @@ export const getSubscriptionCatalogEntryMeta = (entry) => {
   );
 
   if (scopeType === TEAM_SCOPE) {
-    const slotsLabel = `${slotCount} équipe${slotCount > 1 ? 's' : ''} couverte${slotCount > 1 ? 's' : ''}`;
+    const slotsLabel = i18next.t('subscriptionBilling.teamSlotsCovered', {
+      count: slotCount,
+      defaultValue_one: '{{count}} équipe couverte',
+      defaultValue_other: '{{count}} équipes couvertes',
+    });
     return {
-      description: 'Publie et gère les équipes couvertes par ton offre Équipe.',
+      description: i18next.t(
+        'subscriptionBilling.teamOfferDescription',
+        'Publie et gère les équipes couvertes par ton offre Équipe.',
+      ),
       label: displayName || formatSubscriptionPlanLabel(entry?.planCode),
       priceLabel,
       secondaryLabel: [slotsLabel, periodLabel, priceLabel].filter(Boolean).join(' - '),
@@ -659,10 +698,16 @@ export const getSubscriptionCatalogEntryMeta = (entry) => {
     // R10 — l'argumentaire posait une condition qui n'existe plus depuis la
     // decision produit du 2026-07-17 : l'offre ouvre les droits immediatement,
     // club certifie ou pas. On supprime l'affirmation au lieu de la reformuler.
-    description: 'Débloque les droits club sur tout ton club.',
+    description: i18next.t(
+      'subscriptionBilling.clubOfferDescription',
+      'Débloque les droits club sur tout ton club.',
+    ),
     label: displayName || formatSubscriptionPlanLabel(entry?.planCode),
     priceLabel,
-    secondaryLabel: ['Droits Club', periodLabel, priceLabel].filter(Boolean).join(' - '),
+    secondaryLabel: [i18next.t(
+      'subscriptionBilling.clubRights',
+      'Droits Club',
+    ), periodLabel, priceLabel].filter(Boolean).join(' - '),
   };
 };
 
@@ -718,7 +763,10 @@ export const buildSubscriptionTeamOptions = ({
     const isCoveredByClub = clubCoveredIds.has(teamDocumentId);
 
     return {
-      coverageNotice: isCoveredByClub ? 'Déjà couverte par ton club' : null,
+      coverageNotice: isCoveredByClub ? i18next.t(
+        'subscriptionBilling.coveredByClub',
+        'Déjà couverte par ton club',
+      ) : null,
       isSelectable: !isCoveredByClub,
       team,
       teamDocumentId,
@@ -828,8 +876,14 @@ export const buildClubOfferAvailability = ({
 
   return {
     coverageNotice: offerRank === blockingRank
-      ? 'Ton club a déjà cette offre'
-      : 'Ton club a déjà une offre supérieure',
+      ? i18next.t(
+        'subscriptionBilling.clubOfferAvailability.sameOffer',
+        'Ton club a déjà cette offre',
+      )
+      : i18next.t(
+        'subscriptionBilling.clubOfferAvailability.higherOffer',
+        'Ton club a déjà une offre supérieure',
+      ),
     isSelectable: false,
   };
 };
@@ -866,12 +920,20 @@ export const formatSubscriptionTrialHandoverNotice = (subscriptionSummary) => {
   // Une date illisible ne devient jamais « Invalid Date » a l'ecran : on dit la
   // meme chose sans elle.
   const deadline = Number.isFinite(endTime)
-    ? ` (il court jusqu'au ${new Date(endTime).toLocaleDateString('fr-FR')})`
+    ? i18next.t(
+      'subscriptionBilling.trialHandover.deadline',
+      " (il court jusqu'au {{date}})",
+      { date: new Date(endTime).toLocaleDateString(localeDesFormats()), ...SANS_ECHAPPEMENT },
+    )
     : '';
 
-  return `Ton essai gratuit est en cours${deadline}. L'offre que tu choisis est facturée `
-    + 'tout de suite par ton magasin et prend le relais immédiatement : ton club garde ses '
-    + 'droits sans coupure.';
+  return i18next.t(
+    'subscriptionBilling.trialHandover.notice',
+    "Ton essai gratuit est en cours{{deadline}}. L'offre que tu choisis est facturée "
+      + 'tout de suite par ton magasin et prend le relais immédiatement : ton club garde ses '
+      + 'droits sans coupure.',
+    { deadline, ...SANS_ECHAPPEMENT },
+  );
 };
 
 /**
@@ -1034,15 +1096,26 @@ export const getSubscriptionBillingErrorMessage = (error) => {
   // deja sur « Mon abonnement » (« 1/2 place attribuée »,
   // SubscriptionOverview.js:288). Et l'offre s'appelle « Équipe », jamais « Team ».
   if (message === 'TEAM_SLOT_DUPLICATE_TEAM') {
-    return 'Une même équipe ne peut pas être attribuée deux fois à la même offre Équipe.';
+    return i18next.t(
+      'subscriptionBilling.errors.teamSlotDuplicate',
+      'Une même équipe ne peut pas être attribuée deux fois à la même offre Équipe.',
+    );
   }
 
   if (message === 'TEAM_SLOT_COUNT_EXCEEDED') {
-    return 'Cette offre n a pas assez de places pour couvrir autant d équipes. Ajuste la sélection avant de continuer.';
+    return i18next.t(
+      'subscriptionBilling.errors.teamSlotCountExceeded',
+      'Cette offre n a pas assez de places pour couvrir autant d équipes. Ajuste la '
+        + 'sélection avant de continuer.',
+    );
   }
 
   if (message === 'CLUB_ALREADY_COVERED') {
-    return 'Ce club est déjà couvert par une offre Club active (souscrite par un autre membre). Inutile de payer deux fois : les droits sont partages.';
+    return i18next.t(
+      'subscriptionBilling.errors.clubAlreadyCovered',
+      'Ce club est déjà couvert par une offre Club active (souscrite par un autre membre). '
+        + 'Inutile de payer deux fois : les droits sont partages.',
+    );
   }
 
   // CLUBEQ (decision d Adel du 2026-09-04) : code DISTINCT de
@@ -1051,20 +1124,33 @@ export const getSubscriptionBillingErrorMessage = (error) => {
   // une offre Club n a aucune place a liberer. Un mauvais conseil coute plus
   // cher qu un code de plus.
   if (message === 'TEAM_COVERED_BY_CLUB_PLAN') {
-    return 'Cette équipe est déjà couverte par l\'offre Club de son club : '
-      + 'tu as déjà ces droits, inutile de payer une offre Équipe pour elle.';
+    return i18next.t(
+      'subscriptionBilling.errors.teamCoveredByClubPlan',
+      "Cette équipe est déjà couverte par l'offre Club de son club : tu as déjà ces droits, "
+        + 'inutile de payer une offre Équipe pour elle.',
+    );
   }
 
   if (message === 'TEAM_ALREADY_COVERED') {
-    return 'Cette équipe est déjà couverte par une autre offre active. Choisis une équipe non couverte ou libere sa place actuelle.';
+    return i18next.t(
+      'subscriptionBilling.errors.teamAlreadyCovered',
+      'Cette équipe est déjà couverte par une autre offre active. Choisis une équipe non '
+        + 'couverte ou libere sa place actuelle.',
+    );
   }
 
   if (message === 'clubDocumentId obligatoire pour une offre CLUB.' || message === 'Club introuvable pour entitlement CLUB.') {
-    return 'Rattache d abord le bon club avant de prendre une offre Club.';
+    return i18next.t(
+      'subscriptionBilling.errors.clubRequired',
+      'Rattache d abord le bon club avant de prendre une offre Club.',
+    );
   }
 
   if (message === 'Le checkout web public n est pas disponible en production tant qu un provider web n a pas été choisi.') {
-    return 'Le changement d offre web public n est pas encore ouvert sur cet environnement.';
+    return i18next.t(
+      'subscriptionBilling.errors.webPlanChangeClosed',
+      'Le changement d offre web public n est pas encore ouvert sur cet environnement.',
+    );
   }
 
   // VITRINE (2026-09-04) — LES TROIS REFUS QUE L APP NE MONTRAIT JAMAIS.
@@ -1075,29 +1161,41 @@ export const getSubscriptionBillingErrorMessage = (error) => {
   // Chacun nomme AUSSI la sortie de secours — « Restaurer mes achats », le seul
   // geste par lequel quelqu un repare un compte dont le webhook n est pas arrive.
   if (message === 'Subscription source introuvable pour changement d offre.') {
-    return 'Nous n avons pas retrouvé l abonnement à changer sur ce compte. Ton achat est bien '
-      + 'enregistré par le store : ouvre « Mon abonnement » puis « Restaurer mes achats ».';
+    return i18next.t(
+      'subscriptionBilling.errors.subscriptionSourceNotFound',
+      'Nous n avons pas retrouvé l abonnement à changer sur ce compte. Ton achat est bien '
+        + 'enregistré par le store : ouvre « Mon abonnement » puis « Restaurer mes achats ».',
+    );
   }
 
   if (message === 'providerTransactionId obligatoire.'
     || message === 'providerTransactionId obligatoire pour traiter cet achat.') {
-    return 'Le store ne nous a pas transmis le numéro de ta transaction. Ton paiement est bien '
-      + 'enregistré chez lui : tes droits s ouvriront automatiquement, et « Restaurer mes achats » '
-      + 'les débloque tout de suite.';
+    return i18next.t(
+      'subscriptionBilling.errors.missingTransactionId',
+      'Le store ne nous a pas transmis le numéro de ta transaction. Ton paiement est bien '
+        + 'enregistré chez lui : tes droits s ouvriront automatiquement, et « Restaurer mes '
+        + 'achats » les débloque tout de suite.',
+    );
   }
 
   const REFUS_SOURCE_STORE = 'Abonnement source introuvable chez le store pour ce compte :'
     + ' changement d offre refuse.';
   if (message === REFUS_SOURCE_STORE) {
-    return 'Le store ne reconnaît pas cet abonnement sur ton compte. Vérifie que tu es connecté au '
-      + 'même compte App Store ou Google Play qu au moment de l achat, puis réessaie.';
+    return i18next.t(
+      'subscriptionBilling.errors.storeSourceUnknown',
+      'Le store ne reconnaît pas cet abonnement sur ton compte. Vérifie que tu es connecté '
+        + 'au même compte App Store ou Google Play qu au moment de l achat, puis réessaie.',
+    );
   }
 
   if (message) {
     return message;
   }
 
-  return 'Impossible de mettre à jour ton abonnement pour le moment.';
+  return i18next.t(
+    'subscriptionBilling.errors.generic',
+    'Impossible de mettre à jour ton abonnement pour le moment.',
+  );
 };
 
 /**
