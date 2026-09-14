@@ -1,9 +1,11 @@
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
+import i18next from 'i18next';
 import {
   useCallback, useEffect, useMemo, useState,
 } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
   Alert,
@@ -17,6 +19,7 @@ import {
 } from 'react-native';
 
 import useAuth from '@/domains/auth/useAuth';
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -53,7 +56,7 @@ const normalizeComparableText = (value) => String(value || '')
 const resolveVenueLabel = (match) => (
   getProposalLocationLabel(match?.venue)
     || getProposalLocationLabel(match?.proposed_venue)
-    || 'Lieu à définir'
+    || i18next.t('pastMatchDetails.venueToBeDecided', 'Lieu à définir')
 );
 
 /**
@@ -96,6 +99,7 @@ const getTeamSnapshot = (match, isTeamA) => {
  */
 function PastMatchDetails() {
   const { Colors, Fonts, Images } = useTheme();
+  const { t } = useTranslation();
   const leagueCardTextColor = Colors.primary500;
   const leagueAccentSurface = 'rgba(1, 179, 244, 0.12)';
   const leagueGoldSurface = 'rgba(255, 215, 0, 0.08)';
@@ -119,7 +123,7 @@ function PastMatchDetails() {
 
   const loadMatch = useCallback(async () => {
     if (!matchId) {
-      setLoadError("Aucun match n'est associé à ce lien.");
+      setLoadError(t('pastMatchDetails.errors.missingId', "Aucun match n'est associé à ce lien."));
       setMatch(null);
       setLoading(false);
       setRefreshing(false);
@@ -133,12 +137,15 @@ function PastMatchDetails() {
     } catch (error) {
       console.error('Error loading match:', error);
       setMatch(null);
-      setLoadError(error?.message || 'Impossible de charger le match terminé.');
+      setLoadError(error?.message || t(
+        'pastMatchDetails.errors.load',
+        'Impossible de charger le match terminé.',
+      ));
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [matchId]);
+  }, [matchId, t]);
 
   useEffect(() => {
     loadMatch();
@@ -174,7 +181,7 @@ function PastMatchDetails() {
         borderColor: 'rgba(39, 214, 163, 0.55)',
         chipBg: 'rgba(39, 214, 163, 0.2)',
         color: Colors.success500,
-        label: 'VICTOIRE',
+        label: t('pastMatchDetails.result.win', 'VICTOIRE'),
       };
     }
 
@@ -183,7 +190,7 @@ function PastMatchDetails() {
         borderColor: 'rgba(255, 40, 79, 0.55)',
         chipBg: 'rgba(255, 40, 79, 0.2)',
         color: Colors.error500,
-        label: 'DEFAITE',
+        label: t('pastMatchDetails.result.loss', 'DEFAITE'),
       };
     }
 
@@ -191,18 +198,20 @@ function PastMatchDetails() {
       borderColor: 'rgba(255, 161, 21, 0.55)',
       chipBg: 'rgba(255, 161, 21, 0.2)',
       color: Colors.warning500,
-      label: 'MATCH NUL',
+      label: t('pastMatchDetails.result.draw', 'MATCH NUL'),
     };
-  }, [Colors.error500, Colors.success500, Colors.warning500, myScoreValue, oppScoreValue]);
+  }, [Colors.error500, Colors.success500, Colors.warning500, myScoreValue, oppScoreValue, t]);
 
   const formattedDate = useMemo(() => {
-    if (!match?.date) return 'Date inconnue';
+    if (!match?.date) {
+      return t('pastMatchDetails.unknownDate', 'Date inconnue');
+    }
     try {
       return format(new Date(match.date), "EEEE d MMMM yyyy 'a' HH'h'mm", { locale: fr });
     } catch (_error) {
       return match.date;
     }
-  }, [match?.date]);
+  }, [match?.date, t]);
 
   const venueLabel = useMemo(() => resolveVenueLabel(match), [match]);
   const addressLabel = useMemo(() => resolveAddressLabel(match), [match]);
@@ -214,15 +223,15 @@ function PastMatchDetails() {
     ? {
       backgroundColor: 'rgba(1, 179, 244, 0.16)',
       borderColor: 'rgba(1, 179, 244, 0.35)',
-      label: 'DOMICILE',
+      label: t('pastMatchDetails.context.home', 'DOMICILE'),
       textColor: Colors.primary500,
     }
     : {
       backgroundColor: 'rgba(255, 215, 0, 0.12)',
       borderColor: 'rgba(255, 215, 0, 0.28)',
-      label: 'EXTERIEUR',
+      label: t('pastMatchDetails.context.away', 'EXTERIEUR'),
       textColor: Colors.gold500,
-    }), [Colors.gold500, Colors.primary500, isTeamA]);
+    }), [Colors.gold500, Colors.primary500, isTeamA, t]);
 
   const eloInfo = useMemo(() => {
     const recap = getTeamRecap(match, isTeamA);
@@ -240,10 +249,14 @@ function PastMatchDetails() {
   }, [isTeamA, match]);
 
   const resultSummaryText = useMemo(() => {
-    if (myScoreValue > oppScoreValue) return 'Tu remportes ce duel League.';
-    if (myScoreValue < oppScoreValue) return 'Le match a bascule du cote adverse.';
-    return 'Les deux équipes repartent dos à dos.';
-  }, [myScoreValue, oppScoreValue]);
+    if (myScoreValue > oppScoreValue) {
+      return t('pastMatchDetails.summary.win', 'Tu remportes ce duel League.');
+    }
+    if (myScoreValue < oppScoreValue) {
+      return t('pastMatchDetails.summary.loss', 'Le match a bascule du cote adverse.');
+    }
+    return t('pastMatchDetails.summary.draw', 'Les deux équipes repartent dos à dos.');
+  }, [myScoreValue, oppScoreValue, t]);
 
   const canRematch = useMemo(() => {
     const isCaptain = isLeagueCaptain(myTeam, currentUserId);
@@ -263,34 +276,55 @@ function PastMatchDetails() {
     const opponentDocId = getEntityDocumentId(opponent);
 
     if (!myTeamDocId || !opponentDocId) {
-      Alert.alert('Erreur', 'Impossible de lancer la revanche pour ce match.');
+      Alert.alert(
+        t('pastMatchDetails.alerts.errorTitle', 'Erreur'),
+        t(
+          'pastMatchDetails.rematch.cannotStart',
+          'Impossible de lancer la revanche pour ce match.',
+        ),
+      );
       return;
     }
 
     Alert.alert(
-      'Demander une revanche',
-      `Veux-tu demander une revanche contre ${opponent?.name || 'cette équipe'} ?`,
+      t('pastMatchDetails.rematch.title', 'Demander une revanche'),
+      t(
+        'pastMatchDetails.rematch.confirmBody',
+        'Veux-tu demander une revanche contre {{opponentName}} ?',
+        {
+          opponentName: opponent?.name || t('pastMatchDetails.rematch.thisTeam', 'cette équipe'),
+          ...SANS_ECHAPPEMENT,
+        },
+      ),
       [
-        { style: 'cancel', text: 'Annuler' },
+        { style: 'cancel', text: t('pastMatchDetails.rematch.cancel', 'Annuler') },
         {
           onPress: async () => {
             setRequestingRematch(true);
             try {
               const result = await requestRematch(myTeamDocId, opponentDocId, matchId);
               Alert.alert(
-                result?.matched ? 'Match créé' : 'Demande envoyée',
-                result?.message || 'Ta demande a bien été envoyée.',
+                result?.matched
+                  ? t('pastMatchDetails.rematch.matched', 'Match créé')
+                  : t('pastMatchDetails.rematch.sent', 'Demande envoyée'),
+                result?.message || t(
+                  'pastMatchDetails.rematch.sentBody',
+                  'Ta demande a bien été envoyée.',
+                ),
               );
               if (result?.matched) {
                 navigation.goBack();
               }
             } catch (_error) {
-              Alert.alert('Erreur', 'Impossible de demander une revanche');
+              Alert.alert(
+                t('pastMatchDetails.alerts.errorTitle', 'Erreur'),
+                t('pastMatchDetails.rematch.error', 'Impossible de demander une revanche'),
+              );
             } finally {
               setRequestingRematch(false);
             }
           },
-          text: 'Oui, revanche',
+          text: t('pastMatchDetails.rematch.confirm', 'Oui, revanche'),
         },
       ],
     );
@@ -311,13 +345,13 @@ function PastMatchDetails() {
   if (loadError && !match) {
     return (
       <LeagueStateView
-        actionLabel="Recharger"
+        actionLabel={t('pastMatchDetails.reload', 'Recharger')}
         description={loadError}
         onAction={() => {
           setLoading(true);
           loadMatch();
         }}
-        title="Chargement impossible"
+        title={t('pastMatchDetails.loadErrorTitle', 'Chargement impossible')}
       />
     );
   }
@@ -325,13 +359,16 @@ function PastMatchDetails() {
   if (!match) {
     return (
       <LeagueStateView
-        actionLabel="Retour au dashboard"
-        description="Ce match terminé n'est plus accessible depuis ce lien."
+        actionLabel={t('pastMatchDetails.backToDashboard', 'Retour au dashboard')}
+        description={t(
+          'pastMatchDetails.missing.description',
+          "Ce match terminé n'est plus accessible depuis ce lien.",
+        )}
         onAction={() => navigateToStackScreenOrScreen(navigation, {
           screen: RouteNames.LeagueDashboard,
           stack: RouteNames.LeagueHomeTab,
         })}
-        title="Match introuvable"
+        title={t('pastMatchDetails.missing.title', 'Match introuvable')}
       />
     );
   }
@@ -355,7 +392,9 @@ function PastMatchDetails() {
               withDefaultMargin={false}
             />
           </View>
-          <Text style={[Fonts.h3, styles.headerTitle, { color: Colors.gold500 }]}>Match termine</Text>
+          <Text style={[Fonts.h3, styles.headerTitle, { color: Colors.gold500 }]}>
+            {t('pastMatchDetails.headerTitle', 'Match termine')}
+          </Text>
           <View style={styles.headerSide} />
         </View>
 
@@ -400,7 +439,7 @@ function PastMatchDetails() {
                   size={62}
                 />
                 <Text numberOfLines={1} style={[Fonts.p2Bold, styles.teamName, { color: Colors.neutral100 }]}>
-                  {teamA?.name || 'Équipe A'}
+                  {teamA?.name || t('pastMatchDetails.teamAFallback', 'Équipe A')}
                 </Text>
               </View>
 
@@ -431,7 +470,9 @@ function PastMatchDetails() {
                   <Text style={[Fonts.h2, { color: Colors.gold500, marginHorizontal: 10 }]}>-</Text>
                   <Text style={[Fonts.h1Bold, { color: Colors.gold500 }]}>{match?.score_b ?? '-'}</Text>
                 </View>
-                <Text style={[Fonts.p4Bold, { color: resultConfig.color, marginTop: 8 }]}>Score officialise</Text>
+                <Text style={[Fonts.p4Bold, { color: resultConfig.color, marginTop: 8 }]}>
+                  {t('pastMatchDetails.officialScore', 'Score officialise')}
+                </Text>
               </View>
 
               <View style={styles.teamBlock}>
@@ -446,7 +487,7 @@ function PastMatchDetails() {
                   />
                 )}
                 <Text numberOfLines={1} style={[Fonts.p2Bold, styles.teamName, { color: Colors.neutral100 }]}>
-                  {teamB?.name || 'Équipe B'}
+                  {teamB?.name || t('pastMatchDetails.teamBFallback', 'Équipe B')}
                 </Text>
               </View>
             </View>
@@ -467,7 +508,9 @@ function PastMatchDetails() {
                   <Image source={Images.calendar} style={[styles.infoIcon, { tintColor: Colors.gold500 }]} />
                 </View>
                 <View style={styles.infoTextWrap}>
-                  <Text style={[Fonts.p4Bold, { color: Colors.gold500, marginBottom: 4 }]}>Date et heure</Text>
+                  <Text style={[Fonts.p4Bold, { color: Colors.gold500, marginBottom: 4 }]}>
+                    {t('pastMatchDetails.dateTime', 'Date et heure')}
+                  </Text>
                   <Text style={[Fonts.p3, { color: Colors.gold500 }]}>{formattedDate}</Text>
                 </View>
               </View>
@@ -485,7 +528,9 @@ function PastMatchDetails() {
                   <Image source={Images.pin} style={[styles.infoIcon, { tintColor: Colors.primary500 }]} />
                 </View>
                 <View style={styles.infoTextWrap}>
-                  <Text style={[Fonts.p4Bold, { color: leagueCardTextColor, marginBottom: 4 }]}>Lieu du match</Text>
+                  <Text style={[Fonts.p4Bold, { color: leagueCardTextColor, marginBottom: 4 }]}>
+                    {t('pastMatchDetails.venue', 'Lieu du match')}
+                  </Text>
                   <Text style={[Fonts.p3, { color: Colors.gold500 }]}>{venueLabel}</Text>
                   {showAddressLine ? (
                     <Text style={[Fonts.p4, { color: Colors.gold500, marginTop: 4 }]}>{addressLabel}</Text>
@@ -495,7 +540,7 @@ function PastMatchDetails() {
             </View>
           </LeagueCard>
 
-          {renderSectionHeader('Impact ELO matchmaking')}
+          {renderSectionHeader(t('pastMatchDetails.sections.eloImpact', 'Impact ELO matchmaking'))}
           <LeagueCard style={styles.eloCard}>
             <View style={styles.eloRow}>
               <View
@@ -508,7 +553,9 @@ function PastMatchDetails() {
                   },
                 ]}
               >
-                <Text style={[Fonts.p4Bold, { color: leagueCardTextColor }]}>Avant</Text>
+                <Text style={[Fonts.p4Bold, { color: leagueCardTextColor }]}>
+                  {t('pastMatchDetails.elo.before', 'Avant')}
+                </Text>
                 <Text style={[Fonts.h3, { color: Colors.gold500, marginTop: 6 }]}>
                   {eloInfo.available ? eloInfo.before : '-'}
                 </Text>
@@ -525,7 +572,10 @@ function PastMatchDetails() {
               >
                 <Text style={[Fonts.p4Bold, { color: leagueCardTextColor, marginBottom: 4 }]}>Delta</Text>
                 <Text style={[Fonts.h3, { color: Colors.gold500 }]}>
-                  {eloInfo.available ? `${eloInfo.delta > 0 ? '+' : ''}${eloInfo.delta}` : 'Indisponible'}
+                  {eloInfo.available ? `${eloInfo.delta > 0 ? '+' : ''}${eloInfo.delta}` : t(
+                    'pastMatchDetails.elo.unavailable',
+                    'Indisponible',
+                  )}
                 </Text>
               </View>
 
@@ -539,7 +589,9 @@ function PastMatchDetails() {
                   },
                 ]}
               >
-                <Text style={[Fonts.p4Bold, { color: Colors.gold500 }]}>Après</Text>
+                <Text style={[Fonts.p4Bold, { color: Colors.gold500 }]}>
+                  {t('pastMatchDetails.elo.after', 'Après')}
+                </Text>
                 <Text style={[Fonts.h3, { color: Colors.gold500, marginTop: 6 }]}>
                   {eloInfo.available ? eloInfo.after : '-'}
                 </Text>
@@ -549,7 +601,10 @@ function PastMatchDetails() {
 
           {goalsByPlayer.length > 0 ? (
             <>
-              {renderSectionHeader('Buteurs', Colors.gold500)}
+              {renderSectionHeader(t(
+                'pastMatchDetails.sections.scorers',
+                'Buteurs',
+              ), Colors.gold500)}
               <LeagueCard style={styles.goalsCard}>
                 {goalsByPlayer.map(([playerId, goals], index) => (
                   <View
@@ -563,7 +618,7 @@ function PastMatchDetails() {
                     ]}
                   >
                     <Text style={[Fonts.p3, { color: leagueCardTextColor, flex: 1 }]}>
-                      Joueur
+                      {t('pastMatchDetails.playerLabel', 'Joueur')}
                       {' '}
                       {playerId.slice(0, 8)}
                       ...
@@ -585,7 +640,7 @@ function PastMatchDetails() {
               onPress={handleRematch}
               style={{ backgroundColor: Colors.gold500, marginTop: 6 }}
               textStyle={{ color: Colors.primary900 }}
-              title="Demander une revanche"
+              title={t('pastMatchDetails.rematch.title', 'Demander une revanche')}
               variant="Primary"
             />
           ) : null}
