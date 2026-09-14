@@ -1,6 +1,11 @@
 import { Text, TouchableOpacity } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
+// I18N-4 : le bandeau lit ses textes par t() ; ce temoin initialise le VRAI
+// i18next en francais (fr.js + replis, interpolation comprise), sans rien
+// changer a ce qu'il affirme.
+import '@/theme/strings';
+
 import TourBanner from '../TourBanner';
 
 // Filet L01-B (audit docs/AUDIT_TOUR_GUIDE_ET_MISSIONS_2026_07_31.md §7) :
