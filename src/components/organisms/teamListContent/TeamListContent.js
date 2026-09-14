@@ -513,16 +513,16 @@ function TeamListContent({
       'FREE_TEAM',
       subscriptionAccessLevel,
     );
-    let quotaHint = 'Crée une équipe pour ton club.';
+    let quotaHint = t('teamListContent.newTeam.hint', 'Crée une équipe pour ton club.');
     if (freeTeamQuota) {
       quotaHint = freeTeamQuota.remaining > 0
-        ? `Il te reste ${freeTeamQuota.remaining} création gratuite`
-        : "Ta création gratuite est utilisée — débloque l'offre Équipe";
+        ? t('teamListContent.newTeam.freeRemaining', 'Il te reste {{remaining}} création gratuite', { remaining: freeTeamQuota.remaining })
+        : t('teamListContent.newTeam.freeUsed', "Ta création gratuite est utilisée — débloque l'offre Équipe");
     }
     return (
       <TouchableOpacity
         accessibilityHint={quotaHint}
-        accessibilityLabel="Nouvelle équipe"
+        accessibilityLabel={t('teamListContent.newTeam.title', 'Nouvelle équipe')}
         accessibilityRole="button"
         onPress={() => {
           if (newTeamLock) {
@@ -561,7 +561,7 @@ function TeamListContent({
               <PremiumBadge label={newTeamLock.badgeLabel} scope={newTeamLock.scope} />
             </View>
           ) : null}
-          <Text style={[Fonts.p2Bold, Fonts.primary500]}>Nouvelle équipe</Text>
+          <Text style={[Fonts.p2Bold, Fonts.primary500]}>{t('teamListContent.newTeam.title', 'Nouvelle équipe')}</Text>
           <Text numberOfLines={1} style={[Fonts.p4, Fonts.neutral400, { marginTop: 1 }]}>
             {quotaHint}
           </Text>
@@ -579,6 +579,7 @@ function TeamListContent({
     newTeamLock,
     Spaces,
     subscriptionAccessLevel,
+    t,
   ]);
 
   const renderTeamCard = useCallback((
@@ -1052,7 +1053,11 @@ function TeamListContent({
       toChipLabel(item?.activities?.[0]?.name || item?.sport),
       toChipLabel(item?.category),
       toChipLabel(item?.section),
-      `${memberCount} membre${memberCount > 1 ? 's' : ''}`,
+      t('teamListContent.memberCount', {
+        count: memberCount,
+        defaultValue_one: '{{count}} membre',
+        defaultValue_other: '{{count}} membres',
+      }),
     ].filter(Boolean).join(' · ');
 
     return (
@@ -1094,7 +1099,7 @@ function TeamListContent({
         />
       </TouchableOpacity>
     );
-  }, [Colors, Fonts, handleTeamSelect, Images]);
+  }, [Colors, Fonts, handleTeamSelect, Images, t]);
 
   const headerComponent = useMemo(() => (
     <View>
@@ -1103,7 +1108,7 @@ function TeamListContent({
           <Button
             onPress={() => /** @type {any} */ (navigation).navigate(RouteNames.SquadSearch)}
             style={{ flex: 1 }}
-            title="Rechercher une squad"
+            title={t('teamListContent.searchSquad', 'Rechercher une squad')}
             variant="Secondary"
           />
         </View>
@@ -1122,7 +1127,7 @@ function TeamListContent({
       {invitedTeams.length > 0 ? (
         <View>
           <Text style={[Fonts.h3, Fonts.neutral00, Spaces.marginBottom[16]]}>
-            Invitations reçues
+            {t('teamListContent.sections.invitations', 'Invitations reçues')}
           </Text>
           {invitedTeams.map((team) => (
             <View key={`invited-${team.documentId}`}>
@@ -1141,7 +1146,7 @@ function TeamListContent({
             invitedTeams.length > 0 && Spaces.marginTop[24],
           ]}
           >
-            Demandes en attente
+            {t('teamListContent.sections.pending', 'Demandes en attente')}
           </Text>
           {/* Q7 — les equipes creees par un entraineur, que le dirigeant doit */}
           {/* valider. La carte est celle de tout le monde (badge EN ATTENTE */}
@@ -1180,7 +1185,7 @@ function TeamListContent({
       {myTeams.length > 0 ? (
         <View>
           <Text style={[Fonts.h3, Fonts.neutral00, Spaces.marginBottom[16], (pendingTeams.length > 0 || invitedTeams.length > 0) && Spaces.marginTop[24]]}>
-            Mes équipes
+            {t('teamListContent.sections.mine', 'Mes équipes')}
           </Text>
           {myTeams.map((team) => (
             <View key={`joined-${team.documentId}`}>
@@ -1192,7 +1197,7 @@ function TeamListContent({
 
       {otherTeams.length > 0 ? (
         <Text style={[Fonts.h3, Fonts.neutral00, Spaces.marginBottom[16], (myTeams.length > 0 || pendingTeams.length > 0 || invitedTeams.length > 0) && Spaces.marginTop[24]]}>
-          {clubId ? 'Autres équipes du club' : 'Autres équipes'}
+          {clubId ? t('teamListContent.sections.otherInClub', 'Autres équipes du club') : t('teamListContent.sections.other', 'Autres équipes')}
         </Text>
       ) : null}
     </View>
@@ -1254,7 +1259,7 @@ function TeamListContent({
         <Button
           onPress={() => /** @type {any} */ (navigation).navigate(RouteNames.SquadSearch)}
           style={{ minWidth: 220 }}
-          title="Rechercher une squad"
+          title={t('teamListContent.searchSquad', 'Rechercher une squad')}
           variant="Secondary"
         />
       ) : null}
@@ -1294,7 +1299,7 @@ function TeamListContent({
             style={getFloatingActionContainerStyle(floatingActionBottom, { zIndex: 1100 })}
           >
             <TouchableOpacity
-              accessibilityLabel="Créer une squad"
+              accessibilityLabel={t('teamListContent.createSquad', 'Créer une squad')}
               activeOpacity={0.85}
               onPress={() => /** @type {any} */ (navigation).navigate(
                 RouteNames.TeamStack,

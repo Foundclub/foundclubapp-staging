@@ -1,5 +1,6 @@
 import { useNavigation } from '@react-navigation/native';
 import { useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
   FlatList,
@@ -11,6 +12,7 @@ import {
 
 import { getAppliedFilterCount } from '@/domains/search/recruitmentFlow';
 import { useAppContext } from '@/store/appContext';
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import Loader from '@/components/atoms/loader/Loader';
@@ -45,6 +47,7 @@ function RecruitmentProfilesList({
     Fonts,
     Spaces,
   } = useTheme();
+  const { t } = useTranslation();
   const [{ mercatoFilters }, appDispatch] = useAppContext();
   const [searchValue, setSearchValue] = useState(String(mercatoFilters?.q || ''));
   const [filtersSheetVisible, setFiltersSheetVisible] = useState(false);
@@ -109,22 +112,22 @@ function RecruitmentProfilesList({
   const trimmedSearch = String(searchValue || '').trim();
   const hasSearchTerm = trimmedSearch.length >= 2;
   const hasActiveFilters = filtersCount > 0;
-  let profilesCountLabel = '1 profil';
+  let profilesCountLabel = t('recruitmentProfilesList.count.one', '1 profil');
   if (totalProfiles === 0) {
-    profilesCountLabel = 'Aucun profil';
+    profilesCountLabel = t('recruitmentProfilesList.count.none', 'Aucun profil');
   } else if (totalProfiles > 1) {
-    profilesCountLabel = `${String(totalProfiles)} profils`;
+    profilesCountLabel = t('recruitmentProfilesList.count.many', '{{total}} profils', { total: String(totalProfiles) });
   }
-  let headerDescription = 'Retrouve ici les joueurs et joueuses ouverts a un club pour construire ton recrutement.';
+  let headerDescription = t('recruitmentProfilesList.header.default', 'Retrouve ici les joueurs et joueuses ouverts a un club pour construire ton recrutement.');
   if (hasSearchTerm) {
-    headerDescription = `Recherche en cours pour "${trimmedSearch}". Les profils les plus pertinents remontent en premier.`;
+    headerDescription = t('recruitmentProfilesList.header.searching', 'Recherche en cours pour "{{search}}". Les profils les plus pertinents remontent en premier.', { search: trimmedSearch, ...SANS_ECHAPPEMENT });
   } else if (hasActiveFilters) {
-    headerDescription = 'Les filtres ci-dessous ciblent uniquement les profils ouverts à ton recrutement.';
+    headerDescription = t('recruitmentProfilesList.header.filtered', 'Les filtres ci-dessous ciblent uniquement les profils ouverts à ton recrutement.');
   }
   const summaryPills = [
     profilesCountLabel,
-    hasSearchTerm ? 'Recherche active' : 'Feed complet',
-    hasActiveFilters ? `${String(filtersCount)} filtre(s)` : 'Sans filtre',
+    hasSearchTerm ? t('recruitmentProfilesList.pills.searchActive', 'Recherche active') : t('recruitmentProfilesList.pills.fullFeed', 'Feed complet'),
+    hasActiveFilters ? t('recruitmentProfilesList.pills.filters', '{{total}} filtre(s)', { total: String(filtersCount) }) : t('recruitmentProfilesList.pills.noFilter', 'Sans filtre'),
   ];
 
   const handleClearFilters = () => {
@@ -165,7 +168,7 @@ function RecruitmentProfilesList({
         >
           <View style={{ flex: 1, paddingRight: 12 }}>
             <Text style={[Fonts.h4, Fonts.neutral100]}>
-              Profils ouverts au recrutement
+              {t('recruitmentProfilesList.title', 'Profils ouverts au recrutement')}
             </Text>
             <Text style={[Fonts.p2, { color: recruitmentMutedText, marginTop: 6 }]}>
               {headerDescription}
@@ -183,7 +186,7 @@ function RecruitmentProfilesList({
             }}
           >
             <Text style={[Fonts.p4Bold, { color: Colors.primary500 }]}>
-              Alertes profils
+              {t('recruitmentProfilesList.alerts', 'Alertes profils')}
             </Text>
           </TouchableOpacity>
         </View>
@@ -211,7 +214,7 @@ function RecruitmentProfilesList({
 
       <View>
         <Text style={[Fonts.p3, { color: recruitmentMutedText, marginBottom: 8 }]}>
-          Recherche et filtres profils
+          {t('recruitmentProfilesList.searchLabel', 'Recherche et filtres profils')}
         </Text>
         {/* D69 — le bouton ouvre desormais la FEUILLE du pack (capture 05) au
             lieu de pousser l'ecran plein `MercatoFilters`. Cet ecran reste
@@ -221,7 +224,7 @@ function RecruitmentProfilesList({
           filterNumber={filtersCount}
           handleSearchField={setSearchValue}
           openFilters={() => setFiltersSheetVisible(true)}
-          placeholder="Rechercher un profil..."
+          placeholder={t('recruitmentProfilesList.searchPlaceholder', 'Rechercher un profil...')}
           searchDefaultValue={searchValue}
         />
       </View>
@@ -240,7 +243,7 @@ function RecruitmentProfilesList({
           }}
         >
           <Text style={[Fonts.p4Bold, { color: Colors.primary500 }]}>
-            Effacer les filtres profils
+            {t('recruitmentProfilesList.clearFilters', 'Effacer les filtres profils')}
           </Text>
         </TouchableOpacity>
       ) : null}
@@ -258,12 +261,12 @@ function RecruitmentProfilesList({
       }]}
     >
       <Text style={[Fonts.p1, Fonts.neutral100, { textAlign: 'center' }]}>
-        Aucun profil visible pour cette recherche.
+        {t('recruitmentProfilesList.empty.title', 'Aucun profil visible pour cette recherche.')}
       </Text>
       <Text style={[Fonts.p2, { color: recruitmentMutedText, marginTop: 8, textAlign: 'center' }]}>
         {hasSearchTerm || hasActiveFilters
-          ? 'Essaie d\'elargir les filtres ou de simplifier la recherche.'
-          : 'Les profils ouverts a un club apparaîtront ici des qu\'ils seront disponibles.'}
+          ? t('recruitmentProfilesList.empty.widen', "Essaie d'elargir les filtres ou de simplifier la recherche.")
+          : t('recruitmentProfilesList.empty.later', "Les profils ouverts a un club apparaîtront ici des qu'ils seront disponibles.")}
       </Text>
       {hasSearchTerm || hasActiveFilters ? (
         <TouchableOpacity
@@ -282,7 +285,7 @@ function RecruitmentProfilesList({
           }}
         >
           <Text style={[Fonts.p4Bold, { color: Colors.primary500 }]}>
-            Revenir au flux complet
+            {t('recruitmentProfilesList.backToFeed', 'Revenir au flux complet')}
           </Text>
         </TouchableOpacity>
       ) : null}

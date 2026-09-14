@@ -33,7 +33,7 @@ function ReservationModeModal({
 
   const handleConfirm = () => {
     if (!selectedMode) {
-      setError('Merci de sélectionner un mode');
+      setError(t('reservationModeModal.errors.noMode', 'Merci de sélectionner un mode'));
       return;
     }
 
@@ -86,7 +86,7 @@ function ReservationModeModal({
             color: '#fff', fontSize: 18, fontWeight: 'bold', textAlign: 'center',
           }}
           >
-            Comment souhaites-te participer ?
+            {t('reservationModeModal.title', 'Comment souhaites-te participer ?')}
           </Text>
 
           {/* Option FULL_GROUP */}
@@ -103,10 +103,10 @@ function ReservationModeModal({
             }}
           >
             <Text style={{ color: '#fff', fontSize: 16, fontWeight: 'bold' }}>
-              Je viens avec mon groupe complet
+              {t('reservationModeModal.fullGroup.title', 'Je viens avec mon groupe complet')}
             </Text>
             <Text style={{ color: '#aaa', fontSize: 14, marginTop: 4 }}>
-              Tous les joueurs sont déjà trouvés
+              {t('reservationModeModal.fullGroup.description', 'Tous les joueurs sont déjà trouvés')}
             </Text>
           </TouchableOpacity>
 
@@ -124,10 +124,10 @@ function ReservationModeModal({
             }}
           >
             <Text style={{ color: '#fff', fontSize: 16, fontWeight: 'bold' }}>
-              Je cherche des joueurs
+              {t('reservationModeModal.recruiting.title', 'Je cherche des joueurs')}
             </Text>
             <Text style={{ color: '#aaa', fontSize: 14, marginTop: 4 }}>
-              D'autres joueurs peuvent rejoindre
+              {t('reservationModeModal.recruiting.description', "D'autres joueurs peuvent rejoindre")}
             </Text>
           </TouchableOpacity>
 
@@ -152,7 +152,7 @@ function ReservationModeModal({
                 padding: 16,
               }}
             >
-              <Text style={{ color: '#00D1FF', fontWeight: 'bold' }}>Annuler</Text>
+              <Text style={{ color: '#00D1FF', fontWeight: 'bold' }}>{t('reservationModeModal.cancel', 'Annuler')}</Text>
             </TouchableOpacity>
             <TouchableOpacity
               disabled={!selectedMode}
@@ -165,7 +165,7 @@ function ReservationModeModal({
                 padding: 16,
               }}
             >
-              <Text style={{ color: '#000', fontWeight: 'bold' }}>Confirmer</Text>
+              <Text style={{ color: '#000', fontWeight: 'bold' }}>{t('reservationModeModal.confirm', 'Confirmer')}</Text>
             </TouchableOpacity>
           </View>
         </View>

@@ -1,6 +1,10 @@
 import { Text, TouchableOpacity } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
+// I18N-4 : l'ecran lit ses textes par t() (interpolation, pluriels) ; ce temoin
+// initialise le VRAI i18next en francais, sans rien changer a ce qu'il affirme.
+import '@/theme/strings';
+
 import TeamListContent from '../TeamListContent';
 
 // Filet du lot L10-C (docs/STRATEGIE_PAYWALL_2026_08_01.md §2.3) : la carte
