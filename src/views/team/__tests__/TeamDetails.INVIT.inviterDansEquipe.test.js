@@ -33,6 +33,16 @@ import renderer, { act } from 'react-test-renderer';
 
 import TeamDetails from '../TeamDetails';
 
+// I18N-4 : le code teste lit certains textes par i18next hors composant. react-i18next
+// reste double ; i18next lui-meme est initialise sur le VRAI fr.js, en francais, sans
+// rien changer a ce que le temoin affirme.
+(require('i18next').default || require('i18next')).init({
+  compatibilityJSON: 'v4',
+  fallbackLng: 'fr',
+  lng: 'fr',
+  resources: { fr: { translation: require('@/theme/strings/translations/fr').default } },
+});
+
 const mockInviterDansEquipe = jest.fn();
 const mockPartagerLeLien = jest.fn();
 const mockAlerte = jest.fn();

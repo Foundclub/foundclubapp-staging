@@ -4,6 +4,16 @@ import renderer, { act } from 'react-test-renderer';
 import { TeamWizardProvider } from '../TeamWizardContext';
 import TeamWizardName from '../TeamWizardName';
 
+// I18N-4 : le code teste lit certains textes par i18next hors composant. react-i18next
+// reste double ; i18next lui-meme est initialise sur le VRAI fr.js, en francais, sans
+// rien changer a ce que le temoin affirme.
+(require('i18next').default || require('i18next')).init({
+  compatibilityJSON: 'v4',
+  fallbackLng: 'fr',
+  lng: 'fr',
+  resources: { fr: { translation: require('@/theme/strings/translations/fr').default } },
+});
+
 // Filet D25 (E6) — ce que l'etape 1/8 « Nom de l'equipe » FAIT, avant correction.
 // Etat du 2026-08-07. Ce fichier n'avait AUCUN test.
 //
