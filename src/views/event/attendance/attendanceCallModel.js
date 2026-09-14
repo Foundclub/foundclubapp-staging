@@ -12,6 +12,8 @@
  * lit pas. Les seuls `new Date(valeur)` presents sont des ANALYSEURS de chaine.
  */
 
+import localeDesFormats from '@/theme/strings/localeDesFormats';
+
 import { getServerErrorCode } from '@/utils/errors/displayError';
 
 const MINUTE_MS = 60 * 1000;
@@ -97,7 +99,7 @@ export const toMsOrNull = (value) => {
 export const formatTimeInZone = (instant, timeZone) => {
   const ms = toMsOrNull(instant);
   if (ms === null) return '';
-  return new Intl.DateTimeFormat('fr-FR', {
+  return new Intl.DateTimeFormat(localeDesFormats(), {
     hour: '2-digit',
     hour12: false,
     minute: '2-digit',
@@ -117,7 +119,7 @@ export const formatTimeInZone = (instant, timeZone) => {
 export const formatShortDateInZone = (instant, timeZone) => {
   const ms = toMsOrNull(instant);
   if (ms === null) return '';
-  return new Intl.DateTimeFormat('fr-FR', {
+  return new Intl.DateTimeFormat(localeDesFormats(), {
     day: '2-digit',
     month: '2-digit',
     timeZone: timeZone || 'Europe/Paris',

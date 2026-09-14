@@ -1,5 +1,7 @@
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
+import i18next from 'i18next';
+import { useTranslation } from 'react-i18next';
 import {
   ScrollView,
   Text,
@@ -7,6 +9,7 @@ import {
   View,
 } from 'react-native';
 
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -19,14 +22,19 @@ import {
 } from './tournamentUtils';
 
 const formatMatchWindow = (scheduledAt, endAt) => {
-  if (!scheduledAt) return 'Horaire à définir';
+  if (!scheduledAt) {
+    return i18next.t(
+      'tournamentCompetitionComponents.timeToBeSet',
+      'Horaire à définir',
+    );
+  }
   try {
     const startDate = new Date(scheduledAt);
     const startLabel = format(startDate, 'EEE d MMM - HH:mm', { locale: fr });
     if (!endAt) return startLabel;
     return `${startLabel} - ${format(new Date(endAt), 'HH:mm')}`;
   } catch {
-    return 'Horaire à définir';
+    return i18next.t('tournamentCompetitionComponents.timeToBeSet', 'Horaire à définir');
   }
 };
 
@@ -90,6 +98,7 @@ export function TournamentMatchCard({
   match,
   onPress,
 }) {
+  const { t } = useTranslation();
   const {
     Alignments,
     ApplicationStyle,
@@ -115,10 +124,18 @@ export function TournamentMatchCard({
       <View style={[Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween, Spaces.gap[12]]}>
         <View style={{ flex: 1 }}>
           <Text style={[Fonts.p4Bold, Fonts.primary500]}>
-            {match?.roundLabel || match?.group?.label || 'Match tournoi'}
+            {match?.roundLabel || match?.group?.label || t(
+              'tournamentCompetitionComponents.tournamentMatch',
+              'Match tournoi',
+            )}
           </Text>
           <Text style={[Fonts.p3, Fonts.neutral200]}>
-            {match?.group?.label ? `Poule ${match.group.label}` : 'Phase finale'}
+            {match?.group?.label
+              ? t('tournamentCompetitionComponents.groupLabel', 'Poule {{label}}', {
+                label: match.group.label,
+                ...SANS_ECHAPPEMENT,
+              })
+              : t('tournamentCompetitionComponents.knockoutStage', 'Phase finale')}
           </Text>
         </View>
         <TournamentPhaseChip label={statusMeta.label} tone={statusMeta.tone} />
@@ -126,10 +143,10 @@ export function TournamentMatchCard({
 
       <View style={Spaces.gap[8]}>
         <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
-          {match?.teamA?.name || 'Équipe A'}
+          {match?.teamA?.name || t('tournamentCompetitionComponents.teamA', 'Équipe A')}
         </Text>
         <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
-          {match?.teamB?.name || 'Équipe B'}
+          {match?.teamB?.name || t('tournamentCompetitionComponents.teamB', 'Équipe B')}
         </Text>
       </View>
 
@@ -167,6 +184,7 @@ export function TournamentMatchCard({
  * @param root0.standings
  */
 export function TournamentStandingsTable({ standings = [] }) {
+  const { t } = useTranslation();
   const {
     ApplicationStyle,
     Colors,
@@ -183,7 +201,12 @@ export function TournamentStandingsTable({ standings = [] }) {
   if (!Array.isArray(standings) || standings.length === 0) {
     return (
       <View style={tournamentDs.styles.compactPanelCard}>
-        <Text style={[Fonts.p3, Fonts.neutral200]}>Aucun classement calcule pour le moment.</Text>
+        <Text style={[Fonts.p3, Fonts.neutral200]}>
+          {t(
+            'tournamentCompetitionComponents.noStandingsComputedYet',
+            'Aucun classement calcule pour le moment.',
+          )}
+        </Text>
       </View>
     );
   }
@@ -196,7 +219,12 @@ export function TournamentStandingsTable({ standings = [] }) {
           style={tournamentDs.styles.panelCard}
         >
           <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
-            {standing?.label ? `Poule ${standing.label}` : 'Classement'}
+            {standing?.label
+              ? t('tournamentCompetitionComponents.groupLabel', 'Poule {{label}}', {
+                label: standing.label,
+                ...SANS_ECHAPPEMENT,
+              })
+              : t('tournamentCompetitionComponents.standings', 'Classement')}
           </Text>
 
           <View
@@ -211,12 +239,49 @@ export function TournamentStandingsTable({ standings = [] }) {
             ]}
           >
             <StandingCell flex={0.8} text="#" textStyle={Fonts.neutral200} />
-            <StandingCell flex={2.8} text="Equipe" textStyle={Fonts.neutral200} />
-            <StandingCell text="PJ" textStyle={Fonts.neutral200} />
-            <StandingCell text="V" textStyle={Fonts.neutral200} />
-            <StandingCell text="N" textStyle={Fonts.neutral200} />
-            <StandingCell text="D" textStyle={Fonts.neutral200} />
-            <StandingCell text="Diff" textStyle={Fonts.neutral200} />
+            <StandingCell
+              flex={2.8}
+              text={t(
+                'tournamentCompetitionComponents.teamFallback',
+                'Equipe',
+              )}
+              textStyle={Fonts.neutral200}
+            />
+            <StandingCell
+              text={t(
+                'tournamentCompetitionComponents.p',
+                'PJ',
+              )}
+              textStyle={Fonts.neutral200}
+            />
+            <StandingCell
+              text={t(
+                'tournamentCompetitionComponents.winShort',
+                'V',
+              )}
+              textStyle={Fonts.neutral200}
+            />
+            <StandingCell
+              text={t(
+                'tournamentCompetitionComponents.drawShort',
+                'N',
+              )}
+              textStyle={Fonts.neutral200}
+            />
+            <StandingCell
+              text={t(
+                'tournamentCompetitionComponents.lossShort',
+                'D',
+              )}
+              textStyle={Fonts.neutral200}
+            />
+            <StandingCell
+              text={t(
+                'tournamentCompetitionComponents.gd',
+                'Diff',
+              )}
+              textStyle={Fonts.neutral200}
+            />
             <StandingCell text="Pts" textStyle={Fonts.neutral200} />
           </View>
 
@@ -226,7 +291,7 @@ export function TournamentStandingsTable({ standings = [] }) {
               style={{ flexDirection: 'row', gap: 8 }}
             >
               <StandingCell flex={0.8} text={row?.rank || '-'} textStyle={Fonts.primary500} />
-              <StandingCell flex={2.8} text={row?.teamName || 'Equipe'} textStyle={Fonts.neutral00} />
+              <StandingCell flex={2.8} text={row?.teamName || t('tournamentCompetitionComponents.teamFallback', 'Equipe')} textStyle={Fonts.neutral00} />
               <StandingCell text={row?.matchesPlayed || 0} textStyle={Fonts.neutral100} />
               <StandingCell text={row?.wins || 0} textStyle={Fonts.neutral100} />
               <StandingCell text={row?.draws || 0} textStyle={Fonts.neutral100} />
@@ -248,6 +313,7 @@ export function TournamentStandingsTable({ standings = [] }) {
  * @param root0.onMatchPress
  */
 export function TournamentBracketBoard({ bracket = [], onMatchPress }) {
+  const { t } = useTranslation();
   const {
     ApplicationStyle,
     Colors,
@@ -264,7 +330,12 @@ export function TournamentBracketBoard({ bracket = [], onMatchPress }) {
   if (!Array.isArray(bracket) || bracket.length === 0) {
     return (
       <View style={tournamentDs.styles.compactPanelCard}>
-        <Text style={[Fonts.p3, Fonts.neutral200]}>Aucun tableau final génère pour le moment.</Text>
+        <Text style={[Fonts.p3, Fonts.neutral200]}>
+          {t(
+            'tournamentCompetitionComponents.noKnockoutBracketGeneratedYet',
+            'Aucun tableau final génère pour le moment.',
+          )}
+        </Text>
       </View>
     );
   }
@@ -282,17 +353,34 @@ export function TournamentBracketBoard({ bracket = [], onMatchPress }) {
               },
             ]}
           >
-            <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{round?.label || 'Tour'}</Text>
+            <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
+              {round?.label || t(
+                'tournamentCompetitionComponents.round',
+                'Tour',
+              )}
+            </Text>
             {(round?.matches || []).map((match) => (
               <View
                 key={match?.documentId}
                 style={tournamentDs.styles.insetPanelCard}
               >
                 <Text style={[Fonts.p4Bold, Fonts.primary500]}>
-                  {match?.teamA?.name || match?.sourceMatchA ? 'Qualifié A' : 'A définir'}
+                  {match?.teamA?.name || match?.sourceMatchA ? t(
+                    'tournamentCompetitionComponents.qualifiedA',
+                    'Qualifié A',
+                  ) : t(
+                    'tournamentCompetitionComponents.toBeDecided',
+                    'A définir',
+                  )}
                 </Text>
                 <Text style={[Fonts.p4Bold, Fonts.primary500]}>
-                  {match?.teamB?.name || match?.sourceMatchB ? 'Qualifié B' : 'A définir'}
+                  {match?.teamB?.name || match?.sourceMatchB ? t(
+                    'tournamentCompetitionComponents.qualifiedB',
+                    'Qualifié B',
+                  ) : t(
+                    'tournamentCompetitionComponents.toBeDecided',
+                    'A définir',
+                  )}
                 </Text>
                 <Text style={[Fonts.h4Bold, Fonts.neutral00]}>{formatTournamentScore(match)}</Text>
                 <Text style={[Fonts.p4, Fonts.neutral200]}>
@@ -303,7 +391,7 @@ export function TournamentBracketBoard({ bracket = [], onMatchPress }) {
                     onPress={() => onMatchPress(match)}
                     size="sm"
                     style={{ alignSelf: 'flex-start' }}
-                    title="Voir le match"
+                    title={t('tournamentCompetitionComponents.seeTheMatch', 'Voir le match')}
                     variant="Secondary"
                   />
                 ) : null}
@@ -324,6 +412,7 @@ export function TournamentBracketBoard({ bracket = [], onMatchPress }) {
  * @param root0.standings
  */
 export function TournamentGroupCards({ groups = [], onGroupPress = null, standings = [] }) {
+  const { t } = useTranslation();
   const {
     Alignments,
     ApplicationStyle,
@@ -341,7 +430,12 @@ export function TournamentGroupCards({ groups = [], onGroupPress = null, standin
   if (!Array.isArray(groups) || groups.length === 0) {
     return (
       <View style={tournamentDs.styles.compactPanelCard}>
-        <Text style={[Fonts.p3, Fonts.neutral200]}>Aucune poule n à encore été tirée.</Text>
+        <Text style={[Fonts.p3, Fonts.neutral200]}>
+          {t(
+            'tournamentCompetitionComponents.noGroupHasBeenDrawn',
+            'Aucune poule n à encore été tirée.',
+          )}
+        </Text>
       </View>
     );
   }
@@ -363,7 +457,12 @@ export function TournamentGroupCards({ groups = [], onGroupPress = null, standin
             style={tournamentDs.styles.compactPanelCard}
           >
             <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
-              {group?.label ? `Poule ${group.label}` : 'Poule'}
+              {group?.label
+                ? t('tournamentCompetitionComponents.groupLabel', 'Poule {{label}}', {
+                  label: group.label,
+                  ...SANS_ECHAPPEMENT,
+                })
+                : t('tournamentCompetitionComponents.group', 'Poule')}
             </Text>
             {(rows.length > 0 ? rows : (group?.entries || [])).map((item, index) => (
               <View
@@ -371,7 +470,7 @@ export function TournamentGroupCards({ groups = [], onGroupPress = null, standin
                 style={[Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween, Spaces.gap[12]]}
               >
                 <Text style={[Fonts.p3, Fonts.neutral100]}>
-                  {rows.length > 0 ? `${item?.rank || index + 1}. ${item?.teamName || 'Equipe'}` : `${index + 1}. ${item?.tournamentTeam?.name || 'Equipe'}`}
+                  {rows.length > 0 ? `${item?.rank || index + 1}. ${item?.teamName || t('tournamentCompetitionComponents.teamFallback', 'Equipe')}` : `${index + 1}. ${item?.tournamentTeam?.name || t('tournamentCompetitionComponents.teamFallback', 'Equipe')}`}
                 </Text>
                 {rows.length > 0 ? (
                   <Text style={[Fonts.p4Bold, Fonts.primary500]}>

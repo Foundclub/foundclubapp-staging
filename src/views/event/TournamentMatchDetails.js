@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Alert,
   ScrollView,
@@ -12,6 +13,7 @@ import {
 
 import useAuth from '@/domains/auth/useAuth';
 import { formatDateTimeToSend } from '@/domains/event/eventUseCases';
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -59,6 +61,7 @@ const formatTimeValue = (value) => {
  * @param root0.route
  */
 function TournamentMatchDetails({ navigation, route }) {
+  const { t } = useTranslation();
   const routeEventId = route?.params?.eventId || '';
   const matchId = route?.params?.matchId || '';
   const queryClient = useQueryClient();
@@ -124,7 +127,13 @@ function TournamentMatchDetails({ navigation, route }) {
   const scheduleMutation = useMutation({
     mutationFn: (payload) => scheduleTournamentMatch(matchId, payload),
     onError: (mutationError) => {
-      Alert.alert('Erreur', mutationError?.message || 'Impossible de programmer ce match.');
+      Alert.alert(t(
+        'common.error',
+        'Erreur',
+      ), mutationError?.message || t(
+        'tournamentMatchDetails.unableToScheduleThisMatch',
+        'Impossible de programmer ce match.',
+      ));
     },
     onSuccess: invalidate,
   });
@@ -132,7 +141,13 @@ function TournamentMatchDetails({ navigation, route }) {
   const reportScoreMutation = useMutation({
     mutationFn: (payload) => reportTournamentMatchScore(matchId, payload),
     onError: (mutationError) => {
-      Alert.alert('Erreur', mutationError?.message || 'Impossible d enregistrer ce score.');
+      Alert.alert(t(
+        'common.error',
+        'Erreur',
+      ), mutationError?.message || t(
+        'tournamentMatchDetails.unableToSaveThisScore',
+        'Impossible d enregistrer ce score.',
+      ));
     },
     onSuccess: invalidate,
   });
@@ -140,7 +155,13 @@ function TournamentMatchDetails({ navigation, route }) {
   const validateScoreMutation = useMutation({
     mutationFn: () => validateTournamentMatchScore(matchId),
     onError: (mutationError) => {
-      Alert.alert('Erreur', mutationError?.message || 'Impossible de valider ce score.');
+      Alert.alert(t(
+        'common.error',
+        'Erreur',
+      ), mutationError?.message || t(
+        'tournamentMatchDetails.unableToApproveThisScore',
+        'Impossible de valider ce score.',
+      ));
     },
     onSuccess: invalidate,
   });
@@ -152,14 +173,14 @@ function TournamentMatchDetails({ navigation, route }) {
   const scoresNeedWinner = scoresAreValid && scoreA === scoreB && isKnockoutLike;
   const canSubmitScore = scoresAreValid && (!scoresNeedWinner || Boolean(winnerTeamId));
   const matchStatusMeta = getTournamentMatchStatusMeta(match?.status, Colors);
-  const currentFacilityName = match?.facility?.name || facilities.find((facility) => facility?.documentId === selectedFacilityId)?.name || 'Aucune installation';
+  const currentFacilityName = match?.facility?.name || facilities.find((facility) => facility?.documentId === selectedFacilityId)?.name || t('tournamentMatchDetails.noFacility', 'Aucune installation');
 
   const handleSchedule = () => {
     const scheduledAt = formatDateTimeToSend(scheduledDate, startTime);
     const endAt = formatDateTimeToSend(scheduledDate, endTime);
 
     if (!scheduledAt || !endAt) {
-      Alert.alert('Créneau incomplet', 'Sélectionne une date, une heure de début et une heure de fin valides.');
+      Alert.alert(t('tournamentMatchDetails.incompleteSlot', 'Créneau incomplet'), t('tournamentMatchDetails.selectAValidDateStart', 'Sélectionne une date, une heure de début et une heure de fin valides.'));
       return;
     }
 
@@ -172,7 +193,7 @@ function TournamentMatchDetails({ navigation, route }) {
 
   const handleReportScore = (options = {}) => {
     if (!canSubmitScore && options.status !== 'forfeit') {
-      Alert.alert('Score incomplet', 'Renseigne deux scores valides. Pour un match nul en phase finale, indique aussi le vainqueur.');
+      Alert.alert(t('tournamentMatchDetails.incompleteScore', 'Score incomplet'), t('tournamentMatchDetails.enterTwoValidScoresFor', 'Renseigne deux scores valides. Pour un match nul en phase finale, indique aussi le vainqueur.'));
       return;
     }
 
@@ -200,8 +221,8 @@ function TournamentMatchDetails({ navigation, route }) {
           },
         ]}
       >
-        <Text style={[Fonts.p3Bold, selected ? Fonts.primary100 : Fonts.neutral100]}>{facility?.name || 'Installation'}</Text>
-        <Text style={[Fonts.p4, Fonts.neutral200]}>{facility?.address || 'Adresse indisponible'}</Text>
+        <Text style={[Fonts.p3Bold, selected ? Fonts.primary100 : Fonts.neutral100]}>{facility?.name || t('tournamentMatchDetails.facility', 'Installation')}</Text>
+        <Text style={[Fonts.p4, Fonts.neutral200]}>{facility?.address || t('tournamentMatchDetails.addressUnavailable', 'Adresse indisponible')}</Text>
       </TouchableOpacity>
     );
   };
@@ -214,17 +235,36 @@ function TournamentMatchDetails({ navigation, route }) {
       <WithDataWrapper data={match} error={error} isLoading={isLoading} onRetry={refetch}>
         <ScrollView contentContainerStyle={tournamentDs.styles.screenContent}>
           <View style={tournamentDs.styles.screenIntro}>
-            <Text style={[Fonts.h2, Fonts.neutral00]}>{match?.roundLabel || 'Match tournoi'}</Text>
+            <Text style={[Fonts.h2, Fonts.neutral00]}>
+              {match?.roundLabel || t(
+                'tournamentMatchDetails.tournamentMatch',
+                'Match tournoi',
+              )}
+            </Text>
             <Text style={[Fonts.p2, Fonts.primary100]}>
-              {`${match?.teamA?.name || 'Équipe A'} vs ${match?.teamB?.name || 'Équipe B'}`}
+              {`${match?.teamA?.name || t(
+                'tournamentMatchDetails.teamA',
+                'Équipe A',
+              )} vs ${match?.teamB?.name || t(
+                'tournamentMatchDetails.teamB',
+                'Équipe B',
+              )}`}
             </Text>
           </View>
 
           <View style={tournamentDs.styles.panelCard}>
             <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter, Spaces.gap[12]]}>
               <View style={{ flex: 1 }}>
-                <Text style={[Fonts.p4Bold, Fonts.primary500]}>{match?.group?.label ? `Poule ${match.group.label}` : match?.phase?.label || 'Phase finale'}</Text>
-                <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{`${match?.teamA?.name || 'Équipe A'} - ${match?.teamB?.name || 'Équipe B'}`}</Text>
+                <Text style={[Fonts.p4Bold, Fonts.primary500]}>
+                  {match?.group?.label
+                    ? t('tournamentMatchDetails.groupLabel', 'Poule {{label}}', {
+                      label: match.group.label,
+                      ...SANS_ECHAPPEMENT,
+                    })
+                    : match?.phase?.label
+                      || t('tournamentMatchDetails.knockoutStage', 'Phase finale')}
+                </Text>
+                <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{`${match?.teamA?.name || t('tournamentMatchDetails.teamA', 'Équipe A')} - ${match?.teamB?.name || t('tournamentMatchDetails.teamB', 'Équipe B')}`}</Text>
               </View>
               <Tag
                 style={tournamentDs.getToneTagStyle(matchStatusMeta.tone)}
@@ -238,7 +278,7 @@ function TournamentMatchDetails({ navigation, route }) {
               {scoresAreValid ? `${scoreA} - ${scoreB}` : '--'}
             </Text>
             <Text style={[Fonts.p3, Fonts.neutral100]}>
-              {scheduledDate && startTime ? `${scheduledDate} - ${startTime}${endTime ? ` / ${endTime}` : ''}` : 'Horaire à définir'}
+              {scheduledDate && startTime ? `${scheduledDate} - ${startTime}${endTime ? ` / ${endTime}` : ''}` : t('tournamentMatchDetails.timeToBeSet', 'Horaire à définir')}
             </Text>
             <Text style={[Fonts.p3, Fonts.neutral200]}>{`Installation: ${currentFacilityName}`}</Text>
             {match?.winner?.name ? (
@@ -248,21 +288,32 @@ function TournamentMatchDetails({ navigation, route }) {
 
           {canManageMatch ? (
             <View style={tournamentDs.styles.panelCard}>
-              <Text style={[Fonts.h4Bold, Fonts.neutral00]}>Programmer le match</Text>
+              <Text style={[Fonts.h4Bold, Fonts.neutral00]}>
+                {t('tournamentMatchDetails.scheduleTheMatch', 'Programmer le match')}
+              </Text>
               <DatePickerInput label="Date" onChange={setScheduledDate} value={scheduledDate} />
               <View style={[Alignments.row, Spaces.gap[12]]}>
                 <View style={{ flex: 1 }}>
-                  <TimePickerInput label="Heure de début" onChange={setStartTime} value={startTime} />
+                  <TimePickerInput label={t('tournamentMatchDetails.startTime', 'Heure de début')} onChange={setStartTime} value={startTime} />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <TimePickerInput label="Heure de fin" onChange={setEndTime} value={endTime} />
+                  <TimePickerInput
+                    label={t(
+                      'tournamentMatchDetails.endTime',
+                      'Heure de fin',
+                    )}
+                    onChange={setEndTime}
+                    value={endTime}
+                  />
                 </View>
               </View>
 
               <View style={Spaces.gap[8]}>
-                <Text style={[Fonts.p3Bold, Fonts.primary500]}>Installation</Text>
+                <Text style={[Fonts.p3Bold, Fonts.primary500]}>
+                  {t('tournamentMatchDetails.facility', 'Installation')}
+                </Text>
                 {facilities.length === 0 ? (
-                  <Text style={[Fonts.p3, Fonts.neutral200]}>Aucune installation disponible pour ce club.</Text>
+                  <Text style={[Fonts.p3, Fonts.neutral200]}>{t('tournamentMatchDetails.noFacilityAvailableForThis', 'Aucune installation disponible pour ce club.')}</Text>
                 ) : (
                   <View style={Spaces.gap[8]}>
                     {facilities.map((facility) => renderFacilityChoice(facility))}
@@ -273,7 +324,7 @@ function TournamentMatchDetails({ navigation, route }) {
               <Button
                 isLoading={scheduleMutation.isPending}
                 onPress={handleSchedule}
-                title="Enregistrer le créneau"
+                title={t('tournamentMatchDetails.saveTheSlot', 'Enregistrer le créneau')}
                 variant="Primary"
               />
             </View>
@@ -281,10 +332,12 @@ function TournamentMatchDetails({ navigation, route }) {
 
           {canManageMatch ? (
             <View style={tournamentDs.styles.panelCard}>
-              <Text style={[Fonts.h4Bold, Fonts.neutral00]}>Saisie du score</Text>
+              <Text style={[Fonts.h4Bold, Fonts.neutral00]}>
+                {t('tournamentMatchDetails.scoreEntry', 'Saisie du score')}
+              </Text>
               <View style={[Alignments.row, Spaces.gap[12]]}>
                 <View style={{ flex: 1 }}>
-                  <Text style={[Fonts.p3Bold, Fonts.primary500]}>{match?.teamA?.name || 'Équipe A'}</Text>
+                  <Text style={[Fonts.p3Bold, Fonts.primary500]}>{match?.teamA?.name || t('tournamentMatchDetails.teamA', 'Équipe A')}</Text>
                   <TextInput
                     keyboardType="number-pad"
                     onChangeText={setScoreAText}
@@ -295,7 +348,7 @@ function TournamentMatchDetails({ navigation, route }) {
                   />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={[Fonts.p3Bold, Fonts.primary500]}>{match?.teamB?.name || 'Équipe B'}</Text>
+                  <Text style={[Fonts.p3Bold, Fonts.primary500]}>{match?.teamB?.name || t('tournamentMatchDetails.teamB', 'Équipe B')}</Text>
                   <TextInput
                     keyboardType="number-pad"
                     onChangeText={setScoreBText}
@@ -309,23 +362,29 @@ function TournamentMatchDetails({ navigation, route }) {
 
               {scoresNeedWinner ? (
                 <View style={Spaces.gap[8]}>
-                  <Text style={[Fonts.p3Bold, Fonts.warning500]}>Choisir le vainqueur</Text>
+                  <Text style={[Fonts.p3Bold, Fonts.warning500]}>
+                    {t('tournamentMatchDetails.chooseTheWinner', 'Choisir le vainqueur')}
+                  </Text>
                   <Text style={[Fonts.p3, Fonts.neutral200]}>
-                    En phase finale, un match nul doit tout de même designer une équipe qualifiée.
+                    {t(
+                      'tournamentMatchDetails.inTheKnockoutStageA',
+                      'En phase finale, un match nul doit tout de même designer une équipe '
+                        + 'qualifiée.',
+                    )}
                   </Text>
                   <View style={[Alignments.row, Spaces.gap[12]]}>
                     <Button
                       onPress={() => setWinnerTeamId(match?.teamA?.documentId || '')}
                       size="sm"
                       style={{ flex: 1 }}
-                      title={match?.teamA?.name || 'Équipe A'}
+                      title={match?.teamA?.name || t('tournamentMatchDetails.teamA', 'Équipe A')}
                       variant={winnerTeamId === match?.teamA?.documentId ? 'Primary' : 'Secondary'}
                     />
                     <Button
                       onPress={() => setWinnerTeamId(match?.teamB?.documentId || '')}
                       size="sm"
                       style={{ flex: 1 }}
-                      title={match?.teamB?.name || 'Équipe B'}
+                      title={match?.teamB?.name || t('tournamentMatchDetails.teamB', 'Équipe B')}
                       variant={winnerTeamId === match?.teamB?.documentId ? 'Primary' : 'Secondary'}
                     />
                   </View>
@@ -338,7 +397,10 @@ function TournamentMatchDetails({ navigation, route }) {
                   multiline
                   numberOfLines={4}
                   onChangeText={setNotesText}
-                  placeholder="Commentaires arbitre, contexte du match, forfait..."
+                  placeholder={t(
+                    'tournamentMatchDetails.refereeCommentsMatchContextForfeit',
+                    'Commentaires arbitre, contexte du match, forfait...',
+                  )}
                   placeholderTextColor={Colors.neutral500}
                   style={[
                     ...tournamentDs.styles.multilineInput,
@@ -354,7 +416,7 @@ function TournamentMatchDetails({ navigation, route }) {
                 disabled={!canSubmitScore}
                 isLoading={reportScoreMutation.isPending}
                 onPress={() => handleReportScore()}
-                title="Enregistrer le score"
+                title={t('tournamentMatchDetails.saveTheScore', 'Enregistrer le score')}
                 variant="Primary"
               />
 
@@ -368,7 +430,10 @@ function TournamentMatchDetails({ navigation, route }) {
                   })}
                   size="sm"
                   style={{ flex: 1 }}
-                  title={`Forfait ${match?.teamB?.name || 'Équipe B'}`}
+                  title={t('tournamentMatchDetails.forfeitOf', 'Forfait {{teamName}}', {
+                    teamName: match?.teamB?.name || t('tournamentMatchDetails.teamB', 'Équipe B'),
+                    ...SANS_ECHAPPEMENT,
+                  })}
                   variant="Secondary"
                 />
                 <Button
@@ -380,7 +445,10 @@ function TournamentMatchDetails({ navigation, route }) {
                   })}
                   size="sm"
                   style={{ flex: 1 }}
-                  title={`Forfait ${match?.teamA?.name || 'Équipe A'}`}
+                  title={t('tournamentMatchDetails.forfeitOf', 'Forfait {{teamName}}', {
+                    teamName: match?.teamA?.name || t('tournamentMatchDetails.teamA', 'Équipe A'),
+                    ...SANS_ECHAPPEMENT,
+                  })}
                   variant="Secondary"
                 />
               </View>
@@ -389,14 +457,14 @@ function TournamentMatchDetails({ navigation, route }) {
                 <Button
                   isLoading={validateScoreMutation.isPending}
                   onPress={() => validateScoreMutation.mutate()}
-                  title="Valider le score"
+                  title={t('tournamentMatchDetails.approveTheScore', 'Valider le score')}
                   variant="Secondary"
                 />
               ) : null}
             </View>
           ) : null}
 
-          <Button onPress={() => navigation.goBack()} title="Retour au tournoi" variant="Secondary" />
+          <Button onPress={() => navigation.goBack()} title={t('tournamentMatchDetails.backToTheTournament', 'Retour au tournoi')} variant="Secondary" />
         </ScrollView>
       </WithDataWrapper>
     </ScreenContainer>
