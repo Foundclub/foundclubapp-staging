@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { Text, View } from 'react-native';
 
 import useTheme from '@/theme/themeContext';
@@ -16,17 +17,35 @@ import Checkbox from '@/components/atoms/checkbox/Checkbox';
  * @param root0.title
  */
 function ParentalDeclarationCard({
-  checkboxLabel = 'Je déclare être le parent ou le représentant legal de cet enfant et utiliser l application en son nom.',
+  checkboxLabel,
   checked,
-  description = 'Ce profil concerne un enfant de moins de 15 ans. Pour continuer, tu dois confirmer que tu es son parent ou représentant légal.',
+  description,
   disabled = false,
   helperText = '',
   onChange,
-  title = 'Déclaration parentale obligatoire',
+  title,
 }) {
+  const { t } = useTranslation();
   const {
     Alignments, Colors, Fonts, Spaces,
   } = useTheme();
+  const shownCheckboxLabel = checkboxLabel === undefined
+    ? t(
+      'parentalDeclarationCard.checkboxLabel',
+      'Je déclare être le parent ou le représentant legal de cet enfant et utiliser '
+        + 'l application en son nom.',
+    )
+    : checkboxLabel;
+  const shownDescription = description === undefined
+    ? t(
+      'parentalDeclarationCard.description',
+      'Ce profil concerne un enfant de moins de 15 ans. Pour continuer, tu dois confirmer que tu '
+        + 'es son parent ou représentant légal.',
+    )
+    : description;
+  const shownTitle = title === undefined
+    ? t('parentalDeclarationCard.title', 'Déclaration parentale obligatoire')
+    : title;
 
   return (
     <View
@@ -43,10 +62,10 @@ function ParentalDeclarationCard({
     >
       <View style={[Spaces.gap[8]]}>
         <Text style={[Fonts.h4Bold, Fonts.neutral00]}>
-          {title}
+          {shownTitle}
         </Text>
         <Text style={[Fonts.p2, Fonts.neutral200]}>
-          {description}
+          {shownDescription}
         </Text>
       </View>
 
@@ -57,7 +76,7 @@ function ParentalDeclarationCard({
           value={checked}
         />
         <Text style={[Fonts.p2, Fonts.neutral00, { flex: 1 }]}>
-          {checkboxLabel}
+          {shownCheckboxLabel}
         </Text>
       </View>
 

@@ -5,6 +5,7 @@ import {
 } from 'react-native';
 import { captureRef } from 'react-native-view-shot';
 
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -289,7 +290,11 @@ function SelectAvatar({
       }
     } catch (error) {
       console.warn('Camera Error:', error);
-      Alert.alert('Erreur', `Impossible d'ouvrir la caméra : ${error.message}`);
+      Alert.alert(t('selectAvatar.errors.title', 'Erreur'), t(
+        'selectAvatar.errors.camera',
+        "Impossible d'ouvrir la caméra : {{message}}",
+        { message: error.message, ...SANS_ECHAPPEMENT },
+      ));
     }
   };
 
@@ -312,7 +317,11 @@ function SelectAvatar({
       handleResponse(result);
     } catch (error) {
       console.warn('Gallery Error:', error);
-      Alert.alert('Erreur', `Impossible d'ouvrir la galerie : ${error.message}`);
+      Alert.alert(t('selectAvatar.errors.title', 'Erreur'), t(
+        'selectAvatar.errors.gallery',
+        "Impossible d'ouvrir la galerie : {{message}}",
+        { message: error.message, ...SANS_ECHAPPEMENT },
+      ));
     }
   };
 

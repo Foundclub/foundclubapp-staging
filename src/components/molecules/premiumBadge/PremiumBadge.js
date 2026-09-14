@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { Text, View } from 'react-native';
 
 import useTheme from '@/theme/themeContext';
@@ -12,9 +13,13 @@ import useTheme from '@/theme/themeContext';
  * @returns {import('react').ReactElement}
  */
 function PremiumBadge({ label, scope }) {
+  const { t } = useTranslation();
   const { Alignments, Colors, Fonts } = useTheme();
   const tone = scope === 'club' ? Colors.violet500 : Colors.primary500;
-  const resolvedLabel = label || (scope === 'club' ? 'Offre Club' : 'Offre Équipe');
+  const resolvedLabel = label || (scope === 'club' ? t('premiumBadge.clubOffer', 'Offre Club') : t(
+    'premiumBadge.teamOffer',
+    'Offre Équipe',
+  ));
 
   return (
     <View

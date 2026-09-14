@@ -1,6 +1,11 @@
 import { Text, TextInput, TouchableOpacity } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
+// I18N-1 : les paliers et les periodes se lisent par i18next.t hors composant ;
+// ce temoin initialise le VRAI i18next en francais (fr.js + replis), sans rien
+// changer a ce qu'il affirme.
+import '@/theme/strings';
+
 import SubscriptionPaywallSheet from '../SubscriptionPaywallSheet';
 
 // Filet L10-A (docs/STRATEGIE_PAYWALL_2026_08_01.md §1.4 et §5.3) : la feuille de
@@ -38,6 +43,7 @@ jest.mock('@tanstack/react-query', () => ({
 }));
 
 jest.mock('react-i18next', () => ({
+  initReactI18next: { init: () => {}, type: '3rdParty' },
   useTranslation: () => ({
     t: (/** @type {string} */ key, /** @type {any} */ fallback, /** @type {any} */ values) => {
       if (typeof fallback !== 'string') return key;

@@ -1,6 +1,11 @@
 import { TouchableOpacity } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
+// I18N-1 : le bandeau lit ses textes par t() avec interpolation ; ce temoin
+// initialise le VRAI i18next en francais (fr.js + replis), sans rien changer a
+// ce qu'il affirme.
+import '@/theme/strings';
+
 import SubscriptionQuotaBanner from '../SubscriptionQuotaBanner';
 
 // Regle E6 : ce composant n'avait AUCUN test alors qu'il alimente 3 assistants
