@@ -23,8 +23,6 @@ import { resolveNotificationDestination } from '@/utils/notifications/notificati
 import {
   formatNotificationRelativeTime,
   getNotificationIcon,
-  NOTIFICATION_EMPTY_STATE_BODY,
-  NOTIFICATION_EMPTY_STATE_TITLE,
 } from '@/utils/notifications/notificationPresentation';
 
 /**
@@ -164,7 +162,7 @@ function NotificationPopup({
           {'\u{1F514}'}
         </Text>
         <Text style={[Fonts.p3 || { fontSize: 14 }, { color: textMuted, fontStyle: 'italic' }]}>
-          {NOTIFICATION_EMPTY_STATE_TITLE}
+          {t('notificationPopup.empty.title', 'Aucune notification')}
         </Text>
         <Text
           style={[
@@ -172,7 +170,7 @@ function NotificationPopup({
             { color: textMuted, marginTop: 6, textAlign: 'center' },
           ]}
         >
-          {NOTIFICATION_EMPTY_STATE_BODY}
+          {t('notificationPopup.empty.body', 'Les nouvelles notifications apparaîtront ici.')}
         </Text>
       </View>
     );

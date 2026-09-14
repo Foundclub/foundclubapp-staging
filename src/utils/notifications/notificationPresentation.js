@@ -1,3 +1,6 @@
+import i18next from 'i18next';
+
+import localeDesFormats from '@/theme/strings/localeDesFormats';
 import { NOTIFICATION_TYPES } from '@/utils/notifications/notificationTypes';
 
 const TEAM_ICON_TYPES = new Set([
@@ -134,16 +137,32 @@ export const formatNotificationRelativeTime = (dateInput) => {
   const diffHours = Math.floor(diffMs / 3600000);
   const diffDays = Math.floor(diffMs / 86400000);
 
-  if (diffMins < 1) return "A l'instant";
-  if (diffMins < 60) return `Il y a ${diffMins} min`;
-  if (diffHours < 24) return `Il y a ${diffHours} h`;
-  if (diffDays < 7) return `Il y a ${diffDays} j`;
+  if (diffMins < 1) return i18next.t('notificationPresentation.relative.now', "A l'instant");
+  if (diffMins < 60) {
+    return i18next.t(
+      'notificationPresentation.relative.minutes',
+      'Il y a {{value}} min',
+      { value: diffMins },
+    );
+  }
+  if (diffHours < 24) {
+    return i18next.t(
+      'notificationPresentation.relative.hours',
+      'Il y a {{value}} h',
+      { value: diffHours },
+    );
+  }
+  if (diffDays < 7) {
+    return i18next.t(
+      'notificationPresentation.relative.days',
+      'Il y a {{value}} j',
+      { value: diffDays },
+    );
+  }
 
-  return date.toLocaleDateString('fr-FR', {
+  return date.toLocaleDateString(localeDesFormats(), {
     day: '2-digit',
     month: 'short',
   });
 };
 
-export const NOTIFICATION_EMPTY_STATE_TITLE = 'Aucune notification';
-export const NOTIFICATION_EMPTY_STATE_BODY = 'Les nouvelles notifications apparaîtront ici.';
