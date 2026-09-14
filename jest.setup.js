@@ -109,6 +109,7 @@ jest.mock('react-test-renderer', () => {
  * des temoins remplacent `react-native` par un objet partiel.
  */
 jest.mock('@/theme/strings/langue', () => ({
+  anglaisDisponible: () => true,
   CLEF_CHOIX_DE_LANGUE: 'app.language_choice',
   enregistrerChoixDeLangue: jest.fn(),
   langueDepuisLocale: () => 'fr',

@@ -18,7 +18,11 @@ const mockEnregistrer = jest.fn((/** @type {'fr' | 'en' | null} */ choix) => {
   mockChoix = choix;
 });
 
+/** @type {boolean} */
+let mockAnglaisDisponible = true;
+
 jest.mock('@/theme/strings/langue', () => ({
+  anglaisDisponible: () => mockAnglaisDisponible,
   enregistrerChoixDeLangue: (/** @type {any} */ choix) => mockEnregistrer(choix),
   // Le téléphone de ce témoin est réglé en ANGLAIS : « langue du téléphone »
   // doit donc rendre 'en', et un choix « Français » doit l'emporter.
@@ -235,6 +239,19 @@ beforeEach(() => {
 });
 
 describe('I18N-0 — « Mon compte » permet de choisir la langue', () => {
+  afterEach(() => {
+    mockAnglaisDisponible = true;
+  });
+
+  it('garde-fou : sans anglais disponible (production), aucune rangée « Langue »', async () => {
+    mockAnglaisDisponible = false;
+    const libelles = await libellesDuMenu(ROLE_JOUEUR);
+
+    const rangeesLangue = libelles
+      .filter((/** @type {string} */ libelle) => libelle.startsWith('Langue'));
+    expect(rangeesLangue).toEqual([]);
+  });
+
   it('affiche la rangée « Langue », sur la langue du téléphone par défaut', async () => {
     const libelles = await libellesDuMenu(ROLE_JOUEUR);
 

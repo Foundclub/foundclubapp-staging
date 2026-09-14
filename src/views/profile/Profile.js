@@ -23,6 +23,7 @@ import { getSubscriptionQuotaItems } from '@/domains/subscription/subscriptionDe
 import { TutorialIds } from '@/domains/tutorial/tutorialIds';
 import { useAppContext } from '@/store/appContext';
 import {
+  anglaisDisponible,
   enregistrerChoixDeLangue,
   langueEffective,
   lireChoixDeLangue,
@@ -694,7 +695,8 @@ function Profile({ navigation, route }) {
   ];
 
   const accountNonLogoutRows = [
-    ...languageRows,
+    // Garde-fou du 14/09 : pas de choix de langue tant que l anglais est fermé (production).
+    ...(anglaisDisponible() ? languageRows : []),
     {
       icon: Images.share2,
       key: 'switchAccount',

@@ -71,7 +71,30 @@ export const enregistrerChoixDeLangue = (choix) => {
 };
 
 /**
- * La langue que l'app doit parler maintenant.
- * @returns {'fr' | 'en'} Le choix du profil, sinon la langue du téléphone.
+ * 🚧 GARDE-FOU DU 14/09 — pas d anglais à moitié traduit chez les utilisateurs.
+ * I18N-0 a posé le socle, mais ~6 040 lignes de français restent écrites en dur
+ * (lots I18N-1 à 4 à faire, docs/I18N_DECOUPAGE.md). Une build MAGASIN aurait
+ * montré un mélange anglais/français à tout téléphone réglé en anglais. Tant que
+ * ce drapeau est faux, la production parle français et n offre pas le choix ; la
+ * recette et le local gardent l anglais pour avancer.
+ * ⚠️ Le passer à `true` quand I18N-4 est récolté ET relu (décision d Adel).
  */
-export const langueEffective = () => lireChoixDeLangue() || langueDuTelephone();
+export const ANGLAIS_OUVERT_EN_PRODUCTION = false;
+
+/**
+ * L app peut-elle parler anglais dans cet environnement ?
+ * @returns {boolean} `false` en production tant que le garde-fou tient.
+ */
+export const anglaisDisponible = () => (
+  ANGLAIS_OUVERT_EN_PRODUCTION
+  || String(process.env.APP_ENV || process.env.ENV || '').trim().toLowerCase() !== 'production'
+);
+
+/**
+ * La langue que l app doit parler maintenant.
+ * @returns {'fr' | 'en'} Le choix du profil, sinon la langue du téléphone ;
+ *   `fr` si l anglais est fermé.
+ */
+export const langueEffective = () => (
+  anglaisDisponible() ? (lireChoixDeLangue() || langueDuTelephone()) : 'fr'
+);

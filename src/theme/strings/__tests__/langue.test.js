@@ -25,6 +25,7 @@ jest.mock('@/platform/storage', () => ({
 }));
 
 const {
+  anglaisDisponible,
   CLEF_CHOIX_DE_LANGUE,
   enregistrerChoixDeLangue,
   langueDepuisLocale,
@@ -102,5 +103,34 @@ describe('I18N-0 — le choix du profil prime sur le téléphone', () => {
     mockStockage.set(CLEF_CHOIX_DE_LANGUE, 'de');
     expect(lireChoixDeLangue()).toBeNull();
     expect(langueEffective()).toBe('fr');
+  });
+});
+
+// 🚧 GARDE-FOU DU 14/09 (chef d orchestre) : I18N-0 a pose le socle, mais ~6 040 lignes
+// de francais restent ecrites en dur (lots I18N-1..4 pas faits). Sur un telephone en
+// anglais, une build MAGASIN aurait montre un melange anglais/francais a des
+// utilisateurs francais. Tant que le drapeau n est pas leve, la PRODUCTION reste en
+// francais ; la recette et le local gardent l anglais pour avancer.
+describe('garde-fou : pas d anglais a moitie traduit en production', () => {
+  const envAvant = process.env.APP_ENV;
+  afterEach(() => {
+    process.env.APP_ENV = envAvant;
+  });
+
+  it('en production, un telephone en anglais ET un choix « English » restent en francais', () => {
+    process.env.APP_ENV = 'production';
+    mockLocale = ['en', 'US'];
+    mockStockage.set(CLEF_CHOIX_DE_LANGUE, 'en');
+
+    expect(anglaisDisponible()).toBe(false);
+    expect(langueEffective()).toBe('fr');
+  });
+
+  it('en recette, l anglais reste disponible et suit le telephone', () => {
+    process.env.APP_ENV = 'staging';
+    mockLocale = ['en', 'US'];
+
+    expect(anglaisDisponible()).toBe(true);
+    expect(langueEffective()).toBe('en');
   });
 });
