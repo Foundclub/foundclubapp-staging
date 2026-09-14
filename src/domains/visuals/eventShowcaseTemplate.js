@@ -32,6 +32,7 @@
  * est deja exporte par le domaine evenement (§1 bis, barreau 2).
  */
 
+import i18next from 'i18next';
 import {
   isBookingEventType, isDetectionEventType, isMatchEventType, isStageEventType,
   isTournamentEventType, isTrainingEventType,
@@ -134,31 +135,72 @@ export const isEventShowcaseOffered = (typeName) => !isTrainingEventType(typeNam
  */
 export const getEventShowcaseShareIntro = (typeName) => {
   if (isDetectionEventType(typeName)) {
-    return { default: 'Viens participer à notre détection / séance d’essai !', key: 'showcase.shareIntroByType.detection' };
+    return {
+      get default() {
+        return i18next.t(
+          'showcase.shareIntroByType.detection',
+          'Viens participer à notre détection / séance d’essai !',
+        );
+      },
+      key: 'showcase.shareIntroByType.detection',
+    };
   }
   if (isMatchEventType(typeName)) {
     return {
-      default: 'Viens nous encourager pour ce match !',
+      get default() {
+        return i18next.t(
+          'showcase.shareIntroByType.match',
+          'Viens nous encourager pour ce match !',
+        );
+      },
       key: 'showcase.shareIntroByType.match',
     };
   }
   if (isTrainingEventType(typeName)) {
     return {
-      default: 'Rendez-vous à l’entraînement !',
+      get default() {
+        return i18next.t(
+          'showcase.shareIntroByType.entrainement',
+          'Rendez-vous à l’entraînement !',
+        );
+      },
       key: 'showcase.shareIntroByType.entrainement',
     };
   }
   if (isTournamentEventType(typeName)) {
-    return { default: 'Viens vivre notre tournoi !', key: 'showcase.shareIntroByType.tournoi' };
+    return {
+      get default() {
+        return i18next.t('showcase.shareIntroByType.tournoi', 'Viens vivre notre tournoi !');
+      },
+      key: 'showcase.shareIntroByType.tournoi',
+    };
   }
   if (isStageEventType(typeName)) {
-    return { default: 'Découvre notre stage !', key: 'showcase.shareIntroByType.stage' };
+    return {
+      get default() {
+        return i18next.t('showcase.shareIntroByType.stage', 'Découvre notre stage !');
+      },
+      key: 'showcase.shareIntroByType.stage',
+    };
   }
   if (isBookingEventType(typeName)) {
-    return { default: 'Voici les infos de cette réservation.', key: 'showcase.shareIntroByType.reservation' };
+    return {
+      get default() {
+        return i18next.t(
+          'showcase.shareIntroByType.reservation',
+          'Voici les infos de cette réservation.',
+        );
+      },
+      key: 'showcase.shareIntroByType.reservation',
+    };
   }
 
   // « Autre », un type absent, ou un type que le serveur ajouterait demain :
   // on annonce un evenement, on ne promet rien de plus.
-  return { default: 'Voici notre prochain événement !', key: 'showcase.shareIntroByType.neutre' };
+  return {
+    get default() {
+      return i18next.t('showcase.shareIntroByType.neutre', 'Voici notre prochain événement !');
+    },
+    key: 'showcase.shareIntroByType.neutre',
+  };
 };

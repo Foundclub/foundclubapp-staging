@@ -21,6 +21,7 @@
  * NOTE : les imports `@/...` sont résolus dans app/. Fichier non exécuté ici (câblage app).
  */
 
+import i18next from 'i18next';
 import {
   useCallback, useEffect, useMemo, useRef, useState,
 } from 'react';
@@ -116,15 +117,40 @@ const DEFAULT_FORMATS = { poster: 'a4', preview: 'post', story: 'story' };
 
 /** Styles (variantes) du gabarit détection — libellés design validés. */
 export const DETECTION_VARIANTS = [
-  { key: 'projecteurs', label: 'Projecteurs' },
-  { key: 'laissez-passer', label: 'Laissez-passer' },
-  { key: 'decouverte', label: 'Découverte' },
+  {
+    key: 'projecteurs',
+    get label() {
+      return i18next.t('useEventShowcase.variants.projecteurs', 'Projecteurs');
+    },
+  },
+  {
+    key: 'laissez-passer',
+    get label() {
+      return i18next.t('useEventShowcase.variants.laissezPasser', 'Laissez-passer');
+    },
+  },
+  {
+    key: 'decouverte',
+    get label() {
+      return i18next.t('useEventShowcase.variants.decouverte', 'Découverte');
+    },
+  },
 ];
 
 /** Styles (variantes) du gabarit affiche-club « Rejoindre » — libellés design validés. */
 export const CLUB_VARIANTS = [
-  { key: 'ecusson', label: 'Écusson' },
-  { key: 'famille', label: 'Famille' },
+  {
+    key: 'ecusson',
+    get label() {
+      return i18next.t('useEventShowcase.variants.ecusson', 'Écusson');
+    },
+  },
+  {
+    key: 'famille',
+    get label() {
+      return i18next.t('useEventShowcase.variants.famille', 'Famille');
+    },
+  },
 ];
 
 /**
@@ -132,11 +158,39 @@ export const CLUB_VARIANTS = [
  * (VISUAL_TEMPLATES['avis-de-recherche'].variants, visualModel.ts).
  */
 export const RECHERCHE_VARIANTS = [
-  { key: 'far-west', label: 'Far-west' },
-  { key: 'viseur', label: 'Viseur' },
-  { key: 'club-recherche', label: 'Club recherché' },
-  { key: 'western', label: 'Western' },
-  { key: 'club-recherche-western', label: 'Club recherché — Western' },
+  {
+    key: 'far-west',
+    get label() {
+      return i18next.t('useEventShowcase.variants.farWest', 'Far-west');
+    },
+  },
+  {
+    key: 'viseur',
+    get label() {
+      return i18next.t('useEventShowcase.variants.viseur', 'Viseur');
+    },
+  },
+  {
+    key: 'club-recherche',
+    get label() {
+      return i18next.t('useEventShowcase.variants.clubRecherche', 'Club recherché');
+    },
+  },
+  {
+    key: 'western',
+    get label() {
+      return i18next.t('useEventShowcase.variants.western', 'Western');
+    },
+  },
+  {
+    key: 'club-recherche-western',
+    get label() {
+      return i18next.t(
+        'useEventShowcase.variants.clubRechercheWestern',
+        'Club recherché — Western',
+      );
+    },
+  },
 ];
 
 /**
@@ -147,39 +201,90 @@ export const RECHERCHE_VARIANTS = [
 const DETECTION_FIELDS = [
   {
     key: 'titre',
-    labelDefault: 'Titre',
+    get labelDefault() {
+      return i18next.t('showcase.fieldTitre', 'Titre');
+    },
     labelKey: 'showcase.fieldTitre',
     maxLength: 80,
     placeholder: (variant) => (variant === 'decouverte'
-      ? { default: 'Viens essayer,', key: 'showcase.placeholderTitreDecouverte' }
-      : { default: 'Viens montrer', key: 'showcase.placeholderTitre' }),
+      ? {
+        get default() {
+          return i18next.t('showcase.placeholderTitreDecouverte', 'Viens essayer,');
+        },
+        key: 'showcase.placeholderTitreDecouverte',
+      }
+      : {
+        get default() {
+          return i18next.t('showcase.placeholderTitre', 'Viens montrer');
+        },
+        key: 'showcase.placeholderTitre',
+      }),
   },
   {
     key: 'titreAccent',
-    labelDefault: 'Accroche',
+    get labelDefault() {
+      return i18next.t('showcase.fieldTitreAccent', 'Accroche');
+    },
     labelKey: 'showcase.fieldTitreAccent',
     maxLength: 80,
     placeholder: (variant) => (variant === 'decouverte'
-      ? { default: 'tu vas aimer.', key: 'showcase.placeholderTitreAccentDecouverte' }
-      : { default: 'ce que tu vaux.', key: 'showcase.placeholderTitreAccent' }),
+      ? {
+        get default() {
+          return i18next.t('showcase.placeholderTitreAccentDecouverte', 'tu vas aimer.');
+        },
+        key: 'showcase.placeholderTitreAccentDecouverte',
+      }
+      : {
+        get default() {
+          return i18next.t('showcase.placeholderTitreAccent', 'ce que tu vaux.');
+        },
+        key: 'showcase.placeholderTitreAccent',
+      }),
   },
   {
     key: 'qrLabel',
-    labelDefault: 'Texte sous le QR code',
+    get labelDefault() {
+      return i18next.t('showcase.fieldQrLabel', 'Texte sous le QR code');
+    },
     labelKey: 'showcase.fieldQrLabel',
     maxLength: 60,
     placeholder: (variant) => (variant === 'decouverte'
-      ? { default: 'Scanne pour essayer', key: 'showcase.placeholderQrLabelDecouverte' }
-      : { default: 'Scanne pour participer', key: 'showcase.placeholderQrLabel' }),
+      ? {
+        get default() {
+          return i18next.t('showcase.placeholderQrLabelDecouverte', 'Scanne pour essayer');
+        },
+        key: 'showcase.placeholderQrLabelDecouverte',
+      }
+      : {
+        get default() {
+          return i18next.t('showcase.placeholderQrLabel', 'Scanne pour participer');
+        },
+        key: 'showcase.placeholderQrLabel',
+      }),
   },
   {
-    key: 'equipe', labelDefault: 'Équipe', labelKey: 'showcase.fieldEquipe', maxLength: 80,
+    key: 'equipe',
+    get labelDefault() {
+      return i18next.t('showcase.fieldEquipe', 'Équipe');
+    },
+    labelKey: 'showcase.fieldEquipe',
+    maxLength: 80,
   },
   {
-    key: 'niveau', labelDefault: 'Niveau', labelKey: 'showcase.fieldNiveau', maxLength: 80,
+    key: 'niveau',
+    get labelDefault() {
+      return i18next.t('showcase.fieldNiveau', 'Niveau');
+    },
+    labelKey: 'showcase.fieldNiveau',
+    maxLength: 80,
   },
   {
-    key: 'lieu', labelDefault: 'Lieu', labelKey: 'showcase.fieldLieu', maxLength: 80,
+    key: 'lieu',
+    get labelDefault() {
+      return i18next.t('showcase.fieldLieu', 'Lieu');
+    },
+    labelKey: 'showcase.fieldLieu',
+    maxLength: 80,
   },
 ];
 
@@ -187,31 +292,59 @@ const DETECTION_FIELDS = [
 const CLUB_FIELDS = [
   {
     key: 'titre',
-    labelDefault: 'Titre',
+    get labelDefault() {
+      return i18next.t('showcase.club.fieldTitre', 'Titre');
+    },
     labelKey: 'showcase.club.fieldTitre',
     maxLength: 80,
-    placeholder: { default: 'Ici, on joue', key: 'showcase.club.placeholderTitre' },
+    placeholder: {
+      get default() {
+        return i18next.t('showcase.club.placeholderTitre', 'Ici, on joue');
+      },
+      key: 'showcase.club.placeholderTitre',
+    },
   },
   {
     key: 'titreAccent',
-    labelDefault: 'Accroche',
+    get labelDefault() {
+      return i18next.t('showcase.club.fieldTitreAccent', 'Accroche');
+    },
     labelKey: 'showcase.club.fieldTitreAccent',
     maxLength: 80,
-    placeholder: { default: 'ensemble.', key: 'showcase.club.placeholderTitreAccent' },
+    placeholder: {
+      get default() {
+        return i18next.t('showcase.club.placeholderTitreAccent', 'ensemble.');
+      },
+      key: 'showcase.club.placeholderTitreAccent',
+    },
   },
   {
     key: 'sports',
-    labelDefault: 'Sports (séparés par ·)',
+    get labelDefault() {
+      return i18next.t('showcase.club.fieldSports', 'Sports (séparés par ·)');
+    },
     labelKey: 'showcase.club.fieldSports',
     maxLength: 120,
-    placeholder: { default: 'Football · Rugby · Handball', key: 'showcase.club.placeholderSports' },
+    placeholder: {
+      get default() {
+        return i18next.t('showcase.club.placeholderSports', 'Football · Rugby · Handball');
+      },
+      key: 'showcase.club.placeholderSports',
+    },
   },
   {
     key: 'qrLabel',
-    labelDefault: 'Texte sous le QR code',
+    get labelDefault() {
+      return i18next.t('showcase.club.fieldQrLabel', 'Texte sous le QR code');
+    },
     labelKey: 'showcase.club.fieldQrLabel',
     maxLength: 60,
-    placeholder: { default: 'Scanne pour nous rejoindre', key: 'showcase.club.placeholderQrLabel' },
+    placeholder: {
+      get default() {
+        return i18next.t('showcase.club.placeholderQrLabel', 'Scanne pour nous rejoindre');
+      },
+      key: 'showcase.club.placeholderQrLabel',
+    },
   },
 ];
 
@@ -219,53 +352,121 @@ const CLUB_FIELDS = [
 const RECHERCHE_FIELDS = [
   {
     key: 'cible',
-    labelDefault: 'Cible',
+    get labelDefault() {
+      return i18next.t('showcase.ad.fieldCible', 'Cible');
+    },
     labelKey: 'showcase.ad.fieldCible',
     maxLength: 40,
     placeholder: (variant) => (variant === 'club-recherche' || variant === 'club-recherche-western'
-      ? { default: 'Ce club est', key: 'showcase.ad.placeholderCibleClub' }
-      : { default: 'Joueur·se', key: 'showcase.ad.placeholderCible' }),
+      ? {
+        get default() {
+          return i18next.t('showcase.ad.placeholderCibleClub', 'Ce club est');
+        },
+        key: 'showcase.ad.placeholderCibleClub',
+      }
+      : {
+        get default() {
+          return i18next.t('showcase.ad.placeholderCible', 'Joueur·se');
+        },
+        key: 'showcase.ad.placeholderCible',
+      }),
   },
   {
     key: 'mention',
-    labelDefault: 'Mention',
+    get labelDefault() {
+      return i18next.t('showcase.ad.fieldMention', 'Mention');
+    },
     labelKey: 'showcase.ad.fieldMention',
     maxLength: 40,
     placeholder: (variant) => (variant === 'club-recherche' || variant === 'club-recherche-western'
-      ? { default: 'recherché.', key: 'showcase.ad.placeholderMentionClub' }
-      : { default: 'recherché·e', key: 'showcase.ad.placeholderMention' }),
+      ? {
+        get default() {
+          return i18next.t('showcase.ad.placeholderMentionClub', 'recherché.');
+        },
+        key: 'showcase.ad.placeholderMentionClub',
+      }
+      : {
+        get default() {
+          return i18next.t('showcase.ad.placeholderMention', 'recherché·e');
+        },
+        key: 'showcase.ad.placeholderMention',
+      }),
   },
   {
     key: 'poste',
-    labelDefault: 'Poste',
+    get labelDefault() {
+      return i18next.t('showcase.ad.fieldPoste', 'Poste');
+    },
     labelKey: 'showcase.ad.fieldPoste',
     maxLength: 60,
-    placeholder: { default: 'Ailier · Meneur', key: 'showcase.ad.placeholderPoste' },
+    placeholder: {
+      get default() {
+        return i18next.t('showcase.ad.placeholderPoste', 'Ailier · Meneur');
+      },
+      key: 'showcase.ad.placeholderPoste',
+    },
   },
   {
     key: 'niveau',
-    labelDefault: 'Niveau',
+    get labelDefault() {
+      return i18next.t('showcase.ad.fieldNiveau', 'Niveau');
+    },
     labelKey: 'showcase.ad.fieldNiveau',
     maxLength: 60,
-    placeholder: { default: 'Tous niveaux', key: 'showcase.ad.placeholderNiveau' },
+    placeholder: {
+      get default() {
+        return i18next.t('showcase.ad.placeholderNiveau', 'Tous niveaux');
+      },
+      key: 'showcase.ad.placeholderNiveau',
+    },
   },
   {
     key: 'recompense',
-    labelDefault: 'Accroche',
+    get labelDefault() {
+      return i18next.t('showcase.ad.fieldRecompense', 'Accroche');
+    },
     labelKey: 'showcase.ad.fieldRecompense',
     maxLength: 120,
     placeholder: (variant) => (variant === 'club-recherche' || variant === 'club-recherche-western'
-      ? { default: 'Ton club, enfin géré en un seul endroit.', key: 'showcase.ad.placeholderRecompenseClub' }
-      : { default: 'Une équipe qui compte sur toi, chaque week-end.', key: 'showcase.ad.placeholderRecompense' }),
+      ? {
+        get default() {
+          return i18next.t(
+            'showcase.ad.placeholderRecompenseClub',
+            'Ton club, enfin géré en un seul endroit.',
+          );
+        },
+        key: 'showcase.ad.placeholderRecompenseClub',
+      }
+      : {
+        get default() {
+          return i18next.t(
+            'showcase.ad.placeholderRecompense',
+            'Une équipe qui compte sur toi, chaque week-end.',
+          );
+        },
+        key: 'showcase.ad.placeholderRecompense',
+      }),
   },
   {
     key: 'qrLabel',
-    labelDefault: 'Texte sous le QR code',
+    get labelDefault() {
+      return i18next.t('showcase.ad.fieldQrLabel', 'Texte sous le QR code');
+    },
     labelKey: 'showcase.ad.fieldQrLabel',
     maxLength: 60,
     placeholder: (variant) => (variant === 'club-recherche' || variant === 'club-recherche-western'
-      ? { default: "Scanne si c'est ton club", key: 'showcase.ad.placeholderQrLabelClub' }
-      : { default: "Scanne si c'est toi", key: 'showcase.ad.placeholderQrLabel' }),
+      ? {
+        get default() {
+          return i18next.t('showcase.ad.placeholderQrLabelClub', "Scanne si c'est ton club");
+        },
+        key: 'showcase.ad.placeholderQrLabelClub',
+      }
+      : {
+        get default() {
+          return i18next.t('showcase.ad.placeholderQrLabel', "Scanne si c'est toi");
+        },
+        key: 'showcase.ad.placeholderQrLabel',
+      }),
   },
 ];
 
@@ -285,26 +486,47 @@ const RECHERCHE_FIELDS = [
 const EVENEMENT_FIELDS = [
   {
     key: 'titre',
-    labelDefault: 'Titre',
+    get labelDefault() {
+      return i18next.t('showcase.fieldTitre', 'Titre');
+    },
     labelKey: 'showcase.fieldTitre',
     maxLength: 80,
-    placeholder: { default: 'Notre événement', key: 'showcase.evenement.placeholderTitre' },
+    placeholder: {
+      get default() {
+        return i18next.t('showcase.evenement.placeholderTitre', 'Notre événement');
+      },
+      key: 'showcase.evenement.placeholderTitre',
+    },
   },
   {
     key: 'accroche',
-    labelDefault: 'Accroche',
+    get labelDefault() {
+      return i18next.t('showcase.fieldTitreAccent', 'Accroche');
+    },
     labelKey: 'showcase.fieldTitreAccent',
     maxLength: 80,
   },
   {
-    key: 'lieu', labelDefault: 'Lieu', labelKey: 'showcase.fieldLieu', maxLength: 80,
+    key: 'lieu',
+    get labelDefault() {
+      return i18next.t('showcase.fieldLieu', 'Lieu');
+    },
+    labelKey: 'showcase.fieldLieu',
+    maxLength: 80,
   },
   {
-    key: 'niveau', labelDefault: 'Niveau', labelKey: 'showcase.fieldNiveau', maxLength: 80,
+    key: 'niveau',
+    get labelDefault() {
+      return i18next.t('showcase.fieldNiveau', 'Niveau');
+    },
+    labelKey: 'showcase.fieldNiveau',
+    maxLength: 80,
   },
   {
     key: 'qrLabel',
-    labelDefault: 'Texte sous le QR code',
+    get labelDefault() {
+      return i18next.t('showcase.fieldQrLabel', 'Texte sous le QR code');
+    },
     labelKey: 'showcase.fieldQrLabel',
     maxLength: 60,
   },
@@ -321,12 +543,29 @@ const MATCH_FIELDS = EVENEMENT_FIELDS.filter((field) => field.key !== 'titre');
  */
 const EVENEMENT_TEXTS = {
   shareIntro: {
-    default: 'Voici notre prochain événement !',
+    get default() {
+      return i18next.t('showcase.shareIntroByType.neutre', 'Voici notre prochain événement !');
+    },
     key: 'showcase.shareIntroByType.neutre',
   },
-  shareLinkLabel: { default: 'Voir l’événement', key: 'showcase.shareLabel' },
-  subtitle: { default: 'Fais-le voir. Plus il est vu, plus tu remplis.', key: 'showcase.subtitle' },
-  title: { default: 'Ton événement est en ligne', key: 'showcase.title' },
+  shareLinkLabel: {
+    get default() {
+      return i18next.t('showcase.shareLabel', 'Voir l’événement');
+    },
+    key: 'showcase.shareLabel',
+  },
+  subtitle: {
+    get default() {
+      return i18next.t('showcase.subtitle', 'Fais-le voir. Plus il est vu, plus tu remplis.');
+    },
+    key: 'showcase.subtitle',
+  },
+  title: {
+    get default() {
+      return i18next.t('showcase.title', 'Ton événement est en ligne');
+    },
+    key: 'showcase.title',
+  },
 };
 
 /**
@@ -341,10 +580,33 @@ export const SHOWCASE_TEMPLATES = {
     formats: DEFAULT_FORMATS,
     subjectType: 'club',
     texts: {
-      shareIntro: { default: 'Viens nous rejoindre au club !', key: 'showcase.club.shareIntro' },
-      shareLinkLabel: { default: 'Voir le club', key: 'showcase.club.shareLabel' },
-      subtitle: { default: 'Fais-la voir. Plus elle est vue, plus on te rejoint.', key: 'showcase.club.subtitle' },
-      title: { default: 'Ton affiche club est prête', key: 'showcase.club.title' },
+      shareIntro: {
+        get default() {
+          return i18next.t('showcase.club.shareIntro', 'Viens nous rejoindre au club !');
+        },
+        key: 'showcase.club.shareIntro',
+      },
+      shareLinkLabel: {
+        get default() {
+          return i18next.t('showcase.club.shareLabel', 'Voir le club');
+        },
+        key: 'showcase.club.shareLabel',
+      },
+      subtitle: {
+        get default() {
+          return i18next.t(
+            'showcase.club.subtitle',
+            'Fais-la voir. Plus elle est vue, plus on te rejoint.',
+          );
+        },
+        key: 'showcase.club.subtitle',
+      },
+      title: {
+        get default() {
+          return i18next.t('showcase.club.title', 'Ton affiche club est prête');
+        },
+        key: 'showcase.club.title',
+      },
     },
     variants: CLUB_VARIANTS,
   },
@@ -353,10 +615,33 @@ export const SHOWCASE_TEMPLATES = {
     formats: DEFAULT_FORMATS,
     subjectType: 'event',
     texts: {
-      shareIntro: { default: 'Viens participer à notre détection / séance d’essai !', key: 'showcase.shareIntro' },
-      shareLinkLabel: { default: 'Voir l’événement', key: 'showcase.shareLabel' },
-      subtitle: { default: 'Fais-le voir. Plus il est vu, plus tu remplis.', key: 'showcase.subtitle' },
-      title: { default: 'Ton événement est en ligne', key: 'showcase.title' },
+      shareIntro: {
+        get default() {
+          return i18next.t(
+            'showcase.shareIntro',
+            'Viens participer à notre détection / séance d’essai !',
+          );
+        },
+        key: 'showcase.shareIntro',
+      },
+      shareLinkLabel: {
+        get default() {
+          return i18next.t('showcase.shareLabel', 'Voir l’événement');
+        },
+        key: 'showcase.shareLabel',
+      },
+      subtitle: {
+        get default() {
+          return i18next.t('showcase.subtitle', 'Fais-le voir. Plus il est vu, plus tu remplis.');
+        },
+        key: 'showcase.subtitle',
+      },
+      title: {
+        get default() {
+          return i18next.t('showcase.title', 'Ton événement est en ligne');
+        },
+        key: 'showcase.title',
+      },
     },
     variants: DETECTION_VARIANTS,
   },
@@ -376,7 +661,15 @@ export const SHOWCASE_TEMPLATES = {
     subjectType: 'event',
     texts: {
       ...EVENEMENT_TEXTS,
-      shareIntro: { default: 'Viens nous encourager pour ce match !', key: 'showcase.shareIntroByType.match' },
+      shareIntro: {
+        get default() {
+          return i18next.t(
+            'showcase.shareIntroByType.match',
+            'Viens nous encourager pour ce match !',
+          );
+        },
+        key: 'showcase.shareIntroByType.match',
+      },
     },
     variants: [],
   },
@@ -386,7 +679,12 @@ export const SHOWCASE_TEMPLATES = {
     subjectType: 'event',
     texts: {
       ...EVENEMENT_TEXTS,
-      shareIntro: { default: 'Viens vivre notre tournoi !', key: 'showcase.shareIntroByType.tournoi' },
+      shareIntro: {
+        get default() {
+          return i18next.t('showcase.shareIntroByType.tournoi', 'Viens vivre notre tournoi !');
+        },
+        key: 'showcase.shareIntroByType.tournoi',
+      },
     },
     variants: [],
   },
@@ -395,10 +693,33 @@ export const SHOWCASE_TEMPLATES = {
     formats: DEFAULT_FORMATS,
     subjectType: 'recruitment-ad',
     texts: {
-      shareIntro: { default: 'On recrute, rejoins l’équipe !', key: 'showcase.ad.shareIntro' },
-      shareLinkLabel: { default: 'Voir l’annonce', key: 'showcase.ad.shareLabel' },
-      subtitle: { default: 'Fais-le voir. Plus il est vu, plus vite tu trouves.', key: 'showcase.ad.subtitle' },
-      title: { default: 'Ton avis de recherche est prêt', key: 'showcase.ad.title' },
+      shareIntro: {
+        get default() {
+          return i18next.t('showcase.ad.shareIntro', 'On recrute, rejoins l’équipe !');
+        },
+        key: 'showcase.ad.shareIntro',
+      },
+      shareLinkLabel: {
+        get default() {
+          return i18next.t('showcase.ad.shareLabel', 'Voir l’annonce');
+        },
+        key: 'showcase.ad.shareLabel',
+      },
+      subtitle: {
+        get default() {
+          return i18next.t(
+            'showcase.ad.subtitle',
+            'Fais-le voir. Plus il est vu, plus vite tu trouves.',
+          );
+        },
+        key: 'showcase.ad.subtitle',
+      },
+      title: {
+        get default() {
+          return i18next.t('showcase.ad.title', 'Ton avis de recherche est prêt');
+        },
+        key: 'showcase.ad.title',
+      },
     },
     variants: RECHERCHE_VARIANTS,
   },
