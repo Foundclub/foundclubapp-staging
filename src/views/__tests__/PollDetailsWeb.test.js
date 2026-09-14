@@ -34,28 +34,11 @@ jest.mock('@tanstack/react-query', () => ({
 // Le VRAI catalogue, pas une identite : l'ecran demande deux libelles a la
 // traduction — « Membre » et le repli numerote « Option {{index}} ». Un `t` qui
 // rendrait la cle ferait passer un test qui devrait tomber.
-jest.mock('react-i18next', () => {
-  const catalogue = jest.requireActual('@/theme/strings/translations/fr').default;
-
-  return {
-    useTranslation: () => ({
-      t: (/** @type {string} */ cle, /** @type {any} */ options) => {
-        const trouve = String(cle || '')
-          .split('.')
-          .reduce((noeud, segment) => (noeud == null ? undefined : noeud[segment]), catalogue);
-        let gabarit = cle;
-        if (typeof trouve === 'string') gabarit = trouve;
-        else if (typeof options === 'string') gabarit = options;
-        else if (typeof options?.defaultValue === 'string') gabarit = options.defaultValue;
-        if (!options || typeof options === 'string') return gabarit;
-        return gabarit.replace(
-          /{{(\w+)}}/g,
-          (/** @type {any} */ _entier, /** @type {string} */ nom) => String(options[nom] ?? ''),
-        );
-      },
-    }),
-  };
-});
+// I18N-2 : la même règle, désormais partagée — et elle sait aussi le pluriel
+// (« 1 vote » / « 2 votes » passent par defaultValue_one / defaultValue_other).
+jest.mock('react-i18next', () => (
+  jest.requireActual('@/theme/strings/__mocks__/doublureTraduction').reactI18next
+));
 
 // Le theme est monte avec les VRAIS modules : un mock en Proxy rend les echecs
 // Jest illisibles (piege paye au lot paywall).

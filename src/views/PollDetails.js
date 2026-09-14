@@ -21,6 +21,7 @@ import {
   getPollVoters,
 } from '@/domains/messaging/pollUseCases';
 import useMessaging from '@/domains/messaging/useMessaging';
+import localeDesFormats from '@/theme/strings/localeDesFormats';
 import useTheme from '@/theme/themeContext';
 
 import HeaderBackButton from '@/components/atoms/headerBackButton/HeaderBackButton';
@@ -172,7 +173,10 @@ function PollDetails({ navigation, route }) {
       const previous = directory.get(String(userId));
       directory.set(String(userId), {
         avatarUrl: String(user?.avatar?.url || previous?.avatarUrl || '').trim(),
-        displayName: fullName || fallbackName || previous?.displayName || 'Membre',
+        displayName: fullName || fallbackName || previous?.displayName || t(
+          'pollDetails.member',
+          'Membre',
+        ),
         firstname: firstname || previous?.firstname || '',
         lastname: lastname || previous?.lastname || '',
       });
@@ -192,7 +196,7 @@ function PollDetails({ navigation, route }) {
     }
 
     return directory;
-  }, [chatData?.participants, messagesPages?.pages, userData]);
+  }, [chatData?.participants, messagesPages?.pages, userData, t]);
 
   const resolveVoterName = (/** @type {string} */ voterId) => {
     if (!voterId) return t('conversation.poll.common.member', 'Membre');
@@ -247,7 +251,7 @@ function PollDetails({ navigation, route }) {
     if (!poll?.createdAt) return '--';
     const parsed = new Date(poll.createdAt);
     if (Number.isNaN(parsed.getTime())) return '--';
-    return parsed.toLocaleString('fr-FR', {
+    return parsed.toLocaleString(localeDesFormats(), {
       day: '2-digit',
       hour: '2-digit',
       minute: '2-digit',
