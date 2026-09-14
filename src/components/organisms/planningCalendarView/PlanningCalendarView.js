@@ -14,6 +14,7 @@ import {
 } from 'react-native';
 import { Calendar, LocaleConfig } from 'react-native-calendars';
 
+import localeDesFormats from '@/theme/strings/localeDesFormats';
 import useTheme from '@/theme/themeContext';
 
 import MarqueeText from '@/components/atoms/marqueeText/MarqueeText';
@@ -60,6 +61,41 @@ LocaleConfig.locales.fr = {
     'Déc.',
   ],
   today: "Aujourd'hui",
+};
+// I18N-2 : les mêmes libellés en anglais. Les noms de jours et de mois sont des
+// données de calendrier, pas des phrases : ils vivent ici, pas dans fr.js.
+LocaleConfig.locales.en = {
+  dayNames: ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
+  dayNamesShort: ['Sun.', 'Mon.', 'Tue.', 'Wed.', 'Thu.', 'Fri.', 'Sat.'],
+  monthNames: [
+    'January',
+    'February',
+    'March',
+    'April',
+    'May',
+    'June',
+    'July',
+    'August',
+    'September',
+    'October',
+    'November',
+    'December',
+  ],
+  monthNamesShort: [
+    'Jan.',
+    'Feb.',
+    'Mar.',
+    'Apr.',
+    'May',
+    'Jun.',
+    'Jul.',
+    'Aug.',
+    'Sep.',
+    'Oct.',
+    'Nov.',
+    'Dec.',
+  ],
+  today: 'Today',
 };
 LocaleConfig.defaultLocale = 'fr';
 
@@ -199,6 +235,8 @@ function PlanningCalendarView({
     Spaces,
   } = useTheme();
   const { t } = useTranslation();
+  // I18N-2 : le calendrier parle la langue de l app (lue au rendu, pas à l import).
+  LocaleConfig.defaultLocale = localeDesFormats() === 'en-GB' ? 'en' : 'fr';
   const [internalDate, setInternalDate] = useState(format(getPlanningDefaultDate(), 'yyyy-MM-dd'));
 
   const selectedDate = useMemo(() => {

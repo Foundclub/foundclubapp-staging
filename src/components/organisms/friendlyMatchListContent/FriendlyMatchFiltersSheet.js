@@ -1,4 +1,6 @@
+import i18next from 'i18next';
 import { useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Modal,
   Platform,
@@ -28,21 +30,47 @@ export const EMPTY_FRIENDLY_MATCH_FILTERS = Object.freeze({
   periodDays: 0,
 });
 
+// I18N-2 : des GETTERS, pas des textes — ces tableaux sont lus à l import, avant
+// l initialisation d i18next ; le libellé se traduit au moment où il s affiche.
 const HOSTING_INTENT_OPTIONS = [
-  { label: 'Peu importe', value: 'any' },
-  { label: 'Je veux recevoir', value: 'host' },
-  { label: 'Je veux me déplacer', value: 'away' },
+  {
+    get label() { return i18next.t('friendlyMatchFiltersSheet.any', 'Peu importe'); },
+    value: 'any',
+  },
+  {
+    get label() { return i18next.t('friendlyMatchFiltersSheet.host', 'Je veux recevoir'); },
+    value: 'host',
+  },
+  {
+    get label() { return i18next.t('friendlyMatchFiltersSheet.away', 'Je veux me déplacer'); },
+    value: 'away',
+  },
 ];
 
 const PERIOD_OPTIONS = [
-  { label: 'Peu importe', value: 0 },
-  { label: '7 jours', value: 7 },
-  { label: '30 jours', value: 30 },
-  { label: '3 mois', value: 90 },
+  {
+    get label() { return i18next.t('friendlyMatchFiltersSheet.any', 'Peu importe'); },
+    value: 0,
+  },
+  {
+    get label() { return i18next.t('friendlyMatchFiltersSheet.days7', '7 jours'); },
+    value: 7,
+  },
+  {
+    get label() { return i18next.t('friendlyMatchFiltersSheet.days30', '30 jours'); },
+    value: 30,
+  },
+  {
+    get label() { return i18next.t('friendlyMatchFiltersSheet.months3', '3 mois'); },
+    value: 90,
+  },
 ];
 
 const DISTANCE_OPTIONS = [
-  { label: 'Peu importe', value: 0 },
+  {
+    get label() { return i18next.t('friendlyMatchFiltersSheet.any', 'Peu importe'); },
+    value: 0,
+  },
   { label: '10 km', value: 10 },
   { label: '25 km', value: 25 },
   { label: '50 km', value: 50 },
@@ -81,6 +109,7 @@ function FriendlyMatchFiltersSheet({
   onClose,
   visible,
 }) {
+  const { t } = useTranslation();
   const isWeb = Platform.OS === 'web';
   const insets = useSafeAreaInsets();
   const {
@@ -98,25 +127,25 @@ function FriendlyMatchFiltersSheet({
   }, [filters, visible]);
 
   const categoryOptions = useMemo(() => [
-    { label: 'Toutes', value: '' },
+    { label: t('friendlyMatchFiltersSheet.allFeminine', 'Toutes'), value: '' },
     ...(categories || []).map((/** @type {any} */ category) => ({
       label: category.name,
       value: category.documentId || '',
     })),
-  ], [categories]);
+  ], [categories, t]);
 
   const levelOptions = useMemo(() => [
-    { label: 'Tous', value: '' },
+    { label: t('friendlyMatchFiltersSheet.all', 'Tous'), value: '' },
     ...(levels || []).map((/** @type {any} */ level) => ({
       label: level.name,
       value: level.documentId || '',
     })),
-  ], [levels]);
+  ], [levels, t]);
 
   const formatOptions = useMemo(() => [
-    { label: 'Tous', value: '' },
+    { label: t('friendlyMatchFiltersSheet.all', 'Tous'), value: '' },
     ...getAllFriendlyMatchFormats().map((format) => ({ label: format, value: format })),
-  ], []);
+  ], [t]);
 
   /**
    * Modifie une seule cle du brouillon, sans toucher aux autres.
@@ -208,9 +237,11 @@ function FriendlyMatchFiltersSheet({
             Spaces.marginBottom[16],
           ]}
           >
-            <Text style={[Fonts.h4, Fonts.neutral00]}>Filtres</Text>
+            <Text style={[Fonts.h4, Fonts.neutral00]}>
+              {t('friendlyMatchFiltersSheet.filters', 'Filtres')}
+            </Text>
             <TouchableOpacity
-              accessibilityLabel="Fermer les filtres"
+              accessibilityLabel={t('friendlyMatchFiltersSheet.closeFilters', 'Fermer les filtres')}
               accessibilityRole="button"
               onPress={onClose}
               style={{
@@ -229,17 +260,20 @@ function FriendlyMatchFiltersSheet({
             showsVerticalScrollIndicator={false}
           >
             {renderChipGroup(
-              'Je veux',
+              t('friendlyMatchFiltersSheet.iWantTo', 'Je veux'),
               HOSTING_INTENT_OPTIONS,
               draft.hostingIntent,
               (value) => updateDraft('hostingIntent', value),
             )}
             <Text style={[Fonts.p4, { color: `${Colors.neutral100}A0`, marginTop: -12 }]}>
-              Les annonces incompatibles avec ton choix sont simplement masquées.
+              {t(
+                'friendlyMatchFiltersSheet.listingsThatDonTMatch',
+                'Les annonces incompatibles avec ton choix sont simplement masquées.',
+              )}
             </Text>
 
             {renderChipGroup(
-              'Quand',
+              t('friendlyMatchFiltersSheet.when', 'Quand'),
               PERIOD_OPTIONS,
               draft.periodDays,
               (value) => updateDraft('periodDays', value),
@@ -253,14 +287,14 @@ function FriendlyMatchFiltersSheet({
             )}
 
             {renderChipGroup(
-              'Catégorie',
+              t('friendlyMatchFiltersSheet.category', 'Catégorie'),
               categoryOptions,
               draft.category,
               (value) => updateDraft('category', value),
             )}
 
             {renderChipGroup(
-              'Niveau',
+              t('friendlyMatchFiltersSheet.level', 'Niveau'),
               levelOptions,
               draft.level,
               (value) => updateDraft('level', value),
@@ -277,12 +311,12 @@ function FriendlyMatchFiltersSheet({
           <View style={[Spaces.gap[12], Spaces.marginTop[8]]}>
             <Button
               onPress={() => onApply({ ...EMPTY_FRIENDLY_MATCH_FILTERS })}
-              title="Effacer"
+              title={t('friendlyMatchFiltersSheet.clear', 'Effacer')}
               variant="Secondary"
             />
             <Button
               onPress={() => onApply(draft)}
-              title="Appliquer"
+              title={t('friendlyMatchFiltersSheet.apply', 'Appliquer')}
               variant="Primary"
             />
           </View>

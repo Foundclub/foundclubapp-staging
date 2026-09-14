@@ -2,6 +2,7 @@ import { useNavigation } from '@react-navigation/native';
 import {
   useCallback, useEffect, useMemo, useRef, useState,
 } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   FlatList,
   Platform,
@@ -79,6 +80,7 @@ function FriendlyMatchListContent({
   refreshSignal = 0,
   screenActive = true,
 }) {
+  const { t } = useTranslation();
   const isWeb = Platform.OS === 'web';
   const {
     Alignments, Colors, Fonts, Spaces,
@@ -354,18 +356,33 @@ function FriendlyMatchListContent({
       }}
       >
         <Text style={[Fonts.p2Bold, { color: Colors.neutral100 }]}>
-          {activeTab === 'mes-annonces' ? 'Mes annonces' : 'Trouver un adversaire'}
+          {activeTab === 'mes-annonces' ? t(
+            'friendlyMatchListContent.myListings',
+            'Mes annonces',
+          ) : t(
+            'friendlyMatchListContent.findAnOpponent',
+            'Trouver un adversaire',
+          )}
         </Text>
         <Text style={[Fonts.p3, { color: mutedText, marginTop: 4 }]}>
           {activeTab === 'mes-annonces'
-            ? 'Les annonces publiées pour tes équipes et les propositions reçues.'
-            : 'Les équipes qui cherchent un match amical près de chez toi.'}
+            ? t(
+              'friendlyMatchListContent.listingsPublishedForYourTeams',
+              'Les annonces publiées pour tes équipes et les propositions reçues.',
+            )
+            : t(
+              'friendlyMatchListContent.teamsLookingForAFriendly',
+              'Les équipes qui cherchent un match amical près de chez toi.',
+            )}
         </Text>
       </View>
 
       {canPublish && activeTab !== 'candidatures' ? (
         <TouchableOpacity
-          accessibilityLabel="Créer un match amical"
+          accessibilityLabel={t(
+            'friendlyMatchListContent.createAFriendlyMatch',
+            'Créer un match amical',
+          )}
           accessibilityRole="button"
           onPress={handlePublishPress}
           style={[Spaces.padding[16], {
@@ -381,7 +398,7 @@ function FriendlyMatchListContent({
             fois l offre de recrutement, le match propose et la candidature.
           */}
           <Text style={[Fonts.p1Bold, { color: Colors.neutral900 }]}>
-            + Créer un match amical
+            {t('friendlyMatchListContent.createAFriendlyMatch2', '+ Créer un match amical')}
           </Text>
         </TouchableOpacity>
       ) : null}
@@ -392,7 +409,10 @@ function FriendlyMatchListContent({
             filterNumber={filtersCount}
             handleSearchField={setSearchValue}
             openFilters={() => setIsFiltersVisible(true)}
-            placeholder="Rechercher une équipe, une ville..."
+            placeholder={t(
+              'friendlyMatchListContent.searchForATeamA',
+              'Rechercher une équipe, une ville...',
+            )}
             searchDefaultValue={searchValue}
           />
         </View>
@@ -402,23 +422,38 @@ function FriendlyMatchListContent({
 
   let data = visibleAds;
   let emptyState = renderEmptyState(
-    'Aucune annonce de match amical pour le moment.',
+    t(
+      'friendlyMatchListContent.noFriendlyMatchListingFor',
+      'Aucune annonce de match amical pour le moment.',
+    ),
     filtersCount > 0
-      ? 'Élargis tes filtres : la distance et « je veux recevoir » en masquent peut-être.'
-      : 'Reviens un peu plus tard, ou publie la tienne si tu encadres une équipe.',
+      ? t(
+        'friendlyMatchListContent.widenYourFiltersDistanceAnd',
+        'Élargis tes filtres : la distance et « je veux recevoir » en masquent peut-être.',
+      )
+      : t(
+        'friendlyMatchListContent.comeBackALittleLater',
+        'Reviens un peu plus tard, ou publie la tienne si tu encadres une équipe.',
+      ),
   );
 
   if (activeTab === 'mes-annonces') {
     data = visibleMyAds;
     emptyState = renderEmptyState(
-      'Tu n’as encore publié aucune annonce.',
-      'Publie une annonce pour que d’autres équipes te proposent un match.',
+      t('friendlyMatchListContent.youHavenTPublishedAny', 'Tu n’as encore publié aucune annonce.'),
+      t(
+        'friendlyMatchListContent.publishAListingSoOther',
+        'Publie une annonce pour que d’autres équipes te proposent un match.',
+      ),
     );
   } else if (activeTab === 'candidatures') {
     data = visibleMyApplications;
     emptyState = renderEmptyState(
-      'Tu n’as encore proposé aucun match.',
-      'Ouvre une annonce et propose un match : une conversation s’ouvrira avec le staff.',
+      t('friendlyMatchListContent.youHavenTProposedAny', 'Tu n’as encore proposé aucun match.'),
+      t(
+        'friendlyMatchListContent.openAListingAndPropose',
+        'Ouvre une annonce et propose un match : une conversation s’ouvrira avec le staff.',
+      ),
     );
   }
 
@@ -439,9 +474,9 @@ function FriendlyMatchListContent({
           },
         ]}
         >
-          {renderTab('annonces', 'Annonces')}
-          {renderTab('mes-annonces', 'Mes annonces')}
-          {renderTab('candidatures', 'Mes propositions')}
+          {renderTab('annonces', t('friendlyMatchListContent.listings', 'Annonces'))}
+          {renderTab('mes-annonces', t('friendlyMatchListContent.myListings', 'Mes annonces'))}
+          {renderTab('candidatures', t('friendlyMatchListContent.myProposals', 'Mes propositions'))}
         </View>
       ) : null}
 

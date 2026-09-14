@@ -396,7 +396,14 @@ function ClubFacilityPlanningContainer({
               {[
                 `${facilityPlanningSummary.maxSlots} slot${facilityPlanningSummary.maxSlots > 1 ? 's' : ''}`,
                 `Pic ${facilityPlanningSummary.peakConcurrent}/${facilityPlanningSummary.maxSlots}`,
-                `${facilityPlanningSummary.eventCount} événement${facilityPlanningSummary.eventCount > 1 ? 's' : ''}`,
+                t(
+                  'clubFacilityPlanningContainer.events',
+                  {
+                    count: facilityPlanningSummary.eventCount,
+                    defaultValue_one: '{{count}} événement',
+                    defaultValue_other: '{{count}} événements',
+                  },
+                ),
                 facilityPlanningSummary.allowsImmediateConfirmation
                   ? t('facilityList.planning.overflowAllowed', 'Autorise et notifier')
                   : t('facilityList.planning.overflowBlocked', 'Demande en attente'),
