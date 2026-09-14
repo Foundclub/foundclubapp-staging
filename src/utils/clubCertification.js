@@ -1,3 +1,5 @@
+import i18next from 'i18next';
+
 import { colors as themeColors } from '@/theme/colors';
 
 /**
@@ -28,7 +30,10 @@ export const isVerifiedClub = (club) => (
 // Portee assumee (validee par Adel) : ce libelle s'affiche sur la fiche club
 // ET sur les pages evenements du site web.
 export const getClubCertificationLabel = (club) => (
-  isVerifiedClub(club) ? 'Certifié' : 'Non certifié'
+  isVerifiedClub(club) ? i18next.t(
+    'clubCertification.certified',
+    'Certifié',
+  ) : i18next.t('clubCertification.notCertified', 'Non certifié')
 );
 
 /**

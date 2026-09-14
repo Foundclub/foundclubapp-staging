@@ -1,4 +1,6 @@
 /* eslint-disable perfectionist/sort-imports */
+import i18next from 'i18next';
+
 import { getAuthTokens } from '@/domains/auth/authUseCases';
 import { celebrate } from '@/services/celebrations/celebrationRuntime';
 import { getApiBaseUrl } from '@/config/runtimeUrls';
@@ -82,7 +84,12 @@ export const unwaiveLicenseAssignment = async (/** @type {any} */ assignmentId, 
 export const addManualLicensePayment = async (/** @type {any} */ assignmentId, /** @type {any} */ payload) => unwrap(await client.post(`/licenses/assignments/${assignmentId}/payments/manual`, payload));
 export const submitLicenseDocument = async (/** @type {any} */ assignmentId, /** @type {any} */ payload = {}) => {
   const apiBaseUrl = getApiBaseUrl();
-  if (!apiBaseUrl) throw new Error('API FoundClub indisponible pour envoyer le document.');
+  if (!apiBaseUrl) {
+    throw new Error(i18next.t(
+      'licenseService.errors.apiUnavailableDocument',
+      'API FoundClub indisponible pour envoyer le document.',
+    ));
+  }
 
   const file = normalizePickedFile(payload.file || payload.document || payload.proof);
   const formData = new FormData();
@@ -118,7 +125,12 @@ export const submitLicenseDocument = async (/** @type {any} */ assignmentId, /**
 // (`license-document-submission`). Sans fichier, la route RETIRE le modele.
 export const uploadLicenseDocumentRequestTemplate = async (/** @type {any} */ documentRequestId, /** @type {any} */ payload = {}) => {
   const apiBaseUrl = getApiBaseUrl();
-  if (!apiBaseUrl) throw new Error('API FoundClub indisponible pour envoyer le modèle.');
+  if (!apiBaseUrl) {
+    throw new Error(i18next.t(
+      'licenseService.errors.apiUnavailableTemplate',
+      'API FoundClub indisponible pour envoyer le modèle.',
+    ));
+  }
 
   const file = normalizePickedFile(payload.file || payload.template);
   const formData = new FormData();
@@ -145,7 +157,12 @@ export const uploadLicenseDocumentRequestTemplate = async (/** @type {any} */ do
 };
 export const uploadOfficialLicenseDocument = async (/** @type {any} */ assignmentId, /** @type {any} */ payload = {}) => {
   const apiBaseUrl = getApiBaseUrl();
-  if (!apiBaseUrl) throw new Error('API FoundClub indisponible pour envoyer la licence officielle.');
+  if (!apiBaseUrl) {
+    throw new Error(i18next.t(
+      'licenseService.errors.apiUnavailableOfficialLicence',
+      'API FoundClub indisponible pour envoyer la licence officielle.',
+    ));
+  }
 
   const file = normalizePickedFile(payload.file || payload.document || payload.proof);
   const formData = new FormData();

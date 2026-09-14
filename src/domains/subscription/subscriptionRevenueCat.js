@@ -1,4 +1,7 @@
+import i18next from 'i18next';
 import { Platform } from 'react-native';
+
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 
 import { createLogger } from '@/utils/logger/logger';
 
@@ -276,7 +279,10 @@ const mapRevenueCatPurchaseError = (error) => {
   if (error?.userCancelled === true
     || errorCode === String(PURCHASES_ERROR_CODE?.PURCHASE_CANCELLED_ERROR)) {
     const cancelled = /** @type {Error & { code?: string, revenueCatError?: any }} */ (
-      new Error('Achat annulé. Ton brouillon est toujours là.')
+      new Error(i18next.t(
+        'subscriptionRevenueCat.errors.purchaseCancelled',
+        'Achat annulé. Ton brouillon est toujours là.',
+      ))
     );
     cancelled.code = REVENUECAT_PURCHASE_ERROR_CODES.CANCELLED;
     cancelled.revenueCatError = error;
@@ -285,7 +291,11 @@ const mapRevenueCatPurchaseError = (error) => {
 
   if (errorCode === String(PURCHASES_ERROR_CODE?.PAYMENT_PENDING_ERROR)) {
     const pending = /** @type {Error & { code?: string, revenueCatError?: any }} */ (
-      new Error('Achat en attente de validation (contrôle parental ou moyen de paiement). Tes accès s\'activeront automatiquement à la confirmation.')
+      new Error(i18next.t(
+        'subscriptionRevenueCat.errors.purchasePending',
+        'Achat en attente de validation (contrôle parental ou moyen de paiement). Tes accès '
+          + "s'activeront automatiquement à la confirmation.",
+      ))
     );
     pending.code = REVENUECAT_PURCHASE_ERROR_CODES.PENDING;
     pending.revenueCatError = error;
@@ -297,12 +307,18 @@ const mapRevenueCatPurchaseError = (error) => {
 
 const ensureRevenueCatReadyForPurchase = async (payerUserDocumentId) => {
   if (!isRevenueCatEnabled() || !configureRevenueCatIfNeeded()) {
-    throw new Error('Checkout indisponible : la clé RevenueCat est absente de ce build.');
+    throw new Error(i18next.t(
+      'subscriptionRevenueCat.errors.missingRevenueCatKey',
+      'Checkout indisponible : la clé RevenueCat est absente de ce build.',
+    ));
   }
 
   const targetUserId = String(payerUserDocumentId || lastKnownUserDocumentId || '').trim();
   if (!targetUserId) {
-    throw new Error('Utilisateur non identifié : reconnecte-toi avant de finaliser l\'achat.');
+    throw new Error(i18next.t(
+      'subscriptionRevenueCat.errors.userNotIdentified',
+      "Utilisateur non identifié : reconnecte-toi avant de finaliser l'achat.",
+    ));
   }
 
   if (lastSyncedAppUserId !== targetUserId) {
@@ -349,7 +365,12 @@ export const purchaseSubscriptionViaRevenueCat = async ({
   const rcPackage = resolveRevenueCatPackageForCatalogEntry(offerings, catalogEntry);
   if (!rcPackage) {
     throw new Error(
-      `Cette offre (${String(catalogEntry?.planCode || 'inconnue')}) n'est pas encore disponible sur le store. Réessaie dans quelques minutes.`,
+      i18next.t(
+        'subscriptionRevenueCat.errors.offerNotOnStore',
+        "Cette offre ({{planCode}}) n'est pas encore disponible sur le store. Réessaie dans "
+          + 'quelques minutes.',
+        { planCode: String(catalogEntry?.planCode || 'inconnue'), ...SANS_ECHAPPEMENT },
+      ),
     );
   }
 

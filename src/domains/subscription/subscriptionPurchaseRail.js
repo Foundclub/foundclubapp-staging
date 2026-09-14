@@ -1,3 +1,4 @@
+import i18next from 'i18next';
 import { Linking, Platform } from 'react-native';
 
 import {
@@ -151,7 +152,10 @@ const openSubscriptionWebCheckout = async ({
   });
   const checkoutUrl = String(session?.url || '').trim();
   if (!checkoutUrl) {
-    throw new Error('Paiement web indisponible pour le moment.');
+    throw new Error(i18next.t(
+      'subscriptionPurchaseRail.errors.webPaymentUnavailable',
+      'Paiement web indisponible pour le moment.',
+    ));
   }
 
   if (Platform.OS === 'web') {
@@ -492,7 +496,10 @@ export const performSubscriptionPlanChange = async ({
   // V1 web : le changement d'offre d'un abonnement Stripe (proratisation) n'est
   // pas encore cable — l'abonne gere son offre depuis l'app mobile.
   if (rail === SUBSCRIPTION_PURCHASE_RAILS.STRIPE_WEB) {
-    throw new Error('Le changement d offre se fait depuis l app mobile pour le moment.');
+    throw new Error(i18next.t(
+      'subscriptionPurchaseRail.errors.planChangeMobileOnly',
+      'Le changement d offre se fait depuis l app mobile pour le moment.',
+    ));
   }
 
   if (rail === SUBSCRIPTION_PURCHASE_RAILS.TRUSTED_TEST) {
@@ -591,7 +598,10 @@ export const performSubscriptionLicenseeIncrease = async ({
   // un `null` qui passe ici serait une facture au hasard.
   const normalizedLicenseeCount = clampSubscriptionLicenseeCount(licenseeCount);
   if (normalizedLicenseeCount === null) {
-    throw new Error('Nombre de licenciés invalide (entier, minimum 1).');
+    throw new Error(i18next.t(
+      'subscriptionPurchaseRail.errors.invalidLicenseeCount',
+      'Nombre de licenciés invalide (entier, minimum 1).',
+    ));
   }
 
   return increaseSubscriptionLicenseeCount({

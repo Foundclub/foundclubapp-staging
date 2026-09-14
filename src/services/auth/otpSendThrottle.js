@@ -1,3 +1,7 @@
+import i18next from 'i18next';
+
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
+
 /**
  * Verrou d'envoi de SMS de connexion.
  *
@@ -85,7 +89,11 @@ export const assertOtpSendAllowed = (phoneNumber) => {
   if (remainingSeconds <= 0) return;
 
   const error = /** @type {any} */ (new Error(
-    `Un code vient d'être envoyé. Nouvel envoi possible dans ${remainingSeconds} s.`,
+    i18next.t(
+      'otpSendThrottle.errors.throttled',
+      "Un code vient d'être envoyé. Nouvel envoi possible dans {{remainingSeconds}} s.",
+      { remainingSeconds, ...SANS_ECHAPPEMENT },
+    ),
   ));
   error.code = OTP_SEND_THROTTLED_CODE;
   error.details = { retryAfterSeconds: remainingSeconds };
