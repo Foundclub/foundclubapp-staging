@@ -17,25 +17,21 @@ import Checkbox from '@/components/atoms/checkbox/Checkbox';
  * @param root0.title
  */
 function ParentalDeclarationCard({
-  checkboxLabel,
+  // I18N-1 : reste en francais. C'est le texte juridique dont le serveur enregistre
+  // l'empreinte (MINOR_PARENTAL_DECLARATION_TEXT_HASH) et la locale fr-FR : le
+  // traduire enregistrerait un consentement sur un texte que la personne n'a pas lu.
+  checkboxLabel = 'Je déclare être le parent ou le représentant legal de cet enfant et utiliser l application en son nom.',
   checked,
-  description,
+  description = /** @type {string | undefined} */ (undefined),
   disabled = false,
   helperText = '',
   onChange,
-  title,
+  title = /** @type {string | undefined} */ (undefined),
 }) {
   const { t } = useTranslation();
   const {
     Alignments, Colors, Fonts, Spaces,
   } = useTheme();
-  const shownCheckboxLabel = checkboxLabel === undefined
-    ? t(
-      'parentalDeclarationCard.checkboxLabel',
-      'Je déclare être le parent ou le représentant legal de cet enfant et utiliser '
-        + 'l application en son nom.',
-    )
-    : checkboxLabel;
   const shownDescription = description === undefined
     ? t(
       'parentalDeclarationCard.description',
@@ -76,7 +72,7 @@ function ParentalDeclarationCard({
           value={checked}
         />
         <Text style={[Fonts.p2, Fonts.neutral00, { flex: 1 }]}>
-          {shownCheckboxLabel}
+          {checkboxLabel}
         </Text>
       </View>
 

@@ -25,7 +25,6 @@
   "licenseeCountField.errors.max": "{{max}} members maximum. Write to us beyond that, we will take care of it.",
   "licenseeCountField.errors.min": "Enter at least 1 member.",
   "licenseeCountField.label": "Number of members",
-  "parentalDeclarationCard.checkboxLabel": "I declare that I am the parent or legal guardian of this child and that I use the app on their behalf.",
   "parentalDeclarationCard.description": "This profile belongs to a child under 15. To continue, you must confirm that you are their parent or legal guardian.",
   "parentalDeclarationCard.title": "Parental declaration required",
   "premiumBadge.clubOffer": "Club plan",
