@@ -7693,10 +7693,10 @@ function EventDetails({ navigation, route }) {
                   </Text>
                   <Text style={[Fonts.p4, Fonts.primary100]}>
                     {tournamentTeam?.sourceType === 'club_team'
-                      ? `Depuis ${tournamentTeam?.sourceTeam?.name || t(
-                        'eventDetails.aClubTeam',
-                        'une équipe club',
-                      )}`
+                      ? t('eventDetails.fromTeam', 'Depuis {{teamName}}', {
+                        teamName: tournamentTeam?.sourceTeam?.name || t('eventDetails.aClubTeam', 'une équipe club'),
+                        ...SANS_ECHAPPEMENT,
+                      })
                       : t('eventDetails.temporaryTeam', 'Équipe éphémère')}
                   </Text>
                 </View>
@@ -9043,9 +9043,12 @@ function EventDetails({ navigation, route }) {
 
         // @ts-ignore: FIXME: Baseline TS regression
         if (pendingDetectionSlot?.documentId) {
-          joinModalConfirmLabel = 'Participer';
+          joinModalConfirmLabel = t('eventDetails.takePart', 'Participer');
           // @ts-ignore: FIXME: Baseline TS regression
-          joinModalContextNote = `Poste choisi : ${pendingDetectionSlot.position}.`;
+          joinModalContextNote = t('eventDetails.chosenPosition', 'Poste choisi : {{position}}.', {
+            position: pendingDetectionSlot.position,
+            ...SANS_ECHAPPEMENT,
+          });
           joinModalIsSubmitting = applyToDetectionSlotMutation.isPending
             // @ts-ignore: FIXME: Baseline TS regression
             && Boolean(pendingDetectionSlot?.documentId);
@@ -9181,7 +9184,7 @@ function EventDetails({ navigation, route }) {
             if (isCurrentUserSlot) {
               buttonTitle = t('eventDetails.requestSent', 'Demande envoyée');
             } else if (isComplete) {
-              buttonTitle = 'Poste complet';
+              buttonTitle = t('eventDetails.positionFull', 'Poste complet');
             }
             const remainingLabel = isComplete
               ? t('eventDetails.full', 'Complet')
