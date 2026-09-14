@@ -26,6 +26,7 @@ const demarrer = (langue) => {
     module = {
       ...jest.requireActual('@/theme/strings'),
       format: jest.requireActual('date-fns').format,
+      localeDesFormats: jest.requireActual('@/theme/strings/localeDesFormats').default,
     };
   });
   return module;

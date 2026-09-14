@@ -130,7 +130,9 @@ function texteDeRepli(source, indexAppel, decalage, clef) {
   // ⚠️ `defaultValue` s'écrit AUSSI en gabarit, et 4 écrans le font
   // (`SquadDetailsScreen` x2, `SelfProfilePlayerCoach`, `TeamEdit`). Ne lire
   // que la forme entre apostrophes les faisait passer pour des clefs nues.
-  const defaut = apres.match(/defaultValue\s*:\s*['"`]/);
+  // 🔤 I18N-0 : `defaultValue_one` / `defaultValue_other` (repli PLURIEL, lu par
+  // i18next depuis la v21) est aussi un repli — les lots I18N-1 à 4 s'en servent.
+  const defaut = apres.match(/defaultValue(?:_[a-z]+)?\s*:\s*['"`]/);
   if (defaut) return '';
   // Un gabarit ou une concaténation en 2e argument : on ne sait pas lire le
   // texte, mais on sait qu'il y en a un. L'écran n'affiche donc pas la clef.

@@ -91,13 +91,6 @@ export const Joi = DefaultJoi.defaults(
   }),
 );
 
-/**
- * La locale des formats `Intl` / `toLocaleDateString` pour la langue en cours.
- * Les lots I18N-1 à 4 remplacent les `'fr-FR'` écrits en dur par cet appel.
- * @returns {'fr-FR' | 'en-GB'} La locale à passer à `Intl`.
- */
-export const localeDesFormats = () => (i18n.language === 'en' ? 'en-GB' : 'fr-FR');
-
 // date-fns suit la langue : `format(date, 'EEEE')` rend « lundi » ou « Monday ».
 const reglerDateFns = (langue) => setDefaultOptions({ locale: langue === 'en' ? enGB : fr });
 reglerDateFns(i18n.language);

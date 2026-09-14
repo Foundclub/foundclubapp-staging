@@ -9,6 +9,10 @@
 //   node scripts/i18n/clefs.js replis --ecrire [--sortie a-traduire.json]
 //       Ajoute les clefs ajoutables à fr.js (valeur = le repli, mot pour mot) et
 //       écrit la liste { clef: texte français } qui reste à traduire.
+//   node scripts/i18n/clefs.js replis --controle --traductions I18N-1.en.json
+//       N'écrit RIEN. Vérifie que chaque clef ajoutable a sa traduction anglaise
+//       dans le fichier, avec les mêmes {{jetons}}. Code 1 sinon. C'est la porte
+//       d'un lot I18N-1..4, qui ne touche jamais fr.js ni en.js.
 //   node scripts/i18n/clefs.js en --traductions traductions.json
 //       Ajoute à en.js toutes les clefs de fr.js qui lui manquent, en lisant leur
 //       texte anglais dans le fichier donné. Refuse s'il en manque une seule.
@@ -19,6 +23,9 @@
 // 'Refuser')`) transformerait l'un des deux boutons en l'autre. Même raison pour
 // une clef dont UN des appels a un repli illisible (gabarit, concaténation).
 // Voir src/theme/strings/translations/frClefsAtteignables.test.js.
+//
+// 🔢 Pluriels : `t('clef', { count, defaultValue_one: '…', defaultValue_other: '…' })`
+// ajoute `clef_one` et `clef_other` (i18next lit ces replis depuis la v21).
 //
 // ✍️ L'insertion suit l'ordre de `perfectionist/sort-objects` (alphabétique,
 // casse ignorée, locale en-US) : une clef neuve se pose à sa place, rien d'autre
@@ -270,38 +277,46 @@ const estUnAppelDeT = (appel) => {
     && ['i18n', 'i18next'].includes(callee.object.name);
 };
 
-// Le repli d'un appel : { texte } s'il est lisible, { illisible: true } s'il y
-// en a un qu'on ne sait pas lire, null s'il n'y en a pas.
+// Le repli d'un appel : { textes: { suffixe: texte } } s'il est lisible (suffixe
+// '' pour un repli simple, '_one' / '_other'… pour un pluriel), { illisible: true }
+// s'il y en a un qu'on ne sait pas lire, null s'il n'y en a pas.
 const repliDeLAppel = (appel) => {
   const second = appel.arguments[1];
   if (!second) return null;
   const texte = texteDuNoeud(second);
-  if (texte !== undefined) return { texte };
-  if (second.type === 'ObjectExpression') {
-    const defaut = second.properties.find((p) => p.type === 'ObjectProperty'
-      && nomDeLaPropriete(p) === 'defaultValue');
-    if (!defaut) return null;
-    const texteDefaut = texteDuNoeud(defaut.value);
-    return texteDefaut === undefined ? { illisible: true } : { texte: texteDefaut };
-  }
-  return { illisible: true };
+  if (texte !== undefined) return { textes: { '': texte } };
+  if (second.type !== 'ObjectExpression') return { illisible: true };
+  const defauts = second.properties.filter((p) => p.type === 'ObjectProperty'
+    && /^defaultValue(_[a-z]+)?$/.test(String(nomDeLaPropriete(p))));
+  if (defauts.length === 0) return null;
+  const textes = {};
+  const lisibles = defauts.every((p) => {
+    textes[String(nomDeLaPropriete(p)).replace('defaultValue', '')] = texteDuNoeud(p.value);
+    return texteDuNoeud(p.value) !== undefined;
+  });
+  return lisibles ? { textes } : { illisible: true };
+};
+
+// Ajoute à `appels` les `t('clef', …)` littéraux d'une source.
+const releverDansLaSource = (appels, relatif, source) => {
+  parcourirAst(analyser(relatif, source).program, (noeud) => {
+    if (noeud.type !== 'CallExpression' || !estUnAppelDeT(noeud)) return;
+    const clef = texteDuNoeud(noeud.arguments[0]);
+    if (!clef || !CLEF_POINTEE.test(clef)) return;
+    if (!appels.has(clef)) appels.set(clef, []);
+    appels.get(clef).push({
+      endroit: `${relatif}:${noeud.loc.start.line}`,
+      repli: repliDeLAppel(noeud),
+    });
+  });
+  return appels;
 };
 
 const releverLesAppels = () => {
   const appels = new Map();
   fichiersDeProduction(SRC).forEach((fichier) => {
-    const source = fs.readFileSync(fichier, 'utf8');
     const relatif = path.relative(RACINE, fichier).split(path.sep).join('/');
-    parcourirAst(analyser(fichier, source).program, (noeud) => {
-      if (noeud.type !== 'CallExpression' || !estUnAppelDeT(noeud)) return;
-      const clef = texteDuNoeud(noeud.arguments[0]);
-      if (!clef || !CLEF_POINTEE.test(clef)) return;
-      if (!appels.has(clef)) appels.set(clef, []);
-      appels.get(clef).push({
-        endroit: `${relatif}:${noeud.loc.start.line}`,
-        repli: repliDeLAppel(noeud),
-      });
-    });
+    releverDansLaSource(appels, relatif, fs.readFileSync(fichier, 'utf8'));
   });
   return appels;
 };
@@ -310,8 +325,7 @@ const presente = (plat, clef) => SUFFIXES_DE_PLURIEL.some((suffixe) => (
   typeof plat[`${clef}${suffixe}`] === 'string'
 ));
 
-const classerLesReplis = (plat) => {
-  const appels = releverLesAppels();
+const classerLesReplis = (plat, appels = releverLesAppels()) => {
   const absentes = [...appels.entries()].filter(([clef]) => !presente(plat, clef));
   const ajoutables = {};
   const minees = [];
@@ -326,12 +340,15 @@ const classerLesReplis = (plat) => {
       illisibles.push(clef);
       return;
     }
-    const textes = new Set(usages.map((u) => u.repli.texte));
-    if (textes.size > 1) {
+    const signature = (usage) => JSON.stringify(Object.entries(usage.repli.textes).sort());
+    const signatures = new Set(usages.map(signature));
+    if (signatures.size > 1) {
       minees.push(clef);
       return;
     }
-    [ajoutables[clef]] = textes;
+    Object.entries(usages[0].repli.textes).forEach(([suffixe, texte]) => {
+      ajoutables[`${clef}${suffixe}`] = texte;
+    });
   });
   const tous = [...appels.values()].flat();
   return {
@@ -347,6 +364,35 @@ const classerLesReplis = (plat) => {
 };
 
 // ---------------------------------------------------------------------------
+
+const jetons = (texte) => (String(texte).match(/\{\{[^}]+\}\}/g) || []).sort().join(' ');
+
+// Chaque clef ajoutable a-t-elle sa traduction, avec les mêmes jetons ?
+const bilanDesTraductions = (ajoutables, traductions) => {
+  const clefs = Object.keys(ajoutables);
+  return {
+    enTrop: Object.keys(traductions).filter((clef) => ajoutables[clef] === undefined),
+    jetonsFaux: clefs.filter((clef) => typeof traductions[clef] === 'string'
+      && jetons(traductions[clef]) !== jetons(ajoutables[clef])),
+    manquantes: clefs.filter((clef) => typeof traductions[clef] !== 'string'
+      || traductions[clef].trim() === ''),
+  };
+};
+
+const controlerLesTraductions = (ajoutables) => {
+  const chemin = lireArgument('--traductions');
+  if (!chemin) throw new Error('--controle exige --traductions <fichier.json>.');
+  const traductions = JSON.parse(fs.readFileSync(chemin, 'utf8'));
+  const { enTrop, jetonsFaux, manquantes } = bilanDesTraductions(ajoutables, traductions);
+  console.log(`controle: ajoutables=${Object.keys(ajoutables).length}`
+    + ` manquantes=${manquantes.length} jetonsFaux=${jetonsFaux.length} enTrop=${enTrop.length}`);
+  if (enTrop.length) console.log(`controle: en trop (sans appel) = ${enTrop.join(', ')}`);
+  if (manquantes.length || jetonsFaux.length) {
+    console.error(`controle: manquantes = ${manquantes.join(', ')}`);
+    console.error(`controle: jetons differents = ${jetonsFaux.join(', ')}`);
+    process.exit(1);
+  }
+};
 
 const commandeReplis = () => {
   const sourceFr = fs.readFileSync(FR, 'utf8');
@@ -364,6 +410,10 @@ const commandeReplis = () => {
   lister('minees (jamais ajoutees)', bilan.minees);
   lister('illisibles (jamais ajoutees)', bilan.illisibles);
   lister("NUES (l'ecran affiche la clef)", bilan.nues);
+  if (process.argv.includes('--controle')) {
+    controlerLesTraductions(bilan.ajoutables);
+    return;
+  }
   if (!process.argv.includes('--ecrire')) return;
 
   const { refusees, source } = ajouterClefs(sourceFr, bilan.ajoutables);
@@ -401,10 +451,17 @@ if (require.main === module) {
   const commandes = { en: commandeEn, replis: commandeReplis };
   const commande = commandes[process.argv[2]];
   if (!commande) {
-    console.error('Usage : node scripts/i18n/clefs.js replis [--ecrire] | en --traductions <json>');
+    console.error('Usage : node scripts/i18n/clefs.js replis'
+      + ' [--ecrire | --controle --traductions <json>] | en --traductions <json>');
     process.exit(1);
   }
   commande();
 }
 
-module.exports = { ajouterClefs, aPlat };
+module.exports = {
+  ajouterClefs,
+  aPlat,
+  bilanDesTraductions,
+  classerLesReplis,
+  releverDansLaSource,
+};
