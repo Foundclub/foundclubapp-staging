@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { Text, TouchableOpacity, View } from 'react-native';
 
+import localeDesFormats from '@/theme/strings/localeDesFormats';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -16,18 +17,18 @@ const formatWindowLabel = (startValue, endValue) => {
   const endDate = endValue ? new Date(endValue) : null;
   if (!startDate || Number.isNaN(startDate.getTime())) return '';
 
-  const dateLabel = startDate.toLocaleDateString('fr-FR', {
+  const dateLabel = startDate.toLocaleDateString(localeDesFormats(), {
     day: 'numeric',
     month: 'short',
     weekday: 'short',
   });
 
-  const startTimeLabel = startDate.toLocaleTimeString('fr-FR', {
+  const startTimeLabel = startDate.toLocaleTimeString(localeDesFormats(), {
     hour: '2-digit',
     minute: '2-digit',
   });
   const endTimeLabel = endDate && !Number.isNaN(endDate.getTime())
-    ? endDate.toLocaleTimeString('fr-FR', {
+    ? endDate.toLocaleTimeString(localeDesFormats(), {
       hour: '2-digit',
       minute: '2-digit',
     })
@@ -146,7 +147,10 @@ function RequestFeedItem({
     item?.meta?.windowStart,
     item?.meta?.windowEnd,
   );
-  const occupancyRatioLabel = `${Number(item?.meta?.overlapCount || 0)}/${Number(item?.meta?.maxSlots || 1)} slots occupes`;
+  const occupancyRatioLabel = t('requestFeedItem.occupancy', '{{occupied}}/{{max}} slots occupes', {
+    max: Number(item?.meta?.maxSlots || 1),
+    occupied: Number(item?.meta?.overlapCount || 0),
+  });
   /**
    * @param {import('react').ReactNode} children
    */

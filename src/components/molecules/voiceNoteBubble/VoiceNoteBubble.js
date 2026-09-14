@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Text,
   TouchableOpacity,
@@ -122,6 +123,7 @@ function VoiceNoteBubble({
     Fonts,
     Spaces,
   } = useTheme();
+  const { t } = useTranslation();
 
   const audioAttachment = useMemo(() => getPrimaryAudioAttachment(attachments), [attachments]);
   const initialAudioUrl = useMemo(() => resolveAudioAttachmentUrl(attachments), [attachments]);
@@ -249,7 +251,7 @@ function VoiceNoteBubble({
       <View style={containerStyle}>
         <View style={[Spaces.padding[12], { gap: 8 }]}>
           <Text style={[Fonts.p3Bold, { color: Colors.error500 }]}>
-            Note vocale indisponible
+            {t('voiceNoteBubble.unavailable', 'Note vocale indisponible')}
           </Text>
           {messageText ? (
             <Text style={[Fonts.p3, { color: Colors.neutral100 }]}>
@@ -370,7 +372,7 @@ function VoiceNoteBubble({
 
         {!isPlayerAvailable ? (
           <Text style={[Fonts.p4, { color: Colors.error500 }]}>
-            Lecture audio indisponible sur cette build.
+            {t('voiceNoteBubble.playbackUnavailable', 'Lecture audio indisponible sur cette build.')}
           </Text>
         ) : null}
 

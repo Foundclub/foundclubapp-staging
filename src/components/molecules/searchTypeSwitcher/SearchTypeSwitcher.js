@@ -180,11 +180,10 @@ function SearchTypeSwitcher({ activeType, onTypeChange }) {
       >
         <View style={[Spaces.gap[16], Spaces.paddingBottom[16]]}>
           <Text style={[Fonts.h4, Fonts.neutral00]}>
-            Bientôt disponible !
+            {t('searchTypeSwitcher.soon.title', 'Bientôt disponible !')}
           </Text>
           <Text style={[Fonts.p2, Fonts.neutral200]}>
-            La réservation de créneaux (foot à 5, padel…) arrive dans une
-            prochaine version.
+            {t('searchTypeSwitcher.soon.body', 'La réservation de créneaux (foot à 5, padel…) arrive dans une prochaine version.')}
           </Text>
           <TouchableOpacity
             accessibilityRole="button"
@@ -201,7 +200,7 @@ function SearchTypeSwitcher({ activeType, onTypeChange }) {
             ]}
           >
             <Text style={[Fonts.p1Bold, Fonts.primary900]}>
-              Compris
+              {t('searchTypeSwitcher.soon.gotIt', 'Compris')}
             </Text>
           </TouchableOpacity>
         </View>

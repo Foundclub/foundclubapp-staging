@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   ScrollView, Text, TouchableOpacity, View,
 } from 'react-native';
@@ -23,6 +24,7 @@ function Select({
   const {
     Alignments, ApplicationStyle, Colors, Fonts, Spaces,
   } = useTheme();
+  const { t } = useTranslation();
   const [isVisible, setIsVisible] = useState(false);
 
   const selectedOption = options.find((opt) => opt.value === value);
@@ -46,7 +48,7 @@ function Select({
         ]}
       >
         <Text style={[Fonts.p1, selectedOption ? Fonts.primary500 : Fonts.neutral500]}>
-          {selectedOption ? selectedOption.label : placeholder || 'Sélectionner'}
+          {selectedOption ? selectedOption.label : placeholder || t('select.placeholder', 'Sélectionner')}
         </Text>
       </TouchableOpacity>
       {error && <Text style={[Fonts.p3, Fonts.error500, Spaces.marginTop[4]]}>{error}</Text>}

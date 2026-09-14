@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
   Text,
@@ -56,6 +57,7 @@ function DocumentMessageBubble({
   pending = false,
 }) {
   const { Colors, Fonts, Spaces } = useTheme();
+  const { t } = useTranslation();
 
   const documentAttachment = getPrimaryDocumentAttachment(attachments);
   if (!documentAttachment) return null;
@@ -140,7 +142,7 @@ function DocumentMessageBubble({
                 numberOfLines={1}
                 style={[Fonts.p4, { color: Colors.neutral300 }]}
               >
-                {metaParts.join(' • ') || 'Fichier'}
+                {metaParts.join(' • ') || t('documentMessageBubble.file', 'Fichier')}
               </Text>
 
               {extraAttachmentCount > 0 ? (
@@ -166,7 +168,7 @@ function DocumentMessageBubble({
           {pending ? (
             <View style={{ alignItems: 'center', flexDirection: 'row', gap: 8 }}>
               <ActivityIndicator color={Colors.primary500} size="small" />
-              <Text style={[Fonts.p4, { color: Colors.neutral300 }]}>Envoi...</Text>
+              <Text style={[Fonts.p4, { color: Colors.neutral300 }]}>{t('documentMessageBubble.sending', 'Envoi...')}</Text>
             </View>
           ) : null}
         </View>
@@ -204,7 +206,7 @@ function DocumentMessageBubble({
                 numberOfLines={1}
                 style={[Fonts.p4Bold, { color: failed ? Colors.error500 : Colors.primary500 }]}
               >
-                {failed ? 'Réessayer' : 'Ouvrir'}
+                {failed ? t('documentMessageBubble.retry', 'Réessayer') : t('documentMessageBubble.open', 'Ouvrir')}
               </Text>
             </TouchableOpacity>
 
@@ -232,7 +234,7 @@ function DocumentMessageBubble({
                     numberOfLines={1}
                     style={[Fonts.p4Bold, { color: Colors.neutral100 }]}
                   >
-                    Télécharger
+                    {t('documentMessageBubble.download', 'Télécharger')}
                   </Text>
                 </TouchableOpacity>
                 <TouchableOpacity
@@ -257,7 +259,7 @@ function DocumentMessageBubble({
                     numberOfLines={1}
                     style={[Fonts.p4Bold, { color: Colors.neutral100 }]}
                   >
-                    Partager
+                    {t('documentMessageBubble.share', 'Partager')}
                   </Text>
                 </TouchableOpacity>
               </>
