@@ -7,6 +7,7 @@ import {
   useRoute,
 } from '@react-navigation/native';
 import { useQueryClient } from '@tanstack/react-query';
+import { useTranslation } from 'react-i18next';
 import React, {
   useCallback, useEffect, useRef, useState,
 } from 'react';
@@ -15,6 +16,8 @@ import {
 } from 'react-native';
 
 import useClub from '@/domains/club/useClub';
+import localeDesFormats from '@/theme/strings/localeDesFormats';
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import MarqueeText from '@/components/atoms/marqueeText/MarqueeText';
@@ -280,6 +283,7 @@ function MatchCenterScreen() {
   const {
     Alignments, ApplicationStyle, Colors, Fonts, Images, Spaces,
   } = useTheme();
+  const { t } = useTranslation();
   const { leagueLegalAcceptanceModal, requestLeagueLegalAcceptance } = useLeagueLegalAcceptance();
   const leaguePlatformRuntimeQuery = useLeaguePlatformRuntime();
   const leaguePlatformRuntime = leaguePlatformRuntimeQuery.data || null;
@@ -336,10 +340,16 @@ function MatchCenterScreen() {
   const [isProposalModalVisible, setIsProposalModalVisible] = useState(false);
   const [suggestionActionLoading, setSuggestionActionLoading] = useState(false);
   const currentMatchLegalLabel = React.useMemo(() => {
-    const left = currentMatch?.team_a?.name || mySquad?.name || 'Ta squad';
-    const right = currentMatch?.team_b?.name || opponentDetails?.name || 'Adversaire';
+    const left = currentMatch?.team_a?.name || mySquad?.name || t(
+      'matchCenterScreen.mySquadFallback',
+      'Ta squad',
+    );
+    const right = currentMatch?.team_b?.name || opponentDetails?.name || t(
+      'matchCenterScreen.opponentFallback',
+      'Adversaire',
+    );
     return `${left} VS ${right}`;
-  }, [currentMatch?.team_a?.name, currentMatch?.team_b?.name, mySquad?.name, opponentDetails?.name]);
+  }, [currentMatch?.team_a?.name, currentMatch?.team_b?.name, mySquad?.name, opponentDetails?.name, t]);
   const venueRequired = React.useMemo(() => doesMatchRequireVenue(currentMatch), [currentMatch]);
   const proposalDurationMinutes = React.useMemo(
     () => getMatchDurationMinutes(currentMatch?.team_a?.sport || currentMatch?.team_b?.sport || mySquad?.sport),
@@ -359,7 +369,13 @@ function MatchCenterScreen() {
   const mySquadId = React.useMemo(() => getEntityDocumentId(mySquad), [mySquad]);
   const squadRequiredPlayers = React.useMemo(() => getRequiredPlayersForSport(mySquad?.sport), [mySquad?.sport]);
   const isOpponentAnonymous = React.useMemo(() => shouldMaskOpponentIdentity(currentMatch), [currentMatch]);
-  const opponentChatTitle = isOpponentAnonymous ? 'Vs Adversaire' : `Vs ${opponentDetails?.name || 'Adversaire'}`;
+  const opponentChatTitle = isOpponentAnonymous ? t(
+    'matchCenterScreen.chatTitleAnonymous',
+    'Vs Adversaire',
+  ) : `Vs ${opponentDetails?.name || t(
+    'matchCenterScreen.opponentFallback',
+    'Adversaire',
+  )}`;
   const routeOpenProposalRequested = Boolean(route?.params?.openLeagueProposal);
   const routeOpenProposalToken = String(
     route?.params?.openLeagueProposalToken
@@ -378,11 +394,11 @@ function MatchCenterScreen() {
     const runtime = getLeagueRuntimeFromError(errorLike) || leaguePlatformRuntime;
     const scope = restrictionCode ? getLeagueRestrictionScope(errorLike) : 'matchmaking';
     const title = scope === 'platform'
-      ? 'Found Club League fermée'
-      : 'Recherche de match fermée';
+      ? t('matchCenterScreen.closed.platform', 'Found Club League fermée')
+      : t('matchCenterScreen.closed.matchmaking', 'Recherche de match fermée');
 
     Alert.alert(title, getLeagueClosedMessage(runtime, scope));
-  }, [leaguePlatformRuntime]);
+  }, [leaguePlatformRuntime, t]);
   const ensureMatchmakingIsOpen = useCallback(() => {
     if (leaguePlatformRuntime?.effectiveMatchmakingIsOpen === false) {
       showLeagueRestrictionAlert({
@@ -412,40 +428,64 @@ function MatchCenterScreen() {
     if (!currentMatch || !matchHasPendingProposal) {
       return {
         helper: venueRequired
-          ? 'Le match correspond à tes critères. Envoie une proposition de terrain et d\u2019horaire pour lancer la négociation.'
-          : 'Le match correspond à tes critères. Envoie une proposition d horaire, avec un lieu si tu veux le fixer tout de suite.',
+          ? t(
+            'matchCenterScreen.proposalCta.createWithVenue',
+            // eslint-disable-next-line max-len
+            'Le match correspond à tes critères. Envoie une proposition de terrain et d’horaire pour lancer la négociation.',
+          )
+          : t(
+            'matchCenterScreen.proposalCta.createWithoutVenue',
+            // eslint-disable-next-line max-len
+            'Le match correspond à tes critères. Envoie une proposition d horaire, avec un lieu si tu veux le fixer tout de suite.',
+          ),
         kind: 'create',
-        title: 'ENVOYER UNE PROPOSITION',
+        title: t('matchCenterScreen.proposalCta.createTitle', 'ENVOYER UNE PROPOSITION'),
       };
     }
 
     if (actionState === 'proposal_received' || (matchLastProposalSide && matchTeamSide && matchLastProposalSide !== matchTeamSide)) {
       return {
-        helper: 'Une proposition adverse attend ta réponse. Ouvre le chat pour accepter, refuser ou contre-proposer.',
+        helper: t(
+          'matchCenterScreen.proposalCta.replyHelper',
+          // eslint-disable-next-line max-len
+          'Une proposition adverse attend ta réponse. Ouvre le chat pour accepter, refuser ou contre-proposer.',
+        ),
         kind: 'reply',
-        title: 'RÉPONDRE',
+        title: t('matchCenterScreen.proposalCta.replyTitle', 'RÉPONDRE'),
       };
     }
 
     if (actionState === 'proposal_sent_waiting' || (matchLastProposalSide && matchTeamSide && matchLastProposalSide === matchTeamSide)) {
       return {
-        helper: 'Ta proposition a été envoyée. Ouvre la discussion pour suivre la réponse adverse.',
+        helper: t(
+          'matchCenterScreen.proposalCta.sentHelper',
+          'Ta proposition a été envoyée. Ouvre la discussion pour suivre la réponse adverse.',
+        ),
         kind: 'sent',
-        title: 'VOIR LA PROPOSITION',
+        title: t('matchCenterScreen.proposalCta.sentTitle', 'VOIR LA PROPOSITION'),
       };
     }
 
     return {
-      helper: 'Une proposition est déjà ouverte. Ouvre la négociation pour continuer.',
+      helper: t(
+        'matchCenterScreen.proposalCta.openHelper',
+        'Une proposition est déjà ouverte. Ouvre la négociation pour continuer.',
+      ),
       kind: 'open',
-      title: 'OUVRIR LA NÉGOCIATION',
+      title: t('matchCenterScreen.proposalCta.openTitle', 'OUVRIR LA NÉGOCIATION'),
     };
-  }, [currentMatch, matchHasPendingProposal, matchLastProposalSide, matchTeamSide, venueRequired]);
+  }, [currentMatch, matchHasPendingProposal, matchLastProposalSide, matchTeamSide, t, venueRequired]);
 
   // DAY_MAP for display
   /** @type {Record<string, string>} */
   const DAY_MAP = {
-    friday: 'Vendredi', monday: 'Lundi', saturday: 'Samedi', sunday: 'Dimanche', thursday: 'Jeudi', tuesday: 'Mardi', wednesday: 'Mercredi',
+    friday: t('matchCenterScreen.days.friday', 'Vendredi'),
+    monday: t('matchCenterScreen.days.monday', 'Lundi'),
+    saturday: t('matchCenterScreen.days.saturday', 'Samedi'),
+    sunday: t('matchCenterScreen.days.sunday', 'Dimanche'),
+    thursday: t('matchCenterScreen.days.thursday', 'Jeudi'),
+    tuesday: t('matchCenterScreen.days.tuesday', 'Mardi'),
+    wednesday: t('matchCenterScreen.days.wednesday', 'Mercredi'),
   };
 
   const isCurrentUserCaptain = React.useMemo(
@@ -482,12 +522,16 @@ function MatchCenterScreen() {
 
   const promptSquadSearchRequirements = useCallback(() => {
     Alert.alert(
-      'Recherche réservée à la squad',
-      'Tu dois être membre de cette squad pour lancer une recherche manuelle. La recherche démarre aussi automatiquement quand le quorum est prêt sur un créneau.',
+      t('matchCenterScreen.searchRestricted.title', 'Recherche réservée à la squad'),
+      t(
+        'matchCenterScreen.searchRestricted.body',
+        // eslint-disable-next-line max-len
+        'Tu dois être membre de cette squad pour lancer une recherche manuelle. La recherche démarre aussi automatiquement quand le quorum est prêt sur un créneau.',
+      ),
       [
         {
           style: 'cancel',
-          text: 'Compris',
+          text: t('matchCenterScreen.searchRestricted.ok', 'Compris'),
         },
         {
           onPress: () => {
@@ -496,11 +540,11 @@ function MatchCenterScreen() {
             if (squadId && safeNavigate(RouteNames.SquadDetails, { teamId: squadId })) return;
             safeNavigate(RouteNames.LeagueHomeTab, { screen: RouteNames.LeagueSquadTab });
           },
-          text: 'Inviter des joueurs',
+          text: t('matchCenterScreen.searchRestricted.invite', 'Inviter des joueurs'),
         },
       ],
     );
-  }, [mySquad, safeNavigate]);
+  }, [mySquad, safeNavigate, t]);
 
   /**
    * @param {Array<any>} items
@@ -607,7 +651,10 @@ function MatchCenterScreen() {
           if (lastMatchRef.current) {
             const previousStatus = String(lastMatchRef.current.status || '').toLowerCase();
             if (cancellationLikeStatuses.has(previousStatus)) {
-              Alert.alert('Match annulé', 'Le match précédent a été annulé.');
+              Alert.alert(
+                t('matchCenterScreen.alerts.matchCancelledTitle', 'Match annulé'),
+                t('matchCenterScreen.alerts.previousCancelled', 'Le match précédent a été annulé.'),
+              );
             }
             lastMatchRef.current = null;
           }
@@ -620,7 +667,13 @@ function MatchCenterScreen() {
           // Only show cancellation if previous status was in cancellable pre-result phases.
           const previousStatus = String(lastMatchRef.current.status || '').toLowerCase();
           if (cancellationLikeStatuses.has(previousStatus)) {
-            Alert.alert('Match annulé', "Ton match a été annulé par l'adversaire ou le système.");
+            Alert.alert(
+              t('matchCenterScreen.alerts.matchCancelledTitle', 'Match annulé'),
+              t(
+                'matchCenterScreen.alerts.cancelledByOther',
+                "Ton match a été annulé par l'adversaire ou le système.",
+              ),
+            );
           }
           lastMatchRef.current = null;
           setCurrentMatch(null);
@@ -645,12 +698,15 @@ function MatchCenterScreen() {
       }
     } catch (error) {
       console.error('Fetch Match Data Error:', error);
-      setLoadError('Impossible de synchroniser le Match Center League.');
+      setLoadError(t(
+        'matchCenterScreen.errors.sync',
+        'Impossible de synchroniser le Match Center League.',
+      ));
       setViewState('connection_error');
     } finally {
       setLoading(false);
     }
-  }, [cancellationLikeStatuses, openInitialProposalModal]);
+  }, [cancellationLikeStatuses, openInitialProposalModal, t]);
 
   const loadMatchCenter = useCallback(async () => {
     if (!userId) return;
@@ -685,11 +741,17 @@ function MatchCenterScreen() {
       await fetchMatchData(initialSquad);
     } catch (error) {
       console.error('Load Match Center Error:', error);
-      Alert.alert('Erreur', 'Impossible de charger le Match Center');
-      setLoadError('Impossible de charger le Match Center League.');
+      Alert.alert(
+        t('matchCenterScreen.errorTitle', 'Erreur'),
+        t('matchCenterScreen.errors.loadAlert', 'Impossible de charger le Match Center'),
+      );
+      setLoadError(t(
+        'matchCenterScreen.errors.load',
+        'Impossible de charger le Match Center League.',
+      ));
       setLoading(false);
     }
-  }, [fetchMatchData, mySquadId, queryClient, routeActiveSquadId, userId]);
+  }, [fetchMatchData, mySquadId, queryClient, routeActiveSquadId, t, userId]);
 
   /*
   const refreshMatchmakingStatus = useCallback(async () => {
@@ -790,8 +852,11 @@ function MatchCenterScreen() {
     if (!mySquad) return;
     if (!Array.isArray(selectedSlotIds) || selectedSlotIds.length === 0) {
       Alert.alert(
-        'Créneau requis',
-        'Sélectionne au moins un créneau avant de lancer la recherche.',
+        t('matchCenterScreen.alerts.slotRequiredTitle', 'Créneau requis'),
+        t(
+          'matchCenterScreen.alerts.slotRequiredBody',
+          'Sélectionne au moins un créneau avant de lancer la recherche.',
+        ),
       );
       return;
     }
@@ -818,8 +883,11 @@ function MatchCenterScreen() {
 
         if (!normalizedLocation) {
           Alert.alert(
-            'Localisation requise',
-            'Ajoute une adresse de squad validée (coordonnées GPS) avant de lancer la recherche.',
+            t('matchCenterScreen.alerts.locationRequiredTitle', 'Localisation requise'),
+            t(
+              'matchCenterScreen.alerts.locationRequiredBody',
+              'Ajoute une adresse de squad validée (coordonnées GPS) avant de lancer la recherche.',
+            ),
           );
           setViewState('lobby');
           return;
@@ -828,8 +896,11 @@ function MatchCenterScreen() {
         const coordinates = getLocationCoordinates(normalizedLocation);
         if (!coordinates) {
           Alert.alert(
-            'Localisation invalide',
-            'Impossible de lire les coordonnées de ton localisation.',
+            t('matchCenterScreen.alerts.invalidLocationTitle', 'Localisation invalide'),
+            t(
+              'matchCenterScreen.alerts.invalidLocationBody',
+              'Impossible de lire les coordonnées de ton localisation.',
+            ),
           );
           setViewState('lobby');
           return;
@@ -874,13 +945,22 @@ function MatchCenterScreen() {
         const backendCode = apiError?.code;
         const backendMessage = apiError?.message;
         if (backendCode === 'SEARCH_ALREADY_ACTIVE') {
-          Alert.alert('Recherche déjà activé', 'Une recherche est déjà en cours pour cette squad.');
+          Alert.alert(
+            t('matchCenterScreen.alerts.searchActiveTitle', 'Recherche déjà activé'),
+            t(
+              'matchCenterScreen.alerts.searchActiveBody',
+              'Une recherche est déjà en cours pour cette squad.',
+            ),
+          );
         } else if (backendCode === 'UNAUTHORIZED_TEAM_ACTION') {
           promptSquadSearchRequirements();
         } else if (isLeaguePlatformRestrictedError(apiError)) {
           showLeagueRestrictionAlert(apiError);
         } else {
-          Alert.alert('Erreur', backendMessage || 'Recherche échouée');
+          Alert.alert(t('matchCenterScreen.errorTitle', 'Erreur'), backendMessage || t(
+            'matchCenterScreen.alerts.searchFailed',
+            'Recherche échouée',
+          ));
         }
         setViewState('lobby'); // Go back to config on error
       }
@@ -944,24 +1024,39 @@ function MatchCenterScreen() {
 
       if (decision === 'decline') {
         setSoftSuggestion(null);
-        Alert.alert('Piste ignorée', 'La recherche continue dans ton rayon.');
+        Alert.alert(
+          t('matchCenterScreen.suggestion.ignoredTitle', 'Piste ignorée'),
+          t('matchCenterScreen.suggestion.ignoredBody', 'La recherche continue dans ton rayon.'),
+        );
         return;
       }
 
       setSoftSuggestion(result?.suggestion || softSuggestion);
-      Alert.alert('Piste acceptée', 'On attend l accord de la squad adverse. La recherche continue en parallele.');
+      Alert.alert(
+        t('matchCenterScreen.suggestion.acceptedTitle', 'Piste acceptée'),
+        t(
+          'matchCenterScreen.suggestion.acceptedBody',
+          'On attend l accord de la squad adverse. La recherche continue en parallele.',
+        ),
+      );
     } catch (error) {
       console.error('Suggestion response error:', error);
       const apiError = /** @type {any} */ (error);
       const message = apiError?.response?.data?.error?.message
         || apiError?.message
-        || 'Impossible de traiter cette piste. La recherche continue.';
-      Alert.alert('Piste indisponible', message);
+        || t(
+          'matchCenterScreen.suggestion.error',
+          'Impossible de traiter cette piste. La recherche continue.',
+        );
+      Alert.alert(t(
+        'matchCenterScreen.suggestion.unavailableTitle',
+        'Piste indisponible',
+      ), message);
       setSoftSuggestion(null);
     } finally {
       setSuggestionActionLoading(false);
     }
-  }, [openInitialProposalModal, softSuggestion, suggestionActionLoading]);
+  }, [openInitialProposalModal, softSuggestion, suggestionActionLoading, t]);
 
   const handleRecoverFromBackground = useCallback(() => {
     setViewState('radar');
@@ -1061,12 +1156,22 @@ function MatchCenterScreen() {
 
       setIsAddingSearchSlot(false);
       Alert.alert(
-        'Succès',
-        slotsToCreate.length > 1 ? `${slotsToCreate.length} créneaux ajoutés à la recherche.` : 'Créneau ajouté à la recherche.',
+        t('matchCenterScreen.alerts.successTitle', 'Succès'),
+        slotsToCreate.length > 1 ? t(
+          'matchCenterScreen.alerts.slotsAdded',
+          '{{count}} créneaux ajoutés à la recherche.',
+          { count: slotsToCreate.length },
+        ) : t(
+          'matchCenterScreen.alerts.slotAdded',
+          'Créneau ajouté à la recherche.',
+        ),
       );
     } catch (error) {
       console.error('Add search slot error:', error);
-      Alert.alert('Erreur', "Impossible d'ajouter le créneau.");
+      Alert.alert(
+        t('matchCenterScreen.errorTitle', 'Erreur'),
+        t('matchCenterScreen.alerts.addSlotError', "Impossible d'ajouter le créneau."),
+      );
     } finally {
       setIsSavingSearchSlot(false);
     }
@@ -1076,8 +1181,11 @@ function MatchCenterScreen() {
     if (!matchRequest) return;
     if (!isCurrentUserCaptain) {
       Alert.alert(
-        'Action réservée',
-        'Seul un capitaine ou co-capitaine peut arrêter la recherche League.',
+        t('matchCenterScreen.alerts.restrictedTitle', 'Action réservée'),
+        t(
+          'matchCenterScreen.alerts.restrictedBody',
+          'Seul un capitaine ou co-capitaine peut arrêter la recherche League.',
+        ),
       );
       return;
     }
@@ -1100,10 +1208,19 @@ function MatchCenterScreen() {
       const isUnauthorized = cancelError?.code === 'UNAUTHORIZED_TEAM_ACTION'
         || cancelError?.status === 403;
       Alert.alert(
-        isUnauthorized ? 'Action réservée' : 'Erreur',
+        isUnauthorized ? t(
+          'matchCenterScreen.alerts.restrictedTitle',
+          'Action réservée',
+        ) : t('matchCenterScreen.errorTitle', 'Erreur'),
         isUnauthorized
-          ? 'Seul un capitaine ou co-capitaine peut arrêter la recherche League.'
-          : "Impossible d'annuler la recherche pour le moment.",
+          ? t(
+            'matchCenterScreen.alerts.restrictedBody',
+            'Seul un capitaine ou co-capitaine peut arrêter la recherche League.',
+          )
+          : t(
+            'matchCenterScreen.alerts.cancelSearchError',
+            "Impossible d'annuler la recherche pour le moment.",
+          ),
       );
     } finally {
       setLoading(false);
@@ -1161,7 +1278,7 @@ function MatchCenterScreen() {
       if (chatId) {
         navigation.navigate(RouteNames.Conversation, {
           chatId,
-          subTitle: 'Match de Ligue',
+          subTitle: t('matchCenterScreen.chatSubtitle', 'Match de Ligue'),
           title: opponentChatTitle,
         });
         return;
@@ -1175,12 +1292,12 @@ function MatchCenterScreen() {
       const apiMessage = error?.response?.data?.error?.message
         || error?.response?.data?.message
         || error?.message
-        || "Impossible d'envoyer la proposition.";
+        || t('matchCenterScreen.alerts.proposalError', "Impossible d'envoyer la proposition.");
       console.error('Proposal Error:', {
         message: apiMessage,
         status: error?.response?.status,
       });
-      Alert.alert('Erreur', apiMessage);
+      Alert.alert(t('matchCenterScreen.errorTitle', 'Erreur'), apiMessage);
     } finally {
       setLoading(false);
     }
@@ -1188,7 +1305,13 @@ function MatchCenterScreen() {
 
   const openLeagueNegotiation = useCallback((/** @type {LeagueMatch | null | undefined} */ match, options = {}) => {
     if (!match) {
-      Alert.alert('Erreur', "Le match n'est pas encore prêt. Réessaie dans quelques secondes.");
+      Alert.alert(
+        t('matchCenterScreen.errorTitle', 'Erreur'),
+        t(
+          'matchCenterScreen.alerts.matchNotReady',
+          "Le match n'est pas encore prêt. Réessaie dans quelques secondes.",
+        ),
+      );
       return;
     }
 
@@ -1202,7 +1325,7 @@ function MatchCenterScreen() {
         focusLatestProposal: Boolean(proposalMessageId),
         focusProposalMessageId: proposalMessageId || undefined,
         leagueNegotiationFocusToken: String(Date.now()),
-        subTitle: 'Négociation du match en cours',
+        subTitle: t('matchCenterScreen.negotiationSubtitle', 'Négociation du match en cours'),
         title: opponentChatTitle,
       });
       return;
@@ -1213,12 +1336,18 @@ function MatchCenterScreen() {
       focusSection: 'negotiation',
       matchId,
     });
-  }, [navigation, opponentChatTitle]);
+  }, [navigation, opponentChatTitle, t]);
 
   const handleMatchFoundPrimaryAction = useCallback((/** @type {LeagueMatch | null | undefined} */ targetMatch = currentMatch) => {
     const match = targetMatch || currentMatch;
     if (!match) {
-      Alert.alert('Erreur', "Le match n'est pas encore prêt. Réessaie dans quelques secondes.");
+      Alert.alert(
+        t('matchCenterScreen.errorTitle', 'Erreur'),
+        t(
+          'matchCenterScreen.alerts.matchNotReady',
+          "Le match n'est pas encore prêt. Réessaie dans quelques secondes.",
+        ),
+      );
       return;
     }
 
@@ -1231,7 +1360,7 @@ function MatchCenterScreen() {
     openLeagueNegotiation(match, {
       proposalMessageId: getLatestLeagueProposalMessageId(match),
     });
-  }, [currentMatch, openLeagueNegotiation]);
+  }, [currentMatch, openLeagueNegotiation, t]);
 
   useEffect(() => {
     if (!routeOpenProposalRequested) return;
@@ -1276,9 +1405,14 @@ function MatchCenterScreen() {
     }}
     >
       <LeagueCard style={{ alignItems: 'center', paddingVertical: 40, width: '100%' }}>
-        <Text style={[Fonts.h2, { color: Colors.neutral00, marginBottom: 8 }]}>Prêt à l&apos;action ?</Text>
+        <Text style={[Fonts.h2, { color: Colors.neutral00, marginBottom: 8 }]}>
+          {t('matchCenterScreen.noTeam.title', "Prêt à l'action ?")}
+        </Text>
         <Text style={[Fonts.p2, { color: Colors.neutral300, marginBottom: 24, textAlign: 'center' }]}>
-          Crée ton équipe pour rejoindre la compétition officielle.
+          {t(
+            'matchCenterScreen.noTeam.subtitle',
+            'Crée ton équipe pour rejoindre la compétition officielle.',
+          )}
         </Text>
         <Button
           icon="plus"
@@ -1295,7 +1429,7 @@ function MatchCenterScreen() {
             width: '100%',
           }}
           textStyle={{ color: Colors.neutral900 }}
-          title="Créer une squad"
+          title={t('matchCenterScreen.noTeam.create', 'Créer une squad')}
           variant="Primary"
         />
       </LeagueCard>
@@ -1426,15 +1560,27 @@ function MatchCenterScreen() {
       const distanceKm = Number(softSuggestion.distanceKm);
       const extraDistanceKm = Number(softSuggestion.extraDistanceKm || 0);
       const eloDiff = Number(softSuggestion.eloDiff);
-      const division = opponent?.division != null ? `D${opponent.division}` : 'Division inconnue';
+      const division = opponent?.division != null ? `D${opponent.division}` : t(
+        'matchCenterScreen.suggestion.unknownDivision',
+        'Division inconnue',
+      );
       const statusForTeam = String(softSuggestion.statusForTeam || softSuggestion.status || '').trim();
       const acceptedByMe = Boolean(softSuggestion.acceptedByMe);
       const acceptedByOpponent = Boolean(softSuggestion.acceptedByOpponent);
-      let statusLabel = 'Piste optionnelle disponible.';
+      let statusLabel = t(
+        'matchCenterScreen.suggestion.statusDefault',
+        'Piste optionnelle disponible.',
+      );
       if (acceptedByMe && !acceptedByOpponent) {
-        statusLabel = 'Tu as accepté. En attente de l autre squad.';
+        statusLabel = t(
+          'matchCenterScreen.suggestion.statusAcceptedByMe',
+          'Tu as accepté. En attente de l autre squad.',
+        );
       } else if (!acceptedByMe && acceptedByOpponent) {
-        statusLabel = 'La squad adverse est partante.';
+        statusLabel = t(
+          'matchCenterScreen.suggestion.statusAcceptedByOpponent',
+          'La squad adverse est partante.',
+        );
       }
 
       return (
@@ -1448,15 +1594,33 @@ function MatchCenterScreen() {
         }}
         >
           <Text style={[Fonts.p3Bold, { color: Colors.gold500, marginBottom: 6 }]}>
-            PISTE OPTIONNELLE
+            {t('matchCenterScreen.suggestion.label', 'PISTE OPTIONNELLE')}
           </Text>
           <Text style={[Fonts.p1Bold, { color: Colors.neutral00, marginBottom: 4 }]}>
-            {opponent?.name || 'Squad compatible'}
+            {opponent?.name || t('matchCenterScreen.suggestion.squadFallback', 'Squad compatible')}
           </Text>
           <Text style={[Fonts.p3, { color: Colors.neutral300, lineHeight: 20 }]}>
-            {Number.isFinite(distanceKm) ? `A ${Math.round(distanceKm)} km de toi` : 'Distance en vérification'}
-            {extraDistanceKm > 0 ? `, +${Math.round(extraDistanceKm)} km hors rayon` : ', dans ta zone'}
-            {Number.isFinite(eloDiff) ? ` - ${eloDiff} pts ELO matchmaking d'écart` : ''}
+            {Number.isFinite(distanceKm) ? t(
+              'matchCenterScreen.suggestion.distance',
+              'A {{distance}} km de toi',
+              { distance: Math.round(distanceKm) },
+            ) : t(
+              'matchCenterScreen.suggestion.distanceChecking',
+              'Distance en vérification',
+            )}
+            {extraDistanceKm > 0 ? t(
+              'matchCenterScreen.suggestion.outsideRadius',
+              ', +{{extra}} km hors rayon',
+              { extra: Math.round(extraDistanceKm) },
+            ) : t(
+              'matchCenterScreen.suggestion.inArea',
+              ', dans ta zone',
+            )}
+            {Number.isFinite(eloDiff) ? t(
+              'matchCenterScreen.suggestion.eloGap',
+              " - {{eloDiff}} pts ELO matchmaking d'écart",
+              { eloDiff },
+            ) : ''}
             {` - ${division}`}
           </Text>
           <Text style={[Fonts.p3Bold, { color: Colors.primary500, marginTop: 8 }]}>
@@ -1467,13 +1631,19 @@ function MatchCenterScreen() {
             <Button
               disabled={suggestionActionLoading || acceptedByMe || statusForTeam === 'waiting_opponent'}
               onPress={() => handleSuggestionResponse('accept')}
-              title={acceptedByMe ? 'ACCEPTE - EN ATTENTE' : 'ACCEPTER CETTE PISTE'}
+              title={acceptedByMe ? t(
+                'matchCenterScreen.suggestion.acceptedPending',
+                'ACCEPTE - EN ATTENTE',
+              ) : t(
+                'matchCenterScreen.suggestion.accept',
+                'ACCEPTER CETTE PISTE',
+              )}
               variant="Primary"
             />
             <Button
               disabled={suggestionActionLoading || acceptedByMe}
               onPress={() => handleSuggestionResponse('decline')}
-              title="CONTINUER DANS MON RAYON"
+              title={t('matchCenterScreen.suggestion.stayInRadius', 'CONTINUER DANS MON RAYON')}
               variant="Secondary"
             />
           </View>
@@ -1484,11 +1654,14 @@ function MatchCenterScreen() {
     if (viewState === 'initializing') {
       return renderMissionState({
         accentColor: leagueGold,
-        eyebrow: 'PROTOCOLE LEAGUE',
-        helper: 'Lancement du protocole de match et synchronisation des signaux de la rencontre.',
+        eyebrow: t('matchCenterScreen.mission.init.eyebrow', 'PROTOCOLE LEAGUE'),
+        helper: t(
+          'matchCenterScreen.mission.init.helper',
+          'Lancement du protocole de match et synchronisation des signaux de la rencontre.',
+        ),
         renderIcon: () => <ActivityIndicator color={leagueGold} size="large" />,
-        subtitle: 'Mise en place',
-        title: 'Initialisation',
+        subtitle: t('matchCenterScreen.mission.init.subtitle', 'Mise en place'),
+        title: t('matchCenterScreen.mission.init.title', 'Initialisation'),
       });
     }
 
@@ -1496,10 +1669,13 @@ function MatchCenterScreen() {
       return renderMissionState({
         accentColor: Colors.primary500,
         eyebrow: 'SCAN MATCHMAKING',
-        helper: 'Nous analysons ta zone, tes créneaux et les disponibilités compatibles.',
+        helper: t(
+          'matchCenterScreen.mission.scan.helper',
+          'Nous analysons ta zone, tes créneaux et les disponibilités compatibles.',
+        ),
         renderIcon: () => <ActivityIndicator color={Colors.primary500} size="large" />,
-        subtitle: 'Analyse réseau',
-        title: 'Lancement du scan',
+        subtitle: t('matchCenterScreen.mission.scan.subtitle', 'Analyse réseau'),
+        title: t('matchCenterScreen.mission.scan.title', 'Lancement du scan'),
       });
     }
 
@@ -1526,11 +1702,15 @@ function MatchCenterScreen() {
             />
           </View>
         ),
-        eyebrow: 'ALERTE Réseau',
-        helper: 'La connexion au serveur League a été interrompue. Tu peux relancer le scan ou revenir au vestiaire.',
+        eyebrow: t('matchCenterScreen.mission.error.eyebrow', 'ALERTE Réseau'),
+        helper: t(
+          'matchCenterScreen.mission.error.helper',
+          // eslint-disable-next-line max-len
+          'La connexion au serveur League a été interrompue. Tu peux relancer le scan ou revenir au vestiaire.',
+        ),
         renderIcon: () => <Text style={{ color: Colors.error500, fontSize: 34, fontWeight: '700' }}>!</Text>,
-        subtitle: 'Signal interrompu',
-        title: 'Connexion perdue',
+        subtitle: t('matchCenterScreen.mission.error.subtitle', 'Signal interrompu'),
+        title: t('matchCenterScreen.mission.error.title', 'Connexion perdue'),
       });
     }
 
@@ -1564,8 +1744,11 @@ function MatchCenterScreen() {
                 textAlign: 'center',
               }]}
               >
-                La recherche est geree par le capitaine de ta squad. Seul lui
-                ou un co-capitaine peut l annuler.
+                {t(
+                  'matchCenterScreen.mission.radar.captainOnly',
+                  // eslint-disable-next-line max-len
+                  'La recherche est geree par le capitaine de ta squad. Seul lui ou un co-capitaine peut l annuler.',
+                )}
               </Text>
             ) : null}
             <SearchCountdown
@@ -1576,11 +1759,14 @@ function MatchCenterScreen() {
             {renderSoftSuggestionCard()}
           </>
         ),
-        eyebrow: 'RADAR ACTIF',
-        helper: 'Nous cherchons une équipe compatible dans ta zone et sur tes plages partagées.',
+        eyebrow: t('matchCenterScreen.mission.radar.eyebrow', 'RADAR ACTIF'),
+        helper: t(
+          'matchCenterScreen.mission.radar.helper',
+          'Nous cherchons une équipe compatible dans ta zone et sur tes plages partagées.',
+        ),
         renderIcon: () => <Text style={{ color: leagueGold, fontSize: 28 }}>{radarIcon}</Text>,
-        subtitle: 'Balayage en cours',
-        title: 'Recherche active',
+        subtitle: t('matchCenterScreen.mission.radar.subtitle', 'Balayage en cours'),
+        title: t('matchCenterScreen.mission.radar.title', 'Recherche active'),
       });
     }
 
@@ -1593,7 +1779,9 @@ function MatchCenterScreen() {
           >
             <Text style={{ color: Colors.gold500, fontSize: 24 }}>{radarIcon}</Text>
           </View>
-          <Text style={[Fonts.h3, { color: Colors.neutral00, marginBottom: 4 }]}>RECHERCHE EN COURS</Text>
+          <Text style={[Fonts.h3, { color: Colors.neutral00, marginBottom: 4 }]}>
+            {t('matchCenterScreen.searching.title', 'RECHERCHE EN COURS')}
+          </Text>
           <Text style={[Fonts.p2, {
             color: Colors.gold500, fontWeight: 'bold', marginBottom: 8, textAlign: 'center',
           }]}
@@ -1601,7 +1789,10 @@ function MatchCenterScreen() {
             {searchStatus}
           </Text>
           <Text style={[Fonts.p2, { color: Colors.neutral300, marginBottom: 16, textAlign: 'center' }]}>
-            Nous cherchons une équipe compatible dans ta zone.
+            {t(
+              'matchCenterScreen.searching.helper',
+              'Nous cherchons une équipe compatible dans ta zone.',
+            )}
           </Text>
 
           {/* Timer Countdown */}
@@ -1636,7 +1827,13 @@ function MatchCenterScreen() {
 
       /** @type {Record<string, string>} */
       const anonymousDayMap = {
-        friday: 'Vendredi', monday: 'Lundi', saturday: 'Samedi', sunday: 'Dimanche', thursday: 'Jeudi', tuesday: 'Mardi', wednesday: 'Mercredi',
+        friday: t('matchCenterScreen.days.friday', 'Vendredi'),
+        monday: t('matchCenterScreen.days.monday', 'Lundi'),
+        saturday: t('matchCenterScreen.days.saturday', 'Samedi'),
+        sunday: t('matchCenterScreen.days.sunday', 'Dimanche'),
+        thursday: t('matchCenterScreen.days.thursday', 'Jeudi'),
+        tuesday: t('matchCenterScreen.days.tuesday', 'Mardi'),
+        wednesday: t('matchCenterScreen.days.wednesday', 'Mercredi'),
       };
       const formatAnonymousHour = (/** @type {string | undefined | null} */ value) => (value ? value.substring(0, 5) : '?');
       const parseAnonymousValue = (/** @type {unknown} */ value) => {
@@ -1669,11 +1866,11 @@ function MatchCenterScreen() {
         .map((candidate) => cleanAnonymousLabel(candidate))
         .find(Boolean)
         || ((opponentHomeBase?.lat || opponentHomeBase?.lng || opponentLocation?.lat || opponentLocation?.lng)
-          ? 'Zone approximative'
-          : 'Zone inconnue');
+          ? t('matchCenterScreen.opponent.approximateArea', 'Zone approximative')
+          : t('matchCenterScreen.opponent.unknownArea', 'Zone inconnue'));
       const radiusDisplay = (opponentDetails?.radius && opponentDetails.radius > 0)
         ? `+/- ${opponentDetails.radius} km`
-        : 'Rayon standard';
+        : t('matchCenterScreen.opponent.standardRadius', 'Rayon standard');
       const parsedDivision = Number.parseInt(String(opponentDetails?.division), 10);
       const anonymousDivision = Number.isFinite(parsedDivision)
         ? Math.max(1, Math.min(5, parsedDivision))
@@ -1703,7 +1900,15 @@ function MatchCenterScreen() {
             matchTeamSide === 'a' ? slot?.teamBLocationMode : slot?.teamALocationMode,
           );
           const locationModeSummary = !isOpponentAnonymous && (myLocationModeLabel || opponentLocationModeLabel)
-            ? ` • Nous: ${myLocationModeLabel || '-'} / Eux: ${opponentLocationModeLabel || '-'}`
+            ? t(
+              'matchCenterScreen.opponent.locationModes',
+              ' • Nous: {{mine}} / Eux: {{theirs}}',
+              {
+                mine: myLocationModeLabel || '-',
+                theirs: opponentLocationModeLabel || '-',
+                ...SANS_ECHAPPEMENT,
+              },
+            )
             : '';
           return dayLabel ? `${dayLabel} ${startLabel}-${endLabel}${locationModeSummary}` : null;
         })
@@ -1732,7 +1937,9 @@ function MatchCenterScreen() {
                 width: 8,
               }}
               />
-              <Text style={[Fonts.p3Bold, { color: Colors.primary500, letterSpacing: 1.1 }]}>MATCH TROUVE</Text>
+              <Text style={[Fonts.p3Bold, { color: Colors.primary500, letterSpacing: 1.1 }]}>
+                {t('matchCenterScreen.found.label', 'MATCH TROUVE')}
+              </Text>
             </View>
             <View style={{
               backgroundColor: `${leagueGold}1A`,
@@ -1799,7 +2006,7 @@ function MatchCenterScreen() {
                 >
                   {swordsIcon}
                   {' '}
-                  Duel confirmé
+                  {t('matchCenterScreen.found.duelConfirmed', 'Duel confirmé')}
                 </Text>
                 <Text style={[Fonts.h2, {
                   color: Colors.neutral00,
@@ -1807,7 +2014,13 @@ function MatchCenterScreen() {
                   textTransform: 'uppercase',
                 }]}
                 >
-                  {isOpponentAnonymous ? 'Équipe adverse' : (opponentDetails?.name || currentMatch?.team_b?.name || 'Équipe adverse')}
+                  {isOpponentAnonymous ? t(
+                    'matchCenterScreen.found.opposingTeam',
+                    'Équipe adverse',
+                  ) : (opponentDetails?.name || currentMatch?.team_b?.name || t(
+                    'matchCenterScreen.found.opposingTeam',
+                    'Équipe adverse',
+                  ))}
                 </Text>
                 <Text style={[Fonts.p2, { color: Colors.primary500, marginBottom: 8 }]}>
                   {sportLabel}
@@ -1816,8 +2029,16 @@ function MatchCenterScreen() {
                 </Text>
                 <Text style={[Fonts.p3, { color: Colors.neutral200, lineHeight: 20 }]}>
                   {isOpponentAnonymous
-                    ? 'Le profil reste masque tant que le premier contact n est pas engage dans le chat.'
-                    : 'Pour le Football a 11, l identité adverse et les créneaux communs sont visibles des le match trouve.'}
+                    ? t(
+                      'matchCenterScreen.found.maskedHint',
+                      // eslint-disable-next-line max-len
+                      'Le profil reste masque tant que le premier contact n est pas engage dans le chat.',
+                    )
+                    : t(
+                      'matchCenterScreen.found.football11Hint',
+                      // eslint-disable-next-line max-len
+                      'Pour le Football a 11, l identité adverse et les créneaux communs sont visibles des le match trouve.',
+                    )}
                 </Text>
               </View>
             </View>
@@ -1884,7 +2105,7 @@ function MatchCenterScreen() {
                   textTransform: 'uppercase',
                 }]}
                 >
-                  Créneau phare
+                  {t('matchCenterScreen.found.keySlot', 'Créneau phare')}
                 </Text>
                 <Text style={[Fonts.p2Bold, { color: Colors.neutral00, marginBottom: 4 }]}>{recurringDayLabel}</Text>
                 <Text style={[Fonts.p3, { color: Colors.gold500 }]}>
@@ -1904,7 +2125,7 @@ function MatchCenterScreen() {
                   textTransform: 'uppercase',
                 }]}
                 >
-                  Créneaux en commun
+                  {t('matchCenterScreen.found.commonSlots', 'Créneaux en commun')}
                 </Text>
                 <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginHorizontal: -4 }}>
                   {commonSlotsSummary.slice(0, 6).map((slotLabel) => (
@@ -1945,7 +2166,7 @@ function MatchCenterScreen() {
                 textTransform: 'uppercase',
               }]}
               >
-                Prochaine étape
+                {t('matchCenterScreen.found.nextStep', 'Prochaine étape')}
               </Text>
               <Text style={[Fonts.p2, { color: Colors.neutral00, lineHeight: 22 }]}>
                 {matchProposalAction.helper}
@@ -1972,10 +2193,14 @@ function MatchCenterScreen() {
             <TouchableOpacity
               onPress={() => {
                 Alert.alert(
-                  'Annuler le match ?',
-                  'Es-tu sûr de vouloir annuler ce match ? Ton équipe reviendra en mode recherche.',
+                  t('matchCenterScreen.cancelMatch.title', 'Annuler le match ?'),
+                  t(
+                    'matchCenterScreen.cancelMatch.body',
+                    // eslint-disable-next-line max-len
+                    'Es-tu sûr de vouloir annuler ce match ? Ton équipe reviendra en mode recherche.',
+                  ),
                   [
-                    { style: 'cancel', text: 'Non' },
+                    { style: 'cancel', text: t('matchCenterScreen.cancelMatch.no', 'Non') },
                     {
                       onPress: async () => {
                         try {
@@ -2009,7 +2234,13 @@ function MatchCenterScreen() {
                                 if (isLeaguePlatformRestrictedError(error)) {
                                   showLeagueRestrictionAlert(error);
                                 } else {
-                                  Alert.alert('Erreur', 'Match annule mais impossible de relancer la recherche.');
+                                  Alert.alert(
+                                    t('matchCenterScreen.errorTitle', 'Erreur'),
+                                    t(
+                                      'matchCenterScreen.cancelMatch.restartError',
+                                      'Match annule mais impossible de relancer la recherche.',
+                                    ),
+                                  );
                                 }
                                 loadMatchCenter();
                               }
@@ -2017,10 +2248,19 @@ function MatchCenterScreen() {
                           }
                         } catch (error) {
                           console.error('Cancel/Restart error:', error);
-                          Alert.alert('Erreur', "Impossible d'annuler le match.");
+                          Alert.alert(
+                            t('matchCenterScreen.errorTitle', 'Erreur'),
+                            t(
+                              'matchCenterScreen.cancelMatch.error',
+                              "Impossible d'annuler le match.",
+                            ),
+                          );
                         }
                       },
-                      text: 'Annuler et relancer',
+                      text: t(
+                        'matchCenterScreen.cancelMatch.cancelAndRestart',
+                        'Annuler et relancer',
+                      ),
                     },
                     {
                       onPress: async () => {
@@ -2029,16 +2269,28 @@ function MatchCenterScreen() {
                           if (currentMatchId) {
                             const { cancelMatch } = await import('../../../services/league/leagueMatchService');
                             await cancelMatch(currentMatchId, getEntityDocumentId(mySquad), 'captain_request');
-                            Alert.alert('Match annule', 'Tu peux relancer une recherche.');
+                            Alert.alert(
+                              t('matchCenterScreen.cancelMatch.doneTitle', 'Match annule'),
+                              t(
+                                'matchCenterScreen.cancelMatch.doneBody',
+                                'Tu peux relancer une recherche.',
+                              ),
+                            );
                             loadMatchCenter();
                           }
                         } catch (error) {
                           console.error('Cancel match error:', error);
-                          Alert.alert('Erreur', "Impossible d'annuler le match.");
+                          Alert.alert(
+                            t('matchCenterScreen.errorTitle', 'Erreur'),
+                            t(
+                              'matchCenterScreen.cancelMatch.error',
+                              "Impossible d'annuler le match.",
+                            ),
+                          );
                         }
                       },
                       style: 'destructive',
-                      text: 'Annuler seulement',
+                      text: t('matchCenterScreen.cancelMatch.cancelOnly', 'Annuler seulement'),
                     },
                   ],
                 );
@@ -2059,7 +2311,7 @@ function MatchCenterScreen() {
                 textTransform: 'uppercase',
               }]}
               >
-                Annuler le match
+                {t('matchCenterScreen.cancelMatch.action', 'Annuler le match')}
               </Text>
             </TouchableOpacity>
           )}
@@ -2096,7 +2348,9 @@ function MatchCenterScreen() {
       };
 
       const getOpponentCity = (/** @type {OpponentDetails | null} */ details) => {
-        if (!details) return 'Zone inconnue';
+        if (!details) {
+          return t('matchCenterScreen.opponent.unknownArea', 'Zone inconnue');
+        }
 
         const opponentHomeBase = parseMaybeJson(details.home_base);
         const location = parseMaybeJson(details.location);
@@ -2119,14 +2373,17 @@ function MatchCenterScreen() {
         if (cleanedCandidate) return cleanedCandidate;
 
         if (opponentHomeBase?.lat || opponentHomeBase?.lng || location?.lat || location?.lng) {
-          return 'Zone approximative';
+          return t('matchCenterScreen.opponent.approximateArea', 'Zone approximative');
         }
 
-        return 'Zone inconnue';
+        return t('matchCenterScreen.opponent.unknownArea', 'Zone inconnue');
       };
 
       const city = getOpponentCity(opponentDetails);
-      const radiusDisplay = (opponentDetails?.radius && opponentDetails.radius > 0) ? `+/- ${opponentDetails.radius} km` : 'Rayon Standard';
+      const radiusDisplay = (opponentDetails?.radius && opponentDetails.radius > 0) ? `+/- ${opponentDetails.radius} km` : t(
+        'matchCenterScreen.opponent.standardRadiusTitle',
+        'Rayon Standard',
+      );
       const parsedDivision = Number.parseInt(String(opponentDetails?.division), 10);
       const division = Number.isFinite(parsedDivision)
         ? Math.max(1, Math.min(5, parsedDivision))
@@ -2161,7 +2418,15 @@ function MatchCenterScreen() {
           matchTeamSide === 'a' ? slot?.teamBLocationMode : slot?.teamALocationMode,
         );
         const locationModeSummary = !isOpponentAnonymous && (myLocationModeLabel || opponentLocationModeLabel)
-          ? ` • Nous: ${myLocationModeLabel || '-'} / Eux: ${opponentLocationModeLabel || '-'}`
+          ? t(
+            'matchCenterScreen.opponent.locationModes',
+            ' • Nous: {{mine}} / Eux: {{theirs}}',
+            {
+              mine: myLocationModeLabel || '-',
+              theirs: opponentLocationModeLabel || '-',
+              ...SANS_ECHAPPEMENT,
+            },
+          )
           : '';
         commonSlotsSummary.push(`${dayLabel} ${startLabel}-${endLabel}${locationModeSummary}`);
       });
@@ -2175,7 +2440,13 @@ function MatchCenterScreen() {
             color: Colors.neutral200, letterSpacing: 2, marginBottom: 16, textTransform: 'uppercase',
           }]}
           >
-            {isOpponentAnonymous ? 'ADVERSAIRE MYSTERE' : (opponentDetails?.name || 'ADVERSAIRE')}
+            {isOpponentAnonymous ? t(
+              'matchCenterScreen.opponent.mysteryUpper',
+              'ADVERSAIRE MYSTERE',
+            ) : (opponentDetails?.name || t(
+              'matchCenterScreen.opponent.upperFallback',
+              'ADVERSAIRE',
+            ))}
           </Text>
 
           {/* MAIN CARD */}
@@ -2253,7 +2524,13 @@ function MatchCenterScreen() {
                 {swordsIcon}
               </Text>
               <Text style={[Fonts.h2, { color: 'white', marginBottom: 4 }]}>
-                {isOpponentAnonymous ? 'Équipe adverse' : (opponentDetails?.name || currentMatch?.team_b?.name || 'Équipe adverse')}
+                {isOpponentAnonymous ? t(
+                  'matchCenterScreen.found.opposingTeam',
+                  'Équipe adverse',
+                ) : (opponentDetails?.name || currentMatch?.team_b?.name || t(
+                  'matchCenterScreen.found.opposingTeam',
+                  'Équipe adverse',
+                ))}
               </Text>
               <Text style={[Fonts.p2, { color: Colors.neutral300, marginBottom: 16 }]}>
                 {sportLabel}
@@ -2300,10 +2577,19 @@ function MatchCenterScreen() {
                     {(() => {
                       /** @type {Record<string, string>} */
                       const dayMap = {
-                        friday: 'Vendredi', monday: 'Lundi', saturday: 'Samedi', sunday: 'Dimanche', thursday: 'Jeudi', tuesday: 'Mardi', wednesday: 'Mercredi',
+                        friday: t('matchCenterScreen.days.friday', 'Vendredi'),
+                        monday: t('matchCenterScreen.days.monday', 'Lundi'),
+                        saturday: t('matchCenterScreen.days.saturday', 'Samedi'),
+                        sunday: t('matchCenterScreen.days.sunday', 'Dimanche'),
+                        thursday: t('matchCenterScreen.days.thursday', 'Jeudi'),
+                        tuesday: t('matchCenterScreen.days.tuesday', 'Mardi'),
+                        wednesday: t('matchCenterScreen.days.wednesday', 'Mercredi'),
                       };
                       const rDay = String(recurringDay || '').toLowerCase();
-                      return dayMap[rDay] || rDay || 'Date Inconnue';
+                      return dayMap[rDay] || rDay || t(
+                        'matchCenterScreen.opponent.unknownDate',
+                        'Date Inconnue',
+                      );
                     })()}
                   </Text>
                   <Text style={[Fonts.p3, { color: Colors.gold500 }]}>
@@ -2330,7 +2616,7 @@ function MatchCenterScreen() {
             }}
             >
               <Text style={[Fonts.p3Bold, { color: Colors.neutral200, marginBottom: 8 }]}>
-                Créneaux en commun
+                {t('matchCenterScreen.found.commonSlots', 'Créneaux en commun')}
               </Text>
               {commonSlotsSummary.map((/** @type {string} */ slotLabel) => (
                 <Text key={slotLabel} style={[Fonts.p3, { color: Colors.gold500, marginBottom: 4 }]}>
@@ -2363,10 +2649,13 @@ function MatchCenterScreen() {
           <TouchableOpacity
             onPress={() => {
               Alert.alert(
-                'Annuler le match ?',
-                'Es-tu sûr de vouloir annuler ce match ? Ton équipe reviendra en mode recherche.',
+                t('matchCenterScreen.cancelMatch.title', 'Annuler le match ?'),
+                t(
+                  'matchCenterScreen.cancelMatch.body',
+                  'Es-tu sûr de vouloir annuler ce match ? Ton équipe reviendra en mode recherche.',
+                ),
                 [
-                  { style: 'cancel', text: 'Non' },
+                  { style: 'cancel', text: t('matchCenterScreen.cancelMatch.no', 'Non') },
                   {
                     onPress: async () => {
                       try {
@@ -2404,7 +2693,13 @@ function MatchCenterScreen() {
                               if (isLeaguePlatformRestrictedError(e)) {
                                 showLeagueRestrictionAlert(e);
                               } else {
-                                Alert.alert('Erreur', 'Match annulé mais impossible de relancer la recherche.');
+                                Alert.alert(
+                                  t('matchCenterScreen.errorTitle', 'Erreur'),
+                                  t(
+                                    'matchCenterScreen.cancelMatch.restartErrorAlt',
+                                    'Match annulé mais impossible de relancer la recherche.',
+                                  ),
+                                );
                               }
                               loadMatchCenter();
                             }
@@ -2412,10 +2707,19 @@ function MatchCenterScreen() {
                         }
                       } catch (err) {
                         console.error('Cancel/Restart error:', err);
-                        Alert.alert('Erreur', "Impossible d'annuler le match.");
+                        Alert.alert(
+                          t('matchCenterScreen.errorTitle', 'Erreur'),
+                          t(
+                            'matchCenterScreen.cancelMatch.error',
+                            "Impossible d'annuler le match.",
+                          ),
+                        );
                       }
                     },
-                    text: 'Annuler et Relancer',
+                    text: t(
+                      'matchCenterScreen.cancelMatch.cancelAndRestartAlt',
+                      'Annuler et Relancer',
+                    ),
                   },
                   {
                     onPress: async () => {
@@ -2424,16 +2728,28 @@ function MatchCenterScreen() {
                         if (currentMatchId) {
                           const { cancelMatch } = await import('../../../services/league/leagueMatchService');
                           await cancelMatch(currentMatchId, getEntityDocumentId(mySquad), 'captain_request');
-                          Alert.alert('Match annulé', 'Tu peux relancer une recherche.');
+                          Alert.alert(
+                            t('matchCenterScreen.alerts.matchCancelledTitle', 'Match annulé'),
+                            t(
+                              'matchCenterScreen.cancelMatch.doneBody',
+                              'Tu peux relancer une recherche.',
+                            ),
+                          );
                           loadMatchCenter();
                         }
                       } catch (err) {
                         console.error('Cancel match error:', err);
-                        Alert.alert('Erreur', "Impossible d'annuler le match.");
+                        Alert.alert(
+                          t('matchCenterScreen.errorTitle', 'Erreur'),
+                          t(
+                            'matchCenterScreen.cancelMatch.error',
+                            "Impossible d'annuler le match.",
+                          ),
+                        );
                       }
                     },
                     style: 'destructive',
-                    text: 'Annuler seulement',
+                    text: t('matchCenterScreen.cancelMatch.cancelOnly', 'Annuler seulement'),
                   },
                 ],
               );
@@ -2441,7 +2757,7 @@ function MatchCenterScreen() {
             style={{ marginTop: 16, paddingVertical: 12 }}
           >
             <Text style={[Fonts.p2, { color: Colors.error500, textAlign: 'center' }]}>
-              Annuler le match
+              {t('matchCenterScreen.cancelMatch.action', 'Annuler le match')}
             </Text>
           </TouchableOpacity>
           )}
@@ -2500,8 +2816,12 @@ function MatchCenterScreen() {
             ListEmptyComponent={(
               <View style={{ width: slotCardWidth }}>
                 <View>
-                  <Text style={[Fonts.h2, { color: Colors.neutral500 }]}>Pas de match</Text>
-                  <Text style={[Fonts.p2, { color: Colors.neutral500 }]}>Aucun créneau réservé</Text>
+                  <Text style={[Fonts.h2, { color: Colors.neutral500 }]}>
+                    {t('matchCenterScreen.slots.noMatch', 'Pas de match')}
+                  </Text>
+                  <Text style={[Fonts.p2, { color: Colors.neutral500 }]}>
+                    {t('matchCenterScreen.slots.noneBooked', 'Aucun créneau réservé')}
+                  </Text>
                 </View>
                 <View style={{
                   backgroundColor: 'rgba(255, 255, 255, 0.05)',
@@ -2576,7 +2896,10 @@ function MatchCenterScreen() {
                     }}
                   >
                     <Text style={[Fonts.p3Bold, { color: isSlotFull ? '#4CAF50' : Colors.primary500 }]}>
-                      {isSlotFull ? 'COMPLET' : 'OUVERT'}
+                      {isSlotFull ? t(
+                        'matchCenterScreen.slots.full',
+                        'COMPLET',
+                      ) : t('matchCenterScreen.slots.open', 'OUVERT')}
                     </Text>
                   </View>
 
@@ -2639,7 +2962,7 @@ function MatchCenterScreen() {
             {(activeSlot.rsvp_count || 0) >= squadRequiredPlayers ? (
               <View>
                 <Text style={[Fonts.p2, { color: Colors.success500 || '#27d6a3', marginBottom: 12, textAlign: 'center' }]}>
-                  Équipe complète
+                  {t('matchCenterScreen.slots.teamComplete', 'Équipe complète')}
                 </Text>
                 <Button
                   onPress={handleLaunchLobby}
@@ -2647,17 +2970,17 @@ function MatchCenterScreen() {
                     backgroundColor: Colors.gold500, elevation: 5, shadowColor: Colors.gold500, shadowOpacity: 0.4, shadowRadius: 10,
                   }}
                   textStyle={{ color: Colors.neutral900, fontSize: 13, fontWeight: 'bold' }}
-                  title="RECHERCHER UN MATCH"
+                  title={t('matchCenterScreen.slots.searchMatch', 'RECHERCHER UN MATCH')}
                 />
               </View>
             ) : (
               <View>
                 <Text style={[Fonts.p2, { color: Colors.neutral00, marginBottom: 12 }]}>
-                  Il manque
+                  {t('matchCenterScreen.slots.missingPrefix', 'Il manque')}
                   {' '}
                   <Text style={{ color: Colors.gold500 }}>{5 - (activeSlot.rsvp_count || 0)}</Text>
                   {' '}
-                  joueurs pour être au complet.
+                  {t('matchCenterScreen.slots.missingSuffix', 'joueurs pour être au complet.')}
                 </Text>
                 <Button
                   onPress={() => navigation.navigate(RouteNames.LeagueSquadTab)}
@@ -2665,14 +2988,14 @@ function MatchCenterScreen() {
                     backgroundColor: Colors.neutral800, borderColor: Colors.primary500, borderWidth: 1, marginBottom: 12,
                   }}
                   textStyle={{ color: Colors.primary500 }}
-                  title="INVITER DES JOUEURS"
+                  title={t('matchCenterScreen.slots.invitePlayers', 'INVITER DES JOUEURS')}
                   variant="Primary"
                 />
                 <Button
                   onPress={handleLaunchLobby}
                   style={{ backgroundColor: Colors.gold500, borderColor: Colors.gold500, marginTop: 8 }}
                   textStyle={{ color: Colors.neutral900, fontWeight: 'bold' }}
-                  title="LANCER LA RECHERCHE"
+                  title={t('matchCenterScreen.slots.startSearch', 'LANCER LA RECHERCHE')}
                   variant="Primary"
                 />
               </View>
@@ -2683,7 +3006,7 @@ function MatchCenterScreen() {
             onPress={handleLaunchLobby}
             style={{ backgroundColor: Colors.gold500 }}
             textStyle={{ color: Colors.neutral900, fontWeight: 'bold' }}
-            title="RECHERCHER UN MATCH"
+            title={t('matchCenterScreen.slots.searchMatch', 'RECHERCHER UN MATCH')}
             variant="Primary"
           />
         )}
@@ -2703,25 +3026,33 @@ function MatchCenterScreen() {
     const highestStreak = Number(mySquad?.highest_streak ?? mySquad?.highestStreak ?? 0);
     const divisionProgress = getDivisionProgressState(divisionPoints, mySquad?.division);
     const nextStreakBonus = rawStreak > 0 ? getNextStreakBonus(rawStreak) : 0;
-    let streakHelper = 'Prochaine victoire: +20 pts';
+    let streakHelper = t('matchCenterScreen.stats.nextWin', 'Prochaine victoire: +20 pts');
     if (rawStreak > 0) {
-      streakHelper = `Prochain bonus: +${nextStreakBonus}`;
+      streakHelper = t(
+        'matchCenterScreen.stats.nextBonus',
+        'Prochain bonus: +{{nextStreakBonus}}',
+        { nextStreakBonus },
+      );
     } else if (rawStreak < 0) {
-      streakHelper = 'Dernier résultat: défaite';
+      streakHelper = t('matchCenterScreen.stats.lastResultLoss', 'Dernier résultat: défaite');
     }
     const promotionHelper = divisionProgress.maxDivisionReached
-      ? 'Division 1 prestige'
-      : `${Math.round(divisionProgress.pointsToPromotion)} pts avant promotion`;
+      ? t('matchCenterScreen.stats.prestigeDivision', 'Division 1 prestige')
+      : t(
+        'matchCenterScreen.stats.pointsToPromotion',
+        '{{points}} pts avant promotion',
+        { points: Math.round(divisionProgress.pointsToPromotion) },
+      );
     const showEmptyHistoryCta = !currentMatch && viewState !== 'radar' && viewState !== 'searching_start';
     const leagueSurface = {
       backgroundColor: 'rgba(10, 28, 43, 0.82)',
       borderColor: 'rgba(1, 179, 244, 0.22)',
     };
-    let nextMatchSectionTitle = 'PROCHAIN MATCH';
+    let nextMatchSectionTitle = t('matchCenterScreen.nextMatch.title', 'PROCHAIN MATCH');
     if (viewState === 'radar') {
-      nextMatchSectionTitle = 'RECHERCHE...';
+      nextMatchSectionTitle = t('matchCenterScreen.nextMatch.searching', 'RECHERCHE...');
     } else if (viewState === 'match_found') {
-      nextMatchSectionTitle = 'ACTION REQUISE';
+      nextMatchSectionTitle = t('matchCenterScreen.nextMatch.actionRequired', 'ACTION REQUISE');
     }
 
     return (
@@ -2770,7 +3101,10 @@ function MatchCenterScreen() {
                 text={mySquad ? mySquad.name : 'Team Alpha'}
               />
               <TouchableOpacity
-                accessibilityHint="Ouvre la liste des squads"
+                accessibilityHint={t(
+                  'matchCenterScreen.squadSwitch.hint',
+                  'Ouvre la liste des squads',
+                )}
                 accessibilityLabel="Squad"
                 accessibilityRole="button"
                 activeOpacity={0.8}
@@ -2837,13 +3171,15 @@ function MatchCenterScreen() {
 
         {/* 3. SEASON STATS */}
         <View style={{ marginTop: 4 }}>
-          <SectionHeader title="SAISON EN COURS" />
+          <SectionHeader title={t('matchCenterScreen.stats.currentSeason', 'SAISON EN COURS')} />
         </View>
         <LeagueCard style={{ marginBottom: 6, marginTop: 8, ...leagueSurface }}>
           <View style={{ alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between' }}>
             <View style={{ alignItems: 'center', flex: 1 }}>
               <Text style={[Fonts.h1Bold, { color: Colors.gold500 }]}>{mySquad?.wins || 0}</Text>
-              <Text style={[Fonts.p3Bold, { color: Colors.neutral200, marginTop: 4 }]}>VICTOIRES</Text>
+              <Text style={[Fonts.p3Bold, { color: Colors.neutral200, marginTop: 4 }]}>
+                {t('matchCenterScreen.stats.wins', 'VICTOIRES')}
+              </Text>
             </View>
             <View style={{ backgroundColor: 'rgba(255,255,255,0.12)', height: 40, width: 1 }} />
             <View style={{ alignItems: 'center', flex: 1 }}>
@@ -2855,7 +3191,9 @@ function MatchCenterScreen() {
               >
                 {streakValue}
               </Text>
-              <Text style={[Fonts.p3Bold, { color: Colors.neutral200, marginTop: 4 }]}>Série</Text>
+              <Text style={[Fonts.p3Bold, { color: Colors.neutral200, marginTop: 4 }]}>
+                {t('matchCenterScreen.stats.streak', 'Série')}
+              </Text>
             </View>
             <View style={{ backgroundColor: 'rgba(255,255,255,0.12)', height: 40, width: 1 }} />
             <View style={{ alignItems: 'center', flex: 1, paddingHorizontal: 10 }}>
@@ -2909,14 +3247,14 @@ function MatchCenterScreen() {
             </Text>
             <Text style={[Fonts.p3, { color: Colors.neutral200, marginTop: 4, textAlign: 'center' }]}>
               {streakHelper}
-              {' | Meilleure série: x'}
+              {t('matchCenterScreen.stats.bestStreak', ' | Meilleure série: x')}
               {highestStreak}
             </Text>
           </View>
         </LeagueCard>
 
         <View style={{ marginTop: 14 }}>
-          <SectionHeader title="DERNIERS MATCHS" />
+          <SectionHeader title={t('matchCenterScreen.history.title', 'DERNIERS MATCHS')} />
         </View>
         <LeagueCard style={{ marginBottom: 8, marginTop: 8, ...leagueSurface }}>
           {recentMatches.length === 0 ? (
@@ -2937,10 +3275,13 @@ function MatchCenterScreen() {
                 <Text style={{ fontSize: 16 }}>[]</Text>
               </View>
               <Text style={[Fonts.p2, { color: Colors.neutral100, textAlign: 'center' }]}>
-                Aucun match terminé pour le moment.
+                {t('matchCenterScreen.history.empty', 'Aucun match terminé pour le moment.')}
               </Text>
               <Text style={[Fonts.p3, { color: Colors.neutral300, marginTop: 6, textAlign: 'center' }]}>
-                Termine un premier match pour alimenter ton historique.
+                {t(
+                  'matchCenterScreen.history.emptyHint',
+                  'Termine un premier match pour alimenter ton historique.',
+                )}
               </Text>
               {showEmptyHistoryCta && (
               <TouchableOpacity
@@ -2956,7 +3297,7 @@ function MatchCenterScreen() {
                 }}
               >
                 <Text style={[Fonts.p3Bold, { color: Colors.primary500 }]}>
-                  Lancer une recherche
+                  {t('matchCenterScreen.history.startSearch', 'Lancer une recherche')}
                 </Text>
               </TouchableOpacity>
               )}
@@ -2971,16 +3312,16 @@ function MatchCenterScreen() {
               }
               let resultLabel = String(item.status || '');
               if (item.result === 'win') {
-                resultLabel = 'Victoire';
+                resultLabel = t('matchCenterScreen.history.win', 'Victoire');
               } else if (item.result === 'loss') {
-                resultLabel = 'Defaite';
+                resultLabel = t('matchCenterScreen.history.loss', 'Defaite');
               } else if (item.result === 'draw') {
-                resultLabel = 'Nul';
+                resultLabel = t('matchCenterScreen.history.draw', 'Nul');
               }
               const matchDate = item.date ? new Date(item.date) : null;
               const dateLabel = matchDate && !Number.isNaN(matchDate.getTime())
-                ? matchDate.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' })
-                : 'Date inconnue';
+                ? matchDate.toLocaleDateString(localeDesFormats(), { day: '2-digit', month: '2-digit', year: 'numeric' })
+                : t('matchCenterScreen.history.unknownDate', 'Date inconnue');
 
               return (
                 <TouchableOpacity
@@ -3003,7 +3344,10 @@ function MatchCenterScreen() {
                       <Text numberOfLines={1} style={[Fonts.p2Bold, { color: Colors.neutral00 }]}>
                         vs
                         {' '}
-                        {item.opponent?.name || 'Adversaire'}
+                        {item.opponent?.name || t(
+                          'matchCenterScreen.opponentFallback',
+                          'Adversaire',
+                        )}
                       </Text>
                       <Text style={[Fonts.p3, { color: Colors.gold500, marginTop: 2 }]}>
                         {dateLabel}
@@ -3043,7 +3387,7 @@ function MatchCenterScreen() {
     };
 
     // Display Label
-    let displayLabel = 'Zone indéfinie';
+    let displayLabel = t('matchCenterScreen.config.undefinedArea', 'Zone indéfinie');
     const tempAddr = getSafeLabel(tempSearchLocation?.address);
     const tempCity = getSafeLabel(tempSearchLocation?.city);
     const homeAddr = getSafeLabel(homeBase?.address);
@@ -3061,7 +3405,7 @@ function MatchCenterScreen() {
           <View>
             <Text style={[Fonts.h3, { color: Colors.gold500, letterSpacing: 1, textAlign: 'center' }]}>CONFIGURATION</Text>
             <Text style={[Fonts.p1, { color: Colors.neutral300, marginBottom: 8, textAlign: 'center' }]}>
-              Rechercher match
+              {t('matchCenterScreen.config.subtitle', 'Rechercher match')}
             </Text>
           </View>
               )}
@@ -3070,7 +3414,9 @@ function MatchCenterScreen() {
         snapPoints={['90%']}
       >
         <View style={{ marginBottom: 24 }}>
-          <Text style={[Fonts.p2, { color: Colors.neutral300, marginBottom: 8 }]}>Zone de recherche</Text>
+          <Text style={[Fonts.p2, { color: Colors.neutral300, marginBottom: 8 }]}>
+            {t('matchCenterScreen.config.searchArea', 'Zone de recherche')}
+          </Text>
 
           {isEditingLocation ? (
             <View style={{ height: 200 }}>
@@ -3082,12 +3428,20 @@ function MatchCenterScreen() {
                   }
                   setIsEditingLocation(false);
                 }}
-                placeholder="Entre une nouvelle adresse..."
+                placeholder={t(
+                  'matchCenterScreen.config.addressPlaceholder',
+                  'Entre une nouvelle adresse...',
+                )}
                 styles={{
                   textInput: { backgroundColor: Colors.neutral800, color: Colors.neutral00 },
                 }}
               />
-              <Button onPress={() => setIsEditingLocation(false)} style={{ marginTop: 8 }} title="Annuler" variant="Secondary" />
+              <Button
+                onPress={() => setIsEditingLocation(false)}
+                style={{ marginTop: 8 }}
+                title={t('matchCenterScreen.config.cancel', 'Annuler')}
+                variant="Secondary"
+              />
             </View>
           ) : (
             <TouchableOpacity
@@ -3104,7 +3458,7 @@ function MatchCenterScreen() {
               }}
             >
               <Text numberOfLines={1} style={[Fonts.p1Bold, { color: Colors.neutral00 }]}>
-                Lieu:
+                {t('matchCenterScreen.config.venue', 'Lieu:')}
                 {' '}
                 {displayLabel}
               </Text>
@@ -3115,7 +3469,9 @@ function MatchCenterScreen() {
 
         <View style={{ marginBottom: 24 }}>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 }}>
-            <Text style={[Fonts.p1Bold, { color: Colors.neutral00 }]}>Rayon de recherche</Text>
+            <Text style={[Fonts.p1Bold, { color: Colors.neutral00 }]}>
+              {t('matchCenterScreen.config.searchRadius', 'Rayon de recherche')}
+            </Text>
             <Text style={[Fonts.p1Bold, { color: Colors.primary500 }]}>
               <Text style={{ color: Colors.gold500 }}>
                 {searchRadius}
@@ -3148,7 +3504,7 @@ function MatchCenterScreen() {
           }}
           >
             <Text style={[Fonts.p2, { color: Colors.neutral300, flex: 1 }]}>
-              Tes disponibilités (
+              {t('matchCenterScreen.config.availability', 'Tes disponibilités (')}
               <Text style={{ color: Colors.gold500 }}>{selectedSlotIds.length}</Text>
               /
               <Text style={{ color: Colors.gold500 }}>{squadSlots.length || 0}</Text>
@@ -3166,7 +3522,10 @@ function MatchCenterScreen() {
               }}
             >
               <Text style={[Fonts.p3Bold, { color: Colors.gold500 }]}>
-                {isAddingSearchSlot ? 'Fermer' : '+ Ajouter'}
+                {isAddingSearchSlot ? t(
+                  'matchCenterScreen.config.close',
+                  'Fermer',
+                ) : t('matchCenterScreen.config.add', '+ Ajouter')}
               </Text>
             </TouchableOpacity>
           </View>
@@ -3205,8 +3564,8 @@ function MatchCenterScreen() {
           >
             <Text style={[Fonts.p3Bold, { color: Colors.primary500 }]}>
               {selectedSlotIds.length === (squadSlots || []).length && selectedSlotIds.length > 0
-                ? 'Tout désélectionner'
-                : 'Tout sélectionner'}
+                ? t('matchCenterScreen.config.deselectAll', 'Tout désélectionner')
+                : t('matchCenterScreen.config.selectAll', 'Tout sélectionner')}
             </Text>
           </TouchableOpacity>
           )}
@@ -3218,7 +3577,10 @@ function MatchCenterScreen() {
           }}
           >
             <Text style={[Fonts.p3, { color: Colors.neutral300, marginBottom: 8 }]}>
-              - Autres créneaux communs possibles :
+              {t(
+                'matchCenterScreen.config.otherCommonSlots',
+                '- Autres créneaux communs possibles :',
+              )}
             </Text>
             {currentMatch.common_slots.map((/** @type {LeagueSlot} */ slot) => {
               // Skip the currently selected slot
@@ -3292,7 +3654,10 @@ function MatchCenterScreen() {
           })}
           {!isAddingSearchSlot && (!squadSlots || squadSlots.length === 0) && (
           <Text style={[Fonts.p2, { color: Colors.neutral500, padding: 16, textAlign: 'center' }]}>
-            Aucun créneau défini. Ajoute-en directement ici.
+            {t(
+              'matchCenterScreen.config.noSlots',
+              'Aucun créneau défini. Ajoute-en directement ici.',
+            )}
           </Text>
           )}
         </View>
@@ -3301,7 +3666,9 @@ function MatchCenterScreen() {
           alignItems: 'center', borderBottomColor: Colors.neutral800, borderBottomWidth: 1, flexDirection: 'row', justifyContent: 'space-between', marginBottom: 24, paddingBottom: 16,
         }}
         >
-          <Text style={[Fonts.p1, { color: Colors.neutral00 }]}>Durée Match</Text>
+          <Text style={[Fonts.p1, { color: Colors.neutral00 }]}>
+            {t('matchCenterScreen.config.matchDuration', 'Durée Match')}
+          </Text>
           <View style={{
             backgroundColor: Colors.neutral800, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 4,
           }}
@@ -3314,7 +3681,10 @@ function MatchCenterScreen() {
           disabled={loading || selectedSlotIds.length === 0 || leaguePlatformRuntime?.effectiveMatchmakingIsOpen === false}
           onPress={handleConfirmSearch}
           style={{ marginBottom: 16 }}
-          title={loading ? 'Lancement...' : 'CONFIRMER & SCANNER'}
+          title={loading ? t('matchCenterScreen.config.starting', 'Lancement...') : t(
+            'matchCenterScreen.config.confirmScan',
+            'CONFIRMER & SCANNER',
+          )}
           variant="Primary"
         />
         {leaguePlatformRuntime?.effectiveMatchmakingIsOpen === false ? (
@@ -3324,7 +3694,7 @@ function MatchCenterScreen() {
         ) : null}
         <Button
           onPress={() => setViewState('locker_room')}
-          title="Annuler"
+          title={t('matchCenterScreen.config.cancel', 'Annuler')}
           variant="Secondary"
         />
       </BottomModal>
@@ -3339,10 +3709,13 @@ function MatchCenterScreen() {
       headerComponent={(
         <View style={{ alignItems: 'center' }}>
           <Text style={[Fonts.h3, { color: Colors.neutral00, textAlign: 'center' }]}>
-            Changer de squad
+            {t('matchCenterScreen.squadSwitch.title', 'Changer de squad')}
           </Text>
           <Text style={[Fonts.p3, { color: Colors.neutral300, marginTop: 6, textAlign: 'center' }]}>
-            Sélectionné la squad active pour les matchs
+            {t(
+              'matchCenterScreen.squadSwitch.subtitle',
+              'Sélectionné la squad active pour les matchs',
+            )}
           </Text>
         </View>
               )}
@@ -3372,7 +3745,7 @@ function MatchCenterScreen() {
           ]}
         >
           <Text style={[Fonts.p2, { color: Colors.neutral300 }]}>
-            Aucune squad disponible.
+            {t('matchCenterScreen.squadSwitch.empty', 'Aucune squad disponible.')}
           </Text>
         </View>
         )}
@@ -3452,7 +3825,9 @@ function MatchCenterScreen() {
                           height: 12, marginRight: 4, tintColor: Colors.primary500, width: 12,
                         }}
                       />
-                      <Text style={[Fonts.p3Bold, { color: Colors.primary500 }]}>Actif</Text>
+                      <Text style={[Fonts.p3Bold, { color: Colors.primary500 }]}>
+                        {t('matchCenterScreen.squadSwitch.active', 'Actif')}
+                      </Text>
                     </View>
                   )}
                 </View>
@@ -3475,10 +3850,10 @@ function MatchCenterScreen() {
   if (loadError && !mySquad && viewState !== 'no_squad') {
     return (
       <LeagueStateView
-        actionLabel="Réessayer"
+        actionLabel={t('matchCenterScreen.states.retry', 'Réessayer')}
         description={loadError}
         onAction={() => loadMatchCenter()}
-        title="Match Center indisponible"
+        title={t('matchCenterScreen.states.unavailable', 'Match Center indisponible')}
       />
     );
   }
@@ -3486,9 +3861,12 @@ function MatchCenterScreen() {
   if (viewState === 'loading' && !mySquad) {
     return (
       <LeagueStateView
-        description="Synchronisation de ta squad et des opportunités de match en cours."
+        description={t(
+          'matchCenterScreen.states.loadingDescription',
+          'Synchronisation de ta squad et des opportunités de match en cours.',
+        )}
         isLoading
-        title="Chargement du Match Center"
+        title={t('matchCenterScreen.states.loadingTitle', 'Chargement du Match Center')}
       />
     );
   }
@@ -3546,7 +3924,7 @@ function MatchCenterScreen() {
             const chatId = getEntityDocumentId(currentMatch.chat);
             navigation.navigate(RouteNames.Conversation, {
               chatId,
-              subTitle: 'Match de Ligue',
+              subTitle: t('matchCenterScreen.chatSubtitle', 'Match de Ligue'),
               title: opponentChatTitle,
             });
           }
