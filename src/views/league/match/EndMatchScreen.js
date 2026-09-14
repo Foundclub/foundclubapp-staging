@@ -1,6 +1,8 @@
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import i18next from 'i18next';
 import { useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Alert,
   Image,
@@ -147,10 +149,19 @@ const wasScorePersistedDespiteError = (
   return hasMatchingFinalScore || hasMatchingSubmission || hasStatusProgression;
 };
 
-const DISPUTE_TYPES = [
-  { key: 'score_mismatch', label: 'Score contesté' },
-  { key: 'no_show', label: 'No-show' },
-  { key: 'incident', label: 'Incident terrain' },
+const disputeTypes = () => [
+  {
+    key: 'score_mismatch',
+    label: i18next.t('endMatchScreen.disputeTypes.scoreMismatch', 'Score contesté'),
+  },
+  {
+    key: 'no_show',
+    label: 'No-show',
+  },
+  {
+    key: 'incident',
+    label: i18next.t('endMatchScreen.disputeTypes.incident', 'Incident terrain'),
+  },
 ];
 
 const hasSubmissionPayload = (submission) => Boolean(
@@ -200,6 +211,7 @@ const buildProofPayloadFromAsset = (asset, source) => {
  */
 function EndMatchScreen() {
   const { Colors, Fonts } = useTheme();
+  const { t } = useTranslation();
   const navigation = /** @type {any} */ (useNavigation());
   const route = /** @type {any} */ (useRoute());
   const queryClient = useQueryClient();
@@ -307,20 +319,30 @@ function EndMatchScreen() {
     const runtime = getLeagueRuntimeFromError(errorLike) || leaguePlatformRuntime;
     const scope = restrictionCode ? getLeagueRestrictionScope(errorLike) : 'matchmaking';
     const title = scope === 'platform'
-      ? 'Found Club League fermée'
-      : 'Recherche de match fermée';
+      ? t('endMatchScreen.closed.platform', 'Found Club League fermée')
+      : t('endMatchScreen.closed.matchmaking', 'Recherche de match fermée');
 
     Alert.alert(title, getLeagueClosedMessage(runtime, scope));
   };
   const isScoreSubmissionAllowed = Boolean(scoreFlow.canSubmit);
   const scoreSubmissionBlockReason = (() => {
     if (scoreFlow.state === 'locked_no_venue') {
-      return "Le score est verrouillé tant qu'un terrain n'est pas confirmé.";
+      return t(
+        'endMatchScreen.blockReason.noVenue',
+        "Le score est verrouillé tant qu'un terrain n'est pas confirmé.",
+      );
     }
     if (scoreFlow.state === 'locked_before_start') {
-      return "Le score sera disponible à l'heure de début du match + 1 minute.";
+      return t(
+        'endMatchScreen.blockReason.beforeStart',
+        "Le score sera disponible à l'heure de début du match + 1 minute.",
+      );
     }
-    return "Le score ne peut pas être saisi à ce stade. Vérifie que l'heure de début du match est dépassée.";
+    return t(
+      'endMatchScreen.blockReason.default',
+      // eslint-disable-next-line max-len
+      "Le score ne peut pas être saisi à ce stade. Vérifie que l'heure de début du match est dépassée.",
+    );
   })();
   let ownSubmission = null;
   let opponentSubmission = null;
@@ -348,15 +370,18 @@ function EndMatchScreen() {
   const leagueAccentSurface = 'rgba(1, 179, 244, 0.12)';
   const leagueGoldSurface = 'rgba(255, 215, 0, 0.08)';
   let captainSideLabel = 'SQUAD';
-  if (scoreTeamSide === 'a') captainSideLabel = 'DOMICILE';
-  if (scoreTeamSide === 'b') captainSideLabel = 'EXTERIEUR';
+  if (scoreTeamSide === 'a') captainSideLabel = t('endMatchScreen.side.home', 'DOMICILE');
+  if (scoreTeamSide === 'b') captainSideLabel = t('endMatchScreen.side.away', 'EXTERIEUR');
   const heroStatusMeta = useMemo(() => {
     if (!isScoreSubmissionAllowed) {
       return {
         accentColor: Colors.warning500,
         helper:
-          'Le score sera saisissable une fois la fenêtre de validation ouverte.',
-        label: 'Fenêtre fermée',
+          t(
+            'endMatchScreen.hero.closed.helper',
+            'Le score sera saisissable une fois la fenêtre de validation ouverte.',
+          ),
+        label: t('endMatchScreen.hero.closed.label', 'Fenêtre fermée'),
       };
     }
 
@@ -364,8 +389,11 @@ function EndMatchScreen() {
       return {
         accentColor: Colors.gold500,
         helper:
-          'Le capitaine adverse a déjà proposé un score. Confirme-le ou ouvre un litige.',
-        label: 'Score adverse reçu',
+          t(
+            'endMatchScreen.hero.opponent.helper',
+            'Le capitaine adverse a déjà proposé un score. Confirme-le ou ouvre un litige.',
+          ),
+        label: t('endMatchScreen.hero.opponent.label', 'Score adverse reçu'),
       };
     }
 
@@ -373,16 +401,22 @@ function EndMatchScreen() {
       return {
         accentColor: Colors.success500,
         helper:
-          'Ton dernière saisie est enregistrée. Tu peux encore la relire.',
-        label: 'Saisie en cours',
+          t(
+            'endMatchScreen.hero.own.helper',
+            'Ton dernière saisie est enregistrée. Tu peux encore la relire.',
+          ),
+        label: t('endMatchScreen.hero.own.label', 'Saisie en cours'),
       };
     }
 
     return {
       accentColor: Colors.primary500,
       helper:
-        'Renseigne le score final puis valide ou ouvre un litige si nécessaire.',
-      label: 'Score à saisir',
+        t(
+          'endMatchScreen.hero.todo.helper',
+          'Renseigne le score final puis valide ou ouvre un litige si nécessaire.',
+        ),
+      label: t('endMatchScreen.hero.todo.label', 'Score à saisir'),
     };
   }, [
     Colors.gold500,
@@ -392,6 +426,7 @@ function EndMatchScreen() {
     hasOpponentSubmission,
     hasOwnSubmission,
     isScoreSubmissionAllowed,
+    t,
   ]);
 
   useEffect(() => {
@@ -436,7 +471,7 @@ function EndMatchScreen() {
 
     const myTeam = getMyTeamFromMatch();
     if (!myTeam) {
-      throw new Error("Impossible d'identifier ta squad.");
+      throw new Error(t('endMatchScreen.relaunch.noSquad', "Impossible d'identifier ta squad."));
     }
 
     const teamId = getEntityDocumentId(myTeam);
@@ -447,7 +482,10 @@ function EndMatchScreen() {
     const location = homeBaseLocation || userLocation;
     if (!location) {
       throw new Error(
-        'Aucune localisation validée trouvée. Configure la base de ta squad.',
+        t(
+          'endMatchScreen.relaunch.noLocation',
+          'Aucune localisation validée trouvée. Configure la base de ta squad.',
+        ),
       );
     }
     const homeBase = myTeam?.home_base && typeof myTeam.home_base === 'object'
@@ -460,7 +498,10 @@ function EndMatchScreen() {
       .filter((id) => typeof id === 'string' && id.length > 0);
 
     if (selectedSlotIds.length === 0) {
-      throw new Error('Aucun créneau disponible pour relancer une recherche.');
+      throw new Error(t(
+        'endMatchScreen.relaunch.noSlot',
+        'Aucun créneau disponible pour relancer une recherche.',
+      ));
     }
 
     await MatchmakingService.triggerSearch(teamId, selectedSlotIds, {
@@ -586,20 +627,28 @@ function EndMatchScreen() {
             await showValidatedRecap(refreshedMatch);
           } else if (recoveredStatus === 'pending_validation') {
             Alert.alert(
-              'Score enregistré',
-              'Ton score est en attente de validation par le capitaine adverse.',
+              t('endMatchScreen.alerts.scoreSaved', 'Score enregistré'),
+              t(
+                'endMatchScreen.alerts.awaitingOpponent',
+                'Ton score est en attente de validation par le capitaine adverse.',
+              ),
               [{ onPress: () => refetchMatch(), text: 'OK' }],
             );
           } else if (recoveredStatus === 'disputed') {
             Alert.alert(
-              'Litige ouvert',
-              'Le score a été enregistré mais est passé en litige.',
+              t('endMatchScreen.alerts.disputeOpened', 'Litige ouvert'),
+              t(
+                'endMatchScreen.alerts.savedButDisputed',
+                'Le score a été enregistré mais est passé en litige.',
+              ),
               [{ onPress: () => refetchMatch(), text: 'OK' }],
             );
           } else {
-            Alert.alert('Score enregistré', 'Le score a été enregistré.', [
-              { onPress: () => refetchMatch(), text: 'OK' },
-            ]);
+            Alert.alert(
+              t('endMatchScreen.alerts.scoreSaved', 'Score enregistré'),
+              t('endMatchScreen.alerts.saved', 'Le score a été enregistré.'),
+              [{ onPress: () => refetchMatch(), text: 'OK' }],
+            );
           }
           return;
         }
@@ -610,8 +659,11 @@ function EndMatchScreen() {
       const apiError = /** @type {any} */ (error);
       const message = typeof error === 'string'
         ? error
-        : apiError?.message || "Impossible d'envoyer le score.";
-      Alert.alert('Erreur', message);
+        : apiError?.message || t(
+          'endMatchScreen.alerts.sendError',
+          "Impossible d'envoyer le score.",
+        );
+      Alert.alert(t('endMatchScreen.alerts.errorTitle', 'Erreur'), message);
     },
     onSuccess: async (response) => {
       queryClient.invalidateQueries({ queryKey: ['league-matches'] });
@@ -624,8 +676,11 @@ function EndMatchScreen() {
 
       if (finalStatus === 'pending_validation') {
         Alert.alert(
-          'Score enregistré',
-          'Ton score est en attente de validation par le capitaine adverse.',
+          t('endMatchScreen.alerts.scoreSaved', 'Score enregistré'),
+          t(
+            'endMatchScreen.alerts.awaitingOpponent',
+            'Ton score est en attente de validation par le capitaine adverse.',
+          ),
           [{ onPress: () => refetchMatch(), text: 'OK' }],
         );
         return;
@@ -633,23 +688,40 @@ function EndMatchScreen() {
 
       if (finalStatus === 'disputed') {
         Alert.alert(
-          'Litige ouvert',
-          'Le score est maintenant en litige. Tu pourras confirmer ou fournir des détails si besoin.',
+          t('endMatchScreen.alerts.disputeOpened', 'Litige ouvert'),
+          t(
+            'endMatchScreen.alerts.nowDisputed',
+            // eslint-disable-next-line max-len
+            'Le score est maintenant en litige. Tu pourras confirmer ou fournir des détails si besoin.',
+          ),
           [{ onPress: () => refetchMatch(), text: 'OK' }],
         );
         return;
       }
 
-      Alert.alert('Score enregistré', 'Le score a bien été envoyé.', [
-        { onPress: () => refetchMatch(), text: 'OK' },
-      ]);
+      Alert.alert(
+
+        t('endMatchScreen.alerts.scoreSaved', 'Score enregistré'),
+
+        t('endMatchScreen.alerts.sent', 'Le score a bien été envoyé.'),
+
+        [{ onPress: () => refetchMatch(), text: 'OK' }],
+
+      );
     },
   });
 
   const isNoShowDispute = dispute && disputeType === 'no_show';
-  let captureProofButtonTitle = 'Prendre une photo';
-  if (isNoShowDispute) captureProofButtonTitle = 'Prendre une photo (caméra)';
-  if (proof) captureProofButtonTitle = 'Preuve ajoutée';
+  let captureProofButtonTitle = t('endMatchScreen.proof.takePhoto', 'Prendre une photo');
+  if (isNoShowDispute) {
+    captureProofButtonTitle = t(
+      'endMatchScreen.proof.takePhotoCamera',
+      'Prendre une photo (caméra)',
+    );
+  }
+  if (proof) {
+    captureProofButtonTitle = t('endMatchScreen.proof.added', 'Preuve ajoutée');
+  }
 
   const handlePickProofFromGallery = async () => {
     /** @type {import('react-native-image-picker').ImageLibraryOptions} */
@@ -664,7 +736,10 @@ function EndMatchScreen() {
         console.log('User cancelled image picker');
       } else if (response.errorCode) {
         console.log('ImagePicker Error: ', response.errorMessage);
-        Alert.alert('Erreur', 'Impossible de sélectionner une image');
+        Alert.alert(
+          t('endMatchScreen.alerts.errorTitle', 'Erreur'),
+          t('endMatchScreen.proof.pickError', 'Impossible de sélectionner une image'),
+        );
       } else if (response.assets && response.assets.length > 0) {
         const asset = response.assets[0];
         const nextProof = buildProofPayloadFromAsset(asset, 'gallery');
@@ -687,7 +762,10 @@ function EndMatchScreen() {
         console.log('User cancelled camera');
       } else if (response.errorCode) {
         console.log('Camera Error: ', response.errorMessage);
-        Alert.alert('Erreur', 'Impossible de prendre la photo');
+        Alert.alert(
+          t('endMatchScreen.alerts.errorTitle', 'Erreur'),
+          t('endMatchScreen.proof.cameraError', 'Impossible de prendre la photo'),
+        );
       } else if (response.assets && response.assets.length > 0) {
         const asset = response.assets[0];
         const nextProof = buildProofPayloadFromAsset(asset, 'camera');
@@ -721,22 +799,34 @@ function EndMatchScreen() {
 
   const handleSubmit = () => {
     if (!isScoreSubmissionAllowed) {
-      Alert.alert('Action impossible', scoreSubmissionBlockReason);
+      Alert.alert(t(
+        'endMatchScreen.alerts.actionImpossible',
+        'Action impossible',
+      ), scoreSubmissionBlockReason);
       return;
     }
     const nextPadelScore = isPadelMatch ? buildPadelScorePayload(padelSets) : null;
     if (isPadelMatch && nextPadelScore?.error) {
-      Alert.alert('Score padel invalide', nextPadelScore.error);
+      Alert.alert(t(
+        'endMatchScreen.alerts.invalidPadel',
+        'Score padel invalide',
+      ), nextPadelScore.error);
       return;
     }
     if (!isPadelMatch && (!scoreA || !scoreB)) {
-      Alert.alert('Erreur', 'Merci de saisir les scores.');
+      Alert.alert(
+        t('endMatchScreen.alerts.errorTitle', 'Erreur'),
+        t('endMatchScreen.alerts.enterScores', 'Merci de saisir les scores.'),
+      );
       return;
     }
     if (isNoShowDispute && proof?.source !== 'camera') {
       Alert.alert(
-        'Erreur',
-        'Pour un no-show, la preuve doit venir de la caméra.',
+        t('endMatchScreen.alerts.errorTitle', 'Erreur'),
+        t(
+          'endMatchScreen.alerts.noShowCamera',
+          'Pour un no-show, la preuve doit venir de la caméra.',
+        ),
       );
       return;
     }
@@ -754,7 +844,10 @@ function EndMatchScreen() {
 
   const handleConfirmOpponentScore = () => {
     if (opponentScoreA === null || opponentScoreB === null) {
-      Alert.alert('Information', 'Le score adverse est incomplet.');
+      Alert.alert(
+        'Information',
+        t('endMatchScreen.alerts.opponentIncomplete', 'Le score adverse est incomplet.'),
+      );
       return;
     }
     submitMutation.mutate({
@@ -785,9 +878,13 @@ function EndMatchScreen() {
   };
 
   const submitButtonTitle = (() => {
-    if (submitMutation.isPending) return 'Envoi en cours...';
-    if (hasOwnSubmission) return 'Corriger le score';
-    return 'Valider le score';
+    if (submitMutation.isPending) {
+      return t('endMatchScreen.submit.sending', 'Envoi en cours...');
+    }
+    if (hasOwnSubmission) {
+      return t('endMatchScreen.submit.correct', 'Corriger le score');
+    }
+    return t('endMatchScreen.submit.validate', 'Valider le score');
   })();
 
   const handleScoreChange = (/** @type {(value: string) => void} */ setter) => (/** @type {string} */ value) => {
@@ -815,8 +912,11 @@ function EndMatchScreen() {
   if (!matchId) {
     return (
       <LeagueStateView
-        description="Aucun identifiant de match n'a été fourni pour ouvrir cette saisie de score."
-        title="Match introuvable"
+        description={t(
+          'endMatchScreen.states.missingId',
+          "Aucun identifiant de match n'a été fourni pour ouvrir cette saisie de score.",
+        )}
+        title={t('endMatchScreen.states.notFound', 'Match introuvable')}
       />
     );
   }
@@ -824,9 +924,12 @@ function EndMatchScreen() {
   if (isLoading) {
     return (
       <LeagueStateView
-        description="Nous chargeons les données du match avant la saisie du score."
+        description={t(
+          'endMatchScreen.states.loadingDescription',
+          'Nous chargeons les données du match avant la saisie du score.',
+        )}
         isLoading
-        title="Chargement du match"
+        title={t('endMatchScreen.states.loadingTitle', 'Chargement du match')}
       />
     );
   }
@@ -834,10 +937,13 @@ function EndMatchScreen() {
   if (isMatchError) {
     return (
       <LeagueStateView
-        actionLabel="Réessayer"
-        description={matchError?.message || 'Impossible de charger ce match League.'}
+        actionLabel={t('endMatchScreen.states.retry', 'Réessayer')}
+        description={matchError?.message || t(
+          'endMatchScreen.states.errorDescription',
+          'Impossible de charger ce match League.',
+        )}
         onAction={() => refetchMatch()}
-        title="Chargement impossible"
+        title={t('endMatchScreen.states.errorTitle', 'Chargement impossible')}
       />
     );
   }
@@ -845,8 +951,11 @@ function EndMatchScreen() {
   if (!match) {
     return (
       <LeagueStateView
-        description="Le match demandé est introuvable ou n'est plus accessible."
-        title="Match introuvable"
+        description={t(
+          'endMatchScreen.states.unavailable',
+          "Le match demandé est introuvable ou n'est plus accessible.",
+        )}
+        title={t('endMatchScreen.states.notFound', 'Match introuvable')}
       />
     );
   }
@@ -872,7 +981,7 @@ function EndMatchScreen() {
             />
           </View>
           <Text style={[Fonts.h3, styles.headerTitle, { color: Colors.gold500 }]}>
-            Saisir le score
+            {t('endMatchScreen.headerTitle', 'Saisir le score')}
           </Text>
           <View style={styles.headerSide} />
         </View>
@@ -947,7 +1056,7 @@ function EndMatchScreen() {
                     { color: Colors.neutral100 },
                   ]}
                 >
-                  {teamA?.name || 'Équipe A'}
+                  {teamA?.name || t('endMatchScreen.teamAFallback', 'Équipe A')}
                 </Text>
               </View>
 
@@ -988,7 +1097,7 @@ function EndMatchScreen() {
                     { color: Colors.neutral100 },
                   ]}
                 >
-                  {teamB?.name || 'Équipe B'}
+                  {teamB?.name || t('endMatchScreen.teamBFallback', 'Équipe B')}
                 </Text>
               </View>
             </View>
@@ -1041,20 +1150,27 @@ function EndMatchScreen() {
                   ]}
                 />
                 <Text style={[Fonts.p3Bold, { color: Colors.success500 }]}>
-                  Score déjà saisi
+                  {t('endMatchScreen.own.title', 'Score déjà saisi')}
                 </Text>
               </View>
               <Text style={[Fonts.h3, { color: Colors.neutral100, marginTop: 4 }]}>
                 {ownScoreLabel}
               </Text>
               <Text style={[Fonts.p3, { color: leagueCardTextColor, marginTop: 6 }]}>
-                En attente de validation adverse. Sans réponse, ce score sera validé automatiquement dans
+                {t(
+                  'endMatchScreen.own.pending',
+                  // eslint-disable-next-line max-len
+                  'En attente de validation adverse. Sans réponse, ce score sera validé automatiquement dans',
+                )}
                 {' '}
                 {scoreFlowCountdown}
                 .
               </Text>
               <Text style={[Fonts.p4, { color: Colors.neutral400, marginTop: 8 }]}>
-                Tu peux encore corriger ta saisie tant que le match n&apos;est pas validé.
+                {t(
+                  'endMatchScreen.own.canCorrect',
+                  "Tu peux encore corriger ta saisie tant que le match n'est pas validé.",
+                )}
               </Text>
             </LeagueCard>
           ) : null}
@@ -1078,7 +1194,7 @@ function EndMatchScreen() {
                   ]}
                 />
                 <Text style={[Fonts.p3Bold, { color: Colors.gold500 }]}>
-                  Score saisi par le capitaine adverse
+                  {t('endMatchScreen.opponent.title', 'Score saisi par le capitaine adverse')}
                 </Text>
               </View>
               <Text
@@ -1089,7 +1205,10 @@ function EndMatchScreen() {
               <Text
                 style={[Fonts.p3, { color: leagueCardTextColor, marginTop: 6 }]}
               >
-                Confirme ce score si tu es d&apos;accord, sinon ouvre un litige.
+                {t(
+                  'endMatchScreen.opponent.hint',
+                  "Confirme ce score si tu es d'accord, sinon ouvre un litige.",
+                )}
               </Text>
               <View style={styles.opponentScoreActions}>
                 <Button
@@ -1098,7 +1217,7 @@ function EndMatchScreen() {
                   iconPosition="before"
                   onPress={handleConfirmOpponentScore}
                   style={{ width: '100%' }}
-                  title="Confirmer le score"
+                  title={t('endMatchScreen.opponent.confirm', 'Confirmer le score')}
                   variant="Primary"
                 />
                 <Button
@@ -1108,7 +1227,7 @@ function EndMatchScreen() {
                   onPress={handleDisputeOpponentScore}
                   style={{ borderColor: Colors.error500, width: '100%' }}
                   textStyle={{ color: Colors.error500 }}
-                  title="Contester le score"
+                  title={t('endMatchScreen.opponent.dispute', 'Contester le score')}
                   variant="Secondary"
                 />
               </View>
@@ -1127,13 +1246,15 @@ function EndMatchScreen() {
               ]}
             >
               <Text style={[Fonts.p3Bold, { color: Colors.primary500 }]}>
-                En attente de ta décision
+                {t('endMatchScreen.guided.title', 'En attente de ta décision')}
               </Text>
               <Text
                 style={[Fonts.p3, { color: leagueCardTextColor, marginTop: 6 }]}
               >
-                Utilise les boutons ci-dessus pour confirmer ou contester le
-                score adverse.
+                {t(
+                  'endMatchScreen.guided.hint',
+                  'Utilise les boutons ci-dessus pour confirmer ou contester le score adverse.',
+                )}
               </Text>
             </LeagueCard>
           ) : null}
@@ -1148,13 +1269,16 @@ function EndMatchScreen() {
                   ]}
                 />
                 <Text style={[Fonts.p3Bold, { color: Colors.primary500 }]}>
-                  Saisie du score final
+                  {t('endMatchScreen.manual.title', 'Saisie du score final')}
                 </Text>
               </View>
               {isPadelMatch ? (
                 <View style={styles.padelSetsContainer}>
                   <Text style={[Fonts.p3, { color: leagueCardTextColor }]}>
-                    Saisis les jeux de chaque set. Le vainqueur doit gagner 2 sets.
+                    {t(
+                      'endMatchScreen.manual.padelHint',
+                      'Saisis les jeux de chaque set. Le vainqueur doit gagner 2 sets.',
+                    )}
                   </Text>
                   {padelSets.map((set, index) => (
                     <View
@@ -1170,7 +1294,11 @@ function EndMatchScreen() {
                     >
                       <View style={styles.padelSetHeader}>
                         <Text style={[Fonts.p2Bold, { color: Colors.neutral100 }]}>
-                          {index === 2 ? 'Set décisif' : `Set ${index + 1}`}
+                          {index === 2 ? t('endMatchScreen.manual.decidingSet', 'Set décisif') : t(
+                            'endMatchScreen.manual.setNumber',
+                            'Set {{number}}',
+                            { number: index + 1 },
+                          )}
                         </Text>
                         <TouchableOpacity
                           onPress={() => togglePadelSuperTieBreak(index)}
@@ -1195,7 +1323,7 @@ function EndMatchScreen() {
                       <View style={styles.padelSetScoreRow}>
                         <View style={styles.padelSetTeamInput}>
                           <Text numberOfLines={1} style={[Fonts.p4Bold, { color: Colors.neutral300 }]}>
-                            {teamA?.name || 'Équipe A'}
+                            {teamA?.name || t('endMatchScreen.teamAFallback', 'Équipe A')}
                           </Text>
                           <TextInput
                             keyboardType="number-pad"
@@ -1216,7 +1344,7 @@ function EndMatchScreen() {
                         <Text style={[Fonts.h3, { color: Colors.gold500 }]}>-</Text>
                         <View style={styles.padelSetTeamInput}>
                           <Text numberOfLines={1} style={[Fonts.p4Bold, { color: Colors.neutral300 }]}>
-                            {teamB?.name || 'Équipe B'}
+                            {teamB?.name || t('endMatchScreen.teamBFallback', 'Équipe B')}
                           </Text>
                           <TextInput
                             keyboardType="number-pad"
@@ -1241,14 +1369,14 @@ function EndMatchScreen() {
                     <Button
                       onPress={addPadelDecisionSet}
                       style={{ borderColor: Colors.primary500 }}
-                      title="Ajouter un set décisif"
+                      title={t('endMatchScreen.manual.addDecidingSet', 'Ajouter un set décisif')}
                       variant="Secondary"
                     />
                   ) : (
                     <Button
                       onPress={removePadelDecisionSet}
                       style={{ borderColor: Colors.neutral500 }}
-                      title="Retirer le set décisif"
+                      title={t('endMatchScreen.manual.removeDecidingSet', 'Retirer le set décisif')}
                       variant="Secondary"
                     />
                   )}
@@ -1411,12 +1539,12 @@ function EndMatchScreen() {
                   ]}
                 />
                 <Text style={[Fonts.p3Bold, { color: Colors.error500 }]}>
-                  Gestion du litige
+                  {t('endMatchScreen.dispute.title', 'Gestion du litige')}
                 </Text>
               </View>
               <View style={styles.headerRow}>
                 <Text style={[Fonts.h4, { color: Colors.neutral100 }]}>
-                  Y a-t-il un litige ?
+                  {t('endMatchScreen.dispute.question', 'Y a-t-il un litige ?')}
                 </Text>
                 <Switch
                   onValueChange={setDispute}
@@ -1428,8 +1556,11 @@ function EndMatchScreen() {
               <Text
                 style={[Fonts.p3, { color: leagueCardTextColor, marginTop: 6 }]}
               >
-                Active en cas de désaccord. Preuve optionnelle sauf no-show
-                (caméra obligatoire).
+                {t(
+                  'endMatchScreen.dispute.hint',
+                  // eslint-disable-next-line max-len
+                  'Active en cas de désaccord. Preuve optionnelle sauf no-show (caméra obligatoire).',
+                )}
               </Text>
 
               {dispute ? (
@@ -1441,10 +1572,10 @@ function EndMatchScreen() {
                         { color: leagueCardTextColor, marginBottom: 8 },
                       ]}
                     >
-                      Type de litige
+                      {t('endMatchScreen.dispute.type', 'Type de litige')}
                     </Text>
                     <View style={styles.chipsRow}>
-                      {DISPUTE_TYPES.map((item) => (
+                      {disputeTypes().map((item) => (
                         <TouchableOpacity
                           key={item.key}
                           onPress={() => setDisputeType(item.key)}
@@ -1487,13 +1618,16 @@ function EndMatchScreen() {
                         { color: leagueCardTextColor, marginBottom: 8 },
                       ]}
                     >
-                      Commentaire (optionnel)
+                      {t('endMatchScreen.dispute.comment', 'Commentaire (optionnel)')}
                     </Text>
                     <TextInput
                       maxLength={500}
                       multiline
                       onChangeText={setDisputeComment}
-                      placeholder="Explique brièvement le problème"
+                      placeholder={t(
+                        'endMatchScreen.dispute.commentPlaceholder',
+                        'Explique brièvement le problème',
+                      )}
                       placeholderTextColor={Colors.neutral500}
                       style={[
                         styles.commentInput,
@@ -1524,14 +1658,19 @@ function EndMatchScreen() {
                       iconPosition="before"
                       onPress={handlePickProofFromGallery}
                       style={{ borderColor: Colors.neutral500 }}
-                      title="Importer depuis la galerie"
+                      title={t(
+                        'endMatchScreen.dispute.importGallery',
+                        'Importer depuis la galerie',
+                      )}
                       variant="Secondary"
                     />
                   ) : null}
                   {isNoShowDispute ? (
                     <Text style={[Fonts.p3, { color: leagueCardTextColor }]}>
-                      Pour un no-show, seule une preuve prise en direct est
-                      acceptée.
+                      {t(
+                        'endMatchScreen.dispute.noShowLive',
+                        'Pour un no-show, seule une preuve prise en direct est acceptée.',
+                      )}
                     </Text>
                   ) : null}
                   {proof ? (
@@ -1575,13 +1714,25 @@ function EndMatchScreen() {
             try {
               await relaunchSearchNow();
               setFinalPosterPayload(null);
-              Alert.alert('Recherche relancée', "La recherche d'un nouvel adversaire a été lancée.");
+              Alert.alert(
+                t('endMatchScreen.relaunch.successTitle', 'Recherche relancée'),
+                t(
+                  'endMatchScreen.relaunch.successBody',
+                  "La recherche d'un nouvel adversaire a été lancée.",
+                ),
+              );
             } catch (error) {
               const apiError = /** @type {any} */ (error);
               if (isLeaguePlatformRestrictedError(apiError)) {
                 showLeagueRestrictionAlert(apiError);
               } else {
-                Alert.alert('Relance impossible', apiError?.message || 'Relance impossible.');
+                Alert.alert(
+                  t('endMatchScreen.relaunch.errorTitle', 'Relance impossible'),
+                  apiError?.message || t(
+                    'endMatchScreen.relaunch.errorFallback',
+                    'Relance impossible.',
+                  ),
+                );
               }
             }
           }}
