@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Platform } from 'react-native';
 
 import { getUserRoleKey } from '@/domains/auth/authUseCases';
@@ -35,6 +36,7 @@ const navigateWebTo = (targetPath) => {
  * @returns {import('react').ReactElement}
  */
 function LeaguePlatformGate({ children }) {
+  const { t } = useTranslation();
   const [{ auth }] = useAppContext();
   const { isGold, setMode } = useAppMode();
   const currentWebPath = getCurrentWebPath();
@@ -92,9 +94,12 @@ function LeaguePlatformGate({ children }) {
   if (shouldShowLoadingState) {
     return (
       <AdminStateView
-        description="Nous vérifions l'état de Found Club League."
+        description={t(
+          'leaguePlatformGate.loading.description',
+          "Nous vérifions l'état de Found Club League.",
+        )}
         isLoading
-        title="Préparation de la plateforme"
+        title={t('leaguePlatformGate.loading.title', 'Préparation de la plateforme')}
       />
     );
   }
@@ -102,10 +107,13 @@ function LeaguePlatformGate({ children }) {
   if (gateState === 'login-required') {
     return (
       <AdminStateView
-        actionLabel="Se connecter"
-        description="Cette zone Super Admin est réservée aux comptes autorisés."
+        actionLabel={t('leaguePlatformGate.loginRequired.action', 'Se connecter')}
+        description={t(
+          'leaguePlatformGate.loginRequired.description',
+          'Cette zone Super Admin est réservée aux comptes autorisés.',
+        )}
         onAction={handleGoToLogin}
-        title="Connexion requise"
+        title={t('leaguePlatformGate.loginRequired.title', 'Connexion requise')}
       />
     );
   }
@@ -113,10 +121,13 @@ function LeaguePlatformGate({ children }) {
   if (gateState === 'access-denied') {
     return (
       <AdminStateView
-        actionLabel="Retour à l'accueil"
-        description="Ton compte n'a pas les droits pour accéder à l'espace Super Admin League."
+        actionLabel={t('leaguePlatformGate.accessDenied.action', "Retour à l'accueil")}
+        description={t(
+          'leaguePlatformGate.accessDenied.description',
+          "Ton compte n'a pas les droits pour accéder à l'espace Super Admin League.",
+        )}
         onAction={handleGoHome}
-        title="Accès refusé"
+        title={t('leaguePlatformGate.accessDenied.title', 'Accès refusé')}
       />
     );
   }

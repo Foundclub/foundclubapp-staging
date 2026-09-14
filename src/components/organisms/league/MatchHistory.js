@@ -1,7 +1,9 @@
+import { useTranslation } from 'react-i18next';
 import {
   StyleSheet, Text, TouchableOpacity, View,
 } from 'react-native';
 
+import localeDesFormats from '@/theme/strings/localeDesFormats';
 import useTheme from '@/theme/themeContext';
 
 import LeagueCard from '@/components/atoms/league/LeagueCard';
@@ -17,6 +19,7 @@ import SectionHeader from '@/components/atoms/SectionHeader/SectionHeader';
  */
 function MatchHistory({ matches = [], onMatchPress, onViewAll }) {
   const { Colors, Fonts } = useTheme();
+  const { t } = useTranslation();
   const leagueSurface = {
     backgroundColor: 'rgba(10, 28, 43, 0.82)',
     borderColor: 'rgba(1, 179, 244, 0.22)',
@@ -33,7 +36,7 @@ function MatchHistory({ matches = [], onMatchPress, onViewAll }) {
 
   const formatDate = (dateString) => {
     const date = new Date(dateString);
-    return date.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
+    return date.toLocaleDateString(localeDesFormats(), { day: 'numeric', month: 'short' });
   };
 
   const getEloChange = (match) => {
@@ -45,13 +48,16 @@ function MatchHistory({ matches = [], onMatchPress, onViewAll }) {
   if (!matches || matches.length === 0) {
     return (
       <View style={{ marginBottom: 24 }}>
-        <SectionHeader subtitle="HISTORIQUE" title="DERNIERS MATCHS" />
+        <SectionHeader
+          subtitle={t('matchHistory.subtitle', 'HISTORIQUE')}
+          title={t('matchHistory.title', 'DERNIERS MATCHS')}
+        />
         <LeagueCard style={{ alignItems: 'center', paddingVertical: 32, ...leagueSurface }}>
           <Text style={{ color: Colors.gold500, fontSize: 40, marginBottom: 12 }}>-</Text>
           <Text style={[Fonts.p2, { color: Colors.neutral300, marginTop: 8, textAlign: 'center' }]}>
-            Aucun match joue pour le moment.
+            {t('matchHistory.emptyTitle', 'Aucun match joue pour le moment.')}
             {'\n'}
-            Lance une recherche !
+            {t('matchHistory.emptyHint', 'Lance une recherche !')}
           </Text>
         </LeagueCard>
       </View>
@@ -60,7 +66,10 @@ function MatchHistory({ matches = [], onMatchPress, onViewAll }) {
 
   return (
     <View style={{ marginBottom: 24 }}>
-      <SectionHeader subtitle="HISTORIQUE" title="DERNIERS MATCHS" />
+      <SectionHeader
+        subtitle={t('matchHistory.subtitle', 'HISTORIQUE')}
+        title={t('matchHistory.title', 'DERNIERS MATCHS')}
+      />
 
       <LeagueCard style={{ overflow: 'hidden', padding: 0, ...leagueSurface }}>
         {matches.slice(0, 5).map((match, index) => {
@@ -86,7 +95,7 @@ function MatchHistory({ matches = [], onMatchPress, onViewAll }) {
                 <Text numberOfLines={1} style={[Fonts.p1Bold, { color: Colors.neutral00 }]}>
                   vs
                   {' '}
-                  {match.opponent?.name || 'Adversaire'}
+                  {match.opponent?.name || t('matchHistory.opponentFallback', 'Adversaire')}
                 </Text>
                 <Text style={[Fonts.p3, { color: Colors.gold500, marginTop: 2 }]}>
                   {formatDate(match.date)}
@@ -116,7 +125,7 @@ function MatchHistory({ matches = [], onMatchPress, onViewAll }) {
             style={[styles.viewAllButton, { backgroundColor: 'rgba(255,255,255,0.04)' }]}
           >
             <Text style={[Fonts.p3Bold, { color: Colors.primary500 }]}>
-              VOIR TOUT HISTORIQUE (
+              {t('matchHistory.viewAll', 'VOIR TOUT HISTORIQUE (')}
               <Text style={{ color: Colors.gold500 }}>{matches.length}</Text>
               )
             </Text>

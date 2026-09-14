@@ -1,9 +1,11 @@
+import i18next from 'i18next';
 import {
   useCallback,
   useEffect,
   useMemo,
   useState,
 } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Text, View } from 'react-native';
 
 import useTheme from '@/theme/themeContext';
@@ -19,52 +21,123 @@ import {
 } from '@/constants/leagueLegalAcceptance';
 
 /**
- * @type {Record<string, { action: string, description: string, title: string }>}
+ * Les textes de la fenêtre, par portée : une fonction, pour que la langue soit lue à l'affichage.
+ * @returns {Record<string, { action: string, description: string, title: string }>}
  */
-const SCOPE_CONTENT = {
+const scopeContent = () => ({
   [LEAGUE_LEGAL_SCOPES.MATCH_CAPTAIN_ACCEPTANCE]: {
-    action: 'Confirmer le match',
-    description: 'Avant de confirmer ce match League, confirme le cadre de responsabilité de ton équipe et du lieu choisi.',
-    title: 'Confirmation League',
+    action: i18next.t(
+      'leagueLegalAcceptanceModal.scopes.matchCaptainAcceptance.action',
+      'Confirmer le match',
+    ),
+    description: i18next.t(
+      'leagueLegalAcceptanceModal.scopes.matchCaptainAcceptance.description',
+      // eslint-disable-next-line max-len
+      'Avant de confirmer ce match League, confirme le cadre de responsabilité de ton équipe et du lieu choisi.',
+    ),
+    title: i18next.t(
+      'leagueLegalAcceptanceModal.scopes.matchCaptainAcceptance.title',
+      'Confirmation League',
+    ),
   },
   [LEAGUE_LEGAL_SCOPES.MATCH_CAPTAIN_PROPOSAL]: {
-    action: 'Envoyer la proposition',
-    description: 'Tu proposes une rencontre au nom de ton équipe. FoundClub facilite la mise en relation mais n organise pas le match.',
-    title: 'Proposition League',
+    action: i18next.t(
+      'leagueLegalAcceptanceModal.scopes.matchCaptainProposal.action',
+      'Envoyer la proposition',
+    ),
+    description: i18next.t(
+      'leagueLegalAcceptanceModal.scopes.matchCaptainProposal.description',
+      // eslint-disable-next-line max-len
+      'Tu proposes une rencontre au nom de ton équipe. FoundClub facilite la mise en relation mais n organise pas le match.',
+    ),
+    title: i18next.t(
+      'leagueLegalAcceptanceModal.scopes.matchCaptainProposal.title',
+      'Proposition League',
+    ),
   },
   [LEAGUE_LEGAL_SCOPES.MATCH_PLAYER_PARTICIPATION]: {
-    action: 'Confirmer ma présence',
-    description: 'Avant de participer à ce match League, confirme que tu acceptes les risques liés à la pratique sportive.',
-    title: 'Participation League',
+    action: i18next.t(
+      'leagueLegalAcceptanceModal.scopes.matchPlayerParticipation.action',
+      'Confirmer ma présence',
+    ),
+    description: i18next.t(
+      'leagueLegalAcceptanceModal.scopes.matchPlayerParticipation.description',
+      // eslint-disable-next-line max-len
+      'Avant de participer à ce match League, confirme que tu acceptes les risques liés à la pratique sportive.',
+    ),
+    title: i18next.t(
+      'leagueLegalAcceptanceModal.scopes.matchPlayerParticipation.title',
+      'Participation League',
+    ),
   },
   [LEAGUE_LEGAL_SCOPES.MATCH_VENUE_BOOKING]: {
-    action: 'Marquer le terrain réservé',
-    description: 'Avant de marquer le terrain comme réservé, confirme que la réservation et les conditions du lieu ont bien été gérées hors FoundClub.',
-    title: 'Terrain League',
+    action: i18next.t(
+      'leagueLegalAcceptanceModal.scopes.matchVenueBooking.action',
+      'Marquer le terrain réservé',
+    ),
+    description: i18next.t(
+      'leagueLegalAcceptanceModal.scopes.matchVenueBooking.description',
+      // eslint-disable-next-line max-len
+      'Avant de marquer le terrain comme réservé, confirme que la réservation et les conditions du lieu ont bien été gérées hors FoundClub.',
+    ),
+    title: i18next.t('leagueLegalAcceptanceModal.scopes.matchVenueBooking.title', 'Terrain League'),
   },
   [LEAGUE_LEGAL_SCOPES.TEAM_CREATE]: {
-    action: 'Créer mon équipe League',
-    description: 'Avant de créer une équipe FoundClub League, confirme que FoundClub est une plateforme de mise en relation et ne devient pas organisateur des rencontres.',
-    title: 'Cadre FoundClub League',
+    action: i18next.t(
+      'leagueLegalAcceptanceModal.scopes.teamCreate.action',
+      'Créer mon équipe League',
+    ),
+    description: i18next.t(
+      'leagueLegalAcceptanceModal.scopes.teamCreate.description',
+      // eslint-disable-next-line max-len
+      'Avant de créer une équipe FoundClub League, confirme que FoundClub est une plateforme de mise en relation et ne devient pas organisateur des rencontres.',
+    ),
+    title: i18next.t(
+      'leagueLegalAcceptanceModal.scopes.teamCreate.title',
+      'Cadre FoundClub League',
+    ),
   },
   [LEAGUE_LEGAL_SCOPES.TEAM_INVITATION_ACCEPT]: {
-    action: 'Accepter l invitation',
-    description: 'Avant d accepter cette invitation League, confirme le cadre de pratique et de responsabilité applicable aux rencontres.',
-    title: 'Invitation FoundClub League',
+    action: i18next.t(
+      'leagueLegalAcceptanceModal.scopes.teamInvitationAccept.action',
+      'Accepter l invitation',
+    ),
+    description: i18next.t(
+      'leagueLegalAcceptanceModal.scopes.teamInvitationAccept.description',
+      // eslint-disable-next-line max-len
+      'Avant d accepter cette invitation League, confirme le cadre de pratique et de responsabilité applicable aux rencontres.',
+    ),
+    title: i18next.t(
+      'leagueLegalAcceptanceModal.scopes.teamInvitationAccept.title',
+      'Invitation FoundClub League',
+    ),
   },
   [LEAGUE_LEGAL_SCOPES.TEAM_JOIN_REQUEST]: {
-    action: 'Demander à rejoindre',
-    description: 'Avant de rejoindre une équipe FoundClub League, confirme le cadre de pratique et de responsabilité applicable aux rencontres.',
-    title: 'Rejoindre une équipe League',
+    action: i18next.t(
+      'leagueLegalAcceptanceModal.scopes.teamJoinRequest.action',
+      'Demander à rejoindre',
+    ),
+    description: i18next.t(
+      'leagueLegalAcceptanceModal.scopes.teamJoinRequest.description',
+      // eslint-disable-next-line max-len
+      'Avant de rejoindre une équipe FoundClub League, confirme le cadre de pratique et de responsabilité applicable aux rencontres.',
+    ),
+    title: i18next.t(
+      'leagueLegalAcceptanceModal.scopes.teamJoinRequest.title',
+      'Rejoindre une équipe League',
+    ),
   },
-};
+});
 
 /**
  * @param {unknown} scope
  */
-const getScopeContent = (scope) => SCOPE_CONTENT[String(scope || '')] || {
-  action: 'Continuer',
-  description: 'Confirme le cadre FoundClub League avant de continuer.',
+const getScopeContent = (scope) => scopeContent()[String(scope || '')] || {
+  action: i18next.t('leagueLegalAcceptanceModal.scopes.default.action', 'Continuer'),
+  description: i18next.t(
+    'leagueLegalAcceptanceModal.scopes.default.description',
+    'Confirme le cadre FoundClub League avant de continuer.',
+  ),
   title: 'FoundClub League',
 };
 
@@ -103,6 +176,7 @@ function LeagueLegalAcceptanceModal({
   const [acceptedRules, setAcceptedRules] = useState(false);
   const [acceptedAdult, setAcceptedAdult] = useState(false);
   const [acceptedExtra, setAcceptedExtra] = useState(false);
+  const { t } = useTranslation();
   const {
     Alignments,
     ApplicationStyle,
@@ -169,7 +243,7 @@ function LeagueLegalAcceptanceModal({
           />
           <Button
             onPress={onClose}
-            title="Annuler"
+            title={t('leagueLegalAcceptanceModal.cancel', 'Annuler')}
             variant="Secondary"
           />
         </View>
@@ -199,7 +273,9 @@ function LeagueLegalAcceptanceModal({
             { backgroundColor: 'rgba(0, 24, 33, 0.42)', borderColor: 'rgba(1, 179, 244, 0.28)' },
           ]}
           >
-            <Text style={[Fonts.p3Bold, { color: Colors.primary200 }]}>Concerne</Text>
+            <Text style={[Fonts.p3Bold, { color: Colors.primary200 }]}>
+              {t('leagueLegalAcceptanceModal.regarding', 'Concerne')}
+            </Text>
             <Text style={[Fonts.p2Bold, Fonts.neutral00, { marginTop: 6 }]}>{targetLabel}</Text>
           </View>
         ) : null}
@@ -211,13 +287,19 @@ function LeagueLegalAcceptanceModal({
           { backgroundColor: 'rgba(0, 24, 33, 0.42)', borderColor: 'rgba(255, 212, 0, 0.26)' },
         ]}
         >
-          <Text style={[Fonts.p2Bold, Fonts.neutral00, Spaces.marginBottom[12]]}>A confirmer</Text>
+          <Text style={[Fonts.p2Bold, Fonts.neutral00, Spaces.marginBottom[12]]}>
+            {t('leagueLegalAcceptanceModal.toConfirm', 'A confirmer')}
+          </Text>
           <View style={{ gap: 14 }}>
             <Checkable
               fontStyle={[Fonts.p2, Fonts.neutral00]}
               isChecked={acceptedContext}
               setIsChecked={() => setAcceptedContext((previous) => !previous)}
-              text="Je comprends que FoundClub ne fait que mettre en relation les équipes et participants, sans organiser ni superviser la rencontre."
+              text={t(
+                'leagueLegalAcceptanceModal.checks.context',
+                // eslint-disable-next-line max-len
+                'Je comprends que FoundClub ne fait que mettre en relation les équipes et participants, sans organiser ni superviser la rencontre.',
+              )}
               type="square"
               wrapperStyle={checkableWrapperStyle}
             />
@@ -225,7 +307,11 @@ function LeagueLegalAcceptanceModal({
               fontStyle={[Fonts.p2, Fonts.neutral00]}
               isChecked={acceptedRisk}
               setIsChecked={() => setAcceptedRisk((previous) => !previous)}
-              text="J accepte les risques normaux liés à la pratique sportive et je vérifie que mon état de santé me permet de participer."
+              text={t(
+                'leagueLegalAcceptanceModal.checks.risk',
+                // eslint-disable-next-line max-len
+                'J accepte les risques normaux liés à la pratique sportive et je vérifie que mon état de santé me permet de participer.',
+              )}
               type="square"
               wrapperStyle={checkableWrapperStyle}
             />
@@ -233,7 +319,11 @@ function LeagueLegalAcceptanceModal({
               fontStyle={[Fonts.p2, Fonts.neutral00]}
               isChecked={acceptedRules}
               setIsChecked={() => setAcceptedRules((previous) => !previous)}
-              text="Je respecte les règles du lieu, les consignes de sécurité et je vérifie la couverture d assurance applicable."
+              text={t(
+                'leagueLegalAcceptanceModal.checks.rules',
+                // eslint-disable-next-line max-len
+                'Je respecte les règles du lieu, les consignes de sécurité et je vérifie la couverture d assurance applicable.',
+              )}
               type="square"
               wrapperStyle={checkableWrapperStyle}
             />
@@ -242,7 +332,11 @@ function LeagueLegalAcceptanceModal({
                 fontStyle={[Fonts.p2, Fonts.neutral00]}
                 isChecked={acceptedAdult}
                 setIsChecked={() => setAcceptedAdult((previous) => !previous)}
-                text="Je certifie avoir 18 ans ou plus pour créer ou rejoindre une squad FoundClub League."
+                text={t(
+                  'leagueLegalAcceptanceModal.checks.adult',
+                  // eslint-disable-next-line max-len
+                  'Je certifie avoir 18 ans ou plus pour créer ou rejoindre une squad FoundClub League.',
+                )}
                 type="square"
                 wrapperStyle={checkableWrapperStyle}
               />
@@ -253,8 +347,16 @@ function LeagueLegalAcceptanceModal({
                 isChecked={acceptedExtra}
                 setIsChecked={() => setAcceptedExtra((previous) => !previous)}
                 text={needsVenueResponsibility
-                  ? 'Je confirme que le terrain, les horaires et les conditions du lieu ont été verifies par les participants concernés.'
-                  : 'Je confirme agir comme membre référent de mon équipe pour cette proposition ou confirmation de match.'}
+                  ? t(
+                    'leagueLegalAcceptanceModal.checks.venue',
+                    // eslint-disable-next-line max-len
+                    'Je confirme que le terrain, les horaires et les conditions du lieu ont été verifies par les participants concernés.',
+                  )
+                  : t(
+                    'leagueLegalAcceptanceModal.checks.teamLead',
+                    // eslint-disable-next-line max-len
+                    'Je confirme agir comme membre référent de mon équipe pour cette proposition ou confirmation de match.',
+                  )}
                 type="square"
                 wrapperStyle={checkableWrapperStyle}
               />
@@ -262,7 +364,13 @@ function LeagueLegalAcceptanceModal({
           </View>
         </View>
 
-        <Text style={[Fonts.p3, { color: Colors.neutral300 }]}>Cette confirmation est enregistrée avec la version legale active pour garder une preuve d acceptation.</Text>
+        <Text style={[Fonts.p3, { color: Colors.neutral300 }]}>
+          {t(
+            'leagueLegalAcceptanceModal.footer',
+            // eslint-disable-next-line max-len
+            'Cette confirmation est enregistrée avec la version legale active pour garder une preuve d acceptation.',
+          )}
+        </Text>
       </View>
     </BottomModal>
   );

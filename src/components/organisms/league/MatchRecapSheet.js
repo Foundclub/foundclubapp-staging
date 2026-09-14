@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import {
   Modal, Pressable, StyleSheet, Text, View,
 } from 'react-native';
@@ -24,6 +25,7 @@ function MatchRecapSheet({
   visible,
 }) {
   const { Colors, Fonts } = useTheme();
+  const { t } = useTranslation();
   if (!visible || !payload) return null;
 
   const recap = payload.recap || {};
@@ -40,7 +42,7 @@ function MatchRecapSheet({
       && Number.isFinite(divisionAfter)
       && divisionBefore !== divisionAfter,
   );
-  let divisionMovementType = 'Changement';
+  let divisionMovementType = t('matchRecapSheet.movementChange', 'Changement');
   if (recap.promotion) {
     divisionMovementType = 'Promotion';
   } else if (recap.relegation) {
@@ -68,10 +70,15 @@ function MatchRecapSheet({
             },
           ]}
         >
-          <Text style={[Fonts.h3, { color: Colors.gold500, textAlign: 'center' }]}>Recap de fin de match</Text>
+          <Text style={[Fonts.h3, { color: Colors.gold500, textAlign: 'center' }]}>
+            {t('matchRecapSheet.title', 'Recap de fin de match')}
+          </Text>
           <Text style={[Fonts.h2Bold, { color: Colors.gold500, textAlign: 'center' }]}>{scoreLabel}</Text>
           <Text style={[Fonts.p2, { color: Colors.neutral300, textAlign: 'center' }]}>
-            {recap.resultLabel || recap.result || 'Résultat validé'}
+            {recap.resultLabel || recap.result || t(
+              'matchRecapSheet.resultFallback',
+              'Résultat validé',
+            )}
           </Text>
 
           {hasDivisionMovement ? (
@@ -82,7 +89,9 @@ function MatchRecapSheet({
 
           <View style={[styles.statRow, { borderColor: 'rgba(255,255,255,0.12)' }]}>
             <View style={styles.statBlock}>
-              <Text style={[Fonts.p3, { color: Colors.neutral300 }]}>Points avant</Text>
+              <Text style={[Fonts.p3, { color: Colors.neutral300 }]}>
+                {t('matchRecapSheet.pointsBefore', 'Points avant')}
+              </Text>
               <Text style={[Fonts.h4Bold, { color: Colors.gold500 }]}>{recap.divisionPointsBefore ?? '-'}</Text>
             </View>
             <View style={styles.statBlock}>
@@ -90,34 +99,36 @@ function MatchRecapSheet({
               <Text style={[Fonts.h4Bold, { color: Colors.gold500 }]}>{pointsDeltaLabel}</Text>
             </View>
             <View style={styles.statBlock}>
-              <Text style={[Fonts.p3, { color: Colors.neutral300 }]}>Points après</Text>
+              <Text style={[Fonts.p3, { color: Colors.neutral300 }]}>
+                {t('matchRecapSheet.pointsAfter', 'Points après')}
+              </Text>
               <Text style={[Fonts.h4Bold, { color: Colors.gold500 }]}>{recap.divisionPointsAfter ?? '-'}</Text>
             </View>
           </View>
 
           <Text style={[Fonts.p3, { color: Colors.neutral300, textAlign: 'center' }]}>
-            Resultat
+            {t('matchRecapSheet.resultLabel', 'Resultat')}
             {' '}
             {baseDelta >= 0 ? '+' : ''}
             {baseDelta}
-            {' | Bonus série '}
+            {t('matchRecapSheet.streakBonus', ' | Bonus série ')}
             {streakBonus >= 0 ? '+' : ''}
             {streakBonus}
-            {' | Total points League '}
+            {t('matchRecapSheet.leaguePointsTotal', ' | Total points League ')}
             {pointsDeltaLabel}
           </Text>
 
           <View style={styles.buttons}>
             <Button
               onPress={onOpenMatch}
-              title="Voir le detail"
+              title={t('matchRecapSheet.viewDetails', 'Voir le detail')}
               variant="Primary"
             />
             <Button
               onPress={onRelaunchSearch}
               style={{ borderColor: Colors.gold500 }}
               textStyle={{ color: Colors.gold500 }}
-              title="Relancer une recherche"
+              title={t('matchRecapSheet.searchAgain', 'Relancer une recherche')}
               variant="Secondary"
             />
           </View>

@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import {
   StyleSheet,
   Text,
@@ -36,13 +37,17 @@ import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
  */
 function MercatoCard({ onPress, user }) {
   const { Colors } = useTheme();
+  const { t } = useTranslation();
 
   // Data for badges
-  const position = user.position || 'Joueur';
+  const position = user.position || t('mercatoCard.defaultPosition', 'Joueur');
   const category = user.category || user.section?.name;
   const preferredSport = user.preferredSport || null;
   const currentClubName = user.club?.name || '';
-  const headerSubtitle = currentClubName || 'Ouvert au recrutement';
+  const headerSubtitle = currentClubName || t(
+    'mercatoCard.openToRecruitment',
+    'Ouvert au recrutement',
+  );
 
   const criteriaChips = [category, preferredSport].filter(Boolean);
   const glassChipStyle = {
@@ -138,7 +143,7 @@ function MercatoCard({ onPress, user }) {
         {/* CTA — le flux mercato ouvre le profil du joueur */}
         <View style={[styles.ctaButton, { backgroundColor: Colors.primary500 }]}>
           <Text style={[styles.ctaText, { color: Colors.primary900 }]}>
-            Voir le profil
+            {t('mercatoCard.viewProfile', 'Voir le profil')}
           </Text>
         </View>
       </View>
