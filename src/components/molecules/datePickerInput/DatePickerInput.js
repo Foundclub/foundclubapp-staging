@@ -140,7 +140,9 @@ function DatePickerInput({
               ]}
               >
                 <TouchableOpacity onPress={() => setShowPicker(false)}>
-                  <Text style={[Fonts.p1, { color: Colors.neutral300 }]}>{t('datePickerInput.cancel', 'Annuler')}</Text>
+                  <Text style={[Fonts.p1, { color: Colors.neutral300 }]}>
+                    {t('datePickerInput.cancel', 'Annuler')}
+                  </Text>
                 </TouchableOpacity>
                 <Text style={[Fonts.p1Bold, Fonts.neutral00]}>{label}</Text>
                 <TouchableOpacity onPress={handleConfirm}>

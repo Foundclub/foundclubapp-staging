@@ -128,7 +128,10 @@ const getProfileMatchInfo = (/** @type {any} */ ad, /** @type {any} */ userData)
     if (userCategory === adCategory) {
       hardMatches += 1;
       score += 3;
-      reasons.push(i18next.t('recrutementListContent.matchReasons.category', 'Catégorie compatible'));
+      reasons.push(i18next.t(
+        'recrutementListContent.matchReasons.category',
+        'Catégorie compatible',
+      ));
     } else {
       hardMismatch = true;
     }
@@ -195,7 +198,13 @@ const buildPlayerFeedItems = ({ matchingAds, otherAds, showMatchingOnly }) => {
     items.push({
       count: otherAds.length,
       key: 'section-other',
-      title: matchingAds.length > 0 ? i18next.t('recrutementListContent.sections.other', 'Autres annonces') : i18next.t('recrutementListContent.sections.all', 'Toutes les annonces'),
+      title: matchingAds.length > 0 ? i18next.t(
+        'recrutementListContent.sections.other',
+        'Autres annonces',
+      ) : i18next.t(
+        'recrutementListContent.sections.all',
+        'Toutes les annonces',
+      ),
       type: 'section',
     });
     otherAds.forEach((/** @type {any} */ ad) => {
@@ -210,11 +219,14 @@ const buildPlayerFeedItems = ({ matchingAds, otherAds, showMatchingOnly }) => {
   return items;
 };
 
-const formatAdsCountLabel = (/** @type {number} */ count) => i18next.t('recrutementListContent.adsCount', {
-  count,
-  defaultValue_one: '{{count}} annonce',
-  defaultValue_other: '{{count}} annonces',
-});
+const formatAdsCountLabel = (/** @type {number} */ count) => i18next.t(
+  'recrutementListContent.adsCount',
+  {
+    count,
+    defaultValue_one: '{{count}} annonce',
+    defaultValue_other: '{{count}} annonces',
+  },
+);
 const normalizeAudienceType = (/** @type {any} */ value) => (
   String(value || '').trim().toLowerCase() === 'coach' ? 'coach' : 'player'
 );
@@ -249,8 +261,14 @@ function RecrutementListContent({
 }) {
   const isWeb = Platform.OS === 'web';
   const { t } = useTranslation();
-  const UNREACHABLE_TITLE = t('recrutementListContent.unreachable.title', 'On n’arrive pas à joindre le serveur.');
-  const UNREACHABLE_DESCRIPTION = t('recrutementListContent.unreachable.description', 'Vérifie ta connexion, puis réessaie.');
+  const UNREACHABLE_TITLE = t(
+    'recrutementListContent.unreachable.title',
+    'On n’arrive pas à joindre le serveur.',
+  );
+  const UNREACHABLE_DESCRIPTION = t(
+    'recrutementListContent.unreachable.description',
+    'Vérifie ta connexion, puis réessaie.',
+  );
   const UNREACHABLE_ACTION = t('recrutementListContent.unreachable.retry', 'Réessayer');
   const {
     Alignments, Colors, Fonts, Spaces,
@@ -543,7 +561,10 @@ function RecrutementListContent({
     }
 
     if (!ad?.isActive) {
-      Alert.alert(i18next.t('recrutementListContent.apply.title', 'Candidature'), i18next.t('recrutementListContent.apply.inactive', 'Cette annonce n est plus active.'));
+      Alert.alert(i18next.t('recrutementListContent.apply.title', 'Candidature'), i18next.t(
+        'recrutementListContent.apply.inactive',
+        'Cette annonce n est plus active.',
+      ));
       return;
     }
 
@@ -555,14 +576,26 @@ function RecrutementListContent({
     const isDetectionLinked = normalizeTypeLabel(ad?.event?.type?.name).includes('detection');
 
     if (applicationState.hasApplied) {
-      let alreadyAppliedMessage = i18next.t('recrutementListContent.apply.already', 'Tu as déjà postule à cette annonce.');
+      let alreadyAppliedMessage = i18next.t(
+        'recrutementListContent.apply.already',
+        'Tu as déjà postule à cette annonce.',
+      );
 
       if (applicationState.status === 'accepted') {
         alreadyAppliedMessage = isDetectionLinked
-          ? i18next.t('recrutementListContent.apply.alreadyInDetection', 'Tu participes déjà à cette détection.')
-          : i18next.t('recrutementListContent.apply.alreadyAccepted', 'Ta candidature est déjà validée pour cette annonce.');
+          ? i18next.t(
+            'recrutementListContent.apply.alreadyInDetection',
+            'Tu participes déjà à cette détection.',
+          )
+          : i18next.t(
+            'recrutementListContent.apply.alreadyAccepted',
+            'Ta candidature est déjà validée pour cette annonce.',
+          );
       } else if (isDetectionLinked) {
-        alreadyAppliedMessage = i18next.t('recrutementListContent.apply.pendingDetection', 'Tu as déjà une candidature en attente sur cette détection.');
+        alreadyAppliedMessage = i18next.t(
+          'recrutementListContent.apply.pendingDetection',
+          'Tu as déjà une candidature en attente sur cette détection.',
+        );
       }
 
       Alert.alert(
@@ -592,7 +625,10 @@ function RecrutementListContent({
       ]);
       Alert.alert(
         i18next.t('recrutementListContent.apply.sentTitle', 'Candidature envoyée'),
-        result?.message || i18next.t('recrutementListContent.apply.sent', 'Ta candidature a bien été envoyée.'),
+        result?.message || i18next.t(
+          'recrutementListContent.apply.sent',
+          'Ta candidature a bien été envoyée.',
+        ),
       );
     } catch (error) {
       // Les deux lectures `error.response.data...` qui ouvraient cette chaine
@@ -606,7 +642,10 @@ function RecrutementListContent({
       const requestError = /** @type {any} */ (error);
       const message = getApiErrorTranslation(error)
         || requestError?.message
-        || i18next.t('recrutementListContent.apply.error', 'Impossible d envoyer la candidature pour le moment.');
+        || i18next.t(
+          'recrutementListContent.apply.error',
+          'Impossible d envoyer la candidature pour le moment.',
+        );
       Alert.alert(i18next.t('recrutementListContent.apply.title', 'Candidature'), message);
     } finally {
       setApplyingAdId((currentAdId) => (currentAdId === adId ? '' : currentAdId));
@@ -721,8 +760,14 @@ function RecrutementListContent({
     ]}
     >
       {renderSegmentedTab('profils', t('recrutementListContent.tabs.profiles', 'Profils'))}
-      {renderSegmentedTab('opportunites', t('recrutementListContent.tabs.opportunities', 'Opportunités'))}
-      {renderSegmentedTab('candidatures', t('recrutementListContent.tabs.applications', 'Candidatures'))}
+      {renderSegmentedTab('opportunites', t(
+        'recrutementListContent.tabs.opportunities',
+        'Opportunités',
+      ))}
+      {renderSegmentedTab('candidatures', t(
+        'recrutementListContent.tabs.applications',
+        'Candidatures',
+      ))}
     </View>
   );
 
@@ -748,7 +793,10 @@ function RecrutementListContent({
   // « annonce » (le meme mot couvrait trois objets differents).
   const renderPublishOfferCta = () => (
     <TouchableOpacity
-      accessibilityLabel={t('recrutementListContent.publishOffer.label', 'Publier une offre de recrutement')}
+      accessibilityLabel={t(
+        'recrutementListContent.publishOffer.label',
+        'Publier une offre de recrutement',
+      )}
       accessibilityRole="button"
       onPress={() => {
         nav.navigate(RouteNames.AdWizardStack);
@@ -843,12 +891,21 @@ function RecrutementListContent({
 
   const playerFilterHelperText = React.useMemo(() => {
     if (!hasProfileSignals) {
-      return i18next.t('recrutementListContent.helper.completeProfile', 'Complète ton profil pour activer un tri personnalisé.');
+      return i18next.t(
+        'recrutementListContent.helper.completeProfile',
+        'Complète ton profil pour activer un tri personnalisé.',
+      );
     }
     if (showProfileMatchesOnly) {
-      return i18next.t('recrutementListContent.helper.matchesOnly', 'Le flux affiche uniquement les annonces compatibles.');
+      return i18next.t(
+        'recrutementListContent.helper.matchesOnly',
+        'Le flux affiche uniquement les annonces compatibles.',
+      );
     }
-    return i18next.t('recrutementListContent.helper.matchesFirst', 'Les annonces compatibles restent affichées en tête.');
+    return i18next.t(
+      'recrutementListContent.helper.matchesFirst',
+      'Les annonces compatibles restent affichées en tête.',
+    );
   }, [hasProfileSignals, showProfileMatchesOnly]);
 
   const renderPlayerEmptyState = () => {
@@ -871,13 +928,25 @@ function RecrutementListContent({
         >
           <Text style={[Fonts.p1, Fonts.neutral100, { textAlign: 'center' }]}>
             {hasProfileSignals
-              ? t('recrutementListContent.empty.noMatch', 'Aucune annonce ne correspond exactement à ton profil pour le moment.')
-              : t('recrutementListContent.empty.completeProfile', 'Complète ton profil pour activer le tri personnalisé des annonces.')}
+              ? t(
+                'recrutementListContent.empty.noMatch',
+                'Aucune annonce ne correspond exactement à ton profil pour le moment.',
+              )
+              : t(
+                'recrutementListContent.empty.completeProfile',
+                'Complète ton profil pour activer le tri personnalisé des annonces.',
+              )}
           </Text>
           <Text style={[Fonts.p2, { color: recruitmentMutedText, marginTop: 8, textAlign: 'center' }]}>
             {hasProfileSignals
-              ? t('recrutementListContent.empty.disableFilter', 'Désactive le filtre pour afficher toutes les annonces disponibles.')
-              : t('recrutementListContent.empty.browseAll', "Tu peux déjà consulter toutes les annonces publiées sur l'application.")}
+              ? t(
+                'recrutementListContent.empty.disableFilter',
+                'Désactive le filtre pour afficher toutes les annonces disponibles.',
+              )
+              : t(
+                'recrutementListContent.empty.browseAll',
+                "Tu peux déjà consulter toutes les annonces publiées sur l'application.",
+              )}
           </Text>
         </View>
       );
@@ -897,7 +966,10 @@ function RecrutementListContent({
           {t('recrutementListContent.empty.none', 'Aucune annonce disponible pour le moment.')}
         </Text>
         <Text style={[Fonts.p2, { color: recruitmentMutedText, marginTop: 8, textAlign: 'center' }]}>
-          {t('recrutementListContent.empty.comeBack', 'Reviens un peu plus tard ou ajuste ta recherche.')}
+          {t(
+            'recrutementListContent.empty.comeBack',
+            'Reviens un peu plus tard ou ajuste ta recherche.',
+          )}
         </Text>
       </View>
     );
@@ -1025,7 +1097,10 @@ function RecrutementListContent({
                 {t('recrutementListContent.completeProfile.title', 'Compléter mon profil')}
               </Text>
               <Text style={[Fonts.p4, { color: recruitmentMutedText, marginTop: 8 }]}>
-                {t('recrutementListContent.completeProfile.fields', 'Sport, section, catégorie, niveau.')}
+                {t(
+                  'recrutementListContent.completeProfile.fields',
+                  'Sport, section, catégorie, niveau.',
+                )}
               </Text>
             </View>
             <Text style={[Fonts.p4Bold, { color: Colors.primary500 }]}>
@@ -1097,7 +1172,11 @@ function RecrutementListContent({
                 }}
                 >
                   <Text style={[Fonts.p4Bold, { color: Colors.primary500 }]}>
-                    {t('recrutementListContent.relevanceReason', 'Pertinence : {{reason}}', { reason: primaryReasonLabel, ...SANS_ECHAPPEMENT })}
+                    {t(
+                      'recrutementListContent.relevanceReason',
+                      'Pertinence : {{reason}}',
+                      { reason: primaryReasonLabel, ...SANS_ECHAPPEMENT },
+                    )}
                   </Text>
                 </View>
               ) : null}
@@ -1138,7 +1217,10 @@ function RecrutementListContent({
           }]}
           >
             <Text style={[Fonts.p1, { color: recruitmentMutedText, textAlign: 'center' }]}>
-              {t('recrutementListContent.applications.empty', 'Tu n\u2019as pas encore postulé à une annonce.')}
+              {t(
+                'recrutementListContent.applications.empty',
+                'Tu n\u2019as pas encore postulé à une annonce.',
+              )}
             </Text>
           </View>
         )}

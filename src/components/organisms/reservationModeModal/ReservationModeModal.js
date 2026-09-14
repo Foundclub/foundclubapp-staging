@@ -106,7 +106,10 @@ function ReservationModeModal({
               {t('reservationModeModal.fullGroup.title', 'Je viens avec mon groupe complet')}
             </Text>
             <Text style={{ color: '#aaa', fontSize: 14, marginTop: 4 }}>
-              {t('reservationModeModal.fullGroup.description', 'Tous les joueurs sont déjà trouvés')}
+              {t(
+                'reservationModeModal.fullGroup.description',
+                'Tous les joueurs sont déjà trouvés',
+              )}
             </Text>
           </TouchableOpacity>
 
@@ -127,7 +130,10 @@ function ReservationModeModal({
               {t('reservationModeModal.recruiting.title', 'Je cherche des joueurs')}
             </Text>
             <Text style={{ color: '#aaa', fontSize: 14, marginTop: 4 }}>
-              {t('reservationModeModal.recruiting.description', "D'autres joueurs peuvent rejoindre")}
+              {t(
+                'reservationModeModal.recruiting.description',
+                "D'autres joueurs peuvent rejoindre",
+              )}
             </Text>
           </TouchableOpacity>
 
@@ -152,7 +158,9 @@ function ReservationModeModal({
                 padding: 16,
               }}
             >
-              <Text style={{ color: '#00D1FF', fontWeight: 'bold' }}>{t('reservationModeModal.cancel', 'Annuler')}</Text>
+              <Text style={{ color: '#00D1FF', fontWeight: 'bold' }}>
+                {t('reservationModeModal.cancel', 'Annuler')}
+              </Text>
             </TouchableOpacity>
             <TouchableOpacity
               disabled={!selectedMode}
@@ -165,7 +173,9 @@ function ReservationModeModal({
                 padding: 16,
               }}
             >
-              <Text style={{ color: '#000', fontWeight: 'bold' }}>{t('reservationModeModal.confirm', 'Confirmer')}</Text>
+              <Text style={{ color: '#000', fontWeight: 'bold' }}>
+                {t('reservationModeModal.confirm', 'Confirmer')}
+              </Text>
             </TouchableOpacity>
           </View>
         </View>

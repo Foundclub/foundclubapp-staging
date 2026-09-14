@@ -516,8 +516,15 @@ function TeamListContent({
     let quotaHint = t('teamListContent.newTeam.hint', 'Crée une équipe pour ton club.');
     if (freeTeamQuota) {
       quotaHint = freeTeamQuota.remaining > 0
-        ? t('teamListContent.newTeam.freeRemaining', 'Il te reste {{remaining}} création gratuite', { remaining: freeTeamQuota.remaining })
-        : t('teamListContent.newTeam.freeUsed', "Ta création gratuite est utilisée — débloque l'offre Équipe");
+        ? t(
+          'teamListContent.newTeam.freeRemaining',
+          'Il te reste {{remaining}} création gratuite',
+          { remaining: freeTeamQuota.remaining },
+        )
+        : t(
+          'teamListContent.newTeam.freeUsed',
+          "Ta création gratuite est utilisée — débloque l'offre Équipe",
+        );
     }
     return (
       <TouchableOpacity
@@ -561,7 +568,9 @@ function TeamListContent({
               <PremiumBadge label={newTeamLock.badgeLabel} scope={newTeamLock.scope} />
             </View>
           ) : null}
-          <Text style={[Fonts.p2Bold, Fonts.primary500]}>{t('teamListContent.newTeam.title', 'Nouvelle équipe')}</Text>
+          <Text style={[Fonts.p2Bold, Fonts.primary500]}>
+            {t('teamListContent.newTeam.title', 'Nouvelle équipe')}
+          </Text>
           <Text numberOfLines={1} style={[Fonts.p4, Fonts.neutral400, { marginTop: 1 }]}>
             {quotaHint}
           </Text>
@@ -1197,7 +1206,10 @@ function TeamListContent({
 
       {otherTeams.length > 0 ? (
         <Text style={[Fonts.h3, Fonts.neutral00, Spaces.marginBottom[16], (myTeams.length > 0 || pendingTeams.length > 0 || invitedTeams.length > 0) && Spaces.marginTop[24]]}>
-          {clubId ? t('teamListContent.sections.otherInClub', 'Autres équipes du club') : t('teamListContent.sections.other', 'Autres équipes')}
+          {clubId ? t(
+            'teamListContent.sections.otherInClub',
+            'Autres équipes du club',
+          ) : t('teamListContent.sections.other', 'Autres équipes')}
         </Text>
       ) : null}
     </View>

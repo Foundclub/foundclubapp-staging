@@ -683,7 +683,10 @@ function LegacySearchMapNative({
               {t('legacySearchMapNative.loading.title', 'Chargement de la carte')}
             </Text>
             <Text style={[Fonts.p3, Fonts.neutral200, Fonts.textCenter]}>
-              {t('legacySearchMapNative.loading.body', "Nous préparons l'affichage géolocalisé de tes résultats.")}
+              {t(
+                'legacySearchMapNative.loading.body',
+                "Nous préparons l'affichage géolocalisé de tes résultats.",
+              )}
             </Text>
           </View>
         </View>
@@ -705,11 +708,18 @@ function LegacySearchMapNative({
               {t('legacySearchMapNative.error.title', 'Impossible de charger la carte')}
             </Text>
             <Text style={[Fonts.p3, Fonts.neutral200, Fonts.textCenter]}>
-              {t('legacySearchMapNative.error.body', 'Les tuiles Google Maps ne répondent pas pour le moment. Réessaie ou reviens à la liste.')}
+              {t(
+                'legacySearchMapNative.error.body',
+                // eslint-disable-next-line max-len
+                'Les tuiles Google Maps ne répondent pas pour le moment. Réessaie ou reviens à la liste.',
+              )}
             </Text>
             <View style={[Alignments.row, Alignments.justifyCenter, { gap: 12, width: '100%' }]}>
               <TouchableOpacity
-                accessibilityLabel={t('legacySearchMapNative.error.retryLabel', 'Réessayer le chargement de la carte')}
+                accessibilityLabel={t(
+                  'legacySearchMapNative.error.retryLabel',
+                  'Réessayer le chargement de la carte',
+                )}
                 accessibilityRole="button"
                 activeOpacity={0.85}
                 onPress={handleRetryMap}

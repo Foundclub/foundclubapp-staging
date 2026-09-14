@@ -186,13 +186,25 @@ export const isChosenHostingAllowed = (preference, chosenHosting) => (
 export const getHostingSummary = (ad) => {
   switch (String(ad?.hostingPreference ?? '').trim().toUpperCase()) {
     case 'AWAY':
-      return { label: i18next.t('friendlyMatchFlow.hostingSummary.away', 'Il se déplace'), tone: 'away' };
+      return {
+        label: i18next.t('friendlyMatchFlow.hostingSummary.away', 'Il se déplace'),
+        tone: 'away',
+      };
     case 'BOTH':
-      return { label: i18next.t('friendlyMatchFlow.hostingSummary.both', 'Reçoit ou se déplace'), tone: 'both' };
+      return {
+        label: i18next.t('friendlyMatchFlow.hostingSummary.both', 'Reçoit ou se déplace'),
+        tone: 'both',
+      };
     case 'HOST':
-      return { label: i18next.t('friendlyMatchFlow.hostingSummary.host', 'Il reçoit'), tone: 'host' };
+      return {
+        label: i18next.t('friendlyMatchFlow.hostingSummary.host', 'Il reçoit'),
+        tone: 'host',
+      };
     default:
-      return { label: i18next.t('friendlyMatchFlow.hostingSummary.unknown', 'À convenir'), tone: 'unknown' };
+      return {
+        label: i18next.t('friendlyMatchFlow.hostingSummary.unknown', 'À convenir'),
+        tone: 'unknown',
+      };
   }
 };
 

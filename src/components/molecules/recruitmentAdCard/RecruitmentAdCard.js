@@ -92,17 +92,29 @@ function RecruitmentAdCard({
   const clubLogo = getImageUrl(club?.logo?.url);
   const isCoachAd = String(ad?.audienceType || '').trim().toLowerCase() === 'coach';
   const positionLabel = isCoachAd
-    ? humanizeEnumLabel(ad?.coachRoleOther || ad?.coachRole, t('recruitmentAdCard.coachRole', 'Rôle entraîneur'))
+    ? humanizeEnumLabel(ad?.coachRoleOther || ad?.coachRole, t(
+      'recruitmentAdCard.coachRole',
+      'Rôle entraîneur',
+    ))
     : (ad.position || t('recruitmentAdCard.positionUnspecified', 'Poste non spécifié'));
-  const levelName = ad.level?.name || ad.minLevel || t('recruitmentAdCard.levelUnknown', 'Niveau ?');
-  const categoryName = ad.category?.name || ad.category || t('recruitmentAdCard.categoryUnknown', 'Catégorie ?');
+  const levelName = ad.level?.name || ad.minLevel || t(
+    'recruitmentAdCard.levelUnknown',
+    'Niveau ?',
+  );
+  const categoryName = ad.category?.name || ad.category || t(
+    'recruitmentAdCard.categoryUnknown',
+    'Catégorie ?',
+  );
   const sectionName = ad.section?.name || ad.section || '';
   const sportName = ad.sport || team?.sport || 'Football';
   const address = getShortAddress(ad.city || club?.city || '');
   // T8 : 6 annonces portent « Gymnase - [object Object] » ECRIT EN BASE (releve du
   // 26/08). Tant que ces lignes ne sont pas reparees, l'affichage recompose le
   // libelle depuis les champs restes sains de la MEME charge.
-  const locationLabel = resolveLocationDisplayLabel(ad.address, address || t('recruitmentAdCard.locationUnspecified', 'Lieu non précisé'));
+  const locationLabel = resolveLocationDisplayLabel(ad.address, address || t(
+    'recruitmentAdCard.locationUnspecified',
+    'Lieu non précisé',
+  ));
   const isDetectionLinked = normalizeTypeLabel(ad?.event?.type?.name).includes('detection');
   const detectionDateLabel = ad?.event?.date
     ? formatDateWithDayPrefix(new Date(ad.event.date))
@@ -117,7 +129,10 @@ function RecruitmentAdCard({
   let playerCtaBorderColor = 'transparent';
   let playerCtaTextColor = Colors.neutral00;
   let playerCtaBorderWidth = 0;
-  let playerCtaLabel = isCoachAd ? t('recruitmentAdCard.cta.applyCoach', 'Candidater') : t('recruitmentAdCard.cta.apply', 'Postuler');
+  let playerCtaLabel = isCoachAd ? t(
+    'recruitmentAdCard.cta.applyCoach',
+    'Candidater',
+  ) : t('recruitmentAdCard.cta.apply', 'Postuler');
 
   if (!ad.isActive) {
     playerCtaLabel = t('recruitmentAdCard.cta.inactive', 'Annonce inactive');
@@ -126,7 +141,10 @@ function RecruitmentAdCard({
     playerCtaTextColor = Colors.neutral300;
     playerCtaBorderWidth = 1;
   } else if (applicationState.status === 'accepted') {
-    playerCtaLabel = isCoachAd ? t('recruitmentAdCard.cta.acceptedCoach', 'Candidature acceptée') : t('recruitmentAdCard.cta.accepted', 'Je participe');
+    playerCtaLabel = isCoachAd ? t(
+      'recruitmentAdCard.cta.acceptedCoach',
+      'Candidature acceptée',
+    ) : t('recruitmentAdCard.cta.accepted', 'Je participe');
     playerCtaBackgroundColor = `${Colors.primary500}18`;
     playerCtaBorderColor = `${Colors.primary500}45`;
     playerCtaTextColor = Colors.primary500;
@@ -146,7 +164,10 @@ function RecruitmentAdCard({
     ? { color: Colors.primary500, text: t('recruitmentAdCard.status.online', 'En ligne') }
     : { color: Colors.neutral500, text: t('recruitmentAdCard.status.inactive', 'Inactive') };
   const rightMetaLabel = [categoryName, sectionName].filter(Boolean).join(' - ');
-  const audienceTypeLabel = isCoachAd ? t('recruitmentAdCard.coachAudience', 'ENTRAINEUR') : getRecruitAthleteNoun(sportName).toUpperCase();
+  const audienceTypeLabel = isCoachAd ? t(
+    'recruitmentAdCard.coachAudience',
+    'ENTRAINEUR',
+  ) : getRecruitAthleteNoun(sportName).toUpperCase();
 
   const handlePress = () => {
     if (onPress) {
@@ -289,7 +310,10 @@ function RecruitmentAdCard({
               <View style={[styles.detailItem, styles.detailItemRight]}>
                 <Image source={Images.users} style={[styles.icon, { tintColor: Colors.neutral300 }]} />
                 <Text numberOfLines={1} style={[styles.detailText, styles.detailTextRight]}>
-                  {rightMetaLabel || (isCoachAd ? t('recruitmentAdCard.frameworkToDefine', 'Cadre à preciser') : t('recruitmentAdCard.openCategory', 'Catégorie libre'))}
+                  {rightMetaLabel || (isCoachAd ? t(
+                    'recruitmentAdCard.frameworkToDefine',
+                    'Cadre à preciser',
+                  ) : t('recruitmentAdCard.openCategory', 'Catégorie libre'))}
                 </Text>
               </View>
             </View>

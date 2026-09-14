@@ -82,7 +82,10 @@ function CreateAdModal({
   // Handle form submission
   const handleSubmit = async () => {
     if (!team) {
-      setError(t('createAdModal.errors.noTeam', 'Tu dois être associé à une équipe pour créer une annonce.'));
+      setError(t(
+        'createAdModal.errors.noTeam',
+        'Tu dois être associé à une équipe pour créer une annonce.',
+      ));
       return;
     }
 
@@ -116,7 +119,10 @@ function CreateAdModal({
     } catch (err) {
       const typedError = /** @type {any} */ (err);
       console.error('[CreateAdModal] Error creating ad:', typedError);
-      setError(typedError?.message || t('createAdModal.errors.generic', "Une erreur est survenue lors de la création de l'annonce."));
+      setError(typedError?.message || t(
+        'createAdModal.errors.generic',
+        "Une erreur est survenue lors de la création de l'annonce.",
+      ));
     } finally {
       setLoading(false);
     }
@@ -147,7 +153,10 @@ function CreateAdModal({
           {/* Header */}
           <View style={styles.header}>
             <Text style={[Fonts.h4, { color: Colors.neutral00 }]}>
-              {event ? t('createAdModal.title.event', "Recruter pour l'événement") : t('createAdModal.title.default', 'Créer une annonce')}
+              {event ? t(
+                'createAdModal.title.event',
+                "Recruter pour l'événement",
+              ) : t('createAdModal.title.default', 'Créer une annonce')}
             </Text>
           </View>
 
@@ -162,7 +171,10 @@ function CreateAdModal({
                   {t('createAdModal.noTeam.title', '⚠️ Aucune équipe')}
                 </Text>
                 <Text style={[Fonts.p3, { color: Colors.neutral300, marginTop: 8, textAlign: 'center' }]}>
-                  {t('createAdModal.noTeam.description', 'Tu dois être associé à une équipe pour créer une annonce de recrutement.')}
+                  {t(
+                    'createAdModal.noTeam.description',
+                    'Tu dois être associé à une équipe pour créer une annonce de recrutement.',
+                  )}
                 </Text>
               </View>
             )}
@@ -328,7 +340,9 @@ function CreateAdModal({
               onPress={handleClose}
               style={[styles.button, styles.cancelButton, { backgroundColor: Colors.neutral800, borderColor: Colors.neutral700 }]}
             >
-              <Text style={[Fonts.p1Bold, { color: Colors.neutral00 }]}>{t('createAdModal.cancel', 'Annuler')}</Text>
+              <Text style={[Fonts.p1Bold, { color: Colors.neutral00 }]}>
+                {t('createAdModal.cancel', 'Annuler')}
+              </Text>
             </TouchableOpacity>
             <TouchableOpacity
               disabled={loading || !team}
@@ -345,7 +359,9 @@ function CreateAdModal({
               {loading ? (
                 <ActivityIndicator color={Colors.neutral900} size="small" />
               ) : (
-                <Text style={[Fonts.p1Bold, { color: Colors.neutral900 }]}>{t('createAdModal.submit', "Créer l'annonce")}</Text>
+                <Text style={[Fonts.p1Bold, { color: Colors.neutral900 }]}>
+                  {t('createAdModal.submit', "Créer l'annonce")}
+                </Text>
               )}
             </TouchableOpacity>
           </View>

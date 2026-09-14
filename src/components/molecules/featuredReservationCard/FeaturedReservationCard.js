@@ -174,7 +174,10 @@ function FeaturedReservationCard({
                 style={[{ height: moderateScale(22), width: moderateScale(22) }, ApplicationStyle.tintColor.neutral00]}
               />
               <Text style={[Fonts.p2, { color: '#FFFFFF', fontSize: moderateScale(12), lineHeight: moderateScale(14) }]}>
-                {item.pricePerPerson === 0 ? t('featuredReservationCard.free', 'Gratuit') : `${item.pricePerPerson}€`}
+                {item.pricePerPerson === 0 ? t(
+                  'featuredReservationCard.free',
+                  'Gratuit',
+                ) : `${item.pricePerPerson}€`}
               </Text>
             </View>
           )}

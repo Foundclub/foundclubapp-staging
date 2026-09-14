@@ -285,7 +285,9 @@ function BookingConfigModal({
               ]}
             >
               <View style={styles.modeHeader}>
-                <Text style={[Fonts.h3, Fonts.neutral00]}>{t('bookingConfigModal.private.title', '🔒 PRIVATISER')}</Text>
+                <Text style={[Fonts.h3, Fonts.neutral00]}>
+                  {t('bookingConfigModal.private.title', '🔒 PRIVATISER')}
+                </Text>
                 {mode === 'private' && (
                   <View style={[styles.checkBadge, { backgroundColor: Colors.primary500 }]}>
                     <Text style={styles.checkText}>✓</Text>
@@ -293,7 +295,10 @@ function BookingConfigModal({
                 )}
               </View>
               <Text style={[Fonts.p2, Fonts.neutral300]}>
-                {t('bookingConfigModal.private.description', 'Je réserve le terrain pour mon groupe')}
+                {t(
+                  'bookingConfigModal.private.description',
+                  'Je réserve le terrain pour mon groupe',
+                )}
               </Text>
               <Text style={[Fonts.p1Bold, { color: Colors.primary500 }, Spaces.marginTop[8]]}>
                 {t('bookingConfigModal.private.totalPrice', 'Prix total:')}
@@ -312,7 +317,9 @@ function BookingConfigModal({
               ]}
             >
               <View style={styles.modeHeader}>
-                <Text style={[Fonts.h3, Fonts.neutral00]}>{t('bookingConfigModal.shared.title', '👥 MATCH OUVERT')}</Text>
+                <Text style={[Fonts.h3, Fonts.neutral00]}>
+                  {t('bookingConfigModal.shared.title', '👥 MATCH OUVERT')}
+                </Text>
                 {mode === 'shared' && (
                   <View style={[styles.checkBadge, { backgroundColor: Colors.success500 }]}>
                     <Text style={styles.checkText}>✓</Text>
@@ -320,13 +327,18 @@ function BookingConfigModal({
                 )}
               </View>
               <Text style={[Fonts.p2, Fonts.neutral300]}>
-                {t('bookingConfigModal.shared.description', 'Je cherche des joueurs pour compléter')}
+                {t(
+                  'bookingConfigModal.shared.description',
+                  'Je cherche des joueurs pour compléter',
+                )}
               </Text>
 
               {mode === 'shared' && (
                 <View style={[styles.sharedConfig, Spaces.marginTop[16]]}>
                   <View style={styles.stepperRow}>
-                    <Text style={[Fonts.p2, Fonts.neutral00]}>{t('bookingConfigModal.shared.targetPlayers', 'Joueurs recherchés :')}</Text>
+                    <Text style={[Fonts.p2, Fonts.neutral00]}>
+                      {t('bookingConfigModal.shared.targetPlayers', 'Joueurs recherchés :')}
+                    </Text>
                     <View style={styles.stepper}>
                       <Pressable onPress={decrementTarget} style={styles.stepperBtn}>
                         <Text style={styles.stepperBtnText}>-</Text>
@@ -341,7 +353,9 @@ function BookingConfigModal({
                   </View>
 
                   <View style={styles.stepperRow}>
-                    <Text style={[Fonts.p2, Fonts.neutral00]}>{t('bookingConfigModal.shared.currentPlayers', 'Tu es combien ?')}</Text>
+                    <Text style={[Fonts.p2, Fonts.neutral00]}>
+                      {t('bookingConfigModal.shared.currentPlayers', 'Tu es combien ?')}
+                    </Text>
                     <View style={styles.stepper}>
                       <Pressable onPress={decrementPlayers} style={styles.stepperBtn}>
                         <Text style={styles.stepperBtnText}>-</Text>
@@ -364,7 +378,11 @@ function BookingConfigModal({
                       })}
                     </Text>
                     <Text style={[Fonts.p1Bold, { color: Colors.success500 }]}>
-                      {t('bookingConfigModal.shared.pricePerPlayer', '{{price}}€/joueur', { price: pricePerPerson })}
+                      {t(
+                        'bookingConfigModal.shared.pricePerPlayer',
+                        '{{price}}€/joueur',
+                        { price: pricePerPerson },
+                      )}
                     </Text>
                   </View>
                 </View>
@@ -375,7 +393,13 @@ function BookingConfigModal({
               disabled={createBookingMutation.isPending}
               onPress={handleConfirm}
               style={Spaces.marginTop[24]}
-              title={createBookingMutation.isPending ? t('bookingConfigModal.booking', 'Réservation...') : t('bookingConfigModal.confirm', 'Confirmer la réservation')}
+              title={createBookingMutation.isPending ? t(
+                'bookingConfigModal.booking',
+                'Réservation...',
+              ) : t(
+                'bookingConfigModal.confirm',
+                'Confirmer la réservation',
+              )}
               variant="Primary"
             />
           </View>

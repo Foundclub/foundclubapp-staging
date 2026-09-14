@@ -100,7 +100,9 @@ function LocationShareBubble({ composition, isMe = false }) {
           paddingVertical: 10,
         }}
       >
-        <Text style={[Fonts.p3Bold, { color: Colors.primary500 }]}>{t('locationShareBubble.openInGps', 'Ouvrir dans le GPS')}</Text>
+        <Text style={[Fonts.p3Bold, { color: Colors.primary500 }]}>
+          {t('locationShareBubble.openInGps', 'Ouvrir dans le GPS')}
+        </Text>
       </TouchableOpacity>
     </View>
   );

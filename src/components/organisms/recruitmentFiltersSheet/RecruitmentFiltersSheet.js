@@ -274,7 +274,9 @@ function RecruitmentFiltersSheet({
               },
             ]}
           >
-            <Text style={[Fonts.p1Bold, { color: Colors.primary900 }]}>{t('recruitmentFiltersSheet.apply', 'Voir les résultats')}</Text>
+            <Text style={[Fonts.p1Bold, { color: Colors.primary900 }]}>
+              {t('recruitmentFiltersSheet.apply', 'Voir les résultats')}
+            </Text>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -282,11 +284,17 @@ function RecruitmentFiltersSheet({
             onPress={reinitialiser}
             style={[Alignments.alignCenter, Alignments.justifyCenter, { minHeight: 44 }]}
           >
-            <Text style={[Fonts.p2Bold, { color: Colors.neutral200 }]}>{t('recruitmentFiltersSheet.reset', 'Réinitialiser')}</Text>
+            <Text style={[Fonts.p2Bold, { color: Colors.neutral200 }]}>
+              {t('recruitmentFiltersSheet.reset', 'Réinitialiser')}
+            </Text>
           </TouchableOpacity>
         </View>
       )}
-      headerComponent={<Text style={[Fonts.h3Bold, Fonts.neutral00]}>{t('recruitmentFiltersSheet.title', 'Filtrer')}</Text>}
+      headerComponent={(
+        <Text style={[Fonts.h3Bold, Fonts.neutral00]}>
+          {t('recruitmentFiltersSheet.title', 'Filtrer')}
+        </Text>
+      )}
       isVisible={isVisible}
       snapPoints={SNAP_POINTS}
       webPresentation="dialog"

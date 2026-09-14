@@ -96,7 +96,10 @@ function NotificationPopup({
     if (onMarkAsRead && notificationId) {
       Promise.resolve(onMarkAsRead(notificationId)).catch((error) => {
         const typedError = /** @type {any} */ (error);
-        showFeedback(getErrorMessage(typedError, 'generic') || t('notificationPopup.errors.markRead', 'Impossible de marquer comme lu.'));
+        showFeedback(getErrorMessage(typedError, 'generic') || t(
+          'notificationPopup.errors.markRead',
+          'Impossible de marquer comme lu.',
+        ));
       });
     }
 
@@ -135,7 +138,10 @@ function NotificationPopup({
     try {
       await onMarkAllAsRead();
     } catch (error) {
-      showFeedback(getErrorMessage(error, 'generic') || t('notificationPopup.errors.markAll', 'Impossible de marquer toutes les notifications.'));
+      showFeedback(getErrorMessage(error, 'generic') || t(
+        'notificationPopup.errors.markAll',
+        'Impossible de marquer toutes les notifications.',
+      ));
     }
   };
 
@@ -175,7 +181,10 @@ function NotificationPopup({
       const icon = getNotificationIcon(notif.type);
       return (
         <TouchableOpacity
-          accessibilityLabel={`${notif.title || t('notificationPopup.defaultTitle', 'Notification')}. ${notif.body || ''}`.trim()}
+          accessibilityLabel={`${notif.title || t(
+            'notificationPopup.defaultTitle',
+            'Notification',
+          )}. ${notif.body || ''}`.trim()}
           accessibilityRole="button"
           accessibilityState={{ selected: !notif.read }}
           key={notif.documentId || notif.id || index}

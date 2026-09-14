@@ -99,7 +99,7 @@ const resolveRequesterName = (/** @type {any} */ requester = {}) => {
   if (fullName) return fullName;
   return normalizeString(
     requester?.displayName || requester?.username || requester?.phoneNumber || requester?.phone,
-  ) || i18next.t('requestMappers.requesterFallback', "Utilisateur");
+  ) || i18next.t('requestMappers.requesterFallback', 'Utilisateur');
 };
 
 const toStableTime = (/** @type {any} */ value) => {
@@ -144,7 +144,10 @@ const resolveRequesterAvatarUrl = (/** @type {any} */ requester = {}) => {
  */
 export const mapTeamMembershipRequestToHubItem = (request = {}) => {
   const requestId = String(request?.documentId || request?.id || '');
-  const teamName = normalizeString(request?.team?.name) || i18next.t('requestMappers.teamFallback', "Equipe");
+  const teamName = normalizeString(request?.team?.name) || i18next.t(
+    'requestMappers.teamFallback',
+    'Equipe',
+  );
   const requester = request?.user || {};
   const requesterName = resolveRequesterName(requester);
   const requesterAvatarUrl = resolveRequesterAvatarUrl(requester);
@@ -157,12 +160,26 @@ export const mapTeamMembershipRequestToHubItem = (request = {}) => {
   }
   const readOnlySubtitle = isOwnerOnly
     ? [
-      i18next.t('requestMappers.team.asked', "{{requester}} a demandé à rejoindre {{team}}.", { requester: requesterName, team: teamName, ...SANS_ECHAPPEMENT }),
-      i18next.t('requestMappers.team.waitForManagers', "Ton équipe doit attendre la validation par ton ou tes dirigeant(s)."),
+      i18next.t(
+        'requestMappers.team.asked',
+        '{{requester}} a demandé à rejoindre {{team}}.',
+        { requester: requesterName, team: teamName, ...SANS_ECHAPPEMENT },
+      ),
+      i18next.t(
+        'requestMappers.team.waitForManagers',
+        'Ton équipe doit attendre la validation par ton ou tes dirigeant(s).',
+      ),
     ].join(' ')
     : [
-      i18next.t('requestMappers.team.asked', "{{requester}} a demandé à rejoindre {{team}}.", { requester: requesterName, team: teamName, ...SANS_ECHAPPEMENT }),
-      i18next.t('requestMappers.team.managerRequired', "Un responsable autorisé doit traiter cette demande."),
+      i18next.t(
+        'requestMappers.team.asked',
+        '{{requester}} a demandé à rejoindre {{team}}.',
+        { requester: requesterName, team: teamName, ...SANS_ECHAPPEMENT },
+      ),
+      i18next.t(
+        'requestMappers.team.managerRequired',
+        'Un responsable autorisé doit traiter cette demande.',
+      ),
     ].join(' ');
 
   return {
@@ -185,10 +202,14 @@ export const mapTeamMembershipRequestToHubItem = (request = {}) => {
     status: 'pending',
     subtitle: isReadOnly
       ? readOnlySubtitle
-      : i18next.t('requestMappers.team.wantsToJoin', "{{requester}} souhaite rejoindre {{team}}.", { requester: requesterName, team: teamName, ...SANS_ECHAPPEMENT }),
+      : i18next.t(
+        'requestMappers.team.wantsToJoin',
+        '{{requester}} souhaite rejoindre {{team}}.',
+        { requester: requesterName, team: teamName, ...SANS_ECHAPPEMENT },
+      ),
     title: isReadOnly
-      ? i18next.t('requestMappers.team.titleReadOnly', "Demande équipe en validation")
-      : i18next.t('requestMappers.team.title', "Demande adhésion équipe"),
+      ? i18next.t('requestMappers.team.titleReadOnly', 'Demande équipe en validation')
+      : i18next.t('requestMappers.team.title', 'Demande adhésion équipe'),
     type: 'team',
   };
 };
@@ -203,7 +224,10 @@ export const mapTeamMembershipRequestToHubItem = (request = {}) => {
  */
 export const mapClubMembershipRequestToHubItem = (request = {}, options = {}) => {
   const requestId = String(request?.documentId || request?.id || '');
-  const clubName = normalizeString(request?.club?.name) || i18next.t('requestMappers.clubFallback', "Club");
+  const clubName = normalizeString(request?.club?.name) || i18next.t(
+    'requestMappers.clubFallback',
+    'Club',
+  );
   const requester = request?.requester || request?.user || {};
   const requesterName = resolveRequesterName(requester);
   const requesterAvatarUrl = resolveRequesterAvatarUrl(requester)
@@ -212,14 +236,29 @@ export const mapClubMembershipRequestToHubItem = (request = {}, options = {}) =>
   const isSuperAdmin = options?.isSuperAdmin === true;
   const isReadOnly = requestType === 'claim' && !isSuperAdmin;
   const title = requestType === 'claim'
-    ? i18next.t('requestMappers.club.claimTitle', "Revendication club")
-    : i18next.t('requestMappers.club.joinTitle', "Demande affiliation club");
+    ? i18next.t('requestMappers.club.claimTitle', 'Revendication club')
+    : i18next.t('requestMappers.club.joinTitle', 'Demande affiliation club');
   const subtitle = requestType === 'claim'
-    ? i18next.t('requestMappers.club.claim', "{{requester}} veut revendiquer la gestion du club {{club}}.", { club: clubName, requester: requesterName, ...SANS_ECHAPPEMENT })
-    : i18next.t('requestMappers.club.join', "{{requester}} demande une affiliation au club {{club}}.", { club: clubName, requester: requesterName, ...SANS_ECHAPPEMENT });
+    ? i18next.t(
+      'requestMappers.club.claim',
+      '{{requester}} veut revendiquer la gestion du club {{club}}.',
+      { club: clubName, requester: requesterName, ...SANS_ECHAPPEMENT },
+    )
+    : i18next.t(
+      'requestMappers.club.join',
+      '{{requester}} demande une affiliation au club {{club}}.',
+      { club: clubName, requester: requesterName, ...SANS_ECHAPPEMENT },
+    );
   const readOnlySubtitle = [
-    i18next.t('requestMappers.club.claim', "{{requester}} veut revendiquer la gestion du club {{club}}.", { club: clubName, requester: requesterName, ...SANS_ECHAPPEMENT }),
-    i18next.t('requestMappers.club.claimReview', "Revendication en cours de vérification FoundClub."),
+    i18next.t(
+      'requestMappers.club.claim',
+      '{{requester}} veut revendiquer la gestion du club {{club}}.',
+      { club: clubName, requester: requesterName, ...SANS_ECHAPPEMENT },
+    ),
+    i18next.t(
+      'requestMappers.club.claimReview',
+      'Revendication en cours de vérification FoundClub.',
+    ),
   ].join(' ');
 
   return {
@@ -240,7 +279,10 @@ export const mapClubMembershipRequestToHubItem = (request = {}, options = {}) =>
     },
     status: 'pending',
     subtitle: isReadOnly ? readOnlySubtitle : subtitle,
-    title: isReadOnly ? i18next.t('requestMappers.club.claimTitleReadOnly', "Revendication club en vérification") : title,
+    title: isReadOnly ? i18next.t(
+      'requestMappers.club.claimTitleReadOnly',
+      'Revendication club en vérification',
+    ) : title,
     type: 'club',
   };
 };
@@ -256,7 +298,10 @@ export const mapClubInterestRequestToHubItem = (request = {}) => {
   // « X est interesse par Equipe ». L'absence d'equipe se dit, elle ne se
   // remplace pas.
   const teamName = normalizeString(request?.team?.name);
-  const clubName = normalizeString(request?.club?.name || request?.team?.club?.name) || i18next.t('requestMappers.clubFallback', "Club");
+  const clubName = normalizeString(request?.club?.name || request?.team?.club?.name) || i18next.t(
+    'requestMappers.clubFallback',
+    'Club',
+  );
   const requester = request?.user || {};
   const requesterName = resolveRequesterName(requester);
   const requesterAvatarUrl = resolveRequesterAvatarUrl(requester);
@@ -272,7 +317,11 @@ export const mapClubInterestRequestToHubItem = (request = {}) => {
     const childAge = Number.isFinite(child?.age) ? child.age : null;
     const childLabel = childAge === null
       ? childFirstname
-      : i18next.t('requestMappers.interest.childWithAge', "{{firstname}} ({{age}} ans)", { age: childAge, firstname: childFirstname, ...SANS_ECHAPPEMENT });
+      : i18next.t(
+        'requestMappers.interest.childWithAge',
+        '{{firstname}} ({{age}} ans)',
+        { age: childAge, firstname: childFirstname, ...SANS_ECHAPPEMENT },
+      );
     const destination = teamName || clubName;
     return {
       actions: { primary: 'accept', secondary: 'reject' },
@@ -293,8 +342,17 @@ export const mapClubInterestRequestToHubItem = (request = {}) => {
         teamName,
       },
       status: 'pending',
-      subtitle: i18next.t('requestMappers.interest.childPlace', "{{requester}} demande une place pour {{child}} dans {{destination}}.", { child: childLabel, destination, requester: requesterName, ...SANS_ECHAPPEMENT }),
-      title: i18next.t('requestMappers.interest.childPlaceTitle', "Place pour un enfant"),
+      subtitle: i18next.t(
+        'requestMappers.interest.childPlace',
+        '{{requester}} demande une place pour {{child}} dans {{destination}}.',
+        {
+          child: childLabel,
+          destination,
+          requester: requesterName,
+          ...SANS_ECHAPPEMENT,
+        },
+      ),
+      title: i18next.t('requestMappers.interest.childPlaceTitle', 'Place pour un enfant'),
       type: 'interest',
     };
   }
@@ -316,9 +374,17 @@ export const mapClubInterestRequestToHubItem = (request = {}) => {
     },
     status: 'pending',
     subtitle: teamName
-      ? i18next.t('requestMappers.interest.team', "{{requester}} est intéressé par {{team}}.", { requester: requesterName, team: teamName, ...SANS_ECHAPPEMENT })
-      : i18next.t('requestMappers.interest.club', "{{requester}} est intéressé par le club {{club}}.", { club: clubName, requester: requesterName, ...SANS_ECHAPPEMENT }),
-    title: i18next.t('requestMappers.interest.title', "Intérêt club"),
+      ? i18next.t(
+        'requestMappers.interest.team',
+        '{{requester}} est intéressé par {{team}}.',
+        { requester: requesterName, team: teamName, ...SANS_ECHAPPEMENT },
+      )
+      : i18next.t(
+        'requestMappers.interest.club',
+        '{{requester}} est intéressé par le club {{club}}.',
+        { club: clubName, requester: requesterName, ...SANS_ECHAPPEMENT },
+      ),
+    title: i18next.t('requestMappers.interest.title', 'Intérêt club'),
     type: 'interest',
   };
 };
@@ -329,8 +395,14 @@ export const mapClubInterestRequestToHubItem = (request = {}) => {
  */
 export const mapEventValidationRequestToHubItem = (event = {}) => {
   const eventId = String(event?.documentId || event?.id || '');
-  const teamName = normalizeString(event?.team?.name) || i18next.t('requestMappers.teamFallback', "Equipe");
-  const eventName = normalizeString(event?.name || event?.type?.name) || i18next.t('requestMappers.eventFallback', "Evenement");
+  const teamName = normalizeString(event?.team?.name) || i18next.t(
+    'requestMappers.teamFallback',
+    'Equipe',
+  );
+  const eventName = normalizeString(event?.name || event?.type?.name) || i18next.t(
+    'requestMappers.eventFallback',
+    'Evenement',
+  );
   const startDate = toIsoString(event?.date);
 
   return {
@@ -345,7 +417,7 @@ export const mapEventValidationRequestToHubItem = (event = {}) => {
     },
     status: 'pending',
     subtitle: `${eventName} - ${teamName}`,
-    title: i18next.t('requestMappers.event.validationTitle', "Validation événement"),
+    title: i18next.t('requestMappers.event.validationTitle', 'Validation événement'),
     type: 'event',
   };
 };
@@ -358,8 +430,14 @@ export const mapEventValidationRequestToHubItem = (event = {}) => {
 export const mapEventParticipationRequestToHubItem = (event = {}, request = {}) => {
   const eventId = String(event?.documentId || event?.id || '');
   const requestId = String(request?.documentId || request?.id || '');
-  const teamName = normalizeString(event?.team?.name) || i18next.t('requestMappers.teamFallback', "Equipe");
-  const eventName = normalizeString(event?.name || event?.type?.name) || i18next.t('requestMappers.eventFallback', "Evenement");
+  const teamName = normalizeString(event?.team?.name) || i18next.t(
+    'requestMappers.teamFallback',
+    'Equipe',
+  );
+  const eventName = normalizeString(event?.name || event?.type?.name) || i18next.t(
+    'requestMappers.eventFallback',
+    'Evenement',
+  );
   const requester = request?.requester || request?.user || {};
   const requesterName = resolveRequesterName(requester);
   const requesterAvatarUrl = resolveRequesterAvatarUrl(requester)
@@ -384,7 +462,7 @@ export const mapEventParticipationRequestToHubItem = (event = {}, request = {}) 
     },
     status: 'pending',
     subtitle: `${eventName} - ${teamName}`,
-    title: i18next.t('requestMappers.event.validationTitle', "Validation événement"),
+    title: i18next.t('requestMappers.event.validationTitle', 'Validation événement'),
     type: 'event',
   };
 };
@@ -394,13 +472,22 @@ export const mapFeaturedRequestToHubItem = (/** @type {Record<string, any>} */ e
   const requestKind = normalizeString(event?.kind).toUpperCase();
   const eventEntity = event?.event || {};
   const eventId = String(eventEntity?.documentId || eventEntity?.id || '');
-  const eventName = normalizeString(eventEntity?.name || eventEntity?.type?.name) || i18next.t('requestMappers.eventFallback', "Evenement");
-  const clubName = normalizeString(eventEntity?.team?.club?.name) || i18next.t('requestMappers.clubFallback', "Club");
+  const eventName = normalizeString(eventEntity?.name || eventEntity?.type?.name) || i18next.t(
+    'requestMappers.eventFallback',
+    'Evenement',
+  );
+  const clubName = normalizeString(eventEntity?.team?.club?.name) || i18next.t(
+    'requestMappers.clubFallback',
+    'Club',
+  );
   const scopeLabelByKind = /** @type {Record<string, string>} */ ({
-    CM: i18next.t('requestMappers.featured.scope.multisport', "Multisport"),
-    PUBLIC: i18next.t('requestMappers.featured.scope.public', "Public"),
+    CM: i18next.t('requestMappers.featured.scope.multisport', 'Multisport'),
+    PUBLIC: i18next.t('requestMappers.featured.scope.public', 'Public'),
   });
-  const scopeLabel = scopeLabelByKind[requestKind] || i18next.t('requestMappers.featured.scope.club', "Club");
+  const scopeLabel = scopeLabelByKind[requestKind] || i18next.t(
+    'requestMappers.featured.scope.club',
+    'Club',
+  );
   const targetName = normalizeString(event?.targetClub?.name || event?.multisportClub?.name || clubName);
   const requester = event?.requester || {};
   const requesterName = resolveRequesterName(requester);
@@ -424,10 +511,27 @@ export const mapFeaturedRequestToHubItem = (/** @type {Record<string, any>} */ e
       targetName,
     },
     status: 'pending',
-    subtitle: i18next.t('requestMappers.featured.subtitle', "{{requester}} demande une mise à la une {{scope}}{{target}}.", { requester: requesterName,
-      scope: scopeLabel.toLowerCase(),
-      target: targetName ? i18next.t('requestMappers.featured.forTarget', " pour {{target}}", { target: targetName, ...SANS_ECHAPPEMENT }) : '', ...SANS_ECHAPPEMENT }),
-    title: i18next.t('requestMappers.featured.title', "Mise à la une {{scope}} - {{event}}", { event: eventName, scope: scopeLabel, ...SANS_ECHAPPEMENT }),
+    subtitle: i18next.t(
+      'requestMappers.featured.subtitle',
+      '{{requester}} demande une mise à la une {{scope}}{{target}}.',
+      {
+        requester: requesterName,
+        scope: scopeLabel.toLowerCase(),
+        target: targetName
+          ? i18next.t(
+            'requestMappers.featured.forTarget',
+            ' pour {{target}}',
+            { target: targetName, ...SANS_ECHAPPEMENT },
+          )
+          : '',
+        ...SANS_ECHAPPEMENT,
+      },
+    ),
+    title: i18next.t(
+      'requestMappers.featured.title',
+      'Mise à la une {{scope}} - {{event}}',
+      { event: eventName, scope: scopeLabel, ...SANS_ECHAPPEMENT },
+    ),
     type: 'featured',
   };
 };
@@ -439,9 +543,18 @@ export const mapFacilityOverrideRequestToHubItem = (/** @type {Record<string, an
   const requesterAvatarUrl = resolveRequesterAvatarUrl(requester);
   const eventEntity = request?.event || {};
   const eventId = normalizeString(eventEntity?.documentId || eventEntity?.id);
-  const eventName = normalizeString(eventEntity?.name || eventEntity?.type?.name) || i18next.t('requestMappers.eventFallback', "Evenement");
-  const facilityName = normalizeString(request?.facility?.name) || i18next.t('requestMappers.facilityFallback', "Installation");
-  const teamName = normalizeString(request?.team?.name) || i18next.t('requestMappers.teamFallback', "Equipe");
+  const eventName = normalizeString(eventEntity?.name || eventEntity?.type?.name) || i18next.t(
+    'requestMappers.eventFallback',
+    'Evenement',
+  );
+  const facilityName = normalizeString(request?.facility?.name) || i18next.t(
+    'requestMappers.facilityFallback',
+    'Installation',
+  );
+  const teamName = normalizeString(request?.team?.name) || i18next.t(
+    'requestMappers.teamFallback',
+    'Equipe',
+  );
   const overlapCount = Number(request?.overlapCount || 0);
   const maxSlots = Number(request?.maxSlots || 1);
   const startDate = toIsoString(request?.requestedStart || request?.createdAt);
@@ -469,8 +582,19 @@ export const mapFacilityOverrideRequestToHubItem = (/** @type {Record<string, an
       windowStart: startDate,
     },
     status: 'pending',
-    subtitle: i18next.t('requestMappers.facility.subtitle', "{{team}} demande une place supplementaire sur {{facility}} ({{overlap}}/{{max}} slots deja pris).", { facility: facilityName, max: maxSlots, overlap: overlapCount, team: teamName, ...SANS_ECHAPPEMENT }),
-    title: i18next.t('requestMappers.facility.title', "Exception installation"),
+    subtitle: i18next.t(
+      'requestMappers.facility.subtitle',
+      // eslint-disable-next-line max-len
+      '{{team}} demande une place supplementaire sur {{facility}} ({{overlap}}/{{max}} slots deja pris).',
+      {
+        facility: facilityName,
+        max: maxSlots,
+        overlap: overlapCount,
+        team: teamName,
+        ...SANS_ECHAPPEMENT,
+      },
+    ),
+    title: i18next.t('requestMappers.facility.title', 'Exception installation'),
     type: 'installation',
   };
 };
@@ -488,8 +612,14 @@ export const mapFacilityOverrideRequestToHubItem = (/** @type {Record<string, an
  */
 export const mapFriendlyMatchApplicationToHubItem = (ad = {}, application = {}) => {
   const applicationId = String(application?.documentId || application?.id || '');
-  const opponentName = normalizeString(application?.team?.name) || i18next.t('requestMappers.friendly.opponentFallback', "Une equipe");
-  const myTeamName = normalizeString(ad?.team?.name) || i18next.t('requestMappers.friendly.myTeamFallback', "ton equipe");
+  const opponentName = normalizeString(application?.team?.name) || i18next.t(
+    'requestMappers.friendly.opponentFallback',
+    'Une equipe',
+  );
+  const myTeamName = normalizeString(ad?.team?.name) || i18next.t(
+    'requestMappers.friendly.myTeamFallback',
+    'ton equipe',
+  );
 
   return {
     actions: { primary: 'open' },
@@ -504,8 +634,12 @@ export const mapFriendlyMatchApplicationToHubItem = (ad = {}, application = {}) 
       teamName: myTeamName,
     },
     status: 'pending',
-    subtitle: i18next.t('requestMappers.friendly.received', "{{opponent}} propose un match à {{team}}.", { opponent: opponentName, team: myTeamName, ...SANS_ECHAPPEMENT }),
-    title: i18next.t('requestMappers.friendly.receivedTitle', "Proposition de match amical"),
+    subtitle: i18next.t(
+      'requestMappers.friendly.received',
+      '{{opponent}} propose un match à {{team}}.',
+      { opponent: opponentName, team: myTeamName, ...SANS_ECHAPPEMENT },
+    ),
+    title: i18next.t('requestMappers.friendly.receivedTitle', 'Proposition de match amical'),
     type: 'friendly',
   };
 };
@@ -522,7 +656,10 @@ export const mapFriendlyMatchApplicationToHubItem = (ad = {}, application = {}) 
 export const mapMyFriendlyMatchProposalToHubItem = (ad = {}) => {
   const application = ad?.myApplication || {};
   const applicationId = String(application?.documentId || application?.id || '');
-  const opponentName = normalizeString(ad?.team?.name) || i18next.t('requestMappers.friendly.opponentFallback', "Une equipe");
+  const opponentName = normalizeString(ad?.team?.name) || i18next.t(
+    'requestMappers.friendly.opponentFallback',
+    'Une equipe',
+  );
 
   return {
     actions: {},
@@ -537,8 +674,12 @@ export const mapMyFriendlyMatchProposalToHubItem = (ad = {}) => {
       raw: application,
     },
     status: 'pending',
-    subtitle: i18next.t('requestMappers.friendly.sent', "Envoyée à {{opponent}}. En attente de sa réponse.", { opponent: opponentName, ...SANS_ECHAPPEMENT }),
-    title: i18next.t('requestMappers.friendly.sentTitle', "Ta proposition de match"),
+    subtitle: i18next.t(
+      'requestMappers.friendly.sent',
+      'Envoyée à {{opponent}}. En attente de sa réponse.',
+      { opponent: opponentName, ...SANS_ECHAPPEMENT },
+    ),
+    title: i18next.t('requestMappers.friendly.sentTitle', 'Ta proposition de match'),
     type: 'friendly',
   };
 };
@@ -564,8 +705,14 @@ export const mapEventTeamInvitationToHubItem = (audience = {}) => {
   const audienceId = String(audience?.audienceId || audience?.documentId || audience?.id || '');
   const eventId = String(event?.id || event?.documentId || '');
   const typeName = normalizeString(event?.typeName);
-  const eventName = normalizeString(event?.name) || typeName || i18next.t('requestMappers.eventFallback', "Evenement");
-  const invitedTeamName = normalizeString(invitedTeam?.name) || i18next.t('requestMappers.teamInvite.myTeamFallback', "Ton equipe");
+  const eventName = normalizeString(event?.name) || typeName || i18next.t(
+    'requestMappers.eventFallback',
+    'Evenement',
+  );
+  const invitedTeamName = normalizeString(invitedTeam?.name) || i18next.t(
+    'requestMappers.teamInvite.myTeamFallback',
+    'Ton equipe',
+  );
   const organizerTeamName = normalizeString(event?.teamName);
 
   return {
@@ -588,9 +735,21 @@ export const mapEventTeamInvitationToHubItem = (audience = {}) => {
     },
     status: 'pending',
     subtitle: organizerTeamName
-      ? i18next.t('requestMappers.teamInvite.invites', "{{organizer}} invite {{team}}.", { organizer: organizerTeamName, team: invitedTeamName, ...SANS_ECHAPPEMENT })
-      : i18next.t('requestMappers.teamInvite.invited', "{{team}} est invitee a cet evenement.", { team: invitedTeamName, ...SANS_ECHAPPEMENT }),
-    title: i18next.t('requestMappers.teamInvite.title', "Invitation - {{event}}", { event: eventName, ...SANS_ECHAPPEMENT }),
+      ? i18next.t(
+        'requestMappers.teamInvite.invites',
+        '{{organizer}} invite {{team}}.',
+        { organizer: organizerTeamName, team: invitedTeamName, ...SANS_ECHAPPEMENT },
+      )
+      : i18next.t(
+        'requestMappers.teamInvite.invited',
+        '{{team}} est invitee a cet evenement.',
+        { team: invitedTeamName, ...SANS_ECHAPPEMENT },
+      ),
+    title: i18next.t(
+      'requestMappers.teamInvite.title',
+      'Invitation - {{event}}',
+      { event: eventName, ...SANS_ECHAPPEMENT },
+    ),
     type: 'teamInvite',
   };
 };

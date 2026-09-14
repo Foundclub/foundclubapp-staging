@@ -716,7 +716,11 @@ function PlayerCardBase({
           >
             <InfoRow label={t('playerCard.info.position', 'POSTE')} s={s} value={up(poste)} />
             <InfoRow label={t('playerCard.info.age', 'ÂGE')} s={s} value={up(age)} />
-            <InfoRow label={t('playerCard.info.nationality', 'NATIONALITÉ')} s={s} value={up(nationalite)} />
+            <InfoRow
+              label={t('playerCard.info.nationality', 'NATIONALITÉ')}
+              s={s}
+              value={up(nationalite)}
+            />
             <InfoRow label={t('playerCard.info.club', 'CLUB')} s={s} value={up(club)} />
             <InfoRow label={t('playerCard.info.city', 'VILLE')} s={s} value={up(ville)} />
             <InfoRow
@@ -798,7 +802,11 @@ function PlayerCardBase({
                       allowFontScaling={false}
                       style={{ color: CYAN, fontFamily: 'Montserrat-Black', fontSize: 20 * s }}
                     >
-                      {t('playerCard.history.clubCount', '{{total}} CLUBS', { total: historique.length })}
+                      {t(
+                        'playerCard.history.clubCount',
+                        '{{total}} CLUBS',
+                        { total: historique.length },
+                      )}
                     </Text>
                   ) : null}
                 </View>
@@ -813,7 +821,10 @@ function PlayerCardBase({
                         letterSpacing: 2 * s,
                       }}
                     >
-                      {up(historiqueEmptyLabel ?? t('playerCard.history.empty', 'PARCOURS À COMPLÉTER'))}
+                      {up(historiqueEmptyLabel ?? t(
+                        'playerCard.history.empty',
+                        'PARCOURS À COMPLÉTER',
+                      ))}
                     </Text>
                   </View>
                 ) : null}

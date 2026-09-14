@@ -222,7 +222,11 @@ function ProfileFiltersSheet({
               rangee Ville (« Marseille · 25 km »). Il reste REGLABLE ici, sur
               la meme rampe qu'avant (2 a 50 km, au kilometre pres). */}
           <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
-            {t('profileFiltersSheet.radius', 'Dans un rayon autour de : {{radius}} km', { radius: String(radius) })}
+            {t(
+              'profileFiltersSheet.radius',
+              'Dans un rayon autour de : {{radius}} km',
+              { radius: String(radius) },
+            )}
           </Text>
           <Slider
             accessibilityLabel={t('profileFiltersSheet.radiusLabel', 'Rayon de recherche')}

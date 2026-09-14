@@ -70,7 +70,9 @@ function TourBanner() {
       hitSlop={8}
       onPress={exitTour}
     >
-      <Text style={[Fonts.p3Bold, Fonts.neutral400]}>{t('tourBanner.quit', 'Quitter le tour')}</Text>
+      <Text style={[Fonts.p3Bold, Fonts.neutral400]}>
+        {t('tourBanner.quit', 'Quitter le tour')}
+      </Text>
     </TouchableOpacity>
   );
 
@@ -107,7 +109,11 @@ function TourBanner() {
           }}
           />
           <Text style={[Fonts.p4Bold, Fonts.neutral100]}>
-            {t('tourBanner.compact', 'Tour {{step}}/{{total}}', { step: stepIndex + 1, total: totalSteps })}
+            {t(
+              'tourBanner.compact',
+              'Tour {{step}}/{{total}}',
+              { step: stepIndex + 1, total: totalSteps },
+            )}
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
@@ -145,7 +151,11 @@ function TourBanner() {
       <View style={[containerStyle, Spaces.padding[12], Spaces.gap[8]]}>
         <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[8]]}>
           <Text style={[Fonts.p2Bold, Fonts.neutral00, { flex: 1 }]}>
-            {t('tourBanner.waiting', "Ton tour guidé t'attend (étape {{step}}/{{total}})", { step: stepIndex + 1, total: totalSteps })}
+            {t(
+              'tourBanner.waiting',
+              "Ton tour guidé t'attend (étape {{step}}/{{total}})",
+              { step: stepIndex + 1, total: totalSteps },
+            )}
           </Text>
           <TouchableOpacity
             accessibilityLabel={t('tourBanner.collapse', 'Réduire le tour')}
@@ -167,7 +177,9 @@ function TourBanner() {
               paddingVertical: 10,
             }}
           >
-            <Text style={[Fonts.p3Bold, Fonts.primary900]}>{t('tourBanner.resume', 'Reprendre le tour')}</Text>
+            <Text style={[Fonts.p3Bold, Fonts.primary900]}>
+              {t('tourBanner.resume', 'Reprendre le tour')}
+            </Text>
           </TouchableOpacity>
           <View style={Alignments.fill} />
           {quitButton}
@@ -213,7 +225,11 @@ function TourBanner() {
         <Text
           style={[Fonts.p4Bold, Fonts.primary500, { letterSpacing: 1, textTransform: 'uppercase' }]}
         >
-          {t('tourBanner.stepOf', 'Tour guidé · étape {{step}} sur {{total}}', { step: stepIndex + 1, total: totalSteps })}
+          {t(
+            'tourBanner.stepOf',
+            'Tour guidé · étape {{step}} sur {{total}}',
+            { step: stepIndex + 1, total: totalSteps },
+          )}
         </Text>
         <View style={Alignments.fill} />
         {isSignalStep ? (

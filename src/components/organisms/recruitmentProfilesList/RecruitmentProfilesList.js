@@ -116,18 +116,39 @@ function RecruitmentProfilesList({
   if (totalProfiles === 0) {
     profilesCountLabel = t('recruitmentProfilesList.count.none', 'Aucun profil');
   } else if (totalProfiles > 1) {
-    profilesCountLabel = t('recruitmentProfilesList.count.many', '{{total}} profils', { total: String(totalProfiles) });
+    profilesCountLabel = t(
+      'recruitmentProfilesList.count.many',
+      '{{total}} profils',
+      { total: String(totalProfiles) },
+    );
   }
-  let headerDescription = t('recruitmentProfilesList.header.default', 'Retrouve ici les joueurs et joueuses ouverts a un club pour construire ton recrutement.');
+  let headerDescription = t(
+    'recruitmentProfilesList.header.default',
+    'Retrouve ici les joueurs et joueuses ouverts a un club pour construire ton recrutement.',
+  );
   if (hasSearchTerm) {
-    headerDescription = t('recruitmentProfilesList.header.searching', 'Recherche en cours pour "{{search}}". Les profils les plus pertinents remontent en premier.', { search: trimmedSearch, ...SANS_ECHAPPEMENT });
+    headerDescription = t(
+      'recruitmentProfilesList.header.searching',
+      'Recherche en cours pour "{{search}}". Les profils les plus pertinents remontent en premier.',
+      { search: trimmedSearch, ...SANS_ECHAPPEMENT },
+    );
   } else if (hasActiveFilters) {
-    headerDescription = t('recruitmentProfilesList.header.filtered', 'Les filtres ci-dessous ciblent uniquement les profils ouverts à ton recrutement.');
+    headerDescription = t(
+      'recruitmentProfilesList.header.filtered',
+      'Les filtres ci-dessous ciblent uniquement les profils ouverts à ton recrutement.',
+    );
   }
   const summaryPills = [
     profilesCountLabel,
-    hasSearchTerm ? t('recruitmentProfilesList.pills.searchActive', 'Recherche active') : t('recruitmentProfilesList.pills.fullFeed', 'Feed complet'),
-    hasActiveFilters ? t('recruitmentProfilesList.pills.filters', '{{total}} filtre(s)', { total: String(filtersCount) }) : t('recruitmentProfilesList.pills.noFilter', 'Sans filtre'),
+    hasSearchTerm ? t(
+      'recruitmentProfilesList.pills.searchActive',
+      'Recherche active',
+    ) : t('recruitmentProfilesList.pills.fullFeed', 'Feed complet'),
+    hasActiveFilters ? t(
+      'recruitmentProfilesList.pills.filters',
+      '{{total}} filtre(s)',
+      { total: String(filtersCount) },
+    ) : t('recruitmentProfilesList.pills.noFilter', 'Sans filtre'),
   ];
 
   const handleClearFilters = () => {
@@ -265,8 +286,14 @@ function RecruitmentProfilesList({
       </Text>
       <Text style={[Fonts.p2, { color: recruitmentMutedText, marginTop: 8, textAlign: 'center' }]}>
         {hasSearchTerm || hasActiveFilters
-          ? t('recruitmentProfilesList.empty.widen', "Essaie d'elargir les filtres ou de simplifier la recherche.")
-          : t('recruitmentProfilesList.empty.later', "Les profils ouverts a un club apparaîtront ici des qu'ils seront disponibles.")}
+          ? t(
+            'recruitmentProfilesList.empty.widen',
+            "Essaie d'elargir les filtres ou de simplifier la recherche.",
+          )
+          : t(
+            'recruitmentProfilesList.empty.later',
+            "Les profils ouverts a un club apparaîtront ici des qu'ils seront disponibles.",
+          )}
       </Text>
       {hasSearchTerm || hasActiveFilters ? (
         <TouchableOpacity

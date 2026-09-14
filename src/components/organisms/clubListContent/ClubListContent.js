@@ -309,12 +309,21 @@ function ClubListContent({
   } else if (isSmartSearchEnabled) {
     activeMode = 'smart-search';
   }
-  let viewportHelperText = t('clubListContent.viewport.followsMap', 'La liste suit la zone actuellement choisie sur la carte.');
+  let viewportHelperText = t(
+    'clubListContent.viewport.followsMap',
+    'La liste suit la zone actuellement choisie sur la carte.',
+  );
   if (isViewportTruncated) {
-    viewportHelperText = t('clubListContent.viewport.zoomToLoadAll', 'Zoome sur la carte pour charger tout le catalogue local.');
+    viewportHelperText = t(
+      'clubListContent.viewport.zoomToLoadAll',
+      'Zoome sur la carte pour charger tout le catalogue local.',
+    );
   }
   if (requiresViewportZoom) {
-    viewportHelperText = t('clubListContent.viewport.zoomToRefine', 'Zoome pour affiner la recherche.');
+    viewportHelperText = t(
+      'clubListContent.viewport.zoomToRefine',
+      'Zoome pour affiner la recherche.',
+    );
   }
 
   useEffect(() => {
@@ -606,7 +615,11 @@ function ClubListContent({
           : handleClubSelection(item.documentId))}
         paused={idsVisibles !== null && !idsVisibles.has(item?.documentId)}
         reasonLabel={primaryReasonLabel
-          ? t('clubListContent.relevanceReason', 'Tri pertinence: {{reason}}', { reason: primaryReasonLabel, ...SANS_ECHAPPEMENT })
+          ? t(
+            'clubListContent.relevanceReason',
+            'Tri pertinence: {{reason}}',
+            { reason: primaryReasonLabel, ...SANS_ECHAPPEMENT },
+          )
           : ''}
       />
     );
@@ -616,7 +629,10 @@ function ClubListContent({
     if (showLoadingPlaceholder) {
       return (
         <SearchResultsLoadingState
-          description={t('clubListContent.loading.description', 'Nous chargeons les clubs correspondant à ta recherche.')}
+          description={t(
+            'clubListContent.loading.description',
+            'Nous chargeons les clubs correspondant à ta recherche.',
+          )}
           title={t('clubListContent.loading.title', 'Chargement des clubs')}
         />
       );
@@ -625,7 +641,11 @@ function ClubListContent({
     if (requiresViewportZoom) {
       return (
         <EmptyState
-          description={t('clubListContent.zoomRequired.description', 'La zone visible est trop large pour charger une liste fiable. Zoome puis relance la vue liste.')}
+          description={t(
+            'clubListContent.zoomRequired.description',
+            // eslint-disable-next-line max-len
+            'La zone visible est trop large pour charger une liste fiable. Zoome puis relance la vue liste.',
+          )}
           title={t('clubListContent.zoomRequired.title', 'Zoome pour affiner la recherche')}
         />
       );

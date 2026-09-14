@@ -372,7 +372,10 @@ function VoiceNoteBubble({
 
         {!isPlayerAvailable ? (
           <Text style={[Fonts.p4, { color: Colors.error500 }]}>
-            {t('voiceNoteBubble.playbackUnavailable', 'Lecture audio indisponible sur cette build.')}
+            {t(
+              'voiceNoteBubble.playbackUnavailable',
+              'Lecture audio indisponible sur cette build.',
+            )}
           </Text>
         ) : null}
 

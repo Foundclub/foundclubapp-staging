@@ -35,7 +35,11 @@ function Stepper({ currentStep, steps }) {
 
   return (
     <View
-      accessibilityLabel={t('stepper.progress', 'Étape {{filled}} sur {{total}}', { filled, total })}
+      accessibilityLabel={t(
+        'stepper.progress',
+        'Étape {{filled}} sur {{total}}',
+        { filled, total },
+      )}
       accessibilityRole="progressbar"
       style={[
         Alignments.fullWidth,

@@ -123,12 +123,18 @@ function SmartNotificationHost() {
       {activeSnackbar && !isLineupReminder ? (
         <View style={styles.snackbarWrap}>
           <GlobalBanner
-            body={activeSnackbar.body || t('smartNotificationHost.defaultBody', 'Nouvelle mise à jour.')}
+            body={activeSnackbar.body || t(
+              'smartNotificationHost.defaultBody',
+              'Nouvelle mise à jour.',
+            )}
             onPress={() => {
               handleOpenFromPayload(activeSnackbar);
               dismissSnackbar();
             }}
-            title={activeSnackbar.title || t('smartNotificationHost.defaultTitle', 'Notification league')}
+            title={activeSnackbar.title || t(
+              'smartNotificationHost.defaultTitle',
+              'Notification league',
+            )}
             tone="league"
           />
         </View>
@@ -155,8 +161,14 @@ function SmartNotificationHost() {
             />
             <View style={[styles.lineupCard, { borderColor: Colors.primary500 }]}>
               <LeagueModalHeader
-                description={activeSnackbar.body || t('smartNotificationHost.lineup.description', 'Ton match est dans 2 jours. Souhaites-te publier la composition maintenant ?')}
-                title={activeSnackbar.title || t('smartNotificationHost.lineup.title', 'Publier la compo')}
+                description={activeSnackbar.body || t(
+                  'smartNotificationHost.lineup.description',
+                  'Ton match est dans 2 jours. Souhaites-te publier la composition maintenant ?',
+                )}
+                title={activeSnackbar.title || t(
+                  'smartNotificationHost.lineup.title',
+                  'Publier la compo',
+                )}
               />
 
               <View style={styles.lineupActions}>
@@ -167,7 +179,9 @@ function SmartNotificationHost() {
                   }}
                   style={[styles.lineupSecondaryButton, { borderColor: Colors.primary500 }]}
                 >
-                  <Text style={[Fonts.p2Bold, { color: Colors.primary500 }]}>{t('smartNotificationHost.lineup.later', 'Plus tard')}</Text>
+                  <Text style={[Fonts.p2Bold, { color: Colors.primary500 }]}>
+                    {t('smartNotificationHost.lineup.later', 'Plus tard')}
+                  </Text>
                 </Pressable>
                 <Pressable
                   onPress={() => {
@@ -180,7 +194,9 @@ function SmartNotificationHost() {
                   }}
                   style={[styles.lineupPrimaryButton, { backgroundColor: Colors.primary500 }]}
                 >
-                  <Text style={[Fonts.p2Bold, { color: Colors.neutral00 }]}>{t('smartNotificationHost.lineup.publish', 'Publier la compo')}</Text>
+                  <Text style={[Fonts.p2Bold, { color: Colors.neutral00 }]}>
+                    {t('smartNotificationHost.lineup.publish', 'Publier la compo')}
+                  </Text>
                 </Pressable>
               </View>
             </View>
@@ -209,8 +225,14 @@ function SmartNotificationHost() {
             />
             <View style={[styles.lineupCard, { borderColor: Colors.primary500 }]}>
               <LeagueModalHeader
-                description={activeSnackbar.body || t('smartNotificationHost.lineup.description', 'Ton match est dans 2 jours. Souhaites-te publier la composition maintenant ?')}
-                title={activeSnackbar.title || t('smartNotificationHost.lineup.title', 'Publier la compo')}
+                description={activeSnackbar.body || t(
+                  'smartNotificationHost.lineup.description',
+                  'Ton match est dans 2 jours. Souhaites-te publier la composition maintenant ?',
+                )}
+                title={activeSnackbar.title || t(
+                  'smartNotificationHost.lineup.title',
+                  'Publier la compo',
+                )}
               />
 
               <View style={styles.lineupActions}>
@@ -221,7 +243,9 @@ function SmartNotificationHost() {
                   }}
                   style={[styles.lineupSecondaryButton, { borderColor: Colors.primary500 }]}
                 >
-                  <Text style={[Fonts.p2Bold, { color: Colors.primary500 }]}>{t('smartNotificationHost.lineup.later', 'Plus tard')}</Text>
+                  <Text style={[Fonts.p2Bold, { color: Colors.primary500 }]}>
+                    {t('smartNotificationHost.lineup.later', 'Plus tard')}
+                  </Text>
                 </Pressable>
                 <Pressable
                   onPress={() => {
@@ -234,7 +258,9 @@ function SmartNotificationHost() {
                   }}
                   style={[styles.lineupPrimaryButton, { backgroundColor: Colors.primary500 }]}
                 >
-                  <Text style={[Fonts.p2Bold, { color: Colors.neutral00 }]}>{t('smartNotificationHost.lineup.publish', 'Publier la compo')}</Text>
+                  <Text style={[Fonts.p2Bold, { color: Colors.neutral00 }]}>
+                    {t('smartNotificationHost.lineup.publish', 'Publier la compo')}
+                  </Text>
                 </Pressable>
               </View>
             </View>

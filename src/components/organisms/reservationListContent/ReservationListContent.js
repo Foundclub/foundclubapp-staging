@@ -97,8 +97,16 @@ function ReservationListContent({
     { id: 'all', label: t('reservationListContent.activities.all', 'Tous'), slug: null },
     { id: 'padel', label: 'Padel', slug: 'padel' },
     { id: 'foot', label: t('reservationListContent.activities.foot', 'Foot 5'), slug: 'foot' },
-    { id: 'tennis', label: t('reservationListContent.activities.tennis', 'Tennis'), slug: 'tennis' },
-    { id: 'basket', label: t('reservationListContent.activities.basket', 'Basket'), slug: 'basket' },
+    {
+      id: 'tennis',
+      label: t('reservationListContent.activities.tennis', 'Tennis'),
+      slug: 'tennis',
+    },
+    {
+      id: 'basket',
+      label: t('reservationListContent.activities.basket', 'Basket'),
+      slug: 'basket',
+    },
   ];
 
   const joinReservationMutation = useMutation({
@@ -106,7 +114,10 @@ function ReservationListContent({
     onError: (error) => {
       Alert.alert(
         t('common.error'),
-        getParticipationErrorMessage(error, t('reservationListContent.errors.join', 'Impossible de rejoindre cette réservation pour le moment.')),
+        getParticipationErrorMessage(error, t(
+          'reservationListContent.errors.join',
+          'Impossible de rejoindre cette réservation pour le moment.',
+        )),
       );
     },
     onSuccess: () => {
@@ -438,7 +449,11 @@ function ReservationListContent({
       <View style={[Spaces.gap[8]]}>
         {primaryReasonLabel ? (
           <Text style={[Fonts.p3, Fonts.primary500]}>
-            {t('reservationListContent.relevanceReason', 'Tri pertinence: {{reason}}', { reason: primaryReasonLabel, ...SANS_ECHAPPEMENT })}
+            {t(
+              'reservationListContent.relevanceReason',
+              'Tri pertinence: {{reason}}',
+              { reason: primaryReasonLabel, ...SANS_ECHAPPEMENT },
+            )}
           </Text>
         ) : null}
         <EventCardNew
@@ -471,7 +486,10 @@ function ReservationListContent({
     return (
       <View style={[Spaces.gap[40], Alignments.fill, Alignments.alignCenter, Alignments.justifyCenter]}>
         <Text style={[Fonts.p1, Fonts.error500]}>
-          {activeError?.message || t('reservationListContent.errors.generic', 'Une erreur est survenue')}
+          {activeError?.message || t(
+            'reservationListContent.errors.generic',
+            'Une erreur est survenue',
+          )}
         </Text>
       </View>
     );

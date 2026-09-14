@@ -183,7 +183,10 @@ function SearchTypeSwitcher({ activeType, onTypeChange }) {
             {t('searchTypeSwitcher.soon.title', 'Bientôt disponible !')}
           </Text>
           <Text style={[Fonts.p2, Fonts.neutral200]}>
-            {t('searchTypeSwitcher.soon.body', 'La réservation de créneaux (foot à 5, padel…) arrive dans une prochaine version.')}
+            {t(
+              'searchTypeSwitcher.soon.body',
+              'La réservation de créneaux (foot à 5, padel…) arrive dans une prochaine version.',
+            )}
           </Text>
           <TouchableOpacity
             accessibilityRole="button"

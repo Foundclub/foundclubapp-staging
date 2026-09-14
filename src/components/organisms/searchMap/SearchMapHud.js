@@ -67,16 +67,28 @@ function SearchMapHud({
 
   let geolocatableLabel = t('searchMapHud.markers.none', 'Aucun repère');
   if (visibleMarkerCount > 0) {
-    geolocatableLabel = t('searchMapHud.markers.visible', '{{total}} repères visibles', { total: visibleMarkerCount });
+    geolocatableLabel = t(
+      'searchMapHud.markers.visible',
+      '{{total}} repères visibles',
+      { total: visibleMarkerCount },
+    );
   } else if (safeAvailableCount > 0 && truncated) {
     geolocatableLabel = t('searchMapHud.markers.zoomToSeeAll', 'Zoome pour tout voir');
   } else if (safeAvailableCount > 0 && isLoadingResults) {
     geolocatableLabel = t('searchMapHud.markers.updating', 'Mise à jour des repères...');
   } else if (geolocatableCount > 0 && isPartialDataset) {
-    geolocatableLabel = t('searchMapHud.markers.geolocatable', '{{total}} geolocalisables', { total: geolocatableCount });
+    geolocatableLabel = t(
+      'searchMapHud.markers.geolocatable',
+      '{{total}} geolocalisables',
+      { total: geolocatableCount },
+    );
   } else if (geolocatableCount > 0) {
     geolocatableLabel = scope === 'clubs'
-      ? t('searchMapHud.markers.geolocatable', '{{total}} geolocalisables', { total: geolocatableCount })
+      ? t(
+        'searchMapHud.markers.geolocatable',
+        '{{total}} geolocalisables',
+        { total: geolocatableCount },
+      )
       : t('searchMapHud.markers.tap', 'Touche un repère');
   } else if (safeAvailableCount > 0) {
     geolocatableLabel = t('searchMapHud.markers.noneVisible', 'Aucun repère visible');

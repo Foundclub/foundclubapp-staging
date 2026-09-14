@@ -52,7 +52,11 @@ function BootGate({ children }) {
       <ErrorScreen
         actionTitle={t('bootGate.reload', 'Recharger')}
         details={__DEV__ ? errors.join('\n') : ''}
-        subtitle={t('bootGate.subtitle', "La configuration réseau de ce build est invalide. L'app est bloquée proprement pour éviter un crash au démarrage.")}
+        subtitle={t(
+          'bootGate.subtitle',
+          // eslint-disable-next-line max-len
+          "La configuration réseau de ce build est invalide. L'app est bloquée proprement pour éviter un crash au démarrage.",
+        )}
         title={t('bootGate.title', 'Configuration invalide')}
       />
     );

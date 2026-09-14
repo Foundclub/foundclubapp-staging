@@ -70,7 +70,10 @@ function SearchMapPreviewCard({
     scope === 'reservations' ? item.priceLabel : '',
     item.distanceLabel,
   ]);
-  const secondaryActionLabel = onDismiss ? t('searchMapPreviewCard.hide', 'Masquer') : t('searchMapPreviewCard.showList', 'Voir la liste');
+  const secondaryActionLabel = onDismiss ? t('searchMapPreviewCard.hide', 'Masquer') : t(
+    'searchMapPreviewCard.showList',
+    'Voir la liste',
+  );
   const handleSecondaryAction = onDismiss || onShowList;
 
   return (
@@ -229,7 +232,11 @@ function SearchMapPreviewCard({
           </TouchableOpacity>
           <TouchableOpacity
             accessibilityLabel={item?.title
-              ? t('searchMapPreviewCard.openNamed', 'Ouvrir {{title}}', { title: item.title, ...SANS_ECHAPPEMENT })
+              ? t(
+                'searchMapPreviewCard.openNamed',
+                'Ouvrir {{title}}',
+                { title: item.title, ...SANS_ECHAPPEMENT },
+              )
               : t('searchMapPreviewCard.openSheet', 'Ouvrir la fiche')}
             accessibilityRole="button"
             activeOpacity={0.85}

@@ -168,7 +168,9 @@ function DocumentMessageBubble({
           {pending ? (
             <View style={{ alignItems: 'center', flexDirection: 'row', gap: 8 }}>
               <ActivityIndicator color={Colors.primary500} size="small" />
-              <Text style={[Fonts.p4, { color: Colors.neutral300 }]}>{t('documentMessageBubble.sending', 'Envoi...')}</Text>
+              <Text style={[Fonts.p4, { color: Colors.neutral300 }]}>
+                {t('documentMessageBubble.sending', 'Envoi...')}
+              </Text>
             </View>
           ) : null}
         </View>
@@ -206,7 +208,10 @@ function DocumentMessageBubble({
                 numberOfLines={1}
                 style={[Fonts.p4Bold, { color: failed ? Colors.error500 : Colors.primary500 }]}
               >
-                {failed ? t('documentMessageBubble.retry', 'Réessayer') : t('documentMessageBubble.open', 'Ouvrir')}
+                {failed ? t(
+                  'documentMessageBubble.retry',
+                  'Réessayer',
+                ) : t('documentMessageBubble.open', 'Ouvrir')}
               </Text>
             </TouchableOpacity>
 

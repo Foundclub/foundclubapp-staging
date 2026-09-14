@@ -142,7 +142,9 @@ function TimePickerInput({
               ]}
               >
                 <TouchableOpacity onPress={() => setShowPicker(false)} style={{ flex: 1 }}>
-                  <Text style={[Fonts.p1, { color: Colors.neutral300 }]}>{t('timePickerInput.cancel', 'Annuler')}</Text>
+                  <Text style={[Fonts.p1, { color: Colors.neutral300 }]}>
+                    {t('timePickerInput.cancel', 'Annuler')}
+                  </Text>
                 </TouchableOpacity>
                 <Text style={[Fonts.p1Bold, Fonts.neutral00, { flex: 1, textAlign: 'center' }]}>
                   {label}

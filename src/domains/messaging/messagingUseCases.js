@@ -86,16 +86,26 @@ export const getConversationName = ({
       // Le serveur pose deja « Match amical : A vs B » dans groupName
       // (friendly-match-workflow.ts:279). Sans ce cas, le `default` rendait ''
       // et le fil s affichait sans titre dans la liste de messagerie.
-      return chatGroupName || i18next.t('messagingUseCases.conversationName.friendlyMatch', 'Match amical');
+      return chatGroupName || i18next.t(
+        'messagingUseCases.conversationName.friendlyMatch',
+        'Match amical',
+      );
     case 'group':
       return chatGroupName || i18next.t('messagingUseCases.conversationName.group', 'Groupe');
     case 'league_match':
       if (chatLeagueMatch) {
         const date = chatLeagueMatch.date
-          ? new Date(chatLeagueMatch.date).toLocaleDateString(localeDesFormats(), { day: '2-digit', month: '2-digit' })
+          ? new Date(chatLeagueMatch.date).toLocaleDateString(localeDesFormats(), {
+            day: '2-digit',
+            month: '2-digit',
+          })
           : '';
         return date
-          ? i18next.t('messagingUseCases.conversationName.leagueMatchOn', 'Match du {{date}}', { date })
+          ? i18next.t(
+            'messagingUseCases.conversationName.leagueMatchOn',
+            'Match du {{date}}',
+            { date },
+          )
           : i18next.t('messagingUseCases.conversationName.leagueMatch', 'Match de Ligue');
       }
       return i18next.t('messagingUseCases.conversationName.leagueMatch', 'Match de Ligue');

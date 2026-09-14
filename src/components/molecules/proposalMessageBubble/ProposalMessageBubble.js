@@ -50,13 +50,19 @@ const getProposalMeta = ({ isMe, status, t }) => {
   if (status === 'accepted') {
     return {
       badgeLabel: t('proposalMessageBubble.badge.accepted', 'Acceptee'),
-      title: isMe ? t('proposalMessageBubble.title.mine', 'Ta proposition') : t('proposalMessageBubble.title.opponent', 'Proposition adverse'),
+      title: isMe ? t('proposalMessageBubble.title.mine', 'Ta proposition') : t(
+        'proposalMessageBubble.title.opponent',
+        'Proposition adverse',
+      ),
     };
   }
   if (status === 'declined') {
     return {
       badgeLabel: t('proposalMessageBubble.badge.declined', 'Refusee'),
-      title: isMe ? t('proposalMessageBubble.title.mine', 'Ta proposition') : t('proposalMessageBubble.title.opponent', 'Proposition adverse'),
+      title: isMe ? t('proposalMessageBubble.title.mine', 'Ta proposition') : t(
+        'proposalMessageBubble.title.opponent',
+        'Proposition adverse',
+      ),
     };
   }
   if (isMe) {
@@ -231,7 +237,10 @@ function ProposalMessageBubble({
   const statusConfig = STATUS_CONFIG[status] || STATUS_CONFIG.pending;
   const statusColor = Colors[statusConfig.colorToken] || Colors.gold500;
   const proposalMeta = getProposalMeta({ isMe, status, t });
-  const venueLabel = getProposalLocationLabel(venue) || t('proposalMessageBubble.venueToBeDefined', 'Lieu à définir');
+  const venueLabel = getProposalLocationLabel(venue) || t(
+    'proposalMessageBubble.venueToBeDefined',
+    'Lieu à définir',
+  );
   const addressLabel = resolveAddressLabel(address) || getProposalLocationLabel(proposal?.addressObject);
 
   // S03 — quand le serveur envoie DÉJÀ la phrase (proposition de match amical),
@@ -243,7 +252,10 @@ function ProposalMessageBubble({
   // alors « 00:00 -> --:-- », une heure qui n'existe pas. Le serveur, lui, dit
   // « horaire à convenir » — ce qui est la vérité.
   const formattedDate = dateLabel
-    || (date ? dayjs(date).locale('fr').format('dddd D MMMM') : t('proposalMessageBubble.dateToBeDefined', 'Date à définir'));
+    || (date ? dayjs(date).locale('fr').format('dddd D MMMM') : t(
+      'proposalMessageBubble.dateToBeDefined',
+      'Date à définir',
+    ));
   const formattedStartTime = date ? dayjs(date).format('HH:mm') : '--:--';
   const formattedEndTime = endDate ? dayjs(endDate).format('HH:mm') : '--:--';
   const timeRange = timeLabel || `${formattedStartTime} -> ${formattedEndTime}`;
@@ -391,7 +403,9 @@ function ProposalMessageBubble({
             >
               {addressLabel}
             </Text>
-            <Text style={[Fonts.p4Bold, { color: Colors.primary500, marginLeft: 10 }]}>{t('proposalMessageBubble.viewVenue', 'Voir le lieu')}</Text>
+            <Text style={[Fonts.p4Bold, { color: Colors.primary500, marginLeft: 10 }]}>
+              {t('proposalMessageBubble.viewVenue', 'Voir le lieu')}
+            </Text>
           </TouchableOpacity>
         ) : null}
       </View>
@@ -413,7 +427,9 @@ function ProposalMessageBubble({
                   },
                 ]}
               >
-                <Text style={[Fonts.p3Bold, { color: Colors.primary500 }]}>{viewMatchLabel ?? t('proposalMessageBubble.viewMatch', 'Voir la fiche match')}</Text>
+                <Text style={[Fonts.p3Bold, { color: Colors.primary500 }]}>
+                  {viewMatchLabel ?? t('proposalMessageBubble.viewMatch', 'Voir la fiche match')}
+                </Text>
               </TouchableOpacity>
             )}
           </View>
@@ -439,7 +455,9 @@ function ProposalMessageBubble({
                       },
                     ]}
                   >
-                    <Text style={[Fonts.p3Bold, { color: Colors.success500 }]}>{t('proposalMessageBubble.actions.accept', 'Accepter')}</Text>
+                    <Text style={[Fonts.p3Bold, { color: Colors.success500 }]}>
+                      {t('proposalMessageBubble.actions.accept', 'Accepter')}
+                    </Text>
                   </TouchableOpacity>
                   {onCounter ? (
                     <TouchableOpacity
@@ -452,7 +470,9 @@ function ProposalMessageBubble({
                         },
                       ]}
                     >
-                      <Text style={[Fonts.p3Bold, { color: Colors.primary500 }]}>{t('proposalMessageBubble.actions.counter', 'Contre-proposer')}</Text>
+                      <Text style={[Fonts.p3Bold, { color: Colors.primary500 }]}>
+                        {t('proposalMessageBubble.actions.counter', 'Contre-proposer')}
+                      </Text>
                     </TouchableOpacity>
                   ) : null}
                 </View>
@@ -467,7 +487,9 @@ function ProposalMessageBubble({
                     },
                   ]}
                 >
-                  <Text style={[Fonts.p3Bold, { color: Colors.error500 }]}>{t('proposalMessageBubble.actions.decline', 'Refuser')}</Text>
+                  <Text style={[Fonts.p3Bold, { color: Colors.error500 }]}>
+                    {t('proposalMessageBubble.actions.decline', 'Refuser')}
+                  </Text>
                 </TouchableOpacity>
               </View>
             )}
@@ -494,7 +516,9 @@ function ProposalMessageBubble({
                     },
                   ]}
                 >
-                  <Text style={[Fonts.p3Bold, { color: Colors.primary500 }]}>{t('proposalMessageBubble.actions.counter', 'Contre-proposer')}</Text>
+                  <Text style={[Fonts.p3Bold, { color: Colors.primary500 }]}>
+                    {t('proposalMessageBubble.actions.counter', 'Contre-proposer')}
+                  </Text>
                 </TouchableOpacity>
               ) : null}
             </View>
