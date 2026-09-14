@@ -1,5 +1,26 @@
 import { getAdminReports } from '@/services/admin/adminService';
 
+// I18N-3 : les textes passent par i18next.t, qui rend undefined sans initialisation.
+// Le double lit le vrai fr.js, puis le repli, et remplit les {{jetons}} : le temoin
+// affirme toujours le texte francais affiche.
+jest.mock('i18next', () => {
+  const catalogue = jest.requireActual('@/theme/strings/translations/fr').default;
+  return {
+    __esModule: true,
+    default: {
+      language: 'fr',
+      t: (/** @type {string} */ cle, /** @type {any} */ repli, /** @type {any} */ options) => {
+        const valeur = String(cle).split('.').reduce(
+          (/** @type {any} */ noeud, segment) => (noeud == null ? undefined : noeud[segment]),
+          catalogue,
+        );
+        const gabarit = typeof valeur === 'string' ? valeur : String(repli);
+        return gabarit.replace(/\{\{(\w+)\}\}/g, (_tout, nom) => String((options || {})[nom] ?? ''));
+      },
+    },
+  };
+});
+
 /**
  * ADMIN-SIGNALEMENTS — L ECRAN « A TRAITER » DEMANDAIT DES CHAMPS QUI N EXISTENT PAS.
  *

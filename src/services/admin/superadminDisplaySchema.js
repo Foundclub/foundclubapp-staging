@@ -1,3 +1,8 @@
+import i18next from 'i18next';
+
+import localeDesFormats from '@/theme/strings/localeDesFormats';
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
+
 const SCALAR_TYPES = new Set([
   'biginteger',
   'boolean',
@@ -93,11 +98,15 @@ const SORT_MODES = {
 const SORT_OPTIONS = [
   {
     key: SORT_MODES.updated,
-    label: 'MAJ récente',
+    get label() {
+      return i18next.t('superadminDisplaySchema.sort.updated', 'MAJ récente');
+    },
   },
   {
     key: SORT_MODES.created,
-    label: 'Création récente',
+    get label() {
+      return i18next.t('superadminDisplaySchema.sort.created', 'Création récente');
+    },
   },
   {
     key: SORT_MODES.alpha,
@@ -133,7 +142,7 @@ const formatDate = (/** @type {any} */ value) => {
   if (!normalized) return '';
   const parsed = new Date(normalized);
   if (Number.isNaN(parsed.getTime())) return normalized;
-  return parsed.toLocaleString('fr-FR', {
+  return parsed.toLocaleString(localeDesFormats(), {
     day: '2-digit',
     hour: '2-digit',
     minute: '2-digit',
@@ -210,15 +219,25 @@ const resolveRawFieldValue = (/** @type {Record<string, any>} */ entry = {}, /**
 
 const summarizeComplex = (/** @type {any} */ value) => {
   if (Array.isArray(value)) {
-    if (!value.length) return '0 element';
+    if (!value.length) {
+      return i18next.t('superadminDisplaySchema.summary.empty', '0 element');
+    }
     const first = value[0];
     if (first && typeof first === 'object') {
       const firstLabel = normalizeString(first?.name || first?.title || first?.label || first?.documentId);
       if (firstLabel) {
-        return `${value.length} éléments (ex: ${truncate(firstLabel, 24)})`;
+        return i18next.t(
+          'superadminDisplaySchema.summary.itemsWithExample',
+          '{{count}} éléments (ex: {{firstLabel}})',
+          { count: value.length, firstLabel: truncate(firstLabel, 24), ...SANS_ECHAPPEMENT },
+        );
       }
     }
-    return `${value.length} éléments`;
+    return i18next.t(
+      'superadminDisplaySchema.summary.items',
+      '{{count}} éléments',
+      { count: value.length },
+    );
   }
 
   if (value && typeof value === 'object') {
@@ -234,7 +253,11 @@ const summarizeComplex = (/** @type {any} */ value) => {
     if (locationLabel) {
       return truncate(locationLabel, 56);
     }
-    return `${Object.keys(value).length} champs`;
+    return i18next.t(
+      'superadminDisplaySchema.summary.fields',
+      '{{count}} champs',
+      { count: Object.keys(value).length },
+    );
   }
 
   return '';
@@ -244,7 +267,10 @@ const normalizeFieldValue = (/** @type {string} */ fieldName, /** @type {any} */
   if (value === null || value === undefined) return '';
 
   if (typeof value === 'boolean') {
-    return value ? 'Oui' : 'Non';
+    return value ? i18next.t(
+      'superadminDisplaySchema.boolean.yes',
+      'Oui',
+    ) : i18next.t('superadminDisplaySchema.boolean.no', 'Non');
   }
 
   if (typeof value === 'number') {
@@ -280,7 +306,7 @@ const getTitle = (/** @type {Record<string, any>} */ entry, /** @type {string} *
     return normalizeFieldValue(matchingTitle, raw);
   }
 
-  return 'Sans titre';
+  return i18next.t('superadminDisplaySchema.untitled', 'Sans titre');
 };
 
 const getBadgeTone = (/** @type {string} */ fieldName, /** @type {any} */ rawValue) => {

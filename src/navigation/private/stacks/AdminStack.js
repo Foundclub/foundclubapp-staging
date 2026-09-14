@@ -1,4 +1,5 @@
 import { createStackNavigator } from '@react-navigation/stack';
+import { useTranslation } from 'react-i18next';
 
 import AdminClaimDetail from '@/views/admin/AdminClaimDetail';
 import AdminClaimList from '@/views/admin/AdminClaimList';
@@ -50,6 +51,8 @@ const Stack = createStackNavigator();
  *
  */
 function AdminStack() {
+  const { t } = useTranslation();
+
   return (
     <AdminClubWizardProvider>
       <Stack.Navigator
@@ -134,7 +137,7 @@ function AdminStack() {
           name={RouteNames.AdminRevenue}
           options={{
             ...commonOptions,
-            headerTitle: 'Revenus',
+            headerTitle: t('adminStack.titles.revenue', 'Revenus'),
           }}
         />
         <Stack.Screen
@@ -142,7 +145,7 @@ function AdminStack() {
           name={RouteNames.AdminEvents}
           options={{
             ...commonOptions,
-            headerTitle: 'Événements',
+            headerTitle: t('adminStack.titles.events', 'Événements'),
           }}
         />
         <Stack.Screen
@@ -150,7 +153,7 @@ function AdminStack() {
           name={RouteNames.AdminReports}
           options={{
             ...commonOptions,
-            headerTitle: 'Signalements',
+            headerTitle: t('adminStack.titles.reports', 'Signalements'),
           }}
         />
 
@@ -159,7 +162,7 @@ function AdminStack() {
           name={RouteNames.FeaturedRequestsList}
           options={{
             ...commonOptions,
-            headerTitle: 'Demandes à la une',
+            headerTitle: t('adminStack.titles.featuredRequests', 'Demandes à la une'),
           }}
         />
         <Stack.Screen
@@ -167,7 +170,7 @@ function AdminStack() {
           name={RouteNames.AdminClaimList}
           options={{
             ...commonOptions,
-            headerTitle: 'Revendications',
+            headerTitle: t('adminStack.titles.claims', 'Revendications'),
           }}
         />
         <Stack.Screen
@@ -175,7 +178,7 @@ function AdminStack() {
           name={RouteNames.AdminClaimDetail}
           options={{
             ...commonOptions,
-            headerTitle: 'Détail Demande',
+            headerTitle: t('adminStack.titles.claimDetail', 'Détail Demande'),
           }}
         />
         <Stack.Screen
@@ -183,7 +186,7 @@ function AdminStack() {
           name={RouteNames.AdminClubOnboardingList}
           options={{
             ...commonOptions,
-            headerTitle: 'Clubs à onboarder',
+            headerTitle: t('adminStack.titles.clubOnboarding', 'Clubs à onboarder'),
           }}
         />
         <Stack.Screen
@@ -191,7 +194,7 @@ function AdminStack() {
           name={RouteNames.AdminUserList}
           options={{
             ...commonOptions,
-            headerTitle: 'Utilisateurs',
+            headerTitle: t('adminStack.titles.users', 'Utilisateurs'),
           }}
         />
         <Stack.Screen
@@ -199,7 +202,7 @@ function AdminStack() {
           name={RouteNames.AdminUserDetail}
           options={{
             ...commonOptions,
-            headerTitle: 'Détail Utilisateur',
+            headerTitle: t('adminStack.titles.userDetail', 'Détail Utilisateur'),
           }}
         />
         <Stack.Screen
@@ -215,7 +218,7 @@ function AdminStack() {
           name={RouteNames.AdminClubDetail}
           options={{
             ...commonOptions,
-            headerTitle: 'Détail Club',
+            headerTitle: t('adminStack.titles.clubDetail', 'Détail Club'),
           }}
         />
         <Stack.Screen
@@ -223,7 +226,7 @@ function AdminStack() {
           name={RouteNames.AdminClubForm}
           options={{
             ...commonOptions,
-            headerTitle: 'Édition Club',
+            headerTitle: t('adminStack.titles.clubEdit', 'Édition Club'),
           }}
         />
         <Stack.Screen
@@ -271,7 +274,7 @@ function AdminStack() {
           name={RouteNames.AdminLeagueDisputes}
           options={{
             ...commonOptions,
-            headerTitle: 'Litiges League',
+            headerTitle: t('adminStack.titles.leagueDisputes', 'Litiges League'),
           }}
         />
         <Stack.Screen
@@ -287,7 +290,7 @@ function AdminStack() {
           name={RouteNames.AdminPopupCampaignList}
           options={{
             ...commonOptions,
-            headerTitle: 'Campagnes pop-up',
+            headerTitle: t('adminStack.titles.popupCampaigns', 'Campagnes pop-up'),
           }}
         />
         <Stack.Screen
@@ -295,7 +298,7 @@ function AdminStack() {
           name={RouteNames.AdminPopupCampaignDetail}
           options={{
             ...commonOptions,
-            headerTitle: 'Détail campagne',
+            headerTitle: t('adminStack.titles.popupCampaignDetail', 'Détail campagne'),
           }}
         />
         <Stack.Screen
@@ -303,7 +306,7 @@ function AdminStack() {
           name={RouteNames.AdminPopupCampaignForm}
           options={{
             ...commonOptions,
-            headerTitle: 'Éditer campagne',
+            headerTitle: t('adminStack.titles.popupCampaignEdit', 'Éditer campagne'),
           }}
         />
         <Stack.Screen
@@ -311,7 +314,7 @@ function AdminStack() {
           name={RouteNames.SuperAdminContentExplorer}
           options={{
             ...commonOptions,
-            headerTitle: 'Explorer CM',
+            headerTitle: t('adminStack.titles.contentExplorer', 'Explorer CM'),
           }}
         />
         <Stack.Screen
@@ -319,7 +322,7 @@ function AdminStack() {
           name={RouteNames.SuperAdminEntryList}
           options={{
             ...commonOptions,
-            headerTitle: 'Entrées',
+            headerTitle: t('adminStack.titles.entries', 'Entrées'),
           }}
         />
         <Stack.Screen
@@ -327,7 +330,7 @@ function AdminStack() {
           name={RouteNames.SuperAdminEntryDetail}
           options={{
             ...commonOptions,
-            headerTitle: 'Détail',
+            headerTitle: t('adminStack.titles.entryDetail', 'Détail'),
           }}
         />
         <Stack.Screen
@@ -335,7 +338,7 @@ function AdminStack() {
           name={RouteNames.SuperAdminEntryForm}
           options={{
             ...commonOptions,
-            headerTitle: 'Edition',
+            headerTitle: t('adminStack.titles.entryEdit', 'Edition'),
           }}
         />
       </Stack.Navigator>
