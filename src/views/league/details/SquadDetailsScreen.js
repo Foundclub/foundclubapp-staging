@@ -1,6 +1,7 @@
 import { BottomTabBarHeightContext } from '@react-navigation/bottom-tabs';
 import { useFocusEffect } from '@react-navigation/native';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import i18next from 'i18next';
 import {
   useCallback, useContext, useEffect, useMemo, useRef, useState,
 } from 'react';
@@ -13,6 +14,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import useAuth from '@/domains/auth/useAuth';
 import useClub from '@/domains/club/useClub';
+import localeDesFormats from '@/theme/strings/localeDesFormats';
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -79,25 +82,25 @@ import useLeagueLegalAcceptance from '@/hooks/useLeagueLegalAcceptance';
 import { PHOTO_PICKER_LIMITS } from '@/platform/media/photoLimits';
 import SharePlatform from '@/platform/share';
 
-const slotDayLabels = {
-  friday: 'Vendredi',
-  monday: 'Lundi',
-  saturday: 'Samedi',
-  sunday: 'Dimanche',
-  thursday: 'Jeudi',
-  tuesday: 'Mardi',
-  wednesday: 'Mercredi',
-};
+const slotDayLabels = () => ({
+  friday: i18next.t('squadDetailsScreen.days.friday', 'Vendredi'),
+  monday: i18next.t('squadDetailsScreen.days.monday', 'Lundi'),
+  saturday: i18next.t('squadDetailsScreen.days.saturday', 'Samedi'),
+  sunday: i18next.t('squadDetailsScreen.days.sunday', 'Dimanche'),
+  thursday: i18next.t('squadDetailsScreen.days.thursday', 'Jeudi'),
+  tuesday: i18next.t('squadDetailsScreen.days.tuesday', 'Mardi'),
+  wednesday: i18next.t('squadDetailsScreen.days.wednesday', 'Mercredi'),
+});
 
-const slotDayShortLabels = {
-  friday: 'Ven',
-  monday: 'Lun',
-  saturday: 'Sam',
-  sunday: 'Dim',
-  thursday: 'Jeu',
-  tuesday: 'Mar',
-  wednesday: 'Mer',
-};
+const slotDayShortLabels = () => ({
+  friday: i18next.t('squadDetailsScreen.daysShort.friday', 'Ven'),
+  monday: i18next.t('squadDetailsScreen.daysShort.monday', 'Lun'),
+  saturday: i18next.t('squadDetailsScreen.daysShort.saturday', 'Sam'),
+  sunday: i18next.t('squadDetailsScreen.daysShort.sunday', 'Dim'),
+  thursday: i18next.t('squadDetailsScreen.daysShort.thursday', 'Jeu'),
+  tuesday: i18next.t('squadDetailsScreen.daysShort.tuesday', 'Mar'),
+  wednesday: i18next.t('squadDetailsScreen.daysShort.wednesday', 'Mer'),
+});
 
 const slotWeekdayOrder = {
   friday: 5,
@@ -163,10 +166,14 @@ const resolveUpcomingSlot = (slots = []) => {
 };
 
 const formatLeagueMatchDate = (value) => {
-  if (!value) return 'Date à définir';
+  if (!value) {
+    return i18next.t('squadDetailsScreen.dateToBeDecided', 'Date à définir');
+  }
   const parsed = new Date(String(value));
-  if (Number.isNaN(parsed.getTime())) return 'Date à définir';
-  return parsed.toLocaleDateString('fr-FR', {
+  if (Number.isNaN(parsed.getTime())) {
+    return i18next.t('squadDetailsScreen.dateToBeDecided', 'Date à définir');
+  }
+  return parsed.toLocaleDateString(localeDesFormats(), {
     day: 'numeric',
     month: 'short',
   });
@@ -178,28 +185,28 @@ const getLeagueResultMeta = (result, Colors) => {
       return {
         backgroundColor: `${Colors.warning500}16`,
         borderColor: `${Colors.warning500}40`,
-        label: 'Nul',
+        label: i18next.t('squadDetailsScreen.results.draw', 'Nul'),
         textColor: Colors.warning500,
       };
     case 'loss':
       return {
         backgroundColor: `${Colors.error500}16`,
         borderColor: `${Colors.error500}40`,
-        label: 'Defaite',
+        label: i18next.t('squadDetailsScreen.results.loss', 'Defaite'),
         textColor: Colors.error500,
       };
     case 'win':
       return {
         backgroundColor: `${Colors.success500}16`,
         borderColor: `${Colors.success500}40`,
-        label: 'Victoire',
+        label: i18next.t('squadDetailsScreen.results.win', 'Victoire'),
         textColor: Colors.success500,
       };
     default:
       return {
         backgroundColor: `${Colors.primary500}12`,
         borderColor: `${Colors.primary500}30`,
-        label: 'En attente',
+        label: i18next.t('squadDetailsScreen.results.pending', 'En attente'),
         textColor: Colors.primary100,
       };
   }
@@ -365,18 +372,31 @@ function SquadDetailsScreen({ navigation, route }) {
   const hasInvitation = useMemo(() => team?.invitations?.some((/** @type {User} */ u) => u.documentId === currentUser?.documentId), [team, currentUser]);
   const shouldShowFixedJoinButton = !isCaptain && !isMember && !hasInvitation;
   const fixedJoinButtonTitle = (() => {
-    if (isShareInviteLink) return 'Rejoindre la squad';
-    if (hasPendingRequest) return 'Demande en attente';
-    return 'Demander à rejoindre';
+    if (isShareInviteLink) {
+      return t('squadDetailsScreen.joinSquad', 'Rejoindre la squad');
+    }
+    if (hasPendingRequest) {
+      return t('squadDetailsScreen.requestPending', 'Demande en attente');
+    }
+    return t('squadDetailsScreen.requestToJoin', 'Demander à rejoindre');
   })();
   const fixedJoinButtonHelperText = (() => {
     if (isShareInviteLink) {
-      return 'Ce lien te permet de rejoindre directement la squad';
+      return t(
+        'squadDetailsScreen.joinHelper.inviteLink',
+        'Ce lien te permet de rejoindre directement la squad',
+      );
     }
     if (hasPendingRequest) {
-      return 'Ta demande attend la validation du capitaine';
+      return t(
+        'squadDetailsScreen.joinHelper.pending',
+        'Ta demande attend la validation du capitaine',
+      );
     }
-    return 'Envoyer une demande au capitaine de la squad';
+    return t(
+      'squadDetailsScreen.joinHelper.request',
+      'Envoyer une demande au capitaine de la squad',
+    );
   })();
   const isFixedJoinButtonDisabled = hasPendingRequest && !isShareInviteLink;
   const scrollBottomPadding = shouldShowFixedJoinButton
@@ -424,51 +444,90 @@ function SquadDetailsScreen({ navigation, route }) {
   const nextSlot = useMemo(() => resolveUpcomingSlot(team?.slots || []), [team?.slots]);
   const pendingRequestsCount = Number(team?.join_requests?.length || 0);
   const nextSlotShortLabel = useMemo(() => {
-    if (!nextSlot) return 'À définir';
-    return `${slotDayShortLabels[nextSlot.recurrenceDay] || 'A venir'} · ${formatSlotHour(nextSlot?.start_hour)}`;
-  }, [nextSlot]);
+    if (!nextSlot) {
+      return t('squadDetailsScreen.toBeDecided', 'À définir');
+    }
+    return `${slotDayShortLabels()[nextSlot.recurrenceDay] || t(
+      'squadDetailsScreen.nextSlot.upcoming',
+      'A venir',
+    )} · ${formatSlotHour(nextSlot?.start_hour)}`;
+  }, [nextSlot, t]);
   const nextSlotLongLabel = useMemo(() => {
-    if (!nextSlot) return 'Ajoute un créneau pour lancer ton rythme.';
-    return `${slotDayLabels[nextSlot.recurrenceDay] || 'Jour'} · ${formatSlotHour(nextSlot?.start_hour)} - ${formatSlotHour(nextSlot?.end_hour)}`;
-  }, [nextSlot]);
+    if (!nextSlot) {
+      return t('squadDetailsScreen.nextSlot.addSlot', 'Ajoute un créneau pour lancer ton rythme.');
+    }
+    return `${slotDayLabels()[nextSlot.recurrenceDay] || t(
+      'squadDetailsScreen.nextSlot.day',
+      'Jour',
+    )} · ${formatSlotHour(nextSlot?.start_hour)} - ${formatSlotHour(nextSlot?.end_hour)}`;
+  }, [nextSlot, t]);
   const squadStatusChip = useMemo(() => {
-    if (isCaptain) return { label: 'Capitaine', tone: 'gold' };
-    if (hasInvitation) return { label: 'Invitation reçue', tone: 'blue' };
-    if (hasPendingRequest) return { label: 'Demande en attente', tone: 'blue' };
-    if (isMember) return { label: 'Membre', tone: 'blue' };
-    return { label: 'Squad ouverte', tone: 'blue' };
-  }, [hasInvitation, hasPendingRequest, isCaptain, isMember]);
+    if (isCaptain) {
+      return {
+        label: t('squadDetailsScreen.captain', 'Capitaine'),
+        tone: 'gold',
+      };
+    }
+    if (hasInvitation) {
+      return {
+        label: t('squadDetailsScreen.status.invitationReceived', 'Invitation reçue'),
+        tone: 'blue',
+      };
+    }
+    if (hasPendingRequest) {
+      return {
+        label: t('squadDetailsScreen.requestPending', 'Demande en attente'),
+        tone: 'blue',
+      };
+    }
+    if (isMember) {
+      return {
+        label: t('squadDetailsScreen.status.member', 'Membre'),
+        tone: 'blue',
+      };
+    }
+    return {
+      label: t('squadDetailsScreen.status.openSquad', 'Squad ouverte'),
+      tone: 'blue',
+    };
+  }, [hasInvitation, hasPendingRequest, isCaptain, isMember, t]);
   const nextSlotParticipantsCount = Number(nextSlot?.participants?.length || 0);
   const nextSlotRemainingCount = Math.max(0, requiredPlayers - nextSlotParticipantsCount);
   const nextSlotStatus = useMemo(() => {
     if (!nextSlot) {
       return {
-        badge: 'Aucun créneau',
-        helper: 'Ajoute un créneau pour donner un premier point de rendez-vous à la squad.',
+        badge: t('squadDetailsScreen.slotStatus.none.badge', 'Aucun créneau'),
+        helper: t(
+          'squadDetailsScreen.slotStatus.none.helper',
+          'Ajoute un créneau pour donner un premier point de rendez-vous à la squad.',
+        ),
       };
     }
     if (nextSlotParticipantsCount >= requiredPlayers) {
       return {
-        badge: 'Prêt à jouer',
-        helper: 'Le prochain créneau est complet. La squad a déjà assez de monde pour se lancer.',
+        badge: t('squadDetailsScreen.slotStatus.ready.badge', 'Prêt à jouer'),
+        helper: t(
+          'squadDetailsScreen.slotStatus.ready.helper',
+          'Le prochain créneau est complet. La squad a déjà assez de monde pour se lancer.',
+        ),
       };
     }
     if (nextSlotParticipantsCount >= Math.max(requiredPlayers - 2, 1)) {
       return {
-        badge: 'Presque prêt',
+        badge: t('squadDetailsScreen.slotStatus.almost.badge', 'Presque prêt'),
         helper: `Encore ${nextSlotRemainingCount} présence${nextSlotRemainingCount > 1 ? 's' : ''} pour atteindre le format ideal.`,
       };
     }
     return {
-      badge: 'A renforcer',
+      badge: t('squadDetailsScreen.slotStatus.weak.badge', 'A renforcer'),
       helper: `Seulement ${nextSlotParticipantsCount} présence${nextSlotParticipantsCount > 1 ? 's' : ''} pour le moment. Il faut encore mobiliser la squad.`,
     };
-  }, [nextSlot, nextSlotParticipantsCount, nextSlotRemainingCount, requiredPlayers]);
+  }, [nextSlot, nextSlotParticipantsCount, nextSlotRemainingCount, requiredPlayers, t]);
   const rosterSignals = useMemo(() => {
     const signals = [
       {
         key: 'members',
-        label: 'Membres',
+        label: t('squadDetailsScreen.signals.members', 'Membres'),
         value: `${rosterCount}`,
       },
     ];
@@ -476,7 +535,7 @@ function SquadDetailsScreen({ navigation, route }) {
     if (isCaptain) {
       signals.push({
         key: 'requests',
-        label: 'Demandes',
+        label: t('squadDetailsScreen.signals.requests', 'Demandes'),
         value: `${pendingRequestsCount}`,
       });
       signals.push({
@@ -487,28 +546,39 @@ function SquadDetailsScreen({ navigation, route }) {
     } else {
       signals.push({
         key: 'captain',
-        label: captainCount > 1 ? 'Capitaines' : 'Capitaine',
+        label: t('squadDetailsScreen.captainsLabel', {
+          count: captainCount,
+          defaultValue_one: 'Capitaine',
+          defaultValue_other: 'Capitaines',
+        }),
         value: captainMembers.length > 0
           ? captainMembers
-            .map((captain) => `${captain?.firstname || ''} ${captain?.lastname || ''}`.trim() || captain?.username || 'Capitaine')
+            .map((captain) => `${captain?.firstname || ''} ${captain?.lastname || ''}`.trim() || captain?.username || t(
+              'squadDetailsScreen.captain',
+              'Capitaine',
+            ))
             .filter(Boolean)
             .join(', ')
-          : 'À définir',
+          : t('squadDetailsScreen.toBeDecided', 'À définir'),
       });
       signals.push({
         key: 'status',
-        label: 'Statut',
+        label: t('squadDetailsScreen.signals.status', 'Statut'),
         value: squadStatusChip.label,
       });
     }
 
     return signals;
-  }, [captainCount, captainMembers, isCaptain, pendingRequestsCount, rosterCount, squadStatusChip.label, team?.invitations?.length]);
+  }, [captainCount, captainMembers, isCaptain, pendingRequestsCount, rosterCount, squadStatusChip.label, t, team?.invitations?.length]);
   const nextSlotActionLabel = useMemo(() => {
-    if (isCaptain) return 'Animer la squad';
-    if (isMember) return 'Confirmer ma présence';
-    return 'Rejoindre la squad';
-  }, [isCaptain, isMember]);
+    if (isCaptain) {
+      return t('squadDetailsScreen.nextSlotAction.captain', 'Animer la squad');
+    }
+    if (isMember) {
+      return t('squadDetailsScreen.nextSlotAction.member', 'Confirmer ma présence');
+    }
+    return t('squadDetailsScreen.joinSquad', 'Rejoindre la squad');
+  }, [isCaptain, isMember, t]);
   const leagueCardBg = 'rgba(10, 28, 43, 0.84)';
   const leagueCardBorder = 'rgba(1, 179, 244, 0.24)';
 
@@ -548,7 +618,9 @@ function SquadDetailsScreen({ navigation, route }) {
 
   const statisticsMode = leaguePerformanceStats?.mode || (normalizedLeagueSport === 'padel' ? 'padel_light' : 'football_full');
   const isPadelStatisticsMode = statisticsMode === 'padel_light';
-  const statisticsModeLabel = isPadelStatisticsMode ? 'Padel light' : 'Football complet';
+  const statisticsModeLabel = isPadelStatisticsMode
+    ? 'Padel light'
+    : t('squadDetailsScreen.statisticsMode.football', 'Football complet');
 
   const rankingEntries = useMemo(
     () => (Array.isArray(rankingData) ? rankingData : []),
@@ -607,14 +679,17 @@ function SquadDetailsScreen({ navigation, route }) {
     if (streak > 0) {
       streakLabel = `x${streak}`;
     } else if (streak < 0) {
-      streakLabel = 'Defaite';
+      streakLabel = t('squadDetailsScreen.competition.streakLoss', 'Defaite');
     }
 
     return [
       {
         key: 'division',
         label: 'Division',
-        value: team?.division ? `DIV ${team.division}` : 'À définir',
+        value: team?.division ? `DIV ${team.division}` : t(
+          'squadDetailsScreen.toBeDecided',
+          'À définir',
+        ),
       },
       {
         key: 'divisionPoints',
@@ -628,31 +703,38 @@ function SquadDetailsScreen({ navigation, route }) {
       },
       {
         key: 'rank',
-        label: 'Classement',
-        value: squadRank ? `#${squadRank}` : 'En attente',
+        label: t('squadDetailsScreen.competition.rank', 'Classement'),
+        value: squadRank ? `#${squadRank}` : t(
+          'squadDetailsScreen.competition.rankPending',
+          'En attente',
+        ),
       },
       {
         key: 'record',
-        label: 'Bilan',
-        value: `${Number(team?.wins || 0)}V ${Number(team?.draws || 0)}N ${Number(team?.losses || 0)}D`,
+        label: t('squadDetailsScreen.competition.record', 'Bilan'),
+        value: t('squadDetailsScreen.competition.recordValue', '{{wins}}V {{draws}}N {{losses}}D', {
+          draws: Number(team?.draws || 0),
+          losses: Number(team?.losses || 0),
+          wins: Number(team?.wins || 0),
+        }),
       },
       {
         key: 'streak',
-        label: 'Serie',
+        label: t('squadDetailsScreen.competition.streak', 'Serie'),
         value: streakLabel,
       },
       {
         key: 'highestStreak',
-        label: 'Meilleure série',
+        label: t('squadDetailsScreen.competition.highestStreak', 'Meilleure série'),
         value: `x${highestStreak}`,
       },
       {
         key: 'reliability',
-        label: 'Fiabilite',
+        label: t('squadDetailsScreen.competition.reliability', 'Fiabilite'),
         value: `${Number(team?.reliability_score || 0)}%`,
       },
     ];
-  }, [squadRank, team?.division, team?.divisionPoints, team?.division_points, team?.draws, team?.elo, team?.highestStreak, team?.highest_streak, team?.losses, team?.reliability_score, team?.streak, team?.wins]);
+  }, [squadRank, team?.division, team?.divisionPoints, team?.division_points, team?.draws, team?.elo, team?.highestStreak, team?.highest_streak, team?.losses, team?.reliability_score, team?.streak, team?.wins, t]);
 
   const getPlayerDisplayName = useCallback((player) => {
     const fullName = `${player?.firstname || ''} ${player?.lastname || ''}`.trim();
@@ -669,8 +751,17 @@ function SquadDetailsScreen({ navigation, route }) {
     const inviterName = [currentUser?.firstname, currentUser?.lastname].filter(Boolean).join(' ').trim();
     const squadName = String(team?.name || '').trim();
     const intro = inviterName
-      ? `${inviterName} t'invite à rejoindre sa squad${squadName ? ` ${squadName}` : ''} sur FoundClub League.`
-      : `Rejoins${squadName ? ` la squad ${squadName}` : ' une squad'} sur FoundClub League.`;
+      ? t(
+        'squadDetailsScreen.share.introFromInviter',
+        "{{inviterName}} t'invite à rejoindre sa squad{{squadSuffix}} sur FoundClub League.",
+        { inviterName, squadSuffix: squadName ? ` ${squadName}` : '', ...SANS_ECHAPPEMENT },
+      )
+      : t('squadDetailsScreen.share.introAnonymous', 'Rejoins{{squadPart}} sur FoundClub League.', {
+        squadPart: squadName
+          ? t('squadDetailsScreen.share.theSquad', ' la squad {{squadName}}', { squadName, ...SANS_ECHAPPEMENT })
+          : t('squadDetailsScreen.share.aSquad', ' une squad'),
+        ...SANS_ECHAPPEMENT,
+      });
     const shareUrl = buildInstallLandingUrl({
       id: squadId,
       invite: true,
@@ -679,16 +770,21 @@ function SquadDetailsScreen({ navigation, route }) {
     });
     const message = buildShareMessageWithUrl({
       intro,
-      linkLabel: 'Ouvrir dans FoundClub',
+      linkLabel: t('squadDetailsScreen.share.linkLabel', 'Ouvrir dans FoundClub'),
       url: shareUrl,
     });
 
     SharePlatform.share({
       message,
-      title: inviterName ? `${inviterName} t'invite` : `Rejoins ${squadName || 'une squad'}`,
+      title: inviterName
+        ? t('squadDetailsScreen.share.titleFromInviter', "{{inviterName}} t'invite", { inviterName, ...SANS_ECHAPPEMENT })
+        : t('squadDetailsScreen.share.titleAnonymous', 'Rejoins {{squadName}}', {
+          squadName: squadName || t('squadDetailsScreen.share.aSquadShort', 'une squad'),
+          ...SANS_ECHAPPEMENT,
+        }),
       url: shareUrl,
     }).catch(() => undefined);
-  }, [currentUser?.firstname, currentUser?.lastname, safeTeamId, team?.documentId, team?.name]);
+  }, [currentUser?.firstname, currentUser?.lastname, safeTeamId, t, team?.documentId, team?.name]);
 
   const promptShareInviteAuthentication = useCallback(() => {
     if (!safeTeamId) return;
@@ -1029,7 +1125,10 @@ function SquadDetailsScreen({ navigation, route }) {
       console.error(e);
       const pickerError = /** @type {{ code?: string }} */ (e);
       if (pickerError?.code !== 'E_PICKER_CANCELLED') {
-        Alert.alert('Erreur', 'Impossible de mettre à jour l\'image');
+        Alert.alert(
+          'Erreur',
+          'Impossible de mettre à jour l\'image',
+        );
       }
     }
   };
@@ -1455,10 +1554,16 @@ function SquadDetailsScreen({ navigation, route }) {
       await resyncLeagueSourceTeam(safeTeamId);
       await refetch();
       queryClient.invalidateQueries({ queryKey: ['leagueTeam', safeTeamId] });
-      Alert.alert('Synchronisation terminée', "L'équipe source a été resynchronisee dans League.");
+      Alert.alert(
+        'Synchronisation terminée',
+        "L'équipe source a été resynchronisee dans League.",
+      );
     } catch (error) {
       console.error(error);
-      Alert.alert('Erreur', "Impossible de resynchroniser l'équipe source pour le moment.");
+      Alert.alert(
+        'Erreur',
+        "Impossible de resynchroniser l'équipe source pour le moment.",
+      );
     } finally {
       setIsUpdating(false);
     }
@@ -1507,7 +1612,9 @@ function SquadDetailsScreen({ navigation, route }) {
   }, [handleDeleteTeam, handleLeaveSquad, handleResyncSourceTeam, handleShare, isFootball11, navigation, openRequests, safeTeamId, t]);
 
   const dynamicSummaryLabel = useMemo(() => {
-    if (isCaptain) return 'Demandes';
+    if (isCaptain) {
+      return 'Demandes';
+    }
     if (team?.division) return 'Division';
     return 'ELO matchmaking';
   }, [isCaptain, team?.division]);
@@ -2496,7 +2603,9 @@ function SquadDetailsScreen({ navigation, route }) {
                             }}
                             >
                               <Text style={[Fonts.p4Bold, { color: Colors.primary100 }]}>
-                                {pendingMatch?.reportStatus === 'draft' ? 'Brouillon équipe' : 'En attente'}
+                                {pendingMatch?.reportStatus === 'draft'
+                                  ? 'Brouillon équipe'
+                                  : 'En attente'}
                               </Text>
                             </View>
                           </View>
