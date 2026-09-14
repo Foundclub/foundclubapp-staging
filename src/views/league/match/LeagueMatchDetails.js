@@ -2,9 +2,11 @@ import { useFocusEffect, useIsFocused } from '@react-navigation/native';
 import { useQueryClient } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
+import i18next from 'i18next';
 import {
   useCallback, useEffect, useMemo, useState,
 } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
   Alert,
@@ -19,6 +21,7 @@ import {
 } from 'react-native';
 
 import useAuth from '@/domains/auth/useAuth';
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -104,7 +107,7 @@ const normalizeComparableText = (/** @type {unknown} */ value) => String(value |
 const resolveVenueLabel = (/** @type {LeagueMatch | null} */ match) => (
   getProposalLocationLabel(match?.venue)
     || getProposalLocationLabel(match?.proposed_venue)
-    || 'Lieu à définir'
+    || i18next.t('leagueMatchDetails.venueToBeDecided', 'Lieu à définir')
 );
 const resolveAddressLabel = (/** @type {LeagueMatch | null} */ match) => (
   getProposalLocationLabel(match?.location?.address)
@@ -121,7 +124,7 @@ const getParticipantDisplayName = (/** @type {User | null | undefined} */ partic
   if (firstName) return firstName;
   if (lastName) return lastName;
   if (participant?.username && !looksLikePhone(participant.username)) return participant.username;
-  return 'Joueur';
+  return i18next.t('leagueMatchDetails.playerFallback', 'Joueur');
 };
 
 const LIVE_MATCH_POLLING_PHASES = new Set([
@@ -152,6 +155,7 @@ function LeagueMatchDetails({ navigation, route }) {
   const queryClient = useQueryClient();
   const isFocused = useIsFocused();
   const { Colors, Fonts, Images } = useTheme();
+  const { t } = useTranslation();
   const { userData } = /** @type {{ userData: User | null }} */ (useAuth());
   const { showBanner } = useAppFeedback();
   const { leagueLegalAcceptanceModal, requestLeagueLegalAcceptance } = useLeagueLegalAcceptance();
@@ -179,7 +183,10 @@ function LeagueMatchDetails({ navigation, route }) {
 
   const loadMatch = useCallback(async (options = {}) => {
     if (!matchId) {
-      setLoadError("Aucun match n'est associé à ce lien.");
+      setLoadError(t(
+        'leagueMatchDetails.errors.missingId',
+        "Aucun match n'est associé à ce lien.",
+      ));
       setMatch(null);
       setLoading(false);
       setRefreshing(false);
@@ -195,12 +202,15 @@ function LeagueMatchDetails({ navigation, route }) {
     } catch (error) {
       console.error('Error loading match:', error);
       setMatch(null);
-      setLoadError(error?.message || 'Impossible de charger le match pour le moment.');
+      setLoadError(error?.message || t(
+        'leagueMatchDetails.errors.load',
+        'Impossible de charger le match pour le moment.',
+      ));
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [matchId, queryClient]);
+  }, [matchId, queryClient, t]);
 
   const matchPhase = useMemo(() => getMatchDerivedPhase(match), [match]);
   const shouldPollLiveMatch = LIVE_MATCH_POLLING_PHASES.has(String(matchPhase || '').trim().toLowerCase());
@@ -291,10 +301,16 @@ function LeagueMatchDetails({ navigation, route }) {
   const isVenueBooked = useMemo(() => isVenueBookedForMatch(match), [match]);
   const isAnonymous = useMemo(() => shouldMaskOpponentIdentity(match), [match]);
   const matchLegalLabel = useMemo(() => {
-    const left = match?.team_a?.name || 'Équipe A';
-    const right = isAnonymous ? 'Adversaire' : (match?.team_b?.name || 'Équipe B');
+    const left = match?.team_a?.name || t('leagueMatchDetails.teamAFallback', 'Équipe A');
+    const right = isAnonymous ? t(
+      'leagueMatchDetails.opponentFallback',
+      'Adversaire',
+    ) : (match?.team_b?.name || t(
+      'leagueMatchDetails.teamBFallback',
+      'Équipe B',
+    ));
     return `${left} VS ${right}`;
-  }, [isAnonymous, match?.team_a?.name, match?.team_b?.name]);
+  }, [isAnonymous, match?.team_a?.name, match?.team_b?.name, t]);
   const scoreFlow = useMemo(
     () => buildLocalScoreFlow(match, { isCaptainA, isCaptainB, teamSide }),
     [isCaptainA, isCaptainB, match, teamSide],
@@ -390,7 +406,7 @@ function LeagueMatchDetails({ navigation, route }) {
   const negotiationProposalVenue = getProposalLocationLabel(pendingLeagueAction?.venue)
     || getProposalLocationLabel(match?.proposed_venue)
     || getProposalLocationLabel(match?.venue)
-    || 'Lieu à définir';
+    || t('leagueMatchDetails.venueToBeDecided', 'Lieu à définir');
   const negotiationProposalMessageId = String(pendingLeagueAction?.proposalMessageId || '').trim();
   const hasNegotiationConversation = Boolean(getEntityDocumentId(match?.chat));
   const canReplyFromNegotiationCard = negotiationState === 'proposal_received' && Boolean(negotiationProposalMessageId);
@@ -403,32 +419,53 @@ function LeagueMatchDetails({ navigation, route }) {
     [match],
   );
   const negotiationMeta = useMemo(() => {
-    let title = 'Négociation du match';
-    let helper = "Retrouve la conversation avec l'adversaire pour conclure rapidement.";
-    let origin = 'Discussion League active';
+    let title = t('leagueMatchDetails.negotiation.default.title', 'Négociation du match');
+    let helper = t(
+      'leagueMatchDetails.negotiation.default.helper',
+      "Retrouve la conversation avec l'adversaire pour conclure rapidement.",
+    );
+    let origin = t('leagueMatchDetails.negotiation.default.origin', 'Discussion League active');
 
     if (negotiationState === 'proposal_received') {
-      title = 'Proposition reçue';
-      helper = 'Une proposition adverse attend ta réponse. Tu peux accepter, refuser ou contre-proposer.';
-      origin = "Envoyée par l'adversaire";
+      title = t('leagueMatchDetails.negotiation.received.title', 'Proposition reçue');
+      helper = t(
+        'leagueMatchDetails.negotiation.received.helper',
+        'Une proposition adverse attend ta réponse. Tu peux accepter, refuser ou contre-proposer.',
+      );
+      origin = t('leagueMatchDetails.negotiation.received.origin', "Envoyée par l'adversaire");
     } else if (negotiationState === 'proposal_sent_waiting') {
-      title = 'Proposition envoyée';
-      helper = 'Ta squad attend maintenant la réponse adverse. La conversation reste le centre de la négociation.';
-      origin = 'Envoyée par ta squad';
+      title = t('leagueMatchDetails.negotiation.sent.title', 'Proposition envoyée');
+      helper = t(
+        'leagueMatchDetails.negotiation.sent.helper',
+        // eslint-disable-next-line max-len
+        'Ta squad attend maintenant la réponse adverse. La conversation reste le centre de la négociation.',
+      );
+      origin = t('leagueMatchDetails.negotiation.sent.origin', 'Envoyée par ta squad');
     } else if (negotiationState === 'opponent_found') {
-      title = 'Adversaire trouve';
+      title = t('leagueMatchDetails.negotiation.found.title', 'Adversaire trouve');
       helper = venueRequired
-        ? 'Le match est créé. Envoie une proposition de date et de terrain pour lancer la négociation.'
-        : 'Le match est créé. Envoie une proposition de date, avec un lieu si tu veux le fixer tout de suite.';
-      origin = 'Aucune proposition définitive pour le moment';
+        ? t(
+          'leagueMatchDetails.negotiation.found.helperWithVenue',
+          // eslint-disable-next-line max-len
+          'Le match est créé. Envoie une proposition de date et de terrain pour lancer la négociation.',
+        )
+        : t(
+          'leagueMatchDetails.negotiation.found.helperWithoutVenue',
+          // eslint-disable-next-line max-len
+          'Le match est créé. Envoie une proposition de date, avec un lieu si tu veux le fixer tout de suite.',
+        );
+      origin = t(
+        'leagueMatchDetails.negotiation.found.origin',
+        'Aucune proposition définitive pour le moment',
+      );
     }
 
-    let formattedDate = 'Date à définir';
+    let formattedDate = t('leagueMatchDetails.dateToBeDecided', 'Date à définir');
     if (negotiationProposalDate) {
       try {
         formattedDate = format(new Date(negotiationProposalDate), "EEEE d MMMM 'a' HH'h'mm", { locale: fr });
       } catch (_error) {
-        formattedDate = 'Date à définir';
+        formattedDate = t('leagueMatchDetails.dateToBeDecided', 'Date à définir');
       }
     }
 
@@ -438,7 +475,7 @@ function LeagueMatchDetails({ navigation, route }) {
       origin,
       title,
     };
-  }, [negotiationProposalDate, negotiationState, venueRequired]);
+  }, [negotiationProposalDate, negotiationState, t, venueRequired]);
   const renderNegotiationActions = useCallback(() => {
     if (canCreateFirstProposalFromNegotiationCard && !hasNegotiationConversation) {
       return (
@@ -446,7 +483,7 @@ function LeagueMatchDetails({ navigation, route }) {
           <Button
             disabled={actionLoading}
             onPress={handleOpenCounterProposal}
-            title="Envoyer une proposition"
+            title={t('leagueMatchDetails.negotiation.sendProposal', 'Envoyer une proposition')}
             variant="Primary"
           />
         </View>
@@ -464,7 +501,7 @@ function LeagueMatchDetails({ navigation, route }) {
               borderColor: Colors.gold500,
             }}
             textStyle={{ color: Colors.primary900 }}
-            title="Repondre"
+            title={t('leagueMatchDetails.negotiation.reply', 'Repondre')}
             variant="Primary"
           />
           {hasNegotiationConversation ? (
@@ -474,7 +511,7 @@ function LeagueMatchDetails({ navigation, route }) {
               style={{ alignSelf: 'flex-start', paddingVertical: 2 }}
             >
               <Text style={[Fonts.p4Bold, { color: Colors.primary500 }]}>
-                Ouvrir dans le chat &gt;
+                {t('leagueMatchDetails.negotiation.openInChat', 'Ouvrir dans le chat >')}
               </Text>
             </TouchableOpacity>
           ) : null}
@@ -488,7 +525,7 @@ function LeagueMatchDetails({ navigation, route }) {
           <Button
             disabled={actionLoading}
             onPress={handleOpenChat}
-            title="Ouvrir le chat"
+            title={t('leagueMatchDetails.negotiation.openChat', 'Ouvrir le chat')}
             variant="SecondaryLight"
           />
           <TouchableOpacity
@@ -497,7 +534,10 @@ function LeagueMatchDetails({ navigation, route }) {
             style={{ alignItems: 'center', paddingVertical: 4 }}
           >
             <Text style={[Fonts.p3Bold, { color: Colors.primary500 }]}>
-              Envoyer une nouvelle proposition
+              {t(
+                'leagueMatchDetails.negotiation.sendNewProposal',
+                'Envoyer une nouvelle proposition',
+              )}
             </Text>
           </TouchableOpacity>
         </View>
@@ -519,6 +559,7 @@ function LeagueMatchDetails({ navigation, route }) {
     handleOpenCounterProposal,
     handleOpenNegotiationResponseSheet,
     hasNegotiationConversation,
+    t,
   ]);
   const renderPostSlotResolutionActions = useCallback(() => {
     if (effectivePostSlotResolutionStep === 'choose_not_played_action') {
@@ -527,19 +568,19 @@ function LeagueMatchDetails({ navigation, route }) {
           <Button
             disabled={actionLoading}
             onPress={() => handleSubmitPostSlotResolution({ nextAction: 'reschedule', outcome: 'not_played' })}
-            title="Replanifier ce match"
+            title={t('leagueMatchDetails.postSlot.reschedule', 'Replanifier ce match')}
             variant="Primary"
           />
           <Button
             disabled={actionLoading}
             onPress={() => handleSubmitPostSlotResolution({ nextAction: 'cancel', outcome: 'not_played' })}
-            title="Annuler le match"
+            title={t('leagueMatchDetails.postSlot.cancelMatch', 'Annuler le match')}
             variant="Secondary"
           />
           <Button
             disabled={actionLoading}
             onPress={() => setPostSlotResolutionStep(null)}
-            title="Retour"
+            title={t('leagueMatchDetails.postSlot.back', 'Retour')}
             variant="Secondary"
           />
         </View>
@@ -552,13 +593,16 @@ function LeagueMatchDetails({ navigation, route }) {
           <Button
             disabled={actionLoading}
             onPress={() => handleSubmitPostSlotResolution({ nextAction: 'reschedule', outcome: 'not_played' })}
-            title="Confirmer la replanification"
+            title={t(
+              'leagueMatchDetails.postSlot.confirmReschedule',
+              'Confirmer la replanification',
+            )}
             variant="Primary"
           />
           <Button
             disabled={actionLoading}
             onPress={() => handleSubmitPostSlotResolution({ outcome: 'played' })}
-            title="Le match a eu lieu"
+            title={t('leagueMatchDetails.postSlot.matchHappened', 'Le match a eu lieu')}
             variant="Secondary"
           />
         </View>
@@ -571,13 +615,13 @@ function LeagueMatchDetails({ navigation, route }) {
           <Button
             disabled={actionLoading}
             onPress={() => handleSubmitPostSlotResolution({ nextAction: 'cancel', outcome: 'not_played' })}
-            title="Confirmer l annulation"
+            title={t('leagueMatchDetails.postSlot.confirmCancel', 'Confirmer l annulation')}
             variant="Primary"
           />
           <Button
             disabled={actionLoading}
             onPress={() => handleSubmitPostSlotResolution({ outcome: 'played' })}
-            title="Le match a eu lieu"
+            title={t('leagueMatchDetails.postSlot.matchHappened', 'Le match a eu lieu')}
             variant="Secondary"
           />
         </View>
@@ -589,13 +633,13 @@ function LeagueMatchDetails({ navigation, route }) {
         <Button
           disabled={actionLoading}
           onPress={() => handleSubmitPostSlotResolution({ outcome: 'played' })}
-          title="Oui, le match a eu lieu"
+          title={t('leagueMatchDetails.postSlot.yesHappened', 'Oui, le match a eu lieu')}
           variant="Primary"
         />
         <Button
           disabled={actionLoading}
           onPress={openPostSlotNoMatchChoices}
-          title="Non, le match n a pas eu lieu"
+          title={t('leagueMatchDetails.postSlot.noNotHappened', 'Non, le match n a pas eu lieu')}
           variant="Secondary"
         />
       </View>
@@ -605,6 +649,7 @@ function LeagueMatchDetails({ navigation, route }) {
     effectivePostSlotResolutionStep,
     handleSubmitPostSlotResolution,
     openPostSlotNoMatchChoices,
+    t,
   ]);
 
   const venueLabel = useMemo(() => resolveVenueLabel(match), [match]);
@@ -618,8 +663,8 @@ function LeagueMatchDetails({ navigation, route }) {
       return {
         backgroundColor: 'rgba(1, 179, 244, 0.16)',
         borderColor: 'rgba(1, 179, 244, 0.35)',
-        label: 'DOMICILE',
-        subtitle: 'Tu joues chez toi',
+        label: t('leagueMatchDetails.context.home', 'DOMICILE'),
+        subtitle: t('leagueMatchDetails.context.homeSubtitle', 'Tu joues chez toi'),
         textColor: Colors.primary500,
       };
     }
@@ -628,14 +673,14 @@ function LeagueMatchDetails({ navigation, route }) {
       return {
         backgroundColor: 'rgba(255, 255, 255, 0.06)',
         borderColor: 'rgba(255, 255, 255, 0.18)',
-        label: 'EXTERIEUR',
-        subtitle: 'Deplacement League',
+        label: t('leagueMatchDetails.context.away', 'EXTERIEUR'),
+        subtitle: t('leagueMatchDetails.context.awaySubtitle', 'Deplacement League'),
         textColor: Colors.neutral200,
       };
     }
 
     return null;
-  }, [Colors.neutral200, Colors.primary500, teamSide]);
+  }, [Colors.neutral200, Colors.primary500, t, teamSide]);
   const remainingPlayers = useMemo(
     () => Math.max(requiredPlayers - participationCount, 0),
     [participationCount, requiredPlayers],
@@ -644,26 +689,37 @@ function LeagueMatchDetails({ navigation, route }) {
   const hasOfficialScore = match?.score_a !== null && match?.score_b !== null;
   const presenceCompactHelperText = useMemo(() => {
     if (hasConfirmed) {
-      if (remainingPlayers <= 0) return 'Le quorum est atteint pour ton équipe.';
+      if (remainingPlayers <= 0) {
+        return t(
+          'leagueMatchDetails.presence.quorumReached',
+          'Le quorum est atteint pour ton équipe.',
+        );
+      }
       return `Encore ${remainingPlayers} joueur${remainingPlayers > 1 ? 's' : ''} pour atteindre le quorum.`;
     }
 
-    if (isRosterFull) return 'Effectif complet pour le moment.';
+    if (isRosterFull) {
+      return t('leagueMatchDetails.presence.rosterFull', 'Effectif complet pour le moment.');
+    }
     return `Il manque ${remainingPlayers} joueur${remainingPlayers > 1 ? 's' : ''} pour atteindre le quorum.`;
-  }, [hasConfirmed, isRosterFull, remainingPlayers]);
+  }, [hasConfirmed, isRosterFull, remainingPlayers, t]);
   const presencePrimaryTitle = useMemo(() => {
-    if (isRosterFull) return 'Complet';
-    return 'Je participe';
-  }, [isRosterFull]);
+    if (isRosterFull) {
+      return t('leagueMatchDetails.presence.full', 'Complet');
+    }
+    return t('leagueMatchDetails.presence.join', 'Je participe');
+  }, [isRosterFull, t]);
 
   const formattedDate = useMemo(() => {
-    if (!match?.date) return 'Date à définir';
+    if (!match?.date) {
+      return t('leagueMatchDetails.dateToBeDecided', 'Date à définir');
+    }
     try {
       return format(new Date(match.date), "EEEE d MMMM 'a' HH'h'mm", { locale: fr });
     } catch (_error) {
       return match.date;
     }
-  }, [match?.date]);
+  }, [match?.date, t]);
 
   const statusConfig = useMemo(() => getMatchStatusBadgeConfig(match, Colors), [Colors, match]);
 
@@ -732,7 +788,7 @@ function LeagueMatchDetails({ navigation, route }) {
             borderColor: Colors.gold500,
           }}
           textStyle={{ color: Colors.primary900 }}
-          title="Confirmer le match"
+          title={t('leagueMatchDetails.captain.confirmMatch', 'Confirmer le match')}
           variant="Primary"
         />
       ) : null}
@@ -749,7 +805,7 @@ function LeagueMatchDetails({ navigation, route }) {
             borderColor: Colors.primary500,
           }}
           textStyle={{ color: Colors.neutral00 }}
-          title="Marquer terrain réservé"
+          title={t('leagueMatchDetails.captain.markVenueBooked', 'Marquer terrain réservé')}
           variant="Primary"
         />
       ) : null}
@@ -766,7 +822,10 @@ function LeagueMatchDetails({ navigation, route }) {
         >
           <Image source={Images.clock} style={{ height: 16, tintColor: Colors.primary500, width: 16 }} />
           <Text style={[Fonts.p4Bold, { color: Colors.neutral200, flex: 1 }]}>
-            Score disponible au debut du match + 1 min.
+            {t(
+              'leagueMatchDetails.captain.scoreAvailableAtStart',
+              'Score disponible au debut du match + 1 min.',
+            )}
           </Text>
         </View>
       ) : null}
@@ -794,48 +853,76 @@ function LeagueMatchDetails({ navigation, route }) {
     const countdown = formatScoreFlowCountdown(scoreFlow.remainingSeconds);
     if (scoreFlow.state === 'opponent_score_pending') {
       return {
-        helper: `La squad adverse a saisi un score. Confirme ou conteste avant auto-validation dans ${countdown}.`,
-        label: 'Score adverse',
-        title: 'Valider le score adverse',
+        helper: t(
+          'leagueMatchDetails.scoreAction.opponentPending.helper',
+          // eslint-disable-next-line max-len
+          'La squad adverse a saisi un score. Confirme ou conteste avant auto-validation dans {{countdown}}.',
+          { countdown, ...SANS_ECHAPPEMENT },
+        ),
+        label: t('leagueMatchDetails.scoreAction.opponentPending.label', 'Score adverse'),
+        title: t(
+          'leagueMatchDetails.scoreAction.opponentPending.title',
+          'Valider le score adverse',
+        ),
       };
     }
 
     if (scoreFlow.state === 'submitted_waiting_opponent' || scoreFlow.state === 'auto_validation_pending') {
       return {
-        helper: `Ton score est enregistré. Sans réponse adverse, il sera validé automatiquement dans ${countdown}.`,
-        label: 'Score saisi',
-        title: 'Score saisi',
+        helper: t(
+          'leagueMatchDetails.scoreAction.submitted.helper',
+          // eslint-disable-next-line max-len
+          'Ton score est enregistré. Sans réponse adverse, il sera validé automatiquement dans {{countdown}}.',
+          { countdown, ...SANS_ECHAPPEMENT },
+        ),
+        label: t('leagueMatchDetails.scoreAction.submitted.label', 'Score saisi'),
+        title: t('leagueMatchDetails.scoreAction.submitted.label', 'Score saisi'),
       };
     }
 
     if (matchPhase === 'pending_validation') {
       return {
-        helper: `Un score attend une validation. Sans action, le score soumis sera traite à la deadline dans ${countdown}.`,
-        label: 'Score à valider',
-        title: 'Valider le score',
+        helper: t(
+          'leagueMatchDetails.scoreAction.pendingValidation.helper',
+          // eslint-disable-next-line max-len
+          'Un score attend une validation. Sans action, le score soumis sera traite à la deadline dans {{countdown}}.',
+          { countdown, ...SANS_ECHAPPEMENT },
+        ),
+        label: t('leagueMatchDetails.scoreAction.pendingValidation.label', 'Score à valider'),
+        title: t('leagueMatchDetails.scoreAction.pendingValidation.title', 'Valider le score'),
       };
     }
 
     if (matchPhase === 'disputed') {
       return {
-        helper: 'Un litige score est ouvert. Ajoute les éléments utiles ou attends la résolution SuperAdmin.',
-        label: 'Litige score',
-        title: 'Traiter le litige',
+        helper: t(
+          'leagueMatchDetails.scoreAction.disputed.helper',
+          // eslint-disable-next-line max-len
+          'Un litige score est ouvert. Ajoute les éléments utiles ou attends la résolution SuperAdmin.',
+        ),
+        label: t('leagueMatchDetails.scoreAction.disputed.label', 'Litige score'),
+        title: t('leagueMatchDetails.scoreAction.disputed.title', 'Traiter le litige'),
       };
     }
 
     return {
-      helper: 'Le match est joué. Le score officiel doit être saisi pour lancer le bilan League.',
-      label: 'Score à saisir',
-      title: 'Saisir le score final',
+      helper: t(
+        'leagueMatchDetails.scoreAction.waiting.helper',
+        'Le match est joué. Le score officiel doit être saisi pour lancer le bilan League.',
+      ),
+      label: t('leagueMatchDetails.scoreAction.waiting.label', 'Score à saisir'),
+      title: t('leagueMatchDetails.scoreAction.waiting.title', 'Saisir le score final'),
     };
-  }, [matchPhase, scoreFlow.remainingSeconds, scoreFlow.state]);
+  }, [matchPhase, scoreFlow.remainingSeconds, scoreFlow.state, t]);
   const heroStatusMeta = useMemo(() => {
     if (isScoreActionPhase || isScoreToSubmitBadge) {
       return {
         accentColor: Colors.gold500,
         icon: Images.edit,
-        label: isCaptain ? 'Action capitaine' : 'Action équipe',
+        label: isCaptain ? t('leagueMatchDetails.hero.captainAction', 'Action capitaine') : t(
+          'leagueMatchDetails.hero.teamAction',
+          'Action équipe',
+        ),
         text: scoreQuickActionMeta.helper,
       };
     }
@@ -844,8 +931,11 @@ function LeagueMatchDetails({ navigation, route }) {
       return {
         accentColor: Colors.gold500,
         icon: Images.stadium,
-        label: 'Organisation équipe',
-        text: "Le terrain doit encore être confirmé avant le coup d'envoi.",
+        label: t('leagueMatchDetails.hero.teamOrganisation', 'Organisation équipe'),
+        text: t(
+          'leagueMatchDetails.hero.venuePending',
+          "Le terrain doit encore être confirmé avant le coup d'envoi.",
+        ),
       };
     }
 
@@ -853,8 +943,11 @@ function LeagueMatchDetails({ navigation, route }) {
       return {
         accentColor: Colors.primary500,
         icon: Images.clock,
-        label: 'Avant match',
-        text: 'Les confirmations de présence restent ouvertes avant le début.',
+        label: t('leagueMatchDetails.hero.beforeMatch', 'Avant match'),
+        text: t(
+          'leagueMatchDetails.hero.presenceOpen',
+          'Les confirmations de présence restent ouvertes avant le début.',
+        ),
       };
     }
 
@@ -862,16 +955,22 @@ function LeagueMatchDetails({ navigation, route }) {
       return {
         accentColor: Colors.success500,
         icon: Images.check,
-        label: 'Résultat validé',
-        text: 'Le match est verrouillé avec son score officiel.',
+        label: t('leagueMatchDetails.hero.resultConfirmed', 'Résultat validé'),
+        text: t(
+          'leagueMatchDetails.hero.locked',
+          'Le match est verrouillé avec son score officiel.',
+        ),
       };
     }
 
     return {
       accentColor: Colors.primary500,
       icon: Images.flag,
-      label: 'Statut League',
-      text: 'Le suivi League reste disponible dans les sections ci-dessous.',
+      label: t('leagueMatchDetails.hero.leagueStatus', 'Statut League'),
+      text: t(
+        'leagueMatchDetails.hero.trackingBelow',
+        'Le suivi League reste disponible dans les sections ci-dessous.',
+      ),
     };
   }, [
     Colors.gold500,
@@ -888,20 +987,30 @@ function LeagueMatchDetails({ navigation, route }) {
     normalizedStatus,
     isCaptain,
     scoreQuickActionMeta.helper,
+    t,
     venueRequired,
   ]);
   const heroSupportText = useMemo(() => {
     if (hasOfficialScore && normalizedStatus === 'valid') {
-      return 'Score officiel enregistré pour cette affiche League.';
+      return t(
+        'leagueMatchDetails.hero.officialScoreSaved',
+        'Score officiel enregistré pour cette affiche League.',
+      );
     }
     if (isScoreActionPhase || isScoreToSubmitBadge) {
       return scoreQuickActionMeta.helper;
     }
     if (normalizedStatus === 'scheduled' && venueRequired && !isVenueBooked) {
-      return "Le terrain doit encore être confirmé avant le coup d'envoi.";
+      return t(
+        'leagueMatchDetails.hero.venuePending',
+        "Le terrain doit encore être confirmé avant le coup d'envoi.",
+      );
     }
     if (normalizedStatus === 'scheduled') {
-      return 'Les confirmations de présence restent ouvertes avant le début.';
+      return t(
+        'leagueMatchDetails.hero.presenceOpen',
+        'Les confirmations de présence restent ouvertes avant le début.',
+      );
     }
     return heroStatusMeta.text;
   }, [
@@ -912,15 +1021,19 @@ function LeagueMatchDetails({ navigation, route }) {
     isVenueBooked,
     normalizedStatus,
     scoreQuickActionMeta.helper,
+    t,
     venueRequired,
   ]);
   const captainQuickActionMeta = useMemo(() => {
     if (isPostSlotResolutionCurrentMatch) {
       return {
         accentColor: Colors.gold500,
-        helper: 'Le créneau est dépassé. Confirme si le match a eu lieu.',
-        label: 'Résolution à faire',
-        title: 'Confirmation du match',
+        helper: t(
+          'leagueMatchDetails.captainQuick.postSlot.helper',
+          'Le créneau est dépassé. Confirme si le match a eu lieu.',
+        ),
+        label: t('leagueMatchDetails.captainQuick.postSlot.label', 'Résolution à faire'),
+        title: t('leagueMatchDetails.captainQuick.postSlot.title', 'Confirmation du match'),
       };
     }
 
@@ -929,26 +1042,42 @@ function LeagueMatchDetails({ navigation, route }) {
         accentColor: Colors.primary500,
         helper: scoreQuickActionMeta.helper,
         label: scoreQuickActionMeta.label,
-        title: 'Score officiel',
+        title: t('leagueMatchDetails.captainQuick.score.title', 'Score officiel'),
       };
     }
 
     if (isScoreLockedByTime) {
       return {
         accentColor: Colors.primary500,
-        helper: "Le score se débloque automatiquement à l'heure de début du match + 1 minute.",
-        label: 'Score bientôt disponible',
-        title: 'Score verrouillé',
+        helper: t(
+          'leagueMatchDetails.captainQuick.locked.helper',
+          "Le score se débloque automatiquement à l'heure de début du match + 1 minute.",
+        ),
+        label: t('leagueMatchDetails.captainQuick.locked.label', 'Score bientôt disponible'),
+        title: t('leagueMatchDetails.captainQuick.locked.title', 'Score verrouillé'),
       };
     }
 
     return {
       accentColor: Colors.primary500,
       helper: venueRequired
-        ? "Le terrain doit être confirme avant le coup d'envoi pour garder le workflow League propre."
-        : "Le match reste à confirmer par les équipes avant le coup d'envoi.",
-      label: venueRequired ? 'Terrain à confirmer' : 'Match à confirmer',
-      title: 'Organisation du match',
+        ? t(
+          'leagueMatchDetails.captainQuick.default.helperVenue',
+          // eslint-disable-next-line max-len
+          "Le terrain doit être confirme avant le coup d'envoi pour garder le workflow League propre.",
+        )
+        : t(
+          'leagueMatchDetails.captainQuick.default.helperNoVenue',
+          "Le match reste à confirmer par les équipes avant le coup d'envoi.",
+        ),
+      label: venueRequired ? t(
+        'leagueMatchDetails.captainQuick.default.labelVenue',
+        'Terrain à confirmer',
+      ) : t(
+        'leagueMatchDetails.captainQuick.default.labelNoVenue',
+        'Match à confirmer',
+      ),
+      title: t('leagueMatchDetails.matchOrganisation', 'Organisation du match'),
     };
   }, [
     Colors.gold500,
@@ -958,20 +1087,24 @@ function LeagueMatchDetails({ navigation, route }) {
     isScoreLockedByTime,
     scoreQuickActionMeta.helper,
     scoreQuickActionMeta.label,
+    t,
     venueRequired,
   ]);
   const captainPrimarySummaryText = useMemo(() => {
     if (isPostSlotResolutionCurrentMatch) {
-      return 'Confirme si le match a eu lieu.';
+      return t('leagueMatchDetails.captainSummary.postSlot', 'Confirme si le match a eu lieu.');
     }
     if (canManageVenue) {
-      return 'Confirme le terrain du match.';
+      return t('leagueMatchDetails.captainSummary.venue', 'Confirme le terrain du match.');
     }
     if (canSubmitScore) {
-      return 'Saisis le score officiel.';
+      return t('leagueMatchDetails.captainSummary.score', 'Saisis le score officiel.');
     }
     if (isScoreLockedByTime) {
-      return 'Le score sera disponible au coup d envoi.';
+      return t(
+        'leagueMatchDetails.captainSummary.locked',
+        'Le score sera disponible au coup d envoi.',
+      );
     }
     return captainQuickActionMeta.helper;
   }, [
@@ -980,6 +1113,7 @@ function LeagueMatchDetails({ navigation, route }) {
     captainQuickActionMeta.helper,
     isPostSlotResolutionCurrentMatch,
     isScoreLockedByTime,
+    t,
   ]);
   const actionDockMeta = useMemo(() => {
     if (hasBottomPresenceBar) {
@@ -987,7 +1121,10 @@ function LeagueMatchDetails({ navigation, route }) {
         accentColor: hasConfirmed ? Colors.success500 : Colors.primary500,
         helper: presenceCompactHelperText,
         label: `${participationCount}/${requiredPlayers}`,
-        title: hasConfirmed ? 'Présence confirmée' : 'Disponibilité',
+        title: hasConfirmed ? t('leagueMatchDetails.presence.confirmed', 'Présence confirmée') : t(
+          'leagueMatchDetails.presence.availability',
+          'Disponibilité',
+        ),
       };
     }
 
@@ -1004,7 +1141,7 @@ function LeagueMatchDetails({ navigation, route }) {
       accentColor: Colors.primary500,
       helper: '',
       label: '',
-      title: 'Actions du match',
+      title: t('leagueMatchDetails.matchActions', 'Actions du match'),
     };
   }, [
     Colors.primary500,
@@ -1019,55 +1156,99 @@ function LeagueMatchDetails({ navigation, route }) {
     participationCount,
     presenceCompactHelperText,
     requiredPlayers,
+    t,
   ]);
   const captainSectionHelperText = useMemo(() => {
     if (shouldShowInlineCaptainActions) {
       return null;
     }
     if (venueRequired) {
-      return 'Les actions rapides terrain, score et résolution restent visibles dans la barre du bas pour agir sans quitter la fiche.';
+      return t(
+        'leagueMatchDetails.captainHelper.withVenue',
+        // eslint-disable-next-line max-len
+        'Les actions rapides terrain, score et résolution restent visibles dans la barre du bas pour agir sans quitter la fiche.',
+      );
     }
-    return 'Les actions rapides présence, score et résolution restent visibles dans la barre du bas pour agir sans quitter la fiche.';
-  }, [shouldShowInlineCaptainActions, venueRequired]);
+    return t(
+      'leagueMatchDetails.captainHelper.withoutVenue',
+      // eslint-disable-next-line max-len
+      'Les actions rapides présence, score et résolution restent visibles dans la barre du bas pour agir sans quitter la fiche.',
+    );
+  }, [shouldShowInlineCaptainActions, t, venueRequired]);
   const captainSectionTitle = useMemo(() => {
-    if (canShowCaptainPrimary) return 'Action prioritaire';
-    return isCaptain ? 'Zone Capitaine' : 'Organisation du match';
-  }, [canShowCaptainPrimary, isCaptain]);
+    if (canShowCaptainPrimary) {
+      return t('leagueMatchDetails.captainSection.priorityTitle', 'Action prioritaire');
+    }
+    return isCaptain ? t('leagueMatchDetails.captainSection.captainZone', 'Zone Capitaine') : t(
+      'leagueMatchDetails.matchOrganisation',
+      'Organisation du match',
+    );
+  }, [canShowCaptainPrimary, isCaptain, t]);
   const captainSectionLabel = useMemo(() => {
-    if (canShowCaptainPrimary) return 'ACTION PRIORITAIRE';
-    return isCaptain ? 'Priorité MATCH' : 'ACTION Équipe';
-  }, [canShowCaptainPrimary, isCaptain]);
+    if (canShowCaptainPrimary) {
+      return t('leagueMatchDetails.captainSection.priorityLabel', 'ACTION PRIORITAIRE');
+    }
+    return isCaptain ? t('leagueMatchDetails.captainSection.captainLabel', 'Priorité MATCH') : t(
+      'leagueMatchDetails.captainSection.teamLabel',
+      'ACTION Équipe',
+    );
+  }, [canShowCaptainPrimary, isCaptain, t]);
   const shouldRenderCaptainSectionHelper = Boolean(canShowCaptainPrimary && captainSectionHelperText);
   const shouldRenderInlineCaptainActions = Boolean(canShowCaptainPrimary && shouldShowInlineCaptainActions);
   const postSlotResolutionModalMeta = useMemo(() => {
     if (effectivePostSlotResolutionStep === 'confirm_reschedule') {
       return {
-        helper: 'L adversaire indique que le match n a pas eu lieu et propose de replanifier ce même match.',
-        title: 'Confirmer la replanification ?',
+        helper: t(
+          'leagueMatchDetails.postSlotModal.confirmReschedule.helper',
+          // eslint-disable-next-line max-len
+          'L adversaire indique que le match n a pas eu lieu et propose de replanifier ce même match.',
+        ),
+        title: t(
+          'leagueMatchDetails.postSlotModal.confirmReschedule.title',
+          'Confirmer la replanification ?',
+        ),
       };
     }
 
     if (effectivePostSlotResolutionStep === 'confirm_cancel') {
       return {
-        helper: 'L adversaire indique que le match n a pas eu lieu et propose d annuler ce match sans pénalité.',
-        title: 'Confirmer l annulation ?',
+        helper: t(
+          'leagueMatchDetails.postSlotModal.confirmCancel.helper',
+          // eslint-disable-next-line max-len
+          'L adversaire indique que le match n a pas eu lieu et propose d annuler ce match sans pénalité.',
+        ),
+        title: t(
+          'leagueMatchDetails.postSlotModal.confirmCancel.title',
+          'Confirmer l annulation ?',
+        ),
       };
     }
 
     if (effectivePostSlotResolutionStep === 'choose_not_played_action') {
       return {
-        helper: 'Choisis la suite à donner à ce match : replanifier avec le même adversaire ou annuler sans pénalité.',
-        title: 'Le match n a pas eu lieu',
+        helper: t(
+          'leagueMatchDetails.postSlotModal.notPlayed.helper',
+          // eslint-disable-next-line max-len
+          'Choisis la suite à donner à ce match : replanifier avec le même adversaire ou annuler sans pénalité.',
+        ),
+        title: t('leagueMatchDetails.postSlotModal.notPlayed.title', 'Le match n a pas eu lieu'),
       };
     }
 
     return {
       helper: venueRequired
-        ? 'Le créneau est dépassé sans terrain confirmé. Les capitaines doivent confirmer si le match a eu lieu.'
-        : 'Le créneau est dépassé. Les capitaines doivent confirmer si le match a eu lieu.',
-      title: 'Le match a-t-il eu lieu ?',
+        ? t(
+          'leagueMatchDetails.postSlotModal.ask.helperWithVenue',
+          // eslint-disable-next-line max-len
+          'Le créneau est dépassé sans terrain confirmé. Les capitaines doivent confirmer si le match a eu lieu.',
+        )
+        : t(
+          'leagueMatchDetails.postSlotModal.ask.helperWithoutVenue',
+          'Le créneau est dépassé. Les capitaines doivent confirmer si le match a eu lieu.',
+        ),
+      title: t('leagueMatchDetails.postSlotModal.ask.title', 'Le match a-t-il eu lieu ?'),
     };
-  }, [effectivePostSlotResolutionStep, venueRequired]);
+  }, [effectivePostSlotResolutionStep, t, venueRequired]);
   const leagueWorkflowSteps = useMemo(() => {
     const hasProposal = Boolean(negotiationState) || normalizedStatus === 'scheduled' || normalizedStatus === 'valid';
     const hasEnoughPlayers = participationCount >= requiredPlayers || normalizedStatus !== 'scheduled';
@@ -1084,17 +1265,20 @@ function LeagueMatchDetails({ navigation, route }) {
     return [
       {
         key: 'proposal',
-        label: 'Proposition',
+        label: t('leagueMatchDetails.workflow.proposal', 'Proposition'),
         state: hasProposal ? 'done' : 'todo',
       },
       {
         key: 'venue',
-        label: venueRequired ? 'Terrain' : 'Confirme',
+        label: venueRequired ? t(
+          'leagueMatchDetails.workflow.venue',
+          'Terrain',
+        ) : t('leagueMatchDetails.workflow.confirmed', 'Confirme'),
         state: venueResolved ? 'done' : 'active',
       },
       {
         key: 'presence',
-        label: 'Présences',
+        label: t('leagueMatchDetails.workflow.presence', 'Présences'),
         state: hasEnoughPlayers ? 'done' : 'active',
       },
       {
@@ -1116,6 +1300,7 @@ function LeagueMatchDetails({ navigation, route }) {
     normalizedStatus,
     participationCount,
     requiredPlayers,
+    t,
     venueRequired,
   ]);
   const detailTabOptions = useMemo(() => ([
@@ -1435,11 +1620,17 @@ function LeagueMatchDetails({ navigation, route }) {
       await markVenueBooked(matchId);
       await invalidateLeagueQueries();
       await refetchPendingLeagueAction();
-      Alert.alert('Succès', 'Terrain marque comme réservé.');
+      Alert.alert(
+        'Succès',
+        'Terrain marque comme réservé.',
+      );
       await loadMatch({ forceFresh: true });
     } catch (error) {
       console.error(error);
-      Alert.alert('Erreur', 'Impossible de mettre à jour le statut');
+      Alert.alert(
+        'Erreur',
+        'Impossible de mettre à jour le statut',
+      );
     } finally {
       setActionLoading(false);
     }
@@ -1530,14 +1721,23 @@ function LeagueMatchDetails({ navigation, route }) {
             try {
               const targetTeamId = getEntityDocumentId(myTeam);
               if (!targetTeamId) {
-                Alert.alert('Erreur', 'Équipe introuvable.');
+                Alert.alert(
+                  'Erreur',
+                  'Équipe introuvable.',
+                );
                 return;
               }
               await cancelMatch(matchId, targetTeamId, 'Annule par le capitaine');
-              Alert.alert('Match annule', 'Le match a été annulé.');
+              Alert.alert(
+                'Match annule',
+                'Le match a été annulé.',
+              );
               navigation.goBack();
             } catch (_error) {
-              Alert.alert('Erreur', 'Échec annulation');
+              Alert.alert(
+                'Erreur',
+                'Échec annulation',
+              );
             } finally {
               setActionLoading(false);
             }
@@ -1607,7 +1807,10 @@ function LeagueMatchDetails({ navigation, route }) {
         await loadMatch({ forceFresh: true });
         return;
       }
-      Alert.alert('Erreur', 'Impossible d accepter la proposition pour le moment.');
+      Alert.alert(
+        'Erreur',
+        'Impossible d accepter la proposition pour le moment.',
+      );
     } finally {
       setActionLoading(false);
     }
@@ -1641,7 +1844,10 @@ function LeagueMatchDetails({ navigation, route }) {
         await loadMatch({ forceFresh: true });
         return;
       }
-      Alert.alert('Erreur', 'Impossible de refuser la proposition pour le moment.');
+      Alert.alert(
+        'Erreur',
+        'Impossible de refuser la proposition pour le moment.',
+      );
     } finally {
       setActionLoading(false);
     }
@@ -1726,7 +1932,10 @@ function LeagueMatchDetails({ navigation, route }) {
         setIsNegotiationModalVisible(false);
         return;
       }
-      Alert.alert('Erreur', "Impossible d'envoyer la contre-proposition.");
+      Alert.alert(
+        'Erreur',
+        "Impossible d'envoyer la contre-proposition.",
+      );
     } finally {
       setActionLoading(false);
     }
