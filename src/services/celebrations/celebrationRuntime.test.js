@@ -1,3 +1,7 @@
+// I18N-4 : le catalogue lit ses phrases par i18next ; ce temoin initialise le VRAI
+// i18next en francais (fr.js + replis), sans rien changer a ce qu'il affirme.
+require('@/theme/strings');
+
 const { NOTIFICATION_TYPES } = require('@/utils/notifications/notificationTypes');
 
 const {
