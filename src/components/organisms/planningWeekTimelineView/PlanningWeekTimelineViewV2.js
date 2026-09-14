@@ -873,7 +873,11 @@ function PlanningWeekTimelineView({
           if (timedEvents.length === 0) {
             return (
               <View style={styles.emptyState}>
-                <Text style={[Fonts.p2Bold, { color: Colors.neutral00, marginBottom: 6 }]}>{emptyTitle}</Text>
+                {/* Android coupait « période » : un titre gras sans largeur */}
+                {/* ni centrage ne passe pas à la ligne. */}
+                <Text style={[Fonts.p2Bold, styles.emptyTitle, { color: Colors.neutral00 }]}>
+                  {emptyTitle}
+                </Text>
                 <Text style={[Fonts.p3, { color: Colors.neutral300, textAlign: 'center' }]}>{emptyDescription}</Text>
               </View>
             );
@@ -1062,6 +1066,7 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end', borderBottomWidth: 1, flexDirection: 'row', marginBottom: 8, paddingBottom: 8,
   },
   emptyState: { alignItems: 'center', paddingHorizontal: 16, paddingVertical: 28 },
+  emptyTitle: { alignSelf: 'stretch', marginBottom: 6, textAlign: 'center' },
   eventCard: {
     borderRadius: 8, borderWidth: 1, overflow: 'hidden', position: 'absolute',
   },
