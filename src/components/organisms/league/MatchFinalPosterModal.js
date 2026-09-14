@@ -1,4 +1,6 @@
+import i18next from 'i18next';
 import { useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Modal, Pressable, StyleSheet, Text, View,
 } from 'react-native';
@@ -92,15 +94,24 @@ const formatDelta = (value) => {
 const getStatusUi = (status, colors) => {
   const normalized = String(status || '').toLowerCase();
   if (normalized === 'valid') {
-    return { chip: 'Résultat valide', color: colors.success500 };
+    return {
+      chip: i18next.t('matchFinalPosterModal.status.valid', 'Résultat valide'),
+      color: colors.success500,
+    };
   }
   if (normalized === 'forfeit') {
-    return { chip: 'Forfait', color: colors.warning500 };
+    return {
+      chip: i18next.t('matchFinalPosterModal.status.forfeit', 'Forfait'),
+      color: colors.warning500,
+    };
   }
   if (normalized === 'no_show') {
     return { chip: 'No-show', color: colors.error500 };
   }
-  return { chip: 'Match annule', color: colors.error500 };
+  return {
+    chip: i18next.t('matchFinalPosterModal.status.cancelled', 'Match annule'),
+    color: colors.error500,
+  };
 };
 
 /**
@@ -112,7 +123,7 @@ const getStageLabels = (division) => {
   if (progress.maxDivisionReached) {
     return {
       floorLabel: 'D1',
-      targetLabel: 'Division max',
+      targetLabel: i18next.t('matchFinalPosterModal.stage.maxDivision', 'Division max'),
     };
   }
 
@@ -183,7 +194,13 @@ const buildProgressSegments = ({
   if (divisionBefore === divisionAfter) {
     return [
       buildSegment({
-        banner: movement === 'up' ? 'Progression League' : 'Perte League',
+        banner: movement === 'up' ? i18next.t(
+          'matchFinalPosterModal.banners.progress',
+          'Progression League',
+        ) : i18next.t(
+          'matchFinalPosterModal.banners.loss',
+          'Perte League',
+        ),
         division: divisionAfter,
         fromRatio: beforeProgress.progressRatio,
         movement,
@@ -195,7 +212,10 @@ const buildProgressSegments = ({
   if (divisionAfter < divisionBefore) {
     const segments = [
       buildSegment({
-        banner: 'Seuil de promotion atteint',
+        banner: i18next.t(
+          'matchFinalPosterModal.banners.promotionThreshold',
+          'Seuil de promotion atteint',
+        ),
         division: divisionBefore,
         fromRatio: beforeProgress.progressRatio,
         movement: 'up',
@@ -205,7 +225,14 @@ const buildProgressSegments = ({
 
     for (let division = divisionBefore - 1; division >= divisionAfter; division -= 1) {
       segments.push(buildSegment({
-        banner: division === divisionAfter ? 'Promotion validée' : `Passage en D${division}`,
+        banner: division === divisionAfter ? i18next.t(
+          'matchFinalPosterModal.banners.promotionConfirmed',
+          'Promotion validée',
+        ) : i18next.t(
+          'matchFinalPosterModal.banners.movingTo',
+          'Passage en D{{division}}',
+          { division },
+        ),
         division,
         fromRatio: 0,
         movement: 'up',
@@ -218,7 +245,7 @@ const buildProgressSegments = ({
 
   const segments = [
     buildSegment({
-      banner: 'Seuil de maintien perdu',
+      banner: i18next.t('matchFinalPosterModal.banners.safetyLost', 'Seuil de maintien perdu'),
       division: divisionBefore,
       fromRatio: beforeProgress.progressRatio,
       movement: 'down',
@@ -228,7 +255,14 @@ const buildProgressSegments = ({
 
   for (let division = divisionBefore + 1; division <= divisionAfter; division += 1) {
     segments.push(buildSegment({
-      banner: division === divisionAfter ? 'Relégation appliquée' : `Passage en D${division}`,
+      banner: division === divisionAfter ? i18next.t(
+        'matchFinalPosterModal.banners.relegationApplied',
+        'Relégation appliquée',
+      ) : i18next.t(
+        'matchFinalPosterModal.banners.movingTo',
+        'Passage en D{{division}}',
+        { division },
+      ),
       division,
       fromRatio: 1,
       movement: 'down',
@@ -281,7 +315,10 @@ const buildAnimationModel = (payload) => {
       hasEloRecap: false,
       segments: [
         buildSegment({
-          banner: 'Calcul des points en cours',
+          banner: i18next.t(
+            'matchFinalPosterModal.banners.calculating',
+            'Calcul des points en cours',
+          ),
           division: fallbackDivision,
           fromRatio: 0,
           movement: 'neutral',
@@ -354,10 +391,11 @@ function MatchFinalPosterModal({
   visible,
 }) {
   const { Colors, Fonts } = useTheme();
+  const { t } = useTranslation();
   const entry = useSharedValue(0);
   const eloProgress = useSharedValue(0);
   const [stage, setStage] = useState(() => buildSegment({
-    banner: 'Progression League',
+    banner: t('matchFinalPosterModal.banners.progress', 'Progression League'),
     division: MAX_LEAGUE_DIVISION,
     fromRatio: 0,
     movement: 'neutral',
@@ -456,28 +494,46 @@ function MatchFinalPosterModal({
   const divisionLabel = divisionChanged
     ? `Division ${divisionBefore} -> ${divisionAfter}`
     : `Division ${divisionAfter || MAX_LEAGUE_DIVISION}`;
-  let divisionStatusLabel = 'Maintien';
+  let divisionStatusLabel = t('matchFinalPosterModal.divisionStatus.held', 'Maintien');
   if (!hasEloRecap) {
-    divisionStatusLabel = 'Calcul en cours';
+    divisionStatusLabel = t('matchFinalPosterModal.divisionStatus.calculating', 'Calcul en cours');
   } else if (changeKind === 'promotion') {
     divisionStatusLabel = 'Promotion';
   } else if (changeKind === 'relegation') {
-    divisionStatusLabel = 'Relégation';
+    divisionStatusLabel = t('matchFinalPosterModal.divisionStatus.relegation', 'Relégation');
   } else if (afterProgress?.maxDivisionReached) {
-    divisionStatusLabel = 'Division max atteinte';
+    divisionStatusLabel = t(
+      'matchFinalPosterModal.divisionStatus.maxReached',
+      'Division max atteinte',
+    );
   }
   const progressHelper = (() => {
     if (!hasEloRecap) {
-      return 'Les points sont en cours de synchronisation. Le récapitulatif sera mis à jour dès que le calcul League est prêt.';
+      return t(
+        'matchFinalPosterModal.helper.syncing',
+        // eslint-disable-next-line max-len
+        'Les points sont en cours de synchronisation. Le récapitulatif sera mis à jour dès que le calcul League est prêt.',
+      );
     }
     if (afterProgress?.maxDivisionReached) {
-      return 'Tu es déjà dans la division la plus haute.';
+      return t(
+        'matchFinalPosterModal.helper.topDivision',
+        'Tu es déjà dans la division la plus haute.',
+      );
     }
     const pointsToPromotion = Number(afterProgress?.pointsToPromotion ?? 0);
     if (pointsToPromotion <= 0) {
-      return `Seuil D${afterProgress?.nextDivision} atteint.`;
+      return t(
+        'matchFinalPosterModal.helper.thresholdReached',
+        'Seuil D{{nextDivision}} atteint.',
+        { nextDivision: afterProgress?.nextDivision },
+      );
     }
-    return `${Math.round(pointsToPromotion)} pts avant la D${afterProgress?.nextDivision}.`;
+    return t(
+      'matchFinalPosterModal.helper.pointsToNext',
+      '{{points}} pts avant la D{{nextDivision}}.',
+      { nextDivision: afterProgress?.nextDivision, points: Math.round(pointsToPromotion) },
+    );
   })();
 
   return (
@@ -494,7 +550,7 @@ function MatchFinalPosterModal({
             },
           ]}
         >
-          <LeagueModalHeader title="Fin de match" />
+          <LeagueModalHeader title={t('matchFinalPosterModal.title', 'Fin de match')} />
 
           <View style={styles.headerRow}>
             <View style={[styles.stageChip, { borderColor: Colors.gold500 }]}>
@@ -507,17 +563,22 @@ function MatchFinalPosterModal({
 
           <Text style={[Fonts.h1Bold, { color: Colors.gold500, marginTop: 12, textAlign: 'center' }]}>{scoreLabel}</Text>
           <Text style={[Fonts.p2, { color: Colors.neutral200, marginTop: 4, textAlign: 'center' }]}>
-            {recap?.resultLabel || recap?.result || 'Résultat enregistré'}
+            {recap?.resultLabel || recap?.result || t(
+              'matchFinalPosterModal.resultFallback',
+              'Résultat enregistré',
+            )}
           </Text>
 
           <View style={styles.breakdownRow}>
             <View style={styles.breakdownItem}>
-              <Text style={[Fonts.p4, { color: Colors.neutral300 }]}>Résultat</Text>
+              <Text style={[Fonts.p4, { color: Colors.neutral300 }]}>
+                {t('matchFinalPosterModal.breakdown.result', 'Résultat')}
+              </Text>
               <Text style={[Fonts.p2Bold, { color: Colors.gold500 }]}>{formatDelta(basePointsDelta)}</Text>
             </View>
             <View style={styles.breakdownItem}>
               <Text style={[Fonts.p4, { color: Colors.neutral300 }]}>
-                Bonus série
+                {t('matchFinalPosterModal.breakdown.streakBonus', 'Bonus série')}
                 {streakAfter && streakAfter > 1 ? ` x${streakAfter}` : ''}
               </Text>
               <Text style={[Fonts.p2Bold, { color: streakBonus > 0 ? Colors.success500 : Colors.neutral300 }]}>
@@ -541,14 +602,18 @@ function MatchFinalPosterModal({
           >
             <View style={styles.eloHeader}>
               <View>
-                <Text style={[Fonts.p3, { color: Colors.neutral300 }]}>Points avant</Text>
+                <Text style={[Fonts.p3, { color: Colors.neutral300 }]}>
+                  {t('matchFinalPosterModal.pointsBefore', 'Points avant')}
+                </Text>
                 <Text style={[Fonts.h4Bold, { color: Colors.gold500 }]}>{formatElo(eloBefore)}</Text>
               </View>
               <View style={[styles.deltaPill, { backgroundColor: `${isNegativeDelta ? Colors.error500 : Colors.success500}24` }]}>
                 <Text style={[Fonts.h4Bold, { color: isNegativeDelta ? Colors.error500 : Colors.success500 }]}>{delta}</Text>
               </View>
               <View style={styles.alignEnd}>
-                <Text style={[Fonts.p3, { color: Colors.neutral300 }]}>Points après</Text>
+                <Text style={[Fonts.p3, { color: Colors.neutral300 }]}>
+                  {t('matchFinalPosterModal.pointsAfter', 'Points après')}
+                </Text>
                 <Text style={[Fonts.h4Bold, { color: Colors.gold500 }]}>{formatElo(eloAfter)}</Text>
               </View>
             </View>
@@ -585,12 +650,16 @@ function MatchFinalPosterModal({
           </View>
 
           <View style={styles.actions}>
-            <Button onPress={onOpenDetails} title="Voir détails" variant="Primary" />
+            <Button
+              onPress={onOpenDetails}
+              title={t('matchFinalPosterModal.viewDetails', 'Voir détails')}
+              variant="Primary"
+            />
             <Button
               onPress={onRelaunchSearch}
               style={{ borderColor: Colors.gold500 }}
               textStyle={{ color: Colors.gold500 }}
-              title="Relancer une recherche"
+              title={t('matchFinalPosterModal.searchAgain', 'Relancer une recherche')}
               variant="Secondary"
             />
           </View>
