@@ -696,13 +696,21 @@ function LeagueMatchDetails({ navigation, route }) {
           'Le quorum est atteint pour ton équipe.',
         );
       }
-      return `Encore ${remainingPlayers} joueur${remainingPlayers > 1 ? 's' : ''} pour atteindre le quorum.`;
+      return t('leagueMatchDetails.presence.stillNeeded', {
+        count: remainingPlayers,
+        defaultValue_one: 'Encore {{count}} joueur pour atteindre le quorum.',
+        defaultValue_other: 'Encore {{count}} joueurs pour atteindre le quorum.',
+      });
     }
 
     if (isRosterFull) {
       return t('leagueMatchDetails.presence.rosterFull', 'Effectif complet pour le moment.');
     }
-    return `Il manque ${remainingPlayers} joueur${remainingPlayers > 1 ? 's' : ''} pour atteindre le quorum.`;
+    return t('leagueMatchDetails.presence.missing', {
+      count: remainingPlayers,
+      defaultValue_one: 'Il manque {{count}} joueur pour atteindre le quorum.',
+      defaultValue_other: 'Il manque {{count}} joueurs pour atteindre le quorum.',
+    });
   }, [hasConfirmed, isRosterFull, remainingPlayers, t]);
   const presencePrimaryTitle = useMemo(() => {
     if (isRosterFull) {
@@ -2955,7 +2963,11 @@ function LeagueMatchDetails({ navigation, route }) {
                       </Text>
                       {leaguePlayerCollectiveRating?.count ? (
                         <Text style={[Fonts.p4, { color: leagueCardTextColor }]}>
-                          {`${leaguePlayerCollectiveRating.count} note${leaguePlayerCollectiveRating.count > 1 ? 's' : ''} collective${leaguePlayerCollectiveRating.count > 1 ? 's' : ''} prise${leaguePlayerCollectiveRating.count > 1 ? 's' : ''} en compte`}
+                          {t('leagueMatchDetails.stats.collectiveRatingsCount', {
+                            count: leaguePlayerCollectiveRating.count,
+                            defaultValue_one: '{{count}} note collective prise en compte',
+                            defaultValue_other: '{{count}} notes collectives prises en compte',
+                          })}
                         </Text>
                       ) : null}
                     </View>

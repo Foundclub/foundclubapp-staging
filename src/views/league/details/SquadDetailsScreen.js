@@ -515,12 +515,20 @@ function SquadDetailsScreen({ navigation, route }) {
     if (nextSlotParticipantsCount >= Math.max(requiredPlayers - 2, 1)) {
       return {
         badge: t('squadDetailsScreen.slotStatus.almost.badge', 'Presque prêt'),
-        helper: `Encore ${nextSlotRemainingCount} présence${nextSlotRemainingCount > 1 ? 's' : ''} pour atteindre le format ideal.`,
+        helper: t('squadDetailsScreen.slotStatus.almost.helper', {
+          count: nextSlotRemainingCount,
+          defaultValue_one: 'Encore {{count}} présence pour atteindre le format ideal.',
+          defaultValue_other: 'Encore {{count}} présences pour atteindre le format ideal.',
+        }),
       };
     }
     return {
       badge: t('squadDetailsScreen.slotStatus.weak.badge', 'A renforcer'),
-      helper: `Seulement ${nextSlotParticipantsCount} présence${nextSlotParticipantsCount > 1 ? 's' : ''} pour le moment. Il faut encore mobiliser la squad.`,
+      helper: t('squadDetailsScreen.slotStatus.weak.helper', {
+        count: nextSlotParticipantsCount,
+        defaultValue_one: 'Seulement {{count}} présence pour le moment. Il faut encore mobiliser la squad.',
+        defaultValue_other: 'Seulement {{count}} présences pour le moment. Il faut encore mobiliser la squad.',
+      }),
     };
   }, [nextSlot, nextSlotParticipantsCount, nextSlotRemainingCount, requiredPlayers, t]);
   const rosterSignals = useMemo(() => {

@@ -266,12 +266,30 @@ function SquadSearchScreen() {
     }));
 
     const parts = [];
-    if (counts.joined > 0) parts.push(`${counts.joined} déjà membre${counts.joined > 1 ? 's' : ''}`);
-    if (counts.invited > 0) parts.push(`${counts.invited} invitation${counts.invited > 1 ? 's' : ''}`);
-    if (counts.pending > 0) parts.push(`${counts.pending} demande${counts.pending > 1 ? 's' : ''} en attente`);
+    if (counts.joined > 0) {
+      parts.push(t('squadSearchScreen.summary.joined', {
+        count: counts.joined,
+        defaultValue_one: '{{count}} déjà membre',
+        defaultValue_other: '{{count}} déjà membres',
+      }));
+    }
+    if (counts.invited > 0) {
+      parts.push(t('squadSearchScreen.summary.invited', {
+        count: counts.invited,
+        defaultValue_one: '{{count}} invitation',
+        defaultValue_other: '{{count}} invitations',
+      }));
+    }
+    if (counts.pending > 0) {
+      parts.push(t('squadSearchScreen.summary.pending', {
+        count: counts.pending,
+        defaultValue_one: '{{count}} demande en attente',
+        defaultValue_other: '{{count}} demandes en attente',
+      }));
+    }
 
     return parts.join(' · ');
-  }, [decoratedSquads]);
+  }, [decoratedSquads, t]);
 
   const activeFiltersLabel = useMemo(() => {
     const chips = [];
