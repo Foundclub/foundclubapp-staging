@@ -135,14 +135,16 @@ jest.mock('@/theme/strings/langue', () => ({
  * (`jest.mock('i18next')`) garde sa doublure.
  */
 {
-  const i18next = require('i18next');
+  const i18next = jest.requireActual('i18next');
   if (!i18next.isInitialized) {
     i18next.init({
       compatibilityJSON: 'v4',
       fallbackLng: 'fr',
       initAsync: false,
       lng: 'fr',
-      resources: { fr: { translation: require('@/theme/strings/translations/fr').default } },
+      resources: {
+        fr: { translation: jest.requireActual('@/theme/strings/translations/fr').default },
+      },
     });
   }
 }
