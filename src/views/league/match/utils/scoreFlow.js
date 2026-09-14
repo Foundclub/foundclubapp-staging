@@ -1,3 +1,5 @@
+import i18next from 'i18next';
+
 import { getSubmissionScoreLabel } from '@/utils/leagueScoreDetails';
 
 import {
@@ -101,17 +103,41 @@ const formatSubmission = (submission, side) => {
  */
 const getPrimaryCta = (state, canActOnScore) => {
   if (!canActOnScore) return null;
-  if (state === 'ready_to_submit') return { label: 'Saisir le score' };
-  if (state === 'opponent_score_pending') return { label: 'Valider le score adverse' };
+  if (state === 'ready_to_submit') {
+    return {
+      label: i18next.t('scoreFlow.primaryCta.readyToSubmit', 'Saisir le score'),
+    };
+  }
+  if (state === 'opponent_score_pending') {
+    return {
+      label: i18next.t('scoreFlow.primaryCta.opponentScorePending', 'Valider le score adverse'),
+    };
+  }
   if (state === 'submitted_waiting_opponent' || state === 'auto_validation_pending') {
-    return { label: 'Score saisi' };
+    return {
+      label: i18next.t('scoreFlow.primaryCta.submitted', 'Score saisi'),
+    };
   }
   if (state === 'disputed' || state === 'admin_resolution') {
-    return { label: 'Traiter le litige' };
+    return {
+      label: i18next.t('scoreFlow.primaryCta.disputed', 'Traiter le litige'),
+    };
   }
-  if (state === 'locked_before_start') return { label: 'Score verrouillé' };
-  if (state === 'locked_no_venue') return { label: 'Confirmer le terrain' };
-  if (state === 'valid') return { label: 'Résultat validé' };
+  if (state === 'locked_before_start') {
+    return {
+      label: i18next.t('scoreFlow.primaryCta.lockedBeforeStart', 'Score verrouillé'),
+    };
+  }
+  if (state === 'locked_no_venue') {
+    return {
+      label: i18next.t('scoreFlow.primaryCta.lockedNoVenue', 'Confirmer le terrain'),
+    };
+  }
+  if (state === 'valid') {
+    return {
+      label: i18next.t('scoreFlow.primaryCta.valid', 'Résultat validé'),
+    };
+  }
   return null;
 };
 
@@ -245,14 +271,19 @@ export const buildLocalScoreFlow = (match, options = {}) => {
  */
 export const formatScoreFlowCountdown = (seconds) => {
   const value = Number(seconds);
-  if (!Number.isFinite(value) || value <= 0) return "moins d'une minute";
+  if (!Number.isFinite(value) || value <= 0) {
+    return i18next.t('scoreFlow.countdown.lessThanMinute', "moins d'une minute");
+  }
   const hours = Math.floor(value / 3600);
   const minutes = Math.ceil((value % 3600) / 60);
   if (hours >= 24) {
     const days = Math.floor(hours / 24);
     const remainingHours = hours % 24;
-    return `${days}j${remainingHours ? ` ${remainingHours}h` : ''}`;
+    const daysLabel = i18next.t('scoreFlow.countdown.days', '{{days}}j', { days });
+    return `${daysLabel}${remainingHours ? ` ${remainingHours}h` : ''}`;
   }
-  if (hours > 0) return `${hours}h${minutes ? ` ${minutes}min` : ''}`;
+  if (hours > 0) {
+    return `${hours}h${minutes ? ` ${minutes}min` : ''}`;
+  }
   return `${minutes}min`;
 };

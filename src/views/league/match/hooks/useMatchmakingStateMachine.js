@@ -1,5 +1,8 @@
+import i18next from 'i18next';
 import { useEffect, useRef, useState } from 'react';
 import { AppState } from 'react-native';
+
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 
 import MatchmakingService from '@/services/league/MatchmakingService';
 
@@ -16,7 +19,9 @@ const formatSecondsCompact = (seconds) => {
   const safe = Math.max(0, Number(seconds) || 0);
   const min = Math.floor(safe / 60);
   const sec = safe % 60;
-  if (min <= 0) return `${sec}s`;
+  if (min <= 0) {
+    return `${sec}s`;
+  }
   return `${min}m ${String(sec).padStart(2, '0')}s`;
 };
 
@@ -77,9 +82,19 @@ const parseMaybeJson = (value) => {
  */
 const formatZoneLine = (cityLabel, radiusKm) => {
   const safeRadius = Number.isFinite(Number(radiusKm)) ? Number(radiusKm) : null;
-  const city = cityLabel || 'ta zone';
-  if (!safeRadius) return `Zone: ${city}.`;
-  return `Zone: ${city} - rayon ${safeRadius} km.`;
+  const city = cityLabel || i18next.t('useMatchmakingStateMachine.zone.fallbackCity', 'ta zone');
+  if (!safeRadius) {
+    return i18next.t(
+      'useMatchmakingStateMachine.zone.city',
+      'Zone: {{city}}.',
+      { city, ...SANS_ECHAPPEMENT },
+    );
+  }
+  return i18next.t(
+    'useMatchmakingStateMachine.zone.cityRadius',
+    'Zone: {{city}} - rayon {{safeRadius}} km.',
+    { city, safeRadius, ...SANS_ECHAPPEMENT },
+  );
 };
 
 /**
@@ -129,24 +144,68 @@ const buildSearchStatusLabel = ({
     : Number(searchInsights?.nextAutoExpansionInSec || searchInsights?.nextExpansionInSec || 0);
 
   const zoneLineV3 = formatZoneLine(cityLabel || null, radiusKm);
-  const criteriaLineV3 = `Critere prioritaire: ELO matchmaking similaire, écart max actuel ${autoEloCap} pts.`;
+  const criteriaLineV3 = i18next.t(
+    'useMatchmakingStateMachine.criteria',
+    'Critere prioritaire: ELO matchmaking similaire, écart max actuel {{autoEloCap}} pts.',
+    { autoEloCap },
+  );
 
   if (searchInsights?.candidateFound && hasTierBlocking(searchInsights)) {
     if (nextExpansion > 0) {
-      return `Statut: adversaire potentiel repère.\n${criteriaLineV3}\n${zoneLineV3}\nSuite: elargissement ELO matchmaking dans ${formatSecondsCompact(nextExpansion)}.`;
+      return i18next.t(
+        'useMatchmakingStateMachine.status.candidateExpansionIn',
+        // eslint-disable-next-line max-len
+        'Statut: adversaire potentiel repère.\n{{criteriaLineV3}}\n{{zoneLineV3}}\nSuite: elargissement ELO matchmaking dans {{delay}}.',
+        {
+          criteriaLineV3,
+          delay: formatSecondsCompact(nextExpansion),
+          zoneLineV3,
+          ...SANS_ECHAPPEMENT,
+        },
+      );
     }
-    return `Statut: adversaire potentiel repère.\n${criteriaLineV3}\n${zoneLineV3}\nSuite: recherche ELO matchmaking elargie en cours.`;
+    return i18next.t(
+      'useMatchmakingStateMachine.status.candidateWidened',
+      // eslint-disable-next-line max-len
+      'Statut: adversaire potentiel repère.\n{{criteriaLineV3}}\n{{zoneLineV3}}\nSuite: recherche ELO matchmaking elargie en cours.',
+      { criteriaLineV3, zoneLineV3, ...SANS_ECHAPPEMENT },
+    );
   }
 
   if (softSuggestionCaps?.extraDistanceKm) {
-    return `Statut: recherche active.\n${criteriaLineV3}\nRayon conserve pour le match auto; pistes opt-in possibles jusqu'a +${softSuggestionCaps.extraDistanceKm} km.\n${zoneLineV3}`;
+    return i18next.t(
+      'useMatchmakingStateMachine.status.activeSoftCaps',
+      // eslint-disable-next-line max-len
+      "Statut: recherche active.\n{{criteriaLineV3}}\nRayon conserve pour le match auto; pistes opt-in possibles jusqu'a +{{extraDistanceKm}} km.\n{{zoneLineV3}}",
+      {
+        criteriaLineV3,
+        extraDistanceKm: softSuggestionCaps.extraDistanceKm,
+        zoneLineV3,
+        ...SANS_ECHAPPEMENT,
+      },
+    );
   }
 
   if (nextExpansion > 0) {
-    return `Statut: recherche précise en cours.\n${criteriaLineV3}\nProchain elargissement ELO matchmaking dans ${formatSecondsCompact(nextExpansion)}.\n${zoneLineV3}`;
+    return i18next.t(
+      'useMatchmakingStateMachine.status.preciseSearch',
+      // eslint-disable-next-line max-len
+      'Statut: recherche précise en cours.\n{{criteriaLineV3}}\nProchain elargissement ELO matchmaking dans {{delay}}.\n{{zoneLineV3}}',
+      {
+        criteriaLineV3,
+        delay: formatSecondsCompact(nextExpansion),
+        zoneLineV3,
+        ...SANS_ECHAPPEMENT,
+      },
+    );
   }
 
-  return `Statut: recherche large en cours.\n${criteriaLineV3}\nRayon auto conserve; les grands écarts passent en opt-in.\n${zoneLineV3}`;
+  return i18next.t(
+    'useMatchmakingStateMachine.status.wideSearch',
+    // eslint-disable-next-line max-len
+    'Statut: recherche large en cours.\n{{criteriaLineV3}}\nRayon auto conserve; les grands écarts passent en opt-in.\n{{zoneLineV3}}',
+    { criteriaLineV3, zoneLineV3, ...SANS_ECHAPPEMENT },
+  );
 };
 /*
   const zoneLine = formatZoneLine(cityLabel || null, radiusKm);
@@ -206,7 +265,10 @@ export const useMatchmakingStateMachine = ({
 }) => {
   const appStateRef = useRef(AppState.currentState);
   const failureCountRef = useRef(0);
-  const [searchStatus, setSearchStatus] = useState('Initialisation...');
+  const [searchStatus, setSearchStatus] = useState(i18next.t(
+    'useMatchmakingStateMachine.status.initialising',
+    'Initialisation...',
+  ));
   const [searchInsights, setSearchInsights] = useState(/** @type {Record<string, any> | null} */ (null));
   const [searchInsightsUpdatedAt, setSearchInsightsUpdatedAt] = useState(0);
   const [serverNow, setServerNow] = useState(/** @type {string | null} */ (null));

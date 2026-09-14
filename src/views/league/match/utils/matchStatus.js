@@ -1,3 +1,5 @@
+import i18next from 'i18next';
+
 import {
   doesMatchRequireVenue,
   getMatchDurationMinutes,
@@ -273,19 +275,70 @@ export const getMatchStatusBadgeConfig = (match, colors = {}, event = null, now 
 
   /** @type {Record<string, {label: string, color: string, bg: string}>} */
   const map = {
-    cancelled: { bg: withAlpha(palette.error), color: palette.error, label: 'Annulé' },
-    confirmed_upcoming: { bg: withAlpha(palette.primary), color: palette.primary, label: 'À venir' },
-    disputed: { bg: withAlpha(palette.error), color: palette.error, label: 'Litige' },
-    forfeit: { bg: withAlpha(palette.error), color: palette.error, label: 'Forfait' },
-    no_show: { bg: withAlpha(palette.error), color: palette.error, label: 'No-show' },
-    pending_validation: { bg: withAlpha(palette.warning), color: palette.warning, label: 'Validation score' },
-    post_slot_resolution: { bg: withAlpha(palette.warning), color: palette.warning, label: 'Confirmation match' },
-    valid: { bg: withAlpha(palette.success), color: palette.success, label: 'Validé' },
-    waiting_proposal: { bg: withAlpha(palette.warning), color: palette.warning, label: 'En attente accord' },
-    waiting_score: { bg: withAlpha(palette.gold), color: palette.gold, label: 'Score à saisir' },
-    waiting_venue: { bg: withAlpha(palette.warning), color: palette.warning, label: 'En attente terrain' },
+    cancelled: {
+      bg: withAlpha(palette.error),
+      color: palette.error,
+      label: i18next.t('matchStatus.badges.cancelled', 'Annulé'),
+    },
+    confirmed_upcoming: {
+      bg: withAlpha(palette.primary),
+      color: palette.primary,
+      label: i18next.t('matchStatus.badges.confirmedUpcoming', 'À venir'),
+    },
+    disputed: {
+      bg: withAlpha(palette.error),
+      color: palette.error,
+      label: i18next.t('matchStatus.badges.disputed', 'Litige'),
+    },
+    forfeit: {
+      bg: withAlpha(palette.error),
+      color: palette.error,
+      label: i18next.t('matchStatus.badges.forfeit', 'Forfait'),
+    },
+    no_show: {
+      bg: withAlpha(palette.error),
+      color: palette.error,
+      label: 'No-show',
+    },
+    pending_validation: {
+      bg: withAlpha(palette.warning),
+      color: palette.warning,
+      label: i18next.t('matchStatus.badges.pendingValidation', 'Validation score'),
+    },
+    post_slot_resolution: {
+      bg: withAlpha(palette.warning),
+      color: palette.warning,
+      label: i18next.t('matchStatus.badges.postSlotResolution', 'Confirmation match'),
+    },
+    valid: {
+      bg: withAlpha(palette.success),
+      color: palette.success,
+      label: i18next.t('matchStatus.badges.valid', 'Validé'),
+    },
+    waiting_proposal: {
+      bg: withAlpha(palette.warning),
+      color: palette.warning,
+      label: i18next.t('matchStatus.badges.waitingProposal', 'En attente accord'),
+    },
+    waiting_score: {
+      bg: withAlpha(palette.gold),
+      color: palette.gold,
+      label: i18next.t('matchStatus.badges.waitingScore', 'Score à saisir'),
+    },
+    waiting_venue: {
+      bg: withAlpha(palette.warning),
+      color: palette.warning,
+      label: i18next.t('matchStatus.badges.waitingVenue', 'En attente terrain'),
+    },
   };
 
   if (map[phase]) return map[phase];
-  return { bg: withAlpha(palette.neutral), color: palette.neutral, label: normalizeMatchStatus(match?.status) || 'inconnu' };
+  return {
+    bg: withAlpha(palette.neutral),
+    color: palette.neutral,
+    label: normalizeMatchStatus(match?.status) || i18next.t(
+      'matchStatus.badges.unknown',
+      'inconnu',
+    ),
+  };
 };
