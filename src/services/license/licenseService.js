@@ -185,7 +185,25 @@ export const sendLicenseReminder = async (/** @type {any} */ assignmentId, paylo
 export const sendBulkLicenseReminder = async (/** @type {any} */ campaignId, payload = {}) => unwrap(await client.post(`/licenses/campaigns/${campaignId}/reminders/bulk`, payload));
 export const getMyLicenses = async () => unwrap(await client.get('/licenses/me'));
 export const getMyLicenseAssignment = async (/** @type {any} */ assignmentId) => unwrap(await client.get(`/licenses/me/${assignmentId}`));
-export const getUserCurrentLicense = async (/** @type {any} */ userId) => unwrap(await client.get(`/licenses/users/${userId}/current`));
+/**
+ * La licence courante d'une personne, ou `null` si elle n'en a pas.
+ * LICENCE404 (14/09) : le serveur répond 404 « License assignment not found » quand
+ * la personne n'a pas de licence — un ÉTAT, pas une panne (motif du carnet
+ * d'entraînement, trainingService.js). Seul le 404 devient `null` : une coupure
+ * réseau ou un 500 continuent de remonter.
+ * @param {any} userId - L'identifiant de la personne.
+ * @returns {Promise<any>} La licence, ou `null`.
+ */
+export const getUserCurrentLicense = async (/** @type {any} */ userId) => {
+  try {
+    return unwrap(await client.get(`/licenses/users/${userId}/current`));
+  } catch (erreur) {
+    const e = /** @type {any} */ (erreur);
+    const code = Number(e?.status ?? e?.response?.status ?? e?.response?.data?.error?.status);
+    if (code === 404) return null;
+    throw erreur;
+  }
+};
 export const createLicenseCheckout = async (/** @type {any} */ assignmentId, /** @type {any} */ payload) => unwrap(await client.post(`/licenses/me/${assignmentId}/checkout`, payload));
 export const declareExternalLicensePayment = async (/** @type {any} */ assignmentId, /** @type {any} */ payload) => unwrap(await client.post(`/licenses/me/${assignmentId}/external-payment-declared`, payload));
 export const getPublicLicensePayment = async (/** @type {any} */ token) => unwrap(await client.get(`/licenses/pay/${token}`));
