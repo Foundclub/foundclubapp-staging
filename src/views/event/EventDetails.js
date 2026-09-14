@@ -5013,7 +5013,10 @@ function EventDetails({ navigation, route }) {
     if (!eventId || !compositionTeamId) return;
 
     if (isStaffCompositionFetching) {
-      Alert.alert('Patiente', "On récupère l'état actuel de la composition.");
+      Alert.alert('Patiente', t(
+        'eventDetails.weReFetchingTheCurrent',
+        "On récupère l'état actuel de la composition.",
+      ));
       return;
     }
 
@@ -5071,7 +5074,7 @@ function EventDetails({ navigation, route }) {
     getCompositionSourceLabel,
     isStaffCompositionFetching,
     openCompositionBoard,
-    staffCompositionPayload,
+    staffCompositionPayload, t,
   ]);
 
   // H8 — la liste des bilans en attente, atteignable depuis la page du match.
@@ -5088,7 +5091,7 @@ function EventDetails({ navigation, route }) {
       sport: matchStatsPayload?.sport || compositionSport,
       teamId: compositionTeamId,
       teamName: compositionEditorTeam?.name || matchStatsPayload?.team?.name || null,
-      title: 'Bilan équipe',
+      title: t('eventDetails.teamReport', 'Bilan équipe'),
     });
   }, [
     compositionEditorTeam?.name,
@@ -5097,7 +5100,7 @@ function EventDetails({ navigation, route }) {
     eventId,
     matchStatsPayload?.sport,
     matchStatsPayload?.team?.name,
-    navigation,
+    navigation, t,
   ]);
 
   // AD01 (✍️) — ECRIRE « 3-1 » SANS OUVRIR 1 615 LIGNES.
@@ -5270,7 +5273,7 @@ function EventDetails({ navigation, route }) {
       sport: myMatchResponsePayload?.sport || matchStatsPayload?.sport || compositionSport,
       teamId: compositionTeamId,
       teamName: compositionEditorTeam?.name || myMatchResponsePayload?.team?.name || matchStatsPayload?.team?.name || null,
-      title: 'Mon retour post-match',
+      title: t('eventDetails.myPostMatchFeedback', 'Mon retour post-match'),
     });
   }, [
     compositionEditorTeam?.name,
@@ -5282,7 +5285,7 @@ function EventDetails({ navigation, route }) {
     matchStatsPayload?.team?.name,
     myMatchResponsePayload?.sport,
     myMatchResponsePayload?.team?.name,
-    navigation,
+    navigation, t,
   ]);
 
   useFocusEffect(useCallback(() => () => {
@@ -5444,11 +5447,17 @@ function EventDetails({ navigation, route }) {
 
   const handleSelfArrival = useCallback(() => {
     if (!eventId) {
-      Alert.alert(t('common.error'), "Impossible d'enregistrer ton arrivée (événement introuvable).");
+      Alert.alert(t('common.error'), t(
+        'eventDetails.unableToRecordYourArrival',
+        "Impossible d'enregistrer ton arrivée (événement introuvable).",
+      ));
       return;
     }
     if (hasSelfArrived) {
-      Alert.alert(t('common.success'), 'Arrivée déjà enregistrée.');
+      Alert.alert(t('common.success'), t(
+        'eventDetails.arrivalAlreadyRecorded',
+        'Arrivée déjà enregistrée.',
+      ));
       return;
     }
     setSelfArrivalMarkedLocal(true);
@@ -5590,7 +5599,10 @@ function EventDetails({ navigation, route }) {
         // une porte qui mene toujours au meme endroit. L'ETAT n'est pas perdu :
         // il descend dans la note (juste dessous) et se lit en entier dans la
         // carte-parcours de l'Apercu.
-        label: isMatchStatsFetching ? 'Chargement...' : 'Stats du match',
+        label: isMatchStatsFetching ? t('common.loading', 'Chargement...') : t(
+          'eventDetails.matchStats',
+          'Stats du match',
+        ),
         note: matchStatsPrimaryAction.subtitle,
         // AD01 (✍️) — LE DETOURNEMENT D'UN SEUL CAS. « Enregistrer le score »
         // ouvre desormais deux champs ; tous les autres etats de cette meme
@@ -5724,7 +5736,11 @@ function EventDetails({ navigation, route }) {
           + ` - validation ${validationLabel}`;
         quotaNote = trainingOpenConfig.isOpenTraining
           ? quotaLine
-          : `Dernier reglage mémorise: ${quotaLine}`;
+          : t(
+            'eventDetails.lastSavedSetting',
+            'Dernier reglage mémorise: {{quotaLine}}',
+            { quotaLine, ...SANS_ECHAPPEMENT },
+          );
       }
       chips.push({
         disabled: mutations.updateEventNoNavMutation.isPending,
@@ -6370,7 +6386,7 @@ function EventDetails({ navigation, route }) {
               >
                 <View style={{ flex: 1 }}>
                   <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
-                    {`${t('eventDetails.stage.day', 'Jour')} ${index + 1} · ${dayDate.toLocaleDateString('fr-FR', {
+                    {`${t('eventDetails.stage.day', 'Jour')} ${index + 1} · ${dayDate.toLocaleDateString(localeDesFormats(), {
                       day: '2-digit',
                       month: 'short',
                       weekday: 'long',
@@ -7109,20 +7125,23 @@ function EventDetails({ navigation, route }) {
     if (!isTournamentEvent || isStageDayEvent) return null;
 
     if (canEdit) {
-      return { onPress: handleOpenTournamentManagement, title: 'Gérer le tournoi' };
+      return {
+        onPress: handleOpenTournamentManagement,
+        title: t('eventDetails.manageTheTournament', 'Gérer le tournoi'),
+      };
     }
 
     if (managedTournamentTeam?.documentId) {
       return {
         onPress: () => handleOpenTournamentTeam(managedTournamentTeam.documentId),
-        title: 'Gérer mon équipe inscrite',
+        title: t('eventDetails.manageMyRegisteredTeam', 'Gérer mon équipe inscrite'),
       };
     }
 
     if (currentUserTournamentTeam?.documentId) {
       return {
         onPress: () => handleOpenTournamentTeam(currentUserTournamentTeam.documentId),
-        title: 'Voir mon équipe inscrite',
+        title: t('eventDetails.seeMyRegisteredTeam', 'Voir mon équipe inscrite'),
       };
     }
 
@@ -7135,11 +7154,20 @@ function EventDetails({ navigation, route }) {
       );
       return {
         onPress: () => handleOpenTournamentTeam(currentUserPendingTournamentTeam.documentId),
-        title: pendingStatus === 'invited' ? 'Répondre à mon invitation' : 'Suivre ma demande',
+        title: pendingStatus === 'invited' ? t(
+          'eventDetails.answerMyInvitation',
+          'Répondre à mon invitation',
+        ) : t(
+          'eventDetails.followMyRequest',
+          'Suivre ma demande',
+        ),
       };
     }
 
-    return { onPress: handleOpenTournamentManagement, title: 'Voir le tournoi' };
+    return {
+      onPress: handleOpenTournamentManagement,
+      title: t('eventDetails.seeTheTournament', 'Voir le tournoi'),
+    };
   };
 
   const renderTournamentActionsPanel = () => {
@@ -7169,7 +7197,7 @@ function EventDetails({ navigation, route }) {
           {canRegisterTournamentSourceTeam ? (
             <Button
               onPress={() => setIsTournamentRegisterModalVisible(true)}
-              title="Inscrire une équipe du club"
+              title={t('eventDetails.registerAClubTeam', 'Inscrire une équipe du club')}
               variant="Secondary"
             />
           ) : null}
@@ -7177,7 +7205,7 @@ function EventDetails({ navigation, route }) {
           {canCreateCustomTournamentTeam ? (
             <Button
               onPress={() => setIsTournamentCreateModalVisible(true)}
-              title="Créer une équipe pour ce tournoi"
+              title={t('eventDetails.createATeamForThis', 'Créer une équipe pour ce tournoi')}
               variant="Secondary"
             />
           ) : null}
@@ -7195,9 +7223,11 @@ function EventDetails({ navigation, route }) {
     if (eventLicenseCampaignsQuery.isLoading) {
       return (
         <View style={[Spaces.gap[8], Spaces.paddingTop[4]]}>
-          <Text style={[Fonts.p2Bold, Fonts.neutral00]}>Cotisations</Text>
+          <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
+            {t('eventDetails.fees', 'Cotisations')}
+          </Text>
           <Text style={[Fonts.p3, Fonts.neutral300]}>
-            Chargement des campagnes...
+            {t('eventDetails.loadingCampaigns', 'Chargement des campagnes...')}
           </Text>
         </View>
       );
@@ -7211,9 +7241,14 @@ function EventDetails({ navigation, route }) {
     return (
       <View style={[Spaces.gap[12], Spaces.paddingTop[4]]}>
         <View style={[Spaces.gap[4]]}>
-          <Text style={[Fonts.p2Bold, Fonts.neutral00]}>Cotisations liées</Text>
+          <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
+            {t('eventDetails.linkedFees', 'Cotisations liées')}
+          </Text>
           <Text style={[Fonts.p3, Fonts.neutral300]}>
-            Campagnes de paiement rattachées à cet événement.
+            {t(
+              'eventDetails.paymentCampaignsLinkedToThis',
+              'Campagnes de paiement rattachées à cet événement.',
+            )}
           </Text>
         </View>
 
@@ -7244,7 +7279,7 @@ function EventDetails({ navigation, route }) {
               >
                 <View style={[Spaces.gap[4], { flex: 1 }]}>
                   <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
-                    {campaign?.name || 'Campagne événement'}
+                    {campaign?.name || t('eventDetails.eventCampaign', 'Campagne événement')}
                   </Text>
                   <Text style={[Fonts.p3, Fonts.neutral300]}>
                     {formatCampaignAmount(
@@ -7252,11 +7287,11 @@ function EventDetails({ navigation, route }) {
                       campaign?.currency || 'EUR',
                     )}
                     {' '}
-                    par participant
+                    {t('eventDetails.perParticipant', 'par participant')}
                     {' - '}
                     {assignmentTotal}
                     {' '}
-                    affectation(s)
+                    {t('eventDetails.assignmentS', 'affectation(s)')}
                   </Text>
                 </View>
                 <Text style={[Fonts.p3Bold, Fonts.primary500]}>
@@ -7267,13 +7302,13 @@ function EventDetails({ navigation, route }) {
                 <Button
                   onPress={() => openEventLicenseCampaign(campaign)}
                   style={{ flex: 1 }}
-                  title="Ouvrir"
+                  title={t('eventDetails.open', 'Ouvrir')}
                   variant="Secondary"
                 />
                 <Button
                   onPress={() => editEventLicenseCampaign(campaign)}
                   style={{ flex: 1 }}
-                  title="Modifier"
+                  title={t('eventDetails.edit', 'Modifier')}
                   variant="Secondary"
                 />
               </View>
@@ -7282,7 +7317,7 @@ function EventDetails({ navigation, route }) {
         })}
         <Button
           onPress={openEventLicenseCampaignSettings}
-          title="Créer une autre campagne"
+          title={t('eventDetails.createAnotherCampaign', 'Créer une autre campagne')}
           variant="Secondary"
         />
       </View>
@@ -7301,15 +7336,32 @@ function EventDetails({ navigation, route }) {
     }
     const isCompetitionPublished = event?.tournamentConfig?.competitionState === 'published';
     const competitionStateLabel = isCompetitionPublished
-      ? 'Compétition publiée'
-      : 'Compétition en brouillon';
-    let primaryActionHelper = 'Consulte le déroulé, les équipes et les résultats du tournoi.';
+      ? t('eventDetails.competitionPublished', 'Compétition publiée')
+      : t('eventDetails.competitionInDraft', 'Compétition en brouillon');
+    let primaryActionHelper = t(
+      'eventDetails.seeTheScheduleTheTeams',
+      'Consulte le déroulé, les équipes et les résultats du tournoi.',
+    );
     if (canEdit && isCompetitionPublished) {
-      primaryActionHelper = 'Calendrier, résultats et classement sont prêts à être pilotés.';
+      primaryActionHelper = t(
+        'eventDetails.scheduleResultsAndStandingsAre',
+        'Calendrier, résultats et classement sont prêts à être pilotés.',
+      );
     } else if (canEdit) {
-      primaryActionHelper = 'Finalise les équipes et les paramètres avant de lancer le tournoi.';
+      primaryActionHelper = t(
+        'eventDetails.finaliseTheTeamsAndSettings',
+        'Finalise les équipes et les paramètres avant de lancer le tournoi.',
+      );
     }
-    const teamsSummary = `${tournamentTeamCounters.accepted} validée(s) · ${tournamentTeamCounters.pending} en attente`;
+    const teamsSummary = t(
+      'eventDetails.approvedPending',
+      '{{accepted}} validée(s) · {{pending}} en attente',
+      {
+        accepted: tournamentTeamCounters.accepted,
+        pending: tournamentTeamCounters.pending,
+        ...SANS_ECHAPPEMENT,
+      },
+    );
 
     // 🧭 LES CINQ ETAPES DU FIL — les trois dernieres lisent le dashboard.
     //
@@ -7374,18 +7426,18 @@ function EventDetails({ navigation, route }) {
       },
     ];
     const tournamentScopeLabel = event?.tournamentScopeMode === 'autonomous'
-      ? 'Tournoi autonome'
-      : 'Équipe source';
+      ? t('eventDetails.standaloneTournament', 'Tournoi autonome')
+      : t('eventDetails.sourceTeam', 'Équipe source');
     const tournamentContextTags = [
       tournamentScopeLabel,
       event?.tournamentActivity?.name,
       event?.tournamentSection?.name,
       event?.tournamentCategory?.name,
     ].filter(Boolean);
-    let playerTournamentStatusLabel = 'Réponse attendue';
+    let playerTournamentStatusLabel = t('eventDetails.answerExpected', 'Réponse attendue');
     let playerTournamentStatusTone = Colors.warning500;
     if (currentUserTournamentStatus === 'present') {
-      playerTournamentStatusLabel = 'Présent';
+      playerTournamentStatusLabel = t('eventDetails.present', 'Présent');
       playerTournamentStatusTone = Colors.success500;
     } else if (currentUserTournamentStatus === 'absent') {
       playerTournamentStatusLabel = 'Absent';
@@ -7396,7 +7448,9 @@ function EventDetails({ navigation, route }) {
         <View style={tournamentDs.styles.panelCard}>
           <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter, Spaces.gap[12]]}>
             <View style={{ flex: 1 }}>
-              <Text style={[Fonts.p4Bold, Fonts.primary500]}>TOURNOI</Text>
+              <Text style={[Fonts.p4Bold, Fonts.primary500]}>
+                {t('eventDetails.tournament', 'TOURNOI')}
+              </Text>
               <Text style={[Fonts.h3Bold, Fonts.neutral00, Spaces.marginTop[4]]}>
                 {competitionStateLabel}
               </Text>
@@ -7406,7 +7460,7 @@ function EventDetails({ navigation, route }) {
             </View>
             <Tag
               style={tournamentDs.getToneTagStyle(isCompetitionPublished ? Colors.success500 : Colors.warning500)}
-              text={isCompetitionPublished ? 'Publié' : 'Brouillon'}
+              text={isCompetitionPublished ? t('eventDetails.published', 'Publié') : t('eventDetails.draft', 'Brouillon')}
               // @ts-ignore: FIXME: Baseline TS regression
               textColor={isCompetitionPublished ? 'neutral00' : 'warning500'}
               textStyle={isCompetitionPublished ? { color: Colors.success500 } : undefined}
@@ -7439,13 +7493,16 @@ function EventDetails({ navigation, route }) {
 
           <View style={[Alignments.row, Spaces.gap[12], { flexWrap: 'wrap' }]}>
             <View style={[tournamentDs.styles.insetPanelCard, { flexGrow: 1, minWidth: 132 }]}>
-              <Text style={[Fonts.p4, Fonts.neutral300]}>Équipes</Text>
+              <Text style={[Fonts.p4, Fonts.neutral300]}>{t('eventDetails.teams', 'Équipes')}</Text>
               <Text style={[Fonts.h4Bold, Fonts.neutral00]}>{tournamentTeams.length}</Text>
             </View>
             <View style={[tournamentDs.styles.insetPanelCard, { flexGrow: 1, minWidth: 132 }]}>
               <Text style={[Fonts.p4, Fonts.neutral300]}>Validation</Text>
               <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
-                {event?.tournamentConfig?.registrationMode === 'auto' ? 'Auto' : 'Manuelle'}
+                {event?.tournamentConfig?.registrationMode === 'auto' ? 'Auto' : t(
+                  'eventDetails.manual',
+                  'Manuelle',
+                )}
               </Text>
             </View>
             <View style={[tournamentDs.styles.insetPanelCard, { flexGrow: 1, minWidth: 132 }]}>
@@ -7465,7 +7522,14 @@ function EventDetails({ navigation, route }) {
 
         <TournamentProgressRail
           note={tournamentTeamCounters.pending > 0
-            ? `${tournamentTeamCounters.pending} inscription${tournamentTeamCounters.pending > 1 ? 's' : ''} à vérifier`
+            ? t(
+              'eventDetails.registrationsToCheck',
+              {
+                count: tournamentTeamCounters.pending,
+                defaultValue_one: '{{count}} inscription à vérifier',
+                defaultValue_other: '{{count}} inscriptions à vérifier',
+              },
+            )
             : ''}
           steps={tournamentRailSteps}
           title={t('eventDetails.tournamentRail.title', 'OÙ EN EST LE TOURNOI')}
@@ -7475,9 +7539,15 @@ function EventDetails({ navigation, route }) {
           <View style={tournamentDs.styles.panelCard}>
             <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter, Spaces.gap[12]]}>
               <View style={{ flex: 1 }}>
-                <Text style={[Fonts.h4Bold, Fonts.neutral00]}>Ma réponse au tournoi</Text>
+                <Text style={[Fonts.h4Bold, Fonts.neutral00]}>
+                  {t('eventDetails.myTournamentAnswer', 'Ma réponse au tournoi')}
+                </Text>
                 <Text style={[Fonts.p3, Fonts.neutral200, Spaces.marginTop[4], { lineHeight: 20 }]}>
-                  Ta réponse concerne ton équipe tournoi, pas le RSVP classique de l’événement.
+                  {t(
+                    'eventDetails.yourAnswerIsAboutYour',
+                    'Ta réponse concerne ton équipe tournoi, pas le RSVP classique de '
+                      + 'l’événement.',
+                  )}
                 </Text>
               </View>
               <Tag
@@ -7494,7 +7564,13 @@ function EventDetails({ navigation, route }) {
                   disabled={respondTournamentPresenceMutation.isPending || currentUserTournamentStatus === 'present'}
                   isLoading={respondTournamentPresenceMutation.isPending}
                   onPress={() => handleRespondTournamentPresence('present')}
-                  title={currentUserTournamentStatus === 'present' ? 'Présent confirmé' : 'Je suis présent'}
+                  title={currentUserTournamentStatus === 'present' ? t(
+                    'eventDetails.presenceConfirmed',
+                    'Présent confirmé',
+                  ) : t(
+                    'eventDetails.iMPresent',
+                    'Je suis présent',
+                  )}
                   variant={currentUserTournamentStatus === 'present' ? 'Primary' : 'Secondary'}
                 />
               </View>
@@ -7503,7 +7579,13 @@ function EventDetails({ navigation, route }) {
                   disabled={respondTournamentPresenceMutation.isPending || currentUserTournamentStatus === 'absent'}
                   isLoading={respondTournamentPresenceMutation.isPending}
                   onPress={() => handleRespondTournamentPresence('absent')}
-                  title={currentUserTournamentStatus === 'absent' ? 'Absence confirmée' : 'Je suis absent'}
+                  title={currentUserTournamentStatus === 'absent' ? t(
+                    'eventDetails.absenceConfirmed',
+                    'Absence confirmée',
+                  ) : t(
+                    'eventDetails.iMAbsent',
+                    'Je suis absent',
+                  )}
                   variant={currentUserTournamentStatus === 'absent' ? 'Primary' : 'Secondary'}
                 />
               </View>
@@ -7529,7 +7611,15 @@ function EventDetails({ navigation, route }) {
   const renderTournamentTeamsTab = () => {
     if (!isTournamentEvent || isStageDayEvent) return null;
 
-    const teamsSummary = `${tournamentTeamCounters.accepted} validée(s) · ${tournamentTeamCounters.pending} en attente`;
+    const teamsSummary = t(
+      'eventDetails.approvedPending',
+      '{{accepted}} validée(s) · {{pending}} en attente',
+      {
+        accepted: tournamentTeamCounters.accepted,
+        pending: tournamentTeamCounters.pending,
+        ...SANS_ECHAPPEMENT,
+      },
+    );
 
     return (
       <View style={Spaces.gap[16]}>
@@ -7538,13 +7628,19 @@ function EventDetails({ navigation, route }) {
         <View style={tournamentDs.styles.panelCard}>
           <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter, Spaces.gap[12]]}>
             <View style={{ flex: 1 }}>
-              <Text style={[Fonts.h4Bold, Fonts.neutral00]}>Équipes tournoi</Text>
+              <Text style={[Fonts.h4Bold, Fonts.neutral00]}>
+                {t('eventDetails.tournamentTeams2', 'Équipes tournoi')}
+              </Text>
               <Text style={[Fonts.p3, Fonts.neutral200, Spaces.marginTop[4]]}>{teamsSummary}</Text>
             </View>
             {tournamentTeamCounters.warning > 0 ? (
               <Tag
                 style={tournamentDs.getToneTagStyle(Colors.gold500)}
-                text={`${tournamentTeamCounters.warning} à vérifier`}
+                text={t(
+                  'eventDetails.toCheck',
+                  '{{warning}} à vérifier',
+                  { warning: tournamentTeamCounters.warning, ...SANS_ECHAPPEMENT },
+                )}
                 // @ts-ignore: FIXME: Baseline TS regression
                 textColor="gold500"
               />
@@ -7556,7 +7652,10 @@ function EventDetails({ navigation, route }) {
         {tournamentTeams.length === 0 ? (
           <View style={tournamentDs.styles.panelCard}>
             <Text style={[Fonts.p2, Fonts.neutral100]}>
-              Aucune équipe n est encore inscrite sur ce tournoi.
+              {t(
+                'eventDetails.noTeamIsRegisteredFor',
+                'Aucune équipe n est encore inscrite sur ce tournoi.',
+              )}
             </Text>
           </View>
         ) : null}
@@ -7590,12 +7689,15 @@ function EventDetails({ navigation, route }) {
               <View style={[Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween, Spaces.gap[12]]}>
                 <View style={{ flex: 1 }}>
                   <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
-                    {tournamentTeam?.name || 'Équipe tournoi'}
+                    {tournamentTeam?.name || t('eventDetails.tournamentTeam', 'Équipe tournoi')}
                   </Text>
                   <Text style={[Fonts.p4, Fonts.primary100]}>
                     {tournamentTeam?.sourceType === 'club_team'
-                      ? `Depuis ${tournamentTeam?.sourceTeam?.name || 'une équipe club'}`
-                      : 'Équipe éphémère'}
+                      ? `Depuis ${tournamentTeam?.sourceTeam?.name || t(
+                        'eventDetails.aClubTeam',
+                        'une équipe club',
+                      )}`
+                      : t('eventDetails.temporaryTeam', 'Équipe éphémère')}
                   </Text>
                 </View>
                 <Tag
@@ -7646,7 +7748,7 @@ function EventDetails({ navigation, route }) {
                     isLoading={reviewTournamentTeamMutation.isPending}
                     isOption
                     onPress={() => handleReviewTournamentTeam(tournamentTeam?.documentId, 'accepted')}
-                    title="Valider"
+                    title={t('eventDetails.approve', 'Valider')}
                     variant="Primary"
                   />
                   <Button
@@ -7655,7 +7757,7 @@ function EventDetails({ navigation, route }) {
                     onPress={() => handleReviewTournamentTeam(tournamentTeam?.documentId, 'declined')}
                     style={{ borderColor: `${Colors.error500}55` }}
                     textStyle={{ color: Colors.error300 }}
-                    title="Refuser"
+                    title={t('eventDetails.decline', 'Refuser')}
                     variant="SecondaryLight"
                   />
                 </View>
@@ -7682,8 +7784,16 @@ function EventDetails({ navigation, route }) {
             mutations={mutations}
             userData={userData}
           />
-          {hasAlreadyJoined && <Button disabled title="Je participe !" variant="Primary" />}
-          {!hasAlreadyJoined && <Button onPress={handleJoinEvent} title="Reserver" variant="Primary" />}
+          {hasAlreadyJoined && (
+            <Button disabled title={t('eventDetails.iMIn', 'Je participe !')} variant="Primary" />
+          )}
+          {!hasAlreadyJoined && (
+            <Button
+              onPress={handleJoinEvent}
+              title={t('eventDetails.book', 'Reserver')}
+              variant="Primary"
+            />
+          )}
         </View>
       );
     }
@@ -8003,18 +8113,33 @@ function EventDetails({ navigation, route }) {
     || mutations.updateLateMinutesMutation.isPending
     || mutations.selfLateMutation.isPending
     || mutations.resetAttendanceMutation.isPending;
-  let lateModalTitle = 'Corriger le retard';
-  let lateModalDescription = 'Mets à jour le retard réel ou réinitialise le pointage.';
+  let lateModalTitle = t('eventDetails.correctTheDelay', 'Corriger le retard');
+  let lateModalDescription = t(
+    'eventDetails.updateTheActualDelayOr',
+    'Mets à jour le retard réel ou réinitialise le pointage.',
+  );
   let lateModalPrimaryActionTitle = 'Enregistrer';
 
   if (isPlayerLateModal) {
-    lateModalTitle = lateModalMode === 'player_update' ? 'Mettre à jour mon retard' : 'Je serai en retard';
-    lateModalDescription = 'Signale ton retard avant d\'arriver. Tu confirmeras ensuite ton arrivée réelle.';
-    lateModalPrimaryActionTitle = 'Enregistrer mon retard';
+    lateModalTitle = lateModalMode === 'player_update' ? t(
+      'eventDetails.updateMyDelay',
+      'Mettre à jour mon retard',
+    ) : t(
+      'eventDetails.iLlBeLate',
+      'Je serai en retard',
+    );
+    lateModalDescription = t(
+      'eventDetails.reportYourDelayBeforeArriving',
+      "Signale ton retard avant d'arriver. Tu confirmeras ensuite ton arrivée réelle.",
+    );
+    lateModalPrimaryActionTitle = t('eventDetails.saveMyDelay', 'Enregistrer mon retard');
   } else if (lateModalMode === 'coach_mark') {
-    lateModalTitle = 'Pointer l\'arrivée';
-    lateModalDescription = 'Pointe l\'arrivée et ajuste le retard si nécessaire.';
-    lateModalPrimaryActionTitle = 'Pointer l\'arrivée';
+    lateModalTitle = t('eventDetails.checkInTheArrival', "Pointer l'arrivée");
+    lateModalDescription = t(
+      'eventDetails.checkInTheArrivalAnd',
+      "Pointe l'arrivée et ajuste le retard si nécessaire.",
+    );
+    lateModalPrimaryActionTitle = t('eventDetails.checkInTheArrival', "Pointer l'arrivée");
   }
 
   // @ts-ignore: FIXME: Baseline TS regression

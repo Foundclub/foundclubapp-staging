@@ -52,23 +52,11 @@ jest.mock('@/services/teamMembershipRequest/teamMembershipRequestService', () =>
   }),
 }));
 
-jest.mock('react-i18next', () => ({
-  ...jest.requireActual('react-i18next'),
-  useTranslation: () => ({
-    t: (
-      /** @type {string} */ key,
-      /** @type {any} */ fallback,
-      /** @type {any} */ options,
-    ) => {
-      const modele = typeof fallback === 'string' ? fallback : key;
-      if (!options || typeof options !== 'object') return modele;
-      return Object.keys(options).reduce(
-        (texte, nom) => texte.split(`{{${nom}}}`).join(String(options[nom])),
-        modele,
-      );
-    },
-  }),
-}));
+// I18N-2 : les textes passent par t() avec {{jetons}} et pluriels — la doublure partagée
+// rend le français de l app (fr.js, sinon le repli, jetons, pluriel français).
+jest.mock('react-i18next', () => (
+  jest.requireActual('@/theme/strings/__mocks__/doublureTraduction').reactI18next
+));
 
 jest.mock('@/theme/themeContext', () => {
   const generateColors = jest.requireActual('@/theme/colors').default;

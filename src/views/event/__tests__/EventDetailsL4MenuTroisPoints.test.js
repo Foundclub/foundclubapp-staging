@@ -46,14 +46,11 @@ jest.mock('@/services/teamMembershipRequest/teamMembershipRequestService', () =>
   }),
 }));
 
-jest.mock('react-i18next', () => ({
-  ...jest.requireActual('react-i18next'),
-  useTranslation: () => ({
-    t: (/** @type {string} */ key, /** @type {any} */ fallback) => (
-      typeof fallback === 'string' ? fallback : key
-    ),
-  }),
-}));
+// I18N-2 : les textes passent par t() avec {{jetons}} et pluriels — la doublure partagée
+// rend le français de l app (fr.js, sinon le repli, jetons, pluriel français).
+jest.mock('react-i18next', () => (
+  jest.requireActual('@/theme/strings/__mocks__/doublureTraduction').reactI18next
+));
 
 // Le theme est monte avec les VRAIS modules : un Proxy rend les echecs Jest
 // illisibles (piege paye au lot paywall). Seul Images est stube.
