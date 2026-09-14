@@ -1,10 +1,14 @@
+import i18next from 'i18next';
 import {
   useCallback, useEffect, useMemo, useRef, useState,
 } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Text, TouchableOpacity, View,
 } from 'react-native';
 
+import localeDesFormats from '@/theme/strings/localeDesFormats';
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -129,35 +133,63 @@ const isSameCalendarDay = (left, right) => (
 const buildStepDefinitions = (durationMinutes, venueRequired) => ([
   {
     description: venueRequired
-      ? 'Propose quand et ou jouer à ton adversaire. Tu choisiras la date, l heure et le lieu.'
-      : 'Propose quand jouer à ton adversaire. Tu pourras aussi ajouter un lieu si besoin.',
+      ? i18next.t(
+        'venueProposalModal.proposeWhenAndWhereTo',
+        'Propose quand et ou jouer à ton adversaire. Tu choisiras la date, l heure et le lieu.',
+      )
+      : i18next.t(
+        'venueProposalModal.proposeWhenToPlayTo',
+        'Propose quand jouer à ton adversaire. Tu pourras aussi ajouter un lieu si besoin.',
+      ),
     key: 'intro',
-    title: 'Envoyer une proposition de match',
+    title: i18next.t('venueProposalModal.sendAMatchProposal', 'Envoyer une proposition de match'),
   },
   {
-    description: 'Une seule décision ici : choisis le jour à proposer.',
+    description: i18next.t(
+      'venueProposalModal.justOneDecisionHerePick',
+      'Une seule décision ici : choisis le jour à proposer.',
+    ),
     key: 'date',
-    title: 'Choisis la date',
+    title: i18next.t('venueProposalModal.pickTheDate', 'Choisis la date'),
   },
   {
     description: [
-      'Choisis l heure de début.',
-      `La fin reste calculee automatiquement (${durationMinutes} min).`,
+      i18next.t('venueProposalModal.pickTheStartTime', 'Choisis l heure de début.'),
+      i18next.t(
+        'venueProposalModal.theEndIsStillCalculated',
+        'La fin reste calculee automatiquement ({{durationMinutes}} min).',
+        { durationMinutes, ...SANS_ECHAPPEMENT },
+      ),
     ].join(' '),
     key: 'time',
-    title: 'Choisis l heure',
+    title: i18next.t('venueProposalModal.pickTheTime', 'Choisis l heure'),
   },
   {
     description: venueRequired
-      ? 'Renseigne un seul lieu ou une seule adresse pour cette proposition.'
-      : 'Tu peux déjà proposer un lieu, mais ce n est pas obligatoire pour ce format.',
+      ? i18next.t(
+        'venueProposalModal.enterASingleVenueOr',
+        'Renseigne un seul lieu ou une seule adresse pour cette proposition.',
+      )
+      : i18next.t(
+        'venueProposalModal.youCanAlreadyProposeA',
+        'Tu peux déjà proposer un lieu, mais ce n est pas obligatoire pour ce format.',
+      ),
     key: 'venue',
-    title: venueRequired ? 'Choisis le lieu' : 'Ajoute un lieu si besoin',
+    title: venueRequired ? i18next.t(
+      'venueProposalModal.pickTheVenue',
+      'Choisis le lieu',
+    ) : i18next.t(
+      'venueProposalModal.addAVenueIfNeeded',
+      'Ajoute un lieu si besoin',
+    ),
   },
   {
-    description: 'Vérifie les informations avant de les envoyer à ton adversaire.',
+    description: i18next.t(
+      'venueProposalModal.checkTheDetailsBeforeSending',
+      'Vérifie les informations avant de les envoyer à ton adversaire.',
+    ),
     key: 'recap',
-    title: 'Vérifie la proposition',
+    title: i18next.t('venueProposalModal.checkTheProposal', 'Vérifie la proposition'),
   },
 ]);
 
@@ -180,6 +212,7 @@ function VenueProposalModal({
   onSkip,
   venueRequired = true,
 }) {
+  const { t } = useTranslation();
   const { Colors, Fonts } = useTheme();
   const { showBanner } = useAppFeedback();
 
@@ -210,8 +243,11 @@ function VenueProposalModal({
   const isLastStep = stepIndex === stepDefinitions.length - 1;
   const currentStepNumber = stepIndex === 0 ? 0 : stepIndex;
   const stepIndicatorLabel = stepIndex === 0
-    ? 'Avant de commencer'
-    : `Etape ${currentStepNumber}/${stepCount}`;
+    ? t('venueProposalModal.beforeYouStart', 'Avant de commencer')
+    : t('venueProposalModal.stepOfTotal', 'Etape {{current}}/{{total}}', {
+      current: currentStepNumber,
+      total: stepCount,
+    });
   const normalizedLegalScope = String(legalAcceptanceConfig?.scope || '').trim();
   const hasInlineLegalConfirmation = Boolean(normalizedLegalScope);
   const needsAdultConfirmation = hasInlineLegalConfirmation
@@ -237,11 +273,11 @@ function VenueProposalModal({
     const plusTwoDays = new Date(now);
     plusTwoDays.setDate(now.getDate() + 2);
     return [
-      { id: 'today', label: 'Aujourd hui', value: now },
-      { id: 'tomorrow', label: 'Demain', value: tomorrow },
-      { id: 'plus-two', label: '+2 jours', value: plusTwoDays },
+      { id: 'today', label: t('venueProposalModal.today', 'Aujourd hui'), value: now },
+      { id: 'tomorrow', label: t('venueProposalModal.tomorrow', 'Demain'), value: tomorrow },
+      { id: 'plus-two', label: t('venueProposalModal.n2Days', '+2 jours'), value: plusTwoDays },
     ];
-  }, []);
+  }, [t]);
 
   const scrollModalTo = useCallback((y, animated = true) => {
     const ref = modalScrollRef.current;
@@ -308,9 +344,12 @@ function VenueProposalModal({
     return () => clearTimeout(timer);
   }, [isVisible, scrollModalTo, stepIndex]);
 
-  const venueSummary = useMemo(() => venueInput?.trim() || 'A définir', [venueInput]);
+  const venueSummary = useMemo(() => venueInput?.trim() || t(
+    'venueProposalModal.toBeDecided',
+    'A définir',
+  ), [venueInput, t]);
   const dateSummary = useMemo(
-    () => date.toLocaleDateString('fr-FR', {
+    () => date.toLocaleDateString(localeDesFormats(), {
       day: '2-digit',
       month: 'short',
       weekday: 'short',
@@ -320,11 +359,11 @@ function VenueProposalModal({
   );
   const timeSummary = useMemo(() => {
     const formattedStartTime = startTime.toLocaleTimeString(
-      'fr-FR',
+      localeDesFormats(),
       { hour: '2-digit', minute: '2-digit' },
     );
     const formattedEndTime = endTime.toLocaleTimeString(
-      'fr-FR',
+      localeDesFormats(),
       { hour: '2-digit', minute: '2-digit' },
     );
     return `${formattedStartTime} - ${formattedEndTime}`;
@@ -383,8 +422,11 @@ function VenueProposalModal({
     if (isSubmitting) return;
     if (!isLegalConfirmationValid) {
       showBanner({
-        body: 'Confirme le cadre League avant d envoyer la proposition.',
-        title: 'Confirmation requise',
+        body: t(
+          'venueProposalModal.confirmTheLeagueTermsBefore',
+          'Confirme le cadre League avant d envoyer la proposition.',
+        ),
+        title: t('venueProposalModal.confirmationRequired', 'Confirmation requise'),
         tone: 'error',
       });
       return;
@@ -399,8 +441,11 @@ function VenueProposalModal({
     const startIso = toParisIsoFromLocalSelection(finalStartDate);
     if (!startUtcDate || !startIso) {
       showBanner({
-        body: 'Impossible de convertir le créneau sélectionne.',
-        title: 'Erreur',
+        body: t(
+          'venueProposalModal.unableToConvertTheSelected',
+          'Impossible de convertir le créneau sélectionne.',
+        ),
+        title: t('venueProposalModal.error', 'Erreur'),
         tone: 'error',
       });
       return;
@@ -408,8 +453,11 @@ function VenueProposalModal({
 
     if (startUtcDate <= new Date()) {
       showBanner({
-        body: 'Ce créneau est déjà passé. Choisis une date ou une heure future.',
-        title: 'Créneau passe',
+        body: t(
+          'venueProposalModal.thisSlotIsAlreadyIn',
+          'Ce créneau est déjà passé. Choisis une date ou une heure future.',
+        ),
+        title: t('venueProposalModal.slotInThePast', 'Créneau passe'),
         tone: 'error',
       });
       return;
@@ -457,14 +505,14 @@ function VenueProposalModal({
     showBanner,
     startTime,
     venueInput,
-    venueRequired,
+    venueRequired, t,
   ]);
 
   const handleAdvance = useCallback(() => {
     if (currentStep?.key === 'venue' && !isVenueStepValid) {
       showBanner({
-        body: 'Ajoute un lieu pour continuer.',
-        title: 'Lieu requis',
+        body: t('venueProposalModal.addAVenueToContinue', 'Ajoute un lieu pour continuer.'),
+        title: t('venueProposalModal.venueRequired', 'Lieu requis'),
         tone: 'error',
       });
       return;
@@ -476,7 +524,7 @@ function VenueProposalModal({
     }
 
     setStepIndex((currentValue) => Math.min(currentValue + 1, maxStepIndex));
-  }, [currentStep?.key, handleSend, isLastStep, isVenueStepValid, maxStepIndex, showBanner]);
+  }, [currentStep?.key, handleSend, isLastStep, isVenueStepValid, maxStepIndex, showBanner, t]);
 
   const handleBack = useCallback(() => {
     if (stepIndex === 0) {
@@ -505,10 +553,22 @@ function VenueProposalModal({
     }, 220);
   }, [dateSelectorY, scrollModalTo, timeSelectorY]);
 
-  const venueFieldLabel = venueRequired ? 'Lieu' : 'Lieu (optionnel)';
+  const venueFieldLabel = venueRequired ? t(
+    'venueProposalModal.venue',
+    'Lieu',
+  ) : t(
+    'venueProposalModal.venueOptional',
+    'Lieu (optionnel)',
+  );
   const venueFieldHint = venueRequired
-    ? 'Renseigne le nom du lieu ou son adresse en un seul champ.'
-    : 'Tu peux déjà proposer un lieu, mais ce n est pas obligatoire pour ce format.';
+    ? t(
+      'venueProposalModal.enterTheVenueNameOr',
+      'Renseigne le nom du lieu ou son adresse en un seul champ.',
+    )
+    : t(
+      'venueProposalModal.youCanAlreadyProposeA',
+      'Tu peux déjà proposer un lieu, mais ce n est pas obligatoire pour ce format.',
+    );
   let isPrimaryDisabled = false;
   if (currentStep?.key === 'recap') {
     isPrimaryDisabled = isSendDisabled || !isLegalConfirmationValid || isSubmitting;
@@ -517,11 +577,11 @@ function VenueProposalModal({
   } else {
     isPrimaryDisabled = isSubmitting;
   }
-  let primaryButtonTitle = 'Continuer';
+  let primaryButtonTitle = t('venueProposalModal.continue', 'Continuer');
   if (stepIndex === 0) {
-    primaryButtonTitle = 'Commencer';
+    primaryButtonTitle = t('venueProposalModal.start', 'Commencer');
   } else if (isLastStep) {
-    primaryButtonTitle = 'Envoyer la proposition';
+    primaryButtonTitle = t('venueProposalModal.sendTheProposal', 'Envoyer la proposition');
   }
 
   const renderStepContent = () => {
@@ -539,10 +599,13 @@ function VenueProposalModal({
             }}
           >
             <Text style={[Fonts.p2Bold, { color: Colors.primary500, marginBottom: 10 }]}>
-              En bref
+              {t('venueProposalModal.inShort', 'En bref')}
             </Text>
             <Text style={[Fonts.p2, { color: Colors.neutral100, lineHeight: 24 }]}>
-              Propose quand et ou jouer à ton adversaire en quelques étapes simples.
+              {t(
+                'venueProposalModal.proposeWhenAndWhereTo2',
+                'Propose quand et ou jouer à ton adversaire en quelques étapes simples.',
+              )}
             </Text>
 
             <View style={{
@@ -583,10 +646,13 @@ function VenueProposalModal({
             }}
           >
             <Text style={[Fonts.p3Bold, { color: Colors.gold500, marginBottom: 6 }]}>
-              Réponse adverse
+              {t('venueProposalModal.opponentSAnswer', 'Réponse adverse')}
             </Text>
             <Text style={[Fonts.p3, { color: Colors.neutral200, lineHeight: 22 }]}>
-              Ton adversaire pourra accepter, refuser ou contre-proposer.
+              {t(
+                'venueProposalModal.yourOpponentCanAcceptDecline',
+                'Ton adversaire pourra accepter, refuser ou contre-proposer.',
+              )}
             </Text>
           </View>
         </View>
@@ -607,10 +673,13 @@ function VenueProposalModal({
             }}
           >
             <Text style={[Fonts.p3Bold, { color: Colors.primary500, marginBottom: 4 }]}>
-              Créneau commun déjà trouve
+              {t('venueProposalModal.commonSlotAlreadyFound', 'Créneau commun déjà trouve')}
             </Text>
             <Text style={[Fonts.p3, { color: Colors.neutral200 }]}>
-              On commence juste par choisir le jour à proposer.
+              {t(
+                'venueProposalModal.letSJustStartBy',
+                'On commence juste par choisir le jour à proposer.',
+              )}
             </Text>
           </View>
 
@@ -681,7 +750,7 @@ function VenueProposalModal({
             }}
           >
             <Text style={[Fonts.p3, { color: Colors.neutral300, marginBottom: 4 }]}>
-              Date choisie
+              {t('venueProposalModal.chosenDate', 'Date choisie')}
             </Text>
             <Text style={[Fonts.p2Bold, { color: Colors.neutral00 }]}>
               {dateSummary}
@@ -698,7 +767,7 @@ function VenueProposalModal({
               <DateTimeSelector
                 buttonStyle={glassPickerStyle}
                 display="inline"
-                label="Debut"
+                label={t('venueProposalModal.startField', 'Debut')}
                 mode="time"
                 onChange={setStartTime}
                 onOpen={() => handleSelectorOpen('time')}
@@ -707,7 +776,7 @@ function VenueProposalModal({
             </View>
             <View style={{ flex: 1 }}>
               <Text style={[Fonts.p1Bold, Fonts.neutral00, { marginBottom: 8 }]}>
-                Fin (auto)
+                {t('venueProposalModal.endAuto', 'Fin (auto)')}
               </Text>
               <View
                 style={[glassPickerStyle, {
@@ -718,11 +787,15 @@ function VenueProposalModal({
                 }]}
               >
                 <Text style={[Fonts.p1, Fonts.neutral00]}>
-                  {endTime.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+                  {endTime.toLocaleTimeString(localeDesFormats(), { hour: '2-digit', minute: '2-digit' })}
                 </Text>
               </View>
               <Text style={[Fonts.p3, { color: Colors.neutral300, marginTop: 6 }]}>
-                {`Durée fixe : ${durationMinutes} min`}
+                {t(
+                  'venueProposalModal.fixedDurationMin',
+                  'Durée fixe : {{durationMinutes}} min',
+                  { durationMinutes, ...SANS_ECHAPPEMENT },
+                )}
               </Text>
             </View>
           </View>
@@ -744,7 +817,7 @@ function VenueProposalModal({
             }}
           >
             <Text style={[Fonts.p3, { color: Colors.neutral300, marginBottom: 4 }]}>
-              Créneau retenu
+              {t('venueProposalModal.selectedSlot', 'Créneau retenu')}
             </Text>
             <Text style={[Fonts.p2Bold, { color: Colors.neutral00 }]}>
               {dateSummary}
@@ -764,7 +837,10 @@ function VenueProposalModal({
 
             <Input
               onChangeText={setVenueInput}
-              placeholder="Ex: Z5 Aix, 12 rue des Sports Marseille"
+              placeholder={t(
+                'venueProposalModal.eGZ5Aix12',
+                'Ex: Z5 Aix, 12 rue des Sports Marseille',
+              )}
               value={venueInput}
               wrapperStyle={{ marginTop: 4 }}
             />
@@ -786,7 +862,7 @@ function VenueProposalModal({
           }}
         >
           <Text style={[Fonts.p3, { color: Colors.neutral300, marginBottom: 6 }]}>
-            Lieu
+            {t('venueProposalModal.venue', 'Lieu')}
           </Text>
           <Text style={[Fonts.p1Bold, { color: Colors.neutral00, marginBottom: 12 }]}>
             {venueSummary}
@@ -800,7 +876,7 @@ function VenueProposalModal({
           </Text>
 
           <Text style={[Fonts.p3, { color: Colors.neutral300, marginBottom: 6 }]}>
-            Heure
+            {t('venueProposalModal.time', 'Heure')}
           </Text>
           <Text style={[Fonts.p1Bold, { color: Colors.neutral00 }]}>
             {timeSummary}
@@ -821,10 +897,13 @@ function VenueProposalModal({
           >
             <View>
               <Text style={[Fonts.p2Bold, { color: Colors.gold500, marginBottom: 6 }]}>
-                Confirmation avant envoi
+                {t('venueProposalModal.confirmationBeforeSending', 'Confirmation avant envoi')}
               </Text>
               <Text style={[Fonts.p3, { color: Colors.neutral200, lineHeight: 22 }]}>
-                Confirme ces 4 points pour envoyer la proposition à ton adversaire.
+                {t(
+                  'venueProposalModal.confirmThese4PointsTo',
+                  'Confirme ces 4 points pour envoyer la proposition à ton adversaire.',
+                )}
               </Text>
             </View>
 
@@ -832,33 +911,56 @@ function VenueProposalModal({
               {
                 checked: acceptedContext,
                 key: 'context',
-                label: 'Je comprends que FoundClub facilite la mise en relation sans organiser le match.',
+                label: t(
+                  'venueProposalModal.iUnderstandThatFoundclubHelps',
+                  'Je comprends que FoundClub facilite la mise en relation sans organiser le '
+                    + 'match.',
+                ),
                 toggle: () => setAcceptedContext((previous) => !previous),
               },
               {
                 checked: acceptedRisk,
                 key: 'risk',
-                label: 'J accepte les risques normaux liés à la pratique sportive et je vérifie mon aptitude à jouer.',
+                label: t(
+                  'venueProposalModal.iAcceptTheNormalRisks',
+                  'J accepte les risques normaux liés à la pratique sportive et je vérifie mon '
+                    + 'aptitude à jouer.',
+                ),
                 toggle: () => setAcceptedRisk((previous) => !previous),
               },
               {
                 checked: acceptedRules,
                 key: 'rules',
-                label: 'Je respecte les règles du lieu, les consignes de sécurité et la couverture d assurance applicable.',
+                label: t(
+                  'venueProposalModal.iFollowTheVenueS',
+                  'Je respecte les règles du lieu, les consignes de sécurité et la couverture '
+                    + 'd assurance applicable.',
+                ),
                 toggle: () => setAcceptedRules((previous) => !previous),
               },
               ...(needsAdultConfirmation ? [{
                 checked: acceptedAdult,
                 key: 'adult',
-                label: 'Je certifie avoir 18 ans ou plus pour cette action League.',
+                label: t(
+                  'venueProposalModal.iCertifyThatIAm',
+                  'Je certifie avoir 18 ans ou plus pour cette action League.',
+                ),
                 toggle: () => setAcceptedAdult((previous) => !previous),
               }] : []),
               ...(hasExtraConfirmation ? [{
                 checked: acceptedExtra,
                 key: 'extra',
                 label: needsVenueResponsibility
-                  ? 'Je confirme que le lieu, les horaires et les conditions du terrain ont été verifies.'
-                  : 'Je confirme agir comme membre référent de mon équipe pour cette proposition de match.',
+                  ? t(
+                    'venueProposalModal.iConfirmThatTheVenue',
+                    'Je confirme que le lieu, les horaires et les conditions du terrain ont '
+                      + 'été verifies.',
+                  )
+                  : t(
+                    'venueProposalModal.iConfirmIAmActing',
+                    'Je confirme agir comme membre référent de mon équipe pour cette '
+                      + 'proposition de match.',
+                  ),
                 toggle: () => setAcceptedExtra((previous) => !previous),
               }] : []),
             ].map((item) => (
@@ -915,11 +1017,14 @@ function VenueProposalModal({
             }}
           >
             <Text style={[Fonts.p3Bold, { color: Colors.error700, marginBottom: 4 }]}>
-              Créneau à corriger
+              {t('venueProposalModal.slotToFix', 'Créneau à corriger')}
             </Text>
             <Text style={[Fonts.p3, { color: Colors.neutral200 }]}>
-              Cette proposition tombe dans le passé. Reviens en arrière pour
-              choisir une date ou une heure future.
+              {t(
+                'venueProposalModal.thisProposalFallsInThe',
+                'Cette proposition tombe dans le passé. Reviens en arrière pour choisir une '
+                  + 'date ou une heure future.',
+              )}
             </Text>
           </View>
         ) : null}
@@ -965,7 +1070,7 @@ function VenueProposalModal({
           <Button
             onPress={handleBack}
             style={{ flex: 1 }}
-            title="Retour"
+            title={t('venueProposalModal.back', 'Retour')}
             variant="Secondary"
           />
           <Button
@@ -990,7 +1095,7 @@ function VenueProposalModal({
             }}
           >
             <Text style={[Fonts.p2Bold, { color: Colors.primary500 }]}>
-              Passer et acceder au chat
+              {t('venueProposalModal.skipAndGoToThe', 'Passer et acceder au chat')}
             </Text>
           </TouchableOpacity>
         ) : null}

@@ -8,6 +8,7 @@ import {
 import useAuth from '@/domains/auth/useAuth';
 import { isFriendlyMatchChat } from '@/domains/messaging/messagingUseCases';
 import useMessaging from '@/domains/messaging/useMessaging';
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -123,13 +124,18 @@ function ShareCompositionModal({
         if (p) return `${p.firstname} ${p.lastname}`;
         const mp = manualPlayers.find((u) => u.id === id || u.documentId === id);
         if (mp) return `${mp.firstname} ${mp.lastname}`;
-        return 'Joueur';
+        return t('shareCompositionModal.player', 'Joueur');
       };
 
       const starters = placements.map((pl) => findName(pl.playerId)).join('\n- ');
       const playerCount = placements.length;
 
-      const message = `📋 Composition d'équipe\n\n⚽ Titulaires (${playerCount}):\n- ${starters}\n\nRetrouve le détail sur FoundClub !`;
+      const message = t(
+        'shareCompositionModal.teamLineUpStartersSee',
+        "📋 Composition d'équipe\n\n⚽ Titulaires ({{playerCount}}):\n- {{starters}}\n\nRetrouve le "
+          + 'détail sur FoundClub !',
+        { playerCount, starters, ...SANS_ECHAPPEMENT },
+      );
 
       await share({
         message,

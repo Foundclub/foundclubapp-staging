@@ -121,6 +121,7 @@ const OptionInputRow = memo(({
   Spaces,
   style,
 }) => {
+  const { t } = useTranslation();
   const [value, setValue] = useState('');
 
   return (
@@ -169,7 +170,7 @@ const OptionInputRow = memo(({
       </View>
       {hasDuplicate ? (
         <Text style={[Fonts.p4, { color: Colors.error500 }]}>
-          Cette option est déjà utilisée.
+          {t('pollCreationModal.thisOptionIsAlreadyUsed', 'Cette option est déjà utilisée.')}
         </Text>
       ) : null}
     </View>

@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next';
 import { Text, TouchableOpacity, View } from 'react-native';
 
 import { withAlpha } from '@/theme/colors';
+import localeDesFormats from '@/theme/strings/localeDesFormats';
 import useTheme from '@/theme/themeContext';
 
 import ClubCardSurface from '@/components/molecules/clubCard/ClubCardSurface';
@@ -55,7 +56,10 @@ export const formatSessionDate = (iso) => {
   if (!iso) return '';
   const date = new Date(`${String(iso).slice(0, 10)}T00:00:00`);
   if (Number.isNaN(date.getTime())) return '';
-  return date.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', weekday: 'short' });
+  return date.toLocaleDateString(
+    localeDesFormats(),
+    { day: 'numeric', month: 'short', weekday: 'short' },
+  );
 };
 
 /**

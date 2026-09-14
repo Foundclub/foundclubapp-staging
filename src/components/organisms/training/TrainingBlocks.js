@@ -1,4 +1,5 @@
 import { memo, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Linking, ScrollView, Text, TouchableOpacity, View,
 } from 'react-native';
@@ -201,6 +202,7 @@ export const familleDuSchema = (xml) => (ratioDuSchema(xml) >= 1 ? 'field' : 'bo
 function BlockSvg({
   block, Colors, Fonts, onZoom, Spaces,
 }) {
+  const { t } = useTranslation();
   const xml = typeof block.svg === 'string' && block.svg.includes('<svg') ? block.svg : null;
   if (!xml) return null;
   const famille = familleDuSchema(xml);
@@ -212,7 +214,13 @@ function BlockSvg({
         l'ouvrir.
       */}
       <Text style={[Fonts.caption, { color: Colors.primary400 }]}>
-        {famille === 'field' ? 'Plan de terrain' : 'Position du corps'}
+        {famille === 'field' ? t(
+          'trainingBlocks.pitchPlan',
+          'Plan de terrain',
+        ) : t(
+          'trainingBlocks.bodyPosition',
+          'Position du corps',
+        )}
       </Text>
       <View style={{ backgroundColor: Colors.neutral00, borderRadius: 8, padding: 4 }}>
         {/*
@@ -245,7 +253,7 @@ function BlockSvg({
           }}
         >
           <Text style={[Fonts.caption, { color: Colors.primary400 }]}>
-            Agrandir
+            {t('trainingBlocks.enlarge', 'Agrandir')}
           </Text>
         </TouchableOpacity>
       )}
