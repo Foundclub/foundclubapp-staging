@@ -1,4 +1,29 @@
 export default {
+  addClubManager: {
+    alerts: {
+      alreadyExist: {
+        actions: {
+          addToClub: 'Ajouter à la section',
+          cancel: 'Annuler',
+        },
+        // eslint-disable-next-line max-len
+        description: "Le détenteur de ce numéro de téléphone utilise déjà l'application sous le nom de {{firstname}} {{lastname}}. Veux-tu l'ajouter comme dirigeant à cette section ?",
+        title: 'Un utilisateur existe déjà avec ce numéro de téléphone.',
+      },
+      alreadyInClub: {
+        // eslint-disable-next-line max-len
+        description: "Un utilisateur du nom de {{firstname}} {{lastname}} est déjà membre d'un autre club.",
+        title: "Impossible d'ajouter ce dirigeant à la section",
+      },
+      success: {
+        description: 'Le dirigeant {{managerName}} a bien été ajouté à cette section.',
+        title: 'Ajout réussi !',
+      },
+    },
+    titles: {
+      main: 'Ajouter un dirigeant',
+    },
+  },
   addCoach: {
     actions: {
       invite: 'Inviter',
@@ -306,6 +331,14 @@ export default {
     why: 'Télécharge la nouvelle version de FoundClub pour continuer à profiter '
       + "de l'app.",
   },
+  bookingModal: {
+    // eslint-disable-next-line max-len
+    overflowAutoApprovedMessage: 'Le créneau dépasse la capacité habituelle, mais cette installation est configuree en "Autorise et notifier". Les dirigeants ont été prevenus.',
+    overflowAutoApprovedTitle: 'Réservation confirmée',
+    // eslint-disable-next-line max-len
+    overflowRequestCreatedMessage: 'Le créneau est déjà complet. Ta réservation a été envoyée aux dirigeants pour arbitrage.',
+    overflowRequestCreatedTitle: "Demande d'exception envoyée",
+  },
   club: {
     fields: {
       address: {
@@ -327,6 +360,11 @@ export default {
     },
   },
   clubDetails: {
+    a11y: {
+      callClub: 'Appeler le club au {{phoneNumber}}',
+      deleteSponsor: 'Supprimer le sponsor {{sponsorName}}',
+      emailClub: 'Envoyer un e-mail a {{email}}',
+    },
     actions: {
       // S02 — la VALEUR change, la clef reste (aucune clef n'est supprimee de ce
       // fichier). « Me prévenir dès qu’une équipe existe » decrivait ce que fait
@@ -341,17 +379,22 @@ export default {
       clubArrivalInterest: 'Prévenez-moi quand ce club arrive',
       clubArrivalInterestPending: 'Tu seras prévenu·e',
       contactTrainers: 'Contacter les entraîneur·e·s',
+      createTeam: 'Créer une équipe',
       delete: 'Supprimer',
       editInfo: 'Modifier',
       join: "C'est mon club !",
       joinAsMyClub: "C'est mon club !",
+      joinClubMember: 'Je fais partie de ce club',
       // PARENT P2 -- la porte du parent. Le prenom n'apparait QUE s'il n'y a
       // QU'UN enfant concerne : avec deux, en nommer un serait faux, la
       // demande ne porte pas l'enfant.
       joinForChild: 'Demander à rejoindre au nom de {{firstname}}',
       joinForChildren: 'Demander à rejoindre pour mes enfants',
+      joinPoster: 'Affiche — Rejoindre le club',
       leave: 'Quitter le club',
+      manageClub: 'Je dirige ce club',
       manageJoinRequests: 'Voir les demandes d\'affiliation',
+      myTeam: 'Mon équipe',
       playAtClub: 'Je joue dans ce club',
       requestJoin: 'Demander à rejoindre ce club',
       requestPending: 'Demande en attente',
@@ -387,8 +430,11 @@ export default {
       // AFFILIATION, pas une verification. Promettre une verification, c'est
       // promettre autre chose que ce que fait le bouton.
       claimClub: {
+        // eslint-disable-next-line max-len
+        confirmDescription: 'Veux-tu demander la gestion de ce club ? Une vérification sera effectuée.',
         confirmDirectAffiliation: 'Ce club n’a aucun dirigeant :'
           + ' tu en deviendras le dirigeant tout de suite.',
+        confirmTitle: 'Tu diriges ce club ?',
       },
       // S02 — la 2e porte parle de CE QU'ON FAIT DE L'INTERET : on previent la
       // personne, et le club voit combien de gens l'attendent. Rien n'est promis
@@ -401,6 +447,25 @@ export default {
           + ' Tu n’es rattaché·e à rien pour le moment.',
         error: 'Impossible d’enregistrer ton intérêt pour le moment.',
         title: 'C’est noté',
+      },
+      clubPartnerRequest: {
+        // eslint-disable-next-line max-len
+        description: "Nous allons contacter le dirigeant de ce club pour l'aider à rejoindre FoundClub.",
+        error: "Impossible d'envoyer cette demande pour le moment.",
+        invalidEmail: "L'adresse email du dirigeant est invalide.",
+        missingContact: 'Ajoute au moins un numéro de téléphone ou un email.',
+        missingName: 'Ajoute le prénom et le nom du dirigeant.',
+        title: 'Demande envoyée',
+      },
+      deleteManager: {
+        actions: {
+          cancel: 'Annuler',
+          confirm: 'Retirer',
+        },
+        // eslint-disable-next-line max-len
+        description: 'Ce dirigeant ne sera plus rattaché à cette section. Tu pourras le réajouter plus tard si besoin.',
+        error: 'Impossible de retirer ce dirigeant pour le moment.',
+        title: 'Retirer ce dirigeant ?',
       },
       deleteSponsor: {
         actions: {
@@ -416,6 +481,7 @@ export default {
           confirm: 'Supprimer',
         },
         description: 'Le compte ne sera pas supprimé, mais l\'entraîneur·e ne sera plus lié·e au club. Es-tu sûr·e de vouloir continuer ?',
+        error: 'Impossible de retirer cet entraîneur pour le moment.',
         title: 'Tu es sur le point de supprimer cet·te entraîneur·e.',
       },
       inviteTrainer: {
@@ -456,6 +522,16 @@ export default {
         error: "Impossible d'envoyer ta demande pour le moment.",
         title: 'Demande envoyée',
       },
+      playerTeamJoin: {
+        confirmation: 'Une demande sera envoyée pour rejoindre {{teamName}}.',
+        description: 'Ta demande pour rejoindre {{teamName}} a été envoyée.',
+        error: "Impossible d'envoyer ta demande pour le moment.",
+        noTeams: 'Aucune équipe n’est disponible dans ce club pour le moment.',
+        title: 'Choisir cette équipe ?',
+      },
+      update: {
+        error: 'Impossible de mettre à jour ce club pour le moment.',
+      },
       // V01 — le même geste sur un club QUI EST déjà là. On ne peut pas lui
       // promettre « on te prévient quand il arrive » : il est arrivé. Ce qui
       // l'attend, ce sont des dirigeants qui vont lire son intérêt.
@@ -481,11 +557,72 @@ export default {
         + ' {{firstname}}. Tu recevras leur réponse.',
       sentTitle: 'Demande envoyée',
     },
+    clubInterest: {
+      alreadyMember: 'Tu es déjà rattaché à ce club.',
+      alreadySent: 'Intérêt déjà envoyé.',
+      alreadySentDescription: 'Le staff de cette équipe a déjà reçu ton intérêt.',
+      alreadySentShort: 'Intérêt déjà envoyé',
+      alreadySentTitle: 'Intérêt déjà envoyé',
+      button: 'Intéressé par le club',
+      cardHint: 'Le staff pourra répondre avec un message ou ouvrir une conversation.',
+      confirmDescription: 'Le staff de {{teamName}} verra ton profil et pourra te répondre.',
+      confirmTitle: 'Envoyer ton intérêt ?',
+      error: "Impossible d'envoyer ton intérêt pour le moment.",
+      // eslint-disable-next-line max-len
+      forbidden: "Ton compte n'a pas encore l'autorisation d'envoyer un intérêt. Réessaie dans quelques instants.",
+      noTeams: "Aucune équipe n'est disponible dans ce club pour le moment.",
+      // eslint-disable-next-line max-len
+      pickerDescription: 'Sélectionne une équipe, ou le club en général, pour signaler ton intérêt sans créer de demande d’adhésion.',
+      pickerTitle: 'Qu’est-ce qui t’intéresse ?',
+      sendAction: 'Envoyer mon intérêt',
+      sentDescription: 'Le staff de {{teamName}} a reçu ton intérêt et pourra te répondre.',
+      sentTitle: 'Intérêt envoyé',
+      teamNotFound: "Cette équipe n'est plus disponible.",
+      // eslint-disable-next-line max-len
+      wholeClubHint: 'Les dirigeants du club recevront ton intérêt et pourront te répondre ou ouvrir une conversation.',
+      wholeClubOption: 'Le club en général',
+    },
+    clubPartnerRequest: {
+      clubLabel: 'Club concerne',
+      // eslint-disable-next-line max-len
+      description: "Ton club n'est pas encore partenaire FoundClub. Ajoute les coordonnées du dirigeant pour que nous puissions le contacter et lui donner accès au classement, au calendrier et aux statistiques directement dans l'application.",
+      fields: {
+        holderEmail: 'Email du dirigeant',
+        holderFirstname: 'Prénom du dirigeant',
+        holderLastname: 'Nom du dirigeant',
+        holderPhone: 'Téléphone du dirigeant',
+      },
+      submit: 'Envoyer la demande',
+      title: 'Je dirige ce club',
+    },
     // E17 -- on EXPLIQUE l'absence de la porte au lieu de la faire
     // disparaitre sans un mot.
     hints: {
       teenAsksAlone: 'À partir de 13 ans, ton enfant fait sa demande'
         + ' lui-même depuis son propre compte.',
+    },
+    hub: {
+      coach: 'entraîneur',
+      coachs: 'entraîneurs',
+      groups: {
+        manage: 'Gérer',
+        membership: 'Adhésions',
+      },
+      membership: {
+        coachAllowed: 'Délégation',
+        ownerOnly: 'Dirigeant',
+      },
+      owner: 'dirigeant',
+      owners: 'dirigeants',
+      rows: {
+        membershipRequests: "Demandes d'adhésion",
+        staff: 'Staff',
+      },
+    },
+    membersHidden: {
+      // eslint-disable-next-line max-len
+      description: '{{count}} membres sont rattachés à ce club, mais leurs identités ne sont pas visibles publiquement.',
+      title: 'Membres masqués par le club',
     },
     playerNoTeamRequest: {
       clubLabel: 'Club que tu attends',
@@ -503,6 +640,11 @@ export default {
       // rendait indiscernable de la seconde porte.
       submit: 'Envoyer ma demande',
       title: 'Ce club n’a pas encore d’équipe sur FoundClub',
+    },
+    playerTeamPicker: {
+      description: 'Sélectionne ton équipe dans ce club pour envoyer une demande d’affiliation.',
+      selectAction: 'Choisir',
+      title: 'Choisir mon équipe',
     },
     // AB05 — CE QUE DIT LA FENETRE QUAND « C’EST MON CLUB » EST REFUSÉ.
     // Adel, 2026-08-20 : « il y a écrit "Accès refusé" sans expliquer pourquoi ».
@@ -523,12 +665,45 @@ export default {
     titles: {
       activities: 'Sports',
       coachs: 'Nos entraîneur·e·s',
+      members: 'Membres',
       owners: 'Nos dirigeant·e·s',
       sponsors: 'Nos partenaires',
       teams: 'Nos équipes',
     },
   },
   clubEdit: {
+    membership: {
+      // eslint-disable-next-line max-len
+      description: 'Choisis si toutes les demandes doivent être traitées par le dirigeant, ou si les entraîneurs peuvent être autorisés à gérer celles de leur équipe.',
+      mode: {
+        coachAllowed: "Délégation à l'entraîneur",
+        // eslint-disable-next-line max-len
+        coachAllowedDescription: 'Le dirigeant peut déléguer équipe par équipe aux entraîneurs autorisés, tout en gardant une vue complète.',
+        ownerOnly: 'Gestion par le dirigeant',
+        // eslint-disable-next-line max-len
+        ownerOnlyDescription: "Le dirigeant garde la main sur toutes les demandes d'adhésion des équipes du club.",
+      },
+      title: "Demandes d'adhésion aux équipes",
+    },
+    publicMembers: {
+      // eslint-disable-next-line max-len
+      description: 'Choisis si les membres du club peuvent apparaître publiquement sur la page du club.',
+      switchLabel: 'Afficher les membres publiquement',
+      title: 'Visibilité des membres',
+    },
+    teamCreation: {
+      coachAllowed: {
+        // eslint-disable-next-line max-len
+        description: 'Désactive si tu préfères créer toi-même toutes les équipes du club. Les équipes déjà créées ne changent pas.',
+        switchLabel: 'Mes entraîneur·es peuvent créer des équipes',
+      },
+      requiresValidation: {
+        // eslint-disable-next-line max-len
+        description: "L'équipe est bien créée, mais elle n'apparaît dans le club qu'une fois que tu l'as validée.",
+        switchLabel: 'Leurs équipes doivent être validées par moi',
+      },
+      title: "Création d'équipes",
+    },
     title: 'Modifier le club',
   },
   clubFilters: {
@@ -538,6 +713,7 @@ export default {
     },
     fields: {
       activity: {
+        error: 'Impossible de charger la liste des sports pour le moment.',
         label: 'Sport',
         placeholder: 'Sélectionner une activité',
       },
@@ -559,6 +735,9 @@ export default {
       training: 'Entraînement',
     },
     noData: 'Aucun club ne correspond à la recherche.',
+    search: {
+      placeholder: 'Nom du club',
+    },
     title: 'Trouver mon club',
   },
   clubMembershipRequestList: {
@@ -568,6 +747,10 @@ export default {
     },
     errors: {
       accept: 'Impossible de valider la demande pour le moment.',
+      load: 'Impossible de charger les demandes du club pour le moment.',
+      loadTitle: 'Chargement impossible',
+      missingClubBody: "Impossible d'ouvrir ces demandes sans identifiant de club.",
+      missingClubTitle: 'Club introuvable',
       missingRequester: 'Impossible de traiter cette demande. Demande au joueur de renvoyer sa demande.',
       reject: 'Impossible de refuser la demande pour le moment.',
     },
@@ -575,12 +758,22 @@ export default {
       accepted: 'Demande acceptée',
       claimAccepted: '{{firstname}} a bien été ajouté·e comme dirigeant·e du club.',
       claimAcceptedTitle: 'Dirigeant ajouté',
+      claimPendingVerification: 'Revendication en cours de vérification FoundClub',
       pending: "{{firstname}} s'est signalé·e comme entraîneur·e de cette équipe",
       pendingClaim: '{{firstname}} souhaite revendiquer la gestion de ce club.',
       rejected: 'Demande refusée',
     },
     noData: 'Aucune demande d\'affiliation en attente',
     title: 'Demandes d\'affiliation',
+  },
+  clubScope: {
+    toggle: {
+      backToMultisport: 'Retour multisport',
+      hint: 'Basculer entre le contexte multisport et la section active.',
+      multisportActive: 'Mode multisport',
+      sectionActive: 'Mode section',
+      sectionMode: 'Passer en mode section',
+    },
   },
   clubWizard: {
     activities: {
@@ -634,6 +827,7 @@ export default {
     },
   },
   common: {
+    accept: 'Accepter',
     // VA1 — un refus du serveur (403) se dit, il ne se déguise pas en liste vide.
     accessReserved: {
       description: "Tu n'as pas accès à cette partie : elle est réservée aux membres.",
@@ -641,36 +835,72 @@ export default {
     },
     actions: {
       askLater: 'Plus tard',
+      back: 'Retour',
       cancel: 'Annuler',
       confirm: 'Confirmer',
       continueLater: 'Continuer plus tard',
       create: 'Créer',
       delete: 'Supprimer',
+      edit: 'Modifier',
+      later: 'Plus tard',
+      login: 'Se connecter',
       next: 'Continuer',
       ok: 'OK',
       openInGps: 'Ouvrir dans le GPS',
       photoFromCamera: 'Prendre une photo',
       photoFromGallery: 'Choisir depuis la galerie',
+      retry: 'Réessayer',
       save: 'Enregistrer',
+      search: 'Rechercher',
+      seeMore: 'Voir le detail',
     },
+    all: 'Tous',
     back: 'Retour',
+    cancelMatch: 'Annuler le match',
     chat: 'Conversation',
     close: 'Fermer',
+    club: 'Club',
+    confirmation: 'Confirmation',
+    delete: 'Supprimer',
+    edit: 'Modifier',
     error: 'Erreur',
     errorOccurred: 'Une erreur est survenue.',
+    errors: {
+      error: 'Erreur',
+      generic: 'Une erreur est survenue',
+    },
     finish: 'Terminer',
     ignore: 'Ignorer',
+    info: 'Info',
+    later: 'Plus tard',
+    list: 'Liste',
     loading: 'Chargement...',
+    map: 'Carte',
     member: 'Membre',
     messages: {
+      loading: 'Chargement...',
       noData: 'Aucune donnée disponible',
     },
     next: 'Suivant',
+    ok: 'OK',
+    open: 'Ouvrir',
+    openInGps: 'Ouvrir dans le GPS',
     previous: 'Précédent',
+    refuse: 'Refuser',
+    reject: 'Refuser',
+    search: 'Rechercher un sport...',
+    selected: 'Sélectionnée',
+    send: 'Envoyer',
     skip: 'Passer',
+    start: 'Démarrer la discussion',
     success: 'Succès',
     teams: 'Équipes',
+    user: 'Utilisateur',
+    validate: 'Valider',
     view: 'Voir',
+  },
+  composition: {
+    shareTitle: 'Partager la composition',
   },
   // C-C — ECRAN 11 du pack composition : la compo type d'une équipe.
   compoTemplate: {
@@ -760,31 +990,61 @@ export default {
         takePhoto: 'Prendre une photo',
         title: 'Modifier le message',
       },
+      manageGroup: 'Gérer le groupe',
       modalTitle: 'Actions du message',
       reply: 'Répondre',
       report: 'Signaler',
     },
     attachments: {
       camera: 'Caméra',
+      captionPlaceholder: 'Ajouter une légende',
       contact: 'Contact',
       createPoll: 'Créer un sondage',
       document: 'Document',
       documentDisabled: 'Indisponible sur cette build',
       event: 'Événement',
+      location: 'Localisation',
       noContact: 'Aucun contact partageable',
+      openErrorDescription: 'Le document n a pas pu être ouvert.',
+      openErrorTitle: 'Ouverture impossible',
       photos: 'Photos',
       pickFile: 'Envoyer un fichier',
       pickMedia: 'Envoyer un média',
       poll: 'Sondage',
+      previewTitle: 'Photo prête à envoyer',
+      previewWithCaption: 'La légende sera envoyée avec la photo.',
+      previewWithoutCaption: "Ajoute une légende puis confirme l'envoi.",
+      shareErrorDescription: 'Le document n a pas pu être partage.',
+      shareErrorTitle: 'Partage impossible',
+      shareUnavailableDescription: 'Ce document ne peut pas être partage pour le moment.',
       subtitle: 'Partage du contenu dans cette conversation',
       takePhoto: 'Prendre une photo',
       title: 'Ajouter',
       unavailable: 'Bientôt disponible',
+      unavailableDescription: 'Ce document ne peut pas être ouvert pour le moment.',
+      unavailableTitle: 'Fichier indisponible',
     },
     // CONVAVERT (C4) — l'avertissement permanent en tête de fil. Il ne
     // s'affiche QUE sur un fil rattaché à un club (fil de club, fil d'équipe) :
     // ailleurs, aucun dirigeant ne peut lire, et la phrase serait fausse.
     clubReadNotice: 'Les conversations de ce club peuvent être consultées par son dirigeant.',
+    documentActions: {
+      download: 'Télécharger',
+      open: 'Ouvrir',
+      share: 'Partager',
+      title: 'Actions du document',
+    },
+    group: {
+      addMembers: 'Ajouter des membres',
+      admin: 'Admin',
+      member: 'Membre',
+      members: 'Membres',
+      nameLabel: 'Nom du groupe',
+      namePlaceholder: 'Nom du groupe',
+      remove: 'Retirer',
+      saveName: 'Enregistrer le nom',
+      title: 'Gestion du groupe',
+    },
     messagePlaceholder: 'Message',
     modals: {
       actions: {
@@ -807,6 +1067,7 @@ export default {
         title: 'Ton signalement a bien été envoyé',
       },
     },
+    placeholder: 'Ecris ton message...',
     poll: {
       bubble: {
         anonymousBadge: 'Sondage anonyme',
@@ -878,6 +1139,13 @@ export default {
         visible: 'visible',
       },
     },
+    readOnly: "Canal d'annonce (lecture seule)",
+    replyPreview: {
+      defaultAuthor: 'Membre',
+      defaultText: 'Message',
+      label: 'Réponse à',
+    },
+    sending: 'Envoi en cours...',
     shareContact: {
       empty: 'Aucun contact partageable dans ce chat.',
       send: 'Partager',
@@ -898,6 +1166,12 @@ export default {
       title: 'Partager une localisation',
     },
     voice: {
+      captionPlaceholder: 'Ajouter un message (optionnel)',
+      draftReady: 'Brouillon vocal',
+      draftReadyHint: 'Note vocale prête. Ajoute un message puis envoie.',
+      draftWithoutText: 'Ajoute un message optionnel puis appuie sur Envoyer.',
+      draftWithText: 'Le texte sera envoyé avec la note vocale.',
+      emptyErrorDescription: "Aucun son exploitable n'a été capturé. Réessaie.",
       hint: 'Glisser gauche pour annuler, glisser haut pour verrouiller.',
       hintShort: 'Maintiens appuyé pour enregistrer',
       locked: 'Note vocale verrouillée',
@@ -1143,15 +1417,24 @@ export default {
       team: 'Équipe',
       whisper: 'Privé',
     },
+    shareCloseA11y: 'Fermer le partage',
     sharedEvent: 'Événement partagé',
     shareEyebrow: 'Diffusion',
     shareInChat: 'Partager dans une conversation',
+    shareInChatError: "Impossible de partager l'événement pour le moment.",
     shareInChatHint: 'Envoi direct dans FoundClub.',
+    // eslint-disable-next-line max-len
+    shareInChatSuccessDescription: 'Ton événement a bien été partage. Appuie sur OK pour ouvrir la conversation.',
+    shareInChatSuccessTitle: 'Événement partage',
+    shareLinkLabel: 'Voir la fiche FoundClub',
+    shareMessage: 'Découvre cet événement :',
     shareNoChatAvailable: 'Aucune conv disponible.',
     shareNoChatAvailableHint: 'Rejoins ou crée une conversation pour partager cet événement ici.',
     shareOutsideHint: 'SMS, mail ou application externe',
     shareOutsideLabel: 'Lien externe',
     shareSubtitle: 'Choisis un canal pour envoyer cette fiche rapidement.',
+    shareTitle: "Partager l'événement",
+    shareViaOther: 'Partager via... (SMS, Mail)',
   },
   eventDetails: {
     actions: {
@@ -1181,6 +1464,7 @@ export default {
     },
     attendanceCall: {
       actions: {
+        everyoneHere: 'Tout le monde est là',
         markAll: 'Tout pointer',
         unmarkAll: 'Tout dépointer',
       },
@@ -1243,11 +1527,13 @@ export default {
         cancel: 'Annuler',
         custom: 'Autre heure',
         customPlaceholder: "Heure d'arrivée (HH:MM)",
+        minutes: 'min',
         note: 'Note du staff (optionnel)',
         onTime: "À l'heure",
         onTimePreview: "Arrivé à l'heure",
         preview: 'Arrivé',
         previewAt: 'à',
+        question: 'Arrivé avec combien de retard ?',
         submit: 'Enregistrer',
         title: 'RETARD CONSTATÉ',
       },
@@ -1258,16 +1544,19 @@ export default {
         waiting: 'En attente',
       },
       row: {
+        absentState: 'Absent',
         anonymous: 'Participant·e',
         arrived: 'Arrivé',
         arrivedLate: 'Arrivé',
         correct: 'Corriger',
         declaredLate: 'Retard annoncé',
         lateFor: 'Retard pour',
+        lateState: 'En retard',
         markedByYou: 'Pointé par toi à',
         markHere: 'Là',
         noAnswer: 'Sans réponse',
         noShow: 'Non pointé',
+        onTimeState: "À l'heure",
         saidNo: 'a dit absent',
         saidYes: 'a dit présent',
       },
@@ -1284,6 +1573,7 @@ export default {
       action: 'Préparer la convocation',
       draftAction: 'Continuer mes convocations',
       draftTitle: 'Tes convocations sont commencées',
+      offerAction: 'Voir l’offre Équipe',
       offerTitle: 'La convocation est incluse dans l’offre Équipe',
       title: 'Ce match n’a pas encore de convocation',
     },
@@ -1293,6 +1583,7 @@ export default {
     convocation: {
       bench: 'Sur le banc',
       called: 'Convoqués',
+      notPublished: 'La composition n’est pas encore publiée.',
       starters: 'Sur le terrain',
     },
     detection: {
@@ -1353,6 +1644,10 @@ export default {
       stepSplitHint: 'Séparer par poste recherché',
       title: 'LE CHEMIN COMPLET',
     },
+    editUnsupported: {
+      description: "Ce type d'événement ne se modifie pas encore depuis cette fiche.",
+      title: 'Modification limitée',
+    },
     emptyStates: {
       allAnswered: 'Tout le monde a répondu.',
       noAbsence: 'Aucune absence signalée.',
@@ -1385,6 +1680,10 @@ export default {
       available: 'Disponible',
       error: 'Impossible d’envoyer la demande de mise à la une.',
       rejected: 'Refusée, tu peux redemander',
+      success: {
+        message: 'Ta demande de mise à la une a été envoyée pour validation.',
+        title: 'Demande envoyée',
+      },
     },
     fields: {
       description: 'Description',
@@ -1403,15 +1702,30 @@ export default {
       homeTeamBadge: 'Équipe organisatrice',
       invitedTeamBadge: 'équipe invitée',
     },
+    late: {
+      helper: "0 = a l'heure. Ajuste la valeur si nécessaire avant validation.",
+      minutesInvalid: 'Le retard doit être un nombre positif.',
+      minutesLabel: 'Minutes de retard',
+      playerLabel: 'Joueur',
+      selfOnTime: "Arrivée enregistrée a l'heure.",
+    },
+    locationUnknown: 'Lieu à confirmer',
     managePanel: {
+      campaign: 'Cotisation',
       campaignAlreadyLinked: 'Cet événement a déjà une cotisation',
       cancel: 'Annuler',
       closeTraining: 'Fermer l\'entraînement',
+      detectionSwitch: 'Faire venir des joueurs',
+      // eslint-disable-next-line max-len
+      detectionSwitchNote: 'L’affiche sert à attirer des gens de l’extérieur : on ne publie donc pas l’heure et le lieu d’un entraînement. Pour ouvrir une séance à de nouveaux joueurs, crée une détection / séance d’essai.',
+      detectionTeamsBoard: 'Placer les équipes sur les terrains',
+      detectionTeamsBoardHint: 'Répartis d’abord les équipes depuis « Répartition ».',
       edit: 'Modifier',
       feature: 'À la une',
       lineup: 'Convocation',
       lineupDetection: 'Répartition',
       openTraining: 'Ouvrir l\'entraînement',
+      poster: "Voir l'affiche",
       title: 'Gérer l\'événement',
       tournamentSettings: 'Réglages tournoi',
     },
@@ -1426,6 +1740,17 @@ export default {
         loss: 'Défaite',
         win: 'Victoire',
       },
+    },
+    matchScore: {
+      bothRequired: 'Les deux scores sont obligatoires.',
+      error: 'Le score n’a pas pu être enregistré. Réessaie.',
+      lockedHint: 'Ce score vient de la source officielle : il ne se modifie pas ici.',
+      savedMessage: 'Le score du match est enregistré.',
+      savedTitle: 'Score enregistré',
+      submit: 'Valider le score',
+      them: 'Eux',
+      title: 'Score du match',
+      us: 'Nous',
     },
     menu: {
       campaign: 'Créer la cotisation de cet événement',
@@ -1540,6 +1865,7 @@ export default {
       notAnswered: 'Sans réponse',
       present: 'Présents',
     },
+    participantsHiddenMessage: 'Les identités des participants sont masquees par l organisateur.',
     participantsPayment: {
       manualReview: 'À valider',
       overdue: 'En retard',
@@ -1684,6 +2010,9 @@ export default {
       save: 'Enregistrer',
     },
     fields: {
+      address: {
+        label: 'Adresse',
+      },
       capacity: {
         label: 'Nombre de participant·e·s',
         placeholder: 'Illimité',
@@ -1704,9 +2033,16 @@ export default {
         label: 'Heure de fin',
         placeholder: 'HH:mm',
       },
+      externalParticipantLimit: {
+        label: 'Places externes',
+        placeholder: 'Combien de joueurs externes acceptes ?',
+      },
       externalRequests: {
         alwaysManual: 'Les demandes extérieures sont validées par toi.',
         label: 'Demandes extérieures',
+      },
+      facility: {
+        label: 'Installation',
       },
       invitedTeams: {
         label: 'Inviter des équipes',
@@ -1721,12 +2057,22 @@ export default {
         label: 'Lieu',
         placeholder: '2 rue du stade, 69000 Lyon',
       },
+      participantIdentityVisibility: {
+        label: 'Confidentialité des participants',
+        options: {
+          anonymized: 'Participants anonymisés',
+          visible: 'Identités visibles',
+        },
+      },
       pricePerPerson: {
         label: 'Prix par personne (€)',
         placeholder: 'Ex: 10',
       },
       recurrenceDay: {
         label: 'Jour de la récurrence',
+      },
+      recurrenceDays: {
+        label: 'Jours de récurrence',
       },
       recurrenceEndDate: {
         label: 'Date de fin de la récurrence',
@@ -1766,6 +2112,13 @@ export default {
         label: 'Nombre total de joueurs',
         placeholder: 'Ex: 10',
       },
+      trainingTotalPlayers: {
+        label: 'Joueurs attendus (interne)',
+        placeholder: 'Nombre de joueurs de tes équipes attendus',
+      },
+      trainingValidationMode: {
+        label: 'Validation des membres internes',
+      },
       type: {
         label: 'Type d\'événement',
         placeholder: 'Sélectionner un type d\'événement',
@@ -1781,14 +2134,66 @@ export default {
         },
       },
     },
+    loadFailed: {
+      // eslint-disable-next-line max-len
+      description: "L'événement n'a pas pu être chargé. Vérifie ta connexion, puis appuie sur Réessayer.",
+      retry: 'Réessayer',
+    },
+    loading: {
+      description: "Chargement de l'événement… Le bouton s'active dès que tout est affiché.",
+    },
+    locationMode: {
+      club: 'Club',
+      clubHint: 'Installation du club',
+      external: 'Exterieur',
+      externalHint: 'Adresse extérieure',
+    },
+    modals: {
+      invalidForm: {
+        title: 'Il manque quelque chose',
+      },
+      loadFailed: {
+        // eslint-disable-next-line max-len
+        description: 'Appuie sur Réessayer : enregistrer maintenant effacerait ses tâches, ses équipes conviées et son lieu.',
+        title: "L'événement n'a pas pu être chargé",
+      },
+      recurrenceUpdate: {
+        description: "Cet événement fait partie d'une série. Que veux-tu modifier ?",
+        options: {
+          all: 'Tous les événements',
+          cancel: 'Annuler',
+          future: 'Cet événement et les suivants',
+          this: 'Cet événement',
+        },
+        title: 'Modification récurrente',
+      },
+      saveFailed: {
+        keepsInput: "Tes saisies sont toujours à l'écran : rien n'est perdu.",
+        reason: "Ça n'a pas marché. Vérifie ta connexion, puis appuie de nouveau sur Enregistrer.",
+        title: "L'enregistrement n'est pas passé",
+      },
+      stillLoading: {
+        // eslint-disable-next-line max-len
+        description: "Laisse l'événement finir de s'afficher : enregistrer maintenant effacerait ses tâches, ses équipes conviées et son lieu.",
+        title: "La fiche n'est pas encore chargée",
+      },
+      unsupportedEdit: {
+        title: 'Modification limitée',
+      },
+    },
     title: 'Créer un événement',
     titleEdit: 'Modifier l\'événement',
+    trainingOpen: {
+      externalLimitRequired: 'Indique combien de places externes tu ouvres pour cet entraînement.',
+    },
   },
 
   eventFilters: {
     actions: {
       apply: 'Appliquer les filtres',
       clear: 'Effacer les filtres',
+      empty: 'Effacer les filtres',
+      submit: 'Appliquer',
     },
     fields: {
       activity: {
@@ -1845,6 +2250,7 @@ export default {
       join: 'Participer',
       present: 'Présent·e',
     },
+    emptyDesc: 'Essaie de modifier tes filtres ou lance une nouvelle recherche.',
     featured: 'À la une :',
     info: {
       alreadyJoined: 'Je participe !',
@@ -1886,6 +2292,7 @@ export default {
     loadingTitle: 'Chargement des événements',
     loadingUpdating: 'Actualisation des événements...',
     noData: 'Aucun événement trouvé.',
+    searchPlaceholder: 'Rechercher un événement',
     title: 'Mes événements',
   },
   eventWizard: {
@@ -1895,6 +2302,7 @@ export default {
     errors: {
       datePast: "La date ou l'heure de début doit être dans le futur.",
       genericCreate: "Erreur de création d'événement.",
+      genericLoad: 'Impossible de charger cette étape.',
       invalidTimeRange: "L'heure de fin doit être après l'heure de début.",
       invitesFetch: 'Impossible de charger les équipes à inviter.',
       locationRequired: 'Un lieu est requis.',
@@ -1924,16 +2332,55 @@ export default {
         createShort: 'Créer',
         edit: 'Modifier',
       },
+      addDescription: '+ Ajouter une description',
+      advanced: {
+        featuredCount: '{{count}} espace(s)',
+        invites: 'Invitations',
+        invitesCount: '{{count}} equipe(s)',
+        no: 'Non',
+        none: 'Aucune',
+        opponent: 'Adversaire',
+        opponentNone: 'Pas encore connu',
+        tasks: 'Tâches annexes',
+        title: 'Options avancées',
+      },
       capacity: 'Participants max: {{value}}',
+      capacityTitle: 'Capacité',
+      capacityValue: '{{count}} joueurs',
       completedCount: '{{done}}/5 infos clés complétées',
+      creationProgress: {
+        description: '{{completed}}/{{total}} evenements traites',
+        partialFailures: '{{count}} création(s) à vérifier',
+        title: 'Création en cours',
+      },
       dateLabel: 'Date',
+      dateTimeTitle: 'Date & horaire',
+      externalQuotaTitle: 'Places externes',
+      externalValidationTitle: 'Validation externe',
+      facilitySelected: 'Installation sélectionnée',
+      featured: {
+        descriptionShort: "Rien n'est envoyé si aucun espace n'est coché.",
+        recurrentNote: 'Pour une récurrence, la demande sera envoyée pour chaque occurrence créée.',
+        title: 'Mise à la une',
+        // eslint-disable-next-line max-len
+        warningMessage: "L'événement est créé, mais la demande de mise à la une n'a pas pu être envoyée. Tu pourras la refaire depuis le detail.",
+        warningTitle: 'Événement crée',
+      },
+      freeQuota: {
+        description: '{{remaining}}/{{total}} publication gratuite restante avant paywall.',
+        // eslint-disable-next-line max-len
+        hint: 'Une fois cet avantage utilise, les prochaines publications seront bloquées cote serveur et renverront vers ton abonnement.',
+        title: 'Quota événement gratuit',
+      },
       incomplete: 'à compléter',
+      internalValidationMode: 'Membres internes: {{value}}',
       invitedTeamsTitle: 'équipes invitées',
       invitesCount: '{{count}} équipe(s) invitée(s)',
       noDescription: 'Aucune description',
       notSet: 'Non renseigné',
       organizationTitle: 'Organisation',
       participationTitle: 'Participation',
+      perDayLocations: 'Lieux personnalises par jour',
       pricePerPerson: 'Prix par personne: {{value}}',
       quickOverviewTitle: 'Vue d\'ensemble',
       ready: 'Prêt à créer',
@@ -1943,6 +2390,7 @@ export default {
         description: 'Description',
         location: 'Lieu',
         logistics: 'Logistique',
+        participantPrivacy: 'Confidentialité participants',
         participants: 'Participants',
         reservation: 'Réservation',
         team: 'Équipe',
@@ -1958,15 +2406,50 @@ export default {
     },
     steps: {
       access: {
+        advancedGroup: 'Avancé',
         externalAlwaysManualHint: 'Les demandes extérieures sont validées par toi.',
         externalGroup: 'Demandes extérieures',
+        identityAnonymized: 'Anonymisées',
+        identityAnonymizedHint: 'Les autres ne verront que le nombre de participants.',
+        identityRow: 'Identités des participants',
+        identityVisible: 'Visibles',
+        identityVisibleHint: 'Les participants apparaissent avec leur nom et leur photo.',
+        subtitleShort: "Qui voit l'événement, et comment on s'y inscrit.",
+        titleShort: 'Accès',
+        validationAutoHint: 'Les participants confirment seuls leur présence — recommandé.',
+        validationGroupInternal: 'Validation des membres internes',
         validationGroupMembers: 'Validation des membres',
+        validationManualHint: 'Le coach valide chaque participant, un par un.',
+        visibilityGroup: 'Visibilité',
+        visibilityPrivate: 'Privé',
+        visibilityPrivateHint: "Réservé aux membres de l'équipe et aux invités.",
+        visibilityPublic: 'Public',
+        visibilityPublicHint: 'Découvrable par tous — recommandé pour une détection.',
       },
       description: {
         label: 'Description',
         placeholder: 'Ajoute des détails utiles pour les participants.',
+        // eslint-disable-next-line max-len
+        placeholderExample: "Ex. : viens essayer le foot avec les U15 — prévois une tenue de sport, l'essai est gratuit.",
         subtitle: 'Ajoute un contexte clair pour cet événement.',
+        subtitleShort: "Ce que les joueurs liront avant de s'inscrire.",
         title: 'Description',
+        valueHint: 'Une description claire double les inscriptions sur une détection.',
+      },
+      detectionSlots: {
+        capacityWarning: 'Le total des places par poste dépasse la capacité de l événement.',
+        emptyPositions: 'Aucun poste n est actuellement défini pour ce sport.',
+        positionSummary: '{{count}} place(s) sur ce poste',
+        recapSummary: '{{count}} place(s) cible au total',
+        // eslint-disable-next-line max-len
+        recurrenceHintBody: 'Les postes recherches sont disponibles uniquement sur une détection simple, non recurrente.',
+        recurrenceHintTitle: 'Postes par détection indisponibles',
+        selectedSectionTitle: 'Postes actifs',
+        // eslint-disable-next-line max-len
+        slotsSummaryFixed: '{{count}} places fléchées sur {{capacity}} — les {{free}} autres restent libres.',
+        slotsSummaryUnlimited: '{{count}} place(s) fléchée(s) sur un poste précis.',
+        toggleHint: 'Optionnel : les joueurs candidateront ensuite sur un poste précis.',
+        unselectedActionLabel: 'Activer',
       },
       invites: {
         myTeams: 'MES ÉQUIPES',
@@ -1977,14 +2460,34 @@ export default {
       location: {
         addInstallation: 'Ajouter une installation',
         addressMissing: 'Adresse non renseignée',
+        // eslint-disable-next-line max-len
+        allowAndNotifyConflict: 'Ce créneau dépasse la capacité, mais il restera autorise et notifiera les dirigeants.',
+        // eslint-disable-next-line max-len
+        allowAndNotifyHint: "Créneau complet sur cet horaire — le club l'autorise quand même, l'événement reste confirmé.",
+        capacityAvailable: 'Cette installation à encore de la capacité pour ce créneau.',
+        // eslint-disable-next-line max-len
+        disabledNextHint: 'Sélectionne une installation du club ou saisis une adresse extérieure pour continuer.',
+        focusSubtitle: "Où se déroule l'événement ?",
         helper: 'Sélectionne un lieu du club ou saisis une adresse externe.',
         installationHelper: 'Choisis une installation existante de ton club.',
+        modeButtonHint: 'Sélectionné ce mode de lieu',
+        modeHint: 'Choisis si le lieu est dans ton club ou en extérieur.',
         noInstallations: 'Aucune installation disponible pour ce club.',
+        noInstallationsTitle: 'Aucune installation pour le moment',
+        // eslint-disable-next-line max-len
+        pendingValidationConflict: "Ce créneau dépasse la capacité. La création passera en demande en attente jusqu'a validation d'un dirigeant.",
+        // eslint-disable-next-line max-len
+        pendingValidationHint: "Créneau complet sur cet horaire — l'événement partira en demande de validation au club.",
         subtitle: 'Le lieu est obligatoire pour continuer.',
         title: 'Lieu',
       },
       logistics: {
+        dateTimeGroupLabel: 'DATE ET HORAIRE',
+        focusSubtitle: "Quand a lieu l'événement ?",
+        focusTitle: 'Date & horaire',
         isRecurrent: 'Événement récurrent',
+        // eslint-disable-next-line max-len
+        recurrenceBaseDayHint: "Le jour de l'événement est présélectionné. Tu peux ajouter d'autres jours.",
         recurrenceDays: 'Jours de récurrence',
         recurrenceInterval: 'Intervalle de récurrence',
         recurrenceIntervalDecrement: "Réduire l'intervalle de récurrence",
@@ -1994,6 +2497,11 @@ export default {
         recurrenceIntervalWeeklyMany: 'Toutes les {{count}} semaines',
         recurrenceIntervalWeeklyOne: 'Toutes les semaines',
         recurrenceTitle: 'Configuration récurrence',
+        repeatApply: 'Appliquer',
+        repeatClear: 'Ne pas répéter',
+        repeatRowLabel: 'Répéter',
+        repeatRowOnce: 'Une seule fois',
+        repeatSheetTitle: "Répéter l'événement",
         reservationMode: 'Mode de réservation',
         reservationTitle: 'Paramêtres réservation',
         subtitle: "Configure date, horaires et règles d'accès.",
@@ -2002,14 +2510,68 @@ export default {
       // Y02 — l'etape « Contre qui ? » du tunnel, posee uniquement pour un match.
       // Idee d'Adel du 2026-08-19 : l'evenement doit s'appeler « Match vs X ».
       opponent: {
+        clubResultsTitle: 'Clubs trouvés',
+        clubSelected: 'Club trouvé. Précise son équipe en modifiant le nom si besoin.',
         hint: 'Tu ne le connais pas encore ? Passe cette étape, tu pourras l’ajouter plus tard.',
+        inviteActivitiesError: 'Impossible de charger la liste des sports pour le moment.',
+        inviteChangeClub: 'Changer de club',
+        inviteClearFilters: 'Effacer les filtres',
+        inviteClubsError: 'Impossible de charger les clubs externes pour le moment.',
+        inviteClubsFiltered: 'Clubs correspondant aux filtres',
+        inviteClubsFound: 'Résultats de recherche',
+        inviteClubsProposed: 'Clubs proposes',
+        inviteCurrent: 'Équipe adverse invitée',
+        inviteFiltersTitle: 'Filtres de recherche club',
+        inviteNoClub: 'Aucun club externe disponible pour le moment.',
+        inviteNoClubForFilters: 'Aucun club externe ne correspond à ces filtres pour le moment.',
+        inviteNoClubForSearch: 'Aucun club externe trouve pour cette recherche.',
+        inviteNoTeam: 'Aucune équipe disponible pour ce club.',
+        inviteNoTeamForSearch: 'Aucune équipe ne correspond à cette recherche.',
+        inviteOpenClub: 'Appuie pour voir les équipes du club',
+        invitePending: 'Invitation en attente de réponse',
+        invitePendingSummary: 'Invitation envoyée à {{team}} — son coach doit accepter.',
+        inviteSearchPlaceholder: 'Rechercher un club externe',
+        inviteSelectedClub: 'Club sélectionne',
+        // eslint-disable-next-line max-len
+        inviteSubtitle: 'Cherche son club, puis son équipe : elle recevra une invitation à ce match.',
+        inviteTeamAction: 'Appuie pour inviter cette équipe',
+        inviteTeamHint: 'Choisis l équipe que tu affrontes : son coach recevra l invitation.',
+        inviteTeamSearchPlaceholder: 'Rechercher une équipe',
+        inviteTeamsError: 'Impossible de charger les équipes de ce club.',
+        inviteTitle: 'Inviter l équipe adverse sur FoundClub',
         placeholder: 'Ex. : US Blaisoise U15',
         subtitle: 'Le match s’appellera « Match vs » suivi de ce nom.',
         title: 'Contre qui ?',
       },
       participants: {
+        decrease: 'Un joueur de moins',
+        externalQuotaLabel: 'Places externes',
         fixed: 'Capacité fixe',
         hint: 'Tu pourras encore modifier ces valeurs avant la création finale.',
+        hintFixed: 'Les inscriptions restent libres dans la limite des {{count}} places.',
+        hintUnlimited: 'Aucun plafond : tout le monde peut s inscrire.',
+        increase: 'Un joueur de plus',
+        internalInvitesAllAction: 'Inviter tous les membres',
+        // eslint-disable-next-line max-len
+        internalInvitesAllHint: 'Tous les membres de cette équipe recevront cette invitation et verront ensuite l événement dans leur planning.',
+        internalInvitesAllMembers: 'Tous les membres invites',
+        internalInvitesEmptyRoster: 'Aucun membre disponible pour cette équipe.',
+        // eslint-disable-next-line max-len
+        internalInvitesModalHint: 'Choisis si tu invites tout le groupe ou seulement certains membres à cet événement.',
+        internalInvitesPickedCount: '{{count}} membre(s) sélectionne(s)',
+        internalInvitesPickPrompt: 'Sélectionne les membres à inviter',
+        internalInvitesRemove: 'Retirer cette invitation',
+        internalInvitesSelectedCount: '{{count}} membre(s) invites',
+        internalInvitesSomeAction: 'Choisir certains membres',
+        // eslint-disable-next-line max-len
+        internalInvitesSubtitle: 'Choisis une équipe, puis invite tout le groupe ou seulement les membres concernés.',
+        internalInvitesTeamHint: 'Appuie pour choisir les membres ou inviter toute l equipe.',
+        internalInvitesTitle: 'Inviter des membres d une équipe de mon club',
+        matchCallUpCount: '{{count}} sur {{total}}',
+        // eslint-disable-next-line max-len
+        matchCallUpEmpty: "Cette équipe n'a encore aucun joueur. Tu pourras convoquer depuis la fiche du match.",
+        matchCallUpHint: 'Tu pourras encore la modifier, puis la publier depuis la fiche du match.',
+        matchCallUpTitle: 'Convocation',
         modeHintFixed: 'Mode capacité fixe: nombre de places limite.',
         modeHintUnlimited: 'Mode illimité: aucun plafond de participants.',
         modeLabel: 'Mode de capacité',
@@ -2023,21 +2585,37 @@ export default {
         summaryTitle: 'Résumé',
         title: 'Participants',
         totalPlayersExceedsCapacity: 'Le nombre de joueurs attendus ne peut pas dépasser la capacité max.',
+        trainingOpenCapacity: 'Illimité en interne + quota externe',
+        trainingPrivateCapacity: 'Illimité (entraînement prive)',
+        trainingTotalPlayers: 'Joueurs attendus (interne)',
         unlimited: 'Illimité',
         unlimitedHint: 'Aucune limite de places',
         unlimitedLabel: 'Illimité',
       },
       recap: {
         subtitle: 'Vérifie les informations avant création.',
+        subtitleShort: 'Relis, corrige, puis crée. Tout reste modifiable après.',
         title: 'Récapitulatif',
       },
       team: {
         createTeamCta: 'Créer une équipe',
         createTeamHint: "Crée d'abord ton équipe, puis reviens créer ton événement.",
+        focusSubtitle: "L'événement sera rattaché à cette équipe.",
+        myTeams: 'MES ÉQUIPES',
+        otherClubTeams: 'AUTRES ÉQUIPES DU CLUB',
         subtitle: "Sélectionne l'équipe organisatrice.",
         title: 'Équipe organisatrice',
       },
+      tournament: {
+        // eslint-disable-next-line max-len
+        subtitle: 'Définis les règles d inscription, les effectifs et les options d équipe pour ton tournoi.',
+        title: 'Paramètres du tournoi',
+      },
       type: {
+        comingSoonTag: 'Bientôt disponible',
+        focusSubtitle: 'Un seul choix — il adapte les étapes suivantes.',
+        friendlyMatchDescription: "Trouve un adversaire — ouvre l'annonce League",
+        friendlyMatchTitle: 'Match amical',
         subtitle: "Sélectionne le type d'événement.",
         title: "Type d'événement",
       },
@@ -2057,6 +2635,8 @@ export default {
         title: 'Mode de validation',
       },
       visibility: {
+        participantPrivacyAnonymized: 'Participants anonymisés',
+        participantPrivacyVisible: 'Identités visibles',
         public: 'Public',
         publicDesc: 'Visible pour tous les profils qui y ont accès.',
         subtitle: "Définis qui peut voir l'événement.",
@@ -2064,6 +2644,33 @@ export default {
         teamDesc: "Visibilité uniquement pour les membres de l'équipe créatrice de l'événement.",
         title: 'Visibilité',
       },
+    },
+    tournamentProgram: {
+      applyToAll: 'Appliquer à tous',
+      applyToAllHelper: 'Réinitialise les horaires personnalises et reapplique la base du tournoi.',
+      customHours: 'Horaires personnalises',
+      customizeHours: 'Personnaliser les horaires',
+      dayEndTime: 'Heure de fin du jour',
+      daysHelper: 'Active ou personnalise uniquement les journées qui sortent du cadre par défaut.',
+      dayStartTime: 'Heure de début du jour',
+      daysTitle: 'Jours du tournoi',
+      defaultEndTime: 'Heure de fin',
+      // eslint-disable-next-line max-len
+      defaultHoursHelper: 'Ces horaires servent de base pour toutes les journées actives du tournoi.',
+      defaultHoursTitle: 'Horaires par défaut',
+      defaultStartTime: 'Heure de début',
+      endDate: 'Date de fin',
+      errors: {
+        noActiveDays: 'Active au moins une journée de tournoi pour continuer.',
+      },
+      inheritedHours: 'Horaires hérités du tournoi',
+      inlinePeriodHelper: 'Définis directement les dates du tournoi avant de choisir le lieu.',
+      // eslint-disable-next-line max-len
+      logisticsToggleHelper: 'Active cette option pour définir une période, les jours actifs et les horaires par jour.',
+      logisticsToggleTitle: 'Tournoi sur plusieurs jours',
+      periodTitle: 'Periode',
+      startDate: 'Date de début',
+      useDefaultHours: 'Revenir aux horaires par défaut',
     },
   },
   facilityForm: {
@@ -2075,6 +2682,8 @@ export default {
       save: 'Enregistrer',
     },
     capacity: {
+      plural: 'équipes à la fois',
+      singular: 'équipe à la fois',
       teamPlural: 'équipes simultanées',
       teamSingular: 'équipe simultanée',
     },
@@ -2094,7 +2703,9 @@ export default {
     },
     errors: {
       addressGeocodeRequired: 'Sélectionne une adresse géolocalisée dans la liste.',
+      contextMissing: 'Impossible de récupérer les informations du club.',
       planningColorInvalid: 'Sélectionne une couleur validé.',
+      saveFailed: "Une erreur est survenue lors de l'enregistrement.",
     },
     fields: {
       address: 'Adresse (lieu exact)',
@@ -2125,10 +2736,19 @@ export default {
   facilityList: {
     actions: {
       add: 'Ajouter',
+      openPlanning: 'Voir le planning',
       viewPlanning: 'Voir planning',
+    },
+    alerts: {
+      delete: {
+        error: "Impossible de supprimer l'installation pour le moment.",
+        title: "Supprimer l'installation",
+      },
     },
     badges: {
       multisport: 'Multisport',
+      overflowAllowed: 'Conflits : autoriser et notifier',
+      overflowBlocked: 'Conflits : demande à valider',
       shared: 'Partagée',
     },
     capacity: {
@@ -2142,15 +2762,30 @@ export default {
       facilityName: 'Installation',
       unknownType: 'Type inconnu',
     },
+    empty: {
+      action: 'Ajouter une installation',
+      description: 'Ajoute les terrains, gymnases ou salles de ton club.',
+      title: 'Aucune installation',
+    },
     labels: {
+      planning: 'Planning',
       planningColor: 'Couleur planning',
     },
     planning: {
       allClubFacilities: 'Toutes installations',
       allSharedFacilities: 'Toutes partagées',
+      capacityAvailable: '{{count}} slot(s) restaient disponibles au pic de charge.',
+      // eslint-disable-next-line max-len
+      capacityReachedOverflow: 'La capacité a déjà été atteinte sur cette période. Les nouveaux dépassements restent autorises et notifieront les dirigeants.',
+      // eslint-disable-next-line max-len
+      capacityReachedStrict: 'La capacité a déjà été atteinte sur cette période. Les nouveaux dépassements passeront en demande en attente.',
+      capacityTitle: 'Capacité installation',
       occupiedBy: 'Occupé par {{clubName}}',
+      overflowAllowed: 'Autorise et notifier',
+      overflowBlocked: 'Demande en attente',
       scopeClub: 'Mon club',
       scopeShared: 'Partagées',
+      selectedFacility: 'Installation sélectionnée',
       sharedEmpty: 'Aucune installation partagée disponible pour ce club.',
       sharedFallbackTitle: 'Occupation',
       sharedLabel: 'Planning partagé',
@@ -2161,6 +2796,27 @@ export default {
       shared: 'Installations partagées',
     },
     sharedOwnerHint: 'Installation partagée du multisport {{ownerName}}. Lecture seule côté club.',
+  },
+  featuredRequests: {
+    approveSuccess: {
+      message: "L'événement est maintenant à la une du club.",
+      title: 'Demande acceptée',
+    },
+    confirm: {
+      approve: {
+        message: 'Cet événement sera visible dans le planning de tous les adherents du club.',
+        title: 'Accepter la demande ?',
+      },
+      reject: {
+        message: 'Le demandeur sera notifié du refus.',
+        title: 'Refuser la demande ?',
+      },
+    },
+    empty: 'Aucune demande en attente',
+    rejectSuccess: {
+      message: 'Le demandeur a été notifié.',
+      title: 'Demande refusée',
+    },
   },
   // LOT D41 ② — la copy des chantiers B (tunnel amical, etape 2/7) et C (carte
   // d'annonce) descend ici. Elle etait ecrite en chaines litterales dans le JSX :
@@ -2242,6 +2898,16 @@ export default {
       },
     },
   },
+  historyWizard: {
+    category: {
+      empty: 'Aucune catégorie disponible pour le moment.',
+      error: 'Impossible de charger les catégories pour le moment.',
+    },
+    club: {
+      clearSelection: 'Changer de club',
+      clearSelectionHint: 'Retire le club retenu et rouvre la recherche.',
+    },
+  },
   home: {
     fields: {
       type: {
@@ -2272,6 +2938,13 @@ export default {
       noClub: {
         description: 'Ton compte doit être rattaché à un club pour gérer ces demandes.',
         title: 'Club introuvable',
+      },
+      nonPartnerCoachPublishingBlocked: {
+        // eslint-disable-next-line max-len
+        adDescription: "Ton club n'est pas encore certifié sur FoundClub. Un superadmin doit autoriser la publication avant de créer une offre.",
+        // eslint-disable-next-line max-len
+        description: "Ton club n'est pas encore certifié sur FoundClub. Un superadmin doit autoriser la publication avant de créer un événement.",
+        title: 'Publication en attente d autorisation',
       },
       noTrainedTeams: {
         description: 'Tu dois être entraîneur d\'au moins une équipe pour gérer les demandes d\'adhésion.',
@@ -2446,6 +3119,10 @@ export default {
         events: {
           subtitle: 'Détections, séances d\u2019essai, matchs\u2026',
           title: 'Événement',
+        },
+        myActivities: {
+          subtitle: 'Tes candidatures et leurs réponses.',
+          title: 'Mes réponses',
         },
         // PARENT P2 — la porte vers « Mes enfants » depuis l accueil du parent.
         myChildren: {
@@ -3015,7 +3692,25 @@ export default {
     search: 'Recherche',
   },
   messaging: {
+    addGroupMembers: 'Ajouter des membres',
+    archive: 'Archiver',
+    archiveError: "Impossible d'archiver cette conversation.",
+    createConversationError: 'Impossible de démarrer cette conversation.',
+    errors: {
+      cannotMessageSelf: 'Impossible de lancer une conversation avec ton propre compte.',
+      failedToCreateConversation: 'Impossible de créer la conversation.',
+    },
+    filters: {
+      all: 'Toutes',
+      classic: 'Classique',
+      league: 'League',
+    },
+    loadError: 'Impossible de charger les conversations.',
+    loadUsersError: 'Impossible de charger les membres pour cette conversation.',
+    noClassicData: 'Aucune conversation classique.',
     noData: 'Aucune conversation trouvée.',
+    noLeagueData: 'Aucune conversation League.',
+    noSearchResults: 'Aucune conversation trouvée.',
     preview: {
       attachment: 'Pièce jointe',
       contactShare: 'Contact partagé',
@@ -3035,6 +3730,8 @@ export default {
       proposalWhen: '{{team}} propose un match — {{when}}',
       voiceNote: 'Note vocale',
     },
+    searchPlaceholder: 'Rechercher une conversation...',
+    searchUserPlaceholder: 'Rechercher un membre...',
     title: 'Messages privés',
     unread: {
       badge: 'Non lu',
@@ -3051,6 +3748,7 @@ export default {
   },
   multisport: {
     accessibility: {
+      addSection: 'Ajouter une section',
       addSponsor: 'Ajouter un partenaire',
       callPhone: 'Appeler le club',
       deleteSection: 'Supprimer la section',
@@ -3071,6 +3769,10 @@ export default {
       createSection: {
         title: 'Créer une section',
       },
+      licenses: {
+        subtitle: 'Piloter les cotisations et paiements de toutes les sections.',
+        title: 'Cotisations multisport',
+      },
       manageClub: {
         subtitle: 'Modifier les informations et réglages du club.',
         title: 'Gérer mon club',
@@ -3086,6 +3788,10 @@ export default {
         create: 'Créer la section',
         creating: 'Création...',
       },
+      activitiesErrorDescription: 'Impossible de charger la liste des sports pour le moment.',
+      activitiesErrorTitle: 'Le referentiel des sports est indisponible',
+      error: 'Impossible de charger cette structure multisport pour le moment.',
+      errorTitle: 'Création indisponible',
       fields: {
         address: {
           label: 'Adresse / Ville *',
@@ -3107,18 +3813,44 @@ export default {
         },
       },
       info: 'Une fois créée, la section pourra accueillir équipes, événements et membres.',
+      loading: 'Nous chargeons les informations de ta structure multisport.',
+      loadingTitle: 'Chargement de la fiche',
+      loadingUser: 'Nous préparons ta structure multisport avant la création de la section.',
+      loadingUserTitle: 'Chargement du club',
+      notFound: "Cette structure multisport est introuvable ou n'est plus accessible.",
+      notFoundTitle: 'Club introuvable',
       subtitle: 'Crée une section sportive pour ton club multisport.',
       title: 'Nouvelle section',
+      userError: 'Impossible de retrouver ta structure multisport pour le moment.',
+      userErrorTitle: 'Création indisponible',
     },
     deleteSectionConfirm: 'Es-tu sûr de vouloir supprimer la section "{{name}}" ? Cette action est irréversible.',
     deleteSectionTitle: 'Supprimer la section',
+    details: {
+      error: 'Impossible de charger cette structure multisport pour le moment.',
+      errorTitle: 'Club indisponible',
+      loading: 'Nous préparons les informations de ta structure multisport.',
+      loadingTitle: 'Chargement du club',
+      notFound: 'Cette structure multisport est introuvable ou n est plus accessible.',
+      notFoundTitle: 'Club introuvable',
+    },
     edit: {
+      error: 'Impossible de charger cette fiche multisport pour le moment.',
+      errorTitle: 'Édition indisponible',
       fields: {
         phone: {
           label: 'Téléphone',
           placeholder: 'Téléphone',
         },
       },
+      loading: 'Nous chargeons les informations à modifier.',
+      loadingTitle: 'Chargement de la fiche',
+      loadingUser: 'Nous préparons les informations de ton club multisport.',
+      loadingUserTitle: 'Chargement du club',
+      notFound: 'Cette structure multisport est introuvable ou n est plus accessible.',
+      notFoundTitle: 'Club introuvable',
+      userError: 'Impossible de retrouver ta structure multisport pour le moment.',
+      userErrorTitle: 'Édition indisponible',
     },
     empty: {
       admins: 'Aucun dirigeant rattaché.',
@@ -3126,10 +3858,28 @@ export default {
       sections: 'Aucune section disponible pour le moment.',
     },
     fallback: {
+      error: 'Impossible de charger tes informations multisport pour le moment.',
+      errorTitle: 'Club indisponible',
+      loading: 'Nous préparons ton espace multisport.',
+      loadingTitle: 'Chargement du club',
       noClub: 'Aucun club multisport associé à ce compte.',
+      noClubTitle: 'Aucun club multisport',
+    },
+    featured: {
+      error: 'Impossible de charger cette structure multisport pour le moment.',
+      errorTitle: 'Demandes indisponibles',
+      loading: 'Nous chargeons les informations de ta structure multisport.',
+      loadingTitle: 'Chargement des demandes',
+      loadingUser: 'Nous préparons les demandes à la une de ta structure multisport.',
+      loadingUserTitle: 'Chargement du club',
+      notFound: "Cette structure multisport est introuvable ou n'est plus accessible.",
+      notFoundTitle: 'Club introuvable',
+      userError: 'Impossible de retrouver ta structure multisport pour le moment.',
+      userErrorTitle: 'Demandes indisponibles',
     },
     formErrors: {
       addressRequired: "L'adresse est obligatoire.",
+      clubRequired: 'Impossible de retrouver le club multisport.',
       generic: 'Une erreur est survenue lors de la création de la section.',
       sectionNameRequired: 'Le nom de la section est obligatoire.',
     },
@@ -3140,6 +3890,33 @@ export default {
       members: 'membres',
       teams: 'équipes',
     },
+    members: {
+      empty: 'Aucun membre trouve pour le moment.',
+      emptyFiltered: 'Aucun membre ne correspond à ces filtres.',
+      error: 'Impossible de charger cette structure multisport pour le moment.',
+      errorTitle: 'Membres indisponibles',
+      loading: 'Nous chargeons les informations de ta structure multisport.',
+      loadingTitle: 'Chargement des membres',
+      loadingUser: 'Nous préparons les membres de ta structure multisport.',
+      loadingUserTitle: 'Chargement du club',
+      noSection: 'Section non renseignée',
+      notFound: "Cette structure multisport est introuvable ou n'est plus accessible.",
+      notFoundTitle: 'Club introuvable',
+      userError: 'Impossible de retrouver ta structure multisport pour le moment.',
+      userErrorTitle: 'Club indisponible',
+    },
+    planning: {
+      error: 'Impossible de charger cette structure multisport pour le moment.',
+      errorTitle: 'Planning indisponible',
+      loading: 'Nous chargeons les informations de ta structure multisport.',
+      loadingTitle: 'Chargement du planning',
+      loadingUser: 'Nous préparons le planning de ta structure multisport.',
+      loadingUserTitle: 'Chargement du club',
+      notFound: "Cette structure multisport est introuvable ou n'est plus accessible.",
+      notFoundTitle: 'Club introuvable',
+      userError: 'Impossible de retrouver ta structure multisport pour le moment.',
+      userErrorTitle: 'Planning indisponible',
+    },
     sectionCreated: 'La section a été créée avec succès.',
     sectionCreatedMessage: 'La section "{{name}}" a été créée avec succès.',
     sectionCreatedTitle: 'Section créée',
@@ -3149,6 +3926,21 @@ export default {
       members: 'Membres',
       sections: 'Sections',
       teams: 'Équipes',
+    },
+    teams: {
+      empty: 'Aucune équipe trouvée pour le moment.',
+      emptyFiltered: 'Aucune équipe ne correspond à ces filtres.',
+      error: 'Impossible de charger cette structure multisport pour le moment.',
+      errorTitle: 'Équipes indisponibles',
+      loading: 'Nous chargeons les informations de ta structure multisport.',
+      loadingTitle: 'Chargement des équipes',
+      loadingUser: 'Nous préparons les équipes de ta structure multisport.',
+      loadingUserTitle: 'Chargement du club',
+      noSection: 'Section non renseignée',
+      notFound: "Cette structure multisport est introuvable ou n'est plus accessible.",
+      notFoundTitle: 'Club introuvable',
+      userError: 'Impossible de retrouver ta structure multisport pour le moment.',
+      userErrorTitle: 'Club indisponible',
     },
     titles: {
       admins: 'Dirigeants omnisport',
@@ -3182,6 +3974,9 @@ export default {
   },
   notifications: {
     details: {
+      bodyFallback: 'Aucun detail disponible.',
+      loadError: 'Impossible de charger cette notification.',
+      notFound: 'Notification introuvable.',
       participationDeclined: {
         actions: {
           viewEvent: "Voir l'événement",
@@ -3200,12 +3995,19 @@ export default {
         title: 'Demande refusée',
         unknownDate: 'Date indisponible',
       },
+      screenTitle: 'Notification',
+      statusFallback: 'Information',
+      title: 'Notification',
     },
     labels: {
       participationDeclined: 'Refusée',
     },
+    title: 'Notifications',
   },
   onboarding: {
+    actions: {
+      skipStep: 'Passer cette étape',
+    },
     category: {
       subtitle: 'La catégorie d\'âge dans laquelle tu joues cette saison.',
       title: 'Ta catégorie ?',
@@ -3221,6 +4023,14 @@ export default {
         + 'et te contacter pour te recruter.',
       visibleLabel: 'Profil visible',
     },
+    history: {
+      subtitle: 'Raconte-nous brièvement tes expériences passées (Clubs, niveaux, postes...)',
+      title: 'Ton parcours sportif',
+    },
+    level: {
+      subtitle: 'Le plus haut niveau auquel tu as joué — facultatif.',
+      title: 'Ton meilleur niveau ?',
+    },
     optionalStepHint: 'Cette étape n\'est pas obligatoire, mais elle reste utile pour améliorer ton expérience FoundClub.',
     physique: {
       heightLabel: 'Taille (cm)',
@@ -3228,6 +4038,25 @@ export default {
       subtitle: 'Facultatif — ces infos aident les recruteurs.',
       title: 'Ton physique',
       weightLabel: 'Poids (kg)',
+    },
+    position: {
+      subtitle: 'Sélectionne tes postes de prédilection',
+      title: 'Quel(s) poste(s) ?',
+    },
+    sport: {
+      subtitle: 'Choisis ton sport de préférence',
+      title: 'Quel est ton sport ?',
+    },
+    trainedTeams: {
+      alreadyRequested: 'Demande déjà envoyée',
+      createFirst: 'Créer ma première équipe',
+      // eslint-disable-next-line max-len
+      empty: "Aucune équipe n'est encore déclarée dans ton club. Crée la première : tu en seras l'entraîneur·e.",
+      errorMessage: "Impossible d'envoyer ta demande pour le moment. Réessaie dans un instant.",
+      errorTitle: 'Demande non envoyée',
+      submit: 'Envoyer ma demande ({{count}})',
+      subtitle: 'Sélectionne-les toutes : une demande part au club pour chacune.',
+      title: 'Quelles équipes entraînes-tu ?',
     },
   },
   onboardingAffiliation: {
@@ -3289,6 +4118,10 @@ export default {
       missingInfoMessageClub: 'Renseigne le nom du club recherché.',
       missingInfoMessageTeam: "Renseigne le nom de l'équipe recherchée.",
       missingInfoTitle: 'Information manquante',
+      // eslint-disable-next-line max-len
+      nearbyDenied: "Localisation refusée : la liste reste triée par suggestions. Tu peux l'autoriser dans les réglages de ton téléphone.",
+      // eslint-disable-next-line max-len
+      nearbyUnavailable: "La localisation n'est pas disponible sur cet appareil. La liste reste triée par suggestions.",
       requestError: 'Impossible d\'envoyer ta demande.',
       requestSentDescription: 'Ta demande a été envoyée aux superadmins. Tu recevras une notification.',
       requestSentTitle: 'Demande envoyée',
@@ -3350,6 +4183,22 @@ export default {
     subtitleClubStaff: 'Retrouve ton club pour le gérer sur FoundClub.',
     subtitleTeam: 'Recherche ton équipe puis ouvre sa fiche pour envoyer ta demande.',
     subtitleTeamFromClub: 'Recherche ton équipe dans le club sélectionné puis ouvre sa fiche pour envoyer ta demande.',
+    teamNotCreated: {
+      coachContactHint: 'Indique un téléphone ou un e-mail pour joindre ton coach.',
+      coachContactLabel: 'Contact du coach (téléphone ou e-mail)',
+      coachContactPlaceholder: 'Ex: 06 12 34 56 78 ou coach@club.fr',
+      coachNameHint: 'Indique le nom de ton coach ou dirigeant.',
+      coachNameLabel: 'Nom de ton coach ou dirigeant',
+      coachNamePlaceholder: 'Ex: Karim Benali',
+      // eslint-disable-next-line max-len
+      description: "Tu ne peux pas encore rejoindre : ce sera possible dès que le club ou ton coach aura créé l'équipe sur FoundClub. Laisse le contact de ton coach ou dirigeant, on l'invite à la créer.",
+      // eslint-disable-next-line max-len
+      missingCoach: "Renseigne au moins le nom ou le contact de ton coach pour qu'on puisse l'inviter.",
+      send: 'Envoyer au club',
+      sendHint: 'Envoie le contact de ton coach aux superadmins FoundClub.',
+      title: "Ce club n'a pas encore d'équipe sur FoundClub",
+      unknownClub: 'Club sans équipe',
+    },
     titleClub: 'Trouve ton club',
     titleTeam: 'Trouve ton équipe',
     tutorial: {
@@ -3371,6 +4220,7 @@ export default {
   otp: {
     actions: {
       confirm: 'Confirmer',
+      resend: 'Renvoyer le code',
     },
     fields: {
       code: {
@@ -3401,11 +4251,43 @@ export default {
     },
   },
   planning: {
+    actions: {
+      today: "Aujourd'hui",
+    },
+    cm: {
+      description: 'Retrouve le planning des sections et la liste des événements de ton club.',
+      emptyListDescription: 'Change la date ou les filtres pour afficher d’autres événements.',
+      emptyListTitle: 'Aucun événement dans cette liste',
+      // eslint-disable-next-line max-len
+      filtersErrorDescription: "Le planning reste accessible, mais nous n'avons pas pu charger toutes les sections ou installations.",
+      filtersErrorTitle: 'Certains filtres du planning sont indisponibles',
+      title: 'Mon planning',
+    },
+    eventsFrom: 'Événements à partir de',
+    filters: {
+      allFacilities: 'Toutes installations',
+      allSections: 'Toutes sections',
+    },
     fullscreen: {
       club: 'Planning club',
       clubShared: 'Planning partagé',
       cm: 'Planning omnisport',
       personal: 'Mon planning',
+    },
+    labels: {
+      noTime: 'Sans horaire',
+    },
+    mode: {
+      monthDescription: 'Vue globale du mois',
+      monthShort: 'Mois',
+      threeDaysDescription: 'Vue condensée sur 3 jours',
+      threeDaysShort: '3 jours',
+      weekDescription: 'Vue détaillée de la semaine',
+      weekShort: 'Semaine',
+    },
+    noEventsForDate: 'Aucun événement ce jour-là',
+    status: {
+      pendingParticipation: 'Demande en attente',
     },
   },
   playerCard: {
@@ -3554,14 +4436,18 @@ export default {
     },
     actions: {
       addAccount: 'Ajouter un compte',
+      addValue: 'Ajouter',
       adminDashboardClassic: 'Dashboard admin classique',
+      avatarPickerUnavailable: 'Le sélecteur d image est indisponible sur ce navigateur.',
       confirmDeleteAvatar: 'Es-tu sûr de vouloir supprimer cette image ?',
       contactSupport: 'Nous contacter',
       deleteAccount: 'Supprimer mon compte',
       edit: 'Modifier mon profil',
+      editIdentity: 'Modifier mon nom et ma photo',
       findClub: 'Trouver mon club',
       findTeam: 'Trouver une équipe',
       ignore: 'Ignorer',
+      language: 'Langue',
       logout: 'Déconnexion',
       // PARENT P2 — la rangée qui manquait : aucune des 8 rangées du menu ne
       // parlait d'enfant, alors que « mes enfants » est la raison d'être du
@@ -3573,12 +4459,15 @@ export default {
       manageRequests: 'Gérer mes demandes',
       manageTeamJoinRequests: 'Gérer les demandes d\'adhésion aux équipes',
       manageTeams: 'Gérer mes équipes',
+      myCard: 'Ma carte de collection',
       myChildren: 'Mes enfants',
       myTeams: 'Mes équipes',
+      previewPublic: 'Voir mon profil comme les autres',
       save: 'Continuer',
       superAdminLeagueDashboard: 'Dashboard League',
       switchAccount: 'Changer de compte',
       view: 'Voir mon profil',
+      viewAvatar: 'Agrandir la photo',
     },
     alerts: {
       deleteAlert: {
@@ -3599,6 +4488,7 @@ export default {
           + ' Cette action est définitive.',
         title: 'Supprimer ton compte ?',
       },
+      deleteError: 'Une erreur est survenue lors de la suppression du compte.',
       maxAccounts: {
         message: 'Tu ne peux pas connecter plus de {{count}} comptes sur cet appareil.',
         title: 'Limite atteinte',
@@ -3617,6 +4507,12 @@ export default {
     contactSupport: {
       unavailableBody: "Aucune application e-mail n'a pu s'ouvrir. Écris-nous à contact@foundclubpro.com.",
       unavailableTitle: "Impossible d'ouvrir l'e-mail",
+    },
+    errors: {
+      birthdateIncomplete: 'Renseigne une date de naissance valide pour continuer.',
+      formIncomplete: 'Vérifie les informations saisies pour continuer.',
+      photoNotRetrieved: "La photo n'a pas pu être récupérée. Réessaie.",
+      photoUnavailable: "L'appareil photo n'est pas disponible.",
     },
     fields: {
       // AA11 — ces six libelles vivaient en REPLI dans le code des ecrans
@@ -3644,6 +4540,7 @@ export default {
       },
       email: {
         label: 'Email',
+        placeholder: 'Ajouter un email',
       },
       firstname: {
         label: 'Prénom',
@@ -3703,6 +4600,18 @@ export default {
         placeholder: '80',
       },
     },
+    history: {
+      add: 'Ajouter une expérience',
+      bestLevel: 'Meilleur niveau',
+      count: '{{count}} expérience(s)',
+      deleteConfirmation: 'Veux-tu vraiment supprimer cette expérience ?',
+      empty: 'Ajoute ton parcours sportif pour enrichir ton profil',
+      emptyOther: 'Aucun historique renseigne',
+      periodNotSet: 'Période non renseignée',
+      tapToEdit: 'Touche la carte pour modifier',
+      title: 'Historique sportif',
+      unknownClub: 'Club inconnu',
+    },
     identity: {
       // AFFIL A3 — la demande qui attend, sur le profil du dirigeant. Elle ne
       // dit RIEN de la certification du club : ce sont deux pastilles, deux
@@ -3717,6 +4626,12 @@ export default {
         superAdmin: 'Administrateur',
       },
       roleWithClub: '{{role}} · {{club}}',
+      verified: 'Certifié',
+    },
+    language: {
+      auto: 'Langue du téléphone',
+      en: 'English',
+      fr: 'Français',
     },
     // AA11 — LA PHRASE QU'ADEL DEMANDE (« felicitations, votre (info) a ete
     // modifiee »), et elle NOMME toujours ce qui a change. Le libelle insere
@@ -3736,7 +4651,10 @@ export default {
     sections: {
       account: 'Compte',
       administration: 'Administration',
+      contact: 'Coordonnées',
+      followUp: 'Suivi',
       profileActivity: 'Profil & activité',
+      visibility: 'Visibilité',
     },
     // L33 — le parcours Abonnement est en trois ecrans : le hub (gerer), le
     // carrousel (choisir) et la matrice (comparer). Ces cles nomment les
@@ -3792,7 +4710,16 @@ export default {
         usage7: 'Communiquer à tous vos licenciés',
       },
       headerTitle: 'Abonnement',
+      offers: {
+        skip: 'Continuer gratuitement',
+      },
       offersHeaderTitle: 'Changer d\'offre',
+      onboardingHeaderTitle: 'Choisis ton offre',
+      paywall: {
+        recommended: 'Offre recommandee',
+        remaining: 'Usages gratuits restants: {{count}}.',
+        requiredPlan: 'Offre requise: {{plans}}.',
+      },
       quota: {
         labels: {
           EVENT_PUBLISH: 'Événements',
@@ -3817,22 +4744,33 @@ export default {
         team: 'Tes équipes couvertes profitent des droits Équipe.',
       },
       title: 'Mon abonnement',
+      unavailable: {
+        description: "Cette action n'est pas disponible pour ce profil.",
+        title: 'Action indisponible',
+      },
     },
     subtitles: {
+      address: 'Renseigne ta ville ou ton code postal',
       avatar: "Ajoute une photo de profil pour que l'on puisse te reconnaître facilement.",
       birthdate: 'Renseigne ta date de naissance.',
+      identity: 'Renseigne ton nom, ton prénom et ta date de naissance.',
+      identityPresident: 'La seule étape obligatoire du parcours dirigeant.',
       name: 'Renseigne ton nom et prénom.',
       section: 'Elle filtre les équipes et les annonces qui te concernent.',
       type: 'Ta fonction principale — tu pourras en ajouter d\'autres plus tard.',
     },
+    title: 'Profil',
     titles: {
+      address: 'Où habites-tu ?',
       avatar: 'Une photo de profil ?',
       birthdate: 'Quelle est ta date de naissance ?',
       edit: 'Modifier mes informations',
+      identity: 'Qui es-tu ?',
       name: "Comment t'appelles-tu ?",
       profile: 'Mon compte',
       section: 'Dans quelle section joues-tu ?',
       type: 'Quel est ton statut ?',
+      unified: 'Mon profil',
     },
     updateError: 'Impossible d\'enregistrer ton profil pour le moment. Vérifie ta connexion et réessaie.',
   },
@@ -3842,6 +4780,45 @@ export default {
       needsAccount: 'Cette personne n\'a pas encore de compte FoundClub : impossible de l\'inviter.',
       sent: 'Invitation envoyée',
     },
+  },
+  recruitmentAdDetails: {
+    owner: {
+      posterCta: 'Avis de recherche',
+    },
+  },
+  recruitmentAdFilters: {
+    actions: {
+      apply: 'Appliquer',
+      clear: 'Effacer',
+    },
+    fields: {
+      category: {
+        label: 'Categorie',
+        placeholder: 'Sélectionner une catégorie',
+      },
+      city: {
+        label: 'Ville',
+        placeholder: 'Ex: Marseille',
+      },
+      level: {
+        label: 'Niveau',
+        placeholder: 'Sélectionner un niveau',
+      },
+      position: {
+        label: 'Poste',
+        placeholder: 'Sélectionner un poste',
+        placeholderFallback: 'Ex: Avant-centre',
+      },
+      section: {
+        label: 'Section',
+        placeholder: 'Sélectionner une section',
+      },
+      sport: {
+        label: 'Sport',
+        placeholder: 'Sélectionner un sport',
+      },
+    },
+    headerTitle: 'Filtres annonces',
   },
   register: {
     actions: {
@@ -3857,13 +4834,26 @@ export default {
     title: 'Crée ton compte',
   },
   requests: {
+    approvedError: 'Impossible de valider cette demande pour le moment.',
     approvedSuccess: 'La demande est validée.',
+    empty: 'Aucune demande en attente',
+    emptyDescription: "Les prochaines validations de demandes d'événements apparaîtront ici.",
     rejectConfirmMessage: 'Cette demande sera refusée et la personne prévenue.',
     rejectConfirmTitle: 'Refuser cette demande ?',
+    rejectedError: 'Impossible de refuser cette demande pour le moment.',
     rejectedSuccess: 'La demande est refusée.',
   },
   requestsHub: {
     actionError: 'Impossible de traiter la demande.',
+    actions: {
+      approveOverflow: 'Autoriser',
+      open: 'Voir la proposition',
+      openChat: 'Ouvrir chat',
+      respond: 'Repondre',
+      viewEvent: "Voir l'événement",
+      viewProfile: 'Voir le profil',
+      viewProfileHint: 'Ouvre le profil du demandeur',
+    },
     assignNow: 'Assigner maintenant',
     // Y04 — LA FENETRE QUI DIT CE QUI VIENT DE CHANGER, demande d'Adel du
     // 2026-08-19. Une phrase par type de demande : « acceptée » ne dit pas si
@@ -3885,6 +4875,10 @@ export default {
       title: 'Félicitations',
       unknown: 'La demande est acceptée.',
     },
+    childInterest: {
+      refuseMessage: 'La demande pour {{firstname}} sera effacée. Son parent sera prévenu.',
+      refuseTitle: 'Refuser la demande ?',
+    },
     clubAssignedMessage: "{{name}} a été ajouté au club. Veux-tu l'assigner à une équipe maintenant ?",
     clubAssignedTitle: 'Entraîneur ajouté',
     clubClaimAssignedMessage: '{{name}} a été ajouté comme dirigeant du club.',
@@ -3895,23 +4889,48 @@ export default {
       club: 'Club',
       event: 'Événement',
       featured: 'À la une',
+      friendly: 'Amicaux',
+      installation: 'Installation',
+      interest: 'Interets',
       team: 'Équipe',
       teamInvite: 'Invitations',
     },
     forbidden: 'Cet onglet est réservé aux entraîneur·e·s et aux dirigeant·e·s.',
+    installation: {
+      defaultRefusalReason: 'Créneau complet, dépassement refuse par le dirigeant.',
+      eventLabel: 'Evenement',
+      refusalModalDescription: 'Explique pourquoi cette exception installation est refusée.',
+      refusalModalPlaceholder: 'Exemple: capacité déjà atteinte pour ce créneau.',
+      refusalModalTitle: 'Refuser la demande',
+      refusalReasonRequired: 'Ajoute un motif pour refuser cette demande d installation.',
+      summary: "Une équipe supplémentaire demande ce créneau sur l'installation.",
+    },
+    interest: {
+      responseDescription: 'Choisis une réponse rapide à envoyer au joueur intéresse.',
+      responseMissing: 'Choisis une réponse pour traiter cet intérêt.',
+      responsePreview: 'Message envoyé',
+      responseTitle: 'Répondre à cet intérêt',
+      targetTeam: 'Équipe visee',
+    },
     // S10-C — les invitations d'équipe reçues. Le libellé du bouton dit où l'on
     // va ET ce qu'on y fera : accepter et refuser vivent à UN seul endroit, la
     // section « Invitations d'équipe » de la fiche événement (décision D5).
     invitations: {
       respond: "Répondre à l'invitation",
     },
+    loading: 'Chargement des demandes...',
     migratedBannerAction: "Ouvrir l'onglet Demandes",
     migratedBannerTitle: 'Ce flux a été migré vers Demandes.',
     partialError: 'Source indisponible',
+    // eslint-disable-next-line max-len
+    partialErrorDescription: 'Certaines demandes n ont pas pu être chargées. Le reste reste disponible.',
+    partialErrorForbidden: 'Cette section n est pas disponible pour ce compte.',
+    partialErrorLabel: 'indisponible',
     // Y04 — la bannière d'erreur n'avait AUCUN bouton : elle nommait la panne et
     // s'arrêtait là. Un 403 n'y arrive jamais (le service le laisse tomber en
     // silence), donc ce qui reste affiché est toujours réessayable.
     partialErrorRetry: 'Réessayer',
+    partialErrorServer: 'Le chargement est temporairement indisponible. Réessaie dans un instant.',
     rejectEventMessage: 'L\'événement sera annulé.',
     rejectEventTitle: 'Refuser la demande ?',
     rejectFeaturedMessage: 'Le demandeur sera notifié du refus.',
@@ -3930,6 +4949,25 @@ export default {
       team: 'Équipe',
       teamInvite: 'Invitation',
       unknown: 'Demande',
+    },
+  },
+  search: {
+    map: {
+      addressPlaceholder: 'Tape une adresse ou une ville',
+    },
+  },
+  searchAlerts: {
+    actions: {
+      create: 'Créer une alerte',
+    },
+    create: {
+      desc: 'Donne un nom à ta recherche pour recevoir des notifications.',
+      title: 'Créer une alerte',
+    },
+    empty: 'Aucune alerte enregistrée.\nCrée une alerte depuis les filtres de recherche.',
+    typeSelection: {
+      desc: "Choisis le type d'alerte que tu souhaites créer.",
+      title: 'Que recherches-tu ?',
     },
   },
   // L16 — chaque bouton dit CE QU'ON OBTIENT (un fichier, un format), jamais un
@@ -3970,6 +5008,7 @@ export default {
     // Android : la feuille de partage de React Native jette le fichier (cf. L20).
     // Le geste devient « enregistrer, puis ouvrir avec » — les libellés le disent.
     openWith: 'Ouvrir l’affiche avec…',
+    otherFormats: 'Autres formats : story, A4 à imprimer',
     placeholderQrLabel: 'Scanne pour participer',
     placeholderQrLabelDecouverte: 'Scanne pour essayer',
     placeholderTitre: 'Viens montrer',
@@ -4018,6 +5057,7 @@ export default {
       tournoi: 'Viens vivre notre tournoi !',
     },
     shareLabel: 'Voir l’événement',
+    sharePoster: 'Partager l’affiche',
     story: 'Version story 9:16',
     storyHint: 'Image verticale plein écran, pour Instagram, WhatsApp ou Snap.',
     storyHintSave: 'Image verticale plein écran, enregistrée dans ta galerie, '
@@ -4026,17 +5066,68 @@ export default {
     title: 'Ton événement est en ligne',
     variantHint: 'Choisir le style {{label}}',
   },
+  squad: {
+    filters: {
+      city: 'Ville de référence',
+      cityPlaceholder: 'Ex: Marseille',
+      clear: 'Effacer',
+      title: 'Filtres Squad',
+    },
+    invitation: {
+      acceptMessage: 'Tu as rejoint la squad.',
+      acceptTitle: 'Invitation acceptée',
+      declineMessage: 'Tu as decline cette invitation.',
+      declineTitle: 'Invitation refusée',
+      error: 'Impossible de répondre a l invitation.',
+    },
+    inviteLink: {
+      acceptMessage: 'Tu as rejoint la squad.',
+      acceptTitle: 'Squad rejointe',
+      error: 'Impossible de rejoindre la squad avec ce lien.',
+      // eslint-disable-next-line max-len
+      loginMessage: 'Connecte-toi ou crée ton compte pour rejoindre cette squad avec le lien d invitation.',
+      loginTitle: 'Connexion requise',
+    },
+    join: {
+      cancelError: "Impossible d'annuler la demande.",
+      cancelSuccessMessage: 'Ta demande à rejoindre la squad a bien été annulée.',
+      cancelSuccessTitle: 'Demande annulée',
+      error: "Impossible d'envoyer la demande.",
+      successMessage: 'Le capitaine a reçu ta demande.',
+      successTitle: 'Demande envoyée',
+    },
+    search: {
+      title: 'Trouver une Squad',
+    },
+  },
   squadDetails: {
     actions: {
       deleteTeam: 'Supprimer la squad',
       deleteTeamError: 'Impossible de supprimer la squad.',
       edit: 'Modifier',
       editTeam: 'Modifier la squad',
+      invitePlayer: 'Inviter un joueur',
+      leaveTeamError: 'Impossible de quitter la squad.',
       menuDescription: 'Choisis une action.',
       menuTitle: 'Actions squad',
       openRequests: 'Voir les demandes',
       requests: 'Demandes',
       unavailableTitle: 'Action non disponible',
+    },
+    captains: {
+      addAction: 'Ajouter comme capitaine',
+      addHint: 'Tu gardes ton rôle et la squad peut avoir plusieurs capitaines.',
+      addSuccess: '{{name}} est maintenant capitaine avec toi.',
+      addTitle: 'Ajouter un capitaine',
+      assignButton: 'Nommer',
+      assignError: 'Impossible de mettre à jour les capitaines.',
+      assignSuccessTitle: 'Capitaines mis à jour',
+      modalDescription: 'Choisis comment donner le rôle de capitaine a {{name}}.',
+      modalTitle: 'Assigner capitaine',
+      transferAction: 'Transferer le capitanat',
+      transferHint: '{{name}} devient le seul capitaine de la squad.',
+      transferSuccess: '{{name}} devient le seul capitaine de la squad.',
+      transferTitle: 'Laisser ma place',
     },
     defaultName: 'Squad',
     delete: {
@@ -4050,10 +5141,17 @@ export default {
     labels: {
       locationUnknown: 'Localisation non renseignée',
     },
+    leave: {
+      title: 'Quitter la squad',
+    },
     roster: {
       captain: 'Capitaine',
       player: 'Joueur',
+      removeAction: 'Retirer',
+      removeError: 'Impossible de retirer ce joueur.',
+      removeTitle: 'Retirer le joueur',
       title: 'Effectif',
+      unknownPlayer: 'Joueur',
     },
     slots: {
       added: 'Créneau ajouté',
@@ -4080,6 +5178,7 @@ export default {
       recruitment: 'Publier une annonce de recrutement',
     },
     firstActionTitle: 'Que veux-tu faire en premier pour profiter de ton abonnement ?',
+    unlockedAtRenewalTitle: 'À ta prochaine échéance, tu auras :',
     unlockedTitle: 'Ton offre débloque :',
     unlocks: {
       clubRoles: 'Gestion des entraîneurs et dirigeants',
@@ -4135,8 +5234,10 @@ export default {
       search: 'Chercher',
       selectAll: 'Tout sélectionner',
       show: 'Afficher',
+      suspendUser: 'Suspendre le compte',
       unpublish: 'Dépublier',
       unselectAll: 'Tout desélectionner',
+      unsuspendUser: 'Reactiver le compte',
     },
     alerts: {
       bulkFailedTitle: 'Action de masse impossible',
@@ -4213,6 +5314,8 @@ export default {
       clipboardUnavailable: 'Copié indisponible sur cette build',
       entryDeleted: 'Entrée supprimée',
       idCopied: 'ID copié',
+      userSuspended: 'Compte suspendu.',
+      userUnsuspended: 'Compte reactive.',
     },
     form: {
       allowedTypes: 'Types autorisés',
@@ -4261,6 +5364,12 @@ export default {
       file: 'Fichier',
       gallery: 'Galerie',
     },
+    suspensionModal: {
+      description: "Une raison support est obligatoire et sera ajoutée a l'audit.",
+      reasonPlaceholder: 'Raison obligatoire (minimum 3 caractères)',
+      suspendTitle: 'Suspendre le compte',
+      unsuspendTitle: 'Reactiver le compte',
+    },
   },
 
   /* eslint-disable perfectionist/sort-objects */
@@ -4271,7 +5380,7 @@ export default {
         placeholder: 'Ex: 20',
       },
       startTime: {
-        label: '? partir de',
+        label: 'À partir de',
         placeholder: 'Heure de début',
       },
     },
@@ -4280,11 +5389,19 @@ export default {
   reservation: {
     actions: {
       cancelRequest: 'Annuler la demande',
+      findPlayers: 'Chercher joueurs',
+      openAgain: 'Ouvrir aux joueurs',
       participate: 'Réserver',
+      privatize: 'Privatiser',
       requestFeatured: 'Demander la mise à la une',
+      sos: 'SOS 🔥',
     },
     bookFull: {
       error: 'Impossible de réserver le créneau entier.',
+      success: {
+        message: 'Ta réservation est maintenant complète.',
+        title: 'Réservation privatisee',
+      },
     },
     card: {
       missingPlayers: 'Il manque {{count}} joueur',
@@ -4308,6 +5425,14 @@ export default {
       tournaments: 'Tournois',
     },
     joinError: 'Impossible de rejoindre cette réservation.',
+    joinSuccess: {
+      message: 'Tu participes maintenant à cette réservation.',
+      title: 'Participation confirmée',
+    },
+    missingPlayers: {
+      subtitle: 'Rejoins une réservation qui manque de joueurs',
+      title: 'Joueurs recherchés',
+    },
     mode: {
       fullGroup: 'J\'ai déjà mon groupe complet',
       invalidPlayerCount: 'Merci de entrer un nombre validé',
@@ -4318,11 +5443,21 @@ export default {
       tooManyPlayers: 'Le nombre doit être inférieur au total',
     },
     noData: 'Aucune réservation trouvée.',
+    noMissingPlayers: 'Aucune réservation ne cherche de joueurs pour le moment',
+    noMissingPlayersHint: 'Reviens plus tard ou crée ta propre réservation !',
     openForPlayers: {
       error: 'Impossible d’ouvrir ce créneau aux joueurs.',
+      success: {
+        message: 'Les joueurs peuvent maintenant te rejoindre !',
+        title: 'Réservation ouverte',
+      },
     },
     sosAlert: {
       error: 'Impossible d’envoyer l’alerte SOS.',
+      success: {
+        message: 'Les joueurs proches seront notifies.',
+        title: 'Alerte SOS lancée',
+      },
     },
     title: 'Événements :',
   },
@@ -4352,18 +5487,31 @@ export default {
   teamDetails: {
     actions: {
       contactTeam: 'Contacter',
+      contactTrainer: "Contacter l'entraîneur·e",
+      contactTrainers: 'Contacter les entraîneur·e·s',
+      contactTrainersError: "Impossible d'ouvrir la conversation pour le moment.",
+      convocations: 'Convocations',
       defaultComposition: 'Composition type',
       edit: 'Modifier',
+      facilities: 'Installations',
       inviteMember: 'Inviter un membre du club',
       join: "C'est mon équipe !",
+      joinRequest: "Demander à rejoindre l'équipe",
       leave: "Quitter l'équipe",
+      noTrainerContact: "Aucun entraîneur n'est disponible pour cette équipe.",
       openPanel: 'Ouvrir',
       panelTitle: "Actions d'équipe",
+      publicJoin: "C'est mon équipe",
+      requestPending: 'Demande en attente',
       shareInviteLink: "Partager un lien d'invitation",
+      sponsors: 'Sponsors & partenaires',
       stats: 'Statistiques',
       teamChat: 'Équipe',
+      teamChatFull: "Discussion d'équipe",
+      teamDues: "Cotisation de l'équipe",
     },
     alerts: {
+      addTrainerError: "Impossible d'ajouter cet entraîneur",
       deleteTrainer: {
         actions: {
           cancel: 'Annuler',
@@ -4373,8 +5521,10 @@ export default {
           + ' Si tu souhaites le retirer seulement de cette équipe merci de passer par le bouton de modification de l\'équipe.',
         title: 'Tu es sur le point de supprimer cet·te entraîneur·e de ton club.',
       },
+      deleteTrainerError: 'Impossible de retirer cet entraîneur',
       invitePlayers: {
         alreadyHaveTheApp: "J'ai déjà l'application",
+        downloadApp: "Telecharge l'application ici",
         downloadOnAndroid: 'Télécharger sur Android',
         downloadOnIOS: 'Télécharger sur iOS',
         message: 'Bonjour !'
@@ -4387,6 +5537,8 @@ export default {
         actions: {
           ok: 'OK',
         },
+        // eslint-disable-next-line max-len
+        coachDescription: "Les entraîneurs de l'équipe et le dirigeant du club vont recevoir ta demande.",
         description: 'Ton entraîneur·e va recevoir ta demande et la traiter dès que possible.',
         title: 'Ta demande d\'adhésion a bien été envoyée',
       },
@@ -4398,13 +5550,159 @@ export default {
         description: 'Tu es sur le point de quitter l\'équipe. Une fois cette action validée tu ne pourras plus participer aux entraînements et matchs.',
         title: 'Es-tu sûr·e de vouloir quitter cette équipe ?',
       },
+      removePlayer: {
+        description: "Veux-tu vraiment retirer ce joueur de l'équipe ?",
+        title: 'Supprimer le joueur',
+      },
+      removePlayerError: 'Impossible de retirer ce joueur de l équipe',
+      trainerRequired: 'Au moins un entraîneur est requis',
+      updateTrainersError: 'Impossible de mettre à jour les entraîneurs',
+    },
+    calendar: {
+      dateUnknown: 'Date à confirmer',
+      empty: {
+        all: 'Aucun match pour ce filtre.',
+        results: 'Aucun résultat disponible.',
+        upcoming: 'Aucun match à venir pour cette équipe.',
+      },
+      filters: {
+        myTeam: 'À venir',
+        poolCalendar: 'Calendrier poule',
+        poolResults: 'Joués',
+      },
+      followedTeam: 'Équipe suivie',
+      months: {
+        all: 'Tous les mois',
+      },
+      monthUnknown: 'Date à confirmer',
+      round: {
+        chip: 'J{{round}}',
+        title: 'Journée {{round}}',
+        unknown: 'Journée non précisée',
+        unknownShort: 'J?',
+      },
+      rounds: {
+        all: 'Toutes les journées',
+      },
+      scope: {
+        ffbbRound: 'Affichage organise par journée FFBB.',
+        fullPool: 'Résultats et calendrier de toute la poule.',
+        upcomingAll: 'Rencontres à venir de la poule.',
+        upcomingTeamOnly: 'Prochaines rencontres de ton équipe uniquement.',
+      },
+      status: {
+        played: 'Terminé',
+        upcoming: 'À venir',
+      },
+      you: 'Toi',
     },
     external: {
+      actions: {
+        addSource: 'Ajouter une source',
+        editSource: 'Modifier la source',
+        report: 'Voir le rapport',
+        reportBug: 'Signaler',
+        sync: 'Synchroniser',
+      },
+      cardTitle: 'Source externe',
+      errorsTitle: 'Erreurs',
+      errorTitle: 'Problème de synchronisation',
+      followedTeam: 'Équipe suivie',
+      history: {
+        errors: 'erreurs',
+        warnings: 'avertissements',
+      },
+      historyTitle: 'Dernières synchronisations',
+      lastConfigUpdate: 'Lien mis à jour',
+      lastConfigUpdateBy: 'Mis à jour par',
+      lastMode: 'Origine',
+      lastSync: 'Dernière synchronisation',
+      loading: {
+        // eslint-disable-next-line max-len
+        connectingDescription: 'Nous récupérons le classement, le calendrier et les données associées.',
+        connectingTitle: 'Connexion de ton équipe',
+        previewingDescription: 'Nous récupérons la liste des équipes disponibles.',
+        previewingTitle: 'Analyse de la compétition',
+        waitDescription: 'Merci de patienter pendant la récupération des données.',
+        waitTitle: 'Chargement en cours',
+      },
+      mode: {
+        connect: 'Configuration initiale',
+        daily: 'Synchronisation auto quotidienne',
+        hotWindow: 'Synchronisation auto autour des matchs',
+        manual: 'Synchronisation manuelle',
+        unknown: 'Synchronisation',
+      },
+      noSource: 'Aucune source configurée',
+      pool: 'Poule',
       prompt: {
         cta: 'Ajouter le classement',
         description: "Tu peux ajouter le lien du classement de ta ligue pour retrouver directement dans l'application ton classement, ton calendrier et tes statistiques.",
         title: 'Ajoute le classement de ta ligue',
       },
+      recommendedBadge: 'Recommandée',
+      recommendedTeam: 'Équipe recommandée',
+      // eslint-disable-next-line max-len
+      replaceDescription: "Cette équipe a déjà une source configurée. La nouvelle source remplacera l'ancienne configuration.",
+      replaceTitle: 'Remplacer la source externe ?',
+      report: {
+        archivedSection: 'Événements archivés',
+        away: 'Exterieur',
+        createdSection: 'Événements créés',
+        dateUnknown: 'Date à confirmer',
+        home: 'Domicile',
+        openEvent: "Ouvrir l'événement",
+        scoreUpdatedSection: 'Scores importes',
+        skippedSection: 'Matchs ignorés',
+        title: 'Classement et calendrier synchronisés',
+        unknownOpponent: 'Adversaire non précisé',
+        updatedSection: 'Événements mis à jour',
+      },
+      resolutionMode: 'Mode de résolution',
+      resolvedSource: 'Source résolue',
+      // eslint-disable-next-line max-len
+      staffOnly: "Seul un entraîneur assigné à cette équipe ou un dirigeant du club peut lancer l'import.",
+      status: {
+        configured: 'Configuré',
+        error: 'Erreur',
+        notConfigured: 'Non configuré',
+        synced: 'Synchronisé',
+        syncedWithWarnings: 'Synchronisé avec avertissements',
+        syncing: 'Synchronisation',
+      },
+      summary: {
+        archived: 'Archives',
+        created: 'Créés',
+        scoreUpdated: 'Scores importes',
+        unchanged: 'Inchangés',
+        updated: 'Mis à jour',
+        venueDetailFetchFailed: 'Détails lieu KO',
+        venueEnriched: 'Lieux enrichis',
+        venueFallbackUsed: 'Lieu à confirmer',
+      },
+      syncCompleted: 'Classement et calendrier synchronisés.',
+      warningsTitle: 'Avertissements',
+    },
+    ffbb: {
+      configure: 'Configurer le classement externe',
+      configureDescription: "Colle l'URL de ton compétition FFF ou FFBB",
+      configureTitle: 'Configurer le classement externe',
+      description: 'Description (optionnel)',
+      descriptionPlaceholder: 'Décris le problème...',
+      errorReported: 'Signalement envoyé, merci !',
+      noCandidate: 'Aucune équipe détectée depuis cette source.',
+      noData: 'Aucun classement externe configuré',
+      problems: {
+        missingTeam: 'Équipe manquante',
+        other: 'Autre',
+        outdated: 'Données obsoletes',
+        wrongData: 'Données incorrectes',
+        wrongUrl: 'Mauvaise URL',
+      },
+      problemType: 'Type de problème',
+      reportTitle: 'Signaler un problème',
+      selectTeam: 'Sélectionne ton équipe',
+      urlError: 'Erreur lors de la configuration: ',
     },
     invitation: {
       accept: 'Accepter',
@@ -4436,15 +5734,35 @@ export default {
       sheetTitle: "Inviter dans l'équipe",
       someone: 'Cette personne',
     },
+    modals: {
+      trainers: {
+        add: 'Ajouter un entraîneur',
+        noData: 'Aucun entraîneur ou dirigeant disponible',
+        title: 'Choisir les entraîneurs',
+      },
+    },
     myTitle: 'Mon équipe',
     sections: {
+      membersHiddenTitle: 'Membres masqués',
       nextEvents: 'Prochains événements',
+      noTrainer: 'Aucun entraîneur pour le moment',
       players_one: 'Joueur·se',
       players_other: 'Joueur·se·s',
+      playersHidden: 'Le club masque les joueurs de cette équipe pour les visiteurs externes.',
       trainers_one: 'Entraîneur·e',
       trainers_other: 'Entraîneur·e·s',
+      trainersHidden: 'Le club masque les entraîneurs de cette équipe pour les visiteurs externes.',
     },
     stats: {
+      baselineLabel: 'Depuis le {{date}}',
+      noData: 'Aucune statistique disponible pour le moment.',
+      resetAction: 'Réinitialiser les statistiques',
+      // eslint-disable-next-line max-len
+      resetDescription: "Les compteurs repartiront de zéro à partir de maintenant. L'historique est conservé.",
+      resetError: 'Impossible de réinitialiser les statistiques',
+      resetReasonDefault: 'Reset manuel depuis Mon équipe',
+      resetSuccess: 'Les statistiques ont été réinitialisées à partir de maintenant.',
+      resetTitle: 'Réinitialiser les statistiques ?',
       summaryHint: 'Consulte les statistiques détaillées de ton équipe.',
     },
     tabs: {
@@ -4458,12 +5776,21 @@ export default {
   /* eslint-enable perfectionist/sort-objects */
   teamEdit: {
     actions: {
+      deleteConfirmAction: 'Oui, supprimer',
+      deleteError: "Impossible de supprimer l'équipe.",
+      deleteTeam: "Supprimer l'équipe",
+      deleteTitle: "Supprimer l'équipe",
       save: 'Enregistrer',
+      saveError: 'Impossible d enregistrer l équipe.',
     },
     fields: {
       activities: {
         label: 'Sports',
         placeholder: 'Sélectionner un sport',
+      },
+      address: {
+        label: "Adresse de l'équipe",
+        placeholder: 'Rechercher une adresse',
       },
       category: {
         label: 'Catégorie',
@@ -4486,9 +5813,42 @@ export default {
         placeholder: 'Sélectionner une section',
       },
       trainers: {
+        actions: {
+          add: 'Ajouter un entraîneur',
+        },
         label: 'Entraîneur·e·s',
         placeholder: 'Sélectionner un·e entraîneur·e',
       },
+    },
+    membershipRequests: {
+      // eslint-disable-next-line max-len
+      allowCoachHint: 'Si ce réglage est désactivé, seul le dirigeant pourra accepter ou refuser les demandes pour cette équipe.',
+      allowCoachToggle: "Autoriser l'entraîneur à traiter les demandes",
+      // eslint-disable-next-line max-len
+      allSelectedHint: "Aucun filtre précis n'est appliqué: tous les entraîneurs de l'équipe pourront traiter les demandes.",
+      authorizedManagers: 'Entraîneurs autorisés',
+      // eslint-disable-next-line max-len
+      authorizedManagersHint: 'Seuls les entraîneurs sélectionnés pourront gérer les demandes. Le dirigeant gardera toujours une vue complète.',
+      authorizedManagersPlaceholder: 'Tous les entraîneurs sélectionnés',
+      // eslint-disable-next-line max-len
+      description: 'Choisis si les entraîneurs de cette équipe peuvent gérer les demandes, ou si le dirigeant garde la main.',
+      // eslint-disable-next-line max-len
+      ownerOnlyDescription: 'Le club est configuré pour que le dirigeant traite toutes les demandes. Les entraîneurs de cette équipe ne pourront pas accepter ou refuser directement.',
+      title: "Demandes d'adhésion",
+    },
+    paymentValidation: {
+      authorizedValidators: 'Entraîneurs autorisés à encaisser',
+      // eslint-disable-next-line max-len
+      authorizedValidatorsHint: 'Ces entraîneurs pourront enregistrer un paiement reçu pour cette équipe uniquement. Tu gardes tous tes droits, et tu peux retirer cette autorisation à tout moment.',
+      authorizedValidatorsPlaceholder: 'Personne pour le moment',
+      // eslint-disable-next-line max-len
+      description: 'Choisis les entraîneurs qui pourront marquer une cotisation comme payée pour cette équipe. Ils ne verront jamais l’argent des autres équipes.',
+      // eslint-disable-next-line max-len
+      noneHint: 'Personne n’est autorisé : toi seul peux enregistrer un paiement reçu pour cette équipe.',
+      title: 'Encaissement des cotisations',
+    },
+    sections: {
+      sportProfile: 'Profil sportif',
     },
     title: 'Créer une équipe',
     titleEdit: "Modifier l'équipe",
@@ -4511,11 +5871,21 @@ export default {
         label: 'Niveau',
         placeholder: 'Sélectionner un niveau',
       },
+      name: {
+        label: 'Nom de l équipe',
+        placeholder: 'Rechercher un nom',
+      },
       section: {
         label: 'Section',
         placeholder: 'Sélectionner une section',
       },
     },
+    status: {
+      // eslint-disable-next-line max-len
+      referenceErrorBody: 'Tu peux quand même filtrer par nom, ou recharger les listes de référence.',
+      referenceErrorTitle: 'Certaines listes n ont pas pu être chargées.',
+    },
+    title: 'Filtres équipes',
   },
   teamList: {
     actions: {
@@ -4531,6 +5901,11 @@ export default {
         title: 'Limite d\'équipes atteinte',
       },
     },
+    awaitingApproval: {
+      approveCta: 'Valider cette équipe',
+      // eslint-disable-next-line max-len
+      explanation: "Cette équipe a été créée par un·e entraîneur·e de ton club. Elle n'apparaîtra pour les autres qu'une fois que tu l'auras validée.",
+    },
     badges: {
       coach: 'COACH',
       invitation: 'INVITATION',
@@ -4543,7 +5918,12 @@ export default {
       members: 'Membres',
       section: 'Section',
     },
+    findTeamCta: 'Rechercher une équipe',
+    // eslint-disable-next-line max-len
+    noClubEmptyDescription: 'Recherche un club, ouvre sa fiche, puis demande à rejoindre une équipe.',
+    noClubEmptyTitle: "Tu n'as pas encore d'équipe",
     noData: 'Aucune équipe trouvée.',
+    noSearchResult: 'Aucune équipe trouvée pour cette recherche',
     pendingNotice: {
       claim: {
         unblocks: 'Une fois acceptée, tu deviens dirigeant·e du club et tu peux créer tes équipes.',
@@ -4576,15 +5956,124 @@ export default {
   teamMembershipRequestList: {
     actions: {
       accept: 'Accepter',
+      backToTeams: 'Retour aux équipes',
       reject: 'Refuser',
+    },
+    errors: {
+      accept: 'Impossible de valider la demande pour le moment.',
+      load: "Impossible de charger les demandes d'équipe pour le moment.",
+      loadTitle: 'Chargement impossible',
+      missingTeamBody: "Impossible d'ouvrir ces demandes sans identifiant d'équipe.",
+      missingTeamTitle: 'Équipe introuvable',
+      reject: 'Impossible de refuser la demande pour le moment.',
     },
     fields: {
       accepted: 'Demande acceptée',
       pending: "{{firstname}} s'est signalé comme joueur·se de l'équipe",
       rejected: 'Demande refusée',
     },
+    governance: {
+      manageAllowed: 'Tu peux traiter cette demande pour cette équipe.',
+      // eslint-disable-next-line max-len
+      ownerOnly: '{{name}} a demandé à rejoindre {{team}}. Ton équipe doit attendre la validation par ton ou tes dirigeant(s).',
+      // eslint-disable-next-line max-len
+      readOnly: 'Tu vois cette demande, mais seul un entraîneur autorisé ou le dirigeant peut la traiter.',
+    },
     noData: 'Aucune demande d\'adhésion en attente',
     title: 'Demandes d\'adhésion',
+  },
+  teamStats: {
+    empty: 'Aucun joueur dans cette équipe',
+    title: 'Statistiques',
+  },
+  teamWizard: {
+    actions: {
+      create: "Créer l'équipe",
+      skipStep: 'Passer cette étape',
+    },
+    blocked: {
+      backCta: "J'ai compris",
+    },
+    clubRequired: {
+      createCta: 'Je ne trouve pas mon club',
+      searchCta: 'Rechercher mon club',
+      // eslint-disable-next-line max-len
+      subtitle: 'Une équipe appartient toujours à un club. Rejoins ton club ou crée-le, puis reviens créer ton équipe.',
+      title: "Il te faut d'abord un club",
+    },
+    created: {
+      // eslint-disable-next-line max-len
+      message: 'Félicitations, ton équipe est créée. Tu peux dès maintenant y ajouter tes joueur·ses et créer tes premiers événements.',
+      // eslint-disable-next-line max-len
+      pendingMessage: "Félicitations, votre équipe est créée. Vous pourrez en profiter une fois qu'elle sera validée par votre dirigeant.",
+      pendingTitle: 'Félicitations',
+      title: 'Félicitations',
+    },
+    errors: {
+      clubRequired: 'Club introuvable. Recommence la création depuis la liste équipe.',
+      trainerRequired: 'Sélectionne au moins un entraîneur.',
+    },
+    recap: {
+      freeQuota: {
+        footnote: 'Cette équipe utilise ta création gratuite ({{used}}/{{total}}).',
+      },
+      identity: 'Identité',
+      noDescription: 'Aucune — ajouter ?',
+      staff: 'Encadrement',
+    },
+    steps: {
+      activity: {
+        allSports: 'Autres sports',
+        clubSports: 'Les sports de ton club',
+        clubSportTag: 'Sport du club',
+        searchPlaceholder: 'Rechercher un sport…',
+        skipEmpty: 'Continuer sans sport',
+        subtitle: "Le sport principal de l'équipe.",
+        title: 'Sport',
+      },
+      category: {
+        skipEmpty: 'Continuer sans catégorie',
+        subtitle: "La catégorie d'âge de l'équipe.",
+        title: 'Catégorie',
+      },
+      description: {
+        // eslint-disable-next-line max-len
+        hint: "Visible sur la page de l'équipe et dans la recherche — utile pour attirer des joueur·se·s.",
+        // eslint-disable-next-line max-len
+        placeholder: 'Ex. : Équipe engagée en championnat départemental. Entraînements mardi et jeudi, matchs le samedi.',
+        subtitle: "Optionnel — précise l'identité et les objectifs de l'équipe.",
+        title: 'Description',
+      },
+      level: {
+        skipEmpty: 'Continuer sans niveau',
+        subtitle: "Le niveau de compétition de l'équipe.",
+        title: 'Niveau',
+      },
+      name: {
+        hint: 'Visible par tout le club — modifiable plus tard.',
+        placeholder: 'Ex. : U15 Filles',
+        subtitle: 'Donne un nom clair à ton équipe pour la retrouver facilement.',
+        suggestions: 'Suggestions',
+        title: "Nom de l'équipe",
+      },
+      recap: {
+        subtitle: 'Vérifie, puis crée ton équipe.',
+        title: 'Récapitulatif',
+      },
+      section: {
+        skipEmpty: 'Continuer sans section',
+        subtitle: 'Dans quelle section joue cette équipe ?',
+        title: 'Section',
+      },
+      trainers: {
+        createCta: '+  Créer un·e entraîneur·e',
+        createHint: 'Invitation envoyée par e-mail',
+        selfHint: "Tu es déjà sélectionné·e — tu pourras en ajouter d'autres plus tard.",
+        selfTag: 'Toi',
+        subtitle: 'Sélectionne au moins un·e entraîneur·e pour encadrer cette équipe.',
+        title: 'Entraîneur·e·s',
+      },
+    },
   },
   // BLOQUER (02/09) — un bloc A PART, volontairement : les lots ENFANTS et
   // HYGIENE ajoutent au meme moment dans `userDetails` et dans `profile`.
@@ -5270,8 +6759,12 @@ export default {
     },
     empty: {
       club: 'Aucun club renseigné',
+      coachFeedback: 'Aucun',
       coachTeams: 'Aucune équipe entraînée',
       playerTeams: 'Aucune équipe joueur',
+    },
+    errors: {
+      minorNoParent: "Impossible de contacter ce joueur mineur car aucun compte parent n'est lie.",
     },
     fields: {
       address: 'Adresse',
@@ -5295,11 +6788,19 @@ export default {
     notSet: 'Non renseigné',
     private: 'Privé',
     sections: {
+      coachFeedback: 'Retours du coach',
+      matchStats: 'Stats de match',
       personal: 'Infos personnelles',
       sport: 'Profil sportif',
     },
     stats: {
+      assists: 'Passes déc.',
+      goals: 'Buts',
+      losses: 'Défaites',
+      matches: 'Matchs',
+      minutes: 'Minutes',
       privateToOwner: 'Ces statistiques ne sont visibles que par la personne elle-même.',
+      wins: 'Victoires',
     },
     teamGroups: {
       coach: 'Équipes entraînées',
@@ -5362,7 +6863,41 @@ export default {
       },
       subtitle: 'Prêt·e à trouver le club de ton enfant ?',
     },
+    subscription: {
+      actions: {
+        skip: 'Continuer',
+      },
+      club: {
+        bullet1: 'Toutes les équipes du club incluses',
+        bullet2: 'Installations et réservations',
+        bullet3: 'Sponsors et canal de diffusion',
+        footnote: 'Réservée aux clubs vérifiés',
+        kicker: "Quand ton club s'organise",
+        title: 'Pilote tout le club',
+      },
+      free: {
+        bullet1: '1 équipe offerte',
+        bullet2: '1 événement et 1 annonce offerts',
+        bullet3: 'Chat illimité, pour toujours',
+        kicker: "Aujourd'hui",
+        title: 'Commence sans payer',
+      },
+      hint: 'Tu retrouveras les offres à tout moment dans Profil → Mon abonnement.',
+      team: {
+        bullet1: 'Événements et matchs illimités',
+        bullet2: 'Convocations en 2 taps',
+        bullet3: "Cotisation encaissée dans l'app",
+        kicker: 'Quand ton équipe grandit',
+        title: 'Débloque tes équipes',
+      },
+      title: 'Bienvenue dans FoundClub',
+    },
     subtitle: 'Prêt·e à trouver ton club et évoluer dans le sport ?',
     title: 'Bienvenu·e sur',
+    tour: {
+      actions: {
+        start: 'Démarrer le tour guidé',
+      },
+    },
   },
 };
