@@ -51,6 +51,7 @@ import {
   useGetUserHistories,
 } from '@/services/userHistory/userHistoryQueries';
 
+import { isAccessRefusalError } from '@/utils/errors/accessRefusal';
 import { getErrorMessage } from '@/utils/errors/displayError';
 import safeJsonParse from '@/utils/safeJsonParse';
 
@@ -381,6 +382,7 @@ function UserDetails({ navigation, route }) {
   const isProfileLoading = isSelfProfile ? !currentUser : fetchedUserLoading;
   const {
     data: personalStats,
+    error: personalStatsError,
     isLoading: isPersonalStatsLoading,
     refetch: refetchPersonalStats,
   } = useGetPersonalStats(targetUserId, {
@@ -1031,9 +1033,19 @@ function UserDetails({ navigation, route }) {
                   </View>
                 ) : null}
 
+                {/* VA1 — le serveur refuse ces stats a qui n'est pas la personne :
+                    le dire, au lieu d'afficher des zeros. */}
+                {!isPersonalStatsLoading && isAccessRefusalError(personalStatsError) ? (
+                  <Text style={[Fonts.p2, Fonts.neutral200]}>
+                    {t(
+                      'userDetails.stats.privateToOwner',
+                      'Ces statistiques ne sont visibles que par la personne elle-même.',
+                    )}
+                  </Text>
+                ) : null}
                 {isPersonalStatsLoading ? (
                   <Text style={[Fonts.p2, Fonts.neutral200]}>Chargement des statistiques...</Text>
-                ) : (
+                ) : !isAccessRefusalError(personalStatsError) && (
                   <View style={[Alignments.row, Alignments.wrap, Alignments.justifySpaceBetween]}>
                     {profileSummaryCards.map((stat) => (
                       <View

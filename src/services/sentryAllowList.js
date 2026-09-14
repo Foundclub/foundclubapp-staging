@@ -3,6 +3,8 @@ import {
   BOOT_REQUEST_NO_SESSION_CODE,
 } from '@/services/bootRequestGuard';
 
+import { isAccessRefusalError } from '@/utils/errors/accessRefusal';
+
 /**
  * A map of ignored API status codes.
  * @type {{ [key: number]: boolean }}
@@ -101,6 +103,26 @@ const isBusinessRefusalQuery = (query) => {
 };
 
 /**
+ * Dit si l'erreur est un REFUS DE DROIT (403) rendu à une requête de LECTURE.
+ *
+ * VA1 — Sentry REACT-NATIVE-2 et -1 (14/09) : 167 « captureQueryError », tous
+ * `{ status: 403, name: 'ForbiddenError', message: 'Forbidden' }`, dont la build
+ * publique 1301 sur TeamDetails. Ne pas avoir accès à une partie de l'app est un
+ * ÉTAT du produit : c'est l'écran qui doit le dire (« accès réservé »), pas un
+ * défaut à remonter. Le `QueryCache` ne voit que des requêtes de lecture — une
+ * écriture refusée passe par le `MutationCache` et n'est pas concernée.
+ *
+ * ⛔ Un 403 qui déguise une panne serveur part toujours : voir
+ * `@/utils/errors/accessRefusal`, le même juge que lisent les écrans.
+ * @param {unknown} error - L'erreur, déballée par l'intercepteur ou brute.
+ * @param {any} [query] - La query react-query à l'origine de l'erreur.
+ * @returns {boolean} Vrai si c'est un refus de droit attendu sur une lecture.
+ */
+export const isReadAccessRefusal = (error, query) => (
+  Array.isArray(query?.queryKey) && isAccessRefusalError(error)
+);
+
+/**
  * Dit si une erreur de requête doit être TUE plutôt qu'envoyée à Sentry.
  * @param {unknown} error - L'erreur, déballée par l'intercepteur ou brute.
  * @param {any} [query] - La query react-query à l'origine de l'erreur.
@@ -112,6 +134,8 @@ export const isInSentryExceptionsAllowList = (error, query) => {
 
   const errorCode = readErrorCode(error);
   if (errorCode !== undefined && ignoredApiErrorCodes[errorCode] === true) return true;
+
+  if (isReadAccessRefusal(error, query)) return true;
 
   return status === 400 && isBusinessRefusalQuery(query);
 };
