@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { Platform } from 'react-native';
 
 import GlobalPromptModal from '@/components/organisms/popup/GlobalPromptModal';
@@ -44,6 +45,7 @@ function NotificationBootstrapDisabled() {
  *
  */
 function NotificationBootstrapEnabled() {
+  const { t } = useTranslation();
   const { consumeNotification } = useSmartNotifications();
 
   React.useEffect(() => {
@@ -98,14 +100,14 @@ function NotificationBootstrapEnabled() {
         inlineOnAndroid
         onRequestClose={pushPermissionPrompt.onDismiss}
         primaryAction={{
-          label: 'Activer',
+          label: t('notificationBootstrap.push.enable', 'Activer'),
           onPress: pushPermissionPrompt.onAccept,
         }}
         secondaryAction={{
-          label: 'Plus tard',
+          label: t('notificationBootstrap.later', 'Plus tard'),
           onPress: pushPermissionPrompt.onDismiss,
         }}
-        supportingText="Tu pourras toujours modifier ce choix plus tard dans les réglages."
+        supportingText={t('notificationBootstrap.push.supporting', 'Tu pourras toujours modifier ce choix plus tard dans les réglages.')}
         title={pushPermissionPrompt.title}
         visible={isPushPromptVisible}
       />
@@ -115,11 +117,11 @@ function NotificationBootstrapEnabled() {
         inlineOnAndroid
         onRequestClose={calendarPrompt.onDismiss}
         primaryAction={{
-          label: 'Ajouter au calendrier',
+          label: t('notificationBootstrap.calendar.add', 'Ajouter au calendrier'),
           onPress: calendarPrompt.onAccept,
         }}
         secondaryAction={{
-          label: 'Plus tard',
+          label: t('notificationBootstrap.later', 'Plus tard'),
           onPress: calendarPrompt.onDismiss,
         }}
         title={calendarPrompt.title}

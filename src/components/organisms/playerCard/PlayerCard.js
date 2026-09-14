@@ -21,6 +21,7 @@
  * masque) et fallback dos floque si `photo` absent (jamais de carte vide).
  */
 import { memo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Image, StyleSheet, Text, View,
 } from 'react-native';
@@ -73,15 +74,6 @@ const ANGLES = {
   165: {
     x1: '37.1%', x2: '62.9%', y1: '1.7%', y2: '98.3%',
   },
-};
-
-/** Libelles FR par defaut du badge (surchargables via prop rarityLabel). */
-const RARITY_LABELS = {
-  COMMON: 'COMMUNE',
-  EPIC: 'ÉPIQUE',
-  MOST_RARE: 'MOST RARE',
-  RARE: 'RARE',
-  ULTRA_RARE: 'ULTRA RARE',
 };
 
 // NB react-native-svg : l'alpha d'un rgba() dans stopColor est ignore ->
@@ -463,7 +455,7 @@ function PlayerCardBase({
   club,
   disposition,
   historique = [],
-  historiqueEmptyLabel = 'PARCOURS À COMPLÉTER',
+  historiqueEmptyLabel = undefined,
   locked = false,
   nationalite,
   nom,
@@ -480,6 +472,15 @@ function PlayerCardBase({
   ville,
   width,
 }) {
+  const { t } = useTranslation();
+  /** Libelles par defaut du badge (surchargables via prop rarityLabel). */
+  const RARITY_LABELS = {
+    COMMON: t('playerCard.rarity.common', 'COMMUNE'),
+    EPIC: t('playerCard.rarity.epic', 'ÉPIQUE'),
+    MOST_RARE: t('playerCard.rarity.mostRare', 'MOST RARE'),
+    RARE: t('playerCard.rarity.rare', 'RARE'),
+    ULTRA_RARE: t('playerCard.rarity.ultraRare', 'ULTRA RARE'),
+  };
   const s = width / CARD_EXPORT_WIDTH;
   const h = width * (CARD_EXPORT_HEIGHT / CARD_EXPORT_WIDTH);
   const theme = RARITY_STYLES[rarity] || RARITY_STYLES.COMMON;
@@ -713,11 +714,11 @@ function PlayerCardBase({
             borderRadius: 20 * s, marginTop: 18 * s, paddingHorizontal: 30 * s, paddingVertical: 5 * s, zIndex: 3,
           }]}
           >
-            <InfoRow label="POSTE" s={s} value={up(poste)} />
-            <InfoRow label="ÂGE" s={s} value={up(age)} />
-            <InfoRow label="NATIONALITÉ" s={s} value={up(nationalite)} />
-            <InfoRow label="CLUB" s={s} value={up(club)} />
-            <InfoRow label="VILLE" s={s} value={up(ville)} />
+            <InfoRow label={t('playerCard.info.position', 'POSTE')} s={s} value={up(poste)} />
+            <InfoRow label={t('playerCard.info.age', 'ÂGE')} s={s} value={up(age)} />
+            <InfoRow label={t('playerCard.info.nationality', 'NATIONALITÉ')} s={s} value={up(nationalite)} />
+            <InfoRow label={t('playerCard.info.club', 'CLUB')} s={s} value={up(club)} />
+            <InfoRow label={t('playerCard.info.city', 'VILLE')} s={s} value={up(ville)} />
             <InfoRow
               isLast
               label="STATUT"
@@ -764,7 +765,7 @@ function PlayerCardBase({
                       color: '#eaf7fd', fontFamily: 'Montserrat-Black', fontSize: 18 * s, letterSpacing: 2.5 * s,
                     }}
                   >
-                    DISPOSITION PRÉFÉRÉE
+                    {t('playerCard.preferredFormation', 'DISPOSITION PRÉFÉRÉE')}
                   </Text>
                   <Text
                     allowFontScaling={false}
@@ -790,14 +791,14 @@ function PlayerCardBase({
                       color: '#eaf7fd', fontFamily: 'Montserrat-Black', fontSize: 18 * s, letterSpacing: 2.5 * s,
                     }}
                   >
-                    HISTORIQUE SPORTIF
+                    {t('playerCard.history.title', 'HISTORIQUE SPORTIF')}
                   </Text>
                   {historique.length ? (
                     <Text
                       allowFontScaling={false}
                       style={{ color: CYAN, fontFamily: 'Montserrat-Black', fontSize: 20 * s }}
                     >
-                      {`${historique.length} CLUBS`}
+                      {t('playerCard.history.clubCount', '{{total}} CLUBS', { total: historique.length })}
                     </Text>
                   ) : null}
                 </View>
@@ -812,7 +813,7 @@ function PlayerCardBase({
                         letterSpacing: 2 * s,
                       }}
                     >
-                      {up(historiqueEmptyLabel)}
+                      {up(historiqueEmptyLabel ?? t('playerCard.history.empty', 'PARCOURS À COMPLÉTER'))}
                     </Text>
                   </View>
                 ) : null}
@@ -932,7 +933,7 @@ function PlayerCardBase({
                   color: '#eaf7fd', fontFamily: 'Montserrat-Black', fontSize: 19 * s, letterSpacing: 1.5 * s,
                 }}
               >
-                APERÇU — ACCORD PARENTAL REQUIS
+                {t('playerCard.parentalConsentPreview', 'APERÇU — ACCORD PARENTAL REQUIS')}
               </Text>
             </View>
           </View>

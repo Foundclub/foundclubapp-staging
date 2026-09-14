@@ -1,6 +1,7 @@
 import {
   useEffect, useMemo, useRef, useState,
 } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Text, TouchableOpacity, View } from 'react-native';
 
 import { withAlpha } from '@/theme/colors';
@@ -27,17 +28,6 @@ import { useGetLevels } from '@/services/level/levelQueries';
  * PAS rendu : `recruitmentAdFilters` ne porte qu'une ville en texte, et le pack
  * demande explicitement de retirer une rangee plutot que de l'afficher morte.
  */
-
-const TOUS_SPORTS = 'Tous les sports';
-const TOUTES = 'Toutes';
-const TOUS = 'Tous';
-
-/** Les 3 valeurs du filtre « Profil », dans les mots du pack. */
-export const AUDIENCE_OPTIONS = /** @type {const} */ ([
-  { label: 'Joueur·se·s et coachs', value: 'all' },
-  { label: 'Joueur·se·s', value: 'player' },
-  { label: 'Coachs', value: 'coach' },
-]);
 
 /**
  * Le libelle d'une valeur, ou le repli « tout » quand rien n'est choisi.
@@ -93,6 +83,16 @@ function RecruitmentFiltersSheet({
   const {
     Alignments, Colors, Fonts, Spaces,
   } = /** @type {any} */ (useTheme());
+  const { t } = useTranslation();
+  const TOUS_SPORTS = t('recruitmentFiltersSheet.allSports', 'Tous les sports');
+  const TOUTES = t('recruitmentFiltersSheet.allFeminine', 'Toutes');
+  const TOUS = t('recruitmentFiltersSheet.allMasculine', 'Tous');
+  /** Les 3 valeurs du filtre « Profil », dans les mots du pack. */
+  const AUDIENCE_OPTIONS = [
+    { label: t('recruitmentFiltersSheet.audience.all', 'Joueur·se·s et coachs'), value: 'all' },
+    { label: t('recruitmentFiltersSheet.audience.player', 'Joueur·se·s'), value: 'player' },
+    { label: t('recruitmentFiltersSheet.audience.coach', 'Coachs'), value: 'coach' },
+  ];
 
   const { data: activities } = useGetActivities();
   const { data: categories } = useGetCategories();
@@ -274,7 +274,7 @@ function RecruitmentFiltersSheet({
               },
             ]}
           >
-            <Text style={[Fonts.p1Bold, { color: Colors.primary900 }]}>Voir les résultats</Text>
+            <Text style={[Fonts.p1Bold, { color: Colors.primary900 }]}>{t('recruitmentFiltersSheet.apply', 'Voir les résultats')}</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -282,11 +282,11 @@ function RecruitmentFiltersSheet({
             onPress={reinitialiser}
             style={[Alignments.alignCenter, Alignments.justifyCenter, { minHeight: 44 }]}
           >
-            <Text style={[Fonts.p2Bold, { color: Colors.neutral200 }]}>Réinitialiser</Text>
+            <Text style={[Fonts.p2Bold, { color: Colors.neutral200 }]}>{t('recruitmentFiltersSheet.reset', 'Réinitialiser')}</Text>
           </TouchableOpacity>
         </View>
       )}
-      headerComponent={<Text style={[Fonts.h3Bold, Fonts.neutral00]}>Filtrer</Text>}
+      headerComponent={<Text style={[Fonts.h3Bold, Fonts.neutral00]}>{t('recruitmentFiltersSheet.title', 'Filtrer')}</Text>}
       isVisible={isVisible}
       snapPoints={SNAP_POINTS}
       webPresentation="dialog"
@@ -299,20 +299,20 @@ function RecruitmentFiltersSheet({
       <View style={Spaces.marginBottom[16]}>
         {rendreRangee(
           'sport',
-          'Sport',
+          t('recruitmentFiltersSheet.sport', 'Sport'),
           libelleDe(sportOptions, sport, TOUS_SPORTS),
           rendreChoix(sportOptions, sport, setSport, TOUS_SPORTS),
         )}
 
         {rendreRangee(
           'city',
-          'Ville',
-          city.trim() || 'Toutes les villes',
+          t('recruitmentFiltersSheet.city', 'Ville'),
+          city.trim() || t('recruitmentFiltersSheet.allCities', 'Toutes les villes'),
           <Input
             density="compact"
             icon="search"
             onChangeText={setCity}
-            placeholder="Ville"
+            placeholder={t('recruitmentFiltersSheet.city', 'Ville')}
             placeholderTextColor={Colors.neutral300}
             value={city}
           />,
@@ -320,8 +320,8 @@ function RecruitmentFiltersSheet({
 
         {showAudienceRow ? rendreRangee(
           'audience',
-          'Profil',
-          libelleDe([...AUDIENCE_OPTIONS], audience, AUDIENCE_OPTIONS[0].label),
+          t('recruitmentFiltersSheet.audience.label', 'Profil'),
+          libelleDe(AUDIENCE_OPTIONS, audience, AUDIENCE_OPTIONS[0].label),
           (
             <View style={[Alignments.row, Spaces.gap[8], { flexWrap: 'wrap' }]}>
               {AUDIENCE_OPTIONS.map((option) => {
@@ -360,14 +360,14 @@ function RecruitmentFiltersSheet({
 
         {rendreRangee(
           'category',
-          'Catégorie',
+          t('recruitmentFiltersSheet.category', 'Catégorie'),
           libelleDe(categoryOptions, category, TOUTES),
           rendreChoix(categoryOptions, category, setCategory, TOUTES),
         )}
 
         {rendreRangee(
           'level',
-          'Niveau',
+          t('recruitmentFiltersSheet.level', 'Niveau'),
           libelleDe(levelOptions, level, TOUS),
           rendreChoix(levelOptions, level, setLevel, TOUS),
         )}
