@@ -1,3 +1,4 @@
+import i18next from 'i18next';
 import { Alert, Platform } from 'react-native';
 
 import { isWebRouteSupported } from '@/navigation/webRoutes';
@@ -27,9 +28,11 @@ import { isWebRouteSupported } from '@/navigation/webRoutes';
 export const navigateOrExplainOnWeb = (navigation, routeName, params = undefined) => {
   if (Platform.OS === 'web' && !isWebRouteSupported(routeName)) {
     Alert.alert(
-      'Bientôt sur le site',
-      "Cet écran n'est pas encore disponible sur le site :"
-      + " ouvre-le depuis l'application FoundClub.",
+      i18next.t('webNavigationGuard.title', 'Bientôt sur le site'),
+      i18next.t(
+        'webNavigationGuard.message',
+        "Cet écran n'est pas encore disponible sur le site : ouvre-le depuis l'application FoundClub.", // eslint-disable-line max-len
+      ),
     );
     return false;
   }

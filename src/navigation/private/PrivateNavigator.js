@@ -201,11 +201,13 @@ function PrivateNavigator() {
   if (userDataError) {
     return (
       <ErrorScreen
-        actionTitle="Réessayer"
+        actionTitle={t('privateNavigator.bootError.retry', 'Réessayer')}
         onReload={retryBoot}
-        subtitle={'Impossible de joindre le serveur FoundClub pour le moment. '
-          + 'Vérifie ta connexion puis réessaie : tes données reviendront dès que le réseau répond.'}
-        title="Connexion impossible"
+        subtitle={t(
+          'privateNavigator.bootError.subtitle',
+          'Impossible de joindre le serveur FoundClub pour le moment. Vérifie ta connexion puis réessaie : tes données reviendront dès que le réseau répond.', // eslint-disable-line max-len
+        )}
+        title={t('privateNavigator.bootError.title', 'Connexion impossible')}
       />
     );
   }
@@ -351,7 +353,7 @@ function PrivateNavigator() {
           name={RouteNames.MissingPlayersView}
           options={{
             ...commonOptions,
-            headerTitle: 'Joueurs recherchés',
+            headerTitle: t('privateNavigator.headers.missingPlayers', 'Joueurs recherchés'),
           }}
         />
         <Stack.Screen
@@ -359,7 +361,7 @@ function PrivateNavigator() {
           name={RouteNames.BookingCalendar}
           options={{
             ...commonOptions,
-            headerTitle: 'Réserver un créneau',
+            headerTitle: t('privateNavigator.headers.bookSlot', 'Réserver un créneau'),
           }}
         />
         <Stack.Screen
@@ -367,7 +369,7 @@ function PrivateNavigator() {
           name={RouteNames.MultisportClubDetails}
           options={{
             ...commonOptions,
-            headerTitle: 'Club Omnisport',
+            headerTitle: t('privateNavigator.headers.multisportClub', 'Club Omnisport'),
           }}
         />
         <Stack.Screen
@@ -375,7 +377,7 @@ function PrivateNavigator() {
           name={RouteNames.MultisportClubEdit}
           options={{
             ...commonOptions,
-            headerTitle: 'Modifier le club',
+            headerTitle: t('clubEdit.title', 'Modifier le club'),
           }}
         />
         <Stack.Screen
@@ -383,7 +385,7 @@ function PrivateNavigator() {
           name={RouteNames.FeaturedRequests}
           options={{
             ...commonOptions,
-            headerTitle: 'Demandes à la une',
+            headerTitle: t('privateNavigator.headers.featuredRequests', 'Demandes à la une'),
           }}
         />
         <Stack.Screen
@@ -391,7 +393,7 @@ function PrivateNavigator() {
           name={RouteNames.CMDashboard}
           options={{
             ...commonOptions,
-            headerTitle: 'Gestion CM',
+            headerTitle: t('privateNavigator.headers.multisportManagement', 'Gestion CM'),
           }}
         />
         <Stack.Screen
@@ -399,7 +401,7 @@ function PrivateNavigator() {
           name={RouteNames.MyClubs}
           options={{
             ...commonOptions,
-            headerTitle: 'Mes clubs',
+            headerTitle: t('privateNavigator.headers.myClubs', 'Mes clubs'),
           }}
         />
         <Stack.Screen
@@ -407,7 +409,7 @@ function PrivateNavigator() {
           name={RouteNames.CMPlanning}
           options={{
             ...commonOptions,
-            headerTitle: 'Planning',
+            headerTitle: t('privateNavigator.headers.planning', 'Planning'),
           }}
         />
         <Stack.Screen
@@ -415,7 +417,7 @@ function PrivateNavigator() {
           name={RouteNames.CMLicensesDashboard}
           options={{
             ...commonOptions,
-            headerTitle: 'Cotisations multisport',
+            headerTitle: t('privateNavigator.headers.multisportFees', 'Cotisations multisport'),
           }}
         />
         <Stack.Screen
@@ -423,7 +425,7 @@ function PrivateNavigator() {
           name={RouteNames.AddSponsor}
           options={{
             ...commonOptions,
-            headerTitle: 'Ajouter un partenaire',
+            headerTitle: t('privateNavigator.headers.addPartner', 'Ajouter un partenaire'),
           }}
         />
         <Stack.Screen
@@ -431,7 +433,7 @@ function PrivateNavigator() {
           name={RouteNames.CMMembers}
           options={{
             ...commonOptions,
-            headerTitle: 'Membres',
+            headerTitle: t('privateNavigator.headers.members', 'Membres'),
           }}
         />
         <Stack.Screen
@@ -447,7 +449,7 @@ function PrivateNavigator() {
           name={RouteNames.CreateSection}
           options={{
             ...commonOptions,
-            headerTitle: 'Nouvelle section',
+            headerTitle: t('privateNavigator.headers.newSection', 'Nouvelle section'),
           }}
         />
         <Stack.Screen
@@ -582,7 +584,7 @@ function PrivateNavigator() {
           name={RouteNames.LicenseCheckoutStatus}
           options={{
             ...commonOptions,
-            headerTitle: 'Paiement cotisation',
+            headerTitle: t('privateNavigator.headers.feePayment', 'Paiement cotisation'),
           }}
         />
         <Stack.Screen
@@ -590,7 +592,7 @@ function PrivateNavigator() {
           name={RouteNames.PublicLicensePayment}
           options={{
             ...commonOptions,
-            headerTitle: 'Paiement cotisation',
+            headerTitle: t('privateNavigator.headers.feePayment', 'Paiement cotisation'),
           }}
         />
         <Stack.Screen
@@ -606,7 +608,7 @@ function PrivateNavigator() {
           name={RouteNames.FacilityList}
           options={{
             ...commonOptions,
-            headerTitle: 'Installations',
+            headerTitle: t('privateNavigator.headers.facilities', 'Installations'),
           }}
         />
         <Stack.Screen
@@ -624,7 +626,7 @@ function PrivateNavigator() {
           name={RouteNames.RecruitmentAdEdit}
           options={{
             ...commonOptions,
-            headerTitle: 'Modifier l\'annonce',
+            headerTitle: t('privateNavigator.headers.editAd', "Modifier l'annonce"),
           }}
         />
         {/* Showcase d'affiches généralisé (event/club/recruitment-ad) : registration UNIQUE
@@ -649,7 +651,7 @@ function PrivateNavigator() {
           name={RouteNames.MatchDetails}
           options={{
             ...commonOptions,
-            headerTitle: 'Détails du match',
+            headerTitle: t('privateNavigator.headers.matchDetails', 'Détails du match'),
           }}
         />
         <Stack.Screen
@@ -988,7 +990,7 @@ function PrivateNavigator() {
         <Stack.Screen
           getComponent={() => require('@/views/profile/SubscriptionOffers').default}
           initialParams={{
-            resumeCtaLabel: 'Continuer',
+            resumeCtaLabel: t('privateNavigator.subscriptionOffers.resumeCta', 'Continuer'),
             resumeRouteName: RouteNames.Welcome,
             // ESSAI (2026-08-28) — LA SEULE LIGNE QUI BRANCHE LE CADEAU.
             //
