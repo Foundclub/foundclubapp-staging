@@ -7506,7 +7506,7 @@ function EventDetails({ navigation, route }) {
               </Text>
             </View>
             <View style={[tournamentDs.styles.insetPanelCard, { flexGrow: 1, minWidth: 132 }]}>
-              <Text style={[Fonts.p4, Fonts.neutral300]}>Points</Text>
+              <Text style={[Fonts.p4, Fonts.neutral300]}>{t('eventDetails.points', 'Points')}</Text>
               <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
                 {`V${event?.tournamentConfig?.pointsWin ?? 3} N${event?.tournamentConfig?.pointsDraw ?? 1} D${event?.tournamentConfig?.pointsLoss ?? 0}`}
               </Text>
@@ -8314,11 +8314,18 @@ function EventDetails({ navigation, route }) {
                     },
                   ]}
                 >
-                  <Text style={[Fonts.p3Bold, Fonts.primary500]}>Journée de stage</Text>
-                  <Text style={[Fonts.p2, Fonts.neutral00]}>
-                    Cette journée depend du stage principal.
+                  <Text style={[Fonts.p3Bold, Fonts.primary500]}>
+                    {t('eventDetails.trainingCampDay', 'Journée de stage')}
                   </Text>
-                  <Text style={[Fonts.p3Bold, Fonts.primary500]}>Voir le stage</Text>
+                  <Text style={[Fonts.p2, Fonts.neutral00]}>
+                    {t(
+                      'eventDetails.thisDayBelongsToThe',
+                      'Cette journée depend du stage principal.',
+                    )}
+                  </Text>
+                  <Text style={[Fonts.p3Bold, Fonts.primary500]}>
+                    {t('eventDetails.seeTheTrainingCamp', 'Voir le stage')}
+                  </Text>
                 </TouchableOpacity>
               ) : null}
 
@@ -8328,7 +8335,9 @@ function EventDetails({ navigation, route }) {
 
               {showOverviewTab && canSelfMarkArrival && selfAttendanceStatus ? (
                 <View style={[Spaces.gap[12]]}>
-                  <Text style={[Fonts.h3Bold, Fonts.neutral00]}>Statut d&apos;arrivée</Text>
+                  <Text style={[Fonts.h3Bold, Fonts.neutral00]}>
+                    {t('eventDetails.arrivalStatus', "Statut d'arrivée")}
+                  </Text>
                   <View
                     style={[
                       ApplicationStyle.backgroundColor.primary900,
@@ -8343,7 +8352,9 @@ function EventDetails({ navigation, route }) {
                   >
                     <View style={[Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween, Spaces.gap[12]]}>
                       <View style={{ flex: 1 }}>
-                        <Text style={[Fonts.p3Bold, Fonts.neutral200]}>Présence événement</Text>
+                        <Text style={[Fonts.p3Bold, Fonts.neutral200]}>
+                          {t('eventDetails.eventAttendance', 'Présence événement')}
+                        </Text>
                         <Text style={[Fonts.p2, Fonts.neutral100, Spaces.marginTop[4]]}>
                           {selfAttendanceStatus.description}
                         </Text>
@@ -8494,7 +8505,9 @@ function EventDetails({ navigation, route }) {
             && isMatchFinished
             && myMatchResponsePayload?.attendanceRestriction === 'no_show' ? (
               <View style={[Spaces.gap[12]]}>
-                <Text style={[Fonts.h3Bold, Fonts.neutral00]}>Mes stats</Text>
+                <Text style={[Fonts.h3Bold, Fonts.neutral00]}>
+                  {t('eventDetails.myStats', 'Mes stats')}
+                </Text>
                 <View
                   style={[
                     ApplicationStyle.backgroundColor.primary900,
@@ -8508,10 +8521,14 @@ function EventDetails({ navigation, route }) {
                   ]}
                 >
                   <Text style={[Fonts.p4Bold, { color: Colors.error500 || 'rgb(248, 113, 113)' }]}>
-                    Pointage à corriger
+                    {t('eventDetails.checkInToCorrect', 'Pointage à corriger')}
                   </Text>
                   <Text style={[Fonts.p2, Fonts.neutral100]}>
-                    Ton arrivée n&apos;a pas été confirmée avant la fin du match. Un coach doit corriger ta présence avant de débloquer ton retour post-match.
+                    {t(
+                      'eventDetails.arrivalNotConfirmed',
+                      "Ton arrivée n'a pas été confirmée avant la fin du match. "
+                        + 'Un coach doit corriger ta présence avant de débloquer ton retour post-match.',
+                    )}
                   </Text>
                 </View>
               </View>
@@ -8519,7 +8536,9 @@ function EventDetails({ navigation, route }) {
 
               {showOverviewTab && isMatchEvent && compositionTeamId && isTeamMember && isMatchFinished && canRespondMyMatchStats ? (
                 <View style={[Spaces.gap[12]]}>
-                  <Text style={[Fonts.h3Bold, Fonts.neutral00]}>Mes stats</Text>
+                  <Text style={[Fonts.h3Bold, Fonts.neutral00]}>
+                    {t('eventDetails.myStats', 'Mes stats')}
+                  </Text>
                   <View
                     style={[
                       ApplicationStyle.backgroundColor.primary900,
@@ -8532,9 +8551,11 @@ function EventDetails({ navigation, route }) {
                   >
                     <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter, Spaces.gap[12]]}>
                       <View style={{ flex: 1 }}>
-                        <Text style={[Fonts.p4Bold, Fonts.primary500]}>Retour individuel</Text>
+                        <Text style={[Fonts.p4Bold, Fonts.primary500]}>
+                          {t('eventDetails.individualFeedback', 'Retour individuel')}
+                        </Text>
                         <Text style={[Fonts.h4Bold, Fonts.neutral00]}>
-                          {myMatchResponse?.selfRating ? `${myMatchResponse.selfRating}/10` : 'A compléter'}
+                          {myMatchResponse?.selfRating ? `${myMatchResponse.selfRating}/10` : t('eventDetails.toComplete', 'A compléter')}
                         </Text>
                       </View>
                       <View
@@ -8570,7 +8591,11 @@ function EventDetails({ navigation, route }) {
                         ]}
                       >
                         <Text style={[Fonts.p4Bold, Fonts.primary100]}>
-                          {`Le match de l equipe : ${myMatchResponse.teamRating}/10`}
+                          {t(
+                            'eventDetails.theTeamSMatch10',
+                            'Le match de l equipe : {{teamRating}}/10',
+                            { teamRating: myMatchResponse.teamRating, ...SANS_ECHAPPEMENT },
+                          )}
                         </Text>
                       </View>
                     ) : null}
@@ -8602,7 +8627,9 @@ function EventDetails({ navigation, route }) {
 
               {showOverviewTab && isMatchEvent && compositionTeamId && isTeamMember && isMatchFinished && canRespondMyMatchStats ? (
                 <View style={[Spaces.gap[12]]}>
-                  <Text style={[Fonts.h3Bold, Fonts.neutral00]}>Mon retour coach</Text>
+                  <Text style={[Fonts.h3Bold, Fonts.neutral00]}>
+                    {t('eventDetails.myCoachFeedback', 'Mon retour coach')}
+                  </Text>
                   <View
                     style={[
                       ApplicationStyle.backgroundColor.primary900,
@@ -8621,9 +8648,9 @@ function EventDetails({ navigation, route }) {
                   >
                     <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter, Spaces.gap[12]]}>
                       <View style={{ flex: 1 }}>
-                        <Text style={[Fonts.p4Bold, Fonts.primary500]}>Retour individuel du coach</Text>
+                        <Text style={[Fonts.p4Bold, Fonts.primary500]}>{t('eventDetails.coachSIndividualFeedback', 'Retour individuel du coach')}</Text>
                         <Text style={[Fonts.h4Bold, Fonts.neutral00]}>
-                          {myCoachReview?.rating != null ? `${myCoachReview.rating}/10` : 'En attente'}
+                          {myCoachReview?.rating != null ? `${myCoachReview.rating}/10` : t('eventDetails.pending', 'En attente')}
                         </Text>
                       </View>
                       <View
@@ -8639,15 +8666,27 @@ function EventDetails({ navigation, route }) {
                         ]}
                       >
                         <Text style={[Fonts.p4Bold, hasMyCoachReview ? Fonts.success500 : Fonts.primary100]}>
-                          {hasMyCoachReview ? 'Disponible' : 'Pas encore partage'}
+                          {hasMyCoachReview ? t(
+                            'eventDetails.available',
+                            'Disponible',
+                          ) : t(
+                            'eventDetails.notSharedYet',
+                            'Pas encore partage',
+                          )}
                         </Text>
                       </View>
                     </View>
 
                     <Text style={[Fonts.p2, Fonts.neutral100]}>
                       {hasMyCoachReview
-                        ? 'Le coach a publié un retour individuel pour ton match.'
-                        : "Le coach n'a pas encore laisse d'avis individuel pour ce match."}
+                        ? t(
+                          'eventDetails.theCoachPublishedIndividualFeedback',
+                          'Le coach a publié un retour individuel pour ton match.',
+                        )
+                        : t(
+                          'eventDetails.theCoachHasnTLeft',
+                          "Le coach n'a pas encore laisse d'avis individuel pour ce match.",
+                        )}
                     </Text>
 
                     {myCoachReview?.comment ? (
@@ -8669,7 +8708,9 @@ function EventDetails({ navigation, route }) {
 
               {showOverviewTab && isMatchEvent && compositionTeamId && canViewMatchStats ? (
                 <View style={[Spaces.gap[12]]}>
-                  <Text style={[Fonts.h3Bold, Fonts.neutral00]}>Stats du match</Text>
+                  <Text style={[Fonts.h3Bold, Fonts.neutral00]}>
+                    {t('eventDetails.matchStats', 'Stats du match')}
+                  </Text>
 
                   {/* 🎯 N4 (D6) — LA CARTE-PARCOURS « APRÈS LE MATCH » (maquette 05 · 5C).
                       Elle remplace l'entete de ce bloc : une pastille d'etat, un score et
@@ -8717,8 +8758,14 @@ function EventDetails({ navigation, route }) {
                   >
                     <Text style={[Fonts.p3Bold, Fonts.primary200]}>
                       {matchStatsReport?.status === 'draft'
-                        ? 'Ce bilan est un brouillon — voir tous mes matchs en attente'
-                        : 'Voir tous mes matchs en attente'}
+                        ? t(
+                          'eventDetails.thisReportIsADraft',
+                          'Ce bilan est un brouillon — voir tous mes matchs en attente',
+                        )
+                        : t(
+                          'eventDetails.seeAllMyPendingMatches',
+                          'Voir tous mes matchs en attente',
+                        )}
                     </Text>
                   </TouchableOpacity>
 
@@ -8745,7 +8792,9 @@ function EventDetails({ navigation, route }) {
                               { flex: 1 },
                             ]}
                           >
-                            <Text style={[Fonts.p4Bold, Fonts.primary100]}>Note coach</Text>
+                            <Text style={[Fonts.p4Bold, Fonts.primary100]}>
+                              {t('eventDetails.coachRating', 'Note coach')}
+                            </Text>
                             <Text style={[Fonts.h4Bold, Fonts.neutral00]}>{`${matchStatsReport.collectiveRating}/10`}</Text>
                           </View>
                         ) : null}
@@ -8759,7 +8808,9 @@ function EventDetails({ navigation, route }) {
                               { flex: 1 },
                             ]}
                           >
-                            <Text style={[Fonts.p4Bold, Fonts.primary100]}>Ressenti joueurs</Text>
+                            <Text style={[Fonts.p4Bold, Fonts.primary100]}>
+                              {t('eventDetails.playersFeeling', 'Ressenti joueurs')}
+                            </Text>
                             <Text style={[Fonts.h4Bold, Fonts.neutral00]}>{`${playerCollectiveRating.average}/10`}</Text>
                           </View>
                         ) : null}
@@ -8822,10 +8873,12 @@ function EventDetails({ navigation, route }) {
                             { flex: 2 },
                           ]}
                         >
-                          <Text style={[Fonts.p4, Fonts.neutral300]}>Publication</Text>
+                          <Text style={[Fonts.p4, Fonts.neutral300]}>
+                            {t('eventDetails.publication', 'Publication')}
+                          </Text>
                           <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
                             {matchStatsReport?.finalizedAt
-                              ? new Date(matchStatsReport.finalizedAt).toLocaleString('fr-FR')
+                              ? new Date(matchStatsReport.finalizedAt).toLocaleString(localeDesFormats())
                               : '-'}
                           </Text>
                         </View>
@@ -8845,7 +8898,7 @@ function EventDetails({ navigation, route }) {
                         ]}
                       >
                         <Text style={[Fonts.p4, Fonts.warning500]}>
-                          Le score officiel a changé après la première publication. Une mise à jour est requise.
+                          {t('eventDetails.theOfficialScoreChangedAfter', 'Le score officiel a changé après la première publication. Une mise à jour est requise.')}
                         </Text>
                       </View>
                     ) : null}
@@ -8866,7 +8919,7 @@ function EventDetails({ navigation, route }) {
               {showCallUpTab && showPublishedComposition ? (
                 <View style={[Spaces.gap[12]]}>
                   <Text style={[Fonts.h3Bold, Fonts.neutral00]}>
-                    Composition d&apos;equipes
+                    {t('eventDetails.teamLineUp', "Composition d'equipes")}
                   </Text>
                   {hasPublishedComposition ? (
                     <View style={[Spaces.gap[8]]}>
@@ -8885,20 +8938,24 @@ function EventDetails({ navigation, route }) {
                       )}
                       <Text style={[Fonts.p2, Fonts.neutral300]}>
                         {publishedCompositionTeamCount > 0
-                          ? `${publishedCompositionTeamCount} équipe(s) publiée(s)`
-                          : 'Composition publiée'}
+                          ? t(
+                            'eventDetails.teamSPublished',
+                            '{{publishedCompositionTeamCount}} équipe(s) publiée(s)',
+                            { publishedCompositionTeamCount, ...SANS_ECHAPPEMENT },
+                          )
+                          : t('eventDetails.lineUpPublished', 'Composition publiée')}
                       </Text>
                       <Text style={[Fonts.p3, Fonts.neutral300]}>
                         {convocationBranches.length}
                         {' '}
-                        branche(s) visible(s)
+                        {t('eventDetails.visibleBranchEs', 'branche(s) visible(s)')}
                         {publishedCompositionReserveCount > 0 ? ` · ${publishedCompositionReserveCount} remplacant(s)` : ''}
                       </Text>
                       {convocationBranches[0]?.published?.publishedAt ? (
                         <Text style={[Fonts.p3, Fonts.neutral300]}>
-                          Publie le
+                          {t('eventDetails.publishedOn', 'Publie le')}
                           {' '}
-                          {new Date(convocationBranches[0].published.publishedAt).toLocaleString('fr-FR')}
+                          {new Date(convocationBranches[0].published.publishedAt).toLocaleString(localeDesFormats())}
                         </Text>
                       ) : null}
                       {/* 🧾 R6 — LES NOMS, AVANT le bouton. La question que se
@@ -8933,7 +8990,10 @@ function EventDetails({ navigation, route }) {
                     </View>
                   ) : (
                     <Text style={[Fonts.p2, Fonts.neutral300]}>
-                      Aucune composition publiée pour le moment.
+                      {t(
+                        'eventDetails.noLineUpPublishedYet',
+                        'Aucune composition publiée pour le moment.',
+                      )}
                     </Text>
                   )}
                 </View>
@@ -8962,7 +9022,7 @@ function EventDetails({ navigation, route }) {
                 isOption
                 onPress={handleRejectFeaturedApproval}
                 style={{ flex: 1 }}
-                title="Refuser"
+                title={t('eventDetails.decline', 'Refuser')}
                 variant="Secondary"
               />
             </View>
@@ -8991,15 +9051,15 @@ function EventDetails({ navigation, route }) {
             && Boolean(pendingDetectionSlot?.documentId);
         // @ts-ignore: FIXME: Baseline TS regression
         } else if (pendingTournamentAction?.mode === 'create_custom') {
-          joinModalConfirmLabel = 'Créer mon équipe';
+          joinModalConfirmLabel = t('eventDetails.createMyTeam', 'Créer mon équipe');
           // @ts-ignore: FIXME: Baseline TS regression
-          joinModalContextNote = `Équipe à créer : ${pendingTournamentAction?.teamName || 'Mon équipe'}.`;
+          joinModalContextNote = t('eventDetails.teamToCreate', 'Équipe à créer : {{teamName}}.', { teamName: pendingTournamentAction?.teamName || t('eventDetails.myTeam', 'Mon équipe'), ...SANS_ECHAPPEMENT });
           joinModalIsSubmitting = createTournamentTeamMutation.isPending;
         // @ts-ignore: FIXME: Baseline TS regression
         } else if (pendingTournamentAction?.mode === 'join_existing') {
-          joinModalConfirmLabel = 'Envoyer ma demande';
+          joinModalConfirmLabel = t('eventDetails.sendMyRequest', 'Envoyer ma demande');
           // @ts-ignore: FIXME: Baseline TS regression
-          joinModalContextNote = `Équipe choisie : ${pendingTournamentAction?.teamName || 'Équipe tournoi'}.`;
+          joinModalContextNote = t('eventDetails.chosenTeam', 'Équipe choisie : {{teamName}}.', { teamName: pendingTournamentAction?.teamName || t('eventDetails.tournamentTeam', 'Équipe tournoi'), ...SANS_ECHAPPEMENT });
           joinModalIsSubmitting = requestJoinTournamentTeamMutation.isPending;
         } else if (currentParticipationFlow?.submitMode === 'joinReservation') {
           joinModalIsSubmitting = mutations.joinReservationMutation.isPending;
@@ -9025,7 +9085,7 @@ function EventDetails({ navigation, route }) {
               setPendingDetectionSlot(null);
             } catch (mutationError) {
               setJoinModalError(
-                getParticipationErrorMessage(mutationError, 'Impossible de confirmer ta participation pour le moment.'),
+                getParticipationErrorMessage(mutationError, t('eventDetails.unableToConfirmYourParticipation', 'Impossible de confirmer ta participation pour le moment.')),
               );
             }
           };
@@ -9038,11 +9098,11 @@ function EventDetails({ navigation, route }) {
               await createTournamentTeamMutation.mutateAsync({
                 acceptRiskDeclaration: acceptance?.acceptRiskDeclaration === true,
                 // @ts-ignore: FIXME: Baseline TS regression
-                name: pendingTournamentAction?.teamName || 'Mon équipe',
+                name: pendingTournamentAction?.teamName || t('eventDetails.myTeam', 'Mon équipe'),
               });
             } catch (mutationError) {
               setJoinModalError(
-                getParticipationErrorMessage(mutationError, 'Impossible de créer cette équipe de tournoi pour le moment.'),
+                getParticipationErrorMessage(mutationError, t('eventDetails.unableToCreateThisTournament2', 'Impossible de créer cette équipe de tournoi pour le moment.')),
               );
             }
           };
@@ -9059,7 +9119,7 @@ function EventDetails({ navigation, route }) {
               });
             } catch (mutationError) {
               setJoinModalError(
-                getParticipationErrorMessage(mutationError, 'Impossible d envoyer cette demande pour le moment.'),
+                getParticipationErrorMessage(mutationError, t('eventDetails.unableToSendThisRequest', 'Impossible d envoyer cette demande pour le moment.')),
               );
             }
           };
@@ -9090,10 +9150,13 @@ function EventDetails({ navigation, route }) {
         headerComponent={(
           <View style={[Spaces.gap[12]]}>
             <Text style={[Fonts.h3Bold, Fonts.neutral00, { textAlign: 'center' }]}>
-              Choisir un poste
+              {t('eventDetails.chooseAPosition', 'Choisir un poste')}
             </Text>
             <Text style={[Fonts.p2, Fonts.neutral100, { textAlign: 'center' }]}>
-              Sélectionne le poste auquel tu veux participer.
+              {t(
+                'eventDetails.selectThePositionYouWant',
+                'Sélectionne le poste auquel tu veux participer.',
+              )}
             </Text>
             <Text style={[Fonts.p3, Fonts.primary200, { textAlign: 'center' }]}>
               {`${detectionSlots.length} poste(s) - ${detectionSlotsSummary.totalRequested} place(s) - ${detectionSlotsSummary.totalOpen} ouvert(s)`}
@@ -9116,12 +9179,12 @@ function EventDetails({ navigation, route }) {
             const isDisabled = isComplete || applyToDetectionSlotMutation.isPending || isCurrentUserSlot;
             let buttonTitle = 'Participer';
             if (isCurrentUserSlot) {
-              buttonTitle = 'Demande envoyée';
+              buttonTitle = t('eventDetails.requestSent', 'Demande envoyée');
             } else if (isComplete) {
               buttonTitle = 'Poste complet';
             }
             const remainingLabel = isComplete
-              ? 'Complet'
+              ? t('eventDetails.full', 'Complet')
               : `${slot?.remaining || 0} ${Number(slot?.remaining || 0) > 1 ? 'places restantes' : 'place restante'}`;
 
             return (
@@ -9141,7 +9204,7 @@ function EventDetails({ navigation, route }) {
                 <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter, Spaces.gap[12]]}>
                   <View style={{ flex: 1 }}>
                     <Text style={[Fonts.p1Bold, Fonts.neutral00]}>
-                      {slot?.position || 'Poste'}
+                      {slot?.position || t('eventDetails.position', 'Poste')}
                     </Text>
                     <Text style={[Fonts.p3, Fonts.neutral300, { marginTop: 4 }]}>
                       {`${slot?.acceptedCount || 0}/${slot?.quantity || 1} valide - ${slot?.pendingCount || 0} en attente`}
@@ -9358,7 +9421,10 @@ function EventDetails({ navigation, route }) {
       <ShareEventModal
         event={event ? {
           ...event,
-          title: event?.title || event?.name || event?.type?.name || 'Événement FoundClub',
+          title: event?.title || event?.name || event?.type?.name || t(
+            'eventDetails.foundclubEvent',
+            'Événement FoundClub',
+          ),
         } : null}
         isVisible={isShareModalVisible}
         onClose={() => setIsShareModalVisible(false)}
@@ -9427,12 +9493,12 @@ function EventDetails({ navigation, route }) {
         <View style={[Spaces.gap[16], Spaces.paddingBottom[12]]}>
           <View style={[Spaces.gap[4]]}>
             <Text style={[Fonts.h3Bold, Fonts.neutral00]}>
-              Bravo, ton événement est en ligne
+              {t('eventDetails.wellDoneYourEventIs', 'Bravo, ton événement est en ligne')}
             </Text>
             <Text style={[Fonts.p2, Fonts.neutral100]}>
               {remainingEventPublishQuota > 0
-                ? `Ton credit gratuit événement a bien été utilise. Il t en reste ${remainingEventPublishQuota}${totalEventPublishQuota > 0 ? `/${totalEventPublishQuota}` : ''}.`
-                : 'Ton credit gratuit événement a bien été utilise. Les prochaines publications passeront par une offre Team ou Club.'}
+                ? t('eventDetails.yourFreeEventCreditHas', 'Ton credit gratuit événement a bien été utilise. Il t en reste {{remainingEventPublishQuota}}{{totalSuffix}}.', { remainingEventPublishQuota, totalSuffix: totalEventPublishQuota > 0 ? `/${totalEventPublishQuota}` : '', ...SANS_ECHAPPEMENT })
+                : t('eventDetails.yourFreeEventCreditHas2', 'Ton credit gratuit événement a bien été utilise. Les prochaines publications passeront par une offre Team ou Club.')}
             </Text>
           </View>
 
@@ -9449,21 +9515,21 @@ function EventDetails({ navigation, route }) {
             ]}
           >
             <Text style={[Fonts.p3Bold, Fonts.primary500]}>
-              Suite logique
+              {t('eventDetails.nextStep', 'Suite logique')}
             </Text>
             <Text style={[Fonts.p2, Fonts.neutral100]}>
-              Consulte ton abonnement pour voir les offres FoundClub, tes quotas restants et les droits qui se debloquent ensuite.
+              {t('eventDetails.checkYourSubscriptionToSee', 'Consulte ton abonnement pour voir les offres FoundClub, tes quotas restants et les droits qui se debloquent ensuite.')}
             </Text>
           </View>
 
           <Button
             onPress={handleOpenSubscriptionOverviewFromSheet}
-            title="Voir mon abonnement"
+            title={t('eventDetails.seeMySubscription', 'Voir mon abonnement')}
             variant="Primary"
           />
           <Button
             onPress={closeSubscriptionFollowUp}
-            title="Continuer"
+            title={t('eventDetails.continue', 'Continuer')}
             variant="Secondary"
           />
         </View>
@@ -9476,9 +9542,15 @@ function EventDetails({ navigation, route }) {
       >
         <View style={[Spaces.gap[16], Spaces.paddingBottom[12]]}>
           <View style={tournamentDs.styles.headerBlock}>
-            <Text style={[Fonts.h3Bold, Fonts.neutral00]}>Participer au tournoi</Text>
+            <Text style={[Fonts.h3Bold, Fonts.neutral00]}>
+              {t('eventDetails.joinTheTournament', 'Participer au tournoi')}
+            </Text>
             <Text style={[Fonts.p2, Fonts.neutral100]}>
-              Choisis si tu créés ton équipe éphémère ou si tu rejoins une équipe déjà inscrite.
+              {t(
+                'eventDetails.chooseWhetherYouCreateYour',
+                'Choisis si tu créés ton équipe éphémère ou si tu rejoins une équipe déjà '
+                  + 'inscrite.',
+              )}
             </Text>
           </View>
 
@@ -9488,7 +9560,7 @@ function EventDetails({ navigation, route }) {
                 setIsTournamentParticipationModalVisible(false);
                 setIsTournamentCreateModalVisible(true);
               }}
-              title="Créer une équipe pour le tournoi"
+              title={t('eventDetails.createATeamForThe', 'Créer une équipe pour le tournoi')}
               variant="Primary"
             />
           ) : null}
@@ -9499,13 +9571,16 @@ function EventDetails({ navigation, route }) {
               setIsTournamentParticipationModalVisible(false);
               setIsTournamentJoinSelectorVisible(true);
             }}
-            title="Rejoindre une équipe existante"
+            title={t('eventDetails.joinAnExistingTeam', 'Rejoindre une équipe existante')}
             variant="Secondary"
           />
 
           {joinableTournamentTeams.length === 0 ? (
             <Text style={[Fonts.p3, Fonts.neutral200]}>
-              Aucune équipe ouverte aux demandes n est disponible pour le moment.
+              {t(
+                'eventDetails.noTeamOpenToRequests',
+                'Aucune équipe ouverte aux demandes n est disponible pour le moment.',
+              )}
             </Text>
           ) : null}
         </View>
@@ -9521,15 +9596,23 @@ function EventDetails({ navigation, route }) {
       >
         <View style={[Spaces.gap[16], Spaces.paddingBottom[12]]}>
           <View style={tournamentDs.styles.headerBlock}>
-            <Text style={[Fonts.h3Bold, Fonts.neutral00]}>Équipes ouvertes</Text>
+            <Text style={[Fonts.h3Bold, Fonts.neutral00]}>
+              {t('eventDetails.openTeams', 'Équipes ouvertes')}
+            </Text>
             <Text style={[Fonts.p2, Fonts.neutral100]}>
-              Sélectionne une équipe tournoi qui accepte actuellement de nouvelles demandes.
+              {t(
+                'eventDetails.selectATournamentTeamThat',
+                'Sélectionne une équipe tournoi qui accepte actuellement de nouvelles demandes.',
+              )}
             </Text>
           </View>
 
           {joinableTournamentTeams.length === 0 ? (
             <Text style={[Fonts.p2, Fonts.neutral100]}>
-              Aucune équipe tournoi n accepte de nouvelles demandes pour le moment.
+              {t(
+                'eventDetails.noTournamentTeamAcceptsNew',
+                'Aucune équipe tournoi n accepte de nouvelles demandes pour le moment.',
+              )}
             </Text>
           ) : (
             joinableTournamentTeams.map((team) => {
@@ -9542,14 +9625,14 @@ function EventDetails({ navigation, route }) {
                 >
                   <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter, Spaces.gap[12]]}>
                     <View style={{ flex: 1 }}>
-                      <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{team?.name || 'Équipe tournoi'}</Text>
+                      <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{team?.name || t('eventDetails.tournamentTeam', 'Équipe tournoi')}</Text>
                       <Text style={[Fonts.p4, Fonts.primary100]}>
                         {`${rosterSummary.totalCount || 0} membre(s) - demandes ouvertes`}
                       </Text>
                     </View>
                     <Tag
                       style={tournamentDs.getToneTagStyle(Colors.primary500)}
-                      text="Rejoindre"
+                      text={t('eventDetails.join', 'Rejoindre')}
                       textColor="primary500"
                     />
                   </View>
@@ -9567,15 +9650,17 @@ function EventDetails({ navigation, route }) {
       >
         <View style={[Spaces.gap[16], Spaces.paddingBottom[12]]}>
           <View style={tournamentDs.styles.headerBlock}>
-            <Text style={[Fonts.h3Bold, Fonts.neutral00]}>Inscrire mon équipe</Text>
+            <Text style={[Fonts.h3Bold, Fonts.neutral00]}>
+              {t('eventDetails.registerMyTeam', 'Inscrire mon équipe')}
+            </Text>
             <Text style={[Fonts.p2, Fonts.neutral100]}>
-              Sélectionne une équipe club. L application creera une équipe éphémère de tournoi sans toucher à ton effectif permanent.
+              {t('eventDetails.selectAClubTeamThe', 'Sélectionne une équipe club. L application creera une équipe éphémère de tournoi sans toucher à ton effectif permanent.')}
             </Text>
           </View>
 
           {availableTournamentSourceTeams.length === 0 ? (
             <Text style={[Fonts.p2, Fonts.neutral100]}>
-              Aucune équipe club disponible à inscrire.
+              {t('eventDetails.noClubTeamAvailableTo', 'Aucune équipe club disponible à inscrire.')}
             </Text>
           ) : (
             // @ts-ignore: FIXME: Baseline TS regression
@@ -9591,7 +9676,9 @@ function EventDetails({ navigation, route }) {
                   },
                 ]}
               >
-                <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{sourceTeam?.name || 'Equipe'}</Text>
+                <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
+                  {sourceTeam?.name || t('eventDetails.teamFallback', 'Equipe')}
+                </Text>
                 <Text style={[Fonts.p4, Fonts.primary100]}>
                   {[
                     sourceTeam?.section?.name,
@@ -9612,15 +9699,17 @@ function EventDetails({ navigation, route }) {
       >
         <View style={[Spaces.gap[16], Spaces.paddingBottom[12]]}>
           <View style={tournamentDs.styles.headerBlock}>
-            <Text style={[Fonts.h3Bold, Fonts.neutral00]}>Créer une équipe</Text>
+            <Text style={[Fonts.h3Bold, Fonts.neutral00]}>
+              {t('eventDetails.createATeam', 'Créer une équipe')}
+            </Text>
             <Text style={[Fonts.p2, Fonts.neutral100]}>
-              Cette équipe n existera que pour ce tournoi. Tu en deviendras automatiquement le capitaine.
+              {t('eventDetails.thisTeamWillOnlyExist', 'Cette équipe n existera que pour ce tournoi. Tu en deviendras automatiquement le capitaine.')}
             </Text>
           </View>
 
           <TextInput
             onChangeText={setTournamentTeamNameDraft}
-            placeholder="Nom de l équipe"
+            placeholder={t('eventDetails.teamName', 'Nom de l équipe')}
             placeholderTextColor={Colors.neutral300}
             style={[
               ...tournamentDs.styles.input,
@@ -9633,12 +9722,12 @@ function EventDetails({ navigation, route }) {
             <Button
               disabled={createTournamentTeamMutation.isPending}
               onPress={handleCreateTournamentTeam}
-              title="Créer mon équipe"
+              title={t('eventDetails.createMyTeam', 'Créer mon équipe')}
               variant="Primary"
             />
             <Button
               onPress={() => setIsTournamentCreateModalVisible(false)}
-              title="Annuler"
+              title={t('eventDetails.cancel', 'Annuler')}
               variant="Secondary"
             />
           </View>
@@ -9652,7 +9741,9 @@ function EventDetails({ navigation, route }) {
       >
         <View style={[Spaces.gap[16], Spaces.paddingBottom[12]]}>
           <View style={[Spaces.gap[4]]}>
-            <Text style={[Fonts.h3Bold, Fonts.neutral00]}>Stats de fin de match</Text>
+            <Text style={[Fonts.h3Bold, Fonts.neutral00]}>
+              {t('eventDetails.endOfMatchStats', 'Stats de fin de match')}
+            </Text>
             <Text style={[Fonts.p2, Fonts.neutral100]}>
               {matchStatsPromptMessage}
             </Text>
@@ -9669,7 +9760,10 @@ function EventDetails({ navigation, route }) {
             <Text style={[Fonts.p3, Fonts.neutral300]}>Match</Text>
             <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{compositionEventLabel}</Text>
             <Text style={[Fonts.p3, Fonts.primary100]}>
-              {compositionEditorTeam?.name || matchStatsPayload?.team?.name || 'Equipe'}
+              {compositionEditorTeam?.name || matchStatsPayload?.team?.name || t(
+                'eventDetails.teamFallback',
+                'Equipe',
+              )}
             </Text>
           </View>
 
@@ -9678,12 +9772,12 @@ function EventDetails({ navigation, route }) {
               dismissMatchStatsPrompt();
               openMatchStatsEditor();
             }}
-            title="Stats du match"
+            title={t('eventDetails.matchStats', 'Stats du match')}
             variant="Primary"
           />
           <Button
             onPress={dismissMatchStatsPrompt}
-            title="Plus tard"
+            title={t('eventDetails.later', 'Plus tard')}
             variant="Secondary"
           />
         </View>
@@ -9703,7 +9797,10 @@ function EventDetails({ navigation, route }) {
               {t('eventDetails.matchScore.title', 'Score du match')}
             </Text>
             <Text style={[Fonts.p2, Fonts.neutral100]}>
-              {compositionEditorTeam?.name || matchStatsPayload?.team?.name || 'Ton équipe'}
+              {compositionEditorTeam?.name || matchStatsPayload?.team?.name || t(
+                'eventDetails.yourTeam',
+                'Ton équipe',
+              )}
             </Text>
           </View>
 
@@ -9849,10 +9946,13 @@ function EventDetails({ navigation, route }) {
           <TouchableOpacity activeOpacity={1} style={[ApplicationStyle.backgroundColor.primary700, { borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24 }]}>
             <View style={[Spaces.gap[16]]}>
               <Text style={[Fonts.h4Bold, Fonts.neutral00]}>
-                Mettre à la une
+                {t('eventDetails.featureIt', 'Mettre à la une')}
               </Text>
               <Text style={[Fonts.p2, Fonts.neutral200]}>
-                Choisis ou tu souhaites mettre cet événement en avant.
+                {t(
+                  'eventDetails.chooseWhereYouWantTo',
+                  'Choisis ou tu souhaites mettre cet événement en avant.',
+                )}
               </Text>
               {featuredScopeOptions.map((option) => {
                 const isDisabled = option.status === 'pending' || option.status === 'approved';
@@ -9902,12 +10002,12 @@ function EventDetails({ navigation, route }) {
                 <Button
                   disabled={!selectedFeaturedScopeKinds.length || mutations.requestFeaturedMutation.isPending}
                   onPress={handleSubmitFeaturedScopes}
-                  title="Envoyer la demande"
+                  title={t('eventDetails.sendTheRequest', 'Envoyer la demande')}
                   variant="Primary"
                 />
                 <Button
                   onPress={() => setIsFeaturedModalVisible(false)}
-                  title="Annuler"
+                  title={t('eventDetails.cancel', 'Annuler')}
                   variant="Secondary"
                 />
               </View>
@@ -10006,7 +10106,10 @@ function EventDetails({ navigation, route }) {
                     />
                     <Text style={[Fonts.p3, Fonts.neutral300]}>
                       {isPlayerLateModal
-                        ? 'Annonce le retard estime. Tu confirmeras ensuite ton arrivée réelle.'
+                        ? t(
+                          'eventDetails.announceTheEstimatedDelayYou',
+                          'Annonce le retard estime. Tu confirmeras ensuite ton arrivée réelle.',
+                        )
                         : t('eventDetails.late.helper', '0 = a l\'heure. Ajuste la valeur si nécessaire avant validation.')}
                     </Text>
                   </View>
@@ -10014,12 +10117,12 @@ function EventDetails({ navigation, route }) {
                   {isCoachLateModal ? (
                     <View style={[Spaces.gap[8]]}>
                       <Text style={[Fonts.p3Bold, Fonts.neutral00]}>
-                        Note staff
+                        {t('eventDetails.staffNote', 'Note staff')}
                       </Text>
                       <TextInput
                         multiline
                         onChangeText={setLateModalNote}
-                        placeholder="Facultatif"
+                        placeholder={t('eventDetails.optional', 'Facultatif')}
                         placeholderTextColor={Colors.neutral400}
                         selectionColor={Colors.primary500}
                         style={[
@@ -10039,7 +10142,7 @@ function EventDetails({ navigation, route }) {
                     <Button
                       disabled={isLateModalLoading}
                       onPress={handleResetLateModal}
-                      title="Réinitialiser le pointage"
+                      title={t('eventDetails.resetTheCheckIn', 'Réinitialiser le pointage')}
                       variant="Secondary"
                     />
                   ) : null}
