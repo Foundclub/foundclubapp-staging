@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { ScrollView, Text, View } from 'react-native';
 
 import {
+  formatSubscriptionPriceLabel,
   getSubscriptionEntryPeriod,
   getSubscriptionEntryScope,
   isPerLicenseeSubscriptionEntry,
@@ -64,7 +65,7 @@ const ROW_MIN_HEIGHT = 44;
  * @returns {string}
  */
 const getStartingMonthlyPriceLabel = (entries, scopeType) => {
-  const prices = entries
+  const pricedEntries = entries
     .filter((entry) => getSubscriptionEntryScope(entry) === scopeType
       && getSubscriptionEntryPeriod(entry) === 'monthly'
       // S12-B — ⛔ LE PRIX AU LICENCIE N'EST PAS UN PRIX D'APPEL.
@@ -72,11 +73,14 @@ const getStartingMonthlyPriceLabel = (entries, scopeType) => {
       // `Math.min` faisait annoncer « Club : des 0,25 EUR » au lieu de 19,99 EUR
       // — un facteur 80 sur l'entete de la colonne la plus chere.
       && !isPerLicenseeSubscriptionEntry(entry))
-    .map((entry) => Number(entry?.referencePriceEurCents))
-    .filter((cents) => Number.isFinite(cents) && cents > 0);
+    .filter((entry) => Number.isFinite(Number(entry?.referencePriceEurCents))
+      && Number(entry?.referencePriceEurCents) > 0);
 
-  if (prices.length === 0) return '';
-  return `dès ${(Math.min(...prices) / 100).toFixed(2).replace('.', ',')} €`;
+  if (pricedEntries.length === 0) return '';
+  const prices = pricedEntries.map((entry) => Number(entry.referencePriceEurCents));
+  // INTL1 — un store n'a qu'une devise : celle de la premiere ligne vaut pour toutes.
+  const currencyCode = pricedEntries[0]?.priceCurrencyCode;
+  return `dès ${formatSubscriptionPriceLabel(Math.min(...prices), '', currencyCode)}`;
 };
 
 /**

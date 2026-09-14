@@ -76,6 +76,7 @@ import { RouteNames } from '@/navigation/routeNames';
  *   featureKeys?: string[] | null;
  *   maxTeams?: number | null;
  *   planCode?: string | null;
+ *   priceCurrencyCode?: string | null;
  *   referencePriceEurCents?: number | null;
  *   scopeType?: string | null;
  *   slotCount?: number | null;
@@ -957,9 +958,16 @@ function SubscriptionOffers({ navigation, route }) {
    * @returns {import('react').ReactElement}
    */
   const renderPrice = (entry) => {
-    const priceLabel = formatSubscriptionPriceLabel(entry?.referencePriceEurCents, billingPeriod);
+    const priceLabel = formatSubscriptionPriceLabel(
+      entry?.referencePriceEurCents,
+      billingPeriod,
+      entry?.priceCurrencyCode ?? undefined,
+    );
     const monthlyEquivalentLabel = billingPeriod === 'yearly'
-      ? formatSubscriptionMonthlyEquivalentLabel(entry?.referencePriceEurCents)
+      ? formatSubscriptionMonthlyEquivalentLabel(
+        entry?.referencePriceEurCents,
+        entry?.priceCurrencyCode ?? undefined,
+      )
       : '';
     const discountLabel = getDiscountLabel(entry);
 
@@ -1172,7 +1180,11 @@ function SubscriptionOffers({ navigation, route }) {
       };
     }
 
-    const priceLabel = formatSubscriptionPriceLabel(entry?.referencePriceEurCents, billingPeriod);
+    const priceLabel = formatSubscriptionPriceLabel(
+      entry?.referencePriceEurCents,
+      billingPeriod,
+      entry?.priceCurrencyCode ?? undefined,
+    );
     return {
       disabled: !isPurchaseAvailable,
       entry,
@@ -1258,7 +1270,11 @@ function SubscriptionOffers({ navigation, route }) {
               </Text>
               <View style={[Spaces.gap[4], Spaces.marginTop[12]]}>
                 <Text style={[Fonts.h3Bold, Fonts.neutral00]}>
-                  {formatSubscriptionPriceLabel(0, billingPeriod)}
+                  {formatSubscriptionPriceLabel(
+                    0,
+                    billingPeriod,
+                    catalogEntries.find((entry) => entry?.priceCurrencyCode)?.priceCurrencyCode,
+                  )}
                 </Text>
               </View>
               {renderBenefits({ dim: true, items: FREE_PLAN_INCLUDED_LABELS })}

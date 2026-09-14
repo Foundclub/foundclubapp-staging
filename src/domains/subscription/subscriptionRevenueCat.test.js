@@ -264,8 +264,11 @@ describe('subscriptionRevenueCat — prix du store', () => {
 
   it('lit le prix du package qui sera ACHETE, les deux conventions d identifiant comprises', () => {
     expect(mapRevenueCatStorePricesInCents(buildPricedOfferings(), CATALOG_ENTRIES)).toEqual({
-      fc_team_1_monthly: 799,
-      fc_team_1_yearly: 5999,
+      currencyCode: 'EUR',
+      pricesInCents: {
+        fc_team_1_monthly: 799,
+        fc_team_1_yearly: 5999,
+      },
     });
   });
 
@@ -277,12 +280,13 @@ describe('subscriptionRevenueCat — prix du store', () => {
     ];
 
     expect(mapRevenueCatStorePricesInCents(offerings, CATALOG_ENTRIES))
-      .toEqual({ fc_team_1_monthly: 799 });
+      .toEqual({ currencyCode: 'EUR', pricesInCents: { fc_team_1_monthly: 799 } });
   });
 
-  // Toute la mise en forme de l'app est en euros (« 7,99 €/mois »). Afficher un
-  // prix en dollars avec ce suffixe serait un faux prix, pas une approximation.
-  it('un prix rendu dans une autre devise est ecarte, jamais affiche avec un €', () => {
+  // Afficher un prix en dollars avec un « € » serait un faux prix. INTL1 : le
+  // prix garde donc SA devise, et une seconde devise dans le meme store (qui
+  // ne devrait pas exister) est ecartee plutot que melangee.
+  it('un prix rendu dans une autre devise garde sa devise, jamais melange a un prix en €', () => {
     const offerings = buildPricedOfferings();
     offerings.all.fc_team_1.monthly = buildPricedPackage('fc_team_1:monthly', {
       currencyCode: 'USD',
@@ -291,7 +295,7 @@ describe('subscriptionRevenueCat — prix du store', () => {
     offerings.all.fc_team_1.availablePackages = [offerings.all.fc_team_1.monthly];
 
     expect(mapRevenueCatStorePricesInCents(offerings, CATALOG_ENTRIES))
-      .toEqual({ fc_team_1_yearly: 5999 });
+      .toEqual({ currencyCode: 'USD', pricesInCents: { fc_team_1_monthly: 899 } });
   });
 
   // C'est aussi le cas du WEB, ou Purchases n'existe pas : la vente y passe par
@@ -313,8 +317,11 @@ describe('subscriptionRevenueCat — prix du store', () => {
     getMockPurchases().getOfferings.mockResolvedValueOnce(buildPricedOfferings());
 
     expect(await readRevenueCatStorePricesInCents(CATALOG_ENTRIES)).toEqual({
-      fc_team_1_monthly: 799,
-      fc_team_1_yearly: 5999,
+      currencyCode: 'EUR',
+      pricesInCents: {
+        fc_team_1_monthly: 799,
+        fc_team_1_yearly: 5999,
+      },
     });
   });
 });

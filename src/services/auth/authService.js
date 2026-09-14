@@ -7,6 +7,7 @@ import { getAuthTokens } from '@/domains/auth/authUseCases';
 
 import client from '@/services/client';
 
+import { getDeviceLocaleCountry } from '@/utils/device/deviceInfo';
 import { buildPreservedApiError } from '@/utils/errors/apiError';
 import { formatBootMeta } from '@/utils/performance/bootPerformance';
 
@@ -583,6 +584,9 @@ const createClubStaff = async (userData, kind) => {
 
   const userDataCopy = {
     ...userData,
+    // INTL1 — un numero tape sans indicatif (CreateTrainerModal) prend
+    // l'indicatif de ce pays cote serveur ; hors FR/BE/CH/AE, le serveur garde FR.
+    phoneCountry: getDeviceLocaleCountry(),
     username: userData.phoneNumber,
   };
 
