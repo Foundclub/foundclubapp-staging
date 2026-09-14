@@ -13,6 +13,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import usePlaces from '@/domains/places/usePlaces';
 import { useAppContext } from '@/store/appContext';
 import { Joi } from '@/theme/strings';
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -182,10 +183,16 @@ function EventFilters({ navigation }) {
     if (isAlertMode) {
       navigation.setOptions({
         headerRight: () => null,
-        headerTitle: editAlertMode ? 'Modifier l\'alerte' : 'Créer une alerte',
+        headerTitle: editAlertMode ? t(
+          'eventFilters.editTheAlert',
+          "Modifier l'alerte",
+        ) : t(
+          'eventFilters.createAnAlert',
+          'Créer une alerte',
+        ),
       });
     }
-  }, [isAlertMode, editAlertMode, navigation]);
+  }, [isAlertMode, editAlertMode, navigation, t]);
 
   React.useLayoutEffect(() => {
     if (!isAlertMode) {
@@ -200,13 +207,13 @@ function EventFilters({ navigation }) {
               }}
             >
               <Text style={{ color: Colors.primary500, fontSize: 24 }}>★</Text>
-              <Text style={{ color: Colors.primary500, fontSize: 10, marginTop: 2 }}>Créer alerte</Text>
+              <Text style={{ color: Colors.primary500, fontSize: 10, marginTop: 2 }}>{t('eventFilters.createAlert', 'Créer alerte')}</Text>
             </TouchableOpacity>
           </View>
         ),
       });
     }
-  }, [navigation, Colors, createAlertMode]);
+  }, [navigation, Colors, createAlertMode, t]);
 
   const handleCreateAlert = async () => {
     if (!alertLabel.trim()) return;
@@ -214,7 +221,13 @@ function EventFilters({ navigation }) {
     // Validate city and radius
     const currentFilters = /** @type {EventFilterFormValues} */ (getValues());
     if (!currentFilters.city?.value || !currentFilters.radius) {
-      Alert.alert('Erreur', 'La ville et le rayon sont obligatoires pour créer une alerte');
+      Alert.alert(t(
+        'common.error',
+        'Erreur',
+      ), t(
+        'eventFilters.cityAndRadiusAreRequired',
+        'La ville et le rayon sont obligatoires pour créer une alerte',
+      ));
       return;
     }
 
@@ -238,7 +251,10 @@ function EventFilters({ navigation }) {
           isActive: true,
           label: alertLabel,
         });
-        Alert.alert('Succès', 'Alerte modifiée avec succès !');
+        Alert.alert(t('common.success', 'Succès'), t(
+          'eventFilters.alertUpdatedSuccessfully',
+          'Alerte modifiée avec succès !',
+        ));
       } else {
         await createSearchAlert({
           filters: filtersToSave,
@@ -246,7 +262,10 @@ function EventFilters({ navigation }) {
           label: alertLabel,
           type: 'event', // Add type field
         });
-        Alert.alert('Succès', 'Alerte créée avec succès !');
+        Alert.alert(t('common.success', 'Succès'), t(
+          'eventFilters.alertCreatedSuccessfully',
+          'Alerte créée avec succès !',
+        ));
       }
       setIsSaveModalVisible(false);
       setAlertLabel('');
@@ -254,7 +273,7 @@ function EventFilters({ navigation }) {
     } catch (err) {
       const typedError = /** @type {any} */ (err);
       console.error(typedError);
-      Alert.alert('Erreur', typedError?.response?.data?.error?.message || 'Erreur lors de la sauvegarde');
+      Alert.alert(t('common.error', 'Erreur'), typedError?.response?.data?.error?.message || t('eventFilters.errorWhileSaving', 'Erreur lors de la sauvegarde'));
     } finally {
       setIsCreatingAlert(false);
     }
@@ -420,7 +439,13 @@ function EventFilters({ navigation }) {
 
     // Validate city and radius
     if (!currentFilters.city?.value || !currentFilters.radius) {
-      Alert.alert('Erreur', 'La ville et le rayon sont obligatoires pour créer une alerte');
+      Alert.alert(t(
+        'common.error',
+        'Erreur',
+      ), t(
+        'eventFilters.cityAndRadiusAreRequired',
+        'La ville et le rayon sont obligatoires pour créer une alerte',
+      ));
       return;
     }
 
@@ -429,8 +454,12 @@ function EventFilters({ navigation }) {
       setAlertLabel(initialAlertLabel);
     } else {
       // Auto-generate alert name based on type + city
-      const cityName = currentFilters.city?.label || 'Recherche';
-      const baseLabel = `Événement · ${cityName}`;
+      const cityName = currentFilters.city?.label || t('eventFilters.search', 'Recherche');
+      const baseLabel = t(
+        'eventFilters.event',
+        'Événement · {{cityName}}',
+        { cityName, ...SANS_ECHAPPEMENT },
+      );
 
       // Check for duplicates and add suffix if needed
       try {
@@ -526,7 +555,7 @@ function EventFilters({ navigation }) {
       >
         <View style={[Spaces.gap[16]]}>
           <Text style={[Fonts.h3Bold, Fonts.neutral00]}>
-            {editAlertMode ? "Modifier l'alerte" : t('searchAlerts.create.title', 'Créer une alerte')}
+            {editAlertMode ? t('eventFilters.editTheAlert', "Modifier l'alerte") : t('searchAlerts.create.title', 'Créer une alerte')}
           </Text>
           <Text style={[Fonts.p1, Fonts.neutral00]}>
             {t('searchAlerts.create.desc', 'Donne un nom à ta recherche pour recevoir des notifications.')}
@@ -538,15 +567,11 @@ function EventFilters({ navigation }) {
           />
           {previewCount !== null && (
             <Text style={[Fonts.p2, { color: Colors.primary500 }]}>
-              Pour le moment,
-              {' '}
-              {previewCount}
-              {' '}
-              événement
-              {previewCount > 1 ? 's' : ''}
-              {' '}
-              correspond
-              {previewCount > 1 ? 'ent' : ''}
+              {t('eventFilters.matchingEventsForNow', {
+                count: previewCount,
+                defaultValue_one: 'Pour le moment, {{count}} événement correspond',
+                defaultValue_other: 'Pour le moment, {{count}} événements correspondent',
+              })}
             </Text>
           )}
           <Button
@@ -759,12 +784,18 @@ function EventFilters({ navigation }) {
           <>
             <Button
               onPress={() => navigation.goBack()}
-              title="Annuler"
+              title={t('eventFilters.cancel', 'Annuler')}
               variant="Secondary"
             />
             <Button
               onPress={handleSaveAlert}
-              title={editAlertMode ? 'Enregistrer les modifications' : "Créer l'alerte ★"}
+              title={editAlertMode ? t(
+                'eventFilters.saveChanges',
+                'Enregistrer les modifications',
+              ) : t(
+                'eventFilters.createTheAlert',
+                "Créer l'alerte ★",
+              )}
               variant="Primary"
             />
           </>

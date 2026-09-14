@@ -4,6 +4,7 @@ import {
   Suspense,
   useCallback, useEffect, useMemo, useRef, useState,
 } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Alert, FlatList, Image, InteractionManager, Platform, Text, TouchableOpacity, View,
 } from 'react-native';
@@ -118,6 +119,7 @@ function CarteEnAttente() {
  * @returns {React.ReactElement} ParticipantEventList component
  */
 function ParticipantEventList({ navigation }) {
+  const { t } = useTranslation();
   const {
     Alignments,
     ApplicationStyle,
@@ -191,11 +193,12 @@ function ParticipantEventList({ navigation }) {
   const userClubId = userData?.club?.documentId;
   const userCmId = userData?.club?.parentMultisport?.documentId;
 
-  const trainedSectionIds = userData?.trainedTeams?.map((t) => t.club?.documentId).filter(Boolean) || [];
-  const trainedCmIds = userData?.trainedTeams?.map((t) => t.club?.parentMultisport?.documentId).filter(Boolean) || [];
+  // I18N-2 : le paramètre s appelait `t` et masquait la traduction de l écran.
+  const trainedSectionIds = userData?.trainedTeams?.map((x) => x.club?.documentId).filter(Boolean) || [];
+  const trainedCmIds = userData?.trainedTeams?.map((x) => x.club?.parentMultisport?.documentId).filter(Boolean) || [];
 
-  const playerSectionIds = userData?.myTeams?.map((t) => t.club?.documentId).filter(Boolean) || [];
-  const playerCmIds = userData?.myTeams?.map((t) => t.club?.parentMultisport?.documentId).filter(Boolean) || [];
+  const playerSectionIds = userData?.myTeams?.map((x) => x.club?.documentId).filter(Boolean) || [];
+  const playerCmIds = userData?.myTeams?.map((x) => x.club?.parentMultisport?.documentId).filter(Boolean) || [];
 
   const allClubIds = [
     userClubId,
@@ -330,8 +333,11 @@ function ParticipantEventList({ navigation }) {
   const createEventParticipationMutation = useMutation({
     mutationFn: createEventParticipation,
     onError: (error) => {
-      const message = getParticipationErrorMessage(error, 'Une erreur est survenue.');
-      Alert.alert('Erreur', message);
+      const message = getParticipationErrorMessage(error, t(
+        'participantEventList.anErrorOccurred',
+        'Une erreur est survenue.',
+      ));
+      Alert.alert(t('common.error', 'Erreur'), message);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['events'] });
@@ -343,8 +349,11 @@ function ParticipantEventList({ navigation }) {
   const joinReservationMutation = useMutation({
     mutationFn: (reservationId) => joinReservation(reservationId),
     onError: (error) => {
-      const message = getParticipationErrorMessage(error, 'Une erreur est survenue.');
-      Alert.alert('Erreur', message);
+      const message = getParticipationErrorMessage(error, t(
+        'participantEventList.anErrorOccurred',
+        'Une erreur est survenue.',
+      ));
+      Alert.alert(t('common.error', 'Erreur'), message);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['events'] });
@@ -393,7 +402,13 @@ function ParticipantEventList({ navigation }) {
     const participationFlow = resolveParticipationFlow(event, { user: userData });
 
     if (!participationFlow?.canAct) {
-      Alert.alert('Erreur', participationFlow?.blockedReason || 'Cette action est indisponible.');
+      Alert.alert(t(
+        'common.error',
+        'Erreur',
+      ), participationFlow?.blockedReason || t(
+        'participantEventList.thisActionIsUnavailable',
+        'Cette action est indisponible.',
+      ));
       return;
     }
 
@@ -461,8 +476,11 @@ function ParticipantEventList({ navigation }) {
         hasUserId: Boolean(userData?.documentId),
       });
       Alert.alert(
-        'Erreur',
-        "Ta réponse n'a pas pu être envoyée. Réessaie dans un instant.",
+        t('common.error', 'Erreur'),
+        t(
+          'participantEventList.yourAnswerCouldnTBe',
+          "Ta réponse n'a pas pu être envoyée. Réessaie dans un instant.",
+        ),
       );
       return;
     }
@@ -473,9 +491,15 @@ function ParticipantEventList({ navigation }) {
         user: userData.documentId,
       });
     } catch (error) {
-      Alert.alert('Erreur', getParticipationErrorMessage(error, 'Une erreur est survenue.'));
+      Alert.alert(t(
+        'common.error',
+        'Erreur',
+      ), getParticipationErrorMessage(error, t(
+        'participantEventList.anErrorOccurred',
+        'Une erreur est survenue.',
+      )));
     }
-  }, [createEventParticipationMutation, navigation, respondToEventRsvpMutation, userData]);
+  }, [createEventParticipationMutation, navigation, respondToEventRsvpMutation, userData, t]);
 
   // 🔇 T2/D2 — « ABSENT·E » N ÉTAIT BRANCHÉ SUR RIEN.
   //
@@ -502,7 +526,13 @@ function ParticipantEventList({ navigation }) {
   const handleJoinEvent = useCallback((event) => {
     const participationFlow = resolveParticipationFlow(event, { user: userData });
     if (!participationFlow?.canAct) {
-      Alert.alert('Erreur', participationFlow?.blockedReason || 'Cette action est indisponible.');
+      Alert.alert(t(
+        'common.error',
+        'Erreur',
+      ), participationFlow?.blockedReason || t(
+        'participantEventList.thisActionIsUnavailable',
+        'Cette action est indisponible.',
+      ));
       return;
     }
 
@@ -527,7 +557,7 @@ function ParticipantEventList({ navigation }) {
     setJoinModalError('');
     setSelectedEvent(event);
     setIsJoinModalVisible(true);
-  }, [navigation, userData]);
+  }, [navigation, userData, t]);
 
   const handleCloseJoinModal = useCallback(() => {
     setIsJoinModalVisible(false);
@@ -557,13 +587,16 @@ function ParticipantEventList({ navigation }) {
         user: userData.documentId,
       });
     } catch (error) {
-      setJoinModalError(getParticipationErrorMessage(error, 'Une erreur est survenue.'));
+      setJoinModalError(getParticipationErrorMessage(error, t(
+        'participantEventList.anErrorOccurred',
+        'Une erreur est survenue.',
+      )));
     }
   }, [
     createEventParticipationMutation,
     joinReservationMutation,
     selectedEvent,
-    userData,
+    userData, t,
   ]);
 
   // 🪤 LE TYPE EST SUR LE PARAMÈTRE, ET PAS DANS UN BLOC AU-DESSUS : un bloc
@@ -749,7 +782,10 @@ function ParticipantEventList({ navigation }) {
             planningContent
           ) : (
             <PlanningOnboardingWrapper
-              description="Retrouve tes événements, ton calendrier et les actions de planning."
+              description={t(
+                'participantEventList.findYourEventsYourCalendar',
+                'Retrouve tes événements, ton calendrier et les actions de planning.',
+              )}
               id="planning-main-content"
               order={1}
               spotlight={{
@@ -758,7 +794,7 @@ function ParticipantEventList({ navigation }) {
                 paddingX: 2,
                 paddingY: 2,
               }}
-              title="Mon planning"
+              title={t('participantEventList.myPlanning', 'Mon planning')}
             >
               {planningContent}
             </PlanningOnboardingWrapper>
@@ -769,7 +805,7 @@ function ParticipantEventList({ navigation }) {
         {shouldLoadSecondaryPlanningData && featuredEvents.length > 0 && (
           <View style={[Spaces.marginTop[16]]}>
             <Text style={[Fonts.h3, Fonts.neutral00, Spaces.marginBottom[8]]}>
-              ⭐ À la une dans mon club
+              {t('participantEventList.featuredInMyClub', '⭐ À la une dans mon club')}
             </Text>
             <Suspense fallback={<DeferredFallback height={180} />}>
               <FeaturedEvents events={featuredEvents} useFacilityAccentColorForPublic />
@@ -781,7 +817,7 @@ function ParticipantEventList({ navigation }) {
         {shouldLoadSecondaryPlanningData ? (
           <View style={[Spaces.marginTop[16]]}>
             <Text style={[Fonts.h3, Fonts.neutral00, Spaces.marginBottom[8]]}>
-              Événements à partir de
+              {t('participantEventList.eventsFrom', 'Événements à partir de')}
             </Text>
             <Suspense fallback={<DeferredFallback height={76} />}>
               <DateSlider
@@ -816,7 +852,7 @@ function ParticipantEventList({ navigation }) {
     listStartDate,
     shouldLoadEventFeed,
     shouldLoadFeaturedFeed,
-    shouldLoadSecondaryPlanningData,
+    shouldLoadSecondaryPlanningData, t,
   ]);
 
   // Ecran par defaut du planning : sans ces deux etats, une liste vide et un echec
@@ -829,7 +865,7 @@ function ParticipantEventList({ navigation }) {
         <ErrorWrapper
           error={eventsError}
           onRetry={refetchEvents}
-          retryLabel="Réessayer"
+          retryLabel={t('participantEventList.tryAgain', 'Réessayer')}
           wrapperStyle={[
             Spaces.marginHorizontal[16],
             Spaces.marginTop[24],
@@ -844,15 +880,24 @@ function ParticipantEventList({ navigation }) {
     return (
       <View style={[Spaces.marginHorizontal[16]]}>
         <EmptyState
-          actionLabel={canManageEvents ? 'Créer un événement' : undefined}
+          actionLabel={canManageEvents ? t(
+            'participantEventList.createAnEvent',
+            'Créer un événement',
+          ) : undefined}
           description={
             canManageEvents
-              ? 'Crée ton premier événement pour le voir apparaître ici.'
-              : 'Tes prochains événements s’afficheront ici dès que ton équipe en publiera.'
+              ? t(
+                'participantEventList.createYourFirstEventTo',
+                'Crée ton premier événement pour le voir apparaître ici.',
+              )
+              : t(
+                'participantEventList.yourNextEventsWillShow',
+                'Tes prochains événements s’afficheront ici dès que ton équipe en publiera.',
+              )
           }
           icon={Images.calendar}
           onAction={canManageEvents ? handleCreateEventPress : undefined}
-          title="Aucun événement à venir"
+          title={t('participantEventList.noUpcomingEvent', 'Aucun événement à venir')}
         />
       </View>
     );
@@ -866,7 +911,7 @@ function ParticipantEventList({ navigation }) {
     isEventsError,
     isEventsLoading,
     refetchEvents,
-    shouldLoadEventFeed,
+    shouldLoadEventFeed, t,
   ]);
 
   return (
@@ -892,7 +937,7 @@ function ParticipantEventList({ navigation }) {
       {canManageEvents && (
         <WebFloatingOverlay style={getFloatingActionContainerStyle(floatingCtaBottom, { zIndex: 1100 })}>
           <TouchableOpacity
-            accessibilityLabel="Ajouter un événement"
+            accessibilityLabel={t('participantEventList.addAnEvent', 'Ajouter un événement')}
             accessibilityRole="button"
             activeOpacity={0.85}
             onPress={handleCreateEventPress}
