@@ -25,14 +25,16 @@ jest.mock('react-i18next', () => {
   return {
     initReactI18next: { init: () => {}, type: '3rdParty' },
     useTranslation: () => ({
-      t: (/** @type {string} */ cle) => {
+      // I18N-1 : une clef absente de fr.js rend son repli, comme dans l'app.
+      t: (/** @type {string} */ cle, /** @type {any} */ repli) => {
         const valeur = cle.split('.').reduce(
           (/** @type {any} */ noeud, /** @type {string} */ segment) => (
             noeud && typeof noeud === 'object' ? noeud[segment] : undefined
           ),
           traductions,
         );
-        return typeof valeur === 'string' ? valeur : cle;
+        if (typeof valeur === 'string') return valeur;
+        return typeof repli === 'string' ? repli : cle;
       },
     }),
   };

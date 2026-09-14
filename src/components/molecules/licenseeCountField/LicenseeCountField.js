@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { Text, View } from 'react-native';
 
 import {
@@ -7,6 +8,7 @@ import {
   SUBSCRIPTION_LICENSEE_COUNT_MIN,
 } from '@/domains/subscription/subscriptionBilling';
 import { withAlpha } from '@/theme/colors';
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import Input from '@/components/molecules/input/Input';
@@ -39,15 +41,19 @@ import Input from '@/components/molecules/input/Input';
 function LicenseeCountField({
   billingPeriod = '',
   helperText = '',
-  label = 'Nombre de licenciés',
+  label,
   minCount = SUBSCRIPTION_LICENSEE_COUNT_MIN,
   onChangeText,
   unitPriceEurCents = null,
   value,
 }) {
+  const { t } = useTranslation();
   const {
     Alignments, Colors, Fonts, Spaces,
   } = useTheme();
+  const fieldLabel = label === undefined
+    ? t('licenseeCountField.label', 'Nombre de licenciés')
+    : label;
 
   const typedCount = Number(value);
   const hasTypedCount = value !== '' && Number.isFinite(typedCount);
@@ -63,20 +69,28 @@ function LicenseeCountField({
   let errorText = '';
   if (isBelowMin) {
     errorText = minCount > SUBSCRIPTION_LICENSEE_COUNT_MIN
-      ? `Ton abonnement couvre déjà ${minCount - 1} licenciés : indique un nombre plus grand.`
-      : 'Indique au moins 1 licencié.';
+      ? t(
+        'licenseeCountField.errors.alreadyCovered',
+        'Ton abonnement couvre déjà {{covered}} licenciés : indique un nombre plus grand.',
+        { covered: minCount - 1, ...SANS_ECHAPPEMENT },
+      )
+      : t('licenseeCountField.errors.min', 'Indique au moins 1 licencié.');
   } else if (isAboveMax) {
-    errorText = `${SUBSCRIPTION_LICENSEE_COUNT_MAX} licenciés maximum. Écris-nous au-delà, on s'en occupe.`;
+    errorText = t(
+      'licenseeCountField.errors.max',
+      "{{max}} licenciés maximum. Écris-nous au-delà, on s'en occupe.",
+      { max: SUBSCRIPTION_LICENSEE_COUNT_MAX, ...SANS_ECHAPPEMENT },
+    );
   }
 
   return (
     <View style={Spaces.gap[12]}>
       <Input
-        accessibilityLabel={label}
+        accessibilityLabel={fieldLabel}
         error={errorText || undefined}
         inputMode="numeric"
         keyboardType="number-pad"
-        label={label}
+        label={fieldLabel}
         maxLength={String(SUBSCRIPTION_LICENSEE_COUNT_MAX).length}
         onChangeText={onChangeText}
         placeholder="250"
