@@ -91,7 +91,11 @@ export const Joi = DefaultJoi.defaults(
   }),
 );
 
-// date-fns suit la langue : `format(date, 'EEEE')` rend « lundi » ou « Monday ».
+/**
+ * date-fns suit la langue : `format(date, 'EEEE')` rend « lundi » ou « Monday ».
+ * @param {string} langue - La langue qu'i18next vient de prendre.
+ * @returns {void}
+ */
 const reglerDateFns = (langue) => setDefaultOptions({ locale: langue === 'en' ? enGB : fr });
 reglerDateFns(i18n.language);
 i18n.on('languageChanged', reglerDateFns);

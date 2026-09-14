@@ -63,7 +63,7 @@ export const lireChoixDeLangue = () => {
  * @returns {void}
  */
 export const enregistrerChoixDeLangue = (choix) => {
-  if (LANGUES_DISPONIBLES.includes(choix)) {
+  if (choix && LANGUES_DISPONIBLES.includes(choix)) {
     setItem(CLEF_CHOIX_DE_LANGUE, choix);
     return;
   }
