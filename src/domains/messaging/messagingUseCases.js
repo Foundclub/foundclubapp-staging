@@ -1,4 +1,7 @@
+import i18next from 'i18next';
+
 import { storage } from '@/store/appContext';
+import localeDesFormats from '@/theme/strings/localeDesFormats';
 
 import {
   getDocumentPreviewText,
@@ -83,17 +86,19 @@ export const getConversationName = ({
       // Le serveur pose deja « Match amical : A vs B » dans groupName
       // (friendly-match-workflow.ts:279). Sans ce cas, le `default` rendait ''
       // et le fil s affichait sans titre dans la liste de messagerie.
-      return chatGroupName || 'Match amical';
+      return chatGroupName || i18next.t('messagingUseCases.conversationName.friendlyMatch', 'Match amical');
     case 'group':
-      return chatGroupName || 'Groupe';
+      return chatGroupName || i18next.t('messagingUseCases.conversationName.group', 'Groupe');
     case 'league_match':
       if (chatLeagueMatch) {
         const date = chatLeagueMatch.date
-          ? new Date(chatLeagueMatch.date).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' })
+          ? new Date(chatLeagueMatch.date).toLocaleDateString(localeDesFormats(), { day: '2-digit', month: '2-digit' })
           : '';
-        return date ? `Match du ${date}` : 'Match de Ligue';
+        return date
+          ? i18next.t('messagingUseCases.conversationName.leagueMatchOn', 'Match du {{date}}', { date })
+          : i18next.t('messagingUseCases.conversationName.leagueMatch', 'Match de Ligue');
       }
-      return 'Match de Ligue';
+      return i18next.t('messagingUseCases.conversationName.leagueMatch', 'Match de Ligue');
     case 'multisport':
       return chatMultisportClub?.name || '';
     case 'team':
@@ -176,18 +181,18 @@ export const formatChatTimestamp = (value, options = {}) => {
       day: '2-digit', month: '2-digit', timeZone, year: 'numeric',
     }
     : { day: '2-digit', month: '2-digit', year: 'numeric' };
-  const sameDay = date.toLocaleDateString('fr-FR', dayOptions)
-    === now.toLocaleDateString('fr-FR', dayOptions);
+  const sameDay = date.toLocaleDateString(localeDesFormats(), dayOptions)
+    === now.toLocaleDateString(localeDesFormats(), dayOptions);
 
   if (sameDay) {
-    return date.toLocaleTimeString('fr-FR', {
+    return date.toLocaleTimeString(localeDesFormats(), {
       hour: '2-digit',
       minute: '2-digit',
       ...(timeZone ? { timeZone } : {}),
     });
   }
 
-  return date.toLocaleDateString('fr-FR', {
+  return date.toLocaleDateString(localeDesFormats(), {
     day: '2-digit',
     month: '2-digit',
     ...(timeZone ? { timeZone } : {}),
