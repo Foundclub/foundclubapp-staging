@@ -1,5 +1,6 @@
 import { joiResolver } from '@hookform/resolvers/joi';
 import Slider from '@react-native-community/slider';
+import i18next from 'i18next';
 import { useMemo } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
@@ -29,9 +30,24 @@ const DIVISION_OPTIONS = [1, 2, 3, 4, 5];
 const SPORT_OPTIONS = LEAGUE_SPORT_OPTIONS;
 
 const SECTION_OPTIONS = [
-  { label: 'Masculin', value: 'Male' },
-  { label: 'Feminin', value: 'Female' },
-  { label: 'Mixte', value: 'Mixed' },
+  {
+    get label() {
+      return i18next.t('squadFiltersScreen.sections.male', 'Masculin');
+    },
+    value: 'Male',
+  },
+  {
+    get label() {
+      return i18next.t('squadFiltersScreen.sections.female', 'Feminin');
+    },
+    value: 'Female',
+  },
+  {
+    get label() {
+      return i18next.t('squadFiltersScreen.sections.mixed', 'Mixte');
+    },
+    value: 'Mixed',
+  },
 ];
 
 const filtersSchema = Joi.object({
@@ -185,11 +201,11 @@ function SquadFiltersScreen({ navigation }) {
           <Text style={[Fonts.p3, { color: Colors.neutral300, marginTop: 2 }]}>
             <Text style={{ color: Colors.gold500 }}>{activeFiltersCount}</Text>
             {' '}
-            filtre
-            {activeFiltersCount > 1 ? 's' : ''}
-            {' '}
-            actif
-            {activeFiltersCount > 1 ? 's' : ''}
+            {t('squadFiltersScreen.activeFilters', {
+              count: activeFiltersCount,
+              defaultValue_one: 'filtre actif',
+              defaultValue_other: 'filtres actifs',
+            })}
           </Text>
         </View>
         <TouchableOpacity
@@ -236,7 +252,7 @@ function SquadFiltersScreen({ navigation }) {
           render={({ field: { onChange, value } }) => (
             <View style={{ gap: 8 }}>
               <Text style={[Fonts.p1Bold, { color: Colors.neutral00 }]}>
-                Dans un rayon de
+                {t('squadFiltersScreen.radiusLabel', 'Dans un rayon de')}
                 {' '}
                 <Text style={{ color: Colors.gold500 }}>
                   {value || DEFAULT_RADIUS_KM}
@@ -259,7 +275,7 @@ function SquadFiltersScreen({ navigation }) {
               />
               {!hasCity ? (
                 <Text style={[Fonts.p3, { color: Colors.neutral300 }]}>
-                  Choisis une ville pour activer le rayon.
+                  {t('squadFiltersScreen.radiusHint', 'Choisis une ville pour activer le rayon.')}
                 </Text>
               ) : null}
             </View>
@@ -342,10 +358,17 @@ function SquadFiltersScreen({ navigation }) {
             padding: 14,
           }}
         >
-          <Text style={[Fonts.p1Bold, { color: Colors.neutral00 }]}>Catégorie</Text>
-          <Text style={[Fonts.p2Bold, { color: Colors.gold500 }]}>Senior uniquement</Text>
+          <Text style={[Fonts.p1Bold, { color: Colors.neutral00 }]}>
+            {t('squadFiltersScreen.category', 'Catégorie')}
+          </Text>
+          <Text style={[Fonts.p2Bold, { color: Colors.gold500 }]}>
+            {t('squadFiltersScreen.seniorOnly', 'Senior uniquement')}
+          </Text>
           <Text style={[Fonts.p3, { color: Colors.neutral300 }]}>
-            Les squads FoundClub League sont filtrées automatiquement sur la catégorie Senior.
+            {t(
+              'squadFiltersScreen.seniorHint',
+              'Les squads FoundClub League sont filtrées automatiquement sur la catégorie Senior.',
+            )}
           </Text>
         </View>
 
@@ -399,7 +422,7 @@ function SquadFiltersScreen({ navigation }) {
         <Button
           onPress={handleSubmit(handleApplyFilters)}
           style={{ width: '100%' }}
-          title="Appliquer les filtres"
+          title={t('squadFiltersScreen.apply', 'Appliquer les filtres')}
           variant="Primary"
         />
       </View>

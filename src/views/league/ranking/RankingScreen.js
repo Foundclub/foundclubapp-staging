@@ -1,11 +1,13 @@
 import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
 import { useQueryClient } from '@tanstack/react-query';
+import i18next from 'i18next';
 import {
   useCallback,
   useEffect,
   useRef,
   useState,
 } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   FlatList,
   Image,
@@ -40,7 +42,7 @@ const formatCurrentStreak = (value) => {
   const streak = Number(value || 0);
   if (!Number.isFinite(streak) || streak === 0) return 'Stable';
   if (streak > 0) return `x${streak}`;
-  return 'Defaite';
+  return i18next.t('rankingScreen.streakDefeat', 'Defaite');
 };
 
 /**
@@ -48,6 +50,7 @@ const formatCurrentStreak = (value) => {
  */
 function RankingScreen() {
   const { Colors, Fonts } = useTheme();
+  const { t } = useTranslation();
   const navigation = /** @type {any} */ (useNavigation());
   const queryClient = useQueryClient();
   const route = /** @type {any} */ (useRoute());
@@ -106,11 +109,14 @@ function RankingScreen() {
     } catch (error) {
       console.error(error);
       setRanking([]);
-      setLoadError('Impossible de charger le classement League pour cette division.');
+      setLoadError(t(
+        'rankingScreen.loadError',
+        'Impossible de charger le classement League pour cette division.',
+      ));
     } finally {
       setLoading(false);
     }
-  }, [division]);
+  }, [division, t]);
 
   useFocusEffect(
     useCallback(() => {
@@ -168,14 +174,14 @@ function RankingScreen() {
           <Text style={[Fonts.p2Bold, { color: Colors.neutral00 }]}>{item.name}</Text>
           <Text numberOfLines={1} style={[Fonts.p3, { color: Colors.gold500 }]}>
             {item.wins}
-            V -
+            {t('rankingScreen.winsShort', 'V -')}
             {item.draws}
-            N -
+            {t('rankingScreen.drawsShort', 'N -')}
             {item.losses}
-            D
+            {t('rankingScreen.lossesShort', 'D')}
           </Text>
           <Text numberOfLines={1} style={[Fonts.p3, { color: Colors.neutral300 }]}>
-            Serie
+            {t('rankingScreen.streak', 'Serie')}
             {' '}
             {formatCurrentStreak(item.streak)}
             {' | Best x'}
@@ -194,9 +200,9 @@ function RankingScreen() {
   if (loading && ranking.length === 0) {
     return (
       <LeagueStateView
-        description="Chargement du classement League."
+        description={t('rankingScreen.loadingDescription', 'Chargement du classement League.')}
         isLoading
-        title="Chargement du classement"
+        title={t('rankingScreen.loadingTitle', 'Chargement du classement')}
       />
     );
   }
@@ -204,10 +210,10 @@ function RankingScreen() {
   if (loadError && ranking.length === 0) {
     return (
       <LeagueStateView
-        actionLabel="Réessayer"
+        actionLabel={t('rankingScreen.retry', 'Réessayer')}
         description={loadError}
         onAction={() => loadData()}
-        title="Classement indisponible"
+        title={t('rankingScreen.unavailable', 'Classement indisponible')}
       />
     );
   }
@@ -219,7 +225,9 @@ function RankingScreen() {
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
             <Text style={{ color: Colors.neutral00, fontSize: 24 }}>{'<'}</Text>
           </TouchableOpacity>
-          <Text style={[Fonts.h1, { color: Colors.neutral00 }]}>CLASSEMENT</Text>
+          <Text style={[Fonts.h1, { color: Colors.neutral00 }]}>
+            {t('rankingScreen.title', 'CLASSEMENT')}
+          </Text>
           <View style={{ width: 40 }} />
         </View>
 
@@ -240,7 +248,9 @@ function RankingScreen() {
         <LeagueCard style={{ overflow: 'hidden', padding: 0, ...leagueSurface }}>
           <View style={[styles.headerRow, { borderBottomColor: 'rgba(255,255,255,0.12)' }]}>
             <Text style={[Fonts.p3Bold, { color: Colors.neutral300, textAlign: 'center', width: 40 }]}>#</Text>
-            <Text style={[Fonts.p3Bold, { color: Colors.neutral300, flex: 1 }]}>Équipe</Text>
+            <Text style={[Fonts.p3Bold, { color: Colors.neutral300, flex: 1 }]}>
+              {t('rankingScreen.teamColumn', 'Équipe')}
+            </Text>
             <Text style={[Fonts.p3Bold, { color: Colors.neutral300, textAlign: 'center', width: 68 }]}>PTS</Text>
           </View>
 
@@ -251,10 +261,10 @@ function RankingScreen() {
             ListEmptyComponent={(
               <View style={{ alignItems: 'center', paddingVertical: 28 }}>
                 <Text style={[Fonts.p2, { color: Colors.neutral200 }]}>
-                  Aucune équipe sur cette division.
+                  {t('rankingScreen.emptyTitle', 'Aucune équipe sur cette division.')}
                 </Text>
                 <Text style={[Fonts.p3, { color: Colors.neutral300, marginTop: 6 }]}>
-                  Change de division ou relance plus tard.
+                  {t('rankingScreen.emptyHint', 'Change de division ou relance plus tard.')}
                 </Text>
               </View>
             )}

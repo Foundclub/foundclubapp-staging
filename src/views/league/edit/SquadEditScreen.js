@@ -3,6 +3,7 @@ import Slider from '@react-native-community/slider';
 import Joi from 'joi';
 import { useEffect, useMemo, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
+import { useTranslation } from 'react-i18next';
 import {
   Alert, KeyboardAvoidingView, Platform, ScrollView, Text, View,
 } from 'react-native';
@@ -45,6 +46,7 @@ function SquadEditScreen({ navigation, route }) {
   const {
     Alignments, Colors, Fonts, Spaces,
   } = useTheme();
+  const { t } = useTranslation();
 
   const {
     data: team,
@@ -99,16 +101,16 @@ function SquadEditScreen({ navigation, route }) {
   }, [allActivities, sportSearchValue]);
 
   const sections = useMemo(() => [
-    { label: 'Masculin', value: 'Male' },
-    { label: 'Féminin', value: 'Female' },
-    { label: 'Mixte', value: 'Mixed' },
-  ], []);
+    { label: t('squadEditScreen.sections.male', 'Masculin'), value: 'Male' },
+    { label: t('squadEditScreen.sections.female', 'Féminin'), value: 'Female' },
+    { label: t('squadEditScreen.sections.mixed', 'Mixte'), value: 'Mixed' },
+  ], [t]);
 
   useEffect(() => {
     navigation.setOptions({
-      headerTitle: 'Éditer la Squad',
+      headerTitle: t('squadEditScreen.headerTitle', 'Éditer la Squad'),
     });
-  }, [navigation]);
+  }, [navigation, t]);
 
   useEffect(() => {
     if (team) {
@@ -132,7 +134,13 @@ function SquadEditScreen({ navigation, route }) {
 
       const homeBasePayload = buildHomeBasePayload(data.address, data.radius);
       if (!homeBasePayload) {
-        Alert.alert('Adresse invalide', 'Sélectionne une adresse avec des coordonnées valides.');
+        Alert.alert(
+          t('squadEditScreen.alerts.invalidAddressTitle', 'Adresse invalide'),
+          t(
+            'squadEditScreen.alerts.invalidAddressBody',
+            'Sélectionne une adresse avec des coordonnées valides.',
+          ),
+        );
         return;
       }
 
@@ -144,11 +152,17 @@ function SquadEditScreen({ navigation, route }) {
         section: data.section,
         sport: data.sport,
       }));
-      Alert.alert('Succès', 'Squad mise à jour');
+      Alert.alert(
+        t('squadEditScreen.alerts.successTitle', 'Succès'),
+        t('squadEditScreen.alerts.successBody', 'Squad mise à jour'),
+      );
       navigation.goBack();
     } catch (e) {
       console.error(e);
-      Alert.alert('Erreur', 'Impossible de mettre à jour la squad');
+      Alert.alert(
+        t('squadEditScreen.alerts.errorTitle', 'Erreur'),
+        t('squadEditScreen.alerts.errorBody', 'Impossible de mettre à jour la squad'),
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -157,10 +171,13 @@ function SquadEditScreen({ navigation, route }) {
   if (!safeTeamId) {
     return (
       <LeagueStateView
-        actionLabel="Retour aux squads"
-        description="Aucune squad n'est associée à ce lien d'édition."
+        actionLabel={t('squadEditScreen.backToSquads', 'Retour aux squads')}
+        description={t(
+          'squadEditScreen.missingId.description',
+          "Aucune squad n'est associée à ce lien d'édition.",
+        )}
         onAction={() => navigation.navigate(RouteNames.LeagueSquadTab)}
-        title="Squad introuvable"
+        title={t('squadEditScreen.notFound', 'Squad introuvable')}
       />
     );
   }
@@ -168,9 +185,12 @@ function SquadEditScreen({ navigation, route }) {
   if (isBootstrapping) {
     return (
       <LeagueStateView
-        description="Préparation du formulaire d'édition de la squad."
+        description={t(
+          'squadEditScreen.loading.description',
+          "Préparation du formulaire d'édition de la squad.",
+        )}
         isLoading
-        title="Chargement de la squad"
+        title={t('squadEditScreen.loading.title', 'Chargement de la squad')}
       />
     );
   }
@@ -178,13 +198,16 @@ function SquadEditScreen({ navigation, route }) {
   if (setupError) {
     return (
       <LeagueStateView
-        actionLabel="Recharger"
-        description={setupError?.message || 'Impossible de charger cette squad pour le moment.'}
+        actionLabel={t('squadEditScreen.reload', 'Recharger')}
+        description={setupError?.message || t(
+          'squadEditScreen.loadError.description',
+          'Impossible de charger cette squad pour le moment.',
+        )}
         onAction={() => {
           refetchTeam();
           refetchActivities();
         }}
-        title="Chargement impossible"
+        title={t('squadEditScreen.loadError.title', 'Chargement impossible')}
       />
     );
   }
@@ -192,10 +215,13 @@ function SquadEditScreen({ navigation, route }) {
   if (missingTeam) {
     return (
       <LeagueStateView
-        actionLabel="Retour aux squads"
-        description="Cette squad n'existe plus ou n'est pas accessible depuis ce lien."
+        actionLabel={t('squadEditScreen.backToSquads', 'Retour aux squads')}
+        description={t(
+          'squadEditScreen.missing.description',
+          "Cette squad n'existe plus ou n'est pas accessible depuis ce lien.",
+        )}
         onAction={() => navigation.navigate(RouteNames.LeagueSquadTab)}
-        title="Squad introuvable"
+        title={t('squadEditScreen.notFound', 'Squad introuvable')}
       />
     );
   }
@@ -203,7 +229,9 @@ function SquadEditScreen({ navigation, route }) {
   return (
     <ScreenContainer bgImage="bg2">
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        behavior={Platform.OS === 'ios'
+          ? 'padding'
+          : 'height'}
         style={{ flex: 1 }}
       >
         <ScrollView contentContainerStyle={[Spaces.paddingVertical[16], Spaces.paddingHorizontal[4], Spaces.gap[24], Spaces.paddingBottom[40]]}>
@@ -214,10 +242,10 @@ function SquadEditScreen({ navigation, route }) {
             render={({ field: { onBlur, onChange, value } }) => (
               <Input
                 error={errors.name?.message}
-                label="Nom de la Squad"
+                label={t('squadEditScreen.fields.name', 'Nom de la Squad')}
                 onBlur={onBlur}
                 onChangeText={onChange}
-                placeholder="Ex: Les Invincibles"
+                placeholder={t('squadEditScreen.fields.namePlaceholder', 'Ex: Les Invincibles')}
                 value={value}
               />
             )}
@@ -234,7 +262,7 @@ function SquadEditScreen({ navigation, route }) {
                     error={errors.sport?.message}
                     label="Sport"
                     options={activities}
-                    placeholder="Sélectionner"
+                    placeholder={t('squadEditScreen.fields.selectPlaceholder', 'Sélectionner')}
                     searchValue={sportSearchValue}
                     setSearchValue={setSportSearchValue}
                     setValue={(/** @type {{value?: string} | null} */ option) => onChange(option ? option.value : undefined)}
@@ -253,7 +281,7 @@ function SquadEditScreen({ navigation, route }) {
                     isSearchable={false}
                     label="Section"
                     options={sections}
-                    placeholder="Sélectionner"
+                    placeholder={t('squadEditScreen.fields.selectPlaceholder', 'Sélectionner')}
                     setValue={(/** @type {{value?: string} | null} */ option) => onChange(option ? option.value : undefined)}
                     value={sections.find((s) => s.value === value)?.label || value}
                   />
@@ -271,10 +299,15 @@ function SquadEditScreen({ navigation, route }) {
               padding: 14,
             }}
           >
-            <Text style={[Fonts.p3Bold, { color: Colors.gold500, marginBottom: 4 }]}>Catégorie</Text>
+            <Text style={[Fonts.p3Bold, { color: Colors.gold500, marginBottom: 4 }]}>
+              {t('squadEditScreen.fields.category', 'Catégorie')}
+            </Text>
             <Text style={[Fonts.p1Bold, { color: Colors.neutral00 }]}>Senior</Text>
             <Text style={[Fonts.p3, { color: Colors.neutral300, marginTop: 6 }]}>
-              FoundClub League est réservé aux squads Senior.
+              {t(
+                'squadEditScreen.fields.categoryHint',
+                'FoundClub League est réservé aux squads Senior.',
+              )}
             </Text>
           </View>
 
@@ -284,8 +317,11 @@ function SquadEditScreen({ navigation, route }) {
             render={({ field: { onChange, value } }) => (
               <AutocompleteAddressInput
                 address={/** @type {any} */ (value || undefined)}
-                label="QG (Adresse principale)"
-                placeholder="Rechercher une adresse"
+                label={t('squadEditScreen.fields.homeBase', 'QG (Adresse principale)')}
+                placeholder={t(
+                  'squadEditScreen.fields.homeBasePlaceholder',
+                  'Rechercher une adresse',
+                )}
                 setAddress={onChange}
               />
             )}
@@ -293,7 +329,9 @@ function SquadEditScreen({ navigation, route }) {
 
           <View>
             <View style={[Alignments.row, Alignments.justifySpaceBetween, Spaces.marginBottom[8]]}>
-              <Text style={[Fonts.p2, { color: Colors.neutral300 }]}>Rayon de déplacement</Text>
+              <Text style={[Fonts.p2, { color: Colors.neutral300 }]}>
+                {t('squadEditScreen.fields.radius', 'Rayon de déplacement')}
+              </Text>
               <Text style={[Fonts.p1Bold, { color: Colors.gold500 }]}>
                 {radiusValue}
                 {' '}
@@ -318,7 +356,7 @@ function SquadEditScreen({ navigation, route }) {
               )}
             />
             <Text style={[Fonts.p3, { color: Colors.neutral500 }]}>
-              {'Distance max pour tes matchs à l\'extérieur'}
+              {t('squadEditScreen.fields.radiusHint', "Distance max pour tes matchs à l'extérieur")}
             </Text>
           </View>
 
@@ -327,7 +365,7 @@ function SquadEditScreen({ navigation, route }) {
               disabled={isSubmitting}
               isLoading={isSubmitting || isBootstrapping}
               onPress={handleSubmit(onSubmit)}
-              title="Enregistrer"
+              title={t('squadEditScreen.save', 'Enregistrer')}
               variant="Primary"
             />
           </View>
@@ -335,7 +373,7 @@ function SquadEditScreen({ navigation, route }) {
           <View style={{ marginTop: 12 }}>
             <Button
               onPress={() => navigation.goBack()}
-              title="Annuler"
+              title={t('squadEditScreen.cancel', 'Annuler')}
               variant="Secondary"
             />
           </View>
