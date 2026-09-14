@@ -1,7 +1,9 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Text, TouchableOpacity, View } from 'react-native';
 
 import { withAlpha } from '@/theme/colors';
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -38,6 +40,7 @@ function FriendlyMatchSlotEditor({
   onRemove,
   slots,
 }) {
+  const { t } = useTranslation();
   const {
     Alignments, Colors, Fonts, Spaces,
   } = /** @type {any} */ (useTheme());
@@ -75,11 +78,14 @@ function FriendlyMatchSlotEditor({
   const handleAdd = () => {
     const isoDay = toIsoDay(dayValue);
     if (!isoDay) {
-      setAddError('Choisis d’abord une date.');
+      setAddError(t('friendlyMatchSlotEditor.pickADateFirst', 'Choisis d’abord une date.'));
       return;
     }
     if (startValue && endValue && endValue <= startValue) {
-      setAddError('L’heure de fin doit être après l’heure de début.');
+      setAddError(t(
+        'friendlyMatchSlotEditor.theEndTimeMustBe',
+        'L’heure de fin doit être après l’heure de début.',
+      ));
       return;
     }
 
@@ -111,14 +117,14 @@ function FriendlyMatchSlotEditor({
       <View style={[Alignments.row, Spaces.gap[12]]}>
         <View style={{ flex: 1 }}>
           <TimePickerInput
-            label="Début (facultatif)"
+            label={t('friendlyMatchSlotEditor.startOptional', 'Début (facultatif)')}
             onChange={setStartValue}
             value={startValue}
           />
         </View>
         <View style={{ flex: 1 }}>
           <TimePickerInput
-            label="Fin (facultatif)"
+            label={t('friendlyMatchSlotEditor.endOptional', 'Fin (facultatif)')}
             onChange={setEndValue}
             value={endValue}
           />
@@ -131,23 +137,42 @@ function FriendlyMatchSlotEditor({
           bouton mort qui laisse deviner. */}
       <Button
         onPress={handleAdd}
-        title={isEditingExistingDay ? 'Mettre à jour cette date' : 'Ajouter cette date'}
+        title={isEditingExistingDay ? t(
+          'friendlyMatchSlotEditor.updateThisDate',
+          'Mettre à jour cette date',
+        ) : t(
+          'friendlyMatchSlotEditor.addThisDate',
+          'Ajouter cette date',
+        )}
         variant="Secondary"
       />
 
       {safeSlots.length === 0 ? (
         <Text style={[Fonts.p4, { color: withAlpha(Colors.neutral100, 0.63) }]}>
-          {emptyHint || 'Aucune date proposée pour l’instant.'}
+          {emptyHint || t(
+            'friendlyMatchSlotEditor.noDateProposedYet',
+            'Aucune date proposée pour l’instant.',
+          )}
         </Text>
       ) : (
         <View style={[Spaces.gap[8]]}>
           <Text style={[Fonts.p2Bold, { color: Colors.neutral100 }]}>
-            {safeSlots.length > 1 ? `${safeSlots.length} dates proposées` : '1 date proposée'}
+            {safeSlots.length > 1 ? t(
+              'friendlyMatchSlotEditor.proposedDates',
+              '{{slotsCount}} dates proposées',
+              { slotsCount: safeSlots.length, ...SANS_ECHAPPEMENT },
+            ) : t(
+              'friendlyMatchSlotEditor.n1ProposedDate',
+              '1 date proposée',
+            )}
           </Text>
 
           {safeSlots.map((/** @type {any} */ slot) => (
             <TouchableOpacity
-              accessibilityHint="Remet cette date dans le formulaire pour changer son horaire"
+              accessibilityHint={t(
+                'friendlyMatchSlotEditor.putsThisDateBackIn',
+                'Remet cette date dans le formulaire pour changer son horaire',
+              )}
               accessibilityLabel={`${toReadableDay(slot.date)}, ${getSlotHoursLabel(slot)}`}
               accessibilityRole="button"
               key={slot.date}
@@ -183,7 +208,11 @@ function FriendlyMatchSlotEditor({
               </Text>
 
               <TouchableOpacity
-                accessibilityLabel={`Retirer la date du ${toReadableDay(slot.date)}`}
+                accessibilityLabel={t(
+                  'friendlyMatchSlotEditor.removeTheDate',
+                  'Retirer la date du {{day}}',
+                  { day: toReadableDay(slot.date), ...SANS_ECHAPPEMENT },
+                )}
                 accessibilityRole="button"
                 onPress={() => onRemove(slot.date)}
                 style={{

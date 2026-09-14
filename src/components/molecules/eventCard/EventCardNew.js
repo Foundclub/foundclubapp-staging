@@ -1,5 +1,6 @@
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
+import i18next from 'i18next';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -21,6 +22,7 @@ import { getCurrentUserEventParticipationState } from '@/domains/event/participa
 import useEvent from '@/domains/event/useEvent';
 import { resolveParticipationFlow } from '@/domains/participation/participationFlow';
 import { withAlpha } from '@/theme/colors';
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import MarqueeText from '@/components/atoms/marqueeText/MarqueeText';
@@ -63,9 +65,6 @@ const getBackgroundImage = (typeName, Images, isStageEvent = false) => {
   return Images.eventCardOther;
 };
 
-// Libellés du chip type — tableau du handoff « Cartes Rechercher » (tour 3b).
-const DETECTION_EVENT_CARD_HEADER_TITLE = 'DÉTECTION / ESSAI';
-
 /**
  * Libéllé du chip type, selon le tableau du handoff (tour 3b).
  * @param {string | undefined} typeName - Nom du type d'événement.
@@ -82,15 +81,20 @@ const getHeaderTitle = (typeName, eventItem) => {
     });
     const externalLimit = Number(trainingConfig?.externalParticipantLimit || 0);
     if (trainingConfig?.isOpenTraining && externalLimit > 0) {
-      return 'Entraînement OUVERT';
+      return i18next.t('eventCardNew.openTraining', 'Entraînement OUVERT');
     }
-    return 'ENTRAINEMENT';
+    return i18next.t('eventCardNew.training', 'ENTRAINEMENT');
   }
-  if (normalizedType.includes('detection')) return DETECTION_EVENT_CARD_HEADER_TITLE;
-  if (normalizedType.includes('reservation')) return 'RÉSERVATION';
-  if (normalizedType.includes('tournoi')) return 'TOURNOI';
-  if (normalizedType.includes('stage')) return 'STAGE';
-  return typeName?.toUpperCase() || 'ÉVÉNEMENT';
+  // Libellés du chip type — tableau du handoff « Cartes Rechercher » (tour 3b).
+  if (normalizedType.includes('detection')) {
+    return i18next.t('eventCardNew.detectionTrial', 'DÉTECTION / ESSAI');
+  }
+  if (normalizedType.includes('reservation')) {
+    return i18next.t('eventCardNew.booking', 'RÉSERVATION');
+  }
+  if (normalizedType.includes('tournoi')) return i18next.t('eventCardNew.tournament', 'TOURNOI');
+  if (normalizedType.includes('stage')) return i18next.t('eventCardNew.trainingCamp', 'STAGE');
+  return typeName?.toUpperCase() || i18next.t('eventCardNew.event', 'ÉVÉNEMENT');
 };
 
 // Couleur du chip par type — SEUL le chip change, tout le reste reste cyan
@@ -278,7 +282,13 @@ const resolveTypeInfoText = ({
         return quantity > 1 ? `${position} ×${quantity}` : position;
       })
       .filter(Boolean);
-    if (slots.length) return `Postes recherchés : ${slots.join(', ')}`;
+    if (slots.length) {
+      return i18next.t(
+        'eventCardNew.positionsWanted',
+        'Postes recherchés : {{positions}}',
+        { positions: slots.join(', '), ...SANS_ECHAPPEMENT },
+      );
+    }
     return description;
   }
 
@@ -289,7 +299,11 @@ const resolveTypeInfoText = ({
     });
     const externalLimit = Number(trainingConfig?.externalParticipantLimit || 0);
     if (trainingConfig?.isOpenTraining && externalLimit > 0) {
-      return `Ouvert aux joueurs externes · ${externalLimit} places externes`;
+      return i18next.t(
+        'eventCardNew.openToExternalPlayersExternal',
+        'Ouvert aux joueurs externes · {{externalLimit}} places externes',
+        { externalLimit, ...SANS_ECHAPPEMENT },
+      );
     }
     return description;
   }
@@ -336,7 +350,11 @@ const resolveCapacityGauge = (eventItem, { isReservation, isTournamentEvent }) =
   if (isTournamentEvent) {
     const total = Number(eventItem?.tournamentConfig?.maxTeams || 0);
     if (!total) return null;
-    return { taken: (eventItem?.tournamentTeams || []).length, total, unit: ' équipes' };
+    return {
+      taken: (eventItem?.tournamentTeams || []).length,
+      total,
+      unit: i18next.t('eventCardNew.teamsUnit', ' équipes'),
+    };
   }
   const total = Number(eventItem?.capacity || 0);
   if (!total) return null;
@@ -590,9 +608,17 @@ function EventCardNew({
   let gaugeCountLabel = '';
   if (capacityGauge) {
     if (isReservation && isShared && missingPlayers > 0) {
-      const plural = missingPlayers > 1 ? 's' : '';
       const countSuffix = `(${currentPlayers}/${totalPlayers})`;
-      gaugeCountLabel = `Il manque ${missingPlayers} joueur${plural} ${countSuffix}`;
+      gaugeCountLabel = t(
+        'eventCardNew.missingPlayers',
+        {
+          count: missingPlayers,
+          countSuffix,
+          defaultValue_one: 'Il manque {{count}} joueur {{countSuffix}}',
+          defaultValue_other: 'Il manque {{count}} joueurs {{countSuffix}}',
+          ...SANS_ECHAPPEMENT,
+        },
+      );
     } else {
       gaugeCountLabel = `${capacityGauge.taken} / ${capacityGauge.total}${capacityGauge.unit}`;
     }
@@ -671,7 +697,10 @@ function EventCardNew({
           ]}
         >
           <Text style={[styles.pillButtonText, { color: Colors.primary900 }]}>
-            {actionLabel || t('reservation.actions.participate') || 'Réserver'}
+            {actionLabel || t('reservation.actions.participate') || t(
+              'eventCardNew.book',
+              'Réserver',
+            )}
           </Text>
         </Pressable>
         {!participationFlow?.canAct && participationFlow?.blockedReason ? (
@@ -810,7 +839,11 @@ function EventCardNew({
               ) : null}
               {!isTeamFocusedCard && invitedTeamNames.length > 0 ? (
                 <Text numberOfLines={1} style={[styles.clubSubLine, { color: Colors.primary200 }]}>
-                  {`équipes invitées: ${invitedTeamNames.join(', ')}`}
+                  {t(
+                    'eventCardNew.invitedTeams',
+                    'équipes invitées: {{teams}}',
+                    { teams: invitedTeamNames.join(', '), ...SANS_ECHAPPEMENT },
+                  )}
                 </Text>
               ) : null}
             </View>
@@ -823,7 +856,10 @@ function EventCardNew({
               {renderMetaCell(Images.clock, timeLabel)}
             </View>
             <View style={styles.metaRow}>
-              {renderMetaCell(Images.pin, locationText || 'Lieu non défini', {
+              {renderMetaCell(Images.pin, locationText || t(
+                'eventCardNew.locationNotSet',
+                'Lieu non défini',
+              ), {
                 iconAccentStyle: locationIconAccentStyle,
                 textAccentStyle: locationTextAccentStyle,
               })}
@@ -842,7 +878,7 @@ function EventCardNew({
                   ]}
                 >
                   <Text style={[styles.statusBadgeText, { color: Colors.primary900 }]}>
-                    🔥 Dernière minute
+                    {t('eventCardNew.lastMinute', '🔥 Dernière minute')}
                   </Text>
                 </View>
               ) : null}
@@ -854,7 +890,7 @@ function EventCardNew({
                   ]}
                 >
                   <Text style={[styles.statusBadgeText, { color: Colors.primary900 }]}>
-                    👥 Joueurs recherchés
+                    {t('eventCardNew.playersWanted', '👥 Joueurs recherchés')}
                   </Text>
                 </View>
               ) : null}
@@ -866,7 +902,7 @@ function EventCardNew({
                   ]}
                 >
                   <Text style={[styles.statusBadgeText, { color: Colors.primary900 }]}>
-                    ✅ Complet
+                    {t('eventCardNew.full', '✅ Complet')}
                   </Text>
                 </View>
               ) : null}

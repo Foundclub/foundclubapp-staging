@@ -2,6 +2,7 @@
 /* eslint-disable no-nested-ternary */
 import { useNavigation } from '@react-navigation/native';
 import dayjs from 'dayjs';
+import { useTranslation } from 'react-i18next';
 import {
   Image, StyleSheet, Text, TouchableOpacity, View,
 } from 'react-native';
@@ -137,6 +138,7 @@ function CountBadge({ label }) {
  * @returns {import('react').ReactElement | null}
  */
 function CompositionMessageBubble({ composition, isMe = false }) {
+  const { t } = useTranslation();
   const { Colors, Fonts } = useTheme();
   const navigation = useNavigation();
 
@@ -195,7 +197,14 @@ function CompositionMessageBubble({ composition, isMe = false }) {
     ? Math.max(0, teams.length - 1)
     : 0;
   const otherTeamsLine = otherTeamsCount > 0
-    ? `+ ${otherTeamsCount} autre équipe${otherTeamsCount > 1 ? 's' : ''} dans cette composition`
+    ? t(
+      'compositionMessageBubble.otherTeams',
+      {
+        count: otherTeamsCount,
+        defaultValue_one: '+ {{count}} autre équipe dans cette composition',
+        defaultValue_other: '+ {{count}} autre équipes dans cette composition',
+      },
+    )
     : '';
 
   // U06 — l'heure etait DEJA dans `eventDate` (champ `datetime` cote serveur) et
@@ -204,8 +213,14 @@ function CompositionMessageBubble({ composition, isMe = false }) {
   const formattedDate = eventMoment ? eventMoment.format('DD/MM/YYYY') : '';
   const formattedTime = eventMoment ? eventMoment.format('HH:mm') : '';
   const whenLine = [formattedDate, formattedTime].filter(Boolean).join(' · ');
-  const addressLine = readableAddress(eventAddress) || 'Lieu non précisé';
-  const teamLine = `${teamName || 'Equipe'}${publishedVersion ? ` · v${publishedVersion}` : ''}`;
+  const addressLine = readableAddress(eventAddress) || t(
+    'compositionMessageBubble.locationNotSpecified',
+    'Lieu non précisé',
+  );
+  const teamLine = `${teamName || t(
+    'compositionMessageBubble.team',
+    'Equipe',
+  )}${publishedVersion ? ` · v${publishedVersion}` : ''}`;
   // Une carte de composition SANS evenement rattache (partage libre) n'a ni
   // quand ni ou a annoncer : on ne lui colle pas un « Lieu non precise » qui ne
   // repond a aucune question.
@@ -328,7 +343,10 @@ function CompositionMessageBubble({ composition, isMe = false }) {
         canEdit: false,
         editorMode: 'event',
         editorSource: type === 'lineup_share' ? 'published' : null,
-        editorSourceLabel: type === 'lineup_share' ? "Composition d'équipes publiée" : null,
+        editorSourceLabel: type === 'lineup_share' ? t(
+          'compositionMessageBubble.teamLineUpPublished',
+          "Composition d'équipes publiée",
+        ) : null,
         eventId,
         eventName,
         existingComposition: packDeLaCarte,
@@ -383,7 +401,13 @@ function CompositionMessageBubble({ composition, isMe = false }) {
           numberOfLines={2}
           style={[Fonts.p2Bold, styles.headerTitle, { color: Colors.neutral00 }]}
         >
-          {type === 'lineup_share' ? "Composition d'équipes publiée" : 'Composition du match'}
+          {type === 'lineup_share' ? t(
+            'compositionMessageBubble.teamLineUpPublished',
+            "Composition d'équipes publiée",
+          ) : t(
+            'compositionMessageBubble.matchLineUp',
+            'Composition du match',
+          )}
         </Text>
         <CountBadge
           label={isMultiTeamComposition
@@ -402,7 +426,9 @@ function CompositionMessageBubble({ composition, isMe = false }) {
       {starters.length > 0 || benchPlayers.length > 0 ? (
         <View style={[styles.roster, { borderTopColor: Colors.neutral700 }]}>
           {starters.length > 0 ? (
-            <Text style={[Fonts.p4Bold, { color: Colors.neutral00 }]}>Sur le terrain</Text>
+            <Text style={[Fonts.p4Bold, { color: Colors.neutral00 }]}>
+              {t('compositionMessageBubble.onThePitch', 'Sur le terrain')}
+            </Text>
           ) : null}
           {starters.map((token) => (
             <Text
@@ -415,7 +441,9 @@ function CompositionMessageBubble({ composition, isMe = false }) {
           ))}
 
           {benchPlayers.length > 0 ? (
-            <Text style={[Fonts.p4Bold, { color: Colors.neutral00 }]}>Sur le banc</Text>
+            <Text style={[Fonts.p4Bold, { color: Colors.neutral00 }]}>
+              {t('compositionMessageBubble.onTheBench', 'Sur le banc')}
+            </Text>
           ) : null}
           {benchPlayers.map((player) => (
             <Text
@@ -452,7 +480,10 @@ function CompositionMessageBubble({ composition, isMe = false }) {
           </>
         ) : null}
         <Text numberOfLines={1} style={[Fonts.p4, { color: Colors.primary500 }]}>
-          {type === 'lineup_share' ? teamLine : 'Appuyer pour voir la composition'}
+          {type === 'lineup_share' ? teamLine : t(
+            'compositionMessageBubble.tapToSeeTheLine',
+            'Appuyer pour voir la composition',
+          )}
         </Text>
       </View>
     </TouchableOpacity>
