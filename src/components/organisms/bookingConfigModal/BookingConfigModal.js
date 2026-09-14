@@ -200,7 +200,7 @@ function BookingConfigModal({
         {step === 1 && (
           <View style={styles.stepContent}>
             <Text style={[Fonts.p2, Fonts.neutral300, Spaces.marginBottom[16]]}>
-              Créneau sélectionné :
+              {t('bookingConfigModal.selectedSlot', 'Créneau sélectionné :')}
               {' '}
               {selectedSlot.time}
               {' '}
@@ -228,12 +228,11 @@ function BookingConfigModal({
                       {option.label}
                     </Text>
                     <Text style={[Fonts.p2, Fonts.neutral300]}>
-                      (
-                      {option.slots}
-                      {' '}
-                      créneau
-                      {option.slots > 1 ? 'x' : ''}
-                      )
+                      {t('bookingConfigModal.slotCount', {
+                        count: option.slots,
+                        defaultValue_one: '({{count}} créneau)',
+                        defaultValue_other: '({{count}} créneaux)',
+                      })}
                     </Text>
                   </View>
                   <Text style={[Fonts.p1Bold, { color: Colors.primary500 }]}>
@@ -248,7 +247,7 @@ function BookingConfigModal({
               disabled={!selectedDuration}
               onPress={handleNext}
               style={Spaces.marginTop[24]}
-              title="Suivant"
+              title={t('bookingConfigModal.next', 'Suivant')}
               variant="Primary"
             />
           </View>
@@ -259,7 +258,7 @@ function BookingConfigModal({
           <View style={styles.stepContent}>
             <Pressable onPress={handleBack} style={Spaces.marginBottom[16]}>
               <Text style={[Fonts.p2, { color: Colors.primary500 }]}>
-                ← Retour
+                {t('bookingConfigModal.back', '← Retour')}
               </Text>
             </Pressable>
 
@@ -286,7 +285,7 @@ function BookingConfigModal({
               ]}
             >
               <View style={styles.modeHeader}>
-                <Text style={[Fonts.h3, Fonts.neutral00]}>🔒 PRIVATISER</Text>
+                <Text style={[Fonts.h3, Fonts.neutral00]}>{t('bookingConfigModal.private.title', '🔒 PRIVATISER')}</Text>
                 {mode === 'private' && (
                   <View style={[styles.checkBadge, { backgroundColor: Colors.primary500 }]}>
                     <Text style={styles.checkText}>✓</Text>
@@ -294,10 +293,10 @@ function BookingConfigModal({
                 )}
               </View>
               <Text style={[Fonts.p2, Fonts.neutral300]}>
-                Je réserve le terrain pour mon groupe
+                {t('bookingConfigModal.private.description', 'Je réserve le terrain pour mon groupe')}
               </Text>
               <Text style={[Fonts.p1Bold, { color: Colors.primary500 }, Spaces.marginTop[8]]}>
-                Prix total:
+                {t('bookingConfigModal.private.totalPrice', 'Prix total:')}
                 {' '}
                 {selectedDuration?.price}
                 €
@@ -313,7 +312,7 @@ function BookingConfigModal({
               ]}
             >
               <View style={styles.modeHeader}>
-                <Text style={[Fonts.h3, Fonts.neutral00]}>👥 MATCH OUVERT</Text>
+                <Text style={[Fonts.h3, Fonts.neutral00]}>{t('bookingConfigModal.shared.title', '👥 MATCH OUVERT')}</Text>
                 {mode === 'shared' && (
                   <View style={[styles.checkBadge, { backgroundColor: Colors.success500 }]}>
                     <Text style={styles.checkText}>✓</Text>
@@ -321,13 +320,13 @@ function BookingConfigModal({
                 )}
               </View>
               <Text style={[Fonts.p2, Fonts.neutral300]}>
-                Je cherche des joueurs pour compléter
+                {t('bookingConfigModal.shared.description', 'Je cherche des joueurs pour compléter')}
               </Text>
 
               {mode === 'shared' && (
                 <View style={[styles.sharedConfig, Spaces.marginTop[16]]}>
                   <View style={styles.stepperRow}>
-                    <Text style={[Fonts.p2, Fonts.neutral00]}>Joueurs recherchés :</Text>
+                    <Text style={[Fonts.p2, Fonts.neutral00]}>{t('bookingConfigModal.shared.targetPlayers', 'Joueurs recherchés :')}</Text>
                     <View style={styles.stepper}>
                       <Pressable onPress={decrementTarget} style={styles.stepperBtn}>
                         <Text style={styles.stepperBtnText}>-</Text>
@@ -342,7 +341,7 @@ function BookingConfigModal({
                   </View>
 
                   <View style={styles.stepperRow}>
-                    <Text style={[Fonts.p2, Fonts.neutral00]}>Tu es combien ?</Text>
+                    <Text style={[Fonts.p2, Fonts.neutral00]}>{t('bookingConfigModal.shared.currentPlayers', 'Tu es combien ?')}</Text>
                     <View style={styles.stepper}>
                       <Pressable onPress={decrementPlayers} style={styles.stepperBtn}>
                         <Text style={styles.stepperBtnText}>-</Text>
@@ -358,16 +357,14 @@ function BookingConfigModal({
 
                   <View style={[styles.priceInfo, { backgroundColor: 'rgba(46, 204, 113, 0.1)' }]}>
                     <Text style={[Fonts.p2, Fonts.neutral00]}>
-                      Il manque
-                      {' '}
-                      {targetPlayers - currentPlayers}
-                      {' '}
-                      joueur
-                      {targetPlayers - currentPlayers > 1 ? 's' : ''}
+                      {t('bookingConfigModal.shared.missingPlayers', {
+                        count: targetPlayers - currentPlayers,
+                        defaultValue_one: 'Il manque {{count}} joueur',
+                        defaultValue_other: 'Il manque {{count}} joueurs',
+                      })}
                     </Text>
                     <Text style={[Fonts.p1Bold, { color: Colors.success500 }]}>
-                      {pricePerPerson}
-                      €/joueur
+                      {t('bookingConfigModal.shared.pricePerPlayer', '{{price}}€/joueur', { price: pricePerPerson })}
                     </Text>
                   </View>
                 </View>
@@ -378,7 +375,7 @@ function BookingConfigModal({
               disabled={createBookingMutation.isPending}
               onPress={handleConfirm}
               style={Spaces.marginTop[24]}
-              title={createBookingMutation.isPending ? 'Réservation...' : 'Confirmer la réservation'}
+              title={createBookingMutation.isPending ? t('bookingConfigModal.booking', 'Réservation...') : t('bookingConfigModal.confirm', 'Confirmer la réservation')}
               variant="Primary"
             />
           </View>

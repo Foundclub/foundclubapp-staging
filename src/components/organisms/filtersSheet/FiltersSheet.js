@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Text, TouchableOpacity, View } from 'react-native';
 
 import { withAlpha } from '@/theme/colors';
@@ -58,18 +59,19 @@ const SNAP_POINTS = ['78%'];
  * @returns {import('react').ReactElement} La feuille.
  */
 function FiltersSheet({
-  applyLabel = 'Voir les résultats',
+  applyLabel = undefined,
   isVisible,
   onApply,
   onClose,
   onReset,
-  resetLabel = 'Réinitialiser',
+  resetLabel = undefined,
   rows,
-  title = 'Filtrer',
+  title = undefined,
 }) {
   const {
     Alignments, Colors, Fonts, Spaces,
   } = /** @type {any} */ (useTheme());
+  const { t } = useTranslation();
 
   const [rangeeOuverte, setRangeeOuverte] = useState('');
   const etaitOuverteRef = useRef(false);
@@ -106,7 +108,7 @@ function FiltersSheet({
               },
             ]}
           >
-            <Text style={[Fonts.p1Bold, { color: Colors.primary900 }]}>{applyLabel}</Text>
+            <Text style={[Fonts.p1Bold, { color: Colors.primary900 }]}>{applyLabel ?? t('filtersSheet.apply', 'Voir les résultats')}</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -114,11 +116,11 @@ function FiltersSheet({
             onPress={onReset}
             style={[Alignments.alignCenter, Alignments.justifyCenter, { minHeight: 44 }]}
           >
-            <Text style={[Fonts.p2Bold, { color: Colors.neutral200 }]}>{resetLabel}</Text>
+            <Text style={[Fonts.p2Bold, { color: Colors.neutral200 }]}>{resetLabel ?? t('filtersSheet.reset', 'Réinitialiser')}</Text>
           </TouchableOpacity>
         </View>
       )}
-      headerComponent={<Text style={[Fonts.h3Bold, Fonts.neutral00]}>{title}</Text>}
+      headerComponent={<Text style={[Fonts.h3Bold, Fonts.neutral00]}>{title ?? t('filtersSheet.title', 'Filtrer')}</Text>}
       isVisible={isVisible}
       snapPoints={SNAP_POINTS}
       webPresentation="dialog"

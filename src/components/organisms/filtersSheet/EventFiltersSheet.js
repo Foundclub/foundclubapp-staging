@@ -44,10 +44,6 @@ import FiltersSheet from './FiltersSheet';
  * rangee sans equivalent plutot que de l'afficher grisee.
  */
 
-const TOUS_SPORTS = 'Tous les sports';
-const TOUTES_VILLES = 'Toutes les villes';
-const TOUTES = 'Toutes';
-const TOUS = 'Tous';
 const RAYON_PAR_DEFAUT = 20;
 
 /** @typedef {{ label: string, value: string }} Option */
@@ -99,6 +95,10 @@ function EventFiltersSheet({
   onClose,
 }) {
   const { t } = useTranslation();
+  const TOUS_SPORTS = t('eventFiltersSheet.allSports', 'Tous les sports');
+  const TOUTES_VILLES = t('eventFiltersSheet.allCities', 'Toutes les villes');
+  const TOUTES = t('eventFiltersSheet.allFeminine', 'Toutes');
+  const TOUS = t('eventFiltersSheet.allMasculine', 'Tous');
   const { Colors, Fonts, Spaces } = /** @type {any} */ (useTheme());
   const { getGeohashForPointAndRadius } = usePlaces();
 

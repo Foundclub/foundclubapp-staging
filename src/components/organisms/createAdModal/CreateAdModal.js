@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
   Modal,
@@ -15,12 +16,6 @@ import { useGetLevels } from '@/services/level/levelQueries';
 import { createRecruitmentAd } from '@/services/recruitment/recruitmentService';
 
 import { getPositionValuesForSport } from '@/constants/positions';
-
-// Validation mode options
-const VALIDATION_MODES = [
-  { label: 'Automatique', value: 'auto' },
-  { label: 'Manuelle', value: 'manual' },
-];
 
 /**
  * @typedef {{
@@ -50,6 +45,13 @@ function CreateAdModal({
   const {
     Colors, Fonts,
   } = useTheme();
+  const { t } = useTranslation();
+
+  // Validation mode options
+  const VALIDATION_MODES = [
+    { label: t('createAdModal.validationMode.auto', 'Automatique'), value: 'auto' },
+    { label: t('createAdModal.validationMode.manual', 'Manuelle'), value: 'manual' },
+  ];
 
   // Form state
   const [selectedPosition, setSelectedPosition] = useState('');
@@ -80,12 +82,12 @@ function CreateAdModal({
   // Handle form submission
   const handleSubmit = async () => {
     if (!team) {
-      setError('Tu dois être associé à une équipe pour créer une annonce.');
+      setError(t('createAdModal.errors.noTeam', 'Tu dois être associé à une équipe pour créer une annonce.'));
       return;
     }
 
     if (!selectedPosition) {
-      setError('Merci de sélectionner un poste.');
+      setError(t('createAdModal.errors.noPosition', 'Merci de sélectionner un poste.'));
       return;
     }
 
@@ -114,7 +116,7 @@ function CreateAdModal({
     } catch (err) {
       const typedError = /** @type {any} */ (err);
       console.error('[CreateAdModal] Error creating ad:', typedError);
-      setError(typedError?.message || 'Une erreur est survenue lors de la création de l\'annonce.');
+      setError(typedError?.message || t('createAdModal.errors.generic', "Une erreur est survenue lors de la création de l'annonce."));
     } finally {
       setLoading(false);
     }
@@ -145,7 +147,7 @@ function CreateAdModal({
           {/* Header */}
           <View style={styles.header}>
             <Text style={[Fonts.h4, { color: Colors.neutral00 }]}>
-              {event ? 'Recruter pour l\'événement' : 'Créer une annonce'}
+              {event ? t('createAdModal.title.event', "Recruter pour l'événement") : t('createAdModal.title.default', 'Créer une annonce')}
             </Text>
           </View>
 
@@ -157,10 +159,10 @@ function CreateAdModal({
             {!team && (
               <View style={[styles.warningBox, { backgroundColor: '#F9731620', borderColor: '#F97316' }]}>
                 <Text style={[Fonts.p2Bold, { color: '#F97316', textAlign: 'center' }]}>
-                  ⚠️ Aucune équipe
+                  {t('createAdModal.noTeam.title', '⚠️ Aucune équipe')}
                 </Text>
                 <Text style={[Fonts.p3, { color: Colors.neutral300, marginTop: 8, textAlign: 'center' }]}>
-                  Tu dois être associé à une équipe pour créer une annonce de recrutement.
+                  {t('createAdModal.noTeam.description', 'Tu dois être associé à une équipe pour créer une annonce de recrutement.')}
                 </Text>
               </View>
             )}
@@ -169,9 +171,9 @@ function CreateAdModal({
             {team && (
               <View style={[styles.infoBox, { backgroundColor: `${Colors.primary500}20`, borderColor: Colors.primary500 }]}>
                 <Text style={[Fonts.p3, { color: Colors.primary500 }]}>
-                  📋 Équipe:
+                  {t('createAdModal.teamLabel', '📋 Équipe:')}
                   {' '}
-                  {team.name || 'Non spécifié'}
+                  {team.name || t('createAdModal.teamUnspecified', 'Non spécifié')}
                 </Text>
               </View>
             )}
@@ -186,7 +188,7 @@ function CreateAdModal({
             {/* Position Selection */}
             <View style={styles.section}>
               <Text style={[Fonts.p2Bold, { color: Colors.neutral00, marginBottom: 12 }]}>
-                Poste recherché *
+                {t('createAdModal.fields.position', 'Poste recherché *')}
               </Text>
               <View style={styles.optionsGrid}>
                 {positions.map((/** @type {string} */ pos) => (
@@ -216,7 +218,7 @@ function CreateAdModal({
             {/* Level Selection */}
             <View style={styles.section}>
               <Text style={[Fonts.p2Bold, { color: Colors.neutral00, marginBottom: 12 }]}>
-                Niveau minimum
+                {t('createAdModal.fields.minLevel', 'Niveau minimum')}
               </Text>
               <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                 <View style={styles.optionsRow}>
@@ -235,7 +237,7 @@ function CreateAdModal({
                       { color: !selectedLevel ? Colors.neutral900 : Colors.neutral00 },
                     ]}
                     >
-                      Tous
+                      {t('createAdModal.fields.allLevels', 'Tous')}
                     </Text>
                   </TouchableOpacity>
                   {levelOptions.map((/** @type {{ value: string; label: string }} */ level) => (
@@ -266,7 +268,7 @@ function CreateAdModal({
             {/* Quantity */}
             <View style={styles.section}>
               <Text style={[Fonts.p2Bold, { color: Colors.neutral00, marginBottom: 12 }]}>
-                Nombre de joueurs recherchés
+                {t('createAdModal.fields.quantity', 'Nombre de joueurs recherchés')}
               </Text>
               <View style={styles.quantityRow}>
                 <TouchableOpacity
@@ -290,7 +292,7 @@ function CreateAdModal({
             {/* Validation Mode */}
             <View style={styles.section}>
               <Text style={[Fonts.p2Bold, { color: Colors.neutral00, marginBottom: 12 }]}>
-                Mode de validation
+                {t('createAdModal.fields.validationMode', 'Mode de validation')}
               </Text>
               <View style={styles.optionsRow}>
                 {VALIDATION_MODES.map((mode) => (
@@ -326,7 +328,7 @@ function CreateAdModal({
               onPress={handleClose}
               style={[styles.button, styles.cancelButton, { backgroundColor: Colors.neutral800, borderColor: Colors.neutral700 }]}
             >
-              <Text style={[Fonts.p1Bold, { color: Colors.neutral00 }]}>Annuler</Text>
+              <Text style={[Fonts.p1Bold, { color: Colors.neutral00 }]}>{t('createAdModal.cancel', 'Annuler')}</Text>
             </TouchableOpacity>
             <TouchableOpacity
               disabled={loading || !team}
@@ -343,7 +345,7 @@ function CreateAdModal({
               {loading ? (
                 <ActivityIndicator color={Colors.neutral900} size="small" />
               ) : (
-                <Text style={[Fonts.p1Bold, { color: Colors.neutral900 }]}>Créer l&apos;annonce</Text>
+                <Text style={[Fonts.p1Bold, { color: Colors.neutral900 }]}>{t('createAdModal.submit', "Créer l'annonce")}</Text>
               )}
             </TouchableOpacity>
           </View>

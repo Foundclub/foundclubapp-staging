@@ -17,6 +17,7 @@ import {
 
 import useClub from '@/domains/club/useClub';
 import { useAppContext } from '@/store/appContext';
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import EmptyState from '@/components/atoms/emptyState/EmptyState';
@@ -308,12 +309,12 @@ function ClubListContent({
   } else if (isSmartSearchEnabled) {
     activeMode = 'smart-search';
   }
-  let viewportHelperText = 'La liste suit la zone actuellement choisie sur la carte.';
+  let viewportHelperText = t('clubListContent.viewport.followsMap', 'La liste suit la zone actuellement choisie sur la carte.');
   if (isViewportTruncated) {
-    viewportHelperText = 'Zoome sur la carte pour charger tout le catalogue local.';
+    viewportHelperText = t('clubListContent.viewport.zoomToLoadAll', 'Zoome sur la carte pour charger tout le catalogue local.');
   }
   if (requiresViewportZoom) {
-    viewportHelperText = 'Zoome pour affiner la recherche.';
+    viewportHelperText = t('clubListContent.viewport.zoomToRefine', 'Zoome pour affiner la recherche.');
   }
 
   useEffect(() => {
@@ -604,17 +605,19 @@ function ClubListContent({
           ? handleMultisportSelection(item.documentId)
           : handleClubSelection(item.documentId))}
         paused={idsVisibles !== null && !idsVisibles.has(item?.documentId)}
-        reasonLabel={primaryReasonLabel ? `Tri pertinence: ${primaryReasonLabel}` : ''}
+        reasonLabel={primaryReasonLabel
+          ? t('clubListContent.relevanceReason', 'Tri pertinence: {{reason}}', { reason: primaryReasonLabel, ...SANS_ECHAPPEMENT })
+          : ''}
       />
     );
-  }, [handleClubSelection, handleMultisportSelection, idsVisibles]);
+  }, [handleClubSelection, handleMultisportSelection, idsVisibles, t]);
 
   const renderEmptyList = useCallback(() => {
     if (showLoadingPlaceholder) {
       return (
         <SearchResultsLoadingState
-          description="Nous chargeons les clubs correspondant à ta recherche."
-          title="Chargement des clubs"
+          description={t('clubListContent.loading.description', 'Nous chargeons les clubs correspondant à ta recherche.')}
+          title={t('clubListContent.loading.title', 'Chargement des clubs')}
         />
       );
     }
@@ -622,8 +625,8 @@ function ClubListContent({
     if (requiresViewportZoom) {
       return (
         <EmptyState
-          description="La zone visible est trop large pour charger une liste fiable. Zoome puis relance la vue liste."
-          title="Zoome pour affiner la recherche"
+          description={t('clubListContent.zoomRequired.description', 'La zone visible est trop large pour charger une liste fiable. Zoome puis relance la vue liste.')}
+          title={t('clubListContent.zoomRequired.title', 'Zoome pour affiner la recherche')}
         />
       );
     }
@@ -656,7 +659,7 @@ function ClubListContent({
         <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[8]]}>
           <Loader color={Colors.primary500} size="small" />
           <Text style={[Fonts.p4, Fonts.neutral200]}>
-            Actualisation des clubs...
+            {t('clubListContent.refreshing', 'Actualisation des clubs...')}
           </Text>
         </View>
       ) : null}
@@ -680,7 +683,10 @@ function ClubListContent({
         >
           <View style={[Spaces.gap[4], { flex: 1, paddingRight: 12 }]}>
             <Text style={[Fonts.p4Bold, Fonts.neutral00]}>
-              {`${viewportDisplayCount}${isViewportTruncated ? '+' : ''} clubs dans la zone visible`}
+              {t('clubListContent.viewport.count', '{{total}}{{plus}} clubs dans la zone visible', {
+                plus: isViewportTruncated ? '+' : '',
+                total: viewportDisplayCount,
+              })}
             </Text>
             <Text style={[Fonts.p4, Fonts.neutral200]}>{viewportHelperText}</Text>
           </View>
@@ -702,7 +708,7 @@ function ClubListContent({
             ]}
           >
             <Text style={[Fonts.p4Bold, Fonts.neutral00]}>
-              Quitter
+              {t('clubListContent.viewport.exit', 'Quitter')}
             </Text>
           </TouchableOpacity>
         </View>
@@ -724,7 +730,7 @@ function ClubListContent({
           ListEmptyComponent={renderEmptyList}
           ListHeaderComponent={isSmartSearchEnabled ? (
             <Text style={[Fonts.p3, Fonts.primary500, Spaces.marginBottom[12]]}>
-              Trie par pertinence
+              {t('clubListContent.sortedByRelevance', 'Trie par pertinence')}
             </Text>
           ) : null}
           onEndReached={handleEndReached}
