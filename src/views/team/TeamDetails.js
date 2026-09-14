@@ -88,6 +88,7 @@ import {
 
 import { isVerifiedClub } from '@/utils/clubCertification';
 import { formatDateTimeWithDayPrefix } from '@/utils/date';
+import { isAccessRefusalError } from '@/utils/errors/accessRefusal';
 import { getErrorMessage as getDisplayErrorMessage } from '@/utils/errors/displayError';
 import { getImageUrl } from '@/utils/imageUrl';
 
@@ -172,7 +173,12 @@ function TeamDetails({ navigation, route }) {
   );
   const { data: rawClubData, refetch: refetchClubData } = useGetClub(team?.club?.documentId || '');
   const clubData = /** @type {any} */ (rawClubData);
-  const { data: rawTeamStatsData, isLoading: isTeamStatsLoading, refetch: refetchTeamStats } = useGetTeamStats(
+  const {
+    data: rawTeamStatsData,
+    error: teamStatsError,
+    isLoading: isTeamStatsLoading,
+    refetch: refetchTeamStats,
+  } = useGetTeamStats(
     teamId || '',
     {
       enabled: Boolean(teamId && isMyTeam),
@@ -182,6 +188,7 @@ function TeamDetails({ navigation, route }) {
   const teamStatsData = /** @type {any} */ (rawTeamStatsData);
   const {
     data: rawTeamPerformanceStats,
+    error: teamPerformanceError,
     isLoading: isTeamPerformanceLoading,
     refetch: refetchTeamPerformanceStats,
   } = useGetTeamPerformanceStats(teamId || '', {
@@ -239,6 +246,11 @@ function TeamDetails({ navigation, route }) {
   );
   const assignmentPrefillHandledRef = useRef(false);
   const genericErrorMessage = t('APIerrors.generic', 'Une erreur est survenue. Merci de réessayer plus tard.');
+  // VA1 — le même texte pour tout refus du serveur (403) sur cet écran.
+  const accessReservedMessage = t(
+    'common.accessReserved.description',
+    "Tu n'as pas accès à cette partie : elle est réservée aux membres.",
+  );
 
   /**
    * @param {unknown} sourceError
@@ -2597,6 +2609,10 @@ function TeamDetails({ navigation, route }) {
     );
   }
 
+  // VA1 — un 403 sur l'équipe elle-même : ni « Impossible de charger », ni
+  // « Réessayer » — réessayer rendra le même refus.
+  const isTeamAccessRefused = isTeamLoadingError && isAccessRefusalError(error);
+
   if (isTeamLoadingError) {
     return (
       <ScreenContainer
@@ -2611,12 +2627,18 @@ function TeamDetails({ navigation, route }) {
       >
         <View style={[Spaces.gap[12]]}>
           <Text style={[Fonts.h4Bold, Fonts.neutral00]}>
-            Impossible de charger l'équipe
+            {isTeamAccessRefused
+              ? t('common.accessReserved.title', 'Accès réservé')
+              : "Impossible de charger l'équipe"}
           </Text>
           <Text style={[Fonts.p2, Fonts.neutral200]}>
-            {getErrorMessage(error, 'Réessaie dans quelques instants.')}
+            {isTeamAccessRefused
+              ? accessReservedMessage
+              : getErrorMessage(error, 'Réessaie dans quelques instants.')}
           </Text>
-          <Button onPress={() => refetch()} title="Réessayer" variant="Primary" />
+          {isTeamAccessRefused ? null : (
+            <Button onPress={() => refetch()} title="Réessayer" variant="Primary" />
+          )}
           <Button onPress={() => navigation.navigate(RouteNames.TeamList)} title="Retour aux équipes" variant="Secondary" />
         </View>
       </ScreenContainer>
@@ -4451,7 +4473,13 @@ function TeamDetails({ navigation, route }) {
                           })
                         ) : (
                           <Text style={[Fonts.p2, Fonts.neutral00, Fonts.textCenter]}>
-                            {t('teamDetails.stats.noData', 'Aucune statistique disponible pour le moment.')}
+                            {/* VA1 — un refus n'est pas une liste vide. */}
+                            {isAccessRefusalError(teamStatsError)
+                              ? accessReservedMessage
+                              : t(
+                                'teamDetails.stats.noData',
+                                'Aucune statistique disponible pour le moment.',
+                              )}
                           </Text>
                         )}
                       </View>
@@ -4709,6 +4737,17 @@ function TeamDetails({ navigation, route }) {
                 {(() => {
                   if (isTeamPerformanceLoading) {
                     return <Text style={[Fonts.p2, Fonts.neutral00, Fonts.textCenter]}>Chargement des performances...</Text>;
+                  }
+
+                  // VA1 — refusé par le serveur : le dire, pas « aucune performance ».
+                  const isPerformanceRefused = isAccessRefusalError(teamPerformanceError)
+                    && !teamPerformancePlayers.length;
+                  if (isPerformanceRefused) {
+                    return (
+                      <Text style={[Fonts.p2, Fonts.neutral00, Fonts.textCenter]}>
+                        {accessReservedMessage}
+                      </Text>
+                    );
                   }
 
                   if (teamPerformancePlayers.length) {

@@ -32,6 +32,8 @@ let mockAuthValue;
 let mockFetchedUser;
 /** @type {any} */
 let mockPersonalStats;
+/** @type {any} */
+let mockPersonalStatsError;
 const mockNavigate = jest.fn();
 
 // BLOQUER (02/09) — `UserDetails` lit desormais la liste des personnes que j ai
@@ -103,6 +105,7 @@ jest.mock('@/services/license/licenseQueries', () => ({
 jest.mock('@/services/matchStats/matchStatsQueries', () => ({
   useGetPersonalStats: () => ({
     data: mockPersonalStats,
+    error: mockPersonalStatsError,
     isLoading: false,
     refetch: jest.fn(),
   }),
@@ -290,6 +293,7 @@ beforeEach(() => {
   jest.clearAllMocks();
   mockFetchedUser = undefined;
   mockPersonalStats = undefined;
+  mockPersonalStatsError = undefined;
   propsSectionHistorique.current = null;
 });
 
@@ -374,6 +378,42 @@ describe('UserDetails — profil d\'AUTRUI : le garde-fou que D06 ne doit pas ca
     expect(texte).toContain('Taille');
     expect(texte).toContain('Poids');
     expect(texte).toContain('Poste');
+  });
+
+  // VA1 — Sentry REACT-NATIVE-2 : `GET /api/users/:id/personal-stats` -> 403
+  // « You cannot access personal stats for this user » depuis UserDetails, sur
+  // les builds 2.6.35 a 2.6.43. Le serveur ne les montre qu'a la personne
+  // elle-meme (admin firebase-auth.ts:1570) ; l'ecran affichait des ZEROS.
+  it('stats de match refusees (403) : le dire, et ne pas afficher de zeros', async () => {
+    mockFetchedUser = {
+      documentId: 'autre-1', firstname: 'Autre', lastname: 'Joueur', role: { name: 'Joueur' },
+    };
+    mockPersonalStatsError = {
+      details: {},
+      message: 'You cannot access personal stats for this user',
+      name: 'ForbiddenError',
+      status: 403,
+    };
+
+    const arbre = await rendre(dirigeantConnecte, { userId: 'autre-1' });
+    const texte = texteVisible(arbre);
+
+    expect(texte).toContain('Stats de match');
+    expect(texte).toContain('Ces statistiques ne sont visibles que par la personne elle-même.');
+    expect(texte).not.toContain('Victoires');
+    expect(texte).not.toContain('Passes décisives');
+  });
+
+  it('GARDE-FOU : sans refus, les cartes de stats restent la', async () => {
+    mockFetchedUser = {
+      documentId: 'autre-1', firstname: 'Autre', lastname: 'Joueur', role: { name: 'Joueur' },
+    };
+
+    const arbre = await rendre(dirigeantConnecte, { userId: 'autre-1' });
+    const texte = texteVisible(arbre);
+
+    expect(texte).toContain('Victoires');
+    expect(texte).not.toContain('Ces statistiques ne sont visibles que par la personne elle-même.');
   });
 
   it('conserve « Non renseigne » sur la fiche de quelqu\'un d\'autre', async () => {

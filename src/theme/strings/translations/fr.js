@@ -634,6 +634,11 @@ export default {
     },
   },
   common: {
+    // VA1 — un refus du serveur (403) se dit, il ne se déguise pas en liste vide.
+    accessReserved: {
+      description: "Tu n'as pas accès à cette partie : elle est réservée aux membres.",
+      title: 'Accès réservé',
+    },
     actions: {
       askLater: 'Plus tard',
       cancel: 'Annuler',
@@ -5292,6 +5297,9 @@ export default {
     sections: {
       personal: 'Infos personnelles',
       sport: 'Profil sportif',
+    },
+    stats: {
+      privateToOwner: 'Ces statistiques ne sont visibles que par la personne elle-même.',
     },
     teamGroups: {
       coach: 'Équipes entraînées',

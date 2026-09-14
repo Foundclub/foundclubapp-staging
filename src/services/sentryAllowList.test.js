@@ -131,6 +131,70 @@ describe('T2 — ce qui doit TOUJOURS partir a Sentry', () => {
 });
 
 // ---------------------------------------------------------------------------
+// Lot VA1 — un 403 sur une LECTURE est un etat attendu, pas un defaut.
+//
+// Preuve de production (Sentry REACT-NATIVE-2 et -1, 14/09) : 167 evenements
+// « captureQueryError » pour 14 utilisateurs, TOUS
+//   __serialized__ = { details: {}, message: 'Forbidden', name: 'ForbiddenError', status: 403 }
+// dont la build publique 2.6.43+1301, ecran TeamDetails :
+//   GET /api/teams/:id/performance-stats -> 403.
+// L'utilisateur, lui, ne voyait rien. L'ecran doit le dire ; Sentry n'a rien a
+// en apprendre.
+// ---------------------------------------------------------------------------
+describe('VA1 — un refus 403 sur une requete de lecture ne part plus', () => {
+  const refusDeRole = () => unwrappedStrapiError(403, {
+    details: {},
+    message: 'Forbidden',
+    name: 'ForbiddenError',
+  });
+
+  test('LE CAS DE PRODUCTION : TeamDetails, statistiques de performance', () => {
+    expect(
+      isInSentryExceptionsAllowList(refusDeRole(), query('teamPerformanceStats', 'team-1')),
+    ).toBe(true);
+  });
+
+  test('quelle que soit la famille de requete (fiche equipe, club, club omnisport)', () => {
+    expect(isInSentryExceptionsAllowList(refusDeRole(), query('team', 'team-1'))).toBe(true);
+    expect(isInSentryExceptionsAllowList(refusDeRole(), query('club', 'club-1'))).toBe(true);
+    expect(isInSentryExceptionsAllowList(axiosError(403), query('multisport-clubs'))).toBe(true);
+  });
+
+  test('un refus de politique avec son code (non-membre) ne part pas non plus', () => {
+    const refusPolitique = unwrappedStrapiError(403, {
+      details: { code: 'TEAM_MEMBER_POLICY_ERROR' },
+      message: 'User is not a member of organizer or invited teams',
+      name: 'PolicyError',
+    });
+    expect(isInSentryExceptionsAllowList(refusPolitique, query('teamStats', 'team-1'))).toBe(true);
+  });
+
+  test('GARDE-FOU : un 403 qui DEGUISE une panne serveur part toujours', () => {
+    // admin/src/api/team/policies/is-team-member.ts : le `catch` general
+    // ressort une panne de lecture en PolicyError (403) avec ce code-la.
+    const panneDeguisee = unwrappedStrapiError(403, {
+      details: { code: 'INTERNAL_SERVER_ERROR', message: 'connection terminated' },
+      message: 'Error in is-team-member policy',
+      name: 'PolicyError',
+    });
+    expect(isInSentryExceptionsAllowList(panneDeguisee, query('teamStats', 'team-1')))
+      .toBe(false);
+  });
+
+  test('GARDE-FOU : un 403 hors requete de lecture (aucune query) part toujours', () => {
+    expect(isInSentryExceptionsAllowList(refusDeRole())).toBe(false);
+    const pasUneQuery = { queryKey: 'pas-un-tableau' };
+    expect(isInSentryExceptionsAllowList(refusDeRole(), pasUneQuery)).toBe(false);
+  });
+
+  test('GARDE-FOU : un 500 et un 404 sur la meme requete partent toujours', () => {
+    const equipe = query('team', 'team-1');
+    expect(isInSentryExceptionsAllowList(unwrappedStrapiError(500), equipe)).toBe(false);
+    expect(isInSentryExceptionsAllowList(unwrappedStrapiError(404), equipe)).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
 // Les DEUX seuls codes filtres par code seul : les refus que l'app se prononce
 // A ELLE-MEME, sans reseau (bootRequestGuard.js). Par construction ils ne
 // peuvent jamais signaler un defaut serveur.
