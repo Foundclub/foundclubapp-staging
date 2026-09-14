@@ -115,7 +115,8 @@ export const useSubscriptionCatalog = ({ enabled = true } = {}) => {
   const resolvedCatalog = useMemo(
     () => resolveSubscriptionCatalogPrices({
       serverEntries,
-      storePricesEurCents: storePricesQuery.data,
+      storeCurrencyCode: storePricesQuery.data?.currencyCode,
+      storePricesEurCents: storePricesQuery.data?.pricesInCents,
     }),
     [serverEntries, storePricesQuery.data],
   );

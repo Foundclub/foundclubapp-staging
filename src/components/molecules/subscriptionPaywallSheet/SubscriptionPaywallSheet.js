@@ -588,13 +588,16 @@ function SubscriptionPaywallSheet({
     const selectedTierLabel = String(selectedTierOption?.label || '');
     const priceCents = Number(selectedEntry?.referencePriceEurCents);
     const priceAmountLabel = Number.isFinite(priceCents) && priceCents > 0
-      ? `${(priceCents / 100).toFixed(2).replace('.', ',')} €`
+      ? formatSubscriptionPriceLabel(priceCents, '', selectedEntry?.priceCurrencyCode)
       : '';
     const isYearlySelected = billingPeriod === 'yearly';
     const priceSuffix = isYearlySelected ? '/an' : '/mois';
     // Equivalence mensuelle : uniquement sur l'ancre annuelle.
     const monthlyLabel = isYearlySelected
-      ? formatSubscriptionMonthlyEquivalentLabel(selectedEntry?.referencePriceEurCents)
+      ? formatSubscriptionMonthlyEquivalentLabel(
+        selectedEntry?.referencePriceEurCents,
+        selectedEntry?.priceCurrencyCode,
+      )
       : '';
     // Remise calculee sur les DEUX prix du palier retenu. Sans jumelle mensuelle
     // dans le catalogue, le libelle est vide : on n'invente jamais une remise.
@@ -900,11 +903,13 @@ function SubscriptionPaywallSheet({
   const recommendedPriceLabel = formatSubscriptionPriceLabel(
     recommendedEntry?.referencePriceEurCents,
     recommendedEntry?.billingPeriod,
+    recommendedEntry?.priceCurrencyCode,
   );
   const isRecommendedEntryYearly = String(recommendedEntry?.billingPeriod || '').trim().toLowerCase() === 'yearly';
   // Ancre prix unique : annuel + equivalence mensuelle exacte (jamais d'arrondi « ~ »).
   const monthlyEquivalentLabel = formatSubscriptionMonthlyEquivalentLabel(
     recommendedEntry?.referencePriceEurCents,
+    recommendedEntry?.priceCurrencyCode,
   );
   const recommendedPriceLine = isRecommendedEntryYearly && recommendedPriceLabel && monthlyEquivalentLabel
     ? `${recommendedPriceLabel} · ${monthlyEquivalentLabel}`

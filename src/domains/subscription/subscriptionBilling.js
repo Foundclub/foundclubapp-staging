@@ -352,6 +352,23 @@ const getSubscriptionEntryFamilyKey = (entry) => (
 const getSubscriptionEntryPlanCode = (entry) => String(entry?.planCode || '').trim();
 
 /**
+ * INTL1 — code ISO d'une devise AUTRE que l'euro, ou '' (euro, vide, invalide).
+ * @param {unknown} currencyCode
+ * @returns {string}
+ */
+const normalizeCurrencyCode = (currencyCode) => {
+  const code = typeof currencyCode === 'string' ? currencyCode.trim().toUpperCase() : '';
+  return /^[A-Z]{3}$/.test(code) && code !== 'EUR' ? code : '';
+};
+
+/**
+ * Ce qui suit le montant : « € » en euros, le code ISO sinon (« CHF », « AED »).
+ * @param {unknown} currencyCode
+ * @returns {string}
+ */
+const getCurrencySymbol = (currencyCode) => normalizeCurrencyCode(currencyCode) || '€';
+
+/**
  * Le prix AFFICHE devient celui du STORE, et l'ecart avec le catalogue serveur
  * est mesure (decision d'Adel du 2026-08-05 : « A, mais verifier quand meme
  * l'ecart »).
@@ -366,7 +383,19 @@ const getSubscriptionEntryPlanCode = (entry) => String(entry?.planCode || '').tr
  * 3. **Signalement** — tout ecart d'au moins un centime est remonte, meme
  *    quand c'est le bon prix qui s'affiche : un desaccord veut dire qu'une des
  *    deux configurations est fausse, et il faut le savoir.
- * @param {{ serverEntries: any[]; storePricesEurCents?: Record<string, number> | null }} params
+ *
+ * INTL1 — store dans une AUTRE devise que l'euro (Suisse, Emirats) : le prix
+ * serveur en euros n'est jamais affiche. Chaque ligne porte `priceCurrencyCode`,
+ * garde le prix du store quand il existe et PERD son prix sinon (champ absent,
+ * pas `null` : `Number(null)` vaudrait « 0,00 »). Aucun ecart n'est calcule
+ * entre deux devises.
+ * ponytail: `referencePriceEurCents` porte alors des centimes de CHF/AED — le
+ * renommer toucherait 72 lectures dans 9 fichiers. La devise de la ligne fait foi.
+ * @param {{
+ *   serverEntries: any[];
+ *   storePricesEurCents?: Record<string, number> | null;
+ *   storeCurrencyCode?: string | null;
+ * }} params - `storePricesEurCents` : centimes dans la devise `storeCurrencyCode` (EUR par defaut).
  * @returns {{
  *   entries: any[];
  *   mismatches: Array<{
@@ -378,11 +407,12 @@ const getSubscriptionEntryPlanCode = (entry) => String(entry?.planCode || '').tr
  *   missingFromStorePlanCodes: string[];
  * }}
  */
-export const resolveSubscriptionCatalogPrices = ({ serverEntries, storePricesEurCents }) => {
+export const resolveSubscriptionCatalogPrices = ({ serverEntries, storePricesEurCents, storeCurrencyCode }) => {
   const entries = Array.isArray(serverEntries) ? serverEntries : [];
   const storePrices = storePricesEurCents && typeof storePricesEurCents === 'object'
     ? storePricesEurCents
     : null;
+  const foreignCurrencyCode = normalizeCurrencyCode(storeCurrencyCode);
 
   /**
    * Prix du store d'une entree, ou null s'il n'y en a pas.
@@ -414,6 +444,25 @@ export const resolveSubscriptionCatalogPrices = ({ serverEntries, storePricesEur
     const cents = Number(entry?.referencePriceEurCents);
     return Number.isFinite(cents) && cents > 0;
   };
+
+  if (foreignCurrencyCode && storePrices) {
+    /** @type {string[]} */
+    const missingInForeignStore = [];
+    const foreignEntries = entries.map((entry) => {
+      const withoutPrice = { ...entry };
+      delete withoutPrice.referencePriceEurCents;
+      const storeCents = readStorePrice(entry);
+      if (storeCents !== null) {
+        return { ...withoutPrice, priceCurrencyCode: foreignCurrencyCode, referencePriceEurCents: storeCents };
+      }
+      if (!hasSellableServerPrice(entry)) {
+        return entry;
+      }
+      missingInForeignStore.push(getSubscriptionEntryPlanCode(entry));
+      return { ...withoutPrice, priceCurrencyCode: foreignCurrencyCode };
+    });
+    return { entries: foreignEntries, mismatches: [], missingFromStorePlanCodes: missingInForeignStore };
+  }
 
   if (!storePrices || Object.keys(storePrices).length === 0) {
     return { entries, mismatches: [], missingFromStorePlanCodes: [] };
@@ -528,11 +577,12 @@ export const sortSubscriptionCatalogEntries = (entries) => {
 };
 
 /**
- * @param {number | null | undefined} priceEurCents
+ * @param {number | null | undefined} priceEurCents - Centimes, dans la devise `currencyCode`.
  * @param {'monthly' | 'yearly' | string} billingPeriod
+ * @param {string} [currencyCode] - INTL1 : devise du store (`entry.priceCurrencyCode`), euro par defaut.
  * @returns {string}
  */
-export const formatSubscriptionPriceLabel = (priceEurCents, billingPeriod) => {
+export const formatSubscriptionPriceLabel = (priceEurCents, billingPeriod, currencyCode) => {
   const cents = Number(priceEurCents);
   if (!Number.isFinite(cents) || cents < 0) {
     return '';
@@ -545,7 +595,7 @@ export const formatSubscriptionPriceLabel = (priceEurCents, billingPeriod) => {
   } else if (normalizedPeriod === 'monthly') {
     periodSuffix = '/mois';
   }
-  return `${amount} €${periodSuffix}`;
+  return `${amount} ${getCurrencySymbol(currencyCode)}${periodSuffix}`;
 };
 
 /**
@@ -553,14 +603,15 @@ export const formatSubscriptionPriceLabel = (priceEurCents, billingPeriod) => {
  * Une seule ancre prix par surface : ce libelle accompagne toujours l'ancre annuelle,
  * jamais les segments de palier ni le sous-texte d'un CTA.
  * @param {number | null | undefined} yearlyPriceEurCents
+ * @param {string} [currencyCode] - INTL1 : devise du store, euro par defaut.
  * @returns {string}
  */
-export const formatSubscriptionMonthlyEquivalentLabel = (yearlyPriceEurCents) => {
+export const formatSubscriptionMonthlyEquivalentLabel = (yearlyPriceEurCents, currencyCode) => {
   const cents = Number(yearlyPriceEurCents);
   if (!Number.isFinite(cents) || cents <= 0) {
     return '';
   }
-  return `soit ${(cents / 12 / 100).toFixed(2).replace('.', ',')} €/mois`;
+  return `soit ${(cents / 12 / 100).toFixed(2).replace('.', ',')} ${getCurrencySymbol(currencyCode)}/mois`;
 };
 
 /**
@@ -573,7 +624,11 @@ export const getSubscriptionCatalogEntryMeta = (entry) => {
   const slotCount = Number(entry?.slotCount || 0);
   const periodLabel = billingPeriod === 'yearly' ? 'Annuel' : 'Mensuel';
   const displayName = String(entry?.displayName || '').trim();
-  const priceLabel = formatSubscriptionPriceLabel(entry?.referencePriceEurCents, billingPeriod);
+  const priceLabel = formatSubscriptionPriceLabel(
+    entry?.referencePriceEurCents,
+    billingPeriod,
+    entry?.priceCurrencyCode,
+  );
 
   if (scopeType === TEAM_SCOPE) {
     const slotsLabel = `${slotCount} équipe${slotCount > 1 ? 's' : ''} couverte${slotCount > 1 ? 's' : ''}`;

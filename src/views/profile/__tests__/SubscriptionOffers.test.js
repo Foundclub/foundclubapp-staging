@@ -746,6 +746,14 @@ describe('L39 — le prix affiche vient du STORE, et l ecart est signale', () =>
     CATALOG_ENTRIES.map((entry) => [entry.planCode, entry.referencePriceEurCents]),
   );
 
+  /**
+   * INTL1 — la lecture du store rend ses centimes AVEC sa devise.
+   * @param {Record<string, number>} pricesInCents
+   * @param {string} [currencyCode]
+   * @returns {{ currencyCode: string; pricesInCents: Record<string, number> }}
+   */
+  const reponseDuStore = (pricesInCents, currencyCode = 'EUR') => ({ currencyCode, pricesInCents });
+
   /** @type {any} */
   let journal;
 
@@ -758,7 +766,7 @@ describe('L39 — le prix affiche vient du STORE, et l ecart est signale', () =>
   });
 
   it('quand le store repond, c est SON prix qui s affiche, pas celui du serveur', async () => {
-    mockStorePricesQueryState = { data: PRIX_STORE, error: null, isLoading: false };
+    mockStorePricesQueryState = { data: reponseDuStore(PRIX_STORE), error: null, isLoading: false };
     const arbre = await rendre();
     const texte = texteVisible(arbre);
 
@@ -771,6 +779,20 @@ describe('L39 — le prix affiche vient du STORE, et l ecart est signale', () =>
     // Le palier Club, lui, est d'accord des deux cotes : il ne bouge pas.
     await allerALaCarte(arbre, 2);
     expect(libelleDuCta(arbre)).toBe('Choisir Club 100 · 249,99 €/an');
+  });
+
+  it('INTL1 — store suisse : le prix s affiche en CHF, et AUCUN prix en euros', async () => {
+    mockStorePricesQueryState = { data: reponseDuStore(PRIX_STORE, 'CHF'), error: null, isLoading: false };
+    const arbre = await rendre();
+    const texte = texteVisible(arbre);
+
+    expect(texte).toContain('12,99 CHF/an');
+    expect(texte).toContain('soit 1,08 CHF/mois');
+    expect(libelleDuCta(arbre)).toBe('Choisir Équipe · 12,99 CHF/an');
+    expect(texte).not.toMatch(/\d €\/(an|mois)/);
+
+    await allerALaCarte(arbre, 2);
+    expect(libelleDuCta(arbre)).toBe('Choisir Club 100 · 249,99 CHF/an');
   });
 
   it('TEMOIN DE REPLI — store muet : un prix s affiche et l ecran reste vendable', async () => {
@@ -788,7 +810,7 @@ describe('L39 — le prix affiche vient du STORE, et l ecart est signale', () =>
   });
 
   it('la remise reste juste : les deux prix du calcul viennent de la MEME source', async () => {
-    mockStorePricesQueryState = { data: PRIX_STORE, error: null, isLoading: false };
+    mockStorePricesQueryState = { data: reponseDuStore(PRIX_STORE), error: null, isLoading: false };
     const arbre = await rendre();
     const texte = texteVisible(arbre);
 
@@ -803,7 +825,7 @@ describe('L39 — le prix affiche vient du STORE, et l ecart est signale', () =>
   });
 
   it('un ecart est SIGNALE : le palier, les deux valeurs et la source retenue', async () => {
-    mockStorePricesQueryState = { data: PRIX_STORE, error: null, isLoading: false };
+    mockStorePricesQueryState = { data: reponseDuStore(PRIX_STORE), error: null, isLoading: false };
     await rendre();
 
     const signalements = journal.mock.calls
@@ -832,7 +854,7 @@ describe('L39 — le prix affiche vient du STORE, et l ecart est signale', () =>
 
   it('TEMOIN NEGATIF — store et serveur d accord : aucun signalement', async () => {
     mockStorePricesQueryState = {
-      data: prixStoreIdentiquesAuServeur(),
+      data: reponseDuStore(prixStoreIdentiquesAuServeur()),
       error: null,
       isLoading: false,
     };

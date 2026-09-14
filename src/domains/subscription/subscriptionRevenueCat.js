@@ -24,11 +24,6 @@ export const REVENUECAT_PURCHASE_ERROR_CODES = {
   PENDING: 'revenuecat-purchase-pending',
 };
 
-// Toute la mise en forme des prix de l'app est en euros (« 12,99 €/an »). Un
-// prix rendu par le store dans une AUTRE devise, affiche avec ce suffixe, serait
-// un faux prix : on garde alors celui du serveur.
-const STORE_PRICE_CURRENCY_CODE = 'EUR';
-
 const logger = createLogger('subscription-price');
 
 const REVENUECAT_APPLE_API_KEY = String(process.env.REVENUECAT_APPLE_API_KEY || '').trim();
@@ -189,23 +184,28 @@ export const resolveRevenueCatPackageForCatalogEntry = (offerings, catalogEntry)
 };
 
 /**
- * Prix du store, en centimes d'euro, pour les entrees du catalogue serveur.
+ * Prix du store, en centimes DE SA DEVISE, pour les entrees du catalogue serveur.
  *
  * L39 — le prix lu est celui du package que `purchaseSubscriptionViaRevenueCat`
  * achetera, resolu par LA MEME fonction. Passer par une seconde table
  * d'identifiants rouvrirait exactement l'ecart qu'on cherche a fermer : le
  * prix affiche et le prix facture doivent venir du meme objet.
  *
+ * INTL1 — la devise VOYAGE avec les prix : en Suisse ou aux Emirats le store
+ * facture en CHF / AED, et l'ecran doit le dire. Un store n'a qu'une devise ;
+ * un produit dans une autre devise que le premier releve est ecarte (jamais
+ * melange a l'affichage). Un produit sans devise declaree est lu en EUR.
+ *
  * Un palier absent du store est simplement absent du resultat : on ne l'invente
- * jamais, et l'appelant en fait ce qu'il veut (ici : garder le prix serveur et
- * le signaler).
+ * jamais, et l'appelant en fait ce qu'il veut.
  * @param {any} offerings - Resultat de Purchases.getOfferings().
  * @param {any[]} catalogEntries
- * @returns {Record<string, number>}
+ * @returns {{ currencyCode: string; pricesInCents: Record<string, number> }}
  */
 export const mapRevenueCatStorePricesInCents = (offerings, catalogEntries) => {
   /** @type {Record<string, number>} */
-  const pricesEurCents = {};
+  const pricesInCents = {};
+  let storeCurrencyCode = '';
 
   (Array.isArray(catalogEntries) ? catalogEntries : []).forEach((catalogEntry) => {
     const planCode = String(catalogEntry?.planCode || '').trim();
@@ -219,16 +219,21 @@ export const mapRevenueCatStorePricesInCents = (offerings, catalogEntries) => {
       return;
     }
 
-    const currencyCode = String(storeProduct?.currencyCode || '').trim().toUpperCase();
-    if (currencyCode && currencyCode !== STORE_PRICE_CURRENCY_CODE) {
-      logger.warn('prix store ignore : devise non geree', { currencyCode, planCode });
+    const currencyCode = String(storeProduct?.currencyCode || '').trim().toUpperCase() || 'EUR';
+    storeCurrencyCode = storeCurrencyCode || currencyCode;
+    if (currencyCode !== storeCurrencyCode) {
+      logger.warn('prix store ignore : deux devises dans le meme store', {
+        currencyCode,
+        planCode,
+        storeCurrencyCode,
+      });
       return;
     }
 
-    pricesEurCents[planCode] = Math.round(price * 100);
+    pricesInCents[planCode] = Math.round(price * 100);
   });
 
-  return pricesEurCents;
+  return { currencyCode: storeCurrencyCode || 'EUR', pricesInCents };
 };
 
 /**
@@ -239,7 +244,7 @@ export const mapRevenueCatStorePricesInCents = (offerings, catalogEntries) => {
  * retombe alors sur les prix du serveur : **un ecran de vente doit toujours
  * porter un prix**.
  * @param {any[]} catalogEntries
- * @returns {Promise<Record<string, number> | null>}
+ * @returns {Promise<{ currencyCode: string; pricesInCents: Record<string, number> } | null>}
  */
 export const readRevenueCatStorePricesInCents = async (catalogEntries) => {
   // Web et builds sans cle : etat NORMAL de la plateforme, pas un incident.

@@ -10,6 +10,7 @@ import {
   findSubscriptionMonthlySiblingEntry,
   formatSubscriptionClubTierShortLabel,
   formatSubscriptionMonthlyEquivalentLabel,
+  formatSubscriptionPriceLabel,
   formatSubscriptionTrialHandoverNotice,
   formatSubscriptionYearlyDiscountLabel,
   getBlockingClubCoveragePlanCode,
@@ -100,7 +101,8 @@ const getEntryPriceAmountLabel = (entry) => {
   if (!Number.isFinite(cents) || cents <= 0) {
     return '';
   }
-  return `${(cents / 100).toFixed(2).replace('.', ',')} €`;
+  // INTL1 — dans la devise du store (CHF, AED), jamais un € ecrit en dur.
+  return formatSubscriptionPriceLabel(cents, '', entry?.priceCurrencyCode);
 };
 
 // Ce que l'utilisateur vient de creer pendant le tour (fusion preuve + Gratuit, decision 5b).
@@ -415,7 +417,7 @@ function GuideOffersRecap({ navigation }) {
     const cardPriceAmount = getEntryPriceAmountLabel(cardEntry);
     // Equivalence mensuelle : uniquement sur l'ancre annuelle.
     const cardMonthlyLabel = isYearlyPeriod
-      ? formatSubscriptionMonthlyEquivalentLabel(cardEntry?.referencePriceEurCents)
+      ? formatSubscriptionMonthlyEquivalentLabel(cardEntry?.referencePriceEurCents, cardEntry?.priceCurrencyCode)
       : '';
     // Remise calculee sur les DEUX prix de CETTE carte. Sans jumelle mensuelle
     // dans le catalogue, le libelle est vide : on n'invente jamais une remise.
