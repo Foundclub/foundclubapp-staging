@@ -27,9 +27,28 @@ jest.mock('@/utils/logger/logger', () => ({
 }));
 
 const CATALOGUE = [
-  { billingPeriod: 'monthly', planCode: 'fc_team_1_monthly', referencePriceEurCents: 799, scopeType: 'TEAM', slotCount: 1 },
-  { billingPeriod: 'yearly', planCode: 'fc_team_1_yearly', referencePriceEurCents: 5999, scopeType: 'TEAM', slotCount: 1 },
+  {
+    billingPeriod: 'monthly',
+    planCode: 'fc_team_1_monthly',
+    referencePriceEurCents: 799,
+    scopeType: 'TEAM',
+    slotCount: 1,
+  },
+  {
+    billingPeriod: 'yearly',
+    planCode: 'fc_team_1_yearly',
+    referencePriceEurCents: 5999,
+    scopeType: 'TEAM',
+    slotCount: 1,
+  },
 ];
+
+/**
+ * Ce que l ecran lit d une ligne : code, centimes, devise.
+ * @param {any} entry
+ * @returns {any[]}
+ */
+const lecture = (entry) => [entry.planCode, entry.referencePriceEurCents, entry.priceCurrencyCode];
 
 /**
  * Offerings RevenueCat de la famille `fc_team_1` dans une devise donnee.
@@ -77,7 +96,7 @@ describe('INTL1 — la resolution du catalogue n affiche jamais un euro en CHF',
       storePricesEurCents: { fc_team_1_monthly: 790, fc_team_1_yearly: 5900 },
     });
 
-    expect(entries.map((entry) => [entry.planCode, entry.referencePriceEurCents, entry.priceCurrencyCode])).toEqual([
+    expect(entries.map(lecture)).toEqual([
       ['fc_team_1_monthly', 790, 'CHF'],
       ['fc_team_1_yearly', 5900, 'CHF'],
     ]);
@@ -96,7 +115,11 @@ describe('INTL1 — la resolution du catalogue n affiche jamais un euro en CHF',
     const annuel = entries.find((entry) => entry.planCode === 'fc_team_1_yearly');
     expect(annuel.referencePriceEurCents).toBeUndefined();
     expect(annuel.priceCurrencyCode).toBe('AED');
-    expect(formatSubscriptionPriceLabel(annuel.referencePriceEurCents, 'yearly', annuel.priceCurrencyCode)).toBe('');
+    expect(formatSubscriptionPriceLabel(
+      annuel.referencePriceEurCents,
+      'yearly',
+      annuel.priceCurrencyCode,
+    )).toBe('');
     expect(missingFromStorePlanCodes).toEqual(['fc_team_1_yearly']);
 
     const mensuel = entries.find((entry) => entry.planCode === 'fc_team_1_monthly');

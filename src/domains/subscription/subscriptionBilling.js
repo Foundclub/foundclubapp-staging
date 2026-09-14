@@ -407,7 +407,11 @@ const getCurrencySymbol = (currencyCode) => normalizeCurrencyCode(currencyCode) 
  *   missingFromStorePlanCodes: string[];
  * }}
  */
-export const resolveSubscriptionCatalogPrices = ({ serverEntries, storePricesEurCents, storeCurrencyCode }) => {
+export const resolveSubscriptionCatalogPrices = ({
+  serverEntries,
+  storeCurrencyCode,
+  storePricesEurCents,
+}) => {
   const entries = Array.isArray(serverEntries) ? serverEntries : [];
   const storePrices = storePricesEurCents && typeof storePricesEurCents === 'object'
     ? storePricesEurCents
@@ -453,7 +457,11 @@ export const resolveSubscriptionCatalogPrices = ({ serverEntries, storePricesEur
       delete withoutPrice.referencePriceEurCents;
       const storeCents = readStorePrice(entry);
       if (storeCents !== null) {
-        return { ...withoutPrice, priceCurrencyCode: foreignCurrencyCode, referencePriceEurCents: storeCents };
+        return {
+          ...withoutPrice,
+          priceCurrencyCode: foreignCurrencyCode,
+          referencePriceEurCents: storeCents,
+        };
       }
       if (!hasSellableServerPrice(entry)) {
         return entry;
@@ -461,7 +469,11 @@ export const resolveSubscriptionCatalogPrices = ({ serverEntries, storePricesEur
       missingInForeignStore.push(getSubscriptionEntryPlanCode(entry));
       return { ...withoutPrice, priceCurrencyCode: foreignCurrencyCode };
     });
-    return { entries: foreignEntries, mismatches: [], missingFromStorePlanCodes: missingInForeignStore };
+    return {
+      entries: foreignEntries,
+      mismatches: [],
+      missingFromStorePlanCodes: missingInForeignStore,
+    };
   }
 
   if (!storePrices || Object.keys(storePrices).length === 0) {
@@ -577,9 +589,11 @@ export const sortSubscriptionCatalogEntries = (entries) => {
 };
 
 /**
+ * Prix tel qu'il se lit : « 12,99 €/an », ou « 12,99 CHF/an » hors euro.
  * @param {number | null | undefined} priceEurCents - Centimes, dans la devise `currencyCode`.
  * @param {'monthly' | 'yearly' | string} billingPeriod
- * @param {string} [currencyCode] - INTL1 : devise du store (`entry.priceCurrencyCode`), euro par defaut.
+ * @param {string} [currencyCode] - INTL1 : devise du store (`entry.priceCurrencyCode`),
+ *   euro par defaut.
  * @returns {string}
  */
 export const formatSubscriptionPriceLabel = (priceEurCents, billingPeriod, currencyCode) => {
@@ -611,7 +625,8 @@ export const formatSubscriptionMonthlyEquivalentLabel = (yearlyPriceEurCents, cu
   if (!Number.isFinite(cents) || cents <= 0) {
     return '';
   }
-  return `soit ${(cents / 12 / 100).toFixed(2).replace('.', ',')} ${getCurrencySymbol(currencyCode)}/mois`;
+  const amount = (cents / 12 / 100).toFixed(2).replace('.', ',');
+  return `soit ${amount} ${getCurrencySymbol(currencyCode)}/mois`;
 };
 
 /**

@@ -417,7 +417,10 @@ function GuideOffersRecap({ navigation }) {
     const cardPriceAmount = getEntryPriceAmountLabel(cardEntry);
     // Equivalence mensuelle : uniquement sur l'ancre annuelle.
     const cardMonthlyLabel = isYearlyPeriod
-      ? formatSubscriptionMonthlyEquivalentLabel(cardEntry?.referencePriceEurCents, cardEntry?.priceCurrencyCode)
+      ? formatSubscriptionMonthlyEquivalentLabel(
+        cardEntry?.referencePriceEurCents,
+        cardEntry?.priceCurrencyCode,
+      )
       : '';
     // Remise calculee sur les DEUX prix de CETTE carte. Sans jumelle mensuelle
     // dans le catalogue, le libelle est vide : on n'invente jamais une remise.

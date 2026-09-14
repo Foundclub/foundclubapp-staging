@@ -60,6 +60,7 @@ class FormDataEspion {
   }
 
   /**
+   * Retient le dernier champ ajoute sous sa cle.
    * @param {string} cle
    * @param {string} valeur
    */

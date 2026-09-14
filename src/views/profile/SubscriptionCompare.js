@@ -79,7 +79,8 @@ const getStartingMonthlyPriceLabel = (entries, scopeType) => {
   if (pricedEntries.length === 0) return '';
   const prices = pricedEntries.map((entry) => Number(entry.referencePriceEurCents));
   // INTL1 — un store n'a qu'une devise : celle de la premiere ligne vaut pour toutes.
-  return `dès ${formatSubscriptionPriceLabel(Math.min(...prices), '', pricedEntries[0]?.priceCurrencyCode)}`;
+  const currencyCode = pricedEntries[0]?.priceCurrencyCode;
+  return `dès ${formatSubscriptionPriceLabel(Math.min(...prices), '', currencyCode)}`;
 };
 
 /**

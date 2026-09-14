@@ -782,7 +782,11 @@ describe('L39 — le prix affiche vient du STORE, et l ecart est signale', () =>
   });
 
   it('INTL1 — store suisse : le prix s affiche en CHF, et AUCUN prix en euros', async () => {
-    mockStorePricesQueryState = { data: reponseDuStore(PRIX_STORE, 'CHF'), error: null, isLoading: false };
+    mockStorePricesQueryState = {
+      data: reponseDuStore(PRIX_STORE, 'CHF'),
+      error: null,
+      isLoading: false,
+    };
     const arbre = await rendre();
     const texte = texteVisible(arbre);
 
