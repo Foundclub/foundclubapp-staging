@@ -4442,6 +4442,7 @@ export default {
       findClub: 'Trouver mon club',
       findTeam: 'Trouver une équipe',
       ignore: 'Ignorer',
+      language: 'Langue',
       logout: 'Déconnexion',
       // PARENT P2 — la rangée qui manquait : aucune des 8 rangées du menu ne
       // parlait d'enfant, alors que « mes enfants » est la raison d'être du
@@ -4621,6 +4622,11 @@ export default {
       },
       roleWithClub: '{{role}} · {{club}}',
       verified: 'Certifié',
+    },
+    language: {
+      auto: 'Langue du téléphone',
+      en: 'English',
+      fr: 'Français',
     },
     // AA11 — LA PHRASE QU'ADEL DEMANDE (« felicitations, votre (info) a ete
     // modifiee »), et elle NOMME toujours ce qui a change. Le libelle insere

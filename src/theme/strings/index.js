@@ -51,11 +51,12 @@
 // privé : le paquet était resté là, et nulle part ailleurs.
 import 'intl-pluralrules';
 import { setDefaultOptions } from 'date-fns';
-import { fr } from 'date-fns/locale';
+import { enGB, fr } from 'date-fns/locale';
 import i18n from 'i18next';
 import * as JoiModule from 'joi';
 import { initReactI18next } from 'react-i18next';
 
+import { langueEffective } from '@/theme/strings/langue';
 import * as translations from '@/theme/strings/translations';
 import validations from '@/theme/strings/translations/validations';
 
@@ -64,7 +65,9 @@ const DefaultJoi = JoiModule?.default || JoiModule;
 i18n.use(initReactI18next).init({
   compatibilityJSON: 'v4',
   fallbackLng: 'fr',
-  lng: 'fr',
+  // 🔤 I18N-0 : la langue du téléphone, ou celle choisie dans le profil (voir
+  // `langue.js`). Était `'fr'` en dur jusqu'au 2026-09-14.
+  lng: langueEffective(),
   resources: {
     ...Object.entries(translations).reduce(
       (acc, [key, value]) => ({
@@ -88,4 +91,14 @@ export const Joi = DefaultJoi.defaults(
   }),
 );
 
-setDefaultOptions({ locale: fr });
+/**
+ * La locale des formats `Intl` / `toLocaleDateString` pour la langue en cours.
+ * Les lots I18N-1 à 4 remplacent les `'fr-FR'` écrits en dur par cet appel.
+ * @returns {'fr-FR' | 'en-GB'} La locale à passer à `Intl`.
+ */
+export const localeDesFormats = () => (i18n.language === 'en' ? 'en-GB' : 'fr-FR');
+
+// date-fns suit la langue : `format(date, 'EEEE')` rend « lundi » ou « Monday ».
+const reglerDateFns = (langue) => setDefaultOptions({ locale: langue === 'en' ? enGB : fr });
+reglerDateFns(i18n.language);
+i18n.on('languageChanged', reglerDateFns);

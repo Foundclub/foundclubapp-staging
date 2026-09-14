@@ -95,6 +95,29 @@ jest.mock('react-test-renderer', () => {
   };
 });
 
+/**
+ * 🔤 I18N-0 — LES TEMOINS PARLENT FRANCAIS, quelle que soit la machine.
+ *
+ * Depuis I18N-0, l'app parle la langue du telephone. Or ~300 fichiers de temoins
+ * lisent du francais a l'ecran, et la CI tourne sur une machine en anglais : sans
+ * ce double, ils passeraient au rouge d'un coup, sans qu'aucun ecran n'ait change.
+ *
+ * Ce double decrit l'app d'AVANT I18N-0 et rien d'autre : tout est en francais,
+ * aucun choix n'est enregistre. Le vrai module a son propre temoin
+ * (`src/theme/strings/__tests__/langue.test.js`, qui fait `jest.unmock`).
+ * ⛔ Aucun `requireActual` : le vrai module charge le stockage natif (MMKV), et
+ * des temoins remplacent `react-native` par un objet partiel.
+ */
+jest.mock('@/theme/strings/langue', () => ({
+  CLEF_CHOIX_DE_LANGUE: 'app.language_choice',
+  enregistrerChoixDeLangue: jest.fn(),
+  langueDepuisLocale: () => 'fr',
+  langueDuTelephone: () => 'fr',
+  langueEffective: () => 'fr',
+  LANGUES_DISPONIBLES: ['fr', 'en'],
+  lireChoixDeLangue: () => null,
+}));
+
 jest.mock('@tanstack/query-core', () => {
   const reel = jest.requireActual('@tanstack/query-core');
   // `Query` et `Mutation` heritent toutes deux de `Removable`, la classe qui

@@ -22,6 +22,11 @@ import { navigateToRequestsHub } from '@/domains/requests/requestNavigation';
 import { getSubscriptionQuotaItems } from '@/domains/subscription/subscriptionDecision';
 import { TutorialIds } from '@/domains/tutorial/tutorialIds';
 import { useAppContext } from '@/store/appContext';
+import {
+  enregistrerChoixDeLangue,
+  langueEffective,
+  lireChoixDeLangue,
+} from '@/theme/strings/langue';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -64,7 +69,7 @@ function Profile({ navigation, route }) {
   const {
     Alignments, ApplicationStyle, Colors, Fonts, Images, Spaces,
   } = useTheme();
-  const { t } = useTranslation();
+  const { i18n, t } = useTranslation();
   const [{ fcmToken }] = useAppContext();
   const {
     addAccount,
@@ -83,6 +88,9 @@ function Profile({ navigation, route }) {
 
   const [isAccountModalVisible, setIsAccountModalVisible] = useState(false);
   const [switchingAccountId, setSwitchingAccountId] = useState(/** @type {string | null} */ (null));
+  // 🔤 I18N-0 — le réglage « Langue ». `null` = suivre la langue du téléphone.
+  const [choixDeLangue, setChoixDeLangue] = useState(() => lireChoixDeLangue());
+  const [isLanguageChoiceOpen, setIsLanguageChoiceOpen] = useState(false);
   const safeAuthSessions = authSessions || [];
   const hasMultipleConnectedAccounts = safeAuthSessions.length > 1;
   const currentRoleKey = getUserRoleKey(userData?.role?.type || userData?.role?.name);
@@ -126,6 +134,18 @@ function Profile({ navigation, route }) {
 
   // Get the first multisport club for quick access
   const firstMultisportClub = useMemo(() => multisportClubs[0] || null, [multisportClubs]);
+
+  /**
+   * Retient la langue choisie et la parle tout de suite.
+   * @param {'fr' | 'en' | null} choix - La langue, ou `null` pour celle du téléphone.
+   * @returns {void}
+   */
+  const handleChooseLanguage = (choix) => {
+    enregistrerChoixDeLangue(choix);
+    setChoixDeLangue(choix);
+    setIsLanguageChoiceOpen(false);
+    i18n?.changeLanguage(langueEffective());
+  };
 
   const handleEditUser = () => {
     navigation.navigate(RouteNames.ProfileEdit);
@@ -650,7 +670,31 @@ function Profile({ navigation, route }) {
     </View>
   );
 
+  // 🔤 I18N-0 — une rangée « Langue · <choix> » qui déplie les trois choix sur
+  // place. Pas d'`Alert` : sur le web elle ne s'ouvre pas, et cet écran y sert aussi.
+  const nomDesLangues = { en: t('profile.language.en'), fr: t('profile.language.fr') };
+  const nomDuChoix = (/** @type {'fr' | 'en' | null} */ choix) => (
+    choix ? nomDesLangues[choix] : t('profile.language.auto')
+  );
+  const languageRows = [
+    {
+      icon: Images.flag,
+      key: 'language',
+      label: `${t('profile.actions.language')} · ${nomDuChoix(choixDeLangue)}`,
+      onPress: () => setIsLanguageChoiceOpen((ouvert) => !ouvert),
+    },
+    ...(isLanguageChoiceOpen
+      ? /** @type {Array<'fr' | 'en' | null>} */ ([null, 'fr', 'en']).map((choix) => ({
+        icon: choix === choixDeLangue ? Images.check : Images.flag,
+        key: `language-${choix || 'auto'}`,
+        label: nomDuChoix(choix),
+        onPress: () => handleChooseLanguage(choix),
+      }))
+      : []),
+  ];
+
   const accountNonLogoutRows = [
+    ...languageRows,
     {
       icon: Images.share2,
       key: 'switchAccount',

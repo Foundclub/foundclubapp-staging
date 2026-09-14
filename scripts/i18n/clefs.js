@@ -36,6 +36,16 @@ const EN = path.join(SRC, 'theme', 'strings', 'translations', 'en.js');
 const SUFFIXES_DE_PLURIEL = ['', '_zero', '_one', '_two', '_few', '_many', '_other'];
 const CLEF_POINTEE = /^[A-Za-z0-9_]+(?:\.[A-Za-z0-9_]+)+$/;
 const LARGEUR_MAX = 100;
+const EN_VIDE = [
+  '// 🔤 I18N-0 — l\'app en anglais. MÊMES clefs que fr.js : le témoin',
+  '// src/theme/strings/__tests__/enClefsIdentiques.test.js rougit dès qu\'une clef',
+  '// manque ici. `node scripts/i18n/clefs.js en --traductions <json>` la pose à sa place.',
+  '// Un texte ne se coupe pas : la largeur de ligne ne s\'applique pas à ce fichier.',
+  '/* eslint-disable max-len */',
+  'export default {',
+  '};',
+  '',
+].join('\n');
 
 const lireArgument = (nom) => {
   const index = process.argv.indexOf(nom);
@@ -109,7 +119,9 @@ const litteral = (texte) => {
   return `'${echapper("'")}'`;
 };
 
-const nomDeClef = (nom) => (/^[A-Za-z_$][A-Za-z0-9_$]*$/.test(nom) ? nom : litteral(nom));
+const nomDeClef = (nom) => (/^([A-Za-z_$][A-Za-z0-9_$]*|0|[1-9][0-9]*)$/.test(nom)
+  ? nom
+  : litteral(nom));
 
 // Rend une propriété (texte ou objet) à la profondeur donnée, enfants triés.
 const rendre = (nom, valeur, profondeur, avecDerogation) => {
@@ -370,7 +382,7 @@ const commandeEn = () => {
   if (!cheminTraductions) throw new Error('--traductions <fichier.json> est obligatoire.');
   const traductions = JSON.parse(fs.readFileSync(cheminTraductions, 'utf8'));
   const fr = aPlat(fs.readFileSync(FR, 'utf8'));
-  const sourceEn = fs.existsSync(EN) ? fs.readFileSync(EN, 'utf8') : 'export default {\n};\n';
+  const sourceEn = fs.existsSync(EN) ? fs.readFileSync(EN, 'utf8') : EN_VIDE;
   const en = aPlat(sourceEn);
   const manquantes = Object.keys(fr).filter((clef) => en[clef] === undefined);
   const sansTraduction = manquantes.filter((clef) => typeof traductions[clef] !== 'string');
