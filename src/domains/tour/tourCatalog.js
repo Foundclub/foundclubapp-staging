@@ -1,3 +1,5 @@
+import i18next from 'i18next';
+
 import { getSimulationRoster } from '@/domains/tactical/simulationRosters';
 
 import { RouteNames } from '@/navigation/routeNames';
@@ -111,94 +113,211 @@ const COACH_TOUR_STEPS = [
     // Sautee automatiquement si le coach a deja une equipe (isAlreadyDone).
     fallbackTarget: homeTarget,
     id: 'coach_create_team',
-    instruction: 'Crée ton équipe — tout le reste en découle (ta 1ʳᵉ équipe est offerte).',
+    get instruction() {
+      return i18next.t(
+        'tourCatalog.coachCreateTeam.instruction',
+        'Crée ton équipe — tout le reste en découle (ta 1ʳᵉ équipe est offerte).',
+      );
+    },
     isAlreadyDone: (/** @type {any} */ context) => (
       (Array.isArray(context?.userData?.trainedTeams) && context.userData.trainedTeams.length > 0)
       || (Array.isArray(context?.userData?.myTeams) && context.userData.myTeams.length > 0)
     ),
     navTarget: teamWizardTarget,
-    skipLabel: 'Créer plus tard',
+    get skipLabel() {
+      return i18next.t('tourCatalog.coachCreateTeam.skipLabel', 'Créer plus tard');
+    },
     success: { key: 'team.created', type: 'action' },
-    successMessage: '🎉 Ton équipe est créée !',
-    title: 'Crée ton équipe',
+    get successMessage() {
+      return i18next.t('tourCatalog.coachCreateTeam.successMessage', '🎉 Ton équipe est créée !');
+    },
+    get title() {
+      return i18next.t('tourCatalog.coachCreateTeam.title', 'Crée ton équipe');
+    },
   },
   {
     // Semi-etape pedagogique : le coach apprend OU se cree un evenement (carte
     // de l'accueil) — la validation = arrivee sur le tunnel evenement.
     fallbackTarget: homeTarget,
     id: 'coach_find_event_card',
-    instruction: 'Ton équipe est prête ! Sur ton accueil, touche la carte « Ajouter un événement ».',
-    manualLabel: "M'y emmener",
+    get instruction() {
+      return i18next.t(
+        'tourCatalog.coachFindEventCard.instruction',
+        'Ton équipe est prête ! Sur ton accueil, touche la carte « Ajouter un événement ».',
+      );
+    },
+    get manualLabel() {
+      return i18next.t('tourCatalog.coachFindEventCard.manualLabel', "M'y emmener");
+    },
     navTarget: homeTarget,
     success: { key: RouteNames.EventWizardType, type: 'route' },
-    successMessage: "Bien trouvé ! C'est ici que tout se crée.",
-    title: 'Trouve la carte « Ajouter un événement »',
+    get successMessage() {
+      return i18next.t(
+        'tourCatalog.coachFindEventCard.successMessage',
+        "Bien trouvé ! C'est ici que tout se crée.",
+      );
+    },
+    get title() {
+      return i18next.t(
+        'tourCatalog.coachFindEventCard.title',
+        'Trouve la carte « Ajouter un événement »',
+      );
+    },
   },
   {
     fallbackTarget: planningTarget,
     id: 'coach_create_event',
-    instruction: 'Crée ton premier événement — il est offert.',
+    get instruction() {
+      return i18next.t(
+        'tourCatalog.coachCreateEvent.instruction',
+        'Crée ton premier événement — il est offert.',
+      );
+    },
     navTarget: eventWizardTarget,
-    skipLabel: 'Créer plus tard',
+    get skipLabel() {
+      return i18next.t('tourCatalog.coachCreateEvent.skipLabel', 'Créer plus tard');
+    },
     success: { key: 'event.created', type: 'action' },
-    successMessage: '🎉 Ton événement offert est en ligne !',
-    title: 'Ton premier événement',
+    get successMessage() {
+      return i18next.t(
+        'tourCatalog.coachCreateEvent.successMessage',
+        '🎉 Ton événement offert est en ligne !',
+      );
+    },
+    get title() {
+      return i18next.t('tourCatalog.coachCreateEvent.title', 'Ton premier événement');
+    },
   },
   {
     id: 'coach_follow_event',
-    instruction: 'Ouvre ton événement depuis le planning : présents, absents, retards et arrivées se suivent ici.',
-    manualLabel: "J'ai vu",
+    get instruction() {
+      return i18next.t(
+        'tourCatalog.coachFollowEvent.instruction',
+        'Ouvre ton événement depuis le planning : présents, absents, retards et arrivées se suivent ici.', // eslint-disable-line max-len
+      );
+    },
+    get manualLabel() {
+      return i18next.t('tourCatalog.coachFollowEvent.manualLabel', "J'ai vu");
+    },
     navTarget: planningTarget,
     success: { type: 'manual' },
-    successMessage: 'Tu sais suivre ton événement.',
-    title: 'Suivre ton événement',
+    get successMessage() {
+      return i18next.t(
+        'tourCatalog.coachFollowEvent.successMessage',
+        'Tu sais suivre ton événement.',
+      );
+    },
+    get title() {
+      return i18next.t('tourCatalog.coachFollowEvent.title', 'Suivre ton événement');
+    },
   },
   {
     id: 'coach_composition',
-    instruction: "Prépare ta compo — terrain d'essai, rien n'est publié.",
+    get instruction() {
+      return i18next.t(
+        'tourCatalog.coachComposition.instruction',
+        "Prépare ta compo — terrain d'essai, rien n'est publié.",
+      );
+    },
     // Échappatoire : le bandeau garde le bouton manuel même sur cette étape à signal.
-    manualLabel: "J'ai testé",
+    get manualLabel() {
+      return i18next.t('tourCatalog.coachComposition.manualLabel', "J'ai testé");
+    },
     navTarget: compositionSimulationTarget,
     // Émis par TacticalBoard au tap sur « Publier » en mode simulation guidée.
     success: { key: 'composition.simulated.published', type: 'action' },
-    successMessage: 'Compo maîtrisée ! (Publier une convocation = offre Équipe)',
-    title: 'Préparer une composition',
+    get successMessage() {
+      return i18next.t(
+        'tourCatalog.coachComposition.successMessage',
+        'Compo maîtrisée ! (Publier une convocation = offre Équipe)',
+      );
+    },
+    get title() {
+      return i18next.t('tourCatalog.coachComposition.title', 'Préparer une composition');
+    },
   },
   {
     id: 'coach_planning',
-    instruction: 'Ton planning regroupe toute ta semaine.',
-    manualLabel: "J'ai vu",
+    get instruction() {
+      return i18next.t(
+        'tourCatalog.coachPlanning.instruction',
+        'Ton planning regroupe toute ta semaine.',
+      );
+    },
+    get manualLabel() {
+      return i18next.t('tourCatalog.coachPlanning.manualLabel', "J'ai vu");
+    },
     navTarget: planningTarget,
     success: { type: 'manual' },
-    successMessage: 'Planning en poche.',
-    title: 'Ton planning',
+    get successMessage() {
+      return i18next.t('tourCatalog.coachPlanning.successMessage', 'Planning en poche.');
+    },
+    get title() {
+      return i18next.t('tourCatalog.coachPlanning.title', 'Ton planning');
+    },
   },
   {
     id: 'coach_team',
-    instruction: 'Ton espace équipe : invite tes joueur·se·s avec le lien de partage.',
-    manualLabel: "J'ai vu",
+    get instruction() {
+      return i18next.t(
+        'tourCatalog.coachTeam.instruction',
+        'Ton espace équipe : invite tes joueur·se·s avec le lien de partage.',
+      );
+    },
+    get manualLabel() {
+      return i18next.t('tourCatalog.coachTeam.manualLabel', "J'ai vu");
+    },
     navTarget: teamHubTarget,
     success: { type: 'manual' },
-    successMessage: 'Ton équipe est prête à grandir.',
-    title: 'Ton équipe',
+    get successMessage() {
+      return i18next.t('tourCatalog.coachTeam.successMessage', 'Ton équipe est prête à grandir.');
+    },
+    get title() {
+      return i18next.t('tourCatalog.coachTeam.title', 'Ton équipe');
+    },
   },
   {
     id: 'coach_messaging',
-    instruction: 'Le groupe de ton équipe est déjà créé.',
-    manualLabel: "J'ai vu",
+    get instruction() {
+      return i18next.t(
+        'tourCatalog.coachMessaging.instruction',
+        'Le groupe de ton équipe est déjà créé.',
+      );
+    },
+    get manualLabel() {
+      return i18next.t('tourCatalog.coachMessaging.manualLabel', "J'ai vu");
+    },
     navTarget: messagingTarget,
     success: { type: 'manual' },
-    successMessage: 'Communication en place.',
-    title: 'Ta messagerie',
+    get successMessage() {
+      return i18next.t('tourCatalog.coachMessaging.successMessage', 'Communication en place.');
+    },
+    get title() {
+      return i18next.t('tourCatalog.coachMessaging.title', 'Ta messagerie');
+    },
   },
   {
     id: 'coach_offers',
-    instruction: 'Voici ce que chaque offre débloque — à toi de jouer.',
-    manualLabel: 'Terminer le tour',
+    get instruction() {
+      return i18next.t(
+        'tourCatalog.coachOffers.instruction',
+        'Voici ce que chaque offre débloque — à toi de jouer.',
+      );
+    },
+    get manualLabel() {
+      return i18next.t('tourCatalog.coachOffers.manualLabel', 'Terminer le tour');
+    },
     navTarget: offersRecapTarget,
     success: { type: 'manual' },
-    successMessage: 'Tour terminé 🎉 Bienvenue chez toi.',
-    title: 'Les offres FoundClub',
+    get successMessage() {
+      return i18next.t(
+        'tourCatalog.coachOffers.successMessage',
+        'Tour terminé 🎉 Bienvenue chez toi.',
+      );
+    },
+    get title() {
+      return i18next.t('tourCatalog.coachOffers.title', 'Les offres FoundClub');
+    },
   },
 ];
 
@@ -206,39 +325,92 @@ const COACH_TOUR_STEPS = [
 const PLAYER_TOUR_STEPS = [
   {
     id: 'player_planning',
-    instruction: 'Retrouve ici tous tes événements et ton agenda.',
-    manualLabel: "J'ai vu",
+    get instruction() {
+      return i18next.t(
+        'tourCatalog.playerPlanning.instruction',
+        'Retrouve ici tous tes événements et ton agenda.',
+      );
+    },
+    get manualLabel() {
+      return i18next.t('tourCatalog.playerPlanning.manualLabel', "J'ai vu");
+    },
     navTarget: planningTarget,
     success: { type: 'manual' },
-    successMessage: 'Ton planning est prêt !',
-    title: 'Mon planning',
+    get successMessage() {
+      return i18next.t('tourCatalog.playerPlanning.successMessage', 'Ton planning est prêt !');
+    },
+    get title() {
+      return i18next.t('tourCatalog.playerPlanning.title', 'Mon planning');
+    },
   },
   {
     id: 'player_participation',
-    instruction: 'Trouve un événement qui te plaît et réponds présent·e.',
-    manualLabel: 'Plus tard',
+    get instruction() {
+      return i18next.t(
+        'tourCatalog.playerParticipation.instruction',
+        'Trouve un événement qui te plaît et réponds présent·e.',
+      );
+    },
+    get manualLabel() {
+      return i18next.t('tourCatalog.playerParticipation.manualLabel', 'Plus tard');
+    },
     navTarget: searchEventsTarget,
     success: { key: 'event.participation.created', type: 'action' },
-    successMessage: 'Première participation enregistrée !',
-    title: 'Répondre présent·e',
+    get successMessage() {
+      return i18next.t(
+        'tourCatalog.playerParticipation.successMessage',
+        'Première participation enregistrée !',
+      );
+    },
+    get title() {
+      return i18next.t('tourCatalog.playerParticipation.title', 'Répondre présent·e');
+    },
   },
   {
     id: 'player_messaging',
-    instruction: 'Le groupe de ton équipe est déjà là — chat illimité, pour toujours.',
-    manualLabel: "J'ai vu",
+    get instruction() {
+      return i18next.t(
+        'tourCatalog.playerMessaging.instruction',
+        'Le groupe de ton équipe est déjà là — chat illimité, pour toujours.',
+      );
+    },
+    get manualLabel() {
+      return i18next.t('tourCatalog.playerMessaging.manualLabel', "J'ai vu");
+    },
     navTarget: messagingTarget,
     success: { type: 'manual' },
-    successMessage: 'Tu sais où parler à ton équipe.',
-    title: 'Messagerie',
+    get successMessage() {
+      return i18next.t(
+        'tourCatalog.playerMessaging.successMessage',
+        'Tu sais où parler à ton équipe.',
+      );
+    },
+    get title() {
+      return i18next.t('tourCatalog.playerMessaging.title', 'Messagerie');
+    },
   },
   {
     id: 'player_profile',
-    instruction: 'Complète ton profil sportif pour être repéré·e.',
-    manualLabel: 'Terminer le tour',
+    get instruction() {
+      return i18next.t(
+        'tourCatalog.playerProfile.instruction',
+        'Complète ton profil sportif pour être repéré·e.',
+      );
+    },
+    get manualLabel() {
+      return i18next.t('tourCatalog.playerProfile.manualLabel', 'Terminer le tour');
+    },
     navTarget: profileEditTarget,
     success: { type: 'manual' },
-    successMessage: 'Profil au top — tour terminé 🎉',
-    title: 'Mon profil',
+    get successMessage() {
+      return i18next.t(
+        'tourCatalog.playerProfile.successMessage',
+        'Profil au top — tour terminé 🎉',
+      );
+    },
+    get title() {
+      return i18next.t('tourCatalog.playerProfile.title', 'Mon profil');
+    },
   },
 ];
 
@@ -246,58 +418,130 @@ const PLAYER_TOUR_STEPS = [
 const PRESIDENT_TOUR_STEPS = [
   {
     id: 'president_club',
-    instruction: 'Ton espace club : infos, logo, coordonnées.',
-    manualLabel: "J'ai vu",
+    get instruction() {
+      return i18next.t(
+        'tourCatalog.presidentClub.instruction',
+        'Ton espace club : infos, logo, coordonnées.',
+      );
+    },
+    get manualLabel() {
+      return i18next.t('tourCatalog.presidentClub.manualLabel', "J'ai vu");
+    },
     navTarget: homeTarget,
     success: { type: 'manual' },
-    successMessage: 'Ton club a une vitrine.',
-    title: 'Ta fiche club',
+    get successMessage() {
+      return i18next.t('tourCatalog.presidentClub.successMessage', 'Ton club a une vitrine.');
+    },
+    get title() {
+      return i18next.t('tourCatalog.presidentClub.title', 'Ta fiche club');
+    },
   },
   {
     id: 'president_teams',
-    instruction: 'Gère toutes les équipes de ton club ici.',
-    manualLabel: "J'ai vu",
+    get instruction() {
+      return i18next.t(
+        'tourCatalog.presidentTeams.instruction',
+        'Gère toutes les équipes de ton club ici.',
+      );
+    },
+    get manualLabel() {
+      return i18next.t('tourCatalog.presidentTeams.manualLabel', "J'ai vu");
+    },
     navTarget: teamHubTarget,
     success: { type: 'manual' },
-    successMessage: "Vue d'ensemble acquise.",
-    title: 'Les équipes du club',
+    get successMessage() {
+      return i18next.t('tourCatalog.presidentTeams.successMessage', "Vue d'ensemble acquise.");
+    },
+    get title() {
+      return i18next.t('tourCatalog.presidentTeams.title', 'Les équipes du club');
+    },
   },
   {
     id: 'president_planning',
-    instruction: 'Le planning du club : terrains, salles et créneaux colorés par installation.',
-    manualLabel: "J'ai vu",
+    get instruction() {
+      return i18next.t(
+        'tourCatalog.presidentPlanning.instruction',
+        'Le planning du club : terrains, salles et créneaux colorés par installation.',
+      );
+    },
+    get manualLabel() {
+      return i18next.t('tourCatalog.presidentPlanning.manualLabel', "J'ai vu");
+    },
     navTarget: planningTarget,
     success: { type: 'manual' },
-    successMessage: 'Installations repérées (offre Club).',
-    title: 'Installations & planning',
+    get successMessage() {
+      return i18next.t(
+        'tourCatalog.presidentPlanning.successMessage',
+        'Installations repérées (offre Club).',
+      );
+    },
+    get title() {
+      return i18next.t('tourCatalog.presidentPlanning.title', 'Installations & planning');
+    },
   },
   {
     fallbackTarget: planningTarget,
     id: 'president_events',
-    instruction: 'Crée un événement pour ton club — le premier est offert.',
+    get instruction() {
+      return i18next.t(
+        'tourCatalog.presidentEvents.instruction',
+        'Crée un événement pour ton club — le premier est offert.',
+      );
+    },
     navTarget: eventWizardTarget,
-    skipLabel: 'Créer plus tard',
+    get skipLabel() {
+      return i18next.t('tourCatalog.presidentEvents.skipLabel', 'Créer plus tard');
+    },
     success: { key: 'event.created', type: 'action' },
-    successMessage: '🎉 Ton événement offert est en ligne !',
-    title: 'Ton premier événement',
+    get successMessage() {
+      return i18next.t(
+        'tourCatalog.presidentEvents.successMessage',
+        '🎉 Ton événement offert est en ligne !',
+      );
+    },
+    get title() {
+      return i18next.t('tourCatalog.presidentEvents.title', 'Ton premier événement');
+    },
   },
   {
     id: 'president_messaging',
-    instruction: 'Groupes de discussion du club.',
-    manualLabel: "J'ai vu",
+    get instruction() {
+      return i18next.t(
+        'tourCatalog.presidentMessaging.instruction',
+        'Groupes de discussion du club.',
+      );
+    },
+    get manualLabel() {
+      return i18next.t('tourCatalog.presidentMessaging.manualLabel', "J'ai vu");
+    },
     navTarget: messagingTarget,
     success: { type: 'manual' },
-    successMessage: 'Communication club vue.',
-    title: 'Communication',
+    get successMessage() {
+      return i18next.t('tourCatalog.presidentMessaging.successMessage', 'Communication club vue.');
+    },
+    get title() {
+      return i18next.t('tourCatalog.presidentMessaging.title', 'Communication');
+    },
   },
   {
     id: 'president_offers',
-    instruction: "L'offre Club débloque tout ça d'un coup.",
-    manualLabel: 'Terminer le tour',
+    get instruction() {
+      return i18next.t(
+        'tourCatalog.presidentOffers.instruction',
+        "L'offre Club débloque tout ça d'un coup.",
+      );
+    },
+    get manualLabel() {
+      return i18next.t('tourCatalog.presidentOffers.manualLabel', 'Terminer le tour');
+    },
     navTarget: offersRecapTarget,
     success: { type: 'manual' },
-    successMessage: 'Tour terminé 🎉',
-    title: "L'offre Club",
+    get successMessage() {
+      return i18next.t('tourCatalog.presidentOffers.successMessage', 'Tour terminé 🎉');
+    },
+    get title() {
+      return i18next.t('tourCatalog.presidentOffers.title', "L'offre Club");
+    },
   },
 ];
 

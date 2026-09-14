@@ -710,8 +710,7 @@ function LegacySearchMapNative({
             <Text style={[Fonts.p3, Fonts.neutral200, Fonts.textCenter]}>
               {t(
                 'legacySearchMapNative.error.body',
-                // eslint-disable-next-line max-len
-                'Les tuiles Google Maps ne répondent pas pour le moment. Réessaie ou reviens à la liste.',
+                'Les tuiles Google Maps ne répondent pas pour le moment. Réessaie ou reviens à la liste.', // eslint-disable-line max-len
               )}
             </Text>
             <View style={[Alignments.row, Alignments.justifyCenter, { gap: 12, width: '100%' }]}>

@@ -643,8 +643,7 @@ function ClubListContent({
         <EmptyState
           description={t(
             'clubListContent.zoomRequired.description',
-            // eslint-disable-next-line max-len
-            'La zone visible est trop large pour charger une liste fiable. Zoome puis relance la vue liste.',
+            'La zone visible est trop large pour charger une liste fiable. Zoome puis relance la vue liste.', // eslint-disable-line max-len
           )}
           title={t('clubListContent.zoomRequired.title', 'Zoome pour affiner la recherche')}
         />

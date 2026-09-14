@@ -1,3 +1,4 @@
+import i18next from 'i18next';
 import { createElement } from 'react';
 import { StyleSheet } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
@@ -110,6 +111,16 @@ const polices = require('@/theme/fonts').default(require('@/theme/colors').defau
 // Charge ici, et pas dans le `describe` : un require() hors du premier niveau
 // est une erreur `global-require`, que le cliquet de lint compte.
 const catalogueFr = require('@/theme/strings/translations/fr').default;
+
+// I18N-4 : le domaine (friendlyMatchFlow) lit ses libelles par i18next. react-i18next
+// reste double ci-dessus ; on initialise i18next lui-meme sur le VRAI fr.js, sans rien
+// changer a ce que le temoin affirme.
+i18next.init({
+  compatibilityJSON: 'v4',
+  fallbackLng: 'fr',
+  lng: 'fr',
+  resources: { fr: { translation: catalogueFr } },
+});
 
 /**
  * Une annonce complete, telle que le service la rend.

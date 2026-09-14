@@ -584,8 +584,7 @@ export const mapFacilityOverrideRequestToHubItem = (/** @type {Record<string, an
     status: 'pending',
     subtitle: i18next.t(
       'requestMappers.facility.subtitle',
-      // eslint-disable-next-line max-len
-      '{{team}} demande une place supplementaire sur {{facility}} ({{overlap}}/{{max}} slots deja pris).',
+      '{{team}} demande une place supplementaire sur {{facility}} ({{overlap}}/{{max}} slots deja pris).', // eslint-disable-line max-len
       {
         facility: facilityName,
         max: maxSlots,

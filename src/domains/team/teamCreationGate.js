@@ -1,4 +1,7 @@
+import i18next from 'i18next';
+
 import { getActiveClubId, getUserRoleKey } from '@/domains/auth/authUseCases';
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 
 /**
  * LE JUGE D'ENTRÉE DU TUNNEL D'ÉQUIPE — lot EQUIPES (2026-08-28).
@@ -118,17 +121,19 @@ export const actsAsCoach = (userData) => getUserRoleKey(userData?.role?.name) ==
 export const resolveTeamCreationGate = ({ club = null, userData = null } = {}) => {
   const clubId = normalizeId(club?.documentId || club?.id);
   const clubName = String(club?.name || '').trim();
-  const clubLabel = clubName || 'ton club';
+  const clubLabel = clubName || i18next.t('teamCreationGate.yourClub', 'ton club');
 
   if (clubId && isClubAffiliationPending(userData, clubId)) {
     return {
       blockReason: TEAM_CREATION_BLOCK.affiliationPending,
       isAllowed: false,
-      message: `Ton adhésion à ${clubLabel} n'est pas encore validée. Un dirigeant du club `
-        + "doit d'abord accepter ta demande : tu pourras créer ton équipe juste après. "
-        + 'Inutile de remplir le formulaire maintenant, il serait refusé à la dernière étape.',
+      message: i18next.t(
+        'teamCreationGate.affiliationPending.message',
+        "Ton adhésion à {{club}} n'est pas encore validée. Un dirigeant du club doit d'abord accepter ta demande : tu pourras créer ton équipe juste après. Inutile de remplir le formulaire maintenant, il serait refusé à la dernière étape.", // eslint-disable-line max-len
+        { club: clubLabel, ...SANS_ECHAPPEMENT },
+      ),
       requiresClubApproval: false,
-      title: 'Ton adhésion est en attente',
+      title: i18next.t('teamCreationGate.affiliationPending.title', 'Ton adhésion est en attente'),
     };
   }
 
@@ -136,11 +141,16 @@ export const resolveTeamCreationGate = ({ club = null, userData = null } = {}) =
     return {
       blockReason: TEAM_CREATION_BLOCK.coachNotAllowed,
       isAllowed: false,
-      message: `${clubLabel} a choisi que seuls ses dirigeants créent les équipes. `
-        + 'Demande à un dirigeant de créer la tienne, ou de te donner ce droit dans les '
-        + 'réglages du club.',
+      message: i18next.t(
+        'teamCreationGate.coachNotAllowed.message',
+        '{{club}} a choisi que seuls ses dirigeants créent les équipes. Demande à un dirigeant de créer la tienne, ou de te donner ce droit dans les réglages du club.', // eslint-disable-line max-len
+        { club: clubLabel, ...SANS_ECHAPPEMENT },
+      ),
       requiresClubApproval: false,
-      title: 'Ce club réserve la création aux dirigeants',
+      title: i18next.t(
+        'teamCreationGate.coachNotAllowed.title',
+        'Ce club réserve la création aux dirigeants',
+      ),
     };
   }
 

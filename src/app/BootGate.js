@@ -54,8 +54,7 @@ function BootGate({ children }) {
         details={__DEV__ ? errors.join('\n') : ''}
         subtitle={t(
           'bootGate.subtitle',
-          // eslint-disable-next-line max-len
-          "La configuration réseau de ce build est invalide. L'app est bloquée proprement pour éviter un crash au démarrage.",
+          "La configuration réseau de ce build est invalide. L'app est bloquée proprement pour éviter un crash au démarrage.", // eslint-disable-line max-len
         )}
         title={t('bootGate.title', 'Configuration invalide')}
       />
