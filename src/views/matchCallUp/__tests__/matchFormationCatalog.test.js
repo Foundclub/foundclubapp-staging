@@ -5,6 +5,12 @@ import {
   getMatchFormations,
 } from '../matchFormationCatalog';
 
+// I18N-2 : ces textes passent par i18next.t hors composant — la doublure partagée rend le
+// français de l app (fr.js, sinon le repli, jetons et pluriel français).
+jest.mock('i18next', () => (
+  jest.requireActual('@/theme/strings/__mocks__/doublureTraduction').i18next
+));
+
 // 🎁 LOT TERRAIN — CHANTIERS B et C.
 //
 // B : un sport n'avait qu'UNE disposition en dur. Il en a maintenant une LISTE
