@@ -1,4 +1,4 @@
-/* eslint-disable jsdoc/require-returns, max-len, no-console, no-nested-ternary, perfectionist/sort-objects, react/jsx-one-expression-per-line, react/no-unescaped-entities */
+/* eslint-disable jsdoc/require-returns, max-len, no-console, no-nested-ternary, perfectionist/sort-objects, react/no-unescaped-entities */
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useQueryClient } from '@tanstack/react-query';
 import {
@@ -8,6 +8,7 @@ import {
   useRef,
   useState,
 } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Alert,
   Dimensions,
@@ -37,6 +38,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import useAuth from '@/domains/auth/useAuth';
 import { emitGuidanceAction } from '@/domains/guidance/guidanceRuntime';
 import { extractSubscriptionDecisionFromError } from '@/domains/subscription/subscriptionDecision';
+import localeDesFormats from '@/theme/strings/localeDesFormats';
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -175,6 +178,7 @@ const serializeCompositionState = (payload, mode = 'event') => {
  * TacticalBoard V2 - Overlay pattern for reliable drag & drop
  */
 function TacticalBoard() {
+  const { t } = useTranslation();
   const {
     Alignments, ApplicationStyle, Colors, Fonts, Images, Spaces,
   } = useTheme();
@@ -362,52 +366,64 @@ function TacticalBoard() {
   );
 
   const formatDateTime = useCallback(
-    (value) => (value ? new Date(value).toLocaleString('fr-FR') : null),
+    (value) => (value ? new Date(value).toLocaleString(localeDesFormats()) : null),
     [],
   );
 
-  let headerTitle = "Composition d'équipe";
+  let headerTitle = t('tacticalBoard.teamLineup', "Composition d'équipe");
   if (isTeamDefaultMode) {
-    headerTitle = 'Composition type';
+    headerTitle = t('tacticalBoard.defaultLineup', 'Composition type');
   } else if (readOnly) {
-    headerTitle = 'Composition publiée';
+    headerTitle = t('tacticalBoard.publishedLineup', 'Composition publiée');
   }
 
-  let headerModeLabel = 'Édition';
+  let headerModeLabel = t('tacticalBoard.editing', 'Édition');
   if (isTeamDefaultMode) {
-    headerModeLabel = 'Composition type';
+    headerModeLabel = t('tacticalBoard.defaultLineup', 'Composition type');
   } else if (readOnly) {
-    headerModeLabel = 'Lecture seule';
+    headerModeLabel = t('tacticalBoard.readOnly', 'Lecture seule');
   }
 
   const readableEventName = useMemo(() => normalizeMatchLabel(eventName), [eventName]);
-  const contextTitle = teamName || readableEventName || 'Match';
+  const contextTitle = teamName || readableEventName || t('tacticalBoard.match', 'Match');
   const contextSubtitle = teamName && readableEventName && teamName !== readableEventName
     ? readableEventName
     : null;
 
   const playersPlacedCount = fieldPlayers.length;
   const totalPlayersCount = fieldPlayers.length + benchPlayers.length;
-  let primaryActionTitle = "Publier la composition d'équipe";
+  let primaryActionTitle = t('tacticalBoard.publishTeamLineup', "Publier la composition d'équipe");
   if (isTeamDefaultMode) {
-    primaryActionTitle = isSaving ? 'Enregistrement...' : 'Enregistrer la composition type';
+    primaryActionTitle = isSaving ? t(
+      'tacticalBoard.saving',
+      'Enregistrement...',
+    ) : t(
+      'tacticalBoard.saveDefaultLineup',
+      'Enregistrer la composition type',
+    );
   } else if (isPublishing) {
-    primaryActionTitle = 'Publication...';
+    primaryActionTitle = t('tacticalBoard.publishing', 'Publication...');
   }
 
   const resolvedHeaderTitle = (() => {
     if (isTeamDefaultMode) return headerTitle;
     if (readOnly) {
-      return isDetectionEvent ? "Composition d'équipe détection publiée" : headerTitle;
+      return isDetectionEvent ? t(
+        'tacticalBoard.publishedDetectionLineup',
+        "Composition d'équipe détection publiée",
+      ) : headerTitle;
     }
-    return isDetectionEvent ? "Composition d'équipe détection" : headerTitle;
+    return isDetectionEvent ? t(
+      'tacticalBoard.detectionLineup',
+      "Composition d'équipe détection",
+    ) : headerTitle;
   })();
 
   const resolvedHeaderModeLabel = isTeamDefaultMode
     ? headerModeLabel
     : readOnly
       ? headerModeLabel
-      : 'Edition';
+      : t('tacticalBoard.editingPlain', 'Edition');
 
   const resolvedContextTitle = (() => {
     const explicitTypeLabel = String(eventTypeLabel || '').trim();
@@ -415,14 +431,14 @@ function TacticalBoard() {
       return contextTitle;
     }
     if (isDetectionEvent) {
-      return explicitTypeLabel || 'Detection';
+      return explicitTypeLabel || t('tacticalBoard.detection', 'Detection');
     }
     return contextTitle;
   })();
 
   const resolvedPrimaryActionTitle = (
     !isTeamDefaultMode && !isPublishing && isDetectionEvent
-      ? "Publier la composition d'équipe détection"
+      ? t('tacticalBoard.publishDetectionLineup', "Publier la composition d'équipe détection")
       : primaryActionTitle
   );
 
@@ -434,95 +450,162 @@ function TacticalBoard() {
   }
 
   const selectionSource = isTeamDefaultMode ? 'default_composition' : 'draft';
-  const selectionSourceLabel = isTeamDefaultMode ? 'Composition type' : 'Brouillon';
-  const saveDraftLabel = isSaving ? 'Sauvegarde...' : 'Sauvegarder ce brouillon';
-  const teamModelLabel = isTeamDefaultMode ? 'Enregistrer la composition type' : 'Enregistrer comme composition type';
+  const selectionSourceLabel = isTeamDefaultMode ? t(
+    'tacticalBoard.defaultLineup',
+    'Composition type',
+  ) : t(
+    'tacticalBoard.draft',
+    'Brouillon',
+  );
+  const saveDraftLabel = isSaving ? t(
+    'tacticalBoard.savingDraft',
+    'Sauvegarde...',
+  ) : t(
+    'tacticalBoard.saveThisDraft',
+    'Sauvegarder ce brouillon',
+  );
+  const teamModelLabel = isTeamDefaultMode ? t('tacticalBoard.saveDefaultLineup', 'Enregistrer la composition type') : t('tacticalBoard.saveAsDefaultLineup', 'Enregistrer comme composition type');
 
   const statusCard = useMemo(() => {
     if (isTeamDefaultMode) {
       if (compositionMeta?.composition?.updatedAt) {
         return {
           accent: Colors.primary500,
-          eyebrow: 'Composition type active',
+          eyebrow: t('tacticalBoard.activeDefaultLineup', 'Composition type active'),
           lines: [
-            `Dernière mise à jour le ${formatDateTime(compositionMeta.composition.updatedAt)}`,
-            'Tu peux la réutiliser comme base sur les prochains matchs.',
+            t(
+              'tacticalBoard.lastUpdatedOn',
+              'Dernière mise à jour le {{updatedAt}}',
+              {
+                updatedAt: formatDateTime(compositionMeta.composition.updatedAt),
+                ...SANS_ECHAPPEMENT,
+              },
+            ),
+            t(
+              'tacticalBoard.reuseAsBase',
+              'Tu peux la réutiliser comme base sur les prochains matchs.',
+            ),
           ],
-          title: 'Composition type enregistrée',
+          title: t('tacticalBoard.defaultLineupSaved', 'Composition type enregistrée'),
         };
       }
 
       return {
         accent: Colors.primary300,
-        eyebrow: 'Composition type',
+        eyebrow: t('tacticalBoard.defaultLineup', 'Composition type'),
         lines: [
-          'Place les joueurs sur le terrain puis enregistre cette composition type pour répartir plus vite ensuite.',
+          t('tacticalBoard.defaultLineupEmptyHint', 'Place les joueurs sur le terrain puis enregistre cette composition type pour répartir plus vite ensuite.'),
         ],
-        title: "Prépare une composition type pour l'équipe",
+        title: t(
+          'tacticalBoard.prepareDefaultLineup',
+          "Prépare une composition type pour l'équipe",
+        ),
       };
     }
 
     if (readOnly) {
       return {
         accent: Colors.primary500,
-        eyebrow: `Publiée v${Number(compositionMeta?.published?.version || 1)}`,
+        eyebrow: t(
+          'tacticalBoard.publishedVersion',
+          'Publiée v{{version}}',
+          { version: Number(compositionMeta?.published?.version || 1), ...SANS_ECHAPPEMENT },
+        ),
         lines: [
           compositionMeta?.published?.publishedAt
-            ? `Publication le ${formatDateTime(compositionMeta.published.publishedAt)}`
-            : 'Cette version est celle visible par les joueurs.',
+            ? t(
+              'tacticalBoard.publicationOn',
+              'Publication le {{publishedAt}}',
+              {
+                publishedAt: formatDateTime(compositionMeta.published.publishedAt),
+                ...SANS_ECHAPPEMENT,
+              },
+            )
+            : t(
+              'tacticalBoard.versionVisibleToPlayers',
+              'Cette version est celle visible par les joueurs.',
+            ),
           canEdit
-            ? 'Tu peux la modifier pour préparer une nouvelle version sans écraser immédiatement la version publiée.'
-            : 'Les joueurs ne voient jamais les brouillons intermédiaires.',
+            ? t('tacticalBoard.editWithoutOverwriting', 'Tu peux la modifier pour préparer une nouvelle version sans écraser immédiatement la version publiée.')
+            : t(
+              'tacticalBoard.playersNeverSeeDrafts',
+              'Les joueurs ne voient jamais les brouillons intermédiaires.',
+            ),
         ].filter(Boolean),
-        title: 'Composition actuellement publiée',
+        title: t('tacticalBoard.currentlyPublished', 'Composition actuellement publiée'),
       };
     }
 
     if (compositionMeta?.draft?.updatedAt && compositionMeta?.published?.publishedAt) {
       return {
         accent: Colors.primary500,
-        eyebrow: 'Brouillon en cours',
+        eyebrow: t('tacticalBoard.draftInProgress', 'Brouillon en cours'),
         lines: [
-          `Dernière sauvegarde le ${formatDateTime(compositionMeta.draft.updatedAt)}`,
-          `Version visible: v${Number(compositionMeta?.published?.version || 1)} publiée le ${formatDateTime(compositionMeta.published.publishedAt)}`,
+          t(
+            'tacticalBoard.lastSavedOn',
+            'Dernière sauvegarde le {{updatedAt}}',
+            { updatedAt: formatDateTime(compositionMeta.draft.updatedAt), ...SANS_ECHAPPEMENT },
+          ),
+          t('tacticalBoard.visibleVersion', 'Version visible: v{{version}} publiée le {{publishedAt}}', { publishedAt: formatDateTime(compositionMeta.published.publishedAt), version: Number(compositionMeta?.published?.version || 1), ...SANS_ECHAPPEMENT }),
         ],
-        title: "Des changements attendent d'être publiés",
+        title: t('tacticalBoard.changesWaiting', "Des changements attendent d'être publiés"),
       };
     }
 
     if (compositionMeta?.draft?.updatedAt) {
       return {
         accent: Colors.primary300,
-        eyebrow: 'Brouillon',
+        eyebrow: t('tacticalBoard.draft', 'Brouillon'),
         lines: [
-          `Dernière sauvegarde le ${formatDateTime(compositionMeta.draft.updatedAt)}`,
-          "Publie quand la composition est prête pour l'équipe.",
+          t(
+            'tacticalBoard.lastSavedOn',
+            'Dernière sauvegarde le {{updatedAt}}',
+            { updatedAt: formatDateTime(compositionMeta.draft.updatedAt), ...SANS_ECHAPPEMENT },
+          ),
+          t(
+            'tacticalBoard.publishWhenReady',
+            "Publie quand la composition est prête pour l'équipe.",
+          ),
         ],
-        title: 'Brouillon enregistré',
+        title: t('tacticalBoard.draftSaved', 'Brouillon enregistré'),
       };
     }
 
     if (compositionMeta?.published?.publishedAt) {
       return {
         accent: Colors.primary500,
-        eyebrow: `Publiée v${Number(compositionMeta?.published?.version || 1)}`,
+        eyebrow: t(
+          'tacticalBoard.publishedVersion',
+          'Publiée v{{version}}',
+          { version: Number(compositionMeta?.published?.version || 1), ...SANS_ECHAPPEMENT },
+        ),
         lines: [
-          `Publication le ${formatDateTime(compositionMeta.published.publishedAt)}`,
-          'Tu peux répartir de cette version pour préparer la suite.',
+          t(
+            'tacticalBoard.publicationOn',
+            'Publication le {{publishedAt}}',
+            {
+              publishedAt: formatDateTime(compositionMeta.published.publishedAt),
+              ...SANS_ECHAPPEMENT,
+            },
+          ),
+          t(
+            'tacticalBoard.restartFromVersion',
+            'Tu peux répartir de cette version pour préparer la suite.',
+          ),
         ],
-        title: 'Une version est déjà publiée',
+        title: t('tacticalBoard.versionAlreadyPublished', 'Une version est déjà publiée'),
       };
     }
 
     return {
       accent: Colors.primary300,
-      eyebrow: 'Nouvelle composition',
+      eyebrow: t('tacticalBoard.newLineup', 'Nouvelle composition'),
       lines: [
-        'Place les joueurs sur le terrain, complète le banc puis enregistre ou publie quand tout est prêt.',
+        t('tacticalBoard.newLineupHint', 'Place les joueurs sur le terrain, complète le banc puis enregistre ou publie quand tout est prêt.'),
       ],
-      title: 'Commence par organiser ton équipe',
+      title: t('tacticalBoard.startOrganising', 'Commence par organiser ton équipe'),
     };
-  }, [Colors.primary300, Colors.primary500, canEdit, compositionMeta, formatDateTime, isTeamDefaultMode, readOnly]);
+  }, [Colors.primary300, Colors.primary500, canEdit, compositionMeta, formatDateTime, isTeamDefaultMode, readOnly, t]);
 
   // Measure field on layout - updates both SharedValues and React state
   const measureField = useCallback(() => {
@@ -746,7 +829,10 @@ function TacticalBoard() {
       || error?.message;
 
     if (status === 403) {
-      return "Tu n'es pas autorisé à gérer la composition pour cette équipe.";
+      return t(
+        'tacticalBoard.notAllowed',
+        "Tu n'es pas autorisé à gérer la composition pour cette équipe.",
+      );
     }
 
     if (typeof apiMessage === 'string' && apiMessage.trim()) {
@@ -754,7 +840,7 @@ function TacticalBoard() {
     }
 
     return fallbackMessage;
-  }, []);
+  }, [t]);
 
   const buildDraftPayload = useCallback(() => {
     const allCurrentPlayers = [...fieldPlayers, ...benchPlayers];
@@ -893,7 +979,7 @@ function TacticalBoard() {
     teamName,
   ]);
 
-  const openBoardEditorFromCurrentState = useCallback((source = 'draft', sourceLabel = 'Brouillon') => {
+  const openBoardEditorFromCurrentState = useCallback((source = 'draft', sourceLabel = t('tacticalBoard.draft', 'Brouillon')) => {
     // @ts-ignore
     navigation.navigate(RouteNames.TacticalBoardV2, {
       canEdit: false,
@@ -924,16 +1010,19 @@ function TacticalBoard() {
     poolPlayers,
     sport,
     teamId,
-    teamName,
+    teamName, t,
   ]);
 
   // En mode apercu (simulation guidee), aucune ecriture serveur: on informe simplement l'utilisateur.
   const notifySimulationAction = useCallback(() => {
     Alert.alert(
-      'Mode aperçu',
-      'Ceci est un aperçu — publie tes vraies compos depuis un événement.',
+      t('tacticalBoard.previewMode', 'Mode aperçu'),
+      t(
+        'tacticalBoard.previewMessage',
+        'Ceci est un aperçu — publie tes vraies compos depuis un événement.',
+      ),
     );
-  }, []);
+  }, [t]);
 
   const handleSave = useCallback(async (options = {}) => {
     if (simulationMode) {
@@ -947,7 +1036,10 @@ function TacticalBoard() {
     try {
       if (isTeamDefaultMode) {
         if (!teamId) {
-          Alert.alert('Erreur', "Impossible d'identifier l'équipe concernée.");
+          Alert.alert(t('common.error', 'Erreur'), t(
+            'tacticalBoard.identifyTeamError',
+            "Impossible d'identifier l'équipe concernée.",
+          ));
           return false;
         }
 
@@ -958,13 +1050,22 @@ function TacticalBoard() {
         queryClient.invalidateQueries({ queryKey: ['teamDefaultComposition', teamId] });
         queryClient.invalidateQueries({ queryKey: ['team', teamId] });
         if (showSuccess) {
-          Alert.alert('Succès', 'Composition type enregistrée.');
+          Alert.alert(t('common.success', 'Succès'), t(
+            'tacticalBoard.defaultLineupSavedAlert',
+            'Composition type enregistrée.',
+          ));
         }
         return true;
       }
 
       if (!eventId || !teamId) {
-        Alert.alert('Erreur', "Impossible d'identifier l'équipe ou l'événement concerné.");
+        Alert.alert(t(
+          'common.error',
+          'Erreur',
+        ), t(
+          'tacticalBoard.identifyTeamOrEventError',
+          "Impossible d'identifier l'équipe ou l'événement concerné.",
+        ));
         return false;
       }
 
@@ -976,7 +1077,7 @@ function TacticalBoard() {
       setCompositionMeta(response || null);
       invalidateCompositionQueries();
       if (showSuccess) {
-        Alert.alert('Succès', 'Brouillon enregistré.');
+        Alert.alert(t('common.success', 'Succès'), t('tacticalBoard.draftSavedAlert', 'Brouillon enregistré.'));
       }
       return true;
     } catch (error) {
@@ -986,7 +1087,7 @@ function TacticalBoard() {
         return false;
       }
       console.error('Save draft error:', error);
-      Alert.alert('Erreur', getCompositionErrorMessage(error, "Impossible d'enregistrer le brouillon."));
+      Alert.alert(t('common.error', 'Erreur'), getCompositionErrorMessage(error, t('tacticalBoard.draftSaveError', "Impossible d'enregistrer le brouillon.")));
       return false;
     } finally {
       setIsSaving(false);
@@ -1001,24 +1102,24 @@ function TacticalBoard() {
     notifySimulationAction,
     queryClient,
     simulationMode,
-    teamId,
+    teamId, t,
   ]);
 
   const confirmExitWithUnsavedChanges = useCallback((onDiscard) => {
-    const saveLabel = isTeamDefaultMode ? 'Enregistrer la composition type' : 'Sauvegarder le brouillon';
+    const saveLabel = isTeamDefaultMode ? t('tacticalBoard.saveDefaultLineup', 'Enregistrer la composition type') : t('tacticalBoard.saveTheDraft', 'Sauvegarder le brouillon');
     const message = isTeamDefaultMode
-      ? "Tu as des modifications non enregistrées sur la composition type. Tu peux l'enregistrer avant de quitter, ou fermer sans enregistrer."
-      : 'Tu as des modifications non enregistrées sur cette composition. Tu peux sauvegarder le brouillon avant de quitter, ou fermer sans enregistrer.';
+      ? t('tacticalBoard.unsavedDefaultLineup', "Tu as des modifications non enregistrées sur la composition type. Tu peux l'enregistrer avant de quitter, ou fermer sans enregistrer.")
+      : t('tacticalBoard.unsavedLineup', 'Tu as des modifications non enregistrées sur cette composition. Tu peux sauvegarder le brouillon avant de quitter, ou fermer sans enregistrer.');
 
     Alert.alert(
-      'Quitter sans enregistrer ?',
+      t('tacticalBoard.leaveWithoutSavingQuestion', 'Quitter sans enregistrer ?'),
       message,
       [
-        { style: 'cancel', text: 'Annuler' },
+        { style: 'cancel', text: t('tacticalBoard.cancel', 'Annuler') },
         {
           onPress: onDiscard,
           style: 'destructive',
-          text: 'Quitter sans enregistrer',
+          text: t('tacticalBoard.leaveWithoutSaving', 'Quitter sans enregistrer'),
         },
         {
           onPress: async () => {
@@ -1031,7 +1132,7 @@ function TacticalBoard() {
         },
       ],
     );
-  }, [handleSave, isTeamDefaultMode]);
+  }, [handleSave, isTeamDefaultMode, t]);
 
   const leaveWithoutUnsavedPrompt = useCallback((action) => {
     skipUnsavedPromptRef.current = true;
@@ -1052,7 +1153,13 @@ function TacticalBoard() {
     }
 
     if (!eventId || !teamId) {
-      Alert.alert('Erreur', "Impossible d'identifier l'équipe ou l'événement concerné.");
+      Alert.alert(t(
+        'common.error',
+        'Erreur',
+      ), t(
+        'tacticalBoard.identifyTeamOrEventError',
+        "Impossible d'identifier l'équipe ou l'événement concerné.",
+      ));
       return;
     }
 
@@ -1069,7 +1176,10 @@ function TacticalBoard() {
         ...(published || {}),
       });
       invalidateCompositionQueries();
-      Alert.alert('Succès', "Composition d'équipe publiée.", [
+      Alert.alert(t('common.success', 'Succès'), t(
+        'tacticalBoard.teamLineupPublishedAlert',
+        "Composition d'équipe publiée.",
+      ), [
         { onPress: () => /** @type {any} */ (navigation).navigate(RouteNames.EventDetails, { eventId }), text: 'OK' },
       ]);
     } catch (error) {
@@ -1079,15 +1189,18 @@ function TacticalBoard() {
         return;
       }
       console.error('Publish convocation error:', error);
-      Alert.alert('Erreur', getCompositionErrorMessage(error, "Impossible de publier la composition d'équipe."));
+      Alert.alert(t('common.error', 'Erreur'), getCompositionErrorMessage(error, t('tacticalBoard.publishError', "Impossible de publier la composition d'équipe.")));
     } finally {
       setIsPublishing(false);
     }
-  }, [buildDraftPayload, eventId, getCompositionErrorMessage, invalidateCompositionQueries, isTeamDefaultMode, navigation, notifySimulationAction, simulationMode, teamId]);
+  }, [buildDraftPayload, eventId, getCompositionErrorMessage, invalidateCompositionQueries, isTeamDefaultMode, navigation, notifySimulationAction, simulationMode, teamId, t]);
 
   const handleSaveAsTeamDefault = useCallback(async () => {
     if (!teamId) {
-      Alert.alert('Erreur', "Impossible d'identifier l'équipe.");
+      Alert.alert(t('common.error', 'Erreur'), t(
+        'tacticalBoard.identifyTeamShortError',
+        "Impossible d'identifier l'équipe.",
+      ));
       return;
     }
 
@@ -1101,25 +1214,37 @@ function TacticalBoard() {
       }
       queryClient.invalidateQueries({ queryKey: ['teamDefaultComposition', teamId] });
       queryClient.invalidateQueries({ queryKey: ['team', teamId] });
-      Alert.alert('Succès', 'Cette composition a été enregistrée comme composition type.');
+      Alert.alert(t(
+        'common.success',
+        'Succès',
+      ), t(
+        'tacticalBoard.savedAsDefault',
+        'Cette composition a été enregistrée comme composition type.',
+      ));
     } catch (error) {
-      Alert.alert('Erreur', getCompositionErrorMessage(error, "Impossible d'enregistrer la composition type."));
+      Alert.alert(t('common.error', 'Erreur'), getCompositionErrorMessage(error, t('tacticalBoard.saveDefaultError', "Impossible d'enregistrer la composition type.")));
     } finally {
       setIsSaving(false);
     }
-  }, [buildTemplatePayload, getCompositionErrorMessage, isTeamDefaultMode, queryClient, teamId]);
+  }, [buildTemplatePayload, getCompositionErrorMessage, isTeamDefaultMode, queryClient, teamId, t]);
 
   const handleDeleteTeamDefault = useCallback(async () => {
     if (!teamId) {
-      Alert.alert('Erreur', "Impossible d'identifier l'équipe.");
+      Alert.alert(t('common.error', 'Erreur'), t(
+        'tacticalBoard.identifyTeamShortError',
+        "Impossible d'identifier l'équipe.",
+      ));
       return;
     }
 
     Alert.alert(
-      'Retirer la composition type',
-      'Cette action retire la composition type de cette équipe.',
+      t('tacticalBoard.removeDefaultLineup', 'Retirer la composition type'),
+      t(
+        'tacticalBoard.removeDefaultMessage',
+        'Cette action retire la composition type de cette équipe.',
+      ),
       [
-        { style: 'cancel', text: 'Annuler' },
+        { style: 'cancel', text: t('tacticalBoard.cancel', 'Annuler') },
         {
           onPress: async () => {
             try {
@@ -1129,17 +1254,20 @@ function TacticalBoard() {
               setBenchPlayers(poolPlayers.filter((player) => !(player?.isManual || String(player?.id || player?.documentId || '').startsWith('manual_'))));
               queryClient.invalidateQueries({ queryKey: ['teamDefaultComposition', teamId] });
               queryClient.invalidateQueries({ queryKey: ['team', teamId] });
-              Alert.alert('Succès', 'Composition type supprimée.');
+              Alert.alert(t('common.success', 'Succès'), t(
+                'tacticalBoard.defaultLineupDeleted',
+                'Composition type supprimée.',
+              ));
             } catch (error) {
-              Alert.alert('Erreur', getCompositionErrorMessage(error, 'Impossible de supprimer la composition type.'));
+              Alert.alert(t('common.error', 'Erreur'), getCompositionErrorMessage(error, t('tacticalBoard.deleteDefaultError', 'Impossible de supprimer la composition type.')));
             }
           },
           style: 'destructive',
-          text: 'Supprimer',
+          text: t('tacticalBoard.delete', 'Supprimer'),
         },
       ],
     );
-  }, [getCompositionErrorMessage, poolPlayers, queryClient, teamId]);
+  }, [getCompositionErrorMessage, poolPlayers, queryClient, teamId, t]);
 
   // === ANIMATED STYLES ===
   const dropZoneStyle = useAnimatedStyle(() => {
@@ -1266,11 +1394,7 @@ function TacticalBoard() {
               </View>
               <View style={[styles.headerPill, { backgroundColor: `${Colors.primary300}16`, borderColor: `${Colors.primary300}40` }]}>
                 <Text style={[Fonts.p4Bold, { color: Colors.primary100 }]}>
-                  {playersPlacedCount}
-                  /
-                  {totalPlayersCount}
-                  {' '}
-                  placés
+                  {t('tacticalBoard.placedCount', '{{placed}}/{{total}} placés', { placed: playersPlacedCount, total: totalPlayersCount })}
                 </Text>
               </View>
               {editorSourceLabel ? (
@@ -1330,10 +1454,13 @@ function TacticalBoard() {
             {fieldPlayers.length === 0 ? (
               <View style={[styles.fieldEmptyState, { backgroundColor: `${Colors.primary900}88`, borderColor: `${Colors.primary500}44` }]}>
                 <Text style={[Fonts.p2Bold, { color: Colors.neutral00, textAlign: 'center' }]}>
-                  {isDetectionEvent ? 'Place les joueurs convoques sur le terrain' : 'Place tes titulaires sur le terrain'}
+                  {isDetectionEvent ? t('tacticalBoard.placeCalledUpPlayers', 'Place les joueurs convoques sur le terrain') : t('tacticalBoard.placeStarters', 'Place tes titulaires sur le terrain')}
                 </Text>
                 <Text style={[Fonts.p4, { color: Colors.primary100, textAlign: 'center' }]}>
-                  Maintiens un joueur du banc puis glisse-le vers sa position.
+                  {t(
+                    'tacticalBoard.holdBenchPlayerHint',
+                    'Maintiens un joueur du banc puis glisse-le vers sa position.',
+                  )}
                 </Text>
               </View>
             ) : null}
@@ -1373,7 +1500,7 @@ function TacticalBoard() {
               {/* panelTab est rendu a 28px : rendu visuel inchange, zone de clic
                   completee a 44px via hitSlop (decision Adel, cf. THEME.md). */}
               <TouchableOpacity
-                accessibilityLabel="Banc"
+                accessibilityLabel={t('tacticalBoard.bench', 'Banc')}
                 accessibilityRole="tab"
                 accessibilityState={{ selected: isPanelOpen && activePanel === 'bench' }}
                 activeOpacity={0.9}
@@ -1385,7 +1512,7 @@ function TacticalBoard() {
                 ]}
               >
                 <Text style={[Fonts.p4Bold, { color: isPanelOpen && activePanel === 'bench' ? Colors.primary500 : Colors.neutral00 }]}>
-                  Banc
+                  {t('tacticalBoard.bench', 'Banc')}
                 </Text>
                 <View style={[styles.panelTabCount, { backgroundColor: `${Colors.primary500}22` }]}>
                   <Text style={[Fonts.p4Bold, { color: Colors.primary500 }]}>{benchPlayers.length}</Text>
@@ -1393,7 +1520,7 @@ function TacticalBoard() {
               </TouchableOpacity>
 
               <TouchableOpacity
-                accessibilityLabel="Actions"
+                accessibilityLabel={t('tacticalBoard.actions', 'Actions')}
                 accessibilityRole="tab"
                 accessibilityState={{ selected: isPanelOpen && activePanel === 'actions' }}
                 activeOpacity={0.9}
@@ -1405,7 +1532,7 @@ function TacticalBoard() {
                 ]}
               >
                 <Text style={[Fonts.p4Bold, { color: isPanelOpen && activePanel === 'actions' ? Colors.primary500 : Colors.neutral00 }]}>
-                  Actions
+                  {t('tacticalBoard.actions', 'Actions')}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -1416,7 +1543,7 @@ function TacticalBoard() {
               style={styles.panelCloseButton}
             >
               <Text style={[Fonts.p4Bold, { color: Colors.primary100 }]}>
-                {isPanelOpen ? 'Fermer' : 'Ouvrir'}
+                {isPanelOpen ? t('tacticalBoard.close', 'Fermer') : t('tacticalBoard.open', 'Ouvrir')}
               </Text>
             </TouchableOpacity>
           </View>
@@ -1426,12 +1553,18 @@ function TacticalBoard() {
               {showGuidedBenchHighlight ? (
                 <View style={[styles.guidedHint, { backgroundColor: 'rgba(4,31,44,0.97)', borderColor: `${Colors.primary500}59` }]}>
                   <Text style={[Fonts.p3Bold, Fonts.neutral00]}>
-                    Fais glisser un joueur sur le terrain
+                    {t(
+                      'tacticalBoard.dragPlayerOntoPitch',
+                      'Fais glisser un joueur sur le terrain',
+                    )}
                   </Text>
                 </View>
               ) : (
                 <Text style={[Fonts.p4, { color: Colors.primary100 }]}>
-                  Maintiens un joueur puis glisse-le sur le terrain.
+                  {t(
+                    'tacticalBoard.holdPlayerHint',
+                    'Maintiens un joueur puis glisse-le sur le terrain.',
+                  )}
                 </Text>
               )}
 
@@ -1457,9 +1590,13 @@ function TacticalBoard() {
                 </ScrollView>
               ) : (
                 <View style={[styles.emptyBench, { backgroundColor: `${Colors.primary700}55`, borderColor: `${Colors.primary500}22` }]}>
-                  <Text style={[Fonts.p3Bold, { color: Colors.neutral00, textAlign: 'center' }]}>Tous les joueurs sélectionnés sont déjà placés.</Text>
+                  <Text style={[Fonts.p3Bold, { color: Colors.neutral00, textAlign: 'center' }]}>{t('tacticalBoard.allSelectedPlaced', 'Tous les joueurs sélectionnés sont déjà placés.')}</Text>
                   <Text style={[Fonts.p4, { color: Colors.primary100, textAlign: 'center' }]}>
-                    Appuie sur + Ajouter si tu veux compléter la sélection sans revenir en arrière.
+                    {t(
+                      'tacticalBoard.tapAddHint',
+                      'Appuie sur + Ajouter si tu veux compléter la sélection sans revenir en '
+                        + 'arrière.',
+                    )}
                   </Text>
                   {!readOnly ? (
                     <TouchableOpacity
@@ -1467,7 +1604,7 @@ function TacticalBoard() {
                       onPress={() => openSelectionEditor(selectionSource, selectionSourceLabel)}
                       style={[styles.emptyBenchAddButton, { backgroundColor: `${Colors.primary500}18`, borderColor: `${Colors.primary500}44` }]}
                     >
-                      <Text style={[Fonts.p4Bold, { color: Colors.primary500 }]}>+ Ajouter un joueur</Text>
+                      <Text style={[Fonts.p4Bold, { color: Colors.primary500 }]}>{t('tacticalBoard.plusAddPlayer', '+ Ajouter un joueur')}</Text>
                     </TouchableOpacity>
                   ) : null}
                 </View>
@@ -1502,8 +1639,8 @@ function TacticalBoard() {
               {readOnly && canEdit ? (
                 <View style={styles.footerPrimaryAction}>
                   <Button
-                    onPress={() => openBoardEditorFromCurrentState('published', 'Composition publiée')}
-                    title="Modifier la composition"
+                    onPress={() => openBoardEditorFromCurrentState('published', t('tacticalBoard.publishedLineup', 'Composition publiée'))}
+                    title={t('tacticalBoard.editLineup', 'Modifier la composition')}
                     variant="Primary"
                   />
                 </View>
@@ -1514,7 +1651,7 @@ function TacticalBoard() {
                   {showGuidedPublishHighlight ? (
                     <View style={[styles.guidedHint, { backgroundColor: 'rgba(4,31,44,0.97)', borderColor: `${Colors.primary500}59` }]}>
                       <Text style={[Fonts.p3Bold, Fonts.neutral00]}>
-                        Publie ta compo
+                        {t('tacticalBoard.publishYourLineup', 'Publie ta compo')}
                       </Text>
                     </View>
                   ) : null}
@@ -1536,8 +1673,8 @@ function TacticalBoard() {
                   <View style={styles.footerTertiaryAction}>
                     <Button
                       disabled={isSaving || isPublishing}
-                      onPress={() => openSelectionEditor(editorSource || 'draft', editorSourceLabel || 'Brouillon')}
-                      title="Modifier les joueurs"
+                      onPress={() => openSelectionEditor(editorSource || 'draft', editorSourceLabel || t('tacticalBoard.draft', 'Brouillon'))}
+                      title={t('tacticalBoard.editPlayers', 'Modifier les joueurs')}
                       variant="Secondary"
                     />
                   </View>
@@ -1569,7 +1706,10 @@ function TacticalBoard() {
                       <Button
                         disabled={isSaving || isPublishing}
                         onPress={handleDeleteTeamDefault}
-                        title="Retirer la composition type"
+                        title={t(
+                          'tacticalBoard.removeDefaultLineup',
+                          'Retirer la composition type',
+                        )}
                         variant="Secondary"
                       />
                     </View>
@@ -1577,12 +1717,14 @@ function TacticalBoard() {
 
                   {!isTeamDefaultMode ? (
                     <View style={[styles.actionsHintCard, { backgroundColor: `${Colors.primary700}30`, borderColor: `${Colors.primary500}22` }]}>
-                      <Text style={[Fonts.p4Bold, { color: Colors.neutral00 }]}>A quoi servent ces deux sauvegardes ?</Text>
+                      <Text style={[Fonts.p4Bold, { color: Colors.neutral00 }]}>{t('tacticalBoard.twoSavesQuestion', 'A quoi servent ces deux sauvegardes ?')}</Text>
                       <Text style={[Fonts.p4, { color: Colors.primary100 }]}>
-                        Brouillon : garde tes changements prives pour {isDetectionEvent ? 'cette détection' : 'ce match'}, sans les publier.
+                        {isDetectionEvent
+                          ? t('tacticalBoard.draftHintDetection', 'Brouillon : garde tes changements prives pour cette détection, sans les publier.')
+                          : t('tacticalBoard.draftHintMatch', 'Brouillon : garde tes changements prives pour ce match, sans les publier.')}
                       </Text>
                       <Text style={[Fonts.p4, { color: Colors.primary100 }]}>
-                        Composition type : reutilise cette composition comme base de depart sur les prochains evenements.
+                        {t('tacticalBoard.defaultLineupHint', 'Composition type : reutilise cette composition comme base de depart sur les prochains evenements.')}
                       </Text>
                     </View>
                   ) : null}
