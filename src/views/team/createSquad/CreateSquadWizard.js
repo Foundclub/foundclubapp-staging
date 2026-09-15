@@ -1,8 +1,10 @@
 /* global globalThis */
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { View } from 'react-native';
 
 import useAuth from '@/domains/auth/useAuth';
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 
 import ScreenContainer from '@/components/templates/ScreenContainer';
 import LeagueStateView from '@/views/league/components/LeagueStateView';
@@ -142,6 +144,7 @@ const clearPersistedWizardState = () => {
 };
 
 function CreateSquadWizard({ navigation }) {
+  const { t } = useTranslation();
   // @ts-ignore - useAuth returns extended user object
   const { userData: user } = useAuth();
   const { leagueLegalAcceptanceModal, requestLeagueLegalAcceptance } = useLeagueLegalAcceptance();
@@ -222,7 +225,10 @@ function CreateSquadWizard({ navigation }) {
     setSubmitError('');
     try {
       if (!user?.documentId) {
-        throw new Error('Session introuvable. Recharge la page avant de créer une squad.');
+        throw new Error(t(
+          'createSquadWizard.errors.noSession',
+          'Session introuvable. Recharge la page avant de créer une squad.',
+        ));
       }
       console.log('DEBUG: User object:', user);
       console.log('DEBUG: User DocumentId:', user?.documentId);
@@ -247,7 +253,10 @@ function CreateSquadWizard({ navigation }) {
       const selectedSourceTeamId = squadData?.sourceTeam?.value || null;
 
       if (isFootball11 && !selectedSourceTeamId) {
-        throw new Error("Sélectionne l'équipe source pour créer une squad Football a 11.");
+        throw new Error(t(
+          'createSquadWizard.errors.sourceTeamRequired',
+          "Sélectionne l'équipe source pour créer une squad Football a 11.",
+        ));
       }
 
       // Level to ELO/Division Mapping
@@ -265,7 +274,10 @@ function CreateSquadWizard({ navigation }) {
 
       const homeBasePayload = buildHomeBasePayload(squadData.address, squadData.radius);
       if (!homeBasePayload && !isFootball11) {
-        throw new Error('Adresse invalide: sélectionne une adresse avec des coordonnées.');
+        throw new Error(t(
+          'createSquadWizard.errors.invalidAddress',
+          'Adresse invalide: sélectionne une adresse avec des coordonnées.',
+        ));
       }
 
       const normalizedAddress = normalizeLocationInput(squadData.address);
@@ -371,11 +383,25 @@ function CreateSquadWizard({ navigation }) {
       console.error('Full Error:', JSON.stringify(errorData, null, 2));
 
       if (errorMessage?.includes('unique') || errorMessage?.includes('already taken')) {
-        setSubmitError("Ce nom d'équipe est déjà pris. Merci de en choisir un autre.");
-        alert("Ce nom d'équipe est déjà pris. Merci de en choisir un autre.");
+        setSubmitError(t(
+          'createSquadWizard.errors.nameTaken',
+          "Ce nom d'équipe est déjà pris. Merci de en choisir un autre.",
+        ));
+        alert(t(
+          'createSquadWizard.errors.nameTaken',
+          "Ce nom d'équipe est déjà pris. Merci de en choisir un autre.",
+        ));
       } else {
-        setSubmitError(`Erreur: ${errorMessage}`);
-        alert(`Erreur: ${errorMessage}\n${errorDetails}`);
+        setSubmitError(t(
+          'createSquadWizard.errors.generic',
+          'Erreur: {{message}}',
+          { message: errorMessage, ...SANS_ECHAPPEMENT },
+        ));
+        alert(t('createSquadWizard.errors.genericWithDetails', 'Erreur: {{message}}\n{{details}}', {
+          details: errorDetails,
+          message: errorMessage,
+          ...SANS_ECHAPPEMENT,
+        }));
       }
     } finally {
       setIsLoading(false);
@@ -385,9 +411,12 @@ function CreateSquadWizard({ navigation }) {
   if (!user) {
     return (
       <LeagueStateView
-        description="Recharge la page pour recuperer ta session avant de créer une squad."
+        description={t(
+          'createSquadWizard.noUser.description',
+          'Recharge la page pour recuperer ta session avant de créer une squad.',
+        )}
         isLoading
-        title="Préparation du wizard"
+        title={t('createSquadWizard.noUser.title', 'Préparation du wizard')}
       />
     );
   }
