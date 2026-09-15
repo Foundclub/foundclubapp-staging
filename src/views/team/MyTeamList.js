@@ -1,5 +1,6 @@
 import { useFocusEffect } from '@react-navigation/native';
 import { useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { View } from 'react-native';
 
 import useAuth from '@/domains/auth/useAuth';
@@ -20,6 +21,7 @@ import ScreenContainer from '@/components/templates/ScreenContainer';
  * @returns {import('react').ReactElement} Team list screen component
  */
 function MyTeamList({ navigation, route }) {
+  const { t } = useTranslation();
   const { isLeagueMode } = route?.params ?? {};
   const { refetchUserData, userData } = useAuth();
   // Effects
@@ -72,7 +74,10 @@ function MyTeamList({ navigation, route }) {
           </View>
         </View>
         <OnboardingWrapper
-          description="Retrouve tes équipes, les demandes en attente et l'accès aux détails."
+          description={t(
+            'myTeamList.tutorial.description',
+            "Retrouve tes équipes, les demandes en attente et l'accès aux détails.",
+          )}
           id="my-teams-main-content"
           order={1}
           spotlight={{
@@ -83,7 +88,7 @@ function MyTeamList({ navigation, route }) {
             paddingY: 2,
           }}
           style={{ flex: 1 }}
-          title="Mes équipes"
+          title={t('myTeamList.tutorial.title', 'Mes équipes')}
         >
           <TeamListContent
             isLeagueMode={isLeagueMode}

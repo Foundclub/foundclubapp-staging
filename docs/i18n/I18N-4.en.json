@@ -803,6 +803,8 @@
   "myActivitiesScreen.unreachable.description": "Check your connection, then try again.",
   "myActivitiesScreen.unreachable.retry": "Retry",
   "myActivitiesScreen.unreachable.title": "We can't reach the server.",
+  "myTeamList.tutorial.description": "Find your teams, pending requests and access to details.",
+  "myTeamList.tutorial.title": "My teams",
   "newConversation.sections.coaches": "Coaches",
   "newConversation.sections.managers": "Managers",
   "newConversation.sections.others": "Others",
