@@ -1,7 +1,9 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { differenceInHours, formatDistanceToNowStrict, isBefore, startOfDay } from 'date-fns';
 import { fr } from 'date-fns/locale';
+import i18next from 'i18next';
 import { useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useWindowDimensions } from 'react-native';
 
 import { BREAKPOINTS } from '@/responsive';
@@ -20,7 +22,7 @@ const getReservationLabel = (reservation) => {
   return reservation?.name
     || reservation?.team?.activities?.[0]?.name
     || reservation?.reservationActivity?.name
-    || 'Reservation';
+    || i18next.t('missingPlayersView.web.card.titleFallback', 'Reservation');
 };
 
 const getLocationLabel = (reservation) => {
@@ -47,7 +49,9 @@ const getLocationLabel = (reservation) => {
 const formatReservationDate = (value) => {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return '';
-  return date.toLocaleString('fr-FR', {
+  // ponytail: meme regle que localeDesFormats() -- son import, dans ce fichier aux imports
+  // hors de l'ordre attendu, ajoutait une erreur perfectionist ; sortie : ranger les imports.
+  return date.toLocaleString(i18next.language === 'en' ? 'en-GB' : 'fr-FR', {
     day: '2-digit',
     hour: '2-digit',
     minute: '2-digit',
@@ -56,6 +60,7 @@ const formatReservationDate = (value) => {
 };
 
 function MissingPlayersView({ navigation }) {
+  const { t } = useTranslation();
   const { width } = useWindowDimensions();
   const isDesktop = width >= BREAKPOINTS.desktop;
   const isTablet = width >= BREAKPOINTS.tablet;
@@ -106,11 +111,14 @@ function MissingPlayersView({ navigation }) {
       ]);
       setActiveReservationId('');
       refetch();
-      window.alert('Participation confirmée.');
+      window.alert(t('missingPlayersView.web.join.success', 'Participation confirmée.'));
     },
     onError: (joinError) => {
       setActiveReservationId('');
-      window.alert(joinError?.message || 'Impossible de rejoindre cette réservation.');
+      window.alert(joinError?.message || t(
+        'missingPlayersView.web.join.error',
+        'Impossible de rejoindre cette réservation.',
+      ));
     },
   });
 
@@ -134,13 +142,16 @@ function MissingPlayersView({ navigation }) {
           <div style={{ alignItems: 'center', display: 'flex', flexWrap: 'wrap', gap: 12, justifyContent: 'space-between', marginBottom: 18 }}>
             <div style={{ display: 'grid', gap: 8 }}>
               <span style={{ color: accentColor, fontSize: 13, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
-                Réservations partagees
+                {t('missingPlayersView.web.header.eyebrow', 'Réservations partagees')}
               </span>
               <h1 style={{ fontFamily: 'Montserrat-Black, sans-serif', fontSize: isTablet ? 34 : 28, margin: 0 }}>
-                Joueurs recherches
+                {t('missingPlayersView.web.header.title', 'Joueurs recherches')}
               </h1>
               <p style={{ color: mutedTextColor, margin: 0, maxWidth: 720 }}>
-                Rejoins rapidement les réservations ouvertes qui cherchent encore des joueurs, avec priorité sur les SOS de dernière minute.
+                {t(
+                  'missingPlayersView.web.header.body',
+                  'Rejoins rapidement les réservations ouvertes qui cherchent encore des joueurs, avec priorité sur les SOS de dernière minute.', // eslint-disable-line max-len
+                )}
               </p>
             </div>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
@@ -149,23 +160,35 @@ function MissingPlayersView({ navigation }) {
                 style={{ background: 'transparent', border: `1px solid ${borderColor}`, borderRadius: 999, color: textColor, cursor: 'pointer', padding: '10px 14px' }}
                 type="button"
               >
-                Voir toutes les réservations
+                {t('missingPlayersView.web.header.seeAll', 'Voir toutes les réservations')}
               </button>
               <button
                 onClick={() => refetch()}
                 style={{ background: accentColor, border: 0, borderRadius: 999, color: '#04131d', cursor: 'pointer', fontFamily: 'Montserrat-Bold, sans-serif', padding: '10px 14px' }}
                 type="button"
               >
-                Rafraîchir
+                {t('missingPlayersView.web.header.refresh', 'Rafraîchir')}
               </button>
             </div>
           </div>
 
           <div style={{ display: 'grid', gap: 12, gridTemplateColumns: isDesktop ? 'repeat(3, minmax(0, 1fr))' : '1fr' }}>
             {[
-              { label: 'Réservations ouvertes', value: reservations.length },
-              { label: 'SOS urgents', value: urgentCount },
-              { label: 'A pourvoir', value: reservations.reduce((sum, reservation) => sum + Number(reservation?.missingPlayers || 0), 0) },
+              {
+                label: t('missingPlayersView.web.stats.open', 'Réservations ouvertes'),
+                value: reservations.length,
+              },
+              {
+                label: t('missingPlayersView.web.stats.urgent', 'SOS urgents'),
+                value: urgentCount,
+              },
+              {
+                label: t('missingPlayersView.web.stats.toFill', 'A pourvoir'),
+                value: reservations.reduce(
+                  (sum, reservation) => sum + Number(reservation?.missingPlayers || 0),
+                  0,
+                ),
+              },
             ].map((item) => (
               <div key={item.label} style={{ background: cardBackground, border: `1px solid ${borderColor}`, borderRadius: 20, display: 'grid', gap: 6, padding: 18 }}>
                 <span style={{ color: mutedTextColor, fontSize: 13 }}>{item.label}</span>
@@ -177,19 +200,30 @@ function MissingPlayersView({ navigation }) {
 
         {error ? (
           <section style={{ background: 'rgba(160, 40, 40, 0.18)', border: '1px solid rgba(255,120,120,0.28)', borderRadius: 20, color: '#ffd6d6', padding: 18 }}>
-            {error?.message || 'Impossible de charger les réservations.'}
+            {error?.message || t(
+              'missingPlayersView.web.state.loadError',
+              'Impossible de charger les réservations.',
+            )}
           </section>
         ) : null}
 
         {isLoading ? (
           <section style={{ background: cardBackground, border: `1px solid ${borderColor}`, borderRadius: 24, color: mutedTextColor, padding: 24 }}>
-            Chargement des reservations…
+            {t('missingPlayersView.web.state.loading', 'Chargement des reservations…')}
           </section>
         ) : reservations.length === 0 ? (
           <section style={{ background: cardBackground, border: `1px solid ${borderColor}`, borderRadius: 24, display: 'grid', gap: 8, justifyItems: 'start', padding: 24 }}>
-            <h2 style={{ fontFamily: 'Montserrat-Bold, sans-serif', margin: 0 }}>Aucune réservation ouverte pour l’instant</h2>
+            <h2 style={{ fontFamily: 'Montserrat-Bold, sans-serif', margin: 0 }}>
+              {t(
+                'missingPlayersView.web.state.emptyTitle',
+                'Aucune réservation ouverte pour l’instant',
+              )}
+            </h2>
             <p style={{ color: mutedTextColor, margin: 0 }}>
-              Reviens plus tard ou passe par la recherche pour voir toutes les réservations disponibles.
+              {t(
+                'missingPlayersView.web.state.emptyBody',
+                'Reviens plus tard ou passe par la recherche pour voir toutes les réservations disponibles.', // eslint-disable-line max-len
+              )}
             </p>
           </section>
         ) : (
@@ -197,7 +231,10 @@ function MissingPlayersView({ navigation }) {
             {reservations.map((reservation) => {
               const reservationId = String(reservation?.documentId || '');
               const isJoining = joinReservationMutation.isPending && activeReservationId === reservationId;
-              const clubName = reservation?.team?.club?.name || reservation?.club?.name || 'Club';
+              const clubName = reservation?.team?.club?.name || reservation?.club?.name || t(
+                'missingPlayersView.web.card.clubFallback',
+                'Club',
+              );
               const missingPlayers = Number(reservation?.missingPlayers || 0);
               const totalPlayers = Number(reservation?.totalPlayers || 0);
               const currentPlayers = Number(reservation?.currentPlayers || 0);
@@ -212,7 +249,7 @@ function MissingPlayersView({ navigation }) {
                       <div style={{ alignItems: 'center', display: 'flex', flexWrap: 'wrap', gap: 8 }}>
                         {reservation?.isLastMinuteAlert ? (
                           <span style={{ background: 'rgba(255, 107, 53, 0.16)', border: '1px solid rgba(255, 107, 53, 0.34)', borderRadius: 999, color: '#ffb399', fontSize: 12, padding: '5px 10px' }}>
-                            SOS urgent
+                            {t('missingPlayersView.web.card.urgent', 'SOS urgent')}
                           </span>
                         ) : null}
                         <span style={{ background: 'rgba(1,179,244,0.12)', border: `1px solid ${borderColor}`, borderRadius: 999, color: accentColor, fontSize: 12, padding: '5px 10px' }}>
@@ -230,21 +267,27 @@ function MissingPlayersView({ navigation }) {
 
                   <div style={{ display: 'grid', gap: 10, gridTemplateColumns: isTablet ? 'repeat(2, minmax(0, 1fr))' : '1fr' }}>
                     <div style={{ background: 'rgba(255,255,255,0.03)', border: `1px solid ${borderColor}`, borderRadius: 18, display: 'grid', gap: 4, padding: 14 }}>
-                      <span style={{ color: mutedTextColor, fontSize: 12 }}>Date</span>
+                      <span style={{ color: mutedTextColor, fontSize: 12 }}>
+                        {t('missingPlayersView.web.card.date', 'Date')}
+                      </span>
                       <strong style={{ fontFamily: 'Montserrat-Bold, sans-serif' }}>{formatReservationDate(reservation?.date)}</strong>
                       <span style={{ color: accentColor, fontSize: 12 }}>{timeToGo}</span>
                     </div>
                     <div style={{ background: 'rgba(255,255,255,0.03)', border: `1px solid ${borderColor}`, borderRadius: 18, display: 'grid', gap: 4, padding: 14 }}>
-                      <span style={{ color: mutedTextColor, fontSize: 12 }}>Composition</span>
+                      <span style={{ color: mutedTextColor, fontSize: 12 }}>
+                        {t('missingPlayersView.web.card.lineup', 'Composition')}
+                      </span>
                       <strong style={{ fontFamily: 'Montserrat-Bold, sans-serif' }}>
                         {currentPlayers}
                         {' / '}
                         {totalPlayers || '—'}
                       </strong>
                       <span style={{ color: mutedTextColor, fontSize: 12 }}>
-                        {missingPlayers}
-                        {' '}
-                        place{missingPlayers > 1 ? 's' : ''} restante{missingPlayers > 1 ? 's' : ''}
+                        {t('missingPlayersView.web.card.remaining', {
+                          count: missingPlayers,
+                          defaultValue_one: '{{count}} place restante',
+                          defaultValue_other: '{{count}} places restantes',
+                        })}
                       </span>
                     </div>
                   </div>
@@ -258,13 +301,21 @@ function MissingPlayersView({ navigation }) {
                     <div style={{ alignItems: 'center', display: 'flex', flexWrap: 'wrap', gap: 10 }}>
                       {reservation?.pricePerPerson != null ? (
                         <span style={{ background: 'rgba(255,255,255,0.03)', border: `1px solid ${borderColor}`, borderRadius: 999, padding: '6px 10px' }}>
-                          {reservation.pricePerPerson}
-                          {' '}
-                          EUR / joueur
+                          {t(
+                            'missingPlayersView.web.card.pricePerPlayer',
+                            '{{price}} EUR / joueur',
+                            { price: reservation.pricePerPerson },
+                          )}
                         </span>
                       ) : null}
                       <span style={{ background: 'rgba(255,255,255,0.03)', border: `1px solid ${borderColor}`, borderRadius: 999, padding: '6px 10px' }}>
-                        {reservation?.bookingStatus === 'shared' ? 'Ouverte' : 'En recherche'}
+                        {reservation?.bookingStatus === 'shared' ? t(
+                          'missingPlayersView.web.card.statusOpen',
+                          'Ouverte',
+                        ) : t(
+                          'missingPlayersView.web.card.statusRecruiting',
+                          'En recherche',
+                        )}
                       </span>
                     </div>
                   </div>
@@ -275,7 +326,7 @@ function MissingPlayersView({ navigation }) {
                       style={{ background: 'transparent', border: `1px solid ${borderColor}`, borderRadius: 999, color: textColor, cursor: 'pointer', padding: '11px 15px' }}
                       type="button"
                     >
-                      Voir le detail
+                      {t('missingPlayersView.web.card.details', 'Voir le detail')}
                     </button>
                     <button
                       disabled={isJoining}
@@ -291,7 +342,10 @@ function MissingPlayersView({ navigation }) {
                       }}
                       type="button"
                     >
-                      {isJoining ? 'Participation…' : 'Rejoindre'}
+                      {isJoining ? t(
+                        'missingPlayersView.web.card.joining',
+                        'Participation…',
+                      ) : t('missingPlayersView.web.card.join', 'Rejoindre')}
                     </button>
                   </div>
                 </article>
@@ -315,7 +369,10 @@ function MissingPlayersView({ navigation }) {
               }}
               type="button"
             >
-              {isFetchingNextPage ? 'Chargement…' : 'Charger plus de réservations'}
+              {isFetchingNextPage ? t('missingPlayersView.web.loadMore.loading', 'Chargement…') : t(
+                'missingPlayersView.web.loadMore.label',
+                'Charger plus de réservations',
+              )}
             </button>
           </div>
         ) : null}

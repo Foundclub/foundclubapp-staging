@@ -192,13 +192,17 @@ function MissingPlayersView({ navigation }) {
       <View style={[Alignments.row, Spaces.gap[12], Spaces.marginTop[16]]}>
         <View style={styles.statBadge}>
           <Text style={styles.statNumber}>{sharedReservations.length}</Text>
-          <Text style={styles.statLabel}>Réservations ouvertes</Text>
+          <Text style={styles.statLabel}>
+            {t('missingPlayersView.stats.open', 'Réservations ouvertes')}
+          </Text>
         </View>
         <View style={[styles.statBadge, styles.sosBadge]}>
           <Text style={styles.statNumber}>
             {sharedReservations.filter((/** @type {any} */ r) => r.isLastMinuteAlert).length}
           </Text>
-          <Text style={styles.statLabel}>🔥 SOS urgents</Text>
+          <Text style={styles.statLabel}>
+            {t('missingPlayersView.stats.urgent', '🔥 SOS urgents')}
+          </Text>
         </View>
       </View>
     </View>
@@ -240,7 +244,7 @@ function MissingPlayersView({ navigation }) {
       {/* JoinEventModal */}
       <JoinEventModal
         clubName={selectedEvent?.team?.club?.name || selectedEvent?.club?.name || ''}
-        confirmLabel="Reserver"
+        confirmLabel={t('missingPlayersView.joinModal.confirm', 'Reserver')}
         isSubmitting={joinReservationMutation.isPending}
         isVisible={isJoinModalVisible}
         onClose={handleCloseJoinModal}
