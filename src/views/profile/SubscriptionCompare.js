@@ -1,4 +1,6 @@
+import i18next from 'i18next';
 import { useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ScrollView, Text, View } from 'react-native';
 
 import {
@@ -9,6 +11,7 @@ import {
 } from '@/domains/subscription/subscriptionBilling';
 import { useSubscriptionCatalog } from '@/domains/subscription/useSubscriptionCatalog';
 import { withAlpha } from '@/theme/colors';
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -23,34 +26,96 @@ import { RouteNames } from '@/navigation/routeNames';
 //   - false       -> absent (tiret gris)
 const COMPARISON_ROWS = [
   {
-    club: 'Toutes', free: '1', label: 'Équipes couvertes', team: '1–3',
+    get club() {
+      return i18next.t('subscriptionCompare.rows.coveredTeams.club', 'Toutes');
+    },
+    free: '1',
+    get label() {
+      return i18next.t('subscriptionCompare.rows.coveredTeams.label', 'Équipes couvertes');
+    },
+    team: '1–3',
   },
   {
-    club: '∞', free: 'Limités', label: 'Événements & matchs', team: '∞',
+    club: '∞',
+    get free() {
+      return i18next.t('subscriptionCompare.rows.eventsMatches.free', 'Limités');
+    },
+    get label() {
+      return i18next.t('subscriptionCompare.rows.eventsMatches.label', 'Événements & matchs');
+    },
+    team: '∞',
   },
   {
-    club: '∞', free: 'Limitées', label: 'Annonces de recrutement', team: '∞',
+    club: '∞',
+    get free() {
+      return i18next.t('subscriptionCompare.rows.recruitmentAds.free', 'Limitées');
+    },
+    get label() {
+      return i18next.t('subscriptionCompare.rows.recruitmentAds.label', 'Annonces de recrutement');
+    },
+    team: '∞',
   },
   {
-    club: true, free: false, label: 'Composition & convocations', team: true,
+    club: true,
+    free: false,
+    get label() {
+      return i18next.t(
+        'subscriptionCompare.rows.lineUpCallUps.label',
+        'Composition & convocations',
+      );
+    },
+    team: true,
   },
   {
-    club: true, free: false, label: 'Cotisations de l\'équipe', team: true,
+    club: true,
+    free: false,
+    get label() {
+      return i18next.t('subscriptionCompare.rows.teamFees.label', "Cotisations de l'équipe");
+    },
+    team: true,
   },
   {
-    club: true, free: false, label: 'Fiche club & rôles', team: false,
+    club: true,
+    free: false,
+    get label() {
+      return i18next.t('subscriptionCompare.rows.clubProfileRoles.label', 'Fiche club & rôles');
+    },
+    team: false,
   },
   {
-    club: true, free: false, label: 'Installations & réservations', team: false,
+    club: true,
+    free: false,
+    get label() {
+      return i18next.t(
+        'subscriptionCompare.rows.facilitiesBookings.label',
+        'Installations & réservations',
+      );
+    },
+    team: false,
   },
   {
-    club: true, free: false, label: 'Sponsors & partenaires', team: false,
+    club: true,
+    free: false,
+    get label() {
+      return i18next.t('subscriptionCompare.rows.sponsorsPartners.label', 'Sponsors & partenaires');
+    },
+    team: false,
   },
   {
-    club: true, free: false, label: 'Cotisations du club', team: false,
+    club: true,
+    free: false,
+    get label() {
+      return i18next.t('subscriptionCompare.rows.clubFees.label', 'Cotisations du club');
+    },
+    team: false,
   },
   {
-    club: true, free: false, label: 'Certification du club', team: false,
+    club: true,
+    free: false,
+    get label() {
+      return i18next.t('subscriptionCompare.rows.clubCertification.label', 'Certification du club');
+    },
+    team: false,
   },
 ];
 
@@ -80,7 +145,14 @@ const getStartingMonthlyPriceLabel = (entries, scopeType) => {
   const prices = pricedEntries.map((entry) => Number(entry.referencePriceEurCents));
   // INTL1 — un store n'a qu'une devise : celle de la premiere ligne vaut pour toutes.
   const currencyCode = pricedEntries[0]?.priceCurrencyCode;
-  return `dès ${formatSubscriptionPriceLabel(Math.min(...prices), '', currencyCode)}`;
+  return i18next.t(
+    'subscriptionCompare.columns.startingPrice',
+    'dès {{price}}',
+    {
+      price: formatSubscriptionPriceLabel(Math.min(...prices), '', currencyCode),
+      ...SANS_ECHAPPEMENT,
+    },
+  );
 };
 
 /**
@@ -90,6 +162,7 @@ const getStartingMonthlyPriceLabel = (entries, scopeType) => {
  * @returns {import('react').ReactElement}
  */
 function SubscriptionCompare({ navigation }) {
+  const { t } = useTranslation();
   const {
     Alignments, Colors, Fonts, Spaces,
   } = useTheme();
@@ -97,9 +170,30 @@ function SubscriptionCompare({ navigation }) {
   const catalogEntries = useSubscriptionCatalog().entries;
 
   const columns = useMemo(() => [
-    { key: 'free', priceLabel: '0 €', title: 'Gratuit' },
-    { key: 'team', priceLabel: getStartingMonthlyPriceLabel(catalogEntries, 'TEAM'), title: 'Équipe' },
-    { key: 'club', priceLabel: getStartingMonthlyPriceLabel(catalogEntries, 'CLUB'), title: 'Club' },
+    {
+      key: 'free',
+      priceLabel: '0 €',
+      title: i18next.t(
+        'profile.subscription.states.free',
+        'Gratuit',
+      ),
+    },
+    {
+      key: 'team',
+      priceLabel: getStartingMonthlyPriceLabel(catalogEntries, 'TEAM'),
+      title: i18next.t(
+        'profile.subscription.states.team',
+        'Équipe',
+      ),
+    },
+    {
+      key: 'club',
+      priceLabel: getStartingMonthlyPriceLabel(catalogEntries, 'CLUB'),
+      title: i18next.t(
+        'subscriptionCompare.columns.club',
+        'Club',
+      ),
+    },
   ], [catalogEntries]);
 
   /**
@@ -167,7 +261,11 @@ function SubscriptionCompare({ navigation }) {
                   </Text>
                   {column.priceLabel ? (
                     <Text numberOfLines={1} style={[Fonts.p4, Fonts.neutral400]}>
-                      {`${column.priceLabel}/mois`}
+                      {t(
+                        'subscriptionCompare.columns.perMonth',
+                        '{{price}}/mois',
+                        { price: column.priceLabel, ...SANS_ECHAPPEMENT },
+                      )}
                     </Text>
                   ) : null}
                 </View>
@@ -216,7 +314,7 @@ function SubscriptionCompare({ navigation }) {
         >
           <Button
             onPress={() => navigation.navigate(RouteNames.SubscriptionOffers)}
-            title="Voir les offres"
+            title={t('profile.subscription.actions.viewOffers', 'Voir les offres')}
             variant="Primary"
           />
         </View>

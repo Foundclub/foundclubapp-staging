@@ -1,5 +1,6 @@
 // @ts-nocheck
 import { differenceInYears, format } from 'date-fns';
+import i18next from 'i18next';
 import {
   useCallback,
   useEffect,
@@ -114,20 +115,50 @@ const readProfileAge = (profil) => {
 
 const formatRoleLabel = (roleName) => {
   const normalized = String(roleName || '').trim().toLowerCase();
-  if (!normalized) return 'UTILISATEUR';
-  if (normalized.includes('dirigeant')) return 'DIRIGEANT';
-  if (normalized.includes('entra') || normalized.includes('coach')) return 'Entraîneur';
+  if (!normalized) return i18next.t('userDetails.roleLabels.user', 'UTILISATEUR');
+  if (normalized.includes('dirigeant')) {
+    return i18next.t(
+      'userDetails.roleLabels.president',
+      'DIRIGEANT',
+    );
+  }
+  if (normalized.includes('entra') || normalized.includes('coach')) {
+    return i18next.t(
+      'userDetails.roleLabels.coach',
+      'Entraîneur',
+    );
+  }
   if (normalized.includes('super')) return 'SUPERADMIN';
-  if (normalized.includes('authenticated') || normalized.includes('joueur')) return 'JOUEUR';
+  if (normalized.includes('authenticated') || normalized.includes('joueur')) {
+    return i18next.t(
+      'userDetails.roleLabels.player',
+      'JOUEUR',
+    );
+  }
   return String(roleName).toUpperCase();
 };
 
 const formatSectionLabel = (value) => {
   const normalized = String(value || '').trim().toLowerCase();
   if (!normalized) return '';
-  if (['homme', 'male', 'masculin', 'masculine'].includes(normalized)) return 'Masculin';
-  if (['female', 'feminin', 'feminine', 'femme'].includes(normalized)) return 'Feminin';
-  if (['mixed', 'mixte'].includes(normalized)) return 'Mixte';
+  if (['homme', 'male', 'masculin', 'masculine'].includes(normalized)) {
+    return i18next.t(
+      'userDetails.sectionLabels.male',
+      'Masculin',
+    );
+  }
+  if (['female', 'feminin', 'feminine', 'femme'].includes(normalized)) {
+    return i18next.t(
+      'userDetails.sectionLabels.female',
+      'Feminin',
+    );
+  }
+  if (['mixed', 'mixte'].includes(normalized)) {
+    return i18next.t(
+      'userDetails.sectionLabels.mixed',
+      'Mixte',
+    );
+  }
   return String(value);
 };
 
@@ -157,8 +188,8 @@ const parseAddressLabel = (address) => {
 
 const formatNullableValue = (value, fallback) => {
   if (value === 0) return '0';
-  if (value === false) return 'Non';
-  if (value === true) return 'Oui';
+  if (value === false) return i18next.t('userDetails.values.no', 'Non');
+  if (value === true) return i18next.t('userDetails.values.yes', 'Oui');
   if (value === undefined || value === null) return fallback;
   const asString = String(value).trim();
   return asString || fallback;
@@ -261,6 +292,10 @@ function InfoItem({
     || normalizedValue === '-'
     || normalizedValue === 'non renseigne'
     || normalizedValue === 'non renseigné'
+    // I18N-1 : le repli affiche se reconnait aussi dans la langue de l'app.
+    || normalizedValue === String(i18next.t('userDetails.notSet', 'Non renseigné'))
+      .trim()
+      .toLowerCase()
   );
   const valueLines = fullWidth || compact ? 2 : 1;
 
@@ -492,7 +527,7 @@ function UserDetails({ navigation, route }) {
       seen.add(key);
       accumulator.push({
         key,
-        label: entry?.teamName || 'Equipe',
+        label: entry?.teamName || i18next.t('userDetails.stats.teamFallback', 'Equipe'),
       });
       return accumulator;
     }, []);
@@ -539,7 +574,13 @@ function UserDetails({ navigation, route }) {
       sportValue: filteredSportSummary?.minutesPlayed,
       teamValue: selectedTeamSummary?.minutesPlayed,
     });
-    const primaryLabel = selectedStatsSport === 'basketball' ? 'Points' : 'Buts';
+    const primaryLabel = selectedStatsSport === 'basketball' ? i18next.t(
+      'userDetails.stats.points',
+      'Points',
+    ) : i18next.t(
+      'userDetails.stats.goals',
+      'Buts',
+    );
     let primaryValue;
     if (selectedTeamSummary) {
       primaryValue = Number(
@@ -564,14 +605,14 @@ function UserDetails({ navigation, route }) {
     });
 
     return [
-      { label: 'Matchs', value: matches },
-      { label: 'Victoires', value: wins },
-      { label: 'Défaites', value: losses },
-      { label: 'Minutes', value: minutes },
+      { label: i18next.t('userDetails.stats.matches', 'Matchs'), value: matches },
+      { label: i18next.t('userDetails.stats.wins', 'Victoires'), value: wins },
+      { label: i18next.t('userDetails.stats.losses', 'Défaites'), value: losses },
+      { label: i18next.t('userDetails.stats.minutes', 'Minutes'), value: minutes },
       { label: primaryLabel, value: primaryValue },
       // D54 — le pack l'ecrit noir sur blanc : « Passes decisives », jamais
       // « Passes D ». Un libelle systeme ne se tronque pas.
-      { label: 'Passes décisives', value: assists },
+      { label: i18next.t('userDetails.stats.assistsLong', 'Passes décisives'), value: assists },
     ];
   }, [
     filteredSportSummary,
@@ -985,17 +1026,19 @@ function UserDetails({ navigation, route }) {
               Colors={Colors}
               Fonts={Fonts}
               Spaces={Spaces}
-              title="Stats de match"
+              title={t('userDetails.sections.matchStats', 'Stats de match')}
             >
               <View style={[Spaces.gap[12]]}>
                 {shouldShowSportFilter ? (
                   <View style={[Spaces.gap[8]]}>
-                    <Text style={[Fonts.p4Bold, Fonts.primary100]}>Sport</Text>
+                    <Text style={[Fonts.p4Bold, Fonts.primary100]}>
+                      {t('userDetails.fields.sport', 'Sport')}
+                    </Text>
                     <View style={[Alignments.row, Spaces.gap[8], { flexWrap: 'wrap' }]}>
                       <TabButton
                         isFocused={selectedStatsSport === 'all'}
                         onPress={() => setSelectedStatsSport('all')}
-                        title="Tous"
+                        title={t('userDetails.filters.allSports', 'Tous')}
                       />
                       {availableStatSports.map((sportKey) => (
                         <TabButton
@@ -1005,7 +1048,13 @@ function UserDetails({ navigation, route }) {
                             setSelectedStatsSport(sportKey);
                             setSelectedStatsTeamKey('all');
                           }}
-                          title={sportKey === 'basketball' ? 'Basket' : 'Football'}
+                          title={sportKey === 'basketball' ? t(
+                            'userDetails.sports.basketball',
+                            'Basket',
+                          ) : t(
+                            'userDetails.sports.football',
+                            'Football',
+                          )}
                         />
                       ))}
                     </View>
@@ -1014,12 +1063,14 @@ function UserDetails({ navigation, route }) {
 
                 {availableStatTeams.length > 1 ? (
                   <View style={[Spaces.gap[8]]}>
-                    <Text style={[Fonts.p4Bold, Fonts.primary100]}>Équipe</Text>
+                    <Text style={[Fonts.p4Bold, Fonts.primary100]}>
+                      {t('userDetails.filters.team', 'Équipe')}
+                    </Text>
                     <View style={[Alignments.row, Spaces.gap[8], { flexWrap: 'wrap' }]}>
                       <TabButton
                         isFocused={selectedStatsTeamKey === 'all'}
                         onPress={() => setSelectedStatsTeamKey('all')}
-                        title="Toutes"
+                        title={t('userDetails.filters.allTeams', 'Toutes')}
                       />
                       {availableStatTeams.map((teamOption) => (
                         <TabButton
@@ -1044,7 +1095,9 @@ function UserDetails({ navigation, route }) {
                   </Text>
                 ) : null}
                 {isPersonalStatsLoading ? (
-                  <Text style={[Fonts.p2, Fonts.neutral200]}>Chargement des statistiques...</Text>
+                  <Text style={[Fonts.p2, Fonts.neutral200]}>
+                    {t('userDetails.stats.loading', 'Chargement des statistiques...')}
+                  </Text>
                 ) : !isAccessRefusalError(personalStatsError) && (
                   <View style={[Alignments.row, Alignments.wrap, Alignments.justifySpaceBetween]}>
                     {profileSummaryCards.map((stat) => (
@@ -1088,7 +1141,7 @@ function UserDetails({ navigation, route }) {
               Colors={Colors}
               Fonts={Fonts}
               Spaces={Spaces}
-              title="Retours du coach"
+              title={t('userDetails.sections.coachFeedback', 'Retours du coach')}
             >
               <View style={[Spaces.gap[12]]}>
                 {recentCoachFeedback.length ? recentCoachFeedback.map((feedback, index) => {
@@ -1109,10 +1162,16 @@ function UserDetails({ navigation, route }) {
                       <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter, Spaces.gap[12]]}>
                         <View style={{ flex: 1 }}>
                           <Text numberOfLines={2} style={[Fonts.p2Bold, Fonts.neutral00]}>
-                            {feedback?.matchLabel || feedback?.teamName || 'Match'}
+                            {feedback?.matchLabel || feedback?.teamName || t(
+                              'userDetails.feedback.matchFallback',
+                              'Match',
+                            )}
                           </Text>
                           <Text style={[Fonts.p4, Fonts.neutral200]}>
-                            {feedbackDate ? format(feedbackDate, 'dd/MM/yyyy') : 'Date à confirmer'}
+                            {feedbackDate ? format(feedbackDate, 'dd/MM/yyyy') : t(
+                              'userDetails.feedback.dateTbc',
+                              'Date à confirmer',
+                            )}
                           </Text>
                         </View>
                         <View
@@ -1125,18 +1184,27 @@ function UserDetails({ navigation, route }) {
                           ]}
                         >
                           <Text style={[Fonts.p4Bold, Fonts.primary100]}>
-                            {feedback?.rating != null ? `${feedback.rating}/10` : 'Commentaire'}
+                            {feedback?.rating != null ? `${feedback.rating}/10` : t(
+                              'userDetails.feedback.comment',
+                              'Commentaire',
+                            )}
                           </Text>
                         </View>
                       </View>
                       <Text numberOfLines={3} style={[Fonts.p3, Fonts.neutral100]}>
-                        {feedback?.comment || 'Pas de commentaire detaille pour ce retour.'}
+                        {feedback?.comment || t(
+                          'userDetails.feedback.noComment',
+                          'Pas de commentaire detaille pour ce retour.',
+                        )}
                       </Text>
                     </View>
                   );
                 }) : (
                   <Text style={[Fonts.p2, Fonts.neutral200]}>
-                    Aucun retour individuel du coach pour le moment.
+                    {t(
+                      'userDetails.feedback.empty',
+                      'Aucun retour individuel du coach pour le moment.',
+                    )}
                   </Text>
                 )}
               </View>
@@ -1258,7 +1326,11 @@ function UserDetails({ navigation, route }) {
                 icon={Images.calendar}
                 label={t('userDetails.fields.age', 'Age')}
                 Spaces={Spaces}
-                value={age === null ? fallbackValue : `${age} ans`}
+                value={age === null ? fallbackValue : t('userDetails.fields.ageValue', {
+                  count: age,
+                  defaultValue_one: '{{count}} ans',
+                  defaultValue_other: '{{count}} ans',
+                })}
               />
               {/* D54 — LA DATE EXACTE NE SORT JAMAIS D'ICI. Cette page est la
                   vue publique du profil (`PJPublic` / `PEPublic` du pack), et
@@ -1406,23 +1478,29 @@ function UserDetails({ navigation, route }) {
               Colors={Colors}
               Fonts={Fonts}
               Spaces={Spaces}
-              title="Licence"
+              title={t('userDetails.license.title', 'Licence')}
             >
               <View style={[Spaces.gap[12]]}>
                 {currentLicenseAssignment?.officialLicenseDocument?.file?.url ? (
                   <>
                     <Text style={[Fonts.p2, Fonts.neutral200]}>
-                      Une licence officielle est disponible pour ce joueur.
+                      {t(
+                        'userDetails.license.available',
+                        'Une licence officielle est disponible pour ce joueur.',
+                      )}
                     </Text>
                     <Button
                       onPress={handleOpenLicense}
-                      title="Voir la licence"
+                      title={t('userDetails.license.view', 'Voir la licence')}
                       variant="Secondary"
                     />
                   </>
                 ) : (
                   <Text style={[Fonts.p2, Fonts.neutral200]}>
-                    La licence officielle n est pas encore disponible pour ce joueur.
+                    {t(
+                      'userDetails.license.unavailable',
+                      'La licence officielle n est pas encore disponible pour ce joueur.',
+                    )}
                   </Text>
                 )}
               </View>

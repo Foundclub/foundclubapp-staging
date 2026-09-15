@@ -309,7 +309,10 @@ function ProfileEdit({ navigation, route }) {
             style={[Alignments.fill]}
           >
             <OnboardingWrapper
-              description="Mets à jour tes informations personnelles, sportives et ta visibilité."
+              description={t(
+                'profileEdit.tutorial.form.description',
+                'Mets à jour tes informations personnelles, sportives et ta visibilité.',
+              )}
               id="profile-edit-form"
               order={1}
               spotlight={{
@@ -319,7 +322,7 @@ function ProfileEdit({ navigation, route }) {
                 paddingX: 2,
                 paddingY: 2,
               }}
-              title="Édition du profil"
+              title={t('profileEdit.tutorial.form.title', 'Édition du profil')}
             >
               <View style={[Alignments.fill, Spaces.gap[24]]}>
                 <View style={[Alignments.row, Spaces.marginVertical[24]]}>
@@ -417,7 +420,7 @@ function ProfileEdit({ navigation, route }) {
                         maxLength={10}
                         onBlur={onBlur}
                         onChangeText={(text) => onChange(formatBirthdateToDisplay(text))}
-                        placeholder="JJ/MM/AAAA"
+                        placeholder={t('profile.fields.birthdate.placeholder', 'JJ/MM/AAAA')}
                         ref={ref}
                         value={value}
                       />
@@ -722,7 +725,11 @@ function ProfileEdit({ navigation, route }) {
                 {requiresParentalDeclaration ? (
                   <ParentalDeclarationCard
                     checked={parentalDeclarationChecked}
-                    helperText={!parentalDeclarationChecked ? 'Cette confirmation est obligatoire pour enregistrer un profil de moins de 13 ans.' : ''}
+                    helperText={!parentalDeclarationChecked ? t(
+                      'profileEdit.parentalDeclaration.required',
+                      'Cette confirmation est obligatoire pour enregistrer un profil de '
+                        + 'moins de 13 ans.',
+                    ) : ''}
                     onChange={setParentalDeclarationChecked}
                   />
                 ) : null}
@@ -731,13 +738,16 @@ function ProfileEdit({ navigation, route }) {
           </ScrollView>
 
           <OnboardingWrapper
-            description="Enregistre tes modifications pour mettre à jour ton profil."
+            description={t(
+              'profileEdit.tutorial.save.description',
+              'Enregistre tes modifications pour mettre à jour ton profil.',
+            )}
             id="profile-edit-save"
             order={2}
             spotlight={{
               borderRadius: 30, overlayOpacity: 0.4, paddingX: 2, paddingY: 2,
             }}
-            title="Enregistrer"
+            title={t('profileEdit.tutorial.save.title', 'Enregistrer')}
           >
             <Button
               disabled={requiresParentalDeclaration && !parentalDeclarationChecked}

@@ -60,7 +60,14 @@ jest.mock('react-i18next', () => {
   const traductions = jest.requireActual('@/theme/strings/translations/fr').default;
   return {
     useTranslation: () => ({
-      t: (/** @type {string} */ cle, /** @type {any} */ repli) => {
+      t: (/** @type {string} */ cle, /** @type {any} */ repli, /** @type {any} */ valeurs) => {
+        // I18N-1 : repli a {{jetons}} ou pluriel -> le vrai i18next (fr.js), comme l'app.
+        if (
+          (typeof repli === 'string' && valeurs)
+          || (repli && typeof repli === 'object' && 'defaultValue_one' in repli)
+        ) {
+          return jest.requireActual('i18next').t(cle, repli, valeurs);
+        }
         const valeur = String(cle || '').split('.').reduce(
           (/** @type {any} */ noeud, /** @type {string} */ segment) => (
             noeud && typeof noeud === 'object' ? noeud[segment] : undefined

@@ -1,4 +1,5 @@
 import { useQueryClient } from '@tanstack/react-query';
+import i18next from 'i18next';
 import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -18,6 +19,7 @@ import {
   scheduleSubscriptionStateRefresh,
 } from '@/domains/subscription/subscriptionRefresh';
 import { withAlpha } from '@/theme/colors';
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -63,15 +65,42 @@ const CELEBRATION_DOTS = [
 // qu'elle existe, le repli evite un trou de copy si elle disparait (L05).
 /** @type {Record<string, string>} */
 const UNLOCK_FALLBACK_LABELS = {
-  clubRoles: 'Gestion des entraîneurs et dirigeants',
-  clubTeams: 'Toutes les équipes du club couvertes',
-  composition: 'Composition et convocations',
-  dues: 'Campagnes de cotisations',
-  events: 'Événements et matchs illimités',
-  facilities: 'Installations du club',
-  recruitment: 'Annonces de recrutement illimitées',
-  sponsors: 'Sponsors du club',
-  teams: 'Équipes supplémentaires',
+  get clubRoles() {
+    return i18next.t(
+      'subscriptionSuccess.unlocks.clubRoles',
+      'Gestion des entraîneurs et dirigeants',
+    );
+  },
+  get clubTeams() {
+    return i18next.t(
+      'subscriptionSuccess.unlocks.clubTeams',
+      'Toutes les équipes du club couvertes',
+    );
+  },
+  get composition() {
+    return i18next.t('subscriptionSuccess.unlocks.composition', 'Composition et convocations');
+  },
+  get dues() {
+    return i18next.t('subscriptionSuccess.unlocks.dues', 'Campagnes de cotisations');
+  },
+  get events() {
+    return i18next.t('subscriptionSuccess.unlocks.events', 'Événements et matchs illimités');
+  },
+  get facilities() {
+    return i18next.t('subscriptionSuccess.unlocks.facilities', 'Installations du club');
+  },
+  get recruitment() {
+    return i18next.t(
+      'subscriptionSuccess.unlocks.recruitment',
+      'Annonces de recrutement illimitées',
+    );
+  },
+  get sponsors() {
+    return i18next.t('subscriptionSuccess.unlocks.sponsors', 'Sponsors du club');
+  },
+  get teams() {
+    return i18next.t('subscriptionSuccess.unlocks.teams', 'Équipes supplémentaires');
+  },
 };
 
 // Version courte des memes libelles, pour la grille a 2 colonnes (tour 7a).
@@ -80,14 +109,30 @@ const UNLOCK_FALLBACK_LABELS = {
 // retombe sur son libelle long — elle ne doit JAMAIS disparaitre de l'ecran.
 /** @type {Record<string, string>} */
 const UNLOCK_SHORT_FALLBACK_LABELS = {
-  clubRoles: 'Rôles du club',
-  clubTeams: 'Toutes les équipes du club',
-  composition: 'Compo & convocations',
-  dues: 'Cotisations',
-  events: 'Événements illimités',
-  facilities: 'Installations',
-  recruitment: 'Annonces illimitées',
-  sponsors: 'Sponsors',
+  get clubRoles() {
+    return i18next.t('subscriptionSuccess.unlocksShort.clubRoles', 'Rôles du club');
+  },
+  get clubTeams() {
+    return i18next.t('subscriptionSuccess.unlocksShort.clubTeams', 'Toutes les équipes du club');
+  },
+  get composition() {
+    return i18next.t('subscriptionSuccess.unlocksShort.composition', 'Compo & convocations');
+  },
+  get dues() {
+    return i18next.t('subscriptionSuccess.unlocksShort.dues', 'Cotisations');
+  },
+  get events() {
+    return i18next.t('subscriptionSuccess.unlocksShort.events', 'Événements illimités');
+  },
+  get facilities() {
+    return i18next.t('subscriptionSuccess.unlocksShort.facilities', 'Installations');
+  },
+  get recruitment() {
+    return i18next.t('subscriptionSuccess.unlocksShort.recruitment', 'Annonces illimitées');
+  },
+  get sponsors() {
+    return i18next.t('subscriptionSuccess.unlocksShort.sponsors', 'Sponsors');
+  },
 };
 
 // L40 — cibles de reprise autorisees. Cet ecran est pousse sur le navigateur
@@ -112,10 +157,21 @@ const RESUME_ROOT_ROUTES = new Set([
 
 /** @type {Record<string, string>} */
 const FIRST_ACTION_FALLBACK_LABELS = {
-  club: 'Gérer mon club',
-  composition: 'Préparer ma compo',
-  events: 'Publier un événement ou un match',
-  recruitment: 'Publier une annonce de recrutement',
+  get club() {
+    return i18next.t('subscriptionSuccess.firstActions.club', 'Gérer mon club');
+  },
+  get composition() {
+    return i18next.t('subscriptionSuccess.firstActions.composition', 'Préparer ma compo');
+  },
+  get events() {
+    return i18next.t('subscriptionSuccess.firstActions.events', 'Publier un événement ou un match');
+  },
+  get recruitment() {
+    return i18next.t(
+      'subscriptionSuccess.firstActions.recruitment',
+      'Publier une annonce de recrutement',
+    );
+  },
 };
 
 /**
@@ -149,10 +205,16 @@ function SubscriptionSuccess({ navigation, route }) {
     Alignments, Colors, Fonts, Images, Spaces,
   } = useTheme();
   const { t } = useTranslation();
-  const offerLabel = String(route?.params?.offerLabel || 'Équipe');
+  const offerLabel = String(route?.params?.offerLabel || t(
+    'profile.subscription.states.team',
+    'Équipe',
+  ));
   const offerScope = String(route?.params?.offerScope || '').trim().toUpperCase();
   const purchasedClubDocumentId = String(route?.params?.clubDocumentId || '').trim();
-  const resumeCtaLabel = String(route?.params?.resumeCtaLabel || 'Reprendre');
+  const resumeCtaLabel = String(route?.params?.resumeCtaLabel || t(
+    'subscriptionSuccess.actions.resume',
+    'Reprendre',
+  ));
   const renewalDateLabel = String(route?.params?.renewalDateLabel || '');
   // 'back' (defaut) = la tache interrompue vit sous cet ecran dans la pile ;
   // 'home' = achat depuis le Recap de fin de tour, on repart sur l'accueil ;
@@ -176,12 +238,24 @@ function SubscriptionSuccess({ navigation, route }) {
   const storeLabel = Platform.OS === 'ios' ? 'App Store' : 'Google Play';
   // Le pied de page, en trois etats et un seul endroit : l echeance rendue par
   // le serveur · l activation en cours · rien de plus que le store.
-  let receiptLead = `${storeLabel} — détails dans `;
+  let receiptLead = t(
+    'subscriptionSuccess.receipt.store',
+    '{{storeLabel}} — détails dans ',
+    { storeLabel, ...SANS_ECHAPPEMENT },
+  );
   if (renewalDateLabel) {
-    receiptLead = `Renouvellement le ${renewalDateLabel} · ${storeLabel} — détails dans `;
+    receiptLead = t(
+      'subscriptionSuccess.receipt.renewal',
+      'Renouvellement le {{renewalDateLabel}} · {{storeLabel}} — détails dans ',
+      { renewalDateLabel, storeLabel, ...SANS_ECHAPPEMENT },
+    );
   } else if (pendingActivation) {
-    receiptLead = `On vérifie ton achat : ton abonnement s'active dans un instant · ${storeLabel}`
-      + ' — détails dans ';
+    receiptLead = t(
+      'subscriptionSuccess.receipt.pending',
+      "On vérifie ton achat : ton abonnement s'active dans un instant · {{storeLabel}}",
+      { storeLabel, ...SANS_ECHAPPEMENT },
+    )
+      + t('subscriptionSuccess.receipt.detailsIn', ' — détails dans ');
   }
 
   const queryClient = useQueryClient();
@@ -372,16 +446,26 @@ function SubscriptionSuccess({ navigation, route }) {
           </View>
 
           <Text style={[Fonts.h2Bold, Fonts.neutral00, Fonts.textCenter]}>
-            {takesEffectAtRenewal ? 'C\'est enregistré !' : 'C\'est débloqué !'}
+            {takesEffectAtRenewal ? t('subscriptionSuccess.title.saved', "C'est enregistré !") : t(
+              'subscriptionSuccess.title.unlocked',
+              "C'est débloqué !",
+            )}
           </Text>
           <Text style={[Fonts.p2, Fonts.neutral200, Fonts.textCenter, styles.offerLine]}>
-            Offre
+            {t('subscriptionSuccess.offerLine.prefix', 'Offre')}
             {' '}
             <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{offerLabel}</Text>
             {' '}
             {takesEffectAtRenewal
-              ? '— elle prendra effet à ta prochaine échéance. D\'ici là, ton offre actuelle continue.'
-              : '— active pour toute l\'équipe, dès maintenant.'}
+              ? t(
+                'subscriptionSuccess.offerLine.atRenewal',
+                "— elle prendra effet à ta prochaine échéance. D'ici là, ton offre actuelle "
+                  + 'continue.',
+              )
+              : t(
+                'subscriptionSuccess.offerLine.activeNow',
+                "— active pour toute l'équipe, dès maintenant.",
+              )}
           </Text>
 
           <View
@@ -486,19 +570,19 @@ function SubscriptionSuccess({ navigation, route }) {
               qui sont, elles aussi, des TouchableOpacity — il nomme la cible
               pour un lecteur d'ecran comme pour un test. */}
           <TouchableOpacity
-            accessibilityLabel="Retour à l'accueil"
+            accessibilityLabel={t('subscriptionSuccess.actions.backHome', "Retour à l'accueil")}
             accessibilityRole="button"
             onPress={handleGoHome}
             style={[Spaces.paddingVertical[12]]}
           >
             <Text style={[Fonts.p2Bold, Fonts.neutral300, Fonts.textCenter]}>
-              Retour à l&apos;accueil
+              {t('subscriptionSuccess.actions.backHome', "Retour à l'accueil")}
             </Text>
           </TouchableOpacity>
           <Text style={[Fonts.p4, Fonts.neutral400, Fonts.textCenter]}>
             {receiptLead}
             <Text onPress={handleOpenSubscription} style={[Fonts.p4Bold, Fonts.primary500]}>
-              Mon abonnement
+              {t('profile.subscription.title', 'Mon abonnement')}
             </Text>
           </Text>
         </View>

@@ -27,9 +27,16 @@ jest.mock('@tanstack/react-query', () => ({
 
 jest.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (/** @type {string} */ key, /** @type {any} */ fallback) => (
-      typeof fallback === 'string' ? fallback : key
-    ),
+    t: (/** @type {string} */ key, /** @type {any} */ fallback, /** @type {any} */ valeurs) => {
+      // I18N-1 : repli a {{jetons}} ou pluriel -> le vrai i18next (fr.js), comme l'app.
+      if (
+        (typeof fallback === 'string' && valeurs)
+        || (fallback && typeof fallback === 'object' && 'defaultValue_one' in fallback)
+      ) {
+        return jest.requireActual('i18next').t(key, fallback, valeurs);
+      }
+      return typeof fallback === 'string' ? fallback : key;
+    },
   }),
 }));
 

@@ -755,13 +755,16 @@ function Profile({ navigation, route }) {
         {accountNonLogoutRows.map((row) => renderAccountRow({ ...row, isLast: false }))}
         {isLogoutTutorial ? (
           <OnboardingWrapper
-            description="Ce bouton lance la confirmation de déconnexion de ta session."
+            description={t(
+              'profile.tutorial.logout.description',
+              'Ce bouton lance la confirmation de déconnexion de ta session.',
+            )}
             id="profile-logout-action"
             order={2}
             spotlight={{
               borderRadius: 16, overlayOpacity: 0.4, paddingX: 2, paddingY: 2,
             }}
-            title="Déconnexion"
+            title={t('profile.actions.logout', 'Déconnexion')}
           >
             {logoutRow}
           </OnboardingWrapper>
@@ -785,10 +788,10 @@ function Profile({ navigation, route }) {
         const user = isCurrent ? userData : session?.user;
         const displayName = user?.firstname && user?.lastname
           ? `${user.firstname} ${user.lastname}`
-          : user?.phone || user?.username || 'Compte';
+          : user?.phone || user?.username || t('profile.accountSwitcher.fallbackName', 'Compte');
         const roleName = user?.role?.name === 'Authenticated'
-          ? 'Dirigeant'
-          : user?.role?.name || 'Utilisateur';
+          ? t('profile.identity.roles.president', 'Dirigeant')
+          : user?.role?.name || t('profile.accountSwitcher.fallbackRole', 'Utilisateur');
         const avatarUrl = isCurrent ? userData?.avatar?.url : session?.user?.avatar?.url;
 
         return (
@@ -872,13 +875,16 @@ function Profile({ navigation, route }) {
 
   const accountSwitcherTutorialContent = isAccountSwitcherTutorial ? (
     <OnboardingWrapper
-      description="Choisis un compte actif ou ajoute un nouveau compte connecté."
+      description={t(
+        'profile.tutorial.accountSwitcher.description',
+        'Choisis un compte actif ou ajoute un nouveau compte connecté.',
+      )}
       id="profile-account-switcher-modal"
       order={1}
       spotlight={{
         borderRadius: 16, overlayOpacity: 0.4, paddingX: 2, paddingY: 2,
       }}
-      title="Changer de compte"
+      title={t('profile.accountSwitcher.title', 'Changer de compte')}
     >
       {accountSwitcherPanel}
     </OnboardingWrapper>
@@ -941,13 +947,17 @@ function Profile({ navigation, route }) {
 
           {isProfileMainTutorial ? (
             <OnboardingWrapper
-              description="Depuis cette zone, tu peux consulter ton profil, gérer tes demandes et changer de compte."
+              description={t(
+                'profile.tutorial.mainActions.description',
+                'Depuis cette zone, tu peux consulter ton profil, gérer tes demandes et '
+                  + 'changer de compte.',
+              )}
               id="profile-main-actions"
               order={1}
               spotlight={{
                 borderRadius: 16, overlayOpacity: 0.4, paddingX: 2, paddingY: 2,
               }}
-              title="Actions profil"
+              title={t('profile.tutorial.mainActions.title', 'Actions profil')}
             >
               {profileActivitySection}
             </OnboardingWrapper>
@@ -977,13 +987,16 @@ function Profile({ navigation, route }) {
           >
             {isAccountSwitcherTutorial ? (
               <OnboardingWrapper
-                description="Choisis un compte actif ou ajoute un nouveau compte connecté."
+                description={t(
+                  'profile.tutorial.accountSwitcher.description',
+                  'Choisis un compte actif ou ajoute un nouveau compte connecté.',
+                )}
                 id="profile-account-switcher-modal"
                 order={1}
                 spotlight={{
                   borderRadius: 16, overlayOpacity: 0.4, paddingX: 2, paddingY: 2,
                 }}
-                title="Changer de compte"
+                title={t('profile.accountSwitcher.title', 'Changer de compte')}
               >
                 {accountSwitcherContent}
               </OnboardingWrapper>
