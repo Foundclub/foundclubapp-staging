@@ -1,4 +1,6 @@
+import i18next from 'i18next';
 import { useCallback, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Alert, FlatList, Text, TextInput, View,
 } from 'react-native';
@@ -31,7 +33,11 @@ import {
   LicenseStatusChip,
 } from './licenseDesignSystem';
 
-const memberName = (user = {}) => [user.firstname, user.lastname].filter(Boolean).join(' ') || user.username || 'Membre';
+const memberName = (user = {}) => [user.firstname, user.lastname]
+  .filter(Boolean)
+  .join(' ')
+  || user.username
+  || i18next.t('clubLicensePayments.memberFallback', 'Membre');
 const reviewPayments = (assignment = {}) => (assignment.payments || []).filter((payment) => payment.status === 'manual_review');
 const resolveCanManageLicenses = (scope, routeCanManageLicenses) => {
   if (scope === 'coach') return false;
@@ -49,6 +55,7 @@ const resolveCanManageLicenses = (scope, routeCanManageLicenses) => {
 function RejectPaymentModal({
   isLoading, onClose, onSubmit,
 }) {
+  const { t } = useTranslation();
   const { Colors, Fonts, Spaces } = useTheme();
   const [reason, setReason] = useState('');
 
@@ -62,10 +69,12 @@ function RejectPaymentModal({
       webPresentation="dialog"
     >
       <View style={Spaces.gap[licenseSpacing.fieldGap]}>
-        <Text style={[Fonts.h3, Fonts.neutral00]}>Rejeter la déclaration</Text>
+        <Text style={[Fonts.h3, Fonts.neutral00]}>
+          {t('clubLicensePayments.rejectModal.title', 'Rejeter la déclaration')}
+        </Text>
         <TextInput
           onChangeText={setReason}
-          placeholder="Motif obligatoire"
+          placeholder={t('clubLicensePayments.rejectModal.reasonRequired', 'Motif obligatoire')}
           placeholderTextColor={Colors.neutral400}
           style={{
             borderBottomColor: Colors.neutral200,
@@ -77,8 +86,24 @@ function RejectPaymentModal({
           value={reason}
         />
         <View style={{ flexDirection: 'row', gap: licenseSpacing.actionGap }}>
-          <Button onPress={onClose} style={{ flex: 1 }} title="Annuler" variant="Secondary" />
-          <Button isLoading={isLoading} onPress={() => onSubmit(reason)} style={{ flex: 1 }} title="Rejeter" />
+          <Button
+            onPress={onClose}
+            style={{ flex: 1 }}
+            title={t(
+              'clubLicensePayments.buttons.cancel',
+              'Annuler',
+            )}
+            variant="Secondary"
+          />
+          <Button
+            isLoading={isLoading}
+            onPress={() => onSubmit(reason)}
+            style={{ flex: 1 }}
+            title={t(
+              'clubLicensePayments.buttons.reject',
+              'Rejeter',
+            )}
+          />
         </View>
       </View>
     </BottomModal>
@@ -92,6 +117,7 @@ function RejectPaymentModal({
  * @param root0.route
  */
 function ClubLicensePayments({ navigation, route }) {
+  const { t } = useTranslation();
   const { Fonts, Spaces } = useTheme();
   const clubId = route?.params?.clubId;
   const routeCampaignId = route?.params?.campaignId;
@@ -128,16 +154,22 @@ function ClubLicensePayments({ navigation, route }) {
 
   const approvePayment = useCallback((paymentId) => {
     if (!canManageLicenses) return;
-    Alert.alert('Valider le paiement déclare', 'Confirmer que le club a bien reçu ce paiement ?', [
-      { style: 'cancel', text: 'Annuler' },
+    Alert.alert(t(
+      'clubLicensePayments.alerts.approvePayment.title',
+      'Valider le paiement déclare',
+    ), t(
+      'clubLicensePayments.alerts.approvePayment.message',
+      'Confirmer que le club a bien reçu ce paiement ?',
+    ), [
+      { style: 'cancel', text: t('clubLicensePayments.buttons.cancel', 'Annuler') },
       {
         onPress: () => approveMutation.mutate({ paymentId }, {
           onSuccess: () => reviewsQuery.refetch(),
         }),
-        text: 'Valider',
+        text: t('clubLicensePayments.buttons.approve', 'Valider'),
       },
     ]);
-  }, [approveMutation, canManageLicenses, reviewsQuery]);
+  }, [approveMutation, canManageLicenses, reviewsQuery, t]);
 
   const rejectPayment = useCallback((reason) => {
     if (!paymentToReject || !canManageLicenses) return;
@@ -180,7 +212,7 @@ function ClubLicensePayments({ navigation, route }) {
               {/* MARQUEE — l equipe du licencie se lit en entier */}
               <MarqueeText
                 style={[Fonts.p3, Fonts.neutral200]}
-                text={item.team?.name || 'Sans équipe'}
+                text={item.team?.name || t('clubLicensePayments.card.noTeam', 'Sans équipe')}
               />
             </View>
             <LicenseStatusChip status={item.status} />
@@ -190,14 +222,42 @@ function ClubLicensePayments({ navigation, route }) {
               <View style={Spaces.gap[licenseSpacing.actionGap]}>
                 <LicenseMetricRow
                   items={[
-                    { label: 'Declare', value: formatLicenseMoney(payment.amountCents, payment.currency || currency) },
-                    { label: 'Reference', value: payment.externalPaymentId || '-' },
+                    {
+                      label: t(
+                        'clubLicensePayments.card.declared',
+                        'Declare',
+                      ),
+                      value: formatLicenseMoney(payment.amountCents, payment.currency || currency),
+                    },
+                    {
+                      label: t(
+                        'clubLicensePayments.card.reference',
+                        'Reference',
+                      ),
+                      value: payment.externalPaymentId || '-',
+                    },
                   ]}
                 />
                 {payment.note ? <Text style={[Fonts.p3, Fonts.neutral200]}>{payment.note}</Text> : null}
                 <View style={{ flexDirection: 'row', gap: licenseSpacing.actionGap }}>
-                  <Button isLoading={approveMutation.isPending} onPress={() => approvePayment(payment.documentId || payment.id)} style={{ flex: 1 }} title="Valider" />
-                  <Button onPress={() => setPaymentToReject(payment.documentId || payment.id)} style={{ flex: 1 }} title="Rejeter" variant="Secondary" />
+                  <Button
+                    isLoading={approveMutation.isPending}
+                    onPress={() => approvePayment(payment.documentId || payment.id)}
+                    style={{ flex: 1 }}
+                    title={t(
+                      'clubLicensePayments.buttons.approve',
+                      'Valider',
+                    )}
+                  />
+                  <Button
+                    onPress={() => setPaymentToReject(payment.documentId || payment.id)}
+                    style={{ flex: 1 }}
+                    title={t(
+                      'clubLicensePayments.buttons.reject',
+                      'Rejeter',
+                    )}
+                    variant="Secondary"
+                  />
                 </View>
               </View>
             </LicenseCard>
@@ -209,7 +269,7 @@ function ClubLicensePayments({ navigation, route }) {
               canManageLicenses,
               scope,
             })}
-            title="Ouvrir la fiche membre"
+            title={t('clubLicensePayments.card.openMember', 'Ouvrir la fiche membre')}
             variant="Secondary"
           />
         </View>
@@ -221,28 +281,51 @@ function ClubLicensePayments({ navigation, route }) {
     <ScreenContainer bottomInsetMode="tab-scene" withHeaderPadding>
       <View style={[Spaces.gap[licenseSpacing.sectionGap], { flex: 1 }]}>
         <View style={Spaces.gap[licenseSpacing.titleGap]}>
-          <Text style={[Fonts.h2, Fonts.neutral00]}>Paiements à valider</Text>
+          <Text style={[Fonts.h2, Fonts.neutral00]}>
+            {t('clubLicensePayments.header.title', 'Paiements à valider')}
+          </Text>
           <Text style={[Fonts.p2, Fonts.neutral200]}>
-            Controle les déclarations externes avant de les passer en encaisse.
+            {t(
+              'clubLicensePayments.header.subtitle',
+              'Controle les déclarations externes avant de les passer en encaisse.',
+            )}
           </Text>
         </View>
         {isLoading ? (
           <LicenseEmptyState
-            description="On charge les déclarations en attente."
-            title="Chargement"
+            description={t(
+              'clubLicensePayments.loading.description',
+              'On charge les déclarations en attente.',
+            )}
+            title={t('clubLicensePayments.loading.title', 'Chargement')}
           />
         ) : null}
         {!isLoading && !hasError && !canManageLicenses ? (
           <LicenseEmptyState
-            description="La validation des paiements est réservée aux dirigeants."
-            title="Action réservée"
+            description={t(
+              'clubLicensePayments.restricted.description',
+              'La validation des paiements est réservée aux dirigeants.',
+            )}
+            title={t('clubLicensePayments.restricted.title', 'Action réservée')}
           />
         ) : null}
         {!isLoading && hasError ? (
           <LicenseEmptyState
-            action={<Button onPress={retryData} title="Réessayer" variant="Secondary" />}
-            description="Impossible de charger les paiements à valider."
-            title="Paiements indisponibles"
+            action={(
+              <Button
+                onPress={retryData}
+                title={t(
+                  'clubLicensePayments.error.retry',
+                  'Réessayer',
+                )}
+                variant="Secondary"
+              />
+)}
+            description={t(
+              'clubLicensePayments.error.description',
+              'Impossible de charger les paiements à valider.',
+            )}
+            title={t('clubLicensePayments.error.title', 'Paiements indisponibles')}
           />
         ) : null}
         {!isLoading && canManageLicenses && !hasError ? (
@@ -250,21 +333,42 @@ function ClubLicensePayments({ navigation, route }) {
             <LicenseCard>
               <LicenseMetricRow
                 items={[
-                  { label: 'Dossiers', value: String(assignments.length) },
-                  { label: 'Declarations', value: String(totalReviewPayments) },
-                  { label: 'Montant', value: formatLicenseMoney(totalReviewCents) },
+                  {
+                    label: t(
+                      'clubLicensePayments.metrics.records',
+                      'Dossiers',
+                    ),
+                    value: String(assignments.length),
+                  },
+                  {
+                    label: t(
+                      'clubLicensePayments.metrics.declarations',
+                      'Declarations',
+                    ),
+                    value: String(totalReviewPayments),
+                  },
+                  {
+                    label: t(
+                      'clubLicensePayments.metrics.amount',
+                      'Montant',
+                    ),
+                    value: formatLicenseMoney(totalReviewCents),
+                  },
                 ]}
               />
             </LicenseCard>
-            <LicenseSectionHeader title="A traiter" />
+            <LicenseSectionHeader title={t('clubLicensePayments.list.title', 'A traiter')} />
             <FlatList
               contentContainerStyle={{ gap: licenseSpacing.listGap, paddingBottom: 40 }}
               data={assignments}
               keyExtractor={(item) => String(item.documentId || item.id)}
               ListEmptyComponent={(
                 <LicenseEmptyState
-                  description="Aucune déclaration de paiement n attend de validation."
-                  title="Tout est propre"
+                  description={t(
+                    'clubLicensePayments.empty.description',
+                    'Aucune déclaration de paiement n attend de validation.',
+                  )}
+                  title={t('clubLicensePayments.empty.title', 'Tout est propre')}
                 />
               )}
               onRefresh={reviewsQuery.refetch}

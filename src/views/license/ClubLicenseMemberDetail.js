@@ -1,10 +1,13 @@
 /* eslint-disable perfectionist/sort-imports */
+import i18next from 'i18next';
 import { useCallback, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Alert, Pressable, ScrollView, Text, TextInput, View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -60,14 +63,33 @@ import {
 const euroToCents = (value) => Math.round(Number(String(value || '0').replace(',', '.')) * 100);
 const usefulReminderStatuses = ['pending', 'partial', 'overdue', 'manual_review'];
 const paymentStatusLabels = {
-  cancelled: 'Annule',
-  confirmed: 'Valide',
-  failed: 'Echoue',
-  manual_review: 'A valider',
-  partially_refunded: 'Remboursement partiel',
-  pending: 'En attente',
-  refunded: 'Rembourse',
-  rejected: 'Rejete',
+  get cancelled() {
+    return i18next.t('clubLicenseMemberDetail.paymentStatus.cancelled', 'Annule');
+  },
+  get confirmed() {
+    return i18next.t('clubLicenseMemberDetail.paymentStatus.confirmed', 'Valide');
+  },
+  get failed() {
+    return i18next.t('clubLicenseMemberDetail.paymentStatus.failed', 'Echoue');
+  },
+  get manual_review() {
+    return i18next.t('clubLicenseMemberDetail.paymentStatus.manualReview', 'A valider');
+  },
+  get partially_refunded() {
+    return i18next.t(
+      'clubLicenseMemberDetail.paymentStatus.partiallyRefunded',
+      'Remboursement partiel',
+    );
+  },
+  get pending() {
+    return i18next.t('clubLicenseMemberDetail.paymentStatus.pending', 'En attente');
+  },
+  get refunded() {
+    return i18next.t('clubLicenseMemberDetail.paymentStatus.refunded', 'Rembourse');
+  },
+  get rejected() {
+    return i18next.t('clubLicenseMemberDetail.paymentStatus.rejected', 'Rejete');
+  },
 };
 const paymentDate = (payment = {}) => String(payment.validatedAt || payment.paidAt || payment.createdAt || '').slice(0, 10);
 const documentDate = (submission = {}) => String(submission.validatedAt || submission.submittedAt || submission.createdAt || '').slice(0, 10);
@@ -109,6 +131,7 @@ function InfoRow({ label, value }) {
 function ActionModal({
   methodOptions = [], onClose, onSubmit, title, type,
 }) {
+  const { t } = useTranslation();
   const {
     Colors, Fonts, Spaces,
   } = useTheme();
@@ -145,7 +168,10 @@ function ActionModal({
           <TextInput
             keyboardType="decimal-pad"
             onChangeText={setAmount}
-            placeholder="Montant en euros"
+            placeholder={t(
+              'clubLicenseMemberDetail.actionModal.amountPlaceholder',
+              'Montant en euros',
+            )}
             placeholderTextColor={Colors.neutral400}
             style={{
               borderBottomColor: Colors.neutral200, borderBottomWidth: 1, color: Colors.neutral00, paddingVertical: 12,
@@ -155,7 +181,9 @@ function ActionModal({
         ) : null}
         {needsMethod ? (
           <View style={Spaces.gap[8]}>
-            <Text style={[Fonts.p2Bold, Fonts.neutral00]}>Moyen de paiement</Text>
+            <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
+              {t('clubLicenseMemberDetail.actionModal.paymentMethod', 'Moyen de paiement')}
+            </Text>
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
               {methodOptions.map((option) => {
                 const selected = method === option.mode;
@@ -181,7 +209,13 @@ function ActionModal({
         ) : null}
         <TextInput
           onChangeText={(value) => { setNote(value); if (value.trim()) setMotifManquant(false); }}
-          placeholder={needsReason ? 'Motif obligatoire' : 'Note optionnelle'}
+          placeholder={needsReason ? t(
+            'clubLicenseMemberDetail.actionModal.reasonRequired',
+            'Motif obligatoire',
+          ) : t(
+            'clubLicenseMemberDetail.actionModal.noteOptional',
+            'Note optionnelle',
+          )}
           placeholderTextColor={Colors.neutral400}
           style={{
             borderBottomColor: motifManquant ? '#fda4af' : Colors.neutral200,
@@ -193,11 +227,22 @@ function ActionModal({
         />
         {motifManquant ? (
           <Text style={[Fonts.p3, { color: '#fda4af' }]}>
-            Explique en un mot ce qui ne va pas : le membre recevra ce motif.
+            {t(
+              'clubLicenseMemberDetail.actionModal.reasonMissing',
+              'Explique en un mot ce qui ne va pas : le membre recevra ce motif.',
+            )}
           </Text>
         ) : null}
         <View style={[Spaces.marginTop[8], { flexDirection: 'row', gap: licenseSpacing.actionGap }]}>
-          <Button onPress={onClose} style={{ flex: 1 }} title="Annuler" variant="Secondary" />
+          <Button
+            onPress={onClose}
+            style={{ flex: 1 }}
+            title={t(
+              'clubLicenseMemberDetail.buttons.cancel',
+              'Annuler',
+            )}
+            variant="Secondary"
+          />
           <Button
             onPress={() => {
               if (needsReason && !note.trim()) {
@@ -209,7 +254,7 @@ function ActionModal({
               });
             }}
             style={{ flex: 1 }}
-            title="Valider"
+            title={t('clubLicenseMemberDetail.actionModal.submit', 'Valider')}
           />
         </View>
       </View>
@@ -223,6 +268,7 @@ function ActionModal({
  * @param root0.route
  */
 function ClubLicenseMemberDetail({ route }) {
+  const { t } = useTranslation();
   const {
     Fonts, Spaces,
   } = useTheme();
@@ -281,15 +327,25 @@ function ClubLicenseMemberDetail({ route }) {
   // sortaient. Le geste s appuie sur une action neuve, `unwaive`.
   const unwaiveMutation = useLicenseMutation((payload) => unwaiveLicenseAssignment(assignmentId, payload), campaignId);
 
-  const memberName = [assignment?.user?.firstname, assignment?.user?.lastname].filter(Boolean).join(' ') || assignment?.user?.username || 'Membre';
+  const memberName = [assignment?.user?.firstname, assignment?.user?.lastname]
+    .filter(Boolean)
+    .join(' ')
+    || assignment?.user?.username
+    || t('clubLicenseMemberDetail.memberFallback', 'Membre');
   const modalType = modal?.type;
   const modalTitle = {
-    amount: 'Modifier le montant',
-    'document-review': modal?.reviewStatus === 'to_replace' ? 'Demander un nouveau document' : 'Revoir le document',
-    payment: 'Valider un paiement',
-    refund: 'Rembourser le paiement',
-    reject: 'Rejeter la déclaration',
-    waive: 'Exempter la cotisation',
+    amount: t('clubLicenseMemberDetail.actions.changeAmount', 'Modifier le montant'),
+    'document-review': modal?.reviewStatus === 'to_replace' ? t(
+      'clubLicenseMemberDetail.modalTitles.requestNewDocument',
+      'Demander un nouveau document',
+    ) : t(
+      'clubLicenseMemberDetail.modalTitles.reviewDocument',
+      'Revoir le document',
+    ),
+    payment: t('clubLicenseMemberDetail.modalTitles.recordPayment', 'Valider un paiement'),
+    refund: t('clubLicenseMemberDetail.modalTitles.refund', 'Rembourser le paiement'),
+    reject: t('clubLicenseMemberDetail.modalTitles.reject', 'Rejeter la déclaration'),
+    waive: t('clubLicenseMemberDetail.actions.waive', 'Exempter la cotisation'),
   }[modalType];
   const pendingReviewPayments = (assignment?.payments || []).filter((payment) => payment.status === 'manual_review');
   const paymentHistory = (assignment?.payments || []).slice(0, 6);
@@ -340,16 +396,37 @@ function ClubLicenseMemberDetail({ route }) {
         ...common,
         // AA07 / K2 — la cause NOMMEE plutot que l alerte generique.
         onError: (error) => Alert.alert(
-          'Demande non envoyée',
-          error?.message || 'Le serveur a refusé cette demande de remplacement.',
+          t('clubLicenseMemberDetail.alerts.replaceRequest.title', 'Demande non envoyée'),
+          error?.message || t(
+            'clubLicenseMemberDetail.alerts.replaceRequest.fallback',
+            'Le serveur a refusé cette demande de remplacement.',
+          ),
         ),
       });
     }
-  }, [amountMutation, canUseSensitiveActions, canValidatePayment, manualPaymentMutation, modal, modalType, query, rejectPaymentMutation, refundMutation, reviewDocumentMutation, waiveMutation]);
+  }, [
+    amountMutation,
+    canUseSensitiveActions,
+    canValidatePayment,
+    manualPaymentMutation,
+    modal,
+    modalType,
+    query,
+    rejectPaymentMutation,
+    refundMutation,
+    reviewDocumentMutation,
+    waiveMutation,
+    t,
+  ]);
 
   const remind = useCallback(() => {
-    reminderMutation.mutate({}, { onSuccess: () => Alert.alert('Relance envoyée') });
-  }, [reminderMutation]);
+    reminderMutation.mutate({}, {
+      onSuccess: () => Alert.alert(t(
+        'clubLicenseMemberDetail.alerts.reminderSent',
+        'Relance envoyée',
+      )),
+    });
+  }, [reminderMutation, t]);
 
   // T03 — REMETTRE LA COTISATION A PAYER.
   //
@@ -363,28 +440,55 @@ function ClubLicenseMemberDetail({ route }) {
   const setBackToDue = useCallback(() => {
     if (!canUseSensitiveActions) return;
     Alert.alert(
-      'Remettre cette cotisation à payer ?',
-      `${memberName} devra régler ${formatLicenseMoney(assignment?.amountDueCents, currency)}. `
-      + 'L exemption est annulée, les relances redeviennent possibles, '
-      + 'et la personne en est prévenue.',
+      t('clubLicenseMemberDetail.alerts.setBackToDue.title', 'Remettre cette cotisation à payer ?'),
+      t(
+        'clubLicenseMemberDetail.alerts.setBackToDue.messageAmount',
+        '{{memberName}} devra régler {{amount}}. ',
+        {
+          amount: formatLicenseMoney(assignment?.amountDueCents, currency),
+          memberName,
+          ...SANS_ECHAPPEMENT,
+        },
+      )
+      + t(
+        'clubLicenseMemberDetail.alerts.setBackToDue.messageExemption',
+        'L exemption est annulée, les relances redeviennent possibles, ',
+      )
+      + t(
+        'clubLicenseMemberDetail.alerts.setBackToDue.messageNotice',
+        'et la personne en est prévenue.',
+      ),
       [
-        { style: 'cancel', text: 'Annuler' },
+        { style: 'cancel', text: t('clubLicenseMemberDetail.buttons.cancel', 'Annuler') },
         {
           onPress: () => unwaiveMutation.mutate({}, {
             onError: (error) => Alert.alert(
-              'Remise à payer impossible',
-              error?.message || 'Le serveur a refusé ce changement.',
+              t(
+                'clubLicenseMemberDetail.alerts.setBackToDue.errorTitle',
+                'Remise à payer impossible',
+              ),
+              error?.message || t(
+                'clubLicenseMemberDetail.alerts.setBackToDue.errorFallback',
+                'Le serveur a refusé ce changement.',
+              ),
             ),
             onSuccess: () => {
               query.refetch();
               Alert.alert(
-                'Cotisation à payer',
-                `${memberName} n est plus exempté·e : le reste à payer est rétabli `
-                + 'et tu peux de nouveau relancer.',
+                t('clubLicenseMemberDetail.alerts.setBackToDue.successTitle', 'Cotisation à payer'),
+                t(
+                  'clubLicenseMemberDetail.alerts.setBackToDue.successMessageStart',
+                  '{{memberName}} n est plus exempté·e : le reste à payer est rétabli ',
+                  { memberName, ...SANS_ECHAPPEMENT },
+                )
+                + t(
+                  'clubLicenseMemberDetail.alerts.setBackToDue.successMessageEnd',
+                  'et tu peux de nouveau relancer.',
+                ),
               );
             },
           }),
-          text: 'À payer',
+          text: t('clubLicenseMemberDetail.actions.markDue', 'À payer'),
         },
       ],
     );
@@ -395,52 +499,74 @@ function ClubLicenseMemberDetail({ route }) {
     memberName,
     query,
     unwaiveMutation,
+    t,
   ]);
 
   const approvePayment = useCallback((paymentId) => {
     if (!canUseSensitiveActions) return;
-    Alert.alert('Valider le paiement déclare', 'Confirmer que le club a bien reçu ce paiement ?', [
-      { style: 'cancel', text: 'Annuler' },
+    Alert.alert(t(
+      'clubLicenseMemberDetail.alerts.approvePayment.title',
+      'Valider le paiement déclare',
+    ), t(
+      'clubLicenseMemberDetail.alerts.approvePayment.message',
+      'Confirmer que le club a bien reçu ce paiement ?',
+    ), [
+      { style: 'cancel', text: t('clubLicenseMemberDetail.buttons.cancel', 'Annuler') },
       {
         onPress: () => approvePaymentMutation.mutate({ paymentId }, {
           onSuccess: () => query.refetch(),
         }),
-        text: 'Valider',
+        text: t('clubLicenseMemberDetail.buttons.approve', 'Valider'),
       },
     ]);
-  }, [approvePaymentMutation, canUseSensitiveActions, query]);
+  }, [approvePaymentMutation, canUseSensitiveActions, query, t]);
 
   const approveDocument = useCallback((submissionId) => {
     if (!canUseSensitiveActions) return;
-    Alert.alert('Accepter ce document', 'Confirmer que ce document est conforme ?', [
-      { style: 'cancel', text: 'Annuler' },
+    Alert.alert(t('clubLicenseMemberDetail.documents.accept', 'Accepter ce document'), t(
+      'clubLicenseMemberDetail.alerts.approveDocument.message',
+      'Confirmer que ce document est conforme ?',
+    ), [
+      { style: 'cancel', text: t('clubLicenseMemberDetail.buttons.cancel', 'Annuler') },
       {
         onPress: () => reviewDocumentMutation.mutate({ status: 'validated', submissionId }, {
           // AA07 / K2 — un refus DIT sa cause. Sans ce `onError`, l alerte
           // generique de `App.js` affichait « une erreur » et le dirigeant ne
           // pouvait rien en faire — c est ce qu Adel a decrit.
           onError: (error) => Alert.alert(
-            'Document non accepté',
-            error?.message || 'Le serveur a refusé cette acceptation. Réessaie dans un instant.',
+            t('clubLicenseMemberDetail.alerts.approveDocument.errorTitle', 'Document non accepté'),
+            error?.message || t(
+              'clubLicenseMemberDetail.alerts.approveDocument.errorFallback',
+              'Le serveur a refusé cette acceptation. Réessaie dans un instant.',
+            ),
           ),
           onSuccess: () => {
             query.refetch();
-            Alert.alert('Document accepté', 'Le membre est prévenu que sa pièce est conforme.');
+            Alert.alert(t(
+              'clubLicenseMemberDetail.alerts.approveDocument.successTitle',
+              'Document accepté',
+            ), t(
+              'clubLicenseMemberDetail.alerts.approveDocument.successMessage',
+              'Le membre est prévenu que sa pièce est conforme.',
+            ));
           },
         }),
-        text: 'Accepter',
+        text: t('clubLicenseMemberDetail.alerts.approveDocument.confirm', 'Accepter'),
       },
     ]);
-  }, [canUseSensitiveActions, query, reviewDocumentMutation]);
+  }, [canUseSensitiveActions, query, reviewDocumentMutation, t]);
 
   const generateReceiptForPayment = useCallback((paymentId) => {
     receiptMutation.mutate(paymentId, {
       onSuccess: () => {
         query.refetch();
-        Alert.alert('Reçu génère', 'Le reçu est maintenant rattache à ce paiement.');
+        Alert.alert(t('clubLicenseMemberDetail.alerts.receipt.title', 'Reçu génère'), t(
+          'clubLicenseMemberDetail.alerts.receipt.message',
+          'Le reçu est maintenant rattache à ce paiement.',
+        ));
       },
     });
-  }, [query, receiptMutation]);
+  }, [query, receiptMutation, t]);
 
   // AA07 / K2 — LE MEME DEFAUT QUE SUR `MyLicense`, ET C EST L ECRAN QU ADEL
   // DECRIT (« voir / valider / remplacer », avec « ouvrir » qui marche).
@@ -458,29 +584,47 @@ function ClubLicenseMemberDetail({ route }) {
   const openUploadedDocument = useCallback(async (/** @type {any} */ source) => {
     const url = fileUrlOf(source);
     if (!url) {
-      Alert.alert('Document indisponible', 'Aucun fichier exploitable n est rattaché à ce dépôt.');
+      Alert.alert(t(
+        'clubLicenseMemberDetail.alerts.document.unavailableTitle',
+        'Document indisponible',
+      ), t(
+        'clubLicenseMemberDetail.alerts.document.unavailableMessage',
+        'Aucun fichier exploitable n est rattaché à ce dépôt.',
+      ));
       return;
     }
     await LinksPlatform.openUrl(url);
-  }, [fileUrlOf]);
+  }, [fileUrlOf, t]);
 
   // AA07 / K2 — « on doit pouvoir telecharger le document » (Adel, 20/08).
   // Le club aussi : c est lui qui archive les certificats medicaux.
   const downloadDocument = useCallback(async (/** @type {any} */ source, /** @type {any} */ fileName) => {
     const url = fileUrlOf(source);
     if (!url) {
-      Alert.alert('Document indisponible', 'Aucun fichier exploitable n est rattaché à ce dépôt.');
+      Alert.alert(t(
+        'clubLicenseMemberDetail.alerts.document.unavailableTitle',
+        'Document indisponible',
+      ), t(
+        'clubLicenseMemberDetail.alerts.document.unavailableMessage',
+        'Aucun fichier exploitable n est rattaché à ce dépôt.',
+      ));
       return;
     }
     try {
       await downloadRemoteFile({ fileName, url });
     } catch (error) {
       Alert.alert(
-        'Téléchargement impossible',
-        error?.message || 'Le document n a pas pu être enregistré sur ton téléphone.',
+        t(
+          'clubLicenseMemberDetail.alerts.document.downloadFailedTitle',
+          'Téléchargement impossible',
+        ),
+        error?.message || t(
+          'clubLicenseMemberDetail.alerts.document.downloadFailedFallback',
+          'Le document n a pas pu être enregistré sur ton téléphone.',
+        ),
       );
     }
-  }, [fileUrlOf]);
+  }, [fileUrlOf, t]);
 
   const submitOfficialLicenseFile = useCallback(async (picked) => {
     if (!canUseSensitiveActions || !assignmentId) return;
@@ -489,16 +633,25 @@ function ClubLicenseMemberDetail({ route }) {
     officialLicenseMutation.mutate({ file }, {
       onSuccess: () => {
         query.refetch();
-        Alert.alert('Licence ajoutée', 'La licence officielle est maintenant disponible pour les personnes autorisées.');
+        Alert.alert(t(
+          'clubLicenseMemberDetail.alerts.officialLicense.addedTitle',
+          'Licence ajoutée',
+        ), t(
+          'clubLicenseMemberDetail.alerts.officialLicense.addedMessage',
+          'La licence officielle est maintenant disponible pour les personnes autorisées.',
+        ));
       },
     });
-  }, [assignmentId, canUseSensitiveActions, officialLicenseMutation, query]);
+  }, [assignmentId, canUseSensitiveActions, officialLicenseMutation, query, t]);
 
   const uploadOfficialLicense = useCallback(() => {
     if (!canUseSensitiveActions) return;
     Alert.alert(
-      'Ajouter la licence',
-      'Choisis une source pour importer la licence officielle.',
+      t('clubLicenseMemberDetail.officialLicense.add', 'Ajouter la licence'),
+      t(
+        'clubLicenseMemberDetail.alerts.officialLicense.pickMessage',
+        'Choisis une source pour importer la licence officielle.',
+      ),
       [
         {
           onPress: async () => {
@@ -506,11 +659,17 @@ function ClubLicenseMemberDetail({ route }) {
               await submitOfficialLicenseFile(await MediaPlatform.capturePhoto({}));
             } catch (error) {
               if (!isPickerCancelError(error)) {
-                Alert.alert('Upload impossible', error?.message || 'La photo n a pas pu être prise.');
+                Alert.alert(t(
+                  'clubLicenseMemberDetail.alerts.officialLicense.uploadFailedTitle',
+                  'Upload impossible',
+                ), error?.message || t(
+                  'clubLicenseMemberDetail.alerts.officialLicense.takePhotoFailed',
+                  'La photo n a pas pu être prise.',
+                ));
               }
             }
           },
-          text: 'Prendre une photo',
+          text: t('clubLicenseMemberDetail.alerts.officialLicense.takePhoto', 'Prendre une photo'),
         },
         {
           onPress: async () => {
@@ -518,11 +677,20 @@ function ClubLicenseMemberDetail({ route }) {
               await submitOfficialLicenseFile(await MediaPlatform.pickImage({}));
             } catch (error) {
               if (!isPickerCancelError(error)) {
-                Alert.alert('Upload impossible', error?.message || 'La photo n a pas pu être choisie.');
+                Alert.alert(t(
+                  'clubLicenseMemberDetail.alerts.officialLicense.uploadFailedTitle',
+                  'Upload impossible',
+                ), error?.message || t(
+                  'clubLicenseMemberDetail.alerts.officialLicense.chooseImageFailed',
+                  'La photo n a pas pu être choisie.',
+                ));
               }
             }
           },
-          text: 'Choisir une image',
+          text: t(
+            'clubLicenseMemberDetail.alerts.officialLicense.chooseImage',
+            'Choisir une image',
+          ),
         },
         {
           onPress: async () => {
@@ -530,16 +698,25 @@ function ClubLicenseMemberDetail({ route }) {
               await submitOfficialLicenseFile(await MediaPlatform.pickDocument(getDocumentPickerOptions()));
             } catch (error) {
               if (!isPickerCancelError(error)) {
-                Alert.alert('Upload impossible', error?.message || 'Le fichier n a pas pu être choisi.');
+                Alert.alert(t(
+                  'clubLicenseMemberDetail.alerts.officialLicense.uploadFailedTitle',
+                  'Upload impossible',
+                ), error?.message || t(
+                  'clubLicenseMemberDetail.alerts.officialLicense.importFileFailed',
+                  'Le fichier n a pas pu être choisi.',
+                ));
               }
             }
           },
-          text: 'Importer un fichier',
+          text: t(
+            'clubLicenseMemberDetail.alerts.officialLicense.importFile',
+            'Importer un fichier',
+          ),
         },
-        { style: 'cancel', text: 'Annuler' },
+        { style: 'cancel', text: t('clubLicenseMemberDetail.buttons.cancel', 'Annuler') },
       ],
     );
-  }, [canUseSensitiveActions, submitOfficialLicenseFile]);
+  }, [canUseSensitiveActions, submitOfficialLicenseFile, t]);
 
   const retryData = useCallback(() => {
     query.refetch();
@@ -550,8 +727,11 @@ function ClubLicenseMemberDetail({ route }) {
     return (
       <ScreenContainer bottomInsetMode="none" withHeaderPadding>
         <LicenseEmptyState
-          description="On récupère la cotisation et les droits associes."
-          title="Chargement de la fiche"
+          description={t(
+            'clubLicenseMemberDetail.loading.description',
+            'On récupère la cotisation et les droits associes.',
+          )}
+          title={t('clubLicenseMemberDetail.loading.title', 'Chargement de la fiche')}
         />
       </ScreenContainer>
     );
@@ -561,9 +741,21 @@ function ClubLicenseMemberDetail({ route }) {
     return (
       <ScreenContainer bottomInsetMode="none" withHeaderPadding>
         <LicenseEmptyState
-          action={<Button onPress={retryData} title="Réessayer" variant="Secondary" />}
-          description="Impossible de charger cette fiche cotisation pour le moment."
-          title="Fiche indisponible"
+          action={(
+            <Button
+              onPress={retryData}
+              title={t(
+                'clubLicenseMemberDetail.error.retry',
+                'Réessayer',
+              )}
+              variant="Secondary"
+            />
+)}
+          description={t(
+            'clubLicenseMemberDetail.error.description',
+            'Impossible de charger cette fiche cotisation pour le moment.',
+          )}
+          title={t('clubLicenseMemberDetail.error.title', 'Fiche indisponible')}
         />
       </ScreenContainer>
     );
@@ -573,8 +765,11 @@ function ClubLicenseMemberDetail({ route }) {
     return (
       <ScreenContainer bottomInsetMode="none" withHeaderPadding>
         <LicenseEmptyState
-          description="Cette cotisation est introuvable ou n est plus accessible."
-          title="Cotisation introuvable"
+          description={t(
+            'clubLicenseMemberDetail.notFound.description',
+            'Cette cotisation est introuvable ou n est plus accessible.',
+          )}
+          title={t('clubLicenseMemberDetail.notFound.title', 'Cotisation introuvable')}
         />
       </ScreenContainer>
     );
@@ -586,48 +781,119 @@ function ClubLicenseMemberDetail({ route }) {
         <View>
           <Text style={[Fonts.h2, Fonts.neutral00]}>{memberName}</Text>
           <View style={[Spaces.marginTop[8], Spaces.gap[licenseSpacing.titleGap]]}>
-            <Text style={[Fonts.p2, Fonts.neutral200]}>{assignment?.team?.name || 'Sans équipe'}</Text>
+            <Text style={[Fonts.p2, Fonts.neutral200]}>
+              {assignment?.team?.name || t(
+                'clubLicenseMemberDetail.header.noTeam',
+                'Sans équipe',
+              )}
+            </Text>
             <LicenseStatusChip status={assignment?.status} />
           </View>
         </View>
         <LicenseCard>
           <LicenseMetricRow
             items={[
-              { label: 'Total', value: formatLicenseMoney(assignment?.amountDueCents, currency) },
-              { label: 'Paye', value: formatLicenseMoney(assignment?.amountPaidCents, currency) },
-              { label: 'Reste', value: formatLicenseMoney(assignment?.amountRemainingCents, currency) },
+              {
+                label: t(
+                  'clubLicenseMemberDetail.metrics.total',
+                  'Total',
+                ),
+                value: formatLicenseMoney(assignment?.amountDueCents, currency),
+              },
+              {
+                label: t(
+                  'clubLicenseMemberDetail.metrics.paid',
+                  'Paye',
+                ),
+                value: formatLicenseMoney(assignment?.amountPaidCents, currency),
+              },
+              {
+                label: t(
+                  'clubLicenseMemberDetail.metrics.remaining',
+                  'Reste',
+                ),
+                value: formatLicenseMoney(assignment?.amountRemainingCents, currency),
+              },
             ]}
           />
         </LicenseCard>
         {!canUseSensitiveActions ? (
           <LicenseEmptyState
-            description="Les validations de paiement, exemptions et modifications de montant sont réservées aux dirigeants."
-            title="Vue entraîneur"
+            description={t(
+              'clubLicenseMemberDetail.coachView.description',
+              'Les validations de paiement, exemptions et modifications de montant sont '
+                + 'réservées aux dirigeants.',
+            )}
+            title={t('clubLicenseMemberDetail.coachView.title', 'Vue entraîneur')}
           />
         ) : null}
         {pendingReviewPayments.length ? (
           <>
             <LicenseSectionHeader
               description={canUseSensitiveActions
-                ? 'Ces déclarations viennent du joueur ou d un payeur externe et doivent être controlees.'
-                : 'Déclarations en attente de validation par un dirigeant.'}
-              title={canUseSensitiveActions ? 'Paiements à valider' : 'Paiements declares'}
+                ? t(
+                  'clubLicenseMemberDetail.pendingPayments.descriptionManager',
+                  'Ces déclarations viennent du joueur ou d un payeur externe et doivent '
+                    + 'être controlees.',
+                )
+                : t(
+                  'clubLicenseMemberDetail.pendingPayments.descriptionCoach',
+                  'Déclarations en attente de validation par un dirigeant.',
+                )}
+              title={canUseSensitiveActions ? t(
+                'clubLicenseMemberDetail.pendingPayments.titleManager',
+                'Paiements à valider',
+              ) : t(
+                'clubLicenseMemberDetail.pendingPayments.titleCoach',
+                'Paiements declares',
+              )}
             />
             {pendingReviewPayments.map((payment) => (
               <LicenseCard key={payment.documentId || payment.id}>
                 <View style={Spaces.gap[licenseSpacing.actionGap]}>
-                  <InfoRow label="Montant déclare" value={formatLicenseMoney(payment.amountCents, payment.currency || currency)} />
+                  <InfoRow
+                    label={t(
+                      'clubLicenseMemberDetail.pendingPayments.declaredAmount',
+                      'Montant déclare',
+                    )}
+                    value={formatLicenseMoney(payment.amountCents, payment.currency || currency)}
+                  />
                   <Text style={[Fonts.p3, Fonts.neutral200]}>
-                    {paymentModeLabels[payment.method] || payment.method || 'Méthode non précisée'}
+                    {paymentModeLabels[payment.method] || payment.method || t(
+                      'clubLicenseMemberDetail.pendingPayments.noMethod',
+                      'Méthode non précisée',
+                    )}
                     {' '}
                     -
                     {' '}
-                    {payment.note || payment.externalPaymentId || 'Aucune référence fournie.'}
+                    {payment.note || payment.externalPaymentId || t(
+                      'clubLicenseMemberDetail.pendingPayments.noReference',
+                      'Aucune référence fournie.',
+                    )}
                   </Text>
                   {canUseSensitiveActions ? (
                     <View style={{ flexDirection: 'row', gap: licenseSpacing.actionGap }}>
-                      <Button isLoading={approvePaymentMutation.isPending} onPress={() => approvePayment(payment.documentId || payment.id)} style={{ flex: 1 }} title="Valider" />
-                      <Button onPress={() => setModal({ paymentId: payment.documentId || payment.id, type: 'reject' })} style={{ flex: 1 }} title="Rejeter" variant="Secondary" />
+                      <Button
+                        isLoading={approvePaymentMutation.isPending}
+                        onPress={() => approvePayment(payment.documentId || payment.id)}
+                        style={{ flex: 1 }}
+                        title={t(
+                          'clubLicenseMemberDetail.buttons.approve',
+                          'Valider',
+                        )}
+                      />
+                      <Button
+                        onPress={() => setModal({
+                          paymentId: payment.documentId || payment.id,
+                          type: 'reject',
+                        })}
+                        style={{ flex: 1 }}
+                        title={t(
+                          'clubLicenseMemberDetail.buttons.reject',
+                          'Rejeter',
+                        )}
+                        variant="Secondary"
+                      />
                     </View>
                   ) : null}
                 </View>
@@ -635,23 +901,42 @@ function ClubLicenseMemberDetail({ route }) {
             ))}
           </>
         ) : null}
-        <LicenseSectionHeader title="Echeancier" />
+        <LicenseSectionHeader title={t('clubLicenseMemberDetail.schedule.title', 'Echeancier')} />
         <LicenseInstallmentList currency={currency} installments={assignment?.installments || []} />
         <LicenseSectionHeader
           description={canUseSensitiveActions
-            ? 'Ajoute ou remplace la licence officielle de cet adherent.'
-            : 'Consulte la licence officielle de cet adherent si elle est disponible.'}
-          title="Licence officielle"
+            ? t(
+              'clubLicenseMemberDetail.officialLicense.descriptionManager',
+              'Ajoute ou remplace la licence officielle de cet adherent.',
+            )
+            : t(
+              'clubLicenseMemberDetail.officialLicense.descriptionCoach',
+              'Consulte la licence officielle de cet adherent si elle est disponible.',
+            )}
+          title={t('clubLicenseMemberDetail.officialLicense.title', 'Licence officielle')}
         />
         <LicenseCard variant="muted">
           <View style={Spaces.gap[licenseSpacing.actionGap]}>
             <Text style={[Fonts.p1Bold, Fonts.neutral00]}>
-              {officialLicenseDocument?.request?.name || 'Licence officielle'}
+              {officialLicenseDocument?.request?.name || t(
+                'clubLicenseMemberDetail.officialLicense.title',
+                'Licence officielle',
+              )}
             </Text>
             <Text style={[Fonts.p3, Fonts.neutral200]}>
               {officialLicenseDocument?.uploadedAt
-                ? `Dernière mise à jour ${documentDate(officialLicenseDocument.submission || {}) || '-'}`
-                : 'Aucune licence officielle n est encore disponible.'}
+                ? t(
+                  'clubLicenseMemberDetail.lastUpdated',
+                  'Dernière mise à jour {{date}}',
+                  {
+                    date: documentDate(officialLicenseDocument.submission || {}) || '-',
+                    ...SANS_ECHAPPEMENT,
+                  },
+                )
+                : t(
+                  'clubLicenseMemberDetail.officialLicense.none',
+                  'Aucune licence officielle n est encore disponible.',
+                )}
             </Text>
             {officialLicenseDocument?.submission?.status ? (
               <LicenseStatusChip status={officialLicenseDocument.submission.status} />
@@ -660,12 +945,15 @@ function ClubLicenseMemberDetail({ route }) {
               <>
                 <Button
                   onPress={() => openUploadedDocument(officialLicenseDocument)}
-                  title="Ouvrir la licence"
+                  title={t('clubLicenseMemberDetail.officialLicense.open', 'Ouvrir la licence')}
                   variant="Secondary"
                 />
                 <Button
                   onPress={() => downloadDocument(officialLicenseDocument, 'licence-officielle')}
-                  title="Télécharger la licence"
+                  title={t(
+                    'clubLicenseMemberDetail.officialLicense.download',
+                    'Télécharger la licence',
+                  )}
                   variant="Secondary"
                 />
               </>
@@ -674,16 +962,28 @@ function ClubLicenseMemberDetail({ route }) {
               <Button
                 isLoading={officialLicenseMutation.isPending}
                 onPress={uploadOfficialLicense}
-                title={officialLicenseDocument?.file?.url ? 'Remplacer la licence' : 'Ajouter la licence'}
+                title={officialLicenseDocument?.file?.url ? t(
+                  'clubLicenseMemberDetail.officialLicense.replace',
+                  'Remplacer la licence',
+                ) : t(
+                  'clubLicenseMemberDetail.officialLicense.add',
+                  'Ajouter la licence',
+                )}
               />
             ) : null}
           </View>
         </LicenseCard>
         <LicenseSectionHeader
           description={canUseSensitiveActions
-            ? 'Valide ou redemande les pièces fournies par le membre.'
-            : 'Statut des pièces rattachées à cette cotisation.'}
-          title="Documents"
+            ? t(
+              'clubLicenseMemberDetail.documents.descriptionManager',
+              'Valide ou redemande les pièces fournies par le membre.',
+            )
+            : t(
+              'clubLicenseMemberDetail.documents.descriptionCoach',
+              'Statut des pièces rattachées à cette cotisation.',
+            )}
+          title={t('clubLicenseMemberDetail.documents.title', 'Documents')}
         />
         {documentRequests.length ? (
           <View style={Spaces.gap[licenseSpacing.listGap]}>
@@ -702,10 +1002,28 @@ function ClubLicenseMemberDetail({ route }) {
                     }}
                     >
                       <View style={[Spaces.gap[4], { flex: 1 }]}>
-                        <Text style={[Fonts.p1Bold, Fonts.neutral00]}>{request?.name || 'Document'}</Text>
+                        <Text style={[Fonts.p1Bold, Fonts.neutral00]}>
+                          {request?.name || t(
+                            'clubLicenseMemberDetail.documents.fallbackName',
+                            'Document',
+                          )}
+                        </Text>
                         <Text style={[Fonts.p3, Fonts.neutral200]}>
-                          {request?.dueDate ? `A remettre avant ${request.dueDate}` : 'Pas de date limite définie'}
-                          {request?.required === false ? ' - Facultatif' : ' - Obligatoire'}
+                          {request?.dueDate ? t(
+                            'clubLicenseMemberDetail.documents.dueBefore',
+                            'A remettre avant {{dueDate}}',
+                            { dueDate: request.dueDate, ...SANS_ECHAPPEMENT },
+                          ) : t(
+                            'clubLicenseMemberDetail.documents.noDeadline',
+                            'Pas de date limite définie',
+                          )}
+                          {request?.required === false ? t(
+                            'clubLicenseMemberDetail.documents.optionalSuffix',
+                            ' - Facultatif',
+                          ) : t(
+                            'clubLicenseMemberDetail.documents.requiredSuffix',
+                            ' - Obligatoire',
+                          )}
                         </Text>
                       </View>
                       <LicenseStatusChip status={submissionStatus} />
@@ -715,7 +1033,14 @@ function ClubLicenseMemberDetail({ route }) {
                       <Text style={[Fonts.p3, { color: '#fda4af' }]}>{submission.refusalReason}</Text>
                     ) : null}
                     <Text style={[Fonts.p3, Fonts.neutral200]}>
-                      {submission ? `Dernière mise à jour ${documentDate(submission) || '-'}` : 'Aucun document déposé'}
+                      {submission ? t(
+                        'clubLicenseMemberDetail.lastUpdated',
+                        'Dernière mise à jour {{date}}',
+                        { date: documentDate(submission) || '-', ...SANS_ECHAPPEMENT },
+                      ) : t(
+                        'clubLicenseMemberDetail.documents.noneSubmitted',
+                        'Aucun document déposé',
+                      )}
                     </Text>
                     {/*
                       AA07 / K2 — CHAQUE BOUTON DIT CE QU IL FAIT.
@@ -730,13 +1055,13 @@ function ClubLicenseMemberDetail({ route }) {
                         <Button
                           onPress={() => openUploadedDocument(submission)}
                           style={{ flex: 1 }}
-                          title="Ouvrir le document"
+                          title={t('clubLicenseMemberDetail.documents.open', 'Ouvrir le document')}
                           variant="Secondary"
                         />
                         <Button
                           onPress={() => downloadDocument(submission, request?.name)}
                           style={{ flex: 1 }}
-                          title="Télécharger"
+                          title={t('clubLicenseMemberDetail.documents.download', 'Télécharger')}
                           variant="Secondary"
                         />
                       </View>
@@ -746,7 +1071,10 @@ function ClubLicenseMemberDetail({ route }) {
                         <Button
                           onPress={() => approveDocument(submission.documentId || submission.id)}
                           style={{ flex: 1 }}
-                          title="Accepter ce document"
+                          title={t(
+                            'clubLicenseMemberDetail.documents.accept',
+                            'Accepter ce document',
+                          )}
                         />
                         <Button
                           onPress={() => setModal({
@@ -755,7 +1083,10 @@ function ClubLicenseMemberDetail({ route }) {
                             type: 'document-review',
                           })}
                           style={{ flex: 1 }}
-                          title="Demander un remplacement"
+                          title={t(
+                            'clubLicenseMemberDetail.documents.requestReplacement',
+                            'Demander un remplacement',
+                          )}
                           variant="Secondary"
                         />
                       </View>
@@ -767,11 +1098,14 @@ function ClubLicenseMemberDetail({ route }) {
           </View>
         ) : (
           <LicenseEmptyState
-            description="Aucune pièce n est demandée pour cette campagne."
-            title="Pas de documents"
+            description={t(
+              'clubLicenseMemberDetail.documents.emptyDescription',
+              'Aucune pièce n est demandée pour cette campagne.',
+            )}
+            title={t('clubLicenseMemberDetail.documents.emptyTitle', 'Pas de documents')}
           />
         )}
-        <LicenseSectionHeader title="Historique" />
+        <LicenseSectionHeader title={t('clubLicenseMemberDetail.history.title', 'Historique')} />
         {paymentHistory.length ? (
           <View style={Spaces.gap[licenseSpacing.listGap]}>
             {paymentHistory.map((payment) => (
@@ -779,27 +1113,58 @@ function ClubLicenseMemberDetail({ route }) {
                 <View style={Spaces.gap[licenseSpacing.actionGap]}>
                   <LicenseMetricRow
                     items={[
-                      { label: paymentStatusLabels[payment.status] || payment.status || 'Paiement', value: formatLicenseMoney(payment.amountCents, payment.currency || currency) },
-                      { label: 'Methode', value: paymentModeLabels[payment.method] || payment.method || '-' },
-                      { label: 'Date', value: paymentDate(payment) || '-' },
+                      {
+                        label: paymentStatusLabels[payment.status] || payment.status || t(
+                          'clubLicenseMemberDetail.history.paymentFallback',
+                          'Paiement',
+                        ),
+                        value: formatLicenseMoney(
+                          payment.amountCents,
+                          payment.currency || currency,
+                        ),
+                      },
+                      {
+                        label: t(
+                          'clubLicenseMemberDetail.history.method',
+                          'Methode',
+                        ),
+                        value: paymentModeLabels[payment.method] || payment.method || '-',
+                      },
+                      {
+                        label: t(
+                          'clubLicenseMemberDetail.history.date',
+                          'Date',
+                        ),
+                        value: paymentDate(payment) || '-',
+                      },
                     ]}
                   />
                   {payment?.receiptNumber ? (
                     <Text style={[Fonts.p3, Fonts.neutral200]}>
-                      Recu
-                      {' '}
-                      {payment.receiptNumber}
+                      {t(
+                        'clubLicenseMemberDetail.history.receiptNumber',
+                        'Recu {{receiptNumber}}',
+                        { receiptNumber: payment.receiptNumber, ...SANS_ECHAPPEMENT },
+                      )}
                     </Text>
                   ) : null}
                   {(payment?.refunds || []).map((refund) => (
                     <Text key={refund.documentId || refund.id} style={[Fonts.p3, Fonts.neutral200]}>
-                      Remboursement
-                      {' '}
-                      {formatLicenseMoney(refund.amountCents, refund.currency || payment.currency || currency)}
-                      {' '}
-                      -
-                      {' '}
-                      {paymentStatusLabels[refund.status] || refund.status || 'En attente'}
+                      {t(
+                        'clubLicenseMemberDetail.history.refundLine',
+                        'Remboursement {{amount}} - {{status}}',
+                        {
+                          amount: formatLicenseMoney(
+                            refund.amountCents,
+                            refund.currency || payment.currency || currency,
+                          ),
+                          status: paymentStatusLabels[refund.status] || refund.status || t(
+                            'clubLicenseMemberDetail.paymentStatus.pending',
+                            'En attente',
+                          ),
+                          ...SANS_ECHAPPEMENT,
+                        },
+                      )}
                     </Text>
                   ))}
                   {canUseSensitiveActions && ['confirmed', 'partially_refunded'].includes(payment?.status) ? (
@@ -809,7 +1174,10 @@ function ClubLicenseMemberDetail({ route }) {
                           isLoading={receiptMutation.isPending}
                           onPress={() => generateReceiptForPayment(payment.documentId || payment.id)}
                           style={{ flex: 1 }}
-                          title="Générer un reçu"
+                          title={t(
+                            'clubLicenseMemberDetail.history.generateReceipt',
+                            'Générer un reçu',
+                          )}
                           variant="Secondary"
                         />
                       ) : null}
@@ -817,7 +1185,7 @@ function ClubLicenseMemberDetail({ route }) {
                         <Button
                           onPress={() => setModal({ paymentId: payment.documentId || payment.id, type: 'refund' })}
                           style={{ flex: 1 }}
-                          title="Rembourser"
+                          title={t('clubLicenseMemberDetail.history.refund', 'Rembourser')}
                           variant="Secondary"
                         />
                       ) : null}
@@ -829,20 +1197,41 @@ function ClubLicenseMemberDetail({ route }) {
           </View>
         ) : (
           <LicenseEmptyState
-            description="Aucun paiement n est encore rattache à cette cotisation."
-            title="Aucun historique"
+            description={t(
+              'clubLicenseMemberDetail.history.emptyDescription',
+              'Aucun paiement n est encore rattache à cette cotisation.',
+            )}
+            title={t('clubLicenseMemberDetail.history.emptyTitle', 'Aucun historique')}
           />
         )}
-        <LicenseSectionHeader title="Recus" />
+        <LicenseSectionHeader title={t('clubLicenseMemberDetail.receipts.title', 'Recus')} />
         {receipts.length ? (
           <View style={Spaces.gap[licenseSpacing.listGap]}>
             {receipts.map((receipt) => (
               <LicenseCard key={receipt.documentId || receipt.id} variant="muted">
                 <LicenseMetricRow
                   items={[
-                    { label: 'Numero', value: receipt.receiptNumber || '-' },
-                    { label: 'Montant', value: formatLicenseMoney(receipt.amountCents, receipt.currency || currency) },
-                    { label: 'Emission', value: String(receipt.issuedAt || '').slice(0, 10) || '-' },
+                    {
+                      label: t(
+                        'clubLicenseMemberDetail.receipts.number',
+                        'Numero',
+                      ),
+                      value: receipt.receiptNumber || '-',
+                    },
+                    {
+                      label: t(
+                        'clubLicenseMemberDetail.receipts.amount',
+                        'Montant',
+                      ),
+                      value: formatLicenseMoney(receipt.amountCents, receipt.currency || currency),
+                    },
+                    {
+                      label: t(
+                        'clubLicenseMemberDetail.receipts.issued',
+                        'Emission',
+                      ),
+                      value: String(receipt.issuedAt || '').slice(0, 10) || '-',
+                    },
                   ]}
                 />
               </LicenseCard>
@@ -850,14 +1239,27 @@ function ClubLicenseMemberDetail({ route }) {
           </View>
         ) : (
           <LicenseEmptyState
-            description="Les reçus apparaîtront ici après validation des paiements."
-            title="Aucun reçu"
+            description={t(
+              'clubLicenseMemberDetail.receipts.emptyDescription',
+              'Les reçus apparaîtront ici après validation des paiements.',
+            )}
+            title={t('clubLicenseMemberDetail.receipts.emptyTitle', 'Aucun reçu')}
           />
         )}
         {canSendReminder || canValidatePayment || canUseSensitiveActions ? (
           <>
-            <LicenseSectionHeader title="Actions" />
-            {canSendReminder ? <Button isLoading={reminderMutation.isPending} onPress={remind} title="Relancer" variant="Secondary" /> : null}
+            <LicenseSectionHeader title={t('clubLicenseMemberDetail.actions.title', 'Actions')} />
+            {canSendReminder ? (
+              <Button
+                isLoading={reminderMutation.isPending}
+                onPress={remind}
+                title={t(
+                  'clubLicenseMemberDetail.actions.remind',
+                  'Relancer',
+                )}
+                variant="Secondary"
+              />
+            ) : null}
             {/*
               W02 — « A payé », le geste qu Adel a cherche deux fois. Il s appelait
               « Valider un paiement » et se tenait en bas de la pile ; il est
@@ -871,7 +1273,13 @@ function ClubLicenseMemberDetail({ route }) {
               laisserait « waived » de toute facon).
             */}
             {canValidatePayment && assignment?.status !== 'waived' ? (
-              <Button onPress={() => setModal({ type: 'payment' })} title="A payé" />
+              <Button
+                onPress={() => setModal({ type: 'payment' })}
+                title={t(
+                  'clubLicenseMemberDetail.actions.markPaid',
+                  'A payé',
+                )}
+              />
             ) : null}
             {/*
               T03 — le miroir d « Exempter la cotisation ».
@@ -883,14 +1291,28 @@ function ClubLicenseMemberDetail({ route }) {
               <Button
                 isLoading={unwaiveMutation.isPending}
                 onPress={setBackToDue}
-                title="À payer"
+                title={t('clubLicenseMemberDetail.actions.markDue', 'À payer')}
                 variant="Secondary"
               />
             ) : null}
             {canUseSensitiveActions ? (
               <>
-                <Button onPress={() => setModal({ type: 'amount' })} title="Modifier le montant" variant="Secondary" />
-                <Button onPress={() => setModal({ type: 'waive' })} title="Exempter la cotisation" variant="Secondary" />
+                <Button
+                  onPress={() => setModal({ type: 'amount' })}
+                  title={t(
+                    'clubLicenseMemberDetail.actions.changeAmount',
+                    'Modifier le montant',
+                  )}
+                  variant="Secondary"
+                />
+                <Button
+                  onPress={() => setModal({ type: 'waive' })}
+                  title={t(
+                    'clubLicenseMemberDetail.actions.waive',
+                    'Exempter la cotisation',
+                  )}
+                  variant="Secondary"
+                />
               </>
             ) : null}
           </>
