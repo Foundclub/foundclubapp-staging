@@ -46,7 +46,7 @@ const STATUS_CONFIG = {
   },
 };
 
-const getProposalMeta = ({ isMe, status, t }) => {
+const getProposalMeta = (/** @type {any} */ { isMe, status, t }) => {
   if (status === 'accepted') {
     return {
       badgeLabel: t('proposalMessageBubble.badge.accepted', 'Acceptee'),

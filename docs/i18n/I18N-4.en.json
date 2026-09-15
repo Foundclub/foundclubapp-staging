@@ -826,6 +826,8 @@
   "notificationList.delete.cancel": "Cancel",
   "notificationList.delete.confirm": "Delete this notification?",
   "notificationList.delete.title": "Delete",
+  "notificationList.empty.body": "New notifications will appear here.",
+  "notificationList.empty.title": "No notifications",
   "notificationList.errors.delete": "Unable to delete the notification.",
   "notificationList.errors.eventNotFound": "Unable to find the event linked to this notification.",
   "notificationList.errors.markAll": "Unable to mark all notifications as read.",

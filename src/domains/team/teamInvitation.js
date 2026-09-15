@@ -40,7 +40,7 @@ const SERVER_REFUSALS = {
 /**
  * Les phrases francaises, par cause. Le repli est ecrit ici plutot qu'a
  * l'ecran pour qu'un seul endroit porte les mots.
- * @type {Record<string, string>}
+ * @type {() => Record<string, string>}
  */
 // I18N-4 : une fonction, lue a chaque refus -- une table calculee au chargement du module
 // resterait dans la langue du demarrage.

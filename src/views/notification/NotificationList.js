@@ -29,8 +29,6 @@ import { resolveNotificationDestination } from '@/utils/notifications/notificati
 import {
   formatNotificationRelativeTime,
   getNotificationIcon,
-  NOTIFICATION_EMPTY_STATE_BODY,
-  NOTIFICATION_EMPTY_STATE_TITLE,
 } from '@/utils/notifications/notificationPresentation';
 import { normalizeNotificationType, NOTIFICATION_TYPES } from '@/utils/notifications/notificationTypes';
 
@@ -542,7 +540,7 @@ function NotificationList() {
             <View style={{ alignItems: 'center', marginTop: 60 }}>
               <Text style={{ fontSize: 48, marginBottom: 16 }}>{'\u{1F514}'}</Text>
               <Text style={[Fonts.h4Bold, { color: Colors.neutral00 }]}>
-                {NOTIFICATION_EMPTY_STATE_TITLE}
+                {t('notificationList.empty.title', 'Aucune notification')}
               </Text>
               <Text
                 style={[
@@ -555,7 +553,7 @@ function NotificationList() {
                   },
                 ]}
               >
-                {NOTIFICATION_EMPTY_STATE_BODY}
+                {t('notificationList.empty.body', 'Les nouvelles notifications apparaîtront ici.')}
               </Text>
             </View>
           ) : null
