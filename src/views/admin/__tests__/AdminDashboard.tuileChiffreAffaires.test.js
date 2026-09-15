@@ -2,6 +2,31 @@ import renderer, { act } from 'react-test-renderer';
 
 import AdminDashboard from '../AdminDashboard';
 
+// I18N-3 : l ecran lit ses textes par t() (composant) et i18next.t (fonctions de module).
+// Les doubles lisent le vrai fr.js, puis le repli, remplissent les {{jetons}} et
+// choisissent _one / _other comme la regle francaise d i18next (0 et 1 au singulier) :
+// le temoin affirme toujours le texte francais affiche (« 1 payant », « 3 essais »).
+jest.mock('i18next', () => {
+  const catalogue = jest.requireActual('@/theme/strings/translations/fr').default;
+  const t = (/** @type {string} */ cle, /** @type {any} */ repli, /** @type {any} */ options) => {
+    const opts = typeof repli === 'object' && repli !== null ? repli : (options || {});
+    let pluriel = '';
+    if (typeof opts.count === 'number') pluriel = opts.count <= 1 ? '_one' : '_other';
+    const valeur = `${cle}${pluriel}`.split('.').reduce(
+      (/** @type {any} */ noeud, segment) => (noeud == null ? undefined : noeud[segment]),
+      catalogue,
+    );
+    const defaut = typeof repli === 'string' ? repli : opts[`defaultValue${pluriel}`];
+    const gabarit = typeof valeur === 'string' ? valeur : String(defaut);
+    return gabarit.replace(/\{\{(\w+)\}\}/g, (_tout, nom) => String(opts[nom] ?? ''));
+  };
+  return { __esModule: true, default: { language: 'fr', t } };
+});
+jest.mock('react-i18next', () => {
+  const i18next = jest.requireMock('i18next').default;
+  return { useTranslation: () => ({ t: i18next.t }) };
+});
+
 /**
  * CA — LA TUILE « CHIFFRE D AFFAIRES » DE L ACCUEIL SUPERADMIN.
  *

@@ -356,8 +356,18 @@ function AdminDashboard() {
     : formatSubscriptionPriceLabel(revenueEurCents, 'monthly');
   const payingSubscriptionCount = Number(stats?.payingSubscriptionCount || 0);
   const trialSubscriptionCount = Number(stats?.trialSubscriptionCount || 0);
-  const revenueMeta = `${payingSubscriptionCount} payant${payingSubscriptionCount > 1 ? 's' : ''}`
-    + ` · ${trialSubscriptionCount} essai${trialSubscriptionCount > 1 ? 's' : ''}`;
+  const revenueMeta = [
+    t('adminDashboard.revenue.paying', {
+      count: payingSubscriptionCount,
+      defaultValue_one: '{{count}} payant',
+      defaultValue_other: '{{count}} payants',
+    }),
+    t('adminDashboard.revenue.trial', {
+      count: trialSubscriptionCount,
+      defaultValue_one: '{{count}} essai',
+      defaultValue_other: '{{count}} essais',
+    }),
+  ].join(' · ');
   const reportsCount = stats?.reportsCount || 0;
   const claimsCount = claimsData?.meta?.pagination?.total || 0;
   const clubOnboardingCount = clubOnboardingData?.meta?.pagination?.total || 0;
@@ -663,7 +673,11 @@ function AdminDashboard() {
             : '';
           Alert.alert(
             label,
-            `${scopeLabel}${migratedCount} club${migratedCount > 1 ? 's' : ''} analyse${migratedCount > 1 ? 's' : ''}.`,
+            `${scopeLabel}${t('adminDashboard.legacyMigration.analysed', {
+              count: migratedCount,
+              defaultValue_one: '{{count}} club analyse.',
+              defaultValue_other: '{{count}} clubs analyses.',
+            })}`,
           );
           closeLegacyMigrationModal();
         },
@@ -789,7 +803,11 @@ function AdminDashboard() {
                   const syncedCount = Number(response?.meta?.syncedSlotCount || 0);
                   Alert.alert(
                     t('adminDashboard.teamSync.doneTitle', 'Resync terminée'),
-                    `${syncedCount} slot${syncedCount > 1 ? 's' : ''} resynchronise${syncedCount > 1 ? 's' : ''}.`,
+                    t('adminDashboard.teamSync.doneMessage', {
+                      count: syncedCount,
+                      defaultValue_one: '{{count}} slot resynchronise.',
+                      defaultValue_other: '{{count}} slots resynchronises.',
+                    }),
                   );
                 },
               },
@@ -1172,18 +1190,20 @@ function AdminDashboard() {
         <View style={[Alignments.row, Alignments.wrap, Spaces.gap[8], Spaces.marginTop[12]]}>
           <View style={[styles.statusPill, { backgroundColor: `${Colors.primary500}14`, borderColor: `${Colors.primary500}33` }]}>
             <Text style={[Fonts.p4Bold, { color: Colors.primary500 }]}>
-              {eventsCreatedCount}
-              {' '}
-              event
-              {eventsCreatedCount > 1 ? 's' : ''}
+              {t('adminDashboard.governance.eventsCount', {
+                count: eventsCreatedCount,
+                defaultValue_one: '{{count}} event',
+                defaultValue_other: '{{count}} events',
+              })}
             </Text>
           </View>
           <View style={[styles.statusPill, { backgroundColor: `${Colors.primary200}14`, borderColor: `${Colors.primary200}33` }]}>
             <Text style={[Fonts.p4Bold, { color: Colors.primary200 }]}>
-              {recruitmentAdsCreatedCount}
-              {' '}
-              annonce
-              {recruitmentAdsCreatedCount > 1 ? 's' : ''}
+              {t('adminDashboard.governance.adsCount', {
+                count: recruitmentAdsCreatedCount,
+                defaultValue_one: '{{count}} annonce',
+                defaultValue_other: '{{count}} annonces',
+              })}
             </Text>
           </View>
           {item?.affiliation?.autoAffiliated ? (
@@ -1550,7 +1570,11 @@ function AdminDashboard() {
         </View>
         <View style={[styles.statusPill, { backgroundColor: `${Colors.primary500}14`, borderColor: `${Colors.primary500}33` }]}>
           <Text style={[Fonts.p4Bold, { color: Colors.primary500 }]}>
-            Legacy {Number(item?.maxTeamNumber || 0)} equipe{Number(item?.maxTeamNumber || 0) > 1 ? 's' : ''}
+            {t('adminDashboard.legacy.maxTeams', {
+              count: Number(item?.maxTeamNumber || 0),
+              defaultValue_one: 'Legacy {{count}} equipe',
+              defaultValue_other: 'Legacy {{count}} equipes',
+            })}
           </Text>
         </View>
       </View>
@@ -2046,12 +2070,11 @@ function AdminDashboard() {
                 {t('adminDashboard.governance.nonVerifiedCoaches', 'Coachs non certifiés')}
               </Text>
               <Text style={[Fonts.p3, Fonts.neutral300, Spaces.marginTop[6]]}>
-                {publishingGovernance?.nonPartnerCoaches || 0}
-                {' '}
-                coach
-                {(publishingGovernance?.nonPartnerCoaches || 0) > 1 ? 's' : ''}
-                {' '}
-                rattaches a un club non partenaire. Autorise individuellement ceux qui peuvent publier.
+                {t('adminDashboard.governance.coachesDescription', {
+                  count: publishingGovernance?.nonPartnerCoaches || 0,
+                  defaultValue_one: '{{count}} coach rattaches a un club non partenaire. Autorise individuellement ceux qui peuvent publier.',
+                  defaultValue_other: '{{count}} coachs rattaches a un club non partenaire. Autorise individuellement ceux qui peuvent publier.',
+                })}
               </Text>
             </View>
             <TouchableOpacity
@@ -2099,12 +2122,11 @@ function AdminDashboard() {
                 {t('adminDashboard.detectionQueue.title', 'File de vérification détection')}
               </Text>
               <Text style={[Fonts.p3, Fonts.neutral300, Spaces.marginTop[6]]}>
-                {detectionQueueTotal}
-                {' '}
-                detection
-                {detectionQueueTotal > 1 ? 's' : ''}
-                {' '}
-                dans la file. Tu peux ouvrir la fiche, appeler le coach et noter la vérification.
+                {t('adminDashboard.detectionQueue.description', {
+                  count: detectionQueueTotal,
+                  defaultValue_one: '{{count}} detection dans la file. Tu peux ouvrir la fiche, appeler le coach et noter la vérification.',
+                  defaultValue_other: '{{count}} detections dans la file. Tu peux ouvrir la fiche, appeler le coach et noter la vérification.',
+                })}
               </Text>
             </View>
             <TouchableOpacity
