@@ -1,4 +1,5 @@
 import React, { useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ScrollView, Text, View } from 'react-native';
 
 import useTheme from '@/theme/themeContext';
@@ -18,6 +19,7 @@ function SquadImageStep({
   data, onNext, onPrev, updateData,
 }) {
   const { Colors, Fonts, Spaces } = useTheme();
+  const { t } = useTranslation();
 
   // Validate that we can proceed (images are optional, so always validé)
   // User said "s'il y en a qui veulent", so optional.
@@ -43,14 +45,14 @@ function SquadImageStep({
     <View style={{ flex: 1, paddingHorizontal: 16 }}>
       <ScrollView contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', paddingBottom: 100 }}>
         <Text style={[Fonts.h1, { color: Colors.neutral00, marginBottom: 40, textAlign: 'center' }]}>
-          Identité de l'équipe
+          {t('squadImageStep.title', "Identité de l'équipe")}
         </Text>
 
         <View style={{ alignItems: 'center', gap: 30, marginBottom: 40 }}>
           {/* Logo Section */}
           <View style={{ alignItems: 'center', width: '100%' }}>
             <Text style={[Fonts.p1Bold, { color: Colors.neutral00, marginBottom: 12 }]}>
-              Logo
+              {t('squadImageStep.logo.title', 'Logo')}
             </Text>
             <SelectAvatar
               cropHeight={500}
@@ -62,14 +64,14 @@ function SquadImageStep({
               size={120}
             />
             <Text style={[Fonts.p3, { color: Colors.primary500, marginTop: 8, textAlign: 'center' }]}>
-              Apparaît sur les classements et profils
+              {t('squadImageStep.logo.hint', 'Apparaît sur les classements et profils')}
             </Text>
           </View>
 
           {/* Cover Section */}
           <View style={{ alignItems: 'center', width: '100%' }}>
             <Text style={[Fonts.p1Bold, { color: Colors.neutral00, marginBottom: 12 }]}>
-              Photo de couverture
+              {t('squadImageStep.cover.title', 'Photo de couverture')}
             </Text>
             <SelectAvatar
               containerStyle={{ borderRadius: 12, height: 140, width: 250 }}
@@ -82,7 +84,7 @@ function SquadImageStep({
               size={150}
             />
             <Text style={[Fonts.p3, { color: Colors.primary500, marginTop: 8, textAlign: 'center' }]}>
-              Fond des cartes de l'équipe
+              {t('squadImageStep.cover.hint', "Fond des cartes de l'équipe")}
             </Text>
           </View>
         </View>
@@ -92,12 +94,12 @@ function SquadImageStep({
         <Button
           disabled={!isValid}
           onPress={onNext}
-          title="Continuer"
+          title={t('squadImageStep.continue', 'Continuer')}
           variant="Primary"
         />
         <Button
           onPress={onPrev}
-          title="Retour"
+          title={t('squadImageStep.back', 'Retour')}
           variant="Secondary"
         />
       </View>

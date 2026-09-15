@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { Text, View } from 'react-native';
 
 import useTheme from '@/theme/themeContext';
@@ -17,6 +18,7 @@ function SquadCategoryStep({
   data, onNext, onPrev, updateData,
 }) {
   const { Colors, Fonts } = useTheme();
+  const { t } = useTranslation();
 
   React.useEffect(() => {
     if (data.category?.label !== 'Senior') {
@@ -28,7 +30,7 @@ function SquadCategoryStep({
     <View style={{ flex: 1, paddingHorizontal: 16 }}>
       <View style={{ flex: 1, justifyContent: 'center', paddingBottom: 100 }}>
         <Text style={[Fonts.h1, { color: Colors.neutral00, marginBottom: 40, textAlign: 'center' }]}>
-          Catégorie League
+          {t('squadCategoryStep.title', 'Catégorie League')}
         </Text>
 
         <View
@@ -40,9 +42,14 @@ function SquadCategoryStep({
             padding: 18,
           }}
         >
-          <Text style={[Fonts.h3, { color: Colors.gold500, textAlign: 'center' }]}>Senior</Text>
+          <Text style={[Fonts.h3, { color: Colors.gold500, textAlign: 'center' }]}>
+            {t('squadCategoryStep.senior', 'Senior')}
+          </Text>
           <Text style={[Fonts.p2, { color: Colors.neutral100, marginTop: 10, textAlign: 'center' }]}>
-            FoundClub League est réservé aux squads Senior. Les catégories jeunes ne sont pas disponibles dans ce mode.
+            {t(
+              'squadCategoryStep.seniorOnly',
+              'FoundClub League est réservé aux squads Senior. Les catégories jeunes ne sont pas disponibles dans ce mode.', // eslint-disable-line max-len
+            )}
           </Text>
         </View>
       </View>
@@ -50,12 +57,12 @@ function SquadCategoryStep({
       <View style={{ gap: 10, marginBottom: 20 }}>
         <Button
           onPress={onNext}
-          title="Continuer"
+          title={t('squadCategoryStep.continue', 'Continuer')}
           variant="Primary"
         />
         <Button
           onPress={onPrev}
-          title="Retour"
+          title={t('squadCategoryStep.back', 'Retour')}
           variant="Secondary"
         />
       </View>

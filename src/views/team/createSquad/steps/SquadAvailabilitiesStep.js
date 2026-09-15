@@ -1,4 +1,6 @@
+import i18next from 'i18next';
 import { useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Alert, LayoutAnimation, Platform, ScrollView, Text, TouchableOpacity, UIManager, View,
 } from 'react-native';
@@ -16,13 +18,48 @@ if (Platform.OS === 'android') {
 }
 
 const DAYS = [
-  { label: 'Lundi', value: 'monday' },
-  { label: 'Mardi', value: 'tuesday' },
-  { label: 'Mercredi', value: 'wednesday' },
-  { label: 'Jeudi', value: 'thursday' },
-  { label: 'Vendredi', value: 'friday' },
-  { label: 'Samedi', value: 'saturday' },
-  { label: 'Dimanche', value: 'sunday' },
+  {
+    get label() {
+      return i18next.t('squadAvailabilitiesStep.days.monday', 'Lundi');
+    },
+    value: 'monday',
+  },
+  {
+    get label() {
+      return i18next.t('squadAvailabilitiesStep.days.tuesday', 'Mardi');
+    },
+    value: 'tuesday',
+  },
+  {
+    get label() {
+      return i18next.t('squadAvailabilitiesStep.days.wednesday', 'Mercredi');
+    },
+    value: 'wednesday',
+  },
+  {
+    get label() {
+      return i18next.t('squadAvailabilitiesStep.days.thursday', 'Jeudi');
+    },
+    value: 'thursday',
+  },
+  {
+    get label() {
+      return i18next.t('squadAvailabilitiesStep.days.friday', 'Vendredi');
+    },
+    value: 'friday',
+  },
+  {
+    get label() {
+      return i18next.t('squadAvailabilitiesStep.days.saturday', 'Samedi');
+    },
+    value: 'saturday',
+  },
+  {
+    get label() {
+      return i18next.t('squadAvailabilitiesStep.days.sunday', 'Dimanche');
+    },
+    value: 'sunday',
+  },
 ];
 
 /**
@@ -40,6 +77,7 @@ function SquadAvailabilitiesStep({
   data, onNext, onPrev, updateData,
 }) {
   const { Colors, Fonts } = useTheme();
+  const { t } = useTranslation();
   const [isAddingSlot, setIsAddingSlot] = useState(false);
   const requireLocationMode = isFootballElevenSport(data?.sport);
 
@@ -77,7 +115,10 @@ function SquadAvailabilitiesStep({
 
   const handleContinue = () => {
     if (isAddingSlot) {
-      Alert.alert('Popup ouvert', 'Valide ou annule le popup « Ajouter un créneau » avant de continuer.');
+      Alert.alert(t('squadAvailabilitiesStep.slotFormOpen.title', 'Popup ouvert'), t(
+        'squadAvailabilitiesStep.slotFormOpen.body',
+        'Valide ou annule le popup « Ajouter un créneau » avant de continuer.',
+      ));
       return;
     }
 
@@ -111,7 +152,7 @@ function SquadAvailabilitiesStep({
         color: Colors.neutral00, marginBottom: 10, marginTop: 0, textAlign: 'center',
       }]}
       >
-        Quand ton équipe joue-t-elle habituellement ?
+        {t('squadAvailabilitiesStep.title', 'Quand ton équipe joue-t-elle habituellement ?')}
       </Text>
 
       <ScrollView
@@ -153,7 +194,9 @@ function SquadAvailabilitiesStep({
               </View>
 
               <TouchableOpacity onPress={() => removeSlot(slot.id)}>
-                <Text style={[Fonts.p3Bold, { color: Colors.error500 }]}>Supprimer</Text>
+                <Text style={[Fonts.p3Bold, { color: Colors.error500 }]}>
+                  {t('squadAvailabilitiesStep.slot.remove', 'Supprimer')}
+                </Text>
               </TouchableOpacity>
             </View>
           );
@@ -162,7 +205,10 @@ function SquadAvailabilitiesStep({
         {(!sortedSlots || sortedSlots.length === 0) && !isAddingSlot && (
           <View style={{ alignItems: 'center', padding: 20 }}>
             <Text style={[Fonts.p2, { color: Colors.neutral500, textAlign: 'center' }]}>
-              Ajoute tes créneaux réguliers pour faciliter le matchmaking.
+              {t(
+                'squadAvailabilitiesStep.empty',
+                'Ajoute tes créneaux réguliers pour faciliter le matchmaking.',
+              )}
             </Text>
           </View>
         )}
@@ -171,7 +217,7 @@ function SquadAvailabilitiesStep({
           <Button
             onPress={toggleAddSlot}
             style={{ marginTop: 10 }}
-            title="+ Ajouter un créneau"
+            title={t('squadAvailabilitiesStep.addSlot', '+ Ajouter un créneau')}
             variant="Secondary"
           />
         ) : (
@@ -189,12 +235,12 @@ function SquadAvailabilitiesStep({
         <Button
           disabled={isAddingSlot}
           onPress={handleContinue}
-          title="Continuer"
+          title={t('squadAvailabilitiesStep.continue', 'Continuer')}
           variant="Primary"
         />
         <Button
           onPress={onPrev}
-          title="Retour"
+          title={t('squadAvailabilitiesStep.back', 'Retour')}
           variant="Secondary"
         />
       </View>

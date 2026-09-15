@@ -1,5 +1,6 @@
 import Slider from '@react-native-community/slider';
 import React, { useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Text, View } from 'react-native';
 
 import useTheme from '@/theme/themeContext';
@@ -21,6 +22,7 @@ function SquadLocationStep({
   data, onNext, onPrev, updateData,
 }) {
   const { Colors, Fonts, Spaces } = useTheme();
+  const { t } = useTranslation();
   const [sliderWidth, setSliderWidth] = React.useState(0);
 
   const radius = data.radius || 20;
@@ -31,13 +33,13 @@ function SquadLocationStep({
     <View style={{ flex: 1, paddingHorizontal: 16 }}>
       <View style={{ flex: 1, justifyContent: 'center', paddingBottom: 100 }}>
         <Text style={[Fonts.h1, { color: Colors.neutral00, marginBottom: 40, textAlign: 'center' }]}>
-          Où joues-tu ?
+          {t('squadLocationStep.title', 'Où joues-tu ?')}
         </Text>
 
         <View style={{ marginBottom: 30 }}>
           <AutocompleteAddressInput
             address={data.address}
-            placeholder="Rechercher une ville..."
+            placeholder={t('squadLocationStep.placeholder', 'Rechercher une ville...')}
             setAddress={(addr) => {
               updateData('address', addr);
               const normalized = normalizeLocationInput(addr);
@@ -49,10 +51,13 @@ function SquadLocationStep({
         {data.address && (
         <View>
           <Text style={[Fonts.p1Bold, { color: Colors.neutral00, marginBottom: 4 }]}>
-            Rayon de recherche
+            {t('squadLocationStep.radius.title', 'Rayon de recherche')}
           </Text>
           <Text style={[Fonts.p2, { color: Colors.neutral00, marginBottom: 24 }]}>
-            C'est la distance max que tu es prêt à parcourir pour un match.
+            {t(
+              'squadLocationStep.radius.hint',
+              "C'est la distance max que tu es prêt à parcourir pour un match.",
+            )}
           </Text>
 
           <View
@@ -99,12 +104,12 @@ function SquadLocationStep({
         <Button
           disabled={!isValid}
           onPress={onNext}
-          title="Continuer"
+          title={t('squadLocationStep.continue', 'Continuer')}
           variant="Primary"
         />
         <Button
           onPress={onPrev}
-          title="Retour"
+          title={t('squadLocationStep.back', 'Retour')}
           variant="Secondary"
         />
       </View>

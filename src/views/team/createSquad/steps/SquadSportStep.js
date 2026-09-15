@@ -1,4 +1,6 @@
+import i18next from 'i18next';
 import React, { useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Text, View } from 'react-native';
 
 import { getUserRoleKey } from '@/domains/auth/authUseCases';
@@ -22,6 +24,7 @@ function SquadSportStep({
   data, onNext, onPrev, updateData, user,
 }) {
   const { Colors, Fonts, Spaces } = useTheme();
+  const { t } = useTranslation();
 
   const [sports, setSports] = React.useState([]);
   const [loading, setLoading] = React.useState(true);
@@ -53,7 +56,10 @@ function SquadSportStep({
       )));
     } catch (error) {
       console.error('Error fetching sports:', error);
-      setLoadError("Impossible de charger les sports League pour le moment.");
+      setLoadError(i18next.t(
+        'squadSportStep.loadError',
+        'Impossible de charger les sports League pour le moment.',
+      ));
       setSports([]);
     } finally {
       setLoading(false);
@@ -70,14 +76,14 @@ function SquadSportStep({
     <View style={{ flex: 1, paddingHorizontal: 16 }}>
       <View style={{ flex: 1, justifyContent: 'center', paddingBottom: 100 }}>
         <Text style={[Fonts.h1, { color: Colors.neutral00, marginBottom: 40, textAlign: 'center' }]}>
-          Quel est ton sport ?
+          {t('squadSportStep.title', 'Quel est ton sport ?')}
         </Text>
 
         <AutocompleteSelect
           isLoading={loading}
           isSearchable={false}
           options={sports}
-          placeholder="Sélectionner un sport"
+          placeholder={t('squadSportStep.placeholder', 'Sélectionner un sport')}
           setValue={(item) => updateData('sport', item)}
           value={data.sport?.label}
         />
@@ -88,7 +94,7 @@ function SquadSportStep({
             </Text>
             <Button
               onPress={fetchSports}
-              title="Recharger"
+              title={t('squadSportStep.reload', 'Recharger')}
               variant="Secondary"
             />
           </View>
@@ -99,12 +105,12 @@ function SquadSportStep({
         <Button
           disabled={!isValid}
           onPress={onNext}
-          title="Continuer"
+          title={t('squadSportStep.continue', 'Continuer')}
           variant="Primary"
         />
         <Button
           onPress={onPrev}
-          title="Retour"
+          title={t('squadSportStep.back', 'Retour')}
           variant="Secondary"
         />
       </View>
