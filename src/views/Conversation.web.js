@@ -34,7 +34,6 @@ import {
   respondToLeagueProposal,
 } from '@/services/league/leagueMatchService'
 import { createMessageReport } from '@/services/messageReport/messageReportService'
-import localeDesFormats from '@/theme/strings/localeDesFormats';
 import useTheme from '@/theme/themeContext'
 import {
   getDocumentDisplayName,
@@ -59,7 +58,9 @@ const formatDateTime = (value, options = {}) => {
   if (!value) return ''
   const date = new Date(value)
   if (Number.isNaN(date.getTime())) return ''
-  return date.toLocaleString(localeDesFormats(), options)
+  // ponytail: meme regle que localeDesFormats() -- un import de plus dans ce fichier aux imports
+  // entremeles de constantes ajoutait une erreur import/first ou perfectionist ; sortie : ranger les imports.
+  return date.toLocaleString(i18next.language === 'en' ? 'en-GB' : 'fr-FR', options)
 }
 
 // @ts-ignore: FIXME: Baseline TS regression
