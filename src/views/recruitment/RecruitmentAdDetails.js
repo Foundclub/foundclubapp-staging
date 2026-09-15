@@ -1,5 +1,6 @@
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import i18next from 'i18next';
 import {
   useEffect,
   useLayoutEffect,
@@ -21,6 +22,8 @@ import LinearGradient from 'react-native-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import useAuth from '@/domains/auth/useAuth';
+import localeDesFormats from '@/theme/strings/localeDesFormats';
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -102,7 +105,10 @@ const getCandidateDisplayName = (/** @type {any} */ participation) => {
   const fullName = [firstname, lastname].filter(Boolean).join(' ').trim();
   if (fullName) return fullName;
 
-  return String(participation?.user?.phoneNumber || 'Candidat').trim();
+  return String(participation?.user?.phoneNumber || i18next.t(
+    'recruitmentAdDetails.candidates.fallbackName',
+    'Candidat',
+  )).trim();
 };
 
 const userMatchesReference = (/** @type {any} */ candidate, /** @type {any} */ userRef) => {
@@ -128,7 +134,7 @@ const getParticipationStatusMeta = (/** @type {any} */ status, /** @type {any} *
     return {
       backgroundColor: `${colors.success500}18`,
       borderColor: `${colors.success500}45`,
-      label: 'Accepte',
+      label: i18next.t('recruitmentAdDetails.status.accepted', 'Accepte'),
       textColor: colors.success500,
     };
   }
@@ -137,7 +143,7 @@ const getParticipationStatusMeta = (/** @type {any} */ status, /** @type {any} *
     return {
       backgroundColor: `${colors.error500}16`,
       borderColor: `${colors.error500}45`,
-      label: 'Refuse',
+      label: i18next.t('recruitmentAdDetails.status.declined', 'Refuse'),
       textColor: colors.error500,
     };
   }
@@ -145,7 +151,7 @@ const getParticipationStatusMeta = (/** @type {any} */ status, /** @type {any} *
   return {
     backgroundColor: `${colors.warning500}18`,
     borderColor: `${colors.warning500}45`,
-    label: 'En attente',
+    label: i18next.t('recruitmentAdDetails.status.pending', 'En attente'),
     textColor: colors.warning500,
   };
 };
@@ -306,7 +312,10 @@ function RecruitmentAdDetails() {
       const message = error?.response?.data?.error?.message
         || error?.response?.data?.message
         || error?.message
-        || 'Impossible d\'envoyer la candidature pour le moment.';
+        || t(
+          'recruitmentAdDetails.alerts.applyError',
+          "Impossible d'envoyer la candidature pour le moment.",
+        );
 
       if (
         /deja candidate|deja une candidature en attente|deja postule/i.test(message)
@@ -318,7 +327,7 @@ function RecruitmentAdDetails() {
         setOptimisticApplicationStatus('accepted');
       }
 
-      Alert.alert('Candidature', message);
+      Alert.alert(t('recruitmentAdDetails.alerts.applicationTitle', 'Candidature'), message);
     },
     onSuccess: (/** @type {any} */ result) => {
       setOptimisticApplicationStatus(result?.status === 'accepted' ? 'accepted' : 'pending');
@@ -335,8 +344,11 @@ function RecruitmentAdDetails() {
         queryClient.invalidateQueries({ queryKey: ['eventParticipations', ad.event.documentId] });
       }
       Alert.alert(
-        'Candidature envoyée',
-        result?.message || 'Ta candidature a bien été envoyée.',
+        t('recruitmentAdDetails.alerts.applySuccessTitle', 'Candidature envoyée'),
+        result?.message || t(
+          'recruitmentAdDetails.alerts.applySuccessBody',
+          'Ta candidature a bien été envoyée.',
+        ),
       );
     },
   }));
@@ -347,8 +359,11 @@ function RecruitmentAdDetails() {
       const message = error?.response?.data?.error?.message
         || error?.response?.data?.message
         || error?.message
-        || 'Impossible d\'accepter cette candidature pour le moment.';
-      Alert.alert('Candidatures', message);
+        || t(
+          'recruitmentAdDetails.alerts.acceptError',
+          "Impossible d'accepter cette candidature pour le moment.",
+        );
+      Alert.alert(t('recruitmentAdDetails.alerts.applicationsTitle', 'Candidatures'), message);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['recruitmentAdParticipations', eventDocumentId, recruitmentAdDocumentId] });
@@ -367,8 +382,11 @@ function RecruitmentAdDetails() {
       const message = error?.response?.data?.error?.message
         || error?.response?.data?.message
         || error?.message
-        || 'Impossible de refuser cette candidature pour le moment.';
-      Alert.alert('Candidatures', message);
+        || t(
+          'recruitmentAdDetails.alerts.declineError',
+          'Impossible de refuser cette candidature pour le moment.',
+        );
+      Alert.alert(t('recruitmentAdDetails.alerts.applicationsTitle', 'Candidatures'), message);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['recruitmentAdParticipations', eventDocumentId, recruitmentAdDocumentId] });
@@ -393,8 +411,11 @@ function RecruitmentAdDetails() {
       const message = error?.response?.data?.error?.message
         || error?.response?.data?.message
         || error?.message
-        || 'Impossible de mettre à jour cette candidature pour le moment.';
-      Alert.alert('Candidatures', message);
+        || t(
+          'recruitmentAdDetails.alerts.updateError',
+          'Impossible de mettre à jour cette candidature pour le moment.',
+        );
+      Alert.alert(t('recruitmentAdDetails.alerts.applicationsTitle', 'Candidatures'), message);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['recruitmentApplications', recruitmentAdDocumentId] });
@@ -415,8 +436,11 @@ function RecruitmentAdDetails() {
     }),
     onError: (/** @type {any} */ error) => {
       Alert.alert(
-        'Invitation',
-        error?.message || 'Impossible d\'envoyer l\'invitation pour le moment.',
+        t('recruitmentAdDetails.alerts.invitationTitle', 'Invitation'),
+        error?.message || t(
+          'recruitmentAdDetails.alerts.invitationError',
+          "Impossible d'envoyer l'invitation pour le moment.",
+        ),
       );
     },
     onSuccess: (/** @type {any} */ _data, /** @type {any} */ variables) => {
@@ -435,8 +459,11 @@ function RecruitmentAdDetails() {
       const message = error?.response?.data?.error?.message
         || error?.response?.data?.message
         || error?.message
-        || 'Impossible de retirer cette candidature pour le moment.';
-      Alert.alert('Candidature', message);
+        || t(
+          'recruitmentAdDetails.alerts.withdrawError',
+          'Impossible de retirer cette candidature pour le moment.',
+        );
+      Alert.alert(t('recruitmentAdDetails.alerts.applicationTitle', 'Candidature'), message);
     },
     onSuccess: () => {
       setOptimisticApplicationStatus(null);
@@ -447,7 +474,10 @@ function RecruitmentAdDetails() {
         queryClient.invalidateQueries({ queryKey: ['event', ad.event.documentId] });
         queryClient.invalidateQueries({ queryKey: ['eventParticipations', ad.event.documentId] });
       }
-      Alert.alert('Candidature', 'Ta candidature a bien été retirée.');
+      Alert.alert(t('recruitmentAdDetails.alerts.applicationTitle', 'Candidature'), t(
+        'recruitmentAdDetails.alerts.withdrawSuccess',
+        'Ta candidature a bien été retirée.',
+      ));
     },
   }));
 
@@ -467,15 +497,30 @@ function RecruitmentAdDetails() {
   // P10 — l equipe DE L ANNONCE : c est dans celle-la que le staff invite.
   const adTeamDocumentId = String(team?.documentId || '').trim();
   const club = team?.club;
-  const clubName = club?.name || team?.name || 'Club inconnu';
+  const clubName = club?.name || team?.name || t(
+    'recruitmentAdDetails.fallback.unknownClub',
+    'Club inconnu',
+  );
   const clubLogo = getImageUrl(club?.logo?.url);
   const clubCertificationPalette = getClubCertificationPalette(club, Colors);
   const clubCertificationLabel = getClubCertificationLabel(club);
   const positionLabel = isCoachAd
-    ? humanizeEnumLabel(ad?.coachRoleOther || ad?.coachRole, 'Rôle entraîneur')
-    : (ad?.position || 'Poste non specifie');
-  const levelName = ad?.level?.name || ad?.minLevel || 'Niveau ?';
-  const categoryName = ad?.category?.name || ad?.category || 'Catégorie ?';
+    ? humanizeEnumLabel(ad?.coachRoleOther || ad?.coachRole, t(
+      'recruitmentAdDetails.fallback.coachRole',
+      'Rôle entraîneur',
+    ))
+    : (ad?.position || t(
+      'recruitmentAdDetails.fallback.positionUnspecified',
+      'Poste non specifie',
+    ));
+  const levelName = ad?.level?.name || ad?.minLevel || t(
+    'recruitmentAdDetails.fallback.level',
+    'Niveau ?',
+  );
+  const categoryName = ad?.category?.name || ad?.category || t(
+    'recruitmentAdDetails.fallback.category',
+    'Catégorie ?',
+  );
   const address = getShortAddress(ad?.city || club?.city || '');
   const sectionName = ad?.section?.name || ad?.section;
   const coachExperienceLabel = humanizeEnumLabel(ad?.coachExperienceLevel, '');
@@ -503,26 +548,44 @@ function RecruitmentAdDetails() {
     if (Number.isNaN(detectionDateValue.getTime())) return '';
 
     const dateLabel = formatDateWithDayPrefix(detectionDateValue);
-    const hourLabel = detectionDateValue.toLocaleTimeString('fr-FR', {
+    const hourLabel = detectionDateValue.toLocaleTimeString(localeDesFormats(), {
       hour: '2-digit',
       minute: '2-digit',
     });
 
-    return hourLabel ? `${dateLabel} a ${hourLabel}` : dateLabel;
+    return hourLabel
+      ? i18next.t('recruitmentAdDetails.detectionModal.dateAtHour', '{{date}} a {{hour}}', {
+        date: dateLabel,
+        hour: hourLabel,
+        ...SANS_ECHAPPEMENT,
+      })
+      : dateLabel;
   }, [ad?.event?.date]);
   const detectionApplySummary = useMemo(() => {
     const summaryParts = /** @type {string[]} */ ([]);
 
     if (positionLabel) {
-      summaryParts.push(`Poste vise : ${positionLabel}`);
+      summaryParts.push(i18next.t(
+        'recruitmentAdDetails.detectionModal.summaryPosition',
+        'Poste vise : {{position}}',
+        { position: positionLabel, ...SANS_ECHAPPEMENT },
+      ));
     }
 
     if (detectionDateTimeLabel) {
-      summaryParts.push(`Date de la détection : ${detectionDateTimeLabel}`);
+      summaryParts.push(i18next.t(
+        'recruitmentAdDetails.detectionModal.summaryDate',
+        'Date de la détection : {{date}}',
+        { date: detectionDateTimeLabel, ...SANS_ECHAPPEMENT },
+      ));
     }
 
     if (clubName) {
-      summaryParts.push(`Club concerne : ${clubName}`);
+      summaryParts.push(i18next.t(
+        'recruitmentAdDetails.detectionModal.summaryClub',
+        'Club concerne : {{club}}',
+        { club: clubName, ...SANS_ECHAPPEMENT },
+      ));
     }
 
     return summaryParts.join('\n');
@@ -544,11 +607,11 @@ function RecruitmentAdDetails() {
   };
 
   if (!ad) {
-    let adStatusTitle = 'Annonce introuvable';
+    let adStatusTitle = t('recruitmentAdDetails.state.notFound', 'Annonce introuvable');
     if (isLoading) {
-      adStatusTitle = 'Chargement...';
+      adStatusTitle = t('recruitmentAdDetails.state.loading', 'Chargement...');
     } else if (adError) {
-      adStatusTitle = 'Chargement impossible';
+      adStatusTitle = t('recruitmentAdDetails.state.loadError', 'Chargement impossible');
     }
     return (
       <ScreenContainerView bgImage="bg2">
@@ -557,12 +620,15 @@ function RecruitmentAdDetails() {
             {adStatusTitle}
           </Text>
           <Text style={[Fonts.p2, { color: Colors.neutral300, textAlign: 'center' }]}>
-            {adError?.message || 'Cette annonce n est plus disponible ou n a pas pu être chargée.'}
+            {adError?.message || t(
+              'recruitmentAdDetails.state.unavailableBody',
+              'Cette annonce n est plus disponible ou n a pas pu être chargée.',
+            )}
           </Text>
           {adError ? (
             <Button
               onPress={() => refetchAd()}
-              title="Recharger"
+              title={t('recruitmentAdDetails.state.reload', 'Recharger')}
               variant="Primary"
             />
           ) : null}
@@ -580,19 +646,28 @@ function RecruitmentAdDetails() {
     if (hasApplied) {
       if (effectiveApplicationStatus === 'accepted') {
         Alert.alert(
-          'Candidature',
+          t('recruitmentAdDetails.alerts.applicationTitle', 'Candidature'),
           isDetectionLinked
-            ? 'Tu participes déjà à cette détection.'
-            : 'Ta candidature est déjà validée pour cette annonce.',
+            ? t(
+              'recruitmentAdDetails.alerts.alreadyParticipating',
+              'Tu participes déjà à cette détection.',
+            )
+            : t(
+              'recruitmentAdDetails.alerts.alreadyAccepted',
+              'Ta candidature est déjà validée pour cette annonce.',
+            ),
         );
         return;
       }
 
       Alert.alert(
-        'Candidature',
+        t('recruitmentAdDetails.alerts.applicationTitle', 'Candidature'),
         isDetectionLinked
-          ? 'Tu as déjà une candidature en attente sur cette détection.'
-          : 'Tu as déjà postule à cette annonce.',
+          ? t(
+            'recruitmentAdDetails.alerts.alreadyPendingDetection',
+            'Tu as déjà une candidature en attente sur cette détection.',
+          )
+          : t('recruitmentAdDetails.alerts.alreadyApplied', 'Tu as déjà postule à cette annonce.'),
       );
       return;
     }
@@ -644,7 +719,10 @@ function RecruitmentAdDetails() {
     }
 
     if (!coachApplicationPhone && !coachApplicationEmail) {
-      Alert.alert('Candidature', 'Ajoute au moins un numéro ou un email pour être recontacte.');
+      Alert.alert(t('recruitmentAdDetails.alerts.applicationTitle', 'Candidature'), t(
+        'recruitmentAdDetails.alerts.contactRequired',
+        'Ajoute au moins un numéro ou un email pour être recontacte.',
+      ));
       return;
     }
 
@@ -721,26 +799,32 @@ function RecruitmentAdDetails() {
     if (!requestId || acceptParticipationMutation.isPending || declineParticipationMutation.isPending) return;
 
     Alert.alert(
-      'Refuser la candidature',
-      'Veux-tu vraiment refuser cette candidature ?',
+      t('recruitmentAdDetails.declineConfirm.title', 'Refuser la candidature'),
+      t('recruitmentAdDetails.declineConfirm.body', 'Veux-tu vraiment refuser cette candidature ?'),
       [
-        { style: 'cancel', text: 'Annuler' },
+        { style: 'cancel', text: t('recruitmentAdDetails.declineConfirm.cancel', 'Annuler') },
         {
           onPress: () => declineParticipationMutation.mutate({ requestId }),
           style: 'destructive',
-          text: 'Refuser',
+          text: t('recruitmentAdDetails.declineConfirm.confirm', 'Refuser'),
         },
       ],
     );
   };
 
-  let applyButtonTitle = isCoachAd ? 'Candidater comme entraîneur' : 'Postuler';
+  let applyButtonTitle = isCoachAd ? t(
+    'recruitmentAdDetails.footer.applyAsCoach',
+    'Candidater comme entraîneur',
+  ) : t('recruitmentAdDetails.footer.apply', 'Postuler');
   if (effectiveApplicationStatus === 'accepted') {
-    applyButtonTitle = isCoachAd ? 'Candidature acceptée' : 'Je participe';
+    applyButtonTitle = isCoachAd ? t(
+      'recruitmentAdDetails.footer.applicationAccepted',
+      'Candidature acceptée',
+    ) : t('recruitmentAdDetails.footer.participating', 'Je participe');
   } else if (effectiveApplicationStatus === 'pending') {
-    applyButtonTitle = 'Demande en attente';
+    applyButtonTitle = t('recruitmentAdDetails.footer.pending', 'Demande en attente');
   } else if (!ad.isActive) {
-    applyButtonTitle = 'Annonce inactive';
+    applyButtonTitle = t('recruitmentAdDetails.footer.inactive', 'Annonce inactive');
   }
 
   let footerActionNode = (
@@ -767,7 +851,7 @@ function RecruitmentAdDetails() {
           disabled={withdrawApplicationMutation.isPending}
           isLoading={withdrawApplicationMutation.isPending}
           onPress={() => withdrawApplicationMutation.mutate(currentUserApplication.documentId)}
-          title="Retirer ma candidature"
+          title={t('recruitmentAdDetails.footer.withdraw', 'Retirer ma candidature')}
           variant="Secondary"
         />
       </View>
@@ -790,7 +874,7 @@ function RecruitmentAdDetails() {
         }}
       >
         <Text style={[Fonts.h3, { color: Colors.neutral100, marginBottom: 14 }]}>
-          Profil entraîneur recherche
+          {t('recruitmentAdDetails.coachProfile.title', 'Profil entraîneur recherche')}
         </Text>
 
         <View style={[Alignments.row, { flexWrap: 'wrap', gap: 8, marginBottom: 14 }]}>
@@ -822,7 +906,7 @@ function RecruitmentAdDetails() {
           {availabilityLabel ? (
             <View>
               <Text style={[Fonts.p4Bold, { color: Colors.primary500, marginBottom: 4 }]}>
-                Disponibilites
+                {t('recruitmentAdDetails.coachProfile.availability', 'Disponibilites')}
               </Text>
               <Text style={[Fonts.p2, { color: Colors.neutral200, lineHeight: 22 }]}>
                 {availabilityLabel}
@@ -833,7 +917,7 @@ function RecruitmentAdDetails() {
           {certificationsWanted.length > 0 ? (
             <View>
               <Text style={[Fonts.p4Bold, { color: Colors.primary500, marginBottom: 6 }]}>
-                Certifications souhaitées
+                {t('recruitmentAdDetails.coachProfile.certifications', 'Certifications souhaitées')}
               </Text>
               <View style={[Alignments.row, { flexWrap: 'wrap', gap: 8 }]}>
                 {certificationsWanted.map((/** @type {any} */ item) => (
@@ -857,26 +941,33 @@ function RecruitmentAdDetails() {
     ownerCandidatesSection = (
       <View style={{ marginBottom: 32 }}>
         <Text style={[Fonts.h3, { color: Colors.neutral100, marginBottom: 16 }]}>
-          Candidatures du poste (
-          {slotParticipations.length}
-          )
+          {t('recruitmentAdDetails.candidates.slotTitle', 'Candidatures du poste ({{total}})', {
+            total: slotParticipations.length,
+          })}
         </Text>
         {slotParticipationsQuery.isLoading ? (
           <View style={styles.emptyCandidatesBox}>
-            <Text style={[Fonts.p1, { color: Colors.neutral300 }]}>Chargement des candidatures...</Text>
+            <Text style={[Fonts.p1, { color: Colors.neutral300 }]}>
+              {t('recruitmentAdDetails.candidates.loading', 'Chargement des candidatures...')}
+            </Text>
           </View>
         ) : null}
 
         {slotParticipationsQuery.error ? (
           <View style={styles.emptyCandidatesBox}>
-            <Text style={[Fonts.p1Bold, { color: Colors.error500, marginBottom: 8 }]}>Chargement impossible</Text>
+            <Text style={[Fonts.p1Bold, { color: Colors.error500, marginBottom: 8 }]}>
+              {t('recruitmentAdDetails.candidates.loadErrorTitle', 'Chargement impossible')}
+            </Text>
             <Text style={[Fonts.p2, { color: Colors.neutral300, marginBottom: 12, textAlign: 'center' }]}>
-              {slotParticipationsQuery.error?.message || 'Impossible de charger les candidatures pour le moment.'}
+              {slotParticipationsQuery.error?.message || t(
+                'recruitmentAdDetails.candidates.loadErrorBody',
+                'Impossible de charger les candidatures pour le moment.',
+              )}
             </Text>
             <Button
               onPress={() => slotParticipationsQuery.refetch()}
               size="sm"
-              title="Recharger"
+              title={t('recruitmentAdDetails.candidates.reload', 'Recharger')}
               variant="Primary"
             />
           </View>
@@ -957,7 +1048,7 @@ function RecruitmentAdDetails() {
                         ) : null}
                         {canOpenCandidateProfile ? (
                           <Text style={[Fonts.p4Bold, { color: Colors.primary500, marginTop: 6 }]}>
-                            Voir le profil
+                            {t('recruitmentAdDetails.candidates.viewProfile', 'Voir le profil')}
                           </Text>
                         ) : null}
                       </View>
@@ -985,7 +1076,7 @@ function RecruitmentAdDetails() {
                         isLoading={isAcceptLoading}
                         onPress={() => handleAcceptParticipation(participationId)}
                         size="sm"
-                        title="Accepter"
+                        title={t('recruitmentAdDetails.candidates.accept', 'Accepter')}
                         variant="Primary"
                       />
                       <Button
@@ -993,7 +1084,7 @@ function RecruitmentAdDetails() {
                         isLoading={isDeclineLoading}
                         onPress={() => handleDeclineParticipation(participationId)}
                         size="sm"
-                        title="Refuser"
+                        title={t('recruitmentAdDetails.candidates.decline', 'Refuser')}
                         variant="Secondary"
                       />
                     </View>
@@ -1006,7 +1097,9 @@ function RecruitmentAdDetails() {
 
         {!slotParticipationsQuery.isLoading && !slotParticipationsQuery.error && slotParticipations.length === 0 ? (
           <View style={styles.emptyCandidatesBox}>
-            <Text style={[Fonts.p1, { color: Colors.neutral300 }]}>Aucune candidature pour le moment.</Text>
+            <Text style={[Fonts.p1, { color: Colors.neutral300 }]}>
+              {t('recruitmentAdDetails.candidates.empty', 'Aucune candidature pour le moment.')}
+            </Text>
           </View>
         ) : null}
       </View>
@@ -1015,13 +1108,15 @@ function RecruitmentAdDetails() {
     ownerCandidatesSection = (
       <View style={{ marginBottom: 32 }}>
         <Text style={[Fonts.h3, { color: Colors.neutral100, marginBottom: 16 }]}>
-          Candidatures (
-          {ownerApplications.length}
-          )
+          {t('recruitmentAdDetails.candidates.title', 'Candidatures ({{total}})', {
+            total: ownerApplications.length,
+          })}
         </Text>
         {ownerApplicationsQuery.isLoading ? (
           <View style={styles.emptyCandidatesBox}>
-            <Text style={[Fonts.p1, { color: Colors.neutral300 }]}>Chargement des candidatures...</Text>
+            <Text style={[Fonts.p1, { color: Colors.neutral300 }]}>
+              {t('recruitmentAdDetails.candidates.loading', 'Chargement des candidatures...')}
+            </Text>
           </View>
         ) : null}
         {ownerApplications.length > 0 ? (
@@ -1034,7 +1129,10 @@ function RecruitmentAdDetails() {
                 const candidateName = [candidate?.firstname, candidate?.lastname]
                   .filter(Boolean)
                   .join(' ')
-                  .trim() || application?.phoneSnapshot || application?.emailSnapshot || 'Candidat';
+                  .trim() || application?.phoneSnapshot || application?.emailSnapshot || t(
+                    'recruitmentAdDetails.candidates.fallbackName',
+                    'Candidat',
+                  );
                 const candidatePhone = String(application?.phoneSnapshot || candidate?.phoneNumber || '').trim();
                 const candidateEmail = String(application?.emailSnapshot || candidate?.email || '').trim();
                 const candidateMessage = String(application?.message || '').trim();
@@ -1132,7 +1230,7 @@ function RecruitmentAdDetails() {
                           ) : null}
                           {candidateId ? (
                             <Text style={[Fonts.p4Bold, { color: Colors.primary500, marginTop: 6 }]}>
-                              Voir le profil
+                              {t('recruitmentAdDetails.candidates.viewProfile', 'Voir le profil')}
                             </Text>
                           ) : null}
                         </View>
@@ -1182,13 +1280,24 @@ function RecruitmentAdDetails() {
 
                         {coachApplicationAvailability ? (
                           <Text style={[Fonts.p4, { color: Colors.neutral200 }]}>
-                            {`Disponibilités : ${coachApplicationAvailability}`}
+                            {t(
+                              'recruitmentAdDetails.candidates.coachAvailability',
+                              'Disponibilités : {{availability}}',
+                              { availability: coachApplicationAvailability, ...SANS_ECHAPPEMENT },
+                            )}
                           </Text>
                         ) : null}
 
                         {coachApplicationCertifications.length > 0 ? (
                           <Text style={[Fonts.p4, { color: Colors.neutral200 }]}>
-                            {`Certifications : ${coachApplicationCertifications.join(', ')}`}
+                            {t(
+                              'recruitmentAdDetails.candidates.coachCertifications',
+                              'Certifications : {{certifications}}',
+                              {
+                                certifications: coachApplicationCertifications.join(', '),
+                                ...SANS_ECHAPPEMENT,
+                              },
+                            )}
                           </Text>
                         ) : null}
                       </View>
@@ -1233,7 +1342,7 @@ function RecruitmentAdDetails() {
                             status: 'accepted',
                           })}
                           size="sm"
-                          title="Accepter"
+                          title={t('recruitmentAdDetails.candidates.accept', 'Accepter')}
                           variant="Primary"
                         />
                         <Button
@@ -1244,7 +1353,7 @@ function RecruitmentAdDetails() {
                             status: 'declined',
                           })}
                           size="sm"
-                          title="Refuser"
+                          title={t('recruitmentAdDetails.candidates.decline', 'Refuser')}
                           variant="Secondary"
                         />
                       </View>
@@ -1256,7 +1365,9 @@ function RecruitmentAdDetails() {
           </View>
         ) : (
           <View style={styles.emptyCandidatesBox}>
-            <Text style={[Fonts.p1, { color: Colors.neutral300 }]}>Aucune candidature pour le moment.</Text>
+            <Text style={[Fonts.p1, { color: Colors.neutral300 }]}>
+              {t('recruitmentAdDetails.candidates.empty', 'Aucune candidature pour le moment.')}
+            </Text>
           </View>
         )}
       </View>
@@ -1335,7 +1446,10 @@ function RecruitmentAdDetails() {
             }]}
             >
               <Text style={[Fonts.captionBold, { color: ad.isActive ? Colors.primary500 : Colors.neutral400 }]}>
-                {ad.isActive ? 'EN LIGNE' : 'INACTIF'}
+                {ad.isActive ? t('recruitmentAdDetails.header.statusOnline', 'EN LIGNE') : t(
+                  'recruitmentAdDetails.header.statusInactive',
+                  'INACTIF',
+                )}
               </Text>
             </View>
           </View>
@@ -1354,12 +1468,16 @@ function RecruitmentAdDetails() {
         ]}
         >
           <View style={styles.infoItem}>
-            <Text style={[Fonts.caption, { color: Colors.neutral300, marginBottom: 4 }]}>Publie le</Text>
+            <Text style={[Fonts.caption, { color: Colors.neutral300, marginBottom: 4 }]}>
+              {t('recruitmentAdDetails.info.publishedOn', 'Publie le')}
+            </Text>
             <Text style={[Fonts.p2Bold, { color: Colors.neutral100, textAlign: 'center' }]}>{date}</Text>
           </View>
           <View style={styles.separator} />
           <View style={styles.infoItem}>
-            <Text style={[Fonts.caption, { color: Colors.neutral300, marginBottom: 4 }]}>Niveau</Text>
+            <Text style={[Fonts.caption, { color: Colors.neutral300, marginBottom: 4 }]}>
+              {t('recruitmentAdDetails.info.level', 'Niveau')}
+            </Text>
             <Text
               numberOfLines={2}
               style={[Fonts.p2Bold, { color: Colors.neutral100, textAlign: 'center' }]}
@@ -1369,7 +1487,9 @@ function RecruitmentAdDetails() {
           </View>
           <View style={styles.separator} />
           <View style={styles.infoItem}>
-            <Text style={[Fonts.caption, { color: Colors.neutral300, marginBottom: 4 }]}>Catégorie</Text>
+            <Text style={[Fonts.caption, { color: Colors.neutral300, marginBottom: 4 }]}>
+              {t('recruitmentAdDetails.info.category', 'Catégorie')}
+            </Text>
             <Text style={[Fonts.p2Bold, { color: Colors.neutral100, textAlign: 'center' }]}>{categoryName}</Text>
           </View>
         </View>
@@ -1379,7 +1499,11 @@ function RecruitmentAdDetails() {
             {isDetectionLinked ? (
               <TagView
                 style={{ backgroundColor: 'rgba(1,179,244,0.14)', borderColor: Colors.primary500 }}
-                text={detectionDate ? `Détection · ${detectionDate}` : 'Detection'}
+                text={detectionDate ? t(
+                  'recruitmentAdDetails.tags.detectionWithDate',
+                  'Détection · {{date}}',
+                  { date: detectionDate, ...SANS_ECHAPPEMENT },
+                ) : t('recruitmentAdDetails.tags.detection', 'Detection')}
                 textColor="primary500"
                 textStyle={{ fontWeight: '700' }}
               />
@@ -1399,16 +1523,22 @@ function RecruitmentAdDetails() {
           {ownerCandidatesSection}
 
           <Text style={[Fonts.h3, { color: Colors.neutral100, marginBottom: 16 }]}>
-            {isCoachAd ? 'Description et missions' : 'Description'}
+            {isCoachAd ? t(
+              'recruitmentAdDetails.description.titleCoach',
+              'Description et missions',
+            ) : t('recruitmentAdDetails.description.title', 'Description')}
           </Text>
           <Text style={[Fonts.p1, { color: Colors.neutral300, lineHeight: 26 }]}>
-            {ad.description || 'Aucune description fournie pour cette annonce.'}
+            {ad.description || t(
+              'recruitmentAdDetails.description.empty',
+              'Aucune description fournie pour cette annonce.',
+            )}
           </Text>
 
           {isCoachAd && missionsLabel ? (
             <View style={{ marginTop: 20 }}>
               <Text style={[Fonts.p4Bold, { color: Colors.primary500, marginBottom: 8 }]}>
-                Missions
+                {t('recruitmentAdDetails.description.missions', 'Missions')}
               </Text>
               <Text style={[Fonts.p2, { color: Colors.neutral200, lineHeight: 22 }]}>
                 {missionsLabel}
@@ -1428,12 +1558,24 @@ function RecruitmentAdDetails() {
               }}
             >
               <Text style={[Fonts.p2Bold, { color: applicationState.status === 'accepted' ? Colors.success500 : Colors.warning500 }]}>
-                {applicationState.status === 'accepted' ? 'Participation déjà validée sur cette détection' : 'Candidature déjà envoyée sur cette détection'}
+                {applicationState.status === 'accepted' ? t(
+                  'recruitmentAdDetails.otherSlot.acceptedTitle',
+                  'Participation déjà validée sur cette détection',
+                ) : t(
+                  'recruitmentAdDetails.otherSlot.pendingTitle',
+                  'Candidature déjà envoyée sur cette détection',
+                )}
               </Text>
               <Text style={[Fonts.p3, { color: Colors.neutral200, lineHeight: 20, marginTop: 6 }]}>
                 {applicationState.status === 'accepted'
-                  ? 'Tu participes déjà a un autre poste de cette détection. Les autres annonces gardent donc le même statut.'
-                  : 'Tu as déjà une demande en attente sur un autre poste de cette détection. Les autres annonces gardent donc le même statut.'}
+                  ? t(
+                    'recruitmentAdDetails.otherSlot.acceptedBody',
+                    'Tu participes déjà a un autre poste de cette détection. Les autres annonces gardent donc le même statut.', // eslint-disable-line max-len
+                  )
+                  : t(
+                    'recruitmentAdDetails.otherSlot.pendingBody',
+                    'Tu as déjà une demande en attente sur un autre poste de cette détection. Les autres annonces gardent donc le même statut.', // eslint-disable-line max-len
+                  )}
               </Text>
             </View>
           ) : null}
@@ -1442,7 +1584,7 @@ function RecruitmentAdDetails() {
             <View style={{ marginTop: 24 }}>
               <Button
                 onPress={handleOpenDetection}
-                title="Ouvrir la détection"
+                title={t('recruitmentAdDetails.actions.openDetection', 'Ouvrir la détection')}
                 variant="Secondary"
               />
             </View>
@@ -1463,7 +1605,7 @@ function RecruitmentAdDetails() {
             <View style={{ marginBottom: 12 }}>
               <Button
                 onPress={handleEdit}
-                title="Modifier"
+                title={t('recruitmentAdDetails.actions.edit', 'Modifier')}
                 variant="Primary"
               />
             </View>
@@ -1479,7 +1621,7 @@ function RecruitmentAdDetails() {
                 onPress={handleDelete}
                 style={styles.deleteButton}
                 textStyle={{ color: '#FF3B30' }}
-                title="Supprimer"
+                title={t('recruitmentAdDetails.actions.delete', 'Supprimer')}
                 variant="Secondary"
               />
             </View>
@@ -1496,10 +1638,13 @@ function RecruitmentAdDetails() {
       >
         <View style={Spaces.gap[12]}>
           <Text style={[Fonts.h3, { color: Colors.neutral100, marginBottom: 8, textAlign: 'center' }]}>
-            Supprimer cette annonce
+            {t('recruitmentAdDetails.deleteModal.title', 'Supprimer cette annonce')}
           </Text>
           <Text style={[Fonts.p1, { color: Colors.neutral300, marginBottom: 24, textAlign: 'center' }]}>
-            Veux-tu vraiment supprimer cette annonce ? Cette action est irreversible.
+            {t(
+              'recruitmentAdDetails.deleteModal.body',
+              'Veux-tu vraiment supprimer cette annonce ? Cette action est irreversible.',
+            )}
           </Text>
 
           <View style={{ gap: 12 }}>
@@ -1507,12 +1652,12 @@ function RecruitmentAdDetails() {
               isLoading={deleteMutation.isPending}
               onPress={confirmDelete}
               style={{ backgroundColor: '#FF3B30' }}
-              title="Supprimer"
+              title={t('recruitmentAdDetails.deleteModal.confirm', 'Supprimer')}
               variant="Primary"
             />
             <Button
               onPress={() => setIsDeleteModalVisible(false)}
-              title="Annuler"
+              title={t('recruitmentAdDetails.deleteModal.cancel', 'Annuler')}
               variant="Secondary"
             />
           </View>
@@ -1526,13 +1671,13 @@ function RecruitmentAdDetails() {
               disabled={!hasAcceptedDetectionRiskDeclaration || !hasAcceptedDetectionConditions}
               isLoading={applyMutation.isPending}
               onPress={handleConfirmDetectionApply}
-              title="Participer"
+              title={t('recruitmentAdDetails.detectionModal.confirm', 'Participer')}
               variant="Primary"
             />
             <Button
               disabled={applyMutation.isPending}
               onPress={handleCloseDetectionApplyModal}
-              title="Annuler"
+              title={t('recruitmentAdDetails.detectionModal.cancel', 'Annuler')}
               variant="Secondary"
             />
           </View>
@@ -1557,10 +1702,13 @@ function RecruitmentAdDetails() {
             }}
           >
             <Text style={[Fonts.p2Bold, { color: Colors.primary500, marginBottom: 8 }]}>
-              Tu participes a une détection
+              {t('recruitmentAdDetails.detectionModal.title', 'Tu participes a une détection')}
             </Text>
             <Text style={[Fonts.p2, { color: Colors.neutral100, lineHeight: 22 }]}>
-              {detectionApplySummary || 'Vérification de la détection en cours.'}
+              {detectionApplySummary || t(
+                'recruitmentAdDetails.detectionModal.checking',
+                'Vérification de la détection en cours.',
+              )}
             </Text>
           </View>
 
@@ -1598,20 +1746,20 @@ function RecruitmentAdDetails() {
             <Button
               isLoading={applyMutation.isPending}
               onPress={handleConfirmCoachApply}
-              title="Envoyer ma candidature"
+              title={t('recruitmentAdDetails.coachModal.submit', 'Envoyer ma candidature')}
               variant="Primary"
             />
             <Button
               disabled={applyMutation.isPending}
               onPress={handleCloseCoachApplyModal}
-              title="Annuler"
+              title={t('recruitmentAdDetails.coachModal.cancel', 'Annuler')}
               variant="Secondary"
             />
           </View>
         )}
         headerComponent={(
           <Text style={[Fonts.p1Black, { color: Colors.neutral100, textAlign: 'center' }]}>
-            Candidater comme entraîneur
+            {t('recruitmentAdDetails.coachModal.title', 'Candidater comme entraîneur')}
           </Text>
         )}
         hideCloseButton
@@ -1632,40 +1780,52 @@ function RecruitmentAdDetails() {
               {positionLabel}
             </Text>
             <Text style={[Fonts.p2, { color: Colors.neutral100, lineHeight: 22 }]}>
-              Renseigne un message et au moins un moyen de contact pour permettre au club de te recontacter rapidement.
+              {t(
+                'recruitmentAdDetails.coachModal.intro',
+                'Renseigne un message et au moins un moyen de contact pour permettre au club de te recontacter rapidement.', // eslint-disable-line max-len
+              )}
             </Text>
           </View>
 
           <InputView
             height={120}
-            label="Message"
+            label={t('recruitmentAdDetails.coachModal.messageLabel', 'Message')}
             multiline
             numberOfLines={4}
             onChangeText={setCoachApplicationMessage}
-            placeholder="Explique ton expérience, tes disponibilités ou ce que tu peux apporter a l'équipe."
+            placeholder={t(
+              'recruitmentAdDetails.coachModal.messagePlaceholder',
+              "Explique ton expérience, tes disponibilités ou ce que tu peux apporter a l'équipe.",
+            )}
             textAlignVertical="top"
             value={coachApplicationMessage}
           />
 
           <InputView
             keyboardType="phone-pad"
-            label="Telephone"
+            label={t('recruitmentAdDetails.coachModal.phoneLabel', 'Telephone')}
             onChangeText={setCoachApplicationPhone}
-            placeholder="Ton numéro de téléphone"
+            placeholder={t(
+              'recruitmentAdDetails.coachModal.phonePlaceholder',
+              'Ton numéro de téléphone',
+            )}
             value={coachApplicationPhone}
           />
 
           <InputView
             autoCapitalize="none"
             keyboardType="email-address"
-            label="Email"
+            label={t('recruitmentAdDetails.coachModal.emailLabel', 'Email')}
             onChangeText={setCoachApplicationEmail}
-            placeholder="Ton adresse email"
+            placeholder={t('recruitmentAdDetails.coachModal.emailPlaceholder', 'Ton adresse email')}
             value={coachApplicationEmail}
           />
 
           <Text style={[Fonts.p4, { color: Colors.neutral300, lineHeight: 20 }]}>
-            Le club recevra ta candidature avec ton message, ton téléphone et ton email.
+            {t(
+              'recruitmentAdDetails.coachModal.footnote',
+              'Le club recevra ta candidature avec ton message, ton téléphone et ton email.',
+            )}
           </Text>
         </View>
       </BottomModalView>
