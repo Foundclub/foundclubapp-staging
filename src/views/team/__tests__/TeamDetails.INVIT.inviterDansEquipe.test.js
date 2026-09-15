@@ -133,8 +133,10 @@ jest.mock('@react-navigation/native', () => ({
 // La doublure de mutation joue le cycle complet — succes ET echec — parce que
 // ce filet mesure ce que l'utilisateur VOIT apres son geste, pas seulement
 // l'appel reseau.
+// INVIT2 — les options de chaque mutation, pour verifier ce que dit le filet global.
+const mockOptionsDeMutation = /** @type {any[]} */ ([]);
 jest.mock('@tanstack/react-query', () => ({
-  useMutation: (/** @type {any} */ options) => ({
+  useMutation: (/** @type {any} */ options) => (mockOptionsDeMutation.push(options) && {
     isPending: false,
     mutate: (/** @type {any} */ variables) => {
       const resultat = options?.mutationFn?.(variables);
@@ -1035,5 +1037,26 @@ describe('INVIT2 · E — inviter quelqu un qui n a pas l app', () => {
       'Invitation impossible',
       'Ce numéro de téléphone n\'est pas valide.',
     );
+  });
+});
+
+describe('INVIT2 — un seul message par geste', () => {
+  test('🔴 chaque ecriture de la feuille fait taire l alerte generique globale', async () => {
+    const racine = monterLaFiche();
+    mockOptionsDeMutation.length = 0;
+    await ouvrirLaFeuilleDInvitation(racine);
+
+    // Constat a l'ecran (emulateur, 15/09) : « Montrer un QR code » sans route serveur
+    // affichait le QR (repli) ET une alerte « Erreur » generique par-dessus. Les
+    // ecritures de la feuille disent elles-memes ce qui ne va pas.
+    const feuille = mockOptionsDeMutation.filter((options) => String(options?.mutationFn)
+      .match(new RegExp([
+        'inviteToTeam', 'acceptTeamMembershipRequest', 'createTeamPhoneInvite',
+        'createTeamInviteLink', 'cancelTeamInvite',
+      ].join('|'))));
+    expect(feuille.length).toBeGreaterThanOrEqual(5);
+    feuille.forEach((options) => {
+      expect(options.meta).toEqual(expect.objectContaining({ preventToastError: true }));
+    });
   });
 });

@@ -155,6 +155,8 @@ function TeamInviteSheetBody({
   // la ligne porte la personne INVITÉE et reste `pending` — personne n'entre
   // dans l'équipe sans avoir dit oui.
   const inviteMemberMutation = /** @type {any} */ (useMutation({
+    // Un seul message par geste : la feuille dit elle-meme ce qui ne va pas.
+    meta: { preventToastError: true },
     mutationFn: (/** @type {any} */ payload = {}) => inviteToTeam({
       team: payload.teamId,
       user: payload.userId,
@@ -190,6 +192,8 @@ function TeamInviteSheetBody({
   // Accepter une DEMANDE (la personne a déjà dit oui en demandant) : route du
   // staff `accept`, qui la fait entrer.
   const acceptRequestMutation = /** @type {any} */ (useMutation({
+    // Un seul message par geste : la feuille dit elle-meme ce qui ne va pas.
+    meta: { preventToastError: true },
     mutationFn: (/** @type {any} */ payload = {}) => acceptTeamMembershipRequest(payload.requestId),
     onError: () => {
       Alert.alert(
@@ -213,6 +217,8 @@ function TeamInviteSheetBody({
   }));
 
   const phoneInviteMutation = /** @type {any} */ (useMutation({
+    // Un seul message par geste : la feuille dit elle-meme ce qui ne va pas.
+    meta: { preventToastError: true },
     mutationFn: () => createTeamPhoneInvite({
       firstname: phoneFirstname.trim(),
       phoneNumber: phoneNumber.trim(),
@@ -269,6 +275,8 @@ function TeamInviteSheetBody({
   }));
 
   const qrLinkMutation = /** @type {any} */ (useMutation({
+    // Un seul message par geste : la feuille dit elle-meme ce qui ne va pas.
+    meta: { preventToastError: true },
     mutationFn: () => createTeamInviteLink(invitedTeamId),
     onError: () => {
       // Sans réseau, le QR porte le lien sans code : il ouvre l'équipe, en demande.
@@ -281,6 +289,8 @@ function TeamInviteSheetBody({
   }));
 
   const cancelMutation = /** @type {any} */ (useMutation({
+    // Un seul message par geste : la feuille dit elle-meme ce qui ne va pas.
+    meta: { preventToastError: true },
     mutationFn: (/** @type {any} */ item) => cancelTeamInvite({ id: item.id, type: item.type }),
     onError: () => {
       Alert.alert(
