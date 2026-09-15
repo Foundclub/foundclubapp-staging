@@ -114,7 +114,7 @@ function AddSponsor({ navigation, route }) {
     onError: () => {
       Alert.alert(
         t('common.error', 'Erreur'),
-        "Impossible d'enregistrer ce sponsor pour le moment.",
+        t('addSponsor.errors.save', "Impossible d'enregistrer ce sponsor pour le moment."),
       );
     },
     onSuccess: () => {
@@ -146,8 +146,11 @@ function AddSponsor({ navigation, route }) {
   if (!routeClubId && !routeCmId) {
     return (
       <ClubStateView
-        description="Impossible d'ouvrir l'ajout de sponsor sans club ou structure multisport valide."
-        title="Contexte introuvable"
+        description={t(
+          'addSponsor.state.missingContext.description',
+          "Impossible d'ouvrir l'ajout de sponsor sans club ou structure multisport valide.",
+        )}
+        title={t('addSponsor.state.missingContext.title', 'Contexte introuvable')}
       />
     );
   }
@@ -156,10 +159,16 @@ function AddSponsor({ navigation, route }) {
     return (
       <ClubStateView
         description={isMultisportFlow
-          ? 'Nous récupérons les informations de ta structure multisport.'
-          : 'Nous récupérons les informations du club.'}
+          ? t(
+            'addSponsor.state.loading.multisportDescription',
+            'Nous récupérons les informations de ta structure multisport.',
+          )
+          : t(
+            'addSponsor.state.loading.clubDescription',
+            'Nous récupérons les informations du club.',
+          )}
         isLoading
-        title="Chargement du contexte"
+        title={t('addSponsor.state.loading.title', 'Chargement du contexte')}
       />
     );
   }
@@ -167,12 +176,18 @@ function AddSponsor({ navigation, route }) {
   if (currentTargetError && !currentTarget) {
     return (
       <ClubStateView
-        actionLabel="Réessayer"
+        actionLabel={t('addSponsor.state.loadError.retry', 'Réessayer')}
         description={isMultisportFlow
-          ? "Impossible de charger cette structure multisport pour le moment."
-          : "Impossible de charger ce club pour le moment."}
+          ? t(
+            'addSponsor.state.loadError.multisportDescription',
+            'Impossible de charger cette structure multisport pour le moment.',
+          )
+          : t(
+            'addSponsor.state.loadError.clubDescription',
+            'Impossible de charger ce club pour le moment.',
+          )}
         onAction={() => handleRetry()}
-        title="Ajout indisponible"
+        title={t('addSponsor.state.loadError.title', 'Ajout indisponible')}
       />
     );
   }
@@ -180,12 +195,24 @@ function AddSponsor({ navigation, route }) {
   if (!isLoadingTarget && !currentTargetError && !currentTarget) {
     return (
       <ClubStateView
-        actionLabel="Actualiser"
+        actionLabel={t('addSponsor.state.notFound.refresh', 'Actualiser')}
         description={isMultisportFlow
-          ? "Cette structure multisport est introuvable ou n'est plus accessible."
-          : "Ce club est introuvable ou n'est plus accessible."}
+          ? t(
+            'addSponsor.state.notFound.multisportDescription',
+            "Cette structure multisport est introuvable ou n'est plus accessible.",
+          )
+          : t(
+            'addSponsor.state.notFound.clubDescription',
+            "Ce club est introuvable ou n'est plus accessible.",
+          )}
         onAction={() => handleRetry()}
-        title={isMultisportFlow ? 'Structure introuvable' : 'Club introuvable'}
+        title={isMultisportFlow ? t(
+          'addSponsor.state.notFound.multisportTitle',
+          'Structure introuvable',
+        ) : t(
+          'addSponsor.state.notFound.clubTitle',
+          'Club introuvable',
+        )}
       />
     );
   }

@@ -14,6 +14,7 @@ import {
 import useAuth from '@/domains/auth/useAuth';
 import usePlaces from '@/domains/places/usePlaces';
 import { TutorialIds } from '@/domains/tutorial/tutorialIds';
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -458,7 +459,10 @@ function HistoryWizardSingle({ navigation, route }) {
 
       handleSuccess();
     } catch (_error) {
-      Alert.alert('Erreur', 'Impossible d\'enregistrer cette expérience pour le moment.');
+      Alert.alert(t('historyWizardSingle.errors.saveTitle', 'Erreur'), t(
+        'historyWizardSingle.errors.save',
+        "Impossible d'enregistrer cette expérience pour le moment.",
+      ));
     }
   };
 
@@ -501,19 +505,34 @@ function HistoryWizardSingle({ navigation, route }) {
         collapsibleHeader
         isNextDisabled={!canSubmit}
         isNextLoading={isSubmitting}
-        nextLabel={isEditing ? 'Enregistrer' : 'Valider'}
+        nextLabel={isEditing ? t(
+          'historyWizardSingle.actions.save',
+          'Enregistrer',
+        ) : t('historyWizardSingle.actions.confirm', 'Valider')}
         onBack={() => navigation.goBack()}
         onNext={handleSubmit}
-        subtitle="Ajoute une expérience : ton club d'abord, puis la période, les catégories et le niveau."
-        title={isEditing ? 'Modifier l\'expérience' : 'Ton parcours sportif'}
+        subtitle={t(
+          'historyWizardSingle.header.subtitle',
+          "Ajoute une expérience : ton club d'abord, puis la période, les catégories et le niveau.",
+        )}
+        title={isEditing ? t('historyWizardSingle.header.editTitle', "Modifier l'expérience") : t(
+          'historyWizardSingle.header.title',
+          'Ton parcours sportif',
+        )}
       >
         <View style={[Spaces.gap[32]]}>
           {/* 1. CLUB (en premier) */}
           <View style={[Spaces.gap[16]]}>
-            {renderSectionTitle('Quel club ?', 'Recherche ton club ou saisis-le manuellement.')}
+            {renderSectionTitle(t('historyWizardSingle.club.title', 'Quel club ?'), t(
+              'historyWizardSingle.club.helper',
+              'Recherche ton club ou saisis-le manuellement.',
+            ))}
 
             <OnboardingWrapper
-              description="Commence par rechercher ton club ou saisis le nom manuellement."
+              description={t(
+                'historyWizardSingle.club.onboarding.description',
+                'Commence par rechercher ton club ou saisis le nom manuellement.',
+              )}
               id="history-wizard-club-input"
               order={1}
               spotlight={{
@@ -523,7 +542,7 @@ function HistoryWizardSingle({ navigation, route }) {
                 paddingX: 2,
                 paddingY: 2,
               }}
-              title="Sélection du club"
+              title={t('historyWizardSingle.club.onboarding.title', 'Sélection du club')}
             >
               {!showCustomInput ? (
                 <View style={[Spaces.gap[16]]}>
@@ -538,7 +557,10 @@ function HistoryWizardSingle({ navigation, route }) {
                       textAlignVertical: 'center',
                     }}
                     openFilters={handleOpenFilters}
-                    placeholder="Rechercher un club..."
+                    placeholder={t(
+                      'historyWizardSingle.club.searchPlaceholder',
+                      'Rechercher un club...',
+                    )}
                     searchDefaultValue={searchQuery}
                   />
 
@@ -557,8 +579,11 @@ function HistoryWizardSingle({ navigation, route }) {
                     >
                       <AutocompleteAddressInput
                         address={draftFilters.location}
-                        label="Ville ou adresse"
-                        placeholder="Choisir une localisation"
+                        label={t('historyWizardSingle.filters.locationLabel', 'Ville ou adresse')}
+                        placeholder={t(
+                          'historyWizardSingle.filters.locationPlaceholder',
+                          'Choisir une localisation',
+                        )}
                         setAddress={(location) => setDraftFilters((current) => ({
                           ...current,
                           location,
@@ -567,7 +592,11 @@ function HistoryWizardSingle({ navigation, route }) {
 
                       <View style={[Spaces.gap[8]]}>
                         <Text style={[Fonts.p2Bold, { color: Colors.neutral00 }]}>
-                          {`Rayon : ${draftFilters.radius} km`}
+                          {t(
+                            'historyWizardSingle.filters.radius',
+                            'Rayon : {{radius}} km',
+                            { radius: draftFilters.radius, ...SANS_ECHAPPEMENT },
+                          )}
                         </Text>
                         <Slider
                           disabled={!draftLocationHasCoordinates}
@@ -589,9 +618,12 @@ function HistoryWizardSingle({ navigation, route }) {
 
                       <AutocompleteSelect
                         isSearchable
-                        label="Sport"
+                        label={t('historyWizardSingle.filters.sportLabel', 'Sport')}
                         options={activityOptions}
-                        placeholder="Choisir un sport"
+                        placeholder={t(
+                          'historyWizardSingle.filters.sportPlaceholder',
+                          'Choisir un sport',
+                        )}
                         searchValue={activitySearchValue}
                         setSearchValue={setActivitySearchValue}
                         setValue={(option) => setDraftFilters((current) => ({
@@ -605,14 +637,14 @@ function HistoryWizardSingle({ navigation, route }) {
                         <View style={{ flex: 1 }}>
                           <Button
                             onPress={handleClearFilters}
-                            title="Effacer"
+                            title={t('historyWizardSingle.filters.clear', 'Effacer')}
                             variant="Secondary"
                           />
                         </View>
                         <View style={{ flex: 1 }}>
                           <Button
                             onPress={handleApplyFilters}
-                            title="Appliquer"
+                            title={t('historyWizardSingle.filters.apply', 'Appliquer')}
                             variant="Primary"
                           />
                         </View>
@@ -636,14 +668,23 @@ function HistoryWizardSingle({ navigation, route }) {
 
                       {shouldShowNoResults ? (
                         <Text style={[Fonts.p2, { color: Colors.neutral300, textAlign: 'center' }]}>
-                          Aucun club trouvé pour cette recherche.
+                          {t(
+                            'historyWizardSingle.club.noResults',
+                            'Aucun club trouvé pour cette recherche.',
+                          )}
                         </Text>
                       ) : null}
                       {!displayedIsLoading && hasSearchTerm && hasSearchError ? (
                         <Text style={[Fonts.p3, { color: Colors.error500, textAlign: 'center' }]}>
                           {shouldEnableLegacyFallback
-                            ? 'La recherche intelligente est indisponible, fallback actif.'
-                            : 'La recherche intelligente est indisponible.'}
+                            ? t(
+                              'historyWizardSingle.club.smartSearchUnavailableFallback',
+                              'La recherche intelligente est indisponible, fallback actif.',
+                            )
+                            : t(
+                              'historyWizardSingle.club.smartSearchUnavailable',
+                              'La recherche intelligente est indisponible.',
+                            )}
                         </Text>
                       ) : null}
                     </View>
@@ -684,7 +725,10 @@ function HistoryWizardSingle({ navigation, route }) {
                     style={{ justifyContent: 'center', minHeight: 44 }}
                   >
                     <Text style={[Fonts.p2, { color: Colors.primary500, textAlign: 'center' }]}>
-                      Club non trouvé ? Saisir manuellement
+                      {t(
+                        'historyWizardSingle.club.enterManually',
+                        'Club non trouvé ? Saisir manuellement',
+                      )}
                     </Text>
                   </TouchableOpacity>
                 </View>
@@ -693,7 +737,10 @@ function HistoryWizardSingle({ navigation, route }) {
                   <Input
                     autoFocus
                     onChangeText={setCustomClubName}
-                    placeholder="Nom du club..."
+                    placeholder={t(
+                      'historyWizardSingle.club.customNamePlaceholder',
+                      'Nom du club...',
+                    )}
                     value={customClubName}
                   />
 
@@ -721,7 +768,7 @@ function HistoryWizardSingle({ navigation, route }) {
                     style={{ justifyContent: 'center', minHeight: 44 }}
                   >
                     <Text style={[Fonts.p2, { color: Colors.primary500, textAlign: 'center' }]}>
-                      Revenir à la recherche
+                      {t('historyWizardSingle.club.backToSearch', 'Revenir à la recherche')}
                     </Text>
                   </TouchableOpacity>
                 </View>
@@ -731,11 +778,16 @@ function HistoryWizardSingle({ navigation, route }) {
 
           {/* 2. PÉRIODE */}
           <View style={[Spaces.gap[16]]}>
-            {renderSectionTitle('Quelle période ?', 'Indique les années de ta présence dans ce club.')}
+            {renderSectionTitle(t('historyWizardSingle.period.title', 'Quelle période ?'), t(
+              'historyWizardSingle.period.helper',
+              'Indique les années de ta présence dans ce club.',
+            ))}
 
             <View style={[Spaces.gap[24]]}>
               <View style={[Spaces.gap[8]]}>
-                <Text style={[Fonts.p2Bold, { color: Colors.neutral300 }]}>Année de début</Text>
+                <Text style={[Fonts.p2Bold, { color: Colors.neutral300 }]}>
+                  {t('historyWizardSingle.period.startYear', 'Année de début')}
+                </Text>
                 <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                   <View style={[Alignments.row, Spaces.gap[8]]}>
                     {yearOptions.map((year) => {
@@ -772,12 +824,16 @@ function HistoryWizardSingle({ navigation, route }) {
                   trackColor={{ false: Colors.neutral700, true: Colors.primary500 }}
                   value={state.isCurrentlyActive}
                 />
-                <Text style={[Fonts.p1, { color: Colors.neutral00 }]}>Je suis toujours dans ce club</Text>
+                <Text style={[Fonts.p1, { color: Colors.neutral00 }]}>
+                  {t('historyWizardSingle.period.stillActive', 'Je suis toujours dans ce club')}
+                </Text>
               </View>
 
               {!state.isCurrentlyActive ? (
                 <View style={[Spaces.gap[8]]}>
-                  <Text style={[Fonts.p2Bold, { color: Colors.neutral300 }]}>Année de fin</Text>
+                  <Text style={[Fonts.p2Bold, { color: Colors.neutral300 }]}>
+                    {t('historyWizardSingle.period.endYear', 'Année de fin')}
+                  </Text>
                   <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                     <View style={[Alignments.row, Spaces.gap[8]]}>
                       {yearOptions.filter((y) => y >= state.startYear).map((year) => {
@@ -813,10 +869,16 @@ function HistoryWizardSingle({ navigation, route }) {
           {/* 3. CATÉGORIES (optionnel) */}
           <View style={[Spaces.gap[16]]}>
             {renderSectionTitle(
-              'Quelles catégories ?',
+              t('historyWizardSingle.categories.title', 'Quelles catégories ?'),
               isEditing
-                ? 'Sélectionne une catégorie (facultatif).'
-                : 'Sélectionne une ou plusieurs catégories (facultatif).',
+                ? t(
+                  'historyWizardSingle.categories.helperSingle',
+                  'Sélectionne une catégorie (facultatif).',
+                )
+                : t(
+                  'historyWizardSingle.categories.helperMulti',
+                  'Sélectionne une ou plusieurs catégories (facultatif).',
+                ),
             )}
 
             {isCategoriesLoading && (
@@ -897,7 +959,10 @@ function HistoryWizardSingle({ navigation, route }) {
 
           {/* 4. NIVEAU (optionnel) */}
           <View style={[Spaces.gap[16]]}>
-            {renderSectionTitle('Quel niveau ?', 'Sélectionne le meilleur niveau joué (facultatif).')}
+            {renderSectionTitle(t('historyWizardSingle.level.title', 'Quel niveau ?'), t(
+              'historyWizardSingle.level.helper',
+              'Sélectionne le meilleur niveau joué (facultatif).',
+            ))}
 
             {isLevelsLoading && (
               <ActivityIndicator color={Colors.primary500} size="large" />
@@ -905,7 +970,10 @@ function HistoryWizardSingle({ navigation, route }) {
             {!isLevelsLoading && levelsError && (
               <View style={[Spaces.gap[12]]}>
                 <Text style={[Fonts.p1, { color: Colors.neutral100 }]}>
-                  Impossible de charger les niveaux pour le moment.
+                  {t(
+                    'historyWizardSingle.level.error',
+                    'Impossible de charger les niveaux pour le moment.',
+                  )}
                 </Text>
                 <TouchableOpacity
                   onPress={() => refetchLevels()}
@@ -921,14 +989,14 @@ function HistoryWizardSingle({ navigation, route }) {
                   }}
                 >
                   <Text style={[Fonts.p2Bold, { color: Colors.primary500 }]}>
-                    Réessayer
+                    {t('historyWizardSingle.level.retry', 'Réessayer')}
                   </Text>
                 </TouchableOpacity>
               </View>
             )}
             {!isLevelsLoading && !levelsError && levelOptions.length === 0 && (
               <Text style={[Fonts.p1, { color: Colors.neutral100 }]}>
-                Aucun niveau disponible pour le moment.
+                {t('historyWizardSingle.level.empty', 'Aucun niveau disponible pour le moment.')}
               </Text>
             )}
             {!isLevelsLoading && !levelsError && levelOptions.length > 0 && (
@@ -975,10 +1043,13 @@ function HistoryWizardSingle({ navigation, route }) {
             }}
           >
             <Text style={[Fonts.p2Bold, { color: Colors.primary500, marginBottom: 4 }]}>
-              Déclaration sur l&apos;honneur
+              {t('historyWizardSingle.honour.title', "Déclaration sur l'honneur")}
             </Text>
             <Text style={[Fonts.p3, { color: Colors.neutral00, lineHeight: 18 }]}>
-              Ces informations peuvent être vérifiées par la communauté.
+              {t(
+                'historyWizardSingle.honour.description',
+                'Ces informations peuvent être vérifiées par la communauté.',
+              )}
             </Text>
           </View>
         </View>
@@ -991,7 +1062,10 @@ function HistoryWizardSingle({ navigation, route }) {
                 {selectedMultisport?.name}
               </Text>
               <Text style={[Fonts.p2, { color: Colors.neutral300, marginTop: 8, textAlign: 'center' }]}>
-                Sélectionne ton entité de rattachement
+                {t(
+                  'historyWizardSingle.multisport.subtitle',
+                  'Sélectionne ton entité de rattachement',
+                )}
               </Text>
             </View>
           )}
@@ -1007,7 +1081,7 @@ function HistoryWizardSingle({ navigation, route }) {
             <View style={{ backgroundColor: Colors.neutral700, height: 1, marginVertical: 8 }} />
 
             <Text style={[Fonts.p2Bold, { color: Colors.neutral00, marginBottom: 8 }]}>
-              Sections disponibles :
+              {t('historyWizardSingle.multisport.sectionsTitle', 'Sections disponibles :')}
             </Text>
 
             {selectedMultisport?.sections?.map((section) => (
@@ -1048,7 +1122,7 @@ function HistoryWizardSingle({ navigation, route }) {
 
             {(!selectedMultisport?.sections || selectedMultisport.sections.length === 0) ? (
               <Text style={[Fonts.p2, { color: Colors.neutral500, fontStyle: 'italic' }]}>
-                Aucune section listée.
+                {t('historyWizardSingle.multisport.noSections', 'Aucune section listée.')}
               </Text>
             ) : null}
           </View>

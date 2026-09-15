@@ -1,5 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import i18next from 'i18next';
 import { useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Alert, ScrollView, Text, TouchableOpacity, View,
 } from 'react-native';
@@ -26,6 +28,7 @@ import {
 } from '@/domains/subscription/subscriptionPurchaseRail';
 import { scheduleSubscriptionStateRefresh } from '@/domains/subscription/subscriptionRefresh';
 import { useSubscriptionCatalog } from '@/domains/subscription/useSubscriptionCatalog';
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -37,22 +40,36 @@ import { RouteNames } from '@/navigation/routeNames';
 
 import { trackSubscriptionFunnelEvent } from '@/services/subscription/subscriptionService';
 
-// Resume 1 ligne des cartes repliees (decision 3 — carte non selectionnee).
-const TEAM_SUMMARY = "Événements illimités, compo, convocations, cotisation d'équipe…";
-const CLUB_SUMMARY = 'Installations, sponsors, cotisations du club…';
-
-// Benefices des cartes depliees (handoff pw-core PRICING).
-const TEAM_BENEFITS = [
-  'Événements et matchs illimités',
-  'Composition et convocations en 2 taps',
-  "Cotisation d'équipe encaissée dans l'app",
-];
-const CLUB_BENEFITS = [
-  'Équipes du club illimitées',
-  'Installations et réservations',
-  'Sponsors et partenaires du club',
-  "Cotisations du club encaissées dans l'app",
-];
+// I18N-1 : lus par le t du composant (des constantes evaluees au chargement ne suivraient pas
+// la langue).
+/**
+ * Resume 1 ligne des cartes repliees (decision 3 — carte non selectionnee) et benefices des
+ * cartes depliees (handoff pw-core PRICING).
+ * @param {Function} t - La fonction de traduction du composant.
+ * @returns {{ clubBenefits: string[], clubSummary: string, teamBenefits: string[],
+ *   teamSummary: string }} Les textes des deux cartes.
+ */
+const offerTexts = (t) => ({
+  clubBenefits: [
+    t('guideOffersRecap.offers.club.benefits.teams', 'Équipes du club illimitées'),
+    t('guideOffersRecap.offers.club.benefits.facilities', 'Installations et réservations'),
+    t('guideOffersRecap.offers.club.benefits.sponsors', 'Sponsors et partenaires du club'),
+    t('guideOffersRecap.offers.club.benefits.fees', "Cotisations du club encaissées dans l'app"),
+  ],
+  clubSummary: t(
+    'guideOffersRecap.offers.club.summary',
+    'Installations, sponsors, cotisations du club…',
+  ),
+  teamBenefits: [
+    t('guideOffersRecap.offers.team.benefits.events', 'Événements et matchs illimités'),
+    t('guideOffersRecap.offers.team.benefits.lineUp', 'Composition et convocations en 2 taps'),
+    t('guideOffersRecap.offers.team.benefits.fee', "Cotisation d'équipe encaissée dans l'app"),
+  ],
+  teamSummary: t(
+    'guideOffersRecap.offers.team.summary',
+    "Événements illimités, compo, convocations, cotisation d'équipe…",
+  ),
+});
 
 // LOT CATALOGUE (2026-08-28) — CE QUI A REMPLACE LA TABLE ECRITE EN DUR. Cet
 // ecran portait « S · ≤ 3 » / « M · ≤ 8 » / « L · illim. », une grille recopiee
@@ -66,8 +83,18 @@ const CLUB_BENEFITS = [
 // (Club x10 = -17 %, Equipe x7,5-7,7 = -36/-37 %), et « 2 mois offerts » sous-vendait
 // l'offre Equipe de plus de la moitie. La remise est calculee et portee PAR CARTE.
 const BILLING_PERIOD_OPTIONS = [
-  { id: 'yearly', label: 'Annuel' },
-  { id: 'monthly', label: 'Mensuel' },
+  {
+    id: 'yearly',
+    get label() {
+      return i18next.t('guideOffersRecap.billingPeriod.yearly', 'Annuel');
+    },
+  },
+  {
+    id: 'monthly',
+    get label() {
+      return i18next.t('guideOffersRecap.billingPeriod.monthly', 'Mensuel');
+    },
+  },
 ];
 
 /**
@@ -105,14 +132,25 @@ const getEntryPriceAmountLabel = (entry) => {
   return formatSubscriptionPriceLabel(cents, '', entry?.priceCurrencyCode);
 };
 
-// Ce que l'utilisateur vient de creer pendant le tour (fusion preuve + Gratuit, decision 5b).
-const ACQUIS_PROOF_ITEMS = ['Ton équipe', 'Ton événement', 'Ta compo', 'Ton annonce'];
+/**
+ * Ce que l'utilisateur vient de creer pendant le tour (fusion preuve + Gratuit, decision 5b).
+ * I18N-1 : lu par le t du composant.
+ * @param {Function} t - La fonction de traduction du composant.
+ * @returns {string[]} Les quatre preuves.
+ */
+const acquisProofItems = (t) => [
+  t('guideOffersRecap.acquis.items.team', 'Ton équipe'),
+  t('guideOffersRecap.acquis.items.event', 'Ton événement'),
+  t('guideOffersRecap.acquis.items.lineUp', 'Ta compo'),
+  t('guideOffersRecap.acquis.items.listing', 'Ton annonce'),
+];
 
 /**
  * Carte « acquis » : le Gratuit n'est plus une offre a vendre mais un etat atteint.
  * @returns {import('react').ReactElement}
  */
 function AcquisCard() {
+  const { t } = useTranslation();
   const {
     Alignments, Colors, Fonts, Spaces,
   } = useTheme();
@@ -130,7 +168,9 @@ function AcquisCard() {
     ]}
     >
       <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[8]]}>
-        <Text style={[Fonts.p2Bold, Fonts.neutral100]}>Gratuit — 0 €</Text>
+        <Text style={[Fonts.p2Bold, Fonts.neutral100]}>
+          {t('guideOffersRecap.acquis.free', 'Gratuit — 0 €')}
+        </Text>
         <View style={{
           backgroundColor: 'rgba(255,255,255,0.08)',
           borderRadius: 999,
@@ -145,12 +185,12 @@ function AcquisCard() {
               { letterSpacing: 0.8, textTransform: 'uppercase' },
             ]}
           >
-            Tu y es
+            {t('guideOffersRecap.acquis.youAreHere', 'Tu y es')}
           </Text>
         </View>
       </View>
       <View style={[Alignments.row, { columnGap: 10, flexWrap: 'wrap', rowGap: 4 }]}>
-        {ACQUIS_PROOF_ITEMS.map((item) => (
+        {acquisProofItems(t).map((item) => (
           <View key={item} style={[Alignments.row, Alignments.alignCenter, { columnGap: 4 }]}>
             <Text style={[Fonts.p4Bold, { color: Colors.success500 }]}>✓</Text>
             <Text style={[Fonts.p3Bold, { color: Colors.success200 }]}>{item}</Text>
@@ -158,7 +198,7 @@ function AcquisCard() {
         ))}
       </View>
       <Text style={[Fonts.p4, Fonts.neutral400]}>
-        Tout reste à toi, à vie — chat illimité inclus.
+        {t('guideOffersRecap.acquis.footer', 'Tout reste à toi, à vie — chat illimité inclus.')}
       </Text>
     </View>
   );
@@ -173,6 +213,7 @@ function AcquisCard() {
  * @returns {import('react').ReactElement}
  */
 function GuideOffersRecap({ navigation }) {
+  const { t } = useTranslation();
   const {
     Alignments, Colors, Fonts, Spaces,
   } = useTheme();
@@ -265,11 +306,17 @@ function GuideOffersRecap({ navigation }) {
     // Le nom vendu est celui du catalogue serveur (« Club 100 »), jamais un nom
     // reconstruit ici : l'ecran des offres et « Mon abonnement » doivent dire
     // le meme mot que ce recap.
-    ? (String(selectedClubEntry?.displayName || '').trim() || 'Club')
-    : 'Équipe';
+    ? (String(selectedClubEntry?.displayName || '').trim() || t(
+      'guideOffersRecap.offers.club.name',
+      'Club',
+    ))
+    : t('guideOffersRecap.offers.team.name', 'Équipe');
   const selectedPriceAmountLabel = getEntryPriceAmountLabel(selectedEntry);
   const isYearlyPeriod = billingPeriod === 'yearly';
-  const billingPeriodSuffix = isYearlyPeriod ? '/an' : '/mois';
+  const billingPeriodSuffix = isYearlyPeriod ? t('guideOffersRecap.priceSuffix.yearly', '/an') : t(
+    'guideOffersRecap.priceSuffix.monthly',
+    '/mois',
+  );
 
   const purchaseMutation = useMutation({
     mutationFn: async (/** @type {any} */ purchaseInput) => (
@@ -292,8 +339,12 @@ function GuideOffersRecap({ navigation }) {
 
     if (!isSubscriptionPurchaseAvailable()) {
       Alert.alert(
-        'Checkout indisponible',
-        'Le checkout store réel sera branché dans une prochaine vague. Utilise le mode test local ou staging pour la recette complète.',
+        t('guideOffersRecap.alerts.checkoutUnavailable.title', 'Checkout indisponible'),
+        t(
+          'guideOffersRecap.alerts.checkoutUnavailable.message',
+          'Le checkout store réel sera branché dans une prochaine vague. Utilise le mode '
+            + 'test local ou staging pour la recette complète.',
+        ),
       );
       return;
     }
@@ -301,8 +352,11 @@ function GuideOffersRecap({ navigation }) {
     const isClubPurchase = selectedOffer === 'club';
     if (isClubPurchase && !currentClubDocumentId) {
       Alert.alert(
-        'Club requis',
-        "Rattache d'abord ton compte à un club avant de prendre une offre Club.",
+        t('guideOffersRecap.alerts.clubRequired.title', 'Club requis'),
+        t(
+          'guideOffersRecap.alerts.clubRequired.message',
+          "Rattache d'abord ton compte à un club avant de prendre une offre Club.",
+        ),
       );
       return;
     }
@@ -340,7 +394,7 @@ function GuideOffersRecap({ navigation }) {
           source: selectedOffer,
         });
         Alert.alert(
-          'Erreur abonnement',
+          t('guideOffersRecap.alerts.subscriptionError.title', 'Erreur abonnement'),
           String(result?.validationErrorMessage || '') || getSubscriptionBillingErrorMessage(null),
         );
         return;
@@ -365,11 +419,15 @@ function GuideOffersRecap({ navigation }) {
         clubDocumentId: isClubPurchase ? currentClubDocumentId : undefined,
         offerLabel: isClubPurchase
           ? selectedOfferName
-          : `Équipe · ${slotCount} équipe${slotCount > 1 ? 's' : ''}`,
+          : t('guideOffersRecap.success.teamOfferLabel', {
+            count: slotCount,
+            defaultValue_one: 'Équipe · {{count}} équipe',
+            defaultValue_other: 'Équipe · {{count}} équipes',
+          }),
         offerScope: isClubPurchase ? 'CLUB' : 'TEAM',
         pendingActivation: renewal.pendingActivation,
         renewalDateLabel: renewal.renewalDateLabel,
-        resumeCtaLabel: "C'est parti !",
+        resumeCtaLabel: t('guideOffersRecap.success.resumeCta', "C'est parti !"),
         resumeMode: 'home',
       });
     } catch (error) {
@@ -378,7 +436,10 @@ function GuideOffersRecap({ navigation }) {
         slotCount,
         source: selectedOffer,
       });
-      Alert.alert('Erreur abonnement', getSubscriptionBillingErrorMessage(error));
+      Alert.alert(t(
+        'guideOffersRecap.alerts.subscriptionError.title',
+        'Erreur abonnement',
+      ), getSubscriptionBillingErrorMessage(error));
     }
   };
 
@@ -390,14 +451,20 @@ function GuideOffersRecap({ navigation }) {
   const renderOfferCard = (offerKey) => {
     const isClub = offerKey === 'club';
     const isSelected = selectedOffer === offerKey;
-    const offerName = isClub ? 'Club' : 'Équipe';
+    const offerName = isClub ? t(
+      'guideOffersRecap.offers.club.name',
+      'Club',
+    ) : t('guideOffersRecap.offers.team.name', 'Équipe');
     const offerSub = isClub
-      ? 'Pour les dirigeants — tout le club'
-      : 'Pour les coachs — ta ou tes équipes';
+      ? t('guideOffersRecap.offers.club.subtitle', 'Pour les dirigeants — tout le club')
+      : t('guideOffersRecap.offers.team.subtitle', 'Pour les coachs — ta ou tes équipes');
     const entries = isClub ? clubTierEntries : teamTierEntries;
     const firstEntry = entries[0] || null;
-    const summary = isClub ? CLUB_SUMMARY : TEAM_SUMMARY;
-    const benefits = isClub ? CLUB_BENEFITS : TEAM_BENEFITS;
+    const {
+      clubBenefits, clubSummary, teamBenefits, teamSummary,
+    } = offerTexts(t);
+    const summary = isClub ? clubSummary : teamSummary;
+    const benefits = isClub ? clubBenefits : teamBenefits;
     const tierOptions = isClub
       ? entries.map((entry) => {
         const tier = getCatalogEntryClubTier(entry);
@@ -410,7 +477,14 @@ function GuideOffersRecap({ navigation }) {
       })
       : entries.map((entry) => {
         const slotCount = Number(entry?.slotCount || 0);
-        return { id: slotCount, label: `${slotCount} équipe${slotCount > 1 ? 's' : ''}` };
+        return {
+          id: slotCount,
+          label: t('guideOffersRecap.offers.team.tierLabel', {
+            count: slotCount,
+            defaultValue_one: '{{count}} équipe',
+            defaultValue_other: '{{count}} équipes',
+          }),
+        };
       });
     const selectedTierId = isClub ? clubTier : teamSlotCount;
     const cardEntry = isClub ? selectedClubEntry : selectedTeamEntry;
@@ -474,7 +548,7 @@ function GuideOffersRecap({ navigation }) {
                   { letterSpacing: 0.8, textTransform: 'uppercase' },
                 ]}
               >
-                Populaire
+                {t('guideOffersRecap.offers.popular', 'Populaire')}
               </Text>
             </View>
           ) : null}
@@ -575,7 +649,7 @@ function GuideOffersRecap({ navigation }) {
                   { textTransform: 'uppercase' },
                 ]}
               >
-                à partir de
+                {t('guideOffersRecap.offers.startingFrom', 'à partir de')}
               </Text>
               <Text style={[Fonts.h5Bold, Fonts.neutral00]}>
                 {getEntryPriceAmountLabel(firstEntry)}
@@ -604,19 +678,36 @@ function GuideOffersRecap({ navigation }) {
   // UPGRADE / U6 — ce qui arrive au cadeau si on achete maintenant, ou ''.
   const trialHandoverNotice = formatSubscriptionTrialHandoverNotice(subscriptionSummary);
   const purchaseNotice = isSelectedOfferLocked
-    ? `${selectedOfferAvailability.coverageNotice} : payée par un autre membre de ton club. `
-      + 'Seule une offre supérieure peut la remplacer.'
+    ? t(
+      'guideOffersRecap.notice.coveredByOther',
+      '{{coverageNotice}} : payée par un autre membre de ton club. ',
+      { coverageNotice: selectedOfferAvailability.coverageNotice, ...SANS_ECHAPPEMENT },
+    )
+      + t('guideOffersRecap.notice.higherPlanOnly', 'Seule une offre supérieure peut la remplacer.')
     : trialHandoverNotice;
 
-  let ctaTitle = `Débloquer ${selectedOfferName}`;
+  let ctaTitle = t(
+    'guideOffersRecap.cta.unlock',
+    'Débloquer {{selectedOfferName}}',
+    { selectedOfferName, ...SANS_ECHAPPEMENT },
+  );
   if (isCatalogLoading) {
-    ctaTitle = 'Chargement des tarifs…';
+    ctaTitle = t('guideOffersRecap.cta.loadingPrices', 'Chargement des tarifs…');
   } else if (isCatalogError) {
-    ctaTitle = 'Tarifs indisponibles';
+    ctaTitle = t('guideOffersRecap.cta.pricesUnavailable', 'Tarifs indisponibles');
   } else if (isSelectedOfferLocked) {
-    ctaTitle = 'Déjà couvert par ton club';
+    ctaTitle = t('guideOffersRecap.cta.alreadyCovered', 'Déjà couvert par ton club');
   } else if (selectedPriceAmountLabel) {
-    ctaTitle = `Débloquer ${selectedOfferName} · ${selectedPriceAmountLabel}${billingPeriodSuffix}`;
+    ctaTitle = t(
+      'guideOffersRecap.cta.unlockWithPrice',
+      'Débloquer {{selectedOfferName}} · {{selectedPriceAmountLabel}}{{billingPeriodSuffix}}',
+      {
+        billingPeriodSuffix,
+        selectedOfferName,
+        selectedPriceAmountLabel,
+        ...SANS_ECHAPPEMENT,
+      },
+    );
   }
 
   return (
@@ -630,9 +721,11 @@ function GuideOffersRecap({ navigation }) {
           showsVerticalScrollIndicator={false}
         >
           <Text style={[Fonts.h2Bold, Fonts.neutral00]}>
-            Ton équipe est prête.
+            {t('guideOffersRecap.header.teamReady', 'Ton équipe est prête.')}
             {' '}
-            <Text style={[Fonts.h2Bold, Fonts.primary500]}>Débloque la suite.</Text>
+            <Text style={[Fonts.h2Bold, Fonts.primary500]}>
+              {t('guideOffersRecap.header.unlockNext', 'Débloque la suite.')}
+            </Text>
           </Text>
 
           <AcquisCard />
@@ -653,14 +746,17 @@ function GuideOffersRecap({ navigation }) {
               ]}
             >
               <Text style={[Fonts.h5Bold, Fonts.neutral00, Fonts.textCenter]}>
-                Impossible de charger les tarifs
+                {t('guideOffersRecap.catalogError.title', 'Impossible de charger les tarifs')}
               </Text>
               <Text style={[Fonts.p3, Fonts.neutral200, Fonts.textCenter]}>
-                Vérifie ta connexion et réessaie. Tes créations sont bien enregistrées.
+                {t(
+                  'guideOffersRecap.catalogError.description',
+                  'Vérifie ta connexion et réessaie. Tes créations sont bien enregistrées.',
+                )}
               </Text>
               <Button
                 onPress={() => catalogQuery.refetch()}
-                title="Réessayer"
+                title={t('guideOffersRecap.catalogError.retry', 'Réessayer')}
                 variant="Secondary"
               />
             </View>
@@ -676,7 +772,10 @@ function GuideOffersRecap({ navigation }) {
               {renderOfferCard('team')}
               {renderOfferCard('club')}
               <Text style={[Fonts.p4, Fonts.neutral300, Fonts.textCenter]}>
-                Résiliable à tout moment · Paiement App Store / Google Play
+                {t(
+                  'guideOffersRecap.footer.cancelAnytime',
+                  'Résiliable à tout moment · Paiement App Store / Google Play',
+                )}
               </Text>
             </>
           )}
@@ -694,7 +793,10 @@ function GuideOffersRecap({ navigation }) {
             disabled={isCatalogLoading || isCatalogError || isSelectedOfferLocked}
             isLoading={purchaseMutation.isPending}
             onPress={handleUnlock}
-            title={purchaseMutation.isPending ? 'Achat en cours…' : ctaTitle}
+            title={purchaseMutation.isPending ? t(
+              'guideOffersRecap.cta.purchasing',
+              'Achat en cours…',
+            ) : ctaTitle}
             variant="Primary"
           />
           <TouchableOpacity
@@ -703,7 +805,7 @@ function GuideOffersRecap({ navigation }) {
             style={Spaces.paddingVertical[12]}
           >
             <Text style={[Fonts.p2Bold, Fonts.neutral200, Fonts.textCenter]}>
-              Plus tard
+              {t('guideOffersRecap.cta.later', 'Plus tard')}
             </Text>
           </TouchableOpacity>
           <LegalFooter />
