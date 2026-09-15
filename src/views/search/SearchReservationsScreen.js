@@ -1,3 +1,5 @@
+import { useTranslation } from 'react-i18next';
+
 import useAuth from '@/domains/auth/useAuth';
 import { TutorialIds } from '@/domains/tutorial/tutorialIds';
 
@@ -12,6 +14,7 @@ import SearchScreenShell from './components/SearchScreenShell';
  * @returns {import('react').ReactElement}
  */
 function SearchReservationsScreen({ navigation, route }) {
+  const { t } = useTranslation();
   const { userData } = useAuth();
   return (
     <TutorialFlowBoundary
@@ -32,21 +35,30 @@ function SearchReservationsScreen({ navigation, route }) {
         navigation={navigation}
         tutorialSteps={{
           header: {
-            description: 'Accèdes ici aux réservations de terrains et installations.',
+            description: t(
+              'searchReservationsScreen.tutorial.header.description',
+              'Accèdes ici aux réservations de terrains et installations.',
+            ),
             id: 'search-reservations-header',
             order: 1,
-            title: 'Recherche réservations',
+            title: t('searchReservationsScreen.tutorial.header.title', 'Recherche réservations'),
           },
           switcher: {
-            description: 'Le switch permet de passer ? un autre type de recherche.',
+            description: t(
+              'searchReservationsScreen.tutorial.switcher.description',
+              'Le switch permet de passer ? un autre type de recherche.',
+            ),
             id: 'search-reservations-switcher',
             order: 2,
-            title: 'Types de recherche',
+            title: t('searchReservationsScreen.tutorial.switcher.title', 'Types de recherche'),
           },
         }}
       >
         <OnboardingWrapper
-          description="Filtre par activité et critères avancés pour trouver une réservation."
+          description={t(
+            'searchReservationsScreen.tutorial.content.description',
+            'Filtre par activité et critères avancés pour trouver une réservation.',
+          )}
           id="search-reservations-content"
           order={3}
           spotlight={{
@@ -59,7 +71,7 @@ function SearchReservationsScreen({ navigation, route }) {
           style={{
             flex: 1,
           }}
-          title="Liste des réservations"
+          title={t('searchReservationsScreen.tutorial.content.title', 'Liste des réservations')}
         >
           <ReservationListContent enableMapMode showFilters />
         </OnboardingWrapper>
