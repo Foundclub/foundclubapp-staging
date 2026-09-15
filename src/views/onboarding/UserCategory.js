@@ -1,4 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import i18next from 'i18next';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -40,8 +41,18 @@ const CATEGORIES = [
   { label: 'U20', value: 'U20' },
   { label: 'U21', value: 'U21' },
   { label: 'U23', value: 'U23' },
-  { label: 'Senior', value: 'Senior' },
-  { label: 'Vétéran', value: 'Vétéran' },
+  {
+    get label() {
+      return i18next.t('userCategory.categories.senior', 'Senior');
+    },
+    value: 'Senior',
+  },
+  {
+    get label() {
+      return i18next.t('userCategory.categories.veteran', 'Vétéran');
+    },
+    value: 'Vétéran',
+  },
 ];
 
 /**
@@ -69,7 +80,10 @@ function UserCategory({ navigation }) {
   const updateUserMutation = useMutation({
     mutationFn: updateMe,
     onError: (error) => {
-      Alert.alert('Erreur', error?.message || 'Impossible de mettre à jour ton profil.');
+      Alert.alert(t('userCategory.alerts.updateError.title', 'Erreur'), error?.message || t(
+        'userCategory.alerts.updateError.message',
+        'Impossible de mettre à jour ton profil.',
+      ));
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['get-me'] });
@@ -91,9 +105,12 @@ function UserCategory({ navigation }) {
   if (userDataLoading) {
     return (
       <OnboardingStateView
-        description="Nous récupérons ton profil avant de choisir ta catégorie."
+        description={t(
+          'userCategory.loading.description',
+          'Nous récupérons ton profil avant de choisir ta catégorie.',
+        )}
         isLoading
-        title="Chargement du profil"
+        title={t('userCategory.loading.title', 'Chargement du profil')}
       />
     );
   }
@@ -101,10 +118,13 @@ function UserCategory({ navigation }) {
   if (userDataError) {
     return (
       <OnboardingStateView
-        actionLabel="Réessayer"
-        description={userDataError?.message || 'Impossible de charger ton profil.'}
+        actionLabel={t('userCategory.loadError.retry', 'Réessayer')}
+        description={userDataError?.message || t(
+          'userCategory.loadError.message',
+          'Impossible de charger ton profil.',
+        )}
         onAction={refetchUserData}
-        title="Chargement impossible"
+        title={t('userCategory.loadError.title', 'Chargement impossible')}
       />
     );
   }

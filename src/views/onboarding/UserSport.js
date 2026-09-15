@@ -72,7 +72,10 @@ function UserSport({ navigation }) {
   const updateUserMutation = useMutation({
     mutationFn: updateMe,
     onError: (error) => {
-      Alert.alert('Erreur', error?.message || 'Impossible de mettre à jour ton profil.');
+      Alert.alert(t('userSport.alerts.updateError.title', 'Erreur'), error?.message || t(
+        'userSport.alerts.updateError.message',
+        'Impossible de mettre à jour ton profil.',
+      ));
     },
     onSuccess: () => {
       // Invalidate user query to refresh data
@@ -129,9 +132,12 @@ function UserSport({ navigation }) {
   if (userDataLoading) {
     return (
       <OnboardingStateView
-        description="Nous récupérons ton profil avant de choisir ton sport."
+        description={t(
+          'userSport.loading.description',
+          'Nous récupérons ton profil avant de choisir ton sport.',
+        )}
         isLoading
-        title="Chargement du profil"
+        title={t('userSport.loading.title', 'Chargement du profil')}
       />
     );
   }
@@ -139,10 +145,13 @@ function UserSport({ navigation }) {
   if (userDataError) {
     return (
       <OnboardingStateView
-        actionLabel="Réessayer"
-        description={userDataError?.message || 'Impossible de charger ton profil.'}
+        actionLabel={t('userSport.loadError.retry', 'Réessayer')}
+        description={userDataError?.message || t(
+          'userSport.loadError.message',
+          'Impossible de charger ton profil.',
+        )}
         onAction={refetchUserData}
-        title="Chargement impossible"
+        title={t('userSport.loadError.title', 'Chargement impossible')}
       />
     );
   }
@@ -150,9 +159,12 @@ function UserSport({ navigation }) {
   if (activitiesLoading && !activities?.length) {
     return (
       <OnboardingStateView
-        description="Nous chargeons la liste des sports."
+        description={t(
+          'userSport.sportsLoading.description',
+          'Nous chargeons la liste des sports.',
+        )}
         isLoading
-        title="Chargement des sports"
+        title={t('userSport.sportsLoading.title', 'Chargement des sports')}
       />
     );
   }
@@ -160,10 +172,13 @@ function UserSport({ navigation }) {
   if (activitiesError && !activities?.length) {
     return (
       <OnboardingStateView
-        actionLabel="Réessayer"
-        description={activitiesError?.message || 'Impossible de charger les sports.'}
+        actionLabel={t('userSport.loadError.retry', 'Réessayer')}
+        description={activitiesError?.message || t(
+          'userSport.sportsError.message',
+          'Impossible de charger les sports.',
+        )}
         onAction={refetchActivities}
-        title="Chargement impossible"
+        title={t('userSport.loadError.title', 'Chargement impossible')}
       />
     );
   }

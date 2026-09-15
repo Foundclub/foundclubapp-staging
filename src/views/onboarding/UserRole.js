@@ -61,7 +61,10 @@ function UserRole({ navigation }) {
   const updateUserMutation = useMutation({
     mutationFn: updateMe,
     onError: (error) => {
-      Alert.alert('Erreur', error?.message || 'Impossible de mettre à jour ton profil.');
+      Alert.alert(t('userRole.alerts.updateError.title', 'Erreur'), error?.message || t(
+        'userRole.alerts.updateError.message',
+        'Impossible de mettre à jour ton profil.',
+      ));
     },
     onSuccess: async () => {
       // Rafraichir le profil AVANT de naviguer : sinon les etapes suivantes sont
@@ -100,9 +103,12 @@ function UserRole({ navigation }) {
   if (userDataLoading) {
     return (
       <OnboardingStateView
-        description="Nous récupérons ton profil avant de choisir ton rôle."
+        description={t(
+          'userRole.loading.description',
+          'Nous récupérons ton profil avant de choisir ton rôle.',
+        )}
         isLoading
-        title="Chargement du profil"
+        title={t('userRole.loading.title', 'Chargement du profil')}
       />
     );
   }
@@ -110,10 +116,13 @@ function UserRole({ navigation }) {
   if (userDataError) {
     return (
       <OnboardingStateView
-        actionLabel="Réessayer"
-        description={userDataError?.message || 'Impossible de charger ton profil.'}
+        actionLabel={t('userRole.loadError.retry', 'Réessayer')}
+        description={userDataError?.message || t(
+          'userRole.loadError.message',
+          'Impossible de charger ton profil.',
+        )}
         onAction={refetchUserData}
-        title="Chargement impossible"
+        title={t('userRole.loadError.title', 'Chargement impossible')}
       />
     );
   }
@@ -121,9 +130,12 @@ function UserRole({ navigation }) {
   if (rolesLoading && !roles?.length) {
     return (
       <OnboardingStateView
-        description="Nous chargeons les rôles disponibles."
+        description={t(
+          'userRole.rolesLoading.description',
+          'Nous chargeons les rôles disponibles.',
+        )}
         isLoading
-        title="Chargement des rôles"
+        title={t('userRole.rolesLoading.title', 'Chargement des rôles')}
       />
     );
   }
@@ -131,10 +143,13 @@ function UserRole({ navigation }) {
   if (rolesError && !roles?.length) {
     return (
       <OnboardingStateView
-        actionLabel="Réessayer"
-        description={rolesError?.message || 'Impossible de charger les rôles.'}
+        actionLabel={t('userRole.loadError.retry', 'Réessayer')}
+        description={rolesError?.message || t(
+          'userRole.rolesError.message',
+          'Impossible de charger les rôles.',
+        )}
         onAction={refetchRoles}
-        title="Chargement impossible"
+        title={t('userRole.loadError.title', 'Chargement impossible')}
       />
     );
   }

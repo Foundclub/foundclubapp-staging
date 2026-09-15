@@ -397,16 +397,42 @@ function CMDashboard({ navigation, route }) {
       >
         <View style={[Spaces.gap[12]]}>
           <Text style={[Fonts.h4Bold, Fonts.neutral00]}>
-            {isMissingCmId ? 'Club multisport introuvable' : 'Cet espace multisport est introuvable'}
+            {isMissingCmId ? t(
+              'cmDashboard.notFound.missingIdTitle',
+              'Club multisport introuvable',
+            ) : t(
+              'cmDashboard.notFound.title',
+              'Cet espace multisport est introuvable',
+            )}
           </Text>
           <Text style={[Fonts.p2, Fonts.neutral200]}>
             {isMissingCmId
-              ? 'Aucun identifiant multisport n a été fourni.'
-              : 'Le lien est peut-être obsolète ou cet espace a été supprimé.'}
+              ? t(
+                'cmDashboard.notFound.missingIdMessage',
+                'Aucun identifiant multisport n a été fourni.',
+              )
+              : t(
+                'cmDashboard.notFound.message',
+                'Le lien est peut-être obsolète ou cet espace a été supprimé.',
+              )}
           </Text>
-          <Button onPress={() => navigation.navigate(RouteNames.MyClubs)} title="Retour aux clubs" variant="Secondary" />
+          <Button
+            onPress={() => navigation.navigate(RouteNames.MyClubs)}
+            title={t(
+            'cmDashboard.notFound.backToClubs',
+            'Retour aux clubs',
+          )}
+            variant="Secondary"
+          />
           {!isMissingCmId ? (
-            <Button onPress={refetch} title="Réessayer" variant="Primary" />
+            <Button
+              onPress={refetch}
+              title={t(
+              'cmDashboard.notFound.retry',
+              'Réessayer',
+            )}
+              variant="Primary"
+            />
           ) : null}
         </View>
       </ScreenContainer>

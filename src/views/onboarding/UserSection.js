@@ -73,7 +73,10 @@ function UserSection({ navigation }) {
   const updateUserMutation = useMutation({
     mutationFn: updateMe,
     onError: (error) => {
-      Alert.alert('Erreur', error?.message || 'Impossible de mettre à jour ton profil.');
+      Alert.alert(t('userSection.alerts.updateError.title', 'Erreur'), error?.message || t(
+        'userSection.alerts.updateError.message',
+        'Impossible de mettre à jour ton profil.',
+      ));
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['get-me'] });
@@ -125,9 +128,12 @@ function UserSection({ navigation }) {
   if (userDataLoading) {
     return (
       <OnboardingStateView
-        description="Nous récupérons ton profil avant de choisir ta section."
+        description={t(
+          'userSection.loading.description',
+          'Nous récupérons ton profil avant de choisir ta section.',
+        )}
         isLoading
-        title="Chargement du profil"
+        title={t('userSection.loading.title', 'Chargement du profil')}
       />
     );
   }
@@ -135,10 +141,13 @@ function UserSection({ navigation }) {
   if (userDataError) {
     return (
       <OnboardingStateView
-        actionLabel="Réessayer"
-        description={userDataError?.message || 'Impossible de charger ton profil.'}
+        actionLabel={t('userSection.loadError.retry', 'Réessayer')}
+        description={userDataError?.message || t(
+          'userSection.loadError.message',
+          'Impossible de charger ton profil.',
+        )}
         onAction={refetchUserData}
-        title="Chargement impossible"
+        title={t('userSection.loadError.title', 'Chargement impossible')}
       />
     );
   }
@@ -146,9 +155,12 @@ function UserSection({ navigation }) {
   if (sectionsLoading && !sections?.length) {
     return (
       <OnboardingStateView
-        description="Nous chargeons les sections disponibles."
+        description={t(
+          'userSection.sectionsLoading.description',
+          'Nous chargeons les sections disponibles.',
+        )}
         isLoading
-        title="Chargement des sections"
+        title={t('userSection.sectionsLoading.title', 'Chargement des sections')}
       />
     );
   }
@@ -156,10 +168,13 @@ function UserSection({ navigation }) {
   if (sectionsError && !sections?.length) {
     return (
       <OnboardingStateView
-        actionLabel="Réessayer"
-        description={sectionsError?.message || 'Impossible de charger les sections.'}
+        actionLabel={t('userSection.loadError.retry', 'Réessayer')}
+        description={sectionsError?.message || t(
+          'userSection.sectionsError.message',
+          'Impossible de charger les sections.',
+        )}
         onAction={refetchSections}
-        title="Chargement impossible"
+        title={t('userSection.loadError.title', 'Chargement impossible')}
       />
     );
   }

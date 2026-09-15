@@ -52,9 +52,15 @@ function UserAvatar({ navigation }) {
       const rawMessage = typeof error?.message === 'string' ? error.message : '';
       const isNetworkFailure = rawMessage.toLowerCase().includes('network request failed');
       const message = isNetworkFailure
-        ? 'Connexion impossible au serveur pour le moment. Réessaie dans quelques secondes.'
-        : (rawMessage || 'Impossible de mettre à jour ton profil.');
-      Alert.alert('Erreur', message);
+        ? t(
+          'userAvatar.alerts.updateError.network',
+          'Connexion impossible au serveur pour le moment. Réessaie dans quelques secondes.',
+        )
+        : (rawMessage || t(
+          'userAvatar.alerts.updateError.message',
+          'Impossible de mettre à jour ton profil.',
+        ));
+      Alert.alert(t('userAvatar.alerts.updateError.title', 'Erreur'), message);
     },
     onSuccess: () => {
       const nextRoute = getNextOnboardingRoute(RouteNames.UserAvatar);
@@ -75,9 +81,12 @@ function UserAvatar({ navigation }) {
   if (userDataLoading) {
     return (
       <OnboardingStateView
-        description="Nous récupérons ton profil avant de choisir ton avatar."
+        description={t(
+          'userAvatar.loading.description',
+          'Nous récupérons ton profil avant de choisir ton avatar.',
+        )}
         isLoading
-        title="Chargement du profil"
+        title={t('userAvatar.loading.title', 'Chargement du profil')}
       />
     );
   }
@@ -85,10 +94,13 @@ function UserAvatar({ navigation }) {
   if (userDataError) {
     return (
       <OnboardingStateView
-        actionLabel="Réessayer"
-        description={userDataError?.message || 'Impossible de charger ton profil.'}
+        actionLabel={t('userAvatar.loadError.retry', 'Réessayer')}
+        description={userDataError?.message || t(
+          'userAvatar.loadError.message',
+          'Impossible de charger ton profil.',
+        )}
         onAction={refetchUserData}
-        title="Chargement impossible"
+        title={t('userAvatar.loadError.title', 'Chargement impossible')}
       />
     );
   }

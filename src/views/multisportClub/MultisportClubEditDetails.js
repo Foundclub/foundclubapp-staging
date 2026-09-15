@@ -260,11 +260,14 @@ function MultisportClubEditDetails({ navigation, route }) {
                 <Input
                   enterKeyHint="next"
                   error={getFieldError({ errors: formErrors, fieldName: name })}
-                  label="Nom du club"
+                  label={t('multisportClubEditDetails.fields.name.label', 'Nom du club')}
                   onBlur={onBlur}
                   onChangeText={onChange}
                   onSubmitEditing={() => setFocus('email')}
-                  placeholder="Nom du club"
+                  placeholder={t(
+                    'multisportClubEditDetails.fields.name.placeholder',
+                    'Nom du club',
+                  )}
                   ref={ref}
                   value={value}
                 />
@@ -284,11 +287,11 @@ function MultisportClubEditDetails({ navigation, route }) {
                   error={getFieldError({ errors: formErrors, fieldName: name })}
                   inputMode="email"
                   keyboardType="email-address"
-                  label="Email"
+                  label={t('multisportClubEditDetails.fields.email.label', 'Email')}
                   onBlur={onBlur}
                   onChangeText={onChange}
                   onSubmitEditing={() => setFocus('phoneNumber')}
-                  placeholder="Email"
+                  placeholder={t('multisportClubEditDetails.fields.email.placeholder', 'Email')}
                   ref={ref}
                   value={value}
                 />
@@ -322,8 +325,11 @@ function MultisportClubEditDetails({ navigation, route }) {
               {/* Manual Label for consistency since AddressInput handles internal label differently sometimes */}
               <AutocompleteAddressInput
                 address={address}
-                label="Adresse / Ville"
-                placeholder="Rechercher une adresse..."
+                label={t('multisportClubEditDetails.fields.address.label', 'Adresse / Ville')}
+                placeholder={t(
+                  'multisportClubEditDetails.fields.address.placeholder',
+                  'Rechercher une adresse...',
+                )}
                 setAddress={(value) => setAddress(value)}
               />
             </View>

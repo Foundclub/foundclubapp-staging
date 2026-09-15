@@ -146,9 +146,12 @@ function UserTrainedTeams({ navigation, route }) {
   if (userDataLoading) {
     return (
       <OnboardingStateView
-        description="Nous récupérons ton profil avant de lister tes équipes."
+        description={t(
+          'userTrainedTeams.loading.description',
+          'Nous récupérons ton profil avant de lister tes équipes.',
+        )}
         isLoading
-        title="Chargement du profil"
+        title={t('userTrainedTeams.loading.title', 'Chargement du profil')}
       />
     );
   }
@@ -156,10 +159,13 @@ function UserTrainedTeams({ navigation, route }) {
   if (userDataError) {
     return (
       <OnboardingStateView
-        actionLabel="Réessayer"
-        description={userDataError?.message || 'Impossible de charger ton profil.'}
+        actionLabel={t('userTrainedTeams.loadError.retry', 'Réessayer')}
+        description={userDataError?.message || t(
+          'userTrainedTeams.loadError.message',
+          'Impossible de charger ton profil.',
+        )}
         onAction={refetchUserData}
-        title="Chargement impossible"
+        title={t('userTrainedTeams.loadError.title', 'Chargement impossible')}
       />
     );
   }
@@ -167,9 +173,12 @@ function UserTrainedTeams({ navigation, route }) {
   if (teamsQuery.isLoading && !teams.length) {
     return (
       <OnboardingStateView
-        description="Nous chargeons les équipes de ton club."
+        description={t(
+          'userTrainedTeams.teamsLoading.description',
+          'Nous chargeons les équipes de ton club.',
+        )}
         isLoading
-        title="Chargement des équipes"
+        title={t('userTrainedTeams.teamsLoading.title', 'Chargement des équipes')}
       />
     );
   }
@@ -177,10 +186,13 @@ function UserTrainedTeams({ navigation, route }) {
   if (teamsQuery.error && !teams.length) {
     return (
       <OnboardingStateView
-        actionLabel="Réessayer"
-        description={teamsQuery.error?.message || 'Impossible de charger les équipes.'}
+        actionLabel={t('userTrainedTeams.loadError.retry', 'Réessayer')}
+        description={teamsQuery.error?.message || t(
+          'userTrainedTeams.teamsError.message',
+          'Impossible de charger les équipes.',
+        )}
         onAction={teamsQuery.refetch}
-        title="Chargement impossible"
+        title={t('userTrainedTeams.loadError.title', 'Chargement impossible')}
       />
     );
   }

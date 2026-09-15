@@ -7,6 +7,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import useAuth from '@/domains/auth/useAuth';
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -79,7 +80,10 @@ function UserPosition({ navigation, route }) {
   const updateUserMutation = useMutation({
     mutationFn: updateMe,
     onError: (error) => {
-      Alert.alert('Erreur', error?.message || 'Impossible de mettre à jour ton profil.');
+      Alert.alert(t('userPosition.alerts.updateError.title', 'Erreur'), error?.message || t(
+        'userPosition.alerts.updateError.message',
+        'Impossible de mettre à jour ton profil.',
+      ));
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['get-me'] });
@@ -124,9 +128,12 @@ function UserPosition({ navigation, route }) {
   if (userDataLoading) {
     return (
       <OnboardingStateView
-        description="Nous récupérons ton profil avant de choisir tes postes."
+        description={t(
+          'userPosition.loading.description',
+          'Nous récupérons ton profil avant de choisir tes postes.',
+        )}
         isLoading
-        title="Chargement du profil"
+        title={t('userPosition.loading.title', 'Chargement du profil')}
       />
     );
   }
@@ -134,10 +141,13 @@ function UserPosition({ navigation, route }) {
   if (userDataError) {
     return (
       <OnboardingStateView
-        actionLabel="Réessayer"
-        description={userDataError?.message || 'Impossible de charger ton profil.'}
+        actionLabel={t('userPosition.loadError.retry', 'Réessayer')}
+        description={userDataError?.message || t(
+          'userPosition.loadError.message',
+          'Impossible de charger ton profil.',
+        )}
         onAction={refetchUserData}
-        title="Chargement impossible"
+        title={t('userPosition.loadError.title', 'Chargement impossible')}
       />
     );
   }
@@ -164,7 +174,11 @@ function UserPosition({ navigation, route }) {
           </Text>
           <Text style={[Fonts.p1, Fonts.neutral00]}>
             {sportName
-              ? `Postes en ${sportName} (plusieurs choix possibles)`
+              ? t(
+                'userPosition.subtitleWithSport',
+                'Postes en {{sportName}} (plusieurs choix possibles)',
+                { sportName, ...SANS_ECHAPPEMENT },
+              )
               : t('onboarding.position.subtitle', 'Sélectionne tes postes de prédilection')}
           </Text>
         </View>

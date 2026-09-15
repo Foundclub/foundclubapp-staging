@@ -16,6 +16,7 @@ import {
 } from 'react-native';
 
 import useClub from '@/domains/club/useClub';
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import Tag from '@/components/atoms/tag/Tag';
@@ -87,8 +88,14 @@ function CMTeamsScreen({ navigation, route }) {
   }), [allTeams, searchQuery, selectedSection]);
 
   useEffect(() => {
-    navigation.setOptions({ headerTitle: `Équipes (${displayedTeams.length})` });
-  }, [displayedTeams.length, navigation]);
+    navigation.setOptions({
+      headerTitle: t(
+        'cmTeamsScreen.header.title',
+        'Équipes ({{total}})',
+        { total: displayedTeams.length, ...SANS_ECHAPPEMENT },
+      ),
+    });
+  }, [displayedTeams.length, navigation, t]);
 
   const handleRefresh = useCallback(() => {
     refetchTeams();
@@ -221,7 +228,7 @@ function CMTeamsScreen({ navigation, route }) {
       <View style={[Spaces.paddingHorizontal[16], Spaces.marginBottom[16]]}>
         <SearchBar
           onChangeText={setSearchQuery}
-          placeholder="Rechercher une équipe..."
+          placeholder={t('cmTeamsScreen.search.placeholder', 'Rechercher une équipe...')}
           value={searchQuery}
           withCalendar={false}
           withFilter={false}
@@ -249,7 +256,7 @@ function CMTeamsScreen({ navigation, route }) {
               ]}
             >
               <Text style={[Fonts.p3, selectedSection === null ? Fonts.neutral900 : Fonts.neutral100]}>
-                Toutes
+                {t('cmTeamsScreen.filters.all', 'Toutes')}
               </Text>
             </TouchableOpacity>
             {sections.map((section) => (

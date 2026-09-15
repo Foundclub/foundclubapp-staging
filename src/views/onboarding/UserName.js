@@ -186,7 +186,10 @@ function UserName({ navigation }) {
         navigation.navigate(RouteNames.UserParentalDeclaration);
         return;
       }
-      Alert.alert('Erreur', error?.message || 'Impossible de mettre à jour ton profil.');
+      Alert.alert(t('userName.alerts.updateError.title', 'Erreur'), error?.message || t(
+        'userName.alerts.updateError.message',
+        'Impossible de mettre à jour ton profil.',
+      ));
     },
     onSuccess: (unused, submitted) => {
       queryClient.invalidateQueries({ queryKey: ['get-me'] });
@@ -253,9 +256,12 @@ function UserName({ navigation }) {
   if (userDataLoading) {
     return (
       <OnboardingStateView
-        description="Nous récupérons ton profil avant de modifier ton nom."
+        description={t(
+          'userName.loading.description',
+          'Nous récupérons ton profil avant de modifier ton nom.',
+        )}
         isLoading
-        title="Chargement du profil"
+        title={t('userName.loading.title', 'Chargement du profil')}
       />
     );
   }
@@ -263,10 +269,13 @@ function UserName({ navigation }) {
   if (userDataError) {
     return (
       <OnboardingStateView
-        actionLabel="Réessayer"
-        description={userDataError?.message || 'Impossible de charger ton profil.'}
+        actionLabel={t('userName.loadError.retry', 'Réessayer')}
+        description={userDataError?.message || t(
+          'userName.loadError.message',
+          'Impossible de charger ton profil.',
+        )}
         onAction={refetchUserData}
-        title="Chargement impossible"
+        title={t('userName.loadError.title', 'Chargement impossible')}
       />
     );
   }
@@ -427,7 +436,7 @@ function UserName({ navigation }) {
                         }
                       }}
                       onSubmitEditing={() => setFocus('month')}
-                      placeholder="JJ"
+                      placeholder={t('userName.birthdate.dayPlaceholder', 'JJ')}
                       ref={ref}
                       value={value}
                       wrapperStyle={{ width: 60 }}
@@ -459,7 +468,7 @@ function UserName({ navigation }) {
                         }
                       }}
                       onSubmitEditing={() => setFocus('year')}
-                      placeholder="MM"
+                      placeholder={t('userName.birthdate.monthPlaceholder', 'MM')}
                       ref={ref}
                       value={value}
                       wrapperStyle={{ width: 60 }}
@@ -485,7 +494,7 @@ function UserName({ navigation }) {
                       maxLength={4}
                       onBlur={onBlur}
                       onChangeText={onChange}
-                      placeholder="AAAA"
+                      placeholder={t('userName.birthdate.yearPlaceholder', 'AAAA')}
                       ref={ref}
                       value={value}
                       wrapperStyle={{ width: 80 }}

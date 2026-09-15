@@ -62,7 +62,10 @@ function UserClubSearch({ navigation }) {
   const updateUserMutation = useMutation({
     mutationFn: updateMe,
     onError: (error) => {
-      Alert.alert('Erreur', error?.message || 'Impossible de mettre à jour ton profil.');
+      Alert.alert(t('userClubSearch.alerts.updateError.title', 'Erreur'), error?.message || t(
+        'userClubSearch.alerts.updateError.message',
+        'Impossible de mettre à jour ton profil.',
+      ));
     },
     onSuccess: async () => {
       const nextRoute = getNextOnboardingRoute(RouteNames.UserClubSearch);
@@ -87,9 +90,12 @@ function UserClubSearch({ navigation }) {
   if (userDataLoading) {
     return (
       <OnboardingStateView
-        description="Nous récupérons ton profil avant de régler la visibilité."
+        description={t(
+          'userClubSearch.loading.description',
+          'Nous récupérons ton profil avant de régler la visibilité.',
+        )}
         isLoading
-        title="Chargement du profil"
+        title={t('userClubSearch.loading.title', 'Chargement du profil')}
       />
     );
   }
@@ -97,10 +103,13 @@ function UserClubSearch({ navigation }) {
   if (userDataError) {
     return (
       <OnboardingStateView
-        actionLabel="Réessayer"
-        description={userDataError?.message || 'Impossible de charger ton profil.'}
+        actionLabel={t('userClubSearch.loadError.retry', 'Réessayer')}
+        description={userDataError?.message || t(
+          'userClubSearch.loadError.message',
+          'Impossible de charger ton profil.',
+        )}
         onAction={refetchUserData}
-        title="Chargement impossible"
+        title={t('userClubSearch.loadError.title', 'Chargement impossible')}
       />
     );
   }

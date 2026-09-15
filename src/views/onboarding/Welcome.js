@@ -190,9 +190,12 @@ function Welcome({ navigation }) {
   if (userDataLoading) {
     return (
       <OnboardingStateView
-        description="Nous récupérons ton profil avant de finaliser l'onboarding."
+        description={t(
+          'welcome.loading.description',
+          "Nous récupérons ton profil avant de finaliser l'onboarding.",
+        )}
         isLoading
-        title="Chargement du profil"
+        title={t('welcome.loading.title', 'Chargement du profil')}
       />
     );
   }
@@ -200,10 +203,13 @@ function Welcome({ navigation }) {
   if (userDataError) {
     return (
       <OnboardingStateView
-        actionLabel="Réessayer"
-        description={userDataError?.message || 'Impossible de charger ton profil.'}
+        actionLabel={t('welcome.loadError.retry', 'Réessayer')}
+        description={userDataError?.message || t(
+          'welcome.loadError.message',
+          'Impossible de charger ton profil.',
+        )}
         onAction={refetchUserData}
-        title="Chargement impossible"
+        title={t('welcome.loadError.title', 'Chargement impossible')}
       />
     );
   }

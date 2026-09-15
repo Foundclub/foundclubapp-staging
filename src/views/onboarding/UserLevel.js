@@ -52,7 +52,10 @@ function UserLevel({ navigation }) {
   const updateUserMutation = useMutation({
     mutationFn: updateMe,
     onError: (error) => {
-      Alert.alert('Erreur', error?.message || 'Impossible de mettre à jour ton profil.');
+      Alert.alert(t('userLevel.alerts.updateError.title', 'Erreur'), error?.message || t(
+        'userLevel.alerts.updateError.message',
+        'Impossible de mettre à jour ton profil.',
+      ));
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['get-me'] });
@@ -70,9 +73,12 @@ function UserLevel({ navigation }) {
   if (userDataLoading) {
     return (
       <OnboardingStateView
-        description="Nous récupérons ton profil avant de choisir ton niveau."
+        description={t(
+          'userLevel.loading.description',
+          'Nous récupérons ton profil avant de choisir ton niveau.',
+        )}
         isLoading
-        title="Chargement du profil"
+        title={t('userLevel.loading.title', 'Chargement du profil')}
       />
     );
   }
@@ -80,10 +86,13 @@ function UserLevel({ navigation }) {
   if (userDataError) {
     return (
       <OnboardingStateView
-        actionLabel="Réessayer"
-        description={userDataError?.message || 'Impossible de charger ton profil.'}
+        actionLabel={t('userLevel.loadError.retry', 'Réessayer')}
+        description={userDataError?.message || t(
+          'userLevel.loadError.message',
+          'Impossible de charger ton profil.',
+        )}
         onAction={refetchUserData}
-        title="Chargement impossible"
+        title={t('userLevel.loadError.title', 'Chargement impossible')}
       />
     );
   }
@@ -91,9 +100,12 @@ function UserLevel({ navigation }) {
   if (levelsLoading && !levels?.length) {
     return (
       <OnboardingStateView
-        description="Nous chargeons les niveaux disponibles."
+        description={t(
+          'userLevel.levelsLoading.description',
+          'Nous chargeons les niveaux disponibles.',
+        )}
         isLoading
-        title="Chargement des niveaux"
+        title={t('userLevel.levelsLoading.title', 'Chargement des niveaux')}
       />
     );
   }
@@ -101,10 +113,13 @@ function UserLevel({ navigation }) {
   if (levelsError && !levels?.length) {
     return (
       <OnboardingStateView
-        actionLabel="Réessayer"
-        description={levelsError?.message || 'Impossible de charger les niveaux.'}
+        actionLabel={t('userLevel.loadError.retry', 'Réessayer')}
+        description={levelsError?.message || t(
+          'userLevel.levelsError.message',
+          'Impossible de charger les niveaux.',
+        )}
         onAction={refetchLevels}
-        title="Chargement impossible"
+        title={t('userLevel.loadError.title', 'Chargement impossible')}
       />
     );
   }
