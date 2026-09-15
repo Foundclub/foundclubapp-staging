@@ -686,7 +686,11 @@ function MatchStatsEditor({ navigation, route }) {
     }
 
     if (isReviewRequired) {
-      return t('matchStatsEditor.officialScoreChangedCheckLines', 'Le score officiel a changé. Vérifie les lignes puis republie directement cette version.');
+      return t(
+        'matchStatsEditor.officialScoreChangedCheckLines',
+        'Le score officiel a changé. Vérifie les lignes puis republie directement cette '
+          + 'version.',
+      );
     }
 
     if (hasConsistencyIssues) {
