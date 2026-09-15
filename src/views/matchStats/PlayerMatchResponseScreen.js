@@ -1181,7 +1181,9 @@ function PlayerMatchResponseScreen({ navigation, route }) {
 
                 {participation === 'played' || participation === 'present_no_play' ? (
                   <View style={[Spaces.gap[12]]}>
-                    <Text style={[Fonts.p3Bold, Fonts.neutral00]}>{t('playerMatchResponseScreen.teamMatch', "Le match de l'équipe")}</Text>
+                    <Text style={[Fonts.p3Bold, Fonts.neutral00]}>
+                      {t('playerMatchResponseScreen.teamMatch', "Le match de l'équipe")}
+                    </Text>
                     <Text style={[Fonts.p3, { color: secondaryTextColor }]}>
                       {t(
                         'playerMatchResponseScreen.teamPerformanceHint',

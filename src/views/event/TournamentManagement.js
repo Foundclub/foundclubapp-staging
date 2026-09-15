@@ -529,7 +529,8 @@ function TournamentManagement({ navigation, route }) {
                 <Text style={[Fonts.p4, Fonts.primary100]}>
                   {team?.sourceType === 'club_team'
                     ? t('tournamentManagement.fromTeam', 'Depuis {{teamName}}', {
-                      teamName: team?.sourceTeam?.name || t('tournamentManagement.aClubTeam', 'une équipe club'),
+                      teamName: team?.sourceTeam?.name
+                        || t('tournamentManagement.aClubTeam', 'une équipe club'),
                       ...SANS_ECHAPPEMENT,
                     })
                     : t(

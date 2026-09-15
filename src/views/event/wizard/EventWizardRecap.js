@@ -521,9 +521,11 @@ function EventWizardRecap({ navigation }) {
   } else if (state.tournamentFormatMode === 'round_robin') {
     tournamentGroupsSummary = t('eventWizardRecap.oneStanding', '1 classement');
   }
-  let tournamentQualificationSummary = t('eventWizardRecap.qualifiedPerGroup', '{{qualified}} / poule', {
-    qualified: state.tournamentQualifiedPerGroup ?? 2,
-  });
+  let tournamentQualificationSummary = t(
+    'eventWizardRecap.qualifiedPerGroup',
+    '{{qualified}} / poule',
+    { qualified: state.tournamentQualifiedPerGroup ?? 2 },
+  );
   if (state.tournamentFormatMode === 'knockout_only') {
     tournamentQualificationSummary = t('eventWizardRecap.directQualification', 'Directs');
   }

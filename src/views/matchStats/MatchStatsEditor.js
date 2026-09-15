@@ -1092,7 +1092,9 @@ function MatchStatsEditor({ navigation, route }) {
         { style: 'cancel', text: t('matchStatsEditor.cancel', 'Annuler') },
         {
           onPress: () => submitMutation.mutate(),
-          text: isReviewRequired ? t('matchStatsEditor.update', 'Mettre à jour') : t('matchStatsEditor.publish', 'Publier'),
+          text: isReviewRequired
+            ? t('matchStatsEditor.update', 'Mettre à jour')
+            : t('matchStatsEditor.publish', 'Publier'),
         },
       ],
     );
@@ -1301,7 +1303,9 @@ function MatchStatsEditor({ navigation, route }) {
                   ]}
                 >
                   <Text style={[Fonts.p3Bold, isScoreLocked ? Fonts.primary100 : Fonts.neutral00]}>
-                    {isScoreLocked ? t('matchStatsEditor.locked', 'Verrouille') : t('matchStatsEditor.editable', 'Editable')}
+                    {isScoreLocked
+                      ? t('matchStatsEditor.locked', 'Verrouille')
+                      : t('matchStatsEditor.editable', 'Editable')}
                   </Text>
                 </View>
               </View>

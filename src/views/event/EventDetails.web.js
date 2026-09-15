@@ -1880,7 +1880,8 @@ function EventDetails({ navigation, route }) {
                     },
                     {
                       label: 'Section',
-                      value: event?.team?.section?.name || t('eventDetails.notSetFeminine', 'Non définie'),
+                      value: event?.team?.section?.name
+                        || t('eventDetails.notSetFeminine', 'Non définie'),
                     },
                     {
                       label: t('eventDetails.capacity', 'Capacite'),

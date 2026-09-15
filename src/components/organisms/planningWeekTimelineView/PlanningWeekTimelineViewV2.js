@@ -566,7 +566,9 @@ function PlanningWeekTimelineView({
         {isPendingParticipation ? (
           <View style={[styles.pendingEventBadge, { backgroundColor: hexToRgba(pendingAccentColor, 0.18), borderColor: hexToRgba(pendingAccentColor, 0.38) }]}>
             <Text style={[styles.pendingEventBadgeText, { color: pendingAccentColor }]}>
-              {isTiny ? t('planningWeekTimelineViewV2.pendingShort', 'Attente') : t('planningWeekTimelineViewV2.pending', 'En attente')}
+              {isTiny
+                ? t('planningWeekTimelineViewV2.pendingShort', 'Attente')
+                : t('planningWeekTimelineViewV2.pending', 'En attente')}
             </Text>
           </View>
         ) : null}

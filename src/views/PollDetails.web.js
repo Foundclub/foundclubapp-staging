@@ -11,10 +11,10 @@ import {
   getPollVoters,
 } from '@/domains/messaging/pollUseCases';
 import useMessaging from '@/domains/messaging/useMessaging';
+import localeDesFormats from '@/theme/strings/localeDesFormats';
 import { BREAKPOINTS } from '@/responsive';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 import { useGetChatById, useGetChatMessages } from '@/services/chat/chatQueriesCompat';
-import localeDesFormats from '@/theme/strings/localeDesFormats';
 import useTheme from '@/theme/themeContext';
 import getImageUrl from '@/utils/imageUrl';
 

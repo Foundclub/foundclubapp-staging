@@ -1090,7 +1090,8 @@ function EventDetails({ navigation, route }) {
     const start = new Date(event.stageStartDate);
     const end = new Date(event.stageEndDate);
     if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return '';
-    return `${start.toLocaleDateString(localeDesFormats())} - ${end.toLocaleDateString(localeDesFormats())}`;
+    const locale = localeDesFormats();
+    return `${start.toLocaleDateString(locale)} - ${end.toLocaleDateString(locale)}`;
   }, [event?.stageEndDate, event?.stageStartDate, isStageParentEvent]);
   const stageHoursSummary = useMemo(() => {
     if (!isStageParentEvent) return '';
@@ -7460,7 +7461,9 @@ function EventDetails({ navigation, route }) {
             </View>
             <Tag
               style={tournamentDs.getToneTagStyle(isCompetitionPublished ? Colors.success500 : Colors.warning500)}
-              text={isCompetitionPublished ? t('eventDetails.published', 'Publié') : t('eventDetails.draft', 'Brouillon')}
+              text={isCompetitionPublished
+                ? t('eventDetails.published', 'Publié')
+                : t('eventDetails.draft', 'Brouillon')}
               // @ts-ignore: FIXME: Baseline TS regression
               textColor={isCompetitionPublished ? 'neutral00' : 'warning500'}
               textStyle={isCompetitionPublished ? { color: Colors.success500 } : undefined}
@@ -7694,7 +7697,8 @@ function EventDetails({ navigation, route }) {
                   <Text style={[Fonts.p4, Fonts.primary100]}>
                     {tournamentTeam?.sourceType === 'club_team'
                       ? t('eventDetails.fromTeam', 'Depuis {{teamName}}', {
-                        teamName: tournamentTeam?.sourceTeam?.name || t('eventDetails.aClubTeam', 'une équipe club'),
+                        teamName: tournamentTeam?.sourceTeam?.name
+                          || t('eventDetails.aClubTeam', 'une équipe club'),
                         ...SANS_ECHAPPEMENT,
                       })
                       : t('eventDetails.temporaryTeam', 'Équipe éphémère')}
@@ -8878,7 +8882,8 @@ function EventDetails({ navigation, route }) {
                           </Text>
                           <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
                             {matchStatsReport?.finalizedAt
-                              ? new Date(matchStatsReport.finalizedAt).toLocaleString(localeDesFormats())
+                              ? new Date(matchStatsReport.finalizedAt)
+                                .toLocaleString(localeDesFormats())
                               : '-'}
                           </Text>
                         </View>

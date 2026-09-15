@@ -787,7 +787,10 @@ function VenueProposalModal({
                 }]}
               >
                 <Text style={[Fonts.p1, Fonts.neutral00]}>
-                  {endTime.toLocaleTimeString(localeDesFormats(), { hour: '2-digit', minute: '2-digit' })}
+                  {endTime.toLocaleTimeString(
+                    localeDesFormats(),
+                    { hour: '2-digit', minute: '2-digit' },
+                  )}
                 </Text>
               </View>
               <Text style={[Fonts.p3, { color: Colors.neutral300, marginTop: 6 }]}>
