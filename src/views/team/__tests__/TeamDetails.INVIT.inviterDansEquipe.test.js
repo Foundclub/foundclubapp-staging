@@ -50,6 +50,12 @@ const frTemoin = require('@/theme/strings/translations/fr');
 const mockInviterDansEquipe = jest.fn();
 const mockPartagerLeLien = jest.fn();
 const mockAlerte = jest.fn();
+const mockAccepterLaDemande = jest.fn();
+const mockAnnuler = jest.fn();
+const mockCreerLien = jest.fn();
+const mockInviterParNumero = jest.fn();
+const mockOuvrirSms = jest.fn();
+const mockRepartager = jest.fn();
 
 /** L'erreur que le serveur renvoie, quand un temoin en simule une. */
 let mockRefusDuServeur = /** @type {any} */ (null);
@@ -240,6 +246,10 @@ jest.mock('@/services/stats/statsService', () => ({ resetTeamStats: jest.fn() })
 // importe `@/services/client`, qui exige un `.env` absent de tout worktree.
 jest.mock('@/services/teamMembershipRequest/teamMembershipRequestService', () => ({
   acceptTeamInvitation: jest.fn(),
+  acceptTeamMembershipRequest: (/** @type {any} */ requestId) => {
+    mockAccepterLaDemande(requestId);
+    return Promise.resolve({ data: { documentId: requestId } });
+  },
   createTeamMembershipRequest: jest.fn(),
   inviteToTeam: (/** @type {any} */ payload) => {
     mockInviterDansEquipe(payload);
@@ -248,6 +258,53 @@ jest.mock('@/services/teamMembershipRequest/teamMembershipRequestService', () =>
   },
   refuseTeamInvitation: jest.fn(),
 }));
+
+// INVIT2 — les lectures et ecritures de la feuille. Les doublures rendent ce que
+// le temoin decide (propositions du serveur, invitations envoyees).
+/** @type {any} */
+let mockPropositions;
+let mockEnvoyees = /** @type {any[]} */ ([]);
+jest.mock('@/services/teamInvite/teamInviteQueries', () => ({
+  useSentTeamInvites: () => ({ data: mockEnvoyees, refetch: jest.fn() }),
+  useTeamInviteSuggestions: () => ({ data: mockPropositions, refetch: jest.fn() }),
+}));
+jest.mock('@/services/teamInvite/teamInviteService', () => ({
+  cancelTeamInvite: (/** @type {any} */ payload) => {
+    mockAnnuler(payload);
+    return Promise.resolve({ cancelled: true });
+  },
+  createTeamInviteLink: (/** @type {any} */ teamId) => {
+    mockCreerLien(teamId);
+    return Promise.resolve({ code: 'AbCdEfGhIjKlMnOpQrStUv12' });
+  },
+  createTeamPhoneInvite: (/** @type {any} */ payload) => {
+    mockInviterParNumero(payload);
+    return Promise.resolve({ invite: { code: 'ZyXwVuTsRqPoNmLkJiHgFe98', state: 'pending' } });
+  },
+}));
+jest.mock('@/services/teamInvite/teamInviteShare', () => ({
+  buildTeamInviteMessage: (/** @type {any} */ p) => (
+    `${p.inviterName || ''} invite ${p.teamName}\n${p.url}`
+  ),
+  buildTeamInviteUrl: (/** @type {any} */ p) => (
+    `https://staging.foundclub.app/i/team/${p.teamId}${p.code ? `?c=${p.code}` : ''}`
+  ),
+  openInviteSms: (/** @type {any} */ p) => {
+    mockOuvrirSms(p);
+    return Promise.resolve();
+  },
+  shareExistingTeamInvite: (/** @type {any} */ p) => {
+    mockRepartager(p);
+    return Promise.resolve();
+  },
+}));
+jest.mock('react-native-qrcode-svg', () => {
+  const { Text: TexteRN } = jest.requireActual('react-native');
+  const reactActuel = jest.requireActual('react');
+  return function QRCodeMock(/** @type {any} */ props) {
+    return reactActuel.createElement(TexteRN, { testID: 'qr-code' }, `QR:${props.value}`);
+  };
+});
 
 jest.mock('@/navigation/public/publicAuthNavigation', () => ({ openPublicAuthFlow: jest.fn() }));
 jest.mock('@/views/league/match/utils/leagueNavigation', () => ({
@@ -537,6 +594,16 @@ beforeEach(() => {
   mockRefusDuServeur = null;
   mockAuthCourant = AUTH_DIRIGEANT;
   mockReponseClub = clubAvec([]);
+  mockPropositions = undefined;
+  mockEnvoyees = [];
+  [
+    mockAccepterLaDemande,
+    mockAnnuler,
+    mockCreerLien,
+    mockInviterParNumero,
+    mockOuvrirSms,
+    mockRepartager,
+  ].forEach((doublure) => doublure.mockClear());
 });
 
 afterEach(() => {
@@ -815,5 +882,158 @@ describe('INVIT2 · A — la feuille entiere, jamais une impasse', () => {
     // ⇒ la sortie est la, dans la meme feuille, et elle marche.
     appuyerSur(racine, LIBELLE_PARTAGER);
     expect(mockPartagerLeLien).toHaveBeenCalledTimes(1);
+  });
+});
+
+/**
+ * INVIT2 · B, C, D, E — LA FEUILLE PROPOSE, SUIT, ET INVITE QUELQU'UN QUI N'A PAS L'APP.
+ *
+ * Ce que ces temoins exigent, a l'ecran (dans l'arbre) :
+ *   B — les propositions du SERVEUR (demandes, autres equipes du club…) avec leur
+ *       RAISON ; une demande s'accepte en un geste ;
+ *   C — un QR code du lien d'invitation, avec son code ;
+ *   D — les invitations ENVOYEES, leur etat, annuler, renvoyer ;
+ *   E — inviter par numero : prenom + numero -> invitation serveur -> SMS.
+ */
+describe('INVIT2 · B — qui proposer, et pourquoi', () => {
+  test('🔴 B1 — propositions du serveur avec leur raison ; une demande s accepte', async () => {
+    mockPropositions = [
+      {
+        documentId: 'zoe',
+        firstname: 'Zoé',
+        lastname: 'D',
+        reason: 'requested',
+        reasonDate: '2026-09-12T10:00:00.000Z',
+        requestId: 'req-1',
+      },
+      {
+        documentId: 'ines',
+        firstname: 'Inès',
+        lastname: 'M',
+        reason: 'otherTeam',
+        reasonLabel: 'U17',
+      },
+    ];
+
+    const racine = monterLaFiche();
+    await ouvrirLaFeuilleDInvitation(racine);
+
+    expect(textesPortant(racine, 'Zoé D')).toHaveLength(1);
+    expect(textesPortant(racine, 'A demandé à rejoindre l\'équipe le 12/09')).toHaveLength(1);
+    expect(textesPortant(racine, 'Joue en U17')).toHaveLength(1);
+
+    await appuyerEtAttendre(racine, 'Accepter');
+    expect(mockAccepterLaDemande).toHaveBeenCalledWith('req-1');
+
+    await appuyerEtAttendre(racine, 'Inviter');
+    expect(mockInviterDansEquipe).toHaveBeenCalledWith({ team: 'equipe-1', user: 'ines' });
+  });
+});
+
+describe('INVIT2 · C — le QR code a montrer en vrai', () => {
+  test('🔴 C1 — « Montrer un QR code » fabrique le lien AVEC son code', async () => {
+    const racine = monterLaFiche();
+    await ouvrirLaFeuilleDInvitation(racine);
+
+    await appuyerEtAttendre(racine, 'Montrer un QR code');
+
+    expect(mockCreerLien).toHaveBeenCalledWith('equipe-1');
+    expect(textesPortant(racine, 'QR:https://staging.foundclub.app/i/team/equipe-1?c=AbCdEfGhIjKlMnOpQrStUv12'))
+      .toHaveLength(1);
+  });
+});
+
+describe('INVIT2 · D — suivre ce qu on a envoye', () => {
+  test('🔴 D1 — les invitations envoyees, leur etat, annuler et renvoyer', async () => {
+    mockEnvoyees = [
+      {
+        canCancel: true,
+        expiresAt: '2026-10-15T18:00:00.000Z',
+        id: 'inv-1',
+        name: 'Marie',
+        phoneHint: '77',
+        shareCode: 'ZyXwVuTsRqPoNmLkJiHgFe98',
+        state: 'pending',
+        type: 'phone',
+      },
+      {
+        canCancel: false, id: 'tmr-2', name: 'Karim N', state: 'accepted', type: 'account',
+      },
+    ];
+
+    const racine = monterLaFiche();
+    await ouvrirLaFeuilleDInvitation(racine);
+
+    expect(textesPortant(racine, 'Invitations envoyées')).toHaveLength(1);
+    expect(textesPortant(racine, 'Marie · •• 77')).toHaveLength(1);
+    expect(textesPortant(racine, 'En attente · expire le 15/10')).toHaveLength(1);
+    expect(textesPortant(racine, 'Acceptée')).toHaveLength(1);
+
+    await appuyerEtAttendre(racine, 'Renvoyer');
+    expect(mockRepartager).toHaveBeenCalledWith(expect.objectContaining({
+      code: 'ZyXwVuTsRqPoNmLkJiHgFe98',
+      teamId: 'equipe-1',
+    }));
+
+    await appuyerEtAttendre(racine, 'Annuler');
+    expect(mockAnnuler).toHaveBeenCalledWith({ id: 'inv-1', type: 'phone' });
+  });
+});
+
+describe('INVIT2 · E — inviter quelqu un qui n a pas l app', () => {
+  /**
+   * Tape dans un champ repere par son indication.
+   * @param {any} racine La racine.
+   * @param {string} indication Le placeholder.
+   * @param {string} texte Ce qu on tape.
+   * @returns {void}
+   */
+  const taperDans = (racine, indication, texte) => {
+    const champ = racine.findAll(
+      (/** @type {any} */ noeud) => typeof noeud.props?.onChangeText === 'function'
+        && noeud.props?.placeholder === indication,
+      { deep: true },
+    )[0];
+    if (!champ) throw new Error(`Aucun champ « ${indication} »`);
+    act(() => {
+      champ.props.onChangeText(texte);
+    });
+  };
+
+  test('🔴 E1 — prenom + numero : l invitation part au serveur, puis le SMS s ouvre', async () => {
+    const racine = monterLaFiche();
+    await ouvrirLaFeuilleDInvitation(racine);
+
+    appuyerSur(racine, 'Par numéro');
+    taperDans(racine, 'Prénom', 'Marie');
+    taperDans(racine, 'Numéro de téléphone', '06 77 77 77 77');
+    await appuyerEtAttendre(racine, 'Envoyer l\'invitation');
+    await act(async () => { await Promise.resolve(); });
+
+    expect(mockInviterParNumero).toHaveBeenCalledWith({
+      firstname: 'Marie',
+      phoneNumber: '06 77 77 77 77',
+      teamId: 'equipe-1',
+    });
+    expect(mockOuvrirSms).toHaveBeenCalledWith(expect.objectContaining({
+      phoneNumber: '06 77 77 77 77',
+      url: 'https://staging.foundclub.app/i/team/equipe-1?c=ZyXwVuTsRqPoNmLkJiHgFe98',
+    }));
+  });
+
+  test('🔒 E2 — un numero impossible est refuse AVANT le serveur', async () => {
+    const racine = monterLaFiche();
+    await ouvrirLaFeuilleDInvitation(racine);
+
+    appuyerSur(racine, 'Par numéro');
+    taperDans(racine, 'Prénom', 'Marie');
+    taperDans(racine, 'Numéro de téléphone', '0612');
+    await appuyerEtAttendre(racine, 'Envoyer l\'invitation');
+
+    expect(mockInviterParNumero).not.toHaveBeenCalled();
+    expect(mockAlerte).toHaveBeenCalledWith(
+      'Invitation impossible',
+      'Ce numéro de téléphone n\'est pas valide.',
+    );
   });
 });

@@ -94,6 +94,28 @@ const AUTH_DIRIGEANT = Object.freeze({
 let mockAuthCourant = AUTH_DIRIGEANT;
 let mockEstMonEquipe = true;
 
+// INVIT2 — la feuille d'invitation (views/team/invite/TeamInviteSheet.js) lit et
+// ecrit par ces trois modules, qui atteignent le client HTTP (`.env` absent des
+// worktrees). Doublures ecrites EN ENTIER, sans requireActual.
+jest.mock('@/services/teamInvite/teamInviteQueries', () => ({
+  useSentTeamInvites: () => ({ data: [], refetch: jest.fn() }),
+  useTeamInviteSuggestions: () => ({ data: undefined, refetch: jest.fn() }),
+}));
+jest.mock('@/services/teamInvite/teamInviteService', () => ({
+  cancelTeamInvite: jest.fn(),
+  createTeamInviteLink: jest.fn(),
+  createTeamPhoneInvite: jest.fn(),
+}));
+jest.mock('react-native-qrcode-svg', () => function QRCodeMock() {
+  return null;
+});
+jest.mock('@/services/teamInvite/teamInviteShare', () => ({
+  buildTeamInviteMessage: () => '',
+  buildTeamInviteUrl: () => '',
+  openInviteSms: jest.fn(),
+  shareExistingTeamInvite: jest.fn(),
+}));
+
 jest.mock('@react-navigation/native', () => ({
   useFocusEffect: () => {},
 }));

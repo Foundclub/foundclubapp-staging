@@ -100,3 +100,27 @@ describe('pendingInvite — l invitation qui attend', () => {
     expect(mockStorage.delete).toHaveBeenCalledWith(PENDING_INVITE_STORAGE_KEY);
   });
 });
+
+describe('INVIT2 — le code du lien est range avec l invitation', () => {
+  const CODE = 'AbCdEfGhIjKlMnOpQrStUv12';
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it('🔴 range ET relit le code', () => {
+    savePendingInvite({ code: CODE, id: 't-1', subject: 'team' });
+    const [, rangee] = mockStorage.set.mock.calls[0];
+    expect(JSON.parse(rangee))
+      .toEqual(expect.objectContaining({ code: CODE, id: 't-1', subject: 'team' }));
+
+    mockStorage.getString.mockReturnValue(rangee);
+    expect(readPendingInvite()).toEqual(expect.objectContaining({ code: CODE, id: 't-1' }));
+  });
+
+  it('🔒 un code a la forme impossible n est pas range', () => {
+    savePendingInvite({ code: '<script>', id: 't-1', subject: 'team' });
+    const [, rangee] = mockStorage.set.mock.calls[0];
+    expect(JSON.parse(rangee).code).toBeUndefined();
+  });
+});

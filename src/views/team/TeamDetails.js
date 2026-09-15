@@ -1970,10 +1970,12 @@ function TeamDetails({ navigation, route }) {
 
   useFocusEffect(
     useCallback(() => {
-      if (invite && canJoinTeam(teamId) && !pendingRequest) {
+      // INVIT2 — une invitation NOMINATIVE deja la : c'est sa banniere Accepter /
+      // Refuser qui repond, pas une demande par-dessus.
+      if (invite && canJoinTeam(teamId) && !pendingRequest && !pendingInvitation) {
         handleJoinTeam();
       }
-    }, [invite, canJoinTeam, teamId, pendingRequest, handleJoinTeam]),
+    }, [invite, canJoinTeam, teamId, pendingRequest, pendingInvitation, handleJoinTeam]),
   );
 
   useEffect(() => navigation.addListener('beforeRemove', (event) => {
@@ -5265,6 +5267,7 @@ function TeamDetails({ navigation, route }) {
         close={() => setIsInviteSheetOpen(false)}
         clubData={clubData}
         currentUserId={currentUser?.documentId}
+        inviterName={currentUser?.firstname}
         isVisible={isInviteSheetOpen}
         onShareLink={handleShareInvitationLink}
         team={team}

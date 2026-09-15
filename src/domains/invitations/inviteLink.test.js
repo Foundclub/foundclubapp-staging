@@ -126,3 +126,44 @@ describe('inviteLink — lecture d un lien d invitation', () => {
     });
   });
 });
+
+/**
+ * INVIT2 · C — LE LIEN PORTE UN CODE OPAQUE, et rien d'autre.
+ *
+ * Le lien d'avant ne portait que l'equipe : la fenetre ne pouvait nommer ni
+ * l'invitant ni l'equipe, et une invitation NOMINATIVE ne se distinguait pas
+ * d'un lien transfere. Le code (24 caracteres aleatoires, cree par le serveur)
+ * permet les deux, sans jamais faire voyager un nom ou un numero.
+ */
+describe('INVIT2 · C — le code d invitation dans le lien', () => {
+  const CODE = 'AbCdEfGhIjKlMnOpQrStUv12';
+
+  it('🔴 le lien canonique rend le code', () => {
+    expect(parseInviteLink(`https://foundclub.app/i/team/team-doc-123?c=${CODE}`)).toEqual({
+      code: CODE,
+      id: 'team-doc-123',
+      subject: 'team',
+    });
+  });
+
+  it('🔴 le schema applicatif le rend aussi (rebond de la page web)', () => {
+    expect(parseInviteLink(`foundclub://team/team-doc-123?invite=true&c=${CODE}`)).toEqual({
+      code: CODE,
+      id: 'team-doc-123',
+      subject: 'team',
+    });
+  });
+
+  it('🔒 un code a la forme impossible est IGNORE : l invitation reste, sans code', () => {
+    expect(parseInviteLink('https://foundclub.app/i/team/team-doc-123?c=<script>')).toEqual({
+      id: 'team-doc-123',
+      subject: 'team',
+    });
+  });
+
+  it('🔴 la construction pose le code, et l aller-retour le retrouve', () => {
+    const url = buildInviteWebUrl({ code: CODE, id: 'team-doc-123', subject: 'team' });
+    expect(url).toBe(`https://foundclub.app/i/team/team-doc-123?c=${CODE}`);
+    expect(parseInviteLink(url)).toEqual({ code: CODE, id: 'team-doc-123', subject: 'team' });
+  });
+});

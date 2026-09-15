@@ -27,6 +27,17 @@ jest.mock('@/domains/invitations/pendingInvite', () => ({
   readPendingInvite: jest.fn(() => null),
   savePendingInvite: jest.fn(),
 }));
+// INVIT2 — la fenetre lit l apercu et repond a une invitation : ses deux services
+// atteignent le client HTTP (.env absent des worktrees). Neutralises aussi.
+jest.mock('@/services/teamInvite/teamInviteService', () => ({
+  claimTeamInvite: jest.fn(),
+  getTeamInvitePreview: jest.fn(),
+}));
+jest.mock('@/services/teamMembershipRequest/teamMembershipRequestService', () => ({
+  acceptTeamInvitation: jest.fn(),
+  createTeamMembershipRequest: jest.fn(),
+  refuseTeamInvitation: jest.fn(),
+}));
 jest.mock('@/components/organisms/popup/GlobalPromptModal', () => ({
   __esModule: true,
   default: jest.fn(() => null),

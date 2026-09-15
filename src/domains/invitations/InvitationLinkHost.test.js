@@ -27,7 +27,15 @@ const mockClearPendingInvite = jest.fn();
 const mockReadPendingInvite = jest.fn(() => null);
 const mockSavePendingInvite = jest.fn();
 
+const mockPreview = jest.fn();
+const mockClaim = jest.fn();
+const mockAcceptInvitation = jest.fn(() => Promise.resolve({}));
+const mockRefuseInvitation = jest.fn(() => Promise.resolve({}));
+const mockCreateRequest = jest.fn(() => Promise.resolve({}));
+const mockAlert = jest.fn();
+
 jest.mock('react-native', () => ({
+  Alert: { alert: (...args) => mockAlert(...args) },
   Linking: {
     addEventListener: (...args) => mockAddEventListener(...args),
     getInitialURL: (...args) => mockGetInitialURL(...args),
@@ -38,6 +46,17 @@ jest.mock('react-native', () => ({
 jest.mock('@/navigation/navigationService', () => ({
   navigate: (...args) => mockNavigate(...args),
   navigationRef: mockNavigationRef,
+}));
+
+// INVIT2 — ecrites EN ENTIER : les vrais services importent le client HTTP.
+jest.mock('@/services/teamInvite/teamInviteService', () => ({
+  claimTeamInvite: (...args) => mockClaim(...args),
+  getTeamInvitePreview: (...args) => mockPreview(...args),
+}));
+jest.mock('@/services/teamMembershipRequest/teamMembershipRequestService', () => ({
+  acceptTeamInvitation: (...args) => mockAcceptInvitation(...args),
+  createTeamMembershipRequest: (...args) => mockCreateRequest(...args),
+  refuseTeamInvitation: (...args) => mockRefuseInvitation(...args),
 }));
 
 jest.mock('@/domains/invitations/pendingInvite', () => ({
@@ -369,5 +388,124 @@ describe('InvitationLinkHost — la fenetre d invitation', () => {
       const source = require('fs').readFileSync(`${__dirname}/InvitationLinkHost.js`, 'utf8');
       expect(source).not.toMatch(/Platform\.OS/);
     });
+  });
+});
+
+describe('INVIT2 — un lien d equipe AVEC code : qui invite, et repondre en un geste', () => {
+  const CODE = 'AbCdEfGhIjKlMnOpQrStUv12';
+  const URL_CODEE = `https://foundclub.app/i/team/t-1?c=${CODE}`;
+  const APERCU = {
+    club: { name: 'FoundClub' },
+    inviterName: 'Adel F.',
+    nominative: true,
+    status: 'active',
+    team: { documentId: 't-1', name: 'SENIOR' },
+  };
+
+  // eslint-disable-next-line global-require -- meme motif que l import de l hote plus haut
+  const { describeCodedTeamInvite } = require('./InvitationLinkHost');
+
+  /**
+   * Monte l'hote avec un compte (ou sans).
+   * @param {string} [userId] le compte connecte.
+   * @returns {Promise<any>} l'arbre.
+   */
+  const monterAvec = async (userId) => {
+    let tree;
+    await act(async () => {
+      tree = create(<InvitationLinkHost userId={userId} />);
+    });
+    await act(async () => { await Promise.resolve(); });
+    return tree;
+  };
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    lastModalProps = null;
+    mockGetInitialURL.mockResolvedValue(null);
+    mockReadPendingInvite.mockReturnValue(null);
+    mockPreview.mockResolvedValue(APERCU);
+    mockClaim.mockResolvedValue({ mode: 'answer', requestId: 'tmr-9', teamId: 't-1' });
+  });
+
+  it('🔴 la phrase nomme l invitant, l equipe et le club', () => {
+    const t = (_cle, repli, valeurs = {}) => Object.keys(valeurs)
+      .reduce((texte, nom) => texte.split(`{{${nom}}}`).join(String(valeurs[nom])), repli);
+    const fenetre = describeCodedTeamInvite({
+      decision: { mode: 'answer', requestId: 'tmr-9' }, isSignedIn: true, preview: APERCU, t,
+    });
+    expect(fenetre.title).toBe('Rejoindre SENIOR');
+    expect(fenetre.body).toBe('Adel F. t\'invite à rejoindre l\'équipe SENIOR (FoundClub).');
+    expect(fenetre.primary).toBe('Accepter');
+    expect(fenetre.secondary).toBe('Refuser');
+  });
+
+  it('🔴 connecte et vise : « Accepter » repond a SON invitation et mene a l equipe', async () => {
+    mockGetInitialURL.mockResolvedValue(URL_CODEE);
+
+    await monterAvec('marie');
+
+    expect(mockPreview).toHaveBeenCalledWith(CODE);
+    expect(mockClaim).toHaveBeenCalledWith(CODE);
+    expect(lastModalProps.visible).toBe(true);
+    expect(mockAcceptInvitation).not.toHaveBeenCalled();
+
+    await act(async () => {
+      await lastModalProps.primaryAction.onPress();
+    });
+
+    expect(mockAcceptInvitation).toHaveBeenCalledWith('tmr-9');
+    expect(mockClearPendingInvite).toHaveBeenCalled();
+    expect(mockNavigate).toHaveBeenCalledWith(RouteNames.TeamDetails, { teamId: 't-1' });
+  });
+
+  it('« Refuser » refuse SON invitation, et ne mene nulle part', async () => {
+    mockGetInitialURL.mockResolvedValue(URL_CODEE);
+    await monterAvec('marie');
+
+    await act(async () => {
+      await lastModalProps.secondaryAction.onPress();
+    });
+
+    expect(mockRefuseInvitation).toHaveBeenCalledWith('tmr-9');
+    expect(mockNavigate).not.toHaveBeenCalled();
+  });
+
+  it('🔒 lien transfere (Q1 = C) : le geste DEMANDE, il ne fait pas entrer', async () => {
+    mockClaim.mockResolvedValue({ mode: 'request', teamId: 't-1' });
+    mockGetInitialURL.mockResolvedValue(URL_CODEE);
+    await monterAvec('curieux');
+
+    await act(async () => {
+      await lastModalProps.primaryAction.onPress();
+    });
+
+    expect(mockCreateRequest).toHaveBeenCalledWith({ team: 't-1' });
+    expect(mockAcceptInvitation).not.toHaveBeenCalled();
+  });
+
+  it('🔴 I7 — deconnecte : l invitation n est PAS effacee, et revient a la connexion', async () => {
+    mockGetInitialURL.mockResolvedValue(URL_CODEE);
+    const tree = await monterAvec(undefined);
+
+    expect(mockClaim).not.toHaveBeenCalled();
+    await act(async () => {
+      await lastModalProps.primaryAction.onPress();
+    });
+    expect(mockClearPendingInvite).not.toHaveBeenCalled();
+    expect(mockNavigate).not.toHaveBeenCalled();
+    expect(lastModalProps.visible).toBe(false);
+
+    // La personne cree son compte : l'hote relit le magasin.
+    mockReadPendingInvite.mockReturnValue({
+      code: CODE, createdAt: 1, id: 't-1', subject: 'team',
+    });
+    await act(async () => {
+      tree.update(<InvitationLinkHost userId="marie" />);
+    });
+    await act(async () => { await Promise.resolve(); });
+
+    expect(lastModalProps.visible).toBe(true);
+    expect(mockClaim).toHaveBeenCalledWith(CODE);
   });
 });

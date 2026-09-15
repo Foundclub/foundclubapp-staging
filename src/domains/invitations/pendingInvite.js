@@ -13,15 +13,16 @@
  * 7 jours. ⚠️ Ce magasin-la existe encore et reste branche sur le chemin
  * League ; il sera absorbe ici quand la squad passera par ce socle.
  */
-import { INVITE_SUBJECTS } from '@/domains/invitations/inviteLink';
+import { INVITE_SUBJECTS, normalizeInviteCode } from '@/domains/invitations/inviteLink';
 import { storage } from '@/store/appContext';
 
 export const PENDING_INVITE_STORAGE_KEY = 'pendingInviteLink';
 export const PENDING_INVITE_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
 
 /**
- * L'invitation rangee : le sujet, son identifiant, et la date de rangement.
- * @typedef {{ createdAt: number, id: string, subject: string }} PendingInvite
+ * L'invitation rangee : le sujet, son identifiant, la date de rangement et —
+ * INVIT2 — le code opaque du lien, quand il y en a un (jamais un nom, jamais un numero).
+ * @typedef {{ code?: string, createdAt: number, id: string, subject: string }} PendingInvite
  */
 
 /**
@@ -42,7 +43,10 @@ const parsePendingInvite = (rawValue) => {
     if (!Number.isFinite(createdAt) || createdAt <= 0) return null;
     if (Date.now() - createdAt > PENDING_INVITE_MAX_AGE_MS) return null;
 
-    return { createdAt, id, subject };
+    const code = normalizeInviteCode(parsed?.code);
+    return code ? {
+      code, createdAt, id, subject,
+    } : { createdAt, id, subject };
   } catch (_error) {
     return null;
   }
@@ -58,10 +62,14 @@ export const savePendingInvite = (invite) => {
   const subject = String(invite?.subject ?? '').trim();
   if (!id || !INVITE_SUBJECTS.includes(subject)) return;
 
+  const code = normalizeInviteCode(invite?.code);
   storage.set(PENDING_INVITE_STORAGE_KEY, JSON.stringify({
     createdAt: Date.now(),
     id,
     subject,
+    // INVIT2 — le code du lien survit a la fermeture de l'app ET a la connexion :
+    // c'est lui qui fait reconnaitre l'invitation apres coup.
+    ...(code ? { code } : {}),
   }));
 };
 
