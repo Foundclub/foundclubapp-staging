@@ -40,7 +40,17 @@ jest.mock('@/services/event/eventService', () => ({
 
 jest.mock('react-i18next', () => ({
   initReactI18next: { init: jest.fn(), type: '3rdParty' },
-  useTranslation: () => ({ t: (/** @type {string} */ key) => key }),
+  // I18N-2 : les messages de la relance passent par t() avec un repli et des {{jetons}} :
+  // le repli est rendu (jetons remplacés), une clef sans repli reste la clef.
+  useTranslation: () => ({
+    t: (/** @type {string} */ key, /** @type {any} */ fallback, /** @type {any} */ options) => (
+      typeof fallback === 'string'
+        ? fallback.replace(/\{\{(\w+)\}\}/g, (jeton, nom) => (
+          options && options[nom] !== undefined ? String(options[nom]) : jeton
+        ))
+        : key
+    ),
+  }),
 }));
 
 jest.mock('@react-navigation/native', () => ({

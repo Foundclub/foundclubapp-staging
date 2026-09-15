@@ -1,4 +1,6 @@
+import i18next from 'i18next';
 import { useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Text,
   TextInput,
@@ -13,16 +15,45 @@ import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 import InputStepper from '@/components/molecules/inputStepper/InputStepper';
 import SegmentedControl from '@/components/molecules/segmentedControl/SegmentedControl';
 
+// I18N-2 : des GETTERS, pas des textes — ce tableau est lu à l import, avant
+// l initialisation d i18next ; le libellé se traduit au moment où il s affiche.
 const TASK_TYPE_OPTIONS = [
-  { label: 'Accompagnateur', value: 'accompagnateur' },
-  { label: 'Voiture / transport', value: 'transport' },
-  { label: 'Table de marque', value: 'table_mark' },
-  { label: 'Arbitrage', value: 'arbitrage' },
-  { label: 'Materiel', value: 'materiel' },
-  { label: 'Buvette', value: 'buvette' },
-  { label: 'Photos / videos', value: 'photos' },
-  { label: 'Responsable maillots', value: 'maillots' },
-  { label: 'Autre', value: 'other' },
+  {
+    get label() { return i18next.t('eventTasksEditor.typeCompanion', 'Accompagnateur'); },
+    value: 'accompagnateur',
+  },
+  {
+    get label() { return i18next.t('eventTasksEditor.typeTransport', 'Voiture / transport'); },
+    value: 'transport',
+  },
+  {
+    get label() { return i18next.t('eventTasksEditor.typeScoreTable', 'Table de marque'); },
+    value: 'table_mark',
+  },
+  {
+    get label() { return i18next.t('eventTasksEditor.typeRefereeing', 'Arbitrage'); },
+    value: 'arbitrage',
+  },
+  {
+    get label() { return i18next.t('eventTasksEditor.typeEquipment', 'Materiel'); },
+    value: 'materiel',
+  },
+  {
+    get label() { return i18next.t('eventTasksEditor.typeRefreshments', 'Buvette'); },
+    value: 'buvette',
+  },
+  {
+    get label() { return i18next.t('eventTasksEditor.typePhotos', 'Photos / videos'); },
+    value: 'photos',
+  },
+  {
+    get label() { return i18next.t('eventTasksEditor.typeKits', 'Responsable maillots'); },
+    value: 'maillots',
+  },
+  {
+    get label() { return i18next.t('eventTasksEditor.typeOther', 'Autre'); },
+    value: 'other',
+  },
 ];
 
 const DEFAULT_TASK_TYPE = 'accompagnateur';
@@ -55,6 +86,7 @@ function EventTasksEditor({
   onChange,
   value = [],
 }) {
+  const { t } = useTranslation();
   const {
     Alignments, ApplicationStyle, Colors, Fonts, Spaces,
   } = useTheme();
@@ -142,9 +174,18 @@ function EventTasksEditor({
   return (
     <View style={[ApplicationStyle.card, Spaces.padding[16], Spaces.gap[12], { backgroundColor: `${Colors.primary700}66` }]}>
       <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter]}>
-        <Text style={[Fonts.p2Bold, Fonts.neutral00]}>Tâches annexes</Text>
+        <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
+          {t('eventTasksEditor.extraTasks', 'Tâches annexes')}
+        </Text>
         {editable ? (
-          <Button onPress={openModal} title="Ajouter" variant="Secondary" />
+          <Button
+            onPress={openModal}
+            title={t(
+              'eventTasksEditor.add',
+              'Ajouter',
+            )}
+            variant="Secondary"
+          />
         ) : null}
       </View>
 
@@ -164,17 +205,24 @@ function EventTasksEditor({
               ]}
             >
               <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter]}>
-                <Text style={[Fonts.p3Bold, Fonts.neutral00]}>{task?.title || 'Tache'}</Text>
+                <Text style={[Fonts.p3Bold, Fonts.neutral00]}>
+                  {task?.title || t(
+                    'eventTasksEditor.task',
+                    'Tache',
+                  )}
+                </Text>
                 {editable ? (
                   <TouchableOpacity onPress={() => removeTask(index)}>
-                    <Text style={[Fonts.p3Bold, Fonts.error500]}>Supprimer</Text>
+                    <Text style={[Fonts.p3Bold, Fonts.error500]}>
+                      {t('eventTasksEditor.delete', 'Supprimer')}
+                    </Text>
                   </TouchableOpacity>
                 ) : null}
               </View>
               <Text style={[Fonts.p3, Fonts.neutral200]}>
                 {task?.requiredCount || 1}
                 {' place(s) - '}
-                {task?.validationMode === 'MANUAL' ? 'Validation manuelle' : 'Validation automatique'}
+                {task?.validationMode === 'MANUAL' ? t('eventTasksEditor.manualApproval', 'Validation manuelle') : t('eventTasksEditor.automaticApproval', 'Validation automatique')}
               </Text>
               {task?.description ? (
                 <Text style={[Fonts.p3, Fonts.neutral300]}>{task.description}</Text>
@@ -183,7 +231,9 @@ function EventTasksEditor({
           ))}
         </View>
       ) : (
-        <Text style={[Fonts.p3, Fonts.neutral200]}>Aucune tâche pour le moment.</Text>
+        <Text style={[Fonts.p3, Fonts.neutral200]}>
+          {t('eventTasksEditor.noTaskYet', 'Aucune tâche pour le moment.')}
+        </Text>
       )}
 
       {isOpen ? (
@@ -197,10 +247,14 @@ function EventTasksEditor({
           webPresentation="dialog"
         >
           <View style={[Spaces.gap[16], Spaces.paddingBottom[24]]}>
-            <Text style={[Fonts.h3, Fonts.neutral00]}>Nouvelle tâche</Text>
+            <Text style={[Fonts.h3, Fonts.neutral00]}>
+              {t('eventTasksEditor.newTask', 'Nouvelle tâche')}
+            </Text>
 
             <View style={Spaces.gap[8]}>
-              <Text style={[Fonts.p3, Fonts.neutral200]}>Type de tâche</Text>
+              <Text style={[Fonts.p3, Fonts.neutral200]}>
+                {t('eventTasksEditor.taskType', 'Type de tâche')}
+              </Text>
               <SegmentedControl
                 onChange={handleTaskTypeChange}
                 options={TASK_TYPE_OPTIONS}
@@ -211,7 +265,7 @@ function EventTasksEditor({
             {draft.type === 'other' ? (
               <TextInput
                 onChangeText={handleCustomLabelChange}
-                placeholder="Nom du type"
+                placeholder={t('eventTasksEditor.typeName', 'Nom du type')}
                 placeholderTextColor={Colors.neutral400}
                 style={{
                   borderBottomColor: Colors.neutral200,
@@ -224,10 +278,12 @@ function EventTasksEditor({
             ) : null}
 
             <View style={Spaces.gap[8]}>
-              <Text style={[Fonts.p3, Fonts.neutral200]}>Titre affiche</Text>
+              <Text style={[Fonts.p3, Fonts.neutral200]}>
+                {t('eventTasksEditor.displayedTitle', 'Titre affiche')}
+              </Text>
               <TextInput
                 onChangeText={handleTitleChange}
-                placeholder="Titre"
+                placeholder={t('eventTasksEditor.title', 'Titre')}
                 placeholderTextColor={Colors.neutral400}
                 style={{
                   borderBottomColor: Colors.neutral200,
@@ -239,8 +295,11 @@ function EventTasksEditor({
               />
               <Text style={[Fonts.p4, Fonts.neutral300]}>
                 {titleEditedManually
-                  ? 'Titre personnalise.'
-                  : 'Le titre se remplit à partir du type choisi, puis tu peux le modifier.'}
+                  ? t('eventTasksEditor.customTitle', 'Titre personnalise.')
+                  : t(
+                    'eventTasksEditor.theTitleFillsInFrom',
+                    'Le titre se remplit à partir du type choisi, puis tu peux le modifier.',
+                  )}
               </Text>
             </View>
 
@@ -260,7 +319,7 @@ function EventTasksEditor({
             />
 
             <InputStepper
-              label="Nombre de personnes"
+              label={t('eventTasksEditor.numberOfPeople', 'Nombre de personnes')}
               max={50}
               min={1}
               onDecrement={() => setDraft((current) => ({ ...current, requiredCount: Math.max(1, Number(current.requiredCount || 1) - 1) }))}
@@ -275,14 +334,22 @@ function EventTasksEditor({
               onChange={(validationMode) => setDraft((current) => ({ ...current, validationMode }))}
               options={[
                 { label: 'Auto', value: 'AUTO' },
-                { label: 'Manuelle', value: 'MANUAL' },
+                { label: t('eventTasksEditor.manual', 'Manuelle'), value: 'MANUAL' },
               ]}
               value={draft.validationMode}
             />
 
             <View style={[Alignments.row, Spaces.gap[8]]}>
-              <Button onPress={closeModal} style={{ flex: 1 }} title="Annuler" variant="Secondary" />
-              <Button disabled={!canSave} onPress={addTask} style={{ flex: 1 }} title="Ajouter" />
+              <Button onPress={closeModal} style={{ flex: 1 }} title={t('eventTasksEditor.cancel', 'Annuler')} variant="Secondary" />
+              <Button
+                disabled={!canSave}
+                onPress={addTask}
+                style={{ flex: 1 }}
+                title={t(
+                  'eventTasksEditor.add',
+                  'Ajouter',
+                )}
+              />
             </View>
           </View>
         </BottomModal>

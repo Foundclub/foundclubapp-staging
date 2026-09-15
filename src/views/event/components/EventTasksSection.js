@@ -1,6 +1,8 @@
 // @ts-nocheck
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import i18next from 'i18next';
 import { useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Alert,
   ScrollView,
@@ -9,6 +11,7 @@ import {
   View,
 } from 'react-native';
 
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -33,12 +36,12 @@ const getUserKey = (user) => {
 const getUserDisplayName = (user) => (
   `${String(user?.firstname || '').trim()} ${String(user?.lastname || '').trim()}`.trim()
   || String(user?.username || '').trim()
-  || 'Membre'
+  || i18next.t('eventTasksSection.member', 'Membre')
 );
 
 const getRoleLabel = (user) => (
   String(user?.role?.name || user?.role?.type || user?.role || '').trim()
-  || 'Membre'
+  || i18next.t('eventTasksSection.member', 'Membre')
 );
 
 const uniqueUsers = (users = []) => {
@@ -82,11 +85,11 @@ const buildAssignableMembersForEvent = (event) => {
 
 const getAssignmentStatusLabel = (status) => {
   const normalizedStatus = String(status || '').toUpperCase();
-  if (normalizedStatus === 'APPROVED') return 'Valide';
-  if (normalizedStatus === 'PENDING') return 'En attente';
-  if (normalizedStatus === 'REJECTED') return 'Refuse';
-  if (normalizedStatus === 'CANCELLED') return 'Annule';
-  return normalizedStatus || 'Inconnu';
+  if (normalizedStatus === 'APPROVED') return i18next.t('eventTasksSection.approved', 'Valide');
+  if (normalizedStatus === 'PENDING') return i18next.t('eventTasksSection.pending', 'En attente');
+  if (normalizedStatus === 'REJECTED') return i18next.t('eventTasksSection.declined', 'Refuse');
+  if (normalizedStatus === 'CANCELLED') return i18next.t('eventTasksSection.cancelled', 'Annule');
+  return normalizedStatus || i18next.t('eventTasksSection.unknown', 'Inconnu');
 };
 
 const isTrainerForUser = (team, user) => {
@@ -103,6 +106,7 @@ const isTrainerForUser = (team, user) => {
  * @param root0.userData
  */
 function EventTasksSection({ canManageEvent = false, event, userData }) {
+  const { t } = useTranslation();
   const {
     Alignments, ApplicationStyle, Colors, Fonts, Spaces,
   } = useTheme();
@@ -137,7 +141,7 @@ function EventTasksSection({ canManageEvent = false, event, userData }) {
 
   const assignMutation = useMutation({
     mutationFn: ({ taskId }) => assignEventTask(taskId, { userId: userData?.documentId }),
-    onError: (error) => Alert.alert('Erreur', error?.message || 'Impossible de rejoindre cette tâche.'),
+    onError: (error) => Alert.alert(t('common.error', 'Erreur'), error?.message || t('eventTasksSection.unableToJoinThisTask', 'Impossible de rejoindre cette tâche.')),
     onSuccess: (result, variables) => {
       const task = tasks.find((item) => String(item?.documentId || item?.id || '') === String(variables?.taskId || ''));
       const status = String(result?.data?.status || result?.status || '').toUpperCase();
@@ -145,7 +149,7 @@ function EventTasksSection({ canManageEvent = false, event, userData }) {
         assignmentId: result?.data?.documentId || result?.documentId || null,
         eventId: event?.documentId,
         taskId: variables?.taskId,
-        taskTitle: task?.title || 'cette tâche',
+        taskTitle: task?.title || t('eventTasksSection.thisTask', 'cette tâche'),
       });
       refreshEvent();
     },
@@ -154,13 +158,13 @@ function EventTasksSection({ canManageEvent = false, event, userData }) {
     mutationFn: ({ taskId, userIds }) => Promise.all(
       userIds.map((userId) => assignEventTask(taskId, { userId })),
     ),
-    onError: (error) => Alert.alert('Erreur', error?.message || 'Impossible d assigner ces membres à la tâche.'),
+    onError: (error) => Alert.alert(t('common.error', 'Erreur'), error?.message || t('eventTasksSection.unableToAssignTheseMembers', 'Impossible d assigner ces membres à la tâche.')),
     onSuccess: () => {
       celebrate('event_task_members_assigned', {
         count: selectedManagerMemberIds.length,
         eventId: event?.documentId,
         taskId: activeManagerTask?.documentId || activeManagerTask?.id || null,
-        taskTitle: activeManagerTask?.title || 'cette tâche',
+        taskTitle: activeManagerTask?.title || t('eventTasksSection.thisTask', 'cette tâche'),
       });
       setIsAssignMembersModalOpen(false);
       setActiveManagerTaskId('');
@@ -170,25 +174,28 @@ function EventTasksSection({ canManageEvent = false, event, userData }) {
   });
   const approveMutation = useMutation({
     mutationFn: ({ assignmentId }) => approveEventTaskAssignment(assignmentId),
-    onError: (error) => Alert.alert('Erreur', error?.message || 'Impossible de valider cette assignation.'),
+    onError: (error) => Alert.alert(t('common.error', 'Erreur'), error?.message || t('eventTasksSection.unableToApproveThisAssignment', 'Impossible de valider cette assignation.')),
     onSuccess: (result) => {
       celebrate('event_task_assignment_validated', {
         assignmentId: result?.data?.documentId || result?.documentId || null,
         eventId: event?.documentId,
         taskId: result?.data?.task?.documentId || result?.task?.documentId || null,
-        taskTitle: result?.data?.task?.title || result?.task?.title || 'cette tâche',
+        taskTitle: result?.data?.task?.title || result?.task?.title || t(
+          'eventTasksSection.thisTask',
+          'cette tâche',
+        ),
       });
       refreshEvent();
     },
   });
   const rejectMutation = useMutation({
     mutationFn: ({ assignmentId }) => rejectEventTaskAssignment(assignmentId, {}),
-    onError: (error) => Alert.alert('Erreur', error?.message || 'Impossible de refuser cette assignation.'),
+    onError: (error) => Alert.alert(t('common.error', 'Erreur'), error?.message || t('eventTasksSection.unableToDeclineThisAssignment', 'Impossible de refuser cette assignation.')),
     onSuccess: refreshEvent,
   });
   const cancelMutation = useMutation({
     mutationFn: ({ assignmentId }) => cancelEventTaskAssignment(assignmentId),
-    onError: (error) => Alert.alert('Erreur', error?.message || 'Impossible d annuler cette assignation.'),
+    onError: (error) => Alert.alert(t('common.error', 'Erreur'), error?.message || t('eventTasksSection.unableToCancelThisAssignment', 'Impossible d annuler cette assignation.')),
     onSuccess: refreshEvent,
   });
 
@@ -241,7 +248,7 @@ function EventTasksSection({ canManageEvent = false, event, userData }) {
         return current.filter((value) => value !== memberId);
       }
       if (current.length >= activeRemainingSlots) {
-        Alert.alert('Tâche complète', 'Retire un membre ou choisis une autre tâche avant de continuer.');
+        Alert.alert(t('eventTasksSection.taskFull', 'Tâche complète'), t('eventTasksSection.removeAMemberOrChoose', 'Retire un membre ou choisis une autre tâche avant de continuer.'));
         return current;
       }
       return [...current, memberId];
@@ -269,9 +276,11 @@ function EventTasksSection({ canManageEvent = false, event, userData }) {
         }]}
       >
         <View style={Spaces.gap[8]}>
-          <Text style={[Fonts.h4, Fonts.neutral00]}>Tâches annexes</Text>
+          <Text style={[Fonts.h4, Fonts.neutral00]}>
+            {t('eventTasksSection.extraTasks', 'Tâches annexes')}
+          </Text>
           <Text style={[Fonts.p3, Fonts.neutral200]}>
-            Les membres peuvent se proposer, et les encadrants peuvent assigner directement les bonnes personnes.
+            {t('eventTasksSection.membersCanVolunteerAndStaff', 'Les membres peuvent se proposer, et les encadrants peuvent assigner directement les bonnes personnes.')}
           </Text>
         </View>
 
@@ -296,7 +305,7 @@ function EventTasksSection({ canManageEvent = false, event, userData }) {
                   <View style={{ flex: 1 }}>
                     <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{task.title}</Text>
                     <Text style={[Fonts.p3, Fonts.neutral300]}>
-                      {String(task.validationMode || 'AUTO') === 'MANUAL' ? 'Volontariat avec validation manuelle' : 'Validation automatique'}
+                      {String(task.validationMode || 'AUTO') === 'MANUAL' ? t('eventTasksSection.volunteeringWithManualApproval', 'Volontariat avec validation manuelle') : t('eventTasksSection.automaticApproval', 'Validation automatique')}
                     </Text>
                   </View>
                   <View
@@ -323,7 +332,9 @@ function EventTasksSection({ canManageEvent = false, event, userData }) {
 
                 {approvedAssignments.length > 0 ? (
                   <View style={Spaces.gap[8]}>
-                    <Text style={[Fonts.p3Bold, Fonts.neutral100]}>Affectations confirmées</Text>
+                    <Text style={[Fonts.p3Bold, Fonts.neutral100]}>
+                      {t('eventTasksSection.confirmedAssignments', 'Affectations confirmées')}
+                    </Text>
                     <View style={[Alignments.row, Spaces.gap[8], { flexWrap: 'wrap' }]}>
                       {approvedAssignments.map((assignment) => (
                         <View
@@ -344,13 +355,16 @@ function EventTasksSection({ canManageEvent = false, event, userData }) {
                   </View>
                 ) : (
                   <Text style={[Fonts.p3, Fonts.neutral300]}>
-                    Personne n est encore confirme sur cette tâche.
+                    {t(
+                      'eventTasksSection.nobodyIsConfirmedOnThis',
+                      'Personne n est encore confirme sur cette tâche.',
+                    )}
                   </Text>
                 )}
 
                 {userAssignment ? (
                   <Text style={[Fonts.p3Bold, Fonts.neutral100]}>
-                    {'Ton statut : '}
+                    {t('eventTasksSection.yourStatus', 'Ton statut : ')}
                     {getAssignmentStatusLabel(userAssignment.status)}
                   </Text>
                 ) : null}
@@ -360,7 +374,7 @@ function EventTasksSection({ canManageEvent = false, event, userData }) {
                     <Button
                       disabled={assignMutation.isPending}
                       onPress={() => assignMutation.mutate({ taskId: task.documentId || task.id })}
-                      title={String(task.validationMode || 'AUTO') === 'MANUAL' ? 'Je me porte volontaire' : "Je m'assigne"}
+                      title={String(task.validationMode || 'AUTO') === 'MANUAL' ? t('eventTasksSection.iVolunteer', 'Je me porte volontaire') : t('eventTasksSection.iLlTakeIt', "Je m'assigne")}
                       variant="Secondary"
                     />
                   ) : null}
@@ -369,7 +383,7 @@ function EventTasksSection({ canManageEvent = false, event, userData }) {
                     <Button
                       disabled={cancelMutation.isPending}
                       onPress={() => cancelMutation.mutate({ assignmentId: userAssignment.documentId || userAssignment.id })}
-                      title="Annuler ma demande"
+                      title={t('eventTasksSection.cancelMyRequest', 'Annuler ma demande')}
                       variant="Secondary"
                     />
                   ) : null}
@@ -378,7 +392,7 @@ function EventTasksSection({ canManageEvent = false, event, userData }) {
                     <Button
                       disabled={isFull}
                       onPress={() => openAssignMembersModal(task)}
-                      title="Assigner des membres"
+                      title={t('eventTasksSection.assignMembers', 'Assigner des membres')}
                       variant="Secondary"
                     />
                   ) : null}
@@ -386,7 +400,9 @@ function EventTasksSection({ canManageEvent = false, event, userData }) {
 
                 {canModerateAssignments && pendingAssignments.length ? (
                   <View style={Spaces.gap[8]}>
-                    <Text style={[Fonts.p3Bold, Fonts.neutral100]}>Volontaires en attente</Text>
+                    <Text style={[Fonts.p3Bold, Fonts.neutral100]}>
+                      {t('eventTasksSection.pendingVolunteers', 'Volontaires en attente')}
+                    </Text>
                     {pendingAssignments.map((assignment) => (
                       <View
                         key={assignment.documentId || assignment.id || getUserKey(assignment?.user)}
@@ -401,12 +417,12 @@ function EventTasksSection({ canManageEvent = false, event, userData }) {
                           <Button
                             disabled={approveMutation.isPending}
                             onPress={() => approveMutation.mutate({ assignmentId: assignment.documentId || assignment.id })}
-                            title="Valider"
+                            title={t('eventTasksSection.approve', 'Valider')}
                           />
                           <Button
                             disabled={rejectMutation.isPending}
                             onPress={() => rejectMutation.mutate({ assignmentId: assignment.documentId || assignment.id })}
-                            title="Refuser"
+                            title={t('eventTasksSection.decline', 'Refuser')}
                             variant="Secondary"
                           />
                         </View>
@@ -425,10 +441,17 @@ function EventTasksSection({ canManageEvent = false, event, userData }) {
           <ScrollView contentContainerStyle={[Spaces.gap[16], Spaces.paddingBottom[24]]} showsVerticalScrollIndicator={false}>
             <View style={Spaces.gap[8]}>
               <Text style={[Fonts.h3, Fonts.neutral00]}>
-                {activeManagerTask?.title || 'Assigner des membres'}
+                {activeManagerTask?.title || t(
+                  'eventTasksSection.assignMembers',
+                  'Assigner des membres',
+                )}
               </Text>
               <Text style={[Fonts.p3, Fonts.neutral200]}>
-                Sélectionne un ou plusieurs membres pour les affecter directement à cette tâche.
+                {t(
+                  'eventTasksSection.selectOneOrMoreMembers',
+                  'Sélectionne un ou plusieurs membres pour les affecter directement à cette '
+                    + 'tâche.',
+                )}
               </Text>
             </View>
 
@@ -441,12 +464,16 @@ function EventTasksSection({ canManageEvent = false, event, userData }) {
               <Text style={[Fonts.p3Bold, Fonts.neutral100]}>
                 {activeRemainingSlots > 0
                   ? `${activeRemainingSlots} place(s) restante(s)`
-                  : 'Cette tâche est déjà complété'}
+                  : t('eventTasksSection.thisTaskIsAlreadyFull', 'Cette tâche est déjà complété')}
               </Text>
               <Text style={[Fonts.p4, Fonts.neutral300]}>
                 {selectedManagerMemberIds.length > 0
-                  ? `${selectedManagerMemberIds.length} membre(s) prêt(s) à être assignes`
-                  : 'Choisis les personnes à ajouter.'}
+                  ? t(
+                    'eventTasksSection.memberSReadyToBe',
+                    '{{selectedCount}} membre(s) prêt(s) à être assignes',
+                    { selectedCount: selectedManagerMemberIds.length, ...SANS_ECHAPPEMENT },
+                  )
+                  : t('eventTasksSection.chooseThePeopleToAdd', 'Choisis les personnes à ajouter.')}
               </Text>
             </View>
 
@@ -495,19 +522,23 @@ function EventTasksSection({ canManageEvent = false, event, userData }) {
               }]}
               >
                 <Text style={[Fonts.p3, Fonts.neutral200]}>
-                  Aucun membre supplémentaire n est disponible pour cette tâche pour le moment.
+                  {t(
+                    'eventTasksSection.noAdditionalMemberIsAvailable',
+                    'Aucun membre supplémentaire n est disponible pour cette tâche pour le '
+                      + 'moment.',
+                  )}
                 </Text>
               </View>
             )}
 
             <View style={[Alignments.row, Spaces.gap[8], Spaces.paddingTop[8]]}>
-              <Button onPress={closeAssignMembersModal} style={{ flex: 1 }} title="Annuler" variant="Secondary" />
+              <Button onPress={closeAssignMembersModal} style={{ flex: 1 }} title={t('eventTasksSection.cancel', 'Annuler')} variant="Secondary" />
               <Button
                 disabled={selectedManagerMemberIds.length === 0 || managerAssignMutation.isPending || activeRemainingSlots === 0}
                 isLoading={managerAssignMutation.isPending}
                 onPress={confirmManagerAssignments}
                 style={{ flex: 1 }}
-                title="Assigner"
+                title={t('eventTasksSection.assign', 'Assigner')}
               />
             </View>
           </ScrollView>

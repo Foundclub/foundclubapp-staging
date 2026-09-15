@@ -6,6 +6,7 @@ import { Alert } from 'react-native';
 import { aggregateRemindReports } from '@/domains/event/aggregateRemindReports';
 import { buildRemindMessage, REMIND_EVENT_MUTATION_KEY } from '@/domains/event/remindReport';
 import { getParticipationErrorMessage } from '@/domains/participation/participationFlow';
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 
 import {
   cancelEvent,
@@ -74,7 +75,10 @@ export const useEventMutations = (eventId, refetch, refetchParticipations) => {
         t('common.error'),
         getParticipationErrorMessage(
           error,
-          "Impossible d'enregistrer ta participation pour le moment.",
+          t(
+            'useEventMutations.unableToSaveYourParticipation',
+            "Impossible d'enregistrer ta participation pour le moment.",
+          ),
         ),
       );
     },
@@ -92,7 +96,10 @@ export const useEventMutations = (eventId, refetch, refetchParticipations) => {
         t('common.error'),
         getParticipationErrorMessage(
           error,
-          'Impossible de valider cette participation pour le moment.',
+          t(
+            'useEventMutations.unableToApproveThisParticipation',
+            'Impossible de valider cette participation pour le moment.',
+          ),
         ),
       );
     },
@@ -110,7 +117,10 @@ export const useEventMutations = (eventId, refetch, refetchParticipations) => {
         t('common.error'),
         getParticipationErrorMessage(
           error,
-          'Impossible de refuser cette participation pour le moment.',
+          t(
+            'useEventMutations.unableToDeclineThisParticipation',
+            'Impossible de refuser cette participation pour le moment.',
+          ),
         ),
       );
     },
@@ -141,7 +151,10 @@ export const useEventMutations = (eventId, refetch, refetchParticipations) => {
     onError: (error) => {
       Alert.alert(
         t('common.error'),
-        getParticipationErrorMessage(error, "Impossible d'enregistrer ton absence pour le moment."),
+        getParticipationErrorMessage(error, t(
+          'useEventMutations.unableToSaveYourAbsence',
+          "Impossible d'enregistrer ton absence pour le moment.",
+        )),
       );
     },
     onSuccess: () => {
@@ -179,7 +192,10 @@ export const useEventMutations = (eventId, refetch, refetchParticipations) => {
     onError: (error) => {
       Alert.alert(
         t('common.error'),
-        getParticipationErrorMessage(error, "Impossible d'enregistrer ta réponse pour le moment."),
+        getParticipationErrorMessage(error, t(
+          'useEventMutations.unableToSaveYourAnswer',
+          "Impossible d'enregistrer ta réponse pour le moment.",
+        )),
       );
     },
     onSuccess: () => {
@@ -290,10 +306,17 @@ export const useEventMutations = (eventId, refetch, refetchParticipations) => {
       // La CONSEQUENCE est collee a la raison : le serveur explique pourquoi,
       // mais c est « personne n a ete prevenu » qui manquait — et c est la
       // seule phrase qui empeche le coach de croire sa relance partie.
-      const raison = getParticipationErrorMessage(error, 'Le serveur n a pas repondu.');
+      const raison = getParticipationErrorMessage(error, t(
+        'useEventMutations.theServerDidnTRespond',
+        'Le serveur n a pas repondu.',
+      ));
       Alert.alert(
-        'La relance n a pas pu partir',
-        `${raison} Personne n a ete prevenu : reessaie dans un instant.`,
+        t('useEventMutations.theReminderCouldnTBe', 'La relance n a pas pu partir'),
+        t(
+          'useEventMutations.nobodyWasNotifiedTryAgain',
+          '{{raison}} Personne n a ete prevenu : reessaie dans un instant.',
+          { raison, ...SANS_ECHAPPEMENT },
+        ),
       );
     },
     onSuccess: (report, /** @type {any} */ variables) => {
@@ -399,7 +422,10 @@ export const useEventMutations = (eventId, refetch, refetchParticipations) => {
     onError: (error) => {
       Alert.alert(
         t('common.error'),
-        getParticipationErrorMessage(error, "Impossible d'enregistrer ton arrivée."),
+        getParticipationErrorMessage(error, t(
+          'useEventMutations.unableToSaveYourArrival',
+          "Impossible d'enregistrer ton arrivée.",
+        )),
       );
     },
     onSuccess: () => {
@@ -418,7 +444,10 @@ export const useEventMutations = (eventId, refetch, refetchParticipations) => {
     onError: (error) => {
       Alert.alert(
         t('common.error'),
-        getParticipationErrorMessage(error, "Impossible d'enregistrer ton retard."),
+        getParticipationErrorMessage(error, t(
+          'useEventMutations.unableToSaveYourDelay',
+          "Impossible d'enregistrer ton retard.",
+        )),
       );
     },
     onSuccess: () => {
@@ -435,7 +464,10 @@ export const useEventMutations = (eventId, refetch, refetchParticipations) => {
   const coachArrivalMutation = useMutation({
     mutationFn: ({ eventId: targetEventId, payload, userId }) => markCoachArrival(targetEventId, userId, payload),
     onError: () => {
-      Alert.alert(t('common.error'), "Impossible d'enregistrer l'arrivée.");
+      Alert.alert(t('common.error'), t(
+        'useEventMutations.unableToSaveTheArrival',
+        "Impossible d'enregistrer l'arrivée.",
+      ));
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['events'] });
@@ -451,7 +483,10 @@ export const useEventMutations = (eventId, refetch, refetchParticipations) => {
   const resetAttendanceMutation = useMutation({
     mutationFn: ({ eventId: targetEventId, userId }) => resetCoachAttendance(targetEventId, userId),
     onError: () => {
-      Alert.alert(t('common.error'), 'Impossible de réinitialiser le pointage.');
+      Alert.alert(t('common.error'), t(
+        'useEventMutations.unableToResetTheCheck',
+        'Impossible de réinitialiser le pointage.',
+      ));
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['events'] });
@@ -467,7 +502,10 @@ export const useEventMutations = (eventId, refetch, refetchParticipations) => {
   const updateLateMinutesMutation = useMutation({
     mutationFn: ({ eventId: targetEventId, payload, userId }) => updateCoachLateMinutes(targetEventId, userId, payload),
     onError: () => {
-      Alert.alert(t('common.error'), 'Impossible de modifier le retard.');
+      Alert.alert(t('common.error'), t(
+        'useEventMutations.unableToChangeTheDelay',
+        'Impossible de modifier le retard.',
+      ));
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['events'] });

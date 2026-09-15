@@ -167,7 +167,7 @@ function EventDetectionSlots({
       >
         <View style={[Spaces.gap[12]]}>
           <Text style={[Fonts.p2, Fonts.neutral200]}>
-            Les joueurs choisissent un poste precis. Les places se remplissent quand tu valides les candidatures.
+            {t('eventDetectionSlots.playersPickASpecificPosition', 'Les joueurs choisissent un poste precis. Les places se remplissent quand tu valides les candidatures.')}
           </Text>
           <View style={[Alignments.row, { columnGap: 8, flexWrap: 'wrap', rowGap: 8 }]}>
             {renderMetricChip(`${summary.totalPositions} poste(s)`, 'primary')}
@@ -191,11 +191,11 @@ function EventDetectionSlots({
             primaryDisabled = true;
             primaryVariant = 'SecondaryLight';
           } else if (isCurrentUserSlot) {
-            primaryTitle = currentUserSlotStatus === 'accepted' ? 'Participation validée' : 'Demande envoyée';
+            primaryTitle = currentUserSlotStatus === 'accepted' ? t('eventDetectionSlots.participationApproved', 'Participation validée') : t('eventDetectionSlots.requestSent', 'Demande envoyée');
             primaryDisabled = true;
             primaryVariant = 'SecondaryLight';
           } else if (isDisabledByOtherSlot) {
-            primaryTitle = 'Déjà inscrit';
+            primaryTitle = t('eventDetectionSlots.alreadyRegistered', 'Déjà inscrit');
             primaryDisabled = true;
             primaryVariant = 'SecondaryLight';
           } else if (isDisabledByGenericParticipation) {
@@ -242,7 +242,11 @@ function EventDetectionSlots({
                     ]}
                   >
                     <Text style={[Fonts.p4Bold, { color: slot.isComplete ? Colors.gold500 : Colors.primary500 }]}>
-                      {slot.isComplete ? 'Complet' : `${slot.remaining} restante(s)`}
+                      {slot.isComplete
+                        ? t('eventDetectionSlots.full', 'Complet')
+                        : t('eventDetectionSlots.remaining', '{{remaining}} restante(s)', {
+                          remaining: slot.remaining,
+                        })}
                     </Text>
                   </View>
 
@@ -291,7 +295,7 @@ function EventDetectionSlots({
                     <Button
                       onPress={() => onOpenSlot?.(slot)}
                       size="sm"
-                      title="Voir le poste"
+                      title={t('eventDetectionSlots.seeThePosition', 'Voir le poste')}
                       variant="SecondaryLight"
                     />
                   </View>

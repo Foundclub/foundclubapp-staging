@@ -1,6 +1,8 @@
 // @ts-nocheck
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import i18next from 'i18next';
 import { useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Alert, Text, View } from 'react-native';
 
 import { canUserEditClub } from '@/domains/auth/authUseCases';
@@ -18,17 +20,32 @@ const getUserKey = (user) => {
 
 const getAudienceLabel = (audience) => {
   const kind = String(audience?.audienceKind || '').toUpperCase();
-  if (kind === 'EXTERNAL_INVITED') return 'Équipe externe';
-  if (kind === 'INTERNAL_INVITED') return 'Équipe interne';
-  return 'Organisateur';
+  if (kind === 'EXTERNAL_INVITED') {
+    return i18next.t(
+      'eventTeamAudiencesSection.externalTeam',
+      'Équipe externe',
+    );
+  }
+  if (kind === 'INTERNAL_INVITED') {
+    return i18next.t(
+      'eventTeamAudiencesSection.internalTeam',
+      'Équipe interne',
+    );
+  }
+  return i18next.t('eventTeamAudiencesSection.organiser', 'Organisateur');
 };
 
 const getStatusLabel = (status) => {
   const normalized = String(status || '').toUpperCase();
-  if (normalized === 'ACCEPTED') return 'Acceptee';
-  if (normalized === 'REFUSED') return 'Refusee';
-  if (normalized === 'CANCELLED') return 'Annulee';
-  return 'En attente';
+  if (normalized === 'ACCEPTED') return i18next.t('eventTeamAudiencesSection.accepted', 'Acceptee');
+  if (normalized === 'REFUSED') return i18next.t('eventTeamAudiencesSection.declined', 'Refusee');
+  if (normalized === 'CANCELLED') {
+    return i18next.t(
+      'eventTeamAudiencesSection.cancelled',
+      'Annulee',
+    );
+  }
+  return i18next.t('eventTeamAudiencesSection.pending', 'En attente');
 };
 
 const isTeamTrainerForUser = (team, user) => {
@@ -56,6 +73,7 @@ const isTeamManagerForUser = (team, user) => {
 };
 
 function EventTeamAudiencesSection({ canManageEvent = false, event, userData }) {
+  const { t } = useTranslation();
   const {
     Alignments, ApplicationStyle, Colors, Fonts, Spaces,
   } = useTheme();
@@ -68,7 +86,7 @@ function EventTeamAudiencesSection({ canManageEvent = false, event, userData }) 
 
   const respondMutation = useMutation({
     mutationFn: ({ action, audienceId }) => respondEventTeamAudience(audienceId, action),
-    onError: (error) => Alert.alert('Erreur', error?.message || 'Impossible de mettre à jour cette invitation.'),
+    onError: (error) => Alert.alert(t('common.error', 'Erreur'), error?.message || t('eventTeamAudiencesSection.unableToUpdateThisInvitation', 'Impossible de mettre à jour cette invitation.')),
     onSuccess: refreshEvent,
   });
 
@@ -81,7 +99,9 @@ function EventTeamAudiencesSection({ canManageEvent = false, event, userData }) 
         borderColor: `${Colors.primary500}44`,
       }]}
     >
-      <Text style={[Fonts.h4, Fonts.neutral00]}>Invitations d&apos;équipe</Text>
+      <Text style={[Fonts.h4, Fonts.neutral00]}>
+        {t('eventTeamAudiencesSection.teamInvitations', "Invitations d'équipe")}
+      </Text>
       <View style={Spaces.gap[12]}>
         {audiences.map((audience) => {
           const team = audience?.team || null;
@@ -110,7 +130,12 @@ function EventTeamAudiencesSection({ canManageEvent = false, event, userData }) 
             >
               <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter, { gap: 8 }]}>
                 <View style={{ flex: 1 }}>
-                  <Text style={[Fonts.p3Bold, Fonts.neutral00]}>{team?.name || 'Equipe'}</Text>
+                  <Text style={[Fonts.p3Bold, Fonts.neutral00]}>
+                    {team?.name || t(
+                      'eventTeamAudiencesSection.teamFallback',
+                      'Equipe',
+                    )}
+                  </Text>
                   <Text style={[Fonts.p3, Fonts.neutral200]}>
                     {getAudienceLabel(audience)}
                     {' '}
@@ -118,7 +143,7 @@ function EventTeamAudiencesSection({ canManageEvent = false, event, userData }) 
                     {' '}
                     {audience?.selectionMode === 'SELECTED_MEMBERS'
                       ? `${selectedMembers.length} membre(s)`
-                      : 'Tous les membres'}
+                      : t('eventTeamAudiencesSection.allMembers', 'Tous les membres')}
                   </Text>
                 </View>
                 <Text style={[Fonts.p3Bold, audience?.status === 'PENDING' ? Fonts.gold500 : Fonts.primary500]}>
@@ -135,12 +160,12 @@ function EventTeamAudiencesSection({ canManageEvent = false, event, userData }) 
                   <Button
                     disabled={respondMutation.isPending}
                     onPress={() => respondMutation.mutate({ action: 'accept', audienceId })}
-                    title="Accepter"
+                    title={t('eventTeamAudiencesSection.accept', 'Accepter')}
                   />
                   <Button
                     disabled={respondMutation.isPending}
                     onPress={() => respondMutation.mutate({ action: 'refuse', audienceId })}
-                    title="Refuser"
+                    title={t('eventTeamAudiencesSection.decline', 'Refuser')}
                     variant="Secondary"
                   />
                 </View>
@@ -151,7 +176,10 @@ function EventTeamAudiencesSection({ canManageEvent = false, event, userData }) 
                   <Button
                     disabled={respondMutation.isPending}
                     onPress={() => respondMutation.mutate({ action: 'cancel', audienceId })}
-                    title="Annuler l'invitation"
+                    title={t(
+                      'eventTeamAudiencesSection.cancelTheInvitation',
+                      "Annuler l'invitation",
+                    )}
                     variant="Secondary"
                   />
                 </View>

@@ -79,7 +79,9 @@ function EventReservationActions({
               backgroundColor: 'rgba(100, 181, 246, 0.2)', borderRadius: 16, paddingHorizontal: 12, paddingVertical: 6,
             }}
             >
-              <Text style={[Fonts.p2, { color: '#64B5F6' }]}>🟢 Ouvert</Text>
+              <Text style={[Fonts.p2, { color: '#64B5F6' }]}>
+                {t('eventReservationActions.open', '🟢 Ouvert')}
+              </Text>
             </View>
           )}
           {bookingStatus === 'shared' && (
@@ -87,7 +89,9 @@ function EventReservationActions({
               backgroundColor: 'rgba(255, 193, 7, 0.2)', borderRadius: 16, paddingHorizontal: 12, paddingVertical: 6,
             }}
             >
-              <Text style={[Fonts.p2, { color: '#FFC107' }]}>👥 Joueurs recherchés</Text>
+              <Text style={[Fonts.p2, { color: '#FFC107' }]}>
+                {t('eventReservationActions.playersWanted', '👥 Joueurs recherchés')}
+              </Text>
             </View>
           )}
           {bookingStatus === 'booked' && (
@@ -95,7 +99,9 @@ function EventReservationActions({
               backgroundColor: 'rgba(76, 175, 80, 0.2)', borderRadius: 16, paddingHorizontal: 12, paddingVertical: 6,
             }}
             >
-              <Text style={[Fonts.p2, { color: '#4CAF50' }]}>✅ Complet</Text>
+              <Text style={[Fonts.p2, { color: '#4CAF50' }]}>
+                {t('eventReservationActions.full', '✅ Complet')}
+              </Text>
             </View>
           )}
           {isLastMinuteAlert && (
@@ -103,7 +109,9 @@ function EventReservationActions({
               backgroundColor: 'rgba(255, 107, 53, 0.2)', borderRadius: 16, paddingHorizontal: 12, paddingVertical: 6,
             }}
             >
-              <Text style={[Fonts.p2, { color: '#FF6B35' }]}>🔥 SOS actif</Text>
+              <Text style={[Fonts.p2, { color: '#FF6B35' }]}>
+                {t('eventReservationActions.sosActive', '🔥 SOS actif')}
+              </Text>
             </View>
           )}
         </View>

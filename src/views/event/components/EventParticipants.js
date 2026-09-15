@@ -1,6 +1,7 @@
 // @ts-nocheck
 import { useNavigation } from '@react-navigation/native';
 import { useIsMutating, useMutationState } from '@tanstack/react-query';
+import i18next from 'i18next';
 import { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -149,7 +150,7 @@ function getUserDisplayName(user) {
   const phoneNumber = String(user?.phoneNumber || user?.phone || '').trim();
   if (phoneNumber) return phoneNumber;
 
-  return 'Utilisateur';
+  return i18next.t('eventParticipants.user', 'Utilisateur');
 }
 
 // 🧨 AE02 — POURQUOI CE HOOK EST RESOLU ICI, ET PAS APPELE DIRECTEMENT.
@@ -309,7 +310,7 @@ const resolveAttendanceBadge = ({
       backgroundColor: `${colors.error500}18`,
       borderColor: `${colors.error500}36`,
       textColor: colors.error300,
-      title: 'Absent',
+      title: t('eventParticipants.absent', 'Absent'),
       value: null,
     };
   }
@@ -319,7 +320,7 @@ const resolveAttendanceBadge = ({
       backgroundColor: `${colors.neutral300}12`,
       borderColor: `${colors.neutral300}24`,
       textColor: colors.neutral200,
-      title: 'Sans réponse',
+      title: t('eventParticipants.noAnswer', 'Sans réponse'),
       value: null,
     };
   }
@@ -1248,7 +1249,10 @@ function EventParticipants({
           <Text style={[Fonts.p2, Fonts.neutral100]}>
             {participatingCount > 0
               ? `${participatingCount} participant${participatingCount > 1 ? 's' : ''}`
-              : 'Aucun participant confirme pour le moment.'}
+              : t(
+                'eventParticipants.noConfirmedParticipantYet',
+                'Aucun participant confirme pour le moment.',
+              )}
           </Text>
 
           {anonymizedPreviewCount > 0 ? (
@@ -1393,7 +1397,7 @@ function EventParticipants({
       {canEdit && (
         <TouchableOpacity onPress={handleExportParticipants} style={[{ alignSelf: 'flex-start' }, Spaces.marginTop[4]]}>
           <Text style={[Fonts.p2, Fonts.primary500, { textDecorationLine: 'underline' }]}>
-            Exporter la liste (Excel/CSV)
+            {t('eventParticipants.exportTheListExcelCsv', 'Exporter la liste (Excel/CSV)')}
           </Text>
         </TouchableOpacity>
       )}

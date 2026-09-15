@@ -1,6 +1,12 @@
 import { Text, TouchableOpacity } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
+// I18N-2 : ces libellés passent par i18next.t hors composant — la doublure rend le
+// français de l app (fr.js, sinon le repli, jetons, pluriel), sans initialiser i18next.
+jest.mock('i18next', () => (
+  jest.requireActual('@/theme/strings/__mocks__/doublureTraduction').i18next
+));
+
 // ==========================================================================
 // S10-C / D5 — LA SECTION « ACCEPTER / REFUSER » EST L UNIQUE ENDROIT D ACTION,
 // ET ELLE NE MONTRE UN BOUTON QU A QUI LE SERVEUR LAISSERA PASSER.
