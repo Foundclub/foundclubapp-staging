@@ -1,6 +1,5 @@
 // @ts-nocheck
 import notifee, { EventType } from '@notifee/react-native';
-import i18next from 'i18next';
 import { getApp } from '@react-native-firebase/app';
 import {
   getMessaging,
@@ -11,6 +10,7 @@ import {
   requestPermission,
 } from '@react-native-firebase/messaging';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import i18next from 'i18next';
 import {
   useCallback,
   useEffect,

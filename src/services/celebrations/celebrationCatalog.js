@@ -2,6 +2,7 @@
 import i18next from 'i18next';
 
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
+
 import { NOTIFICATION_TYPES } from '@/utils/notifications/notificationTypes';
 
 const DEFAULT_DURATION_MS = 3200;

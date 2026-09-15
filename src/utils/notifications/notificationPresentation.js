@@ -1,6 +1,7 @@
 import i18next from 'i18next';
 
 import localeDesFormats from '@/theme/strings/localeDesFormats';
+
 import { NOTIFICATION_TYPES } from '@/utils/notifications/notificationTypes';
 
 const TEAM_ICON_TYPES = new Set([
@@ -165,4 +166,3 @@ export const formatNotificationRelativeTime = (dateInput) => {
     month: 'short',
   });
 };
-

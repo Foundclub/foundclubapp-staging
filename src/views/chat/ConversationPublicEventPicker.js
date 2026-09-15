@@ -121,7 +121,7 @@ function ConversationPublicEventPicker({ navigation, route }) {
           : null,
       },
     });
-  }, [chatId, navigation]);
+  }, [chatId, navigation, t]);
 
   return (
     <ScreenContainer

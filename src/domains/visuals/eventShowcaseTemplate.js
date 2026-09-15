@@ -33,6 +33,7 @@
  */
 
 import i18next from 'i18next';
+
 import {
   isBookingEventType, isDetectionEventType, isMatchEventType, isStageEventType,
   isTournamentEventType, isTrainingEventType,

@@ -1,7 +1,7 @@
 import notifee, { EventType } from '@notifee/react-native';
-import i18next from 'i18next';
 import { getApp } from '@react-native-firebase/app';
 import { getMessaging, setBackgroundMessageHandler } from '@react-native-firebase/messaging';
+import i18next from 'i18next';
 import { Platform } from 'react-native';
 
 import { createLogger } from '@/utils/logger/logger';

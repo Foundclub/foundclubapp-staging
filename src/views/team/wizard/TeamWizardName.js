@@ -33,7 +33,6 @@ import { RouteNames } from '@/navigation/routeNames';
 import { useGetClub } from '@/services/club/clubQueries';
 import { claimTeamAsCoach } from '@/services/team/teamService';
 
-
 const sanitizeRouteParam = (/** @type {any} */ value) => {
   const normalizedValue = String(value || '').trim();
   if (!normalizedValue || normalizedValue.startsWith(':')) {
