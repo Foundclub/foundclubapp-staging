@@ -166,8 +166,7 @@ function SuperAdminLeagueDisputes() {
       activeRouteNames={[RouteNames.SuperAdminLeagueDisputes]}
       description={t(
         'superAdminLeagueDisputes.description',
-        // eslint-disable-next-line max-len
-        'Analyse les litiges League, compare les scores proposés, puis valide, corrige ou annule le résultat.',
+        'Analyse les litiges League, compare les scores proposés, puis valide, corrige ou annule le résultat.', // eslint-disable-line max-len
       )}
       title={t('superAdminLeagueDisputes.title', 'Gestion des litiges')}
     >

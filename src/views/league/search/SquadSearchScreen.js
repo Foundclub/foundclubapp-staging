@@ -629,8 +629,7 @@ function SquadSearchScreen() {
             <Text style={[Fonts.p3, { color: Colors.gold500 }]}>
               {t(
                 'squadSearchScreen.statusesError',
-                // eslint-disable-next-line max-len
-                'Impossible de charger tes statuts personnels League. La recherche reste disponible.',
+                'Impossible de charger tes statuts personnels League. La recherche reste disponible.', // eslint-disable-line max-len
               )}
             </Text>
             <TouchableOpacity

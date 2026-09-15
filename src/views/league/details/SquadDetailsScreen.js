@@ -1770,8 +1770,7 @@ function SquadDetailsScreen({ navigation, route }) {
       return {
         description: t(
           'squadDetailsScreen.actionCard.invited.description',
-          // eslint-disable-next-line max-len
-          "Une invitation t'attend. Accepte-la pour rejoindre la squad et participer aux prochains créneaux.",
+          "Une invitation t'attend. Accepte-la pour rejoindre la squad et participer aux prochains créneaux.", // eslint-disable-line max-len
         ),
         primaryLabel: t('squadDetailsScreen.actionCard.invited.accept', 'Accepter'),
         primaryPress: () => handleRespondToInvitation(true),
@@ -1785,8 +1784,7 @@ function SquadDetailsScreen({ navigation, route }) {
       return {
         description: t(
           'squadDetailsScreen.actionCard.inviteLink.description',
-          // eslint-disable-next-line max-len
-          "Ce lien t'invite à rejoindre directement la squad. Confirme pour être ajoute a l effectif.",
+          "Ce lien t'invite à rejoindre directement la squad. Confirme pour être ajoute a l effectif.", // eslint-disable-line max-len
         ),
         primaryLabel: t('squadDetailsScreen.joinSquad', 'Rejoindre la squad'),
         primaryPress: handleAcceptShareInviteLink,
@@ -1926,8 +1924,7 @@ function SquadDetailsScreen({ navigation, route }) {
         actionLabel={t('squadDetailsScreen.back', 'Retour')}
         description={t(
           'squadDetailsScreen.states.missingId',
-          // eslint-disable-next-line max-len
-          "L'identifiant de la squad est manquant. Ouvre la fiche depuis la recherche League ou le dashboard.",
+          "L'identifiant de la squad est manquant. Ouvre la fiche depuis la recherche League ou le dashboard.", // eslint-disable-line max-len
         )}
         onAction={() => navigation.goBack()}
         title={t('squadDetailsScreen.states.notFound', 'Squad introuvable')}
@@ -1954,8 +1951,7 @@ function SquadDetailsScreen({ navigation, route }) {
         actionLabel={t('squadDetailsScreen.states.retry', 'Réessayer')}
         description={t(
           'squadDetailsScreen.states.errorDescription',
-          // eslint-disable-next-line max-len
-          'Impossible de charger cette squad League pour le moment. Relance le chargement ou reviens à la recherche.',
+          'Impossible de charger cette squad League pour le moment. Relance le chargement ou reviens à la recherche.', // eslint-disable-line max-len
         )}
         onAction={() => refetch()}
         title={t('squadDetailsScreen.states.errorTitle', 'Chargement impossible')}
@@ -2409,13 +2405,11 @@ function SquadDetailsScreen({ navigation, route }) {
                 {isPadelStatisticsMode
                   ? t(
                     'squadDetailsScreen.stats.introPadel',
-                    // eslint-disable-next-line max-len
-                    'Suis ton bilan League, ta position dans la division et l historique récent de la squad.',
+                    'Suis ton bilan League, ta position dans la division et l historique récent de la squad.', // eslint-disable-line max-len
                   )
                   : t(
                     'squadDetailsScreen.stats.introFootball',
-                    // eslint-disable-next-line max-len
-                    'Retrouve tes indicateurs League et les statistiques post-match de la squad au même endroit.',
+                    'Retrouve tes indicateurs League et les statistiques post-match de la squad au même endroit.', // eslint-disable-line max-len
                   )}
               </Text>
 
@@ -2450,13 +2444,11 @@ function SquadDetailsScreen({ navigation, route }) {
                   {isPadelStatisticsMode
                     ? t(
                       'squadDetailsScreen.stats.hintPadel',
-                      // eslint-disable-next-line max-len
-                      'La squad voit déjà ses résultats, son historique et ses indicateurs League. Les statistiques post-match détaillées padel arriveront dans un lot dédié.',
+                      'La squad voit déjà ses résultats, son historique et ses indicateurs League. Les statistiques post-match détaillées padel arriveront dans un lot dédié.', // eslint-disable-line max-len
                     )
                     : t(
                       'squadDetailsScreen.stats.hintFootball',
-                      // eslint-disable-next-line max-len
-                      'La squad suit ici sa compétition League, ses derniers matchs et les retours post-match publiés.',
+                      'La squad suit ici sa compétition League, ses derniers matchs et les retours post-match publiés.', // eslint-disable-line max-len
                     )}
                 </Text>
               </View>
@@ -2595,8 +2587,7 @@ function SquadDetailsScreen({ navigation, route }) {
                   <Text style={[Fonts.p2, { color: Colors.neutral200, marginBottom: 10 }]}>
                     {t(
                       'squadDetailsScreen.stats.padelV1',
-                      // eslint-disable-next-line max-len
-                      'Cet espace suit déjà les résultats League, ton classement et ton historique. Les statistiques post-match détaillées pour le padel ne sont pas encore actives dans cette V1.',
+                      'Cet espace suit déjà les résultats League, ton classement et ton historique. Les statistiques post-match détaillées pour le padel ne sont pas encore actives dans cette V1.', // eslint-disable-line max-len
                     )}
                   </Text>
                   <View style={[Alignments.row, Spaces.gap[12], { flexWrap: 'wrap' }]}>
@@ -3158,8 +3149,7 @@ function SquadDetailsScreen({ navigation, route }) {
               {isCaptain
                 ? t(
                   'squadDetailsScreen.roster.introCaptain',
-                  // eslint-disable-next-line max-len
-                  'Retrouve les capitaines, les membres actifs et ajuste la responsabilité de la squad.',
+                  'Retrouve les capitaines, les membres actifs et ajuste la responsabilité de la squad.', // eslint-disable-line max-len
                 )
                 : t(
                   'squadDetailsScreen.roster.introMember',
@@ -3192,13 +3182,11 @@ function SquadDetailsScreen({ navigation, route }) {
                 {pendingRequestsCount > 0
                   ? t(
                     'squadDetailsScreen.roster.activeHint',
-                    // eslint-disable-next-line max-len
-                    'Le groupe est actif: pense à traiter les demandes et inviter les bons profils.',
+                    'Le groupe est actif: pense à traiter les demandes et inviter les bons profils.', // eslint-disable-line max-len
                   )
                   : t(
                     'squadDetailsScreen.roster.stableHint',
-                    // eslint-disable-next-line max-len
-                    'Le groupe est stable. Tu peux encore inviter des joueurs pour enrichir la squad.',
+                    'Le groupe est stable. Tu peux encore inviter des joueurs pour enrichir la squad.', // eslint-disable-line max-len
                   )}
               </Text>
             ) : null}

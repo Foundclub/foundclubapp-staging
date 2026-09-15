@@ -793,16 +793,14 @@ function LeagueActionPromptHost({ skipInitialFetch = false } = {}) {
   );
   let promptBody = t(
     'leagueActionPromptHost.prompts.proposal.body',
-    // eslint-disable-next-line max-len
-    "Une proposition de match attend une réponse de ta squad. Consulte les détails avant d'accepter ou de refuser.",
+    "Une proposition de match attend une réponse de ta squad. Consulte les détails avant d'accepter ou de refuser.", // eslint-disable-line max-len
   );
   if (isScorePrompt) {
     if (promptScoreActionKey === 'pending_validation') {
       promptTitle = t('leagueActionPromptHost.prompts.pendingValidation.title', 'Score à valider');
       promptBody = t(
         'leagueActionPromptHost.prompts.pendingValidation.body',
-        // eslint-disable-next-line max-len
-        'Un score attend ta validation. Confirme ou conteste le résultat pour finaliser le match League.',
+        'Un score attend ta validation. Confirme ou conteste le résultat pour finaliser le match League.', // eslint-disable-line max-len
       );
     } else if (promptScoreActionKey === 'disputed') {
       promptTitle = t('leagueActionPromptHost.prompts.disputed.title', 'Litige score');
@@ -821,21 +819,18 @@ function LeagueActionPromptHost({ skipInitialFetch = false } = {}) {
     promptTitle = t('leagueActionPromptHost.prompts.waitingVenue.title', 'Terrain à réserver');
     promptBody = t(
       'leagueActionPromptHost.prompts.waitingVenue.body',
-      // eslint-disable-next-line max-len
-      "Le match est confirmé, mais le terrain n'est pas encore réservé. Pense à finaliser l'organisation.",
+      "Le match est confirmé, mais le terrain n'est pas encore réservé. Pense à finaliser l'organisation.", // eslint-disable-line max-len
     );
   } else if (isOpponentFound) {
     promptTitle = t('leagueActionPromptHost.prompts.opponentFound.title', 'Adversaire trouvé');
     promptBody = promptVenueRequired
       ? t(
         'leagueActionPromptHost.prompts.opponentFound.bodyWithVenue',
-        // eslint-disable-next-line max-len
-        'Un match compatible est créé. Envoie la première proposition de terrain et de créneau pour lancer la négociation.',
+        'Un match compatible est créé. Envoie la première proposition de terrain et de créneau pour lancer la négociation.', // eslint-disable-line max-len
       )
       : t(
         'leagueActionPromptHost.prompts.opponentFound.bodyWithoutVenue',
-        // eslint-disable-next-line max-len
-        'Un match compatible est créé. Envoie la première proposition de créneau, avec un lieu si tu veux le fixer tout de suite.',
+        'Un match compatible est créé. Envoie la première proposition de créneau, avec un lieu si tu veux le fixer tout de suite.', // eslint-disable-line max-len
       );
   }
   if (isPostSlotResolution) {
@@ -846,8 +841,7 @@ function LeagueActionPromptHost({ skipInitialFetch = false } = {}) {
       );
       promptBody = t(
         'leagueActionPromptHost.prompts.confirmReschedule.body',
-        // eslint-disable-next-line max-len
-        "L'adversaire indique que le match n'a pas eu lieu et propose de replanifier ce même match.",
+        "L'adversaire indique que le match n'a pas eu lieu et propose de replanifier ce même match.", // eslint-disable-line max-len
       );
     } else if (effectivePostSlotStep === 'confirm_cancel') {
       promptTitle = t(
@@ -856,15 +850,13 @@ function LeagueActionPromptHost({ skipInitialFetch = false } = {}) {
       );
       promptBody = t(
         'leagueActionPromptHost.prompts.confirmCancel.body',
-        // eslint-disable-next-line max-len
-        "L'adversaire indique que le match n'a pas eu lieu et propose d'annuler ce match sans pénalité.",
+        "L'adversaire indique que le match n'a pas eu lieu et propose d'annuler ce match sans pénalité.", // eslint-disable-line max-len
       );
     } else if (effectivePostSlotStep === 'choose_not_played_action') {
       promptTitle = t('leagueActionPromptHost.prompts.notPlayed.title', 'Le match n a pas eu lieu');
       promptBody = t(
         'leagueActionPromptHost.prompts.notPlayed.body',
-        // eslint-disable-next-line max-len
-        'Choisis la suite à donner à ce match : replanifier avec le même adversaire ou annuler sans pénalité.',
+        'Choisis la suite à donner à ce match : replanifier avec le même adversaire ou annuler sans pénalité.', // eslint-disable-line max-len
       );
     } else {
       promptTitle = t(
@@ -873,8 +865,7 @@ function LeagueActionPromptHost({ skipInitialFetch = false } = {}) {
       );
       promptBody = t(
         'leagueActionPromptHost.prompts.askHappened.body',
-        // eslint-disable-next-line max-len
-        'Le créneau est dépassé sans terrain confirmé. Les capitaines doivent confirmer si le match a eu lieu.',
+        'Le créneau est dépassé sans terrain confirmé. Les capitaines doivent confirmer si le match a eu lieu.', // eslint-disable-line max-len
       );
     }
   }
@@ -1297,8 +1288,7 @@ function LeagueActionPromptHost({ skipInitialFetch = false } = {}) {
               <Text style={[Fonts.p4, { color: Colors.neutral200, textAlign: 'center' }]}>
                 {t(
                   'leagueActionPromptHost.reminderFooter',
-                  // eslint-disable-next-line max-len
-                  "Si tu fermes ce rappel sans agir, il reviendra à la prochaine ouverture de l'app tant que cet état reste actif.",
+                  "Si tu fermes ce rappel sans agir, il reviendra à la prochaine ouverture de l'app tant que cet état reste actif.", // eslint-disable-line max-len
                 )}
               </Text>
             </View>

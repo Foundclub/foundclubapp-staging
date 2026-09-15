@@ -430,13 +430,11 @@ function MatchCenterScreen() {
         helper: venueRequired
           ? t(
             'matchCenterScreen.proposalCta.createWithVenue',
-            // eslint-disable-next-line max-len
-            'Le match correspond à tes critères. Envoie une proposition de terrain et d’horaire pour lancer la négociation.',
+            'Le match correspond à tes critères. Envoie une proposition de terrain et d’horaire pour lancer la négociation.', // eslint-disable-line max-len
           )
           : t(
             'matchCenterScreen.proposalCta.createWithoutVenue',
-            // eslint-disable-next-line max-len
-            'Le match correspond à tes critères. Envoie une proposition d horaire, avec un lieu si tu veux le fixer tout de suite.',
+            'Le match correspond à tes critères. Envoie une proposition d horaire, avec un lieu si tu veux le fixer tout de suite.', // eslint-disable-line max-len
           ),
         kind: 'create',
         title: t('matchCenterScreen.proposalCta.createTitle', 'ENVOYER UNE PROPOSITION'),
@@ -447,8 +445,7 @@ function MatchCenterScreen() {
       return {
         helper: t(
           'matchCenterScreen.proposalCta.replyHelper',
-          // eslint-disable-next-line max-len
-          'Une proposition adverse attend ta réponse. Ouvre le chat pour accepter, refuser ou contre-proposer.',
+          'Une proposition adverse attend ta réponse. Ouvre le chat pour accepter, refuser ou contre-proposer.', // eslint-disable-line max-len
         ),
         kind: 'reply',
         title: t('matchCenterScreen.proposalCta.replyTitle', 'RÉPONDRE'),
@@ -525,8 +522,7 @@ function MatchCenterScreen() {
       t('matchCenterScreen.searchRestricted.title', 'Recherche réservée à la squad'),
       t(
         'matchCenterScreen.searchRestricted.body',
-        // eslint-disable-next-line max-len
-        'Tu dois être membre de cette squad pour lancer une recherche manuelle. La recherche démarre aussi automatiquement quand le quorum est prêt sur un créneau.',
+        'Tu dois être membre de cette squad pour lancer une recherche manuelle. La recherche démarre aussi automatiquement quand le quorum est prêt sur un créneau.', // eslint-disable-line max-len
       ),
       [
         {
@@ -1705,8 +1701,7 @@ function MatchCenterScreen() {
         eyebrow: t('matchCenterScreen.mission.error.eyebrow', 'ALERTE Réseau'),
         helper: t(
           'matchCenterScreen.mission.error.helper',
-          // eslint-disable-next-line max-len
-          'La connexion au serveur League a été interrompue. Tu peux relancer le scan ou revenir au vestiaire.',
+          'La connexion au serveur League a été interrompue. Tu peux relancer le scan ou revenir au vestiaire.', // eslint-disable-line max-len
         ),
         renderIcon: () => <Text style={{ color: Colors.error500, fontSize: 34, fontWeight: '700' }}>!</Text>,
         subtitle: t('matchCenterScreen.mission.error.subtitle', 'Signal interrompu'),
@@ -1746,8 +1741,7 @@ function MatchCenterScreen() {
               >
                 {t(
                   'matchCenterScreen.mission.radar.captainOnly',
-                  // eslint-disable-next-line max-len
-                  'La recherche est geree par le capitaine de ta squad. Seul lui ou un co-capitaine peut l annuler.',
+                  'La recherche est geree par le capitaine de ta squad. Seul lui ou un co-capitaine peut l annuler.', // eslint-disable-line max-len
                 )}
               </Text>
             ) : null}
@@ -2031,13 +2025,11 @@ function MatchCenterScreen() {
                   {isOpponentAnonymous
                     ? t(
                       'matchCenterScreen.found.maskedHint',
-                      // eslint-disable-next-line max-len
-                      'Le profil reste masque tant que le premier contact n est pas engage dans le chat.',
+                      'Le profil reste masque tant que le premier contact n est pas engage dans le chat.', // eslint-disable-line max-len
                     )
                     : t(
                       'matchCenterScreen.found.football11Hint',
-                      // eslint-disable-next-line max-len
-                      'Pour le Football a 11, l identité adverse et les créneaux communs sont visibles des le match trouve.',
+                      'Pour le Football a 11, l identité adverse et les créneaux communs sont visibles des le match trouve.', // eslint-disable-line max-len
                     )}
                 </Text>
               </View>
@@ -2196,8 +2188,7 @@ function MatchCenterScreen() {
                   t('matchCenterScreen.cancelMatch.title', 'Annuler le match ?'),
                   t(
                     'matchCenterScreen.cancelMatch.body',
-                    // eslint-disable-next-line max-len
-                    'Es-tu sûr de vouloir annuler ce match ? Ton équipe reviendra en mode recherche.',
+                    'Es-tu sûr de vouloir annuler ce match ? Ton équipe reviendra en mode recherche.', // eslint-disable-line max-len
                   ),
                   [
                     { style: 'cancel', text: t('matchCenterScreen.cancelMatch.no', 'Non') },

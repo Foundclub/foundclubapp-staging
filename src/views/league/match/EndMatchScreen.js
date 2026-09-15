@@ -340,8 +340,7 @@ function EndMatchScreen() {
     }
     return t(
       'endMatchScreen.blockReason.default',
-      // eslint-disable-next-line max-len
-      "Le score ne peut pas être saisi à ce stade. Vérifie que l'heure de début du match est dépassée.",
+      "Le score ne peut pas être saisi à ce stade. Vérifie que l'heure de début du match est dépassée.", // eslint-disable-line max-len
     );
   })();
   let ownSubmission = null;
@@ -691,8 +690,7 @@ function EndMatchScreen() {
           t('endMatchScreen.alerts.disputeOpened', 'Litige ouvert'),
           t(
             'endMatchScreen.alerts.nowDisputed',
-            // eslint-disable-next-line max-len
-            'Le score est maintenant en litige. Tu pourras confirmer ou fournir des détails si besoin.',
+            'Le score est maintenant en litige. Tu pourras confirmer ou fournir des détails si besoin.', // eslint-disable-line max-len
           ),
           [{ onPress: () => refetchMatch(), text: 'OK' }],
         );
@@ -1159,8 +1157,7 @@ function EndMatchScreen() {
               <Text style={[Fonts.p3, { color: leagueCardTextColor, marginTop: 6 }]}>
                 {t(
                   'endMatchScreen.own.pending',
-                  // eslint-disable-next-line max-len
-                  'En attente de validation adverse. Sans réponse, ce score sera validé automatiquement dans',
+                  'En attente de validation adverse. Sans réponse, ce score sera validé automatiquement dans', // eslint-disable-line max-len
                 )}
                 {' '}
                 {scoreFlowCountdown}
@@ -1558,8 +1555,7 @@ function EndMatchScreen() {
               >
                 {t(
                   'endMatchScreen.dispute.hint',
-                  // eslint-disable-next-line max-len
-                  'Active en cas de désaccord. Preuve optionnelle sauf no-show (caméra obligatoire).',
+                  'Active en cas de désaccord. Preuve optionnelle sauf no-show (caméra obligatoire).', // eslint-disable-line max-len
                 )}
               </Text>
 

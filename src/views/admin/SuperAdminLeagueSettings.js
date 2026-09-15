@@ -373,8 +373,7 @@ function SuperAdminLeagueSettings() {
       activeRouteNames={[RouteNames.SuperAdminSettings]}
       description={t(
         'superAdminLeagueSettings.description',
-        // eslint-disable-next-line max-len
-        'Ouvre ou ferme Found Club League pour les joueurs, puis pilote séparément la disponibilité du matchmaking.',
+        'Ouvre ou ferme Found Club League pour les joueurs, puis pilote séparément la disponibilité du matchmaking.', // eslint-disable-line max-len
       )}
       title={t('superAdminLeagueSettings.title', 'Paramètres plateforme')}
     >
@@ -383,8 +382,7 @@ function SuperAdminLeagueSettings() {
         configuredIsOpen={Boolean(configured.platformIsOpen)}
         description={t(
           'superAdminLeagueSettings.platform.description',
-          // eslint-disable-next-line max-len
-          "Quand la plateforme est fermée, les joueurs voient l'écran Found Club League arrive bientôt. Les SuperAdmin gardent l'accès complet.",
+          "Quand la plateforme est fermée, les joueurs voient l'écran Found Club League arrive bientôt. Les SuperAdmin gardent l'accès complet.", // eslint-disable-line max-len
         )}
         effectiveIsOpen={Boolean(runtime?.effectivePlatformIsOpen)}
         inputValue={platformOpeningDateInput}
@@ -417,8 +415,7 @@ function SuperAdminLeagueSettings() {
         configuredIsOpen={Boolean(configured.matchmakingIsOpen)}
         description={t(
           'superAdminLeagueSettings.matchmaking.description',
-          // eslint-disable-next-line max-len
-          'La plateforme peut rester ouverte pendant que la recherche de match est bloquée pour préparer un lancement synchronisé.',
+          'La plateforme peut rester ouverte pendant que la recherche de match est bloquée pour préparer un lancement synchronisé.', // eslint-disable-line max-len
         )}
         effectiveIsOpen={Boolean(runtime?.effectiveMatchmakingIsOpen)}
         inputValue={matchmakingOpeningDateInput}

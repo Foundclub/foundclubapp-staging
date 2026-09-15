@@ -228,8 +228,7 @@ function AdminNotificationsHealth() {
           <Text style={[Fonts.p2, Fonts.neutral300, styles.headerDescription]}>
             {t(
               'adminNotificationsHealth.description',
-              // eslint-disable-next-line max-len
-              "Verifie la configuration push, la queue d'envoi et les abonnements multi-comptes sans exposer les secrets.",
+              "Verifie la configuration push, la queue d'envoi et les abonnements multi-comptes sans exposer les secrets.", // eslint-disable-line max-len
             )}
           </Text>
         </View>
@@ -320,8 +319,7 @@ function AdminNotificationsHealth() {
                     {' '}
                     {t(
                       'adminNotificationsHealth.tokens.unsubscribedLocal',
-                      // eslint-disable-next-line max-len
-                      'compte(s) local(aux) connecte(s) ne sont pas encore abonnes sur cet appareil.',
+                      'compte(s) local(aux) connecte(s) ne sont pas encore abonnes sur cet appareil.', // eslint-disable-line max-len
                     )}
                   </Text>
                 ) : (

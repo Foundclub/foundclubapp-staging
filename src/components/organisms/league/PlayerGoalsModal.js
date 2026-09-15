@@ -56,8 +56,7 @@ function PlayerGoalsModal({
       showBanner({
         body: t(
           'playerGoalsModal.totalMismatch',
-          // eslint-disable-next-line max-len
-          'Le total des buts ({{currentTotal}}) ne correspond pas au score ({{totalGoals}}). Merci de corriger.',
+          'Le total des buts ({{currentTotal}}) ne correspond pas au score ({{totalGoals}}). Merci de corriger.', // eslint-disable-line max-len
           { currentTotal, totalGoals },
         ),
         title: t('playerGoalsModal.errorTitle', 'Erreur'),

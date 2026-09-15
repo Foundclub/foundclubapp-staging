@@ -54,8 +54,7 @@ function SuperAdminLeagueDivisions() {
       activeRouteNames={[RouteNames.SuperAdminLeagueDivisions]}
       description={t(
         'superAdminLeagueDivisions.description',
-        // eslint-disable-next-line max-len
-        "Visualise les divisions 1 à 5, l'effectif des squads, l'Elo moyen et le volume de matchs par sport.",
+        "Visualise les divisions 1 à 5, l'effectif des squads, l'Elo moyen et le volume de matchs par sport.", // eslint-disable-line max-len
       )}
       title={t('superAdminLeagueDivisions.title', 'Divisions League')}
     >

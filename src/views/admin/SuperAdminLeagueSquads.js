@@ -166,8 +166,7 @@ function SuperAdminLeagueSquads() {
       activeRouteNames={[RouteNames.SuperAdminLeagueSquads]}
       description={t(
         'superAdminLeagueSquads.description',
-        // eslint-disable-next-line max-len
-        'Recherche, filtre et inspecte les squads League, leur capitaine, leur Elo, leur division et leur dynamique récente.',
+        'Recherche, filtre et inspecte les squads League, leur capitaine, leur Elo, leur division et leur dynamique récente.', // eslint-disable-line max-len
       )}
       title={t('superAdminLeagueSquads.title', 'Suivi des squads')}
     >

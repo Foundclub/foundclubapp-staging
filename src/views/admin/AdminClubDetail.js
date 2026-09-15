@@ -739,8 +739,7 @@ function AdminClubDetail() {
             <Text style={[Fonts.p3, { color: Colors.neutral300 }, Spaces.marginTop[12]]}>
               {t(
                 'adminClubDetail.info.subscriptionsNote',
-                // eslint-disable-next-line max-len
-                'Les abonnements, entitlements et capacités Team sont pilotes depuis les opérations abonnements, plus depuis la fiche club.',
+                'Les abonnements, entitlements et capacités Team sont pilotes depuis les opérations abonnements, plus depuis la fiche club.', // eslint-disable-line max-len
               )}
             </Text>
           </View>
@@ -839,8 +838,7 @@ function AdminClubDetail() {
             <Text style={[Fonts.p2, { color: Colors.neutral300 }, Spaces.marginTop[8]]}>
               {t(
                 'adminClubDetail.history.description',
-                // eslint-disable-next-line max-len
-                'Les actions sensibles passent par les mutations SuperAdmin et alimentent l audit backend.',
+                'Les actions sensibles passent par les mutations SuperAdmin et alimentent l audit backend.', // eslint-disable-line max-len
               )}
             </Text>
           </View>
@@ -852,8 +850,7 @@ function AdminClubDetail() {
             <Text style={[Fonts.p2, { color: Colors.neutral300 }, Spaces.marginTop[8]]}>
               {t(
                 'adminClubDetail.danger.description',
-                // eslint-disable-next-line max-len
-                'Suppression definitive du club dans le Content Manager. Cette action doit être utilisée avec prudence.',
+                'Suppression definitive du club dans le Content Manager. Cette action doit être utilisée avec prudence.', // eslint-disable-line max-len
               )}
             </Text>
             <Button

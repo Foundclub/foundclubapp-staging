@@ -184,8 +184,7 @@ function SuperAdminLeagueDashboard() {
       activeRouteNames={[RouteNames.SuperAdminHome, RouteNames.SuperAdminDashboard]}
       description={t(
         'superAdminLeagueDashboard.description',
-        // eslint-disable-next-line max-len
-        "Pilote l'ouverture plateforme, les squads, les matchs League et les litiges depuis un seul espace dédié.",
+        "Pilote l'ouverture plateforme, les squads, les matchs League et les litiges depuis un seul espace dédié.", // eslint-disable-line max-len
       )}
       rightAction={{
         label: t('superAdminLeagueDashboard.classicAdmin', 'Admin classique'),

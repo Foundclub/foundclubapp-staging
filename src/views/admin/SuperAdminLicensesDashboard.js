@@ -882,8 +882,7 @@ function SuperAdminLicensesDashboard({ navigation }) {
       activeRouteNames={[RouteNames.SuperAdminLicenses]}
       description={t(
         'superAdminLicensesDashboard.description',
-        // eslint-disable-next-line max-len
-        'Supervise les campagnes, les connexions HelloAsso, les paiements et les anomalies de cotisation depuis un cockpit support unique.',
+        'Supervise les campagnes, les connexions HelloAsso, les paiements et les anomalies de cotisation depuis un cockpit support unique.', // eslint-disable-line max-len
       )}
       rightAction={{
         label: t('superAdminLicensesDashboard.rawExplorer', 'Explorer brut'),
@@ -930,8 +929,7 @@ function SuperAdminLicensesDashboard({ navigation }) {
           <Text style={[Fonts.p2, Fonts.neutral00]}>
             {t(
               'superAdminLicensesDashboard.partialData',
-              // eslint-disable-next-line max-len
-              'Certaines listes dépassent 100 éléments. Le cockpit montre pour l instant les 100 plus recentes données par famille.',
+              'Certaines listes dépassent 100 éléments. Le cockpit montre pour l instant les 100 plus recentes données par famille.', // eslint-disable-line max-len
             )}
           </Text>
         </LicenseCard>
@@ -1256,8 +1254,7 @@ function SuperAdminLicensesDashboard({ navigation }) {
                 <Text style={[Fonts.p3, Fonts.neutral300]}>
                   {t(
                     'superAdminLicensesDashboard.secretNote',
-                    // eslint-disable-next-line max-len
-                    'Le secret n est jamais affiche. Si tu laisses le champ vide, on conserve le secret existant.',
+                    'Le secret n est jamais affiche. Si tu laisses le champ vide, on conserve le secret existant.', // eslint-disable-line max-len
                   )}
                 </Text>
               </View>
@@ -1289,8 +1286,7 @@ function SuperAdminLicensesDashboard({ navigation }) {
                   <Text style={[Fonts.p2, Fonts.neutral200]}>
                     {t(
                       'superAdminLicensesDashboard.noPayments',
-                      // eslint-disable-next-line max-len
-                      'Aucun paiement rattache à cette campagne dans les 100 derniers paiements charges.',
+                      'Aucun paiement rattache à cette campagne dans les 100 derniers paiements charges.', // eslint-disable-line max-len
                     )}
                   </Text>
                 </LicenseCard>
@@ -1332,8 +1328,7 @@ function SuperAdminLicensesDashboard({ navigation }) {
                   <Text style={[Fonts.p2, Fonts.neutral200]}>
                     {t(
                       'superAdminLicensesDashboard.noProviderEvents',
-                      // eslint-disable-next-line max-len
-                      'Aucun événement provider rattache à cette campagne dans les 100 derniers événements charges.',
+                      'Aucun événement provider rattache à cette campagne dans les 100 derniers événements charges.', // eslint-disable-line max-len
                     )}
                   </Text>
                 </LicenseCard>

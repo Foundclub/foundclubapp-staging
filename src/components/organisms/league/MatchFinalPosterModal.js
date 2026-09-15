@@ -511,8 +511,7 @@ function MatchFinalPosterModal({
     if (!hasEloRecap) {
       return t(
         'matchFinalPosterModal.helper.syncing',
-        // eslint-disable-next-line max-len
-        'Les points sont en cours de synchronisation. Le récapitulatif sera mis à jour dès que le calcul League est prêt.',
+        'Les points sont en cours de synchronisation. Le récapitulatif sera mis à jour dès que le calcul League est prêt.', // eslint-disable-line max-len
       );
     }
     if (afterProgress?.maxDivisionReached) {

@@ -335,8 +335,7 @@ function AdminRevenue() {
       t('adminRevenue.reconcileConfirmTitle', 'Réconcilier maintenant ?'),
       t(
         'adminRevenue.reconcileConfirmMessage',
-        // eslint-disable-next-line max-len
-        'Cela relance immédiatement la réconciliation des abonnements (expirations, grace periods, droits).',
+        'Cela relance immédiatement la réconciliation des abonnements (expirations, grace periods, droits).', // eslint-disable-line max-len
       ),
       [
         { style: 'cancel', text: t('adminRevenue.cancel', 'Annuler') },
@@ -684,8 +683,7 @@ function AdminRevenue() {
           <Text style={[Fonts.p2, { color: Colors.neutral300 }, Spaces.marginTop[8]]}>
             {t(
               'adminRevenue.subtitle',
-              // eslint-disable-next-line max-len
-              'Cette vue suit maintenant les subscriptions, entitlements, claims et incidents billing cote serveur. Les anciens champs club ne servent plus de référence métier ici.',
+              'Cette vue suit maintenant les subscriptions, entitlements, claims et incidents billing cote serveur. Les anciens champs club ne servent plus de référence métier ici.', // eslint-disable-line max-len
             )}
           </Text>
         </View>

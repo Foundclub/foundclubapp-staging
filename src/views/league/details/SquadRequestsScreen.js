@@ -255,8 +255,7 @@ function SquadRequestsScreen({ navigation, route }) {
         actionLabel={t('squadRequestsScreen.back', 'Retour')}
         description={t(
           'squadRequestsScreen.missingId.description',
-          // eslint-disable-next-line max-len
-          "L'identifiant de la squad est manquant. Ouvre les demandes depuis la fiche squad ou le dashboard League.",
+          "L'identifiant de la squad est manquant. Ouvre les demandes depuis la fiche squad ou le dashboard League.", // eslint-disable-line max-len
         )}
         onAction={() => navigation.goBack()}
         title={t('squadRequestsScreen.missingId.title', 'Squad introuvable')}
@@ -283,8 +282,7 @@ function SquadRequestsScreen({ navigation, route }) {
         actionLabel={t('squadRequestsScreen.retry', 'Réessayer')}
         description={t(
           'squadRequestsScreen.errorState.description',
-          // eslint-disable-next-line max-len
-          "Impossible de charger les demandes d'adhésion pour cette squad. Vérifie la connexion puis relance.",
+          "Impossible de charger les demandes d'adhésion pour cette squad. Vérifie la connexion puis relance.", // eslint-disable-line max-len
         )}
         onAction={() => refetch()}
         title={t('squadRequestsScreen.errorState.title', 'Chargement impossible')}

@@ -93,8 +93,7 @@ function SuperAdminLeagueMatches() {
       activeRouteNames={[RouteNames.SuperAdminLeagueMatches]}
       description={t(
         'superAdminLeagueMatches.description',
-        // eslint-disable-next-line max-len
-        'Suis les matchs League avec leurs statuts métier, leur score, leur terrain et leurs litiges éventuels.',
+        'Suis les matchs League avec leurs statuts métier, leur score, leur terrain et leurs litiges éventuels.', // eslint-disable-line max-len
       )}
       title={t('superAdminLeagueMatches.title', 'Suivi des matchs')}
     >

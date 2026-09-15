@@ -499,8 +499,7 @@ function AdminClubForm() {
           <Text style={[Fonts.p3, { color: Colors.neutral300 }]}>
             {t(
               'adminClubForm.sections.statusNote',
-              // eslint-disable-next-line max-len
-              'Cette fiche pilote le partenariat, la vérification et la réservation. Les abonnements et la couverture Team se gerent dans les opérations abonnements.',
+              'Cette fiche pilote le partenariat, la vérification et la réservation. Les abonnements et la couverture Team se gerent dans les opérations abonnements.', // eslint-disable-line max-len
             )}
           </Text>
           {renderToggle(t('adminClubForm.fields.clubPartner', 'Club partenaire'), 'clubPartner')}

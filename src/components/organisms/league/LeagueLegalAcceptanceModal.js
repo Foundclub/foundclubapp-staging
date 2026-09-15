@@ -32,8 +32,7 @@ const scopeContent = () => ({
     ),
     description: i18next.t(
       'leagueLegalAcceptanceModal.scopes.matchCaptainAcceptance.description',
-      // eslint-disable-next-line max-len
-      'Avant de confirmer ce match League, confirme le cadre de responsabilité de ton équipe et du lieu choisi.',
+      'Avant de confirmer ce match League, confirme le cadre de responsabilité de ton équipe et du lieu choisi.', // eslint-disable-line max-len
     ),
     title: i18next.t(
       'leagueLegalAcceptanceModal.scopes.matchCaptainAcceptance.title',
@@ -47,8 +46,7 @@ const scopeContent = () => ({
     ),
     description: i18next.t(
       'leagueLegalAcceptanceModal.scopes.matchCaptainProposal.description',
-      // eslint-disable-next-line max-len
-      'Tu proposes une rencontre au nom de ton équipe. FoundClub facilite la mise en relation mais n organise pas le match.',
+      'Tu proposes une rencontre au nom de ton équipe. FoundClub facilite la mise en relation mais n organise pas le match.', // eslint-disable-line max-len
     ),
     title: i18next.t(
       'leagueLegalAcceptanceModal.scopes.matchCaptainProposal.title',
@@ -62,8 +60,7 @@ const scopeContent = () => ({
     ),
     description: i18next.t(
       'leagueLegalAcceptanceModal.scopes.matchPlayerParticipation.description',
-      // eslint-disable-next-line max-len
-      'Avant de participer à ce match League, confirme que tu acceptes les risques liés à la pratique sportive.',
+      'Avant de participer à ce match League, confirme que tu acceptes les risques liés à la pratique sportive.', // eslint-disable-line max-len
     ),
     title: i18next.t(
       'leagueLegalAcceptanceModal.scopes.matchPlayerParticipation.title',
@@ -77,8 +74,7 @@ const scopeContent = () => ({
     ),
     description: i18next.t(
       'leagueLegalAcceptanceModal.scopes.matchVenueBooking.description',
-      // eslint-disable-next-line max-len
-      'Avant de marquer le terrain comme réservé, confirme que la réservation et les conditions du lieu ont bien été gérées hors FoundClub.',
+      'Avant de marquer le terrain comme réservé, confirme que la réservation et les conditions du lieu ont bien été gérées hors FoundClub.', // eslint-disable-line max-len
     ),
     title: i18next.t('leagueLegalAcceptanceModal.scopes.matchVenueBooking.title', 'Terrain League'),
   },
@@ -89,8 +85,7 @@ const scopeContent = () => ({
     ),
     description: i18next.t(
       'leagueLegalAcceptanceModal.scopes.teamCreate.description',
-      // eslint-disable-next-line max-len
-      'Avant de créer une équipe FoundClub League, confirme que FoundClub est une plateforme de mise en relation et ne devient pas organisateur des rencontres.',
+      'Avant de créer une équipe FoundClub League, confirme que FoundClub est une plateforme de mise en relation et ne devient pas organisateur des rencontres.', // eslint-disable-line max-len
     ),
     title: i18next.t(
       'leagueLegalAcceptanceModal.scopes.teamCreate.title',
@@ -104,8 +99,7 @@ const scopeContent = () => ({
     ),
     description: i18next.t(
       'leagueLegalAcceptanceModal.scopes.teamInvitationAccept.description',
-      // eslint-disable-next-line max-len
-      'Avant d accepter cette invitation League, confirme le cadre de pratique et de responsabilité applicable aux rencontres.',
+      'Avant d accepter cette invitation League, confirme le cadre de pratique et de responsabilité applicable aux rencontres.', // eslint-disable-line max-len
     ),
     title: i18next.t(
       'leagueLegalAcceptanceModal.scopes.teamInvitationAccept.title',
@@ -119,8 +113,7 @@ const scopeContent = () => ({
     ),
     description: i18next.t(
       'leagueLegalAcceptanceModal.scopes.teamJoinRequest.description',
-      // eslint-disable-next-line max-len
-      'Avant de rejoindre une équipe FoundClub League, confirme le cadre de pratique et de responsabilité applicable aux rencontres.',
+      'Avant de rejoindre une équipe FoundClub League, confirme le cadre de pratique et de responsabilité applicable aux rencontres.', // eslint-disable-line max-len
     ),
     title: i18next.t(
       'leagueLegalAcceptanceModal.scopes.teamJoinRequest.title',
@@ -297,8 +290,7 @@ function LeagueLegalAcceptanceModal({
               setIsChecked={() => setAcceptedContext((previous) => !previous)}
               text={t(
                 'leagueLegalAcceptanceModal.checks.context',
-                // eslint-disable-next-line max-len
-                'Je comprends que FoundClub ne fait que mettre en relation les équipes et participants, sans organiser ni superviser la rencontre.',
+                'Je comprends que FoundClub ne fait que mettre en relation les équipes et participants, sans organiser ni superviser la rencontre.', // eslint-disable-line max-len
               )}
               type="square"
               wrapperStyle={checkableWrapperStyle}
@@ -309,8 +301,7 @@ function LeagueLegalAcceptanceModal({
               setIsChecked={() => setAcceptedRisk((previous) => !previous)}
               text={t(
                 'leagueLegalAcceptanceModal.checks.risk',
-                // eslint-disable-next-line max-len
-                'J accepte les risques normaux liés à la pratique sportive et je vérifie que mon état de santé me permet de participer.',
+                'J accepte les risques normaux liés à la pratique sportive et je vérifie que mon état de santé me permet de participer.', // eslint-disable-line max-len
               )}
               type="square"
               wrapperStyle={checkableWrapperStyle}
@@ -321,8 +312,7 @@ function LeagueLegalAcceptanceModal({
               setIsChecked={() => setAcceptedRules((previous) => !previous)}
               text={t(
                 'leagueLegalAcceptanceModal.checks.rules',
-                // eslint-disable-next-line max-len
-                'Je respecte les règles du lieu, les consignes de sécurité et je vérifie la couverture d assurance applicable.',
+                'Je respecte les règles du lieu, les consignes de sécurité et je vérifie la couverture d assurance applicable.', // eslint-disable-line max-len
               )}
               type="square"
               wrapperStyle={checkableWrapperStyle}
@@ -334,8 +324,7 @@ function LeagueLegalAcceptanceModal({
                 setIsChecked={() => setAcceptedAdult((previous) => !previous)}
                 text={t(
                   'leagueLegalAcceptanceModal.checks.adult',
-                  // eslint-disable-next-line max-len
-                  'Je certifie avoir 18 ans ou plus pour créer ou rejoindre une squad FoundClub League.',
+                  'Je certifie avoir 18 ans ou plus pour créer ou rejoindre une squad FoundClub League.', // eslint-disable-line max-len
                 )}
                 type="square"
                 wrapperStyle={checkableWrapperStyle}
@@ -349,13 +338,11 @@ function LeagueLegalAcceptanceModal({
                 text={needsVenueResponsibility
                   ? t(
                     'leagueLegalAcceptanceModal.checks.venue',
-                    // eslint-disable-next-line max-len
-                    'Je confirme que le terrain, les horaires et les conditions du lieu ont été verifies par les participants concernés.',
+                    'Je confirme que le terrain, les horaires et les conditions du lieu ont été verifies par les participants concernés.', // eslint-disable-line max-len
                   )
                   : t(
                     'leagueLegalAcceptanceModal.checks.teamLead',
-                    // eslint-disable-next-line max-len
-                    'Je confirme agir comme membre référent de mon équipe pour cette proposition ou confirmation de match.',
+                    'Je confirme agir comme membre référent de mon équipe pour cette proposition ou confirmation de match.', // eslint-disable-line max-len
                   )}
                 type="square"
                 wrapperStyle={checkableWrapperStyle}
@@ -367,8 +354,7 @@ function LeagueLegalAcceptanceModal({
         <Text style={[Fonts.p3, { color: Colors.neutral300 }]}>
           {t(
             'leagueLegalAcceptanceModal.footer',
-            // eslint-disable-next-line max-len
-            'Cette confirmation est enregistrée avec la version legale active pour garder une preuve d acceptation.',
+            'Cette confirmation est enregistrée avec la version legale active pour garder une preuve d acceptation.', // eslint-disable-line max-len
           )}
         </Text>
       </View>

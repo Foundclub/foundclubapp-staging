@@ -254,8 +254,7 @@ const getLeagueActionMetaByState = () => {
       actionLabel: i18next.t('leagueDashboard.actions.proposalReceived.actionLabel', 'Répondre'),
       helper: i18next.t(
         'leagueDashboard.actions.proposalReceived.helper',
-        // eslint-disable-next-line max-len
-        'Une proposition adverse attend ta réponse. Ouvre la conversation pour accepter, refuser ou contre-proposer.',
+        'Une proposition adverse attend ta réponse. Ouvre la conversation pour accepter, refuser ou contre-proposer.', // eslint-disable-line max-len
       ),
       title: i18next.t(
         'leagueDashboard.actions.proposalReceived.title',
@@ -312,8 +311,7 @@ const getLeagueActionMetaByState = () => {
       ),
       helper: i18next.t(
         'leagueDashboard.actions.waitingVenue.helper',
-        // eslint-disable-next-line max-len
-        "Le match est confirmé, mais le terrain n'est pas encore réservé. Finalise l'organisation dès que possible.",
+        "Le match est confirmé, mais le terrain n'est pas encore réservé. Finalise l'organisation dès que possible.", // eslint-disable-line max-len
       ),
       title: i18next.t('leagueDashboard.actions.waitingVenue.title', 'Terrain à réserver'),
     },
@@ -1655,8 +1653,7 @@ function LeagueDashboard() {
             <Text style={[Fonts.p2, { color: Colors.neutral200, textAlign: 'center' }]}>
               {t(
                 'leagueDashboard.conversationFallback.body',
-                // eslint-disable-next-line max-len
-                "La conversation avec l'adversaire n'est pas encore prête. Réessaie dans quelques secondes ou ouvre la fiche match pour suivre l'organisation.",
+                "La conversation avec l'adversaire n'est pas encore prête. Réessaie dans quelques secondes ou ouvre la fiche match pour suivre l'organisation.", // eslint-disable-line max-len
               )}
             </Text>
           </View>

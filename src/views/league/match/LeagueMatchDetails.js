@@ -438,8 +438,7 @@ function LeagueMatchDetails({ navigation, route }) {
       title = t('leagueMatchDetails.negotiation.sent.title', 'Proposition envoyée');
       helper = t(
         'leagueMatchDetails.negotiation.sent.helper',
-        // eslint-disable-next-line max-len
-        'Ta squad attend maintenant la réponse adverse. La conversation reste le centre de la négociation.',
+        'Ta squad attend maintenant la réponse adverse. La conversation reste le centre de la négociation.', // eslint-disable-line max-len
       );
       origin = t('leagueMatchDetails.negotiation.sent.origin', 'Envoyée par ta squad');
     } else if (negotiationState === 'opponent_found') {
@@ -447,13 +446,11 @@ function LeagueMatchDetails({ navigation, route }) {
       helper = venueRequired
         ? t(
           'leagueMatchDetails.negotiation.found.helperWithVenue',
-          // eslint-disable-next-line max-len
-          'Le match est créé. Envoie une proposition de date et de terrain pour lancer la négociation.',
+          'Le match est créé. Envoie une proposition de date et de terrain pour lancer la négociation.', // eslint-disable-line max-len
         )
         : t(
           'leagueMatchDetails.negotiation.found.helperWithoutVenue',
-          // eslint-disable-next-line max-len
-          'Le match est créé. Envoie une proposition de date, avec un lieu si tu veux le fixer tout de suite.',
+          'Le match est créé. Envoie une proposition de date, avec un lieu si tu veux le fixer tout de suite.', // eslint-disable-line max-len
         );
       origin = t(
         'leagueMatchDetails.negotiation.found.origin',
@@ -864,8 +861,7 @@ function LeagueMatchDetails({ navigation, route }) {
       return {
         helper: t(
           'leagueMatchDetails.scoreAction.opponentPending.helper',
-          // eslint-disable-next-line max-len
-          'La squad adverse a saisi un score. Confirme ou conteste avant auto-validation dans {{countdown}}.',
+          'La squad adverse a saisi un score. Confirme ou conteste avant auto-validation dans {{countdown}}.', // eslint-disable-line max-len
           { countdown, ...SANS_ECHAPPEMENT },
         ),
         label: t('leagueMatchDetails.scoreAction.opponentPending.label', 'Score adverse'),
@@ -880,8 +876,7 @@ function LeagueMatchDetails({ navigation, route }) {
       return {
         helper: t(
           'leagueMatchDetails.scoreAction.submitted.helper',
-          // eslint-disable-next-line max-len
-          'Ton score est enregistré. Sans réponse adverse, il sera validé automatiquement dans {{countdown}}.',
+          'Ton score est enregistré. Sans réponse adverse, il sera validé automatiquement dans {{countdown}}.', // eslint-disable-line max-len
           { countdown, ...SANS_ECHAPPEMENT },
         ),
         label: t('leagueMatchDetails.scoreAction.submitted.label', 'Score saisi'),
@@ -893,8 +888,7 @@ function LeagueMatchDetails({ navigation, route }) {
       return {
         helper: t(
           'leagueMatchDetails.scoreAction.pendingValidation.helper',
-          // eslint-disable-next-line max-len
-          'Un score attend une validation. Sans action, le score soumis sera traite à la deadline dans {{countdown}}.',
+          'Un score attend une validation. Sans action, le score soumis sera traite à la deadline dans {{countdown}}.', // eslint-disable-line max-len
           { countdown, ...SANS_ECHAPPEMENT },
         ),
         label: t('leagueMatchDetails.scoreAction.pendingValidation.label', 'Score à valider'),
@@ -906,8 +900,7 @@ function LeagueMatchDetails({ navigation, route }) {
       return {
         helper: t(
           'leagueMatchDetails.scoreAction.disputed.helper',
-          // eslint-disable-next-line max-len
-          'Un litige score est ouvert. Ajoute les éléments utiles ou attends la résolution SuperAdmin.',
+          'Un litige score est ouvert. Ajoute les éléments utiles ou attends la résolution SuperAdmin.', // eslint-disable-line max-len
         ),
         label: t('leagueMatchDetails.scoreAction.disputed.label', 'Litige score'),
         title: t('leagueMatchDetails.scoreAction.disputed.title', 'Traiter le litige'),
@@ -1072,8 +1065,7 @@ function LeagueMatchDetails({ navigation, route }) {
       helper: venueRequired
         ? t(
           'leagueMatchDetails.captainQuick.default.helperVenue',
-          // eslint-disable-next-line max-len
-          "Le terrain doit être confirme avant le coup d'envoi pour garder le workflow League propre.",
+          "Le terrain doit être confirme avant le coup d'envoi pour garder le workflow League propre.", // eslint-disable-line max-len
         )
         : t(
           'leagueMatchDetails.captainQuick.default.helperNoVenue',
@@ -1174,14 +1166,12 @@ function LeagueMatchDetails({ navigation, route }) {
     if (venueRequired) {
       return t(
         'leagueMatchDetails.captainHelper.withVenue',
-        // eslint-disable-next-line max-len
-        'Les actions rapides terrain, score et résolution restent visibles dans la barre du bas pour agir sans quitter la fiche.',
+        'Les actions rapides terrain, score et résolution restent visibles dans la barre du bas pour agir sans quitter la fiche.', // eslint-disable-line max-len
       );
     }
     return t(
       'leagueMatchDetails.captainHelper.withoutVenue',
-      // eslint-disable-next-line max-len
-      'Les actions rapides présence, score et résolution restent visibles dans la barre du bas pour agir sans quitter la fiche.',
+      'Les actions rapides présence, score et résolution restent visibles dans la barre du bas pour agir sans quitter la fiche.', // eslint-disable-line max-len
     );
   }, [shouldShowInlineCaptainActions, t, venueRequired]);
   const captainSectionTitle = useMemo(() => {
@@ -1209,8 +1199,7 @@ function LeagueMatchDetails({ navigation, route }) {
       return {
         helper: t(
           'leagueMatchDetails.postSlotModal.confirmReschedule.helper',
-          // eslint-disable-next-line max-len
-          'L adversaire indique que le match n a pas eu lieu et propose de replanifier ce même match.',
+          'L adversaire indique que le match n a pas eu lieu et propose de replanifier ce même match.', // eslint-disable-line max-len
         ),
         title: t(
           'leagueMatchDetails.postSlotModal.confirmReschedule.title',
@@ -1223,8 +1212,7 @@ function LeagueMatchDetails({ navigation, route }) {
       return {
         helper: t(
           'leagueMatchDetails.postSlotModal.confirmCancel.helper',
-          // eslint-disable-next-line max-len
-          'L adversaire indique que le match n a pas eu lieu et propose d annuler ce match sans pénalité.',
+          'L adversaire indique que le match n a pas eu lieu et propose d annuler ce match sans pénalité.', // eslint-disable-line max-len
         ),
         title: t(
           'leagueMatchDetails.postSlotModal.confirmCancel.title',
@@ -1237,8 +1225,7 @@ function LeagueMatchDetails({ navigation, route }) {
       return {
         helper: t(
           'leagueMatchDetails.postSlotModal.notPlayed.helper',
-          // eslint-disable-next-line max-len
-          'Choisis la suite à donner à ce match : replanifier avec le même adversaire ou annuler sans pénalité.',
+          'Choisis la suite à donner à ce match : replanifier avec le même adversaire ou annuler sans pénalité.', // eslint-disable-line max-len
         ),
         title: t('leagueMatchDetails.postSlotModal.notPlayed.title', 'Le match n a pas eu lieu'),
       };
@@ -1248,8 +1235,7 @@ function LeagueMatchDetails({ navigation, route }) {
       helper: venueRequired
         ? t(
           'leagueMatchDetails.postSlotModal.ask.helperWithVenue',
-          // eslint-disable-next-line max-len
-          'Le créneau est dépassé sans terrain confirmé. Les capitaines doivent confirmer si le match a eu lieu.',
+          'Le créneau est dépassé sans terrain confirmé. Les capitaines doivent confirmer si le match a eu lieu.', // eslint-disable-line max-len
         )
         : t(
           'leagueMatchDetails.postSlotModal.ask.helperWithoutVenue',
@@ -1449,8 +1435,7 @@ function LeagueMatchDetails({ navigation, route }) {
     if (canManageLeagueStats) {
       return t(
         'leagueMatchDetails.stats.summary.manage',
-        // eslint-disable-next-line max-len
-        'Complète le bilan collectif, les retours individuels et les stats manquantes maintenant que le score est validé.',
+        'Complète le bilan collectif, les retours individuels et les stats manquantes maintenant que le score est validé.', // eslint-disable-line max-len
       );
     }
 
@@ -1846,8 +1831,7 @@ function LeagueMatchDetails({ navigation, route }) {
         t('leagueMatchDetails.conversationPending.title', 'Conversation en préparation'),
         t(
           'leagueMatchDetails.conversationPending.alertBody',
-          // eslint-disable-next-line max-len
-          "La conversation avec l'adversaire n est pas encore disponible. Réessaie dans quelques secondes.",
+          "La conversation avec l'adversaire n est pas encore disponible. Réessaie dans quelques secondes.", // eslint-disable-line max-len
         ),
       );
       return;
@@ -2520,8 +2504,7 @@ function LeagueMatchDetails({ navigation, route }) {
                     <Text style={[Fonts.p4, { color: leagueCardTextColor, textAlign: 'center' }]}>
                       {t(
                         'leagueMatchDetails.conversationPending.cardBody',
-                        // eslint-disable-next-line max-len
-                        'La conversation avec l adversaire arrive bientôt. Réessaie dans quelques secondes ou poursuis depuis cette fiche match.',
+                        'La conversation avec l adversaire arrive bientôt. Réessaie dans quelques secondes ou poursuis depuis cette fiche match.', // eslint-disable-line max-len
                       )}
                     </Text>
                     <View style={{ gap: 10, marginTop: 14, width: '100%' }}>
@@ -3023,8 +3006,7 @@ function LeagueMatchDetails({ navigation, route }) {
                       <Text style={[Fonts.p3, { color: Colors.warning400 }]}>
                         {t(
                           'leagueMatchDetails.stats.reviewWarning',
-                          // eslint-disable-next-line max-len
-                          'Le score officiel a changé après la première publication. Une mise à jour est requise.',
+                          'Le score officiel a changé après la première publication. Une mise à jour est requise.', // eslint-disable-line max-len
                         )}
                       </Text>
                     </View>
@@ -3192,8 +3174,7 @@ function LeagueMatchDetails({ navigation, route }) {
                 <Text style={[Fonts.p2, { color: leagueCardTextColor }]}>
                   {t(
                     'leagueMatchDetails.timeline.empty',
-                    // eslint-disable-next-line max-len
-                    'Les prochaines mises à jour League apparaîtront ici des qu une action sera enregistrée sur ce match.',
+                    'Les prochaines mises à jour League apparaîtront ici des qu une action sera enregistrée sur ce match.', // eslint-disable-line max-len
                   )}
                 </Text>
               </LeagueCard>
@@ -3410,8 +3391,7 @@ function LeagueMatchDetails({ navigation, route }) {
                   )
                   : t(
                     'leagueMatchDetails.statsPrompt.manage',
-                    // eslint-disable-next-line max-len
-                    'Le score est validé. Tu peux maintenant compléter le temps de jeu et les stats clés de ton équipe.',
+                    'Le score est validé. Tu peux maintenant compléter le temps de jeu et les stats clés de ton équipe.', // eslint-disable-line max-len
                   )}
               </Text>
             </View>

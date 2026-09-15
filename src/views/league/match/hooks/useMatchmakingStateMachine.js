@@ -154,8 +154,7 @@ const buildSearchStatusLabel = ({
     if (nextExpansion > 0) {
       return i18next.t(
         'useMatchmakingStateMachine.status.candidateExpansionIn',
-        // eslint-disable-next-line max-len
-        'Statut: adversaire potentiel repère.\n{{criteriaLineV3}}\n{{zoneLineV3}}\nSuite: elargissement ELO matchmaking dans {{delay}}.',
+        'Statut: adversaire potentiel repère.\n{{criteriaLineV3}}\n{{zoneLineV3}}\nSuite: elargissement ELO matchmaking dans {{delay}}.', // eslint-disable-line max-len
         {
           criteriaLineV3,
           delay: formatSecondsCompact(nextExpansion),
@@ -166,8 +165,7 @@ const buildSearchStatusLabel = ({
     }
     return i18next.t(
       'useMatchmakingStateMachine.status.candidateWidened',
-      // eslint-disable-next-line max-len
-      'Statut: adversaire potentiel repère.\n{{criteriaLineV3}}\n{{zoneLineV3}}\nSuite: recherche ELO matchmaking elargie en cours.',
+      'Statut: adversaire potentiel repère.\n{{criteriaLineV3}}\n{{zoneLineV3}}\nSuite: recherche ELO matchmaking elargie en cours.', // eslint-disable-line max-len
       { criteriaLineV3, zoneLineV3, ...SANS_ECHAPPEMENT },
     );
   }
@@ -175,8 +173,7 @@ const buildSearchStatusLabel = ({
   if (softSuggestionCaps?.extraDistanceKm) {
     return i18next.t(
       'useMatchmakingStateMachine.status.activeSoftCaps',
-      // eslint-disable-next-line max-len
-      "Statut: recherche active.\n{{criteriaLineV3}}\nRayon conserve pour le match auto; pistes opt-in possibles jusqu'a +{{extraDistanceKm}} km.\n{{zoneLineV3}}",
+      "Statut: recherche active.\n{{criteriaLineV3}}\nRayon conserve pour le match auto; pistes opt-in possibles jusqu'a +{{extraDistanceKm}} km.\n{{zoneLineV3}}", // eslint-disable-line max-len
       {
         criteriaLineV3,
         extraDistanceKm: softSuggestionCaps.extraDistanceKm,
@@ -189,8 +186,7 @@ const buildSearchStatusLabel = ({
   if (nextExpansion > 0) {
     return i18next.t(
       'useMatchmakingStateMachine.status.preciseSearch',
-      // eslint-disable-next-line max-len
-      'Statut: recherche précise en cours.\n{{criteriaLineV3}}\nProchain elargissement ELO matchmaking dans {{delay}}.\n{{zoneLineV3}}',
+      'Statut: recherche précise en cours.\n{{criteriaLineV3}}\nProchain elargissement ELO matchmaking dans {{delay}}.\n{{zoneLineV3}}', // eslint-disable-line max-len
       {
         criteriaLineV3,
         delay: formatSecondsCompact(nextExpansion),
@@ -202,8 +198,7 @@ const buildSearchStatusLabel = ({
 
   return i18next.t(
     'useMatchmakingStateMachine.status.wideSearch',
-    // eslint-disable-next-line max-len
-    'Statut: recherche large en cours.\n{{criteriaLineV3}}\nRayon auto conserve; les grands écarts passent en opt-in.\n{{zoneLineV3}}',
+    'Statut: recherche large en cours.\n{{criteriaLineV3}}\nRayon auto conserve; les grands écarts passent en opt-in.\n{{zoneLineV3}}', // eslint-disable-line max-len
     { criteriaLineV3, zoneLineV3, ...SANS_ECHAPPEMENT },
   );
 };
