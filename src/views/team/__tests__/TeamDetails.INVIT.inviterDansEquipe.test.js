@@ -618,6 +618,11 @@ afterEach(() => {
   arbre = null;
 });
 
+// Recolte INVIT2-SUITE (15/09) : sous la charge du jest complet, le PREMIER montage de la vraie
+// fiche d equipe a depasse 5 s (2 fois), et son echec demontait l arbre des 18 temoins suivants.
+// Vert seul 19/19 a chaque fois. Seul le delai change, aucune assertion.
+jest.setTimeout(20000);
+
 describe('INVIT — la fiche d equipe sait ENVOYER une invitation', () => {
   test('🔴 T1 — inviter quelqu un appelle `inviteToTeam`, pas le partage SMS', async () => {
     mockReponseClub = clubAvec([
