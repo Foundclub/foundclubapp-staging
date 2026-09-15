@@ -1,4 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import i18next from 'i18next';
 import {
   useCallback,
   useEffect,
@@ -6,6 +7,7 @@ import {
   useRef,
   useState,
 } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Alert,
   Pressable,
@@ -18,6 +20,7 @@ import {
 } from 'react-native';
 
 import { invalidateAfterAction } from '@/domains/refresh/afterAction';
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -52,16 +55,51 @@ import {
  */
 
 const FOOTBALL_FIELDS = [
-  { key: 'goals', label: 'Buts' },
-  { key: 'assists', label: 'Passes décisives' },
-  { key: 'goalsConceded', label: 'Buts encaissés' },
+  {
+    key: 'goals',
+    get label() {
+      return i18next.t('matchStatsEditor.goals', 'Buts');
+    },
+  },
+  {
+    key: 'assists',
+    get label() {
+      return i18next.t('matchStatsEditor.assists', 'Passes décisives');
+    },
+  },
+  {
+    key: 'goalsConceded',
+    get label() {
+      return i18next.t('matchStatsEditor.goalsConceded', 'Buts encaissés');
+    },
+  },
 ];
 
 const BASKETBALL_FIELDS = [
-  { key: 'points', label: 'Points' },
-  { key: 'assists', label: 'Passes décisives' },
-  { key: 'rebounds', label: 'Rebonds' },
-  { key: 'threePointsMade', label: '3 pts' },
+  {
+    key: 'points',
+    get label() {
+      return i18next.t('matchStatsEditor.points', 'Points');
+    },
+  },
+  {
+    key: 'assists',
+    get label() {
+      return i18next.t('matchStatsEditor.assists', 'Passes décisives');
+    },
+  },
+  {
+    key: 'rebounds',
+    get label() {
+      return i18next.t('matchStatsEditor.rebounds', 'Rebonds');
+    },
+  },
+  {
+    key: 'threePointsMade',
+    get label() {
+      return i18next.t('matchStatsEditor.threePointers', '3 pts');
+    },
+  },
 ];
 
 const normalizeSport = (/** @type {any} */ value) => {
@@ -103,7 +141,10 @@ const buildInitialLines = (/** @type {any[]} */ players, /** @type {any} */ repo
     const payload = existing?.sportPayload || suggestedPayload;
     const baseLine = /** @type {MatchStatsLine} */ ({
       key: playerKey || `player:${Math.random().toString(36).slice(2)}`,
-      label: player?.label || [player?.firstname, player?.lastname].filter(Boolean).join(' ').trim() || player?.manualPlayerName || 'Joueur',
+      label: player?.label || [player?.firstname, player?.lastname].filter(Boolean).join(' ').trim() || player?.manualPlayerName || i18next.t(
+        'matchStatsEditor.player',
+        'Joueur',
+      ),
       manualPlayerName: player?.isManual ? (player?.label || player?.manualPlayerName || '') : (existing?.manualPlayerName || null),
       minutesPlayed: String(existing?.minutesPlayed ?? player?.suggestedStats?.minutesPlayed ?? 0),
       userDocumentId: player?.documentId || existing?.userDocumentId || null,
@@ -154,7 +195,7 @@ const buildInitialCoachReviews = (/** @type {any[]} */ players, /** @type {any} 
     return {
       comment: existing?.comment || '',
       key: reviewKey,
-      label: player?.label || 'Joueur',
+      label: player?.label || i18next.t('matchStatsEditor.player', 'Joueur'),
       playerResponse: Array.isArray(report?.playerResponses)
         ? report.playerResponses.find((/** @type {any} */ entry) => entry?.userDocumentId === player?.documentId) || null
         : null,
@@ -183,7 +224,7 @@ const isLineCompleted = (/** @type {MatchStatsLine} */ line, /** @type {any} */ 
 
 const buildScoreSummary = (/** @type {any} */ score) => {
   if (score?.scoreFor === null || score?.scoreAgainst === null || score?.scoreFor === undefined || score?.scoreAgainst === undefined) {
-    return 'Score à compléter';
+    return i18next.t('matchStatsEditor.scoreToComplete', 'Score à compléter');
   }
   return `${score.scoreFor} - ${score.scoreAgainst}`;
 };
@@ -222,10 +263,25 @@ const getApiErrorMessage = (/** @type {any} */ error, /** @type {string} */ fall
 );
 
 const getScoreSourceLabel = (/** @type {any} */ score) => {
-  if (score?.source === 'league_validated') return 'Score ligue validé';
-  if (score?.source === 'external_sync') return 'Score officiel synchronise';
-  if (score?.source === 'manual') return 'Score saisi dans FoundClub';
-  return 'Score en attente';
+  if (score?.source === 'league_validated') {
+    return i18next.t(
+      'matchStatsEditor.leagueValidatedScore',
+      'Score ligue validé',
+    );
+  }
+  if (score?.source === 'external_sync') {
+    return i18next.t(
+      'matchStatsEditor.officialScoreSynced',
+      'Score officiel synchronise',
+    );
+  }
+  if (score?.source === 'manual') {
+    return i18next.t(
+      'matchStatsEditor.manualScore',
+      'Score saisi dans FoundClub',
+    );
+  }
+  return i18next.t('matchStatsEditor.scorePending', 'Score en attente');
 };
 
 /**
@@ -237,7 +293,7 @@ const getReportStatusMeta = ({ isFinalized, isReviewRequired, isWaitingOfficial 
     return {
       backgroundColor: `${Colors.warning500}20`,
       borderColor: `${Colors.warning500}45`,
-      label: 'Vérification requise',
+      label: i18next.t('matchStatsEditor.checkRequired', 'Vérification requise'),
       textColor: Colors.warning500,
     };
   }
@@ -246,7 +302,7 @@ const getReportStatusMeta = ({ isFinalized, isReviewRequired, isWaitingOfficial 
     return {
       backgroundColor: `${Colors.success500}20`,
       borderColor: `${Colors.success500}45`,
-      label: 'Stats publiées',
+      label: i18next.t('matchStatsEditor.statsPublished', 'Stats publiées'),
       textColor: Colors.success500,
     };
   }
@@ -255,7 +311,7 @@ const getReportStatusMeta = ({ isFinalized, isReviewRequired, isWaitingOfficial 
     return {
       backgroundColor: `${Colors.gold500}20`,
       borderColor: `${Colors.gold500}45`,
-      label: 'Score officiel en attente',
+      label: i18next.t('matchStatsEditor.officialScorePending', 'Score officiel en attente'),
       textColor: Colors.gold500,
     };
   }
@@ -263,7 +319,7 @@ const getReportStatusMeta = ({ isFinalized, isReviewRequired, isWaitingOfficial 
   return {
     backgroundColor: `${Colors.primary500}20`,
     borderColor: `${Colors.primary500}45`,
-    label: 'Brouillon en cours',
+    label: i18next.t('matchStatsEditor.draftInProgress', 'Brouillon en cours'),
     textColor: Colors.primary500,
   };
 };
@@ -301,18 +357,35 @@ const buildMatchStatsConsistencyIssues = ({
     );
 
     if (resolvedScoreFor !== null && totalPoints > resolvedScoreFor) {
-      issues.push(`Les points saisis (${totalPoints}) dépassent le score final (${resolvedScoreFor}).`);
+      issues.push(i18next.t(
+        'matchStatsEditor.pointsExceedScore',
+        'Les points saisis ({{totalPoints}}) dépassent le score final ({{resolvedScoreFor}}).',
+        { resolvedScoreFor, totalPoints, ...SANS_ECHAPPEMENT },
+      ));
     }
 
     if (totalThreePointPoints > totalPoints) {
-      issues.push('Les tirs a 3 points saisis dépassent le total des points marques.');
+      issues.push(i18next.t(
+        'matchStatsEditor.threePointersExceedPoints',
+        'Les tirs a 3 points saisis dépassent le total des points marques.',
+      ));
     }
 
     const invalidThreePointLine = lines.find((/** @type {MatchStatsLine} */ line) => (
       (getNumericStatValue(line?.threePointsMade) * 3) > getNumericStatValue(line?.points)
     ));
     if (invalidThreePointLine) {
-      issues.push(`Les 3 points de ${invalidThreePointLine?.label || 'ce joueur'} dépassent ses points marques.`);
+      issues.push(i18next.t(
+        'matchStatsEditor.playerThreePointersExceedPoints',
+        'Les 3 points de {{label}} dépassent ses points marques.',
+        {
+          label: invalidThreePointLine?.label || i18next.t(
+            'matchStatsEditor.thisPlayer',
+            'ce joueur',
+          ),
+          ...SANS_ECHAPPEMENT,
+        },
+      ));
     }
 
     return issues;
@@ -328,11 +401,19 @@ const buildMatchStatsConsistencyIssues = ({
   );
 
   if (resolvedScoreFor !== null && totalGoals > resolvedScoreFor) {
-    issues.push(`Les buts saisis (${totalGoals}) dépassent le score final (${resolvedScoreFor}).`);
+    issues.push(i18next.t(
+      'matchStatsEditor.goalsExceedScore',
+      'Les buts saisis ({{totalGoals}}) dépassent le score final ({{resolvedScoreFor}}).',
+      { resolvedScoreFor, totalGoals, ...SANS_ECHAPPEMENT },
+    ));
   }
 
   if (totalAssists > totalGoals) {
-    issues.push(`Les passes decisives (${totalAssists}) dépassent les buts marques (${totalGoals}).`);
+    issues.push(i18next.t(
+      'matchStatsEditor.assistsExceedGoals',
+      'Les passes decisives ({{totalAssists}}) dépassent les buts marques ({{totalGoals}}).',
+      { totalAssists, totalGoals, ...SANS_ECHAPPEMENT },
+    ));
   }
 
   if (resolvedScoreAgainst !== null) {
@@ -340,11 +421,25 @@ const buildMatchStatsConsistencyIssues = ({
       getNumericStatValue(line?.goalsConceded) > resolvedScoreAgainst
     ));
     if (invalidConcededLine) {
-      issues.push(`Les buts encaissés de ${invalidConcededLine?.label || 'ce joueur'} dépassent le score adverse (${resolvedScoreAgainst}).`);
+      issues.push(i18next.t(
+        'matchStatsEditor.playerConcededExceedsOpponentScore',
+        'Les buts encaissés de {{label}} dépassent le score adverse ({{resolvedScoreAgainst}}).',
+        {
+          label: invalidConcededLine?.label || i18next.t(
+            'matchStatsEditor.thisPlayer',
+            'ce joueur',
+          ),
+          resolvedScoreAgainst,
+          ...SANS_ECHAPPEMENT,
+        },
+      ));
     }
 
     if (resolvedScoreAgainst > 0 && lines.some((/** @type {MatchStatsLine} */ line) => Boolean(line?.cleanSheet))) {
-      issues.push('Le clean sheet n est possible que si le score adverse est a 0.');
+      issues.push(i18next.t(
+        'matchStatsEditor.cleanSheetNeedsZero',
+        'Le clean sheet n est possible que si le score adverse est a 0.',
+      ));
     }
   }
 
@@ -352,7 +447,17 @@ const buildMatchStatsConsistencyIssues = ({
     Boolean(line?.cleanSheet) && getNumericStatValue(line?.goalsConceded) > 0
   ));
   if (invalidCleanSheetLine) {
-    issues.push(`Le clean sheet de ${invalidCleanSheetLine?.label || 'ce joueur'} impose 0 but encaissé.`);
+    issues.push(i18next.t(
+      'matchStatsEditor.playerCleanSheetNeedsZeroConceded',
+      'Le clean sheet de {{label}} impose 0 but encaissé.',
+      {
+        label: invalidCleanSheetLine?.label || i18next.t(
+          'matchStatsEditor.thisPlayer',
+          'ce joueur',
+        ),
+        ...SANS_ECHAPPEMENT,
+      },
+    ));
   }
 
   return issues;
@@ -362,6 +467,7 @@ const buildMatchStatsConsistencyIssues = ({
  * @param {{ navigation: any; route: any }} props
  */
 function MatchStatsEditor({ navigation, route }) {
+  const { t } = useTranslation();
   const {
     Alignments, ApplicationStyle, Colors, Fonts, Spaces,
   } = useTheme();
@@ -373,7 +479,7 @@ function MatchStatsEditor({ navigation, route }) {
   const eventId = route?.params?.eventId || null;
   const matchId = route?.params?.matchId || null;
   const requestedTeamId = route?.params?.teamId || null;
-  const initialTitle = route?.params?.title || 'Stats du match';
+  const initialTitle = route?.params?.title || t('matchStatsEditor.matchStats', 'Stats du match');
   const hydratedReportKeyRef = useRef(/** @type {string | null} */ (null));
 
   const eventStatsQuery = useGetEventMatchStats(eventId || '', requestedTeamId || undefined, {
@@ -486,13 +592,13 @@ function MatchStatsEditor({ navigation, route }) {
     return playerLines
       .map((line) => ({
         key: line?.key || line?.label,
-        label: String(line?.label || 'Joueur·se'),
+        label: String(line?.label || t('matchStatsEditor.playerInclusive', 'Joueur·se')),
         value: getNumericStatValue(line?.[scorerField]),
       }))
       .filter((entry) => entry.value > 0)
       .sort((left, right) => right.value - left.value)
       .slice(0, 5);
-  }, [playerLines, sport]);
+  }, [playerLines, sport, t]);
 
   const remindResponsesMutation = useMutation({
     mutationFn: () => remindEventMatchResponses(
@@ -500,15 +606,25 @@ function MatchStatsEditor({ navigation, route }) {
       statsPayload?.team?.documentId || requestedTeamId,
     ),
     onError: (/** @type {any} */ error) => {
-      Alert.alert('Erreur', getApiErrorMessage(error, "Impossible d'envoyer la relance."));
+      Alert.alert(t(
+        'common.error',
+        'Erreur',
+      ), getApiErrorMessage(error, t(
+        'matchStatsEditor.reminderSendError',
+        "Impossible d'envoyer la relance.",
+      )));
     },
     onSuccess: (/** @type {any} */ result) => {
       const remindedCount = Number(result?.remindedCount || 0);
       Alert.alert(
-        'Relance envoyée',
+        t('matchStatsEditor.reminderSent', 'Relance envoyée'),
         remindedCount > 0
-          ? `${remindedCount} joueur·se·s relancé·e·s pour leur retour post-match.`
-          : 'Aucune relance nécessaire pour ce match.',
+          ? t(
+            'matchStatsEditor.playersReminded',
+            '{{remindedCount}} joueur·se·s relancé·e·s pour leur retour post-match.',
+            { remindedCount, ...SANS_ECHAPPEMENT },
+          )
+          : t('matchStatsEditor.noReminderNeeded', 'Aucune relance nécessaire pour ce match.'),
       );
     },
   });
@@ -536,33 +652,52 @@ function MatchStatsEditor({ navigation, route }) {
 
   const submitConfirmationMessage = useMemo(() => {
     if (isReviewRequired) {
-      return 'Le score officiel a changé. Cette publication confirme la nouvelle version des stats pour ton équipe.';
+      return t(
+        'matchStatsEditor.reviewConfirmMessage',
+        'Le score officiel a changé. Cette publication confirme la nouvelle version des stats '
+          + 'pour ton équipe.',
+      );
     }
 
-    return 'Après publication, ce rapport devient la version officielle des statistiques pour cette équipe.';
-  }, [isReviewRequired]);
+    return t(
+      'matchStatsEditor.publishConfirmMessage',
+      'Après publication, ce rapport devient la version officielle des statistiques pour cette '
+        + 'équipe.',
+    );
+  }, [isReviewRequired, t]);
 
   const submitButtonTitle = useMemo(() => {
-    if (isReadOnly) return 'Rapport finalise';
-    if (isReviewRequired) return 'Mettre à jour après score officiel';
-    return 'Publier les stats';
-  }, [isReadOnly, isReviewRequired]);
+    if (isReadOnly) return t('matchStatsEditor.reportFinalised', 'Rapport finalise');
+    if (isReviewRequired) {
+      return t(
+        'matchStatsEditor.updateAfterOfficialScore',
+        'Mettre à jour après score officiel',
+      );
+    }
+    return t('matchStatsEditor.publishTheStats', 'Publier les stats');
+  }, [isReadOnly, isReviewRequired, t]);
 
   const submitHelperText = useMemo(() => {
     if (isReadOnly) {
-      return 'Ce rapport est déjà finalise. Les agregations joueur et équipe sont à jour.';
+      return t(
+        'matchStatsEditor.reportAlreadyFinalised',
+        'Ce rapport est déjà finalise. Les agregations joueur et équipe sont à jour.',
+      );
     }
 
     if (isReviewRequired) {
-      return 'Le score officiel a changé. Vérifie les lignes puis republie directement cette version.';
+      return t('matchStatsEditor.officialScoreChangedCheckLines', 'Le score officiel a changé. Vérifie les lignes puis republie directement cette version.');
     }
 
     if (hasConsistencyIssues) {
-      return 'Corrige les incoherences entre le score final et les statistiques joueur avant de continuer.';
+      return t('matchStatsEditor.fixInconsistencies', 'Corrige les incoherences entre le score final et les statistiques joueur avant de continuer.');
     }
 
-    return 'Le brouillon reste modifiable tant que tu ne publies pas ce rapport.';
-  }, [hasConsistencyIssues, isReadOnly, isReviewRequired]);
+    return t(
+      'matchStatsEditor.draftStaysEditable',
+      'Le brouillon reste modifiable tant que tu ne publies pas ce rapport.',
+    );
+  }, [hasConsistencyIssues, isReadOnly, isReviewRequired, t]);
 
   // H9 — UNE SEULE LISTE DE CLES, PARTAGEE AVEC L ECRAN JOUEUR.
   // Cet ecran tenait sa propre liste, `PlayerMatchResponseScreen` la sienne, et
@@ -609,12 +744,18 @@ function MatchStatsEditor({ navigation, route }) {
       return saveLeagueMatchStatsDraft(matchId, payload);
     },
     onError: (error) => {
-      Alert.alert('Erreur', getApiErrorMessage(error, 'Impossible d enregistrer ce brouillon de stats.'));
+      Alert.alert(t('common.error', 'Erreur'), getApiErrorMessage(error, t('matchStatsEditor.draftSaveError', 'Impossible d enregistrer ce brouillon de stats.')));
     },
     onSuccess: async () => {
       await invalidateRelatedQueries();
       await statsQuery.refetch();
-      Alert.alert('Brouillon enregistre', 'Le brouillon des stats du match a bien été enregistre.');
+      Alert.alert(t(
+        'matchStatsEditor.draftSaved',
+        'Brouillon enregistre',
+      ), t(
+        'matchStatsEditor.draftSavedMessage',
+        'Le brouillon des stats du match a bien été enregistre.',
+      ));
     },
   });
 
@@ -627,15 +768,27 @@ function MatchStatsEditor({ navigation, route }) {
       return submitLeagueMatchStats(matchId, payload);
     },
     onError: (error) => {
-      Alert.alert('Erreur', getApiErrorMessage(error, 'Impossible de publier ces statistiques.'));
+      Alert.alert(t(
+        'common.error',
+        'Erreur',
+      ), getApiErrorMessage(error, t(
+        'matchStatsEditor.publishError',
+        'Impossible de publier ces statistiques.',
+      )));
     },
     onSuccess: async () => {
       await invalidateRelatedQueries();
       Alert.alert(
-        'Stats publiées',
+        t('matchStatsEditor.statsPublished', 'Stats publiées'),
         isReviewRequired
-          ? 'Le rapport a été mis à jour après la synchronisation du score officiel.'
-          : 'Les statistiques du match sont maintenant finalisées.',
+          ? t(
+            'matchStatsEditor.reportUpdatedAfterSync',
+            'Le rapport a été mis à jour après la synchronisation du score officiel.',
+          )
+          : t(
+            'matchStatsEditor.statsNowFinalised',
+            'Les statistiques du match sont maintenant finalisées.',
+          ),
         [{ onPress: redirectToReviewScreen, text: 'OK' }],
       );
     },
@@ -882,48 +1035,64 @@ function MatchStatsEditor({ navigation, route }) {
   const handleSaveDraft = useCallback(() => {
     if (isReviewRequired) {
       Alert.alert(
-        'Revision requise',
-        'Le score officiel a changé. Vérifie les lignes puis republie directement cette version.',
+        t('matchStatsEditor.reviewRequired', 'Revision requise'),
+        t(
+          'matchStatsEditor.officialScoreChangedCheckLines',
+          'Le score officiel a changé. Vérifie les lignes puis republie directement cette '
+            + 'version.',
+        ),
       );
       return;
     }
 
     if (sourceType === 'event' && !hasScore && !isScoreLocked) {
-      Alert.alert('Score manquant', 'Renseigne le score du match avant d enregistrer ce brouillon.');
+      Alert.alert(t('matchStatsEditor.missingScore', 'Score manquant'), t('matchStatsEditor.enterScoreBeforeDraft', 'Renseigne le score du match avant d enregistrer ce brouillon.'));
       return;
     }
 
     if (hasConsistencyIssues) {
-      Alert.alert('Corrections requises', consistencyIssues.join('\n'));
+      Alert.alert(t(
+        'matchStatsEditor.correctionsRequired',
+        'Corrections requises',
+      ), consistencyIssues.join('\n'));
       return;
     }
 
     saveDraftMutation.mutate();
-  }, [consistencyIssues, hasConsistencyIssues, hasScore, isReviewRequired, isScoreLocked, saveDraftMutation, sourceType]);
+  }, [consistencyIssues, hasConsistencyIssues, hasScore, isReviewRequired, isScoreLocked, saveDraftMutation, sourceType, t]);
 
   const handleSubmit = useCallback(() => {
     if (sourceType === 'event' && !hasScore) {
-      Alert.alert('Score requis', 'Le score final doit être enregistre avant de publier les stats.');
+      Alert.alert(t('matchStatsEditor.scoreRequired', 'Score requis'), t('matchStatsEditor.finalScoreRequiredBeforePublish', 'Le score final doit être enregistre avant de publier les stats.'));
       return;
     }
 
     if (hasConsistencyIssues) {
-      Alert.alert('Corrections requises', consistencyIssues.join('\n'));
+      Alert.alert(t(
+        'matchStatsEditor.correctionsRequired',
+        'Corrections requises',
+      ), consistencyIssues.join('\n'));
       return;
     }
 
     Alert.alert(
-      isReviewRequired ? 'Mettre à jour après score officiel ?' : 'Publier les stats du match ?',
+      isReviewRequired ? t(
+        'matchStatsEditor.updateAfterOfficialScoreQuestion',
+        'Mettre à jour après score officiel ?',
+      ) : t(
+        'matchStatsEditor.publishMatchStatsQuestion',
+        'Publier les stats du match ?',
+      ),
       submitConfirmationMessage,
       [
-        { style: 'cancel', text: 'Annuler' },
+        { style: 'cancel', text: t('matchStatsEditor.cancel', 'Annuler') },
         {
           onPress: () => submitMutation.mutate(),
-          text: isReviewRequired ? 'Mettre à jour' : 'Publier',
+          text: isReviewRequired ? t('matchStatsEditor.update', 'Mettre à jour') : t('matchStatsEditor.publish', 'Publier'),
         },
       ],
     );
-  }, [consistencyIssues, hasConsistencyIssues, hasScore, isReviewRequired, sourceType, submitConfirmationMessage, submitMutation]);
+  }, [consistencyIssues, hasConsistencyIssues, hasScore, isReviewRequired, sourceType, submitConfirmationMessage, submitMutation, t]);
 
   return (
     <ScreenContainer
@@ -977,10 +1146,12 @@ function MatchStatsEditor({ navigation, route }) {
           ]}
         >
           <View style={[SpacesAny.gap[4]]}>
-            <Text style={[Fonts.p4Bold, Fonts.primary500]}>Bilan équipe</Text>
+            <Text style={[Fonts.p4Bold, Fonts.primary500]}>
+              {t('matchStatsEditor.teamReport', 'Bilan équipe')}
+            </Text>
             <Text style={[Fonts.h2Bold, Fonts.neutral00]}>{matchLabel}</Text>
             <Text style={[Fonts.p2, Fonts.neutral100]}>
-              {sourceType === 'event' ? "Bilan collectif de l'événement" : 'Bilan collectif du match ligue'}
+              {sourceType === 'event' ? t('matchStatsEditor.eventTeamReview', "Bilan collectif de l'événement") : t('matchStatsEditor.leagueMatchTeamReview', 'Bilan collectif du match ligue')}
             </Text>
           </View>
 
@@ -1035,17 +1206,29 @@ function MatchStatsEditor({ navigation, route }) {
 
         {statsQuery.isLoading ? (
           <View style={[ApplicationStyle.backgroundColor.primary700, ApplicationStyle.borderRadius24, SpacesAny.padding[24]]}>
-            <Text style={[Fonts.p1, Fonts.neutral00, Fonts.textCenter]}>Chargement des stats du match...</Text>
+            <Text style={[Fonts.p1, Fonts.neutral00, Fonts.textCenter]}>{t('matchStatsEditor.loadingMatchStats', 'Chargement des stats du match...')}</Text>
           </View>
         ) : null}
 
         {statsQuery.error ? (
           <View style={[ApplicationStyle.backgroundColor.primary700, ApplicationStyle.borderRadius24, SpacesAny.padding[24], SpacesAny.gap[8]]}>
-            <Text style={[Fonts.p1Bold, Fonts.neutral00]}>Impossible de charger ce rapport.</Text>
-            <Text style={[Fonts.p2, Fonts.neutral100]}>
-              {String(statsQuery.error?.message || 'Une erreur est survenue.')}
+            <Text style={[Fonts.p1Bold, Fonts.neutral00]}>
+              {t('matchStatsEditor.loadReportError', 'Impossible de charger ce rapport.')}
             </Text>
-            <Button onPress={() => statsQuery.refetch()} title="Réessayer" variant="Secondary" />
+            <Text style={[Fonts.p2, Fonts.neutral100]}>
+              {String(statsQuery.error?.message || t(
+                'matchStatsEditor.anErrorOccurred',
+                'Une erreur est survenue.',
+              ))}
+            </Text>
+            <Button
+              onPress={() => statsQuery.refetch()}
+              title={t(
+                'matchStatsEditor.tryAgain',
+                'Réessayer',
+              )}
+              variant="Secondary"
+            />
           </View>
         ) : null}
 
@@ -1064,9 +1247,9 @@ function MatchStatsEditor({ navigation, route }) {
                   },
                 ]}
               >
-                <Text style={[Fonts.h4Bold, { color: Colors.warning500 }]}>Score officiel mis à jour</Text>
+                <Text style={[Fonts.h4Bold, { color: Colors.warning500 }]}>{t('matchStatsEditor.officialScoreUpdated', 'Score officiel mis à jour')}</Text>
                 <Text style={[Fonts.p2, Fonts.neutral100]}>
-                  Le score synchronise depuis la compétition officielle a changé après une saisie précédente. Vérifie les statistiques joueur puis republie ce rapport.
+                  {t('matchStatsEditor.officialScoreUpdatedHint', 'Le score synchronise depuis la compétition officielle a changé après une saisie précédente. Vérifie les statistiques joueur puis republie ce rapport.')}
                 </Text>
               </View>
             ) : null}
@@ -1084,7 +1267,7 @@ function MatchStatsEditor({ navigation, route }) {
                   },
                 ]}
               >
-                <Text style={[Fonts.h4Bold, { color: Colors.warning500 }]}>Corrections requises</Text>
+                <Text style={[Fonts.h4Bold, { color: Colors.warning500 }]}>{t('matchStatsEditor.correctionsRequired', 'Corrections requises')}</Text>
                 {consistencyIssues.map((issue) => (
                   <Text key={issue} style={[Fonts.p3, Fonts.neutral100]}>
                     {`\u2022 ${issue}`}
@@ -1096,7 +1279,9 @@ function MatchStatsEditor({ navigation, route }) {
             <View style={[ApplicationStyle.backgroundColor.primary700, ApplicationStyle.borderRadius24, SpacesAny.padding[sectionPadding], SpacesAny.gap[sectionGap]]}>
               <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter, SpacesAny.gap[12]]}>
                 <View style={{ flex: 1 }}>
-                  <Text style={[Fonts.h4Bold, Fonts.neutral00]}>Score final</Text>
+                  <Text style={[Fonts.h4Bold, Fonts.neutral00]}>
+                    {t('matchStatsEditor.finalScore', 'Score final')}
+                  </Text>
                   <Text style={[Fonts.p3, Fonts.neutral100]}>{getScoreSourceLabel(statsPayload?.score)}</Text>
                 </View>
                 <View
@@ -1112,14 +1297,17 @@ function MatchStatsEditor({ navigation, route }) {
                   ]}
                 >
                   <Text style={[Fonts.p3Bold, isScoreLocked ? Fonts.primary100 : Fonts.neutral00]}>
-                    {isScoreLocked ? 'Verrouille' : 'Editable'}
+                    {isScoreLocked ? t('matchStatsEditor.locked', 'Verrouille') : t('matchStatsEditor.editable', 'Editable')}
                   </Text>
                 </View>
               </View>
 
               {isWaitingOfficial ? (
                 <Text style={[Fonts.p2, Fonts.primary100]}>
-                  Le score officiel est encore attendu depuis la synchronisation externe.
+                  {t(
+                    'matchStatsEditor.officialScoreAwaited',
+                    'Le score officiel est encore attendu depuis la synchronisation externe.',
+                  )}
                 </Text>
               ) : null}
 
@@ -1127,7 +1315,7 @@ function MatchStatsEditor({ navigation, route }) {
                 {renderCounterField({
                   containerStyle: { flex: 1 },
                   disabled: isScoreLocked || isReadOnly,
-                  label: 'Notre score',
+                  label: t('matchStatsEditor.ourScore', 'Notre score'),
                   large: true,
                   onChangeText: updateScoreFor,
                   onDecrement: () => adjustScoreValue('scoreFor', -1),
@@ -1138,7 +1326,7 @@ function MatchStatsEditor({ navigation, route }) {
                 {renderCounterField({
                   containerStyle: { flex: 1 },
                   disabled: isScoreLocked || isReadOnly,
-                  label: 'Score adverse',
+                  label: t('matchStatsEditor.opponentScore', 'Score adverse'),
                   large: true,
                   onChangeText: updateScoreAgainst,
                   onDecrement: () => adjustScoreValue('scoreAgainst', -1),
@@ -1149,16 +1337,25 @@ function MatchStatsEditor({ navigation, route }) {
 
               {sourceType === 'league' ? (
                 <Text style={[Fonts.p3, Fonts.neutral100]}>
-                  Le score ligue validé reste la source officielle pour ce rapport.
+                  {t(
+                    'matchStatsEditor.leagueScoreIsOfficial',
+                    'Le score ligue validé reste la source officielle pour ce rapport.',
+                  )}
                 </Text>
               ) : null}
             </View>
 
             <View style={[ApplicationStyle.backgroundColor.primary700, ApplicationStyle.borderRadius24, SpacesAny.padding[sectionPadding], SpacesAny.gap[sectionGap]]}>
               <View style={[SpacesAny.gap[4]]}>
-                <Text style={[Fonts.h4Bold, Fonts.neutral00]}>Bilan collectif</Text>
+                <Text style={[Fonts.h4Bold, Fonts.neutral00]}>
+                  {t('matchStatsEditor.teamReview', 'Bilan collectif')}
+                </Text>
                 <Text style={[Fonts.p3, Fonts.neutral100]}>
-                  Donne une note d équipe sur 10 et un commentaire collectif visible par ton groupe.
+                  {t(
+                    'matchStatsEditor.teamRatingHint',
+                    'Donne une note d équipe sur 10 et un commentaire collectif visible par '
+                      + 'ton groupe.',
+                  )}
                 </Text>
               </View>
               <View style={[Alignments.row, Alignments.wrap, SpacesAny.gap[8]]}>
@@ -1191,7 +1388,7 @@ function MatchStatsEditor({ navigation, route }) {
                 multiline
                 numberOfLines={4}
                 onChangeText={setCollectiveComment}
-                placeholder="Ressenti collectif, dynamique du groupe, points forts, points à travailler..."
+                placeholder={t('matchStatsEditor.teamCommentPlaceholder', 'Ressenti collectif, dynamique du groupe, points forts, points à travailler...')}
                 placeholderTextColor={Colors.neutral400}
                 style={[
                   Fonts.p2,
@@ -1227,9 +1424,14 @@ function MatchStatsEditor({ navigation, route }) {
 
             <View style={[ApplicationStyle.backgroundColor.primary700, ApplicationStyle.borderRadius24, SpacesAny.padding[sectionPadding], SpacesAny.gap[sectionGap]]}>
               <View style={[SpacesAny.gap[4]]}>
-                <Text style={[Fonts.h4Bold, Fonts.neutral00]}>Retours individuels optionnels</Text>
+                <Text style={[Fonts.h4Bold, Fonts.neutral00]}>
+                  {t(
+                    'matchStatsEditor.optionalIndividualFeedback',
+                    'Retours individuels optionnels',
+                  )}
+                </Text>
                 <Text style={[Fonts.p3, Fonts.neutral100]}>
-                  Tu peux ajouter une note et un commentaire prive à chaque joueur si tu le souhaites.
+                  {t('matchStatsEditor.individualFeedbackHint', 'Tu peux ajouter une note et un commentaire prive à chaque joueur si tu le souhaites.')}
                 </Text>
               </View>
               {coachReviews.length ? coachReviews.map((review) => (
@@ -1250,7 +1452,10 @@ function MatchStatsEditor({ navigation, route }) {
                     <View style={{ flex: 1 }}>
                       <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{review.label}</Text>
                       <Text style={[Fonts.p4, Fonts.neutral100]}>
-                        {review?.playerResponse?.stateLabel || 'Pas encore de retour joueur'}
+                        {review?.playerResponse?.stateLabel || t(
+                          'matchStatsEditor.noPlayerFeedbackYet',
+                          'Pas encore de retour joueur',
+                        )}
                       </Text>
                     </View>
                     <View style={[Alignments.row, Alignments.wrap, SpacesAny.gap[6], { justifyContent: 'flex-end', maxWidth: 180 }]}>
@@ -1284,7 +1489,10 @@ function MatchStatsEditor({ navigation, route }) {
                     multiline
                     numberOfLines={3}
                     onChangeText={(value) => updateCoachReview(review.key, 'comment', value)}
-                    placeholder="Commentaire prive pour ce joueur"
+                    placeholder={t(
+                      'matchStatsEditor.privateCommentPlaceholder',
+                      'Commentaire prive pour ce joueur',
+                    )}
                     placeholderTextColor={Colors.neutral400}
                     style={[
                       Fonts.p3,
@@ -1304,9 +1512,9 @@ function MatchStatsEditor({ navigation, route }) {
                 </View>
               )) : (
                 <View style={[ApplicationStyle.backgroundColor.primary900, { borderRadius: 20 }, SpacesAny.padding[20], SpacesAny.gap[8]]}>
-                  <Text style={[Fonts.p2Bold, Fonts.neutral00, Fonts.textCenter]}>Aucun joueur disponible.</Text>
+                  <Text style={[Fonts.p2Bold, Fonts.neutral00, Fonts.textCenter]}>{t('matchStatsEditor.noPlayerAvailable', 'Aucun joueur disponible.')}</Text>
                   <Text style={[Fonts.p3, Fonts.neutral100, Fonts.textCenter]}>
-                    Les retours individuels apparaîtront ici des que la liste joueur sera disponible.
+                    {t('matchStatsEditor.individualFeedbackEmptyHint', 'Les retours individuels apparaîtront ici des que la liste joueur sera disponible.')}
                   </Text>
                 </View>
               )}
@@ -1325,9 +1533,12 @@ function MatchStatsEditor({ navigation, route }) {
                   },
                 ]}
               >
-                <Text style={[Fonts.h4Bold, { color: Colors.warning500 }]}>Joueurs non pointes</Text>
+                <Text style={[Fonts.h4Bold, { color: Colors.warning500 }]}>{t('matchStatsEditor.playersNotCheckedIn', 'Joueurs non pointes')}</Text>
                 <Text style={[Fonts.p3, Fonts.neutral100]}>
-                  Ces joueurs restent visibles pour le coach, mais ils ne sont pas inclus dans les stats tant que leur attendance n&apos;a pas ete corrigee.
+                  {t(
+                    'matchStatsEditor.unmarkedPlayersHint',
+                    "Ces joueurs restent visibles pour le coach, mais ils ne sont pas inclus dans les stats tant que leur attendance n'a pas ete corrigee.",
+                  )}
                 </Text>
                 <View style={[Alignments.row, Alignments.wrap, SpacesAny.gap[8]]}>
                   {excludedNoShowPlayers.map((/** @type {any} */ player) => (
@@ -1345,7 +1556,10 @@ function MatchStatsEditor({ navigation, route }) {
                       ]}
                     >
                       <Text style={[Fonts.p4Bold, Fonts.neutral00]}>
-                        {player?.label || player?.manualPlayerName || 'Joueur'}
+                        {player?.label || player?.manualPlayerName || t(
+                          'matchStatsEditor.player',
+                          'Joueur',
+                        )}
                       </Text>
                     </View>
                   ))}
@@ -1362,7 +1576,13 @@ function MatchStatsEditor({ navigation, route }) {
                     { letterSpacing: 1, textTransform: 'uppercase' },
                   ]}
                 >
-                  {normalizeSport(sport) === 'basketball' ? 'Marqueur·se·s' : 'Buteur·se·s'}
+                  {normalizeSport(sport) === 'basketball' ? t(
+                    'matchStatsEditor.scorers',
+                    'Marqueur·se·s',
+                  ) : t(
+                    'matchStatsEditor.goalScorers',
+                    'Buteur·se·s',
+                  )}
                 </Text>
                 {topScorers.map((scorer) => (
                   <View
@@ -1418,9 +1638,15 @@ function MatchStatsEditor({ navigation, route }) {
                 ]}
               >
                 <View style={[Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween]}>
-                  <Text style={[Fonts.p2Bold, Fonts.neutral00]}>Retours post-match</Text>
+                  <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
+                    {t('matchStatsEditor.postMatchFeedback', 'Retours post-match')}
+                  </Text>
                   <Text style={[Fonts.p3Bold, Fonts.primary500]}>
-                    {`${responseCompletionCount}/${responseEligibleCount} reçus`}
+                    {t(
+                      'matchStatsEditor.responsesReceived',
+                      '{{responseCompletionCount}}/{{responseEligibleCount}} reçus',
+                      { responseCompletionCount, responseEligibleCount, ...SANS_ECHAPPEMENT },
+                    )}
                   </Text>
                 </View>
                 <View
@@ -1448,8 +1674,12 @@ function MatchStatsEditor({ navigation, route }) {
                   >
                     <Text style={[Fonts.p3Bold, Fonts.primary500]}>
                       {remindResponsesMutation.isPending
-                        ? 'Relance en cours…'
-                        : `Relancer les ${missingResponseCount} manquant·e·s →`}
+                        ? t('matchStatsEditor.sendingReminder', 'Relance en cours…')
+                        : t(
+                          'matchStatsEditor.remindMissing',
+                          'Relancer les {{missingResponseCount}} manquant·e·s →',
+                          { missingResponseCount, ...SANS_ECHAPPEMENT },
+                        )}
                     </Text>
                   </TouchableOpacity>
                 ) : null}
@@ -1459,9 +1689,14 @@ function MatchStatsEditor({ navigation, route }) {
             <View style={[ApplicationStyle.backgroundColor.primary700, ApplicationStyle.borderRadius24, SpacesAny.padding[sectionPadding], SpacesAny.gap[sectionGap]]}>
               <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter, SpacesAny.gap[12]]}>
                 <View style={[SpacesAny.gap[4], { flex: 1 }]}>
-                  <Text style={[Fonts.h4Bold, Fonts.neutral00]}>Stats joueurs</Text>
+                  <Text style={[Fonts.h4Bold, Fonts.neutral00]}>
+                    {t('matchStatsEditor.playerStats', 'Stats joueurs')}
+                  </Text>
                   <Text style={[Fonts.p3, Fonts.neutral100]}>
-                    Temps de jeu et statistiques clés adaptees au sport du match.
+                    {t(
+                      'matchStatsEditor.playerStatsHint',
+                      'Temps de jeu et statistiques clés adaptees au sport du match.',
+                    )}
                   </Text>
                 </View>
                 <View
@@ -1507,7 +1742,13 @@ function MatchStatsEditor({ navigation, route }) {
                       <View style={{ flex: 1 }}>
                         <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{line.label}</Text>
                         <Text style={[Fonts.p4, Fonts.neutral100]}>
-                          {line.userDocumentId ? 'Joueur FoundClub' : 'Joueur manuel'}
+                          {line.userDocumentId ? t(
+                            'matchStatsEditor.foundClubPlayer',
+                            'Joueur FoundClub',
+                          ) : t(
+                            'matchStatsEditor.manualPlayer',
+                            'Joueur manuel',
+                          )}
                         </Text>
                       </View>
                       {normalizeSport(sport) === 'football' ? (
@@ -1526,7 +1767,9 @@ function MatchStatsEditor({ navigation, route }) {
                             },
                           ]}
                         >
-                          <Text style={[Fonts.p4Bold, Fonts.neutral00]}>Clean sheet</Text>
+                          <Text style={[Fonts.p4Bold, Fonts.neutral00]}>
+                            {t('matchStatsEditor.cleanSheet', 'Clean sheet')}
+                          </Text>
                         </TouchableOpacity>
                       ) : null}
                     </View>
@@ -1544,9 +1787,11 @@ function MatchStatsEditor({ navigation, route }) {
                           },
                         ]}
                       >
-                        <Text style={[Fonts.p4Bold, Fonts.primary100]}>Quantités verrouillees</Text>
+                        <Text style={[Fonts.p4Bold, Fonts.primary100]}>
+                          {t('matchStatsEditor.quantitiesLocked', 'Quantités verrouillees')}
+                        </Text>
                         <Text style={[Fonts.p4, Fonts.neutral100]}>
-                          Ce joueur a déjà validé ses stats personnelles. Les chiffres restent proteges, mais tu peux toujours ajouter un retour qualitatif plus haut.
+                          {t('matchStatsEditor.quantitiesLockedHint', 'Ce joueur a déjà validé ses stats personnelles. Les chiffres restent proteges, mais tu peux toujours ajouter un retour qualitatif plus haut.')}
                         </Text>
                       </View>
                     ) : null}
@@ -1555,7 +1800,7 @@ function MatchStatsEditor({ navigation, route }) {
                       {renderCounterField({
                         containerStyle: { flex: 1 },
                         disabled: lineInputsDisabled,
-                        label: 'Minutes jouees',
+                        label: t('matchStatsEditor.minutesPlayed', 'Minutes jouees'),
                         onChangeText: (/** @type {string} */ value) => updateLineNumericValue(line.key, 'minutesPlayed', value),
                         onDecrement: () => adjustLineValue(line.key, 'minutesPlayed', -1),
                         onIncrement: () => adjustLineValue(line.key, 'minutesPlayed', 1),
@@ -1584,21 +1829,23 @@ function MatchStatsEditor({ navigation, route }) {
                 );
               }) : (
                 <View style={[ApplicationStyle.backgroundColor.primary900, { borderRadius: 20 }, SpacesAny.padding[20], SpacesAny.gap[8]]}>
-                  <Text style={[Fonts.p2Bold, Fonts.neutral00, Fonts.textCenter]}>Aucun joueur disponible pour ce rapport.</Text>
+                  <Text style={[Fonts.p2Bold, Fonts.neutral00, Fonts.textCenter]}>{t('matchStatsEditor.noPlayerForReport', 'Aucun joueur disponible pour ce rapport.')}</Text>
                   <Text style={[Fonts.p3, Fonts.neutral100, Fonts.textCenter]}>
-                    Publie d abord la composition d équipe ou vérifie le roster de l équipe pour alimenter cette liste.
+                    {t('matchStatsEditor.noPlayerForReportHint', 'Publie d abord la composition d équipe ou vérifie le roster de l équipe pour alimenter cette liste.')}
                   </Text>
                 </View>
               )}
             </View>
 
             <View style={[ApplicationStyle.backgroundColor.primary700, ApplicationStyle.borderRadius24, SpacesAny.padding[sectionPadding], SpacesAny.gap[sectionGap]]}>
-              <Text style={[Fonts.h4Bold, Fonts.neutral00]}>Actions</Text>
+              <Text style={[Fonts.h4Bold, Fonts.neutral00]}>
+                {t('matchStatsEditor.actions', 'Actions')}
+              </Text>
               <Button
                 disabled={isReadOnly || isReviewRequired || hasConsistencyIssues || saveDraftMutation.isPending || submitMutation.isPending}
                 isLoading={saveDraftMutation.isPending}
                 onPress={handleSaveDraft}
-                title="Sauvegarder le brouillon"
+                title={t('matchStatsEditor.saveTheDraft', 'Sauvegarder le brouillon')}
                 variant="Secondary"
               />
               <Button
