@@ -3,6 +3,7 @@
 import { useFocusEffect } from '@react-navigation/native';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
+import i18next from 'i18next';
 import {
   useCallback,
   useEffect,
@@ -26,6 +27,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import useAuth from '@/domains/auth/useAuth';
 import usePlaces from '@/domains/places/usePlaces';
 import { useAppContext } from '@/store/appContext';
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import GlassSurface from '@/components/atoms/glassSurface/GlassSurface';
@@ -619,26 +621,35 @@ const getActiveQueryTotalCount = (
 
 const getUnavailableMessage = (/** @type {string} */ scope) => {
   if (scope === 'clubs') {
-    return 'Impossible de mettre à jour les clubs pour le moment.';
+    return i18next.t(
+      'searchMapScreen.unavailable.clubs',
+      'Impossible de mettre à jour les clubs pour le moment.',
+    );
   }
 
   if (scope === 'reservations') {
-    return 'Impossible de mettre à jour les réservations pour le moment.';
+    return i18next.t(
+      'searchMapScreen.unavailable.reservations',
+      'Impossible de mettre à jour les réservations pour le moment.',
+    );
   }
 
-  return 'Impossible de mettre à jour les événements pour le moment.';
+  return i18next.t(
+    'searchMapScreen.unavailable.events',
+    'Impossible de mettre à jour les événements pour le moment.',
+  );
 };
 
 const getMapHeading = (/** @type {string} */ scope) => {
   if (scope === 'clubs') {
-    return 'Clubs';
+    return i18next.t('searchMapScreen.heading.clubs', 'Clubs');
   }
 
   if (scope === 'reservations') {
-    return 'Reservations';
+    return i18next.t('searchMapScreen.heading.reservations', 'Reservations');
   }
 
-  return 'Evenements';
+  return i18next.t('searchMapScreen.heading.events', 'Evenements');
 };
 
 const resolveScopedMapAddressSelection = (/** @type {string} */ scope, /** @type {SearchFilters} */ filters, /** @type {any} */ session) => {
@@ -669,7 +680,11 @@ const buildChips = (/** @type {string} */ scope, /** @type {SearchFilters} */ fi
   };
 
   if (scope === 'events') {
-    push(filters.q ? `Recherche : ${filters.q}` : '');
+    push(filters.q ? i18next.t(
+      'searchMapScreen.chips.query',
+      'Recherche : {{query}}',
+      { query: filters.q, ...SANS_ECHAPPEMENT },
+    ) : '');
     push(readLabel(filters.activity));
     push(readLabel(filters.club));
     push(humanize(filters.category));
@@ -681,20 +696,34 @@ const buildChips = (/** @type {string} */ scope, /** @type {SearchFilters} */ fi
     if (!isViewportMode) {
       push(filters.radius ? `${filters.radius} km` : '');
     }
-    push(filters.sessionStatus === 'open' ? 'Ouverts' : '');
-    push(formatDateChip(filters.startDateAfter, 'Dès le'));
-    push(formatDateChip(filters.startDateBefore, 'Jusqu’au'));
+    push(filters.sessionStatus === 'open' ? i18next.t(
+      'searchMapScreen.chips.open',
+      'Ouverts',
+    ) : '');
+    push(formatDateChip(filters.startDateAfter, i18next.t('searchMapScreen.chips.from', 'Dès le')));
+    push(formatDateChip(filters.startDateBefore, i18next.t(
+      'searchMapScreen.chips.until',
+      'Jusqu’au',
+    )));
   }
 
   if (scope === 'clubs') {
-    push(filters.name ? `Recherche : ${filters.name}` : '');
+    push(filters.name ? i18next.t(
+      'searchMapScreen.chips.query',
+      'Recherche : {{query}}',
+      { query: filters.name, ...SANS_ECHAPPEMENT },
+    ) : '');
     push(readLabel(filters.activity));
     push(filters.city?.label);
     push(filters.radius ? `${filters.radius} km` : '');
   }
 
   if (scope === 'reservations') {
-    push(filters.q ? `Recherche : ${filters.q}` : '');
+    push(filters.q ? i18next.t(
+      'searchMapScreen.chips.query',
+      'Recherche : {{query}}',
+      { query: filters.q, ...SANS_ECHAPPEMENT },
+    ) : '');
     push(filters.city?.label);
     push(filters.radius ? `${filters.radius} km` : '');
     push(readLabel(filters.activity));
@@ -703,12 +732,19 @@ const buildChips = (/** @type {string} */ scope, /** @type {SearchFilters} */ fi
     push(humanize(filters.level));
     push(
       filters.maxPricePerPerson || filters.maxPrice
-        ? `Budget max ${filters.maxPricePerPerson || filters.maxPrice}€`
+        ? i18next.t(
+          'searchMapScreen.chips.maxBudget',
+          'Budget max {{amount}}€',
+          { amount: filters.maxPricePerPerson || filters.maxPrice, ...SANS_ECHAPPEMENT },
+        )
         : '',
     );
     push(humanize(filters.reservationMode));
-    push(formatDateChip(filters.startDateAfter, 'Dès le'));
-    push(formatDateChip(filters.startDateBefore, 'Jusqu’au'));
+    push(formatDateChip(filters.startDateAfter, i18next.t('searchMapScreen.chips.from', 'Dès le')));
+    push(formatDateChip(filters.startDateBefore, i18next.t(
+      'searchMapScreen.chips.until',
+      'Jusqu’au',
+    )));
   }
 
   return [...new Set(chips.filter(Boolean))];
@@ -2373,7 +2409,7 @@ function SearchMapScreen({ navigation, route }) {
                     }]}
                   >
                     <Text style={[Fonts.p4Bold, Fonts.neutral00]}>
-                      Liste
+                      {t('searchMapScreen.actions.list', 'Liste')}
                     </Text>
                   </TouchableOpacity>
                 </View>
@@ -2429,7 +2465,7 @@ function SearchMapScreen({ navigation, route }) {
               >
                 <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[8]]}>
                   <Text style={[Fonts.p4Bold, Fonts.neutral00]}>
-                    Filtres
+                    {t('searchMapScreen.actions.filters', 'Filtres')}
                   </Text>
                   {hasActiveFilters ? (
                     <View style={styles.filterCountBadge}>
@@ -2500,7 +2536,10 @@ function SearchMapScreen({ navigation, route }) {
               style={[styles.statusPill, ApplicationStyle.shadow200]}
             >
               <Text style={[Fonts.p4, Fonts.neutral00]}>
-                Zoome ou recherchez une ville pour afficher les clubs.
+                {t(
+                  'searchMapScreen.hints.clubsZoomOrCity',
+                  'Zoome ou recherchez une ville pour afficher les clubs.',
+                )}
               </Text>
             </View>
           ) : null}
@@ -2511,7 +2550,10 @@ function SearchMapScreen({ navigation, route }) {
               style={[styles.statusPill, ApplicationStyle.shadow200]}
             >
               <Text style={[Fonts.p4, Fonts.neutral00]}>
-                Zoome pour afficher tous les clubs de cette zone.
+                {t(
+                  'searchMapScreen.hints.clubsZoom',
+                  'Zoome pour afficher tous les clubs de cette zone.',
+                )}
               </Text>
             </View>
           ) : null}
@@ -2522,7 +2564,10 @@ function SearchMapScreen({ navigation, route }) {
               style={[styles.statusPill, ApplicationStyle.shadow200]}
             >
               <Text style={[Fonts.p4, Fonts.neutral00]}>
-                Zoome ou recherchez une zone plus précise pour afficher les événements.
+                {t(
+                  'searchMapScreen.hints.eventsZoomOrArea',
+                  'Zoome ou recherchez une zone plus précise pour afficher les événements.',
+                )}
               </Text>
             </View>
           ) : null}
@@ -2533,7 +2578,10 @@ function SearchMapScreen({ navigation, route }) {
               style={[styles.statusPill, ApplicationStyle.shadow200]}
             >
               <Text style={[Fonts.p4, Fonts.neutral00]}>
-                Zoome pour afficher tous les événements de cette zone.
+                {t(
+                  'searchMapScreen.hints.eventsZoom',
+                  'Zoome pour afficher tous les événements de cette zone.',
+                )}
               </Text>
             </View>
           ) : null}
@@ -2547,7 +2595,7 @@ function SearchMapScreen({ navigation, route }) {
               ]}
             >
               <Text style={[Fonts.p4Bold, Fonts.neutral00]}>
-                Recherche indisponible
+                {t('searchMapScreen.unavailable.title', 'Recherche indisponible')}
               </Text>
               <Text style={[Fonts.p4, Fonts.neutral200, SpacesAny.marginTop[6]]}>
                 {activeError?.message || getUnavailableMessage(scope)}
