@@ -8805,6 +8805,25 @@ export default {
       primary: 'Voir le club',
       title: 'Invitation à rejoindre un club',
     },
+    coded: {
+      accept: 'Accepter',
+      continue: 'Continuer',
+      // eslint-disable-next-line max-len
+      errorBody: 'Impossible de répondre à cette invitation pour le moment. Réessaie dans un instant.',
+      errorTitle: 'Invitation',
+      expired: 'Cette invitation a expiré.',
+      intro: "Tu es invité·e à rejoindre l'équipe {{team}}.",
+      introFrom: "{{inviter}} t'invite à rejoindre l'équipe {{team}}.",
+      member: 'Tu fais déjà partie de cette équipe.',
+      refuse: 'Refuser',
+      request: 'Demander à rejoindre',
+      requested: 'Ta demande pour rejoindre cette équipe est déjà envoyée.',
+      requestHint: "Tu peux demander à rejoindre l'équipe : son staff validera.",
+      seeTeam: "Voir l'équipe",
+      signIn: "Connecte-toi ou crée ton compte : l'invitation t'attendra.",
+      teamWithClub: '{{team}} ({{club}})',
+      title: 'Rejoindre {{team}}',
+    },
     event: {
       body: "Tu as reçu une invitation pour un événement. Veux-tu l'ouvrir ?",
       primary: "Voir l'événement",
@@ -16566,6 +16585,93 @@ export default {
       unknownUser: 'Ce profil est introuvable. Il a peut-être été supprimé.',
     },
     thisPerson: 'Cette personne',
+  },
+  teamInviteService: {
+    errors: {
+      cancel: "Impossible d'annuler cette invitation pour le moment.",
+      claim: "Impossible d'ouvrir cette invitation pour le moment.",
+      link: "Impossible de préparer le lien d'invitation.",
+      phone: "Impossible d'enregistrer cette invitation pour le moment.",
+      preview: 'Impossible de lire cette invitation pour le moment.',
+      sent: 'Impossible de charger les invitations envoyées.',
+      suggestions: 'Impossible de charger les propositions.',
+    },
+  },
+  teamInviteShare: {
+    // eslint-disable-next-line max-len
+    message: "Tu es invité·e à rejoindre l'équipe {{team}} sur FoundClub. Ouvre ce lien pour voir l'invitation :",
+    // eslint-disable-next-line max-len
+    messageFrom: "{{inviter}} t'invite à rejoindre l'équipe {{team}} sur FoundClub. Ouvre ce lien pour voir l'invitation :",
+    teamWithClub: '{{team}} ({{club}})',
+  },
+  teamInviteSheet: {
+    accepted: {
+      body: "{{name}} fait maintenant partie de l'équipe.",
+      title: 'Demande acceptée',
+    },
+    acceptError: {
+      body: "La demande n'a pas pu être acceptée. Réessaie dans un instant.",
+      title: "Impossible d'accepter",
+    },
+    acceptRequest: 'Accepter',
+    cancelError: {
+      body: "Cette invitation n'est peut-être plus en attente.",
+      title: "Impossible d'annuler",
+    },
+    empty: {
+      allInTeam: "Tout ton club est déjà dans l'équipe.",
+      // eslint-disable-next-line max-len
+      allInTeamExplanation: "Pour faire venir quelqu'un de nouveau, partage-lui un lien d'invitation juste au-dessus.",
+    },
+    // eslint-disable-next-line max-len
+    intro: "Invite une personne de la liste, ou envoie un lien : la personne verra qui l'invite et dans quelle équipe, et c'est elle qui accepte.",
+    phone: {
+      alreadyMember: {
+        body: "Cette personne fait déjà partie de l'équipe.",
+        title: "Déjà dans l'équipe",
+      },
+      errors: {
+        // eslint-disable-next-line max-len
+        dailyLimit: 'Tu as atteint la limite de 20 invitations par numéro sur 24 heures. Réessaie demain.',
+        firstname: 'Indique le prénom de la personne.',
+        phone: "Ce numéro de téléphone n'est pas valide.",
+      },
+      firstnamePlaceholder: 'Prénom',
+      numberPlaceholder: 'Numéro de téléphone',
+      open: 'Par numéro',
+      // eslint-disable-next-line max-len
+      privacy: "Un SMS part de ton téléphone avec le lien. Quand la personne crée son compte avec ce numéro, l'invitation l'attend. Le prénom et le numéro sont effacés à sa réponse, ou au bout de 30 jours.",
+      send: "Envoyer l'invitation",
+      title: "Inviter quelqu'un qui n'a pas l'app",
+    },
+    qr: {
+      caption: "Fais scanner ce code : la personne verra qui l'invite.",
+      hide: 'Masquer le QR code',
+      show: 'Montrer un QR code',
+    },
+    reason: {
+      applied: "A candidaté à une annonce de l'équipe",
+      appliedTo: 'A candidaté : {{label}}',
+      club: 'Membre de ton club',
+      clubStaff: 'Encadrant de ton club',
+      otherTeam: 'Joue en {{label}}',
+      otherTeamUnnamed: 'Joue dans une autre équipe du club',
+      requested: "A demandé à rejoindre l'équipe",
+      requestedOn: "A demandé à rejoindre l'équipe le {{date}}",
+    },
+    sent: {
+      accepted: 'Acceptée',
+      cancel: 'Annuler',
+      cancelled: 'Annulée',
+      expired: 'Expirée',
+      nameWithHint: '{{name}} · •• {{hint}}',
+      pending: 'En attente',
+      pendingUntil: 'En attente · expire le {{date}}',
+      refused: 'Refusée',
+      resend: 'Renvoyer',
+      title: 'Invitations envoyées',
+      unnamed: 'Invitation par numéro',
+    },
   },
   teamListContent: {
     createSquad: 'Créer une squad',

@@ -35,6 +35,27 @@ const mockNavigation = {
 };
 
 jest.mock('@react-navigation/native', () => ({ useFocusEffect: () => {} }));
+// Recolte INVIT2 (15/09) : la fiche d equipe charge desormais la feuille d invitation
+// (views/team/invite/TeamInviteSheet.js), son QR et ses services -- memes doublures que
+// TeamDetails.P10invitation.test.js, ecrites en entier.
+jest.mock('@/services/teamInvite/teamInviteQueries', () => ({
+  useSentTeamInvites: () => ({ data: [], refetch: jest.fn() }),
+  useTeamInviteSuggestions: () => ({ data: undefined, refetch: jest.fn() }),
+}));
+jest.mock('@/services/teamInvite/teamInviteService', () => ({
+  cancelTeamInvite: jest.fn(),
+  createTeamInviteLink: jest.fn(),
+  createTeamPhoneInvite: jest.fn(),
+}));
+jest.mock('react-native-qrcode-svg', () => function QRCodeMock() {
+  return null;
+});
+jest.mock('@/services/teamInvite/teamInviteShare', () => ({
+  buildTeamInviteMessage: () => '',
+  buildTeamInviteUrl: () => '',
+  openInviteSms: jest.fn(),
+  shareExistingTeamInvite: jest.fn(),
+}));
 
 jest.mock('@tanstack/react-query', () => ({
   useMutation: () => ({ isPending: false, mutate: jest.fn() }),
