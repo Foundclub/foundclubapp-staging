@@ -1,6 +1,7 @@
 // @ts-nocheck
 /* eslint-disable jsdoc/require-description, jsdoc/require-param-type, jsdoc/require-returns, max-len */
 import { useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Text,
   TouchableOpacity,
@@ -38,6 +39,7 @@ function AdminClubWizardActivities({ navigation }) {
     Fonts,
     Spaces,
   } = useTheme();
+  const { t } = useTranslation();
   const { setField, state } = useAdminClubWizard();
   const handleExitWizard = useAdminClubWizardExit(navigation);
   const activitiesQuery = useGetActivities();
@@ -68,31 +70,46 @@ function AdminClubWizardActivities({ navigation }) {
 
   return (
     <WizardStepLayout
-      nextLabel="Suivant"
+      nextLabel={t('adminClubWizardActivities.next', 'Suivant')}
       onBack={() => navigation.goBack()}
       onClose={handleExitWizard}
       onNext={() => navigation.navigate(RouteNames.AdminClubWizardBusiness)}
       stepCount={ADMIN_CLUB_WIZARD_TOTAL_STEPS}
       stepIndex={4}
-      subtitle="Comme pour le tunnel équipe, on choisit d'abord le profil sportif. Sélectionne une ou plusieurs activités pour rendre le club exploitable tout de suite."
-      title="Activités sportives"
+      subtitle={t(
+        'adminClubWizardActivities.subtitle',
+        "Comme pour le tunnel équipe, on choisit d'abord le profil sportif. Sélectionne une ou plusieurs activités pour rendre le club exploitable tout de suite.",
+      )}
+      title={t('adminClubWizardActivities.title', 'Activités sportives')}
     >
       <View style={[Spaces.gap[18]]}>
         <Input
-          label="Rechercher une activité"
+          label={t('adminClubWizardActivities.searchLabel', 'Rechercher une activité')}
           onChangeText={(value) => setField('activitiesSearch', value)}
-          placeholder="Football, basket, handball..."
+          placeholder={t(
+            'adminClubWizardActivities.searchPlaceholder',
+            'Football, basket, handball...',
+          )}
           value={searchValue}
         />
 
         <Text style={[Fonts.p2, Fonts.neutral200]}>
           {selectedIds.size > 0
-            ? `${selectedIds.size} activité(s) sélectionnée(s)`
-            : 'Aucune activité sélectionnée pour le moment. Tu peux continuer et compléter plus tard.'}
+            ? t(
+              'adminClubWizardActivities.selectedCount',
+              '{{count}} activité(s) sélectionnée(s)',
+              { count: selectedIds.size },
+            )
+            : t(
+              'adminClubWizardActivities.noneSelected',
+              'Aucune activité sélectionnée pour le moment. Tu peux continuer et compléter plus tard.',
+            )}
         </Text>
 
         {activitiesQuery.isLoading ? (
-          <Text style={[Fonts.p2, Fonts.neutral200]}>Chargement des activités...</Text>
+          <Text style={[Fonts.p2, Fonts.neutral200]}>
+            {t('adminClubWizardActivities.loading', 'Chargement des activités...')}
+          </Text>
         ) : null}
 
         {activitiesQuery.error ? (
@@ -108,7 +125,7 @@ function AdminClubWizardActivities({ navigation }) {
             ]}
           >
             <Text style={[Fonts.p2Bold, { color: Colors.error500 }]}>
-              Impossible de charger les activités.
+              {t('adminClubWizardActivities.loadError', 'Impossible de charger les activités.')}
             </Text>
             <Text style={[Fonts.p2, Fonts.neutral200]}>
               {getErrorMessage(activitiesQuery.error, 'generic')}
@@ -116,7 +133,7 @@ function AdminClubWizardActivities({ navigation }) {
             <Button
               onPress={() => activitiesQuery.refetch()}
               size="sm"
-              title="Reessayer"
+              title={t('adminClubWizardActivities.retry', 'Reessayer')}
               variant="Secondary"
             />
           </View>

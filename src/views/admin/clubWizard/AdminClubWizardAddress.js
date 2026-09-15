@@ -1,6 +1,7 @@
 // @ts-nocheck
 /* eslint-disable jsdoc/require-description, jsdoc/require-param-type, jsdoc/require-returns, max-len */
 import { useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Text, View } from 'react-native';
 
 import useTheme from '@/theme/themeContext';
@@ -30,6 +31,7 @@ function AdminClubWizardAddress({ navigation }) {
     Fonts,
     Spaces,
   } = useTheme();
+  const { t } = useTranslation();
   const { setField, state } = useAdminClubWizard();
   const handleExitWizard = useAdminClubWizardExit(navigation);
 
@@ -43,27 +45,33 @@ function AdminClubWizardAddress({ navigation }) {
 
   return (
     <WizardStepLayout
-      nextLabel="Suivant"
+      nextLabel={t('adminClubWizardAddress.next', 'Suivant')}
       onBack={() => navigation.goBack()}
       onClose={handleExitWizard}
       onNext={() => navigation.navigate(RouteNames.AdminClubWizardActivities)}
       stepCount={ADMIN_CLUB_WIZARD_TOTAL_STEPS}
       stepIndex={3}
-      subtitle="Positionne le club comme dans les autres tunnels FoundClub. Une recherche d'adresse remplit automatiquement la ville, le code postal et les coordonnees."
-      title="Adresse du club"
+      subtitle={t(
+        'adminClubWizardAddress.subtitle',
+        "Positionne le club comme dans les autres tunnels FoundClub. Une recherche d'adresse remplit automatiquement la ville, le code postal et les coordonnees.",
+      )}
+      title={t('adminClubWizardAddress.title', 'Adresse du club')}
     >
       <View style={[Spaces.gap[18]]}>
         <AutocompleteAddressInput
           address={state.addressOption || undefined}
-          label="Adresse principale"
-          placeholder="Rechercher une adresse"
+          label={t('adminClubWizardAddress.addressLabel', 'Adresse principale')}
+          placeholder={t('adminClubWizardAddress.addressPlaceholder', 'Rechercher une adresse')}
           setAddress={handleSelectAddress}
         />
 
         <Input
-          label="Precision / complement"
+          label={t('adminClubWizardAddress.detailsLabel', 'Precision / complement')}
           onChangeText={(value) => setField('addressDetails', value)}
-          placeholder="Ex: entrée stade, batiment, gymnase..."
+          placeholder={t(
+            'adminClubWizardAddress.detailsPlaceholder',
+            'Ex: entrée stade, batiment, gymnase...',
+          )}
           value={state.addressDetails}
         />
 
@@ -79,10 +87,15 @@ function AdminClubWizardAddress({ navigation }) {
               },
             ]}
           >
-            <Text style={[Fonts.p2Bold, Fonts.primary500]}>Adresse sélectionnée</Text>
+            <Text style={[Fonts.p2Bold, Fonts.primary500]}>
+              {t('adminClubWizardAddress.selected', 'Adresse sélectionnée')}
+            </Text>
             <Text style={[Fonts.p2, Fonts.neutral00]}>{state.addressLabel}</Text>
             <Text style={[Fonts.p3, Fonts.neutral200]}>
-              {[state.city, state.postcode].filter(Boolean).join(' - ') || 'Ville non remontee'}
+              {[state.city, state.postcode].filter(Boolean).join(' - ') || t(
+                'adminClubWizardAddress.noCity',
+                'Ville non remontee',
+              )}
             </Text>
             {(state.latitude && state.longitude) ? (
               <Text style={[Fonts.p3, Fonts.neutral300]}>
@@ -92,13 +105,16 @@ function AdminClubWizardAddress({ navigation }) {
             <Button
               onPress={() => handleSelectAddress(undefined)}
               size="sm"
-              title="Retirer cette adresse"
+              title={t('adminClubWizardAddress.remove', 'Retirer cette adresse')}
               variant="Secondary"
             />
           </View>
         ) : (
           <Text style={[Fonts.p2, Fonts.neutral200]}>
-            Cette étape reste facultative, mais une adresse nette aide beaucoup pour les recherches, la cartographie et les futures équipes du club.
+            {t(
+              'adminClubWizardAddress.optionalHint',
+              'Cette étape reste facultative, mais une adresse nette aide beaucoup pour les recherches, la cartographie et les futures équipes du club.',
+            )}
           </Text>
         )}
       </View>

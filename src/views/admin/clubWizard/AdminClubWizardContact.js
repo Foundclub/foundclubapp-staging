@@ -1,5 +1,6 @@
 // @ts-nocheck
 /* eslint-disable jsdoc/require-description, jsdoc/require-param-type, jsdoc/require-returns, max-len */
+import { useTranslation } from 'react-i18next';
 import { Text, View } from 'react-native';
 
 import useTheme from '@/theme/themeContext';
@@ -23,6 +24,7 @@ import useAdminClubWizardExit from './useAdminClubWizardExit';
  */
 function AdminClubWizardContact({ navigation }) {
   const { Fonts, Spaces } = useTheme();
+  const { t } = useTranslation();
   const { setField, state } = useAdminClubWizard();
   const handleExitWizard = useAdminClubWizardExit(navigation);
   const hasInvalidEmail = !isValidOptionalEmail(state.email);
@@ -30,20 +32,26 @@ function AdminClubWizardContact({ navigation }) {
   return (
     <WizardStepLayout
       isNextDisabled={hasInvalidEmail}
-      nextLabel="Suivant"
+      nextLabel={t('adminClubWizardContact.next', 'Suivant')}
       onBack={() => navigation.goBack()}
       onClose={handleExitWizard}
       onNext={() => navigation.navigate(RouteNames.AdminClubWizardAddress)}
       stepCount={ADMIN_CLUB_WIZARD_TOTAL_STEPS}
       stepIndex={2}
-      subtitle="Ajoute un email et un numéro de téléphone pour que la fiche club soit exploitable des la création. Ces champs restent optionnels."
-      title="Contact principal"
+      subtitle={t(
+        'adminClubWizardContact.subtitle',
+        'Ajoute un email et un numéro de téléphone pour que la fiche club soit exploitable des la création. Ces champs restent optionnels.',
+      )}
+      title={t('adminClubWizardContact.title', 'Contact principal')}
     >
       <View style={[Spaces.gap[18]]}>
         <Input
           autoCapitalize="none"
           autoComplete="email"
-          error={hasInvalidEmail ? 'Renseigne un email valide ou laisse le champ vide.' : undefined}
+          error={hasInvalidEmail ? t(
+            'adminClubWizardContact.emailError',
+            'Renseigne un email valide ou laisse le champ vide.',
+          ) : undefined}
           inputMode="email"
           keyboardType="email-address"
           label="Email"
@@ -54,13 +62,16 @@ function AdminClubWizardContact({ navigation }) {
         <Input
           inputMode="tel"
           keyboardType="phone-pad"
-          label="Telephone"
+          label={t('adminClubWizardContact.phoneLabel', 'Telephone')}
           onChangeText={(value) => setField('phoneNumber', value)}
           placeholder="06 00 00 00 00"
           value={state.phoneNumber}
         />
         <Text style={[Fonts.p2, Fonts.neutral200]}>
-          Tu pourras toujours revenir dans la fiche club pour compléter ou corriger ces informations.
+          {t(
+            'adminClubWizardContact.hint',
+            'Tu pourras toujours revenir dans la fiche club pour compléter ou corriger ces informations.',
+          )}
         </Text>
       </View>
     </WizardStepLayout>

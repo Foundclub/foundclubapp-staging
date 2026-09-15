@@ -1,6 +1,7 @@
 // @ts-nocheck
 /* eslint-disable jsdoc/require-description, jsdoc/require-param-type, jsdoc/require-returns, max-len */
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Alert,
   Text,
@@ -43,6 +44,7 @@ function AdminClubWizardMultisport({ navigation }) {
     Fonts,
     Spaces,
   } = useTheme();
+  const { t } = useTranslation();
   const { setField, state } = useAdminClubWizard();
   const handleExitWizard = useAdminClubWizardExit(navigation);
   const [query, setQuery] = useState('');
@@ -61,32 +63,38 @@ function AdminClubWizardMultisport({ navigation }) {
       });
       setResults(Array.isArray(response?.data) ? response.data : []);
     } catch (error) {
-      Alert.alert('Recherche impossible', getErrorMessage(error, 'generic'));
+      Alert.alert(t(
+        'adminClubWizardMultisport.searchError',
+        'Recherche impossible',
+      ), getErrorMessage(error, 'generic'));
     }
   };
 
   return (
     <WizardStepLayout
-      nextLabel="Suivant"
+      nextLabel={t('adminClubWizardMultisport.next', 'Suivant')}
       onBack={() => navigation.goBack()}
       onClose={handleExitWizard}
       onNext={() => navigation.navigate(RouteNames.AdminClubWizardSponsors)}
       stepCount={ADMIN_CLUB_WIZARD_TOTAL_STEPS}
       stepIndex={6}
-      subtitle="Si le club appartient a une structure multisport, rattache-le ici. Sinon laisse simplement cette étape vide."
-      title="Rattachement multisport"
+      subtitle={t(
+        'adminClubWizardMultisport.subtitle',
+        'Si le club appartient a une structure multisport, rattache-le ici. Sinon laisse simplement cette étape vide.',
+      )}
+      title={t('adminClubWizardMultisport.title', 'Rattachement multisport')}
     >
       <View style={[Spaces.gap[18]]}>
         <Input
-          label="Rechercher un club multisport"
+          label={t('adminClubWizardMultisport.searchLabel', 'Rechercher un club multisport')}
           onChangeText={setQuery}
-          placeholder="Nom du multisport"
+          placeholder={t('adminClubWizardMultisport.searchPlaceholder', 'Nom du multisport')}
           value={query}
         />
         <Button
           isLoading={relationSearchMutation.isPending}
           onPress={handleSearch}
-          title="Rechercher"
+          title={t('adminClubWizardMultisport.search', 'Rechercher')}
           variant="Secondary"
         />
 
@@ -102,20 +110,22 @@ function AdminClubWizardMultisport({ navigation }) {
               },
             ]}
           >
-            <Text style={[Fonts.p2Bold, Fonts.primary500]}>Parent sélectionne</Text>
+            <Text style={[Fonts.p2Bold, Fonts.primary500]}>
+              {t('adminClubWizardMultisport.selected', 'Parent sélectionne')}
+            </Text>
             <Text style={[Fonts.p2, Fonts.neutral00]}>
               {getClubRelationLabel(state.parentMultisport)}
             </Text>
             <Button
               onPress={() => setField('parentMultisport', null)}
               size="sm"
-              title="Retirer le rattachement"
+              title={t('adminClubWizardMultisport.remove', 'Retirer le rattachement')}
               variant="Secondary"
             />
           </View>
         ) : (
           <Text style={[Fonts.p2, Fonts.neutral200]}>
-            Aucun parent multisport sélectionne.
+            {t('adminClubWizardMultisport.none', 'Aucun parent multisport sélectionne.')}
           </Text>
         )}
 

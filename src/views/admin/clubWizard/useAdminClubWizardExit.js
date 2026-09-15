@@ -1,5 +1,6 @@
 // @ts-nocheck
 /* eslint-disable jsdoc/require-description, jsdoc/require-param-type, jsdoc/require-returns, max-len */
+import i18next from 'i18next';
 import { useCallback } from 'react';
 import { Alert } from 'react-native';
 
@@ -33,14 +34,17 @@ function useAdminClubWizardExit(navigation) {
     }
 
     Alert.alert(
-      'Quitter la création ?',
-      'Le tunnel de création du club sera ferme et les informations non sauvegardees seront perdues.',
+      i18next.t('useAdminClubWizardExit.title', 'Quitter la création ?'),
+      i18next.t(
+        'useAdminClubWizardExit.body',
+        'Le tunnel de création du club sera ferme et les informations non sauvegardees seront perdues.',
+      ),
       [
-        { style: 'cancel', text: 'Continuer' },
+        { style: 'cancel', text: i18next.t('useAdminClubWizardExit.continue', 'Continuer') },
         {
           onPress: leaveWizard,
           style: 'destructive',
-          text: 'Quitter',
+          text: i18next.t('useAdminClubWizardExit.leave', 'Quitter'),
         },
       ],
     );

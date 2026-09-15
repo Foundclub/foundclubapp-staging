@@ -1,6 +1,7 @@
 // @ts-nocheck
 /* eslint-disable jsdoc/require-description, jsdoc/require-param-type, jsdoc/require-returns, max-len */
 import { useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Alert,
   Image,
@@ -50,6 +51,7 @@ function AdminClubWizardRecap({ navigation }) {
     Fonts,
     Spaces,
   } = useTheme();
+  const { t } = useTranslation();
   const {
     reset,
     setField,
@@ -81,50 +83,80 @@ function AdminClubWizardRecap({ navigation }) {
     {
       action: RouteNames.AdminClubWizardIdentity,
       lines: [
-        normalizeText(state.name) || 'Nom manquant',
-        state.logo?.url ? 'Logo importe' : 'Pas de logo',
+        normalizeText(state.name) || t('adminClubWizardRecap.sections.missingName', 'Nom manquant'),
+        state.logo?.url ? t(
+          'adminClubWizardRecap.sections.logoImported',
+          'Logo importe',
+        ) : t('adminClubWizardRecap.sections.noLogo', 'Pas de logo'),
       ],
-      title: 'Identite',
+      title: t('adminClubWizardRecap.sections.identity', 'Identite'),
     },
     {
       action: RouteNames.AdminClubWizardContact,
       lines: [
-        normalizeText(state.email) || 'Email non renseigne',
-        normalizeText(state.phoneNumber) || 'Téléphone non renseigne',
+        normalizeText(state.email) || t(
+          'adminClubWizardRecap.sections.noEmail',
+          'Email non renseigne',
+        ),
+        normalizeText(state.phoneNumber) || t(
+          'adminClubWizardRecap.sections.noPhone',
+          'Téléphone non renseigne',
+        ),
       ],
       title: 'Contact',
     },
     {
       action: RouteNames.AdminClubWizardAddress,
       lines: [
-        normalizeText(state.addressLabel) || 'Adresse non renseignée',
-        [normalizeText(state.city), normalizeText(state.postcode)].filter(Boolean).join(' - ') || 'Ville non renseignée',
+        normalizeText(state.addressLabel) || t(
+          'adminClubWizardRecap.sections.noAddress',
+          'Adresse non renseignée',
+        ),
+        [normalizeText(state.city), normalizeText(state.postcode)].filter(Boolean).join(' - ') || t(
+          'adminClubWizardRecap.sections.noCity',
+          'Ville non renseignée',
+        ),
       ],
-      title: 'Adresse',
+      title: t('adminClubWizardRecap.sections.address', 'Adresse'),
     },
     {
       action: RouteNames.AdminClubWizardActivities,
       lines: selectedActivities.length > 0
         ? selectedActivities
-        : ['Aucune activité sélectionnée'],
-      title: 'Activites',
+        : [t('adminClubWizardRecap.sections.noActivity', 'Aucune activité sélectionnée')],
+      title: t('adminClubWizardRecap.sections.activities', 'Activites'),
     },
     {
       action: RouteNames.AdminClubWizardBusiness,
       lines: [
-        state.clubPartner ? 'Club partenaire' : 'Club standard',
-        state.clubVerified ? 'Club certifié' : 'Club non certifié',
-        state.isReservationProvider ? 'Réservation active' : 'Pas réservation',
-        'Abonnements et capacité Équipe geres depuis les opérations abonnements',
+        state.clubPartner ? t('adminClubWizardRecap.sections.partner', 'Club partenaire') : t(
+          'adminClubWizardRecap.sections.standard',
+          'Club standard',
+        ),
+        state.clubVerified ? t('adminClubWizardRecap.sections.verified', 'Club certifié') : t(
+          'adminClubWizardRecap.sections.notVerified',
+          'Club non certifié',
+        ),
+        state.isReservationProvider ? t(
+          'adminClubWizardRecap.sections.reservationOn',
+          'Réservation active',
+        ) : t(
+          'adminClubWizardRecap.sections.reservationOff',
+          'Pas réservation',
+        ),
+        t(
+          'adminClubWizardRecap.sections.subscriptionsNote',
+          'Abonnements et capacité Équipe geres depuis les opérations abonnements',
+        ),
       ],
-      title: 'Statut',
+      title: t('adminClubWizardRecap.sections.status', 'Statut'),
     },
     {
       action: RouteNames.AdminClubWizardMultisport,
       lines: [
         state.parentMultisport
           ? getClubRelationLabel(state.parentMultisport)
-          : 'Aucun parent multisport',
+          : t('adminClubWizardRecap.sections.noMultisport', 'Aucun parent multisport'),
       ],
       title: 'Multisport',
     },
@@ -132,10 +164,10 @@ function AdminClubWizardRecap({ navigation }) {
       action: RouteNames.AdminClubWizardSponsors,
       lines: sanitizedSponsors.length > 0
         ? sanitizedSponsors.map((item) => `${item.title}${item.link ? ` - ${item.link}` : ''}`)
-        : ['Aucun sponsor'],
+        : [t('adminClubWizardRecap.sections.noSponsor', 'Aucun sponsor')],
       title: 'Sponsors',
     },
-  ]), [sanitizedSponsors, selectedActivities, state]);
+  ]), [sanitizedSponsors, selectedActivities, state, t]);
 
   const handleSubmit = async () => {
     if (!isReady) return;
@@ -167,7 +199,10 @@ function AdminClubWizardRecap({ navigation }) {
       }
       navigation.reset({ index: 0, routes: [{ name: RouteNames.AdminClubList }] });
     } catch (error) {
-      Alert.alert('Création impossible', getErrorMessage(error, 'generic'));
+      Alert.alert(t(
+        'adminClubWizardRecap.createError',
+        'Création impossible',
+      ), getErrorMessage(error, 'generic'));
     }
   };
 
@@ -175,14 +210,17 @@ function AdminClubWizardRecap({ navigation }) {
     <WizardStepLayout
       isNextDisabled={!isReady}
       isNextLoading={createMutation.isPending}
-      nextLabel="Créer le club"
+      nextLabel={t('adminClubWizardRecap.create', 'Créer le club')}
       onBack={() => navigation.goBack()}
       onClose={handleExitWizard}
       onNext={handleSubmit}
       stepCount={ADMIN_CLUB_WIZARD_TOTAL_STEPS}
       stepIndex={8}
-      subtitle="Tu retrouves ici tout le tunnel avant enregistrement. Le club pourra toujours être edite après création, mais la base sera propre des le depart."
-      title="Recapitulatif"
+      subtitle={t(
+        'adminClubWizardRecap.subtitle',
+        'Tu retrouves ici tout le tunnel avant enregistrement. Le club pourra toujours être edite après création, mais la base sera propre des le depart.',
+      )}
+      title={t('adminClubWizardRecap.title', 'Recapitulatif')}
     >
       <View style={[Spaces.gap[18]]}>
         <View
@@ -226,10 +264,16 @@ function AdminClubWizardRecap({ navigation }) {
             </View>
             <View style={{ flex: 1 }}>
               <Text style={[Fonts.h4Bold, Fonts.neutral00]}>
-                {normalizeText(state.name) || 'Club sans nom'}
+                {normalizeText(state.name) || t(
+                  'adminClubWizardRecap.unnamedClub',
+                  'Club sans nom',
+                )}
               </Text>
               <Text style={[Fonts.p3, Fonts.neutral200, Spaces.marginTop[4]]}>
-                {isReady ? 'Prêt à créer' : 'Des informations restent à compléter'}
+                {isReady ? t('adminClubWizardRecap.ready', 'Prêt à créer') : t(
+                  'adminClubWizardRecap.incomplete',
+                  'Des informations restent à compléter',
+                )}
               </Text>
             </View>
           </View>
@@ -251,7 +295,9 @@ function AdminClubWizardRecap({ navigation }) {
             <View style={[Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween, Spaces.gap[12]]}>
               <Text style={[Fonts.p2Bold, Fonts.primary500]}>{section.title}</Text>
               <TouchableOpacity onPress={() => navigation.navigate(section.action)}>
-                <Text style={[Fonts.p3Bold, Fonts.primary500]}>Modifier</Text>
+                <Text style={[Fonts.p3Bold, Fonts.primary500]}>
+                  {t('adminClubWizardRecap.edit', 'Modifier')}
+                </Text>
               </TouchableOpacity>
             </View>
             {section.lines.map((line) => (
@@ -263,11 +309,14 @@ function AdminClubWizardRecap({ navigation }) {
         ))}
 
         <Input
-          label="Raison d'audit"
+          label={t('adminClubWizardRecap.auditReason.label', "Raison d'audit")}
           multiline
           numberOfLines={4}
           onChangeText={(value) => setField('saveReason', value)}
-          placeholder="Ex: Création initiale dans le dashboard admin"
+          placeholder={t(
+            'adminClubWizardRecap.auditReason.placeholder',
+            'Ex: Création initiale dans le dashboard admin',
+          )}
           style={{ minHeight: 100, textAlignVertical: 'top' }}
           value={state.saveReason}
         />
