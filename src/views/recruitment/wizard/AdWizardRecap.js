@@ -1,6 +1,8 @@
 import { CommonActions } from '@react-navigation/native';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import i18next from 'i18next';
 import { useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Text,
   TouchableOpacity,
@@ -8,6 +10,7 @@ import {
 } from 'react-native';
 
 import { extractSubscriptionDecisionFromError } from '@/domains/subscription/subscriptionDecision';
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import SubscriptionPaywallSheet from '@/components/molecules/subscriptionPaywallSheet/SubscriptionPaywallSheet';
@@ -98,6 +101,7 @@ function RecapSection({
   onEdit,
   title,
 }) {
+  const { t } = useTranslation();
   const {
     Alignments,
     ApplicationStyle,
@@ -132,7 +136,9 @@ function RecapSection({
         </View>
         {onEdit ? (
           <TouchableOpacity onPress={onEdit}>
-            <Text style={[Fonts.p3Bold, Fonts.primary500]}>Modifier</Text>
+            <Text style={[Fonts.p3Bold, Fonts.primary500]}>
+              {t('adWizardRecap.section.edit', 'Modifier')}
+            </Text>
           </TouchableOpacity>
         ) : null}
       </View>
@@ -147,6 +153,7 @@ function RecapSection({
  * @returns {import('react').ReactElement}
  */
 function AdWizardRecap({ navigation }) {
+  const { t } = useTranslation();
   const {
     Alignments,
     ApplicationStyle,
@@ -178,76 +185,128 @@ function AdWizardRecap({ navigation }) {
     : getShortAddress(state.team?.club?.address || state.team?.club?.addressDetails);
   const selectedFacilityName = state.address?.facilityName || state.facility?.name || '';
   const shortAddress = state.address ? getShortAddress(state.address) : '';
-  const overviewLocationLabel = selectedFacilityName || shortAddress || displayAddress || 'À compléter';
+  const overviewLocationLabel = selectedFacilityName || shortAddress || displayAddress || t(
+    'adWizardRecap.toComplete',
+    'À compléter',
+  );
 
   const missingRequiredItems = useMemo(() => {
     const items = [];
 
-    if (!state.team) items.push('une équipe');
-    if (!displayAddress) items.push('un lieu');
-    if (!state.section) items.push('une section');
-    if (!state.category) items.push('une catégorie');
-    if (!state.minLevel) items.push('un niveau minimum');
+    if (!state.team) items.push(i18next.t('adWizardRecap.missing.team', 'une équipe'));
+    if (!displayAddress) items.push(i18next.t('adWizardRecap.missing.location', 'un lieu'));
+    if (!state.section) items.push(i18next.t('adWizardRecap.missing.section', 'une section'));
+    if (!state.category) items.push(i18next.t('adWizardRecap.missing.category', 'une catégorie'));
+    if (!state.minLevel) items.push(i18next.t(
+      'adWizardRecap.missing.minLevel',
+      'un niveau minimum',
+    ));
     if (isCoachAd) {
-      if (!isAdWizardCoachProfileComplete(state)) items.push('un profil entraîneur complet');
+      if (!isAdWizardCoachProfileComplete(state)) items.push(i18next.t(
+        'adWizardRecap.missing.coachProfile',
+        'un profil entraîneur complet',
+      ));
     } else if (!state.positions?.length) {
-      items.push('au moins un poste');
+      items.push(i18next.t('adWizardRecap.missing.position', 'au moins un poste'));
     }
 
     return items;
   }, [displayAddress, isCoachAd, state]);
 
   const isReadyToSubmit = missingRequiredItems.length === 0;
-  const sportName = state.sport?.name || state.team?.activities?.[0]?.name || 'Non défini';
+  const sportName = state.sport?.name || state.team?.activities?.[0]?.name || t(
+    'adWizardRecap.sportUndefined',
+    'Non défini',
+  );
   const profileLabel = [
     state.section?.name,
     state.category?.name,
     state.minLevel?.name,
   ].filter(Boolean).join(' · ');
   const coachRoleLabel = state.coachRole === 'other'
-    ? (state.coachRoleOther || 'À preciser')
-    : (state.coachRole || 'À completer');
+    ? (state.coachRoleOther || t('adWizardRecap.coachRole.otherMissing', 'À preciser'))
+    : (state.coachRole || t('adWizardRecap.coachRole.missing', 'À completer'));
   const playerPositionsLabel = state.positions.length > 0
-    ? `${state.positions.length} poste${state.positions.length > 1 ? 's' : ''} · ${totalPlayers} joueur${totalPlayers > 1 ? 's' : ''}`
-    : 'À compléter';
-  const coachPositionsLabel = `${totalCoachOpenings} role${totalCoachOpenings > 1 ? 's' : ''} · ${coachRoleLabel}`;
+    ? `${t('adWizardRecap.counts.positions', {
+      count: state.positions.length,
+      defaultValue_one: '{{count}} poste',
+      defaultValue_other: '{{count}} postes',
+    })} · ${t('adWizardRecap.counts.players', {
+      count: totalPlayers,
+      defaultValue_one: '{{count}} joueur',
+      defaultValue_other: '{{count}} joueurs',
+    })}`
+    : t('adWizardRecap.toComplete', 'À compléter');
+  const coachPositionsLabel = `${t('adWizardRecap.counts.roles', {
+    count: totalCoachOpenings,
+    defaultValue_one: '{{count}} role',
+    defaultValue_other: '{{count}} roles',
+  })} · ${coachRoleLabel}`;
   const positionsLabel = isCoachAd ? coachPositionsLabel : playerPositionsLabel;
-  const playerAdTypeLabel = state.event ? 'Annonce liée à une détection' : 'Annonce saisonnière';
-  const resolvedAdTypeLabel = isCoachAd ? 'Annonce entraîneur' : playerAdTypeLabel;
-  const needsSectionTitle = isCoachAd ? 'Rôle recherche' : 'Postes recherchés';
+  const playerAdTypeLabel = state.event ? t(
+    'adWizardRecap.adType.detection',
+    'Annonce liée à une détection',
+  ) : t('adWizardRecap.adType.season', 'Annonce saisonnière');
+  const resolvedAdTypeLabel = isCoachAd ? t(
+    'adWizardRecap.adType.coach',
+    'Annonce entraîneur',
+  ) : playerAdTypeLabel;
+  const needsSectionTitle = isCoachAd ? t(
+    'adWizardRecap.needs.titleCoach',
+    'Rôle recherche',
+  ) : t('adWizardRecap.needs.title', 'Postes recherchés');
   const needsEditRoute = isCoachAd ? RouteNames.AdWizardCoachProfile : RouteNames.AdWizardPositions;
-  const coachNeedsSummary = `${totalCoachOpenings} profil${totalCoachOpenings > 1 ? 's' : ''} coach recherche${totalCoachOpenings > 1 ? 's' : ''} pour le rôle ${coachRoleLabel}.`;
+  const coachNeedsSummary = t('adWizardRecap.needs.coachSummary', {
+    count: totalCoachOpenings,
+    defaultValue_one: '{{count}} profil coach recherche pour le rôle {{role}}.',
+    defaultValue_other: '{{count}} profils coach recherches pour le rôle {{role}}.',
+    role: coachRoleLabel,
+    ...SANS_ECHAPPEMENT,
+  });
   const playerNeedsSummary = state.positions.length > 0
-    ? `${totalPlayers} joueur${totalPlayers > 1 ? 's' : ''} recherché${totalPlayers > 1 ? 's' : ''} sur ${state.positions.length} poste${state.positions.length > 1 ? 's' : ''}.`
-    : "Aucun poste n'à encore été ajouté.";
+    ? t('adWizardRecap.needs.playerSummary', {
+      count: totalPlayers,
+      defaultValue_one: '{{count}} joueur recherché sur {{positions}}.',
+      defaultValue_other: '{{count}} joueurs recherchés sur {{positions}}.',
+      positions: t('adWizardRecap.counts.positions', {
+        count: state.positions.length,
+        defaultValue_one: '{{count}} poste',
+        defaultValue_other: '{{count}} postes',
+      }),
+      ...SANS_ECHAPPEMENT,
+    })
+    : t('adWizardRecap.needs.noPositions', "Aucun poste n'à encore été ajouté.");
   const needsSummary = isCoachAd ? coachNeedsSummary : playerNeedsSummary;
-  let validationLabel = 'Publication directe';
+  let validationLabel = t('adWizardRecap.validation.direct', 'Publication directe');
 
   if (state.event && !isCoachAd) {
     validationLabel = state.validationMode === 'manual'
-      ? 'Validation manuelle'
-      : 'Validation automatique';
+      ? t('adWizardRecap.validation.manual', 'Validation manuelle')
+      : t('adWizardRecap.validation.auto', 'Validation automatique');
   }
 
   const quickOverviewItems = [
     {
       complete: Boolean(state.team),
-      label: 'Équipe',
-      value: state.team?.name || 'À compléter',
+      label: t('adWizardRecap.overview.team', 'Équipe'),
+      value: state.team?.name || t('adWizardRecap.toComplete', 'À compléter'),
     },
     {
       complete: isAdWizardSportProfileComplete(state),
-      label: 'Profil',
-      value: profileLabel || 'À préciser',
+      label: t('adWizardRecap.overview.profile', 'Profil'),
+      value: profileLabel || t('adWizardRecap.toSpecify', 'À préciser'),
     },
     {
       complete: Boolean(displayAddress),
-      label: 'Lieu',
+      label: t('adWizardRecap.overview.location', 'Lieu'),
       value: overviewLocationLabel,
     },
     {
       complete: isCoachAd ? isAdWizardCoachProfileComplete(state) : state.positions.length > 0,
-      label: isCoachAd ? 'Role' : 'Postes',
+      label: isCoachAd ? t('adWizardRecap.overview.role', 'Role') : t(
+        'adWizardRecap.overview.positions',
+        'Postes',
+      ),
       value: positionsLabel,
     },
   ];
@@ -320,7 +379,7 @@ function AdWizardRecap({ navigation }) {
     </View>
   )) : (
     <Text style={[Fonts.p2, Fonts.primary100]}>
-      {'Ajoute au moins un poste pour publier l\'annonce.'}
+      {t('adWizardRecap.needs.addPosition', "Ajoute au moins un poste pour publier l'annonce.")}
     </Text>
   );
 
@@ -372,8 +431,12 @@ function AdWizardRecap({ navigation }) {
   const handleSubmit = async () => {
     if (!isReadyToSubmit) {
       showBanner({
-        body: `Il manque encore ${missingRequiredItems.join(', ')} avant de publier cette annonce.`,
-        title: 'Récapitulatif incomplet',
+        body: t(
+          'adWizardRecap.incomplete.body',
+          'Il manque encore {{items}} avant de publier cette annonce.',
+          { items: missingRequiredItems.join(', '), ...SANS_ECHAPPEMENT },
+        ),
+        title: t('adWizardRecap.incomplete.title', 'Récapitulatif incomplet'),
         tone: 'error',
       });
       return;
@@ -446,11 +509,14 @@ function AdWizardRecap({ navigation }) {
         setSubscriptionPaywallDecision(subscriptionDecision);
         return;
       }
-      const nextMessage = error?.message || "Impossible de créer l'annonce. Vérifie les informations puis réessaie.";
+      const nextMessage = error?.message || t(
+        'adWizardRecap.submit.errorBody',
+        "Impossible de créer l'annonce. Vérifie les informations puis réessaie.",
+      );
       setSubmitErrorMessage(nextMessage);
       showBanner({
         body: nextMessage,
-        title: 'Publication impossible',
+        title: t('adWizardRecap.submit.errorTitle', 'Publication impossible'),
         tone: 'error',
       });
     } finally {
@@ -463,13 +529,16 @@ function AdWizardRecap({ navigation }) {
       <WizardStepLayout
         isNextDisabled={!isReadyToSubmit || isSubmitting}
         isNextLoading={isSubmitting}
-        nextLabel="Publier l'annonce"
+        nextLabel={t('adWizardRecap.submit.label', "Publier l'annonce")}
         onBack={() => navigation.goBack()}
         onNext={handleSubmit}
         stepCount={getAdWizardStepCount(state)}
         stepIndex={getAdWizardRecapStepIndex(state)}
-        subtitle="Vérifie l'ensemble du brief avant de publier ton annonce."
-        title="Récapitulatif"
+        subtitle={t(
+          'adWizardRecap.subtitle',
+          "Vérifie l'ensemble du brief avant de publier ton annonce.",
+        )}
+        title={t('adWizardRecap.title', 'Récapitulatif')}
       >
         <View style={[Spaces.gap[24], Spaces.paddingBottom[32]]}>
           {!isReadyToSubmit ? (
@@ -484,13 +553,14 @@ function AdWizardRecap({ navigation }) {
                 },
               ]}
             >
-              <Text style={[Fonts.p2Bold, Fonts.neutral00]}>Récapitulatif incomplet</Text>
+              <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
+                {t('adWizardRecap.incomplete.title', 'Récapitulatif incomplet')}
+              </Text>
               <Text style={[Fonts.p2, Fonts.neutral100]}>
-                Il manque encore
-                {' '}
-                {missingRequiredItems.join(', ')}
-                {' '}
-                avant de publier cette annonce.
+                {t('adWizardRecap.incomplete.body', 'Il manque encore {{items}} avant de publier cette annonce.', {
+                  items: missingRequiredItems.join(', '),
+                  ...SANS_ECHAPPEMENT,
+                })}
               </Text>
             </View>
           ) : null}
@@ -508,7 +578,7 @@ function AdWizardRecap({ navigation }) {
               ]}
             >
               <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
-                {'La publication n\'a pas abouti'}
+                {t('adWizardRecap.submit.failedTitle', "La publication n'a pas abouti")}
               </Text>
               <Text style={[Fonts.p2, Fonts.neutral100]}>{submitErrorMessage}</Text>
             </View>
@@ -536,12 +606,12 @@ function AdWizardRecap({ navigation }) {
             >
               <View style={[Spaces.gap[12], { flex: 1 }]}>
                 <Text style={[Fonts.p2Bold, Fonts.primary500]}>
-                  {'Vue d\'ensemble'}
+                  {t('adWizardRecap.overview.title', "Vue d'ensemble")}
                 </Text>
                 <Text style={[Fonts.p2, Fonts.neutral100]}>
-                  {completedQuickOverviewCount}
-                  {' '}
-                  / 4 informations clés prêtes à publier
+                  {t('adWizardRecap.overview.progress', '{{done}} / 4 informations clés prêtes à publier', {
+                    done: completedQuickOverviewCount,
+                  })}
                 </Text>
               </View>
               <View
@@ -557,7 +627,10 @@ function AdWizardRecap({ navigation }) {
                 ]}
               >
                 <Text style={[Fonts.p4Bold, isReadyToSubmit ? Fonts.primary500 : Fonts.primary100]}>
-                  {isReadyToSubmit ? 'Prêt à publier' : 'À compléter'}
+                  {isReadyToSubmit ? t(
+                    'adWizardRecap.overview.ready',
+                    'Prêt à publier',
+                  ) : t('adWizardRecap.toComplete', 'À compléter')}
                 </Text>
               </View>
             </View>
@@ -578,9 +651,9 @@ function AdWizardRecap({ navigation }) {
           </View>
 
           <RecapSection
-            eyebrow="Équipe qui recrute"
+            eyebrow={t('adWizardRecap.structure.eyebrow', 'Équipe qui recrute')}
             onEdit={() => navigation.navigate(RouteNames.AdWizardTeam)}
-            title="Structure"
+            title={t('adWizardRecap.structure.title', 'Structure')}
           >
             {state.team ? (
               <EventWizardTeamCard
@@ -588,15 +661,20 @@ function AdWizardRecap({ navigation }) {
                 team={state.team}
               />
             ) : (
-              <Text style={[Fonts.p2, Fonts.primary100]}>Aucune équipe sélectionnée</Text>
+              <Text style={[Fonts.p2, Fonts.primary100]}>
+                {t('adWizardRecap.structure.noTeam', 'Aucune équipe sélectionnée')}
+              </Text>
             )}
 
             <View style={[Spaces.gap[12]]}>
               <OverviewMetric
                 ApplicationStyle={ApplicationStyle}
-                complete={Boolean(sportName && sportName !== 'Non défini')}
+                complete={Boolean(sportName && sportName !== t(
+                  'adWizardRecap.sportUndefined',
+                  'Non défini',
+                ))}
                 Fonts={Fonts}
-                label="Sport"
+                label={t('adWizardRecap.structure.sport', 'Sport')}
                 Spaces={Spaces}
                 value={sportName}
               />
@@ -604,15 +682,15 @@ function AdWizardRecap({ navigation }) {
                 ApplicationStyle={ApplicationStyle}
                 complete={Boolean(profileLabel)}
                 Fonts={Fonts}
-                label="Profil"
+                label={t('adWizardRecap.structure.profile', 'Profil')}
                 Spaces={Spaces}
-                value={profileLabel || 'À préciser'}
+                value={profileLabel || t('adWizardRecap.toSpecify', 'À préciser')}
               />
             </View>
           </RecapSection>
 
           <RecapSection
-            eyebrow="Besoins"
+            eyebrow={t('adWizardRecap.needs.eyebrow', 'Besoins')}
             onEdit={() => navigation.navigate(needsEditRoute)}
             title={needsSectionTitle}
           >
@@ -624,40 +702,51 @@ function AdWizardRecap({ navigation }) {
           </RecapSection>
 
           <RecapSection
-            eyebrow="Publication"
+            eyebrow={t('adWizardRecap.targeting.eyebrow', 'Publication')}
             onEdit={() => navigation.navigate(RouteNames.AdWizardInfo)}
-            title="Ciblage sportif"
+            title={t('adWizardRecap.targeting.title', 'Ciblage sportif')}
           >
             <View style={[Spaces.gap[16]]}>
               <View style={[Spaces.gap[8]]}>
-                <Text style={[Fonts.p3, Fonts.neutral300]}>Sport</Text>
+                <Text style={[Fonts.p3, Fonts.neutral300]}>
+                  {t('adWizardRecap.targeting.sport', 'Sport')}
+                </Text>
                 <Text style={[Fonts.p2, Fonts.neutral00]}>{sportName}</Text>
               </View>
 
               <View style={[Spaces.gap[8]]}>
-                <Text style={[Fonts.p3, Fonts.neutral300]}>Profil</Text>
+                <Text style={[Fonts.p3, Fonts.neutral300]}>
+                  {t('adWizardRecap.targeting.profile', 'Profil')}
+                </Text>
                 <Text style={[Fonts.p2, profileLabel ? Fonts.neutral00 : Fonts.primary100]}>
-                  {profileLabel || 'À préciser'}
+                  {profileLabel || t('adWizardRecap.toSpecify', 'À préciser')}
                 </Text>
               </View>
 
               <View style={[Spaces.gap[8]]}>
                 <Text style={[Fonts.p3, Fonts.neutral300]}>
-                  {'Type d\'annonce'}
+                  {t('adWizardRecap.targeting.adType', "Type d'annonce")}
                 </Text>
                 <Text style={[Fonts.p2, Fonts.neutral00]}>{resolvedAdTypeLabel}</Text>
               </View>
 
               <View style={[Spaces.gap[8]]}>
-                <Text style={[Fonts.p3, Fonts.neutral300]}>Validation</Text>
+                <Text style={[Fonts.p3, Fonts.neutral300]}>
+                  {t('adWizardRecap.targeting.validation', 'Validation')}
+                </Text>
                 <Text style={[Fonts.p2, Fonts.neutral00]}>{validationLabel}</Text>
               </View>
 
               {state.event ? (
                 <View style={[Spaces.gap[8]]}>
-                  <Text style={[Fonts.p3, Fonts.neutral300]}>Détection liée</Text>
+                  <Text style={[Fonts.p3, Fonts.neutral300]}>
+                    {t('adWizardRecap.targeting.linkedDetection', 'Détection liée')}
+                  </Text>
                   <Text style={[Fonts.p2, Fonts.neutral00]}>
-                    {state.event.name || state.event.type?.name || 'Événement'}
+                    {state.event.name || state.event.type?.name || t(
+                      'adWizardRecap.targeting.eventFallback',
+                      'Événement',
+                    )}
                   </Text>
                 </View>
               ) : null}
@@ -665,36 +754,52 @@ function AdWizardRecap({ navigation }) {
           </RecapSection>
 
           <RecapSection
-            eyebrow="Lieu"
+            eyebrow={t('adWizardRecap.location.eyebrow', 'Lieu')}
             onEdit={() => navigation.navigate(RouteNames.AdWizardLocation)}
-            title="Lieu de publication"
+            title={t('adWizardRecap.location.title', 'Lieu de publication')}
           >
             {selectedFacilityName ? (
               <View style={[Spaces.gap[8]]}>
-                <Text style={[Fonts.p3, Fonts.neutral300]}>Installation sélectionnée</Text>
+                <Text style={[Fonts.p3, Fonts.neutral300]}>
+                  {t('adWizardRecap.location.facility', 'Installation sélectionnée')}
+                </Text>
                 <Text style={[Fonts.p2, Fonts.neutral00]}>{selectedFacilityName}</Text>
               </View>
             ) : null}
 
             <View style={[Spaces.gap[8]]}>
-              <Text style={[Fonts.p3, Fonts.neutral300]}>{selectedFacilityName ? 'Adresse' : 'Lieu'}</Text>
+              <Text style={[Fonts.p3, Fonts.neutral300]}>
+                {selectedFacilityName ? t(
+                  'adWizardRecap.location.address',
+                  'Adresse',
+                ) : t('adWizardRecap.location.place', 'Lieu')}
+              </Text>
               <Text style={[Fonts.p2, displayAddress ? Fonts.neutral00 : Fonts.primary100]}>
-                {displayAddress || 'À compléter'}
+                {displayAddress || t('adWizardRecap.toComplete', 'À compléter')}
               </Text>
             </View>
           </RecapSection>
 
           <RecapSection
-            eyebrow="Texte de l'annonce"
+            eyebrow={t('adWizardRecap.text.eyebrow', "Texte de l'annonce")}
             onEdit={() => navigation.navigate(RouteNames.AdWizardDescription)}
-            title={isCoachAd ? 'Description et missions' : 'Description'}
+            title={isCoachAd ? t(
+              'adWizardRecap.text.titleCoach',
+              'Description et missions',
+            ) : t('adWizardRecap.text.title', 'Description')}
           >
             <Text style={[Fonts.p2, state.description ? Fonts.neutral100 : Fonts.neutral300]}>
-              {state.description || "Aucune description personnalisée n'a été ajoutée."}
+              {state.description || t(
+                'adWizardRecap.text.noDescription',
+                "Aucune description personnalisée n'a été ajoutée.",
+              )}
             </Text>
             {isCoachAd ? (
               <Text style={[Fonts.p2, state.missions ? Fonts.neutral100 : Fonts.neutral300]}>
-                {state.missions || 'Aucune mission détaillée n à encore été ajoutée.'}
+                {state.missions || t(
+                  'adWizardRecap.text.noMissions',
+                  'Aucune mission détaillée n à encore été ajoutée.',
+                )}
               </Text>
             ) : null}
           </RecapSection>
@@ -710,11 +815,19 @@ function AdWizardRecap({ navigation }) {
               },
             ]}
           >
-            <Text style={[Fonts.p3Bold, Fonts.primary500]}>Avant publication</Text>
+            <Text style={[Fonts.p3Bold, Fonts.primary500]}>
+              {t('adWizardRecap.beforePublish.title', 'Avant publication')}
+            </Text>
             <Text style={[Fonts.p2, Fonts.neutral100]}>
               {isCoachAd
-                ? "L'annonce sera visible dans le flux recrutement avec un badge entraîneur. Plus le rôle, les missions et le cadre sont precis, plus les candidatures seront pertinentes."
-                : "L'annonce sera visible par les joueurs correspondant au profil recherche. Plus tes informations sont precises, plus la mise en relation sera pertinente."}
+                ? t(
+                  'adWizardRecap.beforePublish.bodyCoach',
+                  "L'annonce sera visible dans le flux recrutement avec un badge entraîneur. Plus le rôle, les missions et le cadre sont precis, plus les candidatures seront pertinentes.", // eslint-disable-line max-len
+                )
+                : t(
+                  'adWizardRecap.beforePublish.body',
+                  "L'annonce sera visible par les joueurs correspondant au profil recherche. Plus tes informations sont precises, plus la mise en relation sera pertinente.", // eslint-disable-line max-len
+                )}
             </Text>
           </View>
         </View>
@@ -723,7 +836,7 @@ function AdWizardRecap({ navigation }) {
       <SubscriptionPaywallSheet
         close={() => setSubscriptionPaywallDecision(null)}
         clubDocumentId={state.team?.club?.documentId || null}
-        contextLabel="Ton annonce de recrutement"
+        contextLabel={t('adWizardRecap.paywallContext', 'Ton annonce de recrutement')}
         decision={subscriptionPaywallDecision}
         isVisible={Boolean(subscriptionPaywallDecision)}
         navigation={navigation}
