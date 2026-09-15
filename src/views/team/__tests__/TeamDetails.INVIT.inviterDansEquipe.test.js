@@ -615,7 +615,11 @@ describe('INVIT — la fiche d equipe sait ENVOYER une invitation', () => {
     await ouvrirLaFeuilleDInvitation(racine);
 
     expect(textesPortant(racine, 'Inviter')).toHaveLength(0);
-    expect(textesPortant(racine, 'Personne d\'autre dans ton club pour l\'instant.'))
+    // INVIT2 (15/09) : ce cas — tout le club est deja dans l'equipe — disait
+    // « Personne d'autre dans ton club pour l'instant. », vrai mais inutile (il
+    // faisait croire a un club vide, signalement d'Adel). La phrase change ; ce
+    // que ce temoin protege (ni l'equipe ni moi ne sommes proposes) ne change pas.
+    expect(textesPortant(racine, 'Tout ton club est déjà dans l\'équipe.'))
       .toHaveLength(1);
   });
 
@@ -695,5 +699,121 @@ describe('INVIT — T3 : le cas d Adel, quelqu un d un AUTRE club', () => {
     );
     // 🔒 Rien n a bouge a l ecran : la personne reste invitable.
     expect(textesPortant(racine, 'Invitation envoyée')).toHaveLength(0);
+  });
+});
+
+/**
+ * INVIT2 · PHASE A — LA FEUILLE S'AFFICHE EN ENTIER, ET NE MENE JAMAIS A UNE IMPASSE.
+ *
+ * 🎯 Le signalement d'Adel (15/09, iPhone, build 1311) : la feuille est COUPEE en
+ * bas, ne DEFILE pas, et le bouton « Partager un lien d'invitation » est
+ * inatteignable. La cause est connue et payee trois fois (memoire du projet,
+ * BottomModal) : un `headerComponent` n'entre PAS dans la mesure de la feuille.
+ * Du point de vue de la zone defilante rien ne deborde — donc zero course de
+ * defilement — alors que la feuille est plus courte que son contenu de la
+ * hauteur du titre.
+ *
+ * ⚠️ Jest ne calcule AUCUNE mise en page : ces temoins verifient les CONTRAINTES
+ * qui font la bonne geometrie (titre dans le contenu, plafond calcule sur la
+ * fenetre, sortie avant la liste). C'est l'emulateur qui dit si c'est entier.
+ */
+describe('INVIT2 · A — la feuille entiere, jamais une impasse', () => {
+  /**
+   * La feuille d'invitation, reperee par son titre (et non par sa position).
+   * @param {any} racine La racine de l'arbre.
+   * @returns {any} Le noeud de la doublure de BottomModal.
+   */
+  const laFeuilleDInvitation = (racine) => {
+    const feuilles = racine.findAll(
+      (/** @type {any} */ noeud) => noeud.type?.name === 'BottomModalMock'
+        && noeud.props?.isVisible === true
+        && textesPortant(noeud, TITRE_FEUILLE).length > 0,
+      { deep: true },
+    );
+    if (feuilles.length !== 1) {
+      throw new Error(`Feuille d'invitation attendue une fois, trouvee ${feuilles.length} fois`);
+    }
+    return feuilles[0];
+  };
+
+  /**
+   * Tous les textes d'un sous-arbre, dans l'ordre ou ils sont rendus.
+   * @param {any} noeud Le sous-arbre.
+   * @returns {string[]} Les textes, dans l'ordre.
+   */
+  const textesDansLOrdre = (noeud) => noeud.findAll(
+    (/** @type {any} */ n) => n.type === Text && typeof n.props?.children === 'string',
+    { deep: true },
+  ).map((/** @type {any} */ n) => n.props.children);
+
+  test('🔴 A1 — le titre est DANS le contenu mesure, pas dans un en-tete fixe', async () => {
+    const racine = monterLaFiche();
+    await ouvrirLaFeuilleDInvitation(racine);
+
+    const feuille = laFeuilleDInvitation(racine);
+
+    // 🧨 En-tete fixe = hors mesure = feuille coupee de la hauteur du titre.
+    expect(feuille.props.headerComponent).toBeUndefined();
+    // Et le premier texte rendu dans le contenu EST le titre.
+    expect(textesDansLOrdre(feuille)[0]).toBe(TITRE_FEUILLE);
+  });
+
+  test('🔴 A2 — le plafond est calcule sur la FENETRE, pas sur la dalle entiere', async () => {
+    const racine = monterLaFiche();
+    await ouvrirLaFeuilleDInvitation(racine);
+
+    const feuille = laFeuilleDInvitation(racine);
+    const { Dimensions } = jest.requireActual('react-native');
+    const fenetre = Dimensions.get('window').height;
+    const dalle = Dimensions.get('screen').height;
+
+    // Le defaut du composant (0,7 de la DALLE) peut depasser la fenetre
+    // affichable ; la feuille demande la fraction de dalle qui vaut 85 % de
+    // fenetre (motif « Gerer l'evenement », EventDetails.js).
+    expect(feuille.props.maxContentHeightRatio).toBeCloseTo(
+      Math.min(0.85, (fenetre / dalle) * 0.85),
+      5,
+    );
+  });
+
+  test('🔴 A3 — le partage de lien est AVANT la liste : atteignable sans defiler', async () => {
+    // 14 personnes : de quoi pousser tout ce qui vient apres la liste sous le pli.
+    mockReponseClub = clubAvec(Array.from({ length: 14 }, (_, index) => ({
+      documentId: `membre-${index}`,
+      firstname: `Membre${String(index).padStart(2, '0')}`,
+      lastname: 'X',
+    })));
+
+    const racine = monterLaFiche();
+    await ouvrirLaFeuilleDInvitation(racine);
+
+    const textes = textesDansLOrdre(laFeuilleDInvitation(racine));
+    const rangPartage = textes.indexOf(LIBELLE_PARTAGER);
+    const rangPremierePersonne = textes.indexOf('Membre00 X');
+
+    expect(rangPartage).toBeGreaterThan(-1);
+    expect(rangPremierePersonne).toBeGreaterThan(-1);
+    expect(rangPartage).toBeLessThan(rangPremierePersonne);
+  });
+
+  test('🔴 A4 — tout le club est deja dans l equipe : on le DIT, avec la sortie', async () => {
+    // Le cas mesure chez Adel : Sylvain et Lucas sont au club ET dans l'equipe.
+    mockReponseClub = clubAvec([
+      { documentId: 'joueuse-1', firstname: 'Bo', lastname: 'M' },
+      { documentId: 'moi', firstname: 'Adel', lastname: 'F' },
+    ]);
+
+    const racine = monterLaFiche();
+    await ouvrirLaFeuilleDInvitation(racine);
+
+    const textes = textesDansLOrdre(laFeuilleDInvitation(racine));
+
+    // « Personne d'autre dans ton club » etait VRAI mais inutile : il faisait
+    // croire que le club etait vide.
+    expect(textes).not.toContain('Personne d\'autre dans ton club pour l\'instant.');
+    expect(textes).toContain('Tout ton club est déjà dans l\'équipe.');
+    // ⇒ la sortie est la, dans la meme feuille, et elle marche.
+    appuyerSur(racine, LIBELLE_PARTAGER);
+    expect(mockPartagerLeLien).toHaveBeenCalledTimes(1);
   });
 });
