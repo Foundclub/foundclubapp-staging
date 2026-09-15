@@ -103,8 +103,35 @@ const AUTH_VISITEUR = Object.freeze({
 let mockAuthCourant = AUTH_DIRIGEANT;
 let mockEstMonEquipe = true;
 
+// INVIT2 — la feuille d'invitation (views/team/invite/TeamInviteSheet.js) lit et
+// ecrit par ces trois modules, qui atteignent le client HTTP (`.env` absent des
+// worktrees). Doublures ecrites EN ENTIER, sans requireActual.
+jest.mock('@/services/teamInvite/teamInviteQueries', () => ({
+  useSentTeamInvites: () => ({ data: [], refetch: jest.fn() }),
+  useTeamInviteSuggestions: () => ({ data: undefined, refetch: jest.fn() }),
+}));
+jest.mock('@/services/teamInvite/teamInviteService', () => ({
+  cancelTeamInvite: jest.fn(),
+  createTeamInviteLink: jest.fn(),
+  createTeamPhoneInvite: jest.fn(),
+}));
+jest.mock('react-native-qrcode-svg', () => function QRCodeMock() {
+  return null;
+});
+jest.mock('@/services/teamInvite/teamInviteShare', () => ({
+  buildTeamInviteMessage: () => '',
+  buildTeamInviteUrl: () => '',
+  openInviteSms: jest.fn(),
+  shareExistingTeamInvite: jest.fn(),
+}));
+
+// INVIT2 — un temoin a besoin que l'effet de focus JOUE (lien ?invite=true) ;
+// par defaut il reste muet, comme avant.
+let mockJouerLeFocus = false;
 jest.mock('@react-navigation/native', () => ({
-  useFocusEffect: () => {},
+  useFocusEffect: (/** @type {any} */ effet) => {
+    if (mockJouerLeFocus) effet();
+  },
 }));
 
 jest.mock('@tanstack/react-query', () => ({
@@ -393,6 +420,7 @@ afterEach(() => {
   arbre = null;
   mockAuthCourant = AUTH_DIRIGEANT;
   mockEstMonEquipe = true;
+  mockJouerLeFocus = false;
 });
 
 const invitationEnAttente = (/** @type {string} */ documentId) => ({
@@ -501,5 +529,34 @@ describe('P10 — accepter ou refuser une invitation, depuis la fiche de l equip
     const racine = monterLaFiche();
 
     expect(textesPortant(racine, 'Accepter')).toHaveLength(0);
+  });
+});
+
+describe('INVIT2 — un lien ?invite=true ne fait pas DEMANDER qui a deja une INVITATION', () => {
+  test('🔴 l invitee voit sa banniere, pas « Demander a rejoindre »', () => {
+    // eslint-disable-next-line global-require -- motif du fichier : l Alert reelle, espionnee
+    const alerte = jest.spyOn(require('react-native').Alert, 'alert').mockImplementation(() => {});
+    mockEstMonEquipe = false;
+    mockJouerLeFocus = true;
+    mockAuthCourant = {
+      ...authAvecLignes([invitationEnAttente('tmr-lien')]),
+      canJoinTeam: () => true,
+    };
+
+    act(() => {
+      arbre = renderer.create(
+        <TeamDetails
+          navigation={/** @type {any} */ (navigation)}
+          route={/** @type {any} */ ({ params: { invite: true, teamId: 'equipe-1' } })}
+        />,
+      );
+    });
+
+    // Avant INVIT2 : l'alerte « Demander a rejoindre l'equipe » s'ouvrait par-dessus
+    // la banniere Accepter / Refuser (le filtre ne regardait que les DEMANDES).
+    const titres = alerte.mock.calls.map((appel) => appel[0]);
+    expect(titres).not.toContain('Demander à rejoindre l\'équipe');
+    expect(textesPortant(arbre.root, 'Accepter')).toHaveLength(1);
+    alerte.mockRestore();
   });
 });

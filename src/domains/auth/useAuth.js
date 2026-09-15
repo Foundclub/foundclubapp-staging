@@ -24,6 +24,7 @@ import {
   resetBootRequestGuard,
 } from '@/services/bootRequestGuard';
 import { getAppBootstrap } from '@/services/bootstrap/bootstrapService';
+import { shareTeamInviteLink } from '@/services/teamInvite/teamInviteShare';
 
 import { displayErrorAlert } from '@/utils/errors/displayError';
 import { createLogger } from '@/utils/logger/logger';
@@ -529,27 +530,15 @@ const useAuth = () => {
    * @returns {void}
    */
   const inviteTeamPlayers = ({ clubName, teamId, teamName }) => {
-    const installUrl = buildInstallLandingUrl(/** @type {any} */ ({
-      id: teamId,
-      invite: true,
-      source: 'sms',
-      type: 'team',
-    }));
-    const shareMessage = t('teamDetails.alerts.invitePlayers.message', {
+    // INVIT2 — le lien part sur foundclub.app/i/team/<id>?c=<code> (plus sur
+    // install.html du domaine de l'API, dont les fichiers de reconnaissance sont en
+    // 404) et la phrase nomme QUI invite. Voir services/teamInvite/teamInviteShare.js.
+    if (!teamId) return;
+    shareTeamInviteLink({
       clubName,
+      inviterName: String(userData?.firstname || '').trim(),
+      teamId,
       teamName,
-    });
-
-    SharePlatform.share({
-      message: buildShareMessageWithUrl({
-        intro: shareMessage,
-        linkLabel: t('teamDetails.alerts.invitePlayers.downloadApp', 'Telecharge l\'application ici'),
-        url: installUrl,
-      }),
-      title: t(
-        'teamDetails.alerts.invitePlayers.title',
-      ),
-      url: installUrl,
     }).catch(() => undefined);
   };
 

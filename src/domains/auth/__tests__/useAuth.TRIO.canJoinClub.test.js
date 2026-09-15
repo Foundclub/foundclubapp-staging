@@ -56,6 +56,8 @@ jest.mock('@/services/bootRequestGuard', () => ({
 }));
 jest.mock('@/hooks/useNotificationController', () => ({ UNREAD_COUNT_QUERY_KEY: ['unread'] }));
 jest.mock('@/platform/share', () => ({ __esModule: true, default: { share: jest.fn() } }));
+// INVIT2 — useAuth partage le lien d'equipe par ce module, qui atteint le client HTTP.
+jest.mock('@/services/teamInvite/teamInviteShare', () => ({ shareTeamInviteLink: jest.fn() }));
 
 const useAuth = require('@/domains/auth/useAuth').default;
 

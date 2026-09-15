@@ -305,7 +305,7 @@ function AppShell() {
               }}
             />
             <ClubScopeSwitchHost />
-            <InvitationLinkHost />
+            <InvitationLinkHostWithSession />
             {isDeferredStartupReady ? <DeferredStartupHosts /> : null}
           </LeaguePlatformGate>
         </BootGate>
@@ -398,6 +398,17 @@ function App() {
       <AppShell />
     </AppProvidersNative>
   );
+}
+
+/**
+ * INVIT2 — la fenetre d'invitation doit SAVOIR si un compte est la : deconnectee,
+ * elle garde l'invitation pour apres la connexion ; connectee, elle laisse repondre
+ * en un geste. Elle est montee hors de la navigation, d'ou ce petit relais.
+ * @returns {import('react').ReactElement} la fenetre, avec le compte connecte.
+ */
+function InvitationLinkHostWithSession() {
+  const { userData } = useAuth();
+  return <InvitationLinkHost userId={userData?.documentId} />;
 }
 
 const RootApp = isSentryEnabled ? Sentry.wrap(App) : App;

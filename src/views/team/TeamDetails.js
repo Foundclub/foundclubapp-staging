@@ -32,11 +32,6 @@ import {
   extractSubscriptionDecisionFromError,
   hasActiveClubOffer,
 } from '@/domains/subscription/subscriptionDecision';
-import {
-  describePersonName,
-  describeTeamInvitationRefusal,
-  selectInvitableCandidates,
-} from '@/domains/team/teamInvitation';
 import { isMyTeam as isMyTeamJudge } from '@/domains/team/teamMembership';
 import { withAlpha } from '@/theme/colors';
 import localeDesFormats from '@/theme/strings/localeDesFormats';
@@ -63,6 +58,7 @@ import EventListContent from '@/components/organisms/eventListContent/EventListC
 import ScreenContainer from '@/components/templates/ScreenContainer';
 import { navigateToLeagueMatchDetails } from '@/views/league/match/utils/leagueNavigation';
 import { buildCompoTemplateDestination } from '@/views/team/composition/teamCompoTemplateUtils';
+import TeamInviteSheet from '@/views/team/invite/TeamInviteSheet';
 
 import { openPublicAuthFlow } from '@/navigation/public/publicAuthNavigation';
 import { RouteNames } from '@/navigation/routeNames';
@@ -85,7 +81,6 @@ import {
 import {
   acceptTeamInvitation,
   createTeamMembershipRequest,
-  inviteToTeam,
   refuseTeamInvitation,
 } from '@/services/teamMembershipRequest/teamMembershipRequestService';
 
@@ -212,14 +207,10 @@ function TeamDetails({ navigation, route }) {
   const [calendarDisplayMode, setCalendarDisplayMode] = useState(/** @type {'upcoming' | 'results' | 'all'} */ ('upcoming'));
   const [isTeamActionsPanelOpen, setIsTeamActionsPanelOpen] = useState(false);
   const [trainerSearch, setTrainerSearch] = useState('');
-  // INVIT — la feuille qui envoie une VRAIE invitation (a distinguer du partage
-  // de lien, qui ne parle a aucun serveur). `invitedMemberIds` est optimiste et
-  // ne vit que le temps de la feuille : le serveur ne sait pas rendre la liste
-  // des invitations ENVOYEES (son `find` les filtre, controleur :365), donc
-  // rien ne peut la recharger. C'est nomme dans le compte rendu du lot.
+  // INVIT — la feuille qui envoie une VRAIE invitation. Son contenu (recherche,
+  // envoi, vides) vit dans views/team/invite/TeamInviteSheet.js depuis INVIT2 ;
+  // la fiche ne garde que l'ouverture, declenchee par son menu.
   const [isInviteSheetOpen, setIsInviteSheetOpen] = useState(false);
-  const [inviteSearch, setInviteSearch] = useState('');
-  const [invitedMemberIds, setInvitedMemberIds] = useState(/** @type {string[]} */ ([]));
   const [subscriptionPaywallDecision, setSubscriptionPaywallDecision] = useState(null);
 
   // FFBB Modal states
@@ -695,48 +686,6 @@ function TeamDetails({ navigation, route }) {
       refetchUserData();
       refetch();
       queryClient.invalidateQueries({ queryKey: ['teams'] });
-    },
-  }));
-
-  // INVIT — L ENVOI, ET C EST LE COEUR DU LOT. Jusqu ici les trois boutons
-  // « Inviter » de cet ecran ouvraient le partage SMS : aucune ligne n etait
-  // creee, aucune notification ne partait (mesure du 2026-09-05 en production).
-  // `inviteToTeam` poste sur POST /team-membership-requests/invite, la route
-  // qui existe depuis le lot P10 et que cet ecran n appelait jamais.
-  //
-  // ⛔ Ce n est PAS `createTeamMembershipRequest` juste au-dessus : celle-la
-  // cree une DEMANDE au nom de l appelant. Ici la ligne porte la personne
-  // INVITEE et reste `pending` — personne n entre dans l equipe sans avoir dit
-  // oui.
-  const inviteMemberMutation = /** @type {any} */ (useMutation({
-    mutationFn: (/** @type {any} */ payload = {}) => inviteToTeam({
-      team: payload.teamId,
-      user: payload.userId,
-    }),
-    onError: (/** @type {any} */ echecInvitation) => {
-      // 🗣️ Le serveur refuse en ANGLAIS. `describeTeamInvitationRefusal` est le
-      // seul endroit qui traduit : un refus qu on ne comprend pas est un refus
-      // muet.
-      Alert.alert(
-        t('teamDetails.invite.errorTitle', 'Invitation impossible'),
-        describeTeamInvitationRefusal(echecInvitation),
-      );
-    },
-    onSuccess: (/** @type {any} */ _data, /** @type {any} */ variables) => {
-      const invitedId = String(variables?.userId || '').trim();
-      if (invitedId) {
-        setInvitedMemberIds((previous) => (
-          previous.includes(invitedId) ? previous : [...previous, invitedId]
-        ));
-      }
-      Alert.alert(
-        t('teamDetails.invite.sentTitle', 'Invitation envoyée'),
-        t(
-          'teamDetails.invite.sentMessage',
-          '{{name}} va recevoir une notification. Elle rejoindra l\'équipe si elle accepte.',
-          { name: variables?.userName || t('teamDetails.invite.someone', 'Cette personne') },
-        ),
-      );
     },
   }));
 
@@ -1386,45 +1335,6 @@ function TeamDetails({ navigation, route }) {
       .sort((/** @type {any} */ a, /** @type {any} */ b) => a.label.localeCompare(b.label, 'fr'));
   }, [clubData?.members, trainerSearch]);
 
-  // INVIT — QUI PROPOSER, ET SANS UNE SEULE REQUETE DE PLUS. `clubData` est
-  // deja charge plus haut par `useGetClub` (il alimente deja le choix des
-  // entraineurs) : les membres du club sont donc gratuits. C est aussi ce qui
-  // evite d importer un service reseau de plus dans cet ecran — un import de
-  // service y fait tomber TOUTES ses suites de temoins (pieges AD01/BLOQUER).
-  const inviteCandidates = useMemo(() => selectInvitableCandidates({
-    alreadyInvitedIds: invitedMemberIds,
-    candidates: clubData?.members || [],
-    currentUserId: currentUser?.documentId,
-    players: team?.players || [],
-    search: inviteSearch,
-    trainers: team?.trainers || [],
-  }), [
-    clubData?.members,
-    currentUser?.documentId,
-    invitedMemberIds,
-    inviteSearch,
-    team?.players,
-    team?.trainers,
-  ]);
-
-  // ⚖️ Trois vides differents, trois phrases differentes. Un ecran qui rend la
-  // meme phrase dans les trois cas ment dans deux d'entre eux.
-  const inviteEmptyMessage = useMemo(() => {
-    if (clubData?.membersAreHidden === true) {
-      return t(
-        'teamDetails.invite.emptyHidden',
-        'Ce club masque ses membres : impossible de les proposer ici.',
-      );
-    }
-    if (inviteSearch.trim()) {
-      return t('teamDetails.invite.emptySearch', 'Personne de ce nom dans ton club.');
-    }
-    return t(
-      'teamDetails.invite.emptyClub',
-      'Personne d\'autre dans ton club pour l\'instant.',
-    );
-  }, [clubData?.membersAreHidden, inviteSearch, t]);
-
   const isExternalRowMyTeam = (/** @type {any} */ row) => {
     if (!row) return false;
     if (team?.externalTeamId && row.teamId) {
@@ -1685,7 +1595,6 @@ function TeamDetails({ navigation, route }) {
   const handleOpenInviteSheet = useCallback(() => {
     Keyboard.dismiss();
     setIsTeamActionsPanelOpen(false);
-    setInviteSearch('');
 
     if (inviteSheetOpenTimeoutRef.current) {
       clearTimeout(inviteSheetOpenTimeoutRef.current);
@@ -1709,18 +1618,6 @@ function TeamDetails({ navigation, route }) {
       teamName: team?.name,
     });
   }, [inviteTeamPlayers, team?.club?.name, team?.documentId, team?.name, teamId]);
-
-  const handleInviteMember = useCallback((/** @type {any} */ candidate) => {
-    const userId = String(candidate?.documentId || '').trim();
-    const invitedTeamId = team?.documentId || teamId;
-    if (!userId || !invitedTeamId || inviteMemberMutation.isPending) return;
-
-    inviteMemberMutation.mutate({
-      teamId: invitedTeamId,
-      userId,
-      userName: describePersonName(candidate, t('teamDetails.invite.someone', 'Cette personne')),
-    });
-  }, [inviteMemberMutation, t, team?.documentId, teamId]);
 
   const handleOpenCreateTrainerModal = useCallback(() => {
     Keyboard.dismiss();
@@ -2065,10 +1962,12 @@ function TeamDetails({ navigation, route }) {
 
   useFocusEffect(
     useCallback(() => {
-      if (invite && canJoinTeam(teamId) && !pendingRequest) {
+      // INVIT2 — une invitation NOMINATIVE deja la : c'est sa banniere Accepter /
+      // Refuser qui repond, pas une demande par-dessus.
+      if (invite && canJoinTeam(teamId) && !pendingRequest && !pendingInvitation) {
         handleJoinTeam();
       }
-    }, [invite, canJoinTeam, teamId, pendingRequest, handleJoinTeam]),
+    }, [invite, canJoinTeam, teamId, pendingRequest, pendingInvitation, handleJoinTeam]),
   );
 
   useEffect(() => navigation.addListener('beforeRemove', (event) => {
@@ -5348,127 +5247,20 @@ function TeamDetails({ navigation, route }) {
         </BottomModal>
       ) : null}
 
-      {/* INVIT — LA FEUILLE QUI ENVOIE VRAIMENT. Un seul endroit, deux chemins
-          nommes : la vraie invitation (une ligne serveur + une notification, la
-          personne decide) et le partage de lien (aucun serveur, pour quelqu un
-          qui n a pas l app).
-          ⚠️ AUCUN `footerComponent` ici, donc AUCUN `snapPoints` : c est
-          l association en-tete + pied qui exige des `snapPoints` (piege D19).
-          Le bouton de partage vit DANS le contenu defilant, a dessein. */}
-      <BottomModal
+      {/* INVIT — LA FEUILLE QUI ENVOIE VRAIMENT : la vraie invitation (une ligne
+          serveur + une notification, la personne decide) et le partage de lien.
+          INVIT2 : elle vit dans son propre fichier, qui explique pourquoi elle
+          etait coupee en bas et ce qui la rend entiere. */}
+      <TeamInviteSheet
         close={() => setIsInviteSheetOpen(false)}
-        headerComponent={(
-          <Text style={[Fonts.h5Bold, Fonts.neutral00]}>
-            {t('teamDetails.invite.sheetTitle', 'Inviter dans l\'équipe')}
-          </Text>
-        )}
+        clubData={clubData}
+        currentUserId={currentUser?.documentId}
+        inviterName={currentUser?.firstname}
         isVisible={isInviteSheetOpen}
-      >
-        <View style={[Spaces.gap[16], Spaces.paddingBottom[16]]}>
-          <Text style={[Fonts.p3, Fonts.neutral200]}>
-            {t(
-              'teamDetails.invite.sheetIntro',
-              'Choisis une personne de ton club :'
-              + ' elle reçoit une invitation, et c\'est elle qui accepte.',
-            )}
-          </Text>
-
-          <Input
-            autoCapitalize="none"
-            autoCorrect={false}
-            enterKeyHint="search"
-            icon="search"
-            onChangeText={setInviteSearch}
-            placeholder={t('teamDetails.invite.searchPlaceholder', 'Rechercher un membre du club')}
-            value={inviteSearch}
-          />
-
-          {inviteCandidates.length ? (
-            <View style={[Spaces.gap[8]]}>
-              {inviteCandidates.map((/** @type {any} */ candidate) => (
-                <View
-                  key={candidate.documentId}
-                  style={[
-                    ApplicationStyle.borderRadius16,
-                    Alignments.row,
-                    Alignments.alignCenter,
-                    Alignments.justifySpaceBetween,
-                    Spaces.gap[12],
-                    Spaces.padding[12],
-                    { backgroundColor: withAlpha(Colors.neutral00, 0.04) },
-                  ]}
-                >
-                  <View
-                    style={[
-                      Alignments.row,
-                      Alignments.alignCenter,
-                      Spaces.gap[12],
-                      { flex: 1 },
-                    ]}
-                  >
-                    <ProfileAvatar
-                      imageStyle={{ borderRadius: 36 }}
-                      imageUrl={candidate?.avatar?.url}
-                      size={36}
-                    />
-                    <View style={[Alignments.fill]}>
-                      <Text numberOfLines={1} style={[Fonts.p2Bold, Fonts.neutral00]}>
-                        {describePersonName(candidate)}
-                      </Text>
-                      {candidate?.role?.name ? (
-                        <Text numberOfLines={1} style={[Fonts.p4, Fonts.neutral400]}>
-                          {candidate.role.name}
-                        </Text>
-                      ) : null}
-                    </View>
-                  </View>
-                  {candidate.hasPendingInvitation ? (
-                    <Text style={[Fonts.p4Bold, Fonts.primary500]}>
-                      {t('teamDetails.invite.sentBadge', 'Invitation envoyée')}
-                    </Text>
-                  ) : (
-                    <Button
-                      disabled={inviteMemberMutation.isPending}
-                      onPress={() => handleInviteMember(candidate)}
-                      size="sm"
-                      title={t('teamDetails.invite.action', 'Inviter')}
-                      variant="Primary"
-                    />
-                  )}
-                </View>
-              ))}
-            </View>
-          ) : (
-            // ⛔ JAMAIS un vide muet : on dit pourquoi la liste est vide, ET on
-            // montre la sortie de secours dans la meme feuille. C est le cas
-            // mesure chez Adel — il invitait quelqu un d un AUTRE club.
-            <View style={[Spaces.gap[8]]}>
-              <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{inviteEmptyMessage}</Text>
-              <Text style={[Fonts.p3, Fonts.neutral300]}>
-                {t(
-                  'teamDetails.invite.emptyExplanation',
-                  'Tu peux inviter directement les personnes déjà rattachées à ton club.'
-                  + ' Pour quelqu\'un d\'un autre club, envoie-lui plutôt un lien d\'invitation :'
-                  + ' il·elle pourra demander à rejoindre l\'équipe.',
-                )}
-              </Text>
-            </View>
-          )}
-
-          <View
-            style={{
-              backgroundColor: withAlpha(Colors.neutral00, 0.08),
-              height: 1,
-            }}
-          />
-
-          <Button
-            onPress={handleShareInvitationLink}
-            title={t('teamDetails.actions.shareInviteLink', 'Partager un lien d\'invitation')}
-            variant="SecondaryLight"
-          />
-        </View>
-      </BottomModal>
+        onShareLink={handleShareInvitationLink}
+        team={team}
+        teamId={teamId}
+      />
 
       <Modal
         animationType="slide"

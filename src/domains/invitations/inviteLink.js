@@ -12,8 +12,11 @@
  *   2. `https://<api>/install.html?type=&id=&invite=true` <- les liens deja envoyes
  *   3. `foundclub://<sujet>/<id>?invite=true`             <- le schema applicatif historique
  *
- * 🔒 L'adresse ne transporte QUE le sujet et l'identifiant : jamais un nom,
- * jamais un numero de telephone.
+ * 🔒 L'adresse ne transporte QUE le sujet, l'identifiant et — INVIT2 — un CODE
+ * opaque cree par le serveur (24 caracteres aleatoires) : jamais un nom, jamais
+ * un numero de telephone. Le code permet a la fenetre de nommer l'invitant et
+ * l'equipe, et au serveur de reconnaitre une invitation NOMINATIVE d'un lien
+ * transfere (decision Q1 = C d'Adel, 15/09).
  */
 
 /** Les sujets d'invitation. Equipe ET evenement des le depart, pas « plus tard ». */
@@ -37,6 +40,23 @@ const OWN_HOSTS = ['foundclub.app', 'foundclubpro.com'];
 const LOCAL_HOSTS = ['10.0.2.2', '127.0.0.1', 'localhost'];
 
 const TRUTHY_FLAGS = ['1', 'on', 'true', 'yes'];
+
+/** Parametre du code d'invitation dans les trois formes de lien. */
+export const INVITE_CODE_PARAM = 'c';
+
+// La forme exacte des codes du serveur (admin team-invite-rules.ts). Un code a la
+// forme impossible est IGNORE : l'invitation reste lisible, sans code.
+const INVITE_CODE_PATTERN = /^[A-Za-z0-9_-]{16,64}$/;
+
+/**
+ * Le code d'invitation, s'il a une forme possible.
+ * @param {unknown} rawCode
+ * @returns {string}
+ */
+export const normalizeInviteCode = (rawCode) => {
+  const code = String(rawCode ?? '').trim();
+  return INVITE_CODE_PATTERN.test(code) ? code : '';
+};
 
 const safeDecode = (value) => {
   try {
@@ -115,7 +135,7 @@ export const normalizeInviteSubject = (rawSubject) => {
 };
 
 /**
- * @typedef {{ id: string, subject: string }} InviteLink
+ * @typedef {{ code?: string, id: string, subject: string }} InviteLink
  * @typedef {'foreign-host' | 'malformed' | 'missing-id'
  *   | 'not-an-invite' | 'unknown-subject'} InviteLinkProblem
  * @typedef {{ invite: InviteLink, ok: true }
@@ -126,16 +146,18 @@ export const normalizeInviteSubject = (rawSubject) => {
  * Valide un couple sujet/identifiant deja extrait d'une adresse.
  * @param {unknown} rawSubject
  * @param {unknown} rawId
+ * @param {unknown} [rawCode]
  * @returns {InviteLinkResult}
  */
-const buildResult = (rawSubject, rawId) => {
+const buildResult = (rawSubject, rawId, rawCode) => {
   const subject = normalizeInviteSubject(rawSubject);
   if (!INVITE_SUBJECTS.includes(subject)) return { ok: false, reason: 'unknown-subject' };
 
   const id = safeDecode(rawId).trim();
   if (!id) return { ok: false, reason: 'missing-id' };
 
-  return { invite: { id, subject }, ok: true };
+  const code = normalizeInviteCode(rawCode);
+  return { invite: code ? { code, id, subject } : { id, subject }, ok: true };
 };
 
 /**
@@ -157,7 +179,11 @@ export const readInviteLink = (rawUrl) => {
       .split('/')
       .filter((segment) => segment !== '');
     if (routeSegments.length < 2) return { ok: false, reason: 'missing-id' };
-    return buildResult(routeSegments[0], routeSegments[1]);
+    return buildResult(
+      routeSegments[0],
+      routeSegments[1],
+      readQueryParam(parts.query, INVITE_CODE_PARAM),
+    );
   }
 
   if (parts.scheme !== 'http' && parts.scheme !== 'https') {
@@ -173,7 +199,11 @@ export const readInviteLink = (rawUrl) => {
     if (!isTruthyFlag(readQueryParam(parts.query, 'invite'))) {
       return { ok: false, reason: 'not-an-invite' };
     }
-    return buildResult(readQueryParam(parts.query, 'type'), readQueryParam(parts.query, 'id'));
+    return buildResult(
+      readQueryParam(parts.query, 'type'),
+      readQueryParam(parts.query, 'id'),
+      readQueryParam(parts.query, INVITE_CODE_PARAM),
+    );
   }
 
   // 1. Lien canonique : `/i/<sujet>/<id>`.
@@ -181,7 +211,7 @@ export const readInviteLink = (rawUrl) => {
   if (segments.length < 2) return { ok: false, reason: 'unknown-subject' };
   if (segments.length < 3) return { ok: false, reason: 'missing-id' };
 
-  return buildResult(segments[1], segments[2]);
+  return buildResult(segments[1], segments[2], readQueryParam(parts.query, INVITE_CODE_PARAM));
 };
 
 /**
@@ -195,11 +225,16 @@ export const parseInviteLink = (rawUrl) => {
 };
 
 /**
- * Construit le lien canonique. 🔒 Ne prend QUE un sujet et un identifiant.
- * @param {{ id?: unknown, origin?: string, subject?: unknown }} [params]
+ * Construit le lien canonique. 🔒 Ne prend QUE un sujet, un identifiant et un code.
+ * @param {{ code?: unknown, id?: unknown, origin?: string, subject?: unknown }} [params]
  * @returns {string | null}
  */
-export const buildInviteWebUrl = ({ id, origin = DEFAULT_INVITE_ORIGIN, subject } = {}) => {
+export const buildInviteWebUrl = ({
+  code,
+  id,
+  origin = DEFAULT_INVITE_ORIGIN,
+  subject,
+} = {}) => {
   const normalizedSubject = normalizeInviteSubject(subject);
   if (!INVITE_SUBJECTS.includes(normalizedSubject)) return null;
 
@@ -210,5 +245,7 @@ export const buildInviteWebUrl = ({ id, origin = DEFAULT_INVITE_ORIGIN, subject 
     || DEFAULT_INVITE_ORIGIN;
 
   const path = `${INVITE_PATH_SEGMENT}/${normalizedSubject}/${encodeURIComponent(normalizedId)}`;
-  return `${normalizedOrigin}/${path}`;
+  const normalizedCode = normalizeInviteCode(code);
+  const query = normalizedCode ? `?${INVITE_CODE_PARAM}=${normalizedCode}` : '';
+  return `${normalizedOrigin}/${path}${query}`;
 };

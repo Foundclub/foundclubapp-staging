@@ -88,6 +88,8 @@ jest.mock('@/services/bootRequestGuard', () => ({
 }));
 jest.mock('@/hooks/useNotificationController', () => ({ UNREAD_COUNT_QUERY_KEY: ['unread'] }));
 jest.mock('@/platform/share', () => ({ __esModule: true, default: { share: jest.fn() } }));
+// INVIT2 — useAuth partage le lien d'equipe par ce module, qui atteint le client HTTP.
+jest.mock('@/services/teamInvite/teamInviteShare', () => ({ shareTeamInviteLink: jest.fn() }));
 
 // Un JETON DIFFERENT par temoin. Les garde-fous de `useAuth`
 // (`lastBootstrapSyncedKey`, `lastFullUserSyncedKey`) sont des variables de
