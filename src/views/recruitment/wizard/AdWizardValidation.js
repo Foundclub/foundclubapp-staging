@@ -1,3 +1,5 @@
+import i18next from 'i18next';
+import { useTranslation } from 'react-i18next';
 import { Text, TouchableOpacity, View } from 'react-native';
 
 import useTheme from '@/theme/themeContext';
@@ -14,19 +16,57 @@ import {
 
 const VALIDATION_MODES = [
   {
-    eyebrow: 'Fluide',
-    helper: 'Idéal si tes critères sont déjà très précis.',
-    highlights: ['Réponse immédiate', 'Parcours plus rapide'],
-    label: 'Automatique',
-    summary: 'Les joueurs compatibles sont acceptés sans attendre une validation manuelle.',
+    get eyebrow() {
+      return i18next.t('adWizardValidation.modes.auto.eyebrow', 'Fluide');
+    },
+    get helper() {
+      return i18next.t(
+        'adWizardValidation.modes.auto.helper',
+        'Idéal si tes critères sont déjà très précis.',
+      );
+    },
+    get highlights() {
+      return [
+        i18next.t('adWizardValidation.modes.auto.highlight1', 'Réponse immédiate'),
+        i18next.t('adWizardValidation.modes.auto.highlight2', 'Parcours plus rapide'),
+      ];
+    },
+    get label() {
+      return i18next.t('adWizardValidation.modes.auto.label', 'Automatique');
+    },
+    get summary() {
+      return i18next.t(
+        'adWizardValidation.modes.auto.summary',
+        'Les joueurs compatibles sont acceptés sans attendre une validation manuelle.',
+      );
+    },
     value: 'auto',
   },
   {
-    eyebrow: 'Contrôle',
-    helper: 'Recommandé si tu souhaites valider chaque profil.',
-    highlights: ['Validation capitaine', 'Tri avant confirmation'],
-    label: 'Manuelle',
-    summary: "Tu confirmes chaque candidature avant qu'elle ne rejoigne l'événement.",
+    get eyebrow() {
+      return i18next.t('adWizardValidation.modes.manual.eyebrow', 'Contrôle');
+    },
+    get helper() {
+      return i18next.t(
+        'adWizardValidation.modes.manual.helper',
+        'Recommandé si tu souhaites valider chaque profil.',
+      );
+    },
+    get highlights() {
+      return [
+        i18next.t('adWizardValidation.modes.manual.highlight1', 'Validation capitaine'),
+        i18next.t('adWizardValidation.modes.manual.highlight2', 'Tri avant confirmation'),
+      ];
+    },
+    get label() {
+      return i18next.t('adWizardValidation.modes.manual.label', 'Manuelle');
+    },
+    get summary() {
+      return i18next.t(
+        'adWizardValidation.modes.manual.summary',
+        "Tu confirmes chaque candidature avant qu'elle ne rejoigne l'événement.",
+      );
+    },
     value: 'manual',
   },
 ];
@@ -37,6 +77,7 @@ const VALIDATION_MODES = [
  * @returns {import('react').ReactElement}
  */
 function AdWizardValidation({ navigation }) {
+  const { t } = useTranslation();
   const {
     Alignments,
     ApplicationStyle,
@@ -61,25 +102,34 @@ function AdWizardValidation({ navigation }) {
 
   return (
     <WizardStepLayout
-      nextLabel="Suivant"
+      nextLabel={t('adWizardValidation.next', 'Suivant')}
       onBack={() => navigation.goBack()}
       onNext={handleNext}
       stepCount={getAdWizardStepCount(state)}
       stepIndex={getAdWizardValidationStepIndex(state)}
-      subtitle="Choisis comment les candidatures liées à cette détection seront traitées."
-      title="Mode de validation"
+      subtitle={t(
+        'adWizardValidation.subtitle',
+        'Choisis comment les candidatures liées à cette détection seront traitées.',
+      )}
+      title={t('adWizardValidation.title', 'Mode de validation')}
     >
       <View style={[Spaces.gap[24], Spaces.paddingBottom[32]]}>
         {state.event ? (
           <View style={[ApplicationStyle.card, Spaces.padding[24], Spaces.gap[24], cardSurfaceStyle]}>
             <Text style={[Fonts.p3Bold, Fonts.primary500]}>
-              Annonce liée à une détection
+              {t('adWizardValidation.detectionBadge', 'Annonce liée à une détection')}
             </Text>
             <Text style={[Fonts.h4, Fonts.neutral00]}>
-              {state.event.name || state.event.type?.name || 'Événement'}
+              {state.event.name || state.event.type?.name || t(
+                'adWizardValidation.eventFallback',
+                'Événement',
+              )}
             </Text>
             <Text style={[Fonts.p2, Fonts.neutral100, { lineHeight: 24 }]}>
-              Ce réglage détermine la manière dont les candidatures seront acceptées sur cette annonce.
+              {t(
+                'adWizardValidation.intro',
+                'Ce réglage détermine la manière dont les candidatures seront acceptées sur cette annonce.', // eslint-disable-line max-len
+              )}
             </Text>
           </View>
         ) : null}
@@ -178,9 +228,14 @@ function AdWizardValidation({ navigation }) {
             },
           ]}
         >
-          <Text style={[Fonts.p3Bold, Fonts.primary500]}>À retenir</Text>
+          <Text style={[Fonts.p3Bold, Fonts.primary500]}>
+            {t('adWizardValidation.reminder.title', 'À retenir')}
+          </Text>
           <Text style={[Fonts.p2, Fonts.neutral100, { lineHeight: 24 }]}>
-            Tu pourras toujours consulter les profils reçus ensuite dans le détail de l&apos;annonce.
+            {t(
+              'adWizardValidation.reminder.body',
+              "Tu pourras toujours consulter les profils reçus ensuite dans le détail de l'annonce.", // eslint-disable-line max-len
+            )}once.
           </Text>
         </View>
       </View>

@@ -5,6 +5,7 @@ import {
   useMemo,
   useState,
 } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Text,
   View,
@@ -116,6 +117,7 @@ const dedupeTeams = (teams) => {
  * @returns {import('react').ReactElement}
  */
 function AdWizardTeam({ navigation, route }) {
+  const { t } = useTranslation();
   const { Colors, Fonts, Spaces } = useTheme();
   const { dispatch, state } = useAdWizard();
   const { userData } = useAuth();
@@ -173,8 +175,8 @@ function AdWizardTeam({ navigation, route }) {
         onBack={() => navigation.goBack()}
         stepCount={getAdWizardStepCount(state)}
         stepIndex={getAdWizardTeamStepIndex(state)}
-        subtitle="Tu n'as pas d'équipe associée"
-        title="Créer une annonce"
+        subtitle={t('adWizardTeam.empty.subtitle', "Tu n'as pas d'équipe associée")}
+        title={t('adWizardTeam.empty.title', 'Créer une annonce')}
       >
         <View
           style={[
@@ -188,7 +190,10 @@ function AdWizardTeam({ navigation, route }) {
           ]}
         >
           <Text style={[Fonts.p1, { color: Colors.neutral200, textAlign: 'center' }]}>
-            Tu dois être associé à une équipe pour créer une annonce de recrutement.
+            {t(
+              'adWizardTeam.empty.body',
+              'Tu dois être associé à une équipe pour créer une annonce de recrutement.',
+            )}
           </Text>
         </View>
       </WizardStepLayout>
@@ -200,8 +205,8 @@ function AdWizardTeam({ navigation, route }) {
       onBack={() => navigation.goBack()}
       stepCount={getAdWizardStepCount(state)}
       stepIndex={getAdWizardTeamStepIndex(state)}
-      subtitle="Sélectionne l'équipe qui recrute"
-      title="Pour quelle équipe ?"
+      subtitle={t('adWizardTeam.subtitle', "Sélectionne l'équipe qui recrute")}
+      title={t('adWizardTeam.title', 'Pour quelle équipe ?')}
     >
       <View style={[Spaces.gap[24], Spaces.paddingBottom[8]]}>
         {userTeams.map((team) => {
@@ -226,13 +231,11 @@ function AdWizardTeam({ navigation, route }) {
 
       <View style={[Spaces.marginTop[24]]}>
         <Text style={[Fonts.p2, { color: Colors.neutral400, textAlign: 'center' }]}>
-          {userTeams.length}
-          {' '}
-          équipe
-          {userTeams.length > 1 ? 's' : ''}
-          {' '}
-          disponible
-          {userTeams.length > 1 ? 's' : ''}
+          {t('adWizardTeam.available', {
+            count: userTeams.length,
+            defaultValue_one: '{{count}} équipe disponible',
+            defaultValue_other: '{{count}} équipes disponibles',
+          })}
         </Text>
       </View>
     </WizardStepLayout>

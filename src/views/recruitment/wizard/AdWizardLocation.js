@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Text, View } from 'react-native';
 
 import { getUserRoleKey } from '@/domains/auth/authUseCases';
@@ -62,6 +63,7 @@ const buildFacilitySelectionAddress = (facility, fallbackLocation) => {
  * @returns {import('react').ReactElement}
  */
 function AdWizardLocation({ navigation }) {
+  const { t } = useTranslation();
   const { Fonts, Spaces } = useTheme();
   const { showBanner } = useAppFeedback();
   const { userData } = useAuth();
@@ -94,8 +96,11 @@ function AdWizardLocation({ navigation }) {
   const handleNext = () => {
     if (!canGoNext) {
       showBanner({
-        body: 'Sélectionne une installation du club ou saisis une adresse pour continuer.',
-        title: 'Lieu requis',
+        body: t(
+          'adWizardLocation.required.body',
+          'Sélectionne une installation du club ou saisis une adresse pour continuer.',
+        ),
+        title: t('adWizardLocation.required.title', 'Lieu requis'),
         tone: 'error',
       });
       return;
@@ -131,13 +136,16 @@ function AdWizardLocation({ navigation }) {
   return (
     <WizardStepLayout
       isNextDisabled={!canGoNext}
-      nextLabel="Suivant"
+      nextLabel={t('adWizardLocation.next', 'Suivant')}
       onBack={() => navigation.goBack()}
       onNext={handleNext}
       stepCount={getAdWizardStepCount(state)}
       stepIndex={getAdWizardLocationStepIndex(state)}
-      subtitle="Sélectionne une installation du club ou renseigne une adresse claire pour situer ton annonce."
-      title="Lieu de publication"
+      subtitle={t(
+        'adWizardLocation.subtitle',
+        'Sélectionne une installation du club ou renseigne une adresse claire pour situer ton annonce.', // eslint-disable-line max-len
+      )}
+      title={t('adWizardLocation.title', 'Lieu de publication')}
     >
       <View style={[Spaces.gap[12], Spaces.paddingBottom[32]]}>
         <FacilitySelector
@@ -154,7 +162,10 @@ function AdWizardLocation({ navigation }) {
 
         {!canGoNext ? (
           <Text style={[Fonts.p3, Fonts.warning500]}>
-            Sélectionne une installation du club ou saisis une adresse extérieure pour continuer.
+            {t(
+              'adWizardLocation.hint',
+              'Sélectionne une installation du club ou saisis une adresse extérieure pour continuer.', // eslint-disable-line max-len
+            )}
           </Text>
         ) : null}
       </View>
