@@ -656,7 +656,10 @@ const resolveBareNotificationDestination = (rawPayload = {}) => {
     case NOTIFICATION_TYPES.NEW_TEAM:
     case NOTIFICATION_TYPES.TEAM_EXTERNAL_SOURCE_UPDATED:
     case NOTIFICATION_TYPES.TEAM_MEMBERSHIP_INVITATION:
+    case NOTIFICATION_TYPES.TEAM_MEMBERSHIP_INVITATION_ACCEPTED:
     case NOTIFICATION_TYPES.TEAM_MEMBERSHIP_REQUEST: {
+      // INVIT2-SUITE — « X a accepte ton invitation » (TEAM_MEMBERSHIP_INVITATION_ACCEPTED) :
+      // l inviteur retrouve sa fiche d equipe, ou la personne figure desormais.
       // P10 — « L'equipe X t'invite » (TEAM_MEMBERSHIP_INVITATION) retombe sur
       // `teamDetailsDestination`, comme ADD_TO_TEAM : la banniere
       // accepter/refuser vit sur la fiche de l'equipe. Aucun ecran neuf, aucune

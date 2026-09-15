@@ -269,6 +269,23 @@ describe('U06 — la demande d adhesion a une equipe a enfin une porte', () => {
     expect(destination?.params?.screen).not.toBe(RouteNames.TeamMembershipRequests);
   });
 
+  test('🔴 INVIT2-SUITE — « Karim a accepte ton invitation » ouvre la fiche de l equipe', () => {
+    // Serveur : `teamMembershipInvitationAccepted` (admin feat/INVIT2-suite). Sans
+    // aiguillage, l appui sur la notification de l INVITEUR ne menait nulle part.
+    expect(NOTIFICATION_TYPES.TEAM_MEMBERSHIP_INVITATION_ACCEPTED)
+      .toBe('teamMembershipInvitationAccepted');
+    expect(resolveNotificationDestination({
+      teamId: 'team-7',
+      type: 'teamMembershipInvitationAccepted',
+    })).toEqual({
+      params: {
+        params: { teamId: 'team-7' },
+        screen: RouteNames.TeamDetails,
+      },
+      route: RouteNames.TeamStack,
+    });
+  });
+
   test('les autres notifications d equipe continuent d ouvrir la fiche', () => {
     const destination = resolveNotificationDestination({
       teamId: 'team-7',

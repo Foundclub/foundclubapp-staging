@@ -226,10 +226,6 @@ function TeamInviteSheetBody({
     }),
     onError: (/** @type {any} */ error) => {
       const byCode = {
-        TEAM_INVITE_DAILY_LIMIT: t(
-          'teamInviteSheet.phone.errors.dailyLimit',
-          'Tu as atteint la limite de 20 invitations par numéro sur 24 heures. Réessaie demain.',
-        ),
         TEAM_INVITE_FIRSTNAME_REQUIRED: t(
           'teamInviteSheet.phone.errors.firstname',
           'Indique le prénom de la personne.',

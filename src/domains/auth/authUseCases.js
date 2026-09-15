@@ -1214,6 +1214,8 @@ export const NOTIFICATION_TYPES = {
   NEW_TEAM: 'newTeam',
   TEAM_EXTERNAL_SOURCE_UPDATED: 'teamExternalSourceUpdated',
   TEAM_MEMBERSHIP_INVITATION: 'teamMembershipInvitation',
+  // INVIT2-SUITE — l'inviteur apprend que la personne invitee a accepte.
+  TEAM_MEMBERSHIP_INVITATION_ACCEPTED: 'teamMembershipInvitationAccepted',
   TEAM_MEMBERSHIP_REQUEST: 'teamMembershipRequest',
   TEAM_REQUEST: 'teamRequest',
   TOURNAMENT_CAPTAIN_TRANSFER: 'tournamentCaptainTransfer',
