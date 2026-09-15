@@ -132,17 +132,32 @@ jest.mock('@/components/atoms/marqueeText/MarqueeText', () => {
   const reactActuel = jest.requireActual('react');
   return (/** @type {any} */ props) => reactActuel.createElement(TexteRN, null, props.text);
 });
-jest.mock('@/components/atoms/webFloatingOverlay/WebFloatingOverlay', () => (/** @type {any} */ props) => props.children || null);
+jest.mock(
+  '@/components/atoms/webFloatingOverlay/WebFloatingOverlay',
+  () => (/** @type {any} */ props) => props.children || null,
+);
 jest.mock('@/components/molecules/clubLogoMark/ClubLogoMark', () => () => null);
 jest.mock('@/components/molecules/header/LeagueHeaderSwitch', () => () => null);
 jest.mock('@/components/molecules/notificationBadge/NotificationBadge', () => () => null);
-jest.mock('@/components/molecules/onboardingWrapper/OnboardingWrapper', () => (/** @type {any} */ props) => props.children || null);
+jest.mock(
+  '@/components/molecules/onboardingWrapper/OnboardingWrapper',
+  () => (/** @type {any} */ props) => props.children || null,
+);
 jest.mock('@/components/molecules/profileAvatar/ProfileAvatar', () => () => null);
 jest.mock('@/components/molecules/profileButton/ProfileButton', () => () => null);
 jest.mock('@/components/molecules/segmentedControl/SegmentedControl', () => () => null);
-jest.mock('@/components/molecules/tutorial/TutorialFlowBoundary', () => (/** @type {any} */ props) => props.children || null);
-jest.mock('@/components/molecules/withDataWrapper/WithDataWrapper', () => (/** @type {any} */ props) => props.children || null);
-jest.mock('@/components/templates/ScreenContainer', () => (/** @type {any} */ props) => props.children || null);
+jest.mock(
+  '@/components/molecules/tutorial/TutorialFlowBoundary',
+  () => (/** @type {any} */ props) => props.children || null,
+);
+jest.mock(
+  '@/components/molecules/withDataWrapper/WithDataWrapper',
+  () => (/** @type {any} */ props) => props.children || null,
+);
+jest.mock(
+  '@/components/templates/ScreenContainer',
+  () => (/** @type {any} */ props) => props.children || null,
+);
 
 const CHATS = [
   {
@@ -174,6 +189,7 @@ const etatListe = (surcharge = {}) => ({
 });
 
 /**
+ * Monte l ecran Messages sous ses doublures.
  * @returns {Promise<any>} L ecran monte.
  */
 const monter = async () => {
@@ -181,7 +197,10 @@ const monter = async () => {
   let arbre;
   await act(async () => {
     arbre = renderer.create(
-      <Messaging navigation={{ navigate: mockNavigate, setParams: jest.fn() }} route={{ params: {} }} />,
+      <Messaging
+        navigation={{ navigate: mockNavigate, setParams: jest.fn() }}
+        route={{ params: {} }}
+      />,
     );
   });
   return arbre;
@@ -200,7 +219,8 @@ describe('MSG2 caracterisation — ce que la liste des conversations fait deja',
     mockChatsQuery = etatListe();
     const arbre = await monter();
 
-    expect(dernieresProps().data.map((/** @type {any} */ chat) => chat.documentId)).toEqual(['chat-1']);
+    const identifiants = dernieresProps().data.map((/** @type {any} */ chat) => chat.documentId);
+    expect(identifiants).toEqual(['chat-1']);
     expect(JSON.stringify(arbre.toJSON())).toContain('Les U13');
   });
 
@@ -239,7 +259,7 @@ describe('MSG2 caracterisation — ce que la liste des conversations fait deja',
 });
 
 describe('MSG2 — l indicateur de rechargement ne s allume QUE si on tire', () => {
-  test('un chargement de fond (relecture apres lecture d un fil) n allume pas l indicateur', async () => {
+  test('un chargement de fond (relecture apres lecture) n allume pas l indicateur', async () => {
     mockChatsQuery = etatListe({ isFetching: true });
     await monter();
 
@@ -267,10 +287,11 @@ describe('MSG2 — l indicateur de rechargement ne s allume QUE si on tire', () 
   });
 
   test('tirer allume l indicateur pendant la relecture, puis l eteint', async () => {
-    /** @type {() => void} */
     let terminerRelecture = () => {};
     mockChatsQuery = etatListe({
-      refetch: jest.fn(() => new Promise((resolve) => { terminerRelecture = () => resolve(undefined); })),
+      refetch: jest.fn(() => new Promise((resolve) => {
+        terminerRelecture = () => resolve(undefined);
+      })),
     });
     await monter();
 

@@ -137,12 +137,15 @@ const FRESH_READ_ACK_MS = 10000;
  */
 export const applyServerChatReadCounts = (oldData, chatDocumentId, ack) => {
   const total = Number(ack?.unreadTotal);
-  if (!oldData || typeof oldData !== 'object' || !ack?.ok || !Number.isFinite(total)) return oldData;
+  if (!oldData || typeof oldData !== 'object' || !ack?.ok || !Number.isFinite(total)) {
+    return oldData;
+  }
 
   const safeChatId = normalizeChatId(chatDocumentId);
   const chatCount = Number.isFinite(Number(ack?.unreadCount)) ? Number(ack.unreadCount) : 0;
 
   /**
+   * Applique les comptes du serveur a une page.
    * @param {any} page - Une page de la liste.
    * @param {number} index - Sa position.
    * @returns {any} La page, comptes du serveur appliques.

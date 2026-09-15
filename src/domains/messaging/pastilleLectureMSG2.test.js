@@ -23,11 +23,11 @@ import useMessaging from './useMessaging';
 // ancien (sans accuse) garde l ancien comportement.
 
 const mockSocket = {
-  /** @type {Array<{ event: string, payload: any, ack: any }>} */
-  emissions: [],
+  connected: true,
   /** @type {Record<string, Function[]>} */
   ecouteurs: {},
-  connected: true,
+  /** @type {Array<{ event: string, payload: any, ack: any }>} */
+  emissions: [],
   emit(/** @type {string} */ event, /** @type {any} */ payload, /** @type {any} */ ack) {
     this.emissions.push({ ack, event, payload });
   },
@@ -124,10 +124,14 @@ const monter = async () => {
 
   /** @type {any} */
   let dernier;
-  const Sonde = () => {
+  /**
+   * Le composant qui porte le crochet.
+   * @returns {null} Rien a afficher.
+   */
+  function Sonde() {
     dernier = useMessaging('chat-1');
     return null;
-  };
+  }
 
   await act(async () => {
     renderer.create(
@@ -150,9 +154,12 @@ const echoDeLecture = (payload) => {
   });
 };
 
-const totalEnCache = (/** @type {QueryClient} */ client) => client.getQueryData(CLEF_LISTE).pages[0].meta.unreadTotal;
-const compteDuFil = (/** @type {QueryClient} */ client, /** @type {string} */ id) => client
-  .getQueryData(CLEF_LISTE).pages[0].data.find((/** @type {any} */ chat) => chat.documentId === id).unreadCount;
+const pageUne = (/** @type {QueryClient} */ client) => (
+  /** @type {any} */ (client.getQueryData(CLEF_LISTE)).pages[0]
+);
+const totalEnCache = (/** @type {QueryClient} */ client) => pageUne(client).meta.unreadTotal;
+const compteDuFil = (/** @type {QueryClient} */ client, /** @type {string} */ id) => pageUne(client)
+  .data.find((/** @type {any} */ chat) => chat.documentId === id).unreadCount;
 
 beforeEach(() => {
   mockSocket.emissions = [];
@@ -164,14 +171,14 @@ beforeEach(() => {
 // en cache vaut donc 3 des le montage. L accuse, lui, porte ce que le SERVEUR
 // sait : 5 ici, parce qu un autre membre a ecrit dans chat-2 entre-temps.
 describe('MSG2 — ouvrir un fil fait baisser la pastille, avec le compte du SERVEUR', () => {
-  test('point de depart : l entree dans le fil a deja retire ses 4 messages, sans reseau', async () => {
+  test('depart : entrer dans le fil a deja retire ses 4 messages, sans reseau', async () => {
     const { client } = await monter();
 
     expect(compteDuFil(client, 'chat-1')).toBe(0);
     expect(totalEnCache(client)).toBe(3);
   });
 
-  test('la lecture part avec un accuse, et le compte de l accuse est applique tel quel', async () => {
+  test('la lecture part avec un accuse, dont le compte est applique tel quel', async () => {
     const { client, messagerie } = await monter();
 
     act(() => {
@@ -192,7 +199,8 @@ describe('MSG2 — ouvrir un fil fait baisser la pastille, avec le compte du SER
     expect(totalEnCache(client)).toBe(5);
   });
 
-  test('apres un accuse chiffre, l echo ne relit PAS la liste (une replique rendrait l ancien compte)', async () => {
+  // Une replique rendrait l ANCIEN compte et ecraserait celui de l accuse.
+  test('apres un accuse chiffre, l echo ne relit PAS la liste', async () => {
     const { client, messagerie } = await monter();
 
     act(() => {
@@ -239,7 +247,7 @@ describe('MSG2 — ouvrir un fil fait baisser la pastille, avec le compte du SER
     expect(client.refetchQueries).toHaveBeenCalledTimes(1);
   });
 
-  test('accuse OUI mais sans chiffre (compte serveur indisponible) : on retombe sur la relecture', async () => {
+  test('accuse OUI sans chiffre (compte indisponible) : on retombe sur la relecture', async () => {
     const { client, messagerie } = await monter();
 
     act(() => {
