@@ -2,7 +2,9 @@
 /* eslint-disable max-len, no-nested-ternary, react/function-component-definition, react/jsx-one-expression-per-line, perfectionist/sort-jsx-props */
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { useQuery } from '@tanstack/react-query';
+import i18next from 'i18next';
 import { useCallback, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Alert,
   Linking,
@@ -16,6 +18,8 @@ import {
 } from 'react-native';
 
 import { formatSubscriptionPriceLabel } from '@/domains/subscription/subscriptionBilling';
+import localeDesFormats from '@/theme/strings/localeDesFormats';
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import ScreenContainer from '@/components/templates/ScreenContainer';
@@ -46,17 +50,21 @@ import { useGetInAppPopupCampaigns } from '@/services/inAppPopupCampaign/inAppPo
 import { getErrorMessage } from '@/utils/errors/displayError';
 
 const formatDateTime = (value) => {
-  if (!value) return 'Date inconnue';
+  if (!value) {
+    return i18next.t('adminDashboard.unknownDate', 'Date inconnue');
+  }
   const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return 'Date inconnue';
-  return date.toLocaleString('fr-FR');
+  if (Number.isNaN(date.getTime())) {
+    return i18next.t('adminDashboard.unknownDate', 'Date inconnue');
+  }
+  return date.toLocaleString(localeDesFormats());
 };
 
 const formatPersonName = (person) => {
   const firstname = String(person?.firstname || '').trim();
   const lastname = String(person?.lastname || '').trim();
   const fullname = `${firstname} ${lastname}`.trim();
-  return fullname || 'Utilisateur inconnu';
+  return fullname || i18next.t('adminDashboard.unknownUser', 'Utilisateur inconnu');
 };
 
 const sanitizePhoneNumber = (value) => String(value || '')
@@ -65,7 +73,9 @@ const sanitizePhoneNumber = (value) => String(value || '')
 
 const formatPlanCode = (value) => {
   const normalized = String(value || '').trim();
-  if (!normalized) return 'Plan inconnu';
+  if (!normalized) {
+    return i18next.t('adminDashboard.unknownPlan', 'Plan inconnu');
+  }
   return normalized.replace(/^fc_/i, '').replace(/_/g, ' ').toUpperCase();
 };
 
@@ -96,9 +106,24 @@ const buildManualEntitlementForm = (defaults = {}) => ({
 });
 
 const REVIEWABLE_STATUSES = [
-  { key: 'pending', label: 'En attente' },
-  { key: 'verified', label: 'Verifiee' },
-  { key: 'rejected', label: 'Rejetee' },
+  {
+    key: 'pending',
+    get label() {
+      return i18next.t('adminDashboard.review.pending', 'En attente');
+    },
+  },
+  {
+    key: 'verified',
+    get label() {
+      return i18next.t('adminDashboard.review.verified', 'Verifiee');
+    },
+  },
+  {
+    key: 'rejected',
+    get label() {
+      return i18next.t('adminDashboard.review.rejected', 'Rejetee');
+    },
+  },
 ];
 
 /**
@@ -112,6 +137,7 @@ function AdminDashboard() {
     Fonts,
     Spaces,
   } = useTheme();
+  const { t } = useTranslation();
   const navigation = useNavigation();
   const createManualSubscriptionMutation = useCreateManualSubscription();
   const generateTestTournamentMutation = useGenerateTestTournament();
@@ -233,7 +259,10 @@ function AdminDashboard() {
   ].filter(Boolean);
 
   const partialDashboardDescription = secondaryDashboardErrors.length > 0
-    ? 'Certaines tuiles admin sont temporairement indisponibles.'
+    ? t(
+      'adminDashboard.partialDashboard',
+      'Certaines tuiles admin sont temporairement indisponibles.',
+    )
     : '';
 
   useFocusEffect(
@@ -323,7 +352,7 @@ function AdminDashboard() {
     ? Number(stats.revenueEurCents)
     : Math.round(Number(stats?.revenue || 0) * 100);
   const revenueLabel = stats?.revenueKind === 'indisponible'
-    ? 'indisponible'
+    ? t('adminDashboard.revenue.unavailable', 'indisponible')
     : formatSubscriptionPriceLabel(revenueEurCents, 'monthly');
   const payingSubscriptionCount = Number(stats?.payingSubscriptionCount || 0);
   const trialSubscriptionCount = Number(stats?.trialSubscriptionCount || 0);
@@ -364,10 +393,13 @@ function AdminDashboard() {
     if (generateTestTournamentMutation.isPending) return;
 
     Alert.alert(
-      'Générer un tournoi fictif ?',
-      'Cela crée un tournoi autonome [TEST] avec 8 équipes, des joueurs fictifs, des poules et des matchs brouillons. En production, cette action est bloquée sauf flag explicite.',
+      t('adminDashboard.testTournament.confirmTitle', 'Générer un tournoi fictif ?'),
+      t(
+        'adminDashboard.testTournament.confirmMessage',
+        'Cela crée un tournoi autonome [TEST] avec 8 équipes, des joueurs fictifs, des poules et des matchs brouillons. En production, cette action est bloquée sauf flag explicite.',
+      ),
       [
-        { style: 'cancel', text: 'Annuler' },
+        { style: 'cancel', text: t('adminDashboard.cancel', 'Annuler') },
         {
           onPress: () => {
             generateTestTournamentMutation.mutate(
@@ -379,8 +411,11 @@ function AdminDashboard() {
               {
                 onError: (error) => {
                   Alert.alert(
-                    'Génération impossible',
-                    getErrorMessage(error, 'generic') || 'Impossible de générer le tournoi fictif.',
+                    t('adminDashboard.testTournament.failedTitle', 'Génération impossible'),
+                    getErrorMessage(error, 'generic') || t(
+                      'adminDashboard.testTournament.failedMessage',
+                      'Impossible de générer le tournoi fictif.',
+                    ),
                   );
                 },
                 onSuccess: (response) => {
@@ -388,16 +423,33 @@ function AdminDashboard() {
                   const event = result?.event || {};
                   const eventDocumentId = event?.documentId;
                   const warnings = Array.isArray(result?.warnings) && result.warnings.length > 0
-                    ? `\n\nAttention: ${result.warnings.join(' | ')}`
+                    ? t(
+                      'adminDashboard.testTournament.warnings',
+                      '\n\nAttention: {{list}}',
+                      { list: result.warnings.join(' | '), ...SANS_ECHAPPEMENT },
+                    )
                     : '';
 
                   Alert.alert(
-                    'Tournoi fictif crée',
-                    `${event?.name || 'Le tournoi de test'} est prêt avec ${result?.generated?.teams || 0} équipes.${warnings}`,
+                    t('adminDashboard.testTournament.createdTitle', 'Tournoi fictif crée'),
+                    t(
+                      'adminDashboard.testTournament.createdMessage',
+                      '{{name}} est prêt avec {{teams}} équipes.{{warnings}}',
+                      {
+                        name: event?.name
+                          || t('adminDashboard.testTournament.defaultName', 'Le tournoi de test'),
+                        teams: result?.generated?.teams || 0,
+                        warnings,
+                        ...SANS_ECHAPPEMENT,
+                      },
+                    ),
                     [
                       { text: 'OK' },
                       eventDocumentId
-                        ? { onPress: () => openGeneratedTournament(eventDocumentId), text: 'Ouvrir' }
+                        ? {
+                          onPress: () => openGeneratedTournament(eventDocumentId),
+                          text: t('adminDashboard.open', 'Ouvrir'),
+                        }
                         : null,
                     ].filter(Boolean),
                   );
@@ -405,11 +457,11 @@ function AdminDashboard() {
               },
             );
           },
-          text: 'Generer',
+          text: t('adminDashboard.generate', 'Generer'),
         },
       ],
     );
-  }, [generateTestTournamentMutation, openGeneratedTournament]);
+  }, [generateTestTournamentMutation, openGeneratedTournament, t]);
 
   const openReviewModal = useCallback((item, forcedStatus = null) => {
     const nextStatus = forcedStatus || item?.verification?.status || 'pending';
@@ -427,7 +479,13 @@ function AdminDashboard() {
   const handleCallOrganizer = useCallback(async (phoneNumber) => {
     const sanitizedPhone = sanitizePhoneNumber(phoneNumber);
     if (!sanitizedPhone) {
-      Alert.alert('Numéro manquant', 'Aucun numéro de téléphone exploitable sur cette détection.');
+      Alert.alert(
+        t('adminDashboard.call.missingNumberTitle', 'Numéro manquant'),
+        t(
+          'adminDashboard.call.missingNumberMessage',
+          'Aucun numéro de téléphone exploitable sur cette détection.',
+        ),
+      );
       return;
     }
 
@@ -435,14 +493,14 @@ function AdminDashboard() {
     try {
       const supported = await Linking.canOpenURL(targetUrl);
       if (!supported) {
-        Alert.alert('Appel indisponible', sanitizedPhone);
+        Alert.alert(t('adminDashboard.call.unavailable', 'Appel indisponible'), sanitizedPhone);
         return;
       }
       await Linking.openURL(targetUrl);
     } catch (_error) {
-      Alert.alert('Appel indisponible', sanitizedPhone);
+      Alert.alert(t('adminDashboard.call.unavailable', 'Appel indisponible'), sanitizedPhone);
     }
-  }, []);
+  }, [t]);
 
   const handleSubmitReview = useCallback(() => {
     if (!reviewItem?.documentId || updateDetectionVerificationMutation.isPending) return;
@@ -456,8 +514,11 @@ function AdminDashboard() {
       {
         onError: (error) => {
           Alert.alert(
-            'Vérification impossible',
-            getErrorMessage(error, 'generic') || 'Impossible de mettre à jour cette vérification.',
+            t('adminDashboard.verification.failedTitle', 'Vérification impossible'),
+            getErrorMessage(error, 'generic') || t(
+              'adminDashboard.verification.failedMessage',
+              'Impossible de mettre à jour cette vérification.',
+            ),
           );
         },
         onSuccess: () => {
@@ -470,6 +531,7 @@ function AdminDashboard() {
     reviewItem?.documentId,
     reviewNotes,
     reviewStatus,
+    t,
     updateDetectionVerificationMutation,
   ]);
 
@@ -483,13 +545,16 @@ function AdminDashboard() {
       {
         onError: (error) => {
           Alert.alert(
-            'Mise à jour impossible',
-            getErrorMessage(error, 'generic') || 'Impossible de mettre à jour la publication des coachs non certifiés.',
+            t('adminDashboard.governance.updateFailedTitle', 'Mise à jour impossible'),
+            getErrorMessage(error, 'generic') || t(
+              'adminDashboard.governance.updateFailedMessage',
+              'Impossible de mettre à jour la publication des coachs non certifiés.',
+            ),
           );
         },
       },
     );
-  }, [publishingGovernance?.globalEnabled, updateNonPartnerCoachGovernanceMutation]);
+  }, [publishingGovernance?.globalEnabled, t, updateNonPartnerCoachGovernanceMutation]);
 
   const handleToggleCoachOverride = useCallback((item) => {
     if (!item?.user?.documentId || !item?.club?.documentId || updateNonPartnerCoachAffiliationMutation.isPending) {
@@ -506,13 +571,16 @@ function AdminDashboard() {
       {
         onError: (error) => {
           Alert.alert(
-            'Autorisation impossible',
-            getErrorMessage(error, 'generic') || 'Impossible de mettre à jour cette autorisation coach.',
+            t('adminDashboard.governance.overrideFailedTitle', 'Autorisation impossible'),
+            getErrorMessage(error, 'generic') || t(
+              'adminDashboard.governance.overrideFailedMessage',
+              'Impossible de mettre à jour cette autorisation coach.',
+            ),
           );
         },
       },
     );
-  }, [updateNonPartnerCoachAffiliationMutation]);
+  }, [t, updateNonPartnerCoachAffiliationMutation]);
 
   const openLegacyMigrationModal = useCallback((clubDocumentId = '') => {
     setLegacyMigrationClubDocumentId(String(clubDocumentId || '').trim());
@@ -572,15 +640,26 @@ function AdminDashboard() {
       {
         onError: (error) => {
           Alert.alert(
-            apply ? 'Migration impossible' : 'Preview impossible',
-            getErrorMessage(error, 'generic') || 'Impossible d executer la migration legacy.',
+            apply
+              ? t('adminDashboard.legacyMigration.applyFailed', 'Migration impossible')
+              : t('adminDashboard.legacyMigration.previewFailed', 'Preview impossible'),
+            getErrorMessage(error, 'generic') || t(
+              'adminDashboard.legacyMigration.failedMessage',
+              'Impossible d executer la migration legacy.',
+            ),
           );
         },
         onSuccess: (response) => {
           const migratedCount = Number(response?.meta?.migratedCount || 0);
-          const label = apply ? 'Migration executee' : 'Preview terminée';
+          const label = apply
+            ? t('adminDashboard.legacyMigration.applied', 'Migration executee')
+            : t('adminDashboard.legacyMigration.previewed', 'Preview terminée');
           const scopeLabel = legacyMigrationClubDocumentId
-            ? `Club cible: ${legacyMigrationClubDocumentId}\n`
+            ? t(
+              'adminDashboard.legacyMigration.targetClub',
+              'Club cible: {{documentId}}\n',
+              { documentId: legacyMigrationClubDocumentId, ...SANS_ECHAPPEMENT },
+            )
             : '';
           Alert.alert(
             label,
@@ -590,7 +669,7 @@ function AdminDashboard() {
         },
       },
     );
-  }, [closeLegacyMigrationModal, legacyMigrationClubDocumentId, migrateLegacySubscriptionsMutation]);
+  }, [closeLegacyMigrationModal, legacyMigrationClubDocumentId, migrateLegacySubscriptionsMutation, t]);
 
   const handleSubmitManualSubscription = useCallback(() => {
     if (createManualSubscriptionMutation.isPending) return;
@@ -609,17 +688,26 @@ function AdminDashboard() {
       {
         onError: (error) => {
           Alert.alert(
-            'Création impossible',
-            getErrorMessage(error, 'generic') || 'Impossible de créer cette subscription manuelle.',
+            t('adminDashboard.manualSubscription.failedTitle', 'Création impossible'),
+            getErrorMessage(error, 'generic') || t(
+              'adminDashboard.manualSubscription.failedMessage',
+              'Impossible de créer cette subscription manuelle.',
+            ),
           );
         },
         onSuccess: () => {
-          Alert.alert('Subscription créée', 'La subscription manuelle a été enregistrée et auditée.');
+          Alert.alert(
+            t('adminDashboard.manualSubscription.createdTitle', 'Subscription créée'),
+            t(
+              'adminDashboard.manualSubscription.createdMessage',
+              'La subscription manuelle a été enregistrée et auditée.',
+            ),
+          );
           closeManualSubscriptionModal();
         },
       },
     );
-  }, [closeManualSubscriptionModal, createManualSubscriptionMutation, manualSubscriptionForm]);
+  }, [closeManualSubscriptionModal, createManualSubscriptionMutation, manualSubscriptionForm, t]);
 
   const handleSubmitManualEntitlement = useCallback(() => {
     if (saveManualEntitlementMutation.isPending) return;
@@ -644,30 +732,42 @@ function AdminDashboard() {
       {
         onError: (error) => {
           Alert.alert(
-            'Enregistrement impossible',
-            getErrorMessage(error, 'generic') || 'Impossible de sauvegarder cet entitlement.',
+            t('adminDashboard.manualEntitlement.failedTitle', 'Enregistrement impossible'),
+            getErrorMessage(error, 'generic') || t(
+              'adminDashboard.manualEntitlement.failedMessage',
+              'Impossible de sauvegarder cet entitlement.',
+            ),
           );
         },
         onSuccess: () => {
           Alert.alert(
-            manualEntitlementForm?.documentId ? 'Entitlement corrige' : 'Entitlement crée',
-            'La mutation manuelle a bien été auditée.',
+            manualEntitlementForm?.documentId
+              ? t('adminDashboard.manualEntitlement.correctedTitle', 'Entitlement corrige')
+              : t('adminDashboard.manualEntitlement.createdTitle', 'Entitlement crée'),
+            t(
+              'adminDashboard.manualEntitlement.auditedMessage',
+              'La mutation manuelle a bien été auditée.',
+            ),
           );
           closeManualEntitlementModal();
         },
       },
     );
-  }, [closeManualEntitlementModal, manualEntitlementForm, saveManualEntitlementMutation]);
+  }, [closeManualEntitlementModal, manualEntitlementForm, saveManualEntitlementMutation, t]);
 
   const handleSyncTeamEntitlements = useCallback((item) => {
     const documentId = String(item?.documentId || '').trim();
     if (!documentId || syncSubscriptionTeamEntitlementsMutation.isPending) return;
 
     Alert.alert(
-      'Resynchroniser les droits Team ?',
-      `Cela va recalculer les entitlements TEAM de la subscription ${formatPlanCode(item?.planCode)}.`,
+      t('adminDashboard.teamSync.confirmTitle', 'Resynchroniser les droits Team ?'),
+      t(
+        'adminDashboard.teamSync.confirmMessage',
+        'Cela va recalculer les entitlements TEAM de la subscription {{plan}}.',
+        { plan: formatPlanCode(item?.planCode), ...SANS_ECHAPPEMENT },
+      ),
       [
-        { style: 'cancel', text: 'Annuler' },
+        { style: 'cancel', text: t('adminDashboard.cancel', 'Annuler') },
         {
           onPress: () => {
             syncSubscriptionTeamEntitlementsMutation.mutate(
@@ -678,25 +778,28 @@ function AdminDashboard() {
               {
                 onError: (error) => {
                   Alert.alert(
-                    'Resync impossible',
-                    getErrorMessage(error, 'generic') || 'Impossible de resynchroniser cette subscription.',
+                    t('adminDashboard.teamSync.failedTitle', 'Resync impossible'),
+                    getErrorMessage(error, 'generic') || t(
+                      'adminDashboard.teamSync.failedMessage',
+                      'Impossible de resynchroniser cette subscription.',
+                    ),
                   );
                 },
                 onSuccess: (response) => {
                   const syncedCount = Number(response?.meta?.syncedSlotCount || 0);
                   Alert.alert(
-                    'Resync terminée',
+                    t('adminDashboard.teamSync.doneTitle', 'Resync terminée'),
                     `${syncedCount} slot${syncedCount > 1 ? 's' : ''} resynchronise${syncedCount > 1 ? 's' : ''}.`,
                   );
                 },
               },
             );
           },
-          text: 'Resynchroniser',
+          text: t('adminDashboard.teamSync.confirm', 'Resynchroniser'),
         },
       ],
     );
-  }, [syncSubscriptionTeamEntitlementsMutation]);
+  }, [syncSubscriptionTeamEntitlementsMutation, t]);
 
   const openClaimPreviewDetail = useCallback((item) => {
     if (!item?.documentId) return;
@@ -711,23 +814,26 @@ function AdminDashboard() {
       ? {
         backgroundColor: `${Colors.success500}18`,
         borderColor: `${Colors.success500}44`,
-        label: 'Certifié',
+        label: t('adminDashboard.partner.verified', 'Certifié'),
         textColor: Colors.success500,
       }
       : {
         backgroundColor: `${Colors.neutral300}18`,
         borderColor: `${Colors.neutral300}44`,
-        label: 'Non certifié',
+        label: t('adminDashboard.partner.notVerified', 'Non certifié'),
         textColor: Colors.neutral100,
       }
-  ), [Colors.neutral100, Colors.neutral300, Colors.success500]);
+  ), [Colors.neutral100, Colors.neutral300, Colors.success500, t]);
 
   if (isBootstrapping) {
     return (
       <AdminStateView
-        description="Nous synchronisons les indicateurs d'administration."
+        description={t(
+          'adminDashboard.states.loadingDescription',
+          "Nous synchronisons les indicateurs d'administration.",
+        )}
         isLoading
-        title="Chargement du dashboard admin"
+        title={t('adminDashboard.states.loadingTitle', 'Chargement du dashboard admin')}
       />
     );
   }
@@ -735,8 +841,11 @@ function AdminDashboard() {
   if (dashboardError) {
     return (
       <AdminStateView
-        actionLabel="Reessayer"
-        description={dashboardError?.message || 'Impossible de charger les indicateurs admin.'}
+        actionLabel={t('adminDashboard.states.retry', 'Reessayer')}
+        description={dashboardError?.message || t(
+          'adminDashboard.states.errorDescription',
+          'Impossible de charger les indicateurs admin.',
+        )}
         onAction={() => {
           refetchFeatured();
           refetchStats();
@@ -748,7 +857,7 @@ function AdminDashboard() {
           refetchPopupCampaigns();
           refetchSubscriptionOps();
         }}
-        title="Chargement impossible"
+        title={t('adminDashboard.states.errorTitle', 'Chargement impossible')}
       />
     );
   }
@@ -762,7 +871,9 @@ function AdminDashboard() {
     value,
   }) => (
     <TouchableOpacity
-      accessibilityHint={onPress ? `Ouvrir ${title}` : undefined}
+      accessibilityHint={onPress
+        ? t('adminDashboard.card.openHint', 'Ouvrir {{title}}', { title, ...SANS_ECHAPPEMENT })
+        : undefined}
       accessibilityLabel={`${title}: ${value}`}
       accessibilityRole={onPress ? 'button' : 'summary'}
       activeOpacity={0.82}
@@ -824,7 +935,7 @@ function AdminDashboard() {
               {item?.name || 'Detection'}
             </Text>
             <Text style={[Fonts.p4, Fonts.neutral300, Spaces.marginTop[4]]}>
-              {item?.team?.name || 'Équipe inconnue'}
+              {item?.team?.name || t('adminDashboard.unknownTeam', 'Équipe inconnue')}
               {item?.club?.name ? ` - ${item.club.name}` : ''}
             </Text>
             <Text style={[Fonts.p4, Fonts.neutral300, Spaces.marginTop[4]]}>
@@ -876,10 +987,10 @@ function AdminDashboard() {
               ]}
             >
               {verificationStatus === 'verified'
-                ? 'Verifiee'
+                ? t('adminDashboard.review.verifiedBadge', 'Verifiee')
                 : verificationStatus === 'rejected'
-                  ? 'Rejetee'
-                  : 'En attente'}
+                  ? t('adminDashboard.review.rejectedBadge', 'Rejetee')
+                  : t('adminDashboard.review.pendingBadge', 'En attente')}
             </Text>
           </View>
         </View>
@@ -892,7 +1003,7 @@ function AdminDashboard() {
             {organizerName}
           </Text>
           <Text style={[Fonts.p4, Fonts.neutral300, Spaces.marginTop[4]]}>
-            {phoneLabel || 'Téléphone non renseigne'}
+            {phoneLabel || t('adminDashboard.phoneMissing', 'Téléphone non renseigne')}
           </Text>
         </View>
 
@@ -911,7 +1022,9 @@ function AdminDashboard() {
             onPress={() => openEventDetails(item?.documentId)}
             style={[styles.inlineActionButton, { backgroundColor: `${Colors.primary500}18`, borderColor: `${Colors.primary500}44` }]}
           >
-            <Text style={[Fonts.p4Bold, { color: Colors.primary500 }]}>Ouvrir</Text>
+            <Text style={[Fonts.p4Bold, { color: Colors.primary500 }]}>
+              {t('adminDashboard.open', 'Ouvrir')}
+            </Text>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -919,7 +1032,9 @@ function AdminDashboard() {
             onPress={() => handleCallOrganizer(phoneNumber)}
             style={[styles.inlineActionButton, { backgroundColor: `${Colors.neutral00}08`, borderColor: `${Colors.neutral00}18` }]}
           >
-            <Text style={[Fonts.p4Bold, { color: Colors.neutral00 }]}>Appeler</Text>
+            <Text style={[Fonts.p4Bold, { color: Colors.neutral00 }]}>
+              {t('adminDashboard.call.action', 'Appeler')}
+            </Text>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -927,7 +1042,9 @@ function AdminDashboard() {
             onPress={() => openReviewModal(item)}
             style={[styles.inlineActionButton, { backgroundColor: `${Colors.success500}14`, borderColor: `${Colors.success500}33` }]}
           >
-            <Text style={[Fonts.p4Bold, { color: Colors.success500 }]}>Traiter</Text>
+            <Text style={[Fonts.p4Bold, { color: Colors.success500 }]}>
+              {t('adminDashboard.review.action', 'Traiter')}
+            </Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -953,14 +1070,14 @@ function AdminDashboard() {
         <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter, Spaces.gap[12]]}>
           <View style={{ flex: 1 }}>
             <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
-              {item?.name || 'Evenement'}
+              {item?.name || t('adminDashboard.firstEvent.defaultName', 'Evenement')}
             </Text>
             <Text style={[Fonts.p4, Fonts.neutral300, Spaces.marginTop[4]]}>
-              {item?.team?.name || 'Équipe inconnue'}
+              {item?.team?.name || t('adminDashboard.unknownTeam', 'Équipe inconnue')}
               {item?.club?.name ? ` - ${item.club.name}` : ''}
             </Text>
             <Text style={[Fonts.p4, Fonts.neutral300, Spaces.marginTop[4]]}>
-              Cree le {formatDateTime(item?.createdAt)}
+              {t('adminDashboard.firstEvent.createdOn', 'Cree le')} {formatDateTime(item?.createdAt)}
             </Text>
             <View
               style={[
@@ -979,11 +1096,13 @@ function AdminDashboard() {
             </View>
           </View>
           <View style={[styles.statusPill, { backgroundColor: `${Colors.primary200}18`, borderColor: `${Colors.primary200}44` }]}>
-            <Text style={[Fonts.p4Bold, { color: Colors.primary200 }]}>1er event</Text>
+            <Text style={[Fonts.p4Bold, { color: Colors.primary200 }]}>
+              {t('adminDashboard.firstEvent.badge', '1er event')}
+            </Text>
           </View>
         </View>
         <Text style={[Fonts.p4, Fonts.primary100, Spaces.marginTop[12]]}>
-          Organisateur: {formatPersonName(item?.organizer)}
+          {t('adminDashboard.firstEvent.organizer', 'Organisateur:')} {formatPersonName(item?.organizer)}
         </Text>
       </TouchableOpacity>
     );
@@ -1001,14 +1120,14 @@ function AdminDashboard() {
         backgroundColor: `${Colors.success500}18`,
         borderColor: `${Colors.success500}44`,
         label: item?.access?.reason === 'global_enabled'
-          ? 'Publication ouverte (global)'
-          : 'Publication autorisee',
+          ? t('adminDashboard.governance.openGlobal', 'Publication ouverte (global)')
+          : t('adminDashboard.governance.allowed', 'Publication autorisee'),
         textColor: Colors.success500,
       }
       : {
         backgroundColor: `${Colors.warning500}18`,
         borderColor: `${Colors.warning500}44`,
-        label: 'Publication bloquée',
+        label: t('adminDashboard.governance.blocked', 'Publication bloquée'),
         textColor: Colors.warning500,
       };
 
@@ -1029,10 +1148,10 @@ function AdminDashboard() {
               {coachName}
             </Text>
             <Text style={[Fonts.p4, Fonts.neutral300, Spaces.marginTop[4]]}>
-              {item?.club?.name || 'Club non renseigne'}
+              {item?.club?.name || t('adminDashboard.clubMissing', 'Club non renseigne')}
             </Text>
             <Text style={[Fonts.p4, Fonts.neutral300, Spaces.marginTop[4]]}>
-              {phoneLabel || 'Téléphone non renseigne'}
+              {phoneLabel || t('adminDashboard.phoneMissing', 'Téléphone non renseigne')}
             </Text>
           </View>
           <View
@@ -1069,14 +1188,18 @@ function AdminDashboard() {
           </View>
           {item?.affiliation?.autoAffiliated ? (
             <View style={[styles.statusPill, { backgroundColor: `${Colors.neutral00}08`, borderColor: `${Colors.neutral00}16` }]}>
-              <Text style={[Fonts.p4Bold, Fonts.neutral00]}>Auto-affilie</Text>
+              <Text style={[Fonts.p4Bold, Fonts.neutral00]}>
+                {t('adminDashboard.governance.autoAffiliated', 'Auto-affilie')}
+              </Text>
             </View>
           ) : null}
         </View>
 
         {item?.override?.internalReviewNotes ? (
           <View style={[styles.notesBlock, { backgroundColor: `${Colors.neutral00}08`, borderColor: `${Colors.neutral00}10` }]}>
-            <Text style={[Fonts.p4Bold, { color: Colors.primary200 }]}>Note interne</Text>
+            <Text style={[Fonts.p4Bold, { color: Colors.primary200 }]}>
+              {t('adminDashboard.governance.internalNote', 'Note interne')}
+            </Text>
             <Text style={[Fonts.p4, Fonts.neutral300, Spaces.marginTop[4]]}>
               {item.override.internalReviewNotes}
             </Text>
@@ -1089,7 +1212,9 @@ function AdminDashboard() {
             onPress={() => handleCallOrganizer(item?.user?.phoneNumber)}
             style={[styles.inlineActionButton, { backgroundColor: `${Colors.neutral00}08`, borderColor: `${Colors.neutral00}18` }]}
           >
-            <Text style={[Fonts.p4Bold, { color: Colors.neutral00 }]}>Appeler</Text>
+            <Text style={[Fonts.p4Bold, { color: Colors.neutral00 }]}>
+              {t('adminDashboard.call.action', 'Appeler')}
+            </Text>
           </TouchableOpacity>
           <TouchableOpacity
             activeOpacity={0.86}
@@ -1104,7 +1229,9 @@ function AdminDashboard() {
             ]}
           >
             <Text style={[Fonts.p4Bold, { color: hasIndividualOverride ? Colors.warning500 : Colors.success500 }]}>
-              {hasIndividualOverride ? 'Retirer l exception' : 'Autoriser'}
+              {hasIndividualOverride
+                ? t('adminDashboard.governance.removeOverride', 'Retirer l exception')
+                : t('adminDashboard.governance.allow', 'Autoriser')}
             </Text>
           </TouchableOpacity>
         </View>
@@ -1137,16 +1264,23 @@ function AdminDashboard() {
               {formatPlanCode(item?.planCode)}
             </Text>
             <Text style={[Fonts.p4, Fonts.neutral300, Spaces.marginTop[4]]}>
-              {item?.provider || 'provider inconnu'}
+              {item?.provider || t('adminDashboard.unknownProvider', 'provider inconnu')}
               {item?.billingPeriod ? ` - ${item.billingPeriod}` : ''}
             </Text>
             <Text style={[Fonts.p4, Fonts.neutral300, Spaces.marginTop[4]]}>
               {item?.payerUser
-                ? `Payeur: ${formatPersonName(item.payerUser)}`
-                : 'Payeur non renseigne'}
+                ? t(
+                  'adminDashboard.subscription.payer',
+                  'Payeur: {{name}}',
+                  { name: formatPersonName(item.payerUser), ...SANS_ECHAPPEMENT },
+                )
+                : t('adminDashboard.subscription.payerMissing', 'Payeur non renseigne')}
             </Text>
             <Text style={[Fonts.p4, Fonts.neutral300, Spaces.marginTop[4]]}>
-              {item?.providerTransactionId || item?.documentId || 'Sans transaction'}
+              {item?.providerTransactionId || item?.documentId || t(
+                'adminDashboard.subscription.noTransaction',
+                'Sans transaction',
+              )}
             </Text>
           </View>
           <View style={[styles.statusPill, { backgroundColor: statusMeta.backgroundColor, borderColor: statusMeta.borderColor }]}>
@@ -1183,7 +1317,10 @@ function AdminDashboard() {
       : { backgroundColor: `${Colors.warning500}18`, borderColor: `${Colors.warning500}44`, textColor: Colors.warning500 };
     const scopeLabel = item?.scopeType === 'CLUB'
       ? (item?.scopeClub?.name || item?.scopeClub?.documentId || 'Club')
-      : (item?.scopeTeam?.name || item?.scopeTeam?.documentId || 'Equipe');
+      : (item?.scopeTeam?.name || item?.scopeTeam?.documentId || t(
+        'adminDashboard.entitlement.team',
+        'Equipe',
+      ));
 
     return (
       <View
@@ -1202,7 +1339,7 @@ function AdminDashboard() {
               {item?.capability || '*'}
             </Text>
             <Text style={[Fonts.p4, Fonts.neutral300, Spaces.marginTop[4]]}>
-              {item?.scopeType || 'Scope inconnu'}
+              {item?.scopeType || t('adminDashboard.entitlement.unknownScope', 'Scope inconnu')}
               {' - '}
               {scopeLabel}
             </Text>
@@ -1211,7 +1348,7 @@ function AdminDashboard() {
             </Text>
             {item?.sourceTeamSlot?.documentId ? (
               <Text style={[Fonts.p4, Fonts.neutral300, Spaces.marginTop[4]]}>
-                Slot source: #{item?.sourceTeamSlot?.slotNumber || 0}
+                {t('adminDashboard.entitlement.sourceSlot', 'Slot source:')} #{item?.sourceTeamSlot?.slotNumber || 0}
               </Text>
             ) : null}
           </View>
@@ -1228,7 +1365,9 @@ function AdminDashboard() {
             onPress={() => openManualEntitlementModal(item)}
             style={[styles.inlineActionButton, { backgroundColor: `${Colors.primary200}16`, borderColor: `${Colors.primary200}33` }]}
           >
-            <Text style={[Fonts.p4Bold, { color: Colors.primary200 }]}>Corriger</Text>
+            <Text style={[Fonts.p4Bold, { color: Colors.primary200 }]}>
+              {t('adminDashboard.entitlement.correct', 'Corriger')}
+            </Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -1250,7 +1389,10 @@ function AdminDashboard() {
         {item?.quotaType || 'Quota'}
       </Text>
       <Text style={[Fonts.p4, Fonts.neutral300, Spaces.marginTop[4]]}>
-        {item?.user ? formatPersonName(item.user) : 'Utilisateur inconnu'}
+        {item?.user ? formatPersonName(item.user) : t(
+          'adminDashboard.unknownUser',
+          'Utilisateur inconnu',
+        )}
         {item?.team?.name ? ` - ${item.team.name}` : ''}
       </Text>
       <View style={[Alignments.row, Alignments.wrap, Spaces.gap[8], Spaces.marginTop[12]]}>
@@ -1261,13 +1403,13 @@ function AdminDashboard() {
         </View>
         <View style={[styles.statusPill, { backgroundColor: `${Colors.warning500}14`, borderColor: `${Colors.warning500}33` }]}>
           <Text style={[Fonts.p4Bold, { color: Colors.warning500 }]}>
-            reste {Number(item?.remaining || 0)}
+            {t('adminDashboard.quota.remaining', 'reste')} {Number(item?.remaining || 0)}
           </Text>
         </View>
       </View>
       {item?.lastUsedAt ? (
         <Text style={[Fonts.p4, Fonts.neutral300, Spaces.marginTop[12]]}>
-          Dernier usage: {formatDateTime(item.lastUsedAt)}
+          {t('adminDashboard.quota.lastUsed', 'Dernier usage:')} {formatDateTime(item.lastUsedAt)}
         </Text>
       ) : null}
     </View>
@@ -1293,11 +1435,11 @@ function AdminDashboard() {
               {item?.eventType || 'billing-event'}
             </Text>
             <Text style={[Fonts.p4, Fonts.neutral300, Spaces.marginTop[4]]}>
-              {item?.provider || 'provider inconnu'}
+              {item?.provider || t('adminDashboard.unknownProvider', 'provider inconnu')}
               {item?.providerEventId ? ` - ${item.providerEventId}` : ''}
             </Text>
             <Text style={[Fonts.p4, Fonts.neutral300, Spaces.marginTop[4]]}>
-              Recu le {formatDateTime(item?.receivedAt)}
+              {t('adminDashboard.billing.receivedOn', 'Recu le')} {formatDateTime(item?.receivedAt)}
             </Text>
           </View>
           <View style={[styles.statusPill, { backgroundColor: isFailed ? `${Colors.error500}18` : `${Colors.success500}18`, borderColor: isFailed ? `${Colors.error500}44` : `${Colors.success500}44` }]}>
@@ -1330,13 +1472,16 @@ function AdminDashboard() {
         <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter, Spaces.gap[12]]}>
           <View style={{ flex: 1 }}>
             <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
-              {item?.club?.name || 'Club inconnu'}
+              {item?.club?.name || t('adminDashboard.unknownClub', 'Club inconnu')}
             </Text>
             <Text style={[Fonts.p4, Fonts.neutral300, Spaces.marginTop[4]]}>
-              {item?.user ? formatPersonName(item.user) : 'Utilisateur inconnu'}
+              {item?.user ? formatPersonName(item.user) : t(
+                'adminDashboard.unknownUser',
+                'Utilisateur inconnu',
+              )}
             </Text>
             <Text style={[Fonts.p4, Fonts.neutral300, Spaces.marginTop[4]]}>
-              {item?.proofType || 'Preuve non renseignée'}
+              {item?.proofType || t('adminDashboard.claim.proofMissing', 'Preuve non renseignée')}
             </Text>
           </View>
           <View style={[styles.statusPill, {
@@ -1366,7 +1511,7 @@ function AdminDashboard() {
         </View>
         {item?.rejectionReason ? (
           <Text style={[Fonts.p4, Fonts.neutral300, Spaces.marginTop[12]]}>
-            Motif: {item.rejectionReason}
+            {t('adminDashboard.claim.reason', 'Motif:')} {item.rejectionReason}
           </Text>
         ) : null}
       </TouchableOpacity>
@@ -1385,15 +1530,17 @@ function AdminDashboard() {
       ]}
     >
       <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
-        {item?.name || 'Club legacy'}
+        {item?.name || t('adminDashboard.legacy.defaultName', 'Club legacy')}
       </Text>
       <Text style={[Fonts.p4, Fonts.neutral300, Spaces.marginTop[4]]}>
-        {item?.documentId || 'Sans documentId'}
+        {item?.documentId || t('adminDashboard.legacy.noDocumentId', 'Sans documentId')}
       </Text>
       <View style={[Alignments.row, Alignments.wrap, Spaces.gap[8], Spaces.marginTop[12]]}>
         <View style={[styles.statusPill, { backgroundColor: `${Colors.success500}14`, borderColor: `${Colors.success500}33` }]}>
           <Text style={[Fonts.p4Bold, { color: Colors.success500 }]}>
-            {item?.clubPartner ? 'Partenaire' : 'A migrer'}
+            {item?.clubPartner
+              ? t('adminDashboard.legacy.partner', 'Partenaire')
+              : t('adminDashboard.legacy.toMigrate', 'A migrer')}
           </Text>
         </View>
         <View style={[styles.statusPill, { backgroundColor: `${Colors.primary200}14`, borderColor: `${Colors.primary200}33` }]}>
@@ -1413,7 +1560,9 @@ function AdminDashboard() {
           onPress={() => openLegacyMigrationModal(item?.documentId || '')}
           style={[styles.inlineActionButton, { backgroundColor: `${Colors.warning500}16`, borderColor: `${Colors.warning500}33` }]}
         >
-          <Text style={[Fonts.p4Bold, { color: Colors.warning500 }]}>Dry-run cible</Text>
+          <Text style={[Fonts.p4Bold, { color: Colors.warning500 }]}>
+            {t('adminDashboard.legacy.targetedDryRun', 'Dry-run cible')}
+          </Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -1431,9 +1580,14 @@ function AdminDashboard() {
         <Text style={[Fonts.label, styles.headerEyebrow, { color: Colors.primary500 }]}>
           Superadmin
         </Text>
-        <Text style={[Fonts.h1, Fonts.neutral00]}>Dashboard Admin</Text>
+        <Text style={[Fonts.h1, Fonts.neutral00]}>
+          {t('adminDashboard.title', 'Dashboard Admin')}
+        </Text>
         <Text style={[Fonts.p2, Fonts.neutral300, styles.headerDescription]}>
-          Pilote les demandes, les alertes, les détections et les événements sensibles depuis un seul espace.
+          {t(
+            'adminDashboard.subtitle',
+            'Pilote les demandes, les alertes, les détections et les événements sensibles depuis un seul espace.',
+          )}
         </Text>
         {partialDashboardDescription ? (
           <Text style={[Fonts.p2, Fonts.neutral300, Spaces.marginTop[8]]}>
@@ -1458,15 +1612,21 @@ function AdminDashboard() {
         >
           <View style={styles.flagBannerContent}>
             <Text style={[Fonts.label, styles.cardChipText, { color: publishingGovernance.globalEnabled ? Colors.success500 : Colors.warning500 }]}>
-              Gouvernance
+              {t('adminDashboard.governance.label', 'Gouvernance')}
             </Text>
             <Text style={[Fonts.h3Bold, Fonts.neutral00, Spaces.marginTop[6]]}>
-              Publication coachs non certifiés
+              {t('adminDashboard.governance.title', 'Publication coachs non certifiés')}
             </Text>
             <Text style={[Fonts.p3, Fonts.neutral200, Spaces.marginTop[8]]}>
               {publishingGovernance.globalEnabled
-                ? 'Les coachs rattaches a un club non certifié peuvent publier leurs événements et annonces.'
-                : 'Les coachs de clubs non certifiés restent bloqués tant qu\'aucune exception superadmin n\'est accordée.'}
+                ? t(
+                  'adminDashboard.governance.enabledDescription',
+                  'Les coachs rattaches a un club non certifié peuvent publier leurs événements et annonces.',
+                )
+                : t(
+                  'adminDashboard.governance.disabledDescription',
+                  "Les coachs de clubs non certifiés restent bloqués tant qu'aucune exception superadmin n'est accordée.",
+                )}
             </Text>
           </View>
           <TouchableOpacity
@@ -1500,13 +1660,16 @@ function AdminDashboard() {
         >
           <View style={styles.testToolsContent}>
             <Text style={[Fonts.label, styles.cardChipText, { color: Colors.primary500 }]}>
-              Outils de test
+              {t('adminDashboard.testTools.label', 'Outils de test')}
             </Text>
             <Text style={[Fonts.h3Bold, Fonts.neutral00, styles.testToolsTitle]}>
-              Tournoi fictif complet
+              {t('adminDashboard.testTools.title', 'Tournoi fictif complet')}
             </Text>
             <Text style={[Fonts.p3, Fonts.neutral200, styles.testToolsDescription]}>
-              Crée un tournoi sandbox avec équipes, effectifs fictifs, poules et matchs pour valider le flux de bout en bout.
+              {t(
+                'adminDashboard.testTools.description',
+                'Crée un tournoi sandbox avec équipes, effectifs fictifs, poules et matchs pour valider le flux de bout en bout.',
+              )}
             </Text>
           </View>
           <TouchableOpacity
@@ -1524,69 +1687,71 @@ function AdminDashboard() {
             ]}
           >
             <Text style={[Fonts.p2Bold, Fonts.neutral900]}>
-              {generateTestTournamentMutation.isPending ? 'Generation...' : 'Generer'}
+              {generateTestTournamentMutation.isPending
+                ? t('adminDashboard.generating', 'Generation...')
+                : t('adminDashboard.generate', 'Generer')}
             </Text>
           </TouchableOpacity>
         </View>
 
         <Text style={[Fonts.h3Bold, Fonts.neutral00, Spaces.marginBottom[12]]}>
-          Pilotage general
+          {t('adminDashboard.sections.overview', 'Pilotage general')}
         </Text>
         <View style={styles.dashboardGrid}>
           <DashboardCard
             color={Colors.success500}
             meta={revenueMeta}
             onPress={() => navigation.navigate(RouteNames.AdminRevenue)}
-            title="CA par mois"
+            title={t('adminDashboard.cards.revenue', 'CA par mois')}
             value={revenueLabel}
           />
           <DashboardCard
             color={Colors.primary500}
             meta="Live"
             onPress={() => navigation.navigate(RouteNames.AdminEvents)}
-            title="Événements du jour"
+            title={t('adminDashboard.cards.eventsToday', 'Événements du jour')}
             value={eventsTodayCount}
           />
           <DashboardCard
             color={Colors.error500}
-            meta="Alerte"
+            meta={t('adminDashboard.cards.alertMeta', 'Alerte')}
             onPress={() => navigation.navigate(RouteNames.AdminReports)}
-            title="Signalements"
+            title={t('adminDashboard.cards.reports', 'Signalements')}
             value={reportsCount}
           />
           <DashboardCard
             color={Colors.primary200}
-            meta="A traiter"
+            meta={t('adminDashboard.cards.toHandleMeta', 'A traiter')}
             onPress={() => navigation.navigate(RouteNames.FeaturedRequestsList)}
-            title="Demandes à la une"
+            title={t('adminDashboard.cards.featuredRequests', 'Demandes à la une')}
             value={featuredCount}
           />
           <DashboardCard
             color={Colors.warning500}
             meta="Clubs"
             onPress={() => navigation.navigate(RouteNames.AdminClaimList)}
-            title="Revendications"
+            title={t('adminDashboard.cards.claims', 'Revendications')}
             value={claimsCount}
           />
           <DashboardCard
             color={Colors.primary500}
             meta="Onboarding"
             onPress={() => navigation.navigate(RouteNames.AdminClubOnboardingList)}
-            title="Clubs à onboarder"
+            title={t('adminDashboard.cards.clubOnboarding', 'Clubs à onboarder')}
             value={clubOnboardingCount}
           />
           <DashboardCard
             color={Colors.primary200}
             meta="Pop-up"
             onPress={() => navigation.navigate(RouteNames.AdminPopupCampaignList)}
-            title="Campagnes pop-up"
+            title={t('adminDashboard.cards.popupCampaigns', 'Campagnes pop-up')}
             value={popupCampaignCount}
           />
           <DashboardCard
             color={Colors.error500}
             meta="League"
             onPress={() => navigation.navigate(RouteNames.AdminLeagueDisputes)}
-            title="Litiges League"
+            title={t('adminDashboard.cards.leagueDisputes', 'Litiges League')}
             value={leagueDisputesCount}
           />
           <DashboardCard
@@ -1598,95 +1763,95 @@ function AdminDashboard() {
           />
           <DashboardCard
             color={Colors.primary200}
-            meta="Gestion"
+            meta={t('adminDashboard.cards.managementMeta', 'Gestion')}
             onPress={() => navigation.navigate(RouteNames.AdminUserList)}
-            title="Utilisateurs"
+            title={t('adminDashboard.cards.users', 'Utilisateurs')}
             value="Users"
           />
           <DashboardCard
             color={Colors.primary500}
-            meta="Gestion"
+            meta={t('adminDashboard.cards.managementMeta', 'Gestion')}
             onPress={() => navigation.navigate(RouteNames.AdminClubList)}
             title="Clubs"
             value="Clubs"
           />
           <DashboardCard
             color={Colors.primary500}
-            meta="Contenus"
+            meta={t('adminDashboard.cards.contentMeta', 'Contenus')}
             onPress={() => navigation.navigate(RouteNames.SuperAdminContentExplorer)}
-            title="Explorer CM"
+            title={t('adminDashboard.cards.contentExplorer', 'Explorer CM')}
             value="CM"
           />
         </View>
 
         <Text style={[Fonts.h3Bold, Fonts.neutral00, Spaces.marginBottom[12], Spaces.marginTop[8]]}>
-          KPIs détection et acquisition
+          {t('adminDashboard.sections.kpis', 'KPIs détection et acquisition')}
         </Text>
         <View style={styles.dashboardGrid}>
           <DashboardCard
             color={Colors.primary500}
             meta="Business"
-            title="Utilisateurs avec club"
+            title={t('adminDashboard.cards.usersWithClub', 'Utilisateurs avec club')}
             value={business?.usersWithClub || 0}
           />
           <DashboardCard
             color={Colors.warning500}
             meta="Business"
-            title="Utilisateurs sans club"
+            title={t('adminDashboard.cards.usersWithoutClub', 'Utilisateurs sans club')}
             value={business?.usersWithoutClub || 0}
           />
           <DashboardCard
             color={Colors.primary200}
             meta="Business"
-            title="Équipes créées"
+            title={t('adminDashboard.cards.teamsCreated', 'Équipes créées')}
             value={business?.teamsCreated || 0}
           />
           <DashboardCard
             color={Colors.success500}
             meta="Business"
-            title="Clubs partenaires"
+            title={t('adminDashboard.cards.partnerClubs', 'Clubs partenaires')}
             value={business?.partnerClubs || 0}
           />
           <DashboardCard
             color={Colors.primary500}
             meta="Detections"
-            title="Publiées sur 30 jours"
+            title={t('adminDashboard.cards.detectionsPublished', 'Publiées sur 30 jours')}
             value={ops?.detectionsPublishedLast30Days || 0}
           />
           <DashboardCard
             color={Colors.warning500}
             meta="Detections"
-            title="A vérifier"
+            title={t('adminDashboard.cards.detectionsPending', 'A vérifier')}
             value={ops?.detectionsPendingVerification || 0}
           />
           <DashboardCard
             color={Colors.primary200}
             meta="Signals"
-            title="Équipes avec 1er event"
+            title={t('adminDashboard.cards.teamsWithFirstEvent', 'Équipes avec 1er event')}
             value={ops?.teamsWithFirstEventCount || 0}
           />
           <DashboardCard
             color={Colors.neutral100}
-            meta="Gouvernance"
-            title="Coachs non certifiés"
+            meta={t('adminDashboard.governance.label', 'Gouvernance')}
+            title={t('adminDashboard.governance.nonVerifiedCoaches', 'Coachs non certifiés')}
             value={publishingGovernance?.nonPartnerCoaches || 0}
           />
           <DashboardCard
             color={Colors.neutral100}
-            meta="Gouvernance"
-            title="Clubs non certifiés actifs"
+            meta={t('adminDashboard.governance.label', 'Gouvernance')}
+            title={t('adminDashboard.cards.activeNonVerifiedClubs', 'Clubs non certifiés actifs')}
             value={publishingGovernance?.nonPartnerClubsWithAffiliatedCoaches || 0}
           />
           <DashboardCard
             color={Colors.success500}
-            meta="Gouvernance"
-            title="Exceptions individuelles"
+            meta={t('adminDashboard.governance.label', 'Gouvernance')}
+            title={t('adminDashboard.cards.individualExceptions', 'Exceptions individuelles')}
             value={publishingGovernance?.individuallyAllowedCoaches || 0}
           />
           <DashboardCard
             color={Colors.primary200}
-            meta="Gouvernance"
-            title="Coachs auto-affilies"
+            meta={t('adminDashboard.governance.label', 'Gouvernance')}
+            title={t('adminDashboard.cards.autoAffiliatedCoaches', 'Coachs auto-affilies')}
             value={publishingGovernance?.autoAffiliatedCoaches || 0}
           />
         </View>
@@ -1704,7 +1869,10 @@ function AdminDashboard() {
             <View style={{ flex: 1 }}>
               <Text style={[Fonts.h3Bold, Fonts.neutral00]}>Subscription Ops</Text>
               <Text style={[Fonts.p3, Fonts.neutral300, Spaces.marginTop[6]]}>
-                Pilote la migration legacy, les subscriptions manuelles, les entitlements et les signaux billing depuis le même back-office.
+                {t(
+                  'adminDashboard.subscriptionOps.description',
+                  'Pilote la migration legacy, les subscriptions manuelles, les entitlements et les signaux billing depuis le même back-office.',
+                )}
               </Text>
             </View>
             <TouchableOpacity
@@ -1712,7 +1880,9 @@ function AdminDashboard() {
               onPress={refetchSubscriptionOps}
               style={[styles.refreshButton, { borderColor: `${Colors.primary500}44` }]}
             >
-              <Text style={[Fonts.p4Bold, { color: Colors.primary500 }]}>Rafraîchir</Text>
+              <Text style={[Fonts.p4Bold, { color: Colors.primary500 }]}>
+                {t('adminDashboard.refresh', 'Rafraîchir')}
+              </Text>
             </TouchableOpacity>
           </View>
 
@@ -1734,7 +1904,7 @@ function AdminDashboard() {
             </View>
             <View style={[styles.statusPill, { backgroundColor: `${Colors.error500}14`, borderColor: `${Colors.error500}33` }]}>
               <Text style={[Fonts.p4Bold, { color: Colors.error500 }]}>
-                {Number(subscriptionOpsCounts?.failedBillingEvents || 0)} billing KO
+                {Number(subscriptionOpsCounts?.failedBillingEvents || 0)} {t('adminDashboard.subscriptionOps.billingFailed', 'billing KO')}
               </Text>
             </View>
           </View>
@@ -1745,21 +1915,27 @@ function AdminDashboard() {
               onPress={() => openLegacyMigrationModal('')}
               style={[styles.inlineActionButton, { backgroundColor: `${Colors.warning500}16`, borderColor: `${Colors.warning500}33` }]}
             >
-              <Text style={[Fonts.p4Bold, { color: Colors.warning500 }]}>Migration legacy</Text>
+              <Text style={[Fonts.p4Bold, { color: Colors.warning500 }]}>
+                {t('adminDashboard.legacyMigration.title', 'Migration legacy')}
+              </Text>
             </TouchableOpacity>
             <TouchableOpacity
               activeOpacity={0.86}
               onPress={openManualSubscriptionModal}
               style={[styles.inlineActionButton, { backgroundColor: `${Colors.primary500}18`, borderColor: `${Colors.primary500}44` }]}
             >
-              <Text style={[Fonts.p4Bold, { color: Colors.primary500 }]}>Subscription manuelle</Text>
+              <Text style={[Fonts.p4Bold, { color: Colors.primary500 }]}>
+                {t('adminDashboard.manualSubscription.title', 'Subscription manuelle')}
+              </Text>
             </TouchableOpacity>
             <TouchableOpacity
               activeOpacity={0.86}
               onPress={() => openManualEntitlementModal()}
               style={[styles.inlineActionButton, { backgroundColor: `${Colors.primary200}16`, borderColor: `${Colors.primary200}33` }]}
             >
-              <Text style={[Fonts.p4Bold, { color: Colors.primary200 }]}>Entitlement manuel</Text>
+              <Text style={[Fonts.p4Bold, { color: Colors.primary200 }]}>
+                {t('adminDashboard.manualEntitlement.title', 'Entitlement manuel')}
+              </Text>
             </TouchableOpacity>
             <TouchableOpacity
               activeOpacity={0.86}
@@ -1771,57 +1947,70 @@ function AdminDashboard() {
           </View>
 
           <Text style={[Fonts.p2Bold, Fonts.neutral00, Spaces.marginTop[20], Spaces.marginBottom[12]]}>
-            Subscriptions recentes
+            {t('adminDashboard.subscriptionOps.recentSubscriptions', 'Subscriptions recentes')}
           </Text>
           {subscriptionPreviewItems.length > 0 ? (
             subscriptionPreviewItems.map(renderSubscriptionPreviewItem)
           ) : (
             <View style={[styles.emptySectionState, { backgroundColor: `${Colors.neutral00}06`, borderColor: `${Colors.neutral00}12` }]}>
-              <Text style={[Fonts.p3Bold, Fonts.neutral00]}>Aucune subscription à afficher</Text>
+              <Text style={[Fonts.p3Bold, Fonts.neutral00]}>
+                {t(
+                  'adminDashboard.subscriptionOps.noSubscriptions',
+                  'Aucune subscription à afficher',
+                )}
+              </Text>
             </View>
           )}
 
           <Text style={[Fonts.p2Bold, Fonts.neutral00, Spaces.marginTop[12], Spaces.marginBottom[12]]}>
-            Entitlements récents
+            {t('adminDashboard.subscriptionOps.recentEntitlements', 'Entitlements récents')}
           </Text>
           {entitlementPreviewItems.length > 0 ? (
             entitlementPreviewItems.map(renderEntitlementPreviewItem)
           ) : (
             <View style={[styles.emptySectionState, { backgroundColor: `${Colors.neutral00}06`, borderColor: `${Colors.neutral00}12` }]}>
-              <Text style={[Fonts.p3Bold, Fonts.neutral00]}>Aucun entitlement à afficher</Text>
+              <Text style={[Fonts.p3Bold, Fonts.neutral00]}>
+                {t('adminDashboard.subscriptionOps.noEntitlements', 'Aucun entitlement à afficher')}
+              </Text>
             </View>
           )}
 
           <Text style={[Fonts.p2Bold, Fonts.neutral00, Spaces.marginTop[12], Spaces.marginBottom[12]]}>
-            Clubs legacy candidats
+            {t('adminDashboard.subscriptionOps.legacyCandidates', 'Clubs legacy candidats')}
           </Text>
           {legacyCandidatePreviewItems.length > 0 ? (
             legacyCandidatePreviewItems.map(renderLegacyCandidateItem)
           ) : (
             <View style={[styles.emptySectionState, { backgroundColor: `${Colors.neutral00}06`, borderColor: `${Colors.neutral00}12` }]}>
-              <Text style={[Fonts.p3Bold, Fonts.neutral00]}>Aucun candidat legacy</Text>
+              <Text style={[Fonts.p3Bold, Fonts.neutral00]}>
+                {t('adminDashboard.subscriptionOps.noLegacyCandidates', 'Aucun candidat legacy')}
+              </Text>
             </View>
           )}
 
           <Text style={[Fonts.p2Bold, Fonts.neutral00, Spaces.marginTop[12], Spaces.marginBottom[12]]}>
-            Claims à revoir
+            {t('adminDashboard.subscriptionOps.claimsToReview', 'Claims à revoir')}
           </Text>
           {claimRequestPreviewItems.length > 0 ? (
             claimRequestPreviewItems.map(renderClaimRequestPreviewItem)
           ) : (
             <View style={[styles.emptySectionState, { backgroundColor: `${Colors.neutral00}06`, borderColor: `${Colors.neutral00}12` }]}>
-              <Text style={[Fonts.p3Bold, Fonts.neutral00]}>Aucun claim en preview</Text>
+              <Text style={[Fonts.p3Bold, Fonts.neutral00]}>
+                {t('adminDashboard.subscriptionOps.noClaims', 'Aucun claim en preview')}
+              </Text>
             </View>
           )}
 
           <Text style={[Fonts.p2Bold, Fonts.neutral00, Spaces.marginTop[12], Spaces.marginBottom[12]]}>
-            Quotas free
+            {t('adminDashboard.subscriptionOps.freeQuotas', 'Quotas free')}
           </Text>
           {quotaPreviewItems.length > 0 ? (
             quotaPreviewItems.map(renderQuotaPreviewItem)
           ) : (
             <View style={[styles.emptySectionState, { backgroundColor: `${Colors.neutral00}06`, borderColor: `${Colors.neutral00}12` }]}>
-              <Text style={[Fonts.p3Bold, Fonts.neutral00]}>Aucun quota en preview</Text>
+              <Text style={[Fonts.p3Bold, Fonts.neutral00]}>
+                {t('adminDashboard.subscriptionOps.noQuotas', 'Aucun quota en preview')}
+              </Text>
             </View>
           )}
 
@@ -1832,7 +2021,12 @@ function AdminDashboard() {
             billingEventPreviewItems.map(renderBillingEventPreviewItem)
           ) : (
             <View style={[styles.emptySectionState, { backgroundColor: `${Colors.neutral00}06`, borderColor: `${Colors.neutral00}12` }]}>
-              <Text style={[Fonts.p3Bold, Fonts.neutral00]}>Aucun billing event en preview</Text>
+              <Text style={[Fonts.p3Bold, Fonts.neutral00]}>
+                {t(
+                  'adminDashboard.subscriptionOps.noBillingEvents',
+                  'Aucun billing event en preview',
+                )}
+              </Text>
             </View>
           )}
         </View>
@@ -1848,7 +2042,9 @@ function AdminDashboard() {
         >
           <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter, Spaces.gap[12]]}>
             <View style={{ flex: 1 }}>
-              <Text style={[Fonts.h3Bold, Fonts.neutral00]}>Coachs non certifiés</Text>
+              <Text style={[Fonts.h3Bold, Fonts.neutral00]}>
+                {t('adminDashboard.governance.nonVerifiedCoaches', 'Coachs non certifiés')}
+              </Text>
               <Text style={[Fonts.p3, Fonts.neutral300, Spaces.marginTop[6]]}>
                 {publishingGovernance?.nonPartnerCoaches || 0}
                 {' '}
@@ -1863,7 +2059,9 @@ function AdminDashboard() {
               onPress={refetchGovernanceAffiliations}
               style={[styles.refreshButton, { borderColor: `${Colors.neutral00}18` }]}
             >
-              <Text style={[Fonts.p4Bold, Fonts.neutral00]}>Rafraîchir</Text>
+              <Text style={[Fonts.p4Bold, Fonts.neutral00]}>
+                {t('adminDashboard.refresh', 'Rafraîchir')}
+              </Text>
             </TouchableOpacity>
           </View>
 
@@ -1872,9 +2070,14 @@ function AdminDashboard() {
               governanceAffiliations.map(renderGovernanceAffiliationItem)
             ) : (
               <View style={[styles.emptySectionState, { backgroundColor: `${Colors.neutral00}06`, borderColor: `${Colors.neutral00}12` }]}>
-                <Text style={[Fonts.p3Bold, Fonts.neutral00]}>Aucun coach non certifié</Text>
+                <Text style={[Fonts.p3Bold, Fonts.neutral00]}>
+                  {t('adminDashboard.governance.noCoaches', 'Aucun coach non certifié')}
+                </Text>
                 <Text style={[Fonts.p4, Fonts.neutral300, Spaces.marginTop[6]]}>
-                  Les nouvelles affiliations auto-assignees apparaîtront ici.
+                  {t(
+                    'adminDashboard.governance.noCoachesDescription',
+                    'Les nouvelles affiliations auto-assignees apparaîtront ici.',
+                  )}
                 </Text>
               </View>
             )}
@@ -1892,7 +2095,9 @@ function AdminDashboard() {
         >
           <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter, Spaces.gap[12]]}>
             <View style={{ flex: 1 }}>
-              <Text style={[Fonts.h3Bold, Fonts.neutral00]}>File de vérification détection</Text>
+              <Text style={[Fonts.h3Bold, Fonts.neutral00]}>
+                {t('adminDashboard.detectionQueue.title', 'File de vérification détection')}
+              </Text>
               <Text style={[Fonts.p3, Fonts.neutral300, Spaces.marginTop[6]]}>
                 {detectionQueueTotal}
                 {' '}
@@ -1907,7 +2112,9 @@ function AdminDashboard() {
               onPress={refetchDetectionQueue}
               style={[styles.refreshButton, { borderColor: `${Colors.primary500}44` }]}
             >
-              <Text style={[Fonts.p4Bold, { color: Colors.primary500 }]}>Rafraîchir</Text>
+              <Text style={[Fonts.p4Bold, { color: Colors.primary500 }]}>
+                {t('adminDashboard.refresh', 'Rafraîchir')}
+              </Text>
             </TouchableOpacity>
           </View>
 
@@ -1916,9 +2123,14 @@ function AdminDashboard() {
               detectionVerificationQueue.map(renderDetectionQueueItem)
             ) : (
               <View style={[styles.emptySectionState, { backgroundColor: `${Colors.neutral00}06`, borderColor: `${Colors.neutral00}12` }]}>
-                <Text style={[Fonts.p3Bold, Fonts.neutral00]}>Aucune détection en attente</Text>
+                <Text style={[Fonts.p3Bold, Fonts.neutral00]}>
+                  {t('adminDashboard.detectionQueue.empty', 'Aucune détection en attente')}
+                </Text>
                 <Text style={[Fonts.p4, Fonts.neutral300, Spaces.marginTop[6]]}>
-                  La file est vide pour le moment.
+                  {t(
+                    'adminDashboard.detectionQueue.emptyDescription',
+                    'La file est vide pour le moment.',
+                  )}
                 </Text>
               </View>
             )}
@@ -1936,9 +2148,14 @@ function AdminDashboard() {
         >
           <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter, Spaces.gap[12]]}>
             <View style={{ flex: 1 }}>
-              <Text style={[Fonts.h3Bold, Fonts.neutral00]}>Premiers événements d équipe</Text>
+              <Text style={[Fonts.h3Bold, Fonts.neutral00]}>
+                {t('adminDashboard.firstEvents.title', 'Premiers événements d équipe')}
+              </Text>
               <Text style={[Fonts.p3, Fonts.neutral300, Spaces.marginTop[6]]}>
-                Surveille les équipes qui viennent de créer leur premier événement pour detecter les structures à relancer.
+                {t(
+                  'adminDashboard.firstEvents.description',
+                  'Surveille les équipes qui viennent de créer leur premier événement pour detecter les structures à relancer.',
+                )}
               </Text>
             </View>
             <View style={[styles.statusPill, { backgroundColor: `${Colors.primary200}18`, borderColor: `${Colors.primary200}44` }]}>
@@ -1953,9 +2170,14 @@ function AdminDashboard() {
               recentFirstTeamEvents.map(renderFirstTeamEventItem)
             ) : (
               <View style={[styles.emptySectionState, { backgroundColor: `${Colors.neutral00}06`, borderColor: `${Colors.neutral00}12` }]}>
-                <Text style={[Fonts.p3Bold, Fonts.neutral00]}>Aucun premier événement récent</Text>
+                <Text style={[Fonts.p3Bold, Fonts.neutral00]}>
+                  {t('adminDashboard.firstEvents.empty', 'Aucun premier événement récent')}
+                </Text>
                 <Text style={[Fonts.p4, Fonts.neutral300, Spaces.marginTop[6]]}>
-                  Les nouveaux signaux d activation d équipe apparaîtront ici.
+                  {t(
+                    'adminDashboard.firstEvents.emptyDescription',
+                    'Les nouveaux signaux d activation d équipe apparaîtront ici.',
+                  )}
                 </Text>
               </View>
             )}
@@ -1971,12 +2193,14 @@ function AdminDashboard() {
       >
         <View style={styles.modalOverlay}>
           <View style={[styles.modalCard, { backgroundColor: Colors.neutral900, borderColor: `${Colors.primary500}44` }]}>
-            <Text style={[Fonts.h3Bold, Fonts.neutral00]}>Traiter la vérification</Text>
+            <Text style={[Fonts.h3Bold, Fonts.neutral00]}>
+              {t('adminDashboard.review.title', 'Traiter la vérification')}
+            </Text>
             <Text style={[Fonts.p3, Fonts.neutral300, Spaces.marginTop[8]]}>
               {reviewItem?.name || 'Detection'}
             </Text>
             <Text style={[Fonts.p4, Fonts.primary100, Spaces.marginTop[4]]}>
-              {reviewItem?.team?.name || 'Équipe inconnue'}
+              {reviewItem?.team?.name || t('adminDashboard.unknownTeam', 'Équipe inconnue')}
               {reviewItem?.club?.name ? ` - ${reviewItem.club.name}` : ''}
             </Text>
 
@@ -2005,12 +2229,15 @@ function AdminDashboard() {
             </View>
 
             <Text style={[Fonts.p4Bold, { color: Colors.primary200 }, Spaces.marginTop[16], Spaces.marginBottom[8]]}>
-              Notes internes
+              {t('adminDashboard.review.internalNotes', 'Notes internes')}
             </Text>
             <TextInput
               multiline
               onChangeText={setReviewNotes}
-              placeholder="Appel effectue, identité vérifiée, contact club, etc."
+              placeholder={t(
+                'adminDashboard.review.notesPlaceholder',
+                'Appel effectue, identité vérifiée, contact club, etc.',
+              )}
               placeholderTextColor={Colors.neutral400}
               style={[
                 styles.notesInput,
@@ -2029,7 +2256,9 @@ function AdminDashboard() {
                 onPress={closeReviewModal}
                 style={[styles.modalActionButton, { backgroundColor: `${Colors.neutral00}06`, borderColor: `${Colors.neutral00}16` }]}
               >
-                <Text style={[Fonts.p4Bold, { color: Colors.neutral00 }]}>Annuler</Text>
+                <Text style={[Fonts.p4Bold, { color: Colors.neutral00 }]}>
+                  {t('adminDashboard.cancel', 'Annuler')}
+                </Text>
               </TouchableOpacity>
               <TouchableOpacity
                 activeOpacity={0.86}
@@ -2046,7 +2275,9 @@ function AdminDashboard() {
                 ]}
               >
                 <Text style={[Fonts.p4Bold, { color: Colors.neutral900 }]}>
-                  {updateDetectionVerificationMutation.isPending ? 'Enregistrement...' : 'Enregistrer'}
+                  {updateDetectionVerificationMutation.isPending
+                    ? t('adminDashboard.saving', 'Enregistrement...')
+                    : t('adminDashboard.review.save', 'Enregistrer')}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -2062,12 +2293,17 @@ function AdminDashboard() {
       >
         <View style={styles.modalOverlay}>
           <View style={[styles.modalCard, { backgroundColor: Colors.neutral900, borderColor: `${Colors.warning500}44` }]}>
-            <Text style={[Fonts.h3Bold, Fonts.neutral00]}>Migration legacy</Text>
+            <Text style={[Fonts.h3Bold, Fonts.neutral00]}>
+              {t('adminDashboard.legacyMigration.title', 'Migration legacy')}
+            </Text>
             <Text style={[Fonts.p3, Fonts.neutral300, Spaces.marginTop[8]]}>
-              Lance un dry-run global ou cible un club precis avant l apply réel.
+              {t(
+                'adminDashboard.legacyMigration.description',
+                'Lance un dry-run global ou cible un club precis avant l apply réel.',
+              )}
             </Text>
             <Text style={[Fonts.p4Bold, { color: Colors.warning500 }, Spaces.marginTop[16], Spaces.marginBottom[8]]}>
-              Club documentId optionnel
+              {t('adminDashboard.legacyMigration.clubLabel', 'Club documentId optionnel')}
             </Text>
             <TextInput
               autoCapitalize="none"
@@ -2110,7 +2346,9 @@ function AdminDashboard() {
               onPress={closeLegacyMigrationModal}
               style={[styles.linkButton, Spaces.marginTop[12]]}
             >
-              <Text style={[Fonts.p4Bold, Fonts.neutral300]}>Fermer</Text>
+              <Text style={[Fonts.p4Bold, Fonts.neutral300]}>
+                {t('adminDashboard.close', 'Fermer')}
+              </Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -2125,9 +2363,14 @@ function AdminDashboard() {
         <View style={styles.modalOverlay}>
           <ScrollView contentContainerStyle={styles.modalScrollContent}>
             <View style={[styles.modalCard, { backgroundColor: Colors.neutral900, borderColor: `${Colors.primary500}44` }]}>
-              <Text style={[Fonts.h3Bold, Fonts.neutral00]}>Subscription manuelle</Text>
+              <Text style={[Fonts.h3Bold, Fonts.neutral00]}>
+                {t('adminDashboard.manualSubscription.title', 'Subscription manuelle')}
+              </Text>
               <Text style={[Fonts.p3, Fonts.neutral300, Spaces.marginTop[8]]}>
-                Crée une subscription auditée pour support, migration ciblee ou intervention superadmin.
+                {t(
+                  'adminDashboard.manualSubscription.description',
+                  'Crée une subscription auditée pour support, migration ciblee ou intervention superadmin.',
+                )}
               </Text>
 
               <Text style={[Fonts.p4Bold, { color: Colors.primary200 }, Spaces.marginTop[16], Spaces.marginBottom[8]]}>
@@ -2162,7 +2405,7 @@ function AdminDashboard() {
               </View>
 
               <Text style={[Fonts.p4Bold, { color: Colors.primary200 }, Spaces.marginTop[16], Spaces.marginBottom[8]]}>
-                Payeur user documentId
+                {t('adminDashboard.manualSubscription.payerLabel', 'Payeur user documentId')}
               </Text>
               <TextInput
                 autoCapitalize="none"
@@ -2174,7 +2417,10 @@ function AdminDashboard() {
               />
 
               <Text style={[Fonts.p4Bold, { color: Colors.primary200 }, Spaces.marginTop[16], Spaces.marginBottom[8]]}>
-                Provider / statut / periode
+                {t(
+                  'adminDashboard.manualSubscription.providerLabel',
+                  'Provider / statut / periode',
+                )}
               </Text>
               <View style={styles.statusSelectorRow}>
                 {['manual', 'apple', 'google', 'web', 'legacy'].map((provider) => {
@@ -2232,7 +2478,10 @@ function AdminDashboard() {
               </View>
 
               <Text style={[Fonts.p4Bold, { color: Colors.primary200 }, Spaces.marginTop[16], Spaces.marginBottom[8]]}>
-                Provider productId / transactionId / raison
+                {t(
+                  'adminDashboard.manualSubscription.productLabel',
+                  'Provider productId / transactionId / raison',
+                )}
               </Text>
               <TextInput
                 autoCapitalize="none"
@@ -2245,7 +2494,10 @@ function AdminDashboard() {
               <TextInput
                 autoCapitalize="none"
                 onChangeText={(value) => setManualSubscriptionForm((current) => ({ ...current, providerTransactionId: value }))}
-                placeholder="providerTransactionId (optionnel)"
+                placeholder={t(
+                  'adminDashboard.manualSubscription.transactionPlaceholder',
+                  'providerTransactionId (optionnel)',
+                )}
                 placeholderTextColor={Colors.neutral400}
                 style={[styles.formInput, styles.formInputSpacing, { borderColor: `${Colors.neutral00}18`, color: Colors.neutral00 }]}
                 value={manualSubscriptionForm.providerTransactionId}
@@ -2253,7 +2505,7 @@ function AdminDashboard() {
               <TextInput
                 autoCapitalize="none"
                 onChangeText={(value) => setManualSubscriptionForm((current) => ({ ...current, reason: value }))}
-                placeholder="reason obligatoire"
+                placeholder={t('adminDashboard.reasonPlaceholder', 'reason obligatoire')}
                 placeholderTextColor={Colors.neutral400}
                 style={[styles.formInput, styles.formInputSpacing, { borderColor: `${Colors.neutral00}18`, color: Colors.neutral00 }]}
                 value={manualSubscriptionForm.reason}
@@ -2265,7 +2517,9 @@ function AdminDashboard() {
                   onPress={closeManualSubscriptionModal}
                   style={[styles.modalActionButton, { backgroundColor: `${Colors.neutral00}06`, borderColor: `${Colors.neutral00}16` }]}
                 >
-                  <Text style={[Fonts.p4Bold, { color: Colors.neutral00 }]}>Annuler</Text>
+                  <Text style={[Fonts.p4Bold, { color: Colors.neutral00 }]}>
+                    {t('adminDashboard.cancel', 'Annuler')}
+                  </Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   activeOpacity={0.86}
@@ -2274,7 +2528,9 @@ function AdminDashboard() {
                   style={[styles.modalActionButton, { backgroundColor: Colors.primary500, borderColor: Colors.primary500 }]}
                 >
                   <Text style={[Fonts.p4Bold, { color: Colors.neutral900 }]}>
-                    {createManualSubscriptionMutation.isPending ? 'Creation...' : 'Creer'}
+                    {createManualSubscriptionMutation.isPending
+                      ? t('adminDashboard.manualSubscription.creating', 'Creation...')
+                      : t('adminDashboard.create', 'Creer')}
                   </Text>
                 </TouchableOpacity>
               </View>
@@ -2293,10 +2549,15 @@ function AdminDashboard() {
           <ScrollView contentContainerStyle={styles.modalScrollContent}>
             <View style={[styles.modalCard, { backgroundColor: Colors.neutral900, borderColor: `${Colors.primary200}44` }]}>
               <Text style={[Fonts.h3Bold, Fonts.neutral00]}>
-                {manualEntitlementForm.documentId ? 'Corriger un entitlement' : 'Entitlement manuel'}
+                {manualEntitlementForm.documentId
+                  ? t('adminDashboard.manualEntitlement.correctTitle', 'Corriger un entitlement')
+                  : t('adminDashboard.manualEntitlement.title', 'Entitlement manuel')}
               </Text>
               <Text style={[Fonts.p3, Fonts.neutral300, Spaces.marginTop[8]]}>
-                Scope, capability et subscription restent alignes avec la source de verite backend.
+                {t(
+                  'adminDashboard.manualEntitlement.description',
+                  'Scope, capability et subscription restent alignes avec la source de verite backend.',
+                )}
               </Text>
 
               <Text style={[Fonts.p4Bold, { color: Colors.primary200 }, Spaces.marginTop[16], Spaces.marginBottom[8]]}>
@@ -2312,7 +2573,7 @@ function AdminDashboard() {
               />
 
               <Text style={[Fonts.p4Bold, { color: Colors.primary200 }, Spaces.marginTop[16], Spaces.marginBottom[8]]}>
-                Scope / statut
+                {t('adminDashboard.manualEntitlement.scopeLabel', 'Scope / statut')}
               </Text>
               <View style={styles.statusSelectorRow}>
                 {['TEAM', 'CLUB'].map((scopeType) => {
@@ -2355,7 +2616,10 @@ function AdminDashboard() {
               <TextInput
                 autoCapitalize="none"
                 onChangeText={(value) => setManualEntitlementForm((current) => ({ ...current, capability: value }))}
-                placeholder="* ou capability précise"
+                placeholder={t(
+                  'adminDashboard.manualEntitlement.capabilityPlaceholder',
+                  '* ou capability précise',
+                )}
                 placeholderTextColor={Colors.neutral400}
                 style={[styles.formInput, { borderColor: `${Colors.neutral00}18`, color: Colors.neutral00 }]}
                 value={manualEntitlementForm.capability}
@@ -2392,12 +2656,15 @@ function AdminDashboard() {
               )}
 
               <Text style={[Fonts.p4Bold, { color: Colors.primary200 }, Spaces.marginTop[16], Spaces.marginBottom[8]]}>
-                StartsAt / EndsAt / raison
+                {t('adminDashboard.manualEntitlement.datesLabel', 'StartsAt / EndsAt / raison')}
               </Text>
               <TextInput
                 autoCapitalize="none"
                 onChangeText={(value) => setManualEntitlementForm((current) => ({ ...current, startsAt: value }))}
-                placeholder="startsAt ISO optionnel"
+                placeholder={t(
+                  'adminDashboard.manualEntitlement.startsAtPlaceholder',
+                  'startsAt ISO optionnel',
+                )}
                 placeholderTextColor={Colors.neutral400}
                 style={[styles.formInput, { borderColor: `${Colors.neutral00}18`, color: Colors.neutral00 }]}
                 value={manualEntitlementForm.startsAt}
@@ -2405,7 +2672,10 @@ function AdminDashboard() {
               <TextInput
                 autoCapitalize="none"
                 onChangeText={(value) => setManualEntitlementForm((current) => ({ ...current, endsAt: value }))}
-                placeholder="endsAt ISO optionnel"
+                placeholder={t(
+                  'adminDashboard.manualEntitlement.endsAtPlaceholder',
+                  'endsAt ISO optionnel',
+                )}
                 placeholderTextColor={Colors.neutral400}
                 style={[styles.formInput, styles.formInputSpacing, { borderColor: `${Colors.neutral00}18`, color: Colors.neutral00 }]}
                 value={manualEntitlementForm.endsAt}
@@ -2413,7 +2683,7 @@ function AdminDashboard() {
               <TextInput
                 autoCapitalize="none"
                 onChangeText={(value) => setManualEntitlementForm((current) => ({ ...current, reason: value }))}
-                placeholder="reason obligatoire"
+                placeholder={t('adminDashboard.reasonPlaceholder', 'reason obligatoire')}
                 placeholderTextColor={Colors.neutral400}
                 style={[styles.formInput, styles.formInputSpacing, { borderColor: `${Colors.neutral00}18`, color: Colors.neutral00 }]}
                 value={manualEntitlementForm.reason}
@@ -2425,7 +2695,9 @@ function AdminDashboard() {
                   onPress={closeManualEntitlementModal}
                   style={[styles.modalActionButton, { backgroundColor: `${Colors.neutral00}06`, borderColor: `${Colors.neutral00}16` }]}
                 >
-                  <Text style={[Fonts.p4Bold, { color: Colors.neutral00 }]}>Annuler</Text>
+                  <Text style={[Fonts.p4Bold, { color: Colors.neutral00 }]}>
+                    {t('adminDashboard.cancel', 'Annuler')}
+                  </Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   activeOpacity={0.86}
@@ -2435,8 +2707,10 @@ function AdminDashboard() {
                 >
                   <Text style={[Fonts.p4Bold, { color: Colors.neutral900 }]}>
                     {saveManualEntitlementMutation.isPending
-                      ? 'Enregistrement...'
-                      : (manualEntitlementForm.documentId ? 'Corriger' : 'Creer')}
+                      ? t('adminDashboard.saving', 'Enregistrement...')
+                      : (manualEntitlementForm.documentId
+                        ? t('adminDashboard.entitlement.correct', 'Corriger')
+                        : t('adminDashboard.create', 'Creer'))}
                   </Text>
                 </TouchableOpacity>
               </View>
