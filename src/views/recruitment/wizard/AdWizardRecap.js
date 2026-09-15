@@ -197,15 +197,13 @@ function AdWizardRecap({ navigation }) {
     if (!displayAddress) items.push(i18next.t('adWizardRecap.missing.location', 'un lieu'));
     if (!state.section) items.push(i18next.t('adWizardRecap.missing.section', 'une section'));
     if (!state.category) items.push(i18next.t('adWizardRecap.missing.category', 'une catégorie'));
-    if (!state.minLevel) items.push(i18next.t(
-      'adWizardRecap.missing.minLevel',
-      'un niveau minimum',
-    ));
+    if (!state.minLevel) {
+      items.push(i18next.t('adWizardRecap.missing.minLevel', 'un niveau minimum'));
+    }
     if (isCoachAd) {
-      if (!isAdWizardCoachProfileComplete(state)) items.push(i18next.t(
-        'adWizardRecap.missing.coachProfile',
-        'un profil entraîneur complet',
-      ));
+      if (!isAdWizardCoachProfileComplete(state)) {
+        items.push(i18next.t('adWizardRecap.missing.coachProfile', 'un profil entraîneur complet'));
+      }
     } else if (!state.positions?.length) {
       items.push(i18next.t('adWizardRecap.missing.position', 'au moins un poste'));
     }
@@ -557,10 +555,11 @@ function AdWizardRecap({ navigation }) {
                 {t('adWizardRecap.incomplete.title', 'Récapitulatif incomplet')}
               </Text>
               <Text style={[Fonts.p2, Fonts.neutral100]}>
-                {t('adWizardRecap.incomplete.body', 'Il manque encore {{items}} avant de publier cette annonce.', {
-                  items: missingRequiredItems.join(', '),
-                  ...SANS_ECHAPPEMENT,
-                })}
+                {t(
+                  'adWizardRecap.incomplete.body',
+                  'Il manque encore {{items}} avant de publier cette annonce.',
+                  { items: missingRequiredItems.join(', '), ...SANS_ECHAPPEMENT },
+                )}
               </Text>
             </View>
           ) : null}
@@ -609,9 +608,11 @@ function AdWizardRecap({ navigation }) {
                   {t('adWizardRecap.overview.title', "Vue d'ensemble")}
                 </Text>
                 <Text style={[Fonts.p2, Fonts.neutral100]}>
-                  {t('adWizardRecap.overview.progress', '{{done}} / 4 informations clés prêtes à publier', {
-                    done: completedQuickOverviewCount,
-                  })}
+                  {t(
+                    'adWizardRecap.overview.progress',
+                    '{{done}} / 4 informations clés prêtes à publier',
+                    { done: completedQuickOverviewCount },
+                  )}
                 </Text>
               </View>
               <View

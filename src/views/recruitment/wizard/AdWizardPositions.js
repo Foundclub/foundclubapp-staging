@@ -128,10 +128,11 @@ function AdWizardPositions({ navigation }) {
       >
         <View style={[Spaces.padding[24], Alignments.alignCenter, Spaces.gap[12]]}>
           <Text style={[Fonts.p1, Fonts.neutral00, { textAlign: 'center' }]}>
-            {t('adWizardPositions.noPositions.body', '{{sport}} ne nécessite pas de préciser des postes.', {
-              sport: sportName,
-              ...SANS_ECHAPPEMENT,
-            })}
+            {t(
+              'adWizardPositions.noPositions.body',
+              '{{sport}} ne nécessite pas de préciser des postes.',
+              { sport: sportName, ...SANS_ECHAPPEMENT },
+            )}
           </Text>
           <Text style={[Fonts.p3, Fonts.neutral200, { lineHeight: 22, textAlign: 'center' }]}>
             {t(
@@ -380,7 +381,7 @@ function AdWizardPositions({ navigation }) {
               {t(
                 'adWizardPositions.list.empty',
                 "Aucun poste n'est actuellement défini pour ce sport.",
-              )}port.
+              )}
             </Text>
           </View>
         ) : null}

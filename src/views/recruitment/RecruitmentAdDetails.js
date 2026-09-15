@@ -1129,10 +1129,8 @@ function RecruitmentAdDetails() {
                 const candidateName = [candidate?.firstname, candidate?.lastname]
                   .filter(Boolean)
                   .join(' ')
-                  .trim() || application?.phoneSnapshot || application?.emailSnapshot || t(
-                    'recruitmentAdDetails.candidates.fallbackName',
-                    'Candidat',
-                  );
+                  .trim() || application?.phoneSnapshot || application?.emailSnapshot
+                  || t('recruitmentAdDetails.candidates.fallbackName', 'Candidat');
                 const candidatePhone = String(application?.phoneSnapshot || candidate?.phoneNumber || '').trim();
                 const candidateEmail = String(application?.emailSnapshot || candidate?.email || '').trim();
                 const candidateMessage = String(application?.message || '').trim();

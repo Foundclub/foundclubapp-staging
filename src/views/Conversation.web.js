@@ -59,7 +59,8 @@ const formatDateTime = (value, options = {}) => {
   const date = new Date(value)
   if (Number.isNaN(date.getTime())) return ''
   // ponytail: meme regle que localeDesFormats() -- un import de plus dans ce fichier aux imports
-  // entremeles de constantes ajoutait une erreur import/first ou perfectionist ; sortie : ranger les imports.
+  // entremeles de constantes ajoutait une erreur import/first ou perfectionist ;
+  // sortie : ranger les imports.
   return date.toLocaleString(i18next.language === 'en' ? 'en-GB' : 'fr-FR', options)
 }
 

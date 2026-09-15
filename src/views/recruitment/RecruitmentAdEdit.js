@@ -298,14 +298,12 @@ function RecruitmentAdEdit({ navigation, route }) {
         title={t('recruitmentAdEdit.title', "Modifier l'annonce")}
       >
         <View style={[Spaces.padding[16], { gap: 12 }]}>
-          <Text style={[Fonts.p1Bold, { color: Colors.neutral00 }]}>{t(
-            'recruitmentAdEdit.state.loadingTitle',
-            'Chargement de l’annonce...',
-          )}nce...</Text>
-          <Text style={[Fonts.p2, { color: Colors.neutral300 }]}>{t(
-            'recruitmentAdEdit.state.loadingBody',
-            'Préparation du formulaire d’édition.',
-          )}ition.</Text>
+          <Text style={[Fonts.p1Bold, { color: Colors.neutral00 }]}>
+            {t('recruitmentAdEdit.state.loadingTitle', 'Chargement de l’annonce...')}
+          </Text>
+          <Text style={[Fonts.p2, { color: Colors.neutral300 }]}>
+            {t('recruitmentAdEdit.state.loadingBody', 'Préparation du formulaire d’édition.')}
+          </Text>
         </View>
       </ScreenContainer>
     );
@@ -353,7 +351,7 @@ function RecruitmentAdEdit({ navigation, route }) {
             {t(
               'recruitmentAdEdit.state.notFoundBody',
               'Cette annonce n’est plus disponible ou ne peut pas etre modifiee depuis ce lien.',
-            )} lien.
+            )}
           </Text>
         </View>
       </ScreenContainer>

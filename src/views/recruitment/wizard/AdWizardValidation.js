@@ -235,7 +235,7 @@ function AdWizardValidation({ navigation }) {
             {t(
               'adWizardValidation.reminder.body',
               "Tu pourras toujours consulter les profils reçus ensuite dans le détail de l'annonce.", // eslint-disable-line max-len
-            )}once.
+            )}
           </Text>
         </View>
       </View>

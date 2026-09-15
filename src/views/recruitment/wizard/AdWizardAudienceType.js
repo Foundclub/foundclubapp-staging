@@ -129,7 +129,7 @@ function AdWizardAudienceType({ navigation, route }) {
             {t(
               'adWizardAudienceType.footnote',
               'Le tunnel adapte ensuite automatiquement les etapes, les libelles et l’affichage final de l’annonce.', // eslint-disable-line max-len
-            )}quo;annonce.
+            )}
           </Text>
         </View>
       </View>
