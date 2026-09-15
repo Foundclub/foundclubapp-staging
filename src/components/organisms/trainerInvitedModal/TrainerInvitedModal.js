@@ -1,6 +1,6 @@
 import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { StyleSheet, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
 
 import useTheme from '@/theme/themeContext';
 
@@ -30,26 +30,13 @@ function TrainerInvitedModal({
     onInvite();
   }, [onInvite]);
 
+  // FEUILLES-COUPEES (15/09) : les boutons vivent DANS le contenu, pas dans un
+  // `footerComponent`. Sans `snapPoints`, BottomModal taille la feuille sur son
+  // contenu seul : un pied n'y est pas compté et sortait entier par le bas de
+  // l'écran — « Inviter » était inatteignable.
   return (
     <BottomModal
       close={onClose}
-      footerComponent={(
-        <View style={[Spaces.gap[16], { paddingBottom: 20 }]}>
-          <Button
-            onPress={handleInvite}
-            title={t('addCoach.actions.invite')}
-            variant="Primary"
-          />
-          <Button
-            onPress={onClose}
-            title={t('common.actions.askLater')}
-            variant="Secondary"
-          />
-        </View>
-      )}
-      headerComponent={( // Removed headerComponent to have custom layout inside children for better control
-        null
-      )}
       hideCloseButton
       isVisible={isVisible}
     >
@@ -60,6 +47,18 @@ function TrainerInvitedModal({
         <Text style={[Fonts.p1, { textAlign: 'center' }]}>
           {t('addCoach.alerts.success.description', { trainerName })}
         </Text>
+      </View>
+      <View style={[Spaces.gap[16]]}>
+        <Button
+          onPress={handleInvite}
+          title={t('addCoach.actions.invite')}
+          variant="Primary"
+        />
+        <Button
+          onPress={onClose}
+          title={t('common.actions.askLater')}
+          variant="Secondary"
+        />
       </View>
     </BottomModal>
   );
