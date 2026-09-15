@@ -1,4 +1,5 @@
 import { useCallback, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
   Text,
@@ -7,6 +8,7 @@ import {
   View,
 } from 'react-native';
 
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -38,6 +40,7 @@ import {
  * @returns {import('react').ReactElement}
  */
 function AdWizardInfo({ navigation }) {
+  const { t } = useTranslation();
   const {
     Alignments,
     ApplicationStyle,
@@ -92,8 +95,11 @@ function AdWizardInfo({ navigation }) {
   const handleNext = () => {
     if (!isAdWizardSportProfileComplete(state)) {
       showBanner({
-        body: 'Complète la section, la catégorie et le niveau minimum pour qualifier clairement ton annonce.',
-        title: 'Profil requis',
+        body: t(
+          'adWizardInfo.required.body',
+          'Complète la section, la catégorie et le niveau minimum pour qualifier clairement ton annonce.', // eslint-disable-line max-len
+        ),
+        title: t('adWizardInfo.required.title', 'Profil requis'),
         tone: 'error',
       });
       return;
@@ -102,14 +108,17 @@ function AdWizardInfo({ navigation }) {
     navigation.navigate(RouteNames.AdWizardLocation);
   };
 
-  const sportName = state.sport?.name || state.team?.activities?.[0]?.name || 'Non défini';
+  const sportName = state.sport?.name || state.team?.activities?.[0]?.name || t(
+    'adWizardInfo.sportUndefined',
+    'Non défini',
+  );
   const currentSectionValue = state.section?.name || '';
   const currentCategoryValue = state.category?.name || '';
   const currentLevelValue = state.minLevel?.name || '';
   const teamSummaryMeta = [
-    { label: 'Section', value: currentSectionValue },
-    { label: 'Catégorie', value: currentCategoryValue },
-    { label: 'Niveau', value: currentLevelValue },
+    { label: t('adWizardInfo.teamSummary.section', 'Section'), value: currentSectionValue },
+    { label: t('adWizardInfo.teamSummary.category', 'Catégorie'), value: currentCategoryValue },
+    { label: t('adWizardInfo.teamSummary.level', 'Niveau'), value: currentLevelValue },
   ].filter((item) => String(item.value || '').trim().length > 0).slice(0, 3);
 
   const cardSurfaceStyle = {
@@ -164,15 +173,21 @@ function AdWizardInfo({ navigation }) {
   return (
     <WizardStepLayout
       isNextDisabled={!isAdWizardSportProfileComplete(state)}
-      nextLabel="Suivant"
+      nextLabel={t('adWizardInfo.next', 'Suivant')}
       onBack={() => navigation.goBack()}
       onNext={handleNext}
       stepCount={getAdWizardStepCount(state)}
       stepIndex={getAdWizardInfoStepIndex(state)}
       subtitle={isCoachAdWizard(state)
-        ? 'Précise le cadre sportif dans lequel tu recherches un profil coach.'
-        : 'Précise la cible sportive recherchee avant de passer au lieu de publication.'}
-      title="Ciblage sportif"
+        ? t(
+          'adWizardInfo.subtitleCoach',
+          'Précise le cadre sportif dans lequel tu recherches un profil coach.',
+        )
+        : t(
+          'adWizardInfo.subtitle',
+          'Précise la cible sportive recherchee avant de passer au lieu de publication.',
+        )}
+      title={t('adWizardInfo.title', 'Ciblage sportif')}
     >
       <View style={[Spaces.gap[24], Spaces.paddingBottom[40]]}>
         {isTaxonomyLoading ? (
@@ -188,7 +203,10 @@ function AdWizardInfo({ navigation }) {
           >
             <ActivityIndicator color={Colors.primary500} size="small" />
             <Text style={[Fonts.p2, Fonts.neutral100, Alignments.fill, { lineHeight: 24 }]}>
-              Chargement des sections, catégories et niveaux disponibles.
+              {t(
+                'adWizardInfo.taxonomy.loading',
+                'Chargement des sections, catégories et niveaux disponibles.',
+              )}
             </Text>
           </View>
         ) : null}
@@ -206,14 +224,20 @@ function AdWizardInfo({ navigation }) {
             ]}
           >
             <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
-              {'Certaines options n\'ont pas pu être chargées'}
+              {t(
+                'adWizardInfo.taxonomy.errorTitle',
+                "Certaines options n'ont pas pu être chargées",
+              )}
             </Text>
             <Text style={[Fonts.p2, Fonts.neutral100, { lineHeight: 24 }]}>
-              {'Tu peux réessayer pour récupérer toutes les références, ou continuer avec les informations déjà préremplies depuis l\'équipe.'}
+              {t(
+                'adWizardInfo.taxonomy.errorBody',
+                "Tu peux réessayer pour récupérer toutes les références, ou continuer avec les informations déjà préremplies depuis l'équipe.", // eslint-disable-line max-len
+              )}
             </Text>
             <Button
               onPress={handleRetryTaxonomy}
-              title="Réessayer"
+              title={t('adWizardInfo.taxonomy.retry', 'Réessayer')}
               variant="Secondary"
             />
           </View>
@@ -231,7 +255,7 @@ function AdWizardInfo({ navigation }) {
             <View style={[Spaces.gap[24]]}>
               <View style={[Spaces.gap[16]]}>
                 <Text style={[Fonts.p4Bold, Fonts.primary500]}>
-                  Équipe sélectionnée
+                  {t('adWizardInfo.team.selected', 'Équipe sélectionnée')}
                 </Text>
 
                 <View
@@ -251,7 +275,10 @@ function AdWizardInfo({ navigation }) {
                       numberOfLines={2}
                       style={[Fonts.p2, Fonts.neutral100, { lineHeight: 24 }]}
                     >
-                      {state.team?.club?.name || 'Club non renseigné'}
+                      {state.team?.club?.name || t(
+                        'adWizardInfo.team.clubMissing',
+                        'Club non renseigné',
+                      )}
                     </Text>
                   </View>
                 </View>
@@ -278,7 +305,7 @@ function AdWizardInfo({ navigation }) {
                   ]}
                 >
                   <Text style={[Fonts.p3Bold, Fonts.primary500]}>
-                    Choisir une autre équipe
+                    {t('adWizardInfo.team.change', 'Choisir une autre équipe')}
                   </Text>
                 </TouchableOpacity>
 
@@ -299,7 +326,11 @@ function AdWizardInfo({ navigation }) {
                         ]}
                       >
                         <Text style={[Fonts.p4Bold, Fonts.primary500]}>
-                          {`${item.label} : ${item.value}`}
+                          {t(
+                            'adWizardInfo.teamSummary.item',
+                            '{{label}} : {{value}}',
+                            { label: item.label, value: item.value, ...SANS_ECHAPPEMENT },
+                          )}
                         </Text>
                       </View>
                     ))}
@@ -314,12 +345,21 @@ function AdWizardInfo({ navigation }) {
           <View style={[Spaces.gap[24]]}>
             <View style={[Spaces.gap[12]]}>
               <Text style={[Fonts.h4, Fonts.neutral00]}>
-                {isCoachAdWizard(state) ? 'Contexte du rôle recherche' : 'Profil recherche'}
+                {isCoachAdWizard(state) ? t(
+                  'adWizardInfo.profile.titleCoach',
+                  'Contexte du rôle recherche',
+                ) : t('adWizardInfo.profile.title', 'Profil recherche')}
               </Text>
               <Text style={[Fonts.p2, Fonts.neutral100, { lineHeight: 24 }]}>
                 {isCoachAdWizard(state)
-                  ? 'Précise le sport, la section, la catégorie et le niveau de référence de ton besoin staff.'
-                  : 'Affine la cible de ton annonce avec les bons repères sportifs.'}
+                  ? t(
+                    'adWizardInfo.profile.bodyCoach',
+                    'Précise le sport, la section, la catégorie et le niveau de référence de ton besoin staff.', // eslint-disable-line max-len
+                  )
+                  : t(
+                    'adWizardInfo.profile.body',
+                    'Affine la cible de ton annonce avec les bons repères sportifs.',
+                  )}
               </Text>
             </View>
 
@@ -343,9 +383,9 @@ function AdWizardInfo({ navigation }) {
           <View style={[Alignments.row, Alignments.wrap, Spaces.gap[24], Spaces.marginTop[24]]}>
             <AutocompleteSelect
               displayVariant="card"
-              label="Section *"
+              label={t('adWizardInfo.form.section', 'Section *')}
               options={sections}
-              placeholder="Sélectionner une section"
+              placeholder={t('adWizardInfo.form.sectionPlaceholder', 'Sélectionner une section')}
               setValue={handleSectionChange}
               value={currentSectionValue}
               wrapperStyle={{ width: compactFieldWidth }}
@@ -353,20 +393,23 @@ function AdWizardInfo({ navigation }) {
 
             <AutocompleteSelect
               displayVariant="card"
-              label="Catégorie *"
+              label={t('adWizardInfo.form.category', 'Catégorie *')}
               options={categories}
-              placeholder="Sélectionner une catégorie"
+              placeholder={t('adWizardInfo.form.categoryPlaceholder', 'Sélectionner une catégorie')}
               setValue={handleCategoryChange}
               value={currentCategoryValue}
               wrapperStyle={{ width: compactFieldWidth }}
             />
 
             <AutocompleteSelect
-              description="Définis le niveau minimum attendu pour candidater."
+              description={t(
+                'adWizardInfo.form.levelHelper',
+                'Définis le niveau minimum attendu pour candidater.',
+              )}
               displayVariant="card"
-              label="Niveau minimum recherché *"
+              label={t('adWizardInfo.form.level', 'Niveau minimum recherché *')}
               options={levels}
-              placeholder="Sélectionner un niveau"
+              placeholder={t('adWizardInfo.form.levelPlaceholder', 'Sélectionner un niveau')}
               setValue={handleLevelChange}
               value={currentLevelValue}
               wrapperStyle={{ width: '100%' }}
