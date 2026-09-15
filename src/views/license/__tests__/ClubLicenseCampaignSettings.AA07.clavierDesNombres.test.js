@@ -33,7 +33,15 @@ const SOURCE = fs.readFileSync(FICHIER, 'utf8');
  * @returns {string} le bloc `<Field ... />` qui porte ce libelle
  */
 const blocDuChamp = (ancre) => {
-  const position = SOURCE.indexOf(ancre);
+  let position = SOURCE.indexOf(ancre);
+  // I18N-1 : le libelle passe par t() — `label="X"` s'ecrit desormais
+  // `label={t('clef', 'X')}`. On cherche la meme balise sous sa nouvelle ecriture.
+  const libelle = ancre.match(/^label="(.*)"$/);
+  if (position === -1 && libelle) {
+    const echappe = libelle[1].replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const trouve = new RegExp(`label=\\{t\\(\\s*'[^']+',\\s*'${echappe}'`).exec(SOURCE);
+    position = trouve ? trouve.index : -1;
+  }
   if (position === -1) throw new Error(`Champ introuvable dans la source : ${ancre}`);
   const debut = SOURCE.lastIndexOf('<', position);
   let index = debut;

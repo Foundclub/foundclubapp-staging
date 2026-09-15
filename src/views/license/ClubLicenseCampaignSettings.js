@@ -7,9 +7,11 @@
 /* eslint-disable perfectionist/sort-imports */
 import { useQueryClient } from '@tanstack/react-query';
 import { format, isValid, parse } from 'date-fns';
+import i18next from 'i18next';
 import {
   useCallback, useEffect, useMemo, useRef, useState,
 } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Alert, Pressable, Switch, Text, TextInput, View,
 } from 'react-native';
@@ -17,6 +19,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { getUserRoleKey, USER_ROLES } from '@/domains/auth/authUseCases';
 import { extractSubscriptionDecisionFromError } from '@/domains/subscription/subscriptionDecision';
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -97,16 +100,59 @@ const clampDateToBounds = (date, minimumDate, maximumDate) => {
 // libelles changent, et uniquement pour porter leurs accents (defaut de recette
 // du 2026-08-07 : le recapitulatif affichait « pending, partial, overdue »).
 const reminderStatusOptions = [
-  { key: 'pending', label: 'À payer' },
-  { key: 'partial', label: 'Partiel' },
-  { key: 'overdue', label: 'En retard' },
-  { key: 'manual_review', label: 'À valider' },
+  {
+    key: 'pending',
+    get label() {
+      return i18next.t('clubLicenseCampaignSettings.reminderStatus.pending', 'À payer');
+    },
+  },
+  {
+    key: 'partial',
+    get label() {
+      return i18next.t('clubLicenseCampaignSettings.reminderStatus.partial', 'Partiel');
+    },
+  },
+  {
+    key: 'overdue',
+    get label() {
+      return i18next.t('clubLicenseCampaignSettings.reminderStatus.overdue', 'En retard');
+    },
+  },
+  {
+    key: 'manual_review',
+    get label() {
+      return i18next.t('clubLicenseCampaignSettings.reminderStatus.manualReview', 'À valider');
+    },
+  },
 ];
 const installmentFrequencyOptions = [
-  { key: 'weekly', label: 'Hebdomadaire' },
-  { key: 'monthly', label: 'Mensuelle' },
-  { key: 'quarterly', label: 'Trimestrielle' },
-  { key: 'custom', label: 'Libre' },
+  {
+    key: 'weekly',
+    get label() {
+      return i18next.t('clubLicenseCampaignSettings.installmentFrequency.weekly', 'Hebdomadaire');
+    },
+  },
+  {
+    key: 'monthly',
+    get label() {
+      return i18next.t('clubLicenseCampaignSettings.installmentFrequency.monthly', 'Mensuelle');
+    },
+  },
+  {
+    key: 'quarterly',
+    get label() {
+      return i18next.t(
+        'clubLicenseCampaignSettings.installmentFrequency.quarterly',
+        'Trimestrielle',
+      );
+    },
+  },
+  {
+    key: 'custom',
+    get label() {
+      return i18next.t('clubLicenseCampaignSettings.installmentFrequency.custom', 'Libre');
+    },
+  },
 ];
 const installmentFrequencyMonthStep = {
   custom: 1, monthly: 1, quarterly: 3, weekly: 0,
@@ -182,12 +228,42 @@ const currencyOptions = [
   { key: 'CHF', label: 'CHF' },
 ];
 const campaignTypeOptions = [
-  { key: 'license', label: 'Licence' },
-  { key: 'membership', label: 'Adhésion' },
-  { key: 'equipment', label: 'Équipement' },
-  { key: 'internship', label: 'Stage' },
-  { key: 'tournament', label: 'Tournoi' },
-  { key: 'other', label: 'Autre' },
+  {
+    key: 'license',
+    get label() {
+      return i18next.t('clubLicenseCampaignSettings.campaignType.license', 'Licence');
+    },
+  },
+  {
+    key: 'membership',
+    get label() {
+      return i18next.t('clubLicenseCampaignSettings.campaignType.membership', 'Adhésion');
+    },
+  },
+  {
+    key: 'equipment',
+    get label() {
+      return i18next.t('clubLicenseCampaignSettings.campaignType.equipment', 'Équipement');
+    },
+  },
+  {
+    key: 'internship',
+    get label() {
+      return i18next.t('clubLicenseCampaignSettings.campaignType.internship', 'Stage');
+    },
+  },
+  {
+    key: 'tournament',
+    get label() {
+      return i18next.t('clubLicenseCampaignSettings.campaignType.tournament', 'Tournoi');
+    },
+  },
+  {
+    key: 'other',
+    get label() {
+      return i18next.t('clubLicenseCampaignSettings.campaignType.other', 'Autre');
+    },
+  },
 ];
 const licenseRoleFilterKeys = ['player', 'coach', 'president'];
 /**
@@ -209,33 +285,75 @@ const licenseRoleFilterKeys = ['player', 'coach', 'president'];
 const licenseCampaignWizardSteps = [
   {
     key: 'identity',
-    subtitle: 'Nom, type et saison — le reste a des défauts sûrs.',
-    title: 'Identité',
+    get subtitle() {
+      return i18next.t(
+        'clubLicenseCampaignSettings.steps.identity.subtitle',
+        'Nom, type et saison — le reste a des défauts sûrs.',
+      );
+    },
+    get title() {
+      return i18next.t('clubLicenseCampaignSettings.steps.identity.title', 'Identité');
+    },
   },
   {
     key: 'audience',
-    subtitle: 'Qui paie, et combien. Le montant est obligatoire.',
-    title: 'Public & tarif',
+    get subtitle() {
+      return i18next.t(
+        'clubLicenseCampaignSettings.steps.audience.subtitle',
+        'Qui paie, et combien. Le montant est obligatoire.',
+      );
+    },
+    get title() {
+      return i18next.t('clubLicenseCampaignSettings.steps.audience.title', 'Public & tarif');
+    },
   },
   {
     key: 'payment',
-    subtitle: 'Comment les membres peuvent régler.',
-    title: 'Paiement',
+    get subtitle() {
+      return i18next.t(
+        'clubLicenseCampaignSettings.steps.payment.subtitle',
+        'Comment les membres peuvent régler.',
+      );
+    },
+    get title() {
+      return i18next.t('clubLicenseCampaignSettings.steps.payment.title', 'Paiement');
+    },
   },
   {
     key: 'documents',
-    subtitle: 'Les pièces à fournir. Étape facultative.',
-    title: 'Documents',
+    get subtitle() {
+      return i18next.t(
+        'clubLicenseCampaignSettings.steps.documents.subtitle',
+        'Les pièces à fournir. Étape facultative.',
+      );
+    },
+    get title() {
+      return i18next.t('clubLicenseCampaignSettings.steps.documents.title', 'Documents');
+    },
   },
   {
     key: 'reminders',
-    subtitle: 'On relance tant que ce n est pas payé.',
-    title: 'Relances',
+    get subtitle() {
+      return i18next.t(
+        'clubLicenseCampaignSettings.steps.reminders.subtitle',
+        'On relance tant que ce n est pas payé.',
+      );
+    },
+    get title() {
+      return i18next.t('clubLicenseCampaignSettings.steps.reminders.title', 'Relances');
+    },
   },
   {
     key: 'review',
-    subtitle: 'Relis, corrige, puis ouvre — tout reste modifiable après.',
-    title: 'Récapitulatif',
+    get subtitle() {
+      return i18next.t(
+        'clubLicenseCampaignSettings.steps.review.subtitle',
+        'Relis, corrige, puis ouvre — tout reste modifiable après.',
+      );
+    },
+    get title() {
+      return i18next.t('clubLicenseCampaignSettings.steps.review.title', 'Récapitulatif');
+    },
   },
 ];
 const licenseCampaignWizardStepIndex = licenseCampaignWizardSteps
@@ -487,34 +605,106 @@ const buildCampaignNameSuggestions = ({ seasonLabel, type }) => {
   const season = formatSeasonLabelForSuggestion(seasonLabel);
   const suggestionsByType = {
     equipment: [
-      `Cotisation équipements ${season}`,
-      `Campagne équipements ${season}`,
-      `Équipements ${season}`,
+      i18next.t(
+        'clubLicenseCampaignSettings.suggestions.names.equipment.one',
+        'Cotisation équipements {{season}}',
+        { season, ...SANS_ECHAPPEMENT },
+      ),
+      i18next.t(
+        'clubLicenseCampaignSettings.suggestions.names.equipment.two',
+        'Campagne équipements {{season}}',
+        { season, ...SANS_ECHAPPEMENT },
+      ),
+      i18next.t(
+        'clubLicenseCampaignSettings.suggestions.names.equipment.three',
+        'Équipements {{season}}',
+        { season, ...SANS_ECHAPPEMENT },
+      ),
     ],
     internship: [
-      `Participation stage ${season}`,
-      `Campagne stage ${season}`,
-      `Stage ${season}`,
+      i18next.t(
+        'clubLicenseCampaignSettings.suggestions.names.internship.one',
+        'Participation stage {{season}}',
+        { season, ...SANS_ECHAPPEMENT },
+      ),
+      i18next.t(
+        'clubLicenseCampaignSettings.suggestions.names.internship.two',
+        'Campagne stage {{season}}',
+        { season, ...SANS_ECHAPPEMENT },
+      ),
+      i18next.t(
+        'clubLicenseCampaignSettings.suggestions.names.internship.three',
+        'Stage {{season}}',
+        { season, ...SANS_ECHAPPEMENT },
+      ),
     ],
     license: [
-      `Cotisation licences ${season}`,
-      `Campagne licences ${season}`,
-      `Licences ${season}`,
+      i18next.t(
+        'clubLicenseCampaignSettings.suggestions.names.license.one',
+        'Cotisation licences {{season}}',
+        { season, ...SANS_ECHAPPEMENT },
+      ),
+      i18next.t(
+        'clubLicenseCampaignSettings.suggestions.names.license.two',
+        'Campagne licences {{season}}',
+        { season, ...SANS_ECHAPPEMENT },
+      ),
+      i18next.t(
+        'clubLicenseCampaignSettings.suggestions.names.license.three',
+        'Licences {{season}}',
+        { season, ...SANS_ECHAPPEMENT },
+      ),
     ],
     membership: [
-      `Cotisation adhésions ${season}`,
-      `Campagne adhésion ${season}`,
-      `Adhésions ${season}`,
+      i18next.t(
+        'clubLicenseCampaignSettings.suggestions.names.membership.one',
+        'Cotisation adhésions {{season}}',
+        { season, ...SANS_ECHAPPEMENT },
+      ),
+      i18next.t(
+        'clubLicenseCampaignSettings.suggestions.names.membership.two',
+        'Campagne adhésion {{season}}',
+        { season, ...SANS_ECHAPPEMENT },
+      ),
+      i18next.t(
+        'clubLicenseCampaignSettings.suggestions.names.membership.three',
+        'Adhésions {{season}}',
+        { season, ...SANS_ECHAPPEMENT },
+      ),
     ],
     other: [
-      `Cotisation ${season}`,
-      `Campagne ${season}`,
-      `Paiement ${season}`,
+      i18next.t(
+        'clubLicenseCampaignSettings.suggestions.names.other.one',
+        'Cotisation {{season}}',
+        { season, ...SANS_ECHAPPEMENT },
+      ),
+      i18next.t(
+        'clubLicenseCampaignSettings.suggestions.names.other.two',
+        'Campagne {{season}}',
+        { season, ...SANS_ECHAPPEMENT },
+      ),
+      i18next.t(
+        'clubLicenseCampaignSettings.suggestions.names.other.three',
+        'Paiement {{season}}',
+        { season, ...SANS_ECHAPPEMENT },
+      ),
     ],
     tournament: [
-      `Participation tournoi ${season}`,
-      `Campagne tournoi ${season}`,
-      `Tournoi ${season}`,
+      i18next.t(
+        'clubLicenseCampaignSettings.suggestions.names.tournament.one',
+        'Participation tournoi {{season}}',
+        { season, ...SANS_ECHAPPEMENT },
+      ),
+      i18next.t(
+        'clubLicenseCampaignSettings.suggestions.names.tournament.two',
+        'Campagne tournoi {{season}}',
+        { season, ...SANS_ECHAPPEMENT },
+      ),
+      i18next.t(
+        'clubLicenseCampaignSettings.suggestions.names.tournament.three',
+        'Tournoi {{season}}',
+        { season, ...SANS_ECHAPPEMENT },
+      ),
     ],
   };
   const typeKey = String(type || 'license').trim().toLowerCase();
@@ -525,34 +715,111 @@ const buildCampaignDescriptionSuggestions = ({ seasonLabel, type }) => {
   const season = formatSeasonLabelForSuggestion(seasonLabel);
   const suggestionsByType = {
     equipment: [
-      `Cette campagne concerne les équipements pour la saison ${season}. Merci de finaliser ton règlement dans les délais indiques par le club.`,
-      `Retrouve ici les informations de paiement liées aux équipements de la saison ${season}.`,
-      `Cette cotisation couvre les équipements prévus pour la saison ${season}.`,
+      i18next.t(
+        'clubLicenseCampaignSettings.suggestions.descriptions.equipment.one',
+        'Cette campagne concerne les équipements pour la saison {{season}}. Merci de '
+          + 'finaliser ton règlement dans les délais indiques par le club.',
+        { season, ...SANS_ECHAPPEMENT },
+      ),
+      i18next.t(
+        'clubLicenseCampaignSettings.suggestions.descriptions.equipment.two',
+        'Retrouve ici les informations de paiement liées aux équipements de la saison {{season}}.',
+        { season, ...SANS_ECHAPPEMENT },
+      ),
+      i18next.t(
+        'clubLicenseCampaignSettings.suggestions.descriptions.equipment.three',
+        'Cette cotisation couvre les équipements prévus pour la saison {{season}}.',
+        { season, ...SANS_ECHAPPEMENT },
+      ),
     ],
     internship: [
-      `Cette campagne concerne la participation au stage ${season}. Merci de suivre les modalités de paiement indiquées par le club.`,
-      `Retrouve ici les informations de règlement pour le stage de la saison ${season}.`,
-      `Cette cotisation permet de confirmer l inscription au stage ${season}.`,
+      i18next.t(
+        'clubLicenseCampaignSettings.suggestions.descriptions.internship.one',
+        'Cette campagne concerne la participation au stage {{season}}. Merci de suivre les '
+          + 'modalités de paiement indiquées par le club.',
+        { season, ...SANS_ECHAPPEMENT },
+      ),
+      i18next.t(
+        'clubLicenseCampaignSettings.suggestions.descriptions.internship.two',
+        'Retrouve ici les informations de règlement pour le stage de la saison {{season}}.',
+        { season, ...SANS_ECHAPPEMENT },
+      ),
+      i18next.t(
+        'clubLicenseCampaignSettings.suggestions.descriptions.internship.three',
+        'Cette cotisation permet de confirmer l inscription au stage {{season}}.',
+        { season, ...SANS_ECHAPPEMENT },
+      ),
     ],
     license: [
-      `Cette campagne concerne les licences pour la saison ${season}. Merci de compléter ton dossier et ton paiement dans les délais.`,
-      `Retrouve ici les informations de paiement et les documents à fournir pour la licence ${season}.`,
-      `Cette cotisation permet de finaliser la licence pour la saison ${season}.`,
+      i18next.t(
+        'clubLicenseCampaignSettings.suggestions.descriptions.license.one',
+        'Cette campagne concerne les licences pour la saison {{season}}. Merci de compléter '
+          + 'ton dossier et ton paiement dans les délais.',
+        { season, ...SANS_ECHAPPEMENT },
+      ),
+      i18next.t(
+        'clubLicenseCampaignSettings.suggestions.descriptions.license.two',
+        'Retrouve ici les informations de paiement et les documents à fournir pour la '
+          + 'licence {{season}}.',
+        { season, ...SANS_ECHAPPEMENT },
+      ),
+      i18next.t(
+        'clubLicenseCampaignSettings.suggestions.descriptions.license.three',
+        'Cette cotisation permet de finaliser la licence pour la saison {{season}}.',
+        { season, ...SANS_ECHAPPEMENT },
+      ),
     ],
     membership: [
-      `Cette campagne concerne les adhésions pour la saison ${season}. Merci de compléter ton dossier et ton règlement.`,
-      `Retrouve ici les informations nécessaires pour régler ton adhésion ${season}.`,
-      `Cette cotisation permet de valider l'adhésion à la saison ${season}.`,
+      i18next.t(
+        'clubLicenseCampaignSettings.suggestions.descriptions.membership.one',
+        'Cette campagne concerne les adhésions pour la saison {{season}}. Merci de compléter '
+          + 'ton dossier et ton règlement.',
+        { season, ...SANS_ECHAPPEMENT },
+      ),
+      i18next.t(
+        'clubLicenseCampaignSettings.suggestions.descriptions.membership.two',
+        'Retrouve ici les informations nécessaires pour régler ton adhésion {{season}}.',
+        { season, ...SANS_ECHAPPEMENT },
+      ),
+      i18next.t(
+        'clubLicenseCampaignSettings.suggestions.descriptions.membership.three',
+        "Cette cotisation permet de valider l'adhésion à la saison {{season}}.",
+        { season, ...SANS_ECHAPPEMENT },
+      ),
     ],
     other: [
-      `Merci de retrouver ici toutes les informations utiles pour cette campagne ${season}.`,
-      'Cette campagne regroupe les modalités de paiement et les informations visibles par les membres.',
-      'Merci de compléter ton règlement selon les consignes indiquées par le club.',
+      i18next.t(
+        'clubLicenseCampaignSettings.suggestions.descriptions.other.one',
+        'Merci de retrouver ici toutes les informations utiles pour cette campagne {{season}}.',
+        { season, ...SANS_ECHAPPEMENT },
+      ),
+      i18next.t(
+        'clubLicenseCampaignSettings.suggestions.descriptions.other.two',
+        'Cette campagne regroupe les modalités de paiement et les informations visibles par '
+          + 'les membres.',
+      ),
+      i18next.t(
+        'clubLicenseCampaignSettings.suggestions.descriptions.other.three',
+        'Merci de compléter ton règlement selon les consignes indiquées par le club.',
+      ),
     ],
     tournament: [
-      `Cette campagne concerne la participation au tournoi ${season}. Merci de suivre les modalités indiquées pour valider ton inscription.`,
-      `Retrouve ici les informations de règlement pour le tournoi ${season}.`,
-      `Cette cotisation permet de confirmer la participation au tournoi ${season}.`,
+      i18next.t(
+        'clubLicenseCampaignSettings.suggestions.descriptions.tournament.one',
+        'Cette campagne concerne la participation au tournoi {{season}}. Merci de suivre les '
+          + 'modalités indiquées pour valider ton inscription.',
+        { season, ...SANS_ECHAPPEMENT },
+      ),
+      i18next.t(
+        'clubLicenseCampaignSettings.suggestions.descriptions.tournament.two',
+        'Retrouve ici les informations de règlement pour le tournoi {{season}}.',
+        { season, ...SANS_ECHAPPEMENT },
+      ),
+      i18next.t(
+        'clubLicenseCampaignSettings.suggestions.descriptions.tournament.three',
+        'Cette cotisation permet de confirmer la participation au tournoi {{season}}.',
+        { season, ...SANS_ECHAPPEMENT },
+      ),
     ],
   };
   const typeKey = String(type || 'license').trim().toLowerCase();
@@ -563,34 +830,111 @@ const buildInternalNoteSuggestions = ({ seasonLabel, type }) => {
   const season = formatSeasonLabelForSuggestion(seasonLabel);
   const suggestionsByType = {
     equipment: [
-      `Suivi interne ${season} : vérifier les tailles, les stocks et les règlements avant de lancer la commande équipement.`,
-      `Campagne équipement ${season} : valider les paiements reçus avant remise des articles.`,
-      'Note staff : centraliser ici les cas particuliers, remises et commandes à confirmer.',
+      i18next.t(
+        'clubLicenseCampaignSettings.suggestions.notes.equipment.one',
+        'Suivi interne {{season}} : vérifier les tailles, les stocks et les règlements avant '
+          + 'de lancer la commande équipement.',
+        { season, ...SANS_ECHAPPEMENT },
+      ),
+      i18next.t(
+        'clubLicenseCampaignSettings.suggestions.notes.equipment.two',
+        'Campagne équipement {{season}} : valider les paiements reçus avant remise des articles.',
+        { season, ...SANS_ECHAPPEMENT },
+      ),
+      i18next.t(
+        'clubLicenseCampaignSettings.suggestions.notes.equipment.three',
+        'Note staff : centraliser ici les cas particuliers, remises et commandes à confirmer.',
+      ),
     ],
     internship: [
-      `Suivi stage ${season} : vérifier les dossiers complets, les paiements reçus et les places restantes.`,
-      `Campagne stage ${season} : relancer les familles en attente avant validation finale.`,
-      'Note équipe : suivre ici les exemptions, paiements manuels et confirmations de participation.',
+      i18next.t(
+        'clubLicenseCampaignSettings.suggestions.notes.internship.one',
+        'Suivi stage {{season}} : vérifier les dossiers complets, les paiements reçus et les '
+          + 'places restantes.',
+        { season, ...SANS_ECHAPPEMENT },
+      ),
+      i18next.t(
+        'clubLicenseCampaignSettings.suggestions.notes.internship.two',
+        'Campagne stage {{season}} : relancer les familles en attente avant validation finale.',
+        { season, ...SANS_ECHAPPEMENT },
+      ),
+      i18next.t(
+        'clubLicenseCampaignSettings.suggestions.notes.internship.three',
+        'Note équipe : suivre ici les exemptions, paiements manuels et confirmations de '
+          + 'participation.',
+      ),
     ],
     license: [
-      `Suivi licences ${season} : vérifier les documents manquants et relancer avant validation finale.`,
-      `Campagne licences ${season} : rapprocher les paiements manuels chaque semaine et signaler les dossiers incomplets.`,
-      'Note dirigeants : utiliser cet espace pour les cas particuliers, exemptions et relances prioritaires.',
+      i18next.t(
+        'clubLicenseCampaignSettings.suggestions.notes.license.one',
+        'Suivi licences {{season}} : vérifier les documents manquants et relancer avant '
+          + 'validation finale.',
+        { season, ...SANS_ECHAPPEMENT },
+      ),
+      i18next.t(
+        'clubLicenseCampaignSettings.suggestions.notes.license.two',
+        'Campagne licences {{season}} : rapprocher les paiements manuels chaque semaine et '
+          + 'signaler les dossiers incomplets.',
+        { season, ...SANS_ECHAPPEMENT },
+      ),
+      i18next.t(
+        'clubLicenseCampaignSettings.suggestions.notes.license.three',
+        'Note dirigeants : utiliser cet espace pour les cas particuliers, exemptions et '
+          + 'relances prioritaires.',
+      ),
     ],
     membership: [
-      `Suivi adhésions ${season} : vérifier les paiements reçus et les demandes en attente de validation.`,
-      `Campagne adhésions ${season} : noter ici les cas particuliers, remises et suivis à faire avec les familles.`,
-      'Note gestion : confirmer chaque adhésion après reception du règlement complet.',
+      i18next.t(
+        'clubLicenseCampaignSettings.suggestions.notes.membership.one',
+        'Suivi adhésions {{season}} : vérifier les paiements reçus et les demandes en '
+          + 'attente de validation.',
+        { season, ...SANS_ECHAPPEMENT },
+      ),
+      i18next.t(
+        'clubLicenseCampaignSettings.suggestions.notes.membership.two',
+        'Campagne adhésions {{season}} : noter ici les cas particuliers, remises et suivis à '
+          + 'faire avec les familles.',
+        { season, ...SANS_ECHAPPEMENT },
+      ),
+      i18next.t(
+        'clubLicenseCampaignSettings.suggestions.notes.membership.three',
+        'Note gestion : confirmer chaque adhésion après reception du règlement complet.',
+      ),
     ],
     other: [
-      `Suivi interne ${season} : centraliser ici les points de vigilance et les relances à effectuer.`,
-      'Note staff : utiliser cet espace pour les exceptions, paiements manuels et commentaires de suivi.',
-      'Rappel gestion : vérifier les dossiers incomplets avant clôture de la campagne.',
+      i18next.t(
+        'clubLicenseCampaignSettings.suggestions.notes.other.one',
+        'Suivi interne {{season}} : centraliser ici les points de vigilance et les relances '
+          + 'à effectuer.',
+        { season, ...SANS_ECHAPPEMENT },
+      ),
+      i18next.t(
+        'clubLicenseCampaignSettings.suggestions.notes.other.two',
+        'Note staff : utiliser cet espace pour les exceptions, paiements manuels et '
+          + 'commentaires de suivi.',
+      ),
+      i18next.t(
+        'clubLicenseCampaignSettings.suggestions.notes.other.three',
+        'Rappel gestion : vérifier les dossiers incomplets avant clôture de la campagne.',
+      ),
     ],
     tournament: [
-      `Suivi tournoi ${season} : vérifier les inscriptions, paiements reçus et confirmations avant clôture.`,
-      `Campagne tournoi ${season} : noter ici les équipes à relancer et les cas particuliers à traiter.`,
-      'Note organisation : centraliser les suivis de paiement et de validation dans cet espace.',
+      i18next.t(
+        'clubLicenseCampaignSettings.suggestions.notes.tournament.one',
+        'Suivi tournoi {{season}} : vérifier les inscriptions, paiements reçus et '
+          + 'confirmations avant clôture.',
+        { season, ...SANS_ECHAPPEMENT },
+      ),
+      i18next.t(
+        'clubLicenseCampaignSettings.suggestions.notes.tournament.two',
+        'Campagne tournoi {{season}} : noter ici les équipes à relancer et les cas '
+          + 'particuliers à traiter.',
+        { season, ...SANS_ECHAPPEMENT },
+      ),
+      i18next.t(
+        'clubLicenseCampaignSettings.suggestions.notes.tournament.three',
+        'Note organisation : centraliser les suivis de paiement et de validation dans cet espace.',
+      ),
     ],
   };
   const typeKey = String(type || 'license').trim().toLowerCase();
@@ -664,18 +1008,43 @@ const normalizeTargetConfigPayload = (targetConfig) => {
   };
 };
 const pricingRuleLabels = {
-  category: 'Categorie',
-  level: 'Niveau',
-  role: 'Role',
-  section: 'Section',
-  team: 'Equipe',
+  get category() {
+    return i18next.t('clubLicenseCampaignSettings.pricingRuleType.category', 'Categorie');
+  },
+  get level() {
+    return i18next.t('clubLicenseCampaignSettings.pricingRuleType.level', 'Niveau');
+  },
+  get role() {
+    return i18next.t('clubLicenseCampaignSettings.pricingRuleType.role', 'Role');
+  },
+  get section() {
+    return i18next.t('clubLicenseCampaignSettings.pricingRuleType.section', 'Section');
+  },
+  get team() {
+    return i18next.t('clubLicenseCampaignSettings.pricingRuleType.team', 'Equipe');
+  },
 };
 // ⛔ Les CLES sont les valeurs de `USER_ROLES`, celles qui partent en base dans
 // `targetConfig.roles`. Seul le libelle affiche porte l'accent et le pluriel.
 const licenseTargetRolePills = [
-  { key: USER_ROLES.president, label: 'Dirigeants' },
-  { key: USER_ROLES.coach, label: 'Entraîneurs' },
-  { key: USER_ROLES.player, label: 'Joueurs' },
+  {
+    key: USER_ROLES.president,
+    get label() {
+      return i18next.t('clubLicenseCampaignSettings.targetRoles.clubManagers', 'Dirigeants');
+    },
+  },
+  {
+    key: USER_ROLES.coach,
+    get label() {
+      return i18next.t('clubLicenseCampaignSettings.targetRoles.coaches', 'Entraîneurs');
+    },
+  },
+  {
+    key: USER_ROLES.player,
+    get label() {
+      return i18next.t('clubLicenseCampaignSettings.targetRoles.players', 'Joueurs');
+    },
+  },
 ];
 
 /**
@@ -686,11 +1055,27 @@ const licenseTargetRolePills = [
  * @returns {string} La ligne de resume.
  */
 const describeDocumentRequest = (documentRequest) => [
-  documentRequest.required !== false ? 'Obligatoire' : 'Facultatif',
-  documentRequest.requiresManualValidation !== false ? 'validation manuelle' : null,
-  documentRequest.requiresSignature === true ? 'signature' : null,
+  documentRequest.required !== false ? i18next.t(
+    'clubLicenseCampaignSettings.documentSummary.required',
+    'Obligatoire',
+  ) : i18next.t(
+    'clubLicenseCampaignSettings.documentSummary.optional',
+    'Facultatif',
+  ),
+  documentRequest.requiresManualValidation !== false ? i18next.t(
+    'clubLicenseCampaignSettings.documentSummary.manualApproval',
+    'validation manuelle',
+  ) : null,
+  documentRequest.requiresSignature === true ? i18next.t(
+    'clubLicenseCampaignSettings.documentSummary.signature',
+    'signature',
+  ) : null,
   documentRequest.dueDate?.trim()
-    ? `avant le ${isoToPickerDateValue(documentRequest.dueDate)}`
+    ? i18next.t(
+      'clubLicenseCampaignSettings.documentSummary.beforeDate',
+      'avant le {{date}}',
+      { date: isoToPickerDateValue(documentRequest.dueDate), ...SANS_ECHAPPEMENT },
+    )
     : null,
 ].filter(Boolean).join(' · ');
 const renderReminderPreview = ({
@@ -699,12 +1084,28 @@ const renderReminderPreview = ({
   message,
   totalLabel,
 }) => {
+  // I18N-1 : les {{jetons}} du modele sont remplaces PLUS BAS ; chacun est passe comme sa propre
+  // valeur pour qu'i18next les laisse intacts (mesure : sortie identique au texte d'origine).
   const template = String(message || '').trim()
-    || 'Bonjour {{firstname}}, il te reste {{amountRemaining}} à régler pour {{campaignName}} avant le {{dueDate}}.';
+    || i18next.t(
+      'clubLicenseCampaignSettings.reminderPreview.defaultTemplate',
+      'Bonjour {{firstname}}, il te reste {{amountRemaining}} à régler pour {{campaignName}} '
+        + 'avant le {{dueDate}}.',
+      {
+        amountRemaining: '{{amountRemaining}}',
+        campaignName: '{{campaignName}}',
+        dueDate: '{{dueDate}}',
+        firstname: '{{firstname}}',
+        ...SANS_ECHAPPEMENT,
+      },
+    );
   return template
     .replace(/\{\{\s*firstname\s*\}\}/g, 'Lucas')
     .replace(/\{\{\s*lastname\s*\}\}/g, 'Martin')
-    .replace(/\{\{\s*campaignName\s*\}\}/g, campaignName || 'Cotisation FoundClub')
+    .replace(/\{\{\s*campaignName\s*\}\}/g, campaignName || i18next.t(
+      'clubLicenseCampaignSettings.reminderPreview.sampleCampaignName',
+      'Cotisation FoundClub',
+    ))
     .replace(/\{\{\s*amountTotal\s*\}\}/g, totalLabel || '180,00 EUR')
     .replace(/\{\{\s*amountPaid\s*\}\}/g, '60,00 EUR')
     .replace(/\{\{\s*amountRemaining\s*\}\}/g, '120,00 EUR')
@@ -810,6 +1211,7 @@ function AmountField({
   onAmountChange,
   onCurrencyChange,
 }) {
+  const { t } = useTranslation();
   const {
     Colors, Fonts, Spaces,
   } = useTheme();
@@ -817,7 +1219,9 @@ function AmountField({
   return (
     <View style={Spaces.gap[16]}>
       <View style={Spaces.gap[8]}>
-        <Text style={[Fonts.p2Bold, Fonts.neutral00]}>Devise</Text>
+        <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
+          {t('clubLicenseCampaignSettings.amountField.currency', 'Devise')}
+        </Text>
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
           {currencyOptions.map((option) => (
             <SelectionChip
@@ -831,7 +1235,13 @@ function AmountField({
       </View>
 
       <View style={Spaces.gap[8]}>
-        <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{`Prix par défaut (${currency})`}</Text>
+        <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
+          {t(
+            'clubLicenseCampaignSettings.amountField.defaultPrice',
+            'Prix par défaut ({{currency}})',
+            { currency, ...SANS_ECHAPPEMENT },
+          )}
+        </Text>
         <TextInput
           inputMode="decimal"
           keyboardType="decimal-pad"
@@ -850,7 +1260,10 @@ function AmountField({
           value={amount}
         />
         <Text style={[Fonts.p3, Fonts.neutral300]}>
-          Saisis simplement un montant, par exemple `250` ou `250,00`.
+          {t(
+            'clubLicenseCampaignSettings.amountField.hint',
+            'Saisis simplement un montant, par exemple `250` ou `250,00`.',
+          )}
         </Text>
       </View>
     </View>
@@ -1060,20 +1473,27 @@ function SummaryLine({ label, value }) {
  * @returns {import('react').ReactElement}
  */
 function ReviewSectionHeader({ onEdit, title }) {
+  const { t } = useTranslation();
   const { Alignments, Colors, Fonts } = useTheme();
 
   return (
     <View style={[Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween]}>
       <Text style={[Fonts.p2Bold, Fonts.neutral00, { flex: 1, paddingRight: 12 }]}>{title}</Text>
       <Pressable
-        accessibilityLabel={`Modifier ${title}`}
+        accessibilityLabel={t(
+          'clubLicenseCampaignSettings.reviewSection.editA11y',
+          'Modifier {{title}}',
+          { title, ...SANS_ECHAPPEMENT },
+        )}
         accessibilityRole="button"
         hitSlop={{
           bottom: 12, left: 12, right: 12, top: 12,
         }}
         onPress={onEdit}
       >
-        <Text style={[Fonts.p3Bold, { color: Colors.primary500 }]}>Modifier</Text>
+        <Text style={[Fonts.p3Bold, { color: Colors.primary500 }]}>
+          {t('clubLicenseCampaignSettings.actions.edit', 'Modifier')}
+        </Text>
       </Pressable>
     </View>
   );
@@ -1093,8 +1513,17 @@ function ReviewSectionHeader({ onEdit, title }) {
  * @returns {import('react').ReactElement}
  */
 function WizardSheet({
-  children, close, confirmLabel = 'Terminé', isVisible, snapPoint = '70%', title,
+  children,
+  close,
+  confirmLabel = /** @type {string | undefined} */ (undefined),
+  isVisible,
+  snapPoint = '70%',
+  title,
 }) {
+  const { t } = useTranslation();
+  const shownConfirmLabel = confirmLabel === undefined
+    ? t('clubLicenseCampaignSettings.sheet.done', 'Terminé')
+    : confirmLabel;
   const { Fonts, Spaces } = useTheme();
 
   return (
@@ -1103,13 +1532,15 @@ function WizardSheet({
         <Text style={[Fonts.h4Black, Fonts.neutral00]}>{title}</Text>
         {children}
         <View style={Spaces.gap[8]}>
-          <Button onPress={close} title={confirmLabel} />
+          <Button onPress={close} title={shownConfirmLabel} />
           <Pressable
             accessibilityRole="button"
             onPress={close}
             style={{ alignItems: 'center', minHeight: 44, justifyContent: 'center' }}
           >
-            <Text style={[Fonts.p2Bold, Fonts.neutral300]}>Annuler</Text>
+            <Text style={[Fonts.p2Bold, Fonts.neutral300]}>
+              {t('clubLicenseCampaignSettings.sheet.cancel', 'Annuler')}
+            </Text>
           </Pressable>
         </View>
       </View>
@@ -1141,6 +1572,7 @@ function SuggestionCard({
   selected,
   title,
 }) {
+  const { t } = useTranslation();
   const {
     ApplicationStyle, Colors, Fonts,
   } = useTheme();
@@ -1161,7 +1593,9 @@ function SuggestionCard({
       <View style={{ alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between' }}>
         <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{title}</Text>
         {selected ? (
-          <Text style={[Fonts.p3Bold, Fonts.primary500]}>Sélectionnée</Text>
+          <Text style={[Fonts.p3Bold, Fonts.primary500]}>
+            {t('clubLicenseCampaignSettings.suggestionCard.selected', 'Sélectionnée')}
+          </Text>
         ) : null}
       </View>
       <Text style={[Fonts.p2, selected ? Fonts.neutral00 : Fonts.neutral200, { lineHeight: 28 }]}>
@@ -1187,6 +1621,7 @@ function SelectionGroup({
   onToggle,
   selectedKeys,
 }) {
+  const { t } = useTranslation();
   const { Fonts, Spaces } = useTheme();
   return (
     <View style={Spaces.gap[8]}>
@@ -1202,7 +1637,14 @@ function SelectionGroup({
           />
         ))}
       </View>
-      {!items?.length ? <Text style={[Fonts.p3, Fonts.neutral300]}>Aucune option disponible pour ce filtre.</Text> : null}
+      {!items?.length ? (
+        <Text style={[Fonts.p3, Fonts.neutral300]}>
+          {t(
+            'clubLicenseCampaignSettings.selectionGroup.empty',
+            'Aucune option disponible pour ce filtre.',
+          )}
+        </Text>
+      ) : null}
     </View>
   );
 }
@@ -1224,6 +1666,7 @@ function SelectionGroup({
  * @returns {import('react').ReactElement}
  */
 function TemplateFileRow({ item, onChange }) {
+  const { t } = useTranslation();
   const { Colors, Fonts, Spaces } = useTheme();
   const nomDuModele = item.pickedTemplateFile?.name
     || (item.removedTemplate ? '' : item.templateFileName);
@@ -1249,39 +1692,56 @@ function TemplateFileRow({ item, onChange }) {
       onChange({ pickedTemplateFile: file, removedTemplate: false });
     } catch (error) {
       if (isPickerCancelError(error)) return;
-      Alert.alert('Modèle indisponible', error?.message || 'Ce fichier n a pas pu être lu.');
+      Alert.alert(t(
+        'clubLicenseCampaignSettings.template.unavailable.title',
+        'Modèle indisponible',
+      ), error?.message || t(
+        'clubLicenseCampaignSettings.template.unavailable.message',
+        'Ce fichier n a pas pu être lu.',
+      ));
     }
-  }, [onChange]);
+  }, [onChange, t]);
 
   return (
     <View style={Spaces.gap[8]}>
-      <Text style={[Fonts.p3Bold, Fonts.neutral200]}>MODÈLE À TÉLÉCHARGER</Text>
+      <Text style={[Fonts.p3Bold, Fonts.neutral200]}>
+        {t('clubLicenseCampaignSettings.template.heading', 'MODÈLE À TÉLÉCHARGER')}
+      </Text>
       <Text style={[Fonts.p3, Fonts.neutral300]}>
-        Facultatif. Ce fichier est visible et téléchargeable par tous les membres
-        concernés par la campagne — n y mets aucune pièce personnelle.
+        {t(
+          'clubLicenseCampaignSettings.template.notice',
+          'Facultatif. Ce fichier est visible et téléchargeable par tous les membres '
+            + 'concernés par la campagne — n y mets aucune pièce personnelle.',
+        )}
       </Text>
       <Text
         style={[Fonts.p3, nomDuModele ? { color: Colors.primary500 } : Fonts.neutral300]}
         testID="license-modele-nom"
       >
-        {nomDuModele || 'Aucun modèle'}
+        {nomDuModele || t('clubLicenseCampaignSettings.template.none', 'Aucun modèle')}
       </Text>
       {adresseDuModeleEnregistre ? (
         <Button
           onPress={ouvrirLeModele}
-          title="Voir le modèle"
+          title={t('clubLicenseCampaignSettings.template.view', 'Voir le modèle')}
           variant="Secondary"
         />
       ) : null}
       <Button
         onPress={choisirLeModele}
-        title={nomDuModele ? 'Remplacer le modèle' : 'Ajouter un modèle'}
+        title={nomDuModele ? t(
+          'clubLicenseCampaignSettings.template.replace',
+          'Remplacer le modèle',
+        ) : t(
+          'clubLicenseCampaignSettings.template.add',
+          'Ajouter un modèle',
+        )}
         variant="Secondary"
       />
       {nomDuModele ? (
         <Button
           onPress={() => onChange({ pickedTemplateFile: null, removedTemplate: true })}
-          title="Retirer le modèle"
+          title={t('clubLicenseCampaignSettings.template.remove', 'Retirer le modèle')}
           variant="Secondary"
         />
       ) : null}
@@ -1303,6 +1763,7 @@ function DocumentRequestEditor({
   onChange,
   onRemove,
 }) {
+  const { t } = useTranslation();
   const {
     ApplicationStyle, Colors, Spaces,
   } = useTheme();
@@ -1317,43 +1778,58 @@ function DocumentRequestEditor({
     }]}
     >
       <Field
-        label="Nom du document"
+        label={t('clubLicenseCampaignSettings.documentEditor.name', 'Nom du document')}
         onChangeText={(value) => onChange({ name: value })}
-        placeholder="Certificat medical"
+        placeholder={t(
+          'clubLicenseCampaignSettings.documentEditor.namePlaceholder',
+          'Certificat medical',
+        )}
         value={item.name}
       />
       <Field
-        label="Description / consigne"
+        label={t(
+          'clubLicenseCampaignSettings.documentEditor.description',
+          'Description / consigne',
+        )}
         multiline
         onChangeText={(value) => onChange({ description: value })}
-        placeholder="Document officiel, date de moins de 12 mois..."
+        placeholder={t(
+          'clubLicenseCampaignSettings.documentEditor.descriptionPlaceholder',
+          'Document officiel, date de moins de 12 mois...',
+        )}
         value={item.description}
       />
       <DateField
-        label="Date limite de dépôt"
+        label={t('clubLicenseCampaignSettings.documentEditor.dueDate', 'Date limite de dépôt')}
         onChange={(value) => onChange({ dueDate: value })}
-        placeholder="Sélectionner une date"
+        placeholder={t(
+          'clubLicenseCampaignSettings.documentEditor.dueDatePlaceholder',
+          'Sélectionner une date',
+        )}
         value={item.dueDate}
       />
       <Field
-        label="Formats acceptes"
+        label={t('clubLicenseCampaignSettings.documentEditor.formats', 'Formats acceptes')}
         onChangeText={(value) => onChange({ acceptedMimeTypesText: value })}
         placeholder="application/pdf, image/jpeg, image/png"
         value={item.acceptedMimeTypesText}
       />
       <PaymentModeToggle
         enabled={item.required}
-        label="Document obligatoire"
+        label={t('clubLicenseCampaignSettings.documentEditor.required', 'Document obligatoire')}
         onChange={(value) => onChange({ required: value })}
       />
       <PaymentModeToggle
         enabled={item.requiresManualValidation}
-        label="Validation manuelle"
+        label={t(
+          'clubLicenseCampaignSettings.documentEditor.manualApproval',
+          'Validation manuelle',
+        )}
         onChange={(value) => onChange({ requiresManualValidation: value })}
       />
       <PaymentModeToggle
         enabled={item.requiresSignature}
-        label="Signature demandée"
+        label={t('clubLicenseCampaignSettings.documentEditor.signature', 'Signature demandée')}
         onChange={(value) => onChange({ requiresSignature: value })}
       />
       {/*
@@ -1367,7 +1843,16 @@ function DocumentRequestEditor({
         item={item}
         onChange={onChange}
       />
-      {canRemove ? <Button onPress={onRemove} title="Retirer ce document" variant="Secondary" /> : null}
+      {canRemove ? (
+        <Button
+          onPress={onRemove}
+          title={t(
+            'clubLicenseCampaignSettings.documentEditor.remove',
+            'Retirer ce document',
+          )}
+          variant="Secondary"
+        />
+      ) : null}
     </View>
   );
 }
@@ -1394,6 +1879,7 @@ function PricingRuleEditor({
   sectionOptions,
   teamOptions,
 }) {
+  const { t } = useTranslation();
   const {
     ApplicationStyle, Colors, Fonts, Spaces,
   } = useTheme();
@@ -1414,13 +1900,18 @@ function PricingRuleEditor({
     }]}
     >
       <Field
-        label="Libellé interne"
+        label={t('clubLicenseCampaignSettings.pricingRuleEditor.label', 'Libellé interne')}
         onChangeText={(value) => onChange({ label: value })}
-        placeholder="Tarif joueurs seniors"
+        placeholder={t(
+          'clubLicenseCampaignSettings.pricingRuleEditor.labelPlaceholder',
+          'Tarif joueurs seniors',
+        )}
         value={item.label}
       />
       <View style={Spaces.gap[8]}>
-        <Text style={[Fonts.p2Bold, Fonts.neutral00]}>Type de règle</Text>
+        <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
+          {t('clubLicenseCampaignSettings.pricingRuleEditor.ruleType', 'Type de règle')}
+        </Text>
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
           {Object.entries(pricingRuleLabels).map(([ruleType, label]) => (
             <SelectionChip
@@ -1435,7 +1926,7 @@ function PricingRuleEditor({
       {showRole ? (
         <SelectionGroup
           items={roleOptions.map((option) => ({ key: option.key, label: option.label }))}
-          label="Rôles concernés"
+          label={t('clubLicenseCampaignSettings.pricingRuleEditor.roles', 'Rôles concernés')}
           onToggle={(value) => onChange({ roleName: item.roleName === value ? '' : value })}
           selectedKeys={item.roleName ? [item.roleName] : []}
         />
@@ -1443,7 +1934,7 @@ function PricingRuleEditor({
       {showTeam ? (
         <SelectionGroup
           items={teamOptions}
-          label="Équipe concernee"
+          label={t('clubLicenseCampaignSettings.pricingRuleEditor.team', 'Équipe concernee')}
           onToggle={(value) => onChange({ teamKey: item.teamKey === value ? '' : value })}
           selectedKeys={item.teamKey ? [item.teamKey] : []}
         />
@@ -1451,7 +1942,7 @@ function PricingRuleEditor({
       {showCategory ? (
         <SelectionGroup
           items={categoryOptions}
-          label="Catégorie concernee"
+          label={t('clubLicenseCampaignSettings.pricingRuleEditor.category', 'Catégorie concernee')}
           onToggle={(value) => onChange({ categoryKey: item.categoryKey === value ? '' : value })}
           selectedKeys={item.categoryKey ? [item.categoryKey] : []}
         />
@@ -1459,7 +1950,7 @@ function PricingRuleEditor({
       {showSection ? (
         <SelectionGroup
           items={sectionOptions}
-          label="Section concernee"
+          label={t('clubLicenseCampaignSettings.pricingRuleEditor.section', 'Section concernee')}
           onToggle={(value) => onChange({ sectionKey: item.sectionKey === value ? '' : value })}
           selectedKeys={item.sectionKey ? [item.sectionKey] : []}
         />
@@ -1467,7 +1958,7 @@ function PricingRuleEditor({
       {showLevel ? (
         <SelectionGroup
           items={levelOptions}
-          label="Niveau concerne"
+          label={t('clubLicenseCampaignSettings.pricingRuleEditor.level', 'Niveau concerne')}
           onToggle={(value) => onChange({ levelKey: item.levelKey === value ? '' : value })}
           selectedKeys={item.levelKey ? [item.levelKey] : []}
         />
@@ -1475,7 +1966,7 @@ function PricingRuleEditor({
       <Field
         inputMode="decimal"
         keyboardType="decimal-pad"
-        label="Montant (EUR)"
+        label={t('clubLicenseCampaignSettings.pricingRuleEditor.amount', 'Montant (EUR)')}
         onChangeText={(value) => onChange({ amount: normalizeAmountInput(value) })}
         placeholder="180"
         value={item.amount}
@@ -1483,17 +1974,24 @@ function PricingRuleEditor({
       <Field
         inputMode="numeric"
         keyboardType="number-pad"
-        label="Priorite"
+        label={t('clubLicenseCampaignSettings.pricingRuleEditor.priority', 'Priorite')}
         onChangeText={(value) => onChange({ priority: normalizeWholeNumberInput(value) })}
         placeholder="10"
         value={item.priority}
       />
       <PaymentModeToggle
         enabled={item.isWaiver}
-        label="Exoneration automatique"
+        label={t('clubLicenseCampaignSettings.pricingRuleEditor.waiver', 'Exoneration automatique')}
         onChange={(value) => onChange({ isWaiver: value })}
       />
-      <Button onPress={onRemove} title="Retirer cette règle" variant="Secondary" />
+      <Button
+        onPress={onRemove}
+        title={t(
+          'clubLicenseCampaignSettings.pricingRuleEditor.remove',
+          'Retirer cette règle',
+        )}
+        variant="Secondary"
+      />
     </View>
   );
 }
@@ -1505,6 +2003,7 @@ function PricingRuleEditor({
  * @param root0.route
  */
 function ClubLicenseCampaignSettings({ navigation, route }) {
+  const { t } = useTranslation();
   const {
     Alignments, ApplicationStyle, Colors, Fonts, Spaces,
   } = useTheme();
@@ -1838,16 +2337,24 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
     installmentSchedule.slice(0, Math.max(1, Number(installmentCount) || 1))
   ), [installmentCount, installmentSchedule]);
   const installmentSummaryText = useMemo(() => {
-    if (!allowInstallments) return 'Paiement en une fois';
+    if (!allowInstallments) {
+      return t(
+        'clubLicenseCampaignSettings.installments.singlePayment',
+        'Paiement en une fois',
+      );
+    }
     const firstAmountCents = euroToCents(visibleInstallmentSchedule[0]?.amount || '0');
     const frequencyLabel = installmentFrequencyOptions
-      .find((option) => option.key === installmentFrequency)?.label || 'Mensuelle';
+      .find((option) => option.key === installmentFrequency)?.label || t(
+      'clubLicenseCampaignSettings.installmentFrequency.monthly',
+      'Mensuelle',
+    );
     return [
       `${visibleInstallmentSchedule.length} × ${formatLicenseMoney(firstAmountCents, currency)}`,
       String(frequencyLabel).toLowerCase(),
-      'généré automatiquement',
+      t('clubLicenseCampaignSettings.installments.autoGenerated', 'généré automatiquement'),
     ].join(' · ');
-  }, [allowInstallments, currency, installmentFrequency, visibleInstallmentSchedule]);
+  }, [allowInstallments, currency, installmentFrequency, visibleInstallmentSchedule, t]);
   const filledPaymentInstructionCount = useMemo(() => [
     paymentModes.bank_transfer && bankTransferInstructions.trim(),
     paymentModes.cash && cashInstructions.trim(),
@@ -1869,8 +2376,8 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
     reminderStatusOptions
       .filter((option) => reminderTargetStatuses.includes(option.key))
       .map((option) => option.label)
-      .join(' · ') || 'Aucun statut'
-  ), [reminderTargetStatuses]);
+      .join(' · ') || t('clubLicenseCampaignSettings.reminders.noStatus', 'Aucun statut')
+  ), [reminderTargetStatuses, t]);
   // Les personnes reellement touchees, comptees sur la liste du club — pas une
   // estimation. Le compteur de la maquette (« 2 personnes concernées ») exige un
   // chiffre vrai, sinon il ne vaut pas mieux que le « 0 rôle(s), 0 équipe(s) »
@@ -1954,7 +2461,7 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
   // La maquette titre la premiere etape « Nouvelle campagne » : c'est vrai a la
   // creation, faux quand le dirigeant revient modifier une campagne existante.
   const activeWizardStepTitle = activeWizardStep.key === 'identity' && !campaignId
-    ? 'Nouvelle campagne'
+    ? t('clubLicenseCampaignSettings.wizard.newCampaign', 'Nouvelle campagne')
     : activeWizardStep.title;
   const isOnLastWizardStep = wizardStepIndex >= wizardStepCount - 1;
   // Sur la derniere etape, le bouton du bas OUVRE la campagne et le lien texte
@@ -1962,16 +2469,28 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
   // du bas etait « Enregistrer le brouillon » et « Ouvrir » etait un bouton perdu
   // dans le contenu, au-dessus du pli.
   const finalSaveLabel = useMemo(() => {
-    if (!isOnLastWizardStep) return 'Suivant';
-    if (!canPublishFromWizard) return 'Enregistrer';
-    return publishTargetStatus === 'scheduled' ? 'Programmer la campagne' : 'Ouvrir la campagne';
-  }, [canPublishFromWizard, isOnLastWizardStep, publishTargetStatus]);
+    if (!isOnLastWizardStep) return t('clubLicenseCampaignSettings.wizard.next', 'Suivant');
+    if (!canPublishFromWizard) return t('clubLicenseCampaignSettings.wizard.save', 'Enregistrer');
+    return publishTargetStatus === 'scheduled' ? t(
+      'clubLicenseCampaignSettings.wizard.schedule',
+      'Programmer la campagne',
+    ) : t(
+      'clubLicenseCampaignSettings.wizard.open',
+      'Ouvrir la campagne',
+    );
+  }, [canPublishFromWizard, isOnLastWizardStep, publishTargetStatus, t]);
   const wizardSkipLabel = useMemo(() => {
     if (isOnLastWizardStep) {
-      return canPublishFromWizard ? 'Enregistrer en brouillon' : '';
+      return canPublishFromWizard ? t(
+        'clubLicenseCampaignSettings.wizard.saveDraft',
+        'Enregistrer en brouillon',
+      ) : '';
     }
-    return activeWizardStep.key === 'documents' ? 'Passer cette étape' : '';
-  }, [activeWizardStep.key, canPublishFromWizard, isOnLastWizardStep]);
+    return activeWizardStep.key === 'documents' ? t(
+      'clubLicenseCampaignSettings.wizard.skipStep',
+      'Passer cette étape',
+    ) : '';
+  }, [activeWizardStep.key, canPublishFromWizard, isOnLastWizardStep, t]);
   // Le tunnel ne fait plus que LIRE l'etat de la connexion HelloAsso du club.
   // Le formulaire (slug, client id, client secret) vit dans le hub — D26,
   // decision 4 : ce reglage porte un `clubId`, jamais un `campaignId`.
@@ -2140,16 +2659,28 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
     if (isSubmittingRef.current) return;
     const requestedStatus = options.status || campaign?.status || 'draft';
     if (requestedStatus !== 'draft' && paymentModes.external_link && !String(externalUrl || '').trim()) {
-      Alert.alert('Lien manquant', 'Ajoute le lien externe du club avant publication.');
+      Alert.alert(t('clubLicenseCampaignSettings.errors.missingLink.title', 'Lien manquant'), t(
+        'clubLicenseCampaignSettings.errors.missingLink.beforePublish',
+        'Ajoute le lien externe du club avant publication.',
+      ));
       return;
     }
     if (requestedStatus !== 'draft' && paymentModes.helloasso && !helloAssoIsPublishReady) {
-      Alert.alert('HelloAsso non prêt', helloAssoStatusMessage);
+      Alert.alert(t(
+        'clubLicenseCampaignSettings.errors.helloAssoNotReady',
+        'HelloAsso non prêt',
+      ), helloAssoStatusMessage);
       return;
     }
     const persistedDocumentWithEmptyName = documentRequests.find((item) => item.documentId && !item.name.trim());
     if (persistedDocumentWithEmptyName) {
-      Alert.alert('Document incomplet', 'Renseigne le nom des documents existants avant d enregistrer.');
+      Alert.alert(t(
+        'clubLicenseCampaignSettings.errors.incompleteDocument.title',
+        'Document incomplet',
+      ), t(
+        'clubLicenseCampaignSettings.errors.incompleteDocument.existingNames',
+        'Renseigne le nom des documents existants avant d enregistrer.',
+      ));
       return;
     }
     const invalidPricingRule = pricingRules.find((item) => (
@@ -2161,12 +2692,21 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
       || (item.ruleType === 'level' && !item.levelKey)
     ));
     if (invalidPricingRule) {
-      Alert.alert('Règle tarifaire incomplète', 'Complète chaque règle de prix avant de sauvegarder la campagne.');
+      Alert.alert(t(
+        'clubLicenseCampaignSettings.errors.incompletePricingRule.title',
+        'Règle tarifaire incomplète',
+      ), t(
+        'clubLicenseCampaignSettings.errors.incompletePricingRule.message',
+        'Complète chaque règle de prix avant de sauvegarder la campagne.',
+      ));
       return;
     }
     isSubmittingRef.current = true;
     setIsSubmitting(true);
-    setEtapeEnvoi('Enregistrement de la campagne...');
+    setEtapeEnvoi(t(
+      'clubLicenseCampaignSettings.save.progress.campaign',
+      'Enregistrement de la campagne...',
+    ));
     saveMutation.mutate({ status: requestedStatus }, {
       onError: (error) => {
         finirEnvoi();
@@ -2176,8 +2716,11 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
           return;
         }
         Alert.alert(
-          'Campagne impossible',
-          error?.message || 'Impossible de sauvegarder cette campagne pour le moment.',
+          t('clubLicenseCampaignSettings.save.failed.title', 'Campagne impossible'),
+          error?.message || t(
+            'clubLicenseCampaignSettings.save.failed.message',
+            'Impossible de sauvegarder cette campagne pour le moment.',
+          ),
         );
       },
       onSuccess: async (saved) => {
@@ -2230,7 +2773,10 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
 
         try {
           if (savedCampaignId) {
-            setEtapeEnvoi('Documents et tarifs en cours d envoi...');
+            setEtapeEnvoi(t(
+              'clubLicenseCampaignSettings.save.progress.attachments',
+              'Documents et tarifs en cours d envoi...',
+            ));
             // T03 — LA FILE ETAIT GRATUITE, ON LA SUPPRIME AVANT DE PARLER
             // D ANIMATION.
             //
@@ -2278,7 +2824,10 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
               }))
               .filter((item) => item.identifiant && (item.fichier || item.retire));
             if (modeles.length) {
-              setEtapeEnvoi('Envoi du modèle à télécharger...');
+              setEtapeEnvoi(t(
+                'clubLicenseCampaignSettings.save.progress.template',
+                'Envoi du modèle à télécharger...',
+              ));
               await Promise.all(modeles.map((item) => uploadLicenseDocumentRequestTemplate(
                 item.identifiant,
                 item.fichier ? { file: item.fichier } : {},
@@ -2292,8 +2841,15 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
           setEtapeEnvoi('');
           goToCampaignOperations(savedCampaignId);
           Alert.alert(
-            'Campagne enregistrée partiellement',
-            error?.message || 'La campagne est sauvee, mais certains documents ou providers demandent une vérification.',
+            t(
+              'clubLicenseCampaignSettings.save.partial.title',
+              'Campagne enregistrée partiellement',
+            ),
+            error?.message || t(
+              'clubLicenseCampaignSettings.save.partial.message',
+              'La campagne est sauvee, mais certains documents ou providers demandent une '
+                + 'vérification.',
+            ),
           );
           return;
         }
@@ -2304,14 +2860,26 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
         }
         const isDraftSave = requestedStatus === 'draft';
         const isScheduledSave = requestedStatus === 'scheduled';
-        let successTitle = 'Campagne ouverte';
-        let successMessage = 'La campagne est ouverte et les membres concernés sont synchronises automatiquement.';
+        let successTitle = t('clubLicenseCampaignSettings.save.opened.title', 'Campagne ouverte');
+        let successMessage = t(
+          'clubLicenseCampaignSettings.save.opened.message',
+          'La campagne est ouverte et les membres concernés sont synchronises automatiquement.',
+        );
         if (isDraftSave) {
-          successTitle = 'Brouillon enregistre';
-          successMessage = 'Le brouillon est sauvegarde. Tu pourras le reprendre avant publication.';
+          successTitle = t('clubLicenseCampaignSettings.save.draft.title', 'Brouillon enregistre');
+          successMessage = t(
+            'clubLicenseCampaignSettings.save.draft.message',
+            'Le brouillon est sauvegarde. Tu pourras le reprendre avant publication.',
+          );
         } else if (isScheduledSave) {
-          successTitle = 'Campagne programmee';
-          successMessage = 'La campagne est publiée et s ouvrira automatiquement à sa date de début.';
+          successTitle = t(
+            'clubLicenseCampaignSettings.save.scheduled.title',
+            'Campagne programmee',
+          );
+          successMessage = t(
+            'clubLicenseCampaignSettings.save.scheduled.message',
+            'La campagne est publiée et s ouvrira automatiquement à sa date de début.',
+          );
         }
         // ⛔ ON NE REND PAS LE BOUTON : la campagne EXISTE desormais, un appui de
         // plus n'aurait rien de bon a faire. `cancelable: false` supprime le seul
@@ -2327,7 +2895,27 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
         ], { cancelable: false });
       },
     });
-  }, [campaign?.status, campaignId, documentRequests, externalUrl, finirEnvoi, goToCampaignOperations, helloAssoIsPublishReady, helloAssoStatusMessage, paymentModes.external_link, paymentModes.helloasso, pricingRules, providerMutation, queryClient, removedDocumentRequestIds, removedPricingRuleIds, routeEventId, saveMutation, syncSavedCampaignParams]);
+  }, [
+    campaign?.status,
+    campaignId,
+    documentRequests,
+    externalUrl,
+    finirEnvoi,
+    goToCampaignOperations,
+    helloAssoIsPublishReady,
+    helloAssoStatusMessage,
+    paymentModes.external_link,
+    paymentModes.helloasso,
+    pricingRules,
+    providerMutation,
+    queryClient,
+    removedDocumentRequestIds,
+    removedPricingRuleIds,
+    routeEventId,
+    saveMutation,
+    syncSavedCampaignParams,
+    t,
+  ]);
 
   const save = useCallback(() => {
     persistCampaign({ status: canPublishFromWizard ? 'draft' : (campaign?.status || 'draft') });
@@ -2392,27 +2980,81 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
 
     if (checksIdentity) {
       if (!String(name || '').trim()) {
-        return { message: 'Donne un nom à la campagne avant de continuer.', title: 'Nom manquant' };
+        return {
+          message: t(
+            'clubLicenseCampaignSettings.errors.missingName.message',
+            'Donne un nom à la campagne avant de continuer.',
+          ),
+          title: t(
+            'clubLicenseCampaignSettings.errors.missingName.title',
+            'Nom manquant',
+          ),
+        };
       }
       if (!startDate) {
-        return { message: 'Sélectionne une date de début.', title: 'Date manquante' };
+        return {
+          message: t(
+            'clubLicenseCampaignSettings.errors.missingDate.start',
+            'Sélectionne une date de début.',
+          ),
+          title: t(
+            'clubLicenseCampaignSettings.errors.missingDate.title',
+            'Date manquante',
+          ),
+        };
       }
       if (!endDate) {
-        return { message: 'Sélectionne une date de fin.', title: 'Date manquante' };
+        return {
+          message: t(
+            'clubLicenseCampaignSettings.errors.missingDate.end',
+            'Sélectionne une date de fin.',
+          ),
+          title: t(
+            'clubLicenseCampaignSettings.errors.missingDate.title',
+            'Date manquante',
+          ),
+        };
       }
       const parsedStartDate = parseIsoDateValue(startDate);
       const parsedEndDate = parseIsoDateValue(endDate);
       if (parsedStartDate && parsedEndDate && parsedStartDate.getTime() > parsedEndDate.getTime()) {
-        return { message: 'La date de fin doit être égale ou postérieure à la date de début.', title: 'Période invalide' };
+        return {
+          message: t(
+            'clubLicenseCampaignSettings.errors.invalidPeriod.message',
+            'La date de fin doit être égale ou postérieure à la date de début.',
+          ),
+          title: t(
+            'clubLicenseCampaignSettings.errors.invalidPeriod.title',
+            'Période invalide',
+          ),
+        };
       }
       if (!String(seasonLabel || '').trim()) {
-        return { message: 'Renseigne la saison de la campagne.', title: 'Saison manquante' };
+        return {
+          message: t(
+            'clubLicenseCampaignSettings.errors.missingSeason.message',
+            'Renseigne la saison de la campagne.',
+          ),
+          title: t(
+            'clubLicenseCampaignSettings.errors.missingSeason.title',
+            'Saison manquante',
+          ),
+        };
       }
     }
 
     if (checksAudience) {
       if (euroToCents(amount) <= 0) {
-        return { message: 'Le montant par membre doit être supérieur à 0.', title: 'Montant obligatoire' };
+        return {
+          message: t(
+            'clubLicenseCampaignSettings.errors.amountRequired.message',
+            'Le montant par membre doit être supérieur à 0.',
+          ),
+          title: t(
+            'clubLicenseCampaignSettings.errors.amountRequired.title',
+            'Montant obligatoire',
+          ),
+        };
       }
       if (!targetConfig.includeAllMembers && !isEventParticipantTarget) {
         const hasAtLeastOneFilter = Boolean(
@@ -2424,8 +3066,14 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
         );
         if (!hasAtLeastOneFilter) {
           return {
-            message: 'Choisis au moins un rôle ou une équipe, ou repasse la campagne sur tout le club.',
-            title: 'Cible incomplète',
+            message: t(
+              'clubLicenseCampaignSettings.errors.incompleteTarget.message',
+              'Choisis au moins un rôle ou une équipe, ou repasse la campagne sur tout le club.',
+            ),
+            title: t(
+              'clubLicenseCampaignSettings.errors.incompleteTarget.title',
+              'Cible incomplète',
+            ),
           };
         }
       }
@@ -2439,8 +3087,14 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
       ));
       if (invalidPricingRule) {
         return {
-          message: 'Complète ou retire chaque tarif spécial avant de continuer.',
-          title: 'Tarif spécial incomplet',
+          message: t(
+            'clubLicenseCampaignSettings.errors.incompleteSpecialRate.message',
+            'Complète ou retire chaque tarif spécial avant de continuer.',
+          ),
+          title: t(
+            'clubLicenseCampaignSettings.errors.incompleteSpecialRate.title',
+            'Tarif spécial incomplet',
+          ),
         };
       }
     }
@@ -2448,26 +3102,38 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
     if (checksPayment) {
       if (enabledPaymentModeLabels.length === 0) {
         return {
-          message: 'Active au moins un moyen de paiement avant de terminer le tunnel.',
-          title: 'Paiement manquant',
+          message: t(
+            'clubLicenseCampaignSettings.errors.missingPayment.message',
+            'Active au moins un moyen de paiement avant de terminer le tunnel.',
+          ),
+          title: t('clubLicenseCampaignSettings.errors.missingPayment.title', 'Paiement manquant'),
         };
       }
       if (allowInstallments && (Number(installmentCount) || 0) < 1) {
         return {
-          message: 'Le nombre d échéances doit être supérieur ou égal à 1.',
-          title: 'Échéancier invalide',
+          message: t(
+            'clubLicenseCampaignSettings.errors.invalidInstallments.message',
+            'Le nombre d échéances doit être supérieur ou égal à 1.',
+          ),
+          title: t(
+            'clubLicenseCampaignSettings.errors.invalidInstallments.title',
+            'Échéancier invalide',
+          ),
         };
       }
       if (paymentModes.external_link && !String(externalUrl || '').trim()) {
         return {
-          message: 'Ajoute le lien externe du club avant de continuer.',
-          title: 'Lien manquant',
+          message: t(
+            'clubLicenseCampaignSettings.errors.missingLink.beforeContinue',
+            'Ajoute le lien externe du club avant de continuer.',
+          ),
+          title: t('clubLicenseCampaignSettings.errors.missingLink.title', 'Lien manquant'),
         };
       }
       if (paymentModes.helloasso && !helloAssoIsPublishReady) {
         return {
           message: helloAssoStatusMessage,
-          title: 'HelloAsso non prêt',
+          title: t('clubLicenseCampaignSettings.errors.helloAssoNotReady', 'HelloAsso non prêt'),
         };
       }
     }
@@ -2486,16 +3152,29 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
       ));
       if (invalidDocumentRequest) {
         return {
-          message: 'Chaque document commence par un nom. Vide complètement les brouillons inutilisés ou renseigne leur nom.',
-          title: 'Document incomplet',
+          message: t(
+            'clubLicenseCampaignSettings.errors.incompleteDocument.draftNames',
+            'Chaque document commence par un nom. Vide complètement les brouillons '
+              + 'inutilisés ou renseigne leur nom.',
+          ),
+          title: t(
+            'clubLicenseCampaignSettings.errors.incompleteDocument.title',
+            'Document incomplet',
+          ),
         };
       }
     }
 
     if (checksReminders && autoReminderEnabled && reminderTargetStatuses.length === 0) {
       return {
-        message: 'Choisis au moins un statut à relancer automatiquement.',
-        title: 'Relances incomplètes',
+        message: t(
+          'clubLicenseCampaignSettings.errors.incompleteReminders.message',
+          'Choisis au moins un statut à relancer automatiquement.',
+        ),
+        title: t(
+          'clubLicenseCampaignSettings.errors.incompleteReminders.title',
+          'Relances incomplètes',
+        ),
       };
     }
 
@@ -2525,6 +3204,7 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
     targetConfig.roles.length,
     targetConfig.sectionIds.length,
     targetConfig.teamIds.length,
+    t,
   ]);
 
   const handleWizardBack = useCallback(() => {
@@ -2651,24 +3331,54 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
     ));
   }, []);
   const campaignTypeLabel = campaignTypeOptions
-    .find((option) => option.key === type)?.label || 'Autre';
+    .find((option) => option.key === type)?.label || t(
+    'clubLicenseCampaignSettings.campaignType.other',
+    'Autre',
+  );
   const reviewAudienceLabel = useMemo(() => {
-    if (isEventParticipantTarget) return 'Participants de l événement';
+    if (isEventParticipantTarget) {
+      return t(
+        'clubLicenseCampaignSettings.review.audience.eventParticipants',
+        'Participants de l événement',
+      );
+    }
     const suffix = concernedMemberCount > 1
-      ? `${concernedMemberCount} membres`
-      : `${concernedMemberCount} membre`;
-    if (targetConfig.includeAllMembers) return `Tout le club · ${suffix}`;
+      ? t('clubLicenseCampaignSettings.review.audience.memberCount', {
+        count: concernedMemberCount,
+        defaultValue_one: '{{count}} membre',
+        defaultValue_other: '{{count}} membres',
+      })
+      : t('clubLicenseCampaignSettings.review.audience.memberCount', {
+        count: concernedMemberCount,
+        defaultValue_one: '{{count}} membre',
+        defaultValue_other: '{{count}} membres',
+      });
+    if (targetConfig.includeAllMembers) {
+      return t(
+        'clubLicenseCampaignSettings.review.audience.wholeClub',
+        'Tout le club · {{suffix}}',
+        { suffix, ...SANS_ECHAPPEMENT },
+      );
+    }
     const rolePill = licenseTargetRolePills.find((pill) => pill.key === selectedTargetRole);
     if (selectedTargetRole === USER_ROLES.player) {
-      return `Joueurs · ${targetConfig.teamIds.length} équipe(s)`;
+      return t(
+        'clubLicenseCampaignSettings.review.audience.players',
+        'Joueurs · {{teamCount}} équipe(s)',
+        { teamCount: targetConfig.teamIds.length, ...SANS_ECHAPPEMENT },
+      );
     }
-    return `${rolePill?.label || 'Sélection'} · ${suffix}`;
+    return `${rolePill?.label || t(
+      'clubLicenseCampaignSettings.review.audience.selection',
+      'Sélection',
+    )} · ${suffix}`;
   }, [
     concernedMemberCount,
     isEventParticipantTarget,
     selectedTargetRole,
     targetConfig.includeAllMembers,
     targetConfig.teamIds.length,
+    t,
   ]);
 
   useEffect(() => {
@@ -2693,8 +3403,11 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
     return (
       <ScreenContainer bottomInsetMode="none" withHeaderPadding>
         <LicenseEmptyState
-          description="On récupère la campagne avant d afficher le formulaire."
-          title="Chargement des paramètres"
+          description={t(
+            'clubLicenseCampaignSettings.loading.description',
+            'On récupère la campagne avant d afficher le formulaire.',
+          )}
+          title={t('clubLicenseCampaignSettings.loading.title', 'Chargement des paramètres')}
         />
       </ScreenContainer>
     );
@@ -2704,9 +3417,22 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
     return (
       <ScreenContainer bottomInsetMode="none" withHeaderPadding>
         <LicenseEmptyState
-          action={<Button onPress={retryCampaign} title="Réessayer" variant="Secondary" />}
-          description="Impossible de charger la campagne. Le formulaire n est pas ouvert pour éviter d ecraser ses paramètres."
-          title="Paramètres indisponibles"
+          action={(
+            <Button
+              onPress={retryCampaign}
+              title={t(
+                'clubLicenseCampaignSettings.loadError.retry',
+                'Réessayer',
+              )}
+              variant="Secondary"
+            />
+)}
+          description={t(
+            'clubLicenseCampaignSettings.loadError.description',
+            'Impossible de charger la campagne. Le formulaire n est pas ouvert pour éviter d '
+              + 'ecraser ses paramètres.',
+          )}
+          title={t('clubLicenseCampaignSettings.loadError.title', 'Paramètres indisponibles')}
         />
       </ScreenContainer>
     );
@@ -2730,8 +3456,14 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
   // « 0 rôle(s), 0 équipe(s), 0 catégorie(s)… » sont remplaces par un compte de
   // personnes reel (`concernedMemberCount`), lisible sans decodeur.
   const targetModeSummaryText = isEventParticipantTarget
-    ? 'Cible verrouillée sur les participants acceptés de l événement.'
-    : 'La campagne concernera tout le club.';
+    ? t(
+      'clubLicenseCampaignSettings.audience.targetLocked',
+      'Cible verrouillée sur les participants acceptés de l événement.',
+    )
+    : t(
+      'clubLicenseCampaignSettings.audience.wholeClubSummary',
+      'La campagne concernera tout le club.',
+    );
 
   const dashedTileStyle = {
     alignItems: 'center',
@@ -2746,11 +3478,21 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
   const editedPricingRule = pricingRules.find((item) => item.localId === editedPricingRuleId);
   const editedDocumentRequest = documentRequests
     .find((item) => item.localId === editedDocumentRequestId);
-  const currentSeasonOptionLabel = `Saison ${currentSeason.label}`;
+  const currentSeasonOptionLabel = t(
+    'clubLicenseCampaignSettings.identity.seasonOption',
+    'Saison {{season}}',
+    { season: currentSeason.label, ...SANS_ECHAPPEMENT },
+  );
   const describePricingRule = (rule) => {
     const scopeLabel = rule.roleName || rule.teamKey || rule.categoryKey
-      || rule.sectionKey || rule.levelKey || pricingRuleLabels[rule.ruleType] || 'Cible';
-    return `${rule.label?.trim() || 'Tarif spécial'} · ${scopeLabel}`;
+      || rule.sectionKey || rule.levelKey || pricingRuleLabels[rule.ruleType] || t(
+      'clubLicenseCampaignSettings.specialRate.defaultScope',
+      'Cible',
+    );
+    return `${rule.label?.trim() || t(
+      'clubLicenseCampaignSettings.specialRate.defaultLabel',
+      'Tarif spécial',
+    )} · ${scopeLabel}`;
   };
 
   let stepContent = null;
@@ -2759,7 +3501,9 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
     stepContent = (
       <View style={Spaces.gap[licenseSpacing.sectionGap]}>
         <View style={primaryStepCardStyle}>
-          <Text style={[Fonts.p3Bold, Fonts.neutral200]}>TYPE</Text>
+          <Text style={[Fonts.p3Bold, Fonts.neutral200]}>
+            {t('clubLicenseCampaignSettings.identity.type', 'TYPE')}
+          </Text>
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
             {campaignTypeOptions.map((option) => (
               <SelectionChip
@@ -2771,46 +3515,63 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
             ))}
           </View>
           <Field
-            label="Nom"
+            label={t('clubLicenseCampaignSettings.identity.name', 'Nom')}
             onChangeText={handleNameChange}
-            placeholder={campaignNameSuggestions[0] || 'Cotisation licences 2026/2027'}
+            placeholder={campaignNameSuggestions[0] || t(
+              'clubLicenseCampaignSettings.identity.namePlaceholder',
+              'Cotisation licences 2026/2027',
+            )}
             value={name}
           />
           <Text style={[Fonts.p3, Fonts.neutral300]}>
-            Pré-rempli selon le type — modifiable librement.
+            {t(
+              'clubLicenseCampaignSettings.identity.nameHint',
+              'Pré-rempli selon le type — modifiable librement.',
+            )}
           </Text>
         </View>
 
         <View style={primaryStepCardStyle}>
-          <Text style={[Fonts.p3Bold, Fonts.neutral200]}>PÉRIODE</Text>
+          <Text style={[Fonts.p3Bold, Fonts.neutral200]}>
+            {t('clubLicenseCampaignSettings.identity.period', 'PÉRIODE')}
+          </Text>
           <SegmentedPair
             onSelect={applyPeriodMode}
             options={[
               { key: 'season', label: currentSeasonOptionLabel },
-              { key: 'custom', label: 'Dates libres' },
+              {
+                key: 'custom',
+                label: t(
+                  'clubLicenseCampaignSettings.identity.customDates',
+                  'Dates libres',
+                ),
+              },
             ]}
             selectedKey={periodMode}
           />
           {periodMode === 'season' ? (
             <Text style={[Fonts.p3, Fonts.neutral300]}>
-              Saison actuelle détectée — proposée par défaut.
+              {t(
+                'clubLicenseCampaignSettings.identity.seasonDetected',
+                'Saison actuelle détectée — proposée par défaut.',
+              )}
             </Text>
           ) : (
             <>
               <DateField
-                label="Date de début"
+                label={t('clubLicenseCampaignSettings.identity.startDate', 'Date de début')}
                 maximumDate={maximumCampaignStartDate}
                 onChange={setStartDate}
                 value={startDate}
               />
               <DateField
-                label="Date de fin"
+                label={t('clubLicenseCampaignSettings.identity.endDate', 'Date de fin')}
                 minimumDate={minimumCampaignEndDate}
                 onChange={setEndDate}
                 value={endDate}
               />
               <Field
-                label="Saison à conserver"
+                label={t('clubLicenseCampaignSettings.identity.seasonToKeep', 'Saison à conserver')}
                 onChangeText={(value) => {
                   setSeasonLabelManuallyEdited(true);
                   setSeasonLabel(value);
@@ -2823,9 +3584,15 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
         </View>
 
         <ValueRow
-          label="Description visible"
+          label={t('clubLicenseCampaignSettings.identity.description', 'Description visible')}
           onPress={() => setOpenSheet('description')}
-          value={description.trim() ? 'Renseignée' : 'À remplir'}
+          value={description.trim() ? t(
+            'clubLicenseCampaignSettings.status.filled',
+            'Renseignée',
+          ) : t(
+            'clubLicenseCampaignSettings.status.toFill',
+            'À remplir',
+          )}
         />
       </View>
     );
@@ -2834,7 +3601,11 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
       <View style={Spaces.gap[licenseSpacing.sectionGap]}>
         <View style={primaryStepCardStyle}>
           <Text style={[Fonts.p3Bold, Fonts.neutral200]}>
-            {`MONTANT PAR MEMBRE (${currency})`}
+            {t(
+              'clubLicenseCampaignSettings.audience.amountPerMember',
+              'MONTANT PAR MEMBRE ({{currency}})',
+              { currency, ...SANS_ECHAPPEMENT },
+            )}
           </Text>
           <AmountField
             amount={amount}
@@ -2847,7 +3618,10 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
         {isEventParticipantTarget ? (
           <View style={primaryStepCardStyle}>
             <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
-              Participants acceptés de l événement
+              {t(
+                'clubLicenseCampaignSettings.audience.acceptedParticipants',
+                'Participants acceptés de l événement',
+              )}
             </Text>
             <Text style={[Fonts.p3, Fonts.neutral200]}>{targetModeSummaryText}</Text>
           </View>
@@ -2856,9 +3630,17 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
             <SwitchRow
               enabled={targetConfig.includeAllMembers}
               hint={concernedMemberCount > 1
-                ? `${concernedMemberCount} membres concernés aujourd hui`
-                : `${concernedMemberCount} membre concerné aujourd hui`}
-              label="Tout le club"
+                ? t('clubLicenseCampaignSettings.audience.concernedToday', {
+                  count: concernedMemberCount,
+                  defaultValue_one: '{{count}} membre concerné aujourd hui',
+                  defaultValue_other: '{{count}} membres concernés aujourd hui',
+                })
+                : t('clubLicenseCampaignSettings.audience.concernedToday', {
+                  count: concernedMemberCount,
+                  defaultValue_one: '{{count}} membre concerné aujourd hui',
+                  defaultValue_other: '{{count}} membres concernés aujourd hui',
+                })}
+              label={t('clubLicenseCampaignSettings.audience.wholeClub', 'Tout le club')}
               onChange={(enabled) => setTargetConfig((current) => ({
                 ...current,
                 categoryIds: enabled ? [] : current.categoryIds,
@@ -2870,12 +3652,17 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
               }))}
             />
             <Text style={[Fonts.p3, Fonts.neutral300]}>
-              Désactive pour cibler un rôle : dirigeants, entraîneurs, ou joueurs par équipes.
+              {t(
+                'clubLicenseCampaignSettings.audience.wholeClubHint',
+                'Désactive pour cibler un rôle : dirigeants, entraîneurs, ou joueurs par équipes.',
+              )}
             </Text>
 
             {!targetConfig.includeAllMembers ? (
               <>
-                <Text style={[Fonts.p3Bold, Fonts.neutral200]}>RÔLE CONCERNÉ</Text>
+                <Text style={[Fonts.p3Bold, Fonts.neutral200]}>
+                  {t('clubLicenseCampaignSettings.audience.role', 'RÔLE CONCERNÉ')}
+                </Text>
                 <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
                   {licenseTargetRolePills.map((pill) => (
                     <SelectionChip
@@ -2890,7 +3677,11 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
                 {selectedTargetRole === USER_ROLES.player ? (
                   <>
                     <Text style={[Fonts.p3, Fonts.neutral300]}>
-                      {`${targetConfig.teamIds.length} équipe(s) cochée(s).`}
+                      {t(
+                        'clubLicenseCampaignSettings.audience.teamsChecked',
+                        '{{teamCount}} équipe(s) cochée(s).',
+                        { teamCount: targetConfig.teamIds.length, ...SANS_ECHAPPEMENT },
+                      )}
                     </Text>
                     {teamOptions.map((team) => (
                       <CheckRow
@@ -2902,7 +3693,10 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
                     ))}
                     {!teamOptions.length ? (
                       <Text style={[Fonts.p3, Fonts.neutral300]}>
-                        Aucune équipe dans ce club pour le moment.
+                        {t(
+                          'clubLicenseCampaignSettings.audience.noTeams',
+                          'Aucune équipe dans ce club pour le moment.',
+                        )}
                       </Text>
                     ) : null}
                   </>
@@ -2911,36 +3705,64 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
                 {selectedTargetRole && selectedTargetRole !== USER_ROLES.player ? (
                   <Text style={[Fonts.p3, Fonts.neutral300]}>
                     {concernedMemberCount > 1
-                      ? `${concernedMemberCount} personnes concernées.`
-                      : `${concernedMemberCount} personne concernée.`}
+                      ? t('clubLicenseCampaignSettings.audience.peopleConcerned', {
+                        count: concernedMemberCount,
+                        defaultValue_one: '{{count}} personne concernée.',
+                        defaultValue_other: '{{count}} personnes concernées.',
+                      })
+                      : t('clubLicenseCampaignSettings.audience.peopleConcerned', {
+                        count: concernedMemberCount,
+                        defaultValue_one: '{{count}} personne concernée.',
+                        defaultValue_other: '{{count}} personnes concernées.',
+                      })}
                     {' '}
-                    La sélection personne par personne demande une évolution du serveur :
-                    tout le rôle est concerné pour l instant.
+                    {t(
+                      'clubLicenseCampaignSettings.audience.perPersonNotice',
+                      'La sélection personne par personne demande une évolution du serveur : '
+                        + 'tout le rôle est concerné pour l instant.',
+                    )}
                   </Text>
                 ) : null}
 
                 {hasLegacyTargetFilters ? (
                   <View style={secondaryStepCardStyle}>
-                    <Text style={[Fonts.p2Bold, Fonts.neutral00]}>Filtres avancés</Text>
+                    <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
+                      {t(
+                        'clubLicenseCampaignSettings.audience.advancedFilters.title',
+                        'Filtres avancés',
+                      )}
+                    </Text>
                     <Text style={[Fonts.p3, Fonts.neutral300]}>
-                      Cette campagne utilise des filtres qui ne sont plus proposés aux
-                      nouvelles campagnes. Ils restent modifiables ici.
+                      {t(
+                        'clubLicenseCampaignSettings.audience.advancedFilters.description',
+                        'Cette campagne utilise des filtres qui ne sont plus proposés aux '
+                          + 'nouvelles campagnes. Ils restent modifiables ici.',
+                      )}
                     </Text>
                     <SelectionGroup
                       items={categoryOptions}
-                      label="Categories"
+                      label={t(
+                        'clubLicenseCampaignSettings.audience.advancedFilters.categories',
+                        'Categories',
+                      )}
                       onToggle={(value) => toggleTargetValue('categoryIds', value)}
                       selectedKeys={targetConfig.categoryIds}
                     />
                     <SelectionGroup
                       items={sectionOptions}
-                      label="Sections"
+                      label={t(
+                        'clubLicenseCampaignSettings.audience.advancedFilters.sections',
+                        'Sections',
+                      )}
                       onToggle={(value) => toggleTargetValue('sectionIds', value)}
                       selectedKeys={targetConfig.sectionIds}
                     />
                     <SelectionGroup
                       items={levelOptions}
-                      label="Niveaux"
+                      label={t(
+                        'clubLicenseCampaignSettings.audience.advancedFilters.levels',
+                        'Niveaux',
+                      )}
                       onToggle={(value) => toggleTargetValue('levelIds', value)}
                       selectedKeys={targetConfig.levelIds}
                     />
@@ -2954,8 +3776,16 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
         <View style={primaryStepCardStyle}>
           <Text style={[Fonts.p3Bold, Fonts.neutral200]}>
             {pricingRules.length === 1
-              ? 'TARIFS SPÉCIAUX · 1 RÈGLE'
-              : `TARIFS SPÉCIAUX · ${pricingRules.length} RÈGLES`}
+              ? t('clubLicenseCampaignSettings.audience.specialRatesHeader', {
+                count: pricingRules.length,
+                defaultValue_one: 'TARIFS SPÉCIAUX · {{count}} RÈGLE',
+                defaultValue_other: 'TARIFS SPÉCIAUX · {{count}} RÈGLES',
+              })
+              : t('clubLicenseCampaignSettings.audience.specialRatesHeader', {
+                count: pricingRules.length,
+                defaultValue_one: 'TARIFS SPÉCIAUX · {{count}} RÈGLE',
+                defaultValue_other: 'TARIFS SPÉCIAUX · {{count}} RÈGLES',
+              })}
           </Text>
           {pricingRules.map((rule) => (
             <ValueRow
@@ -2966,7 +3796,7 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
                 setOpenSheet('pricingRule');
               }}
               value={rule.isWaiver
-                ? 'Exemption'
+                ? t('clubLicenseCampaignSettings.audience.exemption', 'Exemption')
                 : `${rule.amount || '0'} ${currency}`}
             />
           ))}
@@ -2975,7 +3805,9 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
             onPress={addPricingRuleAndEdit}
             style={dashedTileStyle}
           >
-            <Text style={[Fonts.p2Bold, { color: Colors.primary500 }]}>+ Ajouter une règle</Text>
+            <Text style={[Fonts.p2Bold, { color: Colors.primary500 }]}>
+              {t('clubLicenseCampaignSettings.audience.addRule', '+ Ajouter une règle')}
+            </Text>
           </Pressable>
         </View>
       </View>
@@ -2987,9 +3819,15 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
           <SwitchRow
             enabled={paymentModes.helloasso}
             hint={helloAssoIsPublishReady
-              ? 'Compte du club connecté ✓ — géré dans Réglages du club'
-              : 'À connecter dans Réglages du club, depuis l écran Cotisations'}
-            label="HelloAsso (en ligne)"
+              ? t(
+                'clubLicenseCampaignSettings.payment.helloAsso.connected',
+                'Compte du club connecté ✓ — géré dans Réglages du club',
+              )
+              : t(
+                'clubLicenseCampaignSettings.payment.helloAsso.toConnect',
+                'À connecter dans Réglages du club, depuis l écran Cotisations',
+              )}
+            label={t('clubLicenseCampaignSettings.payment.helloAsso.label', 'HelloAsso (en ligne)')}
             onChange={() => togglePaymentMode('helloasso')}
           />
           <SwitchRow
@@ -2999,12 +3837,12 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
           />
           <SwitchRow
             enabled={paymentModes.cash}
-            label="Espèces"
+            label={t('clubLicenseCampaignSettings.payment.cash', 'Espèces')}
             onChange={() => togglePaymentMode('cash')}
           />
           <SwitchRow
             enabled={paymentModes.check}
-            label="Chèque"
+            label={t('clubLicenseCampaignSettings.payment.cheque', 'Chèque')}
             onChange={() => togglePaymentMode('check')}
           />
           <SwitchRow
@@ -3014,13 +3852,22 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
           />
           <SwitchRow
             enabled={paymentModes.external_link}
-            hint="Le club encaisse sur sa propre page de paiement."
-            label="Lien externe du club"
+            hint={t(
+              'clubLicenseCampaignSettings.payment.externalLink.hint',
+              'Le club encaisse sur sa propre page de paiement.',
+            )}
+            label={t(
+              'clubLicenseCampaignSettings.payment.externalLink.label',
+              'Lien externe du club',
+            )}
             onChange={() => togglePaymentMode('external_link')}
           />
           {paymentModes.external_link ? (
             <Field
-              label="Lien externe du club"
+              label={t(
+                'clubLicenseCampaignSettings.payment.externalLink.label',
+                'Lien externe du club',
+              )}
               onChangeText={setExternalUrl}
               placeholder="https://..."
               value={externalUrl}
@@ -3030,11 +3877,15 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
 
         {hasOfflineInstructions ? (
           <ValueRow
-            label="Consignes de paiement"
+            label={t('clubLicenseCampaignSettings.payment.instructions', 'Consignes de paiement')}
             onPress={() => setOpenSheet('paymentInstructions')}
             value={filledPaymentInstructionCount
-              ? `${filledPaymentInstructionCount} renseignée(s)`
-              : 'À remplir'}
+              ? t(
+                'clubLicenseCampaignSettings.payment.filledCount',
+                '{{filledCount}} renseignée(s)',
+                { filledCount: filledPaymentInstructionCount, ...SANS_ECHAPPEMENT },
+              )
+              : t('clubLicenseCampaignSettings.status.toFill', 'À remplir')}
           />
         ) : null}
 
@@ -3042,7 +3893,10 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
           <SwitchRow
             enabled={allowInstallments}
             hint={allowInstallments ? installmentSummaryText : undefined}
-            label="Paiement en plusieurs fois"
+            label={t(
+              'clubLicenseCampaignSettings.payment.installments.label',
+              'Paiement en plusieurs fois',
+            )}
             onChange={(enabled) => {
               setAllowInstallments(enabled);
               if (enabled) applyGeneratedInstallments();
@@ -3052,11 +3906,22 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
 
         {allowInstallments ? (
           <ValueRow
-            label="Ajuster l échéancier"
+            label={t(
+              'clubLicenseCampaignSettings.payment.installments.adjust',
+              'Ajuster l échéancier',
+            )}
             onPress={() => setOpenSheet('installments')}
             value={visibleInstallmentSchedule.length === 1
-              ? '1 échéance'
-              : `${visibleInstallmentSchedule.length} échéances`}
+              ? t('clubLicenseCampaignSettings.payment.installments.count', {
+                count: visibleInstallmentSchedule.length,
+                defaultValue_one: '{{count}} échéance',
+                defaultValue_other: '{{count}} échéances',
+              })
+              : t('clubLicenseCampaignSettings.payment.installments.count', {
+                count: visibleInstallmentSchedule.length,
+                defaultValue_one: '{{count}} échéance',
+                defaultValue_other: '{{count}} échéances',
+              })}
           />
         ) : null}
       </View>
@@ -3078,7 +3943,10 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
         ))}
         {!namedDocumentRequests.length ? (
           <Text style={[Fonts.p3, Fonts.neutral300]}>
-            Aucun document demandé. Cette étape est facultative.
+            {t(
+              'clubLicenseCampaignSettings.documents.empty',
+              'Aucun document demandé. Cette étape est facultative.',
+            )}
           </Text>
         ) : null}
         <Pressable
@@ -3087,7 +3955,7 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
           style={dashedTileStyle}
         >
           <Text style={[Fonts.p2Bold, { color: Colors.primary500 }]}>
-            + Demander un document
+            {t('clubLicenseCampaignSettings.documents.add', '+ Demander un document')}
           </Text>
         </Pressable>
       </View>
@@ -3098,8 +3966,8 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
         <View style={primaryStepCardStyle}>
           <SwitchRow
             enabled={autoReminderEnabled}
-            hint="Arrêt dès que c est payé."
-            label="Relancer automatiquement"
+            hint={t('clubLicenseCampaignSettings.reminders.stopHint', 'Arrêt dès que c est payé.')}
+            label={t('clubLicenseCampaignSettings.reminders.auto', 'Relancer automatiquement')}
             onChange={setAutoReminderEnabled}
           />
         </View>
@@ -3108,35 +3976,61 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
           <>
             <View style={primaryStepCardStyle}>
               <SummaryLine
-                label="Cadence"
-                value={`Tous les ${reminderFrequencyDays || 14} jours · ${reminderMaxCount || 5} max`}
+                label={t('clubLicenseCampaignSettings.reminders.frequency', 'Cadence')}
+                value={t(
+                  'clubLicenseCampaignSettings.reminders.frequencySummary',
+                  'Tous les {{days}} jours · {{max}} max',
+                  {
+                    days: reminderFrequencyDays || 14,
+                    max: reminderMaxCount || 5,
+                    ...SANS_ECHAPPEMENT,
+                  },
+                )}
               />
-              <SummaryLine label="Statuts" value={reminderStatusSummary} />
               <SummaryLine
-                label="Première"
+                label={t(
+                  'clubLicenseCampaignSettings.reminders.statuses',
+                  'Statuts',
+                )}
+                value={reminderStatusSummary}
+              />
+              <SummaryLine
+                label={t('clubLicenseCampaignSettings.reminders.first', 'Première')}
                 value={reminderBeforeDueDays
-                  ? `${reminderBeforeDueDays} jours avant l échéance`
-                  : 'Le jour de l échéance'}
+                  ? t(
+                    'clubLicenseCampaignSettings.reminders.daysBefore',
+                    '{{days}} jours avant l échéance',
+                    { days: reminderBeforeDueDays, ...SANS_ECHAPPEMENT },
+                  )
+                  : t('clubLicenseCampaignSettings.reminders.onDueDate', 'Le jour de l échéance')}
               />
             </View>
 
             <ValueRow
-              label="Ajuster la cadence"
+              label={t(
+                'clubLicenseCampaignSettings.reminders.adjustFrequency',
+                'Ajuster la cadence',
+              )}
               onPress={() => setOpenSheet('reminderTiming')}
-              value="Modifier"
+              value={t('clubLicenseCampaignSettings.actions.edit', 'Modifier')}
             />
 
             <View style={primaryStepCardStyle}>
               <Field
-                label="Message de relance"
+                label={t('clubLicenseCampaignSettings.reminders.message', 'Message de relance')}
                 multiline
                 onChangeText={setReminderMessage}
-                placeholder="Rappel: ta cotisation reste à régler."
+                placeholder={t(
+                  'clubLicenseCampaignSettings.reminders.messagePlaceholder',
+                  'Rappel: ta cotisation reste à régler.',
+                )}
                 value={reminderMessage}
               />
             </View>
             <View style={secondaryStepCardStyle}>
-              <Text style={[Fonts.p2Bold, Fonts.neutral00]}>Aperçu du message</Text>
+              <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
+                {t('clubLicenseCampaignSettings.reminders.preview', 'Aperçu du message')}
+              </Text>
               <Text style={[Fonts.p3, Fonts.neutral200]}>{reminderPreviewMessage}</Text>
             </View>
           </>
@@ -3147,11 +4041,32 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
     stepContent = (
       <View style={Spaces.gap[licenseSpacing.sectionGap]}>
         <View style={primaryStepCardStyle}>
-          <ReviewSectionHeader onEdit={() => goToWizardStep('identity')} title="Identité" />
-          <SummaryLine label="Nom" value={name || 'À renseigner'} />
-          <SummaryLine label="Type" value={campaignTypeLabel} />
+          <ReviewSectionHeader
+            onEdit={() => goToWizardStep('identity')}
+            title={t(
+              'clubLicenseCampaignSettings.steps.identity.title',
+              'Identité',
+            )}
+          />
           <SummaryLine
-            label="Période"
+            label={t(
+              'clubLicenseCampaignSettings.identity.name',
+              'Nom',
+            )}
+            value={name || t(
+              'clubLicenseCampaignSettings.review.toFill',
+              'À renseigner',
+            )}
+          />
+          <SummaryLine
+            label={t(
+              'clubLicenseCampaignSettings.review.type',
+              'Type',
+            )}
+            value={campaignTypeLabel}
+          />
+          <SummaryLine
+            label={t('clubLicenseCampaignSettings.review.period', 'Période')}
             value={periodMode === 'season'
               ? currentSeasonOptionLabel
               : `${isoToPickerDateValue(startDate)} → ${isoToPickerDateValue(endDate)}`}
@@ -3159,82 +4074,175 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
         </View>
 
         <View style={primaryStepCardStyle}>
-          <ReviewSectionHeader onEdit={() => goToWizardStep('audience')} title="Public & tarif" />
-          <SummaryLine label="Public" value={reviewAudienceLabel} />
-          <SummaryLine
-            label="Montant"
-            value={`${formatLicenseMoney(euroToCents(amount), currency)} par membre`}
+          <ReviewSectionHeader
+            onEdit={() => goToWizardStep('audience')}
+            title={t(
+              'clubLicenseCampaignSettings.steps.audience.title',
+              'Public & tarif',
+            )}
           />
           <SummaryLine
-            label="Tarifs spéciaux"
+            label={t(
+              'clubLicenseCampaignSettings.review.audience.label',
+              'Public',
+            )}
+            value={reviewAudienceLabel}
+          />
+          <SummaryLine
+            label={t('clubLicenseCampaignSettings.review.amount', 'Montant')}
+            value={t(
+              'clubLicenseCampaignSettings.review.amountPerMember',
+              '{{amount}} par membre',
+              { amount: formatLicenseMoney(euroToCents(amount), currency), ...SANS_ECHAPPEMENT },
+            )}
+          />
+          <SummaryLine
+            label={t('clubLicenseCampaignSettings.review.specialRates', 'Tarifs spéciaux')}
             value={pricingRules.length
-              ? `${pricingRules.length} règle(s)`
-              : 'Prix unique'}
+              ? t(
+                'clubLicenseCampaignSettings.review.ruleCount',
+                '{{ruleCount}} règle(s)',
+                { ruleCount: pricingRules.length, ...SANS_ECHAPPEMENT },
+              )
+              : t('clubLicenseCampaignSettings.review.singlePrice', 'Prix unique')}
           />
         </View>
 
         <View style={primaryStepCardStyle}>
-          <ReviewSectionHeader onEdit={() => goToWizardStep('payment')} title="Paiement" />
-          <SummaryLine
-            label="Moyens"
-            value={enabledPaymentModeLabels.join(' · ') || 'Aucun moyen actif'}
+          <ReviewSectionHeader
+            onEdit={() => goToWizardStep('payment')}
+            title={t(
+              'clubLicenseCampaignSettings.steps.payment.title',
+              'Paiement',
+            )}
           />
-          <SummaryLine label="Échéancier" value={installmentSummaryText} />
           <SummaryLine
-            label="Consignes"
+            label={t('clubLicenseCampaignSettings.review.methods', 'Moyens')}
+            value={enabledPaymentModeLabels.join(' · ') || t(
+              'clubLicenseCampaignSettings.review.noMethod',
+              'Aucun moyen actif',
+            )}
+          />
+          <SummaryLine
+            label={t(
+              'clubLicenseCampaignSettings.review.installmentPlan',
+              'Échéancier',
+            )}
+            value={installmentSummaryText}
+          />
+          <SummaryLine
+            label={t('clubLicenseCampaignSettings.review.instructions', 'Consignes')}
             value={filledPaymentInstructionCount
-              ? `${filledPaymentInstructionCount} renseignée(s)`
-              : 'Aucune'}
+              ? t(
+                'clubLicenseCampaignSettings.payment.filledCount',
+                '{{filledCount}} renseignée(s)',
+                { filledCount: filledPaymentInstructionCount, ...SANS_ECHAPPEMENT },
+              )
+              : t('clubLicenseCampaignSettings.review.none', 'Aucune')}
           />
         </View>
 
         <View style={primaryStepCardStyle}>
-          <ReviewSectionHeader onEdit={() => goToWizardStep('documents')} title="Documents" />
+          <ReviewSectionHeader
+            onEdit={() => goToWizardStep('documents')}
+            title={t(
+              'clubLicenseCampaignSettings.steps.documents.title',
+              'Documents',
+            )}
+          />
           <SummaryLine
-            label="Pièces demandées"
+            label={t('clubLicenseCampaignSettings.review.requestedDocuments', 'Pièces demandées')}
             value={documentRequests.filter((item) => item.name.trim()).length
-              ? `${documentRequests.filter((item) => item.name.trim()).length} document(s)`
-              : 'Aucun'}
+              ? t(
+                'clubLicenseCampaignSettings.review.documentCount',
+                '{{documentCount}} document(s)',
+                {
+                  documentCount: documentRequests.filter((item) => item.name.trim()).length,
+                  ...SANS_ECHAPPEMENT,
+                },
+              )
+              : t('clubLicenseCampaignSettings.review.noDocuments', 'Aucun')}
           />
         </View>
 
         <View style={primaryStepCardStyle}>
-          <ReviewSectionHeader onEdit={() => goToWizardStep('reminders')} title="Relances" />
+          <ReviewSectionHeader
+            onEdit={() => goToWizardStep('reminders')}
+            title={t(
+              'clubLicenseCampaignSettings.steps.reminders.title',
+              'Relances',
+            )}
+          />
           <SummaryLine
-            label="Relances auto"
-            value={autoReminderEnabled ? 'Activées' : 'Désactivées'}
+            label={t('clubLicenseCampaignSettings.review.autoReminders', 'Relances auto')}
+            value={autoReminderEnabled ? t(
+              'clubLicenseCampaignSettings.review.enabled',
+              'Activées',
+            ) : t(
+              'clubLicenseCampaignSettings.review.disabled',
+              'Désactivées',
+            )}
           />
           {autoReminderEnabled ? (
-            <SummaryLine label="Statuts" value={reminderStatusSummary} />
+            <SummaryLine
+              label={t(
+                'clubLicenseCampaignSettings.reminders.statuses',
+                'Statuts',
+              )}
+              value={reminderStatusSummary}
+            />
           ) : null}
         </View>
 
         <View style={secondaryStepCardStyle}>
-          <Text style={[Fonts.p2Bold, Fonts.neutral00]}>Options avancées</Text>
+          <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
+            {t('clubLicenseCampaignSettings.review.advancedOptions', 'Options avancées')}
+          </Text>
           <ValueRow
-            label="Note interne"
+            label={t('clubLicenseCampaignSettings.review.internalNote', 'Note interne')}
             onPress={() => setOpenSheet('internalNote')}
-            value={internalNote.trim() ? 'Renseignée' : 'Aucune'}
+            value={internalNote.trim() ? t(
+              'clubLicenseCampaignSettings.status.filled',
+              'Renseignée',
+            ) : t(
+              'clubLicenseCampaignSettings.review.none',
+              'Aucune',
+            )}
           />
           <SwitchRow
             enabled={paymentOwner === 'multisport'}
-            hint="Les paiements en ligne passent par le compte central du multisport."
-            label="Encaissement multisport"
+            hint={t(
+              'clubLicenseCampaignSettings.review.multisportHint',
+              'Les paiements en ligne passent par le compte central du multisport.',
+            )}
+            label={t(
+              'clubLicenseCampaignSettings.review.multisportCollection',
+              'Encaissement multisport',
+            )}
             onChange={(enabled) => setPaymentOwner(enabled ? 'multisport' : 'section')}
           />
           {paymentOwner === 'multisport' && !club?.parentMultisport ? (
             <Text style={[Fonts.p3, { color: Colors.warning500 }]}>
-              Aucun multisport parent n est rattaché à ce club. Le paiement central ne
-              pourra pas être validé.
+              {t(
+                'clubLicenseCampaignSettings.review.noParentMultisport',
+                'Aucun multisport parent n est rattaché à ce club. Le paiement central ne '
+                  + 'pourra pas être validé.',
+              )}
             </Text>
           ) : null}
           <DateField
-            label="Programmer l ouverture (optionnel)"
+            label={t(
+              'clubLicenseCampaignSettings.review.scheduleOpening',
+              'Programmer l ouverture (optionnel)',
+            )}
             onChange={setStartDate}
             value={startDate}
           />
           <DateField
-            label="Marquer en retard après le (optionnel)"
+            label={t(
+              'clubLicenseCampaignSettings.review.overdueAfter',
+              'Marquer en retard après le (optionnel)',
+            )}
             minimumDate={campaignStartDateValue}
             onChange={setOverdueAfterDate}
             value={overdueAfterDate}
@@ -3292,18 +4300,27 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
       <WizardSheet
         close={closeSheet}
         isVisible={openSheet === 'description'}
-        title="Description visible"
+        title={t('clubLicenseCampaignSettings.identity.description', 'Description visible')}
       >
         <Field
-          label="Texte visible par les membres"
+          label={t(
+            'clubLicenseCampaignSettings.sheets.description.label',
+            'Texte visible par les membres',
+          )}
           multiline
           onChangeText={setDescription}
-          placeholder="Informations visibles par les membres"
+          placeholder={t(
+            'clubLicenseCampaignSettings.sheets.description.placeholder',
+            'Informations visibles par les membres',
+          )}
           value={description}
         />
         <Text style={[Fonts.p3, Fonts.neutral200]}>
-          Choisis un modèle pour pré-remplir le texte, puis ajuste-le. Appuie une
-          deuxième fois pour le retirer.
+          {t(
+            'clubLicenseCampaignSettings.sheets.description.hint',
+            'Choisis un modèle pour pré-remplir le texte, puis ajuste-le. Appuie une '
+              + 'deuxième fois pour le retirer.',
+          )}
         </Text>
         {campaignDescriptionSuggestions.map((suggestion, index) => (
           <SuggestionCard
@@ -3311,7 +4328,11 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
             key={suggestion}
             onPress={() => handleDescriptionSuggestionPress(suggestion)}
             selected={String(description || '').trim() === suggestion}
-            title={`Modèle ${index + 1}`}
+            title={t(
+              'clubLicenseCampaignSettings.sheets.description.template',
+              'Modèle {{number}}',
+              { number: index + 1, ...SANS_ECHAPPEMENT },
+            )}
           />
         ))}
       </WizardSheet>
@@ -3320,7 +4341,7 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
         close={closeSheet}
         isVisible={openSheet === 'pricingRule'}
         snapPoint="86%"
-        title="Tarif spécial"
+        title={t('clubLicenseCampaignSettings.specialRate.defaultLabel', 'Tarif spécial')}
       >
         {editedPricingRule ? (
           <PricingRuleEditor
@@ -3343,41 +4364,59 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
         close={closeSheet}
         isVisible={openSheet === 'paymentInstructions'}
         snapPoint="86%"
-        title="Consignes de paiement"
+        title={t('clubLicenseCampaignSettings.payment.instructions', 'Consignes de paiement')}
       >
         {paymentModes.bank_transfer ? (
           <Field
-            label="Virement"
+            label={t(
+              'clubLicenseCampaignSettings.sheets.paymentInstructions.bankTransfer',
+              'Virement',
+            )}
             multiline
             onChangeText={setBankTransferInstructions}
-            placeholder="IBAN, référence à indiquer..."
+            placeholder={t(
+              'clubLicenseCampaignSettings.sheets.paymentInstructions.bankTransferPlaceholder',
+              'IBAN, référence à indiquer...',
+            )}
             value={bankTransferInstructions}
           />
         ) : null}
         {paymentModes.cash ? (
           <Field
-            label="Espèces"
+            label={t('clubLicenseCampaignSettings.payment.cash', 'Espèces')}
             multiline
             onChangeText={setCashInstructions}
-            placeholder="Lieu, horaires, personne à contacter..."
+            placeholder={t(
+              'clubLicenseCampaignSettings.sheets.paymentInstructions.cashPlaceholder',
+              'Lieu, horaires, personne à contacter...',
+            )}
             value={cashInstructions}
           />
         ) : null}
         {paymentModes.check ? (
           <Field
-            label="Chèque"
+            label={t('clubLicenseCampaignSettings.payment.cheque', 'Chèque')}
             multiline
             onChangeText={setCheckInstructions}
-            placeholder="Ordre, dépôt, référence..."
+            placeholder={t(
+              'clubLicenseCampaignSettings.sheets.paymentInstructions.chequePlaceholder',
+              'Ordre, dépôt, référence...',
+            )}
             value={checkInstructions}
           />
         ) : null}
         {paymentModes.card_physical ? (
           <Field
-            label="Carte au club"
+            label={t(
+              'clubLicenseCampaignSettings.sheets.paymentInstructions.card',
+              'Carte au club',
+            )}
             multiline
             onChangeText={setCardPhysicalInstructions}
-            placeholder="Terminal, permanences..."
+            placeholder={t(
+              'clubLicenseCampaignSettings.sheets.paymentInstructions.cardPlaceholder',
+              'Terminal, permanences...',
+            )}
             value={cardPhysicalInstructions}
           />
         ) : null}
@@ -3387,10 +4426,10 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
         close={closeSheet}
         isVisible={openSheet === 'installments'}
         snapPoint="86%"
-        title="Ajuster l échéancier"
+        title={t('clubLicenseCampaignSettings.payment.installments.adjust', 'Ajuster l échéancier')}
       >
         <InputStepper
-          label="Nombre d échéances"
+          label={t('clubLicenseCampaignSettings.sheets.installments.count', 'Nombre d échéances')}
           max={12}
           min={1}
           onDecrement={() => handleInstallmentCountChange(-1)}
@@ -3399,12 +4438,14 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
         />
         <SelectionGroup
           items={installmentFrequencyOptions}
-          label="Fréquence"
+          label={t('clubLicenseCampaignSettings.sheets.installments.frequency', 'Fréquence')}
           onToggle={handleInstallmentFrequencyChange}
           selectedKeys={[installmentFrequency]}
         />
         <View style={secondaryStepCardStyle}>
-          <Text style={[Fonts.p2Bold, Fonts.neutral00]}>Aperçu de l échéancier</Text>
+          <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
+            {t('clubLicenseCampaignSettings.sheets.installments.preview', 'Aperçu de l échéancier')}
+          </Text>
           {visibleInstallmentSchedule.map((line, index) => (
             <SummaryLine
               key={line.localId || `installment-${index}`}
@@ -3413,28 +4454,40 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
             />
           ))}
           <SummaryLine
-            label="Total"
+            label={t('clubLicenseCampaignSettings.sheets.installments.total', 'Total')}
             value={formatLicenseMoney(euroToCents(amount), currency)}
           />
           <Button
             onPress={applyGeneratedInstallments}
-            title="Régénérer depuis le montant"
+            title={t(
+              'clubLicenseCampaignSettings.sheets.installments.regenerate',
+              'Régénérer depuis le montant',
+            )}
             variant="Secondary"
           />
         </View>
         <PaymentModeToggle
           enabled={memberInstallmentChoiceAllowed}
-          label="Le membre choisit son nombre d échéances"
+          label={t(
+            'clubLicenseCampaignSettings.sheets.installments.memberChooses',
+            'Le membre choisit son nombre d échéances',
+          )}
           onChange={setMemberInstallmentChoiceAllowed}
         />
         <PaymentModeToggle
           enabled={onlineInstallmentsEnabled}
-          label="Autoriser le fractionnement en ligne"
+          label={t(
+            'clubLicenseCampaignSettings.sheets.installments.allowOnlineSplit',
+            'Autoriser le fractionnement en ligne',
+          )}
           onChange={setOnlineInstallmentsEnabled}
         />
         <PaymentModeToggle
           enabled={onlinePaymentRequired}
-          label="Paiement en ligne obligatoire"
+          label={t(
+            'clubLicenseCampaignSettings.sheets.installments.onlineRequired',
+            'Paiement en ligne obligatoire',
+          )}
           onChange={setOnlinePaymentRequired}
         />
       </WizardSheet>
@@ -3443,7 +4496,7 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
         close={closeSheet}
         isVisible={openSheet === 'documentRequest'}
         snapPoint="86%"
-        title="Document demandé"
+        title={t('clubLicenseCampaignSettings.sheets.documentRequest.title', 'Document demandé')}
       >
         {editedDocumentRequest ? (
           <DocumentRequestEditor
@@ -3462,12 +4515,15 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
         close={closeSheet}
         isVisible={openSheet === 'reminderTiming'}
         snapPoint="86%"
-        title="Ajuster la cadence"
+        title={t('clubLicenseCampaignSettings.reminders.adjustFrequency', 'Ajuster la cadence')}
       >
         <View style={[Alignments.row, Spaces.gap[12]]}>
           <View style={{ flex: 1 }}>
             <InputStepper
-              label="Tous les (jours)"
+              label={t(
+                'clubLicenseCampaignSettings.sheets.reminderTiming.everyDays',
+                'Tous les (jours)',
+              )}
               max={90}
               min={3}
               onDecrement={() => shiftReminderFrequency(-1)}
@@ -3477,7 +4533,7 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
           </View>
           <View style={{ flex: 1 }}>
             <InputStepper
-              label="Maximum"
+              label={t('clubLicenseCampaignSettings.sheets.reminderTiming.maximum', 'Maximum')}
               max={20}
               min={1}
               onDecrement={() => shiftReminderMaxCount(-1)}
@@ -3486,7 +4542,9 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
             />
           </View>
         </View>
-        <Text style={[Fonts.p3Bold, Fonts.neutral200]}>STATUTS À RELANCER</Text>
+        <Text style={[Fonts.p3Bold, Fonts.neutral200]}>
+          {t('clubLicenseCampaignSettings.sheets.reminderTiming.statuses', 'STATUTS À RELANCER')}
+        </Text>
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
           {reminderStatusOptions.map((item) => (
             <SelectionChip
@@ -3500,7 +4558,10 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
         <Field
           inputMode="numeric"
           keyboardType="number-pad"
-          label="Commencer X jours avant l échéance"
+          label={t(
+            'clubLicenseCampaignSettings.sheets.reminderTiming.startBefore',
+            'Commencer X jours avant l échéance',
+          )}
           onChangeText={(value) => setReminderBeforeDueDays(normalizeWholeNumberInput(value))}
           placeholder="5"
           value={reminderBeforeDueDays}
@@ -3508,18 +4569,27 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
         <Field
           inputMode="numeric"
           keyboardType="number-pad"
-          label="Reprendre X jours après l échéance"
+          label={t(
+            'clubLicenseCampaignSettings.sheets.reminderTiming.resumeAfter',
+            'Reprendre X jours après l échéance',
+          )}
           onChangeText={(value) => setReminderAfterDueDays(normalizeWholeNumberInput(value))}
           placeholder="7"
           value={reminderAfterDueDays}
         />
         <PaymentModeToggle
           enabled={reminderOnDueDate}
-          label="Relance le jour de l échéance"
+          label={t(
+            'clubLicenseCampaignSettings.sheets.reminderTiming.onDueDate',
+            'Relance le jour de l échéance',
+          )}
           onChange={setReminderOnDueDate}
         />
         <DateField
-          label="Première relance à partir du (optionnel)"
+          label={t(
+            'clubLicenseCampaignSettings.sheets.reminderTiming.firstReminderFrom',
+            'Première relance à partir du (optionnel)',
+          )}
           minimumDate={campaignStartDateValue}
           onChange={setReminderStartDate}
           value={reminderStartDate}
@@ -3529,13 +4599,19 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
       <WizardSheet
         close={closeSheet}
         isVisible={openSheet === 'internalNote'}
-        title="Note interne"
+        title={t('clubLicenseCampaignSettings.review.internalNote', 'Note interne')}
       >
         <Field
-          label="Visible uniquement en gestion"
+          label={t(
+            'clubLicenseCampaignSettings.sheets.internalNote.visibility',
+            'Visible uniquement en gestion',
+          )}
           multiline
           onChangeText={setInternalNote}
-          placeholder="Visible uniquement en gestion"
+          placeholder={t(
+            'clubLicenseCampaignSettings.sheets.internalNote.visibility',
+            'Visible uniquement en gestion',
+          )}
           value={internalNote}
         />
         {internalNoteSuggestions.map((suggestion, index) => (
@@ -3544,7 +4620,11 @@ function ClubLicenseCampaignSettings({ navigation, route }) {
             key={suggestion}
             onPress={() => handleInternalNoteSuggestionPress(suggestion)}
             selected={String(internalNote || '').trim() === suggestion}
-            title={`Note ${index + 1}`}
+            title={t(
+              'clubLicenseCampaignSettings.sheets.internalNote.note',
+              'Note {{number}}',
+              { number: index + 1, ...SANS_ECHAPPEMENT },
+            )}
           />
         ))}
       </WizardSheet>
