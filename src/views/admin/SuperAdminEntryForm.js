@@ -1,3 +1,4 @@
+import i18next from 'i18next';
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -11,6 +12,7 @@ import {
 } from 'react-native';
 import { launchCamera, launchImageLibrary } from 'react-native-image-picker';
 
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import AdminStateView from '@/views/admin/components/AdminStateView';
@@ -335,7 +337,11 @@ const buildPayloadFromForm = (attributes, formValues) => {
     if (NUMBER_TYPES.has(type)) {
       const numeric = parseNumberValue(type, value);
       if (!numeric.ok) {
-        errors.push(`Le champ "${name}" doit être un nombre validé.`);
+        errors.push(i18next.t(
+          'superAdminEntryForm.errors.number',
+          'Le champ "{{name}}" doit être un nombre validé.',
+          { name, ...SANS_ECHAPPEMENT },
+        ));
       } else {
         accumulator[name] = numeric.value;
       }
@@ -357,7 +363,11 @@ const buildPayloadFromForm = (attributes, formValues) => {
       }
       const parsed = safeParseJson(normalized);
       if (!parsed.ok) {
-        errors.push(`Le champ "${name}" contient un JSON invalide.`);
+        errors.push(i18next.t(
+          'superAdminEntryForm.errors.json',
+          'Le champ "{{name}}" contient un JSON invalide.',
+          { name, ...SANS_ECHAPPEMENT },
+        ));
       } else {
         accumulator[name] = parsed.value;
       }
@@ -500,10 +510,13 @@ function SuperAdminEntryForm({ navigation, route }) {
   if (!uid) {
     return (
       <AdminStateView
-        actionLabel="Retour"
-        description="Le content-type superadmin est absent de l'URL."
+        actionLabel={t('superAdminEntryForm.back', 'Retour')}
+        description={t(
+          'superAdminEntryForm.states.missingType',
+          "Le content-type superadmin est absent de l'URL.",
+        )}
         onAction={() => navigation.goBack()}
-        title="Content-type introuvable"
+        title={t('superAdminEntryForm.states.typeNotFound', 'Content-type introuvable')}
       />
     );
   }
@@ -511,9 +524,12 @@ function SuperAdminEntryForm({ navigation, route }) {
   if (metadataQuery.isLoading || (isEditMode && entryQuery.isLoading)) {
     return (
       <AdminStateView
-        description="Nous préparons le formulaire superadmin."
+        description={t(
+          'superAdminEntryForm.states.loadingDescription',
+          'Nous préparons le formulaire superadmin.',
+        )}
         isLoading
-        title="Chargement du formulaire"
+        title={t('superAdminEntryForm.states.loadingTitle', 'Chargement du formulaire')}
       />
     );
   }
@@ -521,14 +537,17 @@ function SuperAdminEntryForm({ navigation, route }) {
   if (metadataQuery.error || (isEditMode && entryQuery.error)) {
     return (
       <AdminStateView
-        actionLabel="Réessayer"
+        actionLabel={t('superAdminEntryForm.states.retry', 'Réessayer')}
         // @ts-ignore: FIXME: Baseline TS regression
-        description={getErrorMessage(metadataQuery.error || entryQuery.error, 'generic') || 'Impossible de charger ce formulaire.'}
+        description={getErrorMessage(metadataQuery.error || entryQuery.error, 'generic') || t(
+          'superAdminEntryForm.states.errorDescription',
+          'Impossible de charger ce formulaire.',
+        )}
         onAction={() => {
           metadataQuery.refetch();
           if (isEditMode) entryQuery.refetch();
         }}
-        title="Chargement impossible"
+        title={t('superAdminEntryForm.states.errorTitle', 'Chargement impossible')}
       />
     );
   }
@@ -536,10 +555,13 @@ function SuperAdminEntryForm({ navigation, route }) {
   if (isEditMode && !entryQuery?.data?.data) {
     return (
       <AdminStateView
-        actionLabel="Retour"
-        description="L'entrée demandée n'existe pas ou n'est plus accessible."
+        actionLabel={t('superAdminEntryForm.back', 'Retour')}
+        description={t(
+          'superAdminEntryForm.states.unavailable',
+          "L'entrée demandée n'existe pas ou n'est plus accessible.",
+        )}
         onAction={() => navigation.goBack()}
-        title="Entrée introuvable"
+        title={t('superAdminEntryForm.states.notFound', 'Entrée introuvable')}
       />
     );
   }
@@ -1197,7 +1219,10 @@ function SuperAdminEntryForm({ navigation, route }) {
             // @ts-ignore: FIXME: Baseline TS regression
             {selectedItems.map((item, index) => {
               const itemKey = `${getMediaKey(item) || 'media'}-${index}`;
-              const itemLabel = item?.name || item?.url || item?.documentId || item?.id || 'Fichier';
+              const itemLabel = item?.name || item?.url || item?.documentId || item?.id || t(
+                'superAdminEntryForm.media.fileFallback',
+                'Fichier',
+              );
               const itemSubtitle = item?.mime || item?.documentId || (item?.id ? `id ${item.id}` : '');
               return (
                 <View

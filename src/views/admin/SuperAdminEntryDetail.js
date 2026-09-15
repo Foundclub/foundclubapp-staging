@@ -164,10 +164,13 @@ function SuperAdminEntryDetail({ navigation, route }) {
   if (!uid || !documentId) {
     return (
       <AdminStateView
-        actionLabel="Retour"
-        description="Les informations de l'entrée superadmin sont incomplètes dans l'URL."
+        actionLabel={t('superAdminEntryDetail.back', 'Retour')}
+        description={t(
+          'superAdminEntryDetail.states.incompleteUrl',
+          "Les informations de l'entrée superadmin sont incomplètes dans l'URL.",
+        )}
         onAction={() => navigation.goBack()}
-        title="Entrée introuvable"
+        title={t('superAdminEntryDetail.states.notFound', 'Entrée introuvable')}
       />
     );
   }
@@ -175,9 +178,12 @@ function SuperAdminEntryDetail({ navigation, route }) {
   if ((isLoading || metadataQuery.isLoading) && !entry) {
     return (
       <AdminStateView
-        description="Nous chargeons le detail de l'entrée."
+        description={t(
+          'superAdminEntryDetail.states.loadingDescription',
+          "Nous chargeons le detail de l'entrée.",
+        )}
         isLoading
-        title="Chargement du detail"
+        title={t('superAdminEntryDetail.states.loadingTitle', 'Chargement du detail')}
       />
     );
   }
@@ -185,13 +191,16 @@ function SuperAdminEntryDetail({ navigation, route }) {
   if ((error || metadataQuery.error) && !entry) {
     return (
       <AdminStateView
-        actionLabel="Réessayer"
-        description={getErrorMessage(error || metadataQuery.error, 'generic') || 'Impossible de charger cette entrée.'}
+        actionLabel={t('superAdminEntryDetail.states.retry', 'Réessayer')}
+        description={getErrorMessage(error || metadataQuery.error, 'generic') || t(
+          'superAdminEntryDetail.states.errorDescription',
+          'Impossible de charger cette entrée.',
+        )}
         onAction={() => {
           metadataQuery.refetch();
           refetch();
         }}
-        title="Chargement impossible"
+        title={t('superAdminEntryDetail.states.errorTitle', 'Chargement impossible')}
       />
     );
   }
@@ -199,10 +208,13 @@ function SuperAdminEntryDetail({ navigation, route }) {
   if (!entry) {
     return (
       <AdminStateView
-        actionLabel="Retour"
-        description="Cette entrée superadmin n'existe pas ou n'est plus accessible."
+        actionLabel={t('superAdminEntryDetail.back', 'Retour')}
+        description={t(
+          'superAdminEntryDetail.states.unavailable',
+          "Cette entrée superadmin n'existe pas ou n'est plus accessible.",
+        )}
         onAction={() => navigation.goBack()}
-        title="Entrée introuvable"
+        title={t('superAdminEntryDetail.states.notFound', 'Entrée introuvable')}
       />
     );
   }

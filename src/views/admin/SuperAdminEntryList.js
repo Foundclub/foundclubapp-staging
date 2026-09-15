@@ -317,10 +317,13 @@ function SuperAdminEntryList({ navigation, route }) {
   if (!uid) {
     return (
       <AdminStateView
-        actionLabel="Retour"
-        description="Le content-type superadmin est absent de l'URL."
+        actionLabel={t('superAdminEntryList.back', 'Retour')}
+        description={t(
+          'superAdminEntryList.states.missingType',
+          "Le content-type superadmin est absent de l'URL.",
+        )}
         onAction={() => navigation.goBack()}
-        title="Content-type introuvable"
+        title={t('superAdminEntryList.states.typeNotFound', 'Content-type introuvable')}
       />
     );
   }
@@ -328,9 +331,12 @@ function SuperAdminEntryList({ navigation, route }) {
   if ((metadataQuery.isLoading || isLoading) && !entries.length) {
     return (
       <AdminStateView
-        description="Nous chargeons les entrées du content manager."
+        description={t(
+          'superAdminEntryList.states.loadingDescription',
+          'Nous chargeons les entrées du content manager.',
+        )}
         isLoading
-        title="Chargement du contenu superadmin"
+        title={t('superAdminEntryList.states.loadingTitle', 'Chargement du contenu superadmin')}
       />
     );
   }
@@ -338,13 +344,16 @@ function SuperAdminEntryList({ navigation, route }) {
   if ((metadataQuery.error || entriesError) && !entries.length) {
     return (
       <AdminStateView
-        actionLabel="Réessayer"
-        description={getErrorMessage(metadataQuery.error || entriesError, 'generic') || 'Impossible de charger cette liste superadmin.'}
+        actionLabel={t('superAdminEntryList.states.retry', 'Réessayer')}
+        description={getErrorMessage(metadataQuery.error || entriesError, 'generic') || t(
+          'superAdminEntryList.states.errorDescription',
+          'Impossible de charger cette liste superadmin.',
+        )}
         onAction={() => {
           metadataQuery.refetch();
           refetch();
         }}
-        title="Chargement impossible"
+        title={t('superAdminEntryList.states.errorTitle', 'Chargement impossible')}
       />
     );
   }

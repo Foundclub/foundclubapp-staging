@@ -1,4 +1,6 @@
+import i18next from 'i18next';
 import { useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Text,
   TextInput,
@@ -87,7 +89,10 @@ const getSquadCaptainsLabel = (squad) => {
   const captains = Array.isArray(squad?.captains) && squad.captains.length > 0
     ? squad.captains
     : [squad?.captain].filter(Boolean);
-  return captains.map((captain) => captain?.name).filter(Boolean).join(', ') || 'Inconnu';
+  return captains.map((captain) => captain?.name).filter(Boolean).join(', ') || i18next.t(
+    'superAdminLeagueSquads.unknownCaptain',
+    'Inconnu',
+  );
 };
 
 /**
@@ -99,6 +104,7 @@ function SuperAdminLeagueSquads() {
     Fonts,
     Spaces,
   } = useTheme();
+  const { t } = useTranslation();
   const [query, setQuery] = useState('');
   const [sport, setSport] = useState('');
   const [division, setDivision] = useState('');
@@ -129,9 +135,12 @@ function SuperAdminLeagueSquads() {
   if (squadsQuery.isLoading && !squads.length) {
     return (
       <AdminStateView
-        description="Nous chargeons la console Squad League."
+        description={t(
+          'superAdminLeagueSquads.states.loadingDescription',
+          'Nous chargeons la console Squad League.',
+        )}
         isLoading
-        title="Chargement des squads"
+        title={t('superAdminLeagueSquads.states.loadingTitle', 'Chargement des squads')}
       />
     );
   }
@@ -139,10 +148,13 @@ function SuperAdminLeagueSquads() {
   if (squadsQuery.error && !squads.length) {
     return (
       <AdminStateView
-        actionLabel="Réessayer"
-        description={getErrorMessage(squadsQuery.error, 'generic') || 'Impossible de charger les squads League.'}
+        actionLabel={t('superAdminLeagueSquads.states.retry', 'Réessayer')}
+        description={getErrorMessage(squadsQuery.error, 'generic') || t(
+          'superAdminLeagueSquads.states.errorDescription',
+          'Impossible de charger les squads League.',
+        )}
         onAction={squadsQuery.refetch}
-        title="Chargement impossible"
+        title={t('superAdminLeagueSquads.states.errorTitle', 'Chargement impossible')}
       />
     );
   }
@@ -152,19 +164,48 @@ function SuperAdminLeagueSquads() {
   return (
     <SuperAdminLeagueLayout
       activeRouteNames={[RouteNames.SuperAdminLeagueSquads]}
-      description="Recherche, filtre et inspecte les squads League, leur capitaine, leur Elo, leur division et leur dynamique récente."
-      title="Suivi des squads"
+      description={t(
+        'superAdminLeagueSquads.description',
+        // eslint-disable-next-line max-len
+        'Recherche, filtre et inspecte les squads League, leur capitaine, leur Elo, leur division et leur dynamique récente.',
+      )}
+      title={t('superAdminLeagueSquads.title', 'Suivi des squads')}
     >
       <LeagueCard style={{ marginBottom: 0 }}>
         <View style={[Spaces.gap[10]]}>
-          <FilterField onChangeText={setQuery} placeholder="Recherche par squad ou capitaine" value={query} />
-          <FilterField onChangeText={setSport} placeholder="Filtre sport (Football à 5, Padel...)" value={sport} />
-          <FilterField onChangeText={setDivision} placeholder="Filtre division (1 à 5)" value={division} />
-          <FilterField onChangeText={setStatus} placeholder="Filtre statut (complete / incomplete)" value={status} />
+          <FilterField
+            onChangeText={setQuery}
+            placeholder={t(
+              'superAdminLeagueSquads.filters.query',
+              'Recherche par squad ou capitaine',
+            )}
+            value={query}
+          />
+          <FilterField
+            onChangeText={setSport}
+            placeholder={t(
+              'superAdminLeagueSquads.filters.sport',
+              'Filtre sport (Football à 5, Padel...)',
+            )}
+            value={sport}
+          />
+          <FilterField
+            onChangeText={setDivision}
+            placeholder={t('superAdminLeagueSquads.filters.division', 'Filtre division (1 à 5)')}
+            value={division}
+          />
+          <FilterField
+            onChangeText={setStatus}
+            placeholder={t(
+              'superAdminLeagueSquads.filters.status',
+              'Filtre statut (complete / incomplete)',
+            )}
+            value={status}
+          />
           <Text style={[Fonts.p3, Fonts.neutral300]}>
             {squadsQuery.data?.meta?.pagination?.total || squads.length}
             {' '}
-            squads trouvées
+            {t('superAdminLeagueSquads.found', 'squads trouvées')}
           </Text>
         </View>
       </LeagueCard>
@@ -196,18 +237,41 @@ function SuperAdminLeagueSquads() {
                     </Text>
                   </View>
                   <Text style={[Fonts.p2, Fonts.neutral300]}>
-                    {Array.isArray(squad?.captains) && squad.captains.length > 1 ? 'Capitaines :' : 'Capitaine :'}
+                    {Array.isArray(squad?.captains) && squad.captains.length > 1 ? t(
+                      'superAdminLeagueSquads.captains',
+                      'Capitaines :',
+                    ) : t(
+                      'superAdminLeagueSquads.captain',
+                      'Capitaine :',
+                    )}
                     {' '}
                     {getSquadCaptainsLabel(squad)}
                   </Text>
                   <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-                    <SquadChip label={squad?.sport || 'Sport inconnu'} />
+                    <SquadChip
+                      label={squad?.sport || t(
+                        'superAdminLeagueSquads.unknownSport',
+                        'Sport inconnu',
+                      )}
+                    />
                     <SquadChip label={`Division ${squad?.division || 5}`} />
                     <SquadChip
-                      label={squad?.status === 'complete' ? 'Squad complète' : 'Squad incomplète'}
+                      label={squad?.status === 'complete' ? t(
+                        'superAdminLeagueSquads.completeSquad',
+                        'Squad complète',
+                      ) : t(
+                        'superAdminLeagueSquads.incompleteSquad',
+                        'Squad incomplète',
+                      )}
                       tone={squad?.status === 'complete' ? 'success' : 'warning'}
                     />
-                    <SquadChip label={`${squad?.membersCount || 0} membres`} />
+                    <SquadChip
+                      label={t(
+                        'superAdminLeagueSquads.membersCount',
+                        '{{count}} membres',
+                        { count: squad?.membersCount || 0 },
+                      )}
+                    />
                   </View>
                 </View>
               </LeagueCard>
@@ -220,7 +284,7 @@ function SuperAdminLeagueSquads() {
         <LeagueCard style={{ marginBottom: 0 }}>
           <View style={[Spaces.gap[12]]}>
             <Text style={[Fonts.h3, Fonts.neutral00]}>
-              Détail squad :
+              {t('superAdminLeagueSquads.detail.title', 'Détail squad :')}
               {' '}
               {selectedSquad?.name || 'Squad'}
             </Text>
@@ -235,34 +299,49 @@ function SuperAdminLeagueSquads() {
               {' · '}
               Sport
               {' '}
-              {selectedSquad?.sport || 'Inconnu'}
+              {selectedSquad?.sport || t('superAdminLeagueSquads.unknown', 'Inconnu')}
             </Text>
             <Text style={[Fonts.p2, Fonts.neutral100]}>
-              {Array.isArray(selectedSquad?.captains) && selectedSquad.captains.length > 1 ? 'Capitaines :' : 'Capitaine :'}
+              {Array.isArray(selectedSquad?.captains) && selectedSquad.captains.length > 1 ? t(
+                'superAdminLeagueSquads.captains',
+                'Capitaines :',
+              ) : t(
+                'superAdminLeagueSquads.captain',
+                'Capitaine :',
+              )}
               {' '}
               {getSquadCaptainsLabel(selectedSquad)}
             </Text>
             <Text style={[Fonts.p2, Fonts.neutral100]}>
-              Dynamique :
+              {t('superAdminLeagueSquads.detail.trend', 'Dynamique :')}
               {' '}
-              {selectedSquad?.recentFormLabel || 'Aucune donnée récente'}
+              {selectedSquad?.recentFormLabel || t(
+                'superAdminLeagueSquads.detail.noRecentData',
+                'Aucune donnée récente',
+              )}
             </Text>
 
             <View style={[Spaces.gap[8]]}>
-              <Text style={[Fonts.p2Bold, Fonts.neutral00]}>Membres</Text>
+              <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
+                {t('superAdminLeagueSquads.detail.members', 'Membres')}
+              </Text>
               {(selectedSquad?.members || []).map((member) => (
                 <Text key={member?.documentId || member?.name} style={[Fonts.p2, Fonts.neutral200]}>
                   -
                   {' '}
-                  {member?.name || 'Utilisateur'}
+                  {member?.name || t('superAdminLeagueSquads.detail.userFallback', 'Utilisateur')}
                 </Text>
               ))}
             </View>
 
             <View style={[Spaces.gap[8]]}>
-              <Text style={[Fonts.p2Bold, Fonts.neutral00]}>Historique récent</Text>
+              <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
+                {t('superAdminLeagueSquads.detail.recentHistory', 'Historique récent')}
+              </Text>
               {(selectedSquad?.recentMatches || []).length === 0 ? (
-                <Text style={[Fonts.p2, Fonts.neutral300]}>Aucun match récent.</Text>
+                <Text style={[Fonts.p2, Fonts.neutral300]}>
+                  {t('superAdminLeagueSquads.detail.noRecentMatches', 'Aucun match récent.')}
+                </Text>
               ) : (
                 selectedSquad.recentMatches.map((match) => (
                   <Text
@@ -277,7 +356,10 @@ function SuperAdminLeagueSquads() {
                     {' '}
                     {match?.teamB?.name || 'Squad B'}
                     {' - '}
-                    {match?.score || match?.status || 'Sans score'}
+                    {match?.score || match?.status || t(
+                      'superAdminLeagueSquads.detail.noScore',
+                      'Sans score',
+                    )}
                   </Text>
                 ))
               )}

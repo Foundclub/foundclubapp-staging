@@ -1,4 +1,5 @@
 import { useNavigation } from '@react-navigation/native';
+import { useTranslation } from 'react-i18next';
 import { Text, View } from 'react-native';
 
 import useTheme from '@/theme/themeContext';
@@ -46,13 +47,16 @@ function MetricCard({ color, label, value }) {
 
 function SummaryList({ items, title, valueKey }) {
   const { Colors, Fonts, Spaces } = useTheme();
+  const { t } = useTranslation();
 
   return (
     <LeagueCard style={{ marginBottom: 0 }}>
       <Text style={[Fonts.h4, Fonts.neutral00, Spaces.marginBottom[12]]}>{title}</Text>
       <View style={[Spaces.gap[10]]}>
         {(items || []).length === 0 ? (
-          <Text style={[Fonts.p2, Fonts.neutral300]}>Aucune donnée disponible.</Text>
+          <Text style={[Fonts.p2, Fonts.neutral300]}>
+            {t('superAdminLeagueDashboard.noData', 'Aucune donnée disponible.')}
+          </Text>
         ) : (
           items.map((item) => (
             <View
@@ -84,14 +88,18 @@ function SuperAdminLeagueDashboard() {
     Colors,
     Spaces,
   } = useTheme();
+  const { t } = useTranslation();
   const dashboardQuery = useGetSuperadminLeagueDashboard();
 
   if (dashboardQuery.isLoading && !dashboardQuery.data) {
     return (
       <AdminStateView
-        description="Nous consolidons les métriques globales de Found Club League."
+        description={t(
+          'superAdminLeagueDashboard.states.loadingDescription',
+          'Nous consolidons les métriques globales de Found Club League.',
+        )}
         isLoading
-        title="Chargement du dashboard League"
+        title={t('superAdminLeagueDashboard.states.loadingTitle', 'Chargement du dashboard League')}
       />
     );
   }
@@ -99,10 +107,13 @@ function SuperAdminLeagueDashboard() {
   if (dashboardQuery.error && !dashboardQuery.data) {
     return (
       <AdminStateView
-        actionLabel="Réessayer"
-        description={getErrorMessage(dashboardQuery.error, 'generic') || 'Impossible de charger le dashboard League.'}
+        actionLabel={t('superAdminLeagueDashboard.states.retry', 'Réessayer')}
+        description={getErrorMessage(dashboardQuery.error, 'generic') || t(
+          'superAdminLeagueDashboard.states.errorDescription',
+          'Impossible de charger le dashboard League.',
+        )}
         onAction={dashboardQuery.refetch}
-        title="Chargement impossible"
+        title={t('superAdminLeagueDashboard.states.errorTitle', 'Chargement impossible')}
       />
     );
   }
@@ -110,30 +121,78 @@ function SuperAdminLeagueDashboard() {
   const payload = dashboardQuery.data || {};
   const stats = payload?.stats || {};
   const metrics = [
-    { color: Colors.primary500, label: 'Joueurs uniques', value: formatCount(stats.totalPlayers) },
+    {
+      color: Colors.primary500,
+      label: t('superAdminLeagueDashboard.metrics.uniquePlayers', 'Joueurs uniques'),
+      value: formatCount(stats.totalPlayers),
+    },
     { color: Colors.gold500, label: 'Squads', value: formatCount(stats.totalSquads) },
-    { color: Colors.success500, label: 'Squads complètes', value: formatCount(stats.squadsComplete) },
-    { color: Colors.warning500, label: 'Squads incomplètes', value: formatCount(stats.squadsIncomplete) },
-    { color: Colors.primary500, label: 'Matchs', value: formatCount(stats.totalMatches) },
-    { color: Colors.primary300, label: 'Matchs confirmés', value: formatCount(stats.matchesConfirmed) },
-    { color: Colors.success500, label: 'Matchs joués', value: formatCount(stats.matchesPlayed) },
-    { color: Colors.error500, label: 'Matchs annulés', value: formatCount(stats.matchesCancelled) },
-    { color: Colors.success500, label: 'Scores validés', value: formatCount(stats.matchesScoreValidated) },
-    { color: Colors.error500, label: 'Litiges ouverts', value: formatCount(stats.openDisputes) },
-    { color: Colors.primary500, label: 'Litiges résolus', value: formatCount(stats.resolvedDisputes) },
-    { color: Colors.gold500, label: 'Recherches lancées', value: formatCount(stats.matchmakingsLaunched) },
+    {
+      color: Colors.success500,
+      label: t('superAdminLeagueDashboard.metrics.completeSquads', 'Squads complètes'),
+      value: formatCount(stats.squadsComplete),
+    },
+    {
+      color: Colors.warning500,
+      label: t('superAdminLeagueDashboard.metrics.incompleteSquads', 'Squads incomplètes'),
+      value: formatCount(stats.squadsIncomplete),
+    },
+    {
+      color: Colors.primary500,
+      label: t('superAdminLeagueDashboard.metrics.matches', 'Matchs'),
+      value: formatCount(stats.totalMatches),
+    },
+    {
+      color: Colors.primary300,
+      label: t('superAdminLeagueDashboard.metrics.confirmedMatches', 'Matchs confirmés'),
+      value: formatCount(stats.matchesConfirmed),
+    },
+    {
+      color: Colors.success500,
+      label: t('superAdminLeagueDashboard.metrics.playedMatches', 'Matchs joués'),
+      value: formatCount(stats.matchesPlayed),
+    },
+    {
+      color: Colors.error500,
+      label: t('superAdminLeagueDashboard.metrics.cancelledMatches', 'Matchs annulés'),
+      value: formatCount(stats.matchesCancelled),
+    },
+    {
+      color: Colors.success500,
+      label: t('superAdminLeagueDashboard.metrics.confirmedScores', 'Scores validés'),
+      value: formatCount(stats.matchesScoreValidated),
+    },
+    {
+      color: Colors.error500,
+      label: t('superAdminLeagueDashboard.metrics.openDisputes', 'Litiges ouverts'),
+      value: formatCount(stats.openDisputes),
+    },
+    {
+      color: Colors.primary500,
+      label: t('superAdminLeagueDashboard.metrics.resolvedDisputes', 'Litiges résolus'),
+      value: formatCount(stats.resolvedDisputes),
+    },
+    {
+      color: Colors.gold500,
+      label: t('superAdminLeagueDashboard.metrics.searchesStarted', 'Recherches lancées'),
+      value: formatCount(stats.matchmakingsLaunched),
+    },
   ];
 
   return (
     <SuperAdminLeagueLayout
       activeRouteNames={[RouteNames.SuperAdminHome, RouteNames.SuperAdminDashboard]}
-      description="Pilote l'ouverture plateforme, les squads, les matchs League et les litiges depuis un seul espace dédié."
+      description={t(
+        'superAdminLeagueDashboard.description',
+        // eslint-disable-next-line max-len
+        "Pilote l'ouverture plateforme, les squads, les matchs League et les litiges depuis un seul espace dédié.",
+      )}
       rightAction={{
-        label: 'Admin classique',
+        label: t('superAdminLeagueDashboard.classicAdmin', 'Admin classique'),
         onPress: () => navigation.navigate(RouteNames.AdminDashboard),
         variant: 'Secondary',
       }}
-      title="Dashboard League"
+      title={t('superAdminLeagueDashboard.title', 'Dashboard League')}
     >
       <View style={[Alignments.row, Spaces.gap[12], { flexWrap: 'wrap' }]}>
         {metrics.map((metric) => (
@@ -149,12 +208,12 @@ function SuperAdminLeagueDashboard() {
       <View style={[Spaces.gap[12]]}>
         <SummaryList
           items={payload?.squadsBySport || []}
-          title="Squads par sport"
+          title={t('superAdminLeagueDashboard.squadsBySport', 'Squads par sport')}
           valueKey="count"
         />
         <SummaryList
           items={payload?.squadsByDivision || []}
-          title="Squads par division"
+          title={t('superAdminLeagueDashboard.squadsByDivision', 'Squads par division')}
           valueKey="count"
         />
       </View>
@@ -162,12 +221,12 @@ function SuperAdminLeagueDashboard() {
       <View style={[Spaces.gap[12]]}>
         <Button
           onPress={() => navigation.navigate(RouteNames.SuperAdminSettings)}
-          title="Gérer l'ouverture League"
+          title={t('superAdminLeagueDashboard.manageOpening', "Gérer l'ouverture League")}
           variant="Primary"
         />
         <Button
           onPress={() => navigation.navigate(RouteNames.SuperAdminLeagueDisputes)}
-          title="Ouvrir les litiges League"
+          title={t('superAdminLeagueDashboard.openDisputes', 'Ouvrir les litiges League')}
           variant="Secondary"
         />
       </View>

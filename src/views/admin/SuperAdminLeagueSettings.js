@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Alert,
   Text,
@@ -6,6 +7,7 @@ import {
   View,
 } from 'react-native';
 
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -117,25 +119,26 @@ function ToggleRow({
   onClose,
   onOpen,
 }) {
+  const { t } = useTranslation();
   return (
     <View style={{ flexDirection: 'row', gap: 10 }}>
       <Button
         onPress={onOpen}
         size="sm"
-        title="Ouvrir"
+        title={t('superAdminLeagueSettings.open', 'Ouvrir')}
         variant={currentOpenValue ? 'Primary' : 'Secondary'}
       />
       <Button
         onPress={onClose}
         size="sm"
-        title="Fermer"
+        title={t('superAdminLeagueSettings.close', 'Fermer')}
         variant={!currentOpenValue ? 'Primary' : 'Secondary'}
       />
       {currentOpenValue !== configuredOpenValue ? (
         <Button
           disabled
           size="sm"
-          title="Modification non enregistrée"
+          title={t('superAdminLeagueSettings.unsaved', 'Modification non enregistrée')}
           variant="Ghost"
         />
       ) : null}
@@ -182,6 +185,7 @@ function SettingsBlock({
   title,
 }) {
   const { Colors, Fonts, Spaces } = useTheme();
+  const { t } = useTranslation();
 
   return (
     <LeagueCard style={{ marginBottom: 0 }}>
@@ -204,7 +208,10 @@ function SettingsBlock({
         />
 
         <DateField
-          label="Date et heure d'ouverture (optionnel)"
+          label={t(
+            'superAdminLeagueSettings.openingDateLabel',
+            "Date et heure d'ouverture (optionnel)",
+          )}
           onChangeText={onChangeDate}
           value={inputValue}
         />
@@ -213,7 +220,7 @@ function SettingsBlock({
           <Button
             isLoading={isSaving}
             onPress={onSave}
-            title="Enregistrer"
+            title={t('superAdminLeagueSettings.save', 'Enregistrer')}
             variant="Primary"
           />
           <Button
@@ -233,6 +240,7 @@ function SettingsBlock({
  *
  */
 function SuperAdminLeagueSettings() {
+  const { t } = useTranslation();
   const settingsQuery = useGetSuperadminLeaguePlatformSettings();
   const updateMutation = useUpdateSuperadminLeaguePlatformSettings();
   const [platformIsOpen, setPlatformIsOpen] = useState(true);
@@ -257,7 +265,13 @@ function SuperAdminLeagueSettings() {
     const nextMatchmakingOpeningDate = parseInputDate(payload.matchmakingOpeningDate);
 
     if (nextPlatformOpeningDate === 'invalid' || nextMatchmakingOpeningDate === 'invalid') {
-      Alert.alert('Date invalide', 'Utilise un format valide du type 2026-05-12T18:00.');
+      Alert.alert(
+        t('superAdminLeagueSettings.alerts.invalidDateTitle', 'Date invalide'),
+        t(
+          'superAdminLeagueSettings.alerts.invalidDateBody',
+          'Utilise un format valide du type 2026-05-12T18:00.',
+        ),
+      );
       return;
     }
 
@@ -271,15 +285,24 @@ function SuperAdminLeagueSettings() {
     try {
       await updateMutation.mutateAsync(normalizedPayload);
       Alert.alert(
-        'Paramètres enregistrés',
+        t('superAdminLeagueSettings.alerts.savedTitle', 'Paramètres enregistrés'),
         scope === 'platform'
-          ? "L'état plateforme League a bien été mis à jour."
-          : "L'état de la recherche de match a bien été mis à jour.",
+          ? t(
+            'superAdminLeagueSettings.alerts.platformSaved',
+            "L'état plateforme League a bien été mis à jour.",
+          )
+          : t(
+            'superAdminLeagueSettings.alerts.matchmakingSaved',
+            "L'état de la recherche de match a bien été mis à jour.",
+          ),
       );
     } catch (error) {
       Alert.alert(
-        'Enregistrement impossible',
-        getErrorMessage(error, 'generic') || 'Impossible de mettre à jour les paramètres League.',
+        t('superAdminLeagueSettings.alerts.saveErrorTitle', 'Enregistrement impossible'),
+        getErrorMessage(error, 'generic') || t(
+          'superAdminLeagueSettings.alerts.saveErrorBody',
+          'Impossible de mettre à jour les paramètres League.',
+        ),
       );
     }
   };
@@ -294,9 +317,15 @@ function SuperAdminLeagueSettings() {
   if (settingsQuery.isLoading && !settingsQuery.data) {
     return (
       <AdminStateView
-        description="Nous chargeons la configuration d'ouverture de Found Club League."
+        description={t(
+          'superAdminLeagueSettings.states.loadingDescription',
+          "Nous chargeons la configuration d'ouverture de Found Club League.",
+        )}
         isLoading
-        title="Chargement des paramètres League"
+        title={t(
+          'superAdminLeagueSettings.states.loadingTitle',
+          'Chargement des paramètres League',
+        )}
       />
     );
   }
@@ -304,34 +333,59 @@ function SuperAdminLeagueSettings() {
   if (settingsQuery.error && !settingsQuery.data) {
     return (
       <AdminStateView
-        actionLabel="Réessayer"
+        actionLabel={t('superAdminLeagueSettings.states.retry', 'Réessayer')}
         description={
           getErrorMessage(settingsQuery.error, 'generic')
-          || 'Impossible de charger les paramètres League.'
+          || t(
+            'superAdminLeagueSettings.states.errorDescription',
+            'Impossible de charger les paramètres League.',
+          )
         }
         onAction={settingsQuery.refetch}
-        title="Chargement impossible"
+        title={t('superAdminLeagueSettings.states.errorTitle', 'Chargement impossible')}
       />
     );
   }
 
   const platformScheduledLabel = runtime?.hasScheduledPlatformOpening
-    ? `Ouverture programmée : ${runtime?.platform?.openingDate || runtime?.platform?.countdownTarget || ''}`
+    ? t(
+      'superAdminLeagueSettings.scheduled.platform',
+      'Ouverture programmée : {{date}}',
+      {
+        date: runtime?.platform?.openingDate || runtime?.platform?.countdownTarget || '',
+        ...SANS_ECHAPPEMENT,
+      },
+    )
     : '';
   const matchmakingScheduledLabel = runtime?.hasScheduledMatchmakingOpening
-    ? `Recherche programmée : ${runtime?.matchmaking?.openingDate || runtime?.matchmaking?.countdownTarget || ''}`
+    ? t(
+      'superAdminLeagueSettings.scheduled.matchmaking',
+      'Recherche programmée : {{date}}',
+      {
+        date: runtime?.matchmaking?.openingDate || runtime?.matchmaking?.countdownTarget || '',
+        ...SANS_ECHAPPEMENT,
+      },
+    )
     : '';
 
   return (
     <SuperAdminLeagueLayout
       activeRouteNames={[RouteNames.SuperAdminSettings]}
-      description="Ouvre ou ferme Found Club League pour les joueurs, puis pilote séparément la disponibilité du matchmaking."
-      title="Paramètres plateforme"
+      description={t(
+        'superAdminLeagueSettings.description',
+        // eslint-disable-next-line max-len
+        'Ouvre ou ferme Found Club League pour les joueurs, puis pilote séparément la disponibilité du matchmaking.',
+      )}
+      title={t('superAdminLeagueSettings.title', 'Paramètres plateforme')}
     >
       <SettingsBlock
-        clearLabel="Supprimer la date"
+        clearLabel={t('superAdminLeagueSettings.platform.clear', 'Supprimer la date')}
         configuredIsOpen={Boolean(configured.platformIsOpen)}
-        description="Quand la plateforme est fermée, les joueurs voient l'écran Found Club League arrive bientôt. Les SuperAdmin gardent l'accès complet."
+        description={t(
+          'superAdminLeagueSettings.platform.description',
+          // eslint-disable-next-line max-len
+          "Quand la plateforme est fermée, les joueurs voient l'écran Found Club League arrive bientôt. Les SuperAdmin gardent l'accès complet.",
+        )}
         effectiveIsOpen={Boolean(runtime?.effectivePlatformIsOpen)}
         inputValue={platformOpeningDateInput}
         isSaving={updateMutation.isPending}
@@ -350,15 +404,22 @@ function SuperAdminLeagueSettings() {
         onSave={() => saveCurrentSettings('platform')}
         scheduledLabel={platformScheduledLabel}
         selectedIsOpen={platformIsOpen}
-        statusClosedLabel="Plateforme fermée"
-        statusOpenLabel="Plateforme ouverte"
-        title="État de Found Club League"
+        statusClosedLabel={t('superAdminLeagueSettings.platform.closed', 'Plateforme fermée')}
+        statusOpenLabel={t('superAdminLeagueSettings.platform.open', 'Plateforme ouverte')}
+        title={t('superAdminLeagueSettings.platform.title', 'État de Found Club League')}
       />
 
       <SettingsBlock
-        clearLabel="Supprimer la date de recherche"
+        clearLabel={t(
+          'superAdminLeagueSettings.matchmaking.clear',
+          'Supprimer la date de recherche',
+        )}
         configuredIsOpen={Boolean(configured.matchmakingIsOpen)}
-        description="La plateforme peut rester ouverte pendant que la recherche de match est bloquée pour préparer un lancement synchronisé."
+        description={t(
+          'superAdminLeagueSettings.matchmaking.description',
+          // eslint-disable-next-line max-len
+          'La plateforme peut rester ouverte pendant que la recherche de match est bloquée pour préparer un lancement synchronisé.',
+        )}
         effectiveIsOpen={Boolean(runtime?.effectiveMatchmakingIsOpen)}
         inputValue={matchmakingOpeningDateInput}
         isSaving={updateMutation.isPending}
@@ -377,9 +438,9 @@ function SuperAdminLeagueSettings() {
         onSave={() => saveCurrentSettings('matchmaking')}
         scheduledLabel={matchmakingScheduledLabel}
         selectedIsOpen={matchmakingIsOpen}
-        statusClosedLabel="Recherche fermée"
-        statusOpenLabel="Recherche ouverte"
-        title="Recherche de match"
+        statusClosedLabel={t('superAdminLeagueSettings.matchmaking.closed', 'Recherche fermée')}
+        statusOpenLabel={t('superAdminLeagueSettings.matchmaking.open', 'Recherche ouverte')}
+        title={t('superAdminLeagueSettings.matchmaking.title', 'Recherche de match')}
       />
     </SuperAdminLeagueLayout>
   );
