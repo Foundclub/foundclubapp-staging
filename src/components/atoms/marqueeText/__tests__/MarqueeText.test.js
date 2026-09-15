@@ -52,8 +52,13 @@ const mesurer = (tree, { largeurTexte, largeurVisible }) => {
 
 // La ligne du repli : une seule ligne, coupée par « … ». C'est EXACTEMENT ce
 // que la carte affichait avant U01.
+// AFFICHAGE (15/09) : cette ligne reste montée pendant le défilement — elle
+// donne sa taille au cadre — mais INVISIBLE. On ne compte donc que celles
+// qu'on voit.
 const lignesTronquees = (tree) => tree.root.findAll(
-  (node) => node.type === 'Text' && node.props?.ellipsizeMode === 'tail',
+  (node) => node.type === 'Text'
+    && node.props?.ellipsizeMode === 'tail'
+    && StyleSheet.flatten(node.props?.style)?.opacity !== 0,
 );
 
 describe('MarqueeText — D1 : ça ne défile QUE si ça dépasse', () => {
@@ -79,10 +84,11 @@ describe('MarqueeText — D1 : ça ne défile QUE si ça dépasse', () => {
     mesurer(tree, { largeurTexte: 420, largeurVisible: 200 });
 
     expect(getActiveMarqueeCount()).toBe(1);
-    // La sonde + les deux copies de la boucle : 3 occurrences, et plus aucune
-    // ligne tronquée — le nom entier est lisible sans ouvrir la fiche.
+    // La sonde + la ligne invisible qui tient la place + les deux copies de la
+    // boucle : 4 occurrences, et plus aucune ligne tronquée VISIBLE — le nom
+    // entier est lisible sans ouvrir la fiche.
     const json = JSON.stringify(tree.toJSON());
-    expect(json.split(NOM_LONG).length - 1).toBe(3);
+    expect(json.split(NOM_LONG).length - 1).toBe(4);
     expect(lignesTronquees(tree)).toHaveLength(0);
 
     act(() => {

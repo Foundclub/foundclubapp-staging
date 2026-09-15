@@ -25,6 +25,13 @@ import useMarqueeLoop, { getActiveMarqueeCount } from '@/hooks/useMarqueeLoop';
 //    layout, test sans moteur de mise en page — on rend EXACTEMENT ce que la
 //    carte affichait avant : une ligne coupée par « … ». Jamais un texte
 //    tranché net, jamais une animation qui tourne pour rien.
+//  · la TAILLE du cadre ne dépend jamais de ce qu'il affiche (AFFICHAGE,
+//    15/09). La ligne tronquée reste dans le flux dans les deux états — elle
+//    tient la place, invisible pendant le défilement — et la piste passe hors
+//    flux. Avant, la piste (deux copies, ~2× le texte) remplaçait la ligne :
+//    dans une colonne centrée, l'enveloppe s'élargissait à la piste, sa mesure
+//    disait « ça tient », la ligne revenait, l'enveloppe rétrécissait… et la
+//    boucle recommençait : le nom clignotait, dédoublé aux bords de l'écran.
 //  · le lecteur d'écran ne lit jamais ce bloc. Un texte qui bouge et qui est
 //    rendu en double n'est pas une source d'accessibilité : le libellé complet
 //    reste porté par le parent (`accessibilityLabel` de la carte).
@@ -82,6 +89,8 @@ function MarqueeText({
     enabled: !paused,
   });
 
+  const showTrack = isOverflowing && isRunning;
+
   const copy = (
     <Text numberOfLines={1} style={[style, styles.copy, { width: textWidth }]}>
       {text}
@@ -115,12 +124,23 @@ function MarqueeText({
       </View>
 
       {/*
+        La ligne tronquée est TOUJOURS là : c'est elle qui donne sa taille au
+        cadre, dans les deux états. Pendant le défilement elle est seulement
+        invisible.
         `isRunning`, et pas seulement « ça dépasse » : une boucle peut être
         refusée (plafond atteint) ou interdite (« réduire les animations »).
         Dans ces deux cas le texte NE DOIT PAS rester figé au bord, coupé net
         et sans « … » — il retombe sur la troncature d'origine.
       */}
-      {isOverflowing && isRunning ? (
+      <Text
+        ellipsizeMode="tail"
+        numberOfLines={1}
+        style={[style, showTrack && styles.placeholder]}
+      >
+        {text}
+      </Text>
+
+      {showTrack ? (
         <Animated.View style={[styles.track, { transform: [{ translateX }] }]}>
           {/*
             Le texte est rendu DEUX fois : quand la première copie sort par la
@@ -130,11 +150,7 @@ function MarqueeText({
           {copy}
           {copy}
         </Animated.View>
-      ) : (
-        <Text ellipsizeMode="tail" numberOfLines={1} style={style}>
-          {text}
-        </Text>
-      )}
+      ) : null}
     </View>
   );
 }
@@ -143,6 +159,9 @@ const styles = StyleSheet.create({
   copy: {
     flexShrink: 0,
     marginRight: COPY_GAP,
+  },
+  placeholder: {
+    opacity: 0,
   },
   probeLayer: {
     // Sans `flex-start`, le texte serait ÉTIRÉ à la largeur de la sonde et
@@ -155,8 +174,11 @@ const styles = StyleSheet.create({
     width: PROBE_WIDTH,
   },
   track: {
-    alignSelf: 'flex-start',
+    // HORS FLUX : deux copies côte à côte ne doivent jamais élargir le cadre.
     flexDirection: 'row',
+    left: 0,
+    position: 'absolute',
+    top: 0,
   },
   viewport: {
     flexShrink: 1,

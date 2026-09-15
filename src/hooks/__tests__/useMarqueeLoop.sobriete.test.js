@@ -1,4 +1,4 @@
-import { AccessibilityInfo, Animated } from 'react-native';
+import { AccessibilityInfo, Animated, StyleSheet } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
 import MarqueeText, { getActiveMarqueeCount } from '@/components/atoms/marqueeText/MarqueeText';
@@ -52,12 +52,16 @@ const monterUnNom = ({ debordant = true } = {}) => {
 };
 
 /**
- * Lignes rendues avec la troncature « … » d'origine.
+ * Lignes VISIBLES rendues avec la troncature « … » d'origine.
+ * AFFICHAGE (15/09) : la ligne tronquée reste montée pendant le défilement —
+ * elle donne sa taille au cadre — mais invisible. Seules les visibles comptent.
  * @param {any} tree - Arbre rendu.
  * @returns {any[]} - Noeuds Text repliés.
  */
 const lignesTronquees = (tree) => tree.root.findAll(
-  (/** @type {any} */ n) => n.type === 'Text' && n.props?.ellipsizeMode === 'tail',
+  (/** @type {any} */ n) => n.type === 'Text'
+    && n.props?.ellipsizeMode === 'tail'
+    && StyleSheet.flatten(n.props?.style)?.opacity !== 0,
 );
 
 describe('MARQUEE D4 — le plafond de boucles simultanées', () => {
