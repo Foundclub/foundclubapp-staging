@@ -1,5 +1,6 @@
 import { FlashList } from '@shopify/flash-list';
 import {
+  useCallback,
   useEffect,
   useMemo,
   useRef,
@@ -88,6 +89,7 @@ function Messaging({ navigation, route }) {
     fetchNextPage,
     hasNextPage,
     isFetching,
+    isFetchingNextPage,
     isLoading,
     refetch,
   } = useGetChats({
@@ -95,6 +97,25 @@ function Messaging({ navigation, route }) {
     currentUserId: userData?.documentId,
     currentUserTeamIds: safeTeamIds,
   });
+
+  // MSG2 — l indicateur « tirer pour rafraichir » ne suit QUE le geste de tirer.
+  // Branche sur `isFetching`, il s allumait a chaque chargement de fond (page
+  // suivante, relecture apres lecture d un fil, retour au premier plan) et
+  // poussait la liste sans que personne n ait tire.
+  const [isPullRefreshing, setIsPullRefreshing] = useState(false);
+  const handlePullRefresh = useCallback(async () => {
+    setIsPullRefreshing(true);
+    try {
+      await refetch();
+    } finally {
+      setIsPullRefreshing(false);
+    }
+  }, [refetch]);
+  // Jamais une page de plus pendant qu une page charge : react-query annulerait
+  // l appel en vol pour en relancer un.
+  const handleEndReached = useCallback(() => {
+    if (hasNextPage && !isFetchingNextPage) fetchNextPage();
+  }, [fetchNextPage, hasNextPage, isFetchingNextPage]);
 
   const {
     archiveChatAsync, getConversationName, getUnreadStatus,
@@ -860,10 +881,10 @@ function Messaging({ navigation, route }) {
                     data={filteredChats}
                     keyExtractor={(item) => item.documentId}
                     ListEmptyComponent={renderEmptyList}
-                    onEndReached={() => hasNextPage && fetchNextPage()}
+                    onEndReached={handleEndReached}
                     onEndReachedThreshold={0.5}
-                    onRefresh={refetch}
-                    refreshing={isLoading}
+                    onRefresh={handlePullRefresh}
+                    refreshing={isPullRefreshing}
                     renderItem={renderChat}
                     showsVerticalScrollIndicator={false}
                   />
@@ -881,10 +902,10 @@ function Messaging({ navigation, route }) {
                   data={filteredChats}
                   keyExtractor={(item) => item.documentId}
                   ListEmptyComponent={renderEmptyList}
-                  onEndReached={() => hasNextPage && fetchNextPage()}
+                  onEndReached={handleEndReached}
                   onEndReachedThreshold={0.5}
-                  onRefresh={refetch}
-                  refreshing={isFetching && !isLoading}
+                  onRefresh={handlePullRefresh}
+                  refreshing={isPullRefreshing}
                   renderItem={renderChat}
                   showsVerticalScrollIndicator={false}
                 />
