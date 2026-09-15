@@ -1,10 +1,13 @@
 /* eslint-disable import/order, perfectionist/sort-imports */
 import { useMutation, useQuery } from '@tanstack/react-query';
+import i18next from 'i18next';
 import { useCallback, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Alert, ScrollView, Text, View,
 } from 'react-native';
 
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -45,6 +48,7 @@ import LinksPlatform from '@/platform/links';
 function DeclarePaymentModal({
   isLoading, methods, onClose, onSelect,
 }) {
+  const { t } = useTranslation();
   const { Fonts, Spaces } = useTheme();
 
   return (
@@ -57,8 +61,15 @@ function DeclarePaymentModal({
       webPresentation="dialog"
     >
       <View style={Spaces.gap[licenseSpacing.fieldGap]}>
-        <Text style={[Fonts.h3, Fonts.neutral00]}>Paiement hors app</Text>
-        <Text style={[Fonts.p2, Fonts.neutral200]}>Choisis le moyen utilise pour prevenir le club.</Text>
+        <Text style={[Fonts.h3, Fonts.neutral00]}>
+          {t('publicLicensePayment.declareModal.title', 'Paiement hors app')}
+        </Text>
+        <Text style={[Fonts.p2, Fonts.neutral200]}>
+          {t(
+            'publicLicensePayment.declareModal.description',
+            'Choisis le moyen utilise pour prevenir le club.',
+          )}
+        </Text>
         {methods.map((method) => (
           <Button
             isLoading={isLoading}
@@ -79,6 +90,7 @@ function DeclarePaymentModal({
  * @param root0.route
  */
 function PublicLicensePayment({ route }) {
+  const { t } = useTranslation();
   const {
     ApplicationStyle, Colors, Fonts, Spaces,
   } = useTheme();
@@ -121,11 +133,24 @@ function PublicLicensePayment({ route }) {
 
   const openCheckout = useCallback((provider) => {
     if (isCampaignPaused) {
-      Alert.alert('Campagne en pause', 'Cette campagne est temporairement suspendue. Le paiement reprendra quand le club la rouvrira.');
+      Alert.alert(i18next.t(
+        'publicLicensePayment.alerts.paused.title',
+        'Campagne en pause',
+      ), i18next.t(
+        'publicLicensePayment.alerts.paused.message',
+        'Cette campagne est temporairement suspendue. Le paiement reprendra quand le club la '
+          + 'rouvrira.',
+      ));
       return;
     }
     checkoutMutation.mutate(provider, {
-      onError: (error) => Alert.alert('Paiement indisponible', error?.message || 'Aucun lien de paiement configure.'),
+      onError: (error) => Alert.alert(i18next.t(
+        'publicLicensePayment.unavailable.title',
+        'Paiement indisponible',
+      ), error?.message || i18next.t(
+        'publicLicensePayment.alerts.checkoutError.noLink',
+        'Aucun lien de paiement configure.',
+      )),
       onSuccess: async (result) => {
         if (result?.checkoutUrl) {
           await LinksPlatform.openUrl(result.checkoutUrl);
@@ -139,7 +164,13 @@ function PublicLicensePayment({ route }) {
       onSuccess: () => {
         setDeclareModalVisible(false);
         query.refetch();
-        Alert.alert('Déclaration envoyée', 'Le club devra valider ce paiement.');
+        Alert.alert(i18next.t(
+          'publicLicensePayment.alerts.declared.title',
+          'Déclaration envoyée',
+        ), i18next.t(
+          'publicLicensePayment.alerts.declared.message',
+          'Le club devra valider ce paiement.',
+        ));
       },
     });
   }, [declareMutation, query]);
@@ -148,8 +179,11 @@ function PublicLicensePayment({ route }) {
     return (
       <ScreenContainer bottomInsetMode="screen" withHeaderPadding>
         <LicenseEmptyState
-          description="Le lien de paiement est incomplet."
-          title="Lien invalide"
+          description={t(
+            'publicLicensePayment.invalidLink.description',
+            'Le lien de paiement est incomplet.',
+          )}
+          title={t('publicLicensePayment.invalidLink.title', 'Lien invalide')}
         />
       </ScreenContainer>
     );
@@ -159,8 +193,11 @@ function PublicLicensePayment({ route }) {
     return (
       <ScreenContainer bottomInsetMode="screen" withHeaderPadding>
         <LicenseEmptyState
-          description="On récupère les informations de paiement."
-          title="Chargement"
+          description={t(
+            'publicLicensePayment.loading.description',
+            'On récupère les informations de paiement.',
+          )}
+          title={t('publicLicensePayment.loading.title', 'Chargement')}
         />
       </ScreenContainer>
     );
@@ -170,9 +207,21 @@ function PublicLicensePayment({ route }) {
     return (
       <ScreenContainer bottomInsetMode="screen" withHeaderPadding>
         <LicenseEmptyState
-          action={<Button onPress={query.refetch} title="Réessayer" variant="Secondary" />}
-          description="Impossible de charger ce lien de paiement pour le moment."
-          title="Paiement indisponible"
+          action={(
+            <Button
+              onPress={query.refetch}
+              title={t(
+                'publicLicensePayment.error.retry',
+                'Réessayer',
+              )}
+              variant="Secondary"
+            />
+)}
+          description={t(
+            'publicLicensePayment.error.description',
+            'Impossible de charger ce lien de paiement pour le moment.',
+          )}
+          title={t('publicLicensePayment.unavailable.title', 'Paiement indisponible')}
         />
       </ScreenContainer>
     );
@@ -182,8 +231,11 @@ function PublicLicensePayment({ route }) {
     return (
       <ScreenContainer bottomInsetMode="screen" withHeaderPadding>
         <LicenseEmptyState
-          description="Ce lien est introuvable ou n est plus disponible."
-          title="Paiement indisponible"
+          description={t(
+            'publicLicensePayment.notFound.description',
+            'Ce lien est introuvable ou n est plus disponible.',
+          )}
+          title={t('publicLicensePayment.unavailable.title', 'Paiement indisponible')}
         />
       </ScreenContainer>
     );
@@ -202,85 +254,124 @@ function PublicLicensePayment({ route }) {
         >
           <View style={Spaces.gap[licenseSpacing.titleGap]}>
             <LicenseStatusChip status={payment?.status} />
-            <Text style={[Fonts.h2, Fonts.neutral00]}>Paiement cotisation</Text>
+            <Text style={[Fonts.h2, Fonts.neutral00]}>
+              {t('publicLicensePayment.hero.title', 'Paiement cotisation')}
+            </Text>
             <Text style={[Fonts.p2, Fonts.neutral200]}>
-              {payment?.memberName || 'Membre'}
+              {payment?.memberName || t('publicLicensePayment.hero.memberFallback', 'Membre')}
               {' '}
               -
               {' '}
-              {payment?.clubName || 'Club'}
+              {payment?.clubName || t('publicLicensePayment.hero.clubFallback', 'Club')}
             </Text>
           </View>
         </View>
         <LicenseCard>
           <LicenseMetricRow
             items={[
-              { label: 'Total', value: formatLicenseMoney(payment?.totalDueCents, currency) },
-              { label: 'Paye', value: formatLicenseMoney(payment?.totalPaidCents, currency) },
-              { label: 'Reste', tone, value: formatLicenseMoney(payment?.remainingCents, currency) },
+              {
+                label: t(
+                  'publicLicensePayment.metrics.total',
+                  'Total',
+                ),
+                value: formatLicenseMoney(payment?.totalDueCents, currency),
+              },
+              {
+                label: t(
+                  'publicLicensePayment.metrics.paid',
+                  'Paye',
+                ),
+                value: formatLicenseMoney(payment?.totalPaidCents, currency),
+              },
+              {
+                label: t(
+                  'publicLicensePayment.metrics.remaining',
+                  'Reste',
+                ),
+                tone,
+                value: formatLicenseMoney(payment?.remainingCents, currency),
+              },
             ]}
           />
         </LicenseCard>
-        <LicenseSectionHeader title="Campagne" />
+        <LicenseSectionHeader title={t('publicLicensePayment.campaign.title', 'Campagne')} />
         <LicenseCard variant="muted">
           <View style={Spaces.gap[licenseSpacing.actionGap]}>
-            <Text style={[Fonts.p1Bold, Fonts.neutral00]}>{payment?.seasonLabel || 'Cotisation en cours'}</Text>
+            <Text style={[Fonts.p1Bold, Fonts.neutral00]}>
+              {payment?.seasonLabel || t(
+                'publicLicensePayment.campaign.seasonFallback',
+                'Cotisation en cours',
+              )}
+            </Text>
             {payment?.description ? <Text style={[Fonts.p2, Fonts.neutral200]}>{payment.description}</Text> : null}
             <Text style={[Fonts.p3, Fonts.neutral200]}>
-              Date limite:
+              {t('publicLicensePayment.campaign.deadline', 'Date limite:')}
               {' '}
-              {payment?.dueDate || 'Non définie'}
+              {payment?.dueDate || t('publicLicensePayment.campaign.deadlineNotSet', 'Non définie')}
             </Text>
             {payment?.teamName ? (
               <Text style={[Fonts.p3, Fonts.neutral200]}>
-                Equipe:
+                {t('publicLicensePayment.campaign.team', 'Equipe:')}
                 {' '}
                 {payment.teamName}
               </Text>
             ) : null}
           </View>
         </LicenseCard>
-        <LicenseSectionHeader title="Echeancier" />
+        <LicenseSectionHeader title={t('publicLicensePayment.installments.title', 'Echeancier')} />
         <LicenseInstallmentList currency={currency} installments={payment?.installments || []} />
         {isCampaignPaused ? (
           <LicenseCard variant="muted">
             <View style={Spaces.gap[licenseSpacing.actionGap]}>
-              <Text style={[Fonts.p1Bold, Fonts.neutral00]}>Campagne temporairement suspendue</Text>
+              <Text style={[Fonts.p1Bold, Fonts.neutral00]}>
+                {t('publicLicensePayment.paused.title', 'Campagne temporairement suspendue')}
+              </Text>
               <Text style={[Fonts.p2, Fonts.neutral200]}>
-                Le dossier reste consultable, mais les paiements et déclarations sont bloques tant que le club n a pas repris cette campagne.
+                {t(
+                  'publicLicensePayment.paused.description',
+                  'Le dossier reste consultable, mais les paiements et déclarations sont '
+                    + 'bloques tant que le club n a pas repris cette campagne.',
+                )}
               </Text>
             </View>
           </LicenseCard>
         ) : null}
         <LicenseSectionHeader
-          description="Choisis le moyen propose par le club."
-          title="Regler"
+          description={t(
+            'publicLicensePayment.pay.description',
+            'Choisis le moyen propose par le club.',
+          )}
+          title={t('publicLicensePayment.pay.title', 'Regler')}
         />
         {!isCampaignPaused && paymentModes.helloasso ? (
           <Button
             isLoading={checkoutMutation.isPending}
             onPress={() => openCheckout('helloasso')}
-            title="Payer avec HelloAsso"
+            title={t('publicLicensePayment.pay.helloAsso', 'Payer avec HelloAsso')}
           />
         ) : null}
         {!isCampaignPaused && paymentModes.external_link ? (
           <Button
             isLoading={checkoutMutation.isPending}
             onPress={() => openCheckout('external')}
-            title="Ouvrir le lien externe du club"
+            title={t('publicLicensePayment.pay.externalLink', 'Ouvrir le lien externe du club')}
             variant="Secondary"
           />
         ) : null}
         {!isCampaignPaused && canDeclareOfflinePayment ? (
           <Button
             onPress={() => setDeclareModalVisible(true)}
-            title="Déclarer un paiement hors app"
+            title={t('publicLicensePayment.pay.declareOffline', 'Déclarer un paiement hors app')}
             variant="Secondary"
           />
         ) : null}
         {offlineInstructions.length ? (
           <>
-            <LicenseSectionHeader title="Instructions du club" />
+            <LicenseSectionHeader title={t(
+              'publicLicensePayment.instructions.title',
+              'Instructions du club',
+            )}
+            />
             {offlineInstructions.map((instruction) => (
               <LicenseCard key={instruction.label} variant="muted">
                 <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{instruction.label}</Text>
@@ -289,7 +380,11 @@ function PublicLicensePayment({ route }) {
             ))}
           </>
         ) : null}
-        <LicenseSectionHeader title="Documents demandes" />
+        <LicenseSectionHeader title={t(
+          'publicLicensePayment.documents.title',
+          'Documents demandes',
+        )}
+        />
         {(payment?.documentRequests || []).length ? (
           <View style={Spaces.gap[licenseSpacing.listGap]}>
             {(payment?.documentRequests || []).map((request) => (
@@ -303,10 +398,25 @@ function PublicLicensePayment({ route }) {
                   }}
                   >
                     <View style={[Spaces.gap[4], { flex: 1 }]}>
-                      <Text style={[Fonts.p1Bold, Fonts.neutral00]}>{request.name || 'Document'}</Text>
+                      <Text style={[Fonts.p1Bold, Fonts.neutral00]}>
+                        {request.name || t(
+                          'publicLicensePayment.documents.nameFallback',
+                          'Document',
+                        )}
+                      </Text>
                       <Text style={[Fonts.p3, Fonts.neutral200]}>
-                        {request.required === false ? 'Facultatif' : 'Obligatoire'}
-                        {request.dueDate ? ` - Dépôt avant ${request.dueDate}` : ''}
+                        {request.required === false ? t(
+                          'publicLicensePayment.documents.optional',
+                          'Facultatif',
+                        ) : t(
+                          'publicLicensePayment.documents.required',
+                          'Obligatoire',
+                        )}
+                        {request.dueDate ? t(
+                          'publicLicensePayment.documents.dueBefore',
+                          ' - Dépôt avant {{dueDate}}',
+                          { dueDate: request.dueDate, ...SANS_ECHAPPEMENT },
+                        ) : ''}
                       </Text>
                     </View>
                     <LicenseStatusChip status={request.status || 'missing'} />
@@ -318,20 +428,41 @@ function PublicLicensePayment({ route }) {
           </View>
         ) : (
           <LicenseEmptyState
-            description="Aucune pièce supplémentaire n est associée à ce lien."
-            title="Aucun document"
+            description={t(
+              'publicLicensePayment.documents.empty.description',
+              'Aucune pièce supplémentaire n est associée à ce lien.',
+            )}
+            title={t('publicLicensePayment.documents.empty.title', 'Aucun document')}
           />
         )}
-        <LicenseSectionHeader title="Reçus déjà emis" />
+        <LicenseSectionHeader title={t('publicLicensePayment.receipts.title', 'Reçus déjà emis')} />
         {(payment?.receipts || []).length ? (
           <View style={Spaces.gap[licenseSpacing.listGap]}>
             {(payment?.receipts || []).map((receipt) => (
               <LicenseCard key={receipt.documentId || receipt.id || receipt.receiptNumber} variant="muted">
                 <LicenseMetricRow
                   items={[
-                    { label: 'Numero', value: receipt.receiptNumber || '-' },
-                    { label: 'Montant', value: formatLicenseMoney(receipt.amountCents, currency) },
-                    { label: 'Statut', value: receipt.status || '-' },
+                    {
+                      label: t(
+                        'publicLicensePayment.receipts.number',
+                        'Numero',
+                      ),
+                      value: receipt.receiptNumber || '-',
+                    },
+                    {
+                      label: t(
+                        'publicLicensePayment.receipts.amount',
+                        'Montant',
+                      ),
+                      value: formatLicenseMoney(receipt.amountCents, currency),
+                    },
+                    {
+                      label: t(
+                        'publicLicensePayment.receipts.status',
+                        'Statut',
+                      ),
+                      value: receipt.status || '-',
+                    },
                   ]}
                 />
               </LicenseCard>
@@ -339,8 +470,11 @@ function PublicLicensePayment({ route }) {
           </View>
         ) : (
           <LicenseEmptyState
-            description="Le reçu apparaîtra après confirmation du paiement par le club ou le prestataire."
-            title="Pas encore de reçu"
+            description={t(
+              'publicLicensePayment.receipts.empty.description',
+              'Le reçu apparaîtra après confirmation du paiement par le club ou le prestataire.',
+            )}
+            title={t('publicLicensePayment.receipts.empty.title', 'Pas encore de reçu')}
           />
         )}
       </ScrollView>

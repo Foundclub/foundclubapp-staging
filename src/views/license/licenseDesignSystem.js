@@ -1,5 +1,8 @@
+import i18next from 'i18next';
+import { useTranslation } from 'react-i18next';
 import { Pressable, Text, View } from 'react-native';
 
+import localeDesFormats from '@/theme/strings/localeDesFormats';
 import useTheme from '@/theme/themeContext';
 
 export const licenseSpacing = {
@@ -23,52 +26,135 @@ export const licenseRadius = {
 };
 
 export const licenseStatusLabels = {
-  active: 'Active',
-  cancelled: 'Annulee',
-  checkout_failed: 'Test checkout en erreur',
-  closed: 'Cloturee',
-  confirmed: 'Valide',
-  credentials_missing: 'Configuration incomplète',
-  disabled: 'Desactive',
-  disputed: 'Litige',
-  draft: 'Brouillon',
-  failed: 'Echoue',
-  issued: 'Emis',
-  link_missing: 'Lien manquant',
-  manual_review: 'A valider',
-  missing: 'Manquant',
-  not_configured: 'A configurer',
-  not_due: 'Non due',
-  oauth_failed: 'OAuth en erreur',
-  overdue: 'En retard',
-  paid: 'Payee',
-  partial: 'Partiel',
-  partially_refunded: 'Remboursement partiel',
-  pending: 'En attente',
-  ready: 'Pret',
-  refunded: 'Remboursee',
-  refused: 'Refuse',
-  rejected: 'Rejete',
-  scheduled: 'Programmee',
-  submitted: 'Depose',
-  to_replace: 'A remplacer',
-  validated: 'Valide',
-  waived: 'Exemptee',
-  webhook_pending: 'Webhook à confirmer',
-  webhook_stale: 'Webhook à vérifier',
+  get active() {
+    return i18next.t('licenseDesignSystem.statusLabels.active', 'Active');
+  },
+  get cancelled() {
+    return i18next.t('licenseDesignSystem.statusLabels.cancelled', 'Annulee');
+  },
+  get checkout_failed() {
+    return i18next.t('licenseDesignSystem.statusLabels.checkoutFailed', 'Test checkout en erreur');
+  },
+  get closed() {
+    return i18next.t('licenseDesignSystem.statusLabels.closed', 'Cloturee');
+  },
+  get confirmed() {
+    return i18next.t('licenseDesignSystem.statusLabels.confirmed', 'Valide');
+  },
+  get credentials_missing() {
+    return i18next.t(
+      'licenseDesignSystem.statusLabels.credentialsMissing',
+      'Configuration incomplète',
+    );
+  },
+  get disabled() {
+    return i18next.t('licenseDesignSystem.statusLabels.disabled', 'Desactive');
+  },
+  get disputed() {
+    return i18next.t('licenseDesignSystem.statusLabels.disputed', 'Litige');
+  },
+  get draft() {
+    return i18next.t('licenseDesignSystem.statusLabels.draft', 'Brouillon');
+  },
+  get failed() {
+    return i18next.t('licenseDesignSystem.statusLabels.failed', 'Echoue');
+  },
+  get issued() {
+    return i18next.t('licenseDesignSystem.statusLabels.issued', 'Emis');
+  },
+  get link_missing() {
+    return i18next.t('licenseDesignSystem.statusLabels.linkMissing', 'Lien manquant');
+  },
+  get manual_review() {
+    return i18next.t('licenseDesignSystem.statusLabels.manualReview', 'A valider');
+  },
+  get missing() {
+    return i18next.t('licenseDesignSystem.statusLabels.missing', 'Manquant');
+  },
+  get not_configured() {
+    return i18next.t('licenseDesignSystem.statusLabels.notConfigured', 'A configurer');
+  },
+  get not_due() {
+    return i18next.t('licenseDesignSystem.statusLabels.notDue', 'Non due');
+  },
+  get oauth_failed() {
+    return i18next.t('licenseDesignSystem.statusLabels.oauthFailed', 'OAuth en erreur');
+  },
+  get overdue() {
+    return i18next.t('licenseDesignSystem.statusLabels.overdue', 'En retard');
+  },
+  get paid() {
+    return i18next.t('licenseDesignSystem.statusLabels.paid', 'Payee');
+  },
+  get partial() {
+    return i18next.t('licenseDesignSystem.statusLabels.partial', 'Partiel');
+  },
+  get partially_refunded() {
+    return i18next.t('licenseDesignSystem.statusLabels.partiallyRefunded', 'Remboursement partiel');
+  },
+  get pending() {
+    return i18next.t('licenseDesignSystem.statusLabels.pending', 'En attente');
+  },
+  get ready() {
+    return i18next.t('licenseDesignSystem.statusLabels.ready', 'Pret');
+  },
+  get refunded() {
+    return i18next.t('licenseDesignSystem.statusLabels.refunded', 'Remboursee');
+  },
+  get refused() {
+    return i18next.t('licenseDesignSystem.statusLabels.refused', 'Refuse');
+  },
+  get rejected() {
+    return i18next.t('licenseDesignSystem.statusLabels.rejected', 'Rejete');
+  },
+  get scheduled() {
+    return i18next.t('licenseDesignSystem.statusLabels.scheduled', 'Programmee');
+  },
+  get submitted() {
+    return i18next.t('licenseDesignSystem.statusLabels.submitted', 'Depose');
+  },
+  get to_replace() {
+    return i18next.t('licenseDesignSystem.statusLabels.toReplace', 'A remplacer');
+  },
+  get validated() {
+    return i18next.t('licenseDesignSystem.statusLabels.validated', 'Valide');
+  },
+  get waived() {
+    return i18next.t('licenseDesignSystem.statusLabels.waived', 'Exemptee');
+  },
+  get webhook_pending() {
+    return i18next.t('licenseDesignSystem.statusLabels.webhookPending', 'Webhook à confirmer');
+  },
+  get webhook_stale() {
+    return i18next.t('licenseDesignSystem.statusLabels.webhookStale', 'Webhook à vérifier');
+  },
 };
 
 // ⛔ Les CLES sont les valeurs de `paymentModes` en base. Seuls les LIBELLES
 // changent ici, pour porter leurs accents (defaut de recette du 2026-08-07).
 export const paymentModeLabels = {
-  bank_transfer: 'Virement',
-  card_physical: 'Carte au club',
-  cash: 'Espèces',
-  check: 'Chèque',
-  custom: 'Autre moyen',
-  external_link: 'Lien externe club',
+  get bank_transfer() {
+    return i18next.t('licenseDesignSystem.paymentModes.bankTransfer', 'Virement');
+  },
+  get card_physical() {
+    return i18next.t('licenseDesignSystem.paymentModes.cardPhysical', 'Carte au club');
+  },
+  get cash() {
+    return i18next.t('licenseDesignSystem.paymentModes.cash', 'Espèces');
+  },
+  get check() {
+    return i18next.t('licenseDesignSystem.paymentModes.check', 'Chèque');
+  },
+  get custom() {
+    return i18next.t('licenseDesignSystem.paymentModes.custom', 'Autre moyen');
+  },
+  get external_link() {
+    return i18next.t('licenseDesignSystem.paymentModes.externalLink', 'Lien externe club');
+  },
   helloasso: 'HelloAsso',
-  stripe: 'Carte en ligne',
+  get stripe() {
+    return i18next.t('licenseDesignSystem.paymentModes.stripe', 'Carte en ligne');
+  },
 };
 
 export const paymentInstructionFields = {
@@ -80,10 +166,10 @@ export const paymentInstructionFields = {
 
 export const manualPaymentMethods = ['cash', 'check', 'bank_transfer', 'card_physical', 'custom'];
 
-export const formatLicenseMoney = (value = 0, currency = 'EUR') => new Intl.NumberFormat('fr-FR', {
-  currency,
-  style: 'currency',
-}).format((Number(value) || 0) / 100);
+export const formatLicenseMoney = (value = 0, currency = 'EUR') => new Intl.NumberFormat(
+  localeDesFormats(),
+  { currency, style: 'currency' },
+).format((Number(value) || 0) / 100);
 
 export const getInstallmentOrder = (installment = {}) => installment.installmentOrder || installment.order || 1;
 
@@ -111,17 +197,48 @@ export const createHelloAssoDraft = (snapshot) => ({
 export const describeHelloAssoReadiness = (snapshot) => {
   const readiness = String(snapshot?.readiness || '').trim();
   return {
-    checkout_failed: 'Le test de checkout HelloAsso a échoué. Vérifie le slug organisation et les droits API.',
-    credentials_missing: 'Renseigne le slug, le client id et le client secret avant publication.',
-    disabled: 'HelloAsso est désactivé pour ce scope.',
-    oauth_failed: 'OAuth HelloAsso en erreur. Vérifie le client id et le client secret.',
-    pending: 'La configuration HelloAsso existe, mais elle n a pas encore été vérifiée.',
-    ready: 'Connexion HelloAsso validée. La campagne peut utiliser le paiement in-app.',
-    webhook_pending: 'Connexion validée. Le premier paiement doit encore confirmer le webhook.',
-    webhook_stale: 'Connexion validée, mais aucun webhook récent n a été vu. Un test de paiement est recommandé.',
+    checkout_failed: i18next.t(
+      'licenseDesignSystem.helloAsso.checkoutFailed',
+      'Le test de checkout HelloAsso a échoué. Vérifie le slug organisation et les droits API.',
+    ),
+    credentials_missing: i18next.t(
+      'licenseDesignSystem.helloAsso.credentialsMissing',
+      'Renseigne le slug, le client id et le client secret avant publication.',
+    ),
+    disabled: i18next.t(
+      'licenseDesignSystem.helloAsso.disabled',
+      'HelloAsso est désactivé pour ce scope.',
+    ),
+    oauth_failed: i18next.t(
+      'licenseDesignSystem.helloAsso.oauthFailed',
+      'OAuth HelloAsso en erreur. Vérifie le client id et le client secret.',
+    ),
+    pending: i18next.t(
+      'licenseDesignSystem.helloAsso.pending',
+      'La configuration HelloAsso existe, mais elle n a pas encore été vérifiée.',
+    ),
+    ready: i18next.t(
+      'licenseDesignSystem.helloAsso.ready',
+      'Connexion HelloAsso validée. La campagne peut utiliser le paiement in-app.',
+    ),
+    webhook_pending: i18next.t(
+      'licenseDesignSystem.helloAsso.webhookPending',
+      'Connexion validée. Le premier paiement doit encore confirmer le webhook.',
+    ),
+    webhook_stale: i18next.t(
+      'licenseDesignSystem.helloAsso.webhookStale',
+      'Connexion validée, mais aucun webhook récent n a été vu. Un test de paiement est '
+        + 'recommandé.',
+    ),
   }[readiness] || (readiness
-    ? 'La configuration HelloAsso demande une vérification supplémentaire.'
-    : 'La connexion HelloAsso n est pas encore configurée pour ce club.');
+    ? i18next.t(
+      'licenseDesignSystem.helloAsso.needsReview',
+      'La configuration HelloAsso demande une vérification supplémentaire.',
+    )
+    : i18next.t(
+      'licenseDesignSystem.helloAsso.notConfigured',
+      'La connexion HelloAsso n est pas encore configurée pour ce club.',
+    ));
 };
 
 export const normalizePaymentModes = (raw = {}) => {
@@ -316,6 +433,7 @@ export function LicenseSectionHeader({ description, title }) {
  * @param root0.status
  */
 export function LicenseStatusChip({ status }) {
+  const { t } = useTranslation();
   const { Colors, Fonts } = useTheme();
   const tone = getLicenseStatusTone(Colors, status);
 
@@ -330,7 +448,12 @@ export function LicenseStatusChip({ status }) {
       paddingVertical: 4,
     }}
     >
-      <Text style={[Fonts.p3Bold, { color: tone }]}>{licenseStatusLabels[status] || status || 'Inconnu'}</Text>
+      <Text style={[Fonts.p3Bold, { color: tone }]}>
+        {licenseStatusLabels[status] || status || t(
+          'licenseDesignSystem.statusChip.unknown',
+          'Inconnu',
+        )}
+      </Text>
     </View>
   );
 }
@@ -385,13 +508,17 @@ export function LicenseEmptyState({ action, description, title }) {
  * @param root0.installments
  */
 export function LicenseInstallmentList({ currency = 'EUR', installments = [] }) {
+  const { t } = useTranslation();
   const { Colors, Fonts, Spaces } = useTheme();
 
   if (!installments.length) {
     return (
       <LicenseEmptyState
-        description="Aucune échéance détaillée n est encore disponible."
-        title="Échéancier indisponible"
+        description={t(
+          'licenseDesignSystem.installments.empty.description',
+          'Aucune échéance détaillée n est encore disponible.',
+        )}
+        title={t('licenseDesignSystem.installments.empty.title', 'Échéancier indisponible')}
       />
     );
   }
@@ -411,7 +538,7 @@ export function LicenseInstallmentList({ currency = 'EUR', installments = [] }) 
               }}
               >
                 <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
-                  Échéance
+                  {t('licenseDesignSystem.installments.item', 'Échéance')}
                   {' '}
                   {getInstallmentOrder(installment)}
                 </Text>
@@ -420,7 +547,10 @@ export function LicenseInstallmentList({ currency = 'EUR', installments = [] }) 
                 </Text>
               </View>
               <Text style={[Fonts.p3, Fonts.neutral200]}>
-                {installment.dueDate || 'Date non définie'}
+                {installment.dueDate || t(
+                  'licenseDesignSystem.installments.noDate',
+                  'Date non définie',
+                )}
                 {' '}
                 -
                 {' '}

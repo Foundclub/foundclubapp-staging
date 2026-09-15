@@ -10,10 +10,13 @@
 // 🎯 UN GESTE, UNE FEUILLE. Et « declarer n est pas payer » : le solde ne bouge
 // pas, la ligne passe en tiretee, le club verifie.
 
+import i18next from 'i18next';
 import { useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Pressable, Text, View } from 'react-native';
 
 import { withAlpha } from '@/theme/colors';
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -51,17 +54,41 @@ export const getPayableChoices = (assignment) => {
     const dueDate = formatMemberDate(next.dueDate, { withYear: false });
     choices.push({
       amountCents: nextRemaining,
-      hint: `Il restera ${formatLicenseMoney(remaining - nextRemaining, currency)} après`,
+      hint: i18next.t(
+        'memberLicenseSheets.choices.remainingAfter',
+        'Il restera {{amount}} après',
+        { amount: formatLicenseMoney(remaining - nextRemaining, currency), ...SANS_ECHAPPEMENT },
+      ),
       key: `installment-${installmentOrderOf(next)}`,
-      title: dueDate ? `L'échéance du ${dueDate}` : `Échéance ${installmentOrderOf(next)}`,
+      title: dueDate ? i18next.t(
+        'memberLicenseSheets.choices.instalmentOn',
+        "L'échéance du {{dueDate}}",
+        { dueDate, ...SANS_ECHAPPEMENT },
+      ) : i18next.t(
+        'memberLicenseSheets.choices.instalmentNumber',
+        'Échéance {{order}}',
+        { order: installmentOrderOf(next), ...SANS_ECHAPPEMENT },
+      ),
     });
   }
   if (remaining > 0) {
     choices.push({
       amountCents: remaining,
-      hint: choices.length ? 'Plus rien ne restera à payer' : 'Le montant total restant',
+      hint: choices.length ? i18next.t(
+        'memberLicenseSheets.choices.nothingLeft',
+        'Plus rien ne restera à payer',
+      ) : i18next.t(
+        'memberLicenseSheets.choices.totalRemaining',
+        'Le montant total restant',
+      ),
       key: 'all',
-      title: choices.length ? 'Tout solder' : 'Régler ma cotisation',
+      title: choices.length ? i18next.t(
+        'memberLicenseSheets.choices.payAll',
+        'Tout solder',
+      ) : i18next.t(
+        'memberLicenseSheets.choices.payMyFee',
+        'Régler ma cotisation',
+      ),
     });
   }
   return choices;
@@ -227,6 +254,7 @@ export const glyphForPaymentMethod = (method) => METHOD_GLYPHS[method] || 'euroC
 export function PayLicenseSheet({
   assignment, isLoading, onClose, onConfirm, onlineMethods,
 }) {
+  const { t } = useTranslation();
   const { Fonts } = useTheme();
   const type = memberType(Fonts);
   const currency = currencyOf(assignment);
@@ -247,7 +275,7 @@ export function PayLicenseSheet({
       <View style={{ gap: memberSpacing.section }}>
         <SheetHeader
           subtitle={[clubName, assignment?.campaign?.name].filter(Boolean).join(' · ')}
-          title="Payer ma cotisation"
+          title={t('memberLicenseSheets.pay.title', 'Payer ma cotisation')}
         />
         {choices.length > 1 ? (
           <View style={{ gap: memberSpacing.rowGap }}>
@@ -264,7 +292,9 @@ export function PayLicenseSheet({
         ) : null}
         {onlineMethods.length > 1 ? (
           <View style={{ gap: memberSpacing.rowGap }}>
-            <Text style={[type.overline, Fonts.neutral300]}>MOYEN DE PAIEMENT</Text>
+            <Text style={[type.overline, Fonts.neutral300]}>
+              {t('memberLicenseSheets.pay.methodOverline', 'MOYEN DE PAIEMENT')}
+            </Text>
             <View style={{ flexDirection: 'row', gap: memberSpacing.rowGap }}>
               {onlineMethods.map((method) => (
                 <MethodTile
@@ -281,7 +311,11 @@ export function PayLicenseSheet({
         <Button
           isLoading={isLoading}
           onPress={() => onConfirm(choice, provider)}
-          title={`Payer ${formatLicenseMoney(choice?.amountCents || 0, currency)}`}
+          title={t(
+            'memberLicenseSheets.pay.confirm',
+            'Payer {{amount}}',
+            { amount: formatLicenseMoney(choice?.amountCents || 0, currency), ...SANS_ECHAPPEMENT },
+          )}
         />
       </View>
     </BottomModal>
@@ -312,6 +346,7 @@ export function PayLicenseSheet({
 export function DeclareLicensePaymentSheet({
   assignment, isLoading, methods, onClose, onConfirm,
 }) {
+  const { t } = useTranslation();
   const { Fonts } = useTheme();
   const type = memberType(Fonts);
   const currency = currencyOf(assignment);
@@ -330,12 +365,17 @@ export function DeclareLicensePaymentSheet({
     >
       <View style={{ gap: memberSpacing.section }}>
         <SheetHeader
-          subtitle="Le club vérifiera avant de mettre ton solde à jour."
-          title="Déclarer un paiement"
+          subtitle={t(
+            'memberLicenseSheets.declare.subtitle',
+            'Le club vérifiera avant de mettre ton solde à jour.',
+          )}
+          title={t('memberLicenseSheets.declare.title', 'Déclarer un paiement')}
         />
         {choices.length > 1 ? (
           <View style={{ gap: memberSpacing.rowGap }}>
-            <Text style={[type.overline, Fonts.neutral300]}>MONTANT</Text>
+            <Text style={[type.overline, Fonts.neutral300]}>
+              {t('memberLicenseSheets.declare.amountOverline', 'MONTANT')}
+            </Text>
             {choices.map((item) => (
               <AmountChoice
                 choice={item}
@@ -348,7 +388,9 @@ export function DeclareLicensePaymentSheet({
           </View>
         ) : null}
         <View style={{ gap: memberSpacing.rowGap }}>
-          <Text style={[type.overline, Fonts.neutral300]}>COMMENT</Text>
+          <Text style={[type.overline, Fonts.neutral300]}>
+            {t('memberLicenseSheets.declare.methodOverline', 'COMMENT')}
+          </Text>
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: memberSpacing.rowGap }}>
             {methods.map((item) => (
               <MethodTile
@@ -365,7 +407,7 @@ export function DeclareLicensePaymentSheet({
           disabled={!method}
           isLoading={isLoading}
           onPress={() => onConfirm(choice, method)}
-          title="Envoyer au club"
+          title={t('memberLicenseSheets.declare.submit', 'Envoyer au club')}
         />
       </View>
     </BottomModal>
@@ -393,10 +435,14 @@ export function DeclareLicensePaymentSheet({
 export function PayerLinkSheet({
   amountCents, assignment, onClose, onShare,
 }) {
+  const { t } = useTranslation();
   const { Colors, Fonts } = useTheme();
   const type = memberType(Fonts);
   const currency = currencyOf(assignment);
-  const clubName = assignment?.club?.name || assignment?.campaign?.club?.name || 'Ton club';
+  const clubName = assignment?.club?.name || assignment?.campaign?.club?.name || t(
+    'memberLicenseSheets.payer.clubFallback',
+    'Ton club',
+  );
 
   return (
     <BottomModal
@@ -408,11 +454,16 @@ export function PayerLinkSheet({
     >
       <View style={{ gap: memberSpacing.section }}>
         <SheetHeader
-          subtitle="Un parent, un proche, un employeur : la personne paie sans compte FoundClub."
-          title="Faire payer quelqu'un"
+          subtitle={t(
+            'memberLicenseSheets.payer.subtitle',
+            'Un parent, un proche, un employeur : la personne paie sans compte FoundClub.',
+          )}
+          title={t('memberLicenseSheets.payer.title', "Faire payer quelqu'un")}
         />
         <View style={{ gap: memberSpacing.rowGap }}>
-          <Text style={[type.overline, Fonts.neutral300]}>CE QUE LA PERSONNE VERRA</Text>
+          <Text style={[type.overline, Fonts.neutral300]}>
+            {t('memberLicenseSheets.payer.previewOverline', 'CE QUE LA PERSONNE VERRA')}
+          </Text>
           <View style={{
             backgroundColor: Colors.primary800,
             borderColor: withAlpha(Colors.neutral00, 0.08),
@@ -422,19 +473,35 @@ export function PayerLinkSheet({
             padding: memberSpacing.cardPadding,
           }}
           >
-            <Text style={[type.rowTitle, Fonts.neutral00]}>Ta cotisation, et elle seule</Text>
+            <Text style={[type.rowTitle, Fonts.neutral00]}>
+              {t('memberLicenseSheets.payer.previewTitle', 'Ta cotisation, et elle seule')}
+            </Text>
             <Text style={[type.rowState, Fonts.neutral300]}>
-              {`${clubName} · ${assignment?.campaign?.name || 'Cotisation'}`}
+              {`${clubName} · ${assignment?.campaign?.name || t(
+                'memberLicenseSheets.payer.campaignFallback',
+                'Cotisation',
+              )}`}
             </Text>
             <Text style={[type.amountStrong, Fonts.neutral00]}>
               {formatLicenseMoney(amountCents, currency)}
             </Text>
           </View>
           <Text style={[type.rowState, Fonts.neutral300]}>
-            Le lien ne montre ni tes autres cotisations, ni ton compte FoundClub, ni tes messages.
+            {t(
+              'memberLicenseSheets.payer.privacy',
+              'Le lien ne montre ni tes autres cotisations, ni ton compte FoundClub, ni tes '
+                + 'messages.',
+            )}
           </Text>
         </View>
-        <Button icon="share" onPress={onShare} title="Partager le lien" />
+        <Button
+          icon="share"
+          onPress={onShare}
+          title={t(
+            'memberLicenseSheets.payer.share',
+            'Partager le lien',
+          )}
+        />
       </View>
     </BottomModal>
   );

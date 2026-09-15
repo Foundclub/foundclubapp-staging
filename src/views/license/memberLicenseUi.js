@@ -14,6 +14,7 @@
 // React Native l ignorerait EN SILENCE. Les mesures du pack qui tombent dans
 // un trou sont donc ecrites en nombre, jamais en jeton fantome.
 
+import { useTranslation } from 'react-i18next';
 import { Pressable, Text, View } from 'react-native';
 
 import { withAlpha } from '@/theme/colors';
@@ -96,6 +97,7 @@ export const memberType = (Fonts) => ({
  * @returns {import('react').ReactElement}
  */
 export function MemberTopBar({ onBack, onMenu, title }) {
+  const { t } = useTranslation();
   const { ApplicationStyle, Colors, Fonts } = useTheme();
   const type = memberType(Fonts);
 
@@ -122,7 +124,7 @@ export function MemberTopBar({ onBack, onMenu, title }) {
         deja de `ScreenContainer`, elle serait comptee deux fois.
       */}
       <HeaderBackButton
-        accessibilityLabel="Retour"
+        accessibilityLabel={t('memberLicenseUi.topBar.back', 'Retour')}
         onPress={onBack}
         withDefaultMargin={false}
       />
@@ -134,7 +136,7 @@ export function MemberTopBar({ onBack, onMenu, title }) {
       </Text>
       {onMenu ? (
         <Pressable
-          accessibilityLabel="Plus d options"
+          accessibilityLabel={t('memberLicenseUi.topBar.moreOptions', 'Plus d options')}
           accessibilityRole="button"
           // 🎯 MEME GEOMETRIE QUE LA FLECHE : 32 pt visibles, 44 pt touchables.
           // Sans ca, le titre centre se decale de 6 pt vers la gauche.
