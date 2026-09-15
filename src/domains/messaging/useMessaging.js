@@ -119,6 +119,63 @@ export const applyOptimisticChatRead = (oldData, chatDocumentId) => {
   return readPage(oldData);
 };
 
+// MSG2 — pendant ce delai apres un accuse chiffre, l echo de lecture ne relit
+// pas la liste : la replique qui la servirait peut rendre l ANCIEN compte (cache
+// chaud 3 s + jeton de version garde 5 s cote serveur).
+const FRESH_READ_ACK_MS = 10000;
+
+/**
+ * MSG2 — applique le compte que le SERVEUR rend dans l accuse de lecture : le
+ * fil lu prend son compte, la page 1 prend le total (c est la que la pastille
+ * le lit). Sans chiffre, ou sur un accuse NON, rien ne bouge.
+ * 🧨 Le tableau `data` garde son identite quand le compte du fil ne change
+ * pas : une liste dont l identite change relance sa pagination.
+ * @param {any} oldData - La page (ou les pages) en cache.
+ * @param {string} chatDocumentId - Le fil qui vient d etre lu.
+ * @param {any} ack - La reponse du serveur a `read-message`.
+ * @returns {any} Les donnees, comptes du serveur appliques.
+ */
+export const applyServerChatReadCounts = (oldData, chatDocumentId, ack) => {
+  const total = Number(ack?.unreadTotal);
+  if (!oldData || typeof oldData !== 'object' || !ack?.ok || !Number.isFinite(total)) {
+    return oldData;
+  }
+
+  const safeChatId = normalizeChatId(chatDocumentId);
+  const chatCount = Number.isFinite(Number(ack?.unreadCount)) ? Number(ack.unreadCount) : 0;
+
+  /**
+   * Applique les comptes du serveur a une page.
+   * @param {any} page - Une page de la liste.
+   * @param {number} index - Sa position.
+   * @returns {any} La page, comptes du serveur appliques.
+   */
+  const readPage = (page, index) => {
+    const chats = Array.isArray(page?.data) ? page.data : null;
+    let changed = false;
+    const nextChats = chats
+      ? chats.map((/** @type {any} */ chat) => {
+        if (!safeChatId || normalizeChatId(chat?.documentId) !== safeChatId) return chat;
+        if (Number(chat?.unreadCount) === chatCount) return chat;
+        changed = true;
+        return { ...chat, unreadCount: chatCount };
+      })
+      : null;
+
+    return {
+      ...page,
+      ...(chats ? { data: changed ? nextChats : chats } : {}),
+      ...(index === 0 ? { meta: { ...(page?.meta || {}), unreadTotal: total } } : {}),
+    };
+  };
+
+  if (Array.isArray(oldData?.pages)) {
+    return { ...oldData, pages: oldData.pages.map(readPage) };
+  }
+
+  return readPage(oldData, 0);
+};
+
 /**
  * @param {unknown} value
  * @returns {string}
@@ -218,6 +275,8 @@ const useMessaging = (currentChatId) => {
   const pendingTimeoutsRef = useRef(
     /** @type {Map<string, ReturnType<typeof setTimeout>>} */ (new Map()),
   );
+  // MSG2 — quand le serveur a rendu, pour chaque fil, un compte FRAIS.
+  const freshReadAckAtRef = useRef(/** @type {Map<string, number>} */ (new Map()));
   const safeTeamIds = useMemo(() => Array.from(
     new Set(
       (Array.isArray(allMyTeams) ? allMyTeams : [])
@@ -549,7 +608,13 @@ const useMessaging = (currentChatId) => {
     // disponible. 🧊 `refetch` et pas `invalidate` : une query en veille — et
     // celle de la pastille l est des qu on n est pas dans la messagerie — ne se
     // relit jamais sur une simple invalidation.
-    if (shouldRefetchChatsAfterRead(payload, userData?.documentId)) {
+    // MSG2 — sauf si l accuse vient de rendre le compte FRAIS : relire irait sur
+    // une replique qui peut resservir l ancien compte, et l ecraserait.
+    const freshAckAt = freshReadAckAtRef.current.get(chatDocumentId) || 0;
+    if (
+      shouldRefetchChatsAfterRead(payload, userData?.documentId)
+      && Date.now() - freshAckAt > FRESH_READ_ACK_MS
+    ) {
       queryClient.refetchQueries({ queryKey: ['chats'] });
     }
 
@@ -1027,9 +1092,18 @@ const useMessaging = (currentChatId) => {
       socket.emit(EVENTS.READ_MESSAGE, {
         chatDocumentId: safeChatId,
         ...(safeLastSeenId ? { lastSeenMessageId: safeLastSeenId } : {}),
+      }, (/** @type {any} */ ack) => {
+        // MSG2 — le serveur repond avec le compte recalcule APRES l ecriture du
+        // curseur. Un serveur ancien ne repond pas : l echo relit alors la liste.
+        if (!ack?.ok || !Number.isFinite(Number(ack?.unreadTotal))) return;
+        freshReadAckAtRef.current.set(safeChatId, Date.now());
+        queryClient.setQueriesData(
+          { queryKey: ['chats'] },
+          (/** @type {any} */ oldData) => applyServerChatReadCounts(oldData, safeChatId, ack),
+        );
       });
     }
-  }, [socket]);
+  }, [queryClient, socket]);
 
   /**
    * Join a chat room
