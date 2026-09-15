@@ -8,6 +8,12 @@ import {
   getFriendlyMatchWizardStepIssue,
 } from './friendlyMatchWizardSteps';
 
+// I18N-2 : ces textes passent par i18next.t hors composant — la doublure partagée rend le
+// français de l app (fr.js, sinon le repli, jetons et pluriel français).
+jest.mock('i18next', () => (
+  jest.requireActual('@/theme/strings/__mocks__/doublureTraduction').i18next
+));
+
 /**
  * Un brouillon complet, dont chaque test retire ce qu il veut mettre en defaut.
  * @param {any} [overrides]

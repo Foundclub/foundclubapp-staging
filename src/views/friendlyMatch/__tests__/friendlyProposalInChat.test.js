@@ -11,6 +11,12 @@ import {
   respondToFriendlyProposal,
 } from '../friendlyProposalInChat';
 
+// I18N-2 : ces textes passent par i18next.t hors composant — la doublure partagée rend le
+// français de l app (fr.js, sinon le repli, jetons et pluriel français).
+jest.mock('i18next', () => (
+  jest.requireActual('@/theme/strings/__mocks__/doublureTraduction').i18next
+));
+
 // Filet S03 — constat d'Adel (16/08) : « il doit y avoir, pour l'entraîneur qui
 // reçoit la proposition, un BOUTON POUR ACCEPTER ».
 //

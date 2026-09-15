@@ -89,9 +89,13 @@ jest.mock('react-i18next', () => {
     askedKeys,
     initReactI18next: { init: jest.fn(), type: '3rdParty' },
     useTranslation: () => ({
-      t: (/** @type {string} */ key, /** @type {any} */ fallback) => {
+      t: (/** @type {string} */ key, /** @type {any} */ fallback, /** @type {any} */ options) => {
         askedKeys.push(key);
-        return typeof fallback === 'string' ? fallback : key;
+        const texte = typeof fallback === 'string' ? fallback : key;
+        // I18N-2 : les {{jetons}} du repli sont remplacés, comme le fait i18next.
+        return texte.replace(/\{\{(\w+)\}\}/g, (jeton, nom) => (
+          options && options[nom] !== undefined ? String(options[nom]) : jeton
+        ));
       },
     }),
   };

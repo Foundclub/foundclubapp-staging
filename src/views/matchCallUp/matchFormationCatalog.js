@@ -25,6 +25,8 @@
  * conservee telle quelle pour que le 4-3-3 d'aujourd'hui ne bouge pas d'un pixel.
  */
 
+import i18next from 'i18next';
+
 import { getTacticalSportKey } from '@/utils/tacticalField';
 
 /**
@@ -198,7 +200,9 @@ const FUTSAL = [
 const BASKETBALL = [
   {
     key: 'standard',
-    label: 'Attaque placée',
+    get label() {
+      return i18next.t('matchFormationCatalog.placedAttack', 'Attaque placée');
+    },
     slots: [
       slot('MEN', 50, 76), slot('ARR', 19, 60), slot('AIL', 81, 60),
       slot('AF', 30, 32), slot('PIV', 66, 27),
@@ -289,7 +293,9 @@ const VOLLEYBALL = [
   },
   {
     key: 'w',
-    label: 'Réception en W',
+    get label() {
+      return i18next.t('matchFormationCatalog.wReception', 'Réception en W');
+    },
     slots: [
       slot('PAS', 70, 24),
       slot('R4', 14, 50), slot('CEN', 50, 52), slot('R4', 86, 50),
@@ -302,7 +308,9 @@ const VOLLEYBALL = [
 const RUGBY_XV = [
   {
     key: 'xv',
-    label: 'Rugby à XV',
+    get label() {
+      return i18next.t('matchFormationCatalog.rugbyUnion', 'Rugby à XV');
+    },
     slots: [
       slot('ARR', 50, 92), slot('AI G', 10, 74), slot('AI D', 88, 82),
       slot('CE 1', 50, 68), slot('CE 2', 66, 76), slot('OUV', 34, 60), slot('MÊL', 50, 52),
@@ -320,7 +328,9 @@ const RUGBY_XV = [
 const RUGBY_XIII = [
   {
     key: 'xiii',
-    label: 'Rugby à XIII',
+    get label() {
+      return i18next.t('matchFormationCatalog.rugbyLeague', 'Rugby à XIII');
+    },
     slots: [
       slot('ARR', 50, 92),
       slot('AI G', 10, 74), slot('AI D', 90, 74),

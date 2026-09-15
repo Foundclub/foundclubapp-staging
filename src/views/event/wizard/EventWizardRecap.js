@@ -2,6 +2,7 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
+import i18next from 'i18next';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -24,6 +25,7 @@ import {
   getSubscriptionQuotaItem,
 } from '@/domains/subscription/subscriptionDecision';
 import { getEventShowcaseTemplate, isEventShowcaseOffered } from '@/domains/visuals/eventShowcaseTemplate';
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -60,20 +62,43 @@ import {
 import { keepAudiencesForEventType } from './useEventWizardAudiences';
 
 const CREATE_EVENT_BATCH_CONCURRENCY = 3;
+// I18N-2 : des GETTERS, pas des textes — lus à l import, avant l initialisation
+// d i18next ; le libellé se traduit au moment où il s affiche.
 const FEATURED_SCOPE_OPTIONS = [
   {
-    description: 'Visible dans les espaces publics FoundClub après validation.',
-    label: 'A la une publique',
+    get description() {
+      return i18next.t(
+        'eventWizardRecap.featuredPublicDescription',
+        'Visible dans les espaces publics FoundClub après validation.',
+      );
+    },
+    get label() {
+      return i18next.t('eventWizardRecap.featuredPublic', 'A la une publique');
+    },
     value: 'PUBLIC',
   },
   {
-    description: 'Visible pour les membres du club ou de la section.',
-    label: 'A la une du club',
+    get description() {
+      return i18next.t(
+        'eventWizardRecap.featuredSectionDescription',
+        'Visible pour les membres du club ou de la section.',
+      );
+    },
+    get label() {
+      return i18next.t('eventWizardRecap.featuredSection', 'A la une du club');
+    },
     value: 'SECTION',
   },
   {
-    description: 'Visible au niveau de la structure multisport.',
-    label: 'A la une multisport',
+    get description() {
+      return i18next.t(
+        'eventWizardRecap.featuredCmDescription',
+        'Visible au niveau de la structure multisport.',
+      );
+    },
+    get label() {
+      return i18next.t('eventWizardRecap.featuredCm', 'A la une multisport');
+    },
     value: 'CM',
   },
 ];
@@ -450,7 +475,7 @@ function EventWizardRecap({ navigation }) {
 
   const typeValue = state.type?.name || recapNotSet;
   const teamValue = isTournament && state.tournamentScopeMode === 'autonomous'
-    ? 'Tournoi autonome'
+    ? t('eventWizardRecap.standaloneTournament', 'Tournoi autonome')
     : (state.team?.name || recapNotSet);
   const dateValue = getFormattedDate();
   const timeValue = getFormattedTime();
@@ -482,30 +507,37 @@ function EventWizardRecap({ navigation }) {
   const detectionSlots = Array.isArray(state.detectionSlots) ? state.detectionSlots : [];
   const detectionSlotsTotal = detectionSlots.reduce((sum, slot) => sum + Number(slot?.quantity || 0), 0);
   const tournamentFormatLabel = {
-    groups_only: 'Poules uniquement',
-    groups_to_knockout: 'Poules + finale',
-    knockout_only: 'Phase finale directe',
-    round_robin: 'Championnat',
-  }[state.tournamentFormatMode || 'groups_only'] || 'Poules uniquement';
+    groups_only: t('eventWizardRecap.formatGroupsOnly', 'Poules uniquement'),
+    groups_to_knockout: t('eventWizardRecap.formatGroupsFinal', 'Poules + finale'),
+    knockout_only: t('eventWizardRecap.formatStraightKnockout', 'Phase finale directe'),
+    round_robin: t('eventWizardRecap.formatLeague', 'Championnat'),
+  }[state.tournamentFormatMode || 'groups_only'] || t(
+    'eventWizardRecap.formatGroupsOnly',
+    'Poules uniquement',
+  );
   let tournamentGroupsSummary = state.tournamentGroupCount ?? 1;
   if (state.tournamentFormatMode === 'knockout_only') {
-    tournamentGroupsSummary = 'Aucune';
+    tournamentGroupsSummary = t('eventWizardRecap.noGroups', 'Aucune');
   } else if (state.tournamentFormatMode === 'round_robin') {
-    tournamentGroupsSummary = '1 classement';
+    tournamentGroupsSummary = t('eventWizardRecap.oneStanding', '1 classement');
   }
-  let tournamentQualificationSummary = `${state.tournamentQualifiedPerGroup ?? 2} / poule`;
+  let tournamentQualificationSummary = t(
+    'eventWizardRecap.qualifiedPerGroup',
+    '{{qualified}} / poule',
+    { qualified: state.tournamentQualifiedPerGroup ?? 2 },
+  );
   if (state.tournamentFormatMode === 'knockout_only') {
-    tournamentQualificationSummary = 'Directs';
+    tournamentQualificationSummary = t('eventWizardRecap.directQualification', 'Directs');
   }
-  let tournamentSeedingSummary = 'Aleatoire';
+  let tournamentSeedingSummary = t('eventWizardRecap.seedingRandom', 'Aleatoire');
   if (state.tournamentSeedingMode === 'manual') {
-    tournamentSeedingSummary = 'Manuel';
+    tournamentSeedingSummary = t('eventWizardRecap.seedingManual', 'Manuel');
   } else if (state.tournamentSeedingMode === 'snake') {
-    tournamentSeedingSummary = 'Serpentin';
+    tournamentSeedingSummary = t('eventWizardRecap.seedingSnake', 'Serpentin');
   }
   const tournamentGenerationSummary = state.tournamentMatchGenerationMode === 'manual'
-    ? 'Manuelle'
-    : 'Automatique';
+    ? t('eventWizardRecap.generationManual', 'Manuelle')
+    : t('eventWizardRecap.generationAutomatic', 'Automatique');
   const stageSchedule = Array.isArray(state.stageSchedule) ? state.stageSchedule : [];
   const activeStageDays = stageSchedule.filter((day) => day?.isActive !== false);
   const stageHasVariableHours = activeStageDays.some((day) => (
@@ -1146,7 +1178,9 @@ function EventWizardRecap({ navigation }) {
               </View>
               {isTournament && state.tournamentScopeMode === 'autonomous' ? (
                 <View style={[Spaces.gap[4]]}>
-                  <Text style={[Fonts.p3, Fonts.neutral200]}>Cadre autonome</Text>
+                  <Text style={[Fonts.p3, Fonts.neutral200]}>
+                    {t('eventWizardRecap.standaloneFrame', 'Cadre autonome')}
+                  </Text>
                   <Text style={[Fonts.p2, Fonts.neutral100]}>
                     {[
                       state.tournamentActivity?.name,
@@ -1307,7 +1341,9 @@ function EventWizardRecap({ navigation }) {
           {isTournament ? (
             <View style={[ApplicationStyle.card, Spaces.padding[16], Spaces.gap[12], cardSurfaceStyle]}>
               <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter]}>
-                <Text style={[Fonts.h4, Fonts.neutral00]}>Paramètres tournoi</Text>
+                <Text style={[Fonts.h4, Fonts.neutral00]}>
+                  {t('eventWizardRecap.tournamentSettings', 'Paramètres tournoi')}
+                </Text>
                 <TouchableOpacity onPress={() => openStepFromRecap(RouteNames.EventWizardTournamentSettings)}>
                   <Text style={[Fonts.p3Bold, Fonts.primary500]}>{t('eventWizard.recap.actions.edit')}</Text>
                 </TouchableOpacity>
@@ -1315,22 +1351,43 @@ function EventWizardRecap({ navigation }) {
 
               <View style={[Spaces.gap[8]]}>
                 <Text style={[Fonts.p2, Fonts.neutral100]}>
-                  {`Max équipes: ${state.tournamentMaxTeams ?? recapNotSet}`}
+                  {t('eventWizardRecap.maxTeams', 'Max équipes: {{value}}', {
+                    value: state.tournamentMaxTeams ?? recapNotSet,
+                    ...SANS_ECHAPPEMENT,
+                  })}
                 </Text>
                 <Text style={[Fonts.p2, Fonts.neutral100]}>
-                  {`Effectif: ${state.tournamentMinRosterSize ?? recapNotSet} - ${state.tournamentMaxRosterSize ?? recapNotSet}`}
+                  {t('eventWizardRecap.squadSize', 'Effectif: {{min}} - {{max}}', {
+                    max: state.tournamentMaxRosterSize ?? recapNotSet,
+                    min: state.tournamentMinRosterSize ?? recapNotSet,
+                    ...SANS_ECHAPPEMENT,
+                  })}
                 </Text>
                 <Text style={[Fonts.p2, Fonts.neutral100]}>
-                  {`Équipes éphémères: ${state.tournamentAllowCustomTeams !== false ? 'Autorisees' : 'Desactivees'}`}
+                  {t('eventWizardRecap.temporaryTeams', 'Équipes éphémères: {{value}}', {
+                    value: state.tournamentAllowCustomTeams !== false
+                      ? t('eventWizardRecap.allowedPlural', 'Autorisees')
+                      : t('eventWizardRecap.disabledPlural', 'Desactivees'),
+                  })}
                 </Text>
                 <Text style={[Fonts.p2, Fonts.neutral100]}>
-                  {`Mix clubs: ${state.tournamentAllowCrossClubPlayers === true ? 'Autorise' : 'Non autorise'}`}
+                  {t('eventWizardRecap.mixedClubs', 'Mix clubs: {{value}}', {
+                    value: state.tournamentAllowCrossClubPlayers === true
+                      ? t('eventWizardRecap.allowed', 'Autorise')
+                      : t('eventWizardRecap.notAllowed', 'Non autorise'),
+                  })}
                 </Text>
                 <Text style={[Fonts.p2, Fonts.neutral100]}>
-                  {`Validation des équipes: ${validationValue}`}
+                  {t('eventWizardRecap.teamApproval', 'Validation des équipes: {{value}}', {
+                    value: validationValue,
+                    ...SANS_ECHAPPEMENT,
+                  })}
                 </Text>
                 <Text style={[Fonts.p2, state.tournamentRulesText ? Fonts.neutral100 : Fonts.neutral300]}>
-                  {state.tournamentRulesText || 'Aucune règle spécifique renseignée.'}
+                  {state.tournamentRulesText || t(
+                    'eventWizardRecap.noSpecificRuleEntered',
+                    'Aucune règle spécifique renseignée.',
+                  )}
                 </Text>
               </View>
             </View>
@@ -1339,36 +1396,68 @@ function EventWizardRecap({ navigation }) {
           {isTournament ? (
             <View style={[ApplicationStyle.card, Spaces.padding[16], Spaces.gap[12], cardSurfaceStyle]}>
               <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter]}>
-                <Text style={[Fonts.h4, Fonts.neutral00]}>Structure du tournoi</Text>
+                <Text style={[Fonts.h4, Fonts.neutral00]}>
+                  {t('eventWizardRecap.tournamentStructure', 'Structure du tournoi')}
+                </Text>
                 <TouchableOpacity onPress={() => openStepFromRecap(RouteNames.EventWizardTournamentStructure)}>
                   <Text style={[Fonts.p3Bold, Fonts.primary500]}>{t('eventWizard.recap.actions.edit')}</Text>
                 </TouchableOpacity>
               </View>
 
               <View style={[Spaces.gap[8]]}>
-                <Text style={[Fonts.p2, Fonts.neutral100]}>{`Format: ${tournamentFormatLabel}`}</Text>
                 <Text style={[Fonts.p2, Fonts.neutral100]}>
-                  {`Poules: ${tournamentGroupsSummary}`}
+                  {t(
+                    'eventWizardRecap.formatLine',
+                    'Format: {{value}}',
+                    { value: tournamentFormatLabel, ...SANS_ECHAPPEMENT },
+                  )}
                 </Text>
                 <Text style={[Fonts.p2, Fonts.neutral100]}>
-                  {`Qualifiés: ${tournamentQualificationSummary}`}
+                  {t(
+                    'eventWizardRecap.groupsLine',
+                    'Poules: {{value}}',
+                    { value: tournamentGroupsSummary, ...SANS_ECHAPPEMENT },
+                  )}
+                </Text>
+                <Text style={[Fonts.p2, Fonts.neutral100]}>
+                  {t('eventWizardRecap.qualifiedLine', 'Qualifiés: {{value}}', {
+                    value: tournamentQualificationSummary,
+                    ...SANS_ECHAPPEMENT,
+                  })}
                 </Text>
                 {(state.tournamentFormatMode === 'groups_to_knockout' || state.tournamentFormatMode === 'knockout_only') ? (
                   <Text style={[Fonts.p2, Fonts.neutral100]}>
-                    {`Bracket: ${state.tournamentKnockoutSize || recapNotSet}`}
+                    {t('eventWizardRecap.bracketLine', 'Bracket: {{value}}', {
+                      value: state.tournamentKnockoutSize || recapNotSet,
+                      ...SANS_ECHAPPEMENT,
+                    })}
                   </Text>
                 ) : null}
                 <Text style={[Fonts.p2, Fonts.neutral100]}>
-                  {`Tirage: ${tournamentSeedingSummary}`}
+                  {t(
+                    'eventWizardRecap.seedingLine',
+                    'Tirage: {{value}}',
+                    { value: tournamentSeedingSummary, ...SANS_ECHAPPEMENT },
+                  )}
                 </Text>
                 <Text style={[Fonts.p2, Fonts.neutral100]}>
-                  {`Génération matchs: ${tournamentGenerationSummary}`}
+                  {t('eventWizardRecap.generationLine', 'Génération matchs: {{value}}', {
+                    value: tournamentGenerationSummary,
+                    ...SANS_ECHAPPEMENT,
+                  })}
                 </Text>
                 <Text style={[Fonts.p2, Fonts.neutral100]}>
-                  {`Points: V ${state.tournamentPointsWin ?? 3} | N ${state.tournamentPointsDraw ?? 1} | D ${state.tournamentPointsLoss ?? 0} | F ${state.tournamentPointsForfeit ?? 0}`}
+                  {t('eventWizardRecap.pointsLine', 'Points: V {{win}} | N {{draw}} | D {{loss}} | F {{forfeit}}', {
+                    draw: state.tournamentPointsDraw ?? 1,
+                    forfeit: state.tournamentPointsForfeit ?? 0,
+                    loss: state.tournamentPointsLoss ?? 0,
+                    win: state.tournamentPointsWin ?? 3,
+                  })}
                 </Text>
                 {(state.tournamentFormatMode === 'groups_to_knockout' || state.tournamentFormatMode === 'knockout_only') && state.tournamentThirdPlaceMatch ? (
-                  <Text style={[Fonts.p2, Fonts.primary500]}>Petite finale activee</Text>
+                  <Text style={[Fonts.p2, Fonts.primary500]}>
+                    {t('eventWizardRecap.thirdPlaceMatchEnabled', 'Petite finale activee')}
+                  </Text>
                 ) : null}
               </View>
             </View>
@@ -1754,7 +1843,7 @@ function EventWizardRecap({ navigation }) {
       <SubscriptionPaywallSheet
         close={() => setSubscriptionPaywallDecision(null)}
         clubDocumentId={clubVerificationSummary?.clubDocumentId || null}
-        contextLabel={state.type?.name || 'Ton événement'}
+        contextLabel={state.type?.name || t('eventWizardRecap.yourEvent', 'Ton événement')}
         decision={subscriptionPaywallDecision}
         isVisible={Boolean(subscriptionPaywallDecision)}
         navigation={navigation}

@@ -391,7 +391,9 @@ function EventWizardTeam({ navigation }) {
               },
             ]}
           >
-            {selected ? 'Sélectionné' : 'Choisir'}
+            {selected
+              ? t('eventWizardTeam.selected', 'Sélectionné')
+              : t('eventWizardTeam.choose', 'Choisir')}
           </Text>
         </View>
         <Text style={[Fonts.p3, Fonts.neutral200, { lineHeight: 20, paddingRight: 4 }]}>
@@ -454,19 +456,28 @@ function EventWizardTeam({ navigation }) {
         onBack={() => navigation.goBack()}
         stepCount={getEventWizardStepCount(state)}
         stepIndex={getEventWizardStepIndex(RouteNames.EventWizardTeam, state)}
-        subtitle="Choisis si le tournoi part d'une équipe existante ou s'il est autonome."
-        title="Cadre du tournoi"
+        subtitle={t(
+          'eventWizardTeam.chooseWhetherTheTournamentStarts',
+          "Choisis si le tournoi part d'une équipe existante ou s'il est autonome.",
+        )}
+        title={t('eventWizardTeam.tournamentFrame', 'Cadre du tournoi')}
       >
         <View style={[Spaces.gap[24]]}>
           <View style={[Spaces.gap[16]]}>
             {renderModeCard({
-              description: "L'équipe est inscrite automatiquement. Ses joueurs répondent Présent ou Absent dans le roster tournoi.",
-              label: "Tournoi d'une équipe",
+              description: t(
+                'eventWizardTeam.theTeamIsRegisteredAutomatically',
+                "L'équipe est inscrite automatiquement. Ses joueurs répondent Présent ou Absent dans le roster tournoi.",
+              ),
+              label: t('eventWizardTeam.teamTournament', "Tournoi d'une équipe"),
               mode: 'team',
             })}
             {renderModeCard({
-              description: 'Aucune équipe n’est inscrite au départ. Le tournoi est défini par sport, section et catégorie.',
-              label: 'Tournoi autonome',
+              description: t(
+                'eventWizardTeam.noTeamIsRegisteredAt',
+                'Aucune équipe n’est inscrite au départ. Le tournoi est défini par sport, section et catégorie.',
+              ),
+              label: t('eventWizardTeam.standaloneTournament', 'Tournoi autonome'),
               mode: 'autonomous',
             })}
           </View>
@@ -474,9 +485,14 @@ function EventWizardTeam({ navigation }) {
           {tournamentMode === 'team' ? (
             <View style={[Spaces.gap[16]]}>
               <View style={[Spaces.gap[8]]}>
-                <Text style={[Fonts.h4Bold, Fonts.neutral00]}>Équipe source</Text>
+                <Text style={[Fonts.h4Bold, Fonts.neutral00]}>
+                  {t('eventWizardTeam.sourceTeam', 'Équipe source')}
+                </Text>
                 <Text style={[Fonts.p3, Fonts.neutral200, { lineHeight: 21 }]}>
-                  Les membres de l’équipe choisie seront ajoutés au tournoi. Ils ne passeront pas par le RSVP événement classique.
+                  {t(
+                    'eventWizardTeam.membersOfTheChosenTeam',
+                    'Les membres de l’équipe choisie seront ajoutés au tournoi. Ils ne passeront pas par le RSVP événement classique.',
+                  )}
                 </Text>
               </View>
 
@@ -503,7 +519,14 @@ function EventWizardTeam({ navigation }) {
                   <Text style={[Fonts.p1, Fonts.neutral100, { textAlign: 'center' }]}>
                     {error?.message || t('eventWizard.errors.noTeams')}
                   </Text>
-                  <Button onPress={() => refetch()} title="Recharger" variant="Secondary" />
+                  <Button
+                    onPress={() => refetch()}
+                    title={t(
+                      'eventWizardTeam.reload',
+                      'Recharger',
+                    )}
+                    variant="Secondary"
+                  />
                 </View>
               ) : null}
 
@@ -540,13 +563,17 @@ function EventWizardTeam({ navigation }) {
                 <View style={[Spaces.gap[16]]}>
                   {teamsByOwnership.myTeams.length > 0 ? (
                     <View style={[Spaces.gap[12]]}>
-                      <Text style={intertitreStyle}>MES ÉQUIPES</Text>
+                      <Text style={intertitreStyle}>
+                        {t('eventWizardTeam.myTeams', 'MES ÉQUIPES')}
+                      </Text>
                       <View>{teamsByOwnership.myTeams.map(renderTeamCard)}</View>
                     </View>
                   ) : null}
                   {teamsByOwnership.otherTeams.length > 0 ? (
                     <View style={[Spaces.gap[12]]}>
-                      <Text style={intertitreStyle}>AUTRES ÉQUIPES DU CLUB</Text>
+                      <Text style={intertitreStyle}>
+                        {t('eventWizardTeam.otherClubTeams', 'AUTRES ÉQUIPES DU CLUB')}
+                      </Text>
                       <View>{teamsByOwnership.otherTeams.map(renderTeamCard)}</View>
                     </View>
                   ) : null}
@@ -562,59 +589,77 @@ function EventWizardTeam({ navigation }) {
             }]}
             >
               <View style={[Spaces.gap[8]]}>
-                <Text style={[Fonts.h4Bold, Fonts.neutral00]}>Qualification du tournoi</Text>
+                <Text style={[Fonts.h4Bold, Fonts.neutral00]}>
+                  {t('eventWizardTeam.tournamentQualification', 'Qualification du tournoi')}
+                </Text>
                 <Text style={[Fonts.p3, Fonts.neutral200, { lineHeight: 21 }]}>
-                  Ces informations remplacent l’équipe source pour classer le tournoi et guider les inscriptions.
+                  {t(
+                    'eventWizardTeam.thisInformationReplacesTheSource',
+                    'Ces informations remplacent l’équipe source pour classer le tournoi et guider les inscriptions.',
+                  )}
                 </Text>
               </View>
 
               <View style={[Spaces.gap[4]]}>
-                <Text style={[Fonts.p3Bold, Fonts.primary500]}>Club organisateur</Text>
+                <Text style={[Fonts.p3Bold, Fonts.primary500]}>
+                  {t('eventWizardTeam.organisingClub', 'Club organisateur')}
+                </Text>
                 <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
-                  {organizerClub?.name || 'Aucun club disponible'}
+                  {organizerClub?.name || t(
+                    'eventWizardTeam.noClubAvailable',
+                    'Aucun club disponible',
+                  )}
                 </Text>
               </View>
 
               {isReferenceLoading ? (
-                <Text style={[Fonts.p3, Fonts.neutral300]}>Chargement des référentiels...</Text>
+                <Text style={[Fonts.p3, Fonts.neutral300]}>
+                  {t('eventWizardTeam.loadingReferenceData', 'Chargement des référentiels...')}
+                </Text>
               ) : null}
               {hasReferenceError ? (
                 <Text style={[Fonts.p3, Fonts.neutral300]}>
-                  Impossible de charger tous les référentiels. Réessaie ou repassez par un tournoi d’équipe.
+                  {t(
+                    'eventWizardTeam.unableToLoadAllReference',
+                    'Impossible de charger tous les référentiels. Réessaie ou repassez par un tournoi d’équipe.',
+                  )}
                 </Text>
               ) : null}
 
               {renderReferenceSelect({
-                emptyLabel: 'Aucun sport disponible.',
+                emptyLabel: t('eventWizardTeam.noSportAvailable', 'Aucun sport disponible.'),
                 label: 'Sport',
-                modalTitle: 'Choisir un sport',
+                modalTitle: t('eventWizardTeam.chooseASport', 'Choisir un sport'),
                 onSelect: setSelectedTournamentActivity,
                 options: activityOptions,
-                placeholder: 'Sélectionner un sport',
+                placeholder: t('eventWizardTeam.selectASport', 'Sélectionner un sport'),
                 references: activityReferences,
                 searchValue: activitySearchValue,
                 selected: selectedTournamentActivity,
                 setSearchValue: setActivitySearchValue,
               })}
               {renderReferenceSelect({
-                emptyLabel: 'Aucune section disponible.',
+                emptyLabel: t('eventWizardTeam.noSectionAvailable', 'Aucune section disponible.'),
                 label: 'Section',
-                modalTitle: 'Choisir une section',
+                modalTitle: t('eventWizardTeam.chooseASection', 'Choisir une section'),
                 onSelect: setSelectedTournamentSection,
                 options: sectionOptions,
-                placeholder: 'Sélectionner une section',
+                placeholder: t('eventWizardTeam.selectASection', 'Sélectionner une section'),
                 references: sectionReferences,
                 searchValue: sectionSearchValue,
                 selected: selectedTournamentSection,
                 setSearchValue: setSectionSearchValue,
               })}
               {renderReferenceSelect({
-                emptyLabel: 'Aucune catégorie disponible.',
-                label: 'Catégorie',
-                modalTitle: 'Choisir une catégorie',
+                emptyLabel: t(
+                  'eventWizardTeam.noCategoryAvailable',
+                  'Aucune catégorie disponible.',
+                ),
+                label: t('eventWizardTeam.category', 'Catégorie'),
+                modalTitle: t('eventWizardTeam.chooseACategory', 'Choisir une catégorie'),
                 onSelect: setSelectedTournamentCategory,
                 options: categoryOptions,
-                placeholder: 'Sélectionner une catégorie',
+                placeholder: t('eventWizardTeam.selectACategory', 'Sélectionner une catégorie'),
                 references: categoryReferences,
                 searchValue: categorySearchValue,
                 selected: selectedTournamentCategory,
@@ -624,7 +669,7 @@ function EventWizardTeam({ navigation }) {
               <Button
                 disabled={!canContinueAutonomousTournament}
                 onPress={handleContinueAutonomousTournament}
-                title="Continuer"
+                title={t('eventWizardTeam.continue', 'Continuer')}
                 variant="Primary"
               />
             </View>
@@ -692,7 +737,9 @@ function EventWizardTeam({ navigation }) {
                 },
               ]}
             >
-              <Text style={[Fonts.p3Bold, Fonts.primary500]}>Recharger</Text>
+              <Text style={[Fonts.p3Bold, Fonts.primary500]}>
+                {t('eventWizardTeam.reload', 'Recharger')}
+              </Text>
             </TouchableOpacity>
           </View>
         ) : null}

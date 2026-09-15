@@ -1,3 +1,5 @@
+import i18next from 'i18next';
+
 import { USER_ROLES } from '@/domains/auth/authUseCases';
 import {
   normalizeEventTypeLabel,
@@ -216,15 +218,30 @@ const buildReservationFlow = (entity, context) => {
 
   let blockedReason = '';
   if (!isPlayer) {
-    blockedReason = 'Seuls les joueurs peuvent rejoindre cette réservation.';
+    blockedReason = i18next.t(
+      'participationFlow.onlyPlayersCanJoinThis',
+      'Seuls les joueurs peuvent rejoindre cette réservation.',
+    );
   } else if (alreadyHandled) {
-    blockedReason = 'Tu participes déjà à cette réservation.';
+    blockedReason = i18next.t(
+      'participationFlow.youReAlreadyTakingPart',
+      'Tu participes déjà à cette réservation.',
+    );
   } else if (!isFutureDatedEntity(entity)) {
-    blockedReason = 'Cette réservation est déjà passee.';
+    blockedReason = i18next.t(
+      'participationFlow.thisBookingIsAlreadyOver',
+      'Cette réservation est déjà passee.',
+    );
   } else if (!isRecruiting || !isShared) {
-    blockedReason = 'Cette réservation n accepte pas de nouveaux joueurs.';
+    blockedReason = i18next.t(
+      'participationFlow.thisBookingDoesnTAccept',
+      'Cette réservation n accepte pas de nouveaux joueurs.',
+    );
   } else if (missingPlayers <= 0) {
-    blockedReason = 'Cette réservation est déjà complété.';
+    blockedReason = i18next.t(
+      'participationFlow.thisBookingIsAlreadyFull',
+      'Cette réservation est déjà complété.',
+    );
   }
 
   return {
@@ -265,7 +282,7 @@ const buildEventFlow = (entity, context) => {
 
   if (String(entity?.eventFormat || '').trim().toLowerCase() === 'stage_day' && entity?.parentEvent?.documentId) {
     return {
-      actionLabel: 'Voir le stage principal',
+      actionLabel: i18next.t('participationFlow.seeTheMainTrainingCamp', 'Voir le stage principal'),
       blockedReason: '',
       canAct: true,
       confirmLabel: '',
@@ -278,7 +295,10 @@ const buildEventFlow = (entity, context) => {
   if (detectionSlotsCount > 0) {
     return {
       actionLabel: 'Participer',
-      blockedReason: isPlayer ? '' : 'Seuls les joueurs peuvent candidater à cette détection.',
+      blockedReason: isPlayer ? '' : i18next.t(
+        'participationFlow.onlyPlayersCanApplyTo',
+        'Seuls les joueurs peuvent candidater à cette détection.',
+      ),
       canAct: isPlayer && !alreadyHandled,
       confirmLabel: 'Participer',
       kind: ParticipationFlowKind.detectionSlot,
@@ -327,7 +347,10 @@ const buildEventFlow = (entity, context) => {
   // que le serveur renverrait (`EVENT_USER_NOT_PLAYER_OF_TEAM_ERROR`), et un
   // non-membre doit lire pourquoi il est dehors, pas ce qu il est.
   if (isClosed && !sourceTeam) {
-    blockedReason = 'Cet événement fermé est réservé aux équipes concernées.';
+    blockedReason = i18next.t(
+      'participationFlow.thisClosedEventIsReserved',
+      'Cet événement fermé est réservé aux équipes concernées.',
+    );
   } else if (isStaffOnly && !alreadyHandled) {
     // Y07 : la phrase que le serveur renverrait (`EVENT_STAFF_DOES_NOT_RSVP`).
     // ⛔ Elle ne doit JAMAIS accompagner un bouton eteint : les surfaces qui
@@ -338,32 +361,53 @@ const buildEventFlow = (entity, context) => {
     // (« tu as deja repondu »), comme `hasOwnAnswer` cote `EventAnswerButtons`.
     // Y07 retire le droit de repondre, il n efface aucune reponse posee avant
     // lui — un encadrant coche dans la compo publiee a repondu, ca reste vrai.
-    blockedReason = 'Tu encadres cet événement : ce sont les joueurs qui répondent.';
+    blockedReason = i18next.t(
+      'participationFlow.youReStaffForThis',
+      'Tu encadres cet événement : ce sont les joueurs qui répondent.',
+    );
   } else if (!isPlayer && !isConvenedMember) {
-    blockedReason = 'Seuls les joueurs peuvent participer à cet événement.';
+    blockedReason = i18next.t(
+      'participationFlow.onlyPlayersCanTakePart',
+      'Seuls les joueurs peuvent participer à cet événement.',
+    );
   } else if (alreadyHandled) {
-    blockedReason = 'Tu as déjà répondu à cet événement.';
+    blockedReason = i18next.t(
+      'participationFlow.youVeAlreadyAnsweredThis',
+      'Tu as déjà répondu à cet événement.',
+    );
   } else if (!isFutureDatedEntity(entity) && !entity?.league_match) {
-    blockedReason = 'Cet événement est déjà passe.';
+    blockedReason = i18next.t(
+      'participationFlow.thisEventIsAlreadyOver',
+      'Cet événement est déjà passe.',
+    );
   } else if (
     isExternalTrainingParticipant
     && Number(trainingOpenConfig?.externalParticipantLimit || 0) < 1
   ) {
-    blockedReason = 'Cet entraînement n accepte pas de joueurs externes pour le moment.';
+    blockedReason = i18next.t(
+      'participationFlow.thisTrainingSessionDoesnT',
+      'Cet entraînement n accepte pas de joueurs externes pour le moment.',
+    );
   } else if (
     isExternalTrainingParticipant
     && Number(trainingOpenConfig?.externalParticipantLimit || 0) > 0
     && externalActiveRequestsCount >= Number(trainingOpenConfig?.externalParticipantLimit || 0)
   ) {
-    blockedReason = 'Le quota de joueurs externes pour cet entraînement est déjà atteint.';
+    blockedReason = i18next.t(
+      'participationFlow.theExternalPlayerQuotaFor',
+      'Le quota de joueurs externes pour cet entraînement est déjà atteint.',
+    );
   } else if (!isTrainingEvent && capacity > 0 && participationsCount >= capacity) {
-    blockedReason = 'Cet événement est complet.';
+    blockedReason = i18next.t('participationFlow.thisEventIsFull', 'Cet événement est complet.');
   } else if (
     userDocumentId
     && Array.isArray(entity?.participations)
     && entity.participations.some((participant) => String(participant?.documentId || '').trim() === userDocumentId)
   ) {
-    blockedReason = 'Tu participes déjà à cet événement.';
+    blockedReason = i18next.t(
+      'participationFlow.youReAlreadyTakingPart2',
+      'Tu participes déjà à cet événement.',
+    );
   }
 
   // AA01 (constat d Adel du 2026-08-20) — REPONDRE A SON EQUIPE N EST PAS
@@ -385,11 +429,22 @@ const buildEventFlow = (entity, context) => {
   // une formalite : elle ne bouge pas.
   const answersAsConvenedMember = isConvenedMember && !isDetection;
 
-  let actionLabel = isClosed ? 'Present' : 'Participer';
-  let confirmLabel = isClosed ? 'Confirmer ma présence' : 'Participer';
+  let actionLabel = isClosed
+    ? i18next.t('participationFlow.present', 'Present')
+    : i18next.t('participationFlow.takePart', 'Participer');
+  let confirmLabel = isClosed ? i18next.t(
+    'participationFlow.confirmMyAttendance',
+    'Confirmer ma présence',
+  ) : i18next.t(
+    'participationFlow.takePart',
+    'Participer',
+  );
   if (isDetection) {
-    actionLabel = 'Participer';
-    confirmLabel = 'Confirmer ma participation';
+    actionLabel = i18next.t('participationFlow.takePart', 'Participer');
+    confirmLabel = i18next.t(
+      'participationFlow.confirmMyParticipation',
+      'Confirmer ma participation',
+    );
   }
 
   // 🎯 R9 — L AIGUILLAGE VERS LE CHOIX DU POSTE, ET POURQUOI IL EST *ICI*.
@@ -443,17 +498,35 @@ const buildRecruitmentFlow = (entity, context) => {
 
   let blockedReason = '';
   if (isOwner) {
-    blockedReason = 'Tu ne peux pas candidater à ta propre annonce.';
+    blockedReason = i18next.t(
+      'participationFlow.youCanTApplyTo',
+      'Tu ne peux pas candidater à ta propre annonce.',
+    );
   } else if (!entity?.isActive) {
-    blockedReason = 'Cette annonce n est plus active.';
+    blockedReason = i18next.t(
+      'participationFlow.thisListingIsNoLonger',
+      'Cette annonce n est plus active.',
+    );
   } else if (normalizedStatus === 'accepted') {
     blockedReason = isDetectionLinked
-      ? 'Tu participes déjà à cette détection.'
-      : 'Ta candidature est déjà validée.';
+      ? i18next.t(
+        'participationFlow.youReAlreadyTakingPart3',
+        'Tu participes déjà à cette détection.',
+      )
+      : i18next.t(
+        'participationFlow.yourApplicationHasAlreadyBeen',
+        'Ta candidature est déjà validée.',
+      );
   } else if (normalizedStatus === 'pending') {
     blockedReason = isDetectionLinked
-      ? 'Tu as déjà une candidature en attente sur cette détection.'
-      : 'Ta candidature est déjà en attente.';
+      ? i18next.t(
+        'participationFlow.youAlreadyHaveAPending',
+        'Tu as déjà une candidature en attente sur cette détection.',
+      )
+      : i18next.t(
+        'participationFlow.yourApplicationIsAlreadyPending',
+        'Ta candidature est déjà en attente.',
+      );
   }
 
   let kind = ParticipationFlowKind.recruitmentPlayer;
@@ -464,11 +537,23 @@ const buildRecruitmentFlow = (entity, context) => {
   }
 
   return {
-    actionLabel: audienceType === 'coach' ? 'Candidater comme entraîneur' : 'Postuler',
+    actionLabel: audienceType === 'coach' ? i18next.t(
+      'participationFlow.applyAsACoach',
+      'Candidater comme entraîneur',
+    ) : i18next.t(
+      'participationFlow.apply',
+      'Postuler',
+    ),
     blockedReason,
     canAct: !blockedReason,
     canWithdraw,
-    confirmLabel: audienceType === 'coach' ? 'Envoyer ma candidature' : 'Confirmer ma candidature',
+    confirmLabel: audienceType === 'coach' ? i18next.t(
+      'participationFlow.sendMyApplication',
+      'Envoyer ma candidature',
+    ) : i18next.t(
+      'participationFlow.confirmMyApplication',
+      'Confirmer ma candidature',
+    ),
     kind,
     submitMode: 'applyToRecruitmentAd',
     usesConfirmationModal: false,
@@ -512,8 +597,6 @@ export const resolveParticipationFlow = (entity, context = {}) => {
   return buildEventFlow(entity, context);
 };
 
-const DEFAULT_PARTICIPATION_ERROR = 'Action impossible pour le moment.';
-
 /**
  * Message montre au joueur quand le serveur REFUSE sa reponse a un evenement.
  *
@@ -530,8 +613,14 @@ const DEFAULT_PARTICIPATION_ERROR = 'Action impossible pour le moment.';
  * @param {string} [fallback] - Repli francais, propre a l'appel.
  * @returns {string} Un message en francais, toujours.
  */
-export const getParticipationErrorMessage = (error, fallback = DEFAULT_PARTICIPATION_ERROR) => (
+export const getParticipationErrorMessage = (
+  error,
+  fallback = i18next.t(
+    'participationFlow.actionImpossibleForNow',
+    'Action impossible pour le moment.',
+  ),
+) => (
   getApiErrorTranslation(error)
   || String(fallback || '').trim()
-  || DEFAULT_PARTICIPATION_ERROR
+  || i18next.t('participationFlow.actionImpossibleForNow', 'Action impossible pour le moment.')
 );

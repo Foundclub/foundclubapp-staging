@@ -1,4 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import i18next from 'i18next';
 import {
   useCallback,
   useEffect,
@@ -6,6 +7,7 @@ import {
   useRef,
   useState,
 } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Alert,
   Pressable,
@@ -17,6 +19,7 @@ import {
 } from 'react-native';
 
 import { invalidateAfterAction } from '@/domains/refresh/afterAction';
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -38,16 +41,51 @@ import {
 import { clampMatchStatsValue, getMatchStatsFieldMax } from '@/utils/matchStatsBounds';
 
 const FOOTBALL_FIELDS = [
-  { key: 'goals', label: 'Buts' },
-  { key: 'assists', label: 'Passes décisives' },
-  { key: 'goalsConceded', label: 'Buts encaissés' },
+  {
+    key: 'goals',
+    get label() {
+      return i18next.t('playerMatchResponseScreen.goals', 'Buts');
+    },
+  },
+  {
+    key: 'assists',
+    get label() {
+      return i18next.t('playerMatchResponseScreen.assists', 'Passes décisives');
+    },
+  },
+  {
+    key: 'goalsConceded',
+    get label() {
+      return i18next.t('playerMatchResponseScreen.goalsConceded', 'Buts encaissés');
+    },
+  },
 ];
 
 const BASKETBALL_FIELDS = [
-  { key: 'points', label: 'Points' },
-  { key: 'assists', label: 'Passes décisives' },
-  { key: 'rebounds', label: 'Rebonds' },
-  { key: 'threePointsMade', label: '3 pts' },
+  {
+    key: 'points',
+    get label() {
+      return i18next.t('playerMatchResponseScreen.points', 'Points');
+    },
+  },
+  {
+    key: 'assists',
+    get label() {
+      return i18next.t('playerMatchResponseScreen.assists', 'Passes décisives');
+    },
+  },
+  {
+    key: 'rebounds',
+    get label() {
+      return i18next.t('playerMatchResponseScreen.rebounds', 'Rebonds');
+    },
+  },
+  {
+    key: 'threePointsMade',
+    get label() {
+      return i18next.t('playerMatchResponseScreen.threePointers', '3 pts');
+    },
+  },
 ];
 
 // H6 — cet ecran n avait AUCUNE borne haute : `sanitizeNumericInput` retirait
@@ -64,7 +102,12 @@ const normalizeSport = (value) => {
 const getSportFields = (sport) => (normalizeSport(sport) === 'basketball' ? BASKETBALL_FIELDS : FOOTBALL_FIELDS);
 
 const buildScoreSummary = (score) => {
-  if (!score?.available) return 'Score en attente';
+  if (!score?.available) {
+    return i18next.t(
+      'playerMatchResponseScreen.scorePending',
+      'Score en attente',
+    );
+  }
   return `${score?.scoreFor ?? '-'} - ${score?.scoreAgainst ?? '-'}`;
 };
 
@@ -89,10 +132,17 @@ const buildPlayerConsistencyIssues = ({
     const threePointsMade = getNumericValue(quantitative?.threePointsMade);
 
     if (scoreFor !== null && points > scoreFor) {
-      issues.push(`Tes points ne peuvent pas dépasser le score officiel de ton équipe (${scoreFor}).`);
+      issues.push(i18next.t(
+        'playerMatchResponseScreen.pointsExceedTeamScore',
+        'Tes points ne peuvent pas dépasser le score officiel de ton équipe ({{scoreFor}}).',
+        { scoreFor, ...SANS_ECHAPPEMENT },
+      ));
     }
     if ((threePointsMade * 3) > points) {
-      issues.push('Le total de tirs a 3 points ne peut pas dépasser ton total de points.');
+      issues.push(i18next.t(
+        'playerMatchResponseScreen.threePointersExceedPoints',
+        'Le total de tirs a 3 points ne peut pas dépasser ton total de points.',
+      ));
     }
     return issues;
   }
@@ -102,26 +152,55 @@ const buildPlayerConsistencyIssues = ({
   const cleanSheet = Boolean(quantitative?.cleanSheet);
 
   if (scoreFor !== null && goals > scoreFor) {
-    issues.push(`Tes buts ne peuvent pas dépasser le score officiel de ton équipe (${scoreFor}).`);
+    issues.push(i18next.t(
+      'playerMatchResponseScreen.goalsExceedTeamScore',
+      'Tes buts ne peuvent pas dépasser le score officiel de ton équipe ({{scoreFor}}).',
+      { scoreFor, ...SANS_ECHAPPEMENT },
+    ));
   }
   if (scoreAgainst !== null && goalsConceded > scoreAgainst) {
-    issues.push(`Les buts encaissés ne peuvent pas dépasser le score officiel adverse (${scoreAgainst}).`);
+    issues.push(i18next.t(
+      'playerMatchResponseScreen.concededExceedsOpponentScore',
+      'Les buts encaissés ne peuvent pas dépasser le score officiel adverse ({{scoreAgainst}}).',
+      { scoreAgainst, ...SANS_ECHAPPEMENT },
+    ));
   }
   if (scoreAgainst !== null && cleanSheet && scoreAgainst > 0) {
-    issues.push('Un clean sheet est impossible si le score officiel indique un but adverse.');
+    issues.push(i18next.t(
+      'playerMatchResponseScreen.cleanSheetImpossible',
+      'Un clean sheet est impossible si le score officiel indique un but adverse.',
+    ));
   }
   if (cleanSheet && goalsConceded > 0) {
-    issues.push('Un clean sheet implique 0 but encaisse.');
+    issues.push(i18next.t(
+      'playerMatchResponseScreen.cleanSheetMeansZero',
+      'Un clean sheet implique 0 but encaisse.',
+    ));
   }
 
   return issues;
 };
 
 const getScoreSourceLabel = (score) => {
-  if (score?.source === 'league_validated') return 'Score ligue validé';
-  if (score?.source === 'external_sync') return 'Score officiel synchronise';
-  if (score?.source === 'manual') return 'Score saisi dans FoundClub';
-  return 'Score en attente';
+  if (score?.source === 'league_validated') {
+    return i18next.t(
+      'playerMatchResponseScreen.leagueValidatedScore',
+      'Score ligue validé',
+    );
+  }
+  if (score?.source === 'external_sync') {
+    return i18next.t(
+      'playerMatchResponseScreen.officialScoreSynced',
+      'Score officiel synchronise',
+    );
+  }
+  if (score?.source === 'manual') {
+    return i18next.t(
+      'playerMatchResponseScreen.manualScore',
+      'Score saisi dans FoundClub',
+    );
+  }
+  return i18next.t('playerMatchResponseScreen.scorePending', 'Score en attente');
 };
 
 const getApiErrorMessage = (error, fallbackMessage) => (
@@ -156,6 +235,7 @@ const buildInitialQuantitative = (response, sport) => {
  * @param root0.route
  */
 function PlayerMatchResponseScreen({ navigation, route }) {
+  const { t } = useTranslation();
   const {
     Alignments, ApplicationStyle, Colors, Fonts, Spaces,
   } = useTheme();
@@ -166,7 +246,10 @@ function PlayerMatchResponseScreen({ navigation, route }) {
   const eventId = route?.params?.eventId || null;
   const matchId = route?.params?.matchId || null;
   const requestedTeamId = route?.params?.teamId || null;
-  const initialTitle = route?.params?.title || 'Mon retour post-match';
+  const initialTitle = route?.params?.title || t(
+    'playerMatchResponseScreen.myPostMatchFeedback',
+    'Mon retour post-match',
+  );
   const routeMatchLabel = route?.params?.matchLabel || null;
   const forceUnknownStats = Boolean(route?.params?.forceUnknownStats);
   const hydratedKeyRef = useRef(null);
@@ -240,15 +323,18 @@ function PlayerMatchResponseScreen({ navigation, route }) {
     || responsePayload?.team?.name
     || null
   ), [responsePayload?.event?.name, responsePayload?.match?.name, responsePayload?.team?.name, routeMatchLabel]);
-  const pageTitle = initialTitle || 'Mon retour post-match';
-  const heroMatchLabel = headerMatchLabel || 'Match';
+  const pageTitle = initialTitle || t(
+    'playerMatchResponseScreen.myPostMatchFeedback',
+    'Mon retour post-match',
+  );
+  const heroMatchLabel = headerMatchLabel || t('playerMatchResponseScreen.match', 'Match');
   const isSubmitted = responsePayload?.response?.status === 'submitted';
   const isDraft = responsePayload?.response?.status === 'draft';
-  let statusLabel = 'À faire';
+  let statusLabel = t('playerMatchResponseScreen.toDo', 'À faire');
   if (isSubmitted) {
-    statusLabel = 'Envoyé';
+    statusLabel = t('playerMatchResponseScreen.sent', 'Envoyé');
   } else if (isDraft) {
-    statusLabel = 'Brouillon';
+    statusLabel = t('playerMatchResponseScreen.draft', 'Brouillon');
   }
   const fieldRows = useMemo(() => {
     const fields = getSportFields(sport);
@@ -386,20 +472,35 @@ function PlayerMatchResponseScreen({ navigation, route }) {
       return saveLeagueMyMatchResponse(matchId, payload);
     },
     onError: (error) => {
-      Alert.alert('Erreur', getApiErrorMessage(error, "Impossible d'enregistrer ta réponse."));
+      Alert.alert(t(
+        'common.error',
+        'Erreur',
+      ), getApiErrorMessage(error, t(
+        'playerMatchResponseScreen.saveError',
+        "Impossible d'enregistrer ta réponse.",
+      )));
     },
     onSuccess: async (_result, status) => {
       await invalidateQueries();
       await responseQuery.refetch();
       if (status === 'draft') {
-        Alert.alert('Brouillon enregistré', 'Tu peux reprendre ta réponse plus tard.');
+        Alert.alert(t(
+          'playerMatchResponseScreen.draftSaved',
+          'Brouillon enregistré',
+        ), t(
+          'playerMatchResponseScreen.resumeLater',
+          'Tu peux reprendre ta réponse plus tard.',
+        ));
         return;
       }
       Alert.alert(
-        'Merci',
+        t('playerMatchResponseScreen.thankYou', 'Merci'),
         participation === 'played'
-          ? 'Ton match est enregistré.'
-          : 'Ton retour post-match a bien été enregistré.',
+          ? t('playerMatchResponseScreen.matchSaved', 'Ton match est enregistré.')
+          : t(
+            'playerMatchResponseScreen.feedbackSaved',
+            'Ton retour post-match a bien été enregistré.',
+          ),
         [{ onPress: redirectToReviewScreen, text: 'OK' }],
       );
     },
@@ -407,27 +508,45 @@ function PlayerMatchResponseScreen({ navigation, route }) {
 
   const handleSaveDraft = useCallback(() => {
     if (!participation) {
-      Alert.alert('Participation', "Indique d'abord si tu as joué ce match.");
+      Alert.alert(t(
+        'playerMatchResponseScreen.participation',
+        'Participation',
+      ), t(
+        'playerMatchResponseScreen.sayIfPlayedFirst',
+        "Indique d'abord si tu as joué ce match.",
+      ));
       return;
     }
     if (consistencyIssues.length > 0) {
-      Alert.alert('Vérifier tes stats', consistencyIssues[0]);
+      Alert.alert(t(
+        'playerMatchResponseScreen.checkYourStats',
+        'Vérifier tes stats',
+      ), consistencyIssues[0]);
       return;
     }
     saveMutation.mutate('draft');
-  }, [consistencyIssues, participation, saveMutation]);
+  }, [consistencyIssues, participation, saveMutation, t]);
 
   const handleSubmit = useCallback(() => {
     if (!participation) {
-      Alert.alert('Participation', "Indique d'abord si tu as joué ce match.");
+      Alert.alert(t(
+        'playerMatchResponseScreen.participation',
+        'Participation',
+      ), t(
+        'playerMatchResponseScreen.sayIfPlayedFirst',
+        "Indique d'abord si tu as joué ce match.",
+      ));
       return;
     }
     if (consistencyIssues.length > 0) {
-      Alert.alert('Vérifier tes stats', consistencyIssues[0]);
+      Alert.alert(t(
+        'playerMatchResponseScreen.checkYourStats',
+        'Vérifier tes stats',
+      ), consistencyIssues[0]);
       return;
     }
     saveMutation.mutate('submitted');
-  }, [consistencyIssues, participation, saveMutation]);
+  }, [consistencyIssues, participation, saveMutation, t]);
 
   const renderCounterField = ({ field, label }) => (
     <View style={{ flex: 1 }}>
@@ -504,11 +623,24 @@ function PlayerMatchResponseScreen({ navigation, route }) {
     return (
       <ScreenContainer bgImage="bg2" contentContainerStyle={[Alignments.justifyCenter, Alignments.fill]}>
         <View style={[ApplicationStyle.borderRadius24, Spaces.padding[24], Spaces.gap[8], { backgroundColor: cardSurfaceColor }]}>
-          <Text style={[Fonts.h4Bold, Fonts.neutral00]}>Match introuvable</Text>
-          <Text style={[Fonts.p2, Fonts.neutral100]}>
-            Cette route n&apos;a pas recu les informations necessaires pour charger ton retour post-match.
+          <Text style={[Fonts.h4Bold, Fonts.neutral00]}>
+            {t('playerMatchResponseScreen.matchNotFound', 'Match introuvable')}
           </Text>
-          <Button onPress={() => navigation.goBack()} title="Retour" variant="Secondary" />
+          <Text style={[Fonts.p2, Fonts.neutral100]}>
+            {t(
+              'playerMatchResponseScreen.missingRouteInfo',
+              "Cette route n'a pas recu les informations necessaires pour charger ton retour "
+                + 'post-match.',
+            )}
+          </Text>
+          <Button
+            onPress={() => navigation.goBack()}
+            title={t(
+              'common.back',
+              'Retour',
+            )}
+            variant="Secondary"
+          />
         </View>
       </ScreenContainer>
     );
@@ -518,9 +650,14 @@ function PlayerMatchResponseScreen({ navigation, route }) {
     return (
       <ScreenContainer bgImage="bg2" contentContainerStyle={[Alignments.justifyCenter, Alignments.fill]}>
         <View style={[ApplicationStyle.borderRadius24, Spaces.padding[24], Spaces.gap[8], { backgroundColor: cardSurfaceColor }]}>
-          <Text style={[Fonts.h4Bold, Fonts.neutral00]}>Chargement du retour post-match</Text>
+          <Text style={[Fonts.h4Bold, Fonts.neutral00]}>
+            {t('playerMatchResponseScreen.loadingFeedback', 'Chargement du retour post-match')}
+          </Text>
           <Text style={[Fonts.p2, Fonts.neutral100]}>
-            Nous récupérons ton questionnaire et le score officiel du match.
+            {t(
+              'playerMatchResponseScreen.fetchingQuestionnaire',
+              'Nous récupérons ton questionnaire et le score officiel du match.',
+            )}
           </Text>
         </View>
       </ScreenContainer>
@@ -531,11 +668,23 @@ function PlayerMatchResponseScreen({ navigation, route }) {
     return (
       <ScreenContainer bgImage="bg2" contentContainerStyle={[Alignments.justifyCenter, Alignments.fill]}>
         <View style={[ApplicationStyle.borderRadius24, Spaces.padding[24], Spaces.gap[12], { backgroundColor: cardSurfaceColor }]}>
-          <Text style={[Fonts.h4Bold, Fonts.neutral00]}>Chargement impossible</Text>
-          <Text style={[Fonts.p2, Fonts.neutral100]}>
-            {String(responseQuery.error?.message || 'Une erreur est survenue.')}
+          <Text style={[Fonts.h4Bold, Fonts.neutral00]}>
+            {t('playerMatchResponseScreen.loadingFailed', 'Chargement impossible')}
           </Text>
-          <Button onPress={() => responseQuery.refetch()} title="Réessayer" variant="Primary" />
+          <Text style={[Fonts.p2, Fonts.neutral100]}>
+            {String(responseQuery.error?.message || t(
+              'playerMatchResponseScreen.anErrorOccurred',
+              'Une erreur est survenue.',
+            ))}
+          </Text>
+          <Button
+            onPress={() => responseQuery.refetch()}
+            title={t(
+              'playerMatchResponseScreen.tryAgain',
+              'Réessayer',
+            )}
+            variant="Primary"
+          />
         </View>
       </ScreenContainer>
     );
@@ -545,11 +694,23 @@ function PlayerMatchResponseScreen({ navigation, route }) {
     return (
       <ScreenContainer bgImage="bg2" contentContainerStyle={[Alignments.justifyCenter, Alignments.fill]}>
         <View style={[ApplicationStyle.borderRadius24, Spaces.padding[24], Spaces.gap[12], { backgroundColor: cardSurfaceColor }]}>
-          <Text style={[Fonts.h4Bold, Fonts.neutral00]}>Questionnaire indisponible</Text>
-          <Text style={[Fonts.p2, Fonts.neutral100]}>
-            Aucun retour joueur n&apos;est disponible pour ce match.
+          <Text style={[Fonts.h4Bold, Fonts.neutral00]}>
+            {t('playerMatchResponseScreen.questionnaireUnavailable', 'Questionnaire indisponible')}
           </Text>
-          <Button onPress={() => navigation.goBack()} title="Retour" variant="Secondary" />
+          <Text style={[Fonts.p2, Fonts.neutral100]}>
+            {t(
+              'playerMatchResponseScreen.noFeedbackAvailable',
+              "Aucun retour joueur n'est disponible pour ce match.",
+            )}
+          </Text>
+          <Button
+            onPress={() => navigation.goBack()}
+            title={t(
+              'common.back',
+              'Retour',
+            )}
+            variant="Secondary"
+          />
         </View>
       </ScreenContainer>
     );
@@ -612,7 +773,9 @@ function PlayerMatchResponseScreen({ navigation, route }) {
             },
           ]}
         >
-          <Text style={[Fonts.p4Bold, Fonts.primary500]}>Ton match</Text>
+          <Text style={[Fonts.p4Bold, Fonts.primary500]}>
+            {t('playerMatchResponseScreen.yourMatch', 'Ton match')}
+          </Text>
           <Text style={[Fonts.h2Bold, Fonts.neutral00]}>
             {heroMatchLabel}
           </Text>
@@ -656,15 +819,37 @@ function PlayerMatchResponseScreen({ navigation, route }) {
 
         {responseQuery.isLoading ? (
           <View style={[ApplicationStyle.borderRadius24, Spaces.padding[24], { backgroundColor: cardSurfaceColor }]}>
-            <Text style={[Fonts.p2, Fonts.neutral00, Fonts.textCenter]}>Chargement de ton retour post-match...</Text>
+            <Text style={[Fonts.p2, Fonts.neutral00, Fonts.textCenter]}>
+              {t(
+                'playerMatchResponseScreen.loadingYourFeedback',
+                'Chargement de ton retour post-match...',
+              )}
+            </Text>
           </View>
         ) : null}
 
         {responseQuery.error ? (
           <View style={[ApplicationStyle.borderRadius24, Spaces.padding[24], Spaces.gap[8], { backgroundColor: cardSurfaceColor }]}>
-            <Text style={[Fonts.h4Bold, Fonts.neutral00]}>Impossible de charger ce questionnaire.</Text>
-            <Text style={[Fonts.p2, Fonts.neutral100]}>{String(responseQuery.error?.message || 'Une erreur est survenue.')}</Text>
-            <Button onPress={() => responseQuery.refetch()} title="Réessayer" variant="Secondary" />
+            <Text style={[Fonts.h4Bold, Fonts.neutral00]}>
+              {t(
+                'playerMatchResponseScreen.loadQuestionnaireError',
+                'Impossible de charger ce questionnaire.',
+              )}
+            </Text>
+            <Text style={[Fonts.p2, Fonts.neutral100]}>
+              {String(responseQuery.error?.message || t(
+                'playerMatchResponseScreen.anErrorOccurred',
+                'Une erreur est survenue.',
+              ))}
+            </Text>
+            <Button
+              onPress={() => responseQuery.refetch()}
+              title={t(
+                'playerMatchResponseScreen.tryAgain',
+                'Réessayer',
+              )}
+              variant="Secondary"
+            />
           </View>
         ) : null}
 
@@ -672,26 +857,43 @@ function PlayerMatchResponseScreen({ navigation, route }) {
           <>
             <View style={[ApplicationStyle.borderRadius24, Spaces.padding[sectionPadding], Spaces.gap[sectionGap], { backgroundColor: cardSurfaceColor }]}>
               <View style={[Spaces.gap[8]]}>
-                <Text style={[Fonts.h4Bold, Fonts.neutral00]}>As-tu participé au match ?</Text>
+                <Text style={[Fonts.h4Bold, Fonts.neutral00]}>
+                  {t('playerMatchResponseScreen.didYouTakePart', 'As-tu participé au match ?')}
+                </Text>
                 <Text style={[Fonts.p2, { color: secondaryTextColor }]}>
-                  Choisis le cas qui correspond le mieux à ta situation pour ce match.
+                  {t(
+                    'playerMatchResponseScreen.chooseSituation',
+                    'Choisis le cas qui correspond le mieux à ta situation pour ce match.',
+                  )}
                 </Text>
               </View>
               <View style={[Spaces.gap[12]]}>
                 {[
                   {
-                    description: 'Tu peux ensuite renseigner tes stats et ton ressenti.',
-                    label: "J'ai joué",
+                    description: t(
+                      'playerMatchResponseScreen.playedDescription',
+                      'Tu peux ensuite renseigner tes stats et ton ressenti.',
+                    ),
+                    label: t('playerMatchResponseScreen.played', "J'ai joué"),
                     value: 'played',
                   },
                   {
-                    description: 'Tu peux laisser une note et un commentaire, sans chiffres de match.',
-                    label: "J'étais là mais je n'ai pas joué",
+                    description: t(
+                      'playerMatchResponseScreen.presentNoPlayDescription',
+                      'Tu peux laisser une note et un commentaire, sans chiffres de match.',
+                    ),
+                    label: t(
+                      'playerMatchResponseScreen.presentNoPlay',
+                      "J'étais là mais je n'ai pas joué",
+                    ),
                     value: 'present_no_play',
                   },
                   {
-                    description: 'Tu ne seras plus relancé·e pour ce match.',
-                    label: "Je n'étais pas concerné·e",
+                    description: t(
+                      'playerMatchResponseScreen.notInvolvedDescription',
+                      'Tu ne seras plus relancé·e pour ce match.',
+                    ),
+                    label: t('playerMatchResponseScreen.notInvolved', "Je n'étais pas concerné·e"),
                     value: 'not_involved',
                   },
                 ].map((option) => {
@@ -725,9 +927,18 @@ function PlayerMatchResponseScreen({ navigation, route }) {
               <View style={[ApplicationStyle.borderRadius24, Spaces.padding[sectionPadding], Spaces.gap[sectionGap], { backgroundColor: cardSurfaceColor }]}>
                 <View style={[Spaces.gap[12]]}>
                   <View style={{ flex: 1 }}>
-                    <Text style={[Fonts.h4Bold, Fonts.neutral00]}>Mes stats quantitatives</Text>
+                    <Text style={[Fonts.h4Bold, Fonts.neutral00]}>
+                      {t(
+                        'playerMatchResponseScreen.myQuantitativeStats',
+                        'Mes stats quantitatives',
+                      )}
+                    </Text>
                     <Text style={[Fonts.p2, { color: secondaryTextColor }]}>
-                      Renseigne tes chiffres personnels, ou indique que tu ne les connais pas.
+                      {t(
+                        'playerMatchResponseScreen.fillInFigures',
+                        'Renseigne tes chiffres personnels, ou indique que tu ne les connais '
+                          + 'pas.',
+                      )}
                     </Text>
                   </View>
                   <Pressable
@@ -735,7 +946,13 @@ function PlayerMatchResponseScreen({ navigation, route }) {
                     onPress={() => setDoesKnowStats((current) => !current)}
                   >
                     <Text style={[Fonts.p3Bold, Fonts.neutral300, Fonts.textCenter]}>
-                      {doesKnowStats ? 'Je ne connais pas mes stats' : 'Je connais mes stats'}
+                      {doesKnowStats ? t(
+                        'playerMatchResponseScreen.dontKnowStats',
+                        'Je ne connais pas mes stats',
+                      ) : t(
+                        'playerMatchResponseScreen.knowStats',
+                        'Je connais mes stats',
+                      )}
                     </Text>
                   </Pressable>
                 </View>
@@ -743,18 +960,56 @@ function PlayerMatchResponseScreen({ navigation, route }) {
                 {doesKnowStats ? (
                   <>
                     <View style={[Spaces.gap[8]]}>
-                      <Text style={[Fonts.p4Bold, Fonts.neutral100]}>Temps de jeu</Text>
+                      <Text style={[Fonts.p4Bold, Fonts.neutral100]}>
+                        {t('playerMatchResponseScreen.playingTime', 'Temps de jeu')}
+                      </Text>
                       <View style={[Alignments.row, Spaces.gap[8]]}>
                         {(normalizeSport(sport) === 'basketball'
                           ? [
-                            { label: 'Pas joué', minutes: 0 },
-                            { label: 'Une mi-temps', minutes: 20 },
-                            { label: 'Tout le match', minutes: 40 },
+                            {
+                              label: t(
+                                'playerMatchResponseScreen.didNotPlay',
+                                'Pas joué',
+                              ),
+                              minutes: 0,
+                            },
+                            {
+                              label: t(
+                                'playerMatchResponseScreen.oneHalf',
+                                'Une mi-temps',
+                              ),
+                              minutes: 20,
+                            },
+                            {
+                              label: t(
+                                'playerMatchResponseScreen.wholeMatch',
+                                'Tout le match',
+                              ),
+                              minutes: 40,
+                            },
                           ]
                           : [
-                            { label: 'Pas joué', minutes: 0 },
-                            { label: 'Une mi-temps', minutes: 45 },
-                            { label: 'Tout le match', minutes: 90 },
+                            {
+                              label: t(
+                                'playerMatchResponseScreen.didNotPlay',
+                                'Pas joué',
+                              ),
+                              minutes: 0,
+                            },
+                            {
+                              label: t(
+                                'playerMatchResponseScreen.oneHalf',
+                                'Une mi-temps',
+                              ),
+                              minutes: 45,
+                            },
+                            {
+                              label: t(
+                                'playerMatchResponseScreen.wholeMatch',
+                                'Tout le match',
+                              ),
+                              minutes: 90,
+                            },
                           ]
                         ).map((preset) => {
                           const isPresetActive = Number.parseInt(String(quantitative?.minutesPlayed || '0'), 10) === preset.minutes;
@@ -789,7 +1044,13 @@ function PlayerMatchResponseScreen({ navigation, route }) {
                         {`${Number.parseInt(String(quantitative?.minutesPlayed || '0'), 10) || 0} min — ajuste si besoin ci-dessous.`}
                       </Text>
                     </View>
-                    {renderCounterField({ field: 'minutesPlayed', label: 'Temps de jeu (min)' })}
+                    {renderCounterField({
+                      field: 'minutesPlayed',
+                      label: t(
+                        'playerMatchResponseScreen.playingTimeMinutes',
+                        'Temps de jeu (min)',
+                      ),
+                    })}
                     {fieldRows.map((row) => (
                       <View key={row.map((field) => field.key).join(':')} style={[Alignments.row, Spaces.gap[12]]}>
                         {row.map((field) => (
@@ -821,7 +1082,9 @@ function PlayerMatchResponseScreen({ navigation, route }) {
                         ]}
                       >
                         <View style={[Alignments.fill]}>
-                          <Text style={[Fonts.p2Bold, Fonts.neutral00]}>Clean sheet</Text>
+                          <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
+                            {t('playerMatchResponseScreen.cleanSheet', 'Clean sheet')}
+                          </Text>
                           <Text
                             style={[
                               Fonts.p4,
@@ -830,8 +1093,14 @@ function PlayerMatchResponseScreen({ navigation, route }) {
                             ]}
                           >
                             {quantitative?.cleanSheet
-                              ? 'Activé automatiquement — 0 but encaissé'
-                              : "S'active à 0 but encaissé"}
+                              ? t(
+                                'playerMatchResponseScreen.cleanSheetAuto',
+                                'Activé automatiquement — 0 but encaissé',
+                              )
+                              : t(
+                                'playerMatchResponseScreen.cleanSheetTurnsOn',
+                                "S'active à 0 but encaissé",
+                              )}
                           </Text>
                         </View>
                         <View
@@ -861,23 +1130,25 @@ function PlayerMatchResponseScreen({ navigation, route }) {
                     ) : null}
                     {consistencyIssues.length ? (
                       <View style={[{ borderRadius: 20 }, Spaces.padding[16], Spaces.gap[8], { backgroundColor: activeSurfaceColor, borderColor: `${Colors.warning500}66`, borderWidth: 1 }]}>
-                        <Text style={[Fonts.p3Bold, Fonts.warning500]}>Vérification de cohérence</Text>
+                        <Text style={[Fonts.p3Bold, Fonts.warning500]}>{t('playerMatchResponseScreen.consistencyCheck', 'Vérification de cohérence')}</Text>
                         {consistencyIssues.map((issue) => (
                           <Text key={issue} style={[Fonts.p3, Fonts.neutral100]}>
                             {`- ${issue}`}
                           </Text>
                         ))}
                         <Text style={[Fonts.p4, Fonts.neutral200]}>
-                          Le score officiel ne sera jamais modifié. Corrige simplement les chiffres avant l&apos;envoi.
+                          {t('playerMatchResponseScreen.officialScoreNeverChanged', "Le score officiel ne sera jamais modifié. Corrige simplement les chiffres avant l'envoi.")}
                         </Text>
                       </View>
                     ) : null}
                   </>
                 ) : (
                   <View style={[{ borderRadius: 20 }, Spaces.padding[16], Spaces.gap[8], { backgroundColor: insetSurfaceColor, borderColor: subtleBorderColor, borderWidth: 1 }]}>
-                    <Text style={[Fonts.p2Bold, Fonts.neutral00]}>Aucun problème.</Text>
+                    <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
+                      {t('playerMatchResponseScreen.noProblem', 'Aucun problème.')}
+                    </Text>
                     <Text style={[Fonts.p3, { color: secondaryTextColor }]}>
-                      On enregistre que tu ne connais pas tes stats individuelles pour ce match. Tu peux quand même laisser ta note et ton ressenti.
+                      {t('playerMatchResponseScreen.unknownStatsHint', 'On enregistre que tu ne connais pas tes stats individuelles pour ce match. Tu peux quand même laisser ta note et ton ressenti.')}
                     </Text>
                   </View>
                 )}
@@ -887,25 +1158,37 @@ function PlayerMatchResponseScreen({ navigation, route }) {
             {participation !== 'not_involved' ? (
               <View style={[ApplicationStyle.borderRadius24, Spaces.padding[sectionPadding], Spaces.gap[sectionGap], { backgroundColor: cardSurfaceColor }]}>
                 <View style={[Spaces.gap[8]]}>
-                  <Text style={[Fonts.h4Bold, Fonts.neutral00]}>Mon ressenti</Text>
+                  <Text style={[Fonts.h4Bold, Fonts.neutral00]}>
+                    {t('playerMatchResponseScreen.howIFelt', 'Mon ressenti')}
+                  </Text>
                   <Text style={[Fonts.p2, { color: secondaryTextColor }]}>
-                    Note ton match et le match de l&apos;équipe, puis ajoute un commentaire si tu le souhaites.
+                    {t('playerMatchResponseScreen.rateHint', "Note ton match et le match de l'équipe, puis ajoute un commentaire si tu le souhaites.")}
                   </Text>
                 </View>
 
                 <View style={[Spaces.gap[12]]}>
-                  <Text style={[Fonts.p3Bold, Fonts.neutral00]}>Ma performance</Text>
+                  <Text style={[Fonts.p3Bold, Fonts.neutral00]}>
+                    {t('playerMatchResponseScreen.myPerformance', 'Ma performance')}
+                  </Text>
                   <Text style={[Fonts.p3, { color: secondaryTextColor }]}>
-                    Comment tu évaluerais ta contribution personnelle sur ce match ?
+                    {t(
+                      'playerMatchResponseScreen.rateContribution',
+                      'Comment tu évaluerais ta contribution personnelle sur ce match ?',
+                    )}
                   </Text>
                   {renderRatingScale(rating, setRating)}
                 </View>
 
                 {participation === 'played' || participation === 'present_no_play' ? (
                   <View style={[Spaces.gap[12]]}>
-                    <Text style={[Fonts.p3Bold, Fonts.neutral00]}>Le match de l&apos;équipe</Text>
+                    <Text style={[Fonts.p3Bold, Fonts.neutral00]}>
+                      {t('playerMatchResponseScreen.teamMatch', "Le match de l'équipe")}
+                    </Text>
                     <Text style={[Fonts.p3, { color: secondaryTextColor }]}>
-                      Donne ton ressenti collectif sur la performance du groupe.
+                      {t(
+                        'playerMatchResponseScreen.teamPerformanceHint',
+                        'Donne ton ressenti collectif sur la performance du groupe.',
+                      )}
                     </Text>
                     {renderRatingScale(teamRating, setTeamRating)}
                   </View>
@@ -915,7 +1198,10 @@ function PlayerMatchResponseScreen({ navigation, route }) {
                   multiline
                   numberOfLines={4}
                   onChangeText={setComment}
-                  placeholder="Mon ressenti, ce qui a bien marché, ce qui était plus compliqué…"
+                  placeholder={t(
+                    'playerMatchResponseScreen.commentPlaceholder',
+                    'Mon ressenti, ce qui a bien marché, ce qui était plus compliqué…',
+                  )}
                   placeholderTextColor={Colors.neutral400}
                   style={[
                     Fonts.p2,
@@ -937,23 +1223,28 @@ function PlayerMatchResponseScreen({ navigation, route }) {
 
             <View style={[ApplicationStyle.borderRadius24, Spaces.padding[sectionPadding], Spaces.gap[16], { backgroundColor: cardSurfaceColor }]}>
               <View style={[Spaces.gap[8]]}>
-                <Text style={[Fonts.h4Bold, Fonts.neutral00]}>Actions</Text>
+                <Text style={[Fonts.h4Bold, Fonts.neutral00]}>
+                  {t('playerMatchResponseScreen.actions', 'Actions')}
+                </Text>
                 <Text style={[Fonts.p2, { color: secondaryTextColor }]}>
-                  Tu peux enregistrer un brouillon ou envoyer directement ton retour.
+                  {t(
+                    'playerMatchResponseScreen.saveOrSendHint',
+                    'Tu peux enregistrer un brouillon ou envoyer directement ton retour.',
+                  )}
                 </Text>
               </View>
               <Button
                 disabled={!participation || saveMutation.isPending}
                 isLoading={saveMutation.isPending}
                 onPress={handleSaveDraft}
-                title="Sauvegarder mon brouillon"
+                title={t('playerMatchResponseScreen.saveMyDraft', 'Sauvegarder mon brouillon')}
                 variant="Secondary"
               />
               <Button
                 disabled={!participation || saveMutation.isPending}
                 isLoading={saveMutation.isPending}
                 onPress={handleSubmit}
-                title="Envoyer mon retour"
+                title={t('playerMatchResponseScreen.sendMyFeedback', 'Envoyer mon retour')}
                 variant="Primary"
               />
             </View>

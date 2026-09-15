@@ -8,6 +8,12 @@ import {
   toShortDay,
 } from './friendlyMatchDateLabels';
 
+// I18N-2 : ces textes passent par i18next.t hors composant — la doublure partagée rend le
+// français de l app (fr.js, sinon le repli, jetons et pluriel français).
+jest.mock('i18next', () => (
+  jest.requireActual('@/theme/strings/__mocks__/doublureTraduction').i18next
+));
+
 describe('friendlyMatchDateLabels', () => {
   test('la saisie du selecteur devient la date attendue par le serveur', () => {
     expect(toIsoDay('12/05/2099')).toBe('2099-05-12');

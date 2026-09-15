@@ -2,6 +2,7 @@
 import { joiResolver } from '@hookform/resolvers/joi';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { format, isValid, parse } from 'date-fns';
+import i18next from 'i18next';
 import Joi from 'joi';
 import { useEffect, useMemo, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
@@ -19,6 +20,7 @@ import { ScrollView } from 'react-native-gesture-handler';
 import { USER_ROLES } from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
 import useEvent from '@/domains/event/useEvent';
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -156,12 +158,23 @@ const decrireLesChampsFautifs = (errors, traduire) => {
   });
 
   if (noms.length === 0) {
-    return 'Vérifie ta saisie avant d\'enregistrer.';
+    return i18next.t(
+      'eventEdit.checkYourInputBeforeSaving',
+      "Vérifie ta saisie avant d'enregistrer.",
+    );
   }
   if (noms.length === 1) {
-    return `Vérifie le champ « ${noms[0]} », puis appuie de nouveau sur Enregistrer.`;
+    return i18next.t(
+      'eventEdit.checkTheFieldThenTap',
+      'Vérifie le champ « {{field}} », puis appuie de nouveau sur Enregistrer.',
+      { field: noms[0], ...SANS_ECHAPPEMENT },
+    );
   }
-  return `Vérifie ces champs : ${noms.join(', ')}.`;
+  return i18next.t(
+    'eventEdit.checkTheseFields',
+    'Vérifie ces champs : {{fields}}.',
+    { fields: noms.join(', '), ...SANS_ECHAPPEMENT },
+  );
 };
 
 const buildOccupancyWindow = (dateValue, startTime, endTime, getDateFromDateInput) => {
@@ -659,12 +672,20 @@ function EventEdit({ navigation, route }) {
     const finalOptions = [];
 
     if (myTeamsOptions.length > 0) {
-      finalOptions.push({ isHeader: true, label: t('eventEdit.fields.invitedTeams.myTeams') || 'MES ÉQUIPES', value: 'header_my_teams' });
+      finalOptions.push({
+        isHeader: true,
+        label: t('eventEdit.fields.invitedTeams.myTeams', 'MES ÉQUIPES'),
+        value: 'header_my_teams',
+      });
       finalOptions.push(...myTeamsOptions);
     }
 
     if (otherTeamsOptions.length > 0) {
-      finalOptions.push({ isHeader: true, label: t('eventEdit.fields.invitedTeams.otherTeams') || 'AUTRES ÉQUIPES', value: 'header_other_teams' });
+      finalOptions.push({
+        isHeader: true,
+        label: t('eventEdit.fields.invitedTeams.otherTeams', 'AUTRES ÉQUIPES'),
+        value: 'header_other_teams',
+      });
       finalOptions.push(...otherTeamsOptions);
     }
 
@@ -775,7 +796,10 @@ function EventEdit({ navigation, route }) {
       if (eventId && !editSupport?.isSupported) {
         Alert.alert(
           t('eventEdit.modals.unsupportedEdit.title', 'Modification limitée'),
-          editSupport?.reason || "Cette fiche ne permet pas encore d'éditer ce type d'événement.",
+          editSupport?.reason || t(
+            'eventEdit.thisPageCanTEdit',
+            "Cette fiche ne permet pas encore d'éditer ce type d'événement.",
+          ),
         );
         return;
       }
@@ -837,7 +861,12 @@ function EventEdit({ navigation, route }) {
         if (event?.recurrenceGroupId) {
           const originalDate = event?.date ? format(new Date(event.date), 'dd/MM/yyyy') : '';
           const recurrenceScopeHint = originalDate && data?.date && data.date !== originalDate
-            ? "\n\nSi tu choisis les futurs ou toute la série, la nouvelle date reste spécifique à cet événement. Les autres occurrences recuperent surtout les paramètres communs comme l'horaire, le lieu et les invitations."
+            ? t(
+              'eventEdit.ifYouChooseTheFuture',
+              '\n\nSi tu choisis les futurs ou toute la série, la nouvelle date reste spécifique '
+                + 'à cet événement. Les autres occurrences recuperent surtout les paramètres '
+                + "communs comme l'horaire, le lieu et les invitations.",
+            )
             : '';
           Alert.alert(
             t('eventEdit.modals.recurrenceUpdate.title', 'Modification récurrente'),
@@ -977,10 +1006,10 @@ function EventEdit({ navigation, route }) {
                 <AutocompleteSelect
                   error={getFieldError({ errors: formErrors, fieldName: name })}
                   isMulti
-                  label={t('eventEdit.fields.invitedTeams.label') || 'Inviter des équipes'}
+                  label={t('eventEdit.fields.invitedTeams.label', 'Inviter des équipes')}
                   onBlur={onBlur}
                   options={invitedTeamOptions}
-                  placeholder={t('eventEdit.fields.invitedTeams.placeholder') || 'Sélectionner des équipes'}
+                  placeholder={t('eventEdit.fields.invitedTeams.placeholder', 'Sélectionner des équipes')}
                   setValue={(/** @type {Option[]} */options) => {
                     // Filter out headers from selection just in case
                     const validOptions = options?.filter((o) => !o.isHeader);
@@ -1029,7 +1058,7 @@ function EventEdit({ navigation, route }) {
               ]}
               >
                 <Text style={[Fonts.p2, Fonts.warning900]}>
-                  {editSupport?.reason || "Cette fiche ne permet pas encore d'éditer ce type d'événement."}
+                  {editSupport?.reason || t('eventEdit.thisPageCanTEdit', "Cette fiche ne permet pas encore d'éditer ce type d'événement.")}
                 </Text>
               </View>
             ) : null}
@@ -1042,7 +1071,7 @@ function EventEdit({ navigation, route }) {
               ]}
               >
                 <Text style={[Fonts.p2, Fonts.warning900]}>
-                  Ce créneau dépasse la capacité de l installation. L événement restera en demande en attente jusqu au traitement d un dirigeant.
+                  {t('eventEdit.thisSlotExceedsTheFacility', 'Ce créneau dépasse la capacité de l installation. L événement restera en demande en attente jusqu au traitement d un dirigeant.')}
                 </Text>
               </View>
             ) : null}
@@ -1055,7 +1084,7 @@ function EventEdit({ navigation, route }) {
               ]}
               >
                 <Text style={[Fonts.p2, Fonts.primary200]}>
-                  Ce créneau dépasse la capacité de l installation, mais ce club est configure en Autorise et notifier. L événement restera confirme et les dirigeants seront prevenus.
+                  {t('eventEdit.thisSlotExceedsTheFacility2', 'Ce créneau dépasse la capacité de l installation, mais ce club est configure en Autorise et notifier. L événement restera confirme et les dirigeants seront prevenus.')}
                 </Text>
               </View>
             ) : null}
@@ -1069,7 +1098,11 @@ function EventEdit({ navigation, route }) {
               ]}
               >
                 <Text style={[Fonts.p2, Fonts.warning900]}>
-                  ⚠️ Un conflit a été détecté sur ce créneau. Ta demande sera soumise à validation.
+                  {t(
+                    'eventEdit.aConflictWasDetectedOn',
+                    '⚠️ Un conflit a été détecté sur ce créneau. Ta demande sera soumise à '
+                      + 'validation.',
+                  )}
                 </Text>
               </View>
             )}
@@ -1609,10 +1642,13 @@ function EventEdit({ navigation, route }) {
               ]}
             >
               <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
-                Mise à la une
+                {t('eventEdit.featured', 'Mise à la une')}
               </Text>
               <Text style={[Fonts.p3, Fonts.neutral200]}>
-                La demande de mise a la une se fait depuis la fiche de l&apos;evenement une fois enregistre.
+                {t(
+                  'eventEdit.featuringRequestFromEventPage',
+                  "La demande de mise a la une se fait depuis la fiche de l'evenement une fois enregistre.",
+                )}
               </Text>
             </View>
           </View>

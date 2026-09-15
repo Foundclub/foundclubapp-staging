@@ -1357,13 +1357,16 @@ function EventListContent({
           ]}
         >
           <Text style={[Fonts.p1, { color: Colors.neutral00, flex: 1 }]}>
-            Événements à partir de
+            {t('eventListContent.eventsFrom', 'Événements à partir de')}
           </Text>
 
           {shouldShowMapToggle ? (
             <TouchableOpacity
-              accessibilityHint="Ouvre la vue carte des événements."
-              accessibilityLabel="Passer en mode carte"
+              accessibilityHint={t(
+                'eventListContent.opensTheEventsMapView',
+                'Ouvre la vue carte des événements.',
+              )}
+              accessibilityLabel={t('eventListContent.switchToMapView', 'Passer en mode carte')}
               activeOpacity={0.85}
               onPress={() => navigation.navigate(RouteNames.SearchMapScreen, { scope: 'events' })}
               style={[
@@ -1424,18 +1427,28 @@ function EventListContent({
       {isViewportListMode ? (
         <View style={[Spaces.gap[4]]}>
           <Text style={[Fonts.p3Bold, Fonts.neutral00]}>
-            {`${viewportDisplayCount} événement${viewportDisplayCount > 1 ? 's' : ''} dans cette zone`}
+            {t(
+              'eventListContent.eventsInThisArea',
+              {
+                count: viewportDisplayCount,
+                defaultValue_one: '{{count}} événement dans cette zone',
+                defaultValue_other: '{{count}} événements dans cette zone',
+              },
+            )}
           </Text>
           {isViewportTruncated ? (
             <Text style={[Fonts.p4, Fonts.neutral200]}>
-              Zoome sur la carte pour afficher tous les événements de cette zone.
+              {t(
+                'eventListContent.zoomInOnTheMap',
+                'Zoome sur la carte pour afficher tous les événements de cette zone.',
+              )}
             </Text>
           ) : null}
         </View>
       ) : null}
       {isSmartSearchEnabled ? (
         <Text style={[Fonts.p3, Fonts.primary500]}>
-          Trie par pertinence
+          {t('eventListContent.sortedByRelevance', 'Trie par pertinence')}
         </Text>
       ) : null}
       {showInlineLoadingHint ? renderLoadingHint(

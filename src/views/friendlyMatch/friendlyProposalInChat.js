@@ -1,3 +1,5 @@
+import i18next from 'i18next';
+
 import { respondToFriendlyMatchApplication } from '@/services/friendlyMatch/friendlyMatchService';
 
 /**
@@ -22,13 +24,9 @@ import { respondToFriendlyMatchApplication } from '@/services/friendlyMatch/frie
 /** Ce qui distingue une proposition d'amical de son jumeau LEAGUE. */
 export const FRIENDLY_PROPOSAL_KIND = 'friendly_match';
 
-/**
- * Ce que l'acceptation va produire, dit AVANT le geste. Accepter est lourd et
- * irréversible côté serveur : le match est créé et posé dans le planning des
- * deux équipes. La même phrase que l'écran de l'annonce, parce que c'est le
- * même geste — deux formulations laisseraient croire à deux gestes différents.
- */
-export const FRIENDLY_ACCEPT_CONSEQUENCE = 'Le match sera créé et apparaîtra dans le planning des deux équipes.'; // eslint-disable-line max-len
+// I18N-2 : la phrase de l acceptation (« Le match sera créé… ») vit sous UNE clef,
+// friendlyProposalInChat.acceptConsequence, lue ici et par la carte de candidature :
+// même geste, même phrase. Une constante lue à l import ne se traduisait pas.
 
 /**
  * Une bulle de proposition de match AMICAL ? (par opposition à LEAGUE)
@@ -61,8 +59,11 @@ export const canAcceptFriendlyProposal = (composition, userDocumentId) => {
  * @returns {{ body: string, title: string }}
  */
 export const buildFriendlyProposalConfirmation = () => ({
-  body: FRIENDLY_ACCEPT_CONSEQUENCE,
-  title: 'Accepter cette proposition ?',
+  body: i18next.t(
+    'friendlyProposalInChat.acceptConsequence',
+    'Le match sera créé et apparaîtra dans le planning des deux équipes.',
+  ),
+  title: i18next.t('friendlyProposalInChat.acceptThisProposal', 'Accepter cette proposition ?'),
 });
 
 /**
@@ -79,7 +80,10 @@ export const buildFriendlyProposalConfirmation = () => ({
 export const respondToFriendlyProposal = async (composition, action) => {
   const applicationId = String(composition?.applicationId || '').trim();
   if (!applicationId) {
-    throw new Error('Impossible de retrouver la proposition de match.');
+    throw new Error(i18next.t(
+      'friendlyProposalInChat.unableToFindTheMatch',
+      'Impossible de retrouver la proposition de match.',
+    ));
   }
   return respondToFriendlyMatchApplication(applicationId, { action });
 };

@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import {
   TouchableOpacity,
   View,
@@ -9,6 +10,7 @@ import {
  * @returns {import('react').ReactElement}
  */
 function PlanningFullscreenButton({ borderColor, onPress }) {
+  const { t } = useTranslation();
   const cornerStyle = {
     borderColor,
     height: 7,
@@ -18,7 +20,10 @@ function PlanningFullscreenButton({ borderColor, onPress }) {
 
   return (
     <TouchableOpacity
-      accessibilityLabel="Ouvrir le planning en plein écran"
+      accessibilityLabel={t(
+        'planningFullscreenButton.openThePlanningInFull',
+        'Ouvrir le planning en plein écran',
+      )}
       accessibilityRole="button"
       onPress={onPress}
       style={{

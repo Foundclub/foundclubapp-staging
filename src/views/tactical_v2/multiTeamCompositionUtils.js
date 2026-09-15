@@ -1,5 +1,9 @@
 // @ts-nocheck
 /* eslint-disable no-nested-ternary */
+import i18next from 'i18next';
+
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
+
 import {
   getCompositionPlayerId,
   getCompositionPlayerInitials,
@@ -120,7 +124,15 @@ export const buildTeamEntryFromPreset = (preset, index, sportContext, teamName =
   const teamEntryId = normalizeText(teamId || `team_${index + 1}`) || `team_${index + 1}`;
   return {
     id: teamEntryId,
-    name: normalizeText(teamName || `Équipe ${index + 1}`) || `Équipe ${index + 1}`,
+    name: normalizeText(teamName || i18next.t(
+      'multiTeamCompositionUtils.team',
+      'Équipe {{number}}',
+      { number: index + 1, ...SANS_ECHAPPEMENT },
+    )) || i18next.t(
+      'multiTeamCompositionUtils.team',
+      'Équipe {{number}}',
+      { number: index + 1, ...SANS_ECHAPPEMENT },
+    ),
     placements: [],
     presetKey: normalizeText(preset?.key) || null,
     presetLabel: normalizeText(preset?.label) || null,
@@ -161,7 +173,15 @@ const normalizeTeamEntry = (team, index, presets, sportContext) => {
 
   return {
     id: teamEntryId,
-    name: normalizeText(team?.name || `Équipe ${index + 1}`) || `Équipe ${index + 1}`,
+    name: normalizeText(team?.name || i18next.t(
+      'multiTeamCompositionUtils.team',
+      'Équipe {{number}}',
+      { number: index + 1, ...SANS_ECHAPPEMENT },
+    )) || i18next.t(
+      'multiTeamCompositionUtils.team',
+      'Équipe {{number}}',
+      { number: index + 1, ...SANS_ECHAPPEMENT },
+    ),
     placements,
     presetKey: normalizeText(team?.presetKey || preset?.key) || null,
     presetLabel: normalizeText(team?.presetLabel || preset?.label) || null,
@@ -213,7 +233,7 @@ export const normalizeMultiTeamPack = (source, options = {}) => {
       mode: 'manual',
       teams: [{
         id: 'team_1',
-        name: 'Équipe 1',
+        name: i18next.t('multiTeamCompositionUtils.team1', 'Équipe 1'),
         placements: source.placements,
         presetKey: presets[0]?.key || null,
         presetLabel: presets[0]?.label || null,
@@ -357,7 +377,15 @@ export const buildDraftPayloadFromPack = (pack, players = []) => {
     sportContext: normalizeText(pack?.sportContext) || null,
     teams: (Array.isArray(pack?.teams) ? pack.teams : []).map((team, index) => ({
       id: normalizeText(team?.id) || `team_${index + 1}`,
-      name: normalizeText(team?.name || `Équipe ${index + 1}`) || `Équipe ${index + 1}`,
+      name: normalizeText(team?.name || i18next.t(
+        'multiTeamCompositionUtils.team',
+        'Équipe {{number}}',
+        { number: index + 1, ...SANS_ECHAPPEMENT },
+      )) || i18next.t(
+        'multiTeamCompositionUtils.team',
+        'Équipe {{number}}',
+        { number: index + 1, ...SANS_ECHAPPEMENT },
+      ),
       placements: (Array.isArray(team?.placements) ? team.placements : [])
         .map((placement) => {
           const playerId = normalizeText(placement?.playerId);
@@ -396,7 +424,13 @@ export const buildPublishedBranchesFromPack = (pack, teamName = null) => [{
   }),
   team: {
     documentId: null,
-    name: normalizeText(teamName || 'Equipe') || 'Equipe',
+    name: normalizeText(teamName || i18next.t(
+      'multiTeamCompositionUtils.teamFallback',
+      'Equipe',
+    )) || i18next.t(
+      'multiTeamCompositionUtils.teamFallback',
+      'Equipe',
+    ),
   },
   viewer: {
     inReserve: false,

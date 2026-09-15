@@ -1,3 +1,4 @@
+import i18next from 'i18next';
 import { useMemo } from 'react';
 import {
   Text,
@@ -30,9 +31,9 @@ function PositionSelectionList({
   onToggle,
   positions = [],
   selectedQuantityLabel,
-  selectedSectionTitle = 'Sélection actuelle',
+  selectedSectionTitle = i18next.t('positionSelectionList.currentSelection', 'Sélection actuelle'),
   sportName = '',
-  unselectedActionLabel = 'Selectionner',
+  unselectedActionLabel = i18next.t('positionSelectionList.select', 'Selectionner'),
 }) {
   const {
     Alignments,

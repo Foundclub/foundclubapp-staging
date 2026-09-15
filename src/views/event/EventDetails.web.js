@@ -1,9 +1,11 @@
 // @ts-nocheck
 /* eslint-disable no-alert, no-nested-ternary, jsx-a11y/label-has-associated-control, object-curly-newline */
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import i18next from 'i18next';
 import {
   useCallback, useEffect, useMemo, useRef, useState,
 } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useWindowDimensions } from 'react-native';
 
 import useAuth from '@/domains/auth/useAuth';
@@ -11,6 +13,8 @@ import { resolveEventDisplayName } from '@/domains/event/eventDisplayName';
 import { isDetectionEventType, resolveTrainingOpenConfig } from '@/domains/event/eventUseCases';
 import { getCurrentUserEventParticipationState } from '@/domains/event/participationState';
 import { withoutDeletedAccountEntries, withoutDeletedAccounts } from '@/domains/user/deletedAccount';
+import localeDesFormats from '@/theme/strings/localeDesFormats';
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import ScreenContainer from '@/components/templates/ScreenContainer';
@@ -78,24 +82,39 @@ const flattenPages = (pages) => {
 };
 
 const getParticipationLabel = (effectiveStatus) => {
-  if (effectiveStatus === 'accepted') return 'Tu participes';
-  if (effectiveStatus === 'pending') return 'En attente de validation';
-  if (effectiveStatus === 'missing') return 'Tu es signale absent';
-  return 'Aucune réponse';
+  if (effectiveStatus === 'accepted') {
+    return i18next.t(
+      'eventDetails.youReTakingPart',
+      'Tu participes',
+    );
+  }
+  if (effectiveStatus === 'pending') {
+    return i18next.t(
+      'eventDetails.waitingForApproval',
+      'En attente de validation',
+    );
+  }
+  if (effectiveStatus === 'missing') {
+    return i18next.t(
+      'eventDetails.youReMarkedAbsent',
+      'Tu es signale absent',
+    );
+  }
+  return i18next.t('eventDetails.noAnswer', 'Aucune réponse');
 };
 
 const getTournamentTeamStatusLabel = (status) => {
-  if (status === 'accepted') return 'Validee';
-  if (status === 'declined') return 'Refusee';
-  if (status === 'archived') return 'Archivee';
-  return 'En attente';
+  if (status === 'accepted') return i18next.t('eventDetails.approved', 'Validee');
+  if (status === 'declined') return i18next.t('eventDetails.declined', 'Refusee');
+  if (status === 'archived') return i18next.t('eventDetails.archived', 'Archivee');
+  return i18next.t('eventDetails.pending', 'En attente');
 };
 
 const formatDate = (value, options = {}) => {
   if (!value) return '';
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return '';
-  return date.toLocaleString('fr-FR', options);
+  return date.toLocaleString(localeDesFormats(), options);
 };
 
 const formatDateTimeLabel = (value) => formatDate(value, {
@@ -112,7 +131,7 @@ const formatTimeLabel = (value) => {
   return raw.slice(0, 5);
 };
 
-const getUserDisplayName = (user) => `${String(user?.firstname || '').trim()} ${String(user?.lastname || '').trim()}`.trim() || 'Membre';
+const getUserDisplayName = (user) => `${String(user?.firstname || '').trim()} ${String(user?.lastname || '').trim()}`.trim() || i18next.t('eventDetails.member', 'Membre');
 
 const getAvatarUrl = (user) => getImageUrl(user?.avatar?.url || '');
 
@@ -136,6 +155,7 @@ const normalizeTypeName = (value) => String(value || '')
  * @param root0.route
  */
 function EventDetails({ navigation, route }) {
+  const { t } = useTranslation();
   const { eventId } = route?.params || {};
   const highlightedSection = route?.params?.focusSection || null;
   const fromEventCreation = Boolean(route?.params?.fromEventCreation);
@@ -508,10 +528,10 @@ function EventDetails({ navigation, route }) {
   const canManageMatchStats = Boolean(matchStatsPayload?.permissions?.canManage);
   const matchStatsScoreLabel = useMemo(() => {
     const score = matchStatsPayload?.score;
-    if (!score?.available) return 'Score à compléter';
+    if (!score?.available) return t('eventDetails.scoreToComplete', 'Score à compléter');
 
     return `${score.scoreFor ?? '-'} - ${score.scoreAgainst ?? '-'}`;
-  }, [matchStatsPayload?.score]);
+  }, [matchStatsPayload?.score, t]);
 
   // 🚪 LA PORTE DE LA CARTE : ouverte ou fermee, et POURQUOI quand elle est
   // fermee. L ordre des branches suit celui du telephone
@@ -524,10 +544,22 @@ function EventDetails({ navigation, route }) {
   // texte que personne ne lit, et un second juge a maintenir.
   const postMatchAction = useMemo(() => {
     if (!isMatchFinished) {
-      return { disabled: true, subtitle: 'Les stats seront disponibles à la fin du match.' };
+      return {
+        disabled: true,
+        subtitle: t(
+          'eventDetails.statsWillBeAvailableAt',
+          'Les stats seront disponibles à la fin du match.',
+        ),
+      };
     }
     if (matchStatsPayload?.score?.waitingOfficial) {
-      return { disabled: true, subtitle: 'En attente du score officiel synchronise.' };
+      return {
+        disabled: true,
+        subtitle: t(
+          'eventDetails.waitingForTheSyncedOfficial',
+          'En attente du score officiel synchronise.',
+        ),
+      };
     }
     // ⛔ LA DIFFERENCE ANNONCEE — L ETAPE « SCORE » N A PAS DE DESTINATION ICI.
     // Le telephone l ouvre dans une feuille (`openMatchScoreSheet`) que ce
@@ -537,7 +569,13 @@ function EventDetails({ navigation, route }) {
     // simple : quand le parcours designe l etape 1, la porte est close.
     // Voie de sortie : un ecran de saisie du score au registre web.
     if (!matchStatsPayload?.score?.available) {
-      return { disabled: true, subtitle: 'Le score s’enregistre depuis l’application mobile.' };
+      return {
+        disabled: true,
+        subtitle: t(
+          'eventDetails.theScoreIsSavedFrom',
+          'Le score s’enregistre depuis l’application mobile.',
+        ),
+      };
     }
     // Un rapport publie ou a re-verifier se RELIT toujours, meme sans le droit
     // de le gerer : c est pour cela que ce test passe avant le suivant.
@@ -547,7 +585,10 @@ function EventDetails({ navigation, route }) {
     if (!canManageMatchStats) {
       return {
         disabled: true,
-        subtitle: 'Les membres de ton équipe peuvent encore finaliser ce rapport.',
+        subtitle: t(
+          'eventDetails.yourTeamMembersCanStill',
+          'Les membres de ton équipe peuvent encore finaliser ce rapport.',
+        ),
       };
     }
 
@@ -558,7 +599,7 @@ function EventDetails({ navigation, route }) {
     isMatchStatsFinal,
     isMatchStatsReviewRequired,
     matchStatsPayload?.score?.available,
-    matchStatsPayload?.score?.waitingOfficial,
+    matchStatsPayload?.score?.waitingOfficial, t,
   ]);
   const openMatchStatsEditor = useCallback(() => {
     if (!eventId || !compositionTeamId) return;
@@ -569,7 +610,7 @@ function EventDetails({ navigation, route }) {
       sport: matchStatsPayload?.sport || compositionSport,
       teamId: compositionTeamId,
       teamName: compositionEditorTeam?.name || matchStatsPayload?.team?.name || null,
-      title: 'Bilan équipe',
+      title: t('eventDetails.teamReport', 'Bilan équipe'),
     });
   }, [
     compositionEditorTeam?.name,
@@ -578,7 +619,7 @@ function EventDetails({ navigation, route }) {
     eventId,
     matchStatsPayload?.sport,
     matchStatsPayload?.team?.name,
-    navigation,
+    navigation, t,
   ]);
   const isPostMatchDoorClosed = Boolean(postMatchAction.disabled || isMatchStatsFetching);
   // Comme pour l ecran 1, `showOverviewTab` tombe : le site n a pas d onglets.
@@ -636,7 +677,10 @@ function EventDetails({ navigation, route }) {
     if (!eventId || !compositionTeamId) return;
 
     if (isStaffCompositionFetching) {
-      window.alert('La composition d\'équipes est encore en cours de chargement.');
+      window.alert(t(
+        'eventDetails.theTeamLineUpIs',
+        "La composition d'équipes est encore en cours de chargement.",
+      ));
       return;
     }
 
@@ -701,7 +745,7 @@ function EventDetails({ navigation, route }) {
         canEdit: true,
         compositionIntent: staffCompositionPayload?.published?.mode || 'manual',
         editorSource: 'published',
-        editorSourceLabel: "Composition d'équipes publiée",
+        editorSourceLabel: t('eventDetails.teamLineUpPublished', "Composition d'équipes publiée"),
         players: Array.isArray(staffCompositionPayload?.published?.snapshotPlayers) ? staffCompositionPayload.published.snapshotPlayers : [],
         readOnly: false,
       });
@@ -720,7 +764,7 @@ function EventDetails({ navigation, route }) {
       return;
     }
 
-    const wantsAuto = window.confirm('OK pour créer les équipes automatiquement ? Clique sur Annuler pour passer en mode manuel.');
+    const wantsAuto = window.confirm(t('eventDetails.okToCreateTheTeams', 'OK pour créer les équipes automatiquement ? Clique sur Annuler pour passer en mode manuel.'));
     openBoard(staffCompositionPayload?.bootstrap?.composition || null, {
       canEdit: true,
       compositionIntent: wantsAuto ? 'auto' : 'manual',
@@ -738,7 +782,7 @@ function EventDetails({ navigation, route }) {
     isDetectionEvent,
     isStaffCompositionFetching,
     navigation,
-    staffCompositionPayload,
+    staffCompositionPayload, t,
   ]);
 
   useEffect(() => {
@@ -853,11 +897,23 @@ function EventDetails({ navigation, route }) {
   // (pas gestionnaire, pas participant, pas de demande en attente) : il le voyait
   // donc toujours. Le bouton reste a sa place et garde `primaryButtonStyle` ;
   // seul son libelle dit la verite sur ce qu'il va faire.
-  const joinButtonLabel = isSignedIn ? 'Participer' : 'Se connecter pour participer';
-  const statusHeadingLabel = isSignedIn ? 'Mon statut' : 'Rejoindre cet événement';
+  const joinButtonLabel = isSignedIn ? t(
+    'eventDetails.takePart',
+    'Participer',
+  ) : t(
+    'eventDetails.signInToTakePart',
+    'Se connecter pour participer',
+  );
+  const statusHeadingLabel = isSignedIn ? t(
+    'eventDetails.myStatus',
+    'Mon statut',
+  ) : t(
+    'eventDetails.joinThisEvent',
+    'Rejoindre cet événement',
+  );
   const statusDetailLabel = (isSignedIn
     ? participationLabel
-    : 'Connecte-toi pour répondre à cet événement.');
+    : t('eventDetails.signInToAnswerThis', 'Connecte-toi pour répondre à cet événement.'));
 
   const handleJoin = useCallback(async () => {
     setActionError('');
@@ -877,9 +933,12 @@ function EventDetails({ navigation, route }) {
     try {
       await createParticipationMutation.mutateAsync();
     } catch (joinError) {
-      setActionError(joinError?.message || 'Impossible de rejoindre cet événement.');
+      setActionError(joinError?.message || t(
+        'eventDetails.unableToJoinThisEvent',
+        'Impossible de rejoindre cet événement.',
+      ));
     }
-  }, [createParticipationMutation, isSignedIn, navigation]);
+  }, [createParticipationMutation, isSignedIn, navigation, t]);
 
   const handleCancelParticipation = useCallback(async () => {
     if (!activeParticipationRequestId) return;
@@ -887,16 +946,22 @@ function EventDetails({ navigation, route }) {
     try {
       await cancelParticipationMutation.mutateAsync(activeParticipationRequestId);
     } catch (cancelError) {
-      setActionError(cancelError?.message || 'Impossible d annuler cette participation.');
+      setActionError(cancelError?.message || t(
+        'eventDetails.unableToCancelThisParticipation',
+        'Impossible d annuler cette participation.',
+      ));
     }
-  }, [activeParticipationRequestId, cancelParticipationMutation]);
+  }, [activeParticipationRequestId, cancelParticipationMutation, t]);
 
   const handleSubmitTrainingOpenConfig = useCallback(async () => {
     if (!eventId) return;
 
     const externalParticipantLimit = Number.parseInt(String(trainingOpenLimitDraft || '').trim(), 10);
     if (!Number.isFinite(externalParticipantLimit) || externalParticipantLimit < 1) {
-      setActionError('Indique combien de places externes tu veux ouvrir pour cet entraînement.');
+      setActionError(t(
+        'eventDetails.sayHowManyExternalSpots',
+        'Indique combien de places externes tu veux ouvrir pour cet entraînement.',
+      ));
       return;
     }
 
@@ -909,12 +974,15 @@ function EventDetails({ navigation, route }) {
         sessionStatus: 'open',
       });
     } catch (mutationError) {
-      setActionError(mutationError?.message || 'Impossible d\'ouvrir cet entraînement.');
+      setActionError(mutationError?.message || t(
+        'eventDetails.unableToOpenThisTraining2',
+        "Impossible d'ouvrir cet entraînement.",
+      ));
     }
   }, [
     eventId,
     trainingOpenLimitDraft,
-    updateTrainingMutation,
+    updateTrainingMutation, t,
   ]);
 
   const handleCloseTraining = useCallback(async () => {
@@ -925,34 +993,40 @@ function EventDetails({ navigation, route }) {
         sessionStatus: 'closed',
       });
     } catch (mutationError) {
-      setActionError(mutationError?.message || 'Impossible de fermer cet entraînement.');
+      setActionError(mutationError?.message || t(
+        'eventDetails.unableToCloseThisTraining2',
+        'Impossible de fermer cet entraînement.',
+      ));
     }
-  }, [eventId, updateTrainingMutation]);
+  }, [eventId, updateTrainingMutation, t]);
 
   const handleShare = useCallback(async () => {
     setIsSharing(true);
     try {
       const shareMessage = buildShareMessageWithUrl({
-        intro: event?.name || event?.type?.name || 'Evenement',
-        linkLabel: 'Voir la fiche FoundClub',
+        intro: event?.name || event?.type?.name || t('eventDetails.eventFallback', 'Evenement'),
+        linkLabel: t('eventDetails.seeTheFoundclubPage', 'Voir la fiche FoundClub'),
         url: eventLink,
       });
       await SharePlatform.share({
         message: shareMessage,
-        title: event?.name || 'Événement FoundClub',
+        title: event?.name || t('eventDetails.foundclubEvent', 'Événement FoundClub'),
         url: eventLink,
       });
     } catch (_error) {
       if (navigator?.clipboard?.writeText) {
         await navigator.clipboard.writeText(eventLink);
-        window.alert('Lien copie dans le presse-papiers.');
+        window.alert(t(
+          'eventDetails.linkCopiedToTheClipboard',
+          'Lien copie dans le presse-papiers.',
+        ));
       } else {
         window.alert(eventLink);
       }
     } finally {
       setIsSharing(false);
     }
-  }, [event?.name, event?.type?.name, eventLink]);
+  }, [event?.name, event?.type?.name, eventLink, t]);
 
   const handleOpenTournamentTeam = useCallback((teamDocumentId) => {
     if (!teamDocumentId) return;
@@ -960,23 +1034,36 @@ function EventDetails({ navigation, route }) {
   }, [eventId, navigation]);
 
   const handleCreateTournamentTeam = useCallback(async () => {
-    const proposedName = window.prompt('Nom de l équipe tournoi');
+    const proposedName = window.prompt(t(
+      'eventDetails.tournamentTeamName',
+      'Nom de l équipe tournoi',
+    ));
     const trimmedName = String(proposedName || '').trim();
     if (!trimmedName) return;
     setActionError('');
     try {
       await createTournamentTeamMutation.mutateAsync({ name: trimmedName });
     } catch (mutationError) {
-      setActionError(mutationError?.message || 'Impossible de créer cette équipe tournoi.');
+      setActionError(mutationError?.message || t(
+        'eventDetails.unableToCreateThisTournament3',
+        'Impossible de créer cette équipe tournoi.',
+      ));
     }
-  }, [createTournamentTeamMutation]);
+  }, [createTournamentTeamMutation, t]);
 
   const handleRegisterTournamentTeam = useCallback(async () => {
     if (availableTournamentSourceTeams.length === 0) return;
     const optionsText = availableTournamentSourceTeams
-      .map((team, index) => `${index + 1}. ${team?.name || 'Equipe'}`)
+      .map((team, index) => `${index + 1}. ${team?.name || t(
+        'eventDetails.teamFallback',
+        'Equipe',
+      )}`)
       .join('\n');
-    const rawChoice = window.prompt(`Choisis une équipe à inscrire :\n${optionsText}`);
+    const rawChoice = window.prompt(t(
+      'eventDetails.chooseATeamToRegister',
+      'Choisis une équipe à inscrire :\n{{optionsText}}',
+      { optionsText, ...SANS_ECHAPPEMENT },
+    ));
     const choiceIndex = Number.parseInt(String(rawChoice || '').trim(), 10) - 1;
     const sourceTeam = availableTournamentSourceTeams[choiceIndex];
     if (!sourceTeam?.documentId) return;
@@ -984,18 +1071,24 @@ function EventDetails({ navigation, route }) {
     try {
       await registerTournamentTeamMutation.mutateAsync(sourceTeam.documentId);
     } catch (mutationError) {
-      setActionError(mutationError?.message || 'Impossible d inscrire cette équipe.');
+      setActionError(mutationError?.message || t(
+        'eventDetails.unableToRegisterThisTeam2',
+        'Impossible d inscrire cette équipe.',
+      ));
     }
-  }, [availableTournamentSourceTeams, registerTournamentTeamMutation]);
+  }, [availableTournamentSourceTeams, registerTournamentTeamMutation, t]);
 
   const handleReviewTournamentTeam = useCallback(async (teamDocumentId, status) => {
     setActionError('');
     try {
       await reviewTournamentTeamMutation.mutateAsync({ status, teamDocumentId });
     } catch (mutationError) {
-      setActionError(mutationError?.message || 'Impossible de mettre à jour cette équipe.');
+      setActionError(mutationError?.message || t(
+        'eventDetails.unableToUpdateThisTeam',
+        'Impossible de mettre à jour cette équipe.',
+      ));
     }
-  }, [reviewTournamentTeamMutation]);
+  }, [reviewTournamentTeamMutation, t]);
 
   // AA02 — les TROIS listes de personnes de la page web passent par le meme
   // tri que l'application mobile : `web` compile les sources de `app`, donc la
@@ -1011,7 +1104,7 @@ function EventDetails({ navigation, route }) {
 
   const renderParticipantsSection = () => {
     if (participants.length === 0) {
-      return <div style={{ color: mutedTextColor }}>Aucun participant confirme pour le moment.</div>;
+      return <div style={{ color: mutedTextColor }}>{t('eventDetails.noConfirmedParticipantYet', 'Aucun participant confirme pour le moment.')}</div>;
     }
 
     if (!canViewParticipantNames) {
@@ -1053,7 +1146,10 @@ function EventDetails({ navigation, route }) {
             ))}
           </div>
           <div style={{ color: mutedTextColor, fontSize: 13, lineHeight: 1.5 }}>
-            {'Les identités des participants sont masquees par l organisateur.'}
+            {t(
+              'eventDetails.participantsIdentitiesAreHiddenBy',
+              'Les identités des participants sont masquees par l organisateur.',
+            )}
           </div>
         </div>
       );
@@ -1125,13 +1221,18 @@ function EventDetails({ navigation, route }) {
               padding: 16,
             }}
           >
-            <span>Événement crée. Vérifie les derniers détails avant de le partager.</span>
+            <span>
+              {t(
+                'eventDetails.eventCreatedCheckTheLast',
+                'Événement crée. Vérifie les derniers détails avant de le partager.',
+              )}
+            </span>
             <button
               onClick={() => navigation.navigate(RouteNames.MyEventList)}
               style={{ ...outlineButtonStyle, padding: '8px 14px' }}
               type="button"
             >
-              Voir mon planning
+              {t('eventDetails.seeMyPlanning', 'Voir mon planning')}
             </button>
           </section>
         ) : null}
@@ -1162,7 +1263,7 @@ function EventDetails({ navigation, route }) {
                   style={{ ...outlineButtonStyle, padding: '10px 14px' }}
                   type="button"
                 >
-                  Retour
+                  {t('common.back', 'Retour')}
                 </button>
                 {hasEvent ? (
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
@@ -1171,7 +1272,9 @@ function EventDetails({ navigation, route }) {
                       style={{ ...outlineButtonStyle, padding: '10px 14px' }}
                       type="button"
                     >
-                      {isSharing ? 'Partage...' : 'Partager'}
+                      {isSharing
+                        ? t('eventDetails.sharing', 'Partage...')
+                        : t('eventDetails.share', 'Partager')}
                     </button>
                     {canEdit ? (
                       <button
@@ -1179,7 +1282,7 @@ function EventDetails({ navigation, route }) {
                         style={primaryButtonStyle}
                         type="button"
                       >
-                        Modifier
+                        {t('eventDetails.edit', 'Modifier')}
                       </button>
                     ) : null}
                   </div>
@@ -1193,7 +1296,7 @@ function EventDetails({ navigation, route }) {
                       color: accentColor, fontSize: 13, letterSpacing: '0.08em', textTransform: 'uppercase',
                     }}
                     >
-                      {event?.type?.name || 'Evenement'}
+                      {event?.type?.name || t('eventDetails.eventFallback', 'Evenement')}
                     </span>
                     <h1 style={{
                       color: textColor,
@@ -1203,7 +1306,10 @@ function EventDetails({ navigation, route }) {
                       margin: 0,
                     }}
                     >
-                      {event?.name || event?.type?.name || 'Evenement'}
+                      {event?.name || event?.type?.name || t(
+                        'eventDetails.eventFallback',
+                        'Evenement',
+                      )}
                     </h1>
                     <div style={{
                       color: softTextColor, display: 'flex', flexWrap: 'wrap', gap: 14,
@@ -1293,7 +1399,10 @@ function EventDetails({ navigation, route }) {
                       }}
                       type="button"
                     >
-                      {createParticipationMutation.isPending ? 'Envoi...' : joinButtonLabel}
+                      {createParticipationMutation.isPending ? t(
+                        'eventDetails.sending',
+                        'Envoi...',
+                      ) : joinButtonLabel}
                     </button>
                   ) : null}
                   {!canEdit && activeParticipationRequestId ? (
@@ -1308,7 +1417,7 @@ function EventDetails({ navigation, route }) {
                       }}
                       type="button"
                     >
-                      {cancelParticipationMutation.isPending ? 'Annulation...' : 'Annuler ma demande'}
+                      {cancelParticipationMutation.isPending ? t('eventDetails.cancelling', 'Annulation...') : t('eventDetails.cancelMyRequest', 'Annuler ma demande')}
                     </button>
                   ) : null}
                   {isReservation && facilityId ? (
@@ -1317,7 +1426,7 @@ function EventDetails({ navigation, route }) {
                       style={{ ...outlineButtonStyle, padding: '12px 16px' }}
                       type="button"
                     >
-                      Ouvrir le calendrier
+                      {t('eventDetails.openTheCalendar', 'Ouvrir le calendrier')}
                     </button>
                   ) : null}
                 </div>
@@ -1329,7 +1438,7 @@ function EventDetails({ navigation, route }) {
                 {event?.team?.club?.name ? (
                   <div style={{ display: 'grid', gap: 8 }}>
                     <div style={{ color: mutedTextColor, fontSize: 13 }}>
-                      Club organisateur:
+                      {t('eventDetails.organisingClub', 'Club organisateur:')}
                       {' '}
                       {event.team.club.name}
                     </div>
@@ -1359,14 +1468,14 @@ function EventDetails({ navigation, route }) {
             background: sectionBackground, border: `1px solid ${borderColor}`, borderRadius: 24, padding: 22,
           }}
           >
-            <div style={{ color: '#ff6b81', fontFamily: 'Montserrat-Bold, sans-serif', marginBottom: 8 }}>Chargement impossible</div>
-            <div style={{ color: mutedTextColor, marginBottom: 14 }}>{error?.message || 'Une erreur est survenue.'}</div>
+            <div style={{ color: '#ff6b81', fontFamily: 'Montserrat-Bold, sans-serif', marginBottom: 8 }}>{t('eventDetails.loadingFailed', 'Chargement impossible')}</div>
+            <div style={{ color: mutedTextColor, marginBottom: 14 }}>{error?.message || t('eventDetails.anErrorOccurred', 'Une erreur est survenue.')}</div>
             <button
               onClick={() => refetch()}
               style={{ ...primaryButtonStyle, padding: '10px 16px' }}
               type="button"
             >
-              Recharger
+              {t('eventDetails.reload', 'Recharger')}
             </button>
           </section>
         ) : null}
@@ -1376,7 +1485,7 @@ function EventDetails({ navigation, route }) {
             background: sectionBackground, border: `1px solid ${borderColor}`, borderRadius: 24, color: mutedTextColor, padding: 22,
           }}
           >
-            Chargement de l événement...
+            {t('eventDetails.loadingTheEvent', 'Chargement de l événement...')}
           </section>
         ) : null}
 
@@ -1386,10 +1495,13 @@ function EventDetails({ navigation, route }) {
           }}
           >
             <div style={{ color: textColor, fontFamily: 'Montserrat-Bold, sans-serif', fontSize: 22 }}>
-              Événement introuvable
+              {t('eventDetails.eventNotFound', 'Événement introuvable')}
             </div>
             <div>
-              Cet événement n est plus disponible ou n a pas pu être charge.
+              {t(
+                'eventDetails.thisEventIsNoLonger',
+                'Cet événement n est plus disponible ou n a pas pu être charge.',
+              )}
             </div>
           </section>
         ) : null}
@@ -1435,20 +1547,38 @@ function EventDetails({ navigation, route }) {
                 >
                   <div style={{ display: 'grid', gap: 4 }}>
                     <strong style={{ color: textColor, fontFamily: 'Montserrat-Bold, sans-serif' }}>
-                      {trainingOpenConfig.isOpenTraining ? 'Entraînement ouvert' : 'Entraînement prive'}
+                      {trainingOpenConfig.isOpenTraining ? t('eventDetails.openTraining2', 'Entraînement ouvert') : t('eventDetails.privateTraining', 'Entraînement prive')}
                     </strong>
                     <span style={{ color: mutedTextColor, fontSize: 14, lineHeight: 1.6 }}>
                       {trainingOpenConfig.isOpenTraining
-                        ? 'Les joueurs externes peuvent rejoindre selon le quota et le mode de validation choisis.'
-                        : 'Ouvre l entraînement pour accueillir des joueurs externes sans compter les membres de tes équipes.'}
+                        ? t('eventDetails.externalPlayersCanJoinAccording', 'Les joueurs externes peuvent rejoindre selon le quota et le mode de validation choisis.')
+                        : t('eventDetails.openTheTrainingSessionTo', 'Ouvre l entraînement pour accueillir des joueurs externes sans compter les membres de tes équipes.')}
                     </span>
                   </div>
 
                   {trainingOpenConfig.externalParticipantLimit !== null ? (
                     <span style={{ color: softTextColor, fontSize: 14 }}>
                       {trainingOpenConfig.isOpenTraining
-                        ? `${trainingOpenConfig.externalParticipantLimit} place(s) externes - validation ${trainingOpenConfig.externalParticipantValidationMode === 'auto' ? 'automatique' : 'manuelle'}`
-                        : `Dernier reglage mémorise: ${trainingOpenConfig.externalParticipantLimit} place(s) externes - validation ${trainingOpenConfig.externalParticipantValidationMode === 'auto' ? 'automatique' : 'manuelle'}`}
+                        ? t(
+                          'eventDetails.externalSpotsSetting',
+                          '{{limit}} place(s) externes - validation {{mode}}',
+                          {
+                            limit: trainingOpenConfig.externalParticipantLimit,
+                            mode: trainingOpenConfig.externalParticipantValidationMode === 'auto'
+                              ? t('eventDetails.validationAutomatic', 'automatique')
+                              : t('eventDetails.validationManual', 'manuelle'),
+                          },
+                        )
+                        : t(
+                          'eventDetails.lastSavedExternalSpotsSetting',
+                          'Dernier reglage mémorise: {{limit}} place(s) externes - validation {{mode}}',
+                          {
+                            limit: trainingOpenConfig.externalParticipantLimit,
+                            mode: trainingOpenConfig.externalParticipantValidationMode === 'auto'
+                              ? t('eventDetails.validationAutomatic', 'automatique')
+                              : t('eventDetails.validationManual', 'manuelle'),
+                          },
+                        )}
                     </span>
                   ) : null}
 
@@ -1462,15 +1592,17 @@ function EventDetails({ navigation, route }) {
                       type="button"
                     >
                       {updateTrainingMutation.isPending
-                        ? 'Enregistrement...'
-                        : (trainingOpenConfig.isOpenTraining ? 'Fermer l entraînement' : 'Ouvrir l entraînement')}
+                        ? t('eventDetails.saving', 'Enregistrement...')
+                        : (trainingOpenConfig.isOpenTraining ? t('eventDetails.closeTheTrainingSession', 'Fermer l entraînement') : t('eventDetails.openTheTrainingSession', 'Ouvrir l entraînement'))}
                     </button>
                   </div>
 
                   {!trainingOpenConfig.isOpenTraining && isTrainingSettingsVisible ? (
                     <div style={{ display: 'grid', gap: 14 }}>
                       <label style={{ display: 'grid', gap: 8 }}>
-                        <span style={{ color: mutedTextColor, fontSize: 13 }}>Places externes</span>
+                        <span style={{ color: mutedTextColor, fontSize: 13 }}>
+                          {t('eventDetails.externalSpots', 'Places externes')}
+                        </span>
                         <input
                           min="1"
                           onChange={(eventObject) => setTrainingOpenLimitDraft(eventObject.target.value)}
@@ -1493,10 +1625,13 @@ function EventDetails({ navigation, route }) {
                           toute demande venue du dehors en attente. */}
                       <div style={{ display: 'grid', gap: 4 }}>
                         <span style={{ color: mutedTextColor, fontSize: 13 }}>
-                          Demandes extérieures
+                          {t('eventDetails.externalRequests', 'Demandes extérieures')}
                         </span>
                         <span style={{ color: mutedTextColor, fontSize: 13 }}>
-                          Les demandes extérieures sont validées par toi.
+                          {t(
+                            'eventDetails.externalRequestsAreApprovedBy',
+                            'Les demandes extérieures sont validées par toi.',
+                          )}
                         </span>
                       </div>
 
@@ -1507,7 +1642,7 @@ function EventDetails({ navigation, route }) {
                           style={primaryButtonStyle}
                           type="button"
                         >
-                          Confirmer l ouverture
+                          {t('eventDetails.confirmOpening', 'Confirmer l ouverture')}
                         </button>
                         <button
                           disabled={updateTrainingMutation.isPending}
@@ -1515,7 +1650,7 @@ function EventDetails({ navigation, route }) {
                           style={outlineButtonStyle}
                           type="button"
                         >
-                          Annuler
+                          {t('eventDetails.cancel', 'Annuler')}
                         </button>
                       </div>
                     </div>
@@ -1536,14 +1671,14 @@ function EventDetails({ navigation, route }) {
                 >
                   <div style={{ display: 'grid', gap: 4 }}>
                     <strong style={{ color: textColor, fontFamily: 'Montserrat-Bold, sans-serif' }}>
-                      Composition d&apos;equipes
+                      {t('eventDetails.teamLineUp', "Composition d'equipes")}
                     </strong>
                     <span style={{ color: mutedTextColor, fontSize: 14, lineHeight: 1.6 }}>
                       {staffCompositionPayload?.draft
-                        ? 'Un brouillon existe déjà. Reprends-le, ajuste les équipes puis publie la version finale.'
+                        ? t('eventDetails.aDraftAlreadyExistsResume', 'Un brouillon existe déjà. Reprends-le, ajuste les équipes puis publie la version finale.')
                         : compositionEligiblePlayerCount === 0
-                          ? 'Tu peux déjà créer les équipes même sans participant: les postes resteront libres et se completeront ensuite.'
-                          : 'Crée plusieurs équipes à la main ou génère-les automatiquement, puis publie la version finale.'}
+                          ? t('eventDetails.youCanAlreadyCreateThe', 'Tu peux déjà créer les équipes même sans participant: les postes resteront libres et se completeront ensuite.')
+                          : t('eventDetails.createSeveralTeamsByHand', 'Crée plusieurs équipes à la main ou génère-les automatiquement, puis publie la version finale.')}
                     </span>
                   </div>
 
@@ -1552,19 +1687,19 @@ function EventDetails({ navigation, route }) {
                       <span>
                         {publishedCompositionTeamCount}
                         {' '}
-                        equipe(s) publiee(s)
+                        {t('eventDetails.teamSPublished2', 'equipe(s) publiee(s)')}
                       </span>
                       <span>
                         {convocationBranches.length}
                         {' '}
-                        branche(s) visible(s)
+                        {t('eventDetails.visibleBranchEs', 'branche(s) visible(s)')}
                         {publishedCompositionReserveCount > 0 ? ` · ${publishedCompositionReserveCount} remplacant(s)` : ''}
                       </span>
                       {convocationBranches[0]?.published?.publishedAt ? (
                         <span>
-                          Publie le
+                          {t('eventDetails.publishedOn', 'Publie le')}
                           {' '}
-                          {new Date(convocationBranches[0].published.publishedAt).toLocaleString('fr-FR')}
+                          {new Date(convocationBranches[0].published.publishedAt).toLocaleString(localeDesFormats())}
                         </span>
                       ) : null}
                     </div>
@@ -1578,7 +1713,7 @@ function EventDetails({ navigation, route }) {
                         style={primaryButtonStyle}
                         type="button"
                       >
-                        {isStaffCompositionFetching ? 'Chargement...' : "Gérer la composition d'équipes"}
+                        {isStaffCompositionFetching ? t('common.loading', 'Chargement...') : t('eventDetails.manageTheTeamLineUp', "Gérer la composition d'équipes")}
                       </button>
                     ) : null}
 
@@ -1591,7 +1726,7 @@ function EventDetails({ navigation, route }) {
                         style={outlineButtonStyle}
                         type="button"
                       >
-                        Voir ma convocation
+                        {t('eventDetails.seeMyCallUp', 'Voir ma convocation')}
                       </button>
                     ) : null}
 
@@ -1603,7 +1738,10 @@ function EventDetails({ navigation, route }) {
                           compositionIntent: null,
                           editorMode: 'event',
                           editorSource: 'published',
-                          editorSourceLabel: "Composition d'équipes publiée",
+                          editorSourceLabel: t(
+                            'eventDetails.teamLineUpPublished',
+                            "Composition d'équipes publiée",
+                          ),
                           eventId,
                           eventKind: isDetectionEvent ? 'detection' : 'match',
                           eventName: compositionEventLabel,
@@ -1618,7 +1756,7 @@ function EventDetails({ navigation, route }) {
                         style={outlineButtonStyle}
                         type="button"
                       >
-                        Voir la composition publiée
+                        {t('eventDetails.seeThePublishedLineUp', 'Voir la composition publiée')}
                       </button>
                     ) : null}
                   </div>
@@ -1629,7 +1767,9 @@ function EventDetails({ navigation, route }) {
                   composition : les deux parlent du meme match. */}
               {showPostMatchCard ? (
                 <div style={{ display: 'grid', gap: 12 }}>
-                  <h2 style={sectionTitleStyle}>Stats du match</h2>
+                  <h2 style={sectionTitleStyle}>
+                    {t('eventDetails.matchStats', 'Stats du match')}
+                  </h2>
                   <PostMatchJourneyCard
                     boutonDesactive={isPostMatchDoorClosed}
                     motif={postMatchAction.subtitle}
@@ -1663,7 +1803,7 @@ function EventDetails({ navigation, route }) {
                 </div>
               ) : null}
 
-              <h2 style={sectionTitleStyle}>Participants</h2>
+              <h2 style={sectionTitleStyle}>{t('eventDetails.participants', 'Participants')}</h2>
               {renderParticipantsSection()}
 
               {Array.isArray(event?.teamAudiences) && event.teamAudiences.length > 0 ? (
@@ -1678,9 +1818,13 @@ function EventDetails({ navigation, route }) {
 
               {canEdit ? (
                 <>
-                  <h3 style={{ ...sectionTitleStyle, fontSize: 18 }}>Demandes en attente</h3>
+                  <h3 style={{ ...sectionTitleStyle, fontSize: 18 }}>
+                    {t('eventDetails.pendingRequests', 'Demandes en attente')}
+                  </h3>
                   {participationRequests.length === 0 ? (
-                    <div style={{ color: mutedTextColor }}>Aucune demande en attente.</div>
+                    <div style={{ color: mutedTextColor }}>
+                      {t('eventDetails.noPendingRequest', 'Aucune demande en attente.')}
+                    </div>
                   ) : (
                     <div style={{ display: 'grid', gap: 12 }}>
                       {participationRequests.map((request) => (
@@ -1699,13 +1843,13 @@ function EventDetails({ navigation, route }) {
                             {getUserDisplayName(request?.user)}
                           </span>
                           <span style={{ color: mutedTextColor, fontSize: 13 }}>
-                            Statut:
+                            {t('eventDetails.status', 'Statut:')}
                             {' '}
                             {request?.participationStatus || 'pending'}
                           </span>
                           {request?.sourceTeam?.name ? (
                             <span style={{ color: mutedTextColor, fontSize: 13 }}>
-                              Equipe source:
+                              {t('eventDetails.sourceTeam2', 'Equipe source:')}
                               {' '}
                               {request.sourceTeam.name}
                             </span>
@@ -1723,17 +1867,38 @@ function EventDetails({ navigation, route }) {
                 background: sectionBackground, border: `1px solid ${borderColor}`, borderRadius: 24, display: 'grid', gap: 14, padding: 22,
               }}
               >
-                <h2 style={sectionTitleStyle}>Infos rapides</h2>
+                <h2 style={sectionTitleStyle}>{t('eventDetails.quickInfo', 'Infos rapides')}</h2>
                 <div style={{ display: 'grid', gap: 12 }}>
                   {[
-                    { label: 'Type', value: event?.type?.name || 'Non défini' },
-                    { label: 'Equipe', value: event?.team?.name || 'Non définie' },
-                    { label: 'Section', value: event?.team?.section?.name || 'Non définie' },
-                    { label: 'Capacite', value: event?.capacity ?? 'Libre' },
+                    {
+                      label: 'Type',
+                      value: event?.type?.name || t('eventDetails.notSet', 'Non défini'),
+                    },
+                    {
+                      label: t('eventDetails.teamFallback', 'Equipe'),
+                      value: event?.team?.name || t('eventDetails.notSetFeminine', 'Non définie'),
+                    },
+                    {
+                      label: 'Section',
+                      value: event?.team?.section?.name
+                        || t('eventDetails.notSetFeminine', 'Non définie'),
+                    },
+                    {
+                      label: t('eventDetails.capacity', 'Capacite'),
+                      value: event?.capacity ?? t('eventDetails.open2', 'Libre'),
+                    },
                     ...(!trainingOpenConfig.isOpenTraining
-                      ? [{ label: 'Joueurs attendus', value: event?.totalPlayers ?? 'Non défini' }]
+                      ? [{
+                        label: t('eventDetails.expectedPlayers', 'Joueurs attendus'),
+                        value: event?.totalPlayers ?? t('eventDetails.notSet', 'Non défini'),
+                      }]
                       : []),
-                    { label: 'Prix / personne', value: event?.pricePerPerson != null ? `${event.pricePerPerson} EUR` : 'Gratuit ou non défini' },
+                    {
+                      label: t('eventDetails.pricePerson', 'Prix / personne'),
+                      value: event?.pricePerPerson != null
+                        ? `${event.pricePerPerson} EUR`
+                        : t('eventDetails.freeOrNotSet', 'Gratuit ou non défini'),
+                    },
                   ].map((item, index, rows) => (
                     <div
                       key={item.label}
@@ -1770,33 +1935,42 @@ function EventDetails({ navigation, route }) {
                     padding: 22,
                   }}
                 >
-                  <h2 style={sectionTitleStyle}>Mode tournoi</h2>
+                  <h2 style={sectionTitleStyle}>
+                    {t('eventDetails.tournamentMode', 'Mode tournoi')}
+                  </h2>
                   <div style={{
                     color: mutedTextColor, display: 'grid', fontSize: 14, gap: 10,
                   }}
                   >
                     <span>
-                      Validation des equipes:
-                      {event?.tournamentConfig?.registrationMode === 'auto' ? 'Automatique' : 'Manuelle'}
+                      {t('eventDetails.teamApproval', 'Validation des equipes:')}
+                      {event?.tournamentConfig?.registrationMode === 'auto'
+                        ? t('eventDetails.automatic', 'Automatique')
+                        : t('eventDetails.manual', 'Manuelle')}
                     </span>
                     <span>
-                      Max equipes:
-                      {event?.tournamentConfig?.maxTeams ?? 'Non limite'}
+                      {t('eventDetails.maxTeams', 'Max equipes:')}
+                      {event?.tournamentConfig?.maxTeams ?? t(
+                        'eventDetails.unlimited',
+                        'Non limite',
+                      )}
                     </span>
                     <span>
-                      Effectif:
-                      {event?.tournamentConfig?.minRosterSize ?? 'Libre'}
+                      {t('eventDetails.squadSize', 'Effectif:')}
+                      {event?.tournamentConfig?.minRosterSize ?? t('eventDetails.open2', 'Libre')}
                       {' '}
                       -
-                      {event?.tournamentConfig?.maxRosterSize ?? 'Libre'}
+                      {event?.tournamentConfig?.maxRosterSize ?? t('eventDetails.open2', 'Libre')}
                     </span>
                     <span>
-                      Equipes ephemeres:
-                      {event?.tournamentConfig?.allowCustomTeams !== false ? 'Autorisees' : 'Desactivees'}
+                      {t('eventDetails.temporaryTeams', 'Equipes ephemeres:')}
+                      {event?.tournamentConfig?.allowCustomTeams !== false
+                        ? t('eventDetails.allowed', 'Autorisees')
+                        : t('eventDetails.disabled', 'Desactivees')}
                     </span>
                     <span>
-                      Mix clubs:
-                      {event?.tournamentConfig?.allowCrossClubPlayers === true ? 'Autorise' : 'Non autorise'}
+                      {t('eventDetails.mixedClubs', 'Mix clubs:')}
+                      {event?.tournamentConfig?.allowCrossClubPlayers === true ? t('eventDetails.allowedSingular', 'Autorise') : t('eventDetails.notAllowed', 'Non autorise')}
                     </span>
                   </div>
                   {String(event?.tournamentConfig?.rulesText || '').trim() ? (
@@ -1811,17 +1985,17 @@ function EventDetails({ navigation, route }) {
                     <span>
                       {tournamentTeams.length}
                       {' '}
-                      equipe(s)
+                      {t('eventDetails.teamS', 'equipe(s)')}
                     </span>
                     <span>
                       {tournamentTeamCounters.pending}
                       {' '}
-                      en attente
+                      {t('eventDetails.pendingLower', 'en attente')}
                     </span>
                     <span>
                       {tournamentTeamCounters.accepted}
                       {' '}
-                      validee(s)
+                      {t('eventDetails.approved2', 'validee(s)')}
                     </span>
                     <span>
                       {tournamentTeamCounters.warning}
@@ -1843,7 +2017,13 @@ function EventDetails({ navigation, route }) {
                       }}
                       type="button"
                     >
-                      {canEdit ? 'Piloter la compétition' : 'Voir la compétition'}
+                      {canEdit ? t(
+                        'eventDetails.runTheCompetition',
+                        'Piloter la compétition',
+                      ) : t(
+                        'eventDetails.seeTheCompetition',
+                        'Voir la compétition',
+                      )}
                     </button>
                     {canEdit ? (
                       <button
@@ -1851,7 +2031,7 @@ function EventDetails({ navigation, route }) {
                         style={primaryButtonStyle}
                         type="button"
                       >
-                        Modifier les paramètres
+                        {t('eventDetails.editTheSettings', 'Modifier les paramètres')}
                       </button>
                     ) : null}
                     {managedTournamentTeam?.documentId ? (
@@ -1867,7 +2047,7 @@ function EventDetails({ navigation, route }) {
                         }}
                         type="button"
                       >
-                        Gérer mon équipe
+                        {t('eventDetails.manageMyTeam', 'Gérer mon équipe')}
                       </button>
                     ) : null}
                     {!managedTournamentTeam?.documentId && currentUserTournamentTeam?.documentId ? (
@@ -1883,7 +2063,7 @@ function EventDetails({ navigation, route }) {
                         }}
                         type="button"
                       >
-                        Voir mon équipe
+                        {t('eventDetails.seeMyTeam', 'Voir mon équipe')}
                       </button>
                     ) : null}
                     {!managedTournamentTeam?.documentId && !currentUserTournamentTeam?.documentId && currentUserPendingTournamentTeam?.documentId ? (
@@ -1903,7 +2083,9 @@ function EventDetails({ navigation, route }) {
                           currentUserPendingTournamentTeam?.members?.find(
                             (member) => member?.user?.documentId === userData?.documentId,
                           )?.responseStatus,
-                        ) === 'invited' ? 'Répondre à mon invitation' : 'Suivre ma demande'}
+                        ) === 'invited'
+                          ? t('eventDetails.answerMyInvitation', 'Répondre à mon invitation')
+                          : t('eventDetails.followMyRequest', 'Suivre ma demande')}
                       </button>
                     ) : null}
                     {canRegisterTournamentSourceTeam ? (
@@ -1921,7 +2103,7 @@ function EventDetails({ navigation, route }) {
                         }}
                         type="button"
                       >
-                        Inscrire mon équipe
+                        {t('eventDetails.registerMyTeam', 'Inscrire mon équipe')}
                       </button>
                     ) : null}
                     {canCreateCustomTournamentTeam ? (
@@ -1939,13 +2121,16 @@ function EventDetails({ navigation, route }) {
                         }}
                         type="button"
                       >
-                        Créer une équipe
+                        {t('eventDetails.createATeam', 'Créer une équipe')}
                       </button>
                     ) : null}
                   </div>
                   {tournamentTeams.length === 0 ? (
                     <div style={{ color: mutedTextColor, fontSize: 14 }}>
-                      Aucune équipe n est encore inscrite.
+                      {t(
+                        'eventDetails.noTeamIsRegisteredYet',
+                        'Aucune équipe n est encore inscrite.',
+                      )}
                     </div>
                   ) : (
                     <div style={{ display: 'grid', gap: 10 }}>
@@ -1973,12 +2158,16 @@ function EventDetails({ navigation, route }) {
                             >
                               <div style={{ display: 'grid', gap: 4 }}>
                                 <span style={{ color: textColor, fontFamily: 'Montserrat-Bold, sans-serif', fontSize: 14 }}>
-                                  {team?.name || 'Équipe tournoi'}
+                                  {team?.name || t('eventDetails.tournamentTeam', 'Équipe tournoi')}
                                 </span>
                                 <span style={{ color: mutedTextColor, fontSize: 13 }}>
                                   {team?.sourceType === 'club_team'
-                                    ? `Depuis ${team?.sourceTeam?.name || 'une équipe club'}`
-                                    : 'Équipe éphémère'}
+                                    ? t('eventDetails.fromTeam', 'Depuis {{teamName}}', {
+                                      teamName: team?.sourceTeam?.name
+                                        || t('eventDetails.aClubTeam', 'une équipe club'),
+                                      ...SANS_ECHAPPEMENT,
+                                    })
+                                    : t('eventDetails.temporaryTeam', 'Équipe éphémère')}
                                 </span>
                               </div>
                               <span style={{ color: accentColor, fontSize: 13 }}>
@@ -1997,25 +2186,25 @@ function EventDetails({ navigation, route }) {
                               <span>
                                 {rosterSummary.presentCount}
                                 {' '}
-                                presents
+                                {t('eventDetails.present2', 'presents')}
                               </span>
                               <span>
                                 {rosterSummary.pendingCount}
                                 {' '}
-                                en attente
+                                {t('eventDetails.pendingLower', 'en attente')}
                               </span>
                               {rosterSummary.invitedCount > 0 ? (
                                 <span>
                                   {rosterSummary.invitedCount}
                                   {' '}
-                                  invitation(s)
+                                  {t('eventDetails.invitationS', 'invitation(s)')}
                                 </span>
                               ) : null}
                               {rosterSummary.requestedCount > 0 ? (
                                 <span>
                                   {rosterSummary.requestedCount}
                                   {' '}
-                                  demande(s)
+                                  {t('eventDetails.requestS', 'demande(s)')}
                                 </span>
                               ) : null}
                               {hasRosterWarning ? <span style={{ color: '#ffd54a' }}>Warning roster</span> : null}
@@ -2033,7 +2222,7 @@ function EventDetails({ navigation, route }) {
                                 }}
                                 type="button"
                               >
-                                Ouvrir l équipe
+                                {t('eventDetails.openTheTeam', 'Ouvrir l équipe')}
                               </button>
                               {canEdit && status === 'pending' ? (
                                 <>
@@ -2045,7 +2234,7 @@ function EventDetails({ navigation, route }) {
                                     }}
                                     type="button"
                                   >
-                                    Valider
+                                    {t('eventDetails.approve', 'Valider')}
                                   </button>
                                   <button
                                     onClick={() => handleReviewTournamentTeam(team?.documentId, 'declined')}
@@ -2059,7 +2248,7 @@ function EventDetails({ navigation, route }) {
                                     }}
                                     type="button"
                                   >
-                                    Refuser
+                                    {t('eventDetails.decline', 'Refuser')}
                                   </button>
                                 </>
                               ) : null}
@@ -2076,9 +2265,13 @@ function EventDetails({ navigation, route }) {
                 background: sectionBackground, border: `1px solid ${borderColor}`, borderRadius: 24, display: 'grid', gap: 14, padding: 22,
               }}
               >
-                <h2 style={sectionTitleStyle}>Équipes invitées</h2>
+                <h2 style={sectionTitleStyle}>
+                  {t('eventDetails.invitedTeams2', 'Équipes invitées')}
+                </h2>
                 {invitedTeams.length === 0 ? (
-                  <div style={{ color: mutedTextColor }}>Aucune équipe invitée.</div>
+                  <div style={{ color: mutedTextColor }}>
+                    {t('eventDetails.noInvitedTeam', 'Aucune équipe invitée.')}
+                  </div>
                 ) : (
                   <div style={{ display: 'grid', gap: 10 }}>
                     {invitedTeams.map((team) => (
@@ -2088,7 +2281,7 @@ function EventDetails({ navigation, route }) {
                           background: softSurfaceColor, border: `1px solid ${borderColor}`, borderRadius: 16, padding: '12px 14px',
                         }}
                       >
-                        <div style={{ color: textColor, fontFamily: 'Montserrat-Bold, sans-serif', fontSize: 14 }}>{team?.name || 'Equipe'}</div>
+                        <div style={{ color: textColor, fontFamily: 'Montserrat-Bold, sans-serif', fontSize: 14 }}>{team?.name || t('eventDetails.teamFallback', 'Equipe')}</div>
                         <div style={{ color: mutedTextColor, fontSize: 13 }}>{team?.club?.name || team?.section?.name || ''}</div>
                       </div>
                     ))}
@@ -2101,7 +2294,9 @@ function EventDetails({ navigation, route }) {
                   background: sectionBackground, border: `1px solid ${borderColor}`, borderRadius: 24, display: 'grid', gap: 14, padding: 22,
                 }}
                 >
-                  <h2 style={sectionTitleStyle}>Absences / manques</h2>
+                  <h2 style={sectionTitleStyle}>
+                    {t('eventDetails.absencesMissing', 'Absences / manques')}
+                  </h2>
                   <div style={{ display: 'grid', gap: 10 }}>
                     {detectedPlayers.map((player) => (
                       <div key={getEntityDocumentId(player) || getUserDisplayName(player)} style={{ color: mutedTextColor, fontSize: 14 }}>

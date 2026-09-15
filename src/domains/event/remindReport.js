@@ -1,3 +1,7 @@
+import i18next from 'i18next';
+
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
+
 import { formatDateTimeWithDayPrefix } from '@/utils/date';
 
 /**
@@ -51,21 +55,34 @@ export const buildRemindMessage = (report) => {
   const blockedCount = Number(report?.blockedCount) || 0;
 
   if (remindedCount > 0) {
-    const people = remindedCount > 1 ? 'personnes relancees' : 'personne relancee';
-    let description = 'Elles vont recevoir une notification pour leur rappeler de repondre.';
+    let description = i18next.t(
+      'remindReport.willBeNotified',
+      'Elles vont recevoir une notification pour leur rappeler de repondre.',
+    );
     if (blockedCount === 1) {
-      description = 'Une autre personne a deja ete relancee il y a moins de 48 h :'
-        + ' elle ne recevra rien de plus.';
+      description = i18next.t(
+        'remindReport.oneOtherAlreadyReminded',
+        'Une autre personne a deja ete relancee il y a moins de 48 h :'
+          + ' elle ne recevra rien de plus.',
+      );
     }
     if (blockedCount > 1) {
-      description = `${blockedCount} autres personnes ont deja ete relancees`
-        + ' il y a moins de 48 h : elles ne recevront rien de plus.';
+      description = i18next.t(
+        'remindReport.othersAlreadyReminded',
+        '{{blockedCount}} autres personnes ont deja ete relancees'
+          + ' il y a moins de 48 h : elles ne recevront rien de plus.',
+        { blockedCount },
+      );
     }
 
     return {
       description,
       outcome: 'sent',
-      title: `${remindedCount} ${people}`,
+      title: i18next.t('remindReport.remindedPeople', {
+        count: remindedCount,
+        defaultValue_one: '{{count}} personne relancee',
+        defaultValue_other: '{{count}} personnes relancees',
+      }),
     };
   }
 
@@ -75,23 +92,35 @@ export const buildRemindMessage = (report) => {
     const nextReminderAt = formatDateTimeWithDayPrefix(report?.nextReminderAt);
 
     const already = lastRemindedAt
-      ? `Deja relance le ${lastRemindedAt}.`
-      : 'Deja relance il y a moins de 48 h.';
+      ? i18next.t('remindReport.alreadyRemindedOn', 'Deja relance le {{date}}.', {
+        date: lastRemindedAt,
+        ...SANS_ECHAPPEMENT,
+      })
+      : i18next.t('remindReport.alreadyRemindedRecently', 'Deja relance il y a moins de 48 h.');
     const next = nextReminderAt
-      ? ` Tu pourras relancer a partir du ${nextReminderAt}.`
-      : ' Il faut attendre 48 h entre deux relances.';
+      ? i18next.t('remindReport.canRemindFrom', ' Tu pourras relancer a partir du {{date}}.', {
+        date: nextReminderAt,
+        ...SANS_ECHAPPEMENT,
+      })
+      : i18next.t(
+        'remindReport.waitBetweenReminders',
+        ' Il faut attendre 48 h entre deux relances.',
+      );
 
     return {
       description: `${already}${next}`,
       outcome: 'blocked',
-      title: 'Personne n a ete relance',
+      title: i18next.t('remindReport.nobodyReminded', 'Personne n a ete relance'),
     };
   }
 
   return {
-    description: 'Tout le monde a deja repondu : il n y avait personne a relancer.',
+    description: i18next.t(
+      'remindReport.everyoneAnswered',
+      'Tout le monde a deja repondu : il n y avait personne a relancer.',
+    ),
     outcome: 'nobody',
-    title: 'Personne n a ete relance',
+    title: i18next.t('remindReport.nobodyReminded', 'Personne n a ete relance'),
   };
 };
 

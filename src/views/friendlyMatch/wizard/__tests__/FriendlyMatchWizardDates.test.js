@@ -4,6 +4,12 @@ import renderer, { act } from 'react-test-renderer';
 import { FriendlyMatchWizardProvider } from '../FriendlyMatchWizardContext';
 import FriendlyMatchWizardDates from '../FriendlyMatchWizardDates';
 
+// I18N-2 : ces textes passent par i18next.t hors composant — la doublure partagée rend le
+// français de l app (fr.js, sinon le repli, jetons et pluriel français).
+jest.mock('i18next', () => (
+  jest.requireActual('@/theme/strings/__mocks__/doublureTraduction').i18next
+));
+
 // Filet D24 (E6) : l'etape 3/7 du tunnel amical n'avait AUCUN test, et c'est
 // celle qu'Adel declare BLOQUANTE (recette du 2026-08-07 : « on ne peut pas
 // ajouter d'heure dans le tunnel, ca ne marche pas et on est donc bloque »).
@@ -21,6 +27,12 @@ const mockRoues = [];
 /** Les props recues par le gabarit de tunnel, dans l'ordre de rendu. */
 /** @type {any[]} */
 const mockPropsDuGabarit = [];
+
+// I18N-2 : l accessibilité de la croix passe par t() avec {{day}} — la doublure rend le
+// français de l app (fr.js, sinon le repli, jetons remplacés).
+jest.mock('react-i18next', () => (
+  jest.requireActual('@/theme/strings/__mocks__/doublureTraduction').reactI18next
+));
 
 jest.mock('@react-native-community/datetimepicker', () => {
   const { View } = jest.requireActual('react-native');

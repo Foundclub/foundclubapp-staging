@@ -11,6 +11,8 @@
  * lit deja a la RACINE du pack.
  */
 
+import i18next from 'i18next';
+
 import { getCompositionPlayerId } from '@/utils/compositionPlayer';
 import { getTacticalSportKey } from '@/utils/tacticalField';
 
@@ -649,7 +651,10 @@ export const buildMatchCompositionPack = ({
     sportContext: getTacticalSportKey(sport),
     teams: [{
       id: teamEntryId,
-      name: String(teamName || basePack?.teams?.[0]?.name || 'Équipe'),
+      name: String(teamName || basePack?.teams?.[0]?.name || i18next.t(
+        'matchCompositionUtils.team',
+        'Équipe',
+      )),
       placements: (Array.isArray(placements) ? placements : []).map((placement) => ({
         playerId: String(placement?.playerId || ''),
         positionX: clampPercent(placement?.positionX),

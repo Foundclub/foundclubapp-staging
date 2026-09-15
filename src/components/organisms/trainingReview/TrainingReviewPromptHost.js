@@ -16,6 +16,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import useAuth from '@/domains/auth/useAuth';
 import { useAppContext } from '@/store/appContext';
+import localeDesFormats from '@/theme/strings/localeDesFormats';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -66,7 +67,7 @@ const BLOCKED_ROUTES = /** @type {Set<string>} */ (new Set([RouteNames.EventDeta
 const formatDateDeFin = (valeur) => {
   if (!valeur) return '';
   try {
-    return new Date(valeur).toLocaleString('fr-FR', {
+    return new Date(valeur).toLocaleString(localeDesFormats(), {
       day: '2-digit',
       hour: '2-digit',
       minute: '2-digit',

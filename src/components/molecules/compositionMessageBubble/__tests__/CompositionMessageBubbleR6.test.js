@@ -24,6 +24,10 @@ import CompositionMessageBubble from '../CompositionMessageBubble';
  */
 
 jest.mock('@react-navigation/native', () => ({ useNavigation: () => ({ navigate: jest.fn() }) }));
+// I18N-2 : le pluriel « + 1 autre équipe » passe par t() — la doublure rend le français de l app.
+jest.mock('react-i18next', () => (
+  jest.requireActual('@/theme/strings/__mocks__/doublureTraduction').reactI18next
+));
 
 jest.mock('@/store/authRuntime', () => ({
   getAuthRuntimeSnapshot: () => ({ auth: { user: { documentId: 'personne-1' } } }),

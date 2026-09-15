@@ -3,6 +3,18 @@ import renderer, { act } from 'react-test-renderer';
 
 import FriendlyMatchAdDetails from '../FriendlyMatchAdDetails';
 
+// I18N-2 : ces textes passent par t() — la doublure partagée rend le
+// français de l app (fr.js, sinon le repli, jetons et pluriel français).
+jest.mock('react-i18next', () => (
+  jest.requireActual('@/theme/strings/__mocks__/doublureTraduction').reactI18next
+));
+
+// I18N-2 : ces textes passent par i18next.t hors composant — la doublure partagée rend le
+// français de l app (fr.js, sinon le repli, jetons et pluriel français).
+jest.mock('i18next', () => (
+  jest.requireActual('@/theme/strings/__mocks__/doublureTraduction').i18next
+));
+
 // Filet du lot L5 (spec docs/SPEC_ONGLET_MATCHS_AMICAUX_2026_07_31.md §4.3-4.5).
 //
 // Ce qu il verrouille, et pourquoi c est ici plutot que sur un emulateur :

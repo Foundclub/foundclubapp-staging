@@ -20,6 +20,12 @@ import {
 //   H6 — la saisie s'arrête EXACTEMENT là où le serveur refuse.
 // ---------------------------------------------------------------------------
 
+// I18N-2 : ces phrases passent par i18next.t — la doublure rend le français de l app
+// (fr.js, sinon le repli, jetons et pluriel français), sans initialiser i18next.
+jest.mock('i18next', () => (
+  jest.requireActual('@/theme/strings/__mocks__/doublureTraduction').i18next
+));
+
 describe('H1 — un écran vide dit pourquoi il est vide', () => {
   it('le compte SuperAdmin reçoit une explication, pas un écran blanc', () => {
     const explication = describeMatchStatsEmptyReason(MATCH_STATS_EMPTY_REASONS.SUPERADMIN);

@@ -1,8 +1,11 @@
+import i18next from 'i18next';
 import { useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Platform, Text, TouchableOpacity, UIManager, View,
 } from 'react-native';
 
+import localeDesFormats from '@/theme/strings/localeDesFormats';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -15,20 +18,52 @@ if (Platform.OS === 'android') {
   }
 }
 
+// I18N-2 : des GETTERS, pas des textes — ces tableaux sont lus à l import, avant
+// l initialisation d i18next ; le libellé se traduit au moment où il s affiche.
 const DAYS = [
-  { label: 'Lundi', value: 'monday' },
-  { label: 'Mardi', value: 'tuesday' },
-  { label: 'Mercredi', value: 'wednesday' },
-  { label: 'Jeudi', value: 'thursday' },
-  { label: 'Vendredi', value: 'friday' },
-  { label: 'Samedi', value: 'saturday' },
-  { label: 'Dimanche', value: 'sunday' },
+  {
+    get label() { return i18next.t('teamSlotCreationForm.monday', 'Lundi'); },
+    value: 'monday',
+  },
+  {
+    get label() { return i18next.t('teamSlotCreationForm.tuesday', 'Mardi'); },
+    value: 'tuesday',
+  },
+  {
+    get label() { return i18next.t('teamSlotCreationForm.wednesday', 'Mercredi'); },
+    value: 'wednesday',
+  },
+  {
+    get label() { return i18next.t('teamSlotCreationForm.thursday', 'Jeudi'); },
+    value: 'thursday',
+  },
+  {
+    get label() { return i18next.t('teamSlotCreationForm.friday', 'Vendredi'); },
+    value: 'friday',
+  },
+  {
+    get label() { return i18next.t('teamSlotCreationForm.saturday', 'Samedi'); },
+    value: 'saturday',
+  },
+  {
+    get label() { return i18next.t('teamSlotCreationForm.sunday', 'Dimanche'); },
+    value: 'sunday',
+  },
 ];
 
 const LOCATION_MODES = [
-  { label: 'Recoit', value: 'host' },
-  { label: 'Se deplace', value: 'travel' },
-  { label: 'Les deux', value: 'both' },
+  {
+    get label() { return i18next.t('teamSlotCreationForm.host', 'Recoit'); },
+    value: 'host',
+  },
+  {
+    get label() { return i18next.t('teamSlotCreationForm.travel', 'Se deplace'); },
+    value: 'travel',
+  },
+  {
+    get label() { return i18next.t('teamSlotCreationForm.both', 'Les deux'); },
+    value: 'both',
+  },
 ];
 
 /**
@@ -47,6 +82,7 @@ const LOCATION_MODES = [
 function TeamSlotCreationForm({
   initialValues, onAdd, onCancel, onDelete, onDraftChange, requireLocationMode = false,
 }) {
+  const { t } = useTranslation();
   const { Colors, Fonts } = useTheme();
   const isEditMode = Boolean(initialValues);
 
@@ -94,7 +130,10 @@ function TeamSlotCreationForm({
    * @param {Date} date
    * @returns {string}
    */
-  const formatTime = (date) => date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+  const formatTime = (date) => date.toLocaleTimeString(
+    localeDesFormats(),
+    { hour: '2-digit', minute: '2-digit' },
+  );
 
   /**
    * @param {'hour' | 'minute'} type
@@ -177,8 +216,17 @@ function TeamSlotCreationForm({
       .map((day) => String(day.value || ''))
       .filter(Boolean);
 
-  const dayModalTitle = isEditMode ? 'Jour' : 'Choisir les jours';
-  const dayPlaceholder = isEditMode ? 'Choisir un jour' : 'Choisir un ou plusieurs jours';
+  const dayModalTitle = isEditMode ? t('teamSlotCreationForm.day', 'Jour') : t(
+    'teamSlotCreationForm.chooseTheDays',
+    'Choisir les jours',
+  );
+  const dayPlaceholder = isEditMode ? t(
+    'teamSlotCreationForm.chooseADay',
+    'Choisir un jour',
+  ) : t(
+    'teamSlotCreationForm.chooseOneOrMoreDays',
+    'Choisir un ou plusieurs jours',
+  );
 
   return (
     <View style={{
@@ -193,7 +241,9 @@ function TeamSlotCreationForm({
     >
       <View style={{ marginBottom: 16 }}>
         <Text style={[Fonts.p2Bold, { color: Colors.neutral00, marginBottom: 8 }]}>
-          {isEditMode ? 'Jour' : 'Jour(s)'}
+          {isEditMode
+            ? t('teamSlotCreationForm.day', 'Jour')
+            : t('teamSlotCreationForm.dayS', 'Jour(s)')}
         </Text>
         <AutocompleteSelect
           confirmButtonLabel="Enregistrer"
@@ -229,7 +279,9 @@ function TeamSlotCreationForm({
 
       <View style={{ flexDirection: 'row', gap: 16, marginBottom: 20 }}>
         <View style={{ alignItems: 'center', flex: 1 }}>
-          <Text style={[Fonts.p2Bold, { color: Colors.neutral00, marginBottom: 8 }]}>Début</Text>
+          <Text style={[Fonts.p2Bold, { color: Colors.neutral00, marginBottom: 8 }]}>
+            {t('teamSlotCreationForm.start', 'Début')}
+          </Text>
           <View style={{ alignItems: 'center', flexDirection: 'row' }}>
             <WheelPicker
               data={hours}
@@ -252,7 +304,9 @@ function TeamSlotCreationForm({
         </View>
 
         <View style={{ alignItems: 'center', flex: 1 }}>
-          <Text style={[Fonts.p2Bold, { color: Colors.neutral00, marginBottom: 8 }]}>Fin</Text>
+          <Text style={[Fonts.p2Bold, { color: Colors.neutral00, marginBottom: 8 }]}>
+            {t('teamSlotCreationForm.end', 'Fin')}
+          </Text>
           <View style={{ alignItems: 'center', flexDirection: 'row' }}>
             <WheelPicker
               data={hours}
@@ -278,7 +332,7 @@ function TeamSlotCreationForm({
       {requireLocationMode ? (
         <View style={{ marginBottom: 12 }}>
           <Text style={[Fonts.p2Bold, { color: Colors.neutral00, marginBottom: 10 }]}>
-            Sur ce créneau
+            {t('teamSlotCreationForm.onThisSlot', 'Sur ce créneau')}
           </Text>
           <View style={{ flexDirection: 'row', gap: 8 }}>
             {LOCATION_MODES.map((option) => {
@@ -311,14 +365,16 @@ function TeamSlotCreationForm({
           <Button
             onPress={onCancel}
             style={{ flex: 1 }}
-            title="Annuler"
+            title={t('teamSlotCreationForm.cancel', 'Annuler')}
             variant="Secondary"
           />
           <Button
             disabled={!isFormValid}
             onPress={handleAdd}
             style={{ flex: 1 }}
-            title={initialValues ? 'Modifier' : 'Ajouter'}
+            title={initialValues
+              ? t('teamSlotCreationForm.edit', 'Modifier')
+              : t('teamSlotCreationForm.add', 'Ajouter')}
             variant="Primary"
           />
         </View>
@@ -328,7 +384,7 @@ function TeamSlotCreationForm({
             onPress={onDelete}
             style={{ borderColor: Colors.error500, borderWidth: 1 }}
             textStyle={{ color: Colors.error500 }}
-            title="Supprimer ce créneau"
+            title={t('teamSlotCreationForm.deleteThisSlot', 'Supprimer ce créneau')}
             variant="Secondary"
           />
         )}

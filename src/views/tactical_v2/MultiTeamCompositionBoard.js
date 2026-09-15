@@ -2,6 +2,7 @@
 /* eslint-disable max-len, perfectionist/sort-imports, perfectionist/sort-named-imports, no-nested-ternary, react/no-array-index-key, perfectionist/sort-objects, react/no-unescaped-entities, react-hooks/exhaustive-deps */
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useQueryClient } from '@tanstack/react-query';
+import i18next from 'i18next';
 import {
   useCallback,
   useEffect,
@@ -9,6 +10,7 @@ import {
   useRef,
   useState,
 } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Alert,
   ImageBackground,
@@ -33,6 +35,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import useAuth from '@/domains/auth/useAuth';
 import { extractSubscriptionDecisionFromError } from '@/domains/subscription/subscriptionDecision';
+import localeDesFormats from '@/theme/strings/localeDesFormats';
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -134,7 +138,10 @@ const getErrorMessage = (error, fallbackMessage) => {
     || error?.message;
 
   if (status === 403) {
-    return "Tu n'es pas autorise à gérer cette composition.";
+    return i18next.t(
+      'multiTeamCompositionBoard.notAllowed',
+      "Tu n'es pas autorise à gérer cette composition.",
+    );
   }
 
   if (typeof apiMessage === 'string' && apiMessage.trim()) {
@@ -183,7 +190,10 @@ const renderFieldSlots = ({
         {/* Postes vides = repères de la formation (cibles du mode « sur postes »). */}
         {slots.filter((slot) => !occupiedSlotIds.has(slot?.slotId)).map((slot) => (
           <TouchableOpacity
-            accessibilityLabel={slot?.label || 'Poste'}
+            accessibilityLabel={slot?.label || i18next.t(
+              'multiTeamCompositionBoard.position',
+              'Poste',
+            )}
             activeOpacity={isReadOnly ? 1 : 0.82}
             disabled={isReadOnly}
             key={`slot-${slot?.slotId || slot?.slotKey}`}
@@ -229,7 +239,10 @@ const renderFieldSlots = ({
                 {getCompositionPlayerInitials(player)}
               </Text>
               <Text numberOfLines={1} style={[Fonts.p4, { color: Colors.neutral00, opacity: 0.92, textAlign: 'center' }]}>
-                {player?.number != null && player?.number !== '' ? `#${player.number}` : 'Attribue'}
+                {player?.number != null && player?.number !== '' ? `#${player.number}` : i18next.t(
+                  'multiTeamCompositionBoard.assigned',
+                  'Attribue',
+                )}
               </Text>
             </TouchableOpacity>
           );
@@ -254,6 +267,7 @@ const renderFieldSlots = ({
  * @param root0.routeParams
  */
 function MultiTeamCompositionBoard({ routeParams = null }) {
+  const { t } = useTranslation();
   const {
     Alignments,
     ApplicationStyle,
@@ -570,7 +584,7 @@ function MultiTeamCompositionBoard({ routeParams = null }) {
     const firstname = manualFirstname.trim();
     const lastname = manualLastname.trim();
     if (!firstname || !lastname) {
-      showAlert('Erreur', 'Prénom et nom requis.');
+      showAlert(t('common.error', 'Erreur'), t('multiTeamCompositionBoard.nameRequired', 'Prénom et nom requis.'));
       return;
     }
 
@@ -602,7 +616,7 @@ function MultiTeamCompositionBoard({ routeParams = null }) {
     setManualLastname('');
     setManualNumber('');
     setIsManualPlayerModalVisible(false);
-  }, [manualFirstname, manualLastname, manualNumber, updateDraftPack]);
+  }, [manualFirstname, manualLastname, manualNumber, updateDraftPack, t]);
 
   const handleGoToField = useCallback(() => setCompositionStep(STEP_FIELD), []);
   const handleGoToPlayers = useCallback(() => setCompositionStep(STEP_PLAYERS), []);
@@ -918,7 +932,7 @@ function MultiTeamCompositionBoard({ routeParams = null }) {
     updateDraftPack((currentPack) => {
       const currentTeams = Array.isArray(currentPack?.teams) ? currentPack.teams : [];
       if (currentTeams.length >= MAX_COMPOSITION_TEAMS) {
-        showAlert('Limite atteinte', `Tu peux créer jusqu'a ${MAX_COMPOSITION_TEAMS} équipes dans une même composition.`);
+        showAlert(t('multiTeamCompositionBoard.limitReached', 'Limite atteinte'), t('multiTeamCompositionBoard.maxTeams', "Tu peux créer jusqu'a {{max}} équipes dans une même composition.", { max: MAX_COMPOSITION_TEAMS, ...SANS_ECHAPPEMENT }));
         return currentPack;
       }
 
@@ -929,36 +943,46 @@ function MultiTeamCompositionBoard({ routeParams = null }) {
         mode: 'manual',
         teams: [
           ...currentTeams,
-          buildTeamEntryFromPreset(basePreset, nextIndex - 1, currentPack?.sportContext || sport, `Équipe ${nextIndex}`, `team_${nextIndex}`),
+          buildTeamEntryFromPreset(basePreset, nextIndex - 1, currentPack?.sportContext || sport, t('multiTeamCompositionBoard.teamNumber', 'Équipe {{number}}', { number: nextIndex, ...SANS_ECHAPPEMENT }), `team_${nextIndex}`),
         ],
       };
     });
-  }, [availablePresets, readOnly, sport, updateDraftPack]);
+  }, [availablePresets, readOnly, sport, updateDraftPack, t]);
 
   const handleRemoveTeam = useCallback((teamIdToRemove) => {
     if (readOnly) return;
 
     const currentTeamCount = Array.isArray(draftPack?.teams) ? draftPack.teams.length : 0;
     if (currentTeamCount <= 1) {
-      showAlert('Équipe requise', 'Il doit rester au moins une équipe dans cette composition.');
+      showAlert(t(
+        'multiTeamCompositionBoard.teamRequired',
+        'Équipe requise',
+      ), t(
+        'multiTeamCompositionBoard.oneTeamMustRemain',
+        'Il doit rester au moins une équipe dans cette composition.',
+      ));
       return;
     }
 
     showAlert(
-      'Supprimer cette équipe ?',
-      'Les joueurs déjà places dans cette équipe repasseront automatiquement dans les remplaçants.',
+      t('multiTeamCompositionBoard.deleteTeamQuestion', 'Supprimer cette équipe ?'),
+      t(
+        'multiTeamCompositionBoard.deleteTeamMessage',
+        'Les joueurs déjà places dans cette équipe repasseront automatiquement dans les '
+          + 'remplaçants.',
+      ),
       [
-        { style: 'cancel', text: 'Annuler' },
+        { style: 'cancel', text: t('multiTeamCompositionBoard.cancel', 'Annuler') },
         {
           onPress: () => updateDraftPack((currentPack) => ({
             ...currentPack,
             teams: (Array.isArray(currentPack?.teams) ? currentPack.teams : []).filter((team) => team?.id !== teamIdToRemove),
           })),
-          text: 'Supprimer',
+          text: t('multiTeamCompositionBoard.delete', 'Supprimer'),
         },
       ],
     );
-  }, [draftPack?.teams, readOnly, updateDraftPack]);
+  }, [draftPack?.teams, readOnly, updateDraftPack, t]);
 
   const cyclePreset = useCallback((teamIdToUpdate, direction) => {
     if (readOnly || availablePresets.length === 0) return;
@@ -990,18 +1014,27 @@ function MultiTeamCompositionBoard({ routeParams = null }) {
         }));
       }
       invalidateQueries();
-      showAlert('Succès', 'Brouillon de composition enregistre.');
+      showAlert(t('common.success', 'Succès'), t(
+        'multiTeamCompositionBoard.draftSaved',
+        'Brouillon de composition enregistre.',
+      ));
     } catch (error) {
       const subscriptionDecision = extractSubscriptionDecisionFromError(error);
       if (subscriptionDecision) {
         setSubscriptionPaywallDecision(subscriptionDecision);
         return;
       }
-      showAlert('Erreur', getErrorMessage(error, 'Impossible d\'enregistrer ce brouillon.'));
+      showAlert(t(
+        'common.error',
+        'Erreur',
+      ), getErrorMessage(error, t(
+        'multiTeamCompositionBoard.draftSaveError',
+        "Impossible d'enregistrer ce brouillon.",
+      )));
     } finally {
       setIsSaving(false);
     }
-  }, [allPlayers, availablePresets, draftPack, eventId, invalidateQueries, readOnly, sport, teamId]);
+  }, [allPlayers, availablePresets, draftPack, eventId, invalidateQueries, readOnly, sport, teamId, t]);
 
   const handlePublish = useCallback(async () => {
     if (readOnly || !eventId || !teamId) return;
@@ -1020,7 +1053,10 @@ function MultiTeamCompositionBoard({ routeParams = null }) {
         }));
       }
       invalidateQueries();
-      showAlert('Succès', 'Composition d\'équipes publiée.', [
+      showAlert(t('common.success', 'Succès'), t(
+        'multiTeamCompositionBoard.lineupPublished',
+        "Composition d'équipes publiée.",
+      ), [
         {
           onPress: () => navigation.navigate(RouteNames.EventDetails, { eventId }),
           text: 'OK',
@@ -1032,16 +1068,22 @@ function MultiTeamCompositionBoard({ routeParams = null }) {
         setSubscriptionPaywallDecision(subscriptionDecision);
         return;
       }
-      showAlert('Erreur', getErrorMessage(error, 'Impossible de publier cette composition.'));
+      showAlert(t(
+        'common.error',
+        'Erreur',
+      ), getErrorMessage(error, t(
+        'multiTeamCompositionBoard.publishError',
+        'Impossible de publier cette composition.',
+      )));
     } finally {
       setIsPublishing(false);
     }
-  }, [allPlayers, availablePresets, draftPack, eventId, invalidateQueries, navigation, readOnly, sport, teamId]);
+  }, [allPlayers, availablePresets, draftPack, eventId, invalidateQueries, navigation, readOnly, sport, teamId, t]);
 
   const handleGenerateAuto = useCallback(async () => {
     if (!eventId || !teamId) return;
     if (availablePresets.length === 0) {
-      showAlert('Preset requis', 'Aucun preset n\'est disponible pour ce sport. Passe en mode manuel.');
+      showAlert(t('multiTeamCompositionBoard.presetRequired', 'Preset requis'), t('multiTeamCompositionBoard.noPresetForSport', "Aucun preset n'est disponible pour ce sport. Passe en mode manuel."));
       return;
     }
 
@@ -1063,18 +1105,18 @@ function MultiTeamCompositionBoard({ routeParams = null }) {
       // resultat sur le terrain, c'est la seule facon de le verifier.
       setCompositionStep(STEP_FIELD);
       invalidateQueries();
-      showAlert('Succès', 'Brouillon génère automatiquement. Tu peux maintenant ajuster les équipes à la main.');
+      showAlert(t('common.success', 'Succès'), t('multiTeamCompositionBoard.autoGenerated', 'Brouillon génère automatiquement. Tu peux maintenant ajuster les équipes à la main.'));
     } catch (error) {
       const subscriptionDecision = extractSubscriptionDecisionFromError(error);
       if (subscriptionDecision) {
         setSubscriptionPaywallDecision(subscriptionDecision);
         return;
       }
-      showAlert('Erreur', getErrorMessage(error, 'Impossible de générer cette composition automatiquement.'));
+      showAlert(t('common.error', 'Erreur'), getErrorMessage(error, t('multiTeamCompositionBoard.autoGenerateError', 'Impossible de générer cette composition automatiquement.')));
     } finally {
       setIsSaving(false);
     }
-  }, [autoPresetKeys, autoTeamCount, availablePresets, eventId, invalidateQueries, sport, teamId]);
+  }, [autoPresetKeys, autoTeamCount, availablePresets, eventId, invalidateQueries, sport, teamId, t]);
 
   const isPlayersStep = !readOnly && compositionStep === STEP_PLAYERS;
   const isFieldStep = readOnly || compositionStep === STEP_FIELD;
@@ -1085,9 +1127,12 @@ function MultiTeamCompositionBoard({ routeParams = null }) {
   const canAddTeam = !isSingleTeamEvent
     || (Array.isArray(draftPack?.teams) ? draftPack.teams.length : 0) > 1;
   const headerTitle = readOnly
-    ? 'Composition d\'équipes'
-    : (isPlayersStep ? 'Qui joue ?' : 'Où ils jouent');
-  const contextLabel = teamName || eventName || 'Evenement';
+    ? t('multiTeamCompositionBoard.teamLineup', "Composition d'équipes")
+    : (isPlayersStep ? t('multiTeamCompositionBoard.whoPlays', 'Qui joue ?') : t(
+      'multiTeamCompositionBoard.whereTheyPlay',
+      'Où ils jouent',
+    ));
+  const contextLabel = teamName || eventName || t('multiTeamCompositionBoard.event', 'Evenement');
   const viewerBranchCount = resolvedReadOnlyBranches.length;
   const convokedCount = allPlayers.length;
 
@@ -1113,29 +1158,31 @@ function MultiTeamCompositionBoard({ routeParams = null }) {
               {!readOnly ? (
                 <View style={[styles.headerPill, { backgroundColor: `${Colors.gold500}18`, borderColor: `${Colors.gold500}55` }]}>
                   <Text style={[Fonts.p4Bold, { color: Colors.gold500 }]}>
-                    {isPlayersStep ? 'Étape 1 sur 2' : 'Étape 2 sur 2'}
+                    {isPlayersStep ? t(
+                      'multiTeamCompositionBoard.step1Of2',
+                      'Étape 1 sur 2',
+                    ) : t(
+                      'multiTeamCompositionBoard.step2Of2',
+                      'Étape 2 sur 2',
+                    )}
                   </Text>
                 </View>
               ) : null}
               <View style={[styles.headerPill, { backgroundColor: `${Colors.primary500}18`, borderColor: `${Colors.primary500}55` }]}>
                 <Text style={[Fonts.p4Bold, { color: Colors.primary500 }]}>
-                  {readOnly ? 'Publication' : (draftPack?.mode === 'auto' ? 'Auto + manuel' : 'Manuel')}
+                  {readOnly ? t('multiTeamCompositionBoard.publication', 'Publication') : (draftPack?.mode === 'auto' ? t('multiTeamCompositionBoard.autoPlusManual', 'Auto + manuel') : t('multiTeamCompositionBoard.manual', 'Manuel'))}
                 </Text>
               </View>
               {!readOnly ? (
                 <View style={[styles.headerPill, { backgroundColor: `${Colors.neutral00}10`, borderColor: `${Colors.neutral00}22` }]}>
                   <Text style={[Fonts.p4Bold, { color: Colors.neutral00 }]}>
-                    {(Array.isArray(draftPack?.teams) ? draftPack.teams.length : 0)}
-                    {' '}
-                    equipe(s)
+                    {t('multiTeamCompositionBoard.teamCountPill', '{{teamCount}} equipe(s)', { teamCount: (Array.isArray(draftPack?.teams) ? draftPack.teams.length : 0) })}
                   </Text>
                 </View>
               ) : (
                 <View style={[styles.headerPill, { backgroundColor: `${Colors.neutral00}10`, borderColor: `${Colors.neutral00}22` }]}>
                   <Text style={[Fonts.p4Bold, { color: Colors.neutral00 }]}>
-                    {viewerBranchCount}
-                    {' '}
-                    branche(s)
+                    {t('multiTeamCompositionBoard.branchCountPill', '{{branchCount}} branche(s)', { branchCount: viewerBranchCount })}
                   </Text>
                 </View>
               )}
@@ -1170,9 +1217,17 @@ function MultiTeamCompositionBoard({ routeParams = null }) {
                       },
                     ]}
                   >
-                    <Text style={[Fonts.h4Bold, Fonts.neutral00]}>Aucune composition publiée</Text>
+                    <Text style={[Fonts.h4Bold, Fonts.neutral00]}>
+                      {t(
+                        'multiTeamCompositionBoard.noLineupPublished',
+                        'Aucune composition publiée',
+                      )}
+                    </Text>
                     <Text style={[Fonts.p2, Fonts.neutral300, { marginTop: 8 }]}>
-                      Le coach n a pas encore publie de composition pour cet événement.
+                      {t(
+                        'multiTeamCompositionBoard.coachNotPublished',
+                        'Le coach n a pas encore publie de composition pour cet événement.',
+                      )}
                     </Text>
                   </View>
                 ) : null}
@@ -1191,7 +1246,7 @@ function MultiTeamCompositionBoard({ routeParams = null }) {
                     ]}
                   >
                     <Text style={[Fonts.p3, Fonts.neutral300]}>
-                      Les places encore libres restent visibles et seront complétées automatiquement quand de nouveaux joueurs acceptes arriveront.
+                      {t('multiTeamCompositionBoard.openSpotsHint', 'Les places encore libres restent visibles et seront complétées automatiquement quand de nouveaux joueurs acceptes arriveront.')}
                     </Text>
                   </View>
                 ) : null}
@@ -1225,16 +1280,22 @@ function MultiTeamCompositionBoard({ routeParams = null }) {
                     >
                       <View style={[Spaces.gap[4]]}>
                         <Text style={[Fonts.h4Bold, Fonts.neutral00]}>
-                          {branch?.team?.name || `Branche ${branchIndex + 1}`}
+                          {branch?.team?.name || t('multiTeamCompositionBoard.branchNumber', 'Branche {{number}}', { number: branchIndex + 1 })}
                         </Text>
                         <Text style={[Fonts.p3, Fonts.neutral300]}>
                           {branch?.published?.publishedAt
-                            ? `Publie le ${new Date(branch.published.publishedAt).toLocaleString('fr-FR')}`
-                            : "Composition d'équipes publiée"}
+                            ? t('multiTeamCompositionBoard.publishedOn', 'Publie le {{date}}', { date: new Date(branch.published.publishedAt).toLocaleString(localeDesFormats()), ...SANS_ECHAPPEMENT })
+                            : t(
+                              'multiTeamCompositionBoard.teamLineupPublished',
+                              "Composition d'équipes publiée",
+                            )}
                         </Text>
                         {branch?.viewer?.inReserve ? (
                           <Text style={[Fonts.p3, { color: Colors.gold500 }]}>
-                            Tu figures actuellement dans les remplacants / en attente.
+                            {t(
+                              'multiTeamCompositionBoard.youAreInReserve',
+                              'Tu figures actuellement dans les remplacants / en attente.',
+                            )}
                           </Text>
                         ) : null}
                       </View>
@@ -1257,14 +1318,17 @@ function MultiTeamCompositionBoard({ routeParams = null }) {
                           >
                             <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter]}>
                               <View style={{ flex: 1, paddingRight: 12 }}>
-                                <Text style={[Fonts.h4Bold, Fonts.neutral00]}>{team?.name || `Équipe ${teamIndex + 1}`}</Text>
+                                <Text style={[Fonts.h4Bold, Fonts.neutral00]}>{team?.name || t('multiTeamCompositionBoard.teamNumber', 'Équipe {{number}}', { number: teamIndex + 1, ...SANS_ECHAPPEMENT })}</Text>
                                 <Text style={[Fonts.p4, Fonts.neutral300]}>
-                                  {team?.presetLabel || 'Composition libre'}
+                                  {team?.presetLabel || t(
+                                    'multiTeamCompositionBoard.freeLineup',
+                                    'Composition libre',
+                                  )}
                                 </Text>
                               </View>
                               {isViewerTeam ? (
                                 <View style={[styles.badge, { backgroundColor: `${Colors.primary500}24`, borderColor: `${Colors.primary500}55` }]}>
-                                  <Text style={[Fonts.p4Bold, { color: Colors.primary500 }]}>Mon équipe</Text>
+                                  <Text style={[Fonts.p4Bold, { color: Colors.primary500 }]}>{t('multiTeamCompositionBoard.myTeam', 'Mon équipe')}</Text>
                                 </View>
                               ) : null}
                             </View>
@@ -1293,7 +1357,10 @@ function MultiTeamCompositionBoard({ routeParams = null }) {
                                       {slot?.label}
                                     </Text>
                                     <Text style={[Fonts.p3, { color: player ? Colors.primary100 : Colors.neutral300, flex: 1.2, textAlign: 'right' }]}>
-                                      {player ? getCompositionPlayerLabel(player) : 'Libre'}
+                                      {player ? getCompositionPlayerLabel(player) : t(
+                                        'multiTeamCompositionBoard.openSlot',
+                                        'Libre',
+                                      )}
                                     </Text>
                                   </View>
                                 );
@@ -1304,9 +1371,9 @@ function MultiTeamCompositionBoard({ routeParams = null }) {
                       })}
 
                       <View style={Spaces.gap[8]}>
-                        <Text style={[Fonts.h4Bold, Fonts.neutral00]}>Remplaçants / en attente</Text>
+                        <Text style={[Fonts.h4Bold, Fonts.neutral00]}>{t('multiTeamCompositionBoard.substitutes', 'Remplaçants / en attente')}</Text>
                         {branchReservePlayers.length === 0 ? (
-                          <Text style={[Fonts.p3, Fonts.neutral300]}>Aucun joueur non affecte.</Text>
+                          <Text style={[Fonts.p3, Fonts.neutral300]}>{t('multiTeamCompositionBoard.noUnassignedPlayer', 'Aucun joueur non affecte.')}</Text>
                         ) : (
                           <View style={styles.chipRow}>
                             {branchReservePlayers.map((player) => (
@@ -1343,35 +1410,35 @@ function MultiTeamCompositionBoard({ routeParams = null }) {
                     },
                   ]}
                 >
-                  <Text style={[Fonts.h4Bold, Fonts.neutral00]}>Qui joue ?</Text>
+                  <Text style={[Fonts.h4Bold, Fonts.neutral00]}>
+                    {t('multiTeamCompositionBoard.whoPlays', 'Qui joue ?')}
+                  </Text>
                   <Text style={[Fonts.p2, Fonts.neutral300]}>
                     {showAutoSetup
-                      ? "Choisis le nombre d'équipes et le preset de chacune, puis génère un brouillon."
-                      : "Coche les joueurs que tu convoques. Tu les placeras sur le terrain à l'étape suivante."}
+                      ? t('multiTeamCompositionBoard.autoSetupHint', "Choisis le nombre d'équipes et le preset de chacune, puis génère un brouillon.")
+                      : t('multiTeamCompositionBoard.convokeHint', "Coche les joueurs que tu convoques. Tu les placeras sur le terrain à l'étape suivante.")}
                   </Text>
                   <Text style={[Fonts.p3, Fonts.primary100]}>
-                    {convokedCount}
-                    {' joueur(s) convoqué(s) sur '}
-                    {knownPlayers.length}
+                    {t('multiTeamCompositionBoard.convokedCount', '{{convokedCount}} joueur(s) convoqué(s) sur {{total}}', { convokedCount, total: knownPlayers.length })}
                   </Text>
 
                   <View style={[Alignments.row, { flexWrap: 'wrap' }, Spaces.gap[8]]}>
                     <Button
                       onPress={handleConvokeEveryone}
                       size="sm"
-                      title="Tout sélectionner"
+                      title={t('multiTeamCompositionBoard.selectAll', 'Tout sélectionner')}
                       variant="Secondary"
                     />
                     <Button
                       onPress={handleConvokeNobody}
                       size="sm"
-                      title="Effacer"
+                      title={t('multiTeamCompositionBoard.clear', 'Effacer')}
                       variant="Secondary"
                     />
                     <Button
                       onPress={() => setIsManualPlayerModalVisible(true)}
                       size="sm"
-                      title="Ajouter un joueur"
+                      title={t('multiTeamCompositionBoard.addPlayer', 'Ajouter un joueur')}
                       variant="Secondary"
                     />
                     {availablePresets.length > 0 && !isSingleTeamEvent ? (
@@ -1379,7 +1446,13 @@ function MultiTeamCompositionBoard({ routeParams = null }) {
                         disabled={isPublishing || isSaving}
                         onPress={() => setShowAutoSetup((current) => !current)}
                         size="sm"
-                        title={showAutoSetup ? 'Fermer auto' : 'Génération auto'}
+                        title={showAutoSetup ? t(
+                          'multiTeamCompositionBoard.closeAuto',
+                          'Fermer auto',
+                        ) : t(
+                          'multiTeamCompositionBoard.autoGeneration',
+                          'Génération auto',
+                        )}
                         variant="Secondary"
                       />
                     ) : null}
@@ -1399,10 +1472,12 @@ function MultiTeamCompositionBoard({ routeParams = null }) {
                     },
                   ]}
                 >
-                  <Text style={[Fonts.h4Bold, Fonts.neutral00]}>Joueurs disponibles</Text>
+                  <Text style={[Fonts.h4Bold, Fonts.neutral00]}>
+                    {t('multiTeamCompositionBoard.availablePlayers', 'Joueurs disponibles')}
+                  </Text>
                   {knownPlayers.length === 0 ? (
                     <Text style={[Fonts.p3, Fonts.neutral300]}>
-                      Aucun joueur disponible pour le moment. Ajoute-les à la main avec « Ajouter un joueur », ou passe à la suite et laisse les postes libres.
+                      {t('multiTeamCompositionBoard.noPlayerAvailableHint', 'Aucun joueur disponible pour le moment. Ajoute-les à la main avec « Ajouter un joueur », ou passe à la suite et laisse les postes libres.')}
                     </Text>
                   ) : (
                     <View style={Spaces.gap[8]}>
@@ -1442,7 +1517,13 @@ function MultiTeamCompositionBoard({ routeParams = null }) {
                               {getCompositionPlayerLabel(player)}
                             </Text>
                             <Text style={[Fonts.p4, { color: isConvoked ? Colors.primary100 : Colors.neutral300 }]}>
-                              {isConvoked ? 'Convoqué' : 'Écarté'}
+                              {isConvoked ? t(
+                                'multiTeamCompositionBoard.calledUp',
+                                'Convoqué',
+                              ) : t(
+                                'multiTeamCompositionBoard.leftOut',
+                                'Écarté',
+                              )}
                             </Text>
                           </TouchableOpacity>
                         );
@@ -1465,7 +1546,9 @@ function MultiTeamCompositionBoard({ routeParams = null }) {
                       },
                     ]}
                   >
-                    <Text style={[Fonts.h4Bold, Fonts.neutral00]}>Génération automatique</Text>
+                    <Text style={[Fonts.h4Bold, Fonts.neutral00]}>
+                      {t('multiTeamCompositionBoard.automaticGeneration', 'Génération automatique')}
+                    </Text>
 
                     <View style={[styles.stepperRow, { borderColor: `${Colors.neutral00}12`, backgroundColor: Colors.neutral800 }]}>
                       <TouchableOpacity
@@ -1477,7 +1560,9 @@ function MultiTeamCompositionBoard({ routeParams = null }) {
                       </TouchableOpacity>
                       <View style={styles.stepperValue}>
                         <Text style={[Fonts.h3Bold, Fonts.neutral00]}>{autoTeamCount}</Text>
-                        <Text style={[Fonts.p4, Fonts.neutral300]}>équipes</Text>
+                        <Text style={[Fonts.p4, Fonts.neutral300]}>
+                          {t('multiTeamCompositionBoard.teamsUnit', 'équipes')}
+                        </Text>
                       </View>
                       <TouchableOpacity
                         activeOpacity={0.82}
@@ -1498,8 +1583,8 @@ function MultiTeamCompositionBoard({ routeParams = null }) {
                           style={[styles.listRow, { backgroundColor: Colors.neutral800, borderColor: `${Colors.neutral00}12`, paddingVertical: 14 }]}
                         >
                           <View style={{ flex: 1 }}>
-                            <Text style={[Fonts.p3Bold, Fonts.neutral00]}>{`Équipe ${index + 1}`}</Text>
-                            <Text style={[Fonts.p4, Fonts.neutral300]}>{preset?.label || 'Aucun preset'}</Text>
+                            <Text style={[Fonts.p3Bold, Fonts.neutral00]}>{t('multiTeamCompositionBoard.teamNumber', 'Équipe {{number}}', { number: index + 1, ...SANS_ECHAPPEMENT })}</Text>
+                            <Text style={[Fonts.p4, Fonts.neutral300]}>{preset?.label || t('multiTeamCompositionBoard.noPreset', 'Aucun preset')}</Text>
                           </View>
                           <View style={[Alignments.row, Spaces.gap[8]]}>
                             <Button
@@ -1534,7 +1619,7 @@ function MultiTeamCompositionBoard({ routeParams = null }) {
                     <Button
                       isLoading={isSaving}
                       onPress={handleGenerateAuto}
-                      title="Générer le brouillon"
+                      title={t('multiTeamCompositionBoard.generateDraft', 'Générer le brouillon')}
                       variant="Primary"
                     />
                   </View>
@@ -1543,7 +1628,7 @@ function MultiTeamCompositionBoard({ routeParams = null }) {
                 <Button
                   disabled={isPublishing || isSaving}
                   onPress={handleGoToField}
-                  title="Suivant"
+                  title={t('multiTeamCompositionBoard.next', 'Suivant')}
                   variant="Primary"
                 />
               </>
@@ -1564,40 +1649,42 @@ function MultiTeamCompositionBoard({ routeParams = null }) {
                     },
                   ]}
                 >
-                  <Text style={[Fonts.h4Bold, Fonts.neutral00]}>Où ils jouent</Text>
+                  <Text style={[Fonts.h4Bold, Fonts.neutral00]}>
+                    {t('multiTeamCompositionBoard.whereTheyPlay', 'Où ils jouent')}
+                  </Text>
                   <Text style={[Fonts.p2, Fonts.neutral300]}>
-                    Fais glisser un joueur des remplaçants vers le terrain : appui long, puis tu le déposes où tu veux. Tu peux aussi le sélectionner puis toucher un poste.
+                    {t('multiTeamCompositionBoard.dragHint', 'Fais glisser un joueur des remplaçants vers le terrain : appui long, puis tu le déposes où tu veux. Tu peux aussi le sélectionner puis toucher un poste.')}
                   </Text>
                   <Text style={[Fonts.p3, Fonts.neutral300]}>
-                    Les postes encore libres peuvent rester vides: ils seront completes automatiquement quand de nouveaux joueurs acceptes arriveront.
+                    {t('multiTeamCompositionBoard.openPositionsHint', 'Les postes encore libres peuvent rester vides: ils seront completes automatiquement quand de nouveaux joueurs acceptes arriveront.')}
                   </Text>
 
                   <View style={[Alignments.row, { flexWrap: 'wrap' }, Spaces.gap[8]]}>
                     <Button
                       disabled={isPublishing || isSaving}
                       onPress={handleGoToPlayers}
-                      title="Retour"
+                      title={t('common.back', 'Retour')}
                       variant="Secondary"
                     />
                     {canAddTeam ? (
                       <Button
                         disabled={isPublishing || isSaving}
                         onPress={handleAddTeam}
-                        title="Ajouter une équipe"
+                        title={t('multiTeamCompositionBoard.addTeam', 'Ajouter une équipe')}
                         variant="Secondary"
                       />
                     ) : null}
                     <Button
                       isLoading={isSaving}
                       onPress={handleSaveDraft}
-                      title="Sauvegarder"
+                      title={t('multiTeamCompositionBoard.save', 'Sauvegarder')}
                       variant="Secondary"
                     />
                     <Button
                       disabled={isSaving}
                       isLoading={isPublishing}
                       onPress={handlePublish}
-                      title="Publier"
+                      title={t('multiTeamCompositionBoard.publish', 'Publier')}
                       variant="Primary"
                     />
                   </View>
@@ -1618,18 +1705,20 @@ function MultiTeamCompositionBoard({ routeParams = null }) {
                 >
                   <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter]}>
                     <View style={{ flex: 1, paddingRight: 12 }}>
-                      <Text style={[Fonts.h4Bold, Fonts.neutral00]}>Remplaçants / en attente</Text>
+                      <Text style={[Fonts.h4Bold, Fonts.neutral00]}>
+                        {t('multiTeamCompositionBoard.substitutes', 'Remplaçants / en attente')}
+                      </Text>
                       <Text style={[Fonts.p3, Fonts.neutral300]}>
                         {selectedPlayer
-                          ? `${getCompositionPlayerLabel(selectedPlayer)} est sélectionné. Touche maintenant un poste pour l'affecter.`
-                          : 'Touche un joueur pour le sélectionner, puis touche un poste sur une équipe.'}
+                          ? t('multiTeamCompositionBoard.playerSelectedHint', "{{player}} est sélectionné. Touche maintenant un poste pour l'affecter.", { player: getCompositionPlayerLabel(selectedPlayer), ...SANS_ECHAPPEMENT })
+                          : t('multiTeamCompositionBoard.tapPlayerHint', 'Touche un joueur pour le sélectionner, puis touche un poste sur une équipe.')}
                       </Text>
                     </View>
                     {selectedPlayer ? (
                       <Button
                         onPress={() => setSelectedPlayerId('')}
                         size="sm"
-                        title="Annuler"
+                        title={t('multiTeamCompositionBoard.cancel', 'Annuler')}
                         variant="Secondary"
                       />
                     ) : null}
@@ -1638,8 +1727,11 @@ function MultiTeamCompositionBoard({ routeParams = null }) {
                   {reservePlayers.length === 0 ? (
                     <Text style={[Fonts.p3, Fonts.neutral300]}>
                       {hasKnownPlayers
-                        ? 'Tous les joueurs sont déjà affectes a une équipe.'
-                        : 'Aucun joueur disponible pour le moment. Tu peux quand même créer les équipes et laisser les postes libres.'}
+                        ? t(
+                          'multiTeamCompositionBoard.allPlayersAssigned',
+                          'Tous les joueurs sont déjà affectes a une équipe.',
+                        )
+                        : t('multiTeamCompositionBoard.noPlayerCreateTeamsHint', 'Aucun joueur disponible pour le moment. Tu peux quand même créer les équipes et laisser les postes libres.')}
                     </Text>
                   ) : (
                     <View style={styles.chipRow}>
@@ -1664,7 +1756,7 @@ function MultiTeamCompositionBoard({ routeParams = null }) {
                             </Text>
                             {player?.participantSource ? (
                               <Text style={[Fonts.p4, { color: isSelected ? Colors.primary100 : Colors.neutral300 }]}>
-                                {player.participantSource === 'external_participant' ? 'Externe' : 'Equipe'}
+                                {player.participantSource === 'external_participant' ? t('multiTeamCompositionBoard.external', 'Externe') : t('multiTeamCompositionBoard.teamSource', 'Equipe')}
                               </Text>
                             ) : null}
                           </TouchableOpacity>
@@ -1697,7 +1789,11 @@ function MultiTeamCompositionBoard({ routeParams = null }) {
                     <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[8]]}>
                       <TextInput
                         onChangeText={(value) => handleRenameTeam(team?.id, value)}
-                        placeholder={`Équipe ${teamIndex + 1}`}
+                        placeholder={t(
+                          'multiTeamCompositionBoard.teamNumber',
+                          'Équipe {{number}}',
+                          { number: teamIndex + 1, ...SANS_ECHAPPEMENT },
+                        )}
                         placeholderTextColor={Colors.neutral300}
                         style={[
                           Fonts.h4Bold,
@@ -1718,7 +1814,7 @@ function MultiTeamCompositionBoard({ routeParams = null }) {
                         disabled={(Array.isArray(draftPack?.teams) ? draftPack.teams.length : 0) <= 1}
                         onPress={() => handleRemoveTeam(team?.id)}
                         size="sm"
-                        title="Suppr."
+                        title={t('multiTeamCompositionBoard.removeShort', 'Suppr.')}
                         variant="Secondary"
                       />
                     </View>
@@ -1726,8 +1822,10 @@ function MultiTeamCompositionBoard({ routeParams = null }) {
                     {availablePresets.length > 0 ? (
                       <View style={[styles.listRow, { backgroundColor: Colors.neutral800, borderColor: `${Colors.neutral00}12` }]}>
                         <View style={{ flex: 1 }}>
-                          <Text style={[Fonts.p3Bold, Fonts.neutral00]}>Preset</Text>
-                          <Text style={[Fonts.p4, Fonts.neutral300]}>{team?.presetLabel || 'Composition libre'}</Text>
+                          <Text style={[Fonts.p3Bold, Fonts.neutral00]}>
+                            {t('multiTeamCompositionBoard.preset', 'Preset')}
+                          </Text>
+                          <Text style={[Fonts.p4, Fonts.neutral300]}>{team?.presetLabel || t('multiTeamCompositionBoard.freeLineup', 'Composition libre')}</Text>
                         </View>
                         <View style={[Alignments.row, Spaces.gap[8]]}>
                           <Button onPress={() => cyclePreset(team?.id, -1)} size="sm" title="<" variant="Secondary" />
@@ -1765,7 +1863,10 @@ function MultiTeamCompositionBoard({ routeParams = null }) {
                               {slot?.label}
                             </Text>
                             <Text style={[Fonts.p3, { color: player ? Colors.primary100 : Colors.neutral300, flex: 1.2, textAlign: 'right' }]}>
-                              {player ? getCompositionPlayerLabel(player) : 'Libre'}
+                              {player ? getCompositionPlayerLabel(player) : t(
+                                'multiTeamCompositionBoard.openSlot',
+                                'Libre',
+                              )}
                             </Text>
                           </TouchableOpacity>
                         );
@@ -1786,18 +1887,18 @@ function MultiTeamCompositionBoard({ routeParams = null }) {
           <View style={styles.modalOverlay}>
             <View style={[styles.modalContent, { backgroundColor: Colors.neutral800 }]}>
               <Text style={[Fonts.h4Bold, Fonts.neutral00, styles.headerTitle]}>
-                Ajouter un joueur
+                {t('multiTeamCompositionBoard.addPlayer', 'Ajouter un joueur')}
               </Text>
               <TextInput
                 onChangeText={setManualFirstname}
-                placeholder="Prénom *"
+                placeholder={t('multiTeamCompositionBoard.firstNameRequired', 'Prénom *')}
                 placeholderTextColor={Colors.neutral300}
                 style={[styles.modalInput, { backgroundColor: Colors.neutral900, borderColor: `${Colors.neutral00}12`, color: Colors.neutral00 }]}
                 value={manualFirstname}
               />
               <TextInput
                 onChangeText={setManualLastname}
-                placeholder="Nom *"
+                placeholder={t('multiTeamCompositionBoard.lastNameRequired', 'Nom *')}
                 placeholderTextColor={Colors.neutral300}
                 style={[styles.modalInput, { backgroundColor: Colors.neutral900, borderColor: `${Colors.neutral00}12`, color: Colors.neutral00 }]}
                 value={manualLastname}
@@ -1806,7 +1907,7 @@ function MultiTeamCompositionBoard({ routeParams = null }) {
                 keyboardType="number-pad"
                 maxLength={2}
                 onChangeText={setManualNumber}
-                placeholder="Numéro (optionnel)"
+                placeholder={t('multiTeamCompositionBoard.numberOptional', 'Numéro (optionnel)')}
                 placeholderTextColor={Colors.neutral300}
                 style={[styles.modalInput, { backgroundColor: Colors.neutral900, borderColor: `${Colors.neutral00}12`, color: Colors.neutral00 }]}
                 value={manualNumber}
@@ -1814,12 +1915,12 @@ function MultiTeamCompositionBoard({ routeParams = null }) {
               <View style={[Alignments.row, Spaces.gap[8]]}>
                 <Button
                   onPress={() => setIsManualPlayerModalVisible(false)}
-                  title="Annuler"
+                  title={t('multiTeamCompositionBoard.cancel', 'Annuler')}
                   variant="Secondary"
                 />
                 <Button
                   onPress={handleAddManualPlayer}
-                  title="Ajouter"
+                  title={t('multiTeamCompositionBoard.add', 'Ajouter')}
                   variant="Primary"
                 />
               </View>

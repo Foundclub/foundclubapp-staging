@@ -11,6 +11,12 @@ import {
   isTournamentTeamNonCompliant,
 } from './tournamentUtils';
 
+// I18N-2 : ces libellés passent par i18next.t — la doublure rend le français de l app
+// (fr.js, sinon le repli), sans initialiser i18next.
+jest.mock('i18next', () => (
+  jest.requireActual('@/theme/strings/__mocks__/doublureTraduction').i18next
+));
+
 describe('tournamentUtils', () => {
   const tournamentConfig = {
     maxRosterSize: 5,

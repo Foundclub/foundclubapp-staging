@@ -63,12 +63,11 @@ jest.mock('@/theme/themeContext', () => {
   };
 });
 
-jest.mock('react-i18next', () => ({
-  initReactI18next: { init: jest.fn(), type: '3rdParty' },
-  useTranslation: () => ({
-    t: (_key, fallback) => fallback || _key,
-  }),
-}));
+// I18N-2 : les libellés passent par t() avec {{jetons}} et pluriels — la doublure rend le
+// français de l app (fr.js, sinon le repli, jetons remplacés).
+jest.mock('react-i18next', () => (
+  jest.requireActual('@/theme/strings/__mocks__/doublureTraduction').reactI18next
+));
 
 const mockUserData = jest.fn();
 jest.mock('@/domains/auth/useAuth', () => ({

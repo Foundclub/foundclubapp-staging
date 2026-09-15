@@ -1,3 +1,5 @@
+import i18next from 'i18next';
+
 import { normalizeCandidateDates } from '@/domains/search/friendlyMatchFlow';
 
 import client from '@/services/client';
@@ -385,7 +387,10 @@ export const createFriendlyMatchAd = async (adData) => {
     const response = await client.post('/friendly-match-ads', { data: adData });
     return normalizeFriendlyMatchAd(response.data?.data);
   } catch (error) {
-    throw toReadableError(error, "Impossible de publier l'annonce.");
+    throw toReadableError(error, i18next.t(
+      'friendlyMatchService.unableToPublishTheListing',
+      "Impossible de publier l'annonce.",
+    ));
   }
 };
 
@@ -400,7 +405,10 @@ export const updateFriendlyMatchAd = async (adId, adData) => {
     const response = await client.put(`/friendly-match-ads/${adId}`, { data: adData });
     return normalizeFriendlyMatchAd(response.data?.data);
   } catch (error) {
-    throw toReadableError(error, "Impossible de modifier l'annonce.");
+    throw toReadableError(error, i18next.t(
+      'friendlyMatchService.unableToEditTheListing',
+      "Impossible de modifier l'annonce.",
+    ));
   }
 };
 
@@ -413,7 +421,10 @@ export const deleteFriendlyMatchAd = async (adId) => {
   try {
     await client.delete(`/friendly-match-ads/${adId}`);
   } catch (error) {
-    throw toReadableError(error, "Impossible de supprimer l'annonce.");
+    throw toReadableError(error, i18next.t(
+      'friendlyMatchService.unableToDeleteTheListing',
+      "Impossible de supprimer l'annonce.",
+    ));
   }
 };
 
@@ -432,7 +443,10 @@ export const applyToFriendlyMatchAd = async (adId, payload) => {
     const response = await client.post(`/friendly-match-ads/${adId}/apply`, payload);
     return normalizeFriendlyMatchApplication(response.data?.data);
   } catch (error) {
-    throw toReadableError(error, "Impossible d'envoyer la proposition de match.");
+    throw toReadableError(error, i18next.t(
+      'friendlyMatchService.unableToSendTheMatch',
+      "Impossible d'envoyer la proposition de match.",
+    ));
   }
 };
 
@@ -462,7 +476,10 @@ export const respondToFriendlyMatchApplication = async (applicationId, payload) 
     );
     return response.data?.data;
   } catch (error) {
-    throw toReadableError(error, 'Impossible de répondre à cette proposition.');
+    throw toReadableError(error, i18next.t(
+      'friendlyMatchService.unableToAnswerThisProposal',
+      'Impossible de répondre à cette proposition.',
+    ));
   }
 };
 
@@ -478,7 +495,10 @@ export const withdrawFriendlyMatchApplication = async (applicationId) => {
     );
     return normalizeFriendlyMatchApplication(response.data?.data);
   } catch (error) {
-    throw toReadableError(error, 'Impossible de retirer cette proposition.');
+    throw toReadableError(error, i18next.t(
+      'friendlyMatchService.unableToWithdrawThisProposal',
+      'Impossible de retirer cette proposition.',
+    ));
   }
 };
 
@@ -493,6 +513,9 @@ export const repostFriendlyMatchAd = async (adId, payload = {}) => {
     const response = await client.post(`/friendly-match-ads/${adId}/repost`, payload);
     return normalizeFriendlyMatchAd(response.data?.data);
   } catch (error) {
-    throw toReadableError(error, "Impossible de reposter l'annonce.");
+    throw toReadableError(error, i18next.t(
+      'friendlyMatchService.unableToRepostTheListing',
+      "Impossible de reposter l'annonce.",
+    ));
   }
 };

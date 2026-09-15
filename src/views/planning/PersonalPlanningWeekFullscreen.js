@@ -313,12 +313,26 @@ function PlanningWeekFullscreen() {
           }}
         >
           <Text style={[Fonts.h4Bold, Fonts.neutral00, Fonts.textCenter, Spaces.marginBottom[8]]}>
-            Impossible de charger le planning
+            {t(
+              'personalPlanningWeekFullscreen.unableToLoadThePlanning',
+              'Impossible de charger le planning',
+            )}
           </Text>
           <Text style={[Fonts.p2, Fonts.neutral100, Fonts.textCenter, Spaces.marginBottom[16]]}>
-            Le planning de cette semaine n’a pas pu être récupère. Réessaie ou change de semaine.
+            {t(
+              'personalPlanningWeekFullscreen.weekPlanningLoadError',
+              'Le planning de cette semaine n’a pas pu être récupère. Réessaie ou change de '
+                + 'semaine.',
+            )}
           </Text>
-          <Button onPress={() => refetch()} title="Reessayer" variant="Primary" />
+          <Button
+            onPress={() => refetch()}
+            title={t(
+              'personalPlanningWeekFullscreen.tryAgain',
+              'Reessayer',
+            )}
+            variant="Primary"
+          />
         </View>
       );
     }
@@ -340,16 +354,33 @@ function PlanningWeekFullscreen() {
           }}
         >
           <Text style={[Fonts.h4Bold, Fonts.neutral00, Fonts.textCenter, Spaces.marginBottom[8]]}>
-            Aucun créneau cette semaine
+            {t('personalPlanningWeekFullscreen.noSlotThisWeek', 'Aucun créneau cette semaine')}
           </Text>
           <Text style={[Fonts.p2, Fonts.neutral100, Fonts.textCenter, Spaces.marginBottom[16]]}>
-            Change de semaine pour explorer le planning ou reviens à la semaine actuelle.
+            {t(
+              'personalPlanningWeekFullscreen.changeWeekToExploreThe',
+              'Change de semaine pour explorer le planning ou reviens à la semaine actuelle.',
+            )}
           </Text>
           <View style={[Alignments.row, Spaces.gap[12]]}>
             {!isCurrentWeek ? (
-              <Button onPress={handleBackToCurrentWeek} title="Aujourd’hui" variant="Secondary" />
+              <Button
+                onPress={handleBackToCurrentWeek}
+                title={t(
+                  'personalPlanningWeekFullscreen.today',
+                  'Aujourd’hui',
+                )}
+                variant="Secondary"
+              />
             ) : null}
-            <Button onPress={handleNextWeek} title="Semaine suivante" variant="Primary" />
+            <Button
+              onPress={handleNextWeek}
+              title={t(
+                'personalPlanningWeekFullscreen.nextWeek',
+                'Semaine suivante',
+              )}
+              variant="Primary"
+            />
           </View>
         </View>
       );
@@ -389,6 +420,7 @@ function PlanningWeekFullscreen() {
     isLoading,
     refetch,
     setCurrentDate,
+    t,
   ]);
 
   return (
@@ -419,7 +451,10 @@ function PlanningWeekFullscreen() {
           ]}
         >
           <TouchableOpacity
-            accessibilityLabel="Semaine précédente"
+            accessibilityLabel={t(
+              'personalPlanningWeekFullscreen.previousWeek',
+              'Semaine précédente',
+            )}
             accessibilityRole="button"
             hitSlop={8}
             onPress={handlePrevWeek}
@@ -462,7 +497,7 @@ function PlanningWeekFullscreen() {
           </View>
 
           <TouchableOpacity
-            accessibilityLabel="Semaine suivante"
+            accessibilityLabel={t('personalPlanningWeekFullscreen.nextWeek', 'Semaine suivante')}
             accessibilityRole="button"
             hitSlop={8}
             onPress={handleNextWeek}
@@ -482,7 +517,10 @@ function PlanningWeekFullscreen() {
           </TouchableOpacity>
 
           <TouchableOpacity
-            accessibilityLabel="Fermer le planning plein écran"
+            accessibilityLabel={t(
+              'personalPlanningWeekFullscreen.closeTheFullScreenPlanning',
+              'Fermer le planning plein écran',
+            )}
             accessibilityRole="button"
             hitSlop={8}
             onPress={handleClose}
@@ -505,7 +543,10 @@ function PlanningWeekFullscreen() {
           </TouchableOpacity>
           {!isCurrentWeek ? (
             <TouchableOpacity
-              accessibilityLabel="Revenir à la semaine actuelle"
+              accessibilityLabel={t(
+                'personalPlanningWeekFullscreen.backToTheCurrentWeek',
+                'Revenir à la semaine actuelle',
+              )}
               accessibilityRole="button"
               hitSlop={8}
               onPress={handleBackToCurrentWeek}
@@ -522,7 +563,9 @@ function PlanningWeekFullscreen() {
                 paddingHorizontal: 10,
               }}
             >
-              <Text style={[Fonts.p3Bold, { color: Colors.primary500 }]}>Aujourd’hui</Text>
+              <Text style={[Fonts.p3Bold, { color: Colors.primary500 }]}>
+                {t('personalPlanningWeekFullscreen.today', 'Aujourd’hui')}
+              </Text>
             </TouchableOpacity>
           ) : null}
         </View>
@@ -552,9 +595,30 @@ function PlanningWeekFullscreen() {
 
             <View style={[Alignments.row, Alignments.wrap, Spaces.gap[8]]}>
               {[
-                `${facilityPlanningSummary.maxSlots} slot${facilityPlanningSummary.maxSlots > 1 ? 's' : ''}`,
-                `Pic ${facilityPlanningSummary.peakConcurrent}/${facilityPlanningSummary.maxSlots}`,
-                `${facilityPlanningSummary.eventCount} événement${facilityPlanningSummary.eventCount > 1 ? 's' : ''}`,
+                t(
+                  'personalPlanningWeekFullscreen.slots',
+                  {
+                    count: facilityPlanningSummary.maxSlots,
+                    defaultValue_one: '{{count}} slot',
+                    defaultValue_other: '{{count}} slots',
+                  },
+                ),
+                t(
+                  'personalPlanningWeekFullscreen.peak',
+                  'Pic {{peak}}/{{max}}',
+                  {
+                    max: facilityPlanningSummary.maxSlots,
+                    peak: facilityPlanningSummary.peakConcurrent,
+                  },
+                ),
+                t(
+                  'personalPlanningWeekFullscreen.events',
+                  {
+                    count: facilityPlanningSummary.eventCount,
+                    defaultValue_one: '{{count}} événement',
+                    defaultValue_other: '{{count}} événements',
+                  },
+                ),
               ].map((label, index) => (
                 <View
                   key={`${label}-${index + 1}`}

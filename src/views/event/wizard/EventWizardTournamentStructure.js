@@ -1,4 +1,6 @@
+import i18next from 'i18next';
 import { useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Switch,
   Text,
@@ -22,44 +24,103 @@ import {
   getEventWizardTournamentStructureStepIndex,
 } from './eventWizardDetectionUtils';
 
+// I18N-2 : des GETTERS, pas des textes — lus à l import, avant l initialisation
+// d i18next ; le libellé se traduit au moment où il s affiche.
 const STRUCTURE_OPTIONS = [
   {
-    description: 'Des poules uniquement, sans tableau final.',
-    label: 'Poules uniquement',
+    get description() {
+      return i18next.t(
+        'eventWizardTournamentStructure.groupsOnlyDescription',
+        'Des poules uniquement, sans tableau final.',
+      );
+    },
+    get label() {
+      return i18next.t('eventWizardTournamentStructure.groupsOnly', 'Poules uniquement');
+    },
     value: 'groups_only',
   },
   {
-    description: 'Des poules puis une phase finale automatique.',
-    label: 'Poules + finale',
+    get description() {
+      return i18next.t(
+        'eventWizardTournamentStructure.groupsFinalDescription',
+        'Des poules puis une phase finale automatique.',
+      );
+    },
+    get label() {
+      return i18next.t('eventWizardTournamentStructure.groupsFinal', 'Poules + finale');
+    },
     value: 'groups_to_knockout',
   },
   {
-    description: 'Un tableau final direct a elimination simple.',
-    label: 'Phase finale directe',
+    get description() {
+      return i18next.t(
+        'eventWizardTournamentStructure.straightKnockoutDescription',
+        'Un tableau final direct a elimination simple.',
+      );
+    },
+    get label() {
+      return i18next.t('eventWizardTournamentStructure.straightKnockout', 'Phase finale directe');
+    },
     value: 'knockout_only',
   },
   {
-    description: 'Un seul classement general, sans bracket.',
-    label: 'Championnat',
+    get description() {
+      return i18next.t(
+        'eventWizardTournamentStructure.leagueDescription',
+        'Un seul classement general, sans bracket.',
+      );
+    },
+    get label() {
+      return i18next.t('eventWizardTournamentStructure.league', 'Championnat');
+    },
     value: 'round_robin',
   },
 ];
 
 const SEEDING_OPTIONS = [
-  { label: 'Aleatoire', value: 'random' },
-  { label: 'Serpentin', value: 'snake' },
-  { label: 'Ordre manuel', value: 'manual' },
+  {
+    get label() {
+      return i18next.t('eventWizardTournamentStructure.seedingRandom', 'Aleatoire');
+    },
+    value: 'random',
+  },
+  {
+    get label() {
+      return i18next.t('eventWizardTournamentStructure.seedingSnake', 'Serpentin');
+    },
+    value: 'snake',
+  },
+  {
+    get label() {
+      return i18next.t('eventWizardTournamentStructure.seedingManual', 'Ordre manuel');
+    },
+    value: 'manual',
+  },
 ];
 
 const GENERATION_OPTIONS = [
   {
-    description: 'Le calendrier est généré automatiquement des que les poules sont créées.',
-    label: 'Automatique',
+    get description() {
+      return i18next.t(
+        'eventWizardTournamentStructure.generationAutomaticDescription',
+        'Le calendrier est généré automatiquement des que les poules sont créées.',
+      );
+    },
+    get label() {
+      return i18next.t('eventWizardTournamentStructure.generationAutomatic', 'Automatique');
+    },
     value: 'auto',
   },
   {
-    description: 'L organisateur garde la main sur le declenchement des matchs.',
-    label: 'Manuelle',
+    get description() {
+      return i18next.t(
+        'eventWizardTournamentStructure.generationManualDescription',
+        'L organisateur garde la main sur le declenchement des matchs.',
+      );
+    },
+    get label() {
+      return i18next.t('eventWizardTournamentStructure.generationManual', 'Manuelle');
+    },
     value: 'manual',
   },
 ];
@@ -76,6 +137,7 @@ const parseOptionalInteger = (value, fallback = null) => {
  * @returns {import('react').ReactElement} L'etape rendue.
  */
 function EventWizardTournamentStructure({ navigation, route }) {
+  const { t } = useTranslation();
   const {
     Alignments,
     ApplicationStyle,
@@ -180,15 +242,23 @@ function EventWizardTournamentStructure({ navigation, route }) {
       onNext={handleNext}
       stepCount={getEventWizardStepCount(state)}
       stepIndex={getEventWizardTournamentStructureStepIndex(state)}
-      subtitle="Définis la structure sportive du tournoi: poules, tableau final, génération des matchs et règles de classement."
-      title="Structure du tournoi"
+      subtitle={t(
+        'eventWizardTournamentStructure.setTheTournamentSSports',
+        'Définis la structure sportive du tournoi: poules, tableau final, génération des matchs et règles de classement.',
+      )}
+      title={t('eventWizardTournamentStructure.tournamentStructure', 'Structure du tournoi')}
     >
       <View style={tournamentDs.styles.sectionStack}>
         <View style={tournamentDs.styles.wizardSectionCard}>
           <View style={tournamentDs.styles.headerBlock}>
-            <Text style={[Fonts.h4Bold, Fonts.neutral00]}>Format de compétition</Text>
+            <Text style={[Fonts.h4Bold, Fonts.neutral00]}>
+              {t('eventWizardTournamentStructure.competitionFormat', 'Format de compétition')}
+            </Text>
             <Text style={[Fonts.p3, Fonts.neutral200]}>
-              Choisis le fonctionnement sportif principal du tournoi. Le cockpit organisateur pilotera ensuite le tirage, les matchs et les scores.
+              {t(
+                'eventWizardTournamentStructure.chooseTheTournamentSMain',
+                'Choisis le fonctionnement sportif principal du tournoi. Le cockpit organisateur pilotera ensuite le tirage, les matchs et les scores.',
+              )}
             </Text>
           </View>
           <View style={Spaces.gap[12]}>
@@ -199,14 +269,21 @@ function EventWizardTournamentStructure({ navigation, route }) {
         {usesGroups ? (
           <View style={tournamentDs.styles.wizardSectionCard}>
             <View style={tournamentDs.styles.headerBlock}>
-              <Text style={[Fonts.h4Bold, Fonts.neutral00]}>Poules et qualification</Text>
+              <Text style={[Fonts.h4Bold, Fonts.neutral00]}>
+                {t(
+                  'eventWizardTournamentStructure.groupsAndQualification',
+                  'Poules et qualification',
+                )}
+              </Text>
               <Text style={[Fonts.p3, Fonts.neutral200]}>
-                Configure le nombre de poules et la facon dont les équipes passent au tableau final ou au classement.
+                {t('eventWizardTournamentStructure.setTheNumberOfGroups', 'Configure le nombre de poules et la facon dont les équipes passent au tableau final ou au classement.')}
               </Text>
             </View>
             {formatMode !== 'round_robin' ? (
               <View style={Spaces.gap[8]}>
-                <Text style={[Fonts.p3Bold, Fonts.primary500]}>Nombre de poules</Text>
+                <Text style={[Fonts.p3Bold, Fonts.primary500]}>
+                  {t('eventWizardTournamentStructure.numberOfGroups', 'Nombre de poules')}
+                </Text>
                 <TextInput
                   keyboardType="number-pad"
                   onChangeText={setGroupCountText}
@@ -219,7 +296,9 @@ function EventWizardTournamentStructure({ navigation, route }) {
             ) : null}
             <View style={[Alignments.row, Spaces.gap[12]]}>
               <View style={[Spaces.gap[8], { flex: 1 }]}>
-                <Text style={[Fonts.p3Bold, Fonts.primary500]}>Qualifiés par poule</Text>
+                <Text style={[Fonts.p3Bold, Fonts.primary500]}>
+                  {t('eventWizardTournamentStructure.qualifiedPerGroup', 'Qualifiés par poule')}
+                </Text>
                 <TextInput
                   keyboardType="number-pad"
                   onChangeText={setQualifiedPerGroupText}
@@ -231,7 +310,9 @@ function EventWizardTournamentStructure({ navigation, route }) {
               </View>
               {formatMode === 'groups_to_knockout' ? (
                 <View style={[Spaces.gap[8], { flex: 1 }]}>
-                  <Text style={[Fonts.p3Bold, Fonts.primary500]}>Meilleurs 3es</Text>
+                  <Text style={[Fonts.p3Bold, Fonts.primary500]}>
+                    {t('eventWizardTournamentStructure.best3rds', 'Meilleurs 3es')}
+                  </Text>
                   <TextInput
                     keyboardType="number-pad"
                     onChangeText={setBestThirdPlacesText}
@@ -249,14 +330,18 @@ function EventWizardTournamentStructure({ navigation, route }) {
         {usesKnockout ? (
           <View style={tournamentDs.styles.wizardSectionCard}>
             <View style={tournamentDs.styles.headerBlock}>
-              <Text style={[Fonts.h4Bold, Fonts.neutral00]}>Tableau final</Text>
+              <Text style={[Fonts.h4Bold, Fonts.neutral00]}>
+                {t('eventWizardTournamentStructure.knockoutBracket', 'Tableau final')}
+              </Text>
               <Text style={[Fonts.p3, Fonts.neutral200]}>
-                Le tableau final sera généré automatiquement depuis les équipes qualifiees ou directement depuis les équipes acceptées.
+                {t('eventWizardTournamentStructure.theKnockoutBracketWillBe', 'Le tableau final sera généré automatiquement depuis les équipes qualifiees ou directement depuis les équipes acceptées.')}
               </Text>
             </View>
             <View style={[Alignments.row, Spaces.gap[12]]}>
               <View style={[Spaces.gap[8], { flex: 1 }]}>
-                <Text style={[Fonts.p3Bold, Fonts.primary500]}>Taille du bracket</Text>
+                <Text style={[Fonts.p3Bold, Fonts.primary500]}>
+                  {t('eventWizardTournamentStructure.bracketSize', 'Taille du bracket')}
+                </Text>
                 <TextInput
                   keyboardType="number-pad"
                   onChangeText={setKnockoutSizeText}
@@ -268,14 +353,25 @@ function EventWizardTournamentStructure({ navigation, route }) {
               </View>
             </View>
             <View style={Spaces.gap[8]}>
-              <Text style={[Fonts.p3Bold, Fonts.primary500]}>Mode de tirage</Text>
+              <Text style={[Fonts.p3Bold, Fonts.primary500]}>
+                {t('eventWizardTournamentStructure.drawMode', 'Mode de tirage')}
+              </Text>
               <View style={Spaces.gap[12]}>
                 {SEEDING_OPTIONS.map((option) => {
-                  let description = 'Melange automatique des équipes acceptées.';
+                  let description = t(
+                    'eventWizardTournamentStructure.automaticShuffleOfTheAccepted',
+                    'Melange automatique des équipes acceptées.',
+                  );
                   if (option.value === 'manual') {
-                    description = 'L organisateur garde l ordre de seed pour le tirage.';
+                    description = t(
+                      'eventWizardTournamentStructure.theOrganiserKeepsTheSeed',
+                      'L organisateur garde l ordre de seed pour le tirage.',
+                    );
                   } else if (option.value === 'snake') {
-                    description = 'Répartition serpent entre les poules puis le tableau.';
+                    description = t(
+                      'eventWizardTournamentStructure.snakeDistributionAcrossTheGroups',
+                      'Répartition serpent entre les poules puis le tableau.',
+                    );
                   }
 
                   return renderChoiceCard({
@@ -287,14 +383,22 @@ function EventWizardTournamentStructure({ navigation, route }) {
             </View>
             {isInvalid ? (
               <Text style={[Fonts.p3, Fonts.error500]}>
-                Utilise une taille de bracket standard: 2, 4, 8, 16 ou 32.
+                {t(
+                  'eventWizardTournamentStructure.useAStandardBracketSize',
+                  'Utilise une taille de bracket standard: 2, 4, 8, 16 ou 32.',
+                )}
               </Text>
             ) : null}
             <View style={[Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween, Spaces.gap[12]]}>
               <View style={{ flex: 1 }}>
-                <Text style={[Fonts.p2Bold, Fonts.neutral00]}>Match pour la 3e place</Text>
+                <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
+                  {t('eventWizardTournamentStructure.thirdPlaceMatch', 'Match pour la 3e place')}
+                </Text>
                 <Text style={[Fonts.p3, Fonts.neutral200]}>
-                  Ajoute une petite finale quand le tableau atteint les demi-finales.
+                  {t(
+                    'eventWizardTournamentStructure.addsASmallFinalWhen',
+                    'Ajoute une petite finale quand le tableau atteint les demi-finales.',
+                  )}
                 </Text>
               </View>
               <Switch
@@ -309,9 +413,11 @@ function EventWizardTournamentStructure({ navigation, route }) {
 
         <View style={tournamentDs.styles.wizardSectionCard}>
           <View style={tournamentDs.styles.headerBlock}>
-            <Text style={[Fonts.h4Bold, Fonts.neutral00]}>Génération et points</Text>
+            <Text style={[Fonts.h4Bold, Fonts.neutral00]}>
+              {t('eventWizardTournamentStructure.generationAndPoints', 'Génération et points')}
+            </Text>
             <Text style={[Fonts.p3, Fonts.neutral200]}>
-              Définis si le calendrier se génère automatiquement et comment le classement attribue les points.
+              {t('eventWizardTournamentStructure.setWhetherTheScheduleIs', 'Définis si le calendrier se génère automatiquement et comment le classement attribue les points.')}
             </Text>
           </View>
           <View style={Spaces.gap[12]}>
@@ -319,19 +425,27 @@ function EventWizardTournamentStructure({ navigation, route }) {
           </View>
           <View style={[Alignments.row, Spaces.gap[12], { flexWrap: 'wrap' }]}>
             <View style={[Spaces.gap[8], { flex: 1, minWidth: 130 }]}>
-              <Text style={[Fonts.p3Bold, Fonts.primary500]}>Victoire</Text>
+              <Text style={[Fonts.p3Bold, Fonts.primary500]}>
+                {t('eventWizardTournamentStructure.win', 'Victoire')}
+              </Text>
               <TextInput keyboardType="number-pad" onChangeText={setPointsWinText} placeholder="3" placeholderTextColor={Colors.neutral500} style={tournamentDs.styles.input} value={pointsWinText} />
             </View>
             <View style={[Spaces.gap[8], { flex: 1, minWidth: 130 }]}>
-              <Text style={[Fonts.p3Bold, Fonts.primary500]}>Nul</Text>
+              <Text style={[Fonts.p3Bold, Fonts.primary500]}>
+                {t('eventWizardTournamentStructure.draw', 'Nul')}
+              </Text>
               <TextInput keyboardType="number-pad" onChangeText={setPointsDrawText} placeholder="1" placeholderTextColor={Colors.neutral500} style={tournamentDs.styles.input} value={pointsDrawText} />
             </View>
             <View style={[Spaces.gap[8], { flex: 1, minWidth: 130 }]}>
-              <Text style={[Fonts.p3Bold, Fonts.primary500]}>Défaite</Text>
+              <Text style={[Fonts.p3Bold, Fonts.primary500]}>
+                {t('eventWizardTournamentStructure.loss', 'Défaite')}
+              </Text>
               <TextInput keyboardType="number-pad" onChangeText={setPointsLossText} placeholder="0" placeholderTextColor={Colors.neutral500} style={tournamentDs.styles.input} value={pointsLossText} />
             </View>
             <View style={[Spaces.gap[8], { flex: 1, minWidth: 130 }]}>
-              <Text style={[Fonts.p3Bold, Fonts.primary500]}>Forfait</Text>
+              <Text style={[Fonts.p3Bold, Fonts.primary500]}>
+                {t('eventWizardTournamentStructure.forfeit', 'Forfait')}
+              </Text>
               <TextInput keyboardType="number-pad" onChangeText={setPointsForfeitText} placeholder="0" placeholderTextColor={Colors.neutral500} style={tournamentDs.styles.input} value={pointsForfeitText} />
             </View>
           </View>

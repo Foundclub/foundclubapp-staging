@@ -1,7 +1,9 @@
 import { useQueryClient } from '@tanstack/react-query';
+import i18next from 'i18next';
 import {
   useCallback, useEffect, useMemo, useRef, useState,
 } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   AppState,
   Platform,
@@ -13,6 +15,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import useAuth from '@/domains/auth/useAuth';
 import { useAppContext } from '@/store/appContext';
+import localeDesFormats from '@/theme/strings/localeDesFormats';
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -53,17 +57,17 @@ const BLOCKED_ROUTES = /** @type {Set<string>} */ (new Set([
  * @returns {string}
  */
 const formatPromptDate = (value) => {
-  if (!value) return 'Date indisponible';
+  if (!value) return i18next.t('matchStatsPromptHost.dateUnavailable', 'Date indisponible');
 
   try {
-    return new Date(value).toLocaleString('fr-FR', {
+    return new Date(value).toLocaleString(localeDesFormats(), {
       day: '2-digit',
       hour: '2-digit',
       minute: '2-digit',
       month: 'long',
     });
   } catch (_error) {
-    return 'Date indisponible';
+    return i18next.t('matchStatsPromptHost.dateUnavailable', 'Date indisponible');
   }
 };
 
@@ -76,7 +80,13 @@ const getPromptStatusMeta = (prompt, Colors) => {
     return {
       backgroundColor: `${Colors.primary500}20`,
       borderColor: `${Colors.primary500}45`,
-      label: prompt?.state === 'draft' ? 'Brouillon perso' : 'A répondre',
+      label: prompt?.state === 'draft' ? i18next.t(
+        'matchStatsPromptHost.personalDraft',
+        'Brouillon perso',
+      ) : i18next.t(
+        'matchStatsPromptHost.toAnswer',
+        'A répondre',
+      ),
       textColor: Colors.primary500,
     };
   }
@@ -85,7 +95,7 @@ const getPromptStatusMeta = (prompt, Colors) => {
     return {
       backgroundColor: `${Colors.warning500}20`,
       borderColor: `${Colors.warning500}45`,
-      label: 'Vérification requise',
+      label: i18next.t('matchStatsPromptHost.checkRequired', 'Vérification requise'),
       textColor: Colors.warning500,
     };
   }
@@ -94,7 +104,7 @@ const getPromptStatusMeta = (prompt, Colors) => {
     return {
       backgroundColor: `${Colors.primary500}20`,
       borderColor: `${Colors.primary500}45`,
-      label: 'Brouillon en cours',
+      label: i18next.t('matchStatsPromptHost.draftInProgress', 'Brouillon en cours'),
       textColor: Colors.primary500,
     };
   }
@@ -103,7 +113,7 @@ const getPromptStatusMeta = (prompt, Colors) => {
     return {
       backgroundColor: `${Colors.gold500}20`,
       borderColor: `${Colors.gold500}45`,
-      label: 'Score officiel en attente',
+      label: i18next.t('matchStatsPromptHost.officialScorePending', 'Score officiel en attente'),
       textColor: Colors.gold500,
     };
   }
@@ -112,7 +122,7 @@ const getPromptStatusMeta = (prompt, Colors) => {
     return {
       backgroundColor: `${Colors.success500}20`,
       borderColor: `${Colors.success500}45`,
-      label: 'A finaliser',
+      label: i18next.t('matchStatsPromptHost.toFinalise', 'A finaliser'),
       textColor: Colors.success500,
     };
   }
@@ -120,7 +130,7 @@ const getPromptStatusMeta = (prompt, Colors) => {
   return {
     backgroundColor: `${Colors.neutral00}14`,
     borderColor: `${Colors.neutral00}24`,
-    label: 'Score à compléter',
+    label: i18next.t('matchStatsPromptHost.scoreToComplete', 'Score à compléter'),
     textColor: Colors.neutral00,
   };
 };
@@ -149,7 +159,13 @@ const navigateToPendingMatchStats = (prompt, overrides = {}) => {
     ...overrides,
     actionType: prompt?.actionType || 'coach_team_review',
     actorRole: prompt?.actorRole || 'player',
-    title: prompt?.actionType === 'player_self_report' ? 'Mon retour post-match' : 'Bilan équipe',
+    title: prompt?.actionType === 'player_self_report' ? i18next.t(
+      'matchStatsPromptHost.myPostMatchFeedback',
+      'Mon retour post-match',
+    ) : i18next.t(
+      'matchStatsPromptHost.teamReport',
+      'Bilan équipe',
+    ),
   };
 
   if (prompt?.sourceType === 'league') {
@@ -176,6 +192,7 @@ const openPendingMatchStatsList = () => navigate(RouteNames.EventStack, {
  * @param {{ skipInitialFetch?: boolean }} [props]
  */
 function MatchStatsPromptHost({ skipInitialFetch = false } = {}) {
+  const { t } = useTranslation();
   const [{ auth }] = useAppContext();
   const { isBootstrapResolved } = useAuth();
   const queryClient = useQueryClient();
@@ -260,45 +277,103 @@ function MatchStatsPromptHost({ skipInitialFetch = false } = {}) {
     [ApplicationStyle.borderRadius24, isCompactMobile],
   );
   const primaryActionTitle = useMemo(() => {
-    if (!nextPrompt) return 'Ouvrir';
+    if (!nextPrompt) return t('matchStatsPromptHost.open', 'Ouvrir');
     if (nextPrompt?.actionType === 'player_self_report') {
-      return nextPrompt?.state === 'draft' ? 'Reprendre ma réponse' : 'Renseigner mes stats';
+      return nextPrompt?.state === 'draft' ? t(
+        'matchStatsPromptHost.resumeMyAnswer',
+        'Reprendre ma réponse',
+      ) : t(
+        'matchStatsPromptHost.enterMyStats',
+        'Renseigner mes stats',
+      );
     }
-    if (nextPrompt?.reviewRequired) return 'Mettre à jour après score officiel';
-    if (nextPrompt?.reportStatus === 'draft') return 'Reprendre le brouillon';
-    if (nextPrompt?.score?.available) return 'Saisir les stats du match';
-    return 'Enregistrer le score';
-  }, [nextPrompt]);
+    if (nextPrompt?.reviewRequired) {
+      return t(
+        'matchStatsPromptHost.updateAfterOfficialScore',
+        'Mettre à jour après score officiel',
+      );
+    }
+    if (nextPrompt?.reportStatus === 'draft') {
+      return t(
+        'matchStatsPromptHost.resumeTheDraft',
+        'Reprendre le brouillon',
+      );
+    }
+    if (nextPrompt?.score?.available) {
+      return t(
+        'matchStatsPromptHost.enterTheMatchStats',
+        'Saisir les stats du match',
+      );
+    }
+    return t('matchStatsPromptHost.saveTheScore', 'Enregistrer le score');
+  }, [nextPrompt, t]);
 
   const helperText = useMemo(() => {
     if (!nextPrompt) return '';
     if (nextPrompt?.actionType === 'player_self_report') {
       if (nextPrompt?.state === 'draft') {
-        return 'Ton retour perso post-match est déjà commence. Reprends-le quand tu veux pour finaliser tes stats et ta note.';
+        return t(
+          'matchStatsPromptHost.yourPersonalPostMatchFeedback',
+          'Ton retour perso post-match est déjà commence. Reprends-le quand tu veux pour '
+            + 'finaliser tes stats et ta note.',
+        );
       }
-      return 'Ton match est terminé. Renseigne tes stats individuelles si tu les connais, puis laisse une note sur 10 et ton ressenti.';
+      return t(
+        'matchStatsPromptHost.yourMatchIsOverEnter',
+        'Ton match est terminé. Renseigne tes stats individuelles si tu les connais, puis '
+          + 'laisse une note sur 10 et ton ressenti.',
+      );
     }
     if (nextPrompt?.reviewRequired) {
-      return 'Le score officiel a changé après une première saisie. Vérifie les lignes puis republie la bonne version.';
+      return t(
+        'matchStatsPromptHost.theOfficialScoreChangedAfter',
+        'Le score officiel a changé après une première saisie. Vérifie les lignes puis '
+          + 'republie la bonne version.',
+      );
     }
     if (nextPrompt?.reportStatus === 'draft') {
-      return 'Un brouillon post-match existe déjà pour cette équipe. Il attend encore d être finalise.';
+      return t(
+        'matchStatsPromptHost.aPostMatchDraftAlready',
+        'Un brouillon post-match existe déjà pour cette équipe. Il attend encore d être '
+          + 'finalise.',
+      );
     }
     if (nextPrompt?.score?.available) {
-      return 'Le score est prêt. Il reste à compléter le temps de jeu et les statistiques clés de ton équipe.';
+      return t(
+        'matchStatsPromptHost.theScoreIsReadyPlaying',
+        'Le score est prêt. Il reste à compléter le temps de jeu et les statistiques clés de '
+          + 'ton équipe.',
+      );
     }
-    return 'Le match est terminé. Commence par enregistrer le score, puis complète les statistiques de ton équipe.';
-  }, [nextPrompt]);
+    return t(
+      'matchStatsPromptHost.theMatchIsOverStart',
+      'Le match est terminé. Commence par enregistrer le score, puis complète les statistiques '
+        + 'de ton équipe.',
+    );
+  }, [nextPrompt, t]);
 
   const scoreLabel = useMemo(() => {
-    if (!nextPrompt?.score?.available) return nextPrompt?.actionType === 'player_self_report' ? 'Score en attente' : 'Score à compléter';
+    if (!nextPrompt?.score?.available) {
+      return nextPrompt?.actionType === 'player_self_report' ? t(
+        'matchStatsPromptHost.scorePending',
+        'Score en attente',
+      ) : t(
+        'matchStatsPromptHost.scoreToComplete',
+        'Score à compléter',
+      );
+    }
     return `${nextPrompt?.score?.scoreFor ?? '-'} - ${nextPrompt?.score?.scoreAgainst ?? '-'}`;
-  }, [nextPrompt]);
+  }, [nextPrompt, t]);
   const promptSourceLabel = useMemo(() => {
-    if (nextPrompt?.actionType === 'player_self_report') return 'Retour perso';
-    if (nextPrompt?.sourceType === 'league') return 'Ligue';
-    return 'Evenement';
-  }, [nextPrompt?.actionType, nextPrompt?.sourceType]);
+    if (nextPrompt?.actionType === 'player_self_report') {
+      return t(
+        'matchStatsPromptHost.personalFeedback',
+        'Retour perso',
+      );
+    }
+    if (nextPrompt?.sourceType === 'league') return t('matchStatsPromptHost.league', 'Ligue');
+    return t('matchStatsPromptHost.event', 'Evenement');
+  }, [nextPrompt?.actionType, nextPrompt?.sourceType, t]);
 
   const dismissPromptForSession = useCallback(() => {
     if (nextPrompt?.key) {
@@ -403,9 +478,17 @@ function MatchStatsPromptHost({ skipInitialFetch = false } = {}) {
     >
       <View style={[Spaces.gap[sectionGap], { paddingBottom: modalBottomSpacer }]}>
         <View style={[Spaces.gap[titleGap]]}>
-          <Text style={[Fonts.p4Bold, Fonts.primary500]}>Rappel post-match</Text>
+          <Text style={[Fonts.p4Bold, Fonts.primary500]}>
+            {t('matchStatsPromptHost.postMatchReminder', 'Rappel post-match')}
+          </Text>
           <Text style={[Fonts.h3Bold, Fonts.neutral00]}>
-            {nextPrompt?.actionType === 'player_self_report' ? 'Ton match est terminé' : 'Bilan de fin de match'}
+            {nextPrompt?.actionType === 'player_self_report' ? t(
+              'matchStatsPromptHost.yourMatchIsOver',
+              'Ton match est terminé',
+            ) : t(
+              'matchStatsPromptHost.endOfMatchReport',
+              'Bilan de fin de match',
+            )}
           </Text>
           <Text style={[Fonts.p2, Fonts.neutral200, { lineHeight: helperLineHeight, maxWidth: '96%' }]}>
             {helperText}
@@ -450,9 +533,11 @@ function MatchStatsPromptHost({ skipInitialFetch = false } = {}) {
 
             <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter, Spaces.gap[16]]}>
               <View style={[{ flex: 1 }, Spaces.gap[8]]}>
-                <Text style={[Fonts.p3, Fonts.neutral200]}>Équipe</Text>
+                <Text style={[Fonts.p3, Fonts.neutral200]}>
+                  {t('matchStatsPromptHost.team', 'Équipe')}
+                </Text>
                 <Text style={[Fonts.p3Bold, Fonts.primary100]}>
-                  {nextPrompt?.team?.name || 'Equipe'}
+                  {nextPrompt?.team?.name || t('matchStatsPromptHost.teamFallback', 'Equipe')}
                 </Text>
               </View>
               <View style={[{ minWidth: isCompactMobile ? 108 : 120 }, Spaces.gap[8]]}>
@@ -465,7 +550,9 @@ function MatchStatsPromptHost({ skipInitialFetch = false } = {}) {
 
             <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter, Spaces.gap[16]]}>
               <View style={[{ flex: 1 }, Spaces.gap[8]]}>
-                <Text style={[Fonts.p3, Fonts.neutral200]}>Fin du match</Text>
+                <Text style={[Fonts.p3, Fonts.neutral200]}>
+                  {t('matchStatsPromptHost.endOfMatch', 'Fin du match')}
+                </Text>
                 <Text style={[Fonts.p3Bold, Fonts.neutral00]}>
                   {formatPromptDate(nextPrompt?.endedAt || nextPrompt?.updatedAt)}
                 </Text>
@@ -495,7 +582,11 @@ function MatchStatsPromptHost({ skipInitialFetch = false } = {}) {
               ]}
             >
               <Text style={[Fonts.p3, Fonts.neutral100]}>
-                {`Il reste ${totalPending} actions post-match à compléter.`}
+                {t(
+                  'matchStatsPromptHost.postMatchActionsLeftTo',
+                  'Il reste {{totalPending}} actions post-match à compléter.',
+                  { totalPending, ...SANS_ECHAPPEMENT },
+                )}
               </Text>
             </View>
           </View>
@@ -512,7 +603,7 @@ function MatchStatsPromptHost({ skipInitialFetch = false } = {}) {
             <Button
               onPress={handleOpenUnknownStatsFlow}
               style={modalButtonStyle}
-              title="Je ne sais pas mes stats"
+              title={t('matchStatsPromptHost.iDonTKnowMy', 'Je ne sais pas mes stats')}
               variant="Secondary"
             />
           ) : null}
@@ -530,14 +621,17 @@ function MatchStatsPromptHost({ skipInitialFetch = false } = {}) {
                 openPendingMatchStatsList();
               }}
               style={modalButtonStyle}
-              title="Voir tous les matchs en attente"
+              title={t(
+                'matchStatsPromptHost.seeAllPendingMatches',
+                'Voir tous les matchs en attente',
+              )}
               variant="Secondary"
             />
           ) : null}
           <Button
             onPress={dismissPromptForSession}
             style={modalButtonStyle}
-            title="Plus tard"
+            title={t('matchStatsPromptHost.later', 'Plus tard')}
             variant="Secondary"
           />
           <View pointerEvents="none" style={{ height: modalBottomSpacer }} />

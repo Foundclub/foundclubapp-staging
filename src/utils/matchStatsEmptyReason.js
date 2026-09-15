@@ -14,6 +14,8 @@
  * couvre le cas d'un serveur plus ancien qui n'envoie encore aucune cause.
  */
 
+import i18next from 'i18next';
+
 /** Les causes que le serveur sait nommer (`match-stats-report.ts`). */
 export const MATCH_STATS_EMPTY_REASONS = Object.freeze({
   MATCH_NOT_FINISHED: 'match_not_finished',
@@ -23,40 +25,96 @@ export const MATCH_STATS_EMPTY_REASONS = Object.freeze({
   SUPERADMIN: 'superadmin_account',
 });
 
+// I18N-2 : des GETTERS, pas des textes — ce fichier est lu à l import, avant
+// l initialisation d i18next ; la phrase se traduit au moment où elle s affiche.
 const EXPLANATIONS = Object.freeze({
   [MATCH_STATS_EMPTY_REASONS.MATCH_NOT_FINISHED]: {
-    body: "Le bilan s'ouvre une fois l'heure de fin passée. Reviens après le coup de "
-      + 'sifflet final.',
-    title: "Ton match n'est pas encore terminé",
+    get body() {
+      return i18next.t(
+        'matchStatsEmptyReason.matchNotFinished.body',
+        "Le bilan s'ouvre une fois l'heure de fin passée. Reviens après le coup de "
+          + 'sifflet final.',
+      );
+    },
+    get title() {
+      return i18next.t(
+        'matchStatsEmptyReason.matchNotFinished.title',
+        "Ton match n'est pas encore terminé",
+      );
+    },
   },
   [MATCH_STATS_EMPTY_REASONS.NO_TEAM]: {
-    body: "Tu n'es joueur ni entraîneur d'aucune équipe. Rejoins une équipe pour "
-      + 'recevoir les bilans de ses matchs.',
-    title: 'Aucune équipe rattachée à ton compte',
+    get body() {
+      return i18next.t(
+        'matchStatsEmptyReason.noTeam.body',
+        "Tu n'es joueur ni entraîneur d'aucune équipe. Rejoins une équipe pour "
+          + 'recevoir les bilans de ses matchs.',
+      );
+    },
+    get title() {
+      return i18next.t(
+        'matchStatsEmptyReason.noTeam.title',
+        'Aucune équipe rattachée à ton compte',
+      );
+    },
   },
   [MATCH_STATS_EMPTY_REASONS.NOTHING_PENDING]: {
-    body: 'Quand un match terminé demandera encore une action, elle apparaîtra ici '
-      + 'automatiquement.',
-    title: 'Aucune action en attente',
+    get body() {
+      return i18next.t(
+        'matchStatsEmptyReason.nothingPending.body',
+        'Quand un match terminé demandera encore une action, elle apparaîtra ici '
+          + 'automatiquement.',
+      );
+    },
+    get title() {
+      return i18next.t('matchStatsEmptyReason.nothingPending.title', 'Aucune action en attente');
+    },
   },
   [MATCH_STATS_EMPTY_REASONS.SPORT_NOT_SUPPORTED]: {
-    body: 'La saisie du score et des statistiques ne couvre pour le moment que le '
-      + 'football et le basket.',
-    title: "Le sport de ton équipe n'est pas encore géré",
+    get body() {
+      return i18next.t(
+        'matchStatsEmptyReason.sportNotSupported.body',
+        'La saisie du score et des statistiques ne couvre pour le moment que le '
+          + 'football et le basket.',
+      );
+    },
+    get title() {
+      return i18next.t(
+        'matchStatsEmptyReason.sportNotSupported.title',
+        "Le sport de ton équipe n'est pas encore géré",
+      );
+    },
   },
   [MATCH_STATS_EMPTY_REASONS.SUPERADMIN]: {
-    body: "Le serveur ne propose jamais de bilan de match aux comptes d'administration. "
-      + 'Pour tester la saisie, connecte-toi avec un compte joueur ou entraîneur '
-      + "d'une équipe de football ou de basket.",
-    title: 'Ton compte ne peut pas saisir ici',
+    get body() {
+      return i18next.t(
+        'matchStatsEmptyReason.superadmin.body',
+        "Le serveur ne propose jamais de bilan de match aux comptes d'administration. "
+          + 'Pour tester la saisie, connecte-toi avec un compte joueur ou entraîneur '
+          + "d'une équipe de football ou de basket.",
+      );
+    },
+    get title() {
+      return i18next.t(
+        'matchStatsEmptyReason.superadmin.title',
+        'Ton compte ne peut pas saisir ici',
+      );
+    },
   },
 });
 
 /** Le filet : un serveur plus ancien n'envoie aucune cause. */
 export const UNKNOWN_EMPTY_REASON = Object.freeze({
-  body: 'Quand un match terminé demandera encore une action, elle apparaîtra ici '
-    + 'automatiquement.',
-  title: 'Aucune action en attente',
+  get body() {
+    return i18next.t(
+      'matchStatsEmptyReason.nothingPending.body',
+      'Quand un match terminé demandera encore une action, elle apparaîtra ici '
+        + 'automatiquement.',
+    );
+  },
+  get title() {
+    return i18next.t('matchStatsEmptyReason.nothingPending.title', 'Aucune action en attente');
+  },
 });
 
 /**

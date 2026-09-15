@@ -1,4 +1,4 @@
-/* eslint-disable jsdoc/require-returns, max-len, no-nested-ternary, perfectionist/sort-imports, perfectionist/sort-objects, react/jsx-indent, react/jsx-one-expression-per-line, react/no-unescaped-entities */
+/* eslint-disable jsdoc/require-returns, max-len, no-nested-ternary, perfectionist/sort-imports, perfectionist/sort-objects, react/jsx-indent, react/jsx-one-expression-per-line */
 import { useNavigation, useRoute } from '@react-navigation/native';
 import {
   useCallback,
@@ -6,6 +6,7 @@ import {
   useMemo,
   useState,
 } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Alert,
   FlatList,
@@ -19,6 +20,8 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import localeDesFormats from '@/theme/strings/localeDesFormats';
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -63,6 +66,7 @@ const getPlayerKey = (player) => String(player?.documentId || player?.id || '');
  * Displays team players with checkboxes for multi-selection
  */
 function TacticalSelection() {
+  const { t } = useTranslation();
   const {
     ApplicationStyle, Colors, Fonts, Spaces,
   } = useTheme();
@@ -230,15 +234,15 @@ function TacticalSelection() {
     && (isEventFetching || isCompositionFetching);
   const isTeamResolutionBlocked = !isTeamDefaultMode && Boolean(eventId) && !teamId && !isResolvingTeam;
   const sourceLabel = useMemo(() => {
-    if (isTeamDefaultMode) return 'Composition type';
-    if (teamCompositionPayload?.draft) return 'Brouillon';
+    if (isTeamDefaultMode) return t('tacticalSelection.defaultLineup', 'Composition type');
+    if (teamCompositionPayload?.draft) return t('tacticalSelection.draft', 'Brouillon');
     return editorSourceLabel
       || (editorSource === 'default_composition'
-        ? 'Composition type'
+        ? t('tacticalSelection.defaultLineup', 'Composition type')
         : editorSource === 'last_match'
-          ? 'Dernier match'
+          ? t('tacticalSelection.lastMatch', 'Dernier match')
           : null);
-  }, [editorSource, editorSourceLabel, isTeamDefaultMode, teamCompositionPayload?.draft]);
+  }, [editorSource, editorSourceLabel, isTeamDefaultMode, teamCompositionPayload?.draft, t]);
 
   // State
   /** @type {[Set<string>, React.Dispatch<React.SetStateAction<Set<string>>>]} */
@@ -362,12 +366,21 @@ function TacticalSelection() {
   // Add manual player
   const handleAddManualPlayer = useCallback(() => {
     if (isTeamDefaultMode) {
-      Alert.alert('Indisponible', "La composition type ne peut contenir que les joueurs de l'équipe.");
+      Alert.alert(t(
+        'tacticalSelection.unavailable',
+        'Indisponible',
+      ), t(
+        'tacticalSelection.defaultLineupTeamOnly',
+        "La composition type ne peut contenir que les joueurs de l'équipe.",
+      ));
       return;
     }
 
     if (!manualFirstname.trim() || !manualLastname.trim()) {
-      Alert.alert('Erreur', 'Prénom et nom requis');
+      Alert.alert(t(
+        'common.error',
+        'Erreur',
+      ), t('tacticalSelection.nameRequired', 'Prénom et nom requis'));
       return;
     }
 
@@ -390,7 +403,7 @@ function TacticalSelection() {
     setManualLastname('');
     setManualNumber('');
     setModalVisible(false);
-  }, [isTeamDefaultMode, manualFirstname, manualLastname, manualNumber]);
+  }, [isTeamDefaultMode, manualFirstname, manualLastname, manualNumber, t]);
 
   // Open edit modal
   const handleEditPlayer = useCallback((/** @type {TacticalPlayer} */ player) => {
@@ -440,10 +453,14 @@ function TacticalSelection() {
 
     if (editingPlayer.isManual || String(playerId).startsWith('manual_')) {
       Alert.alert(
-        'Supprimer',
-        `Supprimer ${editingPlayer.firstname} ${editingPlayer.lastname} ?`,
+        t('tacticalSelection.delete', 'Supprimer'),
+        t('tacticalSelection.deletePlayerQuestion', 'Supprimer {{firstname}} {{lastname}} ?', {
+          firstname: editingPlayer.firstname,
+          lastname: editingPlayer.lastname,
+          ...SANS_ECHAPPEMENT,
+        }),
         [
-          { style: 'cancel', text: 'Annuler' },
+          { style: 'cancel', text: t('tacticalSelection.cancel', 'Annuler') },
           {
             onPress: () => {
               setManualPlayers((prev) => prev.filter((p) => getPlayerKey(p) !== playerId));
@@ -456,27 +473,42 @@ function TacticalSelection() {
               setEditingPlayer(null);
             },
             style: 'destructive',
-            text: 'Supprimer',
+            text: t('tacticalSelection.delete', 'Supprimer'),
           },
         ],
       );
     }
-  }, [editingPlayer]);
+  }, [editingPlayer, t]);
 
   // Navigate to Board
   const handleValidate = useCallback(() => {
     if (isResolvingTeam) {
-      Alert.alert('Patiente', "On termine d'identifier l'équipe concernée.");
+      Alert.alert(t(
+        'tacticalSelection.pleaseWait',
+        'Patiente',
+      ), t(
+        'tacticalSelection.identifyingTeam',
+        "On termine d'identifier l'équipe concernée.",
+      ));
       return;
     }
 
     if (!teamId) {
-      Alert.alert('Erreur', "Impossible d'identifier l'équipe pour cette composition.");
+      Alert.alert(t(
+        'common.error',
+        'Erreur',
+      ), t(
+        'tacticalSelection.identifyTeamError',
+        "Impossible d'identifier l'équipe pour cette composition.",
+      ));
       return;
     }
 
     if (selectedIds.size === 0) {
-      Alert.alert('Attention', 'Sélectionne au moins un joueur');
+      Alert.alert(t('tacticalSelection.warning', 'Attention'), t(
+        'tacticalSelection.selectAtLeastOne',
+        'Sélectionne au moins un joueur',
+      ));
       return;
     }
 
@@ -527,7 +559,7 @@ function TacticalSelection() {
     teamId,
     teamName,
     navigation,
-    isResolvingTeam,
+    isResolvingTeam, t,
   ]);
 
   // Render player item
@@ -593,19 +625,26 @@ function TacticalSelection() {
           </Text>
           {displayNumber && (
             <Text style={[Fonts.p3, { color: Colors.neutral300 }]}>
-              N°
-              {displayNumber}
+              {t(
+                'tacticalSelection.numberShort',
+                'N°{{number}}',
+                { number: displayNumber, ...SANS_ECHAPPEMENT },
+              )}
             </Text>
           )}
           {isManualPlayer && (
             <Text style={[Fonts.p3, { color: Colors.primary500, fontStyle: 'italic' }]}>
-              Ajouté manuellement
+              {t('tacticalSelection.addedManually', 'Ajouté manuellement')}
             </Text>
           )}
           {item.appliedPosition ? (
             // Détection : le poste auquel ce candidat a postulé (primary200 = 6,79:1, AA OK).
             <Text style={[Fonts.p3, { color: Colors.primary200, fontWeight: '600' }]}>
-              {`A postulé : ${item.appliedPosition}`}
+              {t(
+                'tacticalSelection.appliedFor',
+                'A postulé : {{appliedPosition}}',
+                { appliedPosition: item.appliedPosition, ...SANS_ECHAPPEMENT },
+              )}
             </Text>
           ) : null}
         </View>
@@ -622,7 +661,7 @@ function TacticalSelection() {
         </TouchableOpacity>
       </TouchableOpacity>
     );
-  }, [selectedIds, Colors, Fonts, toggleSelection, handleEditPlayer, numberOverrides]);
+  }, [selectedIds, Colors, Fonts, toggleSelection, handleEditPlayer, numberOverrides, t]);
 
   const footerBottomInset = Math.max(insets.bottom, 12);
   const stickyFooterHeight = 84 + footerBottomInset;
@@ -633,7 +672,13 @@ function TacticalSelection() {
       <View style={styles.header}>
         <HeaderBackButton onPress={() => navigation.goBack()} />
         <Text style={[Fonts.h3Bold, { color: Colors.neutral00 }]}>
-          {isTeamDefaultMode ? 'Composition type' : 'Sélection des joueurs'}
+          {isTeamDefaultMode ? t(
+            'tacticalSelection.defaultLineup',
+            'Composition type',
+          ) : t(
+            'tacticalSelection.playerSelection',
+            'Sélection des joueurs',
+          )}
         </Text>
         <View style={styles.headerSpacer} />
       </View>
@@ -642,7 +687,7 @@ function TacticalSelection() {
       <View style={[Spaces.paddingHorizontal[24], Spaces.paddingTop[12]]}>
         <TextInput
           onChangeText={setSearchQuery}
-          placeholder="Rechercher..."
+          placeholder={t('tacticalSelection.search', 'Rechercher...')}
           placeholderTextColor={Colors.neutral300}
           style={[styles.searchInput, { backgroundColor: Colors.neutral800, borderColor: Colors.neutral700, color: Colors.neutral00 }]}
           value={searchQuery}
@@ -654,33 +699,43 @@ function TacticalSelection() {
         {/* actionBtn est rendu a 34px : on garde le visuel, on complete la zone de clic
             jusqu'a 44px via hitSlop (decision Adel, cf. THEME.md). */}
         <TouchableOpacity
-          accessibilityLabel="Tout sélectionner"
+          accessibilityLabel={t('tacticalSelection.selectAll', 'Tout sélectionner')}
           accessibilityRole="button"
           hitSlop={ApplicationStyle.hitSlop.min44From32}
           onPress={selectAll}
           style={[styles.actionBtn, { backgroundColor: Colors.primary700 }]}
         >
-          <Text style={[Fonts.p3, { color: Colors.primary500, fontWeight: '600' }]}>Tout sélectionner</Text>
+          <Text style={[Fonts.p3, { color: Colors.primary500, fontWeight: '600' }]}>{t(
+            'tacticalSelection.selectAll',
+            'Tout sélectionner',
+          )}
+          </Text>
         </TouchableOpacity>
         <TouchableOpacity
-          accessibilityLabel="Effacer la sélection"
+          accessibilityLabel={t('tacticalSelection.clearSelection', 'Effacer la sélection')}
           accessibilityRole="button"
           hitSlop={ApplicationStyle.hitSlop.min44From32}
           onPress={clearSelection}
           style={[styles.actionBtn, { backgroundColor: Colors.primary700 }]}
         >
-          <Text style={[Fonts.p3, { color: Colors.primary100, fontWeight: '600' }]}>Effacer</Text>
+          <Text style={[Fonts.p3, { color: Colors.primary100, fontWeight: '600' }]}>
+            {t('tacticalSelection.clear', 'Effacer')}
+          </Text>
         </TouchableOpacity>
         {!isTeamDefaultMode ? (
           <TouchableOpacity
-            accessibilityLabel="Ajouter un joueur"
+            accessibilityLabel={t('tacticalSelection.addPlayer', 'Ajouter un joueur')}
             accessibilityRole="button"
             hitSlop={ApplicationStyle.hitSlop.min44From32}
             onPress={() => setModalVisible(true)}
             style={[styles.actionBtn, { backgroundColor: Colors.primary500 }]}
           >
             {/* Encre unique sur primary500 : '#FFF' = 2,40:1, primary900 = 7,96:1. */}
-            <Text style={[Fonts.p3, { color: Colors.primary900, fontWeight: '600' }]}>+ Ajouter</Text>
+            <Text style={[Fonts.p3, { color: Colors.primary900, fontWeight: '600' }]}>{t(
+              'tacticalSelection.plusAdd',
+              '+ Ajouter',
+            )}
+            </Text>
           </TouchableOpacity>
         ) : null}
       </View>
@@ -688,17 +743,19 @@ function TacticalSelection() {
       {/* Selection Count */}
       <View style={[Spaces.paddingHorizontal[24], Spaces.paddingTop[12], Spaces.paddingBottom[8]]}>
         <Text style={[Fonts.p2, { color: Colors.neutral300 }]}>
-          {selectedIds.size}
-          {' '}
-          joueur
-          {selectedIds.size > 1 ? 's' : ''}
-          {' '}
-          sélectionné
-          {selectedIds.size > 1 ? 's' : ''}
+          {t('tacticalSelection.selectedPlayers', {
+            count: selectedIds.size,
+            defaultValue_one: '{{count}} joueur sélectionné',
+            defaultValue_other: '{{count}} joueurs sélectionnés',
+          })}
         </Text>
         {teamName ? (
           <Text style={[Fonts.p3, { color: Colors.primary100, marginTop: 6 }]}>
-            Équipe : {teamName}
+            {t(
+              'tacticalSelection.teamLabel',
+              'Équipe : {{teamName}}',
+              { teamName, ...SANS_ECHAPPEMENT },
+            )}
           </Text>
         ) : null}
         {readableEventName ? (
@@ -708,38 +765,46 @@ function TacticalSelection() {
         ) : null}
         {sourceLabel ? (
           <Text style={[Fonts.p3, { color: Colors.primary500, marginTop: 4 }]}>
-            Base : {sourceLabel}
+            {t(
+              'tacticalSelection.baseLabel',
+              'Base : {{sourceLabel}}',
+              { sourceLabel, ...SANS_ECHAPPEMENT },
+            )}
           </Text>
         ) : null}
         {teamCompositionPayload?.draft?.updatedAt ? (
           <Text style={[Fonts.p3, { color: Colors.neutral300, marginTop: 6 }]}>
-            Brouillon mis à jour le
-            {' '}
-            {new Date(teamCompositionPayload.draft.updatedAt).toLocaleString('fr-FR')}
+            {t('tacticalSelection.draftUpdatedOn', 'Brouillon mis à jour le {{date}}', {
+              date: new Date(teamCompositionPayload.draft.updatedAt).toLocaleString(localeDesFormats()),
+              ...SANS_ECHAPPEMENT,
+            })}
           </Text>
         ) : null}
         {teamCompositionPayload?.published?.publishedAt ? (
           <Text style={[Fonts.p3, { color: Colors.primary500, marginTop: 4 }]}>
-            Convocation publiée (v
-            {Number(teamCompositionPayload?.published?.version || 1)}
-            ) le
-            {' '}
-            {new Date(teamCompositionPayload.published.publishedAt).toLocaleString('fr-FR')}
+            {t('tacticalSelection.callUpPublishedOn', 'Convocation publiée (v{{version}}) le {{date}}', {
+              date: new Date(teamCompositionPayload.published.publishedAt).toLocaleString(localeDesFormats()),
+              version: Number(teamCompositionPayload?.published?.version || 1),
+              ...SANS_ECHAPPEMENT,
+            })}
           </Text>
         ) : null}
         {isTeamDefaultMode && isDefaultCompositionFetching ? (
           <Text style={[Fonts.p3, { color: Colors.neutral300, marginTop: 4 }]}>
-            Chargement de la composition type...
+            {t('tacticalSelection.loadingDefaultLineup', 'Chargement de la composition type...')}
           </Text>
         ) : null}
         {isResolvingTeam ? (
           <Text style={[Fonts.p3, { color: Colors.neutral300, marginTop: 4 }]}>
-            Chargement de l'équipe concernée...
+            {t('tacticalSelection.loadingTeamConcerned', "Chargement de l'équipe concernée...")}
           </Text>
         ) : null}
         {isTeamResolutionBlocked ? (
           <Text style={[Fonts.p3, { color: Colors.danger500, marginTop: 4 }]}>
-            Impossible d'identifier l'équipe de ce match.
+            {t(
+              'tacticalSelection.identifyMatchTeamError',
+              "Impossible d'identifier l'équipe de ce match.",
+            )}
           </Text>
         ) : null}
       </View>
@@ -757,7 +822,13 @@ function TacticalSelection() {
           ListEmptyComponent={(
             <View style={styles.emptyState}>
               <Text style={[Fonts.p2, { color: Colors.neutral300 }]}>
-              {searchQuery ? 'Aucun résultat' : "Aucun joueur dans l'équipe"}
+              {searchQuery ? t(
+                'tacticalSelection.noResults',
+                'Aucun résultat',
+              ) : t(
+                'tacticalSelection.noPlayerInTeam',
+                "Aucun joueur dans l'équipe",
+              )}
               </Text>
             </View>
           )}
@@ -782,10 +853,10 @@ function TacticalSelection() {
           disabled={selectedIds.size === 0 || isResolvingTeam || isTeamResolutionBlocked}
           onPress={handleValidate}
           title={isResolvingTeam
-            ? "Chargement de l'équipe..."
+            ? t('tacticalSelection.loadingTeam', "Chargement de l'équipe...")
             : isTeamDefaultMode
-              ? `Continuer (${selectedIds.size})`
-              : `Valider (${selectedIds.size})`}
+              ? t('tacticalSelection.continueWithSize', 'Continuer ({{size}})', { size: selectedIds.size })
+              : t('tacticalSelection.validateWithSize', 'Valider ({{size}})', { size: selectedIds.size })}
           variant="Primary"
         />
       </View>
@@ -795,13 +866,13 @@ function TacticalSelection() {
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContent, { backgroundColor: Colors.neutral800 }]}>
             <Text style={[Fonts.h3Bold, { color: Colors.neutral00, marginBottom: 20, textAlign: 'center' }]}>
-              Ajouter un joueur
+              {t('tacticalSelection.addPlayer', 'Ajouter un joueur')}
             </Text>
 
             <TextInput
               autoFocus
               onChangeText={setManualFirstname}
-              placeholder="Prénom *"
+              placeholder={t('tacticalSelection.firstNameRequired', 'Prénom *')}
               placeholderTextColor={Colors.neutral300}
               style={[styles.input, { backgroundColor: Colors.neutral900, borderColor: Colors.neutral700, color: Colors.neutral00 }]}
               value={manualFirstname}
@@ -809,7 +880,7 @@ function TacticalSelection() {
 
             <TextInput
               onChangeText={setManualLastname}
-              placeholder="Nom *"
+              placeholder={t('tacticalSelection.lastNameRequired', 'Nom *')}
               placeholderTextColor={Colors.neutral300}
               style={[styles.input, { backgroundColor: Colors.neutral900, borderColor: Colors.neutral700, color: Colors.neutral00 }]}
               value={manualLastname}
@@ -819,7 +890,7 @@ function TacticalSelection() {
               keyboardType="number-pad"
               maxLength={2}
               onChangeText={setManualNumber}
-              placeholder="Numéro (optionnel)"
+              placeholder={t('tacticalSelection.numberOptional', 'Numéro (optionnel)')}
               placeholderTextColor={Colors.neutral300}
               style={[styles.input, { backgroundColor: Colors.neutral900, borderColor: Colors.neutral700, color: Colors.neutral00 }]}
               value={manualNumber}
@@ -827,16 +898,16 @@ function TacticalSelection() {
 
             <View style={styles.modalButtons}>
               <TouchableOpacity onPress={() => setModalVisible(false)} style={[styles.modalBtn, { backgroundColor: Colors.neutral700 }]}>
-                <Text style={[Fonts.p1, { color: Colors.neutral00, fontWeight: '600' }]}>Annuler</Text>
+                <Text style={[Fonts.p1, { color: Colors.neutral00, fontWeight: '600' }]}>{t('tacticalSelection.cancel', 'Annuler')}</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                accessibilityLabel="Ajouter"
+                accessibilityLabel={t('tacticalSelection.add', 'Ajouter')}
                 accessibilityRole="button"
                 onPress={handleAddManualPlayer}
                 style={[styles.modalBtn, { backgroundColor: Colors.primary500 }]}
               >
                 {/* Encre unique sur primary500 : '#FFF' = 2,40:1, primary900 = 7,96:1. */}
-                <Text style={[Fonts.p1, { color: Colors.primary900, fontWeight: '700' }]}>Ajouter</Text>
+                <Text style={[Fonts.p1, { color: Colors.primary900, fontWeight: '700' }]}>{t('tacticalSelection.add', 'Ajouter')}</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -849,8 +920,8 @@ function TacticalSelection() {
           <View style={[styles.modalContent, { backgroundColor: Colors.neutral800 }]}>
             <Text style={[Fonts.h3Bold, { color: Colors.neutral00, marginBottom: 20, textAlign: 'center' }]}>
               {editingPlayer?.isManual || String(editingPlayer?.id || '').startsWith('manual_')
-                ? 'Modifier le joueur'
-                : 'Modifier le numéro'}
+                ? t('tacticalSelection.editPlayer', 'Modifier le joueur')
+                : t('tacticalSelection.editNumber', 'Modifier le numéro')}
             </Text>
 
             {/* Only show name fields for manual players */}
@@ -858,7 +929,7 @@ function TacticalSelection() {
               <>
                 <TextInput
                   onChangeText={setEditFirstname}
-                  placeholder="Prénom"
+                  placeholder={t('tacticalSelection.firstName', 'Prénom')}
                   placeholderTextColor={Colors.neutral300}
                   style={[styles.input, { backgroundColor: Colors.neutral900, borderColor: Colors.neutral700, color: Colors.neutral00 }]}
                   value={editFirstname}
@@ -866,7 +937,7 @@ function TacticalSelection() {
 
                 <TextInput
                   onChangeText={setEditLastname}
-                  placeholder="Nom"
+                  placeholder={t('tacticalSelection.lastName', 'Nom')}
                   placeholderTextColor={Colors.neutral300}
                   style={[styles.input, { backgroundColor: Colors.neutral900, borderColor: Colors.neutral700, color: Colors.neutral00 }]}
                   value={editLastname}
@@ -878,7 +949,7 @@ function TacticalSelection() {
               keyboardType="number-pad"
               maxLength={2}
               onChangeText={setEditNumber}
-              placeholder="Numéro"
+              placeholder={t('tacticalSelection.number', 'Numéro')}
               placeholderTextColor={Colors.neutral300}
               style={[styles.input, { backgroundColor: Colors.neutral900, borderColor: Colors.neutral700, color: Colors.neutral00 }]}
               value={editNumber}
@@ -886,16 +957,16 @@ function TacticalSelection() {
 
             <View style={styles.modalButtons}>
               <TouchableOpacity onPress={() => setEditModalVisible(false)} style={[styles.modalBtn, { backgroundColor: Colors.neutral700 }]}>
-                <Text style={[Fonts.p1, { color: Colors.neutral00, fontWeight: '600' }]}>Annuler</Text>
+                <Text style={[Fonts.p1, { color: Colors.neutral00, fontWeight: '600' }]}>{t('tacticalSelection.cancel', 'Annuler')}</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                accessibilityLabel="Enregistrer"
+                accessibilityLabel={t('tacticalSelection.save', 'Enregistrer')}
                 accessibilityRole="button"
                 onPress={handleSaveEdit}
                 style={[styles.modalBtn, { backgroundColor: Colors.primary500 }]}
               >
                 {/* Encre unique sur primary500 : '#FFF' = 2,40:1, primary900 = 7,96:1. */}
-                <Text style={[Fonts.p1, { color: Colors.primary900, fontWeight: '700' }]}>Enregistrer</Text>
+                <Text style={[Fonts.p1, { color: Colors.primary900, fontWeight: '700' }]}>{t('tacticalSelection.save', 'Enregistrer')}</Text>
               </TouchableOpacity>
             </View>
 
@@ -905,7 +976,7 @@ function TacticalSelection() {
                 onPress={handleDeletePlayer}
                 style={[styles.deleteBtn, { borderColor: Colors.error500 }]}
               >
-                <Text style={[Fonts.p1, { color: Colors.error500, fontWeight: '600' }]}>Supprimer ce joueur</Text>
+                <Text style={[Fonts.p1, { color: Colors.error500, fontWeight: '600' }]}>{t('tacticalSelection.deletePlayer', 'Supprimer ce joueur')}</Text>
               </TouchableOpacity>
             )}
           </View>

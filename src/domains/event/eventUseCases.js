@@ -1,6 +1,7 @@
 // @ts-nocheck
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale/fr';
+import i18next from 'i18next';
 
 import i18n from '@/theme/strings';
 
@@ -541,7 +542,11 @@ export const getEventEditSupport = (event, eventTypeName = '') => {
       // pire qu'un refus : il cherche, il ne trouve pas, et il conclut que
       // l'application est cassee. Un manque annonce franchement se supporte ;
       // une fausse piste, non.
-      reason: "La modification d'un stage n'est pas encore possible, ni ici ni ailleurs dans l'application. C'est un manque connu de notre côté, pas une erreur de ta part.",
+      reason: i18next.t(
+        'eventUseCases.stageEditUnavailable',
+        "La modification d'un stage n'est pas encore possible, ni ici ni ailleurs dans "
+          + "l'application. C'est un manque connu de notre côté, pas une erreur de ta part.",
+      ),
       reasonKey: 'stage',
     };
   }
@@ -553,7 +558,11 @@ export const getEventEditSupport = (event, eventTypeName = '') => {
       // Contrairement au stage, un tournoi a bien un ecran de reglages
       // atteignable depuis sa fiche (« Gérer le tournoi »). Il ne couvre pas
       // tout, et le texte ne pretend pas le contraire.
-      reason: "La modification complète d'un tournoi n'est pas encore possible ici. Depuis sa fiche, « Gérer le tournoi » permet déjà d'ajuster une partie de ses réglages.",
+      reason: i18next.t(
+        'eventUseCases.tournamentEditUnavailable',
+        "La modification complète d'un tournoi n'est pas encore possible ici. Depuis sa fiche, "
+          + "« Gérer le tournoi » permet déjà d'ajuster une partie de ses réglages.",
+      ),
       reasonKey: 'tournament',
     };
   }
@@ -561,7 +570,11 @@ export const getEventEditSupport = (event, eventTypeName = '') => {
   if (hasDetectionSlots || (isDetectionEventType(resolvedTypeName) && hasDetectionSlots)) {
     return {
       isSupported: false,
-      reason: 'Les détections avec postes recherches ne peuvent pas encore être reeditees depuis cette fiche sans risque de perdre la configuration des postes.',
+      reason: i18next.t(
+        'eventUseCases.detectionEditUnavailable',
+        'Les détections avec postes recherches ne peuvent pas encore être reeditees depuis '
+          + 'cette fiche sans risque de perdre la configuration des postes.',
+      ),
       reasonKey: 'detection_slots',
     };
   }

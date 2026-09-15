@@ -13,6 +13,7 @@ import { fr } from 'date-fns/locale';
 import {
   memo, useEffect, useMemo, useRef, useState,
 } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Image,
   Platform,
@@ -128,6 +129,7 @@ function PlanningWeekTimelineView({
   showHeader = true,
   showUntimedSection = true,
 }) {
+  const { t } = useTranslation();
   const { Colors, Fonts } = useTheme();
   const [internalDate, setInternalDate] = useState(getPlanningDefaultDate());
   const pendingAccentColor = Colors.warning500 || Colors.gold500 || '#F5A623';
@@ -411,10 +413,12 @@ function PlanningWeekTimelineView({
 
   // Periode vide : le resume n'est pas rendu (voir summarySection), l'etat vide
   // porte seul le message. Ce libelle ne concerne donc que les periodes remplies.
-  const summaryText = useMemo(() => {
-    const label = weekEvents.length > 1 ? 'événements' : 'événement';
-    return `${weekEvents.length} ${label} sur ${weekDays.length} jours`;
-  }, [weekDays.length, weekEvents.length]);
+  const summaryText = useMemo(() => t('planningWeekTimelineViewV2.summary', {
+    count: weekEvents.length,
+    daysCount: weekDays.length,
+    defaultValue_one: '{{count}} événement sur {{daysCount}} jours',
+    defaultValue_other: '{{count}} événements sur {{daysCount}} jours',
+  }), [t, weekDays.length, weekEvents.length]);
 
   const nowLine = useMemo(() => {
     if (!timedEvents.length) return null;
@@ -466,7 +470,9 @@ function PlanningWeekTimelineView({
         +
         {event.count}
       </Text>
-      <Text style={[Fonts.p3, { color: Colors.neutral300, fontSize: 9, textAlign: 'center' }]}>plus</Text>
+      <Text style={[Fonts.p3, { color: Colors.neutral300, fontSize: 9, textAlign: 'center' }]}>
+        {t('planningWeekTimelineViewV2.more', 'plus')}
+      </Text>
     </TouchableOpacity>
   );
 
@@ -560,7 +566,9 @@ function PlanningWeekTimelineView({
         {isPendingParticipation ? (
           <View style={[styles.pendingEventBadge, { backgroundColor: hexToRgba(pendingAccentColor, 0.18), borderColor: hexToRgba(pendingAccentColor, 0.38) }]}>
             <Text style={[styles.pendingEventBadgeText, { color: pendingAccentColor }]}>
-              {isTiny ? 'Attente' : 'En attente'}
+              {isTiny
+                ? t('planningWeekTimelineViewV2.pendingShort', 'Attente')
+                : t('planningWeekTimelineViewV2.pending', 'En attente')}
             </Text>
           </View>
         ) : null}
@@ -634,11 +642,17 @@ function PlanningWeekTimelineView({
   });
 
   const emptyTitle = weekEvents.length === 0
-    ? 'Aucun événement sur cette période'
-    : 'Aucun événement avec horaire';
+    ? t('planningWeekTimelineViewV2.noEventInThisPeriod', 'Aucun événement sur cette période')
+    : t('planningWeekTimelineViewV2.noEventWithATime', 'Aucun événement avec horaire');
   const emptyDescription = weekEvents.length === 0
-    ? "Change de période pour voir d'autres créneaux."
-    : 'Les événements de cette période sont uniquement dans la section « Sans horaire ».';
+    ? t(
+      'planningWeekTimelineViewV2.changeThePeriodToSee',
+      "Change de période pour voir d'autres créneaux.",
+    )
+    : t(
+      'planningWeekTimelineViewV2.thisPeriodSEventsAre',
+      'Les événements de cette période sont uniquement dans la section « Sans horaire ».',
+    );
 
   const summarySection = (() => {
     if (compactFullscreen) return null;
@@ -671,7 +685,9 @@ function PlanningWeekTimelineView({
   const untimedSection = showUntimedSection && untimedEvents.length > 0 ? (
     <View style={[styles.untimedSection, compactFullscreen ? styles.compactUntimedSection : null, { borderBottomColor: 'rgba(255,255,255,0.10)' }]}>
       <View style={[styles.untimedLabelColumn, { width: timeColumnWidth }]}>
-        <Text style={[Fonts.p3Bold, styles.untimedLabel, { color: Colors.neutral200 }]}>Sans horaire</Text>
+        <Text style={[Fonts.p3Bold, styles.untimedLabel, { color: Colors.neutral200 }]}>
+          {t('planningWeekTimelineViewV2.noTime', 'Sans horaire')}
+        </Text>
       </View>
       <View style={styles.untimedColumns}>
         {untimedByDay.map((dayEvents, index) => (
@@ -716,7 +732,9 @@ function PlanningWeekTimelineView({
                   </Text>
                   {isPendingParticipation ? (
                     <View style={[styles.pendingInlineBadge, { backgroundColor: hexToRgba(pendingAccentColor, 0.18), borderColor: hexToRgba(pendingAccentColor, 0.35) }]}>
-                      <Text style={[styles.pendingInlineBadgeText, { color: pendingAccentColor }]}>En attente</Text>
+                      <Text style={[styles.pendingInlineBadgeText, { color: pendingAccentColor }]}>
+                        {t('planningWeekTimelineViewV2.pending', 'En attente')}
+                      </Text>
                     </View>
                   ) : null}
                   {contextLabel ? (

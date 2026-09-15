@@ -1,10 +1,12 @@
 import React, {
   useEffect, useMemo, useRef, useState,
 } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   ScrollView, StyleSheet, Text, TouchableOpacity, View,
 } from 'react-native';
 
+import localeDesFormats from '@/theme/strings/localeDesFormats';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -184,6 +186,7 @@ function DateTimeSelector({
   onOpen,
   value,
 }) {
+  const { t } = useTranslation();
   const { Colors, Fonts, Spaces } = useTheme();
   const [isOpen, setIsOpen] = useState(false);
   const [tempDate, setTempDate] = useState(value || new Date());
@@ -192,16 +195,16 @@ function DateTimeSelector({
   const year = tempDate.getFullYear();
 
   const getFormattedValue = () => {
-    if (!value) return 'Sélectionner';
+    if (!value) return t('dateTimeSelector.select', 'Sélectionner');
     if (mode === 'date') {
-      return value.toLocaleDateString('fr-FR', {
+      return value.toLocaleDateString(localeDesFormats(), {
         day: 'numeric',
         month: 'short',
         weekday: 'short',
         year: 'numeric',
       });
     }
-    return value.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+    return value.toLocaleTimeString(localeDesFormats(), { hour: '2-digit', minute: '2-digit' });
   };
 
   const handleOpen = () => {

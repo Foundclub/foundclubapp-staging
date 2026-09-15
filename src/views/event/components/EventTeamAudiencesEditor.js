@@ -1,5 +1,7 @@
 // @ts-nocheck
+import i18next from 'i18next';
 import { useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   ScrollView,
   Text,
@@ -55,7 +57,7 @@ const getUserKey = (user) => getDocumentId(user);
 const getUserDisplayName = (user) => (
   `${String(user?.firstname || '').trim()} ${String(user?.lastname || '').trim()}`.trim()
   || String(user?.username || '').trim()
-  || 'Membre'
+  || i18next.t('eventTeamAudiencesEditor.member', 'Membre')
 );
 
 const uniqueUsers = (users = []) => {
@@ -75,9 +77,19 @@ const buildRosterFromTeam = (team) => uniqueUsers([
 
 const getAudienceLabel = (audience) => {
   const kind = String(audience?.audienceKind || '').toUpperCase();
-  if (kind === 'EXTERNAL_INVITED') return 'Équipe externe';
-  if (kind === 'INTERNAL_INVITED') return 'Équipe interne';
-  return 'Organisateur';
+  if (kind === 'EXTERNAL_INVITED') {
+    return i18next.t(
+      'eventTeamAudiencesEditor.externalTeam',
+      'Équipe externe',
+    );
+  }
+  if (kind === 'INTERNAL_INVITED') {
+    return i18next.t(
+      'eventTeamAudiencesEditor.internalTeam',
+      'Équipe interne',
+    );
+  }
+  return i18next.t('eventTeamAudiencesEditor.organiser', 'Organisateur');
 };
 
 const getAudienceStatusLabel = (status) => {
@@ -94,11 +106,15 @@ function EventTeamAudiencesEditor({
   clubId = '',
   currentTeamId = '',
   editable = true,
-  emptyStateText = 'Aucune invitation avancée pour le moment.',
+  emptyStateText = i18next.t(
+    'eventTeamAudiencesEditor.noAdvancedInvitationYet',
+    'Aucune invitation avancée pour le moment.',
+  ),
   onChange,
-  title = "Invitations d'équipe",
+  title = i18next.t('eventTeamAudiencesEditor.teamInvitations', "Invitations d'équipe"),
   value = AUCUNE_AUDIENCE,
 }) {
+  const { t } = useTranslation();
   const {
     Alignments, ApplicationStyle, Colors, Fonts, Spaces,
   } = useTheme();
@@ -173,10 +189,10 @@ function EventTeamAudiencesEditor({
     && (draft.selectionMode !== 'SELECTED_MEMBERS' || draft.selectedMembers.length > 0);
   const teamAvailabilityMessage = useMemo(() => {
     if (draft.audienceKind === 'external_invited' && isLoadingExternalTeams) {
-      return 'Chargement des équipes...';
+      return t('eventTeamAudiencesEditor.loadingTeams', 'Chargement des équipes...');
     }
-    return 'Aucune équipe disponible.';
-  }, [draft.audienceKind, isLoadingExternalTeams]);
+    return t('eventTeamAudiencesEditor.noTeamAvailable', 'Aucune équipe disponible.');
+  }, [draft.audienceKind, isLoadingExternalTeams, t]);
 
   useEffect(() => {
     let cancelled = false;
@@ -337,7 +353,14 @@ function EventTeamAudiencesEditor({
       <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter]}>
         <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{title}</Text>
         {editable ? (
-          <Button onPress={() => openDraft(null)} title="Ajouter" variant="Secondary" />
+          <Button
+            onPress={() => openDraft(null)}
+            title={t(
+              'eventTeamAudiencesEditor.add',
+              'Ajouter',
+            )}
+            variant="Secondary"
+          />
         ) : null}
       </View>
 
@@ -357,7 +380,12 @@ function EventTeamAudiencesEditor({
               >
                 <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter, { gap: 8 }]}>
                   <View style={{ flex: 1 }}>
-                    <Text style={[Fonts.p3Bold, Fonts.neutral00]}>{team?.name || 'Equipe'}</Text>
+                    <Text style={[Fonts.p3Bold, Fonts.neutral00]}>
+                      {team?.name || t(
+                        'eventTeamAudiencesEditor.teamFallback',
+                        'Equipe',
+                      )}
+                    </Text>
                     <Text style={[Fonts.p3, Fonts.neutral200]}>
                       {getAudienceLabel(audience)}
                       {' '}
@@ -365,7 +393,7 @@ function EventTeamAudiencesEditor({
                       {' '}
                       {audience?.selectionMode === 'SELECTED_MEMBERS'
                         ? `${selectedMembers.length} membre(s)`
-                        : 'Tous les membres'}
+                        : t('eventTeamAudiencesEditor.allMembers', 'Tous les membres')}
                     </Text>
                   </View>
                   <Text style={[Fonts.p3Bold, audience?.status === 'PENDING' ? Fonts.gold500 : Fonts.primary500]}>
@@ -374,8 +402,8 @@ function EventTeamAudiencesEditor({
                 </View>
                 {editable ? (
                   <View style={[Alignments.row, Spaces.gap[8], { flexWrap: 'wrap' }]}>
-                    <Button onPress={() => openDraft(audience)} title="Modifier" variant="Secondary" />
-                    <Button onPress={() => removeAudience(audienceKey)} title="Supprimer" variant="Secondary" />
+                    <Button onPress={() => openDraft(audience)} title={t('eventTeamAudiencesEditor.edit', 'Modifier')} variant="Secondary" />
+                    <Button onPress={() => removeAudience(audienceKey)} title={t('eventTeamAudiencesEditor.delete', 'Supprimer')} variant="Secondary" />
                   </View>
                 ) : null}
               </View>
@@ -391,10 +419,16 @@ function EventTeamAudiencesEditor({
           <ScrollView contentContainerStyle={Spaces.gap[16]} showsVerticalScrollIndicator={false}>
             <View style={Spaces.gap[8]}>
               <Text style={[Fonts.h3, Fonts.neutral00]}>
-                {isEditMode ? 'Modifier linvitation' : 'Nouvelle invitation'}
+                {isEditMode ? t(
+                  'eventTeamAudiencesEditor.editTheInvitation',
+                  'Modifier linvitation',
+                ) : t(
+                  'eventTeamAudiencesEditor.newInvitation',
+                  'Nouvelle invitation',
+                )}
               </Text>
               <Text style={[Fonts.p3, Fonts.neutral200]}>
-                Choisis une équipe, puis décide si tu invites tout le monde ou seulement certains membres.
+                {t('eventTeamAudiencesEditor.chooseATeamThenDecide', 'Choisis une équipe, puis décide si tu invites tout le monde ou seulement certains membres.')}
               </Text>
             </View>
 
@@ -415,13 +449,15 @@ function EventTeamAudiencesEditor({
             {draft.audienceKind === 'external_invited' ? (
               <View style={Spaces.gap[12]}>
                 <Input
-                  label="Rechercher un club"
+                  label={t('eventTeamAudiencesEditor.searchForAClub', 'Rechercher un club')}
                   onChangeText={setClubSearch}
-                  placeholder="Nom du club"
+                  placeholder={t('eventTeamAudiencesEditor.clubName', 'Nom du club')}
                   value={clubSearch}
                 />
                 {isLoadingExternalClubs ? (
-                  <Text style={[Fonts.p3, Fonts.neutral200]}>Recherche en cours...</Text>
+                  <Text style={[Fonts.p3, Fonts.neutral200]}>
+                    {t('eventTeamAudiencesEditor.searching', 'Recherche en cours...')}
+                  </Text>
                 ) : null}
                 {externalClubs.length ? (
                   <View style={Spaces.gap[8]}>
@@ -450,15 +486,17 @@ function EventTeamAudiencesEditor({
                   </View>
                 ) : null}
                 {!externalClubs.length && clubSearch.trim().length >= 2 ? (
-                  <Text style={[Fonts.p3, Fonts.neutral200]}>Aucun club trouve.</Text>
+                  <Text style={[Fonts.p3, Fonts.neutral200]}>
+                    {t('eventTeamAudiencesEditor.noClubFound', 'Aucun club trouve.')}
+                  </Text>
                 ) : null}
               </View>
             ) : null}
 
             <Input
-              label="Rechercher une équipe"
+              label={t('eventTeamAudiencesEditor.searchForATeam', 'Rechercher une équipe')}
               onChangeText={draft.audienceKind === 'external_invited' ? setExternalSearch : setInternalSearch}
-              placeholder="Nom de lequipe"
+              placeholder={t('eventTeamAudiencesEditor.teamName', 'Nom de lequipe')}
               value={draft.audienceKind === 'external_invited' ? externalSearch : internalSearch}
             />
 
@@ -480,7 +518,12 @@ function EventTeamAudiencesEditor({
                       borderRadius: 16,
                     }]}
                   >
-                    <Text style={[Fonts.p3Bold, Fonts.neutral00]}>{team?.name || 'Equipe'}</Text>
+                    <Text style={[Fonts.p3Bold, Fonts.neutral00]}>
+                      {team?.name || t(
+                        'eventTeamAudiencesEditor.teamFallback',
+                        'Equipe',
+                      )}
+                    </Text>
                     <Text style={[Fonts.p3, Fonts.neutral200]}>
                       {[team?.club?.name, team?.section?.name, team?.category?.name, team?.level?.name]
                         .filter(Boolean)
@@ -505,7 +548,9 @@ function EventTeamAudiencesEditor({
 
             {draft.selectionMode === 'SELECTED_MEMBERS' ? (
               <View style={Spaces.gap[12]}>
-                <Text style={[Fonts.p3Bold, Fonts.neutral00]}>Membres sélectionnés</Text>
+                <Text style={[Fonts.p3Bold, Fonts.neutral00]}>
+                  {t('eventTeamAudiencesEditor.selectedMembers', 'Membres sélectionnés')}
+                </Text>
                 {roster.length ? (
                   <View style={Spaces.gap[8]}>
                     {roster.map((member) => {
@@ -532,21 +577,21 @@ function EventTeamAudiencesEditor({
                           />
                           <View style={{ flex: 1 }}>
                             <Text style={[Fonts.p3Bold, Fonts.neutral00]}>{getUserDisplayName(member)}</Text>
-                            <Text style={[Fonts.p3, Fonts.neutral200]}>{member?.role?.name || 'Membre'}</Text>
+                            <Text style={[Fonts.p3, Fonts.neutral200]}>{member?.role?.name || t('eventTeamAudiencesEditor.member', 'Membre')}</Text>
                           </View>
                         </TouchableOpacity>
                       );
                     })}
                   </View>
                 ) : (
-                  <Text style={[Fonts.p3, Fonts.neutral200]}>Aucun membre disponible pour cette équipe.</Text>
+                  <Text style={[Fonts.p3, Fonts.neutral200]}>{t('eventTeamAudiencesEditor.noMemberAvailableForThis', 'Aucun membre disponible pour cette équipe.')}</Text>
                 )}
               </View>
             ) : null}
 
             <View style={[Alignments.row, Spaces.gap[8], Spaces.paddingBottom[12]]}>
-              <Button onPress={resetDraft} style={{ flex: 1 }} title="Annuler" variant="Secondary" />
-              <Button disabled={!canSave} onPress={saveDraft} style={{ flex: 1 }} title="Enregistrer" />
+              <Button onPress={resetDraft} style={{ flex: 1 }} title={t('eventTeamAudiencesEditor.cancel', 'Annuler')} variant="Secondary" />
+              <Button disabled={!canSave} onPress={saveDraft} style={{ flex: 1 }} title={t('eventTeamAudiencesEditor.save', 'Enregistrer')} />
             </View>
           </ScrollView>
         </BottomModal>

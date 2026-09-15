@@ -11,6 +11,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { invalidateAfterAction } from '@/domains/refresh/afterAction';
 import { extractSubscriptionDecisionFromError } from '@/domains/subscription/subscriptionDecision';
 import { withAlpha } from '@/theme/colors';
+import localeDesFormats from '@/theme/strings/localeDesFormats';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -128,7 +129,7 @@ function MatchConvocationPublished() {
     if (!published?.publishedAt) return '';
     const date = new Date(published.publishedAt);
     if (Number.isNaN(date.getTime())) return '';
-    return date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+    return date.toLocaleTimeString(localeDesFormats(), { hour: '2-digit', minute: '2-digit' });
   }, [published?.publishedAt]);
 
   const handleActionError = useCallback((/** @type {any} */ error) => {

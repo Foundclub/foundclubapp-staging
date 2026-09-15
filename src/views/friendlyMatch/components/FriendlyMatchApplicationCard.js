@@ -1,7 +1,10 @@
+import i18next from 'i18next';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Alert, Text, View } from 'react-native';
 
 import { withAlpha } from '@/theme/colors';
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -11,23 +14,38 @@ import { respondToFriendlyMatchApplication } from '@/services/friendlyMatch/frie
 import { createLogger } from '@/utils/logger/logger';
 
 import { getSlotHoursLabel, toReadableDay } from '../friendlyMatchDateLabels';
-import { FRIENDLY_ACCEPT_CONSEQUENCE } from '../friendlyProposalInChat';
 import FriendlyMatchTermsSheet from './FriendlyMatchTermsSheet';
 
 const logger = createLogger('friendly-match-application');
 
 /** Ce que le candidat a coché, dit du point de vue de celui qui LIT l annonce. */
+// I18N-2 : des GETTERS, pas des textes — lus à l import, avant l initialisation
+// d i18next ; le libellé se traduit au moment où il s affiche.
 const CHOSEN_HOSTING_LABELS = {
-  AWAY: 'Elle se déplace chez toi',
-  HOST: 'Elle reçoit chez elle',
+  get AWAY() {
+    return i18next.t('friendlyMatchApplicationCard.hostingAway', 'Elle se déplace chez toi');
+  },
+  get HOST() {
+    return i18next.t('friendlyMatchApplicationCard.hostingHost', 'Elle reçoit chez elle');
+  },
 };
 
 const STATUS_LABELS = {
-  accepted: 'Acceptée',
-  cancelled: 'Annulée',
-  declined: 'Refusée',
-  pending: 'En attente de ta réponse',
-  withdrawn: 'Retirée par l’équipe',
+  get accepted() {
+    return i18next.t('friendlyMatchApplicationCard.statusAccepted', 'Acceptée');
+  },
+  get cancelled() {
+    return i18next.t('friendlyMatchApplicationCard.statusCancelled', 'Annulée');
+  },
+  get declined() {
+    return i18next.t('friendlyMatchApplicationCard.statusDeclined', 'Refusée');
+  },
+  get pending() {
+    return i18next.t('friendlyMatchApplicationCard.statusPending', 'En attente de ta réponse');
+  },
+  get withdrawn() {
+    return i18next.t('friendlyMatchApplicationCard.statusWithdrawn', 'Retirée par l’équipe');
+  },
 };
 
 /**
@@ -36,11 +54,14 @@ const STATUS_LABELS = {
  * @param {number} otherCount
  * @returns {string}
  */
-const buildOtherApplicationsWarning = (otherCount) => {
-  const plural = otherCount > 1 ? 's' : '';
-  const verb = otherCount > 1 ? 'seront refusées' : 'sera refusée';
-  return `Les ${otherCount} autre${plural} proposition${plural} ${verb} automatiquement.`;
-};
+const buildOtherApplicationsWarning = (otherCount) => i18next.t(
+  'friendlyMatchApplicationCard.otherApplicationsWarning',
+  {
+    count: otherCount,
+    defaultValue_one: 'Les {{count}} autre proposition sera refusée automatiquement.',
+    defaultValue_other: 'Les {{count}} autres propositions seront refusées automatiquement.',
+  },
+);
 
 /**
  * Une proposition recue, du point de vue du staff de l annonce (§4.5).
@@ -62,6 +83,7 @@ function FriendlyMatchApplicationCard({
   onOpenConversation,
   onResponded,
 }) {
+  const { t } = useTranslation();
   const { Colors, Fonts, Spaces } = /** @type {any} */ (useTheme());
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isTermsSheetVisible, setIsTermsSheetVisible] = useState(false);
@@ -97,8 +119,11 @@ function FriendlyMatchApplicationCard({
     } catch (error) {
       logger.error('Reponse a une proposition impossible', { action, error });
       Alert.alert(
-        'Réponse impossible',
-        /** @type {any} */ (error)?.message || 'Réessaie dans un instant.',
+        t('friendlyMatchApplicationCard.answerNotPossible', 'Réponse impossible'),
+        /** @type {any} */ (error)?.message || t(
+          'friendlyMatchApplicationCard.tryAgainInAMoment',
+          'Réessaie dans un instant.',
+        ),
       );
     } finally {
       setIsSubmitting(false);
@@ -108,16 +133,25 @@ function FriendlyMatchApplicationCard({
   const confirmAccept = () => {
     const otherCount = Math.max(0, Number(ad?.applicationsCount || 0) - 1);
     Alert.alert(
-      'Accepter cette équipe ?',
+      t('friendlyMatchApplicationCard.acceptThisTeam', 'Accepter cette équipe ?'),
       [
         // S03 — la MEME phrase que la confirmation du fil de discussion : c'est
         // le meme geste, deux formulations feraient croire a deux gestes.
-        FRIENDLY_ACCEPT_CONSEQUENCE,
+        t(
+          'friendlyProposalInChat.acceptConsequence',
+          'Le match sera créé et apparaîtra dans le planning des deux équipes.',
+        ),
         otherCount > 0 ? buildOtherApplicationsWarning(otherCount) : '',
       ].filter(Boolean).join('\n\n'),
       [
-        { style: 'cancel', text: 'Annuler' },
-        { onPress: () => respond('accept'), text: 'Accepter' },
+        { style: 'cancel', text: t('friendlyMatchApplicationCard.cancel', 'Annuler') },
+        {
+          onPress: () => respond('accept'),
+          text: t(
+            'friendlyMatchApplicationCard.accept',
+            'Accepter',
+          ),
+        },
       ],
     );
   };
@@ -133,7 +167,7 @@ function FriendlyMatchApplicationCard({
     }]}
     >
       <Text style={[Fonts.p1Bold, { color: Colors.neutral00 }]}>
-        {application?.team?.name || 'Une équipe'}
+        {application?.team?.name || t('friendlyMatchApplicationCard.aTeam', 'Une équipe')}
       </Text>
 
       {application?.team?.club?.name ? (
@@ -145,7 +179,7 @@ function FriendlyMatchApplicationCard({
       <Text style={[Fonts.p3Bold, { color: Colors.primary500 }]}>
         {CHOSEN_HOSTING_LABELS[
           /** @type {keyof typeof CHOSEN_HOSTING_LABELS} */ (application?.chosenHosting)
-        ] || 'Hébergement à confirmer'}
+        ] || t('friendlyMatchApplicationCard.hostingToBeConfirmed', 'Hébergement à confirmer')}
       </Text>
 
       {agreedLabel ? (
@@ -156,11 +190,18 @@ function FriendlyMatchApplicationCard({
 
       {chosenDayLabel ? (
         <Text style={[Fonts.p3, { color: Colors.neutral200 }]}>
-          {`Date souhaitée : ${chosenDayLabel}`}
+          {t(
+            'friendlyMatchApplicationCard.preferredDate',
+            'Date souhaitée : {{day}}',
+            { day: chosenDayLabel, ...SANS_ECHAPPEMENT },
+          )}
         </Text>
       ) : (
         <Text style={[Fonts.p3, { color: Colors.neutral300 }]}>
-          Aucune date privilégiée : à convenir ensemble.
+          {t(
+            'friendlyMatchApplicationCard.noPreferredDateToBe',
+            'Aucune date privilégiée : à convenir ensemble.',
+          )}
         </Text>
       )}
 
@@ -180,7 +221,7 @@ function FriendlyMatchApplicationCard({
       <View style={[Spaces.gap[8], Spaces.marginTop[8]]}>
         <Button
           onPress={onOpenConversation}
-          title="Ouvrir la discussion"
+          title={t('friendlyMatchApplicationCard.openTheConversation', 'Ouvrir la discussion')}
           variant="Secondary"
         />
 
@@ -189,20 +230,26 @@ function FriendlyMatchApplicationCard({
             <Button
               disabled={isSubmitting}
               onPress={() => setIsTermsSheetVisible(true)}
-              title={agreedLabel ? 'Modifier ce qui est convenu' : 'Convenir date, heure et lieu'}
+              title={agreedLabel ? t(
+                'friendlyMatchApplicationCard.editWhatWasAgreed',
+                'Modifier ce qui est convenu',
+              ) : t(
+                'friendlyMatchApplicationCard.agreeOnDateTimeAnd',
+                'Convenir date, heure et lieu',
+              )}
               variant="Secondary"
             />
             <Button
               disabled={isSubmitting}
               isLoading={isSubmitting}
               onPress={confirmAccept}
-              title="Accepter ce match"
+              title={t('friendlyMatchApplicationCard.acceptThisMatch', 'Accepter ce match')}
               variant="Primary"
             />
             <Button
               disabled={isSubmitting}
               onPress={() => respond('decline')}
-              title="Refuser"
+              title={t('friendlyMatchApplicationCard.decline', 'Refuser')}
               variant="Secondary"
             />
           </>

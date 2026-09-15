@@ -1,4 +1,5 @@
 import { useQueryClient } from '@tanstack/react-query';
+import i18next from 'i18next';
 import { useCallback, useMemo, useState } from 'react';
 import { useWindowDimensions } from 'react-native';
 import { useTranslation } from 'react-i18next';
@@ -10,6 +11,7 @@ import {
   getPollVoters,
 } from '@/domains/messaging/pollUseCases';
 import useMessaging from '@/domains/messaging/useMessaging';
+import localeDesFormats from '@/theme/strings/localeDesFormats';
 import { BREAKPOINTS } from '@/responsive';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 import { useGetChatById, useGetChatMessages } from '@/services/chat/chatQueriesCompat';
@@ -26,7 +28,7 @@ const getMessageId = (message) => String(message?.documentId || message?.id || '
 const toDisplayDate = (value) => {
   const parsed = new Date(value);
   if (Number.isNaN(parsed.getTime())) return '--';
-  return parsed.toLocaleString('fr-FR', {
+  return parsed.toLocaleString(localeDesFormats(), {
     day: '2-digit',
     hour: '2-digit',
     minute: '2-digit',
@@ -38,7 +40,13 @@ const toDisplayDate = (value) => {
 const getDisplayName = (user) => {
   const firstname = String(user?.firstname || '').trim();
   const lastname = String(user?.lastname || '').trim();
-  return `${firstname} ${lastname}`.trim() || String(user?.username || user?.email || 'Membre').trim() || 'Membre';
+  return `${firstname} ${lastname}`.trim() || String(user?.username || user?.email || i18next.t(
+    'pollDetails.member',
+    'Membre',
+  )).trim() || i18next.t(
+    'pollDetails.member',
+    'Membre',
+  );
 };
 
 const getInitials = (value) => String(value || '')
@@ -166,11 +174,14 @@ function PollDetails({ navigation, route }) {
       await votePoll(effectiveMessageId, optionId);
     } catch (error) {
       queryClient.invalidateQueries({ queryKey: ['chat-messages', chatId] });
-      window.alert(error?.message || 'Impossible de sauvegarder ce vote.');
+      window.alert(error?.message || t(
+        'pollDetails.unableToSaveThisVote',
+        'Impossible de sauvegarder ce vote.',
+      ));
     } finally {
       setIsSubmittingVote(false);
     }
-  }, [chatId, effectiveMessageId, poll, queryClient, userData?.documentId, votePoll]);
+  }, [chatId, effectiveMessageId, poll, queryClient, userData?.documentId, votePoll, t]);
 
   const textColor = Colors?.neutral00 || '#ffffff';
   const mutedTextColor = Colors?.neutral300 || '#adb1b2';
@@ -191,13 +202,16 @@ function PollDetails({ navigation, route }) {
           <div style={{ alignItems: 'center', display: 'flex', flexWrap: 'wrap', gap: 12, justifyContent: 'space-between', marginBottom: 18 }}>
             <div style={{ display: 'grid', gap: 8 }}>
               <span style={{ color: accentColor, fontSize: 13, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
-                Messagerie
+                {t('pollDetails.messaging', 'Messagerie')}
               </span>
               <h1 style={{ fontFamily: 'Montserrat-Black, sans-serif', fontSize: isTablet ? 34 : 28, margin: 0 }}>
-                Detail du sondage
+                {t('pollDetails.pollDetails', 'Detail du sondage')}
               </h1>
               <p style={{ color: mutedTextColor, margin: 0, maxWidth: 720 }}>
-                Consulte les résultats, vote ou modifie ton choix directement depuis le web.
+                {t(
+                  'pollDetails.seeTheResultsVoteOr',
+                  'Consulte les résultats, vote ou modifie ton choix directement depuis le web.',
+                )}
               </p>
             </div>
             <button
@@ -205,23 +219,23 @@ function PollDetails({ navigation, route }) {
               style={{ background: 'transparent', border: `1px solid ${borderColor}`, borderRadius: 999, color: textColor, cursor: 'pointer', padding: '10px 14px' }}
               type="button"
             >
-              Retour
+              {t('pollDetails.back', 'Retour')}
             </button>
           </div>
 
           {isLoading && !poll ? (
             <div style={{ background: cardBackground, border: `1px solid ${borderColor}`, borderRadius: 20, color: mutedTextColor, padding: 20 }}>
-              Chargement du sondage…
+              {t('pollDetails.loadingThePoll', 'Chargement du sondage…')}
             </div>
           ) : null}
 
           {!poll ? (
             <div style={{ background: cardBackground, border: `1px solid ${borderColor}`, borderRadius: 20, display: 'grid', gap: 8, padding: 20 }}>
               <strong style={{ fontFamily: 'Montserrat-Bold, sans-serif' }}>
-                Sondage introuvable
+                {t('pollDetails.pollNotFound', 'Sondage introuvable')}
               </strong>
               <p style={{ color: mutedTextColor, margin: 0 }}>
-                Ce sondage est introuvable ou a été supprimé.
+                {t('pollDetails.thisPollCanTBe', 'Ce sondage est introuvable ou a été supprimé.')}
               </p>
             </div>
           ) : (
@@ -232,16 +246,19 @@ function PollDetails({ navigation, route }) {
                     Question
                   </span>
                   <h2 style={{ fontFamily: 'Montserrat-Bold, sans-serif', fontSize: 28, margin: 0 }}>
-                    {String(poll?.question || 'Sondage')}
+                    {String(poll?.question || t('pollDetails.poll', 'Sondage'))}
                   </h2>
                   <p style={{ color: mutedTextColor, margin: 0 }}>
                     {poll?.isAnonymous
-                      ? 'Votes anonymes'
-                      : 'Votes visibles pour tous les participants'}
+                      ? t('pollDetails.anonymousVotes', 'Votes anonymes')
+                      : t(
+                        'pollDetails.votesVisibleToAllParticipants',
+                        'Votes visibles pour tous les participants',
+                      )}
                     {' • '}
                     {poll?.allowMultipleVotes
-                      ? 'Votes multiples autorises'
-                      : 'Un seul choix par participant'}
+                      ? t('pollDetails.multipleVotesAllowed', 'Votes multiples autorises')
+                      : t('pollDetails.oneChoicePerParticipant', 'Un seul choix par participant')}
                   </p>
                 </section>
 
@@ -254,9 +271,11 @@ function PollDetails({ navigation, route }) {
                             {section.label}
                           </strong>
                           <span style={{ color: mutedTextColor, fontSize: 13 }}>
-                            {section.count}
-                            {' '}
-                            vote{section.count > 1 ? 's' : ''}
+                            {t('pollDetails.votesCount', {
+                              count: section.count,
+                              defaultValue_one: '{{count}} vote',
+                              defaultValue_other: '{{count}} votes',
+                            })}
                           </span>
                         </div>
                         <button
@@ -273,7 +292,10 @@ function PollDetails({ navigation, route }) {
                           }}
                           type="button"
                         >
-                          {section.isSelected ? 'Vote enregistre' : 'Voter'}
+                          {section.isSelected ? t(
+                            'pollDetails.voteSaved',
+                            'Vote enregistre',
+                          ) : t('pollDetails.vote', 'Voter')}
                         </button>
                       </div>
 
@@ -300,11 +322,16 @@ function PollDetails({ navigation, route }) {
                             ))}
                           </div>
                         ) : (
-                          <span style={{ color: mutedTextColor, fontSize: 13 }}>Aucun vote pour cette option.</span>
+                          <span style={{ color: mutedTextColor, fontSize: 13 }}>
+                            {t('pollDetails.noVoteForThisOption', 'Aucun vote pour cette option.')}
+                          </span>
                         )
                       ) : (
                         <span style={{ color: mutedTextColor, fontSize: 13 }}>
-                          Ce sondage est anonyme, la liste des votants n’est pas affichée.
+                          {t(
+                            'pollDetails.thisPollIsAnonymousThe',
+                            'Ce sondage est anonyme, la liste des votants n’est pas affichée.',
+                          )}
                         </span>
                       )}
                     </section>
@@ -314,13 +341,18 @@ function PollDetails({ navigation, route }) {
 
               <aside style={{ alignSelf: 'start', background: cardBackground, border: `1px solid ${borderColor}`, borderRadius: 24, display: 'grid', gap: 14, padding: 20, position: isDesktop ? 'sticky' : 'relative', top: isDesktop ? 24 : 'auto' }}>
                 <span style={{ color: accentColor, fontSize: 13, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
-                  Informations
+                  {t('pollDetails.information', 'Informations')}
                 </span>
                 <div style={{ display: 'grid', gap: 10 }}>
                   <div style={{ display: 'grid', gap: 4 }}>
-                    <span style={{ color: mutedTextColor, fontSize: 12 }}>Creé par</span>
+                    <span style={{ color: mutedTextColor, fontSize: 12 }}>
+                      {t('pollDetails.createdBy', 'Creé par')}
+                    </span>
                     <strong style={{ fontFamily: 'Montserrat-Bold, sans-serif' }}>
-                      {poll?.createdBy ? (resolveVoterProfile(String(poll.createdBy)).displayName) : 'Membre'}
+                      {poll?.createdBy ? (resolveVoterProfile(String(poll.createdBy)).displayName) : t(
+                        'pollDetails.member',
+                        'Membre',
+                      )}
                     </strong>
                   </div>
                   <div style={{ display: 'grid', gap: 4 }}>
@@ -328,7 +360,9 @@ function PollDetails({ navigation, route }) {
                     <strong style={{ fontFamily: 'Montserrat-Bold, sans-serif' }}>{toDisplayDate(poll?.createdAt)}</strong>
                   </div>
                   <div style={{ display: 'grid', gap: 4 }}>
-                    <span style={{ color: mutedTextColor, fontSize: 12 }}>Total votes</span>
+                    <span style={{ color: mutedTextColor, fontSize: 12 }}>
+                      {t('pollDetails.totalVotes', 'Total votes')}
+                    </span>
                     <strong style={{ color: accentColor, fontFamily: 'Montserrat-Black, sans-serif', fontSize: 30 }}>{totalVotes}</strong>
                   </div>
                 </div>

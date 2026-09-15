@@ -1,5 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import i18next from 'i18next';
 import { useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Alert,
   ScrollView,
@@ -9,6 +11,7 @@ import {
 } from 'react-native';
 
 import useAuth from '@/domains/auth/useAuth';
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -49,22 +52,60 @@ import {
   normalizeTournamentText,
 } from './tournamentUtils';
 
+// I18N-2 : des GETTERS, pas des textes — ces tableaux sont lus à l import, avant
+// l initialisation d i18next ; le libellé se traduit au moment où il s affiche.
 const TAB_OPTIONS = [
-  { label: 'Vue d ensemble', value: 'overview' },
-  { label: 'Equipes', value: 'teams' },
-  { label: 'Poules', value: 'groups' },
-  { label: 'Matchs', value: 'matches' },
-  { label: 'Classements', value: 'standings' },
-  { label: 'Phases finales', value: 'bracket' },
+  {
+    get label() { return i18next.t('tournamentManagement.tabOverview', 'Vue d ensemble'); },
+    value: 'overview',
+  },
+  {
+    get label() { return i18next.t('tournamentManagement.tabTeams', 'Equipes'); },
+    value: 'teams',
+  },
+  {
+    get label() { return i18next.t('tournamentManagement.tabGroups', 'Poules'); },
+    value: 'groups',
+  },
+  {
+    get label() { return i18next.t('tournamentManagement.tabMatches', 'Matchs'); },
+    value: 'matches',
+  },
+  {
+    get label() { return i18next.t('tournamentManagement.tabStandings', 'Classements'); },
+    value: 'standings',
+  },
+  {
+    get label() { return i18next.t('tournamentManagement.tabBracket', 'Phases finales'); },
+    value: 'bracket',
+  },
 ];
 
 const TEAM_FILTER_OPTIONS = [
-  { label: 'Toutes', value: 'all' },
-  { label: 'En attente', value: 'pending' },
-  { label: 'Validees', value: 'accepted' },
-  { label: 'Refusees', value: 'declined' },
-  { label: 'Archivees', value: 'archived' },
-  { label: 'Warnings roster', value: 'warning' },
+  {
+    get label() { return i18next.t('tournamentManagement.filterAll', 'Toutes'); },
+    value: 'all',
+  },
+  {
+    get label() { return i18next.t('tournamentManagement.filterPending', 'En attente'); },
+    value: 'pending',
+  },
+  {
+    get label() { return i18next.t('tournamentManagement.filterAccepted', 'Validees'); },
+    value: 'accepted',
+  },
+  {
+    get label() { return i18next.t('tournamentManagement.filterDeclined', 'Refusees'); },
+    value: 'declined',
+  },
+  {
+    get label() { return i18next.t('tournamentManagement.filterArchived', 'Archivees'); },
+    value: 'archived',
+  },
+  {
+    get label() { return i18next.t('tournamentManagement.filterWarning', 'Warnings roster'); },
+    value: 'warning',
+  },
 ];
 
 /**
@@ -74,6 +115,7 @@ const TEAM_FILTER_OPTIONS = [
  * @param root0.route
  */
 function TournamentManagement({ navigation, route }) {
+  const { t } = useTranslation();
   const { eventId } = route?.params || {};
   const queryClient = useQueryClient();
   const { canManageEvent } = useAuth();
@@ -139,7 +181,13 @@ function TournamentManagement({ navigation, route }) {
   const reviewMutation = useMutation({
     mutationFn: ({ status, teamDocumentId }) => reviewTournamentTeamRegistration(teamDocumentId, status),
     onError: (mutationError) => {
-      Alert.alert('Erreur', mutationError?.message || 'Impossible de mettre à jour cette équipe.');
+      Alert.alert(t(
+        'common.error',
+        'Erreur',
+      ), mutationError?.message || t(
+        'tournamentManagement.unableToUpdateThisTeam',
+        'Impossible de mettre à jour cette équipe.',
+      ));
     },
     onSuccess: invalidate,
   });
@@ -147,18 +195,24 @@ function TournamentManagement({ navigation, route }) {
   const closeTournamentMutation = useMutation({
     mutationFn: () => closeTournament(eventId),
     onError: (mutationError) => {
-      Alert.alert('Erreur', mutationError?.message || 'Impossible de clôturer ce tournoi.');
+      Alert.alert(t(
+        'common.error',
+        'Erreur',
+      ), mutationError?.message || t(
+        'tournamentManagement.unableToCloseThisTournament',
+        'Impossible de clôturer ce tournoi.',
+      ));
     },
     onSuccess: async () => {
       await invalidate();
-      Alert.alert('Tournoi clôture', 'Le tournoi est maintenant ferme et les équipes éphémères sont archivées.');
+      Alert.alert(t('tournamentManagement.tournamentClosed', 'Tournoi clôture'), t('tournamentManagement.theTournamentIsNowClosed', 'Le tournoi est maintenant ferme et les équipes éphémères sont archivées.'));
     },
   });
 
   const setupCompetitionMutation = useMutation({
     mutationFn: () => setupTournamentCompetition(eventId, tournamentConfig),
     onError: (mutationError) => {
-      Alert.alert('Erreur', mutationError?.message || 'Impossible de synchroniser la structure du tournoi.');
+      Alert.alert(t('common.error', 'Erreur'), mutationError?.message || t('tournamentManagement.unableToSyncTheTournament', 'Impossible de synchroniser la structure du tournoi.'));
     },
     onSuccess: invalidate,
   });
@@ -166,7 +220,13 @@ function TournamentManagement({ navigation, route }) {
   const drawGroupsMutation = useMutation({
     mutationFn: () => drawTournamentGroups(eventId),
     onError: (mutationError) => {
-      Alert.alert('Erreur', mutationError?.message || 'Impossible de tirer les poules.');
+      Alert.alert(t(
+        'common.error',
+        'Erreur',
+      ), mutationError?.message || t(
+        'tournamentManagement.unableToDrawTheGroups',
+        'Impossible de tirer les poules.',
+      ));
     },
     onSuccess: invalidate,
   });
@@ -174,7 +234,13 @@ function TournamentManagement({ navigation, route }) {
   const generateMatchesMutation = useMutation({
     mutationFn: () => generateTournamentMatches(eventId),
     onError: (mutationError) => {
-      Alert.alert('Erreur', mutationError?.message || 'Impossible de générer les matchs.');
+      Alert.alert(t(
+        'common.error',
+        'Erreur',
+      ), mutationError?.message || t(
+        'tournamentManagement.unableToGenerateTheMatches',
+        'Impossible de générer les matchs.',
+      ));
     },
     onSuccess: invalidate,
   });
@@ -182,7 +248,13 @@ function TournamentManagement({ navigation, route }) {
   const generateKnockoutMutation = useMutation({
     mutationFn: () => generateTournamentKnockout(eventId),
     onError: (mutationError) => {
-      Alert.alert('Erreur', mutationError?.message || 'Impossible de générer la phase finale.');
+      Alert.alert(t(
+        'common.error',
+        'Erreur',
+      ), mutationError?.message || t(
+        'tournamentManagement.unableToGenerateTheKnockout',
+        'Impossible de générer la phase finale.',
+      ));
     },
     onSuccess: invalidate,
   });
@@ -190,11 +262,17 @@ function TournamentManagement({ navigation, route }) {
   const publishCompetitionMutation = useMutation({
     mutationFn: () => publishTournamentCompetition(eventId),
     onError: (mutationError) => {
-      Alert.alert('Erreur', mutationError?.message || 'Impossible de publier cette compétition.');
+      Alert.alert(t(
+        'common.error',
+        'Erreur',
+      ), mutationError?.message || t(
+        'tournamentManagement.unableToPublishThisCompetition',
+        'Impossible de publier cette compétition.',
+      ));
     },
     onSuccess: async () => {
       await invalidate();
-      Alert.alert('Compétition publiée', 'La structure sportive est maintenant verrouillée. Les horaires, installations et scores restent modifiables.');
+      Alert.alert(t('tournamentManagement.competitionPublished', 'Compétition publiée'), t('tournamentManagement.theSportsStructureIsNow', 'La structure sportive est maintenant verrouillée. Les horaires, installations et scores restent modifiables.'));
     },
   });
 
@@ -227,14 +305,14 @@ function TournamentManagement({ navigation, route }) {
 
   const handleCloseTournament = () => {
     Alert.alert(
-      'Clôturer le tournoi',
-      'Cette action archive toutes les équipes éphémères et gele les modifications sur la compétition.',
+      t('tournamentManagement.closeTheTournament', 'Clôturer le tournoi'),
+      t('tournamentManagement.thisActionArchivesAllTemporary', 'Cette action archive toutes les équipes éphémères et gele les modifications sur la compétition.'),
       [
-        { style: 'cancel', text: 'Annuler' },
+        { style: 'cancel', text: t('tournamentManagement.cancel', 'Annuler') },
         {
           onPress: () => closeTournamentMutation.mutate(),
           style: 'destructive',
-          text: 'Cloturer',
+          text: t('tournamentManagement.close', 'Cloturer'),
         },
       ],
     );
@@ -242,13 +320,13 @@ function TournamentManagement({ navigation, route }) {
 
   const handlePublishCompetition = () => {
     Alert.alert(
-      'Publier la compétition',
-      'Après publication, la structure sportive sera verrouillée. Seuls les horaires, installations et scores resteront modifiables.',
+      t('tournamentManagement.publishTheCompetition', 'Publier la compétition'),
+      t('tournamentManagement.afterPublishingTheSportsStructure', 'Après publication, la structure sportive sera verrouillée. Seuls les horaires, installations et scores resteront modifiables.'),
       [
-        { style: 'cancel', text: 'Annuler' },
+        { style: 'cancel', text: t('tournamentManagement.cancel', 'Annuler') },
         {
           onPress: () => publishCompetitionMutation.mutate(),
-          text: 'Publier',
+          text: t('tournamentManagement.publish', 'Publier'),
         },
       ],
     );
@@ -274,7 +352,9 @@ function TournamentManagement({ navigation, route }) {
       >
         <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter, Spaces.gap[12]]}>
           <View style={{ flex: 1 }}>
-            <Text style={[Fonts.h4Bold, Fonts.neutral00]}>Structure sportive</Text>
+            <Text style={[Fonts.h4Bold, Fonts.neutral00]}>
+              {t('tournamentManagement.sportsStructure', 'Structure sportive')}
+            </Text>
             <Text style={[Fonts.p3, Fonts.neutral200]}>
               {`Format: ${getTournamentFormatLabel(tournamentConfig?.formatMode)}`}
             </Text>
@@ -291,7 +371,7 @@ function TournamentManagement({ navigation, route }) {
           <Tag style={tournamentDs.getToneTagStyle(Colors.primary500)} text={`${dashboard?.overview?.groups || 0} poule(s)`} textColor="primary500" />
           <Tag style={tournamentDs.getToneTagStyle(Colors.primary500)} text={`${dashboard?.overview?.totalMatches || 0} match(s)`} textColor="primary500" />
           {competitionActions.hasBracket ? (
-            <Tag style={tournamentDs.getToneTagStyle(Colors.success500)} text="Bracket génère" textColor="neutral00" textStyle={{ color: Colors.success500 }} />
+            <Tag style={tournamentDs.getToneTagStyle(Colors.success500)} text={t('tournamentManagement.bracketGenerated', 'Bracket génère')} textColor="neutral00" textStyle={{ color: Colors.success500 }} />
           ) : null}
           {counters.warning > 0 ? (
             <Tag style={tournamentDs.getToneTagStyle(Colors.gold500)} text={`${counters.warning} warning(s) roster`} textColor="gold500" />
@@ -299,11 +379,36 @@ function TournamentManagement({ navigation, route }) {
         </View>
 
         <View style={Spaces.gap[8]}>
-          <Text style={[Fonts.p2, Fonts.neutral100]}>{`Validation des équipes: ${tournamentConfig?.registrationMode === 'auto' ? 'Automatique' : 'Manuelle'}`}</Text>
-          <Text style={[Fonts.p2, Fonts.neutral100]}>{`Points: V ${tournamentConfig?.pointsWin ?? 3} | N ${tournamentConfig?.pointsDraw ?? 1} | D ${tournamentConfig?.pointsLoss ?? 0} | F ${tournamentConfig?.pointsForfeit ?? 0}`}</Text>
-          <Text style={[Fonts.p2, Fonts.neutral100]}>{`Génération des matchs: ${tournamentConfig?.matchGenerationMode === 'manual' ? 'Manuelle' : 'Automatique'}`}</Text>
-          <Text style={[Fonts.p2, Fonts.neutral100]}>{`Tirage: ${seedingLabel}`}</Text>
-          <Text style={[Fonts.p2, Fonts.neutral100]}>{`Qualifies / poule: ${tournamentConfig?.qualifiedPerGroup ?? 2}`}</Text>
+          <Text style={[Fonts.p2, Fonts.neutral100]}>
+            {t('tournamentManagement.teamApprovalMode', 'Validation des équipes: {{mode}}', {
+              mode: tournamentConfig?.registrationMode === 'auto'
+                ? t('tournamentManagement.automatic', 'Automatique')
+                : t('tournamentManagement.manual', 'Manuelle'),
+            })}
+          </Text>
+          <Text style={[Fonts.p2, Fonts.neutral100]}>
+            {t('tournamentManagement.pointsSummary', 'Points: V {{win}} | N {{draw}} | D {{loss}} | F {{forfeit}}', {
+              draw: tournamentConfig?.pointsDraw ?? 1,
+              forfeit: tournamentConfig?.pointsForfeit ?? 0,
+              loss: tournamentConfig?.pointsLoss ?? 0,
+              win: tournamentConfig?.pointsWin ?? 3,
+            })}
+          </Text>
+          <Text style={[Fonts.p2, Fonts.neutral100]}>
+            {t('tournamentManagement.matchGenerationMode', 'Génération des matchs: {{mode}}', {
+              mode: tournamentConfig?.matchGenerationMode === 'manual'
+                ? t('tournamentManagement.manual', 'Manuelle')
+                : t('tournamentManagement.automatic', 'Automatique'),
+            })}
+          </Text>
+          <Text style={[Fonts.p2, Fonts.neutral100]}>
+            {t('tournamentManagement.seeding', 'Tirage: {{seeding}}', { seeding: seedingLabel, ...SANS_ECHAPPEMENT })}
+          </Text>
+          <Text style={[Fonts.p2, Fonts.neutral100]}>
+            {t('tournamentManagement.qualifiedPerGroup', 'Qualifies / poule: {{qualified}}', {
+              qualified: tournamentConfig?.qualifiedPerGroup ?? 2,
+            })}
+          </Text>
           {String(tournamentConfig?.rulesText || '').trim() ? (
             <Text style={[Fonts.p3, Fonts.neutral200]}>{String(tournamentConfig.rulesText).trim()}</Text>
           ) : null}
@@ -314,12 +419,18 @@ function TournamentManagement({ navigation, route }) {
         style={tournamentDs.styles.panelCard}
       >
         <Text style={[Fonts.h4Bold, Fonts.neutral00]}>
-          {canManageTournament ? 'Actions compétition' : 'Lecture compétition'}
+          {canManageTournament ? t(
+            'tournamentManagement.competitionActions',
+            'Actions compétition',
+          ) : t(
+            'tournamentManagement.competitionView',
+            'Lecture compétition',
+          )}
         </Text>
         <Text style={[Fonts.p3, Fonts.neutral200]}>
           {canManageTournament
-            ? 'Organise le tirage, génère les matchs, puis publie la compétition quand la structure est prête.'
-            : 'Tu peux suivre les poules, les matchs, les classements et le bracket depuis ce cockpit en lecture seule.'}
+            ? t('tournamentManagement.runTheDrawGenerateThe', 'Organise le tirage, génère les matchs, puis publie la compétition quand la structure est prête.')
+            : t('tournamentManagement.youCanFollowGroupsMatches', 'Tu peux suivre les poules, les matchs, les classements et le bracket depuis ce cockpit en lecture seule.')}
         </Text>
 
         {canManageTournament ? (
@@ -328,36 +439,36 @@ function TournamentManagement({ navigation, route }) {
               disabled: isCompetitionPublished,
               isLoading: setupCompetitionMutation.isPending,
               onPress: () => setupCompetitionMutation.mutate(),
-              title: 'Synchroniser la structure',
+              title: t('tournamentManagement.syncTheStructure', 'Synchroniser la structure'),
               variant: 'Secondary',
             })}
             {competitionActions.canDrawGroups ? renderActionButton({
               isLoading: drawGroupsMutation.isPending,
               onPress: () => drawGroupsMutation.mutate(),
-              title: 'Tirer les poules',
+              title: t('tournamentManagement.drawTheGroups', 'Tirer les poules'),
               variant: 'Primary',
             }) : null}
             {competitionActions.canGenerateMatches ? renderActionButton({
               isLoading: generateMatchesMutation.isPending,
               onPress: () => generateMatchesMutation.mutate(),
-              title: 'Générer les matchs',
+              title: t('tournamentManagement.generateTheMatches', 'Générer les matchs'),
               variant: 'Secondary',
             }) : null}
             {competitionActions.canGenerateKnockout ? renderActionButton({
               isLoading: generateKnockoutMutation.isPending,
               onPress: () => generateKnockoutMutation.mutate(),
-              title: 'Générer la phase finale',
+              title: t('tournamentManagement.generateTheKnockoutStage', 'Générer la phase finale'),
               variant: 'Secondary',
             }) : null}
             {competitionActions.canPublish ? renderActionButton({
               isLoading: publishCompetitionMutation.isPending,
               onPress: handlePublishCompetition,
-              title: 'Publier la compétition',
+              title: t('tournamentManagement.publishTheCompetition', 'Publier la compétition'),
               variant: 'Primary',
             }) : null}
             {renderActionButton({
               onPress: () => navigation.navigate(RouteNames.TournamentSettingsEdit, { eventId }),
-              title: 'Modifier les paramètres',
+              title: t('tournamentManagement.editTheSettings', 'Modifier les paramètres'),
               variant: 'Secondary',
             })}
             <Button
@@ -366,7 +477,7 @@ function TournamentManagement({ navigation, route }) {
               size="sm"
               style={{ borderColor: `${Colors.error500}55` }}
               textStyle={{ color: Colors.error500 }}
-              title="Clôturer le tournoi"
+              title={t('tournamentManagement.closeTheTournament', 'Clôturer le tournoi')}
               variant="SecondaryLight"
             />
           </View>
@@ -378,7 +489,9 @@ function TournamentManagement({ navigation, route }) {
   const renderTeamsTab = () => (
     <View style={Spaces.gap[16]}>
       <View style={[Spaces.gap[12]]}>
-        <Text style={[Fonts.h4Bold, Fonts.neutral00]}>Équipes inscrites</Text>
+        <Text style={[Fonts.h4Bold, Fonts.neutral00]}>
+          {t('tournamentManagement.registeredTeams', 'Équipes inscrites')}
+        </Text>
         <View style={[Alignments.row, { flexWrap: 'wrap' }, Spaces.gap[8]]}>
           {TEAM_FILTER_OPTIONS.map((option) => {
             const selected = teamFilter === option.value;
@@ -397,7 +510,7 @@ function TournamentManagement({ navigation, route }) {
 
       {filteredTeams.length === 0 ? (
         <View style={tournamentDs.styles.panelCard}>
-          <Text style={[Fonts.p2, Fonts.neutral100]}>Aucune équipe ne correspond à ce filtre pour le moment.</Text>
+          <Text style={[Fonts.p2, Fonts.neutral100]}>{t('tournamentManagement.noTeamMatchesThisFilter', 'Aucune équipe ne correspond à ce filtre pour le moment.')}</Text>
         </View>
       ) : null}
 
@@ -412,11 +525,18 @@ function TournamentManagement({ navigation, route }) {
           >
             <View style={[Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween, Spaces.gap[12]]}>
               <View style={{ flex: 1 }}>
-                <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{team?.name || 'Équipe tournoi'}</Text>
+                <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{team?.name || t('tournamentManagement.tournamentTeam', 'Équipe tournoi')}</Text>
                 <Text style={[Fonts.p4, Fonts.primary100]}>
                   {team?.sourceType === 'club_team'
-                    ? `Depuis ${team?.sourceTeam?.name || 'une équipe club'}`
-                    : 'Équipe éphémère créée par un joueur'}
+                    ? t('tournamentManagement.fromTeam', 'Depuis {{teamName}}', {
+                      teamName: team?.sourceTeam?.name
+                        || t('tournamentManagement.aClubTeam', 'une équipe club'),
+                      ...SANS_ECHAPPEMENT,
+                    })
+                    : t(
+                      'tournamentManagement.temporaryTeamCreatedByA',
+                      'Équipe éphémère créée par un joueur',
+                    )}
                 </Text>
               </View>
               <Tag style={tournamentDs.getToneTagStyle(statusMeta.tone)} text={statusMeta.label} textColor="neutral00" textStyle={{ color: statusMeta.tone }} />
@@ -433,14 +553,14 @@ function TournamentManagement({ navigation, route }) {
                 <Tag style={tournamentDs.getToneTagStyle(Colors.warning500)} text={`${rosterSummary.requestedCount} demande${rosterSummary.requestedCount > 1 ? 's' : ''}`} textColor="warning500" />
               ) : null}
               {hasRosterWarning ? (
-                <Tag style={tournamentDs.getToneTagStyle(Colors.gold500)} text="Warning roster" textColor="gold500" />
+                <Tag style={tournamentDs.getToneTagStyle(Colors.gold500)} text={t('tournamentManagement.rosterWarning', 'Warning roster')} textColor="gold500" />
               ) : null}
             </View>
 
             <View style={[Spaces.gap[12]]}>
               <Button
                 onPress={() => navigation.navigate(RouteNames.TournamentTeamDetails, { eventId, teamId: team?.documentId })}
-                title="Ouvrir l équipe"
+                title={t('tournamentManagement.openTheTeam', 'Ouvrir l équipe')}
                 variant="Secondary"
               />
               {canManageTournament && normalizeTournamentText(team?.status) === 'pending' ? (
@@ -450,7 +570,7 @@ function TournamentManagement({ navigation, route }) {
                     onPress={() => handleReview(team?.documentId, 'accepted')}
                     size="sm"
                     style={{ flex: 1 }}
-                    title="Valider"
+                    title={t('tournamentManagement.approve', 'Valider')}
                     variant="Primary"
                   />
                   <Button
@@ -459,7 +579,7 @@ function TournamentManagement({ navigation, route }) {
                     size="sm"
                     style={{ borderColor: `${Colors.error500}55`, flex: 1 }}
                     textStyle={{ color: Colors.error500 }}
-                    title="Refuser"
+                    title={t('tournamentManagement.decline', 'Refuser')}
                     variant="SecondaryLight"
                   />
                 </View>
@@ -471,7 +591,7 @@ function TournamentManagement({ navigation, route }) {
                   size="sm"
                   style={{ borderColor: `${Colors.neutral300}55` }}
                   textStyle={{ color: Colors.neutral100 }}
-                  title="Archiver l équipe"
+                  title={t('tournamentManagement.archiveTheTeam', 'Archiver l équipe')}
                   variant="SecondaryLight"
                 />
               ) : null}
@@ -491,7 +611,9 @@ function TournamentManagement({ navigation, route }) {
       if (!Array.isArray(dashboard?.matches) || dashboard.matches.length === 0) {
         return (
           <View style={tournamentDs.styles.panelCard}>
-            <Text style={[Fonts.p2, Fonts.neutral100]}>Aucun match génère pour le moment.</Text>
+            <Text style={[Fonts.p2, Fonts.neutral100]}>
+              {t('tournamentManagement.noMatchGeneratedYet', 'Aucun match génère pour le moment.')}
+            </Text>
           </View>
         );
       }
@@ -499,7 +621,7 @@ function TournamentManagement({ navigation, route }) {
         <View style={Spaces.gap[12]}>
           {dashboard.matches.map((match) => (
             <TournamentMatchCard
-              ctaLabel="Voir le match"
+              ctaLabel={t('tournamentManagement.seeTheMatch', 'Voir le match')}
               key={match?.documentId}
               match={match}
               onPress={() => navigation.navigate(RouteNames.TournamentMatchDetails, {
@@ -547,9 +669,11 @@ function TournamentManagement({ navigation, route }) {
           style={{ flex: 1 }}
         >
           <View style={tournamentDs.styles.screenIntro}>
-            <Text style={[Fonts.h2, Fonts.neutral00]}>Pilotage du tournoi</Text>
+            <Text style={[Fonts.h2, Fonts.neutral00]}>
+              {t('tournamentManagement.tournamentControl', 'Pilotage du tournoi')}
+            </Text>
             <Text style={[Fonts.p2, Fonts.primary100]}>
-              Tire les poules, génère les matchs, calcule les classements et pilote la phase finale depuis un seul cockpit.
+              {t('tournamentManagement.drawTheGroupsGenerateThe', 'Tire les poules, génère les matchs, calcule les classements et pilote la phase finale depuis un seul cockpit.')}
             </Text>
           </View>
 

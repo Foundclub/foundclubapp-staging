@@ -1,3 +1,5 @@
+import i18next from 'i18next';
+
 export const normalizeTournamentText = (value = '') => String(value || '')
   .normalize('NFD')
   .replace(/[\u0300-\u036f]/g, '')
@@ -86,15 +88,15 @@ export const isTournamentTeamNonCompliant = (team, tournamentConfig = {}) => {
 export const getTournamentTeamStatusMeta = (status, colors) => {
   const normalized = normalizeTournamentText(status);
   if (normalized === 'accepted') {
-    return { label: 'Validée', tone: colors.success500 };
+    return { label: i18next.t('tournamentUtils.approved', 'Validée'), tone: colors.success500 };
   }
   if (normalized === 'declined') {
-    return { label: 'Refusée', tone: colors.error500 };
+    return { label: i18next.t('tournamentUtils.declined', 'Refusée'), tone: colors.error500 };
   }
   if (normalized === 'archived') {
-    return { label: 'Archivée', tone: colors.neutral300 };
+    return { label: i18next.t('tournamentUtils.archived', 'Archivée'), tone: colors.neutral300 };
   }
-  return { label: 'En attente', tone: colors.warning500 };
+  return { label: i18next.t('tournamentUtils.pending', 'En attente'), tone: colors.warning500 };
 };
 
 export const getTournamentStatusCounters = (teams = [], tournamentConfig = {}) => teams.reduce((summary, team) => {
@@ -133,27 +135,82 @@ export const getTournamentPendingMembershipForUser = (teams = [], userDocumentId
 
 export const getTournamentFormatLabel = (formatMode) => {
   const normalized = normalizeTournamentText(formatMode);
-  if (normalized === 'groups_to_knockout') return 'Poules + finale';
-  if (normalized === 'knockout_only') return 'Phase finale directe';
-  if (normalized === 'round_robin') return 'Championnat';
-  return 'Poules uniquement';
+  if (normalized === 'groups_to_knockout') {
+    return i18next.t(
+      'tournamentUtils.groupsFinal',
+      'Poules + finale',
+    );
+  }
+  if (normalized === 'knockout_only') {
+    return i18next.t(
+      'tournamentUtils.straightKnockout',
+      'Phase finale directe',
+    );
+  }
+  if (normalized === 'round_robin') return i18next.t('tournamentUtils.league', 'Championnat');
+  return i18next.t('tournamentUtils.groupsOnly', 'Poules uniquement');
 };
 
 export const getTournamentCompetitionStateLabel = (competitionState) => {
   const normalized = normalizeTournamentText(competitionState);
-  if (normalized === 'published') return 'Compétition publiée';
-  return 'Compétition en brouillon';
+  if (normalized === 'published') {
+    return i18next.t(
+      'tournamentUtils.competitionPublished',
+      'Compétition publiée',
+    );
+  }
+  return i18next.t('tournamentUtils.competitionInDraft', 'Compétition en brouillon');
 };
 
 export const getTournamentMatchStatusMeta = (status, colors) => {
   const normalized = normalizeTournamentText(status);
-  if (normalized === 'validated') return { label: 'Valide', tone: colors.success500 };
-  if (normalized === 'forfeit') return { label: 'Forfait', tone: colors.warning500 };
-  if (normalized === 'played_pending_validation') return { label: 'Score à valider', tone: colors.warning500 };
-  if (normalized === 'scheduled') return { label: 'Programme', tone: colors.primary500 };
-  if (normalized === 'ready') return { label: 'Prêt à jouer', tone: colors.primary500 };
-  if (normalized === 'cancelled') return { label: 'Annule', tone: colors.error500 };
-  return { label: 'Brouillon', tone: colors.neutral300 };
+  if (normalized === 'validated') {
+    return {
+      label: i18next.t(
+        'tournamentUtils.validated',
+        'Valide',
+      ),
+      tone: colors.success500,
+    };
+  }
+  if (normalized === 'forfeit') {
+    return {
+      label: i18next.t(
+        'tournamentUtils.forfeit',
+        'Forfait',
+      ),
+      tone: colors.warning500,
+    };
+  }
+  if (normalized === 'played_pending_validation') return { label: i18next.t('tournamentUtils.scoreToApprove', 'Score à valider'), tone: colors.warning500 };
+  if (normalized === 'scheduled') {
+    return {
+      label: i18next.t(
+        'tournamentUtils.scheduled',
+        'Programme',
+      ),
+      tone: colors.primary500,
+    };
+  }
+  if (normalized === 'ready') {
+    return {
+      label: i18next.t(
+        'tournamentUtils.readyToPlay',
+        'Prêt à jouer',
+      ),
+      tone: colors.primary500,
+    };
+  }
+  if (normalized === 'cancelled') {
+    return {
+      label: i18next.t(
+        'tournamentUtils.cancelled',
+        'Annule',
+      ),
+      tone: colors.error500,
+    };
+  }
+  return { label: i18next.t('tournamentUtils.draft', 'Brouillon'), tone: colors.neutral300 };
 };
 
 export const getTournamentCompetitionActions = (dashboard) => {

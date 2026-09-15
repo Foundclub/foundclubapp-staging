@@ -1,5 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import i18next from 'i18next';
 import { useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Alert,
   ScrollView,
@@ -11,6 +13,7 @@ import {
 } from 'react-native';
 
 import useAuth from '@/domains/auth/useAuth';
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -31,17 +34,42 @@ const parseOptionalInteger = (value) => {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
 };
 
+// I18N-2 : des GETTERS, pas des textes — ces tableaux sont lus à l import, avant
+// l initialisation d i18next ; le libellé se traduit au moment où il s affiche.
 const STRUCTURE_OPTIONS = [
-  { label: 'Poules uniquement', value: 'groups_only' },
-  { label: 'Poules + finale', value: 'groups_to_knockout' },
-  { label: 'Phase finale directe', value: 'knockout_only' },
-  { label: 'Championnat', value: 'round_robin' },
+  {
+    get label() { return i18next.t('tournamentSettingsEdit.groupsOnly', 'Poules uniquement'); },
+    value: 'groups_only',
+  },
+  {
+    get label() { return i18next.t('tournamentSettingsEdit.groupsFinal', 'Poules + finale'); },
+    value: 'groups_to_knockout',
+  },
+  {
+    get label() {
+      return i18next.t('tournamentSettingsEdit.straightKnockout', 'Phase finale directe');
+    },
+    value: 'knockout_only',
+  },
+  {
+    get label() { return i18next.t('tournamentSettingsEdit.league', 'Championnat'); },
+    value: 'round_robin',
+  },
 ];
 
 const SEEDING_OPTIONS = [
-  { label: 'Aleatoire', value: 'random' },
-  { label: 'Serpentin', value: 'snake' },
-  { label: 'Ordre manuel', value: 'manual' },
+  {
+    get label() { return i18next.t('tournamentSettingsEdit.seedingRandom', 'Aleatoire'); },
+    value: 'random',
+  },
+  {
+    get label() { return i18next.t('tournamentSettingsEdit.seedingSnake', 'Serpentin'); },
+    value: 'snake',
+  },
+  {
+    get label() { return i18next.t('tournamentSettingsEdit.seedingManual', 'Ordre manuel'); },
+    value: 'manual',
+  },
 ];
 
 /**
@@ -51,6 +79,7 @@ const SEEDING_OPTIONS = [
  * @param root0.route
  */
 function TournamentSettingsEdit({ navigation, route }) {
+  const { t } = useTranslation();
   const { eventId } = route?.params || {};
   const queryClient = useQueryClient();
   const { canManageEvent } = useAuth();
@@ -202,7 +231,7 @@ function TournamentSettingsEdit({ navigation, route }) {
       },
     }),
     onError: (mutationError) => {
-      Alert.alert('Erreur', mutationError?.message || 'Impossible de mettre à jour les paramètres du tournoi.');
+      Alert.alert(t('common.error', 'Erreur'), mutationError?.message || t('tournamentSettingsEdit.unableToUpdateTheTournament', 'Impossible de mettre à jour les paramètres du tournoi.'));
     },
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['event', eventId] });
@@ -276,17 +305,31 @@ function TournamentSettingsEdit({ navigation, route }) {
       <WithDataWrapper data={event} error={error} isLoading={isLoading} onRetry={refetch}>
         <ScrollView contentContainerStyle={tournamentDs.styles.screenContent}>
           <View style={tournamentDs.styles.screenIntro}>
-            <Text style={[Fonts.h2, Fonts.neutral00]}>Paramètres du tournoi</Text>
+            <Text style={[Fonts.h2, Fonts.neutral00]}>
+              {t('tournamentSettingsEdit.tournamentSettings', 'Paramètres du tournoi')}
+            </Text>
             <Text style={[Fonts.p2, Fonts.primary100]}>
-              Ajuste les règles globales du tournoi sans toucher aux équipes permanentes du club.
+              {t(
+                'tournamentSettingsEdit.adjustTheTournamentSGlobal',
+                'Ajuste les règles globales du tournoi sans toucher aux équipes permanentes du '
+                  + 'club.',
+              )}
             </Text>
           </View>
 
           {!canManageTournament ? (
             <View style={sectionCardStyle}>
-              <Text style={[Fonts.p2Bold, Fonts.neutral00]}>Accès réserve a l organisateur</Text>
+              <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
+                {t(
+                  'tournamentSettingsEdit.accessReservedForTheOrganiser',
+                  'Accès réserve a l organisateur',
+                )}
+              </Text>
               <Text style={[Fonts.p3, Fonts.neutral200]}>
-                Seul le createur du tournoi peut modifier ces paramètres globaux.
+                {t(
+                  'tournamentSettingsEdit.onlyTheTournamentCreatorCan',
+                  'Seul le createur du tournoi peut modifier ces paramètres globaux.',
+                )}
               </Text>
             </View>
           ) : null}
@@ -294,14 +337,18 @@ function TournamentSettingsEdit({ navigation, route }) {
           {canManageTournament ? (
             <View style={sectionCardStyle}>
               <View style={[Spaces.gap[8]]}>
-                <Text style={[Fonts.h4Bold, Fonts.neutral00]}>Cadre du tournoi</Text>
+                <Text style={[Fonts.h4Bold, Fonts.neutral00]}>
+                  {t('tournamentSettingsEdit.tournamentFrame', 'Cadre du tournoi')}
+                </Text>
                 <Text style={[Fonts.p3, Fonts.neutral200]}>
-                  Le nombre d équipes et la fourchette d effectif s appliquent à toutes les équipes éphémères de ce tournoi.
+                  {t('tournamentSettingsEdit.theNumberOfTeamsAnd', 'Le nombre d équipes et la fourchette d effectif s appliquent à toutes les équipes éphémères de ce tournoi.')}
                 </Text>
               </View>
 
               <View style={[Spaces.gap[8]]}>
-                <Text style={[Fonts.p3Bold, Fonts.primary500]}>Nombre max d équipes</Text>
+                <Text style={[Fonts.p3Bold, Fonts.primary500]}>
+                  {t('tournamentSettingsEdit.maxNumberOfTeams', 'Nombre max d équipes')}
+                </Text>
                 <TextInput
                   keyboardType="number-pad"
                   onChangeText={setMaxTeamsText}
@@ -314,7 +361,9 @@ function TournamentSettingsEdit({ navigation, route }) {
 
               <View style={[Alignments.row, Spaces.gap[12]]}>
                 <View style={[Spaces.gap[8], { flex: 1 }]}>
-                  <Text style={[Fonts.p3Bold, Fonts.primary500]}>Effectif min</Text>
+                  <Text style={[Fonts.p3Bold, Fonts.primary500]}>
+                    {t('tournamentSettingsEdit.minSquad', 'Effectif min')}
+                  </Text>
                   <TextInput
                     keyboardType="number-pad"
                     onChangeText={setMinRosterText}
@@ -325,7 +374,9 @@ function TournamentSettingsEdit({ navigation, route }) {
                   />
                 </View>
                 <View style={[Spaces.gap[8], { flex: 1 }]}>
-                  <Text style={[Fonts.p3Bold, Fonts.primary500]}>Effectif max</Text>
+                  <Text style={[Fonts.p3Bold, Fonts.primary500]}>
+                    {t('tournamentSettingsEdit.maxSquad', 'Effectif max')}
+                  </Text>
                   <TextInput
                     keyboardType="number-pad"
                     onChangeText={setMaxRosterText}
@@ -339,7 +390,10 @@ function TournamentSettingsEdit({ navigation, route }) {
 
               {isRosterRangeInvalid ? (
                 <Text style={[Fonts.p3, Fonts.error500]}>
-                  L effectif minimum ne peut pas dépasser l effectif maximum.
+                  {t(
+                    'tournamentSettingsEdit.theMinimumSquadSizeCan',
+                    'L effectif minimum ne peut pas dépasser l effectif maximum.',
+                  )}
                 </Text>
               ) : null}
               {nonCompliantAcceptedTeams.length > 0 ? (
@@ -349,9 +403,11 @@ function TournamentSettingsEdit({ navigation, route }) {
                     borderColor: `${Colors.warning500}38`,
                   }]}
                 >
-                  <Text style={[Fonts.p3Bold, Fonts.warning500]}>Impact roster détecte</Text>
+                  <Text style={[Fonts.p3Bold, Fonts.warning500]}>
+                    {t('tournamentSettingsEdit.rosterImpactDetected', 'Impact roster détecte')}
+                  </Text>
                   <Text style={[Fonts.p3, Fonts.neutral100]}>
-                    {`${nonCompliantAcceptedTeams.length} équipe(s) déjà acceptée(s) deviendront non conformes avec ces règles. Leur statut restera accepte, avec warning visible seulement.`}
+                    {t('tournamentSettingsEdit.teamSAlreadyAcceptedWill', '{{teamsCount}} équipe(s) déjà acceptée(s) deviendront non conformes avec ces règles. Leur statut restera accepte, avec warning visible seulement.', { teamsCount: nonCompliantAcceptedTeams.length, ...SANS_ECHAPPEMENT })}
                   </Text>
                 </View>
               ) : null}
@@ -361,9 +417,11 @@ function TournamentSettingsEdit({ navigation, route }) {
           {canManageTournament ? (
             <View style={sectionCardStyle}>
               <View style={[Spaces.gap[8]]}>
-                <Text style={[Fonts.h4Bold, Fonts.neutral00]}>Structure sportive</Text>
+                <Text style={[Fonts.h4Bold, Fonts.neutral00]}>
+                  {t('tournamentSettingsEdit.sportsStructure', 'Structure sportive')}
+                </Text>
                 <Text style={[Fonts.p3, Fonts.neutral200]}>
-                  Ces réglages pilotent les poules, la phase finale et le calcul du classement. Après modification, resynchronise la compétition depuis le cockpit organisateur.
+                  {t('tournamentSettingsEdit.theseSettingsDriveTheGroups', 'Ces réglages pilotent les poules, la phase finale et le calcul du classement. Après modification, resynchronise la compétition depuis le cockpit organisateur.')}
                 </Text>
               </View>
 
@@ -375,7 +433,9 @@ function TournamentSettingsEdit({ navigation, route }) {
                 <View style={[Spaces.gap[12]]}>
                   {formatMode !== 'round_robin' ? (
                     <View style={[Spaces.gap[8]]}>
-                      <Text style={[Fonts.p3Bold, Fonts.primary500]}>Nombre de poules</Text>
+                      <Text style={[Fonts.p3Bold, Fonts.primary500]}>
+                        {t('tournamentSettingsEdit.numberOfGroups', 'Nombre de poules')}
+                      </Text>
                       <TextInput
                         keyboardType="number-pad"
                         onChangeText={setGroupCountText}
@@ -389,7 +449,9 @@ function TournamentSettingsEdit({ navigation, route }) {
 
                   <View style={[Alignments.row, Spaces.gap[12]]}>
                     <View style={[Spaces.gap[8], { flex: 1 }]}>
-                      <Text style={[Fonts.p3Bold, Fonts.primary500]}>Qualifiés par poule</Text>
+                      <Text style={[Fonts.p3Bold, Fonts.primary500]}>
+                        {t('tournamentSettingsEdit.qualifiedPerGroup', 'Qualifiés par poule')}
+                      </Text>
                       <TextInput
                         keyboardType="number-pad"
                         onChangeText={setQualifiedPerGroupText}
@@ -401,7 +463,9 @@ function TournamentSettingsEdit({ navigation, route }) {
                     </View>
                     {formatMode === 'groups_to_knockout' ? (
                       <View style={[Spaces.gap[8], { flex: 1 }]}>
-                        <Text style={[Fonts.p3Bold, Fonts.primary500]}>Meilleurs 3es</Text>
+                        <Text style={[Fonts.p3Bold, Fonts.primary500]}>
+                          {t('tournamentSettingsEdit.best3rds', 'Meilleurs 3es')}
+                        </Text>
                         <TextInput
                           keyboardType="number-pad"
                           onChangeText={setBestThirdPlacesText}
@@ -419,7 +483,9 @@ function TournamentSettingsEdit({ navigation, route }) {
               {usesKnockout ? (
                 <View style={[Spaces.gap[12]]}>
                   <View style={[Spaces.gap[8]]}>
-                    <Text style={[Fonts.p3Bold, Fonts.primary500]}>Taille du bracket</Text>
+                    <Text style={[Fonts.p3Bold, Fonts.primary500]}>
+                      {t('tournamentSettingsEdit.bracketSize', 'Taille du bracket')}
+                    </Text>
                     <TextInput
                       keyboardType="number-pad"
                       onChangeText={setKnockoutSizeText}
@@ -431,12 +497,17 @@ function TournamentSettingsEdit({ navigation, route }) {
                   </View>
                   {isKnockoutSizeInvalid ? (
                     <Text style={[Fonts.p3, Fonts.error500]}>
-                      Utilise une taille de bracket standard: 2, 4, 8, 16 ou 32.
+                      {t(
+                        'tournamentSettingsEdit.useAStandardBracketSize',
+                        'Utilise une taille de bracket standard: 2, 4, 8, 16 ou 32.',
+                      )}
                     </Text>
                   ) : null}
 
                   <View style={[Spaces.gap[8]]}>
-                    <Text style={[Fonts.p3Bold, Fonts.primary500]}>Mode de tirage</Text>
+                    <Text style={[Fonts.p3Bold, Fonts.primary500]}>
+                      {t('tournamentSettingsEdit.drawMode', 'Mode de tirage')}
+                    </Text>
                     <View style={[Spaces.gap[12]]}>
                       {SEEDING_OPTIONS.map((option) => renderSelectionCard(option, seedingMode, setSeedingMode))}
                     </View>
@@ -444,9 +515,15 @@ function TournamentSettingsEdit({ navigation, route }) {
 
                   <View style={[Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween, Spaces.gap[12]]}>
                     <View style={{ flex: 1 }}>
-                      <Text style={[Fonts.p2Bold, Fonts.neutral00]}>Match pour la 3e place</Text>
+                      <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
+                        {t('tournamentSettingsEdit.thirdPlaceMatch', 'Match pour la 3e place')}
+                      </Text>
                       <Text style={[Fonts.p3, Fonts.neutral200]}>
-                        Ajoute une petite finale quand la compétition atteint les demi-finales.
+                        {t(
+                          'tournamentSettingsEdit.addsASmallFinalWhen',
+                          'Ajoute une petite finale quand la compétition atteint les '
+                            + 'demi-finales.',
+                        )}
                       </Text>
                     </View>
                     <Switch
@@ -460,17 +537,22 @@ function TournamentSettingsEdit({ navigation, route }) {
               ) : null}
 
               <View style={[Spaces.gap[8]]}>
-                <Text style={[Fonts.p3Bold, Fonts.primary500]}>Génération des matchs</Text>
+                <Text style={[Fonts.p3Bold, Fonts.primary500]}>
+                  {t('tournamentSettingsEdit.matchGeneration', 'Génération des matchs')}
+                </Text>
                 <View style={[Spaces.gap[12]]}>
                   {[
                     {
-                      description: 'Le calendrier est généré automatiquement une fois les poules créées.',
-                      label: 'Automatique',
+                      description: t('tournamentSettingsEdit.theScheduleIsGeneratedAutomatically', 'Le calendrier est généré automatiquement une fois les poules créées.'),
+                      label: t('tournamentSettingsEdit.automatic', 'Automatique'),
                       value: 'auto',
                     },
                     {
-                      description: 'L organisateur déclenche lui-même la génération du calendrier.',
-                      label: 'Manuelle',
+                      description: t(
+                        'tournamentSettingsEdit.theOrganiserTriggersTheSchedule',
+                        'L organisateur déclenche lui-même la génération du calendrier.',
+                      ),
+                      label: t('tournamentSettingsEdit.manual', 'Manuelle'),
                       value: 'manual',
                     },
                   ].map((option) => renderSelectionCard(option, matchGenerationMode, setMatchGenerationMode, option.description))}
@@ -479,7 +561,9 @@ function TournamentSettingsEdit({ navigation, route }) {
 
               <View style={[Alignments.row, Spaces.gap[12], { flexWrap: 'wrap' }]}>
                 <View style={[Spaces.gap[8], { flex: 1, minWidth: 130 }]}>
-                  <Text style={[Fonts.p3Bold, Fonts.primary500]}>Victoire</Text>
+                  <Text style={[Fonts.p3Bold, Fonts.primary500]}>
+                    {t('tournamentSettingsEdit.win', 'Victoire')}
+                  </Text>
                   <TextInput
                     keyboardType="number-pad"
                     onChangeText={setPointsWinText}
@@ -490,7 +574,9 @@ function TournamentSettingsEdit({ navigation, route }) {
                   />
                 </View>
                 <View style={[Spaces.gap[8], { flex: 1, minWidth: 130 }]}>
-                  <Text style={[Fonts.p3Bold, Fonts.primary500]}>Nul</Text>
+                  <Text style={[Fonts.p3Bold, Fonts.primary500]}>
+                    {t('tournamentSettingsEdit.draw', 'Nul')}
+                  </Text>
                   <TextInput
                     keyboardType="number-pad"
                     onChangeText={setPointsDrawText}
@@ -501,7 +587,9 @@ function TournamentSettingsEdit({ navigation, route }) {
                   />
                 </View>
                 <View style={[Spaces.gap[8], { flex: 1, minWidth: 130 }]}>
-                  <Text style={[Fonts.p3Bold, Fonts.primary500]}>Défaite</Text>
+                  <Text style={[Fonts.p3Bold, Fonts.primary500]}>
+                    {t('tournamentSettingsEdit.loss', 'Défaite')}
+                  </Text>
                   <TextInput
                     keyboardType="number-pad"
                     onChangeText={setPointsLossText}
@@ -512,7 +600,9 @@ function TournamentSettingsEdit({ navigation, route }) {
                   />
                 </View>
                 <View style={[Spaces.gap[8], { flex: 1, minWidth: 130 }]}>
-                  <Text style={[Fonts.p3Bold, Fonts.primary500]}>Forfait</Text>
+                  <Text style={[Fonts.p3Bold, Fonts.primary500]}>
+                    {t('tournamentSettingsEdit.forfeit', 'Forfait')}
+                  </Text>
                   <TextInput
                     keyboardType="number-pad"
                     onChangeText={setPointsForfeitText}
@@ -529,17 +619,25 @@ function TournamentSettingsEdit({ navigation, route }) {
           {canManageTournament ? (
             <View style={sectionCardStyle}>
               <View style={[Spaces.gap[8]]}>
-                <Text style={[Fonts.h4Bold, Fonts.neutral00]}>Équipes et eligibility</Text>
+                <Text style={[Fonts.h4Bold, Fonts.neutral00]}>
+                  {t('tournamentSettingsEdit.teamsAndEligibility', 'Équipes et eligibility')}
+                </Text>
                 <Text style={[Fonts.p3, Fonts.neutral200]}>
-                  Définis qui peut créer une équipe et si le melange de clubs est autorise.
+                  {t(
+                    'tournamentSettingsEdit.setWhoCanCreateA',
+                    'Définis qui peut créer une équipe et si le melange de clubs est autorise.',
+                  )}
                 </Text>
               </View>
 
               <View style={[Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween, Spaces.gap[12]]}>
                 <View style={{ flex: 1 }}>
-                  <Text style={[Fonts.p2Bold, Fonts.neutral00]}>Autoriser les équipes éphémères</Text>
+                  <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{t('tournamentSettingsEdit.allowTemporaryTeams', 'Autoriser les équipes éphémères')}</Text>
                   <Text style={[Fonts.p3, Fonts.neutral200]}>
-                    Les joueurs peuvent créer leur propre équipe pour ce tournoi.
+                    {t(
+                      'tournamentSettingsEdit.playersCanCreateTheirOwn',
+                      'Les joueurs peuvent créer leur propre équipe pour ce tournoi.',
+                    )}
                   </Text>
                 </View>
                 <Switch
@@ -552,9 +650,12 @@ function TournamentSettingsEdit({ navigation, route }) {
 
               <View style={[Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween, Spaces.gap[12]]}>
                 <View style={{ flex: 1 }}>
-                  <Text style={[Fonts.p2Bold, Fonts.neutral00]}>Autoriser les joueurs d autres clubs</Text>
+                  <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{t('tournamentSettingsEdit.allowPlayersFromOtherClubs', 'Autoriser les joueurs d autres clubs')}</Text>
                   <Text style={[Fonts.p3, Fonts.neutral200]}>
-                    Autorise les ajouts hors club organisateur dans les rosters tournoi.
+                    {t(
+                      'tournamentSettingsEdit.allowsAdditionsFromOutsideThe',
+                      'Autorise les ajouts hors club organisateur dans les rosters tournoi.',
+                    )}
                   </Text>
                 </View>
                 <Switch
@@ -570,9 +671,14 @@ function TournamentSettingsEdit({ navigation, route }) {
           {canManageTournament ? (
             <View style={sectionCardStyle}>
               <View style={[Spaces.gap[8]]}>
-                <Text style={[Fonts.h4Bold, Fonts.neutral00]}>Validation des équipes</Text>
+                <Text style={[Fonts.h4Bold, Fonts.neutral00]}>
+                  {t('tournamentSettingsEdit.teamApproval', 'Validation des équipes')}
+                </Text>
                 <Text style={[Fonts.p3, Fonts.neutral200]}>
-                  En mode manuel, seul l organisateur valide les équipes inscrites.
+                  {t(
+                    'tournamentSettingsEdit.inManualModeOnlyThe',
+                    'En mode manuel, seul l organisateur valide les équipes inscrites.',
+                  )}
                 </Text>
               </View>
 
@@ -580,12 +686,18 @@ function TournamentSettingsEdit({ navigation, route }) {
                 {renderRegistrationModeCard(
                   'manual',
                   'Validation manuelle',
-                  'Chaque équipe reste en attente tant que le dirigeant ne l a pas acceptée.',
+                  t(
+                    'tournamentSettingsEdit.eachTeamStaysPendingUntil',
+                    'Chaque équipe reste en attente tant que le dirigeant ne l a pas acceptée.',
+                  ),
                 )}
                 {renderRegistrationModeCard(
                   'auto',
                   'Validation automatique',
-                  'Les équipes compatibles sont acceptées directement a l inscription.',
+                  t(
+                    'tournamentSettingsEdit.compatibleTeamsAreAcceptedDirectly',
+                    'Les équipes compatibles sont acceptées directement a l inscription.',
+                  ),
                 )}
               </View>
             </View>
@@ -594,9 +706,11 @@ function TournamentSettingsEdit({ navigation, route }) {
           {canManageTournament ? (
             <View style={sectionCardStyle}>
               <View style={tournamentDs.styles.headerBlock}>
-                <Text style={[Fonts.h4Bold, Fonts.neutral00]}>Règles du tournoi</Text>
+                <Text style={[Fonts.h4Bold, Fonts.neutral00]}>
+                  {t('tournamentSettingsEdit.tournamentRules', 'Règles du tournoi')}
+                </Text>
                 <Text style={[Fonts.p3, Fonts.neutral200]}>
-                  Ce texte est affiche sur la fiche tournoi et sert de référence commune pour les équipes.
+                  {t('tournamentSettingsEdit.thisTextIsShownOn', 'Ce texte est affiche sur la fiche tournoi et sert de référence commune pour les équipes.')}
                 </Text>
               </View>
 
@@ -604,7 +718,10 @@ function TournamentSettingsEdit({ navigation, route }) {
                 multiline
                 numberOfLines={5}
                 onChangeText={setRulesText}
-                placeholder="Ex. un joueur actif par tournoi, tenue claire obligatoire..."
+                placeholder={t(
+                  'tournamentSettingsEdit.eGOneActivePlayer',
+                  'Ex. un joueur actif par tournoi, tenue claire obligatoire...',
+                )}
                 placeholderTextColor={Colors.neutral500}
                 style={[
                   ...tournamentDs.styles.multilineInput,
@@ -623,13 +740,15 @@ function TournamentSettingsEdit({ navigation, route }) {
                 disabled={isRosterRangeInvalid || isKnockoutSizeInvalid || updateMutation.isPending}
                 isLoading={updateMutation.isPending}
                 onPress={() => updateMutation.mutate()}
-                title="Enregistrer"
+                title={t('tournamentSettingsEdit.save', 'Enregistrer')}
                 variant="Primary"
               />
             ) : null}
             <Button
               onPress={() => navigation.goBack()}
-              title={canManageTournament ? 'Annuler' : 'Retour'}
+              title={canManageTournament
+                ? t('tournamentSettingsEdit.cancel', 'Annuler')
+                : t('common.back', 'Retour')}
               variant="Secondary"
             />
           </View>

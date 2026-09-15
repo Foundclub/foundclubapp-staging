@@ -1,6 +1,7 @@
 import {
   useCallback, useEffect, useMemo, useState,
 } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Alert,
   ScrollView,
@@ -18,6 +19,7 @@ import {
   normalizeCandidateDates,
 } from '@/domains/search/friendlyMatchFlow';
 import { withAlpha } from '@/theme/colors';
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -80,6 +82,7 @@ const getLocationLabel = (location) => {
  * @returns {import('react').ReactElement}
  */
 function FriendlyMatchAdDetails({ navigation, route }) {
+  const { t } = useTranslation();
   const adId = route?.params?.adId;
   const {
     Alignments, Colors, Fonts, Spaces,
@@ -135,11 +138,14 @@ function FriendlyMatchAdDetails({ navigation, route }) {
       setLoadError('');
     } catch (error) {
       logger.error('Chargement de l annonce amicale impossible', { error });
-      setLoadError('Cette annonce n’est plus disponible.');
+      setLoadError(t(
+        'friendlyMatchAdDetails.thisListingIsNoLonger',
+        'Cette annonce n’est plus disponible.',
+      ));
     } finally {
       setIsLoading(false);
     }
-  }, [adId]);
+  }, [adId, t]);
 
   useEffect(() => {
     loadAd();
@@ -221,17 +227,26 @@ function FriendlyMatchAdDetails({ navigation, route }) {
 
     const hasThread = Boolean(getFriendlyMatchChatId(freshApplication));
     Alert.alert(
-      'Félicitations, proposition envoyée !',
+      t(
+        'friendlyMatchAdDetails.congratulationsProposalSent',
+        'Félicitations, proposition envoyée !',
+      ),
       hasThread
-        ? 'Elle vient d’être publiée dans la discussion avec l’autre staff.'
-          + ' À vous de convenir des détails.'
-        : 'L’autre staff vient d’être prévenu. Tu la retrouveras dans tes demandes.',
+        ? t(
+          'friendlyMatchAdDetails.publishedInConversation',
+          'Elle vient d’être publiée dans la discussion avec l’autre staff.'
+            + ' À vous de convenir des détails.',
+        )
+        : t(
+          'friendlyMatchAdDetails.theOtherStaffHasJust',
+          'L’autre staff vient d’être prévenu. Tu la retrouveras dans tes demandes.',
+        ),
       [{
         onPress: () => { if (hasThread) openConversation(freshApplication); },
         text: 'OK',
       }],
     );
-  }, [adId, managedTeamIds, openConversation]);
+  }, [adId, managedTeamIds, openConversation, t]);
 
   /**
    * Annuler son annonce (§4.6). On ne SUPPRIME pas : le statut passe a
@@ -242,13 +257,20 @@ function FriendlyMatchAdDetails({ navigation, route }) {
   const handleCancelAd = useCallback(() => {
     const applicationCount = Number(ad?.applicationsCount || 0);
     Alert.alert(
-      'Annuler cette annonce ?',
+      t('friendlyMatchAdDetails.cancelThisListing', 'Annuler cette annonce ?'),
       applicationCount > 0
-        ? `Elle ne sera plus visible, et les ${applicationCount} équipe(s) qui ont`
-          + ' répondu ne pourront plus aller plus loin.'
-        : 'Elle ne sera plus visible par les autres équipes.',
+        ? t(
+          'friendlyMatchAdDetails.cancelWithApplications',
+          'Elle ne sera plus visible, et les {{applicationCount}} équipe(s) qui ont'
+            + ' répondu ne pourront plus aller plus loin.',
+          { applicationCount },
+        )
+        : t(
+          'friendlyMatchAdDetails.itWillNoLongerBe',
+          'Elle ne sera plus visible par les autres équipes.',
+        ),
       [
-        { style: 'cancel', text: 'Garder l’annonce' },
+        { style: 'cancel', text: t('friendlyMatchAdDetails.keepTheListing', 'Garder l’annonce') },
         {
           onPress: async () => {
             try {
@@ -258,23 +280,29 @@ function FriendlyMatchAdDetails({ navigation, route }) {
               logger.error('Annulation d annonce impossible', { error });
               Alert.alert(
                 'Annulation impossible',
-                /** @type {any} */ (error)?.message || 'Réessaie dans un instant.',
+                /** @type {any} */ (error)?.message || t(
+                  'friendlyMatchAdDetails.tryAgainInAMoment',
+                  'Réessaie dans un instant.',
+                ),
               );
             }
           },
           style: 'destructive',
-          text: 'Annuler l’annonce',
+          text: t('friendlyMatchAdDetails.cancelTheListing', 'Annuler l’annonce'),
         },
       ],
     );
-  }, [ad, loadAd]);
+  }, [ad, loadAd, t]);
 
   const handleWithdraw = useCallback(() => {
     Alert.alert(
-      'Retirer ma proposition',
-      'L’autre staff ne verra plus ta proposition. La discussion, elle, reste.',
+      t('friendlyMatchAdDetails.withdrawMyProposal', 'Retirer ma proposition'),
+      t(
+        'friendlyMatchAdDetails.theOtherStaffWillNo',
+        'L’autre staff ne verra plus ta proposition. La discussion, elle, reste.',
+      ),
       [
-        { style: 'cancel', text: 'Annuler' },
+        { style: 'cancel', text: t('friendlyMatchAdDetails.cancel', 'Annuler') },
         {
           onPress: async () => {
             try {
@@ -284,16 +312,19 @@ function FriendlyMatchAdDetails({ navigation, route }) {
               logger.error('Retrait de candidature impossible', { error });
               Alert.alert(
                 'Retrait impossible',
-                /** @type {any} */ (error)?.message || 'Réessaie dans un instant.',
+                /** @type {any} */ (error)?.message || t(
+                  'friendlyMatchAdDetails.tryAgainInAMoment',
+                  'Réessaie dans un instant.',
+                ),
               );
             }
           },
           style: 'destructive',
-          text: 'Retirer',
+          text: t('friendlyMatchAdDetails.withdraw', 'Retirer'),
         },
       ],
     );
-  }, [loadAd, myApplication]);
+  }, [loadAd, myApplication, t]);
 
   if (isLoading) {
     return (
@@ -314,7 +345,10 @@ function FriendlyMatchAdDetails({ navigation, route }) {
         }]}
         >
           <Text style={[Fonts.p1, { color: Colors.neutral100, textAlign: 'center' }]}>
-            {loadError || 'Cette annonce n’est plus disponible.'}
+            {loadError || t(
+              'friendlyMatchAdDetails.thisListingIsNoLonger',
+              'Cette annonce n’est plus disponible.',
+            )}
           </Text>
         </View>
       </ScreenContainer>
@@ -324,11 +358,14 @@ function FriendlyMatchAdDetails({ navigation, route }) {
   const hostingSummary = getHostingSummary(ad);
   const slots = normalizeCandidateDates(ad.candidateDates);
   const locationLabel = getLocationLabel(ad.location);
-  const radiusLabel = ad.travelRadiusKm ? `dans un rayon de ${ad.travelRadiusKm} km` : '';
+  const radiusLabel = ad.travelRadiusKm ? t(
+    'friendlyMatchAdDetails.withinKm',
+    'dans un rayon de {{radius}} km',
+    { radius: ad.travelRadiusKm, ...SANS_ECHAPPEMENT },
+  ) : '';
   const pendingApplications = applications.filter(
     (/** @type {any} */ application) => application?.status === 'pending',
   );
-  const pendingLabel = pendingApplications.length > 1 ? 'propositions' : 'proposition';
   const settledApplications = applications.filter(
     (/** @type {any} */ application) => application?.status !== 'pending',
   );
@@ -360,7 +397,7 @@ function FriendlyMatchAdDetails({ navigation, route }) {
       >
         <View style={[Spaces.gap[4]]}>
           <Text style={[Fonts.h3, Fonts.neutral00]}>
-            {ad.team?.name || 'Une équipe'}
+            {ad.team?.name || t('friendlyMatchAdDetails.aTeam', 'Une équipe')}
           </Text>
           <Text style={[Fonts.p2, { color: withAlpha(Colors.neutral100, 0.63) }]}>
             {[
@@ -381,14 +418,20 @@ function FriendlyMatchAdDetails({ navigation, route }) {
           >
             <Text style={[Fonts.p3Bold, { color: Colors.neutral00 }]}>
               {ad.status === 'matched'
-                ? 'Cette annonce a trouvé son adversaire.'
-                : 'Cette annonce n’accepte plus de proposition.'}
+                ? t(
+                  'friendlyMatchAdDetails.thisListingHasFoundIts',
+                  'Cette annonce a trouvé son adversaire.',
+                )
+                : t(
+                  'friendlyMatchAdDetails.thisListingNoLongerAccepts',
+                  'Cette annonce n’accepte plus de proposition.',
+                )}
             </Text>
           </View>
         ) : null}
 
         {renderCard(
-          'Ce que cette équipe propose', (
+          t('friendlyMatchAdDetails.whatThisTeamOffers', 'Ce que cette équipe propose'), (
             <View style={[Spaces.gap[4]]}>
               <Text style={[Fonts.p1Bold, { color: Colors.primary500 }]}>
                 {hostingSummary.label}
@@ -411,10 +454,18 @@ function FriendlyMatchAdDetails({ navigation, route }) {
         )}
 
         {renderCard(
-          slots.length > 1 ? 'Dates proposées' : 'Date proposée', (
+          slots.length > 1 ? t(
+            'friendlyMatchAdDetails.proposedDates',
+            'Dates proposées',
+          ) : t(
+            'friendlyMatchAdDetails.proposedDate',
+            'Date proposée',
+          ), (
             <View style={[Spaces.gap[4]]}>
               {slots.length === 0 ? (
-                <Text style={[Fonts.p3, { color: Colors.neutral300 }]}>Aucune date proposée.</Text>
+                <Text style={[Fonts.p3, { color: Colors.neutral300 }]}>
+                  {t('friendlyMatchAdDetails.noDateProposed', 'Aucune date proposée.')}
+                </Text>
               ) : slots.map((/** @type {any} */ slot) => (
                 <Text key={slot.date} style={[Fonts.p3, { color: Colors.neutral200 }]}>
                   {getSlotLabel(slot)}
@@ -425,7 +476,7 @@ function FriendlyMatchAdDetails({ navigation, route }) {
         )}
 
         {ad.description ? renderCard(
-          'Le mot du staff', (
+          t('friendlyMatchAdDetails.aWordFromTheStaff', 'Le mot du staff'), (
             <Text style={[Fonts.p2, { color: Colors.neutral200 }]}>{ad.description}</Text>
           ),
         ) : null}
@@ -435,14 +486,17 @@ function FriendlyMatchAdDetails({ navigation, route }) {
             {ad.status === 'expired' ? (
               <Button
                 onPress={() => setIsRepostSheetVisible(true)}
-                title="Reposter avec de nouvelles dates"
+                title={t(
+                  'friendlyMatchAdDetails.repostWithNewDates',
+                  'Reposter avec de nouvelles dates',
+                )}
                 variant="Primary"
               />
             ) : null}
             {ad.status === 'open' || ad.status === 'expired' ? (
               <Button
                 onPress={handleCancelAd}
-                title="Annuler l’annonce"
+                title={t('friendlyMatchAdDetails.cancelTheListing', 'Annuler l’annonce')}
                 variant="Secondary"
               />
             ) : null}
@@ -453,13 +507,20 @@ function FriendlyMatchAdDetails({ navigation, route }) {
           <View style={[Spaces.gap[12]]}>
             <Text style={[Fonts.h4, Fonts.neutral00, Spaces.marginTop[8]]}>
               {pendingApplications.length > 0
-                ? `${pendingApplications.length} ${pendingLabel} à traiter`
-                : 'Les propositions reçues'}
+                ? t('friendlyMatchAdDetails.proposalsToHandle', {
+                  count: pendingApplications.length,
+                  defaultValue_one: '{{count}} proposition à traiter',
+                  defaultValue_other: '{{count}} propositions à traiter',
+                })
+                : t('friendlyMatchAdDetails.proposalsReceived', 'Les propositions reçues')}
             </Text>
 
             {applications.length === 0 ? (
               <Text style={[Fonts.p3, { color: Colors.neutral300 }]}>
-                Personne n’a encore répondu. Les équipes du secteur voient ton annonce.
+                {t(
+                  'friendlyMatchAdDetails.nobodyHasAnsweredYetTeams',
+                  'Personne n’a encore répondu. Les équipes du secteur voient ton annonce.',
+                )}
               </Text>
             ) : null}
 
@@ -478,24 +539,30 @@ function FriendlyMatchAdDetails({ navigation, route }) {
         ) : null}
 
         {!isAdSideStaff && myApplication ? renderCard(
-          'Ta proposition', (
+          t('friendlyMatchAdDetails.yourProposal', 'Ta proposition'), (
             <View style={[Spaces.gap[12]]}>
               <Text style={[Fonts.p3, { color: Colors.neutral200 }]}>
                 {myApplication.status === 'accepted'
-                  ? 'Elle a été acceptée : le match est dans le planning de ton équipe.'
-                  : 'Elle est envoyée. La suite se joue dans la discussion.'}
+                  ? t(
+                    'friendlyMatchAdDetails.itWasAcceptedTheMatch',
+                    'Elle a été acceptée : le match est dans le planning de ton équipe.',
+                  )
+                  : t(
+                    'friendlyMatchAdDetails.itSSentWhatComes',
+                    'Elle est envoyée. La suite se joue dans la discussion.',
+                  )}
               </Text>
               {getFriendlyMatchChatId(myApplication) ? (
                 <Button
                   onPress={() => openConversation(myApplication)}
-                  title="Ouvrir la discussion"
+                  title={t('friendlyMatchAdDetails.openTheConversation', 'Ouvrir la discussion')}
                   variant="Primary"
                 />
               ) : null}
               {myApplication.status === 'pending' ? (
                 <Button
                   onPress={handleWithdraw}
-                  title="Retirer ma proposition"
+                  title={t('friendlyMatchAdDetails.withdrawMyProposal', 'Retirer ma proposition')}
                   variant="Secondary"
                 />
               ) : null}
@@ -508,7 +575,7 @@ function FriendlyMatchAdDetails({ navigation, route }) {
             <Button
               disabled={isAuthenticated && !canApply}
               onPress={handleApplyPress}
-              title="Proposer un match"
+              title={t('friendlyMatchAdDetails.proposeAMatch', 'Proposer un match')}
               variant="Primary"
             />
             <Text style={[
@@ -518,8 +585,14 @@ function FriendlyMatchAdDetails({ navigation, route }) {
             ]}
             >
               {isAuthenticated && !canApply
-                ? 'Seuls un entraîneur ou un dirigeant peuvent proposer un match.'
-                : 'Répondre ouvre une discussion entre les deux staffs.'}
+                ? t(
+                  'friendlyMatchAdDetails.onlyACoachOrA',
+                  'Seuls un entraîneur ou un dirigeant peuvent proposer un match.',
+                )
+                : t(
+                  'friendlyMatchAdDetails.answeringOpensAConversationBetween',
+                  'Répondre ouvre une discussion entre les deux staffs.',
+                )}
             </Text>
           </View>
         ) : null}
