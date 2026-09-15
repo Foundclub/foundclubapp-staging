@@ -64,7 +64,14 @@ jest.mock('react-i18next', () => {
 
   return {
     useTranslation: () => ({
-      t: (/** @type {string} */ cle, /** @type {any} */ options) => {
+      t: (/** @type {string} */ cle, /** @type {any} */ options, /** @type {any} */ valeurs) => {
+        // I18N-1 : repli a {{jetons}} ou pluriel -> le vrai i18next (fr.js), comme l'app.
+        if (
+          (typeof options === 'string' && valeurs)
+          || (options && typeof options === 'object' && 'defaultValue_one' in options)
+        ) {
+          return jest.requireActual('i18next').t(cle, options, valeurs);
+        }
         const valeur = lire(String(cle || '').split('.'));
         if (typeof valeur === 'string') return valeur;
         return typeof options === 'string' ? options : cle;

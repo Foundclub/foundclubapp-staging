@@ -1,3 +1,7 @@
+import i18next from 'i18next';
+
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
+
 /**
  * @param {any} value
  * @returns {any[]}
@@ -39,14 +43,29 @@ export const getSubscriptionAccessLevel = ({
 
 /** @type {Record<string, string>} */
 const DEFAULT_REASON_LABELS = {
-  AUTH_REQUIRED: 'Connexion requise',
-  CLUB_TIER_LIMIT_REACHED: 'Limite d équipes de ton offre Club atteinte',
+  get AUTH_REQUIRED() {
+    return i18next.t('subscriptionDecision.reasons.authRequired', 'Connexion requise');
+  },
+  get CLUB_TIER_LIMIT_REACHED() {
+    return i18next.t(
+      'subscriptionDecision.reasons.clubTierLimitReached',
+      'Limite d équipes de ton offre Club atteinte',
+    );
+  },
   // T09 — « offre » partout : c'est le mot des trois ecrans du parcours
   // (« Changer d'offre », « Comparer les offres », « Ton offre actuelle »).
-  FREE_INCLUDED: 'Inclus dans l offre gratuite',
-  FREE_QUOTA_AVAILABLE: 'Quota gratuit disponible',
-  FREE_QUOTA_EXHAUSTED: 'Quota gratuit épuisé',
-  SUBSCRIPTION_REQUIRED: 'Abonnement requis',
+  get FREE_INCLUDED() {
+    return i18next.t('subscriptionDecision.reasons.freeIncluded', 'Inclus dans l offre gratuite');
+  },
+  get FREE_QUOTA_AVAILABLE() {
+    return i18next.t('subscriptionDecision.reasons.freeQuotaAvailable', 'Quota gratuit disponible');
+  },
+  get FREE_QUOTA_EXHAUSTED() {
+    return i18next.t('subscriptionDecision.reasons.freeQuotaExhausted', 'Quota gratuit épuisé');
+  },
+  get SUBSCRIPTION_REQUIRED() {
+    return i18next.t('subscriptionDecision.reasons.subscriptionRequired', 'Abonnement requis');
+  },
 };
 
 /** @type {Record<string, string>} */
@@ -72,53 +91,130 @@ const DEFAULT_PAYWALL_KEYS = {
   TEAM_OFFER_UNLOCK: 'team-offer-unlock',
 };
 
-/** @type {string[]} */
-const CLUB_PAYWALL_BENEFITS = [
-  'Toutes les équipes du club couvertes',
-  'Droits club et gestion centralisée',
-  'Cotisations et recrutement illimités',
+// I18N-1 : lus a l'usage (un tableau evalue au chargement ne suivrait pas la langue).
+/**
+ * Les benefices de l'offre Club, dans la langue de l'app.
+ * @returns {string[]} Les trois benefices.
+ */
+const clubPaywallBenefits = () => [
+  i18next.t(
+    'subscriptionDecision.benefits.allClubTeamsCovered',
+    'Toutes les équipes du club couvertes',
+  ),
+  i18next.t(
+    'subscriptionDecision.benefits.clubRightsCentralised',
+    'Droits club et gestion centralisée',
+  ),
+  i18next.t(
+    'subscriptionDecision.benefits.unlimitedFeesRecruitment',
+    'Cotisations et recrutement illimités',
+  ),
 ];
 
 /** @type {Record<string, string[]>} */
 const PAYWALL_BENEFITS_BY_KEY = {
   // Ce club PAIE deja : ses benefices ne sont pas un argumentaire de vente, ce
   // sont les consequences du plafond — dites dans l'ordre ou elles inquietent.
-  'club-licensee-limit': [
-    'Les membres deja inscrits gardent tout',
-    'Seules les NOUVELLES adhesions sont en pause',
-    'Passe a la tranche superieure pour rouvrir',
-  ],
-  'club-tier-team-limit': CLUB_PAYWALL_BENEFITS,
-  'composition-required': [
-    'Composition et convocations en 2 taps',
-    'Événements et matchs illimités',
-    'Toute l équipe en profite',
-  ],
-  'dues-limit': [
-    'Campagnes de cotisation illimitées',
-    'Suivi des paiements simplifie',
-    'Relances des membres en un clic',
-  ],
-  'event-limit': [
-    'Événements et matchs illimités',
-    'Composition et convocations',
-    'Toute l équipe en profite',
-  ],
-  'match-limit': [
-    'Matchs et événements illimités',
-    'Composition et convocations',
-    'Suivi des présences simplifie',
-  ],
-  'recruitment-ad-limit': [
-    'Annonces de recrutement illimitées',
-    'Visibilité aupres des joueurs',
-    'Contacts sans limite',
-  ],
-  'team-limit': [
-    'Ajoute autant d équipes que besoin',
-    'Événements et matchs illimités',
-    'Gestion complète de chaque équipe',
-  ],
+  get 'club-licensee-limit'() {
+    return [
+      i18next.t(
+        'subscriptionDecision.benefits.existingMembersKeepAll',
+        'Les membres deja inscrits gardent tout',
+      ),
+      i18next.t(
+        'subscriptionDecision.benefits.onlyNewMembershipsPaused',
+        'Seules les NOUVELLES adhesions sont en pause',
+      ),
+      i18next.t(
+        'subscriptionDecision.benefits.upgradeTierToReopen',
+        'Passe a la tranche superieure pour rouvrir',
+      ),
+    ];
+  },
+  get 'club-tier-team-limit'() {
+    return clubPaywallBenefits();
+  },
+  get 'composition-required'() {
+    return [
+      i18next.t(
+        'subscriptionDecision.benefits.lineupCallupsTwoTaps',
+        'Composition et convocations en 2 taps',
+      ),
+      i18next.t(
+        'subscriptionDecision.benefits.unlimitedEventsMatches',
+        'Événements et matchs illimités',
+      ),
+      i18next.t('subscriptionDecision.benefits.wholeTeamBenefits', 'Toute l équipe en profite'),
+    ];
+  },
+  get 'dues-limit'() {
+    return [
+      i18next.t(
+        'subscriptionDecision.benefits.unlimitedFeeCampaigns',
+        'Campagnes de cotisation illimitées',
+      ),
+      i18next.t(
+        'subscriptionDecision.benefits.simplePaymentTracking',
+        'Suivi des paiements simplifie',
+      ),
+      i18next.t(
+        'subscriptionDecision.benefits.oneClickReminders',
+        'Relances des membres en un clic',
+      ),
+    ];
+  },
+  get 'event-limit'() {
+    return [
+      i18next.t(
+        'subscriptionDecision.benefits.unlimitedEventsMatches',
+        'Événements et matchs illimités',
+      ),
+      i18next.t('subscriptionDecision.benefits.lineupCallups', 'Composition et convocations'),
+      i18next.t('subscriptionDecision.benefits.wholeTeamBenefits', 'Toute l équipe en profite'),
+    ];
+  },
+  get 'match-limit'() {
+    return [
+      i18next.t(
+        'subscriptionDecision.benefits.unlimitedMatchesEvents',
+        'Matchs et événements illimités',
+      ),
+      i18next.t('subscriptionDecision.benefits.lineupCallups', 'Composition et convocations'),
+      i18next.t(
+        'subscriptionDecision.benefits.simpleAttendanceTracking',
+        'Suivi des présences simplifie',
+      ),
+    ];
+  },
+  get 'recruitment-ad-limit'() {
+    return [
+      i18next.t(
+        'subscriptionDecision.benefits.unlimitedRecruitmentAds',
+        'Annonces de recrutement illimitées',
+      ),
+      i18next.t(
+        'subscriptionDecision.benefits.visibilityWithPlayers',
+        'Visibilité aupres des joueurs',
+      ),
+      i18next.t('subscriptionDecision.benefits.unlimitedContacts', 'Contacts sans limite'),
+    ];
+  },
+  get 'team-limit'() {
+    return [
+      i18next.t(
+        'subscriptionDecision.benefits.addTeamsAsNeeded',
+        'Ajoute autant d équipes que besoin',
+      ),
+      i18next.t(
+        'subscriptionDecision.benefits.unlimitedEventsMatches',
+        'Événements et matchs illimités',
+      ),
+      i18next.t(
+        'subscriptionDecision.benefits.fullTeamManagement',
+        'Gestion complète de chaque équipe',
+      ),
+    ];
+  },
 };
 
 /** @type {Record<string, string>} */
@@ -134,7 +230,9 @@ const RECOMMENDED_PLAN_CODES = {
 /** @type {Record<string, string>} */
 const REQUIRED_PLAN_LABELS = {
   CLUB: 'Club',
-  TEAM: 'Équipe',
+  get TEAM() {
+    return i18next.t('subscriptionDecision.requiredPlanLabels.team', 'Équipe');
+  },
 };
 
 // Nom de tranche Club, tel que le catalogue serveur la vend : « Club 100 » /
@@ -151,13 +249,19 @@ const CLUB_TIER_NAMES = {
   1: '100',
   2: '500',
   3: '1000',
-  4: 'Illimité',
+  get 4() {
+    return i18next.t('subscriptionDecision.clubTierNames.unlimited', 'Illimité');
+  },
 };
 
 /** @type {Record<string, string>} */
 const PLAN_PERIOD_LABELS = {
-  monthly: 'mois',
-  yearly: 'an',
+  get monthly() {
+    return i18next.t('subscriptionDecision.planPeriods.month', 'mois');
+  },
+  get yearly() {
+    return i18next.t('subscriptionDecision.planPeriods.year', 'an');
+  },
 };
 
 const QUOTA_ORDER = [
@@ -169,10 +273,18 @@ const QUOTA_ORDER = [
 
 /** @type {Record<string, string>} */
 const QUOTA_LABELS = {
-  EVENT_PUBLISH: 'Evenements',
-  FREE_TEAM: 'Equipes',
-  MATCH_PUBLISH: 'Matchs',
-  RECRUITMENT_AD_PUBLISH: 'Recrutement',
+  get EVENT_PUBLISH() {
+    return i18next.t('subscriptionDecision.quotaLabels.events', 'Evenements');
+  },
+  get FREE_TEAM() {
+    return i18next.t('subscriptionDecision.quotaLabels.teams', 'Equipes');
+  },
+  get MATCH_PUBLISH() {
+    return i18next.t('subscriptionDecision.quotaLabels.matches', 'Matchs');
+  },
+  get RECRUITMENT_AD_PUBLISH() {
+    return i18next.t('subscriptionDecision.quotaLabels.recruitment', 'Recrutement');
+  },
 };
 
 // Quota retire de la matrice (decision #6 du 2026-07-09 : chat/contact 100 % libre).
@@ -188,20 +300,48 @@ const SUBSCRIPTION_STATUS_META = {
   // demandait donc un geste impossible — et rendait l'etat NON certifie plus
   // inquietant que l'etat certifie, alors qu'il n'ouvre pas moins de droits.
   CLUB: {
-    description: 'Les droits Club sont actifs sur tout ton club.',
-    label: 'Club · actif',
+    get description() {
+      return i18next.t(
+        'subscriptionDecision.statusMeta.club.description',
+        'Les droits Club sont actifs sur tout ton club.',
+      );
+    },
+    get label() {
+      return i18next.t('subscriptionDecision.statusMeta.clubActive', 'Club · actif');
+    },
   },
   CLUB_UNVERIFIED: {
-    description: 'Tes droits Club sont actifs. Ton club est en cours de certification par la plateforme.',
-    label: 'Club · actif',
+    get description() {
+      return i18next.t(
+        'subscriptionDecision.statusMeta.clubUnverified.description',
+        'Tes droits Club sont actifs. Ton club est en cours de certification par la plateforme.',
+      );
+    },
+    get label() {
+      return i18next.t('subscriptionDecision.statusMeta.clubActive', 'Club · actif');
+    },
   },
   FREE: {
-    description: 'Tu utilises actuellement les quotas gratuits FoundClub.',
-    label: 'Gratuit',
+    get description() {
+      return i18next.t(
+        'subscriptionDecision.statusMeta.free.description',
+        'Tu utilises actuellement les quotas gratuits FoundClub.',
+      );
+    },
+    get label() {
+      return i18next.t('subscriptionDecision.statusMeta.free.label', 'Gratuit');
+    },
   },
   TEAM: {
-    description: 'Les droits Équipe sont ouverts sur les équipes couvertes.',
-    label: 'Équipe',
+    get description() {
+      return i18next.t(
+        'subscriptionDecision.statusMeta.team.description',
+        'Les droits Équipe sont ouverts sur les équipes couvertes.',
+      );
+    },
+    get label() {
+      return i18next.t('subscriptionDecision.statusMeta.team.label', 'Équipe');
+    },
   },
 };
 
@@ -247,7 +387,10 @@ export const mapSubscriptionDecisionToPaywall = (decision) => {
     // plein » sans jamais pouvoir dire de combien.
     licenseeCount: readDecisionCount(safeDecision?.licenseeCount),
     memberCount: readDecisionCount(safeDecision?.memberCount),
-    message: DEFAULT_REASON_LABELS[reason] || 'Accès refuse',
+    message: DEFAULT_REASON_LABELS[reason] || i18next.t(
+      'subscriptionDecision.accessDenied',
+      'Accès refuse',
+    ),
     paywall,
     paywallKey: DEFAULT_PAYWALL_KEYS[paywall] || 'subscription-required',
     reason,
@@ -307,10 +450,22 @@ export const formatSubscriptionRequiredPlanText = (requiredPlan) => {
     return labels[0];
   }
   if (labels.length === 2) {
-    return `${labels[0]} ou ${labels[1]}`;
+    return i18next.t(
+      'subscriptionDecision.requiredPlanText.two',
+      '{{first}} ou {{second}}',
+      { first: labels[0], second: labels[1], ...SANS_ECHAPPEMENT },
+    );
   }
 
-  return `${labels.slice(0, -1).join(', ')} ou ${labels[labels.length - 1]}`;
+  return i18next.t(
+    'subscriptionDecision.requiredPlanText.many',
+    '{{others}} ou {{last}}',
+    {
+      last: labels[labels.length - 1],
+      others: labels.slice(0, -1).join(', '),
+      ...SANS_ECHAPPEMENT,
+    },
+  );
 };
 
 /**
@@ -350,7 +505,11 @@ export const getSubscriptionPaywallContent = (decision) => {
   const paywall = mapSubscriptionDecisionToPaywall(decision);
   const requiredPlanText = formatSubscriptionRequiredPlanText(paywall.requiredPlan);
   const requiredPlanSuffix = requiredPlanText
-    ? ` Offre conseillée: ${requiredPlanText}.`
+    ? i18next.t(
+      'subscriptionDecision.requiredPlanSuffix',
+      ' Offre conseillée: {{requiredPlanText}}.',
+      { requiredPlanText, ...SANS_ECHAPPEMENT },
+    )
     : '';
   const withRequiredPlan = (sentence) => `${sentence}${requiredPlanSuffix}`.trim();
 
@@ -362,88 +521,172 @@ export const getSubscriptionPaywallContent = (decision) => {
       // a un bug. Les nombres manquent (vieille decision, refus relaye) : on
       // garde la phrase sans eux plutot que d'ecrire « undefined ».
       const countsSentence = paywall.memberCount !== null && paywall.licenseeCount !== null
-        ? ` Ton club compte ${paywall.memberCount} membre${paywall.memberCount > 1 ? 's' : ''} pour ${paywall.licenseeCount} licencié${paywall.licenseeCount > 1 ? 's' : ''} souscrit${paywall.licenseeCount > 1 ? 's' : ''}.`
+        ? i18next.t(
+          'subscriptionDecision.clubFull.counts',
+          ' Ton club compte {{members}} pour {{licensees}}.',
+          {
+            licensees: i18next.t('subscriptionDecision.clubFull.licensees', {
+              count: paywall.licenseeCount,
+              defaultValue_one: '{{count}} licencié souscrit',
+              defaultValue_other: '{{count}} licenciés souscrits',
+            }),
+            members: i18next.t('subscriptionDecision.clubFull.members', {
+              count: paywall.memberCount,
+              defaultValue_one: '{{count}} membre',
+              defaultValue_other: '{{count}} membres',
+            }),
+            ...SANS_ECHAPPEMENT,
+          },
+        )
         : '';
       // Lot CATALOGUE (28/08) : le verbe a change avec l'offre. On n'augmente
       // plus un nombre saisi, on passe a la tranche au-dessus (Club 100 -> 500
       // -> 1000 -> Illimite), et c'est le magasin qui fait la bascule.
       return {
-        ctaLabel: 'Passer à la tranche supérieure',
-        description: `Les nouvelles adhésions sont en pause : ton club a atteint le nombre de licenciés couverts par son abonnement.${countsSentence} Les membres déjà inscrits gardent tout.`,
-        title: 'Ton club est complet',
+        ctaLabel: i18next.t(
+          'subscriptionDecision.paywall.clubLicenseeLimit.cta',
+          'Passer à la tranche supérieure',
+        ),
+        description: i18next.t(
+          'subscriptionDecision.paywall.clubLicenseeLimit.description',
+          'Les nouvelles adhésions sont en pause : ton club a atteint le nombre de licenciés '
+            + 'couverts par son abonnement.{{countsSentence}} Les membres déjà inscrits gardent '
+            + 'tout.',
+          { countsSentence, ...SANS_ECHAPPEMENT },
+        ),
+        title: i18next.t(
+          'subscriptionDecision.paywall.clubLicenseeLimit.title',
+          'Ton club est complet',
+        ),
       };
     }
     case 'club-roles-manage-required':
       return {
-        ctaLabel: 'Voir mon abonnement',
+        ctaLabel: i18next.t('subscriptionDecision.paywall.viewSubscription', 'Voir mon abonnement'),
         description: withRequiredPlan(
-          'La gestion des rôles et des droits du club est réservée a l offre Club.',
+          i18next.t(
+            'subscriptionDecision.paywall.clubRoles.description',
+            'La gestion des rôles et des droits du club est réservée a l offre Club.',
+          ),
         ),
-        title: 'Rôles club reserves',
+        title: i18next.t('subscriptionDecision.paywall.clubRoles.title', 'Rôles club reserves'),
       };
     case 'club-tier-team-limit':
       return {
-        ctaLabel: 'Voir mon abonnement',
-        description: 'Ton offre Club a atteint son nombre maximum d équipes. Passe au palier supérieur pour ajouter de nouvelles équipes.',
-        title: 'Limite d équipes atteinte',
+        ctaLabel: i18next.t('subscriptionDecision.paywall.viewSubscription', 'Voir mon abonnement'),
+        description: i18next.t(
+          'subscriptionDecision.paywall.clubTierTeamLimit.description',
+          'Ton offre Club a atteint son nombre maximum d équipes. Passe au palier supérieur '
+            + 'pour ajouter de nouvelles équipes.',
+        ),
+        title: i18next.t(
+          'subscriptionDecision.paywall.clubTierTeamLimit.title',
+          'Limite d équipes atteinte',
+        ),
       };
     case 'composition-required':
       return {
-        ctaLabel: 'Voir mon abonnement',
-        description: `La composition d équipe est réservée a l offre Équipe.${requiredPlanSuffix}`.trim(),
-        title: 'Composition réservée',
+        ctaLabel: i18next.t('subscriptionDecision.paywall.viewSubscription', 'Voir mon abonnement'),
+        description: i18next.t(
+          'subscriptionDecision.paywall.composition.description',
+          'La composition d équipe est réservée a l offre Équipe.{{requiredPlanSuffix}}',
+          { requiredPlanSuffix, ...SANS_ECHAPPEMENT },
+        ).trim(),
+        title: i18next.t('subscriptionDecision.paywall.composition.title', 'Composition réservée'),
       };
     case 'dues-limit':
       return {
-        ctaLabel: 'Voir mon abonnement',
-        description: `La création de campagnes de cotisation demande une offre active.${requiredPlanSuffix}`.trim(),
-        title: 'Cotisations réservées',
+        ctaLabel: i18next.t('subscriptionDecision.paywall.viewSubscription', 'Voir mon abonnement'),
+        description: i18next.t(
+          'subscriptionDecision.paywall.dues.description',
+          'La création de campagnes de cotisation demande une offre active.{{requiredPlanSuffix}}',
+          { requiredPlanSuffix, ...SANS_ECHAPPEMENT },
+        ).trim(),
+        title: i18next.t('subscriptionDecision.paywall.dues.title', 'Cotisations réservées'),
       };
     case 'event-limit':
       return {
-        ctaLabel: 'Voir mon abonnement',
-        description: `Tu as atteint la limite gratuite de publication d événements.${requiredPlanSuffix}`.trim(),
-        title: 'Publication d événement limitée',
+        ctaLabel: i18next.t('subscriptionDecision.paywall.viewSubscription', 'Voir mon abonnement'),
+        description: i18next.t(
+          'subscriptionDecision.paywall.event.description',
+          'Tu as atteint la limite gratuite de publication d événements.{{requiredPlanSuffix}}',
+          { requiredPlanSuffix, ...SANS_ECHAPPEMENT },
+        ).trim(),
+        title: i18next.t(
+          'subscriptionDecision.paywall.event.title',
+          'Publication d événement limitée',
+        ),
       };
     case 'facility-manage-required':
       return {
-        ctaLabel: 'Voir mon abonnement',
+        ctaLabel: i18next.t('subscriptionDecision.paywall.viewSubscription', 'Voir mon abonnement'),
         description: withRequiredPlan(
-          'La gestion des installations du club est réservée a l offre Club.',
+          i18next.t(
+            'subscriptionDecision.paywall.facility.description',
+            'La gestion des installations du club est réservée a l offre Club.',
+          ),
         ),
-        title: 'Installations réservées',
+        title: i18next.t('subscriptionDecision.paywall.facility.title', 'Installations réservées'),
       };
     case 'match-limit':
       return {
-        ctaLabel: 'Voir mon abonnement',
-        description: `Tu as atteint la limite gratuite de publication de match.${requiredPlanSuffix}`.trim(),
-        title: 'Publication de match limitée',
+        ctaLabel: i18next.t('subscriptionDecision.paywall.viewSubscription', 'Voir mon abonnement'),
+        description: i18next.t(
+          'subscriptionDecision.paywall.match.description',
+          'Tu as atteint la limite gratuite de publication de match.{{requiredPlanSuffix}}',
+          { requiredPlanSuffix, ...SANS_ECHAPPEMENT },
+        ).trim(),
+        title: i18next.t(
+          'subscriptionDecision.paywall.match.title',
+          'Publication de match limitée',
+        ),
       };
     case 'recruitment-ad-limit':
       return {
-        ctaLabel: 'Voir mon abonnement',
-        description: `Cette publication de recrutement demande une offre active.${requiredPlanSuffix}`.trim(),
-        title: 'Publication recrutement limitée',
+        ctaLabel: i18next.t('subscriptionDecision.paywall.viewSubscription', 'Voir mon abonnement'),
+        description: i18next.t(
+          'subscriptionDecision.paywall.recruitment.description',
+          'Cette publication de recrutement demande une offre active.{{requiredPlanSuffix}}',
+          { requiredPlanSuffix, ...SANS_ECHAPPEMENT },
+        ).trim(),
+        title: i18next.t(
+          'subscriptionDecision.paywall.recruitment.title',
+          'Publication recrutement limitée',
+        ),
       };
     case 'sponsor-manage-required':
       return {
-        ctaLabel: 'Voir mon abonnement',
+        ctaLabel: i18next.t('subscriptionDecision.paywall.viewSubscription', 'Voir mon abonnement'),
         description: withRequiredPlan(
-          'La gestion des sponsors du club est réservée a l offre Club.',
+          i18next.t(
+            'subscriptionDecision.paywall.sponsor.description',
+            'La gestion des sponsors du club est réservée a l offre Club.',
+          ),
         ),
-        title: 'Sponsors reserves',
+        title: i18next.t('subscriptionDecision.paywall.sponsor.title', 'Sponsors reserves'),
       };
     case 'team-limit':
       return {
-        ctaLabel: 'Voir mon abonnement',
-        description: `La création d équipe demande une offre active.${requiredPlanSuffix}`.trim(),
-        title: 'Création d équipe limitée',
+        ctaLabel: i18next.t('subscriptionDecision.paywall.viewSubscription', 'Voir mon abonnement'),
+        description: i18next.t(
+          'subscriptionDecision.paywall.team.description',
+          'La création d équipe demande une offre active.{{requiredPlanSuffix}}',
+          { requiredPlanSuffix, ...SANS_ECHAPPEMENT },
+        ).trim(),
+        title: i18next.t('subscriptionDecision.paywall.team.title', 'Création d équipe limitée'),
       };
     default:
       return {
-        ctaLabel: 'Voir mon abonnement',
-        description: `Cette action demande une offre FoundClub active.${requiredPlanSuffix}`.trim(),
-        title: 'Abonnement FoundClub requis',
+        ctaLabel: i18next.t('subscriptionDecision.paywall.viewSubscription', 'Voir mon abonnement'),
+        description: i18next.t(
+          'subscriptionDecision.paywall.default.description',
+          'Cette action demande une offre FoundClub active.{{requiredPlanSuffix}}',
+          { requiredPlanSuffix, ...SANS_ECHAPPEMENT },
+        ).trim(),
+        title: i18next.t(
+          'subscriptionDecision.paywall.default.title',
+          'Abonnement FoundClub requis',
+        ),
       };
   }
 };
@@ -464,71 +707,200 @@ export const getSubscriptionPaywallContent = (decision) => {
 const QUOTA_SHEET_CONTENT_BY_KEY = {
   // Paywall plan-only (pas un quota) : la compo/convocation est reservee aux offres.
   'composition-required': {
-    benefits: [
-      'Composition et convocations en 2 taps',
-      'Événements et matchs illimités',
-      "Toute l'équipe en profite",
-    ],
-    kicker: 'Offre Équipe',
+    get benefits() {
+      return [
+        i18next.t(
+          'subscriptionDecision.benefits.lineupCallupsTwoTaps',
+          'Composition et convocations en 2 taps',
+        ),
+        i18next.t(
+          'subscriptionDecision.benefits.unlimitedEventsMatches',
+          'Événements et matchs illimités',
+        ),
+        i18next.t(
+          'subscriptionDecision.benefits.wholeTeamBenefitsSheet',
+          "Toute l'équipe en profite",
+        ),
+      ];
+    },
+    get kicker() {
+      return i18next.t('subscriptionDecision.quotaSheet.kickerTeamOffer', 'Offre Équipe');
+    },
     preselectedSlotCount: 1,
-    successCtaLabel: 'Préparer ma compo',
-    title: "La composition d'équipe est réservée à l'offre Équipe",
+    get successCtaLabel() {
+      return i18next.t(
+        'subscriptionDecision.quotaSheet.composition.successCta',
+        'Préparer ma compo',
+      );
+    },
+    get title() {
+      return i18next.t(
+        'subscriptionDecision.quotaSheet.composition.title',
+        "La composition d'équipe est réservée à l'offre Équipe",
+      );
+    },
   },
   'event-limit': {
-    benefits: [
-      'Événements et matchs illimités',
-      'Présences en temps réel, relances auto',
-      'Convocations envoyées en 2 taps',
-    ],
-    kicker: 'Offre Équipe',
+    get benefits() {
+      return [
+        i18next.t(
+          'subscriptionDecision.benefits.unlimitedEventsMatches',
+          'Événements et matchs illimités',
+        ),
+        i18next.t(
+          'subscriptionDecision.benefits.realTimeAttendance',
+          'Présences en temps réel, relances auto',
+        ),
+        i18next.t(
+          'subscriptionDecision.benefits.callupsTwoTaps',
+          'Convocations envoyées en 2 taps',
+        ),
+      ];
+    },
+    get kicker() {
+      return i18next.t('subscriptionDecision.quotaSheet.kickerTeamOffer', 'Offre Équipe');
+    },
     preselectedSlotCount: 1,
-    successCtaLabel: 'Publier mon événement',
-    title: 'Tu veux publier un 2ᵉ événement ?',
+    get successCtaLabel() {
+      return i18next.t('subscriptionDecision.quotaSheet.event.successCta', 'Publier mon événement');
+    },
+    get title() {
+      return i18next.t(
+        'subscriptionDecision.quotaSheet.event.title',
+        'Tu veux publier un 2ᵉ événement ?',
+      );
+    },
   },
   'match-limit': {
-    benefits: [
-      'Matchs et événements illimités',
-      'Présences en temps réel, relances auto',
-      'Convocations envoyées en 2 taps',
-    ],
-    kicker: 'Offre Équipe',
+    get benefits() {
+      return [
+        i18next.t(
+          'subscriptionDecision.benefits.unlimitedMatchesEvents',
+          'Matchs et événements illimités',
+        ),
+        i18next.t(
+          'subscriptionDecision.benefits.realTimeAttendance',
+          'Présences en temps réel, relances auto',
+        ),
+        i18next.t(
+          'subscriptionDecision.benefits.callupsTwoTaps',
+          'Convocations envoyées en 2 taps',
+        ),
+      ];
+    },
+    get kicker() {
+      return i18next.t('subscriptionDecision.quotaSheet.kickerTeamOffer', 'Offre Équipe');
+    },
     preselectedSlotCount: 1,
-    successCtaLabel: 'Publier mon match',
-    title: 'Tu veux publier un 2ᵉ match ?',
+    get successCtaLabel() {
+      return i18next.t('subscriptionDecision.quotaSheet.match.successCta', 'Publier mon match');
+    },
+    get title() {
+      return i18next.t(
+        'subscriptionDecision.quotaSheet.match.title',
+        'Tu veux publier un 2ᵉ match ?',
+      );
+    },
   },
   'recruitment-ad-limit': {
-    benefits: [
-      'Annonces de recrutement illimitées',
-      'Visible par tous les joueurs de ta zone',
-      'Candidatures directement dans tes messages',
-    ],
-    kicker: 'Offre Équipe',
+    get benefits() {
+      return [
+        i18next.t(
+          'subscriptionDecision.benefits.unlimitedRecruitmentAds',
+          'Annonces de recrutement illimitées',
+        ),
+        i18next.t(
+          'subscriptionDecision.benefits.visibleToAreaPlayers',
+          'Visible par tous les joueurs de ta zone',
+        ),
+        i18next.t(
+          'subscriptionDecision.benefits.applicationsInMessages',
+          'Candidatures directement dans tes messages',
+        ),
+      ];
+    },
+    get kicker() {
+      return i18next.t('subscriptionDecision.quotaSheet.kickerTeamOffer', 'Offre Équipe');
+    },
     preselectedSlotCount: 1,
-    successCtaLabel: 'Publier mon annonce',
-    title: 'Tu veux publier une 2ᵉ annonce ?',
+    get successCtaLabel() {
+      return i18next.t(
+        'subscriptionDecision.quotaSheet.recruitment.successCta',
+        'Publier mon annonce',
+      );
+    },
+    get title() {
+      return i18next.t(
+        'subscriptionDecision.quotaSheet.recruitment.title',
+        'Tu veux publier une 2ᵉ annonce ?',
+      );
+    },
   },
   'team-limit': {
-    benefits: [
-      'Toutes tes équipes, événements illimités',
-      'Convoque toute ton équipe en 2 taps',
-      'Encaisse la cotisation de chaque équipe',
-    ],
-    kicker: 'Offre Équipe',
+    get benefits() {
+      return [
+        i18next.t(
+          'subscriptionDecision.benefits.allTeamsUnlimitedEvents',
+          'Toutes tes équipes, événements illimités',
+        ),
+        i18next.t(
+          'subscriptionDecision.benefits.callWholeTeamTwoTaps',
+          'Convoque toute ton équipe en 2 taps',
+        ),
+        i18next.t(
+          'subscriptionDecision.benefits.collectEachTeamFee',
+          'Encaisse la cotisation de chaque équipe',
+        ),
+      ];
+    },
+    get kicker() {
+      return i18next.t('subscriptionDecision.quotaSheet.kickerTeamOffer', 'Offre Équipe');
+    },
     preselectedSlotCount: 2,
-    successCtaLabel: 'Créer ma 2ᵉ équipe',
-    title: 'Tu veux créer une 2ᵉ équipe ?',
+    get successCtaLabel() {
+      return i18next.t('subscriptionDecision.quotaSheet.team.successCta', 'Créer ma 2ᵉ équipe');
+    },
+    get title() {
+      return i18next.t(
+        'subscriptionDecision.quotaSheet.team.title',
+        'Tu veux créer une 2ᵉ équipe ?',
+      );
+    },
   },
   // Deblocage direct de l'offre Équipe depuis la sheet Actions d'équipe (decision 7).
   'team-offer-unlock': {
-    benefits: [
-      'Composition type et convocations en 2 taps',
-      'Événements et matchs illimités',
-      "Cotisation de l'équipe encaissée dans l'app",
-    ],
-    kicker: 'Offre Équipe',
+    get benefits() {
+      return [
+        i18next.t(
+          'subscriptionDecision.benefits.templateLineupCallups',
+          'Composition type et convocations en 2 taps',
+        ),
+        i18next.t(
+          'subscriptionDecision.benefits.unlimitedEventsMatches',
+          'Événements et matchs illimités',
+        ),
+        i18next.t(
+          'subscriptionDecision.benefits.teamFeeInApp',
+          "Cotisation de l'équipe encaissée dans l'app",
+        ),
+      ];
+    },
+    get kicker() {
+      return i18next.t('subscriptionDecision.quotaSheet.kickerTeamOffer', 'Offre Équipe');
+    },
     preselectedSlotCount: 1,
-    successCtaLabel: "C'est parti !",
-    title: "Débloque tes outils d'équipe",
+    get successCtaLabel() {
+      return i18next.t(
+        'subscriptionDecision.quotaSheet.teamOfferUnlock.successCta',
+        "C'est parti !",
+      );
+    },
+    get title() {
+      return i18next.t(
+        'subscriptionDecision.quotaSheet.teamOfferUnlock.title',
+        "Débloque tes outils d'équipe",
+      );
+    },
   },
 };
 
@@ -553,7 +925,7 @@ export const getSubscriptionQuotaSheetContent = (decision) => {
  */
 export const getSubscriptionPaywallBenefits = (decision) => {
   const paywall = mapSubscriptionDecisionToPaywall(decision);
-  const benefits = PAYWALL_BENEFITS_BY_KEY[paywall.paywallKey] || CLUB_PAYWALL_BENEFITS;
+  const benefits = PAYWALL_BENEFITS_BY_KEY[paywall.paywallKey] || clubPaywallBenefits();
   return benefits.slice(0, 3);
 };
 
@@ -606,8 +978,8 @@ export const getSubscriptionClubSheetContent = (decision) => {
   return {
     benefits: getSubscriptionPaywallBenefits(decision),
     description: content.description,
-    kicker: 'Offre Club',
-    successCtaLabel: 'Reprendre',
+    kicker: i18next.t('subscriptionDecision.clubSheet.kicker', 'Offre Club'),
+    successCtaLabel: i18next.t('subscriptionDecision.clubSheet.successCta', 'Reprendre'),
     title: content.title,
   };
 };
@@ -710,7 +1082,7 @@ export const getSubscriptionStatusMeta = (subscriptionAccessLevel) => (
 export const formatSubscriptionPlanLabel = (planCode) => {
   const normalizedPlanCode = String(planCode || '').trim().toLowerCase();
   if (!normalizedPlanCode) {
-    return 'Aucune offre active';
+    return i18next.t('subscriptionDecision.planLabel.none', 'Aucune offre active');
   }
 
   // T09 — c'est le SEUL nom que connaisse l'ecran « Mon abonnement » : il ne
@@ -721,7 +1093,13 @@ export const formatSubscriptionPlanLabel = (planCode) => {
   if (teamMatch) {
     const slotCount = Number(teamMatch[1] || 0);
     const period = PLAN_PERIOD_LABELS[teamMatch[2]] || teamMatch[2];
-    return `Équipe · ${slotCount} équipe${slotCount > 1 ? 's' : ''} / ${period}`;
+    return i18next.t('subscriptionDecision.planLabel.team', {
+      count: slotCount,
+      defaultValue_one: 'Équipe · {{count}} équipe / {{period}}',
+      defaultValue_other: 'Équipe · {{count}} équipes / {{period}}',
+      period,
+      ...SANS_ECHAPPEMENT,
+    });
   }
 
   // S12-B — L'OFFRE AU LICENCIE, NOMMEE A COTE DES PALIERS, PAS DEDANS.
@@ -732,7 +1110,11 @@ export const formatSubscriptionPlanLabel = (planCode) => {
   const licenseeMatch = normalizedPlanCode.match(/^fc_club_licensee_(monthly|yearly)$/);
   if (licenseeMatch) {
     const period = PLAN_PERIOD_LABELS[licenseeMatch[1]] || licenseeMatch[1];
-    return `Club au licencié / ${period}`;
+    return i18next.t(
+      'subscriptionDecision.planLabel.clubLicensee',
+      'Club au licencié / {{period}}',
+      { period, ...SANS_ECHAPPEMENT },
+    );
   }
 
   const clubMatch = normalizedPlanCode.match(/^fc_club(?:_tier_(\d+))?_(monthly|yearly)$/);
@@ -742,7 +1124,15 @@ export const formatSubscriptionPlanLabel = (planCode) => {
     // Une tranche inconnue retombe sur « Club » nu plutot que d'inventer un
     // nombre : mieux vaut un nom incomplet qu'un nom faux.
     const tierName = CLUB_TIER_NAMES[tier] || '';
-    return tierName ? `Club ${tierName} / ${period}` : `Club / ${period}`;
+    return tierName ? i18next.t(
+      'subscriptionDecision.planLabel.clubTier',
+      'Club {{tierName}} / {{period}}',
+      { period, tierName, ...SANS_ECHAPPEMENT },
+    ) : i18next.t(
+      'subscriptionDecision.planLabel.club',
+      'Club / {{period}}',
+      { period, ...SANS_ECHAPPEMENT },
+    );
   }
 
   return normalizedPlanCode
@@ -987,10 +1377,30 @@ const ENTRY_POINT_PAYWALL_BY_QUOTA_TYPE = {
 // (STRATEGIE_PAYWALL_2026_08_01 §2.3) : sans phrase, l'utilisateur croit a un bug.
 /** @type {Record<string, string>} */
 const ENTRY_POINT_EXHAUSTED_HINTS = {
-  EVENT_PUBLISH: "Ton événement gratuit est déjà en ligne — débloque l'offre Équipe",
-  FREE_TEAM: "Ta création gratuite est utilisée — débloque l'offre Équipe",
-  MATCH_PUBLISH: "Ton match gratuit est déjà en ligne — débloque l'offre Équipe",
-  RECRUITMENT_AD_PUBLISH: "Ton annonce gratuite est déjà en ligne — débloque l'offre Équipe",
+  get EVENT_PUBLISH() {
+    return i18next.t(
+      'subscriptionDecision.entryPointHints.eventPublish',
+      "Ton événement gratuit est déjà en ligne — débloque l'offre Équipe",
+    );
+  },
+  get FREE_TEAM() {
+    return i18next.t(
+      'subscriptionDecision.entryPointHints.freeTeam',
+      "Ta création gratuite est utilisée — débloque l'offre Équipe",
+    );
+  },
+  get MATCH_PUBLISH() {
+    return i18next.t(
+      'subscriptionDecision.entryPointHints.matchPublish',
+      "Ton match gratuit est déjà en ligne — débloque l'offre Équipe",
+    );
+  },
+  get RECRUITMENT_AD_PUBLISH() {
+    return i18next.t(
+      'subscriptionDecision.entryPointHints.recruitmentAdPublish',
+      "Ton annonce gratuite est déjà en ligne — débloque l'offre Équipe",
+    );
+  },
 };
 
 // Seuls ces roles peuvent acheter, et ce sont les seuls pour qui le serveur
@@ -1039,7 +1449,7 @@ export const getSubscriptionEntryPointLock = ({
   }
 
   return {
-    badgeLabel: 'Offre Équipe',
+    badgeLabel: i18next.t('subscriptionDecision.quotaSheet.kickerTeamOffer', 'Offre Équipe'),
     decision: {
       allowed: false,
       paywall: paywallKey,

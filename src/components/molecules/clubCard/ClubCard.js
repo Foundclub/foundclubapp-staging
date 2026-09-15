@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import {
   Image,
   StyleSheet,
@@ -65,6 +66,7 @@ const resolveStatValue = (...candidates) => {
 function ClubCard({
   item, onPress, paused = false, reasonLabel = '',
 }) {
+  const { t } = useTranslation();
   const { Colors, Images } = useTheme();
 
   const isMultisport = Reflect.get(item || {}, '_type') === 'multisport';
@@ -91,9 +93,9 @@ function ClubCard({
     Array.isArray(item?.recruitmentAds) ? item.recruitmentAds.length : undefined,
   );
   const stats = [
-    { label: 'Équipes', value: teamsCount },
-    { label: 'Membres', value: membersCount },
-    { accent: true, label: 'Annonces', value: adsCount },
+    { label: t('clubCard.stats.teams', 'Équipes'), value: teamsCount },
+    { label: t('clubCard.stats.members', 'Membres'), value: membersCount },
+    { accent: true, label: t('clubCard.stats.ads', 'Annonces'), value: adsCount },
   ].filter((stat) => stat.value !== null);
 
   // Sorti du JSX comme glassChipStyle juste en dessous : l'encre claire ne
@@ -148,7 +150,7 @@ function ClubCard({
               {isMultisport ? (
                 <View style={[styles.omnisportBadge, { backgroundColor: Colors.primary500 }]}>
                   <Text style={[styles.omnisportText, { color: Colors.primary900 }]}>
-                    OMNISPORT
+                    {t('clubCard.multisportBadge', 'OMNISPORT')}
                   </Text>
                 </View>
               ) : null}
@@ -176,7 +178,9 @@ function ClubCard({
           </View>
           {isRecruiting ? (
             <View style={[styles.recruitBadge, { borderColor: Colors.success500 }]}>
-              <Text style={[styles.recruitText, { color: Colors.success500 }]}>RECRUTE</Text>
+              <Text style={[styles.recruitText, { color: Colors.success500 }]}>
+                {t('clubCard.recruitingBadge', 'RECRUTE')}
+              </Text>
             </View>
           ) : null}
         </View>
@@ -192,7 +196,11 @@ function ClubCard({
             {!sectionLabels.length && isMultisport && item?.sectionsCount ? (
               <View style={[styles.sectionChip, glassChipStyle]}>
                 <Text style={[styles.sectionChipText, { color: Colors.neutral100 }]}>
-                  {`${item.sectionsCount} section${item.sectionsCount > 1 ? 's' : ''}`}
+                  {t('clubCard.sectionsCount', {
+                    count: item.sectionsCount,
+                    defaultValue_one: '{{count}} section',
+                    defaultValue_other: '{{count}} sections',
+                  })}
                 </Text>
               </View>
             ) : null}

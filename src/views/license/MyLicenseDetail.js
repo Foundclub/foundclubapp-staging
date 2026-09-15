@@ -17,13 +17,16 @@
 // `file` · aucun bouton sans fichier. Le temoin
 // `MyLicenseDetail.AA07.documents.test.js` l observe.
 
+import i18next from 'i18next';
 import { useCallback, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Alert, Pressable, ScrollView, Text, View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { withAlpha } from '@/theme/colors';
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import MarqueeText from '@/components/atoms/marqueeText/MarqueeText';
@@ -126,6 +129,7 @@ const paymentDate = (payment = {}) => String(
  * @returns {import('react').ReactElement}
  */
 function AmountCard({ assignment, footer }) {
+  const { t } = useTranslation();
   const { Colors, Fonts } = useTheme();
   const type = memberType(Fonts);
   const tone = getMemberStatusTone(Colors, assignment.status);
@@ -141,12 +145,30 @@ function AmountCard({ assignment, footer }) {
   else if (status === 'waived') headlineStyle = Fonts.neutral300;
 
   const dueLabel = formatLicenseMoney(due, currency);
-  let context = 'Aucun paiement pour l’instant';
-  if (status === 'waived') context = `Cotisation de ${dueLabel} offerte par le club`;
-  else if (status === 'cancelled') context = 'Annulée par le club';
-  else if (status === 'paid') context = `${dueLabel} réglés`;
-  else if (paid > 0) {
-    context = `${formatLicenseMoney(paid, currency)} déjà payés sur ${dueLabel}`;
+  let context = t('myLicenseDetail.amountCard.context.none', 'Aucun paiement pour l’instant');
+  if (status === 'waived') {
+    context = t(
+      'myLicenseDetail.amountCard.context.waived',
+      'Cotisation de {{dueLabel}} offerte par le club',
+      { dueLabel, ...SANS_ECHAPPEMENT },
+    );
+  } else if (status === 'cancelled') {
+    context = t(
+      'myLicenseDetail.amountCard.context.cancelled',
+      'Annulée par le club',
+    );
+  } else if (status === 'paid') {
+    context = t(
+      'myLicenseDetail.amountCard.context.paid',
+      '{{dueLabel}} réglés',
+      { dueLabel, ...SANS_ECHAPPEMENT },
+    );
+  } else if (paid > 0) {
+    context = t(
+      'myLicenseDetail.amountCard.context.partial',
+      '{{paidLabel}} déjà payés sur {{dueLabel}}',
+      { dueLabel, paidLabel: formatLicenseMoney(paid, currency), ...SANS_ECHAPPEMENT },
+    );
   }
 
   return (
@@ -211,6 +233,7 @@ function AmountCard({ assignment, footer }) {
  * @returns {import('react').ReactElement}
  */
 function MyLicenseDetail({ navigation, route }) {
+  const { t } = useTranslation();
   const {
     Alignments, ApplicationStyle, Colors, Fonts,
   } = useTheme();
@@ -285,7 +308,13 @@ function MyLicenseDetail({ navigation, route }) {
   const openUploadedDocument = useCallback(async (source) => {
     const url = fileUrlOf(source);
     if (!url) {
-      Alert.alert('Document indisponible', 'Aucun fichier exploitable n est rattaché à ce dépôt.');
+      Alert.alert(i18next.t(
+        'myLicenseDetail.alerts.documentUnavailable.title',
+        'Document indisponible',
+      ), i18next.t(
+        'myLicenseDetail.alerts.documentUnavailable.message',
+        'Aucun fichier exploitable n est rattaché à ce dépôt.',
+      ));
       return;
     }
     await LinksPlatform.openUrl(url);
@@ -297,15 +326,24 @@ function MyLicenseDetail({ navigation, route }) {
   const downloadDocument = useCallback(async (source, fileName) => {
     const url = fileUrlOf(source);
     if (!url) {
-      Alert.alert('Document indisponible', 'Aucun fichier exploitable n est rattaché à ce dépôt.');
+      Alert.alert(i18next.t(
+        'myLicenseDetail.alerts.documentUnavailable.title',
+        'Document indisponible',
+      ), i18next.t(
+        'myLicenseDetail.alerts.documentUnavailable.message',
+        'Aucun fichier exploitable n est rattaché à ce dépôt.',
+      ));
       return;
     }
     try {
       await downloadRemoteFile({ fileName, url });
     } catch (error) {
       Alert.alert(
-        'Téléchargement impossible',
-        error?.message || 'Le document n a pas pu être enregistré sur ton téléphone.',
+        i18next.t('myLicenseDetail.alerts.downloadFailed.title', 'Téléchargement impossible'),
+        error?.message || i18next.t(
+          'myLicenseDetail.alerts.downloadFailed.document',
+          'Le document n a pas pu être enregistré sur ton téléphone.',
+        ),
       );
     }
   }, [fileUrlOf]);
@@ -316,8 +354,11 @@ function MyLicenseDetail({ navigation, route }) {
     const url = resolveMediaUrl(request?.templateFile?.url || '');
     if (!url) {
       Alert.alert(
-        'Modèle indisponible',
-        'Le club n a pas encore déposé de modèle pour cette pièce.',
+        i18next.t('myLicenseDetail.alerts.templateUnavailable.title', 'Modèle indisponible'),
+        i18next.t(
+          'myLicenseDetail.alerts.templateUnavailable.message',
+          'Le club n a pas encore déposé de modèle pour cette pièce.',
+        ),
       );
       return;
     }
@@ -325,8 +366,11 @@ function MyLicenseDetail({ navigation, route }) {
       await downloadRemoteFile({ fileName: request?.templateFile?.name || undefined, url });
     } catch (error) {
       Alert.alert(
-        'Téléchargement impossible',
-        error?.message || 'Le modèle n a pas pu être enregistré sur ton téléphone.',
+        i18next.t('myLicenseDetail.alerts.downloadFailed.title', 'Téléchargement impossible'),
+        error?.message || i18next.t(
+          'myLicenseDetail.alerts.downloadFailed.template',
+          'Le modèle n a pas pu être enregistré sur ton téléphone.',
+        ),
       );
     }
   }, []);
@@ -343,12 +387,24 @@ function MyLicenseDetail({ navigation, route }) {
       }, {
         onSuccess: () => {
           refreshCurrent();
-          Alert.alert('Pièce envoyée', 'Le club pourra maintenant la vérifier.');
+          Alert.alert(i18next.t(
+            'myLicenseDetail.alerts.documentSent.title',
+            'Pièce envoyée',
+          ), i18next.t(
+            'myLicenseDetail.alerts.documentSent.message',
+            'Le club pourra maintenant la vérifier.',
+          ));
         },
       });
     } catch (error) {
       if (isPickerCancelError(error)) return;
-      Alert.alert('Envoi impossible', error?.message || 'La pièce n a pas pu être envoyée.');
+      Alert.alert(i18next.t(
+        'myLicenseDetail.alerts.uploadFailed.title',
+        'Envoi impossible',
+      ), error?.message || i18next.t(
+        'myLicenseDetail.alerts.uploadFailed.message',
+        'La pièce n a pas pu être envoyée.',
+      ));
     }
   }, [assignmentId, documentMutation, refreshCurrent]);
 
@@ -360,20 +416,30 @@ function MyLicenseDetail({ navigation, route }) {
   const sharePayerLink = useCallback(() => {
     if (!payerLink) {
       Alert.alert(
-        'Lien indisponible',
-        'Le lien de paiement sera disponible après génération par le club.',
+        i18next.t('myLicenseDetail.alerts.linkUnavailable.title', 'Lien indisponible'),
+        i18next.t(
+          'myLicenseDetail.alerts.linkUnavailable.message',
+          'Le lien de paiement sera disponible après génération par le club.',
+        ),
       );
       return;
     }
     SharePlatform.share({
-      message: `Paiement cotisation FoundClub: ${payerLink}`,
+      message: i18next.t(
+        'myLicenseDetail.share.message',
+        'Paiement cotisation FoundClub: {{payerLink}}',
+        { payerLink, ...SANS_ECHAPPEMENT },
+      ),
       url: payerLink,
     })
       .then(() => setPayerSheetVisible(false))
       .catch((error) => {
         Alert.alert(
-          'Partage indisponible',
-          error?.message || 'Impossible de partager le lien depuis ce navigateur.',
+          i18next.t('myLicenseDetail.alerts.shareUnavailable.title', 'Partage indisponible'),
+          error?.message || i18next.t(
+            'myLicenseDetail.alerts.shareUnavailable.message',
+            'Impossible de partager le lien depuis ce navigateur.',
+          ),
         );
       });
   }, [payerLink]);
@@ -387,7 +453,13 @@ function MyLicenseDetail({ navigation, route }) {
   const paymentModes = normalizePaymentModes(current?.campaign?.paymentModes);
   const onlineMethods = useMemo(() => [
     paymentModes.helloasso ? { label: 'HelloAsso', mode: 'helloasso' } : null,
-    paymentModes.external_link ? { label: 'Lien du club', mode: 'external' } : null,
+    paymentModes.external_link ? {
+      label: i18next.t(
+        'myLicenseDetail.onlineMethods.clubLink',
+        'Lien du club',
+      ),
+      mode: 'external',
+    } : null,
   ].filter(Boolean), [paymentModes.external_link, paymentModes.helloasso]);
   const manualMethods = useMemo(
     () => getEnabledManualPaymentMethods(current?.campaign?.paymentModes),
@@ -397,15 +469,21 @@ function MyLicenseDetail({ navigation, route }) {
   const confirmCheckout = useCallback((choice, provider) => {
     if (isCampaignPaused) {
       Alert.alert(
-        'Campagne en pause',
-        'Cette campagne est suspendue. Le paiement reprendra quand le club la rouvrira.',
+        i18next.t('myLicenseDetail.alerts.campaignPaused.title', 'Campagne en pause'),
+        i18next.t(
+          'myLicenseDetail.alerts.campaignPaused.message',
+          'Cette campagne est suspendue. Le paiement reprendra quand le club la rouvrira.',
+        ),
       );
       return;
     }
     checkoutMutation.mutate({ amountCents: choice?.amountCents, provider }, {
       onError: (error) => Alert.alert(
-        'Paiement indisponible',
-        error?.message || 'Aucun lien de paiement configuré.',
+        i18next.t('myLicenseDetail.alerts.paymentUnavailable.title', 'Paiement indisponible'),
+        error?.message || i18next.t(
+          'myLicenseDetail.alerts.paymentUnavailable.message',
+          'Aucun lien de paiement configuré.',
+        ),
       ),
       onSuccess: async (result) => {
         setPaySheetVisible(false);
@@ -424,8 +502,11 @@ function MyLicenseDetail({ navigation, route }) {
   const confirmDeclaration = useCallback((choice, method) => {
     declareMutation.mutate({ amountCents: choice?.amountCents, method }, {
       onError: (error) => Alert.alert(
-        'Déclaration impossible',
-        error?.message || 'Le club n a pas pu être prévenu.',
+        i18next.t('myLicenseDetail.alerts.declarationFailed.title', 'Déclaration impossible'),
+        error?.message || i18next.t(
+          'myLicenseDetail.alerts.declarationFailed.message',
+          'Le club n a pas pu être prévenu.',
+        ),
       ),
       onSuccess: () => {
         setDeclareSheetVisible(false);
@@ -433,8 +514,12 @@ function MyLicenseDetail({ navigation, route }) {
         // ✅ « Une action, un retour » : on dit ce qui a change ET ce qui ne
         // change pas — declarer ne fait pas bouger le solde.
         Alert.alert(
-          'Déclaration envoyée',
-          'Ton solde ne bouge pas tant que le club n a pas vérifié. Tu peux corriger en attendant.',
+          i18next.t('myLicenseDetail.alerts.declarationSent.title', 'Déclaration envoyée'),
+          i18next.t(
+            'myLicenseDetail.alerts.declarationSent.message',
+            'Ton solde ne bouge pas tant que le club n a pas vérifié. Tu peux corriger en '
+              + 'attendant.',
+          ),
         );
       },
     });
@@ -443,8 +528,17 @@ function MyLicenseDetail({ navigation, route }) {
   if (listQuery.isLoading || assignmentQuery.isLoading) {
     return (
       <ScreenContainer bottomInsetMode="screen" withHeaderPadding>
-        <MemberTopBar onBack={goBack} title="Ma cotisation" />
-        <LicenseEmptyState description="On récupère ta cotisation." title="Chargement" />
+        <MemberTopBar onBack={goBack} title={t('myLicenseDetail.header.title', 'Ma cotisation')} />
+        <LicenseEmptyState
+          description={t(
+            'myLicenseDetail.loading.description',
+            'On récupère ta cotisation.',
+          )}
+          title={t(
+            'myLicenseDetail.loading.title',
+            'Chargement',
+          )}
+        />
       </ScreenContainer>
     );
   }
@@ -452,17 +546,20 @@ function MyLicenseDetail({ navigation, route }) {
   if (!current) {
     return (
       <ScreenContainer bottomInsetMode="screen" withHeaderPadding>
-        <MemberTopBar onBack={goBack} title="Ma cotisation" />
+        <MemberTopBar onBack={goBack} title={t('myLicenseDetail.header.title', 'Ma cotisation')} />
         <LicenseEmptyState
           action={(
             <Button
               onPress={() => navigation.navigate(RouteNames.MyLicenses)}
-              title="Voir mes cotisations"
+              title={t('myLicenseDetail.notFound.action', 'Voir mes cotisations')}
               variant="Secondary"
             />
           )}
-          description="Cette cotisation n est pas disponible pour ton compte."
-          title="Cotisation introuvable"
+          description={t(
+            'myLicenseDetail.notFound.description',
+            'Cette cotisation n est pas disponible pour ton compte.',
+          )}
+          title={t('myLicenseDetail.notFound.title', 'Cotisation introuvable')}
         />
       </ScreenContainer>
     );
@@ -494,7 +591,6 @@ function MyLicenseDetail({ navigation, route }) {
   const validatedCount = documentRequests.filter(
     (item) => submissionByRequestId.get(licenseKeyOf(item))?.status === 'validated',
   ).length;
-  const piecesPlural = validatedCount > 1 ? 's' : '';
   const isDossierComplete = Boolean(fileUrlOf(officialLicenseDocument))
     && requiredRequests.every(
       (item) => submissionByRequestId.get(licenseKeyOf(item))?.status === 'validated',
@@ -519,24 +615,32 @@ function MyLicenseDetail({ navigation, route }) {
           { file: lastReceipt?.pdfFile },
           `recu-${lastReceipt?.receiptNumber || ''}`,
         )}
-        title="Télécharger le reçu"
+        title={t('myLicenseDetail.receipt.download', 'Télécharger le reçu')}
         variant="Secondary"
       />
     ) : (
-      <Text style={[type.rowState, Fonts.neutral300]}>Reçu en attente du club.</Text>
+      <Text style={[type.rowState, Fonts.neutral300]}>
+        {t('myLicenseDetail.amountCard.footer.receiptPending', 'Reçu en attente du club.')}
+      </Text>
     );
   } else if (status === 'waived') {
     cardFooter = (
       <Text style={[type.rowState, Fonts.neutral300]}>
         {current?.waiveReasonVisibleToMember && current?.waiveReason
           ? current.waiveReason
-          : 'Le club prend cette cotisation à sa charge.'}
+          : t(
+            'myLicenseDetail.amountCard.footer.waived',
+            'Le club prend cette cotisation à sa charge.',
+          )}
       </Text>
     );
   } else if (status === 'cancelled') {
     cardFooter = (
       <Text style={[type.rowState, Fonts.neutral300]}>
-        {current?.discountReason || 'Cette cotisation a été annulée par le club.'}
+        {current?.discountReason || t(
+          'myLicenseDetail.amountCard.footer.cancelled',
+          'Cette cotisation a été annulée par le club.',
+        )}
       </Text>
     );
   } else {
@@ -546,8 +650,20 @@ function MyLicenseDetail({ navigation, route }) {
         <GlyphIcon color={Colors.primary500} name="calendar" size={18} />
         <Text style={[type.keyValue, Fonts.neutral00]}>
           {nextInstallment?.amountRemainingCents
-            ? `${formatLicenseMoney(nextInstallment.amountRemainingCents, currency)} le ${nextDate}`
-            : `À payer avant le ${nextDate}`}
+            ? t(
+              'myLicenseDetail.amountCard.footer.nextAmount',
+              '{{amount}} le {{nextDate}}',
+              {
+                amount: formatLicenseMoney(nextInstallment.amountRemainingCents, currency),
+                nextDate,
+                ...SANS_ECHAPPEMENT,
+              },
+            )
+            : t(
+              'myLicenseDetail.amountCard.footer.dueBefore',
+              'À payer avant le {{nextDate}}',
+              { nextDate, ...SANS_ECHAPPEMENT },
+            )}
         </Text>
       </View>
     ) : (
@@ -556,7 +672,10 @@ function MyLicenseDetail({ navigation, route }) {
       <View style={{ alignItems: 'center', flexDirection: 'row', gap: 8 }}>
         <GlyphIcon color={Colors.neutral300} name="hourglass" size={18} />
         <Text style={[type.rowState, Fonts.neutral300]}>
-          Le club n a pas encore fixé de date. Tu peux payer dès maintenant.
+          {t(
+            'myLicenseDetail.amountCard.footer.noDate',
+            'Le club n a pas encore fixé de date. Tu peux payer dès maintenant.',
+          )}
         </Text>
       </View>
     );
@@ -566,7 +685,7 @@ function MyLicenseDetail({ navigation, route }) {
     assignments.length > 1
       ? {
         glyph: 'euroCircle',
-        label: 'Toutes mes cotisations',
+        label: t('myLicenseDetail.menu.allFees', 'Toutes mes cotisations'),
         onPress: () => navigation.navigate(RouteNames.MyLicenses),
       }
       : null,
@@ -578,7 +697,7 @@ function MyLicenseDetail({ navigation, route }) {
     canDeclare && canPayOnline
       ? {
         glyph: 'landmark',
-        label: 'J’ai payé hors app',
+        label: t('myLicenseDetail.menu.paidOutsideApp', 'J’ai payé hors app'),
         onPress: () => setDeclareSheetVisible(true),
       }
       : null,
@@ -590,23 +709,37 @@ function MyLicenseDetail({ navigation, route }) {
     payerLink
       ? {
         glyph: 'creditCard',
-        label: 'Quelqu’un paie pour moi',
+        label: t('myLicenseDetail.menu.someonePays', 'Quelqu’un paie pour moi'),
         onPress: () => setPayerSheetVisible(true),
       }
       : null,
     {
       glyph: 'envelope',
-      label: 'Écrire au club',
+      label: t('myLicenseDetail.actions.writeToClub', 'Écrire au club'),
       onPress: () => navigation.navigate(RouteNames.NewConversation, {}),
     },
-    { glyph: 'circleInformation', label: 'Comment ça marche', onPress: () => setHelpVisible(true) },
+    {
+      glyph: 'circleInformation',
+      label: t(
+        'myLicenseDetail.help.title',
+        'Comment ça marche',
+      ),
+      onPress: () => setHelpVisible(true),
+    },
   ].filter(Boolean);
 
   return (
     // ⛔ `edge-to-edge` : le calque flottant applique DEJA `insets.bottom`.
     // Laisser `screen` le compterait deux fois et decollerait le bouton du bord.
     <ScreenContainer bottomInsetMode="edge-to-edge" withHeaderPadding>
-      <MemberTopBar onBack={goBack} onMenu={() => setMenuVisible(true)} title="Ma cotisation" />
+      <MemberTopBar
+        onBack={goBack}
+        onMenu={() => setMenuVisible(true)}
+        title={t(
+          'myLicenseDetail.header.title',
+          'Ma cotisation',
+        )}
+      />
       {/*
         S9-bis / defaut 1 — POURQUOI CE `Alignments.fill` N EST PAS DECORATIF.
         Adel, recette du 25/08 : « la page est figee, le bouton du bas est coupe ».
@@ -634,8 +767,11 @@ function MyLicenseDetail({ navigation, route }) {
           <MemberRow
             glyph="hourglass"
             glyphColor={Colors.warning500}
-            state="Les paiements reprendront quand le club rouvrira la campagne."
-            title="Campagne temporairement suspendue"
+            state={t(
+              'myLicenseDetail.paused.state',
+              'Les paiements reprendront quand le club rouvrira la campagne.',
+            )}
+            title={t('myLicenseDetail.paused.title', 'Campagne temporairement suspendue')}
           />
         ) : null}
 
@@ -643,8 +779,12 @@ function MyLicenseDetail({ navigation, route }) {
         {hasInstallmentPlan(current) ? (
           <View style={{ gap: memberSpacing.rowGap }}>
             <MemberOverline
-              hint={`${installments.length} échéances · ${dueLabel}`}
-              title="Échéancier"
+              hint={t(
+                'myLicenseDetail.installments.hint',
+                '{{instalmentCount}} échéances · {{dueLabel}}',
+                { dueLabel, instalmentCount: installments.length, ...SANS_ECHAPPEMENT },
+              )}
+              title={t('myLicenseDetail.installments.title', 'Échéancier')}
             />
             {installments.map((installment) => {
               const state = getInstallmentState(installment, {
@@ -653,11 +793,14 @@ function MyLicenseDetail({ navigation, route }) {
               });
               const dueDate = formatMemberDate(installment.dueDate, { withYear: false });
               const stateLabels = {
-                declared: 'Déclarée · le club vérifie',
-                due: 'À payer',
-                late: 'En retard',
-                paid: 'Payée',
-                upcoming: 'À venir',
+                declared: t(
+                  'myLicenseDetail.installments.states.declared',
+                  'Déclarée · le club vérifie',
+                ),
+                due: t('myLicenseDetail.installments.states.due', 'À payer'),
+                late: t('myLicenseDetail.installments.states.late', 'En retard'),
+                paid: t('myLicenseDetail.installments.states.paid', 'Payée'),
+                upcoming: t('myLicenseDetail.installments.states.upcoming', 'À venir'),
               };
               const glyphColors = {
                 declared: Colors.warning500,
@@ -681,14 +824,22 @@ function MyLicenseDetail({ navigation, route }) {
                   state={stateLabels[state]}
                   title={dueDate
                     ? `${installmentOrderOf(installment)} · ${dueDate}`
-                    : `Échéance ${installmentOrderOf(installment)}`}
+                    : t(
+                      'myLicenseDetail.installments.itemFallback',
+                      'Échéance {{order}}',
+                      { order: installmentOrderOf(installment), ...SANS_ECHAPPEMENT },
+                    )}
                 />
               );
             })}
             {status === 'partial' && canPayOnline ? (
               <Button
                 onPress={() => setPaySheetVisible(true)}
-                title={`Tout solder — ${remainingLabel}`}
+                title={t(
+                  'myLicenseDetail.installments.payAll',
+                  'Tout solder — {{remainingLabel}}',
+                  { remainingLabel, ...SANS_ECHAPPEMENT },
+                )}
                 variant="Secondary"
               />
             ) : null}
@@ -700,9 +851,13 @@ function MyLicenseDetail({ navigation, route }) {
           <View style={{ gap: memberSpacing.rowGap }}>
             <MemberOverline
               hint={documentRequests.length
-                ? `${documentRequests.length} pièce${documentRequests.length > 1 ? 's' : ''}`
+                ? t('myLicenseDetail.dossier.documentsCount', {
+                  count: documentRequests.length,
+                  defaultValue_one: '{{count}} pièce',
+                  defaultValue_other: '{{count}} pièces',
+                })
                 : undefined}
-              title="Mon dossier"
+              title={t('myLicenseDetail.dossier.title', 'Mon dossier')}
             />
             {isDossierComplete ? (
               <MemberRow
@@ -710,12 +865,16 @@ function MyLicenseDetail({ navigation, route }) {
                 glyphColor={Colors.success500}
                 onPress={() => setDossierExpanded((open) => !open)}
                 state={[
-                  'Licence validée',
+                  t('myLicenseDetail.dossier.licenceValidated', 'Licence validée'),
                   validatedCount
-                    ? `${validatedCount} pièce${piecesPlural} reçue${piecesPlural}`
+                    ? t('myLicenseDetail.dossier.documentsReceived', {
+                      count: validatedCount,
+                      defaultValue_one: '{{count}} pièce reçue',
+                      defaultValue_other: '{{count}} pièces reçues',
+                    })
                     : null,
                 ].filter(Boolean).join(' · ')}
-                title="Dossier complet"
+                title={t('myLicenseDetail.dossier.complete', 'Dossier complet')}
                 trailing={(
                   <GlyphIcon
                     color={Colors.primary500}
@@ -738,19 +897,36 @@ function MyLicenseDetail({ navigation, route }) {
                 // pack (etat reel de la demande a la federation) n existe pas
                 // cote serveur : on dit donc ce qu on SAIT, sans l inventer.
                     state={fileUrlOf(officialLicenseDocument)
-                      ? `Disponible depuis le ${licenceDate || 'dépôt du club'}`
-                      : 'Le club ne l a pas encore déposée.'}
-                    title={officialLicenseDocument?.request?.name || 'Ma licence'}
+                      ? t(
+                        'myLicenseDetail.dossier.licence.availableSince',
+                        'Disponible depuis le {{date}}',
+                        {
+                          date: licenceDate
+                            || t('myLicenseDetail.dossier.licence.clubUpload', 'dépôt du club'),
+                          ...SANS_ECHAPPEMENT,
+                        },
+                      )
+                      : t(
+                        'myLicenseDetail.dossier.licence.notUploaded',
+                        'Le club ne l a pas encore déposée.',
+                      )}
+                    title={officialLicenseDocument?.request?.name || t(
+                      'myLicenseDetail.dossier.licence.titleFallback',
+                      'Ma licence',
+                    )}
                     trailing={fileUrlOf(officialLicenseDocument) ? (
                       <View style={{ flexDirection: 'row', gap: memberSpacing.rowGap }}>
                         <MemberRowAction
                           glyph="idCard"
-                          label="Ouvrir ma licence"
+                          label={t('myLicenseDetail.dossier.licence.open', 'Ouvrir ma licence')}
                           onPress={() => openUploadedDocument(officialLicenseDocument)}
                         />
                         <MemberRowAction
                           glyph="arrowDownToBracket"
-                          label="Télécharger ma licence"
+                          label={t(
+                            'myLicenseDetail.dossier.licence.download',
+                            'Télécharger ma licence',
+                          )}
                           onPress={() => downloadDocument(officialLicenseDocument, 'ma-licence')}
                         />
                       </View>
@@ -762,10 +938,31 @@ function MyLicenseDetail({ navigation, route }) {
                   const hasFile = Boolean(fileUrlOf(submission));
                   const dueDate = formatMemberDate(request?.dueDate, { withYear: false });
                   // ⛔ UNE PIECE DIT TOUJOURS QUI ATTEND QUOI, ET JUSQU A QUAND.
-                  let state = request?.required === false ? 'Facultatif' : 'Obligatoire';
-                  if (dueDate) state += ` · à remettre avant le ${dueDate}`;
-                  if (submission?.status === 'validated') state = 'Validée par le club';
-                  else if (submission) state = 'Envoyée · le club vérifie';
+                  let state = request?.required === false ? t(
+                    'myLicenseDetail.dossier.request.optional',
+                    'Facultatif',
+                  ) : t(
+                    'myLicenseDetail.dossier.request.required',
+                    'Obligatoire',
+                  );
+                  if (dueDate) {
+                    state += t(
+                      'myLicenseDetail.dossier.request.dueBefore',
+                      ' · à remettre avant le {{dueDate}}',
+                      { dueDate, ...SANS_ECHAPPEMENT },
+                    );
+                  }
+                  if (submission?.status === 'validated') {
+                    state = t(
+                      'myLicenseDetail.dossier.request.validated',
+                      'Validée par le club',
+                    );
+                  } else if (submission) {
+                    state = t(
+                      'myLicenseDetail.dossier.request.sent',
+                      'Envoyée · le club vérifie',
+                    );
+                  }
                   return (
                     <View
                       key={licenseKeyOf(request) || request?.name}
@@ -779,17 +976,26 @@ function MyLicenseDetail({ navigation, route }) {
                           : Colors.warning400}
                         state={submission?.refusalReason || state}
                         stateColor={submission?.refusalReason ? Colors.error300 : undefined}
-                        title={request?.name || 'Pièce demandée'}
+                        title={request?.name || t(
+                          'myLicenseDetail.dossier.request.titleFallback',
+                          'Pièce demandée',
+                        )}
                         trailing={hasFile ? (
                           <View style={{ flexDirection: 'row', gap: memberSpacing.rowGap }}>
                             <MemberRowAction
                               glyph="fileCheck"
-                              label="Ouvrir le document"
+                              label={t(
+                                'myLicenseDetail.dossier.request.open',
+                                'Ouvrir le document',
+                              )}
                               onPress={() => openUploadedDocument(submission)}
                             />
                             <MemberRowAction
                               glyph="arrowDownToBracket"
-                              label="Télécharger le document"
+                              label={t(
+                                'myLicenseDetail.dossier.request.download',
+                                'Télécharger le document',
+                              )}
                               onPress={() => downloadDocument(
                                 submission,
                                 request?.name || undefined,
@@ -806,14 +1012,23 @@ function MyLicenseDetail({ navigation, route }) {
                           onPress={() => uploadDocument(request)}
                           size="sm"
                           style={{ borderRadius: memberRadius.pill, flex: 1 }}
-                          title={submission ? 'Remplacer ma pièce' : 'Déposer'}
+                          title={submission ? t(
+                            'myLicenseDetail.dossier.request.replace',
+                            'Remplacer ma pièce',
+                          ) : t(
+                            'myLicenseDetail.dossier.request.upload',
+                            'Déposer',
+                          )}
                         />
                         {request?.templateFile?.url ? (
                           <Button
                             onPress={() => downloadTemplate(request)}
                             size="sm"
                             style={{ borderRadius: memberRadius.pill, flex: 1 }}
-                            title="Télécharger le modèle"
+                            title={t(
+                              'myLicenseDetail.dossier.request.downloadTemplate',
+                              'Télécharger le modèle',
+                            )}
                             variant="Secondary"
                           />
                         ) : null}
@@ -829,7 +1044,7 @@ function MyLicenseDetail({ navigation, route }) {
         {/* ── 4. RELANCES — de vrais messages, pas un compteur ──────────────── */}
         {reminders.length ? (
           <View style={{ gap: memberSpacing.rowGap }}>
-            <MemberOverline title="Relances du club" />
+            <MemberOverline title={t('myLicenseDetail.reminders.title', 'Relances du club')} />
             {reminders.map((reminder) => (
               <View
                 key={licenseKeyOf(reminder) || reminder?.sentAt}
@@ -849,7 +1064,9 @@ function MyLicenseDetail({ navigation, route }) {
                   justifyContent: 'space-between',
                 }}
                 >
-                  <Text style={[type.rowTitle, Fonts.neutral00]}>Relance du club</Text>
+                  <Text style={[type.rowTitle, Fonts.neutral00]}>
+                    {t('myLicenseDetail.reminders.item', 'Relance du club')}
+                  </Text>
                   {reminder?.amountRequestedCents ? (
                     <Text style={[type.amount, Fonts.neutral00]}>
                       {formatLicenseMoney(reminder.amountRequestedCents, currency)}
@@ -859,7 +1076,13 @@ function MyLicenseDetail({ navigation, route }) {
                 <Text style={[type.rowState, Fonts.neutral300]}>
                   {[
                     formatMemberDate(reminder?.sentAt),
-                    reminder?.channel === 'email' ? 'e-mail' : 'notification',
+                    reminder?.channel === 'email' ? t(
+                      'myLicenseDetail.reminders.channels.email',
+                      'e-mail',
+                    ) : t(
+                      'myLicenseDetail.reminders.channels.notification',
+                      'notification',
+                    ),
                   ].filter(Boolean).join(' · ')}
                 </Text>
                 {reminder?.message ? (
@@ -869,7 +1092,14 @@ function MyLicenseDetail({ navigation, route }) {
                   <Button
                     onPress={() => setPaySheetVisible(true)}
                     size="sm"
-                    title={`Payer ${formatLicenseMoney(reminder.amountRequestedCents, currency)}`}
+                    title={t(
+                      'myLicenseDetail.actions.payAmount',
+                      'Payer {{amount}}',
+                      {
+                        amount: formatLicenseMoney(reminder.amountRequestedCents, currency),
+                        ...SANS_ECHAPPEMENT,
+                      },
+                    )}
                     variant="Secondary"
                   />
                 ) : null}
@@ -883,7 +1113,7 @@ function MyLicenseDetail({ navigation, route }) {
           <View style={{ gap: memberSpacing.rowGap }}>
             <MemberOverline
               hint={`${payments.length} · ${formatLicenseMoney(current.amountPaidCents, currency)}`}
-              title="Paiements"
+              title={t('myLicenseDetail.payments.title', 'Paiements')}
             />
             {payments.map((payment) => {
               const receipt = payment?.receipt || null;
@@ -897,7 +1127,7 @@ function MyLicenseDetail({ navigation, route }) {
                 receiptAction = (
                   <MemberRowAction
                     glyph="arrowDownToBracket"
-                    label="Télécharger le reçu"
+                    label={t('myLicenseDetail.receipt.download', 'Télécharger le reçu')}
                     onPress={() => downloadDocument(
                       { file: receipt.pdfFile },
                       `recu-${receipt.receiptNumber || ''}`,
@@ -912,13 +1142,16 @@ function MyLicenseDetail({ navigation, route }) {
                 receiptAction = (
                   <MemberRowAction
                     glyph="receiptAlt"
-                    label="Générer mon reçu"
+                    label={t('myLicenseDetail.receipt.generate', 'Générer mon reçu')}
                     onPress={() => receiptMutation.mutate(licenseKeyOf(payment), {
                       onSuccess: () => {
                         refreshCurrent();
                         Alert.alert(
-                          'Reçu généré',
-                          'Ton reçu est maintenant disponible sur ce paiement.',
+                          t('myLicenseDetail.alerts.receiptGenerated.title', 'Reçu généré'),
+                          t(
+                            'myLicenseDetail.alerts.receiptGenerated.message',
+                            'Ton reçu est maintenant disponible sur ce paiement.',
+                          ),
                         );
                       },
                     })}
@@ -936,17 +1169,31 @@ function MyLicenseDetail({ navigation, route }) {
                   state={[
                     formatMemberDate(paymentDate(payment), { withYear: false }),
                     paymentModeLabels[payment.method] || payment.method,
-                    receipt?.receiptNumber ? `reçu ${receipt.receiptNumber}` : null,
-                    !receipt && !canGenerate ? 'reçu en attente du club' : null,
+                    receipt?.receiptNumber ? t(
+                      'myLicenseDetail.payments.receiptNumber',
+                      'reçu {{receiptNumber}}',
+                      { receiptNumber: receipt.receiptNumber, ...SANS_ECHAPPEMENT },
+                    ) : null,
+                    !receipt && !canGenerate ? t(
+                      'myLicenseDetail.payments.receiptPending',
+                      'reçu en attente du club',
+                    ) : null,
                   ].filter(Boolean).join(' · ')}
-                  title={formatMemberDate(paymentDate(payment)) || 'Paiement'}
+                  title={formatMemberDate(paymentDate(payment)) || t(
+                    'myLicenseDetail.payments.titleFallback',
+                    'Paiement',
+                  )}
                   trailing={receiptAction}
                 />
               );
             })}
             {receiptCount > 1 ? (
               <Text style={[type.meta, Fonts.neutral400]}>
-                {`${receiptCount} reçus disponibles sur cette cotisation.`}
+                {t(
+                  'myLicenseDetail.payments.receiptsAvailable',
+                  '{{receiptCount}} reçus disponibles sur cette cotisation.',
+                  { receiptCount, ...SANS_ECHAPPEMENT },
+                )}
               </Text>
             ) : null}
           </View>
@@ -954,17 +1201,41 @@ function MyLicenseDetail({ navigation, route }) {
 
         {/* ── 6. LA CAMPAGNE — les informations froides, tout en bas ────────── */}
         <View style={{ gap: memberSpacing.rowGap }}>
-          <MemberOverline title="La campagne" />
+          <MemberOverline title={t('myLicenseDetail.campaign.title', 'La campagne')} />
           <MemberKeyValueTable
             rows={[
-              { label: 'Campagne', value: current?.campaign?.name },
-              { label: 'Club', value: clubNameOf(current) },
-              { label: 'Section', value: current?.team?.name || current?.categoryLabel },
-              { label: 'Montant', value: formatLicenseMoney(current.amountDueCents, currency) },
+              {
+                label: t(
+                  'myLicenseDetail.campaign.rows.campaign',
+                  'Campagne',
+                ),
+                value: current?.campaign?.name,
+              },
+              {
+                label: t(
+                  'myLicenseDetail.campaign.rows.club',
+                  'Club',
+                ),
+                value: clubNameOf(current),
+              },
+              {
+                label: t(
+                  'myLicenseDetail.campaign.rows.section',
+                  'Section',
+                ),
+                value: current?.team?.name || current?.categoryLabel,
+              },
+              {
+                label: t(
+                  'myLicenseDetail.campaign.rows.amount',
+                  'Montant',
+                ),
+                value: formatLicenseMoney(current.amountDueCents, currency),
+              },
               // ⛔ LA LIGNE DISPARAIT QUAND IL N Y A PAS DE DATE : un tiret est
               // la meme non-information que « Non definie ».
               {
-                label: 'Date limite',
+                label: t('myLicenseDetail.campaign.rows.deadline', 'Date limite'),
                 value: formatMemberDate(current?.dueDate || current?.campaign?.dueDate),
               },
             ]}
@@ -973,18 +1244,21 @@ function MyLicenseDetail({ navigation, route }) {
 
         {/* ── 7. LE CONTACT DU CLUB — toujours ──────────────────────────────── */}
         <View style={{ gap: memberSpacing.rowGap }}>
-          <MemberOverline title="Une question ?" />
+          <MemberOverline title={t('myLicenseDetail.contact.title', 'Une question ?')} />
           <MemberRow
             glyph="envelope"
             glyphColor={Colors.primary500}
             // 🕳️ OUVERTURE S6 : le serveur ne designe aucun referent par club.
             // Le repli v1 decide le 25/08 est la conversation existante.
-            state="Un délai, une aide, une erreur de montant : ça se règle en parlant."
-            title="Écrire au club"
+            state={t(
+              'myLicenseDetail.contact.state',
+              'Un délai, une aide, une erreur de montant : ça se règle en parlant.',
+            )}
+            title={t('myLicenseDetail.actions.writeToClub', 'Écrire au club')}
             trailing={(
               <MemberRowAction
                 glyph="envelope"
-                label="Écrire au club"
+                label={t('myLicenseDetail.actions.writeToClub', 'Écrire au club')}
                 onPress={() => navigation.navigate(RouteNames.NewConversation, {})}
               />
             )}
@@ -1024,13 +1298,17 @@ function MyLicenseDetail({ navigation, route }) {
               isLoading={checkoutMutation.isPending}
               onPress={() => setPaySheetVisible(true)}
               style={ApplicationStyle.shadow200}
-              title={`Payer ${remainingLabel}`}
+              title={t(
+                'myLicenseDetail.actions.payAmount',
+                'Payer {{amount}}',
+                { amount: remainingLabel, ...SANS_ECHAPPEMENT },
+              )}
             />
           ) : (
             <Button
               onPress={() => setDeclareSheetVisible(true)}
               style={ApplicationStyle.shadow200}
-              title="J'ai payé hors app"
+              title={t('myLicenseDetail.actions.paidOutsideApp', "J'ai payé hors app")}
             />
           )}
         </WebFloatingOverlay>
@@ -1074,18 +1352,29 @@ function MyLicenseDetail({ navigation, route }) {
           webPresentation="dialog"
         >
           <View style={{ gap: memberSpacing.rowGap }}>
-            <Text style={[Fonts.h3Bold, Fonts.neutral00]}>Comment ça marche</Text>
-            <Text style={[type.subtitle, Fonts.neutral200]}>
-              Ta cotisation est fixée par ton club. Si elle se paie en plusieurs fois,
-              chaque échéance a sa date : tu règles celle qui arrive, ou tu soldes tout.
+            <Text style={[Fonts.h3Bold, Fonts.neutral00]}>
+              {t('myLicenseDetail.help.title', 'Comment ça marche')}
             </Text>
             <Text style={[type.subtitle, Fonts.neutral200]}>
-              Si tu as payé en espèces, par chèque ou par virement, dis-le avec
-              « J ai payé hors app ». Ton solde ne bougera qu une fois le club passé.
+              {t(
+                'myLicenseDetail.help.instalments',
+                'Ta cotisation est fixée par ton club. Si elle se paie en plusieurs fois, '
+                  + 'chaque échéance a sa date : tu règles celle qui arrive, ou tu soldes tout.',
+              )}
             </Text>
             <Text style={[type.subtitle, Fonts.neutral200]}>
-              Chaque paiement encaissé porte son reçu. Les saisons terminées restent
-              consultables : un reçu se retrouve indéfiniment.
+              {t(
+                'myLicenseDetail.help.paidOutsideApp',
+                'Si tu as payé en espèces, par chèque ou par virement, dis-le avec « J ai '
+                  + 'payé hors app ». Ton solde ne bougera qu une fois le club passé.',
+              )}
+            </Text>
+            <Text style={[type.subtitle, Fonts.neutral200]}>
+              {t(
+                'myLicenseDetail.help.receipts',
+                'Chaque paiement encaissé porte son reçu. Les saisons terminées restent '
+                  + 'consultables : un reçu se retrouve indéfiniment.',
+              )}
             </Text>
           </View>
         </BottomModal>

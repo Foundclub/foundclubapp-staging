@@ -1,5 +1,7 @@
 import { useQueryClient } from '@tanstack/react-query';
+import i18next from 'i18next';
 import { useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Text, View } from 'react-native';
 
 import {
@@ -28,6 +30,7 @@ import {
  * @returns {import('react').ReactElement}
  */
 function SubscriptionWebSuccess({ navigation, route }) {
+  const { t } = useTranslation();
   const { Alignments, Fonts, Spaces } = useTheme();
   const queryClient = useQueryClient();
   const sessionId = String(route?.params?.session_id || route?.params?.sessionId || '');
@@ -46,7 +49,10 @@ function SubscriptionWebSuccess({ navigation, route }) {
     const finalize = async () => {
       if (!sessionId) {
         setStatus('error');
-        setErrorMessage('Session de paiement introuvable.');
+        setErrorMessage(i18next.t(
+          'subscriptionWebSuccess.errors.sessionNotFound',
+          'Session de paiement introuvable.',
+        ));
         return;
       }
       try {
@@ -68,7 +74,10 @@ function SubscriptionWebSuccess({ navigation, route }) {
       } catch (error) {
         if (!cancelled) {
           setStatus('error');
-          setErrorMessage(error?.message || 'Impossible de confirmer le paiement.');
+          setErrorMessage(error?.message || i18next.t(
+            'subscriptionWebSuccess.errors.confirmFailed',
+            'Impossible de confirmer le paiement.',
+          ));
         }
       }
     };
@@ -85,7 +94,7 @@ function SubscriptionWebSuccess({ navigation, route }) {
     if (status === 'success') {
       navigation.replace(RouteNames.SubscriptionSuccess, {
         offerLabel: 'FoundClub',
-        resumeCtaLabel: "C'est parti !",
+        resumeCtaLabel: t('subscriptionWebSuccess.actions.letsGo', "C'est parti !"),
         resumeMode: 'home',
       });
       return;
@@ -117,21 +126,31 @@ function SubscriptionWebSuccess({ navigation, route }) {
         {status === 'error' ? (
           <>
             <Text style={[Fonts.h2Bold, Fonts.neutral00, Fonts.textCenter]}>
-              Confirmation impossible
+              {t('subscriptionWebSuccess.error.title', 'Confirmation impossible')}
             </Text>
             <Text style={[Fonts.p1, Fonts.neutral200, Fonts.textCenter, { maxWidth: 320 }]}>
               {errorMessage}
               {' '}
-              Si tu as bien été débité, tes droits s&apos;activeront automatiquement d&apos;ici
-              quelques minutes.
+              {t(
+                'subscriptionWebSuccess.error.chargedHint',
+                "Si tu as bien été débité, tes droits s'activeront automatiquement d'ici "
+                  + 'quelques minutes.',
+              )}
             </Text>
-            <Button onPress={handleContinue} title="Retour à l'accueil" variant="Primary" />
+            <Button
+              onPress={handleContinue}
+              title={t(
+                'subscriptionWebSuccess.actions.backHome',
+                "Retour à l'accueil",
+              )}
+              variant="Primary"
+            />
           </>
         ) : (
           <>
             <ActivityIndicator size="large" />
             <Text style={[Fonts.p1, Fonts.neutral200, Fonts.textCenter]}>
-              Confirmation du paiement…
+              {t('subscriptionWebSuccess.pending', 'Confirmation du paiement…')}
             </Text>
           </>
         )}

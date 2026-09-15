@@ -51,7 +51,18 @@ jest.mock('@/theme/themeContext', () => {
 });
 
 jest.mock('react-i18next', () => ({
-  useTranslation: () => ({ t: (/** @type {string} */ key) => key }),
+  // I18N-1 : un texte passe par t() avec son repli francais rend ce repli (pluriel compris),
+  // comme dans l'app ; une clef appelee sans repli rend toujours la clef.
+  useTranslation: () => ({
+    t: (/** @type {string} */ key, /** @type {any} */ repli) => {
+      if (typeof repli === 'string') return repli;
+      if (repli && typeof repli === 'object' && 'defaultValue_one' in repli) {
+        const texte = repli.count > 1 ? repli.defaultValue_other : repli.defaultValue_one;
+        return String(texte).replace('{{count}}', String(repli.count));
+      }
+      return key;
+    },
+  }),
 }));
 
 const collectTexts = (/** @type {any} */ node, /** @type {string[]} */ acc = []) => {

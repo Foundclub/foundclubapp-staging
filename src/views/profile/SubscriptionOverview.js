@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { format as formatDate } from 'date-fns';
 import { fr as frLocale } from 'date-fns/locale';
+import i18next from 'i18next';
 import {
   useCallback, useEffect, useMemo, useState,
 } from 'react';
@@ -38,6 +39,7 @@ import {
 } from '@/domains/subscription/subscriptionRefresh';
 import { useSubscriptionCatalog } from '@/domains/subscription/useSubscriptionCatalog';
 import { withAlpha } from '@/theme/colors';
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -65,8 +67,12 @@ import { RouteNames } from '@/navigation/routeNames';
  * @type {Record<string, string>}
  */
 const TRIAL_PLAN_LABELS = {
-  fc_trial_club: 'Aperçu Club (offert)',
-  fc_trial_team: 'Aperçu Équipe (offert)',
+  get fc_trial_club() {
+    return i18next.t('subscriptionOverview.trialPlans.club', 'Aperçu Club (offert)');
+  },
+  get fc_trial_team() {
+    return i18next.t('subscriptionOverview.trialPlans.team', 'Aperçu Équipe (offert)');
+  },
 };
 
 /**
@@ -75,17 +81,17 @@ const TRIAL_PLAN_LABELS = {
  */
 const getVerificationLabel = (clubVerificationSummary) => {
   if (!clubVerificationSummary?.clubDocumentId) {
-    return 'Aucun club rattaché';
+    return i18next.t('subscriptionOverview.verification.noClub', 'Aucun club rattaché');
   }
   if (clubVerificationSummary?.clubVerified === true) {
-    return 'Club certifié';
+    return i18next.t('subscriptionOverview.verification.verified', 'Club certifié');
   }
   if (clubVerificationSummary?.requiresClubVerification === true) {
     // L'ancien libelle reclamait ici un geste qui n'existe pas pour un
     // dirigeant : la certification est faite par la plateforme, jamais par lui.
-    return 'Certification en cours';
+    return i18next.t('subscriptionOverview.verification.pending', 'Certification en cours');
   }
-  return 'Club non certifié';
+  return i18next.t('subscriptionOverview.verification.unverified', 'Club non certifié');
 };
 
 /**
@@ -119,7 +125,13 @@ const getTrialRemainingDays = (currentPeriodEnd) => {
  * @returns {string}
  */
 const getTrialScopeLabel = (planCode) => (
-  String(planCode || '').trim().toLowerCase().includes('club') ? 'Club' : 'Équipe'
+  String(planCode || '').trim().toLowerCase().includes('club') ? i18next.t(
+    'subscriptionOverview.trialScope.club',
+    'Club',
+  ) : i18next.t(
+    'profile.subscription.states.team',
+    'Équipe',
+  )
 );
 
 /**
@@ -136,6 +148,7 @@ const formatSubscriptionPlanLabelWithTrial = (planCode) => (
  * @returns {import('react').ReactElement}
  */
 function SubscriptionTrialBanner({ trialSubscription }) {
+  const { t } = useTranslation();
   const { ApplicationStyle, Fonts, Spaces } = useTheme();
   const remainingDays = getTrialRemainingDays(trialSubscription?.currentPeriodEnd);
 
@@ -150,10 +163,21 @@ function SubscriptionTrialBanner({ trialSubscription }) {
     ]}
     >
       <Text style={[Fonts.p1Bold, Fonts.primary700]}>
-        {`Aperçu ${getTrialScopeLabel(trialSubscription?.planCode)} · J-${remainingDays}`}
+        {t(
+          'subscriptionOverview.trialBanner.title',
+          'Aperçu {{scope}} · J-{{remainingDays}}',
+          {
+            remainingDays,
+            scope: getTrialScopeLabel(trialSubscription?.planCode),
+            ...SANS_ECHAPPEMENT,
+          },
+        )}
       </Text>
       <Text style={[Fonts.p2, Fonts.primary700]}>
-        Aucune carte requise. Retour à l&apos;offre gratuite ensuite.
+        {t(
+          'subscriptionOverview.trialBanner.noCard',
+          "Aucune carte requise. Retour à l'offre gratuite ensuite.",
+        )}
       </Text>
     </View>
   );
@@ -303,27 +327,68 @@ function SubscriptionOverview({ navigation, route }) {
   const isFreeLevel = subscriptionAccessLevel === 'FREE';
   const isClubLevel = hasActiveClubOffer(subscriptionAccessLevel);
   // Titre humain de la carte statut : le vrai nom d'offre si payant, sinon l'offre gratuite.
-  const planCardTitle = isFreeLevel ? 'Offre gratuite FoundClub' : (planLabels[0] || statusMeta.label);
+  const planCardTitle = isFreeLevel ? t(
+    'subscriptionOverview.planCard.freeTitle',
+    'Offre gratuite FoundClub',
+  ) : (planLabels[0] || statusMeta.label);
   // Description tutoyée par niveau (remplace la copie technique/vouvoyée du backend).
   const planCardDescription = {
-    CLUB: 'Les droits Club sont actifs sur ton club certifié : toutes tes équipes sont couvertes.',
-    CLUB_UNVERIFIED: 'Tes droits Club sont actifs sur tout ton club — rien n\'est bloqué. Ton club est en cours de certification par la plateforme.',
-    FREE: 'Tu publies en quantité limitée. Passe à une offre payante pour lever les limites.',
-    TEAM: 'Tes équipes couvertes profitent des droits Équipe, sans limite de publication.',
-  }[subscriptionAccessLevel] || 'Tu utilises l\'offre gratuite FoundClub.';
+    CLUB: t(
+      'subscriptionOverview.planCard.description.club',
+      'Les droits Club sont actifs sur ton club certifié : toutes tes équipes sont couvertes.',
+    ),
+    CLUB_UNVERIFIED: t(
+      'subscriptionOverview.planCard.description.clubUnverified',
+      "Tes droits Club sont actifs sur tout ton club — rien n'est bloqué. Ton club est en "
+        + 'cours de certification par la plateforme.',
+    ),
+    FREE: t(
+      'subscriptionOverview.planCard.description.free',
+      'Tu publies en quantité limitée. Passe à une offre payante pour lever les limites.',
+    ),
+    TEAM: t(
+      'subscriptionOverview.planCard.description.team',
+      'Tes équipes couvertes profitent des droits Équipe, sans limite de publication.',
+    ),
+  }[subscriptionAccessLevel] || t(
+    'profile.subscription.status.free',
+    "Tu utilises l'offre gratuite FoundClub.",
+  );
   // Résumé de couverture humain (aucune tuile « 0 » : on n'affiche que ce qui a du sens).
   const coverageSummary = (() => {
     if (isFreeLevel) return '';
-    if (isClubLevel) return 'Toutes les équipes de ton club sont couvertes.';
+    if (isClubLevel) {
+      return t(
+        'subscriptionOverview.coverage.allClubTeams',
+        'Toutes les équipes de ton club sont couvertes.',
+      );
+    }
     if (coveredTeamCount > 0) {
-      return `${coveredTeamCount} équipe${coveredTeamCount > 1 ? 's' : ''} couverte${coveredTeamCount > 1 ? 's' : ''} par ton offre.`;
+      return t('subscriptionOverview.coverage.teams', {
+        count: coveredTeamCount,
+        defaultValue_one: '{{count}} équipe couverte par ton offre.',
+        defaultValue_other: '{{count}} équipes couvertes par ton offre.',
+      });
     }
     return '';
   })();
   // Places restantes d'une offre Équipe : la seule information de l'ancienne
   // section « Plans et droits actifs » qui n'existait nulle part ailleurs.
   const teamSlotLine = !isFreeLevel && !isClubLevel && teamSlotSummary.total > 0
-    ? `${teamSlotSummary.assigned}/${teamSlotSummary.total} place${teamSlotSummary.total > 1 ? 's' : ''} attribuée${teamSlotSummary.assigned > 1 ? 's' : ''}`
+    ? t('subscriptionOverview.teamSlots.usage', '{{assigned}}/{{places}} {{assignedWord}}', {
+      assigned: teamSlotSummary.assigned,
+      assignedWord: t('subscriptionOverview.teamSlots.assignedWord', {
+        count: teamSlotSummary.assigned,
+        defaultValue_one: 'attribuée',
+        defaultValue_other: 'attribuées',
+      }),
+      places: t('subscriptionOverview.teamSlots.places', {
+        count: teamSlotSummary.total,
+        defaultValue_one: '{{count}} place',
+        defaultValue_other: '{{count}} places',
+      }),
+      ...SANS_ECHAPPEMENT,
+    })
     : '';
   const renewalDateLabel = payerRenewalEntitlement?.subscriptionCurrentPeriodEnd
     ? formatDate(
@@ -452,13 +517,29 @@ function SubscriptionOverview({ navigation, route }) {
       const previousCount = Number(result?.previousLicenseeCount);
       const nextCount = Number(result?.licenseeCount || typedLicenseeCount);
       Alert.alert(
-        'Nouveau nombre de licenciés enregistré',
+        i18next.t(
+          'subscriptionOverview.alerts.licenseeIncreased.title',
+          'Nouveau nombre de licenciés enregistré',
+        ),
         Number.isFinite(previousCount) && previousCount > 0
-          ? `Ton club passe de ${previousCount} à ${nextCount} licenciés. La différence est facturée tout de suite, au prorata, et les adhésions rouvrent.`
-          : `Ton club couvre maintenant ${nextCount} licenciés. La différence est facturée tout de suite, au prorata, et les adhésions rouvrent.`,
+          ? i18next.t(
+            'subscriptionOverview.alerts.licenseeIncreased.fromTo',
+            'Ton club passe de {{previousCount}} à {{nextCount}} licenciés. La différence '
+              + 'est facturée tout de suite, au prorata, et les adhésions rouvrent.',
+            { nextCount, previousCount, ...SANS_ECHAPPEMENT },
+          )
+          : i18next.t(
+            'subscriptionOverview.alerts.licenseeIncreased.nowCovers',
+            'Ton club couvre maintenant {{nextCount}} licenciés. La différence est facturée '
+              + 'tout de suite, au prorata, et les adhésions rouvrent.',
+            { nextCount, ...SANS_ECHAPPEMENT },
+          ),
       );
     } catch (error) {
-      Alert.alert('Erreur abonnement', getSubscriptionBillingErrorMessage(error));
+      Alert.alert(i18next.t(
+        'subscriptionOverview.alerts.subscriptionError.title',
+        'Erreur abonnement',
+      ), getSubscriptionBillingErrorMessage(error));
     }
   }, [
     closeLicenseeSheet,
@@ -485,13 +566,23 @@ function SubscriptionOverview({ navigation, route }) {
         restoredPayload?.meta?.restoredCount || restoredPayload?.data?.length || 0,
       );
       Alert.alert(
-        'Restauration terminée',
+        i18next.t('subscriptionOverview.alerts.restoreDone.title', 'Restauration terminée'),
         restoredCount > 0
-          ? `${restoredCount} abonnement${restoredCount > 1 ? 's ont été retrouves' : ' a été retrouve'}.`
-          : 'Aucun achat n a été retrouve sur ce compte.',
+          ? i18next.t('subscriptionOverview.alerts.restoreDone.found', {
+            count: restoredCount,
+            defaultValue_one: '{{count}} abonnement a été retrouve.',
+            defaultValue_other: '{{count}} abonnements ont été retrouves.',
+          })
+          : i18next.t(
+            'subscriptionOverview.alerts.restoreDone.none',
+            'Aucun achat n a été retrouve sur ce compte.',
+          ),
       );
     } catch (error) {
-      Alert.alert('Erreur abonnement', getSubscriptionBillingErrorMessage(error));
+      Alert.alert(i18next.t(
+        'subscriptionOverview.alerts.subscriptionError.title',
+        'Erreur abonnement',
+      ), getSubscriptionBillingErrorMessage(error));
     }
   }, [queryClient, restoreMutation]);
 
@@ -540,7 +631,10 @@ function SubscriptionOverview({ navigation, route }) {
         ),
       );
     } catch (error) {
-      Alert.alert('Erreur abonnement', getSubscriptionBillingErrorMessage(error));
+      Alert.alert(t(
+        'subscriptionOverview.alerts.subscriptionError.title',
+        'Erreur abonnement',
+      ), getSubscriptionBillingErrorMessage(error));
     }
   }, [t]);
 
@@ -732,32 +826,36 @@ function SubscriptionOverview({ navigation, route }) {
 
           {planLabels.length > 1 ? (
             <Text style={[Fonts.p4, Fonts.neutral400, Spaces.marginTop[4]]}>
-              {`Autres offres actives : ${planLabels.slice(1).join(' · ')}`}
+              {t(
+                'subscriptionOverview.planCard.otherPlans',
+                'Autres offres actives : {{plans}}',
+                { plans: planLabels.slice(1).join(' · '), ...SANS_ECHAPPEMENT },
+              )}
             </Text>
           ) : null}
 
           <View style={Spaces.marginTop[12]}>
             {isClubLevel ? renderStatusLine({
               icon: 'check',
-              label: 'Certification',
+              label: t('subscriptionOverview.statusLines.certification', 'Certification'),
               value: verificationLabel,
               valueColor: Colors.violet200,
             }) : null}
             {teamSlotLine ? renderStatusLine({
               icon: 'users',
-              label: 'Équipes couvertes',
+              label: t('subscriptionOverview.statusLines.coveredTeams', 'Équipes couvertes'),
               value: teamSlotLine,
             }) : null}
             {renewalDateLabel ? renderStatusLine({
               icon: 'calendar',
-              label: 'Renouvelé le',
+              label: t('subscriptionOverview.statusLines.renewedOn', 'Renouvelé le'),
               value: renewalDateLabel,
             }) : null}
           </View>
         </View>
 
         {renderSection(
-          'Offre', (
+          t('subscriptionOverview.sections.plan', 'Offre'), (
             <>
               {renderActionRow({
                 icon: 'euroCircle',
@@ -775,9 +873,13 @@ function SubscriptionOverview({ navigation, route }) {
                   nombre a quelqu'un qui n'en a pas serait une impasse. */}
               {licenseeSubscription ? renderActionRow({
                 icon: 'users',
-                label: 'Augmenter mes licenciés',
+                label: t('subscriptionOverview.licensee.increase', 'Augmenter mes licenciés'),
                 onPress: () => setIsLicenseeSheetVisible(true),
-                right: knownLicenseeCount === null ? '' : `${knownLicenseeCount} couverts`,
+                right: knownLicenseeCount === null ? '' : t(
+                  'subscriptionOverview.licensee.coveredCount',
+                  '{{knownLicenseeCount}} couverts',
+                  { knownLicenseeCount, ...SANS_ECHAPPEMENT },
+                ),
                 withDivider: true,
               }) : null}
               {renderActionRow({
@@ -807,7 +909,10 @@ function SubscriptionOverview({ navigation, route }) {
           ),
         )}
 
-        {currentClubDocumentId ? renderSection('Club', renderActionRow({
+        {currentClubDocumentId ? renderSection(t(
+          'subscriptionOverview.sections.club',
+          'Club',
+        ), renderActionRow({
           icon: 'shield',
           label: t('profile.subscription.actions.viewClub', 'Voir mon club'),
           onPress: () => navigation.navigate(RouteNames.ClubStack, {
@@ -832,20 +937,47 @@ function SubscriptionOverview({ navigation, route }) {
         <View style={[Spaces.gap[16], Spaces.paddingBottom[24]]}>
           <View style={Spaces.gap[4]}>
             <Text style={[Fonts.h4Black, Fonts.neutral00]}>
-              Augmenter mes licenciés
+              {t('subscriptionOverview.licensee.increase', 'Augmenter mes licenciés')}
             </Text>
             <Text style={[Fonts.p2, Fonts.neutral200]}>
               {knownLicenseeCount === null
-                ? 'Indique le nouveau nombre TOTAL de licenciés que ton club doit couvrir.'
-                : `Ton abonnement couvre ${knownLicenseeCount} licenciés${knownMemberCount === null ? '' : `, et ton club compte ${knownMemberCount} membres`}. Indique le nouveau total.`}
+                ? t(
+                  'subscriptionOverview.licenseeSheet.introUnknown',
+                  'Indique le nouveau nombre TOTAL de licenciés que ton club doit couvrir.',
+                )
+                : t(
+                  'subscriptionOverview.licenseeSheet.introKnown',
+                  'Ton abonnement couvre {{knownLicenseeCount}} licenciés{{memberClause}}. '
+                    + 'Indique le nouveau total.',
+                  {
+                    knownLicenseeCount,
+                    memberClause: knownMemberCount === null
+                      ? ''
+                      : t(
+                        'subscriptionOverview.licenseeSheet.memberClause',
+                        ', et ton club compte {{knownMemberCount}} membres',
+                        { knownMemberCount, ...SANS_ECHAPPEMENT },
+                      ),
+                    ...SANS_ECHAPPEMENT,
+                  },
+                )}
             </Text>
           </View>
 
           <LicenseeCountField
             billingPeriod={licenseeSubscription?.billingPeriod || ''}
-            helperText={'La différence est facturée tout de suite, au prorata du temps restant. '
-              + 'Une baisse, elle, prend effet au prochain renouvellement.'}
-            label="Nouveau nombre de licenciés"
+            helperText={t(
+              'subscriptionOverview.licenseeSheet.helperCharge',
+              'La différence est facturée tout de suite, au prorata du temps restant. ',
+            )
+              + t(
+                'subscriptionOverview.licenseeSheet.helperDecrease',
+                'Une baisse, elle, prend effet au prochain renouvellement.',
+              )}
+            label={t(
+              'subscriptionOverview.licenseeSheet.fieldLabel',
+              'Nouveau nombre de licenciés',
+            )}
             minCount={minimumLicenseeCount}
             onChangeText={
               (value) => setLicenseeCountText(sanitizeSubscriptionLicenseeCountInput(value))
@@ -858,11 +990,18 @@ function SubscriptionOverview({ navigation, route }) {
               seul ne dit pas ce qu'on va payer EN PLUS. */}
           {knownLicenseeCount !== null && isTypedLicenseeCountValid ? (
             <Text style={[Fonts.p3Bold, Fonts.primary200]}>
-              {`+ ${formatSubscriptionPerMemberPriceLabel(
-                licenseeUnitPriceEurCents,
-                /** @type {number} */ (typedLicenseeCount) - knownLicenseeCount,
-                licenseeSubscription?.billingPeriod || '',
-              )} sur une année pleine`}
+              {t(
+                'subscriptionOverview.licenseeSheet.extraPerYear',
+                '+ {{extraYearLabel}} sur une année pleine',
+                {
+                  extraYearLabel: formatSubscriptionPerMemberPriceLabel(
+                    licenseeUnitPriceEurCents,
+                    /** @type {number} */ (typedLicenseeCount) - knownLicenseeCount,
+                    licenseeSubscription?.billingPeriod || '',
+                  ),
+                  ...SANS_ECHAPPEMENT,
+                },
+              )}
             </Text>
           ) : null}
 
@@ -871,12 +1010,12 @@ function SubscriptionOverview({ navigation, route }) {
               disabled={!isTypedLicenseeCountValid}
               isLoading={increaseMutation.isPending}
               onPress={handleIncreaseLicensees}
-              title="Confirmer l'augmentation"
+              title={t('subscriptionOverview.licenseeSheet.confirm', "Confirmer l'augmentation")}
               variant="PrimaryLight"
             />
             <Button
               onPress={closeLicenseeSheet}
-              title="Annuler"
+              title={t('subscriptionOverview.licenseeSheet.cancel', 'Annuler')}
               variant="SecondaryLight"
             />
           </View>

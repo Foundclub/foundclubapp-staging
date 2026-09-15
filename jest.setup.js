@@ -119,6 +119,36 @@ jest.mock('@/theme/strings/langue', () => ({
   lireChoixDeLangue: () => null,
 }));
 
+/**
+ * 🔤 I18N-1 — i18next EST DEMARRE EN FRANCAIS POUR CHAQUE TEMOIN.
+ *
+ * Les lots I18N-1 a 4 font lire les textes des modules hors composant par
+ * `i18next.t('clef', 'repli')` (docs/I18N_DECOUPAGE.md §3). Or aucun temoin ne
+ * demarrait i18next : `i18next.t` rend alors `undefined`, et un seul helper
+ * partage (`subscriptionBilling`) faisait rougir 11 suites d'ecrans qui ne
+ * savent rien d'i18n (mesure du 2026-09-15 : « 49,99 €undefined »).
+ *
+ * Ce demarrage decrit l'app et rien d'autre : la vraie `fr.js`, le francais,
+ * les replis, l'interpolation et le pluriel francais. Il ne branche PAS
+ * react-i18next (`initReactI18next`) : les doublures de `useTranslation` des
+ * temoins restent ce qu'elles sont. Un temoin qui double `i18next` lui-meme
+ * (`jest.mock('i18next')`) garde sa doublure.
+ */
+{
+  const i18next = jest.requireActual('i18next');
+  if (!i18next.isInitialized) {
+    i18next.init({
+      compatibilityJSON: 'v4',
+      fallbackLng: 'fr',
+      initAsync: false,
+      lng: 'fr',
+      resources: {
+        fr: { translation: jest.requireActual('@/theme/strings/translations/fr').default },
+      },
+    });
+  }
+}
+
 jest.mock('@tanstack/query-core', () => {
   const reel = jest.requireActual('@tanstack/query-core');
   // `Query` et `Mutation` heritent toutes deux de `Removable`, la classe qui

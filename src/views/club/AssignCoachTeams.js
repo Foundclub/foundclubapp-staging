@@ -1,6 +1,7 @@
 import { useFocusEffect } from '@react-navigation/native';
 import { FlashList } from '@shopify/flash-list';
 import { useMutation } from '@tanstack/react-query';
+import i18next from 'i18next';
 import { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -10,6 +11,7 @@ import {
   View,
 } from 'react-native';
 
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -25,7 +27,13 @@ import { RouteNames } from '@/navigation/routeNames';
 import { useGetTeams } from '@/services/team/teamQueries';
 import { updateTeam } from '@/services/team/teamService';
 
-const getTeamDisplayName = (team) => String(team?.name || 'Équipe').trim() || 'Équipe';
+const getTeamDisplayName = (team) => String(team?.name || i18next.t(
+  'assignCoachTeams.fallbacks.team',
+  'Équipe',
+)).trim() || i18next.t(
+  'assignCoachTeams.fallbacks.team',
+  'Équipe',
+);
 
 /**
  * @param {Team} team
@@ -120,13 +128,24 @@ function AssignCoachTeams({ navigation, route }) {
     onError: () => {
       Alert.alert(
         t('common.error', 'Erreur'),
-        'Impossible d\'assigner l\'entraîneur aux équipes sélectionnées.',
+        t(
+          'assignCoachTeams.errors.assign',
+          "Impossible d'assigner l'entraîneur aux équipes sélectionnées.",
+        ),
       );
     },
     onSuccess: () => {
       Alert.alert(
-        'Assignation terminée',
-        `${trainerName || "L'entraîneur"} a été assigné aux équipes sélectionnées.`,
+        t('assignCoachTeams.alerts.success.title', 'Assignation terminée'),
+        t(
+          'assignCoachTeams.alerts.success.message',
+          '{{trainerName}} a été assigné aux équipes sélectionnées.',
+          {
+            trainerName: trainerName
+              || t('assignCoachTeams.alerts.success.trainerFallback', "L'entraîneur"),
+            ...SANS_ECHAPPEMENT,
+          },
+        ),
         [{
           onPress: () => navigation.goBack(),
           text: t('common.actions.ok', 'OK'),
@@ -166,14 +185,17 @@ function AssignCoachTeams({ navigation, route }) {
     if (!trainerId) {
       Alert.alert(
         t('common.error', 'Erreur'),
-        'Impossible de retrouver cet entraîneur. Merci de réessayer.',
+        t(
+          'assignCoachTeams.errors.trainerNotFound',
+          'Impossible de retrouver cet entraîneur. Merci de réessayer.',
+        ),
       );
       return;
     }
     if (!selectedTeamIds.length) {
       Alert.alert(
         t('common.error', 'Erreur'),
-        'Sélectionne au moins une équipe.',
+        t('assignCoachTeams.errors.noTeamSelected', 'Sélectionne au moins une équipe.'),
       );
       return;
     }
@@ -191,11 +213,11 @@ function AssignCoachTeams({ navigation, route }) {
       ]}
     >
       <Text style={[Fonts.p1Bold, Fonts.neutral00, Fonts.textCenter]}>
-        Aucune équipe pour le moment.
+        {t('assignCoachTeams.empty.message', 'Aucune équipe pour le moment.')}
       </Text>
       <Button
         onPress={handleCreateTeam}
-        title="Créer une équipe"
+        title={t('assignCoachTeams.actions.createTeam', 'Créer une équipe')}
         variant="Secondary"
       />
     </View>
@@ -209,6 +231,7 @@ function AssignCoachTeams({ navigation, route }) {
     Spaces.gap,
     Spaces.padding,
     handleCreateTeam,
+    t,
   ]);
 
   const renderItem = useCallback(({ item }) => {
@@ -245,7 +268,7 @@ function AssignCoachTeams({ navigation, route }) {
               text={getTeamDisplayName(item)}
             />
             <Text style={[Fonts.p3, Fonts.primary100]}>
-              {item?.activities?.[0]?.name || 'Équipe'}
+              {item?.activities?.[0]?.name || t('assignCoachTeams.fallbacks.team', 'Équipe')}
             </Text>
           </View>
           {isAssigned ? (
@@ -260,7 +283,7 @@ function AssignCoachTeams({ navigation, route }) {
               ]}
             >
               <Text style={[Fonts.p4Bold, Fonts.gold500]}>
-                Déjà assigné
+                {t('assignCoachTeams.badges.alreadyAssigned', 'Déjà assigné')}
               </Text>
             </View>
           ) : (
@@ -310,19 +333,38 @@ function AssignCoachTeams({ navigation, route }) {
     selectedTeamIds,
     toggleTeamSelection,
     trainerId,
+    t,
   ]);
 
   const selectedCountLabel = useMemo(() => {
-    if (!selectedTeamIds.length) return 'Aucune équipe sélectionnée';
-    if (selectedTeamIds.length === 1) return '1 équipe sélectionnée';
-    return `${selectedTeamIds.length} équipes sélectionnées`;
-  }, [selectedTeamIds.length]);
+    if (!selectedTeamIds.length) {
+      return t(
+        'assignCoachTeams.selection.none',
+        'Aucune équipe sélectionnée',
+      );
+    }
+    if (selectedTeamIds.length === 1) {
+      return t(
+        'assignCoachTeams.selection.one',
+        '1 équipe sélectionnée',
+      );
+    }
+    return t(
+      'assignCoachTeams.selection.many',
+      '{{teamCount}} équipes sélectionnées',
+      { teamCount: selectedTeamIds.length, ...SANS_ECHAPPEMENT },
+    );
+  }, [selectedTeamIds.length, t]);
 
   if (!clubId) {
     return (
       <ClubStateView
-        description="Impossible d'ouvrir cette assignation sans club valide. Reviens à la demande d'adhésion puis relance l'action."
-        title="Club introuvable"
+        description={t(
+          'assignCoachTeams.state.missingClub.description',
+          "Impossible d'ouvrir cette assignation sans club valide. Reviens à la demande "
+            + "d'adhésion puis relance l'action.",
+        )}
+        title={t('assignCoachTeams.state.missingClub.title', 'Club introuvable')}
       />
     );
   }
@@ -330,8 +372,12 @@ function AssignCoachTeams({ navigation, route }) {
   if (!trainerId) {
     return (
       <ClubStateView
-        description="Impossible de retrouver le coach à assigner. Reviens à la demande puis relance l'assignation."
-        title="Coach introuvable"
+        description={t(
+          'assignCoachTeams.state.missingCoach.description',
+          'Impossible de retrouver le coach à assigner. Reviens à la demande puis relance '
+            + "l'assignation.",
+        )}
+        title={t('assignCoachTeams.state.missingCoach.title', 'Coach introuvable')}
       />
     );
   }
@@ -361,13 +407,13 @@ function AssignCoachTeams({ navigation, route }) {
             ]}
           >
             <Text style={[Fonts.h3Bold, Fonts.neutral00]}>
-              Assigner un entraîneur
+              {t('assignCoachTeams.header.title', 'Assigner un entraîneur')}
             </Text>
             <Text style={[Fonts.p1Bold, Fonts.primary500, Spaces.marginTop[8]]}>
-              {trainerName || 'Utilisateur'}
+              {trainerName || t('assignCoachTeams.header.userFallback', 'Utilisateur')}
             </Text>
             <Text style={[Fonts.p2, Fonts.primary100, Spaces.marginTop[8]]}>
-              Cochez une ou plusieurs équipes, puis valide.
+              {t('assignCoachTeams.header.hint', 'Cochez une ou plusieurs équipes, puis valide.')}
             </Text>
           </View>
 
@@ -395,12 +441,15 @@ function AssignCoachTeams({ navigation, route }) {
               disabled={!selectedTeamIds.length || assignMutation.isPending || isLoading}
               isLoading={assignMutation.isPending}
               onPress={handleAssignSelected}
-              title="Assigner aux équipes sélectionnées"
+              title={t(
+                'assignCoachTeams.actions.assignSelected',
+                'Assigner aux équipes sélectionnées',
+              )}
               variant="Primary"
             />
             <Button
               onPress={handleCreateTeam}
-              title="Créer une équipe"
+              title={t('assignCoachTeams.actions.createTeam', 'Créer une équipe')}
               variant="Secondary"
             />
           </View>

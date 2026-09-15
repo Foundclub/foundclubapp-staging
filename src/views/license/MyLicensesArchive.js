@@ -10,10 +10,12 @@
 // 🧭 Le dock reste (D5) : c est un ecran de consultation, pas de tache.
 
 import { useCallback, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Alert, ScrollView, Text, View,
 } from 'react-native';
 
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import ScreenContainer from '@/components/templates/ScreenContainer';
@@ -76,6 +78,7 @@ const settledDateOf = (assignment) => formatMemberDate(
  * @returns {import('react').ReactElement}
  */
 function MyLicensesArchive({ navigation }) {
+  const { t } = useTranslation();
   const { Alignments, Fonts } = useTheme();
   const type = memberType(Fonts);
   const query = useMyLicenses();
@@ -91,24 +94,39 @@ function MyLicensesArchive({ navigation }) {
   const downloadReceipt = useCallback(async (receipt) => {
     const url = resolveMediaUrl(receipt?.pdfFile?.url || '');
     if (!url) {
-      Alert.alert('Reçu indisponible', 'Aucun fichier n est rattaché à ce reçu.');
+      Alert.alert(t('myLicensesArchive.alerts.receiptUnavailable.title', 'Reçu indisponible'), t(
+        'myLicensesArchive.alerts.receiptUnavailable.message',
+        'Aucun fichier n est rattaché à ce reçu.',
+      ));
       return;
     }
     try {
       await downloadRemoteFile({ fileName: `recu-${receipt?.receiptNumber || ''}`, url });
     } catch (error) {
       Alert.alert(
-        'Téléchargement impossible',
-        error?.message || 'Le reçu n a pas pu être enregistré sur ton téléphone.',
+        t('myLicensesArchive.alerts.downloadFailed.title', 'Téléchargement impossible'),
+        error?.message || t(
+          'myLicensesArchive.alerts.downloadFailed.fallback',
+          'Le reçu n a pas pu être enregistré sur ton téléphone.',
+        ),
       );
     }
-  }, []);
+  }, [t]);
 
   if (query.isLoading) {
     return (
       <ScreenContainer bottomInsetMode="tab-scene" withHeaderPadding>
-        <MemberTopBar onBack={goBack} title="Saisons passées" />
-        <LicenseEmptyState description="On récupère tes anciennes saisons." title="Chargement" />
+        <MemberTopBar onBack={goBack} title={t('myLicensesArchive.title', 'Saisons passées')} />
+        <LicenseEmptyState
+          description={t(
+            'myLicensesArchive.loading.description',
+            'On récupère tes anciennes saisons.',
+          )}
+          title={t(
+            'myLicensesArchive.loading.title',
+            'Chargement',
+          )}
+        />
       </ScreenContainer>
     );
   }
@@ -116,10 +134,13 @@ function MyLicensesArchive({ navigation }) {
   if (!seasons.length) {
     return (
       <ScreenContainer bottomInsetMode="tab-scene" withHeaderPadding>
-        <MemberTopBar onBack={goBack} title="Saisons passées" />
+        <MemberTopBar onBack={goBack} title={t('myLicensesArchive.title', 'Saisons passées')} />
         <LicenseEmptyState
-          description="Tes saisons terminées apparaîtront ici, avec leurs reçus."
-          title="Aucune saison archivée"
+          description={t(
+            'myLicensesArchive.empty.description',
+            'Tes saisons terminées apparaîtront ici, avec leurs reçus.',
+          )}
+          title={t('myLicensesArchive.empty.title', 'Aucune saison archivée')}
         />
       </ScreenContainer>
     );
@@ -127,7 +148,7 @@ function MyLicensesArchive({ navigation }) {
 
   return (
     <ScreenContainer bottomInsetMode="tab-scene" withHeaderPadding>
-      <MemberTopBar onBack={goBack} title="Saisons passées" />
+      <MemberTopBar onBack={goBack} title={t('myLicensesArchive.title', 'Saisons passées')} />
       {/* S9-bis : meme borne de hauteur que le detail — cf. le temoin
           `MyLicenseDetail.S9bis.defilement.test.js` pour la cause. */}
       <ScrollView
@@ -148,13 +169,20 @@ function MyLicensesArchive({ navigation }) {
                   // ⛔ Pas de pastille, pas de barre : tout est regle.
                   state={[
                     formatLicenseMoney(assignment.amountDueCents, currency),
-                    settledOn ? `soldée le ${settledOn}` : 'soldée',
+                    settledOn ? t(
+                      'myLicensesArchive.row.settledOn',
+                      'soldée le {{settledOn}}',
+                      { settledOn, ...SANS_ECHAPPEMENT },
+                    ) : t(
+                      'myLicensesArchive.row.settled',
+                      'soldée',
+                    ),
                   ].join(' · ')}
                   title={`${clubNameOf(assignment)} · ${campaignTitleOf(assignment)}`}
                   trailing={receipt ? (
                     <MemberRowAction
                       glyph="arrowDownToBracket"
-                      label="Télécharger le reçu"
+                      label={t('myLicensesArchive.row.downloadReceipt', 'Télécharger le reçu')}
                       onPress={() => downloadReceipt(receipt)}
                     />
                   ) : null}
@@ -164,8 +192,11 @@ function MyLicensesArchive({ navigation }) {
           </View>
         ))}
         <Text style={[type.meta, Fonts.neutral400]}>
-          Une saison archivée ne demande rien : elle sert à retrouver un reçu, et il reste
-          téléchargeable indéfiniment.
+          {t(
+            'myLicensesArchive.footer',
+            'Une saison archivée ne demande rien : elle sert à retrouver un reçu, et il '
+              + 'reste téléchargeable indéfiniment.',
+          )}
         </Text>
       </ScrollView>
     </ScreenContainer>

@@ -1,6 +1,8 @@
 // @ts-nocheck
 /* eslint-disable no-nested-ternary, object-curly-newline, perfectionist/sort-imports, perfectionist/sort-named-imports */
+import i18next from 'i18next';
 import { useCallback, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Alert,
   Pressable,
@@ -10,6 +12,8 @@ import {
   View,
 } from 'react-native';
 
+import localeDesFormats from '@/theme/strings/localeDesFormats';
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import MarqueeText from '@/components/atoms/marqueeText/MarqueeText';
@@ -35,15 +39,38 @@ import {
   licenseSpacing,
 } from './licenseDesignSystem';
 
-const money = (value = 0) => new Intl.NumberFormat('fr-FR', { currency: 'EUR', style: 'currency' }).format((value || 0) / 100);
+const money = (value = 0) => new Intl.NumberFormat(localeDesFormats(), {
+  currency: 'EUR',
+  style: 'currency',
+}).format((value || 0) / 100);
 const currentSeason = () => `${new Date().getFullYear()}-${new Date().getFullYear() + 1}`;
 const euroToCents = (value) => Math.round(Number(String(value || '0').replace(',', '.')) * 100);
 
 const statusOptions = [
-  { label: 'Toutes', value: '' },
-  { label: 'Actives', value: 'active' },
-  { label: 'Brouillons', value: 'draft' },
-  { label: 'Cloturees', value: 'closed' },
+  {
+    get label() {
+      return i18next.t('cmLicensesDashboard.filters.all', 'Toutes');
+    },
+    value: '',
+  },
+  {
+    get label() {
+      return i18next.t('cmLicensesDashboard.filters.active', 'Actives');
+    },
+    value: 'active',
+  },
+  {
+    get label() {
+      return i18next.t('cmLicensesDashboard.filters.drafts', 'Brouillons');
+    },
+    value: 'draft',
+  },
+  {
+    get label() {
+      return i18next.t('cmLicensesDashboard.filters.closed', 'Cloturees');
+    },
+    value: 'closed',
+  },
 ];
 
 const defaultPaymentModes = {
@@ -102,6 +129,7 @@ function SectionLicenseCard({
   onOpenSettings,
   section,
 }) {
+  const { t } = useTranslation();
   const {
     Alignments, ApplicationStyle, Colors, Fonts, Spaces,
   } = useTheme();
@@ -131,17 +159,26 @@ function SectionLicenseCard({
             {/* MARQUEE — le nom de la section se lit en entier */}
             <MarqueeText
               style={[Fonts.p1Bold, Fonts.neutral00]}
-              text={section?.clubName || 'Section'}
+              text={section?.clubName || t('cmLicensesDashboard.fallback.section', 'Section')}
             />
             <Text style={[Fonts.p3, Fonts.neutral200]}>
-              {campaign?.seasonLabel || 'Aucune campagne'}
-              {campaign?.paymentOwner === 'multisport' ? ' - encaissement central' : ''}
+              {campaign?.seasonLabel || t(
+                'cmLicensesDashboard.sectionCard.noCampaign',
+                'Aucune campagne',
+              )}
+              {campaign?.paymentOwner === 'multisport' ? t(
+                'cmLicensesDashboard.sectionCard.centralCollection',
+                ' - encaissement central',
+              ) : ''}
             </Text>
             {campaign?.paymentModes?.helloasso ? (
               <Text style={[Fonts.p3, Fonts.neutral200]}>
                 HelloAsso:
                 {' '}
-                {campaign?.paymentProviderSnapshot?.helloasso?.readiness || 'à vérifier'}
+                {campaign?.paymentProviderSnapshot?.helloasso?.readiness || t(
+                  'cmLicensesDashboard.sectionCard.helloAssoToCheck',
+                  'à vérifier',
+                )}
               </Text>
             ) : null}
           </View>
@@ -149,13 +186,47 @@ function SectionLicenseCard({
         </View>
 
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: licenseSpacing.actionGap }}>
-          <StatCard label="Licencies" tone={Colors.primary500} value={String(totals.total || 0)} />
-          <StatCard label="Reste" tone={Colors.warning500} value={money(totals.remainingCents)} />
+          <StatCard
+            label={t(
+              'cmLicensesDashboard.sectionCard.members',
+              'Licencies',
+            )}
+            tone={Colors.primary500}
+            value={String(totals.total || 0)}
+          />
+          <StatCard
+            label={t(
+              'cmLicensesDashboard.stats.remaining',
+              'Reste',
+            )}
+            tone={Colors.warning500}
+            value={money(totals.remainingCents)}
+          />
         </View>
 
         <View style={{ flexDirection: 'row', gap: licenseSpacing.actionGap }}>
-          <Button onPress={onOpenSettings} style={{ flex: 1 }} title={hasCampaign ? 'Reglages' : 'Configurer'} variant="Secondary" />
-          <Button onPress={onOpenPayments} style={{ flex: 1 }} title={`A valider (${section?.manualReviewCount || 0})`} variant="Secondary" />
+          <Button
+            onPress={onOpenSettings}
+            style={{ flex: 1 }}
+            title={hasCampaign ? t(
+              'cmLicensesDashboard.sectionCard.settings',
+              'Reglages',
+            ) : t(
+              'cmLicensesDashboard.sectionCard.setUp',
+              'Configurer',
+            )}
+            variant="Secondary"
+          />
+          <Button
+            onPress={onOpenPayments}
+            style={{ flex: 1 }}
+            title={t(
+              'cmLicensesDashboard.sectionCard.toApprove',
+              'A valider ({{pendingCount}})',
+              { pendingCount: section?.manualReviewCount || 0, ...SANS_ECHAPPEMENT },
+            )}
+            variant="Secondary"
+          />
         </View>
       </View>
     </Pressable>
@@ -176,11 +247,16 @@ function ReviewCard({
   onOpen,
   onReject,
 }) {
+  const { t } = useTranslation();
   const {
     ApplicationStyle, Colors, Fonts, Spaces,
   } = useTheme();
   const payment = firstReviewPayment(assignment);
-  const memberName = [assignment?.user?.firstname, assignment?.user?.lastname].filter(Boolean).join(' ') || assignment?.user?.username || 'Membre';
+  const memberName = [assignment?.user?.firstname, assignment?.user?.lastname]
+    .filter(Boolean)
+    .join(' ')
+    || assignment?.user?.username
+    || t('cmLicensesDashboard.fallback.member', 'Membre');
 
   return (
     <View style={[ApplicationStyle.card, Spaces.gap[12], {
@@ -194,20 +270,46 @@ function ReviewCard({
       <View style={Spaces.gap[4]}>
         <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{memberName}</Text>
         <Text style={[Fonts.p3, Fonts.neutral200]}>
-          {assignment?.club?.name || assignment?.campaign?.club?.name || 'Section'}
+          {assignment?.club?.name || assignment?.campaign?.club?.name || t(
+            'cmLicensesDashboard.fallback.section',
+            'Section',
+          )}
           {' - '}
-          {assignment?.team?.name || 'Sans équipe'}
+          {assignment?.team?.name || t('cmLicensesDashboard.reviewCard.noTeam', 'Sans équipe')}
         </Text>
         <Text style={[Fonts.p2Bold, { color: Colors.warning500 }]}>
           {money(payment?.amountCents || assignment?.amountRemainingCents)}
           {' '}
-          à valider
+          {t('cmLicensesDashboard.reviewCard.toApprove', 'à valider')}
         </Text>
       </View>
       <View style={{ flexDirection: 'row', gap: licenseSpacing.actionGap }}>
-        <Button onPress={onOpen} style={{ flex: 1 }} title="Detail" variant="Secondary" />
-        <Button onPress={onReject} style={{ flex: 1 }} title="Rejeter" variant="Secondary" />
-        <Button onPress={onApprove} style={{ flex: 1 }} title="Valider" />
+        <Button
+          onPress={onOpen}
+          style={{ flex: 1 }}
+          title={t(
+            'cmLicensesDashboard.reviewCard.details',
+            'Detail',
+          )}
+          variant="Secondary"
+        />
+        <Button
+          onPress={onReject}
+          style={{ flex: 1 }}
+          title={t(
+            'cmLicensesDashboard.reviewCard.reject',
+            'Rejeter',
+          )}
+          variant="Secondary"
+        />
+        <Button
+          onPress={onApprove}
+          style={{ flex: 1 }}
+          title={t(
+            'cmLicensesDashboard.reviewCard.approve',
+            'Valider',
+          )}
+        />
       </View>
     </View>
   );
@@ -220,6 +322,7 @@ function ReviewCard({
  * @param root0.route
  */
 function CMLicensesDashboard({ navigation, route }) {
+  const { t } = useTranslation();
   const {
     Alignments, Colors, Fonts, Spaces,
   } = useTheme();
@@ -261,19 +364,29 @@ function CMLicensesDashboard({ navigation, route }) {
 
   const handleBulkCreate = useCallback(() => {
     if (!missingSectionIds.length) {
-      Alert.alert('Campagnes déjà pretes', 'Toutes les sections visibles ont déjà une campagne pour cette saison.');
+      Alert.alert(t('cmLicensesDashboard.alerts.allReady.title', 'Campagnes déjà pretes'), t(
+        'cmLicensesDashboard.alerts.allReady.message',
+        'Toutes les sections visibles ont déjà une campagne pour cette saison.',
+      ));
       return;
     }
     const amountCents = euroToCents(defaultAmount);
     if (amountCents <= 0) {
-      Alert.alert('Montant requis', 'Indique un montant par défaut avant de créer les campagnes manquantes.');
+      Alert.alert(t('cmLicensesDashboard.alerts.amountRequired.title', 'Montant requis'), t(
+        'cmLicensesDashboard.alerts.amountRequired.message',
+        'Indique un montant par défaut avant de créer les campagnes manquantes.',
+      ));
       return;
     }
     Alert.alert(
-      'Créer les campagnes manquantes',
-      `${missingSectionIds.length} section(s) recevront une campagne ${seasonLabel}.`,
+      t('cmLicensesDashboard.alerts.bulkCreate.title', 'Créer les campagnes manquantes'),
+      t(
+        'cmLicensesDashboard.alerts.bulkCreate.message',
+        '{{sectionCount}} section(s) recevront une campagne {{seasonLabel}}.',
+        { seasonLabel, sectionCount: missingSectionIds.length, ...SANS_ECHAPPEMENT },
+      ),
       [
-        { style: 'cancel', text: 'Annuler' },
+        { style: 'cancel', text: t('cmLicensesDashboard.alerts.cancel', 'Annuler') },
         {
           onPress: () => bulkCreateMutation.mutate({
             defaultAmountCents: amountCents,
@@ -285,38 +398,62 @@ function CMLicensesDashboard({ navigation, route }) {
             status: 'active',
           }, {
             onSuccess: (result) => Alert.alert(
-              'Campagnes créées',
-              `${result?.summary?.created || 0} créée(s), ${result?.summary?.skipped || 0} ignoree(s), ${result?.summary?.errors || 0} erreur(s).`,
+              t('cmLicensesDashboard.alerts.bulkCreated.title', 'Campagnes créées'),
+              t(
+                'cmLicensesDashboard.alerts.bulkCreated.message',
+                '{{created}} créée(s), {{skipped}} ignoree(s), {{errors}} erreur(s).',
+                {
+                  created: result?.summary?.created || 0,
+                  errors: result?.summary?.errors || 0,
+                  skipped: result?.summary?.skipped || 0,
+                  ...SANS_ECHAPPEMENT,
+                },
+              ),
             ),
           }),
-          text: 'Creer',
+          text: t('cmLicensesDashboard.alerts.bulkCreate.confirm', 'Creer'),
         },
       ],
     );
-  }, [bulkCreateMutation, defaultAmount, dueDate, missingSectionIds, seasonLabel]);
+  }, [bulkCreateMutation, defaultAmount, dueDate, missingSectionIds, seasonLabel, t]);
 
   const handleBulkGenerate = useCallback(() => {
     if (!campaignIds.length) {
-      Alert.alert('Aucune campagne', 'Crée au moins une campagne avant de relancer une synchronisation de secours.');
+      Alert.alert(t('cmLicensesDashboard.alerts.noCampaign.title', 'Aucune campagne'), t(
+        'cmLicensesDashboard.alerts.noCampaign.message',
+        'Crée au moins une campagne avant de relancer une synchronisation de secours.',
+      ));
       return;
     }
     Alert.alert(
-      'Resynchroniser les campagnes',
-      'Opération de maintenance: les cotisations manquantes seront rattachées sans dupliquer les dossiers déjà existants.',
+      t('cmLicensesDashboard.alerts.resync.title', 'Resynchroniser les campagnes'),
+      t(
+        'cmLicensesDashboard.alerts.resync.message',
+        'Opération de maintenance: les cotisations manquantes seront rattachées sans '
+          + 'dupliquer les dossiers déjà existants.',
+      ),
       [
-        { style: 'cancel', text: 'Annuler' },
+        { style: 'cancel', text: t('cmLicensesDashboard.alerts.cancel', 'Annuler') },
         {
           onPress: () => bulkGenerateMutation.mutate({ campaignIds, mode: 'missing_only' }, {
             onSuccess: (result) => Alert.alert(
-              'Synchronisation terminée',
-              `${result?.summary?.created || 0} créée(s), ${result?.summary?.skipped || 0} déjà existante(s).`,
+              t('cmLicensesDashboard.alerts.resyncDone.title', 'Synchronisation terminée'),
+              t(
+                'cmLicensesDashboard.alerts.resyncDone.message',
+                '{{created}} créée(s), {{skipped}} déjà existante(s).',
+                {
+                  created: result?.summary?.created || 0,
+                  skipped: result?.summary?.skipped || 0,
+                  ...SANS_ECHAPPEMENT,
+                },
+              ),
             ),
           }),
-          text: 'Resynchroniser',
+          text: t('cmLicensesDashboard.actions.resync', 'Resynchroniser'),
         },
       ],
     );
-  }, [bulkGenerateMutation, campaignIds]);
+  }, [bulkGenerateMutation, campaignIds, t]);
 
   const openSectionLicenses = useCallback((section) => {
     if (!section?.clubId) return;
@@ -362,31 +499,70 @@ function CMLicensesDashboard({ navigation, route }) {
     <ScreenContainer bottomInsetMode="tab-scene" withHeaderPadding>
       <ScrollView contentContainerStyle={[Spaces.gap[licenseSpacing.sectionGap], { paddingBottom: 40 }]} showsVerticalScrollIndicator={false}>
         <View style={Spaces.gap[licenseSpacing.titleGap]}>
-          <Text style={[Fonts.h2, Fonts.neutral00]}>Cotisations multisport</Text>
+          <Text style={[Fonts.h2, Fonts.neutral00]}>
+            {t('cmLicensesDashboard.header.title', 'Cotisations multisport')}
+          </Text>
           <Text style={[Fonts.p2, Fonts.neutral200]}>
-            Pilote les campagnes de toutes les sections, les restes à payer et les validations en attente.
+            {t(
+              'cmLicensesDashboard.header.subtitle',
+              'Pilote les campagnes de toutes les sections, les restes à payer et les '
+                + 'validations en attente.',
+            )}
           </Text>
         </View>
 
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: licenseSpacing.actionGap }}>
-          <StatCard label="Attendu" tone={Colors.primary500} value={money(totals.expectedCents)} />
-          <StatCard label="Encaisse" tone={Colors.success500} value={money(totals.paidCents)} />
-          <StatCard label="Reste" tone={Colors.warning500} value={money(totals.remainingCents)} />
-          <StatCard label="A valider" tone={Colors.warning500} value={String(totals.manualReviewCount || 0)} />
+          <StatCard
+            label={t(
+              'cmLicensesDashboard.stats.expected',
+              'Attendu',
+            )}
+            tone={Colors.primary500}
+            value={money(totals.expectedCents)}
+          />
+          <StatCard
+            label={t(
+              'cmLicensesDashboard.stats.collected',
+              'Encaisse',
+            )}
+            tone={Colors.success500}
+            value={money(totals.paidCents)}
+          />
+          <StatCard
+            label={t(
+              'cmLicensesDashboard.stats.remaining',
+              'Reste',
+            )}
+            tone={Colors.warning500}
+            value={money(totals.remainingCents)}
+          />
+          <StatCard
+            label={t(
+              'cmLicensesDashboard.stats.toApprove',
+              'A valider',
+            )}
+            tone={Colors.warning500}
+            value={String(totals.manualReviewCount || 0)}
+          />
         </View>
 
         <View style={Spaces.gap[12]}>
-          <Text style={[Fonts.p2Bold, Fonts.neutral00]}>Filtres et création globale</Text>
+          <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
+            {t('cmLicensesDashboard.filters.title', 'Filtres et création globale')}
+          </Text>
           <TextInput
             onChangeText={setSeasonLabel}
-            placeholder="Saison"
+            placeholder={t('cmLicensesDashboard.filters.seasonPlaceholder', 'Saison')}
             placeholderTextColor={Colors.neutral400}
             style={{ borderBottomColor: Colors.neutral200, borderBottomWidth: 1, color: Colors.neutral00, paddingVertical: 12 }}
             value={seasonLabel}
           />
           <TextInput
             onChangeText={setSearch}
-            placeholder="Rechercher une section ou un paiement"
+            placeholder={t(
+              'cmLicensesDashboard.filters.searchPlaceholder',
+              'Rechercher une section ou un paiement',
+            )}
             placeholderTextColor={Colors.neutral400}
             style={{ borderBottomColor: Colors.neutral200, borderBottomWidth: 1, color: Colors.neutral00, paddingVertical: 12 }}
             value={search}
@@ -404,33 +580,63 @@ function CMLicensesDashboard({ navigation, route }) {
           <TextInput
             keyboardType="decimal-pad"
             onChangeText={setDefaultAmount}
-            placeholder="Montant par défaut pour les campagnes manquantes"
+            placeholder={t(
+              'cmLicensesDashboard.bulk.amountPlaceholder',
+              'Montant par défaut pour les campagnes manquantes',
+            )}
             placeholderTextColor={Colors.neutral400}
             style={{ borderBottomColor: Colors.neutral200, borderBottomWidth: 1, color: Colors.neutral00, paddingVertical: 12 }}
             value={defaultAmount}
           />
           <TextInput
             onChangeText={setDueDate}
-            placeholder="Date limite optionnelle YYYY-MM-DD"
+            placeholder={t(
+              'cmLicensesDashboard.bulk.dueDatePlaceholder',
+              'Date limite optionnelle YYYY-MM-DD',
+            )}
             placeholderTextColor={Colors.neutral400}
             style={{ borderBottomColor: Colors.neutral200, borderBottomWidth: 1, color: Colors.neutral00, paddingVertical: 12 }}
             value={dueDate}
           />
           <View style={{ flexDirection: 'row', gap: licenseSpacing.actionGap }}>
-            <Button isLoading={bulkCreateMutation.isPending} onPress={handleBulkCreate} style={{ flex: 1 }} title="Créer manquantes" variant="Secondary" />
-            <Button isLoading={bulkGenerateMutation.isPending} onPress={handleBulkGenerate} style={{ flex: 1 }} title="Resynchroniser" />
+            <Button
+              isLoading={bulkCreateMutation.isPending}
+              onPress={handleBulkCreate}
+              style={{ flex: 1 }}
+              title={t(
+                'cmLicensesDashboard.bulk.createMissing',
+                'Créer manquantes',
+              )}
+              variant="Secondary"
+            />
+            <Button
+              isLoading={bulkGenerateMutation.isPending}
+              onPress={handleBulkGenerate}
+              style={{ flex: 1 }}
+              title={t(
+                'cmLicensesDashboard.actions.resync',
+                'Resynchroniser',
+              )}
+            />
           </View>
         </View>
 
         <View style={Spaces.gap[licenseSpacing.listGap]}>
-          <Text style={[Fonts.h4Bold, Fonts.neutral00]}>Sections</Text>
+          <Text style={[Fonts.h4Bold, Fonts.neutral00]}>
+            {t('cmLicensesDashboard.sections.title', 'Sections')}
+          </Text>
           {dashboardQuery.isLoading ? (
-            <Text style={[Fonts.p2, Fonts.neutral200]}>Chargement des sections...</Text>
+            <Text style={[Fonts.p2, Fonts.neutral200]}>
+              {t('cmLicensesDashboard.sections.loading', 'Chargement des sections...')}
+            </Text>
           ) : null}
           {!dashboardQuery.isLoading && filteredSections.length === 0 ? (
             <LicenseEmptyState
-              description="Aucune section ne correspond aux filtres choisis."
-              title="Aucune section"
+              description={t(
+                'cmLicensesDashboard.sections.empty.description',
+                'Aucune section ne correspond aux filtres choisis.',
+              )}
+              title={t('cmLicensesDashboard.sections.empty.title', 'Aucune section')}
             />
           ) : null}
           {filteredSections.map((section) => (
@@ -445,11 +651,16 @@ function CMLicensesDashboard({ navigation, route }) {
         </View>
 
         <View style={Spaces.gap[licenseSpacing.listGap]}>
-          <Text style={[Fonts.h4Bold, Fonts.neutral00]}>Paiements à valider</Text>
+          <Text style={[Fonts.h4Bold, Fonts.neutral00]}>
+            {t('cmLicensesDashboard.reviews.title', 'Paiements à valider')}
+          </Text>
           {reviews.length === 0 ? (
             <LicenseEmptyState
-              description="Les déclarations manuelles ou externes en attente apparaîtront ici."
-              title="Aucun paiement en attente"
+              description={t(
+                'cmLicensesDashboard.reviews.empty.description',
+                'Les déclarations manuelles ou externes en attente apparaîtront ici.',
+              )}
+              title={t('cmLicensesDashboard.reviews.empty.title', 'Aucun paiement en attente')}
             />
           ) : null}
           {reviews.map((assignment) => {

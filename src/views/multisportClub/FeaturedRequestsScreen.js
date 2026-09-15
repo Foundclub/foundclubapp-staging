@@ -13,6 +13,7 @@ import {
 import useAuth from '@/domains/auth/useAuth';
 import { navigateToRequestsHub, REQUESTS_HUB_LEGACY_REDIRECT } from '@/domains/requests/requestNavigation';
 import { TutorialIds } from '@/domains/tutorial/tutorialIds';
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -272,7 +273,10 @@ function FeaturedRequestsScreen({ navigation, route }) {
         >
           <WithDataWrapper error={error} isLoading={isLoading} wrapperStyle={[Spaces.gap[16]]}>
             <OnboardingWrapper
-              description="Analyse les demandes et valide les événements à la une."
+              description={t(
+                'featuredRequestsScreen.tutorial.description',
+                'Analyse les demandes et valide les événements à la une.',
+              )}
               id="featured-requests-list"
               order={1}
               spotlight={{
@@ -282,7 +286,7 @@ function FeaturedRequestsScreen({ navigation, route }) {
                 paddingX: 2,
                 paddingY: 2,
               }}
-              title="Demandes à la une"
+              title={t('featuredRequestsScreen.tutorial.title', 'Demandes à la une')}
             >
               <TouchableOpacity
                 onPress={() => navigateToRequestsHub(navigation, {
@@ -326,14 +330,23 @@ function FeaturedRequestsScreen({ navigation, route }) {
                     >
                       <View style={[Spaces.gap[4]]}>
                         <Text style={[Fonts.h4Bold, Fonts.neutral00]}>
-                          {event.name || event.type?.name || request?.name || 'Evenement'}
+                          {event.name || event.type?.name || request?.name || t(
+                            'featuredRequestsScreen.request.eventFallback',
+                            'Evenement',
+                          )}
                         </Text>
                         <Text style={[Fonts.p2, Fonts.primary100]}>
                           {event.team?.club?.name || cmData?.name || '-'}
                         </Text>
                         <Text style={[Fonts.p2, Fonts.primary100]}>
-                          Date:
-                          {event.date ? formatDateWithDayPrefix(event.date) : '-'}
+                          {t(
+                            'featuredRequestsScreen.request.date',
+                            'Date:{{date}}',
+                            {
+                              date: event.date ? formatDateWithDayPrefix(event.date) : '-',
+                              ...SANS_ECHAPPEMENT,
+                            },
+                          )}
                         </Text>
                       </View>
                       <View style={[Alignments.row, Spaces.gap[12]]}>

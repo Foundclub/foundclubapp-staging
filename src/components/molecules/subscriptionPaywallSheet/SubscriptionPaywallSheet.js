@@ -1,4 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import i18next from 'i18next';
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -48,6 +49,7 @@ import {
 } from '@/domains/subscription/subscriptionPurchaseRail';
 import { scheduleSubscriptionStateRefresh } from '@/domains/subscription/subscriptionRefresh';
 import { useSubscriptionCatalog } from '@/domains/subscription/useSubscriptionCatalog';
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -106,7 +108,11 @@ const getTierOptionsForPeriod = (
       // (Club 100 / 500 / 1000 / Illimité).
       label: scopeType === 'CLUB'
         ? String(entry?.displayName || '').trim()
-        : `${slotCount} équipe${slotCount > 1 ? 's' : ''}`,
+        : i18next.t('subscriptionPaywallSheet.tierTeamsCount', {
+          count: slotCount,
+          defaultValue_one: '{{count}} équipe',
+          defaultValue_other: '{{count}} équipes',
+        }),
     };
   })
   .filter((option) => option.id > 0 && option.label);
@@ -116,8 +122,18 @@ const getTierOptionsForPeriod = (
 // (Club x10 = -17 %, Equipe x7,5-7,7 = -36/-37 %), et « 2 mois offerts » sous-vendait
 // l'offre Equipe de plus de la moitie. La remise est calculee sur le palier retenu.
 const BILLING_PERIOD_OPTIONS = [
-  { id: 'yearly', label: 'Annuel' },
-  { id: 'monthly', label: 'Mensuel' },
+  {
+    id: 'yearly',
+    get label() {
+      return i18next.t('subscriptionPaywallSheet.billingPeriod.yearly', 'Annuel');
+    },
+  },
+  {
+    id: 'monthly',
+    get label() {
+      return i18next.t('subscriptionPaywallSheet.billingPeriod.monthly', 'Mensuel');
+    },
+  },
 ];
 
 // S12-B/D1 — les MEMES deux mots que la carte Club du carrousel
@@ -126,8 +142,18 @@ const BILLING_PERIOD_OPTIONS = [
 // « jusqu'a N equipes » dans un helper partage.
 const CLUB_PRICING_MODES = { LICENSEE: 'licensee', TIER: 'tier' };
 const CLUB_PRICING_MODE_OPTIONS = [
-  { id: CLUB_PRICING_MODES.TIER, label: 'Par palier' },
-  { id: CLUB_PRICING_MODES.LICENSEE, label: 'Au licencié' },
+  {
+    id: CLUB_PRICING_MODES.TIER,
+    get label() {
+      return i18next.t('subscriptionPaywallSheet.pricingMode.tier', 'Par palier');
+    },
+  },
+  {
+    id: CLUB_PRICING_MODES.LICENSEE,
+    get label() {
+      return i18next.t('subscriptionPaywallSheet.pricingMode.licensee', 'Au licencié');
+    },
+  },
 ];
 
 /**
@@ -421,16 +447,26 @@ function SubscriptionPaywallSheet({
     // jamais rien. C'est l'ecran qui le garantit, pas le serveur.
     if (!purchaseClubDocumentId) {
       Alert.alert(
-        'Club requis',
-        "Rattache d'abord ton compte à un club : c'est sur lui que se compte le nombre de licenciés.",
+        t('subscriptionPaywallSheet.alerts.clubRequired.title', 'Club requis'),
+        t(
+          'subscriptionPaywallSheet.alerts.clubRequired.licenseeMessage',
+          "Rattache d'abord ton compte à un club : c'est sur lui que se compte le nombre de "
+            + 'licenciés.',
+        ),
       );
       return;
     }
 
     if (!isTypedLicenseeCountValid) {
       Alert.alert(
-        'Nombre de licenciés requis',
-        'Indique combien de licenciés ton club doit couvrir avant de continuer.',
+        t(
+          'subscriptionPaywallSheet.alerts.licenseeCountRequired.title',
+          'Nombre de licenciés requis',
+        ),
+        t(
+          'subscriptionPaywallSheet.alerts.licenseeCountRequired.message',
+          'Indique combien de licenciés ton club doit couvrir avant de continuer.',
+        ),
       );
       return;
     }
@@ -452,8 +488,15 @@ function SubscriptionPaywallSheet({
       });
       close();
       Alert.alert(
-        'Paiement ouvert dans ton navigateur',
-        "Termine le paiement dans la page qui vient de s'ouvrir, puis reviens ici. Tes droits s'ouvrent dans la minute qui suit.",
+        t(
+          'subscriptionPaywallSheet.alerts.paymentOpened.title',
+          'Paiement ouvert dans ton navigateur',
+        ),
+        t(
+          'subscriptionPaywallSheet.alerts.paymentOpened.message',
+          "Termine le paiement dans la page qui vient de s'ouvrir, puis reviens ici. Tes "
+            + "droits s'ouvrent dans la minute qui suit.",
+        ),
       );
     } catch (error) {
       trackSubscriptionFunnelEvent('paywall_purchase_failed', {
@@ -461,7 +504,10 @@ function SubscriptionPaywallSheet({
         paywallKey: paywall.paywallKey,
         planCode: String(licenseeEntry?.planCode || ''),
       });
-      Alert.alert('Erreur abonnement', getSubscriptionBillingErrorMessage(error));
+      Alert.alert(t(
+        'subscriptionPaywallSheet.alerts.subscriptionError.title',
+        'Erreur abonnement',
+      ), getSubscriptionBillingErrorMessage(error));
     }
   };
 
@@ -489,8 +535,12 @@ function SubscriptionPaywallSheet({
 
     if (!isSubscriptionPurchaseAvailable()) {
       Alert.alert(
-        'Checkout indisponible',
-        'Le checkout store réel sera branché dans une prochaine vague. Utilise le mode test local ou staging pour la recette complète.',
+        t('subscriptionPaywallSheet.alerts.checkoutUnavailable.title', 'Checkout indisponible'),
+        t(
+          'subscriptionPaywallSheet.alerts.checkoutUnavailable.message',
+          'Le checkout store réel sera branché dans une prochaine vague. Utilise le mode '
+            + 'test local ou staging pour la recette complète.',
+        ),
       );
       return;
     }
@@ -498,8 +548,11 @@ function SubscriptionPaywallSheet({
     const isClubPurchase = sellingScope === 'CLUB';
     if (isClubPurchase && !purchaseClubDocumentId) {
       Alert.alert(
-        'Club requis',
-        "Rattache d'abord ton compte à un club avant de prendre une offre Club.",
+        t('subscriptionPaywallSheet.alerts.clubRequired.title', 'Club requis'),
+        t(
+          'subscriptionPaywallSheet.alerts.clubRequired.clubOfferMessage',
+          "Rattache d'abord ton compte à un club avant de prendre une offre Club.",
+        ),
       );
       return;
     }
@@ -539,7 +592,7 @@ function SubscriptionPaywallSheet({
           slotCount,
         });
         Alert.alert(
-          'Erreur abonnement',
+          t('subscriptionPaywallSheet.alerts.subscriptionError.title', 'Erreur abonnement'),
           String(result?.validationErrorMessage || '') || getSubscriptionBillingErrorMessage(null),
         );
         return;
@@ -566,11 +619,18 @@ function SubscriptionPaywallSheet({
         clubDocumentId: isClubPurchase ? purchaseClubDocumentId : undefined,
         offerLabel: isClubPurchase
           ? String(selectedTierOption?.label || 'Club')
-          : `Équipe · ${slotCount} équipe${slotCount > 1 ? 's' : ''}`,
+          : t('subscriptionPaywallSheet.teamOfferLabel', {
+            count: slotCount,
+            defaultValue_one: 'Équipe · {{count}} équipe',
+            defaultValue_other: 'Équipe · {{count}} équipes',
+          }),
         offerScope: isClubPurchase ? 'CLUB' : 'TEAM',
         pendingActivation: renewal.pendingActivation,
         renewalDateLabel: renewal.renewalDateLabel,
-        resumeCtaLabel: sellingSheet?.successCtaLabel || 'Reprendre',
+        resumeCtaLabel: sellingSheet?.successCtaLabel || t(
+          'subscriptionPaywallSheet.resumeCta',
+          'Reprendre',
+        ),
       });
     } catch (error) {
       trackSubscriptionFunnelEvent('paywall_purchase_failed', {
@@ -579,7 +639,10 @@ function SubscriptionPaywallSheet({
         planCode: String(selectedEntry?.planCode || ''),
         slotCount,
       });
-      Alert.alert('Erreur abonnement', getSubscriptionBillingErrorMessage(error));
+      Alert.alert(t(
+        'subscriptionPaywallSheet.alerts.subscriptionError.title',
+        'Erreur abonnement',
+      ), getSubscriptionBillingErrorMessage(error));
     }
   };
 
@@ -591,7 +654,13 @@ function SubscriptionPaywallSheet({
       ? formatSubscriptionPriceLabel(priceCents, '', selectedEntry?.priceCurrencyCode)
       : '';
     const isYearlySelected = billingPeriod === 'yearly';
-    const priceSuffix = isYearlySelected ? '/an' : '/mois';
+    const priceSuffix = isYearlySelected ? t(
+      'subscriptionPaywallSheet.priceSuffix.yearly',
+      '/an',
+    ) : t(
+      'subscriptionPaywallSheet.priceSuffix.monthly',
+      '/mois',
+    );
     // Equivalence mensuelle : uniquement sur l'ancre annuelle.
     const monthlyLabel = isYearlySelected
       ? formatSubscriptionMonthlyEquivalentLabel(
@@ -639,23 +708,36 @@ function SubscriptionPaywallSheet({
     const lockedNotice = selectedTierOption?.isSelectable === false
       ? String(selectedTierOption?.coverageNotice || '')
       : '';
-    let ctaLabel = 'Chargement des tarifs…';
+    let ctaLabel = t('subscriptionPaywallSheet.cta.loadingPrices', 'Chargement des tarifs…');
     if (isLicenseeModeActive) {
       ctaLabel = isTypedLicenseeCountValid && licenseeTotalLabel
-        ? `Souscrire · ${licenseeTotalLabel.split(' = ')[1] || licenseeTotalLabel}`
-        : 'Indique ton nombre de licenciés';
+        ? t(
+          'subscriptionPaywallSheet.cta.subscribe',
+          'Souscrire · {{total}}',
+          { total: licenseeTotalLabel.split(' = ')[1] || licenseeTotalLabel, ...SANS_ECHAPPEMENT },
+        )
+        : t('subscriptionPaywallSheet.cta.enterLicenseeCount', 'Indique ton nombre de licenciés');
     } else if (lockedNotice) {
-      ctaLabel = 'Déjà couvert par ton club';
+      ctaLabel = t('subscriptionPaywallSheet.cta.alreadyCovered', 'Déjà couvert par ton club');
     } else if (!isCatalogLoading && !isCatalogUnavailable) {
       ctaLabel = (sellingScope === 'TEAM' && selectedTierId === 1)
-        ? 'Débloquer mon équipe'
-        : `Débloquer ${selectedTierLabel}`;
+        ? t('subscriptionPaywallSheet.cta.unlockMyTeam', 'Débloquer mon équipe')
+        : t(
+          'subscriptionPaywallSheet.cta.unlockTier',
+          'Débloquer {{selectedTierLabel}}',
+          { selectedTierLabel, ...SANS_ECHAPPEMENT },
+        );
     }
     // UPGRADE — la phrase posee juste au-dessus du bouton : elle dit ce qui
     // bloque (U5) ou ce qui arrive au cadeau (U6). Jamais les deux : un ecran
     // deja bloque n'a rien a raconter sur un achat qui n'aura pas lieu.
     const purchaseNotice = lockedNotice
-      ? `${lockedNotice} : payée par un autre membre. Seule une offre supérieure peut la remplacer.`
+      ? t(
+        'subscriptionPaywallSheet.lockedNotice',
+        '{{lockedNotice}} : payée par un autre membre. Seule une offre supérieure peut la '
+          + 'remplacer.',
+        { lockedNotice, ...SANS_ECHAPPEMENT },
+      )
       : trialHandoverNotice;
 
     return (
@@ -705,7 +787,7 @@ function SubscriptionPaywallSheet({
                 {contextLabel}
               </Text>
               <Text style={[Fonts.p4Bold, { color: Colors.success500 }]}>
-                ✓ brouillon conservé
+                {t('subscriptionPaywallSheet.draftKept', '✓ brouillon conservé')}
               </Text>
             </View>
           ) : null}
@@ -730,11 +812,14 @@ function SubscriptionPaywallSheet({
           {isCatalogUnavailable ? (
             <View style={Spaces.gap[4]}>
               <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
-                Tarifs indisponibles
+                {t('subscriptionPaywallSheet.catalogUnavailable.title', 'Tarifs indisponibles')}
               </Text>
               <Text style={[Fonts.p3, Fonts.neutral300]}>
-                Impossible de charger les tarifs pour le moment. Vérifie ta
-                connexion puis réessaie.
+                {t(
+                  'subscriptionPaywallSheet.catalogUnavailable.message',
+                  'Impossible de charger les tarifs pour le moment. Vérifie ta connexion '
+                    + 'puis réessaie.',
+                )}
               </Text>
             </View>
           ) : null}
@@ -764,7 +849,11 @@ function SubscriptionPaywallSheet({
               </Text>
               <LicenseeCountField
                 billingPeriod={billingPeriod}
-                helperText="Équipes illimitées. Tous les membres du club comptent : joueurs, coachs et dirigeants."
+                helperText={t(
+                  'subscriptionPaywallSheet.licenseeHelper',
+                  'Équipes illimitées. Tous les membres du club comptent : joueurs, coachs '
+                    + 'et dirigeants.',
+                )}
                 onChangeText={
                   (value) => setLicenseeCountText(sanitizeSubscriptionLicenseeCountInput(value))
                 }
@@ -846,7 +935,7 @@ function SubscriptionPaywallSheet({
             {isCatalogUnavailable ? (
               <Button
                 onPress={() => catalogQuery.refetch?.()}
-                title="Réessayer"
+                title={t('subscriptionPaywallSheet.retry', 'Réessayer')}
                 variant="Primary"
               />
             ) : (
@@ -856,7 +945,10 @@ function SubscriptionPaywallSheet({
                   : (isCatalogLoading || Boolean(lockedNotice))}
                 isLoading={purchasing}
                 onPress={isLicenseeModeActive ? handlePurchaseLicenseeOffer : handlePurchase}
-                title={purchasing ? 'Achat en cours…' : ctaLabel}
+                title={purchasing ? t(
+                  'subscriptionPaywallSheet.cta.purchasing',
+                  'Achat en cours…',
+                ) : ctaLabel}
                 variant="Primary"
               />
             )}
@@ -874,7 +966,7 @@ function SubscriptionPaywallSheet({
                 style={Spaces.paddingVertical[12]}
               >
                 <Text style={[Fonts.p2Bold, Fonts.primary500]}>
-                  Comparer les offres
+                  {t('subscriptionPaywallSheet.compareOffers', 'Comparer les offres')}
                 </Text>
               </TouchableOpacity>
               <TouchableOpacity
@@ -883,7 +975,7 @@ function SubscriptionPaywallSheet({
                 style={Spaces.paddingVertical[12]}
               >
                 <Text style={[Fonts.p2Bold, Fonts.neutral300]}>
-                  Plus tard
+                  {t('subscriptionPaywallSheet.later', 'Plus tard')}
                 </Text>
               </TouchableOpacity>
             </View>

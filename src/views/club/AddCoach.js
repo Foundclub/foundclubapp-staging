@@ -116,7 +116,10 @@ function AddCoach({ navigation, route }) {
   } = useGetClub(routeClubId, {
     enabled: !!routeClubId,
   });
-  const resolvedClubName = routeClubName || clubData?.name || userData?.club?.name || 'Club';
+  const resolvedClubName = routeClubName || clubData?.name || userData?.club?.name || t(
+    'addCoach.fallbacks.clubName',
+    'Club',
+  );
   /**
    * @param {string | undefined} firstname
    * @param {string | undefined} lastname
@@ -124,7 +127,13 @@ function AddCoach({ navigation, route }) {
    * @returns {string}
    */
   const successEntityName = (firstname, lastname, fallbackPhone) => (
-    [firstname, lastname].filter(Boolean).join(' ').trim() || fallbackPhone || (isManagerMode ? 'dirigeant' : 'coach')
+    [firstname, lastname].filter(Boolean).join(' ').trim() || fallbackPhone || (isManagerMode ? t(
+      'addCoach.fallbacks.managerName',
+      'dirigeant',
+    ) : t(
+      'addCoach.fallbacks.coachName',
+      'coach',
+    ))
   );
 
   const {
@@ -151,8 +160,14 @@ function AddCoach({ navigation, route }) {
       Alert.alert(
         t('common.error', 'Erreur'),
         isManagerMode
-          ? "Impossible d'ajouter ce dirigeant à la section pour le moment."
-          : "Impossible d'ajouter cet entraîneur au club pour le moment.",
+          ? t(
+            'addCoach.errors.linkManager',
+            "Impossible d'ajouter ce dirigeant à la section pour le moment.",
+          )
+          : t(
+            'addCoach.errors.linkTrainer',
+            "Impossible d'ajouter cet entraîneur au club pour le moment.",
+          ),
       );
     },
     onSuccess: () => {
@@ -279,8 +294,12 @@ function AddCoach({ navigation, route }) {
   if (!routeClubId) {
     return (
       <ClubStateView
-        description="Impossible d'ouvrir ce formulaire sans club valide. Reviens à la fiche club puis relance l'ajout."
-        title="Club introuvable"
+        description={t(
+          'addCoach.state.missingClub.description',
+          "Impossible d'ouvrir ce formulaire sans club valide. Reviens à la fiche club puis "
+            + "relance l'ajout.",
+        )}
+        title={t('addCoach.state.missingClub.title', 'Club introuvable')}
       />
     );
   }
@@ -289,10 +308,22 @@ function AddCoach({ navigation, route }) {
     return (
       <ClubStateView
         description={isManagerMode
-          ? "Nous récupérons les informations de la section pour préparer l'ajout du dirigeant."
-          : "Nous récupérons les informations du club pour préparer l'ajout du coach."}
+          ? t(
+            'addCoach.state.loading.managerDescription',
+            "Nous récupérons les informations de la section pour préparer l'ajout du dirigeant.",
+          )
+          : t(
+            'addCoach.state.loading.trainerDescription',
+            "Nous récupérons les informations du club pour préparer l'ajout du coach.",
+          )}
         isLoading
-        title={isManagerMode ? 'Chargement de la section' : 'Chargement du club'}
+        title={isManagerMode ? t(
+          'addCoach.state.loading.managerTitle',
+          'Chargement de la section',
+        ) : t(
+          'addCoach.state.loading.trainerTitle',
+          'Chargement du club',
+        )}
       />
     );
   }
@@ -300,10 +331,13 @@ function AddCoach({ navigation, route }) {
   if (clubError && !clubData) {
     return (
       <ClubStateView
-        actionLabel="Réessayer"
-        description="Impossible de charger ce club pour le moment."
+        actionLabel={t('addCoach.state.loadError.retry', 'Réessayer')}
+        description={t(
+          'addCoach.state.loadError.description',
+          'Impossible de charger ce club pour le moment.',
+        )}
         onAction={() => refetchClub()}
-        title="Ajout indisponible"
+        title={t('addCoach.state.loadError.title', 'Ajout indisponible')}
       />
     );
   }
@@ -311,10 +345,13 @@ function AddCoach({ navigation, route }) {
   if (!isLoadingClub && !clubError && !clubData) {
     return (
       <ClubStateView
-        actionLabel="Actualiser"
-        description="Ce club est introuvable ou n'est plus accessible."
+        actionLabel={t('addCoach.state.notFound.refresh', 'Actualiser')}
+        description={t(
+          'addCoach.state.notFound.description',
+          "Ce club est introuvable ou n'est plus accessible.",
+        )}
         onAction={() => refetchClub()}
-        title="Club introuvable"
+        title={t('addCoach.state.missingClub.title', 'Club introuvable')}
       />
     );
   }
@@ -462,7 +499,7 @@ function AddCoach({ navigation, route }) {
                   maxLength={10}
                   onBlur={onBlur}
                   onChangeText={(text) => onChange(formatBirthdateToDisplay(text))}
-                  placeholder="JJ/MM/AAAA"
+                  placeholder={t('addCoach.fields.birthdate.placeholder', 'JJ/MM/AAAA')}
                   ref={ref}
                   value={value}
                 />
@@ -500,7 +537,10 @@ function AddCoach({ navigation, route }) {
               inviteTrainer({
                 clubId: routeClubId || clubData?.documentId || userData?.club?.documentId,
                 clubName: resolvedClubName,
-                firstname: createdTrainer.firstname || 'Coach',
+                firstname: createdTrainer.firstname || t(
+                  'addCoach.fallbacks.inviteFirstname',
+                  'Coach',
+                ),
                 phoneNumber: createdTrainer.phoneNumber,
               });
             }

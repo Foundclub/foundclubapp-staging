@@ -724,9 +724,12 @@ function UserAffiliationGuideContent({ navigation, route }) {
   if (userDataLoading) {
     return (
       <OnboardingStateView
-        description="Nous récupérons ton profil avant de lancer l'affiliation."
+        description={t(
+          'userAffiliationGuide.loading.description',
+          "Nous récupérons ton profil avant de lancer l'affiliation.",
+        )}
         isLoading
-        title="Chargement du profil"
+        title={t('userAffiliationGuide.loading.title', 'Chargement du profil')}
       />
     );
   }
@@ -734,10 +737,13 @@ function UserAffiliationGuideContent({ navigation, route }) {
   if (userDataError) {
     return (
       <OnboardingStateView
-        actionLabel="Réessayer"
-        description={userDataError?.message || 'Impossible de charger ton profil.'}
+        actionLabel={t('userAffiliationGuide.loadError.retry', 'Réessayer')}
+        description={userDataError?.message || t(
+          'userAffiliationGuide.loadError.message',
+          'Impossible de charger ton profil.',
+        )}
         onAction={refetchUserData}
-        title="Chargement impossible"
+        title={t('userAffiliationGuide.loadError.title', 'Chargement impossible')}
       />
     );
   }

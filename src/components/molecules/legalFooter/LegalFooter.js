@@ -1,10 +1,12 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useTranslation } from 'react-i18next';
 import {
   Alert, Linking, Text, TouchableOpacity, View,
 } from 'react-native';
 
 import { getSubscriptionBillingErrorMessage } from '@/domains/subscription/subscriptionBilling';
 import { restoreAllSubscriptionPurchases } from '@/domains/subscription/subscriptionPurchaseRail';
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import { LEGAL_PRIVACY_URL, LEGAL_TERMS_URL } from '@/config/legalUrls';
@@ -21,6 +23,7 @@ import { LEGAL_PRIVACY_URL, LEGAL_TERMS_URL } from '@/config/legalUrls';
  * @returns {import('react').ReactElement}
  */
 function LegalFooter({ restore = true, style }) {
+  const { t } = useTranslation();
   const { Fonts, Spaces } = useTheme();
   const queryClient = useQueryClient();
 
@@ -40,11 +43,14 @@ function LegalFooter({ restore = true, style }) {
         queryClient.invalidateQueries({ queryKey: ['get-me'] }),
       ]);
       Alert.alert(
-        'Restauration terminée',
-        "Ton contexte abonnement vient d'être mis à jour.",
+        t('legalFooter.restoreDone.title', 'Restauration terminée'),
+        t('legalFooter.restoreDone.message', "Ton contexte abonnement vient d'être mis à jour."),
       );
     } catch (error) {
-      Alert.alert('Erreur abonnement', getSubscriptionBillingErrorMessage(error));
+      Alert.alert(t(
+        'legalFooter.restoreError.title',
+        'Erreur abonnement',
+      ), getSubscriptionBillingErrorMessage(error));
     }
   };
 
@@ -53,8 +59,12 @@ function LegalFooter({ restore = true, style }) {
   const openLegalUrl = (url) => {
     Promise.resolve(Linking.openURL(url)).catch(() => {
       Alert.alert(
-        'Page indisponible',
-        `Impossible d'ouvrir ${url} depuis l'application.`,
+        t('legalFooter.linkError.title', 'Page indisponible'),
+        t(
+          'legalFooter.linkError.message',
+          "Impossible d'ouvrir {{url}} depuis l'application.",
+          { url, ...SANS_ECHAPPEMENT },
+        ),
       );
     });
   };
@@ -69,7 +79,10 @@ function LegalFooter({ restore = true, style }) {
   return (
     <View style={[{ alignItems: 'center' }, style]}>
       <Text style={[Fonts.p4, Fonts.neutral400, Fonts.textCenter]}>
-        Prix TTC. Renouvellement automatique, résiliable à tout moment.
+        {t(
+          'legalFooter.pricesNotice',
+          'Prix TTC. Renouvellement automatique, résiliable à tout moment.',
+        )}
       </Text>
       <View
         style={[
@@ -83,21 +96,27 @@ function LegalFooter({ restore = true, style }) {
         ]}
       >
         <TouchableOpacity
-          accessibilityHint="Ouvre les conditions générales d'utilisation dans le navigateur."
+          accessibilityHint={t(
+            'legalFooter.termsHint',
+            "Ouvre les conditions générales d'utilisation dans le navigateur.",
+          )}
           accessibilityRole="link"
           onPress={() => openLegalUrl(LEGAL_TERMS_URL)}
           style={Spaces.paddingHorizontal[8]}
         >
-          <Text style={linkTextStyle}>Conditions générales</Text>
+          <Text style={linkTextStyle}>{t('legalFooter.terms', 'Conditions générales')}</Text>
         </TouchableOpacity>
         <Text style={[Fonts.p4, Fonts.neutral400]}>·</Text>
         <TouchableOpacity
-          accessibilityHint="Ouvre la politique de confidentialité dans le navigateur."
+          accessibilityHint={t(
+            'legalFooter.privacyHint',
+            'Ouvre la politique de confidentialité dans le navigateur.',
+          )}
           accessibilityRole="link"
           onPress={() => openLegalUrl(LEGAL_PRIVACY_URL)}
           style={Spaces.paddingHorizontal[8]}
         >
-          <Text style={linkTextStyle}>Confidentialité</Text>
+          <Text style={linkTextStyle}>{t('legalFooter.privacy', 'Confidentialité')}</Text>
         </TouchableOpacity>
       </View>
       {restore ? (
@@ -109,8 +128,8 @@ function LegalFooter({ restore = true, style }) {
         >
           <Text style={linkTextStyle}>
             {restoreMutation.isPending
-              ? 'Restauration en cours…'
-              : 'Restaurer mes achats'}
+              ? t('legalFooter.restoring', 'Restauration en cours…')
+              : t('legalFooter.restore', 'Restaurer mes achats')}
           </Text>
         </TouchableOpacity>
       ) : null}

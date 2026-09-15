@@ -1,4 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import i18next from 'i18next';
 import {
   useCallback, useEffect, useMemo, useRef, useState,
 } from 'react';
@@ -57,6 +58,7 @@ import {
 } from '@/domains/subscription/subscriptionRefresh';
 import { useSubscriptionCatalog } from '@/domains/subscription/useSubscriptionCatalog';
 import { withAlpha } from '@/theme/colors';
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -87,33 +89,81 @@ import { RouteNames } from '@/navigation/routeNames';
 // par L33 : c'est ici que les benefices s'affichent desormais).
 /** @type {Record<string, string>} */
 const SUBSCRIPTION_FEATURE_LABELS = {
-  'club.broadcast': 'Canal de diffusion',
-  'club.multi_teams': 'Toutes les équipes du club',
-  'club.profile': 'Fiche club complète',
-  'club.roles': 'Rôles du club',
-  composition: 'Composition d\'équipe',
-  convocation: 'Convocations',
-  'dues.club': 'Cotisations du club',
-  'dues.team': 'Cotisations de l\'équipe',
-  'events.unlimited': 'Événements illimités',
-  facilities: 'Installations',
-  'matches.unlimited': 'Matchs illimités',
-  'recruitment.unlimited': 'Annonces illimitées',
-  sponsors: 'Sponsors et partenaires',
+  get 'club.broadcast'() {
+    return i18next.t('subscriptionOffers.features.clubBroadcast', 'Canal de diffusion');
+  },
+  get 'club.multi_teams'() {
+    return i18next.t('subscriptionOffers.features.allClubTeams', 'Toutes les équipes du club');
+  },
+  get 'club.profile'() {
+    return i18next.t('subscriptionOffers.features.fullClubProfile', 'Fiche club complète');
+  },
+  get 'club.roles'() {
+    return i18next.t('subscriptionOffers.features.clubRoles', 'Rôles du club');
+  },
+  get composition() {
+    return i18next.t('subscriptionOffers.features.teamLineUp', "Composition d'équipe");
+  },
+  get convocation() {
+    return i18next.t('subscriptionOffers.features.callUps', 'Convocations');
+  },
+  get 'dues.club'() {
+    return i18next.t('subscriptionOffers.features.clubFees', 'Cotisations du club');
+  },
+  get 'dues.team'() {
+    return i18next.t('subscriptionOffers.features.teamFees', "Cotisations de l'équipe");
+  },
+  get 'events.unlimited'() {
+    return i18next.t('subscriptionOffers.features.unlimitedEvents', 'Événements illimités');
+  },
+  get facilities() {
+    return i18next.t('subscriptionOffers.features.facilities', 'Installations');
+  },
+  get 'matches.unlimited'() {
+    return i18next.t('subscriptionOffers.features.unlimitedMatches', 'Matchs illimités');
+  },
+  get 'recruitment.unlimited'() {
+    return i18next.t('subscriptionOffers.features.unlimitedListings', 'Annonces illimitées');
+  },
+  get sponsors() {
+    return i18next.t('subscriptionOffers.features.sponsors', 'Sponsors et partenaires');
+  },
 };
 
-const FREE_PLAN_INCLUDED_LABELS = [
-  '1 équipe gratuite',
-  'Événements et matchs en quantité limitée',
-  'Annonces de recrutement limitées',
+// I18N-1 : lus a l'usage, dans la langue de l'app (un tableau evalue au chargement ne la
+// suivrait pas).
+/**
+ * Ce que contient l'offre gratuite.
+ * @returns {string[]} Les trois lignes de la carte Gratuit.
+ */
+const freePlanIncludedLabels = () => [
+  i18next.t('subscriptionOffers.freePlan.oneTeam', '1 équipe gratuite'),
+  i18next.t(
+    'subscriptionOffers.freePlan.limitedEventsMatches',
+    'Événements et matchs en quantité limitée',
+  ),
+  i18next.t(
+    'subscriptionOffers.freePlan.limitedRecruitmentAds',
+    'Annonces de recrutement limitées',
+  ),
 ];
 
 // L33 — la pilule « Annuel » ne porte PLUS de tag de remise : le catalogue a
 // deux grilles (Club x10, Equipe x7,5-7,7) et un tag unique serait faux pour la
 // moitie des paliers. Le badge est calcule et porte par carte.
 const BILLING_PERIOD_OPTIONS = [
-  { id: 'monthly', label: 'Mensuel' },
-  { id: 'yearly', label: 'Annuel' },
+  {
+    id: 'monthly',
+    get label() {
+      return i18next.t('subscriptionOffers.billingPeriods.monthly', 'Mensuel');
+    },
+  },
+  {
+    id: 'yearly',
+    get label() {
+      return i18next.t('subscriptionOffers.billingPeriods.yearly', 'Annuel');
+    },
+  },
 ];
 
 // S12-B/D1 — L'OFFRE AU LICENCIE EST UN MODE DE LA CARTE CLUB, PAS UNE 4e CARTE.
@@ -125,8 +175,18 @@ const BILLING_PERIOD_OPTIONS = [
 // les droits club — se choisissent dans la carte, pas a cote d'elle.
 const CLUB_PRICING_MODES = { LICENSEE: 'licensee', TIER: 'tier' };
 const CLUB_PRICING_MODE_OPTIONS = [
-  { id: CLUB_PRICING_MODES.TIER, label: 'Par palier' },
-  { id: CLUB_PRICING_MODES.LICENSEE, label: 'Au licencié' },
+  {
+    id: CLUB_PRICING_MODES.TIER,
+    get label() {
+      return i18next.t('subscriptionOffers.clubPricingModes.tier', 'Par palier');
+    },
+  },
+  {
+    id: CLUB_PRICING_MODES.LICENSEE,
+    get label() {
+      return i18next.t('subscriptionOffers.clubPricingModes.licensee', 'Au licencié');
+    },
+  },
 ];
 
 // R07 point 6 — la reserve posee SOUS le CTA collant, en plus du retrait
@@ -263,11 +323,21 @@ function SubscriptionOffers({ navigation, route }) {
   const isPurchaseAvailable = isSubscriptionPurchaseAvailable();
   const isTestPurchaseRail = getActiveSubscriptionPurchaseRail()
     === SUBSCRIPTION_PURCHASE_RAILS.TRUSTED_TEST;
-  let purchaseHelperText = 'Le paiement in-app n\'est pas encore disponible sur cette version. Cette section reste en lecture pour le moment.';
+  let purchaseHelperText = t(
+    'subscriptionOffers.purchaseHelper.unavailable',
+    "Le paiement in-app n'est pas encore disponible sur cette version. Cette section reste "
+      + 'en lecture pour le moment.',
+  );
   if (isTestPurchaseRail) {
-    purchaseHelperText = 'Mode test actif : les changements d\'offre sont simulés pour la recette.';
+    purchaseHelperText = t(
+      'subscriptionOffers.purchaseHelper.testMode',
+      "Mode test actif : les changements d'offre sont simulés pour la recette.",
+    );
   } else if (isPurchaseAvailable) {
-    purchaseHelperText = 'Paiement sécurisé par le store. Changement immédiat, prorata géré automatiquement.';
+    purchaseHelperText = t(
+      'subscriptionOffers.purchaseHelper.available',
+      'Paiement sécurisé par le store. Changement immédiat, prorata géré automatiquement.',
+    );
   }
 
   const teamOptions = useMemo(() => getSubscriptionSelectableTeams(allMyTeams), [allMyTeams]);
@@ -497,8 +567,15 @@ function SubscriptionOffers({ navigation, route }) {
       // jamais un nom reconstruit ici : l'ecran de succes et « Mon abonnement »
       // doivent lire le meme mot que la carte sur laquelle il vient d'appuyer.
       offerLabel: isClubOffer
-        ? (String(catalogEntry?.displayName || '').trim() || 'Club')
-        : `Équipe · ${slotCount} équipe${slotCount > 1 ? 's' : ''}`,
+        ? (String(catalogEntry?.displayName || '').trim() || i18next.t(
+          'subscriptionOffers.plans.club',
+          'Club',
+        ))
+        : i18next.t('subscriptionOffers.success.teamOffer', {
+          count: slotCount,
+          defaultValue_one: 'Équipe · {{count}} équipe',
+          defaultValue_other: 'Équipe · {{count}} équipes',
+        }),
       offerScope: isClubOffer ? 'CLUB' : 'TEAM',
       // VITRINE / W5 — « on verifie ton achat » plutot qu une fausse echeance.
       // Vrai quand le serveur n a rendu AUCUNE date : validation partie en
@@ -521,7 +598,13 @@ function SubscriptionOffers({ navigation, route }) {
       // part entiere.
       // D89 — un libelle FOURNI par la porte gagne : le sas d'inscription ne
       // reprend aucune tache, il continue vers la bienvenue.
-      resumeCtaLabel: resumeCtaLabel || (resumeRouteName ? 'Reprendre' : 'C\'est parti !'),
+      resumeCtaLabel: resumeCtaLabel || (resumeRouteName ? i18next.t(
+        'subscriptionOffers.success.resume',
+        'Reprendre',
+      ) : i18next.t(
+        'subscriptionOffers.success.letsGo',
+        "C'est parti !",
+      )),
       resumeMode: resumeRouteName ? 'route' : 'home',
       resumeRouteName: resumeRouteName || undefined,
       resumeRouteParams: resumeRouteName ? resumeRouteParams : undefined,
@@ -557,7 +640,7 @@ function SubscriptionOffers({ navigation, route }) {
       // payer serait le defaut inverse, et il coute aussi cher.
       if (result?.serverRefused === true) {
         Alert.alert(
-          'Erreur abonnement',
+          i18next.t('subscriptionOffers.alerts.subscriptionError.title', 'Erreur abonnement'),
           String(result?.validationErrorMessage || '') || getSubscriptionBillingErrorMessage(null),
         );
         return null;
@@ -601,7 +684,10 @@ function SubscriptionOffers({ navigation, route }) {
     } catch (error) {
       // Pas de `throw` : aucun appelant ne rattrape cette promesse, et la
       // relancer produisait un rejet non traite APRES l'alerte (mesure L38).
-      Alert.alert('Erreur abonnement', getSubscriptionBillingErrorMessage(error));
+      Alert.alert(i18next.t(
+        'subscriptionOffers.alerts.subscriptionError.title',
+        'Erreur abonnement',
+      ), getSubscriptionBillingErrorMessage(error));
       return null;
     } finally {
       setActiveActionPlanCode('');
@@ -655,16 +741,26 @@ function SubscriptionOffers({ navigation, route }) {
     // limiterait jamais rien. C'est l'ecran qui le garantit.
     if (!currentClubDocumentId) {
       Alert.alert(
-        'Club requis',
-        'Rattache d abord ton compte a un club : c est sur lui que se compte le nombre de licenciés.',
+        i18next.t('subscriptionOffers.alerts.clubRequired.title', 'Club requis'),
+        i18next.t(
+          'subscriptionOffers.alerts.clubRequired.licenseeMessage',
+          'Rattache d abord ton compte a un club : c est sur lui que se compte le nombre de '
+            + 'licenciés.',
+        ),
       );
       return;
     }
 
     if (!isTypedLicenseeCountValid) {
       Alert.alert(
-        'Nombre de licenciés requis',
-        'Indique combien de licenciés ton club doit couvrir avant de continuer.',
+        i18next.t(
+          'subscriptionOffers.alerts.licenseeCountRequired.title',
+          'Nombre de licenciés requis',
+        ),
+        i18next.t(
+          'subscriptionOffers.alerts.licenseeCountRequired.message',
+          'Indique combien de licenciés ton club doit couvrir avant de continuer.',
+        ),
       );
       return;
     }
@@ -682,11 +778,21 @@ function SubscriptionOffers({ navigation, route }) {
         },
       });
       Alert.alert(
-        'Paiement ouvert dans ton navigateur',
-        'Termine le paiement dans la page qui vient de s ouvrir, puis reviens ici. Tes droits s ouvrent dans la minute qui suit.',
+        i18next.t(
+          'subscriptionOffers.alerts.browserCheckout.title',
+          'Paiement ouvert dans ton navigateur',
+        ),
+        i18next.t(
+          'subscriptionOffers.alerts.browserCheckout.message',
+          'Termine le paiement dans la page qui vient de s ouvrir, puis reviens ici. Tes '
+            + 'droits s ouvrent dans la minute qui suit.',
+        ),
       );
     } catch (error) {
-      Alert.alert('Erreur abonnement', getSubscriptionBillingErrorMessage(error));
+      Alert.alert(i18next.t(
+        'subscriptionOffers.alerts.subscriptionError.title',
+        'Erreur abonnement',
+      ), getSubscriptionBillingErrorMessage(error));
     } finally {
       setActiveActionPlanCode('');
     }
@@ -721,16 +827,22 @@ function SubscriptionOffers({ navigation, route }) {
 
     if (!currentClubDocumentId) {
       Alert.alert(
-        'Club requis',
-        'Rattache d abord ton compte a un club avant de prendre une offre Club.',
+        i18next.t('subscriptionOffers.alerts.clubRequired.title', 'Club requis'),
+        i18next.t(
+          'subscriptionOffers.alerts.clubRequired.clubPlanMessage',
+          'Rattache d abord ton compte a un club avant de prendre une offre Club.',
+        ),
       );
       return;
     }
 
     if (!isPurchaseAvailable) {
       Alert.alert(
-        'Checkout indisponible',
-        'Le paiement in-app n\'est pas disponible sur ce build. Mets l\'app à jour puis réessaie.',
+        i18next.t('subscriptionOffers.alerts.checkoutUnavailable.title', 'Checkout indisponible'),
+        i18next.t(
+          'subscriptionOffers.alerts.checkoutUnavailable.message',
+          "Le paiement in-app n'est pas disponible sur ce build. Mets l'app à jour puis réessaie.",
+        ),
       );
       return;
     }
@@ -795,8 +907,12 @@ function SubscriptionOffers({ navigation, route }) {
         // T09 — « places » et « Équipe » : les mots de la carte d'offre juste
         // derriere cette alerte, jamais ceux du code.
         Alert.alert(
-          'Toutes les places sont prises',
-          `Cette offre couvre ${slotCount} équipe${slotCount > 1 ? 's' : ''} maximum.`,
+          i18next.t('subscriptionOffers.alerts.slotsFull.title', 'Toutes les places sont prises'),
+          i18next.t('subscriptionOffers.alerts.slotsFull.message', {
+            count: slotCount,
+            defaultValue_one: 'Cette offre couvre {{count}} équipe maximum.',
+            defaultValue_other: 'Cette offre couvre {{count}} équipes maximum.',
+          }),
         );
         return currentState;
       }
@@ -813,24 +929,33 @@ function SubscriptionOffers({ navigation, route }) {
 
     if (teamOptions.length === 0) {
       Alert.alert(
-        'Équipe requise',
-        'Ajoute ou rattache d abord une équipe avant de prendre une offre Équipe.',
+        i18next.t('subscriptionOffers.alerts.teamRequired.title', 'Équipe requise'),
+        i18next.t(
+          'subscriptionOffers.alerts.teamRequired.noTeam',
+          'Ajoute ou rattache d abord une équipe avant de prendre une offre Équipe.',
+        ),
       );
       return;
     }
 
     if (!hasAtLeastOneSelectedTeam) {
       Alert.alert(
-        'Équipe requise',
-        'Sélectionne au moins une équipe à couvrir avec cette offre Équipe.',
+        i18next.t('subscriptionOffers.alerts.teamRequired.title', 'Équipe requise'),
+        i18next.t(
+          'subscriptionOffers.alerts.teamRequired.noSelection',
+          'Sélectionne au moins une équipe à couvrir avec cette offre Équipe.',
+        ),
       );
       return;
     }
 
     if (!isPurchaseAvailable) {
       Alert.alert(
-        'Checkout indisponible',
-        'Le paiement in-app n\'est pas disponible sur ce build. Mets l\'app à jour puis réessaie.',
+        i18next.t('subscriptionOffers.alerts.checkoutUnavailable.title', 'Checkout indisponible'),
+        i18next.t(
+          'subscriptionOffers.alerts.checkoutUnavailable.message',
+          "Le paiement in-app n'est pas disponible sur ce build. Mets l'app à jour puis réessaie.",
+        ),
       );
       return;
     }
@@ -1059,7 +1184,10 @@ function SubscriptionOffers({ navigation, route }) {
         {lockedNotice ? (
           <Text style={[Fonts.p4, Fonts.neutral300]}>
             {lockedNotice}
-            {' — seules les offres supérieures restent disponibles.'}
+            {t(
+              'subscriptionOffers.tierRow.lockedSuffix',
+              ' — seules les offres supérieures restent disponibles.',
+            )}
           </Text>
         ) : null}
       </View>
@@ -1085,11 +1213,20 @@ function SubscriptionOffers({ navigation, route }) {
       return {
         disabled: true,
         entry: null,
-        label: isFreeLevel ? 'Ton offre actuelle' : 'Gérer dans le store',
+        label: isFreeLevel ? t('subscriptionOffers.chips.currentPlan', 'Ton offre actuelle') : t(
+          'subscriptionOffers.cta.free.manageInStore',
+          'Gérer dans le store',
+        ),
         mode: CLUB_PRICING_MODES.TIER,
         sub: isFreeLevel
-          ? 'Publie en quantité limitée, sans carte bancaire.'
-          : 'Le retour au gratuit se gère dans ton store.',
+          ? t(
+            'subscriptionOffers.cta.free.currentSub',
+            'Publie en quantité limitée, sans carte bancaire.',
+          )
+          : t(
+            'subscriptionOffers.cta.free.storeSub',
+            'Le retour au gratuit se gère dans ton store.',
+          ),
       };
     }
 
@@ -1106,28 +1243,42 @@ function SubscriptionOffers({ navigation, route }) {
         disabled: !isTypedLicenseeCountValid,
         entry: licenseeEntry,
         label: isTypedLicenseeCountValid && totalLabel
-          ? `Souscrire · ${totalLabel.split(' = ')[1] || totalLabel}`
-          : 'Indique ton nombre de licenciés',
+          ? t(
+            'subscriptionOffers.cta.licensee.subscribe',
+            'Souscrire · {{total}}',
+            { total: totalLabel.split(' = ')[1] || totalLabel, ...SANS_ECHAPPEMENT },
+          )
+          : t('subscriptionOffers.cta.licensee.enterCount', 'Indique ton nombre de licenciés'),
         mode: CLUB_PRICING_MODES.LICENSEE,
         sub: isTypedLicenseeCountValid
-          ? 'Le paiement s ouvre dans ton navigateur. Équipes illimitées, résiliable a tout moment.'
-          : 'Le prix se calcule sur le nombre de licenciés de ton club.',
+          ? t(
+            'subscriptionOffers.cta.licensee.readySub',
+            'Le paiement s ouvre dans ton navigateur. Équipes illimitées, résiliable a tout '
+              + 'moment.',
+          )
+          : t(
+            'subscriptionOffers.cta.licensee.pendingSub',
+            'Le prix se calcule sur le nombre de licenciés de ton club.',
+          ),
       };
     }
 
     const entry = activeIndex === 1 ? teamEntry : clubEntry;
     const isActivePlan = activeIndex === 1 ? isTeamEntryActivePlan : isClubEntryActivePlan;
     const familyLabel = activeIndex === 1
-      ? 'Équipe'
-      : (String(clubEntry?.displayName || '').trim() || 'Club');
+      ? t('profile.subscription.states.team', 'Équipe')
+      : (String(clubEntry?.displayName || '').trim() || t('subscriptionOffers.plans.club', 'Club'));
 
     if (!entry) {
       return {
         disabled: true,
         entry: null,
-        label: 'Offre indisponible',
+        label: t('subscriptionOffers.cta.unavailable.label', 'Offre indisponible'),
         mode: CLUB_PRICING_MODES.TIER,
-        sub: 'Ce palier n\'est pas proposé pour cette période.',
+        sub: t(
+          'subscriptionOffers.cta.unavailable.sub',
+          "Ce palier n'est pas proposé pour cette période.",
+        ),
       };
     }
 
@@ -1145,10 +1296,13 @@ function SubscriptionOffers({ navigation, route }) {
         return {
           disabled: !isPurchaseAvailable,
           entry,
-          label: 'Gérer mes équipes couvertes',
+          label: t('subscriptionOffers.cta.manageTeams.label', 'Gérer mes équipes couvertes'),
           mode: CLUB_PRICING_MODES.TIER,
           sub: isPurchaseAvailable
-            ? 'Change les équipes couvertes par ton offre, sans repayer.'
+            ? t(
+              'subscriptionOffers.cta.manageTeams.sub',
+              'Change les équipes couvertes par ton offre, sans repayer.',
+            )
             : purchaseHelperText,
         };
       }
@@ -1156,9 +1310,12 @@ function SubscriptionOffers({ navigation, route }) {
       return {
         disabled: true,
         entry,
-        label: 'Ton offre actuelle',
+        label: t('subscriptionOffers.chips.currentPlan', 'Ton offre actuelle'),
         mode: CLUB_PRICING_MODES.TIER,
-        sub: 'Change de palier ou de période pour la remplacer.',
+        sub: t(
+          'subscriptionOffers.cta.active.sub',
+          'Change de palier ou de période pour la remplacer.',
+        ),
       };
     }
 
@@ -1173,10 +1330,17 @@ function SubscriptionOffers({ navigation, route }) {
       return {
         disabled: true,
         entry,
-        label: 'Déjà couvert par ton club',
+        label: t('subscriptionOffers.cta.locked.label', 'Déjà couvert par ton club'),
         mode: CLUB_PRICING_MODES.TIER,
-        sub: `${lockedOption.coverageNotice} : payée par un autre membre de ton club. `
-          + 'Seule une offre supérieure peut la remplacer.',
+        sub: t(
+          'subscriptionOffers.cta.locked.paidByOther',
+          '{{coverageNotice}} : payée par un autre membre de ton club. ',
+          { coverageNotice: lockedOption.coverageNotice, ...SANS_ECHAPPEMENT },
+        )
+          + t(
+            'subscriptionOffers.cta.locked.higherOnly',
+            'Seule une offre supérieure peut la remplacer.',
+          ),
       };
     }
 
@@ -1188,7 +1352,11 @@ function SubscriptionOffers({ navigation, route }) {
     return {
       disabled: !isPurchaseAvailable,
       entry,
-      label: `Choisir ${familyLabel} · ${priceLabel}`,
+      label: t(
+        'subscriptionOffers.cta.choose',
+        'Choisir {{familyLabel}} · {{priceLabel}}',
+        { familyLabel, priceLabel, ...SANS_ECHAPPEMENT },
+      ),
       mode: CLUB_PRICING_MODES.TIER,
       // UPGRADE / U6 — la derniere ligne lue avant que le magasin s'ouvre.
       // C'est ici, et pas ailleurs, qu'un cadeau en cours doit dire ce qu'il
@@ -1232,7 +1400,7 @@ function SubscriptionOffers({ navigation, route }) {
 
           {catalogQuery.isLoading && catalogEntries.length === 0 ? (
             <Text style={[Fonts.p2, Fonts.neutral200, Spaces.marginTop[16], { paddingHorizontal: sidePadding }]}>
-              Chargement du catalogue abonnement...
+              {t('subscriptionOffers.catalog.loading', 'Chargement du catalogue abonnement...')}
             </Text>
           ) : null}
           {catalogQuery.error && catalogEntries.length === 0 ? (
@@ -1262,11 +1430,19 @@ function SubscriptionOffers({ navigation, route }) {
               }]}
             >
               <View style={[Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween, Spaces.gap[8]]}>
-                <Text style={[Fonts.h4Black, Fonts.neutral00]}>Gratuit</Text>
-                {isFreeLevel ? renderChip({ label: 'Ton offre actuelle', tone: 'neutral' }) : null}
+                <Text style={[Fonts.h4Black, Fonts.neutral00]}>
+                  {t('profile.subscription.states.free', 'Gratuit')}
+                </Text>
+                {isFreeLevel ? renderChip({
+                  label: t(
+                    'subscriptionOffers.chips.currentPlan',
+                    'Ton offre actuelle',
+                  ),
+                  tone: 'neutral',
+                }) : null}
               </View>
               <Text style={[Fonts.p4, Fonts.neutral400, Spaces.marginTop[4]]}>
-                Pour découvrir FoundClub
+                {t('subscriptionOffers.cards.free.tagline', 'Pour découvrir FoundClub')}
               </Text>
               <View style={[Spaces.gap[4], Spaces.marginTop[12]]}>
                 <Text style={[Fonts.h3Bold, Fonts.neutral00]}>
@@ -1277,7 +1453,7 @@ function SubscriptionOffers({ navigation, route }) {
                   )}
                 </Text>
               </View>
-              {renderBenefits({ dim: true, items: FREE_PLAN_INCLUDED_LABELS })}
+              {renderBenefits({ dim: true, items: freePlanIncludedLabels() })}
               {quotaItems.length ? (
                 <View
                   style={[
@@ -1316,22 +1492,33 @@ function SubscriptionOffers({ navigation, route }) {
               }]}
             >
               <View style={[Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween, Spaces.gap[8]]}>
-                <Text style={[Fonts.h4Black, Fonts.neutral00]}>Équipe</Text>
+                <Text style={[Fonts.h4Black, Fonts.neutral00]}>
+                  {t('profile.subscription.states.team', 'Équipe')}
+                </Text>
                 {renderChip({
-                  label: isTeamEntryActivePlan ? 'Ton offre actuelle' : 'Populaire',
+                  label: isTeamEntryActivePlan ? t(
+                    'subscriptionOffers.chips.currentPlan',
+                    'Ton offre actuelle',
+                  ) : t(
+                    'subscriptionOffers.chips.popular',
+                    'Populaire',
+                  ),
                   tone: isTeamEntryActivePlan ? 'neutral' : 'popular',
                 })}
               </View>
               <Text style={[Fonts.p4, Fonts.neutral400, Spaces.marginTop[4]]}>
-                Pour les coachs — ta ou tes équipes
+                {t('subscriptionOffers.cards.team.tagline', 'Pour les coachs — ta ou tes équipes')}
               </Text>
               {teamEntry ? renderPrice(teamEntry) : (
                 <Text style={[Fonts.p3, Fonts.neutral300, Spaces.marginTop[12]]}>
-                  Aucune offre Équipe pour cette période.
+                  {t(
+                    'subscriptionOffers.cards.team.empty',
+                    'Aucune offre Équipe pour cette période.',
+                  )}
                 </Text>
               )}
               {renderTierRow({
-                legend: 'Équipes couvertes',
+                legend: t('subscriptionOffers.cards.team.legend', 'Équipes couvertes'),
                 onChange: (id) => setTeamSlotCount(Number(id)),
                 options: teamTiers,
                 value: resolvedTeamTier,
@@ -1349,16 +1536,31 @@ function SubscriptionOffers({ navigation, route }) {
               }]}
             >
               <View style={[Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween, Spaces.gap[8]]}>
-                <Text style={[Fonts.h4Black, Fonts.neutral00]}>Club</Text>
+                <Text style={[Fonts.h4Black, Fonts.neutral00]}>
+                  {t('subscriptionOffers.plans.club', 'Club')}
+                </Text>
                 {renderChip({
-                  label: isClubEntryActivePlan ? 'Ton offre actuelle' : 'Certification incluse',
+                  label: isClubEntryActivePlan ? t(
+                    'subscriptionOffers.chips.currentPlan',
+                    'Ton offre actuelle',
+                  ) : t(
+                    'subscriptionOffers.chips.certificationIncluded',
+                    'Certification incluse',
+                  ),
                   tone: isClubEntryActivePlan ? 'neutral' : 'club',
                 })}
               </View>
               <Text style={[Fonts.p4, Fonts.neutral400, Spaces.marginTop[4]]}>
                 {isLicenseeModeActive
-                  ? 'Pour les dirigeants — équipes illimitées, sans limite'
-                  : `Pour les dirigeants — équipes illimitées, ${clubCoverageLabel}`}
+                  ? t(
+                    'subscriptionOffers.cards.club.tagline',
+                    'Pour les dirigeants — équipes illimitées, sans limite',
+                  )
+                  : t(
+                    'subscriptionOffers.cards.club.taglineCoverage',
+                    'Pour les dirigeants — équipes illimitées, {{clubCoverageLabel}}',
+                    { clubCoverageLabel, ...SANS_ECHAPPEMENT },
+                  )}
               </Text>
 
               {/* S12-B/D1 — LA BASCULE. Elle n'existe QUE si le catalogue vend
@@ -1381,7 +1583,10 @@ function SubscriptionOffers({ navigation, route }) {
                   </Text>
                   <LicenseeCountField
                     billingPeriod={billingPeriod}
-                    helperText="Tous les membres du club comptent : joueurs, coachs et dirigeants."
+                    helperText={t(
+                      'subscriptionOffers.cards.club.licenseeHelper',
+                      'Tous les membres du club comptent : joueurs, coachs et dirigeants.',
+                    )}
                     onChangeText={
                       (value) => setLicenseeCountText(sanitizeSubscriptionLicenseeCountInput(value))
                     }
@@ -1393,11 +1598,14 @@ function SubscriptionOffers({ navigation, route }) {
                 <>
                   {clubEntry ? renderPrice(clubEntry) : (
                     <Text style={[Fonts.p3, Fonts.neutral300, Spaces.marginTop[12]]}>
-                      Aucune offre Club pour cette période.
+                      {t(
+                        'subscriptionOffers.cards.club.empty',
+                        'Aucune offre Club pour cette période.',
+                      )}
                     </Text>
                   )}
                   {renderTierRow({
-                    legend: 'Taille du club',
+                    legend: t('subscriptionOffers.cards.club.legend', 'Taille du club'),
                     onChange: (id) => setClubTier(Number(id)),
                     options: clubTiers,
                     value: resolvedClubTier,
@@ -1423,7 +1631,16 @@ function SubscriptionOffers({ navigation, route }) {
                 ),
                 // S12-B — l'amorce SUIT le mode : au licencie, la couverture
                 // n'est plus une tranche mais un nombre saisi par le dirigeant.
-                lead: `Tout ce que fait l'offre Équipe, pour ${isLicenseeModeActive ? 'tous les licenciés du club' : clubCoverageLabel}, plus :`,
+                lead: t(
+                  'subscriptionOffers.cards.club.lead',
+                  "Tout ce que fait l'offre Équipe, pour {{coverage}}, plus :",
+                  {
+                    coverage: isLicenseeModeActive
+                      ? t('subscriptionOffers.cards.club.allMembers', 'tous les licenciés du club')
+                      : clubCoverageLabel,
+                    ...SANS_ECHAPPEMENT,
+                  },
+                ),
               })}
             </View>
           </ScrollView>
@@ -1432,7 +1649,11 @@ function SubscriptionOffers({ navigation, route }) {
           <View style={[Alignments.row, Alignments.justifyCenter, Spaces.marginTop[12]]}>
             {CARD_KEYS.map((cardKey, index) => (
               <TouchableOpacity
-                accessibilityLabel={`Carte ${index + 1} sur 3`}
+                accessibilityLabel={t(
+                  'subscriptionOffers.pager.card',
+                  'Carte {{position}} sur 3',
+                  { position: index + 1, ...SANS_ECHAPPEMENT },
+                )}
                 accessibilityRole="button"
                 accessibilityState={{ selected: index === activeIndex }}
                 key={cardKey}
@@ -1522,25 +1743,38 @@ function SubscriptionOffers({ navigation, route }) {
           <View style={[Spaces.gap[4]]}>
             <Text style={[Fonts.h4Black, Fonts.neutral00]}>
               {teamPlanModalState.actionMode === 'manage-team-slots'
-                ? 'Mettre à jour mes équipes couvertes'
-                : 'Choisir les équipes couvertes'}
+                ? t(
+                  'subscriptionOffers.teamModal.titleManage',
+                  'Mettre à jour mes équipes couvertes',
+                )
+                : t('subscriptionOffers.teamModal.titleChoose', 'Choisir les équipes couvertes')}
             </Text>
             <Text style={[Fonts.p2, Fonts.neutral200]}>
               {selectedTeamPlanEntry
-                ? `Cette offre couvre jusqu'à ${selectedTeamSlotCount} équipe${selectedTeamSlotCount > 1 ? 's' : ''}.`
+                ? t('subscriptionOffers.teamModal.coverage', {
+                  count: selectedTeamSlotCount,
+                  defaultValue_one: "Cette offre couvre jusqu'à {{count}} équipe.",
+                  defaultValue_other: "Cette offre couvre jusqu'à {{count}} équipes.",
+                })
                 : ''}
             </Text>
           </View>
 
           {!isPurchaseAvailable ? (
             <Text style={[Fonts.p2, Fonts.neutral200]}>
-              {'Le paiement in-app n\'est pas encore disponible sur cette version.'}
+              {t(
+                'subscriptionOffers.teamModal.purchaseUnavailable',
+                "Le paiement in-app n'est pas encore disponible sur cette version.",
+              )}
             </Text>
           ) : null}
 
           {teamOptions.length === 0 ? (
             <Text style={[Fonts.p2, Fonts.neutral200]}>
-              {'Aucune équipe exploitable n\'a été trouvée sur ce compte pour une offre Équipe.'}
+              {t(
+                'subscriptionOffers.teamModal.noTeams',
+                "Aucune équipe exploitable n'a été trouvée sur ce compte pour une offre Équipe.",
+              )}
             </Text>
           ) : (
             <View style={[Spaces.gap[12]]}>
@@ -1573,7 +1807,10 @@ function SubscriptionOffers({ navigation, route }) {
                   >
                     <View style={[Alignments.fill, Spaces.gap[4]]}>
                       <Text style={[Fonts.p2Bold, isSelected ? Fonts.primary900 : Fonts.neutral00]}>
-                        {team?.name || 'Équipe sans nom'}
+                        {team?.name || t(
+                          'subscriptionOffers.teamModal.unnamedTeam',
+                          'Équipe sans nom',
+                        )}
                       </Text>
                       {teamClubName ? (
                         <Text style={[Fonts.p4, isSelected ? Fonts.primary900 : Fonts.neutral200]}>
@@ -1594,13 +1831,29 @@ function SubscriptionOffers({ navigation, route }) {
 
           {isSelectedTeamCountInvalid ? (
             <Text style={[Fonts.p4, { color: Colors.error300 }]}>
-              {'Trop d\'équipes sélectionnées pour cette formule.'}
+              {t(
+                'subscriptionOffers.teamModal.tooMany',
+                "Trop d'équipes sélectionnées pour cette formule.",
+              )}
             </Text>
           ) : null}
 
           {selectedTeamPlanEntry ? (
             <Text style={[Fonts.p4, Fonts.neutral300]}>
-              {`${selectedTeamIds.length} / ${selectedTeamSlotCount} place${selectedTeamSlotCount > 1 ? 's' : ''} utilisée${selectedTeamIds.length > 1 ? 's' : ''}`}
+              {t('subscriptionOffers.teamSlots.usage', '{{used}} / {{places}} {{usedWord}}', {
+                places: t('subscriptionOffers.teamSlots.places', {
+                  count: selectedTeamSlotCount,
+                  defaultValue_one: '{{count}} place',
+                  defaultValue_other: '{{count}} places',
+                }),
+                used: selectedTeamIds.length,
+                usedWord: t('subscriptionOffers.teamSlots.usedWord', {
+                  count: selectedTeamIds.length,
+                  defaultValue_one: 'utilisée',
+                  defaultValue_other: 'utilisées',
+                }),
+                ...SANS_ECHAPPEMENT,
+              })}
             </Text>
           ) : null}
 
@@ -1609,12 +1862,18 @@ function SubscriptionOffers({ navigation, route }) {
               disabled={isTeamSelectionConfirmDisabled}
               isLoading={subscriptionMutation.isPending}
               onPress={handleConfirmTeamPlan}
-              title={primarySubscriptionDocumentId ? 'Confirmer le changement' : 'Activer cette offre'}
+              title={primarySubscriptionDocumentId ? t(
+                'subscriptionOffers.teamModal.confirmChange',
+                'Confirmer le changement',
+              ) : t(
+                'subscriptionOffers.teamModal.activate',
+                'Activer cette offre',
+              )}
               variant="PrimaryLight"
             />
             <Button
               onPress={closeTeamPlanModal}
-              title="Annuler"
+              title={t('subscriptionOffers.teamModal.cancel', 'Annuler')}
               variant="SecondaryLight"
             />
           </View>

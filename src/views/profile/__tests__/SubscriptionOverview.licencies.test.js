@@ -61,10 +61,15 @@ jest.mock('react-i18next', () => {
 
   return {
     useTranslation: () => ({
-      t: (/** @type {string} */ cle, /** @type {any} */ repli) => {
+      t: (/** @type {string} */ cle, /** @type {any} */ repli, /** @type {any} */ valeurs) => {
         const valeur = lire(String(cle || '').split('.'));
         if (typeof valeur === 'string') return valeur;
-        return typeof repli === 'string' ? repli : cle;
+        if (typeof repli !== 'string') return cle;
+        // I18N-1 : le repli s'interpole comme dans l'app ({{jetons}}).
+        return repli.replace(
+          /\{\{(\w+)\}\}/g,
+          (/** @type {string} */ _m, /** @type {string} */ nom) => String(valeurs?.[nom] ?? ''),
+        );
       },
     }),
   };

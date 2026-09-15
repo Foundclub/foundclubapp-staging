@@ -167,7 +167,10 @@ function ClubEdit({ navigation, route }) {
       }
       Alert.alert(
         t('common.error', 'Erreur'),
-        mutationError?.message || 'Impossible de mettre à jour ce club pour le moment.',
+        mutationError?.message || t(
+          'clubEdit.errors.updateFallback',
+          'Impossible de mettre à jour ce club pour le moment.',
+        ),
       );
     },
     onSuccess: () => {
@@ -222,16 +225,39 @@ function ClubEdit({ navigation, route }) {
       <ScreenContainer bgImage="bg2" contentContainerStyle={[Spaces.paddingVertical[24], Alignments.fill, Alignments.justifyCenter]}>
         <View style={[Spaces.gap[12]]}>
           <Text style={[Fonts.h3Bold, Fonts.neutral00]}>
-            {isMissingClubId ? 'Club introuvable' : 'Ce club est introuvable'}
+            {isMissingClubId ? t('clubEdit.state.notFound.missingIdTitle', 'Club introuvable') : t(
+              'clubEdit.state.notFound.title',
+              'Ce club est introuvable',
+            )}
           </Text>
           <Text style={[Fonts.p1, Fonts.neutral200]}>
             {isMissingClubId
-              ? 'Aucun identifiant de club n a été fourni.'
-              : 'Le lien est peut-être obsolète ou le club a été supprimé.'}
+              ? t(
+                'clubEdit.state.notFound.missingIdDescription',
+                'Aucun identifiant de club n a été fourni.',
+              )
+              : t(
+                'clubEdit.state.notFound.description',
+                'Le lien est peut-être obsolète ou le club a été supprimé.',
+              )}
           </Text>
-          <Button onPress={() => navigation.navigate(RouteNames.ClubList)} title="Retour aux clubs" variant="Secondary" />
+          <Button
+            onPress={() => navigation.navigate(RouteNames.ClubList)}
+            title={t(
+              'clubEdit.state.backToClubs',
+              'Retour aux clubs',
+            )}
+            variant="Secondary"
+          />
           {!isMissingClubId ? (
-            <Button onPress={() => refetch()} title="Réessayer" variant="Primary" />
+            <Button
+              onPress={() => refetch()}
+              title={t(
+                'clubEdit.state.retry',
+                'Réessayer',
+              )}
+              variant="Primary"
+            />
           ) : null}
         </View>
       </ScreenContainer>
@@ -244,7 +270,7 @@ function ClubEdit({ navigation, route }) {
         <View style={[Alignments.alignCenter, Spaces.gap[12]]}>
           <Loader />
           <Text style={[Fonts.p1, Fonts.neutral200]}>
-            Chargement du club...
+            {t('clubEdit.state.loading', 'Chargement du club...')}
           </Text>
         </View>
       </ScreenContainer>
@@ -256,13 +282,30 @@ function ClubEdit({ navigation, route }) {
       <ScreenContainer bgImage="bg2" contentContainerStyle={[Spaces.paddingVertical[24], Alignments.fill, Alignments.justifyCenter]}>
         <View style={[Spaces.gap[12]]}>
           <Text style={[Fonts.h3Bold, Fonts.neutral00]}>
-            Impossible de charger le club
+            {t('clubEdit.state.loadError.title', 'Impossible de charger le club')}
           </Text>
           <Text style={[Fonts.p1, Fonts.neutral200]}>
-            {error?.message || 'Réessaie dans quelques instants.'}
+            {error?.message || t(
+              'clubEdit.state.loadError.fallback',
+              'Réessaie dans quelques instants.',
+            )}
           </Text>
-          <Button onPress={() => refetch()} title="Réessayer" variant="Primary" />
-          <Button onPress={() => navigation.navigate(RouteNames.ClubList)} title="Retour aux clubs" variant="Secondary" />
+          <Button
+            onPress={() => refetch()}
+            title={t(
+              'clubEdit.state.retry',
+              'Réessayer',
+            )}
+            variant="Primary"
+          />
+          <Button
+            onPress={() => navigation.navigate(RouteNames.ClubList)}
+            title={t(
+              'clubEdit.state.backToClubs',
+              'Retour aux clubs',
+            )}
+            variant="Secondary"
+          />
         </View>
       </ScreenContainer>
     );

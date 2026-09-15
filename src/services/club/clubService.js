@@ -1,4 +1,5 @@
 /* eslint-disable perfectionist/sort-imports */
+import i18next from 'i18next';
 import Joi from 'joi';
 import { Platform } from 'react-native';
 
@@ -912,7 +913,7 @@ export const createSelfOnboardClub = async (payload) => {
     }
     const message = error?.response?.data?.error?.message
       || (error && typeof error === 'object' && 'message' in error ? error.message : null)
-      || 'Impossible de créer le club.';
+      || i18next.t('clubService.errors.createClubFailed', 'Impossible de créer le club.');
     throw new Error(String(message));
   }
 };

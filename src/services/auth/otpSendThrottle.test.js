@@ -1,3 +1,8 @@
+// I18N-1 : le code teste lit ses textes par i18next / t() (replis, interpolation) ;
+// ce temoin initialise le VRAI i18next en francais (fr.js + replis), sans rien
+// changer a ce qu'il affirme.
+import '@/theme/strings';
+
 import {
   assertOtpSendAllowed,
   getOtpCooldownRemainingMs,

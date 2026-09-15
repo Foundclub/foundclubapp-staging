@@ -13,6 +13,7 @@ import useAuth from '@/domains/auth/useAuth';
 import { navigateToRequestsHub, REQUESTS_HUB_LEGACY_REDIRECT } from '@/domains/requests/requestNavigation';
 import { extractSubscriptionDecisionFromError } from '@/domains/subscription/subscriptionDecision';
 import { TutorialIds } from '@/domains/tutorial/tutorialIds';
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -185,8 +186,13 @@ function ClubMembershipRequestList({ navigation, route }) {
       }
 
       Alert.alert(
-        'Entraîneur ajouté',
-        `${trainerLabel} a bien été ajouté à ton club.\n\nVeux-tu l'assigner à une équipe maintenant ?`,
+        t('clubMembershipRequestList.alerts.trainerAdded.title', 'Entraîneur ajouté'),
+        t(
+          'clubMembershipRequestList.alerts.trainerAdded.message',
+          "{{trainerLabel}} a bien été ajouté à ton club.\n\nVeux-tu l'assigner à une équipe "
+            + 'maintenant ?',
+          { trainerLabel, ...SANS_ECHAPPEMENT },
+        ),
         [
           {
             style: 'cancel',
@@ -200,7 +206,10 @@ function ClubMembershipRequestList({ navigation, route }) {
                 trainerName: trainerLabel,
               });
             },
-            text: 'Assigner maintenant',
+            text: t(
+              'clubMembershipRequestList.alerts.trainerAdded.assignNow',
+              'Assigner maintenant',
+            ),
           },
         ],
       );
@@ -343,7 +352,7 @@ function ClubMembershipRequestList({ navigation, route }) {
                   ]}
                 >
                   <Text style={[Fonts.p4Bold, Fonts.gold500, Fonts.uppercase]}>
-                    En attente
+                    {t('clubMembershipRequestList.badges.pending', 'En attente')}
                   </Text>
                 </View>
               </View>
@@ -561,7 +570,10 @@ function ClubMembershipRequestList({ navigation, route }) {
             </Text>
           </TouchableOpacity>
           <OnboardingWrapper
-            description="Traite ici les demandes d'adhésion au club et assigne les profils valides."
+            description={t(
+              'clubMembershipRequestList.onboarding.description',
+              "Traite ici les demandes d'adhésion au club et assigne les profils valides.",
+            )}
             id="club-membership-requests-list"
             order={1}
             spotlight={{
@@ -572,7 +584,7 @@ function ClubMembershipRequestList({ navigation, route }) {
               paddingY: 2,
             }}
             style={{ flex: 1 }}
-            title="Demandes club"
+            title={t('clubMembershipRequestList.onboarding.title', 'Demandes club')}
           >
             <View style={[
               Alignments.fill,

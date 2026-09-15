@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { Text, View } from 'react-native';
 
 import useTheme from '@/theme/themeContext';
@@ -16,17 +17,31 @@ import Checkbox from '@/components/atoms/checkbox/Checkbox';
  * @param root0.title
  */
 function ParentalDeclarationCard({
+  // I18N-1 : reste en francais. C'est le texte juridique dont le serveur enregistre
+  // l'empreinte (MINOR_PARENTAL_DECLARATION_TEXT_HASH) et la locale fr-FR : le
+  // traduire enregistrerait un consentement sur un texte que la personne n'a pas lu.
   checkboxLabel = 'Je déclare être le parent ou le représentant legal de cet enfant et utiliser l application en son nom.',
   checked,
-  description = 'Ce profil concerne un enfant de moins de 15 ans. Pour continuer, tu dois confirmer que tu es son parent ou représentant légal.',
+  description = /** @type {string | undefined} */ (undefined),
   disabled = false,
   helperText = '',
   onChange,
-  title = 'Déclaration parentale obligatoire',
+  title = /** @type {string | undefined} */ (undefined),
 }) {
+  const { t } = useTranslation();
   const {
     Alignments, Colors, Fonts, Spaces,
   } = useTheme();
+  const shownDescription = description === undefined
+    ? t(
+      'parentalDeclarationCard.description',
+      'Ce profil concerne un enfant de moins de 15 ans. Pour continuer, tu dois confirmer que tu '
+        + 'es son parent ou représentant légal.',
+    )
+    : description;
+  const shownTitle = title === undefined
+    ? t('parentalDeclarationCard.title', 'Déclaration parentale obligatoire')
+    : title;
 
   return (
     <View
@@ -43,10 +58,10 @@ function ParentalDeclarationCard({
     >
       <View style={[Spaces.gap[8]]}>
         <Text style={[Fonts.h4Bold, Fonts.neutral00]}>
-          {title}
+          {shownTitle}
         </Text>
         <Text style={[Fonts.p2, Fonts.neutral200]}>
-          {description}
+          {shownDescription}
         </Text>
       </View>
 

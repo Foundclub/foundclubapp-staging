@@ -45,7 +45,10 @@ function UserAddress({ navigation }) {
   const updateUserMutation = useMutation({
     mutationFn: updateMe,
     onError: (error) => {
-      Alert.alert('Erreur', error?.message || 'Impossible de mettre à jour ton profil.');
+      Alert.alert(t('userAddress.alerts.updateError.title', 'Erreur'), error?.message || t(
+        'userAddress.alerts.updateError.message',
+        'Impossible de mettre à jour ton profil.',
+      ));
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['get-me'] });
@@ -63,9 +66,12 @@ function UserAddress({ navigation }) {
   if (userDataLoading) {
     return (
       <OnboardingStateView
-        description="Nous récupérons ton profil avant de renseigner ton adresse."
+        description={t(
+          'userAddress.loading.description',
+          'Nous récupérons ton profil avant de renseigner ton adresse.',
+        )}
         isLoading
-        title="Chargement du profil"
+        title={t('userAddress.loading.title', 'Chargement du profil')}
       />
     );
   }
@@ -73,10 +79,13 @@ function UserAddress({ navigation }) {
   if (userDataError) {
     return (
       <OnboardingStateView
-        actionLabel="Réessayer"
-        description={userDataError?.message || 'Impossible de charger ton profil.'}
+        actionLabel={t('userAddress.loadError.retry', 'Réessayer')}
+        description={userDataError?.message || t(
+          'userAddress.loadError.message',
+          'Impossible de charger ton profil.',
+        )}
         onAction={refetchUserData}
-        title="Chargement impossible"
+        title={t('userAddress.loadError.title', 'Chargement impossible')}
       />
     );
   }

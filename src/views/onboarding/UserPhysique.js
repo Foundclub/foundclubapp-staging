@@ -49,7 +49,10 @@ function UserPhysique({ navigation }) {
   const updateUserMutation = useMutation({
     mutationFn: updateMe,
     onError: (error) => {
-      Alert.alert('Erreur', error?.message || 'Impossible de mettre à jour ton profil.');
+      Alert.alert(t('userPhysique.alerts.updateError.title', 'Erreur'), error?.message || t(
+        'userPhysique.alerts.updateError.message',
+        'Impossible de mettre à jour ton profil.',
+      ));
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['get-me'] });
@@ -69,9 +72,12 @@ function UserPhysique({ navigation }) {
   if (userDataLoading) {
     return (
       <OnboardingStateView
-        description="Nous récupérons ton profil avant de renseigner ton physique."
+        description={t(
+          'userPhysique.loading.description',
+          'Nous récupérons ton profil avant de renseigner ton physique.',
+        )}
         isLoading
-        title="Chargement du profil"
+        title={t('userPhysique.loading.title', 'Chargement du profil')}
       />
     );
   }
@@ -79,10 +85,13 @@ function UserPhysique({ navigation }) {
   if (userDataError) {
     return (
       <OnboardingStateView
-        actionLabel="Réessayer"
-        description={userDataError?.message || 'Impossible de charger ton profil.'}
+        actionLabel={t('userPhysique.loadError.retry', 'Réessayer')}
+        description={userDataError?.message || t(
+          'userPhysique.loadError.message',
+          'Impossible de charger ton profil.',
+        )}
         onAction={refetchUserData}
-        title="Chargement impossible"
+        title={t('userPhysique.loadError.title', 'Chargement impossible')}
       />
     );
   }
@@ -149,7 +158,7 @@ function UserPhysique({ navigation }) {
                 keyboardType="numeric"
                 maxLength={3}
                 onChangeText={setHeight}
-                placeholder="Ex : 180"
+                placeholder={t('userPhysique.fields.height.placeholder', 'Ex : 180')}
                 placeholderTextColor={Colors.neutral500}
                 returnKeyType="next"
                 style={[
@@ -175,7 +184,7 @@ function UserPhysique({ navigation }) {
                 keyboardType="numeric"
                 maxLength={3}
                 onChangeText={setWeight}
-                placeholder="Ex : 75"
+                placeholder={t('userPhysique.fields.weight.placeholder', 'Ex : 75')}
                 placeholderTextColor={Colors.neutral500}
                 returnKeyType="done"
                 style={[

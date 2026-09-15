@@ -15,6 +15,7 @@ import useMessaging from '@/domains/messaging/useMessaging';
 import { invalidateAfterAction } from '@/domains/refresh/afterAction';
 import { extractSubscriptionDecisionFromError } from '@/domains/subscription/subscriptionDecision';
 import { withAlpha } from '@/theme/colors';
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -401,9 +402,12 @@ function ClubDetails({ navigation, route }) {
       const errorMessage = mutationError?.response?.data?.error?.message
         || mutationError?.response?.data?.error
         || mutationError?.message
-        || 'Impossible de changer de club pour le moment.';
+        || t(
+          'clubDetails.switchClub.errorFallback',
+          'Impossible de changer de club pour le moment.',
+        );
 
-      Alert.alert('Erreur', errorMessage);
+      Alert.alert(t('clubDetails.switchClub.errorTitle', 'Erreur'), errorMessage);
     },
   });
 
@@ -977,8 +981,12 @@ function ClubDetails({ navigation, route }) {
     if (!removedActivityId) return;
 
     Alert.alert(
-      `Supprimer le sport ${activityName} ?`,
-      'Es-tu sûr de vouloir continuer ?',
+      t(
+        'clubDetails.alerts.deleteActivity.title',
+        'Supprimer le sport {{activityName}} ?',
+        { activityName, ...SANS_ECHAPPEMENT },
+      ),
+      t('clubDetails.alerts.deleteActivity.description', 'Es-tu sûr de vouloir continuer ?'),
       [
         {
           style: 'cancel',
@@ -1815,12 +1823,12 @@ function ClubDetails({ navigation, route }) {
   ]);
 
   const tabs = useMemo(() => {
-    const options = [{ label: 'Informations', value: 'infos' }];
+    const options = [{ label: t('clubDetails.tabs.info', 'Informations'), value: 'infos' }];
     if (isMember) {
-      options.push({ label: 'Planning', value: 'planning' });
+      options.push({ label: t('clubDetails.tabs.planning', 'Planning'), value: 'planning' });
     }
     return options;
-  }, [isMember]);
+  }, [isMember, t]);
 
   // Reset tab if access lost
   if (selectedTab === 'planning' && !isMember) {
@@ -2328,7 +2336,7 @@ function ClubDetails({ navigation, route }) {
         disabled={activitiesToAdd.length === 0 || updateClubMutation.isPending}
         isLoading={updateClubMutation.isPending}
         onPress={handleConfirmAddActivities}
-        title="Ajouter"
+        title={t('clubDetails.activities.addConfirm', 'Ajouter')}
         variant="Primary"
       />
     </View>
@@ -2354,7 +2362,7 @@ function ClubDetails({ navigation, route }) {
         <View style={[Alignments.alignCenter, Spaces.gap[12]]}>
           <Loader />
           <Text style={[Fonts.p2, Fonts.primary100]}>
-            Chargement du club...
+            {t('clubDetails.state.loading', 'Chargement du club...')}
           </Text>
         </View>
       </ScreenContainer>
@@ -2374,13 +2382,30 @@ function ClubDetails({ navigation, route }) {
       >
         <View style={[Spaces.gap[12]]}>
           <Text style={[Fonts.h4Bold, Fonts.neutral00]}>
-            Impossible de charger le club
+            {t('clubDetails.state.loadError.title', 'Impossible de charger le club')}
           </Text>
           <Text style={[Fonts.p2, Fonts.neutral200]}>
-            {error?.message || 'Réessaie dans quelques instants.'}
+            {error?.message || t(
+              'clubDetails.state.loadError.fallback',
+              'Réessaie dans quelques instants.',
+            )}
           </Text>
-          <Button onPress={() => refetch()} title="Réessayer" variant="Primary" />
-          <Button onPress={() => navigation.navigate(RouteNames.ClubList)} title="Retour aux clubs" variant="Secondary" />
+          <Button
+            onPress={() => refetch()}
+            title={t(
+              'clubDetails.state.retry',
+              'Réessayer',
+            )}
+            variant="Primary"
+          />
+          <Button
+            onPress={() => navigation.navigate(RouteNames.ClubList)}
+            title={t(
+              'clubDetails.state.backToClubs',
+              'Retour aux clubs',
+            )}
+            variant="Secondary"
+          />
         </View>
       </ScreenContainer>
     );
@@ -2399,16 +2424,42 @@ function ClubDetails({ navigation, route }) {
       >
         <View style={[Spaces.gap[12]]}>
           <Text style={[Fonts.h4Bold, Fonts.neutral00]}>
-            {isMissingClubId ? 'Club introuvable' : 'Ce club est introuvable'}
+            {isMissingClubId ? t(
+              'clubDetails.state.notFound.missingIdTitle',
+              'Club introuvable',
+            ) : t(
+              'clubDetails.state.notFound.title',
+              'Ce club est introuvable',
+            )}
           </Text>
           <Text style={[Fonts.p2, Fonts.neutral200]}>
             {isMissingClubId
-              ? 'Aucun identifiant de club n a été fourni.'
-              : 'Le lien est peut-être obsolète ou le club a été supprimé.'}
+              ? t(
+                'clubDetails.state.notFound.missingIdDescription',
+                'Aucun identifiant de club n a été fourni.',
+              )
+              : t(
+                'clubDetails.state.notFound.description',
+                'Le lien est peut-être obsolète ou le club a été supprimé.',
+              )}
           </Text>
-          <Button onPress={() => navigation.navigate(RouteNames.ClubList)} title="Retour aux clubs" variant="Secondary" />
+          <Button
+            onPress={() => navigation.navigate(RouteNames.ClubList)}
+            title={t(
+              'clubDetails.state.backToClubs',
+              'Retour aux clubs',
+            )}
+            variant="Secondary"
+          />
           {!isMissingClubId ? (
-            <Button onPress={() => refetch()} title="Réessayer" variant="Primary" />
+            <Button
+              onPress={() => refetch()}
+              title={t(
+                'clubDetails.state.retry',
+                'Réessayer',
+              )}
+              variant="Primary"
+            />
           ) : null}
         </View>
       </ScreenContainer>
@@ -2444,7 +2495,7 @@ function ClubDetails({ navigation, route }) {
             clubs={clubs}
             isLoading={switchClubMutation.isPending}
             onSelectClub={handleSelectManagedClub}
-            title="Choisir un club"
+            title={t('clubDetails.clubSelector.title', 'Choisir un club')}
           />
         ) : null}
         <WithDataWrapper
@@ -2791,7 +2842,10 @@ function ClubDetails({ navigation, route }) {
                             {/* MARQUEE — le nom de l installation se lit en entier */}
                             <MarqueeText
                               style={[Fonts.p1Bold, Fonts.neutral00]}
-                              text={facility?.name || 'Installation'}
+                              text={facility?.name || t(
+                                'clubDetails.facilities.nameFallback',
+                                'Installation',
+                              )}
                             />
                             <View style={[Alignments.row, Alignments.wrap, Spaces.gap[8]]}>
                               <View

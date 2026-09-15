@@ -5,6 +5,7 @@ import {
   signInWithPhoneNumber,
   signOut,
 } from 'firebase/auth';
+import i18next from 'i18next';
 
 const DEFAULT_RECAPTCHA_CONTAINER_ID = 'fc-recaptcha-container';
 
@@ -57,7 +58,10 @@ const ensureRecaptchaContainer = (containerId = DEFAULT_RECAPTCHA_CONTAINER_ID) 
 
 const getFirebaseApp = () => {
   if (!isFirebaseConfigured()) {
-    throw new Error('Firebase Web n est pas configure pour cette application.');
+    throw new Error(i18next.t(
+      'authWeb.errors.firebaseNotConfigured',
+      'Firebase Web n est pas configure pour cette application.',
+    ));
   }
 
   if (getApps().length > 0) {
@@ -82,7 +86,10 @@ export const resetRecaptcha = () => {
 
 const getOrCreateRecaptchaVerifier = async (containerId = DEFAULT_RECAPTCHA_CONTAINER_ID) => {
   if (typeof document === 'undefined') {
-    throw new Error('Le navigateur est requis pour initialiser le reCAPTCHA.');
+    throw new Error(i18next.t(
+      'authWeb.errors.browserRequired',
+      'Le navigateur est requis pour initialiser le reCAPTCHA.',
+    ));
   }
 
   const resolvedContainerId = ensureRecaptchaContainer(containerId);

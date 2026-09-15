@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import {
   Image,
   StyleSheet,
@@ -96,9 +97,10 @@ function OnboardingClubCard({
   item,
   onPress = undefined,
 }) {
+  const { t } = useTranslation();
   const { Colors, Images } = useTheme();
 
-  const clubName = item?.name || 'Club';
+  const clubName = item?.name || t('onboardingClubCard.clubNameFallback', 'Club');
   const shortAddress = getShortAddress(item?.addressDetails || item?.address);
   const distanceLabel = formatClubDistanceLabel(distanceKm);
   const sectionLabels = resolveSectionLabels(item);
@@ -110,14 +112,14 @@ function OnboardingClubCard({
 
   const stats = [
     {
-      label: 'Équipes',
+      label: t('onboardingClubCard.stats.teams', 'Équipes'),
       value: resolveStatValue(
         item?.teamsCount,
         Array.isArray(item?.teams) ? item.teams.length : undefined,
       ),
     },
     {
-      label: 'Membres',
+      label: t('onboardingClubCard.stats.members', 'Membres'),
       value: resolveStatValue(
         item?.membersCount,
         Array.isArray(item?.members) ? item.members.length : undefined,
@@ -125,7 +127,7 @@ function OnboardingClubCard({
     },
     {
       accent: true,
-      label: 'Annonces',
+      label: t('onboardingClubCard.stats.ads', 'Annonces'),
       value: resolveStatValue(
         item?.openAdsCount,
         Array.isArray(item?.recruitmentAds) ? item.recruitmentAds.length : undefined,
@@ -203,7 +205,9 @@ function OnboardingClubCard({
           </View>
           {isRecruiting ? (
             <View style={[styles.recruitBadge, { borderColor: Colors.success500 }]}>
-              <Text style={[styles.recruitText, { color: Colors.success500 }]}>RECRUTE</Text>
+              <Text style={[styles.recruitText, { color: Colors.success500 }]}>
+                {t('onboardingClubCard.recruitingBadge', 'RECRUTE')}
+              </Text>
             </View>
           ) : null}
         </View>

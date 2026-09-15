@@ -1,4 +1,5 @@
 // @ts-nocheck
+import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator, Pressable, ScrollView, Text, View,
 } from 'react-native';
@@ -27,8 +28,9 @@ function ClubSelector({
   clubs = [],
   isLoading = false,
   onSelectClub,
-  title = 'Mes clubs',
+  title,
 }) {
+  const { t } = useTranslation();
   const {
     Alignments,
     ApplicationStyle,
@@ -36,6 +38,7 @@ function ClubSelector({
     Fonts,
     Spaces,
   } = useTheme();
+  const selectorTitle = title === undefined ? t('clubSelector.title', 'Mes clubs') : title;
 
   const visibleClubs = Array.isArray(clubs)
     ? clubs
@@ -61,7 +64,7 @@ function ClubSelector({
   return (
     <View style={[Spaces.marginBottom[16], Spaces.gap[8]]}>
       <View style={[Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween]}>
-        <Text style={[Fonts.p3Bold, Fonts.neutral200]}>{title}</Text>
+        <Text style={[Fonts.p3Bold, Fonts.neutral200]}>{selectorTitle}</Text>
         {isLoading ? <ActivityIndicator color={Colors.primary300} size="small" /> : null}
       </View>
 
@@ -115,7 +118,10 @@ function ClubSelector({
                   },
                 ]}
               >
-                {isActive ? 'Club actif' : 'Basculer'}
+                {isActive ? t(
+                  'clubSelector.activeClub',
+                  'Club actif',
+                ) : t('clubSelector.switchClub', 'Basculer')}
               </Text>
             </Pressable>
           );

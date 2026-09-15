@@ -44,7 +44,13 @@ function UserParentalDeclaration({ navigation, route }) {
   const updateUserMutation = useMutation({
     mutationFn: updateMe,
     onError: (error) => {
-      Alert.alert('Erreur', error?.message || 'Impossible d enregistrer la déclaration parentale.');
+      Alert.alert(t(
+        'userParentalDeclaration.alerts.saveError.title',
+        'Erreur',
+      ), error?.message || t(
+        'userParentalDeclaration.alerts.saveError.message',
+        'Impossible d enregistrer la déclaration parentale.',
+      ));
     },
     onSuccess: (updatedUser) => {
       queryClient.setQueriesData({ queryKey: ['get-me'] }, updatedUser);
@@ -68,9 +74,12 @@ function UserParentalDeclaration({ navigation, route }) {
   if (userDataLoading) {
     return (
       <OnboardingStateView
-        description="Nous recuperons le profil avant la déclaration parentale."
+        description={t(
+          'userParentalDeclaration.loading.description',
+          'Nous recuperons le profil avant la déclaration parentale.',
+        )}
         isLoading
-        title="Chargement du profil"
+        title={t('userParentalDeclaration.loading.title', 'Chargement du profil')}
       />
     );
   }
@@ -78,10 +87,13 @@ function UserParentalDeclaration({ navigation, route }) {
   if (userDataError) {
     return (
       <OnboardingStateView
-        actionLabel="Reessayer"
-        description={userDataError?.message || 'Impossible de charger le profil.'}
+        actionLabel={t('userParentalDeclaration.loadError.retry', 'Reessayer')}
+        description={userDataError?.message || t(
+          'userParentalDeclaration.loadError.message',
+          'Impossible de charger le profil.',
+        )}
         onAction={refetchUserData}
-        title="Chargement impossible"
+        title={t('userParentalDeclaration.loadError.title', 'Chargement impossible')}
       />
     );
   }
@@ -125,13 +137,21 @@ function UserParentalDeclaration({ navigation, route }) {
             {t('profile.titles.birthdate', 'Déclaration parentale obligatoire')}
           </Text>
           <Text style={[Fonts.p1, Fonts.neutral00]}>
-            Ce profil concerne un enfant de moins de 15 ans. Pour continuer, tu dois confirmer que tu es son parent ou représentant légal.
+            {t(
+              'userParentalDeclaration.intro',
+              'Ce profil concerne un enfant de moins de 15 ans. Pour continuer, tu dois '
+                + 'confirmer que tu es son parent ou représentant légal.',
+            )}
           </Text>
         </View>
 
         <ParentalDeclarationCard
           checked={accepted}
-          description="La personne qui utilise FoundClub pour ce profil doit être le parent ou le représentant legal de l enfant."
+          description={t(
+            'userParentalDeclaration.card.description',
+            'La personne qui utilise FoundClub pour ce profil doit être le parent ou le '
+              + 'représentant legal de l enfant.',
+          )}
           onChange={setAccepted}
         />
       </View>
@@ -141,7 +161,7 @@ function UserParentalDeclaration({ navigation, route }) {
           disabled={!accepted || updateUserMutation.isPending}
           isLoading={updateUserMutation.isPending}
           onPress={handleContinue}
-          title="Continuer"
+          title={t('userParentalDeclaration.actions.continue', 'Continuer')}
           variant="Primary"
         />
       </View>

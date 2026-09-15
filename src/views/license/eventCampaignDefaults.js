@@ -1,3 +1,7 @@
+import i18next from 'i18next';
+
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
+
 /**
  * Normalize any event date/datetime value to an ISO date.
  * @param {unknown} value
@@ -65,21 +69,39 @@ export const buildEventCampaignDefaults = ({ event, eventId, todayIsoDateValue }
   );
   const campaignType = resolveEventCampaignType(event);
   const eventName = String(event?.name || '').trim();
-  let typeLabel = 'evenement';
+  let typeLabel = i18next.t('eventCampaignDefaults.typeLabels.event', 'evenement');
   if (campaignType === 'internship') {
-    typeLabel = 'stage';
+    typeLabel = i18next.t('eventCampaignDefaults.typeLabels.internship', 'stage');
   } else if (campaignType === 'tournament') {
-    typeLabel = 'tournoi';
+    typeLabel = i18next.t('eventCampaignDefaults.typeLabels.tournament', 'tournoi');
   }
   const amountValue = Number(event?.pricePerPerson || 0);
   const description = eventName
-    ? `Campagne liée a l événement ${eventName}. `
-      + 'Les cotisations seront générées pour les participants acceptes.'
-    : 'Campagne liée a un événement. '
-      + 'Les cotisations seront générées pour les participants acceptes.';
+    ? i18next.t(
+      'eventCampaignDefaults.description.withEvent',
+      'Campagne liée a l événement {{eventName}}. ',
+      { eventName, ...SANS_ECHAPPEMENT },
+    )
+      + i18next.t(
+        'eventCampaignDefaults.description.acceptedParticipants',
+        'Les cotisations seront générées pour les participants acceptes.',
+      )
+    : i18next.t('eventCampaignDefaults.description.withoutEvent', 'Campagne liée a un événement. ')
+      + i18next.t(
+        'eventCampaignDefaults.description.acceptedParticipants',
+        'Les cotisations seront générées pour les participants acceptes.',
+      );
   const name = eventName
-    ? `Participation ${typeLabel} - ${eventName}`
-    : `Participation ${typeLabel}`;
+    ? i18next.t(
+      'eventCampaignDefaults.name.withEvent',
+      'Participation {{typeLabel}} - {{eventName}}',
+      { eventName, typeLabel, ...SANS_ECHAPPEMENT },
+    )
+    : i18next.t(
+      'eventCampaignDefaults.name.withoutEvent',
+      'Participation {{typeLabel}}',
+      { typeLabel, ...SANS_ECHAPPEMENT },
+    );
   return {
     amount: amountValue > 0 ? String(amountValue).replace('.', ',') : '',
     description,

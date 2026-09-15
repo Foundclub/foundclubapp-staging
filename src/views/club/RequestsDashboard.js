@@ -143,7 +143,12 @@ function RequestsDashboard({ navigation, route }) {
       >
         <View style={[Alignments.row, Alignments.spaceBetween, Alignments.alignStart]}>
           <View style={{ flex: 1 }}>
-            <Text style={[Fonts.h4Black, Fonts.neutral00]}>{item.type?.name || 'Événement'}</Text>
+            <Text style={[Fonts.h4Black, Fonts.neutral00]}>
+              {item.type?.name || t(
+                'requestsDashboard.item.eventFallback',
+                'Événement',
+              )}
+            </Text>
             <Text style={[Fonts.p2, Fonts.neutral00, Spaces.marginTop[4]]}>
               {dateStr}
               {' '}
@@ -156,12 +161,15 @@ function RequestsDashboard({ navigation, route }) {
               {item.endTime?.substring(0, 5)}
             </Text>
             <Text style={[Fonts.p2, Fonts.neutral00, Spaces.marginTop[4]]}>
-              Lieu:
-              {item.facility?.name || item.locationDetails || 'Non défini'}
+              {t('requestsDashboard.item.locationLabel', 'Lieu:')}
+              {item.facility?.name || item.locationDetails || t(
+                'requestsDashboard.item.locationUndefined',
+                'Non défini',
+              )}
             </Text>
             <Text style={[Fonts.p2, Fonts.primary500, Spaces.marginTop[4]]}>
-              Équipe:
-              {item.team?.name || 'Équipe inconnue'}
+              {t('requestsDashboard.item.teamLabel', 'Équipe:')}
+              {item.team?.name || t('requestsDashboard.item.teamUnknown', 'Équipe inconnue')}
             </Text>
           </View>
         </View>
@@ -206,7 +214,10 @@ function RequestsDashboard({ navigation, route }) {
     >
       <ScreenContainer title={t('requests.title', 'Demandes en attente')}>
         <OnboardingWrapper
-          description="Consulte puis valide ou refuse les demandes d événements en attente."
+          description={t(
+            'requestsDashboard.onboarding.description',
+            'Consulte puis valide ou refuse les demandes d événements en attente.',
+          )}
           id="requests-dashboard-list"
           order={1}
           spotlight={{
@@ -217,7 +228,7 @@ function RequestsDashboard({ navigation, route }) {
             paddingY: 2,
           }}
           style={{ flex: 1 }}
-          title="Demandes en attente"
+          title={t('requestsDashboard.onboarding.title', 'Demandes en attente')}
         >
           <TouchableOpacity
             onPress={() => navigateToRequestsHub(navigation, {
@@ -249,14 +260,17 @@ function RequestsDashboard({ navigation, route }) {
           ) : isMissingContext ? (
             <View style={[Alignments.fill, Alignments.mainCenter, Spaces.gap[12], Spaces.padding[16]]}>
               <Text style={[Fonts.h4Black, Fonts.neutral00]}>
-                Club introuvable
+                {t('requestsDashboard.missingContext.title', 'Club introuvable')}
               </Text>
               <Text style={[Fonts.p2, Fonts.neutral100]}>
-                Impossible de determiner pour quel club afficher les demandes.
+                {t(
+                  'requestsDashboard.missingContext.description',
+                  'Impossible de determiner pour quel club afficher les demandes.',
+                )}
               </Text>
               <Button
                 onPress={() => navigation.navigate(RouteNames.TeamList)}
-                title="Retour aux équipes"
+                title={t('requestsDashboard.missingContext.backToTeams', 'Retour aux équipes')}
                 variant="Secondary"
               />
             </View>
@@ -267,14 +281,17 @@ function RequestsDashboard({ navigation, route }) {
           ) : error ? (
             <View style={[Alignments.fill, Alignments.mainCenter, Spaces.gap[12], Spaces.padding[16]]}>
               <Text style={[Fonts.h4Black, Fonts.neutral00]}>
-                Impossible de charger les demandes
+                {t('requestsDashboard.loadError.title', 'Impossible de charger les demandes')}
               </Text>
               <Text style={[Fonts.p2, Fonts.neutral100]}>
-                {error?.message || 'Réessaie dans quelques instants.'}
+                {error?.message || t(
+                  'requestsDashboard.loadError.fallback',
+                  'Réessaie dans quelques instants.',
+                )}
               </Text>
               <Button
                 onPress={() => refetch()}
-                title="Réessayer"
+                title={t('requestsDashboard.loadError.retry', 'Réessayer')}
                 variant="Secondary"
               />
             </View>

@@ -13,6 +13,10 @@
 // ⛔ CE FICHIER NE DESSINE RIEN. Il ne connait ni `useTheme`, ni React : c est
 // ce qui le rend mesurable par un test sans monter un ecran.
 
+import i18next from 'i18next';
+
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
+
 import { formatLicenseMoney } from './licenseDesignSystem';
 
 // ── Les six statuts que le pack dessine, et les trois qu il masque ──────────
@@ -35,13 +39,27 @@ import { formatLicenseMoney } from './licenseDesignSystem';
 
 /** @type {Record<string, string>} */
 export const MEMBER_STATUS_LABELS = {
-  cancelled: 'Annulée',
-  manual_review: 'Déclarée',
-  overdue: 'En retard',
-  paid: 'Payée',
-  partial: 'Partielle',
-  pending: 'En attente',
-  waived: 'Exemptée',
+  get cancelled() {
+    return i18next.t('memberLicenseModel.statusLabels.cancelled', 'Annulée');
+  },
+  get manual_review() {
+    return i18next.t('memberLicenseModel.statusLabels.manualReview', 'Déclarée');
+  },
+  get overdue() {
+    return i18next.t('memberLicenseModel.statusLabels.overdue', 'En retard');
+  },
+  get paid() {
+    return i18next.t('memberLicenseModel.statusLabels.paid', 'Payée');
+  },
+  get partial() {
+    return i18next.t('memberLicenseModel.statusLabels.partial', 'Partielle');
+  },
+  get pending() {
+    return i18next.t('memberLicenseModel.statusLabels.pending', 'En attente');
+  },
+  get waived() {
+    return i18next.t('memberLicenseModel.statusLabels.waived', 'Exemptée');
+  },
 };
 
 // Le surtitre de la carte de montant change avec le statut (planche 02).
@@ -49,13 +67,27 @@ export const MEMBER_STATUS_LABELS = {
 // cher qu un libelle long.
 /** @type {Record<string, string>} */
 export const MEMBER_STATUS_OVERLINES = {
-  cancelled: 'MONTANT ANNULÉ',
-  manual_review: 'RESTE À PAYER',
-  overdue: 'RESTE À PAYER',
-  paid: 'COTISATION RÉGLÉE',
-  partial: 'RESTE À PAYER',
-  pending: 'RESTE À PAYER',
-  waived: 'RIEN À PAYER',
+  get cancelled() {
+    return i18next.t('memberLicenseModel.overlines.amountCancelled', 'MONTANT ANNULÉ');
+  },
+  get manual_review() {
+    return i18next.t('memberLicenseModel.overlines.leftToPay', 'RESTE À PAYER');
+  },
+  get overdue() {
+    return i18next.t('memberLicenseModel.overlines.leftToPay', 'RESTE À PAYER');
+  },
+  get paid() {
+    return i18next.t('memberLicenseModel.overlines.feePaid', 'COTISATION RÉGLÉE');
+  },
+  get partial() {
+    return i18next.t('memberLicenseModel.overlines.leftToPay', 'RESTE À PAYER');
+  },
+  get pending() {
+    return i18next.t('memberLicenseModel.overlines.leftToPay', 'RESTE À PAYER');
+  },
+  get waived() {
+    return i18next.t('memberLicenseModel.overlines.nothingToPay', 'RIEN À PAYER');
+  },
 };
 
 // ⛔ `not_due`, `refunded` et `disputed` NE SONT PAS DESSINES (decision du chef
@@ -86,7 +118,7 @@ export const getMemberStatusLabel = (status) => MEMBER_STATUS_LABELS[status] || 
  * @returns {string} le surtitre en majuscules
  */
 export const getMemberStatusOverline = (status) => MEMBER_STATUS_OVERLINES[status]
-  || 'RESTE À PAYER';
+  || i18next.t('memberLicenseModel.overlines.leftToPay', 'RESTE À PAYER');
 
 /**
  * La couleur du statut (D6 du pack : six statuts, quatre couleurs).
@@ -134,7 +166,7 @@ export const licenseKeyOf = (entity) => String(entity?.documentId || entity?.id 
  */
 export const clubNameOf = (assignment) => assignment?.club?.name
   || assignment?.campaign?.club?.name
-  || 'Ton club';
+  || i18next.t('memberLicenseModel.fallbacks.clubName', 'Ton club');
 
 /**
  * LE TITRE D UNE CARTE EST LA CAMPAGNE, JAMAIS LE CLUB.
@@ -145,7 +177,10 @@ export const clubNameOf = (assignment) => assignment?.club?.name
  * @param {any} assignment une affectation de cotisation
  * @returns {string} le titre de la carte
  */
-export const campaignTitleOf = (assignment) => assignment?.campaign?.name || 'Cotisation';
+export const campaignTitleOf = (assignment) => assignment?.campaign?.name || i18next.t(
+  'memberLicenseModel.fallbacks.campaignTitle',
+  'Cotisation',
+);
 
 /**
  * LE DISCRIMINANT — ce qui distingue deux cotisations du MEME club.
@@ -164,10 +199,26 @@ export const cardSubtitleOf = (assignment) => {
   return discriminant ? `${club} · ${discriminant}` : club;
 };
 
-// ── Les dates, ecrites en francais ─────────────────────────────────────────
-const MONTHS = [
-  'janvier', 'février', 'mars', 'avril', 'mai', 'juin',
-  'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre',
+// ── Les dates, ecrites en toutes lettres ────────────────────────────────────
+// I18N-1 : les mois sont lus a l'usage, dans la langue de l'app (un tableau evalue au chargement
+// ne la suivrait pas).
+/**
+ * Les douze mois, dans la langue de l'app.
+ * @returns {string[]} janvier … decembre.
+ */
+const months = () => [
+  i18next.t('memberLicenseModel.months.january', 'janvier'),
+  i18next.t('memberLicenseModel.months.february', 'février'),
+  i18next.t('memberLicenseModel.months.march', 'mars'),
+  i18next.t('memberLicenseModel.months.april', 'avril'),
+  i18next.t('memberLicenseModel.months.may', 'mai'),
+  i18next.t('memberLicenseModel.months.june', 'juin'),
+  i18next.t('memberLicenseModel.months.july', 'juillet'),
+  i18next.t('memberLicenseModel.months.august', 'août'),
+  i18next.t('memberLicenseModel.months.september', 'septembre'),
+  i18next.t('memberLicenseModel.months.october', 'octobre'),
+  i18next.t('memberLicenseModel.months.november', 'novembre'),
+  i18next.t('memberLicenseModel.months.december', 'décembre'),
 ];
 
 /**
@@ -186,7 +237,7 @@ export const formatMemberDate = (value, options = {}) => {
   const parts = raw.split('-');
   if (parts.length !== 3) return '';
   const [year, month, day] = parts;
-  const monthLabel = MONTHS[Number(month) - 1];
+  const monthLabel = months()[Number(month) - 1];
   if (!monthLabel || !Number(day)) return '';
   const dayLabel = Number(day);
   const withYear = options.withYear !== false;
@@ -324,10 +375,24 @@ export const describeTotalsLine = (assignments = []) => {
     (assignments || []).map((item) => String(item?.campaign?.seasonLabel || '')).filter(Boolean),
   )];
   const parts = [
-    `${count} cotisation${count > 1 ? 's' : ''}`,
-    `${clubs} club${clubs > 1 ? 's' : ''}`,
+    i18next.t('memberLicenseModel.totals.fees', {
+      count,
+      defaultValue_one: '{{count}} cotisation',
+      defaultValue_other: '{{count}} cotisations',
+    }),
+    i18next.t('memberLicenseModel.totals.clubs', {
+      count: clubs,
+      defaultValue_one: '{{count}} club',
+      defaultValue_other: '{{count}} clubs',
+    }),
   ];
-  if (seasons.length === 1) parts.push(`saison ${seasons[0]}`);
+  if (seasons.length === 1) {
+    parts.push(i18next.t(
+      'memberLicenseModel.totals.season',
+      'saison {{season}}',
+      { season: seasons[0], ...SANS_ECHAPPEMENT },
+    ));
+  }
   return parts.join(' · ');
 };
 
@@ -348,20 +413,48 @@ export const describeAssignmentContext = (assignment) => {
   const paid = Number(assignment?.amountPaidCents) || 0;
 
   if (status === 'waived') {
-    return `${formatLicenseMoney(due, currency)} offerts par le club`;
+    return i18next.t(
+      'memberLicenseModel.context.waived',
+      '{{amount}} offerts par le club',
+      { amount: formatLicenseMoney(due, currency), ...SANS_ECHAPPEMENT },
+    );
   }
-  if (status === 'cancelled') return 'Annulée par le club';
-  if (status === 'paid') return 'soldée';
-  if (status === 'manual_review') return 'paiement déclaré · le club vérifie';
-  if (status === 'overdue') return 'en retard';
+  if (status === 'cancelled') {
+    return i18next.t(
+      'memberLicenseModel.context.cancelled',
+      'Annulée par le club',
+    );
+  }
+  if (status === 'paid') return i18next.t('memberLicenseModel.context.paid', 'soldée');
+  if (status === 'manual_review') {
+    return i18next.t(
+      'memberLicenseModel.context.manualReview',
+      'paiement déclaré · le club vérifie',
+    );
+  }
+  if (status === 'overdue') return i18next.t('memberLicenseModel.context.overdue', 'en retard');
   if (paid > 0) {
-    return `${formatLicenseMoney(paid, currency)} payés sur ${formatLicenseMoney(due, currency)}`;
+    return i18next.t(
+      'memberLicenseModel.context.partial',
+      '{{paidAmount}} payés sur {{dueAmount}}',
+      {
+        dueAmount: formatLicenseMoney(due, currency),
+        paidAmount: formatLicenseMoney(paid, currency),
+        ...SANS_ECHAPPEMENT,
+      },
+    );
   }
 
   const next = getNextInstallment(assignment);
   const dueDate = formatMemberDate(next?.dueDate || assignment?.dueDate);
-  if (dueDate) return `à payer avant le ${dueDate}`;
-  return 'aucune date fixée';
+  if (dueDate) {
+    return i18next.t(
+      'memberLicenseModel.context.dueBefore',
+      'à payer avant le {{dueDate}}',
+      { dueDate, ...SANS_ECHAPPEMENT },
+    );
+  }
+  return i18next.t('memberLicenseModel.context.noDate', 'aucune date fixée');
 };
 
 /**
@@ -435,7 +528,10 @@ export const groupBySeason = (archived = []) => {
   /** @type {Map<string, any>} */
   const groups = new Map();
   (archived || []).forEach((assignment) => {
-    const season = String(assignment?.campaign?.seasonLabel || '') || 'Saison non précisée';
+    const season = String(assignment?.campaign?.seasonLabel || '') || i18next.t(
+      'memberLicenseModel.seasons.unspecified',
+      'Saison non précisée',
+    );
     if (!groups.has(season)) groups.set(season, { items: [], season });
     groups.get(season).items.push(assignment);
   });

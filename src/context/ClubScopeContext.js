@@ -1,5 +1,6 @@
 // @ts-nocheck
 import { useMutation } from '@tanstack/react-query';
+import i18next from 'i18next';
 import React, {
   createContext,
   useCallback,
@@ -182,7 +183,10 @@ export function ClubScopeProvider({ children }) {
   const switchManagedClubMutation = useMutation({
     mutationFn: switchManagedClub,
     onError: (error) => {
-      displayErrorAlert(error, 'Impossible de basculer sur cette section pour le moment.');
+      displayErrorAlert(error, i18next.t(
+        'clubScopeContext.errors.switchSection',
+        'Impossible de basculer sur cette section pour le moment.',
+      ));
     },
   });
 

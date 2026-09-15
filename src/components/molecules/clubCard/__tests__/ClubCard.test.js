@@ -46,7 +46,14 @@ jest.mock('@/theme/themeContext', () => {
 jest.mock('react-i18next', () => ({
   initReactI18next: { init: jest.fn(), type: '3rdParty' },
   useTranslation: () => ({
-    t: (_key, fallback) => fallback || _key,
+    // I18N-1 : un repli pluriel se lit comme dans l'app (0 et 1 au singulier).
+    t: (_key, fallback) => {
+      if (fallback && typeof fallback === 'object') {
+        const texte = fallback.count > 1 ? fallback.defaultValue_other : fallback.defaultValue_one;
+        return String(texte).replace('{{count}}', String(fallback.count));
+      }
+      return fallback || _key;
+    },
   }),
 }));
 

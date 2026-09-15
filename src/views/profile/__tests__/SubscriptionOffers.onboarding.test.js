@@ -63,9 +63,16 @@ jest.mock('@tanstack/react-query', () => ({
 // devant une cle absente.
 jest.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (/** @type {string} */ cle, /** @type {any} */ repli) => (
-      typeof repli === 'string' ? repli : cle
-    ),
+    t: (/** @type {string} */ cle, /** @type {any} */ repli, /** @type {any} */ valeurs) => {
+      // I18N-1 : repli a {{jetons}} ou pluriel -> le vrai i18next (fr.js), comme l'app.
+      if (
+        (typeof repli === 'string' && valeurs)
+        || (repli && typeof repli === 'object' && 'defaultValue_one' in repli)
+      ) {
+        return jest.requireActual('i18next').t(cle, repli, valeurs);
+      }
+      return typeof repli === 'string' ? repli : cle;
+    },
   }),
 }));
 

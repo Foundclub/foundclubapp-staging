@@ -1,5 +1,6 @@
 import { useNavigation } from '@react-navigation/native';
 import { useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Image, Text, TouchableOpacity, View,
 } from 'react-native';
@@ -11,18 +12,34 @@ import {
   getSubscriptionQuotaItem,
 } from '@/domains/subscription/subscriptionDecision';
 import { withAlpha } from '@/theme/colors';
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import { RouteNames } from '@/navigation/routeNames';
 
 // Corps du bandeau « quota épuisé » par type de quota (microcopy validée du handoff —
 // rappelle que le contenu gratuit reste actif, puis nomme le déblocage).
-/** @type {Record<string, string>} */
-const EXHAUSTED_BODY_BY_QUOTA_TYPE = {
-  EVENT_PUBLISH: "Ton événement gratuit est déjà en ligne. Passe à l'illimité : entraînements, matchs, tournois…",
-  FREE_TEAM: "Ta 1ʳᵉ équipe reste active. Débloque l'offre Équipe pour en créer d'autres.",
-  RECRUITMENT_AD_PUBLISH: "Ton annonce gratuite est déjà en ligne. Recrute sans limite avec l'offre Équipe.",
-};
+// I18N-1 : lue par le t du composant (une table evaluee au chargement ne suivrait pas la langue).
+/**
+ * Le corps du bandeau « quota épuisé », dans la langue de l'app.
+ * @param {Function} t - La fonction de traduction du composant.
+ * @returns {Record<string, string>} Le corps du bandeau par type de quota.
+ */
+const exhaustedBodyByQuotaType = (t) => ({
+  EVENT_PUBLISH: t(
+    'subscriptionQuotaBanner.exhaustedBody.eventPublish',
+    "Ton événement gratuit est déjà en ligne. Passe à l'illimité : "
+      + 'entraînements, matchs, tournois…',
+  ),
+  FREE_TEAM: t(
+    'subscriptionQuotaBanner.exhaustedBody.freeTeam',
+    "Ta 1ʳᵉ équipe reste active. Débloque l'offre Équipe pour en créer d'autres.",
+  ),
+  RECRUITMENT_AD_PUBLISH: t(
+    'subscriptionQuotaBanner.exhaustedBody.recruitmentAdPublish',
+    "Ton annonce gratuite est déjà en ligne. Recrute sans limite avec l'offre Équipe.",
+  ),
+});
 
 /**
  * Bandeau proactif de quota gratuit affiche en entree de wizard.
@@ -42,6 +59,7 @@ function SubscriptionQuotaBanner({
   resumeRouteName = '',
   resumeRouteParams = undefined,
 }) {
+  const { t } = useTranslation();
   const {
     Alignments,
     ApplicationStyle,
@@ -114,8 +132,17 @@ function SubscriptionQuotaBanner({
     const displayName = lastnameInitial ? `${firstname} ${lastnameInitial}.` : firstname;
     const scopeType = String(coveringEntitlement?.scopeType || '').trim().toUpperCase();
     const isClubScope = scopeType === 'CLUB';
-    const offerName = isClubScope ? 'Club' : 'Équipe';
-    const coveredThing = isClubScope ? 'tout le club' : 'cette équipe';
+    const offerName = isClubScope ? t('subscriptionQuotaBanner.covered.offerClub', 'Club') : t(
+      'subscriptionQuotaBanner.covered.offerTeam',
+      'Équipe',
+    );
+    const coveredThing = isClubScope ? t(
+      'subscriptionQuotaBanner.covered.wholeClub',
+      'tout le club',
+    ) : t(
+      'subscriptionQuotaBanner.covered.thisTeam',
+      'cette équipe',
+    );
 
     return (
       <View
@@ -137,11 +164,20 @@ function SubscriptionQuotaBanner({
             tintColor={Colors.success500}
           />
           <Text style={[Fonts.p2Bold, { color: Colors.success500 }]}>
-            Déjà couvert — tu n&apos;as rien à payer
+            {t('subscriptionQuotaBanner.covered.title', "Déjà couvert — tu n'as rien à payer")}
           </Text>
         </View>
         <Text style={[Fonts.p3, Fonts.neutral200]}>
-          {`${displayName} paie l'offre ${offerName} pour ${coveredThing}.`}
+          {t(
+            'subscriptionQuotaBanner.covered.message',
+            "{{displayName}} paie l'offre {{offerName}} pour {{coveredThing}}.",
+            {
+              coveredThing,
+              displayName,
+              offerName,
+              ...SANS_ECHAPPEMENT,
+            },
+          )}
         </Text>
       </View>
     );
@@ -153,7 +189,13 @@ function SubscriptionQuotaBanner({
 
   const isQuotaExhausted = quotaItem.remaining <= 0;
   // FREE_TEAM compte des creations d'equipe, les autres quotas des publications.
-  const quotaNoun = quotaType === 'FREE_TEAM' ? 'création' : 'publication';
+  const quotaNoun = quotaType === 'FREE_TEAM' ? t(
+    'subscriptionQuotaBanner.nouns.creation',
+    'création',
+  ) : t(
+    'subscriptionQuotaBanner.nouns.publication',
+    'publication',
+  );
 
   // L33 — cap sur le CARROUSEL : cette personne vient de voir un compteur, elle
   // doit tomber sur des offres achetables, pas sur la page de gestion (qui ne
@@ -184,11 +226,18 @@ function SubscriptionQuotaBanner({
         ]}
       >
         <Text style={[Fonts.p2Bold, Fonts.warning400]}>
-          {`${label} : quota gratuit épuisé`}
+          {t(
+            'subscriptionQuotaBanner.exhausted.title',
+            '{{label}} : quota gratuit épuisé',
+            { label, ...SANS_ECHAPPEMENT },
+          )}
         </Text>
         <Text style={[Fonts.p3, Fonts.neutral100]}>
-          {EXHAUSTED_BODY_BY_QUOTA_TYPE[quotaType]
-            || "Débloque l'offre Équipe pour continuer sans limite."}
+          {exhaustedBodyByQuotaType(t)[quotaType]
+            || t(
+              'subscriptionQuotaBanner.exhausted.defaultBody',
+              "Débloque l'offre Équipe pour continuer sans limite.",
+            )}
         </Text>
         <TouchableOpacity
           accessibilityRole="button"
@@ -196,7 +245,7 @@ function SubscriptionQuotaBanner({
           style={[Spaces.paddingVertical[8], { alignSelf: 'flex-start' }]}
         >
           <Text style={[Fonts.p3Bold, Fonts.primary500]}>
-            Débloquer l&apos;offre Équipe →
+            {t('subscriptionQuotaBanner.exhausted.cta', "Débloquer l'offre Équipe →")}
           </Text>
         </TouchableOpacity>
       </View>
@@ -218,8 +267,26 @@ function SubscriptionQuotaBanner({
     >
       <Text style={[Fonts.p2Bold, Fonts.primary500]}>
         {quotaItem.remaining > 1
-          ? `${label} : il te reste ${quotaItem.remaining} ${quotaNoun}s gratuites`
-          : `${label} : il te reste ${quotaItem.remaining} ${quotaNoun} gratuite`}
+          ? t(
+            'subscriptionQuotaBanner.remaining.many',
+            '{{label}} : il te reste {{remaining}} {{quotaNoun}}s gratuites',
+            {
+              label,
+              quotaNoun,
+              remaining: quotaItem.remaining,
+              ...SANS_ECHAPPEMENT,
+            },
+          )
+          : t(
+            'subscriptionQuotaBanner.remaining.one',
+            '{{label}} : il te reste {{remaining}} {{quotaNoun}} gratuite',
+            {
+              label,
+              quotaNoun,
+              remaining: quotaItem.remaining,
+              ...SANS_ECHAPPEMENT,
+            },
+          )}
       </Text>
     </View>
   );

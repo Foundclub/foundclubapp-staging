@@ -1,4 +1,5 @@
 // @ts-nocheck
+import i18next from 'i18next';
 import Joi from 'joi';
 
 import client from '../client';
@@ -6,23 +7,54 @@ import client from '../client';
 export const CLUB_INTEREST_RESPONSE_PRESETS = [
   {
     key: 'thanks',
-    label: 'Merci, on revient vers toi',
-    message: 'Merci pour ton intérêt, on revient vers toi rapidement.',
+    get label() {
+      return i18next.t(
+        'clubInterestRequestService.presets.thanks.label',
+        'Merci, on revient vers toi',
+      );
+    },
+    get message() {
+      return i18next.t(
+        'clubInterestRequestService.presets.thanks.message',
+        'Merci pour ton intérêt, on revient vers toi rapidement.',
+      );
+    },
   },
   {
     key: 'trial',
-    label: 'Proposer un essai',
-    message: 'On peut te proposer un essai, envoie-nous tes disponibilités.',
+    get label() {
+      return i18next.t('clubInterestRequestService.presets.trial.label', 'Proposer un essai');
+    },
+    get message() {
+      return i18next.t(
+        'clubInterestRequestService.presets.trial.message',
+        'On peut te proposer un essai, envoie-nous tes disponibilités.',
+      );
+    },
   },
   {
     key: 'profile',
-    label: 'Compléter le profil',
-    message: 'Peux-tu compléter ton profil et preciser ton poste/niveau ?',
+    get label() {
+      return i18next.t('clubInterestRequestService.presets.profile.label', 'Compléter le profil');
+    },
+    get message() {
+      return i18next.t(
+        'clubInterestRequestService.presets.profile.message',
+        'Peux-tu compléter ton profil et preciser ton poste/niveau ?',
+      );
+    },
   },
   {
     key: 'full',
-    label: 'Équipe complète',
-    message: "L'équipe est complété pour le moment, on garde ton profil pour la suite.",
+    get label() {
+      return i18next.t('clubInterestRequestService.presets.full.label', 'Équipe complète');
+    },
+    get message() {
+      return i18next.t(
+        'clubInterestRequestService.presets.full.message',
+        "L'équipe est complété pour le moment, on garde ton profil pour la suite.",
+      );
+    },
   },
 ];
 

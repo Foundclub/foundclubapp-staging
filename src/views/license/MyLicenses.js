@@ -16,6 +16,7 @@
 // `MyLicenses.AA07.plusieursCotisations.test.js` l observe.
 
 import { useCallback, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Pressable, ScrollView, Text, View,
 } from 'react-native';
@@ -70,6 +71,7 @@ import {
  * @returns {import('react').ReactElement}
  */
 function TotalCard({ assignments }) {
+  const { t } = useTranslation();
   const { Colors, Fonts } = useTheme();
   const type = memberType(Fonts);
   const remaining = sumRemainingCents(assignments);
@@ -94,7 +96,10 @@ function TotalCard({ assignments }) {
           {formatLicenseMoney(remaining, currency)}
         </Text>
         <Text style={[type.subtitle, Fonts.neutral300]}>
-          {isSettled ? 'tout est réglé' : 'à payer en tout'}
+          {isSettled ? t(
+            'myLicenses.total.settled',
+            'tout est réglé',
+          ) : t('myLicenses.total.toPay', 'à payer en tout')}
         </Text>
       </View>
       <Text style={[type.keyLabel, Fonts.neutral300]}>{describeTotalsLine(assignments)}</Text>
@@ -110,7 +115,11 @@ function TotalCard({ assignments }) {
         >
           <GlyphIcon color={Colors.error100} name="triangleExclamation" size={18} />
           <Text style={[type.keyValue, { color: Colors.error100 }]}>
-            {`${lateCount} cotisation${lateCount > 1 ? 's' : ''} en retard`}
+            {t('myLicenses.total.overdue', {
+              count: lateCount,
+              defaultValue_one: '{{count}} cotisation en retard',
+              defaultValue_other: '{{count}} cotisations en retard',
+            })}
           </Text>
         </View>
       ) : null}
@@ -134,6 +143,7 @@ function TotalCard({ assignments }) {
  * @returns {import('react').ReactElement}
  */
 function AssignmentCard({ assignment, onPress }) {
+  const { t } = useTranslation();
   const { Colors, Fonts } = useTheme();
   const type = memberType(Fonts);
   const tone = getMemberStatusTone(Colors, assignment.status);
@@ -196,7 +206,11 @@ function AssignmentCard({ assignment, onPress }) {
       {isWaived ? null : <MemberProgressBar height={6} ratio={getPaidRatio(assignment)} />}
       {installmentCount > 1 ? (
         <Text style={[type.meta, Fonts.neutral400]}>
-          {`${installmentCount} échéances`}
+          {t('myLicenses.card.instalments', {
+            count: installmentCount,
+            defaultValue_one: '{{count}} échéance',
+            defaultValue_other: '{{count}} échéances',
+          })}
         </Text>
       ) : null}
     </Pressable>
@@ -255,6 +269,7 @@ function ListSkeleton() {
  * @returns {import('react').ReactElement}
  */
 function MyLicenses({ navigation }) {
+  const { t } = useTranslation();
   const { Alignments, Colors, Fonts } = useTheme();
   const type = memberType(Fonts);
   const query = useMyLicenses();
@@ -265,7 +280,6 @@ function MyLicenses({ navigation }) {
     archived.map((item) => String(item?.campaign?.seasonLabel || '')).filter(Boolean),
   )].sort().reverse(), [archived]);
   const archivedCount = archivedSeasons.length || archived.length;
-  const archivedPlural = archivedCount > 1 ? 's' : '';
   const archivedAllPaid = archived.every(
     (item) => (Number(item?.amountRemainingCents) || 0) <= 0,
   );
@@ -282,7 +296,7 @@ function MyLicenses({ navigation }) {
   if (query.isLoading) {
     return (
       <ScreenContainer bottomInsetMode="tab-scene" withHeaderPadding>
-        <MemberTopBar onBack={goBack} title="Mes cotisations" />
+        <MemberTopBar onBack={goBack} title={t('myLicenses.title', 'Mes cotisations')} />
         <ListSkeleton />
       </ScreenContainer>
     );
@@ -291,11 +305,23 @@ function MyLicenses({ navigation }) {
   if (query.isError) {
     return (
       <ScreenContainer bottomInsetMode="tab-scene" withHeaderPadding>
-        <MemberTopBar onBack={goBack} title="Mes cotisations" />
+        <MemberTopBar onBack={goBack} title={t('myLicenses.title', 'Mes cotisations')} />
         <LicenseEmptyState
-          action={<Button onPress={() => query.refetch()} title="Réessayer" variant="Secondary" />}
-          description="Impossible de charger tes cotisations pour le moment."
-          title="Cotisations indisponibles"
+          action={(
+            <Button
+              onPress={() => query.refetch()}
+              title={t(
+                'myLicenses.error.retry',
+                'Réessayer',
+              )}
+              variant="Secondary"
+            />
+)}
+          description={t(
+            'myLicenses.error.description',
+            'Impossible de charger tes cotisations pour le moment.',
+          )}
+          title={t('myLicenses.error.title', 'Cotisations indisponibles')}
         />
       </ScreenContainer>
     );
@@ -304,10 +330,13 @@ function MyLicenses({ navigation }) {
   if (!active.length && !archived.length) {
     return (
       <ScreenContainer bottomInsetMode="tab-scene" withHeaderPadding>
-        <MemberTopBar onBack={goBack} title="Mes cotisations" />
+        <MemberTopBar onBack={goBack} title={t('myLicenses.title', 'Mes cotisations')} />
         <LicenseEmptyState
-          description="Aucune cotisation n est encore rattachée à ton compte."
-          title="Mes cotisations"
+          description={t(
+            'myLicenses.empty.description',
+            'Aucune cotisation n est encore rattachée à ton compte.',
+          )}
+          title={t('myLicenses.title', 'Mes cotisations')}
         />
       </ScreenContainer>
     );
@@ -315,7 +344,7 @@ function MyLicenses({ navigation }) {
 
   return (
     <ScreenContainer bottomInsetMode="tab-scene" withHeaderPadding>
-      <MemberTopBar onBack={goBack} title="Mes cotisations" />
+      <MemberTopBar onBack={goBack} title={t('myLicenses.title', 'Mes cotisations')} />
       {/* S9-bis : meme borne de hauteur que le detail — cf. le temoin
           `MyLicenseDetail.S9bis.defilement.test.js` pour la cause. */}
       <ScrollView
@@ -350,7 +379,7 @@ function MyLicenses({ navigation }) {
               >
                 {group.remainingCents > 0
                   ? formatLicenseMoney(group.remainingCents, currencyOf(group.items[0]))
-                  : 'à jour'}
+                  : t('myLicenses.group.upToDate', 'à jour')}
               </Text>
             </View>
             <View style={{ gap: memberSpacing.cardGap }}>
@@ -369,7 +398,7 @@ function MyLicenses({ navigation }) {
             ligne, et l archive est un ecran a part (ecran 3 du pack). */}
         {archived.length ? (
           <View style={{ gap: memberSpacing.rowGap }}>
-            <MemberOverline title="Saisons passées" />
+            <MemberOverline title={t('myLicenses.archive.title', 'Saisons passées')} />
             <Pressable
               accessibilityRole="button"
               onPress={() => navigation.navigate(RouteNames.MyLicensesArchive)}
@@ -389,11 +418,15 @@ function MyLicenses({ navigation }) {
               <GlyphIcon color={Colors.neutral300} name="receiptAlt" size={20} />
               <View style={{ flex: 1, gap: 4 }}>
                 <Text style={[type.rowTitle, Fonts.neutral00]}>
-                  {`${archivedCount} saison${archivedPlural} archivée${archivedPlural}`}
+                  {t('myLicenses.archive.count', {
+                    count: archivedCount,
+                    defaultValue_one: '{{count}} saison archivée',
+                    defaultValue_other: '{{count}} saisons archivées',
+                  })}
                 </Text>
                 <Text numberOfLines={1} style={[type.rowState, Fonts.neutral300]}>
                   {archivedSeasons.join(' · ')}
-                  {archivedAllPaid ? ' — tout est payé' : ''}
+                  {archivedAllPaid ? t('myLicenses.archive.allPaid', ' — tout est payé') : ''}
                 </Text>
               </View>
               <GlyphIcon color={Colors.primary500} name="chevronRight" size={20} />

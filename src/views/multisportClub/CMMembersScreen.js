@@ -16,6 +16,7 @@ import {
   View,
 } from 'react-native';
 
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
@@ -119,14 +120,20 @@ function CMMembersScreen({ navigation, route }) {
   const total = membersData?.data?.total || 0;
 
   useEffect(() => {
-    navigation.setOptions({ headerTitle: `Membres (${total})` });
-  }, [navigation, total]);
+    navigation.setOptions({
+      headerTitle: t(
+        'cmMembersScreen.header.title',
+        'Membres ({{total}})',
+        { total, ...SANS_ECHAPPEMENT },
+      ),
+    });
+  }, [navigation, total, t]);
 
   const tabs = [
-    { label: 'Tous', value: 'all' },
-    { label: 'Dirigeants', value: 'presidents' },
-    { label: 'Entraîneur·e·s', value: 'coaches' },
-    { label: 'Joueurs', value: 'players' },
+    { label: t('cmMembersScreen.tabs.all', 'Tous'), value: 'all' },
+    { label: t('cmMembersScreen.tabs.clubManagers', 'Dirigeants'), value: 'presidents' },
+    { label: t('cmMembersScreen.tabs.coaches', 'Entraîneur·e·s'), value: 'coaches' },
+    { label: t('cmMembersScreen.tabs.players', 'Joueurs'), value: 'players' },
   ];
 
   const allSections = membersData?.data?.sections || [];
@@ -323,7 +330,7 @@ function CMMembersScreen({ navigation, route }) {
               ]}
             >
               <Text style={[Fonts.p3, selectedSection === null ? Fonts.neutral900 : Fonts.neutral100]}>
-                Toutes les sections
+                {t('cmMembersScreen.filters.allSections', 'Toutes les sections')}
               </Text>
             </TouchableOpacity>
             {allSections.map((section) => (
