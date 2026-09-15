@@ -1,9 +1,12 @@
 import { useNavigation } from '@react-navigation/native';
+import i18next from 'i18next';
 import React, { useCallback, useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   FlatList, RefreshControl, ScrollView, Text, TextInput, TouchableOpacity, View,
 } from 'react-native';
 
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import AdminStateView from '@/views/admin/components/AdminStateView';
@@ -25,11 +28,31 @@ import { getErrorMessage } from '@/utils/errors/displayError';
  * @type {{ label: string, type: string }[]}
  */
 const ROLES_FILTRABLES = [
-  { label: 'Dirigeant', type: 'dirigeant' },
-  { label: 'Entraineur', type: 'entraineur' },
-  { label: 'Joueur', type: 'joueur' },
+  {
+    get label() {
+      return i18next.t('adminUserList.roles.clubManager', 'Dirigeant');
+    },
+    type: 'dirigeant',
+  },
+  {
+    get label() {
+      return i18next.t('adminUserList.roles.coach', 'Entraineur');
+    },
+    type: 'entraineur',
+  },
+  {
+    get label() {
+      return i18next.t('adminUserList.roles.player', 'Joueur');
+    },
+    type: 'joueur',
+  },
   { label: 'Parent', type: 'parent' },
-  { label: 'Sans rôle', type: 'authenticated' },
+  {
+    get label() {
+      return i18next.t('adminUserList.roles.none', 'Sans rôle');
+    },
+    type: 'authenticated',
+  },
   { label: 'SuperAdmin', type: 'superadmin' },
 ];
 
@@ -54,6 +77,7 @@ function AdminUserList() {
   const {
     Alignments, ApplicationStyle, Colors, Fonts, Spaces,
   } = useTheme();
+  const { t } = useTranslation();
   const navigation = useNavigation();
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
@@ -111,11 +135,15 @@ function AdminUserList() {
     const { role } = item;
     const { club } = item;
     const nomComplet = [item.firstname, item.lastname].filter(Boolean).join(' ').trim()
-      || 'Personne sans nom';
+      || t('adminUserList.unnamed', 'Personne sans nom');
 
     return (
       <TouchableOpacity
-        accessibilityLabel={`Ouvrir la fiche de ${nomComplet}`}
+        accessibilityLabel={t(
+          'adminUserList.openProfile',
+          'Ouvrir la fiche de {{name}}',
+          { name: nomComplet, ...SANS_ECHAPPEMENT },
+        )}
         // 🐛 LE NUMERO, PAS L IDENTIFIANT DOCUMENT.
         // On passait `item.documentId`, et la fiche appelle `/api/users/:id`.
         // Cette route du greffon users-permissions cherche par NUMERO
@@ -185,14 +213,17 @@ function AdminUserList() {
         </View>
       </TouchableOpacity>
     );
-  }, [navigation, Colors, Fonts, Spaces, ApplicationStyle, Alignments]);
+  }, [navigation, Colors, Fonts, Spaces, ApplicationStyle, Alignments, t]);
 
   if (isLoading && !users.length) {
     return (
       <AdminStateView
-        description="Nous chargeons la liste des utilisateurs."
+        description={t(
+          'adminUserList.states.loadingDescription',
+          'Nous chargeons la liste des utilisateurs.',
+        )}
         isLoading
-        title="Chargement des utilisateurs"
+        title={t('adminUserList.states.loadingTitle', 'Chargement des utilisateurs')}
       />
     );
   }
@@ -200,10 +231,13 @@ function AdminUserList() {
   if (error && !users.length) {
     return (
       <AdminStateView
-        actionLabel="Réessayer"
-        description={getErrorMessage(error, 'generic') || 'Impossible de charger les utilisateurs.'}
+        actionLabel={t('adminUserList.states.retry', 'Réessayer')}
+        description={getErrorMessage(error, 'generic') || t(
+          'adminUserList.states.errorDescription',
+          'Impossible de charger les utilisateurs.',
+        )}
         onAction={refetch}
-        title="Chargement impossible"
+        title={t('adminUserList.states.errorTitle', 'Chargement impossible')}
       />
     );
   }
@@ -213,7 +247,9 @@ function AdminUserList() {
     <ScreenContainer bgImage="bg2">
       {/* Header */}
       <View style={[Spaces.paddingHorizontal[24], Spaces.marginTop[16]]}>
-        <Text style={[Fonts.h2, Fonts.neutral00]}>Gestion Utilisateurs</Text>
+        <Text style={[Fonts.h2, Fonts.neutral00]}>
+          {t('adminUserList.title', 'Gestion Utilisateurs')}
+        </Text>
       </View>
 
       {/* Search Bar */}
@@ -230,7 +266,7 @@ function AdminUserList() {
           <Text style={{ color: Colors.neutral300, marginRight: 8 }}>🔍</Text>
           <TextInput
             onChangeText={setSearchQuery}
-            placeholder="Rechercher un utilisateur..."
+            placeholder={t('adminUserList.searchPlaceholder', 'Rechercher un utilisateur...')}
             placeholderTextColor={Colors.neutral300}
             style={[
               Fonts.p1,
@@ -256,7 +292,7 @@ function AdminUserList() {
         style={[Spaces.marginBottom[12], { flexGrow: 0 }]}
       >
         <TouchableOpacity
-          accessibilityLabel="Trier par date d inscription"
+          accessibilityLabel={t('adminUserList.sortHint', 'Trier par date d inscription')}
           onPress={() => setNewestFirst((valeur) => !valeur)}
           style={[
             Spaces.paddingHorizontal[12],
@@ -268,7 +304,10 @@ function AdminUserList() {
           ]}
         >
           <Text style={[Fonts.p2, { color: 'white', fontSize: 12 }]}>
-            {newestFirst ? '↓ Derniers inscrits' : '↑ Plus anciens'}
+            {newestFirst ? t(
+              'adminUserList.sortNewest',
+              '↓ Derniers inscrits',
+            ) : t('adminUserList.sortOldest', '↑ Plus anciens')}
           </Text>
         </TouchableOpacity>
 
@@ -276,7 +315,11 @@ function AdminUserList() {
           const actif = roleFilter === entree.type;
           return (
             <TouchableOpacity
-              accessibilityLabel={`Filtrer sur le role ${entree.label}`}
+              accessibilityLabel={t(
+                'adminUserList.filterByRole',
+                'Filtrer sur le role {{label}}',
+                { label: entree.label, ...SANS_ECHAPPEMENT },
+              )}
               key={entree.type}
               onPress={() => setRoleFilter((valeur) => (valeur === entree.type ? '' : entree.type))}
               style={[
@@ -303,9 +346,17 @@ function AdminUserList() {
         ListEmptyComponent={
                     !isLoading ? (
                       <View style={[Alignments.alignCenter, Spaces.marginTop[40]]}>
-                        <Text style={[Fonts.h4, { color: Colors.neutral200 }]}>Aucun utilisateur trouvé</Text>
+                        <Text style={[Fonts.h4, { color: Colors.neutral200 }]}>
+                          {t('adminUserList.empty.title', 'Aucun utilisateur trouvé')}
+                        </Text>
                         <Text style={[Fonts.p2, { color: Colors.neutral300 }, Spaces.marginTop[8], { textAlign: 'center' }]}>
-                          {searchQuery ? 'Essaie une autre recherche' : 'Les utilisateurs apparaîtront ici'}
+                          {searchQuery ? t(
+                            'adminUserList.empty.trySearch',
+                            'Essaie une autre recherche',
+                          ) : t(
+                            'adminUserList.empty.hint',
+                            'Les utilisateurs apparaîtront ici',
+                          )}
                         </Text>
                       </View>
                     ) : null

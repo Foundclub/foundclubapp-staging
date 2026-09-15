@@ -2,6 +2,26 @@ import renderer, { act } from 'react-test-renderer';
 
 import AdminUserList from '../AdminUserList';
 
+// I18N-3 : l ecran lit ses textes par t() (composant) et i18next.t (constantes de module).
+// Les doubles lisent le vrai fr.js, puis le repli, et remplissent les {{jetons}} : le temoin
+// affirme toujours le texte francais affiche.
+jest.mock('i18next', () => {
+  const catalogue = jest.requireActual('@/theme/strings/translations/fr').default;
+  const t = (/** @type {string} */ cle, /** @type {any} */ repli, /** @type {any} */ options) => {
+    const valeur = String(cle).split('.').reduce(
+      (/** @type {any} */ noeud, segment) => (noeud == null ? undefined : noeud[segment]),
+      catalogue,
+    );
+    const gabarit = typeof valeur === 'string' ? valeur : String(repli);
+    return gabarit.replace(/\{\{(\w+)\}\}/g, (_tout, nom) => String((options || {})[nom] ?? ''));
+  };
+  return { __esModule: true, default: { language: 'fr', t } };
+});
+jest.mock('react-i18next', () => {
+  const i18next = jest.requireMock('i18next').default;
+  return { useTranslation: () => ({ t: i18next.t }) };
+});
+
 /**
  * ADMIN-USERS — TROIS DEMANDES D ADEL DU 2026-09-08, APRES AVOIR TESTE LA 2.6.36.
  *

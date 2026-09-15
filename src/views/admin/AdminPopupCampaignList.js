@@ -1,5 +1,7 @@
 import { useNavigation } from '@react-navigation/native';
+import i18next from 'i18next';
 import { useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   ScrollView,
   StyleSheet,
@@ -22,7 +24,12 @@ import { useGetInAppPopupCampaigns } from '@/services/inAppPopupCampaign/inAppPo
 import { getErrorMessage } from '@/utils/errors/displayError';
 
 const STATUS_FILTERS = [
-  { label: 'Tous', value: '' },
+  {
+    get label() {
+      return i18next.t('adminPopupCampaignList.filters.all', 'Tous');
+    },
+    value: '',
+  },
   { label: 'Draft', value: 'draft' },
   { label: 'Scheduled', value: 'scheduled' },
   { label: 'Live', value: 'live' },
@@ -41,6 +48,7 @@ function AdminPopupCampaignList() {
     Fonts,
     Spaces,
   } = useTheme();
+  const { t } = useTranslation();
   const [statusFilter, setStatusFilter] = useState('');
   const [search, setSearch] = useState('');
 
@@ -63,9 +71,12 @@ function AdminPopupCampaignList() {
   if (isLoading) {
     return (
       <AdminStateView
-        description="Nous préparons la liste des campagnes pop-up."
+        description={t(
+          'adminPopupCampaignList.states.loadingDescription',
+          'Nous préparons la liste des campagnes pop-up.',
+        )}
         isLoading
-        title="Chargement des campagnes"
+        title={t('adminPopupCampaignList.states.loadingTitle', 'Chargement des campagnes')}
       />
     );
   }
@@ -73,10 +84,13 @@ function AdminPopupCampaignList() {
   if (error) {
     return (
       <AdminStateView
-        actionLabel="Réessayer"
-        description={getErrorMessage(error, 'generic') || 'Impossible de charger les campagnes pop-up.'}
+        actionLabel={t('adminPopupCampaignList.states.retry', 'Réessayer')}
+        description={getErrorMessage(error, 'generic') || t(
+          'adminPopupCampaignList.states.errorDescription',
+          'Impossible de charger les campagnes pop-up.',
+        )}
         onAction={() => refetch()}
-        title="Chargement impossible"
+        title={t('adminPopupCampaignList.states.errorTitle', 'Chargement impossible')}
       />
     );
   }
@@ -87,20 +101,28 @@ function AdminPopupCampaignList() {
       contentContainerStyle={[Spaces.paddingVertical[24]]}
     >
       <View style={[Spaces.paddingHorizontal[24], Spaces.marginBottom[24], Spaces.gap[16]]}>
-        <Text style={[Fonts.h1, Fonts.neutral00]}>Campagnes pop-up</Text>
+        <Text style={[Fonts.h1, Fonts.neutral00]}>
+          {t('adminPopupCampaignList.title', 'Campagnes pop-up')}
+        </Text>
         <Text style={[Fonts.p2, { color: Colors.neutral200 }]}>
-          Crée, planifie et pilote les pop-ups in-app diffusés à l’ouverture.
+          {t(
+            'adminPopupCampaignList.subtitle',
+            'Crée, planifie et pilote les pop-ups in-app diffusés à l’ouverture.',
+          )}
         </Text>
         <Button
           onPress={() => navigation.navigate(RouteNames.AdminPopupCampaignForm)}
-          title="Créer une campagne"
+          title={t('adminPopupCampaignList.create', 'Créer une campagne')}
         />
       </View>
 
       <View style={[Spaces.paddingHorizontal[24], Spaces.marginBottom[20], Spaces.gap[12]]}>
         <TextInput
           onChangeText={setSearch}
-          placeholder="Rechercher par nom interne ou titre"
+          placeholder={t(
+            'adminPopupCampaignList.searchPlaceholder',
+            'Rechercher par nom interne ou titre',
+          )}
           placeholderTextColor={Colors.neutral300}
           style={[
             styles.input,
@@ -167,11 +189,14 @@ function AdminPopupCampaignList() {
             <Text style={[Fonts.p3, { color: Colors.neutral300 }]}>
               {campaign.templateKey}
               {' '}
-              | Priorité
+              {t('adminPopupCampaignList.priority', '| Priorité')}
               {campaign.priority}
             </Text>
             <Text style={[Fonts.p3, { color: Colors.neutral300 }]}>
-              {campaign.summary?.audienceSummary || 'Tous les utilisateurs authentifiés'}
+              {campaign.summary?.audienceSummary || t(
+                'adminPopupCampaignList.allUsers',
+                'Tous les utilisateurs authentifiés',
+              )}
             </Text>
 
             <View style={[styles.metricsRow, Spaces.marginTop[12]]}>
@@ -181,7 +206,7 @@ function AdminPopupCampaignList() {
                 {campaign.stats?.totalImpressions || 0}
               </Text>
               <Text style={[Fonts.p4, { color: Colors.neutral200 }]}>
-                Clics
+                {t('adminPopupCampaignList.clicks', 'Clics')}
                 {' '}
                 {(campaign.stats?.primaryClickCount || 0) + (campaign.stats?.secondaryClickCount || 0)}
               </Text>
@@ -202,9 +227,14 @@ function AdminPopupCampaignList() {
               { borderColor: `${Colors.neutral300}22` },
             ]}
           >
-            <Text style={[Fonts.h4, Fonts.neutral00]}>Aucune campagne</Text>
+            <Text style={[Fonts.h4, Fonts.neutral00]}>
+              {t('adminPopupCampaignList.empty.title', 'Aucune campagne')}
+            </Text>
             <Text style={[Fonts.p3, { color: Colors.neutral200 }]}>
-              Ajuste les filtres ou crée une première campagne pop-up.
+              {t(
+                'adminPopupCampaignList.empty.hint',
+                'Ajuste les filtres ou crée une première campagne pop-up.',
+              )}
             </Text>
           </View>
         ) : null}

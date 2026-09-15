@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Alert, ScrollView, Text, TextInput, TouchableOpacity, View,
 } from 'react-native';
@@ -36,6 +37,7 @@ function AdminLeagueDisputes() {
   const {
     Alignments, Colors, Fonts, Spaces,
   } = useTheme();
+  const { t } = useTranslation();
   const {
     data,
     error,
@@ -50,9 +52,12 @@ function AdminLeagueDisputes() {
   if (isLoading && !disputes.length) {
     return (
       <AdminStateView
-        description="Nous chargeons les litiges League."
+        description={t(
+          'adminLeagueDisputes.states.loadingDescription',
+          'Nous chargeons les litiges League.',
+        )}
         isLoading
-        title="Chargement des litiges"
+        title={t('adminLeagueDisputes.states.loadingTitle', 'Chargement des litiges')}
       />
     );
   }
@@ -60,10 +65,13 @@ function AdminLeagueDisputes() {
   if (error && !disputes.length) {
     return (
       <AdminStateView
-        actionLabel="Réessayer"
-        description={getErrorMessage(error, 'generic') || 'Impossible de charger les litiges League.'}
+        actionLabel={t('adminLeagueDisputes.states.retry', 'Réessayer')}
+        description={getErrorMessage(error, 'generic') || t(
+          'adminLeagueDisputes.states.errorDescription',
+          'Impossible de charger les litiges League.',
+        )}
         onAction={refetch}
-        title="Chargement impossible"
+        title={t('adminLeagueDisputes.states.errorTitle', 'Chargement impossible')}
       />
     );
   }
@@ -91,7 +99,10 @@ function AdminLeagueDisputes() {
     const scoreA = Number.parseInt(form.scoreA, 10);
     const scoreB = Number.parseInt(form.scoreB, 10);
     if (Number.isNaN(scoreA) || Number.isNaN(scoreB) || scoreA < 0 || scoreB < 0) {
-      Alert.alert('Erreur', 'Les scores doivent être des entiers positifs.');
+      Alert.alert(
+        t('adminLeagueDisputes.errorTitle', 'Erreur'),
+        t('adminLeagueDisputes.invalidScores', 'Les scores doivent être des entiers positifs.'),
+      );
       return;
     }
 
@@ -102,10 +113,19 @@ function AdminLeagueDisputes() {
         scoreA,
         scoreB,
       });
-      Alert.alert('Succès', 'Litige résolu.');
+      Alert.alert(
+        t('adminLeagueDisputes.successTitle', 'Succès'),
+        t('adminLeagueDisputes.resolved', 'Litige résolu.'),
+      );
       refetch();
     } catch (error) {
-      Alert.alert('Erreur', getErrorMessage(error, 'generic') || 'Impossible de resoudre le litige.');
+      Alert.alert(
+        t('adminLeagueDisputes.errorTitle', 'Erreur'),
+        getErrorMessage(error, 'generic') || t(
+          'adminLeagueDisputes.resolveError',
+          'Impossible de resoudre le litige.',
+        ),
+      );
     }
   };
 
@@ -114,27 +134,35 @@ function AdminLeagueDisputes() {
       <ScrollView contentContainerStyle={[Spaces.paddingHorizontal[16], Spaces.paddingVertical[24], { paddingBottom: 120 }]}>
         <View style={[Alignments.row, Alignments.justifySpaceBetween, Spaces.marginBottom[16]]}>
           <View>
-            <Text style={[Fonts.h2, { color: Colors.neutral00 }]}>Litiges League</Text>
+            <Text style={[Fonts.h2, { color: Colors.neutral00 }]}>
+              {t('adminLeagueDisputes.title', 'Litiges League')}
+            </Text>
             <Text style={[Fonts.p3, { color: Colors.neutral300 }]}>
               {disputes.length}
               {' '}
-              match(es) en litige
+              {t('adminLeagueDisputes.count', 'match(es) en litige')}
             </Text>
           </View>
           <TouchableOpacity onPress={() => refetch()}>
-            <Text style={[Fonts.p2Bold, { color: Colors.primary500 }]}>Rafraîchir</Text>
+            <Text style={[Fonts.p2Bold, { color: Colors.primary500 }]}>
+              {t('adminLeagueDisputes.refresh', 'Rafraîchir')}
+            </Text>
           </TouchableOpacity>
         </View>
 
         {isLoading && (
         <LeagueCard>
-          <Text style={[Fonts.p2, { color: Colors.neutral300 }]}>Chargement...</Text>
+          <Text style={[Fonts.p2, { color: Colors.neutral300 }]}>
+            {t('adminLeagueDisputes.loading', 'Chargement...')}
+          </Text>
         </LeagueCard>
         )}
 
         {!isLoading && disputes.length === 0 && (
         <LeagueCard>
-          <Text style={[Fonts.p2, { color: Colors.neutral300 }]}>Aucun litige actif.</Text>
+          <Text style={[Fonts.p2, { color: Colors.neutral300 }]}>
+            {t('adminLeagueDisputes.empty', 'Aucun litige actif.')}
+          </Text>
         </LeagueCard>
         )}
 
@@ -157,24 +185,24 @@ function AdminLeagueDisputes() {
               </Text>
 
               <Text style={[Fonts.p3, { color: Colors.neutral300 }]}>
-                Soumission A:
+                {t('adminLeagueDisputes.submissionA', 'Soumission A:')}
                 {' '}
                 {subA?.score_a ?? '-'}
                 {' '}
                 -
                 {subA?.score_b ?? '-'}
                 {' '}
-                {subA?.dispute ? '(litige)' : ''}
+                {subA?.dispute ? t('adminLeagueDisputes.disputeTag', '(litige)') : ''}
               </Text>
               <Text style={[Fonts.p3, { color: Colors.neutral300, marginBottom: 10 }]}>
-                Soumission B:
+                {t('adminLeagueDisputes.submissionB', 'Soumission B:')}
                 {' '}
                 {subB?.score_a ?? '-'}
                 {' '}
                 -
                 {subB?.score_b ?? '-'}
                 {' '}
-                {subB?.dispute ? '(litige)' : ''}
+                {subB?.dispute ? t('adminLeagueDisputes.disputeTag', '(litige)') : ''}
               </Text>
 
               <View style={[Alignments.row, { gap: 8, marginBottom: 8 }]}>
@@ -214,7 +242,7 @@ function AdminLeagueDisputes() {
 
               <TextInput
                 onChangeText={(value) => updateForm(match, { reason: value })}
-                placeholder="Raison de résolution"
+                placeholder={t('adminLeagueDisputes.reasonPlaceholder', 'Raison de résolution')}
                 placeholderTextColor={Colors.neutral500}
                 style={{
                   borderWidth: 1,
@@ -232,7 +260,13 @@ function AdminLeagueDisputes() {
                 disabled={resolveMutation.isPending}
                 onPress={() => resolveDispute(match)}
                 style={{ backgroundColor: Colors.primary500 }}
-                title={resolveMutation.isPending ? 'Résolution...' : 'Résoudre ce litige'}
+                title={resolveMutation.isPending ? t(
+                  'adminLeagueDisputes.resolving',
+                  'Résolution...',
+                ) : t(
+                  'adminLeagueDisputes.resolve',
+                  'Résoudre ce litige',
+                )}
                 variant="Primary"
               />
             </LeagueCard>
