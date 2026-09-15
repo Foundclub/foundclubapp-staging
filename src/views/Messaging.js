@@ -722,7 +722,9 @@ function Messaging({ navigation, route }) {
                   backgroundColor: Colors.primary500, borderRadius: 4, marginLeft: 8, paddingHorizontal: 6, paddingVertical: 2,
                 }}
                 >
-                  <Text style={[Fonts.p4Bold, { color: Colors.neutral900, fontSize: 10 }]}>ÉPINGLÉ</Text>
+                  <Text style={[Fonts.p4Bold, { color: Colors.neutral900, fontSize: 10 }]}>
+                    {t('messaging.pinnedBadge', 'ÉPINGLÉ')}
+                  </Text>
                 </View>
                 )}
               </View>
@@ -830,7 +832,10 @@ function Messaging({ navigation, route }) {
           {t('messaging.title')}
         </Text>
         <OnboardingWrapper
-          description="Recherche une conversation, ouvre un chat et utilise les actions rapides."
+          description={t(
+            'messaging.onboarding.main',
+            'Recherche une conversation, ouvre un chat et utilise les actions rapides.',
+          )}
           id="messaging-main-content"
           order={1}
           spotlight={{

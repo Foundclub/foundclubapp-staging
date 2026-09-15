@@ -113,7 +113,7 @@ function ConversationPublicEventPicker({ navigation, route }) {
           : null,
         location: event?.location || null,
         locationDetails: event?.locationDetails || '',
-        name: event?.name || 'Événement',
+        name: event?.name || t('conversationPublicEventPicker.eventFallback', 'Événement'),
         team: event?.team
           ? {
             name: event?.team?.name || '',

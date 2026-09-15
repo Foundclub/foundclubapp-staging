@@ -1,4 +1,5 @@
 import { useIsFocused } from '@react-navigation/native';
+import i18next from 'i18next';
 import { useEffect, useMemo, useState } from 'react';
 import {
   View,
@@ -21,17 +22,25 @@ import ScreenContainer from '@/components/templates/ScreenContainer';
 
 import { OnboardingProvider, useOnboarding } from '@/context/OnboardingContext';
 
+// I18N-4 : libelles en ACCESSEURS, lus a chaque rendu (une valeur de module resterait dans la
+// langue du demarrage).
 const publicSearchOptions = [
   {
-    label: 'Événements',
+    get label() {
+      return i18next.t('home.searchTypes.events', 'Événements');
+    },
     value: 'events',
   },
   {
-    label: 'Clubs',
+    get label() {
+      return i18next.t('home.searchTypes.clubs', 'Clubs');
+    },
     value: 'clubs',
   },
   {
-    label: 'Recrutement',
+    get label() {
+      return i18next.t('home.searchTypes.recruitment', 'Recrutement');
+    },
     value: 'recrutement',
   },
 ];
@@ -40,7 +49,9 @@ const authenticatedSearchOptions = [
   publicSearchOptions[0],
   publicSearchOptions[1],
   {
-    label: 'Réservations',
+    get label() {
+      return i18next.t('home.searchTypes.reservations', 'Réservations');
+    },
     value: 'reservations',
   },
   publicSearchOptions[2],
@@ -165,7 +176,10 @@ function HomeContent({ route }) {
       {/* SegmentedControl - Figma exact design */}
       <View style={[Alignments.alignCenter, Alignments.fullWidth, Spaces.marginBottom[24]]}>
         <OnboardingWrapper
-          description="Choisis ici ce que tu cherches : Événements, Clubs ou Recrutement."
+          description={i18next.t(
+            'home.onboarding.searchTabs',
+            'Choisis ici ce que tu cherches : Événements, Clubs ou Recrutement.',
+          )}
           id="search-tabs"
           order={1}
           style={Alignments.fullWidth}
