@@ -1,7 +1,9 @@
 import { useMutation } from '@tanstack/react-query';
+import i18next from 'i18next';
 import {
   useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState,
 } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Alert, FlatList, Platform, Pressable, ScrollView, Text, TextInput, TouchableOpacity, View,
 } from 'react-native';
@@ -11,6 +13,8 @@ import { getUserRoleKey } from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
 import { useAppContext } from '@/store/appContext';
 import { withAlpha } from '@/theme/colors';
+import localeDesFormats from '@/theme/strings/localeDesFormats';
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -98,25 +102,69 @@ function HelloAssoField({
   );
 }
 
-const money = (value = 0, currency = 'EUR') => new Intl.NumberFormat('fr-FR', { currency, style: 'currency' }).format((value || 0) / 100);
+const money = (value = 0, currency = 'EUR') => new Intl.NumberFormat(localeDesFormats(), {
+  currency,
+  style: 'currency',
+}).format((value || 0) / 100);
 const statusLabel = {
-  manual_review: 'A valider', overdue: 'En retard', paid: 'Payee', partial: 'Partiel', pending: 'En attente', waived: 'Exemptee',
+  get manual_review() {
+    return i18next.t('clubLicenses.status.manualReview', 'A valider');
+  },
+  get overdue() {
+    return i18next.t('clubLicenses.status.overdue', 'En retard');
+  },
+  get paid() {
+    return i18next.t('clubLicenses.status.paid', 'Payee');
+  },
+  get partial() {
+    return i18next.t('clubLicenses.status.partial', 'Partiel');
+  },
+  get pending() {
+    return i18next.t('clubLicenses.status.pending', 'En attente');
+  },
+  get waived() {
+    return i18next.t('clubLicenses.status.waived', 'Exemptee');
+  },
 };
 const campaignTypeLabel = {
-  equipment: 'Equipement',
-  internship: 'Stage',
-  license: 'Licence',
-  membership: 'Adhesion',
-  other: 'Autre',
-  tournament: 'Tournoi',
+  get equipment() {
+    return i18next.t('clubLicenses.campaignTypes.equipment', 'Equipement');
+  },
+  get internship() {
+    return i18next.t('clubLicenses.campaignTypes.internship', 'Stage');
+  },
+  get license() {
+    return i18next.t('clubLicenses.campaignTypes.license', 'Licence');
+  },
+  get membership() {
+    return i18next.t('clubLicenses.campaignTypes.membership', 'Adhesion');
+  },
+  get other() {
+    return i18next.t('clubLicenses.campaignTypes.other', 'Autre');
+  },
+  get tournament() {
+    return i18next.t('clubLicenses.campaignTypes.tournament', 'Tournoi');
+  },
 };
 const roleDisplayLabel = {
-  coach: 'Entraîneur·e',
-  dirigeant: 'Dirigeant',
-  entraineur: 'Entraîneur·e',
-  joueur: 'Joueur',
-  president: 'Dirigeant',
-  superadmin: 'Super admin',
+  get coach() {
+    return i18next.t('clubLicenses.roles.coach', 'Entraîneur·e');
+  },
+  get dirigeant() {
+    return i18next.t('clubLicenses.roles.manager', 'Dirigeant');
+  },
+  get entraineur() {
+    return i18next.t('clubLicenses.roles.coach', 'Entraîneur·e');
+  },
+  get joueur() {
+    return i18next.t('clubLicenses.roles.player', 'Joueur');
+  },
+  get president() {
+    return i18next.t('clubLicenses.roles.manager', 'Dirigeant');
+  },
+  get superadmin() {
+    return i18next.t('clubLicenses.roles.superAdmin', 'Super admin');
+  },
 };
 const statusTone = (Colors, status) => ({
   manual_review: Colors.warning500,
@@ -127,13 +175,48 @@ const statusTone = (Colors, status) => ({
   waived: Colors.neutral200,
 }[status] || Colors.primary500);
 const statusFilters = [
-  { label: 'Tous', value: '' },
-  { label: 'En attente', value: 'pending' },
-  { label: 'Partiel', value: 'partial' },
-  { label: 'En retard', value: 'overdue' },
-  { label: 'A valider', value: 'manual_review' },
-  { label: 'Payee', value: 'paid' },
-  { label: 'Exemptee', value: 'waived' },
+  {
+    get label() {
+      return i18next.t('clubLicenses.filters.all', 'Tous');
+    },
+    value: '',
+  },
+  {
+    get label() {
+      return i18next.t('clubLicenses.status.pending', 'En attente');
+    },
+    value: 'pending',
+  },
+  {
+    get label() {
+      return i18next.t('clubLicenses.status.partial', 'Partiel');
+    },
+    value: 'partial',
+  },
+  {
+    get label() {
+      return i18next.t('clubLicenses.status.overdue', 'En retard');
+    },
+    value: 'overdue',
+  },
+  {
+    get label() {
+      return i18next.t('clubLicenses.status.manualReview', 'A valider');
+    },
+    value: 'manual_review',
+  },
+  {
+    get label() {
+      return i18next.t('clubLicenses.status.paid', 'Payee');
+    },
+    value: 'paid',
+  },
+  {
+    get label() {
+      return i18next.t('clubLicenses.status.waived', 'Exemptee');
+    },
+    value: 'waived',
+  },
 ];
 // Vocabulaire du pack de design des cotisations : le dirigeant lit l'etat de
 // sa campagne, pas celui d'un enregistrement. « Ouverte » dit qu'un membre peut
@@ -142,48 +225,130 @@ const statusFilters = [
 // de campagne (carte du hub, entete du detail, pastille de recapitulatif) lisent
 // tous cette table.
 const campaignStatusLabel = {
-  active: 'Ouverte',
-  archived: 'Archivée',
-  closed: 'Terminée',
-  draft: 'Brouillon',
-  paused: 'En pause',
-  scheduled: 'Programmée',
+  get active() {
+    return i18next.t('clubLicenses.campaignStatus.active', 'Ouverte');
+  },
+  get archived() {
+    return i18next.t('clubLicenses.campaignStatus.archived', 'Archivée');
+  },
+  get closed() {
+    return i18next.t('clubLicenses.campaignStatus.closed', 'Terminée');
+  },
+  get draft() {
+    return i18next.t('clubLicenses.campaignStatus.draft', 'Brouillon');
+  },
+  get paused() {
+    return i18next.t('clubLicenses.campaignStatus.paused', 'En pause');
+  },
+  get scheduled() {
+    return i18next.t('clubLicenses.campaignStatus.scheduled', 'Programmée');
+  },
 };
 const providerReadinessLabel = {
-  checkout_failed: 'Test checkout en erreur',
-  credentials_missing: 'Configuration incomplète',
-  disabled: 'Desactive',
-  oauth_failed: 'OAuth en erreur',
-  pending: 'A vérifier',
-  ready: 'Pret',
-  webhook_pending: 'Webhook à confirmer',
-  webhook_stale: 'Webhook à vérifier',
+  get checkout_failed() {
+    return i18next.t('clubLicenses.helloAssoReadiness.checkoutFailed', 'Test checkout en erreur');
+  },
+  get credentials_missing() {
+    return i18next.t(
+      'clubLicenses.helloAssoReadiness.credentialsMissing',
+      'Configuration incomplète',
+    );
+  },
+  get disabled() {
+    return i18next.t('clubLicenses.helloAssoReadiness.disabled', 'Desactive');
+  },
+  get oauth_failed() {
+    return i18next.t('clubLicenses.helloAssoReadiness.oauthFailed', 'OAuth en erreur');
+  },
+  get pending() {
+    return i18next.t('clubLicenses.helloAssoReadiness.pending', 'A vérifier');
+  },
+  get ready() {
+    return i18next.t('clubLicenses.helloAssoReadiness.ready', 'Pret');
+  },
+  get webhook_pending() {
+    return i18next.t('clubLicenses.helloAssoReadiness.webhookPending', 'Webhook à confirmer');
+  },
+  get webhook_stale() {
+    return i18next.t('clubLicenses.helloAssoReadiness.webhookStale', 'Webhook à vérifier');
+  },
 };
 const paymentOwnerLabel = {
-  club: 'Club',
-  platform: 'Plateforme',
-  section: 'Section',
+  get club() {
+    return i18next.t('clubLicenses.paymentOwner.club', 'Club');
+  },
+  get platform() {
+    return i18next.t('clubLicenses.paymentOwner.platform', 'Plateforme');
+  },
+  get section() {
+    return i18next.t('clubLicenses.paymentOwner.section', 'Section');
+  },
 };
 const documentStatusLabel = {
-  missing: 'Document manquant',
-  none: 'Aucun document',
-  refused: 'Document refuse',
-  submitted: 'Document déposé',
-  to_replace: 'Document à remplacer',
-  validated: 'Document valide',
+  get missing() {
+    return i18next.t('clubLicenses.documentStatus.missing', 'Document manquant');
+  },
+  get none() {
+    return i18next.t('clubLicenses.documentStatus.none', 'Aucun document');
+  },
+  get refused() {
+    return i18next.t('clubLicenses.documentStatus.refused', 'Document refuse');
+  },
+  get submitted() {
+    return i18next.t('clubLicenses.documentStatus.submitted', 'Document déposé');
+  },
+  get to_replace() {
+    return i18next.t('clubLicenses.documentStatus.toReplace', 'Document à remplacer');
+  },
+  get validated() {
+    return i18next.t('clubLicenses.documentStatus.validated', 'Document valide');
+  },
 };
 const installmentFrequencyLabel = {
-  custom: 'Libre',
-  monthly: 'Mensuelle',
-  quarterly: 'Trimestrielle',
-  weekly: 'Hebdo',
+  get custom() {
+    return i18next.t('clubLicenses.installmentFrequency.custom', 'Libre');
+  },
+  get monthly() {
+    return i18next.t('clubLicenses.installmentFrequency.monthly', 'Mensuelle');
+  },
+  get quarterly() {
+    return i18next.t('clubLicenses.installmentFrequency.quarterly', 'Trimestrielle');
+  },
+  get weekly() {
+    return i18next.t('clubLicenses.installmentFrequency.weekly', 'Hebdo');
+  },
 };
 const detailTabOptions = [
-  { label: 'Vue d ensemble', value: 'overview' },
-  { label: 'Membres', value: 'members' },
-  { label: 'Paiements', value: 'payments' },
-  { label: 'Documents', value: 'documents' },
-  { label: 'Relances', value: 'reminders' },
+  {
+    get label() {
+      return i18next.t('clubLicenses.tabs.overview', 'Vue d ensemble');
+    },
+    value: 'overview',
+  },
+  {
+    get label() {
+      return i18next.t('clubLicenses.tabs.members', 'Membres');
+    },
+    value: 'members',
+  },
+  {
+    get label() {
+      return i18next.t('clubLicenses.tabs.payments', 'Paiements');
+    },
+    value: 'payments',
+  },
+  {
+    get label() {
+      return i18next.t('clubLicenses.tabs.documents', 'Documents');
+    },
+    value: 'documents',
+  },
+  {
+    get label() {
+      return i18next.t('clubLicenses.tabs.reminders', 'Relances');
+    },
+    value: 'reminders',
+  },
 ];
 const emptyMemberFilters = {
   category: '',
@@ -194,10 +359,18 @@ const emptyMemberFilters = {
   teamId: '',
 };
 const memberQuickFilterLabels = {
-  expected: 'Attendu',
-  overdue: 'Retards',
-  paid: 'Encaisse',
-  remaining: 'Reste',
+  get expected() {
+    return i18next.t('clubLicenses.quickFilters.expected', 'Attendu');
+  },
+  get overdue() {
+    return i18next.t('clubLicenses.quickFilters.overdue', 'Retards');
+  },
+  get paid() {
+    return i18next.t('clubLicenses.quickFilters.paid', 'Encaisse');
+  },
+  get remaining() {
+    return i18next.t('clubLicenses.quickFilters.remaining', 'Reste');
+  },
 };
 const normalizeMemberQuickFilter = (value) => {
   const normalized = String(value || '').trim().toLowerCase();
@@ -214,32 +387,109 @@ const matchesMemberQuickFilter = (item, quickFilter) => {
 const reminderEligibleStatuses = ['manual_review', 'overdue', 'partial', 'pending'];
 const lifecycleForCampaign = (campaign) => {
   const status = campaign?.status;
-  if (status === 'draft') return { action: 'launch', label: 'Ouvrir' };
-  if (status === 'scheduled') return { action: 'pause', label: 'Mettre en pause' };
-  if (status === 'active') return { action: 'pause', label: 'Mettre en pause' };
-  if (status === 'paused') return { action: 'resume', label: 'Reprendre' };
-  if (status === 'closed') return { action: 'archive', label: 'Archiver' };
-  if (status === 'archived') return { action: 'reopen', label: 'Reouvrir' };
+  if (status === 'draft') {
+    return {
+      action: 'launch',
+      label: i18next.t(
+        'clubLicenses.actions.open',
+        'Ouvrir',
+      ),
+    };
+  }
+  if (status === 'scheduled') {
+    return {
+      action: 'pause',
+      label: i18next.t(
+        'clubLicenses.actions.pause',
+        'Mettre en pause',
+      ),
+    };
+  }
+  if (status === 'active') {
+    return {
+      action: 'pause',
+      label: i18next.t(
+        'clubLicenses.actions.pause',
+        'Mettre en pause',
+      ),
+    };
+  }
+  if (status === 'paused') {
+    return {
+      action: 'resume',
+      label: i18next.t(
+        'clubLicenses.actions.resume',
+        'Reprendre',
+      ),
+    };
+  }
+  if (status === 'closed') {
+    return {
+      action: 'archive',
+      label: i18next.t(
+        'clubLicenses.actions.archive',
+        'Archiver',
+      ),
+    };
+  }
+  if (status === 'archived') {
+    return {
+      action: 'reopen',
+      label: i18next.t(
+        'clubLicenses.actions.reopen',
+        'Reouvrir',
+      ),
+    };
+  }
   return null;
 };
 const formatDateLabel = (value) => {
   const normalized = String(value || '').trim().slice(0, 10);
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(normalized)) return 'Non renseignée';
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(normalized)) {
+    return i18next.t(
+      'clubLicenses.values.notSpecified',
+      'Non renseignée',
+    );
+  }
   return `${normalized.slice(8, 10)}/${normalized.slice(5, 7)}/${normalized.slice(0, 4)}`;
 };
 const nonEmptyText = (value) => String(value || '').trim();
 const buildTargetSummary = (campaign) => {
   const config = campaign?.targetConfig || {};
   if (config.includeAllMembers) {
-    return ['Tous les membres du club'];
+    return [i18next.t('clubLicenses.target.allMembers', 'Tous les membres du club')];
   }
 
   const labels = [];
   if (Array.isArray(config.roles) && config.roles.length) labels.push(...config.roles.map((item) => String(item?.name || item?.label || item || '')));
-  if (Array.isArray(config.teamIds) && config.teamIds.length) labels.push(`${config.teamIds.length} équipe(s)`);
-  if (Array.isArray(config.categoryIds) && config.categoryIds.length) labels.push(`${config.categoryIds.length} catégorie(s)`);
-  if (Array.isArray(config.sectionIds) && config.sectionIds.length) labels.push(`${config.sectionIds.length} section(s)`);
-  if (Array.isArray(config.levelIds) && config.levelIds.length) labels.push(`${config.levelIds.length} niveau(x)`);
+  if (Array.isArray(config.teamIds) && config.teamIds.length) {
+    labels.push(i18next.t(
+      'clubLicenses.target.teams',
+      '{{teams}} équipe(s)',
+      { teams: config.teamIds.length, ...SANS_ECHAPPEMENT },
+    ));
+  }
+  if (Array.isArray(config.categoryIds) && config.categoryIds.length) {
+    labels.push(i18next.t(
+      'clubLicenses.target.categories',
+      '{{categories}} catégorie(s)',
+      { categories: config.categoryIds.length, ...SANS_ECHAPPEMENT },
+    ));
+  }
+  if (Array.isArray(config.sectionIds) && config.sectionIds.length) {
+    labels.push(i18next.t(
+      'clubLicenses.target.sections',
+      '{{sections}} section(s)',
+      { sections: config.sectionIds.length, ...SANS_ECHAPPEMENT },
+    ));
+  }
+  if (Array.isArray(config.levelIds) && config.levelIds.length) {
+    labels.push(i18next.t(
+      'clubLicenses.target.levels',
+      '{{levels}} niveau(x)',
+      { levels: config.levelIds.length, ...SANS_ECHAPPEMENT },
+    ));
+  }
 
   return labels.filter(Boolean);
 };
@@ -253,19 +503,39 @@ const summarizePricingRule = (rule, currency = 'EUR') => {
   if (nonEmptyText(rule?.section?.name)) parts.push(rule.section.name);
   if (nonEmptyText(rule?.level?.name)) parts.push(rule.level.name);
 
-  const scopeLabel = parts[0] || 'Règle tarifaire';
-  const amountLabel = rule?.isWaiver ? 'Exoneration' : money(rule?.amountCents || 0, currency);
+  const scopeLabel = parts[0] || i18next.t('clubLicenses.pricing.ruleFallback', 'Règle tarifaire');
+  const amountLabel = rule?.isWaiver ? i18next.t(
+    'clubLicenses.pricing.waiver',
+    'Exoneration',
+  ) : money(rule?.amountCents || 0, currency);
   return `${scopeLabel} - ${amountLabel}`;
 };
 const summarizeDocumentRequest = (request) => {
-  const parts = [nonEmptyText(request?.name) || 'Document'];
-  if (request?.required !== false) parts.push('obligatoire');
-  if (nonEmptyText(request?.dueDate)) parts.push(`avant le ${formatDateLabel(request.dueDate)}`);
+  const parts = [nonEmptyText(request?.name) || i18next.t(
+    'clubLicenses.documents.fallbackName',
+    'Document',
+  )];
+  if (request?.required !== false) {
+    parts.push(i18next.t(
+      'clubLicenses.documents.required',
+      'obligatoire',
+    ));
+  }
+  if (nonEmptyText(request?.dueDate)) {
+    parts.push(i18next.t(
+      'clubLicenses.documents.dueBefore',
+      'avant le {{date}}',
+      { date: formatDateLabel(request.dueDate), ...SANS_ECHAPPEMENT },
+    ));
+  }
   return parts.join(' - ');
 };
 const summarizeReminderStatuses = (statuses = []) => {
   const labels = statuses.map((status) => statusLabel[status] || campaignStatusLabel[status] || status).filter(Boolean);
-  return labels.length ? labels.join(', ') : 'Aucun statut cible';
+  return labels.length ? labels.join(', ') : i18next.t(
+    'clubLicenses.reminders.noTargetStatus',
+    'Aucun statut cible',
+  );
 };
 const sumPaymentReviewCents = (assignment = {}) => (assignment?.payments || [])
   .filter((payment) => payment?.status === 'manual_review')
@@ -280,7 +550,11 @@ const sortByReminderPriority = (left, right) => {
 
   return sortByRemainingDescending(left, right);
 };
-const getAssignmentMemberName = (item) => [item?.user?.firstname, item?.user?.lastname].filter(Boolean).join(' ') || item?.user?.username || 'Membre';
+const getAssignmentMemberName = (item) => [item?.user?.firstname, item?.user?.lastname]
+  .filter(Boolean)
+  .join(' ')
+  || item?.user?.username
+  || i18next.t('clubLicenses.member.fallbackName', 'Membre');
 const getAssignmentMemberAvatarUrl = (item) => item?.user?.avatar?.url || item?.user?.avatarUrl || item?.avatar?.url || item?.avatarUrl || '';
 const canAssignmentBeReminded = (item) => reminderEligibleStatuses.includes(String(item?.status || '')) && Number(item?.amountRemainingCents || 0) > 0;
 // U06 — « À payer » ne veut dire quelque chose que sur une cotisation EXEMPTEE :
@@ -426,6 +700,7 @@ function StatCard({
   tone,
   value,
 }) {
+  const { t } = useTranslation();
   const {
     ApplicationStyle, Colors, Fonts, Spaces,
   } = useTheme();
@@ -452,7 +727,11 @@ function StatCard({
 
   return (
     <TouchableOpacity
-      accessibilityHint={`Ouvre les membres pour le bloc ${label.toLowerCase()}.`}
+      accessibilityHint={t(
+        'clubLicenses.statCard.hint',
+        'Ouvre les membres pour le bloc {{label}}.',
+        { label: label.toLowerCase(), ...SANS_ECHAPPEMENT },
+      )}
       accessibilityRole="button"
       accessible
       activeOpacity={0.92}
@@ -493,6 +772,7 @@ function CampaignSummary({
   paidCents = 0,
   remainingCents = 0,
 }) {
+  const { t } = useTranslation();
   const {
     ApplicationStyle, Colors, Fonts, Spaces,
   } = useTheme();
@@ -503,7 +783,14 @@ function CampaignSummary({
   const partEncaissee = attendu > 0 ? Math.min(encaisse / attendu, 1) : 0;
   const pourcentage = Math.round(partEncaissee * 100);
   const retards = Math.max(overdueCount || 0, 0);
-  const libelleRetards = retards === 0 ? 'Aucun retard' : `${retards} retard${retards > 1 ? 's' : ''}`;
+  const libelleRetards = retards === 0 ? t(
+    'clubLicenses.summary.noOverdue',
+    'Aucun retard',
+  ) : t('clubLicenses.summary.overdueCount', {
+    count: retards,
+    defaultValue_one: '{{count}} retard',
+    defaultValue_other: '{{count}} retards',
+  });
 
   return (
     <View style={[ApplicationStyle.card, Spaces.gap[12], {
@@ -518,17 +805,27 @@ function CampaignSummary({
       <Text style={Fonts.p2}>
         <Text style={[Fonts.h3, Fonts.neutral00]}>{money(encaisse, currency)}</Text>
         <Text style={[Fonts.p2, Fonts.neutral200]}>
-          {' encaissés sur '}
+          {t('clubLicenses.summary.collectedOf', ' encaissés sur ')}
           {money(attendu, currency)}
-          {' attendus'}
+          {t('clubLicenses.summary.expected', ' attendus')}
         </Text>
       </Text>
 
       <View
-        accessibilityLabel="Progression des encaissements"
+        accessibilityLabel={t(
+          'clubLicenses.summary.progressLabel',
+          'Progression des encaissements',
+        )}
         accessibilityRole="progressbar"
         accessibilityValue={{
-          max: 100, min: 0, now: pourcentage, text: `${pourcentage} % encaissés`,
+          max: 100,
+          min: 0,
+          now: pourcentage,
+          text: t(
+            'clubLicenses.summary.progressValue',
+            '{{percent}} % encaissés',
+            { percent: pourcentage, ...SANS_ECHAPPEMENT },
+          ),
         }}
         style={{
           backgroundColor: withAlpha(Colors.primary500, 0.18),
@@ -548,7 +845,7 @@ function CampaignSummary({
 
       <View style={{ flexDirection: 'row', gap: licenseSpacing.actionGap, justifyContent: 'space-between' }}>
         <Text style={[Fonts.p2Bold, { color: Colors.warning500 }]}>
-          {'Reste '}
+          {t('clubLicenses.summary.remaining', 'Reste ')}
           {money(Math.max(remainingCents || 0, 0), currency)}
         </Text>
         <Text style={[Fonts.p2Bold, { color: retards === 0 ? Colors.success500 : Colors.error500 }]}>
@@ -586,6 +883,7 @@ function AssignmentCard({
   onSetBackToDue,
   onValidatePayment,
 }) {
+  const { t } = useTranslation();
   const {
     ApplicationStyle, Colors, Fonts, Spaces,
   } = useTheme();
@@ -626,7 +924,7 @@ function AssignmentCard({
             {/* MARQUEE — l equipe du licencie se lit en entier */}
             <MarqueeText
               style={[Fonts.p3, Fonts.neutral200]}
-              text={item?.team?.name || 'Sans équipe'}
+              text={item?.team?.name || t('clubLicenses.assignment.noTeam', 'Sans équipe')}
             />
           </View>
           <View style={[Spaces.gap[4], { alignItems: 'flex-end', maxWidth: 120 }]}>
@@ -634,7 +932,7 @@ function AssignmentCard({
             <Text style={[Fonts.p3, Fonts.neutral200, { textAlign: 'right' }]}>
               {money(item?.amountRemainingCents, item?.currency || 'EUR')}
               {' '}
-              reste
+              {t('clubLicenses.assignment.remaining', 'reste')}
             </Text>
           </View>
         </View>
@@ -652,7 +950,7 @@ function AssignmentCard({
               isLoading={isReminding}
               onPress={onRemind}
               size="sm"
-              title="Relancer"
+              title={t('clubLicenses.actions.remind', 'Relancer')}
               variant="Secondary"
             />
           ) : null}
@@ -668,7 +966,7 @@ function AssignmentCard({
             <Button
               onPress={onValidatePayment}
               size="sm"
-              title="A payé"
+              title={t('clubLicenses.assignment.markPaid', 'A payé')}
             />
           ) : null}
           {/* U06 — « À payer », juste a cote de « Relancer », exactement la ou
@@ -679,7 +977,7 @@ function AssignmentCard({
               isLoading={isSettingBackToDue}
               onPress={onSetBackToDue}
               size="sm"
-              title="À payer"
+              title={t('clubLicenses.assignment.setBackToDue', 'À payer')}
               variant="Secondary"
             />
           ) : null}
@@ -703,6 +1001,7 @@ function AssignmentSignalCard({
   label,
   onPress,
 }) {
+  const { t } = useTranslation();
   const {
     ApplicationStyle, Colors, Fonts, Spaces,
   } = useTheme();
@@ -739,13 +1038,15 @@ function AssignmentSignalCard({
             {/* MARQUEE — l equipe du licencie se lit en entier */}
             <MarqueeText
               style={[Fonts.p3, Fonts.neutral200]}
-              text={item?.team?.name || 'Sans équipe'}
+              text={item?.team?.name || t('clubLicenses.assignment.noTeam', 'Sans équipe')}
             />
           </View>
           <Text style={[Fonts.p3Bold, { color: tone }]}>{label}</Text>
         </View>
         {helper ? <Text style={[Fonts.p2, Fonts.neutral200]}>{helper}</Text> : null}
-        <Text style={[Fonts.p3Bold, { color: Colors.primary500 }]}>Ouvrir la fiche membre</Text>
+        <Text style={[Fonts.p3Bold, { color: Colors.primary500 }]}>
+          {t('clubLicenses.signalCard.openMember', 'Ouvrir la fiche membre')}
+        </Text>
       </View>
     </Pressable>
   );
@@ -780,6 +1081,7 @@ function CampaignCard({
   onOpenActions,
   onPress,
 }) {
+  const { t } = useTranslation();
   const {
     ApplicationStyle, Colors, Fonts, Spaces,
   } = useTheme();
@@ -820,14 +1122,27 @@ function CampaignCard({
             est la premiere chose que le dirigeant ne reconnait pas. Il passe a
             la ligne, la carte grandit.
           */}
-          <Text style={[Fonts.p1Bold, Fonts.neutral00]}>{item?.name || 'Campagne'}</Text>
+          <Text style={[Fonts.p1Bold, Fonts.neutral00]}>
+            {item?.name || t(
+              'clubLicenses.campaignCard.nameFallback',
+              'Campagne',
+            )}
+          </Text>
           <Text style={[Fonts.p3, { color: secondaryTextColor }]}>
             {item?.seasonLabel || '-'}
-            {item?.defaultAmountCents ? ` · ${money(item.defaultAmountCents, currency)} par membre` : ''}
+            {item?.defaultAmountCents ? t(
+              'clubLicenses.campaignCard.perMember',
+              ' · {{amount}} par membre',
+              { amount: money(item.defaultAmountCents, currency), ...SANS_ECHAPPEMENT },
+            ) : ''}
           </Text>
         </View>
         <View style={{ alignItems: 'flex-end', gap: 4 }}>
-          {isSelected ? <Text style={[Fonts.p4Bold, { color: Colors.primary500 }]}>Suivi actuel</Text> : null}
+          {isSelected ? (
+            <Text style={[Fonts.p4Bold, { color: Colors.primary500 }]}>
+              {t('clubLicenses.campaignCard.current', 'Suivi actuel')}
+            </Text>
+          ) : null}
           <View style={{
             backgroundColor: isInactiveCampaign
               ? withAlpha(Colors.neutral00, 0.08)
@@ -852,25 +1167,47 @@ function CampaignCard({
 
       <View style={Spaces.gap[8]}>
         <CampaignCardRow
-          label="Encaissé"
-          value={`${money(totals.paidCents || 0, currency)} sur ${money(totals.expectedCents || 0, currency)}`}
+          label={t('clubLicenses.campaignCard.collected', 'Encaissé')}
+          value={t(
+            'clubLicenses.campaignCard.collectedValue',
+            '{{paid}} sur {{expected}}',
+            {
+              expected: money(totals.expectedCents || 0, currency),
+              paid: money(totals.paidCents || 0, currency),
+              ...SANS_ECHAPPEMENT,
+            },
+          )}
           valueColor={Colors.neutral00}
         />
         <CampaignCardRow
-          label="Membres"
-          value={`${totals.total || 0} · ${nombreRetards} en retard`}
+          label={t('clubLicenses.tabs.members', 'Membres')}
+          value={t(
+            'clubLicenses.campaignCard.membersValue',
+            '{{total}} · {{overdue}} en retard',
+            { overdue: nombreRetards, total: totals.total || 0, ...SANS_ECHAPPEMENT },
+          )}
           // Le rouge ne sert qu'au retard : sans retard, la ligne reste neutre.
           valueColor={nombreRetards > 0 ? Colors.error500 : Colors.neutral00}
         />
         <CampaignCardRow
-          label="Documents"
-          value={nombreDocuments === 0 ? 'Aucun demandé' : `${nombreDocuments} demandé${nombreDocuments > 1 ? 's' : ''}`}
+          label={t('clubLicenses.tabs.documents', 'Documents')}
+          value={nombreDocuments === 0 ? t(
+            'clubLicenses.campaignCard.noDocuments',
+            'Aucun demandé',
+          ) : t('clubLicenses.campaignCard.documentsCount', {
+            count: nombreDocuments,
+            defaultValue_one: '{{count}} demandé',
+            defaultValue_other: '{{count}} demandés',
+          })}
           valueColor={Colors.neutral00}
         />
         {item?.paymentModes?.helloasso ? (
           <CampaignCardRow
             label="HelloAsso"
-            value={providerReadinessLabel[helloAssoReadiness] || helloAssoReadiness || 'A configurer'}
+            value={providerReadinessLabel[helloAssoReadiness] || helloAssoReadiness || t(
+              'clubLicenses.campaignCard.toConfigure',
+              'A configurer',
+            )}
             valueColor={Colors.neutral00}
           />
         ) : null}
@@ -894,7 +1231,16 @@ function CampaignCard({
 
       <View style={{ alignItems: 'center', flexDirection: 'row', gap: licenseSpacing.actionGap }}>
         <View style={{ flex: 1 }}>
-          <Button onPress={onPress} title={isSelected ? 'Campagne ouverte' : 'Voir le détail'} />
+          <Button
+            onPress={onPress}
+            title={isSelected ? t(
+              'clubLicenses.campaignCard.selected',
+              'Campagne ouverte',
+            ) : t(
+              'clubLicenses.campaignCard.viewDetails',
+              'Voir le détail',
+            )}
+          />
         </View>
         {/*
           Les actions secondaires passent sous ce bouton : c'est ce qui supprime
@@ -902,8 +1248,18 @@ function CampaignCard({
           La cible tactile fait 44 pt de cote, comme l'exige le pack de design.
         */}
         <Pressable
-          accessibilityHint="Dupliquer, mettre en pause ou modifier cette campagne."
-          accessibilityLabel={`Autres actions pour la campagne ${item?.name || 'sans nom'}`}
+          accessibilityHint={t(
+            'clubLicenses.campaignCard.moreActionsHint',
+            'Dupliquer, mettre en pause ou modifier cette campagne.',
+          )}
+          accessibilityLabel={t(
+            'clubLicenses.campaignCard.moreActionsLabel',
+            'Autres actions pour la campagne {{name}}',
+            {
+              name: item?.name || t('clubLicenses.campaignCard.untitled', 'sans nom'),
+              ...SANS_ECHAPPEMENT,
+            },
+          )}
           accessibilityRole="button"
           // ⛔ Un geste deja en vol ferme la porte du suivant : c est le meme
           // reflexe que le verrou du bouton final du tunnel (S06, 8c19cff).
@@ -951,6 +1307,7 @@ function CampaignCardRow({ label, value, valueColor }) {
  *
  */
 function LicenseSetupIntro() {
+  const { t } = useTranslation();
   const {
     ApplicationStyle, Colors, Fonts, Spaces,
   } = useTheme();
@@ -965,28 +1322,44 @@ function LicenseSetupIntro() {
         paddingVertical: licenseSpacing.heroPadding,
       }]}
       >
-        <Text style={[Fonts.p1Bold, Fonts.neutral00]}>Avant de suivre les paiements</Text>
+        <Text style={[Fonts.p1Bold, Fonts.neutral00]}>
+          {t('clubLicenses.setup.title', 'Avant de suivre les paiements')}
+        </Text>
         <Text style={[Fonts.p2, Fonts.neutral200]}>
-          Configure les règles de cotisation du club, puis publie la campagne.
-          Les membres éligibles seront synchronises automatiquement des qu elle devient active.
+          {t(
+            'clubLicenses.setup.intro',
+            'Configure les règles de cotisation du club, puis publie la campagne. Les '
+              + 'membres éligibles seront synchronises automatiquement des qu elle devient '
+              + 'active.',
+          )}
         </Text>
       </View>
 
       <View style={Spaces.gap[licenseSpacing.listGap]}>
         <SetupStep
-          description="Choisis la saison, le montant par défaut et les règles de relance."
+          description={t(
+            'clubLicenses.setup.step1.description',
+            'Choisis la saison, le montant par défaut et les règles de relance.',
+          )}
           index="1"
-          title="Définir la campagne"
+          title={t('clubLicenses.setup.step1.title', 'Définir la campagne')}
         />
         <SetupStep
-          description="Active les paiements acceptes: espece, chèque, virement, HelloAsso intègre ou lien externe."
+          description={t(
+            'clubLicenses.setup.step2.description',
+            'Active les paiements acceptes: espece, chèque, virement, HelloAsso intègre ou '
+              + 'lien externe.',
+          )}
           index="2"
-          title="Configurer les moyens de paiement"
+          title={t('clubLicenses.setup.step2.title', 'Configurer les moyens de paiement')}
         />
         <SetupStep
-          description="La campagne s applique automatiquement aux membres qui correspondent aux criteres."
+          description={t(
+            'clubLicenses.setup.step3.description',
+            'La campagne s applique automatiquement aux membres qui correspondent aux criteres.',
+          )}
           index="3"
-          title="Synchronisation auto des membres"
+          title={t('clubLicenses.setup.step3.title', 'Synchronisation auto des membres')}
         />
       </View>
     </View>
@@ -1058,6 +1431,7 @@ function SkeletonBlock({ height }) {
  * @param root0.route
  */
 function ClubLicenses({ navigation, route }) {
+  const { t } = useTranslation();
   const {
     Alignments, Colors, Fonts, Spaces,
   } = useTheme();
@@ -1086,9 +1460,9 @@ function ClubLicenses({ navigation, route }) {
       const errorMessage = mutationError?.response?.data?.error?.message
         || mutationError?.response?.data?.error
         || mutationError?.message
-        || 'Impossible de changer de club pour le moment.';
+        || t('clubLicenses.errors.switchClub', 'Impossible de changer de club pour le moment.');
 
-      Alert.alert('Erreur', errorMessage);
+      Alert.alert(t('clubLicenses.errors.title', 'Erreur'), errorMessage);
     },
   });
   const [search, setSearch] = useState('');
@@ -1193,8 +1567,11 @@ function ClubLicenses({ navigation, route }) {
     helloAssoMutation.mutate(undefined, {
       onError: (error) => {
         Alert.alert(
-          'Vérification HelloAsso impossible',
-          error?.message || 'La vérification HelloAsso a échoué.',
+          t('clubLicenses.helloAsso.checkFailedTitle', 'Vérification HelloAsso impossible'),
+          error?.message || t(
+            'clubLicenses.helloAsso.checkFailedMessage',
+            'La vérification HelloAsso a échoué.',
+          ),
         );
       },
       onSuccess: (result) => {
@@ -1208,12 +1585,18 @@ function ClubLicenses({ navigation, route }) {
           organizationSlug: result?.snapshot?.organizationSlug || currentConfig.organizationSlug,
         }));
         Alert.alert(
-          isHelloAssoReadyForCampaign(result?.snapshot) ? 'HelloAsso prêt' : 'HelloAsso à vérifier',
+          isHelloAssoReadyForCampaign(result?.snapshot) ? t(
+            'clubLicenses.helloAsso.readyTitle',
+            'HelloAsso prêt',
+          ) : t(
+            'clubLicenses.helloAsso.toCheckTitle',
+            'HelloAsso à vérifier',
+          ),
           describeHelloAssoReadiness(result?.snapshot),
         );
       },
     });
-  }, [helloAssoMutation]);
+  }, [helloAssoMutation, t]);
 
   const overviewTotals = useMemo(() => campaigns.reduce((accumulator, item) => {
     const itemTotals = item?.totals || {};
@@ -1323,23 +1706,87 @@ function ClubLicenses({ navigation, route }) {
     if (!campaign) return [];
     const summary = [];
     if (reminderAutomation.enabled === false) {
-      summary.push('Relances auto désactivées');
+      summary.push(t('clubLicenses.reminderTiming.disabled', 'Relances auto désactivées'));
       return summary;
     }
-    if (campaign?.dueDate) summary.push(`Échéance principale: ${formatDateLabel(campaign.dueDate)}`);
-    if (reminderAutomation.beforeDueDays !== undefined && reminderAutomation.beforeDueDays !== null) summary.push(`${reminderAutomation.beforeDueDays} j avant échéance`);
-    if (reminderAutomation.onDueDate) summary.push('Le jour de l échéance');
-    if (reminderAutomation.afterDueDays !== undefined && reminderAutomation.afterDueDays !== null) summary.push(`${reminderAutomation.afterDueDays} j après échéance`);
-    if (reminderAutomation.frequencyDays) summary.push(`Toutes les ${reminderAutomation.frequencyDays} j`);
-    if (reminderAutomation.maxCount) summary.push(`${reminderAutomation.maxCount} relance(s) max`);
+    if (campaign?.dueDate) {
+      summary.push(t(
+        'clubLicenses.reminderTiming.mainDueDate',
+        'Échéance principale: {{date}}',
+        { date: formatDateLabel(campaign.dueDate), ...SANS_ECHAPPEMENT },
+      ));
+    }
+    if (
+      reminderAutomation.beforeDueDays !== undefined
+      && reminderAutomation.beforeDueDays !== null
+    ) {
+      summary.push(t(
+        'clubLicenses.reminderTiming.daysBefore',
+        '{{days}} j avant échéance',
+        { days: reminderAutomation.beforeDueDays, ...SANS_ECHAPPEMENT },
+      ));
+    }
+    if (reminderAutomation.onDueDate) {
+      summary.push(t(
+        'clubLicenses.reminderTiming.onDueDate',
+        'Le jour de l échéance',
+      ));
+    }
+    if (reminderAutomation.afterDueDays !== undefined && reminderAutomation.afterDueDays !== null) {
+      summary.push(t(
+        'clubLicenses.reminderTiming.daysAfter',
+        '{{days}} j après échéance',
+        { days: reminderAutomation.afterDueDays, ...SANS_ECHAPPEMENT },
+      ));
+    }
+    if (reminderAutomation.frequencyDays) {
+      summary.push(t(
+        'clubLicenses.reminderTiming.every',
+        'Toutes les {{days}} j',
+        { days: reminderAutomation.frequencyDays, ...SANS_ECHAPPEMENT },
+      ));
+    }
+    if (reminderAutomation.maxCount) {
+      summary.push(t(
+        'clubLicenses.reminderTiming.maxCount',
+        '{{max}} relance(s) max',
+        { max: reminderAutomation.maxCount, ...SANS_ECHAPPEMENT },
+      ));
+    }
     return summary;
-  }, [campaign, reminderAutomation.afterDueDays, reminderAutomation.beforeDueDays, reminderAutomation.enabled, reminderAutomation.frequencyDays, reminderAutomation.maxCount, reminderAutomation.onDueDate]);
+  }, [
+    campaign,
+    reminderAutomation.afterDueDays,
+    reminderAutomation.beforeDueDays,
+    reminderAutomation.enabled,
+    reminderAutomation.frequencyDays,
+    reminderAutomation.maxCount,
+    reminderAutomation.onDueDate,
+    t,
+  ]);
   const installmentSummary = useMemo(() => {
-    if (!campaign?.allowInstallments) return 'Paiement en une fois';
+    if (!campaign?.allowInstallments) {
+      return t(
+        'clubLicenses.installments.single',
+        'Paiement en une fois',
+      );
+    }
     const count = Number(campaign?.installmentCount || campaign?.installmentSchedule?.length || 1);
-    const frequency = installmentFrequencyLabel[campaign?.installmentFrequency] || campaign?.installmentFrequency || 'Libre';
-    return `${count} échéance(s) - ${frequency}`;
-  }, [campaign?.allowInstallments, campaign?.installmentCount, campaign?.installmentFrequency, campaign?.installmentSchedule]);
+    const frequency = installmentFrequencyLabel[campaign?.installmentFrequency]
+      || campaign?.installmentFrequency
+      || t('clubLicenses.installmentFrequency.custom', 'Libre');
+    return t(
+      'clubLicenses.installments.summary',
+      '{{installments}} échéance(s) - {{frequency}}',
+      { frequency, installments: count, ...SANS_ECHAPPEMENT },
+    );
+  }, [
+    campaign?.allowInstallments,
+    campaign?.installmentCount,
+    campaign?.installmentFrequency,
+    campaign?.installmentSchedule,
+    t,
+  ]);
   const campaignDescription = nonEmptyText(campaign?.description);
   const campaignInternalNote = nonEmptyText(campaign?.internalNote);
   const isFocusedMembersView = isFocusedCampaignView && detailTab === 'members';
@@ -1380,13 +1827,63 @@ function ClubLicenses({ navigation, route }) {
     || assignmentsQuery.isError;
   const shouldShowSetup = !defaultCampaign && campaigns.length === 0;
   const memberFilterDefinitions = useMemo(() => ([
-    { key: 'teamId', label: 'Equipe', options: memberTeamOptions },
-    { key: 'role', label: 'Role', options: memberRoleOptions },
-    { key: 'category', label: 'Categorie', options: memberCategoryOptions },
-    { key: 'section', label: 'Section', options: memberSectionOptions },
-    { key: 'level', label: 'Niveau', options: memberLevelOptions },
-    { key: 'documentStatus', label: 'Documents', options: memberDocumentOptions },
-  ]), [memberCategoryOptions, memberDocumentOptions, memberLevelOptions, memberRoleOptions, memberSectionOptions, memberTeamOptions]);
+    {
+      key: 'teamId',
+      label: t(
+        'clubLicenses.memberFilters.team',
+        'Equipe',
+      ),
+      options: memberTeamOptions,
+    },
+    {
+      key: 'role',
+      label: t(
+        'clubLicenses.memberFilters.role',
+        'Role',
+      ),
+      options: memberRoleOptions,
+    },
+    {
+      key: 'category',
+      label: t(
+        'clubLicenses.memberFilters.category',
+        'Categorie',
+      ),
+      options: memberCategoryOptions,
+    },
+    {
+      key: 'section',
+      label: t(
+        'clubLicenses.memberFilters.section',
+        'Section',
+      ),
+      options: memberSectionOptions,
+    },
+    {
+      key: 'level',
+      label: t(
+        'clubLicenses.memberFilters.level',
+        'Niveau',
+      ),
+      options: memberLevelOptions,
+    },
+    {
+      key: 'documentStatus',
+      label: t(
+        'clubLicenses.tabs.documents',
+        'Documents',
+      ),
+      options: memberDocumentOptions,
+    },
+  ]), [
+    memberCategoryOptions,
+    memberDocumentOptions,
+    memberLevelOptions,
+    memberRoleOptions,
+    memberSectionOptions,
+    memberTeamOptions,
+    t,
+  ]);
   const visibleMemberFilterDefinitions = useMemo(
     () => memberFilterDefinitions.filter((definition) => definition.options.length > 0 || memberFilters[definition.key]),
     [memberFilterDefinitions, memberFilters],
@@ -1397,8 +1894,23 @@ function ClubLicenses({ navigation, route }) {
   );
   const activeMemberFilterPills = useMemo(
     () => [
-      memberQuickFilter ? `Vue rapide: ${memberQuickFilterLabels[memberQuickFilter] || memberQuickFilter}` : null,
-      statusFilter ? `Statut: ${statusFilters.find((filter) => filter.value === statusFilter)?.label || statusFilter}` : null,
+      memberQuickFilter ? t(
+        'clubLicenses.memberList.quickView',
+        'Vue rapide: {{view}}',
+        {
+          view: memberQuickFilterLabels[memberQuickFilter] || memberQuickFilter,
+          ...SANS_ECHAPPEMENT,
+        },
+      ) : null,
+      statusFilter ? t(
+        'clubLicenses.memberList.status',
+        'Statut: {{status}}',
+        {
+          status: statusFilters.find((filter) => filter.value === statusFilter)?.label
+            || statusFilter,
+          ...SANS_ECHAPPEMENT,
+        },
+      ) : null,
       ...memberFilterDefinitions.map((definition) => {
         const selectedValue = memberFilters[definition.key];
         if (!selectedValue) return null;
@@ -1406,17 +1918,39 @@ function ClubLicenses({ navigation, route }) {
         return selectedOption ? `${definition.label}: ${selectedOption.label}` : null;
       }),
     ].filter(Boolean),
-    [memberFilterDefinitions, memberFilters, memberQuickFilter, statusFilter],
+    [memberFilterDefinitions, memberFilters, memberQuickFilter, statusFilter, t],
   );
   const memberListSummary = useMemo(() => {
     if (assignmentsQuery.isLoading) return '';
     if (activeMemberFilterCount || statusFilter || memberQuickFilter) {
-      return `${visibleAssignments.length} membre(s) affiche(s)${assignmentsTotalCount > assignments.length ? ` - apercu sur ${assignments.length}/${assignmentsTotalCount}` : ''}.`;
+      return t(
+        'clubLicenses.memberList.shownSummary',
+        '{{shown}} membre(s) affiche(s){{preview}}.',
+        {
+          preview: assignmentsTotalCount > assignments.length
+            ? t('clubLicenses.memberList.previewSuffix', ' - apercu sur {{loaded}}/{{total}}', {
+              loaded: assignments.length,
+              total: assignmentsTotalCount,
+              ...SANS_ECHAPPEMENT,
+            })
+            : '',
+          shown: visibleAssignments.length,
+          ...SANS_ECHAPPEMENT,
+        },
+      );
     }
     if (assignmentsTotalCount > assignments.length) {
-      return `Aperçu sur ${assignments.length} membre(s) sur ${assignmentsTotalCount}. Affine avec la recherche ou les filtres.`;
+      return t(
+        'clubLicenses.memberList.previewSummary',
+        'Aperçu sur {{loaded}} membre(s) sur {{total}}. Affine avec la recherche ou les filtres.',
+        { loaded: assignments.length, total: assignmentsTotalCount, ...SANS_ECHAPPEMENT },
+      );
     }
-    return `${visibleAssignments.length} membre(s) dans cette vue.`;
+    return t(
+      'clubLicenses.memberList.inViewSummary',
+      '{{members}} membre(s) dans cette vue.',
+      { members: visibleAssignments.length, ...SANS_ECHAPPEMENT },
+    );
   }, [
     activeMemberFilterCount,
     assignments.length,
@@ -1425,6 +1959,7 @@ function ClubLicenses({ navigation, route }) {
     memberQuickFilter,
     statusFilter,
     visibleAssignments.length,
+    t,
   ]);
 
   const resetAdvancedMemberFilters = useCallback(() => {
@@ -1457,7 +1992,10 @@ function ClubLicenses({ navigation, route }) {
     const targetCampaign = defaultCampaign;
     const targetCampaignId = targetCampaign?.documentId || targetCampaign?.id;
     if (!targetCampaignId) {
-      Alert.alert('Aucune campagne disponible', 'Crée ou ouvre une campagne pour consulter les membres relies à ces indicateurs.');
+      Alert.alert(t('clubLicenses.alerts.noCampaign.title', 'Aucune campagne disponible'), t(
+        'clubLicenses.alerts.noCampaign.message',
+        'Crée ou ouvre une campagne pour consulter les membres relies à ces indicateurs.',
+      ));
       return;
     }
 
@@ -1469,7 +2007,7 @@ function ClubLicenses({ navigation, route }) {
       initialDetailTab: 'members',
       initialMemberQuickFilter: normalizeMemberQuickFilter(quickFilterKey),
     });
-  }, [applyMemberQuickFilterView, clubId, defaultCampaign, isFocusedCampaignView, navigation]);
+  }, [applyMemberQuickFilterView, clubId, defaultCampaign, isFocusedCampaignView, navigation, t]);
 
   useEffect(() => {
     setDetailTab(campaignId ? (routeInitialDetailTab || 'members') : 'overview');
@@ -1520,9 +2058,12 @@ function ClubLicenses({ navigation, route }) {
   useLayoutEffect(() => {
     if (currentRouteName !== RouteNames.ClubLicenseCampaignDetail) return;
     navigation.setOptions({
-      headerTitle: campaign?.name || 'Campagne cotisation',
+      headerTitle: campaign?.name || t(
+        'clubLicenses.header.campaignFallbackTitle',
+        'Campagne cotisation',
+      ),
     });
-  }, [campaign?.name, currentRouteName, navigation]);
+  }, [campaign?.name, currentRouteName, navigation, t]);
 
   const handleOpenCampaignDashboard = useCallback((selectedCampaign) => {
     const selectedCampaignId = selectedCampaign?.documentId || selectedCampaign?.id;
@@ -1573,15 +2114,21 @@ function ClubLicenses({ navigation, route }) {
   }, []);
 
   const handleBulkReminder = useCallback(() => {
-    Alert.alert('Relancer les non-payeurs', 'Envoyer une relance aux cotisations en attente, partielles ou en retard ?', [
-      { style: 'cancel', text: 'Annuler' },
+    Alert.alert(t('clubLicenses.alerts.bulkReminder.title', 'Relancer les non-payeurs'), t(
+      'clubLicenses.alerts.bulkReminder.message',
+      'Envoyer une relance aux cotisations en attente, partielles ou en retard ?',
+    ), [
+      { style: 'cancel', text: t('clubLicenses.actions.cancel', 'Annuler') },
       {
         onPress: () => reminderMutation.mutate(
           { statuses: ['pending', 'partial', 'overdue'] },
           {
             onError: (error) => Alert.alert(
-              'Relance impossible',
-              error?.message || 'Les relances n\'ont pas pu être envoyées.',
+              t('clubLicenses.alerts.reminderFailedTitle', 'Relance impossible'),
+              error?.message || t(
+                'clubLicenses.alerts.bulkReminder.failedMessage',
+                "Les relances n'ont pas pu être envoyées.",
+              ),
             ),
             // S06 — meme famille que la pause et la suppression : la relance
             // INDIVIDUELLE annoncait deja son envoi (l. 1480 avant ce lot), la
@@ -1589,15 +2136,18 @@ function ClubLicenses({ navigation, route }) {
             // recu — c'est ce que le dirigeant a besoin de savoir avant de
             // recommencer.
             onSuccess: () => Alert.alert(
-              'Relances envoyées',
-              'Les membres en attente, en paiement partiel ou en retard ont reçu une relance.',
+              t('clubLicenses.alerts.bulkReminder.sentTitle', 'Relances envoyées'),
+              t(
+                'clubLicenses.alerts.bulkReminder.sentMessage',
+                'Les membres en attente, en paiement partiel ou en retard ont reçu une relance.',
+              ),
             ),
           },
         ),
-        text: 'Relancer',
+        text: t('clubLicenses.actions.remind', 'Relancer'),
       },
     ]);
-  }, [reminderMutation]);
+  }, [reminderMutation, t]);
 
   const updateMemberFilter = useCallback((key, value) => {
     setMemberFilters((current) => ({
@@ -1611,16 +2161,23 @@ function ClubLicenses({ navigation, route }) {
     if (!assignmentId) return;
 
     if (!canManageLicenses) {
-      Alert.alert('Action réservée', 'Seuls les dirigeants peuvent envoyer une relance individuelle.');
+      Alert.alert(t('clubLicenses.alerts.restricted.title', 'Action réservée'), t(
+        'clubLicenses.alerts.restricted.remindMessage',
+        'Seuls les dirigeants peuvent envoyer une relance individuelle.',
+      ));
       return;
     }
 
     const memberName = getAssignmentMemberName(item);
     Alert.alert(
-      'Relancer ce membre',
-      `Envoyer une relance individuelle a ${memberName} ?`,
+      t('clubLicenses.alerts.singleReminder.title', 'Relancer ce membre'),
+      t(
+        'clubLicenses.alerts.singleReminder.message',
+        'Envoyer une relance individuelle a {{memberName}} ?',
+        { memberName, ...SANS_ECHAPPEMENT },
+      ),
       [
-        { style: 'cancel', text: 'Annuler' },
+        { style: 'cancel', text: t('clubLicenses.actions.cancel', 'Annuler') },
         {
           onPress: () => {
             setPendingReminderAssignmentId(String(assignmentId));
@@ -1630,19 +2187,32 @@ function ClubLicenses({ navigation, route }) {
                 onError: (error) => {
                   const message = typeof error === 'string'
                     ? error
-                    : error?.message || 'La relance n a pas pu être envoyée.';
-                  Alert.alert('Relance impossible', message);
+                    : error?.message || t(
+                      'clubLicenses.alerts.singleReminder.failedMessage',
+                      'La relance n a pas pu être envoyée.',
+                    );
+                  Alert.alert(t(
+                    'clubLicenses.alerts.reminderFailedTitle',
+                    'Relance impossible',
+                  ), message);
                 },
                 onSettled: () => setPendingReminderAssignmentId(null),
-                onSuccess: () => Alert.alert('Relance envoyée', `${memberName} a bien été relance.`),
+                onSuccess: () => Alert.alert(t(
+                  'clubLicenses.alerts.singleReminder.sentTitle',
+                  'Relance envoyée',
+                ), t(
+                  'clubLicenses.alerts.singleReminder.sentMessage',
+                  '{{memberName}} a bien été relance.',
+                  { memberName, ...SANS_ECHAPPEMENT },
+                )),
               },
             );
           },
-          text: 'Relancer',
+          text: t('clubLicenses.actions.remind', 'Relancer'),
         },
       ],
     );
-  }, [canManageLicenses, singleReminderMutation]);
+  }, [canManageLicenses, singleReminderMutation, t]);
 
   // U06 — le retour en arriere d une exemption, depuis la LISTE. Meme confirmation
   // que sur la fiche : remettre une cotisation a payer engage de l argent pour
@@ -1653,18 +2223,25 @@ function ClubLicenses({ navigation, route }) {
 
     if (!canManageLicenses) {
       Alert.alert(
-        'Action réservée',
-        'Seuls les dirigeants peuvent remettre une cotisation à payer.',
+        t('clubLicenses.alerts.restricted.title', 'Action réservée'),
+        t(
+          'clubLicenses.alerts.restricted.setBackToDueMessage',
+          'Seuls les dirigeants peuvent remettre une cotisation à payer.',
+        ),
       );
       return;
     }
 
     const memberName = getAssignmentMemberName(item);
     Alert.alert(
-      'Remettre à payer',
-      `${memberName} devra de nouveau régler cette cotisation. L exemption sera retirée.`,
+      t('clubLicenses.alerts.setBackToDue.title', 'Remettre à payer'),
+      t(
+        'clubLicenses.alerts.setBackToDue.message',
+        '{{memberName}} devra de nouveau régler cette cotisation. L exemption sera retirée.',
+        { memberName, ...SANS_ECHAPPEMENT },
+      ),
       [
-        { style: 'cancel', text: 'Annuler' },
+        { style: 'cancel', text: t('clubLicenses.actions.cancel', 'Annuler') },
         {
           onPress: () => {
             setPendingUnwaiveAssignmentId(String(assignmentId));
@@ -1672,36 +2249,52 @@ function ClubLicenses({ navigation, route }) {
               { assignmentId },
               {
                 onError: (error) => Alert.alert(
-                  'Geste impossible',
-                  error?.message || 'La cotisation n a pas pu être remise à payer.',
+                  t('clubLicenses.alerts.setBackToDue.failedTitle', 'Geste impossible'),
+                  error?.message || t(
+                    'clubLicenses.alerts.setBackToDue.failedMessage',
+                    'La cotisation n a pas pu être remise à payer.',
+                  ),
                 ),
                 onSettled: () => setPendingUnwaiveAssignmentId(null),
                 onSuccess: () => Alert.alert(
-                  'Cotisation à payer',
-                  `${memberName} doit de nouveau régler sa cotisation.`,
+                  t('clubLicenses.alerts.setBackToDue.doneTitle', 'Cotisation à payer'),
+                  t(
+                    'clubLicenses.alerts.setBackToDue.doneMessage',
+                    '{{memberName}} doit de nouveau régler sa cotisation.',
+                    { memberName, ...SANS_ECHAPPEMENT },
+                  ),
                 ),
               },
             );
           },
-          text: 'À payer',
+          text: t('clubLicenses.assignment.setBackToDue', 'À payer'),
         },
       ],
     );
-  }, [canManageLicenses, unwaiveMutation]);
+  }, [canManageLicenses, unwaiveMutation, t]);
 
   const handleDuplicateCampaign = useCallback((item) => {
     const nextSeason = `${new Date().getFullYear()}-${new Date().getFullYear() + 1}`;
     const nom = item?.name || 'Campagne';
     const nomDeLaCopie = `${nom} - copie`;
-    Alert.alert('Dupliquer la campagne', 'Créer une copie en brouillon avec les mêmes réglages ?', [
-      { style: 'cancel', text: 'Annuler' },
+    Alert.alert(t('clubLicenses.alerts.duplicate.title', 'Dupliquer la campagne'), t(
+      'clubLicenses.alerts.duplicate.message',
+      'Créer une copie en brouillon avec les mêmes réglages ?',
+    ), [
+      { style: 'cancel', text: t('clubLicenses.actions.cancel', 'Annuler') },
       {
         onPress: () => {
           const identifiantCampagne = item.documentId || item.id;
           // T03 — meme regle que le cycle de vie : dupliquer recopie les
           // documents et les regles une par une cote serveur, ca n est pas
           // instantane.
-          setGesteEnCours({ campagneId: identifiantCampagne, libelle: 'Duplication en cours...' });
+          setGesteEnCours({
+            campagneId: identifiantCampagne,
+            libelle: t(
+              'clubLicenses.alerts.duplicate.pending',
+              'Duplication en cours...',
+            ),
+          });
           duplicateMutation.mutate(
             {
               id: identifiantCampagne,
@@ -1711,8 +2304,11 @@ function ClubLicenses({ navigation, route }) {
               onError: (error) => {
                 setGesteEnCours(null);
                 Alert.alert(
-                  'Duplication impossible',
-                  error?.message || 'La copie n\'a pas pu être créée.',
+                  t('clubLicenses.alerts.duplicate.failedTitle', 'Duplication impossible'),
+                  error?.message || t(
+                    'clubLicenses.alerts.duplicate.failedMessage',
+                    "La copie n'a pas pu être créée.",
+                  ),
                 );
               },
               // S06 — ce que ca change vraiment : une copie EN BROUILLON, et
@@ -1721,18 +2317,26 @@ function ClubLicenses({ navigation, route }) {
               onSuccess: () => {
                 setGesteEnCours(null);
                 Alert.alert(
-                  'Copie créée',
-                  `« ${nomDeLaCopie} » t'attend en brouillon, à ouvrir quand tu veux. `
-                  + `« ${nom} » n'a pas bougé.`,
+                  t('clubLicenses.alerts.duplicate.doneTitle', 'Copie créée'),
+                  t(
+                    'clubLicenses.alerts.duplicate.doneMessageStart',
+                    "« {{copyName}} » t'attend en brouillon, à ouvrir quand tu veux. ",
+                    { copyName: nomDeLaCopie, ...SANS_ECHAPPEMENT },
+                  )
+                  + t(
+                    'clubLicenses.alerts.duplicate.doneMessageEnd',
+                    "« {{name}} » n'a pas bougé.",
+                    { name: nom, ...SANS_ECHAPPEMENT },
+                  ),
                 );
               },
             },
           );
         },
-        text: 'Dupliquer',
+        text: t('clubLicenses.actions.duplicate', 'Dupliquer'),
       },
     ]);
-  }, [duplicateMutation]);
+  }, [duplicateMutation, t]);
 
   // `forcedAction` force l'etape du cycle de vie plutot que de la deduire du
   // statut. R01 s'en sert pour proposer « Archiver » quand une suppression est
@@ -1754,76 +2358,132 @@ function ClubLicenses({ navigation, route }) {
     // Il manquait, et c est lui qu Adel a cherche pendant « quelques secondes ».
     const copyByAction = {
       archive: {
-        confirm: 'Archiver',
-        description: 'La campagne restera consultable dans les archives.',
-        doneDescription: 'sort de la liste. Rien n\'est perdu : elle reste consultable '
-          + 'dans les archives.',
-        doneTitle: 'Campagne archivée',
-        failedTitle: 'Archivage impossible',
-        pendingLabel: 'Archivage en cours...',
-        title: 'Archiver la campagne',
+        confirm: t('clubLicenses.actions.archive', 'Archiver'),
+        description: t(
+          'clubLicenses.lifecycle.archive.description',
+          'La campagne restera consultable dans les archives.',
+        ),
+        doneDescription: t(
+          'clubLicenses.lifecycle.archive.doneStart',
+          "sort de la liste. Rien n'est perdu : elle reste consultable ",
+        )
+          + t('clubLicenses.lifecycle.archive.doneEnd', 'dans les archives.'),
+        doneTitle: t('clubLicenses.lifecycle.archive.doneTitle', 'Campagne archivée'),
+        failedTitle: t('clubLicenses.lifecycle.archive.failedTitle', 'Archivage impossible'),
+        pendingLabel: t('clubLicenses.lifecycle.archive.pending', 'Archivage en cours...'),
+        title: t('clubLicenses.lifecycle.archive.title', 'Archiver la campagne'),
       },
       close: {
-        confirm: 'Clore',
-        description: 'Les relances et les paiements resteront visibles, mais la campagne passe en fin de cycle.',
-        doneDescription: 'passe en fin de cycle. Plus aucun membre n\'y sera ajouté ; '
-          + 'les paiements déjà encaissés et les relances restent consultables.',
-        doneTitle: 'Campagne close',
-        failedTitle: 'Clôture impossible',
-        pendingLabel: 'Clôture en cours...',
-        title: 'Clore la campagne',
+        confirm: t('clubLicenses.actions.end', 'Clore'),
+        description: t(
+          'clubLicenses.lifecycle.close.description',
+          'Les relances et les paiements resteront visibles, mais la campagne passe en fin '
+            + 'de cycle.',
+        ),
+        doneDescription: t(
+          'clubLicenses.lifecycle.close.doneStart',
+          "passe en fin de cycle. Plus aucun membre n'y sera ajouté ; ",
+        )
+          + t(
+            'clubLicenses.lifecycle.close.doneEnd',
+            'les paiements déjà encaissés et les relances restent consultables.',
+          ),
+        doneTitle: t('clubLicenses.lifecycle.close.doneTitle', 'Campagne close'),
+        failedTitle: t('clubLicenses.lifecycle.close.failedTitle', 'Clôture impossible'),
+        pendingLabel: t('clubLicenses.lifecycle.close.pending', 'Clôture en cours...'),
+        title: t('clubLicenses.lifecycle.close.title', 'Clore la campagne'),
       },
       launch: {
-        confirm: 'Ouvrir',
-        description: 'La campagne devient active et synchronise automatiquement les membres concernés.',
-        doneDescription: 'est ouverte. Les joueurs peuvent payer, et les membres concernés '
-          + 'y sont ajoutés automatiquement.',
-        doneTitle: 'Campagne ouverte',
-        failedTitle: 'Ouverture impossible',
+        confirm: t('clubLicenses.actions.open', 'Ouvrir'),
+        description: t(
+          'clubLicenses.lifecycle.launch.description',
+          'La campagne devient active et synchronise automatiquement les membres concernés.',
+        ),
+        doneDescription: t(
+          'clubLicenses.lifecycle.launch.doneStart',
+          'est ouverte. Les joueurs peuvent payer, et les membres concernés ',
+        )
+          + t('clubLicenses.lifecycle.launch.doneEnd', 'y sont ajoutés automatiquement.'),
+        doneTitle: t('clubLicenses.lifecycle.launch.doneTitle', 'Campagne ouverte'),
+        failedTitle: t('clubLicenses.lifecycle.launch.failedTitle', 'Ouverture impossible'),
         // Ces trois-la nomment le TRAVAIL, pas le geste : `launch`, `resume` et
         // `reopen` declenchent cote serveur une synchronisation membre par
         // membre (license.ts:2562). C est la qu on attend le plus longtemps,
         // donc c est la qu il faut dire pourquoi.
-        pendingLabel: 'Ouverture en cours, les membres sont ajoutés...',
-        title: 'Ouvrir la campagne',
+        pendingLabel: t(
+          'clubLicenses.lifecycle.launch.pending',
+          'Ouverture en cours, les membres sont ajoutés...',
+        ),
+        title: t('clubLicenses.lifecycle.launch.title', 'Ouvrir la campagne'),
       },
       pause: {
-        confirm: 'Mettre en pause',
-        description: 'La campagne reste visible, mais bloque les ajouts auto, les relances et les paiements membres.',
-        doneDescription: 'est en pause : les joueurs ne peuvent plus payer, les relances '
-          + 'automatiques s\'arrêtent et aucun membre n\'y sera ajouté. '
-          + 'Tu peux la reprendre quand tu veux.',
-        doneTitle: 'Campagne en pause',
-        failedTitle: 'Mise en pause impossible',
-        pendingLabel: 'Mise en pause en cours...',
-        title: 'Mettre la campagne en pause',
+        confirm: t('clubLicenses.actions.pause', 'Mettre en pause'),
+        description: t(
+          'clubLicenses.lifecycle.pause.description',
+          'La campagne reste visible, mais bloque les ajouts auto, les relances et les '
+            + 'paiements membres.',
+        ),
+        doneDescription: t(
+          'clubLicenses.lifecycle.pause.doneStart',
+          'est en pause : les joueurs ne peuvent plus payer, les relances ',
+        )
+          + t(
+            'clubLicenses.lifecycle.pause.doneMiddle',
+            "automatiques s'arrêtent et aucun membre n'y sera ajouté. ",
+          )
+          + t('clubLicenses.lifecycle.pause.doneEnd', 'Tu peux la reprendre quand tu veux.'),
+        doneTitle: t('clubLicenses.lifecycle.pause.doneTitle', 'Campagne en pause'),
+        failedTitle: t('clubLicenses.lifecycle.pause.failedTitle', 'Mise en pause impossible'),
+        pendingLabel: t('clubLicenses.lifecycle.pause.pending', 'Mise en pause en cours...'),
+        title: t('clubLicenses.lifecycle.pause.title', 'Mettre la campagne en pause'),
       },
       reopen: {
-        confirm: 'Reouvrir',
-        description: 'La campagne redevient active et resynchronise les membres concernés.',
-        doneDescription: 'est de nouveau ouverte. Les joueurs peuvent payer, et les membres '
-          + 'concernés y sont rajoutés automatiquement.',
-        doneTitle: 'Campagne réouverte',
-        failedTitle: 'Réouverture impossible',
-        pendingLabel: 'Réouverture en cours, les membres sont ajoutés...',
-        title: 'Reouvrir la campagne',
+        confirm: t('clubLicenses.actions.reopen', 'Reouvrir'),
+        description: t(
+          'clubLicenses.lifecycle.reopen.description',
+          'La campagne redevient active et resynchronise les membres concernés.',
+        ),
+        doneDescription: t(
+          'clubLicenses.lifecycle.openAgainStart',
+          'est de nouveau ouverte. Les joueurs peuvent payer, et les membres ',
+        )
+          + t(
+            'clubLicenses.lifecycle.reopen.doneEnd',
+            'concernés y sont rajoutés automatiquement.',
+          ),
+        doneTitle: t('clubLicenses.lifecycle.reopen.doneTitle', 'Campagne réouverte'),
+        failedTitle: t('clubLicenses.lifecycle.reopen.failedTitle', 'Réouverture impossible'),
+        pendingLabel: t(
+          'clubLicenses.lifecycle.reopen.pending',
+          'Réouverture en cours, les membres sont ajoutés...',
+        ),
+        title: t('clubLicenses.lifecycle.reopen.title', 'Reouvrir la campagne'),
       },
       resume: {
-        confirm: 'Reprendre',
-        description: 'La campagne redevient active et resynchronise automatiquement les membres éligibles.',
-        doneDescription: 'est de nouveau ouverte. Les joueurs peuvent payer, et les membres '
-          + 'éligibles y sont rajoutés automatiquement.',
-        doneTitle: 'Campagne reprise',
-        failedTitle: 'Reprise impossible',
-        pendingLabel: 'Reprise en cours...',
-        title: 'Reprendre la campagne',
+        confirm: t('clubLicenses.actions.resume', 'Reprendre'),
+        description: t(
+          'clubLicenses.lifecycle.resume.description',
+          'La campagne redevient active et resynchronise automatiquement les membres éligibles.',
+        ),
+        doneDescription: t(
+          'clubLicenses.lifecycle.openAgainStart',
+          'est de nouveau ouverte. Les joueurs peuvent payer, et les membres ',
+        )
+          + t(
+            'clubLicenses.lifecycle.resume.doneEnd',
+            'éligibles y sont rajoutés automatiquement.',
+          ),
+        doneTitle: t('clubLicenses.lifecycle.resume.doneTitle', 'Campagne reprise'),
+        failedTitle: t('clubLicenses.lifecycle.resume.failedTitle', 'Reprise impossible'),
+        pendingLabel: t('clubLicenses.lifecycle.resume.pending', 'Reprise en cours...'),
+        title: t('clubLicenses.lifecycle.resume.title', 'Reprendre la campagne'),
       },
     };
     const copy = copyByAction[lifecycle.action];
-    const nom = item?.name || 'Cette campagne';
+    const nom = item?.name || t('clubLicenses.lifecycle.nameFallback', 'Cette campagne');
     const identifiantCampagne = item.documentId || item.id;
     Alert.alert(copy.title, copy.description, [
-      { style: 'cancel', text: 'Annuler' },
+      { style: 'cancel', text: t('clubLicenses.actions.cancel', 'Annuler') },
       {
         onPress: () => {
           // ⛔ Pose AVANT l envoi, effacee dans LES DEUX issues : une carte qui
@@ -1836,12 +2496,19 @@ function ClubLicenses({ navigation, route }) {
                 setGesteEnCours(null);
                 Alert.alert(
                   copy.failedTitle,
-                  error?.message || 'Le serveur a refusé ce changement.',
+                  error?.message || t(
+                    'clubLicenses.lifecycle.serverRefused',
+                    'Le serveur a refusé ce changement.',
+                  ),
                 );
               },
               onSuccess: () => {
                 setGesteEnCours(null);
-                Alert.alert(copy.doneTitle, `« ${nom} » ${copy.doneDescription}`);
+                Alert.alert(copy.doneTitle, t(
+                  'clubLicenses.lifecycle.doneMessage',
+                  '« {{name}} » {{description}}',
+                  { description: copy.doneDescription, name: nom, ...SANS_ECHAPPEMENT },
+                ));
               },
             },
           );
@@ -1849,29 +2516,42 @@ function ClubLicenses({ navigation, route }) {
         text: copy.confirm,
       },
     ]);
-  }, [transitionMutation]);
+  }, [transitionMutation, t]);
 
   const handleDeleteDraft = useCallback((item) => {
-    const nom = item?.name || 'Ce brouillon';
-    Alert.alert('Supprimer le brouillon', 'Supprimer definitivement cette campagne non lancée ?', [
-      { style: 'cancel', text: 'Annuler' },
+    const nom = item?.name || t('clubLicenses.alerts.deleteDraft.nameFallback', 'Ce brouillon');
+    Alert.alert(t('clubLicenses.alerts.deleteDraft.title', 'Supprimer le brouillon'), t(
+      'clubLicenses.alerts.deleteDraft.message',
+      'Supprimer definitivement cette campagne non lancée ?',
+    ), [
+      { style: 'cancel', text: t('clubLicenses.actions.cancel', 'Annuler') },
       {
         onPress: () => deleteMutation.mutate(item.documentId || item.id, {
           onError: (error) => Alert.alert(
-            'Suppression impossible',
-            error?.message || 'La suppression a échoué.',
+            t('clubLicenses.alerts.deleteFailedTitle', 'Suppression impossible'),
+            error?.message || t(
+              'clubLicenses.alerts.deleteFailedMessage',
+              'La suppression a échoué.',
+            ),
           ),
           onSuccess: () => Alert.alert(
-            'Brouillon supprimé',
-            `« ${nom} » est supprimé. Un brouillon n'ayant jamais été ouvert, `
-            + 'aucune cotisation ne disparaît avec lui.',
+            t('clubLicenses.alerts.deleteDraft.doneTitle', 'Brouillon supprimé'),
+            t(
+              'clubLicenses.alerts.deleteDraft.doneStart',
+              "« {{name}} » est supprimé. Un brouillon n'ayant jamais été ouvert, ",
+              { name: nom, ...SANS_ECHAPPEMENT },
+            )
+            + t(
+              'clubLicenses.alerts.deleteDraft.doneEnd',
+              'aucune cotisation ne disparaît avec lui.',
+            ),
           ),
         }),
         style: 'destructive',
-        text: 'Supprimer',
+        text: t('clubLicenses.actions.delete', 'Supprimer'),
       },
     ]);
-  }, [deleteMutation]);
+  }, [deleteMutation, t]);
 
   // R01 (2026-08-13) — SUPPRIMER UNE CAMPAGNE, EN DISANT CE QU ON PERD.
   //
@@ -1892,7 +2572,7 @@ function ClubLicenses({ navigation, route }) {
     // `compteurs` et non `totals` : le nom court est deja pris par la synthese
     // du hub (l. 1097), et le masquer rendrait les deux illisibles.
     const compteurs = item?.totals || {};
-    const nom = item?.name || 'Cette campagne';
+    const nom = item?.name || t('clubLicenses.lifecycle.nameFallback', 'Cette campagne');
     const nombreCotisations = Number(compteurs.total) || 0;
     const nombreMembresAyantPaye = (Number(compteurs.paidCount) || 0)
       + (Number(compteurs.partialCount) || 0);
@@ -1902,20 +2582,40 @@ function ClubLicenses({ navigation, route }) {
     if (montantEncaisseCents > 0 || nombreMembresAyantPaye > 0) {
       const lifecycle = lifecycleForCampaign(item);
       const peutArchiverMaintenant = lifecycle?.action === 'archive';
-      const pluriel = nombreMembresAyantPaye > 1 ? 's' : '';
       const sortie = peutArchiverMaintenant
-        ? 'Tu peux l\'archiver : elle sort de la liste, et rien n\'est perdu.'
-        : 'Clos-la d\'abord, puis archive-la : elle sortira de la liste sans rien perdre.';
+        ? t(
+          'clubLicenses.alerts.deleteCampaign.canArchive',
+          "Tu peux l'archiver : elle sort de la liste, et rien n'est perdu.",
+        )
+        : t(
+          'clubLicenses.alerts.deleteCampaign.closeFirst',
+          "Clos-la d'abord, puis archive-la : elle sortira de la liste sans rien perdre.",
+        );
       Alert.alert(
-        'Suppression impossible',
-        `« ${nom} » a déjà encaissé ${formatLicenseMoney(montantEncaisseCents)} `
-        + `auprès de ${nombreMembresAyantPaye} membre${pluriel}. `
-        + `On ne supprime pas une campagne qui porte de l'argent.\n\n${sortie}`,
+        t('clubLicenses.alerts.deleteFailedTitle', 'Suppression impossible'),
+        t(
+          'clubLicenses.alerts.deleteCampaign.refusedStart',
+          '« {{name}} » a déjà encaissé {{amount}} ',
+          { amount: formatLicenseMoney(montantEncaisseCents), name: nom, ...SANS_ECHAPPEMENT },
+        )
+        + t('clubLicenses.alerts.deleteCampaign.refusedMembers', {
+          count: nombreMembresAyantPaye,
+          defaultValue_one: 'auprès de {{count}} membre. ',
+          defaultValue_other: 'auprès de {{count}} membres. ',
+        })
+        + t(
+          'clubLicenses.alerts.deleteCampaign.refusedEnd',
+          "On ne supprime pas une campagne qui porte de l'argent.\n\n{{nextStep}}",
+          { nextStep: sortie, ...SANS_ECHAPPEMENT },
+        ),
         [
-          { style: 'cancel', text: 'Annuler' },
+          { style: 'cancel', text: t('clubLicenses.actions.cancel', 'Annuler') },
           ...(lifecycle ? [{
             onPress: () => handleLifecycleCampaign(item, lifecycle.action),
-            text: peutArchiverMaintenant ? 'Archiver' : lifecycle.label,
+            text: peutArchiverMaintenant ? t(
+              'clubLicenses.actions.archive',
+              'Archiver',
+            ) : lifecycle.label,
           }] : []),
         ],
       );
@@ -1923,39 +2623,68 @@ function ClubLicenses({ navigation, route }) {
     }
 
     const cotisationsPerdues = nombreCotisations > 0
-      ? `, avec ses ${nombreCotisations} cotisation${nombreCotisations > 1 ? 's' : ''}.`
+      ? t('clubLicenses.alerts.deleteCampaign.lostFees', {
+        count: nombreCotisations,
+        defaultValue_one: ', avec ses {{count}} cotisation.',
+        defaultValue_other: ', avec ses {{count}} cotisations.',
+      })
       : '.';
     Alert.alert(
-      'Supprimer cette campagne ?',
-      `« ${nom} » sera définitivement supprimée${cotisationsPerdues}`
-      + '\n\nAucun paiement n\'a été encaissé : rien d\'autre ne sera perdu. '
-      + 'Cette action est irréversible.',
+      t('clubLicenses.alerts.deleteCampaign.title', 'Supprimer cette campagne ?'),
+      t(
+        'clubLicenses.alerts.deleteCampaign.messageStart',
+        '« {{name}} » sera définitivement supprimée{{lostFees}}',
+        { lostFees: cotisationsPerdues, name: nom, ...SANS_ECHAPPEMENT },
+      )
+      + t(
+        'clubLicenses.alerts.deleteCampaign.messageNoPayment',
+        "\n\nAucun paiement n'a été encaissé : rien d'autre ne sera perdu. ",
+      )
+      + t(
+        'clubLicenses.alerts.deleteCampaign.messageIrreversible',
+        'Cette action est irréversible.',
+      ),
       [
-        { style: 'cancel', text: 'Annuler' },
+        { style: 'cancel', text: t('clubLicenses.actions.cancel', 'Annuler') },
         {
           onPress: () => deleteMutation.mutate(identifiant, {
             onError: (error) => Alert.alert(
-              'Suppression impossible',
-              error?.message || 'La suppression a échoué.',
+              t('clubLicenses.alerts.deleteFailedTitle', 'Suppression impossible'),
+              error?.message || t(
+                'clubLicenses.alerts.deleteFailedMessage',
+                'La suppression a échoué.',
+              ),
             ),
             // S06 — LE MESSAGE QUI MANQUAIT (point 12 de la recette). Il
             // REUTILISE le chiffre que la confirmation vient d'afficher : c'est
             // le meme `item.totals.total`, aucun appel de plus, et l'utilisateur
             // retrouve donc exactement le nombre qu'il a accepte de perdre.
             onSuccess: () => Alert.alert(
-              'Campagne supprimée',
+              t('clubLicenses.alerts.deleteCampaign.doneTitle', 'Campagne supprimée'),
               nombreCotisations > 0
-                ? `« ${nom} » est supprimée, avec ses ${nombreCotisations} `
-                  + `cotisation${nombreCotisations > 1 ? 's' : ''}.`
-                : `« ${nom} » est supprimée. Elle ne portait aucune cotisation.`,
+                ? t(
+                  'clubLicenses.alerts.deleteCampaign.doneWithFeesStart',
+                  '« {{name}} » est supprimée, avec ses {{fees}} ',
+                  { fees: nombreCotisations, name: nom, ...SANS_ECHAPPEMENT },
+                )
+                  + t('clubLicenses.alerts.deleteCampaign.doneWithFeesEnd', {
+                    count: nombreCotisations,
+                    defaultValue_one: 'cotisation.',
+                    defaultValue_other: 'cotisations.',
+                  })
+                : t(
+                  'clubLicenses.alerts.deleteCampaign.doneNoFees',
+                  '« {{name}} » est supprimée. Elle ne portait aucune cotisation.',
+                  { name: nom, ...SANS_ECHAPPEMENT },
+                ),
             ),
           }),
           style: 'destructive',
-          text: 'Supprimer',
+          text: t('clubLicenses.actions.delete', 'Supprimer'),
         },
       ],
     );
-  }, [deleteMutation, handleLifecycleCampaign]);
+  }, [deleteMutation, handleLifecycleCampaign, t]);
 
   const retryData = useCallback(() => {
     campaignQuery.refetch();
@@ -2035,14 +2764,23 @@ function ClubLicenses({ navigation, route }) {
           clubs={clubs}
           isLoading={switchClubMutation.isPending}
           onSelectClub={handleSelectClub}
-          title="Choisir un club"
+          title={t('clubLicenses.header.chooseClub', 'Choisir un club')}
         />
       ) : null}
       {isFocusedCampaignView ? (
         <>
-          <Text style={[Fonts.h2, Fonts.neutral00]}>Cotisations</Text>
+          <Text style={[Fonts.h2, Fonts.neutral00]}>
+            {t('clubLicenses.header.title', 'Cotisations')}
+          </Text>
           <Text style={[Fonts.p2, Fonts.neutral200, Spaces.marginTop[8]]}>
-            {`Detail complet de la campagne ${campaign?.name || 'selectionnee'}.`}
+            {t(
+              'clubLicenses.header.detailSubtitle',
+              'Detail complet de la campagne {{name}}.',
+              {
+                name: campaign?.name || t('clubLicenses.header.selectedFallback', 'selectionnee'),
+                ...SANS_ECHAPPEMENT,
+              },
+            )}
           </Text>
         </>
       ) : null}
@@ -2062,14 +2800,14 @@ function ClubLicenses({ navigation, route }) {
           <View style={{ flexDirection: 'row', gap: licenseSpacing.actionGap }}>
             <StatCard
               active={memberQuickFilter === 'expected'}
-              label="Attendu"
+              label={t('clubLicenses.quickFilters.expected', 'Attendu')}
               onPress={() => handleOpenMemberStatView('expected')}
               tone={Colors.primary500}
               value={money(totals.expectedCents, campaign?.currency || 'EUR')}
             />
             <StatCard
               active={memberQuickFilter === 'paid'}
-              label="Encaisse"
+              label={t('clubLicenses.quickFilters.paid', 'Encaisse')}
               onPress={() => handleOpenMemberStatView('paid')}
               tone={Colors.success500}
               value={money(totals.paidCents, campaign?.currency || 'EUR')}
@@ -2078,14 +2816,14 @@ function ClubLicenses({ navigation, route }) {
           <View style={{ flexDirection: 'row', gap: licenseSpacing.actionGap }}>
             <StatCard
               active={memberQuickFilter === 'remaining'}
-              label="Reste"
+              label={t('clubLicenses.quickFilters.remaining', 'Reste')}
               onPress={() => handleOpenMemberStatView('remaining')}
               tone={Colors.warning500}
               value={money(totals.remainingCents, campaign?.currency || 'EUR')}
             />
             <StatCard
               active={memberQuickFilter === 'overdue'}
-              label="Retards"
+              label={t('clubLicenses.quickFilters.overdue', 'Retards')}
               onPress={() => handleOpenMemberStatView('overdue')}
               tone={Colors.error500}
               value={String(totals.overdueCount || 0)}
@@ -2123,8 +2861,15 @@ function ClubLicenses({ navigation, route }) {
           }]}
           >
             <View style={Spaces.gap[4]}>
-              <Text style={[Fonts.p3Bold, { color: Colors.primary500 }]}>Suivi de campagne</Text>
-              <Text style={[Fonts.p1Bold, Fonts.neutral00]}>{campaign?.name || 'Campagne'}</Text>
+              <Text style={[Fonts.p3Bold, { color: Colors.primary500 }]}>
+                {t('clubLicenses.dashboard.tracking', 'Suivi de campagne')}
+              </Text>
+              <Text style={[Fonts.p1Bold, Fonts.neutral00]}>
+                {campaign?.name || t(
+                  'clubLicenses.campaignCard.nameFallback',
+                  'Campagne',
+                )}
+              </Text>
               <Text style={[Fonts.p3, Fonts.neutral200]}>
                 {campaign?.seasonLabel || '-'}
                 {' '}
@@ -2133,7 +2878,14 @@ function ClubLicenses({ navigation, route }) {
                 {campaignStatusLabel[campaign?.status] || campaign?.status}
               </Text>
             </View>
-            <Button onPress={handleReturnToCampaignOverview} title="Voir toutes les campagnes" variant="Secondary" />
+            <Button
+              onPress={handleReturnToCampaignOverview}
+              title={t(
+                'clubLicenses.dashboard.viewAll',
+                'Voir toutes les campagnes',
+              )}
+              variant="Secondary"
+            />
           </View>
         );
       })()}
@@ -2151,16 +2903,58 @@ function ClubLicenses({ navigation, route }) {
           {detailTab === 'overview' ? (
             <>
               <CampaignDetailSection
-                description="Retrouve ici l identité, la période et le positionnement de la campagne sélectionnée."
-                title="Informations de campagne"
+                description={t(
+                  'clubLicenses.overview.info.description',
+                  'Retrouve ici l identité, la période et le positionnement de la campagne '
+                    + 'sélectionnée.',
+                )}
+                title={t('clubLicenses.overview.info.title', 'Informations de campagne')}
               >
                 <View style={Spaces.gap[12]}>
-                  <Text style={[Fonts.p2, Fonts.neutral200]}>{campaignDescription || 'Aucune description visible pour les membres.'}</Text>
+                  <Text style={[Fonts.p2, Fonts.neutral200]}>
+                    {campaignDescription || t(
+                      'clubLicenses.overview.noDescription',
+                      'Aucune description visible pour les membres.',
+                    )}
+                  </Text>
                   <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-                    <DetailPill label={`Type: ${campaignTypeLabel[campaign?.type] || campaign?.type || 'Licence'}`} />
-                    <DetailPill label={`Saison: ${campaign?.seasonLabel || 'Non renseignée'}`} />
-                    <DetailPill label={`Du ${formatDateLabel(campaign?.startDate)} au ${formatDateLabel(campaign?.endDate)}`} />
-                    <DetailPill label={`Statut: ${campaignStatusLabel[campaign?.status] || campaign?.status || 'Inconnu'}`} />
+                    <DetailPill label={`Type: ${
+                      campaignTypeLabel[campaign?.type]
+                      || campaign?.type
+                      || t('clubLicenses.campaignTypes.license', 'Licence')
+                    }`}
+                    />
+                    <DetailPill label={t(
+                      'clubLicenses.overview.season',
+                      'Saison: {{season}}',
+                      {
+                        season: campaign?.seasonLabel
+                          || t('clubLicenses.values.notSpecified', 'Non renseignée'),
+                        ...SANS_ECHAPPEMENT,
+                      },
+                    )}
+                    />
+                    <DetailPill label={t(
+                      'clubLicenses.overview.period',
+                      'Du {{start}} au {{end}}',
+                      {
+                        end: formatDateLabel(campaign?.endDate),
+                        start: formatDateLabel(campaign?.startDate),
+                        ...SANS_ECHAPPEMENT,
+                      },
+                    )}
+                    />
+                    <DetailPill label={t(
+                      'clubLicenses.overview.status',
+                      'Statut: {{status}}',
+                      {
+                        status: campaignStatusLabel[campaign?.status]
+                          || campaign?.status
+                          || t('clubLicenses.overview.unknownStatus', 'Inconnu'),
+                        ...SANS_ECHAPPEMENT,
+                      },
+                    )}
+                    />
                   </View>
                   {campaignInternalNote ? (
                     <View style={[Spaces.gap[4], {
@@ -2172,7 +2966,9 @@ function ClubLicenses({ navigation, route }) {
                       paddingVertical: 12,
                     }]}
                     >
-                      <Text style={[Fonts.p3Bold, Fonts.neutral00]}>Note interne</Text>
+                      <Text style={[Fonts.p3Bold, Fonts.neutral00]}>
+                        {t('clubLicenses.overview.internalNote', 'Note interne')}
+                      </Text>
                       <Text style={[Fonts.p2, Fonts.neutral200]}>{campaignInternalNote}</Text>
                     </View>
                   ) : null}
@@ -2180,53 +2976,136 @@ function ClubLicenses({ navigation, route }) {
               </CampaignDetailSection>
 
               <CampaignDetailSection
-                description="Montant de référence, ciblage des membres et règles tarifaires associées."
-                title="Tarification et public"
+                description={t(
+                  'clubLicenses.overview.pricing.description',
+                  'Montant de référence, ciblage des membres et règles tarifaires associées.',
+                )}
+                title={t('clubLicenses.overview.pricing.title', 'Tarification et public')}
               >
                 <View style={Spaces.gap[12]}>
                   <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-                    <DetailPill label={`Montant par défaut: ${money(campaign?.defaultAmountCents || 0, campaign?.currency || 'EUR')}`} />
-                    <DetailPill label={`Devise: ${campaign?.currency || 'EUR'}`} />
-                    {campaign?.dueDate ? <DetailPill label={`Échéance: ${formatDateLabel(campaign.dueDate)}`} /> : null}
+                    <DetailPill label={t(
+                      'clubLicenses.overview.defaultAmount',
+                      'Montant par défaut: {{amount}}',
+                      {
+                        amount: money(
+                          campaign?.defaultAmountCents || 0,
+                          campaign?.currency || 'EUR',
+                        ),
+                        ...SANS_ECHAPPEMENT,
+                      },
+                    )}
+                    />
+                    <DetailPill label={t(
+                      'clubLicenses.overview.currency',
+                      'Devise: {{currency}}',
+                      { currency: campaign?.currency || 'EUR', ...SANS_ECHAPPEMENT },
+                    )}
+                    />
+                    {campaign?.dueDate ? (
+                      <DetailPill label={t(
+                        'clubLicenses.overview.dueDate',
+                        'Échéance: {{date}}',
+                        { date: formatDateLabel(campaign.dueDate), ...SANS_ECHAPPEMENT },
+                      )}
+                      />
+                    ) : null}
                   </View>
                   <View style={Spaces.gap[8]}>
-                    <Text style={[Fonts.p3Bold, Fonts.neutral00]}>Public concerne</Text>
+                    <Text style={[Fonts.p3Bold, Fonts.neutral00]}>
+                      {t('clubLicenses.overview.audience', 'Public concerne')}
+                    </Text>
                     <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-                      {(targetSummary.length ? targetSummary : ['Aucun filtre défini']).map((item) => (
+                      {(targetSummary.length ? targetSummary : [t(
+                        'clubLicenses.overview.noFilter',
+                        'Aucun filtre défini',
+                      )]).map((item) => (
                         <DetailPill key={item} label={item} />
                       ))}
                     </View>
                   </View>
                   <View style={Spaces.gap[8]}>
-                    <Text style={[Fonts.p3Bold, Fonts.neutral00]}>Règles tarifaires</Text>
+                    <Text style={[Fonts.p3Bold, Fonts.neutral00]}>
+                      {t('clubLicenses.overview.pricingRules', 'Règles tarifaires')}
+                    </Text>
                     {pricingRuleSummaries.length ? pricingRuleSummaries.slice(0, 4).map((item) => (
                       <Text key={item} style={[Fonts.p2, Fonts.neutral200]}>{`\u2022 ${item}`}</Text>
-                    )) : <Text style={[Fonts.p2, Fonts.neutral200]}>Aucune règle tarifaire speciale.</Text>}
-                    {pricingRuleSummaries.length > 4 ? <Text style={[Fonts.p3, Fonts.neutral200]}>{`+ ${pricingRuleSummaries.length - 4} autre(s) règle(s)`}</Text> : null}
+                    )) : (
+                      <Text style={[Fonts.p2, Fonts.neutral200]}>
+                        {t(
+                          'clubLicenses.overview.noPricingRule',
+                          'Aucune règle tarifaire speciale.',
+                        )}
+                      </Text>
+                    )}
+                    {pricingRuleSummaries.length > 4 ? (
+                      <Text style={[Fonts.p3, Fonts.neutral200]}>
+                        {t(
+                          'clubLicenses.overview.moreRules',
+                          '+ {{more}} autre(s) règle(s)',
+                          { more: pricingRuleSummaries.length - 4, ...SANS_ECHAPPEMENT },
+                        )}
+                      </Text>
+                    ) : null}
                   </View>
                 </View>
               </CampaignDetailSection>
 
               <CampaignDetailSection
-                description="Moyens de paiement autorises, gestion du paiement en ligne et organisation des échéances."
-                title="Paiements et échéancier"
+                description={t(
+                  'clubLicenses.overview.payments.description',
+                  'Moyens de paiement autorises, gestion du paiement en ligne et '
+                    + 'organisation des échéances.',
+                )}
+                title={t('clubLicenses.overview.payments.title', 'Paiements et échéancier')}
               >
                 <View style={Spaces.gap[12]}>
                   <View style={Spaces.gap[8]}>
-                    <Text style={[Fonts.p3Bold, Fonts.neutral00]}>Moyens de paiement</Text>
+                    <Text style={[Fonts.p3Bold, Fonts.neutral00]}>
+                      {t('clubLicenses.overview.paymentMethods', 'Moyens de paiement')}
+                    </Text>
                     <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-                      {(enabledPaymentModes.length ? enabledPaymentModes : ['Aucun moyen active']).map((item) => (
+                      {(enabledPaymentModes.length ? enabledPaymentModes : [t(
+                        'clubLicenses.overview.noMethod',
+                        'Aucun moyen active',
+                      )]).map((item) => (
                         <DetailPill key={item} label={item} />
                       ))}
                     </View>
                   </View>
                   <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
                     <DetailPill label={installmentSummary} />
-                    <DetailPill label={`Paiement en ligne ${campaign?.onlinePaymentRequired ? 'obligatoire' : 'optionnel'}`} />
-                    <DetailPill label={`Encaissement: ${paymentOwnerLabel[campaign?.paymentOwner] || campaign?.paymentOwner || 'Section'}`} />
+                    <DetailPill label={t(
+                      'clubLicenses.overview.onlinePayment',
+                      'Paiement en ligne {{requirement}}',
+                      {
+                        requirement: campaign?.onlinePaymentRequired
+                          ? t('clubLicenses.documents.required', 'obligatoire')
+                          : t('clubLicenses.overview.optional', 'optionnel'),
+                        ...SANS_ECHAPPEMENT,
+                      },
+                    )}
+                    />
+                    <DetailPill label={t(
+                      'clubLicenses.overview.collection',
+                      'Encaissement: {{owner}}',
+                      {
+                        owner: paymentOwnerLabel[campaign?.paymentOwner]
+                          || campaign?.paymentOwner
+                          || 'Section',
+                        ...SANS_ECHAPPEMENT,
+                      },
+                    )}
+                    />
                   </View>
                   {nonEmptyText(campaign?.externalPaymentUrl) ? (
-                    <Text numberOfLines={2} style={[Fonts.p2, Fonts.neutral200]}>{`Lien de paiement: ${campaign.externalPaymentUrl}`}</Text>
+                    <Text numberOfLines={2} style={[Fonts.p2, Fonts.neutral200]}>
+                      {t(
+                        'clubLicenses.overview.paymentLink',
+                        'Lien de paiement: {{url}}',
+                        { url: campaign.externalPaymentUrl, ...SANS_ECHAPPEMENT },
+                      )}
+                    </Text>
                   ) : null}
                 </View>
               </CampaignDetailSection>
@@ -2236,7 +3115,7 @@ function ClubLicenses({ navigation, route }) {
                   <Button
                     onPress={() => navigation.navigate(RouteNames.ClubLicenseCampaignSettings, { campaignId, clubId })}
                     style={{ flex: 1 }}
-                    title="Parametres"
+                    title={t('clubLicenses.actions.settings', 'Parametres')}
                     variant="Secondary"
                   />
                   <Button
@@ -2244,7 +3123,11 @@ function ClubLicenses({ navigation, route }) {
                       campaignId, canManageLicenses, clubId, scope,
                     })}
                     style={{ flex: 1 }}
-                    title={`Paiements à valider (${totals.manualReviewCount || 0})`}
+                    title={t(
+                      'clubLicenses.overview.pendingPayments',
+                      'Paiements à valider ({{pending}})',
+                      { pending: totals.manualReviewCount || 0, ...SANS_ECHAPPEMENT },
+                    )}
                     variant="Secondary"
                   />
                 </View>
@@ -2258,7 +3141,7 @@ function ClubLicenses({ navigation, route }) {
                 {['active', 'paused'].includes(campaign?.status) ? (
                   <Button
                     onPress={() => handleLifecycleCampaign(campaign, 'close')}
-                    title="Clore la campagne"
+                    title={t('clubLicenses.lifecycle.close.title', 'Clore la campagne')}
                     variant="Secondary"
                   />
                 ) : null}
@@ -2284,7 +3167,9 @@ function ClubLicenses({ navigation, route }) {
                   justifyContent: 'space-between',
                 }}
                 >
-                  <Text style={[Fonts.p1Bold, Fonts.neutral00]}>Membres</Text>
+                  <Text style={[Fonts.p1Bold, Fonts.neutral00]}>
+                    {t('clubLicenses.tabs.members', 'Membres')}
+                  </Text>
                   {activeMemberFilterPills.length ? (
                     <Pressable
                       onPress={clearMemberFilters}
@@ -2297,13 +3182,15 @@ function ClubLicenses({ navigation, route }) {
                         paddingVertical: 8,
                       }}
                     >
-                      <Text style={[Fonts.p3Bold, Fonts.primary500]}>Réinitialiser</Text>
+                      <Text style={[Fonts.p3Bold, Fonts.primary500]}>
+                        {t('clubLicenses.members.reset', 'Réinitialiser')}
+                      </Text>
                     </Pressable>
                   ) : null}
                 </View>
                 <TextInput
                   onChangeText={setSearch}
-                  placeholder="Rechercher un membre"
+                  placeholder={t('clubLicenses.members.searchPlaceholder', 'Rechercher un membre')}
                   placeholderTextColor={Colors.neutral400}
                   style={{
                     borderBottomColor: Colors.neutral200, borderBottomWidth: 1, color: Colors.neutral00, paddingVertical: 12,
@@ -2317,7 +3204,14 @@ function ClubLicenses({ navigation, route }) {
                 >
                   <FilterTrigger
                     active={Boolean(activeMemberFilterCount)}
-                    label={activeMemberFilterCount ? `Filtres (${activeMemberFilterCount})` : 'Filtres'}
+                    label={activeMemberFilterCount ? t(
+                      'clubLicenses.members.filtersCount',
+                      'Filtres ({{active}})',
+                      { active: activeMemberFilterCount, ...SANS_ECHAPPEMENT },
+                    ) : t(
+                      'clubLicenses.members.filters',
+                      'Filtres',
+                    )}
                     onPress={() => setMemberFilterMenuKey('filters')}
                   />
                   {statusFilters.map((filter) => (
@@ -2359,13 +3253,30 @@ function ClubLicenses({ navigation, route }) {
           {detailTab === 'payments' ? (
             <>
               <CampaignDetailSection
-                description="Pilote les encaissements et les dossiers à valider pour cette campagne."
-                title="Pilotage des paiements"
+                description={t(
+                  'clubLicenses.payments.description',
+                  'Pilote les encaissements et les dossiers à valider pour cette campagne.',
+                )}
+                title={t('clubLicenses.payments.title', 'Pilotage des paiements')}
               >
                 <View style={Spaces.gap[12]}>
                   <View style={{ flexDirection: 'row', gap: licenseSpacing.actionGap }}>
-                    <StatCard label="A valider" tone={Colors.warning500} value={String(totals.manualReviewCount || 0)} />
-                    <StatCard label="Payees" tone={Colors.success500} value={money(totals.paidCents || 0, campaign?.currency || 'EUR')} />
+                    <StatCard
+                      label={t(
+                        'clubLicenses.status.manualReview',
+                        'A valider',
+                      )}
+                      tone={Colors.warning500}
+                      value={String(totals.manualReviewCount || 0)}
+                    />
+                    <StatCard
+                      label={t(
+                        'clubLicenses.payments.paidStat',
+                        'Payees',
+                      )}
+                      tone={Colors.success500}
+                      value={money(totals.paidCents || 0, campaign?.currency || 'EUR')}
+                    />
                   </View>
                   <View style={{ flexDirection: 'row', gap: licenseSpacing.actionGap }}>
                     <Button
@@ -2373,12 +3284,12 @@ function ClubLicenses({ navigation, route }) {
                         campaignId, canManageLicenses, clubId, scope,
                       })}
                       style={{ flex: 1 }}
-                      title="Ouvrir les validations"
+                      title={t('clubLicenses.payments.openValidations', 'Ouvrir les validations')}
                     />
                     <Button
                       onPress={() => navigation.navigate(RouteNames.ClubLicenseCampaignSettings, { campaignId, clubId })}
                       style={{ flex: 1 }}
-                      title="Régler les paiements"
+                      title={t('clubLicenses.payments.settings', 'Régler les paiements')}
                       variant="Secondary"
                     />
                   </View>
@@ -2395,37 +3306,57 @@ function ClubLicenses({ navigation, route }) {
                   */}
                   <View style={Spaces.gap[8]}>
                     <Text style={[Fonts.p3Bold, Fonts.neutral00]}>
-                      Qui peut valider les paiements ?
+                      {t('clubLicenses.payments.whoTitle', 'Qui peut valider les paiements ?')}
                     </Text>
                     <Text style={[Fonts.p3, Fonts.neutral200]}>
-                      Toi, toujours. Tu peux aussi confier l encaissement a un
-                      entraîneur, équipe par équipe : le réglage vit dans la fiche
-                      de l équipe, section « Encaissement des cotisations ».
+                      {t(
+                        'clubLicenses.payments.whoBody',
+                        'Toi, toujours. Tu peux aussi confier l encaissement a un '
+                          + 'entraîneur, équipe par équipe : le réglage vit dans la fiche de l '
+                          + 'équipe, section « Encaissement des cotisations ».',
+                      )}
                     </Text>
                     {memberTeamOptions.length ? memberTeamOptions.map((team) => (
                       <Button
                         key={team.value}
                         onPress={() => openTeamPaymentDelegation(team)}
-                        title={`Régler pour ${team.label}`}
+                        title={t(
+                          'clubLicenses.payments.settleForTeam',
+                          'Régler pour {{team}}',
+                          { team: team.label, ...SANS_ECHAPPEMENT },
+                        )}
                         variant="Secondary"
                       />
                     )) : (
                       <Text style={[Fonts.p3, Fonts.neutral200]}>
-                        Aucune équipe n apparaît encore dans cette campagne.
+                        {t(
+                          'clubLicenses.payments.noTeam',
+                          'Aucune équipe n apparaît encore dans cette campagne.',
+                        )}
                       </Text>
                     )}
                     {assignmentsTotalCount > assignments.length ? (
                       <Text style={[Fonts.p3, Fonts.neutral200]}>
-                        {`Seuls les ${assignments.length} premiers membres sont `
-                        + 'chargés : d autres équipes peuvent exister.'}
+                        {t(
+                          'clubLicenses.payments.loadedStart',
+                          'Seuls les {{loaded}} premiers membres sont ',
+                          { loaded: assignments.length, ...SANS_ECHAPPEMENT },
+                        )
+                        + t(
+                          'clubLicenses.payments.loadedEnd',
+                          'chargés : d autres équipes peuvent exister.',
+                        )}
                       </Text>
                     ) : null}
                   </View>
                 </View>
               </CampaignDetailSection>
               <CampaignDetailSection
-                description="Déclarations externes qui attendent une validation dirigeant."
-                title="Paiements à valider maintenant"
+                description={t(
+                  'clubLicenses.payments.reviews.description',
+                  'Déclarations externes qui attendent une validation dirigeant.',
+                )}
+                title={t('clubLicenses.payments.reviews.title', 'Paiements à valider maintenant')}
               >
                 <View style={Spaces.gap[12]}>
                   {paymentReviewsQuery.isLoading ? (
@@ -2439,45 +3370,101 @@ function ClubLicenses({ navigation, route }) {
                   ) : null}
                   {!paymentReviewsQuery.isLoading && paymentReviewAssignments.length ? paymentReviewAssignments.slice(0, 5).map((item) => (
                     <AssignmentSignalCard
-                      helper={`${(item?.payments || []).filter((payment) => payment?.status === 'manual_review').length} déclaration(s) - ${money(sumPaymentReviewCents(item), item?.currency || campaign?.currency || 'EUR')}`}
+                      helper={t(
+                        'clubLicenses.payments.declarations',
+                        '{{declarations}} déclaration(s) - {{amount}}',
+                        {
+                          amount: money(
+                            sumPaymentReviewCents(item),
+                            item?.currency || campaign?.currency || 'EUR',
+                          ),
+                          declarations: (item?.payments || [])
+                            .filter((payment) => payment?.status === 'manual_review')
+                            .length,
+                          ...SANS_ECHAPPEMENT,
+                        },
+                      )}
                       item={item}
                       key={item?.documentId || item?.id}
-                      label="A valider"
+                      label={t('clubLicenses.status.manualReview', 'A valider')}
                       onPress={() => openAssignmentDetail(item)}
                     />
                   )) : null}
                   {!paymentReviewsQuery.isLoading && !paymentReviewAssignments.length ? (
-                    <Text style={[Fonts.p2, Fonts.neutral200]}>Aucune déclaration de paiement n attend ici pour le moment.</Text>
+                    <Text style={[Fonts.p2, Fonts.neutral200]}>
+                      {t(
+                        'clubLicenses.payments.noReviews',
+                        'Aucune déclaration de paiement n attend ici pour le moment.',
+                      )}
+                    </Text>
                   ) : null}
                 </View>
               </CampaignDetailSection>
               <CampaignDetailSection
-                description="Membres avec reste à payer déjà en retard."
-                title="Impayes prioritaires"
+                description={t(
+                  'clubLicenses.payments.overdue.description',
+                  'Membres avec reste à payer déjà en retard.',
+                )}
+                title={t('clubLicenses.payments.overdue.title', 'Impayes prioritaires')}
               >
                 <View style={Spaces.gap[12]}>
                   {overdueAssignments.length ? overdueAssignments.map((item) => (
                     <AssignmentSignalCard
-                      helper={`${money(item?.amountRemainingCents || 0, item?.currency || campaign?.currency || 'EUR')} restant${item?.lastReminderAt ? ` - relance le ${formatDateLabel(item.lastReminderAt)}` : ''}`}
+                      helper={t(
+                        'clubLicenses.payments.remainingWithReminder',
+                        '{{amount}} restant{{reminder}}',
+                        {
+                          amount: money(
+                            item?.amountRemainingCents || 0,
+                            item?.currency || campaign?.currency || 'EUR',
+                          ),
+                          reminder: item?.lastReminderAt
+                            ? t('clubLicenses.payments.remindedOn', ' - relance le {{date}}', {
+                              date: formatDateLabel(item.lastReminderAt),
+                              ...SANS_ECHAPPEMENT,
+                            })
+                            : '',
+                          ...SANS_ECHAPPEMENT,
+                        },
+                      )}
                       item={item}
                       key={item?.documentId || item?.id}
-                      label="En retard"
+                      label={t('clubLicenses.status.overdue', 'En retard')}
                       onPress={() => openAssignmentDetail(item)}
                     />
-                  )) : <Text style={[Fonts.p2, Fonts.neutral200]}>Aucun impaye en retard dans cet aperçu.</Text>}
+                  )) : (
+                    <Text style={[Fonts.p2, Fonts.neutral200]}>
+                      {t(
+                        'clubLicenses.payments.noOverdue',
+                        'Aucun impaye en retard dans cet aperçu.',
+                      )}
+                    </Text>
+                  )}
                 </View>
               </CampaignDetailSection>
               <CampaignDetailSection
-                description="Résumé des moyens actifs sur cette campagne."
-                title="Canaux actifs"
+                description={t(
+                  'clubLicenses.payments.channels.description',
+                  'Résumé des moyens actifs sur cette campagne.',
+                )}
+                title={t('clubLicenses.payments.channels.title', 'Canaux actifs')}
               >
                 <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-                  {(enabledPaymentModes.length ? enabledPaymentModes : ['Aucun moyen active']).map((item) => (
+                  {(enabledPaymentModes.length ? enabledPaymentModes : [t(
+                    'clubLicenses.overview.noMethod',
+                    'Aucun moyen active',
+                  )]).map((item) => (
                     <DetailPill key={item} label={item} />
                   ))}
                   {campaign?.paymentModes?.helloasso ? (
                     <DetailPill
-                      label={`HelloAsso ${providerReadinessLabel[campaign?.paymentProviderSnapshot?.helloasso?.readiness] || campaign?.paymentProviderSnapshot?.helloasso?.readiness || 'A configurer'}`}
+                      label={`HelloAsso ${
+                        providerReadinessLabel[
+                          campaign?.paymentProviderSnapshot?.helloasso?.readiness
+                        ]
+                        || campaign?.paymentProviderSnapshot?.helloasso?.readiness
+                        || t('clubLicenses.campaignCard.toConfigure', 'A configurer')
+                      }`}
                     />
                   ) : null}
                 </View>
@@ -2488,59 +3475,133 @@ function ClubLicenses({ navigation, route }) {
           {detailTab === 'documents' ? (
             <>
               <CampaignDetailSection
-                description="Pièces exigees par la campagne et état global des dossiers membres."
-                title="Documents demandes"
+                description={t(
+                  'clubLicenses.documentsTab.requested.description',
+                  'Pièces exigees par la campagne et état global des dossiers membres.',
+                )}
+                title={t('clubLicenses.documentsTab.requested.title', 'Documents demandes')}
               >
                 <View style={Spaces.gap[12]}>
                   {documentRequestSummaries.length ? documentRequestSummaries.map((item) => (
                     <Text key={item} style={[Fonts.p2, Fonts.neutral200]}>{`\u2022 ${item}`}</Text>
-                  )) : <Text style={[Fonts.p2, Fonts.neutral200]}>Aucun document demande.</Text>}
+                  )) : (
+                    <Text style={[Fonts.p2, Fonts.neutral200]}>
+                      {t('clubLicenses.documentsTab.noRequested', 'Aucun document demande.')}
+                    </Text>
+                  )}
                 </View>
               </CampaignDetailSection>
               <CampaignDetailSection
-                description="Vue d ensemble des statuts documentaires des membres sur cette campagne."
-                title="État des dossiers"
+                description={t(
+                  'clubLicenses.documentsTab.status.description',
+                  'Vue d ensemble des statuts documentaires des membres sur cette campagne.',
+                )}
+                title={t('clubLicenses.documentsTab.status.title', 'État des dossiers')}
               >
                 <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-                  <DetailPill label={`Manquants: ${documentStatusSummary.missing || 0}`} />
-                  <DetailPill label={`Deposes: ${documentStatusSummary.submitted || 0}`} />
-                  <DetailPill label={`Valides: ${documentStatusSummary.validated || 0}`} />
-                  <DetailPill label={`A remplacer: ${documentStatusSummary.to_replace || 0}`} />
+                  <DetailPill label={t(
+                    'clubLicenses.documentsTab.missingCount',
+                    'Manquants: {{missing}}',
+                    { missing: documentStatusSummary.missing || 0, ...SANS_ECHAPPEMENT },
+                  )}
+                  />
+                  <DetailPill label={t(
+                    'clubLicenses.documentsTab.submittedCount',
+                    'Deposes: {{submitted}}',
+                    { submitted: documentStatusSummary.submitted || 0, ...SANS_ECHAPPEMENT },
+                  )}
+                  />
+                  <DetailPill label={t(
+                    'clubLicenses.documentsTab.validatedCount',
+                    'Valides: {{validated}}',
+                    { validated: documentStatusSummary.validated || 0, ...SANS_ECHAPPEMENT },
+                  )}
+                  />
+                  <DetailPill label={t(
+                    'clubLicenses.documentsTab.toReplaceCount',
+                    'A remplacer: {{toReplace}}',
+                    { toReplace: documentStatusSummary.to_replace || 0, ...SANS_ECHAPPEMENT },
+                  )}
+                  />
                 </View>
               </CampaignDetailSection>
               <CampaignDetailSection
-                description="Membres dont les documents ont besoin d une action humaine."
-                title="Dossiers à vérifier"
+                description={t(
+                  'clubLicenses.documentsTab.review.description',
+                  'Membres dont les documents ont besoin d une action humaine.',
+                )}
+                title={t('clubLicenses.documentsTab.review.title', 'Dossiers à vérifier')}
               >
                 <View style={Spaces.gap[12]}>
                   {documentReviewAssignments.length ? documentReviewAssignments.map((item) => (
                     <AssignmentSignalCard
-                      helper={documentStatusLabel[item?.documentStatus] || 'Document à vérifier'}
+                      helper={documentStatusLabel[item?.documentStatus] || t(
+                        'clubLicenses.documentsTab.toCheck',
+                        'Document à vérifier',
+                      )}
                       item={item}
                       key={item?.documentId || item?.id}
-                      label={documentStatusLabel[item?.documentStatus] || 'Document'}
+                      label={documentStatusLabel[item?.documentStatus] || t(
+                        'clubLicenses.documents.fallbackName',
+                        'Document',
+                      )}
                       onPress={() => openAssignmentDetail(item)}
                     />
-                  )) : <Text style={[Fonts.p2, Fonts.neutral200]}>Aucun document n attend de vérification dans cet aperçu.</Text>}
+                  )) : (
+                    <Text style={[Fonts.p2, Fonts.neutral200]}>
+                      {t(
+                        'clubLicenses.documentsTab.noReview',
+                        'Aucun document n attend de vérification dans cet aperçu.',
+                      )}
+                    </Text>
+                  )}
                 </View>
               </CampaignDetailSection>
               <CampaignDetailSection
-                description="Dossiers encore incomplets à traiter en priorité."
-                title="Documents manquants"
+                description={t(
+                  'clubLicenses.documentsTab.missing.description',
+                  'Dossiers encore incomplets à traiter en priorité.',
+                )}
+                title={t('clubLicenses.documentsTab.missing.title', 'Documents manquants')}
               >
                 <View style={Spaces.gap[12]}>
                   {missingDocumentAssignments.length ? missingDocumentAssignments.map((item) => (
                     <AssignmentSignalCard
-                      helper={`${money(item?.amountRemainingCents || 0, item?.currency || campaign?.currency || 'EUR')} restant`}
+                      helper={t(
+                        'clubLicenses.documentsTab.remaining',
+                        '{{amount}} restant',
+                        {
+                          amount: money(
+                            item?.amountRemainingCents || 0,
+                            item?.currency || campaign?.currency || 'EUR',
+                          ),
+                          ...SANS_ECHAPPEMENT,
+                        },
+                      )}
                       item={item}
                       key={item?.documentId || item?.id}
-                      label="Manquant"
+                      label={t('clubLicenses.documentsTab.missingLabel', 'Manquant')}
                       onPress={() => openAssignmentDetail(item)}
                     />
-                  )) : <Text style={[Fonts.p2, Fonts.neutral200]}>Aucun document manquant dans cet aperçu.</Text>}
+                  )) : (
+                    <Text style={[Fonts.p2, Fonts.neutral200]}>
+                      {t(
+                        'clubLicenses.documentsTab.noMissing',
+                        'Aucun document manquant dans cet aperçu.',
+                      )}
+                    </Text>
+                  )}
                   {assignmentsTotalCount > assignments.length ? (
                     <Text style={[Fonts.p3, Fonts.neutral200]}>
-                      {`Aperçu sur ${assignments.length} membre(s) sur ${assignmentsTotalCount}.`}
+                      {t(
+                        'clubLicenses.memberList.previewShort',
+                        'Aperçu sur {{loaded}} membre(s) sur {{total}}.',
+                        {
+                          loaded: assignments.length,
+                          total: assignmentsTotalCount,
+                          ...SANS_ECHAPPEMENT,
+                        },
+                      )}
                     </Text>
                   ) : null}
                 </View>
@@ -2551,59 +3612,133 @@ function ClubLicenses({ navigation, route }) {
           {detailTab === 'reminders' ? (
             <>
               <CampaignDetailSection
-                description="Automatisation, statuts cibles et historique agrégé des relances."
-                title="Configuration des relances"
+                description={t(
+                  'clubLicenses.remindersTab.settings.description',
+                  'Automatisation, statuts cibles et historique agrégé des relances.',
+                )}
+                title={t('clubLicenses.remindersTab.settings.title', 'Configuration des relances')}
               >
                 <View style={Spaces.gap[12]}>
                   <Text style={[Fonts.p2, Fonts.neutral200]}>{summarizeReminderStatuses(reminderAutomation.targetStatuses || [])}</Text>
                   {reminderTimingSummary.length ? reminderTimingSummary.map((item) => (
                     <Text key={item} style={[Fonts.p2, Fonts.neutral200]}>{`\u2022 ${item}`}</Text>
-                  )) : <Text style={[Fonts.p2, Fonts.neutral200]}>Aucune relance automatique configuree.</Text>}
+                  )) : (
+                    <Text style={[Fonts.p2, Fonts.neutral200]}>
+                      {t(
+                        'clubLicenses.remindersTab.noAutomation',
+                        'Aucune relance automatique configuree.',
+                      )}
+                    </Text>
+                  )}
                   {nonEmptyText(campaign?.reminderMessage) ? <Text style={[Fonts.p2, Fonts.neutral200]}>{campaign.reminderMessage}</Text> : null}
                 </View>
               </CampaignDetailSection>
               <CampaignDetailSection
-                description="Tu peux lancer une relance groupée ou suivre l intensité des rappels déjà envoyés."
-                title="Activité de relance"
+                description={t(
+                  'clubLicenses.remindersTab.activity.description',
+                  'Tu peux lancer une relance groupée ou suivre l intensité des rappels déjà '
+                    + 'envoyés.',
+                )}
+                title={t('clubLicenses.remindersTab.activity.title', 'Activité de relance')}
               >
                 <View style={Spaces.gap[12]}>
                   <View style={{ flexDirection: 'row', gap: licenseSpacing.actionGap }}>
-                    <StatCard label="Membres relances" tone={Colors.primary500} value={String(reminderSummary.memberCount || 0)} />
-                    <StatCard label="Relances envoyées" tone={Colors.warning500} value={String(reminderSummary.totalCount || 0)} />
+                    <StatCard
+                      label={t(
+                        'clubLicenses.remindersTab.membersReminded',
+                        'Membres relances',
+                      )}
+                      tone={Colors.primary500}
+                      value={String(reminderSummary.memberCount || 0)}
+                    />
+                    <StatCard
+                      label={t(
+                        'clubLicenses.alerts.bulkReminder.sentTitle',
+                        'Relances envoyées',
+                      )}
+                      tone={Colors.warning500}
+                      value={String(reminderSummary.totalCount || 0)}
+                    />
                   </View>
                   <Text style={[Fonts.p2, Fonts.neutral200]}>
-                    Derniere relance:
+                    {t('clubLicenses.remindersTab.lastReminder', 'Derniere relance:')}
                     {' '}
-                    {reminderSummary.lastReminderAt ? formatDateLabel(reminderSummary.lastReminderAt) : 'Aucune'}
+                    {reminderSummary.lastReminderAt
+                      ? formatDateLabel(reminderSummary.lastReminderAt)
+                      : t('clubLicenses.remindersTab.none', 'Aucune')}
                   </Text>
                   <View style={{ flexDirection: 'row', gap: licenseSpacing.actionGap }}>
-                    <Button isLoading={reminderMutation.isPending} onPress={handleBulkReminder} style={{ flex: 1 }} title="Relancer les non-payeurs" />
+                    <Button
+                      isLoading={reminderMutation.isPending}
+                      onPress={handleBulkReminder}
+                      style={{ flex: 1 }}
+                      title={t(
+                        'clubLicenses.alerts.bulkReminder.title',
+                        'Relancer les non-payeurs',
+                      )}
+                    />
                     <Button
                       onPress={() => navigation.navigate(RouteNames.ClubLicenseCampaignSettings, { campaignId, clubId })}
                       style={{ flex: 1 }}
-                      title="Régler les relances"
+                      title={t('clubLicenses.remindersTab.settingsButton', 'Régler les relances')}
                       variant="Secondary"
                     />
                   </View>
                 </View>
               </CampaignDetailSection>
               <CampaignDetailSection
-                description="Membres qui devraient être consideres en priorité pour une relance."
-                title="A relancer maintenant"
+                description={t(
+                  'clubLicenses.remindersTab.priority.description',
+                  'Membres qui devraient être consideres en priorité pour une relance.',
+                )}
+                title={t('clubLicenses.remindersTab.priority.title', 'A relancer maintenant')}
               >
                 <View style={Spaces.gap[12]}>
                   {remindableAssignments.length ? remindableAssignments.map((item) => (
                     <AssignmentSignalCard
-                      helper={`${money(item?.amountRemainingCents || 0, item?.currency || campaign?.currency || 'EUR')} restant - ${statusLabel[item?.status] || item?.status}${Number(item?.reminderCount || 0) > 0 ? ` - ${item.reminderCount} relance(s)` : ''}`}
+                      helper={t(
+                        'clubLicenses.remindersTab.priorityHelper',
+                        '{{amount}} restant - {{status}}{{reminders}}',
+                        {
+                          amount: money(
+                            item?.amountRemainingCents || 0,
+                            item?.currency || campaign?.currency || 'EUR',
+                          ),
+                          reminders: Number(item?.reminderCount || 0) > 0
+                            ? t(
+                              'clubLicenses.remindersTab.reminderCount',
+                              ' - {{reminders}} relance(s)',
+                              { reminders: item.reminderCount, ...SANS_ECHAPPEMENT },
+                            )
+                            : '',
+                          status: statusLabel[item?.status] || item?.status,
+                          ...SANS_ECHAPPEMENT,
+                        },
+                      )}
                       item={item}
                       key={item?.documentId || item?.id}
-                      label="A relancer"
+                      label={t('clubLicenses.remindersTab.priorityLabel', 'A relancer')}
                       onPress={() => openAssignmentDetail(item)}
                     />
-                  )) : <Text style={[Fonts.p2, Fonts.neutral200]}>Aucun membre prioritaire à relancer dans cet aperçu.</Text>}
+                  )) : (
+                    <Text style={[Fonts.p2, Fonts.neutral200]}>
+                      {t(
+                        'clubLicenses.remindersTab.noPriority',
+                        'Aucun membre prioritaire à relancer dans cet aperçu.',
+                      )}
+                    </Text>
+                  )}
                   {assignmentsTotalCount > assignments.length ? (
                     <Text style={[Fonts.p3, Fonts.neutral200]}>
-                      {`Aperçu sur ${assignments.length} membre(s) sur ${assignmentsTotalCount}.`}
+                      {t(
+                        'clubLicenses.memberList.previewShort',
+                        'Aperçu sur {{loaded}} membre(s) sur {{total}}.',
+                        {
+                          loaded: assignments.length,
+                          total: assignmentsTotalCount,
+                          ...SANS_ECHAPPEMENT,
+                        },
+                      )}
                     </Text>
                   ) : null}
                 </View>
@@ -2615,7 +3750,11 @@ function ClubLicenses({ navigation, route }) {
       {campaigns.length && shouldShowCampaignSwitcher ? (
         <View style={Spaces.gap[licenseSpacing.listGap]}>
           <Text style={[Fonts.p3Bold, Fonts.neutral200, { letterSpacing: 1, textTransform: 'uppercase' }]}>
-            {isFocusedCampaignView ? 'Autres campagnes' : `Campagnes · ${campaigns.length}`}
+            {isFocusedCampaignView ? t('clubLicenses.campaigns.others', 'Autres campagnes') : t(
+              'clubLicenses.campaigns.count',
+              'Campagnes · {{campaigns}}',
+              { campaigns: campaigns.length, ...SANS_ECHAPPEMENT },
+            )}
           </Text>
           {(isFocusedCampaignView
             ? campaigns.filter((item) => (item?.documentId || item?.id) !== campaignId)
@@ -2649,20 +3788,23 @@ function ClubLicenses({ navigation, route }) {
               <Button
                 onPress={() => navigation.navigate(RouteNames.ClubLicenseCampaignSettings, editorCampaignId ? { campaignId: editorCampaignId, clubId } : { clubId })}
                 style={{ flex: 1 }}
-                title="Parametres"
+                title={t('clubLicenses.actions.settings', 'Parametres')}
                 variant="Secondary"
               />
               <Button
                 onPress={() => navigation.navigate(RouteNames.ClubLicenseCampaignSettings, { clubId })}
                 style={{ flex: 1 }}
-                title="Nouvelle campagne"
+                title={t('clubLicenses.campaigns.new', 'Nouvelle campagne')}
                 variant="Secondary"
               />
             </View>
           ) : (
             <Pressable
-              accessibilityHint="Ouvre le tunnel de creation d une campagne de cotisation."
-              accessibilityLabel="Nouvelle campagne"
+              accessibilityHint={t(
+                'clubLicenses.campaigns.newHint',
+                'Ouvre le tunnel de creation d une campagne de cotisation.',
+              )}
+              accessibilityLabel={t('clubLicenses.campaigns.new', 'Nouvelle campagne')}
               accessibilityRole="button"
               onPress={() => navigation.navigate(RouteNames.ClubLicenseCampaignSettings, { clubId })}
               style={({ pressed }) => [{
@@ -2678,7 +3820,9 @@ function ClubLicenses({ navigation, route }) {
                 paddingVertical: licenseSpacing.cardPadding,
               }, Platform.OS === 'web' ? { cursor: 'pointer' } : null]}
             >
-              <Text style={[Fonts.p1Bold, { color: Colors.primary500 }]}>+ Nouvelle campagne</Text>
+              <Text style={[Fonts.p1Bold, { color: Colors.primary500 }]}>
+                {t('clubLicenses.campaigns.newTile', '+ Nouvelle campagne')}
+              </Text>
             </Pressable>
           )}
           {/*
@@ -2688,8 +3832,14 @@ function ClubLicenses({ navigation, route }) {
             creation, et vient ici : une fois pour toutes.
           */}
           <Pressable
-            accessibilityHint="Connecte le compte HelloAsso du club, une fois pour toutes."
-            accessibilityLabel="Réglages du club — HelloAsso"
+            accessibilityHint={t(
+              'clubLicenses.helloAsso.settingsHint',
+              'Connecte le compte HelloAsso du club, une fois pour toutes.',
+            )}
+            accessibilityLabel={t(
+              'clubLicenses.helloAsso.settingsTitle',
+              'Réglages du club — HelloAsso',
+            )}
             accessibilityRole="button"
             onPress={() => setIsHelloAssoSheetOpen(true)}
             style={{
@@ -2705,10 +3855,16 @@ function ClubLicenses({ navigation, route }) {
             }}
           >
             <Text style={[Fonts.p2Bold, Fonts.neutral00, { flex: 1, paddingRight: 12 }]}>
-              Réglages du club — HelloAsso
+              {t('clubLicenses.helloAsso.settingsTitle', 'Réglages du club — HelloAsso')}
             </Text>
             <Text style={[Fonts.p3, Fonts.neutral300]}>
-              {isHelloAssoReadyForCampaign(clubHelloAssoSnapshot) ? 'Connecté ✓' : 'À connecter'}
+              {isHelloAssoReadyForCampaign(clubHelloAssoSnapshot) ? t(
+                'clubLicenses.helloAsso.connected',
+                'Connecté ✓',
+              ) : t(
+                'clubLicenses.helloAsso.toConnect',
+                'À connecter',
+              )}
             </Text>
           </Pressable>
           {/*
@@ -2730,11 +3886,28 @@ function ClubLicenses({ navigation, route }) {
             <Button
               isLoading={transitionMutation.isPending}
               onPress={() => handleLifecycleCampaign(campaign)}
-              title={lifecycleForCampaign(campaign)?.label ? `${lifecycleForCampaign(campaign)?.label} la campagne` : 'Gérer la campagne'}
+              title={lifecycleForCampaign(campaign)?.label ? t(
+                'clubLicenses.campaignActions.manageWith',
+                '{{action}} la campagne',
+                { action: lifecycleForCampaign(campaign)?.label, ...SANS_ECHAPPEMENT },
+              ) : t(
+                'clubLicenses.campaignActions.manage',
+                'Gérer la campagne',
+              )}
               variant="Secondary"
             />
           ) : null}
-          {campaign?.status === 'draft' ? <Button isLoading={deleteMutation.isPending} onPress={() => handleDeleteDraft(campaign)} title="Supprimer le brouillon" variant="Secondary" /> : null}
+          {campaign?.status === 'draft' ? (
+            <Button
+              isLoading={deleteMutation.isPending}
+              onPress={() => handleDeleteDraft(campaign)}
+              title={t(
+                'clubLicenses.alerts.deleteDraft.title',
+                'Supprimer le brouillon',
+              )}
+              variant="Secondary"
+            />
+          ) : null}
         </>
       ) : null}
     </View>
@@ -2758,9 +3931,21 @@ function ClubLicenses({ navigation, route }) {
     if (hasError) {
       return (
         <LicenseEmptyState
-          action={<Button onPress={retryData} title="Réessayer" variant="Secondary" />}
-          description="Impossible de charger la campagne ou les cotisations pour le moment."
-          title="Cotisations indisponibles"
+          action={(
+            <Button
+              onPress={retryData}
+              title={t(
+                'clubLicenses.emptyStates.retry',
+                'Réessayer',
+              )}
+              variant="Secondary"
+            />
+)}
+          description={t(
+            'clubLicenses.emptyStates.errorDescription',
+            'Impossible de charger la campagne ou les cotisations pour le moment.',
+          )}
+          title={t('clubLicenses.emptyStates.errorTitle', 'Cotisations indisponibles')}
         />
       );
     }
@@ -2769,8 +3954,11 @@ function ClubLicenses({ navigation, route }) {
       if (!canManageLicenses) {
         return (
           <LicenseEmptyState
-            description="Un dirigeant doit d abord créer et activer une campagne de cotisation."
-            title="Aucune campagne active"
+            description={t(
+              'clubLicenses.emptyStates.noCampaignDescription',
+              'Un dirigeant doit d abord créer et activer une campagne de cotisation.',
+            )}
+            title={t('clubLicenses.emptyStates.noCampaignTitle', 'Aucune campagne active')}
           />
         );
       }
@@ -2780,8 +3968,12 @@ function ClubLicenses({ navigation, route }) {
     if (!canManageLicenses) {
       return (
         <LicenseEmptyState
-          description="Vue limitée aux équipes que tu entraines. Les actions financieres restent réservées aux dirigeants."
-          title="Vue entraîneur"
+          description={t(
+            'clubLicenses.emptyStates.coachDescription',
+            'Vue limitée aux équipes que tu entraines. Les actions financieres restent '
+              + 'réservées aux dirigeants.',
+          )}
+          title={t('clubLicenses.emptyStates.coachTitle', 'Vue entraîneur')}
         />
       );
     }
@@ -2826,10 +4018,15 @@ function ClubLicenses({ navigation, route }) {
       <BottomModal close={fermer} isVisible snapPoints={['86%']}>
         <View style={Spaces.gap[16]}>
           <View style={Spaces.gap[4]}>
-            <Text style={[Fonts.h4Black, Fonts.neutral00]}>Réglages du club — HelloAsso</Text>
+            <Text style={[Fonts.h4Black, Fonts.neutral00]}>
+              {t('clubLicenses.helloAsso.settingsTitle', 'Réglages du club — HelloAsso')}
+            </Text>
             <Text style={[Fonts.p3, Fonts.neutral200]}>
-              À renseigner une seule fois pour le club. Toutes les campagnes s y
-              connectent ensuite d un simple interrupteur.
+              {t(
+                'clubLicenses.helloAssoSheet.intro',
+                'À renseigner une seule fois pour le club. Toutes les campagnes s y '
+                  + 'connectent ensuite d un simple interrupteur.',
+              )}
             </Text>
           </View>
           <LicenseStatusChip status={clubHelloAssoSnapshot?.readiness || 'not_configured'} />
@@ -2837,39 +4034,55 @@ function ClubLicenses({ navigation, route }) {
             {describeHelloAssoReadiness(clubHelloAssoSnapshot)}
           </Text>
           <HelloAssoField
-            label="Slug organisation"
+            label={t('clubLicenses.helloAssoSheet.slugLabel', 'Slug organisation')}
             onChangeText={(value) => handleHelloAssoFieldChange('organizationSlug', value)}
-            placeholder="mon-club"
+            placeholder={t('clubLicenses.helloAssoSheet.slugPlaceholder', 'mon-club')}
             value={helloAssoConfig.organizationSlug}
           />
           <HelloAssoField
-            label="Environnement"
+            label={t('clubLicenses.helloAssoSheet.environmentLabel', 'Environnement')}
             onChangeText={(value) => handleHelloAssoFieldChange('environment', value)}
-            placeholder="production ou sandbox"
+            placeholder={t(
+              'clubLicenses.helloAssoSheet.environmentPlaceholder',
+              'production ou sandbox',
+            )}
             value={helloAssoConfig.environment}
           />
           <HelloAssoField
             label="Client id"
             onChangeText={(value) => handleHelloAssoFieldChange('clientId', value)}
             placeholder={clubHelloAssoSnapshot?.clientIdConfigured
-              ? 'Laisser vide pour conserver l identifiant actuel'
-              : 'Renseigne le client id'}
+              ? t(
+                'clubLicenses.helloAssoSheet.clientIdKeep',
+                'Laisser vide pour conserver l identifiant actuel',
+              )
+              : t('clubLicenses.helloAssoSheet.clientIdEnter', 'Renseigne le client id')}
             value={helloAssoConfig.clientId}
           />
           <HelloAssoField
             label="Client secret"
             onChangeText={(value) => handleHelloAssoFieldChange('clientSecret', value)}
             placeholder={clubHelloAssoSnapshot?.clientSecretConfigured
-              ? 'Laisser vide pour conserver le secret actuel'
-              : 'Renseigne le client secret'}
+              ? t(
+                'clubLicenses.helloAssoSheet.clientSecretKeep',
+                'Laisser vide pour conserver le secret actuel',
+              )
+              : t('clubLicenses.helloAssoSheet.clientSecretEnter', 'Renseigne le client secret')}
             value={helloAssoConfig.clientSecret}
           />
           <Button
             isLoading={helloAssoMutation.isPending}
             onPress={verifyClubHelloAssoConnection}
-            title="Vérifier la connexion"
+            title={t('clubLicenses.helloAssoSheet.verify', 'Vérifier la connexion')}
           />
-          <Button onPress={fermer} title="Fermer" variant="Secondary" />
+          <Button
+            onPress={fermer}
+            title={t(
+              'clubLicenses.actions.close',
+              'Fermer',
+            )}
+            variant="Secondary"
+          />
         </View>
       </BottomModal>
     );
@@ -2894,7 +4107,12 @@ function ClubLicenses({ navigation, route }) {
       <BottomModal close={fermer} isVisible snapPoints={['50%']}>
         <View style={Spaces.gap[12]}>
           <View style={Spaces.gap[4]}>
-            <Text style={[Fonts.p1Bold, Fonts.neutral00]}>{campaignActionsFor?.name || 'Campagne'}</Text>
+            <Text style={[Fonts.p1Bold, Fonts.neutral00]}>
+              {campaignActionsFor?.name || t(
+                'clubLicenses.campaignCard.nameFallback',
+                'Campagne',
+              )}
+            </Text>
             <Text style={[Fonts.p2, Fonts.neutral200]}>
               {campaignActionsFor?.seasonLabel || '-'}
               {' · '}
@@ -2903,7 +4121,7 @@ function ClubLicenses({ navigation, route }) {
           </View>
           <Button
             onPress={fermerPuis(() => handleDuplicateCampaign(campaignActionsFor))}
-            title="Dupliquer"
+            title={t('clubLicenses.actions.duplicate', 'Dupliquer')}
             variant="Secondary"
           />
           {lifecycle ? (
@@ -2919,7 +4137,7 @@ function ClubLicenses({ navigation, route }) {
               campaignId: campaignActionsFor?.documentId || campaignActionsFor?.id,
               clubId,
             }))}
-            title="Modifier"
+            title={t('clubLicenses.actions.edit', 'Modifier')}
             variant="Secondary"
           />
           {/*
@@ -2929,7 +4147,7 @@ function ClubLicenses({ navigation, route }) {
           <Button
             isLoading={deleteMutation.isPending}
             onPress={fermerPuis(() => handleDeleteCampaign(campaignActionsFor))}
-            title="Supprimer"
+            title={t('clubLicenses.actions.delete', 'Supprimer')}
             variant="Secondary"
           />
         </View>
@@ -2949,8 +4167,16 @@ function ClubLicenses({ navigation, route }) {
       >
         <View style={Spaces.gap[12]}>
           <View style={Spaces.gap[4]}>
-            <Text style={[Fonts.p1Bold, Fonts.neutral00]}>Filtrer les membres</Text>
-            <Text style={[Fonts.p2, Fonts.neutral200]}>Affiche seulement les cotisations qui t interessent, par équipe, rôle, catégorie, niveau ou état documentaire.</Text>
+            <Text style={[Fonts.p1Bold, Fonts.neutral00]}>
+              {t('clubLicenses.filterModal.title', 'Filtrer les membres')}
+            </Text>
+            <Text style={[Fonts.p2, Fonts.neutral200]}>
+              {t(
+                'clubLicenses.filterModal.description',
+                'Affiche seulement les cotisations qui t interessent, par équipe, rôle, '
+                  + 'catégorie, niveau ou état documentaire.',
+              )}
+            </Text>
           </View>
           <ScrollView showsVerticalScrollIndicator={false}>
             <View style={Spaces.gap[16]}>
@@ -2961,7 +4187,7 @@ function ClubLicenses({ navigation, route }) {
                     <Text style={[Fonts.p3Bold, Fonts.neutral00]}>{definition.label}</Text>
                     <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
                       <LicenseSelectionChip
-                        label="Tous"
+                        label={t('clubLicenses.filters.all', 'Tous')}
                         onPress={() => updateMemberFilter(definition.key, '')}
                         selected={!selectedValue}
                         variant="soft"
@@ -2991,13 +4217,13 @@ function ClubLicenses({ navigation, route }) {
                 setMemberFilterMenuKey(null);
               }}
               style={{ flex: 1 }}
-              title="Reinitialiser"
+              title={t('clubLicenses.filterModal.reset', 'Reinitialiser')}
               variant="Secondary"
             />
             <Button
               onPress={() => setMemberFilterMenuKey(null)}
               style={{ flex: 1 }}
-              title="Appliquer"
+              title={t('clubLicenses.filterModal.apply', 'Appliquer')}
             />
           </View>
         </View>
@@ -3020,7 +4246,14 @@ function ClubLicenses({ navigation, route }) {
           }}
           data={isFocusedCampaignView && detailTab === 'members' ? visibleAssignments : []}
           keyExtractor={(item) => String(item.documentId || item.id)}
-          ListEmptyComponent={isFocusedCampaignView && detailTab === 'members' ? <Text style={[Fonts.p2, Fonts.neutral200]}>Aucune cotisation pour ces filtres ou cette recherche.</Text> : null}
+          ListEmptyComponent={isFocusedCampaignView && detailTab === 'members' ? (
+            <Text style={[Fonts.p2, Fonts.neutral200]}>
+              {t(
+                'clubLicenses.list.empty',
+                'Aucune cotisation pour ces filtres ou cette recherche.',
+              )}
+            </Text>
+          ) : null}
           ListHeaderComponent={(
             <View style={Spaces.gap[licenseSpacing.sectionGap]}>
               {renderTopHeader()}
@@ -3070,10 +4303,13 @@ function ClubLicenses({ navigation, route }) {
             ]}
           >
             <Button
-              accessibilityHint="Continue le paramétrage des cotisations du club."
-              accessibilityLabel="Continuer le paramétrage"
+              accessibilityHint={t(
+                'clubLicenses.setupFooter.hint',
+                'Continue le paramétrage des cotisations du club.',
+              )}
+              accessibilityLabel={t('clubLicenses.setupFooter.label', 'Continuer le paramétrage')}
               onPress={handleSetupContinue}
-              title="Continuer"
+              title={t('clubLicenses.setupFooter.continue', 'Continuer')}
             />
           </View>
         ) : null}
