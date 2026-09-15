@@ -86,7 +86,7 @@ function TeamWizardCategory({ navigation }) {
           <View style={[{ alignItems: 'center', flexDirection: 'row' }, Spaces.gap[12], Spaces.marginBottom[16]]}>
             <ActivityIndicator size="small" />
             <Text style={[Fonts.p2, Fonts.neutral200]}>
-              Chargement des catégories disponibles…
+              {t('teamWizardCategory.loading', 'Chargement des catégories disponibles…')}
             </Text>
           </View>
         ) : null}
@@ -94,14 +94,26 @@ function TeamWizardCategory({ navigation }) {
         {hasError ? (
           <View style={[Spaces.gap[12], Spaces.marginBottom[16]]}>
             <Text style={[Fonts.p2, Fonts.neutral100]}>
-              Impossible de charger les catégories. Réessaie pour continuer.
+              {t(
+                'teamWizardCategory.loadError',
+                'Impossible de charger les catégories. Réessaie pour continuer.',
+              )}
             </Text>
-            <Button onPress={() => categoriesQuery.refetch()} title="Réessayer" variant="Secondary" />
+            <Button
+              onPress={() => categoriesQuery.refetch()}
+              title={t('teamWizardCategory.retry', 'Réessayer')}
+              variant="Secondary"
+            />
           </View>
         ) : null}
 
         {isListEmpty ? (
-          <TeamWizardEmptyReferential missing="Aucune catégorie d’âge n’est proposée pour le moment." />
+          <TeamWizardEmptyReferential
+            missing={t(
+              'teamWizardCategory.empty',
+              'Aucune catégorie d’âge n’est proposée pour le moment.',
+            )}
+          />
         ) : null}
 
         <View

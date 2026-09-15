@@ -1,3 +1,4 @@
+import i18next from 'i18next';
 import { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -53,7 +54,10 @@ function TeamWizardTrainers({ navigation }) {
         documentId: member.documentId || '',
         firstname: member.firstname || '',
         lastname: member.lastname || '',
-        roleLabel: member.role?.name === USER_ROLES.president ? 'Dirigeant·e' : 'Coach',
+        roleLabel: member.role?.name === USER_ROLES.president ? i18next.t(
+          'teamWizardTrainers.roles.president',
+          'Dirigeant·e',
+        ) : i18next.t('teamWizardTrainers.roles.coach', 'Coach'),
       })) || [];
 
     if (userData
@@ -67,7 +71,10 @@ function TeamWizardTrainers({ navigation }) {
           documentId: userData.documentId || '',
           firstname: userData.firstname || '',
           lastname: userData.lastname || '',
-          roleLabel: userData.role?.name === USER_ROLES.president ? 'Dirigeant·e' : 'Coach',
+          roleLabel: userData.role?.name === USER_ROLES.president ? i18next.t(
+            'teamWizardTrainers.roles.president',
+            'Dirigeant·e',
+          ) : i18next.t('teamWizardTrainers.roles.coach', 'Coach'),
         });
       }
     }
@@ -118,7 +125,7 @@ function TeamWizardTrainers({ navigation }) {
             <View style={[{ alignItems: 'center', flexDirection: 'row' }, Spaces.gap[12], Spaces.marginBottom[16]]}>
               <ActivityIndicator size="small" />
               <Text style={[Fonts.p2, Fonts.neutral200]}>
-                Chargement des entraîneur·e·s du club…
+                {t('teamWizardTrainers.loading', 'Chargement des entraîneur·e·s du club…')}
               </Text>
             </View>
           ) : null}
@@ -126,8 +133,10 @@ function TeamWizardTrainers({ navigation }) {
           {isClubMissing ? (
             <View style={Spaces.marginBottom[16]}>
               <Text style={[Fonts.p2, Fonts.neutral100]}>
-                Club introuvable pour initialiser la création de l&apos;équipe. Reviens à la
-                liste des équipes puis relance le wizard.
+                {t(
+                  'teamWizardTrainers.clubMissing',
+                  "Club introuvable pour initialiser la création de l'équipe. Reviens à la liste des équipes puis relance le wizard.", // eslint-disable-line max-len
+                )}
               </Text>
             </View>
           ) : null}
@@ -135,9 +144,16 @@ function TeamWizardTrainers({ navigation }) {
           {hasError ? (
             <View style={[Spaces.gap[12], Spaces.marginBottom[16]]}>
               <Text style={[Fonts.p2, Fonts.neutral100]}>
-                Impossible de charger les membres du club. Réessaie pour continuer.
+                {t(
+                  'teamWizardTrainers.loadError',
+                  'Impossible de charger les membres du club. Réessaie pour continuer.',
+                )}
               </Text>
-              <Button onPress={() => refetchClubData()} title="Réessayer" variant="Secondary" />
+              <Button
+                onPress={() => refetchClubData()}
+                title={t('teamWizardTrainers.retry', 'Réessayer')}
+                variant="Secondary"
+              />
             </View>
           ) : null}
 
@@ -168,8 +184,10 @@ function TeamWizardTrainers({ navigation }) {
 
           {!isLoading && !hasError && !isClubMissing && trainerRows.length === 0 ? (
             <Text style={[Fonts.p2, Fonts.neutral300, Spaces.marginTop[8]]}>
-              Aucun·e entraîneur·e n&apos;est encore disponible pour ce club. Ajoutes-en
-              un·e pour continuer.
+              {t(
+                'teamWizardTrainers.empty',
+                "Aucun·e entraîneur·e n'est encore disponible pour ce club. Ajoutes-en un·e pour continuer.", // eslint-disable-line max-len
+              )}
             </Text>
           ) : null}
 

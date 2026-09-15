@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { Text, View } from 'react-native';
 
 import useTheme from '@/theme/themeContext';
@@ -105,16 +106,6 @@ export const getStepFooterProps = ({
 };
 
 /**
- * L'EXPLICATION PARTAGEE. Elle est ici, en UN exemplaire : chaque etape ne dit
- * que ce qui lui manque, et cette phrase-la ne peut pas diverger entre les
- * quatre. Elle repond a la question que la personne se pose vraiment : « c'est
- * mon club qui est mal rempli ? » — non, c'est un referentiel commun.
- */
-const EXPLICATION_PARTAGEE = 'Cette liste est commune à toute l’application : '
-  + 'ce n’est pas ton club qui manque quelque chose. Tu pourras la renseigner '
-  + 'plus tard, depuis la fiche de l’équipe.';
-
-/**
  * Le bloc affiche quand un referentiel est vide.
  *
  * ⛔ Il ne porte AUCUN bouton : l'action est le bouton du bas, et deux boutons
@@ -125,7 +116,18 @@ const EXPLICATION_PARTAGEE = 'Cette liste est commune à toute l’application :
  * @returns {import('react').ReactElement} Le bloc a inserer dans le corps de l'etape.
  */
 function TeamWizardEmptyReferential({ missing }) {
+  const { t } = useTranslation();
   const { Fonts, Spaces } = useTheme();
+  /**
+   * L'EXPLICATION PARTAGEE. Elle est ici, en UN exemplaire : chaque etape ne dit
+   * que ce qui lui manque, et cette phrase-la ne peut pas diverger entre les
+   * quatre. Elle repond a la question que la personne se pose vraiment : « c'est
+   * mon club qui est mal rempli ? » — non, c'est un referentiel commun.
+   */
+  const EXPLICATION_PARTAGEE = t(
+    'teamWizardEmptyReferential.sharedExplanation',
+    'Cette liste est commune à toute l’application : ce n’est pas ton club qui manque quelque chose. Tu pourras la renseigner plus tard, depuis la fiche de l’équipe.', // eslint-disable-line max-len
+  );
 
   return (
     <View style={[Spaces.gap[8], Spaces.marginBottom[16]]}>

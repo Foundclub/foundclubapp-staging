@@ -16,6 +16,7 @@ import {
   getSubscriptionQuotaItem,
 } from '@/domains/subscription/subscriptionDecision';
 import { resolveTeamCreationGate } from '@/domains/team/teamCreationGate';
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -324,10 +325,15 @@ function TeamWizardRecap({ navigation }) {
     const lastname = member?.lastname || (isSelf ? userData?.lastname : '') || '';
     const fullName = `${firstname} ${lastname}`.trim();
     const roleName = member?.role?.name || (isSelf ? userData?.role?.name : '');
-    const roleLabel = roleName === 'Dirigeant' ? 'dirigeant·e' : 'coach';
+    const roleLabel = roleName === 'Dirigeant'
+      ? t('teamWizardRecap.trainers.rolePresident', 'dirigeant·e')
+      : t('teamWizardRecap.trainers.roleCoach', 'coach');
     let displayName = fullName;
     if (!displayName) {
-      displayName = isSelf ? 'Toi' : 'Entraîneur·e';
+      displayName = isSelf ? t('teamWizardRecap.trainers.self', 'Toi') : t(
+        'teamWizardRecap.trainers.fallback',
+        'Entraîneur·e',
+      );
     }
     return {
       displayName,
@@ -398,7 +404,7 @@ function TeamWizardRecap({ navigation }) {
               <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[12]]}>
                 <ActivityIndicator size="small" />
                 <Text style={[Fonts.p2, Fonts.neutral100]}>
-                  Chargement du récapitulatif de cette équipe…
+                  {t('teamWizardRecap.loading', 'Chargement du récapitulatif de cette équipe…')}
                 </Text>
               </View>
             </View>
@@ -407,11 +413,16 @@ function TeamWizardRecap({ navigation }) {
           {hasReferenceError ? (
             <View style={[ApplicationStyle.card, Spaces.padding[16], Spaces.gap[8], cardSurfaceStyle]}>
               <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
-                Impossible de charger toutes les informations du récapitulatif.
+                {t(
+                  'teamWizardRecap.loadErrorTitle',
+                  'Impossible de charger toutes les informations du récapitulatif.',
+                )}
               </Text>
               <Text style={[Fonts.p2, Fonts.neutral100]}>
-                Réessaie avant de créer cette équipe pour vérifier le club, les référentiels et les
-                entraîneur·e·s.
+                {t(
+                  'teamWizardRecap.loadErrorBody',
+                  'Réessaie avant de créer cette équipe pour vérifier le club, les référentiels et les entraîneur·e·s.', // eslint-disable-line max-len
+                )}
               </Text>
               <Button
                 onPress={() => {
@@ -423,7 +434,7 @@ function TeamWizardRecap({ navigation }) {
                     clubQuery.refetch();
                   }
                 }}
-                title="Réessayer"
+                title={t('teamWizardRecap.retry', 'Réessayer')}
                 variant="Secondary"
               />
             </View>
@@ -543,7 +554,11 @@ function TeamWizardRecap({ navigation }) {
                       {trainer.displayName}
                       {trainer.isSelf ? (
                         <Text style={[Fonts.p3, Fonts.neutral400]}>
-                          {trainer.hasName ? ` — toi, ${trainer.roleLabel}` : ` — ${trainer.roleLabel}`}
+                          {trainer.hasName ? t(
+                            'teamWizardRecap.trainers.selfWithRole',
+                            ' — toi, {{role}}',
+                            { role: trainer.roleLabel, ...SANS_ECHAPPEMENT },
+                          ) : ` — ${trainer.roleLabel}`}
                         </Text>
                       ) : null}
                     </Text>
@@ -573,7 +588,10 @@ function TeamWizardRecap({ navigation }) {
       <SubscriptionPaywallSheet
         close={() => setSubscriptionPaywallDecision(null)}
         clubDocumentId={selectedOverview.clubId || null}
-        contextLabel={selectedOverview.name || 'Ta nouvelle équipe'}
+        contextLabel={selectedOverview.name || t(
+          'teamWizardRecap.paywallContext',
+          'Ta nouvelle équipe',
+        )}
         decision={subscriptionPaywallDecision}
         isVisible={Boolean(subscriptionPaywallDecision)}
         navigation={navigation}
