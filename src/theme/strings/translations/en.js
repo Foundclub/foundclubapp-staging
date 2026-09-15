@@ -5488,6 +5488,7 @@ export default {
     eventCampaign: 'Event campaign',
     eventCreatedCheckTheLast: 'Event created. Check the last details before sharing it.',
     eventFallback: 'Event',
+    eventGone: 'This event is no longer available or has been deleted.',
     eventNotFound: 'Event not found',
     expectedPlayers: 'Expected players',
     export: {

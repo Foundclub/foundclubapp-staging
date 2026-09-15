@@ -5817,6 +5817,7 @@ export default {
     eventCampaign: 'Campagne événement',
     eventCreatedCheckTheLast: 'Événement crée. Vérifie les derniers détails avant de le partager.',
     eventFallback: 'Evenement',
+    eventGone: 'Cet événement n’est plus disponible ou a été supprimé.',
     eventNotFound: 'Événement introuvable',
     expectedPlayers: 'Joueurs attendus',
     export: {

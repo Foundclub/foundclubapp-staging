@@ -136,6 +136,7 @@ import {
   reviewTournamentTeamRegistration,
 } from '@/services/tournamentTeam/tournamentTeamService';
 
+import { getErrorStatus } from '@/utils/errors/displayError';
 import { resolveExternalMatchDisplay } from '@/utils/externalMatchDisplay';
 import {
   dismissMatchStatsPromptForSession,
@@ -897,6 +898,12 @@ function EventDetails({ navigation, route }) {
     staleTime: fromEventCreation ? 0 : EVENT_DETAILS_STALE_MS,
   });
   const hasLoadedEvent = Boolean(event);
+  // LIENS-EVENEMENT : un lien partage peut viser un evenement supprime (404). Le pave
+  // d'erreur dit alors CE qui manque, au lieu de « ressource introuvable ».
+  // Temoin : __tests__/EventDetailsLienEvenementDisparu.test.js.
+  const eventLoadErrorMessage = getErrorStatus(error) === 404
+    ? t('eventDetails.eventGone', 'Cet événement n’est plus disponible ou a été supprimé.')
+    : undefined;
 
   useEffect(() => {
     if (!fromEventCreation || !eventId) return undefined;
@@ -8242,7 +8249,12 @@ function EventDetails({ navigation, route }) {
           )}
           showsVerticalScrollIndicator={false}
         >
-          <WithDataWrapper error={error} isLoading={isLoading} wrapperStyle={[Alignments.fill, Spaces.gap[24]]}>
+          <WithDataWrapper
+            error={error}
+            errorMessage={eventLoadErrorMessage}
+            isLoading={isLoading}
+            wrapperStyle={[Alignments.fill, Spaces.gap[24]]}
+          >
             <EventHeader
               detectionSummary={detectionHeaderSummary}
               event={event}
