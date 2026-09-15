@@ -1,3 +1,4 @@
+import i18next from 'i18next';
 import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
@@ -37,14 +38,36 @@ import {
  * description plutot que de disparaitre.
  * @type {Record<string, string>}
  */
+// I18N-2 : des GETTERS, pas des textes — lus à l import, avant l initialisation
+// d i18next ; le libellé se traduit au moment où il s affiche.
 const DESCRIPTIONS_PAR_TYPE = {
-  autre: 'Réunion, sortie, animation du club…',
-  detection: 'Ouvre ton équipe à de nouveaux joueurs',
-  entrainement: 'Séance classique pour ton équipe',
-  match: 'Rencontre de championnat ou de coupe',
-  reservation: "Bloque un créneau d'installation",
-  stage: 'Plusieurs séances sur plusieurs jours',
-  tournoi: 'Plusieurs équipes sur une ou plusieurs journées',
+  get autre() {
+    return i18next.t('eventWizardType.otherDescription', 'Réunion, sortie, animation du club…');
+  },
+  get detection() {
+    return i18next.t(
+      'eventWizardType.detectionDescription',
+      'Ouvre ton équipe à de nouveaux joueurs',
+    );
+  },
+  get entrainement() {
+    return i18next.t('eventWizardType.trainingDescription', 'Séance classique pour ton équipe');
+  },
+  get match() {
+    return i18next.t('eventWizardType.matchDescription', 'Rencontre de championnat ou de coupe');
+  },
+  get reservation() {
+    return i18next.t('eventWizardType.bookingDescription', "Bloque un créneau d'installation");
+  },
+  get stage() {
+    return i18next.t('eventWizardType.stageDescription', 'Plusieurs séances sur plusieurs jours');
+  },
+  get tournoi() {
+    return i18next.t(
+      'eventWizardType.tournamentDescription',
+      'Plusieurs équipes sur une ou plusieurs journées',
+    );
+  },
 };
 
 /**
@@ -373,7 +396,7 @@ function EventWizardType({ navigation, route }) {
       >
         {/* L40 — si la personne part d'ici acheter, elle revient ICI. */}
         <SubscriptionQuotaBanner
-          label="Evenements"
+          label={t('eventWizardType.events', 'Evenements')}
           quotaType="EVENT_PUBLISH"
           resumeRouteName={RouteNames.EventStack}
           resumeRouteParams={{ screen: RouteNames.EventWizardType }}
@@ -401,7 +424,9 @@ function EventWizardType({ navigation, route }) {
                 },
               ]}
             >
-              <Text style={[Fonts.p3Bold, Fonts.primary500]}>Recharger</Text>
+              <Text style={[Fonts.p3Bold, Fonts.primary500]}>
+                {t('eventWizardType.reload', 'Recharger')}
+              </Text>
             </TouchableOpacity>
           </View>
         ) : null}
@@ -416,7 +441,10 @@ function EventWizardType({ navigation, route }) {
 
         {!isLoading && !error && hasTypes ? (
           <OnboardingWrapper
-            description="Choisis le type d événement avant de continuer le wizard."
+            description={t(
+              'eventWizardType.chooseTheEventTypeBefore',
+              'Choisis le type d événement avant de continuer le wizard.',
+            )}
             id="event-wizard-type-list"
             order={1}
             spotlight={{
@@ -426,7 +454,7 @@ function EventWizardType({ navigation, route }) {
               paddingX: 2,
               paddingY: 2,
             }}
-            title="Sélection du type"
+            title={t('eventWizardType.typeSelection', 'Sélection du type')}
           >
             <View style={[Spaces.gap[8]]}>
               {buildRows().map(renderRow)}

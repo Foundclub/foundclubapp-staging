@@ -344,27 +344,39 @@ function EventWizardParticipants({ navigation, route }) {
   // `fr.js` avec l'ancienne phrase, et `fr.js` gagne toujours sur le repli.
   // Modifier cette ligne-la compterait comme une SUPPRESSION dans le diff, ce
   // que le lot s'interdit. Une cle neuve porte donc la copy du pack.
-  let participantsSubtitleKey = 'eventWizard.steps.participants.subtitleQuestion';
-  let participantsSubtitleFallback = "Combien de joueurs peuvent s'inscrire ?";
+  // I18N-2 : une clef en variable ne se replie jamais dans fr.js / en.js — chaque
+  // sous-titre passe donc par un t() littéral (mêmes clefs, mêmes textes).
+  let participantsSubtitle = t(
+    'eventWizard.steps.participants.subtitleQuestion',
+    "Combien de joueurs peuvent s'inscrire ?",
+  );
   if (shouldOfferCallUp) {
     // AC04 — sur un match, la question de l'etape n'est plus « combien ? » mais
     // « qui ? ». Cle neuve, meme raison qu'au-dessus : `fr.js` gagne toujours
     // sur le repli, et retoucher une valeur existante compterait comme une
     // suppression dans le diff.
-    participantsSubtitleKey = 'eventWizard.steps.participants.matchCallUpSubtitle';
-    participantsSubtitleFallback = 'Coche les joueurs que tu convoques.';
+    participantsSubtitle = t(
+      'eventWizard.steps.participants.matchCallUpSubtitle',
+      'Coche les joueurs que tu convoques.',
+    );
   } else if (isTraining && isOpenTraining) {
-    participantsSubtitleKey = 'eventWizard.steps.participants.trainingOpenSubtitle';
-    participantsSubtitleFallback = 'Définis uniquement combien de joueurs externes a l équipe tu veux accepter.';
+    participantsSubtitle = t(
+      'eventWizard.steps.participants.trainingOpenSubtitle',
+      'Définis uniquement combien de joueurs externes a l équipe tu veux accepter.',
+    );
   } else if (isTraining) {
-    participantsSubtitleKey = 'eventWizard.steps.participants.trainingSubtitle';
-    participantsSubtitleFallback = 'Définis tes joueurs attendus pour cet entraînement.';
+    participantsSubtitle = t(
+      'eventWizard.steps.participants.trainingSubtitle',
+      'Définis tes joueurs attendus pour cet entraînement.',
+    );
   }
   if (invitationsSeules) {
     // S10-B — l'etape ne demande plus que « qui vient » : le dire, plutot que de
     // laisser un sous-titre qui parle d'un compteur absent de l'ecran.
-    participantsSubtitleKey = 'eventWizard.steps.participants.invitesOnlySubtitle';
-    participantsSubtitleFallback = 'Invite une équipe de ton club à cet entraînement.';
+    participantsSubtitle = t(
+      'eventWizard.steps.participants.invitesOnlySubtitle',
+      'Invite une équipe de ton club à cet entraînement.',
+    );
   }
 
   const surfaceStyle = {
@@ -486,7 +498,7 @@ function EventWizardParticipants({ navigation, route }) {
       stepIndex={invitationsSeules
         ? undefined
         : getEventWizardParticipantsStepIndex(projectedState)}
-      subtitle={t(participantsSubtitleKey, participantsSubtitleFallback)}
+      subtitle={participantsSubtitle}
       title={t('eventWizard.steps.participants.title', 'Participants')}
     >
       <View style={[Spaces.gap[16]]}>

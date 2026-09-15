@@ -157,14 +157,18 @@ function EventWizardTournamentSettings({ navigation, route }) {
       <View style={tournamentDs.styles.sectionStack}>
         <View style={tournamentDs.styles.wizardSectionCard}>
           <View style={tournamentDs.styles.headerBlock}>
-            <Text style={[Fonts.h4Bold, Fonts.neutral00]}>Cadre du tournoi</Text>
+            <Text style={[Fonts.h4Bold, Fonts.neutral00]}>
+              {t('eventWizardTournamentSettings.tournamentFrame', 'Cadre du tournoi')}
+            </Text>
             <Text style={[Fonts.p3, Fonts.neutral200]}>
-              Ces règles pilotent les équipes éphémères et les inscriptions sur ce tournoi uniquement.
+              {t('eventWizardTournamentSettings.theseRulesDriveTemporaryTeams', 'Ces règles pilotent les équipes éphémères et les inscriptions sur ce tournoi uniquement.')}
             </Text>
           </View>
 
           <View style={Spaces.gap[8]}>
-            <Text style={[Fonts.p3Bold, Fonts.primary500]}>Nombre max d équipes</Text>
+            <Text style={[Fonts.p3Bold, Fonts.primary500]}>
+              {t('eventWizardTournamentSettings.maxNumberOfTeams', 'Nombre max d équipes')}
+            </Text>
             <TextInput
               keyboardType="number-pad"
               onChangeText={setMaxTeamsText}
@@ -177,7 +181,9 @@ function EventWizardTournamentSettings({ navigation, route }) {
 
           <View style={[Alignments.row, Spaces.gap[12]]}>
             <View style={[Spaces.gap[8], { flex: 1 }]}>
-              <Text style={[Fonts.p3Bold, Fonts.primary500]}>Effectif min</Text>
+              <Text style={[Fonts.p3Bold, Fonts.primary500]}>
+                {t('eventWizardTournamentSettings.minSquad', 'Effectif min')}
+              </Text>
               <TextInput
                 keyboardType="number-pad"
                 onChangeText={setMinRosterText}
@@ -189,7 +195,9 @@ function EventWizardTournamentSettings({ navigation, route }) {
             </View>
 
             <View style={[Spaces.gap[8], { flex: 1 }]}>
-              <Text style={[Fonts.p3Bold, Fonts.primary500]}>Effectif max</Text>
+              <Text style={[Fonts.p3Bold, Fonts.primary500]}>
+                {t('eventWizardTournamentSettings.maxSquad', 'Effectif max')}
+              </Text>
               <TextInput
                 keyboardType="number-pad"
                 onChangeText={setMaxRosterText}
@@ -203,24 +211,37 @@ function EventWizardTournamentSettings({ navigation, route }) {
 
           {isRosterRangeInvalid ? (
             <Text style={[Fonts.p3, Fonts.error500]}>
-              L effectif minimum ne peut pas dépasser l effectif maximum.
+              {t(
+                'eventWizardTournamentSettings.theMinimumSquadSizeCan',
+                'L effectif minimum ne peut pas dépasser l effectif maximum.',
+              )}
             </Text>
           ) : null}
         </View>
 
         <View style={tournamentDs.styles.wizardSectionCard}>
           <View style={tournamentDs.styles.headerBlock}>
-            <Text style={[Fonts.h4Bold, Fonts.neutral00]}>Équipes et éligibilité</Text>
+            <Text style={[Fonts.h4Bold, Fonts.neutral00]}>
+              {t('eventWizardTournamentSettings.teamsAndEligibility', 'Équipes et éligibilité')}
+            </Text>
             <Text style={[Fonts.p3, Fonts.neutral200]}>
-              Choisis si les joueurs peuvent créer une équipe éphémère et si le melange entre clubs est autorise.
+              {t('eventWizardTournamentSettings.chooseWhetherPlayersCanCreate', 'Choisis si les joueurs peuvent créer une équipe éphémère et si le melange entre clubs est autorise.')}
             </Text>
           </View>
 
           <View style={[Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween, Spaces.gap[12]]}>
             <View style={{ flex: 1 }}>
-              <Text style={[Fonts.p2Bold, Fonts.neutral00]}>Autoriser les équipes éphémères</Text>
+              <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
+                {t(
+                  'eventWizardTournamentSettings.allowTemporaryTeams',
+                  'Autoriser les équipes éphémères',
+                )}
+              </Text>
               <Text style={[Fonts.p3, Fonts.neutral200]}>
-                Les joueurs peuvent créer leur propre équipe pour ce tournoi.
+                {t(
+                  'eventWizardTournamentSettings.playersCanCreateTheirOwn',
+                  'Les joueurs peuvent créer leur propre équipe pour ce tournoi.',
+                )}
               </Text>
             </View>
             <Switch
@@ -233,9 +254,12 @@ function EventWizardTournamentSettings({ navigation, route }) {
 
           <View style={[Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween, Spaces.gap[12]]}>
             <View style={{ flex: 1 }}>
-              <Text style={[Fonts.p2Bold, Fonts.neutral00]}>Autoriser les joueurs d autres clubs</Text>
+              <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{t('eventWizardTournamentSettings.allowPlayersFromOtherClubs', 'Autoriser les joueurs d autres clubs')}</Text>
               <Text style={[Fonts.p3, Fonts.neutral200]}>
-                Ouvre la composition des équipes de tournoi a des profils externes.
+                {t(
+                  'eventWizardTournamentSettings.opensTournamentTeamLineUps',
+                  'Ouvre la composition des équipes de tournoi a des profils externes.',
+                )}
               </Text>
             </View>
             <Switch
@@ -249,9 +273,11 @@ function EventWizardTournamentSettings({ navigation, route }) {
 
         <View style={tournamentDs.styles.wizardSectionCard}>
           <View style={tournamentDs.styles.headerBlock}>
-            <Text style={[Fonts.h4Bold, Fonts.neutral00]}>Validation des équipes</Text>
+            <Text style={[Fonts.h4Bold, Fonts.neutral00]}>
+              {t('eventWizardTournamentSettings.teamApproval', 'Validation des équipes')}
+            </Text>
             <Text style={[Fonts.p3, Fonts.neutral200]}>
-              Décide si les équipes inscrites sont acceptées automatiquement ou validées par l organisateur.
+              {t('eventWizardTournamentSettings.decideWhetherRegisteredTeamsAre', 'Décide si les équipes inscrites sont acceptées automatiquement ou validées par l organisateur.')}
             </Text>
           </View>
 
@@ -259,21 +285,26 @@ function EventWizardTournamentSettings({ navigation, route }) {
             {renderRegistrationModeCard(
               'manual',
               'Validation manuelle',
-              'Le dirigeant accepte ou refuse chaque équipe inscrite avant son entrée dans le tournoi.',
+              t('eventWizardTournamentSettings.theClubManagerAcceptsOr', 'Le dirigeant accepte ou refuse chaque équipe inscrite avant son entrée dans le tournoi.'),
             )}
             {renderRegistrationModeCard(
               'auto',
               'Validation automatique',
-              'Les équipes autorisées sont inscrites directement sans file de validation.',
+              t(
+                'eventWizardTournamentSettings.allowedTeamsAreRegisteredDirectly',
+                'Les équipes autorisées sont inscrites directement sans file de validation.',
+              ),
             )}
           </View>
         </View>
 
         <View style={tournamentDs.styles.wizardSectionCard}>
           <View style={tournamentDs.styles.headerBlock}>
-            <Text style={[Fonts.h4Bold, Fonts.neutral00]}>Règles du tournoi</Text>
+            <Text style={[Fonts.h4Bold, Fonts.neutral00]}>
+              {t('eventWizardTournamentSettings.tournamentRules', 'Règles du tournoi')}
+            </Text>
             <Text style={[Fonts.p3, Fonts.neutral200]}>
-              Ajoute les consignes a afficher sur la fiche tournoi: tenue, format, conditions d inscription ou arbitrage.
+              {t('eventWizardTournamentSettings.addTheInstructionsToShow', 'Ajoute les consignes a afficher sur la fiche tournoi: tenue, format, conditions d inscription ou arbitrage.')}
             </Text>
           </View>
 
@@ -281,7 +312,10 @@ function EventWizardTournamentSettings({ navigation, route }) {
             multiline
             numberOfLines={5}
             onChangeText={setRulesText}
-            placeholder="Ex. 5 contre 5, un joueur actif par tournoi, tenue claire obligatoire..."
+            placeholder={t(
+              'eventWizardTournamentSettings.eG5ASide',
+              'Ex. 5 contre 5, un joueur actif par tournoi, tenue claire obligatoire...',
+            )}
             placeholderTextColor={Colors.neutral500}
             style={[
               ...tournamentDs.styles.multilineInput,

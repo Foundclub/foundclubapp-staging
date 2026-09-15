@@ -42,6 +42,12 @@ const mockReseau = {
   types: TYPES_DU_SERVEUR,
 };
 
+// I18N-2 : les descriptions de type sont des getters qui lisent i18next.t au rendu —
+// la doublure rend le français de l app, sans initialiser i18next.
+jest.mock('i18next', () => (
+  jest.requireActual('@/theme/strings/__mocks__/doublureTraduction').i18next
+));
+
 jest.mock('react-i18next', () => ({
   initReactI18next: { init: () => {}, type: '3rdParty' },
   useTranslation: () => ({
