@@ -1,5 +1,6 @@
 import { useCallback, useMemo, useState } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
+import { useTranslation } from 'react-i18next';
 import {
   FlatList,
   Text,
@@ -31,12 +32,6 @@ import {
 } from '@/services/friendlyMatch/friendlyMatchService';
 import { getMyApplications, getMyRecruitmentAds } from '@/services/recruitment/recruitmentService';
 
-// Les memes mots que les quatre listes de Recrutement (lot L42) : une panne
-// serveur n est PAS une liste vide, et elle doit se lire pareil partout.
-const UNREACHABLE_TITLE = 'On n’arrive pas à joindre le serveur.';
-const UNREACHABLE_DESCRIPTION = 'Vérifie ta connexion, puis réessaie.';
-const UNREACHABLE_ACTION = 'Réessayer';
-
 const TAB_PUBLICATIONS = 'publications';
 const TAB_RESPONSES = 'responses';
 
@@ -63,6 +58,18 @@ const getManagedTeamIds = (userData) => Array.from(new Set([
  * @returns {import('react').ReactElement} L ecran.
  */
 function MyActivitiesScreen({ navigation }) {
+  const { t } = useTranslation();
+  // Les memes mots que les quatre listes de Recrutement (lot L42) : une panne
+  // serveur n est PAS une liste vide, et elle doit se lire pareil partout.
+  const UNREACHABLE_TITLE = t(
+    'myActivitiesScreen.unreachable.title',
+    'On n’arrive pas à joindre le serveur.',
+  );
+  const UNREACHABLE_DESCRIPTION = t(
+    'myActivitiesScreen.unreachable.description',
+    'Vérifie ta connexion, puis réessaie.',
+  );
+  const UNREACHABLE_ACTION = t('myActivitiesScreen.unreachable.retry', 'Réessayer');
   const {
     Alignments, Colors, Fonts, Spaces,
   } = /** @type {any} */ (useTheme());
@@ -158,7 +165,10 @@ function MyActivitiesScreen({ navigation }) {
     sentFriendlyApplications,
   ]);
 
-  const responsesLabel = isStaff ? 'Réponses reçues' : 'Mes réponses';
+  const responsesLabel = isStaff ? t(
+    'myActivitiesScreen.tabs.receivedResponses',
+    'Réponses reçues',
+  ) : t('myActivitiesScreen.tabs.myResponses', 'Mes réponses');
 
   const openItem = useCallback((/** @type {any} */ item) => {
     const nav = /** @type {any} */ (navigation);
@@ -224,7 +234,10 @@ function MyActivitiesScreen({ navigation }) {
             }}
             />
             <Text style={[Fonts.p3, Fonts.neutral300]}>
-              {item.isOnline ? 'En ligne' : 'Hors ligne'}
+              {item.isOnline ? t('myActivitiesScreen.item.online', 'En ligne') : t(
+                'myActivitiesScreen.item.offline',
+                'Hors ligne',
+              )}
             </Text>
             <Text style={[Fonts.p3Bold, Fonts.neutral00]}>
               {`· ${item.countLabel}`}
@@ -244,7 +257,9 @@ function MyActivitiesScreen({ navigation }) {
           },
         ]}
         >
-          <Text style={[Fonts.p4Bold, { color: Colors.success500 }]}>Nouveau</Text>
+          <Text style={[Fonts.p4Bold, { color: Colors.success500 }]}>
+            {t('myActivitiesScreen.item.new', 'Nouveau')}
+          </Text>
         </View>
       ) : null}
     </TouchableOpacity>
@@ -265,11 +280,17 @@ function MyActivitiesScreen({ navigation }) {
     return (
       <EmptyState
         description={activeTab === TAB_PUBLICATIONS
-          ? 'Publie une offre ou un match amical depuis Rechercher : tu les géreras ici.'
-          : 'Dès qu’on répondra à ce que tu as publié, tu le verras ici.'}
+          ? t(
+            'myActivitiesScreen.empty.publicationsBody',
+            'Publie une offre ou un match amical depuis Rechercher : tu les géreras ici.',
+          )
+          : t(
+            'myActivitiesScreen.empty.responsesBody',
+            'Dès qu’on répondra à ce que tu as publié, tu le verras ici.',
+          )}
         title={activeTab === TAB_PUBLICATIONS
-          ? 'Tu n’as encore rien publié.'
-          : 'Aucune réponse pour le moment.'}
+          ? t('myActivitiesScreen.empty.publicationsTitle', 'Tu n’as encore rien publié.')
+          : t('myActivitiesScreen.empty.responsesTitle', 'Aucune réponse pour le moment.')}
       />
     );
   };
@@ -280,14 +301,19 @@ function MyActivitiesScreen({ navigation }) {
       contentContainerStyle={[Alignments.fill, Spaces.paddingHorizontal[16]]}
     >
       <View style={[Spaces.paddingTop[24], Spaces.marginBottom[24]]}>
-        <Text style={[Fonts.h1, Fonts.neutral00]}>Mes activités</Text>
+        <Text style={[Fonts.h1, Fonts.neutral00]}>
+          {t('myActivitiesScreen.title', 'Mes activités')}
+        </Text>
       </View>
 
       <SegmentedControl
         centerContent
         onChange={setActiveTab}
         options={[
-          { label: 'Publications', value: TAB_PUBLICATIONS },
+          {
+            label: t('myActivitiesScreen.tabs.publications', 'Publications'),
+            value: TAB_PUBLICATIONS,
+          },
           { label: responsesLabel, value: TAB_RESPONSES },
         ]}
         value={activeTab}
