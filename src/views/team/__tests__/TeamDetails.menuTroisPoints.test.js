@@ -635,4 +635,31 @@ describe("AC01 — les actions d'équipe passent en trois points, en haut à dro
     expect(zones).toHaveLength(1);
     expect(zones[0].props.refreshControl).toBeTruthy();
   });
+
+  // 🧨 FEUILLES-COUPEES (15/09) — sans `snapPoints`, BottomModal taille la
+  // feuille sur son CONTENU seul : un `headerComponent` n'y est pas compté, et
+  // la feuille est plus courte que ce qu'elle affiche de la hauteur du titre.
+  // Le commentaire d'AC01 (« en-tete sans pied : le dimensionnement dynamique
+  // suffit ») était faux — même défaut que la feuille d'invitation (INVIT2).
+  test('🔴 FEUILLES — le titre et « Quitter l’équipe » sont dans le contenu mesuré', () => {
+    const racine = monterLaFiche();
+    ouvrirLeMenu(racine);
+
+    const feuille = racine.findAll(
+      (/** @type {any} */ noeud) => noeud.type?.name === 'BottomModalMock'
+        && noeud.props?.isVisible === true,
+    )[0];
+
+    expect(feuille.props.snapPoints).toBeUndefined();
+    expect(feuille.props.headerComponent).toBeUndefined();
+    expect(feuille.props.footerComponent).toBeUndefined();
+
+    const textes = feuille.findAll(
+      (/** @type {any} */ noeud) => noeud.type === Text
+        && typeof noeud.props?.children === 'string',
+    ).map((/** @type {any} */ noeud) => noeud.props.children);
+
+    expect(textes[0]).toBe(LIBELLE_ENTETE_MENU);
+    expect(textes).toContain("Quitter l'équipe");
+  });
 });
