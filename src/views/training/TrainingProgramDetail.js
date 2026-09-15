@@ -8,6 +8,7 @@ import {
 } from 'react-native';
 
 import { withAlpha } from '@/theme/colors';
+import localeDesFormats from '@/theme/strings/localeDesFormats';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -190,7 +191,7 @@ function TrainingProgramDetail({ navigation, route }) {
     if (!jours) return '';
     const fin = new Date(`${dateDeDepart(quand)}T00:00:00`);
     fin.setDate(fin.getDate() + jours - 1);
-    return fin.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
+    return fin.toLocaleDateString(localeDesFormats(), { day: 'numeric', month: 'short' });
   }, [dateDeDepart, program]);
 
   const onChoose = useCallback(async () => {

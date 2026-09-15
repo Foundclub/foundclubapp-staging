@@ -1,3 +1,5 @@
+import i18next from 'i18next';
+
 import { mesuresParFamille } from '@/views/training/trainingTestModel';
 
 /**
@@ -43,8 +45,8 @@ export const arretsDuTest = (test) => {
 
   /** @type {Record<string, any>[]} */
   const file = [
-    { cle: 'prep', court: 'Prépa', type: ARRETS.PREP },
-    { cle: 'warmup', court: 'Éch.', type: ARRETS.WARMUP },
+    { cle: 'prep', court: i18next.t('trainingParcours.prep', 'Prépa'), type: ARRETS.PREP },
+    { cle: 'warmup', court: i18next.t('trainingParcours.warmUp', 'Éch.'), type: ARRETS.WARMUP },
   ];
 
   for (let essai = 1; essai <= essais; essai += 1) {

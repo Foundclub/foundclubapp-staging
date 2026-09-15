@@ -1,4 +1,6 @@
+import i18next from 'i18next';
 import { useCallback, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   FlatList,
   RefreshControl,
@@ -8,6 +10,7 @@ import {
   View,
 } from 'react-native';
 
+import localeDesFormats from '@/theme/strings/localeDesFormats';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -21,17 +24,17 @@ import { useGetPendingMatchStatsPrompts } from '@/services/matchStats/matchStats
 import { describeMatchStatsEmptyReason } from '@/utils/matchStatsEmptyReason';
 
 const formatPromptDate = (value) => {
-  if (!value) return 'Date indisponible';
+  if (!value) return i18next.t('pendingMatchStatsScreen.dateUnavailable', 'Date indisponible');
 
   try {
-    return new Date(value).toLocaleString('fr-FR', {
+    return new Date(value).toLocaleString(localeDesFormats(), {
       day: '2-digit',
       hour: '2-digit',
       minute: '2-digit',
       month: 'long',
     });
   } catch (_error) {
-    return 'Date indisponible';
+    return i18next.t('pendingMatchStatsScreen.dateUnavailable', 'Date indisponible');
   }
 };
 
@@ -40,7 +43,13 @@ const getPromptStatusMeta = (prompt, Colors) => {
     return {
       backgroundColor: `${Colors.primary500}20`,
       borderColor: `${Colors.primary500}45`,
-      label: prompt?.state === 'draft' ? 'Brouillon perso' : 'A répondre',
+      label: prompt?.state === 'draft' ? i18next.t(
+        'pendingMatchStatsScreen.personalDraft',
+        'Brouillon perso',
+      ) : i18next.t(
+        'pendingMatchStatsScreen.toAnswer',
+        'A répondre',
+      ),
       textColor: Colors.primary500,
     };
   }
@@ -49,7 +58,7 @@ const getPromptStatusMeta = (prompt, Colors) => {
     return {
       backgroundColor: `${Colors.warning500}20`,
       borderColor: `${Colors.warning500}45`,
-      label: 'Vérification requise',
+      label: i18next.t('pendingMatchStatsScreen.checkRequired', 'Vérification requise'),
       textColor: Colors.warning500,
     };
   }
@@ -58,7 +67,7 @@ const getPromptStatusMeta = (prompt, Colors) => {
     return {
       backgroundColor: `${Colors.primary500}20`,
       borderColor: `${Colors.primary500}45`,
-      label: 'Brouillon en cours',
+      label: i18next.t('pendingMatchStatsScreen.draftInProgress', 'Brouillon en cours'),
       textColor: Colors.primary500,
     };
   }
@@ -67,7 +76,7 @@ const getPromptStatusMeta = (prompt, Colors) => {
     return {
       backgroundColor: `${Colors.gold500}20`,
       borderColor: `${Colors.gold500}45`,
-      label: 'Score officiel en attente',
+      label: i18next.t('pendingMatchStatsScreen.officialScorePending', 'Score officiel en attente'),
       textColor: Colors.gold500,
     };
   }
@@ -76,7 +85,7 @@ const getPromptStatusMeta = (prompt, Colors) => {
     return {
       backgroundColor: `${Colors.success500}20`,
       borderColor: `${Colors.success500}45`,
-      label: 'A finaliser',
+      label: i18next.t('pendingMatchStatsScreen.toFinalise', 'A finaliser'),
       textColor: Colors.success500,
     };
   }
@@ -84,41 +93,73 @@ const getPromptStatusMeta = (prompt, Colors) => {
   return {
     backgroundColor: `${Colors.neutral00}14`,
     borderColor: `${Colors.neutral00}24`,
-    label: 'Score à compléter',
+    label: i18next.t('pendingMatchStatsScreen.scoreToComplete', 'Score à compléter'),
     textColor: Colors.neutral00,
   };
 };
 
 const getPromptPrimaryAction = (prompt) => {
-  if (prompt?.actionType === 'player_self_report') return prompt?.state === 'draft' ? 'Reprendre' : 'Renseigner';
-  if (prompt?.reviewRequired) return 'Mettre à jour';
-  if (prompt?.reportStatus === 'draft') return 'Reprendre';
-  if (prompt?.score?.available) return 'Ouvrir';
-  return 'Enregistrer le score';
+  if (prompt?.actionType === 'player_self_report') {
+    return prompt?.state === 'draft'
+      ? i18next.t('pendingMatchStatsScreen.resume', 'Reprendre')
+      : i18next.t('pendingMatchStatsScreen.fillIn', 'Renseigner');
+  }
+  if (prompt?.reviewRequired) return i18next.t('pendingMatchStatsScreen.update', 'Mettre à jour');
+  if (prompt?.reportStatus === 'draft') {
+    return i18next.t(
+      'pendingMatchStatsScreen.resume',
+      'Reprendre',
+    );
+  }
+  if (prompt?.score?.available) return i18next.t('pendingMatchStatsScreen.open', 'Ouvrir');
+  return i18next.t('pendingMatchStatsScreen.saveTheScore', 'Enregistrer le score');
 };
 
 const buildPromptScore = (prompt) => {
-  if (!prompt?.score?.available) return 'Score à compléter';
+  if (!prompt?.score?.available) {
+    return i18next.t(
+      'pendingMatchStatsScreen.scoreToComplete',
+      'Score à compléter',
+    );
+  }
   return `${prompt?.score?.scoreFor ?? '-'} - ${prompt?.score?.scoreAgainst ?? '-'}`;
 };
 
 const getPromptActionSummary = (prompt) => {
   if (prompt?.actionType === 'player_self_report') {
     if (prompt?.state === 'draft') {
-      return 'Reprendre ton brouillon perso, finaliser tes stats et ta note de match.';
+      return i18next.t(
+        'pendingMatchStatsScreen.resumeYourPersonalDraftFinalise',
+        'Reprendre ton brouillon perso, finaliser tes stats et ta note de match.',
+      );
     }
-    return 'Donner ton retour individuel post-match, avec stats perso et note sur 10.';
+    return i18next.t(
+      'pendingMatchStatsScreen.giveYourIndividualPostMatch',
+      'Donner ton retour individuel post-match, avec stats perso et note sur 10.',
+    );
   }
   if (prompt?.reviewRequired) {
-    return 'Vérifier puis republier les stats de cette équipe.';
+    return i18next.t(
+      'pendingMatchStatsScreen.checkThenRepublishThisTeam',
+      'Vérifier puis republier les stats de cette équipe.',
+    );
   }
   if (prompt?.reportStatus === 'draft') {
-    return 'Reprendre le brouillon et finaliser le rapport.';
+    return i18next.t(
+      'pendingMatchStatsScreen.resumeTheDraftAndFinalise',
+      'Reprendre le brouillon et finaliser le rapport.',
+    );
   }
   if (prompt?.score?.available) {
-    return 'Compléter les stats joueurs puis publier le rapport.';
+    return i18next.t(
+      'pendingMatchStatsScreen.completeThePlayerStatsThen',
+      'Compléter les stats joueurs puis publier le rapport.',
+    );
   }
-  return 'Enregistrer le score avant de remplir les stats.';
+  return i18next.t(
+    'pendingMatchStatsScreen.saveTheScoreBeforeFilling',
+    'Enregistrer le score avant de remplir les stats.',
+  );
 };
 
 /**
@@ -126,6 +167,7 @@ const getPromptActionSummary = (prompt) => {
  * @returns {import('react').ReactElement}
  */
 function PendingMatchStatsScreen({ navigation }) {
+  const { t } = useTranslation();
   const {
     Alignments, ApplicationStyle, Colors, Fonts, Spaces,
   } = useTheme();
@@ -176,9 +218,15 @@ function PendingMatchStatsScreen({ navigation }) {
       sport: prompt?.sport || 'football',
       teamId: prompt?.team?.documentId || undefined,
       teamName: prompt?.team?.name || null,
-      title: prompt?.actionType === 'player_self_report' ? 'Mon retour post-match' : 'Bilan équipe',
+      title: prompt?.actionType === 'player_self_report' ? t(
+        'pendingMatchStatsScreen.myPostMatchFeedback',
+        'Mon retour post-match',
+      ) : t(
+        'pendingMatchStatsScreen.teamReport',
+        'Bilan équipe',
+      ),
     });
-  }, [navigation]);
+  }, [navigation, t]);
 
   if (isLoading && !promptItems.length) {
     return (
@@ -196,9 +244,17 @@ function PendingMatchStatsScreen({ navigation }) {
             { flex: 1, minHeight: 220 },
           ]}
         >
-          <Text style={[Fonts.h4Bold, Fonts.neutral00, Fonts.textCenter]}>Chargement des matchs en attente</Text>
+          <Text style={[Fonts.h4Bold, Fonts.neutral00, Fonts.textCenter]}>
+            {t(
+              'pendingMatchStatsScreen.loadingPendingMatches',
+              'Chargement des matchs en attente',
+            )}
+          </Text>
           <Text style={[Fonts.p2, Fonts.neutral100, Fonts.textCenter]}>
-            Nous récupérons tes retours post-match disponibles.
+            {t(
+              'pendingMatchStatsScreen.weReFetchingYourAvailable',
+              'Nous récupérons tes retours post-match disponibles.',
+            )}
           </Text>
         </View>
       </ScreenContainer>
@@ -221,13 +277,21 @@ function PendingMatchStatsScreen({ navigation }) {
             { flex: 1, minHeight: 220 },
           ]}
         >
-          <Text style={[Fonts.h4Bold, Fonts.neutral00, Fonts.textCenter]}>Chargement impossible</Text>
+          <Text style={[Fonts.h4Bold, Fonts.neutral00, Fonts.textCenter]}>
+            {t(
+              'pendingMatchStatsScreen.loadingFailed',
+              'Chargement impossible',
+            )}
+          </Text>
           <Text style={[Fonts.p2, Fonts.neutral100, Fonts.textCenter]}>
-            {error?.message || 'Impossible de charger les actions post-match pour le moment.'}
+            {error?.message || t(
+              'pendingMatchStatsScreen.unableToLoadPostMatch',
+              'Impossible de charger les actions post-match pour le moment.',
+            )}
           </Text>
           <Button
             onPress={() => refetch()}
-            title="Réessayer"
+            title={t('pendingMatchStatsScreen.tryAgain', 'Réessayer')}
             variant="Primary"
           />
         </View>
@@ -255,7 +319,7 @@ function PendingMatchStatsScreen({ navigation }) {
           <View style={{ flex: 1 }}>
             <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{item?.label || 'Match'}</Text>
             <Text style={[Fonts.p3, Fonts.primary100]}>
-              {item?.team?.name || 'Equipe'}
+              {item?.team?.name || t('pendingMatchStatsScreen.teamFallback', 'Equipe')}
             </Text>
           </View>
           <View
@@ -276,7 +340,9 @@ function PendingMatchStatsScreen({ navigation }) {
 
         <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter, Spaces.gap[12]]}>
           <View style={{ flex: 1 }}>
-            <Text style={[Fonts.p4, Fonts.neutral300]}>Fin du match</Text>
+            <Text style={[Fonts.p4, Fonts.neutral300]}>
+              {t('pendingMatchStatsScreen.endOfMatch', 'Fin du match')}
+            </Text>
             <Text style={[Fonts.p2, Fonts.neutral00]}>{formatPromptDate(item?.endedAt || item?.updatedAt)}</Text>
           </View>
           <View style={{ minWidth: isCompactMobile ? 96 : 112 }}>
@@ -287,7 +353,13 @@ function PendingMatchStatsScreen({ navigation }) {
 
         <View style={[ApplicationStyle.backgroundColor.primary700, ApplicationStyle.borderRadius16, Spaces.padding[12], Spaces.gap[4]]}>
           <Text style={[Fonts.p4Bold, Fonts.primary100]}>
-            {item?.actionType === 'player_self_report' ? 'Mon action' : "Action d'équipe"}
+            {item?.actionType === 'player_self_report' ? t(
+              'pendingMatchStatsScreen.myAction',
+              'Mon action',
+            ) : t(
+              'pendingMatchStatsScreen.teamAction',
+              "Action d'équipe",
+            )}
           </Text>
           <Text style={[Fonts.p3, Fonts.neutral100]}>
             {getPromptActionSummary(item)}
@@ -313,7 +385,7 @@ function PendingMatchStatsScreen({ navigation }) {
           withDefaultMargin={false}
         />
         <Text style={[Fonts.h3Bold, Fonts.neutral00, { flex: 1, textAlign: 'center' }]}>
-          Matchs en attente
+          {t('pendingMatchStatsScreen.pendingMatches', 'Matchs en attente')}
         </Text>
         <View style={{ width: 44 }} />
       </View>
@@ -329,21 +401,48 @@ function PendingMatchStatsScreen({ navigation }) {
           Spaces.gap[isCompactMobile ? 6 : 8],
         ]}
       >
-        <Text style={[Fonts.p4Bold, Fonts.primary500]}>Suivi post-match</Text>
+        <Text style={[Fonts.p4Bold, Fonts.primary500]}>
+          {t('pendingMatchStatsScreen.postMatchFollowUp', 'Suivi post-match')}
+        </Text>
         <Text style={[Fonts.h4Bold, Fonts.neutral00]}>
-          {`${promptItems.length} action${promptItems.length > 1 ? 's' : ''} à traiter`}
+          {t(
+            'pendingMatchStatsScreen.actionsToHandle',
+            {
+              count: promptItems.length,
+              defaultValue_one: '{{count}} action à traiter',
+              defaultValue_other: '{{count}} actions à traiter',
+            },
+          )}
         </Text>
         <Text style={[Fonts.p2, Fonts.neutral100]}>
-          Retrouve ici tes retours perso et les bilans équipe encore en attente après les matchs.
+          {t(
+            'pendingMatchStatsScreen.findHereYourPersonalFeedback',
+            'Retrouve ici tes retours perso et les bilans équipe encore en attente après les '
+              + 'matchs.',
+          )}
         </Text>
       </View>
 
       <FlatList
         contentContainerStyle={[Spaces.gap[12], Spaces.paddingBottom[24], promptItems.length === 0 ? { flexGrow: 1 } : null]}
         data={[
-          ...(personalPromptItems.length ? [{ key: 'header-personal', title: 'Pour moi', type: 'header' }] : []),
+          ...(personalPromptItems.length ? [{
+            key: 'header-personal',
+            title: t(
+              'pendingMatchStatsScreen.forMe',
+              'Pour moi',
+            ),
+            type: 'header',
+          }] : []),
           ...personalPromptItems.map((item) => ({ ...item, type: 'item' })),
-          ...(teamPromptItems.length ? [{ key: 'header-team', title: 'Pour mon équipe', type: 'header' }] : []),
+          ...(teamPromptItems.length ? [{
+            key: 'header-team',
+            title: t(
+              'pendingMatchStatsScreen.forMyTeam',
+              'Pour mon équipe',
+            ),
+            type: 'header',
+          }] : []),
           ...teamPromptItems.map((item) => ({ ...item, type: 'item' })),
         ]}
         keyExtractor={(item, index) => String(item?.key || index)}

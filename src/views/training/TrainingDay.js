@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 
 import { withAlpha } from '@/theme/colors';
+import localeDesFormats from '@/theme/strings/localeDesFormats';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -367,7 +368,7 @@ function TrainingDay({ navigation, route }) {
   const sousTitre = useMemo(() => {
     const iso = session?.plannedDate;
     const date = iso
-      ? new Date(`${String(iso).slice(0, 10)}T00:00:00`).toLocaleDateString('fr-FR', {
+      ? new Date(`${String(iso).slice(0, 10)}T00:00:00`).toLocaleDateString(localeDesFormats(), {
         day: 'numeric', month: 'long', weekday: 'long',
       })
       : '';
