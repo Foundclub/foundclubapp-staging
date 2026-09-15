@@ -395,32 +395,24 @@ function TeamDetails({ navigation, route }) {
     [team?.club?.logo?.url],
   );
 
+  // AFFICHAGE (15/09) — le cadre du logo prend la FORME du logo. Le fond du
+  // cadre est blanc (voulu : un écusson transparent disparaîtrait sur le fond
+  // sombre), donc toute différence de forme se voit : l'ancien cadre carré de
+  // 92 × 92 laissait ~5 px de blanc de chaque côté d'un logo de 894 × 1000 (le
+  // « halo » signalé sur Aix-Perd). Même motif que « Modifier le club » (L15).
+  // La surface reste celle du carré de 92, et le ratio est borné par les deux
+  // anciens cadres extrêmes (large 122 × 78, haut 78 × 102) : au-delà, des
+  // bandes reviennent — le prix d'un cadre qui reste tenable à l'écran.
   const teamClubLogoFrame = useMemo(() => {
     const ratio = Number.isFinite(teamClubLogoRatio) && teamClubLogoRatio > 0 ? teamClubLogoRatio : 1;
-
-    if (ratio >= 1.3) {
-      return {
-        borderRadius: 20,
-        height: 78,
-        safeInsetRatio: 0.02,
-        width: 122,
-      };
-    }
-
-    if (ratio <= 0.8) {
-      return {
-        borderRadius: 22,
-        height: 102,
-        safeInsetRatio: 0.02,
-        width: 78,
-      };
-    }
+    const scale = Math.sqrt(Math.min(Math.max(ratio, 78 / 102), 122 / 78));
+    const width = Math.round(92 * scale);
+    const height = Math.round(92 / scale);
 
     return {
-      borderRadius: 22,
-      height: 92,
-      safeInsetRatio: 0,
-      width: 92,
+      borderRadius: Math.round(Math.min(width, height) * 0.24),
+      height,
+      width,
     };
   }, [teamClubLogoRatio]);
 
@@ -3014,17 +3006,13 @@ function TeamDetails({ navigation, route }) {
               <ClubLogoMark
                 club={team?.club}
                 imageStyle={{ backgroundColor: 'transparent' }}
-                logoStyle={[
-                  ApplicationStyle.borderWidth1,
-                  ApplicationStyle.borderColor.neutral00,
-                  {
-                    borderRadius: teamClubLogoFrame.borderRadius,
-                    height: teamClubLogoFrame.height,
-                    width: teamClubLogoFrame.width,
-                  },
-                ]}
+                logoStyle={{
+                  borderRadius: teamClubLogoFrame.borderRadius,
+                  height: teamClubLogoFrame.height,
+                  width: teamClubLogoFrame.width,
+                }}
                 name={team?.club?.name}
-                safeInsetRatio={teamClubLogoFrame.safeInsetRatio}
+                safeInsetRatio={0}
                 size={90}
               />
             </View>
