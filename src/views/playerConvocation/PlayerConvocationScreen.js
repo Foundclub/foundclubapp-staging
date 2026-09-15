@@ -31,6 +31,7 @@ import { useGetEvent, useGetEventConvocation } from '@/services/event/eventQueri
 import { respondToEventRsvp } from '@/services/event/eventService';
 
 import { getCompositionPlayerInitials } from '@/utils/compositionPlayer';
+import { getAddressText } from '@/utils/facilityAddressLabel';
 import { getImageUrl } from '@/utils/imageUrl';
 import { getTacticalFieldAspectRatio } from '@/utils/tacticalField';
 
@@ -183,7 +184,13 @@ function PlayerConvocationScreen() {
 
   const event = eventQuery.data || convocation?.event || null;
   const kickOff = formatConvocationTime(event?.startTime || convocation?.event?.date);
-  const place = String(event?.location || event?.facility?.name || '').trim();
+  // LIEU — `location` est l objet des coordonnees `{ lat, lng }` (event/schema.json,
+  // type json) : `String()` le rendait « [object Object] ». L adresse lisible vit
+  // dans `locationDetails` (chaine JSON `{"address":…}`). `getAddressText` descend
+  // dans l objet et ne rend jamais que du texte, ou ''.
+  const place = getAddressText(event?.locationDetails)
+    || getAddressText(event?.location)
+    || getAddressText(event?.facility?.name);
 
   // Y02 — LA CONVOCATION DIT ENFIN DE QUOI IL S'AGIT. Constat d'Adel du
   // 2026-08-19, point 8 : « il manque le nom du type d'evenement ». La carte
