@@ -22,6 +22,12 @@ const mockRoues = [];
 /** @type {any[]} */
 const mockPropsDuGabarit = [];
 
+// I18N-2 : l accessibilité de la croix passe par t() avec {{day}} — la doublure rend le
+// français de l app (fr.js, sinon le repli, jetons remplacés).
+jest.mock('react-i18next', () => (
+  jest.requireActual('@/theme/strings/__mocks__/doublureTraduction').reactI18next
+));
+
 jest.mock('@react-native-community/datetimepicker', () => {
   const { View } = jest.requireActual('react-native');
   const { createElement: creer } = jest.requireActual('react');
