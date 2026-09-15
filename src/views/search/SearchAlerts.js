@@ -95,7 +95,10 @@ function SearchAlerts({ navigation }) {
       fetchAlerts();
     } catch (error) {
       console.error(error);
-      Alert.alert('Erreur', 'Impossible de modifier l\'alerte');
+      Alert.alert(t('searchAlerts.errors.title', 'Erreur'), t(
+        'searchAlerts.errors.toggle',
+        "Impossible de modifier l'alerte",
+      ));
     }
   };
 
@@ -117,8 +120,11 @@ function SearchAlerts({ navigation }) {
     } else if (alert.type === 'mercato') {
       if (!canUseProfileAlerts) {
         Alert.alert(
-          'Alerte profils indisponible',
-          'Cette alerte profils est visible uniquement sur un compte dirigeant ou entraîneur.',
+          t('searchAlerts.profilesUnavailable.title', 'Alerte profils indisponible'),
+          t(
+            'searchAlerts.profilesUnavailable.launchBody',
+            'Cette alerte profils est visible uniquement sur un compte dirigeant ou entraîneur.',
+          ),
         );
         return;
       }
@@ -151,8 +157,11 @@ function SearchAlerts({ navigation }) {
     } else if (alert.type === 'mercato') {
       if (!canUseProfileAlerts) {
         Alert.alert(
-          'Alerte profils indisponible',
-          'Cette alerte profils n est plus modifiable sur un compte joueur.',
+          t('searchAlerts.profilesUnavailable.title', 'Alerte profils indisponible'),
+          t(
+            'searchAlerts.profilesUnavailable.editBody',
+            'Cette alerte profils n est plus modifiable sur un compte joueur.',
+          ),
         );
         return;
       }
@@ -183,7 +192,13 @@ function SearchAlerts({ navigation }) {
     }
   };
 
-  const getAlertTypeLabel = (type) => (type === 'mercato' ? 'Alerte profils' : 'Alerte événements');
+  const getAlertTypeLabel = (type) => (type === 'mercato' ? t(
+    'searchAlerts.type.profiles',
+    'Alerte profils',
+  ) : t(
+    'searchAlerts.type.events',
+    'Alerte événements',
+  ));
 
   // Format filters into readable string with calendar icon
   const formatFilters = (/** @type {Record<string, any> | undefined} */ filters, /** @type {string} */ type) => {
@@ -212,7 +227,7 @@ function SearchAlerts({ navigation }) {
       contentContainerStyle={[Alignments.fill]}
     >
       <View style={[Spaces.paddingHorizontal[16], Spaces.paddingTop[24], Spaces.marginBottom[24]]}>
-        <Text style={[Fonts.h1, Fonts.neutral00]}>Mes Alertes</Text>
+        <Text style={[Fonts.h1, Fonts.neutral00]}>{t('searchAlerts.title', 'Mes Alertes')}</Text>
       </View>
 
       {loading && !refreshing ? (
@@ -280,7 +295,10 @@ function SearchAlerts({ navigation }) {
                       </View>
                       {isProfileAlertUnavailable ? (
                         <Text style={[Fonts.p3, { color: Colors.neutral300, marginTop: 8 }]}>
-                          Disponible uniquement sur un compte dirigeant ou entraîneur.
+                          {t(
+                            'searchAlerts.item.staffOnly',
+                            'Disponible uniquement sur un compte dirigeant ou entraîneur.',
+                          )}
                         </Text>
                       ) : null}
                     </View>
@@ -297,7 +315,7 @@ function SearchAlerts({ navigation }) {
                       disabled={isProfileAlertUnavailable}
                       onPress={() => handleLaunchSearch(item)}
                       style={{ flex: 1 }}
-                      title="Rechercher"
+                      title={t('searchAlerts.item.search', 'Rechercher')}
                       variant="Secondary"
                     />
                 <Button
@@ -350,13 +368,13 @@ function SearchAlerts({ navigation }) {
 
           <Button
             onPress={() => handleNavigateToFilters('event')}
-            title="Un événement / Une réservation ?"
+            title={t('searchAlerts.create.events', 'Un événement / Une réservation ?')}
             variant="Secondary"
           />
           {canUseProfileAlerts ? (
             <Button
               onPress={() => handleNavigateToFilters('mercato')}
-              title="Un profil ?"
+              title={t('searchAlerts.create.profiles', 'Un profil ?')}
               variant="Secondary"
             />
           ) : null}
@@ -370,20 +388,23 @@ function SearchAlerts({ navigation }) {
       >
         <View style={[Spaces.gap[16]]}>
           <Text style={[Fonts.h3Bold, Fonts.neutral00, Spaces.marginTop[16]]}>
-            Supprimer l'alerte ?
+            {t('searchAlerts.deleteModal.title', "Supprimer l'alerte ?")}
           </Text>
           <Text style={[Fonts.p1, Fonts.neutral00]}>
-            Cette action est irréversible. Tu ne recevras plus de notifications pour cette recherche.
+            {t(
+              'searchAlerts.deleteModal.body',
+              'Cette action est irréversible. Tu ne recevras plus de notifications pour cette recherche.', // eslint-disable-line max-len
+            )}
           </Text>
 
           <Button
             onPress={handleDeleteConfirm}
-            title="Supprimer"
+            title={t('searchAlerts.deleteModal.confirm', 'Supprimer')}
             variant="Primary"
           />
           <Button
             onPress={() => setDeleteModalVisible(false)}
-            title="Annuler"
+            title={t('searchAlerts.deleteModal.cancel', 'Annuler')}
             variant="Secondary"
           />
         </View>
