@@ -1,5 +1,6 @@
 import { useFocusEffect } from '@react-navigation/native';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import i18next from 'i18next';
 import {
   useCallback, useEffect, useMemo, useRef, useState,
 } from 'react';
@@ -38,6 +39,8 @@ import {
 } from '@/domains/team/teamInvitation';
 import { isMyTeam as isMyTeamJudge } from '@/domains/team/teamMembership';
 import { withAlpha } from '@/theme/colors';
+import localeDesFormats from '@/theme/strings/localeDesFormats';
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -257,7 +260,10 @@ function TeamDetails({ navigation, route }) {
    * @param {string} [fallback]
    * @returns {string}
    */
-  const getErrorMessage = useCallback((/** @type {unknown} */ sourceError, /** @type {string} */ fallback = 'Erreur') => {
+  const getErrorMessage = useCallback((
+    /** @type {unknown} */ sourceError,
+    /** @type {string} */ fallback = i18next.t('teamDetails.errors.fallback', 'Erreur'),
+  ) => {
     const resolvedMessage = getDisplayErrorMessage(/** @type {any} */ (sourceError), 'generic');
     if (fallback && resolvedMessage === genericErrorMessage) {
       return fallback;
@@ -506,7 +512,7 @@ function TeamDetails({ navigation, route }) {
     if (!value) return null;
     const parsed = new Date(value);
     if (Number.isNaN(parsed.getTime())) return null;
-    return parsed.toLocaleString('fr-FR', {
+    return parsed.toLocaleString(localeDesFormats(), {
       day: '2-digit',
       hour: '2-digit',
       minute: '2-digit',
@@ -1193,11 +1199,23 @@ function TeamDetails({ navigation, route }) {
     if (!normalizedValue) return null;
 
     const labels = {
-      direct: 'Lien compétition direct',
-      normalized_direct: 'Lien source normalisé',
-      stored_source: 'Source configurée existante',
-      'team-page-html': 'Page équipe FFBB résolue via le contenu HTML',
-      'team-page-rewrite': 'Page équipe FFBB résolue via redirection',
+      direct: i18next.t('teamDetails.externalSync.resolution.direct', 'Lien compétition direct'),
+      normalized_direct: i18next.t(
+        'teamDetails.externalSync.resolution.normalizedDirect',
+        'Lien source normalisé',
+      ),
+      stored_source: i18next.t(
+        'teamDetails.externalSync.resolution.storedSource',
+        'Source configurée existante',
+      ),
+      'team-page-html': i18next.t(
+        'teamDetails.externalSync.resolution.teamPageHtml',
+        'Page équipe FFBB résolue via le contenu HTML',
+      ),
+      'team-page-rewrite': i18next.t(
+        'teamDetails.externalSync.resolution.teamPageRewrite',
+        'Page équipe FFBB résolue via redirection',
+      ),
     };
 
     return /** @type {Record<string, string>} */ (labels)[normalizedValue] || value;
@@ -1232,20 +1250,41 @@ function TeamDetails({ navigation, route }) {
       if (!value) return null;
       const normalizedValue = String(value || '').trim();
       const labels = {
-        ng_state_fallback: 'fallback ng-state',
-        secured_api: 'API sécurisée',
-        secured_api_monthly: 'API sécurisée mensuelle',
-        secured_api_scoped: 'API sécurisée ciblée',
-        secured_api_team: 'API sécurisée équipe',
-        skipped_preview: 'non chargé en preview',
-        unavailable: 'indisponible',
+        ng_state_fallback: i18next.t(
+          'teamDetails.externalSync.strategy.ngStateFallback',
+          'fallback ng-state',
+        ),
+        secured_api: i18next.t('teamDetails.externalSync.strategy.securedApi', 'API sécurisée'),
+        secured_api_monthly: i18next.t(
+          'teamDetails.externalSync.strategy.securedApiMonthly',
+          'API sécurisée mensuelle',
+        ),
+        secured_api_scoped: i18next.t(
+          'teamDetails.externalSync.strategy.securedApiScoped',
+          'API sécurisée ciblée',
+        ),
+        secured_api_team: i18next.t(
+          'teamDetails.externalSync.strategy.securedApiTeam',
+          'API sécurisée équipe',
+        ),
+        skipped_preview: i18next.t(
+          'teamDetails.externalSync.strategy.skippedPreview',
+          'non chargé en preview',
+        ),
+        unavailable: i18next.t('teamDetails.externalSync.strategy.unavailable', 'indisponible'),
       };
       return `${label}: ${/** @type {Record<string, string>} */ (labels)[normalizedValue] || normalizedValue}`;
     };
 
     return [
-      formatStrategy('Classement', standingsStrategy),
-      formatStrategy('Calendrier', calendarStrategy),
+      formatStrategy(i18next.t(
+        'teamDetails.externalSync.strategy.standings',
+        'Classement',
+      ), standingsStrategy),
+      formatStrategy(i18next.t(
+        'teamDetails.externalSync.strategy.calendar',
+        'Calendrier',
+      ), calendarStrategy),
     ].filter(Boolean).join('  •  ') || null;
   }, [externalSyncProviderMetadata]);
   const externalCompetitionEligible = useMemo(
@@ -1316,8 +1355,8 @@ function TeamDetails({ navigation, route }) {
   );
   const areSlotActionsEnabled = String(process.env.APP_ENV || '').trim().toLowerCase() === 'local';
   const showSlotFeatureComingSoon = () => Alert.alert(
-    'Bientôt disponible',
-    'La gestion des créneaux sera activee prochainement.',
+    t('teamDetails.slots.comingSoonTitle', 'Bientôt disponible'),
+    t('teamDetails.slots.comingSoonBody', 'La gestion des créneaux sera activee prochainement.'),
   );
   const showStatsTab = useMemo(
     () => Boolean(
@@ -1346,7 +1385,9 @@ function TeamDetails({ navigation, route }) {
       .filter((/** @type {any} */ member) => member?.documentId
         && (member.role?.name === USER_ROLES.coach || member.role?.name === USER_ROLES.president))
       .map((/** @type {any} */ member) => ({
-        label: `${member.firstname || ''} ${member.lastname || ''}`.trim() || member.phoneNumber || 'Utilisateur',
+        label: `${member.firstname || ''} ${member.lastname || ''}`.trim()
+          || member.phoneNumber
+          || i18next.t('teamDetails.trainerPicker.userFallback', 'Utilisateur'),
         value: member.documentId || '',
       }))
       .filter((/** @type {any} */ option) => !normalizedSearch || option.label.toLowerCase().includes(normalizedSearch))
@@ -1592,8 +1633,18 @@ function TeamDetails({ navigation, route }) {
     setIsTrainerPickerVisible(true);
 
     Alert.alert(
-      'Preselection effectuée',
-      `${assignmentTrainerName || "L'entraîneur"} est présélectionné. Vérifie puis appuie sur "Valider".`,
+      t('teamDetails.trainerPreselect.title', 'Preselection effectuée'),
+      t(
+        'teamDetails.trainerPreselect.body',
+        '{{name}} est présélectionné. Vérifie puis appuie sur "Valider".',
+        {
+          name: assignmentTrainerName || t(
+            'teamDetails.trainerPreselect.trainerFallback',
+            "L'entraîneur",
+          ),
+          ...SANS_ECHAPPEMENT,
+        },
+      ),
       [{ text: t('common.actions.ok', 'OK') }],
     );
 
@@ -1873,7 +1924,10 @@ function TeamDetails({ navigation, route }) {
     } catch (contactError) {
       Alert.alert(
         t('common.error', 'Erreur'),
-        getErrorMessage(contactError, 'Impossible de démarrer la conversation.'),
+        getErrorMessage(contactError, t(
+          'teamDetails.contact.startConversationError',
+          'Impossible de démarrer la conversation.',
+        )),
       );
     }
   };
@@ -2300,7 +2354,11 @@ function TeamDetails({ navigation, route }) {
         <View style={[Spaces.gap[4]]}>
           {externalSyncProviderLabel ? (
             <Text style={[Fonts.p3Bold, Fonts.neutral00]}>
-              {`Provider: ${externalSyncProviderLabel}`}
+              {t(
+                'teamDetails.externalSync.provider',
+                'Provider: {{provider}}',
+                { provider: externalSyncProviderLabel, ...SANS_ECHAPPEMENT },
+              )}
             </Text>
           ) : null}
           {externalSyncSourceResolutionLabel ? (
@@ -2602,7 +2660,7 @@ function TeamDetails({ navigation, route }) {
         <View style={[Alignments.alignCenter, Spaces.gap[12]]}>
           <Loader />
           <Text style={[Fonts.p2, Fonts.primary100]}>
-            Chargement de l'équipe...
+            {t('teamDetails.states.loading', "Chargement de l'équipe...")}
           </Text>
         </View>
       </ScreenContainer>
@@ -2629,17 +2687,28 @@ function TeamDetails({ navigation, route }) {
           <Text style={[Fonts.h4Bold, Fonts.neutral00]}>
             {isTeamAccessRefused
               ? t('common.accessReserved.title', 'Accès réservé')
-              : "Impossible de charger l'équipe"}
+              : t('teamDetails.states.loadErrorTitle', "Impossible de charger l'équipe")}
           </Text>
           <Text style={[Fonts.p2, Fonts.neutral200]}>
             {isTeamAccessRefused
               ? accessReservedMessage
-              : getErrorMessage(error, 'Réessaie dans quelques instants.')}
+              : getErrorMessage(error, t(
+                'teamDetails.states.loadErrorBody',
+                'Réessaie dans quelques instants.',
+              ))}
           </Text>
           {isTeamAccessRefused ? null : (
-            <Button onPress={() => refetch()} title="Réessayer" variant="Primary" />
+            <Button
+              onPress={() => refetch()}
+              title={t('teamDetails.states.retry', 'Réessayer')}
+              variant="Primary"
+            />
           )}
-          <Button onPress={() => navigation.navigate(RouteNames.TeamList)} title="Retour aux équipes" variant="Secondary" />
+          <Button
+            onPress={() => navigation.navigate(RouteNames.TeamList)}
+            title={t('teamDetails.states.backToTeams', 'Retour aux équipes')}
+            variant="Secondary"
+          />
         </View>
       </ScreenContainer>
     );
@@ -2659,16 +2728,30 @@ function TeamDetails({ navigation, route }) {
       >
         <View style={[Spaces.gap[12]]}>
           <Text style={[Fonts.h4Bold, Fonts.neutral00]}>
-            {isMissingTeamId ? 'Équipe introuvable' : 'Cette équipe est introuvable'}
+            {isMissingTeamId ? t('teamDetails.states.missingIdTitle', 'Équipe introuvable') : t(
+              'teamDetails.states.notFoundTitle',
+              'Cette équipe est introuvable',
+            )}
           </Text>
           <Text style={[Fonts.p2, Fonts.neutral200]}>
             {isMissingTeamId
-              ? 'Aucun identifiant d\'équipe n\'a été fourni.'
-              : 'Le lien est peut-être obsolète ou l\'équipe a été supprimée.'}
+              ? t('teamDetails.states.missingIdBody', "Aucun identifiant d'équipe n'a été fourni.")
+              : t(
+                'teamDetails.states.notFoundBody',
+                "Le lien est peut-être obsolète ou l'équipe a été supprimée.",
+              )}
           </Text>
-          <Button onPress={() => navigation.navigate(RouteNames.TeamList)} title="Retour aux équipes" variant="Secondary" />
+          <Button
+            onPress={() => navigation.navigate(RouteNames.TeamList)}
+            title={t('teamDetails.states.backToTeams', 'Retour aux équipes')}
+            variant="Secondary"
+          />
           {!isMissingTeamId ? (
-            <Button onPress={() => refetch()} title="Réessayer" variant="Primary" />
+            <Button
+              onPress={() => refetch()}
+              title={t('teamDetails.states.retry', 'Réessayer')}
+              variant="Primary"
+            />
           ) : null}
         </View>
       </ScreenContainer>
@@ -3080,7 +3163,13 @@ function TeamDetails({ navigation, route }) {
                   ? [Fonts.p3, { color: Colors.success500 }]
                   : [Fonts.p3, Fonts.neutral300]}
                 >
-                  {isVerifiedClub(team?.club) ? 'Club certifié' : 'Club non certifié'}
+                  {isVerifiedClub(team?.club) ? t(
+                    'teamDetails.header.clubCertified',
+                    'Club certifié',
+                  ) : t(
+                    'teamDetails.header.clubNotCertified',
+                    'Club non certifié',
+                  )}
                 </Text>
               </View>
             </View>
@@ -3295,7 +3384,7 @@ function TeamDetails({ navigation, route }) {
                         >
                           <View style={[Alignments.fill]}>
                             <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
-                              Personne pour l&apos;instant
+                              {t('teamDetails.members.emptyTitle', "Personne pour l'instant")}
                             </Text>
                             {/* INVIT — la phrase d avant PROMETTAIT un lien
                                 d inscription, parce que c est tout ce que le
@@ -3317,7 +3406,9 @@ function TeamDetails({ navigation, route }) {
                               paddingVertical: 8,
                             }}
                           >
-                            <Text style={[Fonts.p3Bold, Fonts.primary500]}>Inviter</Text>
+                            <Text style={[Fonts.p3Bold, Fonts.primary500]}>
+                              {t('teamDetails.members.emptyInvite', 'Inviter')}
+                            </Text>
                           </View>
                         </TouchableOpacity>
                       ) : null}
@@ -3361,10 +3452,13 @@ function TeamDetails({ navigation, route }) {
                     >
                       <View style={[Alignments.fill]}>
                         <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
-                          Aucun événement prévu
+                          {t('teamDetails.events.emptyTitle', 'Aucun événement prévu')}
                         </Text>
                         <Text style={[Fonts.p4, Fonts.neutral400, { marginTop: 2 }]}>
-                          Ton 1ᵉʳ événement est offert — entraînement, match…
+                          {t(
+                            'teamDetails.events.emptyBody',
+                            'Ton 1ᵉʳ événement est offert — entraînement, match…',
+                          )}
                         </Text>
                       </View>
                       <View
@@ -3376,7 +3470,9 @@ function TeamDetails({ navigation, route }) {
                           paddingVertical: 8,
                         }}
                       >
-                        <Text style={[Fonts.p3Bold, Fonts.primary500]}>Créer</Text>
+                        <Text style={[Fonts.p3Bold, Fonts.primary500]}>
+                          {t('teamDetails.events.emptyCreate', 'Créer')}
+                        </Text>
                       </View>
                     </TouchableOpacity>
                   ) : null}
@@ -3455,11 +3551,18 @@ function TeamDetails({ navigation, route }) {
                           { letterSpacing: 1, textTransform: 'uppercase' },
                         ]}
                       >
-                        {String(team?.level?.name || team?.level || 'Classement')}
+                        {String(team?.level?.name || team?.level || t(
+                          'teamDetails.standingsTable.levelFallback',
+                          'Classement',
+                        ))}
                       </Text>
                       {maxPlayed > 0 ? (
                         <Text style={[Fonts.p4, Fonts.neutral400]}>
-                          {`Journée ${maxPlayed}`}
+                          {t(
+                            'teamDetails.standingsTable.matchday',
+                            'Journée {{round}}',
+                            { round: maxPlayed, ...SANS_ECHAPPEMENT },
+                          )}
                         </Text>
                       ) : null}
                     </View>
@@ -3486,9 +3589,27 @@ function TeamDetails({ navigation, route }) {
                         ]}
                       >
                         <Text style={[Fonts.p4Bold, Fonts.neutral400, { width: 24 }]}>#</Text>
-                        <Text style={[Fonts.p4Bold, Fonts.neutral400, { flex: 1 }]}>Équipe</Text>
-                        <Text style={[Fonts.p4Bold, Fonts.neutral400, { textAlign: 'right', width: 30 }]}>Pts</Text>
-                        <Text style={[Fonts.p4Bold, Fonts.neutral400, { textAlign: 'right', width: 40 }]}>Diff</Text>
+                        <Text style={[Fonts.p4Bold, Fonts.neutral400, { flex: 1 }]}>
+                          {t('teamDetails.standingsTable.team', 'Équipe')}
+                        </Text>
+                        <Text
+                          style={[
+                            Fonts.p4Bold,
+                            Fonts.neutral400,
+                            { textAlign: 'right', width: 30 },
+                          ]}
+                        >
+                          {t('teamDetails.standingsTable.points', 'Pts')}
+                        </Text>
+                        <Text
+                          style={[
+                            Fonts.p4Bold,
+                            Fonts.neutral400,
+                            { textAlign: 'right', width: 40 },
+                          ]}
+                        >
+                          {t('teamDetails.standingsTable.difference', 'Diff')}
+                        </Text>
                       </View>
                       {sortedRows.map((/** @type {any} */ row, /** @type {number} */ index) => {
                         const isMyRow = isExternalRowMyTeam(row);
@@ -3566,7 +3687,7 @@ function TeamDetails({ navigation, route }) {
                                         { textTransform: 'uppercase' },
                                       ]}
                                     >
-                                      Toi
+                                      {t('teamDetails.standingsTable.you', 'Toi')}
                                     </Text>
                                   </View>
                                 ) : null}
@@ -3621,7 +3742,15 @@ function TeamDetails({ navigation, route }) {
                                 </View>
                                 {row?.goalFor || row?.goalAgainst ? (
                                   <Text style={[Fonts.p4Bold, Fonts.primary200]}>
-                                    {`buts ${row?.goalFor || 0}–${row?.goalAgainst || 0}`}
+                                    {t(
+                                      'teamDetails.standingsTable.goals',
+                                      'buts {{goalsFor}}–{{goalsAgainst}}',
+                                      {
+                                        goalsAgainst: row?.goalAgainst || 0,
+                                        goalsFor: row?.goalFor || 0,
+                                        ...SANS_ECHAPPEMENT,
+                                      },
+                                    )}
                                   </Text>
                                 ) : null}
                               </View>
@@ -3636,14 +3765,18 @@ function TeamDetails({ navigation, route }) {
                           backgroundColor: Colors.success500, borderRadius: 999, height: 7, width: 7,
                         }}
                         />
-                        <Text style={[Fonts.p4, Fonts.neutral400]}>Montée</Text>
+                        <Text style={[Fonts.p4, Fonts.neutral400]}>
+                          {t('teamDetails.standingsTable.promotion', 'Montée')}
+                        </Text>
                       </View>
                       <View style={[Alignments.row, Alignments.alignCenter, { columnGap: 6 }]}>
                         <View style={{
                           backgroundColor: Colors.error500, borderRadius: 999, height: 7, width: 7,
                         }}
                         />
-                        <Text style={[Fonts.p4, Fonts.neutral400]}>Descente</Text>
+                        <Text style={[Fonts.p4, Fonts.neutral400]}>
+                          {t('teamDetails.standingsTable.relegation', 'Descente')}
+                        </Text>
                       </View>
                     </View>
                   </View>
@@ -3705,7 +3838,10 @@ function TeamDetails({ navigation, route }) {
                       ? `${matchDate.getFullYear()}-${String(matchDate.getMonth() + 1).padStart(2, '0')}`
                       : 'unknown';
                     const monthLabel = matchDate && !Number.isNaN(matchDate.getTime())
-                      ? matchDate.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })
+                      ? matchDate.toLocaleDateString(localeDesFormats(), {
+                        month: 'long',
+                        year: 'numeric',
+                      })
                       : t('teamDetails.calendar.monthUnknown', 'Date à confirmer');
                     const homeTeamId = match?.homeTeamId ? String(match.homeTeamId) : '';
                     const awayTeamId = match?.awayTeamId ? String(match.awayTeamId) : '';
@@ -3796,7 +3932,7 @@ function TeamDetails({ navigation, route }) {
                     : null;
                   const canBrowseUpcoming = upcomingMatches.length > 1;
                   const activeUpcomingDateLabel = activeUpcomingMatch?._dateObj
-                    ? activeUpcomingMatch._dateObj.toLocaleDateString('fr-FR', {
+                    ? activeUpcomingMatch._dateObj.toLocaleDateString(localeDesFormats(), {
                       day: '2-digit',
                       month: 'short',
                       weekday: 'short',
@@ -3804,7 +3940,10 @@ function TeamDetails({ navigation, route }) {
                     })
                     : t('teamDetails.calendar.dateUnknown', 'Date à confirmer');
                   const activeUpcomingTimeLabel = activeUpcomingMatch?._dateObj
-                    ? activeUpcomingMatch._dateObj.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
+                    ? activeUpcomingMatch._dateObj.toLocaleTimeString(localeDesFormats(), {
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })
                     : '--:--';
 
                   const monthMetaByKey = modeScopedMatches.reduce((/** @type {Record<string, { count: number; label: string }>} */ acc, /** @type {any} */ match) => {
@@ -3898,7 +4037,11 @@ function TeamDetails({ navigation, route }) {
                       ? t('teamDetails.calendar.empty.results', 'Aucun résultat disponible.')
                       : t('teamDetails.calendar.empty.all', 'Aucun match pour ce filtre.');
                   const totalVisibleMatches = isUpcomingMode ? upcomingMatches.length : sortedMatches.length;
-                  const matchCountText = `${totalVisibleMatches} match${totalVisibleMatches > 1 ? 's' : ''}`;
+                  const matchCountText = t('teamDetails.calendarCard.matchCount', {
+                    count: totalVisibleMatches,
+                    defaultValue_one: '{{count}} match',
+                    defaultValue_other: '{{count}} matchs',
+                  });
                   const modeScopeText = isUpcomingMode
                     ? (
                       hasSelectedExternalTeam
@@ -4154,16 +4297,26 @@ function TeamDetails({ navigation, route }) {
                               if (myResult === 'V') resultChipColor = Colors.success500;
                               else if (myResult === 'D') resultChipColor = Colors.error500;
                               let homeAwayLabel = '';
-                              if (isMyHomeTeam) homeAwayLabel = 'Domicile';
-                              else if (isMyAwayTeam) homeAwayLabel = 'Extérieur';
+                              if (isMyHomeTeam) {
+                                homeAwayLabel = t('teamDetails.calendarCard.home', 'Domicile');
+                              } else if (isMyAwayTeam) {
+                                homeAwayLabel = t('teamDetails.calendarCard.away', 'Extérieur');
+                              }
                               const statusLabel = isPlayedMatch
                                 ? t('teamDetails.calendar.status.played', 'Terminé')
                                 : t('teamDetails.calendar.status.upcoming', 'À venir');
                               const dateLabel = match._dateObj
-                                ? match._dateObj.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', weekday: 'short' })
+                                ? match._dateObj.toLocaleDateString(localeDesFormats(), {
+                                  day: '2-digit',
+                                  month: 'short',
+                                  weekday: 'short',
+                                })
                                 : t('teamDetails.calendar.dateUnknown', 'Date à confirmer');
                               const timeLabel = match._dateObj
-                                ? match._dateObj.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
+                                ? match._dateObj.toLocaleTimeString(localeDesFormats(), {
+                                  hour: '2-digit',
+                                  minute: '2-digit',
+                                })
                                 : '--:--';
 
                               const canOpenLinkedEvent = Boolean(match?.linkedEventDocumentIdResolved);
@@ -4274,7 +4427,9 @@ function TeamDetails({ navigation, route }) {
                 })()}
               </View>
             ) : (
-              <Text style={[Fonts.p1, Fonts.neutral00, Fonts.textCenter]}>Aucun calendrier disponible.</Text>
+              <Text style={[Fonts.p1, Fonts.neutral00, Fonts.textCenter]}>
+                {t('teamDetails.calendarCard.empty', 'Aucun calendrier disponible.')}
+              </Text>
             )}
 
             {renderExternalSyncCard()}
@@ -4297,7 +4452,7 @@ function TeamDetails({ navigation, route }) {
                 ]}
               >
                 <Text style={[statsMode === 'attendance' ? Fonts.p3Bold : Fonts.p3, Fonts.neutral00]}>
-                  Vie d'équipe
+                  {t('teamDetails.statsModes.attendance', "Vie d'équipe")}
                 </Text>
               </TouchableOpacity>
               <TouchableOpacity
@@ -4313,7 +4468,7 @@ function TeamDetails({ navigation, route }) {
                 ]}
               >
                 <Text style={[statsMode === 'performance' ? Fonts.p3Bold : Fonts.p3, Fonts.neutral00]}>
-                  Performance
+                  {t('teamDetails.statsModes.performance', 'Performance')}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -4355,17 +4510,27 @@ function TeamDetails({ navigation, route }) {
                           <Text style={[Fonts.h3Bold, Fonts.primary500]}>
                             {attendanceRatio === null ? '—' : `${Math.round(attendanceRatio * 100)} %`}
                           </Text>
-                          <Text style={[Fonts.p4, Fonts.neutral400]}>Assiduité</Text>
+                          <Text style={[Fonts.p4, Fonts.neutral400]}>
+                            {t('teamDetails.attendance.ratio', 'Assiduité')}
+                          </Text>
                         </View>
                         <View style={[Alignments.alignCenter, { flex: 1 }]}>
                           <Text style={[Fonts.h3Bold, Fonts.neutral00]}>{statsSummary.lateCount}</Text>
-                          <Text style={[Fonts.p4, Fonts.neutral400]}>Retards</Text>
+                          <Text style={[Fonts.p4, Fonts.neutral400]}>
+                            {t('teamDetails.attendance.late', 'Retards')}
+                          </Text>
                         </View>
                         <View style={[Alignments.alignCenter, { flex: 1 }]}>
                           <Text style={[Fonts.h3Bold, Fonts.neutral00]}>
-                            {`${statsSummary.lateMinutesAvg} min`}
+                            {t(
+                              'teamDetails.attendance.lateMinutes',
+                              '{{minutes}} min',
+                              { minutes: statsSummary.lateMinutesAvg, ...SANS_ECHAPPEMENT },
+                            )}
                           </Text>
-                          <Text style={[Fonts.p4, Fonts.neutral400]}>Retard moyen</Text>
+                          <Text style={[Fonts.p4, Fonts.neutral400]}>
+                            {t('teamDetails.attendance.lateAverage', 'Retard moyen')}
+                          </Text>
                         </View>
                       </View>
 
@@ -4378,10 +4543,18 @@ function TeamDetails({ navigation, route }) {
                               { letterSpacing: 1, textTransform: 'uppercase' },
                             ]}
                           >
-                            Présences
+                            {t('teamDetails.attendance.title', 'Présences')}
                           </Text>
                           <Text style={[Fonts.p4, Fonts.neutral400]}>
-                            {`${statsSummary.rowCount} joueur·se·s · ${statsSummary.totalEvents} événements`}
+                            {t(
+                              'teamDetails.attendance.summary',
+                              '{{players}} joueur·se·s · {{events}} événements',
+                              {
+                                events: statsSummary.totalEvents,
+                                players: statsSummary.rowCount,
+                                ...SANS_ECHAPPEMENT,
+                              },
+                            )}
                           </Text>
                         </View>
 
@@ -4399,7 +4572,7 @@ function TeamDetails({ navigation, route }) {
                             const rowTone = getPresenceTone(presenceRatio);
                             const lateCount = Number(row?.lateCount || 0);
                             const playerName = `${row?.user?.firstname || ''} ${row?.user?.lastname || ''}`.trim()
-                              || 'Joueur·se';
+                              || t('teamDetails.attendance.playerFallback', 'Joueur·se');
                             return (
                               <TouchableOpacity
                                 key={row?.user?.documentId || `stats-${index}`}
@@ -4441,7 +4614,11 @@ function TeamDetails({ navigation, route }) {
                                     />
                                     {lateCount > 0 ? (
                                       <Text style={[Fonts.p4Bold, Fonts.warning400]}>
-                                        {`${lateCount} retard${lateCount > 1 ? 's' : ''}`}
+                                        {t('teamDetails.attendance.lateCount', {
+                                          count: lateCount,
+                                          defaultValue_one: '{{count}} retard',
+                                          defaultValue_other: '{{count}} retards',
+                                        })}
                                       </Text>
                                     ) : null}
                                   </View>
@@ -4520,24 +4697,51 @@ function TeamDetails({ navigation, route }) {
                     Spaces.gap[8],
                   ]}
                 >
-                  <Text style={[Fonts.p4Bold, Fonts.primary500]}>Performance équipe</Text>
-                  <Text style={[Fonts.h4Bold, Fonts.neutral00]}>Récap du groupe</Text>
+                  <Text style={[Fonts.p4Bold, Fonts.primary500]}>
+                    {t('teamDetails.perf.eyebrow', 'Performance équipe')}
+                  </Text>
+                  <Text style={[Fonts.h4Bold, Fonts.neutral00]}>
+                    {t('teamDetails.perf.title', 'Récap du groupe')}
+                  </Text>
                   <Text style={[Fonts.p2, Fonts.neutral100]}>
-                    Lecture des stats publiées de l'équipe, avec prise en compte des réponses joueur quand elles sont disponibles.
+                    {t(
+                      'teamDetails.perf.body',
+                      "Lecture des stats publiées de l'équipe, avec prise en compte des réponses joueur quand elles sont disponibles.", // eslint-disable-line max-len
+                    )}
                   </Text>
                   {performanceSummary.playerCollectiveRatingCount > 0 ? (
                     <Text style={[Fonts.p4, Fonts.neutral400]}>
-                      {`d'après ${performanceSummary.playerCollectiveRatingCount} retour${performanceSummary.playerCollectiveRatingCount > 1 ? 's' : ''} post-match`}
+                      {t('teamDetails.perf.feedbackCount', {
+                        count: performanceSummary.playerCollectiveRatingCount,
+                        defaultValue_one: "d'après {{count}} retour post-match",
+                        defaultValue_other: "d'après {{count}} retours post-match",
+                      })}
                     </Text>
                   ) : null}
                 </View>
 
                 <View style={[Alignments.row, Spaces.gap[8], { flexWrap: 'wrap' }]}>
                   {[
-                    { label: 'Matchs', value: performanceSummary.matches },
-                    { label: 'Minutes', value: performanceSummary.minutesPlayed },
-                    { label: performanceSummary.sport === 'basketball' ? 'Points' : 'Buts', value: performanceSummary.sport === 'basketball' ? performanceSummary.points : performanceSummary.goals },
-                    { label: 'Passes décisives', value: performanceSummary.assists },
+                    {
+                      label: t('teamDetails.perf.stats.matches', 'Matchs'),
+                      value: performanceSummary.matches,
+                    },
+                    {
+                      label: t('teamDetails.perf.stats.minutes', 'Minutes'),
+                      value: performanceSummary.minutesPlayed,
+                    },
+                    {
+                      label: performanceSummary.sport === 'basketball'
+                        ? t('teamDetails.perf.stats.points', 'Points')
+                        : t('teamDetails.perf.stats.goals', 'Buts'),
+                      value: performanceSummary.sport === 'basketball'
+                        ? performanceSummary.points
+                        : performanceSummary.goals,
+                    },
+                    {
+                      label: t('teamDetails.perf.stats.assists', 'Passes décisives'),
+                      value: performanceSummary.assists,
+                    },
                   ].map((stat) => (
                     <View
                       key={stat.label}
@@ -4564,12 +4768,36 @@ function TeamDetails({ navigation, route }) {
                   ]}
                 >
                   <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
-                    {`Score cumule: ${performanceSummary.scoreForTotal} - ${performanceSummary.scoreAgainstTotal}`}
+                    {t(
+                      'teamDetails.perf.cumulativeScore',
+                      'Score cumule: {{scoreFor}} - {{scoreAgainst}}',
+                      {
+                        scoreAgainst: performanceSummary.scoreAgainstTotal,
+                        scoreFor: performanceSummary.scoreForTotal,
+                        ...SANS_ECHAPPEMENT,
+                      },
+                    )}
                   </Text>
                   <Text style={[Fonts.p3, Fonts.neutral100]}>
                     {performanceSummary.sport === 'basketball'
-                      ? `${performanceSummary.rebounds} rebonds - ${performanceSummary.threePointsMade} tirs à 3 points`
-                      : `${performanceSummary.cleanSheets} clean sheets - ${performanceSummary.scoreAgainstTotal} buts encaissés`}
+                      ? t(
+                        'teamDetails.perf.basketballLine',
+                        '{{rebounds}} rebonds - {{threePointers}} tirs à 3 points',
+                        {
+                          rebounds: performanceSummary.rebounds,
+                          threePointers: performanceSummary.threePointsMade,
+                          ...SANS_ECHAPPEMENT,
+                        },
+                      )
+                      : t(
+                        'teamDetails.perf.footballLine',
+                        '{{cleanSheets}} clean sheets - {{conceded}} buts encaissés',
+                        {
+                          cleanSheets: performanceSummary.cleanSheets,
+                          conceded: performanceSummary.scoreAgainstTotal,
+                          ...SANS_ECHAPPEMENT,
+                        },
+                      )}
                   </Text>
                 </View>
 
@@ -4585,7 +4813,9 @@ function TeamDetails({ navigation, route }) {
                           { flexGrow: 1, minWidth: '47%' },
                         ]}
                       >
-                        <Text style={[Fonts.p4Bold, Fonts.primary100]}>Coach</Text>
+                        <Text style={[Fonts.p4Bold, Fonts.primary100]}>
+                          {t('teamDetails.perf.coachRating', 'Coach')}
+                        </Text>
                         <Text style={[Fonts.h3Bold, Fonts.neutral00]}>{`${performanceSummary.averageCollectiveRating}/10`}</Text>
                       </View>
                     ) : null}
@@ -4599,10 +4829,16 @@ function TeamDetails({ navigation, route }) {
                           { flexGrow: 1, minWidth: '47%' },
                         ]}
                       >
-                        <Text style={[Fonts.p4Bold, Fonts.primary100]}>Joueurs</Text>
+                        <Text style={[Fonts.p4Bold, Fonts.primary100]}>
+                          {t('teamDetails.perf.playersRating', 'Joueurs')}
+                        </Text>
                         <Text style={[Fonts.h3Bold, Fonts.neutral00]}>{`${performanceSummary.playerCollectiveRatingAverage}/10`}</Text>
                         <Text style={[Fonts.p4, Fonts.neutral100]}>
-                          {`${performanceSummary.playerCollectiveRatingCount} note${performanceSummary.playerCollectiveRatingCount > 1 ? 's' : ''}`}
+                          {t('teamDetails.perf.ratingCount', {
+                            count: performanceSummary.playerCollectiveRatingCount,
+                            defaultValue_one: '{{count}} note',
+                            defaultValue_other: '{{count}} notes',
+                          })}
                         </Text>
                       </View>
                     ) : null}
@@ -4611,7 +4847,12 @@ function TeamDetails({ navigation, route }) {
 
                 {pendingPerformanceMatches.length ? (
                   <View style={[Spaces.gap[8]]}>
-                    <Text style={[Fonts.p3Bold, Fonts.neutral00]}>Réponses joueur en attente de validation équipe</Text>
+                    <Text style={[Fonts.p3Bold, Fonts.neutral00]}>
+                      {t(
+                        'teamDetails.perf.pendingTitle',
+                        'Réponses joueur en attente de validation équipe',
+                      )}
+                    </Text>
                     {pendingPerformanceMatches.map((/** @type {any} */ pendingMatch) => (
                       <TouchableOpacity
                         activeOpacity={0.9}
@@ -4635,28 +4876,55 @@ function TeamDetails({ navigation, route }) {
                         <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter, Spaces.gap[8]]}>
                           <View style={{ flex: 1 }}>
                             <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
-                              {pendingMatch?.matchLabel || 'Match'}
+                              {pendingMatch?.matchLabel || t(
+                                'teamDetails.perf.matchFallback',
+                                'Match',
+                              )}
                             </Text>
                             <Text style={[Fonts.p4, Fonts.neutral100]}>
-                              {`${Number(pendingMatch?.submittedResponses || 0)}/${Number(pendingMatch?.eligibleCount || 0)} joueurs ont répondu`}
+                              {t(
+                                'teamDetails.perf.responses',
+                                '{{submitted}}/{{eligible}} joueurs ont répondu',
+                                {
+                                  eligible: Number(pendingMatch?.eligibleCount || 0),
+                                  submitted: Number(pendingMatch?.submittedResponses || 0),
+                                  ...SANS_ECHAPPEMENT,
+                                },
+                              )}
                             </Text>
                           </View>
                           <View style={[Spaces.gap[8], { alignItems: 'flex-end' }]}>
                             <View style={[ApplicationStyle.backgroundColor.primary900, ApplicationStyle.borderRadius16, Spaces.paddingHorizontal[8], Spaces.paddingVertical[8]]}>
                               <Text style={[Fonts.p4Bold, Fonts.primary100]}>
-                                {pendingMatch?.reportStatus === 'draft' ? 'Brouillon équipe' : 'En attente du bilan équipe'}
+                                {pendingMatch?.reportStatus === 'draft' ? t(
+                                  'teamDetails.perf.pendingDraft',
+                                  'Brouillon équipe',
+                                ) : t(
+                                  'teamDetails.perf.pendingReport',
+                                  'En attente du bilan équipe',
+                                )}
                               </Text>
                             </View>
                             {pendingMatch?.sourceDocumentId ? (
                               <View style={[ApplicationStyle.backgroundColor.primary800, ApplicationStyle.borderRadius16, Spaces.paddingHorizontal[8], Spaces.paddingVertical[8]]}>
-                                <Text style={[Fonts.p4Bold, Fonts.primary500]}>Ouvrir</Text>
+                                <Text style={[Fonts.p4Bold, Fonts.primary500]}>
+                                  {t('teamDetails.perf.open', 'Ouvrir')}
+                                </Text>
                               </View>
                             ) : null}
                           </View>
                         </View>
                         {pendingMatch?.lastSubmittedAt ? (
                           <Text style={[Fonts.p4, Fonts.neutral100]}>
-                            {`Dernière réponse le ${new Date(pendingMatch.lastSubmittedAt).toLocaleString('fr-FR')}`}
+                            {t(
+                              'teamDetails.perf.lastResponse',
+                              'Dernière réponse le {{date}}',
+                              {
+                                date: new Date(pendingMatch.lastSubmittedAt)
+                                  .toLocaleString(localeDesFormats()),
+                                ...SANS_ECHAPPEMENT,
+                              },
+                            )}
                           </Text>
                         ) : null}
                       </TouchableOpacity>
@@ -4666,7 +4934,9 @@ function TeamDetails({ navigation, route }) {
 
                 {performanceSummary.recentReports.length ? (
                   <View style={[Spaces.gap[8]]}>
-                    <Text style={[Fonts.p3Bold, Fonts.neutral00]}>Derniers matchs renseignes</Text>
+                    <Text style={[Fonts.p3Bold, Fonts.neutral00]}>
+                      {t('teamDetails.perf.recentTitle', 'Derniers matchs renseignes')}
+                    </Text>
                     {performanceSummary.recentReports.map((/** @type {any} */ report) => (
                       <TouchableOpacity
                         activeOpacity={0.9}
@@ -4691,7 +4961,7 @@ function TeamDetails({ navigation, route }) {
                         <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter, Spaces.gap[8]]}>
                           <View style={{ flex: 1 }}>
                             <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
-                              {report?.matchLabel || 'Match'}
+                              {report?.matchLabel || t('teamDetails.perf.matchFallback', 'Match')}
                             </Text>
                             <Text style={[Fonts.p4, Fonts.neutral100]}>
                               {`${Number(report?.scoreFor || 0)} - ${Number(report?.scoreAgainst || 0)}`}
@@ -4700,15 +4970,22 @@ function TeamDetails({ navigation, route }) {
                           <View style={[Spaces.gap[8], { alignItems: 'flex-end' }]}>
                             <View style={[ApplicationStyle.backgroundColor.primary900, ApplicationStyle.borderRadius16, Spaces.paddingHorizontal[8], Spaces.paddingVertical[4]]}>
                               <Text style={[Fonts.p4Bold, Fonts.primary500]}>
-                                {report?.finalizedAt ? new Date(report.finalizedAt).toLocaleDateString('fr-FR') : 'Publie'}
+                                {report?.finalizedAt
+                                  ? new Date(report.finalizedAt)
+                                    .toLocaleDateString(localeDesFormats())
+                                  : t('teamDetails.perf.published', 'Publie')}
                               </Text>
                             </View>
                             {report?.hasNewResponsesSincePublication ? (
                               <View style={[ApplicationStyle.backgroundColor.primary800, ApplicationStyle.borderRadius16, Spaces.paddingHorizontal[8], Spaces.paddingVertical[8]]}>
                                 <Text style={[Fonts.p4Bold, Fonts.primary100]}>
                                   {report?.newResponsesCount > 1
-                                    ? `${report.newResponsesCount} nouvelles réponses`
-                                    : 'Nouvelle réponse'}
+                                    ? t(
+                                      'teamDetails.perf.newResponses',
+                                      '{{total}} nouvelles réponses',
+                                      { total: report.newResponsesCount, ...SANS_ECHAPPEMENT },
+                                    )
+                                    : t('teamDetails.perf.newResponse', 'Nouvelle réponse')}
                                 </Text>
                               </View>
                             ) : null}
@@ -4717,17 +4994,40 @@ function TeamDetails({ navigation, route }) {
                         <View style={[Alignments.row, Spaces.gap[8], { flexWrap: 'wrap' }]}>
                           {report?.collectiveRating !== null && report?.collectiveRating !== undefined ? (
                             <View style={[ApplicationStyle.backgroundColor.primary900, ApplicationStyle.borderRadius16, Spaces.paddingHorizontal[8], Spaces.paddingVertical[8]]}>
-                              <Text style={[Fonts.p4Bold, Fonts.primary100]}>{`Coach ${report.collectiveRating}/10`}</Text>
+                              <Text style={[Fonts.p4Bold, Fonts.primary100]}>
+                                {t(
+                                  'teamDetails.perf.coachScore',
+                                  'Coach {{rating}}/10',
+                                  { rating: report.collectiveRating, ...SANS_ECHAPPEMENT },
+                                )}
+                              </Text>
                             </View>
                           ) : null}
                           {report?.playerCollectiveRatingAverage !== null && report?.playerCollectiveRatingAverage !== undefined ? (
                             <View style={[ApplicationStyle.backgroundColor.primary900, ApplicationStyle.borderRadius16, Spaces.paddingHorizontal[8], Spaces.paddingVertical[8]]}>
-                              <Text style={[Fonts.p4Bold, Fonts.primary100]}>{`Joueurs ${report.playerCollectiveRatingAverage}/10`}</Text>
+                              <Text style={[Fonts.p4Bold, Fonts.primary100]}>
+                                {t(
+                                  'teamDetails.perf.playersScore',
+                                  'Joueurs {{rating}}/10',
+                                  {
+                                    rating: report.playerCollectiveRatingAverage,
+                                    ...SANS_ECHAPPEMENT,
+                                  },
+                                )}
+                              </Text>
                             </View>
                           ) : null}
                         </View>
                         <Text style={[Fonts.p4, Fonts.neutral100]}>
-                          {`${Number(report?.responseCompletionCount || 0)}/${Number(report?.responseEligibleCount || 0)} joueurs ont répondu`}
+                          {t(
+                            'teamDetails.perf.responses',
+                            '{{submitted}}/{{eligible}} joueurs ont répondu',
+                            {
+                              eligible: Number(report?.responseEligibleCount || 0),
+                              submitted: Number(report?.responseCompletionCount || 0),
+                              ...SANS_ECHAPPEMENT,
+                            },
+                          )}
                         </Text>
                       </TouchableOpacity>
                     ))}
@@ -4736,7 +5036,11 @@ function TeamDetails({ navigation, route }) {
 
                 {(() => {
                   if (isTeamPerformanceLoading) {
-                    return <Text style={[Fonts.p2, Fonts.neutral00, Fonts.textCenter]}>Chargement des performances...</Text>;
+                    return (
+                      <Text style={[Fonts.p2, Fonts.neutral00, Fonts.textCenter]}>
+                        {t('teamDetails.perf.loading', 'Chargement des performances...')}
+                      </Text>
+                    );
                   }
 
                   // VA1 — refusé par le serveur : le dire, pas « aucune performance ».
@@ -4753,7 +5057,9 @@ function TeamDetails({ navigation, route }) {
                   if (teamPerformancePlayers.length) {
                     return (
                       <View style={[Spaces.gap[8]]}>
-                        <Text style={[Fonts.p3Bold, Fonts.neutral00]}>Joueurs</Text>
+                        <Text style={[Fonts.p3Bold, Fonts.neutral00]}>
+                          {t('teamDetails.perf.playersTitle', 'Joueurs')}
+                        </Text>
                         {teamPerformancePlayers.map((/** @type {any} */ player, /** @type {number} */ index) => (
                           <View
                             key={player?.documentId || player?.manualPlayerName || `performance-${index}`}
@@ -4766,16 +5072,42 @@ function TeamDetails({ navigation, route }) {
                           >
                             <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter, Spaces.gap[8]]}>
                               <Text style={[Fonts.p2Bold, Fonts.neutral00, { flex: 1 }]}>
-                                {player?.manualPlayerName || `${player?.firstname || ''} ${player?.lastname || ''}`.trim() || 'Joueur'}
+                                {player?.manualPlayerName
+                                  || `${player?.firstname || ''} ${player?.lastname || ''}`.trim()
+                                  || t('teamDetails.perf.playerFallback', 'Joueur')}
                               </Text>
                               <View style={[ApplicationStyle.backgroundColor.primary900, ApplicationStyle.borderRadius16, Spaces.paddingHorizontal[8], Spaces.paddingVertical[4]]}>
-                                <Text style={[Fonts.p4Bold, Fonts.primary500]}>{`${Number(player?.matches || 0)} matchs`}</Text>
+                                <Text style={[Fonts.p4Bold, Fonts.primary500]}>
+                                  {t(
+                                    'teamDetails.perf.playerMatches',
+                                    '{{matches}} matchs',
+                                    { matches: Number(player?.matches || 0), ...SANS_ECHAPPEMENT },
+                                  )}
+                                </Text>
                               </View>
                             </View>
                             <Text style={[Fonts.p3, Fonts.neutral100]}>
                               {performanceSummary.sport === 'basketball'
-                                ? `${Number(player?.points || 0)} points - ${Number(player?.assists || 0)} passes - ${Number(player?.rebounds || 0)} rebonds`
-                                : `${Number(player?.goals || 0)} buts - ${Number(player?.assists || 0)} passes - ${Number(player?.minutesPlayed || 0)} min`}
+                                ? t(
+                                  'teamDetails.perf.playerBasketballLine',
+                                  '{{points}} points - {{assists}} passes - {{rebounds}} rebonds',
+                                  {
+                                    assists: Number(player?.assists || 0),
+                                    points: Number(player?.points || 0),
+                                    rebounds: Number(player?.rebounds || 0),
+                                    ...SANS_ECHAPPEMENT,
+                                  },
+                                )
+                                : t(
+                                  'teamDetails.perf.playerFootballLine',
+                                  '{{goals}} buts - {{assists}} passes - {{minutes}} min',
+                                  {
+                                    assists: Number(player?.assists || 0),
+                                    goals: Number(player?.goals || 0),
+                                    minutes: Number(player?.minutesPlayed || 0),
+                                    ...SANS_ECHAPPEMENT,
+                                  },
+                                )}
                             </Text>
                           </View>
                         ))}
@@ -4786,14 +5118,20 @@ function TeamDetails({ navigation, route }) {
                   if (pendingPerformanceMatches.length) {
                     return (
                       <Text style={[Fonts.p2, Fonts.neutral00, Fonts.textCenter]}>
-                        Des réponses joueur existent déjà pour des matchs en attente de publication équipe.
+                        {t(
+                          'teamDetails.perf.pendingOnly',
+                          'Des réponses joueur existent déjà pour des matchs en attente de publication équipe.', // eslint-disable-line max-len
+                        )}
                       </Text>
                     );
                   }
 
                   return (
                     <Text style={[Fonts.p2, Fonts.neutral00, Fonts.textCenter]}>
-                      Aucune performance de match disponible pour le moment.
+                      {t(
+                        'teamDetails.perf.empty',
+                        'Aucune performance de match disponible pour le moment.',
+                      )}
                     </Text>
                   );
                 })()}
@@ -4937,8 +5275,11 @@ function TeamDetails({ navigation, route }) {
             {canManageTeam ? (
               <>
                 {renderTeamActionsGroupHead({
-                  actionLabel: isTeamOfferUnlocked ? null : 'Débloquer →',
-                  label: "Avec l'offre Équipe",
+                  actionLabel: isTeamOfferUnlocked ? null : t(
+                    'teamDetails.upsell.teamAction',
+                    'Débloquer →',
+                  ),
+                  label: t('teamDetails.upsell.teamLabel', "Avec l'offre Équipe"),
                   onActionPress: openTeamOfferUnlockSheet,
                 })}
                 <View style={teamActionsListStyle}>
@@ -4970,8 +5311,11 @@ function TeamDetails({ navigation, route }) {
                 </View>
 
                 {renderTeamActionsGroupHead({
-                  actionLabel: isClubOfferUnlocked ? null : "Voir l'offre →",
-                  label: "Avec l'offre Club",
+                  actionLabel: isClubOfferUnlocked ? null : t(
+                    'teamDetails.upsell.clubAction',
+                    "Voir l'offre →",
+                  ),
+                  label: t('teamDetails.upsell.clubLabel', "Avec l'offre Club"),
                   onActionPress: openClubOfferRecap,
                 })}
                 <View style={teamActionsListStyle}>
@@ -5259,7 +5603,7 @@ function TeamDetails({ navigation, route }) {
                   { letterSpacing: 1, textTransform: 'uppercase' },
                 ]}
               >
-                Vie d&apos;équipe
+                {t('teamDetails.playerSheet.attendanceTitle', "Vie d'équipe")}
               </Text>
               <View
                 style={{
@@ -5272,7 +5616,9 @@ function TeamDetails({ navigation, route }) {
                 }}
               >
                 <View style={[Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween]}>
-                  <Text style={[Fonts.p3Bold, Fonts.neutral100]}>Présences</Text>
+                  <Text style={[Fonts.p3Bold, Fonts.neutral100]}>
+                    {t('teamDetails.playerSheet.presence', 'Présences')}
+                  </Text>
                   <Text style={[Fonts.p3Bold, { color: selectedStatsPlayer.rowTone }]}>
                     {`${selectedStatsPlayer.attendance}/${selectedStatsPlayer.denominator} · ${Math.round(selectedStatsPlayer.presenceRatio * 100)} %`}
                   </Text>
@@ -5296,7 +5642,15 @@ function TeamDetails({ navigation, route }) {
                   />
                 </View>
                 <Text style={[Fonts.p4, Fonts.neutral400, Spaces.marginTop[8]]}>
-                  {`${selectedStatsPlayer.lateCount} retard${selectedStatsPlayer.lateCount > 1 ? 's' : ''} · ${Number(selectedStatsPlayer.row?.absenceCount || 0)} absence${Number(selectedStatsPlayer.row?.absenceCount || 0) > 1 ? 's' : ''}`}
+                  {`${t('teamDetails.playerSheet.lateCount', {
+                    count: selectedStatsPlayer.lateCount,
+                    defaultValue_one: '{{count}} retard',
+                    defaultValue_other: '{{count}} retards',
+                  })} · ${t('teamDetails.playerSheet.absenceCount', {
+                    count: Number(selectedStatsPlayer.row?.absenceCount || 0),
+                    defaultValue_one: '{{count}} absence',
+                    defaultValue_other: '{{count}} absences',
+                  })}`}
                 </Text>
               </View>
             </View>
@@ -5309,14 +5663,35 @@ function TeamDetails({ navigation, route }) {
               if (!perfEntry) return null;
               const perfStats = performanceSummary.sport === 'basketball'
                 ? [
-                  { label: 'matchs', value: String(Number(perfEntry?.matches || 0)) },
-                  { label: 'points', value: String(Number(perfEntry?.points || 0)) },
-                  { label: 'passes', value: String(Number(perfEntry?.assists || 0)) },
+                  {
+                    label: t('teamDetails.playerSheet.perf.matches', 'matchs'),
+                    value: String(Number(perfEntry?.matches || 0)),
+                  },
+                  {
+                    label: t('teamDetails.playerSheet.perf.points', 'points'),
+                    value: String(Number(perfEntry?.points || 0)),
+                  },
+                  {
+                    label: t('teamDetails.playerSheet.perf.assists', 'passes'),
+                    value: String(Number(perfEntry?.assists || 0)),
+                  },
                 ]
                 : [
-                  { label: 'matchs', value: String(Number(perfEntry?.matches || 0)) },
-                  { label: 'buts', value: String(Number(perfEntry?.goals || 0)) },
-                  { label: 'temps de jeu', value: `${Number(perfEntry?.minutesPlayed || 0)} min` },
+                  {
+                    label: t('teamDetails.playerSheet.perf.matches', 'matchs'),
+                    value: String(Number(perfEntry?.matches || 0)),
+                  },
+                  {
+                    label: t('teamDetails.playerSheet.perf.goals', 'buts'),
+                    value: String(Number(perfEntry?.goals || 0)),
+                  },
+                  {
+                    label: t('teamDetails.playerSheet.perf.playingTime', 'temps de jeu'),
+                    value: t('teamDetails.playerSheet.perf.minutes', '{{minutes}} min', {
+                      minutes: Number(perfEntry?.minutesPlayed || 0),
+                      ...SANS_ECHAPPEMENT,
+                    }),
+                  },
                 ];
               return (
                 <View style={[Spaces.gap[8]]}>
@@ -5327,7 +5702,7 @@ function TeamDetails({ navigation, route }) {
                       { letterSpacing: 1, textTransform: 'uppercase' },
                     ]}
                   >
-                    Performance · saison
+                    {t('teamDetails.playerSheet.perf.title', 'Performance · saison')}
                   </Text>
                   <View
                     style={[
@@ -5357,7 +5732,17 @@ function TeamDetails({ navigation, route }) {
               && selectedStatsPlayer.row.user.documentId !== currentUser?.documentId ? (
                 <Button
                   onPress={() => handleWriteToPlayer(selectedStatsPlayer.row?.user)}
-                  title={`Écrire à ${selectedStatsPlayer.row?.user?.firstname || 'ce membre'}`}
+                  title={t(
+                    'teamDetails.playerSheet.writeTo',
+                    'Écrire à {{name}}',
+                    {
+                      name: selectedStatsPlayer.row?.user?.firstname || t(
+                        'teamDetails.playerSheet.writeToFallback',
+                        'ce membre',
+                      ),
+                      ...SANS_ECHAPPEMENT,
+                    },
+                  )}
                   variant="Secondary"
                 />
               ) : null}
@@ -5407,7 +5792,10 @@ function TeamDetails({ navigation, route }) {
               autoCorrect={false}
               editable={!isExternalCompetitionPhaseActive}
               onChangeText={setFfbbUrl}
-              placeholder="https://epreuves.fff.fr/... ou https://competitions.ffbb.com/..."
+              placeholder={t(
+                'teamDetails.ffbbForm.urlPlaceholder',
+                'https://epreuves.fff.fr/... ou https://competitions.ffbb.com/...',
+              )}
               placeholderTextColor="#888"
               style={[
                 Fonts.p1, Fonts.neutral00,

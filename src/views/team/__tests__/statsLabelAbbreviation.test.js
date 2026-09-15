@@ -43,7 +43,8 @@ describe('Le vocabulaire des statistiques ne s abrege plus (D59 ④)', () => {
   it('l ecran d une equipe ecrit « Passes décisives » en toutes lettres', () => {
     const source = readFileSync(join(SOURCE_ROOT, 'views', 'team', 'TeamDetails.js'), 'utf8');
 
-    expect(source).toContain("label: 'Passes décisives'");
+    // I18N-4 : le libelle est desormais le repli francais de t() -- meme mot, en toutes lettres.
+    expect(source).toMatch(/label: (t\('[\w.]+', )?'Passes décisives'/);
     expect(ABBREVIATION.test(source)).toBe(false);
   });
 
