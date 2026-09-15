@@ -1,3 +1,5 @@
+import i18next from 'i18next';
+
 import { LEAGUE_SPORT_KEYS } from './leagueSportConfig';
 
 const toInt = (value) => {
@@ -19,10 +21,22 @@ const normalizeSet = (set, index) => {
   const a = toInt(set?.a);
   const b = toInt(set?.b);
   if (a === null || b === null || a < 0 || b < 0) {
-    return { error: `Set ${index + 1} invalide.` };
+    return {
+      error: i18next.t(
+        'leagueScoreDetails.invalidSet',
+        'Set {{setNumber}} invalide.',
+        { setNumber: index + 1 },
+      ),
+    };
   }
   if (a === b) {
-    return { error: `Le set ${index + 1} ne peut pas être à égalité.` };
+    return {
+      error: i18next.t(
+        'leagueScoreDetails.tiedSet',
+        'Le set {{setNumber}} ne peut pas être à égalité.',
+        { setNumber: index + 1 },
+      ),
+    };
   }
   const winner = Math.max(a, b);
   const loser = Math.min(a, b);
@@ -31,7 +45,13 @@ const normalizeSet = (set, index) => {
     ? isValidSuperTieBreakSet(winner, loser)
     : isValidRegularPadelSet(winner, loser);
   if (!valid) {
-    return { error: `Le set ${index + 1} ne respecte pas les règles du padel.` };
+    return {
+      error: i18next.t(
+        'leagueScoreDetails.setBreaksPadelRules',
+        'Le set {{setNumber}} ne respecte pas les règles du padel.',
+        { setNumber: index + 1 },
+      ),
+    };
   }
   return {
     set: {
@@ -48,7 +68,12 @@ export const buildPadelScorePayload = (sets) => {
     .filter((set) => set.a !== null || set.b !== null);
 
   if (inputSets.length < 2 || inputSets.length > 3) {
-    return { error: 'Renseigne 2 ou 3 sets pour un match de padel.' };
+    return {
+      error: i18next.t(
+        'leagueScoreDetails.setCount',
+        'Renseigne 2 ou 3 sets pour un match de padel.',
+      ),
+    };
   }
 
   let scoreA = 0;
@@ -64,7 +89,9 @@ export const buildPadelScorePayload = (sets) => {
   }
 
   if (!((scoreA === 2 && [0, 1].includes(scoreB)) || (scoreB === 2 && [0, 1].includes(scoreA)))) {
-    return { error: 'Le vainqueur doit gagner 2 sets.' };
+    return {
+      error: i18next.t('leagueScoreDetails.winnerSets', 'Le vainqueur doit gagner 2 sets.'),
+    };
   }
 
   return {

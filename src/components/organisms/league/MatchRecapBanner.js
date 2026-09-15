@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Pressable, StyleSheet, Text, View,
 } from 'react-native';
@@ -29,6 +30,7 @@ function MatchRecapBanner({
   visible,
 }) {
   const { Colors, Fonts } = useTheme();
+  const { t } = useTranslation();
   const translateY = useSharedValue(-110);
   const opacity = useSharedValue(0);
   const progress = useSharedValue(1);
@@ -59,7 +61,10 @@ function MatchRecapBanner({
   if (!visible || !payload) return null;
 
   const recap = payload.recap || {};
-  const resultLabel = recap.resultLabel || recap.result || 'Match terminé';
+  const resultLabel = recap.resultLabel || recap.result || t(
+    'matchRecapBanner.resultFallback',
+    'Match terminé',
+  );
   const scoreLabel = typeof recap.scoreLabel === 'string'
     ? recap.scoreLabel
     : `${recap.myScore ?? '-'} - ${recap.opponentScore ?? '-'}`;
@@ -84,7 +89,9 @@ function MatchRecapBanner({
           },
         ]}
       >
-        <Text style={[Fonts.p3Bold, { color: Colors.gold500 }]}>Recap match</Text>
+        <Text style={[Fonts.p3Bold, { color: Colors.gold500 }]}>
+          {t('matchRecapBanner.title', 'Recap match')}
+        </Text>
         <View style={styles.row}>
           <Text numberOfLines={1} style={[Fonts.h4, { color: Colors.neutral00 }]}>{resultLabel}</Text>
           <Text style={[Fonts.h4Bold, { color: Colors.gold500 }]}>{scoreLabel}</Text>
@@ -92,7 +99,10 @@ function MatchRecapBanner({
         <Text numberOfLines={1} style={[Fonts.p3, { color: Colors.neutral300 }]}>
           {pointsLabel}
           {' - '}
-          {movementLabel || recap.progressLabel || 'Touche pour voir le detail complet.'}
+          {movementLabel || recap.progressLabel || t(
+            'matchRecapBanner.openDetailsHint',
+            'Touche pour voir le detail complet.',
+          )}
         </Text>
         <View style={[styles.progressTrack, { backgroundColor: 'rgba(255,255,255,0.12)' }]}>
           <Animated.View style={[styles.progressFill, progressStyle, { backgroundColor: Colors.primary500 }]} />

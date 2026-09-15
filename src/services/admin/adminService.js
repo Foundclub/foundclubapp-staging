@@ -1,3 +1,7 @@
+import i18next from 'i18next';
+
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
+
 import {
   annotateWaitingPlayersPerClub,
   buildClubArrivalInterestRows,
@@ -272,7 +276,10 @@ const getPersonLabel = (person) => {
   return pickFirstText(entity.username, entity.email, entity.phoneNumber, entity.name);
 };
 
-const buildPersonLabel = (...people) => people.map(getPersonLabel).find(Boolean) || 'Utilisateur inconnu';
+const buildPersonLabel = (...people) => people.map(getPersonLabel).find(Boolean) || i18next.t(
+  'adminService.unknownUser',
+  'Utilisateur inconnu',
+);
 
 const normalizeReportStatus = (value) => {
   const normalized = String(value || '').trim().toLowerCase();
@@ -311,10 +318,16 @@ const buildPendingClubRequestFilters = (requestKinds) => ({
 });
 
 const toBadgeLabel = (kind) => {
-  if (kind === ADMIN_CLAIM_ITEM_TYPES.CLUB_CREATION) return 'CRÉATION DE CLUB';
-  if (kind === ADMIN_CLAIM_ITEM_TYPES.CLUB_NOT_FOUND) return 'CLUB INTROUVABLE';
-  if (kind === ADMIN_CLAIM_ITEM_TYPES.TEAM_NOT_FOUND) return 'ÉQUIPE INTROUVABLE';
-  return 'REVENDICATION';
+  if (kind === ADMIN_CLAIM_ITEM_TYPES.CLUB_CREATION) {
+    return i18next.t('adminService.badges.clubCreation', 'CRÉATION DE CLUB');
+  }
+  if (kind === ADMIN_CLAIM_ITEM_TYPES.CLUB_NOT_FOUND) {
+    return i18next.t('adminService.badges.clubNotFound', 'CLUB INTROUVABLE');
+  }
+  if (kind === ADMIN_CLAIM_ITEM_TYPES.TEAM_NOT_FOUND) {
+    return i18next.t('adminService.badges.teamNotFound', 'ÉQUIPE INTROUVABLE');
+  }
+  return i18next.t('adminService.badges.claim', 'REVENDICATION');
 };
 
 const toTimestamp = (value) => {
@@ -333,7 +346,10 @@ const mapEventReportItem = (item = {}) => {
     authorLabel: buildPersonLabel(report.user, report.author, report.createdBy, report.reporter),
     createdAt: report.createdAt || report.updatedAt || null,
     documentId: pickDocumentId(report),
-    message: pickFirstText(report.reason, report.comment, report.description, 'Signalement d\'événement'),
+    message: pickFirstText(report.reason, report.comment, report.description, i18next.t(
+      'adminService.reports.eventFallback',
+      "Signalement d'événement",
+    )),
     raw: report,
     source: 'event',
     status: normalizeReportStatus(report.status || report.state),
@@ -343,7 +359,7 @@ const mapEventReportItem = (item = {}) => {
       event.name,
       event.title,
       [team.name, club.name].filter(Boolean).join(' - '),
-      'Evenement',
+      i18next.t('adminService.reports.eventTargetFallback', 'Evenement'),
     ),
   };
 };
@@ -372,7 +388,10 @@ const mapMessageReportItem = (item = {}) => {
     authorLabel: buildPersonLabel(report.user, report.author, report.createdBy, report.reporter, author),
     createdAt: report.createdAt || report.updatedAt || null,
     documentId: pickDocumentId(report),
-    message: pickFirstText(report.reason, report.comment, messagePreview, 'Signalement de message'),
+    message: pickFirstText(report.reason, report.comment, messagePreview, i18next.t(
+      'adminService.reports.messageFallback',
+      'Signalement de message',
+    )),
     raw: report,
     source: 'message',
     status: normalizeReportStatus(report.status || report.state),
@@ -381,8 +400,12 @@ const mapMessageReportItem = (item = {}) => {
     targetLabel: pickFirstText(
       chat.name,
       chat.title,
-      author?.firstname ? `Conversation avec ${buildPersonLabel(author)}` : '',
-      'Conversation',
+      author?.firstname ? i18next.t(
+        'adminService.reports.conversationWith',
+        'Conversation avec {{person}}',
+        { person: buildPersonLabel(author), ...SANS_ECHAPPEMENT },
+      ) : '',
+      i18next.t('adminService.reports.conversationFallback', 'Conversation'),
     ),
   };
 };

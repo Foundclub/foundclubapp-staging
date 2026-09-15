@@ -1,5 +1,6 @@
 import { useFocusEffect } from '@react-navigation/native';
 import { FlashList } from '@shopify/flash-list';
+import i18next from 'i18next';
 import {
   useCallback, useEffect, useMemo, useState,
 } from 'react';
@@ -39,7 +40,7 @@ const getRequesterName = (/** @type {any} */ user) => {
   if (fullname.length > 0) return fullname;
   const username = String(user?.username || '').trim();
   if (username.length > 0 && !isPhoneLike(username)) return username;
-  return 'Joueur';
+  return i18next.t('squadRequestsScreen.playerFallback', 'Joueur');
 };
 
 /**
@@ -92,19 +93,21 @@ function SquadRequestsScreen({ navigation, route }) {
       await respondToJoinRequest(teamId, userId, accept);
       await refetch();
       setFeedback({
-        message: accept ? 'Demande acceptée.' : 'Demande refusée.',
+        message: accept
+          ? t('squadRequestsScreen.feedback.accepted', 'Demande acceptée.')
+          : t('squadRequestsScreen.feedback.declined', 'Demande refusée.'),
         type: 'success',
       });
     } catch (requestError) {
       console.error('[SquadRequests] respond error:', requestError);
       setFeedback({
-        message: 'Impossible de traiter cette demande.',
+        message: t('squadRequestsScreen.feedback.error', 'Impossible de traiter cette demande.'),
         type: 'error',
       });
     } finally {
       setPendingAction(null);
     }
-  }, [refetch, teamId]);
+  }, [refetch, t, teamId]);
 
   const renderRequestCard = useCallback((/** @type {{ item: any }} */ { item }) => {
     const userId = getEntityDocumentId(item);
@@ -126,7 +129,9 @@ function SquadRequestsScreen({ navigation, route }) {
       >
         <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter, Spaces.marginBottom[16]]}>
           <Tag text={team?.name || 'Squad'} />
-          <Text style={[Fonts.p3Bold, { color: Colors.gold500 }]}>Nouvelle demande</Text>
+          <Text style={[Fonts.p3Bold, { color: Colors.gold500 }]}>
+            {t('squadRequestsScreen.newRequest', 'Nouvelle demande')}
+          </Text>
         </View>
 
         <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[16], Spaces.marginBottom[16]]}>
@@ -149,7 +154,7 @@ function SquadRequestsScreen({ navigation, route }) {
               text={requesterName}
             />
             <Text numberOfLines={2} style={[Fonts.p2, { color: Colors.neutral200 }]}>
-              Souhaite rejoindre ta squad.
+              {t('squadRequestsScreen.wantsToJoin', 'Souhaite rejoindre ta squad.')}
             </Text>
           </View>
         </View>
@@ -226,7 +231,9 @@ function SquadRequestsScreen({ navigation, route }) {
       ]}
     >
       <Text style={[Fonts.p1Bold, { color: Colors.neutral00, textAlign: 'center' }]}>
-        {isLoading ? 'Chargement...' : t('teamMembershipRequestList.noData', 'Aucune demande d\'adhésion en attente')}
+        {isLoading
+          ? t('squadRequestsScreen.loading', 'Chargement...')
+          : t('teamMembershipRequestList.noData', 'Aucune demande d\'adhésion en attente')}
       </Text>
     </View>
   ), [
@@ -245,10 +252,13 @@ function SquadRequestsScreen({ navigation, route }) {
   if (!teamId) {
     return (
       <LeagueStateView
-        actionLabel="Retour"
-        description="L'identifiant de la squad est manquant. Ouvre les demandes depuis la fiche squad ou le dashboard League."
+        actionLabel={t('squadRequestsScreen.back', 'Retour')}
+        description={t(
+          'squadRequestsScreen.missingId.description',
+          "L'identifiant de la squad est manquant. Ouvre les demandes depuis la fiche squad ou le dashboard League.", // eslint-disable-line max-len
+        )}
         onAction={() => navigation.goBack()}
-        title="Squad introuvable"
+        title={t('squadRequestsScreen.missingId.title', 'Squad introuvable')}
       />
     );
   }
@@ -256,9 +266,12 @@ function SquadRequestsScreen({ navigation, route }) {
   if (isLoading && !team) {
     return (
       <LeagueStateView
-        description="Chargement des demandes d'adhésion de la squad League."
+        description={t(
+          'squadRequestsScreen.loadingState.description',
+          "Chargement des demandes d'adhésion de la squad League.",
+        )}
         isLoading
-        title="Chargement des demandes"
+        title={t('squadRequestsScreen.loadingState.title', 'Chargement des demandes')}
       />
     );
   }
@@ -266,10 +279,13 @@ function SquadRequestsScreen({ navigation, route }) {
   if (error) {
     return (
       <LeagueStateView
-        actionLabel="Réessayer"
-        description="Impossible de charger les demandes d'adhésion pour cette squad. Vérifie la connexion puis relance."
+        actionLabel={t('squadRequestsScreen.retry', 'Réessayer')}
+        description={t(
+          'squadRequestsScreen.errorState.description',
+          "Impossible de charger les demandes d'adhésion pour cette squad. Vérifie la connexion puis relance.", // eslint-disable-line max-len
+        )}
         onAction={() => refetch()}
-        title="Chargement impossible"
+        title={t('squadRequestsScreen.errorState.title', 'Chargement impossible')}
       />
     );
   }
@@ -277,10 +293,13 @@ function SquadRequestsScreen({ navigation, route }) {
   if (!team) {
     return (
       <LeagueStateView
-        actionLabel="Retour"
-        description="Cette squad League est introuvable ou n'est plus disponible."
+        actionLabel={t('squadRequestsScreen.back', 'Retour')}
+        description={t(
+          'squadRequestsScreen.unavailable.description',
+          "Cette squad League est introuvable ou n'est plus disponible.",
+        )}
         onAction={() => navigation.goBack()}
-        title="Squad indisponible"
+        title={t('squadRequestsScreen.unavailable.title', 'Squad indisponible')}
       />
     );
   }
@@ -312,9 +331,9 @@ function SquadRequestsScreen({ navigation, route }) {
             <>
               <Text style={{ color: Colors.gold500 }}>{requests.length}</Text>
               {' '}
-              demande(s) en attente
+              {t('squadRequestsScreen.pendingCount', 'demande(s) en attente')}
             </>
-          ) : 'Aucune demande en attente'}
+          ) : t('squadRequestsScreen.noPending', 'Aucune demande en attente')}
         </Text>
 
         {feedback ? (

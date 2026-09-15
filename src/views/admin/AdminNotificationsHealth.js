@@ -1,5 +1,7 @@
 import { useFocusEffect } from '@react-navigation/native';
+import i18next from 'i18next';
 import { useCallback, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
   RefreshControl,
@@ -11,6 +13,7 @@ import {
 } from 'react-native';
 
 import { useAppContext } from '@/store/appContext';
+import localeDesFormats from '@/theme/strings/localeDesFormats';
 import useTheme from '@/theme/themeContext';
 
 import ScreenContainer from '@/components/templates/ScreenContainer';
@@ -25,14 +28,19 @@ import {
 
 const toDisplayValue = (value, fallback = '-') => {
   if (value === undefined || value === null || value === '') return fallback;
-  if (typeof value === 'boolean') return value ? 'Oui' : 'Non';
+  if (typeof value === 'boolean') {
+    return value ? i18next.t(
+      'adminNotificationsHealth.yes',
+      'Oui',
+    ) : i18next.t('adminNotificationsHealth.no', 'Non');
+  }
   return String(value);
 };
 
 const formatDate = (value) => {
   const parsed = Date.parse(String(value || ''));
   if (!Number.isFinite(parsed)) return '-';
-  return new Date(parsed).toLocaleString('fr-FR', {
+  return new Date(parsed).toLocaleString(localeDesFormats(), {
     day: '2-digit',
     hour: '2-digit',
     minute: '2-digit',
@@ -46,6 +54,7 @@ function AdminNotificationsHealth() {
     Fonts,
     Spaces,
   } = useTheme();
+  const { t } = useTranslation();
   const [{ authSessions }] = useAppContext();
   const [feedback, setFeedback] = useState('');
   const {
@@ -67,13 +76,22 @@ function AdminNotificationsHealth() {
 
   const firstFailureDocumentId = data?.recentFailures?.[0]?.documentId;
   const runtimeRows = useMemo(() => ([
-    ['Environnement', data?.runtime?.appEnv],
+    [t('adminNotificationsHealth.runtime.environment', 'Environnement'), data?.runtime?.appEnv],
     ['Push backend', data?.runtime?.push?.enabled],
-    ['Projet Firebase', data?.runtime?.firebase?.projectId],
-    ['Config Firebase', data?.runtime?.firebase?.configured],
-    ['Cron actif', data?.runtime?.cron?.enabled],
-    ['Leader cron', data?.runtime?.cron?.isCronLeader],
-  ]), [data]);
+    [t(
+      'adminNotificationsHealth.runtime.firebaseProject',
+      'Projet Firebase',
+    ), data?.runtime?.firebase?.projectId],
+    [t(
+      'adminNotificationsHealth.runtime.firebaseConfig',
+      'Config Firebase',
+    ), data?.runtime?.firebase?.configured],
+    [t('adminNotificationsHealth.runtime.cronActive', 'Cron actif'), data?.runtime?.cron?.enabled],
+    [t(
+      'adminNotificationsHealth.runtime.cronLeader',
+      'Leader cron',
+    ), data?.runtime?.cron?.isCronLeader],
+  ]), [data, t]);
 
   const queueCounts = data?.queueCounts || {};
   const tokenCounts = data?.tokenCounts || {};
@@ -100,7 +118,10 @@ function AdminNotificationsHealth() {
     setFeedback('');
     try {
       const result = await action();
-      setFeedback(`${label} : OK${result?.ok === false ? ' avec avertissement' : ''}`);
+      setFeedback(`${label} : OK${result?.ok === false ? t(
+        'adminNotificationsHealth.withWarning',
+        ' avec avertissement',
+      ) : ''}`);
       refetch();
     } catch (actionError) {
       setFeedback(`${label} : ${actionError?.message || 'echec'}`);
@@ -110,9 +131,12 @@ function AdminNotificationsHealth() {
   if (isLoading) {
     return (
       <AdminStateView
-        description="Nous lisons l'état runtime push, la queue et les installations."
+        description={t(
+          'adminNotificationsHealth.states.loadingDescription',
+          "Nous lisons l'état runtime push, la queue et les installations.",
+        )}
         isLoading
-        title="Diagnostic notifications"
+        title={t('adminNotificationsHealth.states.loadingTitle', 'Diagnostic notifications')}
       />
     );
   }
@@ -120,10 +144,13 @@ function AdminNotificationsHealth() {
   if (error) {
     return (
       <AdminStateView
-        actionLabel="Reessayer"
-        description={error?.message || 'Impossible de charger le diagnostic notifications.'}
+        actionLabel={t('adminNotificationsHealth.states.retry', 'Reessayer')}
+        description={error?.message || t(
+          'adminNotificationsHealth.states.errorDescription',
+          'Impossible de charger le diagnostic notifications.',
+        )}
         onAction={refetch}
-        title="Diagnostic indisponible"
+        title={t('adminNotificationsHealth.states.errorTitle', 'Diagnostic indisponible')}
       />
     );
   }
@@ -199,7 +226,10 @@ function AdminNotificationsHealth() {
           </Text>
           <Text style={[Fonts.h1, Fonts.neutral00]}>Notifications Health</Text>
           <Text style={[Fonts.p2, Fonts.neutral300, styles.headerDescription]}>
-            Verifie la configuration push, la queue d&apos;envoi et les abonnements multi-comptes sans exposer les secrets.
+            {t(
+              'adminNotificationsHealth.description',
+              "Verifie la configuration push, la queue d'envoi et les abonnements multi-comptes sans exposer les secrets.", // eslint-disable-line max-len
+            )}
           </Text>
         </View>
 
@@ -227,10 +257,24 @@ function AdminNotificationsHealth() {
         {renderCard(
           'Queue', (
             <View style={styles.metricsGrid}>
-              {renderMetric('En attente', queueCounts.pending)}
-              {renderMetric('Envoi', queueCounts.sending)}
-              {renderMetric('Envoyees', queueCounts.sent, Colors.success500)}
-              {renderMetric('Echouees', queueCounts.failed, Colors.warning500)}
+              {renderMetric(
+                t('adminNotificationsHealth.metrics.pending', 'En attente'),
+                queueCounts.pending,
+              )}
+              {renderMetric(
+                t('adminNotificationsHealth.metrics.sending', 'Envoi'),
+                queueCounts.sending,
+              )}
+              {renderMetric(
+                t('adminNotificationsHealth.metrics.sent', 'Envoyees'),
+                queueCounts.sent,
+                Colors.success500,
+              )}
+              {renderMetric(
+                t('adminNotificationsHealth.metrics.failed', 'Echouees'),
+                queueCounts.failed,
+                Colors.warning500,
+              )}
               {renderMetric('Dead', queueCounts.dead, Colors.error500)}
             </View>
           ),
@@ -243,26 +287,47 @@ function AdminNotificationsHealth() {
                 {renderMetric('Total', tokenCounts.total)}
                 {renderMetric('iOS', tokenCounts.ios)}
                 {renderMetric('Android', tokenCounts.android)}
-                {renderMetric('Abonnements', tokenCounts.subscriptions, Colors.primary200)}
-                {renderMetric('Multi-comptes', tokenCounts.multiAccountInstallations, Colors.success500)}
-                {renderMetric('Orphelins', tokenCounts.orphaned, Colors.warning500)}
+                {renderMetric(
+                  t('adminNotificationsHealth.metrics.subscriptions', 'Abonnements'),
+                  tokenCounts.subscriptions,
+                  Colors.primary200,
+                )}
+                {renderMetric(
+                  t('adminNotificationsHealth.metrics.multiAccount', 'Multi-comptes'),
+                  tokenCounts.multiAccountInstallations,
+                  Colors.success500,
+                )}
+                {renderMetric(
+                  t('adminNotificationsHealth.metrics.orphaned', 'Orphelins'),
+                  tokenCounts.orphaned,
+                  Colors.warning500,
+                )}
               </View>
 
               <View style={styles.tokenSummary}>
                 <Text style={[Fonts.p3, Fonts.neutral300]}>
                   {subscribedLocalAccountsCount}
                   {' '}
-                  compte(s) local(aux) abonnes sur cet appareil.
+                  {t(
+                    'adminNotificationsHealth.tokens.subscribedLocal',
+                    'compte(s) local(aux) abonnes sur cet appareil.',
+                  )}
                 </Text>
                 {unsubscribedLocalAccounts.length > 0 ? (
                   <Text style={[Fonts.p3, { color: Colors.warning500 }]}>
                     {unsubscribedLocalAccounts.length}
                     {' '}
-                    compte(s) local(aux) connecte(s) ne sont pas encore abonnes sur cet appareil.
+                    {t(
+                      'adminNotificationsHealth.tokens.unsubscribedLocal',
+                      'compte(s) local(aux) connecte(s) ne sont pas encore abonnes sur cet appareil.', // eslint-disable-line max-len
+                    )}
                   </Text>
                 ) : (
                   <Text style={[Fonts.p3, { color: Colors.success500 }]}>
-                    Tous les comptes locaux detectes sur cet appareil sont abonnés.
+                    {t(
+                      'adminNotificationsHealth.tokens.allSubscribed',
+                      'Tous les comptes locaux detectes sur cet appareil sont abonnés.',
+                    )}
                   </Text>
                 )}
               </View>
@@ -273,17 +338,23 @@ function AdminNotificationsHealth() {
                     <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
                       {token.platform}
                       {' - '}
-                      {token.tokenPrefix || 'token masque'}
+                      {token.tokenPrefix || t(
+                        'adminNotificationsHealth.tokens.masked',
+                        'token masque',
+                      )}
                     </Text>
                     <Text style={[Fonts.p3, Fonts.neutral300]}>
-                      {token.supportsPushActions ? 'Actions rapides' : 'Standard'}
+                      {token.supportsPushActions ? t(
+                        'adminNotificationsHealth.tokens.quickActions',
+                        'Actions rapides',
+                      ) : 'Standard'}
                       {' - '}
                       {formatDate(token.updatedAt)}
                     </Text>
                     <Text style={[Fonts.p3, Fonts.neutral300]}>
                       {token.subscriptionCount || 0}
                       {' '}
-                      abonnement(s)
+                      {t('adminNotificationsHealth.tokens.subscriptionsCount', 'abonnement(s)')}
                       {Array.isArray(token.linkedUsers) && token.linkedUsers.length > 0
                         ? ` - ${token.linkedUsers.map((linkedUser) => linkedUser.label || linkedUser.documentId || linkedUser.id).filter(Boolean).join(', ')}`
                         : ''}
@@ -292,7 +363,10 @@ function AdminNotificationsHealth() {
                 ))}
                 {!data?.currentUserTokens?.length ? (
                   <Text style={[Fonts.p2, Fonts.neutral300]}>
-                    Aucune installation push n&apos;est encore abonnee pour ton compte courant.
+                    {t(
+                      'adminNotificationsHealth.tokens.noneForAccount',
+                      "Aucune installation push n'est encore abonnee pour ton compte courant.",
+                    )}
                   </Text>
                 ) : null}
               </View>
@@ -300,7 +374,10 @@ function AdminNotificationsHealth() {
               {data?.currentDeviceInstallations?.length ? (
                 <View style={styles.currentDeviceSection}>
                   <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
-                    Installations detectees pour cet appareil
+                    {t(
+                      'adminNotificationsHealth.tokens.deviceInstallations',
+                      'Installations detectees pour cet appareil',
+                    )}
                   </Text>
                   <View style={styles.tokenList}>
                     {data.currentDeviceInstallations.map((installation) => (
@@ -311,12 +388,15 @@ function AdminNotificationsHealth() {
                         <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
                           {installation.platform || 'other'}
                           {' - '}
-                          {installation.tokenPrefix || 'token masque'}
+                          {installation.tokenPrefix || t(
+                            'adminNotificationsHealth.tokens.masked',
+                            'token masque',
+                          )}
                         </Text>
                         <Text style={[Fonts.p3, Fonts.neutral300]}>
                           {installation.subscriptionCount || 0}
                           {' '}
-                          compte(s) lie(s)
+                          {t('adminNotificationsHealth.tokens.linkedAccounts', 'compte(s) lie(s)')}
                         </Text>
                         {Array.isArray(installation.linkedUsers) && installation.linkedUsers.length > 0 ? (
                           <Text style={[Fonts.p3, Fonts.neutral300]}>
@@ -336,7 +416,7 @@ function AdminNotificationsHealth() {
         )}
 
         {renderCard(
-          'Actions de test', (
+          t('adminNotificationsHealth.actions.title', 'Actions de test'), (
             <View style={styles.actions}>
               {renderAction('Test standard', () => runAction('Test standard', () => testMutation.mutateAsync({ kind: 'standard' })), testMutation.isPending)}
               {renderAction('Test RSVP', () => runAction('Test RSVP', () => testMutation.mutateAsync({ kind: 'event-rsvp' })), testMutation.isPending)}
@@ -346,12 +426,12 @@ function AdminNotificationsHealth() {
               {renderAction('Test chat', () => runAction('Test chat', () => testMutation.mutateAsync({ kind: 'chat-reply' })), testMutation.isPending)}
               {renderAction('Test groupe', () => runAction('Test groupe', () => testMutation.mutateAsync({ kind: 'chat-group' })), testMutation.isPending)}
               {renderAction(
-                'Relancer dernier échec',
+                t('adminNotificationsHealth.actions.retryLastFailure', 'Relancer dernier échec'),
                 () => runAction('Relance delivery', () => retryMutation.mutateAsync(firstFailureDocumentId)),
                 !firstFailureDocumentId || retryMutation.isPending,
               )}
               {renderAction(
-                'Purger dead non-prod',
+                t('adminNotificationsHealth.actions.purgeDead', 'Purger dead non-prod'),
                 () => runAction('Purge', () => purgeMutation.mutateAsync({ statuses: ['dead'] })),
                 purgeMutation.isPending || data?.runtime?.appEnv === 'production',
               )}
@@ -360,7 +440,7 @@ function AdminNotificationsHealth() {
         )}
 
         {renderCard(
-          'Derniers echecs', (
+          t('adminNotificationsHealth.failures.title', 'Derniers echecs'), (
             <View style={styles.failures}>
               {(data?.recentFailures || []).map((failure) => (
                 <View key={failure.documentId} style={styles.failureRow}>
@@ -375,13 +455,16 @@ function AdminNotificationsHealth() {
                     </Text>
                   </View>
                   <Text numberOfLines={3} style={[Fonts.p3, Fonts.neutral300, styles.failureError]}>
-                    {failure.lastError || 'Sans erreur détaillée'}
+                    {failure.lastError || t(
+                      'adminNotificationsHealth.failures.noDetail',
+                      'Sans erreur détaillée',
+                    )}
                   </Text>
                 </View>
               ))}
               {!data?.recentFailures?.length ? (
                 <Text style={[Fonts.p2, Fonts.neutral300]}>
-                  Aucun échec récent.
+                  {t('adminNotificationsHealth.failures.empty', 'Aucun échec récent.')}
                 </Text>
               ) : null}
             </View>

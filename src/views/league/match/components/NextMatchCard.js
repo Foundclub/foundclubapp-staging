@@ -2,11 +2,13 @@ import { useNavigation } from '@react-navigation/native';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import React, { useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Alert, Image, ImageBackground, ScrollView, StyleSheet, Text, TouchableOpacity, View,
 } from 'react-native';
 
 import useAuth from '@/domains/auth/useAuth';
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -85,6 +87,7 @@ function NextMatchCard({
   event, match, myTeamId, onPress, onRefresh,
 }) {
   const { Colors, Fonts, Images: ThemeImages } = useTheme();
+  const { t } = useTranslation();
   const navigation = /** @type {any} */ (useNavigation());
   const { userData } = /** @type {{ userData: User | null }} */ (useAuth());
   const { leagueLegalAcceptanceModal, requestLeagueLegalAcceptance } = useLeagueLegalAcceptance();
@@ -108,7 +111,13 @@ function NextMatchCard({
   const normalizedStatus = normalizeMatchStatus(match?.status);
   const derivedPhase = getMatchDerivedPhase(match, event, now);
   const isAnonymous = shouldMaskOpponentIdentity(match, event);
-  const matchLegalLabel = `${myTeam?.name || 'Ta squad'} VS ${isAnonymous ? 'Adversaire' : opponent?.name || 'Adversaire'}`;
+  const matchLegalLabel = t('nextMatchCard.matchLabel', '{{myTeamName}} VS {{opponentName}}', {
+    myTeamName: myTeam?.name || t('nextMatchCard.mySquadFallback', 'Ta squad'),
+    opponentName: isAnonymous
+      ? t('nextMatchCard.opponentFallback', 'Adversaire')
+      : opponent?.name || t('nextMatchCard.opponentFallback', 'Adversaire'),
+    ...SANS_ECHAPPEMENT,
+  });
   const isTerminalStatus = ['cancelled', 'forfeit', 'no_show', 'valid'].includes(normalizedStatus);
   const isVenueBooked = event?.venueBooked === true || match?.venueBooked === true || match?.venue_booked === true;
   const venueRequired = doesMatchRequireVenue(match);
@@ -146,7 +155,7 @@ function NextMatchCard({
   const matchAddressLabel = resolveAddressLabel(match);
   const venueLabel = getProposalLocationLabel(match.venue)
     || getProposalLocationLabel(match.proposed_venue)
-    || 'Lieu à définir';
+    || t('nextMatchCard.venueToBeDecided', 'Lieu à définir');
   const showAddressDetails = Boolean(
     matchAddressLabel
         && normalizeComparableLabel(matchAddressLabel) !== normalizeComparableLabel(venueLabel),
@@ -199,12 +208,30 @@ function NextMatchCard({
       .includes(normalizedStatus) || ['disputed', 'pending_validation'].includes(derivedPhase);
 
     return [
-      { done: true, key: 'found', label: 'Trouvé' },
-      { done: venueRequired ? (isVenueBooked || matchPlayed || resultSubmitted) : true, key: 'booked', label: venueRequired ? 'Terrain réservé' : 'Confirmé' },
-      { done: matchPlayed || resultSubmitted, key: 'played', label: 'Match joué' },
-      { done: resultSubmitted, key: 'result', label: 'Résultat' },
+      {
+        done: true,
+        key: 'found',
+        label: t('nextMatchCard.steps.found', 'Trouvé'),
+      },
+      {
+        done: venueRequired ? (isVenueBooked || matchPlayed || resultSubmitted) : true,
+        key: 'booked',
+        label: venueRequired
+          ? t('nextMatchCard.steps.venueBooked', 'Terrain réservé')
+          : t('nextMatchCard.steps.confirmed', 'Confirmé'),
+      },
+      {
+        done: matchPlayed || resultSubmitted,
+        key: 'played',
+        label: t('nextMatchCard.steps.played', 'Match joué'),
+      },
+      {
+        done: resultSubmitted,
+        key: 'result',
+        label: t('nextMatchCard.steps.result', 'Résultat'),
+      },
     ];
-  }, [derivedPhase, hasMatchEnded, isVenueBooked, normalizedStatus, venueRequired]);
+  }, [derivedPhase, hasMatchEnded, isVenueBooked, normalizedStatus, t, venueRequired]);
 
   const handlePrimaryWorkflowAction = () => {
     if (['disputed', 'pending_validation', 'waiting_score'].includes(workflowViewModel.phase)) {
@@ -226,11 +253,17 @@ function NextMatchCard({
         // Event Mode
         const eventId = getEntityDocumentId(event);
         if (!currentUserId) {
-          Alert.alert('Erreur', 'Utilisateur introuvable');
+          Alert.alert(
+            t('nextMatchCard.alerts.errorTitle', 'Erreur'),
+            t('nextMatchCard.alerts.userNotFound', 'Utilisateur introuvable'),
+          );
           return;
         }
         if (!eventId) {
-          Alert.alert('Erreur', 'Événement introuvable');
+          Alert.alert(
+            t('nextMatchCard.alerts.errorTitle', 'Erreur'),
+            t('nextMatchCard.alerts.eventNotFound', 'Événement introuvable'),
+          );
           return;
         }
         await createEventParticipation({
@@ -255,12 +288,21 @@ function NextMatchCard({
 
         await confirmParticipation(matchId, isTeamA ? 'a' : 'b', { legalAcceptance });
       }
-      Alert.alert('Succès', 'Présence confirmée !');
+      Alert.alert(
+        t('nextMatchCard.alerts.successTitle', 'Succès'),
+        t('nextMatchCard.alerts.attendanceConfirmed', 'Présence confirmée !'),
+      );
       onRefresh && onRefresh();
     } catch (error) {
       console.error('Confirm participation error:', error);
       const apiError = /** @type {any} */ (error);
-      Alert.alert('Erreur', apiError?.response?.data?.error?.message || 'Impossible de confirmer');
+      Alert.alert(
+        t('nextMatchCard.alerts.errorTitle', 'Erreur'),
+        apiError?.response?.data?.error?.message || t(
+          'nextMatchCard.alerts.confirmError',
+          'Impossible de confirmer',
+        ),
+      );
     }
   };
 
@@ -269,18 +311,30 @@ function NextMatchCard({
       if (event) {
         const eventId = getEntityDocumentId(event);
         if (!eventId) {
-          Alert.alert('Erreur', 'Événement introuvable');
+          Alert.alert(
+            t('nextMatchCard.alerts.errorTitle', 'Erreur'),
+            t('nextMatchCard.alerts.eventNotFound', 'Événement introuvable'),
+          );
           return;
         }
         await missingEvent(eventId);
       } else {
         await declineParticipation(getEntityDocumentId(match), isTeamA ? 'a' : 'b');
       }
-      Alert.alert('Noté', 'Absence notée.');
+      Alert.alert(
+        t('nextMatchCard.alerts.notedTitle', 'Noté'),
+        t('nextMatchCard.alerts.absenceNoted', 'Absence notée.'),
+      );
       onRefresh && onRefresh();
     } catch (error) {
       const apiError = /** @type {any} */ (error);
-      Alert.alert('Erreur', apiError?.response?.data?.error?.message || 'Impossible de decliner');
+      Alert.alert(
+        t('nextMatchCard.alerts.errorTitle', 'Erreur'),
+        apiError?.response?.data?.error?.message || t(
+          'nextMatchCard.alerts.declineError',
+          'Impossible de decliner',
+        ),
+      );
     }
   };
 
@@ -289,7 +343,10 @@ function NextMatchCard({
       if (event) {
         const eventId = getEntityDocumentId(event);
         if (!eventId) {
-          Alert.alert('Erreur', 'Événement introuvable');
+          Alert.alert(
+            t('nextMatchCard.alerts.errorTitle', 'Erreur'),
+            t('nextMatchCard.alerts.eventNotFound', 'Événement introuvable'),
+          );
           return;
         }
         await markEventVenueBooked(eventId);
@@ -297,11 +354,17 @@ function NextMatchCard({
         const matchId = getEntityDocumentId(match);
         await markLeagueMatchVenueBooked(matchId);
       }
-      Alert.alert('Terrain Réservé ✅', 'Le terrain est confirmé !');
+      Alert.alert(
+        t('nextMatchCard.alerts.venueBookedTitle', 'Terrain Réservé ✅'),
+        t('nextMatchCard.alerts.venueBookedBody', 'Le terrain est confirmé !'),
+      );
       onRefresh && onRefresh();
     } catch (error) {
       console.error('Mark venue booked error:', error);
-      Alert.alert('Erreur', 'Impossible de confirmer la réservation');
+      Alert.alert(
+        t('nextMatchCard.alerts.errorTitle', 'Erreur'),
+        t('nextMatchCard.alerts.bookingError', 'Impossible de confirmer la réservation'),
+      );
     }
   };
 
@@ -309,10 +372,14 @@ function NextMatchCard({
     const penaltyInfo = getCancellationPenalty(hoursUntilMatch);
 
     Alert.alert(
-      'Annuler le match ?',
-      `${penaltyInfo.message}\n\nCette action est irréversible.`,
+      t('nextMatchCard.cancel.title', 'Annuler le match ?'),
+      t(
+        'nextMatchCard.cancel.body',
+        '{{penaltyMessage}}\n\nCette action est irréversible.',
+        { penaltyMessage: penaltyInfo.message, ...SANS_ECHAPPEMENT },
+      ),
       [
-        { style: 'cancel', text: 'Non' },
+        { style: 'cancel', text: t('nextMatchCard.cancel.no', 'Non') },
         {
           onPress: async () => {
             try {
@@ -322,17 +389,24 @@ function NextMatchCard({
 
               const result = await cancelMatch(matchIdToUse, teamIdToUse, 'captain_request');
               Alert.alert(
-                result.penalty > 0 ? 'Match Annulé ⚠️' : 'Match Annulé',
-                result.message || 'Le match a été annulé.',
+                result.penalty > 0
+                  ? t('nextMatchCard.cancel.cancelledWithPenalty', 'Match Annulé ⚠️')
+                  : t('nextMatchCard.cancel.cancelled', 'Match Annulé'),
+                result.message || t('nextMatchCard.cancel.cancelledBody', 'Le match a été annulé.'),
               );
               onRefresh && onRefresh();
             } catch (error) {
               console.error('Cancel match error:', error);
-              Alert.alert('Erreur', "Impossible d'annuler le match");
+              Alert.alert(
+                t('nextMatchCard.alerts.errorTitle', 'Erreur'),
+                t('nextMatchCard.cancel.error', "Impossible d'annuler le match"),
+              );
             }
           },
           style: 'destructive',
-          text: penaltyInfo.isSevere ? 'Oui, forfait' : 'Oui, annuler',
+          text: penaltyInfo.isSevere
+            ? t('nextMatchCard.cancel.yesForfeit', 'Oui, forfait')
+            : t('nextMatchCard.cancel.yesCancel', 'Oui, annuler'),
         },
       ],
     );
@@ -360,26 +434,32 @@ function NextMatchCard({
         <View style={styles.content}>
           {/* Header */}
           <View style={styles.header}>
-            <Text style={styles.headerTitle}>PROCHAIN MATCH</Text>
+            <Text style={styles.headerTitle}>{t('nextMatchCard.title', 'PROCHAIN MATCH')}</Text>
             <View style={{ flexDirection: 'row', gap: 8 }}>
               {derivedPhase === 'confirmed_upcoming' && (
               <View style={[styles.badge, { backgroundColor: '#4CAF50' }]}>
-                <Text style={styles.badgeText}>À venir</Text>
+                <Text style={styles.badgeText}>
+                  {t('nextMatchCard.badges.upcoming', 'À venir')}
+                </Text>
               </View>
               )}
               {derivedPhase === 'waiting_venue' && (
               <View style={[styles.badge, { backgroundColor: '#FFC107' }]}>
-                <Text style={[styles.badgeText, { color: '#0B1820' }]}>EN ATTENTE TERRAIN</Text>
+                <Text style={[styles.badgeText, { color: '#0B1820' }]}>
+                  {t('nextMatchCard.badges.waitingVenue', 'EN ATTENTE TERRAIN')}
+                </Text>
               </View>
               )}
               {derivedPhase === 'pending_validation' && (
               <View style={[styles.badge, { backgroundColor: '#FFC107' }]}>
-                <Text style={[styles.badgeText, { color: '#0B1820' }]}>SCORE EN ATTENTE</Text>
+                <Text style={[styles.badgeText, { color: '#0B1820' }]}>
+                  {t('nextMatchCard.badges.scorePending', 'SCORE EN ATTENTE')}
+                </Text>
               </View>
               )}
               {derivedPhase === 'disputed' && (
               <View style={[styles.badge, { backgroundColor: '#EF4444' }]}>
-                <Text style={styles.badgeText}>LITIGE</Text>
+                <Text style={styles.badgeText}>{t('nextMatchCard.badges.disputed', 'LITIGE')}</Text>
               </View>
               )}
             </View>
@@ -432,7 +512,9 @@ function NextMatchCard({
                   >
                     <Text style={{ fontSize: 24 }}>❓</Text>
                   </View>
-                  <Text numberOfLines={1} style={[styles.teamName, { color: '#ADB1B2', fontStyle: 'italic' }]}>Adversaire Mystère</Text>
+                  <Text numberOfLines={1} style={[styles.teamName, { color: '#ADB1B2', fontStyle: 'italic' }]}>
+                    {t('nextMatchCard.mysteryOpponent', 'Adversaire Mystère')}
+                  </Text>
                 </>
               ) : (
                 <>
@@ -477,7 +559,7 @@ function NextMatchCard({
           {/* Attendance Gauge */}
           <View style={styles.attendance}>
             <Text style={styles.attendanceTitle}>
-              Presences joueurs confirmees (
+              {t('nextMatchCard.attendanceTitle', 'Presences joueurs confirmees (')}
               <Text style={{ color: Colors.gold500 }}>
                 {confirmedCount}
                 /
@@ -487,8 +569,12 @@ function NextMatchCard({
             </Text>
             <Text style={[styles.attendanceHint, { color: Colors.gold500 }]}>
               {isQuorumReached
-                ? 'Quorum atteint. Équipe prête.'
-                : `Minimum requis: ${requiredPlayers} joueurs. Il manque ${Math.max(requiredPlayers - confirmedCount, 0)} joueur(s).`}
+                ? t('nextMatchCard.quorum.reached', 'Quorum atteint. Équipe prête.')
+                : t(
+                  'nextMatchCard.quorum.missing',
+                  'Minimum requis: {{requiredPlayers}} joueurs. Il manque {{missingCount}} joueur(s).', // eslint-disable-line max-len
+                  { missingCount: Math.max(requiredPlayers - confirmedCount, 0), requiredPlayers },
+                )}
             </Text>
             <View style={styles.gaugeBg}>
               <View style={[styles.gaugeFill, { backgroundColor: isQuorumReached ? '#4CAF50' : '#FFC107', width: `${Math.min((confirmedCount / Math.max(requiredPlayers, 1)) * 100, 100)}%` }]} />
@@ -511,7 +597,7 @@ function NextMatchCard({
                 { color: workflowViewModel.isBlockingAction ? Colors.primary500 : Colors.neutral100 },
               ]}
             >
-              {workflowViewModel.primaryCta || 'Voir le match'}
+              {workflowViewModel.primaryCta || t('nextMatchCard.viewMatch', 'Voir le match')}
             </Text>
           </TouchableOpacity>
         </View>

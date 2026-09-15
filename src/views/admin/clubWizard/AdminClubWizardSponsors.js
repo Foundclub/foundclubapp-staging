@@ -1,5 +1,6 @@
 // @ts-nocheck
 /* eslint-disable jsdoc/require-description, jsdoc/require-param-type, jsdoc/require-returns, max-len */
+import { useTranslation } from 'react-i18next';
 import { Text, View } from 'react-native';
 
 import useTheme from '@/theme/themeContext';
@@ -29,6 +30,7 @@ function AdminClubWizardSponsors({ navigation }) {
     Fonts,
     Spaces,
   } = useTheme();
+  const { t } = useTranslation();
   const {
     addSponsor,
     removeSponsor,
@@ -41,31 +43,37 @@ function AdminClubWizardSponsors({ navigation }) {
   return (
     <WizardStepLayout
       isNextDisabled={hasInvalidSponsors}
-      nextLabel="Suivant"
+      nextLabel={t('adminClubWizardSponsors.next', 'Suivant')}
       onBack={() => navigation.goBack()}
       onClose={handleExitWizard}
       onNext={() => navigation.navigate(RouteNames.AdminClubWizardRecap)}
       stepCount={ADMIN_CLUB_WIZARD_TOTAL_STEPS}
       stepIndex={7}
-      subtitle="Ajoute des sponsors si tu veux préparer la fiche club tout de suite. Cette étape reste optionnelle."
+      subtitle={t(
+        'adminClubWizardSponsors.subtitle',
+        'Ajoute des sponsors si tu veux préparer la fiche club tout de suite. Cette étape reste optionnelle.',
+      )}
       title="Sponsors"
     >
       <View style={[Spaces.gap[18]]}>
         <Button
           onPress={addSponsor}
-          title="Ajouter un sponsor"
+          title={t('adminClubWizardSponsors.add', 'Ajouter un sponsor')}
           variant="Secondary"
         />
 
         {hasInvalidSponsors ? (
           <Text style={[Fonts.p2, { color: Colors.error500 }]}>
-            Chaque sponsor ajoute doit avoir au minimum un titre.
+            {t(
+              'adminClubWizardSponsors.invalid',
+              'Chaque sponsor ajoute doit avoir au minimum un titre.',
+            )}
           </Text>
         ) : null}
 
         {(Array.isArray(state.sponsor) ? state.sponsor : []).length === 0 ? (
           <Text style={[Fonts.p2, Fonts.neutral200]}>
-            Aucun sponsor ajoute pour le moment.
+            {t('adminClubWizardSponsors.empty', 'Aucun sponsor ajoute pour le moment.')}
           </Text>
         ) : null}
 
@@ -84,14 +92,14 @@ function AdminClubWizardSponsors({ navigation }) {
           >
             <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{`Sponsor ${index + 1}`}</Text>
             <Input
-              label="Titre"
+              label={t('adminClubWizardSponsors.titleLabel', 'Titre')}
               onChangeText={(value) => updateSponsor(index, 'title', value)}
-              placeholder="Nom du sponsor"
+              placeholder={t('adminClubWizardSponsors.titlePlaceholder', 'Nom du sponsor')}
               value={sponsor.title || ''}
             />
             <Input
               autoCapitalize="none"
-              label="Lien"
+              label={t('adminClubWizardSponsors.linkLabel', 'Lien')}
               onChangeText={(value) => updateSponsor(index, 'link', value)}
               placeholder="https://..."
               value={sponsor.link || ''}
@@ -99,7 +107,7 @@ function AdminClubWizardSponsors({ navigation }) {
             <Button
               onPress={() => removeSponsor(index)}
               size="sm"
-              title="Supprimer ce sponsor"
+              title={t('adminClubWizardSponsors.remove', 'Supprimer ce sponsor')}
               variant="SecondaryLight"
             />
           </View>

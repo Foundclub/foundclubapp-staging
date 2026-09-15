@@ -1,5 +1,7 @@
 import { useNavigation, useRoute } from '@react-navigation/native';
+import i18next from 'i18next';
 import { useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Alert,
   Image,
@@ -158,13 +160,13 @@ const getActionTargetLabel = (actionType) => {
     case 'open_event':
       return 'Event documentId';
     case 'open_recruitment_ad':
-      return 'Annonce documentId';
+      return i18next.t('adminPopupCampaignForm.target.recruitmentAd', 'Annonce documentId');
     case 'open_team':
       return 'Team documentId';
     case 'open_url':
-      return 'URL cible';
+      return i18next.t('adminPopupCampaignForm.target.url', 'URL cible');
     default:
-      return 'Cible';
+      return i18next.t('adminPopupCampaignForm.target.default', 'Cible');
   }
 };
 
@@ -181,6 +183,7 @@ function AdminPopupCampaignForm() {
     Fonts,
     Spaces,
   } = useTheme();
+  const { t } = useTranslation();
   const [isPreviewVisible, setIsPreviewVisible] = useState(false);
   const [formState, setFormState] = useState(() => campaignToForm(null));
   const campaignQuery = useGetInAppPopupCampaign(campaignId);
@@ -204,9 +207,12 @@ function AdminPopupCampaignForm() {
   if (campaignId && campaignQuery.isLoading) {
     return (
       <AdminStateView
-        description="Nous chargeons le brouillon de campagne."
+        description={t(
+          'adminPopupCampaignForm.states.loadingDescription',
+          'Nous chargeons le brouillon de campagne.',
+        )}
         isLoading
-        title="Chargement du brouillon"
+        title={t('adminPopupCampaignForm.states.loadingTitle', 'Chargement du brouillon')}
       />
     );
   }
@@ -214,10 +220,13 @@ function AdminPopupCampaignForm() {
   if (campaignId && campaignQuery.error) {
     return (
       <AdminStateView
-        actionLabel="Réessayer"
-        description={getErrorMessage(campaignQuery.error, 'generic') || 'Impossible de charger ce brouillon.'}
+        actionLabel={t('adminPopupCampaignForm.states.retry', 'Réessayer')}
+        description={getErrorMessage(campaignQuery.error, 'generic') || t(
+          'adminPopupCampaignForm.states.errorDescription',
+          'Impossible de charger ce brouillon.',
+        )}
         onAction={() => campaignQuery.refetch()}
-        title="Chargement impossible"
+        title={t('adminPopupCampaignForm.states.errorTitle', 'Chargement impossible')}
       />
     );
   }
@@ -225,10 +234,13 @@ function AdminPopupCampaignForm() {
   if (campaignId && currentCampaign && currentCampaign.status !== 'draft') {
     return (
       <AdminStateView
-        actionLabel="Ouvrir le détail"
-        description="Cette campagne a déjà été publiée. Duplique-la depuis le détail pour la modifier."
+        actionLabel={t('adminPopupCampaignForm.states.openDetail', 'Ouvrir le détail')}
+        description={t(
+          'adminPopupCampaignForm.states.publishedDescription',
+          'Cette campagne a déjà été publiée. Duplique-la depuis le détail pour la modifier.',
+        )}
         onAction={() => navigation.replace(RouteNames.AdminPopupCampaignDetail, { campaignId })}
-        title="Brouillon non éditable"
+        title={t('adminPopupCampaignForm.states.publishedTitle', 'Brouillon non éditable')}
       />
     );
   }
@@ -261,7 +273,13 @@ function AdminPopupCampaignForm() {
 
       if (response?.didCancel) return;
       if (response?.errorCode) {
-        Alert.alert('Galerie', response?.errorMessage || "Impossible d'ouvrir la galerie.");
+        Alert.alert(
+          t('adminPopupCampaignForm.galleryTitle', 'Galerie'),
+          response?.errorMessage || t(
+            'adminPopupCampaignForm.galleryError',
+            "Impossible d'ouvrir la galerie.",
+          ),
+        );
         return;
       }
 
@@ -287,13 +305,19 @@ function AdminPopupCampaignForm() {
       });
       const uploadedFile = Array.isArray(uploadResponse?.data) ? uploadResponse.data[0] : null;
       if (!uploadedFile) {
-        Alert.alert('Upload impossible', 'Le serveur n’a renvoyé aucun fichier.');
+        Alert.alert(
+          t('adminPopupCampaignForm.uploadFailed', 'Upload impossible'),
+          t('adminPopupCampaignForm.uploadNoFile', 'Le serveur n’a renvoyé aucun fichier.'),
+        );
         return;
       }
 
       setField('image', uploadedFile);
     } catch (error) {
-      Alert.alert('Upload impossible', getErrorMessage(error, 'generic'));
+      Alert.alert(
+        t('adminPopupCampaignForm.uploadFailed', 'Upload impossible'),
+        getErrorMessage(error, 'generic'),
+      );
     }
   };
 
@@ -318,7 +342,10 @@ function AdminPopupCampaignForm() {
         navigation.replace(RouteNames.AdminPopupCampaignDetail, { campaignId: nextDocumentId });
       }
     } catch (error) {
-      Alert.alert('Enregistrement impossible', getErrorMessage(error, 'generic'));
+      Alert.alert(
+        t('adminPopupCampaignForm.saveFailed', 'Enregistrement impossible'),
+        getErrorMessage(error, 'generic'),
+      );
     }
   };
 
@@ -399,16 +426,20 @@ function AdminPopupCampaignForm() {
             ]}
           >
             <Text style={[Fonts.p3Bold, { color: action.enabled ? Colors.primary500 : Colors.neutral100 }]}>
-              {action.enabled ? 'Actif' : 'Inactif'}
+              {action.enabled
+                ? t('adminPopupCampaignForm.active', 'Actif')
+                : t('adminPopupCampaignForm.inactive', 'Inactif')}
             </Text>
           </TouchableOpacity>
         </View>
 
         <View style={[Spaces.gap[8]]}>
-          <Text style={[Fonts.p2Bold, Fonts.neutral00]}>Label bouton</Text>
+          <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
+            {t('adminPopupCampaignForm.buttonLabel', 'Label bouton')}
+          </Text>
           <TextInput
             onChangeText={(value) => setActionField(slot, 'label', value)}
-            placeholder="Ex: Ouvrir"
+            placeholder={t('adminPopupCampaignForm.buttonLabelPlaceholder', 'Ex: Ouvrir')}
             placeholderTextColor={Colors.neutral300}
             style={[
               styles.input,
@@ -420,7 +451,9 @@ function AdminPopupCampaignForm() {
         </View>
 
         <View style={[Spaces.gap[8]]}>
-          <Text style={[Fonts.p2Bold, Fonts.neutral00]}>Type d’action</Text>
+          <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
+            {t('adminPopupCampaignForm.actionType', 'Type d’action')}
+          </Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false}>
             <View style={[Spaces.gap[8], { flexDirection: 'row' }]}>
               {ACTION_TYPE_OPTIONS.map((option) => {
@@ -450,7 +483,7 @@ function AdminPopupCampaignForm() {
             <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{getActionTargetLabel(action.actionType)}</Text>
             <TextInput
               onChangeText={(value) => setActionField(slot, 'targetValue', value)}
-              placeholder="documentId ou URL"
+              placeholder={t('adminPopupCampaignForm.targetPlaceholder', 'documentId ou URL')}
               placeholderTextColor={Colors.neutral300}
               style={[
                 styles.input,
@@ -469,22 +502,81 @@ function AdminPopupCampaignForm() {
     <ScreenContainer bgImage="bg2" contentContainerStyle={[Spaces.paddingVertical[24]]}>
       <ScrollView contentContainerStyle={[Spaces.paddingHorizontal[24], Spaces.paddingBottom[32], Spaces.gap[16]]}>
         <Text style={[Fonts.h1, Fonts.neutral00]}>
-          {campaignId ? 'Éditer la campagne' : 'Nouvelle campagne'}
+          {campaignId
+            ? t('adminPopupCampaignForm.editTitle', 'Éditer la campagne')
+            : t('adminPopupCampaignForm.newTitle', 'Nouvelle campagne')}
         </Text>
 
-        {renderInput('Nom interne', 'internalName', { placeholder: 'Ex: push-renouvellement-avril' })}
-        {renderChoiceRow('Modèle', 'templateKey', TEMPLATE_OPTIONS)}
-        {renderChoiceRow('Ton', 'tone', TONE_OPTIONS)}
+        {renderInput(
+          t('adminPopupCampaignForm.fields.internalName', 'Nom interne'),
+          'internalName',
+          { placeholder: 'Ex: push-renouvellement-avril' },
+        )}
+        {renderChoiceRow(
+          t('adminPopupCampaignForm.fields.template', 'Modèle'),
+          'templateKey',
+          TEMPLATE_OPTIONS,
+        )}
+        {renderChoiceRow(t('adminPopupCampaignForm.fields.tone', 'Ton'), 'tone', TONE_OPTIONS)}
         {renderChoiceRow('Trigger', 'trigger', TRIGGER_OPTIONS)}
         {renderChoiceRow('Cadence', 'cadence', CADENCE_OPTIONS)}
 
-        {renderInput('Eyebrow', 'eyebrow', { placeholder: 'Ex: Nouvelle fonctionnalité' })}
-        {renderInput('Titre', 'title', { placeholder: 'Titre visible du popup' })}
-        {renderInput('Sous-titre', 'subtitle', { placeholder: 'Texte secondaire optionnel' })}
-        {renderInput('Corps', 'body', { multiline: true, placeholder: 'Message principal affiché dans le popup' })}
-        {renderInput('Priorité (10-59)', 'priority', { placeholder: '30' })}
-        {renderInput('Début (ISO, optionnel)', 'startAt', { placeholder: '2026-04-01T09:00:00.000Z' })}
-        {renderInput('Fin (ISO, optionnel)', 'endAt', { placeholder: '2026-04-03T18:00:00.000Z' })}
+        {renderInput(
+          'Eyebrow',
+          'eyebrow',
+          {
+            placeholder: t(
+              'adminPopupCampaignForm.fields.eyebrowPlaceholder',
+              'Ex: Nouvelle fonctionnalité',
+            ),
+          },
+        )}
+        {renderInput(
+          t('adminPopupCampaignForm.fields.title', 'Titre'),
+          'title',
+          {
+            placeholder: t(
+              'adminPopupCampaignForm.fields.titlePlaceholder',
+              'Titre visible du popup',
+            ),
+          },
+        )}
+        {renderInput(
+          t('adminPopupCampaignForm.fields.subtitle', 'Sous-titre'),
+          'subtitle',
+          {
+            placeholder: t(
+              'adminPopupCampaignForm.fields.subtitlePlaceholder',
+              'Texte secondaire optionnel',
+            ),
+          },
+        )}
+        {renderInput(
+          t('adminPopupCampaignForm.fields.body', 'Corps'),
+          'body',
+          {
+            multiline: true,
+            placeholder: t(
+              'adminPopupCampaignForm.fields.bodyPlaceholder',
+              'Message principal affiché dans le popup',
+            ),
+          },
+        )}
+        {renderInput(
+          t('adminPopupCampaignForm.fields.priority', 'Priorité (10-59)'),
+          'priority',
+          { placeholder: '30' },
+        )}
+        {renderInput(
+          t('adminPopupCampaignForm.fields.startAt', 'Début (ISO, optionnel)'),
+          'startAt',
+          { placeholder: '2026-04-01T09:00:00.000Z' },
+        )}
+        {renderInput(
+          t('adminPopupCampaignForm.fields.endAt', 'Fin (ISO, optionnel)'),
+          'endAt',
+          { placeholder: '2026-04-03T18:00:00.000Z' },
+        )}
 
         <View
           style={[
@@ -497,37 +589,72 @@ function AdminPopupCampaignForm() {
           {imageUrl ? (
             <Image source={{ uri: imageUrl }} style={styles.image} />
           ) : (
-            <Text style={[Fonts.p3, { color: Colors.neutral200 }]}>Aucune image liée.</Text>
+            <Text style={[Fonts.p3, { color: Colors.neutral200 }]}>
+              {t('adminPopupCampaignForm.noImage', 'Aucune image liée.')}
+            </Text>
           )}
           <Button
             onPress={handleUploadImage}
-            title={imageUrl ? "Remplacer l'image" : 'Ajouter une image'}
+            title={imageUrl
+              ? t('adminPopupCampaignForm.replaceImage', "Remplacer l'image")
+              : t('adminPopupCampaignForm.addImage', 'Ajouter une image')}
             variant="Secondary"
           />
         </View>
 
-        {renderActionEditor('Action principale', 'primary')}
-        {renderActionEditor('Action secondaire', 'secondary')}
+        {renderActionEditor(
+          t('adminPopupCampaignForm.primaryAction', 'Action principale'),
+          'primary',
+        )}
+        {renderActionEditor(
+          t('adminPopupCampaignForm.secondaryAction', 'Action secondaire'),
+          'secondary',
+        )}
 
         {renderInput('Allowed routes (csv)', 'allowedRoutesText', { placeholder: 'Ex: HomeTab, NotificationList' })}
         {renderInput('Blocked routes (csv)', 'blockedRoutesText', { placeholder: 'Ex: Conversation, EventEdit' })}
-        {renderInput('Rôles ciblés (csv)', 'targetRolesText', { placeholder: 'new, player, coach, président, superadmin' })}
-        {renderInput('Plateformes ciblées (csv)', 'targetPlatformsText', { placeholder: 'ios, android, web' })}
-        {renderInput('Clubs ciblés (documentIds csv)', 'targetClubsText', { placeholder: 'club-doc-id-1, club-doc-id-2' })}
-        {renderInput('Multisports ciblés (documentIds csv)', 'targetMultisportClubsText', { placeholder: 'cm-doc-id-1, cm-doc-id-2' })}
-        {renderInput('Utilisateurs ciblés (documentIds csv)', 'targetUsersText', { placeholder: 'user-doc-id-1, user-doc-id-2' })}
+        {renderInput(
+          t('adminPopupCampaignForm.fields.targetRoles', 'Rôles ciblés (csv)'),
+          'targetRolesText',
+          { placeholder: 'new, player, coach, président, superadmin' },
+        )}
+        {renderInput(
+          t('adminPopupCampaignForm.fields.targetPlatforms', 'Plateformes ciblées (csv)'),
+          'targetPlatformsText',
+          { placeholder: 'ios, android, web' },
+        )}
+        {renderInput(
+          t('adminPopupCampaignForm.fields.targetClubs', 'Clubs ciblés (documentIds csv)'),
+          'targetClubsText',
+          { placeholder: 'club-doc-id-1, club-doc-id-2' },
+        )}
+        {renderInput(
+          t(
+            'adminPopupCampaignForm.fields.targetMultisportClubs',
+            'Multisports ciblés (documentIds csv)',
+          ),
+          'targetMultisportClubsText',
+          { placeholder: 'cm-doc-id-1, cm-doc-id-2' },
+        )}
+        {renderInput(
+          t('adminPopupCampaignForm.fields.targetUsers', 'Utilisateurs ciblés (documentIds csv)'),
+          'targetUsersText',
+          { placeholder: 'user-doc-id-1, user-doc-id-2' },
+        )}
 
         <View style={[Spaces.gap[12], Spaces.marginTop[8]]}>
           <Button
             onPress={() => setIsPreviewVisible(true)}
-            title="Prévisualiser"
+            title={t('adminPopupCampaignForm.preview', 'Prévisualiser')}
             variant="Secondary"
           />
           <Button
             disabled={isSaving}
             isLoading={isSaving}
             onPress={handleSubmit}
-            title={campaignId ? 'Enregistrer le brouillon' : 'Créer le brouillon'}
+            title={campaignId
+              ? t('adminPopupCampaignForm.saveDraft', 'Enregistrer le brouillon')
+              : t('adminPopupCampaignForm.createDraft', 'Créer le brouillon')}
           />
         </View>
       </ScrollView>
@@ -542,16 +669,22 @@ function AdminPopupCampaignForm() {
           onPress: () => setIsPreviewVisible(false),
           variant: previewPrimaryAction.variant || 'Primary',
         } : {
-          label: 'Fermer',
+          label: t('adminPopupCampaignForm.close', 'Fermer'),
           onPress: () => setIsPreviewVisible(false),
         }}
         secondaryAction={previewSecondaryAction ? {
-          label: previewSecondaryAction.label || 'Action secondaire',
+          label: previewSecondaryAction.label || t(
+            'adminPopupCampaignForm.secondaryAction',
+            'Action secondaire',
+          ),
           onPress: () => setIsPreviewVisible(false),
           variant: previewSecondaryAction.variant || 'Secondary',
         } : null}
         supportingText={previewPayload.subtitle || undefined}
-        title={previewPayload.title || previewPayload.internalName || 'Prévisualisation'}
+        title={previewPayload.title || previewPayload.internalName || t(
+          'adminPopupCampaignForm.previewTitle',
+          'Prévisualisation',
+        )}
         tone={previewPayload.tone || 'primary'}
         visible={isPreviewVisible}
       />

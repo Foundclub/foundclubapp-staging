@@ -1,10 +1,12 @@
 import { useNavigation } from '@react-navigation/native';
+import i18next from 'i18next';
 import {
   useCallback,
   useEffect,
   useMemo,
   useState,
 } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Alert,
   FlatList,
@@ -47,22 +49,61 @@ import closeIcon from '@/assets/icons/close.png';
 import searchIcon from '@/assets/icons/search.png';
 
 const SORT_OPTIONS = [
-  { key: 'updated', label: 'MAJ' },
+  {
+    key: 'updated',
+    get label() {
+      return i18next.t('adminClubList.sort.updated', 'MAJ');
+    },
+  },
   { key: 'alpha', label: 'A-Z' },
-  { key: 'created', label: 'Créés' },
-  { key: 'partner', label: 'Partenaires' },
+  {
+    key: 'created',
+    get label() {
+      return i18next.t('adminClubList.sort.created', 'Créés');
+    },
+  },
+  {
+    key: 'partner',
+    get label() {
+      return i18next.t('adminClubList.sort.partner', 'Partenaires');
+    },
+  },
 ];
 
 const BOOLEAN_FILTERS = [
-  { key: 'all', label: 'Tous', value: undefined },
-  { key: 'yes', label: 'Oui', value: true },
-  { key: 'no', label: 'Non', value: false },
+  {
+    key: 'all',
+    get label() {
+      return i18next.t('adminClubList.filters.all', 'Tous');
+    },
+    value: undefined,
+  },
+  {
+    key: 'yes',
+    get label() {
+      return i18next.t('adminClubList.filters.yes', 'Oui');
+    },
+    value: true,
+  },
+  {
+    key: 'no',
+    get label() {
+      return i18next.t('adminClubList.filters.no', 'Non');
+    },
+    value: false,
+  },
 ];
 
 const getStatusBadges = (club = {}) => [
-  club?.clubPartner ? { label: 'Partenaire', tone: 'primary' } : { label: 'Standard', tone: 'neutral' },
-  club?.clubVerified ? { label: 'Certifié', tone: 'success' } : { label: 'Non certifié', tone: 'neutral' },
-  club?.isReservationProvider ? { label: 'Réservation', tone: 'primary' } : null,
+  club?.clubPartner
+    ? { label: i18next.t('adminClubList.badges.partner', 'Partenaire'), tone: 'primary' }
+    : { label: i18next.t('adminClubList.badges.standard', 'Standard'), tone: 'neutral' },
+  club?.clubVerified
+    ? { label: i18next.t('adminClubList.badges.verified', 'Certifié'), tone: 'success' }
+    : { label: i18next.t('adminClubList.badges.notVerified', 'Non certifié'), tone: 'neutral' },
+  club?.isReservationProvider
+    ? { label: i18next.t('adminClubList.badges.reservation', 'Réservation'), tone: 'primary' }
+    : null,
 ].filter(Boolean);
 
 const getBadgePresentation = (tone, colors) => {
@@ -101,6 +142,7 @@ function AdminClubList() {
     Images,
     Spaces,
   } = useTheme();
+  const { t } = useTranslation();
   const navigation = useNavigation();
   const [query, setQuery] = useState('');
   const [debouncedQuery, setDebouncedQuery] = useState('');
@@ -142,7 +184,9 @@ function AdminClubList() {
   const total = data?.meta?.pagination?.total || clubs.length;
   const hasLocalCityFilter = Boolean(normalizeText(city));
   const totalLabel = hasLocalCityFilter ? clubs.length : total;
-  const totalSuffix = hasLocalCityFilter ? 'clubs affichés' : 'clubs dans le Content Manager';
+  const totalSuffix = hasLocalCityFilter
+    ? t('adminClubList.totalDisplayed', 'clubs affichés')
+    : t('adminClubList.totalContentManager', 'clubs dans le Content Manager');
   const selectedCount = selectedIds.length;
   const selectedSet = useMemo(() => new Set(selectedIds), [selectedIds]);
 
@@ -171,12 +215,15 @@ function AdminClubList() {
 
   const openDangerAction = useCallback((action) => {
     if (selectedCount === 0) {
-      Alert.alert('Sélection vide', 'Sélectionne au moins un club.');
+      Alert.alert(
+        t('adminClubList.emptySelectionTitle', 'Sélection vide'),
+        t('adminClubList.emptySelectionMessage', 'Sélectionne au moins un club.'),
+      );
       return;
     }
     setDangerAction(action);
     setDangerReason('');
-  }, [selectedCount]);
+  }, [selectedCount, t]);
 
   const closeDangerAction = useCallback(() => {
     if (bulkDeleteMutation.isPending || bulkUpdateMutation.isPending) return;
@@ -187,7 +234,10 @@ function AdminClubList() {
   const executeDangerAction = useCallback(async () => {
     const reason = normalizeText(dangerReason);
     if (reason.length < 3) {
-      Alert.alert('Raison requise', 'Ajoute une raison d’au moins 3 caractères.');
+      Alert.alert(
+        t('adminClubList.reasonRequiredTitle', 'Raison requise'),
+        t('adminClubList.reasonRequiredMessage', 'Ajoute une raison d’au moins 3 caractères.'),
+      );
       return;
     }
 
@@ -206,7 +256,10 @@ function AdminClubList() {
       closeDangerAction();
       leaveSelectionMode();
     } catch (mutationError) {
-      Alert.alert('Action impossible', getErrorMessage(mutationError, 'generic'));
+      Alert.alert(
+        t('adminClubList.actionFailedTitle', 'Action impossible'),
+        getErrorMessage(mutationError, 'generic'),
+      );
     }
   }, [
     bulkDeleteMutation,
@@ -216,6 +269,7 @@ function AdminClubList() {
     dangerReason,
     leaveSelectionMode,
     selectedIds,
+    t,
   ]);
 
   const renderChip = useCallback((label, active, onPress) => (
@@ -334,7 +388,7 @@ function AdminClubList() {
 
           <View style={styles.clubContent}>
             <Text numberOfLines={1} style={[Fonts.h4Bold, { color: Colors.neutral00 }]}>
-              {item.name || 'Club sans nom'}
+              {item.name || t('adminClubList.unnamedClub', 'Club sans nom')}
             </Text>
             <Text numberOfLines={1} style={[Fonts.p3, { color: Colors.neutral200 }, Spaces.marginTop[4]]}>
               {[cityLabel, activityLabel].filter(Boolean).join(' • ') || documentId}
@@ -384,15 +438,19 @@ function AdminClubList() {
     navigation,
     selectedSet,
     selectionMode,
+    t,
     toggleSelection,
   ]);
 
   if (isLoading && !clubs.length) {
     return (
       <AdminStateView
-        description="Nous chargeons la console Club depuis le moteur SuperAdmin."
+        description={t(
+          'adminClubList.states.loadingDescription',
+          'Nous chargeons la console Club depuis le moteur SuperAdmin.',
+        )}
         isLoading
-        title="Chargement des clubs"
+        title={t('adminClubList.states.loadingTitle', 'Chargement des clubs')}
       />
     );
   }
@@ -400,10 +458,13 @@ function AdminClubList() {
   if (error && !clubs.length) {
     return (
       <AdminStateView
-        actionLabel="Réessayer"
-        description={getErrorMessage(error, 'generic') || 'Impossible de charger les clubs.'}
+        actionLabel={t('adminClubList.states.retry', 'Réessayer')}
+        description={getErrorMessage(error, 'generic') || t(
+          'adminClubList.states.errorDescription',
+          'Impossible de charger les clubs.',
+        )}
         onAction={refetch}
-        title="Chargement impossible"
+        title={t('adminClubList.states.errorTitle', 'Chargement impossible')}
       />
     );
   }
@@ -416,12 +477,14 @@ function AdminClubList() {
         </Text>
         <View style={[Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween, Spaces.gap[12], Spaces.marginTop[6]]}>
           <View style={styles.headerText}>
-            <Text style={[Fonts.h1Bold, Fonts.neutral00]}>Gestion Clubs</Text>
+            <Text style={[Fonts.h1Bold, Fonts.neutral00]}>
+              {t('adminClubList.title', 'Gestion Clubs')}
+            </Text>
             <Text style={[Fonts.p2, Fonts.neutral200, Spaces.marginTop[4]]}>
               {totalLabel}
               {' '}
               {totalSuffix}
-              {isFetching ? ' • synchronisation...' : ''}
+              {isFetching ? t('adminClubList.syncing', ' • synchronisation...') : ''}
             </Text>
           </View>
           <Button
@@ -429,7 +492,7 @@ function AdminClubList() {
             iconPosition="after"
             onPress={() => navigation.navigate(RouteNames.AdminClubWizardIdentity)}
             size="sm"
-            title="Créer"
+            title={t('adminClubList.create', 'Créer')}
           />
         </View>
       </View>
@@ -454,7 +517,7 @@ function AdminClubList() {
           />
           <TextInput
             onChangeText={setQuery}
-            placeholder="Rechercher un club..."
+            placeholder={t('adminClubList.searchPlaceholder', 'Rechercher un club...')}
             placeholderTextColor={Colors.neutral300}
             style={[Fonts.p1, styles.inputText, { color: Colors.neutral00 }]}
             value={query}
@@ -479,7 +542,10 @@ function AdminClubList() {
 
         <TextInput
           onChangeText={setCity}
-          placeholder="Filtrer la page par ville ou code postal"
+          placeholder={t(
+            'adminClubList.cityPlaceholder',
+            'Filtrer la page par ville ou code postal',
+          )}
           placeholderTextColor={Colors.neutral300}
           style={[
             ApplicationStyle.card,
@@ -496,7 +562,7 @@ function AdminClubList() {
         />
 
         {renderFilterGroup(
-          'Tri',
+          t('adminClubList.filters.sort', 'Tri'),
           SORT_OPTIONS.map((option) => renderChip(
             option.label,
             sortMode === option.key,
@@ -504,7 +570,7 @@ function AdminClubList() {
           )),
         )}
         {renderFilterGroup(
-          'Partenariat',
+          t('adminClubList.filters.partnership', 'Partenariat'),
           BOOLEAN_FILTERS.map((option) => renderChip(
             option.label,
             partnerFilter === option.key,
@@ -512,7 +578,7 @@ function AdminClubList() {
           )),
         )}
         {renderFilterGroup(
-          'Réservation',
+          t('adminClubList.filters.reservation', 'Réservation'),
           BOOLEAN_FILTERS.map((option) => renderChip(
             option.label,
             reservationFilter === option.key,
@@ -524,14 +590,16 @@ function AdminClubList() {
           <Button
             onPress={() => (selectionMode ? leaveSelectionMode() : setSelectionMode(true))}
             size="sm"
-            title={selectionMode ? 'Annuler sélection' : 'Sélection'}
+            title={selectionMode
+              ? t('adminClubList.cancelSelection', 'Annuler sélection')
+              : t('adminClubList.selection', 'Sélection')}
             variant="Secondary"
           />
           {selectionMode ? (
             <Button
               onPress={selectAllVisible}
               size="sm"
-              title="Tout"
+              title={t('adminClubList.selectAll', 'Tout')}
               variant="SecondaryLight"
             />
           ) : null}
@@ -553,14 +621,39 @@ function AdminClubList() {
             <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
               {selectedCount}
               {' '}
-              clubs sélectionnés
+              {t('adminClubList.selectedClubs', 'clubs sélectionnés')}
             </Text>
             <View style={[Alignments.row, styles.bulkActions]}>
-              <Button onPress={() => openDangerAction('partner-on')} size="sm" title="Partenaire oui" variant="Secondary" />
-              <Button onPress={() => openDangerAction('partner-off')} size="sm" title="Partenaire non" variant="Secondary" />
-              <Button onPress={() => openDangerAction('reservation-on')} size="sm" title="Résa oui" variant="Secondary" />
-              <Button onPress={() => openDangerAction('reservation-off')} size="sm" title="Résa non" variant="Secondary" />
-              <Button onPress={() => openDangerAction('delete')} size="sm" title="Supprimer" variant="SecondaryLight" />
+              <Button
+                onPress={() => openDangerAction('partner-on')}
+                size="sm"
+                title={t('adminClubList.bulk.partnerOn', 'Partenaire oui')}
+                variant="Secondary"
+              />
+              <Button
+                onPress={() => openDangerAction('partner-off')}
+                size="sm"
+                title={t('adminClubList.bulk.partnerOff', 'Partenaire non')}
+                variant="Secondary"
+              />
+              <Button
+                onPress={() => openDangerAction('reservation-on')}
+                size="sm"
+                title={t('adminClubList.bulk.reservationOn', 'Résa oui')}
+                variant="Secondary"
+              />
+              <Button
+                onPress={() => openDangerAction('reservation-off')}
+                size="sm"
+                title={t('adminClubList.bulk.reservationOff', 'Résa non')}
+                variant="Secondary"
+              />
+              <Button
+                onPress={() => openDangerAction('delete')}
+                size="sm"
+                title={t('adminClubList.bulk.delete', 'Supprimer')}
+                variant="SecondaryLight"
+              />
             </View>
           </View>
         ) : null}
@@ -576,9 +669,11 @@ function AdminClubList() {
         ListEmptyComponent={
           !isLoading ? (
             <View style={[Alignments.alignCenter, Spaces.marginTop[40], Spaces.paddingHorizontal[24]]}>
-              <Text style={[Fonts.h4Bold, { color: Colors.neutral100 }]}>Aucun club trouvé</Text>
+              <Text style={[Fonts.h4Bold, { color: Colors.neutral100 }]}>
+                {t('adminClubList.emptyTitle', 'Aucun club trouvé')}
+              </Text>
               <Text style={[Fonts.p2, { color: Colors.neutral300 }, Spaces.marginTop[8], styles.emptyText]}>
-                Ajuste la recherche ou les filtres.
+                {t('adminClubList.emptyDescription', 'Ajuste la recherche ou les filtres.')}
               </Text>
             </View>
           ) : null
@@ -593,14 +688,19 @@ function AdminClubList() {
         isVisible={Boolean(dangerAction)}
         snapPoints={['46%']}
       >
-        <Text style={[Fonts.h3, Fonts.neutral00]}>Action SuperAdmin</Text>
+        <Text style={[Fonts.h3, Fonts.neutral00]}>
+          {t('adminClubList.dangerTitle', 'Action SuperAdmin')}
+        </Text>
         <Text style={[Fonts.p2, Fonts.neutral300, Spaces.marginTop[8]]}>
-          Cette action sera appliquée aux clubs sélectionnés et auditée.
+          {t(
+            'adminClubList.dangerDescription',
+            'Cette action sera appliquée aux clubs sélectionnés et auditée.',
+          )}
         </Text>
         <TextInput
           multiline
           onChangeText={setDangerReason}
-          placeholder="Raison obligatoire"
+          placeholder={t('adminClubList.reasonPlaceholder', 'Raison obligatoire')}
           placeholderTextColor={Colors.neutral300}
           style={[
             ApplicationStyle.card,
@@ -620,9 +720,13 @@ function AdminClubList() {
           <Button
             isLoading={bulkDeleteMutation.isPending || bulkUpdateMutation.isPending}
             onPress={executeDangerAction}
-            title="Confirmer"
+            title={t('adminClubList.confirm', 'Confirmer')}
           />
-          <Button onPress={closeDangerAction} title="Annuler" variant="Secondary" />
+          <Button
+            onPress={closeDangerAction}
+            title={t('adminClubList.cancel', 'Annuler')}
+            variant="Secondary"
+          />
         </View>
       </BottomModal>
     </ScreenContainer>

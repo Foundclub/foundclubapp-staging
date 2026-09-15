@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { StyleSheet, Text, View } from 'react-native';
 
 import useTheme from '@/theme/themeContext';
@@ -12,6 +13,7 @@ import LeagueCard from '@/components/atoms/league/LeagueCard';
  */
 function SearchCountdown({ createdAt, serverNow = null }) {
   const { Colors, Fonts } = useTheme();
+  const { t } = useTranslation();
   const [elapsed, setElapsed] = useState(null);
   const [serverOffsetMs, setServerOffsetMs] = useState(0);
 
@@ -69,7 +71,7 @@ function SearchCountdown({ createdAt, serverNow = null }) {
       <View style={styles.header}>
         <Text style={{ color: Colors.neutral00, fontSize: 16, marginRight: 8 }}>{'\u23F1'}</Text>
         <Text style={[Fonts.p3Bold, { color: Colors.neutral300 }]}>
-          TEMPS DE RECHERCHE
+          {t('searchCountdown.title', 'TEMPS DE RECHERCHE')}
         </Text>
       </View>
 

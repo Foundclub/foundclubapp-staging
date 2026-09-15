@@ -1,6 +1,7 @@
 import { useNavigation } from '@react-navigation/native';
 import { useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   FlatList,
   RefreshControl,
@@ -11,6 +12,7 @@ import {
 } from 'react-native';
 
 import useAuth from '@/domains/auth/useAuth';
+import localeDesFormats from '@/theme/strings/localeDesFormats';
 import useTheme from '@/theme/themeContext';
 
 import ScreenContainer from '@/components/templates/ScreenContainer';
@@ -29,6 +31,7 @@ import { getEntityDocumentId } from '@/utils/entityId';
  */
 function MatchHistoryScreen() {
   const { Colors, Fonts } = useTheme();
+  const { t } = useTranslation();
   const navigation = /** @type {any} */ (useNavigation());
   const queryClient = useQueryClient();
   const { sceneBottomInset } = useBottomDockLayout();
@@ -67,10 +70,13 @@ function MatchHistoryScreen() {
     } catch (error) {
       console.log(error);
       setTeamId(null);
-      setLoadError(error?.message || 'Impossible de charger ta squad League.');
+      setLoadError(error?.message || t(
+        'matchHistoryScreen.errors.squad',
+        'Impossible de charger ta squad League.',
+      ));
       setLoading(false);
     }
-  }, [queryClient, userData]);
+  }, [queryClient, t, userData]);
 
   useEffect(() => {
     resolveLeagueTeam().catch(() => {});
@@ -87,11 +93,14 @@ function MatchHistoryScreen() {
       setMatches(Array.isArray(history) ? history : []);
     } catch (error) {
       console.error(error);
-      setLoadError(error?.message || "Impossible de charger l'historique des matchs.");
+      setLoadError(error?.message || t(
+        'matchHistoryScreen.errors.history',
+        "Impossible de charger l'historique des matchs.",
+      ));
     } finally {
       setLoading(false);
     }
-  }, [teamId]);
+  }, [t, teamId]);
 
   useEffect(() => {
     if (!teamId) return;
@@ -113,7 +122,7 @@ function MatchHistoryScreen() {
 
   const formatDate = (/** @type {string | undefined} */ dateString) => {
     const date = new Date(String(dateString || ''));
-    return date.toLocaleDateString('fr-FR', {
+    return date.toLocaleDateString(localeDesFormats(), {
       day: 'numeric',
       hour: '2-digit',
       minute: '2-digit',
@@ -140,7 +149,7 @@ function MatchHistoryScreen() {
           <Text style={[Fonts.p1Bold, { color: Colors.neutral00 }]}>
             vs
             {' '}
-            {item.opponent?.name || 'Adversaire'}
+            {item.opponent?.name || t('matchHistoryScreen.opponentFallback', 'Adversaire')}
           </Text>
           <Text style={[Fonts.p3, { color: Colors.neutral300 }]}>
             {formatDate(item.date)}
@@ -178,9 +187,12 @@ function MatchHistoryScreen() {
   if (loading) {
     return (
       <LeagueStateView
-        description="Nous chargeons l'historique de tes matchs League."
+        description={t(
+          'matchHistoryScreen.loading.description',
+          "Nous chargeons l'historique de tes matchs League.",
+        )}
         isLoading
-        title="Chargement de l'historique"
+        title={t('matchHistoryScreen.loading.title', "Chargement de l'historique")}
       />
     );
   }
@@ -188,7 +200,7 @@ function MatchHistoryScreen() {
   if (loadError) {
     return (
       <LeagueStateView
-        actionLabel="Reessayer"
+        actionLabel={t('matchHistoryScreen.retry', 'Reessayer')}
         description={loadError}
         onAction={() => {
           if (teamId) {
@@ -198,7 +210,7 @@ function MatchHistoryScreen() {
 
           resolveLeagueTeam().catch(() => {});
         }}
-        title="Chargement impossible"
+        title={t('matchHistoryScreen.loadError.title', 'Chargement impossible')}
       />
     );
   }
@@ -206,8 +218,11 @@ function MatchHistoryScreen() {
   if (!teamId) {
     return (
       <LeagueStateView
-        description="Aucune squad League n'est reliee à ce compte pour afficher un historique."
-        title="Historique indisponible"
+        description={t(
+          'matchHistoryScreen.noSquad.description',
+          "Aucune squad League n'est reliee à ce compte pour afficher un historique.",
+        )}
+        title={t('matchHistoryScreen.noSquad.title', 'Historique indisponible')}
       />
     );
   }
@@ -215,7 +230,9 @@ function MatchHistoryScreen() {
   const listEmptyState = loading ? null : (
     <View style={{ alignItems: 'center', marginTop: 100 }}>
       <Text style={{ fontSize: 40, marginBottom: 16 }}>[]</Text>
-      <Text style={[Fonts.h3, { color: Colors.neutral300 }]}>Aucun match trouve</Text>
+      <Text style={[Fonts.h3, { color: Colors.neutral300 }]}>
+        {t('matchHistoryScreen.empty', 'Aucun match trouve')}
+      </Text>
     </View>
   );
   const itemSeparator = <View style={{ height: 12 }} />;
@@ -237,8 +254,12 @@ function MatchHistoryScreen() {
             <Text style={{ color: Colors.neutral00, fontSize: 24 }}>{'<'}</Text>
           </TouchableOpacity>
           <View>
-            <Text style={[Fonts.h1, { color: Colors.neutral00 }]}>HISTORIQUE</Text>
-            <Text style={[Fonts.p2, { color: Colors.gold500 }]}>SAISON EN COURS</Text>
+            <Text style={[Fonts.h1, { color: Colors.neutral00 }]}>
+              {t('matchHistoryScreen.title', 'HISTORIQUE')}
+            </Text>
+            <Text style={[Fonts.p2, { color: Colors.gold500 }]}>
+              {t('matchHistoryScreen.subtitle', 'SAISON EN COURS')}
+            </Text>
           </View>
         </View>
 

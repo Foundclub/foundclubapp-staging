@@ -101,9 +101,15 @@ function SuperAdminContentExplorer({ navigation }) {
   if (isLoading && !contentTypes.length) {
     return (
       <AdminStateView
-        description="Nous chargeons les content-types du Content Manager."
+        description={t(
+          'superAdminContentExplorer.states.loadingDescription',
+          'Nous chargeons les content-types du Content Manager.',
+        )}
         isLoading
-        title="Chargement du contenu superadmin"
+        title={t(
+          'superAdminContentExplorer.states.loadingTitle',
+          'Chargement du contenu superadmin',
+        )}
       />
     );
   }
@@ -111,10 +117,13 @@ function SuperAdminContentExplorer({ navigation }) {
   if (error && !contentTypes.length) {
     return (
       <AdminStateView
-        actionLabel="Réessayer"
-        description={getErrorMessage(error, 'generic') || 'Impossible de charger les content-types superadmin.'}
+        actionLabel={t('superAdminContentExplorer.states.retry', 'Réessayer')}
+        description={getErrorMessage(error, 'generic') || t(
+          'superAdminContentExplorer.states.errorDescription',
+          'Impossible de charger les content-types superadmin.',
+        )}
         onAction={refetch}
-        title="Chargement impossible"
+        title={t('superAdminContentExplorer.states.errorTitle', 'Chargement impossible')}
       />
     );
   }

@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import {
   Image, StyleSheet, Text, View,
 } from 'react-native';
@@ -35,6 +36,7 @@ function CompetitiveHero({
   teamName,
 }) {
   const { Colors, Fonts, Images } = useTheme();
+  const { t } = useTranslation();
   const heroSurfaceColor = 'rgba(1, 36, 52, 0.92)';
   const heroBorderColor = 'rgba(255, 215, 0, 0.78)';
   const progressTrackColor = 'rgba(173, 177, 178, 0.26)';
@@ -85,14 +87,14 @@ function CompetitiveHero({
             {progressState.points}
           </Text>
           <Text style={[Fonts.p3Bold, { color: Colors.gold500, textTransform: 'uppercase' }]}>
-            POINTS LEAGUE
+            {t('competitiveHero.leaguePoints', 'POINTS LEAGUE')}
           </Text>
           <Text style={[Fonts.p4, { color: Colors.neutral300, marginTop: 2 }]}>
             ELO matchmaking:
             {' '}
             {elo}
             {' '}
-            | Saison:
+            {t('competitiveHero.seasonLabel', '| Saison:')}
             {' '}
             {seasonPoints}
           </Text>
@@ -100,9 +102,13 @@ function CompetitiveHero({
 
         <View style={styles.progressContainer}>
           <View style={styles.rowBetween}>
-            <Text style={[Fonts.p3, { color: Colors.neutral300 }]}>Niveau actuel</Text>
+            <Text style={[Fonts.p3, { color: Colors.neutral300 }]}>
+              {t('competitiveHero.currentLevel', 'Niveau actuel')}
+            </Text>
             {maxDivisionReached ? (
-              <Text style={[Fonts.p3, { color: Colors.gold500 }]}>Division max</Text>
+              <Text style={[Fonts.p3, { color: Colors.gold500 }]}>
+                {t('competitiveHero.maxDivision', 'Division max')}
+              </Text>
             ) : (
               <Text style={[Fonts.p3, { color: Colors.gold500 }]}>
                 {targetPoints}
@@ -120,12 +126,14 @@ function CompetitiveHero({
           </View>
           <Text style={[Fonts.p3, { color: Colors.neutral200, marginTop: 4, textAlign: 'center' }]}>
             {maxDivisionReached ? (
-              <Text style={{ color: Colors.gold500 }}>Division 1 prestige.</Text>
+              <Text style={{ color: Colors.gold500 }}>
+                {t('competitiveHero.prestigeDivision', 'Division 1 prestige.')}
+              </Text>
             ) : (
               <>
                 <Text style={{ color: Colors.gold500 }}>{Math.round(pointsToPromotion)}</Text>
                 {' '}
-                points pour la promotion
+                {t('competitiveHero.pointsToPromotion', 'points pour la promotion')}
               </>
             )}
           </Text>
@@ -134,7 +142,9 @@ function CompetitiveHero({
         <View style={[styles.rowBetween, { marginTop: 16 }]}>
           <View>
             <Text style={[Fonts.p3, { color: Colors.neutral300 }]}>SQUAD</Text>
-            <Text style={[Fonts.h4, { color: Colors.neutral00 }]}>{teamName || 'Mon équipe'}</Text>
+            <Text style={[Fonts.h4, { color: Colors.neutral00 }]}>
+              {teamName || t('competitiveHero.myTeam', 'Mon équipe')}
+            </Text>
           </View>
           <View style={styles.alignEnd}>
             <Text style={[Fonts.p3, { color: Colors.neutral300 }]}>RANK</Text>

@@ -1,3 +1,5 @@
+import i18next from 'i18next';
+
 export const CLUB_UID = 'api::club.club';
 
 export const CLUB_LIST_FIELDS = [
@@ -29,14 +31,39 @@ export const CLUB_LIST_FIELDS = [
 export const CLUB_DETAIL_POPULATE = '*';
 
 export const CLUB_TABS = [
-  { key: 'overview', label: 'Vue d\'ensemble' },
-  { key: 'info', label: 'Informations' },
+  { key: 'overview', label: i18next.t('adminClubContentModel.tabs.overview', "Vue d'ensemble") },
+  {
+    key: 'info',
+    get label() {
+      return i18next.t('adminClubContentModel.tabs.info', 'Informations');
+    },
+  },
   { key: 'relations', label: 'Relations' },
-  { key: 'media', label: 'Médias' },
+  {
+    key: 'media',
+    get label() {
+      return i18next.t('adminClubContentModel.tabs.media', 'Médias');
+    },
+  },
   { key: 'sponsors', label: 'Sponsors' },
-  { key: 'geo', label: 'Géolocalisation' },
-  { key: 'requests', label: 'Demandes' },
-  { key: 'history', label: 'Historique' },
+  {
+    key: 'geo',
+    get label() {
+      return i18next.t('adminClubContentModel.tabs.geo', 'Géolocalisation');
+    },
+  },
+  {
+    key: 'requests',
+    get label() {
+      return i18next.t('adminClubContentModel.tabs.requests', 'Demandes');
+    },
+  },
+  {
+    key: 'history',
+    get label() {
+      return i18next.t('adminClubContentModel.tabs.history', 'Historique');
+    },
+  },
   { key: 'danger', label: 'Danger zone' },
 ];
 

@@ -1,16 +1,20 @@
 import { useFocusEffect, useIsFocused, useNavigation } from '@react-navigation/native';
 import { useQueryClient } from '@tanstack/react-query';
+import i18next from 'i18next';
 import {
   useCallback,
   useMemo,
   useRef,
   useState,
 } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Image, RefreshControl, ScrollView, Text, TouchableOpacity, View,
 } from 'react-native';
 
 import useAuth from '@/domains/auth/useAuth';
+import localeDesFormats from '@/theme/strings/localeDesFormats';
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -113,16 +117,18 @@ const formatPositiveStreak = (streak) => {
  * @returns {string}
  */
 const formatLeagueDashboardDate = (value) => {
-  if (!value) return 'Date à définir';
+  if (!value) {
+    return i18next.t('leagueDashboard.dateToBeDecided', 'Date à définir');
+  }
   try {
-    return new Date(value).toLocaleString('fr-FR', {
+    return new Date(value).toLocaleString(localeDesFormats(), {
       day: '2-digit',
       hour: '2-digit',
       minute: '2-digit',
       month: 'short',
     });
   } catch (_error) {
-    return 'Date à définir';
+    return i18next.t('leagueDashboard.dateToBeDecided', 'Date à définir');
   }
 };
 
@@ -170,82 +176,150 @@ const getSquadShieldInitials = (squadName) => String(squadName || 'SQ')
   .slice(0, 2)
   .toUpperCase();
 
-const LEAGUE_ACTION_META = {
-  confirmed_upcoming: {
-    accent: 'success',
-    actionLabel: 'Voir le match',
-    helper: 'Le match est confirmé. Retrouve les informations de préparation dans ton espace Match.',
-    title: 'Match confirmé',
-  },
-  disputed: {
-    accent: 'warning',
-    actionLabel: 'Traiter le litige',
-    helper: 'Un litige est ouvert sur le score. Ouvre le match pour le traiter.',
-    title: 'Litige score',
-  },
-  idle: {
-    accent: 'neutral',
-    actionLabel: 'Trouver un match',
-    helper: 'Lance une recherche pour trouver un adversaire compatible avec les créneaux de ta squad.',
-    title: 'Aucun match actif',
-  },
-  opponent_found: {
-    accent: 'primary',
-    actionLabel: 'Envoyer une proposition',
-    helper: "Un adversaire a été trouvé. Il reste à t'accorder sur la proposition de match.",
-    title: 'Adversaire trouve',
-  },
-  pending_validation: {
-    accent: 'warning',
-    actionLabel: 'Valider le score',
-    helper: 'Un score attend une validation. Confirme ou conteste le résultat.',
-    title: 'Score à valider',
-  },
-  post_slot_resolution: {
-    accent: 'warning',
-    actionLabel: 'Le match a-t-il eu lieu ?',
-    helper: 'Le créneau est dépassé sans terrain confirmé. Le capitaine doit dire si le match a eu lieu.',
-    title: 'Confirmation match',
-  },
-  proposal_received: {
-    accent: 'warning',
-    actionLabel: 'Répondre',
-    helper: 'Une proposition adverse attend ta réponse. Ouvre la conversation pour accepter, refuser ou contre-proposer.',
-    title: 'Nouvelle proposition reçue',
-  },
-  proposal_sent_waiting: {
-    accent: 'gold',
-    actionLabel: 'Voir la proposition',
-    helper: "Ta proposition a été envoyée. Continue l'échange dans la conversation avec l'adversaire.",
-    title: 'Proposition envoyée',
-  },
-  searching: {
-    accent: 'gold',
-    actionLabel: 'Ouvrir le centre de match',
-    helper: 'La recherche est en cours. Les meilleures correspondances continuent à être analysees.',
-    title: 'Recherche en cours',
-  },
-  valid: {
-    accent: 'success',
-    actionLabel: 'Voir le résultat',
-    helper: 'Le score est validé. Consulte le récapitulatif du match.',
-    title: 'Résultat validé',
-  },
-  waiting_score: {
-    accent: 'gold',
-    actionLabel: 'Saisir le score',
-    helper: 'Le match est joue. Saisis le score final pour lancer la validation League.',
-    title: 'Score à saisir',
-  },
-  waiting_venue: {
-    accent: 'warning',
-    actionLabel: 'Marquer terrain réservé',
-    helper: "Le match est confirmé, mais le terrain n'est pas encore réservé. Finalise l'organisation dès que possible.",
-    title: 'Terrain à réserver',
-  },
-};
+/**
+ * Les etats du dashboard : une fonction, pour que la langue soit lue a l appel.
+ * @returns {Record<string, { accent: string, actionLabel: string, helper: string, title: string }>}
+ */
+const getLeagueActionMetaByState = () => {
+  /** @type {Record<string, { accent: string, actionLabel: string, helper: string, title: string }>} */
+  const meta = {
+    confirmed_upcoming: {
+      accent: 'success',
+      actionLabel: i18next.t(
+        'leagueDashboard.actions.confirmedUpcoming.actionLabel',
+        'Voir le match',
+      ),
+      helper: i18next.t(
+        'leagueDashboard.actions.confirmedUpcoming.helper',
+        'Le match est confirmé. Retrouve les informations de préparation dans ton espace Match.',
+      ),
+      title: i18next.t('leagueDashboard.actions.confirmedUpcoming.title', 'Match confirmé'),
+    },
+    disputed: {
+      accent: 'warning',
+      actionLabel: i18next.t('leagueDashboard.actions.disputed.actionLabel', 'Traiter le litige'),
+      helper: i18next.t(
+        'leagueDashboard.actions.disputed.helper',
+        'Un litige est ouvert sur le score. Ouvre le match pour le traiter.',
+      ),
+      title: i18next.t('leagueDashboard.actions.disputed.title', 'Litige score'),
+    },
+    idle: {
+      accent: 'neutral',
+      actionLabel: i18next.t('leagueDashboard.actions.idle.actionLabel', 'Trouver un match'),
+      helper: i18next.t(
+        'leagueDashboard.actions.idle.helper',
+        'Lance une recherche pour trouver un adversaire compatible avec les créneaux de ta squad.',
+      ),
+      title: i18next.t('leagueDashboard.actions.idle.title', 'Aucun match actif'),
+    },
+    opponent_found: {
+      accent: 'primary',
+      actionLabel: i18next.t(
+        'leagueDashboard.actions.opponentFound.actionLabel',
+        'Envoyer une proposition',
+      ),
+      helper: i18next.t(
+        'leagueDashboard.actions.opponentFound.helper',
+        "Un adversaire a été trouvé. Il reste à t'accorder sur la proposition de match.",
+      ),
+      title: i18next.t('leagueDashboard.actions.opponentFound.title', 'Adversaire trouve'),
+    },
+    pending_validation: {
+      accent: 'warning',
+      actionLabel: i18next.t(
+        'leagueDashboard.actions.pendingValidation.actionLabel',
+        'Valider le score',
+      ),
+      helper: i18next.t(
+        'leagueDashboard.actions.pendingValidation.helper',
+        'Un score attend une validation. Confirme ou conteste le résultat.',
+      ),
+      title: i18next.t('leagueDashboard.actions.pendingValidation.title', 'Score à valider'),
+    },
+    post_slot_resolution: {
+      accent: 'warning',
+      actionLabel: i18next.t(
+        'leagueDashboard.actions.postSlotResolution.actionLabel',
+        'Le match a-t-il eu lieu ?',
+      ),
+      helper: i18next.t(
+        'leagueDashboard.actions.postSlotResolution.helper',
+        'Le créneau est dépassé sans terrain confirmé. Le capitaine doit dire si le match a eu lieu.',
+      ),
+      title: i18next.t('leagueDashboard.actions.postSlotResolution.title', 'Confirmation match'),
+    },
+    proposal_received: {
+      accent: 'warning',
+      actionLabel: i18next.t('leagueDashboard.actions.proposalReceived.actionLabel', 'Répondre'),
+      helper: i18next.t(
+        'leagueDashboard.actions.proposalReceived.helper',
+        'Une proposition adverse attend ta réponse. Ouvre la conversation pour accepter, refuser ou contre-proposer.', // eslint-disable-line max-len
+      ),
+      title: i18next.t(
+        'leagueDashboard.actions.proposalReceived.title',
+        'Nouvelle proposition reçue',
+      ),
+    },
+    proposal_sent_waiting: {
+      accent: 'gold',
+      actionLabel: i18next.t(
+        'leagueDashboard.actions.proposalSentWaiting.actionLabel',
+        'Voir la proposition',
+      ),
+      helper: i18next.t(
+        'leagueDashboard.actions.proposalSentWaiting.helper',
+        "Ta proposition a été envoyée. Continue l'échange dans la conversation avec l'adversaire.",
+      ),
+      title: i18next.t('leagueDashboard.actions.proposalSentWaiting.title', 'Proposition envoyée'),
+    },
+    searching: {
+      accent: 'gold',
+      actionLabel: i18next.t(
+        'leagueDashboard.actions.searching.actionLabel',
+        'Ouvrir le centre de match',
+      ),
+      helper: i18next.t(
+        'leagueDashboard.actions.searching.helper',
+        'La recherche est en cours. Les meilleures correspondances continuent à être analysees.',
+      ),
+      title: i18next.t('leagueDashboard.actions.searching.title', 'Recherche en cours'),
+    },
+    valid: {
+      accent: 'success',
+      actionLabel: i18next.t('leagueDashboard.actions.valid.actionLabel', 'Voir le résultat'),
+      helper: i18next.t(
+        'leagueDashboard.actions.valid.helper',
+        'Le score est validé. Consulte le récapitulatif du match.',
+      ),
+      title: i18next.t('leagueDashboard.actions.valid.title', 'Résultat validé'),
+    },
+    waiting_score: {
+      accent: 'gold',
+      actionLabel: i18next.t('leagueDashboard.actions.waitingScore.actionLabel', 'Saisir le score'),
+      helper: i18next.t(
+        'leagueDashboard.actions.waitingScore.helper',
+        'Le match est joue. Saisis le score final pour lancer la validation League.',
+      ),
+      title: i18next.t('leagueDashboard.actions.waitingScore.title', 'Score à saisir'),
+    },
+    waiting_venue: {
+      accent: 'warning',
+      actionLabel: i18next.t(
+        'leagueDashboard.actions.waitingVenue.actionLabel',
+        'Marquer terrain réservé',
+      ),
+      helper: i18next.t(
+        'leagueDashboard.actions.waitingVenue.helper',
+        "Le match est confirmé, mais le terrain n'est pas encore réservé. Finalise l'organisation dès que possible.", // eslint-disable-line max-len
+      ),
+      title: i18next.t('leagueDashboard.actions.waitingVenue.title', 'Terrain à réserver'),
+    },
+  };
 
-LEAGUE_ACTION_META.confirméd_upcoming = LEAGUE_ACTION_META.confirmed_upcoming;
+  meta.confirméd_upcoming = meta.confirmed_upcoming;
+  return meta;
+};
 
 const SCORE_ACTION_STATES = new Set(['disputed', 'pending_validation', 'waiting_score']);
 
@@ -264,13 +338,13 @@ const resolveLeagueActionStateKey = (leagueActionState) => {
     || '',
   ).trim();
 
-  if (LEAGUE_ACTION_META[directState]) return directState;
+  if (getLeagueActionMetaByState()[directState]) return directState;
 
   const derivedPhase = leagueActionState?.match
     ? getMatchDerivedPhase(leagueActionState.match, leagueActionState.match?.event)
     : '';
 
-  if (LEAGUE_ACTION_META[derivedPhase]) return derivedPhase;
+  if (getLeagueActionMetaByState()[derivedPhase]) return derivedPhase;
   return directState || 'idle';
 };
 
@@ -283,6 +357,7 @@ function LeagueDashboard() {
   const {
     Alignments, Colors, Fonts, Images, Spaces,
   } = useTheme();
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const { userData } = /** @type {{ userData: User | null }} */ (useAuth());
   const navigation = /** @type {any} */ (useNavigation());
@@ -370,11 +445,14 @@ function LeagueDashboard() {
       setUserTeam(null);
       setMatchHistory([]);
       setRankingData([]);
-      setLoadError('Impossible de charger le dashboard League pour le moment.');
+      setLoadError(t(
+        'leagueDashboard.loadError',
+        'Impossible de charger le dashboard League pour le moment.',
+      ));
     } finally {
       setLoading(false);
     }
-  }, [activeSquadId, hydrateSquadDashboard, queryClient, userData]);
+  }, [activeSquadId, hydrateSquadDashboard, queryClient, t, userData]);
 
   useFocusEffect(
     useCallback(() => {
@@ -455,8 +533,11 @@ function LeagueDashboard() {
     const matchId = options?.matchId || leagueActionState?.matchId || leagueActionState?.match?.documentId || '';
     const shouldHideOpponentName = shouldMaskOpponentIdentity(leagueActionState?.match || null);
     const opponentName = shouldHideOpponentName
-      ? 'Adversaire'
-      : options?.opponentName || leagueActionState?.opponent?.name || leagueActionState?.opponentDetails?.name || 'Adversaire';
+      ? t('leagueDashboard.opponentFallback', 'Adversaire')
+      : options?.opponentName
+        || leagueActionState?.opponent?.name
+        || leagueActionState?.opponentDetails?.name
+        || t('leagueDashboard.opponentFallback', 'Adversaire');
 
     if (!chatId && matchId) {
       try {
@@ -481,10 +562,14 @@ function LeagueDashboard() {
       focusLatestProposal: true,
       focusProposalMessageId: options?.proposalMessageId || leagueActionState?.proposalMessageId || undefined,
       leagueNegotiationFocusToken: String(Date.now()),
-      subTitle: 'Négociation du match en cours',
-      title: `${userTeam?.name || 'Ta squad'} vs ${opponentName}`,
+      subTitle: t('leagueDashboard.negotiationSubtitle', 'Négociation du match en cours'),
+      title: t('leagueDashboard.conversationTitle', '{{squadName}} vs {{opponentName}}', {
+        opponentName,
+        squadName: userTeam?.name || t('leagueDashboard.mySquadFallback', 'Ta squad'),
+        ...SANS_ECHAPPEMENT,
+      }),
     });
-  }, [leagueActionState, navigation, userTeam?.name]);
+  }, [leagueActionState, navigation, t, userTeam?.name]);
 
   const openLeagueProposalComposer = useCallback((matchId) => {
     navigation.navigate(RouteNames.LeagueMatchTab, {
@@ -600,7 +685,8 @@ function LeagueDashboard() {
 
   const leagueActionMeta = useMemo(() => {
     const state = resolveLeagueActionStateKey(leagueActionState);
-    return LEAGUE_ACTION_META[state] || LEAGUE_ACTION_META.idle;
+    const metaByState = getLeagueActionMetaByState();
+    return metaByState[state] || metaByState.idle;
   }, [leagueActionState]);
 
   // --- Components ---
@@ -662,12 +748,12 @@ function LeagueDashboard() {
 
           <View style={{ flex: 1, minWidth: 0, paddingRight: 10 }}>
             <Text style={[Fonts.p4Bold, { color: Colors.gold500, marginBottom: 4, textTransform: 'uppercase' }]}>
-              Vue squad active
+              {t('leagueDashboard.switcher.label', 'Vue squad active')}
             </Text>
             {/* MARQUEE — le nom de ma squad se lit en entier */}
             <MarqueeText
               style={[Fonts.p1Bold, { color: Colors.neutral00 }]}
-              text={userTeam?.name || 'Ta squad'}
+              text={userTeam?.name || t('leagueDashboard.mySquadFallback', 'Ta squad')}
             />
             <Text numberOfLines={1} style={[Fonts.p3, { color: Colors.neutral300, marginTop: 3 }]}>
               {userTeam?.sport || 'Sport'}
@@ -677,8 +763,11 @@ function LeagueDashboard() {
           </View>
 
           <TouchableOpacity
-            accessibilityHint="Ouvre la liste des squads League"
-            accessibilityLabel="Changer de squad"
+            accessibilityHint={t(
+              'leagueDashboard.switcher.hint',
+              'Ouvre la liste des squads League',
+            )}
+            accessibilityLabel={t('leagueDashboard.switcher.title', 'Changer de squad')}
             accessibilityRole="button"
             activeOpacity={canSwitchSquad ? 0.8 : 1}
             disabled={!canSwitchSquad}
@@ -697,7 +786,9 @@ function LeagueDashboard() {
             }}
           >
             <Text style={[Fonts.p3Bold, { color: canSwitchSquad ? Colors.primary500 : Colors.neutral300, marginRight: canSwitchSquad ? 6 : 0 }]}>
-              {canSwitchSquad ? 'Changer' : 'Unique'}
+              {canSwitchSquad
+                ? t('leagueDashboard.switcher.action', 'Changer')
+                : t('leagueDashboard.switcher.single', 'Unique')}
             </Text>
             {canSwitchSquad ? (
               <Image
@@ -719,10 +810,13 @@ function LeagueDashboard() {
       headerComponent={(
         <View style={{ alignItems: 'center' }}>
           <Text style={[Fonts.h3, { color: Colors.neutral00, textAlign: 'center' }]}>
-            Changer de squad
+            {t('leagueDashboard.switcher.title', 'Changer de squad')}
           </Text>
           <Text style={[Fonts.p3, { color: Colors.neutral300, marginTop: 6, textAlign: 'center' }]}>
-            Sélectionne la squad active pour ton dashboard League.
+            {t(
+              'leagueDashboard.switcher.subtitle',
+              'Sélectionne la squad active pour ton dashboard League.',
+            )}
           </Text>
         </View>
       )}
@@ -746,7 +840,7 @@ function LeagueDashboard() {
             }}
           >
             <Text style={[Fonts.p2, { color: Colors.neutral300 }]}>
-              Aucune squad disponible.
+              {t('leagueDashboard.switcher.empty', 'Aucune squad disponible.')}
             </Text>
           </LeagueCard>
         ) : null}
@@ -834,7 +928,9 @@ function LeagueDashboard() {
                           width: 12,
                         }}
                       />
-                      <Text style={[Fonts.p3Bold, { color: Colors.primary500 }]}>Actif</Text>
+                      <Text style={[Fonts.p3Bold, { color: Colors.primary500 }]}>
+                        {t('leagueDashboard.switcher.active', 'Actif')}
+                      </Text>
                     </View>
                   ) : null}
                 </View>
@@ -854,12 +950,22 @@ function LeagueDashboard() {
   const renderSquadSignalCard = (/** @type {Team} */ squad, /** @type {'invited' | 'pending'} */ state) => {
     const isInvitation = state === 'invited';
     const accentColor = isInvitation ? Colors.gold500 : (Colors.warning500 || Colors.gold500);
-    const statusLabel = isInvitation ? 'INVITATION' : 'EN ATTENTE';
+    const statusLabel = isInvitation
+      ? 'INVITATION'
+      : t('leagueDashboard.signals.pendingBadge', 'EN ATTENTE');
     const helperLabel = isInvitation
-      ? 'Une squad t\'attend déjà. Réponds pour rejoindre la compétition.'
-      : 'Ta demande a bien été envoyée. Le capitaine doit encore répondre.';
-    const ctaLabel = isInvitation ? 'Voir l invitation' : 'Voir la demande';
-    const squadName = squad?.name || 'Squad League';
+      ? t(
+        'leagueDashboard.signals.invitedHelper',
+        "Une squad t'attend déjà. Réponds pour rejoindre la compétition.",
+      )
+      : t(
+        'leagueDashboard.signals.pendingHelper',
+        'Ta demande a bien été envoyée. Le capitaine doit encore répondre.',
+      );
+    const ctaLabel = isInvitation
+      ? t('leagueDashboard.signals.viewInvitation', 'Voir l invitation')
+      : t('leagueDashboard.signals.viewRequest', 'Voir la demande');
+    const squadName = squad?.name || t('leagueDashboard.signals.squadFallback', 'Squad League');
     const divisionValue = clampLeagueDivision(squad?.division);
     const sportLabel = String(squad?.sport || 'Sport').trim();
 
@@ -960,7 +1066,7 @@ function LeagueDashboard() {
           }}
         >
           <Text style={[Fonts.p3Bold, { color: Colors.neutral300, flex: 1, paddingRight: 12 }]}>
-            Signal League prioritaire
+            {t('leagueDashboard.signals.priority', 'Signal League prioritaire')}
           </Text>
           <View
             style={{
@@ -988,15 +1094,19 @@ function LeagueDashboard() {
         alignItems: 'center', paddingVertical: 40, width: '100%', ...leagueSurface,
       }}
       >
-        {/* eslint-disable-next-line react/no-unescaped-entities */}
-        <Text style={[Fonts.h2, { color: Colors.neutral00, marginBottom: 8 }]}>Prêt à l'action ?</Text>
+        <Text style={[Fonts.h2, { color: Colors.neutral00, marginBottom: 8 }]}>
+          {t('leagueDashboard.noTeam.title', "Prêt à l'action ?")}
+        </Text>
         <Text style={[Fonts.p2, { color: Colors.neutral300, marginBottom: 24, textAlign: 'center' }]}>
-          Crée ton équipe pour rejoindre la compétition officielle.
+          {t(
+            'leagueDashboard.noTeam.subtitle',
+            'Crée ton équipe pour rejoindre la compétition officielle.',
+          )}
         </Text>
         <Button
           onPress={() => navigation.navigate(RouteNames.SquadSearch)}
           style={{ marginBottom: 12, width: '100%' }}
-          title="Rechercher une squad"
+          title={t('leagueDashboard.noTeam.search', 'Rechercher une squad')}
           variant="Secondary"
         />
         <Button
@@ -1011,15 +1121,15 @@ function LeagueDashboard() {
             width: '100%',
           }}
           textStyle={{ color: Colors.neutral900 }}
-          title="Créer une squad"
+          title={t('leagueDashboard.noTeam.create', 'Créer une squad')}
           variant="Primary"
         />
       </LeagueCard>
       {(invitedSquads.length > 0 || pendingSquads.length > 0) ? (
         <View style={{ marginTop: 8, width: '100%' }}>
           <SectionHeader
-            subtitle="A TRAITER MAINTENANT"
-            title="SIGNAUX SQUAD"
+            subtitle={t('leagueDashboard.noTeam.signalsSubtitle', 'A TRAITER MAINTENANT')}
+            title={t('leagueDashboard.noTeam.signalsTitle', 'SIGNAUX SQUAD')}
           />
           {invitedSquads.map((squad) => renderSquadSignalCard(squad, 'invited'))}
           {pendingSquads.map((squad) => renderSquadSignalCard(squad, 'pending'))}
@@ -1028,7 +1138,7 @@ function LeagueDashboard() {
             style={{ alignItems: 'center', marginTop: 8 }}
           >
             <Text style={[Fonts.p2Bold, { color: Colors.primary500, textDecorationLine: 'underline' }]}>
-              Ouvrir mon onglet Squad
+              {t('leagueDashboard.noTeam.openSquadTab', 'Ouvrir mon onglet Squad')}
             </Text>
           </TouchableOpacity>
         </View>
@@ -1048,22 +1158,28 @@ function LeagueDashboard() {
         }}
       >
         <Text style={[Fonts.p3Bold, { color: Colors.error500, marginBottom: 8 }]}>
-          VALIDATION CAPITAINE
+          {t('leagueDashboard.captainRequests.badge', 'VALIDATION CAPITAINE')}
         </Text>
         <Text style={[Fonts.h4Bold, { color: Colors.neutral00, marginBottom: 8 }]}>
           <Text style={{ color: Colors.gold500 }}>{dashboardPendingRequestsCount}</Text>
           {' '}
-          demande
-          {dashboardPendingRequestsCount > 1 ? 's' : ''}
+          {t('leagueDashboard.captainRequests.requests', {
+            count: dashboardPendingRequestsCount,
+            defaultValue_one: 'demande',
+            defaultValue_other: 'demandes',
+          })}
           {' '}
-          attendent ta réponse
+          {t('leagueDashboard.captainRequests.awaiting', 'attendent ta réponse')}
         </Text>
         <Text style={[Fonts.p2, { color: Colors.neutral200, marginBottom: 16 }]}>
-          Ouvre les demandes de ta squad pour accepter ou refuser les joueurs en attente.
+          {t(
+            'leagueDashboard.captainRequests.hint',
+            'Ouvre les demandes de ta squad pour accepter ou refuser les joueurs en attente.',
+          )}
         </Text>
         <Button
           onPress={() => navigation.navigate(RouteNames.SquadRequests, { teamId: getEntityDocumentId(userTeam) })}
-          title="VOIR LES DEMANDES"
+          title={t('leagueDashboard.captainRequests.cta', 'VOIR LES DEMANDES')}
           variant="Secondary"
         />
       </LeagueCard>
@@ -1109,8 +1225,10 @@ function LeagueDashboard() {
 
     const shouldHideOpponentName = shouldMaskOpponentIdentity(leagueActionState?.match || null);
     const opponentName = shouldHideOpponentName
-      ? 'Adversaire'
-      : leagueActionState?.opponent?.name || leagueActionState?.opponentDetails?.name || 'Adversaire';
+      ? t('leagueDashboard.opponentFallback', 'Adversaire')
+      : leagueActionState?.opponent?.name
+        || leagueActionState?.opponentDetails?.name
+        || t('leagueDashboard.opponentFallback', 'Adversaire');
     const actionRequired = [
       'disputed',
       'pending_validation',
@@ -1129,11 +1247,11 @@ function LeagueDashboard() {
       'waiting_score',
       'waiting_venue',
     ].includes(state);
-    let secondaryActionLabel = 'Voir le chat';
+    let secondaryActionLabel = t('leagueDashboard.actionCard.viewChat', 'Voir le chat');
     if (state === 'proposal_sent_waiting' || state === 'waiting_venue' || state === 'post_slot_resolution') {
-      secondaryActionLabel = 'Voir le match';
+      secondaryActionLabel = t('leagueDashboard.actionCard.viewMatch', 'Voir le match');
     } else if (SCORE_ACTION_STATES.has(state)) {
-      secondaryActionLabel = 'Voir la fiche match';
+      secondaryActionLabel = t('leagueDashboard.actionCard.viewMatchPage', 'Voir la fiche match');
     }
 
     return (
@@ -1162,15 +1280,21 @@ function LeagueDashboard() {
                 paddingVertical: 6,
               }}
             >
-              <Text style={[Fonts.p4Bold, { color: Colors.error500 }]}>ACTION REQUISE</Text>
+              <Text style={[Fonts.p4Bold, { color: Colors.error500 }]}>
+                {t('leagueDashboard.actionCard.actionRequired', 'ACTION REQUISE')}
+              </Text>
             </View>
           ) : null}
         </View>
 
         <Text style={[Fonts.h4Bold, { color: Colors.neutral00, marginTop: 14 }]}>
           {state === 'searching' || state === 'idle'
-            ? (userTeam?.name || 'Ta squad')
-            : `${userTeam?.name || 'Ta squad'} VS ${opponentName}`}
+            ? (userTeam?.name || t('leagueDashboard.mySquadFallback', 'Ta squad'))
+            : t('leagueDashboard.matchupTitle', '{{squadName}} VS {{opponentName}}', {
+              opponentName,
+              squadName: userTeam?.name || t('leagueDashboard.mySquadFallback', 'Ta squad'),
+              ...SANS_ECHAPPEMENT,
+            })}
         </Text>
 
         <Text style={[Fonts.p2, { color: Colors.neutral200, marginTop: 10 }]}>
@@ -1200,7 +1324,7 @@ function LeagueDashboard() {
             ) : null}
             {leagueActionState?.venue ? (
               <Text style={[Fonts.p3, { color: Colors.neutral200 }]}>
-                Lieu
+                {t('leagueDashboard.actionCard.venue', 'Lieu')}
                 {' : '}
                 <Text style={[Fonts.p3Bold, { color: Colors.gold500 }]}>{leagueActionState.venue}</Text>
               </Text>
@@ -1237,32 +1361,46 @@ function LeagueDashboard() {
     );
     const rawStreak = Number(userTeam?.streak || 0);
     const nextStreakBonus = rawStreak > 0 ? getNextStreakBonus(rawStreak) : 0;
-    let streakHelper = 'Prochaine victoire: +20 pts';
+    let streakHelper = t('leagueDashboard.stats.nextWin', 'Prochaine victoire: +20 pts');
     if (rawStreak > 0) {
-      streakHelper = `Prochain bonus: +${nextStreakBonus}`;
+      streakHelper = t(
+        'leagueDashboard.stats.nextBonus',
+        'Prochain bonus: +{{nextStreakBonus}}',
+        { nextStreakBonus },
+      );
     } else if (rawStreak < 0) {
-      streakHelper = 'Dernier résultat: défaite';
+      streakHelper = t('leagueDashboard.stats.lastResultLoss', 'Dernier résultat: défaite');
     }
     const promotionHelper = divisionProgress.maxDivisionReached
-      ? 'Division 1 prestige'
-      : `${Math.round(divisionProgress.pointsToPromotion)} pts avant promotion`;
+      ? t('leagueDashboard.stats.prestigeDivision', 'Division 1 prestige')
+      : t(
+        'leagueDashboard.stats.pointsToPromotion',
+        '{{points}} pts avant promotion',
+        { points: Math.round(divisionProgress.pointsToPromotion) },
+      );
 
     return (
       <LeagueCard style={leagueSurface}>
         <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
           <View style={{ alignItems: 'center', flex: 1 }}>
             <Text style={[Fonts.h2Bold, { color: Colors.gold500 }]}>{userTeam?.wins || 0}</Text>
-            <Text style={[Fonts.p3, { color: Colors.neutral200, marginTop: 4 }]}>VICTOIRES</Text>
+            <Text style={[Fonts.p3, { color: Colors.neutral200, marginTop: 4 }]}>
+              {t('leagueDashboard.stats.wins', 'VICTOIRES')}
+            </Text>
           </View>
           <View style={{ backgroundColor: 'rgba(255,255,255,0.12)', width: 1 }} />
           <View style={{ alignItems: 'center', flex: 1 }}>
             <Text style={[Fonts.h2Bold, { color: Colors.gold500 }]}>{formatPositiveStreak(userTeam?.streak)}</Text>
-            <Text style={[Fonts.p3, { color: Colors.neutral200, marginTop: 4 }]}>SÉRIE</Text>
+            <Text style={[Fonts.p3, { color: Colors.neutral200, marginTop: 4 }]}>
+              {t('leagueDashboard.stats.streak', 'SÉRIE')}
+            </Text>
           </View>
           <View style={{ backgroundColor: 'rgba(255,255,255,0.12)', width: 1 }} />
           <View style={{ alignItems: 'center', flex: 1 }}>
             <Text style={[Fonts.h2Bold, { color: Colors.gold500 }]}>{/** @type {any} */ (userTeam)?.losses || 0}</Text>
-            <Text style={[Fonts.p3, { color: Colors.neutral200, marginTop: 4 }]}>DÉFAITES</Text>
+            <Text style={[Fonts.p3, { color: Colors.neutral200, marginTop: 4 }]}>
+              {t('leagueDashboard.stats.losses', 'DÉFAITES')}
+            </Text>
           </View>
         </View>
 
@@ -1283,13 +1421,13 @@ function LeagueDashboard() {
           </Text>
           <Text style={[Fonts.p3, { color: Colors.neutral200, marginBottom: 12, textAlign: 'center' }]}>
             {streakHelper}
-            {' | Meilleure série: x'}
+            {t('leagueDashboard.stats.bestStreak', ' | Meilleure série: x')}
             {getTeamHighestStreak(userTeam)}
           </Text>
           <Button
             onPress={handleOpenSquadStatistics}
             size="small"
-            title="VOIR LES STATISTIQUES DE LA SQUAD"
+            title={t('leagueDashboard.stats.cta', 'VOIR LES STATISTIQUES DE LA SQUAD')}
             variant="Secondary"
           />
         </View>
@@ -1302,16 +1440,18 @@ function LeagueDashboard() {
     if (!rankingData || rankingData.length === 0) return null;
 
     // 1. Get Top 3
-    const topTeams = /** @type {LeaderboardEntry[]} */ (rankingData.slice(0, 3).map((/** @type {Team} */ t, /** @type {number} */ i) => ({
-      form: computeTeamForm(t),
-      isMe: getEntityDocumentId(t) === getEntityDocumentId(userTeam),
-      name: t.name || 'Équipe',
-      points: getTeamDivisionPoints(t),
+    const topTeams = /** @type {LeaderboardEntry[]} */ (rankingData.slice(0, 3).map((/** @type {Team} */ team, /** @type {number} */ i) => ({
+      form: computeTeamForm(team),
+      isMe: getEntityDocumentId(team) === getEntityDocumentId(userTeam),
+      name: team.name || t('leagueDashboard.leaderboard.teamFallback', 'Équipe'),
+      points: getTeamDivisionPoints(team),
       rank: i + 1,
     })));
 
     // 2. Add User if not in Top 3
-    const userIndex = rankingData.findIndex((/** @type {Team} */ t) => getEntityDocumentId(t) === getEntityDocumentId(userTeam));
+    const userIndex = rankingData.findIndex(
+      (/** @type {Team} */ team) => getEntityDocumentId(team) === getEntityDocumentId(userTeam),
+    );
     const isUserInTop = userIndex >= 0 && userIndex < 3;
 
     const displayTeams = /** @type {any[]} */ ([...topTeams]);
@@ -1321,7 +1461,7 @@ function LeagueDashboard() {
       displayTeams.push({
         form: computeTeamForm(userTeam),
         isMe: true,
-        name: userTeam.name || 'Équipe',
+        name: userTeam.name || t('leagueDashboard.leaderboard.teamFallback', 'Équipe'),
         points: getTeamDivisionPoints(userTeam),
         rank: userIndex + 1,
       });
@@ -1404,7 +1544,9 @@ function LeagueDashboard() {
             })}
             style={{ alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.04)', padding: 12 }}
           >
-            <Text style={[Fonts.p3Bold, { color: Colors.primary500 }]}>VOIR LE CLASSEMENT COMPLET</Text>
+            <Text style={[Fonts.p3Bold, { color: Colors.primary500 }]}>
+              {t('leagueDashboard.leaderboard.fullStandings', 'VOIR LE CLASSEMENT COMPLET')}
+            </Text>
           </TouchableOpacity>
         </LeagueCard>
       </View>
@@ -1414,9 +1556,12 @@ function LeagueDashboard() {
   if (loading && !userTeam && !loadError) {
     return (
       <LeagueStateView
-        description="Chargement du dashboard League et de ta squad."
+        description={t(
+          'leagueDashboard.loading.description',
+          'Chargement du dashboard League et de ta squad.',
+        )}
         isLoading
-        title="Chargement League"
+        title={t('leagueDashboard.loading.title', 'Chargement League')}
       />
     );
   }
@@ -1424,10 +1569,10 @@ function LeagueDashboard() {
   if (loadError && !userTeam) {
     return (
       <LeagueStateView
-        actionLabel="Réessayer"
+        actionLabel={t('leagueDashboard.retry', 'Réessayer')}
         description={loadError}
         onAction={() => loadDashboard()}
-        title="Dashboard indisponible"
+        title={t('leagueDashboard.unavailable', 'Dashboard indisponible')}
       />
     );
   }
@@ -1454,7 +1599,9 @@ function LeagueDashboard() {
               elo={userTeam.elo}
               nextDivisionPoints={getDivisionPromotionTargetPoints(userTeam?.division)}
               rank={(() => {
-                const index = rankingData.findIndex((/** @type {Team} */ t) => getEntityDocumentId(t) === getEntityDocumentId(userTeam));
+                const index = rankingData.findIndex(
+                  (/** @type {Team} */ team) => getEntityDocumentId(team) === getEntityDocumentId(userTeam),
+                );
                 return index >= 0 ? index + 1 : '-';
               })()}
               seasonPoints={getTeamSeasonPoints(userTeam)}
@@ -1486,7 +1633,7 @@ function LeagueDashboard() {
               style={{ alignItems: 'center', marginTop: 16 }}
             >
               <Text style={[Fonts.p2, { color: Colors.neutral300, textDecorationLine: 'underline' }]}>
-                Gérer mon effectif & Rôles
+                {t('leagueDashboard.manageRoster', 'Gérer mon effectif & Rôles')}
               </Text>
             </TouchableOpacity>
           </>
@@ -1501,16 +1648,24 @@ function LeagueDashboard() {
         <View style={{ gap: 16, paddingBottom: 12 }}>
           <View style={{ gap: 6 }}>
             <Text style={[Fonts.h3Bold, { color: Colors.neutral00, textAlign: 'center' }]}>
-              Conversation en préparation
+              {t('leagueDashboard.conversationFallback.title', 'Conversation en préparation')}
             </Text>
             <Text style={[Fonts.p2, { color: Colors.neutral200, textAlign: 'center' }]}>
-              La conversation avec l&apos;adversaire n&apos;est pas encore prête. Réessaie dans quelques secondes ou ouvre la fiche match pour suivre l&apos;organisation.
+              {t(
+                'leagueDashboard.conversationFallback.body',
+                "La conversation avec l'adversaire n'est pas encore prête. Réessaie dans quelques secondes ou ouvre la fiche match pour suivre l'organisation.", // eslint-disable-line max-len
+              )}
             </Text>
           </View>
           <LeagueCard style={{ ...leagueSurface, marginBottom: 0 }}>
-            <Text style={[Fonts.p4Bold, { color: Colors.gold500 }]}>État League</Text>
+            <Text style={[Fonts.p4Bold, { color: Colors.gold500 }]}>
+              {t('leagueDashboard.conversationFallback.status', 'État League')}
+            </Text>
             <Text style={[Fonts.p2Bold, { color: Colors.neutral00, marginTop: 6 }]}>
-              {conversationFallbackState?.opponentName || 'Adversaire'}
+              {conversationFallbackState?.opponentName || t(
+                'leagueDashboard.opponentFallback',
+                'Adversaire',
+              )}
             </Text>
           </LeagueCard>
           <Button
@@ -1523,7 +1678,7 @@ function LeagueDashboard() {
                 proposalMessageId: fallbackState?.proposalMessageId,
               });
             }}
-            title="Repondre"
+            title={t('leagueDashboard.conversationFallback.reply', 'Repondre')}
             variant="Primary"
           />
           {conversationFallbackState?.matchId ? (
@@ -1535,13 +1690,13 @@ function LeagueDashboard() {
                   openLeagueMatchDetails(nextMatchId, 'negotiation');
                 }
               }}
-              title="Voir le match"
+              title={t('leagueDashboard.actionCard.viewMatch', 'Voir le match')}
               variant="Secondary"
             />
           ) : null}
           <Button
             onPress={() => setConversationFallbackState(null)}
-            title="Fermer"
+            title={t('leagueDashboard.conversationFallback.close', 'Fermer')}
             variant="SecondaryLight"
           />
         </View>

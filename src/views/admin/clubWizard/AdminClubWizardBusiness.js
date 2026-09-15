@@ -1,5 +1,6 @@
 // @ts-nocheck
 /* eslint-disable jsdoc/require-description, jsdoc/require-param-type, jsdoc/require-returns, max-len */
+import { useTranslation } from 'react-i18next';
 import {
   Text,
   TouchableOpacity,
@@ -31,6 +32,7 @@ function AdminClubWizardBusiness({ navigation }) {
     Fonts,
     Spaces,
   } = useTheme();
+  const { t } = useTranslation();
   const { setField, state } = useAdminClubWizard();
   const handleExitWizard = useAdminClubWizardExit(navigation);
 
@@ -65,7 +67,12 @@ function AdminClubWizardBusiness({ navigation }) {
             },
           ]}
         >
-          <Text style={[Fonts.p3Bold, Fonts.neutral00]}>{state[field] ? 'Oui' : 'Non'}</Text>
+          <Text style={[Fonts.p3Bold, Fonts.neutral00]}>
+            {state[field] ? t(
+              'adminClubWizardBusiness.yes',
+              'Oui',
+            ) : t('adminClubWizardBusiness.no', 'Non')}
+          </Text>
         </View>
       </View>
     </TouchableOpacity>
@@ -73,30 +80,42 @@ function AdminClubWizardBusiness({ navigation }) {
 
   return (
     <WizardStepLayout
-      nextLabel="Suivant"
+      nextLabel={t('adminClubWizardBusiness.next', 'Suivant')}
       onBack={() => navigation.goBack()}
       onClose={handleExitWizard}
       onNext={() => navigation.navigate(RouteNames.AdminClubWizardMultisport)}
       stepCount={ADMIN_CLUB_WIZARD_TOTAL_STEPS}
       stepIndex={5}
-      subtitle="On fixe ici le partenariat, la vérification et la réservation. Les abonnements et la capacité Équipe se pilotent ensuite depuis les opérations abonnements."
-      title="Statut et gouvernance"
+      subtitle={t(
+        'adminClubWizardBusiness.subtitle',
+        'On fixe ici le partenariat, la vérification et la réservation. Les abonnements et la capacité Équipe se pilotent ensuite depuis les opérations abonnements.',
+      )}
+      title={t('adminClubWizardBusiness.title', 'Statut et gouvernance')}
     >
       <View style={[Spaces.gap[18]]}>
         {renderToggle(
-          'Club partenaire',
+          t('adminClubWizardBusiness.partner.label', 'Club partenaire'),
           'clubPartner',
-          'Signal commercial et interne uniquement. Ce statut n ouvre aucun droit produit a lui seul.',
+          t(
+            'adminClubWizardBusiness.partner.hint',
+            'Signal commercial et interne uniquement. Ce statut n ouvre aucun droit produit a lui seul.',
+          ),
         )}
         {renderToggle(
-          'Club certifié',
+          t('adminClubWizardBusiness.verified.label', 'Club certifié'),
           'clubVerified',
-          'Badge public et legitimite dirigeant. A activer seulement après review claim, migration approuvee ou action superadmin auditée.',
+          t(
+            'adminClubWizardBusiness.verified.hint',
+            'Badge public et legitimite dirigeant. A activer seulement après review claim, migration approuvee ou action superadmin auditée.',
+          ),
         )}
         {renderToggle(
-          'Fournisseur de réservation',
+          t('adminClubWizardBusiness.reservation.label', 'Fournisseur de réservation'),
           'isReservationProvider',
-          'Active si le club peut proposer des installations et des réservations.',
+          t(
+            'adminClubWizardBusiness.reservation.hint',
+            'Active si le club peut proposer des installations et des réservations.',
+          ),
         )}
       </View>
     </WizardStepLayout>

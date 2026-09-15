@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   FlatList, Modal, StyleSheet, Text, TextInput, TouchableOpacity, View,
 } from 'react-native';
@@ -29,6 +30,7 @@ function PlayerGoalsModal({
   visible,
 }) {
   const { Colors, Fonts } = useTheme();
+  const { t } = useTranslation();
   const { showBanner } = useAppFeedback();
   const [goals, setGoals] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -52,8 +54,12 @@ function PlayerGoalsModal({
 
     if (currentTotal !== totalGoals) {
       showBanner({
-        body: `Le total des buts (${currentTotal}) ne correspond pas au score (${totalGoals}). Merci de corriger.`,
-        title: 'Erreur',
+        body: t(
+          'playerGoalsModal.totalMismatch',
+          'Le total des buts ({{currentTotal}}) ne correspond pas au score ({{totalGoals}}). Merci de corriger.', // eslint-disable-line max-len
+          { currentTotal, totalGoals },
+        ),
+        title: t('playerGoalsModal.errorTitle', 'Erreur'),
         tone: 'error',
       });
       return;
@@ -65,8 +71,8 @@ function PlayerGoalsModal({
       onClose();
     } catch (error) {
       showBanner({
-        body: 'Impossible de sauvegarder les buteurs.',
-        title: 'Erreur',
+        body: t('playerGoalsModal.saveError', 'Impossible de sauvegarder les buteurs.'),
+        title: t('playerGoalsModal.errorTitle', 'Erreur'),
         tone: 'error',
       });
     } finally {
@@ -120,7 +126,7 @@ function PlayerGoalsModal({
           {/* Header */}
           <View style={styles.header}>
             <Text style={[Fonts.h3, { color: Colors.neutral100 }]}>
-              ⚽ Buteurs -
+              {t('playerGoalsModal.title', '⚽ Buteurs -')}
               {' '}
               {teamName}
             </Text>
@@ -138,7 +144,7 @@ function PlayerGoalsModal({
               /
               {totalGoals}
               {' '}
-              buts attribués
+              {t('playerGoalsModal.goalsAssigned', 'buts attribués')}
             </Text>
           </View>
 
@@ -148,7 +154,7 @@ function PlayerGoalsModal({
             keyExtractor={(item) => item.documentId || item.id?.toString()}
             ListEmptyComponent={(
               <Text style={{ color: Colors.neutral500, padding: 20, textAlign: 'center' }}>
-                Aucun joueur disponible
+                {t('playerGoalsModal.noPlayers', 'Aucun joueur disponible')}
               </Text>
                           )}
             renderItem={renderPlayer}
@@ -158,7 +164,10 @@ function PlayerGoalsModal({
           {/* Submit Button */}
           <Button
             disabled={!isValid || isSubmitting}
-            label={isSubmitting ? 'Enregistrement...' : 'Valider les buteurs'}
+            label={isSubmitting ? t('playerGoalsModal.saving', 'Enregistrement...') : t(
+              'playerGoalsModal.submit',
+              'Valider les buteurs',
+            )}
             onPress={handleSubmit}
             style={{
               backgroundColor: isValid ? Colors.primary500 : Colors.neutral700,

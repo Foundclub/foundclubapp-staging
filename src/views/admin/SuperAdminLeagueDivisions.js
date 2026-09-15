@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { Text, View } from 'react-native';
 
 import useTheme from '@/theme/themeContext';
@@ -17,15 +18,19 @@ import { getErrorMessage } from '@/utils/errors/displayError';
  */
 function SuperAdminLeagueDivisions() {
   const { Fonts, Spaces } = useTheme();
+  const { t } = useTranslation();
   const divisionsQuery = useGetSuperadminLeagueDivisions();
   const divisions = divisionsQuery.data?.data || [];
 
   if (divisionsQuery.isLoading && !divisions.length) {
     return (
       <AdminStateView
-        description="Nous chargeons la répartition des squads par division League."
+        description={t(
+          'superAdminLeagueDivisions.states.loadingDescription',
+          'Nous chargeons la répartition des squads par division League.',
+        )}
         isLoading
-        title="Chargement des divisions"
+        title={t('superAdminLeagueDivisions.states.loadingTitle', 'Chargement des divisions')}
       />
     );
   }
@@ -33,10 +38,13 @@ function SuperAdminLeagueDivisions() {
   if (divisionsQuery.error && !divisions.length) {
     return (
       <AdminStateView
-        actionLabel="Réessayer"
-        description={getErrorMessage(divisionsQuery.error, 'generic') || 'Impossible de charger les divisions League.'}
+        actionLabel={t('superAdminLeagueDivisions.states.retry', 'Réessayer')}
+        description={getErrorMessage(divisionsQuery.error, 'generic') || t(
+          'superAdminLeagueDivisions.states.errorDescription',
+          'Impossible de charger les divisions League.',
+        )}
         onAction={divisionsQuery.refetch}
-        title="Chargement impossible"
+        title={t('superAdminLeagueDivisions.states.errorTitle', 'Chargement impossible')}
       />
     );
   }
@@ -44,13 +52,18 @@ function SuperAdminLeagueDivisions() {
   return (
     <SuperAdminLeagueLayout
       activeRouteNames={[RouteNames.SuperAdminLeagueDivisions]}
-      description="Visualise les divisions 1 à 5, l'effectif des squads, l'Elo moyen et le volume de matchs par sport."
-      title="Divisions League"
+      description={t(
+        'superAdminLeagueDivisions.description',
+        "Visualise les divisions 1 à 5, l'effectif des squads, l'Elo moyen et le volume de matchs par sport.", // eslint-disable-line max-len
+      )}
+      title={t('superAdminLeagueDivisions.title', 'Divisions League')}
     >
       <View style={[Spaces.gap[12]]}>
         {divisions.length === 0 ? (
           <LeagueCard style={{ marginBottom: 0 }}>
-            <Text style={[Fonts.p2, Fonts.neutral300]}>Aucune donnée de division disponible.</Text>
+            <Text style={[Fonts.p2, Fonts.neutral300]}>
+              {t('superAdminLeagueDivisions.empty', 'Aucune donnée de division disponible.')}
+            </Text>
           </LeagueCard>
         ) : (
           divisions.map((divisionGroup) => (
@@ -61,18 +74,21 @@ function SuperAdminLeagueDivisions() {
                   {' '}
                   {divisionGroup?.division || 5}
                   {' · '}
-                  {divisionGroup?.sport || 'Sport inconnu'}
+                  {divisionGroup?.sport || t(
+                    'superAdminLeagueDivisions.unknownSport',
+                    'Sport inconnu',
+                  )}
                 </Text>
                 <Text style={[Fonts.p2, Fonts.neutral300]}>
-                  Squads :
+                  {t('superAdminLeagueDivisions.fields.squads', 'Squads :')}
                   {' '}
                   {divisionGroup?.squadsCount || 0}
                   {' · '}
-                  Elo moyen :
+                  {t('superAdminLeagueDivisions.fields.averageElo', 'Elo moyen :')}
                   {' '}
                   {divisionGroup?.averageElo || 0}
                   {' · '}
-                  Matchs joués :
+                  {t('superAdminLeagueDivisions.fields.matchesPlayed', 'Matchs joués :')}
                   {' '}
                   {divisionGroup?.matchesPlayed || 0}
                 </Text>

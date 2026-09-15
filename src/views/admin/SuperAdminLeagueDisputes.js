@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Alert,
   Text,
@@ -55,6 +56,7 @@ function FilterField({ onChangeText, placeholder, value }) {
 
 function SuperAdminLeagueDisputes() {
   const { Colors, Fonts, Spaces } = useTheme();
+  const { t } = useTranslation();
   const [status, setStatus] = useState('open');
   const [sport, setSport] = useState('');
   const [from, setFrom] = useState('');
@@ -75,9 +77,12 @@ function SuperAdminLeagueDisputes() {
   if (disputesQuery.isLoading && !disputes.length) {
     return (
       <AdminStateView
-        description="Nous chargeons les litiges League à traiter."
+        description={t(
+          'superAdminLeagueDisputes.states.loadingDescription',
+          'Nous chargeons les litiges League à traiter.',
+        )}
         isLoading
-        title="Chargement des litiges"
+        title={t('superAdminLeagueDisputes.states.loadingTitle', 'Chargement des litiges')}
       />
     );
   }
@@ -85,10 +90,13 @@ function SuperAdminLeagueDisputes() {
   if (disputesQuery.error && !disputes.length) {
     return (
       <AdminStateView
-        actionLabel="Réessayer"
-        description={getErrorMessage(disputesQuery.error, 'generic') || 'Impossible de charger les litiges League.'}
+        actionLabel={t('superAdminLeagueDisputes.states.retry', 'Réessayer')}
+        description={getErrorMessage(disputesQuery.error, 'generic') || t(
+          'superAdminLeagueDisputes.states.errorDescription',
+          'Impossible de charger les litiges League.',
+        )}
         onAction={disputesQuery.refetch}
-        title="Chargement impossible"
+        title={t('superAdminLeagueDisputes.states.errorTitle', 'Chargement impossible')}
       />
     );
   }
@@ -114,7 +122,13 @@ function SuperAdminLeagueDisputes() {
       const scoreA = Number.parseInt(form.scoreA, 10);
       const scoreB = Number.parseInt(form.scoreB, 10);
       if (!Number.isFinite(scoreA) || !Number.isFinite(scoreB)) {
-        Alert.alert('Scores invalides', 'Renseigne deux scores entiers avant de traiter ce litige.');
+        Alert.alert(
+          t('superAdminLeagueDisputes.alerts.invalidScoresTitle', 'Scores invalides'),
+          t(
+            'superAdminLeagueDisputes.alerts.invalidScoresBody',
+            'Renseigne deux scores entiers avant de traiter ce litige.',
+          ),
+        );
         return;
       }
     }
@@ -129,11 +143,20 @@ function SuperAdminLeagueDisputes() {
           scoreB: Number.parseInt(form.scoreB, 10),
         },
       });
-      Alert.alert('Litige mis à jour', "L'action Super Admin a bien été enregistrée.");
+      Alert.alert(
+        t('superAdminLeagueDisputes.alerts.updatedTitle', 'Litige mis à jour'),
+        t(
+          'superAdminLeagueDisputes.alerts.updatedBody',
+          "L'action Super Admin a bien été enregistrée.",
+        ),
+      );
     } catch (error) {
       Alert.alert(
-        'Traitement impossible',
-        getErrorMessage(error, 'generic') || 'Impossible de traiter ce litige.',
+        t('superAdminLeagueDisputes.alerts.errorTitle', 'Traitement impossible'),
+        getErrorMessage(error, 'generic') || t(
+          'superAdminLeagueDisputes.alerts.errorBody',
+          'Impossible de traiter ce litige.',
+        ),
       );
     }
   };
@@ -141,19 +164,37 @@ function SuperAdminLeagueDisputes() {
   return (
     <SuperAdminLeagueLayout
       activeRouteNames={[RouteNames.SuperAdminLeagueDisputes]}
-      description="Analyse les litiges League, compare les scores proposés, puis valide, corrige ou annule le résultat."
-      title="Gestion des litiges"
+      description={t(
+        'superAdminLeagueDisputes.description',
+        'Analyse les litiges League, compare les scores proposés, puis valide, corrige ou annule le résultat.', // eslint-disable-line max-len
+      )}
+      title={t('superAdminLeagueDisputes.title', 'Gestion des litiges')}
     >
       <LeagueCard style={{ marginBottom: 0 }}>
         <View style={[Spaces.gap[10]]}>
-          <FilterField onChangeText={setStatus} placeholder="Statut (open, resolved, all)" value={status} />
+          <FilterField
+            onChangeText={setStatus}
+            placeholder={t(
+              'superAdminLeagueDisputes.filters.status',
+              'Statut (open, resolved, all)',
+            )}
+            value={status}
+          />
           <FilterField onChangeText={setSport} placeholder="Sport" value={sport} />
-          <FilterField onChangeText={setFrom} placeholder="Date min (2026-04-24)" value={from} />
-          <FilterField onChangeText={setTo} placeholder="Date max (2026-04-30)" value={to} />
+          <FilterField
+            onChangeText={setFrom}
+            placeholder={t('superAdminLeagueDisputes.filters.dateMin', 'Date min (2026-04-24)')}
+            value={from}
+          />
+          <FilterField
+            onChangeText={setTo}
+            placeholder={t('superAdminLeagueDisputes.filters.dateMax', 'Date max (2026-04-30)')}
+            value={to}
+          />
           <Text style={[Fonts.p3, Fonts.neutral300]}>
             {disputesQuery.data?.meta?.pagination?.total || disputes.length}
             {' '}
-            litiges trouvés
+            {t('superAdminLeagueDisputes.found', 'litiges trouvés')}
           </Text>
         </View>
       </LeagueCard>
@@ -161,7 +202,9 @@ function SuperAdminLeagueDisputes() {
       <View style={[Spaces.gap[12]]}>
         {disputes.length === 0 ? (
           <LeagueCard style={{ marginBottom: 0 }}>
-            <Text style={[Fonts.p2, Fonts.neutral300]}>Aucun litige League pour ces filtres.</Text>
+            <Text style={[Fonts.p2, Fonts.neutral300]}>
+              {t('superAdminLeagueDisputes.empty', 'Aucun litige League pour ces filtres.')}
+            </Text>
           </LeagueCard>
         ) : (
           disputes.map((match) => {
@@ -177,16 +220,16 @@ function SuperAdminLeagueDisputes() {
                     {match?.teamB?.name || 'Squad B'}
                   </Text>
                   <Text style={[Fonts.p2, Fonts.neutral300]}>
-                    Statut :
+                    {t('superAdminLeagueDisputes.fields.status', 'Statut :')}
                     {' '}
                     {match?.disputeState || 'open'}
                     {' · '}
-                    Sport :
+                    {t('superAdminLeagueDisputes.fields.sport', 'Sport :')}
                     {' '}
-                    {match?.sport || 'Inconnu'}
+                    {match?.sport || t('superAdminLeagueDisputes.unknown', 'Inconnu')}
                   </Text>
                   <Text style={[Fonts.p2, Fonts.neutral100]}>
-                    Score proposé :
+                    {t('superAdminLeagueDisputes.fields.proposedScore', 'Score proposé :')}
                     {' '}
                     {match?.proposedScoreA ?? '-'}
                     {' '}
@@ -195,7 +238,7 @@ function SuperAdminLeagueDisputes() {
                     {match?.proposedScoreB ?? '-'}
                   </Text>
                   <Text style={[Fonts.p2, Fonts.neutral100]}>
-                    Score contesté :
+                    {t('superAdminLeagueDisputes.fields.disputedScore', 'Score contesté :')}
                     {' '}
                     {match?.contestedScoreA ?? '-'}
                     {' '}
@@ -204,9 +247,9 @@ function SuperAdminLeagueDisputes() {
                     {match?.contestedScoreB ?? '-'}
                   </Text>
                   <Text style={[Fonts.p2, Fonts.neutral100]}>
-                    Raison :
+                    {t('superAdminLeagueDisputes.fields.reason', 'Raison :')}
                     {' '}
-                    {match?.reason || 'Aucun commentaire'}
+                    {match?.reason || t('superAdminLeagueDisputes.noComment', 'Aucun commentaire')}
                   </Text>
 
                   <TextInput
@@ -243,7 +286,7 @@ function SuperAdminLeagueDisputes() {
                   />
                   <TextInput
                     onChangeText={(value) => updateForm(match, { reason: value })}
-                    placeholder="Commentaire admin"
+                    placeholder={t('superAdminLeagueDisputes.adminComment', 'Commentaire admin')}
                     placeholderTextColor={Colors.neutral500}
                     style={{
                       backgroundColor: Colors.primary900,
@@ -262,14 +305,14 @@ function SuperAdminLeagueDisputes() {
                       disabled={applyActionMutation.isPending}
                       onPress={() => submitAction(match, 'validate_proposed')}
                       size="sm"
-                      title="Valider le score"
+                      title={t('superAdminLeagueDisputes.actions.validate', 'Valider le score')}
                       variant="Primary"
                     />
                     <Button
                       disabled={applyActionMutation.isPending}
                       onPress={() => submitAction(match, 'correct_score')}
                       size="sm"
-                      title="Corriger le score"
+                      title={t('superAdminLeagueDisputes.actions.correct', 'Corriger le score')}
                       variant="Secondary"
                     />
                     <Button
@@ -278,7 +321,7 @@ function SuperAdminLeagueDisputes() {
                       size="sm"
                       style={{ borderColor: Colors.error500 }}
                       textStyle={{ color: Colors.error500 }}
-                      title="Annuler le résultat"
+                      title={t('superAdminLeagueDisputes.actions.cancel', 'Annuler le résultat')}
                       variant="Secondary"
                     />
                   </View>

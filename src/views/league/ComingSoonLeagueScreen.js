@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Image,
   ScrollView,
@@ -92,6 +93,7 @@ function ComingSoonLeagueScreen({ onGoClassic, runtime }) {
     Images,
     Spaces,
   } = useTheme();
+  const { t } = useTranslation();
   const openingDate = runtime?.platform?.countdownTarget || runtime?.platform?.openingDate || null;
   const [remaining, setRemaining] = useState(() => getRemainingParts(openingDate));
 
@@ -129,8 +131,11 @@ function ComingSoonLeagueScreen({ onGoClassic, runtime }) {
         <View style={[Spaces.gap[20], { alignSelf: 'center', maxWidth: 560, width: '100%' }]}>
           {onGoClassic ? (
             <TouchableOpacity
-              accessibilityHint="Retourne vers FoundClub classique"
-              accessibilityLabel="Retour"
+              accessibilityHint={t(
+                'comingSoonLeagueScreen.backHint',
+                'Retourne vers FoundClub classique',
+              )}
+              accessibilityLabel={t('comingSoonLeagueScreen.back', 'Retour')}
               accessibilityRole="button"
               onPress={onGoClassic}
               style={{
@@ -164,7 +169,7 @@ function ComingSoonLeagueScreen({ onGoClassic, runtime }) {
               }}
             >
               <Text style={[Fonts.p3Bold, { color: Colors.gold500 }]}>
-                Accès League fermé
+                {t('comingSoonLeagueScreen.badge', 'Accès League fermé')}
               </Text>
             </View>
 
@@ -172,10 +177,13 @@ function ComingSoonLeagueScreen({ onGoClassic, runtime }) {
               FOUND CLUB LEAGUE
             </Text>
             <Text style={[Fonts.h1, Fonts.neutral00, { textAlign: 'center' }]}>
-              Found Club League arrive bientôt.
+              {t('comingSoonLeagueScreen.title', 'Found Club League arrive bientôt.')}
             </Text>
             <Text style={[Fonts.p1, Fonts.neutral100, { lineHeight: 26, textAlign: 'center' }]}>
-              Le mode League est momentanément fermé. FoundClub classique reste disponible.
+              {t(
+                'comingSoonLeagueScreen.subtitle',
+                'Le mode League est momentanément fermé. FoundClub classique reste disponible.',
+              )}
             </Text>
           </View>
 
@@ -192,13 +200,25 @@ function ComingSoonLeagueScreen({ onGoClassic, runtime }) {
           {remaining ? (
             <View style={[Spaces.gap[12]]}>
               <Text style={[Fonts.p2Bold, { color: Colors.neutral200, textAlign: 'center' }]}>
-                Compte à rebours avant ouverture
+                {t('comingSoonLeagueScreen.countdownTitle', 'Compte à rebours avant ouverture')}
               </Text>
               <View style={[Alignments.row, Spaces.gap[12], { flexWrap: 'wrap' }]}>
-                <CountdownCell label="Jours" value={remaining.days} />
-                <CountdownCell label="Heures" value={remaining.hours} />
-                <CountdownCell label="Minutes" value={remaining.minutes} />
-                <CountdownCell label="Secondes" value={remaining.seconds} />
+                <CountdownCell
+                  label={t('comingSoonLeagueScreen.countdown.days', 'Jours')}
+                  value={remaining.days}
+                />
+                <CountdownCell
+                  label={t('comingSoonLeagueScreen.countdown.hours', 'Heures')}
+                  value={remaining.hours}
+                />
+                <CountdownCell
+                  label="Minutes"
+                  value={remaining.minutes}
+                />
+                <CountdownCell
+                  label={t('comingSoonLeagueScreen.countdown.seconds', 'Secondes')}
+                  value={remaining.seconds}
+                />
               </View>
             </View>
           ) : null}
@@ -208,7 +228,7 @@ function ComingSoonLeagueScreen({ onGoClassic, runtime }) {
               onPress={onGoClassic}
               style={{ backgroundColor: Colors.gold500, borderColor: `${Colors.gold500}66` }}
               textStyle={{ color: Colors.primary900 }}
-              title="Retour à FoundClub classique"
+              title={t('comingSoonLeagueScreen.backToClassic', 'Retour à FoundClub classique')}
               variant="Primary"
             />
           ) : null}

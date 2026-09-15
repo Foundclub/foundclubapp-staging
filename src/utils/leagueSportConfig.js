@@ -1,3 +1,5 @@
+import i18next from 'i18next';
+
 const SPORT_KEYS = {
   football11: 'football11',
   football5: 'football5',
@@ -32,13 +34,17 @@ const normalizeLeagueSportKey = (sportValue) => {
 const LEAGUE_SPORT_CONFIG = {
   [SPORT_KEYS.football5]: {
     durationMinutes: 60,
-    label: 'Football a 5',
+    get label() {
+      return i18next.t('leagueSportConfig.sports.football5', 'Football a 5');
+    },
     quorum: 5,
     venueRequired: true,
   },
   [SPORT_KEYS.football11]: {
     durationMinutes: 90,
-    label: 'Football a 11',
+    get label() {
+      return i18next.t('leagueSportConfig.sports.football11', 'Football a 11');
+    },
     quorum: 11,
     venueRequired: false,
   },
@@ -71,9 +77,11 @@ export const isFootballElevenSport = (sportValue) => normalizeLeagueSportKey(spo
 
 export const getLocationModeLabel = (locationMode) => {
   const normalized = String(locationMode || '').trim().toLowerCase();
-  if (normalized === 'travel') return 'Se deplace';
-  if (normalized === 'host') return 'Recoit';
-  if (normalized === 'both') return 'Les deux';
+  if (normalized === 'travel') {
+    return i18next.t('leagueSportConfig.locationMode.travel', 'Se deplace');
+  }
+  if (normalized === 'host') return i18next.t('leagueSportConfig.locationMode.host', 'Recoit');
+  if (normalized === 'both') return i18next.t('leagueSportConfig.locationMode.both', 'Les deux');
   return '';
 };
 
@@ -86,8 +94,18 @@ export const getLocationModeBadgeTone = (locationMode) => {
 };
 
 export const LEAGUE_SPORT_OPTIONS = [
-  { label: 'Football a 5', value: SPORT_KEYS.football5 },
-  { label: 'Football a 11', value: SPORT_KEYS.football11 },
+  {
+    get label() {
+      return i18next.t('leagueSportConfig.sports.football5', 'Football a 5');
+    },
+    value: SPORT_KEYS.football5,
+  },
+  {
+    get label() {
+      return i18next.t('leagueSportConfig.sports.football11', 'Football a 11');
+    },
+    value: SPORT_KEYS.football11,
+  },
   { label: 'Padel', value: SPORT_KEYS.padel },
 ];
 

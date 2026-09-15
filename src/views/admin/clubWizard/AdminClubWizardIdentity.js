@@ -1,6 +1,7 @@
 // @ts-nocheck
 /* eslint-disable jsdoc/require-description, jsdoc/require-param-type, jsdoc/require-returns, max-len */
 import { useMutation } from '@tanstack/react-query';
+import { useTranslation } from 'react-i18next';
 import {
   Alert, Image, Text, View,
 } from 'react-native';
@@ -38,6 +39,7 @@ function AdminClubWizardIdentity({ navigation }) {
     Fonts,
     Spaces,
   } = useTheme();
+  const { t } = useTranslation();
   const { setField, state } = useAdminClubWizard();
   const handleExitWizard = useAdminClubWizardExit(navigation);
   const uploadLogoMutation = useMutation({
@@ -51,21 +53,27 @@ function AdminClubWizardIdentity({ navigation }) {
         setField('logo', uploaded);
       }
     } catch (error) {
-      Alert.alert('Upload impossible', getErrorMessage(error, 'generic'));
+      Alert.alert(t(
+        'adminClubWizardIdentity.uploadError',
+        'Upload impossible',
+      ), getErrorMessage(error, 'generic'));
     }
   };
 
   return (
     <WizardStepLayout
       isNextDisabled={!state.name?.trim()}
-      nextLabel="Suivant"
+      nextLabel={t('adminClubWizardIdentity.next', 'Suivant')}
       onBack={handleExitWizard}
       onClose={handleExitWizard}
       onNext={() => navigation.navigate(RouteNames.AdminClubWizardContact)}
       stepCount={ADMIN_CLUB_WIZARD_TOTAL_STEPS}
       stepIndex={1}
-      subtitle="Donne une identité claire au club. Tu pourras enrichir le reste du dossier ensuite et garder un recap avant création."
-      title="Identité du club"
+      subtitle={t(
+        'adminClubWizardIdentity.subtitle',
+        'Donne une identité claire au club. Tu pourras enrichir le reste du dossier ensuite et garder un recap avant création.',
+      )}
+      title={t('adminClubWizardIdentity.title', 'Identité du club')}
     >
       <View style={[Spaces.gap[20]]}>
         <View
@@ -109,12 +117,14 @@ function AdminClubWizardIdentity({ navigation }) {
             <Button
               isLoading={uploadLogoMutation.isPending}
               onPress={handleUploadLogo}
-              title={state.logo?.url ? 'Changer le logo' : 'Importer un logo'}
+              title={state.logo?.url
+                ? t('adminClubWizardIdentity.changeLogo', 'Changer le logo')
+                : t('adminClubWizardIdentity.importLogo', 'Importer un logo')}
             />
             {state.logo?.url ? (
               <Button
                 onPress={() => setField('logo', null)}
-                title="Retirer le logo"
+                title={t('adminClubWizardIdentity.removeLogo', 'Retirer le logo')}
                 variant="Secondary"
               />
             ) : null}
@@ -123,13 +133,16 @@ function AdminClubWizardIdentity({ navigation }) {
 
         <View style={[Spaces.gap[10]]}>
           <Text style={[Fonts.p2, Fonts.neutral200]}>
-            Le nom du club est le seul champ obligatoire du tunnel. Les autres étapes servent à construire une fiche complète, comme pour le wizard équipe.
+            {t(
+              'adminClubWizardIdentity.nameHint',
+              'Le nom du club est le seul champ obligatoire du tunnel. Les autres étapes servent à construire une fiche complète, comme pour le wizard équipe.',
+            )}
           </Text>
           <Input
             autoFocus
-            label="Nom du club"
+            label={t('adminClubWizardIdentity.nameLabel', 'Nom du club')}
             onChangeText={(value) => setField('name', value)}
-            placeholder="Ex: FC FoundClub Paris"
+            placeholder={t('adminClubWizardIdentity.namePlaceholder', 'Ex: FC FoundClub Paris')}
             value={state.name}
           />
         </View>

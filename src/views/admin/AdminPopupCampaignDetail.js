@@ -1,5 +1,6 @@
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Alert,
   Image,
@@ -50,6 +51,7 @@ function AdminPopupCampaignDetail() {
     Fonts,
     Spaces,
   } = useTheme();
+  const { t } = useTranslation();
   const [isPreviewVisible, setIsPreviewVisible] = useState(false);
 
   const campaignQuery = useGetInAppPopupCampaign(campaignId);
@@ -74,9 +76,12 @@ function AdminPopupCampaignDetail() {
   if (campaignQuery.isLoading || statsQuery.isLoading) {
     return (
       <AdminStateView
-        description="Nous préparons le détail de la campagne pop-up."
+        description={t(
+          'adminPopupCampaignDetail.states.loadingDescription',
+          'Nous préparons le détail de la campagne pop-up.',
+        )}
         isLoading
-        title="Chargement de la campagne"
+        title={t('adminPopupCampaignDetail.states.loadingTitle', 'Chargement de la campagne')}
       />
     );
   }
@@ -84,13 +89,16 @@ function AdminPopupCampaignDetail() {
   if (campaignQuery.error || statsQuery.error || !campaign) {
     return (
       <AdminStateView
-        actionLabel="Réessayer"
-        description={getErrorMessage(campaignQuery.error || statsQuery.error, 'generic') || 'Impossible de charger cette campagne.'}
+        actionLabel={t('adminPopupCampaignDetail.states.retry', 'Réessayer')}
+        description={getErrorMessage(campaignQuery.error || statsQuery.error, 'generic') || t(
+          'adminPopupCampaignDetail.states.errorDescription',
+          'Impossible de charger cette campagne.',
+        )}
         onAction={() => {
           campaignQuery.refetch();
           statsQuery.refetch();
         }}
-        title="Chargement impossible"
+        title={t('adminPopupCampaignDetail.states.errorTitle', 'Chargement impossible')}
       />
     );
   }
@@ -101,7 +109,10 @@ function AdminPopupCampaignDetail() {
       campaignQuery.refetch();
       statsQuery.refetch();
     } catch (error) {
-      Alert.alert('Publication impossible', getErrorMessage(error, 'generic'));
+      Alert.alert(t(
+        'adminPopupCampaignDetail.alerts.publishError',
+        'Publication impossible',
+      ), getErrorMessage(error, 'generic'));
     }
   };
 
@@ -111,7 +122,10 @@ function AdminPopupCampaignDetail() {
       campaignQuery.refetch();
       statsQuery.refetch();
     } catch (error) {
-      Alert.alert('Pause impossible', getErrorMessage(error, 'generic'));
+      Alert.alert(t(
+        'adminPopupCampaignDetail.alerts.pauseError',
+        'Pause impossible',
+      ), getErrorMessage(error, 'generic'));
     }
   };
 
@@ -121,7 +135,10 @@ function AdminPopupCampaignDetail() {
       campaignQuery.refetch();
       statsQuery.refetch();
     } catch (error) {
-      Alert.alert('Archivage impossible', getErrorMessage(error, 'generic'));
+      Alert.alert(t(
+        'adminPopupCampaignDetail.alerts.archiveError',
+        'Archivage impossible',
+      ), getErrorMessage(error, 'generic'));
     }
   };
 
@@ -133,7 +150,10 @@ function AdminPopupCampaignDetail() {
         navigation.navigate(RouteNames.AdminPopupCampaignForm, { campaignId: nextDocumentId });
       }
     } catch (error) {
-      Alert.alert('Duplication impossible', getErrorMessage(error, 'generic'));
+      Alert.alert(t(
+        'adminPopupCampaignDetail.alerts.duplicateError',
+        'Duplication impossible',
+      ), getErrorMessage(error, 'generic'));
     }
   };
 
@@ -162,13 +182,15 @@ function AdminPopupCampaignDetail() {
             { borderColor: `${Colors.primary500}24` },
           ]}
         >
-          <Text style={[Fonts.h4, Fonts.neutral00]}>Résumé</Text>
+          <Text style={[Fonts.h4, Fonts.neutral00]}>
+            {t('adminPopupCampaignDetail.summary.title', 'Résumé')}
+          </Text>
           <Text style={[Fonts.p3, { color: Colors.neutral200 }]}>
-            Statut
+            {t('adminPopupCampaignDetail.summary.status', 'Statut')}
             {campaign.status}
           </Text>
           <Text style={[Fonts.p3, { color: Colors.neutral200 }]}>
-            Modèle
+            {t('adminPopupCampaignDetail.summary.template', 'Modèle')}
             {campaign.templateKey}
           </Text>
           <Text style={[Fonts.p3, { color: Colors.neutral200 }]}>
@@ -176,22 +198,25 @@ function AdminPopupCampaignDetail() {
             {campaign.trigger}
           </Text>
           <Text style={[Fonts.p3, { color: Colors.neutral200 }]}>
-            Priorité
+            {t('adminPopupCampaignDetail.summary.priority', 'Priorité')}
             {campaign.priority}
           </Text>
           <Text style={[Fonts.p3, { color: Colors.neutral200 }]}>
             Audience
             {' '}
-            {campaign.summary?.audienceSummary || 'Tous les utilisateurs authentifiés'}
+            {campaign.summary?.audienceSummary || t(
+              'adminPopupCampaignDetail.summary.allUsers',
+              'Tous les utilisateurs authentifiés',
+            )}
           </Text>
           <Text style={[Fonts.p3, { color: Colors.neutral200 }]}>
-            Fenêtre
+            {t('adminPopupCampaignDetail.summary.window', 'Fenêtre')}
             {' '}
-            {campaign.startAt || 'immédiat'}
+            {campaign.startAt || t('adminPopupCampaignDetail.summary.immediate', 'immédiat')}
             {' '}
             a
             {' '}
-            {campaign.endAt || 'sans fin'}
+            {campaign.endAt || t('adminPopupCampaignDetail.summary.noEnd', 'sans fin')}
           </Text>
         </View>
 
@@ -202,9 +227,11 @@ function AdminPopupCampaignDetail() {
             { borderColor: `${Colors.primary500}24` },
           ]}
         >
-          <Text style={[Fonts.h4, Fonts.neutral00]}>Statistiques</Text>
+          <Text style={[Fonts.h4, Fonts.neutral00]}>
+            {t('adminPopupCampaignDetail.stats.title', 'Statistiques')}
+          </Text>
           <Text style={[Fonts.p3, { color: Colors.neutral200 }]}>
-            Utilisateurs vus
+            {t('adminPopupCampaignDetail.stats.usersReached', 'Utilisateurs vus')}
             {stats.uniqueSeenUsers || 0}
           </Text>
           <Text style={[Fonts.p3, { color: Colors.neutral200 }]}>
@@ -216,11 +243,11 @@ function AdminPopupCampaignDetail() {
             {stats.dismissCount || 0}
           </Text>
           <Text style={[Fonts.p3, { color: Colors.neutral200 }]}>
-            Clic primaire
+            {t('adminPopupCampaignDetail.stats.primaryClick', 'Clic primaire')}
             {stats.primaryClickCount || 0}
           </Text>
           <Text style={[Fonts.p3, { color: Colors.neutral200 }]}>
-            Clic secondaire
+            {t('adminPopupCampaignDetail.stats.secondaryClick', 'Clic secondaire')}
             {stats.secondaryClickCount || 0}
           </Text>
         </View>
@@ -232,9 +259,11 @@ function AdminPopupCampaignDetail() {
             { borderColor: `${Colors.primary500}24` },
           ]}
         >
-          <Text style={[Fonts.h4, Fonts.neutral00]}>Contenu</Text>
+          <Text style={[Fonts.h4, Fonts.neutral00]}>
+            {t('adminPopupCampaignDetail.content.title', 'Contenu')}
+          </Text>
           <Text style={[Fonts.p4Bold, { color: Colors.primary500 }]}>
-            {campaign.eyebrow || 'Sans eyebrow'}
+            {campaign.eyebrow || t('adminPopupCampaignDetail.content.noEyebrow', 'Sans eyebrow')}
           </Text>
           <Text style={[Fonts.h3Bold, Fonts.neutral00]}>{campaign.title}</Text>
           {campaign.subtitle ? (
@@ -254,14 +283,14 @@ function AdminPopupCampaignDetail() {
         <View style={[Spaces.gap[12]]}>
           <Button
             onPress={() => setIsPreviewVisible(true)}
-            title="Prévisualiser"
+            title={t('adminPopupCampaignDetail.actions.preview', 'Prévisualiser')}
             variant="Secondary"
           />
           {isDraft ? (
             <Button
               disabled={isBusy}
               onPress={() => navigation.navigate(RouteNames.AdminPopupCampaignForm, { campaignId: campaign.documentId })}
-              title="Modifier le brouillon"
+              title={t('adminPopupCampaignDetail.actions.editDraft', 'Modifier le brouillon')}
               variant="Secondary"
             />
           ) : null}
@@ -270,7 +299,7 @@ function AdminPopupCampaignDetail() {
               disabled={isBusy}
               isLoading={publishMutation.isPending}
               onPress={handlePublish}
-              title="Publier"
+              title={t('adminPopupCampaignDetail.actions.publish', 'Publier')}
             />
           ) : null}
           {canPause ? (
@@ -278,7 +307,7 @@ function AdminPopupCampaignDetail() {
               disabled={isBusy}
               isLoading={pauseMutation.isPending}
               onPress={handlePause}
-              title="Mettre en pause"
+              title={t('adminPopupCampaignDetail.actions.pause', 'Mettre en pause')}
               variant="Secondary"
             />
           ) : null}
@@ -286,7 +315,7 @@ function AdminPopupCampaignDetail() {
             disabled={isBusy}
             isLoading={duplicateMutation.isPending}
             onPress={handleDuplicate}
-            title="Dupliquer"
+            title={t('adminPopupCampaignDetail.actions.duplicate', 'Dupliquer')}
             variant="Secondary"
           />
           {canArchive ? (
@@ -294,7 +323,7 @@ function AdminPopupCampaignDetail() {
               disabled={isBusy}
               isLoading={archiveMutation.isPending}
               onPress={handleArchive}
-              title="Archiver"
+              title={t('adminPopupCampaignDetail.actions.archive', 'Archiver')}
               variant="Secondary"
             />
           ) : null}
@@ -311,7 +340,7 @@ function AdminPopupCampaignDetail() {
           onPress: () => setIsPreviewVisible(false),
           variant: primaryAction.variant || 'Primary',
         } : {
-          label: 'Fermer',
+          label: t('adminPopupCampaignDetail.actions.close', 'Fermer'),
           onPress: () => setIsPreviewVisible(false),
           variant: 'Primary',
         }}

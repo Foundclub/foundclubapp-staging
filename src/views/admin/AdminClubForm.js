@@ -1,9 +1,11 @@
 import { useNavigation, useRoute } from '@react-navigation/native';
+import i18next from 'i18next';
 import {
   useCallback,
   useEffect,
   useState,
 } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Alert,
   Image,
@@ -45,12 +47,16 @@ import { getErrorMessage } from '@/utils/errors/displayError';
 const RELATION_PICKERS = {
   activites: {
     isMany: true,
-    label: 'Activités',
+    get label() {
+      return i18next.t('adminClubForm.relations.activities', 'Activités');
+    },
     targetUid: 'api::activity.activity',
   },
   parentMultisport: {
     isMany: false,
-    label: 'Club multisport parent',
+    get label() {
+      return i18next.t('adminClubForm.relations.parentMultisport', 'Club multisport parent');
+    },
     targetUid: 'api::multisport-club.multisport-club',
   },
 };
@@ -72,6 +78,7 @@ function AdminClubForm() {
   const {
     Alignments, ApplicationStyle, Colors, Fonts, Spaces,
   } = useTheme();
+  const { t } = useTranslation();
   const navigation = useNavigation();
   const route = useRoute();
   const { clubId, duplicateFrom } = route.params || {};
@@ -100,9 +107,13 @@ function AdminClubForm() {
   const isSaving = createMutation.isPending || updateMutation.isPending;
   const isDirty = JSON.stringify(formValues) !== initialSignature;
   const formTitle = (() => {
-    if (isEditing) return 'Modifier le club';
-    if (duplicateFrom) return 'Dupliquer le club';
-    return 'Créer un club';
+    if (isEditing) {
+      return t('adminClubForm.title.edit', 'Modifier le club');
+    }
+    if (duplicateFrom) {
+      return t('adminClubForm.title.duplicate', 'Dupliquer le club');
+    }
+    return t('adminClubForm.title.create', 'Créer un club');
   })();
 
   useEffect(() => {
@@ -189,9 +200,12 @@ function AdminClubForm() {
       });
       setRelationResults(Array.isArray(response?.data) ? response.data : []);
     } catch (searchError) {
-      Alert.alert('Recherche impossible', getErrorMessage(searchError, 'generic'));
+      Alert.alert(
+        t('adminClubForm.searchFailed', 'Recherche impossible'),
+        getErrorMessage(searchError, 'generic'),
+      );
     }
-  }, [relationPicker, relationQuery, relationSearchMutation]);
+  }, [relationPicker, relationQuery, relationSearchMutation, t]);
 
   const addRelationValue = useCallback((item) => {
     if (!relationPicker) return;
@@ -229,26 +243,38 @@ function AdminClubForm() {
         setField('logo', uploaded);
       }
     } catch (uploadError) {
-      Alert.alert('Upload impossible', getErrorMessage(uploadError, 'generic'));
+      Alert.alert(
+        t('adminClubForm.uploadFailed', 'Upload impossible'),
+        getErrorMessage(uploadError, 'generic'),
+      );
     }
-  }, [setField, uploadLogoMutation]);
+  }, [setField, t, uploadLogoMutation]);
 
   const validateForm = useCallback(() => {
     if (!normalizeText(formValues.name)) {
-      Alert.alert('Nom requis', 'Le nom du club est obligatoire.');
+      Alert.alert(
+        t('adminClubForm.nameRequiredTitle', 'Nom requis'),
+        t('adminClubForm.nameRequiredMessage', 'Le nom du club est obligatoire.'),
+      );
       return false;
     }
 
     if (showAdvancedAddress && normalizeText(formValues.addressJson)) {
       const parsed = parseJsonObject(formValues.addressJson, null);
       if (!parsed) {
-        Alert.alert('JSON invalide', 'Le champ adresse JSON doit contenir un objet JSON valide.');
+        Alert.alert(
+          t('adminClubForm.invalidJsonTitle', 'JSON invalide'),
+          t(
+            'adminClubForm.invalidJsonMessage',
+            'Le champ adresse JSON doit contenir un objet JSON valide.',
+          ),
+        );
         return false;
       }
     }
 
     return true;
-  }, [formValues.addressJson, formValues.name, showAdvancedAddress]);
+  }, [formValues.addressJson, formValues.name, showAdvancedAddress, t]);
 
   const handleSave = useCallback(async () => {
     if (!validateForm()) return;
@@ -266,7 +292,10 @@ function AdminClubForm() {
       const nextDocumentId = result?.data?.documentId || clubId;
       navigation.replace(RouteNames.AdminClubDetail, { clubId: nextDocumentId });
     } catch (saveError) {
-      Alert.alert('Sauvegarde impossible', getErrorMessage(saveError, 'generic'));
+      Alert.alert(
+        t('adminClubForm.saveFailed', 'Sauvegarde impossible'),
+        getErrorMessage(saveError, 'generic'),
+      );
     }
   }, [
     clubId,
@@ -275,6 +304,7 @@ function AdminClubForm() {
     isEditing,
     navigation,
     saveReason,
+    t,
     updateMutation,
     validateForm,
   ]);
@@ -286,14 +316,18 @@ function AdminClubForm() {
     }
 
     Alert.alert(
-      'Modifications non sauvegardées',
-      'Quitter sans sauvegarder ?',
+      t('adminClubForm.unsavedTitle', 'Modifications non sauvegardées'),
+      t('adminClubForm.unsavedMessage', 'Quitter sans sauvegarder ?'),
       [
-        { style: 'cancel', text: "Continuer l'édition" },
-        { onPress: () => navigation.goBack(), style: 'destructive', text: 'Quitter' },
+        { style: 'cancel', text: t('adminClubForm.keepEditing', "Continuer l'édition") },
+        {
+          onPress: () => navigation.goBack(),
+          style: 'destructive',
+          text: t('adminClubForm.leave', 'Quitter'),
+        },
       ],
     );
-  }, [isDirty, navigation]);
+  }, [isDirty, navigation, t]);
 
   const renderInput = useCallback((label, field, options = {}) => (
     <View style={Spaces.gap[6]}>
@@ -345,18 +379,21 @@ function AdminClubForm() {
         ]}
       >
         <Text style={[Fonts.p3Bold, { color: Colors.neutral00 }]}>
-          {formValues[field] ? 'Oui' : 'Non'}
+          {formValues[field] ? t('adminClubForm.yes', 'Oui') : t('adminClubForm.no', 'Non')}
         </Text>
       </View>
     </TouchableOpacity>
-  ), [Alignments, ApplicationStyle, Colors, Fonts, Spaces, formValues, setField]);
+  ), [Alignments, ApplicationStyle, Colors, Fonts, Spaces, formValues, setField, t]);
 
   if (!clubId && !duplicateFrom) {
     return (
       <AdminStateView
-        description="Nous ouvrons le tunnel de création du club."
+        description={t(
+          'adminClubForm.states.wizardDescription',
+          'Nous ouvrons le tunnel de création du club.',
+        )}
         isLoading
-        title="Ouverture du tunnel"
+        title={t('adminClubForm.states.wizardTitle', 'Ouverture du tunnel')}
       />
     );
   }
@@ -364,9 +401,12 @@ function AdminClubForm() {
   if (sourceDocumentId && isLoading && !sourceClub) {
     return (
       <AdminStateView
-        description="Nous préparons le formulaire Club."
+        description={t(
+          'adminClubForm.states.loadingDescription',
+          'Nous préparons le formulaire Club.',
+        )}
         isLoading
-        title="Chargement du club"
+        title={t('adminClubForm.states.loadingTitle', 'Chargement du club')}
       />
     );
   }
@@ -374,10 +414,13 @@ function AdminClubForm() {
   if (sourceDocumentId && error && !sourceClub) {
     return (
       <AdminStateView
-        actionLabel="Réessayer"
-        description={getErrorMessage(error, 'generic') || 'Impossible de charger ce club.'}
+        actionLabel={t('adminClubForm.states.retry', 'Réessayer')}
+        description={getErrorMessage(error, 'generic') || t(
+          'adminClubForm.states.errorDescription',
+          'Impossible de charger ce club.',
+        )}
         onAction={refetch}
-        title="Chargement impossible"
+        title={t('adminClubForm.states.errorTitle', 'Chargement impossible')}
       />
     );
   }
@@ -391,14 +434,21 @@ function AdminClubForm() {
               {formTitle}
             </Text>
             <Text style={[Fonts.p2, { color: Colors.neutral300 }, Spaces.marginTop[4]]}>
-              Formulaire dédié compatible Content Manager.
+              {t('adminClubForm.subtitle', 'Formulaire dédié compatible Content Manager.')}
             </Text>
           </View>
-          <Button onPress={confirmCancel} size="sm" title="Annuler" variant="Secondary" />
+          <Button
+            onPress={confirmCancel}
+            size="sm"
+            title={t('adminClubForm.cancel', 'Annuler')}
+            variant="Secondary"
+          />
         </View>
 
         <View style={[ApplicationStyle.backgroundColor.primary700, ApplicationStyle.borderRadius16, Spaces.padding[14], Spaces.gap[12]]}>
-          <Text style={[Fonts.h4Bold, Fonts.neutral00]}>Identité</Text>
+          <Text style={[Fonts.h4Bold, Fonts.neutral00]}>
+            {t('adminClubForm.sections.identity', 'Identité')}
+          </Text>
           <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[12]]}>
             <View
               style={[
@@ -419,61 +469,111 @@ function AdminClubForm() {
               )}
             </View>
             <View style={[Spaces.gap[8], { flex: 1 }]}>
-              <Button isLoading={uploadLogoMutation.isPending} onPress={pickLogo} size="sm" title="Changer logo" />
-              <Button onPress={() => setField('logo', null)} size="sm" title="Retirer logo" variant="Secondary" />
+              <Button
+                isLoading={uploadLogoMutation.isPending}
+                onPress={pickLogo}
+                size="sm"
+                title={t('adminClubForm.changeLogo', 'Changer logo')}
+              />
+              <Button
+                onPress={() => setField('logo', null)}
+                size="sm"
+                title={t('adminClubForm.removeLogo', 'Retirer logo')}
+                variant="Secondary"
+              />
             </View>
           </View>
-          {renderInput('Nom du club', 'name')}
+          {renderInput(t('adminClubForm.fields.name', 'Nom du club'), 'name')}
           {renderInput('Email', 'email', { keyboardType: 'email-address' })}
-          {renderInput('Téléphone', 'phoneNumber', { keyboardType: 'phone-pad' })}
+          {renderInput(
+            t('adminClubForm.fields.phone', 'Téléphone'),
+            'phoneNumber',
+            { keyboardType: 'phone-pad' },
+          )}
         </View>
 
         <View style={[ApplicationStyle.backgroundColor.primary700, ApplicationStyle.borderRadius16, Spaces.padding[14], Spaces.gap[12]]}>
-          <Text style={[Fonts.h4Bold, Fonts.neutral00]}>Statut et gouvernance</Text>
-          <Text style={[Fonts.p3, { color: Colors.neutral300 }]}>
-            Cette fiche pilote le partenariat, la vérification et la réservation. Les abonnements et la couverture Team se gerent dans les opérations abonnements.
+          <Text style={[Fonts.h4Bold, Fonts.neutral00]}>
+            {t('adminClubForm.sections.status', 'Statut et gouvernance')}
           </Text>
-          {renderToggle('Club partenaire', 'clubPartner')}
-          {renderToggle('Club certifié', 'clubVerified')}
-          {renderToggle('Fournisseur de réservation', 'isReservationProvider')}
+          <Text style={[Fonts.p3, { color: Colors.neutral300 }]}>
+            {t(
+              'adminClubForm.sections.statusNote',
+              'Cette fiche pilote le partenariat, la vérification et la réservation. Les abonnements et la couverture Team se gerent dans les opérations abonnements.', // eslint-disable-line max-len
+            )}
+          </Text>
+          {renderToggle(t('adminClubForm.fields.clubPartner', 'Club partenaire'), 'clubPartner')}
+          {renderToggle(t('adminClubForm.fields.clubVerified', 'Club certifié'), 'clubVerified')}
+          {renderToggle(
+            t('adminClubForm.fields.reservationProvider', 'Fournisseur de réservation'),
+            'isReservationProvider',
+          )}
         </View>
 
         <View style={[ApplicationStyle.backgroundColor.primary700, ApplicationStyle.borderRadius16, Spaces.padding[14], Spaces.gap[12]]}>
-          <Text style={[Fonts.h4Bold, Fonts.neutral00]}>Adresse</Text>
-          {renderInput('Adresse affichée', 'addressLabel')}
-          {renderInput('Ville', 'city')}
-          {renderInput('Code postal', 'postcode')}
+          <Text style={[Fonts.h4Bold, Fonts.neutral00]}>
+            {t('adminClubForm.sections.address', 'Adresse')}
+          </Text>
+          {renderInput(
+            t('adminClubForm.fields.addressLabel', 'Adresse affichée'),
+            'addressLabel',
+          )}
+          {renderInput(t('adminClubForm.fields.city', 'Ville'), 'city')}
+          {renderInput(t('adminClubForm.fields.postcode', 'Code postal'), 'postcode')}
           {renderInput('Latitude', 'latitude', { keyboardType: 'numeric' })}
           {renderInput('Longitude', 'longitude', { keyboardType: 'numeric' })}
-          {renderInput('Détails adresse', 'addressDetails')}
+          {renderInput(
+            t('adminClubForm.fields.addressDetails', 'Détails adresse'),
+            'addressDetails',
+          )}
           {renderInput('Geohash', 'geohash')}
           <Button
             onPress={() => setShowAdvancedAddress((previous) => !previous)}
-            title={showAdvancedAddress ? 'Masquer JSON avancé' : 'Adresse JSON avancée'}
+            title={showAdvancedAddress
+              ? t('adminClubForm.hideAdvancedAddress', 'Masquer JSON avancé')
+              : t('adminClubForm.showAdvancedAddress', 'Adresse JSON avancée')}
             variant="Secondary"
           />
-          {showAdvancedAddress ? renderInput('Adresse JSON', 'addressJson', { multiline: true }) : null}
+          {showAdvancedAddress ? renderInput(
+            t('adminClubForm.fields.addressJson', 'Adresse JSON'),
+            'addressJson',
+            { multiline: true },
+          ) : null}
         </View>
 
         <View style={[ApplicationStyle.backgroundColor.primary700, ApplicationStyle.borderRadius16, Spaces.padding[14], Spaces.gap[12]]}>
-          <Text style={[Fonts.h4Bold, Fonts.neutral00]}>Relations principales</Text>
-          <Button onPress={() => openRelationPicker('activites')} title="Ajouter une activité" variant="Secondary" />
+          <Text style={[Fonts.h4Bold, Fonts.neutral00]}>
+            {t('adminClubForm.sections.relations', 'Relations principales')}
+          </Text>
+          <Button
+            onPress={() => openRelationPicker('activites')}
+            title={t('adminClubForm.addActivity', 'Ajouter une activité')}
+            variant="Secondary"
+          />
           {(formValues.activites || []).map((activity) => (
             <View key={getDocumentId(activity)} style={[Alignments.row, Alignments.alignCenter, Spaces.gap[10]]}>
               <Text numberOfLines={1} style={[Fonts.p2, { color: Colors.neutral100, flex: 1 }]}>{getClubRelationLabel(activity)}</Text>
               <TouchableOpacity onPress={() => removeRelationValue('activites', activity)}>
-                <Text style={[Fonts.p3Bold, { color: Colors.error500 }]}>Retirer</Text>
+                <Text style={[Fonts.p3Bold, { color: Colors.error500 }]}>
+                  {t('adminClubForm.remove', 'Retirer')}
+                </Text>
               </TouchableOpacity>
             </View>
           ))}
-          <Button onPress={() => openRelationPicker('parentMultisport')} title="Choisir le parent multisport" variant="Secondary" />
+          <Button
+            onPress={() => openRelationPicker('parentMultisport')}
+            title={t('adminClubForm.chooseParent', 'Choisir le parent multisport')}
+            variant="Secondary"
+          />
           {formValues.parentMultisport ? (
             <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[10]]}>
               <Text numberOfLines={1} style={[Fonts.p2, { color: Colors.neutral100, flex: 1 }]}>
                 {getClubRelationLabel(formValues.parentMultisport)}
               </Text>
               <TouchableOpacity onPress={() => removeRelationValue('parentMultisport', formValues.parentMultisport)}>
-                <Text style={[Fonts.p3Bold, { color: Colors.error500 }]}>Retirer</Text>
+                <Text style={[Fonts.p3Bold, { color: Colors.error500 }]}>
+                  {t('adminClubForm.remove', 'Retirer')}
+                </Text>
               </TouchableOpacity>
             </View>
           ) : null}
@@ -490,22 +590,31 @@ function AdminClubForm() {
               </Text>
               <TextInput
                 onChangeText={(value) => updateSponsor(index, 'title', value)}
-                placeholder="Titre"
+                placeholder={t('adminClubForm.sponsor.title', 'Titre')}
                 placeholderTextColor={Colors.neutral300}
                 style={[ApplicationStyle.backgroundColor.primary700, ApplicationStyle.borderRadius16, Fonts.p1, Spaces.padding[12], { color: Colors.neutral00 }]}
                 value={sponsor.title || sponsor.name || ''}
               />
               <TextInput
                 onChangeText={(value) => updateSponsor(index, 'link', value)}
-                placeholder="Lien"
+                placeholder={t('adminClubForm.sponsor.link', 'Lien')}
                 placeholderTextColor={Colors.neutral300}
                 style={[ApplicationStyle.backgroundColor.primary700, ApplicationStyle.borderRadius16, Fonts.p1, Spaces.padding[12], { color: Colors.neutral00 }]}
                 value={sponsor.link || ''}
               />
-              <Button onPress={() => removeSponsor(index)} size="sm" title="Supprimer sponsor" variant="SecondaryLight" />
+              <Button
+                onPress={() => removeSponsor(index)}
+                size="sm"
+                title={t('adminClubForm.sponsor.remove', 'Supprimer sponsor')}
+                variant="SecondaryLight"
+              />
             </View>
           ))}
-          <Button onPress={addSponsor} title="Ajouter un sponsor" variant="Secondary" />
+          <Button
+            onPress={addSponsor}
+            title={t('adminClubForm.sponsor.add', 'Ajouter un sponsor')}
+            variant="Secondary"
+          />
         </View>
 
         <View style={[ApplicationStyle.backgroundColor.primary700, ApplicationStyle.borderRadius16, Spaces.padding[14], Spaces.gap[12]]}>
@@ -513,7 +622,7 @@ function AdminClubForm() {
           <TextInput
             multiline
             onChangeText={setSaveReason}
-            placeholder="Raison de modification"
+            placeholder={t('adminClubForm.reasonPlaceholder', 'Raison de modification')}
             placeholderTextColor={Colors.neutral300}
             style={[
               ApplicationStyle.backgroundColor.primary700,
@@ -526,7 +635,13 @@ function AdminClubForm() {
           />
         </View>
 
-        <Button isLoading={isSaving} onPress={handleSave} title={isEditing ? 'Sauvegarder' : 'Créer le club'} />
+        <Button
+          isLoading={isSaving}
+          onPress={handleSave}
+          title={isEditing
+            ? t('adminClubForm.save', 'Sauvegarder')
+            : t('adminClubForm.createClub', 'Créer le club')}
+        />
       </ScrollView>
 
       <BottomModal close={closeRelationPicker} isVisible={Boolean(relationPicker)} snapPoints={['78%']}>
@@ -535,7 +650,7 @@ function AdminClubForm() {
         </Text>
         <TextInput
           onChangeText={setRelationQuery}
-          placeholder="Rechercher"
+          placeholder={t('adminClubForm.search', 'Rechercher')}
           placeholderTextColor={Colors.neutral300}
           style={[
             ApplicationStyle.backgroundColor.primary700,
@@ -551,7 +666,7 @@ function AdminClubForm() {
           isLoading={relationSearchMutation.isPending}
           onPress={searchRelations}
           style={Spaces.marginTop[12]}
-          title="Rechercher"
+          title={t('adminClubForm.search', 'Rechercher')}
         />
         <View style={[Spaces.gap[10], Spaces.marginTop[14]]}>
           {relationResults.map((item) => (
@@ -559,7 +674,11 @@ function AdminClubForm() {
               <Text numberOfLines={1} style={[Fonts.p2, { color: Colors.neutral100, flex: 1 }]}>
                 {getClubRelationLabel(item)}
               </Text>
-              <Button onPress={() => addRelationValue(item)} size="sm" title="Choisir" />
+              <Button
+                onPress={() => addRelationValue(item)}
+                size="sm"
+                title={t('adminClubForm.choose', 'Choisir')}
+              />
             </View>
           ))}
         </View>

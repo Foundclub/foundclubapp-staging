@@ -1,5 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import i18next from 'i18next';
 import { useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Alert,
   Modal,
@@ -11,6 +13,8 @@ import {
   View,
 } from 'react-native';
 
+import localeDesFormats from '@/theme/strings/localeDesFormats';
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import ScreenContainer from '@/components/templates/ScreenContainer';
@@ -46,7 +50,7 @@ const formatDateTime = (value) => {
   const parsed = new Date(value);
   if (Number.isNaN(parsed.getTime())) return String(value);
 
-  return new Intl.DateTimeFormat('fr-FR', {
+  return new Intl.DateTimeFormat(localeDesFormats(), {
     dateStyle: 'medium',
     timeStyle: 'short',
   }).format(parsed);
@@ -59,7 +63,7 @@ const formatDateTime = (value) => {
 const formatPerson = (person = {}) => (
   [person?.firstname, person?.lastname].filter(Boolean).join(' ')
   || person?.documentId
-  || 'Utilisateur inconnu'
+  || i18next.t('adminRevenue.unknownUser', 'Utilisateur inconnu')
 );
 
 /**
@@ -80,6 +84,7 @@ function AdminRevenue() {
     Fonts,
     Spaces,
   } = useTheme();
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const {
     data: subscriptionOpsData,
@@ -185,10 +190,22 @@ function AdminRevenue() {
   const statCards = [
     { accent: Colors.primary500, label: 'Subscriptions', value: Number(counts?.subscriptions || 0) },
     { accent: Colors.success500, label: 'Entitlements', value: Number(counts?.entitlements || 0) },
-    { accent: Colors.warning500, label: 'Claims à revoir', value: Number(counts?.pendingClaimReviews || 0) },
-    { accent: Colors.error500, label: 'Billing KO', value: Number(counts?.failedBillingEvents || 0) },
+    {
+      accent: Colors.warning500,
+      label: t('adminRevenue.claimsToReview', 'Claims à revoir'),
+      value: Number(counts?.pendingClaimReviews || 0),
+    },
+    {
+      accent: Colors.error500,
+      label: t('adminRevenue.stats.billingFailed', 'Billing KO'),
+      value: Number(counts?.failedBillingEvents || 0),
+    },
     { accent: Colors.primary200, label: 'Quotas', value: Number(counts?.quotas || 0) },
-    { accent: Colors.neutral100, label: 'Legacy à migrer', value: Number(counts?.legacyCandidateClubs || 0) },
+    {
+      accent: Colors.neutral100,
+      label: t('adminRevenue.legacyToMigrate', 'Legacy à migrer'),
+      value: Number(counts?.legacyCandidateClubs || 0),
+    },
   ];
 
   const subscriptionRows = Array.isArray(subscriptionsListData?.data) ? subscriptionsListData.data : [];
@@ -259,12 +276,21 @@ function AdminRevenue() {
       {
         onError: (mutationError) => {
           Alert.alert(
-            'Changement impossible',
-            getErrorMessage(mutationError, 'generic') || 'Impossible de changer le statut de cet abonnement.',
+            t('adminRevenue.statusChangeFailedTitle', 'Changement impossible'),
+            getErrorMessage(mutationError, 'generic') || t(
+              'adminRevenue.statusChangeFailedMessage',
+              'Impossible de changer le statut de cet abonnement.',
+            ),
           );
         },
         onSuccess: () => {
-          Alert.alert('Statut mis à jour', 'Le statut et les droits associes ont été recalculés.');
+          Alert.alert(
+            t('adminRevenue.statusUpdatedTitle', 'Statut mis à jour'),
+            t(
+              'adminRevenue.statusUpdatedMessage',
+              'Le statut et les droits associes ont été recalculés.',
+            ),
+          );
           closeStatusModal();
         },
       },
@@ -284,12 +310,18 @@ function AdminRevenue() {
       {
         onError: (mutationError) => {
           Alert.alert(
-            'Rejeu impossible',
-            getErrorMessage(mutationError, 'generic') || 'Impossible de rejouer ce billing event.',
+            t('adminRevenue.retryFailedTitle', 'Rejeu impossible'),
+            getErrorMessage(mutationError, 'generic') || t(
+              'adminRevenue.retryFailedMessage',
+              'Impossible de rejouer ce billing event.',
+            ),
           );
         },
         onSuccess: () => {
-          Alert.alert('Billing event rejoue', 'L événement a été rejoue depuis son payload.');
+          Alert.alert(
+            t('adminRevenue.retriedTitle', 'Billing event rejoue'),
+            t('adminRevenue.retriedMessage', 'L événement a été rejoue depuis son payload.'),
+          );
           closeRetryModal();
         },
       },
@@ -300,10 +332,13 @@ function AdminRevenue() {
     if (reconcileMutation.isPending) return;
 
     Alert.alert(
-      'Réconcilier maintenant ?',
-      'Cela relance immédiatement la réconciliation des abonnements (expirations, grace periods, droits).',
+      t('adminRevenue.reconcileConfirmTitle', 'Réconcilier maintenant ?'),
+      t(
+        'adminRevenue.reconcileConfirmMessage',
+        'Cela relance immédiatement la réconciliation des abonnements (expirations, grace periods, droits).', // eslint-disable-line max-len
+      ),
       [
-        { style: 'cancel', text: 'Annuler' },
+        { style: 'cancel', text: t('adminRevenue.cancel', 'Annuler') },
         {
           onPress: () => {
             reconcileMutation.mutate(
@@ -311,17 +346,26 @@ function AdminRevenue() {
               {
                 onError: (mutationError) => {
                   Alert.alert(
-                    'Réconciliation impossible',
-                    getErrorMessage(mutationError, 'generic') || 'Impossible de lancer la réconciliation.',
+                    t('adminRevenue.reconcileFailedTitle', 'Réconciliation impossible'),
+                    getErrorMessage(mutationError, 'generic') || t(
+                      'adminRevenue.reconcileFailedMessage',
+                      'Impossible de lancer la réconciliation.',
+                    ),
                   );
                 },
                 onSuccess: () => {
-                  Alert.alert('Réconciliation terminée', 'Les abonnements et les droits ont été recalculés.');
+                  Alert.alert(
+                    t('adminRevenue.reconciledTitle', 'Réconciliation terminée'),
+                    t(
+                      'adminRevenue.reconciledMessage',
+                      'Les abonnements et les droits ont été recalculés.',
+                    ),
+                  );
                 },
               },
             );
           },
-          text: 'Reconcilier',
+          text: t('adminRevenue.reconcile', 'Reconcilier'),
         },
       ],
     );
@@ -348,9 +392,12 @@ function AdminRevenue() {
   if (isLoading && !subscriptionOpsData) {
     return (
       <AdminStateView
-        description="Nous chargeons le pilotage abonnements depuis le backend."
+        description={t(
+          'adminRevenue.states.loadingDescription',
+          'Nous chargeons le pilotage abonnements depuis le backend.',
+        )}
         isLoading
-        title="Chargement des abonnements"
+        title={t('adminRevenue.states.loadingTitle', 'Chargement des abonnements')}
       />
     );
   }
@@ -358,10 +405,13 @@ function AdminRevenue() {
   if (error && !subscriptionOpsData) {
     return (
       <AdminStateView
-        actionLabel="Rafraichir"
-        description="Impossible de charger les opérations abonnements."
+        actionLabel={t('adminRevenue.states.refresh', 'Rafraichir')}
+        description={t(
+          'adminRevenue.states.errorDescription',
+          'Impossible de charger les opérations abonnements.',
+        )}
         onAction={refetch}
-        title="Chargement impossible"
+        title={t('adminRevenue.states.errorTitle', 'Chargement impossible')}
       />
     );
   }
@@ -384,7 +434,10 @@ function AdminRevenue() {
    */
   const renderFilterChips = (options, selectedValue, onSelect, accentColor) => (
     <View style={styles.filterRow}>
-      {[{ label: 'Tous', value: '' }, ...options.map((option) => ({ label: option, value: option }))].map((option) => {
+      {[
+        { label: t('adminRevenue.filters.all', 'Tous'), value: '' },
+        ...options.map((option) => ({ label: option, value: option })),
+      ].map((option) => {
         const isActive = selectedValue === option.value;
         return (
           <TouchableOpacity
@@ -425,10 +478,16 @@ function AdminRevenue() {
           onPress={() => onChangePage(currentPage - 1)}
           style={[styles.paginationButton, { borderColor: `${Colors.primary500}44`, opacity: canGoPrevious ? 1 : 0.4 }]}
         >
-          <Text style={[Fonts.p4Bold, { color: Colors.primary500 }]}>Précédent</Text>
+          <Text style={[Fonts.p4Bold, { color: Colors.primary500 }]}>
+            {t('adminRevenue.pagination.previous', 'Précédent')}
+          </Text>
         </TouchableOpacity>
         <Text style={[Fonts.p4, { color: Colors.neutral300 }]}>
-          {`Page ${currentPage} / ${pageCount} • ${total} au total`}
+          {t(
+            'adminRevenue.pagination.summary',
+            'Page {{currentPage}} / {{pageCount}} • {{total}} au total',
+            { currentPage, pageCount, total },
+          )}
         </Text>
         <TouchableOpacity
           activeOpacity={0.86}
@@ -436,7 +495,9 @@ function AdminRevenue() {
           onPress={() => onChangePage(currentPage + 1)}
           style={[styles.paginationButton, { borderColor: `${Colors.primary500}44`, opacity: canGoNext ? 1 : 0.4 }]}
         >
-          <Text style={[Fonts.p4Bold, { color: Colors.primary500 }]}>Suivant</Text>
+          <Text style={[Fonts.p4Bold, { color: Colors.primary500 }]}>
+            {t('adminRevenue.pagination.next', 'Suivant')}
+          </Text>
         </TouchableOpacity>
       </View>
     );
@@ -452,7 +513,7 @@ function AdminRevenue() {
         <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter, Spaces.gap[12]]}>
           <View style={styles.rowMain}>
             <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
-              {item?.planCode || 'Plan inconnu'}
+              {item?.planCode || t('adminRevenue.unknownPlan', 'Plan inconnu')}
             </Text>
             <Text style={[Fonts.p3, { color: Colors.neutral300 }, Spaces.marginTop[4]]}>
               {formatPerson(item?.payerUser)}
@@ -463,7 +524,7 @@ function AdminRevenue() {
               {formatDateTime(item?.currentPeriodEnd)}
             </Text>
             <Text style={[Fonts.p4, { color: Colors.neutral300 }, Spaces.marginTop[4]]}>
-              {item?.billingPeriod || 'période inconnue'}
+              {item?.billingPeriod || t('adminRevenue.unknownPeriod', 'période inconnue')}
               {item?.provider ? ` • ${item.provider}` : ''}
             </Text>
           </View>
@@ -475,7 +536,9 @@ function AdminRevenue() {
             onPress={() => openStatusModal(item)}
             style={[styles.inlineActionButton, { backgroundColor: `${Colors.primary500}18`, borderColor: `${Colors.primary500}44` }]}
           >
-            <Text style={[Fonts.p4Bold, { color: Colors.primary500 }]}>Statut...</Text>
+            <Text style={[Fonts.p4Bold, { color: Colors.primary500 }]}>
+              {t('adminRevenue.statusAction', 'Statut...')}
+            </Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -493,14 +556,18 @@ function AdminRevenue() {
         <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter, Spaces.gap[12]]}>
           <View style={styles.rowMain}>
             <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
-              {item?.eventType || 'Event inconnu'}
+              {item?.eventType || t('adminRevenue.unknownEvent', 'Event inconnu')}
             </Text>
             <Text style={[Fonts.p3, { color: Colors.neutral300 }, Spaces.marginTop[4]]}>
-              {item?.provider || 'provider inconnu'}
+              {item?.provider || t('adminRevenue.unknownProvider', 'provider inconnu')}
               {item?.providerEventId ? ` • ${item.providerEventId}` : ''}
             </Text>
             <Text style={[Fonts.p4, { color: Colors.neutral300 }, Spaces.marginTop[4]]}>
-              {`Reçu le ${formatDateTime(item?.receivedAt || item?.createdAt)}`}
+              {t(
+                'adminRevenue.receivedAt',
+                'Reçu le {{date}}',
+                { date: formatDateTime(item?.receivedAt || item?.createdAt), ...SANS_ECHAPPEMENT },
+              )}
             </Text>
           </View>
           {renderStatusPill(status, statusColor)}
@@ -512,7 +579,9 @@ function AdminRevenue() {
               onPress={() => openRetryModal(item)}
               style={[styles.inlineActionButton, { backgroundColor: `${Colors.warning500}16`, borderColor: `${Colors.warning500}44` }]}
             >
-              <Text style={[Fonts.p4Bold, { color: Colors.warning500 }]}>Rejouer</Text>
+              <Text style={[Fonts.p4Bold, { color: Colors.warning500 }]}>
+                {t('adminRevenue.retry', 'Rejouer')}
+              </Text>
             </TouchableOpacity>
           </View>
         ) : null}
@@ -550,7 +619,9 @@ function AdminRevenue() {
             onPress={onRetry}
             style={[styles.inlineActionButton, Spaces.marginTop[8], { backgroundColor: `${Colors.primary500}18`, borderColor: `${Colors.primary500}44` }]}
           >
-            <Text style={[Fonts.p4Bold, { color: Colors.primary500 }]}>Réessayer</Text>
+            <Text style={[Fonts.p4Bold, { color: Colors.primary500 }]}>
+              {t('adminRevenue.tryAgain', 'Réessayer')}
+            </Text>
           </TouchableOpacity>
         </View>
       );
@@ -606,9 +677,14 @@ function AdminRevenue() {
         showsVerticalScrollIndicator={false}
       >
         <View>
-          <Text style={[Fonts.h1, Fonts.neutral00]}>Pilotage abonnements</Text>
+          <Text style={[Fonts.h1, Fonts.neutral00]}>
+            {t('adminRevenue.title', 'Pilotage abonnements')}
+          </Text>
           <Text style={[Fonts.p2, { color: Colors.neutral300 }, Spaces.marginTop[8]]}>
-            Cette vue suit maintenant les subscriptions, entitlements, claims et incidents billing cote serveur. Les anciens champs club ne servent plus de référence métier ici.
+            {t(
+              'adminRevenue.subtitle',
+              'Cette vue suit maintenant les subscriptions, entitlements, claims et incidents billing cote serveur. Les anciens champs club ne servent plus de référence métier ici.', // eslint-disable-line max-len
+            )}
           </Text>
         </View>
 
@@ -621,14 +697,37 @@ function AdminRevenue() {
             { borderColor: `${Colors.success500}44` },
           ]}
         >
-          <Text style={[Fonts.p3Bold, { color: Colors.success500 }]}>Monetisation</Text>
+          <Text style={[Fonts.p3Bold, { color: Colors.success500 }]}>
+            {t('adminRevenue.monetization', 'Monetisation')}
+          </Text>
           <Text style={[Fonts.h2Bold, Fonts.neutral00, Spaces.marginTop[8]]}>
             {`${formatEurosFromCents(monetization?.mrrEurCents)} MRR`}
           </Text>
           <View style={styles.filterRow}>
-            {renderStatusPill(`${Number(monetization?.payingSubscriptionCount || 0)} payants`, Colors.success500)}
-            {renderStatusPill(`${Number(monetization?.trialSubscriptionCount || 0)} essais`, Colors.warning500)}
-            {renderStatusPill(`${Number(monetization?.activeSubscriptionCount || 0)} actifs`, Colors.primary500)}
+            {renderStatusPill(
+              t(
+                'adminRevenue.pills.paying',
+                '{{total}} payants',
+                { total: Number(monetization?.payingSubscriptionCount || 0) },
+              ),
+              Colors.success500,
+            )}
+            {renderStatusPill(
+              t(
+                'adminRevenue.pills.trial',
+                '{{total}} essais',
+                { total: Number(monetization?.trialSubscriptionCount || 0) },
+              ),
+              Colors.warning500,
+            )}
+            {renderStatusPill(
+              t(
+                'adminRevenue.pills.active',
+                '{{total}} actifs',
+                { total: Number(monetization?.activeSubscriptionCount || 0) },
+              ),
+              Colors.primary500,
+            )}
           </View>
         </View>
 
@@ -660,7 +759,9 @@ function AdminRevenue() {
           ]}
         >
           <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter, Spaces.gap[12]]}>
-            <Text style={[Fonts.h4Bold, Fonts.neutral00]}>Abonnés</Text>
+            <Text style={[Fonts.h4Bold, Fonts.neutral00]}>
+              {t('adminRevenue.subscribers', 'Abonnés')}
+            </Text>
             <TouchableOpacity
               activeOpacity={0.86}
               disabled={reconcileMutation.isPending}
@@ -675,7 +776,9 @@ function AdminRevenue() {
               ]}
             >
               <Text style={[Fonts.p4Bold, { color: Colors.warning500 }]}>
-                {reconcileMutation.isPending ? 'Reconciliation...' : 'Réconcilier maintenant'}
+                {reconcileMutation.isPending
+                  ? t('adminRevenue.reconciling', 'Reconciliation...')
+                  : t('adminRevenue.reconcileNow', 'Réconcilier maintenant')}
               </Text>
             </TouchableOpacity>
           </View>
@@ -683,7 +786,7 @@ function AdminRevenue() {
           <TextInput
             autoCapitalize="none"
             onChangeText={setSubscriptionSearchInput}
-            placeholder="Rechercher un payeur, un plan..."
+            placeholder={t('adminRevenue.searchPlaceholder', 'Rechercher un payeur, un plan...')}
             placeholderTextColor={Colors.neutral400}
             style={[
               styles.searchInput,
@@ -698,11 +801,14 @@ function AdminRevenue() {
 
           <View style={[Spaces.gap[12], Spaces.marginTop[12]]}>
             {renderListContent({
-              emptyLabel: 'Aucun abonne trouve.',
-              errorLabel: 'Impossible de charger les abonnés.',
+              emptyLabel: t('adminRevenue.subscriptionsEmpty', 'Aucun abonne trouve.'),
+              errorLabel: t(
+                'adminRevenue.subscriptionsError',
+                'Impossible de charger les abonnés.',
+              ),
               isFetching: isSubscriptionsListFetching,
               listError: subscriptionsListError,
-              loadingLabel: 'Chargement des abonnés...',
+              loadingLabel: t('adminRevenue.subscriptionsLoading', 'Chargement des abonnés...'),
               onRetry: refetchSubscriptionsList,
               renderRow: renderSubscriptionRow,
               rows: subscriptionRows,
@@ -727,11 +833,14 @@ function AdminRevenue() {
 
           <View style={[Spaces.gap[12], Spaces.marginTop[12]]}>
             {renderListContent({
-              emptyLabel: 'Aucun billing event trouve.',
-              errorLabel: 'Impossible de charger les billing events.',
+              emptyLabel: t('adminRevenue.billingEmpty', 'Aucun billing event trouve.'),
+              errorLabel: t(
+                'adminRevenue.billingError',
+                'Impossible de charger les billing events.',
+              ),
               isFetching: isBillingEventsListFetching,
               listError: billingEventsListError,
-              loadingLabel: 'Chargement des billing events...',
+              loadingLabel: t('adminRevenue.billingLoading', 'Chargement des billing events...'),
               onRetry: refetchBillingEventsList,
               renderRow: renderBillingEventRow,
               rows: billingEventRows,
@@ -742,12 +851,12 @@ function AdminRevenue() {
         </View>
 
         {renderSection(
-          'Claims à revoir',
+          t('adminRevenue.claimsToReview', 'Claims à revoir'),
           claims.slice(0, 5),
           (item) => (
             <View key={String(item?.documentId || item?.createdAt || item?.proofUrl)} style={[styles.rowCard, { borderBottomColor: `${Colors.warning500}22` }]}>
               <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
-                {item?.club?.name || 'Club inconnu'}
+                {item?.club?.name || t('adminRevenue.unknownClub', 'Club inconnu')}
               </Text>
               <Text style={[Fonts.p3, { color: Colors.neutral300 }, Spaces.marginTop[4]]}>
                 {formatPerson(item?.user)}
@@ -758,35 +867,37 @@ function AdminRevenue() {
               </Text>
             </View>
           ),
-          'Aucun claim en attente.',
+          t('adminRevenue.claimsEmpty', 'Aucun claim en attente.'),
         )}
 
         {renderSection(
-          'Legacy à migrer',
+          t('adminRevenue.legacyToMigrate', 'Legacy à migrer'),
           legacyCandidates.slice(0, 5),
           (item) => (
             <View key={String(item?.documentId || item?.name)} style={[styles.rowCard, { borderBottomColor: `${Colors.primary200}22` }]}>
               <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
-                {item?.name || 'Club legacy'}
+                {item?.name || t('adminRevenue.legacyClub', 'Club legacy')}
               </Text>
               <Text style={[Fonts.p3, { color: Colors.neutral300 }, Spaces.marginTop[4]]}>
-                {item?.clubPartner ? 'Déjà partenaire' : 'Migration requise'}
+                {item?.clubPartner
+                  ? t('adminRevenue.alreadyPartner', 'Déjà partenaire')
+                  : t('adminRevenue.migrationRequired', 'Migration requise')}
               </Text>
               <Text style={[Fonts.p4, { color: Colors.primary200 }, Spaces.marginTop[4]]}>
-                Legacy abonnement:
+                {t('adminRevenue.legacySubscription', 'Legacy abonnement:')}
                 {' '}
                 {Number(item?.subscriptionValue || 0)}
                 {' '}
                 EUR
               </Text>
               <Text style={[Fonts.p4, { color: Colors.primary200 }, Spaces.marginTop[4]]}>
-                Legacy max equipes:
+                {t('adminRevenue.legacyMaxTeams', 'Legacy max equipes:')}
                 {' '}
                 {Number(item?.maxTeamNumber || 0)}
               </Text>
             </View>
           ),
-          'Aucun club legacy dans l aperçu.',
+          t('adminRevenue.legacyEmpty', 'Aucun club legacy dans l aperçu.'),
         )}
       </ScrollView>
 
@@ -798,9 +909,11 @@ function AdminRevenue() {
       >
         <View style={styles.modalOverlay}>
           <View style={[styles.modalCard, { backgroundColor: Colors.neutral900, borderColor: `${Colors.primary500}44` }]}>
-            <Text style={[Fonts.h4Bold, Fonts.neutral00]}>Changer le statut</Text>
+            <Text style={[Fonts.h4Bold, Fonts.neutral00]}>
+              {t('adminRevenue.statusModal.title', 'Changer le statut')}
+            </Text>
             <Text style={[Fonts.p3, { color: Colors.neutral300 }, Spaces.marginTop[8]]}>
-              {statusModalItem?.planCode || 'Plan inconnu'}
+              {statusModalItem?.planCode || t('adminRevenue.unknownPlan', 'Plan inconnu')}
             </Text>
             <Text style={[Fonts.p4, { color: Colors.neutral300 }, Spaces.marginTop[4]]}>
               {formatPerson(statusModalItem?.payerUser)}
@@ -829,12 +942,15 @@ function AdminRevenue() {
             </View>
 
             <Text style={[Fonts.p4Bold, { color: Colors.primary200 }, Spaces.marginTop[16], Spaces.marginBottom[8]]}>
-              Raison obligatoire
+              {t('adminRevenue.requiredReason', 'Raison obligatoire')}
             </Text>
             <TextInput
               multiline
               onChangeText={setStatusModalReason}
-              placeholder="Motif du changement (support, fraude, regularisation...)"
+              placeholder={t(
+                'adminRevenue.statusModal.reasonPlaceholder',
+                'Motif du changement (support, fraude, regularisation...)',
+              )}
               placeholderTextColor={Colors.neutral400}
               style={[styles.reasonInput, { borderColor: `${Colors.neutral00}18`, color: Colors.neutral00 }]}
               textAlignVertical="top"
@@ -847,7 +963,9 @@ function AdminRevenue() {
                 onPress={closeStatusModal}
                 style={[styles.modalActionButton, { backgroundColor: `${Colors.neutral00}06`, borderColor: `${Colors.neutral00}16` }]}
               >
-                <Text style={[Fonts.p4Bold, { color: Colors.neutral00 }]}>Annuler</Text>
+                <Text style={[Fonts.p4Bold, { color: Colors.neutral00 }]}>
+                  {t('adminRevenue.cancel', 'Annuler')}
+                </Text>
               </TouchableOpacity>
               <TouchableOpacity
                 activeOpacity={0.86}
@@ -862,7 +980,9 @@ function AdminRevenue() {
                 ]}
               >
                 <Text style={[Fonts.p4Bold, { color: Colors.neutral900 }]}>
-                  {updateStatusMutation.isPending ? 'Enregistrement...' : 'Confirmer'}
+                  {updateStatusMutation.isPending
+                    ? t('adminRevenue.statusModal.saving', 'Enregistrement...')
+                    : t('adminRevenue.statusModal.confirm', 'Confirmer')}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -878,22 +998,27 @@ function AdminRevenue() {
       >
         <View style={styles.modalOverlay}>
           <View style={[styles.modalCard, { backgroundColor: Colors.neutral900, borderColor: `${Colors.warning500}44` }]}>
-            <Text style={[Fonts.h4Bold, Fonts.neutral00]}>Rejouer le billing event</Text>
+            <Text style={[Fonts.h4Bold, Fonts.neutral00]}>
+              {t('adminRevenue.retryModal.title', 'Rejouer le billing event')}
+            </Text>
             <Text style={[Fonts.p3, { color: Colors.neutral300 }, Spaces.marginTop[8]]}>
-              {retryModalItem?.eventType || 'Event inconnu'}
+              {retryModalItem?.eventType || t('adminRevenue.unknownEvent', 'Event inconnu')}
             </Text>
             <Text style={[Fonts.p4, { color: Colors.neutral300 }, Spaces.marginTop[4]]}>
-              {retryModalItem?.provider || 'provider inconnu'}
+              {retryModalItem?.provider || t('adminRevenue.unknownProvider', 'provider inconnu')}
               {retryModalItem?.providerEventId ? ` • ${retryModalItem.providerEventId}` : ''}
             </Text>
 
             <Text style={[Fonts.p4Bold, { color: Colors.primary200 }, Spaces.marginTop[16], Spaces.marginBottom[8]]}>
-              Raison obligatoire
+              {t('adminRevenue.requiredReason', 'Raison obligatoire')}
             </Text>
             <TextInput
               multiline
               onChangeText={setRetryModalReason}
-              placeholder="Motif du rejeu (correction webhook, incident résolu...)"
+              placeholder={t(
+                'adminRevenue.retryModal.reasonPlaceholder',
+                'Motif du rejeu (correction webhook, incident résolu...)',
+              )}
               placeholderTextColor={Colors.neutral400}
               style={[styles.reasonInput, { borderColor: `${Colors.neutral00}18`, color: Colors.neutral00 }]}
               textAlignVertical="top"
@@ -906,7 +1031,9 @@ function AdminRevenue() {
                 onPress={closeRetryModal}
                 style={[styles.modalActionButton, { backgroundColor: `${Colors.neutral00}06`, borderColor: `${Colors.neutral00}16` }]}
               >
-                <Text style={[Fonts.p4Bold, { color: Colors.neutral00 }]}>Annuler</Text>
+                <Text style={[Fonts.p4Bold, { color: Colors.neutral00 }]}>
+                  {t('adminRevenue.cancel', 'Annuler')}
+                </Text>
               </TouchableOpacity>
               <TouchableOpacity
                 activeOpacity={0.86}
@@ -921,7 +1048,9 @@ function AdminRevenue() {
                 ]}
               >
                 <Text style={[Fonts.p4Bold, { color: Colors.neutral900 }]}>
-                  {retryBillingEventMutation.isPending ? 'Rejeu...' : 'Rejouer'}
+                  {retryBillingEventMutation.isPending
+                    ? t('adminRevenue.retryModal.retrying', 'Rejeu...')
+                    : t('adminRevenue.retry', 'Rejouer')}
                 </Text>
               </TouchableOpacity>
             </View>

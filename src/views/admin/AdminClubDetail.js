@@ -1,5 +1,7 @@
 import { useNavigation, useRoute } from '@react-navigation/native';
+import i18next from 'i18next';
 import { useCallback, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Alert,
   Image,
@@ -12,6 +14,7 @@ import {
   View,
 } from 'react-native';
 
+import localeDesFormats from '@/theme/strings/localeDesFormats';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -50,25 +53,60 @@ import { getErrorMessage } from '@/utils/errors/displayError';
 
 const RELATION_CONFIGS = [
   {
-    field: 'activites', isMany: true, label: 'Activites', targetUid: 'api::activity.activity',
+    field: 'activites',
+    isMany: true,
+    get label() {
+      return i18next.t('adminClubDetail.relations.activities', 'Activites');
+    },
+    targetUid: 'api::activity.activity',
   },
   {
-    field: 'members', isMany: true, label: 'Membres', targetUid: 'plugin::users-permissions.user',
+    field: 'members',
+    isMany: true,
+    get label() {
+      return i18next.t('adminClubDetail.relations.members', 'Membres');
+    },
+    targetUid: 'plugin::users-permissions.user',
   },
   {
-    field: 'teams', isMany: true, label: 'Equipes', targetUid: 'api::team.team',
+    field: 'teams',
+    isMany: true,
+    get label() {
+      return i18next.t('adminClubDetail.relations.teams', 'Equipes');
+    },
+    targetUid: 'api::team.team',
   },
   {
-    field: 'clubMembershipRequests', isMany: true, label: 'Demandes', targetUid: 'api::club-membership-request.club-membership-request',
+    field: 'clubMembershipRequests',
+    isMany: true,
+    get label() {
+      return i18next.t('adminClubDetail.relations.requests', 'Demandes');
+    },
+    targetUid: 'api::club-membership-request.club-membership-request',
   },
   {
-    field: 'evenements', isMany: true, label: 'Evenements', targetUid: 'api::event.event',
+    field: 'evenements',
+    isMany: true,
+    get label() {
+      return i18next.t('adminClubDetail.relations.events', 'Evenements');
+    },
+    targetUid: 'api::event.event',
   },
   {
-    field: 'facilities', isMany: true, label: 'Terrains', targetUid: 'api::facility.facility',
+    field: 'facilities',
+    isMany: true,
+    get label() {
+      return i18next.t('adminClubDetail.relations.facilities', 'Terrains');
+    },
+    targetUid: 'api::facility.facility',
   },
   {
-    field: 'parentMultisport', isMany: false, label: 'Club multisport parent', targetUid: 'api::multisport-club.multisport-club',
+    field: 'parentMultisport',
+    isMany: false,
+    get label() {
+      return i18next.t('adminClubDetail.relations.parentMultisport', 'Club multisport parent');
+    },
+    targetUid: 'api::multisport-club.multisport-club',
   },
 ];
 
@@ -109,7 +147,7 @@ const formatAuditDate = (value) => {
   const date = new Date(safeValue);
   if (Number.isNaN(date.getTime())) return safeValue;
 
-  return new Intl.DateTimeFormat('fr-FR', {
+  return new Intl.DateTimeFormat(localeDesFormats(), {
     dateStyle: 'medium',
     timeStyle: 'short',
   }).format(date);
@@ -123,6 +161,7 @@ function AdminClubDetail() {
     Fonts,
     Spaces,
   } = useTheme();
+  const { t } = useTranslation();
   const { width: screenWidth } = useWindowDimensions();
   const route = useRoute();
   const navigation = useNavigation();
@@ -157,17 +196,24 @@ function AdminClubDetail() {
     verifyClubMutation.mutate(
       { documentId: clubId, verified: nextVerified },
       {
-        onError: (err) => Alert.alert('Erreur', getErrorMessage(err, 'generic')),
+        onError: (err) => Alert.alert(
+          t('adminClubDetail.errorTitle', 'Erreur'),
+          getErrorMessage(err, 'generic'),
+        ),
         onSuccess: () => {
           refetch?.();
           Alert.alert(
-            nextVerified ? 'Club certifié' : 'Certification retirée',
-            nextVerified ? 'Le club est maintenant certifié.' : 'Le club n’est plus certifié.',
+            nextVerified
+              ? t('adminClubDetail.verifiedTitle', 'Club certifié')
+              : t('adminClubDetail.unverifiedTitle', 'Certification retirée'),
+            nextVerified
+              ? t('adminClubDetail.verifiedMessage', 'Le club est maintenant certifié.')
+              : t('adminClubDetail.unverifiedMessage', 'Le club n’est plus certifié.'),
           );
         },
       },
     );
-  }, [clubId, club?.clubVerified, verifyClubMutation, refetch]);
+  }, [clubId, club?.clubVerified, verifyClubMutation, refetch, t]);
   const isCompactScreen = screenWidth <= 360;
   const contentHorizontalPadding = isCompactScreen ? 8 : 10;
   const members = useMemo(() => normalizeRelationArray(club?.members), [club?.members]);
@@ -183,28 +229,37 @@ function AdminClubDetail() {
   const addressLabel = getClubAddressLabel(club);
 
   const stats = useMemo(() => ([
-    { label: 'Membres', value: members.length },
-    { label: 'Equipes', value: teams.length },
-    { label: 'Evenements', value: events.length },
-    { label: 'Terrains', value: facilities.length },
-    { label: 'Demandes', value: requests.length },
-    { label: 'Sponsors', value: Array.isArray(club?.sponsor) ? club.sponsor.length : 0 },
-  ]), [club?.sponsor, events.length, facilities.length, members.length, requests.length, teams.length]);
+    { label: t('adminClubDetail.stats.members', 'Membres'), value: members.length },
+    { label: t('adminClubDetail.stats.teams', 'Equipes'), value: teams.length },
+    { label: t('adminClubDetail.stats.events', 'Evenements'), value: events.length },
+    { label: t('adminClubDetail.stats.facilities', 'Terrains'), value: facilities.length },
+    { label: t('adminClubDetail.stats.requests', 'Demandes'), value: requests.length },
+    {
+      label: t('adminClubDetail.stats.sponsors', 'Sponsors'),
+      value: Array.isArray(club?.sponsor) ? club.sponsor.length : 0,
+    },
+  ]), [club?.sponsor, events.length, facilities.length, members.length, requests.length, t, teams.length]);
 
   const heroBadges = useMemo(() => ([
     {
-      label: club?.clubPartner ? 'Partenaire' : 'Standard',
+      label: club?.clubPartner
+        ? t('adminClubDetail.badges.partner', 'Partenaire')
+        : t('adminClubDetail.badges.standard', 'Standard'),
       tone: club?.clubPartner ? 'primary' : 'neutral',
     },
     {
-      label: club?.isReservationProvider ? 'Réservation active' : 'Pas réservation',
+      label: club?.isReservationProvider
+        ? t('adminClubDetail.badges.reservationOn', 'Réservation active')
+        : t('adminClubDetail.badges.reservationOff', 'Pas réservation'),
       tone: club?.isReservationProvider ? 'primary' : 'neutral',
     },
     {
-      label: club?.clubVerified ? 'Certifié' : 'Non certifié',
+      label: club?.clubVerified
+        ? t('adminClubDetail.badges.verified', 'Certifié')
+        : t('adminClubDetail.badges.notVerified', 'Non certifié'),
       tone: club?.clubVerified ? 'success' : 'neutral',
     },
-  ]), [club?.clubPartner, club?.clubVerified, club?.isReservationProvider]);
+  ]), [club?.clubPartner, club?.clubVerified, club?.isReservationProvider, t]);
 
   const panelStyle = useMemo(() => ([
     ApplicationStyle.backgroundColor.primary700,
@@ -242,9 +297,12 @@ function AdminClubDetail() {
       });
       setRelationResults(Array.isArray(response?.data) ? response.data : []);
     } catch (searchError) {
-      Alert.alert('Recherche impossible', getErrorMessage(searchError, 'generic'));
+      Alert.alert(
+        t('adminClubDetail.searchFailed', 'Recherche impossible'),
+        getErrorMessage(searchError, 'generic'),
+      );
     }
-  }, [relationConfig, relationQuery, relationSearchMutation]);
+  }, [relationConfig, relationQuery, relationSearchMutation, t]);
 
   const mutateRelation = useCallback(async (action, target) => {
     if (!relationConfig || !clubId) return;
@@ -265,14 +323,20 @@ function AdminClubDetail() {
       closeRelationModal();
       refetch();
     } catch (mutationError) {
-      Alert.alert('Relation impossible', getErrorMessage(mutationError, 'generic'));
+      Alert.alert(
+        t('adminClubDetail.relationFailed', 'Relation impossible'),
+        getErrorMessage(mutationError, 'generic'),
+      );
     }
-  }, [closeRelationModal, clubId, refetch, relationConfig, relationReason, updateRelationMutation]);
+  }, [closeRelationModal, clubId, refetch, relationConfig, relationReason, t, updateRelationMutation]);
 
   const confirmDelete = useCallback(async () => {
     const reason = normalizeText(deleteReason);
     if (reason.length < 3) {
-      Alert.alert('Raison requise', "Ajoute une raison d'au moins 3 caractères.");
+      Alert.alert(
+        t('adminClubDetail.reasonRequiredTitle', 'Raison requise'),
+        t('adminClubDetail.reasonRequiredMessage', "Ajoute une raison d'au moins 3 caractères."),
+      );
       return;
     }
 
@@ -281,9 +345,12 @@ function AdminClubDetail() {
       setIsDeleteVisible(false);
       navigation.goBack();
     } catch (deleteError) {
-      Alert.alert('Suppression impossible', getErrorMessage(deleteError, 'generic'));
+      Alert.alert(
+        t('adminClubDetail.deleteFailed', 'Suppression impossible'),
+        getErrorMessage(deleteError, 'generic'),
+      );
     }
-  }, [clubId, deleteMutation, deleteReason, navigation]);
+  }, [clubId, deleteMutation, deleteReason, navigation, t]);
 
   const renderInfoRows = useCallback((items) => items.map((item, index) => {
     const isLast = index === items.length - 1;
@@ -353,10 +420,14 @@ function AdminClubDetail() {
             <Text style={[Fonts.p3, { color: Colors.neutral300 }, Spaces.marginTop[4]]}>
               {items.length}
               {' '}
-              element(s)
+              {t('adminClubDetail.itemsCount', 'element(s)')}
             </Text>
           </View>
-          <Button onPress={() => openRelationModal(config)} size="sm" title="Ajouter" />
+          <Button
+            onPress={() => openRelationModal(config)}
+            size="sm"
+            title={t('adminClubDetail.add', 'Ajouter')}
+          />
         </View>
 
         <View style={Spaces.gap[8]}>
@@ -373,7 +444,9 @@ function AdminClubDetail() {
                 {getClubRelationLabel(item)}
               </Text>
               <TouchableOpacity onPress={() => mutateRelation('disconnect', item)}>
-                <Text style={[Fonts.p3Bold, { color: Colors.error500 }]}>Retirer</Text>
+                <Text style={[Fonts.p3Bold, { color: Colors.error500 }]}>
+                  {t('adminClubDetail.remove', 'Retirer')}
+                </Text>
               </TouchableOpacity>
             </View>
           ))}
@@ -383,7 +456,7 @@ function AdminClubDetail() {
               +
               {items.length - 6}
               {' '}
-              autres éléments
+              {t('adminClubDetail.moreItems', 'autres éléments')}
             </Text>
           ) : null}
         </View>
@@ -406,15 +479,19 @@ function AdminClubDetail() {
     mutateRelation,
     openRelationModal,
     panelStyle,
+    t,
   ]);
 
   if (!clubId) {
     return (
       <AdminStateView
-        actionLabel="Retour"
-        description="L'identifiant club est absent de l'URL."
+        actionLabel={t('adminClubDetail.states.back', 'Retour')}
+        description={t(
+          'adminClubDetail.states.missingId',
+          "L'identifiant club est absent de l'URL.",
+        )}
         onAction={() => navigation.goBack()}
-        title="Club introuvable"
+        title={t('adminClubDetail.states.notFoundTitle', 'Club introuvable')}
       />
     );
   }
@@ -422,9 +499,12 @@ function AdminClubDetail() {
   if (isLoading && !club) {
     return (
       <AdminStateView
-        description="Nous chargeons la fiche Club depuis le Content Manager."
+        description={t(
+          'adminClubDetail.states.loadingDescription',
+          'Nous chargeons la fiche Club depuis le Content Manager.',
+        )}
         isLoading
-        title="Chargement du club"
+        title={t('adminClubDetail.states.loadingTitle', 'Chargement du club')}
       />
     );
   }
@@ -432,10 +512,13 @@ function AdminClubDetail() {
   if (error && !club) {
     return (
       <AdminStateView
-        actionLabel="Reessayer"
-        description={getErrorMessage(error, 'generic') || 'Impossible de charger ce club.'}
+        actionLabel={t('adminClubDetail.states.retry', 'Reessayer')}
+        description={getErrorMessage(error, 'generic') || t(
+          'adminClubDetail.states.errorDescription',
+          'Impossible de charger ce club.',
+        )}
         onAction={refetch}
-        title="Chargement impossible"
+        title={t('adminClubDetail.states.errorTitle', 'Chargement impossible')}
       />
     );
   }
@@ -443,10 +526,13 @@ function AdminClubDetail() {
   if (!club) {
     return (
       <AdminStateView
-        actionLabel="Retour"
-        description="Le club demande n'existe pas ou n'est plus accessible."
+        actionLabel={t('adminClubDetail.states.back', 'Retour')}
+        description={t(
+          'adminClubDetail.states.notFoundDescription',
+          "Le club demande n'existe pas ou n'est plus accessible.",
+        )}
         onAction={() => navigation.goBack()}
-        title="Club introuvable"
+        title={t('adminClubDetail.states.notFoundTitle', 'Club introuvable')}
       />
     );
   }
@@ -497,10 +583,13 @@ function AdminClubDetail() {
 
             <View style={styles.heroContent}>
               <Text numberOfLines={2} style={[Fonts.h2Bold, Fonts.neutral00]}>
-                {club.name || 'Club sans nom'}
+                {club.name || t('adminClubDetail.unnamedClub', 'Club sans nom')}
               </Text>
               <Text numberOfLines={2} style={[Fonts.p2, { color: Colors.neutral300, marginTop: 8 }]}>
-                {[city, activityLabel].filter(Boolean).join(' - ') || 'Aucune information de localisation'}
+                {[city, activityLabel].filter(Boolean).join(' - ') || t(
+                  'adminClubDetail.noLocation',
+                  'Aucune information de localisation',
+                )}
               </Text>
 
               <View style={[Alignments.row, styles.heroBadges, { marginTop: 12 }]}>
@@ -535,21 +624,23 @@ function AdminClubDetail() {
               onPress={() => navigation.navigate(RouteNames.AdminClubForm, { clubId })}
               size="sm"
               style={isCompactScreen ? styles.fullWidthButton : styles.flexButton}
-              title="Modifier"
+              title={t('adminClubDetail.edit', 'Modifier')}
             />
             <Button
               isLoading={verifyClubMutation.isPending}
               onPress={handleToggleVerification}
               size="sm"
               style={isCompactScreen ? styles.fullWidthButton : styles.flexButton}
-              title={club?.clubVerified ? 'Retirer la vérif.' : 'Vérifier le club'}
+              title={club?.clubVerified
+                ? t('adminClubDetail.unverify', 'Retirer la vérif.')
+                : t('adminClubDetail.verify', 'Vérifier le club')}
               variant={club?.clubVerified ? 'Secondary' : 'Primary'}
             />
             <Button
               onPress={() => setIsActionsVisible(true)}
               size="sm"
               style={isCompactScreen ? styles.fullWidthButton : styles.flexButton}
-              title="Actions"
+              title={t('adminClubDetail.actions', 'Actions')}
               variant="Secondary"
             />
           </View>
@@ -600,8 +691,14 @@ function AdminClubDetail() {
             <View style={[panelStyle, Spaces.padding[18], styles.sectionCard]}>
               {renderInfoRows([
                 { compact: true, label: 'DocumentId', value: getDocumentId(club) },
-                { label: 'Dernière mise à jour', value: formatAuditDate(club.updatedAt) },
-                { label: 'Creation', value: formatAuditDate(club.createdAt) },
+                {
+                  label: t('adminClubDetail.info.updatedAt', 'Dernière mise à jour'),
+                  value: formatAuditDate(club.updatedAt),
+                },
+                {
+                  label: t('adminClubDetail.info.createdAt', 'Creation'),
+                  value: formatAuditDate(club.createdAt),
+                },
               ])}
             </View>
           </View>
@@ -610,16 +707,40 @@ function AdminClubDetail() {
         {activeTab === 'info' ? (
           <View style={[panelStyle, Spaces.padding[18], styles.sectionCard]}>
             {renderInfoRows([
-              { label: 'Nom', value: club.name },
+              { label: t('adminClubDetail.info.name', 'Nom'), value: club.name },
               { label: 'Email', value: club.email },
-              { label: 'Telephone', value: club.phoneNumber },
-              { label: 'Partenariat', value: club.clubPartner ? 'Oui' : 'Non' },
-              { label: 'Club certifié', value: club.clubVerified ? 'Oui' : 'Non' },
-              { label: 'Reservation', value: club.isReservationProvider ? 'Oui' : 'Non' },
-              { label: 'Multisport parent', value: getClubRelationLabel(parentMultisport) },
+              {
+                label: t('adminClubDetail.info.phone', 'Telephone'),
+                value: club.phoneNumber,
+              },
+              {
+                label: t('adminClubDetail.info.partnership', 'Partenariat'),
+                value: club.clubPartner
+                  ? t('adminClubDetail.yes', 'Oui')
+                  : t('adminClubDetail.no', 'Non'),
+              },
+              {
+                label: t('adminClubDetail.info.verified', 'Club certifié'),
+                value: club.clubVerified
+                  ? t('adminClubDetail.yes', 'Oui')
+                  : t('adminClubDetail.no', 'Non'),
+              },
+              {
+                label: t('adminClubDetail.info.reservation', 'Reservation'),
+                value: club.isReservationProvider
+                  ? t('adminClubDetail.yes', 'Oui')
+                  : t('adminClubDetail.no', 'Non'),
+              },
+              {
+                label: t('adminClubDetail.info.parentMultisport', 'Multisport parent'),
+                value: getClubRelationLabel(parentMultisport),
+              },
             ])}
             <Text style={[Fonts.p3, { color: Colors.neutral300 }, Spaces.marginTop[12]]}>
-              Les abonnements, entitlements et capacités Team sont pilotes depuis les opérations abonnements, plus depuis la fiche club.
+              {t(
+                'adminClubDetail.info.subscriptionsNote',
+                'Les abonnements, entitlements et capacités Team sont pilotes depuis les opérations abonnements, plus depuis la fiche club.', // eslint-disable-line max-len
+              )}
             </Text>
           </View>
         ) : null}
@@ -634,12 +755,12 @@ function AdminClubDetail() {
           <View style={[panelStyle, Spaces.padding[18], styles.sectionCard]}>
             <Text style={[Fonts.h4Bold, Fonts.neutral00]}>Logo</Text>
             <Text style={[Fonts.p2, { color: Colors.neutral300 }, Spaces.marginTop[8]]}>
-              {club.logo?.url || 'Aucun logo'}
+              {club.logo?.url || t('adminClubDetail.media.noLogo', 'Aucun logo')}
             </Text>
             <Button
               onPress={() => navigation.navigate(RouteNames.AdminClubForm, { clubId })}
               style={Spaces.marginTop[14]}
-              title="Remplacer le logo"
+              title={t('adminClubDetail.media.replaceLogo', 'Remplacer le logo')}
               variant="Secondary"
             />
           </View>
@@ -662,11 +783,13 @@ function AdminClubDetail() {
                 />
               </View>
             )) : (
-              <Text style={[Fonts.p2, { color: Colors.neutral300 }]}>Aucun sponsor configure.</Text>
+              <Text style={[Fonts.p2, { color: Colors.neutral300 }]}>
+                {t('adminClubDetail.media.noSponsor', 'Aucun sponsor configure.')}
+              </Text>
             )}
             <Button
               onPress={() => navigation.navigate(RouteNames.AdminClubForm, { clubId })}
-              title="Modifier les sponsors"
+              title={t('adminClubDetail.media.editSponsors', 'Modifier les sponsors')}
               variant="Secondary"
             />
           </View>
@@ -675,8 +798,11 @@ function AdminClubDetail() {
         {activeTab === 'geo' ? (
           <View style={[panelStyle, Spaces.padding[18], styles.sectionCard]}>
             {renderInfoRows([
-              { label: 'Adresse', value: addressLabel },
-              { label: 'Ville', value: city },
+              {
+                label: t('adminClubDetail.location.address', 'Adresse'),
+                value: addressLabel,
+              },
+              { label: t('adminClubDetail.location.city', 'Ville'), value: city },
               { compact: true, label: 'Geohash', value: club.geohash },
               { label: 'Latitude', value: coordinates.lat },
               { label: 'Longitude', value: coordinates.lng },
@@ -697,16 +823,23 @@ function AdminClubDetail() {
                 </Text>
               </View>
             )) : (
-              <Text style={[Fonts.p2, { color: Colors.neutral300 }]}>Aucune demande liée.</Text>
+              <Text style={[Fonts.p2, { color: Colors.neutral300 }]}>
+                {t('adminClubDetail.noRequest', 'Aucune demande liée.')}
+              </Text>
             )}
           </View>
         ) : null}
 
         {activeTab === 'history' ? (
           <View style={[panelStyle, Spaces.padding[18], styles.sectionCard]}>
-            <Text style={[Fonts.h4Bold, Fonts.neutral00]}>Historique</Text>
+            <Text style={[Fonts.h4Bold, Fonts.neutral00]}>
+              {t('adminClubDetail.history.title', 'Historique')}
+            </Text>
             <Text style={[Fonts.p2, { color: Colors.neutral300 }, Spaces.marginTop[8]]}>
-              Les actions sensibles passent par les mutations SuperAdmin et alimentent l audit backend.
+              {t(
+                'adminClubDetail.history.description',
+                'Les actions sensibles passent par les mutations SuperAdmin et alimentent l audit backend.', // eslint-disable-line max-len
+              )}
             </Text>
           </View>
         ) : null}
@@ -715,12 +848,15 @@ function AdminClubDetail() {
           <View style={[panelStyle, Spaces.padding[18], styles.sectionCard, { borderColor: Colors.error500 }]}>
             <Text style={[Fonts.h4Bold, { color: Colors.error500 }]}>Danger zone</Text>
             <Text style={[Fonts.p2, { color: Colors.neutral300 }, Spaces.marginTop[8]]}>
-              Suppression definitive du club dans le Content Manager. Cette action doit être utilisée avec prudence.
+              {t(
+                'adminClubDetail.danger.description',
+                'Suppression definitive du club dans le Content Manager. Cette action doit être utilisée avec prudence.', // eslint-disable-line max-len
+              )}
             </Text>
             <Button
               onPress={() => setIsDeleteVisible(true)}
               style={Spaces.marginTop[14]}
-              title="Supprimer ce club"
+              title={t('adminClubDetail.danger.deleteClub', 'Supprimer ce club')}
               variant="SecondaryLight"
             />
           </View>
@@ -728,20 +864,22 @@ function AdminClubDetail() {
 
         {isFetching ? (
           <Text style={[Fonts.p3, { color: Colors.neutral300, textAlign: 'center' }]}>
-            Synchronisation...
+            {t('adminClubDetail.syncing', 'Synchronisation...')}
           </Text>
         ) : null}
       </ScrollView>
 
       <BottomModal close={() => setIsActionsVisible(false)} isVisible={isActionsVisible} snapPoints={['34%']}>
-        <Text style={[Fonts.h3, Fonts.neutral00]}>Actions Club</Text>
+        <Text style={[Fonts.h3, Fonts.neutral00]}>
+          {t('adminClubDetail.actionsTitle', 'Actions Club')}
+        </Text>
         <View style={[Spaces.gap[10], Spaces.marginTop[14]]}>
           <Button
             onPress={() => {
               setIsActionsVisible(false);
               navigation.navigate(RouteNames.AdminClubForm, { duplicateFrom: clubId });
             }}
-            title="Dupliquer le club"
+            title={t('adminClubDetail.duplicate', 'Dupliquer le club')}
             variant="Secondary"
           />
           <Button
@@ -749,7 +887,7 @@ function AdminClubDetail() {
               setIsActionsVisible(false);
               setActiveTab('danger');
             }}
-            title="Ouvrir la Danger zone"
+            title={t('adminClubDetail.openDanger', 'Ouvrir la Danger zone')}
             variant="SecondaryLight"
           />
         </View>
@@ -757,13 +895,13 @@ function AdminClubDetail() {
 
       <BottomModal close={closeRelationModal} isVisible={Boolean(relationConfig)} snapPoints={['82%']}>
         <Text style={[Fonts.h3, Fonts.neutral00]}>
-          Ajouter
+          {t('adminClubDetail.add', 'Ajouter')}
           {' '}
           {relationConfig?.label || ''}
         </Text>
         <TextInput
           onChangeText={setRelationQuery}
-          placeholder="Rechercher une entrée"
+          placeholder={t('adminClubDetail.relationSearchPlaceholder', 'Rechercher une entrée')}
           placeholderTextColor={Colors.neutral300}
           style={[
             panelStyle,
@@ -776,7 +914,7 @@ function AdminClubDetail() {
         />
         <TextInput
           onChangeText={setRelationReason}
-          placeholder="Raison d'audit"
+          placeholder={t('adminClubDetail.auditReasonPlaceholder', "Raison d'audit")}
           placeholderTextColor={Colors.neutral300}
           style={[
             panelStyle,
@@ -791,7 +929,7 @@ function AdminClubDetail() {
           isLoading={relationSearchMutation.isPending}
           onPress={searchRelations}
           style={Spaces.marginTop[12]}
-          title="Rechercher"
+          title={t('adminClubDetail.search', 'Rechercher')}
         />
         <View style={[Spaces.gap[10], Spaces.marginTop[14]]}>
           {relationResults.map((item) => (
@@ -803,7 +941,7 @@ function AdminClubDetail() {
                 isLoading={updateRelationMutation.isPending}
                 onPress={() => mutateRelation('connect', item)}
                 size="sm"
-                title="Ajouter"
+                title={t('adminClubDetail.add', 'Ajouter')}
               />
             </View>
           ))}
@@ -811,14 +949,19 @@ function AdminClubDetail() {
       </BottomModal>
 
       <BottomModal close={() => setIsDeleteVisible(false)} isVisible={isDeleteVisible} snapPoints={['46%']}>
-        <Text style={[Fonts.h3, { color: Colors.error500 }]}>Supprimer le club</Text>
+        <Text style={[Fonts.h3, { color: Colors.error500 }]}>
+          {t('adminClubDetail.delete.title', 'Supprimer le club')}
+        </Text>
         <Text style={[Fonts.p2, { color: Colors.neutral300 }, Spaces.marginTop[8]]}>
-          Cette action est irreversible. Ajoute une raison pour l audit.
+          {t(
+            'adminClubDetail.delete.description',
+            'Cette action est irreversible. Ajoute une raison pour l audit.',
+          )}
         </Text>
         <TextInput
           multiline
           onChangeText={setDeleteReason}
-          placeholder="Raison obligatoire"
+          placeholder={t('adminClubDetail.delete.reasonPlaceholder', 'Raison obligatoire')}
           placeholderTextColor={Colors.neutral300}
           style={[
             panelStyle,
@@ -831,8 +974,16 @@ function AdminClubDetail() {
           value={deleteReason}
         />
         <View style={[Spaces.gap[10], Spaces.marginTop[14]]}>
-          <Button isLoading={deleteMutation.isPending} onPress={confirmDelete} title="Confirmer la suppression" />
-          <Button onPress={() => setIsDeleteVisible(false)} title="Annuler" variant="Secondary" />
+          <Button
+            isLoading={deleteMutation.isPending}
+            onPress={confirmDelete}
+            title={t('adminClubDetail.delete.confirm', 'Confirmer la suppression')}
+          />
+          <Button
+            onPress={() => setIsDeleteVisible(false)}
+            title={t('adminClubDetail.cancel', 'Annuler')}
+            variant="Secondary"
+          />
         </View>
       </BottomModal>
     </ScreenContainer>

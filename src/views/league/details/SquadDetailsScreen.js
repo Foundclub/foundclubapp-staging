@@ -1,6 +1,7 @@
 import { BottomTabBarHeightContext } from '@react-navigation/bottom-tabs';
 import { useFocusEffect } from '@react-navigation/native';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import i18next from 'i18next';
 import {
   useCallback, useContext, useEffect, useMemo, useRef, useState,
 } from 'react';
@@ -13,6 +14,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import useAuth from '@/domains/auth/useAuth';
 import useClub from '@/domains/club/useClub';
+import localeDesFormats from '@/theme/strings/localeDesFormats';
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -79,25 +82,25 @@ import useLeagueLegalAcceptance from '@/hooks/useLeagueLegalAcceptance';
 import { PHOTO_PICKER_LIMITS } from '@/platform/media/photoLimits';
 import SharePlatform from '@/platform/share';
 
-const slotDayLabels = {
-  friday: 'Vendredi',
-  monday: 'Lundi',
-  saturday: 'Samedi',
-  sunday: 'Dimanche',
-  thursday: 'Jeudi',
-  tuesday: 'Mardi',
-  wednesday: 'Mercredi',
-};
+const slotDayLabels = () => ({
+  friday: i18next.t('squadDetailsScreen.days.friday', 'Vendredi'),
+  monday: i18next.t('squadDetailsScreen.days.monday', 'Lundi'),
+  saturday: i18next.t('squadDetailsScreen.days.saturday', 'Samedi'),
+  sunday: i18next.t('squadDetailsScreen.days.sunday', 'Dimanche'),
+  thursday: i18next.t('squadDetailsScreen.days.thursday', 'Jeudi'),
+  tuesday: i18next.t('squadDetailsScreen.days.tuesday', 'Mardi'),
+  wednesday: i18next.t('squadDetailsScreen.days.wednesday', 'Mercredi'),
+});
 
-const slotDayShortLabels = {
-  friday: 'Ven',
-  monday: 'Lun',
-  saturday: 'Sam',
-  sunday: 'Dim',
-  thursday: 'Jeu',
-  tuesday: 'Mar',
-  wednesday: 'Mer',
-};
+const slotDayShortLabels = () => ({
+  friday: i18next.t('squadDetailsScreen.daysShort.friday', 'Ven'),
+  monday: i18next.t('squadDetailsScreen.daysShort.monday', 'Lun'),
+  saturday: i18next.t('squadDetailsScreen.daysShort.saturday', 'Sam'),
+  sunday: i18next.t('squadDetailsScreen.daysShort.sunday', 'Dim'),
+  thursday: i18next.t('squadDetailsScreen.daysShort.thursday', 'Jeu'),
+  tuesday: i18next.t('squadDetailsScreen.daysShort.tuesday', 'Mar'),
+  wednesday: i18next.t('squadDetailsScreen.daysShort.wednesday', 'Mer'),
+});
 
 const slotWeekdayOrder = {
   friday: 5,
@@ -163,10 +166,14 @@ const resolveUpcomingSlot = (slots = []) => {
 };
 
 const formatLeagueMatchDate = (value) => {
-  if (!value) return 'Date à définir';
+  if (!value) {
+    return i18next.t('squadDetailsScreen.dateToBeDecided', 'Date à définir');
+  }
   const parsed = new Date(String(value));
-  if (Number.isNaN(parsed.getTime())) return 'Date à définir';
-  return parsed.toLocaleDateString('fr-FR', {
+  if (Number.isNaN(parsed.getTime())) {
+    return i18next.t('squadDetailsScreen.dateToBeDecided', 'Date à définir');
+  }
+  return parsed.toLocaleDateString(localeDesFormats(), {
     day: 'numeric',
     month: 'short',
   });
@@ -178,28 +185,28 @@ const getLeagueResultMeta = (result, Colors) => {
       return {
         backgroundColor: `${Colors.warning500}16`,
         borderColor: `${Colors.warning500}40`,
-        label: 'Nul',
+        label: i18next.t('squadDetailsScreen.results.draw', 'Nul'),
         textColor: Colors.warning500,
       };
     case 'loss':
       return {
         backgroundColor: `${Colors.error500}16`,
         borderColor: `${Colors.error500}40`,
-        label: 'Defaite',
+        label: i18next.t('squadDetailsScreen.results.loss', 'Defaite'),
         textColor: Colors.error500,
       };
     case 'win':
       return {
         backgroundColor: `${Colors.success500}16`,
         borderColor: `${Colors.success500}40`,
-        label: 'Victoire',
+        label: i18next.t('squadDetailsScreen.results.win', 'Victoire'),
         textColor: Colors.success500,
       };
     default:
       return {
         backgroundColor: `${Colors.primary500}12`,
         borderColor: `${Colors.primary500}30`,
-        label: 'En attente',
+        label: i18next.t('squadDetailsScreen.results.pending', 'En attente'),
         textColor: Colors.primary100,
       };
   }
@@ -365,18 +372,31 @@ function SquadDetailsScreen({ navigation, route }) {
   const hasInvitation = useMemo(() => team?.invitations?.some((/** @type {User} */ u) => u.documentId === currentUser?.documentId), [team, currentUser]);
   const shouldShowFixedJoinButton = !isCaptain && !isMember && !hasInvitation;
   const fixedJoinButtonTitle = (() => {
-    if (isShareInviteLink) return 'Rejoindre la squad';
-    if (hasPendingRequest) return 'Demande en attente';
-    return 'Demander à rejoindre';
+    if (isShareInviteLink) {
+      return t('squadDetailsScreen.joinSquad', 'Rejoindre la squad');
+    }
+    if (hasPendingRequest) {
+      return t('squadDetailsScreen.requestPending', 'Demande en attente');
+    }
+    return t('squadDetailsScreen.requestToJoin', 'Demander à rejoindre');
   })();
   const fixedJoinButtonHelperText = (() => {
     if (isShareInviteLink) {
-      return 'Ce lien te permet de rejoindre directement la squad';
+      return t(
+        'squadDetailsScreen.joinHelper.inviteLink',
+        'Ce lien te permet de rejoindre directement la squad',
+      );
     }
     if (hasPendingRequest) {
-      return 'Ta demande attend la validation du capitaine';
+      return t(
+        'squadDetailsScreen.joinHelper.pending',
+        'Ta demande attend la validation du capitaine',
+      );
     }
-    return 'Envoyer une demande au capitaine de la squad';
+    return t(
+      'squadDetailsScreen.joinHelper.request',
+      'Envoyer une demande au capitaine de la squad',
+    );
   })();
   const isFixedJoinButtonDisabled = hasPendingRequest && !isShareInviteLink;
   const scrollBottomPadding = shouldShowFixedJoinButton
@@ -424,51 +444,98 @@ function SquadDetailsScreen({ navigation, route }) {
   const nextSlot = useMemo(() => resolveUpcomingSlot(team?.slots || []), [team?.slots]);
   const pendingRequestsCount = Number(team?.join_requests?.length || 0);
   const nextSlotShortLabel = useMemo(() => {
-    if (!nextSlot) return 'À définir';
-    return `${slotDayShortLabels[nextSlot.recurrenceDay] || 'A venir'} · ${formatSlotHour(nextSlot?.start_hour)}`;
-  }, [nextSlot]);
+    if (!nextSlot) {
+      return t('squadDetailsScreen.toBeDecided', 'À définir');
+    }
+    return `${slotDayShortLabels()[nextSlot.recurrenceDay] || t(
+      'squadDetailsScreen.nextSlot.upcoming',
+      'A venir',
+    )} · ${formatSlotHour(nextSlot?.start_hour)}`;
+  }, [nextSlot, t]);
   const nextSlotLongLabel = useMemo(() => {
-    if (!nextSlot) return 'Ajoute un créneau pour lancer ton rythme.';
-    return `${slotDayLabels[nextSlot.recurrenceDay] || 'Jour'} · ${formatSlotHour(nextSlot?.start_hour)} - ${formatSlotHour(nextSlot?.end_hour)}`;
-  }, [nextSlot]);
+    if (!nextSlot) {
+      return t('squadDetailsScreen.nextSlot.addSlot', 'Ajoute un créneau pour lancer ton rythme.');
+    }
+    return `${slotDayLabels()[nextSlot.recurrenceDay] || t(
+      'squadDetailsScreen.nextSlot.day',
+      'Jour',
+    )} · ${formatSlotHour(nextSlot?.start_hour)} - ${formatSlotHour(nextSlot?.end_hour)}`;
+  }, [nextSlot, t]);
   const squadStatusChip = useMemo(() => {
-    if (isCaptain) return { label: 'Capitaine', tone: 'gold' };
-    if (hasInvitation) return { label: 'Invitation reçue', tone: 'blue' };
-    if (hasPendingRequest) return { label: 'Demande en attente', tone: 'blue' };
-    if (isMember) return { label: 'Membre', tone: 'blue' };
-    return { label: 'Squad ouverte', tone: 'blue' };
-  }, [hasInvitation, hasPendingRequest, isCaptain, isMember]);
+    if (isCaptain) {
+      return {
+        label: t('squadDetailsScreen.captain', 'Capitaine'),
+        tone: 'gold',
+      };
+    }
+    if (hasInvitation) {
+      return {
+        label: t('squadDetailsScreen.status.invitationReceived', 'Invitation reçue'),
+        tone: 'blue',
+      };
+    }
+    if (hasPendingRequest) {
+      return {
+        label: t('squadDetailsScreen.requestPending', 'Demande en attente'),
+        tone: 'blue',
+      };
+    }
+    if (isMember) {
+      return {
+        label: t('squadDetailsScreen.status.member', 'Membre'),
+        tone: 'blue',
+      };
+    }
+    return {
+      label: t('squadDetailsScreen.status.openSquad', 'Squad ouverte'),
+      tone: 'blue',
+    };
+  }, [hasInvitation, hasPendingRequest, isCaptain, isMember, t]);
   const nextSlotParticipantsCount = Number(nextSlot?.participants?.length || 0);
   const nextSlotRemainingCount = Math.max(0, requiredPlayers - nextSlotParticipantsCount);
   const nextSlotStatus = useMemo(() => {
     if (!nextSlot) {
       return {
-        badge: 'Aucun créneau',
-        helper: 'Ajoute un créneau pour donner un premier point de rendez-vous à la squad.',
+        badge: t('squadDetailsScreen.slotStatus.none.badge', 'Aucun créneau'),
+        helper: t(
+          'squadDetailsScreen.slotStatus.none.helper',
+          'Ajoute un créneau pour donner un premier point de rendez-vous à la squad.',
+        ),
       };
     }
     if (nextSlotParticipantsCount >= requiredPlayers) {
       return {
-        badge: 'Prêt à jouer',
-        helper: 'Le prochain créneau est complet. La squad a déjà assez de monde pour se lancer.',
+        badge: t('squadDetailsScreen.slotStatus.ready.badge', 'Prêt à jouer'),
+        helper: t(
+          'squadDetailsScreen.slotStatus.ready.helper',
+          'Le prochain créneau est complet. La squad a déjà assez de monde pour se lancer.',
+        ),
       };
     }
     if (nextSlotParticipantsCount >= Math.max(requiredPlayers - 2, 1)) {
       return {
-        badge: 'Presque prêt',
-        helper: `Encore ${nextSlotRemainingCount} présence${nextSlotRemainingCount > 1 ? 's' : ''} pour atteindre le format ideal.`,
+        badge: t('squadDetailsScreen.slotStatus.almost.badge', 'Presque prêt'),
+        helper: t('squadDetailsScreen.slotStatus.almost.helper', {
+          count: nextSlotRemainingCount,
+          defaultValue_one: 'Encore {{count}} présence pour atteindre le format ideal.',
+          defaultValue_other: 'Encore {{count}} présences pour atteindre le format ideal.',
+        }),
       };
     }
     return {
-      badge: 'A renforcer',
-      helper: `Seulement ${nextSlotParticipantsCount} présence${nextSlotParticipantsCount > 1 ? 's' : ''} pour le moment. Il faut encore mobiliser la squad.`,
+      badge: t('squadDetailsScreen.slotStatus.weak.badge', 'A renforcer'),
+      helper: t('squadDetailsScreen.slotStatus.weak.helper', {
+        count: nextSlotParticipantsCount,
+        defaultValue_one: 'Seulement {{count}} présence pour le moment. Il faut encore mobiliser la squad.',
+        defaultValue_other: 'Seulement {{count}} présences pour le moment. Il faut encore mobiliser la squad.',
+      }),
     };
-  }, [nextSlot, nextSlotParticipantsCount, nextSlotRemainingCount, requiredPlayers]);
+  }, [nextSlot, nextSlotParticipantsCount, nextSlotRemainingCount, requiredPlayers, t]);
   const rosterSignals = useMemo(() => {
     const signals = [
       {
         key: 'members',
-        label: 'Membres',
+        label: t('squadDetailsScreen.signals.members', 'Membres'),
         value: `${rosterCount}`,
       },
     ];
@@ -476,7 +543,7 @@ function SquadDetailsScreen({ navigation, route }) {
     if (isCaptain) {
       signals.push({
         key: 'requests',
-        label: 'Demandes',
+        label: t('squadDetailsScreen.signals.requests', 'Demandes'),
         value: `${pendingRequestsCount}`,
       });
       signals.push({
@@ -487,28 +554,39 @@ function SquadDetailsScreen({ navigation, route }) {
     } else {
       signals.push({
         key: 'captain',
-        label: captainCount > 1 ? 'Capitaines' : 'Capitaine',
+        label: t('squadDetailsScreen.captainsLabel', {
+          count: captainCount,
+          defaultValue_one: 'Capitaine',
+          defaultValue_other: 'Capitaines',
+        }),
         value: captainMembers.length > 0
           ? captainMembers
-            .map((captain) => `${captain?.firstname || ''} ${captain?.lastname || ''}`.trim() || captain?.username || 'Capitaine')
+            .map((captain) => `${captain?.firstname || ''} ${captain?.lastname || ''}`.trim() || captain?.username || t(
+              'squadDetailsScreen.captain',
+              'Capitaine',
+            ))
             .filter(Boolean)
             .join(', ')
-          : 'À définir',
+          : t('squadDetailsScreen.toBeDecided', 'À définir'),
       });
       signals.push({
         key: 'status',
-        label: 'Statut',
+        label: t('squadDetailsScreen.signals.status', 'Statut'),
         value: squadStatusChip.label,
       });
     }
 
     return signals;
-  }, [captainCount, captainMembers, isCaptain, pendingRequestsCount, rosterCount, squadStatusChip.label, team?.invitations?.length]);
+  }, [captainCount, captainMembers, isCaptain, pendingRequestsCount, rosterCount, squadStatusChip.label, t, team?.invitations?.length]);
   const nextSlotActionLabel = useMemo(() => {
-    if (isCaptain) return 'Animer la squad';
-    if (isMember) return 'Confirmer ma présence';
-    return 'Rejoindre la squad';
-  }, [isCaptain, isMember]);
+    if (isCaptain) {
+      return t('squadDetailsScreen.nextSlotAction.captain', 'Animer la squad');
+    }
+    if (isMember) {
+      return t('squadDetailsScreen.nextSlotAction.member', 'Confirmer ma présence');
+    }
+    return t('squadDetailsScreen.joinSquad', 'Rejoindre la squad');
+  }, [isCaptain, isMember, t]);
   const leagueCardBg = 'rgba(10, 28, 43, 0.84)';
   const leagueCardBorder = 'rgba(1, 179, 244, 0.24)';
 
@@ -548,7 +626,9 @@ function SquadDetailsScreen({ navigation, route }) {
 
   const statisticsMode = leaguePerformanceStats?.mode || (normalizedLeagueSport === 'padel' ? 'padel_light' : 'football_full');
   const isPadelStatisticsMode = statisticsMode === 'padel_light';
-  const statisticsModeLabel = isPadelStatisticsMode ? 'Padel light' : 'Football complet';
+  const statisticsModeLabel = isPadelStatisticsMode
+    ? 'Padel light'
+    : t('squadDetailsScreen.statisticsMode.football', 'Football complet');
 
   const rankingEntries = useMemo(
     () => (Array.isArray(rankingData) ? rankingData : []),
@@ -607,14 +687,17 @@ function SquadDetailsScreen({ navigation, route }) {
     if (streak > 0) {
       streakLabel = `x${streak}`;
     } else if (streak < 0) {
-      streakLabel = 'Defaite';
+      streakLabel = t('squadDetailsScreen.competition.streakLoss', 'Defaite');
     }
 
     return [
       {
         key: 'division',
         label: 'Division',
-        value: team?.division ? `DIV ${team.division}` : 'À définir',
+        value: team?.division ? `DIV ${team.division}` : t(
+          'squadDetailsScreen.toBeDecided',
+          'À définir',
+        ),
       },
       {
         key: 'divisionPoints',
@@ -628,31 +711,38 @@ function SquadDetailsScreen({ navigation, route }) {
       },
       {
         key: 'rank',
-        label: 'Classement',
-        value: squadRank ? `#${squadRank}` : 'En attente',
+        label: t('squadDetailsScreen.competition.rank', 'Classement'),
+        value: squadRank ? `#${squadRank}` : t(
+          'squadDetailsScreen.competition.rankPending',
+          'En attente',
+        ),
       },
       {
         key: 'record',
-        label: 'Bilan',
-        value: `${Number(team?.wins || 0)}V ${Number(team?.draws || 0)}N ${Number(team?.losses || 0)}D`,
+        label: t('squadDetailsScreen.competition.record', 'Bilan'),
+        value: t('squadDetailsScreen.competition.recordValue', '{{wins}}V {{draws}}N {{losses}}D', {
+          draws: Number(team?.draws || 0),
+          losses: Number(team?.losses || 0),
+          wins: Number(team?.wins || 0),
+        }),
       },
       {
         key: 'streak',
-        label: 'Serie',
+        label: t('squadDetailsScreen.competition.streak', 'Serie'),
         value: streakLabel,
       },
       {
         key: 'highestStreak',
-        label: 'Meilleure série',
+        label: t('squadDetailsScreen.competition.highestStreak', 'Meilleure série'),
         value: `x${highestStreak}`,
       },
       {
         key: 'reliability',
-        label: 'Fiabilite',
+        label: t('squadDetailsScreen.competition.reliability', 'Fiabilite'),
         value: `${Number(team?.reliability_score || 0)}%`,
       },
     ];
-  }, [squadRank, team?.division, team?.divisionPoints, team?.division_points, team?.draws, team?.elo, team?.highestStreak, team?.highest_streak, team?.losses, team?.reliability_score, team?.streak, team?.wins]);
+  }, [squadRank, team?.division, team?.divisionPoints, team?.division_points, team?.draws, team?.elo, team?.highestStreak, team?.highest_streak, team?.losses, team?.reliability_score, team?.streak, team?.wins, t]);
 
   const getPlayerDisplayName = useCallback((player) => {
     const fullName = `${player?.firstname || ''} ${player?.lastname || ''}`.trim();
@@ -669,8 +759,17 @@ function SquadDetailsScreen({ navigation, route }) {
     const inviterName = [currentUser?.firstname, currentUser?.lastname].filter(Boolean).join(' ').trim();
     const squadName = String(team?.name || '').trim();
     const intro = inviterName
-      ? `${inviterName} t'invite à rejoindre sa squad${squadName ? ` ${squadName}` : ''} sur FoundClub League.`
-      : `Rejoins${squadName ? ` la squad ${squadName}` : ' une squad'} sur FoundClub League.`;
+      ? t(
+        'squadDetailsScreen.share.introFromInviter',
+        "{{inviterName}} t'invite à rejoindre sa squad{{squadSuffix}} sur FoundClub League.",
+        { inviterName, squadSuffix: squadName ? ` ${squadName}` : '', ...SANS_ECHAPPEMENT },
+      )
+      : t('squadDetailsScreen.share.introAnonymous', 'Rejoins{{squadPart}} sur FoundClub League.', {
+        squadPart: squadName
+          ? t('squadDetailsScreen.share.theSquad', ' la squad {{squadName}}', { squadName, ...SANS_ECHAPPEMENT })
+          : t('squadDetailsScreen.share.aSquad', ' une squad'),
+        ...SANS_ECHAPPEMENT,
+      });
     const shareUrl = buildInstallLandingUrl({
       id: squadId,
       invite: true,
@@ -679,16 +778,21 @@ function SquadDetailsScreen({ navigation, route }) {
     });
     const message = buildShareMessageWithUrl({
       intro,
-      linkLabel: 'Ouvrir dans FoundClub',
+      linkLabel: t('squadDetailsScreen.share.linkLabel', 'Ouvrir dans FoundClub'),
       url: shareUrl,
     });
 
     SharePlatform.share({
       message,
-      title: inviterName ? `${inviterName} t'invite` : `Rejoins ${squadName || 'une squad'}`,
+      title: inviterName
+        ? t('squadDetailsScreen.share.titleFromInviter', "{{inviterName}} t'invite", { inviterName, ...SANS_ECHAPPEMENT })
+        : t('squadDetailsScreen.share.titleAnonymous', 'Rejoins {{squadName}}', {
+          squadName: squadName || t('squadDetailsScreen.share.aSquadShort', 'une squad'),
+          ...SANS_ECHAPPEMENT,
+        }),
       url: shareUrl,
     }).catch(() => undefined);
-  }, [currentUser?.firstname, currentUser?.lastname, safeTeamId, team?.documentId, team?.name]);
+  }, [currentUser?.firstname, currentUser?.lastname, safeTeamId, t, team?.documentId, team?.name]);
 
   const promptShareInviteAuthentication = useCallback(() => {
     if (!safeTeamId) return;
@@ -738,7 +842,7 @@ function SquadDetailsScreen({ navigation, route }) {
         scope: LEAGUE_LEGAL_SCOPES.TEAM_INVITATION_ACCEPT,
         sourceScreen: 'squad_details_share_invite_accept',
         targetDocumentId: safeTeamId,
-        targetLabel: team?.name || 'Squad League',
+        targetLabel: team?.name || t('squadDetailsScreen.legalTargetFallback', 'Squad League'),
         targetType: 'league_team',
       });
       if (!legalAcceptance) return;
@@ -828,7 +932,7 @@ function SquadDetailsScreen({ navigation, route }) {
         scope: LEAGUE_LEGAL_SCOPES.TEAM_JOIN_REQUEST,
         sourceScreen: 'squad_details_join_request',
         targetDocumentId: safeTeamId,
-        targetLabel: team?.name || 'Squad League',
+        targetLabel: team?.name || t('squadDetailsScreen.legalTargetFallback', 'Squad League'),
         targetType: 'league_team',
       });
       if (!legalAcceptance) return;
@@ -882,7 +986,7 @@ function SquadDetailsScreen({ navigation, route }) {
           scope: LEAGUE_LEGAL_SCOPES.TEAM_INVITATION_ACCEPT,
           sourceScreen: 'squad_details_invitation_accept',
           targetDocumentId: safeTeamId,
-          targetLabel: team?.name || 'Squad League',
+          targetLabel: team?.name || t('squadDetailsScreen.legalTargetFallback', 'Squad League'),
           targetType: 'league_team',
         });
         if (!legalAcceptance) return;
@@ -967,8 +1071,8 @@ function SquadDetailsScreen({ navigation, route }) {
    */
   const handleImageUpload = (type) => { // type: 'logo' (mapped to crest) | 'cover'
     Alert.alert(
-      'Modifier la photo',
-      'Choisis une option',
+      t('squadDetailsScreen.photo.title', 'Modifier la photo'),
+      t('squadDetailsScreen.photo.subtitle', 'Choisis une option'),
       [
         {
           onPress: () => openImagePicker(type, 'camera'),
@@ -976,11 +1080,11 @@ function SquadDetailsScreen({ navigation, route }) {
         },
         {
           onPress: () => openImagePicker(type, 'library'),
-          text: 'Galerie',
+          text: t('squadDetailsScreen.photo.gallery', 'Galerie'),
         },
         {
           style: 'cancel',
-          text: 'Annuler',
+          text: t('squadDetailsScreen.photo.cancel', 'Annuler'),
         },
       ],
     );
@@ -1029,7 +1133,10 @@ function SquadDetailsScreen({ navigation, route }) {
       console.error(e);
       const pickerError = /** @type {{ code?: string }} */ (e);
       if (pickerError?.code !== 'E_PICKER_CANCELLED') {
-        Alert.alert('Erreur', 'Impossible de mettre à jour l\'image');
+        Alert.alert(
+          t('squadDetailsScreen.errorTitle', 'Erreur'),
+          t('squadDetailsScreen.photo.error', "Impossible de mettre à jour l'image"),
+        );
       }
     }
   };
@@ -1455,14 +1562,26 @@ function SquadDetailsScreen({ navigation, route }) {
       await resyncLeagueSourceTeam(safeTeamId);
       await refetch();
       queryClient.invalidateQueries({ queryKey: ['leagueTeam', safeTeamId] });
-      Alert.alert('Synchronisation terminée', "L'équipe source a été resynchronisee dans League.");
+      Alert.alert(
+        t('squadDetailsScreen.resync.successTitle', 'Synchronisation terminée'),
+        t(
+          'squadDetailsScreen.resync.successBody',
+          "L'équipe source a été resynchronisee dans League.",
+        ),
+      );
     } catch (error) {
       console.error(error);
-      Alert.alert('Erreur', "Impossible de resynchroniser l'équipe source pour le moment.");
+      Alert.alert(
+        t('squadDetailsScreen.errorTitle', 'Erreur'),
+        t(
+          'squadDetailsScreen.resync.error',
+          "Impossible de resynchroniser l'équipe source pour le moment.",
+        ),
+      );
     } finally {
       setIsUpdating(false);
     }
-  }, [isFootball11, queryClient, refetch, safeTeamId]);
+  }, [isFootball11, queryClient, refetch, safeTeamId, t]);
 
   const openCaptainActionsMenu = useCallback(() => {
     Alert.alert(
@@ -1485,7 +1604,7 @@ function SquadDetailsScreen({ navigation, route }) {
         ...(isFootball11
           ? [{
             onPress: handleResyncSourceTeam,
-            text: 'Resynchroniser l équipe source',
+            text: t('squadDetailsScreen.resync.action', 'Resynchroniser l équipe source'),
           }]
           : []),
         {
@@ -1507,10 +1626,12 @@ function SquadDetailsScreen({ navigation, route }) {
   }, [handleDeleteTeam, handleLeaveSquad, handleResyncSourceTeam, handleShare, isFootball11, navigation, openRequests, safeTeamId, t]);
 
   const dynamicSummaryLabel = useMemo(() => {
-    if (isCaptain) return 'Demandes';
+    if (isCaptain) {
+      return t('squadDetailsScreen.signals.requests', 'Demandes');
+    }
     if (team?.division) return 'Division';
     return 'ELO matchmaking';
-  }, [isCaptain, team?.division]);
+  }, [isCaptain, t, team?.division]);
 
   const dynamicSummaryValue = useMemo(() => {
     if (isCaptain) return `${pendingRequestsCount}`;
@@ -1521,17 +1642,17 @@ function SquadDetailsScreen({ navigation, route }) {
   const summaryCards = useMemo(() => [
     {
       key: 'members',
-      label: 'Effectif',
+      label: t('squadDetailsScreen.summary.roster', 'Effectif'),
       value: `${rosterCount}`,
     },
     {
       key: 'slots',
-      label: 'Créneaux',
+      label: t('squadDetailsScreen.summary.slots', 'Créneaux'),
       value: `${slotCount}`,
     },
     {
       key: 'next',
-      label: 'Prochain',
+      label: t('squadDetailsScreen.summary.next', 'Prochain'),
       value: nextSlotShortLabel,
     },
     {
@@ -1539,33 +1660,58 @@ function SquadDetailsScreen({ navigation, route }) {
       label: dynamicSummaryLabel,
       value: dynamicSummaryValue,
     },
-  ], [dynamicSummaryLabel, dynamicSummaryValue, nextSlotShortLabel, rosterCount, slotCount]);
+  ], [dynamicSummaryLabel, dynamicSummaryValue, nextSlotShortLabel, rosterCount, slotCount, t]);
 
   const actionCard = useMemo(() => {
     if (isCaptain) {
-      let description = 'Ajoute un premier créneau pour rendre la squad active.';
+      let description = t(
+        'squadDetailsScreen.actionCard.captain.noSlot',
+        'Ajoute un premier créneau pour rendre la squad active.',
+      );
       if (pendingRequestsCount > 0) {
         description = (
           <>
             <Text style={{ color: Colors.gold500 }}>{pendingRequestsCount}</Text>
             {' '}
-            demande
-            {pendingRequestsCount > 1 ? 's' : ''}
+            {t('squadDetailsScreen.actionCard.requests', {
+              count: pendingRequestsCount,
+              defaultValue_one: 'demande',
+              defaultValue_other: 'demandes',
+            })}
             {' '}
-            attend
-            {pendingRequestsCount > 1 ? 'ent' : ''}
+            {t('squadDetailsScreen.actionCard.awaits', {
+              count: pendingRequestsCount,
+              defaultValue_one: 'attend',
+              defaultValue_other: 'attendent',
+            })}
             {' '}
-            ta validation.
+            {t('squadDetailsScreen.actionCard.yourApproval', 'ta validation.')}
           </>
         );
       } else if (slotCount > 0) {
-        description = `Prochain créneau: ${nextSlotLongLabel}`;
+        description = t(
+          'squadDetailsScreen.actionCard.captain.nextSlot',
+          'Prochain créneau: {{nextSlotLongLabel}}',
+          { nextSlotLongLabel, ...SANS_ECHAPPEMENT },
+        );
       }
-      const primaryLabel = slotCount > 0 ? 'Gérer les créneaux' : 'Ajouter un créneau';
+      const primaryLabel = slotCount > 0 ? t(
+        'squadDetailsScreen.actionCard.captain.manageSlots',
+        'Gérer les créneaux',
+      ) : t(
+        'squadDetailsScreen.actionCard.captain.addSlot',
+        'Ajouter un créneau',
+      );
       const primaryPress = slotCount > 0
         ? () => handleScrollToSection('slots')
         : () => setIsSlotModalVisible(true);
-      const secondaryLabel = pendingRequestsCount > 0 ? 'Voir les demandes' : 'Inviter un joueur';
+      const secondaryLabel = pendingRequestsCount > 0 ? t(
+        'squadDetailsScreen.actionCard.captain.viewRequests',
+        'Voir les demandes',
+      ) : t(
+        'squadDetailsScreen.actionCard.captain.invitePlayer',
+        'Inviter un joueur',
+      );
       const secondaryPress = pendingRequestsCount > 0
         ? openRequests
         : handleShare;
@@ -1578,65 +1724,118 @@ function SquadDetailsScreen({ navigation, route }) {
         secondaryIsShareAction,
         secondaryLabel,
         secondaryPress,
-        title: pendingRequestsCount > 0 ? 'Ta squad attend ta validation' : 'Pilote ta squad',
+        title: pendingRequestsCount > 0 ? t(
+          'squadDetailsScreen.actionCard.captain.titlePending',
+          'Ta squad attend ta validation',
+        ) : t(
+          'squadDetailsScreen.actionCard.captain.title',
+          'Pilote ta squad',
+        ),
       };
     }
 
     if (isMember) {
       return {
         description: slotCount > 0
-          ? `Confirme ta présence sur ${nextSlotLongLabel}.`
-          : 'Aucun créneau défini pour le moment. Reviens bientôt ou contacte le capitaine.',
-        primaryLabel: slotCount > 0 ? 'Voir les créneaux' : "Voir l'effectif",
+          ? t(
+            'squadDetailsScreen.actionCard.member.confirm',
+            'Confirme ta présence sur {{nextSlotLongLabel}}.',
+            { nextSlotLongLabel, ...SANS_ECHAPPEMENT },
+          )
+          : t(
+            'squadDetailsScreen.actionCard.member.noSlot',
+            'Aucun créneau défini pour le moment. Reviens bientôt ou contacte le capitaine.',
+          ),
+        primaryLabel: slotCount > 0 ? t(
+          'squadDetailsScreen.actionCard.viewSlots',
+          'Voir les créneaux',
+        ) : t(
+          'squadDetailsScreen.actionCard.viewRoster',
+          "Voir l'effectif",
+        ),
         primaryPress: () => handleScrollToSection(slotCount > 0 ? 'slots' : 'effectif'),
-        secondaryLabel: canViewStatistics ? 'Voir les stats' : "Voir l'effectif",
+        secondaryLabel: canViewStatistics ? t(
+          'squadDetailsScreen.actionCard.member.viewStats',
+          'Voir les stats',
+        ) : t(
+          'squadDetailsScreen.actionCard.viewRoster',
+          "Voir l'effectif",
+        ),
         secondaryPress: canViewStatistics ? handleOpenStatisticsScreen : () => handleScrollToSection('effectif'),
-        title: 'Ton prochaine action',
+        title: t('squadDetailsScreen.actionCard.member.title', 'Ton prochaine action'),
       };
     }
 
     if (hasInvitation) {
       return {
-        description: 'Une invitation t\'attend. Accepte-la pour rejoindre la squad et participer aux prochains créneaux.',
-        primaryLabel: 'Accepter',
+        description: t(
+          'squadDetailsScreen.actionCard.invited.description',
+          "Une invitation t'attend. Accepte-la pour rejoindre la squad et participer aux prochains créneaux.", // eslint-disable-line max-len
+        ),
+        primaryLabel: t('squadDetailsScreen.actionCard.invited.accept', 'Accepter'),
         primaryPress: () => handleRespondToInvitation(true),
-        secondaryLabel: 'Refuser',
+        secondaryLabel: t('squadDetailsScreen.actionCard.invited.decline', 'Refuser'),
         secondaryPress: () => handleRespondToInvitation(false),
-        title: 'Invitation reçue',
+        title: t('squadDetailsScreen.status.invitationReceived', 'Invitation reçue'),
       };
     }
 
     if (isShareInviteLink) {
       return {
-        description: 'Ce lien t\'invite à rejoindre directement la squad. Confirme pour être ajoute a l effectif.',
-        primaryLabel: 'Rejoindre la squad',
+        description: t(
+          'squadDetailsScreen.actionCard.inviteLink.description',
+          "Ce lien t'invite à rejoindre directement la squad. Confirme pour être ajoute a l effectif.", // eslint-disable-line max-len
+        ),
+        primaryLabel: t('squadDetailsScreen.joinSquad', 'Rejoindre la squad'),
         primaryPress: handleAcceptShareInviteLink,
-        secondaryLabel: slotCount > 0 ? 'Voir les créneaux' : "Voir l'effectif",
+        secondaryLabel: slotCount > 0 ? t(
+          'squadDetailsScreen.actionCard.viewSlots',
+          'Voir les créneaux',
+        ) : t(
+          'squadDetailsScreen.actionCard.viewRoster',
+          "Voir l'effectif",
+        ),
         secondaryPress: () => handleScrollToSection(slotCount > 0 ? 'slots' : 'effectif'),
-        title: 'Invitation squad',
+        title: t('squadDetailsScreen.actionCard.inviteLink.title', 'Invitation squad'),
       };
     }
 
     if (hasPendingRequest) {
       return {
-        description: "Ta demande est bien envoyée. Tu peux déjà consulter les créneaux et l'effectif.",
-        primaryLabel: 'Annuler la demande',
+        description: t(
+          'squadDetailsScreen.actionCard.pending.description',
+          "Ta demande est bien envoyée. Tu peux déjà consulter les créneaux et l'effectif.",
+        ),
+        primaryLabel: t('squadDetailsScreen.actionCard.pending.cancel', 'Annuler la demande'),
         primaryPress: handleCancelJoinRequest,
-        secondaryLabel: 'Voir les créneaux',
+        secondaryLabel: t('squadDetailsScreen.actionCard.viewSlots', 'Voir les créneaux'),
         secondaryPress: () => handleScrollToSection('slots'),
-        title: 'Ta demande est en attente',
+        title: t('squadDetailsScreen.actionCard.pending.title', 'Ta demande est en attente'),
       };
     }
 
     return {
       description: slotCount > 0
-        ? `La squad vit déjà autour de ${nextSlotLongLabel}. Rejoins-la pour participer.`
-        : "Rejoins cette squad pour accéder aux créneaux et à l'effectif complet.",
-      primaryLabel: 'Demander à rejoindre',
+        ? t(
+          'squadDetailsScreen.actionCard.open.withSlot',
+          'La squad vit déjà autour de {{nextSlotLongLabel}}. Rejoins-la pour participer.',
+          { nextSlotLongLabel, ...SANS_ECHAPPEMENT },
+        )
+        : t(
+          'squadDetailsScreen.actionCard.open.noSlot',
+          "Rejoins cette squad pour accéder aux créneaux et à l'effectif complet.",
+        ),
+      primaryLabel: t('squadDetailsScreen.requestToJoin', 'Demander à rejoindre'),
       primaryPress: handleRequestJoin,
-      secondaryLabel: slotCount > 0 ? 'Voir les créneaux' : "Voir l'effectif",
+      secondaryLabel: slotCount > 0 ? t(
+        'squadDetailsScreen.actionCard.viewSlots',
+        'Voir les créneaux',
+      ) : t(
+        'squadDetailsScreen.actionCard.viewRoster',
+        "Voir l'effectif",
+      ),
       secondaryPress: () => handleScrollToSection(slotCount > 0 ? 'slots' : 'effectif'),
-      title: 'Rejoins cette squad',
+      title: t('squadDetailsScreen.actionCard.open.title', 'Rejoins cette squad'),
     };
   }, [
     handleAcceptShareInviteLink,
@@ -1657,6 +1856,7 @@ function SquadDetailsScreen({ navigation, route }) {
     canViewStatistics,
     handleOpenStatisticsScreen,
     Colors.gold500,
+    t,
   ]);
 
   const sectionShortcuts = useMemo(() => {
@@ -1665,7 +1865,7 @@ function SquadDetailsScreen({ navigation, route }) {
     if (canViewStatistics) {
       shortcuts.push({
         key: 'statistics',
-        label: 'Statistiques',
+        label: t('squadDetailsScreen.statistics', 'Statistiques'),
         onPress: handleOpenStatisticsScreen,
       });
     }
@@ -1673,12 +1873,12 @@ function SquadDetailsScreen({ navigation, route }) {
     shortcuts.push(
       {
         key: 'slots',
-        label: 'Créneaux',
+        label: t('squadDetailsScreen.summary.slots', 'Créneaux'),
         onPress: () => handleScrollToSection('slots'),
       },
       {
         key: 'effectif',
-        label: 'Effectif',
+        label: t('squadDetailsScreen.summary.roster', 'Effectif'),
         onPress: () => handleScrollToSection('effectif'),
       },
     );
@@ -1686,13 +1886,13 @@ function SquadDetailsScreen({ navigation, route }) {
     if (isCaptain) {
       shortcuts.push({
         key: 'requests',
-        label: 'Demandes',
+        label: t('squadDetailsScreen.signals.requests', 'Demandes'),
         onPress: openRequests,
       });
     }
 
     return shortcuts;
-  }, [canViewStatistics, handleOpenStatisticsScreen, handleScrollToSection, isCaptain, openRequests]);
+  }, [canViewStatistics, handleOpenStatisticsScreen, handleScrollToSection, isCaptain, openRequests, t]);
 
   const heroAnimatedStyle = useMemo(() => ({
     opacity: heroEntry,
@@ -1721,10 +1921,13 @@ function SquadDetailsScreen({ navigation, route }) {
   if (!safeTeamId) {
     return (
       <LeagueStateView
-        actionLabel="Retour"
-        description="L'identifiant de la squad est manquant. Ouvre la fiche depuis la recherche League ou le dashboard."
+        actionLabel={t('squadDetailsScreen.back', 'Retour')}
+        description={t(
+          'squadDetailsScreen.states.missingId',
+          "L'identifiant de la squad est manquant. Ouvre la fiche depuis la recherche League ou le dashboard.", // eslint-disable-line max-len
+        )}
         onAction={() => navigation.goBack()}
-        title="Squad introuvable"
+        title={t('squadDetailsScreen.states.notFound', 'Squad introuvable')}
       />
     );
   }
@@ -1732,9 +1935,12 @@ function SquadDetailsScreen({ navigation, route }) {
   if (isLoading && !team) {
     return (
       <LeagueStateView
-        description="Chargement de la fiche squad et des signaux League."
+        description={t(
+          'squadDetailsScreen.states.loadingDescription',
+          'Chargement de la fiche squad et des signaux League.',
+        )}
         isLoading
-        title="Chargement de la squad"
+        title={t('squadDetailsScreen.states.loadingTitle', 'Chargement de la squad')}
       />
     );
   }
@@ -1742,10 +1948,13 @@ function SquadDetailsScreen({ navigation, route }) {
   if (teamError) {
     return (
       <LeagueStateView
-        actionLabel="Réessayer"
-        description="Impossible de charger cette squad League pour le moment. Relance le chargement ou reviens à la recherche."
+        actionLabel={t('squadDetailsScreen.states.retry', 'Réessayer')}
+        description={t(
+          'squadDetailsScreen.states.errorDescription',
+          'Impossible de charger cette squad League pour le moment. Relance le chargement ou reviens à la recherche.', // eslint-disable-line max-len
+        )}
         onAction={() => refetch()}
-        title="Chargement impossible"
+        title={t('squadDetailsScreen.states.errorTitle', 'Chargement impossible')}
       />
     );
   }
@@ -1753,10 +1962,13 @@ function SquadDetailsScreen({ navigation, route }) {
   if (!team) {
     return (
       <LeagueStateView
-        actionLabel="Retour"
-        description="Cette squad League est introuvable ou n'est plus disponible."
+        actionLabel={t('squadDetailsScreen.back', 'Retour')}
+        description={t(
+          'squadDetailsScreen.states.unavailableDescription',
+          "Cette squad League est introuvable ou n'est plus disponible.",
+        )}
         onAction={() => navigation.goBack()}
-        title="Squad indisponible"
+        title={t('squadDetailsScreen.states.unavailableTitle', 'Squad indisponible')}
       />
     );
   }
@@ -1811,7 +2023,7 @@ function SquadDetailsScreen({ navigation, route }) {
                 }}
               >
                 <Text style={[Fonts.p3Bold, { color: Colors.error500 }]}>
-                  Demandes
+                  {t('squadDetailsScreen.signals.requests', 'Demandes')}
                 </Text>
                 <View style={{
                   alignItems: 'center',
@@ -1888,15 +2100,21 @@ function SquadDetailsScreen({ navigation, route }) {
             <View style={[Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween]}>
               <View style={{ flex: 1, paddingRight: 12 }}>
                 <Text style={[Fonts.p2Bold, { color: Colors.error500, marginBottom: 4 }]}>
-                  Validation capitaine en attente
+                  {t('squadDetailsScreen.captainQueue.title', 'Validation capitaine en attente')}
                 </Text>
                 <Text style={[Fonts.p3, { color: Colors.neutral100 }]}>
                   {pendingRequestsCount}
                   {' '}
-                  demande
-                  {pendingRequestsCount > 1 ? 's' : ''}
+                  {t('squadDetailsScreen.actionCard.requests', {
+                    count: pendingRequestsCount,
+                    defaultValue_one: 'demande',
+                    defaultValue_other: 'demandes',
+                  })}
                   {' '}
-                  attendent ta réponse. Ouvre la file pour accepter ou refuser rapidement.
+                  {t(
+                    'squadDetailsScreen.captainQueue.body',
+                    'attendent ta réponse. Ouvre la file pour accepter ou refuser rapidement.',
+                  )}
                 </Text>
               </View>
               <View
@@ -1909,7 +2127,9 @@ function SquadDetailsScreen({ navigation, route }) {
                   paddingVertical: 8,
                 }}
               >
-                <Text style={[Fonts.p3Bold, { color: Colors.error500 }]}>Voir</Text>
+                <Text style={[Fonts.p3Bold, { color: Colors.error500 }]}>
+                  {t('squadDetailsScreen.captainQueue.view', 'Voir')}
+                </Text>
               </View>
             </View>
           </TouchableOpacity>
@@ -2183,8 +2403,14 @@ function SquadDetailsScreen({ navigation, route }) {
             >
               <Text style={[Fonts.p2, { color: Colors.neutral200, marginBottom: 12 }]}>
                 {isPadelStatisticsMode
-                  ? 'Suis ton bilan League, ta position dans la division et l historique récent de la squad.'
-                  : 'Retrouve tes indicateurs League et les statistiques post-match de la squad au même endroit.'}
+                  ? t(
+                    'squadDetailsScreen.stats.introPadel',
+                    'Suis ton bilan League, ta position dans la division et l historique récent de la squad.', // eslint-disable-line max-len
+                  )
+                  : t(
+                    'squadDetailsScreen.stats.introFootball',
+                    'Retrouve tes indicateurs League et les statistiques post-match de la squad au même endroit.', // eslint-disable-line max-len
+                  )}
               </Text>
 
               <View style={{
@@ -2197,7 +2423,9 @@ function SquadDetailsScreen({ navigation, route }) {
               }}
               >
                 <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter, { marginBottom: 8 }]}>
-                  <Text style={[Fonts.h3Bold, { color: Colors.neutral00 }]}>Statistiques</Text>
+                  <Text style={[Fonts.h3Bold, { color: Colors.neutral00 }]}>
+                    {t('squadDetailsScreen.statistics', 'Statistiques')}
+                  </Text>
                   <View style={{
                     backgroundColor: `${Colors.primary500}14`,
                     borderColor: `${Colors.primary500}36`,
@@ -2214,12 +2442,20 @@ function SquadDetailsScreen({ navigation, route }) {
                 </View>
                 <Text style={[Fonts.p3, { color: Colors.neutral200 }]}>
                   {isPadelStatisticsMode
-                    ? 'La squad voit déjà ses résultats, son historique et ses indicateurs League. Les statistiques post-match détaillées padel arriveront dans un lot dédié.'
-                    : 'La squad suit ici sa compétition League, ses derniers matchs et les retours post-match publiés.'}
+                    ? t(
+                      'squadDetailsScreen.stats.hintPadel',
+                      'La squad voit déjà ses résultats, son historique et ses indicateurs League. Les statistiques post-match détaillées padel arriveront dans un lot dédié.', // eslint-disable-line max-len
+                    )
+                    : t(
+                      'squadDetailsScreen.stats.hintFootball',
+                      'La squad suit ici sa compétition League, ses derniers matchs et les retours post-match publiés.', // eslint-disable-line max-len
+                    )}
                 </Text>
               </View>
 
-              <Text style={[Fonts.h3Bold, { color: Colors.neutral00, marginBottom: 12 }]}>Compétition League</Text>
+              <Text style={[Fonts.h3Bold, { color: Colors.neutral00, marginBottom: 12 }]}>
+                {t('squadDetailsScreen.stats.competition', 'Compétition League')}
+              </Text>
               <View style={[Alignments.row, Alignments.wrap, Spaces.gap[12], { marginBottom: 14 }]}>
                 {competitionCards.map((item) => (
                   <View
@@ -2255,14 +2491,20 @@ function SquadDetailsScreen({ navigation, route }) {
               }}
               >
                 <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter, { marginBottom: 8 }]}>
-                  <Text style={[Fonts.h3Bold, { color: Colors.neutral00 }]}>Historique des matchs</Text>
+                  <Text style={[Fonts.h3Bold, { color: Colors.neutral00 }]}>
+                    {t('squadDetailsScreen.stats.history', 'Historique des matchs')}
+                  </Text>
                   <TouchableOpacity onPress={handleOpenFullHistory}>
-                    <Text style={[Fonts.p3Bold, { color: Colors.primary500 }]}>Voir tout</Text>
+                    <Text style={[Fonts.p3Bold, { color: Colors.primary500 }]}>
+                      {t('squadDetailsScreen.stats.viewAll', 'Voir tout')}
+                    </Text>
                   </TouchableOpacity>
                 </View>
 
                 {isLeaguePerformanceFetching && !hasRecentLeagueMatches ? (
-                  <Text style={[Fonts.p2, { color: Colors.neutral100 }]}>Chargement de l historique...</Text>
+                  <Text style={[Fonts.p2, { color: Colors.neutral100 }]}>
+                    {t('squadDetailsScreen.stats.loadingHistory', 'Chargement de l historique...')}
+                  </Text>
                 ) : null}
                 {!isLeaguePerformanceFetching && hasRecentLeagueMatches ? (
                   <View style={[Spaces.gap[10]]}>
@@ -2284,7 +2526,10 @@ function SquadDetailsScreen({ navigation, route }) {
                           <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter, { marginBottom: 8 }]}>
                             <View style={{ flex: 1, paddingRight: 12 }}>
                               <Text style={[Fonts.p2Bold, { color: Colors.neutral00, marginBottom: 4 }]}>
-                                {`vs ${matchItem?.opponent?.name || 'Adversaire'}`}
+                                {`vs ${matchItem?.opponent?.name || t(
+                                  'squadDetailsScreen.opponentFallback',
+                                  'Adversaire',
+                                )}`}
                               </Text>
                               <Text style={[Fonts.p4, { color: Colors.gold500 }]}>
                                 {formatLeagueMatchDate(matchItem?.date)}
@@ -2319,7 +2564,10 @@ function SquadDetailsScreen({ navigation, route }) {
                 ) : null}
                 {!isLeaguePerformanceFetching && !hasRecentLeagueMatches ? (
                   <Text style={[Fonts.p2, { color: Colors.neutral100 }]}>
-                    Aucun match League joue pour le moment.
+                    {t(
+                      'squadDetailsScreen.stats.noMatches',
+                      'Aucun match League joue pour le moment.',
+                    )}
                   </Text>
                 ) : null}
               </View>
@@ -2333,9 +2581,14 @@ function SquadDetailsScreen({ navigation, route }) {
                   padding: 14,
                 }}
                 >
-                  <Text style={[Fonts.h4Bold, { color: Colors.neutral00, marginBottom: 8 }]}>Bilan compétition</Text>
+                  <Text style={[Fonts.h4Bold, { color: Colors.neutral00, marginBottom: 8 }]}>
+                    {t('squadDetailsScreen.stats.competitionRecord', 'Bilan compétition')}
+                  </Text>
                   <Text style={[Fonts.p2, { color: Colors.neutral200, marginBottom: 10 }]}>
-                    Cet espace suit déjà les résultats League, ton classement et ton historique. Les statistiques post-match détaillées pour le padel ne sont pas encore actives dans cette V1.
+                    {t(
+                      'squadDetailsScreen.stats.padelV1',
+                      'Cet espace suit déjà les résultats League, ton classement et ton historique. Les statistiques post-match détaillées pour le padel ne sont pas encore actives dans cette V1.', // eslint-disable-line max-len
+                    )}
                   </Text>
                   <View style={[Alignments.row, Spaces.gap[12], { flexWrap: 'wrap' }]}>
                     <View style={{
@@ -2347,7 +2600,9 @@ function SquadDetailsScreen({ navigation, route }) {
                       padding: 10,
                     }}
                     >
-                      <Text style={[Fonts.p3Bold, { color: Colors.primary200, marginBottom: 4 }]}>Matchs</Text>
+                      <Text style={[Fonts.p3Bold, { color: Colors.primary200, marginBottom: 4 }]}>
+                        {t('squadDetailsScreen.stats.matches', 'Matchs')}
+                      </Text>
                       <Text style={[Fonts.h4Bold, { color: Colors.gold500 }]}>{Number(leaguePerformanceSummary.matches || recentLeagueMatches.length || 0)}</Text>
                     </View>
                     <View style={{
@@ -2359,7 +2614,9 @@ function SquadDetailsScreen({ navigation, route }) {
                       padding: 10,
                     }}
                     >
-                      <Text style={[Fonts.p3Bold, { color: Colors.primary200, marginBottom: 4 }]}>Score cumule</Text>
+                      <Text style={[Fonts.p3Bold, { color: Colors.primary200, marginBottom: 4 }]}>
+                        {t('squadDetailsScreen.stats.cumulativeScore', 'Score cumule')}
+                      </Text>
                       <Text style={[Fonts.h4Bold, { color: Colors.gold500 }]}>{`${leaguePerformanceSummary.scoreForTotal} - ${leaguePerformanceSummary.scoreAgainstTotal}`}</Text>
                     </View>
                     <View style={{
@@ -2378,14 +2635,28 @@ function SquadDetailsScreen({ navigation, route }) {
                 </View>
               ) : (
                 <View style={[Spaces.gap[14]]}>
-                  <Text style={[Fonts.h3Bold, { color: Colors.neutral00 }]}>Performance match</Text>
+                  <Text style={[Fonts.h3Bold, { color: Colors.neutral00 }]}>
+                    {t('squadDetailsScreen.stats.matchPerformance', 'Performance match')}
+                  </Text>
 
                   <View style={[Alignments.row, Alignments.wrap, Spaces.gap[12]]}>
                     {[
-                      { label: 'Matchs', value: leaguePerformanceSummary.matches },
-                      { label: 'Minutes', value: leaguePerformanceSummary.minutesPlayed },
-                      { label: 'Buts', value: leaguePerformanceSummary.goals },
-                      { label: 'Passes décisives', value: leaguePerformanceSummary.assists },
+                      {
+                        label: t('squadDetailsScreen.stats.matches', 'Matchs'),
+                        value: leaguePerformanceSummary.matches,
+                      },
+                      {
+                        label: 'Minutes',
+                        value: leaguePerformanceSummary.minutesPlayed,
+                      },
+                      {
+                        label: t('squadDetailsScreen.stats.goals', 'Buts'),
+                        value: leaguePerformanceSummary.goals,
+                      },
+                      {
+                        label: t('squadDetailsScreen.stats.assists', 'Passes décisives'),
+                        value: leaguePerformanceSummary.assists,
+                      },
                     ].map((stat) => (
                       <View
                         key={stat.label}
@@ -2414,10 +2685,24 @@ function SquadDetailsScreen({ navigation, route }) {
                   }}
                   >
                     <Text style={[Fonts.p2Bold, { color: Colors.gold500, marginBottom: 4 }]}>
-                      {`Score cumule: ${leaguePerformanceSummary.scoreForTotal} - ${leaguePerformanceSummary.scoreAgainstTotal}`}
+                      {t(
+                        'squadDetailsScreen.stats.cumulativeScoreValue',
+                        'Score cumule: {{scoreFor}} - {{scoreAgainst}}',
+                        {
+                          scoreAgainst: leaguePerformanceSummary.scoreAgainstTotal,
+                          scoreFor: leaguePerformanceSummary.scoreForTotal,
+                        },
+                      )}
                     </Text>
                     <Text style={[Fonts.p3, { color: Colors.gold500 }]}>
-                      {`${leaguePerformanceSummary.cleanSheets} clean sheets - ${leaguePerformanceSummary.scoreAgainstTotal} buts encaissés`}
+                      {t(
+                        'squadDetailsScreen.stats.cleanSheets',
+                        '{{cleanSheets}} clean sheets - {{goalsAgainst}} buts encaissés',
+                        {
+                          cleanSheets: leaguePerformanceSummary.cleanSheets,
+                          goalsAgainst: leaguePerformanceSummary.scoreAgainstTotal,
+                        },
+                      )}
                     </Text>
                   </View>
 
@@ -2435,7 +2720,9 @@ function SquadDetailsScreen({ navigation, route }) {
                             width: '47%',
                           }}
                         >
-                          <Text style={[Fonts.p3Bold, { color: Colors.primary200, marginBottom: 8 }]}>Capitaine</Text>
+                          <Text style={[Fonts.p3Bold, { color: Colors.primary200, marginBottom: 8 }]}>
+                            {t('squadDetailsScreen.captain', 'Capitaine')}
+                          </Text>
                           <Text style={[Fonts.h4Bold, { color: Colors.gold500 }]}>{`${leaguePerformanceSummary.averageCollectiveRating}/10`}</Text>
                         </View>
                       ) : null}
@@ -2451,7 +2738,9 @@ function SquadDetailsScreen({ navigation, route }) {
                             width: '47%',
                           }}
                         >
-                          <Text style={[Fonts.p3Bold, { color: Colors.primary200, marginBottom: 8 }]}>Joueurs</Text>
+                          <Text style={[Fonts.p3Bold, { color: Colors.primary200, marginBottom: 8 }]}>
+                            {t('squadDetailsScreen.stats.players', 'Joueurs')}
+                          </Text>
                           <Text style={[Fonts.h4Bold, { color: Colors.gold500 }]}>{`${leaguePerformanceSummary.playerCollectiveRatingAverage}/10`}</Text>
                           <Text style={[Fonts.p4, { color: Colors.gold500 }]}>
                             {`${leaguePerformanceSummary.playerCollectiveRatingCount} note${leaguePerformanceSummary.playerCollectiveRatingCount > 1 ? 's' : ''}`}
@@ -2463,7 +2752,12 @@ function SquadDetailsScreen({ navigation, route }) {
 
                   {leaguePendingMatches.length ? (
                     <View style={[Spaces.gap[10]]}>
-                      <Text style={[Fonts.p3Bold, { color: Colors.neutral00 }]}>Réponses joueur en attente de validation équipe</Text>
+                      <Text style={[Fonts.p3Bold, { color: Colors.neutral00 }]}>
+                        {t(
+                          'squadDetailsScreen.reports.pendingTitle',
+                          'Réponses joueur en attente de validation équipe',
+                        )}
+                      </Text>
                       {leaguePendingMatches.map((pendingMatch, index) => (
                         <TouchableOpacity
                           activeOpacity={0.9}
@@ -2480,10 +2774,20 @@ function SquadDetailsScreen({ navigation, route }) {
                           <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter, { marginBottom: 8 }]}>
                             <View style={{ flex: 1, paddingRight: 12 }}>
                               <Text style={[Fonts.p2Bold, { color: Colors.neutral00, marginBottom: 4 }]}>
-                                {pendingMatch?.matchLabel || 'Match League'}
+                                {pendingMatch?.matchLabel || t(
+                                  'squadDetailsScreen.reports.matchFallback',
+                                  'Match League',
+                                )}
                               </Text>
                               <Text style={[Fonts.p4, { color: Colors.gold500 }]}>
-                                {`${Number(pendingMatch?.submittedResponses || 0)}/${Number(pendingMatch?.eligibleCount || 0)} joueurs ont repondu`}
+                                {t(
+                                  'squadDetailsScreen.reports.responses',
+                                  '{{responded}}/{{eligible}} joueurs ont repondu',
+                                  {
+                                    eligible: Number(pendingMatch?.eligibleCount || 0),
+                                    responded: Number(pendingMatch?.submittedResponses || 0),
+                                  },
+                                )}
                               </Text>
                             </View>
                             <View style={{
@@ -2496,13 +2800,22 @@ function SquadDetailsScreen({ navigation, route }) {
                             }}
                             >
                               <Text style={[Fonts.p4Bold, { color: Colors.primary100 }]}>
-                                {pendingMatch?.reportStatus === 'draft' ? 'Brouillon équipe' : 'En attente'}
+                                {pendingMatch?.reportStatus === 'draft'
+                                  ? t('squadDetailsScreen.reports.draft', 'Brouillon équipe')
+                                  : t('squadDetailsScreen.reports.pending', 'En attente')}
                               </Text>
                             </View>
                           </View>
                           {pendingMatch?.lastSubmittedAt ? (
                             <Text style={[Fonts.p4, { color: Colors.gold500 }]}>
-                              {`Dernière réponse le ${new Date(pendingMatch.lastSubmittedAt).toLocaleString('fr-FR')}`}
+                              {t(
+                                'squadDetailsScreen.reports.lastResponse',
+                                'Dernière réponse le {{date}}',
+                                {
+                                  date: new Date(pendingMatch.lastSubmittedAt).toLocaleString(localeDesFormats()),
+                                  ...SANS_ECHAPPEMENT,
+                                },
+                              )}
                             </Text>
                           ) : null}
                         </TouchableOpacity>
@@ -2512,7 +2825,9 @@ function SquadDetailsScreen({ navigation, route }) {
 
                   {leagueRecentReports.length ? (
                     <View style={[Spaces.gap[10]]}>
-                      <Text style={[Fonts.p3Bold, { color: Colors.neutral00 }]}>Derniers matchs renseignes</Text>
+                      <Text style={[Fonts.p3Bold, { color: Colors.neutral00 }]}>
+                        {t('squadDetailsScreen.reports.latestTitle', 'Derniers matchs renseignes')}
+                      </Text>
                       {leagueRecentReports.map((report, index) => (
                         <TouchableOpacity
                           activeOpacity={0.9}
@@ -2529,7 +2844,10 @@ function SquadDetailsScreen({ navigation, route }) {
                           <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter, { marginBottom: 8 }]}>
                             <View style={{ flex: 1, paddingRight: 12 }}>
                               <Text style={[Fonts.p2Bold, { color: Colors.neutral00, marginBottom: 4 }]}>
-                                {report?.matchLabel || 'Match League'}
+                                {report?.matchLabel || t(
+                                  'squadDetailsScreen.reports.matchFallback',
+                                  'Match League',
+                                )}
                               </Text>
                               <Text style={[Fonts.p4, { color: Colors.gold500 }]}>
                                 {`${Number(report?.scoreFor || 0)} - ${Number(report?.scoreAgainst || 0)}`}
@@ -2546,7 +2864,10 @@ function SquadDetailsScreen({ navigation, route }) {
                               }}
                               >
                                 <Text style={[Fonts.p4Bold, { color: Colors.gold500 }]}>
-                                  {report?.finalizedAt ? new Date(report.finalizedAt).toLocaleDateString('fr-FR') : 'Publie'}
+                                  {report?.finalizedAt ? new Date(report.finalizedAt).toLocaleDateString(localeDesFormats()) : t(
+                                    'squadDetailsScreen.reports.published',
+                                    'Publie',
+                                  )}
                                 </Text>
                               </View>
                               {report?.hasNewResponsesSincePublication ? (
@@ -2560,7 +2881,14 @@ function SquadDetailsScreen({ navigation, route }) {
                                 }}
                                 >
                                   <Text style={[Fonts.p4Bold, { color: Colors.gold500 }]}>
-                                    {report?.newResponsesCount > 1 ? `${report.newResponsesCount} nouvelles réponses` : 'Nouvelle réponse'}
+                                    {report?.newResponsesCount > 1 ? t(
+                                      'squadDetailsScreen.reports.newResponsesMany',
+                                      '{{count}} nouvelles réponses',
+                                      { count: report.newResponsesCount },
+                                    ) : t(
+                                      'squadDetailsScreen.reports.newResponseOne',
+                                      'Nouvelle réponse',
+                                    )}
                                   </Text>
                                 </View>
                               ) : null}
@@ -2577,7 +2905,13 @@ function SquadDetailsScreen({ navigation, route }) {
                                 paddingVertical: 4,
                               }}
                               >
-                                <Text style={[Fonts.p4Bold, { color: Colors.gold500 }]}>{`Capitaine ${report.collectiveRating}/10`}</Text>
+                                <Text style={[Fonts.p4Bold, { color: Colors.gold500 }]}>
+                                  {t(
+                                    'squadDetailsScreen.reports.captainRating',
+                                    'Capitaine {{rating}}/10',
+                                    { rating: report.collectiveRating },
+                                  )}
+                                </Text>
                               </View>
                             ) : null}
                             {report?.playerCollectiveRatingAverage !== null && report?.playerCollectiveRatingAverage !== undefined ? (
@@ -2590,12 +2924,25 @@ function SquadDetailsScreen({ navigation, route }) {
                                 paddingVertical: 4,
                               }}
                               >
-                                <Text style={[Fonts.p4Bold, { color: Colors.gold500 }]}>{`Joueurs ${report.playerCollectiveRatingAverage}/10`}</Text>
+                                <Text style={[Fonts.p4Bold, { color: Colors.gold500 }]}>
+                                  {t(
+                                    'squadDetailsScreen.reports.playersRating',
+                                    'Joueurs {{rating}}/10',
+                                    { rating: report.playerCollectiveRatingAverage },
+                                  )}
+                                </Text>
                               </View>
                             ) : null}
                           </View>
                           <Text style={[Fonts.p4, { color: Colors.gold500 }]}>
-                            {`${Number(report?.responseCompletionCount || 0)}/${Number(report?.responseEligibleCount || 0)} joueurs ont repondu`}
+                            {t(
+                              'squadDetailsScreen.reports.responses',
+                              '{{responded}}/{{eligible}} joueurs ont repondu',
+                              {
+                                eligible: Number(report?.responseEligibleCount || 0),
+                                responded: Number(report?.responseCompletionCount || 0),
+                              },
+                            )}
                           </Text>
                         </TouchableOpacity>
                       ))}
@@ -2604,7 +2951,9 @@ function SquadDetailsScreen({ navigation, route }) {
 
                   {leaguePerformancePlayers.length ? (
                     <View style={[Spaces.gap[10]]}>
-                      <Text style={[Fonts.p3Bold, { color: Colors.neutral00 }]}>Joueurs</Text>
+                      <Text style={[Fonts.p3Bold, { color: Colors.neutral00 }]}>
+                        {t('squadDetailsScreen.stats.players', 'Joueurs')}
+                      </Text>
                       {leaguePerformancePlayers.map((player, index) => (
                         <View
                           key={player?.documentId || player?.manualPlayerName || `league-player-${index}`}
@@ -2618,7 +2967,10 @@ function SquadDetailsScreen({ navigation, route }) {
                         >
                           <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter, { marginBottom: 8 }]}>
                             <Text style={[Fonts.p2Bold, { color: Colors.neutral00, flex: 1, paddingRight: 12 }]}>
-                              {player?.manualPlayerName || `${player?.firstname || ''} ${player?.lastname || ''}`.trim() || 'Joueur'}
+                              {player?.manualPlayerName || `${player?.firstname || ''} ${player?.lastname || ''}`.trim() || t(
+                                'squadDetailsScreen.stats.playerFallback',
+                                'Joueur',
+                              )}
                             </Text>
                             <View style={{
                               backgroundColor: `${Colors.primary500}14`,
@@ -2629,11 +2981,25 @@ function SquadDetailsScreen({ navigation, route }) {
                               paddingVertical: 4,
                             }}
                             >
-                              <Text style={[Fonts.p4Bold, { color: Colors.gold500 }]}>{`${Number(player?.matches || 0)} matchs`}</Text>
+                              <Text style={[Fonts.p4Bold, { color: Colors.gold500 }]}>
+                                {t(
+                                  'squadDetailsScreen.stats.playerMatches',
+                                  '{{count}} matchs',
+                                  { count: Number(player?.matches || 0) },
+                                )}
+                              </Text>
                             </View>
                           </View>
                           <Text style={[Fonts.p3, { color: Colors.gold500 }]}>
-                            {`${Number(player?.goals || 0)} buts - ${Number(player?.assists || 0)} passes - ${Number(player?.minutesPlayed || 0)} min`}
+                            {t(
+                              'squadDetailsScreen.stats.playerLine',
+                              '{{goals}} buts - {{assists}} passes - {{minutes}} min',
+                              {
+                                assists: Number(player?.assists || 0),
+                                goals: Number(player?.goals || 0),
+                                minutes: Number(player?.minutesPlayed || 0),
+                              },
+                            )}
                           </Text>
                         </View>
                       ))}
@@ -2642,7 +3008,10 @@ function SquadDetailsScreen({ navigation, route }) {
 
                   {!leaguePerformancePlayers.length && !leagueRecentReports.length && !leaguePendingMatches.length && !isLeaguePerformanceFetching ? (
                     <Text style={[Fonts.p2, { color: Colors.neutral100 }]}>
-                      Aucune performance de match disponible pour le moment.
+                      {t(
+                        'squadDetailsScreen.stats.noPerformance',
+                        'Aucune performance de match disponible pour le moment.',
+                      )}
                     </Text>
                   ) : null}
                 </View>
@@ -2657,8 +3026,14 @@ function SquadDetailsScreen({ navigation, route }) {
           >
             <Text style={[Fonts.p2, { color: Colors.neutral200, marginBottom: 12 }]}>
               {isCaptain
-                ? 'Ajoute et anime tes créneaux pour rendre la squad visible et active.'
-                : 'Consulte les prochains créneaux et confirme ta présence en un geste.'}
+                ? t(
+                  'squadDetailsScreen.slots.introCaptain',
+                  'Ajoute et anime tes créneaux pour rendre la squad visible et active.',
+                )
+                : t(
+                  'squadDetailsScreen.slots.introMember',
+                  'Consulte les prochains créneaux et confirme ta présence en un geste.',
+                )}
             </Text>
             <View style={{
               backgroundColor: uiTone.insightCardBg,
@@ -2670,7 +3045,9 @@ function SquadDetailsScreen({ navigation, route }) {
             }}
             >
               <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter, { marginBottom: 8 }]}>
-                <Text style={[Fonts.h4Bold, { color: Colors.neutral00 }]}>Prochain créneau</Text>
+                <Text style={[Fonts.h4Bold, { color: Colors.neutral00 }]}>
+                  {t('squadDetailsScreen.slots.next', 'Prochain créneau')}
+                </Text>
                 <View style={{
                   backgroundColor: `${Colors.primary500}14`,
                   borderColor: `${Colors.primary500}36`,
@@ -2684,7 +3061,10 @@ function SquadDetailsScreen({ navigation, route }) {
                 </View>
               </View>
               <Text style={[Fonts.h3Bold, { color: Colors.gold500, marginBottom: 4 }]}>
-                {nextSlot ? nextSlotLongLabel : 'Aucun créneau programmé'}
+                {nextSlot ? nextSlotLongLabel : t(
+                  'squadDetailsScreen.slots.none',
+                  'Aucun créneau programmé',
+                )}
               </Text>
               <Text style={[Fonts.p3, { color: Colors.gold500, marginBottom: 14 }]}>
                 {nextSlotStatus.helper}
@@ -2699,7 +3079,9 @@ function SquadDetailsScreen({ navigation, route }) {
                   padding: 10,
                 }}
                 >
-                  <Text style={[Fonts.p3Bold, { color: Colors.primary200, marginBottom: 4 }]}>Confirmes</Text>
+                  <Text style={[Fonts.p3Bold, { color: Colors.primary200, marginBottom: 4 }]}>
+                    {t('squadDetailsScreen.slots.confirmed', 'Confirmes')}
+                  </Text>
                   <Text style={[Fonts.h4Bold, { color: Colors.gold500 }]}>
                     {nextSlotParticipantsCount}
                     /
@@ -2715,7 +3097,9 @@ function SquadDetailsScreen({ navigation, route }) {
                   padding: 10,
                 }}
                 >
-                  <Text style={[Fonts.p3Bold, { color: Colors.primary200, marginBottom: 4 }]}>Manquants</Text>
+                  <Text style={[Fonts.p3Bold, { color: Colors.primary200, marginBottom: 4 }]}>
+                    {t('squadDetailsScreen.slots.missing', 'Manquants')}
+                  </Text>
                   <Text style={[Fonts.h4Bold, { color: Colors.gold500 }]}>{nextSlot ? nextSlotRemainingCount : '-'}</Text>
                 </View>
                 <View style={{
@@ -2763,8 +3147,14 @@ function SquadDetailsScreen({ navigation, route }) {
             </View>
             <Text style={[Fonts.p2, { color: Colors.neutral200, marginBottom: 14 }]}>
               {isCaptain
-                ? 'Retrouve les capitaines, les membres actifs et ajuste la responsabilité de la squad.'
-                : 'Vois qui compose déjà la squad et identifie rapidement les capitaines.'}
+                ? t(
+                  'squadDetailsScreen.roster.introCaptain',
+                  'Retrouve les capitaines, les membres actifs et ajuste la responsabilité de la squad.', // eslint-disable-line max-len
+                )
+                : t(
+                  'squadDetailsScreen.roster.introMember',
+                  'Vois qui compose déjà la squad et identifie rapidement les capitaines.',
+                )}
             </Text>
             <View style={[Alignments.row, Alignments.wrap, Spaces.gap[12], { marginBottom: 14 }]}>
               {rosterSignals.map((item) => {
@@ -2790,8 +3180,14 @@ function SquadDetailsScreen({ navigation, route }) {
             {isCaptain ? (
               <Text style={[Fonts.p3, { color: Colors.neutral200, marginBottom: 14 }]}>
                 {pendingRequestsCount > 0
-                  ? 'Le groupe est actif: pense à traiter les demandes et inviter les bons profils.'
-                  : 'Le groupe est stable. Tu peux encore inviter des joueurs pour enrichir la squad.'}
+                  ? t(
+                    'squadDetailsScreen.roster.activeHint',
+                    'Le groupe est actif: pense à traiter les demandes et inviter les bons profils.', // eslint-disable-line max-len
+                  )
+                  : t(
+                    'squadDetailsScreen.roster.stableHint',
+                    'Le groupe est stable. Tu peux encore inviter des joueurs pour enrichir la squad.', // eslint-disable-line max-len
+                  )}
               </Text>
             ) : null}
 

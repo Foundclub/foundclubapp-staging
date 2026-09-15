@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Text, TextInput, View } from 'react-native';
 
 import useTheme from '@/theme/themeContext';
@@ -38,6 +39,7 @@ function FilterField({ onChangeText, placeholder, value }) {
 
 function SuperAdminLeagueMatches() {
   const { Colors, Fonts, Spaces } = useTheme();
+  const { t } = useTranslation();
   const [team, setTeam] = useState('');
   const [sport, setSport] = useState('');
   const [status, setStatus] = useState('');
@@ -62,9 +64,12 @@ function SuperAdminLeagueMatches() {
   if (matchesQuery.isLoading && !matches.length) {
     return (
       <AdminStateView
-        description="Nous chargeons tous les matchs League de la plateforme."
+        description={t(
+          'superAdminLeagueMatches.states.loadingDescription',
+          'Nous chargeons tous les matchs League de la plateforme.',
+        )}
         isLoading
-        title="Chargement des matchs"
+        title={t('superAdminLeagueMatches.states.loadingTitle', 'Chargement des matchs')}
       />
     );
   }
@@ -72,10 +77,13 @@ function SuperAdminLeagueMatches() {
   if (matchesQuery.error && !matches.length) {
     return (
       <AdminStateView
-        actionLabel="Réessayer"
-        description={getErrorMessage(matchesQuery.error, 'generic') || 'Impossible de charger les matchs League.'}
+        actionLabel={t('superAdminLeagueMatches.states.retry', 'Réessayer')}
+        description={getErrorMessage(matchesQuery.error, 'generic') || t(
+          'superAdminLeagueMatches.states.errorDescription',
+          'Impossible de charger les matchs League.',
+        )}
         onAction={matchesQuery.refetch}
-        title="Chargement impossible"
+        title={t('superAdminLeagueMatches.states.errorTitle', 'Chargement impossible')}
       />
     );
   }
@@ -83,21 +91,48 @@ function SuperAdminLeagueMatches() {
   return (
     <SuperAdminLeagueLayout
       activeRouteNames={[RouteNames.SuperAdminLeagueMatches]}
-      description="Suis les matchs League avec leurs statuts métier, leur score, leur terrain et leurs litiges éventuels."
-      title="Suivi des matchs"
+      description={t(
+        'superAdminLeagueMatches.description',
+        'Suis les matchs League avec leurs statuts métier, leur score, leur terrain et leurs litiges éventuels.', // eslint-disable-line max-len
+      )}
+      title={t('superAdminLeagueMatches.title', 'Suivi des matchs')}
     >
       <LeagueCard style={{ marginBottom: 0 }}>
         <View style={[Spaces.gap[10]]}>
-          <FilterField onChangeText={setTeam} placeholder="Filtre équipe" value={team} />
-          <FilterField onChangeText={setSport} placeholder="Filtre sport" value={sport} />
-          <FilterField onChangeText={setStatus} placeholder="Filtre statut" value={status} />
-          <FilterField onChangeText={setDivision} placeholder="Filtre division" value={division} />
-          <FilterField onChangeText={setFrom} placeholder="Date min (2026-04-24)" value={from} />
-          <FilterField onChangeText={setTo} placeholder="Date max (2026-04-30)" value={to} />
+          <FilterField
+            onChangeText={setTeam}
+            placeholder={t('superAdminLeagueMatches.filters.team', 'Filtre équipe')}
+            value={team}
+          />
+          <FilterField
+            onChangeText={setSport}
+            placeholder={t('superAdminLeagueMatches.filters.sport', 'Filtre sport')}
+            value={sport}
+          />
+          <FilterField
+            onChangeText={setStatus}
+            placeholder={t('superAdminLeagueMatches.filters.status', 'Filtre statut')}
+            value={status}
+          />
+          <FilterField
+            onChangeText={setDivision}
+            placeholder={t('superAdminLeagueMatches.filters.division', 'Filtre division')}
+            value={division}
+          />
+          <FilterField
+            onChangeText={setFrom}
+            placeholder={t('superAdminLeagueMatches.filters.dateMin', 'Date min (2026-04-24)')}
+            value={from}
+          />
+          <FilterField
+            onChangeText={setTo}
+            placeholder={t('superAdminLeagueMatches.filters.dateMax', 'Date max (2026-04-30)')}
+            value={to}
+          />
           <Text style={[Fonts.p3, Fonts.neutral300]}>
             {matchesQuery.data?.meta?.pagination?.total || matches.length}
             {' '}
-            matchs trouvés
+            {t('superAdminLeagueMatches.found', 'matchs trouvés')}
           </Text>
         </View>
       </LeagueCard>
@@ -105,7 +140,9 @@ function SuperAdminLeagueMatches() {
       <View style={[Spaces.gap[12]]}>
         {matches.length === 0 ? (
           <LeagueCard style={{ marginBottom: 0 }}>
-            <Text style={[Fonts.p2, Fonts.neutral300]}>Aucun match ne correspond à ces filtres.</Text>
+            <Text style={[Fonts.p2, Fonts.neutral300]}>
+              {t('superAdminLeagueMatches.empty', 'Aucun match ne correspond à ces filtres.')}
+            </Text>
           </LeagueCard>
         ) : (
           matches.map((match) => (
@@ -119,37 +156,37 @@ function SuperAdminLeagueMatches() {
                   {match?.teamB?.name || 'Squad B'}
                 </Text>
                 <Text style={[Fonts.p2, Fonts.neutral300]}>
-                  Sport :
+                  {t('superAdminLeagueMatches.fields.sport', 'Sport :')}
                   {' '}
-                  {match?.sport || 'Inconnu'}
+                  {match?.sport || t('superAdminLeagueMatches.unknown', 'Inconnu')}
                   {' · '}
                   Division
                   {' '}
                   {match?.division || 5}
                 </Text>
                 <Text style={[Fonts.p2, Fonts.neutral300]}>
-                  Date :
+                  {t('superAdminLeagueMatches.fields.date', 'Date :')}
                   {' '}
-                  {match?.date || 'Non définie'}
+                  {match?.date || t('superAdminLeagueMatches.notSet', 'Non définie')}
                 </Text>
                 <Text style={[Fonts.p2, Fonts.neutral100]}>
-                  Statut :
+                  {t('superAdminLeagueMatches.fields.status', 'Statut :')}
                   {' '}
                   {match?.derivedStatus || match?.status || 'unknown'}
                 </Text>
                 <Text style={[Fonts.p2, Fonts.neutral100]}>
-                  Score :
+                  {t('superAdminLeagueMatches.fields.score', 'Score :')}
                   {' '}
-                  {match?.score || 'En attente'}
+                  {match?.score || t('superAdminLeagueMatches.pending', 'En attente')}
                 </Text>
                 <Text style={[Fonts.p2, Fonts.neutral100]}>
-                  Terrain :
+                  {t('superAdminLeagueMatches.fields.venue', 'Terrain :')}
                   {' '}
-                  {match?.venue || 'Non renseigné'}
+                  {match?.venue || t('superAdminLeagueMatches.notProvided', 'Non renseigné')}
                 </Text>
                 {match?.disputeState && match.disputeState !== 'none' ? (
                   <Text style={[Fonts.p2Bold, { color: Colors.error500 }]}>
-                    Litige :
+                    {t('superAdminLeagueMatches.fields.dispute', 'Litige :')}
                     {' '}
                     {match.disputeState}
                   </Text>

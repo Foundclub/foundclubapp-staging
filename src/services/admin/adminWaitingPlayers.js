@@ -1,4 +1,5 @@
 /* eslint-disable no-underscore-dangle */
+import i18next from 'i18next';
 
 /**
  * D95 — le compteur de joueurs qui attendent un club.
@@ -127,7 +128,7 @@ export const buildClubArrivalInterestRows = (interests = []) => {
       __interestedPeopleCount: __interestedPeople.size,
       __isAffiliationHelp: false,
       __requestType: CLUB_ARRIVAL_INTEREST_KIND,
-      __typeLabel: 'INTÉRÊTS',
+      __typeLabel: i18next.t('adminWaitingPlayers.interestsBadge', 'INTÉRÊTS'),
     }))
     .sort((a, b) => b.__interestedPeopleCount - a.__interestedPeopleCount);
 };

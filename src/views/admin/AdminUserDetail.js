@@ -1,5 +1,6 @@
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Alert, ScrollView, Text, TouchableOpacity, View,
 } from 'react-native';
@@ -28,6 +29,7 @@ function AdminUserDetail() {
   const {
     Alignments, ApplicationStyle, Colors, Fonts, Spaces,
   } = useTheme();
+  const { t } = useTranslation();
   const route = useRoute();
   const navigation = useNavigation();
   const { userId } = route.params || {};
@@ -72,10 +74,10 @@ function AdminUserDetail() {
 
   const handleSave = () => {
     Alert.alert(
-      'Confirmer',
-      'Veux-tu sauvegarder les modifications ?',
+      t('adminUserDetail.confirmTitle', 'Confirmer'),
+      t('adminUserDetail.confirmSave', 'Veux-tu sauvegarder les modifications ?'),
       [
-        { style: 'cancel', text: 'Annuler' },
+        { style: 'cancel', text: t('adminUserDetail.cancel', 'Annuler') },
         {
           onPress: () => {
             updateMutation.mutate(
@@ -88,16 +90,22 @@ function AdminUserDetail() {
               },
               {
                 onError: (err) => {
-                  Alert.alert('Erreur', getErrorMessage(err, 'generic'));
+                  Alert.alert(
+                    t('adminUserDetail.errorTitle', 'Erreur'),
+                    getErrorMessage(err, 'generic'),
+                  );
                 },
                 onSuccess: () => {
-                  Alert.alert('Succès', 'Utilisateur mis à jour');
+                  Alert.alert(
+                    t('adminUserDetail.successTitle', 'Succès'),
+                    t('adminUserDetail.updated', 'Utilisateur mis à jour'),
+                  );
                   navigation.goBack();
                 },
               },
             );
           },
-          text: 'Sauvegarder',
+          text: t('adminUserDetail.save', 'Sauvegarder'),
         },
       ],
     );
@@ -105,10 +113,13 @@ function AdminUserDetail() {
 
   const handleDelete = () => {
     Alert.alert(
-      'Supprimer ce compte ?',
-      'Le compte sera anonymisé et bloqué définitivement. Cette action est irréversible.',
+      t('adminUserDetail.deleteTitle', 'Supprimer ce compte ?'),
+      t(
+        'adminUserDetail.deleteMessage',
+        'Le compte sera anonymisé et bloqué définitivement. Cette action est irréversible.',
+      ),
       [
-        { style: 'cancel', text: 'Annuler' },
+        { style: 'cancel', text: t('adminUserDetail.cancel', 'Annuler') },
         {
           onPress: () => {
             deleteMutation.mutate(
@@ -118,17 +129,23 @@ function AdminUserDetail() {
               },
               {
                 onError: (err) => {
-                  Alert.alert('Erreur', getErrorMessage(err, 'generic'));
+                  Alert.alert(
+                    t('adminUserDetail.errorTitle', 'Erreur'),
+                    getErrorMessage(err, 'generic'),
+                  );
                 },
                 onSuccess: () => {
-                  Alert.alert('Compte supprimé', "L'utilisateur a été anonymisé et bloqué.");
+                  Alert.alert(
+                    t('adminUserDetail.deletedTitle', 'Compte supprimé'),
+                    t('adminUserDetail.deletedMessage', "L'utilisateur a été anonymisé et bloqué."),
+                  );
                   navigation.goBack();
                 },
               },
             );
           },
           style: 'destructive',
-          text: 'Supprimer',
+          text: t('adminUserDetail.delete', 'Supprimer'),
         },
       ],
     );
@@ -139,12 +156,24 @@ function AdminUserDetail() {
     const currentUserDocumentId = String(currentUser?.documentId || currentUser?.id || '').trim();
 
     if (!targetUserDocumentId) {
-      Alert.alert('Erreur', 'Document ID utilisateur introuvable pour ouvrir la conversation.');
+      Alert.alert(
+        t('adminUserDetail.errorTitle', 'Erreur'),
+        t(
+          'adminUserDetail.missingDocumentId',
+          'Document ID utilisateur introuvable pour ouvrir la conversation.',
+        ),
+      );
       return;
     }
 
     if (targetUserDocumentId === currentUserDocumentId) {
-      Alert.alert('Info', 'Tu ne peux pas créer une conversation avec ton propre compte.');
+      Alert.alert(
+        t('adminUserDetail.infoTitle', 'Info'),
+        t(
+          'adminUserDetail.selfChat',
+          'Tu ne peux pas créer une conversation avec ton propre compte.',
+        ),
+      );
       return;
     }
 
@@ -152,12 +181,21 @@ function AdminUserDetail() {
     try {
       const chat = await startWhisperChat([targetUserDocumentId]);
       if (!chat?.documentId) {
-        Alert.alert('Erreur', "Impossible d'ouvrir la conversation.");
+        Alert.alert(
+          t('adminUserDetail.errorTitle', 'Erreur'),
+          t('adminUserDetail.openChatError', "Impossible d'ouvrir la conversation."),
+        );
         return;
       }
       navigation.navigate(RouteNames.Conversation, { chatId: chat.documentId });
     } catch (contactError) {
-      Alert.alert('Erreur', getErrorMessage(contactError, 'generic') || "Impossible d'ouvrir la conversation.");
+      Alert.alert(
+        t('adminUserDetail.errorTitle', 'Erreur'),
+        getErrorMessage(contactError, 'generic') || t(
+          'adminUserDetail.openChatError',
+          "Impossible d'ouvrir la conversation.",
+        ),
+      );
     } finally {
       setIsContacting(false);
     }
@@ -166,10 +204,13 @@ function AdminUserDetail() {
   if (!userId) {
     return (
       <AdminStateView
-        actionLabel="Retour"
-        description="L'identifiant utilisateur est absent de l'URL."
+        actionLabel={t('adminUserDetail.states.back', 'Retour')}
+        description={t(
+          'adminUserDetail.states.missingId',
+          "L'identifiant utilisateur est absent de l'URL.",
+        )}
         onAction={() => navigation.goBack()}
-        title="Utilisateur introuvable"
+        title={t('adminUserDetail.states.notFoundTitle', 'Utilisateur introuvable')}
       />
     );
   }
@@ -177,9 +218,12 @@ function AdminUserDetail() {
   if (isLoading) {
     return (
       <AdminStateView
-        description="Nous chargeons la fiche utilisateur."
+        description={t(
+          'adminUserDetail.states.loadingDescription',
+          'Nous chargeons la fiche utilisateur.',
+        )}
         isLoading
-        title="Chargement du profil admin"
+        title={t('adminUserDetail.states.loadingTitle', 'Chargement du profil admin')}
       />
     );
   }
@@ -187,10 +231,13 @@ function AdminUserDetail() {
   if ((userError || rolesError) && !user) {
     return (
       <AdminStateView
-        actionLabel="Réessayer"
-        description={userError?.message || rolesError?.message || 'Impossible de charger cet utilisateur.'}
+        actionLabel={t('adminUserDetail.states.retry', 'Réessayer')}
+        description={userError?.message || rolesError?.message || t(
+          'adminUserDetail.states.errorDescription',
+          'Impossible de charger cet utilisateur.',
+        )}
         onAction={refetch}
-        title="Chargement impossible"
+        title={t('adminUserDetail.states.errorTitle', 'Chargement impossible')}
       />
     );
   }
@@ -198,10 +245,13 @@ function AdminUserDetail() {
   if (!user) {
     return (
       <AdminStateView
-        actionLabel="Retour"
-        description="Le compte demande n'existe pas ou n'est plus accessible."
+        actionLabel={t('adminUserDetail.states.back', 'Retour')}
+        description={t(
+          'adminUserDetail.states.notFoundDescription',
+          "Le compte demande n'existe pas ou n'est plus accessible.",
+        )}
         onAction={() => navigation.goBack()}
-        title="Utilisateur introuvable"
+        title={t('adminUserDetail.states.notFoundTitle', 'Utilisateur introuvable')}
       />
     );
   }
@@ -246,7 +296,9 @@ function AdminUserDetail() {
           Spaces.marginBottom[16],
         ]}
         >
-          <Text style={[Fonts.h4, { color: Colors.neutral00 }, Spaces.marginBottom[8]]}>Club Associé</Text>
+          <Text style={[Fonts.h4, { color: Colors.neutral00 }, Spaces.marginBottom[8]]}>
+            {t('adminUserDetail.club', 'Club Associé')}
+          </Text>
           <View style={[Alignments.row, Alignments.alignCenter]}>
             {/* L14 : un CLUB sans logo montre l'ECUSSON, pas le dessin de
                 personne que servait ProfileAvatar variant="logo" non garde. */}
@@ -266,7 +318,9 @@ function AdminUserDetail() {
           Spaces.marginBottom[16],
         ]}
         >
-          <Text style={[Fonts.h4, { color: Colors.neutral00 }, Spaces.marginBottom[12]]}>Rôle</Text>
+          <Text style={[Fonts.h4, { color: Colors.neutral00 }, Spaces.marginBottom[12]]}>
+            {t('adminUserDetail.role', 'Rôle')}
+          </Text>
           <View style={[Alignments.row, { flexWrap: 'wrap' }, Spaces.gap[8]]}>
             {Array.isArray(roles) && roles.map((role) => (
               <TouchableOpacity
@@ -299,7 +353,9 @@ function AdminUserDetail() {
           Spaces.marginBottom[24],
         ]}
         >
-          <Text style={[Fonts.h4, { color: Colors.neutral00 }, Spaces.marginBottom[12]]}>Statut du Compte</Text>
+          <Text style={[Fonts.h4, { color: Colors.neutral00 }, Spaces.marginBottom[12]]}>
+            {t('adminUserDetail.accountStatus', 'Statut du Compte')}
+          </Text>
           <View style={[Alignments.row, Spaces.gap[12]]}>
             <TouchableOpacity
               onPress={() => setIsBlocked(false)}
@@ -317,7 +373,7 @@ function AdminUserDetail() {
               ]}
             >
               <Text style={{ color: !isBlocked ? 'white' : Colors.neutral300, fontWeight: 'bold' }}>
-                ✓ Actif
+                {t('adminUserDetail.active', '✓ Actif')}
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
@@ -336,7 +392,7 @@ function AdminUserDetail() {
               ]}
             >
               <Text style={{ color: isBlocked ? 'white' : Colors.neutral300, fontWeight: 'bold' }}>
-                ✕ Bloqué
+                {t('adminUserDetail.blocked', '✕ Bloqué')}
               </Text>
             </TouchableOpacity>
           </View>
@@ -347,14 +403,14 @@ function AdminUserDetail() {
             isLoading={isContacting}
             onPress={handleContact}
             style={{ flex: 1 }}
-            title="Contacter"
+            title={t('adminUserDetail.contact', 'Contacter')}
             variant="Secondary"
           />
           <Button
             isLoading={updateMutation.isPending}
             onPress={handleSave}
             style={{ flex: 1 }}
-            title="Sauvegarder"
+            title={t('adminUserDetail.save', 'Sauvegarder')}
             variant="Primary"
           />
         </View>
@@ -363,7 +419,7 @@ function AdminUserDetail() {
             visee : on n'offre pas un geste irreversible qu'on ne sait pas adresser. */}
         {!isSelfAccount && Boolean(viewedUserDocumentId) && (
           <TouchableOpacity
-            accessibilityLabel="Supprimer le compte"
+            accessibilityLabel={t('adminUserDetail.deleteAccount', 'Supprimer le compte')}
             disabled={deleteMutation.isPending}
             onPress={handleDelete}
             style={[
@@ -380,7 +436,9 @@ function AdminUserDetail() {
             ]}
           >
             <Text style={{ color: Colors.neutral00, fontWeight: 'bold' }}>
-              {deleteMutation.isPending ? 'Suppression…' : 'Supprimer le compte'}
+              {deleteMutation.isPending
+                ? t('adminUserDetail.deleting', 'Suppression…')
+                : t('adminUserDetail.deleteAccount', 'Supprimer le compte')}
             </Text>
           </TouchableOpacity>
         )}

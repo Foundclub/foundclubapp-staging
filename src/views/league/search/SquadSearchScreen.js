@@ -1,4 +1,5 @@
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import i18next from 'i18next';
 import {
   useCallback, useEffect, useMemo, useState,
 } from 'react';
@@ -59,9 +60,15 @@ const getSectionLabel = (value) => {
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '');
   if (!normalized) return null;
-  if (normalized === 'male' || normalized === 'masculin') return 'Masculin';
-  if (normalized === 'female' || normalized === 'feminin') return 'Feminin';
-  if (normalized === 'mixed' || normalized === 'mixte') return 'Mixte';
+  if (normalized === 'male' || normalized === 'masculin') {
+    return i18next.t('squadSearchScreen.sections.male', 'Masculin');
+  }
+  if (normalized === 'female' || normalized === 'feminin') {
+    return i18next.t('squadSearchScreen.sections.female', 'Feminin');
+  }
+  if (normalized === 'mixed' || normalized === 'mixte') {
+    return i18next.t('squadSearchScreen.sections.mixed', 'Mixte');
+  }
   return String(value || '');
 };
 
@@ -84,10 +91,13 @@ const getStatusConfig = (status, Colors) => {
   if (status === 'joined') {
     return {
       accentColor: successColor,
-      actionLabel: 'Voir ma squad',
-      badgeLabel: 'MEMBRE',
+      actionLabel: i18next.t('squadSearchScreen.status.joined.action', 'Voir ma squad'),
+      badgeLabel: i18next.t('squadSearchScreen.status.joined.badge', 'MEMBRE'),
       badgeTextColor: successColor,
-      helperLabel: 'Tu fais déjà partie de cette squad.',
+      helperLabel: i18next.t(
+        'squadSearchScreen.status.joined.helper',
+        'Tu fais déjà partie de cette squad.',
+      ),
       surfaceColor: `${successColor}14`,
     };
   }
@@ -95,10 +105,13 @@ const getStatusConfig = (status, Colors) => {
   if (status === 'invited') {
     return {
       accentColor: Colors.gold500,
-      actionLabel: 'Répondre a l invitation',
+      actionLabel: i18next.t('squadSearchScreen.status.invited.action', 'Répondre a l invitation'),
       badgeLabel: 'INVITATION',
       badgeTextColor: Colors.gold500,
-      helperLabel: "Une invitation t'attend sur cette squad.",
+      helperLabel: i18next.t(
+        'squadSearchScreen.status.invited.helper',
+        "Une invitation t'attend sur cette squad.",
+      ),
       surfaceColor: `${Colors.gold500}16`,
     };
   }
@@ -106,20 +119,26 @@ const getStatusConfig = (status, Colors) => {
   if (status === 'pending') {
     return {
       accentColor: warningColor,
-      actionLabel: 'Voir la demande',
-      badgeLabel: 'EN ATTENTE',
+      actionLabel: i18next.t('squadSearchScreen.status.pending.action', 'Voir la demande'),
+      badgeLabel: i18next.t('squadSearchScreen.status.pending.badge', 'EN ATTENTE'),
       badgeTextColor: warningColor,
-      helperLabel: 'Ta demande est en attente de validation.',
+      helperLabel: i18next.t(
+        'squadSearchScreen.status.pending.helper',
+        'Ta demande est en attente de validation.',
+      ),
       surfaceColor: `${warningColor}14`,
     };
   }
 
   return {
     accentColor: Colors.primary500,
-    actionLabel: 'Demander à rejoindre',
-    badgeLabel: 'DISPONIBLE',
+    actionLabel: i18next.t('squadSearchScreen.status.available.action', 'Demander à rejoindre'),
+    badgeLabel: i18next.t('squadSearchScreen.status.available.badge', 'DISPONIBLE'),
     badgeTextColor: Colors.primary500,
-    helperLabel: 'Squad ouverte aux demandes de nouveaux joueurs.',
+    helperLabel: i18next.t(
+      'squadSearchScreen.status.available.helper',
+      'Squad ouverte aux demandes de nouveaux joueurs.',
+    ),
     surfaceColor: `${Colors.primary500}14`,
   };
 };
@@ -140,10 +159,16 @@ const getStatusPriority = (status) => {
  * @returns {string}
  */
 const getStatusFooterLabel = (status) => {
-  if (status === 'joined') return 'Accès rapide à ta squad League';
-  if (status === 'invited') return 'Invitation à traiter en priorité';
-  if (status === 'pending') return 'Le capitaine doit encore te répondre';
-  return 'Ouvre la fiche pour envoyer ta demande';
+  if (status === 'joined') {
+    return i18next.t('squadSearchScreen.footer.joined', 'Accès rapide à ta squad League');
+  }
+  if (status === 'invited') {
+    return i18next.t('squadSearchScreen.footer.invited', 'Invitation à traiter en priorité');
+  }
+  if (status === 'pending') {
+    return i18next.t('squadSearchScreen.footer.pending', 'Le capitaine doit encore te répondre');
+  }
+  return i18next.t('squadSearchScreen.footer.available', 'Ouvre la fiche pour envoyer ta demande');
 };
 
 /**
@@ -241,12 +266,30 @@ function SquadSearchScreen() {
     }));
 
     const parts = [];
-    if (counts.joined > 0) parts.push(`${counts.joined} déjà membre${counts.joined > 1 ? 's' : ''}`);
-    if (counts.invited > 0) parts.push(`${counts.invited} invitation${counts.invited > 1 ? 's' : ''}`);
-    if (counts.pending > 0) parts.push(`${counts.pending} demande${counts.pending > 1 ? 's' : ''} en attente`);
+    if (counts.joined > 0) {
+      parts.push(t('squadSearchScreen.summary.joined', {
+        count: counts.joined,
+        defaultValue_one: '{{count}} déjà membre',
+        defaultValue_other: '{{count}} déjà membres',
+      }));
+    }
+    if (counts.invited > 0) {
+      parts.push(t('squadSearchScreen.summary.invited', {
+        count: counts.invited,
+        defaultValue_one: '{{count}} invitation',
+        defaultValue_other: '{{count}} invitations',
+      }));
+    }
+    if (counts.pending > 0) {
+      parts.push(t('squadSearchScreen.summary.pending', {
+        count: counts.pending,
+        defaultValue_one: '{{count}} demande en attente',
+        defaultValue_other: '{{count}} demandes en attente',
+      }));
+    }
 
     return parts.join(' · ');
-  }, [decoratedSquads]);
+  }, [decoratedSquads, t]);
 
   const activeFiltersLabel = useMemo(() => {
     const chips = [];
@@ -276,12 +319,12 @@ function SquadSearchScreen() {
       setSquads(Array.isArray(results) ? results : []);
     } catch (error) {
       console.error('[SquadSearch] search failed:', error);
-      setErrorMessage('Erreur de recherche. Réessaie.');
+      setErrorMessage(t('squadSearchScreen.searchError', 'Erreur de recherche. Réessaie.'));
       setSquads([]);
     } finally {
       setIsLoading(false);
     }
-  }, [query, squadFilters]);
+  }, [query, squadFilters, t]);
 
   const handleRefresh = useCallback(async () => {
     await Promise.allSettled([
@@ -313,11 +356,11 @@ function SquadSearchScreen() {
     const cityLabel = normalizedHomeBase?.city
       || normalizedHomeBase?.label
       || normalizedHomeBase?.address
-      || 'Ville inconnue';
+      || t('squadSearchScreen.unknownCity', 'Ville inconnue');
     const membershipStatus = /** @type {SearchSquadStatus} */ (item?.membershipStatus || 'available');
     const statusConfig = getStatusConfig(membershipStatus, Colors);
     const sportLabel = item?.sport || 'Sport';
-    const categoryLabel = item?.category || 'Categorie';
+    const categoryLabel = item?.category || t('squadSearchScreen.categoryFallback', 'Categorie');
     const sectionLabel = getSectionLabel(item?.section);
     const divisionLabel = `Div ${item?.division || '?'}`;
 
@@ -496,7 +539,9 @@ function SquadSearchScreen() {
                 height: 14, marginRight: 6, tintColor: Colors.primary500, width: 14,
               }}
             />
-            <Text style={[Fonts.p2Bold, { color: Colors.primary500 }]}>Filtres</Text>
+            <Text style={[Fonts.p2Bold, { color: Colors.primary500 }]}>
+              {t('squadSearchScreen.filters', 'Filtres')}
+            </Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -517,7 +562,7 @@ function SquadSearchScreen() {
           <Image source={Images.search} style={{ height: 18, tintColor: Colors.primary500, width: 18 }} />
           <TextInput
             onChangeText={setQuery}
-            placeholder="Nom de squad ou ville"
+            placeholder={t('squadSearchScreen.searchPlaceholder', 'Nom de squad ou ville')}
             placeholderTextColor={Colors.neutral500}
             style={[Fonts.p2, {
               color: Colors.neutral00, flex: 1, marginLeft: 10, minHeight: 46,
@@ -538,7 +583,7 @@ function SquadSearchScreen() {
           }}
           >
             <Text style={[Fonts.p3, { color: Colors.neutral100 }]}>
-              Filtres actifs:
+              {t('squadSearchScreen.activeFilters', 'Filtres actifs:')}
               {' '}
               <Text style={{ color: Colors.gold500 }}>{activeFiltersLabel}</Text>
             </Text>
@@ -557,12 +602,15 @@ function SquadSearchScreen() {
           }}
           >
             <Text style={[Fonts.p3, { color: Colors.neutral100 }]}>
-              Statuts detectes:
+              {t('squadSearchScreen.detectedStatuses', 'Statuts detectes:')}
               {' '}
               <Text style={{ color: Colors.gold500 }}>{statusSummary}</Text>
             </Text>
             <Text style={[Fonts.p4, { color: Colors.neutral300, marginTop: 6 }]}>
-              Les invitations et demandes en attente remontent en premier.
+              {t(
+                'squadSearchScreen.statusesHint',
+                'Les invitations et demandes en attente remontent en premier.',
+              )}
             </Text>
           </View>
         ) : null}
@@ -579,7 +627,10 @@ function SquadSearchScreen() {
           }}
           >
             <Text style={[Fonts.p3, { color: Colors.gold500 }]}>
-              Impossible de charger tes statuts personnels League. La recherche reste disponible.
+              {t(
+                'squadSearchScreen.statusesError',
+                'Impossible de charger tes statuts personnels League. La recherche reste disponible.', // eslint-disable-line max-len
+              )}
             </Text>
             <TouchableOpacity
               onPress={handleRefresh}
@@ -589,7 +640,7 @@ function SquadSearchScreen() {
               }}
             >
               <Text style={[Fonts.p3Bold, { color: Colors.gold500, textDecorationLine: 'underline' }]}>
-                Réessayer
+                {t('squadSearchScreen.retry', 'Réessayer')}
               </Text>
             </TouchableOpacity>
           </View>
@@ -613,7 +664,7 @@ function SquadSearchScreen() {
         <Button
           onPress={handleSearch}
           style={{ marginTop: 14, width: '100%' }}
-          title="Rechercher"
+          title={t('squadSearchScreen.search', 'Rechercher')}
           variant="Primary"
         />
 
@@ -621,7 +672,7 @@ function SquadSearchScreen() {
           <View style={{ alignItems: 'center', marginTop: 28 }}>
             <ActivityIndicator color={Colors.primary500} size="large" />
             <Text style={[Fonts.p2, { color: Colors.neutral300, marginTop: 10 }]}>
-              Recherche des squads...
+              {t('squadSearchScreen.searching', 'Recherche des squads...')}
             </Text>
           </View>
         ) : (
@@ -643,10 +694,13 @@ function SquadSearchScreen() {
               }}
               >
                 <Text style={[Fonts.p1Bold, { color: Colors.neutral00, textAlign: 'center' }]}>
-                  Aucune squad trouvée
+                  {t('squadSearchScreen.empty.title', 'Aucune squad trouvée')}
                 </Text>
                 <Text style={[Fonts.p2, { color: Colors.neutral300, marginTop: 6, textAlign: 'center' }]}>
-                  Essaie avec d&apos;autres filtres ou un autre nom de squad.
+                  {t(
+                    'squadSearchScreen.empty.hint',
+                    "Essaie avec d'autres filtres ou un autre nom de squad.",
+                  )}
                 </Text>
                 <TouchableOpacity
                   onPress={() => navigation.navigate(RouteNames.SquadFilters)}
@@ -660,7 +714,9 @@ function SquadSearchScreen() {
                     paddingVertical: 8,
                   }}
                 >
-                  <Text style={[Fonts.p2Bold, { color: Colors.primary500 }]}>Modifier les filtres</Text>
+                  <Text style={[Fonts.p2Bold, { color: Colors.primary500 }]}>
+                    {t('squadSearchScreen.editFilters', 'Modifier les filtres')}
+                  </Text>
                 </TouchableOpacity>
               </View>
             )}

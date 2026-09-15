@@ -1,3 +1,4 @@
+import i18next from 'i18next';
 import { launchImageLibrary } from 'react-native-image-picker';
 
 import client from '@/services/client';
@@ -155,7 +156,10 @@ export const pickAndUploadAdminClubLogo = async () => {
 
   if (pickerResponse?.didCancel) return null;
   if (pickerResponse?.errorCode) {
-    throw new Error(pickerResponse?.errorMessage || 'Impossible d\'ouvrir la galerie.');
+    throw new Error(pickerResponse?.errorMessage || i18next.t(
+      'adminClubContentService.galleryError',
+      "Impossible d'ouvrir la galerie.",
+    ));
   }
 
   const asset = pickerResponse?.assets?.[0];

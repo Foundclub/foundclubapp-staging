@@ -1,7 +1,9 @@
 import { useQueryClient } from '@tanstack/react-query';
+import i18next from 'i18next';
 import {
   useCallback, useEffect, useMemo, useRef, useState,
 } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   AppState,
   Platform,
@@ -13,6 +15,8 @@ import {
 import { getUserRoleKey } from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
 import { useAppContext } from '@/store/appContext';
+import localeDesFormats from '@/theme/strings/localeDesFormats';
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -86,19 +90,19 @@ const BLOCKED_ROUTES = /** @type {Set<string>} */ (new Set([
  * @returns {string}
  */
 const formatActionDate = (value) => {
-  if (!value) return 'Date à définir';
+  if (!value) return i18next.t('leagueActionPromptHost.dateToBeDecided', 'Date à définir');
   try {
     const dateValue = value instanceof Date
       ? value
       : new Date(/** @type {string | number} */ (value));
-    return dateValue.toLocaleString('fr-FR', {
+    return dateValue.toLocaleString(localeDesFormats(), {
       day: '2-digit',
       hour: '2-digit',
       minute: '2-digit',
       month: 'long',
     });
   } catch (_error) {
-    return 'Date à définir';
+    return i18next.t('leagueActionPromptHost.dateToBeDecided', 'Date à définir');
   }
 };
 
@@ -119,15 +123,21 @@ const isAlreadyResolvedError = (error) => {
  */
 const getOpponentResponseLabel = (opponentResponse, opponentNextAction) => {
   if (opponentResponse === 'played') {
-    return 'Match joué';
+    return i18next.t('leagueActionPromptHost.opponentResponse.played', 'Match joué');
   }
   if (opponentNextAction === 'cancel') {
-    return 'Match non joué - annulation proposée';
+    return i18next.t(
+      'leagueActionPromptHost.opponentResponse.cancelProposed',
+      'Match non joué - annulation proposée',
+    );
   }
   if (opponentNextAction === 'reschedule') {
-    return 'Match non joué - replanification proposée';
+    return i18next.t(
+      'leagueActionPromptHost.opponentResponse.rescheduleProposed',
+      'Match non joué - replanification proposée',
+    );
   }
-  return 'Match non joué';
+  return i18next.t('leagueActionPromptHost.opponentResponse.notPlayed', 'Match non joué');
 };
 
 /**
@@ -135,6 +145,7 @@ const getOpponentResponseLabel = (opponentResponse, opponentNextAction) => {
  */
 function LeagueActionPromptHost({ skipInitialFetch = false } = {}) {
   const queryClient = useQueryClient();
+  const { t } = useTranslation();
   const [{ auth }] = useAppContext();
   const { isBootstrapResolved, userData } = useAuth();
   // AUDIT LEAGUE 2026-07-30, defaut G4 — cet hote est monte dans DeferredStartupHosts
@@ -276,9 +287,16 @@ function LeagueActionPromptHost({ skipInitialFetch = false } = {}) {
     [nextAction?.match],
   );
   const promptMatchLabel = useMemo(() => {
-    const opponent = shouldHideOpponentName ? 'Adversaire' : (nextAction?.opponent?.name || 'Adversaire');
-    return `Ta squad VS ${opponent}`;
-  }, [nextAction?.opponent?.name, shouldHideOpponentName]);
+    const opponentFallback = t('leagueActionPromptHost.opponent', 'Adversaire');
+    const opponent = shouldHideOpponentName
+      ? opponentFallback
+      : (nextAction?.opponent?.name || opponentFallback);
+    return t(
+      'leagueActionPromptHost.matchLabel',
+      'Ta squad VS {{opponent}}',
+      { opponent, ...SANS_ECHAPPEMENT },
+    );
+  }, [nextAction?.opponent?.name, shouldHideOpponentName, t]);
 
   useEffect(() => {
     if (isBootstrapResolved) {
@@ -372,9 +390,9 @@ function LeagueActionPromptHost({ skipInitialFetch = false } = {}) {
       focusLatestProposal: true,
       focusProposalMessageId: nextAction?.proposalMessageId || undefined,
       leagueNegotiationFocusToken: String(Date.now()),
-      subTitle: 'Négociation du match en cours',
+      subTitle: t('leagueActionPromptHost.negotiationSubtitle', 'Négociation du match en cours'),
     });
-  }, [dismissForSession, nextAction?.chatId, nextAction?.proposalMessageId]);
+  }, [dismissForSession, nextAction?.chatId, nextAction?.proposalMessageId, t]);
 
   const handleResolvedElsewhere = useCallback(async () => {
     await invalidateLeagueQueries();
@@ -423,8 +441,8 @@ function LeagueActionPromptHost({ skipInitialFetch = false } = {}) {
         return;
       }
       showBanner({
-        body: "Impossible d'accepter la proposition.",
-        title: 'Erreur',
+        body: t('leagueActionPromptHost.errors.accept', "Impossible d'accepter la proposition."),
+        title: t('leagueActionPromptHost.errors.title', 'Erreur'),
         tone: 'error',
       });
     } finally {
@@ -441,6 +459,7 @@ function LeagueActionPromptHost({ skipInitialFetch = false } = {}) {
     promptMatchLabel,
     requestLeagueLegalAcceptance,
     showBanner,
+    t,
   ]);
 
   const handleDeclineProposal = useCallback(async () => {
@@ -461,14 +480,23 @@ function LeagueActionPromptHost({ skipInitialFetch = false } = {}) {
         return;
       }
       showBanner({
-        body: 'Impossible de refuser la proposition.',
-        title: 'Erreur',
+        body: t('leagueActionPromptHost.errors.decline', 'Impossible de refuser la proposition.'),
+        title: t('leagueActionPromptHost.errors.title', 'Erreur'),
         tone: 'error',
       });
     } finally {
       setIsSubmitting(false);
     }
-  }, [dismissForSession, handleResolvedElsewhere, invalidateLeagueQueries, isSubmitting, nextAction?.matchId, nextAction?.proposalMessageId, showBanner]);
+  }, [
+    dismissForSession,
+    handleResolvedElsewhere,
+    invalidateLeagueQueries,
+    isSubmitting,
+    nextAction?.matchId,
+    nextAction?.proposalMessageId,
+    showBanner,
+    t,
+  ]);
 
   const handleOpenProposalComposer = useCallback(() => {
     dismissForSession();
@@ -528,9 +556,12 @@ function LeagueActionPromptHost({ skipInitialFetch = false } = {}) {
       const isInitialProposal = nextAction?.state === 'opponent_found';
       showBanner({
         body: isInitialProposal
-          ? "Impossible d'envoyer la proposition."
-          : "Impossible d'envoyer la contre-proposition.",
-        title: 'Erreur',
+          ? t('leagueActionPromptHost.errors.sendProposal', "Impossible d'envoyer la proposition.")
+          : t(
+            'leagueActionPromptHost.errors.sendCounterProposal',
+            "Impossible d'envoyer la contre-proposition.",
+          ),
+        title: t('leagueActionPromptHost.errors.title', 'Erreur'),
         tone: 'error',
       });
     } finally {
@@ -547,6 +578,7 @@ function LeagueActionPromptHost({ skipInitialFetch = false } = {}) {
     promptVenueRequired,
     requestLeagueLegalAcceptance,
     showBanner,
+    t,
   ]);
 
   const handleVenueReminder = useCallback(() => {
@@ -647,8 +679,11 @@ function LeagueActionPromptHost({ skipInitialFetch = false } = {}) {
           || '',
         ).trim();
         showBanner({
-          body: serverMessage || "Impossible d'enregistrer cette réponse.",
-          title: 'Erreur',
+          body: serverMessage || t(
+            'leagueActionPromptHost.errors.saveResponse',
+            "Impossible d'enregistrer cette réponse.",
+          ),
+          title: t('leagueActionPromptHost.errors.title', 'Erreur'),
           tone: 'error',
         });
       } finally {
@@ -664,6 +699,7 @@ function LeagueActionPromptHost({ skipInitialFetch = false } = {}) {
       nextAction?.chatId,
       nextActionMatchId,
       showBanner,
+      t,
     ],
   );
 
@@ -751,48 +787,93 @@ function LeagueActionPromptHost({ skipInitialFetch = false } = {}) {
   const isOpponentFound = promptState === 'opponent_found';
   const isPostSlotResolution = promptState === 'post_slot_resolution';
   const effectivePostSlotStep = postSlotLocalStep || nextAction?.step || 'ask_happened';
-  let promptTitle = 'Nouvelle proposition League';
-  let promptBody = "Une proposition de match attend une réponse de ta squad. Consulte les détails avant d'accepter ou de refuser.";
+  let promptTitle = t(
+    'leagueActionPromptHost.prompts.proposal.title',
+    'Nouvelle proposition League',
+  );
+  let promptBody = t(
+    'leagueActionPromptHost.prompts.proposal.body',
+    "Une proposition de match attend une réponse de ta squad. Consulte les détails avant d'accepter ou de refuser.", // eslint-disable-line max-len
+  );
   if (isScorePrompt) {
     if (promptScoreActionKey === 'pending_validation') {
-      promptTitle = 'Score à valider';
-      promptBody = 'Un score attend ta validation. Confirme ou conteste le résultat pour finaliser le match League.';
+      promptTitle = t('leagueActionPromptHost.prompts.pendingValidation.title', 'Score à valider');
+      promptBody = t(
+        'leagueActionPromptHost.prompts.pendingValidation.body',
+        'Un score attend ta validation. Confirme ou conteste le résultat pour finaliser le match League.', // eslint-disable-line max-len
+      );
     } else if (promptScoreActionKey === 'disputed') {
-      promptTitle = 'Litige score';
-      promptBody = 'Un litige est ouvert sur le score. Traite le score pour débloquer la suite League.';
+      promptTitle = t('leagueActionPromptHost.prompts.disputed.title', 'Litige score');
+      promptBody = t(
+        'leagueActionPromptHost.prompts.disputed.body',
+        'Un litige est ouvert sur le score. Traite le score pour débloquer la suite League.',
+      );
     } else {
-      promptTitle = 'Score à saisir';
-      promptBody = 'Le match est joue. Saisis le score final pour lancer la validation League.';
+      promptTitle = t('leagueActionPromptHost.prompts.waitingScore.title', 'Score à saisir');
+      promptBody = t(
+        'leagueActionPromptHost.prompts.waitingScore.body',
+        'Le match est joue. Saisis le score final pour lancer la validation League.',
+      );
     }
   } else if (isWaitingVenue) {
-    promptTitle = 'Terrain à réserver';
-    promptBody = "Le match est confirmé, mais le terrain n'est pas encore réservé. Pense à finaliser l'organisation.";
+    promptTitle = t('leagueActionPromptHost.prompts.waitingVenue.title', 'Terrain à réserver');
+    promptBody = t(
+      'leagueActionPromptHost.prompts.waitingVenue.body',
+      "Le match est confirmé, mais le terrain n'est pas encore réservé. Pense à finaliser l'organisation.", // eslint-disable-line max-len
+    );
   } else if (isOpponentFound) {
-    promptTitle = 'Adversaire trouvé';
+    promptTitle = t('leagueActionPromptHost.prompts.opponentFound.title', 'Adversaire trouvé');
     promptBody = promptVenueRequired
-      ? 'Un match compatible est créé. Envoie la première proposition de terrain et de créneau pour lancer la négociation.'
-      : 'Un match compatible est créé. Envoie la première proposition de créneau, avec un lieu si tu veux le fixer tout de suite.';
+      ? t(
+        'leagueActionPromptHost.prompts.opponentFound.bodyWithVenue',
+        'Un match compatible est créé. Envoie la première proposition de terrain et de créneau pour lancer la négociation.', // eslint-disable-line max-len
+      )
+      : t(
+        'leagueActionPromptHost.prompts.opponentFound.bodyWithoutVenue',
+        'Un match compatible est créé. Envoie la première proposition de créneau, avec un lieu si tu veux le fixer tout de suite.', // eslint-disable-line max-len
+      );
   }
   if (isPostSlotResolution) {
     if (effectivePostSlotStep === 'confirm_reschedule') {
-      promptTitle = 'Confirmer la replanification ?';
-      promptBody = "L'adversaire indique que le match n'a pas eu lieu et propose de replanifier ce même match.";
+      promptTitle = t(
+        'leagueActionPromptHost.prompts.confirmReschedule.title',
+        'Confirmer la replanification ?',
+      );
+      promptBody = t(
+        'leagueActionPromptHost.prompts.confirmReschedule.body',
+        "L'adversaire indique que le match n'a pas eu lieu et propose de replanifier ce même match.", // eslint-disable-line max-len
+      );
     } else if (effectivePostSlotStep === 'confirm_cancel') {
-      promptTitle = 'Confirmer l annulation ?';
-      promptBody = "L'adversaire indique que le match n'a pas eu lieu et propose d'annuler ce match sans pénalité.";
+      promptTitle = t(
+        'leagueActionPromptHost.prompts.confirmCancel.title',
+        'Confirmer l annulation ?',
+      );
+      promptBody = t(
+        'leagueActionPromptHost.prompts.confirmCancel.body',
+        "L'adversaire indique que le match n'a pas eu lieu et propose d'annuler ce match sans pénalité.", // eslint-disable-line max-len
+      );
     } else if (effectivePostSlotStep === 'choose_not_played_action') {
-      promptTitle = 'Le match n a pas eu lieu';
-      promptBody = 'Choisis la suite à donner à ce match : replanifier avec le même adversaire ou annuler sans pénalité.';
+      promptTitle = t('leagueActionPromptHost.prompts.notPlayed.title', 'Le match n a pas eu lieu');
+      promptBody = t(
+        'leagueActionPromptHost.prompts.notPlayed.body',
+        'Choisis la suite à donner à ce match : replanifier avec le même adversaire ou annuler sans pénalité.', // eslint-disable-line max-len
+      );
     } else {
-      promptTitle = 'Le match a-t-il eu lieu ?';
-      promptBody = 'Le créneau est dépassé sans terrain confirmé. Les capitaines doivent confirmer si le match a eu lieu.';
+      promptTitle = t(
+        'leagueActionPromptHost.prompts.askHappened.title',
+        'Le match a-t-il eu lieu ?',
+      );
+      promptBody = t(
+        'leagueActionPromptHost.prompts.askHappened.body',
+        'Le créneau est dépassé sans terrain confirmé. Les capitaines doivent confirmer si le match a eu lieu.', // eslint-disable-line max-len
+      );
     }
   }
-  let homeAwayLabel = 'Match League';
+  let homeAwayLabel = t('leagueActionPromptHost.homeAway.league', 'Match League');
   if (nextAction?.homeAway === 'home') {
-    homeAwayLabel = 'Domicile';
+    homeAwayLabel = t('leagueActionPromptHost.homeAway.home', 'Domicile');
   } else if (nextAction?.homeAway === 'away') {
-    homeAwayLabel = 'Extérieur';
+    homeAwayLabel = t('leagueActionPromptHost.homeAway.away', 'Extérieur');
   }
   const proposalDefaults = useMemo(
     () => buildProposalDefaultsFromMatch(nextAction?.match || null),
@@ -810,19 +891,25 @@ function LeagueActionPromptHost({ skipInitialFetch = false } = {}) {
           <Button
             onPress={() => handlePostSlotResponse({ nextAction: 'reschedule', outcome: 'not_played' })}
             style={ApplicationStyle.borderRadius24}
-            title={isSubmitting ? 'Validation...' : 'Replanifier ce match'}
+            title={isSubmitting ? t(
+              'leagueActionPromptHost.actions.confirming',
+              'Validation...',
+            ) : t(
+              'leagueActionPromptHost.actions.reschedule',
+              'Replanifier ce match',
+            )}
             variant="Primary"
           />
           <Button
             onPress={() => handlePostSlotResponse({ nextAction: 'cancel', outcome: 'not_played' })}
             style={ApplicationStyle.borderRadius24}
-            title="Annuler le match"
+            title={t('leagueActionPromptHost.actions.cancelMatch', 'Annuler le match')}
             variant="Secondary"
           />
           <Button
             onPress={() => setPostSlotLocalStep(null)}
             style={ApplicationStyle.borderRadius24}
-            title="Retour"
+            title={t('leagueActionPromptHost.actions.back', 'Retour')}
             variant="Secondary"
           />
         </>
@@ -835,19 +922,25 @@ function LeagueActionPromptHost({ skipInitialFetch = false } = {}) {
           <Button
             onPress={() => handlePostSlotResponse({ nextAction: 'reschedule', outcome: 'not_played' })}
             style={ApplicationStyle.borderRadius24}
-            title={isSubmitting ? 'Validation...' : 'Confirmer la replanification'}
+            title={isSubmitting ? t(
+              'leagueActionPromptHost.actions.confirming',
+              'Validation...',
+            ) : t(
+              'leagueActionPromptHost.actions.confirmReschedule',
+              'Confirmer la replanification',
+            )}
             variant="Primary"
           />
           <Button
             onPress={() => handlePostSlotResponse({ outcome: 'played' })}
             style={ApplicationStyle.borderRadius24}
-            title="Le match a eu lieu"
+            title={t('leagueActionPromptHost.actions.matchHappened', 'Le match a eu lieu')}
             variant="Secondary"
           />
           <Button
             onPress={() => openMatchDetails()}
             style={ApplicationStyle.borderRadius24}
-            title="Voir le match"
+            title={t('leagueActionPromptHost.actions.viewMatch', 'Voir le match')}
             variant="Secondary"
           />
         </>
@@ -860,19 +953,25 @@ function LeagueActionPromptHost({ skipInitialFetch = false } = {}) {
           <Button
             onPress={() => handlePostSlotResponse({ nextAction: 'cancel', outcome: 'not_played' })}
             style={ApplicationStyle.borderRadius24}
-            title={isSubmitting ? 'Validation...' : 'Confirmer l annulation'}
+            title={isSubmitting ? t(
+              'leagueActionPromptHost.actions.confirming',
+              'Validation...',
+            ) : t(
+              'leagueActionPromptHost.actions.confirmCancel',
+              'Confirmer l annulation',
+            )}
             variant="Primary"
           />
           <Button
             onPress={() => handlePostSlotResponse({ outcome: 'played' })}
             style={ApplicationStyle.borderRadius24}
-            title="Le match a eu lieu"
+            title={t('leagueActionPromptHost.actions.matchHappened', 'Le match a eu lieu')}
             variant="Secondary"
           />
           <Button
             onPress={() => openMatchDetails()}
             style={ApplicationStyle.borderRadius24}
-            title="Voir le match"
+            title={t('leagueActionPromptHost.actions.viewMatch', 'Voir le match')}
             variant="Secondary"
           />
         </>
@@ -884,19 +983,22 @@ function LeagueActionPromptHost({ skipInitialFetch = false } = {}) {
         <Button
           onPress={() => handlePostSlotResponse({ outcome: 'played' })}
           style={ApplicationStyle.borderRadius24}
-          title={isSubmitting ? 'Validation...' : 'Oui, le match a eu lieu'}
+          title={isSubmitting ? t('leagueActionPromptHost.actions.confirming', 'Validation...') : t(
+            'leagueActionPromptHost.actions.yesHappened',
+            'Oui, le match a eu lieu',
+          )}
           variant="Primary"
         />
         <Button
           onPress={openPostSlotNoMatchChoices}
           style={ApplicationStyle.borderRadius24}
-          title="Non, le match n a pas eu lieu"
+          title={t('leagueActionPromptHost.actions.noNotHappened', 'Non, le match n a pas eu lieu')}
           variant="Secondary"
         />
         <Button
           onPress={() => openMatchDetails()}
           style={ApplicationStyle.borderRadius24}
-          title="Voir le match"
+          title={t('leagueActionPromptHost.actions.viewMatch', 'Voir le match')}
           variant="Secondary"
         />
       </>
@@ -908,6 +1010,7 @@ function LeagueActionPromptHost({ skipInitialFetch = false } = {}) {
     isSubmitting,
     openMatchDetails,
     openPostSlotNoMatchChoices,
+    t,
   ]);
 
   const renderPromptActions = useCallback(() => {
@@ -936,13 +1039,13 @@ function LeagueActionPromptHost({ skipInitialFetch = false } = {}) {
       openMatchDetails('timeline');
     };
 
-    let primaryTitle = 'Ouvrir le match';
+    let primaryTitle = t('leagueActionPromptHost.actions.openMatch', 'Ouvrir le match');
     if (scoreActionKey === 'pending_validation') {
-      primaryTitle = 'Valider le score';
+      primaryTitle = t('leagueActionPromptHost.actions.validateScore', 'Valider le score');
     } else if (scoreActionKey === 'disputed') {
-      primaryTitle = 'Traiter le litige';
+      primaryTitle = t('leagueActionPromptHost.actions.handleDispute', 'Traiter le litige');
     } else if (scoreActionKey === 'waiting_score') {
-      primaryTitle = 'Saisir le score';
+      primaryTitle = t('leagueActionPromptHost.actions.enterScore', 'Saisir le score');
     }
 
     if (state === 'post_slot_resolution') {
@@ -959,13 +1062,16 @@ function LeagueActionPromptHost({ skipInitialFetch = false } = {}) {
           <Button
             onPress={handleOpenProposalComposer}
             style={ApplicationStyle.borderRadius24}
-            title={isSubmitting ? 'Envoi...' : 'Envoyer une proposition'}
+            title={isSubmitting ? t('leagueActionPromptHost.actions.sending', 'Envoi...') : t(
+              'leagueActionPromptHost.actions.sendProposal',
+              'Envoyer une proposition',
+            )}
             variant="Primary"
           />
           <Button
             onPress={() => openMatchDetails('negotiation')}
             style={ApplicationStyle.borderRadius24}
-            title="Voir le match"
+            title={t('leagueActionPromptHost.actions.viewMatch', 'Voir le match')}
             variant="Secondary"
           />
         </View>
@@ -979,21 +1085,27 @@ function LeagueActionPromptHost({ skipInitialFetch = false } = {}) {
             disabled={isSubmitting}
             onPress={handleAcceptProposal}
             style={ApplicationStyle.borderRadius24}
-            title={isSubmitting ? 'Validation...' : 'Accepter'}
+            title={isSubmitting ? t(
+              'leagueActionPromptHost.actions.confirming',
+              'Validation...',
+            ) : t(
+              'leagueActionPromptHost.actions.accept',
+              'Accepter',
+            )}
             variant="Primary"
           />
           <Button
             disabled={isSubmitting}
             onPress={handleDeclineProposal}
             style={ApplicationStyle.borderRadius24}
-            title="Refuser"
+            title={t('leagueActionPromptHost.actions.decline', 'Refuser')}
             variant="Secondary"
           />
           <Button
             disabled={isSubmitting}
             onPress={openChat}
             style={ApplicationStyle.borderRadius24}
-            title="Ouvrir le chat"
+            title={t('leagueActionPromptHost.actions.openChat', 'Ouvrir le chat')}
             variant="Secondary"
           />
         </View>
@@ -1007,14 +1119,14 @@ function LeagueActionPromptHost({ skipInitialFetch = false } = {}) {
             disabled={isSubmitting}
             onPress={handleVenueReminder}
             style={ApplicationStyle.borderRadius24}
-            title="Marquer terrain réservé"
+            title={t('leagueActionPromptHost.actions.markVenueBooked', 'Marquer terrain réservé')}
             variant="Primary"
           />
           <Button
             disabled={isSubmitting}
             onPress={() => openMatchDetails('venueBooking')}
             style={ApplicationStyle.borderRadius24}
-            title="Voir le match"
+            title={t('leagueActionPromptHost.actions.viewMatch', 'Voir le match')}
             variant="Secondary"
           />
         </View>
@@ -1045,6 +1157,7 @@ function LeagueActionPromptHost({ skipInitialFetch = false } = {}) {
     dismissThenOpenLeagueScoreFlow,
     openMatchDetails,
     renderPostSlotActions,
+    t,
   ]);
 
   if (!ENABLE_LEAGUE_ACTION_PROMPTS || !nextAction) return null;
@@ -1079,9 +1192,14 @@ function LeagueActionPromptHost({ skipInitialFetch = false } = {}) {
               ]}
             >
               <View style={{ gap: 6 }}>
-                <Text style={[Fonts.p4Bold, { color: Colors.primary500 }]}>Adversaire</Text>
+                <Text style={[Fonts.p4Bold, { color: Colors.primary500 }]}>
+                  {t('leagueActionPromptHost.opponent', 'Adversaire')}
+                </Text>
                 <Text style={[Fonts.h4Bold, { color: Colors.neutral00 }]}>
-                  {shouldHideOpponentName ? 'Adversaire' : nextAction?.opponent?.name || 'Adversaire'}
+                  {shouldHideOpponentName
+                    ? t('leagueActionPromptHost.opponent', 'Adversaire')
+                    : nextAction?.opponent?.name
+                      || t('leagueActionPromptHost.opponent', 'Adversaire')}
                 </Text>
               </View>
 
@@ -1123,24 +1241,29 @@ function LeagueActionPromptHost({ skipInitialFetch = false } = {}) {
                   <Text style={[Fonts.p3Bold, { color: Colors.gold500 }]}>{formatActionDate(nextAction?.date)}</Text>
                 </Text>
                 <Text style={[Fonts.p3, { color: Colors.neutral200 }]}>
-                  Terrain
+                  {t('leagueActionPromptHost.details.venue', 'Terrain')}
                   {' : '}
-                  <Text style={[Fonts.p3Bold, { color: Colors.gold500 }]}>{nextAction?.venue || 'À définir'}</Text>
+                  <Text style={[Fonts.p3Bold, { color: Colors.gold500 }]}>
+                    {nextAction?.venue || t(
+                      'leagueActionPromptHost.details.toBeDecided',
+                      'À définir',
+                    )}
+                  </Text>
                 </Text>
                 {nextAction?.currentProposal?.status ? (
                   <Text style={[Fonts.p3, { color: Colors.neutral200 }]}>
-                    Statut
+                    {t('leagueActionPromptHost.details.status', 'Statut')}
                     {' : '}
                     <Text style={[Fonts.p3Bold, { color: Colors.primary500 }]}>
                       {nextAction.currentProposal.status === 'pending'
-                        ? 'En attente'
+                        ? t('leagueActionPromptHost.details.pending', 'En attente')
                         : nextAction.currentProposal.status}
                     </Text>
                   </Text>
                 ) : null}
                 {isPostSlotResolution && nextAction?.opponentResponse ? (
                   <Text style={[Fonts.p3, { color: Colors.neutral200 }]}>
-                    Réponse adverse
+                    {t('leagueActionPromptHost.details.opponentResponse', 'Réponse adverse')}
                     {' : '}
                     <Text style={[Fonts.p3Bold, { color: Colors.primary500 }]}>
                       {opponentResponseLabel}
@@ -1163,7 +1286,10 @@ function LeagueActionPromptHost({ skipInitialFetch = false } = {}) {
               }}
             >
               <Text style={[Fonts.p4, { color: Colors.neutral200, textAlign: 'center' }]}>
-                Si tu fermes ce rappel sans agir, il reviendra à la prochaine ouverture de l&apos;app tant que cet état reste actif.
+                {t(
+                  'leagueActionPromptHost.reminderFooter',
+                  "Si tu fermes ce rappel sans agir, il reviendra à la prochaine ouverture de l'app tant que cet état reste actif.", // eslint-disable-line max-len
+                )}
               </Text>
             </View>
           </View>
