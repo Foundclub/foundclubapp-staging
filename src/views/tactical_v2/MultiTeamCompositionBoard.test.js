@@ -4,6 +4,12 @@ import renderer, { act } from 'react-test-renderer';
 import MultiTeamCompositionBoard from './MultiTeamCompositionBoard';
 import { generateEventCompositionDraft, publishEventConvocation, saveEventCompositionDraft } from '@/services/event/eventService';
 
+// I18N-2 : ces textes passent par t() — la doublure partagée rend le
+// français de l app (fr.js, sinon le repli, jetons et pluriel français).
+jest.mock('react-i18next', () => (
+  jest.requireActual('@/theme/strings/__mocks__/doublureTraduction').reactI18next
+));
+
 // D42 (E6) : `MultiTeamCompositionBoard.js` fait 1 551 lignes et n'avait AUCUN
 // test propre. C'est pourtant l'ecran ou un coach compose son equipe : 4 actions
 // qui touchent le serveur, un banc, des postes, des preselections.
