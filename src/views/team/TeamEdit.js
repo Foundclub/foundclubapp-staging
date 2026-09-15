@@ -1,5 +1,6 @@
 import { joiResolver } from '@hookform/resolvers/joi';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import i18next from 'i18next';
 import {
   useCallback, useEffect, useMemo, useRef, useState,
 } from 'react';
@@ -19,6 +20,7 @@ import { USER_ROLES } from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
 import { extractSubscriptionDecisionFromError } from '@/domains/subscription/subscriptionDecision';
 import { Joi } from '@/theme/strings';
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -333,7 +335,11 @@ function TeamEdit({ navigation, route }) {
       const userAlreadyInList = members.some((m) => m.value === userData.documentId);
       if (!userAlreadyInList) {
         members.unshift({
-          label: `${userData.firstname} ${userData.lastname} (Toi)`,
+          label: i18next.t(
+            'teamEdit.trainers.me',
+            '{{firstname}} {{lastname}} (Toi)',
+            { firstname: userData.firstname, lastname: userData.lastname, ...SANS_ECHAPPEMENT },
+          ),
           value: userData.documentId || '',
         });
       }
@@ -590,35 +596,73 @@ function TeamEdit({ navigation, route }) {
           {isBootstrapLoading ? (
             <View style={[Alignments.alignCenter, Spaces.gap[12]]}>
               <Loader color={Colors.primary500} size="large" />
-              <Text>Chargement des informations de cette équipe...</Text>
+              <Text>
+                {t('teamEdit.states.loading', 'Chargement des informations de cette équipe...')}
+              </Text>
             </View>
           ) : null}
 
           {isMissingTeamId ? (
             <View style={Spaces.gap[12]}>
-              <Text>Identifiant d équipe manquant. Ouvre la fiche équipe pour continuer.</Text>
-              <Button onPress={() => navigation.navigate(RouteNames.TeamList)} title="Retour aux équipes" variant="Secondary" />
+              <Text>
+                {t(
+                  'teamEdit.states.missingId',
+                  'Identifiant d équipe manquant. Ouvre la fiche équipe pour continuer.',
+                )}
+              </Text>
+              <Button
+                onPress={() => navigation.navigate(RouteNames.TeamList)}
+                title={t('teamEdit.states.backToTeams', 'Retour aux équipes')}
+                variant="Secondary"
+              />
             </View>
           ) : null}
 
           {isTeamNotFound ? (
             <View style={Spaces.gap[12]}>
-              <Text>Équipe introuvable. Vérifie le lien ou retourne à la liste des équipes.</Text>
-              <Button onPress={() => navigation.navigate(RouteNames.TeamList)} title="Retour aux équipes" variant="Secondary" />
+              <Text>
+                {t(
+                  'teamEdit.states.notFound',
+                  'Équipe introuvable. Vérifie le lien ou retourne à la liste des équipes.',
+                )}
+              </Text>
+              <Button
+                onPress={() => navigation.navigate(RouteNames.TeamList)}
+                title={t('teamEdit.states.backToTeams', 'Retour aux équipes')}
+                variant="Secondary"
+              />
             </View>
           ) : null}
 
           {isClubNotFound ? (
             <View style={Spaces.gap[12]}>
-              <Text>Club introuvable pour cette équipe. Reessaye ou reviens à la fiche équipe.</Text>
-              <Button onPress={handleRetryBootstrap} title="Réessayer" variant="Secondary" />
+              <Text>
+                {t(
+                  'teamEdit.states.clubNotFound',
+                  'Club introuvable pour cette équipe. Reessaye ou reviens à la fiche équipe.',
+                )}
+              </Text>
+              <Button
+                onPress={handleRetryBootstrap}
+                title={t('teamEdit.states.retry', 'Réessayer')}
+                variant="Secondary"
+              />
             </View>
           ) : null}
 
           {bootstrapError && !isBootstrapLoading ? (
             <View style={Spaces.gap[12]}>
-              <Text>{bootstrapError?.message || 'Impossible de charger les informations de l équipe.'}</Text>
-              <Button onPress={handleRetryBootstrap} title="Réessayer" variant="Secondary" />
+              <Text>
+                {bootstrapError?.message || t(
+                  'teamEdit.states.loadError',
+                  'Impossible de charger les informations de l équipe.',
+                )}
+              </Text>
+              <Button
+                onPress={handleRetryBootstrap}
+                title={t('teamEdit.states.retry', 'Réessayer')}
+                variant="Secondary"
+              />
             </View>
           ) : null}
         </View>

@@ -10,6 +10,7 @@ import {
 import useAuth from '@/domains/auth/useAuth';
 import { useClubScope } from '@/context/ClubScopeContext';
 import { TutorialIds } from '@/domains/tutorial/tutorialIds';
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import WebFloatingOverlay from '@/components/atoms/webFloatingOverlay/WebFloatingOverlay';
@@ -145,7 +146,10 @@ function TeamList({ navigation, route }) {
         </View>
 
         <OnboardingWrapper
-          description="Consulte tes équipes, les demandes et ouvre chaque fiche équipe."
+          description={t(
+            'teamList.tutorial.description',
+            'Consulte tes équipes, les demandes et ouvre chaque fiche équipe.',
+          )}
           id="team-list-main-content"
           order={1}
           spotlight={{
@@ -156,7 +160,7 @@ function TeamList({ navigation, route }) {
             paddingY: 2,
           }}
           style={{ flex: 1 }}
-          title="Mes équipes"
+          title={t('teamList.tutorial.title', 'Mes équipes')}
         >
           <TeamListContent
             assignmentTrainerId={assignmentTrainerId}
@@ -237,14 +241,24 @@ function TeamList({ navigation, route }) {
         ) : null}
 
         <GlobalPromptModal
-          body={`${assignmentTrainerName || 'Cet entraîneur'} est maintenant dans ton club.\n\n1. Ouvre une équipe.\n2. Appuie sur "Modifier".\n3. Dans la section "Entraîneurs", ajoute-le puis valide.`}
+          body={t(
+            'teamList.trainerGuide.body',
+            '{{name}} est maintenant dans ton club.\n\n1. Ouvre une équipe.\n2. Appuie sur "Modifier".\n3. Dans la section "Entraîneurs", ajoute-le puis valide.', // eslint-disable-line max-len
+            {
+              name: assignmentTrainerName || t(
+                'teamList.trainerGuide.nameFallback',
+                'Cet entraîneur',
+              ),
+              ...SANS_ECHAPPEMENT,
+            },
+          )}
           inlineOnAndroid
           onRequestClose={dismissTrainerGuide}
           primaryAction={{
             label: t('common.actions.ok', 'OK'),
             onPress: dismissTrainerGuide,
           }}
-          title="Assigner un entraîneur"
+          title={t('teamList.trainerGuide.title', 'Assigner un entraîneur')}
           visible={isTrainerGuideVisible}
         />
       </ScreenContainer>

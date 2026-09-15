@@ -1,3 +1,4 @@
+import i18next from 'i18next';
 import React, { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -24,9 +25,9 @@ import { useGetTeamStats } from '@/services/stats/statsQueries';
 const getColumnsForSport = (sport) =>
   // We only show Presence, Absence, Retard for ALL sports as requested
   [
-    { key: 'attendanceCount', label: 'Prés.' },
-    { key: 'absenceCount', label: 'Abs.' },
-    { key: 'retardCount', label: 'Ret.' }, // Retard
+    { key: 'attendanceCount', label: i18next.t('teamStatsScreen.columns.attendance', 'Prés.') },
+    { key: 'absenceCount', label: i18next.t('teamStatsScreen.columns.absence', 'Abs.') },
+    { key: 'retardCount', label: i18next.t('teamStatsScreen.columns.late', 'Ret.') }, // Retard
   ]
 ;
 
@@ -85,7 +86,7 @@ function TeamStatsScreen({ navigation, route }) {
             color: Colors.neutral200, letterSpacing: 1, textAlign: 'center', textTransform: 'uppercase',
           }]}
           >
-            Joueurs
+            {t('teamStatsScreen.header.players', 'Joueurs')}
           </Text>
         </View>
 
@@ -105,7 +106,7 @@ function TeamStatsScreen({ navigation, route }) {
               color: Colors.neutral200, letterSpacing: 1, textAlign: 'center', textTransform: 'uppercase',
             }]}
           >
-            Événements
+            {t('teamStatsScreen.header.events', 'Événements')}
           </Text>
         </View>
 
@@ -123,7 +124,7 @@ function TeamStatsScreen({ navigation, route }) {
             color: Colors.neutral200, letterSpacing: 1, textAlign: 'center', textTransform: 'uppercase',
           }]}
           >
-            Sport
+            {t('teamStatsScreen.header.sport', 'Sport')}
           </Text>
         </View>
       </View>
@@ -142,7 +143,7 @@ function TeamStatsScreen({ navigation, route }) {
           color: Colors.neutral300, flex: 1, letterSpacing: 0.5, textTransform: 'uppercase',
         }]}
         >
-          Joueur
+          {t('teamStatsScreen.table.player', 'Joueur')}
         </Text>
         <View style={[Alignments.row, Spaces.gap[8]]}>
           {columns.map((col) => (
@@ -162,14 +163,17 @@ function TeamStatsScreen({ navigation, route }) {
       <ScreenContainer bgImage="bg2">
         <View style={[Alignments.fill, Alignments.alignCenter, Alignments.justifyCenter, Spaces.gap[12]]}>
           <Text style={[Fonts.h4Bold, Fonts.neutral00]}>
-            Équipe introuvable
+            {t('teamStatsScreen.states.notFoundTitle', 'Équipe introuvable')}
           </Text>
           <Text style={[Fonts.p2, Fonts.neutral200]}>
-            Aucun identifiant d équipe n a été fourni.
+            {t(
+              'teamStatsScreen.states.missingIdBody',
+              'Aucun identifiant d équipe n a été fourni.',
+            )}
           </Text>
           <Button
             onPress={() => navigation.navigate(RouteNames.TeamList)}
-            title="Retour aux équipes"
+            title={t('teamStatsScreen.states.backToTeams', 'Retour aux équipes')}
             variant="Secondary"
           />
         </View>
@@ -192,12 +196,16 @@ function TeamStatsScreen({ navigation, route }) {
       <ScreenContainer bgImage="bg2">
         <View style={[Alignments.fill, Alignments.alignCenter, Alignments.justifyCenter, Spaces.gap[12]]}>
           <Text style={[Fonts.h4Bold, Fonts.neutral00]}>
-            Impossible de charger les statistiques
+            {t('teamStatsScreen.states.loadError', 'Impossible de charger les statistiques')}
           </Text>
           <Text style={[Fonts.p1, { color: Colors.error500 }]}>
             {error?.message || t('common.errors.generic', 'Une erreur est survenue')}
           </Text>
-          <Button onPress={() => refetch()} title="Réessayer" variant="Secondary" />
+          <Button
+            onPress={() => refetch()}
+            title={t('teamStatsScreen.states.retry', 'Réessayer')}
+            variant="Secondary"
+          />
         </View>
       </ScreenContainer>
     );
