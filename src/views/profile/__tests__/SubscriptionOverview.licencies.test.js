@@ -63,10 +63,12 @@ jest.mock('react-i18next', () => {
     useTranslation: () => ({
       t: (/** @type {string} */ cle, /** @type {any} */ repli, /** @type {any} */ valeurs) => {
         const valeur = lire(String(cle || '').split('.'));
-        if (typeof valeur === 'string') return valeur;
-        if (typeof repli !== 'string') return cle;
-        // I18N-1 : le repli s'interpole comme dans l'app ({{jetons}}).
-        return repli.replace(
+        // RÉCOLTE I18N (15/09) : une fois la clef pliée dans fr.js, c'est SON texte
+        // qui s'affiche — et l'app l'interpole comme le repli. Rendre le texte brut
+        // affichait « {{knownLicenseeCount}} » là où l'écran dit « 120 ».
+        const texte = typeof valeur === 'string' ? valeur : repli;
+        if (typeof texte !== 'string') return cle;
+        return texte.replace(
           /\{\{(\w+)\}\}/g,
           (/** @type {string} */ _m, /** @type {string} */ nom) => String(valeurs?.[nom] ?? ''),
         );

@@ -59,13 +59,23 @@ const t = (clef, repliOuOptions, options) => {
   ));
 };
 
+/**
+ * 🪤 RÉCOLTE I18N (15/09) : `@/theme/strings/index.js` appelle
+ * `i18n.use(initReactI18next).init({...})` au chargement. Un témoin qui double
+ * `i18next` avec cette doublure ET importe — même de loin — `@/theme/strings`
+ * mourait sur « i18next.use is not a function » (FriendlyMatchAdDetails, après la
+ * fusion des 4 lots). `use` rend la doublure elle-même, `init` ne fait rien : la
+ * doublure reste la seule source des textes, en français.
+ */
 const i18n = {
   changeLanguage: () => Promise.resolve(),
   exists: (/** @type {string} */ clef) => lire(clef) !== undefined,
+  init: () => Promise.resolve(),
   language: 'fr',
   off: () => {},
   on: () => {},
   t,
+  use: () => i18n,
 };
 
 const reactI18next = {
