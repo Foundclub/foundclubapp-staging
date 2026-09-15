@@ -1,10 +1,12 @@
 import { useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Text,
   TouchableOpacity,
   View,
 } from 'react-native';
 
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import WizardStepLayout from '@/components/molecules/wizardStepLayout/WizardStepLayout';
@@ -31,6 +33,7 @@ const MAX_POSITION_QUANTITY = 10;
  * @returns {import('react').ReactElement}
  */
 function AdWizardPositions({ navigation }) {
+  const { t } = useTranslation();
   const {
     Alignments,
     ApplicationStyle,
@@ -112,20 +115,29 @@ function AdWizardPositions({ navigation }) {
     return (
       <WizardStepLayout
         isNextDisabled={false}
-        nextLabel="Suivant"
+        nextLabel={t('adWizardPositions.next', 'Suivant')}
         onBack={() => navigation.goBack()}
         onNext={() => navigation.navigate(RouteNames.AdWizardInfo)}
         stepCount={getAdWizardStepCount(state)}
         stepIndex={getAdWizardNeedsStepIndex(state)}
-        subtitle="Ce sport ne se joue pas par postes."
-        title="Postes recherchés"
+        subtitle={t(
+          'adWizardPositions.noPositions.subtitle',
+          'Ce sport ne se joue pas par postes.',
+        )}
+        title={t('adWizardPositions.title', 'Postes recherchés')}
       >
         <View style={[Spaces.padding[24], Alignments.alignCenter, Spaces.gap[12]]}>
           <Text style={[Fonts.p1, Fonts.neutral00, { textAlign: 'center' }]}>
-            {sportName} ne nécessite pas de préciser des postes.
+            {t('adWizardPositions.noPositions.body', '{{sport}} ne nécessite pas de préciser des postes.', {
+              sport: sportName,
+              ...SANS_ECHAPPEMENT,
+            })}
           </Text>
           <Text style={[Fonts.p3, Fonts.neutral200, { lineHeight: 22, textAlign: 'center' }]}>
-            Tu peux passer directement à la suite de ton annonce.
+            {t(
+              'adWizardPositions.noPositions.continue',
+              'Tu peux passer directement à la suite de ton annonce.',
+            )}
           </Text>
         </View>
       </WizardStepLayout>
@@ -135,13 +147,16 @@ function AdWizardPositions({ navigation }) {
   return (
     <WizardStepLayout
       isNextDisabled={!isAdWizardNeedsComplete(state)}
-      nextLabel="Suivant"
+      nextLabel={t('adWizardPositions.next', 'Suivant')}
       onBack={() => navigation.goBack()}
       onNext={handleNext}
       stepCount={getAdWizardStepCount(state)}
       stepIndex={getAdWizardNeedsStepIndex(state)}
-      subtitle="Définis les postes à ouvrir et le volume de recrutement associé."
-      title="Postes recherchés"
+      subtitle={t(
+        'adWizardPositions.subtitle',
+        'Définis les postes à ouvrir et le volume de recrutement associé.',
+      )}
+      title={t('adWizardPositions.title', 'Postes recherchés')}
     >
       <View style={[Spaces.gap[24], Spaces.paddingBottom[48]]}>
         <View
@@ -159,13 +174,24 @@ function AdWizardPositions({ navigation }) {
             <View style={[Spaces.gap[12], { flex: 1, minWidth: 180 }]}>
               <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
                 {selectedCount > 0
-                  ? `${selectedCount} poste${selectedCount > 1 ? 's' : ''} configuré${selectedCount > 1 ? 's' : ''}`
-                  : 'Aucun poste sélectionné'}
+                  ? t('adWizardPositions.summary.configured', {
+                    count: selectedCount,
+                    defaultValue_one: '{{count}} poste configuré',
+                    defaultValue_other: '{{count}} postes configurés',
+                  })
+                  : t('adWizardPositions.summary.none', 'Aucun poste sélectionné')}
               </Text>
               <Text style={[Fonts.p4, Fonts.neutral100, { lineHeight: 22 }]}>
                 {selectedCount > 0
-                  ? `${totalPlayers} joueur${totalPlayers > 1 ? 's' : ''} recherché${totalPlayers > 1 ? 's' : ''} sur cette annonce.`
-                  : 'Active des postes ci-dessous ou applique un volume à tous les postes.'}
+                  ? t('adWizardPositions.summary.players', {
+                    count: totalPlayers,
+                    defaultValue_one: '{{count}} joueur recherché sur cette annonce.',
+                    defaultValue_other: '{{count}} joueurs recherchés sur cette annonce.',
+                  })
+                  : t(
+                    'adWizardPositions.summary.noneHint',
+                    'Active des postes ci-dessous ou applique un volume à tous les postes.',
+                  )}
               </Text>
             </View>
 
@@ -199,7 +225,11 @@ function AdWizardPositions({ navigation }) {
               ]}
             >
               <Text style={[Fonts.p3Bold, Fonts.primary500]}>
-                {`${selectedCount} poste${selectedCount > 1 ? 's' : ''}`}
+                {t('adWizardPositions.chips.positions', {
+                  count: selectedCount,
+                  defaultValue_one: '{{count}} poste',
+                  defaultValue_other: '{{count}} postes',
+                })}
               </Text>
             </View>
 
@@ -216,7 +246,11 @@ function AdWizardPositions({ navigation }) {
               ]}
             >
               <Text style={[Fonts.p3Bold, Fonts.neutral00]}>
-                {`${totalPlayers} joueur${totalPlayers > 1 ? 's' : ''}`}
+                {t('adWizardPositions.chips.players', {
+                  count: totalPlayers,
+                  defaultValue_one: '{{count}} joueur',
+                  defaultValue_other: '{{count}} joueurs',
+                })}
               </Text>
             </View>
           </View>
@@ -233,10 +267,13 @@ function AdWizardPositions({ navigation }) {
           >
             <View style={[Spaces.gap[8]]}>
               <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
-                Appliquer à tous les postes
+                {t('adWizardPositions.bulk.title', 'Appliquer à tous les postes')}
               </Text>
               <Text style={[Fonts.p4, Fonts.neutral100, { lineHeight: 22 }]}>
-                Le compteur met à jour toute la liste instantanément. 0 réinitialise la sélection globale.
+                {t(
+                  'adWizardPositions.bulk.body',
+                  'Le compteur met à jour toute la liste instantanément. 0 réinitialise la sélection globale.', // eslint-disable-line max-len
+                )}
               </Text>
             </View>
 
@@ -292,7 +329,7 @@ function AdWizardPositions({ navigation }) {
                     {bulkQuantity}
                   </Text>
                   <Text style={[Fonts.p4, Fonts.neutral100, { lineHeight: 18, textAlign: 'center' }]}>
-                    joueurs par poste
+                    {t('adWizardPositions.bulk.unit', 'joueurs par poste')}
                   </Text>
                 </View>
 
@@ -327,16 +364,23 @@ function AdWizardPositions({ navigation }) {
           onQuantityChange={handleQuantityChange}
           onToggle={handleTogglePosition}
           positions={positions}
-          selectedQuantityLabel={(quantity) => `${quantity} joueur${quantity > 1 ? 's' : ''} recherché${quantity > 1 ? 's' : ''}`}
-          selectedSectionTitle="Postes actifs"
+          selectedQuantityLabel={(quantity) => t('adWizardPositions.list.quantity', {
+            count: quantity,
+            defaultValue_one: '{{count}} joueur recherché',
+            defaultValue_other: '{{count}} joueurs recherchés',
+          })}
+          selectedSectionTitle={t('adWizardPositions.list.selectedTitle', 'Postes actifs')}
           sportName={sportName}
-          unselectedActionLabel="Activer"
+          unselectedActionLabel={t('adWizardPositions.list.enable', 'Activer')}
         />
 
         {positions.length === 0 ? (
           <View style={[ApplicationStyle.card, Spaces.padding[24], cardSurfaceStyle]}>
             <Text style={[Fonts.p1, Fonts.neutral100, { textAlign: 'center' }]}>
-              Aucun poste n&apos;est actuellement défini pour ce sport.
+              {t(
+                'adWizardPositions.list.empty',
+                "Aucun poste n'est actuellement défini pour ce sport.",
+              )}port.
             </Text>
           </View>
         ) : null}
