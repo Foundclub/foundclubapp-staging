@@ -87,7 +87,15 @@ jest.mock('@/domains/auth/authUseCases', () => ({
 }));
 jest.mock('@/theme/strings', () => ({
   __esModule: true,
-  default: { t: (/** @type {string} */ cle) => cle },
+  // I18N-4 : l ecran lit ses textes par i18n.t(clef, repli) ; la doublure rend le repli.
+  default: {
+    t: (/** @type {string} */ cle, /** @type {any} */ repli, /** @type {any} */ valeurs) => (
+      typeof repli === 'string'
+        ? repli.replace(/\{\{(\w+)\}\}/g, (/** @type {string} */ m, /** @type {string} */ nom) => (
+          valeurs && valeurs[nom] !== undefined ? String(valeurs[nom]) : m))
+        : cle
+    ),
+  },
 }));
 jest.mock('react-i18next', () => ({
   useTranslation: () => ({

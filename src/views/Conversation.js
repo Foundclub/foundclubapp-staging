@@ -61,6 +61,8 @@ import {
   toBlockedUserIdSet,
 } from '@/domains/userBlock/userBlockFilters';
 import i18n from '@/theme/strings';
+import localeDesFormats from '@/theme/strings/localeDesFormats';
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -494,16 +496,22 @@ function Conversation({ navigation, route }) {
   const openConversationPrompt = useCallback((/** @type {any} */ promptConfig) => {
     setConversationPrompt(promptConfig);
   }, []);
-  const showErrorBanner = useCallback((/** @type {unknown} */ body, /** @type {string} */ title = 'Erreur') => {
+  const showErrorBanner = useCallback((
+    /** @type {unknown} */ body,
+    /** @type {string} */ title = i18n.t('conversation.banner.errorTitle', 'Erreur'),
+  ) => {
     showBanner({
-      body: String(body || '').trim() || 'Une erreur est survenue.',
+      body: String(body || '').trim() || i18n.t(
+        'conversation.banner.errorFallback',
+        'Une erreur est survenue.',
+      ),
       title,
       tone: 'error',
     });
   }, [showBanner]);
   const showSuccessBanner = useCallback((
     /** @type {unknown} */ body,
-    /** @type {string} */ title = 'Succès',
+    /** @type {string} */ title = i18n.t('conversation.banner.successTitle', 'Succès'),
     /** @type {'success' | 'info' | 'error' | 'league'} */ tone = 'success',
   ) => {
     showBanner({
@@ -514,7 +522,7 @@ function Conversation({ navigation, route }) {
   }, [showBanner]);
   const showInfoBanner = useCallback((
     /** @type {unknown} */ body,
-    /** @type {string} */ title = 'Information',
+    /** @type {string} */ title = i18n.t('conversation.banner.infoTitle', 'Information'),
     /** @type {'success' | 'info' | 'error' | 'league'} */ tone = 'info',
   ) => {
     showBanner({
@@ -546,22 +554,31 @@ function Conversation({ navigation, route }) {
     if (!startParam || !endParam) return;
 
     showBanner({
-      actionLabel: 'Agenda',
-      body: 'Match confirme. Tu peux l ajouter à ton agenda.',
+      actionLabel: i18n.t('conversation.calendar.action', 'Agenda'),
+      body: i18n.t('conversation.calendar.body', 'Match confirme. Tu peux l ajouter à ton agenda.'),
       durationMs: 7000,
       onAction: async () => {
-        const text = encodeURIComponent('Match FoundClub League');
-        const details = encodeURIComponent('Match confirme depuis la messagerie League');
+        const text = encodeURIComponent(i18n.t(
+          'conversation.calendar.eventTitle',
+          'Match FoundClub League',
+        ));
+        const details = encodeURIComponent(i18n.t(
+          'conversation.calendar.eventDetails',
+          'Match confirme depuis la messagerie League',
+        ));
         const location = encodeURIComponent(venue);
         const url = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${text}&dates=${startParam}/${endParam}&details=${details}&location=${location}`;
         try {
           await Linking.openURL(url);
         } catch (error) {
           conversationLogger.warn('Failed to open calendar URL', error);
-          showErrorBanner("Impossible d'ouvrir ton agenda.", 'Agenda');
+          showErrorBanner(i18n.t(
+            'conversation.calendar.openError',
+            "Impossible d'ouvrir ton agenda.",
+          ), i18n.t('conversation.calendar.action', 'Agenda'));
         }
       },
-      title: 'Match confirme',
+      title: i18n.t('conversation.calendar.title', 'Match confirme'),
       tone: 'league',
     });
   };
@@ -648,33 +665,63 @@ function Conversation({ navigation, route }) {
       || '',
     ).toLowerCase();
     if (rawErrorMessage.includes('voice_socket_unavailable')) {
-      return 'Socket chat indisponible avant la création du message.';
+      return i18n.t(
+        'conversation.attachmentErrors.voiceSocketUnavailable',
+        'Socket chat indisponible avant la création du message.',
+      );
     }
     if (rawErrorMessage.includes('voice_upload_failed')) {
-      return 'Upload audio incomplet. Aucun fichier exploitable reçu.';
+      return i18n.t(
+        'conversation.attachmentErrors.voiceUploadFailed',
+        'Upload audio incomplet. Aucun fichier exploitable reçu.',
+      );
     }
     if (rawErrorMessage.includes('voice_file_empty')) {
-      return 'Le fichier audio local est vide.';
+      return i18n.t(
+        'conversation.attachmentErrors.voiceFileEmpty',
+        'Le fichier audio local est vide.',
+      );
     }
     if (rawErrorMessage.includes('voice note requires an audio attachment')) {
-      return 'La note vocale a bien été enregistrée, mais le serveur n a pas reconnu le fichier audio. Réessaie.';
+      return i18n.t(
+        'conversation.attachmentErrors.voiceNotRecognised',
+        'La note vocale a bien été enregistrée, mais le serveur n a pas reconnu le fichier audio. Réessaie.', // eslint-disable-line max-len
+      );
     }
     if (rawErrorMessage.includes('voice_module_unavailable')) {
-      return 'Le module vocal n est pas disponible sur cette build.';
+      return i18n.t(
+        'conversation.attachmentErrors.voiceModuleUnavailable',
+        'Le module vocal n est pas disponible sur cette build.',
+      );
     }
     if (responseStatus === 413 || rawErrorMessage.includes('too large') || rawErrorMessage.includes('payload too large')) {
-      return 'La pièce jointe est trop volumineuse pour être envoyée.';
+      return i18n.t(
+        'conversation.attachmentErrors.tooLarge',
+        'La pièce jointe est trop volumineuse pour être envoyée.',
+      );
     }
     if (responseStatus === 401 || responseStatus === 403) {
-      return 'Session invalide. Reconnecte-te puis réessaie.';
+      return i18n.t(
+        'conversation.attachmentErrors.invalidSession',
+        'Session invalide. Reconnecte-te puis réessaie.',
+      );
     }
     if (isTransientNetworkUploadError(error)) {
-      return 'Connexion instable. Vérifie ton réseau puis réessaie.';
+      return i18n.t(
+        'conversation.attachmentErrors.unstableConnection',
+        'Connexion instable. Vérifie ton réseau puis réessaie.',
+      );
     }
     if (rawErrorMessage.includes('invalid attachment')) {
-      return 'Format de pièce jointe invalide.';
+      return i18n.t(
+        'conversation.attachmentErrors.invalidFormat',
+        'Format de pièce jointe invalide.',
+      );
     }
-    return "Impossible d'envoyer cette pièce jointe.";
+    return i18n.t(
+      'conversation.attachmentErrors.sendFailed',
+      "Impossible d'envoyer cette pièce jointe.",
+    );
   }, [isTransientNetworkUploadError]);
 
   const getAttachmentExtensionFromAsset = useCallback((/** @type {any} */ asset) => {
@@ -718,7 +765,10 @@ function Conversation({ navigation, route }) {
     if (!hasUri) {
       return {
         reason: 'missing_uri',
-        userMessage: 'Impossible de lire ce fichier.',
+        userMessage: i18n.t(
+          'conversation.attachmentErrors.readFailed',
+          'Impossible de lire ce fichier.',
+        ),
       };
     }
 
@@ -734,7 +784,10 @@ function Conversation({ navigation, route }) {
     ) {
       return {
         reason: 'unsupported_type',
-        userMessage: 'Type de fichier non pris en charge.',
+        userMessage: i18n.t(
+          'conversation.attachmentErrors.unsupportedType',
+          'Type de fichier non pris en charge.',
+        ),
       };
     }
 
@@ -779,8 +832,14 @@ function Conversation({ navigation, route }) {
   const chatData = /** @type {any} */ (rawChatData);
   const leagueLegalMatchLabel = useMemo(() => {
     const match = chatData?.league_match;
-    if (!match) return 'Match FoundClub League';
-    return `${match?.team_a?.name || 'Équipe A'} VS ${match?.team_b?.name || 'Adversaire'}`;
+    if (!match) return i18n.t('conversation.calendar.eventTitle', 'Match FoundClub League');
+    return `${match?.team_a?.name || i18n.t(
+      'conversation.league.teamA',
+      'Équipe A',
+    )} VS ${match?.team_b?.name || i18n.t(
+      'conversation.league.opponent',
+      'Adversaire',
+    )}`;
   }, [chatData?.league_match]);
   const pendingLeagueActionTeamId = useMemo(() => {
     const currentUserId = String(userData?.documentId || '').trim();
@@ -1223,7 +1282,10 @@ function Conversation({ navigation, route }) {
       });
       setIsJoinModalVisible(false);
       setJoinModalError('');
-      showSuccessBanner('Réservation rejointe.', t('common.success'));
+      showSuccessBanner(i18n.t(
+        'conversation.reservation.joined',
+        'Réservation rejointe.',
+      ), t('common.success'));
     },
   });
 
@@ -1803,7 +1865,10 @@ function Conversation({ navigation, route }) {
           asset: describeAsset(asset),
           chatId,
         });
-        showErrorBanner("Aucune pièce jointe n'a pu être envoyée.");
+        showErrorBanner(i18n.t(
+          'conversation.attachmentErrors.noneSent',
+          "Aucune pièce jointe n'a pu être envoyée.",
+        ));
         return false;
       }
 
@@ -1829,7 +1894,10 @@ function Conversation({ navigation, route }) {
           socketConnected: Boolean(isSocketConnected),
           uploadedFiles: describeUploadItems(uploadedFiles),
         });
-        showErrorBanner('Connexion messagerie indisponible. Réessaie dans quelques secondes.');
+        showErrorBanner(i18n.t(
+          'conversation.connectionUnavailable',
+          'Connexion messagerie indisponible. Réessaie dans quelques secondes.',
+        ));
         return false;
       }
 
@@ -1902,7 +1970,10 @@ function Conversation({ navigation, route }) {
         if (safeOptimisticMessageId) {
           removeLocalPendingMessage(safeOptimisticMessageId);
         }
-        showErrorBanner("Aucune pièce jointe n'a pu être envoyée.");
+        showErrorBanner(i18n.t(
+          'conversation.attachmentErrors.noneSent',
+          "Aucune pièce jointe n'a pu être envoyée.",
+        ));
         return false;
       }
 
@@ -1938,7 +2009,10 @@ function Conversation({ navigation, route }) {
         if (safeOptimisticMessageId) {
           removeLocalPendingMessage(safeOptimisticMessageId);
         }
-        showErrorBanner('Connexion messagerie indisponible. Réessaie dans quelques secondes.');
+        showErrorBanner(i18n.t(
+          'conversation.connectionUnavailable',
+          'Connexion messagerie indisponible. Réessaie dans quelques secondes.',
+        ));
         return false;
       }
 
@@ -2052,7 +2126,10 @@ function Conversation({ navigation, route }) {
           errorCode: response.errorCode,
           errorMessage: response.errorMessage,
         });
-        showErrorBanner(response.errorMessage || 'Erreur lors de la sélection');
+        showErrorBanner(response.errorMessage || i18n.t(
+          'conversation.picker.selectionError',
+          'Erreur lors de la sélection',
+        ));
         return;
       }
 
@@ -2074,7 +2151,10 @@ function Conversation({ navigation, route }) {
         responseStatus: safeError?.response?.status,
       });
       conversationLogger.warn('Media picker failed', error);
-      showErrorBanner('Impossible d\'ouvrir la galerie.');
+      showErrorBanner(i18n.t(
+        'conversation.picker.galleryError',
+        "Impossible d'ouvrir la galerie.",
+      ));
     }
   };
 
@@ -2111,7 +2191,10 @@ function Conversation({ navigation, route }) {
       return true;
     } catch (error) {
       conversationLogger.warn('Camera permission request failed', error);
-      showErrorBanner('Impossible de vérifier la permission caméra.');
+      showErrorBanner(i18n.t(
+        'conversation.picker.cameraPermissionError',
+        'Impossible de vérifier la permission caméra.',
+      ));
       return false;
     }
   }, [showErrorBanner, t]);
@@ -2142,7 +2225,10 @@ function Conversation({ navigation, route }) {
           errorCode: response.errorCode,
           errorMessage: response.errorMessage,
         });
-        showErrorBanner(response.errorMessage || 'Impossible d\'ouvrir la camera');
+        showErrorBanner(response.errorMessage || i18n.t(
+          'conversation.picker.cameraOpenError',
+          "Impossible d'ouvrir la camera",
+        ));
         return;
       }
 
@@ -2164,19 +2250,25 @@ function Conversation({ navigation, route }) {
         responseStatus: safeError?.response?.status,
       });
       conversationLogger.warn('Camera open failed', error);
-      showErrorBanner('Impossible de prendre la photo.');
+      showErrorBanner(i18n.t('conversation.picker.photoError', 'Impossible de prendre la photo.'));
     }
   };
 
   const handlePickFile = async () => {
     if (isDocumentPickerDisabled) {
-      showInfoBanner('Le sélecteur de fichier est temporairement désactive sur cette build.', 'Fichier indisponible');
+      showInfoBanner(i18n.t(
+        'conversation.picker.fileDisabled',
+        'Le sélecteur de fichier est temporairement désactive sur cette build.',
+      ), 'Fichier indisponible');
       return;
     }
 
     const documentPicker = getDocumentPickerModule();
     if (!documentPicker?.pick || typeof documentPicker.pick !== 'function') {
-      showErrorBanner('Le sélecteur de fichier est indisponible sur cette build.');
+      showErrorBanner(i18n.t(
+        'conversation.picker.fileUnavailable',
+        'Le sélecteur de fichier est indisponible sur cette build.',
+      ));
       return;
     }
 
@@ -2203,7 +2295,10 @@ function Conversation({ navigation, route }) {
         ? localCopyResult.localUri
         : selectedFile.uri;
       if (!selectedUri) {
-        showErrorBanner('Impossible de récupérer ce fichier.');
+        showErrorBanner(i18n.t(
+          'conversation.picker.fileRetrieveError',
+          'Impossible de récupérer ce fichier.',
+        ));
         return;
       }
 
@@ -2216,7 +2311,10 @@ function Conversation({ navigation, route }) {
     } catch (error) {
       if (isDocumentPickerCancellation(documentPicker, error)) return;
       conversationLogger.warn('Document picker failed', error);
-      showErrorBanner('Impossible de sélectionner un fichier.');
+      showErrorBanner(i18n.t(
+        'conversation.picker.fileSelectError',
+        'Impossible de sélectionner un fichier.',
+      ));
     }
   };
 
@@ -2228,7 +2326,10 @@ function Conversation({ navigation, route }) {
       return;
     }
     if (!normalizedAsset?.uri) {
-      showErrorBanner('Impossible de lire ce fichier.');
+      showErrorBanner(i18n.t(
+        'conversation.attachmentErrors.readFailed',
+        'Impossible de lire ce fichier.',
+      ));
       return;
     }
 
@@ -2236,7 +2337,10 @@ function Conversation({ navigation, route }) {
     try {
       const uploadedFiles = await uploadAttachmentAsset(normalizedAsset);
       if (!Array.isArray(uploadedFiles) || uploadedFiles.length === 0) {
-        showErrorBanner("Impossible d'ajouter cette pièce jointe.");
+        showErrorBanner(i18n.t(
+          'conversation.attachmentErrors.addFailed',
+          "Impossible d'ajouter cette pièce jointe.",
+        ));
         return;
       }
 
@@ -2279,7 +2383,10 @@ function Conversation({ navigation, route }) {
 
       if (response.didCancel) return;
       if (response.errorCode) {
-        showErrorBanner(response.errorMessage || 'Erreur lors de la sélection');
+        showErrorBanner(response.errorMessage || i18n.t(
+          'conversation.picker.selectionError',
+          'Erreur lors de la sélection',
+        ));
         return;
       }
 
@@ -2288,7 +2395,10 @@ function Conversation({ navigation, route }) {
       await appendEditAttachmentsFromAsset(selectedAsset);
     } catch (error) {
       conversationLogger.warn('Edit media picker failed', error);
-      showErrorBanner('Impossible d\'ouvrir la galerie.');
+      showErrorBanner(i18n.t(
+        'conversation.picker.galleryError',
+        "Impossible d'ouvrir la galerie.",
+      ));
     }
   }, [appendEditAttachmentsFromAsset, showErrorBanner]);
 
@@ -2307,7 +2417,10 @@ function Conversation({ navigation, route }) {
 
       if (response.didCancel) return;
       if (response.errorCode) {
-        showErrorBanner(response.errorMessage || 'Impossible d\'ouvrir la camera');
+        showErrorBanner(response.errorMessage || i18n.t(
+          'conversation.picker.cameraOpenError',
+          "Impossible d'ouvrir la camera",
+        ));
         return;
       }
 
@@ -2316,19 +2429,25 @@ function Conversation({ navigation, route }) {
       await appendEditAttachmentsFromAsset(selectedAsset);
     } catch (error) {
       conversationLogger.warn('Edit camera failed', error);
-      showErrorBanner('Impossible de prendre la photo.');
+      showErrorBanner(i18n.t('conversation.picker.photoError', 'Impossible de prendre la photo.'));
     }
   }, [appendEditAttachmentsFromAsset, ensureCameraPermission, showErrorBanner]);
 
   const handleEditPickFile = useCallback(async () => {
     if (isDocumentPickerDisabled) {
-      showInfoBanner('Le sélecteur de fichier est temporairement désactive sur cette build.', 'Fichier indisponible');
+      showInfoBanner(i18n.t(
+        'conversation.picker.fileDisabled',
+        'Le sélecteur de fichier est temporairement désactive sur cette build.',
+      ), 'Fichier indisponible');
       return;
     }
 
     const documentPicker = getDocumentPickerModule();
     if (!documentPicker?.pick || typeof documentPicker.pick !== 'function') {
-      showErrorBanner('Le sélecteur de fichier est indisponible sur cette build.');
+      showErrorBanner(i18n.t(
+        'conversation.picker.fileUnavailable',
+        'Le sélecteur de fichier est indisponible sur cette build.',
+      ));
       return;
     }
 
@@ -2355,7 +2474,10 @@ function Conversation({ navigation, route }) {
         ? localCopyResult.localUri
         : selectedFile.uri;
       if (!selectedUri) {
-        showErrorBanner('Impossible de récupérer ce fichier.');
+        showErrorBanner(i18n.t(
+          'conversation.picker.fileRetrieveError',
+          'Impossible de récupérer ce fichier.',
+        ));
         return;
       }
 
@@ -2368,7 +2490,10 @@ function Conversation({ navigation, route }) {
     } catch (error) {
       if (isDocumentPickerCancellation(documentPicker, error)) return;
       conversationLogger.warn('Edit document picker failed', error);
-      showErrorBanner('Impossible de sélectionner un fichier.');
+      showErrorBanner(i18n.t(
+        'conversation.picker.fileSelectError',
+        'Impossible de sélectionner un fichier.',
+      ));
     }
   }, [appendEditAttachmentsFromAsset, showErrorBanner, showInfoBanner]);
 
@@ -2378,7 +2503,10 @@ function Conversation({ navigation, route }) {
     const payloadAttachments = toEditAttachmentPayload(editMessageAttachments);
     const normalizedMessage = String(editMessageText || '');
     if (!normalizedMessage.trim() && payloadAttachments.length === 0) {
-      showErrorBanner('Le message ne peut pas être vide.');
+      showErrorBanner(i18n.t(
+        'conversation.edit.emptyMessage',
+        'Le message ne peut pas être vide.',
+      ));
       return;
     }
 
@@ -2399,7 +2527,7 @@ function Conversation({ navigation, route }) {
       resetEditMessageState();
     } catch (error) {
       conversationLogger.warn('Edit message failed', error);
-      showErrorBanner('Impossible de modifier ce message.');
+      showErrorBanner(i18n.t('conversation.edit.error', 'Impossible de modifier ce message.'));
     } finally {
       setIsEditMessageSubmitting(false);
     }
@@ -2540,7 +2668,7 @@ function Conversation({ navigation, route }) {
         : null,
       location: event?.location || null,
       locationDetails: event?.locationDetails || locationLabel || '',
-      name: event?.name || 'Événement',
+      name: event?.name || i18n.t('conversation.eventFallback', 'Événement'),
       startTime: event?.startTime || null,
       team: event?.team
         ? {
@@ -2564,10 +2692,10 @@ function Conversation({ navigation, route }) {
         : null,
       type: event?.type && typeof event.type === 'object'
         ? {
-          name: event?.type?.name || 'Événement',
+          name: event?.type?.name || i18n.t('conversation.eventFallback', 'Événement'),
         }
         : {
-          name: 'Événement',
+          name: i18n.t('conversation.eventFallback', 'Événement'),
         },
     };
     sharedEventPreviewByIdRef.current.set(eventDocumentId, eventPreview);
@@ -2734,7 +2862,10 @@ function Conversation({ navigation, route }) {
   const handleSaveGroupName = async () => {
     const nextGroupName = String(groupNameDraft || '').trim();
     if (!chatId || !nextGroupName) {
-      showErrorBanner('Entre un nom de groupe valide.', 'Nom requis');
+      showErrorBanner(i18n.t(
+        'conversation.group.invalidName',
+        'Entre un nom de groupe valide.',
+      ), 'Nom requis');
       return;
     }
 
@@ -2744,10 +2875,16 @@ function Conversation({ navigation, route }) {
         chatId,
         data: { groupName: nextGroupName },
       });
-      showSuccessBanner('Nom du groupe mis à jour.', 'Succès');
+      showSuccessBanner(i18n.t(
+        'conversation.group.renamed',
+        'Nom du groupe mis à jour.',
+      ), i18n.t('conversation.banner.successTitle', 'Succès'));
     } catch (error) {
       conversationLogger.warn('Failed to update group name', error);
-      showErrorBanner('Impossible de mettre à jour le nom du groupe.');
+      showErrorBanner(i18n.t(
+        'conversation.group.renameError',
+        'Impossible de mettre à jour le nom du groupe.',
+      ));
     } finally {
       setIsGroupMutationLoading(false);
     }
@@ -2766,9 +2903,16 @@ function Conversation({ navigation, route }) {
     const memberId = String(member?.documentId || member?.id || '').trim();
     if (!chatId || !memberId) return;
 
-    const memberLabel = `${member?.firstname || ''} ${member?.lastname || ''}`.trim() || 'ce membre';
+    const memberLabel = `${member?.firstname || ''} ${member?.lastname || ''}`.trim() || i18n.t(
+      'conversation.group.thisMember',
+      'ce membre',
+    );
     openConversationPrompt({
-      body: `Retirer ${memberLabel} du groupe ?`,
+      body: i18n.t(
+        'conversation.group.removeConfirm',
+        'Retirer {{member}} du groupe ?',
+        { member: memberLabel, ...SANS_ECHAPPEMENT },
+      ),
       primaryAction: {
         label: 'Retirer',
         onPress: async () => {
@@ -2781,7 +2925,10 @@ function Conversation({ navigation, route }) {
             });
           } catch (error) {
             conversationLogger.warn('Failed to remove group member', error);
-            showErrorBanner('Impossible de retirer ce membre.');
+            showErrorBanner(i18n.t(
+              'conversation.group.removeError',
+              'Impossible de retirer ce membre.',
+            ));
           } finally {
             setIsGroupMutationLoading(false);
           }
@@ -2792,7 +2939,7 @@ function Conversation({ navigation, route }) {
         onPress: closeConversationPrompt,
         variant: 'Secondary',
       },
-      title: 'Retirer un membre',
+      title: i18n.t('conversation.group.removeTitle', 'Retirer un membre'),
       tone: 'critical',
     });
   };
@@ -3214,10 +3361,16 @@ function Conversation({ navigation, route }) {
 
       setIsProposalModalVisible(false);
       setCounterProposalContext(null);
-      showSuccessBanner('Ta proposition a été envoyée !', 'Envoye', 'league');
+      showSuccessBanner(i18n.t(
+        'conversation.proposal.sent',
+        'Ta proposition a été envoyée !',
+      ), 'Envoye', 'league');
     } catch (error) {
       conversationLogger.error('Send proposal failed', error);
-      showErrorBanner("Impossible d'envoyer la proposition.");
+      showErrorBanner(i18n.t(
+        'conversation.proposal.sendError',
+        "Impossible d'envoyer la proposition.",
+      ));
     } finally {
       setIsProposalSubmitting(false);
     }
@@ -3247,12 +3400,18 @@ function Conversation({ navigation, route }) {
     if (isProposalResponseSubmitting) return;
 
     if (!proposalMessageId) {
-      showErrorBanner('Impossible de retrouver la proposition.');
+      showErrorBanner(i18n.t(
+        'conversation.proposal.notFound',
+        'Impossible de retrouver la proposition.',
+      ));
       return;
     }
 
     if (!matchId) {
-      showErrorBanner('Impossible de retrouver le match associe.');
+      showErrorBanner(i18n.t(
+        'conversation.proposal.matchNotFound',
+        'Impossible de retrouver le match associe.',
+      ));
       return;
     }
 
@@ -3296,12 +3455,18 @@ function Conversation({ navigation, route }) {
         }
 
         await respondToLeagueProposal(matchId, proposalMessageId, 'accept', { legalAcceptance });
-        showSuccessBanner('Le match est validé !', 'Match confirme', 'league');
+        showSuccessBanner(i18n.t(
+          'conversation.proposal.matchValidated',
+          'Le match est validé !',
+        ), 'Match confirme', 'league');
         promptAddMatchToCalendar(message);
       } else {
         await respondToLeagueProposal(matchId, proposalMessageId, 'decline');
         conversationLogger.debug('Proposal declined');
-        showSuccessBanner('Ton refus a été envoyé.', 'Proposition refusée', 'league');
+        showSuccessBanner(i18n.t(
+          'conversation.proposal.declineSent',
+          'Ton refus a été envoyé.',
+        ), i18n.t('conversation.proposal.declinedTitle', 'Proposition refusée'), 'league');
       }
 
       queryClient.invalidateQueries({ queryKey: ['chat', chatId] });
@@ -3311,7 +3476,10 @@ function Conversation({ navigation, route }) {
       await invalidatePendingLeagueActionQueries();
     } catch (error) {
       conversationLogger.error('Proposal action failed', error);
-      showErrorBanner('Une erreur est survenue lors de la réponse.');
+      showErrorBanner(i18n.t(
+        'conversation.proposal.replyError',
+        'Une erreur est survenue lors de la réponse.',
+      ));
     } finally {
       setIsProposalResponseSubmitting(false);
     }
@@ -3361,9 +3529,15 @@ function Conversation({ navigation, route }) {
       await respondToFriendlyProposal(message?.composition, action);
       showSuccessBanner(
         action === 'accept'
-          ? 'Le match est créé : il apparaît dans le planning des deux équipes.'
-          : 'Ton refus a été envoyé.',
-        action === 'accept' ? 'Match confirmé' : 'Proposition refusée',
+          ? i18n.t(
+            'conversation.friendly.matchCreated',
+            'Le match est créé : il apparaît dans le planning des deux équipes.',
+          )
+          : i18n.t('conversation.proposal.declineSent', 'Ton refus a été envoyé.'),
+        action === 'accept' ? i18n.t(
+          'conversation.friendly.matchConfirmedTitle',
+          'Match confirmé',
+        ) : i18n.t('conversation.proposal.declinedTitle', 'Proposition refusée'),
       );
       queryClient.invalidateQueries({ queryKey: ['chat-messages', chatId] });
       queryClient.invalidateQueries({ queryKey: ['friendly-match-ads'] });
@@ -3374,7 +3548,10 @@ function Conversation({ navigation, route }) {
       // attente », « Only the ad staff… ») : on le montre plutôt que de le
       // remplacer par un « Accès refusé » qui n'explique rien.
       showErrorBanner(
-        /** @type {any} */ (error)?.message || 'Une erreur est survenue lors de la réponse.',
+        /** @type {any} */ (error)?.message || i18n.t(
+          'conversation.proposal.replyError',
+          'Une erreur est survenue lors de la réponse.',
+        ),
       );
       // La bulle reprend l'état que le serveur, lui, connaît.
       queryClient.invalidateQueries({ queryKey: ['chat-messages', chatId] });
@@ -3438,12 +3615,18 @@ function Conversation({ navigation, route }) {
     }
 
     if (!teamId) {
-      showErrorBanner("Impossible d'identifier ton équipe pour l'annulation.");
+      showErrorBanner(i18n.t(
+        'conversation.league.cancelTeamError',
+        "Impossible d'identifier ton équipe pour l'annulation.",
+      ));
       return;
     }
 
     openConversationPrompt({
-      body: 'Cette action annulera le match et supprimera la conversation.',
+      body: i18n.t(
+        'conversation.league.cancelBody',
+        'Cette action annulera le match et supprimera la conversation.',
+      ),
       primaryAction: {
         label: 'Oui, annuler',
         onPress: async () => {
@@ -3456,7 +3639,10 @@ function Conversation({ navigation, route }) {
             navigation.goBack();
           } catch (error) {
             conversationLogger.error('Cancel match failed', error);
-            showErrorBanner("Impossible d'annuler le match.");
+            showErrorBanner(i18n.t(
+              'conversation.league.cancelError',
+              "Impossible d'annuler le match.",
+            ));
           }
         },
       },
@@ -3465,7 +3651,7 @@ function Conversation({ navigation, route }) {
         onPress: closeConversationPrompt,
         variant: 'Secondary',
       },
-      title: 'Annuler le match ?',
+      title: i18n.t('conversation.league.cancelTitle', 'Annuler le match ?'),
       tone: 'critical',
     });
   };
@@ -3480,7 +3666,10 @@ function Conversation({ navigation, route }) {
     if (chatData?.type === 'league_match') {
       const matchDate = chatData?.league_match?.date;
       const dateDisplay = matchDate
-        ? new Date(matchDate).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' })
+        ? new Date(matchDate).toLocaleDateString(localeDesFormats(), {
+          day: '2-digit',
+          month: '2-digit',
+        })
         : '?';
       displayTitle = `Match ${dateDisplay}`;
     } else {
@@ -3828,46 +4017,76 @@ function Conversation({ navigation, route }) {
     const proposalVenue = getProposalLocationLabel(proposal?.venue)
       || getProposalLocationLabel(leagueConversationMatch?.proposed_venue)
       || getProposalLocationLabel(leagueConversationMatch?.venue)
-      || 'Lieu à définir';
+      || i18n.t('conversation.negotiation.venueToBeDefined', 'Lieu à définir');
     const proposalStatus = String(proposal?.status || '').trim().toLowerCase();
 
-    let statusLabel = 'Négociation active';
-    let summaryTitle = 'Organisation du match en cours';
+    let statusLabel = i18n.t('conversation.negotiation.status.active', 'Négociation active');
+    let summaryTitle = i18n.t(
+      'conversation.negotiation.title.active',
+      'Organisation du match en cours',
+    );
     if (proposalStatus === 'accepted') {
-      statusLabel = 'Proposition acceptée';
-      summaryTitle = 'Le match est en bonne voie';
+      statusLabel = i18n.t('conversation.negotiation.status.accepted', 'Proposition acceptée');
+      summaryTitle = i18n.t(
+        'conversation.negotiation.title.accepted',
+        'Le match est en bonne voie',
+      );
     } else if (proposalStatus === 'declined') {
-      statusLabel = 'Proposition refusée';
-      summaryTitle = 'Une nouvelle proposition est attendue';
+      statusLabel = i18n.t('conversation.negotiation.status.declined', 'Proposition refusée');
+      summaryTitle = i18n.t(
+        'conversation.negotiation.title.declined',
+        'Une nouvelle proposition est attendue',
+      );
     } else if (proposalStatus === 'pending') {
-      statusLabel = isLatestProposalFromMySquad ? 'Proposition envoyée' : 'Proposition reçue';
+      statusLabel = isLatestProposalFromMySquad ? i18n.t(
+        'conversation.negotiation.status.sent',
+        'Proposition envoyée',
+      ) : i18n.t(
+        'conversation.negotiation.status.received',
+        'Proposition reçue',
+      );
       summaryTitle = isLatestProposalFromMySquad
-        ? 'Ta proposition attend une réponse'
-        : 'Une proposition attend ta réponse';
+        ? i18n.t('conversation.negotiation.title.sent', 'Ta proposition attend une réponse')
+        : i18n.t('conversation.negotiation.title.received', 'Une proposition attend ta réponse');
     }
 
-    let helper = 'La conversation avec l adversaire reste l espace principal pour conclure ce match.';
+    let helper = i18n.t(
+      'conversation.negotiation.helper.default',
+      'La conversation avec l adversaire reste l espace principal pour conclure ce match.',
+    );
     if (proposalStatus === 'pending') {
       helper = isLatestProposalFromMySquad
-        ? 'Suis la réponse adverse depuis le chat ou la fiche match.'
-        : 'Consulte la proposition puis acceptes, refuse ou contre-propose.';
+        ? i18n.t(
+          'conversation.negotiation.helper.sent',
+          'Suis la réponse adverse depuis le chat ou la fiche match.',
+        )
+        : i18n.t(
+          'conversation.negotiation.helper.received',
+          'Consulte la proposition puis acceptes, refuse ou contre-propose.',
+        );
     } else if (proposalStatus === 'accepted') {
-      helper = 'Retrouve les détails confirms sur la fiche match.';
+      helper = i18n.t(
+        'conversation.negotiation.helper.accepted',
+        'Retrouve les détails confirms sur la fiche match.',
+      );
     } else if (proposalStatus === 'declined') {
-      helper = 'Poursuis la négociation pour trouver un nouveau créneau.';
+      helper = i18n.t(
+        'conversation.negotiation.helper.declined',
+        'Poursuis la négociation pour trouver un nouveau créneau.',
+      );
     }
 
-    let formattedDate = 'Date à définir';
+    let formattedDate = i18n.t('conversation.negotiation.dateToBeDefined', 'Date à définir');
     if (proposalDate) {
       try {
-        formattedDate = new Date(proposalDate).toLocaleString('fr-FR', {
+        formattedDate = new Date(proposalDate).toLocaleString(localeDesFormats(), {
           day: '2-digit',
           hour: '2-digit',
           minute: '2-digit',
           month: 'long',
         });
       } catch (_error) {
-        formattedDate = 'Date à définir';
+        formattedDate = i18n.t('conversation.negotiation.dateToBeDefined', 'Date à définir');
       }
     }
 
@@ -3876,17 +4095,17 @@ function Conversation({ navigation, route }) {
       try {
         const start = new Date(proposalDate);
         const end = proposalEndDate ? new Date(proposalEndDate) : null;
-        const dayLabel = start.toLocaleDateString('fr-FR', {
+        const dayLabel = start.toLocaleDateString(localeDesFormats(), {
           day: '2-digit',
           month: 'short',
           weekday: 'short',
         });
-        const startTime = start.toLocaleTimeString('fr-FR', {
+        const startTime = start.toLocaleTimeString(localeDesFormats(), {
           hour: '2-digit',
           minute: '2-digit',
         });
         const endTime = end && !Number.isNaN(end.getTime())
-          ? end.toLocaleTimeString('fr-FR', {
+          ? end.toLocaleTimeString(localeDesFormats(), {
             hour: '2-digit',
             minute: '2-digit',
           })
@@ -3897,15 +4116,30 @@ function Conversation({ navigation, route }) {
       }
     }
 
-    let compactHelper = 'La discussion dans le chat reste l espace principal pour organiser ce match.';
+    let compactHelper = i18n.t(
+      'conversation.negotiation.compact.default',
+      'La discussion dans le chat reste l espace principal pour organiser ce match.',
+    );
     if (proposalStatus === 'pending') {
       compactHelper = isLatestProposalFromMySquad
-        ? 'Suis la réponse adverse directement dans le fil.'
-        : 'Réponds directement depuis la proposition dans le fil.';
+        ? i18n.t(
+          'conversation.negotiation.compact.sent',
+          'Suis la réponse adverse directement dans le fil.',
+        )
+        : i18n.t(
+          'conversation.negotiation.compact.received',
+          'Réponds directement depuis la proposition dans le fil.',
+        );
     } else if (proposalStatus === 'accepted') {
-      compactHelper = 'Retrouve les détails confirms dans la fiche match.';
+      compactHelper = i18n.t(
+        'conversation.negotiation.compact.accepted',
+        'Retrouve les détails confirms dans la fiche match.',
+      );
     } else if (proposalStatus === 'declined') {
-      compactHelper = 'La négociation continue dans le fil de discussion.';
+      compactHelper = i18n.t(
+        'conversation.negotiation.compact.declined',
+        'La négociation continue dans le fil de discussion.',
+      );
     }
 
     return {
@@ -4209,7 +4443,10 @@ function Conversation({ navigation, route }) {
         socketConnected: Boolean(isSocketConnected && socket),
       });
       showErrorBanner(
-        'Connexion messagerie indisponible. Réessaie quand la conversation est reconnectée.',
+        i18n.t(
+          'conversation.connectionUnavailableReconnect',
+          'Connexion messagerie indisponible. Réessaie quand la conversation est reconnectée.',
+        ),
         t('conversation.voice.sendErrorTitle', 'Envoi impossible'),
       );
       return;
@@ -4364,7 +4601,10 @@ function Conversation({ navigation, route }) {
         socketConnected: Boolean(isSocketConnected && socket),
       });
       showErrorBanner(
-        'Connexion messagerie indisponible. Réessaie quand la conversation est reconnectée.',
+        i18n.t(
+          'conversation.connectionUnavailableReconnect',
+          'Connexion messagerie indisponible. Réessaie quand la conversation est reconnectée.',
+        ),
         'Envoi impossible',
       );
       return;
@@ -4463,7 +4703,10 @@ function Conversation({ navigation, route }) {
     if (messagesRefuses > 0) {
       // On ne vide RIEN : ni le champ, ni la citation. Le texte reste sous les
       // yeux de celui qui l'a ecrit, et il peut le renvoyer d'un appui.
-      showErrorBanner('Connexion messagerie indisponible. Réessaie dans quelques secondes.');
+      showErrorBanner(i18n.t(
+        'conversation.connectionUnavailable',
+        'Connexion messagerie indisponible. Réessaie dans quelques secondes.',
+      ));
       return;
     }
 
@@ -5101,7 +5344,7 @@ function Conversation({ navigation, route }) {
                 onDecline={() => handleRespondProposal(currentMessage, 'declined')}
                 onViewMatch={handleOpenLeagueMatchDetails}
                 proposal={currentMessage.composition}
-                viewMatchLabel="Voir la fiche match"
+                viewMatchLabel={i18n.t('conversation.viewMatch', 'Voir la fiche match')}
               />
             </View>
           ),
@@ -5490,7 +5733,10 @@ function Conversation({ navigation, route }) {
     <View style={{ alignItems: 'center', flexDirection: 'row', height: 44 }}>
       {isLeagueConversation ? (
         <TouchableOpacity
-          accessibilityLabel={canCreateLeagueProposalFromChat ? 'Envoyer une proposition League' : 'Ouvrir le match League'}
+          accessibilityLabel={canCreateLeagueProposalFromChat ? i18n.t(
+            'conversation.league.sendProposalLabel',
+            'Envoyer une proposition League',
+          ) : i18n.t('conversation.league.openMatchLabel', 'Ouvrir le match League')}
           onPress={() => {
             if (canCreateLeagueProposalFromChat) {
               setIsProposalModalVisible(true);
@@ -5831,7 +6077,7 @@ function Conversation({ navigation, route }) {
           >
             <View>
               <Text style={[Fonts.p3Bold, Fonts.primary700]}>
-                Répondre a
+                {i18n.t('conversation.reply.replyingTo', 'Répondre a')}
                 {' '}
                 {replyingTo.user?.name}
               </Text>
@@ -5854,8 +6100,14 @@ function Conversation({ navigation, route }) {
         .map((typingUserId) => resolveVoterName(String(typingUserId)))
         .filter(Boolean);
       const typingLabel = typingNames.length > 0
-        ? `${typingNames.slice(0, 2).join(', ')} ${typingNames.length > 1 ? 'écrivent' : 'écrit'}...`
-        : "Quelqu'un écrit...";
+        ? i18n.t('conversation.typing.named', {
+          count: typingNames.length,
+          defaultValue_one: '{{names}} écrit...',
+          defaultValue_other: '{{names}} écrivent...',
+          names: typingNames.slice(0, 2).join(', '),
+          ...SANS_ECHAPPEMENT,
+        })
+        : i18n.t('conversation.typing.someone', "Quelqu'un écrit...");
       return (
         <View style={[Spaces.padding[8], Spaces.marginLeft[16]]}>
           <Text style={[Fonts.p3, Fonts.neutral500]}>{typingLabel}</Text>
@@ -5881,7 +6133,7 @@ function Conversation({ navigation, route }) {
     ]}
     >
       <Text style={[Fonts.h4Bold, { color: Colors.neutral00, textAlign: 'center' }]}>
-        Aucun message pour le moment
+        {i18n.t('conversation.empty.title', 'Aucun message pour le moment')}
       </Text>
       <Text style={[
         Fonts.p2,
@@ -5889,7 +6141,10 @@ function Conversation({ navigation, route }) {
         { color: Colors.neutral300, textAlign: 'center' },
       ]}
       >
-        Envoie le premier message pour lancer la conversation.
+        {i18n.t(
+          'conversation.empty.body',
+          'Envoie le premier message pour lancer la conversation.',
+        )}
       </Text>
     </View>
   );
@@ -6178,8 +6433,14 @@ function Conversation({ navigation, route }) {
             style={[Fonts.p4, { color: Colors.neutral300, flex: 1 }]}
           >
             {latestProposalMessageId
-              ? 'La proposition détaillée reste visible dans le fil ci-dessous.'
-              : 'Retrouve l historique de l organisation dans le fil ci-dessous.'}
+              ? i18n.t(
+                'conversation.negotiation.banner.proposalBelow',
+                'La proposition détaillée reste visible dans le fil ci-dessous.',
+              )
+              : i18n.t(
+                'conversation.negotiation.banner.historyBelow',
+                'Retrouve l historique de l organisation dans le fil ci-dessous.',
+              )}
           </Text>
           <TouchableOpacity
             onPress={handleOpenLeagueMatchDetails}
@@ -6193,7 +6454,7 @@ function Conversation({ navigation, route }) {
             }}
           >
             <Text style={[Fonts.p4Bold, { color: Colors.primary500 }]}>
-              Voir la fiche match
+              {i18n.t('conversation.viewMatch', 'Voir la fiche match')}
             </Text>
           </TouchableOpacity>
         </View>
@@ -6280,7 +6541,7 @@ function Conversation({ navigation, route }) {
           <ErrorWrapper
             error={messagesError}
             onRetry={handleRetryMessages}
-            retryLabel="Recharger la conversation"
+            retryLabel={i18n.t('conversation.reload', 'Recharger la conversation')}
             wrapperStyle={[Alignments.fill]}
           >
             <View style={[Alignments.fill]} />
@@ -6307,11 +6568,14 @@ function Conversation({ navigation, route }) {
             bottomOffset={giftedChatBottomOffset}
             dateFormat="DD MMMM"
             dateFormatCalendar={{
-              lastDay: '[Hier]',
-              lastWeek: '[La semaine dernière] dddd',
-              nextDay: '[Demain]',
+              lastDay: i18n.t('conversation.calendarFormat.lastDay', '[Hier]'),
+              lastWeek: i18n.t(
+                'conversation.calendarFormat.lastWeek',
+                '[La semaine dernière] dddd',
+              ),
+              nextDay: i18n.t('conversation.calendarFormat.nextDay', '[Demain]'),
               nextWeek: 'dddd',
-              sameDay: '[Aujourd\'hui]',
+              sameDay: i18n.t('conversation.calendarFormat.sameDay', "[Aujourd'hui]"),
               sameElse: 'DD/MM/YYYY',
             }}
             focusOnInputWhenOpeningKeyboard={!isPollModalVisible}
@@ -6319,7 +6583,7 @@ function Conversation({ navigation, route }) {
             inverted
             listViewProps={{ onScrollToIndexFailed: handleScrollToIndexFailed }}
             loadEarlier={hasNextPage}
-            locale="fr"
+            locale={localeDesFormats().slice(0, 2)}
             messageContainerRef={messageContainerRef}
             messages={messages}
             onInputTextChanged={handleInputTextChanged}
@@ -6441,8 +6705,11 @@ function Conversation({ navigation, route }) {
                 setIsMenuVisible(false);
                 setSafeTimeout(() => {
                   showInfoBanner(
-                    'Pour signaler ce match ou cet utilisateur, merci de contacter le support via les paramètres.',
-                    'Signaler',
+                    i18n.t(
+                      'conversation.report.contactSupport',
+                      'Pour signaler ce match ou cet utilisateur, merci de contacter le support via les paramètres.', // eslint-disable-line max-len
+                    ),
+                    i18n.t('conversation.report.title', 'Signaler'),
                   );
                 }, 300);
               }}
