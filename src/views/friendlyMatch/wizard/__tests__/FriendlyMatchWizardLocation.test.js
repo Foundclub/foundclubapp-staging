@@ -3,6 +3,12 @@ import renderer, { act } from 'react-test-renderer';
 
 import FriendlyMatchWizardLocation from '../FriendlyMatchWizardLocation';
 
+// I18N-2 : ces textes passent par i18next.t hors composant — la doublure partagée rend le
+// français de l app (fr.js, sinon le repli, jetons et pluriel français).
+jest.mock('i18next', () => (
+  jest.requireActual('@/theme/strings/__mocks__/doublureTraduction').i18next
+));
+
 // Filet C-G (E6) : l'etape 4 du tunnel amical n'avait AUCUN test, et le lot lui
 // ajoute une porte d'entree — choisir une installation du club plutot que de
 // retaper une adresse qu'on connait deja.

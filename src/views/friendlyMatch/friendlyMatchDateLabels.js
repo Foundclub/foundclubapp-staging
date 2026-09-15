@@ -1,5 +1,8 @@
 import { format as formatDate, isValid, parse } from 'date-fns';
 import { fr } from 'date-fns/locale';
+import i18next from 'i18next';
+
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 
 /**
  * Les dates des matchs amicaux, dites en francais.
@@ -69,9 +72,21 @@ export const toShortDay = (value) => {
  * @returns {string}
  */
 export const getSlotHoursLabel = (slot) => {
-  if (slot?.start && slot?.end) return `de ${slot.start} à ${slot.end}`;
-  if (slot?.start) return `à partir de ${slot.start}`;
-  return 'horaire à convenir';
+  if (slot?.start && slot?.end) {
+    return i18next.t(
+      'friendlyMatchDateLabels.fromTo',
+      'de {{start}} à {{end}}',
+      { end: slot.end, start: slot.start, ...SANS_ECHAPPEMENT },
+    );
+  }
+  if (slot?.start) {
+    return i18next.t(
+      'friendlyMatchDateLabels.from',
+      'à partir de {{start}}',
+      { start: slot.start, ...SANS_ECHAPPEMENT },
+    );
+  }
+  return i18next.t('friendlyMatchDateLabels.timeToBeAgreed', 'horaire à convenir');
 };
 
 /**

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Modal, ScrollView, Text, TouchableOpacity, View,
 } from 'react-native';
@@ -37,6 +38,7 @@ const logger = createLogger('friendly-match-repost');
 function FriendlyMatchRepostSheet({
   ad, onClose, onReposted, visible,
 }) {
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const {
     Alignments, Colors, Fonts, Spaces,
@@ -65,7 +67,10 @@ function FriendlyMatchRepostSheet({
       // Le serveur refuse une annonce deja pourvue et des dates passees : son
       // message dit laquelle des deux, le notre ne le saurait pas.
       const message = /** @type {any} */ (error)?.message
-        || "Impossible de reposter l'annonce.";
+        || t(
+          'friendlyMatchRepostSheet.unableToRepostTheListing',
+          "Impossible de reposter l'annonce.",
+        );
       logger.error('Repostage refuse', { error });
       setErrorMessage(message);
     } finally {
@@ -100,9 +105,11 @@ function FriendlyMatchRepostSheet({
             Spaces.marginBottom[16],
           ]}
           >
-            <Text style={[Fonts.h4, Fonts.neutral00]}>Reposter l’annonce</Text>
+            <Text style={[Fonts.h4, Fonts.neutral00]}>
+              {t('friendlyMatchRepostSheet.repostTheListing', 'Reposter l’annonce')}
+            </Text>
             <TouchableOpacity
-              accessibilityLabel="Fermer"
+              accessibilityLabel={t('friendlyMatchRepostSheet.close', 'Fermer')}
               accessibilityRole="button"
               onPress={onClose}
               style={{
@@ -119,13 +126,18 @@ function FriendlyMatchRepostSheet({
             showsVerticalScrollIndicator={false}
           >
             <Text style={[Fonts.p3, { color: Colors.neutral200 }]}>
-              Tes dates sont passées. Propose-en de nouvelles : le reste de
-              l’annonce ne bouge pas, et les propositions déjà reçues sont
-              conservées.
+              {t(
+                'friendlyMatchRepostSheet.yourDatesHavePassedPropose',
+                'Tes dates sont passées. Propose-en de nouvelles : le reste de l’annonce ne '
+                  + 'bouge pas, et les propositions déjà reçues sont conservées.',
+              )}
             </Text>
 
             <FriendlyMatchSlotEditor
-              emptyHint="Ajoute au moins une date à venir pour remettre l’annonce en ligne."
+              emptyHint={t(
+                'friendlyMatchRepostSheet.addAtLeastOneUpcoming',
+                'Ajoute au moins une date à venir pour remettre l’annonce en ligne.',
+              )}
               onAdd={(slot) => setSlots(
                 (previous) => normalizeCandidateDates([
                   ...previous.filter((/** @type {any} */ item) => item.date !== slot.date),
@@ -155,7 +167,7 @@ function FriendlyMatchRepostSheet({
             disabled={slots.length === 0 || isSubmitting}
             isLoading={isSubmitting}
             onPress={handleSubmit}
-            title="Remettre en ligne"
+            title={t('friendlyMatchRepostSheet.putBackOnline', 'Remettre en ligne')}
             variant="Primary"
           />
         </View>

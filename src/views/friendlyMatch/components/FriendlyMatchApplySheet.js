@@ -1,4 +1,6 @@
+import i18next from 'i18next';
 import { useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Modal,
   ScrollView,
@@ -30,9 +32,15 @@ const logger = createLogger('friendly-match-apply');
 const MESSAGE_MAX_LENGTH = 400;
 
 /** Ce que le candidat annonce faire, dit de SON point de vue. */
+// I18N-2 : des GETTERS, pas des textes — lus à l import, avant l initialisation
+// d i18next ; le libellé se traduit au moment où il s affiche.
 const CHOSEN_HOSTING_LABELS = /** @type {Record<string, string>} */ ({
-  AWAY: 'Je me déplace',
-  HOST: 'Je reçois',
+  get AWAY() {
+    return i18next.t('friendlyMatchApplySheet.hostingAway', 'Je me déplace');
+  },
+  get HOST() {
+    return i18next.t('friendlyMatchApplySheet.hostingHost', 'Je reçois');
+  },
 });
 
 /**
@@ -67,6 +75,7 @@ function FriendlyMatchApplySheet({
   onSubmitted,
   visible,
 }) {
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const {
     Alignments, Colors, Fonts, Spaces,
@@ -94,12 +103,12 @@ function FriendlyMatchApplySheet({
   );
 
   const dateOptions = useMemo(() => [
-    { label: 'Peu importe', value: '' },
+    { label: t('friendlyMatchApplySheet.any', 'Peu importe'), value: '' },
     ...normalizeCandidateDates(ad?.candidateDates).map((slot) => ({
       label: slot.start ? `${toShortDay(slot.date)} ${slot.start}` : toShortDay(slot.date),
       value: slot.date,
     })),
-  ], [ad?.candidateDates]);
+  ], [ad?.candidateDates, t]);
 
   // Rouvrir la feuille repart d un formulaire propre : garder un brouillon
   // abandonne ferait envoyer une proposition que personne n a relue.
@@ -130,7 +139,10 @@ function FriendlyMatchApplySheet({
       // Le serveur dit deja pourquoi il refuse (annonce fermee, equipe deja
       // candidate, hebergement incompatible) : son message vaut mieux que le notre.
       const readableMessage = /** @type {any} */ (error)?.message
-        || "Impossible d'envoyer la proposition.";
+        || t(
+          'friendlyMatchApplySheet.unableToSendTheProposal',
+          "Impossible d'envoyer la proposition.",
+        );
       logger.error('Candidature amicale refusee', { error });
       setErrorMessage(readableMessage);
     } finally {
@@ -165,9 +177,11 @@ function FriendlyMatchApplySheet({
             Spaces.marginBottom[16],
           ]}
           >
-            <Text style={[Fonts.h4, Fonts.neutral00]}>Proposer un match</Text>
+            <Text style={[Fonts.h4, Fonts.neutral00]}>
+              {t('friendlyMatchApplySheet.proposeAMatch', 'Proposer un match')}
+            </Text>
             <TouchableOpacity
-              accessibilityLabel="Fermer"
+              accessibilityLabel={t('friendlyMatchApplySheet.close', 'Fermer')}
               accessibilityRole="button"
               onPress={onClose}
               style={{
@@ -185,54 +199,75 @@ function FriendlyMatchApplySheet({
           >
             {eligibleTeams.length === 0 ? (
               <Text style={[Fonts.p2, { color: Colors.neutral200 }]}>
-                Tu n’as aucune équipe à proposer sur cette annonce.
+                {t(
+                  'friendlyMatchApplySheet.youHaveNoTeamTo',
+                  'Tu n’as aucune équipe à proposer sur cette annonce.',
+                )}
               </Text>
             ) : (
               <ChoiceChipGroup
                 onSelect={(value) => setTeamId(String(value))}
                 options={eligibleTeams.map((team) => ({
-                  label: team?.name || 'Mon équipe',
+                  label: team?.name || t('friendlyMatchApplySheet.myTeam', 'Mon équipe'),
                   value: getTeamKey(team),
                 }))}
                 selectedValue={teamId}
-                title="Quelle équipe"
+                title={t('friendlyMatchApplySheet.whichTeam', 'Quelle équipe')}
               />
             )}
 
             <ChoiceChipGroup
               hint={allowedHostings.length === 1
-                ? 'Cette annonce n’autorise que ce choix, mais il reste à cocher :'
-                  + ' c’est lui qui décide où le match se joue.'
-                : 'C’est ce choix qui décide où le match se joue.'}
+                ? t(
+                  'friendlyMatchApplySheet.thisListingOnlyAllowsThis',
+                  'Cette annonce n’autorise que ce choix, mais il reste à cocher :',
+                )
+                  + t(
+                    'friendlyMatchApplySheet.itDecidesWhereTheMatch',
+                    ' c’est lui qui décide où le match se joue.',
+                  )
+                : t(
+                  'friendlyMatchApplySheet.thisChoiceDecidesWhereThe',
+                  'C’est ce choix qui décide où le match se joue.',
+                )}
               onSelect={(value) => setChosenHosting(String(value))}
               options={allowedHostings.map((value) => ({
                 label: CHOSEN_HOSTING_LABELS[value] || value,
                 value,
               }))}
               selectedValue={chosenHosting}
-              title="Pour ce match"
+              title={t('friendlyMatchApplySheet.forThisMatch', 'Pour ce match')}
             />
 
             {dateOptions.length > 1 ? (
               <ChoiceChipGroup
-                hint="Tu pourras convenir de l’heure exacte dans la discussion."
+                hint={t(
+                  'friendlyMatchApplySheet.youCanAgreeOnThe',
+                  'Tu pourras convenir de l’heure exacte dans la discussion.',
+                )}
                 onSelect={(value) => setChosenDate(String(value))}
                 options={dateOptions}
                 selectedValue={chosenDate}
-                title="Quelle date"
+                title={t('friendlyMatchApplySheet.whichDate', 'Quelle date')}
               />
             ) : null}
 
             <View style={[Spaces.gap[8]]}>
               <Text style={[Fonts.p2Bold, { color: Colors.neutral100 }]}>
-                Un mot (facultatif)
+                {t('friendlyMatchApplySheet.aWordOptional', 'Un mot (facultatif)')}
               </Text>
               <TextInput
-                accessibilityLabel="Message pour le staff de l’annonce"
+                accessibilityLabel={t(
+                  'friendlyMatchApplySheet.messageForTheListingS',
+                  'Message pour le staff de l’annonce',
+                )}
                 maxLength={MESSAGE_MAX_LENGTH}
                 multiline
                 onChangeText={setMessage}
-                placeholder="Ex : bonjour, notre U15 est disponible, on peut décaler l’horaire."
+                placeholder={t(
+                  'friendlyMatchApplySheet.eGHelloOurU15',
+                  'Ex : bonjour, notre U15 est disponible, on peut décaler l’horaire.',
+                )}
                 placeholderTextColor={Colors.neutral400}
                 style={[Fonts.p1, {
                   backgroundColor: withAlpha(Colors.primary900, 0.94),
@@ -262,8 +297,11 @@ function FriendlyMatchApplySheet({
             ) : null}
 
             <Text style={[Fonts.p4, { color: withAlpha(Colors.neutral100, 0.63) }]}>
-              Envoyer ouvre une discussion entre les deux staffs. C’est là que
-              la date, l’heure et le lieu se décident.
+              {t(
+                'friendlyMatchApplySheet.sendingOpensAConversationBetween',
+                'Envoyer ouvre une discussion entre les deux staffs. C’est là que la date, '
+                  + 'l’heure et le lieu se décident.',
+              )}
             </Text>
           </ScrollView>
 
@@ -271,7 +309,7 @@ function FriendlyMatchApplySheet({
             disabled={!canSubmit}
             isLoading={isSubmitting}
             onPress={handleSubmit}
-            title="Envoyer ma proposition"
+            title={t('friendlyMatchApplySheet.sendMyProposal', 'Envoyer ma proposition')}
             variant="Primary"
           />
         </View>

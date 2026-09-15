@@ -72,9 +72,15 @@ function FriendlyMatchWizardLocation({ navigation }) {
       stepCount={getFriendlyMatchWizardStepCount()}
       stepIndex={getFriendlyMatchWizardStepIndex('location')}
       subtitle={isHosting
-        ? 'Là où tu reçois, et jusqu’où les autres peuvent venir.'
-        : 'Ton point de départ, et jusqu’où tu acceptes de te déplacer.'}
-      title="Où ça se passe ?"
+        ? t(
+          'friendlyMatchWizardLocation.whereYouHostAndHow',
+          'Là où tu reçois, et jusqu’où les autres peuvent venir.',
+        )
+        : t(
+          'friendlyMatchWizardLocation.yourStartingPointAndHow',
+          'Ton point de départ, et jusqu’où tu acceptes de te déplacer.',
+        )}
+      title={t('friendlyMatchWizardLocation.whereDoesItHappen', 'Où ça se passe ?')}
     >
       <View style={[Spaces.gap[24]]}>
         {facilitySelections.length > 0 ? (
@@ -99,8 +105,11 @@ function FriendlyMatchWizardLocation({ navigation }) {
           address={typeof state.location === 'object' && state.location
             ? state.location
             : undefined}
-          label="Ville ou adresse"
-          placeholder="Ex : Marseille, Stade Vélodrome..."
+          label={t('friendlyMatchWizardLocation.cityOrAddress', 'Ville ou adresse')}
+          placeholder={t(
+            'friendlyMatchWizardLocation.eGMarseilleStadeVelodrome',
+            'Ex : Marseille, Stade Vélodrome...',
+          )}
           setAddress={(/** @type {any} */ nextLocation) => dispatch({
             payload: { location: nextLocation },
             type: 'SET_LOCATION_SELECTION',
@@ -108,11 +117,14 @@ function FriendlyMatchWizardLocation({ navigation }) {
         />
 
         <ChoiceChipGroup
-          hint="C’est le rayon dans lequel ton annonce sera proposée aux autres équipes."
+          hint={t(
+            'friendlyMatchWizardLocation.itSTheRadiusIn',
+            'C’est le rayon dans lequel ton annonce sera proposée aux autres équipes.',
+          )}
           onSelect={(value) => dispatch({ payload: value, type: 'SET_TRAVEL_RADIUS' })}
           options={RADIUS_OPTIONS}
           selectedValue={state.travelRadiusKm}
-          title="Jusqu’où"
+          title={t('friendlyMatchWizardLocation.howFar', 'Jusqu’où')}
         />
 
         <View style={[Spaces.padding[16], {
@@ -125,8 +137,14 @@ function FriendlyMatchWizardLocation({ navigation }) {
           <Text style={[Fonts.p4, { color: Colors.neutral100 }]}>
             {facilitySelections.length > 0
               ? t('friendlyMatch.wizard.location.facilities.info')
-              : 'Le terrain exact n’est pas demandé ici : il se convient dans la'
-                + ' discussion qui s’ouvre quand une équipe te répond.'}
+              : t(
+                'friendlyMatchWizardLocation.theExactPitchIsnT',
+                'Le terrain exact n’est pas demandé ici : il se convient dans la',
+              )
+                + t(
+                  'friendlyMatchWizardLocation.conversationThatOpensWhenA',
+                  ' discussion qui s’ouvre quand une équipe te répond.',
+                )}
           </Text>
         </View>
 

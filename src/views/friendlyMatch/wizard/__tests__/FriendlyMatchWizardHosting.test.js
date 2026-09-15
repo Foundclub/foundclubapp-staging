@@ -4,6 +4,12 @@ import renderer, { act } from 'react-test-renderer';
 
 import FriendlyMatchWizardHosting from '../FriendlyMatchWizardHosting';
 
+// I18N-2 : ces textes passent par i18next.t hors composant — la doublure partagée rend le
+// français de l app (fr.js, sinon le repli, jetons et pluriel français).
+jest.mock('i18next', () => (
+  jest.requireActual('@/theme/strings/__mocks__/doublureTraduction').i18next
+));
+
 // Filet D07 (E6) : cet ecran n'avait AUCUN test, et il porte la seule donnee
 // que le lot D07 ne doit surtout pas deplacer — `hostingPreference`, dont les
 // valeurs HOST / AWAY / BOTH voyagent jusqu'au serveur. Un renommage cosmetique

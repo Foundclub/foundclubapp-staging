@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Modal, ScrollView, Text, TextInput, TouchableOpacity, View,
 } from 'react-native';
@@ -46,6 +47,7 @@ const VENUE_MAX_LENGTH = 120;
 function FriendlyMatchTermsSheet({
   ad, application, onClose, onSaved, visible,
 }) {
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const {
     Alignments, Colors, Fonts, Spaces,
@@ -94,7 +96,10 @@ function FriendlyMatchTermsSheet({
       onSaved();
     } catch (error) {
       const message = /** @type {any} */ (error)?.message
-        || 'Impossible d’enregistrer les modalités.';
+        || t(
+          'friendlyMatchTermsSheet.unableToSaveTheTerms',
+          'Impossible d’enregistrer les modalités.',
+        );
       logger.error('Mise a jour des modalites refusee', { error });
       setErrorMessage(message);
     } finally {
@@ -129,9 +134,11 @@ function FriendlyMatchTermsSheet({
             Spaces.marginBottom[16],
           ]}
           >
-            <Text style={[Fonts.h4, Fonts.neutral00]}>Ce qui est convenu</Text>
+            <Text style={[Fonts.h4, Fonts.neutral00]}>
+              {t('friendlyMatchTermsSheet.whatWasAgreed', 'Ce qui est convenu')}
+            </Text>
             <TouchableOpacity
-              accessibilityLabel="Fermer"
+              accessibilityLabel={t('friendlyMatchTermsSheet.close', 'Fermer')}
               accessibilityRole="button"
               onPress={onClose}
               style={{
@@ -148,8 +155,11 @@ function FriendlyMatchTermsSheet({
             showsVerticalScrollIndicator={false}
           >
             <Text style={[Fonts.p3, { color: Colors.neutral200 }]}>
-              Discutez-en dans le fil, puis note ici ce sur quoi vous tombez
-              d’accord. C’est ce que le match affichera dans les plannings.
+              {t(
+                'friendlyMatchTermsSheet.discussItInTheThread',
+                'Discutez-en dans le fil, puis note ici ce sur quoi vous tombez d’accord. C’est '
+                  + 'ce que le match affichera dans les plannings.',
+              )}
             </Text>
 
             {dayOptions.length > 0 ? (
@@ -157,25 +167,28 @@ function FriendlyMatchTermsSheet({
                 onSelect={(value) => setDay(String(value))}
                 options={dayOptions}
                 selectedValue={day}
-                title="Quel jour"
+                title={t('friendlyMatchTermsSheet.whichDay', 'Quel jour')}
               />
             ) : null}
 
             <TimePickerInput
-              label="Heure du coup d’envoi"
+              label={t('friendlyMatchTermsSheet.kickOffTime', 'Heure du coup d’envoi')}
               onChange={setTime}
               value={time}
             />
 
             <View style={[Spaces.gap[8]]}>
               <Text style={[Fonts.p2Bold, { color: Colors.neutral100 }]}>
-                Où (facultatif)
+                {t('friendlyMatchTermsSheet.whereOptional', 'Où (facultatif)')}
               </Text>
               <TextInput
-                accessibilityLabel="Lieu du match"
+                accessibilityLabel={t('friendlyMatchTermsSheet.matchVenue', 'Lieu du match')}
                 maxLength={VENUE_MAX_LENGTH}
                 onChangeText={setVenue}
-                placeholder="Ex : Stade Nord, terrain 2"
+                placeholder={t(
+                  'friendlyMatchTermsSheet.eGNorthStadiumPitch',
+                  'Ex : Stade Nord, terrain 2',
+                )}
                 placeholderTextColor={Colors.neutral400}
                 style={[Fonts.p1, {
                   backgroundColor: withAlpha(Colors.primary900, 0.94),
@@ -193,7 +206,10 @@ function FriendlyMatchTermsSheet({
 
             {!agreedInstant ? (
               <Text style={[Fonts.p4, { color: Colors.neutral300 }]}>
-                Choisis un jour pour pouvoir enregistrer.
+                {t(
+                  'friendlyMatchTermsSheet.chooseADayToBe',
+                  'Choisis un jour pour pouvoir enregistrer.',
+                )}
               </Text>
             ) : null}
 
@@ -210,8 +226,11 @@ function FriendlyMatchTermsSheet({
             ) : null}
 
             <Text style={[Fonts.p4, { color: withAlpha(Colors.neutral100, 0.63) }]}>
-              Enregistrer n’accepte pas encore la proposition : le match ne sera
-              créé qu’au moment où tu appuieras sur « Accepter ce match ».
+              {t(
+                'friendlyMatchTermsSheet.savingDoesnTAcceptThe',
+                'Enregistrer n’accepte pas encore la proposition : le match ne sera créé qu’au '
+                  + 'moment où tu appuieras sur « Accepter ce match ».',
+              )}
             </Text>
           </ScrollView>
 
@@ -219,7 +238,7 @@ function FriendlyMatchTermsSheet({
             disabled={!canSubmit}
             isLoading={isSubmitting}
             onPress={handleSubmit}
-            title="Enregistrer ce qui est convenu"
+            title={t('friendlyMatchTermsSheet.saveWhatWasAgreed', 'Enregistrer ce qui est convenu')}
             variant="Primary"
           />
         </View>

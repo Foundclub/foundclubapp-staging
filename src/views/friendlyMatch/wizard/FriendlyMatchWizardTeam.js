@@ -1,4 +1,5 @@
 import { useEffect, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Text, View } from 'react-native';
 
 import useAuth from '@/domains/auth/useAuth';
@@ -39,6 +40,7 @@ const getTeamKey = (team) => String(team?.documentId || team?.id || '').trim();
  * @returns {import('react').ReactElement}
  */
 function FriendlyMatchWizardTeam({ navigation, route }) {
+  const { t } = useTranslation();
   const { Colors, Fonts, Spaces } = /** @type {any} */ (useTheme());
   const { dispatch, state } = useFriendlyMatchWizard();
   const { userData } = /** @type {any} */ (useAuth());
@@ -77,8 +79,11 @@ function FriendlyMatchWizardTeam({ navigation, route }) {
         onBack={() => navigation.goBack()}
         stepCount={getFriendlyMatchWizardStepCount()}
         stepIndex={getFriendlyMatchWizardStepIndex('team')}
-        subtitle="Tu n’encadres encore aucune équipe"
-        title="Publier une annonce"
+        subtitle={t(
+          'friendlyMatchWizardTeam.youDonTCoachAny',
+          'Tu n’encadres encore aucune équipe',
+        )}
+        title={t('friendlyMatchWizardTeam.publishAListing', 'Publier une annonce')}
       >
         <View style={[Spaces.padding[24], {
           backgroundColor: withAlpha(Colors.primary900, 0.94),
@@ -88,8 +93,11 @@ function FriendlyMatchWizardTeam({ navigation, route }) {
         }]}
         >
           <Text style={[Fonts.p1, { color: Colors.neutral200, textAlign: 'center' }]}>
-            Il faut encadrer une équipe pour proposer un match amical. Demande à
-            ton club de te rattacher à une équipe, puis reviens ici.
+            {t(
+              'friendlyMatchWizardTeam.youNeedToCoachA',
+              'Il faut encadrer une équipe pour proposer un match amical. Demande à ton club de '
+                + 'te rattacher à une équipe, puis reviens ici.',
+            )}
           </Text>
         </View>
       </WizardStepLayout>
@@ -101,8 +109,8 @@ function FriendlyMatchWizardTeam({ navigation, route }) {
       onBack={() => navigation.goBack()}
       stepCount={getFriendlyMatchWizardStepCount()}
       stepIndex={getFriendlyMatchWizardStepIndex('team')}
-      subtitle="Qui cherche un adversaire ?"
-      title="Publier une annonce"
+      subtitle={t('friendlyMatchWizardTeam.whoIsLookingForAn', 'Qui cherche un adversaire ?')}
+      title={t('friendlyMatchWizardTeam.publishAListing', 'Publier une annonce')}
     >
       <View style={[Spaces.gap[16], Spaces.paddingBottom[8]]}>
         {managedTeams.map((team) => (

@@ -1,8 +1,10 @@
 import { useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Text, TextInput, View } from 'react-native';
 
 import { getFormatsForSport } from '@/domains/search/friendlyMatchFlow';
 import { withAlpha } from '@/theme/colors';
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import ChoiceChipGroup from '@/components/molecules/choiceChipGroup/ChoiceChipGroup';
@@ -86,6 +88,7 @@ const getSelectedChipValues = (selected) => {
  * @returns {import('react').ReactElement}
  */
 function FriendlyMatchWizardOpponent({ navigation }) {
+  const { t } = useTranslation();
   const { Colors, Fonts, Spaces } = /** @type {any} */ (useTheme());
   const { dispatch, state } = useFriendlyMatchWizard();
 
@@ -96,25 +99,25 @@ function FriendlyMatchWizardOpponent({ navigation }) {
   const sportName = state.activity?.name || '';
 
   const categoryOptions = useMemo(() => [
-    { label: 'Toutes', value: '' },
+    { label: t('friendlyMatchWizardOpponent.allFeminine', 'Toutes'), value: '' },
     ...(categories || []).map((/** @type {any} */ category) => ({
       label: category.name,
       value: category.documentId || '',
     })),
-  ], [categories]);
+  ], [categories, t]);
 
   const levelOptions = useMemo(() => [
-    { label: 'Tous', value: '' },
+    { label: t('friendlyMatchWizardOpponent.all', 'Tous'), value: '' },
     ...(levels || []).map((/** @type {any} */ level) => ({
       label: level.name,
       value: level.documentId || '',
     })),
-  ], [levels]);
+  ], [levels, t]);
 
   const formatOptions = useMemo(() => [
-    { label: 'Peu importe', value: '' },
+    { label: t('friendlyMatchWizardOpponent.any', 'Peu importe'), value: '' },
     ...getFormatsForSport(sportName).map((format) => ({ label: format, value: format })),
-  ], [sportName]);
+  ], [sportName, t]);
 
   return (
     <WizardStepLayout
@@ -123,39 +126,55 @@ function FriendlyMatchWizardOpponent({ navigation }) {
       onNext={() => navigation.navigate(RouteNames.FriendlyMatchWizardDescription)}
       onSkip={() => navigation.navigate(RouteNames.FriendlyMatchWizardDescription)}
       showSkip
-      skipLabel="Peu importe, je prends tout"
+      skipLabel={t('friendlyMatchWizardOpponent.anythingILlTakeAll', 'Peu importe, je prends tout')}
       stepCount={getFriendlyMatchWizardStepCount()}
       stepIndex={getFriendlyMatchWizardStepIndex('opponent')}
-      subtitle="Tout est facultatif : laisse vide et tu verras plus de monde."
-      title="Quel adversaire ?"
+      subtitle={t(
+        'friendlyMatchWizardOpponent.everythingIsOptionalLeaveIt',
+        'Tout est facultatif : laisse vide et tu verras plus de monde.',
+      )}
+      title={t('friendlyMatchWizardOpponent.whichOpponent', 'Quel adversaire ?')}
     >
       <View style={[Spaces.gap[24]]}>
         <ChoiceChipGroup
-          hint="Coche autant de catégories que tu veux. Rien de coché : toutes."
+          hint={t(
+            'friendlyMatchWizardOpponent.tickAsManyCategoriesAs',
+            'Coche autant de catégories que tu veux. Rien de coché : toutes.',
+          )}
           onSelect={(value) => dispatch({
             payload: toggleReference(state.categories, categories, value),
             type: 'SET_CATEGORIES',
           })}
           options={categoryOptions}
           selectedValues={getSelectedChipValues(state.categories)}
-          title="Catégories"
+          title={t('friendlyMatchWizardOpponent.categories', 'Catégories')}
         />
 
         <ChoiceChipGroup
-          hint="Coche autant de niveaux que tu veux. Rien de coché : tous."
+          hint={t(
+            'friendlyMatchWizardOpponent.tickAsManyLevelsAs',
+            'Coche autant de niveaux que tu veux. Rien de coché : tous.',
+          )}
           onSelect={(value) => dispatch({
             payload: toggleReference(state.levels, levels, value),
             type: 'SET_LEVELS',
           })}
           options={levelOptions}
           selectedValues={getSelectedChipValues(state.levels)}
-          title="Niveaux"
+          title={t('friendlyMatchWizardOpponent.levels', 'Niveaux')}
         />
 
         <ChoiceChipGroup
           hint={sportName
-            ? `Les formats proposés sont ceux du ${sportName.toLowerCase()}.`
-            : 'Choisis « Autre » si ton format n’est pas dans la liste.'}
+            ? t(
+              'friendlyMatchWizardOpponent.theFormatsOfferedAreThose',
+              'Les formats proposés sont ceux du {{sport}}.',
+              { sport: sportName.toLowerCase(), ...SANS_ECHAPPEMENT },
+            )
+            : t(
+              'friendlyMatchWizardOpponent.chooseOtherIfYourFormat',
+              'Choisis « Autre » si ton format n’est pas dans la liste.',
+            )}
           onSelect={(value) => dispatch({ payload: value, type: 'SET_FORMAT' })}
           options={formatOptions}
           selectedValue={state.format || ''}
@@ -165,13 +184,13 @@ function FriendlyMatchWizardOpponent({ navigation }) {
         {state.format === FORMAT_OTHER_VALUE ? (
           <View style={[Spaces.gap[8]]}>
             <Text style={[Fonts.p2Bold, { color: Colors.neutral100 }]}>
-              Ton format
+              {t('friendlyMatchWizardOpponent.yourFormat', 'Ton format')}
             </Text>
             <TextInput
-              accessibilityLabel="Format de jeu"
+              accessibilityLabel={t('friendlyMatchWizardOpponent.gameFormat', 'Format de jeu')}
               maxLength={40}
               onChangeText={(value) => dispatch({ payload: value, type: 'SET_FORMAT_OTHER' })}
-              placeholder="Ex : beach 3v3, 9v9..."
+              placeholder={t('friendlyMatchWizardOpponent.eGBeach3v39v9', 'Ex : beach 3v3, 9v9...')}
               placeholderTextColor={Colors.neutral400}
               style={[Fonts.p1, {
                 backgroundColor: withAlpha(Colors.primary900, 0.94),

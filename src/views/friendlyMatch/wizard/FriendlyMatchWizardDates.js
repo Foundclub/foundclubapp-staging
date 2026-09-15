@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { Text, View } from 'react-native';
 
 import useTheme from '@/theme/themeContext';
@@ -29,6 +30,7 @@ import {
  * @returns {import('react').ReactElement}
  */
 function FriendlyMatchWizardDates({ navigation }) {
+  const { t } = useTranslation();
   const { Colors, Fonts, Spaces } = /** @type {any} */ (useTheme());
   const { dispatch, state } = useFriendlyMatchWizard();
 
@@ -41,8 +43,11 @@ function FriendlyMatchWizardDates({ navigation }) {
       onNext={() => navigation.navigate(RouteNames.FriendlyMatchWizardLocation)}
       stepCount={getFriendlyMatchWizardStepCount()}
       stepIndex={getFriendlyMatchWizardStepIndex('dates')}
-      subtitle="Propose plusieurs dates : tu auras beaucoup plus de réponses."
-      title="Quand veux-tu jouer ?"
+      subtitle={t(
+        'friendlyMatchWizardDates.proposeSeveralDatesYouLl',
+        'Propose plusieurs dates : tu auras beaucoup plus de réponses.',
+      )}
+      title={t('friendlyMatchWizardDates.whenDoYouWantTo', 'Quand veux-tu jouer ?')}
     >
       <View style={[Spaces.gap[16]]}>
         <FriendlyMatchSlotEditor

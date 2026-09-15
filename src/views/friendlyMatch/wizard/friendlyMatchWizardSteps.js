@@ -1,3 +1,5 @@
+import i18next from 'i18next';
+
 import {
   hasUpcomingCandidateDate,
   HOSTING_PREFERENCES,
@@ -98,11 +100,19 @@ export const getFriendlyMatchWizardStepIssue = (stepKey, draft, now = new Date()
   switch (stepKey) {
     case 'dates': {
       const slots = normalizeCandidateDates(draft?.candidateDates);
-      if (slots.length === 0) return 'Propose au moins une date.';
+      if (slots.length === 0) {
+        return i18next.t(
+          'friendlyMatchWizardSteps.proposeAtLeastOneDate',
+          'Propose au moins une date.',
+        );
+      }
       // Une annonce dont toutes les dates sont passees naitrait `expired`
       // (§4.7) : elle serait publiee puis effacee sans avoir rien servi.
       if (!hasUpcomingCandidateDate({ candidateDates: slots }, now)) {
-        return 'Toutes tes dates sont déjà passées : propose une date à venir.';
+        return i18next.t(
+          'friendlyMatchWizardSteps.allYourDatesHaveAlready',
+          'Toutes tes dates sont déjà passées : propose une date à venir.',
+        );
       }
       return null;
     }
@@ -115,13 +125,24 @@ export const getFriendlyMatchWizardStepIssue = (stepKey, draft, now = new Date()
       // Q1 : le choix est TOUJOURS explicite, meme quand il parait evident.
       return HOSTING_PREFERENCES.includes(/** @type {any} */ (trimmed(draft?.hostingPreference)))
         ? null
-        : 'Dis si tu peux recevoir, te déplacer, ou les deux.';
+        : i18next.t(
+          'friendlyMatchWizardSteps.sayWhetherYouCanHost',
+          'Dis si tu peux recevoir, te déplacer, ou les deux.',
+        );
 
     case 'location': {
-      if (!draft?.location) return 'Indique où tu cherches un adversaire.';
+      if (!draft?.location) {
+        return i18next.t(
+          'friendlyMatchWizardSteps.sayWhereYouReLooking',
+          'Indique où tu cherches un adversaire.',
+        );
+      }
       const radius = Number(draft?.travelRadiusKm);
       if (!Number.isFinite(radius) || radius < 1) {
-        return 'Choisis un rayon d’au moins 1 km.';
+        return i18next.t(
+          'friendlyMatchWizardSteps.chooseARadiusOfAt',
+          'Choisis un rayon d’au moins 1 km.',
+        );
       }
       return null;
     }
@@ -130,7 +151,10 @@ export const getFriendlyMatchWizardStepIssue = (stepKey, draft, now = new Date()
       // Le catalogue est ferme + « Autre » (§3.4). « Autre » sans texte ne
       // decrit rien : ni l adversaire ni le filtre ne sauraient quoi en faire.
       if (trimmed(draft?.format) === FORMAT_OTHER_VALUE && !trimmed(draft?.formatOther)) {
-        return 'Écris le format que tu cherches.';
+        return i18next.t(
+          'friendlyMatchWizardSteps.writeTheFormatYouRe',
+          'Écris le format que tu cherches.',
+        );
       }
       return null;
 
@@ -143,7 +167,10 @@ export const getFriendlyMatchWizardStepIssue = (stepKey, draft, now = new Date()
     case 'team':
       return getDocumentId(draft?.team)
         ? null
-        : 'Choisis l’équipe qui cherche un match.';
+        : i18next.t(
+          'friendlyMatchWizardSteps.chooseTheTeamLookingFor',
+          'Choisis l’équipe qui cherche un match.',
+        );
 
     default:
       return null;

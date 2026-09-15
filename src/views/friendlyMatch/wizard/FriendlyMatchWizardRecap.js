@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Text, TouchableOpacity, View } from 'react-native';
 
 import {
@@ -84,6 +85,7 @@ const getLocationLabel = (location) => {
  * @returns {import('react').ReactElement}
  */
 function FriendlyMatchWizardRecap({ navigation }) {
+  const { t } = useTranslation();
   const {
     Alignments, Colors, Fonts, Spaces,
   } = /** @type {any} */ (useTheme());
@@ -105,8 +107,11 @@ function FriendlyMatchWizardRecap({ navigation }) {
   const handlePublish = async () => {
     if (blockingStep) {
       showBanner({
-        body: blockingIssue || 'Il manque une information avant de publier.',
-        title: 'Récapitulatif incomplet',
+        body: blockingIssue || t(
+          'friendlyMatchWizardRecap.onePieceOfInformationIs',
+          'Il manque une information avant de publier.',
+        ),
+        title: t('friendlyMatchWizardRecap.incompleteSummary', 'Récapitulatif incomplet'),
         tone: 'error',
       });
       return;
@@ -122,8 +127,11 @@ function FriendlyMatchWizardRecap({ navigation }) {
       // doit pas reproposer une annonce deja publiee.
       dispatch({ type: 'RESET' });
       showBanner({
-        body: 'Les équipes du secteur peuvent maintenant te proposer un match.',
-        title: 'Annonce publiée',
+        body: t(
+          'friendlyMatchWizardRecap.teamsInTheAreaCan',
+          'Les équipes du secteur peuvent maintenant te proposer un match.',
+        ),
+        title: t('friendlyMatchWizardRecap.listingPublished', 'Annonce publiée'),
         tone: 'success',
       });
       // ⑤ — DEUX ordres, dans cet ordre, et chacun a sa raison.
@@ -146,10 +154,20 @@ function FriendlyMatchWizardRecap({ navigation }) {
       // Le serveur explique deja POURQUOI il refuse (§3.3) : on garde SON
       // message plutot que d en inventer un plus vague.
       const message = /** @type {any} */ (error)?.message
-        || "Impossible de publier l'annonce.";
+        || t(
+          'friendlyMatchWizardRecap.unableToPublishTheListing',
+          "Impossible de publier l'annonce.",
+        );
       logger.error('Publication d annonce amicale refusee', { error });
       setSubmitErrorMessage(message);
-      showBanner({ body: message, title: 'Publication impossible', tone: 'error' });
+      showBanner({
+        body: message,
+        title: t(
+          'friendlyMatchWizardRecap.publishingFailed',
+          'Publication impossible',
+        ),
+        tone: 'error',
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -164,8 +182,14 @@ function FriendlyMatchWizardRecap({ navigation }) {
    */
   const renderRow = (label, value, stepKey) => (
     <TouchableOpacity
-      accessibilityHint="Retourne à cette étape pour la modifier"
-      accessibilityLabel={`${label} : ${value || 'non renseigné'}`}
+      accessibilityHint={t(
+        'friendlyMatchWizardRecap.goBackToThisStep',
+        'Retourne à cette étape pour la modifier',
+      )}
+      accessibilityLabel={`${label} : ${value || t(
+        'friendlyMatchWizardRecap.notFilledIn',
+        'non renseigné',
+      )}`}
       accessibilityRole="button"
       key={label}
       onPress={() => navigation.navigate(
@@ -188,10 +212,12 @@ function FriendlyMatchWizardRecap({ navigation }) {
       <View style={{ flex: 1, paddingRight: 12 }}>
         <Text style={[Fonts.p4, { color: withAlpha(Colors.neutral100, 0.63) }]}>{label}</Text>
         <Text style={[Fonts.p2Bold, { color: Colors.neutral100 }]}>
-          {value || 'Non renseigné'}
+          {value || t('friendlyMatchWizardRecap.notFilledIn2', 'Non renseigné')}
         </Text>
       </View>
-      <Text style={[Fonts.p3Bold, { color: Colors.primary500 }]}>Modifier</Text>
+      <Text style={[Fonts.p3Bold, { color: Colors.primary500 }]}>
+        {t('friendlyMatchWizardRecap.edit', 'Modifier')}
+      </Text>
     </TouchableOpacity>
   );
 
@@ -199,38 +225,46 @@ function FriendlyMatchWizardRecap({ navigation }) {
     <WizardStepLayout
       isNextDisabled={Boolean(blockingStep) || isSubmitting}
       isNextLoading={isSubmitting}
-      nextLabel="Publier l’annonce"
+      nextLabel={t('friendlyMatchWizardRecap.publishTheListing', 'Publier l’annonce')}
       onBack={() => navigation.goBack()}
       onNext={handlePublish}
       stepCount={getFriendlyMatchWizardStepCount()}
       stepIndex={getFriendlyMatchWizardStepIndex('recap')}
-      subtitle="Vérifie, puis publie. Tu pourras annuler tant que personne n’a répondu."
-      title="Ton annonce"
+      subtitle={t(
+        'friendlyMatchWizardRecap.checkThenPublishYouCan',
+        'Vérifie, puis publie. Tu pourras annuler tant que personne n’a répondu.',
+      )}
+      title={t('friendlyMatchWizardRecap.yourListing', 'Ton annonce')}
     >
       <View style={[Spaces.gap[12]]}>
-        {renderRow('Équipe', state.team?.name || '', 'team')}
-        {renderRow('Je peux', hostingSummary.label, 'hosting')}
+        {renderRow(t('friendlyMatchWizardRecap.team', 'Équipe'), state.team?.name || '', 'team')}
+        {renderRow(t('friendlyMatchWizardRecap.iCan', 'Je peux'), hostingSummary.label, 'hosting')}
         {renderRow(
-          slots.length > 1 ? `${slots.length} dates` : 'Date',
+          slots.length > 1
+            ? t('friendlyMatchWizardRecap.datesCount', '{{total}} dates', { total: slots.length })
+            : t('friendlyMatchWizardRecap.date', 'Date'),
           slots.map((/** @type {any} */ slot) => toShortDay(slot.date)).join(' · '),
           'dates',
         )}
         {renderRow(
-          'Où',
+          t('friendlyMatchWizardRecap.where', 'Où'),
           [getLocationLabel(state.location), `${state.travelRadiusKm} km`]
             .filter(Boolean).join(' · '),
           'location',
         )}
         {renderRow(
-          'Adversaire',
+          t('friendlyMatchWizardRecap.opponent', 'Adversaire'),
           [
             getReferenceNames(getAdCategories(state)),
             getReferenceNames(getAdLevels(state)),
             formatLabel,
-          ].filter(Boolean).join(' · ') || 'Peu importe',
+          ].filter(Boolean).join(' · ') || t('friendlyMatchWizardRecap.any', 'Peu importe'),
           'opponent',
         )}
-        {renderRow('Un mot', state.description || '', 'description')}
+        {renderRow(t(
+          'friendlyMatchWizardRecap.aWord',
+          'Un mot',
+        ), state.description || '', 'description')}
 
         {blockingIssue ? (
           <View style={[Spaces.padding[16], {
@@ -249,7 +283,10 @@ function FriendlyMatchWizardRecap({ navigation }) {
         ) : null}
 
         <Text style={[Fonts.p4, { color: withAlpha(Colors.neutral100, 0.63) }]}>
-          Publier est gratuit, sans limite de nombre d’annonces.
+          {t(
+            'friendlyMatchWizardRecap.publishingIsFreeWithNo',
+            'Publier est gratuit, sans limite de nombre d’annonces.',
+          )}
         </Text>
       </View>
     </WizardStepLayout>

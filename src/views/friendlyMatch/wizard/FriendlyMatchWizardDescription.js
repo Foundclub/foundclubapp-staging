@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { Text, TextInput, View } from 'react-native';
 
 import { withAlpha } from '@/theme/colors';
@@ -25,6 +26,7 @@ const REFEREEING_MAX_LENGTH = 120;
  * @returns {import('react').ReactElement}
  */
 function FriendlyMatchWizardDescription({ navigation }) {
+  const { t } = useTranslation();
   const { Colors, Fonts, Spaces } = /** @type {any} */ (useTheme());
   const { dispatch, state } = useFriendlyMatchWizard();
 
@@ -69,21 +71,33 @@ function FriendlyMatchWizardDescription({ navigation }) {
       showSkip
       stepCount={getFriendlyMatchWizardStepCount()}
       stepIndex={getFriendlyMatchWizardStepIndex('description')}
-      subtitle="Deux lignes suffisent. C’est ce que les autres staffs liront en premier."
-      title="Un mot pour convaincre"
+      subtitle={t(
+        'friendlyMatchWizardDescription.twoLinesAreEnoughIt',
+        'Deux lignes suffisent. C’est ce que les autres staffs liront en premier.',
+      )}
+      title={t('friendlyMatchWizardDescription.aWordToConvince', 'Un mot pour convaincre')}
     >
       <View style={[Spaces.gap[24]]}>
         <View style={[Spaces.gap[8]]}>
           <Text style={[Fonts.p2Bold, { color: Colors.neutral100 }]}>
-            Description (facultatif)
+            {t('friendlyMatchWizardDescription.descriptionOptional', 'Description (facultatif)')}
           </Text>
           {renderInput({
-            accessibilityLabel: 'Description de l’annonce',
+            accessibilityLabel: t(
+              'friendlyMatchWizardDescription.listingDescription',
+              'Description de l’annonce',
+            ),
             maxLength: DESCRIPTION_MAX_LENGTH,
             multiline: true,
             onChangeText: (value) => dispatch({ payload: value, type: 'SET_DESCRIPTION' }),
-            placeholder: 'Ex : équipe U15 sérieuse, on cherche un match de'
-              + ' préparation avant la reprise.',
+            placeholder: t(
+              'friendlyMatchWizardDescription.eGCommittedU15Team',
+              'Ex : équipe U15 sérieuse, on cherche un match de',
+            )
+              + t(
+                'friendlyMatchWizardDescription.warmUpMatchBeforeThe',
+                ' préparation avant la reprise.',
+              ),
             value: state.description || '',
           })}
           <Text style={[Fonts.p4, { color: withAlpha(Colors.neutral100, 0.63) }]}>
@@ -93,14 +107,17 @@ function FriendlyMatchWizardDescription({ navigation }) {
 
         <View style={[Spaces.gap[8]]}>
           <Text style={[Fonts.p2Bold, { color: Colors.neutral100 }]}>
-            Arbitrage (facultatif)
+            {t('friendlyMatchWizardDescription.refereeingOptional', 'Arbitrage (facultatif)')}
           </Text>
           {renderInput({
-            accessibilityLabel: 'Arbitrage',
+            accessibilityLabel: t('friendlyMatchWizardDescription.refereeing', 'Arbitrage'),
             maxLength: REFEREEING_MAX_LENGTH,
             multiline: false,
             onChangeText: (value) => dispatch({ payload: value, type: 'SET_REFEREEING' }),
-            placeholder: 'Ex : arbitre fourni par le club',
+            placeholder: t(
+              'friendlyMatchWizardDescription.eGRefereeProvidedBy',
+              'Ex : arbitre fourni par le club',
+            ),
             value: state.refereeing || '',
           })}
         </View>
