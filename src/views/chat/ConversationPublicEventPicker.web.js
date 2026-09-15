@@ -38,7 +38,10 @@ function ConversationPublicEventPicker({ navigation, route }) {
   const { width } = useWindowDimensions();
   const isDesktop = width >= BREAKPOINTS.desktop;
   const isTablet = width >= BREAKPOINTS.tablet;
-  const { t } = useTranslation();
+  const { i18n, t } = useTranslation();
+  // La regle de localeDesFormats() ; un import de plus dans ce fichier ajoutait une erreur
+  // perfectionist (ordre des imports deja casse).
+  const localeDates = i18n.language === 'en' ? 'en-GB' : 'fr-FR';
   const { Colors } = useTheme();
   const chatId = String(route?.params?.chatId || '').trim();
   const [query, setQuery] = useState('');
@@ -136,10 +139,13 @@ function ConversationPublicEventPicker({ navigation, route }) {
                 Messagerie
               </span>
               <h1 style={{ fontFamily: 'Montserrat-Black, sans-serif', fontSize: isTablet ? 34 : 28, margin: 0 }}>
-                Partager un événement public
+                {t('conversationPublicEventPicker.web.title', 'Partager un événement public')}
               </h1>
               <p style={{ color: mutedTextColor, margin: 0, maxWidth: 720 }}>
-                Recherche un événement public et partage-le directement dans cette conversation.
+                {t(
+                  'conversationPublicEventPicker.web.subtitle',
+                  'Recherche un événement public et partage-le directement dans cette conversation.', // eslint-disable-line max-len
+                )}
               </p>
             </div>
             <button
@@ -172,13 +178,16 @@ function ConversationPublicEventPicker({ navigation, route }) {
             <span style={{ color: mutedTextColor, fontSize: 13 }}>
               {searchEnabled
                 ? 'Recherche intelligente activee.'
-                : 'Saisis au moins 2 caractères pour lancer une recherche précise.'}
+                : t(
+                  'conversationPublicEventPicker.web.minChars',
+                  'Saisis au moins 2 caractères pour lancer une recherche précise.',
+                )}
             </span>
           </div>
 
           {isLoading ? (
             <div style={{ background: cardBackground, border: `1px solid ${borderColor}`, borderRadius: 20, color: mutedTextColor, padding: 20 }}>
-              Chargement des evenements…
+              {t('conversationPublicEventPicker.web.loading', 'Chargement des evenements…')}
             </div>
           ) : null}
 
@@ -188,7 +197,10 @@ function ConversationPublicEventPicker({ navigation, route }) {
                 Chargement impossible
               </strong>
               <p style={{ color: mutedTextColor, margin: 0 }}>
-                {activeError?.message || 'Impossible de charger les événements publics.'}
+                {activeError?.message || t(
+                  'conversationPublicEventPicker.web.error',
+                  'Impossible de charger les événements publics.',
+                )}
               </p>
             </div>
           ) : null}
@@ -196,10 +208,13 @@ function ConversationPublicEventPicker({ navigation, route }) {
           {!isLoading && !activeError && events.length === 0 ? (
             <div style={{ background: cardBackground, border: `1px solid ${borderColor}`, borderRadius: 20, display: 'grid', gap: 8, padding: 20 }}>
               <strong style={{ fontFamily: 'Montserrat-Bold, sans-serif' }}>
-                Aucun événement disponible
+                {t('conversationPublicEventPicker.web.empty.title', 'Aucun événement disponible')}
               </strong>
               <p style={{ color: mutedTextColor, margin: 0 }}>
-                Aucun événement public ne correspond à cette recherche pour le moment.
+                {t(
+                  'conversationPublicEventPicker.web.empty.body',
+                  'Aucun événement public ne correspond à cette recherche pour le moment.',
+                )}
               </p>
             </div>
           ) : null}
@@ -218,20 +233,26 @@ function ConversationPublicEventPicker({ navigation, route }) {
                         {event?.name || 'Evenement'}
                       </h2>
                       <span style={{ color: mutedTextColor, fontSize: 14 }}>
-                        {event?.team?.name || event?.team?.club?.name || 'Équipe inconnue'}
+                        {event?.team?.name || event?.team?.club?.name || t(
+                          'conversationPublicEventPicker.web.unknownTeam',
+                          'Équipe inconnue',
+                        )}
                       </span>
                     </div>
 
                     <div style={{ display: 'grid', gap: 6 }}>
                       <span style={{ color: mutedTextColor, fontSize: 13 }}>
                         {event?.date
-                          ? new Date(event.date).toLocaleString('fr-FR', {
+                          ? new Date(event.date).toLocaleString(localeDates, {
                             day: '2-digit',
                             hour: '2-digit',
                             minute: '2-digit',
                             month: 'long',
                           })
-                          : 'Date à confirmer'}
+                          : t(
+                            'conversationPublicEventPicker.web.dateToConfirm',
+                            'Date à confirmer',
+                          )}
                       </span>
                       {getLocationLabel(event) ? (
                         <span style={{ color: mutedTextColor, fontSize: 13 }}>
@@ -246,14 +267,17 @@ function ConversationPublicEventPicker({ navigation, route }) {
                         style={{ background: 'transparent', border: `1px solid ${borderColor}`, borderRadius: 999, color: textColor, cursor: 'pointer', padding: '10px 14px' }}
                         type="button"
                       >
-                        Voir le detail
+                        {t('conversationPublicEventPicker.web.viewDetails', 'Voir le detail')}
                       </button>
                       <button
                         onClick={() => handleSelectEvent(event)}
                         style={{ background: accentColor, border: 0, borderRadius: 999, color: '#04131d', cursor: 'pointer', fontFamily: 'Montserrat-Bold, sans-serif', padding: '10px 14px' }}
                         type="button"
                       >
-                        Partager dans la conversation
+                        {t(
+                          'conversationPublicEventPicker.web.share',
+                          'Partager dans la conversation',
+                        )}
                       </button>
                     </div>
                   </article>

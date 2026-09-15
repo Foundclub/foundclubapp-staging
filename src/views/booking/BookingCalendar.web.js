@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { addDays, addMinutes, format, parse, startOfDay } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { useWindowDimensions } from 'react-native';
@@ -71,6 +72,7 @@ function BookingCalendar({ navigation, route }) {
   const isDesktop = width >= BREAKPOINTS.desktop;
   const isTablet = width >= BREAKPOINTS.tablet;
   const { Colors } = useTheme();
+  const { t } = useTranslation();
   const [selectedDate, setSelectedDate] = useState(() => startOfDay(route?.params?.date ? new Date(route.params.date) : new Date()));
   const [selectedFacilityId, setSelectedFacilityId] = useState(() => String(route?.params?.facilityId || '').trim());
   const [selectedSlot, setSelectedSlot] = useState(null);
@@ -176,7 +178,10 @@ function BookingCalendar({ navigation, route }) {
 
   const handleSubmit = async () => {
     if (!selectedFacilityId || !selectedSlot || !selectedDuration || !endTime) {
-      setSubmitError('Choisis une installation, un créneau et une durée.');
+      setSubmitError(t(
+        'bookingCalendar.web.errors.incomplete',
+        'Choisis une installation, un créneau et une durée.',
+      ));
       return;
     }
 
@@ -192,7 +197,10 @@ function BookingCalendar({ navigation, route }) {
         targetPlayers: mode === 'shared' ? Number(targetPlayers) : undefined,
       });
     } catch (error) {
-      setSubmitError(error?.message || 'Impossible de créer cette réservation.');
+      setSubmitError(error?.message || t(
+        'bookingCalendar.web.errors.create',
+        'Impossible de créer cette réservation.',
+      ));
     }
   };
 
@@ -228,13 +236,16 @@ function BookingCalendar({ navigation, route }) {
           <div style={{ alignItems: 'center', display: 'flex', flexWrap: 'wrap', gap: 12, justifyContent: 'space-between', marginBottom: 18 }}>
             <div style={{ display: 'grid', gap: 8 }}>
               <span style={{ color: accentColor, fontSize: 13, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
-                Réservations
+                {t('bookingCalendar.web.eyebrow', 'Réservations')}
               </span>
               <h1 style={{ fontFamily: 'Montserrat-Black, sans-serif', fontSize: isTablet ? 34 : 28, margin: 0 }}>
-                Réserver une installation
+                {t('bookingCalendar.web.title', 'Réserver une installation')}
               </h1>
               <p style={{ color: mutedTextColor, margin: 0, maxWidth: 640 }}>
-                Sélectionne une installation, un créneau disponible et configure ta réservation directement depuis le web.
+                {t(
+                  'bookingCalendar.web.subtitle',
+                  'Sélectionne une installation, un créneau disponible et configure ta réservation directement depuis le web.', // eslint-disable-line max-len
+                )}
               </p>
             </div>
             <button
@@ -257,7 +268,9 @@ function BookingCalendar({ navigation, route }) {
                     style={fieldStyle}
                     value={selectedFacilityId}
                   >
-                    <option value="">Choisir une installation</option>
+                    <option value="">
+                      {t('bookingCalendar.web.chooseFacility', 'Choisir une installation')}
+                    </option>
                     {facilities.map((item) => {
                       const itemId = getEntityDocumentId(item);
                       return (
@@ -270,7 +283,9 @@ function BookingCalendar({ navigation, route }) {
                 </label>
 
                 <label style={{ display: 'grid', gap: 8 }}>
-                  <span style={{ color: mutedTextColor, fontSize: 13 }}>Nom de la réservation</span>
+                  <span style={{ color: mutedTextColor, fontSize: 13 }}>
+                    {t('bookingCalendar.web.bookingName', 'Nom de la réservation')}
+                  </span>
                   <input
                     onChange={(event) => setBookingName(event.target.value)}
                     placeholder="Ex: Five entre amis"
@@ -300,10 +315,19 @@ function BookingCalendar({ navigation, route }) {
               ) : (
                 <div style={{ background: 'rgba(255,255,255,0.04)', border: `1px dashed ${borderColor}`, borderRadius: 22, color: mutedTextColor, padding: 20 }}>
                   {facilitiesError
-                    ? (facilitiesError?.message || 'Impossible de charger les installations.')
+                    ? (facilitiesError?.message || t(
+                      'bookingCalendar.web.errors.facilities',
+                      'Impossible de charger les installations.',
+                    ))
                     : facilities.length === 0
-                      ? 'Aucune installation reservable n est disponible pour le moment.'
-                      : 'Choisis une installation pour voir ses créneaux disponibles.'}
+                      ? t(
+                        'bookingCalendar.web.noFacility',
+                        'Aucune installation reservable n est disponible pour le moment.',
+                      )
+                      : t(
+                        'bookingCalendar.web.pickFacilityFirst',
+                        'Choisis une installation pour voir ses créneaux disponibles.',
+                      )}
                 </div>
               )}
 
@@ -345,18 +369,26 @@ function BookingCalendar({ navigation, route }) {
               <div style={{ display: 'grid', gap: 12 }}>
                 <div style={{ alignItems: 'baseline', display: 'flex', flexWrap: 'wrap', gap: 10, justifyContent: 'space-between' }}>
                   <h2 style={{ fontFamily: 'Montserrat-Bold, sans-serif', fontSize: 22, margin: 0 }}>
-                    Créneaux du
+                    {t('bookingCalendar.web.slotsOf', 'Créneaux du')}
                     {' '}
                     {formatFullDate(selectedDate)}
                   </h2>
                   {availabilityLoading ? (
-                    <span style={{ color: mutedTextColor, fontSize: 13 }}>Chargement des disponibilités…</span>
+                    <span style={{ color: mutedTextColor, fontSize: 13 }}>
+                      {t(
+                        'bookingCalendar.web.loadingAvailability',
+                        'Chargement des disponibilités…',
+                      )}
+                    </span>
                   ) : null}
                 </div>
 
                 {availabilityError ? (
                   <div style={{ background: 'rgba(220, 64, 64, 0.12)', border: '1px solid rgba(220, 64, 64, 0.28)', borderRadius: 22, color: '#ffd6d6', padding: 20 }}>
-                    {availabilityError?.message || 'Impossible de charger les disponibilités.'}
+                    {availabilityError?.message || t(
+                      'bookingCalendar.web.errors.availability',
+                      'Impossible de charger les disponibilités.',
+                    )}
                   </div>
                 ) : availability?.slots?.length > 0 ? (
                   <div style={{ display: 'grid', gap: 12, gridTemplateColumns: isTablet ? 'repeat(3, minmax(0, 1fr))' : 'repeat(2, minmax(0, 1fr))' }}>
@@ -387,7 +419,10 @@ function BookingCalendar({ navigation, route }) {
                             {isAvailable ? `${slot.remaining} place${Number(slot.remaining) > 1 ? 's' : ''} dispo` : 'Complet'}
                           </span>
                           <span style={{ color: mutedTextColor, fontSize: 12 }}>
-                            Durée max {Math.floor(Number(slot?.maxDuration || 0) / 60) > 0 ? `${Math.floor(Number(slot.maxDuration) / 60)}h` : ''}{Number(slot?.maxDuration || 0) % 60 ? ` ${Number(slot.maxDuration) % 60} min` : Number(slot?.maxDuration || 0) >= 60 ? '' : `${slot.maxDuration} min`}
+                            {t(
+                              'bookingCalendar.web.maxDuration',
+                              'Durée max',
+                            )} {Math.floor(Number(slot?.maxDuration || 0) / 60) > 0 ? `${Math.floor(Number(slot.maxDuration) / 60)}h` : ''}{Number(slot?.maxDuration || 0) % 60 ? ` ${Number(slot.maxDuration) % 60} min` : Number(slot?.maxDuration || 0) >= 60 ? '' : `${slot.maxDuration} min`}
                           </span>
                         </button>
                       );
@@ -395,11 +430,14 @@ function BookingCalendar({ navigation, route }) {
                   </div>
                 ) : selectedFacilityId ? (
                   <div style={{ background: 'rgba(255,255,255,0.04)', border: `1px dashed ${borderColor}`, borderRadius: 22, color: mutedTextColor, padding: 20 }}>
-                    Aucun créneau disponible pour cette date.
+                    {t('bookingCalendar.web.noSlot', 'Aucun créneau disponible pour cette date.')}
                   </div>
                 ) : (
                   <div style={{ background: 'rgba(255,255,255,0.04)', border: `1px dashed ${borderColor}`, borderRadius: 22, color: mutedTextColor, padding: 20 }}>
-                    Sélectionne d’abord une installation.
+                    {t(
+                      'bookingCalendar.web.selectFacilityFirst',
+                      'Sélectionne d’abord une installation.',
+                    )}
                   </div>
                 )}
               </div>
@@ -411,17 +449,29 @@ function BookingCalendar({ navigation, route }) {
                   Configuration
                 </span>
                 <h2 style={{ fontFamily: 'Montserrat-Bold, sans-serif', fontSize: 24, margin: 0 }}>
-                  {selectedSlot ? `${selectedSlot.time}${endTime ? ` - ${endTime}` : ''}` : 'Choisis un créneau'}
+                  {selectedSlot ? `${selectedSlot.time}${endTime ? ` - ${endTime}` : ''}` : t(
+                    'bookingCalendar.web.chooseSlot',
+                    'Choisis un créneau',
+                  )}
                 </h2>
                 <p style={{ color: mutedTextColor, margin: 0 }}>
                   {selectedSlot
-                    ? `Finalise ta réservation du ${formatFullDate(selectedDate)}.`
-                    : 'Sélectionne un créneau disponible pour configurer la réservation.'}
+                    ? t(
+                      'bookingCalendar.web.finalize',
+                      'Finalise ta réservation du {{date}}.',
+                      { date: formatFullDate(selectedDate) },
+                    )
+                    : t(
+                      'bookingCalendar.web.selectSlot',
+                      'Sélectionne un créneau disponible pour configurer la réservation.',
+                    )}
                 </p>
               </div>
 
               <div style={{ display: 'grid', gap: 10 }}>
-                <span style={{ color: mutedTextColor, fontSize: 13 }}>Durée</span>
+                <span style={{ color: mutedTextColor, fontSize: 13 }}>
+                  {t('bookingCalendar.web.duration', 'Durée')}
+                </span>
                 <div style={{ display: 'grid', gap: 10 }}>
                   {durationOptions.length > 0 ? durationOptions.map((option) => {
                     const isSelected = selectedDuration?.duration === option.duration;
@@ -449,7 +499,10 @@ function BookingCalendar({ navigation, route }) {
                     );
                   }) : (
                     <div style={{ background: 'rgba(255,255,255,0.03)', border: `1px dashed ${borderColor}`, borderRadius: 18, color: mutedTextColor, padding: 16 }}>
-                      La durée sera disponible dès qu’un créneau sera choisi.
+                      {t(
+                        'bookingCalendar.web.durationAfterSlot',
+                        'La durée sera disponible dès qu’un créneau sera choisi.',
+                      )}
                     </div>
                   )}
                 </div>
@@ -459,8 +512,22 @@ function BookingCalendar({ navigation, route }) {
                 <span style={{ color: mutedTextColor, fontSize: 13 }}>Mode</span>
                 <div style={{ display: 'grid', gap: 10, gridTemplateColumns: '1fr 1fr' }}>
                   {[
-                    { description: 'Tu privatises tout le terrain pour ton groupe.', label: 'Privé', value: 'private' },
-                    { description: 'Tu ouvres la réservation à d’autres joueurs.', label: 'Partagé', value: 'shared' },
+                    {
+                      description: t(
+                        'bookingCalendar.web.mode.privateDescription',
+                        'Tu privatises tout le terrain pour ton groupe.',
+                      ),
+                      label: t('bookingCalendar.web.mode.private', 'Privé'),
+                      value: 'private',
+                    },
+                    {
+                      description: t(
+                        'bookingCalendar.web.mode.sharedDescription',
+                        'Tu ouvres la réservation à d’autres joueurs.',
+                      ),
+                      label: t('bookingCalendar.web.mode.shared', 'Partagé'),
+                      value: 'shared',
+                    },
                   ].map((option) => {
                     const isSelected = mode === option.value;
                     return (
@@ -491,7 +558,9 @@ function BookingCalendar({ navigation, route }) {
               {mode === 'shared' ? (
                 <div style={{ display: 'grid', gap: 14 }}>
                   <div style={{ display: 'grid', gap: 8 }}>
-                    <span style={{ color: mutedTextColor, fontSize: 13 }}>Joueurs déjà confirmés</span>
+                    <span style={{ color: mutedTextColor, fontSize: 13 }}>
+                      {t('bookingCalendar.web.confirmedPlayers', 'Joueurs déjà confirmés')}
+                    </span>
                     <input
                       max={Math.max(1, targetPlayers - 1)}
                       min={1}
@@ -502,7 +571,9 @@ function BookingCalendar({ navigation, route }) {
                     />
                   </div>
                   <div style={{ display: 'grid', gap: 8 }}>
-                    <span style={{ color: mutedTextColor, fontSize: 13 }}>Objectif total de joueurs</span>
+                    <span style={{ color: mutedTextColor, fontSize: 13 }}>
+                      {t('bookingCalendar.web.targetPlayers', 'Objectif total de joueurs')}
+                    </span>
                     <input
                       max={22}
                       min={Math.max(2, currentPlayers + 1)}
@@ -521,7 +592,9 @@ function BookingCalendar({ navigation, route }) {
                   <strong style={{ fontFamily: 'Montserrat-Bold, sans-serif' }}>{format(selectedDate, 'dd/MM/yyyy')}</strong>
                 </div>
                 <div style={{ alignItems: 'center', display: 'flex', justifyContent: 'space-between' }}>
-                  <span style={{ color: mutedTextColor }}>Créneau</span>
+                  <span style={{ color: mutedTextColor }}>
+                    {t('bookingCalendar.web.summary.slot', 'Créneau')}
+                  </span>
                   <strong style={{ fontFamily: 'Montserrat-Bold, sans-serif' }}>{selectedSlot ? selectedSlot.time : '—'}</strong>
                 </div>
                 <div style={{ alignItems: 'center', display: 'flex', justifyContent: 'space-between' }}>
@@ -529,7 +602,9 @@ function BookingCalendar({ navigation, route }) {
                   <strong style={{ fontFamily: 'Montserrat-Bold, sans-serif' }}>{endTime || '—'}</strong>
                 </div>
                 <div style={{ alignItems: 'center', display: 'flex', justifyContent: 'space-between' }}>
-                  <span style={{ color: mutedTextColor }}>Prix estimé</span>
+                  <span style={{ color: mutedTextColor }}>
+                    {t('bookingCalendar.web.summary.price', 'Prix estimé')}
+                  </span>
                   <strong style={{ color: accentColor, fontFamily: 'Montserrat-Bold, sans-serif' }}>
                     {selectedDuration ? `${selectedDuration.price} EUR` : '—'}
                   </strong>
@@ -557,7 +632,13 @@ function BookingCalendar({ navigation, route }) {
                 }}
                 type="button"
               >
-                {createBookingMutation.isPending ? 'Création…' : 'Confirmer la réservation'}
+                {createBookingMutation.isPending ? t(
+                  'bookingCalendar.web.creating',
+                  'Création…',
+                ) : t(
+                  'bookingCalendar.web.confirm',
+                  'Confirmer la réservation',
+                )}
               </button>
 
               <button
@@ -565,7 +646,7 @@ function BookingCalendar({ navigation, route }) {
                 style={{ background: 'transparent', border: `1px solid ${borderColor}`, borderRadius: 999, color: textColor, cursor: 'pointer', padding: '12px 16px' }}
                 type="button"
               >
-                Rafraîchir les disponibilités
+                {t('bookingCalendar.web.refresh', 'Rafraîchir les disponibilités')}
               </button>
             </aside>
           </div>
