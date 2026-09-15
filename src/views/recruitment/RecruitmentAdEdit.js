@@ -1,8 +1,10 @@
 import { joiResolver } from '@hookform/resolvers/joi';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import i18next from 'i18next';
 import Joi from 'joi';
 import { useEffect, useMemo } from 'react';
 import { Controller, useForm } from 'react-hook-form';
+import { useTranslation } from 'react-i18next';
 import {
   Alert, ScrollView, Text, View,
 } from 'react-native';
@@ -53,27 +55,102 @@ const buildDefaultValues = (ad) => ({
 });
 
 const COACH_ROLE_OPTIONS = [
-  { label: 'Entraîneur·e principal·e', value: 'entraineur_principal' },
-  { label: 'Entraîneur adjoint', value: 'entraineur_adjoint' },
-  { label: 'Préparateur physique', value: 'preparateur_physique' },
-  { label: 'Entraîneur gardiens', value: 'entraineur_gardiens' },
-  { label: 'Analyste vidéo', value: 'analyste_video' },
-  { label: 'Team manager', value: 'team_manager' },
-  { label: 'Autre rôle', value: 'other' },
+  {
+    get label() {
+      return i18next.t('recruitmentAdEdit.coachRoles.main', 'Entraîneur·e principal·e');
+    },
+    value: 'entraineur_principal',
+  },
+  {
+    get label() {
+      return i18next.t('recruitmentAdEdit.coachRoles.assistant', 'Entraîneur adjoint');
+    },
+    value: 'entraineur_adjoint',
+  },
+  {
+    get label() {
+      return i18next.t('recruitmentAdEdit.coachRoles.fitness', 'Préparateur physique');
+    },
+    value: 'preparateur_physique',
+  },
+  {
+    get label() {
+      return i18next.t('recruitmentAdEdit.coachRoles.goalkeeper', 'Entraîneur gardiens');
+    },
+    value: 'entraineur_gardiens',
+  },
+  {
+    get label() {
+      return i18next.t('recruitmentAdEdit.coachRoles.videoAnalyst', 'Analyste vidéo');
+    },
+    value: 'analyste_video',
+  },
+  {
+    get label() {
+      return i18next.t('recruitmentAdEdit.coachRoles.teamManager', 'Team manager');
+    },
+    value: 'team_manager',
+  },
+  {
+    get label() {
+      return i18next.t('recruitmentAdEdit.coachRoles.other', 'Autre rôle');
+    },
+    value: 'other',
+  },
 ];
 
 const COACH_EXPERIENCE_OPTIONS = [
-  { label: 'Junior', value: 'junior' },
-  { label: 'Confirme', value: 'confirme' },
-  { label: 'Experimente', value: 'experimente' },
-  { label: 'Diplome', value: 'diplome' },
+  {
+    get label() {
+      return i18next.t('recruitmentAdEdit.coachExperience.junior', 'Junior');
+    },
+    value: 'junior',
+  },
+  {
+    get label() {
+      return i18next.t('recruitmentAdEdit.coachExperience.confirmed', 'Confirme');
+    },
+    value: 'confirme',
+  },
+  {
+    get label() {
+      return i18next.t('recruitmentAdEdit.coachExperience.expert', 'Experimente');
+    },
+    value: 'experimente',
+  },
+  {
+    get label() {
+      return i18next.t('recruitmentAdEdit.coachExperience.qualified', 'Diplome');
+    },
+    value: 'diplome',
+  },
 ];
 
 const ENGAGEMENT_OPTIONS = [
-  { label: 'Benevole', value: 'benevole' },
-  { label: 'Indemnise', value: 'indemnise' },
-  { label: 'Salarie', value: 'salarie' },
-  { label: 'A définir', value: 'a_definir' },
+  {
+    get label() {
+      return i18next.t('recruitmentAdEdit.engagement.volunteer', 'Benevole');
+    },
+    value: 'benevole',
+  },
+  {
+    get label() {
+      return i18next.t('recruitmentAdEdit.engagement.expenses', 'Indemnise');
+    },
+    value: 'indemnise',
+  },
+  {
+    get label() {
+      return i18next.t('recruitmentAdEdit.engagement.salaried', 'Salarie');
+    },
+    value: 'salarie',
+  },
+  {
+    get label() {
+      return i18next.t('recruitmentAdEdit.engagement.toBeDefined', 'A définir');
+    },
+    value: 'a_definir',
+  },
 ];
 
 /**
@@ -81,6 +158,7 @@ const ENGAGEMENT_OPTIONS = [
  * @returns {import('react').ReactElement}
  */
 function RecruitmentAdEdit({ navigation, route }) {
+  const { t } = useTranslation();
   const { ad, adId } = route.params || {};
   const { Colors, Fonts, Spaces } = useTheme();
   const queryClient = useQueryClient();
@@ -145,7 +223,10 @@ function RecruitmentAdEdit({ navigation, route }) {
   const updateMutation = useMutation({
     mutationFn: (data) => updateRecruitmentAd(resolvedAdId, data),
     onError: () => {
-      Alert.alert('Erreur', "Impossible de mettre à jour l'annonce.");
+      Alert.alert(t('recruitmentAdEdit.alerts.errorTitle', 'Erreur'), t(
+        'recruitmentAdEdit.alerts.updateError',
+        "Impossible de mettre à jour l'annonce.",
+      ));
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['recruitmentAds'] });
@@ -153,9 +234,9 @@ function RecruitmentAdEdit({ navigation, route }) {
       queryClient.invalidateQueries({ queryKey: ['recruitmentAd', resolvedAdId] });
 
       Alert.alert(
-        'Succès',
-        "L'annonce a été mise à jour avec succès.",
-        [{ onPress: () => navigation.goBack(), text: 'OK' }],
+        t('recruitmentAdEdit.alerts.successTitle', 'Succès'),
+        t('recruitmentAdEdit.alerts.updateSuccess', "L'annonce a été mise à jour avec succès."),
+        [{ onPress: () => navigation.goBack(), text: t('recruitmentAdEdit.alerts.ok', 'OK') }],
       );
     },
   });
@@ -163,16 +244,25 @@ function RecruitmentAdEdit({ navigation, route }) {
   const onSubmit = (data) => {
     if (isCoachAd) {
       if (!String(data.coachRole || '').trim()) {
-        Alert.alert('Erreur', 'Le rôle entraîneur est requis.');
+        Alert.alert(t('recruitmentAdEdit.alerts.errorTitle', 'Erreur'), t(
+          'recruitmentAdEdit.alerts.coachRoleRequired',
+          'Le rôle entraîneur est requis.',
+        ));
         return;
       }
 
       if (data.coachRole === 'other' && !String(data.coachRoleOther || '').trim()) {
-        Alert.alert('Erreur', 'Précise le rôle entraîneur recherche.');
+        Alert.alert(t('recruitmentAdEdit.alerts.errorTitle', 'Erreur'), t(
+          'recruitmentAdEdit.alerts.coachRoleOtherRequired',
+          'Précise le rôle entraîneur recherche.',
+        ));
         return;
       }
     } else if (!String(data.position || '').trim()) {
-      Alert.alert('Erreur', 'Le poste est requis.');
+      Alert.alert(t('recruitmentAdEdit.alerts.errorTitle', 'Erreur'), t(
+        'recruitmentAdEdit.alerts.positionRequired',
+        'Le poste est requis.',
+      ));
       return;
     }
 
@@ -205,11 +295,17 @@ function RecruitmentAdEdit({ navigation, route }) {
       <ScreenContainer
         bgImage="bg2"
         onGoBack={() => navigation.goBack()}
-        title="Modifier l'annonce"
+        title={t('recruitmentAdEdit.title', "Modifier l'annonce")}
       >
         <View style={[Spaces.padding[16], { gap: 12 }]}>
-          <Text style={[Fonts.p1Bold, { color: Colors.neutral00 }]}>Chargement de l&rsquo;annonce...</Text>
-          <Text style={[Fonts.p2, { color: Colors.neutral300 }]}>Préparation du formulaire d&rsquo;édition.</Text>
+          <Text style={[Fonts.p1Bold, { color: Colors.neutral00 }]}>{t(
+            'recruitmentAdEdit.state.loadingTitle',
+            'Chargement de l’annonce...',
+          )}nce...</Text>
+          <Text style={[Fonts.p2, { color: Colors.neutral300 }]}>{t(
+            'recruitmentAdEdit.state.loadingBody',
+            'Préparation du formulaire d’édition.',
+          )}ition.</Text>
         </View>
       </ScreenContainer>
     );
@@ -220,16 +316,21 @@ function RecruitmentAdEdit({ navigation, route }) {
       <ScreenContainer
         bgImage="bg2"
         onGoBack={() => navigation.goBack()}
-        title="Modifier l'annonce"
+        title={t('recruitmentAdEdit.title', "Modifier l'annonce")}
       >
         <View style={[Spaces.padding[16], { gap: 16 }]}>
-          <Text style={[Fonts.p1Bold, { color: Colors.error500 }]}>Chargement impossible</Text>
+          <Text style={[Fonts.p1Bold, { color: Colors.error500 }]}>
+            {t('recruitmentAdEdit.state.loadErrorTitle', 'Chargement impossible')}
+          </Text>
           <Text style={[Fonts.p2, { color: Colors.neutral300 }]}>
-            {adError?.message || 'Impossible de charger cette annonce.'}
+            {adError?.message || t(
+              'recruitmentAdEdit.state.loadErrorBody',
+              'Impossible de charger cette annonce.',
+            )}
           </Text>
           <Button
             onPress={() => refetchAd()}
-            title="Recharger"
+            title={t('recruitmentAdEdit.state.reload', 'Recharger')}
             variant="Primary"
           />
         </View>
@@ -242,12 +343,17 @@ function RecruitmentAdEdit({ navigation, route }) {
       <ScreenContainer
         bgImage="bg2"
         onGoBack={() => navigation.goBack()}
-        title="Modifier l'annonce"
+        title={t('recruitmentAdEdit.title', "Modifier l'annonce")}
       >
         <View style={[Spaces.padding[16], { gap: 12 }]}>
-          <Text style={[Fonts.p1Bold, { color: Colors.neutral00 }]}>Annonce introuvable</Text>
+          <Text style={[Fonts.p1Bold, { color: Colors.neutral00 }]}>
+            {t('recruitmentAdEdit.state.notFoundTitle', 'Annonce introuvable')}
+          </Text>
           <Text style={[Fonts.p2, { color: Colors.neutral300 }]}>
-            Cette annonce n&rsquo;est plus disponible ou ne peut pas etre modifiee depuis ce lien.
+            {t(
+              'recruitmentAdEdit.state.notFoundBody',
+              'Cette annonce n’est plus disponible ou ne peut pas etre modifiee depuis ce lien.',
+            )} lien.
           </Text>
         </View>
       </ScreenContainer>
@@ -258,13 +364,15 @@ function RecruitmentAdEdit({ navigation, route }) {
     <ScreenContainer
       bgImage="bg2"
       onGoBack={() => navigation.goBack()}
-      title="Modifier l'annonce"
+      title={t('recruitmentAdEdit.title', "Modifier l'annonce")}
     >
       <ScrollView contentContainerStyle={Spaces.padding[16]} showsVerticalScrollIndicator={false}>
         <View style={[Spaces.marginBottom[24], { opacity: 0.7 }]}>
-          <Text style={[Fonts.p2, { color: Colors.neutral300, marginBottom: 4 }]}>Équipe</Text>
+          <Text style={[Fonts.p2, { color: Colors.neutral300, marginBottom: 4 }]}>
+            {t('recruitmentAdEdit.form.team', 'Équipe')}
+          </Text>
           <Text style={[Fonts.p1Bold, { color: Colors.neutral00 }]}>
-            {resolvedAd.team?.name || 'Équipe inconnue'}
+            {resolvedAd.team?.name || t('recruitmentAdEdit.form.unknownTeam', 'Équipe inconnue')}
           </Text>
         </View>
 
@@ -276,9 +384,12 @@ function RecruitmentAdEdit({ navigation, route }) {
               render={({ field: { onChange, value } }) => (
                 <Input
                   error={errors.position?.message}
-                  label="Poste"
+                  label={t('recruitmentAdEdit.form.position', 'Poste')}
                   onChangeText={onChange}
-                  placeholder="Ex: Attaquant, Gardien..."
+                  placeholder={t(
+                    'recruitmentAdEdit.form.positionPlaceholder',
+                    'Ex: Attaquant, Gardien...',
+                  )}
                   value={value}
                 />
               )}
@@ -288,9 +399,12 @@ function RecruitmentAdEdit({ navigation, route }) {
           <>
             <View style={Spaces.marginBottom[24]}>
               <AutocompleteSelect
-                label="Rôle entraîneur"
+                label={t('recruitmentAdEdit.form.coachRole', 'Rôle entraîneur')}
                 options={COACH_ROLE_OPTIONS}
-                placeholder="Sélectionner un rôle"
+                placeholder={t(
+                  'recruitmentAdEdit.form.coachRolePlaceholder',
+                  'Sélectionner un rôle',
+                )}
                 setValue={(option) => setValue('coachRole', option?.value || '')}
                 value={COACH_ROLE_OPTIONS.find((option) => option.value === watchedCoachRole)?.label || ''}
               />
@@ -303,9 +417,12 @@ function RecruitmentAdEdit({ navigation, route }) {
                   name="coachRoleOther"
                   render={({ field: { onChange, value } }) => (
                     <Input
-                      label="Autre rôle"
+                      label={t('recruitmentAdEdit.form.coachRoleOther', 'Autre rôle')}
                       onChangeText={onChange}
-                      placeholder="Précise le rôle recherche"
+                      placeholder={t(
+                        'recruitmentAdEdit.form.coachRoleOtherPlaceholder',
+                        'Précise le rôle recherche',
+                      )}
                       value={value}
                     />
                   )}
@@ -315,9 +432,9 @@ function RecruitmentAdEdit({ navigation, route }) {
 
             <View style={Spaces.marginBottom[24]}>
               <AutocompleteSelect
-                label="Expérience attendue"
+                label={t('recruitmentAdEdit.form.coachExperience', 'Expérience attendue')}
                 options={COACH_EXPERIENCE_OPTIONS}
-                placeholder="Sélectionner un niveau"
+                placeholder={t('recruitmentAdEdit.form.levelPlaceholder', 'Sélectionner un niveau')}
                 setValue={(option) => setValue('coachExperienceLevel', option?.value || '')}
                 value={COACH_EXPERIENCE_OPTIONS.find((option) => option.value === watchedCoachExperienceLevel)?.label || ''}
               />
@@ -325,9 +442,12 @@ function RecruitmentAdEdit({ navigation, route }) {
 
             <View style={Spaces.marginBottom[24]}>
               <AutocompleteSelect
-                label="Type d'engagement"
+                label={t('recruitmentAdEdit.form.engagementType', "Type d'engagement")}
                 options={ENGAGEMENT_OPTIONS}
-                placeholder="Sélectionner un cadre"
+                placeholder={t(
+                  'recruitmentAdEdit.form.engagementPlaceholder',
+                  'Sélectionner un cadre',
+                )}
                 setValue={(option) => setValue('engagementType', option?.value || '')}
                 value={ENGAGEMENT_OPTIONS.find((option) => option.value === watchedEngagementType)?.label || ''}
               />
@@ -337,7 +457,13 @@ function RecruitmentAdEdit({ navigation, route }) {
 
         <View style={Spaces.marginBottom[24]}>
           <InputStepper
-            label={isCoachAd ? 'Nombre de profils recherches' : 'Nombre de joueurs recherches'}
+            label={isCoachAd ? t(
+              'recruitmentAdEdit.form.quantityCoach',
+              'Nombre de profils recherches',
+            ) : t(
+              'recruitmentAdEdit.form.quantityPlayers',
+              'Nombre de joueurs recherches',
+            )}
             max={20}
             min={1}
             onDecrement={() => setValue('quantity', Math.max(1, watchedQuantity - 1))}
@@ -348,9 +474,12 @@ function RecruitmentAdEdit({ navigation, route }) {
 
         <View style={Spaces.marginBottom[24]}>
           <AutocompleteSelect
-            label={isCoachAd ? 'Niveau souhaite' : 'Niveau minimum'}
+            label={isCoachAd ? t('recruitmentAdEdit.form.levelCoach', 'Niveau souhaite') : t(
+              'recruitmentAdEdit.form.levelPlayers',
+              'Niveau minimum',
+            )}
             options={levelOptions}
-            placeholder="Sélectionner un niveau"
+            placeholder={t('recruitmentAdEdit.form.levelPlaceholder', 'Sélectionner un niveau')}
             setValue={(option) => {
               const levelObj = allLevels?.find((level) => level.documentId === option?.value);
               setValue('level', levelObj || option || null);
@@ -361,9 +490,12 @@ function RecruitmentAdEdit({ navigation, route }) {
 
         <View style={Spaces.marginBottom[24]}>
           <AutocompleteSelect
-            label="Categorie"
+            label={t('recruitmentAdEdit.form.category', 'Categorie')}
             options={categoryOptions}
-            placeholder="Sélectionner une catégorie"
+            placeholder={t(
+              'recruitmentAdEdit.form.categoryPlaceholder',
+              'Sélectionner une catégorie',
+            )}
             setValue={(option) => {
               const categoryObj = allCategories?.find((category) => category.documentId === option?.value);
               setValue('category', categoryObj || option || null);
@@ -374,9 +506,9 @@ function RecruitmentAdEdit({ navigation, route }) {
 
         <View style={Spaces.marginBottom[24]}>
           <AutocompleteSelect
-            label="Section"
+            label={t('recruitmentAdEdit.form.section', 'Section')}
             options={sectionOptions}
-            placeholder="Sélectionner une section"
+            placeholder={t('recruitmentAdEdit.form.sectionPlaceholder', 'Sélectionner une section')}
             setValue={(option) => {
               const sectionObj = allSections?.find((section) => section.documentId === option?.value);
               setValue('section', sectionObj || option || null);
@@ -393,9 +525,12 @@ function RecruitmentAdEdit({ navigation, route }) {
                 name="availabilityText"
                 render={({ field: { onChange, value } }) => (
                   <Input
-                    label="Disponibilites"
+                    label={t('recruitmentAdEdit.form.availability', 'Disponibilites')}
                     onChangeText={onChange}
-                    placeholder="Ex: soirs de semaine, mercredi, week-end..."
+                    placeholder={t(
+                      'recruitmentAdEdit.form.availabilityPlaceholder',
+                      'Ex: soirs de semaine, mercredi, week-end...',
+                    )}
                     value={value}
                   />
                 )}
@@ -408,9 +543,12 @@ function RecruitmentAdEdit({ navigation, route }) {
                 name="certificationsWanted"
                 render={({ field: { onChange, value } }) => (
                   <Input
-                    label="Certifications souhaitées"
+                    label={t('recruitmentAdEdit.form.certifications', 'Certifications souhaitées')}
                     onChangeText={onChange}
-                    placeholder="Ex: BMF, BPJEPS, formation jeunes"
+                    placeholder={t(
+                      'recruitmentAdEdit.form.certificationsPlaceholder',
+                      'Ex: BMF, BPJEPS, formation jeunes',
+                    )}
                     value={value}
                   />
                 )}
@@ -424,11 +562,14 @@ function RecruitmentAdEdit({ navigation, route }) {
                 render={({ field: { onChange, value } }) => (
                   <Input
                     height={120}
-                    label="Missions"
+                    label={t('recruitmentAdEdit.form.missions', 'Missions')}
                     multiline
                     numberOfLines={4}
                     onChangeText={onChange}
-                    placeholder="Cadre, responsabilités, projet d'équipe..."
+                    placeholder={t(
+                      'recruitmentAdEdit.form.missionsPlaceholder',
+                      "Cadre, responsabilités, projet d'équipe...",
+                    )}
                     textAlignVertical="top"
                     value={value}
                   />
@@ -445,11 +586,17 @@ function RecruitmentAdEdit({ navigation, route }) {
             render={({ field: { onChange, value } }) => (
               <Input
                 height={120}
-                label="Description"
+                label={t('recruitmentAdEdit.form.description', 'Description')}
                 multiline
                 numberOfLines={4}
                 onChangeText={onChange}
-                placeholder={isCoachAd ? 'Contexte du club, projet, environnement...' : 'Détails supplémentaires...'}
+                placeholder={isCoachAd ? t(
+                  'recruitmentAdEdit.form.descriptionPlaceholderCoach',
+                  'Contexte du club, projet, environnement...',
+                ) : t(
+                  'recruitmentAdEdit.form.descriptionPlaceholder',
+                  'Détails supplémentaires...',
+                )}
                 textAlignVertical="top"
                 value={value}
               />
@@ -460,7 +607,7 @@ function RecruitmentAdEdit({ navigation, route }) {
         <Button
           isLoading={updateMutation.isPending}
           onPress={handleSubmit(onSubmit)}
-          title="Enregistrer les modifications"
+          title={t('recruitmentAdEdit.form.submit', 'Enregistrer les modifications')}
           variant="Primary"
         />
 
