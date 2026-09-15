@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import {
   StyleSheet,
   Text,
@@ -5,6 +6,7 @@ import {
   View,
 } from 'react-native';
 
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import WizardStepLayout from '@/components/molecules/wizardStepLayout/WizardStepLayout';
@@ -25,6 +27,7 @@ import {
  * @returns {import('react').ReactElement}
  */
 function AdWizardDescription({ navigation }) {
+  const { t } = useTranslation();
   const {
     Alignments,
     ApplicationStyle,
@@ -61,30 +64,64 @@ function AdWizardDescription({ navigation }) {
   };
   const locationHighlight = resolveLocationDisplayLabel(state.address);
   const contextualHighlights = [
-    state.team?.name ? `Équipe : ${state.team.name}` : null,
+    state.team?.name ? t(
+      'adWizardDescription.context.team',
+      'Équipe : {{team}}',
+      { team: state.team.name, ...SANS_ECHAPPEMENT },
+    ) : null,
     state.positions.length > 0
-      ? `${state.positions.length} poste${state.positions.length > 1 ? 's' : ''} sélectionné${state.positions.length > 1 ? 's' : ''}`
+      ? t('adWizardDescription.context.positions', {
+        count: state.positions.length,
+        defaultValue_one: '{{count}} poste sélectionné',
+        defaultValue_other: '{{count}} postes sélectionnés',
+      })
       : null,
-    isCoachAd && state.coachRole ? `Rôle : ${state.coachRoleOther || state.coachRole}` : null,
-    locationHighlight ? `Lieu : ${locationHighlight}` : null,
+    isCoachAd && state.coachRole ? t(
+      'adWizardDescription.context.role',
+      'Rôle : {{role}}',
+      { role: state.coachRoleOther || state.coachRole, ...SANS_ECHAPPEMENT },
+    ) : null,
+    locationHighlight ? t(
+      'adWizardDescription.context.location',
+      'Lieu : {{location}}',
+      { location: locationHighlight, ...SANS_ECHAPPEMENT },
+    ) : null,
   ].filter(Boolean);
   const descriptionTips = isCoachAd
     ? [
-      'Précise le projet sportif et la place du rôle dans le staff.',
-      'Indique le rythme attendu des entraînements et des matchs.',
-      'Explique le cadre de mission et les responsabilités principales.',
-      'Mentionne les qualites humaines ou diplomes qui feront la difference.',
+      t(
+        'adWizardDescription.tips.coach1',
+        'Précise le projet sportif et la place du rôle dans le staff.',
+      ),
+      t(
+        'adWizardDescription.tips.coach2',
+        'Indique le rythme attendu des entraînements et des matchs.',
+      ),
+      t(
+        'adWizardDescription.tips.coach3',
+        'Explique le cadre de mission et les responsabilités principales.',
+      ),
+      t(
+        'adWizardDescription.tips.coach4',
+        'Mentionne les qualites humaines ou diplomes qui feront la difference.',
+      ),
     ]
     : [
-      "Précise l'intensité ou le niveau de jeu attendu.",
-      'Indique les horaires et le rythme des entraînements.',
-      "Mentionne si une séance d'essai ou une détection est prévue.",
-      "Décris l'ambiance et le projet sportif de l'équipe.",
+      t('adWizardDescription.tips.players1', "Précise l'intensité ou le niveau de jeu attendu."),
+      t(
+        'adWizardDescription.tips.players2',
+        'Indique les horaires et le rythme des entraînements.',
+      ),
+      t(
+        'adWizardDescription.tips.players3',
+        "Mentionne si une séance d'essai ou une détection est prévue.",
+      ),
+      t('adWizardDescription.tips.players4', "Décris l'ambiance et le projet sportif de l'équipe."),
     ];
 
   return (
     <WizardStepLayout
-      nextLabel="Suivant"
+      nextLabel={t('adWizardDescription.next', 'Suivant')}
       onBack={() => navigation.goBack()}
       onNext={handleNext}
       onSkip={handleSkip}
@@ -92,15 +129,24 @@ function AdWizardDescription({ navigation }) {
       stepCount={getAdWizardStepCount(state)}
       stepIndex={getAdWizardDescriptionStepIndex(state)}
       subtitle={isCoachAd
-        ? 'Ajoute une presentation du besoin et les missions pour attirer les bons profils coach.'
-        : 'Ajoute quelques détails pour rendre ton annonce plus claire et plus attractive.'}
-      title={isCoachAd ? 'Description et missions' : 'Description'}
+        ? t(
+          'adWizardDescription.subtitleCoach',
+          'Ajoute une presentation du besoin et les missions pour attirer les bons profils coach.',
+        )
+        : t(
+          'adWizardDescription.subtitle',
+          'Ajoute quelques détails pour rendre ton annonce plus claire et plus attractive.',
+        )}
+      title={isCoachAd ? t(
+        'adWizardDescription.titleCoach',
+        'Description et missions',
+      ) : t('adWizardDescription.title', 'Description')}
     >
       <View style={[Spaces.gap[24], Spaces.paddingBottom[32]]}>
         {contextualHighlights.length > 0 ? (
           <View style={[ApplicationStyle.card, Spaces.padding[24], Spaces.gap[16], cardSurfaceStyle]}>
             <Text style={[Fonts.p3Bold, Fonts.primary500]}>
-              {'Contexte de l\'annonce'}
+              {t('adWizardDescription.context.title', "Contexte de l'annonce")}
             </Text>
             <View style={[Spaces.gap[12]]}>
               {contextualHighlights.map((highlight) => (
@@ -122,11 +168,19 @@ function AdWizardDescription({ navigation }) {
             ]}
           >
             <View style={[Spaces.gap[12], { flex: 1 }]}>
-              <Text style={[Fonts.h4, Fonts.neutral00]}>Présente ton besoin</Text>
+              <Text style={[Fonts.h4, Fonts.neutral00]}>
+                {t('adWizardDescription.need.title', 'Présente ton besoin')}
+              </Text>
               <Text style={[Fonts.p2, Fonts.neutral100, { lineHeight: 24 }]}>
                 {isCoachAd
-                  ? 'Quelques lignes suffisent pour expliquer le contexte et donner envie aux bons profils coach de candidater.'
-                  : 'Quelques lignes suffisent pour donner envie aux bons profils de candidater.'}
+                  ? t(
+                    'adWizardDescription.need.bodyCoach',
+                    'Quelques lignes suffisent pour expliquer le contexte et donner envie aux bons profils coach de candidater.', // eslint-disable-line max-len
+                  )
+                  : t(
+                    'adWizardDescription.need.body',
+                    'Quelques lignes suffisent pour donner envie aux bons profils de candidater.',
+                  )}
               </Text>
             </View>
 
@@ -142,7 +196,9 @@ function AdWizardDescription({ navigation }) {
                 },
               ]}
             >
-              <Text style={[Fonts.p4Bold, Fonts.primary500]}>Optionnel</Text>
+              <Text style={[Fonts.p4Bold, Fonts.primary500]}>
+                {t('adWizardDescription.need.optional', 'Optionnel')}
+              </Text>
             </View>
           </View>
 
@@ -151,8 +207,14 @@ function AdWizardDescription({ navigation }) {
             numberOfLines={7}
             onChangeText={handleChange}
             placeholder={isCoachAd
-              ? 'Ex. Nous recherchons un entraîneur adjoint pour accompagner notre groupe senior régional. Projet formateur, équipe staff engagee, rythme de deux séances par semaine.'
-              : 'Ex. Nous recherchons un gardien expérimenté pour notre équipe U20 qui evolue en régional. Entraînements les mardis et jeudis soir, ambiance serieuse et bienveillante.'}
+              ? t(
+                'adWizardDescription.need.placeholderCoach',
+                'Ex. Nous recherchons un entraîneur adjoint pour accompagner notre groupe senior régional. Projet formateur, équipe staff engagee, rythme de deux séances par semaine.', // eslint-disable-line max-len
+              )
+              : t(
+                'adWizardDescription.need.placeholder',
+                'Ex. Nous recherchons un gardien expérimenté pour notre équipe U20 qui evolue en régional. Entraînements les mardis et jeudis soir, ambiance serieuse et bienveillante.', // eslint-disable-line max-len
+              )}
             placeholderTextColor={Colors.neutral500}
             style={[
               Fonts.p1,
@@ -170,8 +232,11 @@ function AdWizardDescription({ navigation }) {
           <View style={[Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween, Spaces.gap[12]]}>
             <Text style={[Fonts.p3, Fonts.neutral300]}>
               {state.description.length > 0
-                ? 'Ta description est prête à être publiée.'
-                : 'Tu peux aussi continuer sans description.'}
+                ? t('adWizardDescription.need.ready', 'Ta description est prête à être publiée.')
+                : t(
+                  'adWizardDescription.need.canSkip',
+                  'Tu peux aussi continuer sans description.',
+                )}
             </Text>
             <Text
               style={[
@@ -189,9 +254,14 @@ function AdWizardDescription({ navigation }) {
         {isCoachAd ? (
           <View style={[ApplicationStyle.card, Spaces.padding[24], Spaces.gap[24], cardSurfaceStyle]}>
             <View style={[Spaces.gap[12]]}>
-              <Text style={[Fonts.h4, Fonts.neutral00]}>Missions principales</Text>
+              <Text style={[Fonts.h4, Fonts.neutral00]}>
+                {t('adWizardDescription.missions.title', 'Missions principales')}
+              </Text>
               <Text style={[Fonts.p2, Fonts.neutral100, { lineHeight: 24 }]}>
-                Décris ce que tu attends concretement du futur entraîneur.
+                {t(
+                  'adWizardDescription.missions.body',
+                  'Décris ce que tu attends concretement du futur entraîneur.',
+                )}
               </Text>
             </View>
 
@@ -199,7 +269,10 @@ function AdWizardDescription({ navigation }) {
               multiline
               numberOfLines={6}
               onChangeText={handleMissionsChange}
-              placeholder="Ex. Préparation des séances, accompagnement le week-end, lien avec les joueurs et coordination avec le reste du staff."
+              placeholder={t(
+                'adWizardDescription.missions.placeholder',
+                'Ex. Préparation des séances, accompagnement le week-end, lien avec les joueurs et coordination avec le reste du staff.', // eslint-disable-line max-len
+              )}
               placeholderTextColor={Colors.neutral500}
               style={[
                 Fonts.p1,
@@ -217,7 +290,9 @@ function AdWizardDescription({ navigation }) {
         ) : null}
 
         <View style={[ApplicationStyle.card, Spaces.padding[24], Spaces.gap[16], cardSurfaceStyle]}>
-          <Text style={[Fonts.h4, Fonts.neutral00]}>Idées à inclure</Text>
+          <Text style={[Fonts.h4, Fonts.neutral00]}>
+            {t('adWizardDescription.tips.title', 'Idées à inclure')}
+          </Text>
           <View style={[Spaces.gap[16]]}>
             {descriptionTips.map((tip) => (
               <View key={tip} style={[Alignments.row, Spaces.gap[16]]}>

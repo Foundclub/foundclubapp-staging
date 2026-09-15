@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import {
   Linking,
   Platform,
@@ -33,6 +34,7 @@ const resolveCoordinates = (composition) => {
  */
 function LocationShareBubble({ composition, isMe = false }) {
   const { Colors, Fonts } = useTheme();
+  const { t } = useTranslation();
   if (!composition) return null;
 
   const label = resolveLabel(composition);
@@ -78,7 +80,7 @@ function LocationShareBubble({ composition, isMe = false }) {
     >
       <View style={{ gap: 8, paddingHorizontal: 14, paddingVertical: 12 }}>
         <Text style={[Fonts.p3Bold, { color: Colors.primary500 }]}>
-          Position partagée
+          {t('locationShareBubble.title', 'Position partagée')}
         </Text>
         <Text style={[Fonts.p2Bold, { color: Colors.neutral00 }]}>{label || 'Position'}</Text>
         {coordinates ? (
@@ -98,7 +100,9 @@ function LocationShareBubble({ composition, isMe = false }) {
           paddingVertical: 10,
         }}
       >
-        <Text style={[Fonts.p3Bold, { color: Colors.primary500 }]}>Ouvrir dans le GPS</Text>
+        <Text style={[Fonts.p3Bold, { color: Colors.primary500 }]}>
+          {t('locationShareBubble.openInGps', 'Ouvrir dans le GPS')}
+        </Text>
       </TouchableOpacity>
     </View>
   );

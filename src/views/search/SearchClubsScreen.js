@@ -1,3 +1,5 @@
+import { useTranslation } from 'react-i18next';
+
 import useAuth from '@/domains/auth/useAuth';
 import { TutorialIds } from '@/domains/tutorial/tutorialIds';
 
@@ -12,6 +14,7 @@ import SearchScreenShell from './components/SearchScreenShell';
  * @returns {import('react').ReactElement}
  */
 function SearchClubsScreen({ navigation, route }) {
+  const { t } = useTranslation();
   const { userData } = useAuth();
   return (
     <TutorialFlowBoundary
@@ -32,21 +35,30 @@ function SearchClubsScreen({ navigation, route }) {
         navigation={navigation}
         tutorialSteps={{
           header: {
-            description: 'Retrouve ici la recherche complète de clubs.',
+            description: t(
+              'searchClubsScreen.tutorial.header.description',
+              'Retrouve ici la recherche complète de clubs.',
+            ),
             id: 'search-clubs-header',
             order: 1,
-            title: 'Recherche club',
+            title: t('searchClubsScreen.tutorial.header.title', 'Recherche club'),
           },
           switcher: {
-            description: 'Bascule rapidement entre les differentes recherches.',
+            description: t(
+              'searchClubsScreen.tutorial.switcher.description',
+              'Bascule rapidement entre les differentes recherches.',
+            ),
             id: 'search-clubs-switcher',
             order: 2,
-            title: 'Types de recherche',
+            title: t('searchClubsScreen.tutorial.switcher.title', 'Types de recherche'),
           },
         }}
       >
         <OnboardingWrapper
-          description="Utilise la barre de recherche, les filtres et ouvre une fiche club."
+          description={t(
+            'searchClubsScreen.tutorial.content.description',
+            'Utilise la barre de recherche, les filtres et ouvre une fiche club.',
+          )}
           id="search-clubs-content"
           order={3}
           spotlight={{
@@ -59,7 +71,7 @@ function SearchClubsScreen({ navigation, route }) {
           style={{
             flex: 1,
           }}
-          title="Liste des clubs"
+          title={t('searchClubsScreen.tutorial.content.title', 'Liste des clubs')}
         >
           <ClubListContent enableMapMode />
         </OnboardingWrapper>

@@ -1,4 +1,6 @@
+import i18next from 'i18next';
 import { useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Text, View } from 'react-native';
 
 import useTheme from '@/theme/themeContext';
@@ -10,22 +12,30 @@ import { getTeamById } from '@/services/team/teamService';
 
 const mapSectionOption = (section) => {
   const value = String(section?.name || section?.label || section?.value || '').trim().toLowerCase();
-  if (value.includes('mix')) return { label: 'Mixte', value: 'mixed' };
-  if (value.includes('fem')) return { label: 'Feminin', value: 'female' };
-  return { label: 'Masculin', value: 'male' };
+  if (value.includes('mix')) {
+    return { label: i18next.t('squadSourceTeamStep.sections.mixed', 'Mixte'), value: 'mixed' };
+  }
+  if (value.includes('fem')) {
+    return {
+      label: i18next.t('squadSourceTeamStep.sections.female', 'Feminin'),
+      value: 'female',
+    };
+  }
+  return { label: i18next.t('squadSourceTeamStep.sections.male', 'Masculin'), value: 'male' };
 };
 
 function SquadSourceTeamStep({
   data, onNext, onPrev, updateData, user,
 }) {
   const { Colors, Fonts } = useTheme();
+  const { t } = useTranslation();
   const [isLoading, setIsLoading] = useState(false);
   const [loadError, setLoadError] = useState('');
 
   const options = useMemo(
     () => (Array.isArray(user?.trainedTeams)
       ? user.trainedTeams.map((team) => ({
-        label: team?.name || 'Equipe',
+        label: team?.name || i18next.t('squadSourceTeamStep.teamFallback', 'Equipe'),
         value: team?.documentId || team?.id,
       }))
       : []),
@@ -52,7 +62,10 @@ function SquadSourceTeamStep({
       }
     } catch (error) {
       console.error('Error importing source team:', error);
-      setLoadError("Impossible d'importer cette équipe pour le moment.");
+      setLoadError(t(
+        'squadSourceTeamStep.importError',
+        "Impossible d'importer cette équipe pour le moment.",
+      ));
     } finally {
       setIsLoading(false);
     }
@@ -62,17 +75,20 @@ function SquadSourceTeamStep({
     <View style={{ flex: 1, paddingHorizontal: 16 }}>
       <View style={{ flex: 1, justifyContent: 'center', paddingBottom: 100 }}>
         <Text style={[Fonts.h1, { color: Colors.neutral00, marginBottom: 20, textAlign: 'center' }]}>
-          Quelle équipe importer ?
+          {t('squadSourceTeamStep.title', 'Quelle équipe importer ?')}
         </Text>
         <Text style={[Fonts.p2, { color: Colors.neutral300, marginBottom: 24, textAlign: 'center' }]}>
-          Choisis ton équipe classique pour recuperer le nom et les membres dans League.
+          {t(
+            'squadSourceTeamStep.subtitle',
+            'Choisis ton équipe classique pour recuperer le nom et les membres dans League.',
+          )}
         </Text>
 
         <AutocompleteSelect
           isLoading={isLoading}
           isSearchable={false}
           options={options}
-          placeholder="Sélectionner une équipe"
+          placeholder={t('squadSourceTeamStep.placeholder', 'Sélectionner une équipe')}
           setValue={handleSelectTeam}
           value={selectedValue}
         />
@@ -88,12 +104,12 @@ function SquadSourceTeamStep({
         <Button
           disabled={!isValid || isLoading}
           onPress={onNext}
-          title="Continuer"
+          title={t('squadSourceTeamStep.continue', 'Continuer')}
           variant="Primary"
         />
         <Button
           onPress={onPrev}
-          title="Retour"
+          title={t('squadSourceTeamStep.back', 'Retour')}
           variant="Secondary"
         />
       </View>

@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { Text, TouchableOpacity, View } from 'react-native';
 
 import useTheme from '@/theme/themeContext';
@@ -50,6 +51,7 @@ function SearchMapHud({
     Fonts,
     Spaces,
   } = useTheme();
+  const { t } = useTranslation();
 
   const overlayOpacity = disabled ? 0.46 : 1;
   const safeAvailableCount = Number.isFinite(totalCount) && totalCount > 0
@@ -63,21 +65,33 @@ function SearchMapHud({
     Number(renderStats?.markerCount || 0) + Number(renderStats?.clusterCount || 0),
   );
 
-  let geolocatableLabel = 'Aucun repère';
+  let geolocatableLabel = t('searchMapHud.markers.none', 'Aucun repère');
   if (visibleMarkerCount > 0) {
-    geolocatableLabel = `${visibleMarkerCount} repères visibles`;
+    geolocatableLabel = t(
+      'searchMapHud.markers.visible',
+      '{{total}} repères visibles',
+      { total: visibleMarkerCount },
+    );
   } else if (safeAvailableCount > 0 && truncated) {
-    geolocatableLabel = 'Zoome pour tout voir';
+    geolocatableLabel = t('searchMapHud.markers.zoomToSeeAll', 'Zoome pour tout voir');
   } else if (safeAvailableCount > 0 && isLoadingResults) {
-    geolocatableLabel = 'Mise à jour des repères...';
+    geolocatableLabel = t('searchMapHud.markers.updating', 'Mise à jour des repères...');
   } else if (geolocatableCount > 0 && isPartialDataset) {
-    geolocatableLabel = `${geolocatableCount} geolocalisables`;
+    geolocatableLabel = t(
+      'searchMapHud.markers.geolocatable',
+      '{{total}} geolocalisables',
+      { total: geolocatableCount },
+    );
   } else if (geolocatableCount > 0) {
     geolocatableLabel = scope === 'clubs'
-      ? `${geolocatableCount} geolocalisables`
-      : 'Touche un repère';
+      ? t(
+        'searchMapHud.markers.geolocatable',
+        '{{total}} geolocalisables',
+        { total: geolocatableCount },
+      )
+      : t('searchMapHud.markers.tap', 'Touche un repère');
   } else if (safeAvailableCount > 0) {
-    geolocatableLabel = 'Aucun repère visible';
+    geolocatableLabel = t('searchMapHud.markers.noneVisible', 'Aucun repère visible');
   }
 
   const zoomGroupStyle = [
@@ -192,7 +206,7 @@ function SearchMapHud({
           style={pillStyle}
         >
           <Text style={[Fonts.p4Bold, Fonts.neutral00]}>
-            Recentrer
+            {t('searchMapHud.recenter', 'Recentrer')}
           </Text>
         </TouchableOpacity>
 
@@ -203,7 +217,7 @@ function SearchMapHud({
           style={pillStyle}
         >
           <Text style={[Fonts.p4Bold, Fonts.neutral00]}>
-            Me localiser
+            {t('searchMapHud.locateMe', 'Me localiser')}
           </Text>
         </TouchableOpacity>
       </View>

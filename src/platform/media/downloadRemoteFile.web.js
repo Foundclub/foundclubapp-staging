@@ -19,6 +19,8 @@
  * n ait jamais a demander sur quelle plateforme il tourne.
  */
 
+import i18next from 'i18next';
+
 import { FILE_SHARE_OUTCOMES } from '@/platform/share/fileShareContract';
 
 // Meme suffixe de plateforme que les autres modules de `src/platform/` : Vite
@@ -55,7 +57,10 @@ export const extensionDeLUrl = (url, secours = 'pdf') => {
 export const downloadRemoteFile = async ({ url }) => {
   const adresse = String(url || '').trim();
   if (!adresse) {
-    const erreur = new Error('Aucune adresse de fichier a telecharger.');
+    const erreur = new Error(i18next.t(
+      'downloadRemoteFile.errors.noUrl',
+      'Aucune adresse de fichier a telecharger.',
+    ));
     erreur.reason = DOWNLOAD_FAILURES.NO_URL;
     throw erreur;
   }

@@ -63,7 +63,7 @@ function ClubStack() {
           name={RouteNames.ClubEdit}
           options={{
             ...commonOptions,
-            headerTitle: t('clubEdit.title') || 'Modifier le club',
+            headerTitle: t('clubEdit.title', 'Modifier le club'),
           }}
         />
         <Stack.Screen
@@ -87,7 +87,7 @@ function ClubStack() {
           name={RouteNames.AssignCoachTeams}
           options={{
             ...commonOptions,
-            headerTitle: 'Assigner a une équipe',
+            headerTitle: t('clubStack.headers.assignToTeam', 'Assigner a une équipe'),
           }}
         />
         <Stack.Screen
@@ -144,7 +144,7 @@ function ClubStack() {
           name={RouteNames.FacilityList}
           options={{
             ...commonOptions,
-            headerTitle: 'Installations',
+            headerTitle: t('clubStack.headers.facilities', 'Installations'),
           }}
         />
         <Stack.Screen
@@ -169,7 +169,7 @@ function ClubStack() {
           name={RouteNames.ClubLicenses}
           options={{
             ...commonOptions,
-            headerTitle: 'Cotisations',
+            headerTitle: t('clubStack.headers.fees', 'Cotisations'),
           }}
         />
         <Stack.Screen
@@ -177,7 +177,7 @@ function ClubStack() {
           name={RouteNames.ClubLicenseCampaignDetail}
           options={{
             ...commonOptions,
-            headerTitle: 'Campagne cotisation',
+            headerTitle: t('clubStack.headers.feeCampaign', 'Campagne cotisation'),
           }}
         />
         <Stack.Screen
@@ -185,7 +185,7 @@ function ClubStack() {
           name={RouteNames.ClubLicenseMemberDetail}
           options={{
             ...commonOptions,
-            headerTitle: 'Cotisation membre',
+            headerTitle: t('clubStack.headers.memberFee', 'Cotisation membre'),
           }}
         />
         <Stack.Screen
@@ -193,7 +193,7 @@ function ClubStack() {
           name={RouteNames.ClubLicenseCampaignSettings}
           options={{
             ...commonOptions,
-            headerTitle: 'Paramètres cotisations',
+            headerTitle: t('clubStack.headers.feeSettings', 'Paramètres cotisations'),
           }}
         />
         <Stack.Screen
@@ -201,7 +201,7 @@ function ClubStack() {
           name={RouteNames.ClubLicensePayments}
           options={{
             ...commonOptions,
-            headerTitle: 'Paiements cotisations',
+            headerTitle: t('clubStack.headers.feePayments', 'Paiements cotisations'),
           }}
         />
 
@@ -210,7 +210,7 @@ function ClubStack() {
           name={RouteNames.MultisportClubEdit}
           options={{
             ...commonOptions,
-            headerTitle: 'Modifier le club',
+            headerTitle: t('clubEdit.title', 'Modifier le club'),
           }}
         />
       </Stack.Navigator>

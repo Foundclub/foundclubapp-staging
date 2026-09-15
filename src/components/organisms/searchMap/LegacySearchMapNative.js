@@ -5,6 +5,7 @@ import {
   useRef,
   useState,
 } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
   StyleSheet,
@@ -171,6 +172,7 @@ function LegacySearchMapNative({
     Colors,
     Fonts,
   } = useTheme();
+  const { t } = useTranslation();
   const mapRef = useRef(/** @type {any} */ (null));
   const mapLoadStartedAtRef = useRef(Date.now());
   const [internalSelectedItemId, setInternalSelectedItemId] = useState('');
@@ -659,7 +661,7 @@ function LegacySearchMapNative({
           ]}
         >
           <Text style={[Fonts.p4Bold, Fonts.neutral00, Fonts.textCenter]}>
-            Touche un repère pour voir la fiche
+            {t('legacySearchMapNative.tapMarker', 'Touche un repère pour voir la fiche')}
           </Text>
         </View>
       ) : null}
@@ -678,10 +680,13 @@ function LegacySearchMapNative({
           >
             <ActivityIndicator color={Colors.primary500} size="small" />
             <Text style={[Fonts.p2Bold, Fonts.neutral00, Fonts.textCenter]}>
-              Chargement de la carte
+              {t('legacySearchMapNative.loading.title', 'Chargement de la carte')}
             </Text>
             <Text style={[Fonts.p3, Fonts.neutral200, Fonts.textCenter]}>
-              Nous préparons l&apos;affichage géolocalisé de tes résultats.
+              {t(
+                'legacySearchMapNative.loading.body',
+                "Nous préparons l'affichage géolocalisé de tes résultats.",
+              )}
             </Text>
           </View>
         </View>
@@ -700,14 +705,20 @@ function LegacySearchMapNative({
             ]}
           >
             <Text style={[Fonts.p2Bold, Fonts.neutral00, Fonts.textCenter]}>
-              Impossible de charger la carte
+              {t('legacySearchMapNative.error.title', 'Impossible de charger la carte')}
             </Text>
             <Text style={[Fonts.p3, Fonts.neutral200, Fonts.textCenter]}>
-              Les tuiles Google Maps ne répondent pas pour le moment. Réessaie ou reviens à la liste.
+              {t(
+                'legacySearchMapNative.error.body',
+                'Les tuiles Google Maps ne répondent pas pour le moment. Réessaie ou reviens à la liste.', // eslint-disable-line max-len
+              )}
             </Text>
             <View style={[Alignments.row, Alignments.justifyCenter, { gap: 12, width: '100%' }]}>
               <TouchableOpacity
-                accessibilityLabel="Réessayer le chargement de la carte"
+                accessibilityLabel={t(
+                  'legacySearchMapNative.error.retryLabel',
+                  'Réessayer le chargement de la carte',
+                )}
                 accessibilityRole="button"
                 activeOpacity={0.85}
                 onPress={handleRetryMap}
@@ -720,7 +731,7 @@ function LegacySearchMapNative({
                 ]}
               >
                 <Text style={[Fonts.p4Bold, { color: Colors.primary900 }]}>
-                  Réessayer
+                  {t('legacySearchMapNative.error.retry', 'Réessayer')}
                 </Text>
               </TouchableOpacity>
               <TouchableOpacity
@@ -735,7 +746,7 @@ function LegacySearchMapNative({
                 ]}
               >
                 <Text style={[Fonts.p4Bold, Fonts.neutral00]}>
-                  Voir la liste
+                  {t('legacySearchMapNative.error.showList', 'Voir la liste')}
                 </Text>
               </TouchableOpacity>
             </View>

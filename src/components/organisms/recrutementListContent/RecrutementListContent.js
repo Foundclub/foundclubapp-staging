@@ -1,4 +1,5 @@
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import i18next from 'i18next';
 import React, {
   useCallback, useEffect, useMemo, useRef, useState,
 } from 'react';
@@ -13,6 +14,7 @@ import {
   getRecruitmentRoleMode,
   sanitizeRecruitmentTabForRole,
 } from '@/domains/search/recruitmentFlow';
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import { openPublicAuthFlow } from '@/navigation/public/publicAuthNavigation';
@@ -106,7 +108,7 @@ const getProfileMatchInfo = (/** @type {any} */ ad, /** @type {any} */ userData)
     if (userSport === adSport) {
       hardMatches += 1;
       score += 4;
-      reasons.push('Sport compatible');
+      reasons.push(i18next.t('recrutementListContent.matchReasons.sport', 'Sport compatible'));
     } else {
       hardMismatch = true;
     }
@@ -116,7 +118,7 @@ const getProfileMatchInfo = (/** @type {any} */ ad, /** @type {any} */ userData)
     if (userSection === adSection) {
       hardMatches += 1;
       score += 3;
-      reasons.push('Section compatible');
+      reasons.push(i18next.t('recrutementListContent.matchReasons.section', 'Section compatible'));
     } else {
       hardMismatch = true;
     }
@@ -126,7 +128,10 @@ const getProfileMatchInfo = (/** @type {any} */ ad, /** @type {any} */ userData)
     if (userCategory === adCategory) {
       hardMatches += 1;
       score += 3;
-      reasons.push('Catégorie compatible');
+      reasons.push(i18next.t(
+        'recrutementListContent.matchReasons.category',
+        'Catégorie compatible',
+      ));
     } else {
       hardMismatch = true;
     }
@@ -134,12 +139,12 @@ const getProfileMatchInfo = (/** @type {any} */ ad, /** @type {any} */ userData)
 
   if (userLevel && adLevel && userLevel === adLevel) {
     score += 2;
-    reasons.push('Niveau compatible');
+    reasons.push(i18next.t('recrutementListContent.matchReasons.level', 'Niveau compatible'));
   }
 
   if (userCity && adCity && userCity === adCity) {
     score += 1;
-    reasons.push('Même ville');
+    reasons.push(i18next.t('recrutementListContent.matchReasons.city', 'Même ville'));
   }
 
   return {
@@ -177,7 +182,7 @@ const buildPlayerFeedItems = ({ matchingAds, otherAds, showMatchingOnly }) => {
     items.push({
       count: matchingAds.length,
       key: 'section-matching',
-      title: 'Correspondent à ton profil',
+      title: i18next.t('recrutementListContent.sections.matching', 'Correspondent à ton profil'),
       type: 'section',
     });
     matchingAds.forEach((/** @type {any} */ ad) => {
@@ -193,7 +198,13 @@ const buildPlayerFeedItems = ({ matchingAds, otherAds, showMatchingOnly }) => {
     items.push({
       count: otherAds.length,
       key: 'section-other',
-      title: matchingAds.length > 0 ? 'Autres annonces' : 'Toutes les annonces',
+      title: matchingAds.length > 0 ? i18next.t(
+        'recrutementListContent.sections.other',
+        'Autres annonces',
+      ) : i18next.t(
+        'recrutementListContent.sections.all',
+        'Toutes les annonces',
+      ),
       type: 'section',
     });
     otherAds.forEach((/** @type {any} */ ad) => {
@@ -208,7 +219,14 @@ const buildPlayerFeedItems = ({ matchingAds, otherAds, showMatchingOnly }) => {
   return items;
 };
 
-const formatAdsCountLabel = (/** @type {number} */ count) => `${count} annonce${count > 1 ? 's' : ''}`;
+const formatAdsCountLabel = (/** @type {number} */ count) => i18next.t(
+  'recrutementListContent.adsCount',
+  {
+    count,
+    defaultValue_one: '{{count}} annonce',
+    defaultValue_other: '{{count}} annonces',
+  },
+);
 const normalizeAudienceType = (/** @type {any} */ value) => (
   String(value || '').trim().toLowerCase() === 'coach' ? 'coach' : 'player'
 );
@@ -223,10 +241,6 @@ const normalizeTypeLabel = (/** @type {any} */ value = '') => String(value || ''
 // Ce que l'utilisateur lit quand une liste n'a PAS PU etre chargee — a ne pas
 // confondre avec « il n'y a rien a afficher ». Ecrit ici une seule fois : les
 // trois listes de l'ecran partagent ces mots.
-const UNREACHABLE_TITLE = 'On n’arrive pas à joindre le serveur.';
-const UNREACHABLE_DESCRIPTION = 'Vérifie ta connexion, puis réessaie.';
-const UNREACHABLE_ACTION = 'Réessayer';
-
 /**
  * Recrutement List Content - Main component for recruitment marketplace
  * Shows different content based on user role:
@@ -246,7 +260,16 @@ function RecrutementListContent({
   screenActive = true,
 }) {
   const isWeb = Platform.OS === 'web';
-  useTranslation();
+  const { t } = useTranslation();
+  const UNREACHABLE_TITLE = t(
+    'recrutementListContent.unreachable.title',
+    'On n’arrive pas à joindre le serveur.',
+  );
+  const UNREACHABLE_DESCRIPTION = t(
+    'recrutementListContent.unreachable.description',
+    'Vérifie ta connexion, puis réessaie.',
+  );
+  const UNREACHABLE_ACTION = t('recrutementListContent.unreachable.retry', 'Réessayer');
   const {
     Alignments, Colors, Fonts, Spaces,
   } = /** @type {any} */ (useTheme());
@@ -538,7 +561,10 @@ function RecrutementListContent({
     }
 
     if (!ad?.isActive) {
-      Alert.alert('Candidature', 'Cette annonce n est plus active.');
+      Alert.alert(i18next.t('recrutementListContent.apply.title', 'Candidature'), i18next.t(
+        'recrutementListContent.apply.inactive',
+        'Cette annonce n est plus active.',
+      ));
       return;
     }
 
@@ -550,18 +576,30 @@ function RecrutementListContent({
     const isDetectionLinked = normalizeTypeLabel(ad?.event?.type?.name).includes('detection');
 
     if (applicationState.hasApplied) {
-      let alreadyAppliedMessage = 'Tu as déjà postule à cette annonce.';
+      let alreadyAppliedMessage = i18next.t(
+        'recrutementListContent.apply.already',
+        'Tu as déjà postule à cette annonce.',
+      );
 
       if (applicationState.status === 'accepted') {
         alreadyAppliedMessage = isDetectionLinked
-          ? 'Tu participes déjà à cette détection.'
-          : 'Ta candidature est déjà validée pour cette annonce.';
+          ? i18next.t(
+            'recrutementListContent.apply.alreadyInDetection',
+            'Tu participes déjà à cette détection.',
+          )
+          : i18next.t(
+            'recrutementListContent.apply.alreadyAccepted',
+            'Ta candidature est déjà validée pour cette annonce.',
+          );
       } else if (isDetectionLinked) {
-        alreadyAppliedMessage = 'Tu as déjà une candidature en attente sur cette détection.';
+        alreadyAppliedMessage = i18next.t(
+          'recrutementListContent.apply.pendingDetection',
+          'Tu as déjà une candidature en attente sur cette détection.',
+        );
       }
 
       Alert.alert(
-        'Candidature',
+        i18next.t('recrutementListContent.apply.title', 'Candidature'),
         alreadyAppliedMessage,
       );
       return;
@@ -586,8 +624,11 @@ function RecrutementListContent({
         fetchMyApplicationsSilently(),
       ]);
       Alert.alert(
-        'Candidature envoyée',
-        result?.message || 'Ta candidature a bien été envoyée.',
+        i18next.t('recrutementListContent.apply.sentTitle', 'Candidature envoyée'),
+        result?.message || i18next.t(
+          'recrutementListContent.apply.sent',
+          'Ta candidature a bien été envoyée.',
+        ),
       );
     } catch (error) {
       // Les deux lectures `error.response.data...` qui ouvraient cette chaine
@@ -601,8 +642,11 @@ function RecrutementListContent({
       const requestError = /** @type {any} */ (error);
       const message = getApiErrorTranslation(error)
         || requestError?.message
-        || 'Impossible d envoyer la candidature pour le moment.';
-      Alert.alert('Candidature', message);
+        || i18next.t(
+          'recrutementListContent.apply.error',
+          'Impossible d envoyer la candidature pour le moment.',
+        );
+      Alert.alert(i18next.t('recrutementListContent.apply.title', 'Candidature'), message);
     } finally {
       setApplyingAdId((currentAdId) => (currentAdId === adId ? '' : currentAdId));
     }
@@ -659,9 +703,9 @@ function RecrutementListContent({
 
   const renderAudienceTypeTabs = () => {
     const options = [
-      { key: 'all', label: 'Toutes' },
-      { key: 'player', label: 'Joueurs' },
-      { key: 'coach', label: 'Entraineurs' },
+      { key: 'all', label: t('recrutementListContent.audience.all', 'Toutes') },
+      { key: 'player', label: t('recrutementListContent.audience.player', 'Joueurs') },
+      { key: 'coach', label: t('recrutementListContent.audience.coach', 'Entraineurs') },
     ];
 
     return (
@@ -715,9 +759,15 @@ function RecrutementListContent({
       },
     ]}
     >
-      {renderSegmentedTab('profils', 'Profils')}
-      {renderSegmentedTab('opportunites', 'Opportunités')}
-      {renderSegmentedTab('candidatures', 'Candidatures')}
+      {renderSegmentedTab('profils', t('recrutementListContent.tabs.profiles', 'Profils'))}
+      {renderSegmentedTab('opportunites', t(
+        'recrutementListContent.tabs.opportunities',
+        'Opportunités',
+      ))}
+      {renderSegmentedTab('candidatures', t(
+        'recrutementListContent.tabs.applications',
+        'Candidatures',
+      ))}
     </View>
   );
 
@@ -743,7 +793,10 @@ function RecrutementListContent({
   // « annonce » (le meme mot couvrait trois objets differents).
   const renderPublishOfferCta = () => (
     <TouchableOpacity
-      accessibilityLabel="Publier une offre de recrutement"
+      accessibilityLabel={t(
+        'recrutementListContent.publishOffer.label',
+        'Publier une offre de recrutement',
+      )}
       accessibilityRole="button"
       onPress={() => {
         nav.navigate(RouteNames.AdWizardStack);
@@ -759,7 +812,7 @@ function RecrutementListContent({
       ]}
     >
       <Text style={[Fonts.p1Bold, { color: Colors.neutral900 }]}>
-        + Publier une offre
+        {t('recrutementListContent.publishOffer.cta', '+ Publier une offre')}
       </Text>
     </TouchableOpacity>
   );
@@ -838,12 +891,21 @@ function RecrutementListContent({
 
   const playerFilterHelperText = React.useMemo(() => {
     if (!hasProfileSignals) {
-      return 'Complète ton profil pour activer un tri personnalisé.';
+      return i18next.t(
+        'recrutementListContent.helper.completeProfile',
+        'Complète ton profil pour activer un tri personnalisé.',
+      );
     }
     if (showProfileMatchesOnly) {
-      return 'Le flux affiche uniquement les annonces compatibles.';
+      return i18next.t(
+        'recrutementListContent.helper.matchesOnly',
+        'Le flux affiche uniquement les annonces compatibles.',
+      );
     }
-    return 'Les annonces compatibles restent affichées en tête.';
+    return i18next.t(
+      'recrutementListContent.helper.matchesFirst',
+      'Les annonces compatibles restent affichées en tête.',
+    );
   }, [hasProfileSignals, showProfileMatchesOnly]);
 
   const renderPlayerEmptyState = () => {
@@ -866,13 +928,25 @@ function RecrutementListContent({
         >
           <Text style={[Fonts.p1, Fonts.neutral100, { textAlign: 'center' }]}>
             {hasProfileSignals
-              ? 'Aucune annonce ne correspond exactement à ton profil pour le moment.'
-              : 'Complète ton profil pour activer le tri personnalisé des annonces.'}
+              ? t(
+                'recrutementListContent.empty.noMatch',
+                'Aucune annonce ne correspond exactement à ton profil pour le moment.',
+              )
+              : t(
+                'recrutementListContent.empty.completeProfile',
+                'Complète ton profil pour activer le tri personnalisé des annonces.',
+              )}
           </Text>
           <Text style={[Fonts.p2, { color: recruitmentMutedText, marginTop: 8, textAlign: 'center' }]}>
             {hasProfileSignals
-              ? 'Désactive le filtre pour afficher toutes les annonces disponibles.'
-              : 'Tu peux déjà consulter toutes les annonces publiées sur l\'application.'}
+              ? t(
+                'recrutementListContent.empty.disableFilter',
+                'Désactive le filtre pour afficher toutes les annonces disponibles.',
+              )
+              : t(
+                'recrutementListContent.empty.browseAll',
+                "Tu peux déjà consulter toutes les annonces publiées sur l'application.",
+              )}
           </Text>
         </View>
       );
@@ -889,10 +963,13 @@ function RecrutementListContent({
         }]}
       >
         <Text style={[Fonts.p1, Fonts.neutral100, { textAlign: 'center' }]}>
-          Aucune annonce disponible pour le moment.
+          {t('recrutementListContent.empty.none', 'Aucune annonce disponible pour le moment.')}
         </Text>
         <Text style={[Fonts.p2, { color: recruitmentMutedText, marginTop: 8, textAlign: 'center' }]}>
-          Reviens un peu plus tard ou ajuste ta recherche.
+          {t(
+            'recrutementListContent.empty.comeBack',
+            'Reviens un peu plus tard ou ajuste ta recherche.',
+          )}
         </Text>
       </View>
     );
@@ -922,7 +999,7 @@ function RecrutementListContent({
         <View style={{ alignItems: 'center', flexDirection: 'row' }}>
           {isMatching ? (
             <Text style={[Fonts.p4Bold, { color: Colors.primary500, marginRight: 8 }]}>
-              Prioritaires
+              {t('recrutementListContent.priority', 'Prioritaires')}
             </Text>
           ) : null}
           <View style={{
@@ -970,7 +1047,7 @@ function RecrutementListContent({
         >
           <View style={{ flex: 1, paddingRight: 14 }}>
             <Text style={[Fonts.p2Bold, { color: Colors.neutral100 }]}>
-              Compatibles avec mon profil
+              {t('recrutementListContent.matchesOnlyToggle', 'Compatibles avec mon profil')}
             </Text>
             <Text style={[Fonts.p4, { color: recruitmentMutedText, marginTop: 8 }]}>
               {playerFilterHelperText}
@@ -1017,14 +1094,17 @@ function RecrutementListContent({
           <View style={{ alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between' }}>
             <View style={{ flex: 1, paddingRight: 12 }}>
               <Text style={[Fonts.p2Bold, { color: Colors.primary500 }]}>
-                Compléter mon profil
+                {t('recrutementListContent.completeProfile.title', 'Compléter mon profil')}
               </Text>
               <Text style={[Fonts.p4, { color: recruitmentMutedText, marginTop: 8 }]}>
-                Sport, section, catégorie, niveau.
+                {t(
+                  'recrutementListContent.completeProfile.fields',
+                  'Sport, section, catégorie, niveau.',
+                )}
               </Text>
             </View>
             <Text style={[Fonts.p4Bold, { color: Colors.primary500 }]}>
-              Ouvrir
+              {t('recrutementListContent.completeProfile.open', 'Ouvrir')}
             </Text>
           </View>
         </TouchableOpacity>
@@ -1034,12 +1114,12 @@ function RecrutementListContent({
           filterNumber={badgeFiltersCount}
           handleSearchField={setAdSearchValue}
           openFilters={() => setFiltersSheetVisible(true)}
-          placeholder="Rechercher une annonce..."
+          placeholder={t('recrutementListContent.searchPlaceholder', 'Rechercher une annonce...')}
           searchDefaultValue={adSearchValue}
         />
         {adSearchValue?.trim()?.length >= 2 ? (
           <Text style={[Fonts.p3, { color: Colors.primary500 }, Spaces.marginTop[8]]}>
-            Trie par pertinence
+            {t('recrutementListContent.sortedByRelevance', 'Trie par pertinence')}
           </Text>
         ) : null}
       </View>
@@ -1092,7 +1172,11 @@ function RecrutementListContent({
                 }}
                 >
                   <Text style={[Fonts.p4Bold, { color: Colors.primary500 }]}>
-                    {`Pertinence : ${primaryReasonLabel}`}
+                    {t(
+                      'recrutementListContent.relevanceReason',
+                      'Pertinence : {{reason}}',
+                      { reason: primaryReasonLabel, ...SANS_ECHAPPEMENT },
+                    )}
                   </Text>
                 </View>
               ) : null}
@@ -1133,14 +1217,17 @@ function RecrutementListContent({
           }]}
           >
             <Text style={[Fonts.p1, { color: recruitmentMutedText, textAlign: 'center' }]}>
-              {'Tu n\u2019as pas encore postulé à une annonce.'}
+              {t(
+                'recrutementListContent.applications.empty',
+                'Tu n\u2019as pas encore postulé à une annonce.',
+              )}
             </Text>
           </View>
         )}
         ListHeaderComponent={(
           <View style={[Spaces.gap[12], Spaces.marginBottom[16]]}>
             <Text style={[Fonts.h4, Fonts.neutral100]}>
-              Suivi de tes candidatures
+              {t('recrutementListContent.applications.title', 'Suivi de tes candidatures')}
             </Text>
             {renderAudienceTypeTabs()}
           </View>

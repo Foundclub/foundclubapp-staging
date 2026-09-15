@@ -13,6 +13,10 @@
  * vert et l'ecran retombera sur son repli — jamais sur un ecran muet.
  */
 
+// I18N-4 : le code teste lit ses textes par i18next (interpolation, pluriels) ;
+// ce temoin initialise le VRAI i18next en francais, sans rien changer a ce qu'il affirme.
+import '@/theme/strings';
+
 import {
   describePersonName,
   describeTeamInvitationRefusal,

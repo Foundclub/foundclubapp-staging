@@ -1,4 +1,6 @@
+import i18next from 'i18next';
 import { useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Text,
   TextInput,
@@ -21,27 +23,102 @@ import {
 } from './adWizardStepUtils';
 
 const COACH_ROLE_OPTIONS = [
-  { label: 'Entraîneur principal', value: 'entraineur_principal' },
-  { label: 'Entraîneur adjoint', value: 'entraineur_adjoint' },
-  { label: 'Préparateur physique', value: 'preparateur_physique' },
-  { label: 'Entraîneur gardiens', value: 'entraineur_gardiens' },
-  { label: 'Analyste vidéo', value: 'analyste_video' },
-  { label: 'Team manager', value: 'team_manager' },
-  { label: 'Autre rôle', value: 'other' },
+  {
+    get label() {
+      return i18next.t('adWizardCoachProfile.coachRoles.main', 'Entraîneur principal');
+    },
+    value: 'entraineur_principal',
+  },
+  {
+    get label() {
+      return i18next.t('adWizardCoachProfile.coachRoles.assistant', 'Entraîneur adjoint');
+    },
+    value: 'entraineur_adjoint',
+  },
+  {
+    get label() {
+      return i18next.t('adWizardCoachProfile.coachRoles.fitness', 'Préparateur physique');
+    },
+    value: 'preparateur_physique',
+  },
+  {
+    get label() {
+      return i18next.t('adWizardCoachProfile.coachRoles.goalkeeper', 'Entraîneur gardiens');
+    },
+    value: 'entraineur_gardiens',
+  },
+  {
+    get label() {
+      return i18next.t('adWizardCoachProfile.coachRoles.videoAnalyst', 'Analyste vidéo');
+    },
+    value: 'analyste_video',
+  },
+  {
+    get label() {
+      return i18next.t('adWizardCoachProfile.coachRoles.teamManager', 'Team manager');
+    },
+    value: 'team_manager',
+  },
+  {
+    get label() {
+      return i18next.t('adWizardCoachProfile.coachRoles.other', 'Autre rôle');
+    },
+    value: 'other',
+  },
 ];
 
 const EXPERIENCE_OPTIONS = [
-  { label: 'Junior', value: 'junior' },
-  { label: 'Confirme', value: 'confirme' },
-  { label: 'Experimente', value: 'experimente' },
-  { label: 'Diplome', value: 'diplome' },
+  {
+    get label() {
+      return i18next.t('adWizardCoachProfile.experience.junior', 'Junior');
+    },
+    value: 'junior',
+  },
+  {
+    get label() {
+      return i18next.t('adWizardCoachProfile.experience.confirmed', 'Confirme');
+    },
+    value: 'confirme',
+  },
+  {
+    get label() {
+      return i18next.t('adWizardCoachProfile.experience.expert', 'Experimente');
+    },
+    value: 'experimente',
+  },
+  {
+    get label() {
+      return i18next.t('adWizardCoachProfile.experience.qualified', 'Diplome');
+    },
+    value: 'diplome',
+  },
 ];
 
 const ENGAGEMENT_OPTIONS = [
-  { label: 'Benevole', value: 'benevole' },
-  { label: 'Indemnise', value: 'indemnise' },
-  { label: 'Salarie', value: 'salarie' },
-  { label: 'A définir', value: 'a_definir' },
+  {
+    get label() {
+      return i18next.t('adWizardCoachProfile.engagement.volunteer', 'Benevole');
+    },
+    value: 'benevole',
+  },
+  {
+    get label() {
+      return i18next.t('adWizardCoachProfile.engagement.expenses', 'Indemnise');
+    },
+    value: 'indemnise',
+  },
+  {
+    get label() {
+      return i18next.t('adWizardCoachProfile.engagement.salaried', 'Salarie');
+    },
+    value: 'salarie',
+  },
+  {
+    get label() {
+      return i18next.t('adWizardCoachProfile.engagement.toBeDefined', 'A définir');
+    },
+    value: 'a_definir',
+  },
 ];
 
 /**
@@ -49,6 +126,7 @@ const ENGAGEMENT_OPTIONS = [
  * @returns {import('react').ReactElement}
  */
 function AdWizardCoachProfile({ navigation }) {
+  const { t } = useTranslation();
   const {
     ApplicationStyle,
     Colors,
@@ -80,13 +158,16 @@ function AdWizardCoachProfile({ navigation }) {
   return (
     <WizardStepLayout
       isNextDisabled={!isValid}
-      nextLabel="Suivant"
+      nextLabel={t('adWizardCoachProfile.next', 'Suivant')}
       onBack={() => navigation.goBack()}
       onNext={handleNext}
       stepCount={getAdWizardStepCount(state)}
       stepIndex={getAdWizardNeedsStepIndex(state)}
-      subtitle="Définis le rôle encadrement recherche et le cadre de la mission."
-      title="Profil entraîneur recherche"
+      subtitle={t(
+        'adWizardCoachProfile.subtitle',
+        'Définis le rôle encadrement recherche et le cadre de la mission.',
+      )}
+      title={t('adWizardCoachProfile.title', 'Profil entraîneur recherche')}
     >
       <View style={[Spaces.gap[24], Spaces.paddingBottom[32]]}>
         <View style={[ApplicationStyle.card, Spaces.padding[24], Spaces.gap[24], {
@@ -96,9 +177,9 @@ function AdWizardCoachProfile({ navigation }) {
         >
           <AutocompleteSelect
             displayVariant="card"
-            label="Rôle principal *"
+            label={t('adWizardCoachProfile.roleLabel', 'Rôle principal *')}
             options={COACH_ROLE_OPTIONS}
-            placeholder="Sélectionner un rôle"
+            placeholder={t('adWizardCoachProfile.rolePlaceholder', 'Sélectionner un rôle')}
             setValue={(option) => {
               if (option && !Array.isArray(option)) {
                 dispatch({ payload: option.value, type: 'SET_COACH_ROLE' });
@@ -109,10 +190,15 @@ function AdWizardCoachProfile({ navigation }) {
 
           {state.coachRole === 'other' ? (
             <View style={[Spaces.gap[12]]}>
-              <Text style={[Fonts.p3Bold, Fonts.neutral100]}>Précise le rôle</Text>
+              <Text style={[Fonts.p3Bold, Fonts.neutral100]}>
+                {t('adWizardCoachProfile.roleOtherLabel', 'Précise le rôle')}
+              </Text>
               <TextInput
                 onChangeText={(text) => dispatch({ payload: text.slice(0, 80), type: 'SET_COACH_ROLE_OTHER' })}
-                placeholder="Ex. Responsable gardiens, coordinateur sportif..."
+                placeholder={t(
+                  'adWizardCoachProfile.roleOtherPlaceholder',
+                  'Ex. Responsable gardiens, coordinateur sportif...',
+                )}
                 placeholderTextColor={Colors.neutral500}
                 style={[
                   Fonts.p1,
@@ -133,9 +219,12 @@ function AdWizardCoachProfile({ navigation }) {
 
           <AutocompleteSelect
             displayVariant="card"
-            label="Expérience attendue *"
+            label={t('adWizardCoachProfile.experienceLabel', 'Expérience attendue *')}
             options={EXPERIENCE_OPTIONS}
-            placeholder="Sélectionner un niveau d'expérience"
+            placeholder={t(
+              'adWizardCoachProfile.experiencePlaceholder',
+              "Sélectionner un niveau d'expérience",
+            )}
             setValue={(option) => {
               if (option && !Array.isArray(option)) {
                 dispatch({ payload: option.value, type: 'SET_COACH_EXPERIENCE_LEVEL' });
@@ -146,9 +235,9 @@ function AdWizardCoachProfile({ navigation }) {
 
           <AutocompleteSelect
             displayVariant="card"
-            label="Type d'engagement *"
+            label={t('adWizardCoachProfile.engagementLabel', "Type d'engagement *")}
             options={ENGAGEMENT_OPTIONS}
-            placeholder="Sélectionner un cadre"
+            placeholder={t('adWizardCoachProfile.engagementPlaceholder', 'Sélectionner un cadre')}
             setValue={(option) => {
               if (option && !Array.isArray(option)) {
                 dispatch({ payload: option.value, type: 'SET_ENGAGEMENT_TYPE' });
@@ -164,7 +253,7 @@ function AdWizardCoachProfile({ navigation }) {
         }]}
         >
           <InputStepper
-            label="Nombre de profils recherches"
+            label={t('adWizardCoachProfile.quantityLabel', 'Nombre de profils recherches')}
             max={10}
             min={1}
             onDecrement={() => dispatch({ payload: Math.max(1, state.coachQuantity - 1), type: 'SET_COACH_QUANTITY' })}
@@ -173,13 +262,18 @@ function AdWizardCoachProfile({ navigation }) {
           />
 
           <View style={[Spaces.gap[12]]}>
-            <Text style={[Fonts.p3Bold, Fonts.neutral100]}>Certifications souhaitées</Text>
+            <Text style={[Fonts.p3Bold, Fonts.neutral100]}>
+              {t('adWizardCoachProfile.certificationsLabel', 'Certifications souhaitées')}
+            </Text>
             <TextInput
               onChangeText={(text) => dispatch({
                 payload: text.split(',').map((item) => item.trim()).filter(Boolean),
                 type: 'SET_CERTIFICATIONS_WANTED',
               })}
-              placeholder="Ex. BMF, BPJEPS, expérience formation jeunes"
+              placeholder={t(
+                'adWizardCoachProfile.certificationsPlaceholder',
+                'Ex. BMF, BPJEPS, expérience formation jeunes',
+              )}
               placeholderTextColor={Colors.neutral500}
               style={[
                 Fonts.p1,
@@ -195,14 +289,24 @@ function AdWizardCoachProfile({ navigation }) {
               ]}
               value={Array.isArray(state.certificationsWanted) ? state.certificationsWanted.join(', ') : ''}
             />
-            <Text style={[Fonts.p4, Fonts.neutral300]}>Separer chaque certification par une virgule.</Text>
+            <Text style={[Fonts.p4, Fonts.neutral300]}>
+              {t(
+                'adWizardCoachProfile.certificationsHelper',
+                'Separer chaque certification par une virgule.',
+              )}
+            </Text>
           </View>
 
           <View style={[Spaces.gap[12]]}>
-            <Text style={[Fonts.p3Bold, Fonts.neutral100]}>Disponibilités attendues</Text>
+            <Text style={[Fonts.p3Bold, Fonts.neutral100]}>
+              {t('adWizardCoachProfile.availabilityLabel', 'Disponibilités attendues')}
+            </Text>
             <TextInput
               onChangeText={(text) => dispatch({ payload: text.slice(0, 140), type: 'SET_AVAILABILITY_TEXT' })}
-              placeholder="Ex. Mardi et jeudi soir, match le week-end"
+              placeholder={t(
+                'adWizardCoachProfile.availabilityPlaceholder',
+                'Ex. Mardi et jeudi soir, match le week-end',
+              )}
               placeholderTextColor={Colors.neutral500}
               style={[
                 Fonts.p1,

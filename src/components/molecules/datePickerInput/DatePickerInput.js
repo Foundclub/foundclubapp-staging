@@ -2,10 +2,12 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { format, isValid, parse } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Modal, Platform, Text, TouchableOpacity, View,
 } from 'react-native';
 
+import localeDesFormats from '@/theme/strings/localeDesFormats';
 import useTheme from '@/theme/themeContext';
 
 /**
@@ -25,12 +27,13 @@ function DatePickerInput({
   maximumDate,
   minimumDate,
   onChange,
-  placeholder = 'JJ/MM/AAAA',
+  placeholder = undefined,
   value,
 }) {
   const {
     Alignments, ApplicationStyle, Colors, Fonts, Spaces,
   } = useTheme();
+  const { t } = useTranslation();
   const [showPicker, setShowPicker] = useState(false);
 
   // Parse the value (DD/MM/YYYY) to a Date object for the picker
@@ -137,7 +140,9 @@ function DatePickerInput({
               ]}
               >
                 <TouchableOpacity onPress={() => setShowPicker(false)}>
-                  <Text style={[Fonts.p1, { color: Colors.neutral300 }]}>Annuler</Text>
+                  <Text style={[Fonts.p1, { color: Colors.neutral300 }]}>
+                    {t('datePickerInput.cancel', 'Annuler')}
+                  </Text>
                 </TouchableOpacity>
                 <Text style={[Fonts.p1Bold, Fonts.neutral00]}>{label}</Text>
                 <TouchableOpacity onPress={handleConfirm}>
@@ -147,7 +152,7 @@ function DatePickerInput({
 
               <DateTimePicker
                 display="spinner"
-                locale="fr-FR"
+                locale={localeDesFormats()}
                 maximumDate={maximumDate}
                 minimumDate={minimumDate}
                 mode="date"

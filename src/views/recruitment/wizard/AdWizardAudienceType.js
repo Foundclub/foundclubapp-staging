@@ -1,6 +1,7 @@
 import {
   useEffect,
 } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Text,
   TouchableOpacity,
@@ -55,6 +56,7 @@ function AudienceCard({
  * @returns {import('react').ReactElement}
  */
 function AdWizardAudienceType({ navigation, route }) {
+  const { t } = useTranslation();
   const { Fonts, Spaces } = useTheme();
   const { dispatch, state } = useAdWizard();
   const hasDetectionEvent = Boolean(route?.params?.event);
@@ -82,40 +84,52 @@ function AdWizardAudienceType({ navigation, route }) {
   return (
     <WizardStepLayout
       isNextDisabled={!state?.audienceType}
-      nextLabel="Suivant"
+      nextLabel={t('adWizardAudienceType.next', 'Suivant')}
       onBack={() => navigation.goBack()}
       onNext={handleNext}
       stepCount={getAdWizardStepCount(state)}
       stepIndex={1}
-      subtitle="Choisis si tu publies une annonce pour recruter des joueurs ou un entraîneur."
-      title="Type d'annonce"
+      subtitle={t(
+        'adWizardAudienceType.subtitle',
+        'Choisis si tu publies une annonce pour recruter des joueurs ou un entraîneur.',
+      )}
+      title={t('adWizardAudienceType.title', "Type d'annonce")}
     >
       <View style={[Spaces.gap[24], Spaces.paddingBottom[32]]}>
         {/* L40 — si la personne part d'ici acheter, elle revient ICI. */}
         <SubscriptionQuotaBanner
-          label="Annonces"
+          label={t('adWizardAudienceType.quotaLabel', 'Annonces')}
           quotaType="RECRUITMENT_AD_PUBLISH"
           resumeRouteName={RouteNames.AdWizardStack}
           resumeRouteParams={{ screen: RouteNames.AdWizardAudienceType }}
         />
 
         <AudienceCard
-          description="Publie une annonce par poste recherche, avec le volume de recrutement et les informations sportives de l&rsquo;équipe."
+          description={t(
+            'adWizardAudienceType.players.description',
+            'Publie une annonce par poste recherche, avec le volume de recrutement et les informations sportives de l’équipe.', // eslint-disable-line max-len
+          )}
           isSelected={state.audienceType === 'player'}
           onPress={() => handleSelect('player')}
-          title="Je recrute des joueurs"
+          title={t('adWizardAudienceType.players.title', 'Je recrute des joueurs')}
         />
 
         <AudienceCard
-          description="Publie une annonce dédiée a un rôle d'encadrement: entraîneur principal, adjoint, préparateur physique ou autre besoin staff."
+          description={t(
+            'adWizardAudienceType.coach.description',
+            "Publie une annonce dédiée a un rôle d'encadrement: entraîneur principal, adjoint, préparateur physique ou autre besoin staff.", // eslint-disable-line max-len
+          )}
           isSelected={state.audienceType === 'coach'}
           onPress={() => handleSelect('coach')}
-          title="Je recrute un entraîneur"
+          title={t('adWizardAudienceType.coach.title', 'Je recrute un entraîneur')}
         />
 
         <View style={[Spaces.paddingHorizontal[4], Spaces.marginTop[12]]}>
           <Text style={[Fonts.p3, Fonts.neutral300, { lineHeight: 22 }]}>
-            Le tunnel adapte ensuite automatiquement les etapes, les libelles et l&rsquo;affichage final de l&rsquo;annonce.
+            {t(
+              'adWizardAudienceType.footnote',
+              'Le tunnel adapte ensuite automatiquement les etapes, les libelles et l’affichage final de l’annonce.', // eslint-disable-line max-len
+            )}
           </Text>
         </View>
       </View>

@@ -1,3 +1,7 @@
+// I18N-4 : le code teste lit ses textes par i18next (interpolation, pluriels) ;
+// ce temoin initialise le VRAI i18next en francais, sans rien changer a ce qu'il affirme.
+import '@/theme/strings';
+
 import { getClubInterestRequests } from '@/services/clubInterestRequest/clubInterestRequestService';
 import { getClubMembershipRequests } from '@/services/clubMembershipRequest/clubMembershipRequestService';
 import { getEvents, getPendingFeaturedRequests } from '@/services/event/eventService';

@@ -1,4 +1,6 @@
+import i18next from 'i18next';
 import React, { useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Text, View } from 'react-native';
 
 import useTheme from '@/theme/themeContext';
@@ -20,6 +22,7 @@ function SquadSectionStep({
   data, onNext, onPrev, updateData,
 }) {
   const { Colors, Fonts } = useTheme();
+  const { t } = useTranslation();
 
   const [sections, setSections] = React.useState([]);
   const [loading, setLoading] = React.useState(true);
@@ -38,7 +41,10 @@ function SquadSectionStep({
         }));
         setSections(options);
       } catch (error) {
-        setLoadError("Impossible de charger les sections League pour le moment.");
+        setLoadError(i18next.t(
+          'squadSectionStep.loadError',
+          'Impossible de charger les sections League pour le moment.',
+        ));
         setSections([]);
         console.error('Error fetching sections:', error);
       } finally {
@@ -55,14 +61,14 @@ function SquadSectionStep({
     <View style={{ flex: 1, paddingHorizontal: 16 }}>
       <View style={{ flex: 1, justifyContent: 'center', paddingBottom: 100 }}>
         <Text style={[Fonts.h1, { color: Colors.neutral00, marginBottom: 40, textAlign: 'center' }]}>
-          Pour quelle section ?
+          {t('squadSectionStep.title', 'Pour quelle section ?')}
         </Text>
 
         <AutocompleteSelect
           isLoading={loading}
           isSearchable={false}
           options={sections}
-          placeholder="Sélectionner une section"
+          placeholder={t('squadSectionStep.placeholder', 'Sélectionner une section')}
           setValue={(item) => updateData('section', item)}
           value={data.section?.label}
         />
@@ -77,12 +83,12 @@ function SquadSectionStep({
         <Button
           disabled={!isValid}
           onPress={onNext}
-          title="Continuer"
+          title={t('squadSectionStep.continue', 'Continuer')}
           variant="Primary"
         />
         <Button
           onPress={onPrev}
-          title="Retour"
+          title={t('squadSectionStep.back', 'Retour')}
           variant="Secondary"
         />
       </View>

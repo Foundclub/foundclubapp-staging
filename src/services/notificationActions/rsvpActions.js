@@ -1,4 +1,5 @@
 import notifee from '@notifee/react-native';
+import i18next from 'i18next';
 import { MMKV } from 'react-native-mmkv';
 
 import { activateSessionForNotificationPayload } from '@/domains/auth/authUseCases';
@@ -115,32 +116,35 @@ const resolveAnswerFromAction = (pressActionId) => {
  */
 const getRsvpFeedbackCopy = (answer) => (answer === 'present'
   ? {
-    body: 'Ta présence est enregistrée.',
-    title: 'Présence confirmée',
+    body: i18next.t('rsvpActions.present.body', 'Ta présence est enregistrée.'),
+    title: i18next.t('rsvpActions.present.title', 'Présence confirmée'),
   }
   : {
-    body: 'Ton absence est enregistrée.',
-    title: 'Absence confirmée',
+    body: i18next.t('rsvpActions.absent.body', 'Ton absence est enregistrée.'),
+    title: i18next.t('rsvpActions.absent.title', 'Absence confirmée'),
   });
 
 const getChatReplyFeedbackCopy = () => ({
-  body: 'Ta réponse a été envoyée.',
-  title: 'Réponse envoyée',
+  body: i18next.t('rsvpActions.chatReply.sent.body', 'Ta réponse a été envoyée.'),
+  title: i18next.t('rsvpActions.chatReply.sent.title', 'Réponse envoyée'),
 });
 
 const getChatReplyFailureCopy = () => ({
-  body: "Ouvre l'application pour finaliser ta réponse.",
-  title: 'Action non finalisée',
+  body: i18next.t(
+    'rsvpActions.notFinalized.body',
+    "Ouvre l'application pour finaliser ta réponse.",
+  ),
+  title: i18next.t('rsvpActions.notFinalized.title', 'Action non finalisée'),
 });
 
 const getChatReplyAndroidActions = () => ([
   {
     input: {
       allowFreeFormInput: true,
-      placeholder: 'Ta réponse',
+      placeholder: i18next.t('rsvpActions.chatReply.placeholder', 'Ta réponse'),
     },
     pressAction: { id: CHAT_REPLY_ACTION_REPLY },
-    title: 'Repondre',
+    title: i18next.t('rsvpActions.chatReply.action', 'Repondre'),
   },
 ]);
 
@@ -273,11 +277,11 @@ export const ensureNotificationActionSetup = async () => {
       actions: [
         {
           id: EVENT_RSVP_ACTION_PRESENT,
-          title: 'Present',
+          title: i18next.t('rsvpActions.actions.present', 'Present'),
         },
         {
           id: EVENT_RSVP_ACTION_ABSENT,
-          title: 'Absent',
+          title: i18next.t('rsvpActions.actions.absent', 'Absent'),
         },
       ],
       id: EVENT_RSVP_CATEGORY,
@@ -287,10 +291,10 @@ export const ensureNotificationActionSetup = async () => {
         {
           id: CHAT_REPLY_ACTION_REPLY,
           input: {
-            buttonText: 'Envoyer',
-            placeholderText: 'Ta réponse',
+            buttonText: i18next.t('rsvpActions.chatReply.send', 'Envoyer'),
+            placeholderText: i18next.t('rsvpActions.chatReply.placeholder', 'Ta réponse'),
           },
-          title: 'Repondre',
+          title: i18next.t('rsvpActions.chatReply.action', 'Repondre'),
         },
       ],
       id: CHAT_REPLY_CATEGORY,
@@ -393,10 +397,13 @@ export const handleEventRsvpActionPress = async ({
       `[NOTIF_ACTION_FAILED] type=${normalizedData?.type || 'unknown'} action=${pressActionId || 'unknown'} eventId=${normalizedData?.eventId || 'unknown'}`,
     );
     await displayLocalNotification({
-      body: "Ouvre l'application pour finaliser ta réponse.",
+      body: i18next.t(
+        'rsvpActions.notFinalized.body',
+        "Ouvre l'application pour finaliser ta réponse.",
+      ),
       channelId: NOTIFICATION_SILENT_CHANNEL_ID,
       data: normalizedData,
-      title: 'Action non finalisée',
+      title: i18next.t('rsvpActions.notFinalized.title', 'Action non finalisée'),
     });
     return { handled: true, success: false };
   }

@@ -42,6 +42,8 @@
  * n emporte plus l ecran de cotisation avec lui.
  * @returns {any} le module natif
  */
+import i18next from 'i18next';
+
 const blobUtil = () => {
   // eslint-disable-next-line global-require -- chargement a la demande, cf. ci-dessus
   const module = require('react-native-blob-util');
@@ -93,7 +95,10 @@ export const extensionDeLUrl = (url, secours = 'pdf') => {
 export const downloadRemoteFile = async ({ fileName, mimeType, url }) => {
   const adresse = String(url || '').trim();
   if (!adresse) {
-    const erreur = new Error('Aucune adresse de fichier a telecharger.');
+    const erreur = new Error(i18next.t(
+      'downloadRemoteFile.errors.noUrl',
+      'Aucune adresse de fichier a telecharger.',
+    ));
     erreur.reason = DOWNLOAD_FAILURES.NO_URL;
     throw erreur;
   }
@@ -112,7 +117,11 @@ export const downloadRemoteFile = async ({ fileName, mimeType, url }) => {
   const infos = reponse?.info?.() || {};
   const code = Number(infos?.status || 0);
   if (code >= 400) {
-    const erreur = new Error(`Le serveur a refuse le fichier (${code}).`);
+    const erreur = new Error(i18next.t(
+      'downloadRemoteFile.errors.http',
+      'Le serveur a refuse le fichier ({{code}}).',
+      { code },
+    ));
     erreur.reason = DOWNLOAD_FAILURES.HTTP_ERROR;
     erreur.status = code;
     throw erreur;
@@ -123,7 +132,10 @@ export const downloadRemoteFile = async ({ fileName, mimeType, url }) => {
     cheminTelecharge.replace(/^file:\/\//, ''),
   );
   if (!Number(stat?.size || 0)) {
-    const erreur = new Error('Le fichier telecharge est vide.');
+    const erreur = new Error(i18next.t(
+      'downloadRemoteFile.errors.empty',
+      'Le fichier telecharge est vide.',
+    ));
     erreur.reason = DOWNLOAD_FAILURES.EMPTY_FILE;
     throw erreur;
   }

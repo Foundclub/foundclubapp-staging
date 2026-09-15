@@ -13,6 +13,10 @@
  * le retryAfterSeconds renvoyé par le serveur dans error.details.
  */
 
+import i18next from 'i18next';
+
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
+
 import { createLogger } from '@/utils/logger/logger';
 
 const bootGuardLogger = createLogger('boot-guard');
@@ -102,8 +106,11 @@ export const getRetryAfterSeconds = (error) => {
 
 const buildBlockedError = (/** @type {string} */ path, /** @type {number} */ retryInMs) => {
   const retryAfterSeconds = Math.max(1, Math.ceil(retryInMs / 1000));
-  const message = `Appels de démarrage suspendus ${retryAfterSeconds}s `
-    + `après une rafale d'échecs réseau (${path}).`;
+  const message = i18next.t(
+    'bootRequestGuard.blocked',
+    "Appels de démarrage suspendus {{seconds}}s après une rafale d'échecs réseau ({{path}}).",
+    { path, seconds: retryAfterSeconds, ...SANS_ECHAPPEMENT },
+  );
   const errorPayload = {
     code: BOOT_REQUEST_BLOCKED_CODE,
     details: { retryAfterSeconds },
@@ -150,7 +157,11 @@ export const assertBootRequestAllowed = (config) => {
 const loggedSessionRefusals = new Set();
 
 const buildNoSessionError = (/** @type {string} */ path) => {
-  const message = `Appel ignoré : ${path} exige une session et aucun jeton n'est disponible.`;
+  const message = i18next.t(
+    'bootRequestGuard.noSession',
+    "Appel ignoré : {{path}} exige une session et aucun jeton n'est disponible.",
+    { path, ...SANS_ECHAPPEMENT },
+  );
   const errorPayload = {
     code: BOOT_REQUEST_NO_SESSION_CODE,
     message,

@@ -1,4 +1,5 @@
 import { useNavigation } from '@react-navigation/native';
+import { useTranslation } from 'react-i18next';
 import {
   Image,
   ImageBackground,
@@ -69,6 +70,7 @@ function RecruitmentAdCard({
   const {
     Colors, Fonts, Images,
   } = useTheme();
+  const { t } = useTranslation();
   const { userData } = useAuth();
 
   const scale = useSharedValue(1);
@@ -86,21 +88,33 @@ function RecruitmentAdCard({
 
   const { team } = ad;
   const club = team?.club;
-  const clubName = club?.name || team?.name || 'Club inconnu';
+  const clubName = club?.name || team?.name || t('recruitmentAdCard.unknownClub', 'Club inconnu');
   const clubLogo = getImageUrl(club?.logo?.url);
   const isCoachAd = String(ad?.audienceType || '').trim().toLowerCase() === 'coach';
   const positionLabel = isCoachAd
-    ? humanizeEnumLabel(ad?.coachRoleOther || ad?.coachRole, 'Rôle entraîneur')
-    : (ad.position || 'Poste non spécifié');
-  const levelName = ad.level?.name || ad.minLevel || 'Niveau ?';
-  const categoryName = ad.category?.name || ad.category || 'Catégorie ?';
+    ? humanizeEnumLabel(ad?.coachRoleOther || ad?.coachRole, t(
+      'recruitmentAdCard.coachRole',
+      'Rôle entraîneur',
+    ))
+    : (ad.position || t('recruitmentAdCard.positionUnspecified', 'Poste non spécifié'));
+  const levelName = ad.level?.name || ad.minLevel || t(
+    'recruitmentAdCard.levelUnknown',
+    'Niveau ?',
+  );
+  const categoryName = ad.category?.name || ad.category || t(
+    'recruitmentAdCard.categoryUnknown',
+    'Catégorie ?',
+  );
   const sectionName = ad.section?.name || ad.section || '';
   const sportName = ad.sport || team?.sport || 'Football';
   const address = getShortAddress(ad.city || club?.city || '');
   // T8 : 6 annonces portent « Gymnase - [object Object] » ECRIT EN BASE (releve du
   // 26/08). Tant que ces lignes ne sont pas reparees, l'affichage recompose le
   // libelle depuis les champs restes sains de la MEME charge.
-  const locationLabel = resolveLocationDisplayLabel(ad.address, address || 'Lieu non précisé');
+  const locationLabel = resolveLocationDisplayLabel(ad.address, address || t(
+    'recruitmentAdCard.locationUnspecified',
+    'Lieu non précisé',
+  ));
   const isDetectionLinked = normalizeTypeLabel(ad?.event?.type?.name).includes('detection');
   const detectionDateLabel = ad?.event?.date
     ? formatDateWithDayPrefix(new Date(ad.event.date))
@@ -115,36 +129,45 @@ function RecruitmentAdCard({
   let playerCtaBorderColor = 'transparent';
   let playerCtaTextColor = Colors.neutral00;
   let playerCtaBorderWidth = 0;
-  let playerCtaLabel = isCoachAd ? 'Candidater' : 'Postuler';
+  let playerCtaLabel = isCoachAd ? t(
+    'recruitmentAdCard.cta.applyCoach',
+    'Candidater',
+  ) : t('recruitmentAdCard.cta.apply', 'Postuler');
 
   if (!ad.isActive) {
-    playerCtaLabel = 'Annonce inactive';
+    playerCtaLabel = t('recruitmentAdCard.cta.inactive', 'Annonce inactive');
     playerCtaBackgroundColor = 'rgba(255,255,255,0.06)';
     playerCtaBorderColor = 'rgba(255,255,255,0.12)';
     playerCtaTextColor = Colors.neutral300;
     playerCtaBorderWidth = 1;
   } else if (applicationState.status === 'accepted') {
-    playerCtaLabel = isCoachAd ? 'Candidature acceptée' : 'Je participe';
+    playerCtaLabel = isCoachAd ? t(
+      'recruitmentAdCard.cta.acceptedCoach',
+      'Candidature acceptée',
+    ) : t('recruitmentAdCard.cta.accepted', 'Je participe');
     playerCtaBackgroundColor = `${Colors.primary500}18`;
     playerCtaBorderColor = `${Colors.primary500}45`;
     playerCtaTextColor = Colors.primary500;
     playerCtaBorderWidth = 1;
   } else if (applicationState.status === 'pending') {
-    playerCtaLabel = 'Demande en attente';
+    playerCtaLabel = t('recruitmentAdCard.cta.pending', 'Demande en attente');
     playerCtaBackgroundColor = 'rgba(255,255,255,0.06)';
     playerCtaBorderColor = `${Colors.primary500}35`;
     playerCtaTextColor = Colors.primary100;
     playerCtaBorderWidth = 1;
   } else if (isApplying) {
-    playerCtaLabel = 'Envoi...';
+    playerCtaLabel = t('recruitmentAdCard.cta.sending', 'Envoi...');
   }
 
   const candidatesCount = ad.applicationsCount || ad.candidatesCount || ad.candidates?.length || 0;
   const statusInfo = ad.isActive
-    ? { color: Colors.primary500, text: 'En ligne' }
-    : { color: Colors.neutral500, text: 'Inactive' };
+    ? { color: Colors.primary500, text: t('recruitmentAdCard.status.online', 'En ligne') }
+    : { color: Colors.neutral500, text: t('recruitmentAdCard.status.inactive', 'Inactive') };
   const rightMetaLabel = [categoryName, sectionName].filter(Boolean).join(' - ');
-  const audienceTypeLabel = isCoachAd ? 'ENTRAINEUR' : getRecruitAthleteNoun(sportName).toUpperCase();
+  const audienceTypeLabel = isCoachAd ? t(
+    'recruitmentAdCard.coachAudience',
+    'ENTRAINEUR',
+  ) : getRecruitAthleteNoun(sportName).toUpperCase();
 
   const handlePress = () => {
     if (onPress) {
@@ -179,7 +202,7 @@ function RecruitmentAdCard({
   );
   const playerCtaNode = shouldRenderInteractiveCta ? (
     <TouchableOpacity
-      accessibilityHint="Postuler à cette annonce"
+      accessibilityHint={t('recruitmentAdCard.applyHint', 'Postuler à cette annonce')}
       accessibilityLabel={playerCtaLabel}
       accessibilityRole="button"
       activeOpacity={0.9}
@@ -263,7 +286,7 @@ function RecruitmentAdCard({
               {isDetectionLinked ? (
                 <View style={styles.detectionChip}>
                   <Text style={[Fonts.p4Bold, { color: Colors.primary500 }]}>
-                    Détection
+                    {t('recruitmentAdCard.detection', 'Détection')}
                   </Text>
                   {detectionDateLabel ? (
                     <Text style={[Fonts.p4, { color: Colors.neutral200 }]}>
@@ -287,7 +310,10 @@ function RecruitmentAdCard({
               <View style={[styles.detailItem, styles.detailItemRight]}>
                 <Image source={Images.users} style={[styles.icon, { tintColor: Colors.neutral300 }]} />
                 <Text numberOfLines={1} style={[styles.detailText, styles.detailTextRight]}>
-                  {rightMetaLabel || (isCoachAd ? 'Cadre à preciser' : 'Catégorie libre')}
+                  {rightMetaLabel || (isCoachAd ? t(
+                    'recruitmentAdCard.frameworkToDefine',
+                    'Cadre à preciser',
+                  ) : t('recruitmentAdCard.openCategory', 'Catégorie libre'))}
                 </Text>
               </View>
             </View>

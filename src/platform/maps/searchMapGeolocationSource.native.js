@@ -1,4 +1,5 @@
 import Geolocation from '@react-native-community/geolocation';
+import i18next from 'i18next';
 import { PermissionsAndroid, Platform } from 'react-native';
 
 // Source de position — NATIF (D30).
@@ -39,11 +40,14 @@ export const ensureSearchMapGeolocationPermission = async () => {
   const granted = await PermissionsAndroid.request(
     PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
     {
-      buttonNegative: 'Annuler',
-      buttonNeutral: 'Plus tard',
-      buttonPositive: 'Autoriser',
-      message: 'Nous avons besoin de ta position pour afficher les résultats autour de toi.',
-      title: 'Permission de localisation',
+      buttonNegative: i18next.t('searchMapGeolocationSource.permission.cancel', 'Annuler'),
+      buttonNeutral: i18next.t('searchMapGeolocationSource.permission.later', 'Plus tard'),
+      buttonPositive: i18next.t('searchMapGeolocationSource.permission.allow', 'Autoriser'),
+      message: i18next.t(
+        'searchMapGeolocationSource.permission.message',
+        'Nous avons besoin de ta position pour afficher les résultats autour de toi.',
+      ),
+      title: i18next.t('searchMapGeolocationSource.permission.title', 'Permission de localisation'),
     },
   );
 

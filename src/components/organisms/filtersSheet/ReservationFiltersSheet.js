@@ -39,9 +39,6 @@ import FiltersSheet from './FiltersSheet';
  * equivalent plutot que de l'afficher grisee.
  */
 
-const TOUS_SPORTS = 'Tous les sports';
-const TOUTES_VILLES = 'Toutes les villes';
-const SANS_LIMITE = 'Sans limite';
 const RAYON_PAR_DEFAUT = 20;
 
 /**
@@ -62,6 +59,9 @@ function ReservationFiltersSheet({
   onClose,
 }) {
   const { t } = useTranslation();
+  const TOUS_SPORTS = t('reservationFiltersSheet.allSports', 'Tous les sports');
+  const TOUTES_VILLES = t('reservationFiltersSheet.allCities', 'Toutes les villes');
+  const SANS_LIMITE = t('reservationFiltersSheet.noLimit', 'Sans limite');
   const { Colors, Fonts, Spaces } = /** @type {any} */ (useTheme());
   const { getGeohashForPointAndRadius } = usePlaces();
   const { data: allActivities } = useGetActivities();

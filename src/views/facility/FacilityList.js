@@ -1,4 +1,5 @@
 import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
+import i18next from 'i18next';
 import { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -37,7 +38,10 @@ import { getErrorMessage } from '@/utils/errors/displayError';
 import { FACILITY_CONFLICT_MODES, getFacilityConflictMode } from '@/utils/facilityConflictMode';
 import { resolveFacilityPlanningColor } from '@/utils/facilityPlanningColor';
 
-const getAddressLabel = (address, fallback = 'Adresse non renseignée') => {
+const getAddressLabel = (address, fallback = i18next.t(
+  'facilityList.noAddress',
+  'Adresse non renseignée',
+)) => {
   if (!address) return fallback;
   if (typeof address === 'string') return address;
   if (typeof address === 'object') {
@@ -557,17 +561,20 @@ function FacilityList() {
     content = (
       <View style={[Alignments.fill, Alignments.mainCenter, Spaces.gap[12]]}>
         <Text style={[Fonts.h4Black, Fonts.neutral00]}>
-          Club introuvable
+          {t('facilityList.missingClub.title', 'Club introuvable')}
         </Text>
         <Text style={[Fonts.p2, Fonts.primary100]}>
-          Impossible de determiner pour quel club afficher les installations.
+          {t(
+            'facilityList.missingClub.body',
+            'Impossible de determiner pour quel club afficher les installations.',
+          )}
         </Text>
         <Button
           onPress={() => navigateToStackScreenOrScreen(navigation, {
             screen: RouteNames.TeamList,
             stack: RouteNames.TeamStack,
           })}
-          title="Retour aux équipes"
+          title={t('facilityList.missingClub.back', 'Retour aux équipes')}
           variant="Secondary"
         />
       </View>
@@ -578,14 +585,14 @@ function FacilityList() {
     content = (
       <View style={[Alignments.fill, Alignments.mainCenter, Spaces.gap[12]]}>
         <Text style={[Fonts.h4Black, Fonts.neutral00]}>
-          Impossible de charger les installations
+          {t('facilityList.loadError', 'Impossible de charger les installations')}
         </Text>
         <Text style={[Fonts.p2, Fonts.primary100]}>
           {getErrorMessage(error, 'generic')}
         </Text>
         <Button
           onPress={() => refetchFacilities()}
-          title="Réessayer"
+          title={t('facilityList.retry', 'Réessayer')}
           variant="Secondary"
         />
       </View>

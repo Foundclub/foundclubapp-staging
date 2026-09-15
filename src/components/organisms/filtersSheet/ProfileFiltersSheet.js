@@ -2,6 +2,7 @@ import Slider from '@react-native-community/slider';
 import {
   useEffect, useMemo, useRef, useState,
 } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Text, View } from 'react-native';
 
 import usePlaces from '@/domains/places/usePlaces';
@@ -35,10 +36,6 @@ import FiltersSheet from './FiltersSheet';
  * un lot d'habillage.
  */
 
-const TOUS_SPORTS = 'Tous les sports';
-const TOUTES_VILLES = 'Toutes les villes';
-const TOUTES = 'Toutes';
-const TOUS = 'Tous';
 const RAYON_PAR_DEFAUT = 20;
 
 /**
@@ -81,6 +78,11 @@ function ProfileFiltersSheet({
   onApply,
   onClose,
 }) {
+  const { t } = useTranslation();
+  const TOUS_SPORTS = t('profileFiltersSheet.allSports', 'Tous les sports');
+  const TOUTES_VILLES = t('profileFiltersSheet.allCities', 'Toutes les villes');
+  const TOUTES = t('profileFiltersSheet.allFeminine', 'Toutes');
+  const TOUS = t('profileFiltersSheet.allMasculine', 'Tous');
   const { Colors, Fonts, Spaces } = /** @type {any} */ (useTheme());
   const { getGeohashForPointAndRadius } = usePlaces();
   const { data: allActivities } = useGetActivities();
@@ -192,7 +194,7 @@ function ProfileFiltersSheet({
           isMulti
           isSearchable
           options={filtrer(sportOptions, rechercheSport)}
-          placeholder="Ex: Football, Tennis..."
+          placeholder={t('profileFiltersSheet.sportPlaceholder', 'Ex: Football, Tennis...')}
           searchValue={rechercheSport}
           setSearchValue={setRechercheSport}
           setValue={(/** @type {any} */ option) => {
@@ -205,7 +207,7 @@ function ProfileFiltersSheet({
         />
       ),
       key: 'activity',
-      label: 'Sport',
+      label: t('profileFiltersSheet.sport', 'Sport'),
       value: libellesDe(sportOptions, activity, TOUS_SPORTS),
     },
     {
@@ -213,17 +215,21 @@ function ProfileFiltersSheet({
         <View style={[Spaces.gap[12]]}>
           <AutocompleteAddressInput
             address={city}
-            placeholder="Entre une ville"
+            placeholder={t('profileFiltersSheet.cityPlaceholder', 'Entre une ville')}
             setAddress={setCity}
           />
           {/* Le rayon n'est plus un reglage a part : le pack le lit dans la
               rangee Ville (« Marseille · 25 km »). Il reste REGLABLE ici, sur
               la meme rampe qu'avant (2 a 50 km, au kilometre pres). */}
           <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
-            {`Dans un rayon autour de : ${String(radius)} km`}
+            {t(
+              'profileFiltersSheet.radius',
+              'Dans un rayon autour de : {{radius}} km',
+              { radius: String(radius) },
+            )}
           </Text>
           <Slider
-            accessibilityLabel="Rayon de recherche"
+            accessibilityLabel={t('profileFiltersSheet.radiusLabel', 'Rayon de recherche')}
             disabled={!city?.value}
             maximumTrackTintColor={Colors.primary700}
             maximumValue={50}
@@ -239,7 +245,7 @@ function ProfileFiltersSheet({
         </View>
       ),
       key: 'city',
-      label: 'Ville',
+      label: t('profileFiltersSheet.city', 'Ville'),
       value: libelleVille,
     },
     {
@@ -248,7 +254,7 @@ function ProfileFiltersSheet({
           isMulti
           isSearchable
           options={filtrer(categoryOptions, rechercheCategorie)}
-          placeholder="Ex: Seniors, U17..."
+          placeholder={t('profileFiltersSheet.categoryPlaceholder', 'Ex: Seniors, U17...')}
           searchValue={rechercheCategorie}
           setSearchValue={setRechercheCategorie}
           setValue={(/** @type {any} */ option) => setCategory(Array.isArray(option)
@@ -258,7 +264,7 @@ function ProfileFiltersSheet({
         />
       ),
       key: 'category',
-      label: 'Catégorie',
+      label: t('profileFiltersSheet.category', 'Catégorie'),
       value: libellesDe(categoryOptions, category, TOUTES),
     },
   ];
@@ -270,7 +276,7 @@ function ProfileFiltersSheet({
           isMulti
           isSearchable
           options={filtrer(positionOptions, recherchePoste)}
-          placeholder="Ex: Ailier, Gardien..."
+          placeholder={t('profileFiltersSheet.positionPlaceholder', 'Ex: Ailier, Gardien...')}
           searchValue={recherchePoste}
           setSearchValue={setRecherchePoste}
           setValue={(/** @type {any} */ option) => setPosition(Array.isArray(option)
@@ -280,7 +286,7 @@ function ProfileFiltersSheet({
         />
       ),
       key: 'position',
-      label: 'Poste',
+      label: t('profileFiltersSheet.position', 'Poste'),
       value: libellesDe(positionOptions, position, TOUS),
     });
   }

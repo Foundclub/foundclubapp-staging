@@ -1,9 +1,11 @@
+import i18next from 'i18next';
 import {
   useEffect,
   useMemo,
   useRef,
   useState,
 } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
   Text,
@@ -89,6 +91,7 @@ function SearchMapIframeRuntime({
   );
   const mapId = useMemo(() => `search-map-web-${mapRenderKey}`, [mapRenderKey]);
   const loadingCopy = useMemo(() => getSearchMapLoadingCopy(), []);
+  const { t } = useTranslation();
   const runtimeState = useMemo(() => ({
     command,
     focusMode,
@@ -290,7 +293,7 @@ function SearchMapIframeRuntime({
             }}
           >
             <Text style={{ color: '#ffffff', fontWeight: '700', textAlign: 'center' }}>
-              Impossible de charger la carte
+              {t('maps.error.title', 'Impossible de charger la carte')}
             </Text>
             <Text style={{ color: 'rgba(255,255,255,0.72)', textAlign: 'center' }}>
               {errorMessage}
@@ -312,7 +315,9 @@ function SearchMapIframeRuntime({
                   paddingVertical: 10,
                 }}
               >
-                <Text style={{ color: '#061822', fontWeight: '700' }}>Réessayer</Text>
+                <Text style={{ color: '#061822', fontWeight: '700' }}>
+                  {t('maps.error.retry', 'Réessayer')}
+                </Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -416,7 +421,10 @@ export const renderMap = ({
   return (
     <SearchMapIframeRuntime
       command={command}
-      errorMessage="Les tuiles de la carte legacy ne répondent pas pour le moment."
+      errorMessage={i18next.t(
+        'maps.error.legacyTiles',
+        'Les tuiles de la carte legacy ne répondent pas pour le moment.',
+      )}
       focusMode={focusMode}
       height={height}
       items={items}

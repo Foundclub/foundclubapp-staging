@@ -1,3 +1,7 @@
+import i18next from 'i18next';
+
+import localeDesFormats from '@/theme/strings/localeDesFormats';
+
 /**
  * Extracts a short address (Zip Code + City) from address details.
  * Handles various formats:
@@ -113,10 +117,18 @@ export const formatClubDistanceLabel = (distanceKm) => {
 
   const value = Number(distanceKm);
   if (!Number.isFinite(value) || value < 0) return '';
-  if (value < 1) return `à ${Math.max(50, Math.round((value * 1000) / 50) * 50)} m`;
+  if (value < 1) {
+    return i18next.t('location.distanceMeters', 'à {{distance}} m', {
+      distance: Math.max(50, Math.round((value * 1000) / 50) * 50),
+    });
+  }
 
   const rounded = value >= 10 ? Math.round(value) : Math.round(value * 10) / 10;
-  return `à ${String(rounded).replace('.', ',')} km`;
+  // Separateur decimal de la langue : « 2,5 » en francais, « 2.5 » en anglais.
+  const distance = localeDesFormats() === 'fr-FR'
+    ? String(rounded).replace('.', ',')
+    : String(rounded);
+  return i18next.t('location.distanceKm', 'à {{distance}} km', { distance });
 };
 
 const parseMaybeJson = (value) => {

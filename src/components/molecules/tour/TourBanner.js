@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -29,6 +30,7 @@ function TourBanner() {
   const {
     Alignments, Colors, Fonts, Spaces,
   } = useTheme();
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const {
     completeCurrentStep,
@@ -63,12 +65,14 @@ function TourBanner() {
 
   const quitButton = (
     <TouchableOpacity
-      accessibilityLabel="Quitter le tour"
+      accessibilityLabel={t('tourBanner.quit', 'Quitter le tour')}
       accessibilityRole="button"
       hitSlop={8}
       onPress={exitTour}
     >
-      <Text style={[Fonts.p3Bold, Fonts.neutral400]}>Quitter le tour</Text>
+      <Text style={[Fonts.p3Bold, Fonts.neutral400]}>
+        {t('tourBanner.quit', 'Quitter le tour')}
+      </Text>
     </TouchableOpacity>
   );
 
@@ -94,7 +98,7 @@ function TourBanner() {
         }}
       >
         <TouchableOpacity
-          accessibilityLabel="Afficher le tour guidé"
+          accessibilityLabel={t('tourBanner.show', 'Afficher le tour guidé')}
           accessibilityRole="button"
           hitSlop={8}
           onPress={() => setIsCollapsed(false)}
@@ -105,11 +109,15 @@ function TourBanner() {
           }}
           />
           <Text style={[Fonts.p4Bold, Fonts.neutral100]}>
-            {`Tour ${stepIndex + 1}/${totalSteps}`}
+            {t(
+              'tourBanner.compact',
+              'Tour {{step}}/{{total}}',
+              { step: stepIndex + 1, total: totalSteps },
+            )}
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
-          accessibilityLabel="Quitter le tour"
+          accessibilityLabel={t('tourBanner.quit', 'Quitter le tour')}
           accessibilityRole="button"
           hitSlop={8}
           onPress={exitTour}
@@ -143,10 +151,14 @@ function TourBanner() {
       <View style={[containerStyle, Spaces.padding[12], Spaces.gap[8]]}>
         <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[8]]}>
           <Text style={[Fonts.p2Bold, Fonts.neutral00, { flex: 1 }]}>
-            {`Ton tour guidé t'attend (étape ${stepIndex + 1}/${totalSteps})`}
+            {t(
+              'tourBanner.waiting',
+              "Ton tour guidé t'attend (étape {{step}}/{{total}})",
+              { step: stepIndex + 1, total: totalSteps },
+            )}
           </Text>
           <TouchableOpacity
-            accessibilityLabel="Réduire le tour"
+            accessibilityLabel={t('tourBanner.collapse', 'Réduire le tour')}
             accessibilityRole="button"
             hitSlop={10}
             onPress={() => setIsCollapsed(true)}
@@ -165,7 +177,9 @@ function TourBanner() {
               paddingVertical: 10,
             }}
           >
-            <Text style={[Fonts.p3Bold, Fonts.primary900]}>Reprendre le tour</Text>
+            <Text style={[Fonts.p3Bold, Fonts.primary900]}>
+              {t('tourBanner.resume', 'Reprendre le tour')}
+            </Text>
           </TouchableOpacity>
           <View style={Alignments.fill} />
           {quitButton}
@@ -211,12 +225,16 @@ function TourBanner() {
         <Text
           style={[Fonts.p4Bold, Fonts.primary500, { letterSpacing: 1, textTransform: 'uppercase' }]}
         >
-          {`Tour guidé · étape ${stepIndex + 1} sur ${totalSteps}`}
+          {t(
+            'tourBanner.stepOf',
+            'Tour guidé · étape {{step}} sur {{total}}',
+            { step: stepIndex + 1, total: totalSteps },
+          )}
         </Text>
         <View style={Alignments.fill} />
         {isSignalStep ? (
           <TouchableOpacity
-            accessibilityLabel="Réduire le tour"
+            accessibilityLabel={t('tourBanner.collapse', 'Réduire le tour')}
             accessibilityRole="button"
             hitSlop={10}
             onPress={() => setIsCollapsed(true)}
@@ -240,7 +258,7 @@ function TourBanner() {
             }}
           >
             <Text style={[Fonts.p3Bold, Fonts.primary900]}>
-              {currentStep.manualLabel || 'Étape suivante'}
+              {currentStep.manualLabel || t('tourBanner.nextStep', 'Étape suivante')}
             </Text>
           </TouchableOpacity>
         ) : null}
@@ -251,7 +269,7 @@ function TourBanner() {
             onPress={() => completeCurrentStep({ skipped: true })}
           >
             <Text style={[Fonts.p3Bold, Fonts.neutral400]}>
-              {currentStep.skipLabel || 'Passer'}
+              {currentStep.skipLabel || t('tourBanner.skip', 'Passer')}
             </Text>
           </TouchableOpacity>
         ) : null}

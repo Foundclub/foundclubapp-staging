@@ -14,6 +14,7 @@ import { extractSubscriptionDecisionFromError } from '@/domains/subscription/sub
 import { resolveTeamCreationGate } from '@/domains/team/teamCreationGate';
 import { isMyTeam } from '@/domains/team/teamMembership';
 import { isDeletedAccount } from '@/domains/user/deletedAccount';
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -32,9 +33,6 @@ import { RouteNames } from '@/navigation/routeNames';
 import { useGetClub } from '@/services/club/clubQueries';
 import { claimTeamAsCoach } from '@/services/team/teamService';
 
-// Suggestions de noms du handoff (chips « choisir = toucher », tunnel 1/8).
-const NAME_SUGGESTIONS = ['Seniors A', 'U15 Filles', 'Loisir mixte'];
-
 const sanitizeRouteParam = (/** @type {any} */ value) => {
   const normalizedValue = String(value || '').trim();
   if (!normalizedValue || normalizedValue.startsWith(':')) {
@@ -51,6 +49,12 @@ const sanitizeRouteParam = (/** @type {any} */ value) => {
  */
 function TeamWizardName({ navigation, route }) {
   const { t } = useTranslation();
+  // Suggestions de noms du handoff (chips « choisir = toucher », tunnel 1/8).
+  const NAME_SUGGESTIONS = [
+    t('teamWizardName.suggestions.seniorsA', 'Seniors A'),
+    t('teamWizardName.suggestions.u15Girls', 'U15 Filles'),
+    t('teamWizardName.suggestions.mixedLeisure', 'Loisir mixte'),
+  ];
   const {
     Alignments, Colors, Fonts, Spaces,
   } = useTheme();
@@ -160,7 +164,7 @@ function TeamWizardName({ navigation, route }) {
         return;
       }
       const message = error?.response?.data?.error?.message
-        || 'Impossible de reprendre cette équipe pour le moment.';
+        || t('teamWizardName.claim.error', 'Impossible de reprendre cette équipe pour le moment.');
       Alert.alert(t('common.error', 'Erreur'), message);
     },
     onSuccess: async (/** @type {any} */ _result, /** @type {string} */ teamDocumentId) => {
@@ -176,7 +180,14 @@ function TeamWizardName({ navigation, route }) {
       );
       Alert.alert(
         t('common.success', 'C\'est fait !'),
-        `Tu es maintenant l'entraîneur·e de ${claimedTeam?.name || 'cette équipe'}.`,
+        t(
+          'teamWizardName.claim.success',
+          "Tu es maintenant l'entraîneur·e de {{team}}.",
+          {
+            team: claimedTeam?.name || t('teamWizardName.claim.teamFallback', 'cette équipe'),
+            ...SANS_ECHAPPEMENT,
+          },
+        ),
       );
       goToTeamDetails(teamDocumentId);
     },
@@ -328,7 +339,7 @@ function TeamWizardName({ navigation, route }) {
         ) : null}
         {/* L40 — si la personne part d'ici acheter, elle revient ICI. */}
         <SubscriptionQuotaBanner
-          label="Équipes"
+          label={t('teamWizardName.quotaLabel', 'Équipes')}
           quotaType="FREE_TEAM"
           resumeRouteName={RouteNames.TeamStack}
           resumeRouteParams={{ screen: RouteNames.TeamWizardName }}
@@ -391,11 +402,13 @@ function TeamWizardName({ navigation, route }) {
         <View style={[Spaces.gap[16], Spaces.paddingBottom[16]]}>
           <View style={[Spaces.gap[4]]}>
             <Text style={[Fonts.h3Bold, Fonts.neutral00]}>
-              Ton club a déjà des équipes
+              {t('teamWizardName.chooser.title', 'Ton club a déjà des équipes')}
             </Text>
             <Text style={[Fonts.p2, Fonts.neutral300]}>
-              Rejoins une équipe existante, reprends-en une sans entraîneur·e, ou crée
-              la tienne.
+              {t(
+                'teamWizardName.chooser.body',
+                'Rejoins une équipe existante, reprends-en une sans entraîneur·e, ou crée la tienne.', // eslint-disable-line max-len
+              )}
             </Text>
           </View>
 
@@ -412,12 +425,16 @@ function TeamWizardName({ navigation, route }) {
               let subtitle;
               let tag;
               if (isMine) {
-                subtitle = 'Tu y es déjà — ouvrir';
+                subtitle = t('teamWizardName.chooser.alreadyMember', 'Tu y es déjà — ouvrir');
               } else if (isOrphan) {
-                subtitle = 'Sans entraîneur·e — reprends-la';
-                tag = 'Reprendre';
+                subtitle = t('teamWizardName.chooser.orphan', 'Sans entraîneur·e — reprends-la');
+                tag = t('teamWizardName.chooser.claimTag', 'Reprendre');
               } else {
-                subtitle = `${activeTrainers.length} entraîneur·e${activeTrainers.length > 1 ? 's' : ''}`;
+                subtitle = t('teamWizardName.chooser.trainerCount', {
+                  count: activeTrainers.length,
+                  defaultValue_one: '{{count}} entraîneur·e',
+                  defaultValue_other: '{{count}} entraîneur·es',
+                });
               }
               return (
                 <WizardOptionCard
@@ -433,9 +450,12 @@ function TeamWizardName({ navigation, route }) {
                       goToTeamDetails(team?.documentId);
                     }
                   }}
-                  subtitle={isClaimingThis ? 'Reprise en cours…' : subtitle}
+                  subtitle={isClaimingThis ? t(
+                    'teamWizardName.chooser.claiming',
+                    'Reprise en cours…',
+                  ) : subtitle}
                   tag={tag}
-                  title={team?.name || 'Équipe'}
+                  title={team?.name || t('teamWizardName.chooser.teamFallback', 'Équipe')}
                 />
               );
             })}
@@ -443,7 +463,7 @@ function TeamWizardName({ navigation, route }) {
 
           <Button
             onPress={() => setIsChooserDismissed(true)}
-            title="Créer une nouvelle équipe"
+            title={t('teamWizardName.chooser.createNew', 'Créer une nouvelle équipe')}
             variant="Primary"
           />
         </View>

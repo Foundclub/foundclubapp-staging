@@ -8,12 +8,13 @@
  * afficherait une phrase anglaise a un dirigeant francais. Un refus qu'on ne
  * comprend pas est un refus muet : c'est le defaut AB05 sous un autre costume.
  *
- * 🧱 MODULE 100 % PUR — aucun import, aucun reseau, aucun `client`. C'est
+ * 🧱 MODULE 100 % PUR — aucun reseau, aucun `client` (seul import : i18next, I18N-4). C'est
  * DELIBERE : `app/.env` n'existe dans AUCUN worktree, donc tout module qui
  * atteint `@/services/client` fait tomber la suite ENTIERE de l'ecran qui
  * l'importe (piege paye aux lots AD01 et BLOQUER). Les fonctions pures vivent
  * ici ; les appels reseau restent dans `services/`.
  */
+import i18next from 'i18next';
 
 /**
  * Les refus du serveur, mot pour mot, tels qu'ils arrivent dans
@@ -39,16 +40,36 @@ const SERVER_REFUSALS = {
 /**
  * Les phrases francaises, par cause. Le repli est ecrit ici plutot qu'a
  * l'ecran pour qu'un seul endroit porte les mots.
- * @type {Record<string, string>}
+ * @type {() => Record<string, string>}
  */
-const FRENCH_BY_CAUSE = {
-  'invitation.alreadyInvited': 'Cette personne a déjà une invitation en attente pour cette équipe.',
-  'invitation.alreadyMember': 'Cette personne fait déjà partie de l\'équipe.',
-  'invitation.forbidden': 'Tu n\'as pas le droit d\'inviter dans cette équipe.',
-  'invitation.incomplete': 'Informations incomplètes : impossible d\'envoyer l\'invitation.',
-  'invitation.unknownTeam': 'Cette équipe est introuvable.',
-  'invitation.unknownUser': 'Ce profil est introuvable. Il a peut-être été supprimé.',
-};
+// I18N-4 : une fonction, lue a chaque refus -- une table calculee au chargement du module
+// resterait dans la langue du demarrage.
+const messageByCause = () => ({
+  'invitation.alreadyInvited': i18next.t(
+    'teamInvitation.refusal.alreadyInvited',
+    'Cette personne a déjà une invitation en attente pour cette équipe.',
+  ),
+  'invitation.alreadyMember': i18next.t(
+    'teamInvitation.refusal.alreadyMember',
+    "Cette personne fait déjà partie de l'équipe.",
+  ),
+  'invitation.forbidden': i18next.t(
+    'teamInvitation.refusal.forbidden',
+    "Tu n'as pas le droit d'inviter dans cette équipe.",
+  ),
+  'invitation.incomplete': i18next.t(
+    'teamInvitation.refusal.incomplete',
+    "Informations incomplètes : impossible d'envoyer l'invitation.",
+  ),
+  'invitation.unknownTeam': i18next.t(
+    'teamInvitation.refusal.unknownTeam',
+    'Cette équipe est introuvable.',
+  ),
+  'invitation.unknownUser': i18next.t(
+    'teamInvitation.refusal.unknownUser',
+    'Ce profil est introuvable. Il a peut-être été supprimé.',
+  ),
+});
 
 /** Le dernier mot quand rien n'est reconnu. Jamais un ecran muet. */
 export const TEAM_INVITATION_FALLBACK_MESSAGE = 'Impossible d\'envoyer l\'invitation'
@@ -86,7 +107,11 @@ export const resolveTeamInvitationRefusalCause = (error) => {
  */
 export const describeTeamInvitationRefusal = (error) => {
   const cause = resolveTeamInvitationRefusalCause(error);
-  return FRENCH_BY_CAUSE[cause] || TEAM_INVITATION_FALLBACK_MESSAGE;
+  return messageByCause()[cause]
+    || i18next.t(
+      'teamInvitation.refusal.fallback',
+      "Impossible d'envoyer l'invitation pour le moment.",
+    );
 };
 
 /**
@@ -102,7 +127,10 @@ export const readPersonId = (person) => String(person?.documentId || '').trim();
  * @param {string} [fallback] - ce qu'on ecrit quand on ne sait pas.
  * @returns {string} - le nom a afficher.
  */
-export const describePersonName = (person, fallback = 'Cette personne') => (
+export const describePersonName = (person, fallback = i18next.t(
+  'teamInvitation.thisPerson',
+  'Cette personne',
+)) => (
   [person?.firstname, person?.lastname].filter(Boolean).join(' ').trim()
   || String(person?.username || '').trim()
   || fallback

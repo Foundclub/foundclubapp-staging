@@ -1,9 +1,11 @@
 import DateTimePicker from '@react-native-community/datetimepicker';
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Modal, Platform, Text, TouchableOpacity, View,
 } from 'react-native';
 
+import localeDesFormats from '@/theme/strings/localeDesFormats';
 import useTheme from '@/theme/themeContext';
 
 /**
@@ -38,6 +40,7 @@ function TimePickerInput({
   const {
     Alignments, ApplicationStyle, Colors, Fonts, Spaces,
   } = useTheme();
+  const { t } = useTranslation();
   const [showPicker, setShowPicker] = useState(false);
 
   // Parse the value to a Date object for the picker
@@ -139,7 +142,9 @@ function TimePickerInput({
               ]}
               >
                 <TouchableOpacity onPress={() => setShowPicker(false)} style={{ flex: 1 }}>
-                  <Text style={[Fonts.p1, { color: Colors.neutral300 }]}>Annuler</Text>
+                  <Text style={[Fonts.p1, { color: Colors.neutral300 }]}>
+                    {t('timePickerInput.cancel', 'Annuler')}
+                  </Text>
                 </TouchableOpacity>
                 <Text style={[Fonts.p1Bold, Fonts.neutral00, { flex: 1, textAlign: 'center' }]}>
                   {label}
@@ -155,7 +160,7 @@ function TimePickerInput({
 
               <DateTimePicker
                 display="spinner"
-                locale="fr-FR"
+                locale={localeDesFormats()}
                 minuteInterval={5}
                 mode="time"
                 onChange={handleChange}

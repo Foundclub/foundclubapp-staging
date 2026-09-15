@@ -9,6 +9,8 @@
  *     déclencher un vrai téléchargement navigateur (PDF A4 / PNG story).
  */
 
+import i18next from 'i18next';
+
 import { getAuthTokens } from '@/domains/auth/authUseCases';
 import { getApiBaseUrl } from '@/config/runtimeUrls';
 import { FILE_SHARE_FAILURES } from '@/platform/share/fileShareContract';
@@ -30,7 +32,10 @@ const buildRenderBody = ({
 
 const blobToBase64 = (blob) => new Promise((resolve, reject) => {
   const reader = new FileReader();
-  reader.onerror = () => reject(new Error('Lecture du visuel impossible.'));
+  reader.onerror = () => reject(new Error(i18next.t(
+    'visualRender.errors.readFailed',
+    'Lecture du visuel impossible.',
+  )));
   reader.onloadend = () => {
     const result = String(reader.result || '');
     const commaIndex = result.indexOf(',');

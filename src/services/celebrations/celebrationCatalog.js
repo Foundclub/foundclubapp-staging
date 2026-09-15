@@ -1,4 +1,8 @@
 // @ts-nocheck
+import i18next from 'i18next';
+
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
+
 import { NOTIFICATION_TYPES } from '@/utils/notifications/notificationTypes';
 
 const DEFAULT_DURATION_MS = 3200;
@@ -9,25 +13,30 @@ const toLabel = (value, fallback) => {
   return normalized || fallback;
 };
 
-const pluralize = (count, singular, plural = null) => (
-  `${count} ${count > 1 ? (plural || `${singular}s`) : singular}`
-);
-
-const buildStreakBody = (context, singular, plural) => {
+// I18N-4 : la phrase de serie est un pluriel i18next, fourni par chaque entree (le
+// singulier / pluriel manuel `pluralize` accordait deja a `n > 1`, comme i18next en francais).
+const buildStreakBody = (context, phrase) => {
   const milestone = Number(context?.milestone || 0);
   if (!Number.isFinite(milestone) || milestone <= 0) {
     return '';
   }
-  return `Tu enchaines ${pluralize(milestone, singular, plural)}. Continue comme ca.`;
+  return phrase(milestone);
 };
 
 /** @type {Record<string, any>} */
 export const celebrationCatalog = {
   attendance_on_time_streak: {
     buildCopy: (context) => ({
-      body: buildStreakBody(context, 'entrainement', 'entrainements'),
-      eyebrow: 'ASSIDUITE',
-      title: 'Série sans retard',
+      body: buildStreakBody(context, (count) => i18next.t(
+        'celebrationCatalog.attendanceOnTimeStreak.body',
+        {
+          count,
+          defaultValue_one: 'Tu enchaines {{count}} entrainement. Continue comme ca.',
+          defaultValue_other: 'Tu enchaines {{count}} entrainements. Continue comme ca.',
+        },
+      )),
+      eyebrow: i18next.t('celebrationCatalog.eyebrows.attendance', 'ASSIDUITE'),
+      title: i18next.t('celebrationCatalog.attendanceOnTimeStreak.title', 'Série sans retard'),
     }),
     category: 'attendance',
     channels: 'both',
@@ -39,9 +48,16 @@ export const celebrationCatalog = {
   },
   attendance_presence_streak: {
     buildCopy: (context) => ({
-      body: buildStreakBody(context, 'presence', 'presences'),
-      eyebrow: 'ASSIDUITE',
-      title: 'Série de présences',
+      body: buildStreakBody(context, (count) => i18next.t(
+        'celebrationCatalog.attendancePresenceStreak.body',
+        {
+          count,
+          defaultValue_one: 'Tu enchaines {{count}} presence. Continue comme ca.',
+          defaultValue_other: 'Tu enchaines {{count}} presences. Continue comme ca.',
+        },
+      )),
+      eyebrow: i18next.t('celebrationCatalog.eyebrows.attendance', 'ASSIDUITE'),
+      title: i18next.t('celebrationCatalog.attendancePresenceStreak.title', 'Série de présences'),
     }),
     category: 'attendance',
     channels: 'both',
@@ -54,9 +70,15 @@ export const celebrationCatalog = {
   celebration_generic: {
     buildCopy: (context) => ({
       actionLabel: context?.actionLabel,
-      body: toLabel(context?.body, 'Une nouvelle étape est franchie.'),
-      eyebrow: toLabel(context?.eyebrow, 'FELICITATIONS'),
-      title: toLabel(context?.title, 'Bravo'),
+      body: toLabel(context?.body, i18next.t(
+        'celebrationCatalog.generic.body',
+        'Une nouvelle étape est franchie.',
+      )),
+      eyebrow: toLabel(context?.eyebrow, i18next.t(
+        'celebrationCatalog.generic.eyebrow',
+        'FELICITATIONS',
+      )),
+      title: toLabel(context?.title, i18next.t('celebrationCatalog.generic.title', 'Bravo')),
     }),
     category: 'celebration',
     channels: 'both',
@@ -84,10 +106,23 @@ export const celebrationCatalog = {
       const licenseeCount = Number(context?.licenseeCount || 0);
       return {
         body: remaining > 0 && licenseeCount > 0
-          ? `${toLabel(context?.clubName, 'Ton club')} n'a plus que ${pluralize(remaining, 'place')} sur les ${licenseeCount} licenciés de son abonnement.`
+          ? i18next.t('celebrationCatalog.clubLicenseeQuotaApproaching.body', {
+            club: toLabel(
+              context?.clubName,
+              i18next.t('celebrationCatalog.fallbacks.yourClubCap', 'Ton club'),
+            ),
+            count: remaining,
+            defaultValue_one: "{{club}} n'a plus que {{count}} place sur les {{total}} licenciés de son abonnement.", // eslint-disable-line max-len
+            defaultValue_other: "{{club}} n'a plus que {{count}} places sur les {{total}} licenciés de son abonnement.", // eslint-disable-line max-len
+            total: licenseeCount,
+            ...SANS_ECHAPPEMENT,
+          })
           : '',
-        eyebrow: 'ABONNEMENT',
-        title: 'Bientôt au complet',
+        eyebrow: i18next.t('celebrationCatalog.eyebrows.subscription', 'ABONNEMENT'),
+        title: i18next.t(
+          'celebrationCatalog.clubLicenseeQuotaApproaching.title',
+          'Bientôt au complet',
+        ),
       };
     },
     category: 'club',
@@ -103,10 +138,24 @@ export const celebrationCatalog = {
       const licenseeCount = Number(context?.licenseeCount || 0);
       return {
         body: licenseeCount > 0
-          ? `${toLabel(context?.clubName, 'Ton club')} a atteint ses ${licenseeCount} licenciés. Les nouvelles adhésions sont en pause.`
+          ? i18next.t(
+            'celebrationCatalog.clubLicenseeQuotaReached.body',
+            '{{club}} a atteint ses {{total}} licenciés. Les nouvelles adhésions sont en pause.',
+            {
+              club: toLabel(
+                context?.clubName,
+                i18next.t('celebrationCatalog.fallbacks.yourClubCap', 'Ton club'),
+              ),
+              total: licenseeCount,
+              ...SANS_ECHAPPEMENT,
+            },
+          )
           : '',
-        eyebrow: 'ABONNEMENT',
-        title: 'Plafond de licenciés atteint',
+        eyebrow: i18next.t('celebrationCatalog.eyebrows.subscription', 'ABONNEMENT'),
+        title: i18next.t(
+          'celebrationCatalog.clubLicenseeQuotaReached.title',
+          'Plafond de licenciés atteint',
+        ),
       };
     },
     category: 'club',
@@ -121,9 +170,20 @@ export const celebrationCatalog = {
   },
   club_member_milestone: {
     buildCopy: (context) => ({
-      body: `${toLabel(context?.clubName, 'Ton club')} atteint ${Number(context?.milestone || 0) || 0} membres.`,
+      body: i18next.t(
+        'celebrationCatalog.clubMemberMilestone.body',
+        '{{club}} atteint {{total}} membres.',
+        {
+          club: toLabel(
+            context?.clubName,
+            i18next.t('celebrationCatalog.fallbacks.yourClubCap', 'Ton club'),
+          ),
+          total: Number(context?.milestone || 0) || 0,
+          ...SANS_ECHAPPEMENT,
+        },
+      ),
       eyebrow: 'CLUB',
-      title: 'Nouveau cap franchi',
+      title: i18next.t('celebrationCatalog.clubMemberMilestone.title', 'Nouveau cap franchi'),
     }),
     category: 'club',
     channels: 'both',
@@ -135,9 +195,19 @@ export const celebrationCatalog = {
   },
   club_membership_confirmed: {
     buildCopy: (context) => ({
-      body: `Bienvenue dans ${toLabel(context?.clubName, 'ton club')}.`,
+      body: i18next.t(
+        'celebrationCatalog.clubMembershipConfirmed.body',
+        'Bienvenue dans {{club}}.',
+        {
+          club: toLabel(
+            context?.clubName,
+            i18next.t('celebrationCatalog.fallbacks.yourClub', 'ton club'),
+          ),
+          ...SANS_ECHAPPEMENT,
+        },
+      ),
       eyebrow: 'CLUB',
-      title: 'Adhésion confirmée',
+      title: i18next.t('celebrationCatalog.clubMembershipConfirmed.title', 'Adhésion confirmée'),
     }),
     category: 'club',
     channels: 'both',
@@ -149,9 +219,19 @@ export const celebrationCatalog = {
   },
   club_membership_request_sent: {
     buildCopy: (context) => ({
-      body: `Ta demande pour rejoindre ${toLabel(context?.clubName, 'ce club')} a bien été prise en compte.`,
+      body: i18next.t(
+        'celebrationCatalog.clubMembershipRequestSent.body',
+        'Ta demande pour rejoindre {{club}} a bien été prise en compte.',
+        {
+          club: toLabel(
+            context?.clubName,
+            i18next.t('celebrationCatalog.fallbacks.thisClub', 'ce club'),
+          ),
+          ...SANS_ECHAPPEMENT,
+        },
+      ),
       eyebrow: 'CLUB',
-      title: 'Demande envoyée',
+      title: i18next.t('celebrationCatalog.clubMembershipRequestSent.title', 'Demande envoyée'),
     }),
     category: 'club',
     channels: 'local_banner',
@@ -163,9 +243,16 @@ export const celebrationCatalog = {
   },
   event_batch_created: {
     buildCopy: (context) => ({
-      body: `${Number(context?.eventCount || 0) || 1} événements sont maintenant enregistres.`,
-      eyebrow: 'EVENEMENTS',
-      title: 'Événements créés',
+      body: i18next.t(
+        'celebrationCatalog.eventBatchCreated.body',
+        '{{total}} événements sont maintenant enregistres.',
+        {
+          total: Number(context?.eventCount || 0) || 1,
+          ...SANS_ECHAPPEMENT,
+        },
+      ),
+      eyebrow: i18next.t('celebrationCatalog.eyebrows.events', 'EVENEMENTS'),
+      title: i18next.t('celebrationCatalog.eventBatchCreated.title', 'Événements créés'),
     }),
     category: 'event',
     channels: 'local_banner',
@@ -177,9 +264,22 @@ export const celebrationCatalog = {
   },
   event_convocation_published: {
     buildCopy: (context) => ({
-      body: `La composition d'équipes pour ${toLabel(context?.teamName, 'ton équipe')} est prête.`,
-      eyebrow: 'COMPOSITION',
-      title: "Composition d'équipes publiée",
+      body: i18next.t(
+        'celebrationCatalog.eventConvocationPublished.body',
+        "La composition d'équipes pour {{team}} est prête.",
+        {
+          team: toLabel(
+            context?.teamName,
+            i18next.t('celebrationCatalog.fallbacks.yourTeam', 'ton équipe'),
+          ),
+          ...SANS_ECHAPPEMENT,
+        },
+      ),
+      eyebrow: i18next.t('celebrationCatalog.eyebrows.lineup', 'COMPOSITION'),
+      title: i18next.t(
+        'celebrationCatalog.eventConvocationPublished.title',
+        "Composition d'équipes publiée",
+      ),
     }),
     category: 'event',
     channels: 'both',
@@ -191,9 +291,19 @@ export const celebrationCatalog = {
   },
   event_created: {
     buildCopy: (context) => ({
-      body: `${toLabel(context?.eventName, 'Ton événement')} est bien enregistre.`,
-      eyebrow: 'EVENEMENT',
-      title: 'Événement crée',
+      body: i18next.t(
+        'celebrationCatalog.eventCreated.body',
+        '{{event}} est bien enregistre.',
+        {
+          event: toLabel(
+            context?.eventName,
+            i18next.t('celebrationCatalog.fallbacks.yourEventCap', 'Ton événement'),
+          ),
+          ...SANS_ECHAPPEMENT,
+        },
+      ),
+      eyebrow: i18next.t('celebrationCatalog.eyebrows.event', 'EVENEMENT'),
+      title: i18next.t('celebrationCatalog.eventCreated.title', 'Événement crée'),
     }),
     category: 'event',
     channels: 'local_banner',
@@ -205,9 +315,26 @@ export const celebrationCatalog = {
   },
   event_external_team_accepted: {
     buildCopy: (context) => ({
-      body: `${toLabel(context?.teamName, 'Une équipe externe')} rejoint ${toLabel(context?.eventName, "l'evenement")}.`,
+      body: i18next.t(
+        'celebrationCatalog.eventExternalTeamAccepted.body',
+        '{{team}} rejoint {{event}}.',
+        {
+          event: toLabel(
+            context?.eventName,
+            i18next.t('celebrationCatalog.fallbacks.theEvent', "l'evenement"),
+          ),
+          team: toLabel(
+            context?.teamName,
+            i18next.t('celebrationCatalog.fallbacks.externalTeamCap', 'Une équipe externe'),
+          ),
+          ...SANS_ECHAPPEMENT,
+        },
+      ),
       eyebrow: 'INVITATION',
-      title: 'Équipe externe confirmée',
+      title: i18next.t(
+        'celebrationCatalog.eventExternalTeamAccepted.title',
+        'Équipe externe confirmée',
+      ),
     }),
     category: 'event',
     channels: 'both',
@@ -219,9 +346,22 @@ export const celebrationCatalog = {
   },
   event_participation_confirmed: {
     buildCopy: (context) => ({
-      body: `Tu es bien confirmé pour ${toLabel(context?.eventName, "l'evenement")}.`,
-      eyebrow: 'PARTICIPATION',
-      title: 'Participation confirmée',
+      body: i18next.t(
+        'celebrationCatalog.eventParticipationConfirmed.body',
+        'Tu es bien confirmé pour {{event}}.',
+        {
+          event: toLabel(
+            context?.eventName,
+            i18next.t('celebrationCatalog.fallbacks.theEvent', "l'evenement"),
+          ),
+          ...SANS_ECHAPPEMENT,
+        },
+      ),
+      eyebrow: i18next.t('celebrationCatalog.eyebrows.participation', 'PARTICIPATION'),
+      title: i18next.t(
+        'celebrationCatalog.eventParticipationConfirmed.title',
+        'Participation confirmée',
+      ),
     }),
     category: 'event',
     channels: 'both',
@@ -233,9 +373,22 @@ export const celebrationCatalog = {
   },
   event_participation_request_sent: {
     buildCopy: (context) => ({
-      body: `Ta demande pour ${toLabel(context?.eventName, 'cet événement')} a bien été envoyée.`,
-      eyebrow: 'PARTICIPATION',
-      title: 'Participation envoyée',
+      body: i18next.t(
+        'celebrationCatalog.eventParticipationRequestSent.body',
+        'Ta demande pour {{event}} a bien été envoyée.',
+        {
+          event: toLabel(
+            context?.eventName,
+            i18next.t('celebrationCatalog.fallbacks.thisEvent', 'cet événement'),
+          ),
+          ...SANS_ECHAPPEMENT,
+        },
+      ),
+      eyebrow: i18next.t('celebrationCatalog.eyebrows.participation', 'PARTICIPATION'),
+      title: i18next.t(
+        'celebrationCatalog.eventParticipationRequestSent.title',
+        'Participation envoyée',
+      ),
     }),
     category: 'event',
     channels: 'local_banner',
@@ -247,9 +400,19 @@ export const celebrationCatalog = {
   },
   event_published: {
     buildCopy: (context) => ({
-      body: `${toLabel(context?.eventName, 'Ton événement')} est maintenant visible pour les joueurs concernés.`,
-      eyebrow: 'EVENEMENT',
-      title: 'Événement publie',
+      body: i18next.t(
+        'celebrationCatalog.eventPublished.body',
+        '{{event}} est maintenant visible pour les joueurs concernés.',
+        {
+          event: toLabel(
+            context?.eventName,
+            i18next.t('celebrationCatalog.fallbacks.yourEventCap', 'Ton événement'),
+          ),
+          ...SANS_ECHAPPEMENT,
+        },
+      ),
+      eyebrow: i18next.t('celebrationCatalog.eyebrows.event', 'EVENEMENT'),
+      title: i18next.t('celebrationCatalog.eventPublished.title', 'Événement publie'),
     }),
     category: 'event',
     channels: 'both',
@@ -261,9 +424,23 @@ export const celebrationCatalog = {
   },
   event_responses_complete: {
     buildCopy: (context) => ({
-      body: `Tous les joueurs de ${toLabel(context?.teamName, 'cette équipe')} ont répondu pour ${toLabel(context?.eventName, "l'evenement")}.`,
-      eyebrow: 'CONVOCATION',
-      title: 'Réponses completes',
+      body: i18next.t(
+        'celebrationCatalog.eventResponsesComplete.body',
+        'Tous les joueurs de {{team}} ont répondu pour {{event}}.',
+        {
+          event: toLabel(
+            context?.eventName,
+            i18next.t('celebrationCatalog.fallbacks.theEvent', "l'evenement"),
+          ),
+          team: toLabel(
+            context?.teamName,
+            i18next.t('celebrationCatalog.fallbacks.thisTeam', 'cette équipe'),
+          ),
+          ...SANS_ECHAPPEMENT,
+        },
+      ),
+      eyebrow: i18next.t('celebrationCatalog.eyebrows.callUp', 'CONVOCATION'),
+      title: i18next.t('celebrationCatalog.eventResponsesComplete.title', 'Réponses completes'),
     }),
     category: 'event',
     channels: 'both',
@@ -275,9 +452,19 @@ export const celebrationCatalog = {
   },
   event_rsvp_present: {
     buildCopy: (context) => ({
-      body: `Ta réponse pour ${toLabel(context?.eventName, "l'evenement")} a bien été enregistrée.`,
-      eyebrow: 'PRESENCE',
-      title: 'Présence confirmée',
+      body: i18next.t(
+        'celebrationCatalog.eventRsvpPresent.body',
+        'Ta réponse pour {{event}} a bien été enregistrée.',
+        {
+          event: toLabel(
+            context?.eventName,
+            i18next.t('celebrationCatalog.fallbacks.theEvent', "l'evenement"),
+          ),
+          ...SANS_ECHAPPEMENT,
+        },
+      ),
+      eyebrow: i18next.t('celebrationCatalog.eyebrows.presence', 'PRESENCE'),
+      title: i18next.t('celebrationCatalog.eventRsvpPresent.title', 'Présence confirmée'),
     }),
     category: 'event',
     channels: 'local_banner',
@@ -289,9 +476,19 @@ export const celebrationCatalog = {
   },
   event_task_assignment_validated: {
     buildCopy: (context) => ({
-      body: `Tu es confirmé sur ${toLabel(context?.taskTitle, 'ta mission du jour')}.`,
-      eyebrow: 'ORGANISATION',
-      title: 'Tâche validée',
+      body: i18next.t(
+        'celebrationCatalog.eventTaskAssignmentValidated.body',
+        'Tu es confirmé sur {{task}}.',
+        {
+          task: toLabel(
+            context?.taskTitle,
+            i18next.t('celebrationCatalog.fallbacks.yourTaskToday', 'ta mission du jour'),
+          ),
+          ...SANS_ECHAPPEMENT,
+        },
+      ),
+      eyebrow: i18next.t('celebrationCatalog.eyebrows.organisation', 'ORGANISATION'),
+      title: i18next.t('celebrationCatalog.eventTaskAssignmentValidated.title', 'Tâche validée'),
     }),
     category: 'event_task',
     channels: 'both',
@@ -303,9 +500,18 @@ export const celebrationCatalog = {
   },
   event_task_members_assigned: {
     buildCopy: (context) => ({
-      body: `${pluralize(Number(context?.count || 0), 'membre')} assigne(s) a ${toLabel(context?.taskTitle, 'cette tâche')}.`,
-      eyebrow: 'ORGANISATION',
-      title: 'Affectation terminée',
+      body: i18next.t('celebrationCatalog.eventTaskMembersAssigned.body', {
+        count: Number(context?.count || 0),
+        defaultValue_one: '{{count}} membre assigne(s) a {{task}}.',
+        defaultValue_other: '{{count}} membres assigne(s) a {{task}}.',
+        task: toLabel(
+          context?.taskTitle,
+          i18next.t('celebrationCatalog.fallbacks.thisTask', 'cette tâche'),
+        ),
+        ...SANS_ECHAPPEMENT,
+      }),
+      eyebrow: i18next.t('celebrationCatalog.eyebrows.organisation', 'ORGANISATION'),
+      title: i18next.t('celebrationCatalog.eventTaskMembersAssigned.title', 'Affectation terminée'),
     }),
     category: 'event_task',
     channels: 'local_banner',
@@ -317,9 +523,19 @@ export const celebrationCatalog = {
   },
   event_task_volunteer_sent: {
     buildCopy: (context) => ({
-      body: `Ta proposition pour ${toLabel(context?.taskTitle, 'cette tâche')} a bien été prise en compte.`,
-      eyebrow: 'ORGANISATION',
-      title: 'Volontariat enregistre',
+      body: i18next.t(
+        'celebrationCatalog.eventTaskVolunteerSent.body',
+        'Ta proposition pour {{task}} a bien été prise en compte.',
+        {
+          task: toLabel(
+            context?.taskTitle,
+            i18next.t('celebrationCatalog.fallbacks.thisTask', 'cette tâche'),
+          ),
+          ...SANS_ECHAPPEMENT,
+        },
+      ),
+      eyebrow: i18next.t('celebrationCatalog.eyebrows.organisation', 'ORGANISATION'),
+      title: i18next.t('celebrationCatalog.eventTaskVolunteerSent.title', 'Volontariat enregistre'),
     }),
     category: 'event_task',
     channels: 'local_banner',
@@ -331,9 +547,19 @@ export const celebrationCatalog = {
   },
   event_tasks_covered: {
     buildCopy: (context) => ({
-      body: `Toutes les tâches de ${toLabel(context?.eventName, "l'evenement")} sont maintenant couvertes.`,
-      eyebrow: 'ORGANISATION',
-      title: 'Organisation complète',
+      body: i18next.t(
+        'celebrationCatalog.eventTasksCovered.body',
+        'Toutes les tâches de {{event}} sont maintenant couvertes.',
+        {
+          event: toLabel(
+            context?.eventName,
+            i18next.t('celebrationCatalog.fallbacks.theEvent', "l'evenement"),
+          ),
+          ...SANS_ECHAPPEMENT,
+        },
+      ),
+      eyebrow: i18next.t('celebrationCatalog.eyebrows.organisation', 'ORGANISATION'),
+      title: i18next.t('celebrationCatalog.eventTasksCovered.title', 'Organisation complète'),
     }),
     category: 'event_task',
     channels: 'both',
@@ -345,9 +571,19 @@ export const celebrationCatalog = {
   },
   event_updated: {
     buildCopy: (context) => ({
-      body: `${toLabel(context?.eventName, "L'evenement")} a été mis à jour.`,
-      eyebrow: 'EVENEMENT',
-      title: 'Mise à jour enregistrée',
+      body: i18next.t(
+        'celebrationCatalog.eventUpdated.body',
+        '{{event}} a été mis à jour.',
+        {
+          event: toLabel(
+            context?.eventName,
+            i18next.t('celebrationCatalog.fallbacks.theEventCap', "L'evenement"),
+          ),
+          ...SANS_ECHAPPEMENT,
+        },
+      ),
+      eyebrow: i18next.t('celebrationCatalog.eyebrows.event', 'EVENEMENT'),
+      title: i18next.t('celebrationCatalog.eventUpdated.title', 'Mise à jour enregistrée'),
     }),
     category: 'event',
     channels: 'local_banner',
@@ -359,9 +595,19 @@ export const celebrationCatalog = {
   },
   league_first_victory: {
     buildCopy: (context) => ({
-      body: `${toLabel(context?.teamName, 'Ton équipe')} signe sa première victoire League.`,
+      body: i18next.t(
+        'celebrationCatalog.leagueFirstVictory.body',
+        '{{team}} signe sa première victoire League.',
+        {
+          team: toLabel(
+            context?.teamName,
+            i18next.t('celebrationCatalog.fallbacks.yourTeamCap', 'Ton équipe'),
+          ),
+          ...SANS_ECHAPPEMENT,
+        },
+      ),
       eyebrow: 'LEAGUE',
-      title: 'Première victoire',
+      title: i18next.t('celebrationCatalog.leagueFirstVictory.title', 'Première victoire'),
     }),
     category: 'league',
     channels: 'both',
@@ -373,9 +619,19 @@ export const celebrationCatalog = {
   },
   league_match_found: {
     buildCopy: (context) => ({
-      body: `${toLabel(context?.teamName, 'Ta squad')} a maintenant un adversaire.`,
+      body: i18next.t(
+        'celebrationCatalog.leagueMatchFound.body',
+        '{{team}} a maintenant un adversaire.',
+        {
+          team: toLabel(
+            context?.teamName,
+            i18next.t('celebrationCatalog.fallbacks.yourSquadCap', 'Ta squad'),
+          ),
+          ...SANS_ECHAPPEMENT,
+        },
+      ),
       eyebrow: 'LEAGUE',
-      title: 'Match trouve',
+      title: i18next.t('celebrationCatalog.leagueMatchFound.title', 'Match trouve'),
     }),
     category: 'league',
     channels: 'both',
@@ -387,9 +643,19 @@ export const celebrationCatalog = {
   },
   league_match_validated: {
     buildCopy: (context) => ({
-      body: `Le résultat de ${toLabel(context?.matchLabel || context?.eventName, 'ton match')} est maintenant valide.`,
+      body: i18next.t(
+        'celebrationCatalog.leagueMatchValidated.body',
+        'Le résultat de {{match}} est maintenant valide.',
+        {
+          match: toLabel(
+            context?.matchLabel || context?.eventName,
+            i18next.t('celebrationCatalog.fallbacks.yourMatch', 'ton match'),
+          ),
+          ...SANS_ECHAPPEMENT,
+        },
+      ),
       eyebrow: 'LEAGUE',
-      title: 'Score valide',
+      title: i18next.t('celebrationCatalog.leagueMatchValidated.title', 'Score valide'),
     }),
     category: 'league',
     channels: 'both',
@@ -401,9 +667,19 @@ export const celebrationCatalog = {
   },
   league_proposal_accepted: {
     buildCopy: (context) => ({
-      body: `Le match contre ${toLabel(context?.opponentName, "l'adversaire")} est confirmé.`,
+      body: i18next.t(
+        'celebrationCatalog.leagueProposalAccepted.body',
+        'Le match contre {{opponent}} est confirmé.',
+        {
+          opponent: toLabel(
+            context?.opponentName,
+            i18next.t('celebrationCatalog.fallbacks.theOpponent', "l'adversaire"),
+          ),
+          ...SANS_ECHAPPEMENT,
+        },
+      ),
       eyebrow: 'LEAGUE',
-      title: 'Proposition acceptée',
+      title: i18next.t('celebrationCatalog.leagueProposalAccepted.title', 'Proposition acceptée'),
     }),
     category: 'league',
     channels: 'both',
@@ -415,9 +691,19 @@ export const celebrationCatalog = {
   },
   league_quorum_reached: {
     buildCopy: (context) => ({
-      body: `${toLabel(context?.teamName, 'Ta squad')} à son effectif pour jouer.`,
+      body: i18next.t(
+        'celebrationCatalog.leagueQuorumReached.body',
+        '{{team}} à son effectif pour jouer.',
+        {
+          team: toLabel(
+            context?.teamName,
+            i18next.t('celebrationCatalog.fallbacks.yourSquadCap', 'Ta squad'),
+          ),
+          ...SANS_ECHAPPEMENT,
+        },
+      ),
       eyebrow: 'LEAGUE',
-      title: 'Quorum atteint',
+      title: i18next.t('celebrationCatalog.leagueQuorumReached.title', 'Quorum atteint'),
     }),
     category: 'league',
     channels: 'both',
@@ -429,9 +715,16 @@ export const celebrationCatalog = {
   },
   league_victory_streak: {
     buildCopy: (context) => ({
-      body: buildStreakBody(context, 'victoire', 'victoires'),
+      body: buildStreakBody(context, (count) => i18next.t(
+        'celebrationCatalog.leagueVictoryStreak.body',
+        {
+          count,
+          defaultValue_one: 'Tu enchaines {{count}} victoire. Continue comme ca.',
+          defaultValue_other: 'Tu enchaines {{count}} victoires. Continue comme ca.',
+        },
+      )),
       eyebrow: 'LEAGUE',
-      title: 'Série de victoires',
+      title: i18next.t('celebrationCatalog.leagueVictoryStreak.title', 'Série de victoires'),
     }),
     category: 'league',
     channels: 'both',
@@ -443,9 +736,23 @@ export const celebrationCatalog = {
   },
   league_weekend_win: {
     buildCopy: (context) => ({
-      body: `${toLabel(context?.teamName, 'Ton équipe')} a gagne ce week-end contre ${toLabel(context?.opponentName, "l'adversaire")}.`,
+      body: i18next.t(
+        'celebrationCatalog.leagueWeekendWin.body',
+        '{{team}} a gagne ce week-end contre {{opponent}}.',
+        {
+          opponent: toLabel(
+            context?.opponentName,
+            i18next.t('celebrationCatalog.fallbacks.theOpponent', "l'adversaire"),
+          ),
+          team: toLabel(
+            context?.teamName,
+            i18next.t('celebrationCatalog.fallbacks.yourTeamCap', 'Ton équipe'),
+          ),
+          ...SANS_ECHAPPEMENT,
+        },
+      ),
       eyebrow: 'LEAGUE',
-      title: 'Victoire du week-end',
+      title: i18next.t('celebrationCatalog.leagueWeekendWin.title', 'Victoire du week-end'),
     }),
     category: 'league',
     channels: 'both',
@@ -457,9 +764,12 @@ export const celebrationCatalog = {
   },
   license_available: {
     buildCopy: () => ({
-      body: 'La licence officielle est maintenant disponible dans ton espace.',
-      eyebrow: 'LICENCE',
-      title: 'Licence disponible',
+      body: i18next.t(
+        'celebrationCatalog.licenseAvailable.body',
+        'La licence officielle est maintenant disponible dans ton espace.',
+      ),
+      eyebrow: i18next.t('celebrationCatalog.eyebrows.license', 'LICENCE'),
+      title: i18next.t('celebrationCatalog.licenseAvailable.title', 'Licence disponible'),
     }),
     category: 'license',
     channels: 'both',
@@ -471,9 +781,19 @@ export const celebrationCatalog = {
   },
   license_payment_confirmed: {
     buildCopy: (context) => ({
-      body: `Le paiement de ${toLabel(context?.teamName, 'ta licence')} a bien été confirmé.`,
-      eyebrow: 'LICENCE',
-      title: 'Paiement confirme',
+      body: i18next.t(
+        'celebrationCatalog.licensePaymentConfirmed.body',
+        'Le paiement de {{license}} a bien été confirmé.',
+        {
+          license: toLabel(
+            context?.teamName,
+            i18next.t('celebrationCatalog.fallbacks.yourLicense', 'ta licence'),
+          ),
+          ...SANS_ECHAPPEMENT,
+        },
+      ),
+      eyebrow: i18next.t('celebrationCatalog.eyebrows.license', 'LICENCE'),
+      title: i18next.t('celebrationCatalog.licensePaymentConfirmed.title', 'Paiement confirme'),
     }),
     category: 'license',
     channels: 'both',
@@ -485,9 +805,15 @@ export const celebrationCatalog = {
   },
   official_license_uploaded: {
     buildCopy: () => ({
-      body: 'La copie officielle est disponible pour le membre concerne.',
-      eyebrow: 'LICENCE',
-      title: 'Licence officielle ajoutée',
+      body: i18next.t(
+        'celebrationCatalog.officialLicenseUploaded.body',
+        'La copie officielle est disponible pour le membre concerne.',
+      ),
+      eyebrow: i18next.t('celebrationCatalog.eyebrows.license', 'LICENCE'),
+      title: i18next.t(
+        'celebrationCatalog.officialLicenseUploaded.title',
+        'Licence officielle ajoutée',
+      ),
     }),
     category: 'license',
     channels: 'local_banner',
@@ -499,9 +825,19 @@ export const celebrationCatalog = {
   },
   team_created: {
     buildCopy: (context) => ({
-      body: `${toLabel(context?.teamName, 'Ton équipe')} est prête à accueillir ses membres.`,
-      eyebrow: 'EQUIPE',
-      title: 'Équipe créée',
+      body: i18next.t(
+        'celebrationCatalog.teamCreated.body',
+        '{{team}} est prête à accueillir ses membres.',
+        {
+          team: toLabel(
+            context?.teamName,
+            i18next.t('celebrationCatalog.fallbacks.yourTeamCap', 'Ton équipe'),
+          ),
+          ...SANS_ECHAPPEMENT,
+        },
+      ),
+      eyebrow: i18next.t('celebrationCatalog.eyebrows.team', 'EQUIPE'),
+      title: i18next.t('celebrationCatalog.teamCreated.title', 'Équipe créée'),
     }),
     category: 'team',
     channels: 'local_banner',
@@ -513,9 +849,19 @@ export const celebrationCatalog = {
   },
   team_membership_confirmed: {
     buildCopy: (context) => ({
-      body: `Tu fais maintenant partie de ${toLabel(context?.teamName, 'ton équipe')}.`,
-      eyebrow: 'EQUIPE',
-      title: 'Adhésion confirmée',
+      body: i18next.t(
+        'celebrationCatalog.teamMembershipConfirmed.body',
+        'Tu fais maintenant partie de {{team}}.',
+        {
+          team: toLabel(
+            context?.teamName,
+            i18next.t('celebrationCatalog.fallbacks.yourTeam', 'ton équipe'),
+          ),
+          ...SANS_ECHAPPEMENT,
+        },
+      ),
+      eyebrow: i18next.t('celebrationCatalog.eyebrows.team', 'EQUIPE'),
+      title: i18next.t('celebrationCatalog.teamMembershipConfirmed.title', 'Adhésion confirmée'),
     }),
     category: 'team',
     channels: 'both',
@@ -527,9 +873,19 @@ export const celebrationCatalog = {
   },
   team_membership_request_sent: {
     buildCopy: (context) => ({
-      body: `Ta demande pour rejoindre ${toLabel(context?.teamName, 'cette équipe')} a bien été envoyée.`,
-      eyebrow: 'EQUIPE',
-      title: 'Demande envoyée',
+      body: i18next.t(
+        'celebrationCatalog.teamMembershipRequestSent.body',
+        'Ta demande pour rejoindre {{team}} a bien été envoyée.',
+        {
+          team: toLabel(
+            context?.teamName,
+            i18next.t('celebrationCatalog.fallbacks.thisTeam', 'cette équipe'),
+          ),
+          ...SANS_ECHAPPEMENT,
+        },
+      ),
+      eyebrow: i18next.t('celebrationCatalog.eyebrows.team', 'EQUIPE'),
+      title: i18next.t('celebrationCatalog.teamMembershipRequestSent.title', 'Demande envoyée'),
     }),
     category: 'team',
     channels: 'local_banner',

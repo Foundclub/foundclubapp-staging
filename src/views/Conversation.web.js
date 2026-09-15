@@ -1,4 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
+import i18next from 'i18next';
 import {
   useCallback,
   useEffect,
@@ -57,7 +58,10 @@ const formatDateTime = (value, options = {}) => {
   if (!value) return ''
   const date = new Date(value)
   if (Number.isNaN(date.getTime())) return ''
-  return date.toLocaleString('fr-FR', options)
+  // ponytail: meme regle que localeDesFormats() -- un import de plus dans ce fichier aux imports
+  // entremeles de constantes ajoutait une erreur import/first ou perfectionist ;
+  // sortie : ranger les imports.
+  return date.toLocaleString(i18next.language === 'en' ? 'en-GB' : 'fr-FR', options)
 }
 
 // @ts-ignore: FIXME: Baseline TS regression
@@ -172,7 +176,10 @@ const buildEventShareComposition = (event) => {
 }
 
 // @ts-ignore: FIXME: Baseline TS regression
-const getErrorMessage = (error, fallback) => String(error?.message || fallback || 'Une erreur est survenue.')
+const getErrorMessage = (error, fallback) => String(error?.message || fallback || i18next.t(
+  'conversation.banner.errorFallback',
+  'Une erreur est survenue.',
+))
   .trim()
 
 // @ts-ignore: FIXME: Baseline TS regression
@@ -262,10 +269,16 @@ function Conversation({ navigation, route }) {
   const reportMessageMutation = useMutation({
     mutationFn: createMessageReport,
     onError: (error) => {
-      window.alert(getErrorMessage(error, 'Impossible de signaler ce message pour le moment.'))
+      window.alert(getErrorMessage(error, i18next.t(
+        'conversation.web.report.error',
+        'Impossible de signaler ce message pour le moment.',
+      )))
     },
     onSuccess: () => {
-      window.alert('Signalement envoyé. Merci, notre équipe va vérifier ce message.')
+      window.alert(i18next.t(
+        'conversation.web.report.sent',
+        'Signalement envoyé. Merci, notre équipe va vérifier ce message.',
+      ))
       setReportedMessageId('')
     },
   })
@@ -305,7 +318,10 @@ function Conversation({ navigation, route }) {
   const leagueLegalMatchLabel = useMemo(() => {
     const match = chatData?.league_match
     if (!match) return 'Match FoundClub League'
-    return `${match?.team_a?.name || 'Équipe A'} VS ${match?.team_b?.name || 'Adversaire'}`
+    return `${match?.team_a?.name || i18next.t(
+      'conversation.league.teamA',
+      'Équipe A',
+    )} VS ${match?.team_b?.name || 'Adversaire'}`
   }, [chatData?.league_match])
   const isLeagueConversation = chatData?.type === 'league_match'
   const canUseConversationActions = Boolean(chatId && chatData)
@@ -327,7 +343,10 @@ function Conversation({ navigation, route }) {
   // @ts-ignore: FIXME: Baseline TS regression
   const requestWebLeagueLegalAcceptance = useCallback((scope, targetDocumentId, metadata = {}) => {
     const confirmed = window.confirm(
-      "FoundClub League met en relation les équipes mais n'organise pas la rencontre. Confirmes-tu accepter les risques sportifs, vérifier ton assurance et respecter les règles du lieu ?",
+      i18next.t(
+        'conversation.web.league.legalConfirm',
+        "FoundClub League met en relation les équipes mais n'organise pas la rencontre. Confirmes-tu accepter les risques sportifs, vérifier ton assurance et respecter les règles du lieu ?", // eslint-disable-line max-len
+      ),
     )
     if (!confirmed) return null
     return buildLeagueLegalAcceptancePayload({
@@ -491,7 +510,10 @@ function Conversation({ navigation, route }) {
     try {
       const uploadedFiles = await uploadAttachment(file)
       if (!uploadedFiles.length) {
-        window.alert('Aucune pièce jointe n a pu être televersee.')
+        window.alert(i18next.t(
+          'conversation.web.attachment.noneUploaded',
+          'Aucune pièce jointe n a pu être televersee.',
+        ))
         return
       }
 
@@ -507,7 +529,10 @@ function Conversation({ navigation, route }) {
       })
     } catch (error) {
       // @ts-ignore: FIXME: Baseline TS regression
-      window.alert(error?.message || 'Impossible d envoyer cette pièce jointe.')
+      window.alert(error?.message || i18next.t(
+        'conversation.web.attachment.sendError',
+        'Impossible d envoyer cette pièce jointe.',
+      ))
     } finally {
       setIsUploading(false)
     }
@@ -521,7 +546,10 @@ function Conversation({ navigation, route }) {
       }
     } catch (error) {
       // @ts-ignore: FIXME: Baseline TS regression
-      window.alert(error?.message || 'Impossible de choisir une image.')
+      window.alert(error?.message || i18next.t(
+        'conversation.web.picker.imageError',
+        'Impossible de choisir une image.',
+      ))
     }
   }, [sendPickedFile])
 
@@ -533,7 +561,10 @@ function Conversation({ navigation, route }) {
       }
     } catch (error) {
       // @ts-ignore: FIXME: Baseline TS regression
-      window.alert(error?.message || 'Impossible de choisir un fichier.')
+      window.alert(error?.message || i18next.t(
+        'conversation.web.picker.fileError',
+        'Impossible de choisir un fichier.',
+      ))
     }
   }, [sendPickedFile])
 
@@ -545,7 +576,10 @@ function Conversation({ navigation, route }) {
     try {
       const uploadedFiles = await uploadAttachment(voiceNote.file)
       if (!uploadedFiles.length) {
-        window.alert('Aucune note vocale n a pu être televersee.')
+        window.alert(i18next.t(
+          'conversation.web.voice.noneUploaded',
+          'Aucune note vocale n a pu être televersee.',
+        ))
         return
       }
 
@@ -564,7 +598,10 @@ function Conversation({ navigation, route }) {
       })
     } catch (error) {
       // @ts-ignore: FIXME: Baseline TS regression
-      window.alert(error?.message || 'Impossible d envoyer cette note vocale.')
+      window.alert(error?.message || i18next.t(
+        'conversation.web.voice.sendError',
+        'Impossible d envoyer cette note vocale.',
+      ))
     } finally {
       setIsUploading(false)
     }
@@ -578,7 +615,10 @@ function Conversation({ navigation, route }) {
         setIsRecordingVoice(true)
       } catch (error) {
         // @ts-ignore: FIXME: Baseline TS regression
-        window.alert(error?.message || 'L enregistrement vocal n est pas disponible sur ce navigateur.')
+        window.alert(error?.message || i18next.t(
+          'conversation.web.voice.unavailable',
+          'L enregistrement vocal n est pas disponible sur ce navigateur.',
+        ))
       }
       return
     }
@@ -602,7 +642,10 @@ function Conversation({ navigation, route }) {
       // @ts-ignore: FIXME: Baseline TS regression
       if (error?.message !== 'VOICE_NOTE_RECORDING_CANCELLED') {
         // @ts-ignore: FIXME: Baseline TS regression
-        window.alert(error?.message || 'Impossible de finaliser cette note vocale.')
+        window.alert(error?.message || i18next.t(
+          'conversation.web.voice.finalizeError',
+          'Impossible de finaliser cette note vocale.',
+        ))
       }
     } finally {
       setIsStoppingVoice(false)
@@ -621,7 +664,10 @@ function Conversation({ navigation, route }) {
       })
     } catch (error) {
       // @ts-ignore: FIXME: Baseline TS regression
-      window.alert(error?.message || 'Impossible d envoyer le message.')
+      window.alert(error?.message || i18next.t(
+        'conversation.web.message.sendError',
+        'Impossible d envoyer le message.',
+      ))
     } finally {
       setIsSending(false)
     }
@@ -643,7 +689,10 @@ function Conversation({ navigation, route }) {
       })
     } catch (error) {
       // @ts-ignore: FIXME: Baseline TS regression
-      window.alert(error?.message || 'Impossible de partager ce contact.')
+      window.alert(error?.message || i18next.t(
+        'conversation.web.share.contactError',
+        'Impossible de partager ce contact.',
+      ))
     }
   }, [replyTarget, sendChatPayload])
 
@@ -658,7 +707,10 @@ function Conversation({ navigation, route }) {
       })
     } catch (error) {
       // @ts-ignore: FIXME: Baseline TS regression
-      window.alert(error?.message || 'Impossible de partager cet événement.')
+      window.alert(error?.message || i18next.t(
+        'conversation.web.share.eventError',
+        'Impossible de partager cet événement.',
+      ))
     }
   }, [replyTarget, sendChatPayload])
 
@@ -678,7 +730,10 @@ function Conversation({ navigation, route }) {
 
   const handleShareLocation = useCallback(async () => {
     if (!navigator.geolocation) {
-      window.alert('La geolocalisation n est pas disponible sur ce navigateur.')
+      window.alert(i18next.t(
+        'conversation.web.location.unavailable',
+        'La geolocalisation n est pas disponible sur ce navigateur.',
+      ))
       return
     }
 
@@ -696,10 +751,16 @@ function Conversation({ navigation, route }) {
         })
       } catch (error) {
         // @ts-ignore: FIXME: Baseline TS regression
-        window.alert(error?.message || 'Impossible de partager ta position.')
+        window.alert(error?.message || i18next.t(
+          'conversation.web.location.shareError',
+          'Impossible de partager ta position.',
+        ))
       }
     }, (error) => {
-      window.alert(error?.message || 'Impossible d acceder à ta position.')
+      window.alert(error?.message || i18next.t(
+        'conversation.web.location.accessError',
+        'Impossible d acceder à ta position.',
+      ))
     })
   }, [replyTarget, sendChatPayload])
 
@@ -707,7 +768,10 @@ function Conversation({ navigation, route }) {
     const question = pollQuestion.trim()
     const options = pollOptions.map((option) => option.trim()).filter(Boolean)
     if (!question || options.length < 2) {
-      window.alert('Ajoute une question et au moins deux options.')
+      window.alert(i18next.t(
+        'conversation.web.poll.incomplete',
+        'Ajoute une question et au moins deux options.',
+      ))
       return
     }
 
@@ -728,7 +792,10 @@ function Conversation({ navigation, route }) {
       setIsAnonymousPoll(false)
     } catch (error) {
       // @ts-ignore: FIXME: Baseline TS regression
-      window.alert(error?.message || 'Impossible de créer ce sondage.')
+      window.alert(error?.message || i18next.t(
+        'conversation.web.poll.createError',
+        'Impossible de créer ce sondage.',
+      ))
     } finally {
       setIsSubmittingPoll(false)
     }
@@ -779,13 +846,19 @@ function Conversation({ navigation, route }) {
     } catch (error) {
       await invalidateConversationQueries()
       // @ts-ignore: FIXME: Baseline TS regression
-      window.alert(error?.message || 'Impossible de sauvegarder ce vote.')
+      window.alert(error?.message || i18next.t(
+        'conversation.web.poll.voteError',
+        'Impossible de sauvegarder ce vote.',
+      ))
     }
   }, [chatId, invalidateConversationQueries, queryClient, userData?.documentId, votePoll])
 
   const handleSendProposal = useCallback(async () => {
     if (!proposalDate || !proposalStartTime) {
-      window.alert('Choisis une date et une heure pour la proposition.')
+      window.alert(i18next.t(
+        'conversation.web.proposal.pickDate',
+        'Choisis une date et une heure pour la proposition.',
+      ))
       return
     }
 
@@ -802,7 +875,10 @@ function Conversation({ navigation, route }) {
           : undefined,
         date: startIso,
         endDate: endIso,
-        venue: proposalVenue || 'Lieu à définir',
+        venue: proposalVenue || i18next.t(
+          'conversation.negotiation.venueToBeDefined',
+          'Lieu à définir',
+        ),
       }, chatData?.league_match?.location)
 
       if (leagueMatchId) {
@@ -811,7 +887,10 @@ function Conversation({ navigation, route }) {
           leagueMatchId,
           {
             matchLabel: leagueLegalMatchLabel,
-            venueLabel: proposalVenue || 'Lieu à définir',
+            venueLabel: proposalVenue || i18next.t(
+              'conversation.negotiation.venueToBeDefined',
+              'Lieu à définir',
+            ),
           },
         )
         if (!legalAcceptance) return
@@ -829,7 +908,10 @@ function Conversation({ navigation, route }) {
       }
     } catch (error) {
       // @ts-ignore: FIXME: Baseline TS regression
-      window.alert(error?.message || 'Impossible d envoyer cette proposition.')
+      window.alert(error?.message || i18next.t(
+        'conversation.web.proposal.sendError',
+        'Impossible d envoyer cette proposition.',
+      ))
     } finally {
       setIsSubmittingProposal(false)
     }
@@ -866,14 +948,20 @@ function Conversation({ navigation, route }) {
       } else if (matchId) {
         await respondToLeagueProposal(matchId, messageId, 'decline')
       } else if (message?.composition?.type === 'proposal' && chatData?.type === 'league_match') {
-        throw new Error('Proposition League incomplète. Recharge la conversation avant de répondre.')
+        throw new Error(i18next.t(
+          'conversation.web.proposal.incomplete',
+          'Proposition League incomplète. Recharge la conversation avant de répondre.',
+        ))
       } else {
         await respondToProposal(messageId, status)
       }
       await invalidateConversationQueries()
     } catch (error) {
       // @ts-ignore: FIXME: Baseline TS regression
-      window.alert(error?.message || 'Impossible de répondre à cette proposition.')
+      window.alert(error?.message || i18next.t(
+        'conversation.web.proposal.replyError',
+        'Impossible de répondre à cette proposition.',
+      ))
     }
   }, [
     invalidateConversationQueries,
@@ -960,7 +1048,7 @@ function Conversation({ navigation, route }) {
           }}
           type="button"
         >
-          {actionLabel || 'Réessayer'}
+          {actionLabel || i18next.t('conversation.web.retry', 'Réessayer')}
         </button>
       ) : null}
     </section>
@@ -983,7 +1071,10 @@ function Conversation({ navigation, route }) {
   const handleReportMessage = useCallback((message) => {
     const messageId = getMessageId(message)
     if (!messageId || reportMessageMutation.isPending) return
-    if (!window.confirm('Signaler ce message à la moderation FoundClub ?')) return
+    if (!window.confirm(i18next.t(
+      'conversation.web.report.confirm',
+      'Signaler ce message à la moderation FoundClub ?',
+    ))) return
     setReportedMessageId(messageId)
     reportMessageMutation.mutate({ message: messageId })
   }, [reportMessageMutation])
@@ -1056,7 +1147,10 @@ function Conversation({ navigation, route }) {
                 {label}
               </span>
               <span style={{ color: mutedTextColor, fontSize: 12 }}>
-                {isDocument ? 'Document' : attachment?.mime || 'Pièce jointe'}
+                {isDocument ? 'Document' : attachment?.mime || i18next.t(
+                  'conversation.web.attachment.label',
+                  'Pièce jointe',
+                )}
               </span>
             </span>
             <span style={{ color: primaryColor, fontSize: 12 }}>
@@ -1114,11 +1208,16 @@ function Conversation({ navigation, route }) {
       return (
         <div style={{ display: 'grid', gap: 10 }}>
           <div style={{ fontFamily: 'Montserrat-Bold, sans-serif', fontSize: 15 }}>
-            Proposition de match
+            {i18next.t('conversation.web.proposal.title', 'Proposition de match')}
           </div>
           <div style={{ color: mutedTextColor, display: 'grid', fontSize: 13, gap: 4 }}>
             <span>{formatDay(composition?.date)}</span>
-            <span>{composition?.venue || 'Lieu à définir'}</span>
+            <span>
+              {composition?.venue || i18next.t(
+                'conversation.negotiation.venueToBeDefined',
+                'Lieu à définir',
+              )}
+            </span>
             <span>{composition?.address || composition?.addressObject?.label || ''}</span>
             <span>
               Statut:
@@ -1194,7 +1293,7 @@ function Conversation({ navigation, route }) {
               }}
               type="button"
             >
-              Voir l événement
+              {i18next.t('conversation.web.viewEvent', 'Voir l événement')}
             </button>
           ) : null}
         </div>
@@ -1241,7 +1340,7 @@ function Conversation({ navigation, route }) {
               }}
               type="button"
             >
-              Ouvrir dans Maps
+              {i18next.t('conversation.web.openInMaps', 'Ouvrir dans Maps')}
             </button>
           ) : null}
         </div>
@@ -1269,7 +1368,10 @@ function Conversation({ navigation, route }) {
             <audio controls preload="metadata" src={voiceUrl} style={{ maxWidth: '100%', width: '100%' }} />
           ) : (
             <div style={{ color: mutedTextColor, fontSize: 13 }}>
-              Le fichier audio n est pas disponible pour la lecture web.
+              {i18next.t(
+                'conversation.web.voice.playbackUnavailable',
+                'Le fichier audio n est pas disponible pour la lecture web.',
+              )}
             </div>
           )}
         </div>
@@ -1369,8 +1471,11 @@ function Conversation({ navigation, route }) {
               a
               {' '}
               {formatTime(message?.createdAt)}
-              {message?.pending ? ' • envoi...' : ''}
-              {message?.failed ? ' • à renvoyer' : ''}
+              {message?.pending ? i18next.t('conversation.web.message.sending', ' • envoi...') : ''}
+              {message?.failed ? i18next.t(
+                'conversation.web.message.toResend',
+                ' • à renvoyer',
+              ) : ''}
             </span>
             <div style={{
               alignItems: 'center',
@@ -1456,8 +1561,11 @@ function Conversation({ navigation, route }) {
         style={{ paddingBottom: 32 }}
       >
         {renderStateCard({
-          actionLabel: 'Voir mes messages',
-          description: 'Aucune conversation n a été sélectionnée. Reviens à la liste des messages puis ouvre une discussion.',
+          actionLabel: i18next.t('conversation.web.noChat.cta', 'Voir mes messages'),
+          description: i18next.t(
+            'conversation.web.noChat.body',
+            'Aucune conversation n a été sélectionnée. Reviens à la liste des messages puis ouvre une discussion.', // eslint-disable-line max-len
+          ),
           onAction: () => navigation.navigate(RouteNames.Chat),
           title: 'Conversation introuvable',
         })}
@@ -1475,7 +1583,10 @@ function Conversation({ navigation, route }) {
         style={{ paddingBottom: 32 }}
       >
         {renderStateCard({
-          description: 'Chargement de la conversation en cours...',
+          description: i18next.t(
+            'conversation.web.loading.conversationInProgress',
+            'Chargement de la conversation en cours...',
+          ),
           title: 'Chargement',
         })}
       </ScreenContainer>
@@ -1492,8 +1603,11 @@ function Conversation({ navigation, route }) {
         style={{ paddingBottom: 32 }}
       >
         {renderStateCard({
-          actionLabel: 'Réessayer',
-          description: getErrorMessage(chatError, 'Impossible de charger cette conversation.'),
+          actionLabel: i18next.t('conversation.web.retry', 'Réessayer'),
+          description: getErrorMessage(chatError, i18next.t(
+            'conversation.web.loading.conversationError',
+            'Impossible de charger cette conversation.',
+          )),
           onAction: retryConversationLoad,
           title: 'Conversation indisponible',
         })}
@@ -1511,8 +1625,11 @@ function Conversation({ navigation, route }) {
         style={{ paddingBottom: 32 }}
       >
         {renderStateCard({
-          actionLabel: 'Retour à mes messages',
-          description: 'Cette conversation est introuvable ou tu n\'y as plus accès.',
+          actionLabel: i18next.t('conversation.web.notFound.cta', 'Retour à mes messages'),
+          description: i18next.t(
+            'conversation.web.notFound.body',
+            "Cette conversation est introuvable ou tu n'y as plus accès.",
+          ),
           onAction: () => navigation.navigate(RouteNames.Chat),
           title: 'Conversation introuvable',
         })}
@@ -1573,7 +1690,10 @@ function Conversation({ navigation, route }) {
             </div>
             <div style={{ color: mutedTextColor, fontSize: 14 }}>
               {isChatLoading
-                ? 'Chargement de la conversation...'
+                ? i18next.t(
+                  'conversation.web.loading.conversation',
+                  'Chargement de la conversation...',
+                )
                 : `${Array.isArray(chatData?.participants) ? chatData.participants.length : 0} participants`}
             </div>
           </header>
@@ -1601,12 +1721,17 @@ function Conversation({ navigation, route }) {
                 }}
                 type="button"
               >
-                {isFetchingNextPage ? 'Chargement...' : 'Afficher les messages precedents'}
+                {isFetchingNextPage ? 'Chargement...' : i18next.t(
+                  'conversation.web.loadEarlier',
+                  'Afficher les messages precedents',
+                )}
               </button>
             ) : null}
 
             {isMessagesLoading ? (
-              <div style={{ color: mutedTextColor }}>Chargement des messages...</div>
+              <div style={{ color: mutedTextColor }}>
+                {i18next.t('conversation.web.loading.messages', 'Chargement des messages...')}
+              </div>
             ) : null}
 
             {!isMessagesLoading && messagesError ? (
@@ -1620,7 +1745,12 @@ function Conversation({ navigation, route }) {
                 padding: 18,
               }}
               >
-                <div>{getErrorMessage(messagesError, 'Impossible de charger les messages de cette conversation.')}</div>
+                <div>
+                  {getErrorMessage(messagesError, i18next.t(
+                    'conversation.web.loading.messagesError',
+                    'Impossible de charger les messages de cette conversation.',
+                  ))}
+                </div>
                 <button
                   onClick={() => refetchMessages()}
                   style={{
@@ -1634,13 +1764,15 @@ function Conversation({ navigation, route }) {
                   }}
                   type="button"
                 >
-                  Réessayer
+                  {i18next.t('conversation.web.retry', 'Réessayer')}
                 </button>
               </div>
             ) : null}
 
             {!isMessagesLoading && !messagesError && messages.length === 0 ? (
-              <div style={{ color: mutedTextColor }}>Aucun message pour le moment.</div>
+              <div style={{ color: mutedTextColor }}>
+                {i18next.t('conversation.web.empty', 'Aucun message pour le moment.')}
+              </div>
             ) : null}
 
             {!messagesError ? messages.map((message) => renderMessageCard(message)) : null}
@@ -1724,7 +1856,10 @@ function Conversation({ navigation, route }) {
                 >
                   {isStoppingVoice
                     ? 'Preparation...'
-                    : (isRecordingVoice ? 'Arrêter la note vocale' : 'Note vocale')}
+                    : (isRecordingVoice ? i18next.t(
+                      'conversation.web.voice.stop',
+                      'Arrêter la note vocale',
+                    ) : 'Note vocale')}
                 </button>
                 <button onClick={handlePickImage} style={{ background: 'transparent', border: `1px solid ${borderColor}`, borderRadius: 999, color: baseTextColor, cursor: 'pointer', padding: '10px 14px' }} type="button">Image</button>
                 <button onClick={handlePickDocument} style={{ background: 'transparent', border: `1px solid ${borderColor}`, borderRadius: 999, color: baseTextColor, cursor: 'pointer', padding: '10px 14px' }} type="button">Document</button>
@@ -1749,10 +1884,19 @@ function Conversation({ navigation, route }) {
             </div>
             <div style={{ color: mutedTextColor, fontSize: 12 }}>
               {isRecordingVoice
-                ? 'Enregistrement en cours. Clique à nouveau pour envoyer la note vocale.'
+                ? i18next.t(
+                  'conversation.web.voice.recording',
+                  'Enregistrement en cours. Clique à nouveau pour envoyer la note vocale.',
+                )
                 : (isVoiceRecordingSupported
-                  ? 'Les notes vocales utilisent le microphone du navigateur.'
-                  : 'Les notes vocales ne sont pas prises en charge par ce navigateur.')}
+                  ? i18next.t(
+                    'conversation.web.voice.usesMic',
+                    'Les notes vocales utilisent le microphone du navigateur.',
+                  )
+                  : i18next.t(
+                    'conversation.web.voice.unsupported',
+                    'Les notes vocales ne sont pas prises en charge par ce navigateur.',
+                  ))}
             </div>
           </div>
         </section>
@@ -1769,7 +1913,12 @@ function Conversation({ navigation, route }) {
             <div style={{ display: 'grid', gap: 10 }}>
               <h3 style={{ fontFamily: 'Montserrat-Bold, sans-serif', fontSize: 14, margin: 0 }}>Contacts</h3>
               {shareableContacts.length === 0 ? (
-                <div style={{ color: mutedTextColor, fontSize: 13 }}>Aucun contact partageable dans cette conversation.</div>
+                <div style={{ color: mutedTextColor, fontSize: 13 }}>
+                  {i18next.t(
+                    'conversation.web.share.noContact',
+                    'Aucun contact partageable dans cette conversation.',
+                  )}
+                </div>
               ) : shareableContacts.slice(0, 6).map((contact) => {
                 const fullName = getDisplayName(contact)
                 return (
@@ -1812,9 +1961,16 @@ function Conversation({ navigation, route }) {
             </div>
 
             <div style={{ display: 'grid', gap: 10 }}>
-              <h3 style={{ fontFamily: 'Montserrat-Bold, sans-serif', fontSize: 14, margin: 0 }}>Événements</h3>
+              <h3 style={{ fontFamily: 'Montserrat-Bold, sans-serif', fontSize: 14, margin: 0 }}>
+                {i18next.t('conversation.web.share.events', 'Événements')}
+              </h3>
               {shareableEvents.length === 0 ? (
-                <div style={{ color: mutedTextColor, fontSize: 13 }}>Aucun événement récent à partager.</div>
+                <div style={{ color: mutedTextColor, fontSize: 13 }}>
+                  {i18next.t(
+                    'conversation.web.share.noEvent',
+                    'Aucun événement récent à partager.',
+                  )}
+                </div>
               ) : shareableEvents.slice(0, 6).map((event) => (
                 <button
                   key={getEntityDocumentId(event)}
@@ -1847,7 +2003,7 @@ function Conversation({ navigation, route }) {
 
           <section style={{ background: panelBackground, border: `1px solid ${borderColor}`, borderRadius: 24, display: 'grid', gap: 12, padding: 22 }}>
             <h2 style={{ fontFamily: 'Montserrat-Bold, sans-serif', fontSize: 18, margin: 0 }}>Sondage</h2>
-            <input onChange={(event) => setPollQuestion(event.target.value)} placeholder="Question du sondage" style={{ background: 'rgba(255,255,255,0.03)', border: `1px solid ${borderColor}`, borderRadius: 14, color: baseTextColor, outline: 'none', padding: '12px 14px' }} value={pollQuestion} />
+            <input onChange={(event) => setPollQuestion(event.target.value)} placeholder={i18next.t('conversation.web.poll.questionPlaceholder', 'Question du sondage')} style={{ background: 'rgba(255,255,255,0.03)', border: `1px solid ${borderColor}`, borderRadius: 14, color: baseTextColor, outline: 'none', padding: '12px 14px' }} value={pollQuestion} />
             {pollOptions.map((option, index) => (
               <input
                 key={`poll-option-${index}`}
@@ -1880,13 +2036,18 @@ function Conversation({ navigation, route }) {
               }}
               type="button"
             >
-              {isSubmittingPoll ? 'Envoi...' : 'Envoyer le sondage'}
+              {isSubmittingPoll ? 'Envoi...' : i18next.t(
+                'conversation.web.poll.send',
+                'Envoyer le sondage',
+              )}
             </button>
           </section>
 
           {isLeagueConversation ? (
             <section style={{ background: panelBackground, border: `1px solid ${borderColor}`, borderRadius: 24, display: 'grid', gap: 12, padding: 22 }}>
-              <h2 style={{ fontFamily: 'Montserrat-Bold, sans-serif', fontSize: 18, margin: 0 }}>Proposition de match</h2>
+              <h2 style={{ fontFamily: 'Montserrat-Bold, sans-serif', fontSize: 18, margin: 0 }}>
+                {i18next.t('conversation.web.proposal.title', 'Proposition de match')}
+              </h2>
               <input onChange={(event) => setProposalDate(event.target.value)} style={{ background: 'rgba(255,255,255,0.03)', border: `1px solid ${borderColor}`, borderRadius: 14, color: baseTextColor, outline: 'none', padding: '12px 14px' }} type="date" value={proposalDate} />
               <div style={{ display: 'grid', gap: 10, gridTemplateColumns: '1fr 1fr' }}>
                 <input onChange={(event) => setProposalStartTime(event.target.value)} style={{ background: 'rgba(255,255,255,0.03)', border: `1px solid ${borderColor}`, borderRadius: 14, color: baseTextColor, outline: 'none', padding: '12px 14px' }} type="time" value={proposalStartTime} />
@@ -1909,7 +2070,10 @@ function Conversation({ navigation, route }) {
                 }}
                 type="button"
               >
-                {isSubmittingProposal ? 'Envoi...' : 'Envoyer la proposition'}
+                {isSubmittingProposal ? 'Envoi...' : i18next.t(
+                  'conversation.web.proposal.send',
+                  'Envoyer la proposition',
+                )}
               </button>
             </section>
           ) : null}
@@ -1917,7 +2081,10 @@ function Conversation({ navigation, route }) {
           <section style={{ background: panelBackground, border: `1px solid ${borderColor}`, borderRadius: 24, color: mutedTextColor, display: 'grid', gap: 8, padding: 22 }}>
             <h2 style={{ color: baseTextColor, fontFamily: 'Montserrat-Bold, sans-serif', fontSize: 18, margin: 0 }}>Parite web</h2>
             <div style={{ fontSize: 13, lineHeight: 1.5 }}>
-              Texte, réponse, pièces jointes, partages, sondages et propositions utilisent déjà les hooks, services et sockets partages. Les notes vocales passent par le micro du navigateur quand il est compatible.
+              {i18next.t(
+                'conversation.web.footerNote',
+                'Texte, réponse, pièces jointes, partages, sondages et propositions utilisent déjà les hooks, services et sockets partages. Les notes vocales passent par le micro du navigateur quand il est compatible.', // eslint-disable-line max-len
+              )}
             </div>
           </section>
         </aside>

@@ -1,5 +1,6 @@
 import { useNavigation } from '@react-navigation/native';
 import { isThisWeek, isToday, isYesterday } from 'date-fns';
+import i18next from 'i18next';
 import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -28,8 +29,6 @@ import { resolveNotificationDestination } from '@/utils/notifications/notificati
 import {
   formatNotificationRelativeTime,
   getNotificationIcon,
-  NOTIFICATION_EMPTY_STATE_BODY,
-  NOTIFICATION_EMPTY_STATE_TITLE,
 } from '@/utils/notifications/notificationPresentation';
 import { normalizeNotificationType, NOTIFICATION_TYPES } from '@/utils/notifications/notificationTypes';
 
@@ -118,19 +117,35 @@ function NotificationList() {
     const result = [];
 
     if (groupedNotifications.today.length > 0) {
-      result.push({ key: 'header-today', title: "Aujourd'hui", type: 'header' });
+      result.push({
+        key: 'header-today',
+        title: i18next.t('notificationList.sections.today', "Aujourd'hui"),
+        type: 'header',
+      });
       groupedNotifications.today.forEach((n, index) => result.push({ data: n, key: getStableItemKey(n, index), type: 'item' }));
     }
     if (groupedNotifications.yesterday.length > 0) {
-      result.push({ key: 'header-yesterday', title: 'Hier', type: 'header' });
+      result.push({
+        key: 'header-yesterday',
+        title: i18next.t('notificationList.sections.yesterday', 'Hier'),
+        type: 'header',
+      });
       groupedNotifications.yesterday.forEach((n, index) => result.push({ data: n, key: getStableItemKey(n, index), type: 'item' }));
     }
     if (groupedNotifications.thisWeek.length > 0) {
-      result.push({ key: 'header-week', title: 'Cette semaine', type: 'header' });
+      result.push({
+        key: 'header-week',
+        title: i18next.t('notificationList.sections.thisWeek', 'Cette semaine'),
+        type: 'header',
+      });
       groupedNotifications.thisWeek.forEach((n, index) => result.push({ data: n, key: getStableItemKey(n, index), type: 'item' }));
     }
     if (groupedNotifications.older.length > 0) {
-      result.push({ key: 'header-older', title: 'Plus ancien', type: 'header' });
+      result.push({
+        key: 'header-older',
+        title: i18next.t('notificationList.sections.older', 'Plus ancien'),
+        type: 'header',
+      });
       groupedNotifications.older.forEach((n, index) => result.push({ data: n, key: getStableItemKey(n, index), type: 'item' }));
     }
 
@@ -182,7 +197,10 @@ function NotificationList() {
     const payload = /** @type {any} */ (getNotificationPayload(notification));
     const eventId = String(payload?.eventId || '').trim();
     if (!eventId) {
-      showActionError("Impossible de retrouver l'événement associe à cette notification.");
+      showActionError(i18next.t(
+        'notificationList.errors.eventNotFound',
+        "Impossible de retrouver l'événement associe à cette notification.",
+      ));
       return;
     }
 
@@ -196,12 +214,15 @@ function NotificationList() {
       refreshNotifications();
 
       const successMessage = answer === 'present'
-        ? 'Présence enregistrée.'
-        : 'Absence enregistrée.';
+        ? i18next.t('notificationList.rsvp.present', 'Présence enregistrée.')
+        : i18next.t('notificationList.rsvp.absent', 'Absence enregistrée.');
 
       showActionMessage(successMessage);
     } catch (error) {
-      showActionError("Impossible d'enregistrer ta réponse.", error);
+      showActionError(i18next.t(
+        'notificationList.errors.rsvp',
+        "Impossible d'enregistrer ta réponse.",
+      ), error);
     }
   }, [markAsRead, refreshNotifications, showActionError, showActionMessage]);
 
@@ -209,7 +230,10 @@ function NotificationList() {
     try {
       await markAsRead(String(notification.documentId || notification.id || ''));
     } catch (error) {
-      showActionError('Impossible de marquer la notification comme lue.', error);
+      showActionError(i18next.t(
+        'notificationList.errors.markRead',
+        'Impossible de marquer la notification comme lue.',
+      ), error);
     }
 
     const payload = getNotificationPayload(notification);
@@ -233,20 +257,23 @@ function NotificationList() {
 
   const handleDelete = useCallback((/** @type {NotificationItem} */ notification) => {
     Alert.alert(
-      'Supprimer',
-      'Supprimer cette notification ?',
+      i18next.t('notificationList.delete.title', 'Supprimer'),
+      i18next.t('notificationList.delete.confirm', 'Supprimer cette notification ?'),
       [
-        { style: 'cancel', text: 'Annuler' },
+        { style: 'cancel', text: i18next.t('notificationList.delete.cancel', 'Annuler') },
         {
           onPress: async () => {
             try {
               await deleteNotification(String(notification.documentId || notification.id || ''));
             } catch (error) {
-              showActionError('Impossible de supprimer la notification.', error);
+              showActionError(i18next.t(
+                'notificationList.errors.delete',
+                'Impossible de supprimer la notification.',
+              ), error);
             }
           },
           style: 'destructive',
-          text: 'Supprimer',
+          text: i18next.t('notificationList.delete.title', 'Supprimer'),
         },
       ],
     );
@@ -274,7 +301,10 @@ function NotificationList() {
         try {
           await markAsRead(String(notification.documentId || notification.id || ''));
         } catch (error) {
-          showActionError('Impossible de marquer comme lu.', error);
+          showActionError(i18next.t(
+            'notificationList.errors.markReadShort',
+            'Impossible de marquer comme lu.',
+          ), error);
         }
       }}
       style={{
@@ -487,11 +517,16 @@ function NotificationList() {
                 try {
                   await markAllAsRead();
                 } catch (error) {
-                  showActionError('Impossible de marquer toutes les notifications comme lues.', error);
+                  showActionError(i18next.t(
+                    'notificationList.errors.markAll',
+                    'Impossible de marquer toutes les notifications comme lues.',
+                  ), error);
                 }
               }}
             >
-              <Text style={[Fonts.p3Bold, { color: Colors.primary500 }]}>Tout lire</Text>
+              <Text style={[Fonts.p3Bold, { color: Colors.primary500 }]}>
+                {i18next.t('notificationList.markAll', 'Tout lire')}
+              </Text>
             </TouchableOpacity>
           ) : null}
         </View>
@@ -505,7 +540,7 @@ function NotificationList() {
             <View style={{ alignItems: 'center', marginTop: 60 }}>
               <Text style={{ fontSize: 48, marginBottom: 16 }}>{'\u{1F514}'}</Text>
               <Text style={[Fonts.h4Bold, { color: Colors.neutral00 }]}>
-                {NOTIFICATION_EMPTY_STATE_TITLE}
+                {t('notificationList.empty.title', 'Aucune notification')}
               </Text>
               <Text
                 style={[
@@ -518,7 +553,7 @@ function NotificationList() {
                   },
                 ]}
               >
-                {NOTIFICATION_EMPTY_STATE_BODY}
+                {t('notificationList.empty.body', 'Les nouvelles notifications apparaîtront ici.')}
               </Text>
             </View>
           ) : null

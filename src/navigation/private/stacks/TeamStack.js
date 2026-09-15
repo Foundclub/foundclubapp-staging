@@ -122,7 +122,7 @@ function TeamStack() {
           name={RouteNames.CreateSquad}
           options={{
             ...commonOptions,
-            headerTitle: 'Créer une Squad',
+            headerTitle: t('teamStack.headers.createSquad', 'Créer une Squad'),
           }}
         />
         <Stack.Screen

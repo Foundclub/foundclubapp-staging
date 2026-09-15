@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
+import i18next from 'i18next';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -279,10 +280,16 @@ function NewConversation({ navigation, route }) {
 
     // Convert to SectionList format
     const sections = [
-      { data: sectionsObj.Dirigeant, title: 'Dirigeants' },
-      { data: sectionsObj.Entraineur, title: 'Entraîneurs' },
-      { data: sectionsObj.Joueur, title: 'Joueurs' },
-      { data: sectionsObj.Autre, title: 'Autres' },
+      {
+        data: sectionsObj.Dirigeant,
+        title: i18next.t('newConversation.sections.managers', 'Dirigeants'),
+      },
+      {
+        data: sectionsObj.Entraineur,
+        title: i18next.t('newConversation.sections.coaches', 'Entraîneurs'),
+      },
+      { data: sectionsObj.Joueur, title: i18next.t('newConversation.sections.players', 'Joueurs') },
+      { data: sectionsObj.Autre, title: i18next.t('newConversation.sections.others', 'Autres') },
     ].filter((s) => s.data.length > 0);
 
     return sections;

@@ -98,7 +98,10 @@ export const useHomeEventAnswer = (eventId) => {
       // Il n'y a aucun etat optimiste, donc un echec ne peut pas le laisser vert.
       Alert.alert(
         t('common.error'),
-        getParticipationErrorMessage(error, "Impossible d'enregistrer ta réponse pour le moment."),
+        getParticipationErrorMessage(error, t(
+          'useHomeEventAnswer.error',
+          "Impossible d'enregistrer ta réponse pour le moment.",
+        )),
       );
     },
     onSuccess: () => {

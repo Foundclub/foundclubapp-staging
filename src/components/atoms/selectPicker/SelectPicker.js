@@ -45,7 +45,10 @@ function SelectPicker({
         ]}
       >
         <Text style={[Fonts.p2, Fonts.neutral00]}>
-          {selectedItem ? selectedItem.label : placeholder || 'Sélectionner'}
+          {selectedItem ? selectedItem.label : placeholder || t(
+            'selectPicker.placeholder',
+            'Sélectionner',
+          )}
         </Text>
         <Text style={[Fonts.p2, Fonts.neutral300]}>▼</Text>
       </TouchableOpacity>

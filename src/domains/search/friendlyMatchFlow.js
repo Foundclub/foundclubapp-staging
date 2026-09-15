@@ -1,3 +1,5 @@
+import i18next from 'i18next';
+
 import { getUserRoleKey } from '@/domains/auth/authUseCases';
 
 import { getLocationCoordinates } from '@/utils/location';
@@ -184,13 +186,25 @@ export const isChosenHostingAllowed = (preference, chosenHosting) => (
 export const getHostingSummary = (ad) => {
   switch (String(ad?.hostingPreference ?? '').trim().toUpperCase()) {
     case 'AWAY':
-      return { label: 'Il se déplace', tone: 'away' };
+      return {
+        label: i18next.t('friendlyMatchFlow.hostingSummary.away', 'Il se déplace'),
+        tone: 'away',
+      };
     case 'BOTH':
-      return { label: 'Reçoit ou se déplace', tone: 'both' };
+      return {
+        label: i18next.t('friendlyMatchFlow.hostingSummary.both', 'Reçoit ou se déplace'),
+        tone: 'both',
+      };
     case 'HOST':
-      return { label: 'Il reçoit', tone: 'host' };
+      return {
+        label: i18next.t('friendlyMatchFlow.hostingSummary.host', 'Il reçoit'),
+        tone: 'host',
+      };
     default:
-      return { label: 'À convenir', tone: 'unknown' };
+      return {
+        label: i18next.t('friendlyMatchFlow.hostingSummary.unknown', 'À convenir'),
+        tone: 'unknown',
+      };
   }
 };
 
@@ -211,12 +225,34 @@ const HOSTING_TAG_BY_TONE = {
   // D41 ③ — une fleche, plus un coureur : les DEUX surfaces qui affichent cet
   // etat (la carte-option du tunnel et le tag de chaque annonce) lisent cette
   // seule table, donc elles changent forcement ensemble.
-  away: { iconKey: 'arrow', label: 'Se déplace' },
-  both: { iconKey: 'switch', label: 'Reçoit ou se déplace' },
-  host: { iconKey: 'stadium', label: 'Reçoit' },
+  // I18N-4 : libelles en ACCESSEURS, lus a chaque appel (getHostingTag les etale) :
+  // une valeur calculee au chargement du module resterait dans la langue du demarrage.
+  away: {
+    iconKey: 'arrow',
+    get label() {
+      return i18next.t('friendlyMatchFlow.hostingTag.away', 'Se déplace');
+    },
+  },
+  both: {
+    iconKey: 'switch',
+    get label() {
+      return i18next.t('friendlyMatchFlow.hostingTag.both', 'Reçoit ou se déplace');
+    },
+  },
+  host: {
+    iconKey: 'stadium',
+    get label() {
+      return i18next.t('friendlyMatchFlow.hostingTag.host', 'Reçoit');
+    },
+  },
   // Pas d icone : inventer un pictogramme pour « on ne sait pas » ferait croire
   // a une information. Le libelle seul dit la verite.
-  unknown: { iconKey: 'none', label: 'À convenir' },
+  unknown: {
+    iconKey: 'none',
+    get label() {
+      return i18next.t('friendlyMatchFlow.hostingTag.unknown', 'À convenir');
+    },
+  },
 };
 
 /**

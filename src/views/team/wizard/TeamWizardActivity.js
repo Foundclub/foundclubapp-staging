@@ -131,7 +131,7 @@ function TeamWizardActivity({ navigation }) {
           <View style={[{ alignItems: 'center', flexDirection: 'row' }, Spaces.gap[12], Spaces.marginBottom[16]]}>
             <ActivityIndicator size="small" />
             <Text style={[Fonts.p2, Fonts.neutral200]}>
-              Chargement des sports disponibles…
+              {t('teamWizardActivity.loading', 'Chargement des sports disponibles…')}
             </Text>
           </View>
         ) : null}
@@ -139,7 +139,10 @@ function TeamWizardActivity({ navigation }) {
         {isClubMissing ? (
           <View style={Spaces.marginBottom[16]}>
             <Text style={[Fonts.p2, Fonts.neutral100]}>
-              Club introuvable pour initialiser la création de l’équipe. Reviens à la liste des équipes puis relance le wizard.
+              {t(
+                'teamWizardActivity.clubMissing',
+                'Club introuvable pour initialiser la création de l’équipe. Reviens à la liste des équipes puis relance le wizard.', // eslint-disable-line max-len
+              )}
             </Text>
           </View>
         ) : null}
@@ -147,11 +150,14 @@ function TeamWizardActivity({ navigation }) {
         {hasError ? (
           <View style={[Spaces.gap[12], Spaces.marginBottom[16]]}>
             <Text style={[Fonts.p2, Fonts.neutral100]}>
-              Impossible de charger le référentiel des sports. Réessaie pour continuer.
+              {t(
+                'teamWizardActivity.loadError',
+                'Impossible de charger le référentiel des sports. Réessaie pour continuer.',
+              )}
             </Text>
             <Button
               onPress={() => activitiesQuery.refetch()}
-              title="Réessayer"
+              title={t('teamWizardActivity.retry', 'Réessayer')}
               variant="Secondary"
             />
           </View>
@@ -241,12 +247,17 @@ function TeamWizardActivity({ navigation }) {
 
             {filteredActivities.length > 0 || !normalizedSearch ? null : (
               <Text style={[Fonts.p2, Fonts.neutral300, Spaces.marginTop[8]]}>
-                Aucun sport ne correspond à ta recherche.
+                {t('teamWizardActivity.noMatch', 'Aucun sport ne correspond à ta recherche.')}
               </Text>
             )}
 
             {isListEmpty ? (
-              <TeamWizardEmptyReferential missing="Aucun sport n’est proposé pour le moment." />
+              <TeamWizardEmptyReferential
+                missing={t(
+                  'teamWizardActivity.empty',
+                  'Aucun sport n’est proposé pour le moment.',
+                )}
+              />
             ) : null}
           </>
         ) : null}

@@ -10,6 +10,7 @@ import {
   requestPermission,
 } from '@react-native-firebase/messaging';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import i18next from 'i18next';
 import {
   useCallback,
   useEffect,
@@ -1122,7 +1123,10 @@ const useNotifications = ({ navigate, onSmartNotification }) => {
   return {
     calendarPrompt: {
       body: pendingCalendarPrompt
-        ? 'Ajouter ce match League à ton agenda pour ne pas le manquer ?'
+        ? i18next.t(
+          'useNotifications.calendarPrompt.body',
+          'Ajouter ce match League à ton agenda pour ne pas le manquer ?',
+        )
         : '',
       canShow: calendarPrompt.canShow,
       descriptor: calendarPrompt.descriptor,
@@ -1143,12 +1147,15 @@ const useNotifications = ({ navigate, onSmartNotification }) => {
         promptedCalendarMatchesRef.current.add(pendingCalendarPromptKey);
         calendarPrompt.markShown({ pendingCalendarPromptKey });
       },
-      title: 'Match confirmé',
+      title: i18next.t('useNotifications.calendarPrompt.title', 'Match confirmé'),
       visiblePayload: pendingCalendarPrompt,
     },
     handleNavigateOnOpen,
     pushPermissionPrompt: {
-      body: 'Active les notifications FoundClub pour recevoir les validations League, les rappels de composition et les actions importantes sans attendre.',
+      body: i18next.t(
+        'useNotifications.pushPrompt.body',
+        'Active les notifications FoundClub pour recevoir les validations League, les rappels de composition et les actions importantes sans attendre.', // eslint-disable-line max-len
+      ),
       canShow: pushPermissionPrompt.canShow,
       descriptor: pushPermissionPrompt.descriptor,
       onAccept: async () => {
@@ -1165,7 +1172,7 @@ const useNotifications = ({ navigate, onSmartNotification }) => {
       onVisible: () => {
         pushPermissionPrompt.markShown({ reason: pendingPushPermissionReason || 'manual' });
       },
-      title: 'Active les notifications FoundClub',
+      title: i18next.t('useNotifications.pushPrompt.title', 'Active les notifications FoundClub'),
     },
     saveToken,
   };

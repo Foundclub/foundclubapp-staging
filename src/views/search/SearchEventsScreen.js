@@ -1,3 +1,4 @@
+import i18next from 'i18next';
 import {
   useCallback,
   useEffect,
@@ -5,6 +6,7 @@ import {
   useRef,
   useState,
 } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Modal,
   Pressable,
@@ -33,28 +35,56 @@ const TOOLTIP_BOTTOM_GUARD = 72;
 
 const EVENT_TUTORIAL_STEPS = [
   {
-    description: 'Cet écran te permet de trouver les événements selon tes critères.',
+    get description() {
+      return i18next.t(
+        'searchEventsScreen.tutorial.steps.intro.description',
+        'Cet écran te permet de trouver les événements selon tes critères.',
+      );
+    },
     id: 'intro',
     target: 'header',
-    title: 'Recherche événement',
+    get title() {
+      return i18next.t('searchEventsScreen.tutorial.steps.intro.title', 'Recherche événement');
+    },
   },
   {
-    description: 'Les chips en haut servent à changer rapidement de type de recherche.',
+    get description() {
+      return i18next.t(
+        'searchEventsScreen.tutorial.steps.types.description',
+        'Les chips en haut servent à changer rapidement de type de recherche.',
+      );
+    },
     id: 'types',
     target: 'switcher',
-    title: 'Types de recherche',
+    get title() {
+      return i18next.t('searchEventsScreen.tutorial.steps.types.title', 'Types de recherche');
+    },
   },
   {
-    description: 'Utilise la recherche texte et les filtres avancés pour affiner.',
+    get description() {
+      return i18next.t(
+        'searchEventsScreen.tutorial.steps.filters.description',
+        'Utilise la recherche texte et les filtres avancés pour affiner.',
+      );
+    },
     id: 'filters',
     target: 'filters',
-    title: 'Filtres événement',
+    get title() {
+      return i18next.t('searchEventsScreen.tutorial.steps.filters.title', 'Filtres événement');
+    },
   },
   {
-    description: 'Chaque carte affiche les détails. Appuie sur "À propos" pour ouvrir la fiche.',
+    get description() {
+      return i18next.t(
+        'searchEventsScreen.tutorial.steps.cards.description',
+        'Chaque carte affiche les détails. Appuie sur "À propos" pour ouvrir la fiche.',
+      );
+    },
     id: 'cards',
     target: 'card',
-    title: 'Résultats',
+    get title() {
+      return i18next.t('searchEventsScreen.tutorial.steps.cards.title', 'Résultats');
+    },
   },
 ];
 
@@ -126,6 +156,7 @@ const getFocusLayout = (target, anchor, viewportWidth, viewportHeight) => {
  * @returns {import('react').ReactElement}
  */
 function SearchEventsScreen({ navigation, route }) {
+  const { t } = useTranslation();
   const {
     Alignments,
     Colors,
@@ -379,19 +410,29 @@ function SearchEventsScreen({ navigation, route }) {
             <View style={[Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween]}>
               <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[16]]}>
                 <Pressable
-                  accessibilityLabel="Passer le tutoriel"
+                  accessibilityLabel={t(
+                    'searchEventsScreen.tutorial.skipLabel',
+                    'Passer le tutoriel',
+                  )}
                   accessibilityRole="button"
                   onPress={handleSkipTutorial}
                 >
-                  <Text style={[Fonts.p2Bold, Fonts.neutral600]}>Passer</Text>
+                  <Text style={[Fonts.p2Bold, Fonts.neutral600]}>
+                    {t('searchEventsScreen.tutorial.skip', 'Passer')}
+                  </Text>
                 </Pressable>
                 {stepIndex > 0 ? (
                   <Pressable
-                    accessibilityLabel="Étape précédente"
+                    accessibilityLabel={t(
+                      'searchEventsScreen.tutorial.previousLabel',
+                      'Étape précédente',
+                    )}
                     accessibilityRole="button"
                     onPress={handlePreviousStep}
                   >
-                    <Text style={[Fonts.p2Bold, Fonts.neutral600]}>Précédent</Text>
+                    <Text style={[Fonts.p2Bold, Fonts.neutral600]}>
+                      {t('searchEventsScreen.tutorial.previous', 'Précédent')}
+                    </Text>
                   </Pressable>
                 ) : null}
               </View>
@@ -403,7 +444,10 @@ function SearchEventsScreen({ navigation, route }) {
                   {EVENT_TUTORIAL_STEPS.length}
                 </Text>
                 <Pressable
-                  accessibilityLabel={isLastStep ? 'Terminer le tutoriel' : 'Étape suivante'}
+                  accessibilityLabel={isLastStep ? t(
+                    'searchEventsScreen.tutorial.finishLabel',
+                    'Terminer le tutoriel',
+                  ) : t('searchEventsScreen.tutorial.nextLabel', 'Étape suivante')}
                   accessibilityRole="button"
                   onPress={handleNextStep}
                   style={[
@@ -413,7 +457,10 @@ function SearchEventsScreen({ navigation, route }) {
                   ]}
                 >
                   <Text style={[Fonts.p2Bold, Fonts.primary900]}>
-                    {isLastStep ? 'Terminer' : 'Suivant'}
+                    {isLastStep ? t(
+                      'searchEventsScreen.tutorial.finish',
+                      'Terminer',
+                    ) : t('searchEventsScreen.tutorial.next', 'Suivant')}
                   </Text>
                 </Pressable>
               </View>

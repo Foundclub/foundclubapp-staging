@@ -1,3 +1,4 @@
+import i18next from 'i18next';
 import { PermissionsAndroid, Platform } from 'react-native';
 import ReactNativeBlobUtil from 'react-native-blob-util';
 
@@ -208,10 +209,13 @@ const ensureRecordPermission = async () => {
   if (hasPermission) return true;
 
   const result = await PermissionsAndroid.request(PermissionsAndroid.PERMISSIONS.RECORD_AUDIO, {
-    buttonNegative: 'Refuser',
-    buttonPositive: 'Autoriser',
-    message: 'FoundClub a besoin du micro pour enregistrer une note vocale.',
-    title: 'Autoriser le microphone',
+    buttonNegative: i18next.t('voiceNoteService.permission.deny', 'Refuser'),
+    buttonPositive: i18next.t('voiceNoteService.permission.allow', 'Autoriser'),
+    message: i18next.t(
+      'voiceNoteService.permission.message',
+      'FoundClub a besoin du micro pour enregistrer une note vocale.',
+    ),
+    title: i18next.t('voiceNoteService.permission.title', 'Autoriser le microphone'),
   });
   return result === PermissionsAndroid.RESULTS.GRANTED;
 };

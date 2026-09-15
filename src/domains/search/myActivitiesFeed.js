@@ -17,6 +17,10 @@
  * la traiter. Un vrai « non lu » est un lot serveur.
  */
 
+import i18next from 'i18next';
+
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
+
 const PENDING_STATUS = 'pending';
 
 /**
@@ -52,8 +56,11 @@ const nameOf = (/** @type {any} */ value) => {
 export const buildRecruitmentAdTitle = (ad) => {
   const isCoachAd = String(ad?.audienceType || '').trim().toLowerCase() === 'coach';
   const role = isCoachAd
-    ? (ad?.coachRoleOther || ad?.coachRole || 'Rôle entraîneur')
-    : (ad?.position || 'Poste non spécifié');
+    ? (ad?.coachRoleOther || ad?.coachRole || i18next.t(
+      'myActivitiesFeed.coachRole',
+      'Rôle entraîneur',
+    ))
+    : (ad?.position || i18next.t('myActivitiesFeed.positionUnspecified', 'Poste non spécifié'));
   const teamName = nameOf(ad?.team);
   return teamName ? `${role} — ${teamName}` : String(role);
 };
@@ -67,7 +74,11 @@ const toRecruitmentPublication = (ad) => {
   const count = Number(ad?.applicationsCount || 0);
   return {
     ad,
-    countLabel: pluralize(count, 'candidature'),
+    countLabel: i18next.t('myActivitiesFeed.applicationCount', {
+      count,
+      defaultValue_one: '{{count}} candidature',
+      defaultValue_other: '{{count}} candidatures',
+    }),
     isOnline: Boolean(ad?.isActive),
     key: `offre-${documentKey(ad)}`,
     market: 'recruitment',
@@ -90,14 +101,18 @@ const toRecruitmentPublication = (ad) => {
 const toFriendlyPublication = (ad) => {
   const count = Number(ad?.applicationsCount || 0);
   const hostingLabel = {
-    AWAY: 'Se déplace',
-    BOTH: 'Reçoit ou se déplace',
-    HOST: 'Reçoit',
+    AWAY: i18next.t('myActivitiesFeed.hosting.away', 'Se déplace'),
+    BOTH: i18next.t('myActivitiesFeed.hosting.both', 'Reçoit ou se déplace'),
+    HOST: i18next.t('myActivitiesFeed.hosting.host', 'Reçoit'),
   }[String(ad?.hostingPreference || '').toUpperCase()] || '';
 
   return {
     ad,
-    countLabel: pluralize(count, 'proposition'),
+    countLabel: i18next.t('myActivitiesFeed.proposalCount', {
+      count,
+      defaultValue_one: '{{count}} proposition',
+      defaultValue_other: '{{count}} propositions',
+    }),
     // `status` vaut 'open' quand l annonce cherche encore un adversaire. Toute
     // autre valeur (close, matched, expired) eteint le point vert.
     isOnline: String(ad?.status || '').toLowerCase() === 'open',
@@ -109,7 +124,7 @@ const toFriendlyPublication = (ad) => {
       nameOf(ad?.city) || nameOf(ad?.team?.club?.city),
     ]),
     responsesCount: count,
-    title: nameOf(ad?.team) || 'Match amical',
+    title: nameOf(ad?.team) || i18next.t('myActivitiesFeed.friendlyMatch', 'Match amical'),
     type: 'publication',
   };
 };
@@ -129,7 +144,11 @@ export const buildMyActivitiesPublications = ({ recruitmentAds = [], friendlyAds
   if (recruitmentAds.length > 0) {
     items.push({
       key: 'section-recrutement',
-      title: `Recrutement · ${pluralize(recruitmentAds.length, 'offre')}`,
+      title: i18next.t('myActivitiesFeed.sections.recruitment', {
+        count: recruitmentAds.length,
+        defaultValue_one: 'Recrutement · {{count}} offre',
+        defaultValue_other: 'Recrutement · {{count}} offres',
+      }),
       type: 'section',
     });
     recruitmentAds.forEach((ad) => items.push(toRecruitmentPublication(ad)));
@@ -138,7 +157,11 @@ export const buildMyActivitiesPublications = ({ recruitmentAds = [], friendlyAds
   if (friendlyAds.length > 0) {
     items.push({
       key: 'section-amicaux',
-      title: `Matchs amicaux · ${pluralize(friendlyAds.length, 'match proposé', 'matchs proposés')}`,
+      title: i18next.t('myActivitiesFeed.sections.friendly', {
+        count: friendlyAds.length,
+        defaultValue_one: 'Matchs amicaux · {{count}} match proposé',
+        defaultValue_other: 'Matchs amicaux · {{count}} matchs proposés',
+      }),
       type: 'section',
     });
     friendlyAds.forEach((ad) => items.push(toFriendlyPublication(ad)));
@@ -173,7 +196,7 @@ export const buildMyActivitiesReceivedResponses = ({
         market: 'recruitment',
         meta: buildRecruitmentAdTitle(ad),
         title: joinMeta([applicant?.firstName, applicant?.lastName]).replace(' · ', ' ')
-          || nameOf(applicant) || 'Candidat',
+          || nameOf(applicant) || i18next.t('myActivitiesFeed.applicant', 'Candidat'),
         type: 'response',
       });
     });
@@ -189,8 +212,20 @@ export const buildMyActivitiesReceivedResponses = ({
         isNew: String(application?.status || '').toLowerCase() === PENDING_STATUS,
         key: `proposition-${documentKey(ad)}-${documentKey(application)}`,
         market: 'amicaux',
-        meta: `sur ${nameOf(ad?.team) || 'ton match proposé'}`,
-        title: `${nameOf(application?.team) || 'Une équipe'} propose un match`,
+        meta: i18next.t('myActivitiesFeed.proposal.on', 'sur {{target}}', {
+          ...SANS_ECHAPPEMENT,
+          target: nameOf(ad?.team) || i18next.t(
+            'myActivitiesFeed.proposal.yourMatch',
+            'ton match proposé',
+          ),
+        }),
+        title: i18next.t('myActivitiesFeed.proposal.title', '{{team}} propose un match', {
+          ...SANS_ECHAPPEMENT,
+          team: nameOf(application?.team) || i18next.t(
+            'myActivitiesFeed.proposal.aTeam',
+            'Une équipe',
+          ),
+        }),
         type: 'response',
       });
     });
@@ -201,7 +236,11 @@ export const buildMyActivitiesReceivedResponses = ({
   if (candidatures.length > 0) {
     items.push({
       key: 'section-candidatures',
-      title: `Candidatures reçues · ${candidatures.length}`,
+      title: i18next.t(
+        'myActivitiesFeed.sections.receivedApplications',
+        'Candidatures reçues · {{total}}',
+        { total: candidatures.length },
+      ),
       type: 'section',
     });
     items.push(...candidatures);
@@ -209,7 +248,11 @@ export const buildMyActivitiesReceivedResponses = ({
   if (propositions.length > 0) {
     items.push({
       key: 'section-propositions',
-      title: `Propositions reçues · ${propositions.length}`,
+      title: i18next.t(
+        'myActivitiesFeed.sections.receivedProposals',
+        'Propositions reçues · {{total}}',
+        { total: propositions.length },
+      ),
       type: 'section',
     });
     items.push(...propositions);
@@ -218,13 +261,15 @@ export const buildMyActivitiesReceivedResponses = ({
   return items;
 };
 
-const SENT_STATUS_LABELS = {
-  accepted: 'Acceptée',
-  declined: 'Refusée',
-  pending: 'En attente',
-  rejected: 'Refusée',
-  withdrawn: 'Retirée',
-};
+// I18N-4 : une fonction, lue a chaque appel -- une table calculee au chargement du module
+// resterait dans la langue du demarrage.
+const sentStatusLabels = () => ({
+  accepted: i18next.t('myActivitiesFeed.sentStatus.accepted', 'Acceptée'),
+  declined: i18next.t('myActivitiesFeed.sentStatus.declined', 'Refusée'),
+  pending: i18next.t('myActivitiesFeed.sentStatus.pending', 'En attente'),
+  rejected: i18next.t('myActivitiesFeed.sentStatus.rejected', 'Refusée'),
+  withdrawn: i18next.t('myActivitiesFeed.sentStatus.withdrawn', 'Retirée'),
+});
 
 /**
  * Le meme onglet, cote joueur : « Mes reponses » — ce que J AI envoye.
@@ -241,7 +286,11 @@ export const buildMyActivitiesSentResponses = ({
   if (sentApplications.length > 0) {
     items.push({
       key: 'section-mes-candidatures',
-      title: `Candidatures envoyées · ${sentApplications.length}`,
+      title: i18next.t(
+        'myActivitiesFeed.sections.sentApplications',
+        'Candidatures envoyées · {{total}}',
+        { total: sentApplications.length },
+      ),
       type: 'section',
     });
     sentApplications.forEach((ad) => {
@@ -252,7 +301,13 @@ export const buildMyActivitiesSentResponses = ({
         isNew: false,
         key: `ma-candidature-${documentKey(ad)}`,
         market: 'recruitment',
-        meta: joinMeta([nameOf(ad?.team?.club) || nameOf(ad?.team), SENT_STATUS_LABELS[status] || 'En attente']),
+        meta: joinMeta([
+          nameOf(ad?.team?.club) || nameOf(ad?.team),
+          sentStatusLabels()[status] || i18next.t(
+            'myActivitiesFeed.sentStatus.pending',
+            'En attente',
+          ),
+        ]),
         title: buildRecruitmentAdTitle(ad),
         type: 'response',
       });
@@ -262,7 +317,11 @@ export const buildMyActivitiesSentResponses = ({
   if (sentFriendlyApplications.length > 0) {
     items.push({
       key: 'section-mes-propositions',
-      title: `Propositions envoyées · ${sentFriendlyApplications.length}`,
+      title: i18next.t(
+        'myActivitiesFeed.sections.sentProposals',
+        'Propositions envoyées · {{total}}',
+        { total: sentFriendlyApplications.length },
+      ),
       type: 'section',
     });
     sentFriendlyApplications.forEach((ad) => {
@@ -272,8 +331,11 @@ export const buildMyActivitiesSentResponses = ({
         isNew: false,
         key: `ma-proposition-${documentKey(ad)}`,
         market: 'amicaux',
-        meta: SENT_STATUS_LABELS[status] || 'En attente',
-        title: `${nameOf(ad?.team) || 'Match amical'}`,
+        meta: sentStatusLabels()[status] || i18next.t(
+          'myActivitiesFeed.sentStatus.pending',
+          'En attente',
+        ),
+        title: `${nameOf(ad?.team) || i18next.t('myActivitiesFeed.friendlyMatch', 'Match amical')}`,
         type: 'response',
       });
     });

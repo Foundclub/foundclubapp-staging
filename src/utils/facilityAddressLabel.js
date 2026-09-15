@@ -1,3 +1,5 @@
+import i18next from 'i18next';
+
 import { getShortAddress } from '@/utils/location';
 import safeJsonParse from '@/utils/safeJsonParse';
 
@@ -31,7 +33,12 @@ const MAX_DESCENT = 4;
 
 const CORRUPTED_MARKER = '[object Object]';
 
-const DEFAULT_ADDRESS_FALLBACK = 'Adresse non renseignée';
+// I18N-4 : une fonction, lue a chaque appel -- une constante de module resterait dans la
+// langue du demarrage.
+const defaultAddressFallback = () => i18next.t(
+  'facilityAddressLabel.noAddress',
+  'Adresse non renseignée',
+);
 
 /**
  * Rend une chaine utilisable, ou une chaine vide.
@@ -97,8 +104,8 @@ export const getAddressText = (address) => pickAddressText(address);
  * @param {string} [fallback] - Le repli quand aucun texte n'est trouvable.
  * @returns {string} Un libelle affichable, jamais un objet.
  */
-export const getFacilityAddressLabel = (address, fallback = DEFAULT_ADDRESS_FALLBACK) => (
-  pickAddressText(address) || usableText(fallback) || DEFAULT_ADDRESS_FALLBACK
+export const getFacilityAddressLabel = (address, fallback = defaultAddressFallback()) => (
+  pickAddressText(address) || usableText(fallback) || defaultAddressFallback()
 );
 
 /**

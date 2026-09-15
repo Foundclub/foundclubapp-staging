@@ -4,6 +4,10 @@ import path from 'path';
 import { Text, TouchableOpacity } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
+// I18N-4 : l'ecran lit ses textes par t() (interpolation, pluriels) ; ce temoin
+// initialise le VRAI i18next en francais, sans rien changer a ce qu'il affirme.
+import '@/theme/strings';
+
 import ClubCardSurface from '@/components/molecules/clubCard/ClubCardSurface';
 import SponsorMarquee from '@/components/molecules/sponsorMarquee/SponsorMarquee';
 

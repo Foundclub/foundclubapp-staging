@@ -5,6 +5,20 @@ import OnboardingClubCard from '@/views/onboarding/components/OnboardingClubCard
 
 import { formatClubDistanceLabel } from '@/utils/location';
 
+// I18N-4 : le code teste lit certains textes par i18next hors composant. react-i18next
+// reste double ; i18next lui-meme est initialise sur le VRAI fr.js, en francais, sans
+// rien changer a ce que le temoin affirme.
+const i18nextTemoin = require('i18next');
+
+const frTemoin = require('@/theme/strings/translations/fr');
+
+(i18nextTemoin.default || i18nextTemoin).init({
+  compatibilityJSON: 'v4',
+  fallbackLng: 'fr',
+  lng: 'fr',
+  resources: { fr: { translation: frTemoin.default } },
+});
+
 // L23 — LE TEST QUI EMPÊCHE LES DEUX CARTES DE REDIVERGER.
 //
 // Constat qui commande ce fichier : `ClubCard` et `OnboardingClubCard` font le

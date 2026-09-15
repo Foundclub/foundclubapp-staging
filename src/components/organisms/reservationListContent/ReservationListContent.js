@@ -27,6 +27,7 @@ import useAuth from '@/domains/auth/useAuth';
 import { getParticipationErrorMessage } from '@/domains/participation/participationFlow';
 import { useAppContext } from '@/store/appContext';
 import { horizontalScale } from '@/theme/scaling';
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import SearchMapFab from '@/components/atoms/searchMapFab/SearchMapFab';
@@ -93,11 +94,19 @@ function ReservationListContent({
   const isSmartSearchEnabled = activeSearchText.length >= 2;
 
   const activityOptions = [
-    { id: 'all', label: 'Tous', slug: null },
+    { id: 'all', label: t('reservationListContent.activities.all', 'Tous'), slug: null },
     { id: 'padel', label: 'Padel', slug: 'padel' },
-    { id: 'foot', label: 'Foot 5', slug: 'foot' },
-    { id: 'tennis', label: 'Tennis', slug: 'tennis' },
-    { id: 'basket', label: 'Basket', slug: 'basket' },
+    { id: 'foot', label: t('reservationListContent.activities.foot', 'Foot 5'), slug: 'foot' },
+    {
+      id: 'tennis',
+      label: t('reservationListContent.activities.tennis', 'Tennis'),
+      slug: 'tennis',
+    },
+    {
+      id: 'basket',
+      label: t('reservationListContent.activities.basket', 'Basket'),
+      slug: 'basket',
+    },
   ];
 
   const joinReservationMutation = useMutation({
@@ -105,7 +114,10 @@ function ReservationListContent({
     onError: (error) => {
       Alert.alert(
         t('common.error'),
-        getParticipationErrorMessage(error, 'Impossible de rejoindre cette réservation pour le moment.'),
+        getParticipationErrorMessage(error, t(
+          'reservationListContent.errors.join',
+          'Impossible de rejoindre cette réservation pour le moment.',
+        )),
       );
     },
     onSuccess: () => {
@@ -437,7 +449,11 @@ function ReservationListContent({
       <View style={[Spaces.gap[8]]}>
         {primaryReasonLabel ? (
           <Text style={[Fonts.p3, Fonts.primary500]}>
-            {`Tri pertinence: ${primaryReasonLabel}`}
+            {t(
+              'reservationListContent.relevanceReason',
+              'Tri pertinence: {{reason}}',
+              { reason: primaryReasonLabel, ...SANS_ECHAPPEMENT },
+            )}
           </Text>
         ) : null}
         <EventCardNew
@@ -470,7 +486,10 @@ function ReservationListContent({
     return (
       <View style={[Spaces.gap[40], Alignments.fill, Alignments.alignCenter, Alignments.justifyCenter]}>
         <Text style={[Fonts.p1, Fonts.error500]}>
-          {activeError?.message || 'Une erreur est survenue'}
+          {activeError?.message || t(
+            'reservationListContent.errors.generic',
+            'Une erreur est survenue',
+          )}
         </Text>
       </View>
     );
@@ -529,7 +548,7 @@ function ReservationListContent({
 
       <View>
         <Text style={[Fonts.p1, { color: Colors.neutral00, marginBottom: 8 }]}>
-          Réservations à partir de
+          {t('reservationListContent.fromDate', 'Réservations à partir de')}
         </Text>
         <DateSlider
           onDateSelected={handleDateSelected}
@@ -539,7 +558,7 @@ function ReservationListContent({
 
       <View>
         <Text style={[Fonts.p2Bold, { color: Colors.neutral00, marginBottom: 8 }]}>
-          Filtrer par activité
+          {t('reservationListContent.filterByActivity', 'Filtrer par activité')}
         </Text>
         <ScrollView
           contentContainerStyle={{ gap: 8 }}
@@ -584,7 +603,7 @@ function ReservationListContent({
 
       {isSmartSearchEnabled ? (
         <Text style={[Fonts.p3, Fonts.primary500]}>
-          Tri par pertinence
+          {t('reservationListContent.sortedByRelevance', 'Tri par pertinence')}
         </Text>
       ) : null}
     </View>
@@ -622,7 +641,7 @@ function ReservationListContent({
 
       <JoinEventModal
         clubName={selectedEvent?.team?.club?.name || selectedEvent?.club?.name || ''}
-        confirmLabel="Reserver"
+        confirmLabel={t('reservationListContent.book', 'Reserver')}
         isSubmitting={joinReservationMutation.isPending}
         isVisible={isJoinModalVisible}
         onClose={handleCloseJoinModal}

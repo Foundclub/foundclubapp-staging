@@ -7,6 +7,20 @@ import { FACILITY_PLANNING_PALETTE } from '@/utils/facilityPlanningColor';
 
 import FacilityForm from '../FacilityForm';
 
+// I18N-4 : le code teste lit certains textes par i18next hors composant. react-i18next
+// reste double ; i18next lui-meme est initialise sur le VRAI fr.js, en francais, sans
+// rien changer a ce que le temoin affirme.
+const i18nextTemoin = require('i18next');
+
+const frTemoin = require('@/theme/strings/translations/fr');
+
+(i18nextTemoin.default || i18nextTemoin).init({
+  compatibilityJSON: 'v4',
+  fallbackLng: 'fr',
+  lng: 'fr',
+  resources: { fr: { translation: frTemoin.default } },
+});
+
 // D2 (E6) : FacilityForm.js fait 823 lignes et n'avait AUCUN test, alors qu'il
 // porte trois choses qu'une refonte de mise en page ne doit jamais deplacer :
 // un schema Joi, l'ouverture du paywall, et la normalisation d'adresse en

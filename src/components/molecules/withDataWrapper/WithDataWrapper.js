@@ -53,7 +53,7 @@ function WithDataWrapper({
   errorMessage = undefined,
   isLoading,
   onRetry = undefined,
-  retryLabel = 'Réessayer',
+  retryLabel = undefined,
   wrapperStyle,
 }) {
   const queryClient = useContext(QueryClientContext);

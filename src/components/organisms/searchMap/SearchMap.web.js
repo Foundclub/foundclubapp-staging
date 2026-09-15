@@ -4,6 +4,7 @@ import {
   useMemo,
   useState,
 } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Text, View } from 'react-native';
 
 import { withAlpha } from '@/theme/colors';
@@ -115,6 +116,7 @@ function SearchMap({
     Fonts,
     Spaces,
   } = useTheme();
+  const { t } = useTranslation();
   const [internalSelectedItemId, setInternalSelectedItemId] = useState('');
   const [mapCommand, setMapCommand] = useState(null);
   const [focusMode, setFocusMode] = useState(/** @type {'results' | 'selected' | 'user' | 'region'} */ ('results'));
@@ -390,7 +392,7 @@ function SearchMap({
           }}
         >
           <Text style={[Fonts.p2Bold, Fonts.neutral00, { textAlign: 'center' }]}>
-            Touche un repère pour voir la fiche
+            {t('searchMap.tapMarker', 'Touche un repère pour voir la fiche')}
           </Text>
         </View>
       ) : null}

@@ -1,4 +1,5 @@
 import { pick } from '@react-native-documents/picker';
+import i18next from 'i18next';
 import ReactNativeBlobUtil from 'react-native-blob-util';
 import { launchCamera, launchImageLibrary } from 'react-native-image-picker';
 
@@ -48,7 +49,10 @@ export const getLocalFileSize = async (uri) => {
 };
 
 export const recordVoiceNote = async () => {
-  throw new Error('L enregistrement vocal n est pas encore adapte via platform/media.');
+  throw new Error(i18next.t(
+    'media.errors.voiceNoteNotAdapted',
+    'L enregistrement vocal n est pas encore adapte via platform/media.',
+  ));
 };
 
 export default {

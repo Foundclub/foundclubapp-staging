@@ -1,4 +1,5 @@
 import React, { useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Text, View } from 'react-native';
 
 import useTheme from '@/theme/themeContext';
@@ -18,12 +19,16 @@ function SquadLevelStep({
   data, onNext, onPrev, updateData,
 }) {
   const { Colors, Fonts } = useTheme();
+  const { t } = useTranslation();
 
   const levels = [
-    { label: 'Débutant (Amateur)', value: 'beginner' },
-    { label: 'Intermédiaire (Habitué)', value: 'intermediate' },
-    { label: 'Confirmé (Compétition)', value: 'advanced' },
-    { label: 'Expert (Semi-Pro)', value: 'expert' },
+    { label: t('squadLevelStep.levels.beginner', 'Débutant (Amateur)'), value: 'beginner' },
+    {
+      label: t('squadLevelStep.levels.intermediate', 'Intermédiaire (Habitué)'),
+      value: 'intermediate',
+    },
+    { label: t('squadLevelStep.levels.advanced', 'Confirmé (Compétition)'), value: 'advanced' },
+    { label: t('squadLevelStep.levels.expert', 'Expert (Semi-Pro)'), value: 'expert' },
   ];
 
   const isValid = useMemo(() => !!data.level, [data.level]);
@@ -32,16 +37,19 @@ function SquadLevelStep({
     <View style={{ flex: 1, paddingHorizontal: 16 }}>
       <View style={{ flex: 1, justifyContent: 'center', paddingBottom: 100 }}>
         <Text style={[Fonts.h1, { color: Colors.neutral00, marginBottom: 16, textAlign: 'center' }]}>
-          Quel est ton niveau ?
+          {t('squadLevelStep.title', 'Quel est ton niveau ?')}
         </Text>
         <Text style={[Fonts.p2, { color: Colors.neutral300, marginBottom: 40, textAlign: 'center' }]}>
-          Cela nous aidera à te placer dans la bonne division intiale.
+          {t(
+            'squadLevelStep.subtitle',
+            'Cela nous aidera à te placer dans la bonne division intiale.',
+          )}
         </Text>
 
         <AutocompleteSelect
           isSearchable={false}
           options={levels}
-          placeholder="Sélectionner un niveau"
+          placeholder={t('squadLevelStep.placeholder', 'Sélectionner un niveau')}
           setValue={(item) => updateData('level', item)}
           value={data.level?.label}
         />
@@ -51,12 +59,12 @@ function SquadLevelStep({
         <Button
           disabled={!isValid}
           onPress={onNext}
-          title="Continuer"
+          title={t('squadLevelStep.continue', 'Continuer')}
           variant="Primary"
         />
         <Button
           onPress={onPrev}
-          title="Retour"
+          title={t('squadLevelStep.back', 'Retour')}
           variant="Secondary"
         />
       </View>

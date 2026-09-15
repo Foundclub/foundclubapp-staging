@@ -1,3 +1,4 @@
+import i18next from 'i18next';
 import {
   useCallback,
   useEffect,
@@ -7,6 +8,8 @@ import {
 } from 'react';
 import { Linking } from 'react-native';
 import ReactNativeBlobUtil from 'react-native-blob-util';
+
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 
 import { canLoadNitroSoundModule } from '@/utils/audio/nitroSoundRuntime';
 import { createLogger } from '@/utils/logger/logger';
@@ -275,19 +278,71 @@ const shouldRetryRemoteAudioWithoutHeaders = (/** @type {any} */ error, /** @typ
 const toPlaybackErrorMessage = (/** @type {any} */ error) => {
   const errorCode = getPlaybackErrorCode(error);
 
-  if (errorCode === 'AUDIO_HTTP_401') return 'Audio refuse (401)';
-  if (errorCode === 'AUDIO_HTTP_403') return 'Audio refuse (403)';
-  if (errorCode === 'AUDIO_HTTP_404') return 'Audio introuvable (404)';
-  if (errorCode.startsWith('AUDIO_HTTP_')) return `Erreur HTTP audio (${errorCode.replace('AUDIO_HTTP_', '')})`;
-  if (errorCode === 'AUDIO_DOWNLOAD_INVALID_CONTENT') return 'Réponse audio invalide';
-  if (errorCode === 'AUDIO_DOWNLOAD_EMPTY_FILE') return 'Fichier audio vide';
-  if (errorCode === 'AUDIO_DOWNLOAD_EMPTY_PATH') return 'Cache audio introuvable';
-  if (errorCode === 'PLAYER_SOURCE_EMPTY') return 'Source audio vide';
-  if (errorCode === 'PLAYER_START_FAILED') return 'Lecture native impossible';
+  if (errorCode === 'AUDIO_HTTP_401') {
+    return i18next.t(
+      'useAudioPlayback.errors.refused401',
+      'Audio refuse (401)',
+    );
+  }
+  if (errorCode === 'AUDIO_HTTP_403') {
+    return i18next.t(
+      'useAudioPlayback.errors.refused403',
+      'Audio refuse (403)',
+    );
+  }
+  if (errorCode === 'AUDIO_HTTP_404') {
+    return i18next.t(
+      'useAudioPlayback.errors.notFound404',
+      'Audio introuvable (404)',
+    );
+  }
+  if (errorCode.startsWith('AUDIO_HTTP_')) {
+    return i18next.t(
+      'useAudioPlayback.errors.http',
+      'Erreur HTTP audio ({{status}})',
+      { status: errorCode.replace('AUDIO_HTTP_', '') },
+    );
+  }
+  if (errorCode === 'AUDIO_DOWNLOAD_INVALID_CONTENT') {
+    return i18next.t(
+      'useAudioPlayback.errors.invalidContent',
+      'Réponse audio invalide',
+    );
+  }
+  if (errorCode === 'AUDIO_DOWNLOAD_EMPTY_FILE') {
+    return i18next.t(
+      'useAudioPlayback.errors.emptyFile',
+      'Fichier audio vide',
+    );
+  }
+  if (errorCode === 'AUDIO_DOWNLOAD_EMPTY_PATH') {
+    return i18next.t(
+      'useAudioPlayback.errors.cacheNotFound',
+      'Cache audio introuvable',
+    );
+  }
+  if (errorCode === 'PLAYER_SOURCE_EMPTY') {
+    return i18next.t(
+      'useAudioPlayback.errors.emptySource',
+      'Source audio vide',
+    );
+  }
+  if (errorCode === 'PLAYER_START_FAILED') {
+    return i18next.t(
+      'useAudioPlayback.errors.nativeStartFailed',
+      'Lecture native impossible',
+    );
+  }
 
   const rawMessage = String(error?.message || '').trim();
-  if (rawMessage) return `Lecture audio indisponible (${rawMessage})`;
-  return 'Lecture audio indisponible';
+  if (rawMessage) {
+    return i18next.t(
+      'useAudioPlayback.errors.unavailableWithReason',
+      'Lecture audio indisponible ({{reason}})',
+      { reason: rawMessage, ...SANS_ECHAPPEMENT },
+    );
+  }
+  return i18next.t('useAudioPlayback.errors.unavailable', 'Lecture audio indisponible');
 };
 
 const claimPlaybackSlot = async (/** @type {string} */ ownerId, /** @type {() => Promise<void>} */ stopCurrentOwner) => {
@@ -576,13 +631,19 @@ const useAudioPlayback = ({ allowExternalFallback = false, headers, sourceUrl })
 
   const openExternalFallback = useCallback(async () => {
     if (!allowExternalFallback) {
-      safeSetState(setLastError, 'Lecture audio indisponible');
+      safeSetState(setLastError, i18next.t(
+        'useAudioPlayback.errors.unavailable',
+        'Lecture audio indisponible',
+      ));
       return;
     }
 
     const rawSource = String(normalizedSourceUrl || '').trim();
     if (!rawSource || !isHttpUrl(rawSource)) {
-      safeSetState(setLastError, 'Lecture audio indisponible');
+      safeSetState(setLastError, i18next.t(
+        'useAudioPlayback.errors.unavailable',
+        'Lecture audio indisponible',
+      ));
       return;
     }
 
@@ -594,7 +655,10 @@ const useAudioPlayback = ({ allowExternalFallback = false, headers, sourceUrl })
         message: /** @type {any} */ (error)?.message,
         sourceUrl: rawSource,
       });
-      safeSetState(setLastError, 'Lecture audio indisponible');
+      safeSetState(setLastError, i18next.t(
+        'useAudioPlayback.errors.unavailable',
+        'Lecture audio indisponible',
+      ));
     }
   }, [allowExternalFallback, normalizedSourceUrl, safeSetState]);
 
@@ -608,7 +672,10 @@ const useAudioPlayback = ({ allowExternalFallback = false, headers, sourceUrl })
         sourceUrl: rawSource,
       });
       if (!allowExternalFallback) {
-        safeSetState(setLastError, 'Module audio indisponible');
+        safeSetState(setLastError, i18next.t(
+          'useAudioPlayback.errors.moduleUnavailable',
+          'Module audio indisponible',
+        ));
         return;
       }
       await openExternalFallback();
@@ -764,7 +831,10 @@ const useAudioPlayback = ({ allowExternalFallback = false, headers, sourceUrl })
     const player = ensurePlayer();
     if (!player) {
       if (!allowExternalFallback) {
-        safeSetState(setLastError, 'Module audio indisponible');
+        safeSetState(setLastError, i18next.t(
+          'useAudioPlayback.errors.moduleUnavailable',
+          'Module audio indisponible',
+        ));
         return;
       }
       await openExternalFallback();
@@ -798,7 +868,10 @@ const useAudioPlayback = ({ allowExternalFallback = false, headers, sourceUrl })
       await startPlayback();
     } catch (error) {
       playbackLogger.warn('Failed to toggle playback', { message: /** @type {any} */ (error)?.message });
-      safeSetState(setLastError, 'Lecture audio indisponible');
+      safeSetState(setLastError, i18next.t(
+        'useAudioPlayback.errors.unavailable',
+        'Lecture audio indisponible',
+      ));
       await stopPlayback();
     } finally {
       safeSetState(setIsLoading, false);

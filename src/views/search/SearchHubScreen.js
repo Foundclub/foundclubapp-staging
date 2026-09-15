@@ -1,3 +1,4 @@
+import i18next from 'i18next';
 import {
   useCallback,
   useEffect,
@@ -197,14 +198,16 @@ function SearchHubScreen({ navigation, route }) {
             color: Colors.neutral00, fontSize: 20, fontWeight: '700', textAlign: 'center',
           }}
           >
-            Bientôt disponible
+            {i18next.t('searchHubScreen.reservations.comingSoonTitle', 'Bientôt disponible')}
           </Text>
           <Text style={{
             color: Colors.neutral300, fontSize: 14, lineHeight: 22, marginTop: 12, textAlign: 'center',
           }}
           >
-            La réservation de terrains et d&apos;installations arrive très vite.
-            Reste connecté, on te préviendra dès son ouverture.
+            {i18next.t(
+              'searchHubScreen.reservations.comingSoonBody',
+              "La réservation de terrains et d'installations arrive très vite. Reste connecté, on te préviendra dès son ouverture.", // eslint-disable-line max-len
+            )}
           </Text>
         </View>
       );

@@ -41,6 +41,7 @@ import { TutorialIds } from '@/domains/tutorial/tutorialIds';
 import { scrollTutorialTargetIntoViewOnWeb } from '@/domains/tutorial/tutorialWebRuntime';
 import useFeatureTutorial from '@/domains/tutorial/useFeatureTutorial';
 import { useAppContext } from '@/store/appContext';
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -1866,8 +1867,11 @@ function HomeHubContent({ auth, navigation, route }) {
           tutorial: makeTutorial(
             'manageMyAds',
             6,
-            'Mes activités',
-            'Retrouve tes offres, tes matchs proposés et les réponses reçues.',
+            t('homeHub.tutorial.myActivities.title', 'Mes activités'),
+            t(
+              'homeHub.tutorial.myActivities.description',
+              'Retrouve tes offres, tes matchs proposés et les réponses reçues.',
+            ),
             {
               nextAction: 'scrollDown',
               nextLabel: scrollDownLabel,
@@ -1889,8 +1893,11 @@ function HomeHubContent({ auth, navigation, route }) {
           tutorial: makeTutorial(
             'manageLicenses',
             7,
-            'Cotisations du club',
-            'Pilote les cotisations et relances depuis un tableau dédié.',
+            t('homeHub.tutorial.clubFees.title', 'Cotisations du club'),
+            t(
+              'homeHub.tutorial.clubFees.description',
+              'Pilote les cotisations et relances depuis un tableau dédié.',
+            ),
             {
               nextAction: 'scrollDown',
               nextLabel: scrollDownLabel,
@@ -1988,8 +1995,11 @@ function HomeHubContent({ auth, navigation, route }) {
           tutorial: makeTutorial(
             'manageMyAds',
             6,
-            'Mes activités',
-            'Retrouve tes offres, tes matchs proposés et les réponses reçues.',
+            t('homeHub.tutorial.myActivities.title', 'Mes activités'),
+            t(
+              'homeHub.tutorial.myActivities.description',
+              'Retrouve tes offres, tes matchs proposés et les réponses reçues.',
+            ),
             {
               nextAction: 'scrollDown',
               nextLabel: scrollDownLabel,
@@ -2011,8 +2021,11 @@ function HomeHubContent({ auth, navigation, route }) {
           tutorial: makeTutorial(
             'manageLicenses',
             7,
-            'Cotisations de mes équipes',
-            'Consulte les statuts de cotisation de tes équipes.',
+            t('homeHub.tutorial.teamFees.title', 'Cotisations de mes équipes'),
+            t(
+              'homeHub.tutorial.teamFees.description',
+              'Consulte les statuts de cotisation de tes équipes.',
+            ),
             {
               nextAction: 'scrollDown',
               nextLabel: scrollDownLabel,
@@ -2224,8 +2237,11 @@ function HomeHubContent({ auth, navigation, route }) {
         tutorial: makeTutorial(
           'searchProfiles',
           13,
-          'Rechercher des profils',
-          'Accèdes directement aux profils ouverts au recrutement pour tes équipes.',
+          t('homeHub.tutorial.searchProfiles.title', 'Rechercher des profils'),
+          t(
+            'homeHub.tutorial.searchProfiles.description',
+            'Accèdes directement aux profils ouverts au recrutement pour tes équipes.',
+          ),
           {
             nextAction: 'scrollDown',
             nextLabel: scrollDownLabel,
@@ -2293,8 +2309,11 @@ function HomeHubContent({ auth, navigation, route }) {
       tutorial: makeTutorial(
         'searchAmicaux',
         15,
-        'Matchs amicaux',
-        'Consulte les équipes qui cherchent un match amical, et publie le tien.',
+        t('homeHub.tutorial.friendlies.title', 'Matchs amicaux'),
+        t(
+          'homeHub.tutorial.friendlies.description',
+          'Consulte les équipes qui cherchent un match amical, et publie le tien.',
+        ),
       ),
     });
 
@@ -2474,7 +2493,6 @@ function HomeHubContent({ auth, navigation, route }) {
 
     if (canShowSubscriptionExperience) {
       const remainingFreeEvents = eventPublishQuotaItem?.remaining ?? 0;
-      const quotaPlural = remainingFreeEvents > 1 ? 's' : '';
       cards.unshift({
         accentColor: Colors.primary500,
         icon: 'euroCircle',
@@ -2482,7 +2500,13 @@ function HomeHubContent({ auth, navigation, route }) {
         layout: 'full',
         onPress: handleOpenSubscriptionOverview,
         subtitle: eventPublishQuotaItem
-          ? `${subscriptionStatusMeta.label} · ${remainingFreeEvents} événement${quotaPlural} offert${quotaPlural} restant${quotaPlural}`
+          ? t('homeHub.cards.profile.subscription.quota', {
+            count: remainingFreeEvents,
+            defaultValue_one: '{{status}} · {{count}} événement offert restant',
+            defaultValue_other: '{{status}} · {{count}} événements offerts restants',
+            status: subscriptionStatusMeta.label,
+            ...SANS_ECHAPPEMENT,
+          })
           : t('homeHub.cards.profile.subscription.fallbackSubtitle', 'Consulte tes offres, quotas gratuits et équipes couvertes.'),
         subtitleLines: 1,
         title: t('homeHub.cards.profile.subscription.title', 'Mon abonnement'),
@@ -2625,12 +2649,18 @@ function HomeHubContent({ auth, navigation, route }) {
               ]}
             >
               <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
-                Publication réservée aux clubs certifiés
+                {t('homeHub.publishingBlocked.title', 'Publication réservée aux clubs certifiés')}
               </Text>
               <Text style={[Fonts.p3, Fonts.neutral200]}>
                 {governedPublishingBlockReason === 'requires_superadmin_authorization'
-                  ? "Ton club n'est pas encore certifié. Tu peux gérer ton organisation, mais un superadmin doit encore autoriser la publication des événements et des offres."
-                  : 'La publication est temporairement bloquée pour ce club non certifié.'}
+                  ? t(
+                    'homeHub.publishingBlocked.requiresSuperadmin',
+                    "Ton club n'est pas encore certifié. Tu peux gérer ton organisation, mais un superadmin doit encore autoriser la publication des événements et des offres.", // eslint-disable-line max-len
+                  )
+                  : t(
+                    'homeHub.publishingBlocked.temporary',
+                    'La publication est temporairement bloquée pour ce club non certifié.',
+                  )}
               </Text>
             </View>
           ) : null}
@@ -2858,6 +2888,7 @@ function HomeHubContent({ auth, navigation, route }) {
  */
 function HomeHub({ navigation, route }) {
   const auth = useAuth();
+  const { t } = useTranslation();
   const userId = auth?.userData?.documentId;
 
   useEffect(() => {
@@ -2880,9 +2911,9 @@ function HomeHub({ navigation, route }) {
   if (auth?.userDataLoading) {
     return (
       <HomeHubStateView
-        description="Nous préparons ton espace FoundClub."
+        description={t('homeHub.state.loading.description', 'Nous préparons ton espace FoundClub.')}
         isLoading
-        title="Chargement de l'accueil"
+        title={t('homeHub.state.loading.title', "Chargement de l'accueil")}
       />
     );
   }
@@ -2890,12 +2921,15 @@ function HomeHub({ navigation, route }) {
   if (auth?.userDataError) {
     return (
       <HomeHubStateView
-        actionLabel="Réessayer"
-        description="Impossible de charger ton espace pour le moment. Vérifie ton connexion puis relance le chargement."
+        actionLabel={t('homeHub.state.error.retry', 'Réessayer')}
+        description={t(
+          'homeHub.state.error.description',
+          'Impossible de charger ton espace pour le moment. Vérifie ton connexion puis relance le chargement.', // eslint-disable-line max-len
+        )}
         onAction={() => {
           auth.refetchUserData?.();
         }}
-        title="Accueil indisponible"
+        title={t('homeHub.state.error.title', 'Accueil indisponible')}
       />
     );
   }
@@ -2903,12 +2937,15 @@ function HomeHub({ navigation, route }) {
   if (!auth?.userData) {
     return (
       <HomeHubStateView
-        actionLabel="Actualiser"
-        description="Ton compte n'a pas encore été chargé. Relance le chargement pour afficher ton accueil personnalisé."
+        actionLabel={t('homeHub.state.noUser.refresh', 'Actualiser')}
+        description={t(
+          'homeHub.state.noUser.description',
+          "Ton compte n'a pas encore été chargé. Relance le chargement pour afficher ton accueil personnalisé.", // eslint-disable-line max-len
+        )}
         onAction={() => {
           auth.refetchUserData?.();
         }}
-        title="Compte introuvable"
+        title={t('homeHub.state.noUser.title', 'Compte introuvable')}
       />
     );
   }

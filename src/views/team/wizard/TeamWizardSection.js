@@ -1,3 +1,4 @@
+import i18next from 'i18next';
 import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
@@ -24,7 +25,9 @@ import { useGetSections } from '@/services/section/sectionQueries';
 // Sous-titres d'aide des sections (handoff tunnel 3/8).
 /** @type {Record<string, string>} */
 const SECTION_SUBTITLES = {
-  mixte: 'Ouverte à toutes et tous',
+  get mixte() {
+    return i18next.t('teamWizardSection.subtitles.mixte', 'Ouverte à toutes et tous');
+  },
 };
 
 /**
@@ -75,7 +78,7 @@ function TeamWizardSection({ navigation }) {
           <View style={[{ alignItems: 'center', flexDirection: 'row' }, Spaces.gap[12], Spaces.marginBottom[16]]}>
             <ActivityIndicator size="small" />
             <Text style={[Fonts.p2, Fonts.neutral200]}>
-              Chargement des sections disponibles…
+              {t('teamWizardSection.loading', 'Chargement des sections disponibles…')}
             </Text>
           </View>
         ) : null}
@@ -83,14 +86,26 @@ function TeamWizardSection({ navigation }) {
         {hasError ? (
           <View style={[Spaces.gap[12], Spaces.marginBottom[16]]}>
             <Text style={[Fonts.p2, Fonts.neutral100]}>
-              Impossible de charger les sections. Réessaie pour continuer.
+              {t(
+                'teamWizardSection.loadError',
+                'Impossible de charger les sections. Réessaie pour continuer.',
+              )}
             </Text>
-            <Button onPress={() => sectionsQuery.refetch()} title="Réessayer" variant="Secondary" />
+            <Button
+              onPress={() => sectionsQuery.refetch()}
+              title={t('teamWizardSection.retry', 'Réessayer')}
+              variant="Secondary"
+            />
           </View>
         ) : null}
 
         {isListEmpty ? (
-          <TeamWizardEmptyReferential missing="Aucune section n’est proposée pour le moment." />
+          <TeamWizardEmptyReferential
+            missing={t(
+              'teamWizardSection.empty',
+              'Aucune section n’est proposée pour le moment.',
+            )}
+          />
         ) : null}
 
         {(sections || []).map((section) => {

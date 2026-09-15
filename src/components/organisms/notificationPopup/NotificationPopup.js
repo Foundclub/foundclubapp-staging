@@ -1,4 +1,5 @@
 import { useNavigation } from '@react-navigation/native';
+import { useTranslation } from 'react-i18next';
 import {
   Modal,
   Platform,
@@ -22,8 +23,6 @@ import { resolveNotificationDestination } from '@/utils/notifications/notificati
 import {
   formatNotificationRelativeTime,
   getNotificationIcon,
-  NOTIFICATION_EMPTY_STATE_BODY,
-  NOTIFICATION_EMPTY_STATE_TITLE,
 } from '@/utils/notifications/notificationPresentation';
 
 /**
@@ -41,6 +40,7 @@ function NotificationPopup({
   const {
     ApplicationStyle, Colors, Fonts, Spaces,
   } = useTheme();
+  const { t } = useTranslation();
   const navigation = /** @type {any} */ (useNavigation());
   const insets = useSafeAreaInsets();
 
@@ -94,7 +94,10 @@ function NotificationPopup({
     if (onMarkAsRead && notificationId) {
       Promise.resolve(onMarkAsRead(notificationId)).catch((error) => {
         const typedError = /** @type {any} */ (error);
-        showFeedback(getErrorMessage(typedError, 'generic') || 'Impossible de marquer comme lu.');
+        showFeedback(getErrorMessage(typedError, 'generic') || t(
+          'notificationPopup.errors.markRead',
+          'Impossible de marquer comme lu.',
+        ));
       });
     }
 
@@ -133,7 +136,10 @@ function NotificationPopup({
     try {
       await onMarkAllAsRead();
     } catch (error) {
-      showFeedback(getErrorMessage(error, 'generic') || 'Impossible de marquer toutes les notifications.');
+      showFeedback(getErrorMessage(error, 'generic') || t(
+        'notificationPopup.errors.markAll',
+        'Impossible de marquer toutes les notifications.',
+      ));
     }
   };
 
@@ -142,7 +148,7 @@ function NotificationPopup({
     popupContent = (
       <View style={{ alignItems: 'center', padding: 24 }}>
         <Text style={[Fonts.p3 || { fontSize: 14 }, { color: textMuted, fontStyle: 'italic' }]}>
-          Chargement des notifications...
+          {t('notificationPopup.loading', 'Chargement des notifications...')}
         </Text>
       </View>
     );
@@ -156,7 +162,7 @@ function NotificationPopup({
           {'\u{1F514}'}
         </Text>
         <Text style={[Fonts.p3 || { fontSize: 14 }, { color: textMuted, fontStyle: 'italic' }]}>
-          {NOTIFICATION_EMPTY_STATE_TITLE}
+          {t('notificationPopup.empty.title', 'Aucune notification')}
         </Text>
         <Text
           style={[
@@ -164,7 +170,7 @@ function NotificationPopup({
             { color: textMuted, marginTop: 6, textAlign: 'center' },
           ]}
         >
-          {NOTIFICATION_EMPTY_STATE_BODY}
+          {t('notificationPopup.empty.body', 'Les nouvelles notifications apparaîtront ici.')}
         </Text>
       </View>
     );
@@ -173,7 +179,10 @@ function NotificationPopup({
       const icon = getNotificationIcon(notif.type);
       return (
         <TouchableOpacity
-          accessibilityLabel={`${notif.title || 'Notification'}. ${notif.body || ''}`.trim()}
+          accessibilityLabel={`${notif.title || t(
+            'notificationPopup.defaultTitle',
+            'Notification',
+          )}. ${notif.body || ''}`.trim()}
           accessibilityRole="button"
           accessibilityState={{ selected: !notif.read }}
           key={notif.documentId || notif.id || index}
@@ -207,7 +216,7 @@ function NotificationPopup({
           <View style={{ flex: 1 }}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
               <Text numberOfLines={1} style={[notif.read ? Fonts.p3 : Fonts.p3Bold, { color: textPrimary, flex: 1, fontSize: 14 }]}>
-                {notif.title || 'Notification'}
+                {notif.title || t('notificationPopup.defaultTitle', 'Notification')}
               </Text>
               <Text style={{ color: textMuted, fontSize: 10, marginLeft: 8 }}>
                 {formatNotificationRelativeTime(notif.createdAt)}
@@ -244,7 +253,7 @@ function NotificationPopup({
     >
       <View style={[styles.modalOverlay, { paddingTop: insets.top + 50 }]}>
         <TouchableOpacity
-          accessibilityLabel="Fermer les notifications"
+          accessibilityLabel={t('notificationPopup.close', 'Fermer les notifications')}
           accessibilityRole="button"
           activeOpacity={1}
           onPress={onClose}
@@ -275,7 +284,7 @@ function NotificationPopup({
           >
             <View style={{ alignItems: 'center', flexDirection: 'row' }}>
               <Text style={[Fonts.h4Bold || { fontSize: 16, fontWeight: 'bold' }, { color: textPrimary }]}>
-                Notifications
+                {t('notificationPopup.title', 'Notifications')}
               </Text>
               {unreadCount > 0 ? (
                 <View
@@ -296,13 +305,13 @@ function NotificationPopup({
 
             {unreadCount > 0 ? (
               <TouchableOpacity
-                accessibilityLabel="Tout lire"
+                accessibilityLabel={t('notificationPopup.markAll', 'Tout lire')}
                 accessibilityRole="button"
                 hitSlop={ApplicationStyle.hitSlop.min44From24}
                 onPress={handleMarkAllAsRead}
               >
                 <Text style={[Fonts.p3Bold || { fontWeight: '600' }, { color: popupBorder }]}>
-                  Tout lire
+                  {t('notificationPopup.markAll', 'Tout lire')}
                 </Text>
               </TouchableOpacity>
             ) : null}
@@ -313,7 +322,7 @@ function NotificationPopup({
           </ScrollView>
 
           <TouchableOpacity
-            accessibilityLabel="Voir toutes les notifications"
+            accessibilityLabel={t('notificationPopup.viewAll', 'Voir toutes les notifications')}
             accessibilityRole="button"
             onPress={handleViewAll}
             style={{
@@ -325,7 +334,7 @@ function NotificationPopup({
             }}
           >
             <Text style={[Fonts.p2Bold || { fontWeight: 'bold' }, { color: popupBorder }]}>
-              Voir toutes les notifications
+              {t('notificationPopup.viewAll', 'Voir toutes les notifications')}
             </Text>
           </TouchableOpacity>
         </View>

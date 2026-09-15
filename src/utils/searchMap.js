@@ -1,3 +1,5 @@
+import i18next from 'i18next';
+
 import { formatDateWithDayPrefix } from '@/utils/date';
 import { getShortAddress, normalizeLocationInput } from '@/utils/location';
 
@@ -154,29 +156,29 @@ const formatPriceLabel = (pricePerPerson) => {
     return '';
   }
   if (parsed === 0) {
-    return 'Gratuit';
+    return i18next.t('searchMap.price.free', 'Gratuit');
   }
-  return `${parsed}€ / pers`;
+  return i18next.t('searchMap.price.perPerson', '{{price}}€ / pers', { price: parsed });
 };
 
 const resolveClubBadge = (club) => {
   if (Reflect.get(club || {}, '_type') === 'multisport') {
-    return 'Omnisport';
+    return i18next.t('searchMap.badges.multisport', 'Omnisport');
   }
 
-  return buildActivityBadge(club?.activites) || 'Club';
+  return buildActivityBadge(club?.activites) || i18next.t('searchMap.badges.club', 'Club');
 };
 
 const resolveEventBadge = (item, scope) => {
   if (scope === 'reservations') {
     return buildActivityBadge(item?.team?.activities)
       || pickFirstString(item?.type?.name)
-      || 'Réservation';
+      || i18next.t('searchMap.badges.reservation', 'Réservation');
   }
 
   return pickFirstString(item?.type?.name)
     || buildActivityBadge(item?.team?.activities)
-    || 'Événement';
+    || i18next.t('searchMap.badges.event', 'Événement');
 };
 
 const resolveSubtitle = (item, scope) => {
@@ -196,7 +198,7 @@ const resolveSubtitle = (item, scope) => {
 
 const resolveTitle = (item, scope) => {
   if (scope === 'clubs') {
-    return pickFirstString(item?.name, item?.title, 'Club');
+    return pickFirstString(item?.name, item?.title, i18next.t('searchMap.badges.club', 'Club'));
   }
 
   if (scope === 'reservations') {
@@ -205,7 +207,7 @@ const resolveTitle = (item, scope) => {
       item?.club?.name,
       item?.team?.name,
       item?.title,
-      'Réservation',
+      i18next.t('searchMap.badges.reservation', 'Réservation'),
     );
   }
 
@@ -215,7 +217,7 @@ const resolveTitle = (item, scope) => {
     item?.team?.name,
     item?.title,
     item?.type?.name,
-    'Événement',
+    i18next.t('searchMap.badges.event', 'Événement'),
   );
 };
 
@@ -369,12 +371,15 @@ export const buildSearchMapRegion = (items = []) => {
 export const getSearchMapEmptyMessage = (scope) => {
   switch (scope) {
     case 'clubs':
-      return 'Aucun club géolocalisable pour le moment.';
+      return i18next.t('searchMap.empty.clubs', 'Aucun club géolocalisable pour le moment.');
     case 'reservations':
-      return 'Aucune réservation géolocalisable pour le moment.';
+      return i18next.t(
+        'searchMap.empty.reservations',
+        'Aucune réservation géolocalisable pour le moment.',
+      );
     case 'events':
     default:
-      return 'Aucun événement géolocalisable pour le moment.';
+      return i18next.t('searchMap.empty.events', 'Aucun événement géolocalisable pour le moment.');
   }
 };
 
@@ -389,17 +394,32 @@ export const getSearchMapNoCoordinatesMessage = (scope, totalCount = 0) => {
   switch (scope) {
     case 'clubs':
       return safeCount > 0
-        ? `${safeCount} club${safeCount > 1 ? 's' : ''} trouvé${safeCount > 1 ? 's' : ''}, mais aucun n'a de position exploitable sur la carte.`
-        : 'Aucun club géolocalisable pour le moment.';
+        ? i18next.t('searchMap.noCoordinates.clubs', {
+          count: safeCount,
+          defaultValue_one: "{{count}} club trouvé, mais aucun n'a de position exploitable sur la carte.", // eslint-disable-line max-len
+          defaultValue_other: "{{count}} clubs trouvés, mais aucun n'a de position exploitable sur la carte.", // eslint-disable-line max-len
+        })
+        : i18next.t('searchMap.empty.clubs', 'Aucun club géolocalisable pour le moment.');
     case 'reservations':
       return safeCount > 0
-        ? `${safeCount} réservation${safeCount > 1 ? 's' : ''} trouvée${safeCount > 1 ? 's' : ''}, mais aucune n'a de position exploitable sur la carte.`
-        : 'Aucune réservation géolocalisable pour le moment.';
+        ? i18next.t('searchMap.noCoordinates.reservations', {
+          count: safeCount,
+          defaultValue_one: "{{count}} réservation trouvée, mais aucune n'a de position exploitable sur la carte.", // eslint-disable-line max-len
+          defaultValue_other: "{{count}} réservations trouvées, mais aucune n'a de position exploitable sur la carte.", // eslint-disable-line max-len
+        })
+        : i18next.t(
+          'searchMap.empty.reservations',
+          'Aucune réservation géolocalisable pour le moment.',
+        );
     case 'events':
     default:
       return safeCount > 0
-        ? `${safeCount} événement${safeCount > 1 ? 's' : ''} trouvé${safeCount > 1 ? 's' : ''}, mais aucun n'a de position exploitable sur la carte.`
-        : 'Aucun événement géolocalisable pour le moment.';
+        ? i18next.t('searchMap.noCoordinates.events', {
+          count: safeCount,
+          defaultValue_one: "{{count}} événement trouvé, mais aucun n'a de position exploitable sur la carte.", // eslint-disable-line max-len
+          defaultValue_other: "{{count}} événements trouvés, mais aucun n'a de position exploitable sur la carte.", // eslint-disable-line max-len
+        })
+        : i18next.t('searchMap.empty.events', 'Aucun événement géolocalisable pour le moment.');
   }
 };
 
@@ -413,12 +433,20 @@ export const getSearchMapResultLabel = (scope, count = 2) => {
 
   switch (scope) {
     case 'clubs':
-      return isPlural ? 'clubs' : 'club';
+      return isPlural ? i18next.t(
+        'searchMap.resultLabel.clubs',
+        'clubs',
+      ) : i18next.t('searchMap.resultLabel.club', 'club');
     case 'reservations':
-      return isPlural ? 'réservations' : 'réservation';
+      return isPlural
+        ? i18next.t('searchMap.resultLabel.reservations', 'réservations')
+        : i18next.t('searchMap.resultLabel.reservation', 'réservation');
     case 'events':
     default:
-      return isPlural ? 'événements' : 'événement';
+      return isPlural ? i18next.t(
+        'searchMap.resultLabel.events',
+        'événements',
+      ) : i18next.t('searchMap.resultLabel.event', 'événement');
   }
 };
 

@@ -1,6 +1,7 @@
 import { addDays, format, startOfDay } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { useCallback, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
   Pressable,
@@ -32,6 +33,7 @@ function BookingCalendar({ navigation, route }) {
     Fonts,
     Spaces,
   } = useTheme();
+  const { t } = useTranslation();
 
   // State
   const [selectedDate, setSelectedDate] = useState(startOfDay(new Date()));
@@ -125,17 +127,21 @@ function BookingCalendar({ navigation, route }) {
     const allowsImmediateConfirmation = Boolean(slot.allowsImmediateConfirmation);
     const canOpenSlot = isAvailable || requiresApproval || allowsImmediateConfirmation;
     let borderColor = 'rgba(255,255,255,0.1)';
-    let availabilityLabel = 'Complet';
+    let availabilityLabel = t('bookingCalendar.slot.full', 'Complet');
 
     if (isAvailable) {
       borderColor = Colors.primary500;
-      availabilityLabel = `${slot.remaining} dispo`;
+      availabilityLabel = t(
+        'bookingCalendar.slot.remaining',
+        '{{remaining}} dispo',
+        { remaining: slot.remaining },
+      );
     } else if (requiresApproval) {
       borderColor = Colors.warning500;
-      availabilityLabel = 'Demande en attente';
+      availabilityLabel = t('bookingCalendar.slot.pending', 'Demande en attente');
     } else if (allowsImmediateConfirmation) {
       borderColor = Colors.primary500;
-      availabilityLabel = 'Autorise et notifier';
+      availabilityLabel = t('bookingCalendar.slot.allowAndNotify', 'Autorise et notifier');
     }
 
     return (
@@ -174,7 +180,7 @@ function BookingCalendar({ navigation, route }) {
   // Loading state
   if (facilityLoading) {
     return (
-      <ScreenContainer bgImage="bg2" title="Réservation">
+      <ScreenContainer bgImage="bg2" title={t('bookingCalendar.title', 'Réservation')}>
         <View style={[Alignments.fill, Alignments.alignCenter, Alignments.justifyCenter]}>
           <ActivityIndicator color={Colors.primary500} size="large" />
         </View>
@@ -186,7 +192,7 @@ function BookingCalendar({ navigation, route }) {
   let slotsContent = (
     <View style={[styles.emptyState, { backgroundColor: 'rgba(255,255,255,0.05)' }]}>
       <Text style={[Fonts.p1, Fonts.neutral300, Fonts.textCenter]}>
-        Aucun créneau disponible pour cette date
+        {t('bookingCalendar.noSlots', 'Aucun créneau disponible pour cette date')}
       </Text>
     </View>
   );
@@ -206,7 +212,10 @@ function BookingCalendar({ navigation, route }) {
   }
 
   return (
-    <ScreenContainer bgImage="bg2" title={facilityData?.name || 'Réservation'}>
+    <ScreenContainer
+      bgImage="bg2"
+      title={facilityData?.name || t('bookingCalendar.title', 'Réservation')}
+    >
       <ScrollView
         contentContainerStyle={[Spaces.padding[16]]}
         showsVerticalScrollIndicator={false}
@@ -233,7 +242,7 @@ function BookingCalendar({ navigation, route }) {
         {/* Date Selector */}
         <View style={Spaces.marginBottom[24]}>
           <Text style={[Fonts.p2Bold, Fonts.neutral00, Spaces.marginBottom[12]]}>
-            Choisir une date
+            {t('bookingCalendar.chooseDate', 'Choisir une date')}
           </Text>
           <ScrollView
             contentContainerStyle={{ gap: 8 }}
@@ -247,7 +256,7 @@ function BookingCalendar({ navigation, route }) {
         {/* Time Slots Grid */}
         <View>
           <Text style={[Fonts.p2Bold, Fonts.neutral00, Spaces.marginBottom[12]]}>
-            Créneaux disponibles -
+            {t('bookingCalendar.availableSlots', 'Créneaux disponibles -')}
             {' '}
             {format(selectedDate, 'EEEE d MMMM', { locale: fr })}
           </Text>

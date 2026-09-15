@@ -1,3 +1,5 @@
+import { useTranslation } from 'react-i18next';
+
 import useAuth from '@/domains/auth/useAuth';
 import {
   canAccessRecruitmentProfiles,
@@ -15,6 +17,7 @@ import SearchScreenShell from './components/SearchScreenShell';
  * @returns {import('react').ReactElement}
  */
 function SearchRecruitmentScreen({ navigation, route }) {
+  const { t } = useTranslation();
   const { userData } = useAuth();
   const canSearchProfiles = canAccessRecruitmentProfiles(userData);
   const initialRecruitmentTab = sanitizeRecruitmentTabForRole(
@@ -42,24 +45,39 @@ function SearchRecruitmentScreen({ navigation, route }) {
         tutorialSteps={{
           header: {
             description: canSearchProfiles
-              ? 'Retrouve ici les profils, les opportunités de recrutement et les annonces de tes équipes.'
-              : 'Retrouve ici les annonces de recrutement et le suivi de tes candidatures.',
+              ? t(
+                'searchRecruitmentScreen.tutorial.header.descriptionStaff',
+                'Retrouve ici les profils, les opportunités de recrutement et les annonces de tes équipes.', // eslint-disable-line max-len
+              )
+              : t(
+                'searchRecruitmentScreen.tutorial.header.description',
+                'Retrouve ici les annonces de recrutement et le suivi de tes candidatures.',
+              ),
             id: 'search-recruitment-header',
             order: 1,
-            title: 'Recherche recrutement',
+            title: t('searchRecruitmentScreen.tutorial.header.title', 'Recherche recrutement'),
           },
           switcher: {
-            description: 'Change de type de recherche en un geste.',
+            description: t(
+              'searchRecruitmentScreen.tutorial.switcher.description',
+              'Change de type de recherche en un geste.',
+            ),
             id: 'search-recruitment-switcher',
             order: 2,
-            title: 'Types de recherche',
+            title: t('searchRecruitmentScreen.tutorial.switcher.title', 'Types de recherche'),
           },
         }}
       >
         <OnboardingWrapper
           description={canSearchProfiles
-            ? 'Utilise les onglets Profils, Opportunités, Mes annonces et Mes candidatures pour piloter ton recrutement.'
-            : 'Utilise les onglets Annonces et Mes candidatures pour suivre tes opportunités.'}
+            ? t(
+              'searchRecruitmentScreen.tutorial.content.descriptionStaff',
+              'Utilise les onglets Profils, Opportunités, Mes annonces et Mes candidatures pour piloter ton recrutement.', // eslint-disable-line max-len
+            )
+            : t(
+              'searchRecruitmentScreen.tutorial.content.description',
+              'Utilise les onglets Annonces et Mes candidatures pour suivre tes opportunités.',
+            )}
           id="search-recruitment-content"
           order={3}
           spotlight={{
@@ -72,7 +90,7 @@ function SearchRecruitmentScreen({ navigation, route }) {
           style={{
             flex: 1,
           }}
-          title="Contenu recrutement"
+          title={t('searchRecruitmentScreen.tutorial.content.title', 'Contenu recrutement')}
         >
           <RecrutementListContent
             initialTab={initialRecruitmentTab}

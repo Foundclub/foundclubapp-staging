@@ -5,6 +5,7 @@ import {
   useRef,
   useState,
 } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
   StyleSheet,
@@ -282,6 +283,7 @@ function TomTomSearchMapNative({
     Fonts,
     Spaces,
   } = useTheme();
+  const { t } = useTranslation();
 
   const tomTomApiKey = getTomTomApiKey();
   const { clearSafeTimer, setSafeTimeout } = useSafeTimers();
@@ -959,7 +961,7 @@ function TomTomSearchMapNative({
             ]}
           >
             <Text style={[Fonts.p2Bold, Fonts.neutral00, Fonts.textCenter]}>
-              Impossible de charger la carte
+              {t('tomTomSearchMapNative.error.title', 'Impossible de charger la carte')}
             </Text>
             <Text style={[Fonts.p3, Fonts.neutral200, Fonts.textCenter]}>
               {getSearchMapProviderErrorMessage(mapErrorReason)}
@@ -992,7 +994,7 @@ function TomTomSearchMapNative({
                 ]}
               >
                 <Text style={[Fonts.p4Bold, { color: Colors.primary900 }]}>
-                  Réessayer
+                  {t('tomTomSearchMapNative.error.retry', 'Réessayer')}
                 </Text>
               </TouchableOpacity>
               <TouchableOpacity
@@ -1007,7 +1009,7 @@ function TomTomSearchMapNative({
                 ]}
               >
                 <Text style={[Fonts.p4Bold, Fonts.neutral00]}>
-                  Voir la liste
+                  {t('tomTomSearchMapNative.error.showList', 'Voir la liste')}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -1037,7 +1039,7 @@ function TomTomSearchMapNative({
           style={[styles.selectionHint, { bottom: Math.max(24, previewBottomOffset + previewCardHeight + 10) }]}
         >
           <Text style={[Fonts.p4Bold, Fonts.neutral00, Fonts.textCenter]}>
-            Touche un repère pour voir la fiche
+            {t('tomTomSearchMapNative.tapMarker', 'Touche un repère pour voir la fiche')}
           </Text>
         </View>
       ) : null}

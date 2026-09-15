@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import {
   Text,
   TouchableOpacity,
@@ -28,6 +29,7 @@ function ContactShareBubble({
   onPressContact,
 }) {
   const { Colors, Fonts } = useTheme();
+  const { t } = useTranslation();
   if (!composition) return null;
 
   const userDocumentId = typeof composition?.userDocumentId === 'string'
@@ -35,7 +37,10 @@ function ContactShareBubble({
     : '';
   const firstname = composition?.firstname || '';
   const lastname = composition?.lastname || '';
-  const fullName = `${String(firstname).trim()} ${String(lastname).trim()}`.trim() || 'Membre';
+  const fullName = `${String(firstname).trim()} ${String(lastname).trim()}`.trim() || t(
+    'contactShareBubble.member',
+    'Membre',
+  );
   const roleLabel = typeof composition?.roleLabel === 'string' ? composition.roleLabel : '';
 
   const handlePress = () => {
@@ -59,7 +64,7 @@ function ContactShareBubble({
     >
       <View style={{ gap: 10, paddingHorizontal: 14, paddingVertical: 12 }}>
         <Text style={[Fonts.p3Bold, { color: Colors.primary500 }]}>
-          Contact partagé
+          {t('contactShareBubble.title', 'Contact partagé')}
         </Text>
         <View style={{ alignItems: 'center', flexDirection: 'row' }}>
           <View
@@ -103,7 +108,9 @@ function ContactShareBubble({
           paddingVertical: 10,
         }}
       >
-        <Text style={[Fonts.p3Bold, { color: Colors.primary500 }]}>Voir le profil</Text>
+        <Text style={[Fonts.p3Bold, { color: Colors.primary500 }]}>
+          {t('contactShareBubble.viewProfile', 'Voir le profil')}
+        </Text>
       </TouchableOpacity>
     </View>
   );

@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Image,
   Text,
@@ -6,6 +7,7 @@ import {
   View,
 } from 'react-native';
 
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import MarqueeText from '@/components/atoms/marqueeText/MarqueeText';
@@ -52,6 +54,7 @@ function SearchMapPreviewCard({
     Fonts,
     Spaces,
   } = useTheme();
+  const { t } = useTranslation();
 
   useEffect(() => {
     if (!item) {
@@ -67,7 +70,10 @@ function SearchMapPreviewCard({
     scope === 'reservations' ? item.priceLabel : '',
     item.distanceLabel,
   ]);
-  const secondaryActionLabel = onDismiss ? 'Masquer' : 'Voir la liste';
+  const secondaryActionLabel = onDismiss ? t('searchMapPreviewCard.hide', 'Masquer') : t(
+    'searchMapPreviewCard.showList',
+    'Voir la liste',
+  );
   const handleSecondaryAction = onDismiss || onShowList;
 
   return (
@@ -225,7 +231,13 @@ function SearchMapPreviewCard({
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
-            accessibilityLabel={`Ouvrir ${item?.title || 'la fiche'}`}
+            accessibilityLabel={item?.title
+              ? t(
+                'searchMapPreviewCard.openNamed',
+                'Ouvrir {{title}}',
+                { title: item.title, ...SANS_ECHAPPEMENT },
+              )
+              : t('searchMapPreviewCard.openSheet', 'Ouvrir la fiche')}
             accessibilityRole="button"
             activeOpacity={0.85}
             onPress={() => onOpen(item)}
@@ -245,7 +257,7 @@ function SearchMapPreviewCard({
             ]}
           >
             <Text style={[Fonts.p3Bold, { color: Colors.primary900 }]}>
-              Ouvrir
+              {t('searchMapPreviewCard.open', 'Ouvrir')}
             </Text>
           </TouchableOpacity>
         </View>

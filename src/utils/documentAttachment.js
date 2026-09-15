@@ -1,3 +1,5 @@
+import i18next from 'i18next';
+
 const DOCUMENT_FALLBACK_PREFIXES = [
   'pièce jointe',
 ];
@@ -117,7 +119,7 @@ export const formatAttachmentSize = (value) => {
 
 export const getDocumentDisplayName = (attachment) => {
   const rawName = getReadableAttachmentName(attachment);
-  if (!rawName) return 'Fichier';
+  if (!rawName) return i18next.t('documentAttachment.file', 'Fichier');
 
   if (rawName.length <= 38) return rawName;
 
@@ -137,12 +139,19 @@ export const getDocumentPreviewText = (attachments = []) => {
 
   if (documentAttachments.length === 0) return '';
   if (documentAttachments.length > 1) {
-    return `${documentAttachments.length} fichiers`;
+    return i18next.t(
+      'documentAttachment.fileCount',
+      '{{total}} fichiers',
+      { total: documentAttachments.length },
+    );
   }
 
   const attachment = documentAttachments[0];
   const badgeLabel = getDocumentBadgeLabel(attachment);
-  const fileName = getReadableAttachmentName(attachment) || 'fichier';
+  const fileName = getReadableAttachmentName(attachment) || i18next.t(
+    'documentAttachment.fileLower',
+    'fichier',
+  );
   return `${badgeLabel} • ${fileName}`;
 };
 

@@ -13,6 +13,10 @@
  * - le fabricant, qui promettait un libelle et rendait un objet ;
  * - l'affichage, qui doit reparer les lignes deja ecrites en base.
  */
+// I18N-4 : le code teste lit ses textes par i18next (interpolation, pluriels) ;
+// ce temoin initialise le VRAI i18next en francais, sans rien changer a ce qu'il affirme.
+import '@/theme/strings';
+
 import {
   getAddressText,
   getFacilityAddressLabel,

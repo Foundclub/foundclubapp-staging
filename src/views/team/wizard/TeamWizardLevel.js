@@ -82,7 +82,7 @@ function TeamWizardLevel({ navigation }) {
           <View style={[{ alignItems: 'center', flexDirection: 'row' }, Spaces.gap[12], Spaces.marginBottom[16]]}>
             <ActivityIndicator size="small" />
             <Text style={[Fonts.p2, Fonts.neutral200]}>
-              Chargement des niveaux disponibles…
+              {t('teamWizardLevel.loading', 'Chargement des niveaux disponibles…')}
             </Text>
           </View>
         ) : null}
@@ -90,14 +90,26 @@ function TeamWizardLevel({ navigation }) {
         {hasError ? (
           <View style={[Spaces.gap[12], Spaces.marginBottom[16]]}>
             <Text style={[Fonts.p2, Fonts.neutral100]}>
-              Impossible de charger les niveaux. Réessaie pour continuer.
+              {t(
+                'teamWizardLevel.loadError',
+                'Impossible de charger les niveaux. Réessaie pour continuer.',
+              )}
             </Text>
-            <Button onPress={() => levelsQuery.refetch()} title="Réessayer" variant="Secondary" />
+            <Button
+              onPress={() => levelsQuery.refetch()}
+              title={t('teamWizardLevel.retry', 'Réessayer')}
+              variant="Secondary"
+            />
           </View>
         ) : null}
 
         {isListEmpty ? (
-          <TeamWizardEmptyReferential missing="Aucun niveau n’est proposé pour le moment." />
+          <TeamWizardEmptyReferential
+            missing={t(
+              'teamWizardLevel.empty',
+              'Aucun niveau n’est proposé pour le moment.',
+            )}
+          />
         ) : null}
 
         {(levels || []).map((level) => {

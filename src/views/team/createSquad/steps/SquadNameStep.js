@@ -1,4 +1,6 @@
+import i18next from 'i18next';
 import { useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator, Text, TouchableOpacity, View,
 } from 'react-native';
@@ -41,6 +43,7 @@ function SquadNameStep({
   data, onNext, onPrev, updateData,
 }) {
   const { Colors, Fonts } = useTheme();
+  const { t } = useTranslation();
   const [nameCheckState, setNameCheckState] = useState('idle'); // idle | checking | available | taken | error
   const [nameMessage, setNameMessage] = useState('');
   const [nameSuggestions, setNameSuggestions] = useState([]);
@@ -58,7 +61,7 @@ function SquadNameStep({
       }
 
       setNameCheckState('checking');
-      setNameMessage('Vérification du nom...');
+      setNameMessage(i18next.t('squadNameStep.check.checking', 'Vérification du nom...'));
       setNameSuggestions([]);
 
       try {
@@ -67,13 +70,16 @@ function SquadNameStep({
 
         if (isUnique) {
           setNameCheckState('available');
-          setNameMessage('Nom disponible.');
+          setNameMessage(i18next.t('squadNameStep.check.available', 'Nom disponible.'));
           setNameSuggestions([]);
           return;
         }
 
         setNameCheckState('taken');
-        setNameMessage('Ce nom est déjà pris. Choisis un autre nom.');
+        setNameMessage(i18next.t(
+          'squadNameStep.check.taken',
+          'Ce nom est déjà pris. Choisis un autre nom.',
+        ));
 
         const candidates = buildSuggestionCandidates(normalizedName);
         const availabilityChecks = await Promise.all(
@@ -93,7 +99,10 @@ function SquadNameStep({
       } catch (_error) {
         if (isCancelled) return;
         setNameCheckState('error');
-        setNameMessage('Impossible de vérifier le nom maintenant. Réessaie.');
+        setNameMessage(i18next.t(
+          'squadNameStep.check.error',
+          'Impossible de vérifier le nom maintenant. Réessaie.',
+        ));
         setNameSuggestions([]);
       }
     };
@@ -114,14 +123,14 @@ function SquadNameStep({
     <View style={{ flex: 1, paddingHorizontal: 16 }}>
       <View style={{ flex: 1, justifyContent: 'center', paddingBottom: 100 }}>
         <Text style={[Fonts.h1, { color: Colors.neutral00, marginBottom: 40, textAlign: 'center' }]}>
-          Quel est le nom de ta squad ?
+          {t('squadNameStep.title', 'Quel est le nom de ta squad ?')}
         </Text>
 
         <Input
           autoFocus
           error={nameCheckState === 'taken' || nameCheckState === 'error' ? nameMessage : ''}
           onChangeText={(text) => updateData('name', text)}
-          placeholder="Ex: FC Les Champions"
+          placeholder={t('squadNameStep.placeholder', 'Ex: FC Les Champions')}
           placeholderTextColor={Colors.neutral500}
           style={{ textAlign: 'center' }}
           value={data.name}
@@ -148,7 +157,7 @@ function SquadNameStep({
         {nameSuggestions.length > 0 ? (
           <View style={{ marginTop: 14 }}>
             <Text style={[Fonts.p3Bold, { color: Colors.neutral200, marginBottom: 8, textAlign: 'center' }]}>
-              Suggestions disponibles
+              {t('squadNameStep.suggestions', 'Suggestions disponibles')}
             </Text>
             <View style={{
               alignItems: 'center', flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center',
@@ -184,13 +193,13 @@ function SquadNameStep({
             updateData('name', normalizedName);
             onNext();
           }}
-          title="Continuer"
+          title={t('squadNameStep.continue', 'Continuer')}
           variant="Primary"
         />
         {typeof onPrev === 'function' ? (
           <Button
             onPress={onPrev}
-            title="Retour"
+            title={t('squadNameStep.back', 'Retour')}
             variant="Secondary"
           />
         ) : null}
