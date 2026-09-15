@@ -2,6 +2,7 @@
 
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Alert, ScrollView, Text, View,
 } from 'react-native';
@@ -33,6 +34,7 @@ function AdminClaimDetail() {
   const {
     Alignments, ApplicationStyle, Colors, Fonts, Spaces,
   } = useTheme();
+  const { t } = useTranslation();
   const route = useRoute();
   const navigation = useNavigation();
   const { requestId, requestType } = route.params || {};
@@ -91,10 +93,16 @@ function AdminClaimDetail() {
         { adminNote: adminNote.trim(), documentId: requestId },
         {
           onError: (error) => {
-            Alert.alert('Erreur', getErrorMessage(error, 'generic'));
+            Alert.alert(t(
+              'adminClaimDetail.errorTitle',
+              'Erreur',
+            ), getErrorMessage(error, 'generic'));
           },
           onSuccess: () => {
-            Alert.alert('Succès', 'Demande traitee.');
+            Alert.alert(
+              t('adminClaimDetail.successTitle', 'Succès'),
+              t('adminClaimDetail.success.processed', 'Demande traitee.'),
+            );
             navigation.goBack();
           },
         },
@@ -104,10 +112,13 @@ function AdminClaimDetail() {
 
     approveMutation.mutate(requestId, {
       onError: (error) => {
-        Alert.alert('Erreur', getErrorMessage(error, 'generic'));
+        Alert.alert(t('adminClaimDetail.errorTitle', 'Erreur'), getErrorMessage(error, 'generic'));
       },
       onSuccess: () => {
-        Alert.alert('Succès', 'Demande acceptée.');
+        Alert.alert(
+          t('adminClaimDetail.successTitle', 'Succès'),
+          t('adminClaimDetail.success.accepted', 'Demande acceptée.'),
+        );
         navigation.goBack();
       },
     });
@@ -121,10 +132,16 @@ function AdminClaimDetail() {
         { adminNote: adminNote.trim(), documentId: requestId },
         {
           onError: (error) => {
-            Alert.alert('Erreur', getErrorMessage(error, 'generic'));
+            Alert.alert(t(
+              'adminClaimDetail.errorTitle',
+              'Erreur',
+            ), getErrorMessage(error, 'generic'));
           },
           onSuccess: () => {
-            Alert.alert('Succès', 'Demande refusée.');
+            Alert.alert(
+              t('adminClaimDetail.successTitle', 'Succès'),
+              t('adminClaimDetail.success.declined', 'Demande refusée.'),
+            );
             navigation.goBack();
           },
         },
@@ -134,10 +151,13 @@ function AdminClaimDetail() {
 
     refuseClaimMutation.mutate(requestId, {
       onError: (error) => {
-        Alert.alert('Erreur', getErrorMessage(error, 'generic'));
+        Alert.alert(t('adminClaimDetail.errorTitle', 'Erreur'), getErrorMessage(error, 'generic'));
       },
       onSuccess: () => {
-        Alert.alert('Succès', 'Demande rejetée.');
+        Alert.alert(
+          t('adminClaimDetail.successTitle', 'Succès'),
+          t('adminClaimDetail.success.rejected', 'Demande rejetée.'),
+        );
         navigation.goBack();
       },
     });
@@ -145,24 +165,36 @@ function AdminClaimDetail() {
 
   const handleApprove = () => {
     Alert.alert(
-      'Confirmer',
+      t('adminClaimDetail.confirm.title', 'Confirmer'),
       isAffiliationHelp
-        ? 'Traiter cette demande superadmin ?'
-        : "Veux-tu vraiment accepter cette demande ? L'utilisateur deviendra propriétaire du club.",
+        ? t('adminClaimDetail.confirm.processBody', 'Traiter cette demande superadmin ?')
+        : t(
+          'adminClaimDetail.confirm.acceptBody',
+          "Veux-tu vraiment accepter cette demande ? L'utilisateur deviendra propriétaire du club.",
+        ),
       [
-        { style: 'cancel', text: 'Annuler' },
-        { onPress: runPrimaryAction, text: isAffiliationHelp ? 'Traiter' : 'Accepter' },
+        { style: 'cancel', text: t('adminClaimDetail.cancel', 'Annuler') },
+        {
+          onPress: runPrimaryAction,
+          text: isAffiliationHelp
+            ? t('adminClaimDetail.process', 'Traiter')
+            : t('adminClaimDetail.accept', 'Accepter'),
+        },
       ],
     );
   };
 
   const handleRefuse = () => {
     Alert.alert(
-      'Refuser',
-      'Veux-tu rejeter cette demande ?',
+      t('adminClaimDetail.decline', 'Refuser'),
+      t('adminClaimDetail.confirm.rejectBody', 'Veux-tu rejeter cette demande ?'),
       [
-        { style: 'cancel', text: 'Annuler' },
-        { onPress: runSecondaryAction, style: 'destructive', text: 'Refuser' },
+        { style: 'cancel', text: t('adminClaimDetail.cancel', 'Annuler') },
+        {
+          onPress: runSecondaryAction,
+          style: 'destructive',
+          text: t('adminClaimDetail.decline', 'Refuser'),
+        },
       ],
     );
   };
@@ -170,10 +202,13 @@ function AdminClaimDetail() {
   if (!requestId) {
     return (
       <AdminStateView
-        actionLabel="Retour"
-        description="L'identifiant de la demande est absent de l'URL."
+        actionLabel={t('adminClaimDetail.back', 'Retour')}
+        description={t(
+          'adminClaimDetail.states.missingId',
+          "L'identifiant de la demande est absent de l'URL.",
+        )}
         onAction={() => navigation.goBack()}
-        title="Demande introuvable"
+        title={t('adminClaimDetail.states.notFound', 'Demande introuvable')}
       />
     );
   }
@@ -181,9 +216,12 @@ function AdminClaimDetail() {
   if (isLoading) {
     return (
       <AdminStateView
-        description="Nous chargeons le detail de la demande."
+        description={t(
+          'adminClaimDetail.states.loadingDescription',
+          'Nous chargeons le detail de la demande.',
+        )}
         isLoading
-        title="Chargement de la demande"
+        title={t('adminClaimDetail.states.loadingTitle', 'Chargement de la demande')}
       />
     );
   }
@@ -191,10 +229,13 @@ function AdminClaimDetail() {
   if (error && !request) {
     return (
       <AdminStateView
-        actionLabel="Réessayer"
-        description={getErrorMessage(error, 'generic') || 'Impossible de charger cette demande.'}
+        actionLabel={t('adminClaimDetail.states.retry', 'Réessayer')}
+        description={getErrorMessage(error, 'generic') || t(
+          'adminClaimDetail.states.errorDescription',
+          'Impossible de charger cette demande.',
+        )}
         onAction={refetch}
-        title="Chargement impossible"
+        title={t('adminClaimDetail.states.errorTitle', 'Chargement impossible')}
       />
     );
   }
@@ -202,10 +243,13 @@ function AdminClaimDetail() {
   if (!request) {
     return (
       <AdminStateView
-        actionLabel="Retour"
-        description="La demande demandée n'existe pas ou n'est plus accessible."
+        actionLabel={t('adminClaimDetail.back', 'Retour')}
+        description={t(
+          'adminClaimDetail.states.unavailable',
+          "La demande demandée n'existe pas ou n'est plus accessible.",
+        )}
         onAction={() => navigation.goBack()}
-        title="Demande introuvable"
+        title={t('adminClaimDetail.states.notFound', 'Demande introuvable')}
       />
     );
   }
@@ -214,12 +258,12 @@ function AdminClaimDetail() {
     <ScreenContainer
       bgImage="bg2"
       contentContainerStyle={Spaces.padding[16]}
-      title="Detail demande"
+      title={t('adminClaimDetail.screenTitle', 'Detail demande')}
     >
       <ScrollView showsVerticalScrollIndicator={false}>
         <View style={[ApplicationStyle.card, Spaces.padding[20], Spaces.marginBottom[16]]}>
           <Text style={[Fonts.h3, { color: Colors.neutral00 }, Spaces.marginBottom[12]]}>
-            Demandeur
+            {t('adminClaimDetail.requester', 'Demandeur')}
           </Text>
           <View style={[Alignments.row, Alignments.alignCenter]}>
             <ProfileAvatar
@@ -231,7 +275,10 @@ function AdminClaimDetail() {
             />
             <View style={[Spaces.marginLeft[16], { flex: 1 }]}>
               <Text style={[Fonts.h4, { color: Colors.neutral00 }]}>
-                {[requester.firstname, requester.lastname].filter(Boolean).join(' ').trim() || 'Utilisateur'}
+                {[requester.firstname, requester.lastname].filter(Boolean).join(' ').trim() || t(
+                  'adminClaimDetail.userFallback',
+                  'Utilisateur',
+                )}
               </Text>
               {requester?.email ? (
                 <Text style={[Fonts.p1, { color: Colors.neutral200 }]}>{requester.email}</Text>
@@ -241,7 +288,7 @@ function AdminClaimDetail() {
           </View>
           <View style={[Spaces.marginTop[12]]}>
             <Text style={[Fonts.p2, Fonts.neutral200]}>
-              Pour le club :{' '}
+              {t('adminClaimDetail.forClub', 'Pour le club :')}{' '}
               <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{clubLabel}</Text>
             </Text>
           </View>
@@ -252,17 +299,17 @@ function AdminClaimDetail() {
             {isClubCreation ? (
               <View style={[ApplicationStyle.card, Spaces.padding[20], Spaces.marginBottom[16]]}>
                 <Text style={[Fonts.h3, { color: Colors.neutral00 }, Spaces.marginBottom[12]]}>
-                  Dirigeant à contacter
+                  {t('adminClaimDetail.managerToContact', 'Dirigeant à contacter')}
                 </Text>
                 <View style={[Spaces.gap[10]]}>
                   <Text style={[Fonts.p2, Fonts.neutral200]}>
-                    Nom:{' '}
+                    {t('adminClaimDetail.fields.name', 'Nom:')}{' '}
                     <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
                       {[managerContact.firstname, managerContact.lastname].filter(Boolean).join(' ').trim() || '-'}
                     </Text>
                   </Text>
                   <Text style={[Fonts.p2, Fonts.neutral200]}>
-                    Telephone:{' '}
+                    {t('adminClaimDetail.fields.phone', 'Telephone:')}{' '}
                     <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{managerContact.phoneNumber || '-'}</Text>
                   </Text>
                   <Text style={[Fonts.p2, Fonts.neutral200]}>
@@ -275,7 +322,10 @@ function AdminClaimDetail() {
 
             <View style={[ApplicationStyle.card, Spaces.padding[20], Spaces.marginBottom[16]]}>
               <Text style={[Fonts.h3, { color: Colors.neutral00 }, Spaces.marginBottom[12]]}>
-                {isClubCreation ? 'Club à onboarder' : 'Demande affiliation'}
+                {isClubCreation ? t('adminClaimDetail.clubToOnboard', 'Club à onboarder') : t(
+                  'adminClaimDetail.affiliationRequest',
+                  'Demande affiliation',
+                )}
               </Text>
               <View style={[Spaces.gap[10]]}>
                 <Text style={[Fonts.p2, Fonts.neutral200]}>
@@ -291,7 +341,7 @@ function AdminClaimDetail() {
                   <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{request.source || '-'}</Text>
                 </Text>
                 <Text style={[Fonts.p2, Fonts.neutral200]}>
-                  Ecran:{' '}
+                  {t('adminClaimDetail.fields.screen', 'Ecran:')}{' '}
                   <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{request?.searchContext?.screen || '-'}</Text>
                 </Text>
                 <Text style={[Fonts.p2, Fonts.neutral200]}>
@@ -299,11 +349,11 @@ function AdminClaimDetail() {
                   <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{request?.searchContext?.role || '-'}</Text>
                 </Text>
                 <Text style={[Fonts.p2, Fonts.neutral200]}>
-                  Cible:{' '}
+                  {t('adminClaimDetail.fields.target', 'Cible:')}{' '}
                   <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{request?.searchContext?.target || '-'}</Text>
                 </Text>
                 <Text style={[Fonts.p2, Fonts.neutral200]}>
-                  Recherche initiale:{' '}
+                  {t('adminClaimDetail.fields.initialSearch', 'Recherche initiale:')}{' '}
                   <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
                     {request?.searchContext?.currentQuery || request?.searchContext?.clubId || '-'}
                   </Text>
@@ -313,7 +363,7 @@ function AdminClaimDetail() {
                   <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{requestDate}</Text>
                 </Text>
                 <Text style={[Fonts.p2, Fonts.neutral200]}>
-                  Commentaire:{' '}
+                  {t('adminClaimDetail.fields.comment', 'Commentaire:')}{' '}
                   <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{request.comment || '-'}</Text>
                 </Text>
               </View>
@@ -322,7 +372,7 @@ function AdminClaimDetail() {
         ) : (
           <View style={[ApplicationStyle.card, Spaces.padding[20], Spaces.marginBottom[16]]}>
             <Text style={[Fonts.h3, { color: Colors.neutral00 }, Spaces.marginBottom[12]]}>
-              Club revendique
+              {t('adminClaimDetail.claimedClub', 'Club revendique')}
             </Text>
             <View style={[Alignments.row, Alignments.alignCenter]}>
               {/* L14 : un CLUB sans logo montre l'ECUSSON, pas le dessin de
@@ -343,11 +393,14 @@ function AdminClaimDetail() {
         {isAffiliationHelp ? (
           <View style={[Spaces.marginBottom[16]]}>
             <Input
-              label="Note admin (optionnelle)"
+              label={t('adminClaimDetail.adminNote.label', 'Note admin (optionnelle)')}
               multiline
               numberOfLines={3}
               onChangeText={setAdminNote}
-              placeholder="Ajoute un contexte visible par le demandeur"
+              placeholder={t(
+                'adminClaimDetail.adminNote.placeholder',
+                'Ajoute un contexte visible par le demandeur',
+              )}
               textAlignVertical="top"
               value={adminNote}
             />
@@ -361,8 +414,17 @@ function AdminClaimDetail() {
             style={[Spaces.marginBottom[12], isAffiliationHelp ? null : { backgroundColor: Colors.success500 }]}
             textStyle={Fonts.button}
             title={isAffiliationHelp
-              ? (processHelpMutation.isPending ? 'Traitement...' : 'Traiter la demande')
-              : (approveMutation.isPending ? 'Traitement...' : 'Accepter la demande')}
+              ? (processHelpMutation.isPending ? t(
+                'adminClaimDetail.processing',
+                'Traitement...',
+              ) : t(
+                'adminClaimDetail.processRequest',
+                'Traiter la demande',
+              ))
+              : (approveMutation.isPending ? t('adminClaimDetail.processing', 'Traitement...') : t(
+                'adminClaimDetail.acceptRequest',
+                'Accepter la demande',
+              ))}
             variant="Primary"
           />
 
@@ -371,7 +433,7 @@ function AdminClaimDetail() {
             onPress={handleRefuse}
             style={{ borderColor: Colors.error500 }}
             textStyle={[Fonts.button, { color: Colors.error500 }]}
-            title="Refuser"
+            title={t('adminClaimDetail.decline', 'Refuser')}
             variant="Secondary"
           />
         </View>

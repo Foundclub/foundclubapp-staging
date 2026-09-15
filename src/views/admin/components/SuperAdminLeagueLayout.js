@@ -1,4 +1,6 @@
 import { useNavigation } from '@react-navigation/native';
+import i18next from 'i18next';
+import { useTranslation } from 'react-i18next';
 import {
   ScrollView,
   StyleSheet,
@@ -18,11 +20,31 @@ import { RouteNames } from '@/navigation/routeNames';
 
 const NAV_ITEMS = [
   { label: 'Dashboard', routeName: RouteNames.SuperAdminHome },
-  { label: 'Cotisations', routeName: RouteNames.SuperAdminLicenses },
-  { label: 'Paramètres', routeName: RouteNames.SuperAdminSettings },
+  {
+    get label() {
+      return i18next.t('superAdminLeagueLayout.nav.licenses', 'Cotisations');
+    },
+    routeName: RouteNames.SuperAdminLicenses,
+  },
+  {
+    get label() {
+      return i18next.t('superAdminLeagueLayout.nav.settings', 'Paramètres');
+    },
+    routeName: RouteNames.SuperAdminSettings,
+  },
   { label: 'Squads', routeName: RouteNames.SuperAdminLeagueSquads },
-  { label: 'Matchs', routeName: RouteNames.SuperAdminLeagueMatches },
-  { label: 'Litiges', routeName: RouteNames.SuperAdminLeagueDisputes },
+  {
+    get label() {
+      return i18next.t('superAdminLeagueLayout.nav.matches', 'Matchs');
+    },
+    routeName: RouteNames.SuperAdminLeagueMatches,
+  },
+  {
+    get label() {
+      return i18next.t('superAdminLeagueLayout.nav.disputes', 'Litiges');
+    },
+    routeName: RouteNames.SuperAdminLeagueDisputes,
+  },
   { label: 'Divisions', routeName: RouteNames.SuperAdminLeagueDivisions },
 ];
 
@@ -51,6 +73,7 @@ function SuperAdminLeagueLayout({
     Fonts,
     Spaces,
   } = useTheme();
+  const { t } = useTranslation();
   const isCompactScreen = width <= 390;
   const scrollBottomPadding = Math.max(insets.bottom + 24, 32);
 
@@ -81,7 +104,7 @@ function SuperAdminLeagueLayout({
       >
         <View style={[Spaces.gap[12]]}>
           <HeaderBackButton
-            accessibilityLabel="Retour"
+            accessibilityLabel={t('superAdminLeagueLayout.back', 'Retour')}
             onPress={handleGoBack}
             style={styles.backButton}
             withDefaultMargin={false}

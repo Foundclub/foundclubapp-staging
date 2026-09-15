@@ -71,8 +71,15 @@ function FeaturedRequestsList() {
       queryClient.invalidateQueries({ queryKey: ['admin-featured-requests-count'] });
       queryClient.invalidateQueries({ queryKey: ['events'] });
       Alert.alert(
-        isApproved ? 'Demande validée' : 'Demande refusée',
-        isApproved ? "L'événement est maintenant mis en avant." : 'La demande a été rejetée.',
+        isApproved
+          ? t('featuredRequestsList.alerts.approvedTitle', 'Demande validée')
+          : t('featuredRequestsList.alerts.declinedTitle', 'Demande refusée'),
+        isApproved
+          ? t(
+            'featuredRequestsList.alerts.approvedBody',
+            "L'événement est maintenant mis en avant.",
+          )
+          : t('featuredRequestsList.alerts.declinedBody', 'La demande a été rejetée.'),
         [{ onPress: () => refetch(), text: 'OK' }],
       );
     },
@@ -116,7 +123,10 @@ function FeaturedRequestsList() {
     >
       <View style={Spaces.gap[4]}>
         <Text style={[Fonts.h4Bold, Fonts.neutral00]}>
-          {item?.event?.name || item?.event?.type?.name || 'Evenement'}
+          {item?.event?.name || item?.event?.type?.name || t(
+            'featuredRequestsList.eventFallback',
+            'Evenement',
+          )}
         </Text>
         <Text style={[Fonts.p2, Fonts.primary100]}>
           {item?.event?.team?.club?.name || item?.targetClub?.name || item?.multisportClub?.name || '-'}
@@ -127,14 +137,17 @@ function FeaturedRequestsList() {
           {getScopeLabel(item?.kind)}
         </Text>
         <Text style={[Fonts.p3, Fonts.neutral200]}>
-          Statut:
+          {t('featuredRequestsList.status', 'Statut:')}
           {' '}
           {item?.status || '-'}
         </Text>
         <Text style={[Fonts.p3, Fonts.neutral200]}>
-          Demandeur:
+          {t('featuredRequestsList.requester', 'Demandeur:')}
           {' '}
-          {[item?.requester?.firstname, item?.requester?.lastname].filter(Boolean).join(' ') || 'Inconnu'}
+          {[item?.requester?.firstname, item?.requester?.lastname].filter(Boolean).join(' ') || t(
+            'featuredRequestsList.unknown',
+            'Inconnu',
+          )}
         </Text>
       </View>
       {filterStatus === 'pending' ? (
@@ -173,7 +186,13 @@ function FeaturedRequestsList() {
       Spaces.marginVertical[24]]}
     >
       <Text style={[Fonts.p1Bold, Fonts.neutral00, Fonts.textCenter]}>
-        {filterStatus === 'pending' ? 'Aucune demande en attente' : 'Aucun historique'}
+        {filterStatus === 'pending' ? t(
+          'featuredRequestsList.empty.pending',
+          'Aucune demande en attente',
+        ) : t(
+          'featuredRequestsList.empty.history',
+          'Aucun historique',
+        )}
       </Text>
     </View>
   );
@@ -207,7 +226,7 @@ function FeaturedRequestsList() {
               ]}
             >
               <Text style={[Fonts.p2Bold, { color: filterStatus === 'pending' ? '#001218' : '#FFFFFF' }]}>
-                En attente
+                {t('featuredRequestsList.filters.pending', 'En attente')}
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
@@ -220,7 +239,7 @@ function FeaturedRequestsList() {
               ]}
             >
               <Text style={[Fonts.p2Bold, { color: filterStatus === 'history' ? '#001218' : '#FFFFFF' }]}>
-                Historique
+                {t('featuredRequestsList.filters.history', 'Historique')}
               </Text>
             </TouchableOpacity>
           </View>

@@ -32,7 +32,7 @@ function AdminEvents() {
     const d = new Date();
     d.setDate(d.getDate() + i);
     const dateStr = d.toISOString().split('T')[0];
-    const label = i === 0 ? 'Aujourd\'hui' : d.toLocaleDateString();
+    const label = i === 0 ? t('adminEvents.today', "Aujourd'hui") : d.toLocaleDateString();
     dateOptions.push({ label, value: dateStr });
   }
 
@@ -46,7 +46,7 @@ function AdminEvents() {
     >
       <View style={[Spaces.paddingHorizontal[24], Spaces.marginBottom[16]]}>
         <Text style={[Fonts.h1, Fonts.neutral00, Spaces.marginBottom[16]]}>
-          Modération Événements
+          {t('adminEvents.title', 'Modération Événements')}
         </Text>
         <SelectPicker
           items={dateOptions}

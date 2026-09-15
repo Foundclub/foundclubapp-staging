@@ -2,6 +2,7 @@
 
 import { useNavigation } from '@react-navigation/native';
 import { useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   FlatList, RefreshControl, Text, TouchableOpacity, View,
 } from 'react-native';
@@ -32,6 +33,7 @@ function AdminClubOnboardingList() {
   const {
     Alignments, ApplicationStyle, Colors, Fonts, Spaces,
   } = useTheme();
+  const { t } = useTranslation();
   const navigation = useNavigation();
 
   const {
@@ -49,9 +51,12 @@ function AdminClubOnboardingList() {
   if (isLoading && !requests.length) {
     return (
       <AdminStateView
-        description="Nous chargeons les demandes d'onboarding club."
+        description={t(
+          'adminClubOnboardingList.states.loadingDescription',
+          "Nous chargeons les demandes d'onboarding club.",
+        )}
         isLoading
-        title="Chargement des onboardings"
+        title={t('adminClubOnboardingList.states.loadingTitle', 'Chargement des onboardings')}
       />
     );
   }
@@ -59,10 +64,13 @@ function AdminClubOnboardingList() {
   if (error && !requests.length) {
     return (
       <AdminStateView
-        actionLabel="Réessayer"
-        description={getErrorMessage(error, 'generic') || 'Impossible de charger les demandes d\'onboarding.'}
+        actionLabel={t('adminClubOnboardingList.states.retry', 'Réessayer')}
+        description={getErrorMessage(error, 'generic') || t(
+          'adminClubOnboardingList.states.errorDescription',
+          "Impossible de charger les demandes d'onboarding.",
+        )}
         onAction={refetch}
-        title="Chargement impossible"
+        title={t('adminClubOnboardingList.states.errorTitle', 'Chargement impossible')}
       />
     );
   }
@@ -93,7 +101,10 @@ function AdminClubOnboardingList() {
 
   const renderItem = ({ item }) => {
     const requester = item?.user || {};
-    const requesterLabel = [requester?.firstname, requester?.lastname].filter(Boolean).join(' ').trim() || 'Utilisateur';
+    const requesterLabel = [requester?.firstname, requester?.lastname].filter(Boolean).join(' ').trim() || t(
+      'adminClubOnboardingList.userFallback',
+      'Utilisateur',
+    );
     const managerLabel = [item?.holderFirstname, item?.holderLastname].filter(Boolean).join(' ').trim() || '-';
     const requestDate = item?.createdAt ? new Date(item.createdAt).toLocaleDateString() : '-';
 
@@ -118,7 +129,7 @@ function AdminClubOnboardingList() {
         <View style={[Alignments.row, Alignments.alignCenter, Alignments.justifySpaceBetween, Spaces.gap[12]]}>
           <View style={{ flex: 1 }}>
             <Text style={[Fonts.h4Black, Fonts.neutral00]}>
-              {item?.clubName || 'Club non précisé'}
+              {item?.clubName || t('adminClubOnboardingList.clubNotSpecified', 'Club non précisé')}
             </Text>
             <Text style={[Fonts.p3, Fonts.neutral300, Spaces.marginTop[4]]}>
               {requestDate}
@@ -134,7 +145,7 @@ function AdminClubOnboardingList() {
             }}
           >
             <Text style={[Fonts.p3Bold, { color: Colors.primary500 }]}>
-              {item?.__typeLabel || 'CLUB A ONBOARDER'}
+              {item?.__typeLabel || t('adminClubOnboardingList.badge', 'CLUB A ONBOARDER')}
             </Text>
           </View>
         </View>
@@ -147,10 +158,14 @@ function AdminClubOnboardingList() {
             Spaces.gap[10],
           ]}
         >
-          <Text style={[Fonts.p3Bold, Fonts.primary200]}>Dirigeant à contacter</Text>
+          <Text style={[Fonts.p3Bold, Fonts.primary200]}>
+            {t('adminClubOnboardingList.managerToContact', 'Dirigeant à contacter')}
+          </Text>
           <Text style={[Fonts.p1Bold, Fonts.neutral00]}>{managerLabel}</Text>
           <Text style={[Fonts.p2, Fonts.neutral200]}>
-            Telephone: {item?.holderPhone || '-'}
+            {t('adminClubOnboardingList.phone', 'Telephone:')}
+            {' '}
+            {item?.holderPhone || '-'}
           </Text>
           <Text style={[Fonts.p2, Fonts.neutral200]}>
             Email: {item?.holderEmail || '-'}
@@ -162,7 +177,7 @@ function AdminClubOnboardingList() {
           <View style={{ flex: 1 }}>
             <Text style={[Fonts.p2Bold, Fonts.neutral00]}>{requesterLabel}</Text>
             <Text style={[Fonts.p3, Fonts.neutral300]}>
-              Demandeur
+              {t('adminClubOnboardingList.requester', 'Demandeur')}
             </Text>
           </View>
         </View>
@@ -175,7 +190,7 @@ function AdminClubOnboardingList() {
               size="small"
               style={{ borderColor: Colors.error500 }}
               textStyle={{ color: Colors.error500 }}
-              title="Refuser"
+              title={t('adminClubOnboardingList.decline', 'Refuser')}
               variant="Secondary"
             />
           </View>
@@ -186,7 +201,7 @@ function AdminClubOnboardingList() {
                 requestType: item.__requestType,
               })}
               size="small"
-              title="Voir detail"
+              title={t('adminClubOnboardingList.viewDetails', 'Voir detail')}
               variant="Secondary"
             />
           </View>
@@ -195,7 +210,7 @@ function AdminClubOnboardingList() {
               isLoading={isPrimaryLoading(item)}
               onPress={() => handlePrimaryAction(item)}
               size="small"
-              title="Traiter"
+              title={t('adminClubOnboardingList.process', 'Traiter')}
               variant="Primary"
             />
           </View>
@@ -205,16 +220,24 @@ function AdminClubOnboardingList() {
   };
 
   return (
-    <ScreenContainer bgImage="bg2" title="Clubs à onboarder">
+    <ScreenContainer
+      bgImage="bg2"
+      title={t('adminClubOnboardingList.screenTitle', 'Clubs à onboarder')}
+    >
       <FlatList
         contentContainerStyle={[Spaces.padding[16]]}
         data={requests}
         keyExtractor={(item) => item.documentId}
         ListEmptyComponent={!isLoading ? (
           <View style={[Alignments.center, Spaces.marginTop[40]]}>
-            <Text style={[Fonts.h4, Fonts.neutral200]}>Aucune demande en attente</Text>
+            <Text style={[Fonts.h4, Fonts.neutral200]}>
+              {t('adminClubOnboardingList.empty.title', 'Aucune demande en attente')}
+            </Text>
             <Text style={[Fonts.p2, Fonts.neutral500, Spaces.marginTop[8], { textAlign: 'center' }]}>
-              Les formulaires de clubs à onboarder apparaîtront ici.
+              {t(
+                'adminClubOnboardingList.empty.hint',
+                'Les formulaires de clubs à onboarder apparaîtront ici.',
+              )}
             </Text>
           </View>
         ) : null}

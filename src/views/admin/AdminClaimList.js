@@ -2,10 +2,12 @@
 
 import { useNavigation } from '@react-navigation/native';
 import { useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   FlatList, RefreshControl, Text, TouchableOpacity, View,
 } from 'react-native';
 
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import AdminStateView from '@/views/admin/components/AdminStateView';
@@ -34,6 +36,7 @@ function AdminClaimList() {
   const {
     Alignments, ApplicationStyle, Colors, Fonts, Spaces,
   } = useTheme();
+  const { t } = useTranslation();
   const navigation = useNavigation();
 
   const {
@@ -53,9 +56,12 @@ function AdminClaimList() {
   if (isLoading && !requests.length) {
     return (
       <AdminStateView
-        description="Nous chargeons les revendications et demandes en attente."
+        description={t(
+          'adminClaimList.states.loadingDescription',
+          'Nous chargeons les revendications et demandes en attente.',
+        )}
         isLoading
-        title="Chargement des demandes"
+        title={t('adminClaimList.states.loadingTitle', 'Chargement des demandes')}
       />
     );
   }
@@ -63,10 +69,13 @@ function AdminClaimList() {
   if (error && !requests.length) {
     return (
       <AdminStateView
-        actionLabel="Réessayer"
-        description={getErrorMessage(error, 'generic') || 'Impossible de charger les demandes admin.'}
+        actionLabel={t('adminClaimList.states.retry', 'Réessayer')}
+        description={getErrorMessage(error, 'generic') || t(
+          'adminClaimList.states.errorDescription',
+          'Impossible de charger les demandes admin.',
+        )}
         onAction={refetch}
-        title="Chargement impossible"
+        title={t('adminClaimList.states.errorTitle', 'Chargement impossible')}
       />
     );
   }
@@ -148,7 +157,7 @@ function AdminClaimList() {
           ]}
         >
           <Text numberOfLines={2} style={[Fonts.h4Black, { color: Colors.neutral00, flex: 1 }]}>
-            {item?.clubName || 'Club inconnu'}
+            {item?.clubName || t('adminClaimList.unknownClub', 'Club inconnu')}
           </Text>
           <View
             style={{
@@ -160,18 +169,25 @@ function AdminClaimList() {
             }}
           >
             <Text style={[Fonts.p3Bold, { color: Colors.primary200 }]}>
-              {item?.__typeLabel || 'INTÉRÊTS'}
+              {item?.__typeLabel || t('adminClaimList.interestsBadge', 'INTÉRÊTS')}
             </Text>
           </View>
         </View>
 
         <Text style={[Fonts.p2, { color: Colors.neutral200 }, Spaces.marginTop[8]]}>
           {peopleCount > 1
-            ? `${peopleCount} personnes intéressées par ce club`
-            : '1 personne intéressée par ce club'}
+            ? t(
+              'adminClaimList.interest.many',
+              '{{peopleCount}} personnes intéressées par ce club',
+              { peopleCount },
+            )
+            : t('adminClaimList.interest.one', '1 personne intéressée par ce club')}
         </Text>
         <Text style={[Fonts.p3, { color: Colors.neutral300 }, Spaces.marginTop[4]]}>
-          Ce club n’est pas encore sur FoundClub. Personne n’a rien à traiter ici.
+          {t(
+            'adminClaimList.interest.hint',
+            'Ce club n’est pas encore sur FoundClub. Personne n’a rien à traiter ici.',
+          )}
         </Text>
       </View>
     );
@@ -185,15 +201,24 @@ function AdminClaimList() {
     const user = item?.user || {};
     const fullName = [user?.firstname, user?.lastname].filter(Boolean).join(' ').trim()
             || [item?.holderFirstname, item?.holderLastname].filter(Boolean).join(' ').trim()
-            || 'Utilisateur';
+            || t('adminClaimList.userFallback', 'Utilisateur');
     const date = item?.createdAt ? new Date(item.createdAt).toLocaleDateString() : '-';
 
-    let subtitle = `Revendique: ${item?.club?.name || 'club inconnu'}`;
+    let subtitle = t('adminClaimList.subtitle.claim', 'Revendique: {{clubName}}', {
+      clubName: item?.club?.name || t('adminClaimList.unknownClubLower', 'club inconnu'),
+      ...SANS_ECHAPPEMENT,
+    });
     if (item?.__isAffiliationHelp) {
       if (item?.requestKind === 'club_creation') {
-        subtitle = `Club à onboarder: ${item?.clubName || 'non précisé'}`;
+        subtitle = t('adminClaimList.subtitle.clubCreation', 'Club à onboarder: {{clubName}}', {
+          clubName: item?.clubName || t('adminClaimList.notSpecified', 'non précisé'),
+          ...SANS_ECHAPPEMENT,
+        });
       } else {
-        subtitle = `Recherche: ${item?.clubName || 'non précisé'}`;
+        subtitle = t('adminClaimList.subtitle.search', 'Recherche: {{clubName}}', {
+          clubName: item?.clubName || t('adminClaimList.notSpecified', 'non précisé'),
+          ...SANS_ECHAPPEMENT,
+        });
       }
     }
 
@@ -201,7 +226,11 @@ function AdminClaimList() {
     // est un appel qui se decroche ; « un joueur a demande » ne l'est pas.
     const waitingPlayersCount = Number(item?.__waitingPlayersCount || 0);
     const waitingLabel = waitingPlayersCount > 1
-      ? `${waitingPlayersCount} joueurs attendent ce club`
+      ? t(
+        'adminClaimList.waitingPlayers',
+        '{{waitingPlayersCount}} joueurs attendent ce club',
+        { waitingPlayersCount },
+      )
       : null;
 
     return (
@@ -284,7 +313,7 @@ function AdminClaimList() {
               size="small"
               style={{ borderColor: Colors.error500 }}
               textStyle={{ color: Colors.error500 }}
-              title="Refuser"
+              title={t('adminClaimList.decline', 'Refuser')}
               variant="Secondary"
             />
           </View>
@@ -293,7 +322,10 @@ function AdminClaimList() {
               isLoading={isPrimaryLoading(item)}
               onPress={() => handlePrimaryAction(item)}
               size="small"
-              title={item?.__isAffiliationHelp ? 'Traiter' : 'Accepter'}
+              title={item?.__isAffiliationHelp ? t(
+                'adminClaimList.process',
+                'Traiter',
+              ) : t('adminClaimList.accept', 'Accepter')}
               variant="Primary"
             />
           </View>
@@ -303,16 +335,24 @@ function AdminClaimList() {
   };
 
   return (
-    <ScreenContainer bgImage="bg2" title="Revendications et demandes">
+    <ScreenContainer
+      bgImage="bg2"
+      title={t('adminClaimList.screenTitle', 'Revendications et demandes')}
+    >
       <FlatList
         contentContainerStyle={[Spaces.padding[16]]}
         data={requests}
         keyExtractor={(item) => item.documentId}
         ListEmptyComponent={!isLoading ? (
           <View style={[Alignments.center, Spaces.marginTop[40]]}>
-            <Text style={[Fonts.h4, Fonts.neutral200]}>Aucune demande en attente</Text>
+            <Text style={[Fonts.h4, Fonts.neutral200]}>
+              {t('adminClaimList.empty.title', 'Aucune demande en attente')}
+            </Text>
             <Text style={[Fonts.p2, Fonts.neutral500, Spaces.marginTop[8], { textAlign: 'center' }]}>
-              Les revendications et demandes superadmin apparaîtront ici.
+              {t(
+                'adminClaimList.empty.hint',
+                'Les revendications et demandes superadmin apparaîtront ici.',
+              )}
             </Text>
           </View>
         ) : null}
