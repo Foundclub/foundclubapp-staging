@@ -1,5 +1,6 @@
 import { joiResolver } from '@hookform/resolvers/joi';
 import { useNavigation, useRoute } from '@react-navigation/native';
+import i18next from 'i18next';
 import Joi from 'joi';
 import { useEffect, useMemo, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
@@ -42,7 +43,9 @@ import {
   resolveFacilityPlanningColor,
 } from '@/utils/facilityPlanningColor';
 
-const schema = Joi.object({
+// I18N-4 : le schema est construit a chaque rendu -- ses messages sont lus dans la langue
+// courante (un schema de module les figeait dans celle du demarrage).
+const buildSchema = () => Joi.object({
   address: Joi.alternatives().try(
     Joi.string().allow('').optional(),
     Joi.object().optional(),
@@ -52,27 +55,59 @@ const schema = Joi.object({
     FACILITY_CONFLICT_MODES.ALLOW_AND_NOTIFY,
   ).required(),
   maxSlots: Joi.number().min(1).required().messages({
-    'any.required': 'La capacité est requise',
-    'number.min': 'La capacité doit être d\'au moins 1',
+    'any.required': i18next.t(
+      'facilityForm.validation.capacityRequired',
+      'La capacité est requise',
+    ),
+    'number.min': i18next.t(
+      'facilityForm.validation.capacityMin',
+      "La capacité doit être d'au moins 1",
+    ),
   }),
   name: Joi.string().required().messages({
-    'string.empty': 'Le nom est requis',
+    'string.empty': i18next.t('facilityForm.validation.nameRequired', 'Le nom est requis'),
   }),
   planningColor: Joi.string().valid(...FACILITY_PLANNING_PALETTE).required().messages({
-    'any.only': 'Sélectionne une couleur validé',
-    'string.empty': 'Sélectionne une couleur',
+    'any.only': i18next.t('facilityForm.validation.colorInvalid', 'Sélectionne une couleur validé'),
+    'string.empty': i18next.t('facilityForm.validation.colorRequired', 'Sélectionne une couleur'),
   }),
   type: Joi.string().required().messages({
-    'string.empty': 'Le type est requis',
+    'string.empty': i18next.t('facilityForm.validation.typeRequired', 'Le type est requis'),
   }),
 });
 
+// I18N-4 : la VALEUR reste le contrat serveur ; seul le libelle suit la langue (accesseur).
 const FACILITY_TYPES = [
-  { label: 'Terrain', value: 'Terrain' },
-  { label: 'Gymnase', value: 'Gymnase' },
-  { label: 'Salle vidéo', value: 'Salle vidéo' },
-  { label: 'Vestiaire', value: 'Vestiaire' },
-  { label: 'Club House', value: 'Club House' },
+  {
+    get label() {
+      return i18next.t('facilityForm.types.pitch', 'Terrain');
+    },
+    value: 'Terrain',
+  },
+  {
+    get label() {
+      return i18next.t('facilityForm.types.gym', 'Gymnase');
+    },
+    value: 'Gymnase',
+  },
+  {
+    get label() {
+      return i18next.t('facilityForm.types.videoRoom', 'Salle vidéo');
+    },
+    value: 'Salle vidéo',
+  },
+  {
+    get label() {
+      return i18next.t('facilityForm.types.changingRoom', 'Vestiaire');
+    },
+    value: 'Vestiaire',
+  },
+  {
+    get label() {
+      return i18next.t('facilityForm.types.clubHouse', 'Club House');
+    },
+    value: 'Club House',
+  },
 ];
 
 const getAddressCoordinates = (address) => {
@@ -268,7 +303,7 @@ function FacilityForm() {
     setError,
   } = useForm({
     defaultValues: DEFAULT_FORM_VALUES,
-    resolver: joiResolver(schema),
+    resolver: joiResolver(buildSchema()),
   });
 
   const [loading, setLoading] = useState(false);
@@ -403,7 +438,7 @@ function FacilityForm() {
         <View style={[Alignments.alignCenter, Spaces.gap[12]]}>
           <Loader />
           <Text style={[Fonts.p2, Fonts.primary100]}>
-            Chargement de l installation...
+            {i18next.t('facilityForm.state.loading', 'Chargement de l installation...')}
           </Text>
         </View>
       </ScreenContainer>
@@ -418,13 +453,24 @@ function FacilityForm() {
       >
         <View style={[Spaces.gap[12]]}>
           <Text style={[Fonts.h4Black, Fonts.neutral00]}>
-            Impossible de charger l installation
+            {i18next.t('facilityForm.state.loadError', 'Impossible de charger l installation')}
           </Text>
           <Text style={[Fonts.p2, Fonts.primary100]}>
-            {facilityError?.message || 'Réessaie dans quelques instants.'}
+            {facilityError?.message || i18next.t(
+              'facilityForm.state.retryLater',
+              'Réessaie dans quelques instants.',
+            )}
           </Text>
-          <Button onPress={() => refetchFacility()} title="Réessayer" variant="Primary" />
-          <Button onPress={() => navigation.navigate(RouteNames.FacilityList)} title="Retour aux installations" variant="Secondary" />
+          <Button
+            onPress={() => refetchFacility()}
+            title={i18next.t('facilityForm.state.retry', 'Réessayer')}
+            variant="Primary"
+          />
+          <Button
+            onPress={() => navigation.navigate(RouteNames.FacilityList)}
+            title={i18next.t('facilityForm.state.backToList', 'Retour aux installations')}
+            variant="Secondary"
+          />
         </View>
       </ScreenContainer>
     );
@@ -438,16 +484,32 @@ function FacilityForm() {
       >
         <View style={[Spaces.gap[12]]}>
           <Text style={[Fonts.h4Black, Fonts.neutral00]}>
-            {isFacilityNotFound ? 'Installation introuvable' : 'Contexte club introuvable'}
+            {isFacilityNotFound
+              ? i18next.t('facilityForm.state.notFoundTitle', 'Installation introuvable')
+              : i18next.t('facilityForm.state.missingClubTitle', 'Contexte club introuvable')}
           </Text>
           <Text style={[Fonts.p2, Fonts.primary100]}>
             {isFacilityNotFound
-              ? 'Le lien est peut-être obsolète ou cette installation a été supprimée.'
-              : 'Impossible de determiner pour quel club créer cette installation.'}
+              ? i18next.t(
+                'facilityForm.state.notFoundBody',
+                'Le lien est peut-être obsolète ou cette installation a été supprimée.',
+              )
+              : i18next.t(
+                'facilityForm.state.missingClubBody',
+                'Impossible de determiner pour quel club créer cette installation.',
+              )}
           </Text>
-          <Button onPress={() => navigation.navigate(RouteNames.FacilityList)} title="Retour aux installations" variant="Secondary" />
+          <Button
+            onPress={() => navigation.navigate(RouteNames.FacilityList)}
+            title={i18next.t('facilityForm.state.backToList', 'Retour aux installations')}
+            variant="Secondary"
+          />
           {isFacilityNotFound ? (
-            <Button onPress={() => refetchFacility()} title="Réessayer" variant="Primary" />
+            <Button
+              onPress={() => refetchFacility()}
+              title={i18next.t('facilityForm.state.retry', 'Réessayer')}
+              variant="Primary"
+            />
           ) : null}
         </View>
       </ScreenContainer>
