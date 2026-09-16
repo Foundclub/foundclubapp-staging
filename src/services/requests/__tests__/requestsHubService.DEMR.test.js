@@ -159,7 +159,7 @@ describe('DEMR / T1 — la source « event » du hub', () => {
     /** @type {jest.Mock} */ (getTeamMembershipRequests).mockResolvedValue(PAGE_VIDE);
   });
 
-  it('T1.1 — 323 activites a venir : UN appel, et les 3 demandes (dont celle de la 200e)', async () => {
+  it('T1.1 — 323 activites a venir : UN appel, et les 3 demandes (200e comprise)', async () => {
     const result = await getRequestsHubData({ clubId: 'club-1' });
 
     expect({ appels: appelsSourceEvenement() }).toEqual({ appels: 1 });
@@ -179,7 +179,7 @@ describe('DEMR / T1 — la source « event » du hub', () => {
       .toEqual({ clubId: 'club-1' });
   });
 
-  it('T1.3 — serveur pas encore a jour (404) : repli sur l ancien chemin, PREMIERE PAGE seulement, sans banniere', async () => {
+  it('T1.3 — serveur pas a jour (404) : repli sur la PREMIERE PAGE, sans banniere', async () => {
     /** @type {jest.Mock} */ (getPendingEventParticipationRequestsForHub)
       .mockRejectedValue({ message: 'Not Found', name: 'NotFoundError', status: 404 });
 
@@ -200,7 +200,9 @@ describe('DEMR / T1 — la source « event » du hub', () => {
 
   it('T1.4 — une vraie panne de la route se dit, et ne relance PAS l ancien parcours', async () => {
     /** @type {jest.Mock} */ (getPendingEventParticipationRequestsForHub)
-      .mockRejectedValue({ message: 'Internal Server Error', name: 'ApplicationError', status: 500 });
+      .mockRejectedValue({
+        message: 'Internal Server Error', name: 'ApplicationError', status: 500,
+      });
 
     const result = await getRequestsHubData({ clubId: 'club-1' });
 

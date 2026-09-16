@@ -35,6 +35,7 @@ jest.mock('@/services/event/eventService', () => ({
   getMyPendingEventTeamInvitations: (/** @type {any} */ ...args) => (
     mockGetMyPendingEventTeamInvitations(...args)
   ),
+  getPendingEventParticipationRequestsForHub: jest.fn(async () => ({ data: [] })),
   getPendingFeaturedRequests: jest.fn(async () => ({ data: [] })),
 }));
 

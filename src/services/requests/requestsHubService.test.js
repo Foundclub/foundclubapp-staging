@@ -4,7 +4,10 @@ import '@/theme/strings';
 
 import { getClubInterestRequests } from '@/services/clubInterestRequest/clubInterestRequestService';
 import { getClubMembershipRequests } from '@/services/clubMembershipRequest/clubMembershipRequestService';
-import { getEvents, getPendingFeaturedRequests } from '@/services/event/eventService';
+import {
+  getPendingEventParticipationRequestsForHub,
+  getPendingFeaturedRequests,
+} from '@/services/event/eventService';
 import { getPendingFacilityOverrideRequests } from '@/services/facility/facilityService';
 import {
   getMyFriendlyMatchAds,
@@ -25,6 +28,8 @@ jest.mock('@/services/clubMembershipRequest/clubMembershipRequestService', () =>
 jest.mock('@/services/event/eventService', () => ({
   getEvents: jest.fn(),
   getMyPendingEventTeamInvitations: jest.fn(async () => []),
+  // DEMR — la source « event » lit la route dediee (un appel), plus getEvents.
+  getPendingEventParticipationRequestsForHub: jest.fn(),
   getPendingFeaturedRequests: jest.fn(),
 }));
 
@@ -57,7 +62,7 @@ describe('requestsHubService', () => {
   beforeEach(() => {
     getClubInterestRequests.mockResolvedValue(emptyPaginatedResponse);
     getClubMembershipRequests.mockResolvedValue(emptyPaginatedResponse);
-    getEvents.mockResolvedValue(emptyPaginatedResponse);
+    getPendingEventParticipationRequestsForHub.mockResolvedValue({ data: [] });
     getPendingFeaturedRequests.mockResolvedValue({ data: [] });
     getPendingFacilityOverrideRequests.mockResolvedValue({ data: [] });
     getMyFriendlyMatchAds.mockResolvedValue([]);
@@ -70,7 +75,7 @@ describe('requestsHubService', () => {
   });
 
   test('keeps pending event participation requests even after a training is closed again', async () => {
-    getEvents.mockResolvedValue({
+    getPendingEventParticipationRequestsForHub.mockResolvedValue({
       data: [
         {
           documentId: 'event-1',
@@ -108,7 +113,7 @@ describe('requestsHubService', () => {
   });
 
   test('does not recreate a legacy event validation card when no pending request remains', async () => {
-    getEvents.mockResolvedValue({
+    getPendingEventParticipationRequestsForHub.mockResolvedValue({
       data: [
         {
           documentId: 'event-1',

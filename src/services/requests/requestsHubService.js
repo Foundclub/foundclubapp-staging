@@ -17,6 +17,7 @@ import { getClubMembershipRequests } from '@/services/clubMembershipRequest/club
 import {
   getEvents,
   getMyPendingEventTeamInvitations,
+  getPendingEventParticipationRequestsForHub,
   getPendingFeaturedRequests,
 } from '@/services/event/eventService';
 import { getPendingFacilityOverrideRequests } from '@/services/facility/facilityService';
@@ -168,16 +169,43 @@ const fetchClubInterestRequests = async ({ clubId = '', teamIds = [] }) => {
   return mergeRequestsById(settled.flat());
 };
 
+const EVENT_FALLBACK_PAGE_SIZE = 50;
+
+/**
+ * DEMR — les demandes de participation en attente, en UNE lecture.
+ *
+ * 🔎 Avant (mesure en production du 16/09) : TOUTES les activites a venir du
+ * club, 50 par page, pages en serie — 7 appels de ~9 s pour les 323 activites du
+ * club de demonstration, et une demande posee au-dela de la 180e activite
+ * n'etait rendue sur aucune page (plafond du chemin « split » de `event.find`).
+ * La route dediee part des demandes : un appel, quel que soit le nombre
+ * d'activites.
+ *
+ * ponytail: repli assume tant que le serveur n'a pas la route (404) — l'ancien
+ * chemin, PREMIERE PAGE seulement : 1 appel au lieu de 7, au prix des demandes
+ * posees au-dela des 50 prochaines activites. Voie de sortie : mettre le
+ * serveur en ligne AVANT l'app ; ce repli devient alors du code mort a retirer.
+ * @param {string} clubId - Le club.
+ * @returns {Promise<any[]>} Les activites qui portent des demandes.
+ */
 const fetchEventValidationRequests = async (clubId) => {
   if (!clubId) return [];
 
-  return fetchAllPages((page) => getEvents({
+  try {
+    const response = await getPendingEventParticipationRequestsForHub({ clubId });
+    return Array.isArray(response?.data) ? response.data : [];
+  } catch (error) {
+    if (toErrorStatus(error) !== 404) throw error;
+  }
+
+  const firstPage = await getEvents({
     club: { value: clubId },
-    page,
-    pageSize: 50,
+    page: 1,
+    pageSize: EVENT_FALLBACK_PAGE_SIZE,
     requestHub: true,
     startDateAfter: new Date(),
-  }));
+  });
+  return Array.isArray(firstPage?.data) ? firstPage.data : [];
 };
 
 const fetchFeaturedRequests = async ({ clubId, cmId }) => {
