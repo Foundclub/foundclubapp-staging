@@ -17,6 +17,7 @@ import { getClubMembershipRequests } from '@/services/clubMembershipRequest/club
 import {
   getEvents,
   getMyPendingEventTeamInvitations,
+  getPendingEventParticipationRequestsForHub,
   getPendingFeaturedRequests,
 } from '@/services/event/eventService';
 import { getPendingFacilityOverrideRequests } from '@/services/facility/facilityService';
@@ -72,13 +73,35 @@ export const hasAnyRequestsContext = (context) => (
   Boolean(context?.clubId || context?.cmId || (context?.teamIds || []).length)
 );
 
-const fetchAllPages = async (fetchPage) => {
+/**
+ * DEMR — une lecture COUPEE s'arrete : react-query abandonne la promesse d'une
+ * relecture remplacee, mais la chaine de pages, elle, continuait en arriere-plan
+ * jusqu'a la derniere page. C'est ce qui empilait les lectures cote serveur.
+ * @param {AbortSignal | undefined} signal - Le signal de la lecture.
+ * @returns {void}
+ */
+const throwIfAborted = (signal) => {
+  if (!signal?.aborted) return;
+  const error = /** @type {Error & { code?: string }} */ (new Error('Requests hub read aborted'));
+  error.name = 'AbortError';
+  error.code = 'ERR_CANCELED';
+  throw error;
+};
+
+/**
+ * Lit toutes les pages d'une source, et s'arrete des que la lecture est coupee.
+ * @param {(page: number) => Promise<any>} fetchPage - Lit une page.
+ * @param {AbortSignal} [signal] - Coupe la chaine entre deux pages.
+ * @returns {Promise<any[]>} Les lignes de toutes les pages.
+ */
+const fetchAllPages = async (fetchPage, signal) => {
   let currentPage = 1;
   const collected = [];
 
   for (;;) {
     // eslint-disable-next-line no-await-in-loop
     const response = await fetchPage(currentPage);
+    throwIfAborted(signal);
     const pageItems = Array.isArray(response?.data) ? response.data : [];
     collected.push(...pageItems);
 
@@ -103,14 +126,20 @@ const mergeRequestsById = (entries = []) => {
   return Array.from(byId.values());
 };
 
-const fetchTeamRequests = async ({ clubId, teamIds }) => {
+/**
+ * Les demandes d'adhesion a une equipe, par equipe entrainee et par club.
+ * @param {{ clubId: string, teamIds: string[] }} params - Le perimetre.
+ * @param {AbortSignal} [signal] - Coupe la chaine entre deux pages.
+ * @returns {Promise<any[]>} Les demandes, sans doublon.
+ */
+const fetchTeamRequests = async ({ clubId, teamIds }, signal) => {
   const jobs = [];
 
   if (teamIds.length) {
     jobs.push(fetchAllPages((page) => getTeamMembershipRequests(teamIds, {
       page,
       pageSize: 50,
-    })));
+    }), signal));
   }
 
   if (clubId) {
@@ -118,7 +147,7 @@ const fetchTeamRequests = async ({ clubId, teamIds }) => {
       clubId,
       page,
       pageSize: 50,
-    })));
+    }), signal));
   }
 
   if (!jobs.length) return [];
@@ -127,19 +156,27 @@ const fetchTeamRequests = async ({ clubId, teamIds }) => {
   return mergeRequestsById(settled.flat());
 };
 
-const fetchClubRequests = async (clubId) => {
+/**
+ * Les demandes d'adhesion au club.
+ * @param {string} clubId - Le club.
+ * @param {AbortSignal} [signal] - Coupe la chaine entre deux pages.
+ * @returns {Promise<any[]>} Les demandes.
+ */
+const fetchClubRequests = async (clubId, signal) => {
   if (!clubId) return [];
 
   return fetchAllPages((page) => getClubMembershipRequests(clubId, {
     page,
     pageSize: 50,
-  }));
+  }), signal);
 };
 
 /**
+ * Les marques d'interet pour le club ou ses equipes.
  * @param {{ clubId?: string; teamIds?: string[] }} params
+ * @param {AbortSignal} [signal] - Coupe la chaine entre deux pages.
  */
-const fetchClubInterestRequests = async ({ clubId = '', teamIds = [] }) => {
+const fetchClubInterestRequests = async ({ clubId = '', teamIds = [] }, signal) => {
   const jobs = [];
 
   // 👶 PARENT P3 — cet ecran sait TRANCHER une place demandee pour un enfant : il
@@ -150,7 +187,7 @@ const fetchClubInterestRequests = async ({ clubId = '', teamIds = [] }) => {
       page,
       pageSize: 50,
       teamIds,
-    })));
+    }), signal));
   }
 
   if (clubId) {
@@ -159,7 +196,7 @@ const fetchClubInterestRequests = async ({ clubId = '', teamIds = [] }) => {
       includeChildRequests: true,
       page,
       pageSize: 50,
-    })));
+    }), signal));
   }
 
   if (!jobs.length) return [];
@@ -168,16 +205,44 @@ const fetchClubInterestRequests = async ({ clubId = '', teamIds = [] }) => {
   return mergeRequestsById(settled.flat());
 };
 
-const fetchEventValidationRequests = async (clubId) => {
+const EVENT_FALLBACK_PAGE_SIZE = 50;
+
+/**
+ * DEMR — les demandes de participation en attente, en UNE lecture.
+ *
+ * 🔎 Avant (mesure en production du 16/09) : TOUTES les activites a venir du
+ * club, 50 par page, pages en serie — 7 appels de ~9 s pour les 323 activites du
+ * club de demonstration, et une demande posee au-dela de la 180e activite
+ * n'etait rendue sur aucune page (plafond du chemin « split » de `event.find`).
+ * La route dediee part des demandes : un appel, quel que soit le nombre
+ * d'activites.
+ *
+ * ponytail: repli assume tant que le serveur n'a pas la route (404) — l'ancien
+ * chemin, PREMIERE PAGE seulement : 1 appel au lieu de 7, au prix des demandes
+ * posees au-dela des 50 prochaines activites. Voie de sortie : mettre le
+ * serveur en ligne AVANT l'app ; ce repli devient alors du code mort a retirer.
+ * @param {string} clubId - Le club.
+ * @param {AbortSignal} [signal] - Coupe la lecture (transmis au HTTP).
+ * @returns {Promise<any[]>} Les activites qui portent des demandes.
+ */
+const fetchEventValidationRequests = async (clubId, signal) => {
   if (!clubId) return [];
 
-  return fetchAllPages((page) => getEvents({
-    club: { value: clubId },
-    page,
-    pageSize: 50,
+  try {
+    const response = await getPendingEventParticipationRequestsForHub({ clubId }, { signal });
+    return Array.isArray(response?.data) ? response.data : [];
+  } catch (error) {
+    if (toErrorStatus(error) !== 404) throw error;
+  }
+
+  const firstPage = await getEvents({
+    club: { label: '', value: clubId },
+    page: 1,
+    pageSize: EVENT_FALLBACK_PAGE_SIZE,
     requestHub: true,
     startDateAfter: new Date(),
-  }));
+  }, { signal });
+  return Array.isArray(firstPage?.data) ? firstPage.data : [];
 };
 
 const fetchFeaturedRequests = async ({ clubId, cmId }) => {
@@ -282,8 +347,11 @@ export const EMPTY_REQUESTS_HUB_DATA = {
 
 /**
  * @param {Partial<RequestsHubContext>} rawContext
+ * @param {{ signal?: AbortSignal }} [options] - DEMR : le signal de react-query,
+ * pour couper le HTTP et les chaines de pages d'une lecture remplacee.
  */
-export const getRequestsHubData = async (rawContext = {}) => {
+export const getRequestsHubData = async (rawContext = {}, options = {}) => {
+  const { signal } = options;
   const context = normalizeRequestsHubContext(rawContext);
   if (!hasAnyRequestsContext(context)) {
     return EMPTY_REQUESTS_HUB_DATA;
@@ -292,17 +360,20 @@ export const getRequestsHubData = async (rawContext = {}) => {
   const sources = [
     {
       enabled: context.teamIds.length > 0 || Boolean(context.clubId),
-      fetcher: () => fetchTeamRequests({ clubId: context.clubId, teamIds: context.teamIds }),
+      fetcher: () => fetchTeamRequests(
+        { clubId: context.clubId, teamIds: context.teamIds },
+        signal,
+      ),
       key: 'team',
     },
     {
       enabled: Boolean(context.clubId),
-      fetcher: () => fetchClubRequests(context.clubId),
+      fetcher: () => fetchClubRequests(context.clubId, signal),
       key: 'club',
     },
     {
       enabled: Boolean(context.clubId),
-      fetcher: () => fetchEventValidationRequests(context.clubId),
+      fetcher: () => fetchEventValidationRequests(context.clubId, signal),
       key: 'event',
     },
     {
@@ -317,7 +388,10 @@ export const getRequestsHubData = async (rawContext = {}) => {
     },
     {
       enabled: context.teamIds.length > 0 || Boolean(context.clubId),
-      fetcher: () => fetchClubInterestRequests({ clubId: context.clubId, teamIds: context.teamIds }),
+      fetcher: () => fetchClubInterestRequests(
+        { clubId: context.clubId, teamIds: context.teamIds },
+        signal,
+      ),
       key: 'interest',
     },
     {
@@ -350,6 +424,8 @@ export const getRequestsHubData = async (rawContext = {}) => {
 
   const enabledSources = sources.filter((source) => source.enabled);
   const settled = await Promise.allSettled(enabledSources.map((source) => source.fetcher()));
+  // Une lecture coupee ne rend rien : ses sources en echec ne sont pas des pannes.
+  throwIfAborted(signal);
 
   const errors = [];
   const items = [];

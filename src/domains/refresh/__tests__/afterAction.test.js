@@ -215,6 +215,9 @@ describe('T08 — ce qui devient faux apres une action', () => {
       'leaveTeam',
       'membershipChanged',
       'publishComposition',
+      // DEMR (2026-09-16) — `requestArrived` : une demande qui ARRIVE (equipe,
+      // participation, mise en avant, creneau) relit la seule boite « Demandes ».
+      'requestArrived',
       // SCORE1/H9 — `submitMatchStats` : envoyer un score, un bilan d'equipe ou
       // sa reponse perso. Elle ne s'ajoute pas a la liste, elle en REMPLACE deux
       // qui vivaient hors de ce fichier : `MatchStatsEditor` et

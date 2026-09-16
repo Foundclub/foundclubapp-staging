@@ -1430,6 +1430,32 @@ export const getPendingFeaturedRequests = async (params = {}) => {
 };
 
 /**
+ * DEMR — les demandes de participation EN ATTENTE que je peux trancher, sur les
+ * activites a venir de mon club, en UNE lecture.
+ *
+ * Remplace, pour l'onglet « Demandes », le parcours de TOUTES les activites a
+ * venir (`getEvents` page par page : 7 appels de ~9 s mesures en production le
+ * 16/09 pour 323 activites). Le serveur rend la meme forme que cette liste —
+ * des activites, chacune avec ses `participationRequests` — reduite a celles qui
+ * portent une demande.
+ * ⚠️ Route absente d'un serveur pas encore a jour : le refus (404) remonte tel
+ * quel, c'est l'appelant qui decide du repli.
+ * @param {{ clubId: string }} params - Le club dont on lit les demandes.
+ * @param {{ signal?: AbortSignal }} [options] - Pour couper la lecture.
+ * @returns {Promise<{
+ *   data?: FCEvent[],
+ *   meta?: { limit?: number, total?: number, truncated?: boolean },
+ * }>} Les activites qui portent au moins une demande en attente.
+ */
+export const getPendingEventParticipationRequestsForHub = async ({ clubId }, options = {}) => {
+  const response = await client.get('/event-participations/requests-hub/pending', {
+    params: { clubId },
+    signal: options?.signal,
+  });
+  return response.data;
+};
+
+/**
  * Get attendance/lateness data for event participants.
  * @param {string} eventId
  * @returns {Promise<{ data?: { eventId?: string, items?: Array } }>}

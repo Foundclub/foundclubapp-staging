@@ -57,6 +57,7 @@ import {
   buildRequestAcceptanceCelebration,
 } from '@/services/requests/requestAcceptanceCelebration';
 import {
+  refreshRequestsHubIfStale,
   useRequestsHubData,
 } from '@/services/requests/requestsHubQueries';
 import {
@@ -242,22 +243,26 @@ function RequestsHub({ navigation, route }) {
 
   // 🧊 Y04 — CE QUI DOIT SE RELIRE QUAND ON REVIENT SUR CET ECRAN.
   // Adel : « il faut toujours recharger la page avec un refresh pour voir
-  // apparaitre les demandes ». `staleTime: 30_000` fige la liste, et l'onglet
-  // reste MONTE quand on navigue ailleurs : ni le montage ni le tirer-pour-
-  // rafraichir ne se declenchent au retour. On relit donc a chaque prise de
-  // focus. ⛔ La cause commune a toute l'app n'est pas ici (lot Y05) : cette
-  // ligne ne traite que le cas de cet ecran.
-  // ⚠️ Par une REFERENCE, pas par la dependance : `requestsQuery` est un objet
-  // neuf a chaque rendu, s'y abonner reposerait l'ecouteur en boucle.
+  // apparaitre les demandes ». L'onglet reste MONTE quand on navigue ailleurs :
+  // ni le montage ni le tirer-pour-rafraichir ne se declenchent au retour.
+  // ⛔ La cause commune a toute l'app n'est pas ici (lot Y05) : cette ligne ne
+  // traite que le cas de cet ecran.
+  // ⏱️ DEMR (16/09) — le retour relit SEULEMENT une liste perimee (> 30 s), et
+  // REJOINT une lecture en vol au lieu de l'annuler : `refetch()` relancait
+  // une chaine complete a chaque retour, pendant que l'ancienne continuait.
+  // ⚠️ Par une REFERENCE, pas par la dependance : `requestsQuery` et
+  // `context` changent d'objet, s'y abonner reposerait l'ecouteur en boucle.
   const refetchRequestsRef = useRef(requestsQuery.refetch);
   refetchRequestsRef.current = requestsQuery.refetch;
+  const contextRef = useRef(context);
+  contextRef.current = context;
 
   useEffect(() => {
     if (typeof navigation?.addListener !== 'function') return undefined;
     return navigation.addListener('focus', () => {
-      refetchRequestsRef.current?.();
+      refreshRequestsHubIfStale(queryClient, contextRef.current).catch(() => {});
     });
-  }, [navigation]);
+  }, [navigation, queryClient]);
 
   // U05 — BRANCHE SUR LE MODULE. Cet ecran declarait NEUF rubriques a la main et
   // en oubliait QUATRE : `teams`, `team`, `planning` et `home-summary`. C'est
@@ -715,7 +720,10 @@ function RequestsHub({ navigation, route }) {
 
   const sourceErrors = requestsQuery?.data?.errors || [];
   const canGoBack = typeof navigation?.canGoBack === 'function' && navigation.canGoBack();
-  const isInitialRequestsLoad = requestsQuery.isLoading
+  // DEMR — `isPending` et non `isLoading` : une premiere lecture EN PAUSE
+  // (reseau coupe) n'est pas « en chargement » pour react-query, mais elle
+  // n'a rien lu non plus — dire « Aucune demande en attente » serait faux.
+  const isInitialRequestsLoad = requestsQuery.isPending
     && filteredItems.length === 0
     && sourceErrors.length === 0;
   const selectedInterestPreset = CLUB_INTEREST_RESPONSE_PRESETS.find(
