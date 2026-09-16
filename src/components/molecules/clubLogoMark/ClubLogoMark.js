@@ -133,7 +133,9 @@ function ClubLogoMark({
     //  3. un trait de la couleur du fond (blanc sur blanc) → retiré.
     // Un écran qui donne au cadre une autre taille que size × size (fiche
     // d'équipe) a déjà choisi sa forme : il la garde.
-    const frame = StyleSheet.flatten([{ backgroundColor: LOGO_BACKGROUND }, logoStyle]) || {};
+    const frame = /** @type {import('react-native').ViewStyle} */ (
+      StyleSheet.flatten([{ backgroundColor: LOGO_BACKGROUND }, logoStyle]) || {}
+    );
     const boxWidth = typeof frame.width === 'number' ? frame.width : size;
     const boxHeight = typeof frame.height === 'number' ? frame.height : size;
     const effectiveInsetRatio = Number.isFinite(safeInsetRatio) ? safeInsetRatio : 0;
