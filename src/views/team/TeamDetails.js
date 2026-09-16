@@ -5145,21 +5145,22 @@ function TeamDetails({ navigation, route }) {
           maintenant dans la feuille maison `BottomModal`, ouverte par les trois
           points en haut a droite. AUCUNE action n'a ete retiree : 10 rangees et
           2 en-tetes de groupe, a l'identique.
-          `snapPoints` reste ABSENT a dessein : la feuille porte un en-tete et
-          AUCUN pied, cas ou le dimensionnement dynamique de `BottomModal`
-          suffit. C'est l'association en-tete + pied qui exige des `snapPoints`
-          (piege paye au lot D19). */}
+          FEUILLES-COUPEES (15/09) : sans `snapPoints`, `BottomModal` taille la
+          feuille sur son CONTENU seul. Un `headerComponent` n'y est pas compte :
+          la feuille etait plus courte que ce qu'elle affiche de la hauteur du
+          titre (meme defaut que la feuille d'invitation, INVIT2). Le titre est
+          donc le PREMIER enfant du contenu : ni en-tete ni pied. */}
       {hasTeamActionsPanel ? (
         <BottomModal
           close={() => setIsTeamActionsPanelOpen(false)}
-          headerComponent={(
-            <Text style={[Fonts.h5Bold, Fonts.neutral00]}>
-              {t('teamDetails.actions.panelTitle', "Actions d'équipe")}
-            </Text>
-          )}
           isVisible={isTeamActionsPanelOpen}
         >
           <View style={[Spaces.gap[8]]}>
+            <Text
+              style={[Fonts.h5Bold, Fonts.neutral00, Spaces.marginTop[12], Spaces.marginBottom[8]]}
+            >
+              {t('teamDetails.actions.panelTitle', "Actions d'équipe")}
+            </Text>
             {(showEditAction || canManageTeam || showTeamChatAction || showContactTrainersAction) ? (
               <View style={teamActionsListStyle}>
                 {showEditAction ? renderTeamActionRow({
