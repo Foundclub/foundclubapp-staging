@@ -142,7 +142,9 @@ function FiltersSheet({
             // une rangee depliee s'arrete a 16 pt du trait du pied (le
             // `contentBottomPadding` de `BottomModal`), et « Voir les
             // resultats » parait colle au dernier filtre (constat d'Adel du
-            // 2026-08-13, rangee « Equipe »). La reserve se pose ICI, dans le
+            // 2026-08-13, rangee « Equipe »). ⚠️ FEUILLES-BAS (16/09) : ces 16 pt
+            // de `BottomModal` n'arrivaient PAS au telephone (la bibliotheque les
+            // jetait) ; depuis ce lot, l'air total vaut 16 + 16. La reserve se pose ICI, dans le
             // contenu defilant, et pas dans `BottomModal` : le meme calcul sert
             // une trentaine d'autres feuilles qui n'ont rien demande.
             index === rows.length - 1 ? Spaces.marginBottom[16] : null,
