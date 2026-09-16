@@ -3,7 +3,9 @@ import { RefreshControl } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
 import { getClubInterestRequests } from '@/services/clubInterestRequest/clubInterestRequestService';
-import { getClubMembershipRequests } from '@/services/clubMembershipRequest/clubMembershipRequestService';
+import {
+  getClubMembershipRequests,
+} from '@/services/clubMembershipRequest/clubMembershipRequestService';
 import {
   getEvents,
   getMyPendingEventTeamInvitations,
@@ -16,7 +18,9 @@ import {
   getMyFriendlyMatchApplications,
 } from '@/services/friendlyMatch/friendlyMatchService';
 import { getRequestsHubData } from '@/services/requests/requestsHubService';
-import { getTeamMembershipRequests } from '@/services/teamMembershipRequest/teamMembershipRequestService';
+import {
+  getTeamMembershipRequests,
+} from '@/services/teamMembershipRequest/teamMembershipRequestService';
 
 import RequestsHub from '../RequestsHub';
 
@@ -353,7 +357,8 @@ beforeEach(() => {
   /** @type {jest.Mock} */ (getClubInterestRequests).mockResolvedValue(PAGE_VIDE);
   /** @type {jest.Mock} */ (getClubMembershipRequests).mockResolvedValue(PAGE_VIDE);
   /** @type {jest.Mock} */ (getEvents).mockImplementation(lireEvenement);
-  /** @type {jest.Mock} */ (getPendingEventParticipationRequestsForHub).mockImplementation(lireEvenement);
+  /** @type {jest.Mock} */ (getPendingEventParticipationRequestsForHub)
+    .mockImplementation(lireEvenement);
   /** @type {jest.Mock} */ (getMyPendingEventTeamInvitations).mockResolvedValue([]);
   /** @type {jest.Mock} */ (getPendingFeaturedRequests).mockResolvedValue({ data: [] });
   /** @type {jest.Mock} */ (getPendingFacilityOverrideRequests).mockResolvedValue({ data: [] });
@@ -372,7 +377,7 @@ afterEach(async () => {
 });
 
 describe('DEMR / T3 — le premier chargement se dit', () => {
-  it('T3.1 — pendant la premiere lecture : « chargement », jamais « Aucune demande en attente »', async () => {
+  it('T3.1 — premiere lecture : « chargement », jamais « Aucune demande en attente »', async () => {
     await monter();
 
     expect(lecturesEvenement).toHaveLength(1);
@@ -381,7 +386,7 @@ describe('DEMR / T3 — le premier chargement se dit', () => {
       .toEqual({ chargement: true, vide: false });
   });
 
-  it('T3.2 — a l arrivee des donnees, le chargement disparait et la demande s affiche', async () => {
+  it('T3.2 — a l arrivee des donnees, le chargement part et la demande s affiche', async () => {
     await monter();
     await libererLecture(0, { data: [ACTIVITE_AVEC_DEMANDE], meta: PAGE_VIDE.meta });
 
@@ -423,7 +428,7 @@ describe('DEMR / T3 — le premier chargement se dit', () => {
 });
 
 describe('DEMR / T4 — des relectures maitrisees', () => {
-  it('T4.1 — revenir sur l onglet PENDANT une relecture ne lance pas une deuxieme chaine', async () => {
+  it('T4.1 — revenir sur l onglet PENDANT une relecture ne lance pas une 2e chaine', async () => {
     await chargerUneFois();
     await tirerPourRafraichir();
     expect(lecturesEvenement).toHaveLength(2);
@@ -464,7 +469,7 @@ describe('DEMR / T4 — des relectures maitrisees', () => {
     });
     await vider();
 
-    expect({ signalTransmis: Boolean(ancienne.signal), coupe: ancienne.signal?.aborted ?? false })
+    expect({ coupe: ancienne.signal?.aborted ?? false, signalTransmis: Boolean(ancienne.signal) })
       .toEqual({ coupe: true, signalTransmis: true });
     expect(lecturesEvenement).toHaveLength(3);
   });
@@ -476,7 +481,8 @@ describe('DEMR / T4 — des relectures maitrisees', () => {
         params?.page === 1 ? page1.promise : Promise.resolve(PAGE_VIDE)
       ),
     );
-    /** @type {jest.Mock} */ (getPendingEventParticipationRequestsForHub).mockResolvedValue({ data: [] });
+    /** @type {jest.Mock} */ (getPendingEventParticipationRequestsForHub)
+      .mockResolvedValue({ data: [] });
     /** @type {jest.Mock} */ (getEvents).mockResolvedValue(PAGE_VIDE);
 
     const controller = new AbortController();

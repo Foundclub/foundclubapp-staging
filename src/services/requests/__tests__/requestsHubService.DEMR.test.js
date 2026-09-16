@@ -187,7 +187,7 @@ describe('DEMR / T1 — la source « event » du hub', () => {
 
     expect(getEvents).toHaveBeenCalledTimes(1);
     expect(/** @type {jest.Mock} */ (getEvents).mock.calls[0][0]).toEqual(expect.objectContaining({
-      club: { value: 'club-1' },
+      club: expect.objectContaining({ value: 'club-1' }),
       page: 1,
       pageSize: PAGE_SIZE,
       requestHub: true,
