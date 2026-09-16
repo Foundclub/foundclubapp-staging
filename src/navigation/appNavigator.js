@@ -17,6 +17,18 @@ import { RouteNames } from './routeNames';
 
 const appNavigatorLogger = createLogger('app-navigator');
 
+// LIENS-EVENEMENT (2026-09-15, decision Q2 = B d Adel) -- le lien d evenement partage
+// ouvre l app si elle est installee, la page web sinon. UNE seule adresse :
+// `https://foundclub.app/events/<id>` (shareLinks.js, buildPublicEventUrl), la meme
+// route que le site (webRoutes.js). L alias la mene au meme ecran que foundclub://event/.
+// ponytail: Android reclame tout /events/ (pathPrefix : pas d exclusion avant l API 31).
+// Une page du site comme /events/mine y ouvre donc une fiche d identifiant « mine », en
+// etat d erreur. Sortie : pathAdvancedPattern="/events/[^/]+" quand minSdkVersion >= 31.
+// iOS, lui, exclut ces pages (apple-app-site-association du site).
+// Temoin : src/navigation/__tests__/linking.routesAtteignables.test.js.
+const EVENT_DETAILS_LINK = { alias: ['events/:eventId'], path: 'event/:eventId' };
+const WEB_LINK_ORIGINS = ['https://foundclub.app', 'https://www.foundclub.app', 'https://staging.foundclub.app'];
+
 /**
  * AppNavigator component.
  * @param {object} props - Props object.
@@ -73,7 +85,7 @@ function AppNavigator({ navigationIntegration, onReady, onStateChange }) {
           },
           [RouteNames.EventStack]: {
             screens: {
-              [RouteNames.EventDetails]: 'event/:eventId',
+              [RouteNames.EventDetails]: EVENT_DETAILS_LINK,
             },
           },
           [RouteNames.SquadDetails]: 'squad/:teamId',
@@ -85,7 +97,7 @@ function AppNavigator({ navigationIntegration, onReady, onStateChange }) {
         }
         : {
           [RouteNames.Club]: 'club/:clubId',
-          [RouteNames.EventDetails]: 'event/:eventId',
+          [RouteNames.EventDetails]: EVENT_DETAILS_LINK,
           [RouteNames.PublicAuthStack]: {
             screens: {
               [RouteNames.Login]: 'login',
@@ -105,6 +117,10 @@ function AppNavigator({ navigationIntegration, onReady, onStateChange }) {
     filter: (/** @type {string} */ url) => !readInviteLink(url).ok,
     prefixes: [
       'foundclub://',
+      // LIENS-EVENEMENT : les liens https que le telephone confie a l app. Seuls les
+      // chemins que l app RECLAME arrivent ici (AndroidManifest.xml, filtre autoVerify ;
+      // apple-app-site-association du site) ; un chemin sans ecran ne fait rien.
+      ...WEB_LINK_ORIGINS,
     ],
   };
   const navigationContainerKey = [

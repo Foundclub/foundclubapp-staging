@@ -103,6 +103,8 @@
         <data android:scheme="https" android:host="api-staging.foundclubpro.com"/>
         <data android:pathPrefix="/i/"/>
         <data android:pathPrefix="/install.html"/>
+        <!-- LIENS-EVENEMENT (15/09) : le lien d'evenement partage, foundclub.app/events/<id>. -->
+        <data android:pathPrefix="/events/"/>
       </intent-filter>
     </activity>
   </application>

@@ -56,6 +56,7 @@ import {
   getClubCertificationPalette,
 } from '@/utils/clubCertification';
 import { getEntityDocumentId } from '@/utils/entityId';
+import { getErrorStatus } from '@/utils/errors/displayError';
 import getImageUrl from '@/utils/imageUrl';
 import { buildPublicEventUrl, buildShareMessageWithUrl } from '@/utils/shareLinks';
 
@@ -180,6 +181,10 @@ function EventDetails({ navigation, route }) {
     refetchOnMount: fromEventCreation ? 'always' : false,
     staleTime: fromEventCreation ? 0 : undefined,
   });
+  // LIENS-EVENEMENT : un lien partage peut viser un evenement supprime (404). Ce n'est
+  // pas une panne : pas de « Chargement impossible », pas de « Recharger » dans le vide.
+  // Temoin : web/tests/smoke/event-link.spec.ts.
+  const isEventGone = getErrorStatus(error) === 404;
   const {
     data: myParticipationPages,
   } = useGetEventParticipations(eventId || '', userData?.documentId, {
@@ -1463,7 +1468,7 @@ function EventDetails({ navigation, route }) {
           </div>
         </section>
 
-        {error ? (
+        {error && !isEventGone ? (
           <section style={{
             background: sectionBackground, border: `1px solid ${borderColor}`, borderRadius: 24, padding: 22,
           }}
@@ -1489,7 +1494,7 @@ function EventDetails({ navigation, route }) {
           </section>
         ) : null}
 
-        {!isLoading && !error && !hasEvent ? (
+        {!isLoading && (isEventGone || (!error && !hasEvent)) ? (
           <section style={{
             background: sectionBackground, border: `1px solid ${borderColor}`, borderRadius: 24, color: mutedTextColor, display: 'grid', gap: 10, padding: 22,
           }}
@@ -1498,7 +1503,10 @@ function EventDetails({ navigation, route }) {
               {t('eventDetails.eventNotFound', 'Événement introuvable')}
             </div>
             <div>
-              {t(
+              {isEventGone ? t(
+                'eventDetails.eventGone',
+                'Cet événement n’est plus disponible ou a été supprimé.',
+              ) : t(
                 'eventDetails.thisEventIsNoLonger',
                 'Cet événement n est plus disponible ou n a pas pu être charge.',
               )}

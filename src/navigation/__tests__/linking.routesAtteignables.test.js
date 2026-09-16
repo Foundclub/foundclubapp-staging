@@ -388,3 +388,82 @@ describe('🔒 UN LIEN D INVITATION ATTEND LA REPONSE -- React Navigation le lai
     });
   });
 });
+
+// LIENS-EVENEMENT (2026-09-15, decision Q2 = B d Adel) -- le lien d evenement partage
+// ouvre l app si elle est installee. UNE seule adresse pour l app et le site : celle de
+// buildPublicEventUrl (shareLinks.js), `https://<site>/events/<id>`. Le telephone la
+// donne a l app ; React Navigation la filtre, retire le prefixe (extractPathFromURL),
+// puis appelle getStateFromPath (useLinking.native.tsx:125-132). Ce filet rejoue ces
+// trois pas avec les VRAIES fonctions : l etat obtenu doit etre CELUI de
+// foundclub://event/<id>, dont les deux modes sont prouves atteignables plus haut.
+// Mesure du 15/09 avant le lot : prefixes = ['foundclub://'] seulement -- l app
+// s ouvrait sur l accueil, sans rien faire.
+describe('LIENS-EVENEMENT -- https://<site>/events/<id> mene a la fiche de l evenement', () => {
+  // `exports` du paquet ferme ce chemin a l import : on le vise par son fichier.
+  // eslint-disable-next-line import/no-dynamic-require, global-require
+  const { extractPathFromURL } = require(path.join(
+    path.dirname(require.resolve('@react-navigation/native/package.json')),
+    'lib/module/extractPathFromURL.js',
+  ));
+  // eslint-disable-next-line global-require
+  const { buildPublicEventUrl } = require('@/utils/shareLinks');
+
+  /**
+   * Un etat sans son champ `path` (l adresse brute recue, qui differe par nature).
+   * @param {any} etat l etat rendu par getStateFromPath
+   * @returns {any} le meme etat, noms et parametres seulement
+   */
+  const sansAdresse = (etat) => (etat === undefined ? undefined : JSON.parse(
+    JSON.stringify(etat, (cle, valeur) => (cle === 'path' ? undefined : valeur)),
+  ));
+
+  const SITES = ['https://foundclub.app', 'https://www.foundclub.app', 'https://staging.foundclub.app'];
+
+  /**
+   * Ce que React Navigation fait d une adresse recue, pas a pas.
+   * @param {any} etatApp { auth, isAddingAccount }
+   * @param {string} url l adresse recue
+   * @returns {{ chemin: string | undefined, etat: any, prise: boolean }} le parcours
+   */
+  const parcours = (etatApp, url) => {
+    const { config, filter, prefixes } = linkingDuMode(etatApp);
+    const prise = typeof filter !== 'function' || filter(url);
+    const chemin = extractPathFromURL(prefixes, url);
+    const etat = chemin === undefined ? undefined : sansAdresse(getStateFromPath(chemin, config));
+    return { chemin, etat, prise };
+  };
+
+  it.each([
+    ['connecte', CONNECTE],
+    ['deconnecte', DECONNECTE],
+    ['ajout de compte', AJOUT_DE_COMPTE],
+  ])('%s : le lien partage donne le meme etat que foundclub://event/<id>', (_mode, etatApp) => {
+    const { config } = linkingDuMode(etatApp);
+    const attendu = sansAdresse(getStateFromPath('event/evt-doc-42', config));
+    // Le temoin du temoin : la reference vise bien la fiche, avec son identifiant.
+    expect(JSON.stringify(attendu))
+      .toContain('"name":"EventDetails","params":{"eventId":"evt-doc-42"}');
+
+    SITES.forEach((site) => {
+      const url = buildPublicEventUrl({ eventId: 'evt-doc-42', webUrl: site });
+      expect(url).toBe(`${site}/events/evt-doc-42`);
+
+      const { chemin, etat, prise } = parcours(etatApp, url);
+      expect({
+        chemin, etat, prise, url,
+      }).toEqual({
+        chemin: '/events/evt-doc-42',
+        etat: attendu,
+        prise: true,
+        url,
+      });
+    });
+  });
+
+  it('un lien d invitation en https reste a la fenetre d invitation (INVIT2)', () => {
+    const invitation = 'https://foundclub.app/i/team/t-1?c=AbCdEfGhIjKlMnOpQrStUv12';
+    [CONNECTE, DECONNECTE].forEach((etatApp) => {
+      expect(parcours(etatApp, invitation).prise).toBe(false);
+    });
+  });
+});
