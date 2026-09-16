@@ -44,6 +44,28 @@ export const buildRequestTimeoutAbandon = (axiosError) => {
   };
 };
 
+/**
+ * L'abandon a 15 s, reconnu sous TOUTES ses formes : l'objet pose par
+ * l'intercepteur (code dedie), le meme re-emballe par un service
+ * (`buildPreservedApiError` garde le code et perd le status), ou la chaine nue
+ * historique.
+ *
+ * DEMR (2026-09-16) — UNE definition pour DEUX lecteurs : la politique de
+ * reprise (`app/queryClient.js`) et le detecteur de coupure
+ * (`app/queryRefreshOnReturn.js`). Le second ne connaissait pas l'abandon, et
+ * un seul delai depasse mettait toute l'app hors ligne.
+ *
+ * ⚠️ Le test du message ne vaut que pour une erreur SANS reponse HTTP : les deux
+ * appelants l'interrogent apres avoir ecarte les status > 0 (un 5xx dont le
+ * message contient « timeout » n'arrive jamais jusqu'ici).
+ * @param {any} error - L'erreur telle que rejetee (deballee ou non).
+ * @returns {boolean} Est-ce un abandon sur delai ?
+ */
+export const isRequestTimeoutAbandon = (error) => (
+  error?.code === REQUEST_TIMEOUT_ABANDON_CODE
+  || String(error?.message || error || '').toLowerCase().includes('timeout')
+);
+
 export const buildPreservedApiError = (error, messagePrefix) => {
   const responseError = error?.response?.data?.error;
   const responseData = error?.response?.data;

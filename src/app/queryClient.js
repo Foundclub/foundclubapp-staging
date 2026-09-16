@@ -11,7 +11,7 @@ import {
   BOOT_REQUEST_NO_SESSION_CODE,
 } from '@/services/bootRequestGuard';
 
-import { REQUEST_TIMEOUT_ABANDON_CODE } from '@/utils/errors/apiError';
+import { isRequestTimeoutAbandon } from '@/utils/errors/apiError';
 
 // Les intercepteurs de réponse (client.native.js / client.web.js) rejettent la
 // charge DÉBALLÉE `error.response.data.error`, jamais l'erreur axios : une
@@ -35,15 +35,6 @@ const getErrorMethod = (/** @type {any} */ error) => String(
 const isLocallyBlocked = (/** @type {any} */ error) => (
   error?.code === BOOT_REQUEST_BLOCKED_CODE
   || error?.code === BOOT_REQUEST_NO_SESSION_CODE
-);
-
-// PERF3 — l'abandon posé par l'intercepteur (objet à code dédié), et sa forme
-// historique en chaîne nue au cas où un chemin la produirait encore. Le test du
-// message ne tourne que sur les erreurs SANS status : un 5xx dont le message
-// contient « timeout » n'arrive jamais ici.
-const isTimeoutAbandon = (/** @type {any} */ error) => (
-  error?.code === REQUEST_TIMEOUT_ABANDON_CODE
-  || String(error?.message || error || '').toLowerCase().includes('timeout')
 );
 
 /**
@@ -77,7 +68,10 @@ export const shouldRetryQuery = (failureCount, error) => {
     // serveur n'a aucun timeout de requête (ni Caddyfile ni config/server.ts),
     // il continue de fabriquer la réponse que plus personne n'attend. Chaque
     // reprise ajoutait 15 s d'attente et 1 requête (48 s / 3 appels mesurés).
-    if (isTimeoutAbandon(typedError)) {
+    // PERF3 — l'abandon pose par l'intercepteur (objet a code dedie), et sa
+    // forme historique en chaine nue. La definition est partagee avec le
+    // detecteur de coupure (DEMR) : `utils/errors/apiError.js`.
+    if (isRequestTimeoutAbandon(typedError)) {
       return false;
     }
     // Panne réseau franche (échec immédiat, sans réponse) : ça vaut le coup.

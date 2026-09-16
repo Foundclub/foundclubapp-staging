@@ -1,9 +1,9 @@
 import { onlineManager } from '@tanstack/react-query';
 
-import createFoundClubQueryClient from '@/app/queryClient';
-import { startQueryRefreshBridge } from '@/app/queryRefreshOnReturn';
-
 import { buildPreservedApiError, buildRequestTimeoutAbandon } from '@/utils/errors/apiError';
+
+import { createFoundClubQueryClient } from '@/app/queryClient';
+import { startQueryRefreshBridge } from '@/app/queryRefreshOnReturn';
 
 /**
  * DEMR / T2 — UN DELAI DEPASSE N'EST PAS UNE COUPURE RESEAU.
@@ -32,9 +32,7 @@ const createFakeAppState = () => ({
 
 const createFakeFocus = () => ({ setFocused: () => {} });
 
-/** @type {import('@tanstack/react-query').QueryClient} */
-let client;
-/** @type {() => void} */
+let client = /** @type {import('@tanstack/react-query').QueryClient} */ (/** @type {any} */ (null));
 let stopBridge = () => {};
 
 /**
@@ -82,7 +80,7 @@ describe('DEMR / T2 — delai depasse ou coupure reseau', () => {
     expect({ enLigne: onlineManager.isOnline() }).toEqual({ enLigne: true });
   });
 
-  it('T2.3 — le meme abandon, re-emballe par un service (code conserve, status perdu), non plus', async () => {
+  it('T2.3 — le meme abandon re-emballe par un service (status perdu), non plus', async () => {
     const wrapped = buildPreservedApiError(
       buildRequestTimeoutAbandon({ code: 'ECONNABORTED' }),
       'Failed to fetch events',
@@ -94,7 +92,7 @@ describe('DEMR / T2 — delai depasse ou coupure reseau', () => {
     expect({ enLigne: onlineManager.isOnline() }).toEqual({ enLigne: true });
   });
 
-  it('T2.4 — une VRAIE coupure (aucune reponse, pas un delai) met toujours l app hors ligne', async () => {
+  it('T2.4 — une VRAIE coupure (aucune reponse) met toujours l app hors ligne', async () => {
     await failOnce('coupure', { message: 'Network Error', name: 'AxiosError' });
 
     expect({ enLigne: onlineManager.isOnline() }).toEqual({ enLigne: false });

@@ -9,6 +9,7 @@ import {
 } from '@/services/bootRequestGuard';
 import { reviveSharedSocket } from '@/services/socket/socketManager';
 
+import { isRequestTimeoutAbandon } from '@/utils/errors/apiError';
 import { createLogger } from '@/utils/logger/logger';
 
 /**
@@ -180,9 +181,16 @@ const estUnRefusDeNotreGardeFou = (error) => {
  * L'erreur ressemble-t-elle a une coupure reseau ?
  *
  * ⚠️ On ne le decide QU'ICI, apres les reprises : `shouldRetryQuery`
- * (`queryClient.js`) a deja retente deux fois une erreur sans status. Une erreur
- * qui arrive jusqu'a ce filet a donc echoue trois fois en ~3 s — c'est une
- * coupure, pas un delai isole.
+ * (`queryClient.js`) a deja retente UNE fois une panne franche sans status.
+ *
+ * ⏱️ DEMR (2026-09-16) — UN DELAI DEPASSE N'EST PAS UNE COUPURE. L'abandon a 15 s
+ * porte `status: 0` et n'est JAMAIS retente (PERF3) : il arrivait donc ici au
+ * premier essai, sans code HTTP, et declarait l'app hors ligne. Mesure en
+ * production le 16/09 : les lectures d'activites de l'onglet « Demandes »
+ * duraient 13 a 37 s. Une seule suffisait a mettre TOUTES les requetes en
+ * pause — « Aucune demande en attente », tirer-pour-rafraichir inerte, « il
+ * faut recharger ». Un serveur lent a REPONDU a d'autres requetes : c'est une
+ * erreur de CETTE requete, que l'ecran affiche et que « Reessayer » relance.
  *
  * ponytail: le plafond assume — sans bibliotheque de connectivite, « hors ligne »
  * reste une DEDUCTION. Un serveur injoignable pendant que le wifi marche est
@@ -217,7 +225,8 @@ export const isNetworkOutageError = (error) => {
   if (estUnRefusDeNotreGardeFou(error)) return false;
   const rawStatus = error?.status ?? error?.response?.status ?? error?.error?.status;
   const parsedStatus = Number(rawStatus);
-  return !(Number.isFinite(parsedStatus) && parsedStatus > 0);
+  if (Number.isFinite(parsedStatus) && parsedStatus > 0) return false;
+  return !isRequestTimeoutAbandon(error);
 };
 
 /** Le premier pas de la sonde de retour reseau. */
