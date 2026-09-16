@@ -184,6 +184,20 @@ export const AFTER_ACTION_CACHES = Object.freeze({
     ['home-summary'],
   ],
 
+  /**
+   * DEMR (2026-09-16) — une demande ARRIVE chez un encadrant ou un dirigeant
+   * (equipe, participation a une activite, mise en avant, depassement de
+   * creneau). Sa boite « Demandes », si elle est ouverte, doit la montrer :
+   * un ecran deja focalise ne repasse pas par sa relecture de retour.
+   * ⛔ UNE seule racine : son appartenance a lui ne change pas, et une
+   * notification ne doit pas payer dix requetes. react-query ne relit que les
+   * requetes MONTEES — un onglet ferme est seulement marque perime et se relit
+   * au prochain retour (`refreshRequestsHubIfStale`).
+   */
+  requestArrived: [
+    ['requestsHub'],
+  ],
+
   /** Publier une compo / une convocation. */
   publishComposition: [
     ['event'],
@@ -296,6 +310,30 @@ export const MEMBERSHIP_NOTIFICATION_TYPES = Object.freeze([
 ]);
 
 /**
+ * DEMR (2026-09-16) — LES DEMANDES QUI ARRIVENT dans la boite « Demandes ».
+ *
+ * Le serveur les envoie a ceux qui tranchent :
+ *  · `teamRequest` — une demande d'equipe (team-membership-request) ;
+ *  · `participationRequest` — une demande de participation a une activite
+ *    (admin/src/api/event-participation/services/notification.ts:74) ;
+ *  · `featuredRequest` — une demande de mise en avant
+ *    (admin/src/api/event/services/notification.ts:934) ;
+ *  · `overbookingRequest` — un depassement de creneau
+ *    (admin/src/api/facility-override-request/services/facility-override-request.ts:80).
+ *
+ * 🧨 Avant ce lot, `teamRequest` etait exclu au motif que « RequestsHub la
+ * relit deja » : vrai au RETOUR sur l'onglet, faux pour un onglet deja ouvert.
+ * Elles ne vont PAS dans `MEMBERSHIP_NOTIFICATION_TYPES` : l'appartenance de
+ * celui qui recoit ne change pas, seule sa boite change (`requestArrived`).
+ */
+export const REQUEST_ARRIVAL_NOTIFICATION_TYPES = Object.freeze([
+  'featuredRequest',
+  'overbookingRequest',
+  'participationRequest',
+  'teamRequest',
+]);
+
+/**
  * Quelle action du module une notification recue rend-elle necessaire ?
  *
  * ⚠️ Rend `''` pour tout le reste, et c'est le coeur de la mesure : la grande
@@ -305,11 +343,12 @@ export const MEMBERSHIP_NOTIFICATION_TYPES = Object.freeze([
  * @param {string} [notificationType] Le type porte par la notification.
  * @returns {string} La cle de `AFTER_ACTION_CACHES`, ou '' s'il n'y a rien a faire.
  */
-export const resolveNotificationRefreshAction = (notificationType) => (
-  MEMBERSHIP_NOTIFICATION_TYPES.includes(String(notificationType || '').trim())
-    ? 'membershipChanged'
-    : ''
-);
+export const resolveNotificationRefreshAction = (notificationType) => {
+  const type = String(notificationType || '').trim();
+  if (MEMBERSHIP_NOTIFICATION_TYPES.includes(type)) return 'membershipChanged';
+  if (REQUEST_ARRIVAL_NOTIFICATION_TYPES.includes(type)) return 'requestArrived';
+  return '';
+};
 
 /**
  * Marque perimes les caches devenus faux apres une action reussie.

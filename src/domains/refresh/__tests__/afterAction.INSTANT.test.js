@@ -136,7 +136,12 @@ describe('INSTANT / R1 — l\'etiquette qui manquait a la demande de club', () =
     // (admin, team-membership-request/services/notification.ts:64) : son
     // appartenance a lui ne change pas. L'y mettre ferait payer dix requetes
     // reseau pour rien a chaque demande recue.
-    ['teamRequest', 'newTeamMessage', 'eventInvitation', '', undefined].forEach((type) => {
+    // 🔁 REVU PAR LE LOT DEMR (2026-09-16) : elle reste HORS de l'appartenance,
+    // mais relit desormais la SEULE boite « Demandes » (`requestArrived`, une
+    // racine) — un onglet deja ouvert ne la montrait pas.
+    expect(MEMBERSHIP_NOTIFICATION_TYPES).not.toContain('teamRequest');
+    expect(resolveNotificationRefreshAction('teamRequest')).toBe('requestArrived');
+    ['newTeamMessage', 'eventInvitation', '', undefined].forEach((type) => {
       expect({ rendu: resolveNotificationRefreshAction(/** @type {any} */ (type)), type })
         .toEqual({ rendu: '', type });
     });
