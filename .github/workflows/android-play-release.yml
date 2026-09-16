@@ -248,6 +248,10 @@ jobs:
 
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
+        # Le paquet historique « tools » n existe plus chez Google depuis le 15/09/2026
+        # (sdkmanager : Failed to find package tools) ; l action l installe par defaut.
+        with:
+          packages: platform-tools
 
       - name: Validate runtime env
         shell: bash
