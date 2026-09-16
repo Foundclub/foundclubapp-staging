@@ -11,6 +11,7 @@ import {
   Image,
   Keyboard,
   Platform,
+  StyleSheet,
   TouchableOpacity,
   View,
 } from 'react-native';
@@ -266,28 +267,20 @@ function BottomModal({
     [close, closeOnBackdropPress, Colors, Alignments.fill],
   );
 
-  const footerBottomInset = useMemo(() => (
-    (useSafeAreaBottomInset ? insets.bottom : 0)
-    + (keyboardBehavior === 'interactive' ? 0 : keyboardHeight)
-  ), [insets.bottom, keyboardBehavior, keyboardHeight, useSafeAreaBottomInset]);
   const sheetBottomInset = keyboardBehavior === 'interactive' ? 0 : keyboardHeight;
+  // Barre de gestes + clavier : ce que le systeme occupe sous la derniere rangee.
+  const systemBottomInset = (useSafeAreaBottomInset ? insets.bottom : 0) + sheetBottomInset;
   const contentBottomPadding = useMemo(
     () => {
       if (Number.isFinite(contentBottomPaddingOverride)) {
         return Math.max(0, Number(contentBottomPaddingOverride));
       }
-      const keyboardOffset = keyboardBehavior === 'interactive' ? 0 : keyboardHeight;
-      const safeAreaOffset = useSafeAreaBottomInset ? insets.bottom : 0;
-      return (footerComponent ? 16 : 40) + keyboardOffset + safeAreaOffset;
+      // Avec pied, c'est le pied qui reserve la barre de gestes
+      // (`12 + systemBottomInset`) : la compter aussi au-dessus de lui la doublerait.
+      if (footerComponent) return 16 + sheetBottomInset;
+      return 40 + systemBottomInset;
     },
-    [
-      contentBottomPaddingOverride,
-      footerComponent,
-      insets.bottom,
-      keyboardBehavior,
-      keyboardHeight,
-      useSafeAreaBottomInset,
-    ],
+    [contentBottomPaddingOverride, footerComponent, sheetBottomInset, systemBottomInset],
   );
 
   if (!shouldRender) {
@@ -348,16 +341,22 @@ function BottomModal({
         )}
 
         {/* Content */}
+        {/* FEUILLES-BAS — styles APLATIS avant d'entrer dans la bibliotheque :
+            `@gorhom/bottom-sheet` 5.2.4 les passe a `StyleSheet.compose(...style)`,
+            qui ne garde que les DEUX premiers elements d'un tableau. La marge
+            basse, le `minHeight` et le style de l'appelant etaient jetes, et la
+            derniere rangee finissait au ras de l'ecran
+            (temoin : __tests__/BottomModal.margeBasse.test.js). */}
         {scrollable ? (
           <BottomSheetScrollView
-            contentContainerStyle={[
+            contentContainerStyle={StyleSheet.flatten([
               Spaces.paddingHorizontal[24],
               !headerComponent ? Spaces.paddingTop[12] : null,
               contentContainerStyle,
               // Keep actions and last fields visible above keyboard.
               { paddingBottom: contentBottomPadding },
               { minHeight: 100 },
-            ]}
+            ])}
             keyboardShouldPersistTaps="handled"
             ref={scrollViewRef}
             style={[
@@ -371,12 +370,14 @@ function BottomModal({
             {children}
           </BottomSheetScrollView>
         ) : (
-          <BottomSheetView style={[
+          <BottomSheetView style={StyleSheet.flatten([
             Spaces.paddingHorizontal[24],
             !headerComponent ? Spaces.paddingTop[12] : null,
             contentContainerStyle,
-            footerComponent ? { paddingBottom: contentBottomPadding } : null,
-          ]}
+            // Sans pied, l'appelant pose sa marge dans ses enfants (8 a 24) :
+            // le composant n'y ajoute que la barre de gestes et le clavier.
+            { paddingBottom: footerComponent ? contentBottomPadding : systemBottomInset },
+          ])}
           >
             {children}
           </BottomSheetView>
@@ -391,7 +392,7 @@ function BottomModal({
               backgroundColor: Colors.primary700,
               borderTopColor: withAlpha(Colors.neutral00, 0.1),
               borderTopWidth: 1,
-              paddingBottom: 12 + footerBottomInset,
+              paddingBottom: 12 + systemBottomInset,
             },
           ]}
           >

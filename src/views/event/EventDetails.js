@@ -7039,7 +7039,9 @@ function EventDetails({ navigation, route }) {
     // coupee au ras du bord bas, la barre de gestes par-dessus.
     //
     // ⛔ Ce n est PAS une marge basse qui manque : `BottomModal` pose deja
-    // `paddingBottom = 40 + insets.bottom` sur son contenu defilant. C est encore
+    // `paddingBottom = 40 + insets.bottom` sur son contenu defilant.
+    // ⚠️ FEUILLES-BAS (16/09) : c etait FAUX sur telephone jusqu a ce lot — la
+    // bibliotheque jetait cette marge (BottomModal.margeBasse.test.js). C est encore
     // une mesure fausse — son plafond se calcule sur `Dimensions.get('screen')`,
     // la DALLE ENTIERE, barre d etat et barre de gestes comprises. A 90 % de la
     // dalle, la zone defilante peut donc etre PLUS HAUTE que la fenetre
