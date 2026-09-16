@@ -399,7 +399,22 @@ function InvitationLinkHost({ userId } = {}) {
           await createTeamMembershipRequest({ team: teamId });
           break;
         default:
-          handleAccept();
+          // INVIT2R (2026-09-16) — LA DECISION N EST PAS (ENCORE) LA.
+          //
+          // Mesure en production : le POST claim a mis 17,6 SECONDES. Pendant
+          // ce temps, ce repli appelait `handleAccept()`, qui navigue avec
+          // `invite: true` — et TeamDetails ouvre alors l alerte « Demander a
+          // rejoindre » PAR-DESSUS une invitation nominative encore en attente.
+          // Resultat chez Adel : deux demandes creees a 92 ms d ecart, et son
+          // invitation (team_invites id 2) toujours pas acceptee.
+          //
+          // Un lien QUI PORTE UN CODE annonce justement qu une invitation
+          // nominative existe peut-etre : seul `claim` peut le dire. Tant qu il
+          // n a pas parle, on ouvre la fiche et on n envoie RIEN. L invitation
+          // rangee n est PAS effacee : la personne pourra y repondre au prochain
+          // essai (« Plus tard » reste le geste qui l efface pour de bon).
+          closeWindow();
+          goTo(teamDestination);
           return;
       }
     } catch (_error) {
@@ -414,7 +429,6 @@ function InvitationLinkHost({ userId } = {}) {
     closeWindow,
     codedTeamInvite?.id,
     goTo,
-    handleAccept,
     isSignedIn,
     showAnswerError,
   ]);

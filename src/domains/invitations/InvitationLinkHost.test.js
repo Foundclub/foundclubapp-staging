@@ -509,3 +509,77 @@ describe('INVIT2 — un lien d equipe AVEC code : qui invite, et repondre en un 
     expect(mockClaim).toHaveBeenCalledWith(CODE);
   });
 });
+
+// ===========================================================================
+// INVIT2R — « CA M A DEMANDE DE REJOINDRE ALORS QUE J ETAIS INVITE » (16/09)
+//
+// MESURE EN PRODUCTION : le POST claim a mis 17,6 SECONDES. Pendant ce temps,
+// `claimDecision` vaut null, le bouton dit « Voir l equipe » — et il retombait
+// sur le chemin d avant : TeamDetails avec `invite: true`, qui ouvre l alerte
+// « Demander a rejoindre ». L invitation nominative (team_invites id 2) est
+// restee EN ATTENTE, et deux demandes sont parties a la place.
+//
+// Le garde-fou pose par INVIT2 (TeamDetails.P10invitation.test.js) ne pouvait
+// rien voir : il s appuie sur `pendingInvitation`, une ligne que le serveur
+// n avait justement pas encore creee.
+//
+// LA REGLE : un lien QUI PORTE UN CODE annonce une invitation nominative
+// possible. Tant que `claim` n a pas parle, on OUVRE la fiche et on n envoie
+// RIEN — jamais `invite: true`.
+// ===========================================================================
+describe('INVIT2R — tant que le serveur n a pas repondu, le lien code ne fait RIEN', () => {
+  const CODE = 'AbCdEfGhIjKlMnOpQrStUv12';
+  const URL_CODEE = `https://foundclub.app/i/team/t-1?c=${CODE}`;
+
+  const monterAvec = async (userId) => {
+    let tree;
+    await act(async () => {
+      tree = create(<InvitationLinkHost userId={userId} />);
+    });
+    await act(async () => { await Promise.resolve(); });
+    return tree;
+  };
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    lastModalProps = null;
+    mockGetInitialURL.mockResolvedValue(URL_CODEE);
+    mockReadPendingInvite.mockReturnValue(null);
+    mockPreview.mockResolvedValue({
+      club: { name: 'FoundClub' },
+      inviterName: 'Adel F.',
+      status: 'active',
+      team: { documentId: 't-1', name: 'Basket Seniors' },
+    });
+  });
+
+  it('🔴 claim encore EN VOL (17,6 s le 16/09) : la fiche s ouvre SANS « invite »', async () => {
+    // La promesse ne se resout jamais : c est exactement l ecran d Adel.
+    mockClaim.mockReturnValue(new Promise(() => {}));
+
+    await monterAvec('adel');
+    await act(async () => {
+      await lastModalProps.primaryAction.onPress();
+    });
+
+    expect(mockNavigate).toHaveBeenCalledWith(RouteNames.TeamDetails, { teamId: 't-1' });
+    expect(mockCreateRequest).not.toHaveBeenCalled();
+  });
+
+  it('🔴 claim en ECHEC : aucune demande, et l invitation reste rangee', async () => {
+    mockClaim.mockRejectedValue(new Error('timeout'));
+
+    await monterAvec('adel');
+    await act(async () => {
+      await lastModalProps.primaryAction.onPress();
+    });
+
+    expect(mockCreateRequest).not.toHaveBeenCalled();
+    expect(mockNavigate).not.toHaveBeenCalledWith(
+      RouteNames.TeamDetails,
+      expect.objectContaining({ invite: true }),
+    );
+    // Elle doit pouvoir repondre plus tard : on ne jette pas son invitation.
+    expect(mockClearPendingInvite).not.toHaveBeenCalled();
+  });
+});

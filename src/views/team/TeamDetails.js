@@ -614,8 +614,14 @@ function TeamDetails({ navigation, route }) {
     onboardingOriginRoute,
   ]);
 
+  // INVIT2R — verrou d envoi : voir le bloc explicatif sous la mutation.
+  const joinRequestInFlightRef = useRef(false);
   const createTeamMembershipRequestMutation = /** @type {any} */ (useMutation({
     mutationFn: createTeamMembershipRequest,
+    onSettled: () => {
+      // INVIT2R — la porte se rouvre quand le serveur a repondu, succes OU echec.
+      joinRequestInFlightRef.current = false;
+    },
     onSuccess: () => {
       // 🌐 LOT INSTANT (2026-08-27) — LE DEFAUT DU SITE WEB, ET IL EST ICI.
       //
@@ -659,6 +665,26 @@ function TeamDetails({ navigation, route }) {
       );
     },
   }));
+
+  // ===========================================================================
+  // INVIT2R (2026-09-16) — « LE POP-UP CLIGNOTE ET CA ENVOIE PLEIN DE DEMANDES »
+  //
+  // Mesure en PRODUCTION : 2 lignes team_membership_requests a 92 ms d ecart
+  // (compte 195, equipe « Basket Seniors »), et l alerte qui se rouvrait en
+  // boucle. DEUX causes distinctes, donc DEUX verrous :
+  //
+  //   1. `isPending` de react-query ne se leve qu apres un rendu. Ce matin-la
+  //      l API mettait 10 a 12 secondes : deux appuis coup sur coup passaient
+  //      tous les deux. Un booleen pose TOUT DE SUITE, lui, ne rate rien.
+  //   2. L effet de focus dependait de `handleJoinTeam`, dont les dependances
+  //      contenaient l OBJET rendu par `useMutation` — une identite NEUVE a
+  //      chaque rendu. L effet se rejouait donc a chaque rendu, et chaque rejeu
+  //      rouvrait l alerte. On passe par une reference : le geste ne change
+  //      plus d identite, et l invitation du lien n est consommee QU UNE fois.
+  // ===========================================================================
+  const createTeamMembershipRequestMutationRef = useRef(createTeamMembershipRequestMutation);
+  createTeamMembershipRequestMutationRef.current = createTeamMembershipRequestMutation;
+  const autoJoinPromptedTeamRef = useRef(/** @type {string | null} */ (null));
 
   // P10 — LE CONSENTEMENT. Accepter est le geste qui connecte a l equipe :
   // personne d autre ne peut le faire a ma place (le serveur refuse le staff
@@ -1696,8 +1722,10 @@ function TeamDetails({ navigation, route }) {
           },
           {
             onPress: () => {
-              if (createTeamMembershipRequestMutation.isPending) return;
-              createTeamMembershipRequestMutation.mutate({
+              // INVIT2R — le verrou se pose AVANT l appel, pas au rendu suivant.
+              if (joinRequestInFlightRef.current) return;
+              joinRequestInFlightRef.current = true;
+              createTeamMembershipRequestMutationRef.current.mutate({
                 team: teamId,
                 user: userId,
               });
@@ -1707,7 +1735,14 @@ function TeamDetails({ navigation, route }) {
         ],
       );
     }
-  }, [canCoachRequestJoinViewedTeam, teamId, createTeamMembershipRequestMutation, currentUser?.documentId, isAuthenticated, openTeamAuthFlow, t]);
+  }, [
+    canCoachRequestJoinViewedTeam,
+    currentUser?.documentId,
+    isAuthenticated,
+    openTeamAuthFlow,
+    t,
+    teamId,
+  ]);
 
   const handleContactTeamTrainers = useCallback(async () => {
     if (!isAuthenticated) {
@@ -1964,9 +1999,13 @@ function TeamDetails({ navigation, route }) {
     useCallback(() => {
       // INVIT2 — une invitation NOMINATIVE deja la : c'est sa banniere Accepter /
       // Refuser qui repond, pas une demande par-dessus.
-      if (invite && canJoinTeam(teamId) && !pendingRequest && !pendingInvitation) {
-        handleJoinTeam();
-      }
+      if (!invite || !canJoinTeam(teamId) || pendingRequest || pendingInvitation) return;
+      // INVIT2R — le lien ne pose sa question QU UNE fois par equipe. Sans cette
+      // ligne, tout rendu qui rejoue l effet rouvrait l alerte (45 pop-ups
+      // empiles le 16/09).
+      if (autoJoinPromptedTeamRef.current === teamId) return;
+      autoJoinPromptedTeamRef.current = teamId;
+      handleJoinTeam();
     }, [invite, canJoinTeam, teamId, pendingRequest, pendingInvitation, handleJoinTeam]),
   );
 

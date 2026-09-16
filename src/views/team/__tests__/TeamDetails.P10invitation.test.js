@@ -128,6 +128,7 @@ jest.mock('@/services/teamInvite/teamInviteShare', () => ({
 // INVIT2 — un temoin a besoin que l'effet de focus JOUE (lien ?invite=true) ;
 // par defaut il reste muet, comme avant.
 let mockJouerLeFocus = false;
+const mockDemander = jest.fn(() => Promise.resolve({ data: { documentId: 'tmr-neuve' } }));
 jest.mock('@react-navigation/native', () => ({
   useFocusEffect: (/** @type {any} */ effet) => {
     if (mockJouerLeFocus) effet();
@@ -232,7 +233,8 @@ jest.mock('@/services/auth/authService', () => ({ removeTrainerFromClub: jest.fn
 jest.mock('@/services/stats/statsService', () => ({ resetTeamStats: jest.fn() }));
 jest.mock('@/services/teamMembershipRequest/teamMembershipRequestService', () => ({
   acceptTeamInvitation: (/** @type {any} */ id) => mockAccepter(id),
-  createTeamMembershipRequest: jest.fn(),
+  // INVIT2R — on COMPTE les demandes envoyees : deux en production le 16/09.
+  createTeamMembershipRequest: (/** @type {any} */ payload) => mockDemander(payload),
   refuseTeamInvitation: (/** @type {any} */ id) => mockRefuser(id),
 }));
 
@@ -557,6 +559,96 @@ describe('INVIT2 — un lien ?invite=true ne fait pas DEMANDER qui a deja une IN
     const titres = alerte.mock.calls.map((appel) => appel[0]);
     expect(titres).not.toContain('Demander à rejoindre l\'équipe');
     expect(textesPortant(arbre.root, 'Accepter')).toHaveLength(1);
+    alerte.mockRestore();
+  });
+});
+
+// ===========================================================================
+// INVIT2R — LE POP-UP QUI CLIGNOTE ET LES DEMANDES EN DOUBLE (production, 16/09)
+//
+// Mot d Adel : « j ai le pop-up qui clignote plein de fois, ca envoie 45 pop-up
+// "voulez-vous rejoindre l equipe", j appuie, j appuie, ca envoie plein de
+// demandes ». Mesure en base de PRODUCTION : 2 lignes creees a 92 ms d ecart.
+//
+// LA CAUSE, cote app : l effet de focus depend de `handleJoinTeam`, dont les
+// dependances contiennent l OBJET de mutation rendu par useMutation — une
+// identite NEUVE a chaque rendu. L effet se rejouait donc a chaque rendu, et
+// chaque rejeu rouvrait l alerte.
+// ===========================================================================
+
+describe('INVIT2R — l alerte « Demander a rejoindre » ne se rejoue pas', () => {
+  /**
+   * Monte la fiche avec le parametre du lien, l effet de focus actif.
+   * @returns {any} l arbre monte.
+   */
+  const monterAvecLien = () => {
+    act(() => {
+      arbre = renderer.create(
+        <TeamDetails
+          navigation={/** @type {any} */ (navigation)}
+          route={/** @type {any} */ ({ params: { invite: true, teamId: 'equipe-1' } })}
+        />,
+      );
+    });
+    return arbre;
+  };
+
+  test('🔴 elle s ouvre UNE fois, meme si la fiche se rend plusieurs fois', () => {
+    // eslint-disable-next-line global-require -- motif du fichier : l Alert reelle, espionnee
+    const alerte = jest.spyOn(require('react-native').Alert, 'alert').mockImplementation(() => {});
+    mockEstMonEquipe = false;
+    mockJouerLeFocus = true;
+    mockAuthCourant = { ...authAvecLignes([]), canJoinTeam: () => true };
+
+    const tree = monterAvecLien();
+    act(() => {
+      tree.update(
+        <TeamDetails
+          navigation={/** @type {any} */ (navigation)}
+          route={/** @type {any} */ ({ params: { invite: true, teamId: 'equipe-1' } })}
+        />,
+      );
+    });
+    act(() => {
+      tree.update(
+        <TeamDetails
+          navigation={/** @type {any} */ (navigation)}
+          route={/** @type {any} */ ({ params: { invite: true, teamId: 'equipe-1' } })}
+        />,
+      );
+    });
+
+    const ouvertures = alerte.mock.calls
+      .filter((appel) => appel[0] === 'Demander à rejoindre l\'équipe');
+    expect(ouvertures).toHaveLength(1);
+    alerte.mockRestore();
+  });
+
+  test('🔴 confirmer deux fois n envoie QU UNE demande', async () => {
+    // eslint-disable-next-line global-require -- motif du fichier : l Alert reelle, espionnee
+    const alerte = jest.spyOn(require('react-native').Alert, 'alert').mockImplementation(() => {});
+    mockEstMonEquipe = false;
+    mockJouerLeFocus = true;
+    mockAuthCourant = { ...authAvecLignes([]), canJoinTeam: () => true };
+    mockDemander.mockClear();
+
+    monterAvecLien();
+
+    const ouverture = alerte.mock.calls
+      .find((appel) => appel[0] === 'Demander à rejoindre l\'équipe');
+    expect(ouverture).toBeTruthy();
+    const confirmer = (ouverture[2] || [])
+      .find((bouton) => bouton.text !== 'common.actions.cancel');
+    expect(confirmer).toBeTruthy();
+
+    // Deux appuis coup sur coup, AVANT que le serveur ne reponde (il a mis 10 s
+    // en production ce matin-la).
+    await act(async () => {
+      confirmer.onPress();
+      confirmer.onPress();
+    });
+
+    expect(mockDemander).toHaveBeenCalledTimes(1);
     alerte.mockRestore();
   });
 });
