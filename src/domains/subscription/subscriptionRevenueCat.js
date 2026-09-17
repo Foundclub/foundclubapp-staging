@@ -29,6 +29,16 @@ export const REVENUECAT_PURCHASE_ERROR_CODES = {
 
 const logger = createLogger('subscription-price');
 
+// Vitrines qui facturent en euros : codes pays Apple (3 lettres) et Google (2).
+// ponytail: les 20 pays de la zone euro au 2025-01-01 ; une vitrine absente de
+// la liste garde simplement la devise rendue par le store (regle INTL1).
+const EURO_STOREFRONT_COUNTRY_CODES = new Set([
+  'AT', 'AUT', 'BE', 'BEL', 'CY', 'CYP', 'DE', 'DEU', 'EE', 'ES',
+  'ESP', 'EST', 'FI', 'FIN', 'FR', 'FRA', 'GR', 'GRC', 'HR', 'HRV',
+  'IE', 'IRL', 'IT', 'ITA', 'LT', 'LTU', 'LU', 'LUX', 'LV', 'LVA',
+  'MLT', 'MT', 'NL', 'NLD', 'PRT', 'PT', 'SI', 'SK', 'SVK', 'SVN',
+]);
+
 const REVENUECAT_APPLE_API_KEY = String(process.env.REVENUECAT_APPLE_API_KEY || '').trim();
 const REVENUECAT_GOOGLE_API_KEY = String(process.env.REVENUECAT_GOOGLE_API_KEY || '').trim();
 
@@ -195,20 +205,32 @@ export const resolveRevenueCatPackageForCatalogEntry = (offerings, catalogEntry)
  * prix affiche et le prix facture doivent venir du meme objet.
  *
  * INTL1 — la devise VOYAGE avec les prix : en Suisse ou aux Emirats le store
- * facture en CHF / AED, et l'ecran doit le dire. Un store n'a qu'une devise ;
- * un produit dans une autre devise que le premier releve est ecarte (jamais
- * melange a l'affichage). Un produit sans devise declaree est lu en EUR.
+ * facture en CHF / AED, et l'ecran doit le dire. Un produit sans devise
+ * declaree est lu en EUR.
+ *
+ * DEVISE — deux cas ou la devise du store ne peut pas etre crue, et ou TOUS ses
+ * prix sont ecartes (l'appelant retombe sur le catalogue serveur en euros) :
+ * - plusieurs devises dans le meme store : aucune ne decide pour les autres ;
+ * - une vitrine de la zone euro avec des prix dans une autre devise. C'est ce
+ *   que rend StoreKit en TestFlight / bac a sable (limite connue d'Apple) alors
+ *   que la fenetre de paiement facture en euros : « 229,99 USD/an » sur l'ecran.
  *
  * Un palier absent du store est simplement absent du resultat : on ne l'invente
  * jamais, et l'appelant en fait ce qu'il veut.
  * @param {any} offerings - Resultat de Purchases.getOfferings().
  * @param {any[]} catalogEntries
+ * @param {string | null} [storefrontCountryCode] - `Purchases.getStorefront()`.
  * @returns {{ currencyCode: string; pricesInCents: Record<string, number> }}
  */
-export const mapRevenueCatStorePricesInCents = (offerings, catalogEntries) => {
+export const mapRevenueCatStorePricesInCents = (
+  offerings,
+  catalogEntries,
+  storefrontCountryCode,
+) => {
   /** @type {Record<string, number>} */
   const pricesInCents = {};
-  let storeCurrencyCode = '';
+  /** @type {Set<string>} */
+  const currencyCodes = new Set();
 
   (Array.isArray(catalogEntries) ? catalogEntries : []).forEach((catalogEntry) => {
     const planCode = String(catalogEntry?.planCode || '').trim();
@@ -222,21 +244,42 @@ export const mapRevenueCatStorePricesInCents = (offerings, catalogEntries) => {
       return;
     }
 
-    const currencyCode = String(storeProduct?.currencyCode || '').trim().toUpperCase() || 'EUR';
-    storeCurrencyCode = storeCurrencyCode || currencyCode;
-    if (currencyCode !== storeCurrencyCode) {
-      logger.warn('store price ignored: two currencies in the same store', {
-        currencyCode,
-        planCode,
-        storeCurrencyCode,
-      });
-      return;
-    }
-
+    currencyCodes.add(String(storeProduct?.currencyCode || '').trim().toUpperCase() || 'EUR');
     pricesInCents[planCode] = Math.round(price * 100);
   });
 
-  return { currencyCode: storeCurrencyCode || 'EUR', pricesInCents };
+  const [currencyCode = 'EUR', ...otherCurrencyCodes] = [...currencyCodes];
+  if (otherCurrencyCodes.length > 0) {
+    logger.warn('store prices ignored: several currencies in the same store', {
+      currencyCodes: [...currencyCodes],
+    });
+    return { currencyCode: 'EUR', pricesInCents: {} };
+  }
+
+  const storefront = String(storefrontCountryCode || '').trim().toUpperCase();
+  if (currencyCode !== 'EUR' && EURO_STOREFRONT_COUNTRY_CODES.has(storefront)) {
+    logger.warn('store prices ignored: currency does not match the euro storefront', {
+      currencyCode,
+      storefrontCountryCode: storefront,
+    });
+    return { currencyCode: 'EUR', pricesInCents: {} };
+  }
+
+  return { currencyCode, pricesInCents };
+};
+
+/**
+ * Vitrine du compte store, ou null. Ne bloque jamais la lecture des prix.
+ * @param {any} purchases
+ * @returns {Promise<string | null>}
+ */
+const readStorefrontCountryCode = async (purchases) => {
+  try {
+    const storefront = await purchases?.getStorefront?.();
+    return storefront?.countryCode || null;
+  } catch {
+    return null;
+  }
 };
 
 /**
@@ -257,8 +300,12 @@ export const readRevenueCatStorePricesInCents = async (catalogEntries) => {
   }
 
   try {
-    const offerings = await getPurchases().getOfferings();
-    return mapRevenueCatStorePricesInCents(offerings, catalogEntries);
+    const purchases = getPurchases();
+    const [offerings, storefrontCountryCode] = await Promise.all([
+      purchases.getOfferings(),
+      readStorefrontCountryCode(purchases),
+    ]);
+    return mapRevenueCatStorePricesInCents(offerings, catalogEntries, storefrontCountryCode);
   } catch (error) {
     const storeError = /** @type {any} */ (error);
     logger.warn('store injoignable : les prix affiches restent ceux du serveur', {

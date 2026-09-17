@@ -78,12 +78,15 @@ describe('INTL1 — le releve des prix du magasin garde leur devise', () => {
     });
   });
 
-  it('deux devises dans le meme magasin (incoherent) : seule la premiere est gardee', () => {
+  // DEVISE (2026-09-17) : la premiere devise decidait pour les autres, et
+  // l annuel en EUR perdait son prix. Aucune n est plus crue (subscriptionPrix.
+  // DEVISEvitrine.test.js) : le catalogue serveur s affiche en entier.
+  it('deux devises dans le meme magasin (incoherent) : aucune n est gardee', () => {
     const offerings = offeringsEn('AED', 29.99, 219.99);
     offerings.all.fc_team_1.annual.product.currencyCode = 'EUR';
     expect(mapRevenueCatStorePricesInCents(offerings, CATALOGUE)).toEqual({
-      currencyCode: 'AED',
-      pricesInCents: { fc_team_1_monthly: 2999 },
+      currencyCode: 'EUR',
+      pricesInCents: {},
     });
   });
 });
