@@ -3,6 +3,12 @@
 // changer a ce qu'il affirme.
 import '@/theme/strings';
 
+import { Platform } from 'react-native';
+
+import {
+  formatSubscriptionPriceLabel,
+  resolveSubscriptionCatalogPrices,
+} from './subscriptionBilling';
 import {
   getRevenueCatOfferingIdForPlanCode,
   isRevenueCatEnabled,
@@ -21,7 +27,6 @@ jest.mock('react-native-purchases', () => {
   const mockPurchases = {
     configure: jest.fn(),
     getOfferings: jest.fn(),
-    getStorefront: jest.fn(async () => null),
     logIn: jest.fn(async () => ({ created: false })),
     logOut: jest.fn(async () => ({})),
     purchasePackage: jest.fn(),
@@ -38,8 +43,16 @@ jest.mock('react-native-purchases', () => {
   };
 });
 
+jest.mock('react-native-device-info', () => ({
+  getInstallerPackageName: jest.fn(async () => 'AppStore'),
+}));
+
 // eslint-disable-next-line global-require
 const getMockPurchases = () => require('react-native-purchases').default;
+const getMockInstallerPackageName = () => (
+  // eslint-disable-next-line global-require
+  require('react-native-device-info').getInstallerPackageName
+);
 
 const buildOfferings = () => {
   const buildPackage = (identifier, productIdentifier) => ({
@@ -324,23 +337,77 @@ describe('subscriptionRevenueCat — prix du store', () => {
       .toEqual({ currencyCode: 'EUR', pricesInCents: {} });
   });
 
-  it('vitrine France et prix en dollars (TestFlight) : liste vide en euros', async () => {
-    setRevenueCatApiKeyForTests('appl_test');
-    getMockPurchases().getOfferings.mockResolvedValueOnce(buildUsdOfferings());
-    getMockPurchases().getStorefront.mockResolvedValueOnce({ countryCode: 'FRA' });
+  // DEVISE (iPhone d'Adel, 17/09, TestFlight 2.6.49) : l'ecran ecrivait
+  // « 499,99 USD/an » pour un Club 500 que la fenetre Apple facturait
+  // « 599,99 € par an ». En TestFlight, StoreKit rend la vitrine AMERICAINE
+  // (prix ET devise), et le pays du compte qu'il annonce ne permet pas de le
+  // voir. Seul le recu de test le dit : les prix du store n'y sont pas lus.
+  describe('installation de test Apple (TestFlight, ad hoc)', () => {
+    const SERVER_ENTRIES = [
+      { ...CATALOG_ENTRIES[0], referencePriceEurCents: 799 },
+      { ...CATALOG_ENTRIES[1], referencePriceEurCents: 5999 },
+    ];
 
-    expect(await readRevenueCatStorePricesInCents(CATALOG_ENTRIES))
-      .toEqual({ currencyCode: 'EUR', pricesInCents: {} });
-  });
+    /**
+     * Ce que l'ecran ecrit pour l'annuel, de la lecture du store au libelle.
+     * @returns {Promise<string>}
+     */
+    const libelleAnnuel = async () => {
+      const storePrices = await readRevenueCatStorePricesInCents(SERVER_ENTRIES);
+      const { entries } = resolveSubscriptionCatalogPrices({
+        serverEntries: SERVER_ENTRIES,
+        storeCurrencyCode: storePrices?.currencyCode,
+        storePricesEurCents: storePrices?.pricesInCents,
+      });
+      const annual = entries.find((entry) => entry.billingPeriod === 'yearly');
+      return formatSubscriptionPriceLabel(
+        annual.referencePriceEurCents,
+        'yearly',
+        annual.priceCurrencyCode,
+      );
+    };
 
-  it('vitrine illisible : les prix du store sont quand meme lus', async () => {
-    setRevenueCatApiKeyForTests('appl_test');
-    getMockPurchases().getOfferings.mockResolvedValueOnce(buildPricedOfferings());
-    getMockPurchases().getStorefront.mockRejectedValueOnce(new Error('no storefront'));
+    beforeEach(() => {
+      setRevenueCatApiKeyForTests('appl_test');
+      getMockPurchases().getOfferings.mockResolvedValue(buildUsdOfferings());
+    });
 
-    expect(await readRevenueCatStorePricesInCents(CATALOG_ENTRIES)).toEqual({
-      currencyCode: 'EUR',
-      pricesInCents: { fc_team_1_monthly: 799, fc_team_1_yearly: 5999 },
+    afterEach(() => {
+      jest.restoreAllMocks();
+      getMockPurchases().getOfferings.mockReset();
+      getMockInstallerPackageName().mockResolvedValue('AppStore');
+    });
+
+    it('TestFlight : le prix affiche est celui du serveur, en euros', async () => {
+      getMockInstallerPackageName().mockResolvedValue('TestFlight');
+
+      expect(await libelleAnnuel()).toBe('59,99 €/an');
+      expect(getMockPurchases().getOfferings).not.toHaveBeenCalled();
+    });
+
+    it('ad hoc ou simulateur (« Other ») : meme regle', async () => {
+      getMockInstallerPackageName().mockResolvedValue('Other');
+
+      expect(await libelleAnnuel()).toBe('59,99 €/an');
+    });
+
+    it('App Store : le prix du magasin s affiche, dans sa devise (INTL1)', async () => {
+      expect(await libelleAnnuel()).toBe('69,99 USD/an');
+    });
+
+    it('recu illisible : le prix du magasin s affiche', async () => {
+      getMockInstallerPackageName().mockRejectedValue(new Error('no receipt'));
+
+      expect(await libelleAnnuel()).toBe('69,99 USD/an');
+    });
+
+    it('Android : le recu Apple n est pas consulte', async () => {
+      jest.replaceProperty(Platform, 'OS', 'android');
+      setRevenueCatApiKeyForTests('goog_test');
+      getMockInstallerPackageName().mockResolvedValue('TestFlight');
+
+      expect(await libelleAnnuel()).toBe('69,99 USD/an');
+      expect(getMockInstallerPackageName()).not.toHaveBeenCalled();
     });
   });
 

@@ -29,16 +29,6 @@ export const REVENUECAT_PURCHASE_ERROR_CODES = {
 
 const logger = createLogger('subscription-price');
 
-// Vitrines qui facturent en euros : codes pays Apple (3 lettres) et Google (2).
-// ponytail: les 20 pays de la zone euro au 2025-01-01 ; une vitrine absente de
-// la liste garde simplement la devise rendue par le store (regle INTL1).
-const EURO_STOREFRONT_COUNTRY_CODES = new Set([
-  'AT', 'AUT', 'BE', 'BEL', 'CY', 'CYP', 'DE', 'DEU', 'EE', 'ES',
-  'ESP', 'EST', 'FI', 'FIN', 'FR', 'FRA', 'GR', 'GRC', 'HR', 'HRV',
-  'IE', 'IRL', 'IT', 'ITA', 'LT', 'LTU', 'LU', 'LUX', 'LV', 'LVA',
-  'MLT', 'MT', 'NL', 'NLD', 'PRT', 'PT', 'SI', 'SK', 'SVK', 'SVN',
-]);
-
 const REVENUECAT_APPLE_API_KEY = String(process.env.REVENUECAT_APPLE_API_KEY || '').trim();
 const REVENUECAT_GOOGLE_API_KEY = String(process.env.REVENUECAT_GOOGLE_API_KEY || '').trim();
 
@@ -208,25 +198,17 @@ export const resolveRevenueCatPackageForCatalogEntry = (offerings, catalogEntry)
  * facture en CHF / AED, et l'ecran doit le dire. Un produit sans devise
  * declaree est lu en EUR.
  *
- * DEVISE — deux cas ou la devise du store ne peut pas etre crue, et ou TOUS ses
- * prix sont ecartes (l'appelant retombe sur le catalogue serveur en euros) :
- * - plusieurs devises dans le meme store : aucune ne decide pour les autres ;
- * - une vitrine de la zone euro avec des prix dans une autre devise. C'est ce
- *   que rend StoreKit en TestFlight / bac a sable (limite connue d'Apple) alors
- *   que la fenetre de paiement facture en euros : « 229,99 USD/an » sur l'ecran.
+ * DEVISE — plusieurs devises dans le meme store : aucune ne decide pour les
+ * autres, TOUS ses prix sont ecartes (l'appelant retombe sur le catalogue
+ * serveur en euros). Avant, l'offre dans la seconde devise perdait son prix.
  *
  * Un palier absent du store est simplement absent du resultat : on ne l'invente
  * jamais, et l'appelant en fait ce qu'il veut.
  * @param {any} offerings - Resultat de Purchases.getOfferings().
  * @param {any[]} catalogEntries
- * @param {string | null} [storefrontCountryCode] - `Purchases.getStorefront()`.
  * @returns {{ currencyCode: string; pricesInCents: Record<string, number> }}
  */
-export const mapRevenueCatStorePricesInCents = (
-  offerings,
-  catalogEntries,
-  storefrontCountryCode,
-) => {
+export const mapRevenueCatStorePricesInCents = (offerings, catalogEntries) => {
   /** @type {Record<string, number>} */
   const pricesInCents = {};
   /** @type {Set<string>} */
@@ -256,29 +238,26 @@ export const mapRevenueCatStorePricesInCents = (
     return { currencyCode: 'EUR', pricesInCents: {} };
   }
 
-  const storefront = String(storefrontCountryCode || '').trim().toUpperCase();
-  if (currencyCode !== 'EUR' && EURO_STOREFRONT_COUNTRY_CODES.has(storefront)) {
-    logger.warn('store prices ignored: currency does not match the euro storefront', {
-      currencyCode,
-      storefrontCountryCode: storefront,
-    });
-    return { currencyCode: 'EUR', pricesInCents: {} };
-  }
-
   return { currencyCode, pricesInCents };
 };
 
 /**
- * Vitrine du compte store, ou null. Ne bloque jamais la lecture des prix.
- * @param {any} purchases
- * @returns {Promise<string | null>}
+ * iOS : l'app tourne-t-elle sur un recu de TEST Apple (TestFlight, ad hoc,
+ * simulateur) ? `react-native-device-info` le lit dans le recu du magasin
+ * (« AppStore », « TestFlight » ou « Other »). Recu illisible : non.
+ * @returns {Promise<boolean>}
  */
-const readStorefrontCountryCode = async (purchases) => {
+const isAppleTestInstall = async () => {
+  if (Platform.OS !== 'ios') {
+    return false;
+  }
   try {
-    const storefront = await purchases?.getStorefront?.();
-    return storefront?.countryCode || null;
+    // Require lazy, comme le SDK store : jamais charge sur le web.
+    // eslint-disable-next-line global-require
+    const { getInstallerPackageName } = require('react-native-device-info');
+    return (await getInstallerPackageName()) !== 'AppStore';
   } catch {
-    return null;
+    return false;
   }
 };
 
@@ -289,6 +268,15 @@ const readStorefrontCountryCode = async (purchases) => {
  * la vente y passe par Stripe), build sans cle, panne reseau. L'appelant
  * retombe alors sur les prix du serveur : **un ecran de vente doit toujours
  * porter un prix**.
+ *
+ * DEVISE — et aussi en TestFlight : StoreKit y rend la vitrine AMERICAINE
+ * (prix ET devise) quel que soit le compte, pendant que la fenetre Apple
+ * facture la vitrine du compte. iPhone d'Adel, 17/09 : « 499,99 USD/an » a
+ * l'ecran, « 599,99 € par an » dans la fenetre — le prix du serveur. Le pays
+ * annonce par `Purchases.getStorefront()` ne permet pas de le voir (essaye en
+ * 2.6.49) : seul le recu de test le dit.
+ * ponytail: un testeur suisse verra donc des euros en TestFlight ; l'App Store
+ * garde la devise du magasin (INTL1).
  * @param {any[]} catalogEntries
  * @returns {Promise<{ currencyCode: string; pricesInCents: Record<string, number> } | null>}
  */
@@ -299,13 +287,13 @@ export const readRevenueCatStorePricesInCents = async (catalogEntries) => {
     return null;
   }
 
+  if (await isAppleTestInstall()) {
+    return null;
+  }
+
   try {
-    const purchases = getPurchases();
-    const [offerings, storefrontCountryCode] = await Promise.all([
-      purchases.getOfferings(),
-      readStorefrontCountryCode(purchases),
-    ]);
-    return mapRevenueCatStorePricesInCents(offerings, catalogEntries, storefrontCountryCode);
+    const offerings = await getPurchases().getOfferings();
+    return mapRevenueCatStorePricesInCents(offerings, catalogEntries);
   } catch (error) {
     const storeError = /** @type {any} */ (error);
     logger.warn('store injoignable : les prix affiches restent ceux du serveur', {
