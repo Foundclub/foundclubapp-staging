@@ -21,6 +21,7 @@ jest.mock('react-native-purchases', () => {
   const mockPurchases = {
     configure: jest.fn(),
     getOfferings: jest.fn(),
+    getStorefront: jest.fn(async () => null),
     logIn: jest.fn(async () => ({ created: false })),
     logOut: jest.fn(async () => ({})),
     purchasePackage: jest.fn(),
@@ -289,18 +290,58 @@ describe('subscriptionRevenueCat — prix du store', () => {
   });
 
   // Afficher un prix en dollars avec un « € » serait un faux prix. INTL1 : le
-  // prix garde donc SA devise, et une seconde devise dans le meme store (qui
-  // ne devrait pas exister) est ecartee plutot que melangee.
-  it('un prix rendu dans une autre devise garde sa devise, jamais melange a un prix en €', () => {
+  // prix garde donc SA devise.
+  /**
+   * Offerings de la famille `fc_team_1`, les deux paliers en dollars.
+   * @returns {any}
+   */
+  const buildUsdOfferings = () => {
+    const offerings = buildPricedOfferings();
+    const { fc_team_1: family } = offerings.all;
+    family.monthly = buildPricedPackage('fc_team_1:monthly', { currencyCode: 'USD', price: 8.99 });
+    family.annual = buildPricedPackage('fc_team_1_yearly', { currencyCode: 'USD', price: 69.99 });
+    return offerings;
+  };
+
+  it('un prix rendu dans une autre devise garde sa devise', () => {
+    expect(mapRevenueCatStorePricesInCents(buildUsdOfferings(), CATALOG_ENTRIES)).toEqual({
+      currencyCode: 'USD',
+      pricesInCents: { fc_team_1_monthly: 899, fc_team_1_yearly: 6999 },
+    });
+  });
+
+  // DEVISE (2026-09-17) : une seconde devise dans le meme store (qui ne devrait
+  // pas exister) ne laisse plus la premiere decider : tous les prix du store
+  // sont ecartes, l'ecran garde le catalogue serveur.
+  it('deux devises dans le meme store : aucun prix du store n est garde', () => {
     const offerings = buildPricedOfferings();
     offerings.all.fc_team_1.monthly = buildPricedPackage('fc_team_1:monthly', {
       currencyCode: 'USD',
       price: 8.99,
     });
-    offerings.all.fc_team_1.availablePackages = [offerings.all.fc_team_1.monthly];
 
     expect(mapRevenueCatStorePricesInCents(offerings, CATALOG_ENTRIES))
-      .toEqual({ currencyCode: 'USD', pricesInCents: { fc_team_1_monthly: 899 } });
+      .toEqual({ currencyCode: 'EUR', pricesInCents: {} });
+  });
+
+  it('vitrine France et prix en dollars (TestFlight) : liste vide en euros', async () => {
+    setRevenueCatApiKeyForTests('appl_test');
+    getMockPurchases().getOfferings.mockResolvedValueOnce(buildUsdOfferings());
+    getMockPurchases().getStorefront.mockResolvedValueOnce({ countryCode: 'FRA' });
+
+    expect(await readRevenueCatStorePricesInCents(CATALOG_ENTRIES))
+      .toEqual({ currencyCode: 'EUR', pricesInCents: {} });
+  });
+
+  it('vitrine illisible : les prix du store sont quand meme lus', async () => {
+    setRevenueCatApiKeyForTests('appl_test');
+    getMockPurchases().getOfferings.mockResolvedValueOnce(buildPricedOfferings());
+    getMockPurchases().getStorefront.mockRejectedValueOnce(new Error('no storefront'));
+
+    expect(await readRevenueCatStorePricesInCents(CATALOG_ENTRIES)).toEqual({
+      currencyCode: 'EUR',
+      pricesInCents: { fc_team_1_monthly: 799, fc_team_1_yearly: 5999 },
+    });
   });
 
   // C'est aussi le cas du WEB, ou Purchases n'existe pas : la vente y passe par
