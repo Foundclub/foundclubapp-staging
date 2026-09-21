@@ -8801,6 +8801,15 @@ export default {
     },
   },
   invitationLink: {
+    clipboard: {
+      body: "Si tu viens d'installer FoundClub depuis une invitation, "
+        + "tu peux reprendre le lien copié avant l'installation.",
+      notFoundBody: "Le presse-papiers ne contient pas de lien d'invitation FoundClub.",
+      notFoundTitle: 'Invitation introuvable',
+      primary: 'Reprendre mon invitation',
+      secondary: 'Pas maintenant',
+      title: 'Tu as suivi une invitation ?',
+    },
     club: {
       body: 'Tu as reçu une invitation à rejoindre ce club. Envoyer ta demande ?',
       primary: 'Voir le club',

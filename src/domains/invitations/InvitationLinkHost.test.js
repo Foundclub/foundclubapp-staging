@@ -26,6 +26,9 @@ const mockNavigationRef = {
 const mockClearPendingInvite = jest.fn();
 const mockReadPendingInvite = jest.fn(() => null);
 const mockSavePendingInvite = jest.fn();
+const mockReadAndroidDeferredInviteUrl = jest.fn(() => Promise.resolve(null));
+const mockReadIOSClipboardInviteUrl = jest.fn(() => Promise.resolve(null));
+const mockShouldOfferIOSClipboardInvite = jest.fn(() => Promise.resolve(false));
 
 const mockPreview = jest.fn();
 const mockClaim = jest.fn();
@@ -65,6 +68,12 @@ jest.mock('@/domains/invitations/pendingInvite', () => ({
   savePendingInvite: (...args) => mockSavePendingInvite(...args),
 }));
 
+jest.mock('@/domains/invitations/deferredInviteRecovery', () => ({
+  readAndroidDeferredInviteUrl: (...args) => mockReadAndroidDeferredInviteUrl(...args),
+  readIOSClipboardInviteUrl: (...args) => mockReadIOSClipboardInviteUrl(...args),
+  shouldOfferIOSClipboardInvite: (...args) => mockShouldOfferIOSClipboardInvite(...args),
+}));
+
 let lastModalProps = null;
 jest.mock('@/components/organisms/popup/GlobalPromptModal', () => {
   // eslint-disable-next-line global-require -- une usine jest.mock ne peut pas etre hissee
@@ -99,6 +108,9 @@ describe('InvitationLinkHost — la fenetre d invitation', () => {
     lastModalProps = null;
     mockGetInitialURL.mockResolvedValue(null);
     mockReadPendingInvite.mockReturnValue(null);
+    mockReadAndroidDeferredInviteUrl.mockResolvedValue(null);
+    mockReadIOSClipboardInviteUrl.mockResolvedValue(null);
+    mockShouldOfferIOSClipboardInvite.mockResolvedValue(false);
   });
 
   describe('la decision, isolee et pure', () => {
@@ -184,6 +196,36 @@ describe('InvitationLinkHost — la fenetre d invitation', () => {
       await renderHost();
 
       expect(lastModalProps.visible).toBe(true);
+    });
+
+    it(
+      'INVIT3 Android — reprend l invitation rendue par Google Play apres installation',
+      async () => {
+        mockReadAndroidDeferredInviteUrl.mockResolvedValue('https://foundclub.app/i/team/t-4');
+
+        await renderHost();
+        await act(async () => { await Promise.resolve(); });
+
+        expect(mockSavePendingInvite).toHaveBeenCalledWith({ id: 't-4', subject: 'team' });
+        expect(lastModalProps.visible).toBe(true);
+      },
+    );
+
+    it('INVIT3 iOS — ne lit le presse-papiers qu apres « Reprendre »', async () => {
+      mockShouldOfferIOSClipboardInvite.mockResolvedValue(true);
+      mockReadIOSClipboardInviteUrl.mockResolvedValue('https://foundclub.app/i/team/t-5');
+
+      await renderHost();
+      await act(async () => { await Promise.resolve(); });
+
+      expect(lastModalProps.primaryAction.label).toBe('Reprendre mon invitation');
+      expect(mockReadIOSClipboardInviteUrl).not.toHaveBeenCalled();
+
+      await act(async () => {
+        await lastModalProps.primaryAction.onPress();
+      });
+      expect(mockReadIOSClipboardInviteUrl).toHaveBeenCalledTimes(1);
+      expect(mockSavePendingInvite).toHaveBeenCalledWith({ id: 't-5', subject: 'team' });
     });
   });
 
@@ -424,6 +466,9 @@ describe('INVIT2 — un lien d equipe AVEC code : qui invite, et repondre en un 
     lastModalProps = null;
     mockGetInitialURL.mockResolvedValue(null);
     mockReadPendingInvite.mockReturnValue(null);
+    mockReadAndroidDeferredInviteUrl.mockResolvedValue(null);
+    mockReadIOSClipboardInviteUrl.mockResolvedValue(null);
+    mockShouldOfferIOSClipboardInvite.mockResolvedValue(false);
     mockPreview.mockResolvedValue(APERCU);
     mockClaim.mockResolvedValue({ mode: 'answer', requestId: 'tmr-9', teamId: 't-1' });
   });
@@ -484,6 +529,35 @@ describe('INVIT2 — un lien d equipe AVEC code : qui invite, et repondre en un 
     expect(mockAcceptInvitation).not.toHaveBeenCalled();
   });
 
+  it('🔒 double evenement URL : une seule acceptation apres confirmation', async () => {
+    mockGetInitialURL.mockResolvedValue(URL_CODEE);
+    await monterAvec('marie');
+
+    await act(async () => {
+      urlListener({ url: URL_CODEE });
+      await Promise.resolve();
+    });
+    await act(async () => {
+      await lastModalProps.primaryAction.onPress();
+    });
+
+    expect(mockAcceptInvitation).toHaveBeenCalledTimes(1);
+    expect(mockCreateRequest).not.toHaveBeenCalled();
+  });
+
+  it('🔒 demande deja creee : aucun second POST apres confirmation', async () => {
+    mockClaim.mockResolvedValue({ mode: 'requested', teamId: 't-1' });
+    mockGetInitialURL.mockResolvedValue(URL_CODEE);
+    await monterAvec('curieux');
+
+    await act(async () => {
+      await lastModalProps.primaryAction.onPress();
+    });
+
+    expect(mockCreateRequest).not.toHaveBeenCalled();
+    expect(mockAcceptInvitation).not.toHaveBeenCalled();
+  });
+
   it('🔴 I7 — deconnecte : l invitation n est PAS effacee, et revient a la connexion', async () => {
     mockGetInitialURL.mockResolvedValue(URL_CODEE);
     const tree = await monterAvec(undefined);
@@ -507,6 +581,26 @@ describe('INVIT2 — un lien d equipe AVEC code : qui invite, et repondre en un 
 
     expect(lastModalProps.visible).toBe(true);
     expect(mockClaim).toHaveBeenCalledWith(CODE);
+  });
+
+  it('INVIT3 — compte existant : l invitation revient sans rouvrir le lien', async () => {
+    mockGetInitialURL.mockResolvedValue(URL_CODEE);
+    const tree = await monterAvec(undefined);
+
+    await act(async () => {
+      await lastModalProps.primaryAction.onPress();
+    });
+    mockReadPendingInvite.mockReturnValue({
+      code: CODE, createdAt: 1, id: 't-1', subject: 'team',
+    });
+    await act(async () => {
+      tree.update(<InvitationLinkHost userId="compte-existant" />);
+    });
+    await act(async () => { await Promise.resolve(); });
+
+    expect(lastModalProps.visible).toBe(true);
+    expect(mockClaim).toHaveBeenCalledWith(CODE);
+    expect(mockClearPendingInvite).not.toHaveBeenCalled();
   });
 });
 
@@ -545,6 +639,9 @@ describe('INVIT2R — tant que le serveur n a pas repondu, le lien code ne fait 
     lastModalProps = null;
     mockGetInitialURL.mockResolvedValue(URL_CODEE);
     mockReadPendingInvite.mockReturnValue(null);
+    mockReadAndroidDeferredInviteUrl.mockResolvedValue(null);
+    mockReadIOSClipboardInviteUrl.mockResolvedValue(null);
+    mockShouldOfferIOSClipboardInvite.mockResolvedValue(false);
     mockPreview.mockResolvedValue({
       club: { name: 'FoundClub' },
       inviterName: 'Adel F.',
