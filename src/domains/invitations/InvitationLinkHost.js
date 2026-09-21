@@ -18,10 +18,17 @@
  * Monte une seule fois, au-dessus des navigateurs (voir src/App.js), pour que le
  * lien soit lu qu'on soit connecte ou non.
  */
-import { useCallback, useEffect, useState } from 'react';
+import {
+  useCallback, useEffect, useRef, useState,
+} from 'react';
 import { useTranslation } from 'react-i18next';
 import { Alert, Linking } from 'react-native';
 
+import {
+  readAndroidDeferredInviteUrl,
+  readIOSClipboardInviteUrl,
+  shouldOfferIOSClipboardInvite,
+} from '@/domains/invitations/deferredInviteRecovery';
 import { readInviteLink } from '@/domains/invitations/inviteLink';
 import {
   clearPendingInvite,
@@ -252,7 +259,10 @@ function InvitationLinkHost({ userId } = {}) {
   const [problem, setProblem] = useState(/** @type {string | null} */ (null));
   const [teamPreview, setTeamPreview] = useState(/** @type {any} */ (null));
   const [claimDecision, setClaimDecision] = useState(/** @type {any} */ (null));
+  const [clipboardOffer, setClipboardOffer] = useState(false);
   const isSignedIn = Boolean(String(userId || '').trim());
+  const isSignedInRef = useRef(isSignedIn);
+  isSignedInRef.current = isSignedIn;
   const codedTeamInvite = pendingInvite?.subject === 'team' && pendingInvite?.code
     ? pendingInvite
     : null;
@@ -261,6 +271,7 @@ function InvitationLinkHost({ userId } = {}) {
     const outcome = resolveInviteLinkOutcome(rawUrl);
 
     if (outcome.kind === 'ask') {
+      setClipboardOffer(false);
       savePendingInvite(outcome.invite);
       setProblem(null);
       setPendingInvite(outcome.invite);
@@ -285,14 +296,29 @@ function InvitationLinkHost({ userId } = {}) {
     });
 
     Promise.resolve(Linking.getInitialURL())
-      .then((initialUrl) => {
+      .then(async (initialUrl) => {
         if (!isMounted) return;
         if (handleIncomingUrl(initialUrl)) return;
 
         // Rien dans le lien d'ouverture : une invitation d'une session
         // precedente attend peut-etre encore (app fermee, compte cree entre-temps).
         const storedInvite = readPendingInvite();
-        if (storedInvite) setPendingInvite(storedInvite);
+        if (storedInvite) {
+          setPendingInvite(storedInvite);
+          return;
+        }
+
+        // INVIT3 — app absente au moment du clic.
+        // Android : Google Play restitue le petit referrer officiel au premier
+        // lancement. iOS : l'App Store ne restitue rien ; on propose seulement
+        // une lecture du lien copie sur le site, puis on attend l'appui explicite.
+        const installedInviteUrl = await readAndroidDeferredInviteUrl();
+        if (!isMounted) return;
+        if (handleIncomingUrl(installedInviteUrl)) return;
+
+        if (isSignedInRef.current) return;
+        const canOfferClipboard = await shouldOfferIOSClipboardInvite();
+        if (isMounted && canOfferClipboard) setClipboardOffer(true);
       })
       .catch(() => undefined);
 
@@ -375,6 +401,19 @@ function InvitationLinkHost({ userId } = {}) {
     );
   }, [t]);
 
+  const handleClipboardRecovery = useCallback(async () => {
+    setClipboardOffer(false);
+    const clipboardUrl = await readIOSClipboardInviteUrl();
+    if (handleIncomingUrl(clipboardUrl)) return;
+    Alert.alert(
+      t('invitationLink.clipboard.notFoundTitle', 'Invitation introuvable'),
+      t(
+        'invitationLink.clipboard.notFoundBody',
+        "Le presse-papiers ne contient pas de lien d'invitation FoundClub.",
+      ),
+    );
+  }, [handleIncomingUrl, t]);
+
   // INVIT2 — le geste principal d'un lien d'equipe AVEC code.
   const handleCodedPrimary = useCallback(async () => {
     const teamId = String(claimDecision?.teamId || codedTeamInvite?.id || '').trim();
@@ -444,6 +483,30 @@ function InvitationLinkHost({ userId } = {}) {
     }
     handleDismiss();
   }, [claimDecision, handleDismiss, isSignedIn, showAnswerError]);
+
+  if (clipboardOffer && !pendingInvite && !problem) {
+    return (
+      <GlobalPromptModal
+        body={t(
+          'invitationLink.clipboard.body',
+          "Si tu viens d'installer FoundClub depuis une invitation, "
+            + "tu peux reprendre le lien copié avant l'installation.",
+        )}
+        eyebrow={t('invitationLink.eyebrow', 'Invitation')}
+        onRequestClose={() => setClipboardOffer(false)}
+        primaryAction={{
+          label: t('invitationLink.clipboard.primary', 'Reprendre mon invitation'),
+          onPress: handleClipboardRecovery,
+        }}
+        secondaryAction={{
+          label: t('invitationLink.clipboard.secondary', 'Pas maintenant'),
+          onPress: () => setClipboardOffer(false),
+        }}
+        title={t('invitationLink.clipboard.title', 'Tu as suivi une invitation ?')}
+        visible
+      />
+    );
+  }
 
   if (problem) {
     return (

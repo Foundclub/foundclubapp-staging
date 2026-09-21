@@ -8303,6 +8303,15 @@ export default {
     },
   },
   invitationLink: {
+    clipboard: {
+      body: 'If you just installed FoundClub from an invitation, '
+        + 'you can resume the link copied before installation.',
+      notFoundBody: 'The clipboard does not contain a FoundClub invitation link.',
+      notFoundTitle: 'Invitation not found',
+      primary: 'Resume my invitation',
+      secondary: 'Not now',
+      title: 'Did you follow an invitation?',
+    },
     club: {
       body: "You've received an invitation to join this club. Send your request?",
       primary: 'View club',
