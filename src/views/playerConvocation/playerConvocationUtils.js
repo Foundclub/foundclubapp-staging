@@ -169,6 +169,22 @@ export const buildConvocationReserveList = (published) => {
 };
 
 /**
+ * COACH1 (decision d Adel du 2026-09-21) — L'ENCADREMENT de la convocation.
+ *
+ * 🎁 Aucun calcul ici : le serveur range dans `branch.staff` les entraineurs de
+ * l'equipe qui ont repondu PRESENT (`event-composition.ts`,
+ * `buildConvocationStaff`). Ils ne sont ni sur le terrain ni sur le banc : c'est
+ * une liste a part, que l'ecran du joueur et l'onglet de la fiche lisent tous
+ * les deux ici — une seule facon de la lire.
+ * ⛔ Une personne sans identifiant ni nom n'ecrit pas de ligne vide.
+ * @param {any} branch Une branche de `GET /events/:id/convocation`.
+ * @returns {Array<{ id: string, person: any }>}
+ */
+export const buildConvocationStaffList = (branch) => ensureList(branch?.staff)
+  .map((/** @type {any} */ person) => ({ id: getConvocationPersonId(person), person }))
+  .filter((/** @type {any} */ entry) => Boolean(entry.id && getPersonName(entry.person)));
+
+/**
  * La place du joueur dans la convocation publiee — ou `null` s'il n'y figure pas.
  *
  * 🔒 C'est LE garde-fou de l'ecran 10 : un entraineur, un organisateur ou un
@@ -191,6 +207,7 @@ export const buildConvocationReserveList = (published) => {
  *   role: string,
  *   snapshotPlayers: any[],
  *   sport: string,
+ *   staff: Array<{ id: string, person: any }>,
  *   teamName: string,
  *   viewerPlayer: any,
  * } | null}
@@ -241,6 +258,7 @@ export const buildPlayerConvocationView = ({ convocation = null, userId = '' } =
     role: myPlacement ? CONVOCATION_ROLE_STARTER : CONVOCATION_ROLE_SUBSTITUTE,
     snapshotPlayers: ensureList(published?.snapshotPlayers),
     sport,
+    staff: buildConvocationStaffList(branch),
     teamName: String(
       branch?.team?.name || convocation?.team?.name || published?.teams?.[0]?.name || '',
     ).trim(),

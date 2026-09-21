@@ -380,6 +380,44 @@ function PlayerConvocationScreen() {
             </View>
           </>
         ) : null}
+
+        {/* COACH1 (decision d'Adel du 21/09) — L'ENCADREMENT. Les entraineurs
+            qui ont repondu Present au match : une partie a part, jamais sur le
+            terrain ni sur le banc. Le serveur les envoie (`branch.staff`) ;
+            sans personne, pas de titre vide. */}
+        {view.staff.length ? (
+          <>
+            <Text style={[Fonts.p4, styles.sectionTitle, { color: Colors.neutral300 }]}>
+              {t('playerConvocation.staff.title').toUpperCase()}
+            </Text>
+            <View style={styles.reserveList}>
+              {view.staff.map((/** @type {any} */ { id, person }) => (
+                <View
+                  key={id}
+                  style={[
+                    styles.reserveRow,
+                    {
+                      backgroundColor: withAlpha(Colors.primary500, 0.06),
+                      borderColor: withAlpha(Colors.primary500, 0.16),
+                    },
+                  ]}
+                >
+                  <ProfileAvatar
+                    enablePreview={false}
+                    imageUrl={getImageUrl(person?.avatar?.url || person?.avatar)}
+                    name={[person?.firstname, person?.lastname].filter(Boolean).join(' ')}
+                    size={32}
+                  />
+                  <MarqueeText
+                    containerStyle={styles.reserveName}
+                    style={[Fonts.p3Bold, { color: Colors.neutral00 }]}
+                    text={[person?.firstname, person?.lastname].filter(Boolean).join(' ')}
+                  />
+                </View>
+              ))}
+            </View>
+          </>
+        ) : null}
       </ScrollView>
 
       {/* Barre presence / absence. Elle porte la reponse DEJA donnee — le serveur

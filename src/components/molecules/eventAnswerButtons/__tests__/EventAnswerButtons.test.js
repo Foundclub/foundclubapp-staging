@@ -280,18 +280,15 @@ describe('EventAnswerButtons — qui a le droit de repondre (caracterisation)', 
     ]);
   });
 
-  // Y07 (GO Adel du 2026-08-20) — CES DEUX TEMOINS ONT CHANGE DE CAMP.
+  // COACH1 (decision d Adel du 2026-09-21) — CES DEUX TEMOINS ONT CHANGE DE
+  // CAMP UNE SECONDE FOIS.
   //
-  // Ils portaient la regle du lot W01 : « l encadrant MEMBRE repond comme un
-  // joueur ». Adel a tranche l inverse — repondre Present / Absent est le geste
-  // du JOUEUR. Le serveur applique la meme regle a la source
-  // (`event-audience.ts:819 resolveResponderDecision`, refus
-  // `EVENT_STAFF_DOES_NOT_RSVP`).
-  //
-  // ⛔ CE QU ON VERIFIE ICI N EST PAS « il n y a plus de boutons » : c est
-  // qu il y a une PHRASE a la place. Un bouton eteint et muet etait le constat
-  // d origine d Adel ; le retrait sans phrase le reproduirait a l identique.
-  it('Y07 · temoin 1 — un entraineur MEMBRE lit une phrase au lieu des boutons', () => {
+  // W01 : « l encadrant MEMBRE repond comme un joueur ». Y07 (2026-08-20) :
+  // l inverse, une phrase a la place des boutons. COACH1 revient a W01 : « les
+  // entraineurs des equipes, pour leurs evenements, peuvent repondre present /
+  // absent ». Le serveur accepte (`event-audience.ts`, `resolveResponderDecision`
+  // rend `canRespond: true` a tout membre, et le refus Y07 n existe plus).
+  it('COACH1 · temoin 1 — un entraineur MEMBRE a Present et Absent, sans phrase de refus', () => {
     mockUserData.mockReturnValue({ documentId: 'user-coach', role: { name: USER_ROLES.coach } });
 
     const tree = render({
@@ -307,12 +304,14 @@ describe('EventAnswerButtons — qui a le droit de repondre (caracterisation)', 
       onParticipate: jest.fn(),
     });
 
-    expect(buttonTitles(tree)).not.toContain('eventList.actions.present');
-    expect(buttonTitles(tree)).not.toContain('eventList.actions.absent');
-    expect(textContents(tree)).toContain('eventList.info.staffDoesNotRsvp');
+    expect(buttonTitles(tree)).toEqual([
+      'eventList.actions.present',
+      'eventList.actions.absent',
+    ]);
+    expect(textContents(tree)).not.toContain('eventList.info.staffDoesNotRsvp');
   });
 
-  it('Y07 · temoin 2 — un dirigeant MEMBRE lit la meme phrase', () => {
+  it('COACH1 · temoin 2 — un dirigeant MEMBRE (inscrit aux encadrants) aussi', () => {
     mockUserData.mockReturnValue({ documentId: 'user-boss', role: { name: USER_ROLES.president } });
 
     const tree = render({
@@ -328,9 +327,11 @@ describe('EventAnswerButtons — qui a le droit de repondre (caracterisation)', 
       onParticipate: jest.fn(),
     });
 
-    expect(buttonTitles(tree)).not.toContain('eventList.actions.present');
-    expect(buttonTitles(tree)).not.toContain('eventList.actions.absent');
-    expect(textContents(tree)).toContain('eventList.info.staffDoesNotRsvp');
+    expect(buttonTitles(tree)).toEqual([
+      'eventList.actions.present',
+      'eventList.actions.absent',
+    ]);
+    expect(textContents(tree)).not.toContain('eventList.info.staffDoesNotRsvp');
   });
 
   it('W01 · temoin 3 🔒 — un encadrant NON membre n a AUCUN bouton de reponse', () => {

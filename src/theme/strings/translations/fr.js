@@ -5725,6 +5725,7 @@ export default {
       bench: 'Sur le banc',
       called: 'Convoqués',
       notPublished: 'La composition n’est pas encore publiée.',
+      staff: 'Encadrement',
       starters: 'Sur le terrain',
     },
     correctTheDelay: 'Corriger le retard',
@@ -6818,6 +6819,7 @@ export default {
       pendingRequest: 'Demande en attente',
       restrictedEvent: 'Accès réservé',
       staffDoesNotRsvp: 'Tu encadres cet événement : ce sont les joueurs qui répondent.',
+      staffJoinsConvocation: 'Réponds « Présent » pour être dans l’encadrement de la convocation.',
     },
     joinModal: {
       actions: {
@@ -12459,6 +12461,9 @@ export default {
     roles: {
       starter: 'Titulaire',
       substitute: 'Remplaçant',
+    },
+    staff: {
+      title: 'Encadrement',
     },
     title: 'Tu es convoqué',
   },

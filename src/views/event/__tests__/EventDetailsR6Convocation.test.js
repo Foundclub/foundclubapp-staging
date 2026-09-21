@@ -766,3 +766,56 @@ describe('S5-D · le terrain de la compo publiee, DANS l onglet', () => {
     expect(parTestID(root, 'doublure-terrain')).toHaveLength(1);
   });
 });
+
+// ---------------------------------------------------------------------------
+// COACH1 (decision d Adel du 2026-09-21, confirmee « 3 - A ») — L ENCADREMENT.
+//
+// Se convoquer, pour un entraineur, c est repondre PRESENT au match : le
+// serveur le range alors dans `staff`, a cote du pack publie de la branche
+// (`event-composition.ts`, `buildConvocationStaff`). L onglet doit le dire
+// dans une partie a part — jamais sur le terrain ni sur le banc.
+// ---------------------------------------------------------------------------
+
+const CONVOCATION_AVEC_ENCADREMENT = {
+  ...CONVOCATION,
+  branches: [{
+    ...CONVOCATION.branches[0],
+    staff: [{
+      documentId: 'coach-1', firstname: 'Adel', id: 77, lastname: 'Ferchichi',
+    }],
+  }],
+};
+
+describe('COACH1 · l onglet « Convocation » montre l ENCADREMENT', () => {
+  test('le joueur y lit l entraineur venu, sous « Encadrement »', () => {
+    const root = monter({ auth: authPour(JOUEUR), convocation: CONVOCATION_AVEC_ENCADREMENT });
+
+    allerSurLOnglet(root, 'callUp');
+
+    const texte = textesVisibles(root).join(' | ');
+    expect(texte).toContain('Encadrement');
+    expect(texte).toContain('Adel Ferchichi');
+    // 🔒 Il vient APRES le titre, jamais melange aux titulaires ou au banc.
+    expect(texte.indexOf('Adel Ferchichi')).toBeGreaterThan(texte.indexOf('Encadrement'));
+  });
+
+  test('le staff le lit aussi', () => {
+    const root = monter({
+      auth: authPour('coach-1', true),
+      convocation: CONVOCATION_AVEC_ENCADREMENT,
+    });
+
+    allerSurLOnglet(root, 'callUp');
+
+    expect(contient(root, 'Encadrement')).toBe(true);
+    expect(contient(root, 'Adel Ferchichi')).toBe(true);
+  });
+
+  test('🔒 personne dans l encadrement : aucun titre vide', () => {
+    const root = monter({ auth: authPour(JOUEUR), convocation: CONVOCATION });
+
+    allerSurLOnglet(root, 'callUp');
+
+    expect(contient(root, 'Encadrement')).toBe(false);
+  });
+});

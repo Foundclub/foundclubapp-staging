@@ -5401,6 +5401,7 @@ export default {
       bench: 'On the bench',
       called: 'Called up',
       notPublished: "The line-up hasn't been published yet.",
+      staff: 'Staff',
       starters: 'On the pitch',
     },
     correctTheDelay: 'Correct the delay',
@@ -6436,6 +6437,7 @@ export default {
       pendingRequest: 'Request pending',
       restrictedEvent: 'Restricted access',
       staffDoesNotRsvp: "You're coaching this event: it's the players who respond.",
+      staffJoinsConvocation: 'Answer “Present” to appear in the staff section of the call-up.',
     },
     joinModal: {
       actions: {
@@ -11841,6 +11843,9 @@ export default {
     roles: {
       starter: 'Starter',
       substitute: 'Substitute',
+    },
+    staff: {
+      title: 'Staff',
     },
     title: "You've been called up",
   },

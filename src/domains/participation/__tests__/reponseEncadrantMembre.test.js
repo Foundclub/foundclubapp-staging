@@ -1,39 +1,28 @@
 import { USER_ROLES } from '@/domains/auth/authUseCases';
 import { getParticipationErrorMessage, resolveParticipationFlow } from '@/domains/participation/participationFlow';
 
-// Y07 — SEULS LES JOUEURS REPONDENT. (GO Adel du 2026-08-20)
+// COACH1 — LES ENCADRANTS REPONDENT. (decision d Adel du 2026-09-21)
 //
-// 🔄 CE FICHIER A CHANGE DE CAMP, ET C EST VOULU. Il portait la regle du lot
-// W01 : « l encadrant MEMBRE de l equipe repond comme un joueur ». Adel a
-// tranche l inverse le 2026-08-20 — repondre Present / Absent est le geste du
-// JOUEUR, l encadrant organise. Les temoins 1 et 2 disent donc maintenant le
-// contraire de ce qu ils disaient : ce n est pas une regression, c est la
-// decision. Les temoins 3, 4 et 5 n ont pas bouge d une ligne.
+// 🔄 CE FICHIER A CHANGE DE CAMP DEUX FOIS, ET C EST VOULU. W01 : « l encadrant
+// MEMBRE repond comme un joueur ». Y07 (2026-08-20) : l inverse, seuls les
+// joueurs. COACH1 (2026-09-21) : « les entraineurs des equipes, pour leurs
+// evenements, peuvent repondre present / absent » — retour a W01. Les temoins
+// 1 et 2 disent donc de nouveau qu il repond ; 3, 4 et 5 n ont pas bouge.
 //
-// 📌 LA REGLE DU SERVEUR, RECOPIEE — `event-audience.ts:819
-// resolveResponderDecision` :
-//   `sourceTeam` = equipe conviee dont on est MEMBRE (`players` OU `trainers`).
-//   Puis, et c est tout Y07 : `canRespond = isUserInCollection(sourceTeam.players)`
-//   et `isStaffOnly = !canRespond`. Membre sans etre joueur => on ne repond plus.
-//   AUCUN role n intervient, ici non plus : le serveur ne lit jamais
-//   `user.role.name` sur ce chemin. C est l APPARTENANCE A `players` qui decide.
-//   `assertUserCanRespond` (l.836) refuse alors avec `EVENT_STAFF_DOES_NOT_RSVP`
-//   et la phrase « Tu encadres cet evenement : ce sont les joueurs qui repondent. »
+// 📌 LA REGLE DU SERVEUR, RECOPIEE — `event-audience.ts`,
+// `resolveResponderDecision` :
+//   `sourceTeam` = equipe conviee dont on est MEMBRE (`players` OU `trainers`)
+//   ⇒ `canRespond: true`. `isStaffOnly` dit seulement « encadrant, pas joueur »
+//   — pour ne pas le compter parmi les joueurs (appel, statistiques), jamais
+//   pour le faire taire. AUCUN role n intervient : c est l APPARTENANCE.
 //
-// 🎯 LE COACH-JOUEUR REPOND, sans exception ecrite nulle part : il figure dans
-// `team.players`, donc `canRespond` vaut vrai pour lui. C est aussi le seul
-// moyen d etre coche dans une compo publiee (`event-composition.ts:234` ne
-// puise que dans `players`) — d ou la nuance du GO : « un encadrant coche dans
-// la compo publiee repond quand meme ». Le temoin 1 le verrouille.
+// 🎯 LE COACH-JOUEUR est un joueur : il figure dans `team.players`.
 //
-// ⛔ CE QUE Y07 NE FAIT PAS : il ne retire RIEN d autre a l encadrant. Il reste
-// membre, il voit l evenement, il en recoit les notifications
-// (`getTeamMembers`, l.357, n a pas bouge). Et une reponse DEJA ENREGISTREE
-// n est ni effacee ni cachee — c est le dernier cas du temoin 4.
+// 🔒 CE QUI NE BOUGE PAS : un encadrant d une AUTRE equipe reste dehors
+// (temoin 3), le joueur repond exactement comme avant (temoin 4).
 
-// La phrase EXACTE que le serveur renvoie avec `EVENT_STAFF_DOES_NOT_RSVP`
-// (`event-audience.ts:840`). Elle est nommee une fois : le jour ou elle change,
-// c est ici que ca se voit, et les trois temoins suivent tout seuls.
+// La phrase que Y07 affichait a la place des boutons. Elle est nommee une fois
+// pour que les temoins 1 et 2 prouvent qu elle a DISPARU du chemin.
 const PHRASE_ENCADRANT = 'Tu encadres cet événement : ce sont les joueurs qui répondent.';
 
 const coachUser = {
@@ -78,27 +67,25 @@ const closedTeamEvent = (overrides = {}) => ({
   ...overrides,
 });
 
-describe('Y07 · temoin 1 — un entraineur MEMBRE ne repond plus', () => {
-  it('la regle partagee le declare NON actionnable', () => {
+describe('COACH1 · temoin 1 — un entraineur MEMBRE repond', () => {
+  it('la regle partagee le declare actionnable', () => {
     const flow = resolveParticipationFlow(closedTeamEvent(), { user: coachUser });
 
-    expect(flow.canAct).toBe(false);
+    expect(flow.canAct).toBe(true);
+    expect(flow.blockedReason).toBe('');
   });
 
-  it('et elle nomme le motif du serveur, mot pour mot', () => {
+  it('par la porte des REPONSES, en un geste, comme un joueur membre', () => {
     const flow = resolveParticipationFlow(closedTeamEvent(), { user: coachUser });
 
-    // La phrase de `EVENT_STAFF_DOES_NOT_RSVP` (`event-audience.ts:840`).
-    // ⛔ Jamais « seuls les joueurs peuvent participer » : ce motif-la parle du
-    // ROLE, et c est exactement le contresens que W01 avait corrige. Ici on ne
-    // lui reproche pas ce qu il EST, on lui dit ce qu il FAIT : il encadre.
-    expect(flow.blockedReason).toBe(PHRASE_ENCADRANT);
+    // AA01 : un membre REPOND (`/rsvp`), il ne DEMANDE pas a entrer. Ni
+    // declaration de responsabilite, ni « en attente ».
+    expect(flow.submitMode).toBe('rsvpPresent');
+    expect(flow.usesConfirmationModal).toBe(false);
+    expect(flow.blockedReason).not.toBe(PHRASE_ENCADRANT);
   });
 
-  it('🎯 mais le COACH-JOUEUR repond, lui — la nuance du GO Adel', () => {
-    // Inscrit dans `players` EN PLUS de `trainers` : c est le seul profil que la
-    // compo peut cocher (`event-composition.ts:234` ne puise que dans
-    // `players`), donc le seul encadrant a qui on demande encore de repondre.
+  it('🎯 le COACH-JOUEUR repond aussi, comme avant', () => {
     const event = closedTeamEvent({
       team: {
         documentId: 'team-1',
@@ -114,12 +101,12 @@ describe('Y07 · temoin 1 — un entraineur MEMBRE ne repond plus', () => {
   });
 });
 
-describe('Y07 · temoin 2 — un dirigeant MEMBRE non plus', () => {
-  it('la regle partagee le declare NON actionnable', () => {
+describe('COACH1 · temoin 2 — un dirigeant inscrit aux encadrants repond aussi', () => {
+  it('la regle partagee le declare actionnable', () => {
     const flow = resolveParticipationFlow(closedTeamEvent(), { user: presidentUser });
 
-    expect(flow.canAct).toBe(false);
-    expect(flow.blockedReason).toBe(PHRASE_ENCADRANT);
+    expect(flow.canAct).toBe(true);
+    expect(flow.blockedReason).toBe('');
   });
 
   it('membre d une equipe CONVIEE, pas de l equipe organisatrice : meme sort', () => {
@@ -134,8 +121,8 @@ describe('Y07 · temoin 2 — un dirigeant MEMBRE non plus', () => {
 
     const flow = resolveParticipationFlow(event, { user: presidentUser });
 
-    expect(flow.canAct).toBe(false);
-    expect(flow.blockedReason).toBe(PHRASE_ENCADRANT);
+    expect(flow.canAct).toBe(true);
+    expect(flow.blockedReason).toBe('');
   });
 });
 
