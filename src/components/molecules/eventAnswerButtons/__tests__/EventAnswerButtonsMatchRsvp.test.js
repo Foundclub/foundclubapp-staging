@@ -19,8 +19,9 @@ import EventAnswerButtons from '../EventAnswerButtons';
 // perd. Les temoins ROUGES qu il produit nomment la cause ; ils deviennent le
 // filet du correctif ensuite.
 //
-// ⛔ Y07 n est PAS remis en cause : seuls les JOUEURS repondent. Ces temoins ne
-// montent que des joueurs, sauf le dernier qui verrouille l encadrant.
+// 🔄 Ecrit sous Y07 (seuls les JOUEURS repondaient). COACH1 (decision d Adel du
+// 2026-09-21) rend la reponse a l encadrant : les temoins 6 et 12, qui le
+// verrouillaient, disent maintenant qu il repond — sur un match comme ailleurs.
 
 jest.mock('@/theme/themeContext', () => {
   const styleLeaf = {};
@@ -215,9 +216,8 @@ test('MATCHRSVP/3 — MATCH sans effectif peuple : le repli par `myTeams` doit t
 // ---------------------------------------------------------------------------
 // 4 — LE MATCH AVEC LE DRAPEAU DU SERVEUR (piste A du prompt)
 //
-// `viewerCanRespond` est pose par `event.findOne` (`event.ts:1860`). Quand il
-// vaut `true`, la rangee doit etre la ; quand il vaut `false`, c est un
-// encadrant et Y07 s applique.
+// `viewerCanRespond` est pose par `event.findOne`. Depuis COACH1 il vaut
+// toujours `true` (garde pour les apps deja installees) : la rangee est la.
 // ---------------------------------------------------------------------------
 
 test('MATCHRSVP/4 — MATCH, serveur qui dit `viewerCanRespond: true` : rangee presente', () => {
@@ -241,17 +241,16 @@ test('MATCHRSVP/5 — MATCH AMICAL : un joueur convie doit avoir Present et Abse
 });
 
 // ---------------------------------------------------------------------------
-// 6 🔒 — Y07 NE BOUGE PAS : l encadrant lit sa phrase, sur un match aussi
+// 6 🔒 — COACH1 : l encadrant membre repond, sur un match aussi
 // ---------------------------------------------------------------------------
 
-test('MATCHRSVP/6 🔒 — MATCH : un encadrant membre lit sa phrase, jamais un bouton', () => {
+test('MATCHRSVP/6 🔒 (COACH1) — MATCH : un encadrant membre a Present et Absent', () => {
   mockUserData.mockReturnValue(coachUser);
 
   const tree = render({ event: match() });
 
-  expect(titlesOf(tree)).not.toContain('eventList.actions.present');
-  expect(titlesOf(tree)).not.toContain('eventList.actions.absent');
-  expect(textsOf(tree)).toContain('eventList.info.staffDoesNotRsvp');
+  expect(aLaRangeeDeReponse(tree)).toBe(true);
+  expect(textsOf(tree)).not.toContain('eventList.info.staffDoesNotRsvp');
 });
 
 // ---------------------------------------------------------------------------
@@ -388,16 +387,16 @@ test('MATCHRSVP/11 🔒 — une audience NON ACCEPTEE ne convie personne', () =>
   expect(aLaRangeeDeReponse(tree)).toBe(false);
 });
 
-test('MATCHRSVP/12 🔒 — Y07 tient sur ce chemin aussi : l encadrant lit sa phrase', () => {
+test('MATCHRSVP/12 🔒 (COACH1) — sur ce chemin aussi, l encadrant repond', () => {
   mockUserData.mockReturnValue({ documentId: COACH_ID, role: { name: USER_ROLES.coach } });
 
   // Sans le drapeau du serveur, la regle est recalculee par l app : c est le
-  // chemin des listes et du planning, celui que Y07 doit tenir seul.
+  // chemin des listes et du planning.
   const event = matchConvieParAudienceSeule();
   delete event.viewerCanRespond;
 
   const tree = render({ event });
 
-  expect(titlesOf(tree)).not.toContain('eventList.actions.present');
-  expect(textsOf(tree)).toContain('eventList.info.staffDoesNotRsvp');
+  expect(aLaRangeeDeReponse(tree)).toBe(true);
+  expect(textsOf(tree)).not.toContain('eventList.info.staffDoesNotRsvp');
 });

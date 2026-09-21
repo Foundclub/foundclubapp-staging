@@ -14,6 +14,13 @@ import EventAnswerButtons from '../EventAnswerButtons';
 //
 // Ecrits ROUGES contre le code d origine (preuve : Y07-e6-ROUGE.log).
 //
+// 🔄 COACH1 (decision d Adel du 2026-09-21) REMPLACE Y07 : « les entraineurs
+// des equipes, pour leurs evenements, peuvent repondre present / absent ». Les
+// temoins 1, 2, 4 et 7 disent donc maintenant le contraire de ce qu ils
+// disaient ; 3, 5 et 6 n ont pas bouge. Le fichier garde son nom pour
+// l historique. Le « bouton gris » reste sous surveillance (temoin 7) : c est
+// lui qu un retrait de la phrase pouvait faire revenir.
+//
 // 🧨 CE QUE CES TEMOINS SURVEILLENT EN PLUS DU RETRAIT : le « bouton gris ».
 // `EventAnswerButtons` appelle `canEventBeJoined` SANS lui passer `type`, et
 // cette fonction exige le role Joueur des que `capacity > 0`
@@ -117,7 +124,7 @@ const textsOf = (tree) => tree.root.findAllByType(Text)
 // 1 & 2 — L ENCADRANT NE VOIT AUCUN BOUTON DE REPONSE
 // ---------------------------------------------------------------------------
 
-test('Y07/1 — sur la FICHE, un entraineur membre d une equipe conviee : aucun bouton', () => {
+test('Y07/1 (COACH1) — sur la FICHE, un entraineur membre a Present et Absent', () => {
   mockUserData.mockReturnValue(coach);
 
   const tree = render({
@@ -129,11 +136,12 @@ test('Y07/1 — sur la FICHE, un entraineur membre d une equipe conviee : aucun 
   });
 
   const titles = titlesOf(tree);
-  expect(titles).not.toContain('eventList.actions.present');
-  expect(titles).not.toContain('eventList.actions.absent');
+  expect(titles).toContain('eventList.actions.present');
+  expect(titles).toContain('eventList.actions.absent');
+  expect(textsOf(tree)).not.toContain('eventList.info.staffDoesNotRsvp');
 });
 
-test('Y07/2 — sur une CARTE de liste (planning compris), il n en voit pas davantage', () => {
+test('Y07/2 (COACH1) — sur une CARTE de liste (planning compris), il les a aussi', () => {
   mockUserData.mockReturnValue(coach);
 
   // La carte monte le composant avec `onAbout` et SANS `onEdit`/`onCancel` —
@@ -148,8 +156,8 @@ test('Y07/2 — sur une CARTE de liste (planning compris), il n en voit pas dava
   });
 
   const titles = titlesOf(tree);
-  expect(titles).not.toContain('eventList.actions.present');
-  expect(titles).not.toContain('eventList.actions.absent');
+  expect(titles).toContain('eventList.actions.present');
+  expect(titles).toContain('eventList.actions.absent');
 });
 
 // ---------------------------------------------------------------------------
@@ -197,7 +205,7 @@ test('Y07/3 🔒 — sur une carte SANS `players`, le JOUEUR garde ses boutons',
   expect(textsOf(tree)).not.toContain('eventList.info.staffDoesNotRsvp');
 });
 
-test('Y07/4 — sur cette meme carte, l ENCADRANTE lit bien la phrase', () => {
+test('Y07/4 (COACH1) — sur cette meme carte, l ENCADRANTE a Present et Absent', () => {
   mockUserData.mockReturnValue({ ...coach, trainedTeams: [{ documentId: 'team-1' }] });
 
   const tree = render({
@@ -210,9 +218,9 @@ test('Y07/4 — sur cette meme carte, l ENCADRANTE lit bien la phrase', () => {
   });
 
   const titles = titlesOf(tree);
-  expect(titles).not.toContain('eventList.actions.present');
-  expect(titles).not.toContain('eventList.actions.absent');
-  expect(textsOf(tree)).toContain('eventList.info.staffDoesNotRsvp');
+  expect(titles).toContain('eventList.actions.present');
+  expect(titles).toContain('eventList.actions.absent');
+  expect(textsOf(tree)).not.toContain('eventList.info.staffDoesNotRsvp');
 });
 
 // ---------------------------------------------------------------------------
@@ -265,7 +273,7 @@ test('Y07/6 — un encadrant COCHE DANS LA COMPO (donc dans les joueurs) repond 
 // 7 — LE TEMOIN QUI GARDE LE BOUTON GRIS FERME
 // ---------------------------------------------------------------------------
 
-test('Y07/7 — a la place des boutons, une PHRASE : jamais un bouton eteint, jamais rien', () => {
+test('Y07/7 (COACH1) — Present et Absent ALLUMES : jamais un bouton eteint, jamais rien', () => {
   mockUserData.mockReturnValue(coach);
 
   // `capacity > 0` et session OUVERTE : c est la combinaison EXACTE qui
@@ -278,8 +286,8 @@ test('Y07/7 — a la place des boutons, une PHRASE : jamais un bouton eteint, ja
     onParticipate: () => {},
   });
 
-  // a) une phrase est lue
-  expect(textsOf(tree)).toContain('eventList.info.staffDoesNotRsvp');
+  // a) la rangee de reponse est la
+  expect(titlesOf(tree)).toEqual(['eventList.actions.present', 'eventList.actions.absent']);
 
   // b) AUCUN bouton eteint — c est le defaut d origine, il ne doit pas renaitre
   const buttons = tree.root.findAllByType(Button);

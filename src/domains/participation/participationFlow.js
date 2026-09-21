@@ -137,19 +137,18 @@ export const resolveClientSourceTeamForUser = (event, user) => {
 };
 
 /**
- * « Cette personne doit-elle repondre Present / Absent ? »
+ * « Cette personne ENCADRE-t-elle cet evenement ? » — membre d une equipe
+ * conviee, mais pas joueur.
  *
- * Y07 (GO Adel du 2026-08-20) — le miroir EXACT de `resolveResponderDecision`
- * cote serveur (`event-audience.ts:819`) : seuls les JOUEURS repondent.
+ * COACH1 (decision d Adel du 2026-09-21, qui remplace Y07) : l encadrant
+ * REPOND, comme un joueur. `isStaffOnly` ne ferme donc plus rien ; il sert a
+ * lui dire, sur un match, que repondre Present l inscrit dans l encadrement de
+ * la convocation. Miroir de `isStaffOnly` cote serveur (`event-audience.ts`,
+ * `resolveResponderDecision`).
  *
- * ⛔ `getTeamMemberEntities` ci-dessus ne bouge PAS : etre MEMBRE (voir
- * l evenement, en recevoir les notifications, rester rattache a son equipe) et
- * devoir REPONDRE sont deux questions differentes. Y07 ne ferme que la seconde.
- *
- * Le serveur DIT deja la reponse sur la fiche (`viewerCanRespond`, pose par
- * `event.findOne`) : quand il l a dite, on lui obeit au lieu de recalculer. Les
- * listes et le planning ne portent pas encore ce drapeau, d ou le repli — qui
- * est la MEME regle, ecrite une seule fois, ici.
+ * ⛔ `viewerCanRespond` n est PLUS lu ici : le serveur le pose toujours a vrai
+ * depuis COACH1 (pour les apps deja installees), il ne dit donc plus rien sur
+ * l identite du lecteur.
  * @param {any} event
  * @param {any} user
  * @returns {{ isStaffOnly: boolean, sourceTeam: any }} `isStaffOnly` vrai veut
@@ -157,10 +156,6 @@ export const resolveClientSourceTeamForUser = (event, user) => {
  */
 export const resolveClientResponderDecision = (event, user) => {
   const sourceTeam = resolveClientSourceTeamForUser(event, user);
-
-  if (typeof event?.viewerCanRespond === 'boolean') {
-    return { isStaffOnly: event.viewerCanRespond === false, sourceTeam };
-  }
 
   if (!sourceTeam) return { isStaffOnly: false, sourceTeam: null };
 
@@ -186,13 +181,10 @@ export const resolveClientResponderDecision = (event, user) => {
     return { isStaffOnly: true, sourceTeam };
   }
 
-  // ⛔ AUCUNE PREUVE : on ne fait PAS taire la personne. Ne lire que
-  // `sourceTeam.players` faisait dire « tu encadres » a TOUS LES JOUEURS des
-  // que la charge utile ne portait pas la liste — or le peuplement des cartes
-  // (`buildCompactEventCardPopulate`, `eventService.js:674`) ne descend NI
-  // `players` NI `trainers`, et `viewerCanRespond` n existe que sur la fiche
-  // (`event.ts:1695`). Toutes les listes tombaient donc dans ce trou.
-  // La porte qui tranche vraiment reste le serveur (`assertUserCanRespond`).
+  // ⛔ AUCUNE PREUVE : on ne le declare PAS encadrant. Le peuplement des cartes
+  // (`buildCompactEventCardPopulate`, `eventService.js`) ne descend NI
+  // `players` NI `trainers` : sans ce repli, tout joueur d une liste serait lu
+  // comme encadrant.
   return { isStaffOnly: false, sourceTeam };
 };
 
@@ -310,8 +302,7 @@ const buildEventFlow = (entity, context) => {
   const sessionStatus = normalizeStatus(entity?.sessionStatus);
   const isClosed = sessionStatus === 'closed';
   const isDetection = normalizeEventTypeLabel(entity?.type?.name).includes('detection');
-  // Y07 : la MEME lecture rend l equipe source ET « doit-elle repondre ? ».
-  const { isStaffOnly, sourceTeam } = resolveClientResponderDecision(entity, user);
+  const sourceTeam = resolveClientSourceTeamForUser(entity, user);
   const trainingOpenConfig = resolveTrainingOpenConfig(entity);
   const isTrainingEvent = trainingOpenConfig?.isTraining === true;
   const isExternalTrainingParticipant = isTrainingEvent && !sourceTeam;
@@ -350,20 +341,6 @@ const buildEventFlow = (entity, context) => {
     blockedReason = i18next.t(
       'participationFlow.thisClosedEventIsReserved',
       'Cet événement fermé est réservé aux équipes concernées.',
-    );
-  } else if (isStaffOnly && !alreadyHandled) {
-    // Y07 : la phrase que le serveur renverrait (`EVENT_STAFF_DOES_NOT_RSVP`).
-    // ⛔ Elle ne doit JAMAIS accompagner un bouton eteint : les surfaces qui
-    // montent la rangee de reponse rendent la phrase SEULE (voir
-    // `EventAnswerButtons`). Elle vit ici pour que le motif soit dit au meme
-    // endroit que tous les autres, pas pour griser quoi que ce soit.
-    // 🔒 `&& !alreadyHandled` : une reponse DEJA ENREGISTREE garde son motif
-    // (« tu as deja repondu »), comme `hasOwnAnswer` cote `EventAnswerButtons`.
-    // Y07 retire le droit de repondre, il n efface aucune reponse posee avant
-    // lui — un encadrant coche dans la compo publiee a repondu, ca reste vrai.
-    blockedReason = i18next.t(
-      'participationFlow.youReStaffForThis',
-      'Tu encadres cet événement : ce sont les joueurs qui répondent.',
     );
   } else if (!isPlayer && !isConvenedMember) {
     blockedReason = i18next.t(

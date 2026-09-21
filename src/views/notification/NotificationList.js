@@ -173,16 +173,14 @@ function NotificationList() {
     return normalizedType === NOTIFICATION_TYPES.PARTICIPATION_REQUEST && status === 'declined';
   }, []);
 
-  // Y07 (GO Adel du 2026-08-20) — « seuls les JOUEURS repondent Present / Absent ».
-  // ⛔ NE PAS AJOUTER DE CONTROLE DE ROLE ICI. La regle est appliquee A LA SOURCE :
-  // le seul emetteur vivant de `eventReminder` vise `unansweredEligiblePlayers`,
-  // c est-a-dire `team.players` SEULS (`event-governance.ts:557`). Un encadrant ne
-  // recoit donc jamais cette notification. Verrouille par le temoin serveur
-  // `tests/authz/event-encadrant-ne-repond-plus-y07.test.js`.
-  // Deux garde-fous pour une regle = deux endroits a maintenir — et ici, au moment
-  // ou la notification arrive, l app ne connait pas l effectif de l equipe.
-  // 🔒 Filet : si une telle notification arrivait quand meme, le serveur REFUSE le
-  // clic (`EVENT_STAFF_DOES_NOT_RSVP`) et sa phrase s affiche telle quelle.
+  // COACH1 (decision d Adel du 2026-09-21, qui remplace Y07) — l entraineur
+  // repond Present / Absent comme un joueur. ⛔ NE PAS AJOUTER DE CONTROLE DE
+  // ROLE ICI : cette surface suit deja la regle de la fiche — aucun filtre dans
+  // l app, et le serveur accepte la reponse d un membre, encadrant compris.
+  // Ce qui decide QUI recoit ce rappel, c est le serveur : la relance
+  // « reponse attendue » ne vise que `team.players` (`event-governance.ts`,
+  // `unansweredEligiblePlayers`). Relancer aussi les encadrants est une question
+  // ouverte, posee a Adel par COACH1. Caracterisation : `__tests__/*COACH1.test.js`.
   const isRsvpReminderNotification = useCallback((/** @type {NotificationItem} */ notification) => {
     const normalizedType = normalizeNotificationType(
       notification?.type || notification?.data?.type || notification?.data?.notificationKind || '',

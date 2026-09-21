@@ -67,6 +67,7 @@ import ScreenContainer from '@/components/templates/ScreenContainer';
 import {
   buildConvocationFieldTokens,
   buildConvocationReserveList,
+  buildConvocationStaffList,
   CONVOCATION_ROLE_STARTER,
   getConvocationPersonId,
   getPersonName,
@@ -4324,6 +4325,8 @@ function EventDetails({ navigation, route }) {
       placements,
       snapshotPlayers: Array.isArray(published?.snapshotPlayers) ? published.snapshotPlayers : [],
       sportContext: published?.sportContext || null,
+      // COACH1 — l encadrement voyage a cote du pack (`branch.staff`).
+      staff: buildConvocationStaffList(branch),
       starters: buildConvocationFieldTokens({
         placements,
         snapshotPlayers: published?.snapshotPlayers,
@@ -6696,6 +6699,20 @@ function EventDetails({ navigation, route }) {
         {branch.bench.map((entry) => (
           <Text key={`${branch.key}-banc-${entry.id}`} style={[Fonts.p3, Fonts.neutral300]}>
             {getPersonName(entry.player)}
+          </Text>
+        ))}
+
+        {/* COACH1 (decision d Adel du 21/09) — L ENCADREMENT, a part : les
+            entraineurs qui ont repondu Present au match. Ni terrain, ni banc,
+            et pas de titre sans personne dessous. */}
+        {branch.staff.length ? (
+          <Text style={[Fonts.p3Bold, Fonts.neutral100]}>
+            {t('eventDetails.convocation.staff', 'Encadrement')}
+          </Text>
+        ) : null}
+        {branch.staff.map((entry) => (
+          <Text key={`${branch.key}-encadrement-${entry.id}`} style={[Fonts.p3, Fonts.neutral300]}>
+            {getPersonName(entry.person)}
           </Text>
         ))}
       </View>
