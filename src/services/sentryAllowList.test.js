@@ -216,3 +216,40 @@ describe('les refus locaux de l app ne sont pas des defauts', () => {
     })).toBe(true);
   });
 });
+
+// ---------------------------------------------------------------------------
+// SENTRY-1 du 21/09 — Sentry REACT-NATIVE-1 et -2 : 237 envois, 21 + 21
+// personnes, iOS ET Android 2.6.50, sur EventDetails. Charge envoyee :
+// `{ status: 400, name: 'BadRequestError', details: { code: 'EVENT_FIND_ERROR',
+// error: 'Match statistics are only available after the match has ended' } }`.
+// Ce refus ne vient PAS de `eventMatchStats` (deja taisee) : le seul GET qui le
+// rend est `/events/:id/my-match-response` (match-stats-report.ts:2731), la
+// requete `eventMyMatchResponse`. « Pas avant la fin du match » est un ETAT.
+// ---------------------------------------------------------------------------
+describe('SENTRY-1 (21/09) — la reponse d apres-match demandee avant la fin', () => {
+  const refusAvantLaFin = () => unwrappedStrapiError(400, {
+    details: {
+      code: 'EVENT_FIND_ERROR',
+      error: 'Match statistics are only available after the match has ended',
+    },
+    message: 'Match statistics are only available after the match has ended',
+  });
+
+  test('LE CAS DE PRODUCTION : ne part plus a Sentry', () => {
+    expect(
+      isInSentryExceptionsAllowList(
+        refusAvantLaFin(),
+        query('eventMyMatchResponse', 'evt-1', 'auto'),
+      ),
+    ).toBe(true);
+  });
+
+  test('GARDE-FOU : un 500 sur la meme requete part toujours', () => {
+    expect(
+      isInSentryExceptionsAllowList(
+        unwrappedStrapiError(500),
+        query('eventMyMatchResponse', 'evt-1'),
+      ),
+    ).toBe(false);
+  });
+});

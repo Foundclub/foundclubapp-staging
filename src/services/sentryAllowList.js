@@ -55,6 +55,9 @@ export const ignoredApiErrorCodes = {
  */
 export const businessRefusalQueryKeys = {
   eventMatchStats: true,
+  // SENTRY-1 du 21/09 (REACT-NATIVE-1/-2, 237 envois) : « pas avant la fin du
+  // match », seul GET qui le rend (match-stats-report.ts:2731).
+  eventMyMatchResponse: true,
   leagueMatchStats: true,
   leagueTeamPerformanceStats: true,
   teamPerformanceStats: true,
