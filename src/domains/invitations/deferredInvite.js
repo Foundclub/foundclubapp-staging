@@ -7,6 +7,11 @@ import {
 
 const INSTALL_INVITE_MARKER = '1';
 
+/**
+ * Decode une valeur de referrer sans jamais lever.
+ * @param {unknown} value
+ * @returns {string}
+ */
 const safeDecode = (value) => {
   try {
     return decodeURIComponent(String(value || '').replace(/\+/g, ' '));
@@ -15,6 +20,11 @@ const safeDecode = (value) => {
   }
 };
 
+/**
+ * Lit les paires cle=valeur du referrer Google Play.
+ * @param {unknown} rawReferrer
+ * @returns {Record<string, string>}
+ */
 const readReferrerParams = (rawReferrer) => Object.fromEntries(
   String(rawReferrer || '')
     .split('&')
