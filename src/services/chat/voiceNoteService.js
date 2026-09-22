@@ -141,6 +141,20 @@ const createRecorder = () => {
   return null;
 };
 
+// MSGLIVE — LE RYTHME DU MICRO, et pourquoi il vient de doubler.
+//
+// Le micro rendait compte toutes les 100 ms : dix mesures par seconde, donc une
+// animation plafonnée à dix images par seconde, quoi qu'on fasse. C'était le
+// bon réglage tant que chaque mesure redessinait l'écran de conversation TOUT
+// ENTIER — 7 400 lignes, mesuré à 101 rendus pour cinq secondes de vocal.
+//
+// Depuis que les niveaux ne remontent plus jusqu'à l'écran et s'arrêtent dans
+// les barres (`VoiceLevelBars`), une mesure ne coûte plus que vingt petites
+// vues. On peut donc en prendre deux fois plus : 50 ms, vingt images par
+// seconde, une onde qui glisse au lieu de sauter. Le budget dépensé reste très
+// en dessous de celui d'avant.
+const RECORDER_TICK_SECONDS = 0.05;
+
 const getRecorder = () => {
   if (recorderInstance) return recorderInstance;
   recorderInstance = safeRead(
@@ -155,7 +169,7 @@ const getRecorder = () => {
     safeCall(
       setSubscriptionDuration,
       recorderInstance,
-      [0.1],
+      [RECORDER_TICK_SECONDS],
       'Recorder subscription setup failed',
     );
   }

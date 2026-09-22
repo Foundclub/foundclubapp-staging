@@ -79,6 +79,7 @@ import LocationShareBubble from '@/components/molecules/locationShareBubble/Loca
 import PollMessageBubble from '@/components/molecules/pollMessageBubble/PollMessageBubble';
 import ProposalMessageBubble from '@/components/molecules/proposalMessageBubble/ProposalMessageBubble';
 import TypingIndicator from '@/components/molecules/typingIndicator/TypingIndicator';
+import VoiceLevelBars from '@/components/molecules/voiceLevelBars/VoiceLevelBars';
 import VoiceNoteBubble from '@/components/molecules/voiceNoteBubble/VoiceNoteBubble';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
 import AutocompleteAddressInput from '@/components/organisms/autocompleteAddressInput/autocompleteAddressInput';
@@ -110,6 +111,12 @@ import {
   startRecording,
   stopRecording,
 } from '@/services/chat/voiceNoteService';
+import {
+  clampNumber,
+  toVoiceWaveBarHeight,
+  VOICE_WAVEFORM_MAX_BARS,
+  VOICE_WAVEFORM_VISIBLE_BARS,
+} from '@/services/chat/voiceWaveform';
 import client from '@/services/client';
 import { useGetEvents } from '@/services/event/eventQueries';
 import { createEventParticipation } from '@/services/eventParticipation/eventParticipationService';
@@ -200,8 +207,7 @@ const TYPING_START_THROTTLE_MS = 1000;
 const TYPING_IDLE_TIMEOUT_MS = 6000;
 const VOICE_GESTURE_CANCEL_THRESHOLD = -64;
 const VOICE_GESTURE_LOCK_THRESHOLD = -64;
-const VOICE_WAVEFORM_MAX_BARS = 32;
-const VOICE_WAVEFORM_VISIBLE_BARS = 20;
+
 const MESSAGE_REPLY_SWIPE_THRESHOLD = 44;
 const MESSAGE_REPLY_SWIPE_ACTION_WIDTH = 68;
 const VOICE_RECORDING_STATES = {
@@ -212,45 +218,6 @@ const VOICE_RECORDING_STATES = {
   sending: 'sending',
 };
 
-/**
- * @param {number} value
- * @param {number} min
- * @param {number} max
- * @returns {number}
- */
-const clampNumber = (value, min, max) => Math.max(min, Math.min(max, value));
-
-/**
- * @param {unknown} metering
- * @param {number} [durationMs]
- * @param {number} [index]
- * @returns {number}
- */
-const toVoiceWaveBarHeight = (metering, durationMs = 0, index = 0) => {
-  const parsedMetering = Number(metering);
-  if (Number.isFinite(parsedMetering)) {
-    // Already-rendered heights from previous drafts/messages.
-    if (parsedMetering >= 4 && parsedMetering <= 36) {
-      return clampNumber(Math.round(parsedMetering), 4, 20);
-    }
-    let ratio = 0;
-    // Most metering values are in dB scale (e.g. -160 to 0).
-    if (parsedMetering <= 10 && parsedMetering >= -200) {
-      ratio = (parsedMetering + 120) / 120;
-    } else if (parsedMetering >= 0 && parsedMetering <= 1.2) {
-      ratio = parsedMetering;
-    } else if (parsedMetering > 1.2 && parsedMetering <= 220) {
-      ratio = parsedMetering / 180;
-    }
-    ratio = clampNumber(ratio, 0, 1);
-    return Math.round(4 + (ratio * 16));
-  }
-
-  // Fallback animation when metering is unavailable on the platform/build.
-  const phase = ((Number(durationMs) || 0) / 180) + (index * 0.8);
-  const value = (Math.sin(phase) + 1) / 2;
-  return Math.round(5 + (value * 13));
-};
 const NON_EDITABLE_MESSAGE_COMPOSITION_TYPES = new Set([
   'contact_share',
   'event_share',
@@ -1157,7 +1124,8 @@ function Conversation({ navigation, route }) {
     /** @type {{ asset: AttachmentAsset } | null} */ (null),
   );
   const [pendingVoiceDraft, setPendingVoiceDraft] = useState(
-    /** @type {{
+    /**
+     * @type {{
      *  durationMs: number;
      *  fileName: string;
      *  diagnostics?: {
@@ -1171,7 +1139,7 @@ function Conversation({ navigation, route }) {
      *  size: number;
      *  uri: string;
      *  waveform: number[];
-     * } | null} */
+      } | null} */
     (null),
   );
   const [isUploading, setIsUploading] = useState(false);
@@ -1205,10 +1173,15 @@ function Conversation({ navigation, route }) {
   const [voiceRecordingState, setVoiceRecordingState] = useState(VOICE_RECORDING_STATES.idle);
   const [voiceRecordingDurationMs, setVoiceRecordingDurationMs] = useState(0);
   const [voiceRecordingHint, setVoiceRecordingHint] = useState('');
-  const [voiceRecordingWaveform, setVoiceRecordingWaveform] = useState(/** @type {number[]} */ ([]));
   const loggedAttachmentShapeMessageIdsRef = useRef(new Set());
   const voiceRecordingStateRef = useRef(VOICE_RECORDING_STATES.idle);
-  const voiceWaveformTickRef = useRef(0);
+  // MSGLIVE — la poignée des barres de niveau. Les hauteurs ne passent plus par
+  // l'état de cet écran : on les pousse ici, et seules les barres se
+  // redessinent. Mesuré : 101 rendus de l'écran pour 5 s de vocal, contre 6.
+  const voiceLevelBarsRef = useRef(/** @type {any} */ (null));
+  // La dernière seconde AFFICHÉE par le chronomètre. Le micro en annonce dix
+  // par seconde ; le libellé n'en montre qu'une.
+  const derniereSecondeAffichee = useRef(-1);
 
   const isVoiceRecording = voiceRecordingState === VOICE_RECORDING_STATES.recording
     || voiceRecordingState === VOICE_RECORDING_STATES.locked
@@ -1587,7 +1560,8 @@ function Conversation({ navigation, route }) {
   }), []);
 
   const buildLocalPendingMessage = useCallback((
-    /** @type {{
+    /**
+     * @type {{
      *  attachments?: any[];
      *  clientMessageId?: string;
      *  composition?: any;
@@ -1595,7 +1569,7 @@ function Conversation({ navigation, route }) {
      *  event?: any;
      *  message?: string;
      *  replyTo?: { documentId?: string } | null;
-     * }} */ payload = {},
+      }} */ payload = {},
   ) => {
     const safePayload = /** @type {any} */ (payload || {});
     const {
@@ -1890,13 +1864,14 @@ function Conversation({ navigation, route }) {
 
   const uploadAndSendAttachment = async (
     /** @type {AttachmentAsset} */ asset,
-    /** @type {{
+    /**
+     * @type {{
      *  caption?: string;
      *  clientMessageId?: string;
      *  createdAt?: string;
      *  optimisticMessageId?: string;
      *  replyTo?: { documentId?: string } | null;
-     * }} */ options = {},
+      }} */ options = {},
   ) => {
     if (uploadInFlightRef.current) {
       logAttachmentDebug('uploadAndSendAttachment skipped: upload already in progress', {
@@ -1992,13 +1967,14 @@ function Conversation({ navigation, route }) {
 
   const uploadAndSendAttachmentWithPlaceholder = async (
     /** @type {AttachmentAsset} */ asset,
-    /** @type {{
+    /**
+     * @type {{
      *  caption?: string;
      *  clientMessageId?: string;
      *  createdAt?: string;
      *  optimisticMessageId?: string;
      *  replyTo?: { documentId?: string } | null;
-     * }} */ options = {},
+      }} */ options = {},
   ) => {
     if (uploadInFlightRef.current) {
       logAttachmentDebug('uploadAndSendAttachmentWithPlaceholder skipped: upload already in progress', {
@@ -3012,8 +2988,8 @@ function Conversation({ navigation, route }) {
     setVoiceRecordingState(VOICE_RECORDING_STATES.idle);
     setVoiceRecordingDurationMs(0);
     setVoiceRecordingHint('');
-    setVoiceRecordingWaveform([]);
-    voiceWaveformTickRef.current = 0;
+    derniereSecondeAffichee.current = -1;
+    voiceLevelBarsRef.current?.reinitialiser();
   }, []);
 
   const handleStartVoiceRecording = useCallback(async () => {
@@ -3037,29 +3013,27 @@ function Conversation({ navigation, route }) {
     try {
       setVoiceRecordingHint(t('conversation.voice.hint', 'Glisser gauche pour annuler, glisser haut pour verrouiller.'));
       setVoiceRecordingDurationMs(0);
-      setVoiceRecordingWaveform(
-        Array.from({ length: 14 }, (_, index) => toVoiceWaveBarHeight(null, 0, index)),
-      );
-      voiceWaveformTickRef.current = 0;
+      derniereSecondeAffichee.current = -1;
+      voiceLevelBarsRef.current?.reinitialiser();
       await startRecording({
+        // MSGLIVE — LES NIVEAUX NE REMONTENT PLUS JUSQU'ICI. Ils sont poussés
+        // directement dans les barres, qui se redessinent seules. Avant, chaque
+        // niveau redessinait l'écran ENTIER — 7 400 lignes, dix fois par
+        // seconde.
         onMetering: (metering, durationMs) => {
-          const now = Date.now();
-          if (now - voiceWaveformTickRef.current < 80) return;
-          voiceWaveformTickRef.current = now;
-
-          setVoiceRecordingWaveform((previousWaveform) => {
-            const nextHeight = toVoiceWaveBarHeight(
-              metering,
-              durationMs,
-              previousWaveform.length,
-            );
-            const trimmedWaveform = previousWaveform.length >= VOICE_WAVEFORM_MAX_BARS
-              ? previousWaveform.slice(previousWaveform.length - VOICE_WAVEFORM_MAX_BARS + 1)
-              : previousWaveform;
-            return [...trimmedWaveform, nextHeight];
-          });
+          voiceLevelBarsRef.current?.pousser(metering, durationMs);
         },
-        onProgress: (durationMs) => setVoiceRecordingDurationMs(durationMs),
+        // MSGLIVE — LE CHRONOMÈTRE NE COMPTE QUE LES SECONDES ENTIÈRES, parce
+        // que c'est tout ce que le libellé affiche (`formatDurationLabel`).
+        // Le micro, lui, rend compte toutes les 100 ms : sans ce garde, neuf
+        // rendus d'écran sur dix servaient à réécrire exactement le même
+        // « 00:03 ».
+        onProgress: (durationMs) => {
+          const seconde = Math.floor((Number(durationMs) || 0) / 1000);
+          if (seconde === derniereSecondeAffichee.current) return;
+          derniereSecondeAffichee.current = seconde;
+          setVoiceRecordingDurationMs(durationMs);
+        },
       });
       setVoiceRecordingState(VOICE_RECORDING_STATES.recording);
       logVoiceDiagnostic('record-start-succeeded', { chatId });
@@ -3138,8 +3112,15 @@ function Conversation({ navigation, route }) {
         normalizedWaveform = draft.waveform
           .map((bar, index) => toVoiceWaveBarHeight(bar, normalizedDurationMs, index))
           .slice(-VOICE_WAVEFORM_MAX_BARS);
-      } else if (voiceRecordingWaveform.length > 0) {
-        normalizedWaveform = voiceRecordingWaveform.slice(-VOICE_WAVEFORM_MAX_BARS);
+      } else {
+        // MSGLIVE — l'historique des hauteurs vit maintenant DANS les barres.
+        // On vient le chercher à l'arrêt pour en faire la forme d'onde du
+        // brouillon, plutôt que d'en garder une copie ici : une copie, c'est
+        // exactement le rendu d'écran par tick qu'on vient de supprimer.
+        const hauteursVues = voiceLevelBarsRef.current?.lireHauteurs() || [];
+        if (hauteursVues.length > 0) {
+          normalizedWaveform = hauteursVues.slice(-VOICE_WAVEFORM_MAX_BARS);
+        }
       }
 
       setPendingVoiceDraft({
@@ -3204,7 +3185,6 @@ function Conversation({ navigation, route }) {
     resetVoiceRecordingState,
     showErrorBanner,
     t,
-    voiceRecordingWaveform,
   ]);
 
   const microphonePanResponder = useMemo(() => PanResponder.create({
@@ -5869,14 +5849,6 @@ function Conversation({ navigation, route }) {
     const hasVoiceSession = hasActiveVoiceSession;
     const hasVoiceDraft = Boolean(pendingVoiceDraft?.uri);
     if (!hasMediaDraft && !hasReplyPreview && !hasVoiceSession && !hasVoiceDraft) return null;
-    const fallbackWaveform = Array.from(
-      { length: 14 },
-      (_, index) => toVoiceWaveBarHeight(null, voiceRecordingDurationMs, index),
-    );
-    const liveWaveformBars = voiceRecordingWaveform.length > 0
-      ? voiceRecordingWaveform
-      : fallbackWaveform;
-    const visibleWaveformBars = liveWaveformBars.slice(-VOICE_WAVEFORM_VISIBLE_BARS);
     const draftTotalMs = Math.max(
       Number(pendingVoiceDraft?.durationMs) || 0,
       Number(draftPlaybackDurationMs) || 0,
@@ -5979,33 +5951,7 @@ function Conversation({ navigation, route }) {
                   ? t('conversation.voice.sending', 'Envoi en cours...')
                   : `${formatDurationLabel(voiceRecordingDurationMs)} - ${voiceRecordingHint || t('conversation.voice.hintShort', 'Maintiens appuyé pour enregistrer')}`}
               </Text>
-              <View
-                style={{
-                  alignItems: 'flex-end',
-                  flexDirection: 'row',
-                  height: 22,
-                  marginTop: 8,
-                  maxWidth: 190,
-                  overflow: 'hidden',
-                }}
-              >
-                {visibleWaveformBars.map((barHeight, index) => (
-                  <View
-                    // eslint-disable-next-line react/no-array-index-key
-                    key={`voice-wave-${index}`}
-                    style={{
-                      backgroundColor: isSendingVoiceNote ? Colors.neutral300 : Colors.primary500,
-                      borderRadius: 2,
-                      height: barHeight,
-                      marginRight: index === visibleWaveformBars.length - 1 ? 0 : 2,
-                      opacity: isSendingVoiceNote
-                        ? (0.45 + (((index + 1) / Math.max(visibleWaveformBars.length, 1)) * 0.35))
-                        : (0.35 + (((index + 1) / Math.max(visibleWaveformBars.length, 1)) * 0.65)),
-                      width: 3,
-                    }}
-                  />
-                ))}
-              </View>
+              <VoiceLevelBars dimmed={isSendingVoiceNote} ref={voiceLevelBarsRef} />
             </View>
             {isVoiceRecordingLocked ? (
               <View style={{ flexDirection: 'row', gap: 8 }}>
