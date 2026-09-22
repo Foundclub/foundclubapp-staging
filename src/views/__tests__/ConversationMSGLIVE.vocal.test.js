@@ -172,6 +172,7 @@ jest.mock('@/services/chat/chatQueriesCompat', () => ({
     data: { documentId: 'chat-1', participants: [], type: 'team' },
     isLoading: false,
   }),
+  useGetChatMessageReactions: () => ({ data: { data: [] }, isLoading: false }),
   useGetChatMessages: () => ({
     data: { pages: [{ data: [], meta: { pagination: { page: 1, pageCount: 1, total: 0 } } }] },
     fetchNextPage: jest.fn(),
