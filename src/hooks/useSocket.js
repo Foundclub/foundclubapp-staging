@@ -17,6 +17,9 @@ export const EVENTS = {
   LEFT: 'left',
   MESSAGE_DELETED: 'message-deleted',
   MESSAGE_READ: 'message-read',
+  // MSGREACT — le canal des reactions emoji. Jumeau de
+  // admin/src/socket/constants.ts : les deux chaines doivent rester identiques.
+  MESSAGE_REACTION_UPDATED: 'message-reaction-updated',
   MESSAGE_RECEIVED: 'message-received',
   MESSAGE_UPDATED: 'message-updated',
   READ_MESSAGE: 'read-message',

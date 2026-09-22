@@ -4,6 +4,7 @@ import { buildNormalizedQueryKey } from '@/utils/queryKey';
 
 import {
   getChatById,
+  getChatMessageReactions,
   getChatMessages,
   getChats,
 } from './chatService';
@@ -11,6 +12,7 @@ import {
 const CHATS_STALE_MS = 30 * 1000;
 const CHAT_DETAIL_STALE_MS = 30 * 1000;
 const CHAT_MESSAGES_STALE_MS = 15 * 1000;
+const CHAT_REACTIONS_STALE_MS = 15 * 1000;
 
 /**
  * React Query hook to fetch messages
@@ -86,6 +88,37 @@ export const useGetChatById = (chatId, options = {}) => {
     queryKey: buildNormalizedQueryKey(['chat', chatId], {
       includeMessages,
     }),
+    refetchOnMount,
+    refetchOnWindowFocus,
+    staleTime,
+    ...queryOptions,
+  });
+};
+
+/**
+ * MSGREACT — les reactions emoji d une conversation.
+ *
+ * 🧊 ELLE EST SEPAREE DE LA LISTE DES MESSAGES, ET C EST LE POINT ENTIER : le
+ * serveur sert la page de messages depuis un cache de 3 MINUTES. Y glisser les
+ * reactions les aurait figees pour tout le monde pendant ce temps-la — un pouce
+ * leve invisible jusqu a trois minutes apres coup.
+ * @param {string} chatId La conversation.
+ * @param {any} [options] Les options react-query.
+ * @returns {import('@tanstack/react-query').UseQueryResult<{chatDocumentId: string, data: any[]}>}
+ */
+export const useGetChatMessageReactions = (chatId, options = {}) => {
+  const {
+    enabled = true,
+    refetchOnMount = true,
+    refetchOnWindowFocus = false,
+    staleTime = CHAT_REACTIONS_STALE_MS,
+    ...queryOptions
+  } = options || {};
+
+  return useQuery({
+    enabled: !!chatId && enabled,
+    queryFn: () => getChatMessageReactions(chatId),
+    queryKey: buildNormalizedQueryKey(['chat-message-reactions', chatId], {}),
     refetchOnMount,
     refetchOnWindowFocus,
     staleTime,

@@ -117,3 +117,8 @@ export const useGetChatById = hasFunction(ChatQueries.useGetChatById)
 export const useGetChatMessages = hasFunction(ChatQueries.useGetChatMessages)
   ? ChatQueries.useGetChatMessages
   : useFallbackGetChatMessages;
+
+// MSGREACT — pas de repli pour celle-ci : elle nait avec le lot, donc elle
+// existe forcement dans chatQueries. Le passe-plat est la pour que le site
+// n ait qu UNE porte d entree vers les requetes de messagerie.
+export const { useGetChatMessageReactions } = ChatQueries;

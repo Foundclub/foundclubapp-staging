@@ -17,13 +17,22 @@ import {
   createPollComposition,
   getPollVoteCount,
 } from '@/domains/messaging/pollUseCases'
+import {
+  getMyReactionEmoji,
+  getReactionsForMessage,
+  indexReactionsByMessage,
+} from '@/domains/messaging/reactionUseCases';
 import useMessaging from '@/domains/messaging/useMessaging'
 import { BREAKPOINTS } from '@/responsive'
 import ScreenContainer from '@/components/templates/ScreenContainer'
 import { RouteNames } from '@/navigation/routeNames'
 import links from '@/platform/links'
 import media from '@/platform/media'
-import { useGetChatById, useGetChatMessages } from '@/services/chat/chatQueriesCompat'
+import {
+  useGetChatById,
+  useGetChatMessageReactions,
+  useGetChatMessages,
+} from '@/services/chat/chatQueriesCompat';
 const { openUrl } = links || {}
 const { pickDocument, pickImage, recordVoiceNote } = media || {}
 import { createChatMessage } from '@/services/chat/chatService'
@@ -237,6 +246,15 @@ function Conversation({ navigation, route }) {
   const [isSubmittingPoll, setIsSubmittingPoll] = useState(false)
   const [isSubmittingProposal, setIsSubmittingProposal] = useState(false)
   const [reportedMessageId, setReportedMessageId] = useState('')
+  // MSGREACT — le site LIT les reactions, il n en pose pas (l appui long n a pas
+  // d equivalent naturel a la souris : ce sera un lot a part si Adel le veut).
+  // La requete est la meme que celle du telephone, donc la socket qui met a jour
+  // la reserve tient aussi ici.
+  const { data: chatReactionsData } = useGetChatMessageReactions(chatId);
+  const reactionsByMessage = useMemo(
+    () => indexReactionsByMessage(chatReactionsData?.data),
+    [chatReactionsData?.data],
+  );
   const messagePaneRef = useRef(null)
   const typingTimeoutRef = useRef(/** @type {ReturnType<typeof setTimeout> | null} */ (null))
   const handledSharedEventFromPickerRef = useRef('')
@@ -1403,6 +1421,11 @@ function Conversation({ navigation, route }) {
     const shouldRenderAttachments = attachments.length > 0 && message?.composition?.type !== 'voice_note'
     const replyPreview = message?.replyTo
     const bubbleBackground = isMine ? 'rgba(1, 179, 244, 0.14)' : 'rgba(255, 255, 255, 0.04)'
+    const messageReactions = getReactionsForMessage(
+      reactionsByMessage,
+      getMessageId(message),
+    );
+    const myReactionEmoji = getMyReactionEmoji(messageReactions, userData?.documentId);
 
     return (
       <div
@@ -1455,6 +1478,44 @@ function Conversation({ navigation, route }) {
           ) : null}
           {shouldRenderAttachments ? renderAttachments(attachments) : null}
           {message?.composition ? renderComposition(message) : null}
+          {messageReactions.length > 0 ? (
+            <div style={{
+              display: 'flex',
+              flexWrap: 'wrap',
+              gap: 6,
+              justifyContent: isMine ? 'flex-end' : 'flex-start',
+            }}
+            >
+              {messageReactions.map((reaction) => {
+                const isMyReaction = Boolean(myReactionEmoji)
+                  && reaction?.emoji === myReactionEmoji;
+                return (
+                  <span
+                    key={`${getMessageId(message)}-${reaction?.emoji}`}
+                    style={{
+                      alignItems: 'center',
+                      background: isMyReaction
+                        ? 'rgba(1, 179, 244, 0.22)'
+                        : 'rgba(255, 255, 255, 0.06)',
+                      border: `1px solid ${isMyReaction ? primaryColor : 'transparent'}`,
+                      borderRadius: 12,
+                      display: 'inline-flex',
+                      fontSize: 13,
+                      gap: 4,
+                      padding: '2px 8px',
+                    }}
+                    title={(Array.isArray(reaction?.users) ? reaction.users : [])
+                      .map((user) => [user?.firstname, user?.lastname].filter(Boolean).join(' '))
+                      .filter(Boolean)
+                      .join(', ')}
+                  >
+                    <span>{reaction?.emoji}</span>
+                    <span style={{ color: mutedTextColor }}>{String(reaction?.count ?? 0)}</span>
+                  </span>
+                );
+              })}
+            </div>
+          ) : null}
           <div style={{
             alignItems: 'center',
             color: mutedTextColor,
@@ -1544,6 +1605,7 @@ function Conversation({ navigation, route }) {
     isDesktop,
     mutedTextColor,
     primaryColor,
+    reactionsByMessage,
     reportMessageMutation.isPending,
     renderAttachments,
     renderComposition,

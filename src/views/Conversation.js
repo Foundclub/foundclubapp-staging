@@ -50,6 +50,13 @@ import {
   applyOptimisticPollVote,
   createPollComposition,
 } from '@/domains/messaging/pollUseCases';
+import {
+  getMyReactionEmoji,
+  getReactionsForMessage,
+  indexReactionsByMessage,
+  REACTION_EMOJIS,
+  summarizeReactionPeople,
+} from '@/domains/messaging/reactionUseCases';
 import useMessaging from '@/domains/messaging/useMessaging';
 import {
   getParticipationErrorMessage,
@@ -69,6 +76,7 @@ import Button from '@/components/atoms/button/Button';
 import ErrorWrapper from '@/components/atoms/errorWrapper/ErrorWrapper';
 import HeaderBackButton from '@/components/atoms/headerBackButton/HeaderBackButton';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
+import ChatReactionsRow from '@/components/molecules/chatReactions/ChatReactionsRow';
 import CompositionMessageBubble from '@/components/molecules/compositionMessageBubble/CompositionMessageBubble';
 import ContactShareBubble from '@/components/molecules/contactShareBubble/ContactShareBubble';
 import DocumentMessageBubble from '@/components/molecules/documentMessageBubble/DocumentMessageBubble';
@@ -101,7 +109,11 @@ import {
 
 import { RouteNames } from '@/navigation/routeNames';
 
-import { useGetChatById, useGetChatMessages } from '@/services/chat/chatQueriesCompat';
+import {
+  useGetChatById,
+  useGetChatMessageReactions,
+  useGetChatMessages,
+} from '@/services/chat/chatQueriesCompat';
 import {
   cancelRecording,
   deleteVoiceNoteFile,
@@ -588,6 +600,7 @@ function Conversation({ navigation, route }) {
     editMessage,
     getConversationName,
     isSocketConnected,
+    reactToMessage,
     removeGroupMember,
     retryFailedMessage,
     sendMessage,
@@ -804,6 +817,10 @@ function Conversation({ navigation, route }) {
 
   const [isReportModalVisible, setIsReportModalVisible] = useState(false);
   const [isMessageActionsVisible, setIsMessageActionsVisible] = useState(false);
+  // MSGREACT — le message dont on regarde « qui a reagi ». Une chaine vide ferme
+  // la feuille : un seul etat, pas un booleen ET un identifiant qui peuvent
+  // se contredire.
+  const [reactionPeopleMessageId, setReactionPeopleMessageId] = useState('');
   const [isEditMessageModalVisible, setIsEditMessageModalVisible] = useState(false);
   const [isGroupManagementVisible, setIsGroupManagementVisible] = useState(false);
   const [groupNameDraft, setGroupNameDraft] = useState('');
@@ -4849,6 +4866,49 @@ function Conversation({ navigation, route }) {
     setSelectedMessage(undefined);
   }, []);
 
+  // MSGREACT — les reactions du fil, en UNE requete separee de la liste des
+  // messages (celle-ci est servie par un cache serveur de 3 minutes : y mettre
+  // les reactions les aurait figees pour tout le monde pendant ce temps-la).
+  const { data: chatReactionsData } = useGetChatMessageReactions(chatId);
+  const reactionsByMessage = useMemo(
+    () => indexReactionsByMessage(chatReactionsData?.data),
+    [chatReactionsData?.data],
+  );
+
+  const handleToggleReaction = useCallback(async (message, emoji) => {
+    const messageDocumentId = getMessageDocumentId(message);
+    if (!messageDocumentId || !emoji) return;
+
+    setIsMessageActionsVisible(false);
+    setSelectedMessage(undefined);
+
+    try {
+      await reactToMessage(messageDocumentId, emoji);
+    } catch (_error) {
+      showErrorBanner(
+        t('conversation.reactions.error', "Impossible d'enregistrer ta réaction."),
+        t('common.error', 'Erreur'),
+      );
+    }
+  }, [getMessageDocumentId, reactToMessage, showErrorBanner, t]);
+
+  const reactionPeopleLines = useMemo(() => summarizeReactionPeople(
+    getReactionsForMessage(reactionsByMessage, reactionPeopleMessageId),
+    {
+      deletedLabel: t('conversation.reactions.deletedAccount', 'Compte supprimé'),
+      myLabel: t('conversation.reactions.me', 'Toi'),
+      myUserId: userData?.documentId,
+    },
+  ), [reactionPeopleMessageId, reactionsByMessage, t, userData?.documentId]);
+
+  const selectedMessageReactions = useMemo(() => (
+    getReactionsForMessage(reactionsByMessage, selectedMessageDocumentId)
+  ), [reactionsByMessage, selectedMessageDocumentId]);
+
+  const myEmojiOnSelectedMessage = useMemo(() => (
+    getMyReactionEmoji(selectedMessageReactions, userData?.documentId)
+  ), [selectedMessageReactions, userData?.documentId]);
+
   const handleMessageLongPress = useCallback((_, currentMessage) => {
     if (!currentMessage) return;
     setSelectedMessage(currentMessage);
@@ -5222,16 +5282,38 @@ function Conversation({ navigation, route }) {
         renderRightActions={renderReplySwipeAction}
         rightThreshold={MESSAGE_REPLY_SWIPE_THRESHOLD}
       >
-        <TouchableOpacity
-          activeOpacity={1}
-          delayLongPress={250}
-          onLongPress={() => handleMessageLongPress(null, currentMessage)}
-        >
-          {children}
-        </TouchableOpacity>
+        <View>
+          <TouchableOpacity
+            activeOpacity={1}
+            delayLongPress={250}
+            onLongPress={() => handleMessageLongPress(null, currentMessage)}
+          >
+            {children}
+          </TouchableOpacity>
+          {/*
+            MSGREACT — LE POINT DE PASSAGE UNIQUE. Toutes les formes de bulle
+            (texte, evenement, sondage, proposition, piece jointe...) traversent
+            wrapWithMessageInteractions : poser la rangee ici la donne a TOUTES
+            d un coup, au lieu de la recopier dans chaque branche de renderBubble.
+          */}
+          <ChatReactionsRow
+            isMine={isMessageOwnedByCurrentUser(currentMessage)}
+            myUserId={userData?.documentId}
+            onPress={() => setReactionPeopleMessageId(messageKey)}
+            reactions={getReactionsForMessage(reactionsByMessage, messageKey)}
+          />
+        </View>
       </Swipeable>
     );
-  }, [getMessageDocumentId, handleMessageLongPress, handleSwipeToReply, renderReplySwipeAction]);
+  }, [
+    getMessageDocumentId,
+    handleMessageLongPress,
+    handleSwipeToReply,
+    isMessageOwnedByCurrentUser,
+    reactionsByMessage,
+    renderReplySwipeAction,
+    userData?.documentId,
+  ]);
 
   /**
    * Render a custom bubble component
@@ -7099,6 +7181,37 @@ function Conversation({ navigation, route }) {
             <Text style={[Fonts.h3, Fonts.neutral00, Fonts.textCenter]}>
               {t('conversation.actions.modalTitle', 'Actions du message')}
             </Text>
+            {/*
+              MSGREACT — LA BARRE D EMOJIS EST EN HAUT, avant les actions : c est
+              le geste le plus frequent apres l appui long, et celui qui coute le
+              moins cher a annuler (un second appui sur le meme emoji retire).
+            */}
+            <View style={[Alignments.row, Alignments.justifySpaceBetween, Spaces.gap[8]]}>
+              {REACTION_EMOJIS.map((emoji) => {
+                const isMine = myEmojiOnSelectedMessage === emoji;
+                return (
+                  <TouchableOpacity
+                    accessibilityLabel={emoji}
+                    accessibilityRole="button"
+                    key={`reaction-choice-${emoji}`}
+                    onPress={() => handleToggleReaction(selectedMessage, emoji)}
+                    style={[
+                      Alignments.fill,
+                      Alignments.alignCenter,
+                      {
+                        backgroundColor: isMine ? Colors.primary700 : Colors.neutral700,
+                        borderColor: isMine ? Colors.primary500 : Colors.transparent,
+                        borderRadius: 16,
+                        borderWidth: 1,
+                        paddingVertical: 8,
+                      },
+                    ]}
+                  >
+                    <Text style={{ fontSize: 22 }}>{emoji}</Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
             <Button
               onPress={handleReplySelectedMessage}
               title={t('conversation.actions.reply', 'Repondre')}
@@ -7135,6 +7248,36 @@ function Conversation({ navigation, route }) {
             <Button
               onPress={closeMessageActionsModal}
               title={t('common.actions.cancel', 'Annuler')}
+              variant="PrimaryLight"
+            />
+          </View>
+        </BottomModal>
+
+        {/* MSGREACT — « qui a reagi », ouvert par un appui sur la rangee. */}
+        <BottomModal
+          close={() => setReactionPeopleMessageId('')}
+          isVisible={Boolean(reactionPeopleMessageId)}
+        >
+          <View style={[Spaces.gap[12], Spaces.marginTop[24], Spaces.marginBottom[8]]}>
+            <Text style={[Fonts.h3, Fonts.neutral00, Fonts.textCenter]}>
+              {t('conversation.reactions.title', {
+                count: reactionPeopleLines.length,
+                defaultValue_one: '{{count}} réaction',
+                defaultValue_other: '{{count}} réactions',
+              })}
+            </Text>
+            {reactionPeopleLines.map((line) => (
+              <View
+                key={line.key}
+                style={[Alignments.row, Alignments.alignCenter, Spaces.gap[12]]}
+              >
+                <Text style={{ fontSize: 20 }}>{line.emoji}</Text>
+                <Text style={[Fonts.p2, Fonts.neutral00]}>{line.name}</Text>
+              </View>
+            ))}
+            <Button
+              onPress={() => setReactionPeopleMessageId('')}
+              title={t('common.close', 'Fermer')}
               variant="PrimaryLight"
             />
           </View>

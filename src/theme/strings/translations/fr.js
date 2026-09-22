@@ -4873,6 +4873,13 @@ export default {
       sendError: "Impossible d'envoyer la proposition.",
       sent: 'Ta proposition a été envoyée !',
     },
+    reactions: {
+      deletedAccount: 'Compte supprimé',
+      error: "Impossible d'enregistrer ta réaction.",
+      me: 'Toi',
+      title_one: '{{count}} réaction',
+      title_other: '{{count}} réactions',
+    },
     readOnly: "Canal d'annonce (lecture seule)",
     reload: 'Recharger la conversation',
     reply: {
