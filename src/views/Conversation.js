@@ -78,6 +78,7 @@ import EventShareBubble from '@/components/molecules/eventShareBubble/EventShare
 import LocationShareBubble from '@/components/molecules/locationShareBubble/LocationShareBubble';
 import PollMessageBubble from '@/components/molecules/pollMessageBubble/PollMessageBubble';
 import ProposalMessageBubble from '@/components/molecules/proposalMessageBubble/ProposalMessageBubble';
+import TypingIndicator from '@/components/molecules/typingIndicator/TypingIndicator';
 import VoiceNoteBubble from '@/components/molecules/voiceNoteBubble/VoiceNoteBubble';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
 import AutocompleteAddressInput from '@/components/organisms/autocompleteAddressInput/autocompleteAddressInput';
@@ -192,6 +193,11 @@ const isEventShareEnabled = isFlagEnabled(process.env.FC_CHAT_SHARE_EVENT, true)
 const isAttachmentDebugEnabled = isFlagEnabled(process.env.FC_CHAT_ATTACHMENT_DEBUG, false);
 // MSG1/N5 — au plus un « untel ecrit... » par seconde et par personne.
 const TYPING_START_THROTTLE_MS = 1000;
+// MSGLIVE — au bout de ce silence, on considère que l'autre a arrêté d'écrire.
+// Six secondes, parce que son téléphone re-signale sa frappe une fois par
+// seconde au plus : six signaux manqués d'affilée, ce n'est plus un blanc dans
+// la frappe, c'est quelqu'un qui a posé son téléphone (ou perdu le réseau).
+const TYPING_IDLE_TIMEOUT_MS = 6000;
 const VOICE_GESTURE_CANCEL_THRESHOLD = -64;
 const VOICE_GESTURE_LOCK_THRESHOLD = -64;
 const VOICE_WAVEFORM_MAX_BARS = 32;
@@ -1419,35 +1425,89 @@ function Conversation({ navigation, route }) {
   };
 
   // Typing Indicator Logic
+  //
+  // MSGLIVE — LA MINUTERIE D'EXTINCTION, et pourquoi elle n'est pas un confort.
+  //
+  // `typing-stop` n'est émis par le téléphone d'en face QUE s'il vide son champ
+  // ou s'il envoie (plus bas, `handleInputTextChanged`). Quelqu'un qui tape
+  // trois lettres puis pose son téléphone n'émet donc PLUS RIEN — et la bulle
+  // « untel écrit… » restait allumée chez nous INDÉFINIMENT. Un indicateur qui
+  // ment est pire que pas d'indicateur du tout.
+  //
+  // La minuterie vit du côté de CELUI QUI REGARDE, à dessein : elle tient même
+  // si l'autre perd le réseau, tue l'app ou s'éteint — trois cas où aucun
+  // « typing-stop » ne partira jamais. Chaque signal reçu la remet à zéro, et
+  // l'émetteur en renvoie un par seconde au plus (TYPING_START_THROTTLE_MS)
+  // tant qu'il tape vraiment : quelqu'un qui écrit ne s'éteint donc pas.
   useEffect(() => {
     if (!isSocketReadTypingEnabled) return undefined;
     if (!socket) return undefined;
+
+    /** Une minuterie par personne en train d'écrire. @type {Map<string, any>} */
+    const minuteries = new Map();
+
+    /**
+     * Désarme la minuterie d'une personne.
+     * @param {string} userDocumentId - La personne.
+     * @returns {void}
+     */
+    const desarmer = (userDocumentId) => {
+      const minuterie = minuteries.get(userDocumentId);
+      if (minuterie) clearTimeout(minuterie);
+      minuteries.delete(userDocumentId);
+    };
+
+    /**
+     * Retire une personne de la liste de ceux qui écrivent.
+     * @param {string} userDocumentId - La personne.
+     * @returns {void}
+     */
+    const retirer = (userDocumentId) => {
+      setTypingUsers((prev) => {
+        if (!prev.has(userDocumentId)) return prev;
+        const suivant = new Set(prev);
+        suivant.delete(userDocumentId);
+        return suivant;
+      });
+    };
 
     const handleTypingStart = (
       /** @type {{ chatDocumentId?: string; userDocumentId?: string }} */
       { chatDocumentId, userDocumentId },
     ) => {
-      if (chatDocumentId === chatId) {
-        if (!userDocumentId || userDocumentId === userData?.documentId) return;
-        setTypingUsers((prev) => new Set(prev).add(userDocumentId));
-      }
+      if (chatDocumentId !== chatId) return;
+      if (!userDocumentId || userDocumentId === userData?.documentId) return;
+
+      desarmer(userDocumentId);
+      minuteries.set(userDocumentId, setTimeout(() => {
+        minuteries.delete(userDocumentId);
+        retirer(userDocumentId);
+      }, TYPING_IDLE_TIMEOUT_MS));
+
+      setTypingUsers((prev) => {
+        // Le voisin re-signale sa frappe une fois par seconde. Sans ce garde,
+        // chacun de ces signaux fabriquerait un nouvel ensemble et redemanderait
+        // un rendu de TOUT l'écran pour afficher exactement la même chose.
+        if (prev.has(userDocumentId)) return prev;
+        return new Set(prev).add(userDocumentId);
+      });
     };
 
     const handleTypingStop = (
       /** @type {{ chatDocumentId?: string; userDocumentId?: string }} */
       { chatDocumentId, userDocumentId },
     ) => {
-      if (chatDocumentId === chatId) {
-        setTypingUsers((prev) => {
-          const newSet = new Set(prev);
-          if (userDocumentId) {
-            newSet.delete(userDocumentId);
-          } else {
-            newSet.clear();
-          }
-          return newSet;
-        });
+      if (chatDocumentId !== chatId) return;
+
+      if (userDocumentId) {
+        desarmer(userDocumentId);
+        retirer(userDocumentId);
+        return;
       }
+
+      minuteries.forEach((minuterie) => clearTimeout(minuterie));
+      minuteries.clear();
+      setTypingUsers((prev) => (prev.size === 0 ? prev : new Set()));
     };
 
     socket.on(EVENTS.TYPING_STARTED, handleTypingStart);
@@ -1456,6 +1516,10 @@ function Conversation({ navigation, route }) {
     return () => {
       socket.off(EVENTS.TYPING_STARTED, handleTypingStart);
       socket.off(EVENTS.TYPING_STOPPED, handleTypingStop);
+      // Une minuterie qui survit à l'écran rallumerait un état démonté, et
+      // Jest la verrait comme une poignée restée ouverte.
+      minuteries.forEach((minuterie) => clearTimeout(minuterie));
+      minuteries.clear();
     };
   }, [socket, chatId, userData?.documentId]);
 
@@ -6108,11 +6172,9 @@ function Conversation({ navigation, route }) {
           ...SANS_ECHAPPEMENT,
         })
         : i18n.t('conversation.typing.someone', "Quelqu'un écrit...");
-      return (
-        <View style={[Spaces.padding[8], Spaces.marginLeft[16]]}>
-          <Text style={[Fonts.p3, Fonts.neutral500]}>{typingLabel}</Text>
-        </View>
-      );
+      // MSGLIVE — la phrase ne change pas, la FORME change : les trois points
+      // animés viennent se poser À CÔTÉ d'elle, jamais à sa place.
+      return <TypingIndicator label={typingLabel} />;
     }
     return null;
   };
