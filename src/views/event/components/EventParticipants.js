@@ -94,6 +94,11 @@ import SHARE_ICON from '@/assets/icons/share2.png';
  *     missing?: User[];
  *     pending?: PendingParticipation[];
  *   };
+ *   staff?: {
+ *     participating?: User[];
+ *     missing?: User[];
+ *     notAnswered?: User[];
+ *   };
  * }} TeamParticipationSection
  */
 /**
@@ -279,6 +284,20 @@ const resolveAttendanceBadge = ({
   statusKind = 'participating',
   t = (/** @type {string} */ clef, /** @type {any} */ valeurParDefaut) => valeurParDefaut,
 }) => {
+  // 🧑‍🏫 ENCADRE (22/09) — UN ENCADRANT N EST PAS POINTE : COACH1 l ecarte de
+  // l appel. Sa pastille dit donc sa REPONSE, et rien d autre — « Prévu à
+  // l’heure » resterait affiche apres le coup d envoi, faute d appel.
+  // Absent et sans reponse passent par les branches communes, plus bas.
+  if (statusKind === 'staff_present') {
+    return {
+      backgroundColor: withAlpha(colors.primary500, 0.09),
+      borderColor: withAlpha(colors.primary500, 0.21),
+      textColor: colors.primary500,
+      title: t('eventDetails.present', 'Présent'),
+      value: null,
+    };
+  }
+
   const normalizedAttendanceStatus = String(
     attendance?.attendanceStatus || attendance?.finalState || '',
   ).trim().toLowerCase();
@@ -612,7 +631,8 @@ function EventParticipants({
 
   const renderParticipant = (player, options = {}) => {
     const userId = player?.documentId || '';
-    const attendance = userId ? attendanceByUserId[userId] : null;
+    // 🧑‍🏫 ENCADRE : un encadrant n a pas de ligne d appel a lire (COACH1).
+    const attendance = userId && !options.isStaff ? attendanceByUserId[userId] : null;
     // P2 : hors gate on ne descend RIEN — pas une chaine vide « au cas ou ».
     const statutPaiement = colonnePaiementVisible
       ? (statutPaiementParUtilisateur[userId] || '')
@@ -744,6 +764,44 @@ function EventParticipants({
     };
   };
 
+  /**
+   * 🧑‍🏫 ENCADRE (22/09, decision d Adel « PARTWEB-1 → B ») — L ENCADREMENT DE
+   * LA CARTE : les encadrants de l equipe, chacun avec sa reponse.
+   *
+   * 🔒 Il vient APRES les joueurs et n entre dans AUCUN de leurs chiffres : les
+   * tuiles, la barre « reponses sur » et « Relancer » lisent `participating`,
+   * `missing` et `notAnswered`, jamais `staff` (decisions 2-A et relance A).
+   * Pas de groupe vide : une equipe sans encadrant n a rien a dire ici.
+   * @param {TeamParticipationSection} section - La carte d equipe.
+   * @returns {any} - Le groupe, ou rien.
+   */
+  const renderStaffGroup = (section) => {
+    const staff = section.staff || {};
+    const rangees = [
+      ...(staff.participating || []).map((player) => ({ player, statusKind: 'staff_present' })),
+      ...(staff.missing || []).map((player) => ({ player, statusKind: 'missing' })),
+      ...(staff.notAnswered || []).map((player) => ({ player, statusKind: 'not_answered' })),
+    ];
+    if (!rangees.length) return null;
+    return (
+      <>
+        <Text
+          style={[Fonts.h4Bold, Fonts.primary500]}
+          testID={`ENCADRE-encadrement-${section.key}`}
+        >
+          {t('eventDetails.convocation.staff', 'Encadrement')}
+        </Text>
+        {rangees.map(({ player, statusKind }) => renderParticipant(player, {
+          allowLiveLate: false,
+          isStaff: true,
+          keyPrefix: `${section.key}-staff`,
+          showCoachActions: false,
+          statusKind,
+        }))}
+      </>
+    );
+  };
+
   const renderTeamSection = (section) => {
     const pending = section.pending || [];
     const historical = section.historical || {};
@@ -838,6 +896,8 @@ function EventParticipants({
           { emptyMessage: t('eventDetails.emptyStates.allAnswered') },
         )}
 
+        {renderStaffGroup(section)}
+
         {hasHistorical ? (
           <View style={[Spaces.gap[8], Spaces.marginTop[8]]}>
             <Text style={[Fonts.p3Bold, Fonts.neutral300]}>
@@ -892,6 +952,9 @@ function EventParticipants({
       + (item?.notAnswered?.length || 0)
       + (historique.participating?.length || 0)
       + (historique.missing?.length || 0)
+      + (item?.staff?.participating?.length || 0)
+      + (item?.staff?.missing?.length || 0)
+      + (item?.staff?.notAnswered?.length || 0)
       + (canApprovePendingRequests ? (item?.pending?.length || 0) : 0);
   };
 
@@ -928,6 +991,11 @@ function EventParticipants({
     notAnswered: filtrerJoueurs(item.notAnswered),
     participating: filtrerJoueurs(item.participating),
     pending: filtrerDemandes(item.pending),
+    staff: {
+      missing: filtrerJoueurs(item.staff?.missing),
+      notAnswered: filtrerJoueurs(item.staff?.notAnswered),
+      participating: filtrerJoueurs(item.staff?.participating),
+    },
   });
 
   /**
@@ -953,6 +1021,8 @@ function EventParticipants({
   const filtrerSectionParStatut = (item) => ({
     ...garderLeGroupeChoisi(item),
     historical: garderLeGroupeChoisi(item?.historical),
+    // 🧑‍🏫 ENCADRE : « Présents » garde les encadrants presents, et ainsi de suite.
+    staff: garderLeGroupeChoisi(item?.staff),
   });
 
   // ⚠️ CE QUI EST FILTRE, ET CE QUI NE L EST PAS : seules les LISTES rendues
@@ -1495,7 +1565,7 @@ function EventParticipants({
  * onPress: (user?: User) => void,
  * onEditLate?: (user?: User) => void,
  * paymentStatus?: string,
- * statusKind?: 'participating' | 'missing' | 'not_answered',
+ * statusKind?: 'participating' | 'missing' | 'not_answered' | 'staff_present',
  * styles: any,
  * t: (clef: string, valeurParDefaut?: string) => string
  * }} props

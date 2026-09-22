@@ -168,6 +168,118 @@ test('PARTWEB/8 — les 3 listes a plat : completes pour qui organise, presents 
   expect(lecteur.notAnswered).toEqual([]);
 });
 
+// LOT ENCADRE (22/09) — DECISION D ADEL « PARTWEB-1 → B ».
+//
+// 📸 LE TROU : depuis COACH1, un entraineur repond Present / Absent. PARTWEB/3
+// prouve que sa reponse ne pese dans AUCUNE liste de joueurs — c est voulu
+// (« 2-A »). Mais elle ne se voyait NULLE PART : sur un entrainement, personne
+// ne savait si le coach venait.
+//
+// 🎯 Chaque carte d equipe porte desormais `staff` : SES encadrants, ranges par
+// reponse, a cote des listes des joueurs et jamais dedans. Les compteurs, la
+// relance et « Joueurs attendus » lisent les listes des joueurs : ils ne voient
+// donc pas l encadrement, sans qu on ait eu a leur apprendre a l ecarter.
+
+const staffIds = (/** @type {any} */ section) => ({
+  missing: ids(section.staff.missing),
+  notAnswered: ids(section.staff.notAnswered),
+  participating: ids(section.staff.participating),
+});
+
+test('ENCADRE/1 — coach « Present » : Encadrement de SA carte, chiffres joueurs intacts', () => {
+  const event = entrainementSenior({ participations: [entraineur, joueur(1)] });
+  const resultat = sections(event);
+  const [senior] = resultat.teamParticipationSections;
+
+  expect(staffIds(senior)).toEqual({ missing: [], notAnswered: [], participating: ['coach-1'] });
+  // Les listes des joueurs sont celles d avant ce lot, a l identique.
+  expect(ids(senior.participating)).toEqual(['joueur-1']);
+  expect(senior.missing).toEqual([]);
+  expect(senior.notAnswered).toHaveLength(14);
+  expect(ids(senior.notAnswered)).not.toContain('coach-1');
+  expect(resultat.participantsSummary.participatingCount).toBe(1);
+  expect(resultat.externalParticipationSection).toBeNull();
+});
+
+test('ENCADRE/2 — Absent, Sans reponse : chaque encadrant a sa reponse, et UNE seule', () => {
+  const adjoint = { documentId: 'coach-2', firstname: 'Adjoint', lastname: 'Senior' };
+  const preparateur = { documentId: 'coach-3', firstname: 'Prepa', lastname: 'Senior' };
+  const event = entrainementSenior({
+    missings: [adjoint, joueur(2)],
+    participations: [entraineur],
+    team: {
+      ...entrainementSenior().team,
+      trainers: [entraineur, adjoint, preparateur],
+    },
+  });
+  const [senior] = sections(event).teamParticipationSections;
+
+  expect(staffIds(senior)).toEqual({
+    missing: ['coach-2'],
+    notAnswered: ['coach-3'],
+    participating: ['coach-1'],
+  });
+  expect(ids(senior.missing)).toEqual(['joueur-2']);
+  expect(senior.notAnswered).toHaveLength(14);
+});
+
+test('ENCADRE/3 — l entraineur-joueur : hors des joueurs, dans l Encadrement', () => {
+  // PARTWEB/4 le range en entraineur (`getEligibleTeamPlayers`) : ce lot ne
+  // change pas ce rangement, il donne seulement un endroit ou le voir.
+  const event = entrainementSenior({
+    participations: [entraineur],
+    team: {
+      ...entrainementSenior().team,
+      players: [entraineur, ...quinzeJoueurs],
+    },
+  });
+  const resultat = sections(event);
+  const [senior] = resultat.teamParticipationSections;
+
+  expect(staffIds(senior).participating).toEqual(['coach-1']);
+  expect(ids(senior.participating)).toEqual([]);
+  expect(ids(senior.notAnswered)).toEqual(ids(quinzeJoueurs));
+  expect(resultat.participantsSummary.participatingCount).toBe(0);
+});
+
+test('ENCADRE/4 — l encadrant d une equipe invitee est dans la carte de SON equipe', () => {
+  const coachU17 = { documentId: 'coach-u17', firstname: 'Coach', lastname: 'U17' };
+  const invitee = {
+    documentId: 'team-u17',
+    name: 'U17',
+    players: [joueur(40)],
+    trainers: [coachU17],
+  };
+  const event = entrainementSenior({ invitedTeams: [invitee], participations: [coachU17] });
+  const [senior, u17] = sections(event).teamParticipationSections;
+
+  expect(staffIds(senior)).toEqual({ missing: [], notAnswered: ['coach-1'], participating: [] });
+  expect(staffIds(u17)).toEqual({ missing: [], notAnswered: [], participating: ['coach-u17'] });
+  expect(ids(u17.notAnswered)).toEqual(['joueur-40']);
+});
+
+test('ENCADRE/5 — compte supprime ecarte ; equipe sans encadrant = Encadrement vide', () => {
+  const fantome = {
+    blocked: true,
+    documentId: 'coach-supprime',
+    email: 'deleted_user_7@deleted.com',
+    username: 'deleted_user_7_1700000000',
+  };
+  const event = entrainementSenior({
+    invitedTeams: [{
+      documentId: 'team-u17',
+      name: 'U17',
+      players: [joueur(40)],
+      trainers: [],
+    }],
+    team: { ...entrainementSenior().team, trainers: [entraineur, fantome] },
+  });
+  const [senior, u17] = sections(event).teamParticipationSections;
+
+  expect(staffIds(senior)).toEqual({ missing: [], notAnswered: ['coach-1'], participating: [] });
+  expect(staffIds(u17)).toEqual({ missing: [], notAnswered: [], participating: [] });
+});
+
 test('PARTWEB/9 — sans evenement : des listes vides, jamais une exception', () => {
   expect(sections(null)).toEqual({
     externalParticipationSection: null,
