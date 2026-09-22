@@ -793,7 +793,7 @@ function EventParticipants({
           style={[Fonts.h4Bold, Fonts.primary500]}
           testID={`ENCADRE-encadrement-${section.key}`}
         >
-          {t('eventDetails.convocation.staff', 'Encadrement')}
+          {t('eventDetails.convocation.staff', 'Staff')}
         </Text>
         {rangees.map(({ player, statusKind }) => renderParticipant(player, {
           allowLiveLate: false,

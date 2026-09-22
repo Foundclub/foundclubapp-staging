@@ -1250,7 +1250,7 @@ function EventDetails({ navigation, route }) {
         <span
           style={{ color: accentColor, fontFamily: 'Montserrat-Bold, sans-serif', fontSize: 15 }}
         >
-          {`${t('eventDetails.convocation.staff', 'Encadrement')} · ${rangees.length}`}
+          {`${t('eventDetails.convocation.staff', 'Staff')} · ${rangees.length}`}
         </span>
         <div style={{ display: 'grid', gap: 12 }}>
           {rangees.map(([person, reponse]) => renderParticipantCard(person, reponse))}

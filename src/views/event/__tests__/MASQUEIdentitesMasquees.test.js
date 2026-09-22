@@ -274,7 +274,7 @@ describe('MASQUE — identites masquees : un NOMBRE, jamais un nom', () => {
     const ecran = textesVisibles(arbre).join(' | ');
 
     expect(ecran).not.toMatch(/null|undefined|participations-|missings-|team-players-|team-trainers-/);
-    expect(ecran).not.toContain('Encadrement');
+    expect(ecran).not.toContain('Staff');
     // Ni pastilles de filtre, ni barre de recherche : il n y a rien a fouiller.
     expect(arbre.root.findAll((/** @type {any} */ noeud) => String(noeud.props?.testID || '')
       .startsWith('P2-pastille-'))).toHaveLength(0);

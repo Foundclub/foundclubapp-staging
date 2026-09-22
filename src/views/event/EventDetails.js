@@ -6399,7 +6399,7 @@ function EventDetails({ navigation, route }) {
             et pas de titre sans personne dessous. */}
         {branch.staff.length ? (
           <Text style={[Fonts.p3Bold, Fonts.neutral100]}>
-            {t('eventDetails.convocation.staff', 'Encadrement')}
+            {t('eventDetails.convocation.staff', 'Staff')}
           </Text>
         ) : null}
         {branch.staff.map((entry) => (

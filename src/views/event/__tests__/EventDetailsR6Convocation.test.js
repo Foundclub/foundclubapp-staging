@@ -793,10 +793,10 @@ describe('COACH1 · l onglet « Convocation » montre l ENCADREMENT', () => {
     allerSurLOnglet(root, 'callUp');
 
     const texte = textesVisibles(root).join(' | ');
-    expect(texte).toContain('Encadrement');
+    expect(texte).toContain('Staff');
     expect(texte).toContain('Adel Ferchichi');
     // 🔒 Il vient APRES le titre, jamais melange aux titulaires ou au banc.
-    expect(texte.indexOf('Adel Ferchichi')).toBeGreaterThan(texte.indexOf('Encadrement'));
+    expect(texte.indexOf('Adel Ferchichi')).toBeGreaterThan(texte.indexOf('Staff'));
   });
 
   test('le staff le lit aussi', () => {
@@ -807,7 +807,7 @@ describe('COACH1 · l onglet « Convocation » montre l ENCADREMENT', () => {
 
     allerSurLOnglet(root, 'callUp');
 
-    expect(contient(root, 'Encadrement')).toBe(true);
+    expect(contient(root, 'Staff')).toBe(true);
     expect(contient(root, 'Adel Ferchichi')).toBe(true);
   });
 
@@ -816,6 +816,6 @@ describe('COACH1 · l onglet « Convocation » montre l ENCADREMENT', () => {
 
     allerSurLOnglet(root, 'callUp');
 
-    expect(contient(root, 'Encadrement')).toBe(false);
+    expect(contient(root, 'Staff')).toBe(false);
   });
 });

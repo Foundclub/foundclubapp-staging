@@ -252,7 +252,7 @@ describe('COACH1 · la convocation du joueur montre son ENCADREMENT', () => {
 
     const texte = texteVisible(rendre());
 
-    expect(texte).toContain('ENCADREMENT');
+    expect(texte).toContain('STAFF');
     expect(texte).toContain('Adel Ferchichi');
     expect(texte).toContain('Sandra Bernard');
   });
@@ -265,7 +265,7 @@ describe('COACH1 · la convocation du joueur montre son ENCADREMENT', () => {
     // Le banc garde son seul remplacant ; les entraineurs n apparaissent
     // qu APRES le titre « ENCADREMENT », jamais avant (terrain, banc).
     expect(texte).toContain('Leo Diarra');
-    const debutEncadrement = texte.indexOf('ENCADREMENT');
+    const debutEncadrement = texte.indexOf('STAFF');
     expect(debutEncadrement).toBeGreaterThan(-1);
     expect(texte.slice(0, debutEncadrement)).not.toContain('Adel Ferchichi');
     expect(texte.slice(0, debutEncadrement)).not.toContain('Sandra Bernard');
@@ -274,6 +274,6 @@ describe('COACH1 · la convocation du joueur montre son ENCADREMENT', () => {
   test('🔒 sans encadrant venu, aucun titre vide : la partie n existe pas', () => {
     const texte = texteVisible(rendre());
 
-    expect(texte).not.toContain('ENCADREMENT');
+    expect(texte).not.toContain('STAFF');
   });
 });

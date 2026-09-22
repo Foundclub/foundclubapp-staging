@@ -25,7 +25,7 @@ const COACH_ROLE_LABELS = {
   entraineur_adjoint: 'Entraîneur adjoint',
   entraineur_gardiens: 'Entraîneur des gardiens',
   entraineur_principal: 'Entraîneur principal',
-  other: 'Encadrement',
+  other: 'Staff',
   preparateur_physique: 'Préparateur physique',
   team_manager: 'Team manager',
 };
@@ -91,7 +91,7 @@ export const buildRecruitingNeeds = (recruitmentAds, now = new Date()) => {
     if (audienceType === 'coach') {
       label = ad?.coachRole === 'other' && ad?.coachRoleOther
         ? String(ad.coachRoleOther).trim()
-        : (COACH_ROLE_LABELS[ad?.coachRole] || 'Encadrement');
+        : (COACH_ROLE_LABELS[ad?.coachRole] || 'Staff');
     } else {
       label = String(ad?.position || '').trim() || 'Joueur';
     }

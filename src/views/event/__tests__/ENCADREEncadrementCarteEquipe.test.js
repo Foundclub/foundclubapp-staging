@@ -232,7 +232,7 @@ describe('ENCADRE — l Encadrement de chaque carte d equipe, sur le telephone',
     }));
     const textes = textesVisibles(arbre);
 
-    const encadrement = textes.indexOf('Encadrement');
+    const encadrement = textes.indexOf('Staff');
     expect(encadrement).toBeGreaterThan(-1);
     // Apres les trois groupes des joueurs : le dernier joueur « Sans réponse » est au-dessus.
     expect(encadrement).toBeGreaterThan(textes.lastIndexOf('Prenom15 Nom15'));
@@ -279,7 +279,7 @@ describe('ENCADRE — l Encadrement de chaque carte d equipe, sur le telephone',
     }));
     const textes = textesVisibles(arbre);
 
-    expect(textes).not.toContain('Encadrement');
+    expect(textes).not.toContain('Staff');
     expect(textes).not.toContain('Coach Senior');
     expect(textes).not.toContain('Prenom1 Nom1');
   });

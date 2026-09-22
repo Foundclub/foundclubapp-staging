@@ -567,7 +567,7 @@ function TeamWizardRecap({ navigation }) {
               </View>
             ),
             onEdit: () => navigation.navigate(RouteNames.TeamWizardTrainers),
-            title: t('teamWizard.recap.staff', 'Encadrement'),
+            title: t('teamWizard.recap.staff', 'Staff'),
           })}
 
           {freeTeamQuotaItem ? (
