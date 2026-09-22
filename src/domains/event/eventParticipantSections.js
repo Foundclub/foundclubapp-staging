@@ -79,6 +79,21 @@ export const uniqueUsers = (users = []) => {
 };
 
 /**
+ * 🕶️ MASQUE (22/09) — combien de personnes d une liste n ont PAS de cle.
+ *
+ * 📸 LE DEFAUT : identites masquees, le serveur remplace chaque personne par un
+ * jeton anonyme sans `id` ni `documentId` (`buildAnonymousUser`,
+ * `admin/src/utils/people-in-payload.ts`). `uniqueUsers` ne garde que ce qui a
+ * une cle : tout le monde disparaissait, et le telephone disait « Aucun
+ * participant » alors que 3 personnes venaient.
+ * 🔒 Le serveur garde UN jeton par personne : on relit ce NOMBRE, jamais un nom.
+ * @param {User[]} [users] - Une liste recue du serveur.
+ * @returns {number} - Ses personnes vivantes sans cle.
+ */
+const countAnonymousUsers = (users = []) => withoutDeletedAccounts(users)
+  .filter((user) => !getUserKey(user)).length;
+
+/**
  * Les cles des encadrants d UNE equipe.
  * @param {any} team - L equipe telle que le serveur la rend.
  * @returns {Set<string | null>} - Les cles de ses `trainers`.
@@ -173,7 +188,11 @@ export const getEventTrainerKeys = (event) => {
  * }} params - L evenement, les demandes et qui regarde.
  * @returns {{
  *   externalParticipationSection: any;
- *   participantsSummary: { capacity: number; participatingCount: number };
+ *   participantsSummary: {
+ *     anonymousCounts?: { missing: number; notAnswered: number; participating: number };
+ *     capacity: number;
+ *     participatingCount: number;
+ *   };
  *   teamParticipationSections: any[];
  * }} - Les sections a afficher et le resume des presents.
  */
@@ -430,6 +449,20 @@ export const buildTeamParticipationSections = ({
     ...externalParticipating,
   ]);
 
+  // 🕶️ MASQUE (22/09) — IDENTITES MASQUEES : toutes les listes de noms
+  // ci-dessus sont VIDES (aucun jeton n a de cle), et c est voulu. Les nombres,
+  // eux, sont dans les listes recues : un jeton par personne.
+  // ponytail: un encadrant qui repond compte parmi les presents ou les absents —
+  // la charge masquee ne le distingue pas d un joueur (COACH1 l ecarte quand
+  // les noms sont visibles) — et « sans reponse » se lit par soustraction sur
+  // les jetons de joueurs, donc trop bas d autant. Le chiffre exact demande que
+  // le serveur envoie ses propres comptes (lot serveur, non demande).
+  const anonymousParticipating = countAnonymousUsers(event?.participations);
+  const anonymousMissing = countAnonymousUsers(event?.missings);
+  const anonymousPlayers = [event?.team, ...(event?.invitedTeams || [])]
+    .reduce((total, team) => total + countAnonymousUsers(team?.players), 0);
+  const hasAnonymousUsers = anonymousParticipating + anonymousMissing + anonymousPlayers > 0;
+
   return {
     externalParticipationSection: hasExternalData
       ? {
@@ -446,8 +479,16 @@ export const buildTeamParticipationSections = ({
       }
       : null,
     participantsSummary: {
+      // 🕶️ MASQUE — absent quand les noms sont visibles : la forme d avant reste.
+      anonymousCounts: hasAnonymousUsers
+        ? {
+          missing: anonymousMissing,
+          notAnswered: Math.max(0, anonymousPlayers - anonymousParticipating - anonymousMissing),
+          participating: anonymousParticipating,
+        }
+        : undefined,
       capacity: Number(event?.capacity || 0),
-      participatingCount: visibleParticipating.length,
+      participatingCount: visibleParticipating.length + anonymousParticipating,
     },
     teamParticipationSections: sections,
   };

@@ -123,7 +123,11 @@ import SHARE_ICON from '@/assets/icons/share2.png';
  * @property {PendingParticipation[]} pendingParticipations
  * @property {TeamParticipationSection[]} [teamParticipationSections]
  * @property {TeamParticipationSection | null} [externalParticipationSection]
- * @property {{ participatingCount?: number; capacity?: number }} [participantsSummary]
+ * @property {{
+ *   anonymousCounts?: { missing: number; notAnswered: number; participating: number };
+ *   participatingCount?: number;
+ *   capacity?: number;
+ * }} [participantsSummary]
  * @property {boolean} canEdit
  * @property {boolean} [canApprovePendingRequests]
  * @property {boolean} [canManageEventLicenseCampaigns]
@@ -1068,7 +1072,9 @@ function EventParticipants({
   // (EventDetails.js:1910) : ni les absents, ni les sans-reponse ne descendent
   // jusqu ici. On les compte donc sur les listes REELLEMENT rendues, ce qui
   // evite toute dependance croisee avec l ecran.
-  const listesRendues = hasTeamSections
+  // 🕶️ MASQUE (22/09) — identites masquees : aucune liste de noms n est rendue,
+  // les trois nombres sont les jetons comptes par `buildTeamParticipationSections`.
+  const listesDesSections = hasTeamSections
     ? sectionsToRender.reduce((total, item) => ({
       missing: total.missing + (item.missing?.length || 0),
       notAnswered: total.notAnswered + (item.notAnswered?.length || 0),
@@ -1079,6 +1085,8 @@ function EventParticipants({
       notAnswered: participationsByStatus?.notAnswered?.length || 0,
       participating: participationsByStatus?.participating?.length || 0,
     };
+  const listesRendues = (areParticipantIdentitiesHidden && participantsSummary?.anonymousCounts)
+    || listesDesSections;
   const hasRenderedLists = hasTeamSections || Boolean(participationsByStatus);
   const presentsCount = hasRenderedLists ? listesRendues.participating : participatingCount;
   const absentsCount = listesRendues.missing;
