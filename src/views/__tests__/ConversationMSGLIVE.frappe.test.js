@@ -193,7 +193,9 @@ jest.mock('@/services/chat/chatQueriesCompat', () => ({
     },
     isLoading: false,
   }),
-  useGetChatMessageReactions: () => ({ data: { data: [] }, isLoading: false }),
+  // MSGREACT — les reactions emoji du fil. Aucune par defaut : les temoins de
+  // cet ecran ne parlent pas de reactions, et une rangee vide ne se dessine pas.
+  useGetChatMessageReactions: () => ({ data: { chatDocumentId: '', data: [] } }),
   useGetChatMessages: () => ({
     data: { pages: [{ data: [], meta: { pagination: { page: 1, pageCount: 1, total: 0 } } }] },
     fetchNextPage: jest.fn(),

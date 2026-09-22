@@ -4582,9 +4582,11 @@ export default {
       sent: 'Your proposal has been sent!',
     },
     reactions: {
+      add: 'React to this message',
       deletedAccount: 'Deleted account',
       error: 'Unable to save your reaction.',
       me: 'You',
+      pick: 'Choose a reaction',
       title_one: '{{count}} reaction',
       title_other: '{{count}} reactions',
     },

@@ -21,6 +21,7 @@ import {
   getMyReactionEmoji,
   getReactionsForMessage,
   indexReactionsByMessage,
+  REACTION_EMOJIS,
 } from '@/domains/messaging/reactionUseCases';
 import useMessaging from '@/domains/messaging/useMessaging'
 import { BREAKPOINTS } from '@/responsive'
@@ -191,6 +192,76 @@ const getErrorMessage = (error, fallback) => String(error?.message || fallback |
 ))
   .trim()
 
+// REACT-WEB — la frimousse du bouton qui ouvre la barre. Ecrite par POINT DE
+// CODE : un outil d edition qui abime un emoji le fait en silence, et personne
+// ne s en apercoit avant la production. Elle n appartient PAS au jeu ferme des
+// six reactions — c est une icone, pas un choix.
+const REACTION_TRIGGER_GLYPH = String.fromCodePoint(0x1F642);
+
+/** Les mesures de la barre ouverte, en pixels : 6 emojis, leurs marges, son cadre. */
+const REACTION_BAR_WIDTH = 236;
+const REACTION_BAR_HEIGHT = 44;
+
+/**
+ * REACT-WEB — OU POSER LA BARRE, EN COORDONNEES D ECRAN.
+ *
+ * 🪟 ELLE EST EN `position: fixed`, ET C EST TOUT LE POINT : la liste des messages
+ * defile (`overflowY: 'auto'`), donc n IMPORTE QUEL panneau pose a l interieur en
+ * depassant est COUPE par ce cadre. Mesure du 22/09, capture a l appui : ouverte
+ * au-dessus de la premiere bulle, la barre n en montrait que la moitie basse ;
+ * ouverte a l interieur, elle recouvrait la premiere ligne du message — on
+ * choisissait une reaction sans plus voir a quoi on reagissait. Un element fixe
+ * n est coupe par aucun ancetre : les deux defauts tombent d un coup.
+ *
+ * ⬆️⬇️ Elle s ouvre AU-DESSUS du bouton et BASCULE EN DESSOUS quand le haut de la
+ * fenetre est trop proche — sans cette bascule, la bulle du haut la couperait de
+ * nouveau.
+ *
+ * ↔️ Elle est bornee aux deux bords de la fenetre : sur une bulle etroite collee a
+ * un bord, une barre de 236 px depasserait sinon hors de l ecran.
+ * @param {HTMLElement} trigger Le bouton qui vient d etre active.
+ * @returns {{left: number, top: number}} Sa place, en pixels d ecran.
+ */
+const getReactionBarAnchor = (trigger) => {
+  const rect = trigger.getBoundingClientRect();
+  const placeAuDessus = rect.top > REACTION_BAR_HEIGHT + 12;
+
+  return {
+    left: Math.max(8, Math.min(
+      rect.right - REACTION_BAR_WIDTH,
+      window.innerWidth - REACTION_BAR_WIDTH - 8,
+    )),
+    top: placeAuDessus
+      ? rect.top - REACTION_BAR_HEIGHT - 6
+      : rect.bottom + 6,
+  };
+};
+
+/**
+ * REACT-WEB — LE SURVOL NE PEUT PAS SE FAIRE EN STYLE EN LIGNE.
+ *
+ * 🖱️ Un style en ligne ne connait ni `:hover` ni `:focus-within`. Les refaire a la
+ * main demanderait des etats React recalcules a chaque mouvement de souris, dans
+ * une liste qui porte des centaines de bulles. Trois regles CSS couvrent les trois
+ * cas et ne coutent aucun rendu.
+ *
+ * 👆 `@media (hover: none)` EST LE CAS TACTILE, et il n est pas decoratif : sur un
+ * telephone ou une tablette il n existe aucun survol, donc le bouton y reste
+ * visible en permanence. Sans cette regle, reagir serait simplement impossible la-bas.
+ *
+ * ⌨️ `pointer-events: none` tant qu il est transparent evite une cible cliquable
+ * invisible. Le focus clavier, lui, passe toujours : `:focus-within` le rend visible
+ * des que la tabulation arrive dessus.
+ */
+const REACTION_HOVER_STYLE = `
+  .REACTWEB-hote .REACTWEB-declencheur { opacity: 0; pointer-events: none; }
+  .REACTWEB-hote:hover .REACTWEB-declencheur,
+  .REACTWEB-hote:focus-within .REACTWEB-declencheur { opacity: 1; pointer-events: auto; }
+  @media (hover: none) {
+    .REACTWEB-hote .REACTWEB-declencheur { opacity: 1; pointer-events: auto; }
+  }
+`;
+
 // @ts-ignore: FIXME: Baseline TS regression
 const formatDurationLabel = (durationMs) => {
   const totalSeconds = Math.max(0, Math.round(Number(durationMs || 0) / 1000))
@@ -219,6 +290,7 @@ function Conversation({ navigation, route }) {
     isSocketConnected,
     joinChat,
     leaveChat,
+    reactToMessage,
     respondToProposal,
     retryFailedMessage,
     sendMessage,
@@ -246,10 +318,18 @@ function Conversation({ navigation, route }) {
   const [isSubmittingPoll, setIsSubmittingPoll] = useState(false)
   const [isSubmittingProposal, setIsSubmittingProposal] = useState(false)
   const [reportedMessageId, setReportedMessageId] = useState('')
-  // MSGREACT — le site LIT les reactions, il n en pose pas (l appui long n a pas
-  // d equivalent naturel a la souris : ce sera un lot a part si Adel le veut).
-  // La requete est la meme que celle du telephone, donc la socket qui met a jour
-  // la reserve tient aussi ici.
+  // REACT-WEB — le message dont la barre de six emojis est ouverte, ou une chaine
+  // vide. UN SEUL ETAT : un booleen « ouverte » doublé d un identifiant pourraient
+  // se contredire, et deux barres s ouvrir en meme temps.
+  const [reactionBarMessageId, setReactionBarMessageId] = useState('');
+  const [reactionBarAnchor, setReactionBarAnchor] = useState(
+    /** @type {{left: number, top: number} | null} */ (null),
+  );
+  const reactionTriggerRef = useRef(/** @type {HTMLButtonElement | null} */ (null));
+  const reactionBarRef = useRef(/** @type {HTMLDivElement | null} */ (null));
+  // MSGREACT — la requete est la MEME que celle du telephone, donc la socket
+  // `message-reaction-updated` qui met a jour cette reserve (useMessaging) tient
+  // aussi ici : une reaction posee depuis un autre appareil arrive toute seule.
   const { data: chatReactionsData } = useGetChatMessageReactions(chatId);
   const reactionsByMessage = useMemo(
     () => indexReactionsByMessage(chatReactionsData?.data),
@@ -1413,6 +1493,70 @@ function Conversation({ navigation, route }) {
     primaryColor,
   ])
 
+  /**
+   * REACT-WEB — pose, remplace ou retire MA reaction sur un message.
+   *
+   * 🎯 LE SITE N ARBITRE RIEN : il envoie TOUJOURS l emoji sur lequel on a clique,
+   * et c est le serveur qui decide (chat-message-reaction-actions.ts) — meme emoji
+   * que la mienne : il la retire ; autre emoji : il la remplace ; aucune encore :
+   * il la pose. Rejouer cette regle ici ferait DEUX regles a garder identiques,
+   * exactement comme le telephone a choisi de ne pas le faire.
+   * @param {string} messageDocumentId Le message vise.
+   * @param {string} emoji L emoji cliqué, pris dans le jeu ferme.
+   * @returns {Promise<void>} Rien : le resultat arrive par la reserve react-query.
+   */
+  const handleToggleReaction = useCallback(async (messageDocumentId, emoji) => {
+    if (!messageDocumentId || !emoji) return;
+    setReactionBarMessageId('');
+
+    try {
+      await reactToMessage(messageDocumentId, emoji);
+    } catch (error) {
+      // Le meme canal que toutes les autres erreurs de cet ecran.
+      window.alert(error?.message || i18next.t(
+        'conversation.reactions.error',
+        "Impossible d'enregistrer ta réaction.",
+      ));
+    }
+  }, [reactToMessage]);
+
+  // REACT-WEB — ECHAP FERME LA BARRE ET REND LE FOCUS AU BOUTON qui l a ouverte.
+  // Sans ce retour, une personne au clavier se retrouve projetee en haut de la page,
+  // sans aucun repere pour revenir a son message. Un clic a cote ferme aussi la
+  // barre — sinon le panneau reste suspendu au-dessus de la conversation.
+  useEffect(() => {
+    if (!reactionBarMessageId) return undefined;
+
+    const handleKeyDown = (/** @type {KeyboardEvent} */ event) => {
+      if (event.key !== 'Escape') return;
+      setReactionBarMessageId('');
+      reactionTriggerRef.current?.focus();
+    };
+    const handlePointerDown = (/** @type {MouseEvent} */ event) => {
+      const { target } = event;
+      if (reactionBarRef.current?.contains(/** @type {Node} */ (target))) return;
+      // Le bouton lui-meme est exclu : sinon ce clic fermerait la barre ici, et
+      // son propre `onClick` la rouvrirait aussitot — elle ne se fermerait jamais.
+      if (reactionTriggerRef.current?.contains(/** @type {Node} */ (target))) return;
+      setReactionBarMessageId('');
+    };
+
+    // ⛔ ET LE DEFILEMENT LA FERME. La barre est FIXE a l ecran : si la liste
+    // bouge sous elle, elle reste en place et se retrouve pointee sur un autre
+    // message. `true` en 3e argument est indispensable — l evenement `scroll` d un
+    // cadre interieur ne remonte pas, il ne se prend qu a la descente.
+    const handleScroll = () => setReactionBarMessageId('');
+
+    document.addEventListener('keydown', handleKeyDown);
+    document.addEventListener('mousedown', handlePointerDown);
+    document.addEventListener('scroll', handleScroll, true);
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+      document.removeEventListener('mousedown', handlePointerDown);
+      document.removeEventListener('scroll', handleScroll, true);
+    };
+  }, [reactionBarMessageId]);
+
   // @ts-ignore: FIXME: Baseline TS regression
   const renderMessageCard = useCallback((message) => {
     const senderName = getDisplayName(message?.sender)
@@ -1436,6 +1580,8 @@ function Conversation({ navigation, route }) {
         }}
       >
         <div
+          className="REACTWEB-hote"
+          data-testid={`REACTWEB-bulle-${getMessageId(message)}`}
           style={{
             background: bubbleBackground,
             border: `1px solid ${isMine ? 'rgba(1, 179, 244, 0.28)' : borderColor}`,
@@ -1445,9 +1591,105 @@ function Conversation({ navigation, route }) {
             gap: 12,
             maxWidth: 'min(720px, 100%)',
             padding: 18,
+            // REACT-WEB — LE BOUTON EST POSE EN ABSOLU DANS CE CADRE, et c est ce qui
+            // garantit qu une conversation garde exactement son allure : il n occupe
+            // aucune place dans la grille, donc aucune bulle ne se decale, ni quand il
+            // apparait, ni quand il disparait.
+            position: 'relative',
             width: isDesktop ? 'auto' : '100%',
           }}
         >
+          <button
+            aria-expanded={reactionBarMessageId === getMessageId(message)}
+            aria-haspopup="true"
+            aria-label={i18next.t('conversation.reactions.add', 'Réagir à ce message')}
+            className="REACTWEB-declencheur"
+            data-testid={`REACTWEB-reagir-${getMessageId(message)}`}
+            onClick={(event) => {
+              reactionTriggerRef.current = event.currentTarget;
+              if (reactionBarMessageId === getMessageId(message)) {
+                setReactionBarMessageId('');
+                return;
+              }
+              setReactionBarAnchor(getReactionBarAnchor(event.currentTarget));
+              setReactionBarMessageId(getMessageId(message));
+            }}
+            style={{
+              alignItems: 'center',
+              background: panelBackground,
+              border: `1px solid ${borderColor}`,
+              borderRadius: 999,
+              color: baseTextColor,
+              cursor: 'pointer',
+              display: 'flex',
+              fontSize: 14,
+              height: 28,
+              justifyContent: 'center',
+              lineHeight: 1,
+              padding: 0,
+              position: 'absolute',
+              right: 10,
+              top: 10,
+              transition: 'opacity 120ms ease',
+              width: 28,
+              zIndex: 2,
+            }}
+            type="button"
+          >
+            {REACTION_TRIGGER_GLYPH}
+          </button>
+          {reactionBarMessageId === getMessageId(message) && reactionBarAnchor ? (
+            <div
+              aria-label={i18next.t('conversation.reactions.pick', 'Choisir une réaction')}
+              data-testid={`REACTWEB-barre-${getMessageId(message)}`}
+              ref={reactionBarRef}
+              role="group"
+              style={{
+                alignItems: 'center',
+                backdropFilter: 'blur(10px)',
+                background: panelBackground,
+                border: `1px solid ${borderColor}`,
+                borderRadius: 999,
+                boxShadow: '0 10px 30px rgba(0, 0, 0, 0.45)',
+                boxSizing: 'border-box',
+                display: 'flex',
+                gap: 2,
+                height: REACTION_BAR_HEIGHT,
+                justifyContent: 'center',
+                left: reactionBarAnchor.left,
+                padding: 4,
+                // Fixe, donc hors d atteinte du cadre qui defile : voir getReactionBarAnchor.
+                position: 'fixed',
+                top: reactionBarAnchor.top,
+                width: REACTION_BAR_WIDTH,
+                zIndex: 40,
+              }}
+            >
+              {REACTION_EMOJIS.map((emoji, emojiIndex) => (
+                <button
+                  aria-label={emoji}
+                  aria-pressed={myReactionEmoji === emoji}
+                  data-testid={`REACTWEB-emoji-${emojiIndex}`}
+                  key={`reaction-choice-${emoji}`}
+                  onClick={() => handleToggleReaction(getMessageId(message), emoji)}
+                  style={{
+                    background: myReactionEmoji === emoji
+                      ? 'rgba(1, 179, 244, 0.22)'
+                      : 'transparent',
+                    border: 0,
+                    borderRadius: 999,
+                    cursor: 'pointer',
+                    fontSize: 18,
+                    lineHeight: 1,
+                    padding: '6px 8px',
+                  }}
+                  type="button"
+                >
+                  {emoji}
+                </button>
+              ))}
+            </div>
+          ) : null}
           {!isMine ? (
             <div style={{ color: mutedTextColor, fontFamily: 'Montserrat-Bold, sans-serif', fontSize: 12 }}>
               {senderName}
@@ -1479,12 +1721,14 @@ function Conversation({ navigation, route }) {
           {shouldRenderAttachments ? renderAttachments(attachments) : null}
           {message?.composition ? renderComposition(message) : null}
           {messageReactions.length > 0 ? (
-            <div style={{
-              display: 'flex',
-              flexWrap: 'wrap',
-              gap: 6,
-              justifyContent: isMine ? 'flex-end' : 'flex-start',
-            }}
+            <div
+              data-testid={`MSGREACT-rangee-${getMessageId(message)}`}
+              style={{
+                display: 'flex',
+                flexWrap: 'wrap',
+                gap: 6,
+                justifyContent: isMine ? 'flex-end' : 'flex-start',
+              }}
             >
               {messageReactions.map((reaction) => {
                 const isMyReaction = Boolean(myReactionEmoji)
@@ -1602,9 +1846,13 @@ function Conversation({ navigation, route }) {
     borderColor,
     handleReportMessage,
     handleRetryFailedMessage,
+    handleToggleReaction,
     isDesktop,
     mutedTextColor,
+    panelBackground,
     primaryColor,
+    reactionBarAnchor,
+    reactionBarMessageId,
     reactionsByMessage,
     reportMessageMutation.isPending,
     renderAttachments,
@@ -1837,6 +2085,7 @@ function Conversation({ navigation, route }) {
               </div>
             ) : null}
 
+            <style>{REACTION_HOVER_STYLE}</style>
             {!messagesError ? messages.map((message) => renderMessageCard(message)) : null}
           </div>
 
