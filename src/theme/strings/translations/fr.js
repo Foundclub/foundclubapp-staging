@@ -4874,9 +4874,11 @@ export default {
       sent: 'Ta proposition a été envoyée !',
     },
     reactions: {
+      add: 'Réagir à ce message',
       deletedAccount: 'Compte supprimé',
       error: "Impossible d'enregistrer ta réaction.",
       me: 'Toi',
+      pick: 'Choisir une réaction',
       title_one: '{{count}} réaction',
       title_other: '{{count}} réactions',
     },
