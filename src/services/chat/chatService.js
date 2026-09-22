@@ -509,3 +509,35 @@ export const respondProposalMessage = async (messageId, status) => {
   });
   return response.data;
 };
+
+/**
+ * MSGREACT — pose, remplace ou retire MA reaction sur un message.
+ * Le meme emoji une seconde fois la retire ; un autre emoji la remplace.
+ * @param {string} messageId Le message vise.
+ * @param {string} emoji L emoji du jeu ferme, ou '' pour retirer la mienne.
+ * @returns {Promise<{ changed: boolean; chatDocumentId: string | null;
+ *   messageDocumentId: string; reactions: any[]; success: boolean }>}
+ *   L etat COMPLET des reactions du message apres coup.
+ */
+export const reactToChatMessage = async (messageId, emoji) => {
+  const response = await client.post(`/chat-messages/${messageId}/react`, {
+    emoji,
+  });
+  return response.data;
+};
+
+/**
+ * MSGREACT — toutes les reactions d une conversation, en UN appel.
+ *
+ * 🧮 Ce n est PAS un appel par message : le serveur rend les reactions du fil
+ * entier (bornees aux plus recentes), et l app les range par message. C est ce
+ * qui evite de multiplier les requetes en descendant dans l historique.
+ * @param {string} chatId La conversation.
+ * @returns {Promise<{ chatDocumentId: string; data: any[] }>} Un bloc par message.
+ */
+export const getChatMessageReactions = async (chatId = '') => {
+  const response = await client.get('/chat-message-reactions', {
+    params: { chat: chatId },
+  });
+  return response.data;
+};
