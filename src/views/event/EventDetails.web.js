@@ -10,6 +10,7 @@ import { useWindowDimensions } from 'react-native';
 
 import useAuth from '@/domains/auth/useAuth';
 import { resolveEventDisplayName } from '@/domains/event/eventDisplayName';
+import { buildTeamParticipationSections, getEventTrainerKeys } from '@/domains/event/eventParticipantSections';
 import { isDetectionEventType, resolveTrainingOpenConfig } from '@/domains/event/eventUseCases';
 import { getCurrentUserEventParticipationState } from '@/domains/event/participationState';
 import { withoutDeletedAccountEntries, withoutDeletedAccounts } from '@/domains/user/deletedAccount';
@@ -1095,19 +1096,187 @@ function EventDetails({ navigation, route }) {
     }
   }, [reviewTournamentTeamMutation, t]);
 
-  // AA02 — les TROIS listes de personnes de la page web passent par le meme
+  // AA02 — les listes de personnes de la page web passent par le meme
   // tri que l'application mobile : `web` compile les sources de `app`, donc la
   // fonction partagee est litteralement la meme. Un compte supprime est
   // anonymise et bloque cote serveur, pas efface : sans ce tri il reste ici.
   const participants = withoutDeletedAccounts(event?.participations);
   const participationRequests = withoutDeletedAccountEntries(event?.participationRequests);
   const invitedTeams = Array.isArray(event?.invitedTeams) ? event.invitedTeams : [];
-  const detectedPlayers = withoutDeletedAccounts(event?.missings);
   const hasVisibleEventTasks = canViewParticipantNames
     && Array.isArray(event?.eventTasks)
     && event.eventTasks.length > 0;
 
+  // 👥 PARTWEB (21/09) — LES MEMES LISTES QUE LE TELEPHONE : Presents, Absents,
+  // Sans reponse, PAR EQUIPE.
+  //
+  // 📸 Le defaut : le site ne lisait que `event.participations` — ceux qui ont
+  // DEJA dit « present ». L entrainement Senior d Adel affichait donc « Aucun
+  // participant confirme » a cote de « Faire l appel : 15 attendus ».
+  //
+  // 🎯 On n ecrit AUCUNE regle ici : `buildTeamParticipationSections` est la
+  // fonction que l ecran du telephone appelle (`EventDetails.js`). Memes
+  // equipes, memes absents, memes entraineurs ecartes (COACH1, « 2-A » : leur
+  // reponse ne compte pas dans les listes des joueurs).
+  // 🧭 Les demandes viennent de l evenement lui-meme (`participationRequests`,
+  // actives seulement cote serveur) ; le telephone y ajoute une liste paginee
+  // dont il tire l historique des equipes retirees — le site ne l affiche pas.
+  const {
+    externalParticipationSection,
+    teamParticipationSections,
+  } = buildTeamParticipationSections({
+    canEdit,
+    event,
+    inactiveParticipations: participationRequests.filter((request) => request?.isActive === false),
+    pendingParticipations: participationRequests.filter(
+      (request) => request?.isActive !== false && request?.participationStatus === 'pending',
+    ),
+    t,
+    trainerKeys: getEventTrainerKeys(event),
+  });
+  const participantSections = [
+    ...teamParticipationSections,
+    ...(externalParticipationSection ? [externalParticipationSection] : []),
+  ];
+  // 🔢 « Joueurs attendus » DIT LE NOMBRE DE L APPEL. Il affichait
+  // `event.totalPlayers`, un champ de saisie qui vaut 0 par defaut au schema :
+  // « 0 » a cote de « 15 attendus ». Quand l evenement a des equipes, on prend
+  // le nombre de la carte « Faire l appel » (le serveur) s il est la, sinon
+  // l effectif des listes ci-dessus. Sans equipe, rien ne change.
+  const expectedPlayersCount = teamParticipationSections.length > 0
+    ? (nextActionExpectedCount ?? teamParticipationSections.reduce(
+      (total, section) => total
+        + section.participating.length
+        + section.missing.length
+        + section.pending.length
+        + section.notAnswered.length,
+      0,
+    ))
+    : null;
+
+  const renderParticipantCard = (participant) => {
+    const displayName = getUserDisplayName(participant);
+    const avatarUrl = getAvatarUrl(participant);
+    return (
+      <div
+        key={getEntityDocumentId(participant) || displayName}
+        style={{
+          alignItems: 'center',
+          background: softSurfaceColor,
+          border: `1px solid ${borderColor}`,
+          borderRadius: 16,
+          display: 'flex',
+          gap: 12,
+          padding: '12px 14px',
+        }}
+      >
+        {avatarUrl ? (
+          <img
+            alt={displayName}
+            src={avatarUrl}
+            style={{
+              borderRadius: '50%', height: 42, objectFit: 'cover', width: 42,
+            }}
+          />
+        ) : (
+          <div style={{
+            alignItems: 'center', background: 'rgba(1,179,244,0.16)', borderRadius: '50%', display: 'inline-flex', height: 42, justifyContent: 'center', width: 42,
+          }}
+          >
+            {getInitials(displayName)}
+          </div>
+        )}
+        <div style={{ display: 'grid', gap: 4 }}>
+          <span style={{ color: textColor, fontFamily: 'Montserrat-Bold, sans-serif', fontSize: 14 }}>{displayName}</span>
+        </div>
+      </div>
+    );
+  };
+
+  // Un groupe d une section : son titre compte ses gens (« Sans réponse · 15 »,
+  // la forme des pastilles du telephone), et un groupe vide DIT qu il est vide.
+  const renderParticipantGroup = (statusKey, title, people, emptyMessage) => (
+    <div
+      data-testid={`PARTWEB-groupe-${statusKey}`}
+      key={statusKey}
+      style={{ display: 'grid', gap: 10 }}
+    >
+      <span style={{ color: accentColor, fontFamily: 'Montserrat-Bold, sans-serif', fontSize: 15 }}>
+        {`${title} · ${people.length}`}
+      </span>
+      {people.length > 0 ? (
+        <div style={{ display: 'grid', gap: 12 }}>{people.map(renderParticipantCard)}</div>
+      ) : (
+        <div style={{ color: mutedTextColor, fontSize: 13 }}>{emptyMessage}</div>
+      )}
+    </div>
+  );
+
+  // Les etiquettes de section sont celles du telephone (EventParticipants,
+  // `getSectionBadgeMeta`), memes clefs de traduction.
+  const getParticipantSectionBadge = (section) => {
+    if (section.isExternal) return t('eventDetails.invitedTeams.externalBadge', 'Ouvert à tous');
+    if (section.isHome) return t('eventDetails.invitedTeams.homeTeamBadge', 'Équipe organisatrice');
+    return t('eventDetails.invitedTeams.invitedTeamBadge', 'Équipe invitée');
+  };
+
+  const renderParticipantSection = (section) => (
+    <div
+      data-testid={`PARTWEB-section-${section.key}`}
+      key={section.key}
+      style={{
+        background: sectionBackground,
+        border: `1px solid ${borderColor}`,
+        borderRadius: 20,
+        display: 'grid',
+        gap: 16,
+        padding: '16px 18px',
+      }}
+    >
+      <div style={{
+        alignItems: 'center', display: 'flex', gap: 8, justifyContent: 'space-between',
+      }}
+      >
+        <span style={{ color: textColor, fontFamily: 'Montserrat-Bold, sans-serif', fontSize: 16 }}>
+          {section.teamName}
+        </span>
+        <span style={{ color: mutedTextColor, fontSize: 12 }}>
+          {getParticipantSectionBadge(section)}
+        </span>
+      </div>
+      {renderParticipantGroup(
+        'participating',
+        t('eventDetails.participationStatus.participating', 'Présent·e·s'),
+        section.participating,
+        t('eventDetails.emptyStates.noConfirmation', 'Personne n\'a encore confirmé sa présence.'),
+      )}
+      {renderParticipantGroup(
+        'missing',
+        t('eventDetails.participationStatus.missing', 'Absent·e·s'),
+        section.missing,
+        t('eventDetails.emptyStates.noAbsence', 'Aucune absence signalée.'),
+      )}
+      {renderParticipantGroup(
+        'notAnswered',
+        t('eventDetails.participationStatus.notAnswered', 'Sans réponse'),
+        section.notAnswered,
+        t('eventDetails.emptyStates.allAnswered', 'Tout le monde a répondu.'),
+      )}
+    </div>
+  );
+
   const renderParticipantsSection = () => {
+    // Noms visibles : les listes du telephone. Sinon on garde la suite d avant —
+    // 🔒 identites masquees par l organisateur = le serveur remplace chaque
+    // personne par un jeton anonyme ; on montre un NOMBRE, jamais une liste.
+    if (canViewParticipantNames && participantSections.length > 0) {
+      return (
+        <div style={{ display: 'grid', gap: 12 }}>
+          {participantSections.map(renderParticipantSection)}
+        </div>
+      );
+    }
+
     if (participants.length === 0) {
       return <div style={{ color: mutedTextColor }}>{t('eventDetails.noConfirmedParticipantYet', 'Aucun participant confirme pour le moment.')}</div>;
     }
@@ -1162,44 +1331,7 @@ function EventDetails({ navigation, route }) {
 
     return (
       <div style={{ display: 'grid', gap: 12 }}>
-        {participants.map((participant) => {
-          const displayName = getUserDisplayName(participant);
-          const avatarUrl = getAvatarUrl(participant);
-          return (
-            <div
-              key={getEntityDocumentId(participant) || displayName}
-              style={{
-                alignItems: 'center',
-                background: softSurfaceColor,
-                border: `1px solid ${borderColor}`,
-                borderRadius: 16,
-                display: 'flex',
-                gap: 12,
-                padding: '12px 14px',
-              }}
-            >
-              {avatarUrl ? (
-                <img
-                  alt={displayName}
-                  src={avatarUrl}
-                  style={{
-                    borderRadius: '50%', height: 42, objectFit: 'cover', width: 42,
-                  }}
-                />
-              ) : (
-                <div style={{
-                  alignItems: 'center', background: 'rgba(1,179,244,0.16)', borderRadius: '50%', display: 'inline-flex', height: 42, justifyContent: 'center', width: 42,
-                }}
-                >
-                  {getInitials(displayName)}
-                </div>
-              )}
-              <div style={{ display: 'grid', gap: 4 }}>
-                <span style={{ color: textColor, fontFamily: 'Montserrat-Bold, sans-serif', fontSize: 14 }}>{displayName}</span>
-              </div>
-            </div>
-          );
-        })}
+        {participants.map(renderParticipantCard)}
       </div>
     );
   };
@@ -1516,8 +1648,11 @@ function EventDetails({ navigation, route }) {
 
         {!isLoading && event ? (
           <div style={{ display: 'grid', gap: 24, gridTemplateColumns: isDesktop ? 'minmax(0, 1.15fr) minmax(300px, 0.85fr)' : 'minmax(0, 1fr)' }}>
+            {/* PARTWEB — `alignContent: 'start'` sur les DEUX colonnes : une grille
+                s'etire a la hauteur de la colonne voisine, et ses blocs avec — la
+                liste des participants, longue, creusait des trous dans « Infos rapides ». */}
             <section style={{
-              background: sectionBackground, border: `1px solid ${borderColor}`, borderRadius: 24, display: 'grid', gap: 18, padding: 22,
+              alignContent: 'start', background: sectionBackground, border: `1px solid ${borderColor}`, borderRadius: 24, display: 'grid', gap: 18, padding: 22,
             }}
             >
               {/* 🚪 P9 · ECRAN 1 — LA PROCHAINE ACTION PASSE EN PREMIER, comme sur
@@ -1870,7 +2005,7 @@ function EventDetails({ navigation, route }) {
               ) : null}
             </section>
 
-            <section style={{ display: 'grid', gap: 24 }}>
+            <section style={{ alignContent: 'start', display: 'grid', gap: 24 }}>
               <div style={{
                 background: sectionBackground, border: `1px solid ${borderColor}`, borderRadius: 24, display: 'grid', gap: 14, padding: 22,
               }}
@@ -1898,7 +2033,7 @@ function EventDetails({ navigation, route }) {
                     ...(!trainingOpenConfig.isOpenTraining
                       ? [{
                         label: t('eventDetails.expectedPlayers', 'Joueurs attendus'),
-                        value: event?.totalPlayers ?? t('eventDetails.notSet', 'Non défini'),
+                        value: expectedPlayersCount ?? event?.totalPlayers ?? t('eventDetails.notSet', 'Non défini'),
                       }]
                       : []),
                     {
@@ -2297,23 +2432,9 @@ function EventDetails({ navigation, route }) {
                 )}
               </div>
 
-              {canViewParticipantNames && detectedPlayers.length > 0 ? (
-                <div style={{
-                  background: sectionBackground, border: `1px solid ${borderColor}`, borderRadius: 24, display: 'grid', gap: 14, padding: 22,
-                }}
-                >
-                  <h2 style={sectionTitleStyle}>
-                    {t('eventDetails.absencesMissing', 'Absences / manques')}
-                  </h2>
-                  <div style={{ display: 'grid', gap: 10 }}>
-                    {detectedPlayers.map((player) => (
-                      <div key={getEntityDocumentId(player) || getUserDisplayName(player)} style={{ color: mutedTextColor, fontSize: 14 }}>
-                        {getUserDisplayName(player)}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ) : null}
+              {/* PARTWEB — « Absences / manques » a quitte la page : chaque absent
+                  est desormais DANS son equipe (groupe « Absent·e·s » de la
+                  section Participants), comme sur le telephone. */}
             </section>
           </div>
         ) : null}

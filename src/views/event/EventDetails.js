@@ -30,6 +30,16 @@ import {
   resolveEventDisplayName,
   resolveEventOpponentName,
 } from '@/domains/event/eventDisplayName';
+import {
+  buildParticipationsByStatus,
+  buildTeamParticipationSections,
+  filterUsersByExcludedKeys,
+  getEligibleTeamPlayers,
+  getEventTrainerKeys,
+  getTrainerKeySet,
+  getUserKey,
+  uniqueUsers,
+} from '@/domains/event/eventParticipantSections';
 import { getEventEditSupport, resolveTrainingOpenConfig } from '@/domains/event/eventUseCases';
 import { getCurrentUserEventParticipationState } from '@/domains/event/participationState';
 import useMessaging from '@/domains/messaging/useMessaging';
@@ -39,7 +49,7 @@ import {
   resolveParticipationFlow,
 } from '@/domains/participation/participationFlow';
 import { getSubscriptionQuotaItem, hasActiveClubOffer } from '@/domains/subscription/subscriptionDecision';
-import { hasLivingUser, withoutDeletedAccounts } from '@/domains/user/deletedAccount';
+import { hasLivingUser } from '@/domains/user/deletedAccount';
 import { getEventShowcaseTemplate, isEventShowcaseOffered } from '@/domains/visuals/eventShowcaseTemplate';
 import { withAlpha } from '@/theme/colors';
 import localeDesFormats from '@/theme/strings/localeDesFormats';
@@ -478,57 +488,6 @@ const getFeaturedScopeStatusLabel = (t, status) => {
   return t('eventDetails.featuredRequest.available', 'Disponible');
 };
 
-/**
- * @param {User | null | undefined} user
- * @returns {string | null}
- */
-const getUserKey = (user) => {
-  if (user?.documentId) return `doc:${user.documentId}`;
-  if (user?.id) return `id:${String(user.id)}`;
-  return null;
-};
-
-/**
- * AA02 — LE POINT DE PASSAGE UNIQUE des listes de personnes de cet ecran.
- *
- * Presents, absents, sans reponse, joueurs d'equipe, participants externes,
- * historique, candidats a la compo : TOUT remonte ici. Le tri des comptes
- * supprimes est donc pose a UN seul endroit, pas recopie huit fois.
- * `withoutDeletedAccounts` ecarte les deux trous possibles — la relation vide
- * (`null`) et le fantome (compte anonymise et bloque par `deleteAccount`).
- * @param {User[]} [users]
- * @returns {User[]}
- */
-const uniqueUsers = (users = []) => {
-  const map = new Map();
-  withoutDeletedAccounts(users).forEach((user) => {
-    const key = getUserKey(user);
-    if (!key || map.has(key)) return;
-    map.set(key, user);
-  });
-  return Array.from(map.values());
-};
-
-// @ts-ignore: FIXME: Baseline TS regression
-const getTrainerKeySet = (team) => new Set(
-  (team?.trainers || [])
-    // @ts-ignore: FIXME: Baseline TS regression
-    .map((trainer) => getUserKey(trainer))
-    .filter(Boolean),
-);
-
-// @ts-ignore: FIXME: Baseline TS regression
-const getEligibleTeamPlayers = (team) => {
-  const trainerKeys = getTrainerKeySet(team);
-  return uniqueUsers(
-    // @ts-ignore: FIXME: Baseline TS regression
-    (team?.players || []).filter((player) => {
-      const playerKey = getUserKey(player);
-      return Boolean(playerKey) && !trainerKeys.has(playerKey);
-    }),
-  );
-};
-
 const getDetectionCandidatePlayers = (event, team) => {
   const excludedKeys = new Set([
     ...Array.from(getTrainerKeySet(team)),
@@ -568,14 +527,6 @@ const getCompositionPlayersForEvent = (event, team, detectionEnabled) => {
     ...getDetectionCandidatePlayers(event, team),
   ]);
 };
-
-// @ts-ignore: FIXME: Baseline TS regression
-const filterUsersByExcludedKeys = (users = [], excludedKeys = new Set()) => uniqueUsers(
-  users.filter((user) => {
-    const key = getUserKey(user);
-    return Boolean(key) && !excludedKeys.has(key);
-  }),
-);
 
 /**
  * @param {FCEvent | null | undefined} event
@@ -1417,15 +1368,12 @@ function EventDetails({ navigation, route }) {
     return players.some((player) => player?.documentId === userDocId)
       || trainers.some((trainer) => trainer?.documentId === userDocId);
   }, [event?.invitedTeams, event?.team, userData?.documentId]);
-  const trainerKeysForEvent = useMemo(() => {
-    const teams = [event?.team, ...(event?.invitedTeams || [])].filter(Boolean);
-    return new Set(
-      teams
-        .flatMap((team) => team?.trainers || [])
-        .map((trainer) => getUserKey(trainer))
-        .filter(Boolean),
-    );
-  }, [event?.invitedTeams, event?.team]);
+  // Seuls les deux champs lus sont passes : le memo se recalcule sur les memes
+  // dependances qu avant l extraction (PARTWEB).
+  const trainerKeysForEvent = useMemo(
+    () => getEventTrainerKeys({ invitedTeams: event?.invitedTeams, team: event?.team }),
+    [event?.invitedTeams, event?.team],
+  );
 
   const isCurrentUserParticipating = useMemo(() => {
     const currentUserId = userData?.documentId;
@@ -2267,249 +2215,18 @@ function EventDetails({ navigation, route }) {
     externalParticipationSection,
     participantsSummary,
     teamParticipationSections,
-  } = useMemo(() => {
-    if (!event) {
-      return {
-        externalParticipationSection: null,
-        participantsSummary: {
-          capacity: 0,
-          participatingCount: 0,
-        },
-        teamParticipationSections: [],
-      };
-    }
-
-    const teamBuckets = [
-      event?.team ? {
-        isHome: true,
-        key: event.team.documentId || 'home-team',
-        players: getEligibleTeamPlayers(event.team),
-        teamName: event.team.name || t('eventDetails.organisingTeam', 'Équipe organisatrice'),
-      } : null,
-      ...((event?.invitedTeams || []).map((/** @type {any} */ team) => ({
-        isHome: false,
-        key: team?.documentId || `invited-${team?.name || 'team'}`,
-        players: getEligibleTeamPlayers(team),
-        teamName: team?.name || t('eventDetails.invitedTeam', 'Équipe invitée'),
-      }))),
-    ].filter(Boolean);
-
-    const knownTeamPlayerKeys = new Set(
-      teamBuckets
-        .flatMap((bucket) => bucket.players || [])
-        .map((/** @type {User} */ player) => getUserKey(player))
-        .filter(Boolean),
-    );
-    const knownTeamSectionKeys = new Set(teamBuckets.map((bucket) => bucket.key));
-    const teamKeyByUserKey = new Map();
-    const teamNameByUserKey = new Map();
-    teamBuckets.forEach((bucket) => {
-      (bucket.players || []).forEach((/** @type {User} */ player) => {
-        const userKey = getUserKey(player);
-        if (!userKey || teamKeyByUserKey.has(userKey)) return;
-        teamKeyByUserKey.set(userKey, bucket.key);
-        teamNameByUserKey.set(userKey, bucket.teamName);
-      });
-    });
-
-    const participatingUsers = filterUsersByExcludedKeys(event?.participations || [], trainerKeysForEvent);
-    const missingUsers = filterUsersByExcludedKeys(event?.missings || [], trainerKeysForEvent);
-    const participatingKeys = new Set(participatingUsers.map((/** @type {User} */ participant) => getUserKey(participant)).filter(Boolean));
-    const missingKeys = new Set(missingUsers.map((/** @type {User} */ missing) => getUserKey(missing)).filter(Boolean));
-
-    const pendingByUserKey = new Map();
-    pendingParticipations.forEach((participation) => {
-      const key = getUserKey(participation?.user);
-      if (!key || trainerKeysForEvent.has(key)) return;
-      pendingByUserKey.set(key, participation);
-    });
-
-    /** @type {Map<string, any>} */
-    const historicalByTeam = new Map();
-    const historicalExternal = /** @type {{ missing: User[]; participating: User[]; pending: EventParticipation[] }} */ ({
-      missing: [],
-      participating: [],
-      pending: [],
-    });
-    inactiveEventParticipations
-      .filter((participation) => participation?.user)
-      .forEach((participation) => {
-        const userKey = getUserKey(participation?.user);
-        if (!userKey || trainerKeysForEvent.has(userKey)) return;
-
-        // 🎯 S1 (constat d Adel du 2026-08-25) — UNE REPONSE ACTIVE EFFACE LA
-        // TRACE DE CELLE QU ELLE REMPLACE.
-        //
-        // 📸 LE DEFAUT : un joueur qui passait de « present » a « absent »
-        // apparaissait DEUX FOIS — dans les absents, ET dans « Historique
-        // equipe retiree », avec son ancien pointage « Arrive » en prime.
-        // Le serveur est sain (verifie le 25/08) : `declareMissing` DESACTIVE
-        // l ancienne reponse puis cree l absence. C est ICI que les deux
-        // etaient rangees cote a cote : la boucle versait TOUTE ligne inactive
-        // dans l historique sans jamais regarder s il en existait une active.
-        //
-        // 🔒 CE QUI CONTINUE DE S AFFICHER, et c est tout le sujet de la
-        // section : l historique de qui n a AUCUNE reponse active — une equipe
-        // retiree de l evenement (`archiveResponsesBySourceTeams` cote serveur),
-        // une inscription archivee jamais reprise. Une histoire, ce n est pas
-        // la reponse d il y a trois secondes.
-        //
-        // ⛔ LA DONNEE NE BOUGE PAS : `includeInactive: true` reste. C est le
-        // filtre qui manquait, pas la matiere.
-        //
-        // 🪢 Pose AVANT le partage `isExternal` : le meme garde couvre donc les
-        // deux historiques, celui des equipes et celui des externes.
-        const aDejaUneReponseActive = participatingKeys.has(userKey)
-          || missingKeys.has(userKey)
-          || pendingByUserKey.has(userKey);
-        if (aDejaUneReponseActive) return;
-
-        const sourceTeamId = participation?.sourceTeam?.documentId;
-        const sourceTeamKnown = Boolean(
-          sourceTeamId && knownTeamSectionKeys.has(sourceTeamId),
-        );
-        const fallbackTeamKey = userKey ? teamKeyByUserKey.get(userKey) : null;
-        const resolvedTeamKey = sourceTeamKnown ? sourceTeamId : fallbackTeamKey;
-        let resolvedTeamName = null;
-        if (sourceTeamKnown) {
-          resolvedTeamName = participation?.sourceTeam?.name || null;
-        } else if (userKey) {
-          resolvedTeamName = teamNameByUserKey.get(userKey) || null;
-        }
-        const isExternal = !resolvedTeamKey;
-
-        if (isExternal) {
-          if (participation.participationStatus === 'missing') {
-            historicalExternal.missing.push(participation.user);
-          } else if (participation.participationStatus === 'accepted') {
-            historicalExternal.participating.push(participation.user);
-          } else if (participation.participationStatus === 'pending') {
-            historicalExternal.pending.push(participation);
-          }
-          return;
-        }
-
-        const teamKey = resolvedTeamKey;
-        const teamName = resolvedTeamName || t('eventDetails.removedTeam', 'Équipe retirée');
-        const current = historicalByTeam.get(teamKey) || {
-          key: teamKey,
-          missing: [],
-          participating: [],
-          pending: [],
-          teamName,
-        };
-        if (participation.participationStatus === 'missing') {
-          current.missing.push(participation.user);
-        } else if (participation.participationStatus === 'accepted') {
-          current.participating.push(participation.user);
-        } else if (participation.participationStatus === 'pending') {
-          current.pending.push(participation);
-        }
-        historicalByTeam.set(teamKey, current);
-      });
-
-    const sections = teamBuckets.map((bucket) => {
-      const participating = bucket.players.filter((/** @type {User} */ player) => participatingKeys.has(getUserKey(player)));
-      const missing = bucket.players.filter((/** @type {User} */ player) => missingKeys.has(getUserKey(player)));
-      const pending = bucket.players
-        .map((/** @type {User} */ player) => pendingByUserKey.get(getUserKey(player)))
-        .filter(Boolean);
-      const notAnswered = bucket.players.filter((/** @type {User} */ player) => {
-        const key = getUserKey(player);
-        return !participatingKeys.has(key) && !missingKeys.has(key) && !pendingByUserKey.has(key);
-      });
-
-      const historical = historicalByTeam.get(bucket.key) || {
-        missing: [],
-        participating: [],
-        pending: [],
-      };
-
-      return {
-        ...bucket,
-        allowCoachActions: canEdit,
-        historical: {
-          missing: uniqueUsers(historical.missing || []),
-          participating: uniqueUsers(historical.participating || []),
-          pending: historical.pending || [],
-        },
-        missing: uniqueUsers(missing),
-        notAnswered: uniqueUsers(notAnswered),
-        participating: uniqueUsers(participating),
-        pending,
-      };
-    });
-
-    const existingSectionKeys = new Set(sections.map((section) => section.key));
-    historicalByTeam.forEach((historicalSection, key) => {
-      if (existingSectionKeys.has(key)) return;
-      sections.push({
-        allowCoachActions: false,
-        historical: {
-          missing: uniqueUsers(historicalSection.missing || []),
-          participating: uniqueUsers(historicalSection.participating || []),
-          pending: historicalSection.pending || [],
-        },
-        isHome: false,
-        key,
-        missing: [],
-        notAnswered: [],
-        participating: [],
-        pending: [],
-        players: [],
-        teamName: historicalSection.teamName,
-      });
-    });
-
-    const externalParticipating = uniqueUsers(
-      participatingUsers.filter((/** @type {User} */ user) => !knownTeamPlayerKeys.has(getUserKey(user))),
-    );
-    const externalMissing = uniqueUsers(
-      missingUsers.filter((/** @type {User} */ user) => !knownTeamPlayerKeys.has(getUserKey(user))),
-    );
-    const externalPending = pendingParticipations.filter(
-      (participation) => !knownTeamPlayerKeys.has(getUserKey(participation?.user)),
-    );
-    const externalHistorical = {
-      missing: uniqueUsers(historicalExternal.missing || []),
-      participating: uniqueUsers(historicalExternal.participating || []),
-      pending: historicalExternal.pending || [],
-    };
-
-    const hasExternalData = externalParticipating.length > 0
-      || externalMissing.length > 0
-      || externalPending.length > 0
-      || externalHistorical.participating.length > 0
-      || externalHistorical.missing.length > 0
-      || externalHistorical.pending.length > 0;
-
-    const visibleParticipating = uniqueUsers([
-      ...sections.flatMap((section) => section.participating || []),
-      ...externalParticipating,
-    ]);
-
-    return {
-      externalParticipationSection: hasExternalData
-        ? {
-          allowCoachActions: canEdit,
-          historical: externalHistorical,
-          isExternal: true,
-          key: 'external-participants',
-          missing: externalMissing,
-          notAnswered: [],
-          participating: externalParticipating,
-          pending: externalPending,
-          players: [],
-          teamName: 'Participants externes',
-        }
-        : null,
-      participantsSummary: {
-        capacity: Number(event?.capacity || 0),
-        participatingCount: visibleParticipating.length,
-      },
-      teamParticipationSections: sections,
-    };
-  }, [canEdit, event, inactiveEventParticipations, pendingParticipations, trainerKeysForEvent, t]);
+  } = useMemo(
+    // PARTWEB — le calcul vit dans le domaine : le site appelle le MEME.
+    () => buildTeamParticipationSections({
+      canEdit,
+      event,
+      inactiveParticipations: inactiveEventParticipations,
+      pendingParticipations,
+      t,
+      trainerKeys: trainerKeysForEvent,
+    }),
+    [canEdit, event, inactiveEventParticipations, pendingParticipations, trainerKeysForEvent, t],
+  );
 
   // 🎯 N4 (D5) — LES EQUIPES QU'IL Y A QUELQUE CHOSE A RELANCER.
   // C'est cette liste, et elle seule, qui decide si « Relancer » ouvre une
@@ -2583,40 +2300,15 @@ function EventDetails({ navigation, route }) {
     return [t('eventDetails.typeTag.capacity', '{{taken}}/{{total}} PLACES', { taken, total })];
   }, [isOtherEventType, participantsSummary, t]);
 
-  const participationsByStatus = useMemo(() => {
-    if (!canEdit) {
-      return {
-        missing: [],
-        notAnswered: [],
-        participating: filterUsersByExcludedKeys(event?.participations || [], trainerKeysForEvent),
-      };
-    }
-
-    const teamPlayers = uniqueUsers([
-      ...getEligibleTeamPlayers(event?.team),
-      ...((event?.invitedTeams || []).flatMap((/** @type {any} */ team) => getEligibleTeamPlayers(team))),
-    ]);
-    const participatingPlayers = filterUsersByExcludedKeys(event?.participations || [], trainerKeysForEvent);
-    const missingPlayers = filterUsersByExcludedKeys(event?.missings || [], trainerKeysForEvent);
-    const pendingKeys = new Set(
-      (pendingParticipations || [])
-        .map((participation) => getUserKey(participation?.user))
-        .filter((key) => Boolean(key) && !trainerKeysForEvent.has(key)),
-    );
-
-    const notAnsweredPlayers = teamPlayers.filter((player) => {
-      const key = getUserKey(player);
-      return !participatingPlayers.some((/** @type {User} */ participant) => getUserKey(participant) === key)
-        && !missingPlayers.some((/** @type {User} */ missing) => getUserKey(missing) === key)
-        && !pendingKeys.has(key);
-    });
-
-    return {
-      missing: missingPlayers,
-      notAnswered: notAnsweredPlayers,
-      participating: participatingPlayers,
-    };
-  }, [canEdit, event, pendingParticipations, trainerKeysForEvent]);
+  const participationsByStatus = useMemo(
+    () => buildParticipationsByStatus({
+      canEdit,
+      event,
+      pendingParticipations,
+      trainerKeys: trainerKeysForEvent,
+    }),
+    [canEdit, event, pendingParticipations, trainerKeysForEvent],
+  );
   // 🗂️ P7 — LES CANDIDATS, RANGES PAR POSTE (regle 5 du pack : « chaque poste
   // ouvre les gens de ce poste, en deux groupes nommes : participants (retenus)
   // et demandes (a accepter / refuser) »).
