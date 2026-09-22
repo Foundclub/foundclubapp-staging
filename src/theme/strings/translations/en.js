@@ -10783,7 +10783,9 @@ export default {
       birthdateLabel: 'Date of birth',
       editTitle: 'Edit profile',
       errors: {
+        futureDate: "The date of birth can't be in the future.",
         invalidDate: "This date doesn't exist.",
+        rejected: "This profile wasn't accepted: please check the date of birth.",
         required: 'First name, last name and date of birth are required.',
         save: "This profile can't be saved right now.",
         tooOld: 'A child profile is only for under-13s. From age 13, your child can have their own account.',

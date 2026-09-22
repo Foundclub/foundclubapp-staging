@@ -399,3 +399,117 @@ describe('PARENT P2 — « declare ton enfant » pendant l inscription', () => {
     expect(mockGoBack).not.toHaveBeenCalled();
   });
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// DATENAISS (22/09) — Sentry SERVEUR-STRAPI-T : un vrai parent déclare un enfant
+// né « dans le futur ». L'app laissait partir, le serveur refusait (400), et
+// l'écran disait « pour le moment » : le parent croyait à une panne passagère et
+// réessayait avec la même date.
+// ─────────────────────────────────────────────────────────────────────────────
+describe('DATENAISS — une date de naissance dans le futur', () => {
+  /**
+   * La date LOCALE du téléphone, décalée de `jours`, découpée en trois cases.
+   * @param {number} jours - Le décalage depuis aujourd'hui.
+   * @returns {{ day: string, month: string, year: string }} Les trois cases.
+   */
+  const casesDate = (jours) => {
+    const date = new Date();
+    date.setDate(date.getDate() + jours);
+    return {
+      day: String(date.getDate()).padStart(2, '0'),
+      month: String(date.getMonth() + 1).padStart(2, '0'),
+      year: String(date.getFullYear()),
+    };
+  };
+
+  /**
+   * Remplit le prénom, le nom et la date.
+   * @param {any} arbre - L'arbre rendu.
+   * @param {{ day: string, month: string, year: string }} date - Les trois cases.
+   * @returns {Promise<void>} Rien.
+   */
+  const remplir = async (arbre, { day, month, year }) => {
+    await saisir(arbre, 'child-firstname', 'Léa');
+    await saisir(arbre, 'child-lastname', 'Martin');
+    await saisir(arbre, 'child-day', day);
+    await saisir(arbre, 'child-month', month);
+    await saisir(arbre, 'child-year', year);
+  };
+
+  test("DATENAISS ① demain est refusé AVANT l'envoi, et l'écran dit pourquoi", async () => {
+    const arbre = await rendre();
+
+    await remplir(arbre, casesDate(1));
+    await enregistrer(arbre);
+
+    expect(mockCreer).not.toHaveBeenCalled();
+    expect(texteVisible(arbre)).toContain('ne peut pas être dans le futur');
+  });
+
+  test('DATENAISS ② en modification, une date future ne part pas non plus', async () => {
+    mockParams = { childDocumentId: 'enfant-1' };
+    mockEnfants = [{
+      age: 9,
+      documentId: 'enfant-1',
+      firstname: 'Léa',
+      lastname: 'Martin',
+    }];
+    const arbre = await rendre();
+
+    await remplir(arbre, casesDate(400));
+    await enregistrer(arbre);
+
+    expect(mockModifier).not.toHaveBeenCalled();
+    expect(texteVisible(arbre)).toContain('ne peut pas être dans le futur');
+  });
+
+  test("DATENAISS ③ aujourd'hui reste accepté : un nouveau-né se déclare", async () => {
+    const arbre = await rendre();
+
+    await remplir(arbre, casesDate(0));
+    await enregistrer(arbre);
+
+    expect(mockCreer).toHaveBeenCalledTimes(1);
+  });
+
+  test('DATENAISS ④ un refus de VALIDATION du serveur fait vérifier la date', async () => {
+    const arbre = await rendre();
+    await remplir(arbre, { day: '04', month: '05', year: '2019' });
+    await enregistrer(arbre);
+
+    // La forme EXACTE que l'intercepteur rejette (client.native.js) : la charge
+    // Strapi déballée, pas l'erreur axios.
+    const options = mockCreer.mock.calls[0][1];
+    await act(async () => {
+      options.onError({
+        details: {},
+        message: 'birthdate: date de naissance dans le futur',
+        name: 'ValidationError',
+        status: 400,
+      });
+    });
+
+    const texte = texteVisible(arbre);
+    expect(texte).toContain('vérifie la date de naissance');
+    expect(texte).not.toContain('pour le moment');
+  });
+
+  test.each([
+    ['un 500', { message: 'Internal Server Error', name: 'InternalServerError', status: 500 }],
+    ['un délai dépassé', {
+      code: 'REQUEST_TIMEOUT_ABANDONED',
+      message: 'Request timeout - please retry.',
+      status: 0,
+    }],
+    ['pas de réseau', 'Network Error'],
+  ])('DATENAISS ⑤ une VRAIE panne (%s) garde « pour le moment »', async (_nom, panne) => {
+    const arbre = await rendre();
+    await remplir(arbre, { day: '04', month: '05', year: '2019' });
+    await enregistrer(arbre);
+
+    const options = mockCreer.mock.calls[0][1];
+    await act(async () => { options.onError(panne); });
+
+    expect(texteVisible(arbre)).toContain('pour le moment');
+  });
+});

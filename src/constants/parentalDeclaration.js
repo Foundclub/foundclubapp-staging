@@ -54,6 +54,33 @@ export const isBirthdateUnderParentalAge = (value) => (
   isBirthdateUnderAge(value, MINOR_PARENTAL_DECLARATION_MIN_AGE)
 );
 
+/**
+ * DATENAISS (2026-09-22) — la date de naissance est-elle APRES aujourd hui ?
+ *
+ * Sentry SERVEUR-STRAPI-T : un parent a declare un enfant ne « dans le futur ».
+ * Les paliers ci-dessus ne le voient pas — un age negatif est bien « moins de
+ * 13 ans » — et seul le serveur refusait, apres l aller-retour.
+ *
+ * ⏰ LA REFERENCE EST LA DATE LOCALE DU TELEPHONE : le parent raisonne sur son
+ * calendrier, pas sur minuit UTC. Une date illisible rend `false` : ce n est pas
+ * a cette question de le dire.
+ * @param {unknown} value - La date saisie (AAAA-MM-JJ ou JJ/MM/AAAA).
+ * @param {Date} [now] - L instant de reference, pour les temoins.
+ * @returns {boolean} Vrai si la date tombe apres aujourd hui.
+ */
+export const isBirthdateInFuture = (value, now = new Date()) => {
+  const birthdate = parseBirthdate(value);
+  if (!birthdate) return false;
+
+  const naissance = (birthdate.getUTCFullYear() * 10000)
+    + ((birthdate.getUTCMonth() + 1) * 100)
+    + birthdate.getUTCDate();
+  const aujourdHui = (now.getFullYear() * 10000)
+    + ((now.getMonth() + 1) * 100)
+    + now.getDate();
+  return naissance > aujourdHui;
+};
+
 // PARENT (2026-09-02) — LE PALIER 13, decision d Adel : « en dessous de 13 ans,
 // pas le choix d avoir un compte parent pour creer un compte ».
 //

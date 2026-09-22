@@ -18723,7 +18723,13 @@ export default {
       birthdateKeepHint: 'Laisse vide pour ne pas la changer.',
       birthdateLabel: 'Date de naissance',
       errors: {
+        // 📅 DATENAISS (22/09) : une date après aujourd'hui est dite AVANT
+        // d'envoyer, comme le palier 13 (Sentry SERVEUR-STRAPI-T).
+        futureDate: 'La date de naissance ne peut pas être dans le futur.',
         invalidDate: 'Cette date n’existe pas.',
+        // Le serveur a REFUSÉ la fiche (400) : réessayer « plus tard » avec la
+        // même date ne changerait rien. On fait vérifier la date.
+        rejected: 'Cette fiche n’a pas été acceptée : vérifie la date de naissance.',
         required: 'Le prénom, le nom et la date de naissance sont obligatoires.',
         // 🧒 Le palier 13, dit AVANT d'envoyer. Jusqu'ici l'app ne prevenait
         // jamais : le palier ne tenait que sur le refus du serveur (§4.5 du plan).

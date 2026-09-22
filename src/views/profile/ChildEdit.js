@@ -19,7 +19,12 @@ import {
 } from '@/services/declaredChild/declaredChildQueries';
 import { buildChildPayload } from '@/services/declaredChild/declaredChildRules';
 
-import { isBirthdateUnderParentAccountAge } from '@/constants/parentalDeclaration';
+import { getErrorStatus } from '@/utils/errors/displayError';
+
+import {
+  isBirthdateInFuture,
+  isBirthdateUnderParentAccountAge,
+} from '@/constants/parentalDeclaration';
 
 /**
  * PARENT P2 — ÉCRAN 8 : « AJOUTER OU MODIFIER UN ENFANT ».
@@ -42,6 +47,11 @@ import { isBirthdateUnderParentAccountAge } from '@/constants/parentalDeclaratio
  * existait dans l'app depuis des mois sans être appelé nulle part (§4.5 du plan
  * PARENT) : le palier ne tenait que sur le refus serveur, qui marche, mais qui
  * ne prévient qu'après un aller-retour. Il est branché.
+ *
+ * 📅 LE FUTUR AUSSI (DATENAISS, 22/09) : une date après aujourd'hui partait au
+ * serveur, qui la refusait (Sentry SERVEUR-STRAPI-T), et l'écran disait « pour
+ * le moment » — le parent réessayait avec la même date. Elle est refusée ici, et
+ * un refus de validation du serveur fait vérifier la date au lieu d'attendre.
  * @returns {import('react').ReactElement} L'écran.
  */
 function ChildEdit() {
@@ -141,7 +151,17 @@ function ChildEdit() {
         return;
       }
 
-      // ③ 🧒 LE PALIER 13, DIT AVANT L'ALLER-RETOUR.
+      // ③ 📅 PAS DANS LE FUTUR. Le palier ci-dessous ne le voit pas : un âge
+      //    négatif est bien « moins de 13 ans ».
+      if (isBirthdateInFuture(naissance)) {
+        setErreur(t(
+          'myChildren.form.errors.futureDate',
+          'La date de naissance ne peut pas être dans le futur.',
+        ));
+        return;
+      }
+
+      // ④ 🧒 LE PALIER 13, DIT AVANT L'ALLER-RETOUR.
       if (!isBirthdateUnderParentAccountAge(naissance)) {
         setErreur(t(
           'myChildren.form.errors.tooOld',
@@ -159,10 +179,24 @@ function ChildEdit() {
       position,
     });
 
-    const surErreur = () => setErreur(t(
-      'myChildren.form.errors.save',
-      'Impossible d’enregistrer cette fiche pour le moment.',
-    ));
+    // Un 400 est un refus de VALIDATION : réessayer plus tard avec la même
+    // saisie ne changera rien. Les contrôles ci-dessus arrêtent déjà les champs
+    // manquants ; ce qui reste, c'est la date. « Pour le moment » reste aux
+    // vraies pannes (réseau, délai dépassé, 5xx).
+    // ponytail: le serveur compare à minuit UTC (`declarableBirthdateIssue`,
+    // admin declared-child-rules.js), l'app à la date du téléphone. Une date =
+    // aujourd'hui saisie entre 00h00 et 02h00 à Paris passe ici et y est refusée :
+    // le parent lit alors ce message-ci. Sortie : que le serveur compare au jour
+    // calendaire, pas à l'instant.
+    const surErreur = (/** @type {any} */ error) => setErreur(getErrorStatus(error) === 400
+      ? t(
+        'myChildren.form.errors.rejected',
+        'Cette fiche n’a pas été acceptée : vérifie la date de naissance.',
+      )
+      : t(
+        'myChildren.form.errors.save',
+        'Impossible d’enregistrer cette fiche pour le moment.',
+      ));
     // Depuis le profil on revient d ou l on vient ; pendant l inscription on
     // AVANCE — revenir en arriere renverrait le parent sur la photo.
     const surSucces = () => (estUneEtapeDInscription
