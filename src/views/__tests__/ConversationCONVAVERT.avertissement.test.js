@@ -154,6 +154,9 @@ jest.mock('@/domains/messaging/useMessaging', () => ({
 }));
 
 jest.mock('@/services/chat/chatQueriesCompat', () => ({
+  // MSGREACT — les reactions emoji du fil. Aucune par defaut : les temoins de
+  // cet ecran ne parlent pas de reactions, et une rangee vide ne se dessine pas.
+  useGetChatMessageReactions: () => ({ data: { chatDocumentId: '', data: [] } }),
   useGetChatById: () => ({ data: mockChatData, isLoading: false }),
   useGetChatMessages: () => ({
     data: { pages: [mockMessagesPage] },

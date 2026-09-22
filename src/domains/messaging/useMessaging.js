@@ -8,6 +8,10 @@ import {
 
 import useAuth from '@/domains/auth/useAuth';
 import { getConversationName, getLastReadMessageKey, getUnreadStatus } from '@/domains/messaging/messagingUseCases';
+import {
+  indexReactionsByMessage,
+  withMessageReactions,
+} from '@/domains/messaging/reactionUseCases';
 import { storage } from '@/store/appContext';
 
 import {
@@ -21,6 +25,7 @@ import {
   editMessage,
   getChats,
   pinChat,
+  reactToChatMessage,
   removeGroupMember,
   respondProposalMessage,
   unarchiveChat,
@@ -667,6 +672,53 @@ const useMessaging = (currentChatId) => {
     });
   }, [queryClient, userData?.documentId]);
 
+  /**
+   * MSGREACT — range les reactions d un message dans la reserve du fil.
+   *
+   * 🧊 On ecrit dans `['chat-message-reactions', chatId]`, JAMAIS dans
+   * `['chat-messages', chatId]` : les reactions ont leur propre requete, et
+   * c est ce qui garantit qu une reaction ne fait bouger aucun compteur de
+   * non-lus. Le meme chemin sert a l accuse du serveur ET a la socket, donc les
+   * deux ne peuvent pas diverger.
+   */
+  const applyReactionsToCache = useCallback((
+    /** @type {string} */ chatDocumentId,
+    /** @type {string} */ messageDocumentId,
+    /** @type {any[]} */ reactions,
+  ) => {
+    const safeChatDocumentId = normalizeChatId(chatDocumentId);
+    const safeMessageDocumentId = normalizeChatId(messageDocumentId);
+    if (!safeChatDocumentId || !safeMessageDocumentId) return;
+
+    queryClient.setQueriesData(
+      { queryKey: ['chat-message-reactions', safeChatDocumentId] },
+      (/** @type {any} */ oldData) => {
+        const index = withMessageReactions(
+          indexReactionsByMessage(oldData?.data),
+          safeMessageDocumentId,
+          reactions,
+        );
+
+        return {
+          ...(oldData || {}),
+          chatDocumentId: safeChatDocumentId,
+          data: Object.entries(index).map(([entryMessageDocumentId, entryReactions]) => ({
+            messageDocumentId: entryMessageDocumentId,
+            reactions: entryReactions,
+          })),
+        };
+      },
+    );
+  }, [queryClient]);
+
+  const handleMessageReactionUpdated = useCallback((/** @type {any} */ payload) => {
+    applyReactionsToCache(
+      payload?.chatDocumentId,
+      payload?.messageDocumentId,
+      Array.isArray(payload?.reactions) ? payload.reactions : [],
+    );
+  }, [applyReactionsToCache]);
+
   const handleJoined = useCallback((/** @type {JoinData} */ data) => {
     const chatDocumentId = normalizeChatId(data?.chatDocumentId || '');
     if (!chatDocumentId) return;
@@ -715,6 +767,7 @@ const useMessaging = (currentChatId) => {
     socket.on(EVENTS.MESSAGE_RECEIVED, handleNewMessage);
     socket.on(EVENTS.MESSAGE_DELETED, handleMessageDeleted);
     socket.on(EVENTS.MESSAGE_UPDATED, handleMessageUpdated);
+    socket.on(EVENTS.MESSAGE_REACTION_UPDATED, handleMessageReactionUpdated);
     socket.on(EVENTS.MESSAGE_READ, handleMessageRead);
     socket.on(EVENTS.JOINED, handleJoined);
     socket.on(EVENTS.ERROR, handleSocketError);
@@ -725,6 +778,7 @@ const useMessaging = (currentChatId) => {
       socket.off(EVENTS.MESSAGE_RECEIVED, handleNewMessage);
       socket.off(EVENTS.MESSAGE_DELETED, handleMessageDeleted);
       socket.off(EVENTS.MESSAGE_UPDATED, handleMessageUpdated);
+      socket.off(EVENTS.MESSAGE_REACTION_UPDATED, handleMessageReactionUpdated);
       socket.off(EVENTS.MESSAGE_READ, handleMessageRead);
       socket.off(EVENTS.JOINED, handleJoined);
       socket.off(EVENTS.ERROR, handleSocketError);
@@ -734,6 +788,7 @@ const useMessaging = (currentChatId) => {
     handleNewMessage,
     handleMessageDeleted,
     handleMessageUpdated,
+    handleMessageReactionUpdated,
     handleMessageRead,
     handleJoined,
     handleSocketError,
@@ -817,6 +872,19 @@ const useMessaging = (currentChatId) => {
           messageId: messageDocumentId,
         });
       }
+    },
+  });
+
+  const reactToMessageMutation = useMutation({
+    mutationFn: (/** @type {{ chatId?: string, emoji: string, messageId: string }} */ payload) => (
+      reactToChatMessage(payload.messageId, payload.emoji)
+    ),
+    onSuccess: (data, variables) => {
+      applyReactionsToCache(
+        data?.chatDocumentId || variables?.chatId || currentChatId,
+        data?.messageDocumentId || variables?.messageId,
+        Array.isArray(data?.reactions) ? data.reactions : [],
+      );
     },
   });
 
@@ -1352,6 +1420,15 @@ const useMessaging = (currentChatId) => {
     status,
   }), [currentChatId, proposalResponseMutation]);
 
+  const reactToMessage = useCallback((
+    /** @type {string} */ messageId,
+    /** @type {string} */ emoji,
+  ) => reactToMessageMutation.mutateAsync({
+    chatId: currentChatId,
+    emoji,
+    messageId,
+  }), [currentChatId, reactToMessageMutation]);
+
   // Update last read message when entering/leaving chat
   useEffect(() => {
     const safeCurrentChatId = normalizeChatId(currentChatId);
@@ -1378,6 +1455,7 @@ const useMessaging = (currentChatId) => {
     leaveChat,
     pinChat: pinChatMutation.mutate,
     pinChatAsync: pinChatMutation.mutateAsync,
+    reactToMessage,
     removeGroupMember: removeGroupMemberMutation.mutateAsync,
     respondToProposal,
     retryFailedMessage,

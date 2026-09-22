@@ -4581,6 +4581,13 @@ export default {
       sendError: 'Unable to send the proposal.',
       sent: 'Your proposal has been sent!',
     },
+    reactions: {
+      deletedAccount: 'Deleted account',
+      error: 'Unable to save your reaction.',
+      me: 'You',
+      title_one: '{{count}} reaction',
+      title_other: '{{count}} reactions',
+    },
     readOnly: 'Announcement channel (read-only)',
     reload: 'Reload the conversation',
     reply: {
