@@ -1117,7 +1117,8 @@ function EventDetails({ navigation, route }) {
   // 🎯 On n ecrit AUCUNE regle ici : `buildTeamParticipationSections` est la
   // fonction que l ecran du telephone appelle (`EventDetails.js`). Memes
   // equipes, memes absents, memes entraineurs ecartes (COACH1, « 2-A » : leur
-  // reponse ne compte pas dans les listes des joueurs).
+  // reponse ne compte pas dans les listes des joueurs) — et la meme
+  // « Encadrement » (`staff`, ENCADRE du 22/09) ou leur reponse se voit.
   // 🧭 Les demandes viennent de l evenement lui-meme (`participationRequests`,
   // actives seulement cote serveur) ; le telephone y ajoute une liste paginee
   // dont il tire l historique des equipes retirees — le site ne l affiche pas.
@@ -1154,7 +1155,10 @@ function EventDetails({ navigation, route }) {
     ))
     : null;
 
-  const renderParticipantCard = (participant) => {
+  // `statusLabel` : la reponse d un encadrant (ENCADRE) ; les joueurs n en ont
+  // pas, leur groupe la dit deja. ⚠️ Jamais passee directement a `.map`, qui
+  // glisserait l INDEX a sa place.
+  const renderParticipantCard = (participant, statusLabel = '') => {
     const displayName = getUserDisplayName(participant);
     const avatarUrl = getAvatarUrl(participant);
     return (
@@ -1188,6 +1192,9 @@ function EventDetails({ navigation, route }) {
         )}
         <div style={{ display: 'grid', gap: 4 }}>
           <span style={{ color: textColor, fontFamily: 'Montserrat-Bold, sans-serif', fontSize: 14 }}>{displayName}</span>
+          {statusLabel ? (
+            <span style={{ color: mutedTextColor, fontSize: 12 }}>{statusLabel}</span>
+          ) : null}
         </div>
       </div>
     );
@@ -1205,7 +1212,9 @@ function EventDetails({ navigation, route }) {
         {`${title} · ${people.length}`}
       </span>
       {people.length > 0 ? (
-        <div style={{ display: 'grid', gap: 12 }}>{people.map(renderParticipantCard)}</div>
+        <div style={{ display: 'grid', gap: 12 }}>
+          {people.map((person) => renderParticipantCard(person))}
+        </div>
       ) : (
         <div style={{ color: mutedTextColor, fontSize: 13 }}>{emptyMessage}</div>
       )}
@@ -1218,6 +1227,36 @@ function EventDetails({ navigation, route }) {
     if (section.isExternal) return t('eventDetails.invitedTeams.externalBadge', 'Ouvert à tous');
     if (section.isHome) return t('eventDetails.invitedTeams.homeTeamBadge', 'Équipe organisatrice');
     return t('eventDetails.invitedTeams.invitedTeamBadge', 'Équipe invitée');
+  };
+
+  // 🧑‍🏫 ENCADRE (22/09, decision d Adel « PARTWEB-1 → B ») — L ENCADREMENT DE
+  // LA CARTE, comme sur le telephone : les encadrants de l equipe, chacun avec
+  // sa reponse. Le rangement vient de la fonction partagee (`section.staff`) :
+  // rien n est recalcule ici. Il n entre dans aucun chiffre des joueurs
+  // (« Joueurs attendus » ne lit que leurs listes). Pas de groupe vide.
+  const renderStaffGroup = (section) => {
+    const staff = section.staff || {};
+    const present = t('eventDetails.present', 'Présent');
+    const absent = t('eventParticipants.absent', 'Absent');
+    const sansReponse = t('eventParticipants.noAnswer', 'Sans réponse');
+    const rangees = [
+      ...(staff.participating || []).map((person) => [person, present]),
+      ...(staff.missing || []).map((person) => [person, absent]),
+      ...(staff.notAnswered || []).map((person) => [person, sansReponse]),
+    ];
+    if (rangees.length === 0) return null;
+    return (
+      <div data-testid="ENCADRE-groupe-staff" style={{ display: 'grid', gap: 10 }}>
+        <span
+          style={{ color: accentColor, fontFamily: 'Montserrat-Bold, sans-serif', fontSize: 15 }}
+        >
+          {`${t('eventDetails.convocation.staff', 'Encadrement')} · ${rangees.length}`}
+        </span>
+        <div style={{ display: 'grid', gap: 12 }}>
+          {rangees.map(([person, reponse]) => renderParticipantCard(person, reponse))}
+        </div>
+      </div>
+    );
   };
 
   const renderParticipantSection = (section) => (
@@ -1262,6 +1301,7 @@ function EventDetails({ navigation, route }) {
         section.notAnswered,
         t('eventDetails.emptyStates.allAnswered', 'Tout le monde a répondu.'),
       )}
+      {renderStaffGroup(section)}
     </div>
   );
 
@@ -1331,7 +1371,7 @@ function EventDetails({ navigation, route }) {
 
     return (
       <div style={{ display: 'grid', gap: 12 }}>
-        {participants.map(renderParticipantCard)}
+        {participants.map((participant) => renderParticipantCard(participant))}
       </div>
     );
   };

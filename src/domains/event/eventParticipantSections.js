@@ -16,6 +16,10 @@
  * compte dans AUCUNE de ces listes (`trainerKeys`) — sa reponse ne pese pas
  * dans l assiduite des joueurs.
  *
+ * 🧑‍🏫 ENCADRE (decision d Adel du 22/09, « PARTWEB-1 → B ») : sa reponse se VOIT
+ * quand meme, dans `staff` — l Encadrement de la carte de son equipe, a cote
+ * des listes des joueurs et jamais dedans.
+ *
  * Temoins : `eventParticipantSections.test.js` (le calcul) et les temoins
  * d ecran S1, AA02, AD06, AE02, P2, P7 (les props remises a `EventParticipants`).
  */
@@ -101,6 +105,33 @@ export const getEligibleTeamPlayers = (team) => {
 };
 
 /**
+ * 🧑‍🏫 ENCADRE — les encadrants d UNE equipe, ranges par reponse.
+ *
+ * Present d abord, puis absent ; sans l un ni l autre, « sans reponse » (une
+ * demande en attente d un encadrant compte ici comme une absence de reponse :
+ * elle n a rien a faire dans les demandes des joueurs, que `trainerKeys` lui
+ * ferme deja). Les comptes supprimes partent par `uniqueUsers`, comme partout.
+ * @param {any} team - L equipe telle que le serveur la rend.
+ * @param {Set<string | null>} participatingKeys - Les cles de TOUS les presents.
+ * @param {Set<string | null>} missingKeys - Les cles de TOUS les absents.
+ * @returns {{ missing: User[]; notAnswered: User[]; participating: User[] }}
+ */
+const getTeamStaff = (team, participatingKeys, missingKeys) => {
+  const staff = {
+    missing: /** @type {User[]} */ ([]),
+    notAnswered: /** @type {User[]} */ ([]),
+    participating: /** @type {User[]} */ ([]),
+  };
+  uniqueUsers(team?.trainers || []).forEach((trainer) => {
+    const key = getUserKey(trainer);
+    if (participatingKeys.has(key)) staff.participating.push(trainer);
+    else if (missingKeys.has(key)) staff.missing.push(trainer);
+    else staff.notAnswered.push(trainer);
+  });
+  return staff;
+};
+
+/**
  * Une liste de personnes, moins celles dont la cle est exclue.
  * @param {User[]} [users] - La liste brute.
  * @param {Set<string | null>} [excludedKeys] - Les cles a ecarter.
@@ -130,7 +161,8 @@ export const getEventTrainerKeys = (event) => {
 
 /**
  * Les sections « une par equipe » : presents, absents, demandes, sans reponse,
- * historique — plus la section des participants EXTERNES aux equipes.
+ * historique, encadrement (`staff`) — plus la section des participants
+ * EXTERNES aux equipes.
  * @param {{
  *   canEdit: boolean;
  *   event: any;
@@ -164,17 +196,27 @@ export const buildTeamParticipationSections = ({
     };
   }
 
+  // 🧑‍🏫 ENCADRE — les reponses BRUTES, encadrants compris. Les listes des
+  // joueurs plus bas les relisent SANS eux (`trainerKeys`) ; `staff` est le
+  // seul endroit qui lit celles-ci. Les compteurs, la relance et « Joueurs
+  // attendus » ne lisent que les listes des joueurs : l encadrement n y entre
+  // donc pas, sans qu on ait a leur apprendre a l ecarter.
+  const everyParticipatingKey = new Set(uniqueUsers(event?.participations || []).map(getUserKey));
+  const everyMissingKey = new Set(uniqueUsers(event?.missings || []).map(getUserKey));
+
   const teamBuckets = [
     event?.team ? {
       isHome: true,
       key: event.team.documentId || 'home-team',
       players: getEligibleTeamPlayers(event.team),
+      staff: getTeamStaff(event.team, everyParticipatingKey, everyMissingKey),
       teamName: event.team.name || t('eventDetails.organisingTeam', 'Équipe organisatrice'),
     } : null,
     ...((event?.invitedTeams || []).map((/** @type {any} */ team) => ({
       isHome: false,
       key: team?.documentId || `invited-${team?.name || 'team'}`,
       players: getEligibleTeamPlayers(team),
+      staff: getTeamStaff(team, everyParticipatingKey, everyMissingKey),
       teamName: team?.name || t('eventDetails.invitedTeam', 'Équipe invitée'),
     }))),
   ].filter(Boolean);
