@@ -9665,11 +9665,15 @@ export default {
         freePlacement: 'Free placement',
         magnet: 'Snap to positions',
         placed: '{{placed}}/{{starters}} placed',
+        starters_one: '{{count}} starter',
+        starters_other: '{{count}} starters',
       },
       edit: 'Edit',
       title: 'Line-up',
       tokenOnBench: '{{name}}, on the bench',
       tokenOnField: '{{name}}, on the pitch',
+      updatedSinceMessage: 'Line-up changed since this message: '
+        + 'you are seeing version {{version}}.',
     },
     sheet: {
       actions: {

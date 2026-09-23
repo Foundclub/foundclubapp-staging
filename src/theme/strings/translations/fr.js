@@ -10243,11 +10243,17 @@ export default {
         freePlacement: 'Placement libre',
         magnet: 'Aimanté aux postes',
         placed: '{{placed}}/{{starters}} placés',
+        // COMPOMSG — la pastille du LECTEUR (joueur, dirigeant) en consultation.
+        starters_one: '{{count}} titulaire',
+        starters_other: '{{count}} titulaires',
       },
       edit: 'Modifier',
       title: 'Composition',
       tokenOnBench: '{{name}}, sur le banc',
       tokenOnField: '{{name}}, sur le terrain',
+      // COMPOMSG — la carte du fil montrait une version dépassée.
+      updatedSinceMessage: 'Composition modifiée depuis ce message : '
+        + 'tu vois la version {{version}}.',
     },
     sheet: {
       actions: {
