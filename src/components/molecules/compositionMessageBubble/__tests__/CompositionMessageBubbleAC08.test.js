@@ -23,6 +23,10 @@ const mockNavigate = jest.fn();
 let mockSnapshot;
 
 jest.mock('@react-navigation/native', () => ({ useNavigation: () => ({ navigate: mockNavigate }) }));
+// COMPOMSG : pluriels et `{{count}}` passent par t() — le français de l'app.
+jest.mock('react-i18next', () => (
+  jest.requireActual('@/theme/strings/__mocks__/doublureTraduction').reactI18next
+));
 
 jest.mock('@/store/authRuntime', () => ({
   getAuthRuntimeSnapshot: () => mockSnapshot,
@@ -240,17 +244,23 @@ describe('COMPOLECT-2 · la mini-carte du fil se lit', () => {
       .join(' | ');
   };
 
+  // 🔄 COMPOMSG — le titre de la carte est devenu le NOM DU MATCH (le bandeau
+  // « Composition publiée » tient sur une ligne au-dessus). La promesse est
+  // la même : le titre a droit à deux lignes et ne se coupe pas.
   test('🥇 le titre n est plus coupe : il a droit a DEUX lignes', () => {
     const { Text } = jest.requireActual('react-native');
     const arbre = rendreLaCarte();
 
     const titre = arbre.root.findAllByType(Text)
-      .find((/** @type {any} */ n) => String(n.props.children) === "Composition d'équipes publiée");
+      .find((/** @type {any} */ n) => String(n.props.children) === 'US Fuveau - AS Gardanne');
 
     expect(titre).toBeDefined();
     expect(titre.props.numberOfLines).toBe(2);
   });
 
+  // 🔄 COMPOMSG — la pastille « 1 equipe(s) » est devenue le compte des
+  // convoqués, dans le pied de carte. La promesse est la même : rien n'est
+  // posé PAR-DESSUS le terrain.
   test('🥇 la pastille du compte n est PLUS posee sur le terrain', () => {
     const arbre = rendreLaCarte();
     const [terrain] = arbre.root.findAll(
@@ -262,9 +272,9 @@ describe('COMPOLECT-2 · la mini-carte du fil se lit', () => {
       .map((/** @type {any} */ n) => JSON.stringify(n.props.children))
       .join(' ');
 
-    expect(texteDuTerrain).not.toContain('equipe(s)');
-    // ⛔ Et elle n a pas disparu pour autant : elle est juste remontee.
-    expect(texteVisible(arbre)).toContain('equipe(s)');
+    expect(texteDuTerrain).not.toContain('convoqu');
+    // ⛔ Et il n a pas disparu pour autant : il est dans le pied de carte.
+    expect(texteVisible(arbre)).toContain('2 convoqués');
   });
 
   test('🥇 le jeton porte la PHOTO du joueur quand il y en a une', () => {

@@ -21,6 +21,11 @@ import CompositionMessageBubble from '../CompositionMessageBubble';
  */
 
 jest.mock('@react-navigation/native', () => ({ useNavigation: () => ({ navigate: jest.fn() }) }));
+// COMPOMSG : la carte passe désormais par des pluriels et `{{version}}` — la
+// doublure rend le français de l'app au lieu du `t` « pas prêt » de react-i18next.
+jest.mock('react-i18next', () => (
+  jest.requireActual('@/theme/strings/__mocks__/doublureTraduction').reactI18next
+));
 
 jest.mock('@/components/tactical/RenderedTacticalField', () => {
   const { View } = jest.requireActual('react-native');
@@ -109,7 +114,9 @@ describe('U06 — la carte de compo porte enfin son contexte', () => {
   it('sans nom de match, la carte garde son intitule et ne montre pas de trou', () => {
     const rendu = rendre({ ...COMPO, eventName: null });
 
-    expect(rendu).toContain("Composition d'équipes publiée");
+    // COMPOMSG : l'intitulé est devenu le bandeau « Composition publiée » (pack,
+    // écran 9) ; il reste là quand le match n'a pas de nom.
+    expect(rendu).toContain('Composition publiée');
     expect(rendu).not.toContain('undefined');
   });
 
@@ -117,6 +124,7 @@ describe('U06 — la carte de compo porte enfin son contexte', () => {
     const rendu = rendre(COMPO);
 
     expect(rendu).toContain('U15 A');
-    expect(rendu).toContain('v2');
+    // COMPOMSG : la version se dit en mots (« v2 » ne disait rien à un joueur).
+    expect(rendu).toContain('Version 2');
   });
 });

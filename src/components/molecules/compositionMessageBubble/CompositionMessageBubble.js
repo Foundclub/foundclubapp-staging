@@ -1,30 +1,37 @@
 // @ts-nocheck
 /* eslint-disable no-nested-ternary */
 import { useNavigation } from '@react-navigation/native';
-import dayjs from 'dayjs';
 import { useTranslation } from 'react-i18next';
 import {
-  Image, StyleSheet, Text, TouchableOpacity, View,
+  StyleSheet, Text, TouchableOpacity, View,
 } from 'react-native';
-import 'dayjs/locale/fr';
 
 import { getAuthRuntimeSnapshot } from '@/store/authRuntime';
+import { withAlpha } from '@/theme/colors';
 import useTheme from '@/theme/themeContext';
 
+import PlayerHeadToken from '@/components/tactical/PlayerHeadToken';
 import RenderedTacticalField from '@/components/tactical/RenderedTacticalField';
-import { useTokenIdentity } from '@/components/tactical/TacticalPlayerToken';
 import {
   buildConvocationFieldTokens,
+  buildPublishedBoardTarget,
+  formatConvocationDay,
+  formatConvocationTime,
   getPersonName,
   getViewerConvocationRole,
 } from '@/views/playerConvocation/playerConvocationUtils';
 
 import { RouteNames } from '@/navigation/routeNames';
 
-// Mini field dimensions
-const MINI_FIELD_WIDTH = 220;
-const MINI_FIELD_HEIGHT = 150;
-const MINI_TOKEN_SIZE = 34;
+import { getTacticalFieldAspectRatio } from '@/utils/tacticalField';
+
+// 📐 COMPOMSG — la carte garde la largeur d'une bulle ; le terrain est DEBOUT,
+// dans les proportions de son sport. Il etait couche dans une boite de
+// 220 x 150 : un terrain de football (1,5 fois plus haut que large) y etait
+// ecrase (capture d'Adel du 23/09).
+const CARD_WIDTH = 264;
+const MINI_FIELD_HEIGHT = 196;
+const MINI_TOKEN_SIZE = 24;
 
 /**
  * @typedef {{ id?: string; documentId?: string; firstname?: string; lastname?: string }} CompositionPlayer
@@ -66,72 +73,24 @@ const getPlayerId = (player) => String(player?.documentId || player?.id || '').t
  */
 const readableAddress = (value) => (typeof value === 'string' ? value.trim() : '');
 
-const getPlayerInitials = (player) => `${player?.firstname?.charAt(0) || ''}${player?.lastname?.charAt(0) || ''}`.toUpperCase() || '?';
-
 /**
- * 🔎 COMPOLECT-2 — LE JETON DE LA MINI-CARTE, ENFIN LISIBLE.
+ * Carte « Composition publiee » d'un fil de messagerie.
  *
- * 🗣️ Adel, 27/08 : « un jeton "JM" grand comme rien ». Il mesurait 24 pt et ne
- * portait que des initiales, alors que la personne a souvent une photo dans la
- * meme charge.
+ * 🎨 COMPOMSG (23/09) — REFAITE AU DESIGN SYSTEME. Adel : « visuellement il faut
+ * l'ameliorer, qu'il corresponde mieux au design system. La, c'est pas tres
+ * beau. » Elle suit desormais sa voisine du meme fil, `EventShareBubble` (fond
+ * `primary800`, liseré cyan, titre sur deux lignes, pied separe), et la maquette
+ * du pack composition (ecran 9 : bandeau « COMPOSITION » + sport, terrain avec
+ * les tetes des joueurs, pied « N convoques · Ouvrir »).
  *
- * ⛔ CE N EST PAS LE JETON DE LA CREATION, ET C EST VOULU : celui-la fait
- * 58 x 72 pt, il couvrirait un tiers d une carte de message large de 250. La
- * mini-carte RESTE une vignette — on l agrandit et on lui donne la photo, on ne
- * la transforme pas en ecran.
- * ♻️ La lecture de l avatar (les 3 formes que le serveur envoie, et le repli en
- * initiales) est celle de `TacticalPlayerToken` : un composant a part pour que
- * le crochet soit appele une fois par jeton, jamais dans une boucle.
- * @param {object} props
- * @param {any} props.player
- * @param {any} props.style
- * @returns {import('react').ReactElement}
- */
-function MiniPlayerToken({ player, style }) {
-  const { Colors, Fonts } = useTheme();
-  const { avatarUri, initials } = useTokenIdentity(player);
-
-  return (
-    <View style={[styles.miniToken, { backgroundColor: Colors.primary500 }, style]}>
-      {avatarUri ? (
-        <Image source={{ uri: avatarUri }} style={styles.miniTokenPhoto} />
-      ) : (
-        /* Initiales sur pastille primary500 : encre primary900 (cf. THEME.md). */
-        <Text style={[Fonts.p4Bold, styles.miniTokenText, { color: Colors.primary900 }]}>
-          {initials || getPlayerInitials(player)}
-        </Text>
-      )}
-    </View>
-  );
-}
-
-/**
- * 🔢 La pastille du compte — « 1 equipe(s) » ou « 11 joueurs ».
- *
- * 🧨 COMPOLECT-2 : elle etait posee EN ABSOLU DANS le terrain, ou elle
- * recouvrait les jetons du coin haut droit (capture d'Adel du 27/08). Elle
- * remonte dans l'entete, a cote du titre.
- * ⚠️ Elle vit dans son PROPRE composant, et ce n'est pas cosmetique : le
- * contrat de theme lit la proximite des lignes, et un fond `primary500` pose
- * juste sous une encre `neutral00` (le titre) se lit comme un contraste rate.
- * Ici les deux couleurs ne se touchent plus.
- * @param {object} props
- * @param {string} props.label
- * @returns {import('react').ReactElement}
- */
-function CountBadge({ label }) {
-  const { Colors, Fonts } = useTheme();
-
-  return (
-    <View style={[styles.countBadge, { backgroundColor: Colors.primary500 }]}>
-      {/* Encre primary900 sur primary500 : le blanc y echoue en WCAG AA. */}
-      <Text style={[Fonts.p4Bold, { color: Colors.primary900 }]}>{label}</Text>
-    </View>
-  );
-}
-
-/**
- * Mini composition preview for chat messages
+ * 🚦 QUI VOIT QUOI (regle de la messagerie, COMPOMSG) :
+ *   · toucher la CARTE : un joueur convoque va sur « Tu es convoque » ; tout
+ *     autre lecteur (entraineur, dirigeant, joueur non retenu) va sur le plein
+ *     ecran en lecture seule ;
+ *   · toucher le TERRAIN : TOUT LE MONDE va sur le plein ecran en lecture seule.
+ * Le plein ecran relit la derniere version publiee au serveur en s'ouvrant
+ * (`refreshFromServer`) : une carte ancienne du fil ne montre jamais une compo
+ * perimee sans le dire.
  * @param {object} props
  * @param {CompositionPayload | null | undefined} props.composition - The composition data
  * @param {boolean} [props.isMe] - Whether sent by current user
@@ -173,16 +132,14 @@ function CompositionMessageBubble({ composition, isMe = false }) {
   // 🧾 R6 (vague R) — LES NOMS, ENFIN ECRITS.
   //
   // 🧨 Constat de recette du 24/08 : « la liste des convoques doit se voir dans
-  // le groupe de messages de l equipe ». La carte partait deja toute seule a la
-  // publication et annonçait « 11 joueurs » — onze QUI ? Les personnes
-  // voyageaient DEJA dans sa propre charge (`snapshotPlayers`,
-  // `reservePlayers`) : le lecteur du tchat devait ouvrir un ecran pour savoir
-  // s il en faisait partie. ⇒ ZERO changement serveur : la donnee etait la.
+  // le groupe de messages de l equipe ». Les personnes voyageaient DEJA dans la
+  // charge (`snapshotPlayers`, `reservePlayers`) : ZERO changement serveur.
   //
   // ♻️ `buildConvocationFieldTokens` est le MEME assembleur que l ecran du
   // joueur convoque et que l onglet « Convocation » : il apparie un placement a
   // sa personne et JETTE les placements orphelins — jamais de ligne vide a la
-  // place d un nom qu on n a pas.
+  // place d un nom qu on n a pas. Il nourrit aussi les jetons du terrain : les
+  // tetes et les noms viennent de la meme liste.
   const starters = buildConvocationFieldTokens({
     placements: previewPlacements,
     snapshotPlayers: allPlayers,
@@ -190,9 +147,9 @@ function CompositionMessageBubble({ composition, isMe = false }) {
   const benchPlayers = reservePlayers.filter((player) => getPersonName(player));
 
   // ⛔ LE MINI-TERRAIN N A JAMAIS DESSINE QUE LA PREMIERE EQUIPE — c est un
-  // apercu, et il le reste : 250 pt de large ne portent pas quatre effectifs.
-  // Mais une liste qui s arreterait la SANS RIEN DIRE ferait croire au lecteur
-  // qu il a vu tout le monde. La carte compte donc ce qu elle ne montre pas.
+  // apercu, et il le reste. Mais une liste qui s arreterait la SANS RIEN DIRE
+  // ferait croire au lecteur qu il a vu tout le monde : la carte compte ce
+  // qu elle ne montre pas.
   const otherTeamsCount = isMultiTeamComposition && Array.isArray(teams)
     ? Math.max(0, teams.length - 1)
     : 0;
@@ -202,44 +159,63 @@ function CompositionMessageBubble({ composition, isMe = false }) {
       {
         count: otherTeamsCount,
         defaultValue_one: '+ {{count}} autre équipe dans cette composition',
-        defaultValue_other: '+ {{count}} autre équipes dans cette composition',
+        defaultValue_other: '+ {{count}} autres équipes dans cette composition',
       },
     )
     : '';
 
+  // 🔢 COMPOMSG — CE QUE LA CARTE COMPTE : les CONVOQUES (terrain + banc, toutes
+  // equipes confondues). Elle affichait « 1 equipe(s) » — accent manquant,
+  // « (s) » de formulaire, et une information que personne ne cherchait.
+  const allPlacements = isMultiTeamComposition && Array.isArray(teams)
+    ? teams.flatMap((entry) => (Array.isArray(entry?.placements) ? entry.placements : []))
+    : placements;
+  const calledUpIds = new Set([
+    ...buildConvocationFieldTokens({ placements: allPlacements, snapshotPlayers: allPlayers })
+      .map((token) => getPlayerId(token.player)),
+    ...benchPlayers.map((player) => getPlayerId(player)),
+  ].filter(Boolean));
+  const calledUpLine = calledUpIds.size > 0
+    ? t('compositionMessageBubble.calledUp', {
+      count: calledUpIds.size,
+      defaultValue_one: '{{count}} convoqué',
+      defaultValue_other: '{{count}} convoqués',
+    })
+    : '';
+  // 🏷️ COMPOMSG — « v1 » ne disait rien a un joueur. Une compo MODIFIEE le dit
+  // en mots (« Version 2 », meme mot que l'ecran « Compo modifiee » du pack) ;
+  // la premiere publication n'affiche rien de technique.
+  const versionNumber = Number(publishedVersion) || 0;
+  const versionLine = versionNumber > 1
+    ? t('compositionMessageBubble.version', {
+      defaultValue: 'Version {{version}}',
+      version: versionNumber,
+    })
+    : '';
+
   // U06 — l'heure etait DEJA dans `eventDate` (champ `datetime` cote serveur) et
   // partait a la poubelle : la carte n'en gardait que le jour.
-  const eventMoment = eventDate ? dayjs(eventDate).locale('fr') : null;
-  const formattedDate = eventMoment ? eventMoment.format('DD/MM/YYYY') : '';
-  const formattedTime = eventMoment ? eventMoment.format('HH:mm') : '';
-  const whenLine = [formattedDate, formattedTime].filter(Boolean).join(' · ');
+  // ♻️ COMPOMSG — le jour et l'heure s'ecrivent avec les MEMES fonctions que
+  // « Tu es convoque » : un joueur qui passe de l'un a l'autre lit la meme date.
+  const whenLine = [formatConvocationDay(eventDate), formatConvocationTime(eventDate)]
+    .filter(Boolean).join(' · ');
   const addressLine = readableAddress(eventAddress) || t(
     'compositionMessageBubble.locationNotSpecified',
     'Lieu non précisé',
   );
-  const teamLine = `${teamName || t(
-    'compositionMessageBubble.team',
-    'Equipe',
-  )}${publishedVersion ? ` · v${publishedVersion}` : ''}`;
   // Une carte de composition SANS evenement rattache (partage libre) n'a ni
   // quand ni ou a annoncer : on ne lui colle pas un « Lieu non precise » qui ne
   // repond a aucune question.
   const hasEventContext = Boolean(eventName || whenLine);
 
-  // 🥇 AC08 — LA BULLE MENE ENFIN AU BON ECRAN (constat D-23 d'Adel : « quand on
-  // clique pour ouvrir la compo, c'est nul »). Elle envoyait TOUT LE MONDE sur le
-  // tableau du coach desactive. Un convoque va desormais sur SON terrain ; les
-  // autres gardent la vue d'ensemble en lecture seule, telle quelle.
-  //
-  // ♻️ L'identite se lit dans l'instantane d'authentification — le MEME que
-  // `client.native.js` interroge avant chaque requete. `useAuth` tirerait tout le
-  // client HTTP dans une carte de tchat qui n'appelle rien.
+  const kicker = type === 'lineup_share'
+    ? t('compositionMessageBubble.published', 'Composition publiée')
+    : t('compositionMessageBubble.matchLineUp', 'Composition du match');
+
   // 🎒 COMPOMODIF (M1) — LE PACK QUE LA CARTE EMPORTE, ASSEMBLE UNE SEULE FOIS.
   //
-  // Il servait deja a l'ancien plateau ; il part maintenant AUSSI vers le
-  // plateau neuf, parce qu'un coach qui appuie sur « Modifier » doit retrouver
-  // ses convoques. Sans lui, l'ecran de selection repartirait de zero — c'est
-  // exactement le defaut M4, qu'ouvrir la porte recreerait ici.
+  // Un coach qui appuie sur « Modifier » doit retrouver ses convoques. Sans lui,
+  // l'ecran de selection repartirait de zero — c'est exactement le defaut M4.
   const packDeLaCarte = isMultiTeamComposition
     ? {
       manualPlayers,
@@ -256,82 +232,55 @@ function CompositionMessageBubble({ composition, isMe = false }) {
       sportContext,
     };
 
-  const handlePress = () => {
+  // COMPOLECT-2 (D1) + COMPOMSG — LA CARTE MENE AU MEME TERRAIN QUE PARTOUT
+  // AILLEURS, et par la MEME recette (`buildPublishedBoardTarget`) que le
+  // terrain de « Tu es convoque ».
+  //
+  // DEUX CAS GARDENT L'ANCIEN PLATEAU, et ce sont exactement ceux
+  // d'`EventDetails` (D6) : sans titulaire dessinable, un terrain vide ferait
+  // croire a une compo perdue ; avec plusieurs equipes, le plateau ne dessine
+  // QU'UN terrain et en cacherait une sans rien dire.
+  const openFullScreen = () => {
     const { auth } = getAuthRuntimeSnapshot();
-    const viewerConvocationRole = getViewerConvocationRole(
-      {
-        published: {
-          reservePlayerIds: reservePlayers.map((player) => getPlayerId(player)).filter(Boolean),
-          teams: isMultiTeamComposition ? teams : [{ placements }],
-        },
-      },
-      auth?.user?.documentId || auth?.user?.id,
-    );
 
-    if (eventId && viewerConvocationRole) {
-      navigation.navigate(RouteNames.EventStack, {
-        params: { eventId },
-        screen: RouteNames.PlayerConvocation,
-      });
-      return;
-    }
-
-    // COMPOLECT-2 (D1) - LA CARTE MENE AU MEME TERRAIN QUE PARTOUT AILLEURS.
-    //
-    // Adel, 27/08 : « quand je clique sur "ouvrir la compo", je vois le terrain
-    // avec le banc en plein ecran, COMME QUAND JE CREE LA COMPO ». COMPOLECT-1 a
-    // rebranche l'onglet « Convocation » de l'evenement, mais PAS cette carte :
-    // elle envoyait encore sur `TacticalBoardV2`, un AUTRE plateau (1864 lignes,
-    // panneau de banc de 276 pt) qui ne ressemble pas a l'ecran de creation.
-    // Un coach n'est JAMAIS convoque sur sa propre compo : c'est donc toujours
-    // cette branche-ci qu'il prenait, et jamais celle du dessus.
-    //
-    // ZERO CALCUL NEUF : `starters` et `benchPlayers` sont deja assembles plus
-    // haut pour dessiner le mini-terrain de la carte elle-meme.
-    //
-    // DEUX CAS GARDENT L'ANCIEN PLATEAU, et ce sont exactement ceux
-    // d'`EventDetails` (D6) : sans titulaire dessinable, un terrain vide ferait
-    // croire a une compo perdue ; avec plusieurs equipes, le plateau ne dessine
-    // QU'UN terrain et en cacherait une sans rien dire.
-    // 🚪 COMPOMODIF (M1) — LE COACH RETROUVE SA PORTE, ICI AUSSI.
-    //
-    // 🗣️ Adel, 27/08 : « des qu'il peut voir la compo, il manque un petit
-    // bouton Modifier, a chaque fois ».
-    //
-    // ⛔ ON N'EN FABRIQUE PAS UN DEUXIEME : le bouton existe deja sur le
-    // plateau plein ecran (COMPOLECT-2), reserve a `canEdit`. Cette carte
-    // l'ETEIGNAIT en envoyant `canEdit: false` en dur — sur les 3 vues d'une
-    // compo publiee, c'etait la seule a le faire.
-    //
-    // ♻️ Le droit se lit dans l'instantane deja ouvert deux lignes plus haut :
-    // ce lecteur entraine-t-il l'equipe de cette compo ?
-    //
-    // ⚠️ VOLONTAIREMENT ETROIT : un president de club qui n'entraine pas cette
-    // equipe n'aura pas le bouton ICI — la carte ne porte pas le club, et
-    // inventer un droit qu'on ne peut pas verifier vaut moins qu'un bouton
-    // manquant. Il l'a dans les 2 autres vues, ou `canManageEvent` tranche avec
-    // l'evenement entier en main.
+    // 🚪 COMPOMODIF (M1) — ⚠️ VOLONTAIREMENT ETROIT : un president de club qui
+    // n'entraine pas cette equipe n'aura pas le bouton « Modifier » ICI — la
+    // carte ne porte pas le club, et inventer un droit qu'on ne peut pas
+    // verifier vaut moins qu'un bouton manquant.
     const peutModifier = Boolean(teamId) && (auth?.user?.trainedTeams || []).some(
       (equipe) => String(equipe?.documentId || '') === String(teamId),
     );
 
-    if (eventId && starters.length > 0 && otherTeamsCount === 0) {
+    const target = eventId
+      ? buildPublishedBoardTarget(
+        {
+          ...packDeLaCarte,
+          reservePlayerIds: reservePlayers.map((player) => getPlayerId(player)).filter(Boolean),
+          reserveSnapshotPlayers: reservePlayers,
+          snapshotPlayers: allPlayers,
+          teams: isMultiTeamComposition ? teams : [{ placements }],
+          version: publishedVersion,
+        },
+        { sport: sportContext || sport, teamName },
+      )
+      : null;
+
+    if (target) {
       navigation.navigate(RouteNames.EventStack, {
         params: {
+          ...target,
           canEdit: peutModifier,
           eventId,
           eventLabel: eventName,
           // Sans ces deux-la, « Modifier » ouvrirait un ecran incapable de
           // retrouver les convoques, puis de publier faute d'equipe.
           existingComposition: packDeLaCarte,
+          // 🔄 COMPOMSG — la carte est une PHOTO prise a la publication. Le
+          // plateau relit la derniere version et dit si celle-ci a ete depassee.
+          messageVersion: versionNumber || null,
           readOnly: true,
+          refreshFromServer: true,
           teamId,
-          // Titulaires PUIS remplacants : le plateau retrouve le banc tout seul
-          // en retirant de cette liste ceux que les placements portent.
-          selectedPlayers: [...starters.map((token) => token.player), ...benchPlayers],
-          sport: sportContext || sport,
-          startPlacements: starters.map((token) => token.placement),
-          teamName,
         },
         screen: RouteNames.MatchCompositionBoard,
       });
@@ -360,130 +309,202 @@ function CompositionMessageBubble({ composition, isMe = false }) {
     });
   };
 
-  const renderMiniTokens = () => previewPlacements.map((placement) => {
-    const { playerId, positionX, positionY } = placement;
-    const player = allPlayers.find((entry) => getPlayerId(entry) === String(playerId || '').trim());
-    const left = ((positionX || 0) / 100) * MINI_FIELD_WIDTH - MINI_TOKEN_SIZE / 2;
-    const top = ((positionY || 0) / 100) * MINI_FIELD_HEIGHT - MINI_TOKEN_SIZE / 2;
-
-    return (
-      <MiniPlayerToken
-        key={`${playerId || 'unknown'}-${positionX || 0}-${positionY || 0}`}
-        player={player}
-        style={{ left, top }}
-      />
+  // 🥇 AC08 — LA BULLE MENE AU BON ECRAN. Un convoque va sur SON ecran ; les
+  // autres gardent la vue d'ensemble en lecture seule.
+  //
+  // ♻️ L'identite se lit dans l'instantane d'authentification — le MEME que
+  // `client.native.js` interroge avant chaque requete. `useAuth` tirerait tout le
+  // client HTTP dans une carte de tchat qui n'appelle rien.
+  const handlePress = () => {
+    const { auth } = getAuthRuntimeSnapshot();
+    const viewerConvocationRole = getViewerConvocationRole(
+      {
+        published: {
+          reservePlayerIds: reservePlayers.map((player) => getPlayerId(player)).filter(Boolean),
+          teams: isMultiTeamComposition ? teams : [{ placements }],
+        },
+      },
+      auth?.user?.documentId || auth?.user?.id,
     );
-  });
+
+    if (eventId && viewerConvocationRole) {
+      navigation.navigate(RouteNames.EventStack, {
+        params: { eventId },
+        screen: RouteNames.PlayerConvocation,
+      });
+      return;
+    }
+
+    openFullScreen();
+  };
+
+  const accessibilityLabel = [
+    kicker,
+    versionLine,
+    eventName,
+    whenLine,
+    teamName,
+    hasEventContext ? addressLine : '',
+    calledUpLine,
+  ].filter(Boolean).join('. ');
+
+  const starterNames = starters.map((token) => getPersonName(token.player)).filter(Boolean);
+  const benchNames = benchPlayers.map((player) => getPersonName(player));
+  const pitchTitle = t('compositionMessageBubble.onThePitch', 'Sur le terrain');
+  const benchTitle = t('compositionMessageBubble.onTheBench', 'Sur le banc');
 
   return (
     <TouchableOpacity
+      accessibilityHint={t('compositionMessageBubble.openHint', 'Ouvre la composition')}
+      accessibilityLabel={accessibilityLabel}
+      accessibilityRole="button"
       activeOpacity={0.85}
       onPress={handlePress}
       style={[
         styles.container,
         {
           alignSelf: isMe ? 'flex-end' : 'flex-start',
-          backgroundColor: Colors.neutral800,
-          borderColor: Colors.neutral700,
+          backgroundColor: withAlpha(Colors.primary800, 0.92),
+          borderColor: withAlpha(Colors.primary500, 0.35),
         },
       ]}
     >
-      <View style={[styles.header, { borderBottomColor: Colors.neutral700 }]}>
-        {/* U06 — l'intitule tient desormais sur UNE ligne. A 250 px de large, il
-            partageait sa rangee avec la date : les deux se coupaient. Le nom du
-            match, le quand et le ou descendent dans le pied de carte.
-            🧨 COMPOLECT-2 — MAIS UNE LIGNE NE SUFFISAIT PAS : sur la capture
-            d'Adel du 27/08 il lisait « Composition d'équipes publi… ». Le titre
-            prend DEUX lignes, et la pastille du compte vient a cote de lui —
-            elle etait posee PAR-DESSUS le terrain, ou elle cachait les jetons
-            du coin haut droit. */}
-        <Text
-          numberOfLines={2}
-          style={[Fonts.p2Bold, styles.headerTitle, { color: Colors.neutral00 }]}
-        >
-          {type === 'lineup_share' ? t(
-            'compositionMessageBubble.teamLineUpPublished',
-            "Composition d'équipes publiée",
-          ) : t(
-            'compositionMessageBubble.matchLineUp',
-            'Composition du match',
-          )}
-        </Text>
-        <CountBadge
-          label={isMultiTeamComposition
-            ? `${teams.length} equipe(s)`
-            : `${previewPlacements.length} joueur${previewPlacements.length > 1 ? 's' : ''}`}
-        />
-      </View>
-
-      <RenderedTacticalField sport={sport} style={styles.miniField}>
-        {renderMiniTokens()}
-      </RenderedTacticalField>
-
-      {/* 🧾 R6 — QUI EST CONVOQUE. Le bloc entier disparait quand il n y a
-          personne : une section « Sur le banc » suivie de rien se lit comme un
-          bug, et un pack sans remplacant est le cas normal. */}
-      {starters.length > 0 || benchPlayers.length > 0 ? (
-        <View style={[styles.roster, { borderTopColor: Colors.neutral700 }]}>
-          {starters.length > 0 ? (
-            <Text style={[Fonts.p4Bold, { color: Colors.neutral00 }]}>
-              {t('compositionMessageBubble.onThePitch', 'Sur le terrain')}
-            </Text>
-          ) : null}
-          {starters.map((token) => (
-            <Text
-              key={`terrain-${token?.placement?.playerId}`}
-              numberOfLines={1}
-              style={[Fonts.p4, { color: Colors.neutral200 }]}
+      <View style={styles.body}>
+        <View style={styles.kickerRow}>
+          <View style={[styles.kickerDot, { backgroundColor: Colors.primary500 }]} />
+          <Text
+            numberOfLines={1}
+            style={[Fonts.p4Bold, styles.kicker, { color: Colors.primary500 }]}
+          >
+            {kicker}
+          </Text>
+          {/* Meme mot que la pastille de l'ecran « Compo modifiee » du pack. */}
+          {versionLine ? (
+            <View
+              style={[
+                styles.versionChip,
+                { borderColor: withAlpha(Colors.primary500, 0.45) },
+              ]}
             >
-              {getPersonName(token.player)}
-            </Text>
-          ))}
-
-          {benchPlayers.length > 0 ? (
-            <Text style={[Fonts.p4Bold, { color: Colors.neutral00 }]}>
-              {t('compositionMessageBubble.onTheBench', 'Sur le banc')}
-            </Text>
-          ) : null}
-          {benchPlayers.map((player) => (
-            <Text
-              key={`banc-${getPlayerId(player)}`}
-              numberOfLines={1}
-              style={[Fonts.p4, { color: Colors.neutral200 }]}
-            >
-              {getPersonName(player)}
-            </Text>
-          ))}
-
-          {otherTeamsLine ? (
-            <Text style={[Fonts.p4, { color: Colors.neutral200 }]}>{otherTeamsLine}</Text>
+              <Text numberOfLines={1} style={[Fonts.p4Bold, { color: Colors.primary100 }]}>
+                {versionLine}
+              </Text>
+            </View>
           ) : null}
         </View>
-      ) : null}
 
-      <View style={[styles.footer, { backgroundColor: Colors.neutral900 }]}>
-        {hasEventContext ? (
-          <>
-            {eventName ? (
-              <Text numberOfLines={2} style={[Fonts.p3Bold, { color: Colors.neutral00 }]}>
-                {eventName}
-              </Text>
-            ) : null}
+        {/* U06 + COMPOLECT-2 — le nom du match a droit a DEUX lignes : sur la
+            capture d'Adel du 27/08, l'intitule unique se coupait. Puis, dans
+            l'ordre de la carte voisine `EventShareBubble` : quand, qui, ou. */}
+        {eventName ? (
+          <Text numberOfLines={2} style={[Fonts.p2Bold, { color: Colors.neutral00 }]}>
+            {eventName}
+          </Text>
+        ) : null}
+        {hasEventContext || teamName ? (
+          <View style={styles.contextLines}>
             {whenLine ? (
               <Text numberOfLines={1} style={[Fonts.p4, { color: Colors.neutral200 }]}>
                 {whenLine}
               </Text>
             ) : null}
-            <Text numberOfLines={2} style={[Fonts.p4, { color: Colors.neutral200 }]}>
-              {addressLine}
-            </Text>
-          </>
+            {teamName ? (
+              <Text numberOfLines={1} style={[Fonts.p4, { color: Colors.neutral200 }]}>
+                {teamName}
+              </Text>
+            ) : null}
+            {hasEventContext ? (
+              <Text numberOfLines={2} style={[Fonts.p4, { color: Colors.neutral200 }]}>
+                {addressLine}
+              </Text>
+            ) : null}
+          </View>
         ) : null}
-        <Text numberOfLines={1} style={[Fonts.p4, { color: Colors.primary500 }]}>
-          {type === 'lineup_share' ? teamLine : t(
-            'compositionMessageBubble.tapToSeeTheLine',
-            'Appuyer pour voir la composition',
+
+        {/* 🔎 COMPOMSG — LE TERRAIN EST SON PROPRE BOUTON : il mene TOUJOURS au
+            plein ecran, meme pour un convoque (que la carte, elle, envoie sur
+            « Tu es convoque »). La pastille « Agrandir » le dit. */}
+        <TouchableOpacity
+          accessibilityLabel={t(
+            'compositionMessageBubble.openFullScreen',
+            'Voir la composition en plein écran',
           )}
+          accessibilityRole="button"
+          activeOpacity={0.85}
+          onPress={openFullScreen}
+          style={styles.fieldTouch}
+        >
+          <RenderedTacticalField
+            sport={sport}
+            style={[
+              styles.miniField,
+              { aspectRatio: 1 / getTacticalFieldAspectRatio(sportContext || sport) },
+            ]}
+          >
+            {starters.map(({ placement, player }) => (
+              <View
+                key={`${placement?.playerId}-${placement?.positionX}-${placement?.positionY}`}
+                style={[
+                  styles.tokenSlot,
+                  {
+                    left: `${placement?.positionX || 0}%`,
+                    top: `${placement?.positionY || 0}%`,
+                  },
+                ]}
+              >
+                <PlayerHeadToken player={player} size={MINI_TOKEN_SIZE} />
+              </View>
+            ))}
+          </RenderedTacticalField>
+          <View
+            style={[styles.expandPill, { backgroundColor: withAlpha(Colors.neutral900, 0.72) }]}
+          >
+            <Text style={[Fonts.p4Bold, { color: Colors.neutral00 }]}>
+              {t('compositionMessageBubble.expand', 'Agrandir')}
+            </Text>
+          </View>
+        </TouchableOpacity>
+
+        {/* 🧾 R6 — QUI EST CONVOQUE. Memes mots que l'onglet « Convocation » de
+            la page d'evenement. Le bloc entier disparait quand il n'y a
+            personne : une section « Sur le banc » suivie de rien se lit comme
+            un bug. COMPOMSG : les noms se suivent sur une ligne qui passe a la
+            ligne, au lieu d'une colonne de douze lignes. */}
+        {starterNames.length > 0 || benchNames.length > 0 ? (
+          <View style={styles.roster}>
+            {starterNames.length > 0 ? (
+              <View style={styles.rosterGroup}>
+                <Text style={[Fonts.p4Bold, styles.rosterTitle, { color: Colors.neutral00 }]}>
+                  {`${pitchTitle} · ${starterNames.length}`}
+                </Text>
+                <Text style={[Fonts.p4, { color: Colors.neutral200 }]}>
+                  {starterNames.join(' · ')}
+                </Text>
+              </View>
+            ) : null}
+            {benchNames.length > 0 ? (
+              <View style={styles.rosterGroup}>
+                <Text style={[Fonts.p4Bold, styles.rosterTitle, { color: Colors.neutral00 }]}>
+                  {`${benchTitle} · ${benchNames.length}`}
+                </Text>
+                <Text style={[Fonts.p4, { color: Colors.neutral200 }]}>
+                  {benchNames.join(' · ')}
+                </Text>
+              </View>
+            ) : null}
+            {otherTeamsLine ? (
+              <Text style={[Fonts.p4, { color: Colors.neutral200 }]}>{otherTeamsLine}</Text>
+            ) : null}
+          </View>
+        ) : null}
+      </View>
+
+      <View style={[styles.footer, { borderTopColor: withAlpha(Colors.neutral00, 0.1) }]}>
+        <Text numberOfLines={1} style={[Fonts.p4, styles.footerText, { color: Colors.neutral300 }]}>
+          {calledUpLine}
+        </Text>
+        <Text style={[Fonts.p3Bold, { color: Colors.primary500 }]}>
+          {t('compositionMessageBubble.open', 'Ouvrir')}
         </Text>
       </View>
     </TouchableOpacity>
@@ -491,69 +512,86 @@ function CompositionMessageBubble({ composition, isMe = false }) {
 }
 
 const styles = StyleSheet.create({
+  body: {
+    gap: 8,
+    paddingHorizontal: 14,
+    paddingTop: 12,
+  },
   container: {
-    borderRadius: 12,
+    borderRadius: 14,
     borderWidth: 1,
     marginVertical: 4,
     overflow: 'hidden',
-    width: 250,
+    width: CARD_WIDTH,
   },
-  countBadge: {
-    borderRadius: 10,
+  contextLines: {
+    gap: 2,
+  },
+  expandPill: {
+    borderRadius: 999,
     paddingHorizontal: 8,
-    paddingVertical: 4,
+    paddingVertical: 2,
+    position: 'absolute',
+    right: 6,
+    top: 6,
+  },
+  fieldTouch: {
+    alignSelf: 'center',
+    marginVertical: 4,
   },
   footer: {
-    alignItems: 'flex-start',
-    gap: 2,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-  },
-  header: {
     alignItems: 'center',
-    borderBottomWidth: 1,
+    borderTopWidth: 1,
     flexDirection: 'row',
     gap: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
+    marginTop: 12,
+    minHeight: 44,
+    paddingHorizontal: 14,
   },
-  headerTitle: {
+  footerText: {
     flex: 1,
   },
-  miniField: {
-    alignSelf: 'center',
-    borderRadius: 8,
-    height: MINI_FIELD_HEIGHT,
-    margin: 8,
-    overflow: 'hidden',
-    width: MINI_FIELD_WIDTH,
+  kicker: {
+    flex: 1,
+    letterSpacing: 0.6,
+    textTransform: 'uppercase',
   },
-  miniToken: {
+  kickerDot: {
+    borderRadius: 4,
+    height: 7,
+    width: 7,
+  },
+  kickerRow: {
     alignItems: 'center',
-    borderColor: '#FFF',
-    borderRadius: MINI_TOKEN_SIZE / 2,
-    borderWidth: 2,
-    height: MINI_TOKEN_SIZE,
-    justifyContent: 'center',
-    position: 'absolute',
-    width: MINI_TOKEN_SIZE,
+    flexDirection: 'row',
+    gap: 7,
   },
-  miniTokenPhoto: {
-    borderRadius: MINI_TOKEN_SIZE / 2,
-    height: MINI_TOKEN_SIZE,
-    width: MINI_TOKEN_SIZE,
+  miniField: {
+    borderRadius: 10,
+    height: MINI_FIELD_HEIGHT,
+    overflow: 'hidden',
   },
-  miniTokenText: {
-    fontWeight: '700',
-  },
-  // R6 — memes rembourrages que le pied de carte : la liste est une TROISIEME
-  // bande de la meme carte, pas un encart pose dessus. Seul le filet du haut la
-  // separe du terrain.
   roster: {
-    borderTopWidth: 1,
+    gap: 8,
+  },
+  rosterGroup: {
     gap: 2,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+  },
+  rosterTitle: {
+    letterSpacing: 0.4,
+    textTransform: 'uppercase',
+  },
+  // Le jeton est CENTRE sur sa position, pas accroche par son coin.
+  tokenSlot: {
+    marginLeft: -(MINI_TOKEN_SIZE / 2),
+    marginTop: -(MINI_TOKEN_SIZE / 2),
+    position: 'absolute',
+  },
+  versionChip: {
+    borderRadius: 999,
+    borderWidth: 1,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
   },
 });
 

@@ -4217,15 +4217,23 @@ export default {
     shareTitle: 'Share the line-up',
   },
   compositionMessageBubble: {
+    calledUp_one: '{{count}} called up',
+    calledUp_other: '{{count}} called up',
+    expand: 'Enlarge',
     locationNotSpecified: 'Location not specified',
     matchLineUp: 'Match line-up',
     onTheBench: 'On the bench',
     onThePitch: 'On the pitch',
+    open: 'Open',
+    openFullScreen: 'See the line-up full screen',
+    openHint: 'Opens the line-up',
     otherTeams_one: '+ {{count}} other team in this line-up',
     otherTeams_other: '+ {{count}} other teams in this line-up',
+    published: 'Line-up published',
     tapToSeeTheLine: 'Tap to see the line-up',
     team: 'Team',
     teamLineUpPublished: 'Team line-up published',
+    version: 'Version {{version}}',
   },
   compositionPaywall: {
     actions: {
@@ -11850,6 +11858,7 @@ export default {
       position: 'Position: {{position}}',
     },
     columns: {
+      day: 'Date',
       kickOff: 'Kick-off',
       meeting: 'Meet',
       notSpecified: 'Not specified',
@@ -11859,6 +11868,13 @@ export default {
     empty: {
       message: 'No published line-up concerns you for this event.',
       title: 'The line-up',
+    },
+    field: {
+      expand: 'Enlarge',
+      openFullScreen: 'See the line-up full screen',
+    },
+    note: {
+      title: 'Info',
     },
     reserve: {
       title: 'Substitutes',
@@ -11871,6 +11887,7 @@ export default {
       title: 'Staff',
     },
     title: "You've been called up",
+    version: 'Version {{version}}',
   },
   playerGoalsModal: {
     errorTitle: 'Error',
