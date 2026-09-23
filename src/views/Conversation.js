@@ -4210,6 +4210,9 @@ function Conversation({ navigation, route }) {
     const createdAt = new Date().toISOString();
     const replyToPayload = replyingTo ? { documentId: replyingTo.documentId } : null;
     const voiceComposition = {
+      // VOCAL-MICRO : d'où vient l'onde, combien de niveaux le micro a transmis,
+      // quel démarrage a pris — lisible en base (`voiceNoteService.js`).
+      ...(brouillon.diagnostics ? { diagnostics: brouillon.diagnostics } : {}),
       durationMs: brouillon.durationMs || 0,
       mime: brouillon.mime || 'audio/mp4',
       size: brouillon.size || 0,

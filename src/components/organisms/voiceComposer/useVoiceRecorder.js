@@ -55,6 +55,8 @@ export const VOICE_PHASES = Object.freeze({
  * @property {string} fileName - Le nom du fichier.
  * @property {string} mime - Son type.
  * @property {number} size - Sa taille, en octets.
+ * @property {object} [diagnostics] - Le diagnostic de la prise (source de l'onde,
+ *   niveaux reçus, démarrage retenu), envoyé avec le message.
  */
 
 /**
