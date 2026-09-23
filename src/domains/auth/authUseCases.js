@@ -1292,6 +1292,12 @@ export const NOTIFICATION_TYPES = {
   // l appui vient toujours du telephone. Son etiquette doit quand meme vivre
   // ici, sinon l aiguillage ne la reconnait pas et l appui n ouvre RIEN.
   MESSAGE_REACTION: 'messageReaction',
+  // REPNOTIF (2026-09-23) — `newClubMessage` MANQUAIT, et le serveur l envoie
+  // pourtant a TOUS les membres d un canal de club
+  // (`chat-message/services/notification.ts`). Sans cette etiquette, l appui
+  // tombait dans le cas par defaut : il ouvrait la LISTE des notifications au
+  // lieu de la conversation, et aucun bouton « Repondre » n apparaissait.
+  NEW_CLUB_MESSAGE: 'newClubMessage',
   NEW_GROUP_MESSAGE: 'newGroupMessage',
   NEW_LEAGUE_MATCH_MESSAGE: 'newLeagueMatchMessage',
   NEW_TEAM_MESSAGE: 'newTeamMessage',

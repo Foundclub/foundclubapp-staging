@@ -14,7 +14,9 @@ import { NOTIFICATION_TYPES } from '@/utils/notifications/notificationTypes';
 import {
   CHAT_REPLY_ACTION_CONTEXT,
   CHAT_REPLY_ACTION_REPLY,
+  CHAT_REPLY_ACTION_RETRY,
   CHAT_REPLY_CATEGORY,
+  CHAT_REPLY_RETRY_CATEGORY,
   EVENT_RSVP_ACTION_ABSENT,
   EVENT_RSVP_ACTION_CONTEXT,
   EVENT_RSVP_ACTION_PRESENT,
@@ -51,6 +53,10 @@ const getNotificationStorage = () => ({
 const notificationStorage = getNotificationStorage();
 
 const CHAT_REPLY_ACTIONABLE_TYPES = new Set([
+  // REPNOTIF — le canal de CLUB manquait ici ET dans la liste du serveur : des
+  // centaines de personnes recevaient un message sans jamais pouvoir y repondre
+  // depuis la notification.
+  NOTIFICATION_TYPES.NEW_CLUB_MESSAGE,
   NOTIFICATION_TYPES.NEW_GROUP_MESSAGE,
   NOTIFICATION_TYPES.NEW_LEAGUE_MATCH_MESSAGE,
   NOTIFICATION_TYPES.NEW_TEAM_MESSAGE,
@@ -127,13 +133,38 @@ const getChatReplyFeedbackCopy = () => ({
   title: i18next.t('rsvpActions.chatReply.sent.title', 'Réponse envoyée'),
 });
 
-const getChatReplyFailureCopy = () => ({
-  body: i18next.t(
-    'rsvpActions.notFinalized.body',
-    "Ouvre l'application pour finaliser ta réponse.",
-  ),
-  title: i18next.t('rsvpActions.notFinalized.title', 'Action non finalisée'),
-});
+/**
+ * REPNOTIF — 🧯 CE QUE DIT UN ENVOI RATE, ET POURQUOI IL MONTRE LE TEXTE.
+ *
+ * Avant, l echec disait « Ouvre l application pour finaliser ta reponse » et le
+ * texte tape DISPARAISSAIT : personne ne pouvait le relire ni le renvoyer.
+ * Maintenant il est ECRIT dans le corps — donc lisible et recopiable meme si
+ * tout le reste echoue — et RANGE dans la notification pour le bouton.
+ *
+ * 🔤 Aucune interpolation i18next ici, volontairement : elle ECHAPPE ses
+ * valeurs, et une apostrophe du message ressortirait en `&#39;`
+ * (memoire `piege-i18next-echappe-et-le-zero-prend-le-pluriel`).
+ * @param {string} message Le texte que la personne a tape.
+ * @returns {{ body: string, title: string }} Le titre et le corps.
+ */
+const getChatReplyFailureCopy = (message) => {
+  const invite = i18next.t(
+    'rsvpActions.chatReply.failed.body',
+    'Appuie sur « Réessayer » pour renvoyer :',
+  );
+  const texte = toSafeString(message).trim();
+  return {
+    body: texte ? `${invite} ${texte}` : invite,
+    title: i18next.t('rsvpActions.chatReply.failed.title', 'Message non envoyé'),
+  };
+};
+
+const getChatReplyRetryAndroidActions = () => ([
+  {
+    pressAction: { id: CHAT_REPLY_ACTION_RETRY },
+    title: i18next.t('rsvpActions.chatReply.retry', 'Réessayer'),
+  },
+]);
 
 const getChatReplyAndroidActions = () => ([
   {
@@ -297,6 +328,17 @@ export const ensureNotificationActionSetup = async () => {
       ],
       id: CHAT_REPLY_CATEGORY,
     },
+    {
+      // REPNOTIF — la categorie de REESSAI : un seul bouton, sans champ de
+      // saisie, parce que le texte est deja range dans la notification.
+      actions: [
+        {
+          id: CHAT_REPLY_ACTION_RETRY,
+          title: i18next.t('rsvpActions.chatReply.retry', 'Réessayer'),
+        },
+      ],
+      id: CHAT_REPLY_RETRY_CATEGORY,
+    },
   ]);
 };
 
@@ -421,11 +463,17 @@ export const handleChatReplyActionPress = async ({
     return { handled: false };
   }
 
-  if (pressActionId !== CHAT_REPLY_ACTION_REPLY) {
+  // REPNOTIF — DEUX boutons arrivent ici, et ils ne different que par l ENDROIT
+  // ou le texte se trouve : la personne vient de l ecrire (`inputText`), ou
+  // c est un REESSAI et il attend, range, dans la notification d echec.
+  const estUnReessai = pressActionId === CHAT_REPLY_ACTION_RETRY;
+  if (pressActionId !== CHAT_REPLY_ACTION_REPLY && !estUnReessai) {
     return { handled: false };
   }
 
-  const replyText = toSafeString(inputText).trim();
+  const replyText = estUnReessai
+    ? toSafeString(normalizedData?.chatReplyRetryText).trim()
+    : toSafeString(inputText).trim();
   if (!replyText) {
     return { handled: false };
   }
@@ -437,7 +485,22 @@ export const handleChatReplyActionPress = async ({
 
   try {
     const activationResult = await activateSessionForNotificationPayload(normalizedData);
-    await sendChatReplyMessage(chatId, replyText, activationResult?.session?.token);
+    const sessionToken = activationResult?.session?.token;
+
+    // 🔒 REPNOTIF — SANS LE JETON DU COMPTE VISE, ON N ENVOIE RIEN.
+    //
+    // Un telephone porte souvent PLUSIEURS comptes (memoire
+    // `piege-un-telephone-plusieurs-comptes-notification`). Sans ce garde-fou,
+    // la requete partait quand meme : le client y aurait mis le jeton du compte
+    // ACTIF, et la reponse serait publiee dans la conversation SOUS LE NOM DE
+    // QUELQU UN D AUTRE. Publier un message au nom d un tiers ne se rattrape
+    // pas — mieux vaut un echec, d autant que le texte est desormais garde et
+    // renvoyable d un bouton.
+    if (!sessionToken) {
+      throw new Error(`chat_reply_no_session:${activationResult?.reason || 'unknown'}`);
+    }
+
+    await sendChatReplyMessage(chatId, replyText, sessionToken);
 
     const feedback = getChatReplyFeedbackCopy();
     await displayLocalNotification({
@@ -451,11 +514,16 @@ export const handleChatReplyActionPress = async ({
     console.warn(
       `[NOTIF_ACTION_FAILED] type=${normalizedData?.type || 'unknown'} action=${pressActionId || 'unknown'} chatId=${chatId || 'unknown'}`,
     );
-    const feedback = getChatReplyFailureCopy();
+    const feedback = getChatReplyFailureCopy(replyText);
     await displayLocalNotification({
+      androidActions: getChatReplyRetryAndroidActions(),
       body: feedback.body,
-      channelId: NOTIFICATION_SILENT_CHANNEL_ID,
-      data: normalizedData,
+      // ⛔ PAS le canal silencieux, contrairement aux confirmations : un message
+      // qui n est pas parti doit se VOIR. Une perte silencieuse est exactement
+      // ce que ce lot devait empecher.
+      channelId: NOTIFICATION_DEFAULT_CHANNEL_ID,
+      data: { ...normalizedData, chatReplyRetryText: replyText },
+      iosCategoryId: CHAT_REPLY_RETRY_CATEGORY,
       title: feedback.title,
     });
     return { handled: true, success: false };

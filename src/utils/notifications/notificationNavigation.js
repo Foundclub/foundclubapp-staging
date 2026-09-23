@@ -939,6 +939,7 @@ const resolveBareNotificationDestination = (rawPayload = {}) => {
     // WHATSAPP4 — une reaction mene LA OU VIT LE MESSAGE qu elle marque :
     // la meme conversation que les quatre lignes suivantes.
     case NOTIFICATION_TYPES.MESSAGE_REACTION:
+    case NOTIFICATION_TYPES.NEW_CLUB_MESSAGE:
     case NOTIFICATION_TYPES.NEW_GROUP_MESSAGE:
     case NOTIFICATION_TYPES.NEW_LEAGUE_MATCH_MESSAGE:
     case NOTIFICATION_TYPES.NEW_TEAM_MESSAGE:

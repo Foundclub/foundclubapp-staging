@@ -467,4 +467,24 @@ describe('S12-B — la notification de quota au licencie mene a la reparation', 
       route: RouteNames.Conversation,
     });
   });
+
+  // REPNOTIF — 🧨 LE CANAL DU CLUB N EXISTAIT PAS DANS L APP.
+  //
+  // Le serveur envoie `newClubMessage` a TOUS les membres d un canal de club
+  // (`chat-message/services/notification.ts`, par paquets, des centaines de
+  // personnes). L app, elle, ne connaissait cette etiquette NULLE PART :
+  // `grep -rn "newClubMessage" src` ne rendait rien le 2026-09-23.
+  //
+  // Consequence mesuree : l aiguillage tombait sur `default: null`, et l appui
+  // ouvrait la LISTE des notifications au lieu de la conversation. C est le
+  // meme defaut que le lot INSTANT du 27/08 et que WHATSAPP4, une troisieme fois.
+  it('REPNOTIF — un message du canal du CLUB ouvre sa conversation', () => {
+    expect(resolveNotificationDestination({
+      chatId: 'chat-club-12',
+      type: NOTIFICATION_TYPES.NEW_CLUB_MESSAGE,
+    })).toEqual({
+      params: { chatId: 'chat-club-12' },
+      route: RouteNames.Conversation,
+    });
+  });
 });
