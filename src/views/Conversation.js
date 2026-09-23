@@ -55,6 +55,7 @@ import {
   getReactionsForMessage,
   indexReactionsByMessage,
   summarizeReactionPeople,
+  withReactionsOnMessages,
 } from '@/domains/messaging/reactionUseCases';
 import useMessaging from '@/domains/messaging/useMessaging';
 import {
@@ -4928,6 +4929,20 @@ function Conversation({ navigation, route }) {
     [chatReactionsData?.data],
   );
 
+  // WHATSAPP3 — 🧨 « JE METS UN EMOJI EN REACTION, IL NE SE PASSE RIEN » (Adel,
+  // production 2.6.57). Le serveur enregistrait, le cache se mettait a jour...
+  // et aucune bulle ne bougeait : GiftedChat MEMORISE chaque bulle et ne la
+  // redessine que si son `currentMessage` change. Les reactions vivant hors des
+  // messages, rien ne changeait dans ses props.
+  //
+  // ⚡ Les faire entrer dans l objet message reveille la bonne bulle — et ELLE
+  // SEULE : un message sans reaction ressort avec sa reference d origine, donc
+  // il ne se redessine pas. Un pouce leve ne refabrique pas le fil entier.
+  const messagesAvecReactions = useMemo(
+    () => withReactionsOnMessages(messages, reactionsByMessage),
+    [messages, reactionsByMessage],
+  );
+
   const handleToggleReaction = useCallback(async (message, emoji) => {
     const messageDocumentId = getMessageDocumentId(message);
     if (!messageDocumentId || !emoji) return;
@@ -6736,7 +6751,7 @@ function Conversation({ navigation, route }) {
             loadEarlier={hasNextPage}
             locale={localeDesFormats().slice(0, 2)}
             messageContainerRef={messageContainerRef}
-            messages={messages}
+            messages={messagesAvecReactions}
             onInputTextChanged={handleInputTextChanged}
             onLoadEarlier={() => fetchNextPage()}
             onLongPress={handleMessageLongPress}

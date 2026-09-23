@@ -159,3 +159,65 @@ export const summarizeReactionPeople = (reactions, labels) => {
 
   return lignes;
 };
+
+/**
+ * WHATSAPP3 — LES REACTIONS ENTRENT DANS LES OBJETS MESSAGE.
+ *
+ * 🧨 LE DEFAUT QU ELLE CORRIGE, vu par Adel en production (2.6.57) : « je mets
+ * un emoji en reaction, il ne se passe rien ». Le serveur enregistrait, la
+ * reponse etait bonne, le cache etait a jour — et aucune bulle ne bougeait. La
+ * reaction n apparaissait qu en rouvrant la conversation.
+ *
+ * 🔎 POURQUOI. GiftedChat enveloppe chaque bulle dans `memo(...)` : elle ne se
+ * redessine QUE si `shouldUpdateMessage` le demande, ou si son `currentMessage`
+ * a change (comparaison PROFONDE). Or les reactions vivaient HORS des messages,
+ * dans un index a cote. L objet message restait identique a lui-meme : la bulle
+ * restait donc telle quelle, indefiniment.
+ *
+ * 🎯 LA CORRECTION EST DE FAIRE ENTRER LA DONNEE DANS L OBJET COMPARE. C est le
+ * chemin le plus court et le plus sur : `shouldUpdateMessage` aurait demande une
+ * fermeture qui se compare a elle-meme (elle ne voit que l ANCIEN etat des deux
+ * cotes), et `extraData` redessine TOUTE la liste a chaque reaction.
+ *
+ * ⚡ ELLE NE REFABRIQUE QUE CE QU IL FAUT, et c est la moitie du travail : un
+ * message sans reaction ressort AVEC SA REFERENCE D ORIGINE, donc sa bulle ne se
+ * redessine pas. Un pouce leve sur un message ne refait pas les deux cents
+ * autres (souvenir de MSGLIVE et de ses 101 rendus). Quand rien ne change, c est
+ * la liste d origine elle-meme qui ressort.
+ * @param {any[]} messages Les messages, au format GiftedChat.
+ * @param {Record<string, any[]> | null} [index] Les reactions rangees par message.
+ * @returns {any[]} Les memes messages, ceux qui portent une reaction en plus.
+ */
+export const withReactionsOnMessages = (messages, index) => {
+  const liste = Array.isArray(messages) ? messages : [];
+  const reserve = index && typeof index === 'object' ? index : null;
+  if (!reserve) return liste;
+
+  let auMoinsUnChangement = false;
+
+  const suivants = liste.map((message) => {
+    // La meme clef que partout ailleurs dans l ecran : le documentId d abord.
+    // eslint-disable-next-line no-underscore-dangle -- `_id` est le nom impose par GiftedChat
+    const clef = toSafeId(message?.documentId ?? message?._id ?? message?.id);
+    const reactions = clef ? reserve[clef] : undefined;
+    const dejaPosees = message?.reactions;
+
+    if (!Array.isArray(reactions) || reactions.length === 0) {
+      if (dejaPosees === undefined) return message;
+
+      // La derniere reaction vient d etre retiree : l objet doit changer, sinon
+      // la bulle garderait sa rangee a l ecran.
+      auMoinsUnChangement = true;
+      const sansReactions = { ...message };
+      delete sansReactions.reactions;
+      return sansReactions;
+    }
+
+    if (dejaPosees === reactions) return message;
+
+    auMoinsUnChangement = true;
+    return { ...message, reactions };
+  });
+
+  return auMoinsUnChangement ? suivants : liste;
+};
