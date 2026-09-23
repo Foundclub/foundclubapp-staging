@@ -1,14 +1,49 @@
-import { useEffect, useMemo, useState } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import { useTranslation } from 'react-i18next';
 import {
+  ActivityIndicator,
+  Pressable,
+  StyleSheet,
   Text,
-  TouchableOpacity,
   View,
 } from 'react-native';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import Animated, {
+  runOnJS,
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+} from 'react-native-reanimated';
 
 import { getAuthTokens } from '@/domains/auth/authUseCases';
+import { useVoiceListened } from '@/domains/messaging/voiceListenedStore';
+import { withAlpha } from '@/theme/colors';
+import localeDesFormats from '@/theme/strings/localeDesFormats';
 import useTheme from '@/theme/themeContext';
 
+import GlyphIcon from '@/components/atoms/glyphIcon/GlyphIcon';
+import useVoiceProgress from '@/components/molecules/voiceWave/useVoiceProgress';
+import VoiceStaticWave from '@/components/molecules/voiceWave/VoiceStaticWave';
+import {
+  easeIn,
+  easeOut,
+  snappy,
+  VOICE_EASE_OUT,
+} from '@/components/organisms/voiceComposer/voiceMotion';
+
+import {
+  bucketPeaks,
+  formatVoiceClock,
+  formatVoiceSpeed,
+  storedWaveformToLevels,
+  VOICE_BUBBLE_BARS,
+} from '@/services/chat/voiceWaveform';
 import client from '@/services/client';
 
 import { createLogger } from '@/utils/logger/logger';
@@ -16,8 +51,35 @@ import { resolveMediaUrl, shouldAttachAuthToMediaUrl } from '@/utils/mediaUrl';
 
 import useAudioPlayback from '@/hooks/useAudioPlayback';
 
+// VOCAL — LA BULLE D'UN MESSAGE VOCAL (maquette de Claude Design, états 4 et 5, M4).
+//
+// 280 de large, TOUJOURS (la largeur ne dit rien de la durée), rayon 20 et
+// coin d'attache 6, 62 de haut : lecture Ø 44 · 31 barres (3 px, pas 5) ·
+// temps 12/700 · point « non écouté » · vitesse 42 × 24. Moi : fond cyan,
+// encre sombre (8,0:1). Un autre : fond primary700, barres lues en cyan, son
+// nom au-dessus. L'heure est dessous, « Envoi… » tant que le serveur n'a pas
+// répondu.
+//
+// L'onde vient de celle enregistrée avec le message (`composition.waveform`,
+// 4 → 20, lisible par toutes les versions), relue en niveaux puis réduite à
+// 31 pics normalisés : les anciens vocaux (24 valeurs) s'affichent aussi.
+
 const voiceBubbleLogger = createLogger('voice-bubble');
 
+const PAS = 5;
+const LARGEUR_BARRE = 3;
+/** La largeur de l'onde : 31 barres de 3, pas de 5. */
+const LARGEUR_ONDE = (VOICE_BUBBLE_BARS * PAS) - (PAS - LARGEUR_BARRE);
+/** Pendant qu'on glisse sur l'onde, au plus un saut du lecteur tous les 100 ms. */
+const INTERVALLE_GLISSE_MS = 100;
+/** Un cran du lecteur d'écran : ± 5 s. */
+const CRAN_MS = 5000;
+
+/**
+ * Les diagnostics du lecteur, en une ligne.
+ * @param {unknown} meta - Ce qu'on veut journaliser.
+ * @returns {string} La ligne.
+ */
 const formatDiagnosticMeta = (meta) => {
   if (!meta || typeof meta !== 'object') return '';
   try {
@@ -28,23 +90,25 @@ const formatDiagnosticMeta = (meta) => {
   }
 };
 
-const clampNumber = (value, min, max) => Math.max(min, Math.min(max, value));
+/**
+ * La pièce jointe audio d'un message.
+ * @param {any[]} attachments - Les pièces jointes.
+ * @returns {any | null} La pièce audio.
+ */
+const getPrimaryAudioAttachment = (attachments = []) => attachments.find((attachment) => {
+  const mime = String(attachment?.mime || '').toLowerCase();
+  if (mime.startsWith('audio/')) return true;
+  const name = String(attachment?.url || attachment?.name || attachment?.uri || '').toLowerCase();
+  return /\.(mp4|m4a|aac|mp3|wav|ogg|oga|webm)$/.test(name);
+}) || null;
 
-const formatDuration = (valueMs) => {
-  const totalSeconds = Math.max(0, Math.floor((Number(valueMs) || 0) / 1000));
-  const minutes = Math.floor(totalSeconds / 60);
-  const seconds = totalSeconds % 60;
-  return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
-};
-
+/**
+ * L'adresse du fichier audio d'un message.
+ * @param {any[]} attachments - Les pièces jointes.
+ * @returns {string} L'adresse (vide s'il n'y en a pas).
+ */
 const resolveAudioAttachmentUrl = (attachments = []) => {
-  const audioAttachment = attachments.find((attachment) => {
-    const mime = String(attachment?.mime || '').toLowerCase();
-    if (mime.startsWith('audio/')) return true;
-    const name = String(attachment?.url || attachment?.name || attachment?.uri || '').toLowerCase();
-    return /\.(mp4|m4a|aac|mp3|wav|ogg|oga|webm)$/.test(name);
-  });
-
+  const audioAttachment = getPrimaryAudioAttachment(attachments);
   const rawUrl = String(
     audioAttachment?.url
     || audioAttachment?.uri
@@ -55,75 +119,101 @@ const resolveAudioAttachmentUrl = (attachments = []) => {
   return resolveMediaUrl(rawUrl);
 };
 
-const getPrimaryAudioAttachment = (attachments = []) => attachments.find((attachment) => {
-  const mime = String(attachment?.mime || '').toLowerCase();
-  if (mime.startsWith('audio/')) return true;
-  const name = String(attachment?.url || attachment?.name || attachment?.uri || '').toLowerCase();
-  return /\.(mp4|m4a|aac|mp3|wav|ogg|oga|webm)$/.test(name);
-}) || null;
-
-const buildFallbackWaveform = (durationMs, size = 28) => (
-  Array.from({ length: size }, (_, index) => {
-    const phase = ((Number(durationMs) || 0) / 220) + (index * 0.7);
-    const normalized = (Math.sin(phase) + 1) / 2;
-    return Math.round(4 + (normalized * 14));
-  })
-);
-
-const normalizeWaveformBars = (rawWaveform, durationMs) => {
-  const sourceBars = Array.isArray(rawWaveform) ? rawWaveform : [];
-  if (sourceBars.length === 0) return buildFallbackWaveform(durationMs);
-
-  const numericBars = sourceBars
-    .map((value) => Number(value))
-    .filter((value) => Number.isFinite(value));
-  if (numericBars.length === 0) return buildFallbackWaveform(durationMs);
-
-  const looksLikeHeights = numericBars.every((value) => value >= 0 && value <= 40);
-  if (looksLikeHeights) {
-    return numericBars
-      .map((value) => clampNumber(Math.round(value), 4, 20))
-      .slice(-32);
+/**
+ * L'heure du message, à la façon de la langue (14:32).
+ * @param {unknown} creeLe - La date du message.
+ * @returns {string} L'heure, ou rien.
+ */
+const heureDuMessage = (creeLe) => {
+  const date = new Date(/** @type {any} */ (creeLe));
+  if (!creeLe || Number.isNaN(date.getTime())) return '';
+  try {
+    return date.toLocaleTimeString(localeDesFormats(), { hour: '2-digit', minute: '2-digit' });
+  } catch (_erreur) {
+    return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
   }
-
-  const min = Math.min(...numericBars);
-  const max = Math.max(...numericBars);
-  const range = max - min;
-  if (!Number.isFinite(range) || range < 0.6) {
-    return buildFallbackWaveform(durationMs, Math.min(Math.max(numericBars.length, 12), 32));
-  }
-
-  return numericBars
-    .map((value) => {
-      const ratio = clampNumber((value - min) / range, 0, 1);
-      return Math.round(4 + (ratio * 16));
-    })
-    .slice(-32);
 };
 
 /**
- * Voice note message bubble.
+ * Les couleurs d'une bulle : la mienne (cyan, encre sombre) ou celle d'un autre.
+ * @param {any} Colors - Les couleurs du thème.
+ * @param {boolean} aMoi - La bulle est-elle à moi.
+ * @returns {Record<string, string>} La palette.
+ */
+const palette = (Colors, aMoi) => (aMoi ? {
+  fond: Colors.primary500,
+  lecture: Colors.primary900,
+  lectureEncre: Colors.primary500,
+  lu: Colors.primary900,
+  nonLu: withAlpha(Colors.primary900, 0.3),
+  point: Colors.primary900,
+  temps: Colors.primary900,
+  tempsEcoule: Colors.primary900,
+  vitesse: withAlpha(Colors.primary900, 0.12),
+  vitesseActive: Colors.primary900,
+  vitesseEncre: Colors.primary900,
+  vitesseEncreActive: Colors.primary500,
+} : {
+  fond: Colors.primary700,
+  lecture: Colors.primary500,
+  lectureEncre: Colors.primary900,
+  lu: Colors.primary500,
+  nonLu: withAlpha(Colors.neutral00, 0.38),
+  point: Colors.primary500,
+  temps: Colors.neutral300,
+  tempsEcoule: Colors.neutral00,
+  vitesse: withAlpha(Colors.neutral00, 0.1),
+  vitesseActive: Colors.primary500,
+  vitesseEncre: Colors.neutral00,
+  vitesseEncreActive: Colors.primary900,
+});
+
+/**
+ * L'entrée d'une bulle que je viens d'envoyer : elle monte de 16, grandit de
+ * 0,96 à 1 (350 ms) et apparaît (200 ms), depuis son coin bas droit.
+ * @returns {any} L'animation d'entrée, pour Reanimated.
+ */
+const entreeBulle = () => {
+  'worklet';
+
+  return {
+    animations: {
+      opacity: withTiming(1, { duration: 200, easing: VOICE_EASE_OUT }),
+      transform: [
+        { translateY: withTiming(0, { duration: 350, easing: VOICE_EASE_OUT }) },
+        { scale: withTiming(1, { duration: 350, easing: VOICE_EASE_OUT }) },
+      ],
+    },
+    initialValues: { opacity: 0, transform: [{ translateY: 16 }, { scale: 0.96 }] },
+  };
+};
+
+/**
+ * La bulle d'un message vocal.
  * @param {object} props
- * @param {any} props.composition
- * @param {Array<{ url?: string; uri?: string; mime?: string; name?: string }>} [props.attachments]
- * @param {boolean} [props.isMe]
- * @param {string} [props.message]
+ * @param {any} props.composition - La composition du message (durée, onde).
+ * @param {Array<{ id?: number, url?: string; uri?: string; mime?: string; name?: string, previewUrl?: string }>} [props.attachments]
+ * @param {unknown} [props.createdAt] - La date du message.
+ * @param {boolean} [props.isMe] - Le message est-il à moi.
+ * @param {boolean} [props.isPending] - Le serveur ne l'a pas encore confirmé.
+ * @param {string} [props.message] - Le texte joint (vocaux envoyés par d'anciennes versions).
+ * @param {string} [props.messageId] - L'identifiant du message (point « non écouté »).
+ * @param {string} [props.senderName] - Le nom de l'auteur, à afficher au-dessus.
  * @returns {import('react').ReactElement | null}
  */
 function VoiceNoteBubble({
   attachments = [],
   composition,
+  createdAt,
   isMe = false,
+  isPending = false,
   message = '',
+  messageId = '',
+  senderName = '',
 }) {
-  const {
-    Alignments,
-    ApplicationStyle,
-    Colors,
-    Fonts,
-    Spaces,
-  } = useTheme();
-  const { t } = useTranslation();
+  const { Colors, Fonts } = useTheme();
+  const { i18n, t } = useTranslation();
+  const couleurs = palette(Colors, isMe);
 
   const audioAttachment = useMemo(() => getPrimaryAudioAttachment(attachments), [attachments]);
   const initialAudioUrl = useMemo(() => resolveAudioAttachmentUrl(attachments), [attachments]);
@@ -169,7 +259,7 @@ function VoiceNoteBubble({
         if (__DEV__) {
           voiceBubbleLogger.warn(`[voice-diag] bubble-audio-url-refresh-failed${formatDiagnosticMeta({
             attachmentId,
-            error: error?.message || error,
+            error: /** @type {any} */ (error)?.message || error,
           })}`);
         }
       }
@@ -184,21 +274,21 @@ function VoiceNoteBubble({
 
   const playbackHeaders = useMemo(() => {
     if (!shouldAttachAuthToMediaUrl(audioUrl)) return undefined;
-    const token = getAuthTokens()?.token;
+    const token = /** @type {any} */ (getAuthTokens())?.token;
     if (!token) return undefined;
     return { Authorization: `Bearer ${token}` };
   }, [audioUrl]);
-  const fallbackDuration = Math.max(0, Number(composition?.durationMs) || 0);
 
   const {
     cycleSpeed,
     durationMs,
+    endedAt,
     isLoading,
     isPlayerAvailable,
     isPlaying,
     lastError,
     positionMs,
-    progress,
+    seekTo,
     speed,
     togglePlayback,
   } = useAudioPlayback({
@@ -207,192 +297,374 @@ function VoiceNoteBubble({
   });
 
   useEffect(() => {
-    if (!__DEV__) return;
-    if (audioUrl || attachments.length === 0) return;
-
-    voiceBubbleLogger.warn(`[voice-diag] bubble-no-audio-url${formatDiagnosticMeta({
-      attachmentCount: attachments.length,
-      attachmentMimes: attachments.map((attachment) => String(attachment?.mime || '')),
-      compositionType: composition?.type || '',
-    })}`);
-  }, [attachments, audioUrl, composition?.type]);
-
-  useEffect(() => {
     if (!__DEV__ || !lastError) return;
-
     voiceBubbleLogger.warn(`[voice-diag] bubble-playback-error${formatDiagnosticMeta({
       audioUrl,
       error: lastError,
     })}`);
   }, [audioUrl, lastError]);
 
-  const displayedDuration = durationMs || fallbackDuration;
-  const waveformBars = useMemo(
-    () => normalizeWaveformBars(composition?.waveform, displayedDuration),
-    [composition?.waveform, displayedDuration],
+  const totalMs = Math.max(0, Number(durationMs) || Number(composition?.durationMs) || 0);
+  const positionAffichee = Math.min(Number(positionMs) || 0, totalMs || Number(positionMs) || 0);
+  const vitesse = Number(speed) || 1;
+  const { opaciteLue, progression } = useVoiceProgress({
+    dureeMs: totalMs,
+    enLecture: Boolean(isPlaying),
+    finiLe: Number(endedAt) || 0,
+    positionMs: Number(positionMs) || 0,
+    vitesse,
+  });
+
+  // 31 pics normalisés, calculés une fois par message.
+  const niveaux = useMemo(
+    () => bucketPeaks(storedWaveformToLevels(composition?.waveform), VOICE_BUBBLE_BARS),
+    [composition?.waveform],
   );
 
-  const containerStyle = [
-    ApplicationStyle.card,
-    Spaces.marginVertical[6],
-    {
-      alignSelf: isMe ? 'flex-end' : 'flex-start',
-      backgroundColor: isMe ? 'rgba(11, 41, 56, 0.96)' : 'rgba(7, 24, 34, 0.95)',
-      borderColor: isMe ? Colors.primary500 : Colors.primary700,
-      borderWidth: 1,
-      maxWidth: '88%',
-      minWidth: 220,
-      overflow: 'hidden',
-    },
-  ];
+  // Le point « non écouté » : seulement sur les vocaux des autres (question 1).
+  const [nonEcoute, marquerEcoute] = useVoiceListened(isMe ? '' : String(messageId || ''), createdAt);
+  const pointVisible = useSharedValue(nonEcoute ? 1 : 0);
+  useEffect(() => {
+    if (!isPlaying || !nonEcoute) return;
+    // Opacity → 0, scale 1 → 0,4 (200 ms easeIn), au démarrage de la lecture.
+    pointVisible.value = easeIn(0, 200);
+    marquerEcoute();
+  }, [isPlaying, marquerEcoute, nonEcoute, pointVisible]);
+  const point = useAnimatedStyle(() => ({
+    opacity: pointVisible.value,
+    transform: [{ scale: 0.4 + (0.6 * pointVisible.value) }],
+  }));
+
+  // ▶ ↔ ❚❚ : fondu croisé + scale 0,8 → 1 (120 ms easeOut).
+  const lecture = useSharedValue(0);
+  useEffect(() => {
+    lecture.value = easeOut(isPlaying ? 1 : 0, 120);
+  }, [isPlaying, lecture]);
+  const triangle = useAnimatedStyle(() => ({
+    opacity: 1 - lecture.value,
+    transform: [{ scale: 1 - (0.2 * lecture.value) }],
+  }));
+  const barresPause = useAnimatedStyle(() => ({
+    opacity: lecture.value,
+    transform: [{ scale: 0.8 + (0.2 * lecture.value) }],
+  }));
+
+  // VOCAL (état 5) — SE DÉPLACER : toucher ou glisser sur l'onde (le doigt
+  // doit partir à l'horizontale : glisser en hauteur fait défiler le fil).
+  const derniereRechercheRef = useRef(0);
+  const chercher = useCallback((/** @type {number | undefined} */ x, /** @type {boolean | undefined} */ enGlissant) => {
+    if (!totalMs || typeof seekTo !== 'function' || typeof x !== 'number') return;
+    const maintenant = Date.now();
+    if (enGlissant && maintenant - derniereRechercheRef.current < INTERVALLE_GLISSE_MS) return;
+    derniereRechercheRef.current = maintenant;
+    const rapport = Math.min(1, Math.max(0, x / LARGEUR_ONDE));
+    seekTo(rapport * totalMs);
+  }, [seekTo, totalMs]);
+  const gesteOnde = useMemo(() => Gesture.Race(
+    Gesture.Pan()
+      .activeOffsetX([-8, 8])
+      .failOffsetY([-10, 10])
+      .onStart((evenement) => {
+        'worklet';
+
+        runOnJS(chercher)(evenement.x, false);
+      })
+      .onUpdate((evenement) => {
+        'worklet';
+
+        runOnJS(chercher)(evenement.x, true);
+      })
+      .onEnd((evenement) => {
+        'worklet';
+
+        runOnJS(chercher)(evenement.x, false);
+      }),
+    Gesture.Tap()
+      .maxDuration(250)
+      .onEnd((evenement, reussi) => {
+        'worklet';
+
+        if (reussi) runOnJS(chercher)(evenement.x, false);
+      }),
+  ), [chercher]);
+
+  // Vitesse : 1× → 1,5× → 2× → 1×, la pastille rebondit (scale 0,9 → 1, ressort).
+  const rebond = useSharedValue(1);
+  const vitessePrecedenteRef = useRef(vitesse);
+  useEffect(() => {
+    if (vitessePrecedenteRef.current === vitesse) return;
+    vitessePrecedenteRef.current = vitesse;
+    rebond.value = 0.9;
+    rebond.value = snappy(1);
+  }, [rebond, vitesse]);
+  const pastilleVitesse = useAnimatedStyle(() => ({ transform: [{ scale: rebond.value }] }));
+
+  // Une bulle que je viens d'envoyer entre en scène ; les autres sont déjà là.
+  const nouvelle = useRef(Boolean(isMe && isPending)).current;
 
   if (!audioUrl) {
     return (
-      <View style={containerStyle}>
-        <View style={[Spaces.padding[12], { gap: 8 }]}>
-          <Text style={[Fonts.p3Bold, { color: Colors.error500 }]}>
-            {t('voiceNoteBubble.unavailable', 'Note vocale indisponible')}
-          </Text>
-          {messageText ? (
-            <Text style={[Fonts.p3, { color: Colors.neutral100 }]}>
-              {messageText}
-            </Text>
-          ) : null}
-        </View>
-      </View>
-    );
-  }
-
-  const canTogglePlayback = isPlayerAvailable && !isLoading;
-  let playbackButtonLabel = '>';
-  if (isLoading) playbackButtonLabel = '...';
-  else if (isPlaying) playbackButtonLabel = '||';
-
-  const activeBarsCount = Math.max(
-    0,
-    Math.min(
-      waveformBars.length,
-      Math.round((Number(progress) || 0) * waveformBars.length),
-    ),
-  );
-  const currentPositionLabel = formatDuration(Math.min(positionMs || 0, displayedDuration || positionMs || 0));
-  const totalDurationLabel = formatDuration(displayedDuration);
-
-  return (
-    <View
-      style={containerStyle}
-    >
-      <View style={[Spaces.padding[12], { gap: 10 }]}>
-        <View style={[Alignments.row, Alignments.alignCenter, { gap: 10 }]}>
-          <TouchableOpacity
-            disabled={!canTogglePlayback}
-            onPress={togglePlayback}
-            style={{
-              alignItems: 'center',
-              backgroundColor: isPlaying ? Colors.primary500 : 'rgba(0, 173, 239, 0.12)',
-              borderColor: Colors.primary500,
-              borderRadius: 19,
-              borderWidth: 1,
-              height: 38,
-              justifyContent: 'center',
-              opacity: canTogglePlayback ? 1 : 0.55,
-              width: 38,
-            }}
-          >
-            <Text style={[
-              Fonts.p2Bold,
-              {
-                color: isPlaying ? Colors.neutral00 : Colors.primary500,
-                marginLeft: isPlaying ? 0 : 2,
-              },
-            ]}
-            >
-              {playbackButtonLabel}
-            </Text>
-          </TouchableOpacity>
-
-          <View style={{ flex: 1, gap: 7 }}>
-            <View
-              style={{
-                alignItems: 'flex-end',
-                flexDirection: 'row',
-                gap: 2,
-                height: 22,
-                overflow: 'hidden',
-                width: '100%',
-              }}
-            >
-              {waveformBars.map((barHeight, index) => {
-                const isPastProgress = index < activeBarsCount;
-                return (
-                  <View
-                    // eslint-disable-next-line react/no-array-index-key
-                    key={`voice-bar-${index}`}
-                    style={{
-                      backgroundColor: isPastProgress ? Colors.primary500 : 'rgba(255,255,255,0.20)',
-                      borderRadius: 2,
-                      height: barHeight,
-                      opacity: isPastProgress ? 0.95 : 0.75,
-                      width: 3,
-                    }}
-                  />
-                );
-              })}
-            </View>
-
-            <View style={[Alignments.row, Alignments.justifySpaceBetween, Alignments.alignCenter]}>
-              <Text style={[Fonts.p4Bold, { color: Colors.neutral200 }]}>
-                {currentPositionLabel}
-                {' / '}
-                {totalDurationLabel}
-              </Text>
-
-              <TouchableOpacity
-                onPress={cycleSpeed}
-                style={{
-                  alignItems: 'center',
-                  backgroundColor: 'rgba(0, 173, 239, 0.14)',
-                  borderColor: Colors.primary700,
-                  borderRadius: 12,
-                  borderWidth: 1,
-                  height: 24,
-                  justifyContent: 'center',
-                  minWidth: 46,
-                  paddingHorizontal: 8,
-                }}
-              >
-                <Text style={[Fonts.p4Bold, { color: Colors.primary500 }]}>
-                  x
-                  {speed}
-                </Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-
-        {!isPlayerAvailable ? (
-          <Text style={[Fonts.p4, { color: Colors.error500 }]}>
-            {t(
-              'voiceNoteBubble.playbackUnavailable',
-              'Lecture audio indisponible sur cette build.',
-            )}
-          </Text>
-        ) : null}
-
-        {lastError ? (
-          <Text style={[Fonts.p4, { color: Colors.error500 }]}>
-            {lastError}
-          </Text>
-        ) : null}
-
+      <View style={[styles.bulle, isMe ? styles.coinMoi : styles.coinAutre, { backgroundColor: couleurs.fond }]}>
+        <Text style={[Fonts.p3Bold, { color: isMe ? Colors.primary900 : Colors.error300 }]}>
+          {t('voiceNoteBubble.unavailable', 'Note vocale indisponible')}
+        </Text>
         {messageText ? (
-          <Text style={[Fonts.p3, { color: Colors.neutral100 }]}>
+          <Text style={[Fonts.p3, styles.texteJoint, { color: couleurs.temps }]}>
             {messageText}
           </Text>
         ) : null}
       </View>
+    );
+  }
+
+  const secondes = Math.round(totalMs / 1000);
+  const duree = t('voiceNoteBubble.seconds', {
+    count: secondes,
+    defaultValue_one: '{{count}} seconde',
+    defaultValue_other: '{{count}} secondes',
+  });
+  let libelleLecture = isMe
+    ? t('voiceNoteBubble.mine', { defaultValue: 'Mon message vocal, {{duration}}', duration: duree })
+    : t('voiceNoteBubble.from', {
+      defaultValue: 'Message vocal de {{name}}, {{duration}}',
+      duration: duree,
+      name: senderName || t('voiceNoteBubble.someone', 'quelqu\'un'),
+    });
+  if (nonEcoute) libelleLecture = `${libelleLecture}, ${t('voiceNoteBubble.unlistened', 'non écouté')}`;
+  if (isPlaying) libelleLecture = t('voiceNoteBubble.pause', 'Mettre en pause');
+
+  const separateur = String(i18n?.language || 'fr').startsWith('en') ? '.' : ',';
+  const vitesseActive = vitesse !== 1;
+  const prochaine = [1, 1.5, 2][([1, 1.5, 2].indexOf(vitesse) + 1) % 3];
+  const aCommence = Boolean(isPlaying) || positionAffichee > 0;
+  const heure = heureDuMessage(createdAt);
+
+  return (
+    <View style={{ alignItems: isMe ? 'flex-end' : 'flex-start' }}>
+      {!isMe && senderName ? (
+        <Text numberOfLines={1} style={[Fonts.p3Bold, styles.nom, { color: Colors.neutral300 }]}>
+          {senderName}
+        </Text>
+      ) : null}
+      <Animated.View
+        entering={nouvelle ? entreeBulle : undefined}
+        style={[styles.bulle, isMe ? styles.coinMoi : styles.coinAutre, { backgroundColor: couleurs.fond }]}
+        testID="voice-note-bubble"
+      >
+        <View style={styles.rangee}>
+          <Pressable
+            accessibilityLabel={libelleLecture}
+            accessibilityRole="button"
+            disabled={!isPlayerAvailable || isLoading}
+            onPress={togglePlayback}
+            style={[styles.lecture, { backgroundColor: couleurs.lecture }]}
+            testID="voice-note-play"
+          >
+            {isLoading ? (
+              <ActivityIndicator color={couleurs.lectureEncre} size="small" />
+            ) : (
+              <>
+                <Animated.View style={[StyleSheet.absoluteFill, styles.centre, triangle]}>
+                  <GlyphIcon color={couleurs.lectureEncre} name="play" size={24} />
+                </Animated.View>
+                <Animated.View style={[StyleSheet.absoluteFill, styles.centre, barresPause]}>
+                  <GlyphIcon color={couleurs.lectureEncre} name="pause" size={24} />
+                </Animated.View>
+              </>
+            )}
+          </Pressable>
+
+          <View style={styles.colonne}>
+            <GestureDetector gesture={gesteOnde}>
+              <View
+                accessibilityActions={[{ name: 'increment' }, { name: 'decrement' }]}
+                accessibilityLabel={t('voiceNoteBubble.position', 'Position de lecture')}
+                accessibilityRole="adjustable"
+                accessibilityValue={{
+                  text: t('voiceNoteBubble.positionValue', {
+                    defaultValue: '{{elapsed}} sur {{total}}',
+                    elapsed: t('voiceNoteBubble.seconds', {
+                      count: Math.floor(positionAffichee / 1000),
+                      defaultValue_one: '{{count}} seconde',
+                      defaultValue_other: '{{count}} secondes',
+                    }),
+                    total: String(secondes),
+                  }),
+                }}
+                accessible
+                onAccessibilityAction={(evenement) => {
+                  if (typeof seekTo !== 'function') return;
+                  const sens = evenement.nativeEvent.actionName === 'increment' ? 1 : -1;
+                  seekTo(Math.min(totalMs, Math.max(0, positionAffichee + (sens * CRAN_MS))));
+                }}
+                style={styles.onde}
+                testID="voice-note-wave"
+              >
+                <VoiceStaticWave
+                  couleurLue={couleurs.lu}
+                  couleurNonLue={couleurs.nonLu}
+                  largeurBarre={LARGEUR_BARRE}
+                  montee={nouvelle ? { duree: 180, pas: 6 } : null}
+                  niveaux={niveaux}
+                  opaciteLue={opaciteLue}
+                  pas={PAS}
+                  progression={progression}
+                />
+              </View>
+            </GestureDetector>
+            <View style={styles.ligneTemps}>
+              <Text style={[Fonts.p3Bold, styles.temps, { color: couleurs.temps }]} testID="voice-note-time">
+                {/* « 0:42 » au repos, « 0:17 / 0:42 » dès que la lecture a commencé. */}
+                {aCommence ? (
+                  <Text style={{ color: couleurs.tempsEcoule }}>{formatVoiceClock(positionAffichee)}</Text>
+                ) : null}
+                {aCommence ? ` / ${formatVoiceClock(totalMs)}` : formatVoiceClock(totalMs)}
+              </Text>
+              {nonEcoute ? (
+                <Animated.View
+                  style={[styles.point, { backgroundColor: couleurs.point }, point]}
+                  testID="voice-note-unlistened"
+                />
+              ) : null}
+            </View>
+          </View>
+
+          <Pressable
+            accessibilityHint={t('voiceNoteBubble.speedHint', {
+              defaultValue: 'Touche deux fois pour passer à {{next}} fois.',
+              next: String(prochaine).replace('.', separateur),
+            })}
+            accessibilityLabel={t('voiceNoteBubble.speed', {
+              defaultValue: 'Vitesse de lecture : {{speed}} fois',
+              speed: String(vitesse).replace('.', separateur),
+            })}
+            accessibilityRole="button"
+            hitSlop={{ bottom: 10, top: 10 }}
+            onPress={cycleSpeed}
+            testID="voice-note-speed"
+          >
+            <Animated.View
+              style={[styles.vitesse, {
+                backgroundColor: vitesseActive ? couleurs.vitesseActive : couleurs.vitesse,
+              }, pastilleVitesse]}
+            >
+              <Text style={[Fonts.p3Bold, {
+                color: vitesseActive ? couleurs.vitesseEncreActive : couleurs.vitesseEncre,
+                lineHeight: 16,
+              }]}
+              >
+                {formatVoiceSpeed(vitesse, separateur)}
+              </Text>
+            </Animated.View>
+          </Pressable>
+        </View>
+
+        {!isPlayerAvailable ? (
+          <Text style={[Fonts.p4, styles.texteJoint, { color: couleurs.temps }]}>
+            {t('voiceNoteBubble.playbackUnavailable', 'Lecture audio indisponible sur cette build.')}
+          </Text>
+        ) : null}
+        {lastError ? (
+          <Text style={[Fonts.p4, styles.texteJoint, { color: couleurs.temps }]}>
+            {lastError}
+          </Text>
+        ) : null}
+        {messageText ? (
+          <Text style={[Fonts.p3, styles.texteJoint, { color: couleurs.tempsEcoule }]}>
+            {messageText}
+          </Text>
+        ) : null}
+      </Animated.View>
+      <View style={[styles.pied, isMe ? styles.piedMoi : styles.piedAutre]}>
+        <Text style={[Fonts.small, { color: Colors.neutral400 }]} testID="voice-note-hour">
+          {isPending ? t('voiceNoteBubble.sending', 'Envoi…') : heure}
+        </Text>
+        {isMe && !isPending ? <GlyphIcon color={Colors.neutral400} name="checkDouble" size={14} /> : null}
+      </View>
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  bulle: {
+    borderRadius: 20,
+    paddingBottom: 8,
+    paddingLeft: 8,
+    paddingRight: 10,
+    paddingTop: 8,
+    // ⚠️ Pas de `transformOrigin` pour l'entrée depuis le coin bas droit : le
+    // léger 0,96 → 1 se voit à peine, et l'origine n'est pas animable partout.
+    width: 280,
+  },
+  centre: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  coinAutre: {
+    borderBottomLeftRadius: 6,
+  },
+  coinMoi: {
+    borderBottomRightRadius: 6,
+  },
+  colonne: {
+    flex: 1,
+    gap: 2,
+  },
+  lecture: {
+    borderRadius: 22,
+    height: 44,
+    width: 44,
+  },
+  ligneTemps: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 8,
+    height: 16,
+  },
+  nom: {
+    marginBottom: 4,
+    marginLeft: 12,
+  },
+  onde: {
+    height: 28,
+    justifyContent: 'center',
+  },
+  pied: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 4,
+    marginTop: 4,
+  },
+  piedAutre: {
+    marginLeft: 12,
+  },
+  piedMoi: {
+    marginRight: 12,
+  },
+  point: {
+    borderRadius: 4,
+    height: 8,
+    width: 8,
+  },
+  rangee: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 10,
+  },
+  temps: {
+    fontVariant: ['tabular-nums'],
+    lineHeight: 16,
+  },
+  texteJoint: {
+    marginTop: 6,
+  },
+  vitesse: {
+    alignItems: 'center',
+    borderRadius: 12,
+    height: 24,
+    justifyContent: 'center',
+    width: 42,
+  },
+});
 
 export default VoiceNoteBubble;

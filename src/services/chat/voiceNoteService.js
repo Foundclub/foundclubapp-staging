@@ -6,9 +6,20 @@ import { canLoadNitroSoundModule } from '@/utils/audio/nitroSoundRuntime';
 import { persistDiagnosticError } from '@/utils/bootDiagnostics';
 import { createLogger } from '@/utils/logger/logger';
 
+import { levelsToStoredWaveform, meteringToLevel } from './voiceWaveform';
+
 const voiceNoteLogger = createLogger('voice-note-service');
 
-const MAX_METERING_SAMPLES = 720;
+// VOCAL — LE VOCAL ENTIER, PAS SES 36 DERNIÈRES SECONDES.
+// Le service gardait au plus 720 niveaux, coupés par la FIN (`slice(-720)`) :
+// à un niveau toutes les 50 ms, un vocal d'une minute ne dessinait que sa
+// dernière demi-minute, étirée sur toute la bulle. Mesuré par
+// `__tests__/voiceNoteService.test.js` (témoin 4) : 4 barres hautes sur 12
+// dans la première moitié d'une minute de voix suivie d'une minute de silence.
+// Tous les niveaux sont désormais gardés ; au-delà du plafond (le double de la
+// durée maximale d'une prise), on RÉDUIT par paires — le pic de chaque paire —
+// au lieu de couper : la prise reste couverte d'un bout à l'autre.
+const MAX_METERING_SAMPLES = 48000;
 const WAVEFORM_POINTS = 24;
 const WAVEFORM_BAR_MIN_HEIGHT = 4;
 const WAVEFORM_BAR_MAX_HEIGHT = 20;
@@ -149,8 +160,8 @@ const createRecorder = () => {
 // ENTIER — 7 400 lignes, mesuré à 101 rendus pour cinq secondes de vocal.
 //
 // Depuis que les niveaux ne remontent plus jusqu'à l'écran et s'arrêtent dans
-// les barres (`VoiceLevelBars`), une mesure ne coûte plus que vingt petites
-// vues. On peut donc en prendre deux fois plus : 50 ms, vingt images par
+// l'onde (`voiceComposer/VoiceLiveWave`), une mesure ne coûte plus qu'une
+// cinquantaine de petites vues, sur le fil d'animation. On peut donc en prendre deux fois plus : 50 ms, vingt images par
 // seconde, une onde qui glisse au lieu de sauter. Le budget dépensé reste très
 // en dessous de celui d'avant.
 const RECORDER_TICK_SECONDS = 0.05;
@@ -284,7 +295,12 @@ const pushMeteringSample = (value) => {
   const clamped = Math.max(-160, Math.min(0, numericValue));
   recordingSession.meteringSamples.push(clamped);
   if (recordingSession.meteringSamples.length > MAX_METERING_SAMPLES) {
-    recordingSession.meteringSamples = recordingSession.meteringSamples.slice(-MAX_METERING_SAMPLES);
+    const echantillons = recordingSession.meteringSamples;
+    const reduits = [];
+    for (let rang = 0; rang < echantillons.length; rang += 2) {
+      reduits.push(Math.max(echantillons[rang], echantillons[rang + 1] ?? -160));
+    }
+    recordingSession.meteringSamples = reduits;
   }
 };
 
@@ -451,6 +467,7 @@ export const startRecording = async (params = {}) => {
  *   mime: string;
  *   size: number;
  *   durationMs: number;
+ *   levels: number[];
  *   waveform: number[];
  *   diagnostics?: {
  *     maxDb: number | null;
@@ -501,17 +518,21 @@ export const stopRecording = async () => {
   }
 
   const durationMs = Math.max(0, recordingSession.durationMs || 0);
+  // Le micro a-t-il vraiment mesuré quelque chose ? Même critère qu'avant
+  // (au moins 8 niveaux, un écart d'au moins 0,6 dB) : sinon, l'onde de repli.
   const compactWaveform = downsampleWaveform(recordingSession.meteringSamples, WAVEFORM_POINTS);
-  const normalizedWaveform = normalizeWaveformToHeights(compactWaveform);
-  const waveformSource = normalizedWaveform.length > 0 ? 'metering' : 'fallback';
+  const hasMetering = normalizeWaveformToHeights(compactWaveform).length > 0;
+  const waveformSource = hasMetering ? 'metering' : 'fallback';
+  const levels = hasMetering ? recordingSession.meteringSamples.map(meteringToLevel) : [];
   const response = {
     diagnostics: buildMeteringDiagnostics(recordingSession.meteringSamples, waveformSource),
     durationMs,
     fileName: extractFileName(finalPath) || `voice-note-${Date.now()}.${getDefaultVoiceNoteExtension(finalPath)}`,
+    levels,
     mime: 'audio/mp4',
     size,
     uri: asFileUri(finalPath),
-    waveform: normalizedWaveform.length > 0 ? normalizedWaveform : buildFallbackWaveform(durationMs),
+    waveform: hasMetering ? levelsToStoredWaveform(levels) : buildFallbackWaveform(durationMs),
   };
 
   if (!Number.isFinite(size) || size <= 0) {

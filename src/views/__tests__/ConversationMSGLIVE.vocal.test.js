@@ -18,19 +18,27 @@ import renderer, { act } from 'react-test-renderer';
 // ⇒ une vingtaine de rendus complets par seconde, pour une animation qui ne
 // peut de toute façon pas dépasser dix images par seconde.
 //
-// 🧵 LA COUTURE : `renderSend` est une prop de GiftedChat, et c'est elle qui
-// porte le bouton micro et son `PanResponder`. On peut donc appuyer sur le micro
-// depuis un témoin. Le service vocal est doublé : c'est lui qui nous rend le
-// rappel `onMetering`, et on lui joue les niveaux sonores qu'on veut.
+// 🧵 LA COUTURE (VOCAL, 23/09) : le micro est posé par la zone vocale
+// (`VoiceComposerZone`) que `renderInputToolbar` monte autour de la barre. Son
+// geste passe par Gesture Handler, dont la doublure partagée
+// (`testSupport/animationDouble`) RETIENT les rappels : on joue `onBegin` puis
+// `onStart` comme un doigt qui reste 200 ms. Le service vocal est doublé : c'est
+// lui qui nous rend le rappel `onMetering`, et on lui joue les niveaux qu'on veut.
 
 const mockGiftedRenders = /** @type {any[]} */ ([]);
 /** Ce que l'écran a passé à `startRecording` : c'est notre prise sur le micro. */
 const mockRappelsDuMicro = /** @type {any[]} */ ([]);
 
-jest.mock('react-native-gesture-handler', () => {
-  const { View: VueRN } = jest.requireActual('react-native');
-  return { Swipeable: VueRN };
-});
+// VOCAL — la barre de saisie porte la zone vocale (Reanimated + Gesture Handler) :
+// doublures partagées, qui gardent `Swipeable` et enregistrent les gestes.
+jest.mock('react-native-gesture-handler', () => (
+  // eslint-disable-next-line global-require
+  require('@/testSupport/animationDouble').gestureHandler()
+));
+jest.mock('react-native-reanimated', () => (
+  // eslint-disable-next-line global-require
+  require('@/testSupport/animationDouble').reanimated()
+));
 
 // 🧵 LA DOUBLURE MONTE LA BARRE DE SAISIE, et c'est indispensable ici : c'est
 // elle qui porte le bloc du vocal, donc les barres de niveau ET la poignée par
@@ -63,7 +71,14 @@ jest.mock('react-native-safe-area-context', () => ({
 jest.mock('react-native-svg', () => {
   const { View: VueRN } = jest.requireActual('react-native');
   return {
-    __esModule: true, default: VueRN, Path: VueRN, Rect: VueRN,
+    __esModule: true,
+    Circle: VueRN,
+    default: VueRN,
+    Line: VueRN,
+    Path: VueRN,
+    Polyline: VueRN,
+    Rect: VueRN,
+    Svg: VueRN,
   };
 });
 jest.mock(
@@ -105,7 +120,11 @@ jest.mock('react-i18next', () => ({
     ),
   }),
 }));
-jest.mock('@/hooks/useAudioPlayback', () => ({ __esModule: true, default: () => ({}) }));
+jest.mock('@/hooks/useAudioPlayback', () => ({
+  __esModule: true,
+  default: () => ({}),
+  pauseActivePlayback: () => {},
+}));
 jest.mock('@/hooks/useLeagueLegalAcceptance', () => ({ __esModule: true, default: () => ({}) }));
 
 // LE MICRO DE DOUBLURE. `isVoiceNoteRecordingSupported` rend VRAI, sinon
@@ -230,16 +249,6 @@ jest.mock('@/components/organisms/pollCreationModal/PollCreationModal', () => ()
 jest.mock('@/components/organisms/popup/GlobalPromptModal', () => () => null);
 jest.mock('@/components/organisms/venueProposalModal/VenueProposalModal', () => () => null);
 
-/** Un toucher synthétique, tel que `PanResponder` l'attend. */
-const TOUCHER = {
-  touchHistory: {
-    indexOfSingleActiveTouch: 0,
-    mostRecentTimeStamp: 0,
-    numberActiveTouches: 0,
-    touchBank: [],
-  },
-};
-
 /**
  * Monte le vrai écran Conversation.
  * @returns {{ arbre: any }} L'arbre monté.
@@ -274,59 +283,45 @@ const monterConversation = () => {
 };
 
 /**
- * Appuie sur le bouton micro, comme un doigt le ferait.
- * @returns {Promise<void>} Quand l'enregistrement a démarré.
+ * Le geste d'appui du micro, tel que la zone vocale l'a donné à Gesture Handler.
+ * @param {any} arbre - L'arbre monté.
+ * @returns {any} Le geste `Pan` (appui long), avec ses rappels enregistrés.
  */
-const appuyerSurLeMicro = async () => {
-  const props = mockGiftedRenders[mockGiftedRenders.length - 1];
-  const bouton = props.renderSend({ text: '' });
-  expect(bouton).toBeTruthy();
-  await act(async () => {
-    bouton.props.onResponderGrant(TOUCHER);
-  });
+const gesteDuMicro = (arbre) => {
+  const detecteur = arbre.root.find(
+    (/** @type {any} */ noeud) => noeud.props?.testID === 'gesture-detector'
+      && typeof noeud.type === 'string',
+  );
+  return detecteur.props.gesture.gestes.find((/** @type {any} */ g) => g.type === 'Pan');
 };
 
 /**
- * Les hauteurs des barres de niveau RÉELLEMENT affichées.
- *
- * ⚠️ On lit l'arbre MONTÉ, pas des éléments React non rendus : les barres
- * vivent maintenant dans leur propre composant, et un composant non monté ne
- * rend rien à inspecter. Le filtre `typeof type === 'string'` évite de compter
- * deux fois chaque barre (le composant `View` ET le nœud natif qu'il rend).
+ * Pose le doigt sur le micro et le garde 200 ms, comme Gesture Handler le
+ * raconterait : `onBegin` au toucher, `onStart` quand l'appui long est acquis.
  * @param {any} arbre - L'arbre monté.
- * @returns {number[]} Les hauteurs, en pixels.
+ * @returns {Promise<any>} Le geste, pour la suite.
  */
-const hauteursDesBarres = (arbre) => arbre.root
-  .findAll(
-    (/** @type {any} */ noeud) => noeud.props?.testID === 'voice-level-bar'
-      && typeof noeud.type === 'string',
-    { deep: true },
-  )
-  .map((/** @type {any} */ noeud) => Number(noeud.props.style?.height))
-  .filter((/** @type {number} */ hauteur) => Number.isFinite(hauteur));
+const maintenirLeMicro = async (arbre) => {
+  const appui = gesteDuMicro(arbre);
+  await act(async () => { appui.rappels.onBegin(); });
+  await act(async () => { appui.rappels.onStart(); });
+  return appui;
+};
 
 /**
  * Joue une suite de niveaux sonores, comme le micro le ferait.
  *
- * ⚠️ DEUX PRÉCAUTIONS, et sans elles la mesure ne vaut rien :
- *   1. UN `act()` PAR COMPTE RENDU DU MICRO. React regroupe tout ce qui se
- *      passe dans un même `act()` en UN SEUL rendu : jouer cinquante niveaux
- *      d'un coup mesurerait « 1 rendu ». Dans la vraie vie, chaque compte rendu
- *      arrive dans son propre tour de boucle.
- *   2. L'HORLOGE AVANCE POUR DE BON. L'écran freine les barres à 80 ms en
- *      lisant `Date.now()`. Dans un test, cinquante tours passent en quelques
- *      millisecondes : le frein bloquerait tout, et on mesurerait un écran
- *      beaucoup plus calme qu'il ne l'est sur un téléphone. On avance donc la
- *      fausse horloge de 100 ms entre deux comptes rendus — c'est exactement le
- *      rythme du micro (`setSubscriptionDuration(0.1)`).
+ * ⚠️ UN `act()` PAR COMPTE RENDU DU MICRO : React regroupe tout ce qui se
+ * passe dans un même `act()` en UN SEUL rendu — jouer cent niveaux d'un coup
+ * mesurerait « 1 rendu ». Sur un téléphone, chaque compte rendu arrive dans
+ * son propre tour de boucle.
  * @param {number[]} niveaux - Les niveaux, en décibels (-160 à 0).
- * @param {number} [pasMs] - L'écart entre deux comptes rendus du micro.
+ * @param {number} [pasMs] - L'écart entre deux comptes rendus (50 ms : le rythme du micro).
  * @returns {void}
  */
-const jouerLeSon = (niveaux, pasMs = 100) => {
+const jouerLeSon = (niveaux, pasMs = 50) => {
   const rappels = mockRappelsDuMicro[mockRappelsDuMicro.length - 1];
   niveaux.forEach((niveau, rang) => {
-    act(() => { jest.advanceTimersByTime(pasMs); });
     const dureeMs = (rang + 1) * pasMs;
     act(() => { rappels.onProgress?.(dureeMs); });
     act(() => { rappels.onMetering?.(niveau, dureeMs); });
@@ -337,16 +332,11 @@ describe('MSGLIVE — le vocal : le son bouge, et il ne coûte pas cher', () => 
   beforeEach(() => {
     mockGiftedRenders.length = 0;
     mockRappelsDuMicro.length = 0;
-    jest.useFakeTimers();
   });
 
-  afterEach(() => {
-    jest.useRealTimers();
-  });
-
-  it('1. LE MICRO EST BRANCHÉ : appuyer dessus demande le niveau sonore', async () => {
-    monterConversation();
-    await appuyerSurLeMicro();
+  it('1. LE MICRO EST BRANCHÉ : poser le doigt dessus ouvre le micro et demande le niveau sonore', async () => {
+    const { arbre } = monterConversation();
+    await maintenirLeMicro(arbre);
 
     expect(mockRappelsDuMicro).toHaveLength(1);
     // Ces deux rappels-là sont tout le sujet : l'un donne le temps, l'autre le
@@ -355,36 +345,21 @@ describe('MSGLIVE — le vocal : le son bouge, et il ne coûte pas cher', () => 
     expect(typeof mockRappelsDuMicro[0].onProgress).toBe('function');
   });
 
-  it('2. LE SON FAIT BOUGER : fort et faible ne donnent pas la même chose', async () => {
+  it('3. LE PRIX DU VOCAL : 5 secondes d\'enregistrement ne redessinent plus l\'écran', async () => {
+    // 📏 HISTORIQUE DE CE CHIFFRE. Avant MSGLIVE (22/09) : 105 rendus complets
+    // de l'écran de conversation — 7 400 lignes — pour CINQ SECONDES de vocal.
+    // Après MSGLIVE : 6 (plafond posé à 10). Après VOCAL (23/09) : le micro,
+    // ses niveaux, son chronomètre et ses animations vivent dans la zone
+    // vocale (`VoiceComposerZone`) — l'écran ne sait même plus qu'un vocal est
+    // en cours. Mesuré : 0 rendu. Le plafond est resserré à 2 (cliquet dans le
+    // bon sens) : une marge pour un état légitime, jamais un rendu par niveau.
     const { arbre } = monterConversation();
-    await appuyerSurLeMicro();
-
-    // Du silence (-120 dB) puis du bruit (-10 dB) : les barres doivent le dire.
-    jouerLeSon([-120, -120, -120, -10, -10, -10]);
-
-    const hauteurs = hauteursDesBarres(arbre);
-    expect(hauteurs.length).toBeGreaterThan(0);
-    expect(Math.max(...hauteurs)).toBeGreaterThan(Math.min(...hauteurs));
-  });
-
-  it('3. LE PRIX DU VOCAL : 5 secondes d\'enregistrement, 10 rendus au plus', async () => {
-    // 📏 LE CHIFFRE, mesuré par ce témoin avant le lot : 105 rendus complets de
-    // l'écran de conversation — 7 400 lignes — pour CINQ SECONDES de vocal.
-    // Le micro parle toutes les 100 ms, et chacun de ses cinquante comptes
-    // rendus redessinait l'écran DEUX FOIS : une pour le chronomètre, alors que
-    // le libellé n'affiche que des secondes entières, une pour les barres.
-    //
-    // Après le lot : le chronomètre ne redessine que quand la SECONDE AFFICHÉE
-    // change — cinq fois — et les barres ne redessinent plus qu'elles-mêmes.
-    // Le plafond est posé à 10 : deux fois la marge, et toujours dix fois moins
-    // que l'état mesuré.
-    monterConversation();
-    await appuyerSurLeMicro();
+    await maintenirLeMicro(arbre);
     const avant = mockGiftedRenders.length;
 
-    jouerLeSon(Array.from({ length: 50 }, (_, rang) => -100 + ((rang % 10) * 8)));
+    jouerLeSon(Array.from({ length: 100 }, (_, rang) => -100 + ((rang % 10) * 8)));
 
     const rendus = mockGiftedRenders.length - avant;
-    expect(rendus).toBeLessThanOrEqual(10);
+    expect(rendus).toBeLessThanOrEqual(2);
   });
 });

@@ -52,6 +52,18 @@ const NOMS = [
   'receiptAlt',
   'triangleExclamation',
   'wifiSlash',
+  // VOCAL — les glyphes de la messagerie vocale (maquette du 23/09).
+  'checkDouble',
+  'chevronUp',
+  'lockOpen',
+  'lockShut',
+  'microphone',
+  'pause',
+  'play',
+  'plus2',
+  'send',
+  'stop',
+  'trashAlt',
 ];
 
 // Les cinq primitives que le pont Vite du site sait rendre
