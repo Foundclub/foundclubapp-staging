@@ -55,6 +55,11 @@ import {
 import { persistDiagnosticError } from '@/utils/bootDiagnostics';
 import { getMatchDurationMinutes } from '@/utils/leagueSportConfig';
 import { createLogger } from '@/utils/logger/logger';
+import {
+  forgetDeviceRegistrationsExcept,
+  isDeviceRegistrationFresh,
+  rememberDeviceRegistration,
+} from '@/utils/notifications/deviceRegistrationMemory';
 import { isDuplicateNotificationKey } from '@/utils/notifications/notificationDedupe';
 import {
   getNotificationOpenKey,
@@ -350,6 +355,57 @@ const useNotifications = ({ navigate, onSmartNotification }) => {
     },
   });
 
+  /**
+   * FCMSYNC (23/09) — les comptes lies du telephone partent UN PAR UN. Chaque
+   * enregistrement ecrit la MEME fiche du telephone cote serveur : en parallele,
+   * ils attendaient le meme verrou (jusqu'a 7,1 s mesures en production).
+   * Un compte qui a deja enregistre CE jeton il y a moins de 24 h ne repart pas —
+   * le compte actif compris, que le chemin principal vient d'enregistrer.
+   */
+  const syncLinkedSessionsWithToken = useCallback(async (token) => {
+    const normalizedToken = typeof token === 'string' ? token.trim() : '';
+    if (!normalizedToken) {
+      return;
+    }
+
+    const pendingSessionSyncs = (Array.isArray(authSessions) ? authSessions : [])
+      .map((session) => ({
+        sessionDocumentId: String(session?.user?.documentId || '').trim(),
+        sessionToken: String(session?.token || '').trim(),
+      }))
+      .filter(({ sessionDocumentId, sessionToken }) => (
+        sessionDocumentId
+        && sessionToken
+        && !isDeviceRegistrationFresh(sessionDocumentId, normalizedToken)
+      ));
+
+    for (let index = 0; index < pendingSessionSyncs.length; index += 1) {
+      const sessionSync = pendingSessionSyncs[index];
+      try {
+        // eslint-disable-next-line no-await-in-loop
+        await addDeviceTokenForSession(sessionSync.sessionToken, normalizedToken);
+        rememberDeviceRegistration(sessionSync.sessionDocumentId, normalizedToken);
+      } catch (error) {
+        const typedError = /** @type {any} */ (error);
+        const statusCode = typedError?.status || typedError?.response?.status;
+        if (statusCode === 401 || statusCode === 403) {
+          notificationsLogger.warn('[FCM] Linked session token sync skipped: session authorization rejected.', {
+            sessionDocumentId: sessionSync.sessionDocumentId,
+          });
+        } else if (isNetworkError(typedError)) {
+          notificationsLogger.warn('[FCM] Linked session token sync postponed: network unavailable.', {
+            sessionDocumentId: sessionSync.sessionDocumentId,
+          });
+        } else {
+          notificationsLogger.warn('[FCM] Linked session token sync failed.', {
+            error: typedError?.message || 'unknown',
+            sessionDocumentId: sessionSync.sessionDocumentId,
+          });
+        }
+      }
+    }
+  }, [authSessions]);
+
   const saveToken = useCallback(async (token) => {
     if (!token) return false;
     // Le point de passage OBLIGE : le rafraichissement de jeton par Firebase
@@ -361,15 +417,24 @@ const useNotifications = ({ navigate, onSmartNotification }) => {
       });
       return false;
     }
-    notificationsLogger.debug('[FCM] Calling saveTokenMutation with token:', `${token.substring(0, 20)}...`);
+    const accountDocumentId = String(userData?.documentId || '').trim();
     try {
-      await saveTokenMutationAsync(token);
+      // FCMSYNC — deja enregistre pour ce compte et CE jeton il y a moins de 24 h :
+      // rien ne part. Le jeton reste connu de l'app (la deconnexion s'en sert pour
+      // retirer le lien cote serveur).
+      if (accountDocumentId && isDeviceRegistrationFresh(accountDocumentId, token)) {
+        dispatch({ payload: token, type: 'SET_FCM_TOKEN' });
+      } else {
+        notificationsLogger.debug('[FCM] Calling saveTokenMutation with token:', `${token.substring(0, 20)}...`);
+        await saveTokenMutationAsync(token);
+        rememberDeviceRegistration(accountDocumentId, token);
+      }
       await syncLinkedSessionsWithToken(token);
       return true;
     } catch (_error) {
       return false;
     }
-  }, [isTokenSyncMuted, saveTokenMutationAsync, syncLinkedSessionsWithToken]);
+  }, [dispatch, isTokenSyncMuted, saveTokenMutationAsync, syncLinkedSessionsWithToken, userData?.documentId]);
 
   const smartNotifEnabled = useRef(ENABLE_SMART_NOTIFICATIONS);
   const [pendingCalendarPrompts, setPendingCalendarPrompts] = useState([]);
@@ -379,7 +444,6 @@ const useNotifications = ({ navigate, onSmartNotification }) => {
   const shownCalendarPromptKeyRef = useRef('');
   const queuedNotificationKeysRef = useRef(/** @type {Set<string>} */ (new Set()));
   const handledNotificationKeysRef = useRef(/** @type {Set<string>} */ (new Set()));
-  const linkedSessionSyncKeysRef = useRef(/** @type {Set<string>} */ (new Set()));
   const tokenSyncInFlightRef = useRef(false);
   const tokenSyncRetryTimerRef = useRef(null);
   const lastTokenSyncAtRef = useRef(0);
@@ -441,7 +505,6 @@ const useNotifications = ({ navigate, onSmartNotification }) => {
     if (!userData) {
       setPendingPushPermissionReason('');
       lastSyncedUserIdRef.current = '';
-      linkedSessionSyncKeysRef.current.clear();
       if (tokenSyncRetryTimerRef.current) {
         clearSafeTimer(tokenSyncRetryTimerRef.current);
         tokenSyncRetryTimerRef.current = null;
@@ -449,58 +512,13 @@ const useNotifications = ({ navigate, onSmartNotification }) => {
     }
   }, [clearSafeTimer, userData]);
 
-  const syncLinkedSessionsWithToken = useCallback(async (token) => {
-    const normalizedToken = typeof token === 'string' ? token.trim() : '';
-    if (!normalizedToken) {
-      return;
-    }
-
-    const sessions = Array.isArray(authSessions) ? authSessions : [];
-    if (sessions.length <= 1) {
-      return;
-    }
-
-    const pendingSessionSyncs = sessions
-      .map((session) => {
-        const sessionDocumentId = String(session?.user?.documentId || '').trim();
-        const sessionToken = String(session?.token || '').trim();
-        const syncKey = `${normalizedToken}:${sessionDocumentId}`;
-
-        if (!sessionDocumentId || !sessionToken || linkedSessionSyncKeysRef.current.has(syncKey)) {
-          return null;
-        }
-
-        return {
-          sessionDocumentId,
-          sessionToken,
-          syncKey,
-        };
-      })
-      .filter(Boolean);
-
-    await Promise.all(pendingSessionSyncs.map(async (sessionSync) => {
-      try {
-        await addDeviceTokenForSession(sessionSync.sessionToken, normalizedToken);
-        rememberRuntimeKey(linkedSessionSyncKeysRef, sessionSync.syncKey);
-      } catch (error) {
-        const typedError = /** @type {any} */ (error);
-        const statusCode = typedError?.status || typedError?.response?.status;
-        if (statusCode === 401 || statusCode === 403) {
-          notificationsLogger.warn('[FCM] Linked session token sync skipped: session authorization rejected.', {
-            sessionDocumentId: sessionSync.sessionDocumentId,
-          });
-        } else if (isNetworkError(typedError)) {
-          notificationsLogger.warn('[FCM] Linked session token sync postponed: network unavailable.', {
-            sessionDocumentId: sessionSync.sessionDocumentId,
-          });
-        } else {
-          notificationsLogger.warn('[FCM] Linked session token sync failed.', {
-            error: typedError?.message || 'unknown',
-            sessionDocumentId: sessionSync.sessionDocumentId,
-          });
-        }
-      }
-    }));
+  // FCMSYNC — la memoire d'un compte ne vit que tant que sa session est sur le
+  // telephone : une deconnexion retire son lien cote serveur (`deleteDeviceToken`),
+  // sa reconnexion doit donc repartir.
+  useEffect(() => {
+    forgetDeviceRegistrationsExcept((Array.isArray(authSessions) ? authSessions : [])
+      .map((session) => String(session?.user?.documentId || '').trim())
+      .filter(Boolean));
   }, [authSessions]);
 
   const finalizeCalendarPrompt = useCallback(() => {
