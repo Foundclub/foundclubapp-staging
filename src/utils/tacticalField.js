@@ -129,3 +129,27 @@ export const getTacticalFieldFamilyKey = (sport) => {
 export const getTacticalFieldAspectRatio = (sport) => (
   FIELD_ASPECT_RATIOS[getTacticalSportKey(sport)] || FIELD_ASPECT_RATIOS.generic
 );
+
+/**
+ * COMPOMSG — le plus grand terrain qui tient dans une boite, AUX PROPORTIONS de
+ * son sport. Sur le SITE, une surface qui n'a qu'un ratio (ni largeur ni
+ * hauteur) vaut 0 px : l'ecran qui la dessine lui donne cette taille-ci.
+ * @param {{ width: number, height: number } | null | undefined} box La place disponible.
+ * @param {string} sport
+ * @param {number} [horizontalPadding] Retrait de chaque cote, deduit de la largeur.
+ * @returns {{ width: number, height: number } | null} `null` si la boite est vide.
+ */
+export const fitTacticalFieldInBox = (box, sport, horizontalPadding = 0) => {
+  const availableWidth = Number(box?.width) - (horizontalPadding * 2);
+  const availableHeight = Number(box?.height);
+  if (!(availableWidth > 0) || !(availableHeight > 0)) return null;
+
+  const ratio = getTacticalFieldAspectRatio(sport);
+  let height = availableHeight;
+  let width = height / ratio;
+  if (width > availableWidth) {
+    width = availableWidth;
+    height = width * ratio;
+  }
+  return { height: Math.floor(height), width: Math.floor(width) };
+};
