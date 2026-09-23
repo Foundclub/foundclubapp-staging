@@ -11,6 +11,7 @@ import { useTranslation } from 'react-i18next'
 import { useWindowDimensions } from 'react-native'
 
 import useAuth from '@/domains/auth/useAuth'
+import { EMOJI_CATALOG } from '@/domains/messaging/emojiCatalog';
 import { getConversationName } from '@/domains/messaging/messagingUseCases'
 import {
   applyOptimisticPollVote,
@@ -198,9 +199,13 @@ const getErrorMessage = (error, fallback) => String(error?.message || fallback |
 // six reactions — c est une icone, pas un choix.
 const REACTION_TRIGGER_GLYPH = String.fromCodePoint(0x1F642);
 
-/** Les mesures de la barre ouverte, en pixels : 6 emojis, leurs marges, son cadre. */
-const REACTION_BAR_WIDTH = 236;
+/** Les mesures de la barre ouverte, en pixels : 6 emojis, le « + », leurs marges, son cadre. */
+const REACTION_BAR_WIDTH = 272;
 const REACTION_BAR_HEIGHT = 44;
+
+/** WHATSAPP — les mesures du clavier complet, celui que le « + » ouvre. */
+const REACTION_PICKER_WIDTH = 320;
+const REACTION_PICKER_HEIGHT = 280;
 
 /**
  * REACT-WEB — OU POSER LA BARRE, EN COORDONNEES D ECRAN.
@@ -219,20 +224,29 @@ const REACTION_BAR_HEIGHT = 44;
  *
  * ↔️ Elle est bornee aux deux bords de la fenetre : sur une bulle etroite collee a
  * un bord, une barre de 236 px depasserait sinon hors de l ecran.
+ * 📐 LES MESURES SONT DES PARAMETRES depuis le lot WHATSAPP : le meme calcul sert
+ * la barre des six ET le clavier complet, qui est bien plus grand. Deux fonctions
+ * auraient fait deux bascules haut/bas a garder identiques.
  * @param {HTMLElement} trigger Le bouton qui vient d etre active.
+ * @param {number} [largeur] La largeur du panneau a poser.
+ * @param {number} [hauteur] Sa hauteur.
  * @returns {{left: number, top: number}} Sa place, en pixels d ecran.
  */
-const getReactionBarAnchor = (trigger) => {
+const getReactionBarAnchor = (
+  trigger,
+  largeur = REACTION_BAR_WIDTH,
+  hauteur = REACTION_BAR_HEIGHT,
+) => {
   const rect = trigger.getBoundingClientRect();
-  const placeAuDessus = rect.top > REACTION_BAR_HEIGHT + 12;
+  const placeAuDessus = rect.top > hauteur + 12;
 
   return {
     left: Math.max(8, Math.min(
-      rect.right - REACTION_BAR_WIDTH,
-      window.innerWidth - REACTION_BAR_WIDTH - 8,
+      rect.right - largeur,
+      window.innerWidth - largeur - 8,
     )),
     top: placeAuDessus
-      ? rect.top - REACTION_BAR_HEIGHT - 6
+      ? rect.top - hauteur - 6
       : rect.bottom + 6,
   };
 };
@@ -325,6 +339,12 @@ function Conversation({ navigation, route }) {
   const [reactionBarAnchor, setReactionBarAnchor] = useState(
     /** @type {{left: number, top: number} | null} */ (null),
   );
+  // WHATSAPP — LE CLAVIER EST UN TROISIEME ETAT DU MEME PANNEAU, pas un second
+  // panneau : il reutilise l identifiant, l ancre et la reference de la barre, et
+  // herite donc sans une ligne de plus d Echap, du clic a cote et du defilement,
+  // deja ecrits juste en dessous.
+  const [clavierOuvert, setClavierOuvert] = useState(false);
+  const [familleEmoji, setFamilleEmoji] = useState(EMOJI_CATALOG[0]?.key ?? '');
   const reactionTriggerRef = useRef(/** @type {HTMLButtonElement | null} */ (null));
   const reactionBarRef = useRef(/** @type {HTMLDivElement | null} */ (null));
   // MSGREACT — la requete est la MEME que celle du telephone, donc la socket
@@ -1520,6 +1540,12 @@ function Conversation({ navigation, route }) {
     }
   }, [reactToMessage]);
 
+  // WHATSAPP — sans ce rappel, rouvrir une barre la montrerait directement en
+  // mode clavier : l etat serait reste vrai depuis la fois d avant.
+  useEffect(() => {
+    if (!reactionBarMessageId) setClavierOuvert(false);
+  }, [reactionBarMessageId]);
+
   // REACT-WEB — ECHAP FERME LA BARRE ET REND LE FOCUS AU BOUTON qui l a ouverte.
   // Sans ce retour, une personne au clavier se retrouve projetee en haut de la page,
   // sans aucun repere pour revenir a son message. Un clic a cote ferme aussi la
@@ -1638,7 +1664,7 @@ function Conversation({ navigation, route }) {
           >
             {REACTION_TRIGGER_GLYPH}
           </button>
-          {reactionBarMessageId === getMessageId(message) && reactionBarAnchor ? (
+          {reactionBarMessageId === getMessageId(message) && reactionBarAnchor && !clavierOuvert ? (
             <div
               aria-label={i18next.t('conversation.reactions.pick', 'Choisir une réaction')}
               data-testid={`REACTWEB-barre-${getMessageId(message)}`}
@@ -1688,6 +1714,127 @@ function Conversation({ navigation, route }) {
                   {emoji}
                 </button>
               ))}
+              {/*
+                WHATSAPP — LE « + ». Avant ce lot, la barre s arretait aux six
+                raccourcis et le serveur REFUSAIT tout le reste : reagir avec
+                autre chose etait litteralement impossible. Il ouvre le clavier
+                complet, A LA PLACE de la barre — les deux ne coexistent jamais.
+              */}
+              <button
+                aria-label={i18next.t('conversation.reactions.more', "Plus d'emojis")}
+                data-testid="REACTWEB-plus"
+                onClick={() => {
+                  if (reactionTriggerRef.current) {
+                    setReactionBarAnchor(getReactionBarAnchor(
+                      reactionTriggerRef.current,
+                      REACTION_PICKER_WIDTH,
+                      REACTION_PICKER_HEIGHT,
+                    ));
+                  }
+                  setClavierOuvert(true);
+                }}
+                style={{
+                  background: 'transparent',
+                  border: 0,
+                  borderRadius: 999,
+                  color: baseTextColor,
+                  cursor: 'pointer',
+                  fontSize: 18,
+                  lineHeight: 1,
+                  padding: '6px 8px',
+                }}
+                type="button"
+              >
+                +
+              </button>
+            </div>
+          ) : null}
+          {reactionBarMessageId === getMessageId(message) && reactionBarAnchor && clavierOuvert ? (
+            <div
+              aria-label={i18next.t('conversation.reactions.more', "Plus d'emojis")}
+              data-testid={`REACTWEB-clavier-${getMessageId(message)}`}
+              ref={reactionBarRef}
+              role="dialog"
+              style={{
+                background: panelBackground,
+                border: `1px solid ${borderColor}`,
+                borderRadius: 16,
+                boxShadow: '0 10px 30px rgba(0, 0, 0, 0.45)',
+                boxSizing: 'border-box',
+                display: 'flex',
+                flexDirection: 'column',
+                height: REACTION_PICKER_HEIGHT,
+                left: reactionBarAnchor.left,
+                padding: 8,
+                // Fixe, comme la barre, et pour la meme raison : voir getReactionBarAnchor.
+                position: 'fixed',
+                top: reactionBarAnchor.top,
+                width: REACTION_PICKER_WIDTH,
+                zIndex: 40,
+              }}
+            >
+              <div
+                role="tablist"
+                style={{
+                  display: 'flex',
+                  gap: 4,
+                  overflowX: 'auto',
+                  paddingBottom: 6,
+                }}
+              >
+                {EMOJI_CATALOG.map((categorie) => (
+                  <button
+                    aria-selected={familleEmoji === categorie.key}
+                    key={categorie.key}
+                    onClick={() => setFamilleEmoji(categorie.key)}
+                    role="tab"
+                    style={{
+                      background: familleEmoji === categorie.key
+                        ? 'rgba(1, 179, 244, 0.22)'
+                        : 'transparent',
+                      border: 0,
+                      borderRadius: 999,
+                      color: baseTextColor,
+                      cursor: 'pointer',
+                      fontSize: 12,
+                      padding: '5px 10px',
+                      whiteSpace: 'nowrap',
+                    }}
+                    type="button"
+                  >
+                    {i18next.t(`conversation.reactions.categories.${categorie.key}`, categorie.key)}
+                  </button>
+                ))}
+              </div>
+              <div
+                style={{
+                  display: 'grid',
+                  flex: 1,
+                  gridTemplateColumns: 'repeat(8, 1fr)',
+                  overflowY: 'auto',
+                }}
+              >
+                {(EMOJI_CATALOG.find((categorie) => categorie.key === familleEmoji)?.emojis ?? [])
+                  .map((emoji) => (
+                    <button
+                      aria-label={emoji}
+                      key={`catalogue-${emoji}`}
+                      onClick={() => handleToggleReaction(getMessageId(message), emoji)}
+                      style={{
+                        background: 'transparent',
+                        border: 0,
+                        borderRadius: 8,
+                        cursor: 'pointer',
+                        fontSize: 20,
+                        lineHeight: 1,
+                        padding: 4,
+                      }}
+                      type="button"
+                    >
+                      {emoji}
+                    </button>
+                  ))}
+              </div>
             </div>
           ) : null}
           {!isMine ? (
@@ -1851,6 +1998,8 @@ function Conversation({ navigation, route }) {
     mutedTextColor,
     panelBackground,
     primaryColor,
+    clavierOuvert,
+    familleEmoji,
     reactionBarAnchor,
     reactionBarMessageId,
     reactionsByMessage,

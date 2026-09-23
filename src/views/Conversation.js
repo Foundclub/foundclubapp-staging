@@ -54,7 +54,6 @@ import {
   getMyReactionEmoji,
   getReactionsForMessage,
   indexReactionsByMessage,
-  REACTION_EMOJIS,
   summarizeReactionPeople,
 } from '@/domains/messaging/reactionUseCases';
 import useMessaging from '@/domains/messaging/useMessaging';
@@ -84,6 +83,7 @@ import EventCardNew from '@/components/molecules/eventCard/EventCardNew';
 import EventMessageBubble from '@/components/molecules/eventMessageBubble/EventMessageBubble';
 import EventShareBubble from '@/components/molecules/eventShareBubble/EventShareBubble';
 import LocationShareBubble from '@/components/molecules/locationShareBubble/LocationShareBubble';
+import MessageReactionOverlay from '@/components/molecules/messageReactionOverlay/MessageReactionOverlay';
 import PollMessageBubble from '@/components/molecules/pollMessageBubble/PollMessageBubble';
 import ProposalMessageBubble from '@/components/molecules/proposalMessageBubble/ProposalMessageBubble';
 import TypingIndicator from '@/components/molecules/typingIndicator/TypingIndicator';
@@ -794,6 +794,10 @@ function Conversation({ navigation, route }) {
   // la feuille : un seul etat, pas un booleen ET un identifiant qui peuvent
   // se contredire.
   const [reactionPeopleMessageId, setReactionPeopleMessageId] = useState('');
+  // WHATSAPP — la bulle visee, mesuree a l ecran au moment de l appui long.
+  const [reactionAnchor, setReactionAnchor] = useState(
+    /** @type {{height: number, width: number, x: number, y: number} | null} */ (null),
+  );
   const [isEditMessageModalVisible, setIsEditMessageModalVisible] = useState(false);
   const [isGroupManagementVisible, setIsGroupManagementVisible] = useState(false);
   const [groupNameDraft, setGroupNameDraft] = useState('');
@@ -1182,6 +1186,11 @@ function Conversation({ navigation, route }) {
   const conversationPrimaryLoggedChatIdRef = useRef('');
   const conversationFirstRenderedChatIdRef = useRef('');
   const swipeableMessageRefs = useRef(new Map());
+  // WHATSAPP — LES BULLES, POUR POUVOIR LES MESURER. La pilule de reactions se
+  // pose sur la bulle visee : il faut donc savoir OU elle est a l ecran au
+  // moment de l appui long. Une reserve par message, sur le meme modele que
+  // celle des glissements juste au-dessus.
+  const bubbleMeasureRefs = useRef(new Map());
   const consumedNegotiationFocusKeyRef = useRef('');
   const pendingAttachmentActionRef = useRef(
     /** @type {null | (() => Promise<void> | void)} */ (null),
@@ -4955,9 +4964,34 @@ function Conversation({ navigation, route }) {
 
   const handleMessageLongPress = useCallback((_, currentMessage) => {
     if (!currentMessage) return;
-    setSelectedMessage(currentMessage);
-    setIsMessageActionsVisible(true);
-  }, []);
+
+    /** @param {{height: number, width: number, x: number, y: number} | null} ancre La bulle mesuree. */
+    const ouvrir = (ancre) => {
+      setReactionAnchor(ancre);
+      setSelectedMessage(currentMessage);
+      setIsMessageActionsVisible(true);
+    };
+
+    // WHATSAPP — ON MESURE AVANT D OUVRIR, et l ordre compte. Ouvrir puis
+    // mesurer ferait apparaitre la pilule a une place, puis sauter a la bonne :
+    // `measureInWindow` rend sa reponse un tour plus tard. On attend donc la
+    // mesure, et le calque s ouvre deja au bon endroit.
+    const bulle = bubbleMeasureRefs.current.get(getMessageDocumentId(currentMessage));
+    if (typeof bulle?.measureInWindow === 'function') {
+      bulle.measureInWindow((
+        /** @type {number} */ x,
+        /** @type {number} */ y,
+        /** @type {number} */ width,
+        /** @type {number} */ height,
+      ) => ouvrir({
+        height, width, x, y,
+      }));
+      return;
+    }
+
+    // 🧯 Sans mesure, pas de pilule — mais les actions s ouvrent quand meme.
+    ouvrir(null);
+  }, [getMessageDocumentId]);
 
   const handleReplySelectedMessage = useCallback(() => {
     if (!selectedMessage) return;
@@ -5331,6 +5365,11 @@ function Conversation({ navigation, route }) {
             activeOpacity={1}
             delayLongPress={250}
             onLongPress={() => handleMessageLongPress(null, currentMessage)}
+            ref={(/** @type {any} */ instance) => {
+              if (!messageKey) return;
+              if (instance) bubbleMeasureRefs.current.set(messageKey, instance);
+              else bubbleMeasureRefs.current.delete(messageKey);
+            }}
           >
             {children}
           </TouchableOpacity>
@@ -7181,45 +7220,26 @@ function Conversation({ navigation, route }) {
           onSubmit={handleSubmitPoll}
         />
 
-        <BottomModal
-          close={closeMessageActionsModal}
-          isVisible={isMessageActionsVisible}
+        {/*
+          WHATSAPP — LA RANGEE D EMOJIS A QUITTE CETTE FEUILLE. Elle est
+          maintenant une pilule posee JUSTE AU-DESSUS du message vise
+          (MessageReactionOverlay), qui reste lisible pendant qu on choisit. Les
+          actions ci-dessous, elles, n ont pas bouge : meme place, meme ordre,
+          memes libelles — seul leur cadre a change, pour qu elles partagent un
+          unique calque avec la pilule plutot que de se superposer a elle.
+        */}
+        <MessageReactionOverlay
+          anchor={reactionAnchor}
+          isMine={isSelectedMessageOwn}
+          myEmoji={myEmojiOnSelectedMessage}
+          onClose={closeMessageActionsModal}
+          onSelect={(emoji) => handleToggleReaction(selectedMessage, emoji)}
+          visible={isMessageActionsVisible}
         >
           <View style={[Spaces.gap[12], Spaces.marginTop[24], Spaces.marginBottom[8]]}>
             <Text style={[Fonts.h3, Fonts.neutral00, Fonts.textCenter]}>
               {t('conversation.actions.modalTitle', 'Actions du message')}
             </Text>
-            {/*
-              MSGREACT — LA BARRE D EMOJIS EST EN HAUT, avant les actions : c est
-              le geste le plus frequent apres l appui long, et celui qui coute le
-              moins cher a annuler (un second appui sur le meme emoji retire).
-            */}
-            <View style={[Alignments.row, Alignments.justifySpaceBetween, Spaces.gap[8]]}>
-              {REACTION_EMOJIS.map((emoji) => {
-                const isMine = myEmojiOnSelectedMessage === emoji;
-                return (
-                  <TouchableOpacity
-                    accessibilityLabel={emoji}
-                    accessibilityRole="button"
-                    key={`reaction-choice-${emoji}`}
-                    onPress={() => handleToggleReaction(selectedMessage, emoji)}
-                    style={[
-                      Alignments.fill,
-                      Alignments.alignCenter,
-                      {
-                        backgroundColor: isMine ? Colors.primary700 : Colors.neutral700,
-                        borderColor: isMine ? Colors.primary500 : Colors.transparent,
-                        borderRadius: 16,
-                        borderWidth: 1,
-                        paddingVertical: 8,
-                      },
-                    ]}
-                  >
-                    <Text style={{ fontSize: 22 }}>{emoji}</Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
             <Button
               onPress={handleReplySelectedMessage}
               title={t('conversation.actions.reply', 'Repondre')}
@@ -7259,7 +7279,7 @@ function Conversation({ navigation, route }) {
               variant="PrimaryLight"
             />
           </View>
-        </BottomModal>
+        </MessageReactionOverlay>
 
         {/* MSGREACT — « qui a reagi », ouvert par un appui sur la rangee. */}
         <BottomModal
