@@ -124,8 +124,11 @@ function VoiceLiveWave({
 }
 
 const styles = StyleSheet.create({
+  // ⚠️ PAS de `flex: 1` ici : dans la bande, le parent n'a pas de hauteur à
+  // lui, et `flex: 1` (base 0) ramenait le cadre à 0 px de haut — l'onde était
+  // INVISIBLE pendant tout l'enregistrement. Vu sur le banc de captures du
+  // 23/09, qu'aucune porte ne voit. La largeur vient de l'étirement du parent.
   cadre: {
-    flex: 1,
     height: 28,
     overflow: 'hidden',
   },

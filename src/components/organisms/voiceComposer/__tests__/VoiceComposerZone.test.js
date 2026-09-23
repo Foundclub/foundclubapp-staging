@@ -589,3 +589,14 @@ describe('VOCAL — états 3A et 3B · verrouillé, puis réécoute', () => {
     expect(styleDe(parId(arbre, 'voice-review-pill')[0]).opacity).toBe(1);
   });
 });
+
+describe('VOCAL — correctif vu au banc de captures (23/09)', () => {
+  it('le cadre de l\'onde vivante a sa propre hauteur (28) et PAS de flex : sinon il tombe à 0 px et l\'onde disparaît', () => {
+    const { arbre } = monter();
+    const bande = parId(arbre, 'voice-recording-strip')[0];
+    const cadres = bande.findAll((/** @type {any} */ n) => typeof n.type === 'string'
+      && styleDe(n).height === 28 && styleDe(n).overflow === 'hidden');
+    expect(cadres.length).toBeGreaterThan(0);
+    cadres.forEach((/** @type {any} */ cadre) => expect(styleDe(cadre).flex).toBeUndefined());
+  });
+});
