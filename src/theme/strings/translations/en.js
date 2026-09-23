@@ -13292,7 +13292,12 @@ export default {
     },
     chatReply: {
       action: 'Reply',
+      failed: {
+        body: 'Tap "Try again" to send it:',
+        title: 'Message not sent',
+      },
       placeholder: 'Your reply',
+      retry: 'Try again',
       send: 'Send',
       sent: {
         body: 'Your reply has been sent.',

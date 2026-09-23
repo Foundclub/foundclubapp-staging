@@ -13916,11 +13916,16 @@ export default {
     },
     actions: {
       absent: 'Absent',
-      present: 'Present',
+      present: 'Présent',
     },
     chatReply: {
-      action: 'Repondre',
+      action: 'Répondre',
+      failed: {
+        body: 'Appuie sur « Réessayer » pour renvoyer :',
+        title: 'Message non envoyé',
+      },
       placeholder: 'Ta réponse',
+      retry: 'Réessayer',
       send: 'Envoyer',
       sent: {
         body: 'Ta réponse a été envoyée.',
