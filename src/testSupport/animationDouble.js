@@ -152,7 +152,9 @@ const reanimated = () => {
     },
     withTiming: (/** @type {any} */ v, /** @type {any} */ config, /** @type {any} */ fin) => {
       journal.push({ args: [v, config], fn: 'withTiming' });
-      if (typeof fin === 'function') fin(true);
+      // Le rappel de fin passe APRÈS l'affectation de la valeur, comme sur le
+      // vrai fil d'animation : sinon il écraserait ce qu'il vient de poser.
+      if (typeof fin === 'function') Promise.resolve().then(() => fin(true));
       return v;
     },
   };

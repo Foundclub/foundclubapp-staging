@@ -160,8 +160,8 @@ const createRecorder = () => {
 // ENTIER — 7 400 lignes, mesuré à 101 rendus pour cinq secondes de vocal.
 //
 // Depuis que les niveaux ne remontent plus jusqu'à l'écran et s'arrêtent dans
-// les barres (`VoiceLevelBars`), une mesure ne coûte plus que vingt petites
-// vues. On peut donc en prendre deux fois plus : 50 ms, vingt images par
+// l'onde (`voiceComposer/VoiceLiveWave`), une mesure ne coûte plus qu'une
+// cinquantaine de petites vues, sur le fil d'animation. On peut donc en prendre deux fois plus : 50 ms, vingt images par
 // seconde, une onde qui glisse au lieu de sauter. Le budget dépensé reste très
 // en dessous de celui d'avant.
 const RECORDER_TICK_SECONDS = 0.05;

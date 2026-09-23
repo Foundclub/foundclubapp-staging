@@ -390,6 +390,7 @@ export const pauseActivePlayback = () => {
  *   isPlaying: boolean;
  *   speed: number;
  *   durationMs: number;
+ *   endedAt: number;
  *   positionMs: number;
  *   progress: number;
  *   lastError: string;
@@ -418,6 +419,9 @@ const useAudioPlayback = ({ allowExternalFallback = false, headers, sourceUrl })
   const [durationMs, setDurationMs] = useState(0);
   const [positionMs, setPositionMs] = useState(0);
   const [lastError, setLastError] = useState('');
+  // VOCAL — l'instant de la dernière fin de lecture : l'onde tient son
+  // remplissage 400 ms puis s'efface (`useVoiceProgress`).
+  const [endedAt, setEndedAt] = useState(0);
 
   const playerFactory = useMemo(() => resolvePlayerFactory(), []);
   const normalizedSourceUrl = useMemo(() => resolveMediaUrl(sourceUrl), [sourceUrl]);
@@ -784,6 +788,7 @@ const useAudioPlayback = ({ allowExternalFallback = false, headers, sourceUrl })
         removePlaybackListeners(player);
         safeSetState(setIsPlaying, false);
         safeSetState(setPositionMs, 0);
+        safeSetState(setEndedAt, Date.now());
         releasePlaybackSlot(ownerIdRef.current);
         logPlaybackDiagnostic('playback-ended', {
           durationMs: playbackSessionRef.current.durationMs,
@@ -946,6 +951,7 @@ const useAudioPlayback = ({ allowExternalFallback = false, headers, sourceUrl })
   return {
     cycleSpeed,
     durationMs,
+    endedAt,
     isLoading,
     isPlayerAvailable,
     isPlaying,
