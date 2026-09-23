@@ -219,193 +219,213 @@ function MessageReactionOverlay({
       transparent
       visible={visible}
     >
-      {renderVoile()}
+      {/*
+        ♿ LES TROIS ISSUES, POUR QUI NE VOIT PAS L ECRAN. « Annuler » a disparu
+        avec la feuille du bas : on ferme en appuyant a cote. Mais « a cote »
+        n existe pas au lecteur d ecran — le doigt balaie des elements, il ne
+        vise pas une zone vide. Sans issue declaree, la personne reste ENFERMEE.
+          · `accessibilityViewIsModal` : VoiceOver cesse d annoncer la
+            conversation derriere et ne propose plus que le calque ;
+          · `onAccessibilityEscape` : le geste d echappement d iOS (deux doigts
+            en Z) ferme ;
+          · `onRequestClose` du Modal : le bouton retour d Android ferme aussi.
+        Le voile, lui, porte deja le libelle « Fermer » : c est une quatrieme
+        sortie, celle-la atteignable au balayage.
+      */}
+      <View
+        accessibilityViewIsModal
+        onAccessibilityEscape={fermer}
+        style={{ flex: 1 }}
+        testID="WHATSAPP-calque"
+      >
+        {renderVoile()}
 
-      {!clavierOuvert ? (
-        <>
-          <View
-            accessibilityLabel={t('conversation.reactions.pick', 'Choisir une réaction')}
-            accessibilityRole="menu"
-            style={{
-              alignItems: 'center',
-              backgroundColor: Colors.neutral800,
-              borderColor: Colors.neutral600,
-              borderRadius: 999,
-              borderWidth: 1,
-              flexDirection: 'row',
-              gap: ECART,
-              height: REACTION_PILL_HEIGHT,
-              left: place.pill.left,
-              padding: MARGE_INTERNE,
-              position: 'absolute',
-              top: place.pill.top,
-              width: REACTION_PILL_WIDTH,
-            }}
-            testID="WHATSAPP-pilule"
-          >
-            {REACTION_EMOJIS.map((emoji) => (
+        {!clavierOuvert ? (
+          <>
+            <View
+              accessibilityLabel={t('conversation.reactions.pick', 'Choisir une réaction')}
+              accessibilityRole="menu"
+              style={{
+                alignItems: 'center',
+                backgroundColor: Colors.neutral800,
+                borderColor: Colors.neutral600,
+                borderRadius: 999,
+                borderWidth: 1,
+                flexDirection: 'row',
+                gap: ECART,
+                height: REACTION_PILL_HEIGHT,
+                left: place.pill.left,
+                padding: MARGE_INTERNE,
+                position: 'absolute',
+                top: place.pill.top,
+                width: REACTION_PILL_WIDTH,
+              }}
+              testID="WHATSAPP-pilule"
+            >
+              {REACTION_EMOJIS.map((emoji) => (
+                <TouchableOpacity
+                  accessibilityLabel={emoji}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: myEmoji === emoji }}
+                  activeOpacity={0.6}
+                  key={`pilule-${emoji}`}
+                  onPress={() => choisir(emoji)}
+                  style={{
+                    alignItems: 'center',
+                    backgroundColor: myEmoji === emoji ? Colors.primary700 : Colors.transparent,
+                    borderRadius: 999,
+                    height: BOUTON,
+                    justifyContent: 'center',
+                    width: BOUTON,
+                  }}
+                >
+                  <Text style={{ fontSize: 26 }}>{emoji}</Text>
+                </TouchableOpacity>
+              ))}
               <TouchableOpacity
-                accessibilityLabel={emoji}
+                accessibilityLabel={t('conversation.reactions.more', "Plus d'emojis")}
                 accessibilityRole="button"
-                accessibilityState={{ selected: myEmoji === emoji }}
                 activeOpacity={0.6}
-                key={`pilule-${emoji}`}
-                onPress={() => choisir(emoji)}
+                onPress={() => setClavierOuvert(true)}
                 style={{
                   alignItems: 'center',
-                  backgroundColor: myEmoji === emoji ? Colors.primary700 : Colors.transparent,
+                  backgroundColor: Colors.neutral700,
                   borderRadius: 999,
                   height: BOUTON,
                   justifyContent: 'center',
                   width: BOUTON,
                 }}
+                testID="WHATSAPP-plus"
               >
-                <Text style={{ fontSize: 26 }}>{emoji}</Text>
+                <Text style={{ color: Colors.neutral00, fontSize: 24, lineHeight: 28 }}>+</Text>
               </TouchableOpacity>
-            ))}
-            <TouchableOpacity
-              accessibilityLabel={t('conversation.reactions.more', "Plus d'emojis")}
-              accessibilityRole="button"
-              activeOpacity={0.6}
-              onPress={() => setClavierOuvert(true)}
-              style={{
-                alignItems: 'center',
-                backgroundColor: Colors.neutral700,
-                borderRadius: 999,
-                height: BOUTON,
-                justifyContent: 'center',
-                width: BOUTON,
-              }}
-              testID="WHATSAPP-plus"
-            >
-              <Text style={{ color: Colors.neutral00, fontSize: 24, lineHeight: 28 }}>+</Text>
-            </TouchableOpacity>
-          </View>
+            </View>
 
-          <View
-            accessibilityRole="menu"
-            style={{
-              backgroundColor: Colors.neutral800,
-              borderColor: Colors.neutral600,
-              borderRadius: 14,
-              borderWidth: 1,
-              left: place.menu.left,
-              paddingVertical: MENU_MARGE,
-              position: 'absolute',
-              top: place.menu.top,
-              width: MENU_WIDTH,
-            }}
-            testID="WHATSAPP-menu"
-          >
-            {actions.map((action) => (
-              <TouchableOpacity
-                accessibilityLabel={t(action.labelKey, action.fallback)}
-                accessibilityRole="menuitem"
-                activeOpacity={0.6}
-                key={action.key}
-                onPress={() => onAction(action.key)}
-                style={{
-                  height: MENU_LIGNE,
-                  justifyContent: 'center',
-                  paddingHorizontal: 16,
-                }}
-                testID={`WHATSAPP-action-${action.key}`}
-              >
-                <Text
+            <View
+              accessibilityRole="menu"
+              style={{
+                backgroundColor: Colors.neutral800,
+                borderColor: Colors.neutral600,
+                borderRadius: 14,
+                borderWidth: 1,
+                left: place.menu.left,
+                paddingVertical: MENU_MARGE,
+                position: 'absolute',
+                top: place.menu.top,
+                width: MENU_WIDTH,
+              }}
+              testID="WHATSAPP-menu"
+            >
+              {actions.map((action) => (
+                <TouchableOpacity
+                  accessibilityLabel={t(action.labelKey, action.fallback)}
+                  accessibilityRole="menuitem"
+                  activeOpacity={0.6}
+                  key={action.key}
+                  onPress={() => onAction(action.key)}
                   style={{
+                    height: MENU_LIGNE,
+                    justifyContent: 'center',
+                    paddingHorizontal: 16,
+                  }}
+                  testID={`WHATSAPP-action-${action.key}`}
+                >
+                  <Text
+                    style={{
                     // 🔴 « Supprimer » est la seule action qui detruit : elle porte la
                     // couleur d alerte, et elle est la derniere de la liste.
-                    color: action.destructive ? Colors.error500 : Colors.neutral00,
-                    fontSize: 16,
-                    lineHeight: 22,
-                  }}
-                >
-                  {t(action.labelKey, action.fallback)}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </>
-      ) : null}
+                      color: action.destructive ? Colors.error500 : Colors.neutral00,
+                      fontSize: 16,
+                      lineHeight: 22,
+                    }}
+                  >
+                    {t(action.labelKey, action.fallback)}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </>
+        ) : null}
 
-      {clavierOuvert ? (
-        <View
-          style={{
-            backgroundColor: Colors.neutral800,
-            borderTopLeftRadius: RAYON_FEUILLE,
-            borderTopRightRadius: RAYON_FEUILLE,
-            bottom: 0,
-            height: hauteurEcran * RATIO_CLAVIER,
-            left: 0,
-            paddingBottom: insets.bottom,
-            position: 'absolute',
-            right: 0,
-          }}
-          testID="WHATSAPP-clavier"
-        >
-          {/*
+        {clavierOuvert ? (
+          <View
+            style={{
+              backgroundColor: Colors.neutral800,
+              borderTopLeftRadius: RAYON_FEUILLE,
+              borderTopRightRadius: RAYON_FEUILLE,
+              bottom: 0,
+              height: hauteurEcran * RATIO_CLAVIER,
+              left: 0,
+              paddingBottom: insets.bottom,
+              position: 'absolute',
+              right: 0,
+            }}
+            testID="WHATSAPP-clavier"
+          >
+            {/*
             🩹 LES TITRES DE FAMILLES NE SONT PLUS COUPES. Le defaut etait double :
             le `paddingVertical` vivait dans `style` (sur un ScrollView, il faut le
             mettre dans `contentContainerStyle`, sinon la hauteur se calcule sans
             lui et le contenu est rogne), et 10 px ne suffisaient pas a sortir de
             la courbe des coins. Les deux sont corriges ici.
           */}
-          <ScrollView
-            contentContainerStyle={{
-              alignItems: 'center',
-              paddingBottom: 8,
-              paddingHorizontal: 8,
-              paddingTop: ESPACE_SOUS_LE_BORD,
-            }}
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            style={{ flexGrow: 0 }}
-          >
-            {EMOJI_CATALOG.map((categorie) => (
-              <TouchableOpacity
-                accessibilityRole="tab"
-                accessibilityState={{ selected: famille === categorie.key }}
-                activeOpacity={0.6}
-                key={categorie.key}
-                onPress={() => setFamille(categorie.key)}
-                style={{
-                  backgroundColor: famille === categorie.key
-                    ? Colors.primary700
-                    : Colors.transparent,
-                  borderRadius: 999,
-                  justifyContent: 'center',
-                  marginHorizontal: 4,
-                  minHeight: BOUTON,
-                  paddingHorizontal: 14,
-                }}
-              >
-                <Text style={{ color: Colors.neutral00, fontSize: 14, lineHeight: 20 }}>
-                  {t(`conversation.reactions.categories.${categorie.key}`, categorie.key)}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
+            <ScrollView
+              contentContainerStyle={{
+                alignItems: 'center',
+                paddingBottom: 8,
+                paddingHorizontal: 8,
+                paddingTop: ESPACE_SOUS_LE_BORD,
+              }}
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              style={{ flexGrow: 0 }}
+            >
+              {EMOJI_CATALOG.map((categorie) => (
+                <TouchableOpacity
+                  accessibilityRole="tab"
+                  accessibilityState={{ selected: famille === categorie.key }}
+                  activeOpacity={0.6}
+                  key={categorie.key}
+                  onPress={() => setFamille(categorie.key)}
+                  style={{
+                    backgroundColor: famille === categorie.key
+                      ? Colors.primary700
+                      : Colors.transparent,
+                    borderRadius: 999,
+                    justifyContent: 'center',
+                    marginHorizontal: 4,
+                    minHeight: BOUTON,
+                    paddingHorizontal: 14,
+                  }}
+                >
+                  <Text style={{ color: Colors.neutral00, fontSize: 14, lineHeight: 20 }}>
+                    {t(`conversation.reactions.categories.${categorie.key}`, categorie.key)}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
 
-          <FlatList
-            data={emojisDeLaFamille}
-            initialNumToRender={64}
-            keyExtractor={(emoji) => emoji}
-            numColumns={COLONNES}
-            renderItem={({ item }) => (
-              <TouchableOpacity
-                accessibilityLabel={item}
-                accessibilityRole="button"
-                activeOpacity={0.6}
-                onPress={() => choisir(item)}
-                style={{ alignItems: 'center', flex: 1 / COLONNES, paddingVertical: 8 }}
-              >
-                <Text style={{ fontSize: 26 }}>{item}</Text>
-              </TouchableOpacity>
-            )}
-            style={{ paddingHorizontal: 8 }}
-          />
-        </View>
-      ) : null}
+            <FlatList
+              data={emojisDeLaFamille}
+              initialNumToRender={64}
+              keyExtractor={(emoji) => emoji}
+              numColumns={COLONNES}
+              renderItem={({ item }) => (
+                <TouchableOpacity
+                  accessibilityLabel={item}
+                  accessibilityRole="button"
+                  activeOpacity={0.6}
+                  onPress={() => choisir(item)}
+                  style={{ alignItems: 'center', flex: 1 / COLONNES, paddingVertical: 8 }}
+                >
+                  <Text style={{ fontSize: 26 }}>{item}</Text>
+                </TouchableOpacity>
+              )}
+              style={{ paddingHorizontal: 8 }}
+            />
+          </View>
+        ) : null}
+      </View>
     </Modal>
   );
 }

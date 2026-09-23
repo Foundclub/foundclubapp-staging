@@ -6998,7 +6998,31 @@ function Conversation({ navigation, route }) {
 
         <BottomModal
           close={() => setIsAttachmentMenuVisible(false)}
-          contentContainerStyle={{ gap: 16, paddingBottom: 56, paddingTop: 18 }}
+          contentContainerStyle={{ gap: 16, paddingBottom: 56 }}
+          headerComponent={isAttachmentSheetV2Enabled ? (
+            /*
+              🩹 WHATSAPP2 — CE TITRE ETAIT DANS LA ZONE QUI DEFILE, et c'est
+              pour ca qu'il partait sous le bord haut (capture d'Adel du 23/09 :
+              « Ajouter » coupe en deux, barre de defilement visible, derniere
+              tuile tronquee). Pose en en-tete, il ne defile plus jamais —
+              quelle que soit la hauteur du contenu.
+            */
+            <View>
+              <Text style={[Fonts.h3, Fonts.neutral00, Fonts.textCenter]}>
+                {t('conversation.attachments.title', 'Ajouter')}
+              </Text>
+              <Text
+                style={[
+                  Fonts.p3,
+                  Fonts.neutral300,
+                  Fonts.textCenter,
+                  Spaces.marginTop[4],
+                ]}
+              >
+                {t('conversation.attachments.subtitle', 'Partage du contenu dans cette conversation')}
+              </Text>
+            </View>
+          ) : null}
           hideCloseButton
           isVisible={isAttachmentMenuVisible}
           keyboardBehavior="extend"
@@ -7008,8 +7032,6 @@ function Conversation({ navigation, route }) {
             <ChatAttachmentSheet
               actions={attachmentSheetActions}
               onActionPress={handleAttachmentSheetAction}
-              subtitle={t('conversation.attachments.subtitle', 'Partage du contenu dans cette conversation')}
-              title={t('conversation.attachments.title', 'Ajouter')}
             />
           ) : (
             <View style={Spaces.gap[16]}>

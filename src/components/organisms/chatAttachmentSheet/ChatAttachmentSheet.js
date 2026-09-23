@@ -27,39 +27,32 @@ import styles from './chatAttachmentSheet.styles';
 /**
  * Attachment action grid shown from the chat plus button.
  *
+ * 🩹 WHATSAPP2 — LE TITRE N'EST PLUS ICI, et c'est la correction du defaut : il
+ * vivait dans la zone qui DEFILE, donc il partait sous le bord haut des que le
+ * contenu depassait. Il est desormais rendu par l'en-tete FIXE de la feuille
+ * (`headerComponent` de `BottomModal`, pose dans `Conversation.js`), qui ne
+ * defile jamais.
  * @param {object} props
  * @param {ChatAttachmentActionItem[]} props.actions
  * @param {(key: ChatAttachmentActionKey) => void} props.onActionPress
- * @param {string} props.title
- * @param {string} [props.subtitle]
  * @returns {import('react').ReactElement}
  */
 function ChatAttachmentSheet({
   actions,
   onActionPress,
-  subtitle,
-  title,
 }) {
   const { Colors, Fonts } = useTheme();
 
   return (
     <View style={styles.section}>
-      <View>
-        <Text style={[Fonts.h3, styles.title, { color: Colors.neutral00 }]}>
-          {title}
-        </Text>
-        {subtitle ? (
-          <Text style={[Fonts.p3, styles.subtitle, styles.title, { color: Colors.neutral300 }]}>
-            {subtitle}
-          </Text>
-        ) : null}
-      </View>
-
       <View style={styles.actionsGrid}>
         {actions.map((action) => {
           const isDisabled = !!action.disabled || !!action.loading;
           return (
             <TouchableOpacity
+              accessibilityLabel={action.label}
+              accessibilityRole="button"
+              accessibilityState={{ disabled: isDisabled }}
               activeOpacity={0.9}
               disabled={isDisabled}
               key={action.key}
