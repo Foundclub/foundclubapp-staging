@@ -76,12 +76,24 @@ const hasSession = () => Boolean(getAuthTokens()?.token);
  * propre `enabled` (ConversationPublicEventPicker.js:71) et l'étalement
  * l'écraserait sinon. La session est un plancher que personne ne lève ; le
  * droit d'ÉTEINDRE une requête, lui, reste à l'appelant.
+ *
+ * ANNUAIRE2 (2026-09-23) — `allowAnonymous` : LA SEULE ÉCHAPPATOIRE, ET ELLE SE
+ * DEMANDE. L'annuaire public du site cherche des clubs sans compte (décision
+ * d'Adel du 23/09 : « exactement comme la recherche de club de l'app »), et le
+ * serveur le permet désormais — `GET /search/clubs` porte `auth: false` et rend
+ * une réponse assainie aux visiteurs sans compte.
+ *
+ * ⛔ Le plancher NE BOUGE PAS pour l'app : il faut le demander explicitement,
+ * écran par écran. Un drapeau qui s'active tout seul redonnerait les 403 que ce
+ * garde-fou a fait disparaître (lot SENTRY1 du 05/09, « 403 mesurés en prod »).
+ * ⚠️ Et il ne se pose QUE sur une route que le serveur ouvre vraiment : ailleurs,
+ * il ne ferait que remplacer « requête non partie » par « 403 ».
  * @param {any} options
  * @param {boolean} fallbackEnabled - La condition métier historique du crochet.
  * @returns {boolean}
  */
 const enabledWithSession = (options, fallbackEnabled) => (
-  hasSession() && (options?.enabled ?? fallbackEnabled)
+  (options?.allowAnonymous === true || hasSession()) && (options?.enabled ?? fallbackEnabled)
 );
 
 /**

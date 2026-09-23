@@ -119,3 +119,54 @@ describe('T5 — une fois la session la, la recherche part bien', () => {
     expect(lastEnabled()).toBe(false);
   });
 });
+
+describe('ANNUAIRE2 — l annuaire public cherche SANS compte, mais seulement s il le demande', () => {
+  // Decision d Adel du 23/09 : « exactement comme la recherche de club de
+  // l app ». Le serveur ouvre desormais GET /search/clubs aux anonymes et
+  // assainit sa reponse ; sans le drapeau, le crochet ne partirait meme pas et
+  // le champ « Nom du club, ville, sponsor... » resterait muet.
+  test('useSearchClubs part sans session quand allowAnonymous est demande', () => {
+    sansSession();
+    useSearchClubs({ q: 'foot' }, { allowAnonymous: true });
+    expect(lastEnabled()).toBe(true);
+  });
+
+  test('useSearchClubsMap aussi : cette route etait publique cote serveur depuis longtemps', () => {
+    sansSession();
+    useSearchClubsMap({
+      east: 6, north: 44, south: 43, west: 5, zoom: 12,
+    }, { allowAnonymous: true });
+    expect(lastEnabled()).toBe(true);
+  });
+
+  test('⛔ le drapeau ne s active JAMAIS tout seul : sans lui, le plancher tient', () => {
+    sansSession();
+    useSearchClubs({ q: 'foot' });
+    expect(lastEnabled()).toBe(false);
+
+    useSearchClubs({ q: 'foot' }, { allowAnonymous: false });
+    expect(lastEnabled()).toBe(false);
+    // Un drapeau approximatif rouvrirait la vanne par accident.
+    useSearchClubs({ q: 'foot' }, { allowAnonymous: 'oui' });
+    expect(lastEnabled()).toBe(false);
+  });
+
+  test('il ouvre la SESSION, pas les conditions metier', () => {
+    sansSession();
+    useSearchClubs({ q: 'f' }, { allowAnonymous: true }); // moins de 2 caracteres
+    expect(lastEnabled()).toBe(false);
+
+    useSearchClubs({ q: 'foot' }, { allowAnonymous: true, enabled: false });
+    expect(lastEnabled()).toBe(false);
+  });
+
+  test('⛔ et il ne deverrouille PAS les recherches de personnes', () => {
+    // /search/profiles reste ferme cote serveur : un drapeau ici ne ferait que
+    // remplacer « requete non partie » par un 403.
+    sansSession();
+    useSearchProfiles({ q: 'foot' }, { allowAnonymous: true });
+    expect(lastEnabled()).toBe(true); // le crochet part...
+    // ... mais rien dans le site public ne l appelle : c est la route serveur
+    // qui tient la porte, et elle est fermee. Ce test fige l intention.
+  });
+});
