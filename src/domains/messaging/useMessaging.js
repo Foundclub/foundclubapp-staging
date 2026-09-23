@@ -758,10 +758,23 @@ const useMessaging = (currentChatId) => {
   // Subscribe to chat events when socket is available
   useEffect(() => {
     const safeCurrentChatId = normalizeChatId(currentChatId);
-    if (!isConnected || !safeCurrentChatId || !socket) return undefined;
 
-    // Join the chat first
-    socket.emit(EVENTS.JOIN_CHAT, { chatDocumentId: safeCurrentChatId });
+    // WHATSAPP3 — 🚪 ON ECOUTE DES QU UNE SOCKET EXISTE, fil ouvert ou non.
+    //
+    // 🧨 Avant ce lot, la garde etait `!isConnected || !safeCurrentChatId ||
+    // !socket` : sans fil courant, l effet sortait aussitot et AUCUN ecouteur
+    // n etait pose. Or l ecran de la liste appelle `useMessaging()` SANS
+    // argument — pour lui, `currentChatId` vaut `undefined`. Resultat : un
+    // message recu pendant qu on regardait la liste n y apparaissait jamais
+    // (defaut vu par Adel le 23/09), quoi que fasse le serveur.
+    //
+    // Entrer dans une salle, en revanche, n a de sens qu avec un fil : ce geste
+    // reste conditionne, et lui seul.
+    if (!isConnected || !socket) return undefined;
+
+    if (safeCurrentChatId) {
+      socket.emit(EVENTS.JOIN_CHAT, { chatDocumentId: safeCurrentChatId });
+    }
 
     // Set up event listeners after joining
     socket.on(EVENTS.MESSAGE_RECEIVED, handleNewMessage);
@@ -774,7 +787,11 @@ const useMessaging = (currentChatId) => {
 
     // Cleanup: leave chat and remove listeners
     return () => {
-      socket.emit(EVENTS.LEAVE_CHAT, { chatDocumentId: safeCurrentChatId });
+      // Les ecouteurs, eux, sont TOUJOURS retires : sinon ils s empileraient a
+      // chaque navigation, et un message arriverait en double, puis en triple.
+      if (safeCurrentChatId) {
+        socket.emit(EVENTS.LEAVE_CHAT, { chatDocumentId: safeCurrentChatId });
+      }
       socket.off(EVENTS.MESSAGE_RECEIVED, handleNewMessage);
       socket.off(EVENTS.MESSAGE_DELETED, handleMessageDeleted);
       socket.off(EVENTS.MESSAGE_UPDATED, handleMessageUpdated);
@@ -782,7 +799,9 @@ const useMessaging = (currentChatId) => {
       socket.off(EVENTS.MESSAGE_READ, handleMessageRead);
       socket.off(EVENTS.JOINED, handleJoined);
       socket.off(EVENTS.ERROR, handleSocketError);
-      updateLastReadMessage(safeCurrentChatId);
+      if (safeCurrentChatId) {
+        updateLastReadMessage(safeCurrentChatId);
+      }
     };
   }, [socket,
     handleNewMessage,
