@@ -7,7 +7,12 @@ import {
 } from 'react';
 
 import useAuth from '@/domains/auth/useAuth';
-import { getConversationName, getLastReadMessageKey, getUnreadStatus } from '@/domains/messaging/messagingUseCases';
+import {
+  getConversationName,
+  getLastReadMessageKey,
+  getUnreadStatus,
+  shouldRefetchUnreadOnMessage,
+} from '@/domains/messaging/messagingUseCases';
 import {
   indexReactionsByMessage,
   withMessageReactions,
@@ -405,6 +410,16 @@ const useMessaging = (currentChatId) => {
    * Handle new message received from socket
    * @param {ChatMessage} message - The received message
    */
+  // WHATSAPP3 — 🔴 LA PASTILLE DE NON-LUS SE RELIT, ELLE NE S INVENTE PAS.
+  //
+  // Ce compteur se calcule cote serveur en comparant des COUPLES (message,
+  // lecture), avec un plafond a 100, sur deux repliques. Un « +1 » local
+  // paraitrait juste et divergerait en silence. On relit donc la requete qui le
+  // porte (`['chats']`), et le serveur reste seul maitre du chiffre.
+  //
+  // ⏱️ Une reference, pas un etat : la changer ne doit redessiner personne.
+  const lastUnreadRefetchAtRef = useRef(0);
+
   const handleNewMessage = useCallback((/** @type {ChatMessage} */ message) => {
     const receivedChatId = getMessageChatDocumentId(message);
     markMessagingPerf('messaging_message_received', {
@@ -530,7 +545,25 @@ const useMessaging = (currentChatId) => {
         };
       },
     );
-  }, [queryClient, clearPendingTimeout]);
+
+    // WHATSAPP3 — et si ce message doit faire bouger la pastille, on RELIT.
+    //
+    // ⚠️ `refetchType: 'all'` ET PAS `'active'` : la pastille s affiche aussi
+    // depuis un ecran ou la requete `['chats']` dort. Une invalidation sur une
+    // requete en veille ne relit RIEN (memoire
+    // `piege-invalidation-query-desactivee`) — elle se contenterait de la
+    // marquer perimee, et le chiffre resterait faux jusqu au prochain reveil.
+    if (shouldRefetchUnreadOnMessage({
+      currentChatId,
+      lastRefetchAt: lastUnreadRefetchAtRef.current,
+      message,
+      myUserId: userData?.documentId,
+      now: Date.now(),
+    })) {
+      lastUnreadRefetchAtRef.current = Date.now();
+      queryClient.refetchQueries({ queryKey: ['chats'], type: 'all' });
+    }
+  }, [queryClient, clearPendingTimeout, currentChatId, userData?.documentId]);
 
   const handleMessageDeleted = useCallback((/** @type {MessageDeletionData} */ data) => {
     const chatDocumentId = normalizeChatId(data?.chatDocumentId || data?.chat?.documentId);

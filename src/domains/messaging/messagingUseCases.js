@@ -368,3 +368,59 @@ export const getChatMessagePreview = (message, t = defaultTranslate) => {
   );
   return hasSubstance ? t('messaging.preview.fallback', 'Nouveau message') : '';
 };
+
+/**
+ * Le frein entre deux relectures du compteur de non-lus, en millisecondes.
+ *
+ * ⏱️ Dix messages qui arrivent en rafale ne doivent declencher qu UNE lecture,
+ * pas dix. Deux secondes suffisent a absorber une rafale sans que la pastille
+ * paraisse en retard.
+ */
+export const UNREAD_REFETCH_COOLDOWN_MS = 2_000;
+
+/**
+ * WHATSAPP3 — FAUT-IL RELIRE LE COMPTEUR DE NON-LUS ?
+ *
+ * 🧮 POURQUOI ON RELIT AU LIEU DE COMPTER SOI-MEME. Ce compteur se calcule cote
+ * serveur en comparant des COUPLES (message, lecture), avec un plafond a 100, sur
+ * deux repliques. Un « +1 » local paraitrait juste et divergerait en silence — et
+ * un chiffre faux s affiche a tout le monde. Relire est idempotent : deux
+ * ecouteurs qui relisent rendent le meme chiffre. C est la decision « option D »
+ * du chef d orchestre (23/09).
+ *
+ * Trois cas ne demandent AUCUNE lecture :
+ *   · mon propre message — je viens de l ecrire, il est lu ;
+ *   · un message du fil que j ai ouvert — je suis en train de le lire ;
+ *   · une rafale — le frein tient.
+ *
+ * 🧯 EN CAS DE DOUTE, ON RELIT. Un expediteur inconnu, un identifiant manquant :
+ * on prefere une petite lecture inutile a une pastille qui ment.
+ * @param {object} [params] Ce que l ecran sait au moment ou le message arrive.
+ * @param {string} [params.currentChatId] Le fil actuellement ouvert, s il y en a un.
+ * @param {number} [params.lastRefetchAt] Quand on a relu pour la derniere fois.
+ * @param {any} [params.message] Le message qui vient d arriver.
+ * @param {string} [params.myUserId] Mon identifiant de compte.
+ * @param {number} [params.now] L instant courant.
+ * @returns {boolean} Vrai s il faut relire le compteur.
+ */
+export const shouldRefetchUnreadOnMessage = (params) => {
+  const message = params?.message;
+
+  const expediteur = String(message?.sender?.documentId ?? '').trim();
+  const moi = String(params?.myUserId ?? '').trim();
+  // Mon propre message : rien a relire. Si l un des deux identifiants manque, on
+  // ne conclut PAS que c est moi — on relira.
+  if (expediteur && moi && expediteur === moi) return false;
+
+  const filDuMessage = String(message?.chat?.documentId ?? '').trim();
+  const filOuvert = String(params?.currentChatId ?? '').trim();
+  if (filDuMessage && filOuvert && filDuMessage === filOuvert) return false;
+
+  const maintenant = Number(params?.now);
+  const derniere = Number(params?.lastRefetchAt);
+  if (Number.isFinite(maintenant) && Number.isFinite(derniere) && derniere > 0) {
+    if (maintenant - derniere < UNREAD_REFETCH_COOLDOWN_MS) return false;
+  }
+
+  return true;
+};
