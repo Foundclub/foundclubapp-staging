@@ -6,6 +6,21 @@ import {
 
 import useTheme from '@/theme/themeContext';
 
+// AUTOCOMPLETE-WEB (2026-09-23) — LA GEOMETRIE DE LA LIGNE, NOMMEE UNE SEULE FOIS.
+//
+// `AutocompleteSelect` pose une surcouche ABSOLUE par-dessus cet Input pour
+// afficher la valeur choisie. Les deux geometries doivent donc coincider — et
+// elles avaient derive : la surcouche s etait donne 12 px de marge en haut ET
+// en bas, sur une ligne qui n en a aucune. Resultat mesure dans Chrome le
+// 23/09 : 6 px de place pour une ligne de 23, et react-native-web coupe les
+// glyphes en deux (il pose `overflow: hidden` sur son `<Text>`).
+//
+// ⇒ Ces reperes sont exportes pour que la surcouche lise la meme chose que la
+//   ligne, au lieu de recopier des chiffres qui se perimeront separement.
+export const INPUT_ROW_MIN_HEIGHT = 30;
+export const INPUT_ROW_COMPACT_MIN_HEIGHT = 24;
+export const INPUT_ROW_IOS_BOTTOM_PADDING = 12;
+
 /**
  * @typedef {object} InputAdditionalProps
  * @property {string} [label]
@@ -113,7 +128,9 @@ const Input = forwardRef(
               Spaces.paddingLeft[16],
               Spaces.paddingRight[4],
               Spaces.gap[16],
-              Platform.OS === 'ios' && !isCompact ? Spaces.paddingBottom[12] : Spaces.paddingBottom[0],
+              Platform.OS === 'ios' && !isCompact
+                ? Spaces.paddingBottom[INPUT_ROW_IOS_BOTTOM_PADDING]
+                : Spaces.paddingBottom[0],
             ]}
             >
               {
@@ -161,7 +178,7 @@ const Input = forwardRef(
                   Fonts.p1,
                   props.readOnly ? Fonts.neutral500 : Fonts.neutral00,
                   Alignments.fill,
-                  { minHeight: isCompact ? 24 : 30 },
+                  { minHeight: isCompact ? INPUT_ROW_COMPACT_MIN_HEIGHT : INPUT_ROW_MIN_HEIGHT },
                   props.style,
                 ]}
                 // PARENT P2 — le repere de test manquait, et sans lui un temoin
