@@ -5,6 +5,7 @@ import {
   useMemo,
   useRef,
   useState,
+  useSyncExternalStore,
 } from 'react';
 import { Linking } from 'react-native';
 import ReactNativeBlobUtil from 'react-native-blob-util';
@@ -14,6 +15,8 @@ import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import { canLoadNitroSoundModule } from '@/utils/audio/nitroSoundRuntime';
 import { createLogger } from '@/utils/logger/logger';
 import { resolveMediaUrl } from '@/utils/mediaUrl';
+
+import { getItem, setItem } from '@/platform/storage';
 
 const playbackLogger = /** @type {any} */ (createLogger('audio-playback'));
 const isPlaybackDiagnosticsEnabled = __DEV__;
@@ -370,8 +373,9 @@ const releasePlaybackSlot = (/** @type {string} */ ownerId) => {
 };
 
 /**
- * VOCAL — un seul son à la fois : appuyer sur le micro coupe le vocal qu'on
- * écoutait (section « Gestes » de la maquette, « Lecture en cours »).
+ * VOCAL — un seul son à la fois : appuyer sur le micro met en PAUSE le vocal
+ * qu'on écoutait (section « Gestes » de la maquette, « Lecture en cours ») ;
+ * sa position est gardée.
  * @returns {void}
  */
 export const pauseActivePlayback = () => {
@@ -380,9 +384,50 @@ export const pauseActivePlayback = () => {
   Promise.resolve(stop()).catch(() => {});
 };
 
+// VOCAL — LA VITESSE EST UNE PRÉFÉRENCE GLOBALE (maquette, état 5).
+// 1× → 1,5× → 2× → 1× : choisie sur une bulle, elle vaut pour toutes, et le
+// téléphone s'en souvient d'une ouverture à l'autre.
+const CLE_VITESSE = 'fc:voice:speed';
+const VITESSES = [1, 1.5, 2];
+/** @type {number | null} */
+let vitesseGlobale = null;
+const abonnesVitesse = new Set();
+
+/**
+ * La vitesse de lecture de tous les vocaux.
+ * @returns {number} 1, 1,5 ou 2.
+ */
+const lireVitesseGlobale = () => {
+  if (vitesseGlobale === null) {
+    let memorisee = 1;
+    try { memorisee = Number(getItem(CLE_VITESSE)); } catch (_erreur) { /* 1× */ }
+    vitesseGlobale = VITESSES.includes(memorisee) ? memorisee : 1;
+  }
+  return vitesseGlobale;
+};
+
+/**
+ * Change la vitesse de tous les vocaux, et la retient.
+ * @param {number} vitesse - La nouvelle vitesse.
+ * @returns {void}
+ */
+const changerVitesseGlobale = (vitesse) => {
+  vitesseGlobale = vitesse;
+  try { setItem(CLE_VITESSE, String(vitesse)); } catch (_erreur) { /* mémoire seule */ }
+  abonnesVitesse.forEach((abonne) => abonne());
+};
+
+/**
+ * @param {() => void} abonne - Prévenu à chaque changement de vitesse.
+ * @returns {() => void} Le désabonnement.
+ */
+const sAbonnerVitesse = (abonne) => {
+  abonnesVitesse.add(abonne);
+  return () => { abonnesVitesse.delete(abonne); };
+};
+
 /**
  * Playback hook with local-cache strategy for remote audio sources.
- *
  * @param {{ sourceUrl?: string; headers?: Record<string, string>; allowExternalFallback?: boolean }} params
  * @returns {{
  *   isPlayerAvailable: boolean;
@@ -394,6 +439,7 @@ export const pauseActivePlayback = () => {
  *   positionMs: number;
  *   progress: number;
  *   lastError: string;
+ *   seekTo: (positionMs: number) => Promise<void>;
  *   togglePlayback: () => Promise<void>;
  *   stopPlayback: () => Promise<void>;
  *   cycleSpeed: () => void;
@@ -404,6 +450,10 @@ const useAudioPlayback = ({ allowExternalFallback = false, headers, sourceUrl })
   const mountedRef = useRef(true);
   const playerRef = useRef(/** @type {any | null} */ (null));
   const stopPlaybackRef = useRef(/** @type {() => Promise<void>} */ (async () => {}));
+  const pausePlaybackRef = useRef(/** @type {() => Promise<void>} */ (async () => {}));
+  // VOCAL — une position demandée avant que le lecteur ne tourne (glisser sur
+  // l'onde d'un vocal jamais lu) : appliquée dès qu'il démarre.
+  const pendingSeekMsRef = useRef(0);
   const downloadedSourceRef = useRef('');
   const downloadedPathRef = useRef('');
   const teardownChainRef = useRef(Promise.resolve());
@@ -415,7 +465,7 @@ const useAudioPlayback = ({ allowExternalFallback = false, headers, sourceUrl })
 
   const [isPlaying, setIsPlaying] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [speed, setSpeed] = useState(1);
+  const speed = useSyncExternalStore(sAbonnerVitesse, lireVitesseGlobale);
   const [durationMs, setDurationMs] = useState(0);
   const [positionMs, setPositionMs] = useState(0);
   const [lastError, setLastError] = useState('');
@@ -644,6 +694,23 @@ const useAudioPlayback = ({ allowExternalFallback = false, headers, sourceUrl })
     await enqueuePlayerTeardown(options);
   }, [enqueuePlayerTeardown]);
 
+  // VOCAL — un autre vocal démarre : celui-ci se met en PAUSE et garde sa
+  // position (avant : il s'arrêtait et repartait de zéro).
+  const pausePlayback = useCallback(async () => {
+    const player = playerRef.current;
+    if (!player || typeof player.pausePlayer !== 'function') {
+      await stopPlayback();
+      return;
+    }
+    try {
+      await player.pausePlayer();
+    } catch (_error) {
+      // Best effort pause.
+    }
+    releasePlaybackSlot(ownerIdRef.current);
+    safeSetState(setIsPlaying, false);
+  }, [safeSetState, stopPlayback]);
+
   const openExternalFallback = useCallback(async () => {
     if (!allowExternalFallback) {
       safeSetState(setLastError, i18next.t(
@@ -700,7 +767,7 @@ const useAudioPlayback = ({ allowExternalFallback = false, headers, sourceUrl })
     safeSetState(setIsLoading, true);
     try {
       await claimPlaybackSlot(ownerIdRef.current, async () => {
-        await stopPlaybackRef.current();
+        await pausePlaybackRef.current();
       });
 
       await stopPlayback({ releaseSlot: false });
@@ -753,6 +820,16 @@ const useAudioPlayback = ({ allowExternalFallback = false, headers, sourceUrl })
 
       await player.setVolume?.(1);
       setPlayerSpeed(player, speed);
+      const positionDemandee = pendingSeekMsRef.current;
+      pendingSeekMsRef.current = 0;
+      if (positionDemandee > 0 && typeof player.seekToPlayer === 'function') {
+        try {
+          await player.seekToPlayer(positionDemandee);
+          safeSetState(setPositionMs, positionDemandee);
+        } catch (_error) {
+          // Best effort seek : la lecture part du début.
+        }
+      }
       playbackSessionRef.current = {
         durationMs: 0,
         lastPositionMs: 0,
@@ -872,7 +949,7 @@ const useAudioPlayback = ({ allowExternalFallback = false, headers, sourceUrl })
 
       if (positionMs > 0 && durationMs > 0 && typeof player.resumePlayer === 'function') {
         await claimPlaybackSlot(ownerIdRef.current, async () => {
-          await stopPlaybackRef.current();
+          await pausePlaybackRef.current();
         });
         await player.resumePlayer();
         setPlayerSpeed(player, speed);
@@ -907,20 +984,44 @@ const useAudioPlayback = ({ allowExternalFallback = false, headers, sourceUrl })
   ]);
 
   const cycleSpeed = useCallback(() => {
-    const speeds = [1, 1.5, 2];
-    const currentIndex = speeds.findIndex((/** @type {number} */ value) => value === speed);
-    const nextSpeed = speeds[(currentIndex + 1) % speeds.length];
+    const currentIndex = VITESSES.findIndex((/** @type {number} */ value) => value === speed);
+    changerVitesseGlobale(VITESSES[(currentIndex + 1) % VITESSES.length]);
+  }, [speed]);
 
-    safeSetState(setSpeed, nextSpeed);
+  // La vitesse vient de changer (ici ou sur une autre bulle) : le lecteur suit.
+  useEffect(() => {
+    setPlayerSpeed(playerRef.current, speed);
+  }, [speed]);
+
+  // VOCAL — se déplacer dans le vocal (glisser sur l'onde, ou ± 5 s au lecteur
+  // d'écran). Lecteur déjà chargé : il saute tout de suite. Sinon, la position
+  // est retenue et appliquée au démarrage.
+  const seekTo = useCallback(async (/** @type {number} */ cibleMs) => {
+    const cible = Math.max(0, Math.round(Number(cibleMs) || 0));
+    safeSetState(setPositionMs, cible);
     const player = playerRef.current;
-    setPlayerSpeed(player, nextSpeed);
-  }, [safeSetState, speed]);
+    const charge = isPlaying || (positionMs > 0 && durationMs > 0);
+    if (player && charge && typeof player.seekToPlayer === 'function') {
+      try {
+        await player.seekToPlayer(cible);
+        pendingSeekMsRef.current = 0;
+        return;
+      } catch (_error) {
+        // Le lecteur a refusé : on retente au prochain démarrage.
+      }
+    }
+    pendingSeekMsRef.current = cible;
+  }, [durationMs, isPlaying, positionMs, safeSetState]);
 
   useEffect(() => {
     stopPlaybackRef.current = async () => {
       await stopPlayback();
     };
   }, [stopPlayback]);
+
+  useEffect(() => {
+    pausePlaybackRef.current = pausePlayback;
+  }, [pausePlayback]);
 
   useEffect(() => {
     enqueuePlayerTeardown({
@@ -958,6 +1059,7 @@ const useAudioPlayback = ({ allowExternalFallback = false, headers, sourceUrl })
     lastError,
     positionMs,
     progress: durationMs > 0 ? Math.min(1, positionMs / durationMs) : 0,
+    seekTo,
     speed,
     stopPlayback: async () => {
       await stopPlayback();

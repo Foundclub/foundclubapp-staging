@@ -1,4 +1,5 @@
 import {
+  useCallback,
   useEffect,
   useMemo,
   useRef,
@@ -12,7 +13,9 @@ import {
   Text,
   View,
 } from 'react-native';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
+  runOnJS,
   useAnimatedStyle,
   useSharedValue,
   withTiming,
@@ -27,7 +30,12 @@ import useTheme from '@/theme/themeContext';
 import GlyphIcon from '@/components/atoms/glyphIcon/GlyphIcon';
 import useVoiceProgress from '@/components/molecules/voiceWave/useVoiceProgress';
 import VoiceStaticWave from '@/components/molecules/voiceWave/VoiceStaticWave';
-import { easeIn, easeOut, VOICE_EASE_OUT } from '@/components/organisms/voiceComposer/voiceMotion';
+import {
+  easeIn,
+  easeOut,
+  snappy,
+  VOICE_EASE_OUT,
+} from '@/components/organisms/voiceComposer/voiceMotion';
 
 import {
   bucketPeaks,
@@ -60,6 +68,12 @@ const voiceBubbleLogger = createLogger('voice-bubble');
 
 const PAS = 5;
 const LARGEUR_BARRE = 3;
+/** La largeur de l'onde : 31 barres de 3, pas de 5. */
+const LARGEUR_ONDE = (VOICE_BUBBLE_BARS * PAS) - (PAS - LARGEUR_BARRE);
+/** Pendant qu'on glisse sur l'onde, au plus un saut du lecteur tous les 100 ms. */
+const INTERVALLE_GLISSE_MS = 100;
+/** Un cran du lecteur d'écran : ± 5 s. */
+const CRAN_MS = 5000;
 
 /**
  * Les diagnostics du lecteur, en une ligne.
@@ -274,6 +288,7 @@ function VoiceNoteBubble({
     isPlaying,
     lastError,
     positionMs,
+    seekTo,
     speed,
     togglePlayback,
   } = useAudioPlayback({
@@ -333,6 +348,56 @@ function VoiceNoteBubble({
     opacity: lecture.value,
     transform: [{ scale: 0.8 + (0.2 * lecture.value) }],
   }));
+
+  // VOCAL (état 5) — SE DÉPLACER : toucher ou glisser sur l'onde (le doigt
+  // doit partir à l'horizontale : glisser en hauteur fait défiler le fil).
+  const derniereRechercheRef = useRef(0);
+  const chercher = useCallback((/** @type {number | undefined} */ x, /** @type {boolean | undefined} */ enGlissant) => {
+    if (!totalMs || typeof seekTo !== 'function' || typeof x !== 'number') return;
+    const maintenant = Date.now();
+    if (enGlissant && maintenant - derniereRechercheRef.current < INTERVALLE_GLISSE_MS) return;
+    derniereRechercheRef.current = maintenant;
+    const rapport = Math.min(1, Math.max(0, x / LARGEUR_ONDE));
+    seekTo(rapport * totalMs);
+  }, [seekTo, totalMs]);
+  const gesteOnde = useMemo(() => Gesture.Race(
+    Gesture.Pan()
+      .activeOffsetX([-8, 8])
+      .failOffsetY([-10, 10])
+      .onStart((evenement) => {
+        'worklet';
+
+        runOnJS(chercher)(evenement.x, false);
+      })
+      .onUpdate((evenement) => {
+        'worklet';
+
+        runOnJS(chercher)(evenement.x, true);
+      })
+      .onEnd((evenement) => {
+        'worklet';
+
+        runOnJS(chercher)(evenement.x, false);
+      }),
+    Gesture.Tap()
+      .maxDuration(250)
+      .onEnd((evenement, reussi) => {
+        'worklet';
+
+        if (reussi) runOnJS(chercher)(evenement.x, false);
+      }),
+  ), [chercher]);
+
+  // Vitesse : 1× → 1,5× → 2× → 1×, la pastille rebondit (scale 0,9 → 1, ressort).
+  const rebond = useSharedValue(1);
+  const vitessePrecedenteRef = useRef(vitesse);
+  useEffect(() => {
+    if (vitessePrecedenteRef.current === vitesse) return;
+    vitessePrecedenteRef.current = vitesse;
+    rebond.value = 0.9;
+    rebond.value = snappy(1);
+  }, [rebond, vitesse]);
+  const pastilleVitesse = useAnimatedStyle(() => ({ transform: [{ scale: rebond.value }] }));
 
   // Une bulle que je viens d'envoyer entre en scène ; les autres sont déjà là.
   const nouvelle = useRef(Boolean(isMe && isPending)).current;
@@ -410,30 +475,50 @@ function VoiceNoteBubble({
           </Pressable>
 
           <View style={styles.colonne}>
-            <View
-              accessibilityElementsHidden
-              importantForAccessibility="no-hide-descendants"
-              style={styles.onde}
-            >
-              <VoiceStaticWave
-                couleurLue={couleurs.lu}
-                couleurNonLue={couleurs.nonLu}
-                largeurBarre={LARGEUR_BARRE}
-                montee={nouvelle ? { duree: 180, pas: 6 } : null}
-                niveaux={niveaux}
-                opaciteLue={opaciteLue}
-                pas={PAS}
-                progression={progression}
-              />
-            </View>
+            <GestureDetector gesture={gesteOnde}>
+              <View
+                accessibilityActions={[{ name: 'increment' }, { name: 'decrement' }]}
+                accessibilityLabel={t('voiceNoteBubble.position', 'Position de lecture')}
+                accessibilityRole="adjustable"
+                accessibilityValue={{
+                  text: t('voiceNoteBubble.positionValue', {
+                    defaultValue: '{{elapsed}} sur {{total}}',
+                    elapsed: t('voiceNoteBubble.seconds', {
+                      count: Math.floor(positionAffichee / 1000),
+                      defaultValue_one: '{{count}} seconde',
+                      defaultValue_other: '{{count}} secondes',
+                    }),
+                    total: String(secondes),
+                  }),
+                }}
+                accessible
+                onAccessibilityAction={(evenement) => {
+                  if (typeof seekTo !== 'function') return;
+                  const sens = evenement.nativeEvent.actionName === 'increment' ? 1 : -1;
+                  seekTo(Math.min(totalMs, Math.max(0, positionAffichee + (sens * CRAN_MS))));
+                }}
+                style={styles.onde}
+                testID="voice-note-wave"
+              >
+                <VoiceStaticWave
+                  couleurLue={couleurs.lu}
+                  couleurNonLue={couleurs.nonLu}
+                  largeurBarre={LARGEUR_BARRE}
+                  montee={nouvelle ? { duree: 180, pas: 6 } : null}
+                  niveaux={niveaux}
+                  opaciteLue={opaciteLue}
+                  pas={PAS}
+                  progression={progression}
+                />
+              </View>
+            </GestureDetector>
             <View style={styles.ligneTemps}>
               <Text style={[Fonts.p3Bold, styles.temps, { color: couleurs.temps }]} testID="voice-note-time">
+                {/* « 0:42 » au repos, « 0:17 / 0:42 » dès que la lecture a commencé. */}
                 {aCommence ? (
-                  <>
-                    <Text style={{ color: couleurs.tempsEcoule }}>{formatVoiceClock(positionAffichee)}</Text>
-                    {` / ${formatVoiceClock(totalMs)}`}
-                  </>
-                ) : formatVoiceClock(totalMs)}
+                  <Text style={{ color: couleurs.tempsEcoule }}>{formatVoiceClock(positionAffichee)}</Text>
+                ) : null}
+                {aCommence ? ` / ${formatVoiceClock(totalMs)}` : formatVoiceClock(totalMs)}
               </Text>
               {nonEcoute ? (
                 <Animated.View
@@ -456,18 +541,21 @@ function VoiceNoteBubble({
             accessibilityRole="button"
             hitSlop={{ bottom: 10, top: 10 }}
             onPress={cycleSpeed}
-            style={[styles.vitesse, {
-              backgroundColor: vitesseActive ? couleurs.vitesseActive : couleurs.vitesse,
-            }]}
             testID="voice-note-speed"
           >
-            <Text style={[Fonts.p3Bold, {
-              color: vitesseActive ? couleurs.vitesseEncreActive : couleurs.vitesseEncre,
-              lineHeight: 16,
-            }]}
+            <Animated.View
+              style={[styles.vitesse, {
+                backgroundColor: vitesseActive ? couleurs.vitesseActive : couleurs.vitesse,
+              }, pastilleVitesse]}
             >
-              {formatVoiceSpeed(vitesse, separateur)}
-            </Text>
+              <Text style={[Fonts.p3Bold, {
+                color: vitesseActive ? couleurs.vitesseEncreActive : couleurs.vitesseEncre,
+                lineHeight: 16,
+              }]}
+              >
+                {formatVoiceSpeed(vitesse, separateur)}
+              </Text>
+            </Animated.View>
           </Pressable>
         </View>
 

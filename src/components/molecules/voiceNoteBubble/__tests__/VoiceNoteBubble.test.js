@@ -26,6 +26,7 @@ const mockLecteur = {
   lastError: '',
   positionMs: 0,
   progress: 0,
+  seekTo: jest.fn(),
   speed: 1,
   togglePlayback: jest.fn(),
 };
@@ -33,6 +34,10 @@ const mockLecteur = {
 jest.mock('react-native-reanimated', () => (
   // eslint-disable-next-line global-require
   require('@/testSupport/animationDouble').reanimated()
+));
+jest.mock('react-native-gesture-handler', () => (
+  // eslint-disable-next-line global-require
+  require('@/testSupport/animationDouble').gestureHandler()
 ));
 jest.mock('@/hooks/useAudioPlayback', () => ({ __esModule: true, default: () => mockLecteur }));
 jest.mock('@/services/client', () => ({ __esModule: true, default: { get: jest.fn(() => new Promise(() => {})) } }));
@@ -243,5 +248,93 @@ describe('VOCAL — état 4 · la bulle envoyée (maquette, M4)', () => {
     const vieux = Array.from({ length: 24 }, (_, i) => 4 + (i % 17));
     const bulle = monter({ attachments: AUDIO, composition: { durationMs: 5000, waveform: vieux } });
     expect(parId(bulle, 'voice-static-bar')).toHaveLength(62);
+  });
+});
+
+describe('VOCAL — état 5 · en cours de lecture (maquette, M4)', () => {
+  beforeEach(() => {
+    mockLecteur.isPlaying = false;
+    mockLecteur.positionMs = 0;
+    mockLecteur.durationMs = 0;
+    mockLecteur.speed = 1;
+    mockLecteur.seekTo.mockClear();
+  });
+
+  /**
+   * Le geste de l'onde : glisser (Pan) ou toucher (Tap).
+   * @param {any} arbre - L'arbre monté.
+   * @returns {{ glisse: any, toucher: any }} Les deux gestes.
+   */
+  const gestesOnde = (arbre) => {
+    const detecteur = arbre.root.find(
+      (/** @type {any} */ n) => n.props?.testID === 'gesture-detector' && typeof n.type === 'string',
+    );
+    const [glisse, toucher] = detecteur.props.gesture.gestes;
+    return { glisse, toucher };
+  };
+
+  it('5.1 en lecture : « 0:17 / 0:42 », le bouton devient pause pour le lecteur d\'écran', () => {
+    mockLecteur.isPlaying = true;
+    mockLecteur.positionMs = 17400;
+    mockLecteur.durationMs = 42000;
+    const bulle = monter({ attachments: AUDIO, composition: { durationMs: 42000 } });
+    expect(texte(bulle)).toContain('0:17');
+    expect(texte(bulle)).toContain(' / 0:42');
+    const lecture = bulle.root.findAll((/** @type {any} */ n) => n.props?.testID === 'voice-note-play'
+      && n.props?.accessibilityLabel)[0];
+    expect(lecture.props.accessibilityLabel).toBe('Mettre en pause');
+  });
+
+  it('5.2 une vitesse autre que 1× est PLEINE : cyan chez l\'autre, encre chez moi', () => {
+    mockLecteur.speed = 1.5;
+    const autre = monter({ attachments: AUDIO, composition: { durationMs: 2000 } });
+    const mienne = monter({ attachments: AUDIO, composition: { durationMs: 2000 }, isMe: true });
+    expect(texte(autre)).toContain('1,5×');
+    /**
+     * Le fond de la pastille de vitesse.
+     * @param {any} arbre - L'arbre monté.
+     * @returns {string} La couleur.
+     */
+    const fondVitesse = (arbre) => {
+      const pastille = arbre.root.find((/** @type {any} */ n) => n.props?.testID === 'voice-note-speed'
+        && typeof n.type !== 'string');
+      const interieur = pastille.findAll((/** @type {any} */ n) => typeof n.type === 'string'
+        && StyleSheet.flatten(n.props.style)?.width === 42)[0];
+      return StyleSheet.flatten(interieur.props.style).backgroundColor;
+    };
+    expect(fondVitesse(autre)).toBe(COULEURS.primary500);
+    expect(fondVitesse(mienne)).toBe(COULEURS.primary900);
+  });
+
+  it('5.3 glisser sur l\'onde déplace la lecture : le milieu de l\'onde = le milieu du vocal', () => {
+    const bulle = monter({ attachments: AUDIO, composition: { durationMs: 42000 } });
+    const { glisse } = gestesOnde(bulle);
+    expect(glisse.reglages.activeOffsetX).toEqual([-8, 8]);
+    expect(glisse.reglages.failOffsetY).toEqual([-10, 10]);
+    act(() => { glisse.rappels.onStart({ x: 76.5 }); });
+    expect(mockLecteur.seekTo).toHaveBeenCalledWith(21000);
+  });
+
+  it('5.4 toucher l\'onde y saute aussi ; au-delà des bords, on reste dans le vocal', () => {
+    const bulle = monter({ attachments: AUDIO, composition: { durationMs: 42000 } });
+    const { toucher } = gestesOnde(bulle);
+    act(() => { toucher.rappels.onEnd({ x: 999 }, true); });
+    expect(mockLecteur.seekTo).toHaveBeenLastCalledWith(42000);
+    act(() => { toucher.rappels.onEnd({ x: -20 }, true); });
+    expect(mockLecteur.seekTo).toHaveBeenLastCalledWith(0);
+  });
+
+  it('5.5 lecteur d\'écran : l\'onde est réglable, « 17 secondes sur 42 », et avance de 5 s', () => {
+    mockLecteur.positionMs = 17000;
+    mockLecteur.durationMs = 42000;
+    const bulle = monter({ attachments: AUDIO, composition: { durationMs: 42000 } });
+    const onde = bulle.root.findAll((/** @type {any} */ n) => n.props?.testID === 'voice-note-wave'
+      && n.props?.accessibilityRole)[0];
+    expect(onde.props.accessibilityRole).toBe('adjustable');
+    expect(onde.props.accessibilityValue).toEqual({ text: '17 secondes sur 42' });
+    act(() => { onde.props.onAccessibilityAction({ nativeEvent: { actionName: 'increment' } }); });
+    expect(mockLecteur.seekTo).toHaveBeenLastCalledWith(22000);
+    act(() => { onde.props.onAccessibilityAction({ nativeEvent: { actionName: 'decrement' } }); });
+    expect(mockLecteur.seekTo).toHaveBeenLastCalledWith(12000);
   });
 });

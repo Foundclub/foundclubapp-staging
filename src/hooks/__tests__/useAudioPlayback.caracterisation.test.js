@@ -7,9 +7,10 @@ import renderer, { act } from 'react-test-renderer';
 // trois choses que la maquette exige : une vitesse GLOBALE (1× / 1,5× / 2×,
 // la même pour toutes les bulles), la PAUSE qui garde la position quand un
 // autre vocal démarre, et le déplacement dans le vocal (glisser sur l'onde).
-// Avant d'y toucher, ce fichier fige ce qu'il fait AUJOURD'HUI : chaque
-// changement de comportement du lot devra modifier une ligne d'ici, et donc
-// se voir.
+// Avant d'y toucher, ce fichier a figé ce qu'il faisait (commit f98bfe1d) :
+// chaque changement de comportement du lot modifie une ligne d'ici, et se
+// voit donc dans le diff. Les témoins 3 et 4 ont changé DÉLIBÉREMENT à
+// l'état 5 (vitesse globale, pause qui garde la position) ; 5 à 7 sont neufs.
 
 /** Les lecteurs natifs fabriqués, dans l'ordre. */
 const mockLecteurs = /** @type {any[]} */ ([]);
@@ -23,13 +24,13 @@ jest.mock('react-native-nitro-sound', () => ({
   createSound: () => {
     const lecteur = {
       /** @type {any} */ ecouteFin: null,
-      /** @type {any} */ ecoutePosition: null,
+      /** @type {any} */ addPlaybackEndListener: jest.fn((/** @type {any} */ f) => { lecteur.ecouteFin = f; }),
       addPlayBackListener: jest.fn((/** @type {any} */ f) => { lecteur.ecoutePosition = f; }),
-      addPlaybackEndListener: jest.fn((/** @type {any} */ f) => { lecteur.ecouteFin = f; }),
       dispose: jest.fn(),
+      ecoutePosition: null,
       pausePlayer: jest.fn(() => Promise.resolve()),
-      removePlayBackListener: jest.fn(),
       removePlaybackEndListener: jest.fn(),
+      removePlayBackListener: jest.fn(),
       resumePlayer: jest.fn(() => Promise.resolve()),
       seekToPlayer: jest.fn(() => Promise.resolve()),
       setPlaybackSpeed: jest.fn(),
@@ -58,6 +59,9 @@ import useAudioPlayback from '@/hooks/useAudioPlayback';
 const monterLecteur = async (source) => {
   /** @type {any} */
   let dernier = null;
+  /**
+   *
+   */
   function Sonde() {
     dernier = useAudioPlayback({ sourceUrl: source });
     return null;
@@ -67,7 +71,7 @@ const monterLecteur = async (source) => {
   return { lire: () => dernier };
 };
 
-describe('useAudioPlayback — ce que le lecteur fait AVANT le lot VOCAL', () => {
+describe('useAudioPlayback — ce que le lecteur promet (caractérisé avant VOCAL, puis changé par lui)', () => {
   beforeEach(() => { mockLecteurs.length = 0; });
 
   it('1. la vitesse tourne 1 → 1,5 → 2 → 1', async () => {
@@ -89,15 +93,23 @@ describe('useAudioPlayback — ce que le lecteur fait AVANT le lot VOCAL', () =>
     expect(lecteur.startPlayer).toHaveBeenCalledWith('file:///a.m4a', undefined);
   });
 
-  it('3. la vitesse est PROPRE à chaque lecteur (pas une préférence globale)', async () => {
+  it('3. VOCAL : la vitesse est une préférence GLOBALE — choisie sur une bulle, elle vaut pour toutes', async () => {
     const a = await monterLecteur('file:///a.m4a');
     const b = await monterLecteur('file:///b.m4a');
     act(() => { a.lire().cycleSpeed(); });
     expect(a.lire().speed).toBe(1.5);
+    expect(b.lire().speed).toBe(1.5);
+    // Le lecteur de b l'applique aussi, sans qu'on touche à b.
+    await act(async () => { await b.lire().togglePlayback(); });
+    const lecteurB = mockLecteurs[mockLecteurs.length - 1];
+    expect(lecteurB.setPlaybackSpeed).toHaveBeenLastCalledWith(1.5);
+    // On revient à 1× pour les témoins suivants (la préférence est retenue).
+    act(() => { a.lire().cycleSpeed(); });
+    act(() => { a.lire().cycleSpeed(); });
     expect(b.lire().speed).toBe(1);
   });
 
-  it('4. un second vocal qui démarre ARRÊTE le premier et lui fait perdre sa position', async () => {
+  it('4. VOCAL : un second vocal qui démarre met le premier en PAUSE — il GARDE sa position', async () => {
     const a = await monterLecteur('file:///a.m4a');
     const b = await monterLecteur('file:///b.m4a');
     await act(async () => { await a.lire().togglePlayback(); });
@@ -105,10 +117,48 @@ describe('useAudioPlayback — ce que le lecteur fait AVANT le lot VOCAL', () =>
     act(() => { lecteurA.ecoutePosition({ currentPosition: 4000, duration: 10000 }); });
     expect(a.lire().positionMs).toBe(4000);
 
+    const arretsAvant = lecteurA.stopPlayer.mock.calls.length;
     await act(async () => { await b.lire().togglePlayback(); });
 
     expect(a.lire().isPlaying).toBe(false);
-    expect(lecteurA.stopPlayer).toHaveBeenCalled();
-    expect(a.lire().positionMs).toBe(0);
+    expect(lecteurA.pausePlayer).toHaveBeenCalledTimes(1);
+    expect(lecteurA.stopPlayer.mock.calls.length).toBe(arretsAvant);
+    expect(a.lire().positionMs).toBe(4000);
+
+    // Relancer a : il reprend où il en était, et c'est b qui se met en pause.
+    lecteurA.ecoutePosition({ currentPosition: 4000, duration: 10000 });
+    await act(async () => { await a.lire().togglePlayback(); });
+    expect(lecteurA.resumePlayer).toHaveBeenCalledTimes(1);
+    expect(a.lire().isPlaying).toBe(true);
+    expect(b.lire().isPlaying).toBe(false);
+  });
+
+  it('5. VOCAL : glisser sur l\'onde d\'un vocal jamais lu — la position est retenue, puis appliquée au démarrage', async () => {
+    const a = await monterLecteur('file:///a.m4a');
+    await act(async () => { await a.lire().seekTo(17000); });
+    expect(a.lire().positionMs).toBe(17000);
+    await act(async () => { await a.lire().togglePlayback(); });
+    const lecteur = mockLecteurs[mockLecteurs.length - 1];
+    expect(lecteur.startPlayer).toHaveBeenCalled();
+    expect(lecteur.seekToPlayer).toHaveBeenCalledWith(17000);
+  });
+
+  it('6. VOCAL : se déplacer pendant la lecture saute tout de suite', async () => {
+    const a = await monterLecteur('file:///a.m4a');
+    await act(async () => { await a.lire().togglePlayback(); });
+    const lecteur = mockLecteurs[mockLecteurs.length - 1];
+    await act(async () => { await a.lire().seekTo(5000); });
+    expect(lecteur.seekToPlayer).toHaveBeenCalledWith(5000);
+    expect(a.lire().positionMs).toBe(5000);
+  });
+
+  it('7. VOCAL : la fin de lecture est datée (l\'onde tient son remplissage puis s\'efface)', async () => {
+    const a = await monterLecteur('file:///a.m4a');
+    await act(async () => { await a.lire().togglePlayback(); });
+    const lecteur = mockLecteurs[mockLecteurs.length - 1];
+    expect(a.lire().endedAt).toBe(0);
+    act(() => { lecteur.ecouteFin(); });
+    expect(a.lire().endedAt).toBeGreaterThan(0);
+    expect(a.lire().isPlaying).toBe(false);
   });
 });
