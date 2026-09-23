@@ -1287,6 +1287,11 @@ export const NOTIFICATION_TYPES = {
   SUBSCRIPTION_REPLACED: 'subscriptionReplaced',
 
   // Messages
+  // WHATSAPP4 — quelqu un a reagi a MON message. Elle est POUSSEE SANS CLOCHE
+  // (`pushOnly` cote serveur) : elle n apparait jamais dans la liste, donc
+  // l appui vient toujours du telephone. Son etiquette doit quand meme vivre
+  // ici, sinon l aiguillage ne la reconnait pas et l appui n ouvre RIEN.
+  MESSAGE_REACTION: 'messageReaction',
   NEW_GROUP_MESSAGE: 'newGroupMessage',
   NEW_LEAGUE_MATCH_MESSAGE: 'newLeagueMatchMessage',
   NEW_TEAM_MESSAGE: 'newTeamMessage',
