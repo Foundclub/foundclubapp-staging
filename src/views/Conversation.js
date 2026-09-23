@@ -5197,6 +5197,28 @@ function Conversation({ navigation, route }) {
     });
   }, [closeConversationPrompt, deleteMessage, isSelectedMessageOwn, openConversationPrompt, resetEditMessageState, selectedMessageDocumentId, showErrorBanner, t]);
 
+  // WHATSAPP2 — L AIGUILLAGE DES ACTIONS DU MENU. Les cinq boutons de la feuille
+  // sont devenus cinq lignes d un menu, et c est `messageActions.js` qui decide
+  // lesquelles apparaissent. Ici on ne fait plus que router une clef vers le
+  // geste qui existait deja : aucun comportement n a change de place.
+  //
+  // ⚠️ IL EST DECLARE APRES LES CINQ, ET IL DOIT LE RESTER : son tableau de
+  // dependances est evalue AU RENDU. Le placer plus haut citerait des `const`
+  // pas encore initialisees — ReferenceError, et la conversation ne s ouvre plus.
+  const handleMessageAction = useCallback((clef) => {
+    if (clef === 'reply') handleReplySelectedMessage();
+    else if (clef === 'copy') handleCopySelectedMessage();
+    else if (clef === 'edit') handleOpenEditForSelectedMessage();
+    else if (clef === 'delete') handleDeleteSelectedMessage();
+    else if (clef === 'report') handleOpenReportForSelectedMessage();
+  }, [
+    handleCopySelectedMessage,
+    handleDeleteSelectedMessage,
+    handleOpenEditForSelectedMessage,
+    handleOpenReportForSelectedMessage,
+    handleReplySelectedMessage,
+  ]);
+
   // 🚫 BLOQUER (K3) — la confirmation passe par `openConversationPrompt`,
   // exactement comme la suppression d un message juste au-dessus : c est la
   // mecanique de confirmation DEJA en place dans cet ecran.
@@ -6976,7 +6998,31 @@ function Conversation({ navigation, route }) {
 
         <BottomModal
           close={() => setIsAttachmentMenuVisible(false)}
-          contentContainerStyle={{ gap: 16, paddingBottom: 56, paddingTop: 18 }}
+          contentContainerStyle={{ gap: 16, paddingBottom: 56 }}
+          headerComponent={isAttachmentSheetV2Enabled ? (
+            /*
+              🩹 WHATSAPP2 — CE TITRE ETAIT DANS LA ZONE QUI DEFILE, et c'est
+              pour ca qu'il partait sous le bord haut (capture d'Adel du 23/09 :
+              « Ajouter » coupe en deux, barre de defilement visible, derniere
+              tuile tronquee). Pose en en-tete, il ne defile plus jamais —
+              quelle que soit la hauteur du contenu.
+            */
+            <View>
+              <Text style={[Fonts.h3, Fonts.neutral00, Fonts.textCenter]}>
+                {t('conversation.attachments.title', 'Ajouter')}
+              </Text>
+              <Text
+                style={[
+                  Fonts.p3,
+                  Fonts.neutral300,
+                  Fonts.textCenter,
+                  Spaces.marginTop[4],
+                ]}
+              >
+                {t('conversation.attachments.subtitle', 'Partage du contenu dans cette conversation')}
+              </Text>
+            </View>
+          ) : null}
           hideCloseButton
           isVisible={isAttachmentMenuVisible}
           keyboardBehavior="extend"
@@ -6986,8 +7032,6 @@ function Conversation({ navigation, route }) {
             <ChatAttachmentSheet
               actions={attachmentSheetActions}
               onActionPress={handleAttachmentSheetAction}
-              subtitle={t('conversation.attachments.subtitle', 'Partage du contenu dans cette conversation')}
-              title={t('conversation.attachments.title', 'Ajouter')}
             />
           ) : (
             <View style={Spaces.gap[16]}>
@@ -7230,56 +7274,15 @@ function Conversation({ navigation, route }) {
         */}
         <MessageReactionOverlay
           anchor={reactionAnchor}
+          canCopy={canCopySelectedMessage}
+          canEdit={canEditSelectedMessage}
           isMine={isSelectedMessageOwn}
           myEmoji={myEmojiOnSelectedMessage}
+          onAction={handleMessageAction}
           onClose={closeMessageActionsModal}
           onSelect={(emoji) => handleToggleReaction(selectedMessage, emoji)}
           visible={isMessageActionsVisible}
-        >
-          <View style={[Spaces.gap[12], Spaces.marginTop[24], Spaces.marginBottom[8]]}>
-            <Text style={[Fonts.h3, Fonts.neutral00, Fonts.textCenter]}>
-              {t('conversation.actions.modalTitle', 'Actions du message')}
-            </Text>
-            <Button
-              onPress={handleReplySelectedMessage}
-              title={t('conversation.actions.reply', 'Repondre')}
-              variant="SecondaryLight"
-            />
-            {canCopySelectedMessage ? (
-              <Button
-                onPress={handleCopySelectedMessage}
-                title={t('conversation.actions.copy', 'Copier')}
-                variant="SecondaryLight"
-              />
-            ) : null}
-            {canEditSelectedMessage ? (
-              <Button
-                onPress={handleOpenEditForSelectedMessage}
-                title={t('conversation.actions.edit', 'Modifier')}
-                variant="SecondaryLight"
-              />
-            ) : null}
-            {isSelectedMessageOwn ? (
-              <Button
-                onPress={handleDeleteSelectedMessage}
-                title={t('conversation.actions.delete', 'Supprimer')}
-                variant="Secondary"
-              />
-            ) : null}
-            {!isSelectedMessageOwn ? (
-              <Button
-                onPress={handleOpenReportForSelectedMessage}
-                title={t('conversation.actions.report', 'Signaler')}
-                variant="SecondaryLight"
-              />
-            ) : null}
-            <Button
-              onPress={closeMessageActionsModal}
-              title={t('common.actions.cancel', 'Annuler')}
-              variant="PrimaryLight"
-            />
-          </View>
-        </MessageReactionOverlay>
+        />
 
         {/* MSGREACT — « qui a reagi », ouvert par un appui sur la rangee. */}
         <BottomModal

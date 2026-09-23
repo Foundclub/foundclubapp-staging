@@ -4878,6 +4878,7 @@ export default {
       categories: {
         activites: 'Sport',
         animaux: 'Animaux',
+        drapeaux: 'Drapeaux',
         gestes: 'Gestes',
         nourriture: 'Nourriture',
         objets: 'Objets',

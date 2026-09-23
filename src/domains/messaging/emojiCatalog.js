@@ -14,9 +14,15 @@
  * 🏭 IL EST ENGENDRE, PAS ECRIT A LA MAIN. Les entrees sortent des plages Unicode
  * de chaque famille, filtrees sur la presentation emoji, puis CONTROLEES UNE A
  * UNE contre la grammaire du serveur (`admin/src/api/chat-message/services/
- * chat-message-reactions.js`, `isValidReactionEmoji`) : les 811 ont ete
+ * chat-message-reactions.js`, `isValidReactionEmoji`) : les 1069 ont ete
  * acceptees le 23/09. Sans ce controle croise, l app proposerait des emojis que
  * le serveur refuserait — un appui qui ne fait rien, sans rien dire.
+ *
+ * 🏳️ LA 9e FAMILLE, LES DRAPEAUX, est engendree autrement : ce sont des PAIRES
+ * d indicateurs regionaux, derivees des codes pays que connait ICU. Les codes que
+ * ICU connait mais auxquels Unicode ne donne PAS de drapeau (Kosovo, Sercq, codes
+ * historiques) sont exclus nommement — ils sortiraient en deux lettres encadrees
+ * au lieu d un drapeau. 258 entrees, le compte exact des drapeaux de pays.
  *
  * ⛔ NE PAS Y AJOUTER D EMOJI A LA MAIN sans repasser ce controle. Le temoin
  * `emojiCatalog.test.js` garde la forme de chaque entree, pas sa provenance.
@@ -143,6 +149,33 @@ export const EMOJI_CATALOG = [
       '❕',
     ],
     key: 'symboles',
+  },
+  {
+    emojis: [
+      '🇦🇩', '🇦🇪', '🇦🇫', '🇦🇬', '🇦🇮', '🇦🇱', '🇦🇲', '🇦🇴', '🇦🇶', '🇦🇷', '🇦🇸', '🇦🇹',
+      '🇦🇺', '🇦🇼', '🇦🇽', '🇦🇿', '🇧🇦', '🇧🇧', '🇧🇩', '🇧🇪', '🇧🇫', '🇧🇬', '🇧🇭', '🇧🇮',
+      '🇧🇯', '🇧🇱', '🇧🇲', '🇧🇳', '🇧🇴', '🇧🇶', '🇧🇷', '🇧🇸', '🇧🇹', '🇧🇻', '🇧🇼', '🇧🇾',
+      '🇧🇿', '🇨🇦', '🇨🇨', '🇨🇩', '🇨🇫', '🇨🇬', '🇨🇭', '🇨🇮', '🇨🇰', '🇨🇱', '🇨🇲', '🇨🇳',
+      '🇨🇴', '🇨🇷', '🇨🇺', '🇨🇻', '🇨🇼', '🇨🇽', '🇨🇾', '🇨🇿', '🇩🇪', '🇩🇯', '🇩🇰', '🇩🇲',
+      '🇩🇴', '🇩🇾', '🇩🇿', '🇪🇨', '🇪🇪', '🇪🇬', '🇪🇭', '🇪🇷', '🇪🇸', '🇪🇹', '🇪🇺', '🇫🇮',
+      '🇫🇯', '🇫🇰', '🇫🇲', '🇫🇴', '🇫🇷', '🇬🇦', '🇬🇧', '🇬🇩', '🇬🇪', '🇬🇫', '🇬🇬', '🇬🇭',
+      '🇬🇮', '🇬🇱', '🇬🇲', '🇬🇳', '🇬🇵', '🇬🇶', '🇬🇷', '🇬🇸', '🇬🇹', '🇬🇺', '🇬🇼', '🇬🇾',
+      '🇭🇰', '🇭🇲', '🇭🇳', '🇭🇷', '🇭🇹', '🇭🇺', '🇭🇻', '🇮🇩', '🇮🇪', '🇮🇱', '🇮🇲', '🇮🇳',
+      '🇮🇴', '🇮🇶', '🇮🇷', '🇮🇸', '🇮🇹', '🇯🇪', '🇯🇲', '🇯🇴', '🇯🇵', '🇰🇪', '🇰🇬', '🇰🇭',
+      '🇰🇮', '🇰🇲', '🇰🇳', '🇰🇵', '🇰🇷', '🇰🇼', '🇰🇾', '🇰🇿', '🇱🇦', '🇱🇧', '🇱🇨', '🇱🇮',
+      '🇱🇰', '🇱🇷', '🇱🇸', '🇱🇹', '🇱🇺', '🇱🇻', '🇱🇾', '🇲🇦', '🇲🇨', '🇲🇩', '🇲🇪', '🇲🇫',
+      '🇲🇬', '🇲🇭', '🇲🇰', '🇲🇱', '🇲🇲', '🇲🇳', '🇲🇴', '🇲🇵', '🇲🇶', '🇲🇷', '🇲🇸', '🇲🇹',
+      '🇲🇺', '🇲🇻', '🇲🇼', '🇲🇽', '🇲🇾', '🇲🇿', '🇳🇦', '🇳🇨', '🇳🇪', '🇳🇫', '🇳🇬', '🇳🇭',
+      '🇳🇮', '🇳🇱', '🇳🇴', '🇳🇵', '🇳🇷', '🇳🇺', '🇳🇿', '🇴🇲', '🇵🇦', '🇵🇪', '🇵🇫', '🇵🇬',
+      '🇵🇭', '🇵🇰', '🇵🇱', '🇵🇲', '🇵🇳', '🇵🇷', '🇵🇸', '🇵🇹', '🇵🇼', '🇵🇾', '🇶🇦', '🇷🇪',
+      '🇷🇭', '🇷🇴', '🇷🇸', '🇷🇺', '🇷🇼', '🇸🇦', '🇸🇧', '🇸🇨', '🇸🇩', '🇸🇪', '🇸🇬', '🇸🇭',
+      '🇸🇮', '🇸🇯', '🇸🇰', '🇸🇱', '🇸🇲', '🇸🇳', '🇸🇴', '🇸🇷', '🇸🇸', '🇸🇹', '🇸🇻', '🇸🇽',
+      '🇸🇾', '🇸🇿', '🇹🇨', '🇹🇩', '🇹🇫', '🇹🇬', '🇹🇭', '🇹🇯', '🇹🇰', '🇹🇱', '🇹🇲', '🇹🇳',
+      '🇹🇴', '🇹🇷', '🇹🇹', '🇹🇻', '🇹🇼', '🇹🇿', '🇺🇦', '🇺🇬', '🇺🇲', '🇺🇳', '🇺🇸', '🇺🇾',
+      '🇺🇿', '🇻🇦', '🇻🇨', '🇻🇩', '🇻🇪', '🇻🇬', '🇻🇮', '🇻🇳', '🇻🇺', '🇼🇫', '🇼🇸', '🇾🇩',
+      '🇾🇪', '🇾🇹', '🇿🇦', '🇿🇲', '🇿🇼', '🇿🇿',
+    ],
+    key: 'drapeaux',
   },
 ];
 

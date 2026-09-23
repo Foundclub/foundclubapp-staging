@@ -1,22 +1,27 @@
 import { StyleSheet } from 'react-native';
 
 const styles = StyleSheet.create({
+  // WHATSAPP2 — TROIS COLONNES, ET C'EST UNE MESURE QUI L'IMPOSE. En deux
+  // colonnes, les sept actions faisaient quatre rangees : la feuille reclamait
+  // 778 pt la ou un petit telephone n'en offre que 627. Elle defilait donc, et
+  // son titre partait sous le bord haut (capture d'Adel, 23/09). En trois
+  // colonnes il ne reste que trois rangees, et tout tient sans defiler.
   actionButton: {
     alignItems: 'center',
     borderRadius: 18,
     borderWidth: 1,
-    minHeight: 132,
-    paddingHorizontal: 12,
-    paddingVertical: 14,
-    width: '48%',
+    minHeight: 120,
+    paddingHorizontal: 6,
+    paddingVertical: 12,
+    width: '31.5%',
   },
   actionIconCircle: {
     alignItems: 'center',
-    borderRadius: 32,
-    height: 64,
+    borderRadius: 28,
+    height: 56,
     justifyContent: 'center',
-    marginBottom: 12,
-    width: 64,
+    marginBottom: 10,
+    width: 56,
   },
   actionLabel: {
     textAlign: 'center',
@@ -26,9 +31,14 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   actionsGrid: {
+    columnGap: 6,
     flexDirection: 'row',
     flexWrap: 'wrap',
-    justifyContent: 'space-between',
+    // 🧱 `flex-start` et PAS `space-between` : avec sept tuiles, la derniere
+    // rangee n'en porte qu'une. `space-between` la laisserait collee a gauche
+    // mais etirerait les autres rangees de facon irreguliere des qu'une action
+    // est masquee (elles le sont sous condition).
+    justifyContent: 'flex-start',
     rowGap: 12,
   },
   section: {

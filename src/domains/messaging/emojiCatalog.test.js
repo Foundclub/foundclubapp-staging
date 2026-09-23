@@ -13,8 +13,8 @@ import { REACTION_EMOJIS } from './reactionUseCases';
 // ASCII dans les entrees — c est ce que le test ci-dessous refuse.
 
 describe('WHATSAPP — le catalogue derriere le « + »', () => {
-  it('compte huit familles, toutes garnies', () => {
-    expect(EMOJI_CATALOG).toHaveLength(8);
+  it('compte neuf familles, toutes garnies', () => {
+    expect(EMOJI_CATALOG).toHaveLength(9);
     EMOJI_CATALOG.forEach((categorie) => {
       expect(typeof categorie.key).toBe('string');
       expect(categorie.key.length).toBeGreaterThan(0);
@@ -63,6 +63,26 @@ describe('WHATSAPP — le catalogue derriere le « + »', () => {
     });
 
     expect(doublons).toEqual([]);
+  });
+
+  // 🏳️ LES DRAPEAUX sont d une autre nature que les 811 autres : ce ne sont pas
+  // des pictogrammes mais des PAIRES d indicateurs regionaux (U+1F1E6..U+1F1FF),
+  // deux par drapeau. Un seul indicateur, ou un nombre impair, ne s affiche pas
+  // comme un drapeau — et le serveur le refuserait.
+  it('la famille des drapeaux ne contient que des PAIRES d indicateurs regionaux', () => {
+    const drapeaux = EMOJI_CATALOG.find((categorie) => categorie.key === 'drapeaux');
+
+    expect(drapeaux).toBeDefined();
+    expect(drapeaux.emojis).toHaveLength(258);
+
+    drapeaux.emojis.forEach((drapeau) => {
+      const points = Array.from(drapeau).map((c) => c.codePointAt(0));
+      expect(points).toHaveLength(2);
+      points.forEach((point) => {
+        expect(point).toBeGreaterThanOrEqual(0x1F1E6);
+        expect(point).toBeLessThanOrEqual(0x1F1FF);
+      });
+    });
   });
 
   it('contient bien les six raccourcis — la barre et le clavier ne se contredisent pas', () => {
