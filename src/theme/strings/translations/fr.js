@@ -14208,6 +14208,7 @@ export default {
       nameFuzzy: 'Nom proche de la recherche',
       namePrefix: 'Correspondance du nom',
       nearby: 'A proximite',
+      sponsor: 'Correspond au sponsor',
       team: 'Correspond à l équipe',
     },
   },

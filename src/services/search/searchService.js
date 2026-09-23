@@ -494,6 +494,8 @@ export const getMatchReasonLabel = (reason) => {
       return i18next.t('searchService.matchReason.nameFuzzy', 'Nom proche de la recherche');
     case 'NAME_PREFIX':
       return i18next.t('searchService.matchReason.namePrefix', 'Correspondance du nom');
+    case 'SPONSOR_MATCH':
+      return i18next.t('searchService.matchReason.sponsor', 'Correspond au sponsor');
     case 'TEAM_MATCH':
       return i18next.t('searchService.matchReason.team', 'Correspond à l équipe');
     default:
