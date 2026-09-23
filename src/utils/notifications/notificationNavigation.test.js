@@ -435,4 +435,36 @@ describe('S12-B — la notification de quota au licencie mene a la reparation', 
       type: 'celebration',
     })).toBeNull();
   });
+
+  // WHATSAPP4 — 😀 UN APPUI SUR « Anna a réagi 👍 à ton message » DOIT OUVRIR LA
+  // CONVERSATION. L aiguillage est un `switch` sur des etiquettes NOMMEES : un
+  // type absent de la liste tombe dans le defaut, et l appui n ouvre RIEN. Le
+  // fichier des etiquettes le dit deja d un autre lot, le 27/08 : « sans cette
+  // etiquette ici, la cloche sonnerait et l appui n ouvrirait RIEN ».
+  //
+  // ⚠️ Cette notification est POUSSEE SANS CLOCHE (`pushOnly` cote serveur) :
+  // l appui vient donc toujours du telephone, jamais d une ligne de la liste.
+  // C est exactement le chemin que ce temoin mesure.
+  it('WHATSAPP4 — une reaction a mon message ouvre la conversation', () => {
+    expect(resolveNotificationDestination({
+      chatId: 'chat-doc-77',
+      emoji: '👍',
+      type: NOTIFICATION_TYPES.MESSAGE_REACTION,
+    })).toEqual({
+      params: { chatId: 'chat-doc-77' },
+      route: RouteNames.Conversation,
+    });
+  });
+
+  // Le serveur envoie `chatId` ET `conversationId` avec la meme valeur. Si un
+  // jour l un des deux disparait de la charge, l autre doit encore suffire.
+  it('WHATSAPP4 — la reaction ouvre la conversation meme si seul conversationId est fourni', () => {
+    expect(resolveNotificationDestination({
+      conversationId: 'chat-doc-77',
+      type: NOTIFICATION_TYPES.MESSAGE_REACTION,
+    })).toEqual({
+      params: { chatId: 'chat-doc-77' },
+      route: RouteNames.Conversation,
+    });
+  });
 });
