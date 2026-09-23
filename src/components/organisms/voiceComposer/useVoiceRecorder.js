@@ -61,9 +61,11 @@ export const VOICE_PHASES = Object.freeze({
  * Le micro et ses cinq moments.
  * @param {{
  *   onError: (code: 'empty' | 'permission' | 'start' | 'stop' | 'unavailable') => void,
+ *   onLimitReached?: () => void,
  *   onSend: (brouillon: VoiceDraft) => (boolean | void | Promise<boolean | void>),
  *   onTooShort: () => void,
- * }} rappels - Ce que l'écran fait d'un vocal, d'une erreur, d'une prise trop courte.
+ * }} rappels - Ce que l'écran fait d'un vocal, d'une erreur, d'une prise trop
+ *   courte, et d'une prise arrêtée par la durée maximale.
  * @returns {{
  *   phase: string,
  *   draft: VoiceDraft | null,
@@ -81,7 +83,9 @@ export const VOICE_PHASES = Object.freeze({
  *   trash: () => void,
  * }} Le micro.
  */
-export default function useVoiceRecorder({ onError, onSend, onTooShort }) {
+export default function useVoiceRecorder({
+  onError, onLimitReached, onSend, onTooShort,
+}) {
   const [phase, setPhaseEtat] = useState(/** @type {string} */ (VOICE_PHASES.rest));
   const [draft, setDraft] = useState(/** @type {VoiceDraft | null} */ (null));
   const phaseRef = useRef(/** @type {string} */ (VOICE_PHASES.rest));
@@ -89,8 +93,12 @@ export default function useVoiceRecorder({ onError, onSend, onTooShort }) {
   const fileRef = useRef(Promise.resolve());
   const enregistreRef = useRef(false);
   const ecouteursRef = useRef(new Set());
-  const rappelsRef = useRef({ onError, onSend, onTooShort });
-  rappelsRef.current = { onError, onSend, onTooShort };
+  const rappelsRef = useRef({
+    onError, onLimitReached, onSend, onTooShort,
+  });
+  rappelsRef.current = {
+    onError, onLimitReached, onSend, onTooShort,
+  };
 
   const setPhase = useCallback((/** @type {string} */ suivante) => {
     phaseRef.current = suivante;
@@ -192,7 +200,12 @@ export default function useVoiceRecorder({ onError, onSend, onTooShort }) {
             ecouteursRef.current.forEach((ecouteur) => ecouteur(niveau, dureeMs));
           },
           onProgress: (dureeMs) => {
-            if (dureeMs >= VOICE_MAX_TAKE_MS) interrompreRef.current();
+            if (dureeMs < VOICE_MAX_TAKE_MS) return;
+            const actuelle = phaseRef.current;
+            if (actuelle !== VOICE_PHASES.hold && actuelle !== VOICE_PHASES.locked) return;
+            // VOCAL2 — 10:00 : on dit POURQUOI, puis réécoute (rien n'est perdu).
+            rappelsRef.current.onLimitReached?.();
+            interrompreRef.current();
           },
         });
         enregistreRef.current = true;

@@ -44,15 +44,31 @@ export const VOICE_CANCEL_TX = -120;
 export const VOICE_LOCK_TY = -80;
 /** Une prise plus courte est jetée (un doigt qui a traîné, pas un message). */
 export const VOICE_MIN_TAKE_MS = 800;
-// ponytail: la maquette propose 5:00 (question 5, posée à Adel le 23/09).
-// Consigne du lot en attendant : GARDER LA LIMITE ACTUELLE. Il n'y en avait
-// aucune à l'enregistrement ; la seule était l'envoi, refusé au-delà de 20 Mo
-// (`MAX_ATTACHMENT_BYTES.audio`, Conversation.js), soit ≈ 21:50 à 128 kbit/s.
-// 20:00 reste sous ce plafond : rien de ce qui partait hier n'est refusé, et
-// ce qui échouait à l'envoi s'arrête désormais tout seul en réécoute.
-// Sortie : remplacer par la valeur qu'Adel tranchera.
+// VOCAL2 — LA DURÉE MAXIMALE : 10 MINUTES (décision d'Adel, 23/09 ~17h50 ;
+// la maquette proposait 5:00, le lot VOCAL avait posé 20:00 en attendant).
+// Arrivé là, l'enregistrement s'arrête tout seul et passe en RÉÉCOUTE : le
+// vocal est gardé, jamais perdu. On prévient 15 s avant (chrono rouge +
+// annonce au lecteur d'écran).
+// 📏 LA MARGE avec le seul plafond qui existe, celui de l'envoi (20 Mo,
+// `MAX_ATTACHMENT_BYTES.audio`, Conversation.js) : 10 min à 128 kbit/s
+// (`VOICE_ENCODING_BITRATE`, réglé à l'enregistrement) = 9,6 Mo, moins de la
+// moitié. Même un débit double tiendrait. Témoin : `voiceWaveform.test.js`.
 /** Au-delà, l'enregistrement s'arrête tout seul et passe en réécoute. */
-export const VOICE_MAX_TAKE_MS = 20 * 60 * 1000;
+export const VOICE_MAX_TAKE_MS = 10 * 60 * 1000;
+/** Combien de temps avant la limite on prévient. */
+export const VOICE_LIMIT_WARNING_MS = 15 * 1000;
+/** Le débit demandé à l'enregistreur (AAC, mono). */
+export const VOICE_ENCODING_BITRATE = 128000;
+
+/**
+ * La prise approche-t-elle de la durée maximale ?
+ * @param {number} dureeMs - La durée enregistrée.
+ * @returns {boolean} true dans les 15 dernières secondes.
+ */
+export const isNearTakeLimit = (dureeMs) => {
+  const duree = Number(dureeMs) || 0;
+  return duree >= VOICE_MAX_TAKE_MS - VOICE_LIMIT_WARNING_MS && duree < VOICE_MAX_TAKE_MS;
+};
 
 /**
  * La forme d'un niveau : le seuil 0,02 écrase le souffle, l'exposant 0,7 rend

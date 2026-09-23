@@ -6,7 +6,11 @@ import { canLoadNitroSoundModule } from '@/utils/audio/nitroSoundRuntime';
 import { persistDiagnosticError } from '@/utils/bootDiagnostics';
 import { createLogger } from '@/utils/logger/logger';
 
-import { levelsToStoredWaveform, meteringToLevel } from './voiceWaveform';
+import {
+  levelsToStoredWaveform,
+  meteringToLevel,
+  VOICE_ENCODING_BITRATE,
+} from './voiceWaveform';
 
 const voiceNoteLogger = createLogger('voice-note-service');
 
@@ -254,7 +258,7 @@ const buildAudioSet = () => {
       'Recorder Android encoder constant unavailable',
       3,
     ) ?? 3,
-    AudioEncodingBitRate: 128000,
+    AudioEncodingBitRate: VOICE_ENCODING_BITRATE,
     AudioQuality: 'high',
     AudioSamplingRate: 44100,
     AudioSourceAndroid: safeRead(

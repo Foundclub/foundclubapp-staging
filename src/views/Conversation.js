@@ -56,6 +56,7 @@ import {
   withReactionsOnMessages,
 } from '@/domains/messaging/reactionUseCases';
 import useMessaging from '@/domains/messaging/useMessaging';
+import { nextVoiceToChain } from '@/domains/messaging/voiceChain';
 import {
   getParticipationErrorMessage,
   resolveParticipationFlow,
@@ -5310,6 +5311,10 @@ function Conversation({ navigation, route }) {
                 isPending={Boolean(currentMessage.pending)}
                 message={currentMessage.message}
                 messageId={getMessageDocumentId(currentMessage)}
+                nextVoiceMessageId={nextVoiceToChain(
+                  nextMessage,
+                  isMessageOwnedByCurrentUser(nextMessage),
+                )}
                 senderName={isLeft && !isSameUserAsPrevious ? currentMessage.user?.name || '' : ''}
               />
               {currentMessage.failed ? (

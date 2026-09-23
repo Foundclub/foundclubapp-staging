@@ -22,6 +22,7 @@ import Animated, {
 } from 'react-native-reanimated';
 
 import { getAuthTokens } from '@/domains/auth/authUseCases';
+import { onVoicePlayRequest, requestVoicePlay } from '@/domains/messaging/voiceChain';
 import { useVoiceListened } from '@/domains/messaging/voiceListenedStore';
 import { withAlpha } from '@/theme/colors';
 import localeDesFormats from '@/theme/strings/localeDesFormats';
@@ -198,6 +199,7 @@ const entreeBulle = () => {
  * @param {boolean} [props.isPending] - Le serveur ne l'a pas encore confirmé.
  * @param {string} [props.message] - Le texte joint (vocaux envoyés par d'anciennes versions).
  * @param {string} [props.messageId] - L'identifiant du message (point « non écouté »).
+ * @param {string} [props.nextVoiceMessageId] - Le vocal à lancer quand celui-ci finit ('' : aucun).
  * @param {string} [props.senderName] - Le nom de l'auteur, à afficher au-dessus.
  * @returns {import('react').ReactElement | null}
  */
@@ -209,6 +211,7 @@ function VoiceNoteBubble({
   isPending = false,
   message = '',
   messageId = '',
+  nextVoiceMessageId = '',
   senderName = '',
 }) {
   const { Colors, Fonts } = useTheme();
@@ -330,6 +333,28 @@ function VoiceNoteBubble({
     pointVisible.value = easeIn(0, 200);
     marquerEcoute();
   }, [isPlaying, marquerEcoute, nonEcoute, pointVisible]);
+
+  // VOCAL2 — L'ENCHAÎNEMENT (décision d'Adel, 23/09) : quand MA lecture va à
+  // son terme, je préviens le vocal juste en dessous ; prévenu, je démarre si
+  // je ne suis ni déjà écouté ni déjà en lecture. Une pause, ou un autre vocal
+  // lancé (qui met celui-ci en pause), ne fait pas de fin : la chaîne casse.
+  // Qui enchaîne et le relais : `voiceChain.js`.
+  const etatRef = useRef({ isPlaying, nonEcoute, togglePlayback });
+  useEffect(() => {
+    etatRef.current = { isPlaying, nonEcoute, togglePlayback };
+  });
+  useEffect(() => onVoicePlayRequest(isMe ? '' : String(messageId || ''), () => {
+    const etat = etatRef.current;
+    if (etat.nonEcoute && !etat.isPlaying) etat.togglePlayback();
+  }), [isMe, messageId]);
+  const finPrecedenteRef = useRef(Number(endedAt) || 0);
+  useEffect(() => {
+    const fin = Number(endedAt) || 0;
+    if (fin === finPrecedenteRef.current) return;
+    finPrecedenteRef.current = fin;
+    if (fin > 0 && nextVoiceMessageId) requestVoicePlay(nextVoiceMessageId);
+  }, [endedAt, nextVoiceMessageId]);
+
   const point = useAnimatedStyle(() => ({
     opacity: pointVisible.value,
     transform: [{ scale: 0.4 + (0.6 * pointVisible.value) }],

@@ -166,3 +166,27 @@ describe('VOCAL — ce qui s\'écrit à l\'écran', () => {
     expect(formatVoiceSpeed(2, ',')).toBe('2×');
   });
 });
+
+// Décision d'Adel, 23/09 ~17h50 : 10 minutes.
+describe('VOCAL2 — la durée maximale d\'une prise', () => {
+  // eslint-disable-next-line global-require
+  const onde = require('@/services/chat/voiceWaveform');
+
+  it('10:00, et on prévient 15 s avant', () => {
+    expect(onde.VOICE_MAX_TAKE_MS).toBe(10 * 60 * 1000);
+    expect(onde.VOICE_LIMIT_WARNING_MS).toBe(15000);
+    expect(onde.isNearTakeLimit(584999)).toBe(false);
+    expect(onde.isNearTakeLimit(585000)).toBe(true);
+    expect(onde.isNearTakeLimit(599999)).toBe(true);
+  });
+
+  it('marge avec le plafond d\'envoi (20 Mo) : 10 min tiennent, même à débit double', () => {
+    const plafondOctets = 20 * 1024 * 1024;
+    const octets = (debitBits) => (onde.VOICE_MAX_TAKE_MS / 1000) * (debitBits / 8);
+    // 128 kbit/s réglés à l'enregistrement : 9,6 Mo, moins de la moitié du plafond.
+    expect(onde.VOICE_ENCODING_BITRATE).toBe(128000);
+    expect(octets(onde.VOICE_ENCODING_BITRATE)).toBe(9600000);
+    expect(octets(onde.VOICE_ENCODING_BITRATE) / plafondOctets).toBeLessThan(0.5);
+    expect(octets(2 * onde.VOICE_ENCODING_BITRATE)).toBeLessThan(plafondOctets);
+  });
+});
