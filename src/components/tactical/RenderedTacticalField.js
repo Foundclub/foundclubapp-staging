@@ -228,11 +228,18 @@ function RenderedTacticalField({
 
   return (
     <View pointerEvents="box-none" style={[styles.container, style]}>
+      {/* COMPOMSG — `width`/`height` a 100 % : sur le SITE, un <svg> pose en
+          absolu sans taille prend le format CARRE de son viewBox, et les jetons
+          du bas tombaient sous le terrain dessine (mesure au banc du 23/09 :
+          cadre 131 x 196, dessin 131 x 131). Sur l'iPhone, rien ne change :
+          le dessin remplissait deja le cadre. */}
       <Svg
+        height="100%"
         pointerEvents="none"
         preserveAspectRatio="none"
         style={StyleSheet.absoluteFill}
         viewBox="0 0 100 100"
+        width="100%"
       >
         <Defs>
           <LinearGradient id={gradientId} x1="0" x2="0" y1="0" y2="1">
