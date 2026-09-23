@@ -19399,6 +19399,8 @@ export default {
     duration_one: 'Durée : {{count}} seconde',
     duration_other: 'Durée : {{count}} secondes',
     holdTip: 'Maintiens pour enregistrer',
+    limitReached: 'Arrêté à {{minutes}} minutes : réécoute, puis envoie.',
+    limitSoon: "Plus que {{seconds}} secondes d'enregistrement",
     openSettings: 'Ouvrir les réglages',
     pause: 'Mettre en pause',
     permissionBody: 'Autorise le micro dans les réglages de ton téléphone pour envoyer des messages vocaux.',

@@ -1,6 +1,13 @@
 import { createElement } from 'react';
-import { AppState, StyleSheet, Text } from 'react-native';
+import {
+  AccessibilityInfo,
+  AppState,
+  StyleSheet,
+  Text,
+} from 'react-native';
 import renderer, { act } from 'react-test-renderer';
+
+import { colors as COULEURS } from '@/theme/colors';
 
 import {
   cancelRecording,
@@ -48,8 +55,9 @@ jest.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (/** @type {string} */ cle, /** @type {any} */ repli) => {
       if (typeof repli === 'string') return repli;
-      if (repli && typeof repli.defaultValue_other === 'string') return repli.defaultValue_other;
-      return cle;
+      const gabarit = repli?.defaultValue || repli?.defaultValue_other;
+      if (typeof gabarit !== 'string') return cle;
+      return gabarit.replace(/\{\{(\w+)\}\}/g, (/** @type {string} */ _m, /** @type {string} */ nom) => String(repli[nom]));
     },
   }),
 }));
@@ -587,6 +595,40 @@ describe('VOCAL — états 3A et 3B · verrouillé, puis réécoute', () => {
     expect(stopRecording).toHaveBeenCalledTimes(1);
     expect(onSend).not.toHaveBeenCalled();
     expect(styleDe(parId(arbre, 'voice-review-pill')[0]).opacity).toBe(1);
+  });
+
+  it('3B.7 VOCAL2 — à 10:00, la bulle dit POURQUOI ça s\'arrête, rien n\'est perdu', async () => {
+    const { arbre } = monter();
+    await maintenir(arbre);
+    await act(async () => { rappelsDuMicro().onProgress(10 * 60 * 1000); });
+    await laisserFiler();
+
+    expect(VOICE_MAX_TAKE_MS).toBe(10 * 60 * 1000);
+    const bulle = parId(arbre, 'voice-hold-tip')[0];
+    const texte = bulle
+      .findAll((/** @type {any} */ n) => typeof n.type === 'string' && n.type === 'Text')
+      .map((/** @type {any} */ n) => [].concat(n.props.children).join('')).join('');
+    expect(texte).toBe('Arrêté à 10 minutes : réécoute, puis envoie.');
+    expect(journal.some((e) => e.fn === 'withDelay' && e.args[0] === 2000)).toBe(true);
+    expect(deleteVoiceNoteFile).not.toHaveBeenCalled();
+  });
+
+  it('3B.8 VOCAL2 — à T−15 s : chrono ROUGE, une seule annonce vocale', async () => {
+    const annonce = jest.spyOn(AccessibilityInfo, 'announceForAccessibility')
+      .mockImplementation(() => {});
+    const { arbre } = monter();
+    await maintenir(arbre);
+    const chrono = () => arbre.root.find(
+      (/** @type {any} */ n) => n.props?.testID === 'voice-chrono' && typeof n.type === 'string',
+    );
+    await act(async () => { rappelsDuMicro().onMetering(-20, 584000); });
+    expect(styleDe(chrono()).color).toBe(COULEURS.neutral00);
+    await act(async () => { rappelsDuMicro().onMetering(-20, 585000); });
+    expect(styleDe(chrono()).color).toBe(COULEURS.error300);
+    await act(async () => { rappelsDuMicro().onMetering(-20, 586000); });
+    expect(annonce).toHaveBeenCalledTimes(1);
+    expect(annonce).toHaveBeenCalledWith('Plus que 15 secondes d\'enregistrement');
+    annonce.mockRestore();
   });
 });
 

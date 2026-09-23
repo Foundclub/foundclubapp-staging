@@ -18265,6 +18265,8 @@ export default {
     duration_one: 'Duration: {{count}} second',
     duration_other: 'Duration: {{count}} seconds',
     holdTip: 'Hold to record',
+    limitReached: 'Stopped at {{minutes}} minutes: play it back, then send.',
+    limitSoon: 'Only {{seconds}} seconds of recording left',
     openSettings: 'Open settings',
     pause: 'Pause',
     permissionBody: 'Allow the microphone in your phone settings to send voice messages.',

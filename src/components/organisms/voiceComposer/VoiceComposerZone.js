@@ -7,7 +7,8 @@ import {
   useRef,
   useState,
 } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
+import { AccessibilityInfo, StyleSheet, View } from 'react-native';
 import Animated, {
   Easing,
   FadeIn,
@@ -34,7 +35,7 @@ import { easeIn, easeOut } from '@/components/organisms/voiceComposer/voiceMotio
 import VoiceRecordingStrip from '@/components/organisms/voiceComposer/VoiceRecordingStrip';
 import VoiceReviewPill from '@/components/organisms/voiceComposer/VoiceReviewPill';
 
-import { voiceLevelShape } from '@/services/chat/voiceWaveform';
+import { VOICE_MAX_TAKE_MS, voiceLevelShape } from '@/services/chat/voiceWaveform';
 
 import useReduceMotion from '@/hooks/useReduceMotion';
 
@@ -166,11 +167,27 @@ export default function VoiceComposerZone({
   const precedenteRef = useRef(/** @type {string} */ (VOICE_PHASES.rest));
   const cibleHaloRef = useRef(1);
 
-  const montrerBulle = useCallback(() => {
+  const { t } = useTranslation();
+  // La bulle d'aide : « Maintiens pour enregistrer » ('' : le texte par
+  // défaut), ou, à la durée maximale, pourquoi la prise s'est arrêtée.
+  const [texteBulle, setTexteBulle] = useState('');
+  const afficherBulle = useCallback((/** @type {string} */ texte) => {
+    setTexteBulle(texte);
     motion.bulle.value = withSequence(easeOut(1, 160), withDelay(2000, easeIn(0, 160)));
   }, [motion]);
+  const montrerBulle = useCallback(() => afficherBulle(''), [afficherBulle]);
+  const signalerLimite = useCallback(() => {
+    const texte = t('voiceComposer.limitReached', {
+      defaultValue: 'Arrêté à {{minutes}} minutes : réécoute, puis envoie.',
+      minutes: VOICE_MAX_TAKE_MS / 60000,
+    });
+    afficherBulle(texte);
+    AccessibilityInfo.announceForAccessibility(texte);
+  }, [afficherBulle, t]);
 
-  const micro = useVoiceRecorder({ onError, onSend, onTooShort: montrerBulle });
+  const micro = useVoiceRecorder({
+    onError, onLimitReached: signalerLimite, onSend, onTooShort: montrerBulle,
+  });
   // ⚠️ Les rappels du geste doivent rester STABLES : si le geste change
   // pendant que le doigt est posé, Gesture Handler l'annule. Chaque rappel du
   // micro l'est (`useCallback` sur des dépendances fixes) ; on ne passe donc
@@ -266,7 +283,7 @@ export default function VoiceComposerZone({
             motion={motion}
             onPress={micro.stopToReview}
           />
-          <VoiceHoldTip visibilite={motion.bulle} />
+          <VoiceHoldTip texte={texteBulle} visibilite={motion.bulle} />
           <VoiceActionButton
             actif={actif}
             mode={enAttente ? 'envoyer' : 'micro'}
