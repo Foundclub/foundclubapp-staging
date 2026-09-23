@@ -4493,15 +4493,25 @@ export default {
     shareTitle: 'Partager la composition',
   },
   compositionMessageBubble: {
+    // COMPOMSG — la carte compte les convoqués (terrain + banc), plus « 1 equipe(s) ».
+    calledUp_one: '{{count}} convoqué',
+    calledUp_other: '{{count}} convoqués',
+    expand: 'Agrandir',
     locationNotSpecified: 'Lieu non précisé',
     matchLineUp: 'Composition du match',
     onTheBench: 'Sur le banc',
     onThePitch: 'Sur le terrain',
+    open: 'Ouvrir',
+    openFullScreen: 'Voir la composition en plein écran',
+    openHint: 'Ouvre la composition',
     otherTeams_one: '+ {{count}} autre équipe dans cette composition',
-    otherTeams_other: '+ {{count}} autre équipes dans cette composition',
+    otherTeams_other: '+ {{count}} autres équipes dans cette composition',
+    published: 'Composition publiée',
     tapToSeeTheLine: 'Appuyer pour voir la composition',
     team: 'Equipe',
     teamLineUpPublished: "Composition d'équipes publiée",
+    // COMPOMSG — « v2 » ne disait rien à un joueur. Affiché seulement à partir de 2.
+    version: 'Version {{version}}',
   },
   // C-C — ECRAN 11 du pack composition : la compo type d'une équipe.
   compoTemplate: {
@@ -10233,11 +10243,17 @@ export default {
         freePlacement: 'Placement libre',
         magnet: 'Aimanté aux postes',
         placed: '{{placed}}/{{starters}} placés',
+        // COMPOMSG — la pastille du LECTEUR (joueur, dirigeant) en consultation.
+        starters_one: '{{count}} titulaire',
+        starters_other: '{{count}} titulaires',
       },
       edit: 'Modifier',
       title: 'Composition',
       tokenOnBench: '{{name}}, sur le banc',
       tokenOnField: '{{name}}, sur le terrain',
+      // COMPOMSG — la carte du fil montrait une version dépassée.
+      updatedSinceMessage: 'Composition modifiée depuis ce message : '
+        + 'tu vois la version {{version}}.',
     },
     sheet: {
       actions: {
@@ -12461,6 +12477,8 @@ export default {
       position: 'Poste : {{position}}',
     },
     columns: {
+      // COMPOMSG — l'écran n'écrivait que l'heure : le joueur ne savait pas QUEL jour.
+      day: 'Date',
       kickOff: 'Coup d’envoi',
       meeting: 'RDV',
       // ⚠️ Le modèle serveur n'a AUCUN champ d'heure de rendez-vous
@@ -12476,6 +12494,15 @@ export default {
       message: 'Aucune composition publiée ne te concerne sur cet événement.',
       title: 'La composition',
     },
+    // COMPOMSG — toucher le petit terrain ouvre le plein écran, avec les photos.
+    field: {
+      expand: 'Agrandir',
+      openFullScreen: 'Voir la composition en plein écran',
+    },
+    // COMPOMSG — le texte libre de l'événement (souvent le RDV), tel qu'écrit.
+    note: {
+      title: 'Infos',
+    },
     reserve: {
       title: 'Remplaçants',
     },
@@ -12487,6 +12514,7 @@ export default {
       title: 'Staff',
     },
     title: 'Tu es convoqué',
+    version: 'Version {{version}}',
   },
   playerGoalsModal: {
     errorTitle: 'Erreur',

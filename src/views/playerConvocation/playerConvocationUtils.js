@@ -12,6 +12,8 @@
  * `published.reservePlayerIds`, `published.snapshotPlayers`, `published.publishedBy`.
  */
 
+import localeDesFormats from '@/theme/strings/localeDesFormats';
+
 import {
   getMatchPositionLabels,
 } from '@/views/matchCallUp/matchCompositionUtils';
@@ -202,12 +204,14 @@ export const buildConvocationStaffList = (branch) => ensureList(branch?.staff)
  *   placements: any[],
  *   playerId: string,
  *   positionLabel: string,
+ *   published: any,
  *   publishedByName: string,
  *   reservePlayers: any[],
  *   role: string,
  *   snapshotPlayers: any[],
  *   sport: string,
  *   staff: Array<{ id: string, person: any }>,
+ *   teamId: string,
  *   teamName: string,
  *   viewerPlayer: any,
  * } | null}
@@ -253,12 +257,16 @@ export const buildPlayerConvocationView = ({ convocation = null, userId = '' } =
     placements,
     playerId: viewerId,
     positionLabel,
+    // COMPOMSG — le pack lui-meme : c'est lui que le terrain de l'ecran confie
+    // au plein ecran (`buildPublishedBoardTarget`), photos comprises.
+    published,
     publishedByName: getPersonName(published?.publishedBy),
     reservePlayers: buildConvocationReserveList(published),
     role: myPlacement ? CONVOCATION_ROLE_STARTER : CONVOCATION_ROLE_SUBSTITUTE,
     snapshotPlayers: ensureList(published?.snapshotPlayers),
     sport,
     staff: buildConvocationStaffList(branch),
+    teamId: toId(branch?.team?.documentId || convocation?.team?.documentId),
     teamName: String(
       branch?.team?.name || convocation?.team?.name || published?.teams?.[0]?.name || '',
     ).trim(),
@@ -304,6 +312,120 @@ export const getPlayerConvocationResponse = (convocation, userId) => {
   const answer = branch?.responses?.byPlayerId?.[toId(userId)]
     ?? convocation?.responses?.byPlayerId?.[toId(userId)];
   return answer === 'present' || answer === 'absent' ? answer : 'pending';
+};
+
+/**
+ * COMPOMSG — LA BRANCHE PUBLIEE D'UNE EQUIPE, dans la charge de
+ * `GET /events/:id/convocation` (forme `branches`, ou forme a plat).
+ *
+ * ⚠️ A la difference de `resolveViewerConvocationBranch`, elle ne cherche PAS
+ * le lecteur : le plein ecran se lit aussi par un entraineur ou un dirigeant,
+ * qui ne figurent dans aucun pack.
+ * @param {any} convocation
+ * @param {string} [teamId] `documentId` de l'equipe voulue.
+ * @returns {any | null} La branche, ou `null` si on ne sait pas laquelle.
+ */
+export const findPublishedBranchForTeam = (convocation, teamId = '') => {
+  const branches = ensureList(convocation?.branches);
+  const candidates = (branches.length
+    ? branches
+    : [{ published: convocation?.published, team: convocation?.team }])
+    .filter((/** @type {any} */ branch) => (
+      branch?.published && typeof branch.published === 'object'
+    ));
+  const wanted = toId(teamId);
+  return candidates
+    .find((/** @type {any} */ branch) => wanted && toId(branch?.team?.documentId) === wanted)
+    || (candidates.length === 1 ? candidates[0] : null);
+};
+
+/**
+ * COMPOMSG — CE QU'IL FAUT POUR OUVRIR LE PLEIN ECRAN EN LECTURE, depuis UN pack
+ * publie. Une seule recette pour les trois portes : la carte du fil, le terrain
+ * de « Tu es convoque », et la relecture du plateau lui-meme.
+ *
+ * ⛔ Elle rend `null` dans les deux cas ou le plateau mentirait (memes gardes
+ * que D6) : aucun joueur place — un terrain vide ferait croire a une compo
+ * perdue — et plusieurs equipes — le plateau n'en dessine qu'une et cacherait
+ * les autres sans rien dire.
+ * @param {any} published Pack publie (`teams`, `snapshotPlayers`, banc...).
+ * @param {object} [options]
+ * @param {string} [options.sport] Sport de repli si le pack ne le porte pas.
+ * @param {string} [options.teamName]
+ * @returns {{
+ *   existingComposition: any,
+ *   publishedVersion: number | null,
+ *   selectedPlayers: any[],
+ *   sport: string,
+ *   startPlacements: any[],
+ *   teamName: string,
+ * } | null}
+ */
+export const buildPublishedBoardTarget = (published, { sport = '', teamName = '' } = {}) => {
+  if (!published || typeof published !== 'object') return null;
+  if (ensureList(published.teams).length > 1) return null;
+
+  // Les joueurs ajoutes a la main sont places comme les autres : on les cherche
+  // aussi, sans quoi leur jeton disparaitrait du plein ecran.
+  const starters = buildConvocationFieldTokens({
+    placements: getPackPlacements(published),
+    snapshotPlayers: [
+      ...ensureList(published.manualPlayers),
+      ...ensureList(published.snapshotPlayers),
+    ],
+  });
+  if (!starters.length) return null;
+
+  return {
+    existingComposition: published,
+    publishedVersion: Number(published.version) || null,
+    // Titulaires PUIS remplacants : le plateau retrouve le banc tout seul en
+    // retirant de cette liste ceux que les placements portent.
+    selectedPlayers: [
+      ...starters.map((/** @type {any} */ token) => token.player),
+      ...buildConvocationReserveList(published).map((/** @type {any} */ entry) => entry.player),
+    ],
+    sport: String(published.sportContext || sport || ''),
+    startPlacements: starters.map((/** @type {any} */ token) => token.placement),
+    teamName: String(teamName || '').trim(),
+  };
+};
+
+/**
+ * COMPOMSG — LE TEXTE LIBRE DE L'EVENEMENT, la ou l'entraineur ecrit son RDV.
+ *
+ * 🧨 Le serveur n'a AUCUN champ d'heure de rendez-vous (`event/schema.json`,
+ * remesure le 2026-09-23). Ce que la carte du fil affichait comme
+ * « RDV 19h30 au stade de Pelisanne » est le texte que l'entraineur a tape dans
+ * l'evenement ; « Tu es convoque » ne le montrait nulle part et ecrivait
+ * « Non precise » a la place. On l'affiche tel quel, on n'en extrait rien.
+ * @param {any} event
+ * @param {string[]} [alreadyShown] Textes deja a l'ecran (le nom du match...) :
+ *   un texte identique n'est pas repete.
+ * @returns {string} Le texte, ou '' s'il n'y en a pas.
+ */
+export const resolveConvocationNote = (event, alreadyShown = []) => {
+  const note = String(event?.description ?? '').trim();
+  if (!note) return '';
+  const comparable = (/** @type {any} */ value) => String(value ?? '').trim().toLowerCase();
+  return alreadyShown.map(comparable).includes(comparable(note)) ? '' : note;
+};
+
+/**
+ * COMPOMSG — le JOUR d'un horodatage, au format du telephone (`lun. 28/09/2026`).
+ * « Tu es convoque » n'ecrivait que l'heure : un joueur ne savait pas QUEL jour
+ * il etait attendu. Chaine vide quand la donnee manque.
+ * @param {any} value
+ * @returns {string}
+ */
+export const formatConvocationDay = (value) => {
+  const raw = String(value ?? '').trim();
+  if (!raw) return '';
+  const parsed = new Date(raw);
+  if (Number.isNaN(parsed.getTime())) return '';
+  return parsed.toLocaleDateString(localeDesFormats(), {
+    day: '2-digit', month: '2-digit', weekday: 'short', year: 'numeric',
+  });
 };
 
 /**

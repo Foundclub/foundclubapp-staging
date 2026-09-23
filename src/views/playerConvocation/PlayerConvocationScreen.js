@@ -8,6 +8,7 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TouchableOpacity,
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -22,6 +23,7 @@ import HeaderBackButton from '@/components/atoms/headerBackButton/HeaderBackButt
 import Loader from '@/components/atoms/loader/Loader';
 import MarqueeText from '@/components/atoms/marqueeText/MarqueeText';
 import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
+import PlayerHeadToken from '@/components/tactical/PlayerHeadToken';
 import RenderedTacticalField from '@/components/tactical/RenderedTacticalField';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
@@ -38,9 +40,12 @@ import { getTacticalFieldAspectRatio } from '@/utils/tacticalField';
 import {
   buildConvocationFieldTokens,
   buildPlayerConvocationView,
+  buildPublishedBoardTarget,
   CONVOCATION_ROLE_STARTER,
+  formatConvocationDay,
   formatConvocationTime,
   getPlayerConvocationResponse,
+  resolveConvocationNote,
 } from './playerConvocationUtils';
 
 /**
@@ -68,9 +73,19 @@ import {
  * 🧾 CE QUE LA MESURE A CONTREDIT DANS LE PACK : le pack dessine 3 colonnes
  * « RDV · Coup d'envoi · Lieu ». **Le modele serveur n'a AUCUN champ d'heure de
  * rendez-vous** (`event/schema.json` : `date`, `startTime`, `endTime`, `location`,
- * `locationDetails` — pas de `meetingTime`, mesure du 2026-08-15). La colonne
- * existe donc, mais elle affiche « Non précisé » plutot qu'une heure inventee :
- * le pack interdit lui-meme les promesses fausses.
+ * `locationDetails` — pas de `meetingTime`, mesure du 2026-08-15, remesure le
+ * 2026-09-23).
+ * 🔄 COMPOMSG (23/09) — la colonne affichait « Non précisé »… alors que la carte
+ * du fil, pour le meme match, affichait « RDV 19h30 au stade de Pelisanne » :
+ * c'est le TEXTE LIBRE de l'evenement, ou l'entraineur ecrit son rendez-vous.
+ * La colonne RDV cede donc sa place a la DATE (l'ecran n'ecrivait que l'heure),
+ * et ce texte s'affiche tel quel sous les colonnes (« Infos »). Toujours rien
+ * d'invente : on montre ce que l'entraineur a ecrit, ou rien.
+ *
+ * 🔎 COMPOMSG — LE TERRAIN : les jetons portent la PHOTO (`PlayerHeadToken`, le
+ * meme jeton que la carte du fil — la cause des photos absentes etait un dessin
+ * a part, qui n'ecrivait que des initiales), et le terrain entier est un bouton
+ * vers le plein ecran en lecture seule.
  */
 
 /** Diametre du jeton du terrain, et celui — grossi — du jeton du lecteur. */
@@ -183,6 +198,7 @@ function PlayerConvocationScreen() {
   }
 
   const event = eventQuery.data || convocation?.event || null;
+  const day = formatConvocationDay(event?.date || convocation?.event?.date);
   const kickOff = formatConvocationTime(event?.startTime || convocation?.event?.date);
   // LIEU — `location` est l objet des coordonnees `{ lat, lng }` (event/schema.json,
   // type json) : `String()` le rendait « [object Object] ». L adresse lisible vit
@@ -202,11 +218,36 @@ function PlayerConvocationScreen() {
     '',
   );
 
+  // COMPOMSG — l'heure quitte le sous-titre : elle est dans les colonnes, avec
+  // la date qui manquait.
   const subtitle = [
     eventDisplayName || null,
     view.teamName,
-    formatConvocationTime(convocation?.event?.date) || null,
   ].filter(Boolean).join(' · ');
+
+  // COMPOMSG — le texte de l'entraineur (souvent le RDV), tel qu'il l'a ecrit.
+  // Deja a l'ecran sous forme de nom du match ? On ne le repete pas.
+  const note = resolveConvocationNote(event, [eventDisplayName]);
+
+  // COMPOMSG — le plein ecran recoit le pack de CET ecran, deja a jour : pas de
+  // relecture a demander. `null` quand il n'y a rien a dessiner (garde D6).
+  const fullScreenTarget = buildPublishedBoardTarget(view.published, {
+    sport: view.sport,
+    teamName: view.teamName,
+  });
+  const openFullScreen = () => {
+    if (!fullScreenTarget) return;
+    // @ts-ignore — les parametres de la pile Evenement ne sont pas types.
+    navigation.navigate(RouteNames.MatchCompositionBoard, {
+      ...fullScreenTarget,
+      canEdit: false,
+      eventId,
+      eventLabel: eventDisplayName,
+      readOnly: true,
+      teamId: view.teamId || teamId,
+    });
+  };
+  const versionNumber = Number(view.published?.version) || 0;
 
   const identityLine = [
     view.positionLabel
@@ -216,7 +257,7 @@ function PlayerConvocationScreen() {
   ].filter(Boolean).join(' · ');
 
   const columns = [
-    { key: 'meeting', value: t('playerConvocation.columns.notSpecified') },
+    { key: 'day', value: day || t('playerConvocation.columns.notSpecified') },
     { key: 'kickOff', value: kickOff || t('playerConvocation.columns.notSpecified') },
     { key: 'place', value: place || t('playerConvocation.columns.notSpecified') },
   ];
@@ -294,44 +335,82 @@ function PlayerConvocationScreen() {
               </View>
             ))}
           </View>
+
+          {/* COMPOMSG — le texte de l'entraineur, la ou la carte du fil l'affiche
+              aussi. Sans texte, aucune ligne vide. */}
+          {note ? (
+            <View style={[styles.note, { borderTopColor: withAlpha(Colors.neutral00, 0.1) }]}>
+              <Text style={[Fonts.p4Bold, styles.columnLabel, { color: Colors.neutral300 }]}>
+                {t('playerConvocation.note.title').toUpperCase()}
+              </Text>
+              <Text style={[Fonts.p3, { color: Colors.neutral00 }]}>{note}</Text>
+            </View>
+          ) : null}
         </View>
 
-        <Text style={[Fonts.p4, styles.sectionTitle, { color: Colors.neutral300 }]}>
-          {t('playerConvocation.compositionTitle').toUpperCase()}
-        </Text>
+        <View style={styles.sectionRow}>
+          <Text style={[Fonts.p4, styles.sectionTitle, { color: Colors.neutral300 }]}>
+            {t('playerConvocation.compositionTitle').toUpperCase()}
+          </Text>
+          {/* COMPOMSG — une compo modifiee le dit, avec le meme mot que la carte
+              du fil ; la premiere publication n'affiche rien de technique. */}
+          {versionNumber > 1 ? (
+            <View
+              style={[styles.versionChip, { borderColor: withAlpha(Colors.primary500, 0.45) }]}
+            >
+              <Text style={[Fonts.p4Bold, { color: Colors.primary100 }]}>
+                {t('playerConvocation.version', { version: versionNumber })}
+              </Text>
+            </View>
+          ) : null}
+        </View>
 
-        <RenderedTacticalField
-          sport={view.sport}
-          style={[styles.field, { aspectRatio: 1 / getTacticalFieldAspectRatio(view.sport) }]}
+        {/* 🔎 COMPOMSG — TOUCHER LE TERRAIN OUVRE LE PLEIN ECRAN, en lecture
+            seule, avec les photos et les prenoms. La pastille « Agrandir » le
+            dit. */}
+        <TouchableOpacity
+          accessibilityLabel={t('playerConvocation.field.openFullScreen')}
+          accessibilityRole="button"
+          activeOpacity={0.85}
+          disabled={!fullScreenTarget}
+          onPress={openFullScreen}
+          style={styles.fieldTouch}
         >
-          {fieldTokens.map((/** @type {any} */ { placement, player }) => {
-            const isMine = String(placement?.playerId || '') === view.playerId;
-            const size = isMine ? TOKEN_SIZE_MINE : TOKEN_SIZE;
-            return (
-              <View
-                key={placement.playerId}
-                style={[
-                  styles.token,
-                  {
-                    backgroundColor: withAlpha(Colors.primary500, isMine ? 0.95 : 0.75),
-                    borderColor: isMine ? Colors.neutral00 : Colors.primary100,
-                    borderRadius: size / 2,
-                    height: size,
-                    left: `${placement.positionX}%`,
-                    marginLeft: -(size / 2),
-                    marginTop: -(size / 2),
-                    top: `${placement.positionY}%`,
-                    width: size,
-                  },
-                ]}
-              >
-                <Text numberOfLines={1} style={[Fonts.p4Bold, { color: Colors.neutral00 }]}>
-                  {getCompositionPlayerInitials(player)}
-                </Text>
-              </View>
-            );
-          })}
-        </RenderedTacticalField>
+          <RenderedTacticalField
+            sport={view.sport}
+            style={[styles.field, { aspectRatio: 1 / getTacticalFieldAspectRatio(view.sport) }]}
+          >
+            {fieldTokens.map((/** @type {any} */ { placement, player }) => {
+              const isMine = String(placement?.playerId || '') === view.playerId;
+              const size = isMine ? TOKEN_SIZE_MINE : TOKEN_SIZE;
+              return (
+                <View
+                  key={placement.playerId}
+                  style={[
+                    styles.token,
+                    {
+                      left: `${placement.positionX}%`,
+                      marginLeft: -(size / 2),
+                      marginTop: -(size / 2),
+                      top: `${placement.positionY}%`,
+                    },
+                  ]}
+                >
+                  <PlayerHeadToken isHighlighted={isMine} player={player} size={size} />
+                </View>
+              );
+            })}
+          </RenderedTacticalField>
+          {fullScreenTarget ? (
+            <View
+              style={[styles.expandPill, { backgroundColor: withAlpha(Colors.neutral900, 0.72) }]}
+            >
+              <Text style={[Fonts.p4Bold, { color: Colors.neutral00 }]}>
+                {t('playerConvocation.field.expand')}
+              </Text>
+            </View>
+          ) : null}
+        </TouchableOpacity>
 
         {/* AC08 — LE BANC. Mesure du 2026-08-21 : `reservePlayerIds` et
             `reserveSnapshotPlayers` voyagent dans la charge depuis toujours, et
@@ -461,9 +540,22 @@ const styles = StyleSheet.create({
     paddingBottom: 24,
     paddingHorizontal: 16,
   },
+  expandPill: {
+    borderRadius: 999,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    position: 'absolute',
+    right: 8,
+    top: 8,
+  },
   field: {
     borderRadius: 16,
     height: FIELD_HEIGHT,
+  },
+  // Le bouton epouse le terrain (sinon la pastille « Agrandir » irait se poser
+  // au bord de l'ecran), et le terrain se centre, comme sur la maquette.
+  fieldTouch: {
+    alignSelf: 'center',
   },
   footer: {
     flexDirection: 'row',
@@ -507,6 +599,12 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
   },
+  note: {
+    borderTopWidth: 1,
+    gap: 2,
+    marginTop: 16,
+    paddingTop: 16,
+  },
   reserveList: {
     gap: 8,
   },
@@ -531,16 +629,25 @@ const styles = StyleSheet.create({
   screen: {
     paddingHorizontal: 0,
   },
+  sectionRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
   sectionTitle: {
     letterSpacing: 1,
     marginBottom: 8,
     marginTop: 18,
   },
   token: {
-    alignItems: 'center',
-    borderWidth: 2,
-    justifyContent: 'center',
     position: 'absolute',
+  },
+  versionChip: {
+    borderRadius: 999,
+    borderWidth: 1,
+    marginTop: 10,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
   },
 });
 

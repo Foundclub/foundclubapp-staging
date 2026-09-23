@@ -1,0 +1,364 @@
+import renderer, { act } from 'react-test-renderer';
+
+import PlayerConvocationScreen from '../PlayerConvocationScreen';
+
+// ==========================================================================
+// COMPOMSG — « TU ES CONVOQUÉ », VU DEPUIS LA MESSAGERIE (23/09).
+//
+// 🗣️ Adel, capture 3 (TestFlight 2.6.61) : « dans la version avec les infos, on
+// ne voit pas les photos des joueurs : ce n'est pas normal. Il faudrait qu'en
+// cliquant, on puisse afficher la version en plein écran. »
+//
+// 🧨 CE QUE LA LECTURE DU CODE A TROUVÉ : les photos ÉTAIENT dans la charge
+// (`published.snapshotPlayers[].avatar` — la carte du fil et le plein écran les
+// affichent pour les mêmes joueurs). Cet écran dessinait ses PROPRES pastilles,
+// qui n'écrivaient que des initiales. Composant différent, pas donnée absente.
+//
+// Et le RDV : le serveur n'a AUCUN champ d'heure de rendez-vous. Le « RDV 19h30
+// au stade de Pelisanne » que la carte affiche est le texte libre de
+// l'événement ; cet écran ne le montrait nulle part et écrivait « Non précisé ».
+// ==========================================================================
+
+const mockNavigate = jest.fn();
+const mockGoBack = jest.fn();
+const mockReplace = jest.fn();
+const mockRsvp = jest.fn(() => Promise.resolve({}));
+
+/** @type {any} */
+let mockConvocation;
+/** @type {any} */
+let mockEvent;
+/** @type {any} */
+let mockUserData;
+
+const mockNavigation = { goBack: mockGoBack, navigate: mockNavigate, replace: mockReplace };
+
+jest.mock('@react-navigation/native', () => ({
+  useNavigation: () => mockNavigation,
+  useRoute: () => ({ params: { eventId: 'evt-1', teamId: 'team-1' } }),
+}));
+
+jest.mock('@tanstack/react-query', () => ({
+  useMutation: (/** @type {any} */ options) => ({
+    isPending: false,
+    mutate: (/** @type {any} */ input) => {
+      options.mutationFn(input);
+    },
+  }),
+  useQueryClient: () => ({ invalidateQueries: jest.fn() }),
+}));
+
+jest.mock('react-i18next', () => {
+  const traductions = jest.requireActual('@/theme/strings/translations/fr').default;
+  return {
+    initReactI18next: { init: () => {}, type: '3rdParty' },
+    useTranslation: () => ({
+      t: (/** @type {string} */ cle, /** @type {any} */ options) => {
+        const lire = (/** @type {string} */ chemin) => chemin.split('.').reduce(
+          (/** @type {any} */ noeud, /** @type {string} */ segment) => (
+            noeud && typeof noeud === 'object' ? noeud[segment] : undefined
+          ),
+          traductions,
+        );
+        const compte = options?.count;
+        let valeur = lire(cle);
+        if (typeof valeur !== 'string' && compte !== undefined) {
+          valeur = lire(`${cle}${compte === 0 || compte === 1 ? '_one' : '_other'}`);
+        }
+        if (typeof valeur !== 'string') return cle;
+        return valeur.replace(/{{(\w+)}}/g, (_correspondance, nom) => (
+          options && options[nom] !== undefined ? String(options[nom]) : ''
+        ));
+      },
+    }),
+  };
+});
+
+jest.mock('react-native-safe-area-context', () => ({
+  useSafeAreaInsets: () => ({
+    bottom: 0, left: 0, right: 0, top: 0,
+  }),
+}));
+
+jest.mock('@/domains/auth/useAuth', () => ({
+  __esModule: true,
+  default: () => ({ userData: mockUserData }),
+}));
+
+jest.mock('@/services/event/eventQueries', () => ({
+  useGetEvent: () => ({ data: mockEvent }),
+  useGetEventConvocation: () => ({
+    data: mockConvocation,
+    isError: false,
+    isLoading: false,
+  }),
+}));
+
+jest.mock('@/services/event/eventService', () => ({
+  respondToEventRsvp: (/** @type {any} */ ...args) => mockRsvp(...args),
+}));
+
+jest.mock('@/theme/themeContext', () => {
+  const genererCouleurs = jest.requireActual('@/theme/colors').default;
+  const genererPolices = jest.requireActual('@/theme/fonts').default;
+  const genererStyles = jest.requireActual('@/theme/applicationStyle').default;
+  const alignements = jest.requireActual('@/theme/alignements').default;
+  const espaces = jest.requireActual('@/theme/spaces').default;
+  const couleurs = genererCouleurs();
+
+  return {
+    __esModule: true,
+    default: () => ({
+      Alignments: alignements,
+      ApplicationStyle: genererStyles(couleurs),
+      Colors: couleurs,
+      Fonts: genererPolices(couleurs),
+      Images: { arrowLeft: 1, chevronLeft: 1 },
+      Spaces: espaces,
+    }),
+  };
+});
+
+jest.mock('@/components/templates/ScreenContainer', () => {
+  const { View } = jest.requireActual('react-native');
+  return {
+    __esModule: true,
+    default: (/** @type {any} */ { children }) => <View>{children}</View>,
+  };
+});
+
+jest.mock('@/components/atoms/headerBackButton/HeaderBackButton', () => {
+  const { Text: TexteRN } = jest.requireActual('react-native');
+  return { __esModule: true, default: () => <TexteRN>RETOUR</TexteRN> };
+});
+
+jest.mock('@/components/atoms/loader/Loader', () => {
+  const { Text: TexteRN } = jest.requireActual('react-native');
+  return { __esModule: true, default: () => <TexteRN>CHARGEMENT</TexteRN> };
+});
+
+jest.mock('@/components/molecules/profileAvatar/ProfileAvatar', () => {
+  const { Text: TexteRN } = jest.requireActual('react-native');
+  return {
+    __esModule: true,
+    default: (/** @type {any} */ { name }) => <TexteRN>{`AVATAR:${name}`}</TexteRN>,
+  };
+});
+
+jest.mock('@/components/tactical/RenderedTacticalField', () => {
+  const { View } = jest.requireActual('react-native');
+  return {
+    __esModule: true,
+    default: (/** @type {any} */ { children }) => <View testID="terrain">{children}</View>,
+  };
+});
+
+jest.mock('@/components/atoms/button/Button', () => {
+  const { Text: TexteRN, TouchableOpacity } = jest.requireActual('react-native');
+  return {
+    __esModule: true,
+    default: (/** @type {any} */ { onPress, title }) => (
+      <TouchableOpacity onPress={onPress}>
+        <TexteRN>{title}</TexteRN>
+      </TouchableOpacity>
+    ),
+  };
+});
+
+/**
+ * Aplatit les enfants React en une chaîne, pour lire le texte rendu.
+ * @param {any} enfants
+ * @returns {string}
+ */
+const aplatirTexte = (enfants) => {
+  if (Array.isArray(enfants)) return enfants.map(aplatirTexte).join('');
+  if (enfants === null || enfants === undefined || typeof enfants === 'boolean') return '';
+  if (typeof enfants === 'object') return aplatirTexte(enfants?.props?.children);
+  return String(enfants);
+};
+
+/**
+ * Tout le texte visible de l'arbre rendu, concaténé.
+ * @param {any} arbre
+ * @returns {string}
+ */
+const texteVisible = (arbre) => {
+  const { Text: TexteRN } = jest.requireActual('react-native');
+  return arbre.root.findAllByType(TexteRN)
+    .map((/** @type {any} */ noeud) => aplatirTexte(noeud.props.children))
+    .join(' | ');
+};
+
+const MOI = 'joueur-1';
+
+// La charge telle que la capture d'Adel la montre : Adel sur le terrain AVEC
+// une photo, Amin sur le terrain SANS photo, Paul au banc avec la sienne.
+const PAUL = {
+  avatar: { url: '/uploads/paul.jpg' },
+  documentId: 'joueur-3',
+  firstname: 'Paul',
+  lastname: 'Veuillet',
+};
+
+const PACK = {
+  publishedBy: { firstname: 'Pierre', lastname: 'Hecquet' },
+  reservePlayerIds: ['joueur-3'],
+  reserveSnapshotPlayers: [PAUL],
+  snapshotPlayers: [
+    {
+      avatar: { url: '/uploads/adel.jpg' },
+      documentId: MOI,
+      firstname: 'Adel',
+      lastname: 'Ferchichi',
+    },
+    { documentId: 'joueur-2', firstname: 'Amin', lastname: 'Hsino' },
+    PAUL,
+  ],
+  sportContext: 'football',
+  teams: [{
+    id: 'team_1',
+    name: 'Aix-Perd en Buvette',
+    placements: [
+      { playerId: MOI, positionX: 50, positionY: 20 },
+      { playerId: 'joueur-2', positionX: 50, positionY: 93 },
+    ],
+  }],
+  version: 2,
+};
+
+/** @type {any[]} */
+const montes = [];
+
+const rendre = () => {
+  /** @type {any} */
+  let arbre;
+  act(() => {
+    arbre = renderer.create(<PlayerConvocationScreen />);
+  });
+  montes.push(arbre);
+  return arbre;
+};
+
+beforeEach(() => {
+  jest.clearAllMocks();
+  mockUserData = { documentId: MOI };
+  mockEvent = {
+    date: '2026-09-28T16:00:00.000Z',
+    description: 'RDV 19h30 au stade de Pelisanne',
+    documentId: 'evt-1',
+    locationDetails: JSON.stringify({ address: 'Pélissanne (13330)' }),
+    opponentName: 'US Pelican',
+    startTime: '18:00:00.000',
+    type: { name: 'Match' },
+  };
+  mockConvocation = {
+    branches: [{
+      published: PACK,
+      responses: { byPlayerId: {} },
+      team: { documentId: 'team-1', name: 'Aix-Perd en Buvette' },
+    }],
+    event: { date: '2026-09-28T16:00:00.000Z', documentId: 'evt-1', name: 'Match vs US Pelican' },
+  };
+});
+
+afterEach(() => {
+  act(() => {
+    montes.splice(0).forEach((arbre) => arbre.unmount());
+  });
+});
+
+describe('COMPOMSG · écran 3 — les PHOTOS sur le terrain', () => {
+  test('🥇 un joueur qui a une photo apparaît avec SA photo sur le terrain', () => {
+    const { Image } = jest.requireActual('react-native');
+    const arbre = rendre();
+    const [terrain] = arbre.root.findAll((/** @type {any} */ n) => n.props?.testID === 'terrain');
+
+    const photos = terrain.findAllByType(Image)
+      .map((/** @type {any} */ n) => String(n.props.source?.uri || ''));
+
+    expect(photos.some((uri) => uri.includes('/uploads/adel.jpg'))).toBe(true);
+  });
+
+  test('🔒 un joueur SANS photo garde ses initiales — jamais un rond vide', () => {
+    const arbre = rendre();
+    const [terrain] = arbre.root.findAll((/** @type {any} */ n) => n.props?.testID === 'terrain');
+    const { Text: TexteRN } = jest.requireActual('react-native');
+
+    const initiales = terrain.findAllByType(TexteRN)
+      .map((/** @type {any} */ n) => aplatirTexte(n.props.children));
+
+    expect(initiales).toContain('AH');
+  });
+});
+
+describe('COMPOMSG · écran 3 — toucher le terrain ouvre le PLEIN ÉCRAN', () => {
+  test('🥇 le terrain est un bouton qui mène au plateau, en lecture seule, avec les photos', () => {
+    const arbre = rendre();
+    const bouton = arbre.root.findAll(
+      (/** @type {any} */ n) => typeof n.props?.onPress === 'function'
+        && n.props?.accessibilityLabel === 'Voir la composition en plein écran',
+    )[0];
+
+    expect(bouton).toBeDefined();
+    act(() => { bouton.props.onPress(); });
+
+    const [ecran, parametres] = mockNavigate.mock.calls.pop();
+    expect(ecran).toBe('MatchCompositionBoard');
+    expect(parametres.readOnly).toBe(true);
+    expect(parametres.canEdit).toBe(false);
+    expect(parametres.eventId).toBe('evt-1');
+    expect(parametres.startPlacements.map((/** @type {any} */ p) => p.playerId))
+      .toEqual([MOI, 'joueur-2']);
+    // Les personnes voyagent AVEC leur photo : le plein écran la dessine.
+    expect(parametres.selectedPlayers[0].avatar).toEqual({ url: '/uploads/adel.jpg' });
+    // Titulaires PUIS banc : le plateau retrouve le banc tout seul.
+    expect(parametres.selectedPlayers.map((/** @type {any} */ p) => p.documentId))
+      .toEqual([MOI, 'joueur-2', 'joueur-3']);
+  });
+});
+
+describe('COMPOMSG · écran 3 — les MÊMES infos que la carte du fil', () => {
+  test('🥇 le texte de l’entraîneur (RDV…) est à l’écran, comme sur la carte', () => {
+    const texte = texteVisible(rendre());
+
+    expect(texte).toContain('RDV 19h30 au stade de Pelisanne');
+  });
+
+  test('⛔ plus de colonne « RDV · Non précisé » qui contredit la carte', () => {
+    const texte = texteVisible(rendre());
+
+    expect(texte).not.toContain('Non précisé');
+    expect(texte).not.toMatch(/(^|\| )RDV( \||$)/);
+  });
+
+  test('🥇 le JOUR du match est écrit, pas seulement l’heure', () => {
+    const texte = texteVisible(rendre());
+
+    expect(texte).toContain('28/09/2026');
+    expect(texte).toContain('18:00');
+  });
+
+  test('🔒 sans texte libre, aucune ligne vide ne s’affiche', () => {
+    mockEvent = { ...mockEvent, description: '' };
+    const texte = texteVisible(rendre());
+
+    expect(texte).not.toContain('Infos');
+    expect(texte).not.toContain('undefined');
+  });
+
+  test('🔒 un texte libre identique au nom du match n’est pas répété', () => {
+    mockEvent = { ...mockEvent, description: 'Match vs US Pelican' };
+    const texte = texteVisible(rendre());
+
+    expect(texte.split('Match vs US Pelican').length - 1).toBe(1);
+  });
+
+  test('🥇 une compo modifiée dit sa VERSION ; la première n’affiche rien de technique', () => {
+    expect(texteVisible(rendre())).toContain('Version 2');
+
+    mockConvocation.branches[0].published = { ...PACK, version: 1 };
+    const premiere = texteVisible(rendre());
+    expect(premiere).not.toContain('Version');
+    expect(premiere).not.toMatch(/\bv1\b/);
+  });
+});

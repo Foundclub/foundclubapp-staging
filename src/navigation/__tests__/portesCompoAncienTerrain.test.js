@@ -197,11 +197,13 @@ describe('C-F temoin 2 — la BULLE COMPO d un canal reste ouvrable', () => {
     expect(dossards(compositionAncienneForme)).toBe(false);
   });
 
-  // Le meme defaut, dit avec les mots que lit l'utilisateur : la pastille de la
-  // vignette compte des EQUIPES (parce que le drapeau multi est toujours vrai),
-  // et une ancienne compo n'en a aucune. Elle affiche donc « 0 equipe(s) » pour
-  // une composition qui contient bel et bien un joueur.
-  it('🐛 sa pastille annonce « 0 equipe(s) » pour une compo qui a un joueur', () => {
+  // Le meme defaut, dit avec les mots que lit l'utilisateur.
+  // 🔄 COMPOMSG (23/09) : la pastille « N equipe(s) » a disparu — la carte compte
+  // desormais les CONVOQUES dans son pied. Le defaut, lui, est toujours la et se
+  // lit autrement : une ancienne compo, qui contient bel et bien un joueur,
+  // n'annonce AUCUN convoque (le drapeau multi est toujours vrai, ses placements
+  // plats ne sont jamais lus). Le jour de la correction, ce temoin rougit.
+  it('🐛 son pied de carte n annonce aucun convoque pour une compo qui a un joueur', () => {
     let arbre;
     act(() => {
       arbre = renderer.create(
@@ -210,9 +212,9 @@ describe('C-F temoin 2 — la BULLE COMPO d un canal reste ouvrable', () => {
     });
 
     const rendu = JSON.stringify(arbre.toJSON());
-    expect(rendu).toContain('equipe(s)');
-    expect(rendu).toContain('0');
-    expect(rendu).not.toContain('joueur');
+    expect(rendu).not.toContain('equipe(s)');
+    expect(rendu).not.toContain('convoqu');
+    expect(rendu).not.toContain('Ada Lovelace');
   });
 
   it('forme multi-equipes : la charge part en version 3, pas en placements plats', () => {

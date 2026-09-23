@@ -133,7 +133,15 @@ function TacticalPlayerToken({ isOnField = false, player }) {
             { backgroundColor: `${Colors.primary900 || Colors.neutral900}A6` },
           ]}
         >
-          <Text numberOfLines={1} style={[styles.fieldName, { color: Colors.neutral00 }]}>
+          {/* COMPOMSG — « Antho… », « Bapti… » sur la capture d'Adel du 23/09 :
+              l'iPhone agrandit le texte selon ses reglages, la pastille ne
+              grandit pas. Le prenom retrecit plutot que d'etre coupe. */}
+          <Text
+            adjustsFontSizeToFit
+            minimumFontScale={0.6}
+            numberOfLines={1}
+            style={[styles.fieldName, { color: Colors.neutral00 }]}
+          >
             {player?.firstname || ''}
           </Text>
         </View>

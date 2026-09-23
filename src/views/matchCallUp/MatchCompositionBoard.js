@@ -3,6 +3,7 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import { useQueryClient } from '@tanstack/react-query';
 import {
   useCallback,
+  useEffect,
   useMemo,
   useRef,
   useState,
@@ -40,10 +41,15 @@ import SubscriptionPaywallSheet from '@/components/molecules/subscriptionPaywall
 import DraggableToken, { GHOST_TOKEN_SIZE } from '@/components/tactical/DraggableToken';
 import RenderedTacticalField from '@/components/tactical/RenderedTacticalField';
 import ScreenContainer from '@/components/templates/ScreenContainer';
+import {
+  buildPublishedBoardTarget,
+  findPublishedBranchForTeam,
+} from '@/views/playerConvocation/playerConvocationUtils';
 
 import { RouteNames } from '@/navigation/routeNames';
 
 import {
+  getEventConvocation,
   publishEventConvocation,
   saveEventCompositionDraft,
 } from '@/services/event/eventService';
@@ -104,8 +110,16 @@ function MatchCompositionBoard() {
   // Sert a retrouver le fil de l'equipe apres publication (voir `handlePublish`).
   const { startTeamChat } = /** @type {any} */ (useMessaging());
 
+  // 🔄 COMPOMSG — LA DERNIERE VERSION PUBLIEE, relue au serveur (voir l'effet
+  // plus bas). Elle RECOUVRE les parametres recus : la carte du fil n'est qu'une
+  // photo prise a la publication, et une compo republiee depuis doit se voir.
+  const [relectureServeur, setRelectureServeur] = useState(/** @type {any} */ (null));
+
   /** @type {any} */
-  const params = useMemo(() => route.params || {}, [route.params]);
+  const params = useMemo(
+    () => ({ ...(route.params || {}), ...(relectureServeur || {}) }),
+    [relectureServeur, route.params],
+  );
   const {
     canEdit = false,
     clubId = null,
@@ -113,8 +127,11 @@ function MatchCompositionBoard() {
     eventLabel = '',
     formationKey = null,
     magnetEnabled = false,
+    messageVersion = null,
     readOnly = false,
+    refreshFromServer = false,
     selectedPlayers = EMPTY_LIST,
+    serverVersion = null,
     sport = 'football',
     startPlacements = EMPTY_LIST,
     teamCategory = '',
@@ -138,6 +155,48 @@ function MatchCompositionBoard() {
   // « Publier », et la consigne « Glisse un joueur… », qui promettrait un geste
   // qui n'existe plus.
   const isReadOnly = Boolean(readOnly);
+
+  // 🔄 COMPOMSG — OUVERT DEPUIS UNE CARTE DU FIL, LE PLATEAU RELIT LA DERNIERE
+  // VERSION PUBLIEE.
+  //
+  // 🗣️ Adel, 23/09 : le plein ecran (ouvert depuis la carte) montrait 8 joueurs
+  // sur le terrain, « Tu es convoque » en montrait 9 pour le meme match. La
+  // carte avait ete postee a la version 1 ; la compo avait ete republiee depuis.
+  //
+  // ⚖️ UNE requete, a l'ouverture du plateau — jamais au rendu du fil, ou chaque
+  // carte d'un historique en couterait une. Meme clef de cache que « Tu es
+  // convoque » et la page de l'evenement : la relecture les rafraichit aussi.
+  // ⛔ En echec, on ne casse rien : la photo de la carte reste a l'ecran.
+  useEffect(() => {
+    if (!isReadOnly || !refreshFromServer || !eventId) return undefined;
+    if (typeof queryClient?.fetchQuery !== 'function') return undefined;
+    let actif = true;
+    queryClient.fetchQuery({
+      queryFn: () => getEventConvocation(eventId, teamId),
+      queryKey: ['eventConvocation', eventId, teamId || 'auto'],
+    }).then((/** @type {any} */ convocation) => {
+      if (!actif) return;
+      const branche = findPublishedBranchForTeam(convocation, teamId);
+      const cible = buildPublishedBoardTarget(branche?.published, {
+        sport,
+        teamName: branche?.team?.name || teamName,
+      });
+      if (!cible) return;
+      setRelectureServeur({
+        ...cible,
+        refreshFromServer: false,
+        serverVersion: cible.publishedVersion,
+      });
+    }).catch(() => {});
+    return () => { actif = false; };
+  }, [eventId, isReadOnly, queryClient, refreshFromServer, sport, teamId, teamName]);
+
+  // 🪧 La carte etait-elle depassee ? On ne le dit que si les DEUX versions sont
+  // connues : une carte ancienne sans numero ne declenche aucun bandeau.
+  const isMessageOutdated = isReadOnly
+    && Number(serverVersion) > 0
+    && Number(messageVersion) > 0
+    && Number(serverVersion) > Number(messageVersion);
 
   const [placements, setPlacements] = useState(() => (
     Array.isArray(startPlacements) ? startPlacements : EMPTY_LIST
@@ -601,9 +660,16 @@ function MatchCompositionBoard() {
         </View>
 
         <View style={styles.chipRow}>
-          {renderChip(t('matchComposition.board.chips.placed', {
-            placed: counters.placed, starters: counters.starters,
-          }), true)}
+          {/* 👀 COMPOMSG — « 8/11 places » compte les POSTES ENCORE VIDES : c'est
+              un outil d'entraineur. Un lecteur (joueur, dirigeant) lit ce qu'il
+              cherche : combien de titulaires. L'entraineur garde sa pastille. */}
+          {isReadOnly && !canEdit
+            ? renderChip(t('matchComposition.board.chips.starters', {
+              count: counters.placed,
+            }), true)
+            : renderChip(t('matchComposition.board.chips.placed', {
+              placed: counters.placed, starters: counters.starters,
+            }), true)}
           {renderChip(t('matchComposition.board.chips.bench', { count: counters.bench }), false)}
           <View style={styles.chipSpacer} />
           {/* La pastille d'aimantation decrit un GESTE de placement : en
@@ -613,6 +679,24 @@ function MatchCompositionBoard() {
             ? t('matchComposition.board.chips.magnet')
             : t('matchComposition.board.chips.freePlacement'), false)}
         </View>
+
+        {/* 🪧 COMPOMSG — la carte du fil etait une version DEPASSEE : on le dit,
+            sinon le lecteur croit que la compo a change sous ses yeux. */}
+        {isMessageOutdated ? (
+          <View
+            style={[
+              styles.versionBanner,
+              {
+                backgroundColor: withAlpha(Colors.primary500, 0.12),
+                borderColor: withAlpha(Colors.primary500, 0.45),
+              },
+            ]}
+          >
+            <Text style={[Fonts.p4, { color: Colors.neutral00 }]}>
+              {t('matchComposition.board.updatedSinceMessage', { version: serverVersion })}
+            </Text>
+          </View>
+        ) : null}
 
         <View style={styles.fieldWrapper}>
           <View
@@ -1099,6 +1183,15 @@ const styles = StyleSheet.create({
     gap: 12,
     justifyContent: 'space-between',
     paddingVertical: 12,
+  },
+  // Memes marges que la rangee des pastilles juste au-dessus.
+  versionBanner: {
+    borderRadius: 12,
+    borderWidth: 1,
+    marginBottom: 12,
+    marginHorizontal: 16,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
   },
 });
 
