@@ -181,18 +181,21 @@ function MessageReactionOverlay({
           style={[bande, {
             height: Math.max(0, anchor.y), left: 0, right: 0, top: 0,
           }]}
+          testID="WHATSAPP-voile-haut"
         />
         <Pressable
           onPress={fermer}
           style={[bande, {
             bottom: 0, height: Math.max(0, hauteurEcran - basDeLaBulle), left: 0, right: 0,
           }]}
+          testID="WHATSAPP-voile-bas"
         />
         <Pressable
           onPress={fermer}
           style={[bande, {
             height: anchor.height, left: 0, top: anchor.y, width: Math.max(0, anchor.x),
           }]}
+          testID="WHATSAPP-voile-gauche"
         />
         <Pressable
           onPress={fermer}
@@ -202,6 +205,7 @@ function MessageReactionOverlay({
             top: anchor.y,
             width: Math.max(0, largeurEcran - anchor.x - anchor.width),
           }]}
+          testID="WHATSAPP-voile-droite"
         />
       </>
     );
