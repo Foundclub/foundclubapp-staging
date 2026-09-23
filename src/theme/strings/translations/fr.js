@@ -14204,6 +14204,7 @@ export default {
       description: 'Correspond à la description',
       location: 'Correspond au lieu',
       locationFuzzy: 'Lieu proche de la recherche',
+      nameContains: 'Correspondance dans le nom',
       nameExact: 'Correspondance exacte du nom',
       nameFuzzy: 'Nom proche de la recherche',
       namePrefix: 'Correspondance du nom',

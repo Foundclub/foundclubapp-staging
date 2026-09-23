@@ -488,6 +488,8 @@ export const getMatchReasonLabel = (reason) => {
       return i18next.t('searchService.matchReason.locationFuzzy', 'Lieu proche de la recherche');
     case 'LOCATION_MATCH':
       return i18next.t('searchService.matchReason.location', 'Correspond au lieu');
+    case 'NAME_CONTAINS':
+      return i18next.t('searchService.matchReason.nameContains', 'Correspondance dans le nom');
     case 'NAME_EXACT':
       return i18next.t('searchService.matchReason.nameExact', 'Correspondance exacte du nom');
     case 'NAME_FUZZY':

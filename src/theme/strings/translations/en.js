@@ -13564,6 +13564,7 @@ export default {
       description: 'Matches the description',
       location: 'Matches the location',
       locationFuzzy: 'Location close to the search',
+      nameContains: 'Match inside the name',
       nameExact: 'Exact name match',
       nameFuzzy: 'Name close to the search',
       namePrefix: 'Name match',
