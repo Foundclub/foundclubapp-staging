@@ -13569,6 +13569,7 @@ export default {
       nameFuzzy: 'Name close to the search',
       namePrefix: 'Name match',
       nearby: 'Nearby',
+      sponsor: 'Matches the sponsor',
       team: 'Matches the team',
     },
   },
