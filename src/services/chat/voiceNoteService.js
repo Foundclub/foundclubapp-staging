@@ -36,6 +36,7 @@ let recorderInstance = null;
  * @type {{
  *   durationMs: number; filePath: string; isBusy: boolean; isRecording: boolean;
  *   meteringSamples: number[]; recorderStart: string; recorderStartError: string;
+ *   recorderStartErrors: string[]; recorderStartMs: number;
  * }}
  */
 let recordingSession = {
@@ -46,6 +47,8 @@ let recordingSession = {
   meteringSamples: [],
   recorderStart: '',
   recorderStartError: '',
+  recorderStartErrors: [],
+  recorderStartMs: 0,
 };
 
 const safeRead = (resolver, context, fallback = null) => {
@@ -207,6 +210,8 @@ const resetSession = () => {
     meteringSamples: [],
     recorderStart: '',
     recorderStartError: '',
+    recorderStartErrors: [],
+    recorderStartMs: 0,
   };
 };
 
@@ -359,6 +364,8 @@ const buildMeteringDiagnostics = (samples, waveformSource) => {
   const demarrage = {
     recorderStart: recordingSession.recorderStart,
     recorderStartError: recordingSession.recorderStartError,
+    recorderStartErrors: recordingSession.recorderStartErrors,
+    recorderStartMs: recordingSession.recorderStartMs,
   };
 
   if (numericSamples.length === 0) {
@@ -391,32 +398,47 @@ const buildMeteringDiagnostics = (samples, waveformSource) => {
 // retentait SANS ce 3e argument : un premier démarrage raté, et le vocal
 // partait muet de bout en bout — onde vivante immobile, onde enregistrée de
 // secours (le même sinus sur tous les vocaux d'Adel du 23/09).
-// Chaque essai garde maintenant la mesure ; seuls les RÉGLAGES s'allègent :
-// sans le mode de session iOS « measurement », puis sans aucun réglage. Le
-// démarrage retenu et la première erreur voyagent dans `diagnostics`, jusqu'à
-// la `composition` du message : le prochain vocal raté se lira en base.
+// Chaque essai garde maintenant la mesure ; seuls les RÉGLAGES changent. Le
+// démarrage retenu, CHAQUE refus et le temps jusqu'au démarrage effectif
+// voyagent dans `diagnostics`, jusqu'à la `composition` du message.
+//
+// VOCAL-RÉGLAGES — CE QUE LA BASE A DIT (vocal 4705, TestFlight 2.6.61) :
+// `recorderStart: defaults`, « Recording setup failed: Failed to prepare
+// recorder » (Sound.swift:143-147). AVEC la mesure, nos réglages (mono,
+// 44,1 kHz, 128 kbit/s) sont refusés ; SANS elle ils passaient (2.6.60, pente
+// 140 kbit/s, voix audible) ; les défauts (48 kHz, STÉRÉO, 192 kbit/s)
+// passent AVEC. L'iPhone enregistrait donc en stéréo : 1,5 fois trop lourd.
+// L'échelle change UN facteur à la fois pour que la base désigne le coupable :
+// le DÉBIT seul (96 kbit/s, celui des défauts par canal), puis la FRÉQUENCE
+// seule (48 kHz). ⚠️ Retirer `AudioEncodingBitRate` ne laisserait PAS iOS
+// choisir : il retomberait sur le préréglage « high », 192 kbit/s en mono
+// (Sound.swift:14-17 puis 741).
+// Sortie : quand la base aura désigné l'essai qui prend, le mettre en tête.
 // Témoin : `__tests__/voiceNoteService.contratNatif.test.js`.
 /**
- * Les trois démarrages, du plus complet au plus nu : la mesure reste allumée à chacun.
+ * Les quatre démarrages, de nos réglages aux défauts : la mesure reste allumée à chacun.
  * @type {Array<[string, (audioSet: any) => any]>}
  */
 const ESSAIS_DE_DEMARRAGE = [
   ['full', (audioSet) => audioSet],
-  ['noIosMode', ({ AVModeIOS, ...reglages }) => reglages],
+  ['bitrate96', (audioSet) => ({ ...audioSet, AudioEncodingBitRate: 96000 })],
+  ['mono48k', (audioSet) => ({ ...audioSet, AudioSamplingRate: 48000, AVSampleRateKeyIOS: 48000 })],
   ['defaults', () => undefined],
 ];
 /** Au plus 160 caractères d'erreur voyagent avec le message. */
 const LONGUEUR_ERREUR_DEMARRAGE = 160;
 
 /**
- * Démarre le micro, mesure allumée, en allégeant les réglages à chaque échec.
+ * Démarre le micro, mesure allumée, en changeant les réglages à chaque refus.
  * @param {any} recorder - L'enregistreur natif.
  * @param {string} filePath - Le fichier à écrire.
  * @param {any} audioSet - Tous nos réglages.
- * @returns {Promise<{ essai: string, premiereErreur: any }>} Le démarrage retenu.
+ * @returns {Promise<{ essai: string, refus: Array<{ essai: string, erreur: any }> }>}
+ *   Le démarrage retenu, et chaque refus avant lui, dans l'ordre.
  */
 const demarrerAvecMesure = async (recorder, filePath, audioSet) => {
-  let premiereErreur = null;
+  /** @type {Array<{ essai: string, erreur: any }>} */
+  const refus = [];
   let derniereErreur = null;
   for (let rang = 0; rang < ESSAIS_DE_DEMARRAGE.length; rang += 1) {
     const [essai, reglages] = ESSAIS_DE_DEMARRAGE[rang];
@@ -424,9 +446,9 @@ const demarrerAvecMesure = async (recorder, filePath, audioSet) => {
       // Un essai après l'autre : jamais deux démarrages du micro en même temps.
       // eslint-disable-next-line no-await-in-loop
       await recorder.startRecorder(filePath, reglages(audioSet), true);
-      return { essai, premiereErreur };
+      return { essai, refus };
     } catch (erreur) {
-      premiereErreur = premiereErreur || erreur;
+      refus.push({ erreur, essai });
       derniereErreur = erreur;
       voiceNoteLogger.warn('startRecorder failed, retrying with lighter settings (metering kept)', {
         essai,
@@ -464,6 +486,8 @@ export const isVoiceNoteRecordingSupported = () => safeRead(
  * @returns {Promise<{ filePath: string }>}
  */
 export const startRecording = async (params = {}) => {
+  // Le temps jusqu'au démarrage effectif part d'ici : le doigt vient de se poser.
+  const debut = Date.now();
   const recorder = getRecorder();
   if (!recorder) throw new Error('VOICE_MODULE_UNAVAILABLE');
   if (recordingSession.isBusy || recordingSession.isRecording) throw new Error('VOICE_ALREADY_RECORDING');
@@ -476,6 +500,8 @@ export const startRecording = async (params = {}) => {
     meteringSamples: [],
     recorderStart: '',
     recorderStartError: '',
+    recorderStartErrors: [],
+    recorderStartMs: 0,
   };
 
   const hasPermission = await ensureRecordPermission();
@@ -510,10 +536,15 @@ export const startRecording = async (params = {}) => {
   });
 
   try {
-    const { essai, premiereErreur } = await demarrerAvecMesure(recorder, filePath, buildAudioSet());
+    const { essai, refus } = await demarrerAvecMesure(recorder, filePath, buildAudioSet());
+    recordingSession.recorderStartMs = Math.max(0, Date.now() - debut);
     recordingSession.recorderStart = essai;
-    recordingSession.recorderStartError = String(premiereErreur?.message || '')
+    recordingSession.recorderStartError = String(refus[0]?.erreur?.message || '')
       .slice(0, LONGUEUR_ERREUR_DEMARRAGE);
+    recordingSession.recorderStartErrors = refus.map((un) => {
+      const message = String(un.erreur?.message || un.erreur || '');
+      return `${un.essai}: ${message}`.slice(0, LONGUEUR_ERREUR_DEMARRAGE);
+    });
 
     recordingSession.isRecording = true;
     recordingSession.isBusy = false;
@@ -543,6 +574,8 @@ export const startRecording = async (params = {}) => {
  *     waveformSource: 'metering' | 'fallback';
  *     recorderStart: string;
  *     recorderStartError: string;
+ *     recorderStartErrors: string[];
+ *     recorderStartMs: number;
  *   };
  * }>}
  */

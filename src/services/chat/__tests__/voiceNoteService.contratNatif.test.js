@@ -17,6 +17,13 @@
 //
 // 🧨 LE DÉFAUT : si le premier démarrage échouait, le service retentait SANS
 // le 3e argument. L'enregistrement partait, mais muet de bout en bout.
+//
+// VOCAL-RÉGLAGES — CE QUE LA BASE A DIT ENSUITE (vocal 4705, TestFlight 2.6.61) :
+// `recorderStart: defaults`, 1re erreur « Recording setup failed: Failed to
+// prepare recorder » (Sound.swift:143-147, puis 376). Avec la mesure, NOS
+// réglages sont refusés au `prepareToRecord` ; les défauts (48 kHz, stéréo,
+// 192 kbit/s) passent. L'échelle change donc UN facteur à la fois — le débit,
+// puis la fréquence — et chaque refus voyage jusqu'en base.
 
 /** Le micro natif : ses démarrages, sa mesure, et le rappel par lequel il parle. */
 const mockNatif = {
@@ -24,8 +31,17 @@ const mockNatif = {
   ecoute: /** @type {any} */ (null),
   /** Combien de démarrages échouent d'abord (session audio refusée, par exemple). */
   echecs: 0,
+  /** La durée d'un essai de démarrage, sur l'horloge de la doublure. */
+  dureeEssai: 0,
   fichier: '',
+  /** L'horloge de la doublure (`Date.now`, quand un témoin l'y branche). */
+  maintenant: 0,
   mesure: false,
+  /**
+   * Les réglages que `prepareToRecord` refuse (Sound.swift:143-147).
+   * @type {null | ((reglages: any, mesure: boolean | undefined) => boolean)}
+   */
+  refuse: null,
 };
 
 jest.mock('@/utils/audio/nitroSoundRuntime', () => ({ canLoadNitroSoundModule: () => true }));
@@ -52,6 +68,11 @@ jest.mock('react-native-nitro-sound', () => ({
       /** @type {boolean | undefined} */ meteringEnabled,
     ) => {
       mockNatif.appels.push([uri, audioSets, meteringEnabled]);
+      mockNatif.maintenant += mockNatif.dureeEssai;
+      if (mockNatif.refuse && mockNatif.refuse(audioSets, meteringEnabled)) {
+        // Le message réel reçu en base le 23/09 (Sound.swift:147, puis 376).
+        return Promise.reject(new Error('Recording setup failed: Failed to prepare recorder'));
+      }
       if (mockNatif.appels.length <= mockNatif.echecs) {
         // Le message réel de Sound.swift:90, numéroté pour distinguer les essais.
         return Promise.reject(new Error(
@@ -109,9 +130,12 @@ describe('VOCAL-MICRO — le micro mesure, même quand le premier démarrage éc
   beforeEach(() => {
     mockNatif.appels.length = 0;
     mockNatif.ecoute = null;
+    mockNatif.dureeEssai = 0;
     mockNatif.echecs = 0;
     mockNatif.fichier = '';
+    mockNatif.maintenant = 0;
     mockNatif.mesure = false;
+    mockNatif.refuse = null;
   });
 
   it('1. démarrage normal : la mesure est allumée et la voix fait bouger l\'onde', async () => {
@@ -135,20 +159,25 @@ describe('VOCAL-MICRO — le micro mesure, même quand le premier démarrage éc
     expect(new Set(brouillon.waveform).size).toBeGreaterThan(1);
   });
 
-  it('3. chaque essai garde la mesure ; seuls les réglages s\'allègent', async () => {
-    mockNatif.echecs = 2;
+  it('3. chaque essai garde la mesure ; un seul facteur change à la fois', async () => {
+    mockNatif.echecs = 3;
     await enregistrer();
 
-    expect(mockNatif.appels.map((appel) => appel[2])).toEqual([true, true, true]);
-    const [premier, deuxieme, troisieme] = mockNatif.appels.map((appel) => appel[1]);
-    // 1er : tous nos réglages, dont le mode iOS « measurement ».
-    expect(premier.AVModeIOS).toBe('measurement');
-    // 2e : les mêmes, SANS le mode iOS (le seul réglage de session audio).
-    expect(deuxieme).not.toHaveProperty('AVModeIOS');
-    expect(deuxieme.AudioEncodingBitRate).toBe(premier.AudioEncodingBitRate);
-    expect(deuxieme.AudioChannels).toBe(1);
-    // 3e : les réglages par défaut de la bibliothèque.
-    expect(troisieme).toBeUndefined();
+    expect(mockNatif.appels.map((appel) => appel[2])).toEqual([true, true, true, true]);
+    const [premier, deuxieme, troisieme, quatrieme] = mockNatif.appels.map((appel) => appel[1]);
+    // 1er : tous nos réglages — mono, 44,1 kHz, 128 kbit/s, mode iOS « measurement ».
+    expect(premier).toMatchObject({
+      AudioChannels: 1,
+      AudioEncodingBitRate: 128000,
+      AVModeIOS: 'measurement',
+      AVSampleRateKeyIOS: 44100,
+    });
+    // 2e : le DÉBIT seul descend à 96 kbit/s (celui des défauts, par canal).
+    expect(deuxieme).toEqual({ ...premier, AudioEncodingBitRate: 96000 });
+    // 3e : la FRÉQUENCE seule passe à 48 kHz (sur iPhone et sur Android).
+    expect(troisieme).toEqual({ ...premier, AudioSamplingRate: 48000, AVSampleRateKeyIOS: 48000 });
+    // 4e : les réglages par défaut de la bibliothèque.
+    expect(quatrieme).toBeUndefined();
   });
 
   it('4. le vocal dit en base QUEL essai a pris, et pourquoi le premier a raté', async () => {
@@ -160,7 +189,7 @@ describe('VOCAL-MICRO — le micro mesure, même quand le premier démarrage éc
     mockNatif.appels.length = 0;
     mockNatif.echecs = 1;
     const rattrape = (await enregistrer()).brouillon.diagnostics;
-    expect(rattrape.recorderStart).toBe('noIosMode');
+    expect(rattrape.recorderStart).toBe('bitrate96');
     expect(rattrape.recorderStartError).toMatch(/^Audio session setup failed/);
     expect(rattrape.recorderStartError.length).toBeLessThanOrEqual(160);
 
@@ -168,13 +197,75 @@ describe('VOCAL-MICRO — le micro mesure, même quand le premier démarrage éc
     mockNatif.appels.length = 0;
     mockNatif.echecs = 2;
     const deuxEchecs = (await enregistrer()).brouillon.diagnostics;
-    expect(deuxEchecs.recorderStart).toBe('defaults');
+    expect(deuxEchecs.recorderStart).toBe('mono48k');
     expect(deuxEchecs.recorderStartError).toMatch(/\[essai 1\]$/);
   });
 
-  it('5. trois démarrages ratés : l\'erreur remonte et rien ne démarre', async () => {
-    mockNatif.echecs = 3;
+  it('5. quatre démarrages ratés : l\'erreur remonte et rien ne démarre', async () => {
+    mockNatif.echecs = 4;
     await expect(startRecording({})).rejects.toThrow('Audio session setup failed');
-    expect(mockNatif.appels).toHaveLength(3);
+    expect(mockNatif.appels).toHaveLength(4);
+  });
+});
+
+describe('VOCAL-RÉGLAGES — quels réglages l\'iPhone accepte-t-il avec la mesure ?', () => {
+  beforeEach(() => {
+    mockNatif.appels.length = 0;
+    mockNatif.dureeEssai = 0;
+    mockNatif.echecs = 0;
+    mockNatif.maintenant = 0;
+    mockNatif.refuse = null;
+  });
+
+  it('6. le constat du 23/09 rejoué : chaque refus voyage en base, dans l\'ordre', async () => {
+    // 2.6.61 : AVEC la mesure, tous nos réglages sont refusés ; les défauts passent.
+    mockNatif.refuse = (reglages, mesure) => Boolean(mesure) && reglages !== undefined;
+    const { brouillon } = await enregistrer();
+    const { diagnostics } = brouillon;
+
+    expect(diagnostics.recorderStart).toBe('defaults');
+    expect(diagnostics.waveformSource).toBe('metering');
+    expect(diagnostics.recorderStartErrors).toEqual([
+      'full: Recording setup failed: Failed to prepare recorder',
+      'bitrate96: Recording setup failed: Failed to prepare recorder',
+      'mono48k: Recording setup failed: Failed to prepare recorder',
+    ]);
+    // La 1re erreur reste lisible au même endroit qu'en 2.6.61.
+    expect(diagnostics.recorderStartError)
+      .toBe('Recording setup failed: Failed to prepare recorder');
+  });
+
+  it('7. si c\'est le DÉBIT, l\'essai à 96 kbit/s prend, en mono', async () => {
+    mockNatif.refuse = (reglages, mesure) => Boolean(mesure)
+      && Number(reglages?.AudioEncodingBitRate) > 96000;
+    const { diagnostics } = (await enregistrer()).brouillon;
+
+    expect(diagnostics.recorderStart).toBe('bitrate96');
+    expect(mockNatif.appels).toHaveLength(2);
+    expect(mockNatif.appels[1][1]).toMatchObject({ AudioChannels: 1, AudioEncodingBitRate: 96000 });
+  });
+
+  it('8. si c\'est la FRÉQUENCE, l\'essai à 48 kHz prend, en mono', async () => {
+    mockNatif.refuse = (reglages, mesure) => Boolean(mesure)
+      && reglages?.AVSampleRateKeyIOS === 44100;
+    const { diagnostics } = (await enregistrer()).brouillon;
+
+    expect(diagnostics.recorderStart).toBe('mono48k');
+    expect(mockNatif.appels[2][1]).toMatchObject({ AudioChannels: 1, AVSampleRateKeyIOS: 48000 });
+  });
+
+  it('9. le temps jusqu\'au démarrage effectif est mesuré (recorderStartMs)', async () => {
+    const horloge = jest.spyOn(Date, 'now').mockImplementation(() => mockNatif.maintenant);
+    try {
+      mockNatif.dureeEssai = 150;
+      expect((await enregistrer()).brouillon.diagnostics.recorderStartMs).toBe(150);
+
+      mockNatif.appels.length = 0;
+      mockNatif.refuse = (reglages, mesure) => Boolean(mesure) && reglages !== undefined;
+      // Trois refus puis les défauts : quatre essais de 150 ms.
+      expect((await enregistrer()).brouillon.diagnostics.recorderStartMs).toBe(600);
+    } finally {
+      horloge.mockRestore();
+    }
   });
 });
