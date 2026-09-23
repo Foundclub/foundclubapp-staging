@@ -370,6 +370,17 @@ const releasePlaybackSlot = (/** @type {string} */ ownerId) => {
 };
 
 /**
+ * VOCAL — un seul son à la fois : appuyer sur le micro coupe le vocal qu'on
+ * écoutait (section « Gestes » de la maquette, « Lecture en cours »).
+ * @returns {void}
+ */
+export const pauseActivePlayback = () => {
+  const { stop } = activePlayback;
+  if (typeof stop !== 'function') return;
+  Promise.resolve(stop()).catch(() => {});
+};
+
+/**
  * Playback hook with local-cache strategy for remote audio sources.
  *
  * @param {{ sourceUrl?: string; headers?: Record<string, string>; allowExternalFallback?: boolean }} params

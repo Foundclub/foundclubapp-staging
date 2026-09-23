@@ -33,10 +33,16 @@ import {
 
 const mockGiftedRenders = /** @type {any[]} */ ([]);
 
-jest.mock('react-native-gesture-handler', () => {
-  const { View: VueRN } = jest.requireActual('react-native');
-  return { Swipeable: VueRN };
-});
+// VOCAL — la barre de saisie porte la zone vocale (Reanimated + Gesture Handler) :
+// doublures partagées, qui gardent `Swipeable` et enregistrent les gestes.
+jest.mock('react-native-gesture-handler', () => (
+  // eslint-disable-next-line global-require
+  require('@/testSupport/animationDouble').gestureHandler()
+));
+jest.mock('react-native-reanimated', () => (
+  // eslint-disable-next-line global-require
+  require('@/testSupport/animationDouble').reanimated()
+));
 
 // La doublure RENVOIE le pied de liste : c'est lui qu'on mesure.
 jest.mock('react-native-gifted-chat', () => {
@@ -64,7 +70,14 @@ jest.mock('react-native-safe-area-context', () => ({
 jest.mock('react-native-svg', () => {
   const { View: VueRN } = jest.requireActual('react-native');
   return {
-    __esModule: true, default: VueRN, Path: VueRN, Rect: VueRN,
+    __esModule: true,
+    Circle: VueRN,
+    default: VueRN,
+    Line: VueRN,
+    Path: VueRN,
+    Polyline: VueRN,
+    Rect: VueRN,
+    Svg: VueRN,
   };
 });
 jest.mock(
@@ -133,7 +146,11 @@ jest.mock('react-i18next', () => ({
   }),
 }));
 
-jest.mock('@/hooks/useAudioPlayback', () => ({ __esModule: true, default: () => ({}) }));
+jest.mock('@/hooks/useAudioPlayback', () => ({
+  __esModule: true,
+  default: () => ({}),
+  pauseActivePlayback: () => {},
+}));
 jest.mock('@/hooks/useLeagueLegalAcceptance', () => ({ __esModule: true, default: () => ({}) }));
 jest.mock('@/services/chat/voiceNoteService', () => ({
   cancelRecording: jest.fn(),

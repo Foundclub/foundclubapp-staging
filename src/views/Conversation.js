@@ -17,7 +17,6 @@ import {
   Keyboard,
   Linking,
   Modal,
-  PanResponder,
   PermissionsAndroid,
   Platform,
   ScrollView,
@@ -37,7 +36,6 @@ import {
 } from 'react-native-gifted-chat';
 import { launchCamera, launchImageLibrary } from 'react-native-image-picker';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Svg, { Path, Rect } from 'react-native-svg';
 
 import {
   getAuthTokens,
@@ -66,6 +64,7 @@ import {
   resolveOtherParticipantId,
   toBlockedUserIdSet,
 } from '@/domains/userBlock/userBlockFilters';
+import { withAlpha } from '@/theme/colors';
 import i18n from '@/theme/strings';
 import localeDesFormats from '@/theme/strings/localeDesFormats';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
@@ -73,6 +72,7 @@ import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
 import ErrorWrapper from '@/components/atoms/errorWrapper/ErrorWrapper';
+import GlyphIcon from '@/components/atoms/glyphIcon/GlyphIcon';
 import HeaderBackButton from '@/components/atoms/headerBackButton/HeaderBackButton';
 import BottomModal from '@/components/molecules/bottomModal/BottomModal';
 import ChatReactionsRow from '@/components/molecules/chatReactions/ChatReactionsRow';
@@ -87,7 +87,6 @@ import MessageReactionOverlay from '@/components/molecules/messageReactionOverla
 import PollMessageBubble from '@/components/molecules/pollMessageBubble/PollMessageBubble';
 import ProposalMessageBubble from '@/components/molecules/proposalMessageBubble/ProposalMessageBubble';
 import TypingIndicator from '@/components/molecules/typingIndicator/TypingIndicator';
-import VoiceLevelBars from '@/components/molecules/voiceLevelBars/VoiceLevelBars';
 import VoiceNoteBubble from '@/components/molecules/voiceNoteBubble/VoiceNoteBubble';
 import WithDataWrapper from '@/components/molecules/withDataWrapper/WithDataWrapper';
 import AutocompleteAddressInput from '@/components/organisms/autocompleteAddressInput/autocompleteAddressInput';
@@ -96,6 +95,10 @@ import JoinEventModal from '@/components/organisms/joinEventModal/JoinEventModal
 import PollCreationModal from '@/components/organisms/pollCreationModal/PollCreationModal';
 import GlobalPromptModal from '@/components/organisms/popup/GlobalPromptModal';
 import VenueProposalModal from '@/components/organisms/venueProposalModal/VenueProposalModal';
+import VoiceComposerZone, {
+  VoiceRestFade,
+  VoiceSendAppear,
+} from '@/components/organisms/voiceComposer/VoiceComposerZone';
 import { useEventAnswerMutations } from '@/views/event/hooks/useEventAnswerMutations';
 import {
   buildFriendlyProposalConfirmation,
@@ -117,18 +120,9 @@ import {
   useGetChatMessages,
 } from '@/services/chat/chatQueriesCompat';
 import {
-  cancelRecording,
   deleteVoiceNoteFile,
   isVoiceNoteRecordingSupported,
-  startRecording,
-  stopRecording,
 } from '@/services/chat/voiceNoteService';
-import {
-  clampNumber,
-  toVoiceWaveBarHeight,
-  VOICE_WAVEFORM_MAX_BARS,
-  VOICE_WAVEFORM_VISIBLE_BARS,
-} from '@/services/chat/voiceWaveform';
 import client from '@/services/client';
 import { useGetEvents } from '@/services/event/eventQueries';
 import { createEventParticipation } from '@/services/eventParticipation/eventParticipationService';
@@ -162,7 +156,6 @@ import safeJsonParse from '@/utils/safeJsonParse';
 import { getApiBaseUrl, getPublicApiOrigin } from '@/config/runtimeUrls';
 import { LEAGUE_LEGAL_SCOPES } from '@/constants/leagueLegalAcceptance';
 import { useAppFeedback } from '@/context/AppFeedbackContext';
-import useAudioPlayback from '@/hooks/useAudioPlayback';
 import useLeagueLegalAcceptance from '@/hooks/useLeagueLegalAcceptance';
 import useSafeTimers from '@/hooks/useSafeTimers';
 import { EVENTS } from '@/hooks/useSocket';
@@ -217,18 +210,9 @@ const TYPING_START_THROTTLE_MS = 1000;
 // seconde au plus : six signaux manqués d'affilée, ce n'est plus un blanc dans
 // la frappe, c'est quelqu'un qui a posé son téléphone (ou perdu le réseau).
 const TYPING_IDLE_TIMEOUT_MS = 6000;
-const VOICE_GESTURE_CANCEL_THRESHOLD = -64;
-const VOICE_GESTURE_LOCK_THRESHOLD = -64;
 
 const MESSAGE_REPLY_SWIPE_THRESHOLD = 44;
 const MESSAGE_REPLY_SWIPE_ACTION_WIDTH = 68;
-const VOICE_RECORDING_STATES = {
-  error: 'error',
-  idle: 'idle',
-  locked: 'locked',
-  recording: 'recording',
-  sending: 'sending',
-};
 
 const NON_EDITABLE_MESSAGE_COMPOSITION_TYPES = new Set([
   'contact_share',
@@ -320,22 +304,6 @@ const getClipboardModule = () => {
   }
 };
 
-/**
- *
- * @param {object} props
- * @param {string} [props.color]
- * @returns {import('react').ReactElement}
- */
-function MicrophoneGlyph({ color = '#ffffff' }) {
-  return (
-    <Svg fill="none" height={16} viewBox="0 0 24 24" width={16}>
-      <Rect height={11} rx={3.5} stroke={color} strokeWidth={1.8} width={7} x={8.5} y={3} />
-      <Path d="M6.5 11.5C6.5 15.0899 8.91015 17.5 12 17.5C15.0899 17.5 17.5 15.0899 17.5 11.5" stroke={color} strokeLinecap="round" strokeWidth={1.8} />
-      <Path d="M12 17.5V21" stroke={color} strokeLinecap="round" strokeWidth={1.8} />
-      <Path d="M9.5 21H14.5" stroke={color} strokeLinecap="round" strokeWidth={1.8} />
-    </Svg>
-  );
-}
 // Y01 — le plafond des IMAGES et sa phrase viennent desormais de
 // `@/platform/media/photoLimits` : c'etait la seule verite du depot sur la
 // taille d'une photo, et elle etait recopiee ici. Les trois autres plafonds
@@ -1144,25 +1112,6 @@ function Conversation({ navigation, route }) {
   const [pendingMediaDraft, setPendingMediaDraft] = useState(
     /** @type {{ asset: AttachmentAsset } | null} */ (null),
   );
-  const [pendingVoiceDraft, setPendingVoiceDraft] = useState(
-    /**
-     * @type {{
-     *  durationMs: number;
-     *  fileName: string;
-     *  diagnostics?: {
-     *    maxDb: number | null;
-     *    minDb: number | null;
-     *    rangeDb: number;
-     *    sampleCount: number;
-     *    waveformSource: 'metering' | 'fallback';
-     *  };
-     *  mime: string;
-     *  size: number;
-     *  uri: string;
-     *  waveform: number[];
-      } | null} */
-    (null),
-  );
   const [isUploading, setIsUploading] = useState(false);
   const [isAttachmentMenuVisible, setIsAttachmentMenuVisible] = useState(false);
   const [isPollModalVisible, setIsPollModalVisible] = useState(false);
@@ -1196,34 +1145,7 @@ function Conversation({ navigation, route }) {
     /** @type {null | (() => Promise<void> | void)} */ (null),
   );
 
-  const [voiceRecordingState, setVoiceRecordingState] = useState(VOICE_RECORDING_STATES.idle);
-  const [voiceRecordingDurationMs, setVoiceRecordingDurationMs] = useState(0);
-  const [voiceRecordingHint, setVoiceRecordingHint] = useState('');
   const loggedAttachmentShapeMessageIdsRef = useRef(new Set());
-  const voiceRecordingStateRef = useRef(VOICE_RECORDING_STATES.idle);
-  // MSGLIVE — la poignée des barres de niveau. Les hauteurs ne passent plus par
-  // l'état de cet écran : on les pousse ici, et seules les barres se
-  // redessinent. Mesuré : 101 rendus de l'écran pour 5 s de vocal, contre 6.
-  const voiceLevelBarsRef = useRef(/** @type {any} */ (null));
-  // La dernière seconde AFFICHÉE par le chronomètre. Le micro en annonce dix
-  // par seconde ; le libellé n'en montre qu'une.
-  const derniereSecondeAffichee = useRef(-1);
-
-  const isVoiceRecording = voiceRecordingState === VOICE_RECORDING_STATES.recording
-    || voiceRecordingState === VOICE_RECORDING_STATES.locked
-    || voiceRecordingState === VOICE_RECORDING_STATES.sending;
-  const isVoiceRecordingLocked = voiceRecordingState === VOICE_RECORDING_STATES.locked;
-  const isSendingVoiceNote = voiceRecordingState === VOICE_RECORDING_STATES.sending;
-  const hasActiveVoiceSession = isVoiceRecording || isVoiceRecordingLocked || isSendingVoiceNote;
-  const {
-    durationMs: draftPlaybackDurationMs,
-    isPlaying: isDraftVoicePlaying,
-    lastError: draftPlaybackError,
-    positionMs: draftPlaybackPositionMs,
-    progress: draftPlaybackProgress,
-    stopPlayback: stopDraftVoicePlayback,
-    togglePlayback: toggleDraftVoicePlayback,
-  } = useAudioPlayback({ sourceUrl: pendingVoiceDraft?.uri || '' });
 
   // Event Participation Logic
   const queryClient = useQueryClient();
@@ -1243,10 +1165,6 @@ function Conversation({ navigation, route }) {
     () => resolveParticipationFlow(selectedEvent, { user: userData }),
     [selectedEvent, userData],
   );
-
-  useEffect(() => {
-    voiceRecordingStateRef.current = voiceRecordingState;
-  }, [voiceRecordingState]);
 
   const createEventParticipationMutation = useMutation({
     mutationFn: createEventParticipation,
@@ -1521,18 +1439,6 @@ function Conversation({ navigation, route }) {
       minuteries.clear();
     };
   }, [socket, chatId, userData?.documentId]);
-
-  useEffect(() => () => {
-    if (voiceRecordingStateRef.current !== VOICE_RECORDING_STATES.idle) {
-      cancelRecording().catch(() => {});
-    }
-  }, []);
-
-  useEffect(() => () => {
-    const currentDraftUri = String(pendingVoiceDraft?.uri || '').trim();
-    if (!currentDraftUri) return;
-    deleteVoiceNoteFile(currentDraftUri).catch(() => {});
-  }, [pendingVoiceDraft?.uri]);
 
   // MSG1/N5 — ARRETER LA FRAPPE REARME LE RALENTISSEUR. Sans ca, le caractere
   // tape juste apres un envoi ne reprevient personne pendant une seconde : le
@@ -3010,248 +2916,6 @@ function Conversation({ navigation, route }) {
     });
   };
 
-  const resetVoiceRecordingState = useCallback(() => {
-    setVoiceRecordingState(VOICE_RECORDING_STATES.idle);
-    setVoiceRecordingDurationMs(0);
-    setVoiceRecordingHint('');
-    derniereSecondeAffichee.current = -1;
-    voiceLevelBarsRef.current?.reinitialiser();
-  }, []);
-
-  const handleStartVoiceRecording = useCallback(async () => {
-    if (pendingVoiceDraft?.uri) {
-      stopDraftVoicePlayback().catch(() => {});
-    }
-
-    if (!canRecordVoiceNote || !chatId) {
-      showInfoBanner(
-        t('conversation.voice.unavailableDescription', 'Le module vocal n\'est pas disponible sur cette build.'),
-        t('conversation.voice.unavailableTitle', 'Vocal indisponible'),
-      );
-      return;
-    }
-
-    if (voiceRecordingStateRef.current !== VOICE_RECORDING_STATES.idle) return;
-    logVoiceDiagnostic('record-start-requested', {
-      chatId,
-      hasPendingDraft: Boolean(pendingVoiceDraft?.uri),
-    });
-    try {
-      setVoiceRecordingHint(t('conversation.voice.hint', 'Glisser gauche pour annuler, glisser haut pour verrouiller.'));
-      setVoiceRecordingDurationMs(0);
-      derniereSecondeAffichee.current = -1;
-      voiceLevelBarsRef.current?.reinitialiser();
-      await startRecording({
-        // MSGLIVE — LES NIVEAUX NE REMONTENT PLUS JUSQU'ICI. Ils sont poussés
-        // directement dans les barres, qui se redessinent seules. Avant, chaque
-        // niveau redessinait l'écran ENTIER — 7 400 lignes, dix fois par
-        // seconde.
-        onMetering: (metering, durationMs) => {
-          voiceLevelBarsRef.current?.pousser(metering, durationMs);
-        },
-        // MSGLIVE — LE CHRONOMÈTRE NE COMPTE QUE LES SECONDES ENTIÈRES, parce
-        // que c'est tout ce que le libellé affiche (`formatDurationLabel`).
-        // Le micro, lui, rend compte toutes les 100 ms : sans ce garde, neuf
-        // rendus d'écran sur dix servaient à réécrire exactement le même
-        // « 00:03 ».
-        onProgress: (durationMs) => {
-          const seconde = Math.floor((Number(durationMs) || 0) / 1000);
-          if (seconde === derniereSecondeAffichee.current) return;
-          derniereSecondeAffichee.current = seconde;
-          setVoiceRecordingDurationMs(durationMs);
-        },
-      });
-      setVoiceRecordingState(VOICE_RECORDING_STATES.recording);
-      logVoiceDiagnostic('record-start-succeeded', { chatId });
-    } catch (error) {
-      const safeError = /** @type {any} */ (error);
-      const code = String(safeError?.message || '');
-      logVoiceDiagnostic('record-start-failed', {
-        chatId,
-        code,
-        message: safeError?.message || safeError,
-      });
-      if (code === 'VOICE_ALREADY_RECORDING') return;
-      conversationLogger.warn('Failed to start voice recording', error);
-      setVoiceRecordingState(VOICE_RECORDING_STATES.error);
-      if (code === 'VOICE_MODULE_UNAVAILABLE') {
-        showInfoBanner(
-          t('conversation.voice.unavailableDescription', 'Le module vocal n\'est pas disponible sur cette build.'),
-          t('conversation.voice.unavailableTitle', 'Vocal indisponible'),
-        );
-      } else {
-        showErrorBanner(
-          t('conversation.voice.permissionDescription', 'Autorise le micro pour envoyer des notes vocales.'),
-          t('conversation.voice.permissionTitle', 'Micro requis'),
-        );
-      }
-      resetVoiceRecordingState();
-    }
-  }, [canRecordVoiceNote, chatId, logVoiceDiagnostic, pendingVoiceDraft?.uri, resetVoiceRecordingState, showErrorBanner, showInfoBanner, stopDraftVoicePlayback, t]);
-
-  const handleCancelVoiceRecording = useCallback(async () => {
-    if (voiceRecordingStateRef.current === VOICE_RECORDING_STATES.idle) return;
-
-    try {
-      await cancelRecording();
-    } catch (_error) {
-      // No-op cleanup.
-    }
-    logVoiceDiagnostic('record-cancelled', { chatId });
-    resetVoiceRecordingState();
-  }, [chatId, logVoiceDiagnostic, resetVoiceRecordingState]);
-
-  const handleStopVoiceRecordingToDraft = useCallback(async () => {
-    if (!chatId || !isVoiceRecording) return;
-
-    try {
-      setVoiceRecordingState(VOICE_RECORDING_STATES.sending);
-      const draft = await stopRecording();
-      logVoiceDiagnostic('record-stop-succeeded', {
-        chatId,
-        durationMs: Number(draft?.durationMs || 0) || 0,
-        fileName: draft?.fileName || '',
-        mime: draft?.mime || '',
-        size: Number(draft?.size || 0) || 0,
-        uri: draft?.uri || '',
-      });
-
-      if (!draft?.uri) {
-        throw new Error('VOICE_EMPTY');
-      }
-      if ((draft?.durationMs || 0) < 500) {
-        logVoiceDiagnostic('record-too-short-discarded', {
-          chatId,
-          durationMs: Number(draft?.durationMs || 0) || 0,
-        });
-        await deleteVoiceNoteFile(draft.uri);
-        resetVoiceRecordingState();
-        return;
-      }
-
-      const normalizedDurationMs = Math.max(0, Number(draft?.durationMs) || 0);
-      let normalizedWaveform = Array.from(
-        { length: 14 },
-        (_, index) => toVoiceWaveBarHeight(null, normalizedDurationMs, index),
-      );
-      if (Array.isArray(draft?.waveform) && draft.waveform.length > 0) {
-        normalizedWaveform = draft.waveform
-          .map((bar, index) => toVoiceWaveBarHeight(bar, normalizedDurationMs, index))
-          .slice(-VOICE_WAVEFORM_MAX_BARS);
-      } else {
-        // MSGLIVE — l'historique des hauteurs vit maintenant DANS les barres.
-        // On vient le chercher à l'arrêt pour en faire la forme d'onde du
-        // brouillon, plutôt que d'en garder une copie ici : une copie, c'est
-        // exactement le rendu d'écran par tick qu'on vient de supprimer.
-        const hauteursVues = voiceLevelBarsRef.current?.lireHauteurs() || [];
-        if (hauteursVues.length > 0) {
-          normalizedWaveform = hauteursVues.slice(-VOICE_WAVEFORM_MAX_BARS);
-        }
-      }
-
-      setPendingVoiceDraft({
-        diagnostics: draft?.diagnostics,
-        durationMs: normalizedDurationMs,
-        fileName: draft?.fileName || `voice-note-${Date.now()}.${getAttachmentExtensionFromAsset({
-          type: draft?.mime || 'audio/mp4',
-          uri: draft?.uri,
-        })}`,
-        mime: draft?.mime || 'audio/mp4',
-        size: Math.max(0, Number(draft?.size) || 0),
-        uri: draft.uri,
-        waveform: normalizedWaveform,
-      });
-
-      setVoiceRecordingHint(t('conversation.voice.draftReadyHint', 'Note vocale prête. Ajoute un message puis envoie.'));
-      logVoiceDiagnostic('draft-created', {
-        chatId,
-        diagnostics: draft?.diagnostics || null,
-        durationMs: normalizedDurationMs,
-        mime: draft?.mime || 'audio/mp4',
-        size: Math.max(0, Number(draft?.size) || 0),
-        uriScheme: String(draft?.uri || '').split(':')[0] || 'unknown',
-      });
-      resetVoiceRecordingState();
-    } catch (error) {
-      const safeError = /** @type {any} */ (error);
-      conversationLogger.warn('Failed to finalize voice note draft', error);
-      logVoiceDiagnostic('record-stop-failed', {
-        chatId,
-        code: String(safeError?.message || ''),
-        message: safeError?.message || safeError,
-      });
-      setVoiceRecordingState(VOICE_RECORDING_STATES.error);
-      const code = String(safeError?.message || '');
-      let errorMessage = t(
-        'conversation.voice.sendErrorDescription',
-        'Impossible d\'envoyer la note vocale. Réessaie.',
-      );
-      if (code === 'VOICE_STOP_FAILED') {
-        errorMessage = t(
-          'conversation.voice.stopErrorDescription',
-          'Impossible de finaliser l\'enregistrement vocal. Réessaie.',
-        );
-      } else if (code === 'VOICE_FILE_EMPTY') {
-        errorMessage = t(
-          'conversation.voice.emptyErrorDescription',
-          'Aucun son exploitable n\'a été capturé. Réessaie.',
-        );
-      }
-      showErrorBanner(
-        errorMessage,
-        t('conversation.voice.sendErrorTitle', 'Envoi impossible'),
-      );
-      resetVoiceRecordingState();
-    }
-  }, [
-    chatId,
-    getAttachmentExtensionFromAsset,
-    isVoiceRecording,
-    logVoiceDiagnostic,
-    resetVoiceRecordingState,
-    showErrorBanner,
-    t,
-  ]);
-
-  const microphonePanResponder = useMemo(() => PanResponder.create({
-    onMoveShouldSetPanResponder: () => (
-      voiceRecordingStateRef.current === VOICE_RECORDING_STATES.recording
-      || voiceRecordingStateRef.current === VOICE_RECORDING_STATES.locked
-    ),
-    onPanResponderGrant: () => {
-      handleStartVoiceRecording();
-    },
-    onPanResponderMove: (_event, gestureState) => {
-      if (voiceRecordingStateRef.current !== VOICE_RECORDING_STATES.recording) return;
-
-      if (gestureState.dx <= VOICE_GESTURE_CANCEL_THRESHOLD) {
-        handleCancelVoiceRecording();
-        return;
-      }
-
-      if (gestureState.dy <= VOICE_GESTURE_LOCK_THRESHOLD) {
-        setVoiceRecordingState(VOICE_RECORDING_STATES.locked);
-        setVoiceRecordingHint(t('conversation.voice.lockedHint', 'Enregistrement verrouillé. Touche envoyer ou annuler.'));
-      }
-    },
-    onPanResponderRelease: () => {
-      if (voiceRecordingStateRef.current === VOICE_RECORDING_STATES.locked) return;
-      if (voiceRecordingStateRef.current !== VOICE_RECORDING_STATES.recording) return;
-      handleStopVoiceRecordingToDraft();
-    },
-    onPanResponderTerminate: () => {
-      if (voiceRecordingStateRef.current === VOICE_RECORDING_STATES.recording) {
-        handleCancelVoiceRecording();
-      }
-    },
-    onStartShouldSetPanResponder: () => true,
-  }), [
-    handleCancelVoiceRecording,
-    handleStartVoiceRecording,
-    handleStopVoiceRecordingToDraft,
-    t,
-  ]);
-
   const openSharedContact = (/** @type {string} */ userDocumentId) => {
     if (!userDocumentId) return;
     navigation.navigate(RouteNames.ProfileStack, {
@@ -4475,37 +4139,23 @@ function Conversation({ navigation, route }) {
     setPendingMediaDraft(null);
   };
 
-  const clearPendingVoiceDraft = useCallback(async () => {
-    const currentDraftUri = String(pendingVoiceDraft?.uri || '').trim();
-    stopDraftVoicePlayback().catch(() => {});
-    setPendingVoiceDraft(null);
-    logVoiceDiagnostic('draft-cleared', {
-      chatId,
-      hadUri: Boolean(currentDraftUri),
-    });
-    if (!currentDraftUri) return;
-    try {
-      await deleteVoiceNoteFile(currentDraftUri);
-    } catch (error) {
-      conversationLogger.warn('Failed to delete local voice draft', {
-        message: error?.message || error,
-        uri: currentDraftUri,
-      });
-    }
-  }, [chatId, logVoiceDiagnostic, pendingVoiceDraft?.uri, stopDraftVoicePlayback]);
-
-  const sendPendingVoiceDraft = async () => {
+  // VOCAL — ENVOYER UN VOCAL FINI. La zone vocale (`VoiceComposerZone`) le
+  // confie ici dès que le doigt se lève, ou sur Envoyer : l'écran ne garde plus
+  // de brouillon vocal (la carte « Brouillon vocal » a disparu avec la maquette
+  // de Claude Design). Rend `false` si l'envoi échoue : la zone remet alors le
+  // vocal en réécoute — rien n'est perdu, on peut réessayer.
+  const sendVoiceNote = async (/** @type {any} */ brouillon) => {
     if (uploadInFlightRef.current) {
-      logAttachmentDebug('sendPendingVoiceDraft skipped: upload already in progress', { chatId });
-      return;
+      logAttachmentDebug('sendVoiceNote skipped: upload already in progress', { chatId });
+      return false;
     }
 
-    if (!pendingVoiceDraft?.uri || !chatId) {
+    if (!brouillon?.uri || !chatId) {
       logVoiceDiagnostic('send-skipped-missing-draft', {
         chatId,
-        hasDraftUri: Boolean(pendingVoiceDraft?.uri),
+        hasDraftUri: Boolean(brouillon?.uri),
       });
-      return;
+      return false;
     }
     if (!isSocketConnected || !socket) {
       logVoiceDiagnostic('send-socket-unavailable', {
@@ -4519,17 +4169,17 @@ function Conversation({ navigation, route }) {
         ),
         t('conversation.voice.sendErrorTitle', 'Envoi impossible'),
       );
-      return;
+      return false;
     }
 
     const normalizedVoiceAsset = {
-      fileName: pendingVoiceDraft.fileName || `voice-note-${Date.now()}.${getAttachmentExtensionFromAsset({
-        type: pendingVoiceDraft.mime || 'audio/mp4',
-        uri: pendingVoiceDraft.uri,
+      fileName: brouillon.fileName || `voice-note-${Date.now()}.${getAttachmentExtensionFromAsset({
+        type: brouillon.mime || 'audio/mp4',
+        uri: brouillon.uri,
       })}`,
-      size: Number(pendingVoiceDraft.size || 0) || 0,
-      type: pendingVoiceDraft.mime || 'audio/mp4',
-      uri: pendingVoiceDraft.uri,
+      size: Number(brouillon.size || 0) || 0,
+      type: brouillon.mime || 'audio/mp4',
+      uri: brouillon.uri,
     };
     logVoiceDiagnostic('send-start', {
       asset: describeAsset(normalizedVoiceAsset),
@@ -4549,7 +4199,7 @@ function Conversation({ navigation, route }) {
         voiceValidationError?.userMessage || 'Validation audio impossible.',
         t('conversation.voice.sendErrorTitle', 'Envoi impossible'),
       );
-      return;
+      return false;
     }
 
     const localUploadId = createLocalUploadId();
@@ -4558,12 +4208,12 @@ function Conversation({ navigation, route }) {
     const createdAt = new Date().toISOString();
     const replyToPayload = replyingTo ? { documentId: replyingTo.documentId } : null;
     const voiceComposition = {
-      durationMs: pendingVoiceDraft.durationMs || 0,
-      mime: pendingVoiceDraft.mime || 'audio/mp4',
-      size: pendingVoiceDraft.size || 0,
+      durationMs: brouillon.durationMs || 0,
+      mime: brouillon.mime || 'audio/mp4',
+      size: brouillon.size || 0,
       type: 'voice_note',
       version: 1,
-      waveform: pendingVoiceDraft.waveform || [],
+      waveform: brouillon.waveform || [],
     };
 
     upsertLocalPendingMessage(optimisticMessageId, buildLocalPendingMessage({
@@ -4591,8 +4241,8 @@ function Conversation({ navigation, route }) {
 
       const uploadedVoiceComposition = {
         ...voiceComposition,
-        mime: pendingVoiceDraft.mime || uploadedFiles?.[0]?.mime || 'audio/mp4',
-        size: pendingVoiceDraft.size || uploadedFiles?.[0]?.size || 0,
+        mime: brouillon.mime || uploadedFiles?.[0]?.mime || 'audio/mp4',
+        size: brouillon.size || uploadedFiles?.[0]?.size || 0,
       };
 
       upsertLocalPendingMessage(optimisticMessageId, buildLocalPendingMessage({
@@ -4622,15 +4272,16 @@ function Conversation({ navigation, route }) {
         optimisticMessageId: queuedMessageId,
       });
 
-      await clearPendingVoiceDraft();
+      // Le fichier est sur le serveur : la copie locale peut partir.
+      deleteVoiceNoteFile(brouillon.uri).catch(() => {});
       setReplyingTo(null);
-      setComposerText('');
       stopTyping(chatId);
+      return true;
     } catch (error) {
       if (String(error?.message || '') !== 'VOICE_SOCKET_UNAVAILABLE') {
         removeLocalPendingMessage(optimisticMessageId);
       }
-      conversationLogger.warn('Failed to send pending voice draft', error);
+      conversationLogger.warn('Failed to send voice note', error);
       logVoiceDiagnostic('send-failed', {
         chatId,
         message: error?.message || error,
@@ -4641,10 +4292,59 @@ function Conversation({ navigation, route }) {
         detailedMessage || t('conversation.voice.sendErrorDescription', "Impossible d'envoyer la note vocale. Réessaie."),
         t('conversation.voice.sendErrorTitle', 'Envoi impossible'),
       );
+      return false;
     } finally {
       uploadInFlightRef.current = false;
       setIsUploading(false);
     }
+  };
+
+  // VOCAL — ce que la zone vocale remonte quand le micro dit non.
+  const handleVoiceError = (/** @type {string} */ code) => {
+    if (code === 'unavailable') {
+      showInfoBanner(
+        t('conversation.voice.unavailableDescription', 'Le module vocal n\'est pas disponible sur cette build.'),
+        t('conversation.voice.unavailableTitle', 'Vocal indisponible'),
+      );
+      return;
+    }
+    if (code === 'permission') {
+      // Micro refusé : la maquette demande une feuille qui mène aux réglages.
+      openConversationPrompt({
+        body: t(
+          'voiceComposer.permissionBody',
+          'Autorise le micro dans les réglages de ton téléphone pour envoyer des messages vocaux.',
+        ),
+        primaryAction: {
+          label: t('voiceComposer.openSettings', 'Ouvrir les réglages'),
+          onPress: () => {
+            closeConversationPrompt();
+            Linking.openSettings().catch(() => {});
+          },
+        },
+        secondaryAction: {
+          label: t('common.cancel', 'Annuler'),
+          onPress: closeConversationPrompt,
+          variant: 'Secondary',
+        },
+        title: t('conversation.voice.permissionTitle', 'Micro requis'),
+      });
+      return;
+    }
+    let description = t('conversation.voice.sendErrorDescription', 'Impossible d\'envoyer la note vocale. Réessaie.');
+    if (code === 'stop') {
+      description = t('conversation.voice.stopErrorDescription', 'Impossible de finaliser l\'enregistrement vocal. Réessaie.');
+    } else if (code === 'empty') {
+      description = t('conversation.voice.emptyErrorDescription', 'Aucun son exploitable n\'a été capturé. Réessaie.');
+    }
+    showErrorBanner(description, t('conversation.voice.sendErrorTitle', 'Envoi impossible'));
+  };
+
+  const handleVoiceUnavailable = () => {
+    showInfoBanner(
+      t('conversation.voice.unavailableDescription', 'Le module vocal n\'est pas disponible sur cette build.'),
+      t('conversation.voice.unavailableTitle', 'Vocal indisponible'),
+    );
   };
 
   const sendPendingMediaDraft = async () => {
@@ -4738,11 +4438,6 @@ function Conversation({ navigation, route }) {
       sendPendingMediaDraft();
       return;
     }
-    if (pendingVoiceDraft?.uri) {
-      sendPendingVoiceDraft();
-      return;
-    }
-
     // MSG1/N1 — LE TEXTE NE S'EFFACE PLUS DANS LE VIDE.
     // Avant, le champ etait vide INCONDITIONNELLEMENT, sans jamais regarder si
     // le message etait parti. Quand le fil temps reel est coupe, `sendMessage`
@@ -5830,37 +5525,44 @@ function Conversation({ navigation, route }) {
     let composerPlaceholder = t('conversation.messagePlaceholder');
     if (pendingMediaDraft?.asset?.uri) {
       composerPlaceholder = t('conversation.attachments.captionPlaceholder', 'Ajouter une légende');
-    } else if (pendingVoiceDraft?.uri) {
-      composerPlaceholder = t('conversation.voice.captionPlaceholder', 'Ajouter un message (optionnel)');
     }
 
+    // VOCAL — le champ de la maquette (M1) : 44 de haut, rayon 22, fond
+    // primary800, bord primary700, marge interne 16, « Message » 16/400 en
+    // neutral400 (5,3:1). Il s'efface quand la bande d'enregistrement arrive.
+    // `flex: 0` : dans son enveloppe, le champ garde sa hauteur calculée
+    // (il grandit jusqu'à 5 lignes) au lieu de se caler sur une base nulle.
     return (
-      <Composer
-        {...props}
-        placeholder={composerPlaceholder}
-        textInputProps={{
-          editable: !isPollModalVisible,
-          maxLength: 1000,
-          multiline: true,
-          showSoftInputOnFocus: !isPollModalVisible,
-        }}
-        textInputStyle={[
-          Fonts.p2,
-          Spaces.paddingHorizontal[16],
-          Spaces.paddingVertical[8],
-          {
-            backgroundColor: 'rgba(12, 28, 37, 0.94)',
-            borderColor: Colors.primary700,
-            borderRadius: 22,
-            borderWidth: 1,
-            color: Colors.neutral00,
-            marginBottom: 0,
-            marginTop: 0,
-            minHeight: 44,
-            paddingRight: 46,
-          },
-        ]}
-      />
+      <VoiceRestFade style={{ flex: 1, marginLeft: 8 }}>
+        <Composer
+          {...props}
+          placeholder={composerPlaceholder}
+          placeholderTextColor={Colors.neutral400}
+          textInputProps={{
+            editable: !isPollModalVisible,
+            maxLength: 1000,
+            multiline: true,
+            showSoftInputOnFocus: !isPollModalVisible,
+          }}
+          textInputStyle={[
+            Fonts.p1,
+            Spaces.paddingHorizontal[16],
+            Spaces.paddingVertical[8],
+            {
+              backgroundColor: Colors.primary800,
+              borderColor: Colors.primary700,
+              borderRadius: 22,
+              borderWidth: 1,
+              color: Colors.neutral00,
+              flex: 0,
+              marginBottom: 0,
+              marginLeft: 0,
+              marginTop: 0,
+              minHeight: 44,
+            },
+          ]}
+        />
+      </VoiceRestFade>
     );
   };
 
@@ -5917,7 +5619,7 @@ function Conversation({ navigation, route }) {
    * @returns {React.ReactNode} Rendered actions component
    */
   const renderActions = () => (
-    <View style={{ alignItems: 'center', flexDirection: 'row', height: 44 }}>
+    <VoiceRestFade style={{ alignItems: 'center', flexDirection: 'row', height: 44 }}>
       {isLeagueConversation ? (
         <TouchableOpacity
           accessibilityLabel={canCreateLeagueProposalFromChat ? i18n.t(
@@ -5955,69 +5657,28 @@ function Conversation({ navigation, route }) {
         </TouchableOpacity>
       ) : null}
       <TouchableOpacity
+        accessibilityLabel={t('voiceComposer.attach', 'Ajouter')}
+        accessibilityRole="button"
         onPress={handleOpenAttachmentMenu}
         style={{
           alignItems: 'center',
           backgroundColor: Colors.primary500,
-          borderRadius: 16,
-          height: 32,
+          borderRadius: 22,
+          height: 44,
           justifyContent: 'center',
-          marginHorizontal: 4,
-          width: 32,
+          width: 44,
         }}
       >
-        {/* Croix sur fond primary500 : encre primary900 (cf. THEME.md). */}
-        <View style={{
-          backgroundColor: Colors.primary900, height: 2, position: 'absolute', width: 16,
-        }}
-        />
-        <View style={{
-          backgroundColor: Colors.primary900, height: 16, position: 'absolute', width: 2,
-        }}
-        />
+        {/* VOCAL — le + de la maquette : 44, Plus2 22 à l'encre primary900 (cf. THEME.md). */}
+        <GlyphIcon color={Colors.primary900} name="plus2" size={22} />
       </TouchableOpacity>
-    </View>
+    </VoiceRestFade>
   );
-
-  const formatDurationLabel = (durationMs) => {
-    const totalSeconds = Math.max(0, Math.floor((Number(durationMs) || 0) / 1000));
-    const minutes = Math.floor(totalSeconds / 60);
-    const seconds = totalSeconds % 60;
-    return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
-  };
 
   const renderAccessory = () => {
     const hasMediaDraft = Boolean(pendingMediaDraft?.asset?.uri);
     const hasReplyPreview = !!replyingTo;
-    const hasVoiceSession = hasActiveVoiceSession;
-    const hasVoiceDraft = Boolean(pendingVoiceDraft?.uri);
-    if (!hasMediaDraft && !hasReplyPreview && !hasVoiceSession && !hasVoiceDraft) return null;
-    const draftTotalMs = Math.max(
-      Number(pendingVoiceDraft?.durationMs) || 0,
-      Number(draftPlaybackDurationMs) || 0,
-    );
-    const rawDraftWaveform = Array.isArray(pendingVoiceDraft?.waveform)
-      ? pendingVoiceDraft.waveform
-      : [];
-    const draftWaveformBars = (rawDraftWaveform.length > 0
-      ? rawDraftWaveform
-        .slice(-VOICE_WAVEFORM_VISIBLE_BARS)
-        .map((bar, index) => toVoiceWaveBarHeight(bar, draftTotalMs, index))
-      : Array.from(
-        { length: 14 },
-        (_, index) => toVoiceWaveBarHeight(null, draftTotalMs, index),
-      ));
-    const draftActiveBarsCount = Math.max(
-      0,
-      Math.min(
-        draftWaveformBars.length,
-        Math.round((Number(draftPlaybackProgress) || 0) * draftWaveformBars.length),
-      ),
-    );
-    const draftCurrentMs = Math.min(
-      Number(draftPlaybackPositionMs) || 0,
-      draftTotalMs || Number(draftPlaybackPositionMs) || 0,
-    );
+    if (!hasMediaDraft && !hasReplyPreview) return null;
 
     return (
       <View style={Spaces.gap[8]}>
@@ -6062,155 +5723,6 @@ function Conversation({ navigation, route }) {
               <Button
                 isLoading={isUploading}
                 onPress={sendPendingMediaDraft}
-                size="sm"
-                title={t('common.send', 'Envoyer')}
-                variant="PrimaryLight"
-              />
-            </View>
-          </View>
-        ) : null}
-
-        {hasVoiceSession ? (
-          <View style={[
-            ApplicationStyle.backgroundColor.neutral100,
-            Spaces.padding[8],
-            Alignments.row,
-            Alignments.alignCenter,
-            Alignments.justifySpaceBetween,
-            { borderRadius: 14 },
-          ]}
-          >
-            <View style={{ flex: 1 }}>
-              <Text style={[Fonts.p3Bold, { color: Colors.primary700 }]}>
-                {isVoiceRecordingLocked
-                  ? t('conversation.voice.locked', 'Note vocale verrouillée')
-                  : t('conversation.voice.recording', 'Enregistrement vocal')}
-              </Text>
-              <Text
-                numberOfLines={2}
-                style={[Fonts.p4, { color: Colors.neutral700 }]}
-              >
-                {isSendingVoiceNote
-                  ? t('conversation.voice.sending', 'Envoi en cours...')
-                  : `${formatDurationLabel(voiceRecordingDurationMs)} - ${voiceRecordingHint || t('conversation.voice.hintShort', 'Maintiens appuyé pour enregistrer')}`}
-              </Text>
-              <VoiceLevelBars dimmed={isSendingVoiceNote} ref={voiceLevelBarsRef} />
-            </View>
-            {isVoiceRecordingLocked ? (
-              <View style={{ flexDirection: 'row', gap: 8 }}>
-                <Button
-                  onPress={handleCancelVoiceRecording}
-                  size="sm"
-                  title={t('common.cancel', 'Annuler')}
-                  variant="SecondaryLight"
-                />
-                <Button
-                  isLoading={isSendingVoiceNote}
-                  onPress={handleStopVoiceRecordingToDraft}
-                  size="sm"
-                  title={t('common.send', 'Envoyer')}
-                  variant="PrimaryLight"
-                />
-              </View>
-            ) : null}
-          </View>
-        ) : null}
-
-        {hasVoiceDraft ? (
-          <View style={[
-            ApplicationStyle.backgroundColor.neutral100,
-            Spaces.padding[8],
-            {
-              backgroundColor: 'rgba(10, 29, 40, 0.95)',
-              borderColor: Colors.primary700,
-              borderRadius: 14,
-              borderWidth: 1,
-            },
-          ]}
-          >
-            <View style={[Alignments.row, Alignments.alignCenter, { gap: 8 }]}>
-              <TouchableOpacity
-                onPress={toggleDraftVoicePlayback}
-                style={{
-                  alignItems: 'center',
-                  backgroundColor: isDraftVoicePlaying ? Colors.primary500 : 'rgba(0, 173, 239, 0.16)',
-                  borderColor: Colors.primary500,
-                  borderRadius: 11,
-                  borderWidth: 1,
-                  height: 22,
-                  justifyContent: 'center',
-                  width: 22,
-                }}
-              >
-                <Text style={[Fonts.p4Bold, {
-                  color: isDraftVoicePlaying ? Colors.primary900 : Colors.primary500,
-                }]}
-                >
-                  {isDraftVoicePlaying ? '||' : '>'}
-                </Text>
-              </TouchableOpacity>
-              <Text style={[Fonts.p3Bold, { color: Colors.primary500 }]}>
-                {t('conversation.voice.draftReady', 'Brouillon vocal')}
-              </Text>
-              <Text style={[Fonts.p4, { color: Colors.neutral300, marginLeft: 'auto' }]}>
-                {formatDurationLabel(draftCurrentMs)}
-                {' / '}
-                {formatDurationLabel(draftTotalMs)}
-              </Text>
-            </View>
-
-            <View
-              style={{
-                alignItems: 'flex-end',
-                flexDirection: 'row',
-                height: 24,
-                marginTop: 8,
-                overflow: 'hidden',
-                width: '100%',
-              }}
-            >
-              {draftWaveformBars
-                .map((barHeight, index, array) => (
-                  <View
-                    // eslint-disable-next-line react/no-array-index-key
-                    key={`voice-draft-wave-${index}`}
-                    style={{
-                      backgroundColor: index < draftActiveBarsCount
-                        ? Colors.primary500
-                        : 'rgba(255,255,255,0.24)',
-                      borderRadius: 2,
-                      height: clampNumber(Number(barHeight) || 4, 4, 20),
-                      marginRight: index === array.length - 1 ? 0 : 2,
-                      opacity: index < draftActiveBarsCount
-                        ? 0.85
-                        : (0.35 + (((index + 1) / Math.max(array.length, 1)) * 0.35)),
-                      width: 3,
-                    }}
-                  />
-                ))}
-            </View>
-
-            <Text style={[Fonts.p4, { color: Colors.neutral300, marginTop: 6 }]}>
-              {composerText?.trim()
-                ? t('conversation.voice.draftWithText', 'Le texte sera envoyé avec la note vocale.')
-                : t('conversation.voice.draftWithoutText', 'Ajoute un message optionnel puis appuie sur Envoyer.')}
-            </Text>
-            {draftPlaybackError ? (
-              <Text style={[Fonts.p4, { color: Colors.error500, marginTop: 4 }]}>
-                {draftPlaybackError}
-              </Text>
-            ) : null}
-
-            <View style={[Alignments.row, Alignments.justifyEnd, Spaces.marginTop[8], { gap: 8 }]}>
-              <Button
-                onPress={clearPendingVoiceDraft}
-                size="sm"
-                title={t('common.cancel', 'Annuler')}
-                variant="SecondaryLight"
-              />
-              <Button
-                isLoading={isUploading}
-                onPress={sendPendingVoiceDraft}
                 size="sm"
                 title={t('common.send', 'Envoyer')}
                 variant="PrimaryLight"
@@ -6334,25 +5846,39 @@ function Conversation({ navigation, route }) {
 
     return (
       <View style={[
-        ApplicationStyle.backgroundColor.primary900,
-        ApplicationStyle.noBorderTop,
-        Spaces.paddingHorizontal[8],
-        { paddingBottom: composerBottomInset },
         Spaces.paddingVertical[8],
+        {
+          // VOCAL — la barre de la maquette (M1) : fond primary900 à 96 %,
+          // liseré haut de 1 px, 12 sur les côtés.
+          backgroundColor: withAlpha(Colors.primary900, 0.96),
+          borderTopColor: withAlpha(Colors.neutral00, 0.06),
+          borderTopWidth: 1,
+          paddingBottom: composerBottomInset,
+          paddingHorizontal: 12,
+        },
       ]}
       >
         {!shouldRenderAccessoryAfterToolbar ? accessoryBlock : null}
-        <InputToolbar
-          {...props}
-          containerStyle={[
-            ApplicationStyle.backgroundColor.primary900,
-            ApplicationStyle.noBorderTop,
-            { paddingHorizontal: 0, paddingVertical: 0 },
-          ]}
-          primaryStyle={{ alignItems: 'center' }}
-          renderActions={renderActions}
-          renderComposer={renderComposer}
-        />
+        <VoiceComposerZone
+          actif={canRecordVoiceNote}
+          onError={handleVoiceError}
+          onSend={sendVoiceNote}
+          onUnavailable={handleVoiceUnavailable}
+          visible={isVoiceNotesEnabled
+            && !String(props.text || '').trim()
+            && !pendingMediaDraft?.asset?.uri}
+        >
+          <InputToolbar
+            {...props}
+            containerStyle={[
+              ApplicationStyle.noBorderTop,
+              { backgroundColor: Colors.transparent, paddingHorizontal: 0, paddingVertical: 0 },
+            ]}
+            primaryStyle={{ alignItems: 'center' }}
+            renderActions={renderActions}
+            renderComposer={renderComposer}
+          />
+        </VoiceComposerZone>
         {shouldRenderAccessoryAfterToolbar ? accessoryBlock : null}
       </View>
     );
@@ -6370,87 +5896,25 @@ function Conversation({ navigation, route }) {
    */
   const renderSend = (props) => {
     const hasPendingMediaDraft = Boolean(pendingMediaDraft?.asset?.uri);
-    const hasPendingVoiceDraft = Boolean(pendingVoiceDraft);
     const hasText = String(props.text || '').trim().length > 0;
-    const shouldShowVoiceButton = !hasText
-      && !hasPendingMediaDraft
-      && !hasPendingVoiceDraft
-      && isVoiceNotesEnabled;
-    let voiceButtonBackgroundColor = Colors.neutral700;
-    let voiceButtonBorderColor = Colors.neutral600;
-    // Encre du micro : foncee sur fond primary500 (cf. THEME.md), claire sinon.
-    let voiceButtonInkColor = Colors.neutral00;
-    let voiceButtonOpacity = canRecordVoiceNote ? 1 : 0.6;
-    if (canRecordVoiceNote) {
-      voiceButtonBackgroundColor = Colors.primary500;
-      voiceButtonBorderColor = Colors.primary200;
-      voiceButtonInkColor = Colors.primary900;
-    }
-    if (isVoiceRecording) {
-      voiceButtonBackgroundColor = Colors.error500;
-      voiceButtonBorderColor = Colors.error700;
-      voiceButtonInkColor = Colors.neutral00;
-    }
-    if (isSendingVoiceNote) {
-      voiceButtonOpacity = 0.7;
-    }
-    if (!hasText && !hasPendingMediaDraft && !hasPendingVoiceDraft && !isVoiceNotesEnabled) return null;
-
-    if (shouldShowVoiceButton) {
-      return (
-        <View
-          {...microphonePanResponder.panHandlers}
-          style={{
-            alignItems: 'center',
-            height: 44,
-            justifyContent: 'center',
-            marginLeft: -44,
-            marginRight: 4,
-            width: 44,
-          }}
-        >
-          <View
-            style={{
-              alignItems: 'center',
-              backgroundColor: voiceButtonBackgroundColor,
-              borderColor: voiceButtonBorderColor,
-              borderRadius: 17,
-              borderWidth: 1,
-              height: 34,
-              justifyContent: 'center',
-              opacity: voiceButtonOpacity,
-              width: 34,
-            }}
-          >
-            {isSendingVoiceNote ? (
-              <ActivityIndicator color={voiceButtonInkColor} size="small" />
-            ) : (
-              <MicrophoneGlyph color={voiceButtonInkColor} />
-            )}
-          </View>
-        </View>
-      );
+    // VOCAL — champ vide : la place de droite est GARDÉE pour le micro, que la
+    // zone vocale pose par-dessus (`VoiceComposerZone`). Sans vocal : rien.
+    if (!hasText && !hasPendingMediaDraft) {
+      return isVoiceNotesEnabled
+        ? <View style={{ height: 44, marginLeft: 8, width: 44 }} testID="voice-mic-slot" />
+        : null;
     }
 
+    // Une lettre tapée : le micro devient Envoyer (fondu de 120 ms).
     return (
-      <View style={{
-        alignItems: 'center',
-        height: 44,
-        justifyContent: 'center',
-        marginLeft: -44,
-        marginRight: 4,
-        width: 44,
-      }}
-      >
+      <VoiceSendAppear style={{ marginLeft: 8 }}>
         <TouchableOpacity
+          accessibilityLabel={t('common.send', 'Envoyer')}
+          accessibilityRole="button"
           disabled={isUploading}
           onPress={() => {
             if (hasPendingMediaDraft) {
               sendPendingMediaDraft();
-              return;
-            }
-            if (hasPendingVoiceDraft) {
-              sendPendingVoiceDraft();
               return;
             }
             if (props.onSend) {
@@ -6460,30 +5924,21 @@ function Conversation({ navigation, route }) {
           style={{
             alignItems: 'center',
             backgroundColor: Colors.primary500,
-            borderColor: Colors.primary200,
-            borderRadius: 17,
-            borderWidth: 1,
-            height: 34,
+            borderRadius: 22,
+            height: 44,
             justifyContent: 'center',
             opacity: isUploading ? 0.7 : 1,
-            width: 34,
+            width: 44,
           }}
         >
           {/* Bouton Envoyer sur fond primary500 : encre primary900 (cf. THEME.md). */}
           {isUploading ? (
             <ActivityIndicator color={Colors.primary900} size="small" />
           ) : (
-            <Image
-              source={Images.send}
-              style={{
-                height: 16,
-                tintColor: Colors.primary900,
-                width: 16,
-              }}
-            />
+            <GlyphIcon color={Colors.primary900} name="send" size={22} />
           )}
         </TouchableOpacity>
-      </View>
+      </VoiceSendAppear>
     );
   };
 
