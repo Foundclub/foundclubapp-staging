@@ -19410,8 +19410,20 @@ export default {
     stop: 'Arrêter et réécouter',
   },
   voiceNoteBubble: {
+    from: 'Message vocal de {{name}}, {{duration}}',
+    mine: 'Mon message vocal, {{duration}}',
+    pause: 'Mettre en pause',
     playbackUnavailable: 'Lecture audio indisponible sur cette build.',
+    position: 'Position de lecture',
+    positionValue: '{{elapsed}} sur {{total}}',
+    seconds_one: '{{count}} seconde',
+    seconds_other: '{{count}} secondes',
+    sending: 'Envoi…',
+    someone: "quelqu'un",
+    speed: 'Vitesse de lecture : {{speed}} fois',
+    speedHint: 'Touche deux fois pour passer à {{next}} fois.',
     unavailable: 'Note vocale indisponible',
+    unlistened: 'non écouté',
   },
   voiceNoteService: {
     permission: {

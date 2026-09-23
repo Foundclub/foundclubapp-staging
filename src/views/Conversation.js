@@ -5285,20 +5285,21 @@ function Conversation({ navigation, route }) {
                 width: '100%',
               }}
             >
+              {/* VOCAL — la bulle porte son nom (au-dessus, quand l'auteur
+                  change), son heure et « Envoi… » (dessous) : la maquette. */}
               <VoiceNoteBubble
                 attachments={currentMessage.attachments || []}
                 composition={currentMessage.composition}
+                createdAt={currentMessage.createdAt}
                 isMe={!isLeft}
+                isPending={Boolean(currentMessage.pending)}
                 message={currentMessage.message}
+                messageId={getMessageDocumentId(currentMessage)}
+                senderName={isLeft && !isSameUserAsPrevious ? currentMessage.user?.name || '' : ''}
               />
               {currentMessage.failed ? (
                 <Text style={[Fonts.p4Bold, { color: Colors.error500, marginTop: 4, textAlign: isLeft ? 'left' : 'right' }]}>
                   {t('common.retry', 'Réessayer')}
-                </Text>
-              ) : null}
-              {currentMessage.pending ? (
-                <Text style={[Fonts.p4, { color: Colors.neutral300, marginTop: 4, textAlign: isLeft ? 'left' : 'right' }]}>
-                  {t('conversation.sending', 'Envoi en cours...')}
                 </Text>
               ) : null}
             </View>

@@ -18276,8 +18276,20 @@ export default {
     stop: 'Stop and play back',
   },
   voiceNoteBubble: {
+    from: 'Voice message from {{name}}, {{duration}}',
+    mine: 'My voice message, {{duration}}',
+    pause: 'Pause',
     playbackUnavailable: 'Audio playback is unavailable on this build.',
+    position: 'Playback position',
+    positionValue: '{{elapsed}} of {{total}}',
+    seconds_one: '{{count}} second',
+    seconds_other: '{{count}} seconds',
+    sending: 'Sending…',
+    someone: 'someone',
+    speed: 'Playback speed: {{speed}} times',
+    speedHint: 'Double tap to switch to {{next}} times.',
     unavailable: 'Voice note unavailable',
+    unlistened: 'not played',
   },
   voiceNoteService: {
     permission: {
