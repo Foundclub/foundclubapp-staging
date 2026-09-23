@@ -4222,6 +4222,7 @@ export default {
     expand: 'Enlarge',
     locationNotSpecified: 'Location not specified',
     matchLineUp: 'Match line-up',
+    note: 'Info',
     onTheBench: 'On the bench',
     onThePitch: 'On the pitch',
     open: 'Open',
