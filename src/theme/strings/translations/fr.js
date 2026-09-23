@@ -13916,7 +13916,7 @@ export default {
     },
     actions: {
       absent: 'Absent',
-      present: 'Present',
+      present: 'Présent',
     },
     chatReply: {
       action: 'Répondre',

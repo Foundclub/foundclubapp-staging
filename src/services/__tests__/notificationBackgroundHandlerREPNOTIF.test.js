@@ -22,11 +22,11 @@ const mockCancel = jest.fn(async () => undefined);
 
 jest.mock('@notifee/react-native', () => ({
   __esModule: true,
-  EventType: { ACTION_PRESS: 2, PRESS: 1 },
   default: {
     cancelNotification: (...args) => mockCancel(...args),
     onBackgroundEvent: (callback) => ecouteursDeFond.push(callback),
   },
+  EventType: { ACTION_PRESS: 2, PRESS: 1 },
 }));
 
 jest.mock('@react-native-firebase/app', () => ({ getApp: () => ({}) }));

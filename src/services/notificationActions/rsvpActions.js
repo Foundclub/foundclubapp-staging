@@ -159,6 +159,27 @@ const getChatReplyFailureCopy = (message) => {
   };
 };
 
+/**
+ * REPNOTIF — 📛 LES DEUX BOUTONS DU RAPPEL, ECRITS UNE SEULE FOIS.
+ *
+ * Ils l etaient DEUX fois, et pas de la meme facon : iOS passait par les
+ * traductions, Android les avait en dur ('Present', 'Absent'). Sur Android le
+ * bouton restait donc en francais pour un anglophone, et sans accent pour tout
+ * le monde. Les deux plateformes lisent desormais la meme source, et un temoin
+ * verifie qu elles disent exactement la meme chose.
+ * @returns {Array<object>} Les deux actions Android du rappel d evenement.
+ */
+const getEventRsvpAndroidActions = () => ([
+  {
+    pressAction: { id: EVENT_RSVP_ACTION_PRESENT },
+    title: i18next.t('rsvpActions.actions.present', 'Présent'),
+  },
+  {
+    pressAction: { id: EVENT_RSVP_ACTION_ABSENT },
+    title: i18next.t('rsvpActions.actions.absent', 'Absent'),
+  },
+]);
+
 const getChatReplyRetryAndroidActions = () => ([
   {
     pressAction: { id: CHAT_REPLY_ACTION_RETRY },
@@ -306,7 +327,7 @@ export const ensureNotificationActionSetup = async () => {
       actions: [
         {
           id: EVENT_RSVP_ACTION_PRESENT,
-          title: i18next.t('rsvpActions.actions.present', 'Present'),
+          title: i18next.t('rsvpActions.actions.present', 'Présent'),
         },
         {
           id: EVENT_RSVP_ACTION_ABSENT,
@@ -354,16 +375,7 @@ export const displayEventRsvpActionableNotification = async ({
   const normalizedData = normalizeNotificationPayload(data || {});
   await ensureNotificationActionSetup();
   await displayLocalNotification({
-    androidActions: [
-      {
-        pressAction: { id: EVENT_RSVP_ACTION_PRESENT },
-        title: 'Present',
-      },
-      {
-        pressAction: { id: EVENT_RSVP_ACTION_ABSENT },
-        title: 'Absent',
-      },
-    ],
+    androidActions: getEventRsvpAndroidActions(),
     body,
     channelId: NOTIFICATION_DEFAULT_CHANNEL_ID,
     data: normalizedData,

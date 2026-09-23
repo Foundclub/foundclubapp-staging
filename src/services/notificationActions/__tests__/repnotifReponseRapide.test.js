@@ -43,13 +43,13 @@ jest.mock('@/domains/auth/authUseCases', () => ({
 }));
 
 // eslint-disable-next-line import/first
+import { activateSessionForNotificationPayload } from '@/domains/auth/authUseCases';
+
+// eslint-disable-next-line import/first
 import {
   CHAT_REPLY_ACTION_REPLY,
   CHAT_REPLY_ACTION_RETRY,
 } from '../constants';
-// eslint-disable-next-line import/first
-import { activateSessionForNotificationPayload } from '@/domains/auth/authUseCases';
-
 // eslint-disable-next-line import/first
 import {
   handleChatReplyActionPress,
@@ -199,7 +199,7 @@ test('REPNOTIF/R4 bis — la notification d echec porte un bouton « Reessayer �
   expect(echec.ios?.categoryId).toBe('CHAT_REPLY_RETRY_CATEGORY');
 });
 
-test('REPNOTIF/R4 ter — « Reessayer » renvoie le MEME texte, dans la MEME conversation', async () => {
+test('REPNOTIF/R4 ter — « Reessayer » renvoie le MEME texte, meme conversation', async () => {
   const result = await handleChatReplyActionPress({
     notificationData: messageRecu({ chatReplyRetryText: 'Je serai en retard de 10 minutes' }),
     pressActionId: CHAT_REPLY_ACTION_RETRY,
