@@ -204,12 +204,14 @@ export const buildConvocationStaffList = (branch) => ensureList(branch?.staff)
  *   placements: any[],
  *   playerId: string,
  *   positionLabel: string,
+ *   published: any,
  *   publishedByName: string,
  *   reservePlayers: any[],
  *   role: string,
  *   snapshotPlayers: any[],
  *   sport: string,
  *   staff: Array<{ id: string, person: any }>,
+ *   teamId: string,
  *   teamName: string,
  *   viewerPlayer: any,
  * } | null}
@@ -255,12 +257,16 @@ export const buildPlayerConvocationView = ({ convocation = null, userId = '' } =
     placements,
     playerId: viewerId,
     positionLabel,
+    // COMPOMSG — le pack lui-meme : c'est lui que le terrain de l'ecran confie
+    // au plein ecran (`buildPublishedBoardTarget`), photos comprises.
+    published,
     publishedByName: getPersonName(published?.publishedBy),
     reservePlayers: buildConvocationReserveList(published),
     role: myPlacement ? CONVOCATION_ROLE_STARTER : CONVOCATION_ROLE_SUBSTITUTE,
     snapshotPlayers: ensureList(published?.snapshotPlayers),
     sport,
     staff: buildConvocationStaffList(branch),
+    teamId: toId(branch?.team?.documentId || convocation?.team?.documentId),
     teamName: String(
       branch?.team?.name || convocation?.team?.name || published?.teams?.[0]?.name || '',
     ).trim(),

@@ -225,15 +225,21 @@ describe('TEMOIN 1 — un joueur convoque voit un ecran qui le lui dit', () => {
     expect(mockReplace).not.toHaveBeenCalled();
   });
 
-  test('les 3 colonnes sont la — le RDV dit « Non précisé », il ne l invente pas', () => {
+  // 🔄 COMPOMSG (23/09) — MEME PROMESSE, AUTRE DISPOSITION. La colonne « RDV »
+  // affichait toujours « Non précisé » (aucun champ serveur), pendant que la
+  // carte du fil montrait le RDV que l'entraineur avait ecrit dans l'evenement.
+  // Elle cede sa place a la DATE ; le texte de l'entraineur s'affiche a part
+  // (temoins COMPOMSG). Ce qui ne change pas : AUCUNE heure de RDV inventee.
+  test('les 3 colonnes sont la — Date, Coup d envoi, Lieu — et aucun RDV n est invente', () => {
     const texte = texteVisible(rendre());
 
-    expect(texte).toContain('RDV');
+    expect(texte).toContain('DATE');
     expect(texte).toContain('COUP D’ENVOI');
     expect(texte).toContain('LIEU');
+    expect(texte).toContain('15/08/2026');
     expect(texte).toContain('15:00');
     expect(texte).toContain('Stade Municipal');
-    expect(texte).toContain('Non précisé');
+    expect(texte).not.toContain('RDV');
   });
 
   test('un remplacant lit sa chip Remplacant', () => {
