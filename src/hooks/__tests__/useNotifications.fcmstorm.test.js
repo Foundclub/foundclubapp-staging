@@ -1,6 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import renderer, { act } from 'react-test-renderer';
 
+import { forgetDeviceRegistrationsExcept } from '@/utils/notifications/deviceRegistrationMemory';
 import { TOKEN_SYNC_MAX_ATTEMPTS } from '@/utils/notifications/tokenSyncBackoff';
 
 import useNotifications from '../useNotifications';
@@ -27,6 +28,8 @@ const mockAddDeviceTokenForSession = jest.fn();
 const mockGetToken = jest.fn();
 
 let mockUserData = { documentId: 'user-doc-1', id: 1 };
+// Les sessions du telephone au montage (FCMSYNC) ; vide pour les temoins FCMSTORM.
+let mockSessions = [];
 
 jest.mock('@/services/auth/authService', () => ({
   addDeviceToken: (...args) => mockAddDeviceToken(...args),
@@ -141,7 +144,10 @@ jest.mock('@/store/appContext', () => {
     return { ...state };
   };
   return {
-    useAppContext: () => useReducer(reducteur, etatInitial),
+    useAppContext: () => useReducer(reducteur, undefined, () => ({
+      ...etatInitial,
+      authSessions: mockSessions,
+    })),
   };
 });
 
@@ -285,6 +291,13 @@ const monterEtLaisserTourner = async ({ dureeMs = 120000 } = {}) => {
   return { demonter: montageEnCours };
 };
 
+// La memoire « deja enregistre » (FCMSYNC) survit au demontage, comme sur un vrai
+// telephone : chaque temoin repart d'un telephone neuf.
+beforeEach(() => {
+  mockSessions = [];
+  forgetDeviceRegistrationsExcept([]);
+});
+
 /**
  * Demonte ce qui traine, meme quand le temoin a jete avant sa derniere ligne.
  * @returns {void}
@@ -400,5 +413,111 @@ describe('FCMSTORM — la vraie vie : le churn de rendu pendant le refus', () =>
 
     expect(mockAddDeviceToken).toHaveBeenCalledTimes(1);
     demonterCeQuiTraine();
+  });
+});
+
+// FCMSYNC (23/09) — UN TELEPHONE A PLUSIEURS COMPTES SE REENREGISTRAIT EN RAFALE.
+//
+// MESURE en production le 23/09 : rafales de 5 a 9 enregistrements du MEME telephone dans
+// la meme seconde, quand une notification reveille les telephones. Cote serveur, chaque
+// enregistrement ecrit la meme fiche (`update user_fcm_tokens ... where id` : 93 ms en
+// moyenne, jusqu'a 7,1 s d'attente de verrou, sur une table de 25 lignes).
+// Cause : a CHAQUE demarrage, le compte actif, puis TOUS les comptes lies (le compte actif
+// une seconde fois) repartaient d'un coup (`Promise.all`) : la memoire « deja synchronise »
+// ne vivait que le temps du processus.
+// Regle (decision du chef d'orchestre, 23/09) : on reenregistre si le jeton change, apres
+// 24 h, ou apres une deconnexion du compte ; les comptes lies partent UN PAR UN.
+describe('FCMSYNC — un compte n\'est reenregistre que si quelque chose a change', () => {
+  const JETON = 'FCM-TOKEN-DE-TEST-0123456789';
+  const VINGT_QUATRE_HEURES_ET_UNE_MINUTE = (24 * 60 + 1) * 60 * 1000;
+  let journal = [];
+  let enVol = 0;
+  let maxEnVol = 0;
+
+  /**
+   * Un demarrage de l'app : le telephone porte ces comptes, le premier est actif.
+   * @param {string[]} comptes - Les comptes du telephone, le compte actif en tete.
+   * @param {{ jeton?: string }} [options] - Le jeton que Firebase rend a ce demarrage.
+   * @returns {Promise<string[]>} - Les comptes enregistres, dans l'ordre d'envoi.
+   */
+  const demarrer = async (comptes, { jeton = JETON } = {}) => {
+    mockSessions = comptes.map((documentId) => ({
+      token: `jwt-${documentId}`,
+      user: { documentId },
+    }));
+    mockUserData = { documentId: comptes[0], id: comptes[0] };
+    mockGetToken.mockResolvedValue(jeton);
+    journal = [];
+    const { demonter } = await monterEtLaisserTourner({ dureeMs: 4000 });
+    demonter();
+    montageEnCours = null;
+    return journal;
+  };
+
+  beforeEach(() => {
+    jest.useFakeTimers();
+    jest.clearAllMocks();
+    mockEligibiliteInstable = false;
+    enVol = 0;
+    maxEnVol = 0;
+    // Le chemin principal parle au nom du compte ACTIF, les sessions liees au nom du leur.
+    mockAddDeviceToken.mockImplementation(() => {
+      journal.push(mockUserData.documentId);
+      return Promise.resolve({ data: { documentId: 'inst-1' } });
+    });
+    mockAddDeviceTokenForSession.mockImplementation((jwt) => {
+      journal.push(jwt.replace('jwt-', ''));
+      enVol += 1;
+      maxEnVol = Math.max(maxEnVol, enVol);
+      return new Promise((resolve) => {
+        setTimeout(() => {
+          enVol -= 1;
+          resolve({ ok: true });
+        }, 50);
+      });
+    });
+  });
+
+  afterEach(() => {
+    demonterCeQuiTraine();
+    jest.runOnlyPendingTimers();
+    jest.useRealTimers();
+  });
+
+  it('S1 — 3 comptes : 3 envois au 1er demarrage, 0 au suivant, 3 apres 24 h', async () => {
+    expect(await demarrer(['A', 'B', 'C'])).toEqual(['A', 'B', 'C']);
+    expect(await demarrer(['A', 'B', 'C'])).toEqual([]);
+    jest.setSystemTime(Date.now() + VINGT_QUATRE_HEURES_ET_UNE_MINUTE);
+    expect(await demarrer(['A', 'B', 'C'])).toEqual(['A', 'B', 'C']);
+  });
+
+  it('S2 — les comptes lies partent UN PAR UN, jamais deux enregistrements en vol', async () => {
+    await demarrer(['A', 'B', 'C', 'D']);
+
+    expect(mockAddDeviceTokenForSession).toHaveBeenCalledTimes(3);
+    expect(maxEnVol).toBe(1);
+  });
+
+  it('S3 — le jeton change : chaque compte est reenregistre, une fois', async () => {
+    await demarrer(['A', 'B', 'C']);
+
+    const apres = await demarrer(['A', 'B', 'C'], { jeton: 'FCM-TOKEN-NOUVEAU-9876543210' });
+
+    expect(apres).toEqual(['A', 'B', 'C']);
+  });
+
+  it('S4 — deconnexion puis reconnexion d\'un compte : lui seul est reenregistre', async () => {
+    await demarrer(['A', 'B', 'C']);
+
+    // A se deconnecte (le serveur retire son lien) : B devient actif.
+    expect(await demarrer(['B', 'C'])).toEqual([]);
+    // A revient : son lien a disparu cote serveur, il DOIT repartir.
+    expect(await demarrer(['A', 'B', 'C'])).toEqual(['A']);
+  });
+
+  it('S5 — un compte ajoute sur le telephone : lui seul est enregistre', async () => {
+    await demarrer(['A', 'B', 'C']);
+
+    expect(await demarrer(['D', 'A', 'B', 'C'])).toEqual(['D']);
   });
 });
