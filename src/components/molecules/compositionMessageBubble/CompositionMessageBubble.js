@@ -126,7 +126,11 @@ function CompositionMessageBubble({ composition, isMe = false }) {
     teams = [],
     type,
   } = composition;
-  const isMultiTeamComposition = Number(schemaVersion) === 3 || Array.isArray(teams);
+  // 🐛 COMPOMSG (point 3) — `teams` vaut `[]` par defaut : `Array.isArray(teams)`
+  // etait donc TOUJOURS vrai, et les cartes « a plat » d'avant la v3 (7 en
+  // production, du 13/05 au 15/06) ne lisaient jamais leurs `placements` — ni
+  // jeton, ni nom, ni compte. Une liste d'equipes VIDE ne dit rien de la forme.
+  const isMultiTeamComposition = Number(schemaVersion) === 3 || teams.length > 0;
   const previewPlacements = isMultiTeamComposition
     ? (Array.isArray(teams?.[0]?.placements) ? teams[0].placements : [])
     : placements;
