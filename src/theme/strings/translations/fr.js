@@ -4499,6 +4499,8 @@ export default {
     expand: 'Agrandir',
     locationNotSpecified: 'Lieu non précisé',
     matchLineUp: 'Composition du match',
+    // COMPOMSG — le texte libre de l'événement (souvent le RDV), comme sur « Tu es convoqué ».
+    note: 'Infos',
     onTheBench: 'Sur le banc',
     onThePitch: 'Sur le terrain',
     open: 'Ouvrir',

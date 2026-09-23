@@ -47,6 +47,10 @@ const resolveContentWidth = (contentWidth) => {
  * @param {string[]} [props.gradient]
  * @param {'none' | 'card'} [props.surface]
  * @param {boolean} [props.withHeaderPadding]
+ * @param {boolean} [props.fillHeight] COMPOMSG — le cadre de contenu s'etire sur
+ *   toute la hauteur, comme sur l'iPhone. Sans lui, un enfant en `flex: 1` vaut
+ *   0 px (mesure du 23/09 : le terrain du plein ecran de la composition). OPT-IN :
+ *   les autres ecrans du site ne bougent pas.
  * @returns {import('react').ReactElement}
  */
 function ScreenContainer({
@@ -56,6 +60,7 @@ function ScreenContainer({
   contentWidth = 'wide',
   desktopAlignment = 'top',
   desktopMinHeight,
+  fillHeight = false,
   gradient = null,
   responsiveHorizontalPadding = false,
   responsivePadding,
@@ -143,6 +148,7 @@ function ScreenContainer({
       maxWidth: resolvedContentWidth || undefined,
       width: '100%',
     },
+    fillHeight ? { flexGrow: 1 } : null,
     useSurface
       ? {
         backgroundColor: 'rgba(9, 24, 35, 0.78)',

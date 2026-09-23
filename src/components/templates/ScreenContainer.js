@@ -67,6 +67,10 @@ const toScrollableContentStyle = (styles) => {
  * @param {string[] | null} [props.gradient]
  * @param {boolean} [props.withHeaderPadding]
  * @param {boolean} [props.responsivePadding] Alias prioritaire de `responsiveHorizontalPadding`.
+ * @param {boolean} [props.fillHeight] SITE UNIQUEMENT (`ScreenContainer.web.js`, COMPOMSG) :
+ *   le gabarit du site n'etire pas son contenu sans lui. Ici, le conteneur remplit
+ *   DEJA toute la hauteur : la valeur est lue pour que les ecrans partages puissent
+ *   la passer, puis ignoree.
  * @returns {import('react').ReactElement}
  */
 function ScreenContainer({
@@ -75,6 +79,8 @@ function ScreenContainer({
   bottomInsetMode = 'none',
   children,
   contentContainerStyle = [],
+  // eslint-disable-next-line no-unused-vars -- ignore sur l'iPhone, voir la JSDoc.
+  fillHeight = false,
   gradient = null, // Default to no gradient
   keyboardAvoiding = false,
   keyboardScroll = false,

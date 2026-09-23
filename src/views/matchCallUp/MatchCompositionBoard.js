@@ -11,6 +11,7 @@ import {
 import { useTranslation } from 'react-i18next';
 import {
   Alert,
+  Platform,
   ScrollView,
   StyleSheet,
   Switch,
@@ -55,7 +56,11 @@ import {
 } from '@/services/event/eventService';
 
 import { getCompositionPlayerId } from '@/utils/compositionPlayer';
-import { getTacticalFieldAspectRatio, getTacticalSportKey } from '@/utils/tacticalField';
+import {
+  fitTacticalFieldInBox,
+  getTacticalFieldAspectRatio,
+  getTacticalSportKey,
+} from '@/utils/tacticalField';
 
 import { isManualCallUpPlayer } from './matchCallUpUtils';
 import {
@@ -99,6 +104,9 @@ const LONG_PRESS_MS = 120;
 
 /** Le jeton vient du banc — il n'a encore aucune place sur le terrain. */
 const SOURCE_BENCH = 'bench';
+
+/** Retrait lateral de l'enveloppe du terrain (le calcul de taille du site le deduit). */
+const FIELD_WRAPPER_PADDING = 14;
 
 function MatchCompositionBoard() {
   const { Colors, Fonts } = useTheme();
@@ -190,6 +198,24 @@ function MatchCompositionBoard() {
     }).catch(() => {});
     return () => { actif = false; };
   }, [eventId, isReadOnly, queryClient, refreshFromServer, sport, teamId, teamName]);
+
+  // 🌐 COMPOMSG (point 2) — SUR LE SITE, LE TERRAIN N'AVAIT AUCUNE TAILLE.
+  // Mesure au banc avec le vrai gabarit du site (23/09) : enveloppe 390 x 0,
+  // dessin 0 x 0. Une surface qui n'a qu'un ratio (ni largeur ni hauteur) vaut
+  // 0 px dans un navigateur ; sur l'iPhone, Yoga la dimensionne. Le site mesure
+  // donc la place de l'enveloppe et donne au terrain la plus grande taille qui
+  // y tient aux proportions du sport. ⛔ L'iPhone n'est pas touche.
+  const [fieldBox, setFieldBox] = useState(/** @type {any} */ (null));
+  const measureFieldWrapper = useCallback((/** @type {any} */ event) => {
+    if (Platform.OS !== 'web') return;
+    const { height, width } = event?.nativeEvent?.layout || {};
+    setFieldBox((/** @type {any} */ avant) => (
+      avant && avant.height === height && avant.width === width ? avant : { height, width }
+    ));
+  }, []);
+  const siteFieldSize = Platform.OS === 'web'
+    ? fitTacticalFieldInBox(fieldBox, sport, FIELD_WRAPPER_PADDING)
+    : null;
 
   // 🪧 La carte etait-elle depassee ? On ne le dit que si les DEUX versions sont
   // connues : une carte ancienne sans numero ne declenche aucun bandeau.
@@ -609,7 +635,15 @@ function MatchCompositionBoard() {
 
   return (
     <GestureHandlerRootView style={styles.root}>
-      <ScreenContainer bgImage="bg2" bottomInsetMode="edge-to-edge" style={[styles.screen]}>
+      {/* COMPOMSG — `fillHeight` : sur le SITE, le gabarit n'etire pas son
+          contenu, et le terrain (en `flex: 1`) y tombait a 0 px. Sans effet
+          sur l'iPhone, ou le gabarit remplit deja l'ecran. */}
+      <ScreenContainer
+        bgImage="bg2"
+        bottomInsetMode="edge-to-edge"
+        fillHeight
+        style={[styles.screen]}
+      >
         <View style={styles.header}>
           <HeaderBackButton onPress={() => navigation.goBack()} />
           <View style={styles.headerTexts}>
@@ -698,12 +732,16 @@ function MatchCompositionBoard() {
           </View>
         ) : null}
 
-        <View style={styles.fieldWrapper}>
+        <View onLayout={measureFieldWrapper} style={styles.fieldWrapper}>
           <View
             collapsable={false}
             onLayout={measureField}
             ref={fieldNodeRef}
-            style={[styles.fieldSurface, { aspectRatio: 1 / getTacticalFieldAspectRatio(sport) }]}
+            style={[
+              styles.fieldSurface,
+              { aspectRatio: 1 / getTacticalFieldAspectRatio(sport) },
+              siteFieldSize,
+            ]}
           >
             <RenderedTacticalField sport={sport} style={styles.fieldFill}>
               {/* 🎁 LOT TERRAIN — LES POSTES SE VOIENT ENFIN.
@@ -1093,7 +1131,7 @@ const styles = StyleSheet.create({
   fieldWrapper: {
     flex: 1,
     justifyContent: 'center',
-    paddingHorizontal: 14,
+    paddingHorizontal: FIELD_WRAPPER_PADDING,
   },
   footer: {
     flexDirection: 'row',

@@ -36,6 +36,12 @@ jest.mock('@react-navigation/native', () => ({
   useNavigation: () => ({ navigate: (...args) => mockNavigate(...args) }),
 }));
 
+// COMPOMSG : le compte « 1 convoqué » passe par un pluriel i18next — la doublure
+// rend le français de l'app au lieu du `t` « pas prêt » de react-i18next.
+jest.mock('react-i18next', () => (
+  jest.requireActual('@/theme/strings/__mocks__/doublureTraduction').reactI18next
+));
+
 // ⚠️ Le terrain rendu doit LAISSER PASSER ses enfants : les jetons de la
 // vignette sont ses enfants. Un mock qui rend `null` les fait disparaitre et
 // donne un faux « aucun jeton » — piege paye une fois le 2026-08-16.
@@ -132,8 +138,12 @@ describe('C-F temoin 2 — la BULLE COMPO d un canal reste ouvrable', () => {
     expect(arbre.toJSON()).toBeNull();
   });
 
-  it('au toucher : elle ouvre l ANCIEN terrain, en LECTURE SEULE', () => {
-    const [routeName, args] = ouvrirLaBulle(compositionAncienneForme);
+  // 🔄 COMPOMSG (23/09) — LA PORTE VERS L'ANCIEN TERRAIN EXISTE TOUJOURS, mais une
+  // carte a plat qui porte un joueur place ouvre desormais le MEME plein ecran que
+  // les autres (voir plus bas). Le fil-piege de la coupe reste pose sur le cas
+  // qui y mene encore : une carte SANS evenement rattache.
+  it('au toucher : sans evenement rattache, elle ouvre l ANCIEN terrain, en LECTURE SEULE', () => {
+    const [routeName, args] = ouvrirLaBulle({ ...compositionAncienneForme, eventId: undefined });
 
     expect(routeName).toBe(RouteNames.EventStack);
     // 🔒 Deuxieme ligne qui rougira le jour de la coupe.
@@ -147,37 +157,26 @@ describe('C-F temoin 2 — la BULLE COMPO d un canal reste ouvrable', () => {
     const [, args] = ouvrirLaBulle(compositionAncienneForme);
 
     expect(args.params.eventId).toBe('evt-1');
-    expect(args.params.eventName).toBe('Match amical');
+    expect(args.params.eventLabel).toBe('Match amical');
   });
 
-  // 🐛 DEFAUT MESURE LE 2026-08-16, PREEXISTANT — consigne, PAS corrige ici.
-  //
-  // `isMultiTeamComposition` (l. 77) vaut `Number(schemaVersion) === 3 ||
-  // Array.isArray(teams)`, or `teams` est destructure avec `= []` (l. 74).
-  // `Array.isArray([])` est TOUJOURS vrai ⇒ le drapeau est vrai pour TOUTE
-  // composition, y compris une ancienne a `placements` plats. Consequence a
-  // l'ecran : ses placements ne sont jamais recopies dans la charge, la
-  // vignette du canal ne dessine AUCUN jeton, et le terrain s'ouvre VIDE.
-  //
-  // ⛔ Pourquoi ce lot ne le repare pas : C-F a pour seule mission de deplacer
-  // des pieces sans changer un comportement. Reparer ici (`Array.isArray(teams)
-  // && teams.length > 0`) modifierait ce que voit un joueur — c'est une
-  // decision de lot, pas un effet de bord de demenagement.
-  //
-  // ⚠️ Ce test decrit donc ce qui EST, pas ce qui devrait etre. Le jour de la
-  // correction, il devient rouge : c'est le signal, il se met a jour.
-  it('🐛 une compo ANCIENNE forme part quand meme en multi-equipes, et arrive vide', () => {
+  // ✅ CORRIGE LE 2026-09-23 (COMPOMSG, point 3) — le defaut consigne ici le
+  // 2026-08-16 : `isMultiTeamComposition` valait `schemaVersion === 3 ||
+  // Array.isArray(teams)`, et `teams` a `[]` pour valeur par defaut ⇒ TOUJOURS
+  // vrai. Une carte a plat ne lisait jamais ses placements. Le chef d'orchestre a
+  // compte 7 cartes de cette forme en production (13/05 → 15/06).
+  // Ces trois temoins decrivaient le defaut ; ils decrivent maintenant la correction.
+  it('une compo ANCIENNE forme n est plus lue en multi-equipes : ses placements partent', () => {
     const [, args] = ouvrirLaBulle(compositionAncienneForme);
 
-    expect(args.params.multiTeamComposition).toBe(true);
-    expect(args.params.existingComposition.placements).toBeUndefined();
-    expect(args.params.existingComposition.teams).toEqual([]);
+    expect(args.screen).toBe(RouteNames.MatchCompositionBoard);
+    expect(args.params.existingComposition.placements).toEqual(compositionAncienneForme.placements);
+    expect(args.params.startPlacements.map((placement) => placement.playerId)).toEqual(['j1']);
   });
 
-  // Preuve par DIFFERENCE, pour qu'aucune des deux moities ne puisse etre vraie
-  // par accident : le MEME joueur, au MEME endroit, dessine son dossard quand la
-  // compo est en forme v3, et ne dessine RIEN en ancienne forme.
-  it('🐛 et sa vignette ne dessine aucun dossard, la ou la forme v3 en dessine un', () => {
+  // Preuve par DIFFERENCE, gardee : le MEME joueur, au MEME endroit, dessine son
+  // dossard en forme v3 ET en ancienne forme.
+  it('et sa vignette dessine le dossard, comme la forme v3', () => {
     const dossards = (composition) => {
       let arbre;
       act(() => {
@@ -194,16 +193,11 @@ describe('C-F temoin 2 — la BULLE COMPO d un canal reste ouvrable', () => {
     })).toBe(true);
 
     expect(compositionAncienneForme.placements).toHaveLength(1);
-    expect(dossards(compositionAncienneForme)).toBe(false);
+    expect(dossards(compositionAncienneForme)).toBe(true);
   });
 
-  // Le meme defaut, dit avec les mots que lit l'utilisateur.
-  // 🔄 COMPOMSG (23/09) : la pastille « N equipe(s) » a disparu — la carte compte
-  // desormais les CONVOQUES dans son pied. Le defaut, lui, est toujours la et se
-  // lit autrement : une ancienne compo, qui contient bel et bien un joueur,
-  // n'annonce AUCUN convoque (le drapeau multi est toujours vrai, ses placements
-  // plats ne sont jamais lus). Le jour de la correction, ce temoin rougit.
-  it('🐛 son pied de carte n annonce aucun convoque pour une compo qui a un joueur', () => {
+  // Dit avec les mots que lit l'utilisateur : le nom et le compte sont la.
+  it('son pied de carte compte le convoque, et son nom est ecrit', () => {
     let arbre;
     act(() => {
       arbre = renderer.create(
@@ -213,8 +207,8 @@ describe('C-F temoin 2 — la BULLE COMPO d un canal reste ouvrable', () => {
 
     const rendu = JSON.stringify(arbre.toJSON());
     expect(rendu).not.toContain('equipe(s)');
-    expect(rendu).not.toContain('convoqu');
-    expect(rendu).not.toContain('Ada Lovelace');
+    expect(rendu).toContain('1 convoqué');
+    expect(rendu).toContain('Ada Lovelace');
   });
 
   it('forme multi-equipes : la charge part en version 3, pas en placements plats', () => {

@@ -40,7 +40,9 @@ const MINI_TOKEN_SIZE = 24;
  *   eventAddress?: string;
  *   eventId?: string;
  *   eventDate?: string;
+ *   eventDisplayName?: string;
  *   eventName?: string;
+ *   eventNote?: string;
  *   manualPlayers?: CompositionPlayer[];
  *   placements?: CompositionPlacement[];
  *   publishedVersion?: number;
@@ -106,8 +108,10 @@ function CompositionMessageBubble({ composition, isMe = false }) {
   const {
     eventAddress,
     eventDate,
+    eventDisplayName,
     eventId,
     eventName,
+    eventNote,
     manualPlayers = [],
     placements = [],
     publishedVersion,
@@ -122,7 +126,11 @@ function CompositionMessageBubble({ composition, isMe = false }) {
     teams = [],
     type,
   } = composition;
-  const isMultiTeamComposition = Number(schemaVersion) === 3 || Array.isArray(teams);
+  // 🐛 COMPOMSG (point 3) — `teams` vaut `[]` par defaut : `Array.isArray(teams)`
+  // etait donc TOUJOURS vrai, et les cartes « a plat » d'avant la v3 (7 en
+  // production, du 13/05 au 15/06) ne lisaient jamais leurs `placements` — ni
+  // jeton, ni nom, ni compte. Une liste d'equipes VIDE ne dit rien de la forme.
+  const isMultiTeamComposition = Number(schemaVersion) === 3 || teams.length > 0;
   const previewPlacements = isMultiTeamComposition
     ? (Array.isArray(teams?.[0]?.placements) ? teams[0].placements : [])
     : placements;
@@ -206,7 +214,18 @@ function CompositionMessageBubble({ composition, isMe = false }) {
   // Une carte de composition SANS evenement rattache (partage libre) n'a ni
   // quand ni ou a annoncer : on ne lui colle pas un « Lieu non precise » qui ne
   // repond a aucune question.
-  const hasEventContext = Boolean(eventName || whenLine);
+  // 🏷️ COMPOMSG (suite) — LE TITRE ET LE RDV, SEPARES. Mesure en production :
+  // le match d'Adel a un `name` VIDE et le RDV dans sa `description` ; la charge
+  // n'avait que `eventName` = `name || description`, la carte titrait donc le
+  // RDV. Le serveur envoie desormais `eventDisplayName` (« Match vs US Pelican »,
+  // la meme regle que « Tu es convoque ») et `eventNote` (le texte libre).
+  // ⛔ Une carte DEJA postee n'a ni l'un ni l'autre : elle garde son titre d'hier.
+  const title = String(eventDisplayName || '').trim() || eventName;
+  const noteText = String(eventNote || '').trim();
+  const note = noteText && noteText.toLowerCase() !== String(title || '').trim().toLowerCase()
+    ? noteText
+    : '';
+  const hasEventContext = Boolean(title || whenLine);
 
   const kicker = type === 'lineup_share'
     ? t('compositionMessageBubble.published', 'Composition publiée')
@@ -271,7 +290,7 @@ function CompositionMessageBubble({ composition, isMe = false }) {
           ...target,
           canEdit: peutModifier,
           eventId,
-          eventLabel: eventName,
+          eventLabel: title,
           // Sans ces deux-la, « Modifier » ouvrirait un ecran incapable de
           // retrouver les convoques, puis de publier faute d'equipe.
           existingComposition: packDeLaCarte,
@@ -341,10 +360,11 @@ function CompositionMessageBubble({ composition, isMe = false }) {
   const accessibilityLabel = [
     kicker,
     versionLine,
-    eventName,
+    title,
     whenLine,
     teamName,
     hasEventContext ? addressLine : '',
+    note,
     calledUpLine,
   ].filter(Boolean).join('. ');
 
@@ -396,9 +416,9 @@ function CompositionMessageBubble({ composition, isMe = false }) {
         {/* U06 + COMPOLECT-2 — le nom du match a droit a DEUX lignes : sur la
             capture d'Adel du 27/08, l'intitule unique se coupait. Puis, dans
             l'ordre de la carte voisine `EventShareBubble` : quand, qui, ou. */}
-        {eventName ? (
+        {title ? (
           <Text numberOfLines={2} style={[Fonts.p2Bold, { color: Colors.neutral00 }]}>
-            {eventName}
+            {title}
           </Text>
         ) : null}
         {hasEventContext || teamName ? (
@@ -418,6 +438,19 @@ function CompositionMessageBubble({ composition, isMe = false }) {
                 {addressLine}
               </Text>
             ) : null}
+          </View>
+        ) : null}
+
+        {/* COMPOMSG — le texte de l'entraineur (souvent le RDV), sous le meme
+            mot que « Tu es convoque ». Sans texte, rien : pas de ligne vide. */}
+        {note ? (
+          <View style={styles.note}>
+            <Text style={[Fonts.p4Bold, styles.noteLabel, { color: Colors.neutral300 }]}>
+              {t('compositionMessageBubble.note', 'Infos')}
+            </Text>
+            <Text numberOfLines={3} style={[Fonts.p4, { color: Colors.neutral00 }]}>
+              {note}
+            </Text>
           </View>
         ) : null}
 
@@ -570,6 +603,13 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     height: MINI_FIELD_HEIGHT,
     overflow: 'hidden',
+  },
+  note: {
+    gap: 2,
+  },
+  noteLabel: {
+    letterSpacing: 0.4,
+    textTransform: 'uppercase',
   },
   roster: {
     gap: 8,
