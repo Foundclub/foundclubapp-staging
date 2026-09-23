@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import {
   Image,
   Keyboard,
+  Platform,
   Text,
   TouchableOpacity,
   View,
@@ -16,7 +17,10 @@ import Button from '@/components/atoms/button/Button';
 import Checkable from '@/components/atoms/checkable/Checkable';
 
 import BottomModal from '../bottomModal/BottomModal';
-import Input from '../input/Input';
+import Input, {
+  INPUT_ROW_IOS_BOTTOM_PADDING,
+  INPUT_ROW_MIN_HEIGHT,
+} from '../input/Input';
 /**
  * @typedef {object} SelectProps
  * @property {Array<Option>} options - The options of the select.
@@ -99,6 +103,10 @@ const AutocompleteSelect = forwardRef(
     } = useTheme();
     const { t } = useTranslation();
     const hasLabel = Boolean(props.label);
+    // La bande qui porte la valeur fermee : exactement la hauteur de la ligne
+    // de l Input, contenu centre. C est ce qui rend la mise en page juste
+    // AVEC un label sans avoir a deviner la hauteur de ce label.
+    const bandeDeValeur = [{ height: INPUT_ROW_MIN_HEIGHT }, Alignments.justifyCenter];
     const isCardVariant = props.displayVariant === 'card';
     const isCompactCardVariant = props.displayVariant === 'compact-card';
     const isCardLikeVariant = isCardVariant || isCompactCardVariant;
@@ -454,26 +462,51 @@ const AutocompleteSelect = forwardRef(
               style={[
                 Alignments.absolute,
                 Alignments.fullSize,
-                Spaces.padding[12],
-                hasLabel ? Spaces.paddingTop[40] : Spaces.paddingTop[12],
-                { elevation: 2, zIndex: 2 },
+                Spaces.paddingHorizontal[12],
+                // AUTOCOMPLETE-WEB (2026-09-23) — LA SURCOUCHE EPOUSE LA LIGNE,
+                // ELLE NE LA ROGNE PLUS.
+                //
+                // AVANT : 12 px de marge en haut et en bas (40 en haut avec un
+                // label) sur un cadre qui fait EXACTEMENT la hauteur de
+                // l Input. Il restait 6 px pour une ligne de 23, et le site
+                // coupait les glyphes en deux (mesure Chrome du 23/09).
+                //
+                // MAINTENANT : aucune marge verticale ; la valeur est posee
+                // dans une bande de la hauteur exacte de la ligne, collee en
+                // bas — donc sous le label quand il y en a un, sans avoir a
+                // deviner sa hauteur. En bas, on reprend la seule marge que
+                // l Input s accorde : celle d iOS.
+                //
+                // 🎯 C est la recette que PhoneInput s etait ecrite pour lui
+                // seul (webClosedPressableStyle) — remontee ici pour les 76
+                // usages de la variante par defaut, label compris.
+                Platform.OS === 'ios'
+                  ? Spaces.paddingBottom[INPUT_ROW_IOS_BOTTOM_PADDING]
+                  : Spaces.paddingBottom[0],
+                { elevation: 2, justifyContent: 'flex-end', zIndex: 2 },
                 props.closedPressableStyle,
               ]}
             >
               {props.value && (!Array.isArray(props.value) || props.value.length > 0) ? (
+                // ⚠️ `closedContent` n est PAS mis en bande : il apporte sa
+                // propre mise en page (PhoneInput, seul usage du depot).
                 props.closedContent || (
-                  <Text
-                    ellipsizeMode="tail"
-                    numberOfLines={1}
-                    style={[Fonts.p1, Fonts.neutral00, props.displayTextStyle]}
-                  >
-                    {displayValue}
-                  </Text>
+                  <View style={bandeDeValeur}>
+                    <Text
+                      ellipsizeMode="tail"
+                      numberOfLines={1}
+                      style={[Fonts.p1, Fonts.neutral00, props.displayTextStyle]}
+                    >
+                      {displayValue}
+                    </Text>
+                  </View>
                 )
               ) : (
-                <Text style={[Fonts.p1, props.lightMode ? Fonts.neutral200 : Fonts.neutral500]}>
-                  {props.placeholder}
-                </Text>
+                <View style={bandeDeValeur}>
+                  <Text style={[Fonts.p1, props.lightMode ? Fonts.neutral200 : Fonts.neutral500]}>
+                    {props.placeholder}
+                  </Text>
+                </View>
               )}
             </TouchableOpacity>
             <View pointerEvents="none">
