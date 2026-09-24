@@ -17170,10 +17170,13 @@ export default {
       responses: '{{submitted}}/{{eligible}} joueurs ont répondu',
       stats: {
         assists: 'Passes décisives',
+        draws: 'Nuls',
         goals: 'Buts',
+        losses: 'Défaites',
         matches: 'Matchs',
         minutes: 'Minutes',
         points: 'Points',
+        wins: 'Victoires',
       },
       title: 'Récap du groupe',
     },
