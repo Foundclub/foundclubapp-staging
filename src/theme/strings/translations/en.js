@@ -16122,10 +16122,13 @@ export default {
       responses: '{{submitted}}/{{eligible}} players replied',
       stats: {
         assists: 'Assists',
+        draws: 'Draws',
         goals: 'Goals',
+        losses: 'Losses',
         matches: 'Matches',
         minutes: 'Minutes',
         points: 'Points',
+        wins: 'Wins',
       },
       title: 'Squad summary',
     },

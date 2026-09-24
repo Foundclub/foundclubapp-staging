@@ -59,6 +59,7 @@ import ScreenContainer from '@/components/templates/ScreenContainer';
 import { navigateToLeagueMatchDetails } from '@/views/league/match/utils/leagueNavigation';
 import { buildCompoTemplateDestination } from '@/views/team/composition/teamCompoTemplateUtils';
 import TeamInviteSheet from '@/views/team/invite/TeamInviteSheet';
+import TeamRecordTiles from '@/views/team/performance/TeamRecordTiles';
 
 import { openPublicAuthFlow } from '@/navigation/public/publicAuthNavigation';
 import { RouteNames } from '@/navigation/routeNames';
@@ -4684,6 +4685,9 @@ function TeamDetails({ navigation, route }) {
                     </View>
                   ))}
                 </View>
+                {/* STATS-VND — le bilan victoires / nuls / defaites (decision B d Adel, 24/09). */}
+                <TeamRecordTiles totals={teamPerformanceStats?.totals} />
+
 
                 <View
                   style={[
