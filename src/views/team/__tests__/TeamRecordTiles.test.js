@@ -50,7 +50,8 @@ const rendre = (/** @type {any} */ totals) => {
   return arbre;
 };
 
-const textes = (/** @type {any} */ arbre) => arbre.root.findAllByType(Text).map((n) => String(n.props.children));
+const textes = (/** @type {any} */ arbre) => arbre.root.findAllByType(Text)
+  .map((/** @type {any} */ n) => String(n.props.children));
 
 afterEach(() => {
   act(() => {
@@ -66,14 +67,16 @@ describe('STATS-VND — trois tuiles : victoires, nuls, defaites', () => {
   });
 
   test('un bilan vierge montre ses zeros : c est une vraie information', () => {
-    expect(textes(rendre({ draws: 0, losses: 0, wins: 0 }))).toEqual(['Victoires', '0', 'Nuls', '0', 'Défaites', '0']);
+    expect(textes(rendre({ draws: 0, losses: 0, wins: 0 })))
+      .toEqual(['Victoires', '0', 'Nuls', '0', 'Défaites', '0']);
   });
 
   test('un lecteur d ecran entend le chiffre avec son libelle', () => {
     const tuiles = rendre({ draws: 2, losses: 1, wins: 5 }).root
       .findAll((/** @type {any} */ n) => n.props.accessible === true && typeof n.type === 'string');
 
-    expect(tuiles.map((/** @type {any} */ n) => n.props.accessibilityLabel)).toEqual(['5 Victoires', '2 Nuls', '1 Défaites']);
+    expect(tuiles.map((/** @type {any} */ n) => n.props.accessibilityLabel))
+      .toEqual(['5 Victoires', '2 Nuls', '1 Défaites']);
   });
 
   test('🔒 un serveur plus ancien (champs absents) : rien, plutot qu un « 0 » qui mentirait', () => {

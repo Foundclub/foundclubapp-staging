@@ -4688,7 +4688,6 @@ function TeamDetails({ navigation, route }) {
                 {/* STATS-VND — le bilan victoires / nuls / defaites (decision B d Adel, 24/09). */}
                 <TeamRecordTiles totals={teamPerformanceStats?.totals} />
 
-
                 <View
                   style={[
                     ApplicationStyle.backgroundColor.primary700,

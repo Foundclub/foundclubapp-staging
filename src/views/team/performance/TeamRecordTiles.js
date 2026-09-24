@@ -15,12 +15,17 @@ import useTheme from '@/theme/themeContext';
 // plutot qu un « 0 victoire » qui mentirait.
 
 /**
- * @param {{ totals?: { draws?: unknown, losses?: unknown, wins?: unknown } | null }} props - Les totaux de l equipe.
+ * Le bilan de l equipe en trois tuiles : victoires, nuls, defaites.
+ * @param {object} props
+ * @param {{ draws?: unknown, losses?: unknown, wins?: unknown } | null} [props.totals]
+ *   Les totaux servis par le serveur.
  * @returns {import('react').ReactElement | null} Les trois tuiles, ou rien.
  */
-const TeamRecordTiles = ({ totals }) => {
+function TeamRecordTiles({ totals }) {
   const { t } = useTranslation();
-  const { Alignments, ApplicationStyle, Fonts, Spaces } = useTheme();
+  const {
+    Alignments, ApplicationStyle, Fonts, Spaces,
+  } = useTheme();
   const { draws, losses, wins } = totals || {};
   if (![wins, draws, losses].every((value) => typeof value === 'number')) return null;
 
@@ -51,6 +56,6 @@ const TeamRecordTiles = ({ totals }) => {
       ))}
     </View>
   );
-};
+}
 
 export default TeamRecordTiles;
