@@ -59,6 +59,44 @@ const setTimeoutReel = globalThis.setTimeout;
 const setImmediateReel = globalThis.setImmediate;
 
 /**
+ * 🧊 LA FAUSSE HORLOGE NE DOIT PAS DEREGLER LA VRAIE — le second gel de la CI.
+ *
+ * Du 2026-09-22 au 25/09, les tests unitaires de la CI ne s'arretaient plus
+ * DU TOUT : 20 lancements tues a six heures, sans un seul temoin rouge, et
+ * « ca passe chez moi ». La difference etait la version de Node (CI : 22 ;
+ * poste : 24). Mesure le 2026-09-25 (lot CI-VERTE) :
+ *
+ *   1. un temoin passe en fausse horloge pendant qu'un ecran portant un
+ *      `StatusBar` est ouvert (`ConversationMSGLIVE.frappe`, temoins 4 et 5) ;
+ *   2. `StatusBar` range son `setImmediate` dans une variable STATIQUE
+ *      (`StatusBar._updateImmediate`, react-native 0.81) : une poignee
+ *      FACTICE, qui survit au retour a la vraie horloge ;
+ *   3. a la mise a jour suivante, `StatusBar` la passe au VRAI
+ *      `clearImmediate`. Node 20 et 22 decomptent alors un `setImmediate` qui
+ *      n'a jamais existe : leur file se deregle et Node GELE (Node 24 tolere).
+ *
+ * Le vrai `clearImmediate` n'accepte donc plus ici que de vrais `Immediate` :
+ * une poignee factice n'a rien a annuler dans la vraie file. La fausse horloge
+ * n'est pas touchee — elle capture CETTE fonction en s'installant et la remet
+ * en partant (`hijackMethod`, @sinonjs/fake-timers 10.3.0), aucun `useRealTimers`
+ * ne la perd. Temoin : `__tests__/filetHorlogeFactice.test.js`.
+ */
+{
+  const clearImmediateReel = globalThis.clearImmediate;
+  const poigneeTemoin = setImmediateReel(() => {});
+  clearImmediateReel(poigneeTemoin);
+  const Immediate = poigneeTemoin.constructor;
+  /**
+   * Annule un vrai `setImmediate` ; ignore tout le reste.
+   * @param {unknown} poignee ce que l'appelant croit etre un `setImmediate`
+   * @returns {void} rien
+   */
+  globalThis.clearImmediate = function clearImmediate(poignee) {
+    if (poignee instanceof Immediate) clearImmediateReel(poignee);
+  };
+}
+
+/**
  * Laisse passer un tour d'horloge reelle, puis un tour d'ordonnanceur React.
  *
  * 🧨 POURQUOI : react-query livre ses notifications par `setTimeout(cb, 0)`
