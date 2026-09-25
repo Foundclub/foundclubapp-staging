@@ -205,7 +205,7 @@ class FauxApple(BaseHTTPRequestHandler):
             return self._repondre(200, {
                 "data": [
                     {"id": "b3", "attributes": {"version": "1521", "processingState": "VALID",
-                                                "uploadedDate": "2026-09-24T21:00:00Z"},
+                                                "uploadedDate": "2026-09-24T14:17:05-07:00"},
                      "relationships": {"preReleaseVersion": {"data": {"id": "p65"}}}},
                     {"id": "b2", "attributes": {"version": "999", "processingState": "VALID"},
                      "relationships": {"preReleaseVersion": {"data": {"id": "p10"}}}},
@@ -272,7 +272,7 @@ class TestTestflightAsc(unittest.TestCase):
             APP_STORE_CONNECT_PRIVATE_KEY=self.clef_pem))
         self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
         self.assertIn("NUMERO DE BUILD CHOISI : 1522", r.stdout)
-        self.assertIn("2.6.65 (1521) | traitee", r.stdout)
+        self.assertIn("2.6.65 (1521) | traitee | envoyee le 2026-09-24 21:17 UTC", r.stdout)
         self.assertIn("NUMEROS HORS SERIE IGNORES (1)", r.stdout)
         self.assertEqual(self.lu()["IOS_BUILD_NUMBER"], "1522")
         self.assertNotIn("BEGIN PRIVATE KEY", r.stdout + r.stderr)

@@ -56,6 +56,7 @@ import tempfile
 import time
 import urllib.error
 import urllib.request
+from datetime import datetime, timezone
 from urllib.parse import urlencode
 
 API_ROOT = os.environ.get("ASC_API_ROOT") or "https://api.appstoreconnect.apple.com"
@@ -216,6 +217,17 @@ def publier(cle, valeur):
             handle.write("{}={}\n".format(cle, valeur))
 
 
+def heure_utc(valeur):
+    """Apple date ses builds a l'heure de Californie (2026-09-25T06:50:12-07:00) :
+    affichee telle quelle, une build de 13 h 50 UTC passait pour une build du
+    matin. On convertit en UTC."""
+    try:
+        moment = datetime.fromisoformat(str(valeur).replace("Z", "+00:00"))
+        return moment.astimezone(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+    except ValueError:
+        return str(valeur or "?")[:16]
+
+
 def app_id_de(bundle_id):
     status, payload = request("GET", "/v1/apps?" + urlencode({"filter[bundleId]": bundle_id, "limit": "1"}))
     if status != 200 or not payload.get("data"):
@@ -267,7 +279,7 @@ def cmd_prochain_numero(_args):
         ligne = "  - {} ({}) | {} | envoyee le {}".format(
             versions.get(lien.get("id"), "?"), numero,
             ETIQUETTES.get(attributs.get("processingState"), attributs.get("processingState")),
-            str(attributs.get("uploadedDate", "?"))[:16])
+            heure_utc(attributs.get("uploadedDate")))
         lignes.append(ligne)
         if numero.isdigit() and int(numero) < SERIE_MAX:
             numeros.append(int(numero))
