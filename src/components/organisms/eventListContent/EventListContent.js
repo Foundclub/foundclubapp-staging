@@ -399,6 +399,10 @@ function EventListContent({
     teamIds: eventsConfig?.teamIds,
     type: eventsConfig?.type,
   }, {
+    // RECHERCHE-UNIQUE (25/09, « D4 B ») : le serveur ouvre la recherche d evenements aux
+    // visiteurs sans compte (la vitrine seulement). Sans cette cle, un anonyme restait sur
+    // « Chargement » sans fin.
+    allowAnonymous: true,
     enabled: screenActive && !propEvents && !isViewportListMode && isSmartSearchEnabled,
     placeholderData: keepPreviousPageData,
   });
@@ -413,6 +417,7 @@ function EventListContent({
     isLoading: isViewportLoading,
     refetch: refetchViewport,
   } = useSearchEventsMap(viewportListParams || {}, {
+    allowAnonymous: true,
     enabled: screenActive && !propEvents && isViewportListMode && Boolean(viewportListParams),
     placeholderData: keepPreviousPageData,
   });
