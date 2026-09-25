@@ -25,8 +25,10 @@ Bibliotheque standard uniquement. Controle : python scripts/ci/ios/test_scripts_
 """
 import argparse
 import json
+import math
 import os
 import sys
+from datetime import datetime, timezone
 import urllib.error
 import urllib.request
 from pathlib import Path
@@ -87,6 +89,19 @@ def cmd_dernieres(_args):
     print("DERNIERES BUILDS CODEMAGIC ({} lues) :".format(len(builds)))
     for build in builds[:5]:
         print("  - " + ligne(build))
+
+    # Minutes du mois : chaque build arrondie a la minute superieure, comme le
+    # decompte des 500 minutes gratuites (remises a zero le 1er). Estimation :
+    # la page Billing de Codemagic fait foi.
+    mois = datetime.now(timezone.utc).strftime("%Y-%m")
+    minutes = 0
+    for build in builds:
+        debut, fin = build.get("startedAt"), build.get("finishedAt")
+        if debut and fin and str(debut).startswith(mois):
+            duree = (datetime.fromisoformat(str(fin).replace("Z", "+00:00"))
+                     - datetime.fromisoformat(str(debut).replace("Z", "+00:00"))).total_seconds()
+            minutes += math.ceil(max(duree, 0) / 60)
+    print("MINUTES CODEMAGIC CE MOIS ({}) : ~{} sur 500 (builds lues seulement)".format(mois, minutes))
     return 0
 
 

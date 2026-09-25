@@ -23,6 +23,7 @@ import tempfile
 import threading
 import unittest
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from datetime import datetime, timezone
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
@@ -328,6 +329,9 @@ class TestTestflightAsc(unittest.TestCase):
 # ── Faux Codemagic ────────────────────────────────────────────────────────
 
 
+MOIS = datetime.now(timezone.utc).strftime("%Y-%m")
+
+
 class FauxCodemagic(BaseHTTPRequestHandler):
     recus = []
 
@@ -357,7 +361,7 @@ class FauxCodemagic(BaseHTTPRequestHandler):
         if self.path == "/builds?appId=APPX":
             return self._repondre(200, {"builds": [
                 {"_id": "B1", "status": "finished", "labels": ["2.6.66 production"], "branch": "staging",
-                 "startedAt": "2026-09-25T15:00:00Z", "finishedAt": "2026-09-25T15:22:00Z"}]})
+                 "startedAt": MOIS + "-25T15:00:00Z", "finishedAt": MOIS + "-25T15:21:30Z"}]})
         if self.path == "/builds/B2":
             return self._repondre(200, {"build": {"_id": "B2", "status": "failed", "branch": "staging"}})
         return self._repondre(404, {"error": "not found"})
@@ -406,6 +410,7 @@ class TestCodemagic(unittest.TestCase):
         r = lancer(CODEMAGIC, ["dernieres"], self.dossier, self.env())
         self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
         self.assertIn("B1 | finished | 2.6.66 production | branche staging", r.stdout)
+        self.assertIn("MINUTES CODEMAGIC CE MOIS ({}) : ~22 sur 500".format(MOIS), r.stdout)
         r = lancer(CODEMAGIC, ["etat", "B2"], self.dossier, self.env())
         self.assertEqual(r.returncode, 1)
         self.assertIn("B2 | failed", r.stdout)
