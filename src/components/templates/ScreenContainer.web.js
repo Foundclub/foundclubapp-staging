@@ -51,10 +51,17 @@ const resolveContentWidth = (contentWidth) => {
  *   toute la hauteur, comme sur l'iPhone. Sans lui, un enfant en `flex: 1` vaut
  *   0 px (mesure du 23/09 : le terrain du plein ecran de la composition). OPT-IN :
  *   les autres ecrans du site ne bougent pas.
+ * @param {boolean} [props.boundedHeight] RECHERCHE-UNIQUE (25/09) — le cadre prend
+ *   EXACTEMENT la hauteur disponible, ni plus ni moins. `fillHeight` l'autorise a
+ *   grandir mais pas a retrecir (un View du site a flexShrink 0) : une liste en
+ *   `flex: 1` prend alors la hauteur de TOUT son contenu, n'a plus rien a faire
+ *   defiler et reclame page apres page (banc du 25/09 : cadre de 47 697 px dans
+ *   700 px, 8 pages sur 8 demandees d'un coup). OPT-IN, comme `fillHeight`.
  * @returns {import('react').ReactElement}
  */
 function ScreenContainer({
   bgImage = 'bg2',
+  boundedHeight = false,
   children,
   contentContainerStyle = [],
   contentWidth = 'wide',
@@ -149,6 +156,9 @@ function ScreenContainer({
       width: '100%',
     },
     fillHeight ? { flexGrow: 1 } : null,
+    boundedHeight ? {
+      flexBasis: 0, flexGrow: 1, flexShrink: 1, minHeight: 0,
+    } : null,
     useSurface
       ? {
         backgroundColor: 'rgba(9, 24, 35, 0.78)',

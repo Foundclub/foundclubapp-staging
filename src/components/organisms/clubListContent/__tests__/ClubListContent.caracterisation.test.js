@@ -19,6 +19,8 @@ import renderer, { act } from 'react-test-renderer';
 // `data` change — une liste vide a deja relance sa pagination sur 3 pages).
 
 const mockEtat = {
+  /** @type {Record<string, any>} */
+  filtres: {},
   pagesListe: { pages: [{ data: [] }] },
   pagesPertinence: { pages: [{ data: [] }] },
   pageSuivanteEnCours: false,
@@ -138,7 +140,7 @@ jest.mock(
 
 jest.mock('@/store/appContext', () => ({
   useAppContext: () => ([
-    { clubFilters: { name: mockEtat.recherche }, searchMapSessions: {} },
+    { clubFilters: { ...mockEtat.filtres, name: mockEtat.recherche }, searchMapSessions: {} },
     mockDispatch,
   ]),
 }));
@@ -155,6 +157,13 @@ jest.mock('@/navigation/useBottomDockLayout', () => ({
 
 jest.mock('@/navigation/navigationAvailability', () => ({
   navigateToStackScreenOrScreen: jest.fn(),
+}));
+
+// D6 (25/09) : la ligne « Sport · Ville » lit la liste des sports (la meme
+// requete que la feuille de filtres). Doublee ici : ce fichier ne monte pas de
+// QueryClient.
+jest.mock('@/services/activity/activityQueries', () => ({
+  useGetActivities: () => ({ data: [{ documentId: 'sport-foot', name: 'Football' }] }),
 }));
 
 jest.mock('@/services/club/clubQueries', () => ({
@@ -248,6 +257,7 @@ const chercher = async (texte) => {
 const texteRendu = () => JSON.stringify(monte.toJSON());
 
 beforeEach(() => {
+  mockEtat.filtres = {};
   mockEtat.pagesListe = { pages: [{ data: [] }] };
   mockEtat.pagesPertinence = { pages: [{ data: [] }] };
   mockEtat.pageSuivanteEnCours = false;
@@ -449,5 +459,37 @@ describe('HAUT / D2 — la remontee ne doit RIEN faire a la pagination', () => {
     await chercher('deux');
 
     expect(mockPageSuivantePertinence).toHaveBeenCalledTimes(1);
+  });
+});
+
+// D6 — decision d'Adel du 25/09 (« D6 B »). Le 23/09 il relevait : « il n'y a pas
+// de barre de recherche les villes ». Le sport et la ville vivaient DERRIERE le
+// bouton filtre. Ils se lisent desormais sous la barre, et un appui ouvre la
+// feuille — sur le telephone comme sur l'annuaire du site (meme ecran).
+describe('D6 — le sport et la ville se voient sans ouvrir la feuille', () => {
+  const resume = () => monte.root.findByProps({ testID: 'club-filtres-resume' });
+  const feuille = () => monte.root.findByType('ClubFiltersSheet');
+
+  test('📌 sans filtre, la ligne dit « Tous les sports · Toutes les villes »', async () => {
+    await monter();
+
+    expect(texteRendu()).toContain('Tous les sports · Toutes les villes');
+  });
+
+  test('✅ avec un sport et une ville, la ligne les nomme avec le rayon', async () => {
+    mockEtat.filtres = { activity: 'sport-foot', city: { label: 'Lyon', value: '4.83|45.76' }, radius: 10 };
+
+    await monter();
+
+    expect(texteRendu()).toContain('Football · Lyon · 10 km');
+  });
+
+  test('✅ appuyer sur la ligne ouvre la feuille de filtres', async () => {
+    await monter();
+    expect(feuille().props.isVisible).toBe(false);
+
+    await act(async () => { resume().props.onPress(); });
+
+    expect(feuille().props.isVisible).toBe(true);
   });
 });

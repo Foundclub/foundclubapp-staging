@@ -258,3 +258,18 @@ describe('Dock des marches — CE QUE D35 CHANGE', () => {
     expect(textesVisibles(arbre)).not.toContain('temoin-feuille-ouverte');
   });
 });
+
+// RECHERCHE-UNIQUE (25/09) — l'annuaire du site n'ouvre que deux marches.
+describe('Dock des marches — types restreints (annuaire du site)', () => {
+  test('✅ types = events + clubs : deux pastilles, rien d autre', () => {
+    const { arbre } = rendre({ activeType: 'clubs', types: ['events', 'clubs'] });
+
+    expect(pastilles(arbre).map((noeud) => noeud.props.accessibilityLabel)).toEqual(['Événement', 'Club']);
+  });
+
+  test('📌 sans types, les cinq marches restent (le telephone ne change pas)', () => {
+    const { arbre } = rendre();
+
+    expect(pastilles(arbre)).toHaveLength(5);
+  });
+});

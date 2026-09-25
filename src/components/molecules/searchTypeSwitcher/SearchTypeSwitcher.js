@@ -36,13 +36,16 @@ const DOCK_ITEM_SIZE = 46;
  * ponytail: le pack demande un TROPHEE pour les matchs amicaux ; l'app n'en a
  * pas et `Images.trophy` n'est qu'un alias de `flag.png`. On garde `flag`,
  * comme la case d'Accueil — ajouter un dessin est un lot d'illustration.
+ * RECHERCHE-UNIQUE (25/09) — `types` restreint les marches montres. L'annuaire du
+ * site n'en ouvre que deux (Club, Evenement) ; absent, les cinq restent la.
  * @param {{
  *  activeType: SearchType;
  *  onTypeChange: (type: SearchType) => void;
+ *  types?: ReadonlyArray<SearchType>;
  * }} props
  * @returns {import('react').ReactElement}
  */
-function SearchTypeSwitcher({ activeType, onTypeChange }) {
+function SearchTypeSwitcher({ activeType, onTypeChange, types }) {
   const isWeb = Platform.OS === 'web';
   const {
     Alignments,
@@ -81,8 +84,8 @@ function SearchTypeSwitcher({ activeType, onTypeChange }) {
         key: 'amicaux',
         label: t('searchTypeSwitcher.amicaux', 'Matchs amicaux'),
       },
-    ],
-    [Images, t],
+    ].filter((option) => !types || types.includes(/** @type {SearchType} */ (option.key))),
+    [Images, t, types],
   );
 
   const inactiveSurface = withAlpha(Colors.neutral00, 0.05);

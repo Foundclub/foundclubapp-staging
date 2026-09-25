@@ -31,6 +31,7 @@ import { navigateToStackScreenOrScreen } from '@/navigation/navigationAvailabili
 import { RouteNames } from '@/navigation/routeNames';
 import useBottomDockLayout from '@/navigation/useBottomDockLayout';
 
+import { useGetActivities } from '@/services/activity/activityQueries';
 import { useGetClubs, useGetMultisportClubs } from '@/services/club/clubQueries';
 import { keepPreviousPageData } from '@/services/queryOptions';
 import { useSearchClubs, useSearchClubsMap } from '@/services/search/searchQueries';
@@ -201,6 +202,10 @@ function ClubListContent({
     q: activeSearchText,
     radius: clubFilters?.radius,
   }, {
+    // RECHERCHE-UNIQUE (25/09) — le serveur repond sans compte depuis le 23/09
+    // (`/search/clubs`, `/search/clubs/map`) : sans cette cle, un visiteur
+    // anonyme (telephone ou annuaire du site) restait sur « Chargement » sans fin.
+    allowAnonymous: true,
     enabled: screenActive && !isViewportListMode && isSmartSearchEnabled,
     placeholderData: keepPreviousPageData,
   });
@@ -216,6 +221,7 @@ function ClubListContent({
     isLoading: isViewportLoading,
     refetch: refetchViewport,
   } = useSearchClubsMap(viewportListParams || {}, {
+    allowAnonymous: true,
     enabled: screenActive && isViewportListMode && Boolean(viewportListParams),
     placeholderData: keepPreviousPageData,
   });
@@ -532,6 +538,21 @@ function ClubListContent({
     setFiltersSheetVisible(true);
   }, []);
 
+  // D6 (decision d'Adel du 25/09) — le sport et la ville SE VOIENT sans ouvrir
+  // la feuille (constat du 23/09 : « il n'y a pas de barre de recherche les
+  // villes »). Meme libelle que la rangee Ville de la feuille. La requete des
+  // sports est deja partie : la feuille, montee en permanence, la lance.
+  const { data: activites } = useGetActivities();
+  const resumeFiltres = useMemo(() => {
+    const sport = (activites || []).find(
+      (/** @type {any} */ item) => item?.documentId === clubFilters?.activity,
+    )?.name || t('clubFiltersSheet.allSports', 'Tous les sports');
+    const ville = clubFilters?.city?.label
+      ? `${String(clubFilters.city.label)} · ${String(Number(clubFilters?.radius) || 20)} km`
+      : t('clubFiltersSheet.allCities', 'Toutes les villes');
+    return `${sport} · ${ville}`;
+  }, [activites, clubFilters?.activity, clubFilters?.city?.label, clubFilters?.radius, t]);
+
   const handleSearchField = useCallback((name) => {
     appDispatch({
       payload: {
@@ -674,6 +695,17 @@ function ClubListContent({
           />
         </View>
       </View>
+      <TouchableOpacity
+        accessibilityLabel={t('filtersSheet.title', 'Filtrer')}
+        accessibilityRole="button"
+        activeOpacity={0.8}
+        onPress={handleOpenFilters}
+        testID="club-filtres-resume"
+      >
+        <Text numberOfLines={1} style={[Fonts.p4Bold, Fonts.primary500]}>
+          {resumeFiltres}
+        </Text>
+      </TouchableOpacity>
       {showInlineLoadingHint ? (
         <View style={[Alignments.row, Alignments.alignCenter, Spaces.gap[8]]}>
           <Loader color={Colors.primary500} size="small" />

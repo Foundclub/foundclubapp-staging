@@ -300,16 +300,14 @@ describe('ClubListContent — le visiteur sans compte qui cherche un club (RECHE
     expect(constatRechercheStade()).toEqual(RECHERCHE_STADE_REUSSIE);
   });
 
-  // 🔴 ROUGE ASSUMÉ (phase 1, 25/09) : sans jeton, `useSearchClubs` est eteint par
-  // `enabledWithSession` (searchQueries.js:95-97) parce que `ClubListContent.js`
-  // (l. 196-206) ne lui passe pas `allowAnonymous: true`. Aucune requete ne part
-  // et l'ecran reste sur « Chargement des clubs » sans fin — alors que le serveur
-  // repond deja sans compte (`auth: false`, 23/09). Sortie rouge constatee :
-  // `rechercheStadeEnvoyee: false`, `carteStadeAffichee: false`,
-  // `chargementAffiche: true` — et le temoin A, meme harnais AVEC jeton, est vert.
-  // — Decision dont il depend : aucune.
-  // — À repasser en test normal par la phase 2 (`test.failing` → `test`).
-  test.failing('🔴 temoin B — SANS session, « stade » doit partir, carte affichee', async () => {
+  // ✅ ROUGE le 25/09 (phase 1), VERT en phase 2 : sans jeton, `useSearchClubs`
+  // etait eteint par `enabledWithSession` (searchQueries.js:95-97) parce que
+  // `ClubListContent.js` ne lui passait pas `allowAnonymous: true`. Aucune
+  // requete ne partait et l'ecran restait sur « Chargement des clubs » sans fin,
+  // alors que le serveur repond sans compte depuis le 23/09. Sortie rouge de
+  // phase 1 : `rechercheStadeEnvoyee: false`, `carteStadeAffichee: false`,
+  // `chargementAffiche: true` (temoin A, meme harnais AVEC jeton, vert).
+  test('✅ temoin B — SANS session, « stade » part et la carte s affiche', async () => {
     deconnecte();
     mockEtat.recherche = 'stade';
 

@@ -71,12 +71,16 @@ const toScrollableContentStyle = (styles) => {
  *   le gabarit du site n'etire pas son contenu sans lui. Ici, le conteneur remplit
  *   DEJA toute la hauteur : la valeur est lue pour que les ecrans partages puissent
  *   la passer, puis ignoree.
+ * @param {boolean} [props.boundedHeight] SITE UNIQUEMENT (RECHERCHE-UNIQUE) : meme
+ *   raison que `fillHeight`, ignoree ici de la meme facon.
  * @returns {import('react').ReactElement}
  */
 function ScreenContainer({
   bgImage = 'bg2', // Default to bg2 per user request
   bottomInsetExtra = 12,
   bottomInsetMode = 'none',
+  // eslint-disable-next-line no-unused-vars -- ignore sur l'iPhone, voir la JSDoc.
+  boundedHeight = false,
   children,
   contentContainerStyle = [],
   // eslint-disable-next-line no-unused-vars -- ignore sur l'iPhone, voir la JSDoc.

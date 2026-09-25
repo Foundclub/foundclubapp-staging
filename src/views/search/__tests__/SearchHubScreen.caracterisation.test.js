@@ -518,3 +518,54 @@ describe('SearchHubScreen — caractérisation (état au 25/09, avant RECHERCHE-
     expect(mockPanneaux.events.props.refreshSignal).toBe(0);
   });
 });
+
+// RECHERCHE-UNIQUE (phase 2, 25/09) — l'annuaire du site sert CET ecran avec deux
+// reglages de route : `types` (les marches montres) et `enableMapMode`. Absents,
+// les temoins ci-dessus prouvent que le telephone ne change pas.
+describe('RECHERCHE-UNIQUE — les reglages de l annuaire', () => {
+  const ANNUAIRE = { enableMapMode: false, types: ['clubs', 'events'] };
+
+  test('✅ types = clubs + events : le selecteur ne recoit QUE ces deux marches, dans l ordre de l ecran', async () => {
+    await monter({ ...ANNUAIRE, activeType: 'clubs' });
+
+    expect(mockCoquille.props.types).toEqual(['events', 'clubs']);
+    expect(mockCoquille.props.activeType).toBe('clubs');
+  });
+
+  test('✅ un marche hors liste demande par la route retombe sur le premier permis', async () => {
+    await monter({ ...ANNUAIRE, activeType: 'recruitment' });
+
+    expect(mockCoquille.props.activeType).toBe('events');
+    expect(mockPanneaux.recruitment.montages).toBe(0);
+  });
+
+  test('✅ un appui sur un marche hors liste ne fait rien', async () => {
+    await monter({ ...ANNUAIRE, activeType: 'clubs' });
+
+    await changerOnglet('amicaux');
+
+    expect(mockCoquille.props.activeType).toBe('clubs');
+    expect(navigation.setParams).not.toHaveBeenCalled();
+    expect(mockPanneaux.amicaux.montages).toBe(0);
+  });
+
+  test('✅ enableMapMode false eteint le bouton carte des deux listes', async () => {
+    await monter({ ...ANNUAIRE, activeType: 'clubs' });
+    await changerOnglet('events');
+
+    expect(mockPanneaux.clubs.props.enableMapMode).toBe(false);
+    expect(mockPanneaux.events.props.enableMapMode).toBe(false);
+  });
+
+  test('📌 types en chaine « clubs,events » (parametre d adresse) vaut la liste', async () => {
+    await monter({ activeType: 'clubs', types: 'clubs,events' });
+
+    expect(mockCoquille.props.types).toEqual(['events', 'clubs']);
+  });
+
+  test('📌 types vide ou inconnu : les cinq marches restent (rien ne se ferme par erreur)', async () => {
+    await monter({ activeType: 'clubs', types: ['n-importe-quoi'] });
+
+    expect(mockCoquille.props.types).toBeUndefined();
+  });
+});
