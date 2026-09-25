@@ -30,6 +30,7 @@ ICI = Path(__file__).resolve().parent
 RACINE = ICI.parents[2]
 PREPARER = ICI / "preparer_build.py"
 ASC = ICI / "testflight_asc.py"
+CODEMAGIC = ICI / "codemagic.py"
 
 
 def lancer(script, args, cwd, env_extra):
@@ -322,6 +323,98 @@ class TestTestflightAsc(unittest.TestCase):
             IOS_MARKETING_VERSION="2.6.66", IOS_BUILD_NUMBER="1522"))
         self.assertEqual(r.returncode, 0)
         self.assertIn("etat non relu", r.stdout)
+
+
+# ── Faux Codemagic ────────────────────────────────────────────────────────
+
+
+class FauxCodemagic(BaseHTTPRequestHandler):
+    recus = []
+
+    def log_message(self, *args):
+        pass
+
+    def _repondre(self, code, corps):
+        brut = json.dumps(corps).encode("utf-8")
+        self.send_response(code)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", str(len(brut)))
+        self.end_headers()
+        self.wfile.write(brut)
+
+    def _autorise(self):
+        FauxCodemagic.recus.append(("jeton", self.headers.get("x-auth-token")))
+        return self.headers.get("x-auth-token") == "JETON-SECRET-DE-TEST"
+
+    def do_GET(self):
+        if not self._autorise():
+            return self._repondre(401, {"error": "Unauthorized"})
+        if self.path == "/apps":
+            return self._repondre(200, {"applications": [
+                {"_id": "AUTRE", "appName": "autre-depot"},
+                {"_id": "APPX", "appName": "foundclubapp-staging",
+                 "repository": {"htmlUrl": "https://github.com/Foundclub/foundclubapp-staging"}}]})
+        if self.path == "/builds?appId=APPX":
+            return self._repondre(200, {"builds": [
+                {"_id": "B1", "status": "finished", "labels": ["2.6.66 production"], "branch": "staging",
+                 "startedAt": "2026-09-25T15:00:00Z", "finishedAt": "2026-09-25T15:22:00Z"}]})
+        if self.path == "/builds/B2":
+            return self._repondre(200, {"build": {"_id": "B2", "status": "failed", "branch": "staging"}})
+        return self._repondre(404, {"error": "not found"})
+
+    def do_POST(self):
+        if not self._autorise():
+            return self._repondre(401, {"error": "Unauthorized"})
+        corps = json.loads(self.rfile.read(int(self.headers.get("Content-Length", 0))))
+        FauxCodemagic.recus.append(("corps", corps))
+        return self._repondre(200, {"buildId": "B2"})
+
+
+class TestCodemagic(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.serveur = ThreadingHTTPServer(("127.0.0.1", 0), FauxCodemagic)
+        threading.Thread(target=cls.serveur.serve_forever, daemon=True).start()
+        cls.dossier = Path(tempfile.mkdtemp(prefix="ci-cm-"))
+        cls.fichier = cls.dossier / "api_token.txt"
+        # Tel que l'ecrit la commande PowerShell donnee a Adel (sans fin de ligne),
+        # ici avec un BOM et un retour a la ligne en plus, pour la robustesse.
+        cls.fichier.write_bytes("\ufeffJETON-SECRET-DE-TEST\r\n".encode("utf-8"))
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.serveur.shutdown()
+        shutil.rmtree(cls.dossier, ignore_errors=True)
+
+    def env(self, fichier=None):
+        return {"CODEMAGIC_API_ROOT": "http://127.0.0.1:{}".format(self.serveur.server_address[1]),
+                "CODEMAGIC_TOKEN_FILE": str(fichier or self.fichier)}
+
+    def test_lancer_envoie_entrees_et_variables_sans_imprimer_le_jeton(self):
+        r = lancer(CODEMAGIC, ["lancer", "2.6.68", "--attendre-apple"], self.dossier, self.env())
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        self.assertIn("BUILD CODEMAGIC LANCEE : B2 — version 2.6.68 — cible production — attendre Apple true", r.stdout)
+        self.assertNotIn("JETON-SECRET", r.stdout + r.stderr)
+        corps = [c for k, c in FauxCodemagic.recus if k == "corps"][-1]
+        self.assertEqual((corps["appId"], corps["workflowId"], corps["branch"]), ("APPX", "ios-testflight", "staging"))
+        self.assertEqual(corps["inputs"]["marketing_version"], "2.6.68")
+        self.assertEqual(corps["environment"]["variables"]["IOS_MARKETING_VERSION"], "2.6.68")
+        self.assertEqual(corps["environment"]["variables"]["ATTENDRE_APPLE"], "true")
+        self.assertTrue(all(v == "JETON-SECRET-DE-TEST" for k, v in FauxCodemagic.recus if k == "jeton"))
+
+    def test_dernieres_et_etat(self):
+        r = lancer(CODEMAGIC, ["dernieres"], self.dossier, self.env())
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        self.assertIn("B1 | finished | 2.6.66 production | branche staging", r.stdout)
+        r = lancer(CODEMAGIC, ["etat", "B2"], self.dossier, self.env())
+        self.assertEqual(r.returncode, 1)
+        self.assertIn("B2 | failed", r.stdout)
+
+    def test_sans_jeton_message_clair_et_pas_de_trace(self):
+        r = lancer(CODEMAGIC, ["dernieres"], self.dossier, self.env(self.dossier / "absent.txt"))
+        self.assertEqual(r.returncode, 1)
+        self.assertIn("Jeton Codemagic introuvable", r.stderr)
+        self.assertNotIn("Traceback", r.stderr)
 
 
 if __name__ == "__main__":

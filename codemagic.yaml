@@ -167,7 +167,9 @@ workflows:
           #!/usr/bin/env bash
           set -uo pipefail
           # N'echoue jamais : l'envoi, lui, a deja reussi.
-          if [ "${{ inputs.attendre_apple }}" = "true" ]; then
+          # ATTENDRE_APPLE : meme choix quand la build est lancee par l API
+          # (scripts/ci/ios/codemagic.py lancer --attendre-apple).
+          if [ "${{ inputs.attendre_apple }}" = "true" ] || [ "${ATTENDRE_APPLE:-}" = "true" ]; then
             # Attendre le traitement (plafond TESTFLIGHT_MAX_WAIT_MINUTES), tenter
             # la distribution, imprimer le temoin -- un seul processus.
             python3 scripts/ci/ios/testflight_asc.py suivre
