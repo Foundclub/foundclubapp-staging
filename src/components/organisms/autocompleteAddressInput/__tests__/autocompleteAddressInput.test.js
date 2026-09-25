@@ -245,4 +245,38 @@ describe('AutocompleteAddressInput — la recherche de ville, de l\'appui aux pr
     expect(texteVisible(arbre)).toContain('Lyon (69000)');
     expect(texteVisible(arbre)).toContain('Lyon 3e Arrondissement (69003)');
   });
+
+  // RECHERCHE-UNIQUE (phase 3, 25/09) : le champ Lieu de la recherche de clubs propose aussi les
+  // departements et regions de l annuaire, AVANT les adresses. Sans ce reglage : rien ne change.
+  it('✅ optionsSupplementaires : les lieux proposes passent AVANT les adresses', async () => {
+    const lieux = jest.fn((/** @type {string} */ recherche) => (recherche === 'lyon'
+      ? [{
+        label: 'Lyonnais (département)',
+        territoire: 'departement',
+        value: 'departement:lyonnais',
+      }]
+      : []));
+    const arbre = monter({ optionsSupplementaires: lieux });
+    appuyerSurLeChamp(arbre);
+    await act(async () => {
+      jest.advanceTimersByTime(500);
+    });
+
+    const saisie = arbre.root.findAllByType(TextInput)
+      .find((/** @type {any} */ noeud) => noeud.props.editable !== false);
+    await act(async () => {
+      saisie.props.onChangeText('lyon');
+    });
+    for (let tour = 0; tour < 5; tour += 1) {
+      // eslint-disable-next-line no-await-in-loop
+      await act(async () => {
+        jest.advanceTimersByTime(400);
+      });
+    }
+
+    const texte = texteVisible(arbre);
+    expect(lieux).toHaveBeenCalledWith('lyon');
+    expect(texte).toContain('Lyonnais (département)');
+    expect(texte.indexOf('Lyonnais (département)')).toBeLessThan(texte.indexOf('Lyon (69000)'));
+  });
 });

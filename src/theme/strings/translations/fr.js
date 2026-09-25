@@ -2758,6 +2758,10 @@ export default {
   clubFiltersSheet: {
     allCities: 'Toutes les villes',
     allSports: 'Tous les sports',
+    department: 'département',
+    place: 'Lieu',
+    placePlaceholder: 'Ville, département ou région',
+    region: 'région',
   },
   clubInterestRequestService: {
     presets: {

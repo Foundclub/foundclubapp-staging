@@ -32,6 +32,8 @@ import { RouteNames } from '@/navigation/routeNames';
 import useBottomDockLayout from '@/navigation/useBottomDockLayout';
 
 import { useGetActivities } from '@/services/activity/activityQueries';
+import { useGetClubsDuTerritoire } from '@/services/annuaire/annuaireQueries';
+import { slugAnnuaire } from '@/services/annuaire/slugAnnuaire';
 import { useGetClubs, useGetMultisportClubs } from '@/services/club/clubQueries';
 import { keepPreviousPageData } from '@/services/queryOptions';
 import { useSearchClubs, useSearchClubsMap } from '@/services/search/searchQueries';
@@ -75,6 +77,20 @@ const buildViewportListQuery = (viewport, filters = {}) => {
     zoom: viewport.zoom,
   };
 };
+
+/**
+ * RECHERCHE-UNIQUE (phase 3) — une ligne de l'annuaire, sous la forme que lit ClubCard.
+ * @param {any} club Un club tel que `/public-directory/landing` le rend.
+ * @returns {any} Le club pour la carte.
+ */
+const versCarteDeClub = (club) => ({
+  _type: 'club',
+  activites: Array.isArray(club?.sports) ? club.sports : [],
+  addressDetails: club?.addressLabel || club?.city || '',
+  documentId: club?.documentId,
+  logoUrl: club?.logoUrl || null,
+  name: club?.name,
+});
 
 const mergeClubCollections = (...collections) => {
   const byKey = new Map();
@@ -148,7 +164,28 @@ function ClubListContent({
     () => (typeof clubFilters?.name === 'string' ? clubFilters.name.trim() : ''),
     [clubFilters?.name],
   );
-  const isSmartSearchEnabled = !isViewportListMode && activeSearchText.length >= 2;
+  // RECHERCHE-UNIQUE (phase 3, decision d'Adel du 25/09 « Q2 = B ») — un département ou une région
+  // choisi dans le champ Lieu : la liste lit l'ANNUAIRE, page par page, pour compter comme le titre
+  // de sa page (mesure du 25/09 : 404 clubs de football dans les Bouches-du-Rhône selon l'annuaire,
+  // 250 selon la table des clubs, 0 en région). Le nom tapé y est cherché aussi (`q`).
+  // La requête des sports est déjà partie : la feuille de filtres, montée en permanence, la lance.
+  const { data: activites } = useGetActivities();
+  const territoire = clubFilters?.city?.territoire && clubFilters?.city?.slug
+    ? { echelle: clubFilters.city.territoire, slug: clubFilters.city.slug }
+    : null;
+  const isTerritoryMode = !isViewportListMode && Boolean(territoire);
+  // '' = tous les sports ; null = le sport n'est pas encore connu (on attend, sinon la liste
+  // partirait une première fois sur TOUS les sports du département).
+  const sportDuTerritoire = useMemo(() => {
+    if (!clubFilters?.activity) return '';
+    const activite = (activites || []).find(
+      (/** @type {any} */ item) => item?.documentId === clubFilters.activity,
+    );
+    return activite?.name ? slugAnnuaire(activite.name) : null;
+  }, [activites, clubFilters?.activity]);
+  const isSmartSearchEnabled = !isViewportListMode
+    && !isTerritoryMode
+    && activeSearchText.length >= 2;
 
   const {
     data: clubPages,
@@ -165,7 +202,7 @@ function ClubListContent({
     includeMultisport: false,
     pageSize: 30,
   }, {
-    enabled: screenActive && !isViewportListMode && !isSmartSearchEnabled,
+    enabled: screenActive && !isViewportListMode && !isSmartSearchEnabled && !isTerritoryMode,
     placeholderData: keepPreviousPageData,
   });
 
@@ -179,6 +216,7 @@ function ClubListContent({
   }, {
     enabled: screenActive
       && !isViewportListMode
+      && !isTerritoryMode
       && !isSmartSearchEnabled
       && isMultisportDeferredEnabled,
     placeholderData: undefined,
@@ -226,6 +264,32 @@ function ClubListContent({
     placeholderData: keepPreviousPageData,
   });
 
+  const {
+    data: territoirePages,
+    error: territoireError,
+    fetchNextPage: fetchTerritoireNextPage,
+    hasNextPage: hasTerritoireNextPage,
+    isFetched: isTerritoireFetched,
+    isFetching: isTerritoireFetching,
+    isFetchingNextPage: isFetchingTerritoireNextPage,
+    isLoading: isTerritoireLoading,
+    refetch: refetchTerritoire,
+  } = useGetClubsDuTerritoire({
+    department: territoire?.echelle === 'departement' ? territoire.slug : undefined,
+    q: activeSearchText.length >= 2 ? activeSearchText : undefined,
+    region: territoire?.echelle === 'region' ? territoire.slug : undefined,
+    sport: sportDuTerritoire || undefined,
+  }, {
+    enabled: screenActive && isTerritoryMode && sportDuTerritoire !== null,
+    placeholderData: keepPreviousPageData,
+  });
+  const territoireClubs = useMemo(
+    () => (territoirePages?.pages || []).flatMap(
+      (/** @type {any} */ page) => (page?.items || []).map(versCarteDeClub),
+    ),
+    [territoirePages],
+  );
+
   const clubs = useMemo(() => clubPages?.pages
     ?.reduce((/** @type {Club[]} */ acc, page) => {
       const items = page?.data || [];
@@ -259,6 +323,8 @@ function ClubListContent({
   let displayedClubs = defaultDisplayedClubs;
   if (isViewportListMode) {
     displayedClubs = viewportClubs;
+  } else if (isTerritoryMode) {
+    displayedClubs = territoireClubs;
   } else if (isSmartSearchEnabled) {
     displayedClubs = smartClubs;
   }
@@ -268,6 +334,9 @@ function ClubListContent({
   if (isViewportListMode) {
     activeError = viewportError;
     activeHasFetched = isViewportFetched;
+  } else if (isTerritoryMode) {
+    activeError = territoireError;
+    activeHasFetched = isTerritoireFetched;
   } else if (isSmartSearchEnabled) {
     activeError = smartError;
     activeHasFetched = isSmartFetched;
@@ -278,6 +347,9 @@ function ClubListContent({
   if (isViewportListMode) {
     activeIsLoading = isViewportLoading;
     activeIsFetching = isViewportFetching;
+  } else if (isTerritoryMode) {
+    activeIsLoading = isTerritoireLoading;
+    activeIsFetching = isTerritoireFetching;
   } else if (isSmartSearchEnabled) {
     activeIsLoading = isSmartLoading;
     activeIsFetching = isSmartFetching;
@@ -286,6 +358,8 @@ function ClubListContent({
   let activeIsFetchingNext = isFetchingNextPage;
   if (isViewportListMode) {
     activeIsFetchingNext = isFetchingViewportNextPage;
+  } else if (isTerritoryMode) {
+    activeIsFetchingNext = isFetchingTerritoireNextPage;
   } else if (isSmartSearchEnabled) {
     activeIsFetchingNext = isFetchingSmartNextPage;
   }
@@ -312,6 +386,8 @@ function ClubListContent({
   let activeMode = 'default-list';
   if (isViewportListMode) {
     activeMode = 'viewport-list';
+  } else if (isTerritoryMode) {
+    activeMode = 'territory-list';
   } else if (isSmartSearchEnabled) {
     activeMode = 'smart-search';
   }
@@ -364,6 +440,10 @@ function ClubListContent({
       return refetchViewport();
     }
 
+    if (isTerritoryMode) {
+      return refetchTerritoire();
+    }
+
     if (isSmartSearchEnabled) {
       return refetchSmart();
     }
@@ -377,10 +457,12 @@ function ClubListContent({
   }, [
     isMultisportDeferredEnabled,
     isSmartSearchEnabled,
+    isTerritoryMode,
     isViewportListMode,
     refetch,
     refetchMultisport,
     refetchSmart,
+    refetchTerritoire,
     refetchViewport,
   ]);
 
@@ -496,6 +578,13 @@ function ClubListContent({
       return;
     }
 
+    if (isTerritoryMode) {
+      if (hasTerritoireNextPage && !isFetchingTerritoireNextPage) {
+        fetchTerritoireNextPage();
+      }
+      return;
+    }
+
     if (isSmartSearchEnabled) {
       if (hasSmartNextPage && !isFetchingSmartNextPage) {
         fetchSmartNextPage();
@@ -509,14 +598,18 @@ function ClubListContent({
   }, [
     fetchNextPage,
     fetchSmartNextPage,
+    fetchTerritoireNextPage,
     fetchViewportNextPage,
     hasNextPage,
     hasSmartNextPage,
+    hasTerritoireNextPage,
     hasViewportNextPage,
     isFetchingNextPage,
     isFetchingSmartNextPage,
+    isFetchingTerritoireNextPage,
     isFetchingViewportNextPage,
     isSmartSearchEnabled,
+    isTerritoryMode,
     isViewportListMode,
   ]);
 
@@ -538,20 +631,22 @@ function ClubListContent({
     setFiltersSheetVisible(true);
   }, []);
 
-  // D6 (decision d'Adel du 25/09) — le sport et la ville SE VOIENT sans ouvrir
+  // D6 (decision d'Adel du 25/09) — le sport et le lieu SE VOIENT sans ouvrir
   // la feuille (constat du 23/09 : « il n'y a pas de barre de recherche les
-  // villes »). Meme libelle que la rangee Ville de la feuille. La requete des
-  // sports est deja partie : la feuille, montee en permanence, la lance.
-  const { data: activites } = useGetActivities();
+  // villes »). Meme libelle que la rangee Lieu de la feuille : une ville avec
+  // son rayon, un departement ou une region avec son seul nom (phase 3).
   const resumeFiltres = useMemo(() => {
     const sport = (activites || []).find(
       (/** @type {any} */ item) => item?.documentId === clubFilters?.activity,
     )?.name || t('clubFiltersSheet.allSports', 'Tous les sports');
-    const ville = clubFilters?.city?.label
-      ? `${String(clubFilters.city.label)} · ${String(Number(clubFilters?.radius) || 20)} km`
-      : t('clubFiltersSheet.allCities', 'Toutes les villes');
-    return `${sport} · ${ville}`;
-  }, [activites, clubFilters?.activity, clubFilters?.city?.label, clubFilters?.radius, t]);
+    let lieu = t('clubFiltersSheet.allCities', 'Toutes les villes');
+    if (clubFilters?.city?.territoire) {
+      lieu = String(clubFilters.city.nom || clubFilters.city.label);
+    } else if (clubFilters?.city?.label) {
+      lieu = `${String(clubFilters.city.label)} · ${String(Number(clubFilters?.radius) || 20)} km`;
+    }
+    return `${sport} · ${lieu}`;
+  }, [activites, clubFilters?.activity, clubFilters?.city, clubFilters?.radius, t]);
 
   const handleSearchField = useCallback((name) => {
     appDispatch({

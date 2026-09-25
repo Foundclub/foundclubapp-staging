@@ -88,6 +88,24 @@ jest.mock('@/services/activity/activityQueries', () => ({
   useGetActivities: () => ({ data: [{ documentId: 'a-1', name: 'Football' }] }),
 }));
 
+// RECHERCHE-UNIQUE (phase 3) : le champ Lieu propose aussi les departements et regions
+// de l annuaire.
+jest.mock('@/services/annuaire/annuaireQueries', () => ({
+  useGetTerritoires: () => ({
+    data: {
+      departments: [
+        { code: '13', name: 'Bouches-du-Rhône', slug: 'bouches-du-rhone' },
+        { code: '69', name: 'Rhône', slug: 'rhone' },
+      ],
+      regions: [{
+        code: 'paca',
+        name: "Provence-Alpes-Côte d'Azur",
+        slug: 'provence-alpes-cote-d-azur',
+      }],
+    },
+  }),
+}));
+
 jest.mock('@/theme/themeContext', () => {
   const genererCouleurs = jest.requireActual('@/theme/colors').default;
   const genererPolices = jest.requireActual('@/theme/fonts').default;
@@ -212,7 +230,9 @@ describe('ClubFiltersSheet — la forme du pack', () => {
 
     expect(texte).toContain('Filtrer');
     expect(texte).toContain('Sport');
-    expect(texte).toContain('Ville');
+    // RECHERCHE-UNIQUE (phase 3, decision d Adel « Q2 = B ») : la rangee Ville devient « Lieu » —
+    // un seul champ pour une ville, un departement ou une region.
+    expect(texte).toContain('Lieu');
     expect(texte).toContain('Voir les résultats');
     expect(texte).toContain('Réinitialiser');
   });
@@ -236,7 +256,7 @@ describe('ClubFiltersSheet — la forme du pack', () => {
     expect(texte).not.toContain('Tous les sports');
   });
 
-  it('le rayon se lit dans la rangee Ville, il n a plus de rangee a lui', async () => {
+  it('le rayon se lit dans la rangee Lieu, il n a plus de rangee a lui', async () => {
     const { tree } = await rendre({ filters: { city: MARSEILLE, radius: 25 } });
     const rangees = tree.root.findAll(
       (/** @type {any} */ node) => typeof node.props?.accessibilityLabel === 'string'
@@ -244,7 +264,7 @@ describe('ClubFiltersSheet — la forme du pack', () => {
       { deep: true },
     ).map((/** @type {any} */ node) => node.props.accessibilityLabel);
 
-    expect(rangees).toEqual(expect.arrayContaining([expect.stringContaining('Ville : Marseille · 25 km')]));
+    expect(rangees).toEqual(expect.arrayContaining([expect.stringContaining('Lieu : Marseille · 25 km')]));
     expect(rangees.some((/** @type {string} */ l) => l.startsWith('Rayon'))).toBe(false);
   });
 });
@@ -275,10 +295,10 @@ describe('ClubFiltersSheet — ce qu elle envoie a la recherche', () => {
     expect(onApply.mock.calls[0][0].name).toBe('OM');
   });
 
-  it('le rayon reste REGLABLE, depuis la rangee Ville', async () => {
+  it('le rayon reste REGLABLE, depuis la rangee Lieu', async () => {
     const { onApply, tree } = await rendre({ filters: { city: MARSEILLE, radius: 25 } });
 
-    await ouvrirRangee(tree, 'Ville');
+    await ouvrirRangee(tree, 'Lieu');
     await act(async () => {
       trouver(tree, 'rayon').props.onValueChange(42);
     });
@@ -358,5 +378,60 @@ describe('ClubFiltersSheet — ce qu elle envoie a la recherche', () => {
     });
 
     expect(texteVisible(tree)).toContain('Marseille · 25 km');
+  });
+});
+
+// RECHERCHE-UNIQUE (phase 3) — decision d Adel du 25/09 (« Q2 = B ») : « un seul filtre, ou l on
+// peut mettre autant Marseille que le departement Bouches-du-Rhone ». Une ville garde son rayon ;
+// un departement ou une region n en a pas, et la liste lira l annuaire par son slug.
+describe('ClubFiltersSheet — le champ Lieu : ville, departement ou region', () => {
+  const BOUCHES = {
+    code: '13',
+    label: 'Bouches-du-Rhône (département)',
+    nom: 'Bouches-du-Rhône',
+    slug: 'bouches-du-rhone',
+    territoire: 'departement',
+    value: 'departement:bouches-du-rhone',
+  };
+
+  it('✅ « bouches » donne le departement, « provence » la region, avant les adresses', async () => {
+    const { tree } = await rendre();
+    await ouvrirRangee(tree, 'Lieu');
+    const { optionsSupplementaires } = trouver(tree, 'adresse').props;
+
+    expect(optionsSupplementaires('bouches')).toEqual([BOUCHES]);
+    const territoire = (/** @type {any} */ option) => option.territoire;
+    expect(optionsSupplementaires('provence').map(territoire)).toEqual(['region']);
+    // Le code du departement se tape aussi ; une seule lettre ne propose rien.
+    const slug = (/** @type {any} */ option) => option.slug;
+    expect(optionsSupplementaires('13').map(slug)).toEqual(['bouches-du-rhone']);
+    expect(optionsSupplementaires('b')).toEqual([]);
+  });
+
+  it('✅ un departement choisi : pas de rayon, et il part SANS point ni geohash', async () => {
+    const { onApply, tree } = await rendre();
+    await ouvrirRangee(tree, 'Lieu');
+    await act(async () => {
+      trouver(tree, 'adresse').props.setAddress(BOUCHES);
+    });
+
+    expect(trouver(tree, 'rayon')).toBeUndefined();
+    await appuyerSur(tree, 'Voir les résultats');
+    const envoye = onApply.mock.calls[0][0];
+    expect(envoye.city).toEqual(BOUCHES);
+    expect(envoye.geohash).toBeUndefined();
+    expect(envoye.lat).toBeUndefined();
+    expect(envoye.lon).toBeUndefined();
+  });
+
+  it('✅ la rangee Lieu dit le seul nom du departement, sans « km »', async () => {
+    const { tree } = await rendre({ filters: { city: BOUCHES, radius: 20 } });
+    const rangees = tree.root.findAll(
+      (/** @type {any} */ node) => typeof node.props?.accessibilityLabel === 'string'
+        && node.props.accessibilityLabel.startsWith('Lieu : '),
+      { deep: true },
+    ).map((/** @type {any} */ node) => node.props.accessibilityLabel);
+
+    expect(rangees[0]).toBe('Lieu : Bouches-du-Rhône');
   });
 });
