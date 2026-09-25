@@ -172,7 +172,9 @@ workflows:
             # la distribution, imprimer le temoin -- un seul processus.
             python3 scripts/ci/ios/testflight_asc.py suivre
           else
-            TESTFLIGHT_STATE_LABEL="envoyee, traitement Apple non attendu (attendre_apple=false)"             TESTFLIGHT_DISTRIBUTION="groupe interne : automatique une fois traitee, si activee sur le groupe"               python3 scripts/ci/ios/testflight_asc.py temoin
+            export TESTFLIGHT_STATE_LABEL="envoyee, traitement Apple non attendu (attendre_apple=false)"
+            export TESTFLIGHT_DISTRIBUTION="groupe interne : automatique une fois traitee, si activee sur le groupe"
+            python3 scripts/ci/ios/testflight_asc.py temoin
           fi
     artifacts:
       - build/ios/ipa/*.ipa
