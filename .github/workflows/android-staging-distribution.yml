@@ -1,14 +1,20 @@
 name: Android Staging Distribution
 
+# A LA DEMANDE SEULEMENT depuis le 2026-09-25 (decision d'Adel, lot CI-PRIVE).
+# Avant, chaque envoi sur `staging` fabriquait un APK de recette : 106 par mois,
+# ~2 600 minutes, alors que personne dans l'equipe n'a de telephone Android.
+# Une fois le depot prive, ces minutes sont prises sur les 2 000 gratuites.
+# Lancer : gh workflow run android-staging-distribution.yml --ref staging
+# Mode d'emploi : D:/App/fc/CONSTRUIRE_LES_VERSIONS.md
+
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - staging
 
 jobs:
   distribute-android-staging:
     runs-on: ubuntu-latest
+    # ~25 min mesurees ; le defaut de GitHub est 6 HEURES.
+    timeout-minutes: 45
     env:
       APP_ENV: staging
       ENV: staging

@@ -1,16 +1,30 @@
 name: App CI
 
+# A LA DEMANDE (et sur demande de fusion) depuis le 2026-09-25 (lot CI-PRIVE).
+# Avant, chaque envoi sur `staging` la lancait : 106 fois par mois. La vraie
+# porte reste le controle LOCAL de chaque recolte (jest, type-check, lint,
+# theme -- CLAUDE.md §5) ; celle-ci est un second avis, a demander :
+#   gh workflow run app-ci.yml --ref <branche>
+# Aucune demande de fusion n'a jamais ete ouverte sur ce depot : le
+# declencheur ne coute rien tant qu'on n'en ouvre pas.
+
 on:
   pull_request:
-  push:
-    branches:
-      - staging
-      - main
   workflow_dispatch:
+
+# Deux lancements sur la meme branche : le plus ancien est annule.
+concurrency:
+  group: app-ci-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   app-quality:
     runs-on: ubuntu-latest
+    # ~9 min quand tout va bien. Du 22 au 24/09, les tests unitaires ne
+    # s'arretaient plus et chaque lancement a tourne 6 HEURES avant d'etre tue
+    # (20 lancements, 7 200 minutes) : en prive, un seul aurait mange 18 % du
+    # quota du mois. La minuterie coupe a 25 min.
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
 
