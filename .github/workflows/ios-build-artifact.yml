@@ -1,4 +1,14 @@
-name: iOS Build Artifact
+name: iOS Build Artifact (payant en prive)
+
+# ══════════════════════════════════════════════════════════════════════════════
+# ⛔ PAYANT une fois le depot PRIVE : 0,062 $ par minute de Mac (ou ~10 minutes
+# du quota gratuit de 2 000 par minute de Mac). ON NE LE LANCE QU'AVEC L'ACCORD
+# EXPLICITE D'ADEL. Il n'est pas sur le chemin des TestFlight (Codemagic, ou
+# ios-testflight-release.yml en secours) ; au 2026-09-25 ses 4 derniers
+# lancements sont ROUGES (profil ad hoc sans Associated Domains, cf. memoire
+# piege-ci-ios-dormante-deux-ruptures). Mode d'emploi :
+# D:/App/fc/CONSTRUIRE_LES_VERSIONS.md
+# ══════════════════════════════════════════════════════════════════════════════
 
 on:
   workflow_dispatch:
@@ -6,6 +16,7 @@ on:
 jobs:
   build-ios:
     runs-on: macos-latest
+    timeout-minutes: 60
     env:
       APP_ENV: staging
       ENV: staging
