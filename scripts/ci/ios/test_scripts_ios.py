@@ -207,6 +207,10 @@ class FauxApple(BaseHTTPRequestHandler):
                      "relationships": {"preReleaseVersion": {"data": {"id": "p65"}}}},
                     {"id": "b2", "attributes": {"version": "999", "processingState": "VALID"},
                      "relationships": {"preReleaseVersion": {"data": {"id": "p10"}}}},
+                    # Numero-horodatage de l'ancienne agence, vu chez Apple le 2026-09-25.
+                    {"id": "b1", "attributes": {"version": "1761054327", "processingState": "VALID",
+                                                "uploadedDate": "2025-10-21T13:45:27Z"},
+                     "relationships": {"preReleaseVersion": {"data": {"id": "p10"}}}},
                 ],
                 "included": [{"type": "preReleaseVersions", "id": "p65", "attributes": {"version": "2.6.65"}},
                              {"type": "preReleaseVersions", "id": "p10", "attributes": {"version": "2.6.10"}}],
@@ -267,6 +271,7 @@ class TestTestflightAsc(unittest.TestCase):
         self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
         self.assertIn("NUMERO DE BUILD CHOISI : 1522", r.stdout)
         self.assertIn("2.6.65 (1521) | traitee", r.stdout)
+        self.assertIn("NUMEROS HORS SERIE IGNORES (1)", r.stdout)
         self.assertEqual(self.lu()["IOS_BUILD_NUMBER"], "1522")
         self.assertNotIn("BEGIN PRIVATE KEY", r.stdout + r.stderr)
 

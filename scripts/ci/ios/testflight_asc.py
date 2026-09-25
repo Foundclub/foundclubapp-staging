@@ -5,7 +5,9 @@ Appelants : codemagic.yaml (voie normale) et
 .github/workflows/ios-testflight-release.yml (voie de secours).
 
 Sous-commandes :
-  prochain-numero  numero de build = plus grand numero connu d'Apple + 1.
+  prochain-numero  numero de build = plus grand numero de la serie FoundClub
+                   connu d'Apple + 1 (serie = numeros < SERIE_MAX ; voir
+                   plus bas pourquoi).
                    Imprime les dernieres builds et leur etat : c'est le seul
                    endroit ou l'on VOIT l'etat d'une build precedente.
                    Echoue (code 1) si Apple ne repond pas : sans numero, pas
@@ -57,6 +59,13 @@ import urllib.request
 from urllib.parse import urlencode
 
 API_ROOT = os.environ.get("ASC_API_ROOT") or "https://api.appstoreconnect.apple.com"
+
+# Les builds FoundClub sont numerotees run_number+run_attempt (GitHub) puis
+# « dernier + 1 » (Codemagic) : quelques milliers. L'historique d'Apple contient
+# aussi des numeros-HORODATAGES hors serie (1 761 054 327, vu le 2026-09-25,
+# heritage de l'ancienne agence) : les prendre pour maximum ferait sauter la
+# numerotation a 1,7 milliard pour toujours. Ils sont ignores, et imprimes.
+SERIE_MAX = 10_000_000
 
 ETIQUETTES = {
     "VALID": "traitee",
@@ -250,24 +259,35 @@ def cmd_prochain_numero(_args):
     }
     numeros = []
     lignes = []
+    hors_serie = []
     for build in payload.get("data", []):
         attributs = build.get("attributes", {})
         numero = str(attributs.get("version", ""))
-        if numero.isdigit():
-            numeros.append(int(numero))
         lien = (build.get("relationships", {}).get("preReleaseVersion", {}) or {}).get("data") or {}
-        lignes.append("  - {} ({}) | {} | envoyee le {}".format(
+        ligne = "  - {} ({}) | {} | envoyee le {}".format(
             versions.get(lien.get("id"), "?"), numero,
             ETIQUETTES.get(attributs.get("processingState"), attributs.get("processingState")),
-            str(attributs.get("uploadedDate", "?"))[:16]))
+            str(attributs.get("uploadedDate", "?"))[:16])
+        lignes.append(ligne)
+        if numero.isdigit() and int(numero) < SERIE_MAX:
+            numeros.append(int(numero))
+        elif numero:
+            hors_serie.append(ligne)
 
     print("DERNIERES BUILDS CHEZ APPLE ({} lues) :".format(len(lignes)))
     for ligne in lignes[:5]:
         print(ligne)
+    if hors_serie:
+        print("NUMEROS HORS SERIE IGNORES ({}) :".format(len(hors_serie)))
+        for ligne in hors_serie[:5]:
+            print(ligne)
 
-    prochain = (max(numeros) + 1) if numeros else 1
+    if not numeros:
+        print("::error::Aucune build de la serie FoundClub chez Apple : numero impossible a choisir.")
+        return 1
+    prochain = max(numeros) + 1
     publier("IOS_BUILD_NUMBER", prochain)
-    print("NUMERO DE BUILD CHOISI : {} (plus grand numero connu d'Apple + 1)".format(prochain))
+    print("NUMERO DE BUILD CHOISI : {} (plus grand numero de la serie + 1)".format(prochain))
     return 0
 
 

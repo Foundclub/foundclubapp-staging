@@ -19,6 +19,7 @@ on:
       - ci/PRIVE-codemagic
     paths:
       - .github/workflows/testflight-etat.yml
+      - scripts/ci/ios/testflight_asc.py
 
 jobs:
   lire-etat-apple:
