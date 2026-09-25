@@ -1,0 +1,171 @@
+# ══════════════════════════════════════════════════════════════════════════════
+# CODEMAGIC — construction iPhone (TestFlight). VOIE NORMALE depuis le 2026-09-25.
+#
+# Formule GRATUITE d'un compte PERSONNEL : 500 minutes de Mac M2 par mois,
+# remises a zero le 1er du mois, une construction a la fois, 120 min maximum.
+#   ⛔ Ne JAMAIS creer d'« equipe » (Team) : les minutes gratuites disparaissent.
+#   ⛔ Ne JAMAIS activer la facturation sans Adel : au-dela des 500 minutes,
+#      Codemagic BLOQUE tant qu'elle est eteinte, il FACTURE (0,095 $/min) sinon.
+#
+# Fait EXACTEMENT ce que faisait .github/workflows/ios-testflight-release.yml :
+# meme version choisie a la main, meme cible API, meme plist Firebase controle,
+# meme groupe de testeurs. Les etapes communes sont les MEMES scripts
+# (scripts/ci/ios/*.py), controles sur le PC par
+#   python scripts/ci/ios/test_scripts_ios.py
+# Deux differences, voulues :
+#   1. SIGNATURE AUTOMATIQUE. Codemagic obtient certificat et profil d'Apple
+#      pendant la build, avec la cle App Store Connect (integration
+#      « FoundClub Codemagic ») et UNE cle privee de certificat
+#      (CERTIFICATE_PRIVATE_KEY). Plus de .p12, de profil ni de mots de passe a
+#      recopier : Apple fournit un profil a jour a chaque build.
+#   2. NUMERO DE BUILD = plus grand numero connu d'Apple + 1 (Codemagic n'a pas
+#      le compteur de GitHub). Toujours plus grand que tout ce qui est parti.
+#
+# L'attente du traitement par Apple (4 a 5 min) n'est PAS faite par defaut :
+# elle brule des minutes de Mac pour rien, les testeurs INTERNES recoivent la
+# build d'eux-memes. Cocher « attendre_apple » quand on veut la PREUVE
+# « ETAT TESTFLIGHT : ... — traitee ».
+#
+# Mode d'emploi complet (gestes d'Adel, limites, que faire si on est bloque) :
+#   D:/App/fc/CONSTRUIRE_LES_VERSIONS.md
+# ══════════════════════════════════════════════════════════════════════════════
+
+workflows:
+  ios-testflight:
+    name: iOS TestFlight
+    instance_type: mac_mini_m2
+    # ~20-25 min attendues. Le plafond protege le budget si quelque chose pend.
+    max_build_duration: 60
+    labels:
+      - ${{ inputs.marketing_version }} ${{ inputs.api_env }}
+    inputs:
+      marketing_version:
+        description: "Version iOS a envoyer (ex 2.6.66) — AUCUN defaut, a saisir, plus grande que la derniere"
+        type: string
+      api_env:
+        description: "Cible API : production, ou staging pour une recette sur api-staging"
+        type: choice
+        default: production
+        options:
+          - production
+          - staging
+      force_revenuecat_rail:
+        description: "1 pour forcer le rail RevenueCat (recette d'achat en bac a sable), vide sinon"
+        type: string
+        default: ""
+      attendre_apple:
+        description: "Attendre qu'Apple ait traite la build (~5 min de Mac en plus) — pour la PREUVE"
+        type: boolean
+        default: false
+    # Nom EXACT de la cle posee par Adel dans Codemagic (Integrations >
+    # Developer Portal). Elle sert a la signature, au numero de build et a l'envoi.
+    integrations:
+      app_store_connect: FoundClub Codemagic
+    environment:
+      # Groupe de variables SECRETES posees par Adel dans Codemagic :
+      #   CERTIFICATE_PRIVATE_KEY, GOOGLE_SERVICE_INFO_PLIST_PRODUCTION_BASE64,
+      #   TOMTOM_API_KEY_PRODUCTION, REVENUECAT_APPLE_API_KEY, SENTRY_DSN
+      groups:
+        - foundclub_ios
+      vars:
+        IOS_WORKSPACE: ios/foundclub.xcworkspace
+        IOS_SCHEME: foundclub
+        IOS_BUNDLE_ID: com.foundclub
+        IOS_MARKETING_VERSION: ${{ inputs.marketing_version }}
+        API_ENV: ${{ inputs.api_env }}
+        FC_FORCE_REVENUECAT_RAIL: ${{ inputs.force_revenuecat_rail }}
+        APP_ENV: production
+        ENV: production
+        # Le jeton Sentry de l'ancienne agence a ete retire du depot : sans ces
+        # deux variables, la phase d'envoi des symboles echoue et la build rougit.
+        SENTRY_ALLOW_FAILURE: "true"
+        SENTRY_DISABLE_AUTO_UPLOAD: "true"
+        TESTFLIGHT_GROUP: FoundClub internal
+        TESTFLIGHT_MAX_WAIT_MINUTES: "30"
+        TESTFLIGHT_POLL_SECONDS: "60"
+      # Xcode 26.0.1 : le plus ANCIEN Xcode 26 (Apple exige 26+ depuis le
+      # 2026-04-28). Plus recent, le pod `fmt` 11.0.2 de React Native ne compile
+      # plus (« call to consteval function ... »). Meme choix que GitHub.
+      xcode: 26.0
+      # Node 20 = npm 10 : le package-lock.json DOIT etre lu par npm 10.
+      node: 20
+      cocoapods: default
+    scripts:
+      # ── Controles qui coutent quelques secondes : AVANT toute depense ──────
+      - name: Version demandee
+        script: python3 scripts/ci/ios/preparer_build.py version
+      - name: Numero de build (dernier chez Apple + 1)
+        script: |
+          #!/usr/bin/env bash
+          set -euo pipefail
+          if [ -n "${APP_STORE_CONNECT_PRIVATE_KEY:-}" ]; then
+            # Voie principale : imprime aussi les dernieres builds et leur etat.
+            python3 scripts/ci/ios/testflight_asc.py prochain-numero
+          else
+            # Filet : si l'integration ne donnait pas la cle aux scripts, l'outil
+            # de Codemagic l'a toujours. 6744020465 = identifiant Apple de l'app
+            # (public, relu dans le journal GitHub du 2026-09-24).
+            DERNIER="$(app-store-connect get-latest-testflight-build-number 6744020465 --all-versions)"
+            echo "IOS_BUILD_NUMBER=$((DERNIER + 1))" >> "$CM_ENV"
+            echo "NUMERO DE BUILD CHOISI : $((DERNIER + 1)) (outil Codemagic : plus grand numero TestFlight + 1)"
+          fi
+      - name: Fichier .env.production (cible API)
+        script: python3 scripts/ci/ios/preparer_build.py env
+      - name: GoogleService-Info.plist (apparie a la cible API)
+        script: python3 scripts/ci/ios/preparer_build.py firebase
+      - name: Certificat et profil App Store (signature automatique)
+        script: |
+          #!/usr/bin/env bash
+          set -euo pipefail
+          keychain initialize
+          # --create : fabrique le certificat (a partir de CERTIFICATE_PRIVATE_KEY)
+          # et le profil s'ils n'existent pas encore ; les reutilise sinon.
+          # --strict-match-identifier : com.foundclub et rien d'autre.
+          app-store-connect fetch-signing-files "$IOS_BUNDLE_ID" \
+            --type IOS_APP_STORE \
+            --strict-match-identifier \
+            --create
+          keychain add-certificates
+      # ── Construction ───────────────────────────────────────────────────────
+      - name: Dependances JS
+        script: npm ci
+      - name: Dependances CocoaPods
+        script: cd ios && pod install
+      - name: Reglages de signature du projet
+        script: |
+          #!/usr/bin/env bash
+          set -euo pipefail
+          xcode-project use-profiles \
+            --project ios/foundclub.xcodeproj \
+            --archive-method app-store \
+            --custom-export-options='{"uploadSymbols": true, "stripSwiftSymbols": true, "compileBitcode": false}'
+      - name: Numeroter le projet
+        script: python3 scripts/ci/ios/preparer_build.py numeroter
+      - name: Construire l'IPA
+        script: |
+          #!/usr/bin/env bash
+          set -euo pipefail
+          xcode-project build-ipa \
+            --workspace "$IOS_WORKSPACE" \
+            --scheme "$IOS_SCHEME" \
+            --config Release
+      - name: Version reellement archivee
+        script: python3 scripts/ci/ios/preparer_build.py archive build/ios/xcarchive/*.xcarchive
+      # ── Envoi et temoins ───────────────────────────────────────────────────
+      - name: Envoi a App Store Connect (TestFlight)
+        script: app-store-connect publish --path build/ios/ipa/*.ipa
+      - name: ETAT TESTFLIGHT (temoin de fin de chaine)
+        script: |
+          #!/usr/bin/env bash
+          set -uo pipefail
+          # N'echoue jamais : l'envoi, lui, a deja reussi.
+          if [ "${{ inputs.attendre_apple }}" = "true" ]; then
+            # Attendre le traitement (plafond TESTFLIGHT_MAX_WAIT_MINUTES), tenter
+            # la distribution, imprimer le temoin -- un seul processus.
+            python3 scripts/ci/ios/testflight_asc.py suivre
+          else
+            TESTFLIGHT_STATE_LABEL="envoyee, traitement Apple non attendu (attendre_apple=false)"             TESTFLIGHT_DISTRIBUTION="groupe interne : automatique une fois traitee, si activee sur le groupe"               python3 scripts/ci/ios/testflight_asc.py temoin
+          fi
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
