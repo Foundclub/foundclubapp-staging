@@ -18,8 +18,9 @@
 #      « FoundClub Codemagic ») et UNE cle privee de certificat
 #      (CERTIFICATE_PRIVATE_KEY). Plus de .p12, de profil ni de mots de passe a
 #      recopier : Apple fournit un profil a jour a chaque build.
-#   2. NUMERO DE BUILD = plus grand numero connu d'Apple + 1 (Codemagic n'a pas
-#      le compteur de GitHub). Toujours plus grand que tout ce qui est parti.
+#   2. NUMERO DE BUILD = plus grand numero de la serie FoundClub connu d'Apple
+#      + 1 (Codemagic n'a pas le compteur de GitHub). Les numeros-horodatages de
+#      l'ancienne agence (1.7.x, ~1,76 milliard) sont ignores.
 #
 # L'attente du traitement par Apple (4 a 5 min) n'est PAS faite par defaut :
 # elle brule des minutes de Mac pour rien, les testeurs INTERNES recoivent la
@@ -105,9 +106,16 @@ workflows:
             # Filet : si l'integration ne donnait pas la cle aux scripts, l'outil
             # de Codemagic l'a toujours. 6744020465 = identifiant Apple de l'app
             # (public, relu dans le journal GitHub du 2026-09-24).
-            DERNIER="$(app-store-connect get-latest-testflight-build-number 6744020465 --all-versions)"
+            # ⛔ PAS --all-versions : il rendrait 1761054327, un numero-horodatage
+            # de l'ancienne agence (versions 1.7.x). Sans l'option : derniere
+            # build de la version la plus HAUTE (2.6.x), donc la serie FoundClub.
+            DERNIER="$(app-store-connect get-latest-testflight-build-number 6744020465)"
+            if [ "$DERNIER" -ge 10000000 ]; then
+              echo "::error::Numero hors serie rendu par Apple ($DERNIER) : arret."
+              exit 1
+            fi
             echo "IOS_BUILD_NUMBER=$((DERNIER + 1))" >> "$CM_ENV"
-            echo "NUMERO DE BUILD CHOISI : $((DERNIER + 1)) (outil Codemagic : plus grand numero TestFlight + 1)"
+            echo "NUMERO DE BUILD CHOISI : $((DERNIER + 1)) (outil Codemagic : derniere build de la plus haute version + 1)"
           fi
       - name: Fichier .env.production (cible API)
         script: python3 scripts/ci/ios/preparer_build.py env
