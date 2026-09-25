@@ -12,6 +12,13 @@ name: TestFlight - etat chez Apple (lecture seule)
 
 on:
   workflow_dispatch:
+  # TEMPORAIRE (lot CI-PRIVE) : permet un premier passage avant la fusion dans
+  # staging. A RETIRER avant la recolte.
+  push:
+    branches:
+      - ci/PRIVE-codemagic
+    paths:
+      - .github/workflows/testflight-etat.yml
 
 jobs:
   lire-etat-apple:
