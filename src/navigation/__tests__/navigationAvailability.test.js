@@ -94,3 +94,42 @@ describe('navigateToStackScreenOrScreen', () => {
     });
   });
 });
+
+// RECHERCHE-UNIQUE (25/09) — SUR LE SITE, L'ADAPTATEUR SE DONNE LUI-MÊME POUR PARENT.
+// `createWebNavigationAdapter` rend `getParent: () => parentNavigation || adapter` : sans
+// parent, il se rend LUI-MÊME. La remontée de `hasRouteInNavigationTree` ne trouvait donc
+// jamais de fin : un appui sur une carte de club (ClubListContent) figeait l'onglet du
+// navigateur (banc du 25/09 : clic bloqué sur « performing click action », page morte).
+describe('sur le site : l adaptateur web est son propre parent', () => {
+  const { createWebNavigationAdapter } = jest.requireActual('@/navigation/webNavigationAdapter');
+
+  const adaptateurCompte = () => {
+    const push = jest.fn();
+    const adaptateur = createWebNavigationAdapter({ currentRouteName: 'SearchHub', push, replace: jest.fn() });
+    const getParentReel = adaptateur.getParent;
+    let appels = 0;
+    // Garde-fou du TÉMOIN (pas du code) : sans lui, un rouge ne s'afficherait jamais —
+    // la boucle synchrone bloquerait jest pour toujours.
+    adaptateur.getParent = () => {
+      appels += 1;
+      if (appels > 1000) throw new Error('BOUCLE SANS FIN : getParent appelé plus de 1000 fois');
+      return getParentReel();
+    };
+    return { adaptateur, push };
+  };
+
+  it('✅ hasRouteInNavigationTree s arrête et répond faux', () => {
+    const { adaptateur } = adaptateurCompte();
+
+    expect(hasRouteInNavigationTree(adaptateur, 'ClubStack')).toBe(false);
+  });
+
+  it('✅ une carte de club mène à l écran Club (/clubs/c1), sans figer la page', () => {
+    const { adaptateur, push } = adaptateurCompte();
+
+    navigateToStackScreenOrScreen(adaptateur, VERS_LE_PLANNING);
+
+    // buildWebPath recopie aussi le paramètre en requête (/clubs/c1?clubId=c1) : comportement existant.
+    expect(push.mock.calls[0][0].split('?')[0]).toBe('/clubs/c1');
+  });
+});

@@ -36,6 +36,9 @@ import { useGetPlaces } from '@/services/places/placesQueries';
  * @param {string} [props.type] - Optional BAN type hint.
  * @param {() => void} [props.onFocus] - Optional callback when the search modal opens.
  * @param {() => void} [props.onBlur] - Optional callback when the search modal closes.
+ * @param {(recherche: string) => Option[]} [props.optionsSupplementaires] - RECHERCHE-UNIQUE
+ *   (25/09) : des lieux proposés AVANT les adresses (départements, régions de l'annuaire),
+ *   calculés sur le texte tapé. Absent : le champ ne propose que des adresses, comme avant.
  * @param {import('react-native').ViewStyle | import('react-native').ViewStyle[]} [props.wrapperStyle]
  * @param {object} [props.styles] - Optional compatibility style prop.
  * @returns {import('react').ReactElement}
@@ -50,6 +53,7 @@ function AutocompleteAddressInput({
   onBlur,
   onFocus,
   onSelect,
+  optionsSupplementaires,
   placeholder,
   setAddress,
   type,
@@ -158,6 +162,11 @@ function AutocompleteAddressInput({
       .filter((option) => option.label && option.value);
   }, [extractBoundingBox, places]);
 
+  const options = useMemo(() => {
+    if (typeof optionsSupplementaires !== 'function') return placesOptions;
+    return [...optionsSupplementaires(addressSearch?.trim() || ''), ...placesOptions];
+  }, [addressSearch, optionsSupplementaires, placesOptions]);
+
   const selectedAddress = setAddress ? address : uncontrolledAddress;
 
   /**
@@ -183,7 +192,7 @@ function AutocompleteAddressInput({
       lightMode={lightMode}
       onBlur={onBlur}
       onFocus={onFocus}
-      options={placesOptions}
+      options={options}
       placeholder={placeholder}
       ref={selectRef}
       searchValue={addressSearch}

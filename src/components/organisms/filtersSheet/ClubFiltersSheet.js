@@ -1,6 +1,6 @@
 import Slider from '@react-native-community/slider';
 import {
-  useEffect, useMemo, useRef, useState,
+  useCallback, useEffect, useMemo, useRef, useState,
 } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Text, View } from 'react-native';
@@ -12,6 +12,7 @@ import AutocompleteSelect from '@/components/molecules/autocompleteSelect/Autoco
 import AutocompleteAddressInput from '@/components/organisms/autocompleteAddressInput/autocompleteAddressInput';
 
 import { useGetActivities } from '@/services/activity/activityQueries';
+import { useGetTerritoires } from '@/services/annuaire/annuaireQueries';
 
 import coordonneesDeLaVille from './cityCoordinates';
 import FiltersSheet from './FiltersSheet';
@@ -36,6 +37,12 @@ import FiltersSheet from './FiltersSheet';
 
 const RAYON_PAR_DEFAUT = 20;
 
+const normaliser = (/** @type {unknown} */ valeur) => String(valeur || '')
+  .normalize('NFD')
+  .replace(/\p{Diacritic}/gu, '')
+  .toLowerCase()
+  .trim();
+
 /**
  * @param {{
  *  filters?: Record<string, any>;
@@ -57,6 +64,11 @@ function ClubFiltersSheet({
   const { Colors, Fonts, Spaces } = /** @type {any} */ (useTheme());
   const { getGeohashForPointAndRadius } = usePlaces();
   const { data: allActivities } = useGetActivities();
+  // RECHERCHE-UNIQUE (phase 3, decision d'Adel du 25/09 « Q2 = B ») : « un seul filtre, où l'on
+  // peut mettre autant Marseille que le département Bouches-du-Rhône ». Le champ Lieu propose les
+  // départements et régions de l'annuaire AVANT les adresses ; une ville garde son rayon, un
+  // département ou une région n'en a pas.
+  const { data: territoires } = useGetTerritoires();
 
   const [activity, setActivity] = useState('');
   const [city, setCity] = useState(/** @type {any} */ (undefined));
@@ -93,11 +105,58 @@ function ClubFiltersSheet({
     [activity, sportOptions],
   );
 
-  const libelleVille = city?.label
-    ? `${String(city.label)} · ${String(radius)} km`
-    : TOUTES_VILLES;
+  const estTerritoire = Boolean(city?.territoire);
+  let libelleVille = TOUTES_VILLES;
+  if (estTerritoire) {
+    libelleVille = String(city.nom || city.label);
+  } else if (city?.label) {
+    libelleVille = `${String(city.label)} · ${String(radius)} km`;
+  }
+
+  const optionsTerritoires = useCallback((/** @type {string} */ recherche) => {
+    const terme = normaliser(recherche);
+    if (terme.length < 2) return [];
+    const correspond = (/** @type {any} */ item) => normaliser(item?.name).includes(terme)
+      || normaliser(item?.code) === terme;
+    /**
+     * Traduit un lieu de l'annuaire en option du champ Lieu.
+     * @param {any} item Un département ou une région de l'annuaire.
+     * @param {'departement' | 'region'} territoire Son échelle.
+     * @returns {any} L'option du champ Lieu.
+     */
+    const versOption = (item, territoire) => ({
+      code: item.code || null,
+      label: `${item.name} (${territoire === 'departement'
+        ? t('clubFiltersSheet.department', 'département')
+        : t('clubFiltersSheet.region', 'région')})`,
+      nom: item.name,
+      slug: item.slug,
+      territoire,
+      value: `${territoire}:${item.slug}`,
+    });
+    const regions = (territoires?.regions || []).filter(correspond).slice(0, 3);
+    const departements = (territoires?.departments || []).filter(correspond).slice(0, 5);
+    return [
+      ...regions.map((item) => versOption(item, 'region')),
+      ...departements.map((item) => versOption(item, 'departement')),
+    ];
+  }, [t, territoires]);
 
   const appliquer = () => {
+    // Un département ou une région n'a ni point ni rayon : la liste lira l'annuaire par son slug.
+    if (city?.territoire) {
+      onApply({
+        ...filters,
+        activity,
+        city,
+        geohash: undefined,
+        lat: undefined,
+        lon: undefined,
+        radius,
+      });
+      onClose();
+      return;
+    }
     const coordonnees = coordonneesDeLaVille(city);
     const geohash = coordonnees
       ? getGeohashForPointAndRadius(coordonnees.lat, coordonnees.lon, radius)
@@ -150,34 +209,43 @@ function ClubFiltersSheet({
         <View style={[Spaces.gap[12]]}>
           <AutocompleteAddressInput
             address={city}
-            label={t('clubFilters.fields.city.label', 'Ville')}
-            placeholder={t('clubFilters.fields.city.placeholder', 'Entre une ville')}
+            label={t('clubFiltersSheet.place', 'Lieu')}
+            optionsSupplementaires={optionsTerritoires}
+            placeholder={t('clubFiltersSheet.placePlaceholder', 'Ville, département ou région')}
             setAddress={setCity}
           />
           {/* Le rayon n'est plus un reglage a part : le pack le lit dans la
               rangee Ville (« Marseille · 25 km »). Il reste REGLABLE ici, sur
               la meme rampe qu'avant (2 a 50 km, au kilometre pres). */}
-          <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
-            {`${t('clubFilters.fields.radius.label', 'Dans un rayon autour de : ')}${String(radius)} km`}
-          </Text>
-          <Slider
-            accessibilityLabel={t('clubFilters.fields.radius.label', 'Dans un rayon autour de : ')}
-            disabled={!city?.value}
-            maximumTrackTintColor={Colors.primary700}
-            maximumValue={50}
-            minimumTrackTintColor={Colors.primary500}
-            minimumValue={2}
-            onValueChange={setRadius}
-            step={1}
-            style={{ height: 44, width: '100%' }}
-            tapToSeek
-            thumbTintColor={Colors.primary500}
-            value={radius}
-          />
+          {estTerritoire ? null : (
+            <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
+              {t('clubFilters.fields.radius.label', 'Dans un rayon autour de : ')}
+              {`${String(radius)} km`}
+            </Text>
+          )}
+          {estTerritoire ? null : (
+            <Slider
+              accessibilityLabel={t(
+                'clubFilters.fields.radius.label',
+                'Dans un rayon autour de : ',
+              )}
+              disabled={!city?.value}
+              maximumTrackTintColor={Colors.primary700}
+              maximumValue={50}
+              minimumTrackTintColor={Colors.primary500}
+              minimumValue={2}
+              onValueChange={setRadius}
+              step={1}
+              style={{ height: 44, width: '100%' }}
+              tapToSeek
+              thumbTintColor={Colors.primary500}
+              value={radius}
+            />
+          )}
         </View>
       ),
       key: 'city',
-      label: t('clubFilters.fields.city.label', 'Ville'),
+      label: t('clubFiltersSheet.place', 'Lieu'),
       value: libelleVille,
     },
   ];

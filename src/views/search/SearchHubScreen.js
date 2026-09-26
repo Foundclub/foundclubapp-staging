@@ -39,6 +39,19 @@ const SEARCH_TAB_TYPES = /** @type {const} */ ([
   'amicaux',
 ]);
 const SEARCH_STALE_WINDOW_MS = 30_000;
+
+/**
+ * RECHERCHE-UNIQUE (25/09) — l'annuaire du site sert CET ecran, mais n'en ouvre
+ * que deux marches (Club, Evenement). `route.params.types` les nomme ; absent,
+ * vide ou sans marche connu, les cinq restent la : le telephone ne change pas.
+ * @param {unknown} rawTypes
+ * @returns {ReadonlyArray<typeof SEARCH_TAB_TYPES[number]>}
+ */
+const resolveAllowedTypes = (rawTypes) => {
+  const requested = Array.isArray(rawTypes) ? rawTypes : String(rawTypes || '').split(',');
+  const allowed = SEARCH_TAB_TYPES.filter((type) => requested.includes(type));
+  return allowed.length ? allowed : SEARCH_TAB_TYPES;
+};
 const DEFAULT_EVENT_FILTERS = Object.freeze({
   excludeType: 'Réservation',
   sessionStatus: 'open',
@@ -52,7 +65,16 @@ const DEFAULT_EVENT_FILTERS = Object.freeze({
 function SearchHubScreen({ navigation, route }) {
   const { userData } = useAuth();
   const { Colors } = useTheme();
-  const requestedType = coerceSearchHubType(route?.params?.activeType);
+  const allowedTypes = useMemo(
+    () => resolveAllowedTypes(route?.params?.types),
+    [route?.params?.types],
+  );
+  const isRestricted = allowedTypes.length < SEARCH_TAB_TYPES.length;
+  const coercedType = coerceSearchHubType(route?.params?.activeType);
+  const requestedType = allowedTypes.includes(coercedType) ? coercedType : allowedTypes[0];
+  // Le site n'a pas de carte publique : il eteint le bouton carte (Home.js natif
+  // anonyme fait de meme). Absent, rien ne change.
+  const enableMapMode = route?.params?.enableMapMode !== false;
   const [activeType, setActiveType] = useState(requestedType);
   const [visitedTypes, setVisitedTypes] = useState(() => new Set([requestedType]));
   const [refreshSignals, setRefreshSignals] = useState({
@@ -136,7 +158,7 @@ function SearchHubScreen({ navigation, route }) {
 
   const handleTypeChange = useCallback((nextType) => {
     const sanitizedType = coerceSearchHubType(nextType);
-    if (sanitizedType === activeType) return;
+    if (sanitizedType === activeType || !allowedTypes.includes(sanitizedType)) return;
 
     setVisitedTypes((previousVisited) => {
       const nextVisited = new Set(previousVisited);
@@ -151,14 +173,14 @@ function SearchHubScreen({ navigation, route }) {
         ? { initialRecruitmentTab }
         : {}),
     });
-  }, [activeType, initialRecruitmentTab, navigation, route?.params]);
+  }, [activeType, allowedTypes, initialRecruitmentTab, navigation, route?.params]);
 
   const renderPanel = useCallback((type) => {
     if (type === 'events') {
       return (
         <EventListContent
           additionalFilters={DEFAULT_EVENT_FILTERS}
-          enableMapMode
+          enableMapMode={enableMapMode}
           refreshSignal={refreshSignals.events}
           screenActive={activeType === 'events'}
           showFilters
@@ -169,7 +191,7 @@ function SearchHubScreen({ navigation, route }) {
     if (type === 'clubs') {
       return (
         <ClubListContent
-          enableMapMode
+          enableMapMode={enableMapMode}
           refreshSignal={refreshSignals.clubs}
           screenActive={activeType === 'clubs'}
         />
@@ -223,6 +245,7 @@ function SearchHubScreen({ navigation, route }) {
   }, [
     Colors,
     activeType,
+    enableMapMode,
     initialRecruitmentTab,
     refreshSignals,
     route?.params?.initialFriendlyMatchTab,
@@ -233,6 +256,7 @@ function SearchHubScreen({ navigation, route }) {
       activeType={activeType}
       navigation={navigation}
       onTypeChange={handleTypeChange}
+      types={isRestricted ? allowedTypes : undefined}
     >
       <View style={{ flex: 1 }}>
         {SEARCH_TAB_TYPES.map((type) => {

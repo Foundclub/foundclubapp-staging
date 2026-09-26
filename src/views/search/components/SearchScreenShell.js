@@ -32,6 +32,7 @@ import { RouteNames } from '@/navigation/routeNames';
  *    switcher?: { id: string; order: number; title: string; description: string };
  *  };
  *  onTutorialLayout?: (key: 'header' | 'switcher', layout: { x: number; y: number; width: number; height: number }) => void;
+ *  types?: ReadonlyArray<SearchType>;
  * }} props
  * @returns {import('react').ReactElement}
  *
@@ -48,6 +49,7 @@ function SearchScreenShell({
   onTutorialLayout,
   onTypeChange,
   tutorialSteps,
+  types,
 }) {
   const {
     Alignments,
@@ -117,8 +119,13 @@ function SearchScreenShell({
   );
 
   return (
+    // RECHERCHE-UNIQUE (25/09) — `boundedHeight` : sur le SITE, sans lui la liste
+    // prend la hauteur de TOUT son contenu et, n'ayant plus rien a faire defiler,
+    // reclame page apres page (banc du 25/09 : 8 pages sur 8 demandees d'un coup).
+    // Sans effet sur le telephone (ScreenContainer.js l'ignore).
     <ScreenContainer
       bgImage="bg2"
+      boundedHeight
       contentContainerStyle={[Alignments.fill, Spaces.paddingBottom[24]]}
     >
       <View style={[
@@ -159,6 +166,7 @@ function SearchScreenShell({
             <SearchTypeSwitcher
               activeType={activeType}
               onTypeChange={handleTypeChange}
+              types={types}
             />
           </View>
         </OnboardingWrapper>
@@ -170,6 +178,7 @@ function SearchScreenShell({
           <SearchTypeSwitcher
             activeType={activeType}
             onTypeChange={handleTypeChange}
+            types={types}
           />
         </View>
       )}
