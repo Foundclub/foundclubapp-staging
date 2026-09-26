@@ -305,11 +305,33 @@ jobs:
           test -n "$AAB_PATH" || (echo "Unable to locate production AAB" && exit 1)
           echo "path=$AAB_PATH" >> "$GITHUB_OUTPUT"
 
+      # ANDROID-R8 (2026-09-26) — R8 est allume en release (android/app/build.gradle,
+      # enableProguardInReleaseBuilds). Sans son fichier de correspondance, les
+      # plantages Java remontes par la Play Console sont illisibles, et Play
+      # affiche « Aucun fichier de desobscurcissement n est associe a cet App
+      # Bundle ». Un AAB obscurci ne part donc JAMAIS sans lui.
+      - name: Resolve R8 mapping file
+        id: mapping
+        shell: bash
+        run: |
+          test -s android/app/build/outputs/mapping/productionRelease/mapping.txt || (echo "::error::mapping.txt absent : R8 est-il encore allume en release (enableProguardInReleaseBuilds) ?" && exit 1)
+          echo "Fichier de correspondance R8 : $(wc -c < android/app/build/outputs/mapping/productionRelease/mapping.txt) octets"
+          echo "path=android/app/build/outputs/mapping/productionRelease/mapping.txt" >> "$GITHUB_OUTPUT"
+
       - name: Upload AAB artifact
         uses: actions/upload-artifact@v4
         with:
           name: foundclub-android-play-aab
           path: ${{ steps.aab.outputs.path }}
+          if-no-files-found: error
+
+      # Copie de secours : relire une pile d appels Java a la main
+      # (retrace de l Android SDK) si la Play Console ne le fait pas.
+      - name: Upload R8 mapping artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: foundclub-android-play-mapping
+          path: ${{ steps.mapping.outputs.path }}
           if-no-files-found: error
 
       - name: Upload AAB to Google Play
@@ -318,6 +340,7 @@ jobs:
           serviceAccountJson: ${{ github.workspace }}/ci-play/google-play-service-account.json
           packageName: ${{ env.ANDROID_PACKAGE_NAME }}
           releaseFiles: ${{ steps.aab.outputs.path }}
+          mappingFile: android/app/build/outputs/mapping/productionRelease/mapping.txt
           tracks: ${{ env.PLAY_TRACK }}
           status: ${{ env.PLAY_RELEASE_STATUS }}
           releaseName: ${{ steps.release_name.outputs.value }}

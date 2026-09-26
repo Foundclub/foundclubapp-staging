@@ -115,9 +115,18 @@ react {
 }
 
 /**
- * Set this to true to Run Proguard on Release builds to minify the Java bytecode.
+ * R8 en release : compacte le code, l obscurcit, et retire les ressources
+ * inutilisees (shrinkResources, plus bas).
+ *
+ * Allume le 2026-09-26 (lot ANDROID-R8, decision d Adel du 25/09) : sur la
+ * 2.6.65, Google Play a mesure « Obscurcissement 4 % » (seuil 25 %, a corriger
+ * avant fevrier 2027). Le fichier de correspondance produit par R8
+ * (build/outputs/mapping/<variante>/mapping.txt) part avec l AAB
+ * (.github/workflows/android-play-release.yml) : sans lui, les plantages Java
+ * de la Play Console sont illisibles.
+ * Garde-fou : __tests__/androidReleaseR8.test.js.
  */
-def enableProguardInReleaseBuilds = false
+def enableProguardInReleaseBuilds = true
 
 /**
  * The preferred build flavor of JavaScriptCore (JSC)
@@ -195,6 +204,10 @@ android {
         }
         release {
             minifyEnabled enableProguardInReleaseBuilds
+            shrinkResources enableProguardInReleaseBuilds
+            // ponytail: "proguard-android.txt" (celui du gabarit React Native) =
+            // R8 SANS optimisation. Plafond : AGP 9 refusera ce fichier.
+            // Sortie : "proguard-android-optimize.txt", a retester a l ecran.
             proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"
         }
     }
