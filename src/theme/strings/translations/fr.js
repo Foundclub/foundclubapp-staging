@@ -7634,6 +7634,18 @@ export default {
     trainingDescription: 'Séance classique pour ton équipe',
     typeSelection: 'Sélection du type',
   },
+  // CONVOC (demande d'Adel du 26/09) — ouvrir un lieu dans l'appli GPS de son choix
+  // (`src/platform/maps/externalMap.js`). Les noms d'applis sont ceux qu'affiche
+  // le téléphone ; « Appli de cartes » = celle d'un Android sans Google Maps.
+  externalMap: {
+    apps: {
+      apple: 'Plans',
+      device: 'Appli de cartes',
+      google: 'Google Maps',
+      waze: 'Waze',
+    },
+    title: 'Ouvrir le lieu avec',
+  },
   facilityAddressLabel: {
     noAddress: 'Adresse non renseignée',
   },
@@ -12477,6 +12489,12 @@ export default {
         title: 'Erreur',
       },
     },
+    // CONVOC (demande d'Adel du 26/09) — la réponse déjà donnée, écrite en toutes
+    // lettres au-dessus des deux boutons, comme sur la fiche de l'événement.
+    answer: {
+      absent: 'Tu as répondu Absent',
+      present: 'Tu as répondu Présent',
+    },
     card: {
       calledUpBy: 'Convoqué par {{name}}',
       number: 'N°{{number}}',
@@ -12511,6 +12529,14 @@ export default {
     },
     reserve: {
       title: 'Remplaçants',
+    },
+    // CONVOC (demande d'Adel du 26/09) — qui a répondu, sur la compo : la marque de
+    // chaque joueur et sa légende. Présent·e / Absent·e comme l'écran du coach ;
+    // « Sans réponse » plutôt que « Participation en attente », trop long ici.
+    responses: {
+      absent: 'Absent·e',
+      pending: 'Sans réponse',
+      present: 'Présent·e',
     },
     roles: {
       starter: 'Titulaire',

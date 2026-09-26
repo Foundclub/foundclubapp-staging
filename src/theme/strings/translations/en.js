@@ -7185,6 +7185,15 @@ export default {
     trainingDescription: 'Regular session for your team',
     typeSelection: 'Type selection',
   },
+  externalMap: {
+    apps: {
+      apple: 'Maps',
+      device: 'Maps app',
+      google: 'Google Maps',
+      waze: 'Waze',
+    },
+    title: 'Open the place with',
+  },
   facilityAddressLabel: {
     noAddress: 'Address not provided',
   },
@@ -11861,6 +11870,10 @@ export default {
         title: 'Error',
       },
     },
+    answer: {
+      absent: 'You answered Absent',
+      present: 'You answered Present',
+    },
     card: {
       calledUpBy: 'Called up by {{name}}',
       number: '#{{number}}',
@@ -11887,6 +11900,11 @@ export default {
     },
     reserve: {
       title: 'Substitutes',
+    },
+    responses: {
+      absent: 'Absent',
+      pending: 'No answer',
+      present: 'Present',
     },
     roles: {
       starter: 'Starter',

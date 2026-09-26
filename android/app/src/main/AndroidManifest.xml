@@ -59,6 +59,16 @@
       <action android:name="android.intent.action.SEND" />
       <data android:mimeType="text/plain" />
     </intent>
+    <!-- CONVOC (26/09/2026) - ouvrir un lieu dans l appli GPS choisie
+         (src/platform/maps/externalMap.js). Depuis Android 11, canOpenURL ne
+         voit une appli que si elle est declaree ici : Google Maps, Waze, et
+         toute appli qui ouvre un point geo: (celle du telephone). -->
+    <package android:name="com.google.android.apps.maps" />
+    <package android:name="com.waze" />
+    <intent>
+      <action android:name="android.intent.action.VIEW" />
+      <data android:scheme="geo" />
+    </intent>
   </queries>
 
   <!-- R12 (02/09/2026) - android:usesCleartextTraffic="true" a ete RETIRE de

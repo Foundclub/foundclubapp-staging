@@ -15,6 +15,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import useAuth from '@/domains/auth/useAuth';
 import { resolveEventDisplayName } from '@/domains/event/eventDisplayName';
+import { invalidateAfterAction } from '@/domains/refresh/afterAction';
 import { withAlpha } from '@/theme/colors';
 import useTheme from '@/theme/themeContext';
 
@@ -22,6 +23,7 @@ import Button from '@/components/atoms/button/Button';
 import HeaderBackButton from '@/components/atoms/headerBackButton/HeaderBackButton';
 import Loader from '@/components/atoms/loader/Loader';
 import MarqueeText from '@/components/atoms/marqueeText/MarqueeText';
+import Tag from '@/components/atoms/tag/Tag';
 import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 import PlayerHeadToken from '@/components/tactical/PlayerHeadToken';
 import RenderedTacticalField from '@/components/tactical/RenderedTacticalField';
@@ -35,6 +37,7 @@ import { respondToEventRsvp } from '@/services/event/eventService';
 import { getCompositionPlayerInitials } from '@/utils/compositionPlayer';
 import { getAddressText } from '@/utils/facilityAddressLabel';
 import { getImageUrl } from '@/utils/imageUrl';
+import { getLocationCoordinates } from '@/utils/location';
 import { getTacticalFieldAspectRatio } from '@/utils/tacticalField';
 
 import {
@@ -44,9 +47,14 @@ import {
   CONVOCATION_ROLE_STARTER,
   formatConvocationDay,
   formatConvocationTime,
+  getConvocationPlayerResponse,
   getPlayerConvocationResponse,
   resolveConvocationNote,
 } from './playerConvocationUtils';
+// `import/order` veut l'alias `@/` avant les freres `./`, `perfectionist/sort-imports`
+// le veut apres : on suit perfectionist, comme `adminClubContentService.js`.
+// eslint-disable-next-line import/order
+import { openExternalMap } from '@/platform/maps/externalMap';
 
 /**
  * C-C — ECRAN 10 du pack composition : la moitie que le joueur voit.
@@ -95,6 +103,9 @@ const TOKEN_SIZE_MINE = 30;
 /** Hauteur du terrain de l'ecran 10, reprise du pack. */
 const FIELD_HEIGHT = 300;
 
+/** CONVOC — les trois reponses, dans l'ordre de la legende. */
+const RESPONSE_KEYS = Object.freeze(['present', 'absent', 'pending']);
+
 function PlayerConvocationScreen() {
   const { Colors, Fonts } = useTheme();
   const { t } = useTranslation();
@@ -108,8 +119,15 @@ function PlayerConvocationScreen() {
   const params = useMemo(() => route.params || {}, [route.params]);
   const { eventId, teamId } = params;
 
+  // CONVOC (26/09) — LA REPONSE DOIT ETRE JUSTE DES L'OUVERTURE. La requete
+  // porte `refetchOnMount: false` par defaut (eventQueries.js) : une convocation
+  // deja lue etait RESSERVIE telle quelle, meme apres une reponse donnee depuis la
+  // fiche ou une liste — react-query ne relit une requete invalidee qu'a son
+  // prochain montage, et c'est ce montage qui refusait. `true` ne relit que la
+  // copie perimee (30 s) ou invalidee par une reponse, pas a chaque ouverture.
   const convocationQuery = useGetEventConvocation(eventId, teamId, {
     enabled: Boolean(eventId),
+    refetchOnMount: true,
   });
   const eventQuery = useGetEvent(eventId, { enabled: Boolean(eventId) });
 
@@ -134,6 +152,11 @@ function PlayerConvocationScreen() {
   }, [eventId, isSettled, navigation, view]);
 
   const answer = getPlayerConvocationResponse(convocation, viewerId);
+  // CONVOC — « Tu as repondu Present », comme la fiche de l'evenement le dit
+  // (`EventAnswerButtons`). Sans reponse, on n'affirme rien.
+  const answerLabel = answer === 'present' || answer === 'absent'
+    ? t(`playerConvocation.answer.${answer}`)
+    : '';
 
   const rsvpMutation = useMutation({
     mutationFn: (/** @type {'present' | 'absent'} */ nextAnswer) => (
@@ -147,9 +170,11 @@ function PlayerConvocationScreen() {
         t('playerConvocation.alerts.error.message'),
       );
     },
+    // CONVOC — la liste COMMUNE de ce qu'une reponse rend faux (T08) : la fiche,
+    // les listes, le planning, l'accueil, et cette convocation. Les deux cles
+    // ecrites ici a la main laissaient les autres ecrans sur l'ancienne reponse.
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['eventConvocation', eventId] });
-      queryClient.invalidateQueries({ queryKey: ['event', eventId] });
+      invalidateAfterAction(queryClient, 'answerEvent').catch(() => {});
     },
   });
 
@@ -207,6 +232,18 @@ function PlayerConvocationScreen() {
   const place = getAddressText(event?.locationDetails)
     || getAddressText(event?.location)
     || getAddressText(event?.facility?.name);
+  // CONVOC (demande d'Adel du 26/09) — le lieu s'ouvre dans l'appli GPS choisie
+  // (Plans, Google Maps, Waze), comme sur la fiche : la meme aide, le meme choix.
+  // Les coordonnees sont lues comme la fiche les lit (`EventHeader`).
+  const placeCoordinates = getLocationCoordinates(event?.location)
+    || getLocationCoordinates(event?.locationDetails);
+  const openPlace = () => {
+    openExternalMap({
+      label: place,
+      latitude: placeCoordinates?.lat,
+      longitude: placeCoordinates?.lng,
+    });
+  };
 
   // Y02 — LA CONVOCATION DIT ENFIN DE QUOI IL S'AGIT. Constat d'Adel du
   // 2026-08-19, point 8 : « il manque le nom du type d'evenement ». La carte
@@ -249,6 +286,17 @@ function PlayerConvocationScreen() {
   };
   const versionNumber = Number(view.published?.version) || 0;
 
+  // CONVOC (demande d'Adel du 26/09) — QUI A REPONDU, sur la compo. Les couleurs
+  // sont celles de l'ecran du coach (`MatchConvocationPublished`) : le pack
+  // interdit d'inventer un vert ou un rouge. Sans reponses dans la charge
+  // (ancienne forme), ni marque ni legende.
+  const responseTone = (/** @type {string | null} */ response) => ({
+    absent: Colors.error500,
+    pending: Colors.neutral300,
+    present: Colors.success500,
+  })[String(response)] || Colors.neutral300;
+  const hasResponses = Object.keys(view.responsesByPlayerId).length > 0;
+
   const identityLine = [
     view.positionLabel
       ? t('playerConvocation.card.position', { position: view.positionLabel })
@@ -259,8 +307,21 @@ function PlayerConvocationScreen() {
   const columns = [
     { key: 'day', value: day || t('playerConvocation.columns.notSpecified') },
     { key: 'kickOff', value: kickOff || t('playerConvocation.columns.notSpecified') },
-    { key: 'place', value: place || t('playerConvocation.columns.notSpecified') },
+    {
+      key: 'place',
+      onPress: place ? openPlace : undefined,
+      value: place || t('playerConvocation.columns.notSpecified'),
+    },
   ];
+
+  const renderColumnTexts = (/** @type {{ key: string, value: string }} */ column) => (
+    <>
+      <Text style={[Fonts.p4Bold, styles.columnLabel, { color: Colors.neutral300 }]}>
+        {t(`playerConvocation.columns.${column.key}`).toUpperCase()}
+      </Text>
+      <Text style={[Fonts.p3Bold, { color: Colors.neutral00 }]}>{column.value}</Text>
+    </>
+  );
 
   return (
     <ScreenContainer bgImage="bg2" bottomInsetMode="edge-to-edge" style={[styles.screen]}>
@@ -326,14 +387,22 @@ function PlayerConvocationScreen() {
           </View>
 
           <View style={[styles.columns, { borderTopColor: withAlpha(Colors.neutral00, 0.1) }]}>
-            {columns.map((column) => (
-              <View key={column.key} style={styles.column}>
-                <Text style={[Fonts.p4Bold, styles.columnLabel, { color: Colors.neutral300 }]}>
-                  {t(`playerConvocation.columns.${column.key}`).toUpperCase()}
+            {columns.map((column) => (column.onPress ? (
+              <TouchableOpacity
+                accessibilityLabel={`${t('common.openInGps')} : ${column.value}`}
+                accessibilityRole="button"
+                key={column.key}
+                onPress={column.onPress}
+                style={styles.column}
+              >
+                {renderColumnTexts(column)}
+                <Text style={[Fonts.p4, { color: Colors.primary100 }]}>
+                  {t('common.openInGps')}
                 </Text>
-                <Text style={[Fonts.p3Bold, { color: Colors.neutral00 }]}>{column.value}</Text>
-              </View>
-            ))}
+              </TouchableOpacity>
+            ) : (
+              <View key={column.key} style={styles.column}>{renderColumnTexts(column)}</View>
+            )))}
           </View>
 
           {/* COMPOMSG — le texte de l'entraineur, la ou la carte du fil l'affiche
@@ -383,6 +452,7 @@ function PlayerConvocationScreen() {
             {fieldTokens.map((/** @type {any} */ { placement, player }) => {
               const isMine = String(placement?.playerId || '') === view.playerId;
               const size = isMine ? TOKEN_SIZE_MINE : TOKEN_SIZE;
+              const response = getConvocationPlayerResponse(view, placement?.playerId);
               return (
                 <View
                   key={placement.playerId}
@@ -397,6 +467,16 @@ function PlayerConvocationScreen() {
                   ]}
                 >
                   <PlayerHeadToken isHighlighted={isMine} player={player} size={size} />
+                  {response ? (
+                    <View
+                      accessibilityLabel={t(`playerConvocation.responses.${response}`)}
+                      style={[
+                        styles.responseDot,
+                        { backgroundColor: responseTone(response), borderColor: Colors.neutral900 },
+                      ]}
+                      testID={`reponse-${placement.playerId}`}
+                    />
+                  ) : null}
                 </View>
               );
             })}
@@ -412,6 +492,19 @@ function PlayerConvocationScreen() {
           ) : null}
         </TouchableOpacity>
 
+        {hasResponses ? (
+          <View style={styles.legend}>
+            {RESPONSE_KEYS.map((response) => (
+              <View key={response} style={styles.legendItem}>
+                <View style={[styles.legendDot, { backgroundColor: responseTone(response) }]} />
+                <Text style={[Fonts.p4, { color: Colors.neutral300 }]}>
+                  {t(`playerConvocation.responses.${response}`)}
+                </Text>
+              </View>
+            ))}
+          </View>
+        ) : null}
+
         {/* AC08 — LE BANC. Mesure du 2026-08-21 : `reservePlayerIds` et
             `reserveSnapshotPlayers` voyagent dans la charge depuis toujours, et
             AUCUN ecran ne les montrait — un remplacant n'avait nulle part ou se
@@ -424,6 +517,8 @@ function PlayerConvocationScreen() {
             <View style={styles.reserveList}>
               {view.reservePlayers.map((/** @type {any} */ { id, player }) => {
                 const isMine = id === view.playerId;
+                const reserveResponse = getConvocationPlayerResponse(view, id);
+                const reserveTone = responseTone(reserveResponse);
                 return (
                   <View
                     key={id}
@@ -452,6 +547,22 @@ function PlayerConvocationScreen() {
                       <Text style={[Fonts.p3, { color: Colors.neutral300 }]}>
                         {t('playerConvocation.card.number', { number: String(player.number) })}
                       </Text>
+                    ) : null}
+                    {reserveResponse ? (
+                      <View
+                        style={[
+                          styles.responsePill,
+                          {
+                            backgroundColor: withAlpha(reserveTone, 0.14),
+                            borderColor: withAlpha(reserveTone, 0.45),
+                          },
+                        ]}
+                        testID={`reponse-banc-${id}`}
+                      >
+                        <Text style={[Fonts.p4Bold, { color: reserveTone }]}>
+                          {t(`playerConvocation.responses.${reserveResponse}`)}
+                        </Text>
+                      </View>
                     ) : null}
                   </View>
                 );
@@ -502,20 +613,23 @@ function PlayerConvocationScreen() {
       {/* Barre presence / absence. Elle porte la reponse DEJA donnee — le serveur
           la calcule (`responses.byPlayerId`), l'app ne la recalcule pas. */}
       <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 12) }]}>
-        <Button
-          isLoading={pendingAnswer === 'present'}
-          onPress={() => handleAnswer('present')}
-          style={styles.footerCta}
-          title={t('playerConvocation.actions.present')}
-          variant={answer === 'present' ? 'Primary' : 'Secondary'}
-        />
-        <Button
-          isLoading={pendingAnswer === 'absent'}
-          onPress={() => handleAnswer('absent')}
-          style={styles.footerCta}
-          title={t('playerConvocation.actions.absent')}
-          variant={answer === 'absent' ? 'Primary' : 'Secondary'}
-        />
+        {answerLabel ? <Tag text={answerLabel} textStyle={Fonts.p1Bold} /> : null}
+        <View style={styles.footerRow}>
+          <Button
+            isLoading={pendingAnswer === 'present'}
+            onPress={() => handleAnswer('present')}
+            style={styles.footerCta}
+            title={t('playerConvocation.actions.present')}
+            variant={answer === 'present' ? 'Primary' : 'Secondary'}
+          />
+          <Button
+            isLoading={pendingAnswer === 'absent'}
+            onPress={() => handleAnswer('absent')}
+            style={styles.footerCta}
+            title={t('playerConvocation.actions.absent')}
+            variant={answer === 'absent' ? 'Primary' : 'Secondary'}
+          />
+        </View>
       </View>
     </ScreenContainer>
   );
@@ -558,13 +672,16 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
   },
   footer: {
-    flexDirection: 'row',
     gap: 12,
     paddingHorizontal: 16,
     paddingTop: 12,
   },
   footerCta: {
     flex: 1,
+  },
+  footerRow: {
+    flexDirection: 'row',
+    gap: 12,
   },
   header: {
     alignItems: 'center',
@@ -588,6 +705,23 @@ const styles = StyleSheet.create({
   },
   identityTexts: {
     flex: 1,
+  },
+  legend: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+    justifyContent: 'center',
+    marginTop: 8,
+  },
+  legendDot: {
+    borderRadius: 4,
+    height: 8,
+    width: 8,
+  },
+  legendItem: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 4,
   },
   // Meme idiome que les ecrans 4 et 5 du pack : `flex: 1` BORNE la zone qui
   // defile, sinon le contenu pousse la barre du bas hors de l'ecran (D84).
@@ -619,6 +753,22 @@ const styles = StyleSheet.create({
     gap: 12,
     paddingHorizontal: 12,
     paddingVertical: 8,
+  },
+  // CONVOC — la marque de reponse, posee dans le coin du jeton (qui la porte).
+  responseDot: {
+    borderRadius: 5,
+    borderWidth: 1,
+    bottom: -2,
+    height: 10,
+    position: 'absolute',
+    right: -2,
+    width: 10,
+  },
+  responsePill: {
+    borderRadius: 999,
+    borderWidth: 1,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
   },
   roleChip: {
     borderRadius: 999,
