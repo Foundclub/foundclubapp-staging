@@ -37,6 +37,7 @@ import { respondToEventRsvp } from '@/services/event/eventService';
 import { getCompositionPlayerInitials } from '@/utils/compositionPlayer';
 import { getAddressText } from '@/utils/facilityAddressLabel';
 import { getImageUrl } from '@/utils/imageUrl';
+import { getLocationCoordinates } from '@/utils/location';
 import { getTacticalFieldAspectRatio } from '@/utils/tacticalField';
 
 import {
@@ -49,6 +50,10 @@ import {
   getPlayerConvocationResponse,
   resolveConvocationNote,
 } from './playerConvocationUtils';
+// `import/order` veut l'alias `@/` avant les freres `./`, `perfectionist/sort-imports`
+// le veut apres : on suit perfectionist, comme `adminClubContentService.js`.
+// eslint-disable-next-line import/order
+import { openExternalMap } from '@/platform/maps/externalMap';
 
 /**
  * C-C — ECRAN 10 du pack composition : la moitie que le joueur voit.
@@ -223,6 +228,18 @@ function PlayerConvocationScreen() {
   const place = getAddressText(event?.locationDetails)
     || getAddressText(event?.location)
     || getAddressText(event?.facility?.name);
+  // CONVOC (demande d'Adel du 26/09) — le lieu s'ouvre dans l'appli GPS choisie
+  // (Plans, Google Maps, Waze), comme sur la fiche : la meme aide, le meme choix.
+  // Les coordonnees sont lues comme la fiche les lit (`EventHeader`).
+  const placeCoordinates = getLocationCoordinates(event?.location)
+    || getLocationCoordinates(event?.locationDetails);
+  const openPlace = () => {
+    openExternalMap({
+      label: place,
+      latitude: placeCoordinates?.lat,
+      longitude: placeCoordinates?.lng,
+    });
+  };
 
   // Y02 — LA CONVOCATION DIT ENFIN DE QUOI IL S'AGIT. Constat d'Adel du
   // 2026-08-19, point 8 : « il manque le nom du type d'evenement ». La carte
@@ -275,8 +292,21 @@ function PlayerConvocationScreen() {
   const columns = [
     { key: 'day', value: day || t('playerConvocation.columns.notSpecified') },
     { key: 'kickOff', value: kickOff || t('playerConvocation.columns.notSpecified') },
-    { key: 'place', value: place || t('playerConvocation.columns.notSpecified') },
+    {
+      key: 'place',
+      onPress: place ? openPlace : undefined,
+      value: place || t('playerConvocation.columns.notSpecified'),
+    },
   ];
+
+  const renderColumnTexts = (/** @type {{ key: string, value: string }} */ column) => (
+    <>
+      <Text style={[Fonts.p4Bold, styles.columnLabel, { color: Colors.neutral300 }]}>
+        {t(`playerConvocation.columns.${column.key}`).toUpperCase()}
+      </Text>
+      <Text style={[Fonts.p3Bold, { color: Colors.neutral00 }]}>{column.value}</Text>
+    </>
+  );
 
   return (
     <ScreenContainer bgImage="bg2" bottomInsetMode="edge-to-edge" style={[styles.screen]}>
@@ -342,14 +372,22 @@ function PlayerConvocationScreen() {
           </View>
 
           <View style={[styles.columns, { borderTopColor: withAlpha(Colors.neutral00, 0.1) }]}>
-            {columns.map((column) => (
-              <View key={column.key} style={styles.column}>
-                <Text style={[Fonts.p4Bold, styles.columnLabel, { color: Colors.neutral300 }]}>
-                  {t(`playerConvocation.columns.${column.key}`).toUpperCase()}
+            {columns.map((column) => (column.onPress ? (
+              <TouchableOpacity
+                accessibilityLabel={`${t('common.openInGps')} : ${column.value}`}
+                accessibilityRole="button"
+                key={column.key}
+                onPress={column.onPress}
+                style={styles.column}
+              >
+                {renderColumnTexts(column)}
+                <Text style={[Fonts.p4, { color: Colors.primary100 }]}>
+                  {t('common.openInGps')}
                 </Text>
-                <Text style={[Fonts.p3Bold, { color: Colors.neutral00 }]}>{column.value}</Text>
-              </View>
-            ))}
+              </TouchableOpacity>
+            ) : (
+              <View key={column.key} style={styles.column}>{renderColumnTexts(column)}</View>
+            )))}
           </View>
 
           {/* COMPOMSG — le texte de l'entraineur, la ou la carte du fil l'affiche

@@ -7185,6 +7185,15 @@ export default {
     trainingDescription: 'Regular session for your team',
     typeSelection: 'Type selection',
   },
+  externalMap: {
+    apps: {
+      apple: 'Maps',
+      device: 'Maps app',
+      google: 'Google Maps',
+      waze: 'Waze',
+    },
+    title: 'Open the place with',
+  },
   facilityAddressLabel: {
     noAddress: 'Address not provided',
   },

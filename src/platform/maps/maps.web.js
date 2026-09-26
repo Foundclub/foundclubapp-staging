@@ -13,6 +13,7 @@ import {
   View,
 } from 'react-native';
 
+import { openExternalMap } from '@/platform/maps/externalMap';
 import {
   getSearchMapLoadingCopy,
   getSearchMapProviderErrorMessage,
@@ -447,18 +448,9 @@ export const renderMap = ({
   );
 };
 
-export const openExternalMap = async ({ label, latitude, longitude }) => {
-  if (typeof window === 'undefined') {
-    return;
-  }
-
-  const query = encodeURIComponent(label || `${latitude},${longitude}`);
-  window.open(
-    `https://www.google.com/maps/search/?api=1&query=${query}`,
-    '_blank',
-    'noopener,noreferrer',
-  );
-};
+// CONVOC (26/09) — la copie web d'`openExternalMap` (jamais appelee) est
+// remplacee par l'aide partagee, qui ouvre Google Maps dans un onglet sur le site.
+export { openExternalMap };
 
 export default {
   openExternalMap,

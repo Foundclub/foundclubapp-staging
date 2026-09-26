@@ -1,7 +1,7 @@
 import { format } from 'date-fns';
 import { useTranslation } from 'react-i18next';
 import {
-  Image, ImageBackground, Linking, Platform, Text, TouchableOpacity, View,
+  Image, ImageBackground, Text, TouchableOpacity, View,
 } from 'react-native';
 
 import { withAlpha } from '@/theme/colors';
@@ -29,6 +29,7 @@ import BG_MATCH from '@/assets/background-card-event/card-match.png';
 import BG_RESERVATION from '@/assets/background-card-event/card-reservation.png';
 import BG_STAGE from '@/assets/background-card-event/card-stage.png';
 import BG_TOURNAMENT from '@/assets/background-card-event/card-tournoi.png';
+import { openExternalMap } from '@/platform/maps/externalMap';
 
 // AE01 — les 7 fonds, recopies des CARTES de liste (`EventCardNew.js:53-62`) :
 // le tournoi empruntait le fond du match et le stage tombait dans « autre »,
@@ -253,41 +254,18 @@ function EventHeader({ detectionSummary = null, event, matchScoreSummary = null 
       || resolveLocationCoordinates(parsed);
   };
 
+  // CONVOC (demande d'Adel du 26/09) — Plans, Google Maps ou Waze, AU CHOIX, et le
+  // meme geste que sur « Tu es convoque » : l'aide partagee `openExternalMap`.
+  // Elle remplace ici une copie de la logique (`maps:` / `geo:` / Google Maps)
+  // qui ne proposait aucun choix — et qui, sur iPhone, ouvrait la PAGE Google Maps
+  // faute de declaration : `canOpenURL('maps:')` y rendait toujours faux.
   const handleOpenLocationInGps = () => {
-    const addressLabel = getLocationText().trim();
-    if (!addressLabel) return;
-
     const coordinates = getLocationCoordinates();
-    const encodedAddress = encodeURIComponent(addressLabel);
-    const fallbackUrl = `https://www.google.com/maps/search/?api=1&query=${encodedAddress}`;
-
-    const nativeUrl = coordinates
-      ? Platform.select({
-        android: `geo:${coordinates.lat},${coordinates.lng}?q=${coordinates.lat},${coordinates.lng}(${encodedAddress})`,
-        default: fallbackUrl,
-        ios: `maps:${coordinates.lat},${coordinates.lng}?q=${encodedAddress}`,
-      })
-      : Platform.select({
-        android: `geo:0,0?q=${encodedAddress}`,
-        default: fallbackUrl,
-        ios: `maps:0,0?q=${encodedAddress}`,
-      });
-
-    if (!nativeUrl) {
-      Linking.openURL(fallbackUrl).catch(() => {});
-      return;
-    }
-
-    Linking.canOpenURL(nativeUrl)
-      .then((supported) => {
-        if (supported) {
-          return Linking.openURL(nativeUrl);
-        }
-        return Linking.openURL(fallbackUrl);
-      })
-      .catch(() => {
-        Linking.openURL(fallbackUrl).catch(() => {});
-      });
+    openExternalMap({
+      label: getLocationText().trim(),
+      latitude: coordinates?.lat,
+      longitude: coordinates?.lng,
+    });
   };
 
   // 🏁 N3 (D5/D6/D7) — CE QUE L'ENCART AFFICHE, calcule une fois.

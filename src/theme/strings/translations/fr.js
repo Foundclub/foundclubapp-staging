@@ -7634,6 +7634,18 @@ export default {
     trainingDescription: 'Séance classique pour ton équipe',
     typeSelection: 'Sélection du type',
   },
+  // CONVOC (demande d'Adel du 26/09) — ouvrir un lieu dans l'appli GPS de son choix
+  // (`src/platform/maps/externalMap.js`). Les noms d'applis sont ceux qu'affiche
+  // le téléphone ; « Appli de cartes » = celle d'un Android sans Google Maps.
+  externalMap: {
+    apps: {
+      apple: 'Plans',
+      device: 'Appli de cartes',
+      google: 'Google Maps',
+      waze: 'Waze',
+    },
+    title: 'Ouvrir le lieu avec',
+  },
   facilityAddressLabel: {
     noAddress: 'Adresse non renseignée',
   },
