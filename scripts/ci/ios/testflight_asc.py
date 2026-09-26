@@ -88,12 +88,51 @@ def _premier(*noms):
     return ""
 
 
+def _contenu_clef():
+    """Texte PEM de la clef, sous les trois formes que Codemagic peut donner.
+
+    Build 3 du 2026-09-26 : la variable n'etait PAS la clef en clair (openssl a
+    refuse de signer). Les outils Codemagic acceptent `@env:<VARIABLE>` et
+    `@file:<chemin>` ; une clef peut aussi arriver encodee en base64.
+    """
+    contenu = (os.environ.get("APP_STORE_CONNECT_PRIVATE_KEY") or "").strip()
+    if contenu.startswith("@env:"):
+        contenu = (os.environ.get(contenu[len("@env:"):].strip()) or "").strip()
+    if contenu.startswith("@file:"):
+        try:
+            with open(os.path.expanduser(contenu[len("@file:"):].strip()), encoding="utf-8") as handle:
+                contenu = handle.read().strip()
+        except OSError:
+            return ""
+    if contenu and "-----BEGIN" not in contenu:
+        try:
+            decode = base64.b64decode(contenu).decode("utf-8")
+        except (ValueError, UnicodeDecodeError):
+            decode = ""
+        if "-----BEGIN" in decode:
+            contenu = decode.strip()
+    # Une ligne par ligne de PEM, sans ligne vide ni \r : un fichier passe par
+    # Windows peut porter \r\r\n, que la lecture texte change en lignes vides.
+    return "\n".join(ligne.strip() for ligne in contenu.replace("\\n", "\n").splitlines() if ligne.strip())
+
+
+def forme_clef():
+    """Forme de la clef recue, pour un message d'erreur SANS secret."""
+    brut = (os.environ.get("APP_STORE_CONNECT_PRIVATE_KEY") or "").strip()
+    if not brut:
+        return "fichier APPSTORE_KEY_PATH" if _premier("APPSTORE_KEY_PATH") else "absente"
+    for prefixe in ("@env:", "@file:"):
+        if brut.startswith(prefixe):
+            return "renvoi " + prefixe
+    return "PEM" if "-----BEGIN" in brut else "autre ({} caracteres)".format(len(brut))
+
+
 def _chemin_clef():
     chemin = _premier("APPSTORE_KEY_PATH")
     if chemin:
         return chemin
-    contenu = os.environ.get("APP_STORE_CONNECT_PRIVATE_KEY") or ""
-    if not contenu.strip():
+    contenu = _contenu_clef()
+    if not contenu:
         return ""
     descripteur, chemin = tempfile.mkstemp(suffix=".p8")
     with os.fdopen(descripteur, "w", encoding="utf-8") as handle:
@@ -247,8 +286,8 @@ def cmd_prochain_numero(_args):
 
     app_id, status, payload = app_id_de(bundle_id)
     if not app_id:
-        print("::error::App Store Connect ne rend pas l'app {} (HTTP {}). {}"
-              .format(bundle_id, status, detail(payload)))
+        print("::error::App Store Connect ne rend pas l'app {} (HTTP {}). {} [forme de la cle : {}]"
+              .format(bundle_id, status, detail(payload), forme_clef()))
         return 1
     publier("TESTFLIGHT_APP_ID", app_id)
 

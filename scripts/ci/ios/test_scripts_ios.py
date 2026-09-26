@@ -277,6 +277,25 @@ class TestTestflightAsc(unittest.TestCase):
         self.assertEqual(self.lu()["IOS_BUILD_NUMBER"], "1522")
         self.assertNotIn("BEGIN PRIVATE KEY", r.stdout + r.stderr)
 
+    def test_prochain_numero_clef_codemagic_sous_forme_de_renvoi(self):
+        # Build 3 du 2026-09-26 : `openssl dgst -sign` a echoue sur le fichier
+        # temporaire, la variable ne contenait donc pas la clef en clair. Les
+        # outils Codemagic acceptent `@file:<chemin>` et `@env:<VARIABLE>`, et
+        # une clef peut aussi arriver encodee en base64 : les trois doivent signer.
+        import base64 as b64
+        formes = {
+            "@file": dict(APP_STORE_CONNECT_PRIVATE_KEY="@file:" + str(self.clef)),
+            "@env": dict(APP_STORE_CONNECT_PRIVATE_KEY="@env:CLEF_ICI", CLEF_ICI=self.clef_pem),
+            "base64": dict(APP_STORE_CONNECT_PRIVATE_KEY=b64.b64encode(self.clef_pem.encode("ascii")).decode("ascii")),
+        }
+        for forme, extra in formes.items():
+            with self.subTest(forme=forme):
+                r = lancer(ASC, ["prochain-numero"], self.dossier, self.env(
+                    APP_STORE_CONNECT_KEY_IDENTIFIER="KEYID", APP_STORE_CONNECT_ISSUER_ID="ISS", **extra))
+                self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+                self.assertIn("NUMERO DE BUILD CHOISI : 1522", r.stdout)
+                self.assertNotIn("BEGIN PRIVATE KEY", r.stdout + r.stderr)
+
     def test_prochain_numero_sans_clef_echoue(self):
         r = lancer(ASC, ["prochain-numero"], self.dossier, self.env())
         self.assertEqual(r.returncode, 1)
