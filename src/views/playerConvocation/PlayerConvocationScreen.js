@@ -47,6 +47,7 @@ import {
   CONVOCATION_ROLE_STARTER,
   formatConvocationDay,
   formatConvocationTime,
+  getConvocationPlayerResponse,
   getPlayerConvocationResponse,
   resolveConvocationNote,
 } from './playerConvocationUtils';
@@ -101,6 +102,9 @@ const TOKEN_SIZE_MINE = 30;
 
 /** Hauteur du terrain de l'ecran 10, reprise du pack. */
 const FIELD_HEIGHT = 300;
+
+/** CONVOC — les trois reponses, dans l'ordre de la legende. */
+const RESPONSE_KEYS = Object.freeze(['present', 'absent', 'pending']);
 
 function PlayerConvocationScreen() {
   const { Colors, Fonts } = useTheme();
@@ -282,6 +286,17 @@ function PlayerConvocationScreen() {
   };
   const versionNumber = Number(view.published?.version) || 0;
 
+  // CONVOC (demande d'Adel du 26/09) — QUI A REPONDU, sur la compo. Les couleurs
+  // sont celles de l'ecran du coach (`MatchConvocationPublished`) : le pack
+  // interdit d'inventer un vert ou un rouge. Sans reponses dans la charge
+  // (ancienne forme), ni marque ni legende.
+  const responseTone = (/** @type {string | null} */ response) => ({
+    absent: Colors.error500,
+    pending: Colors.neutral300,
+    present: Colors.success500,
+  })[String(response)] || Colors.neutral300;
+  const hasResponses = Object.keys(view.responsesByPlayerId).length > 0;
+
   const identityLine = [
     view.positionLabel
       ? t('playerConvocation.card.position', { position: view.positionLabel })
@@ -437,6 +452,7 @@ function PlayerConvocationScreen() {
             {fieldTokens.map((/** @type {any} */ { placement, player }) => {
               const isMine = String(placement?.playerId || '') === view.playerId;
               const size = isMine ? TOKEN_SIZE_MINE : TOKEN_SIZE;
+              const response = getConvocationPlayerResponse(view, placement?.playerId);
               return (
                 <View
                   key={placement.playerId}
@@ -451,6 +467,16 @@ function PlayerConvocationScreen() {
                   ]}
                 >
                   <PlayerHeadToken isHighlighted={isMine} player={player} size={size} />
+                  {response ? (
+                    <View
+                      accessibilityLabel={t(`playerConvocation.responses.${response}`)}
+                      style={[
+                        styles.responseDot,
+                        { backgroundColor: responseTone(response), borderColor: Colors.neutral900 },
+                      ]}
+                      testID={`reponse-${placement.playerId}`}
+                    />
+                  ) : null}
                 </View>
               );
             })}
@@ -466,6 +492,19 @@ function PlayerConvocationScreen() {
           ) : null}
         </TouchableOpacity>
 
+        {hasResponses ? (
+          <View style={styles.legend}>
+            {RESPONSE_KEYS.map((response) => (
+              <View key={response} style={styles.legendItem}>
+                <View style={[styles.legendDot, { backgroundColor: responseTone(response) }]} />
+                <Text style={[Fonts.p4, { color: Colors.neutral300 }]}>
+                  {t(`playerConvocation.responses.${response}`)}
+                </Text>
+              </View>
+            ))}
+          </View>
+        ) : null}
+
         {/* AC08 — LE BANC. Mesure du 2026-08-21 : `reservePlayerIds` et
             `reserveSnapshotPlayers` voyagent dans la charge depuis toujours, et
             AUCUN ecran ne les montrait — un remplacant n'avait nulle part ou se
@@ -478,6 +517,8 @@ function PlayerConvocationScreen() {
             <View style={styles.reserveList}>
               {view.reservePlayers.map((/** @type {any} */ { id, player }) => {
                 const isMine = id === view.playerId;
+                const reserveResponse = getConvocationPlayerResponse(view, id);
+                const reserveTone = responseTone(reserveResponse);
                 return (
                   <View
                     key={id}
@@ -506,6 +547,22 @@ function PlayerConvocationScreen() {
                       <Text style={[Fonts.p3, { color: Colors.neutral300 }]}>
                         {t('playerConvocation.card.number', { number: String(player.number) })}
                       </Text>
+                    ) : null}
+                    {reserveResponse ? (
+                      <View
+                        style={[
+                          styles.responsePill,
+                          {
+                            backgroundColor: withAlpha(reserveTone, 0.14),
+                            borderColor: withAlpha(reserveTone, 0.45),
+                          },
+                        ]}
+                        testID={`reponse-banc-${id}`}
+                      >
+                        <Text style={[Fonts.p4Bold, { color: reserveTone }]}>
+                          {t(`playerConvocation.responses.${reserveResponse}`)}
+                        </Text>
+                      </View>
                     ) : null}
                   </View>
                 );
@@ -649,6 +706,23 @@ const styles = StyleSheet.create({
   identityTexts: {
     flex: 1,
   },
+  legend: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+    justifyContent: 'center',
+    marginTop: 8,
+  },
+  legendDot: {
+    borderRadius: 4,
+    height: 8,
+    width: 8,
+  },
+  legendItem: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 4,
+  },
   // Meme idiome que les ecrans 4 et 5 du pack : `flex: 1` BORNE la zone qui
   // defile, sinon le contenu pousse la barre du bas hors de l'ecran (D84).
   list: {
@@ -679,6 +753,22 @@ const styles = StyleSheet.create({
     gap: 12,
     paddingHorizontal: 12,
     paddingVertical: 8,
+  },
+  // CONVOC — la marque de reponse, posee dans le coin du jeton (qui la porte).
+  responseDot: {
+    borderRadius: 5,
+    borderWidth: 1,
+    bottom: -2,
+    height: 10,
+    position: 'absolute',
+    right: -2,
+    width: 10,
+  },
+  responsePill: {
+    borderRadius: 999,
+    borderWidth: 1,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
   },
   roleChip: {
     borderRadius: 999,

@@ -12530,6 +12530,14 @@ export default {
     reserve: {
       title: 'Remplaçants',
     },
+    // CONVOC (demande d'Adel du 26/09) — qui a répondu, sur la compo : la marque de
+    // chaque joueur et sa légende. Présent·e / Absent·e comme l'écran du coach ;
+    // « Sans réponse » plutôt que « Participation en attente », trop long ici.
+    responses: {
+      absent: 'Absent·e',
+      pending: 'Sans réponse',
+      present: 'Présent·e',
+    },
     roles: {
       starter: 'Titulaire',
       substitute: 'Remplaçant',

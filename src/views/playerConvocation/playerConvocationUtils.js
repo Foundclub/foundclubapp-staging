@@ -207,6 +207,7 @@ export const buildConvocationStaffList = (branch) => ensureList(branch?.staff)
  *   published: any,
  *   publishedByName: string,
  *   reservePlayers: any[],
+ *   responsesByPlayerId: Record<string, string>,
  *   role: string,
  *   snapshotPlayers: any[],
  *   sport: string,
@@ -240,6 +241,12 @@ export const buildPlayerConvocationView = ({ convocation = null, userId = '' } =
 
   const sport = getTacticalSportKey(published?.sportContext);
 
+  // CONVOC (26/09) — les reponses de TOUS les convoques, telles que le serveur les
+  // range dans la branche (`buildConvocationResponses`). Deja dans la charge,
+  // jamais affichees jusqu'ici. Forme a plat : a la racine, comme la reponse du
+  // lecteur (`getPlayerConvocationResponse`).
+  const byPlayerId = branch?.responses?.byPlayerId ?? convocation?.responses?.byPlayerId;
+
   // Le poste vient d'abord du REPERE ou le jeton s'est pose — c'est la place que
   // le coach a choisie. Sans repere (placement libre), on retombe sur le poste
   // declare du joueur, jamais sur un poste invente.
@@ -262,6 +269,7 @@ export const buildPlayerConvocationView = ({ convocation = null, userId = '' } =
     published,
     publishedByName: getPersonName(published?.publishedBy),
     reservePlayers: buildConvocationReserveList(published),
+    responsesByPlayerId: byPlayerId && typeof byPlayerId === 'object' ? byPlayerId : {},
     role: myPlacement ? CONVOCATION_ROLE_STARTER : CONVOCATION_ROLE_SUBSTITUTE,
     snapshotPlayers: ensureList(published?.snapshotPlayers),
     sport,
@@ -312,6 +320,24 @@ export const getPlayerConvocationResponse = (convocation, userId) => {
   const answer = branch?.responses?.byPlayerId?.[toId(userId)]
     ?? convocation?.responses?.byPlayerId?.[toId(userId)];
   return answer === 'present' || answer === 'absent' ? answer : 'pending';
+};
+
+/**
+ * CONVOC (demande d'Adel du 26/09) — LA REPONSE D'UN CONVOQUE, pour la marque
+ * posee sur son jeton ou sa ligne du banc.
+ *
+ * 🧮 Calculee par le SERVEUR, jamais ici. Un joueur hors app n'est pas dans sa
+ * liste : il n'a AUCUNE reponse, pas meme « sans reponse » — meme regle que
+ * l'ecran du coach (`buildConvocationRoster`, matchConvocationUtils.js).
+ * @param {{ responsesByPlayerId?: Record<string, string> } | null} view
+ * @param {any} playerId
+ * @returns {'present' | 'absent' | 'pending' | null}
+ */
+export const getConvocationPlayerResponse = (view, playerId) => {
+  const response = view?.responsesByPlayerId?.[toId(playerId)];
+  return response === 'present' || response === 'absent' || response === 'pending'
+    ? response
+    : null;
 };
 
 /**

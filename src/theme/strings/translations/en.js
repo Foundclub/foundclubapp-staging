@@ -11901,6 +11901,11 @@ export default {
     reserve: {
       title: 'Substitutes',
     },
+    responses: {
+      absent: 'Absent',
+      pending: 'No answer',
+      present: 'Present',
+    },
     roles: {
       starter: 'Starter',
       substitute: 'Substitute',
