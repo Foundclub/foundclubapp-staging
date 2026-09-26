@@ -15,6 +15,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import useAuth from '@/domains/auth/useAuth';
 import { resolveEventDisplayName } from '@/domains/event/eventDisplayName';
+import { invalidateAfterAction } from '@/domains/refresh/afterAction';
 import { withAlpha } from '@/theme/colors';
 import useTheme from '@/theme/themeContext';
 
@@ -22,6 +23,7 @@ import Button from '@/components/atoms/button/Button';
 import HeaderBackButton from '@/components/atoms/headerBackButton/HeaderBackButton';
 import Loader from '@/components/atoms/loader/Loader';
 import MarqueeText from '@/components/atoms/marqueeText/MarqueeText';
+import Tag from '@/components/atoms/tag/Tag';
 import ProfileAvatar from '@/components/molecules/profileAvatar/ProfileAvatar';
 import PlayerHeadToken from '@/components/tactical/PlayerHeadToken';
 import RenderedTacticalField from '@/components/tactical/RenderedTacticalField';
@@ -108,8 +110,15 @@ function PlayerConvocationScreen() {
   const params = useMemo(() => route.params || {}, [route.params]);
   const { eventId, teamId } = params;
 
+  // CONVOC (26/09) — LA REPONSE DOIT ETRE JUSTE DES L'OUVERTURE. La requete
+  // porte `refetchOnMount: false` par defaut (eventQueries.js) : une convocation
+  // deja lue etait RESSERVIE telle quelle, meme apres une reponse donnee depuis la
+  // fiche ou une liste — react-query ne relit une requete invalidee qu'a son
+  // prochain montage, et c'est ce montage qui refusait. `true` ne relit que la
+  // copie perimee (30 s) ou invalidee par une reponse, pas a chaque ouverture.
   const convocationQuery = useGetEventConvocation(eventId, teamId, {
     enabled: Boolean(eventId),
+    refetchOnMount: true,
   });
   const eventQuery = useGetEvent(eventId, { enabled: Boolean(eventId) });
 
@@ -134,6 +143,11 @@ function PlayerConvocationScreen() {
   }, [eventId, isSettled, navigation, view]);
 
   const answer = getPlayerConvocationResponse(convocation, viewerId);
+  // CONVOC — « Tu as repondu Present », comme la fiche de l'evenement le dit
+  // (`EventAnswerButtons`). Sans reponse, on n'affirme rien.
+  const answerLabel = answer === 'present' || answer === 'absent'
+    ? t(`playerConvocation.answer.${answer}`)
+    : '';
 
   const rsvpMutation = useMutation({
     mutationFn: (/** @type {'present' | 'absent'} */ nextAnswer) => (
@@ -147,9 +161,11 @@ function PlayerConvocationScreen() {
         t('playerConvocation.alerts.error.message'),
       );
     },
+    // CONVOC — la liste COMMUNE de ce qu'une reponse rend faux (T08) : la fiche,
+    // les listes, le planning, l'accueil, et cette convocation. Les deux cles
+    // ecrites ici a la main laissaient les autres ecrans sur l'ancienne reponse.
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['eventConvocation', eventId] });
-      queryClient.invalidateQueries({ queryKey: ['event', eventId] });
+      invalidateAfterAction(queryClient, 'answerEvent').catch(() => {});
     },
   });
 
@@ -502,20 +518,23 @@ function PlayerConvocationScreen() {
       {/* Barre presence / absence. Elle porte la reponse DEJA donnee — le serveur
           la calcule (`responses.byPlayerId`), l'app ne la recalcule pas. */}
       <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 12) }]}>
-        <Button
-          isLoading={pendingAnswer === 'present'}
-          onPress={() => handleAnswer('present')}
-          style={styles.footerCta}
-          title={t('playerConvocation.actions.present')}
-          variant={answer === 'present' ? 'Primary' : 'Secondary'}
-        />
-        <Button
-          isLoading={pendingAnswer === 'absent'}
-          onPress={() => handleAnswer('absent')}
-          style={styles.footerCta}
-          title={t('playerConvocation.actions.absent')}
-          variant={answer === 'absent' ? 'Primary' : 'Secondary'}
-        />
+        {answerLabel ? <Tag text={answerLabel} textStyle={Fonts.p1Bold} /> : null}
+        <View style={styles.footerRow}>
+          <Button
+            isLoading={pendingAnswer === 'present'}
+            onPress={() => handleAnswer('present')}
+            style={styles.footerCta}
+            title={t('playerConvocation.actions.present')}
+            variant={answer === 'present' ? 'Primary' : 'Secondary'}
+          />
+          <Button
+            isLoading={pendingAnswer === 'absent'}
+            onPress={() => handleAnswer('absent')}
+            style={styles.footerCta}
+            title={t('playerConvocation.actions.absent')}
+            variant={answer === 'absent' ? 'Primary' : 'Secondary'}
+          />
+        </View>
       </View>
     </ScreenContainer>
   );
@@ -558,13 +577,16 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
   },
   footer: {
-    flexDirection: 'row',
     gap: 12,
     paddingHorizontal: 16,
     paddingTop: 12,
   },
   footerCta: {
     flex: 1,
+  },
+  footerRow: {
+    flexDirection: 'row',
+    gap: 12,
   },
   header: {
     alignItems: 'center',

@@ -11861,6 +11861,10 @@ export default {
         title: 'Error',
       },
     },
+    answer: {
+      absent: 'You answered Absent',
+      present: 'You answered Present',
+    },
     card: {
       calledUpBy: 'Called up by {{name}}',
       number: '#{{number}}',

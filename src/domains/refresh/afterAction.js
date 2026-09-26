@@ -75,6 +75,11 @@ export const AFTER_ACTION_CACHES = Object.freeze({
     ['eventAttendance'],
     ['planning'],
     ['home-summary'],
+    // CONVOC (demande d'Adel du 26/09) — « Tu es convoque » affiche la reponse
+    // que le serveur range dans `responses.byPlayerId`, lue dans `participations`
+    // / `missings` comme celle de la fiche. Sans cette racine, repondre depuis la
+    // fiche, une liste ou le fil laissait la convocation sur l'ANCIENNE reponse.
+    ['eventConvocation'],
   ],
 
   /** Creer un club : l'identite de la personne change (elle devient dirigeante). */

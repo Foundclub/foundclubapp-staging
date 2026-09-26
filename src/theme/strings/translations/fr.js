@@ -12477,6 +12477,12 @@ export default {
         title: 'Erreur',
       },
     },
+    // CONVOC (demande d'Adel du 26/09) — la réponse déjà donnée, écrite en toutes
+    // lettres au-dessus des deux boutons, comme sur la fiche de l'événement.
+    answer: {
+      absent: 'Tu as répondu Absent',
+      present: 'Tu as répondu Présent',
+    },
     card: {
       calledUpBy: 'Convoqué par {{name}}',
       number: 'N°{{number}}',
