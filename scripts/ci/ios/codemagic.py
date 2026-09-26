@@ -154,7 +154,7 @@ def main(argv=None):
     p_lancer.add_argument("version")
     p_lancer.add_argument("--api-env", choices=["production", "staging"], default="production")
     p_lancer.add_argument("--attendre-apple", action="store_true")
-    p_lancer.add_argument("--force-revenuecat-rail", default="")
+    p_lancer.add_argument("--force-revenuecat-rail", default="0")  # jamais vide : Codemagic refuse
     p_lancer.add_argument("--branche", default="staging")
     p_lancer.set_defaults(func=cmd_lancer)
     args = parser.parse_args(argv)

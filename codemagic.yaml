@@ -51,9 +51,12 @@ workflows:
           - production
           - staging
       force_revenuecat_rail:
-        description: "1 pour forcer le rail RevenueCat (recette d'achat en bac a sable), vide sinon"
+        # "0" et pas "" : Codemagic refuse une variable VIDE dans `vars`
+        # (« ensure this value has at least 1 characters », build 1 du 2026-09-26).
+        # L'app ne force le rail que pour 1/on/true/yes : "0" vaut « non ».
+        description: "1 pour forcer le rail RevenueCat (recette d'achat en bac a sable), 0 sinon"
         type: string
-        default: ""
+        default: "0"
       attendre_apple:
         description: "Attendre qu'Apple ait traite la build (~5 min de Mac en plus) — pour la PREUVE"
         type: boolean
