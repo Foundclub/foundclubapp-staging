@@ -240,7 +240,11 @@ describe('Y05 — le retour au premier plan relit ce qui bouge, et rien d\'autre
   });
 
   test('MESURE — le pire cas est borne par les familles, pas par la taille du cache', async () => {
-    // Les 17 familles montees EN MEME TEMPS — ce qu'aucun ecran reel ne fait.
+    // Les 18 familles montees EN MEME TEMPS — ce qu'aucun ecran reel ne fait.
+    // CONVOC (26/09) : 17 -> 18. `answerEvent` porte desormais `eventConvocation`
+    // (« Tu es convoque » affiche les reponses de toute l'equipe) : une reponse
+    // donnee pendant l'absence — par la notification, ou par un coequipier — est
+    // relue au retour. Seule une convocation MONTEE repart, comme les 17 autres.
     const montees = getReturnRefreshQueryKeys()
       .map((queryKey) => mountQuery(queryClient, queryKey));
     // 30 requetes hors liste dorment dans le cache, sans observateur.
@@ -257,9 +261,9 @@ describe('Y05 — le retour au premier plan relit ce qui bouge, et rien d\'autre
     const appels = montees.reduce((total, { queryFn }) => total + queryFn.mock.calls.length, 0);
 
     expect(endormies).toHaveLength(30);
-    expect(montees).toHaveLength(17);
-    // 17 montages + 17 relectures : jamais les 30 endormies.
-    expect(appels).toBe(34);
+    expect(montees).toHaveLength(18);
+    // 18 montages + 18 relectures : jamais les 30 endormies.
+    expect(appels).toBe(36);
 
     montees.forEach(({ unsubscribe }) => unsubscribe());
   });
