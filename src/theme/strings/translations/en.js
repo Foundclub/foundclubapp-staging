@@ -8090,6 +8090,11 @@ export default {
         requests: 'Pending requests',
         unpaid: 'Unpaid fees',
       },
+      when: {
+        later: 'Coming up',
+        thisWeek: 'This week',
+        tomorrow: 'Tomorrow',
+      },
     },
     cards: {
       account: {

@@ -8594,6 +8594,12 @@ export default {
         requests: 'Demandes en attente',
         unpaid: 'Cotisations impayées',
       },
+      // FINITIONS (recette du 28/09) — l'étiquette suit le jour du prochain événement.
+      when: {
+        later: 'À venir',
+        thisWeek: 'Cette semaine',
+        tomorrow: 'Demain',
+      },
     },
     cards: {
       account: {

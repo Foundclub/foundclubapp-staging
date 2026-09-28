@@ -134,15 +134,56 @@ export const formatBannerTitle = (startsAt) => {
   return `${WEEKDAYS_FR[date.getDay()]} ${date.getDate()} · ${hhmm(date)}`;
 };
 
+const UN_JOUR_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * @param {Date} date
+ * @returns {number} Minuit (heure locale) du jour de `date`.
+ */
+const debutDuJour = (date) => new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
+
+/**
+ * 📅 FINITIONS (recette émulateur du 2026-09-28) — SOUS QUEL JOUR RANGER UN ÉVÉNEMENT.
+ *
+ * 🧨 Le bandeau du dirigeant posait « Aujourd'hui » au-dessus du PROCHAIN événement,
+ * quel que soit son jour : un match du mercredi s'y lisait « aujourd'hui » un lundi.
+ * Ce n'était ni un fuseau ni une date comparée en texte — il n'y avait aucune règle.
+ *
+ * Les jours se comptent en jours de CALENDRIER, en heure locale (comme l'heure que le
+ * bandeau affiche), jamais en tranches de 24 h : un match demain à 8 h est « demain »
+ * même s'il reste moins de 24 h. La semaine va du lundi au dimanche, à la française.
+ * @param {any} startsAt - Le début de l'événement.
+ * @param {any} [now] - Maintenant (injectable pour les témoins).
+ * @returns {'today' | 'tomorrow' | 'thisWeek' | 'later' | null} `null` si illisible.
+ */
+export const selectBannerDay = (startsAt, now = new Date()) => {
+  const date = toDate(startsAt);
+  const maintenant = toDate(now);
+  if (!date || !maintenant) return null;
+  // Math.round : un jour de changement d'heure dure 23 ou 25 heures.
+  const ecart = Math.round((debutDuJour(date) - debutDuJour(maintenant)) / UN_JOUR_MS);
+  // Commencé plus tôt et pas fini : il se passe aujourd'hui.
+  if (ecart <= 0) return 'today';
+  if (ecart === 1) return 'tomorrow';
+  const joursJusquADimanche = 6 - ((maintenant.getDay() + 6) % 7);
+  return ecart <= joursJusquADimanche ? 'thisWeek' : 'later';
+};
+
 /**
  * « sam. 14:00 ». Chaine vide si la date est absente ou illisible.
+ * FINITIONS — avec `now`, un evenement au-dela de la semaine porte aussi sa date
+ * (« lun. 05/10 18:00 ») : « lun. » seul ne dit plus QUEL lundi.
  * @param {any} startsAt
+ * @param {any} [now] - Maintenant ; sans lui, le format court d'origine.
  * @returns {string}
  */
-export const formatBannerShortTime = (startsAt) => {
+export const formatBannerShortTime = (startsAt, now) => {
   const date = toDate(startsAt);
   if (!date) return '';
-  return `${WEEKDAYS_SHORT_FR[date.getDay()]} ${hhmm(date)}`;
+  const jour = WEEKDAYS_SHORT_FR[date.getDay()];
+  if (!now || selectBannerDay(date, now) !== 'later') return `${jour} ${hhmm(date)}`;
+  const jjmm = `${String(date.getDate()).padStart(2, '0')}/${String(date.getMonth() + 1).padStart(2, '0')}`;
+  return `${jour} ${jjmm} ${hhmm(date)}`;
 };
 
 // Correspondance carte → compteur, telle que le pack la donne (tache 4).

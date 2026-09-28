@@ -26,6 +26,7 @@ import {
   formatBannerShortTime,
   formatBannerTitle,
   normalizeHomeCounters,
+  selectBannerDay,
   selectBannerLines,
   selectHomeAlerts,
   selectModerationTotal,
@@ -1655,6 +1656,19 @@ function HomeHubContent({ auth, navigation, route }) {
     }
 
     if (isPresident) {
+      // 📅 FINITIONS (recette émulateur du 28/09) — l'étiquette était « Aujourd'hui »
+      // en dur, posée au-dessus du PROCHAIN événement quel que soit son jour : un
+      // match du mercredi s'y lisait « aujourd'hui » un lundi. Elle suit désormais le
+      // jour de cet événement (règle partagée `selectBannerDay`). Sans événement, le
+      // bandeau ne liste que ce qui attend le dirigeant : il reste « Aujourd'hui ».
+      const maintenant = new Date();
+      const jourDuProchain = selectBannerDay(homeCounters.prochainEvenement?.startsAt, maintenant);
+      const etiquettes = {
+        later: t('homeHub.banner.when.later', 'À venir'),
+        thisWeek: t('homeHub.banner.when.thisWeek', 'Cette semaine'),
+        today: t('homeHub.banner.today.label', "Aujourd'hui"),
+        tomorrow: t('homeHub.banner.when.tomorrow', 'Demain'),
+      };
       const meta = {
         demandes: {
           icon: 'bell',
@@ -1675,11 +1689,11 @@ function HomeHubContent({ auth, navigation, route }) {
           icon: 'calendar',
           label: homeCounters.prochainEvenement?.label,
           onPress: () => handleOpenEvent(homeCounters.prochainEvenement?.id),
-          value: formatBannerShortTime(homeCounters.prochainEvenement?.startsAt),
+          value: formatBannerShortTime(homeCounters.prochainEvenement?.startsAt, maintenant),
         },
       };
       return {
-        label: t('homeHub.banner.today.label', "Aujourd'hui"),
+        label: etiquettes[jourDuProchain || 'today'],
         lines: descriptors.map((line) => ({
           ...meta[line.key], hasAlert: line.hasAlert, key: line.key,
         })),
