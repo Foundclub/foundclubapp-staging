@@ -373,7 +373,8 @@ const COACH = 'coach-1';
 
 // Le titre du bloc du BAS de page. C est le repere qui prouve la POSITION :
 // tout ce qui se lit AVANT lui se lit sans faire defiler la fiche entiere.
-const BLOC_DU_BAS = "Composition d'equipes";
+// FINITIONS (recette du 28/09) : le titre a pris son accent (et l'apostrophe typographique).
+const BLOC_DU_BAS = 'Composition d’équipes';
 
 const PACK = {
   publishedAt: '2026-08-20T09:00:00.000Z',

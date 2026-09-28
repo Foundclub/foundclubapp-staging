@@ -3985,6 +3985,35 @@ function EventDetails({ navigation, route }) {
     ), 0),
     [convocationBranches],
   );
+  // 🗣️ FINITIONS (recette émulateur du 28/09) — LE RÉSUMÉ DE LA CONVOCATION PUBLIÉE,
+  // EN MOTS DE DIRIGEANT. Il écrivait « 1 équipe(s) publiée(s) » et « 1 branche(s)
+  // visible(s) · 1 remplacant(s) ». Vrais pluriels (i18next, `count`) ; une branche
+  // est une CONVOCATION (celle d'une équipe), qu'on ne compte qu'à partir de deux ;
+  // zéro remplaçant ne se dit pas.
+  const publishedCompositionSummary = useMemo(() => ({
+    counts: [
+      convocationBranches.length > 1 ? t('eventDetails.visibleBranchEs', {
+        count: convocationBranches.length,
+        defaultValue_one: '{{count}} convocation',
+        defaultValue_other: '{{count}} convocations',
+      }) : '',
+      publishedCompositionReserveCount > 0 ? t('eventDetails.substitutesCount', {
+        count: publishedCompositionReserveCount,
+        defaultValue_one: '{{count}} remplaçant',
+        defaultValue_other: '{{count}} remplaçants',
+      }) : '',
+    ].filter(Boolean).join(' · '),
+    teams: publishedCompositionTeamCount > 0 ? t('eventDetails.teamSPublished', {
+      count: publishedCompositionTeamCount,
+      defaultValue_one: '{{count}} équipe publiée',
+      defaultValue_other: '{{count}} équipes publiées',
+    }) : t('eventDetails.lineUpPublished', 'Composition publiée'),
+  }), [
+    convocationBranches.length,
+    publishedCompositionReserveCount,
+    publishedCompositionTeamCount,
+    t,
+  ]);
 
   // 🧾 R6 (vague R) — LES NOMS DES CONVOQUES, DEPUIS LA CHARGE DEJA LA.
   //
@@ -8662,7 +8691,7 @@ function EventDetails({ navigation, route }) {
               {showCallUpTab && showPublishedComposition ? (
                 <View style={[Spaces.gap[12]]}>
                   <Text style={[Fonts.h3Bold, Fonts.neutral00]}>
-                    {t('eventDetails.teamLineUp', "Composition d'equipes")}
+                    {t('eventDetails.teamLineUp', 'Composition d’équipes')}
                   </Text>
                   {hasPublishedComposition ? (
                     <View style={[Spaces.gap[8]]}>
@@ -8680,23 +8709,16 @@ function EventDetails({ navigation, route }) {
                         </Text>
                       )}
                       <Text style={[Fonts.p2, Fonts.neutral300]}>
-                        {publishedCompositionTeamCount > 0
-                          ? t(
-                            'eventDetails.teamSPublished',
-                            '{{publishedCompositionTeamCount}} équipe(s) publiée(s)',
-                            { publishedCompositionTeamCount, ...SANS_ECHAPPEMENT },
-                          )
-                          : t('eventDetails.lineUpPublished', 'Composition publiée')}
+                        {publishedCompositionSummary.teams}
                       </Text>
-                      <Text style={[Fonts.p3, Fonts.neutral300]}>
-                        {convocationBranches.length}
-                        {' '}
-                        {t('eventDetails.visibleBranchEs', 'branche(s) visible(s)')}
-                        {publishedCompositionReserveCount > 0 ? ` · ${publishedCompositionReserveCount} remplacant(s)` : ''}
-                      </Text>
+                      {publishedCompositionSummary.counts ? (
+                        <Text style={[Fonts.p3, Fonts.neutral300]}>
+                          {publishedCompositionSummary.counts}
+                        </Text>
+                      ) : null}
                       {convocationBranches[0]?.published?.publishedAt ? (
                         <Text style={[Fonts.p3, Fonts.neutral300]}>
-                          {t('eventDetails.publishedOn', 'Publie le')}
+                          {t('eventDetails.publishedOn', 'Publiée le')}
                           {' '}
                           {new Date(convocationBranches[0].published.publishedAt).toLocaleString(localeDesFormats())}
                         </Text>

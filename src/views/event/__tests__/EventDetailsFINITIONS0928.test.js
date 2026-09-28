@@ -587,3 +587,72 @@ describe('FINITIONS 1b — les libellés de la fiche ne perdent plus leur dernie
     expect(texteBrut(pasEncore)).not.toContain(' ');
   });
 });
+
+// ===========================================================================
+// 2 · LES TEXTES DE L'ONGLET CONVOCATION, VU PAR L'ENTRAÎNEUR
+// ===========================================================================
+describe('FINITIONS 2 — l onglet Convocation parle comme un dirigeant', () => {
+  test('le titre porte son accent', () => {
+    const root = monter();
+    allerSurLOnglet(root, 'callUp');
+
+    expect(toutLeTexte(root)).toContain('Composition d’équipes');
+    expect(toutLeTexte(root)).not.toMatch(/Composition d.equipes/);
+  });
+
+  test.each([
+    [0, 'Composition publiée'],
+    [1, '1 équipe publiée'],
+    [2, '2 équipes publiées'],
+  ])('%i équipe(s) publiée(s) → « %s », jamais « (s) »', (equipes, attendu) => {
+    const root = monter({ convocationData: convocation([brancheAvec(equipes, 1)]) });
+    allerSurLOnglet(root, 'callUp');
+
+    expect(textesVisibles(root)).toContain(attendu);
+    expect(toutLeTexte(root)).not.toContain('(s)');
+  });
+
+  test.each([
+    [0, null],
+    [1, '1 remplaçant'],
+    [2, '2 remplaçants'],
+  ])('%i remplaçant(s) → %s', (remplacants, attendu) => {
+    const root = monter({ convocationData: convocation([brancheAvec(1, remplacants)]) });
+    allerSurLOnglet(root, 'callUp');
+    const texte = toutLeTexte(root);
+
+    if (attendu) {
+      expect(texte).toContain(attendu);
+    } else {
+      expect(texte).not.toMatch(/\d+ rempla/);
+    }
+    // La cédille, et plus jamais le jargon « branche ».
+    expect(texte).not.toContain('remplacant');
+    expect(texte).not.toContain('branche');
+  });
+
+  test('une seule convocation ne se compte pas ; deux se disent « 2 convocations »', () => {
+    const une = monter();
+    allerSurLOnglet(une, 'callUp');
+    expect(toutLeTexte(une)).not.toMatch(/\b1 convocation\b/);
+
+    const deux = monter({
+      convocationData: convocation([
+        BRANCHE,
+        { ...BRANCHE, team: { documentId: 'team-2', name: 'U15 B' } },
+      ]),
+    });
+    allerSurLOnglet(deux, 'callUp');
+    expect(toutLeTexte(deux)).toContain('2 convocations');
+  });
+
+  test('« Publiée le », avec son accent, et la date entière (aucune entité HTML)', () => {
+    const root = monter();
+    allerSurLOnglet(root, 'callUp');
+    const texte = toutLeTexte(root);
+
+    expect(texte).toMatch(/Publiée le \d{2}\/\d{2}\/\d{4}/);
+    expect(texte).not.toContain('Publie le');
+    expect(texte).not.toContain('&#x2F;');
+  });
+});
