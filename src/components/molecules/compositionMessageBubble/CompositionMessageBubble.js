@@ -25,6 +25,8 @@ import { RouteNames } from '@/navigation/routeNames';
 
 import { getTacticalFieldAspectRatio } from '@/utils/tacticalField';
 
+import CompositionAnswerBar from './CompositionAnswerBar';
+
 // 📐 COMPOMSG — la carte garde la largeur d'une bulle ; le terrain est DEBOUT,
 // dans les proportions de son sport. Il etait couche dans une boite de
 // 220 x 150 : un terrain de football (1,5 fois plus haut que large) y etait
@@ -328,6 +330,13 @@ function CompositionMessageBubble({ composition, isMe = false }) {
     });
   };
 
+  // ♻️ BULLE — le pack tel que la CARTE le porte sert deux fois : a
+  // l'aiguillage du toucher (AC08), et a la garde des boutons de reponse.
+  const packPublieDeLaCarte = {
+    reservePlayerIds: reservePlayers.map((player) => getPlayerId(player)).filter(Boolean),
+    teams: isMultiTeamComposition ? teams : [{ placements }],
+  };
+
   // 🥇 AC08 — LA BULLE MENE AU BON ECRAN. Un convoque va sur SON ecran ; les
   // autres gardent la vue d'ensemble en lecture seule.
   //
@@ -337,12 +346,7 @@ function CompositionMessageBubble({ composition, isMe = false }) {
   const handlePress = () => {
     const { auth } = getAuthRuntimeSnapshot();
     const viewerConvocationRole = getViewerConvocationRole(
-      {
-        published: {
-          reservePlayerIds: reservePlayers.map((player) => getPlayerId(player)).filter(Boolean),
-          teams: isMultiTeamComposition ? teams : [{ placements }],
-        },
-      },
+      { published: packPublieDeLaCarte },
       auth?.user?.documentId || auth?.user?.id,
     );
 
@@ -356,6 +360,33 @@ function CompositionMessageBubble({ composition, isMe = false }) {
 
     openFullScreen();
   };
+
+  // 🙋 BULLE (decision d'Adel du 29/09, « bulle A ») — PRESENT / ABSENT DANS
+  // LA CARTE. Deux gardes lues sur la carte elle-meme, AVANT toute requete :
+  //   · le lecteur figure sur CETTE carte — sinon (entraineur, joueur ecarte,
+  //     parent) rien n'est demande au serveur et la carte reste telle quelle ;
+  //   · le match n'a pas commence — le serveur refuserait la reponse
+  //     (`validateDateIsInFuture`, `event-rsvp.ts`) : un bouton voue au refus
+  //     n'a rien a faire sur une carte. Seul un match de LIGUE est accepte apres
+  //     coup par le serveur ; sa fiche reste la pour ca.
+  // Le reste — demande de reponse, version en cours, reponse deja donnee — se
+  // lit au serveur, dans `CompositionAnswerBar`, jamais sur la carte.
+  const { auth: lecteur } = getAuthRuntimeSnapshot();
+  const viewerId = String(lecteur?.user?.documentId || lecteur?.user?.id || '').trim();
+  const matchAVenir = Date.parse(String(eventDate || '')) > Date.now();
+  const proposeLaReponse = type === 'lineup_share'
+    && Boolean(eventId)
+    && matchAVenir
+    && Boolean(getViewerConvocationRole({ published: packPublieDeLaCarte }, viewerId));
+
+  const cadre = [
+    styles.container,
+    {
+      alignSelf: isMe ? 'flex-end' : 'flex-start',
+      backgroundColor: withAlpha(Colors.primary800, 0.92),
+      borderColor: withAlpha(Colors.primary500, 0.35),
+    },
+  ];
 
   const accessibilityLabel = [
     kicker,
@@ -373,21 +404,14 @@ function CompositionMessageBubble({ composition, isMe = false }) {
   const pitchTitle = t('compositionMessageBubble.onThePitch', 'Sur le terrain');
   const benchTitle = t('compositionMessageBubble.onTheBench', 'Sur le banc');
 
-  return (
+  const carte = (
     <TouchableOpacity
       accessibilityHint={t('compositionMessageBubble.openHint', 'Ouvre la composition')}
       accessibilityLabel={accessibilityLabel}
       accessibilityRole="button"
       activeOpacity={0.85}
       onPress={handlePress}
-      style={[
-        styles.container,
-        {
-          alignSelf: isMe ? 'flex-end' : 'flex-start',
-          backgroundColor: withAlpha(Colors.primary800, 0.92),
-          borderColor: withAlpha(Colors.primary500, 0.35),
-        },
-      ]}
+      style={proposeLaReponse ? null : cadre}
     >
       <View style={styles.body}>
         <View style={styles.kickerRow}>
@@ -541,6 +565,23 @@ function CompositionMessageBubble({ composition, isMe = false }) {
         </Text>
       </View>
     </TouchableOpacity>
+  );
+
+  if (!proposeLaReponse) return carte;
+
+  // ♿ BULLE — avec les boutons, le CADRE passe a un conteneur qui porte la
+  // carte PUIS les boutons, cote a cote et non imbriques : un bouton range dans
+  // un element accessible (la carte) est invisible pour VoiceOver et TalkBack.
+  return (
+    <View style={cadre}>
+      {carte}
+      <CompositionAnswerBar
+        eventId={eventId}
+        publishedVersion={publishedVersion}
+        teamId={teamId}
+        viewerId={viewerId}
+      />
+    </View>
   );
 }
 

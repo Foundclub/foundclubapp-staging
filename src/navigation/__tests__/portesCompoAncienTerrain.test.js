@@ -30,6 +30,14 @@ import BulleCompo from '@/components/molecules/compositionMessageBubble/Composit
 
 import { RouteNames } from '@/navigation/routeNames';
 
+// BULLE (29/09) — la barre Present / Absent tire la couche de services (client
+// HTTP). Cette suite ne l affiche jamais (matchs passes, ou lecteur absent de la
+// carte) : elle est testee dans `CompositionMessageBubbleBULLE.test.js`.
+jest.mock(
+  '@/components/molecules/compositionMessageBubble/CompositionAnswerBar',
+  () => ({ __esModule: true, default: () => null }),
+);
+
 const mockNavigate = jest.fn();
 
 jest.mock('@react-navigation/native', () => ({

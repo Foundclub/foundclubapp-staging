@@ -3,6 +3,11 @@ import renderer, { act } from 'react-test-renderer';
 
 import CompositionMessageBubble from '../CompositionMessageBubble';
 
+// BULLE (29/09) — la barre Present / Absent tire la couche de services (client
+// HTTP). Cette suite ne l affiche jamais (matchs passes, ou lecteur absent de la
+// carte) : elle est testee dans `CompositionMessageBubbleBULLE.test.js`.
+jest.mock('../CompositionAnswerBar', () => ({ __esModule: true, default: () => null }));
+
 /**
  * U06 — TEMOINS 2 et 3 : la carte de compo envoyee dans le tchat.
  *
