@@ -109,6 +109,17 @@ function ClubMemberRoles({ route }) {
     () => filterMembersByName(sortMembersForDisplay(data?.members), query),
     [data?.members, query],
   );
+  // ÉCRAN 2 — le lecteur lui-même, s'il encadre : c'est lui que la carte
+  // « Tu joues aussi ? » met joueur d'une équipe, sans rien lui retirer.
+  /** @type {Row | null} */
+  const self = useMemo(
+    () => (Array.isArray(data?.members) ? data.members : [])
+      .find((/** @type {Row} */ member) => member?.isSelf) || null,
+    [data?.members],
+  );
+  const showsSelfPlayerCard = Boolean(self) && teams.length > 0 && (
+    self?.isManager === true || self?.roleKey === 'coach' || self?.roleKey === 'president'
+  );
 
   const describeRoles = useCallback((/** @type {Row} */ member) => {
     const teamNames = (/** @type {string[]} */ ids) => (ids || [])
@@ -194,6 +205,16 @@ function ClubMemberRoles({ route }) {
         ),
       ],
     };
+    if (member?.isSelf && key === 'player.remove') {
+      return [
+        t('clubMemberRoles.confirm.selfPlayerRemove.title', 'Ne plus jouer ?'),
+        t(
+          'clubMemberRoles.confirm.selfPlayerRemove.message',
+          'Tu ne seras plus joueur de {{team}}. Ton historique reste.',
+          values,
+        ),
+      ];
+    }
     return texts[key] || [t('common.actions.confirm', 'Confirmer'), ''];
   }, [t, teamNameById]);
 
@@ -345,6 +366,45 @@ function ClubMemberRoles({ route }) {
     teams.length,
   ]);
 
+  const renderSelfPlayerCard = () => {
+    if (!showsSelfPlayerCard || !self) return null;
+    return (
+      <View
+        style={[
+          ApplicationStyle.backgroundColor.primary700,
+          ApplicationStyle.borderRadius24,
+          ApplicationStyle.borderWidth1,
+          Spaces.gap[12],
+          Spaces.padding[16],
+          { borderColor: Colors.primary500 },
+        ]}
+        testID="self-player-card"
+      >
+        <Text style={[Fonts.h4Bold, Fonts.neutral00]}>
+          {t('clubMemberRoles.selfCard.title', 'Tu joues aussi ?')}
+        </Text>
+        <Text style={[Fonts.p2, Fonts.neutral200]}>
+          {t(
+            'clubMemberRoles.selfCard.description',
+            'Mets-toi joueur d\'une équipe : tu seras convoqué comme les autres et tu '
+              + 'répondras présent ou absent. Tu gardes tous tes droits.',
+          )}
+        </Text>
+        <View style={[Alignments.row, Alignments.wrap, Spaces.gap[8]]}>
+          {teams.map((team) => renderChip({
+            checked: hasMemberRole(self, 'player', team.documentId),
+            label: t('clubMemberRoles.selfCard.chip', 'Je joue en {{team}}', {
+              team: team.name,
+              ...SANS_ECHAPPEMENT,
+            }),
+            onPress: () => handleToggle(self, 'player', team.documentId),
+            testID: `self-player-${team.documentId}`,
+          }))}
+        </View>
+      </View>
+    );
+  };
+
   const renderItem = useCallback((/** @type {{ item: Row }} */ { item }) => {
     const name = getMemberName(item) || t('clubMemberRoles.fallbacks.member', 'Ce membre');
     const isOpen = openMemberId === item.documentId;
@@ -446,6 +506,7 @@ function ClubMemberRoles({ route }) {
           )}
           ListHeaderComponent={(
             <View style={[Spaces.gap[12], Spaces.marginBottom[16]]}>
+              {renderSelfPlayerCard()}
               <Text style={[Fonts.p2, Fonts.neutral200]}>
                 {t(
                   'clubMemberRoles.intro',

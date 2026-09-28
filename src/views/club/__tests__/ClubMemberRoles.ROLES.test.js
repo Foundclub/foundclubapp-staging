@@ -322,3 +322,59 @@ describe('RÔLES — écran 1 : la liste des membres du club', () => {
     expect(textes(arbre)).toContain('Club introuvable');
   });
 });
+
+// ÉCRAN 2 — « Imaginons que je suis dirigeant et que d'un coup j'ai envie de me
+// mettre joueur dans une équipe : il faut que je puisse le faire » (Adel, 28/09).
+// Une carte dédiée, en tête, pour le dirigeant lui-même.
+describe('RÔLES — écran 2 : se mettre soi-même joueur d\'une équipe', () => {
+  const donneesDOrigine = mockRolesQuery.data;
+
+  afterEach(() => {
+    mockRolesQuery.data = donneesDOrigine;
+  });
+
+  it('le dirigeant voit « Tu joues aussi ? », une case par équipe, et s\'y met d\'un appui', () => {
+    const arbre = monter();
+
+    expect(textes(arbre)).toContain('Tu joues aussi ?');
+    const caseU15 = parTestId(arbre, 'self-player-team-u15');
+    expect(caseU15.props.accessibilityLabel).toBe('Je joue en U15');
+    expect(caseU15.props.accessibilityState.checked).toBe(false);
+    expect(parTestId(arbre, 'self-player-team-seniors')).toBeDefined();
+
+    appuyer(arbre, 'self-player-team-u15');
+    expect(Alert.alert).not.toHaveBeenCalled();
+    expect(mockMutation.mutate.mock.calls[0][0]).toEqual({
+      action: 'add', role: 'player', teamDocumentId: 'team-u15', userDocumentId: 'dir-doc',
+    });
+  });
+
+  it('déjà joueur : la case est cochée, et arrêter de jouer se confirme en le tutoyant', () => {
+    mockRolesQuery.data = {
+      ...donneesDOrigine,
+      members: donneesDOrigine.members.map((membre) => (
+        membre.isSelf ? { ...membre, playerTeamIds: ['team-u15'] } : membre
+      )),
+    };
+    const arbre = monter();
+
+    expect(parTestId(arbre, 'self-player-team-u15').props.accessibilityState.checked).toBe(true);
+    appuyer(arbre, 'self-player-team-u15');
+    const [titre, message] = /** @type {any} */ (Alert.alert).mock.calls[0];
+    expect(titre).toBe('Ne plus jouer ?');
+    expect(message).toBe('Tu ne seras plus joueur de U15. Ton historique reste.');
+  });
+
+  it('un lecteur qui n\'encadre rien ne voit pas la carte', () => {
+    mockRolesQuery.data = {
+      ...donneesDOrigine,
+      members: donneesDOrigine.members.map((membre) => (
+        membre.isSelf ? { ...membre, isManager: false, roleKey: 'player' } : membre
+      )),
+    };
+    const arbre = monter();
+
+    expect(textes(arbre)).not.toContain('Tu joues aussi ?');
+    expect(parTestId(arbre, 'self-player-team-u15')).toBeUndefined();
+  });
+});

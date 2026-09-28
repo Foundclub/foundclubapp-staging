@@ -4185,6 +4185,10 @@ export default {
         message: '{{name}} ne sera plus joueur de {{team}}. Son compte et son historique restent.',
         title: 'Retirer le joueur ?',
       },
+      selfPlayerRemove: {
+        message: 'Tu ne seras plus joueur de {{team}}. Ton historique reste.',
+        title: 'Ne plus jouer ?',
+      },
     },
     empty: {
       members: 'Aucun membre dans ce club pour le moment.',
@@ -4210,6 +4214,12 @@ export default {
       player: 'Joueur de',
     },
     self: '{{name}} (toi)',
+    selfCard: {
+      chip: 'Je joue en {{team}}',
+      // eslint-disable-next-line max-len
+      description: "Mets-toi joueur d'une équipe : tu seras convoqué comme les autres et tu répondras présent ou absent. Tu gardes tous tes droits.",
+      title: 'Tu joues aussi ?',
+    },
     state: {
       missingClub: {
         // eslint-disable-next-line max-len

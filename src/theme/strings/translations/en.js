@@ -3905,6 +3905,10 @@ export default {
         message: '{{name}} will no longer play for {{team}}. Their account and history stay.',
         title: 'Remove the player?',
       },
+      selfPlayerRemove: {
+        message: 'You will no longer play for {{team}}. Your history stays.',
+        title: 'Stop playing?',
+      },
     },
     empty: {
       members: 'No members in this club yet.',
@@ -3929,6 +3933,11 @@ export default {
       player: 'Player of',
     },
     self: '{{name}} (you)',
+    selfCard: {
+      chip: 'I play in {{team}}',
+      description: 'Add yourself as a player of a team: you will be called up like the others and answer present or absent. You keep all your rights.',
+      title: 'Do you play too?',
+    },
     state: {
       missingClub: {
         description: 'Unable to open the members without a valid club. Go back to the club page.',
