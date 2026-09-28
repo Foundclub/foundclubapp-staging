@@ -8,6 +8,7 @@ import ClubDetails from '@/views/club/ClubDetails';
 import ClubEdit from '@/views/club/ClubEdit';
 import ClubFilters from '@/views/club/ClubFilters';
 import ClubList from '@/views/club/ClubList';
+import ClubMemberRoles from '@/views/club/ClubMemberRoles';
 import ClubMembershipRequestList from '@/views/club/ClubMembershipRequestList';
 import RequestsDashboard from '@/views/club/RequestsDashboard';
 import ClubWizardActivities from '@/views/club/wizard/ClubWizardActivities';
@@ -80,6 +81,14 @@ function ClubStack() {
           options={{
             ...commonOptions,
             headerTitle: t('clubMembershipRequestList.title'),
+          }}
+        />
+        <Stack.Screen
+          component={ClubMemberRoles}
+          name={RouteNames.ClubMemberRoles}
+          options={{
+            ...commonOptions,
+            headerTitle: t('clubMemberRoles.title', 'Membres et rôles'),
           }}
         />
         <Stack.Screen

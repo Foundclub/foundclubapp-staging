@@ -948,3 +948,18 @@ describe('R07 — la feuille du club sans equipe remonte au-dessus du clavier', 
     expect(feuille.snapPoints.length).toBeGreaterThan(0);
   });
 });
+
+// LOT RÔLES (2026-09-28) — la porte de l'écran « Membres et rôles ». Sans
+// elle, l'écran existe et personne n'y arrive (famille 🚪 de §2 quinquies).
+describe('ClubDetails — RÔLES : la rangée « Membres et rôles » du hub', () => {
+  it('le hub du dirigeant ouvre l écran des rôles de CE club', () => {
+    const arbre = monter();
+    const rangee = pressableAvecTexte(arbre, 'Membres et rôles, Attribuer');
+
+    expect(rangee).toBeDefined();
+    act(() => {
+      rangee.props.onPress();
+    });
+    expect(mockNavigation.navigate).toHaveBeenCalledWith('ClubMemberRoles', { clubId: 'club-1' });
+  });
+});

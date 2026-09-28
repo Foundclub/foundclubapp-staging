@@ -46,6 +46,7 @@ const WEB_ROUTE_PATTERNS = {
   [RouteNames.ClubList]: '/clubs',
   [RouteNames.ClubFilters]: '/clubs/filters',
   [RouteNames.ClubMembershipRequests]: '/clubs/:clubId/requests',
+  [RouteNames.ClubMemberRoles]: '/clubs/:clubId/members/roles',
   [RouteNames.RequestsDashboard]: '/clubs/:clubId/requests-dashboard',
   [RouteNames.AddCoach]: '/clubs/:clubId/coaches/add',
   [RouteNames.AddClubManager]: '/clubs/:clubId/managers/add',
