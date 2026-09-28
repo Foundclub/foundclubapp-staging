@@ -81,6 +81,8 @@ export const RouteNames = /** @type {const} */ ({
   ClubLicensePayments: 'ClubLicensePayments',
   ClubLicenses: 'ClubLicenses',
   ClubList: 'ClubList',
+  // LOT RÔLES (2026-09-28) — les membres du club et leurs rôles (dirigeant).
+  ClubMemberRoles: 'ClubMemberRoles',
   ClubMembershipRequests: 'ClubMembershipRequests',
   ClubWizardActivities: 'ClubWizardActivities',
   ClubWizardAddress: 'ClubWizardAddress',

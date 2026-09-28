@@ -1742,6 +1742,17 @@ export default {
     // refus d'abonnement, pas un refus de droits — les deux ne se disent pas pareil.
     SUBSCRIPTION_PERMISSION_DENIED: "Cette action nécessite une offre FoundClub active. Rends-toi dans Mon abonnement pour l'activer.",
     UNAUTHORIZED: "Tu n'es pas autorisé·e à effectuer cette action.",
+    // LOT RÔLES (2026-09-28) — les refus de POST /clubs/:id/member-roles.
+    MEMBER_ROLE_INVALID_REQUEST: 'Cette demande de rôle est incomplète. Réessaie.',
+    MEMBER_ROLE_LAST_MANAGER: 'Le club doit garder au moins un dirigeant.',
+    // eslint-disable-next-line max-len
+    MEMBER_ROLE_LAST_TRAINER: "L'équipe doit garder au moins un entraîneur : nommes-en un autre avant.",
+    MEMBER_ROLE_NOT_A_MEMBER: "Cette personne n'est pas membre du club.",
+    // eslint-disable-next-line max-len
+    MEMBER_ROLE_OTHER_CLUB: 'Cette personne appartient aussi à un autre club : son rôle de dirigeant ne peut pas être retiré ici.',
+    MEMBER_ROLE_PROTECTED_ACCOUNT: 'Le rôle de ce compte ne se change pas depuis cet écran.',
+    MEMBER_ROLE_SELF_DEMOTION: 'Tu ne peux pas te retirer toi-même la direction du club.',
+    MEMBER_ROLE_TEAM_NOT_IN_CLUB: "Cette équipe n'appartient pas au club.",
 
     // Validation errors
     INVALID_FIELD_FORMAT: 'Format de champ invalide.',
@@ -2599,6 +2610,8 @@ export default {
       owner: 'dirigeant',
       owners: 'dirigeants',
       rows: {
+        memberRoles: 'Membres et rôles',
+        memberRolesValue: 'Attribuer',
         membershipRequests: "Demandes d'adhésion",
         staff: 'Staff',
       },
@@ -4136,6 +4149,75 @@ export default {
       description: 'La zone visible est trop large pour charger une liste fiable. Zoome puis relance la vue liste.',
       title: 'Zoome pour affiner la recherche',
     },
+  },
+  // LOT RÔLES (2026-09-28) — l'écran « Membres et rôles » du dirigeant.
+  clubMemberRoles: {
+    a11y: {
+      openMember: 'Gérer les rôles de {{name}}',
+    },
+    chips: {
+      coachOf: 'Entraîneur de {{team}}',
+      manager: 'Co-dirigeant',
+      playerOf: 'Joueur de {{team}}',
+    },
+    confirm: {
+      action: 'Confirmer',
+      coachAdd: {
+        // eslint-disable-next-line max-len
+        message: '{{name}} deviendra entraîneur de {{team}}. Son compte prendra le rôle Entraîneur.',
+        title: 'Nommer entraîneur ?',
+      },
+      coachRemove: {
+        // eslint-disable-next-line max-len
+        message: '{{name}} ne sera plus entraîneur de {{team}}. Son compte et son historique restent.',
+        title: "Retirer l'entraîneur ?",
+      },
+      managerAdd: {
+        message: '{{name}} deviendra dirigeant du club : il pourra tout gérer, comme toi.',
+        title: 'Nommer co-dirigeant ?',
+      },
+      managerRemove: {
+        // eslint-disable-next-line max-len
+        message: '{{name}} ne sera plus dirigeant du club. Son compte, ses équipes et son historique restent.',
+        title: 'Retirer le co-dirigeant ?',
+      },
+      playerRemove: {
+        message: '{{name}} ne sera plus joueur de {{team}}. Son compte et son historique restent.',
+        title: 'Retirer le joueur ?',
+      },
+    },
+    empty: {
+      members: 'Aucun membre dans ce club pour le moment.',
+      search: 'Aucun membre ne correspond à cette recherche.',
+      teams: "Ce club n'a pas encore d'équipe.",
+    },
+    fallbacks: {
+      member: 'Ce membre',
+      team: 'cette équipe',
+    },
+    // eslint-disable-next-line max-len
+    intro: "Touche un membre pour lui donner un rôle : joueur ou entraîneur d'une équipe, ou co-dirigeant. Un membre peut en cumuler plusieurs.",
+    roles: {
+      coachOf: 'Entraîneur · {{teams}}',
+      manager: 'Dirigeant',
+      none: "Aucun rôle d'équipe",
+      playerOf: 'Joueur · {{teams}}',
+    },
+    search: 'Rechercher un membre',
+    sections: {
+      coach: 'Entraîneur de',
+      manager: 'Direction du club',
+      player: 'Joueur de',
+    },
+    self: '{{name}} (toi)',
+    state: {
+      missingClub: {
+        // eslint-disable-next-line max-len
+        description: "Impossible d'ouvrir les membres sans club valide. Reviens à la fiche du club.",
+        title: 'Club introuvable',
+      },
+    },
+    title: 'Membres et rôles',
   },
   clubMembershipRequestList: {
     actions: {

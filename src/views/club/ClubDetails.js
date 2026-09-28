@@ -2696,6 +2696,15 @@ function ClubDetails({ navigation, route }) {
                   onPress={() => openClubHubSection('staff')}
                   value={clubStaffSummary}
                 />
+                {/* LOT RÔLES (2026-09-28) — donner un rôle à chaque membre :
+                    joueur ou entraîneur d'une équipe, co-dirigeant. */}
+                <ClubHubRow
+                  divider
+                  icon={Images.users}
+                  label={t('clubDetails.hub.rows.memberRoles', 'Membres et rôles')}
+                  onPress={() => navigation.navigate(RouteNames.ClubMemberRoles, { clubId })}
+                  value={t('clubDetails.hub.rows.memberRolesValue', 'Attribuer')}
+                />
               </ClubHubGroup>
 
               <ClubHubGroup label={t('clubDetails.hub.groups.membership', 'Adhésions')}>

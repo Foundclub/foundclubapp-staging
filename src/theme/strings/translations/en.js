@@ -1742,6 +1742,14 @@ export default {
     MEMBERSHIP_REQUEST_ALREADY_PROCESSED: 'The membership request has already been processed.',
     MEMBERSHIP_REQUEST_NOT_PENDING: 'The membership request is not pending.',
     MEMBERSHIP_REQUEST_REFUSED: 'The membership request has been refused.',
+    MEMBER_ROLE_INVALID_REQUEST: 'This role request is incomplete. Please try again.',
+    MEMBER_ROLE_LAST_MANAGER: 'The club must keep at least one manager.',
+    MEMBER_ROLE_LAST_TRAINER: 'The team must keep at least one coach: appoint another one first.',
+    MEMBER_ROLE_NOT_A_MEMBER: 'This person is not a member of the club.',
+    MEMBER_ROLE_OTHER_CLUB: 'This person also belongs to another club: their manager role cannot be removed here.',
+    MEMBER_ROLE_PROTECTED_ACCOUNT: 'This account’s role cannot be changed from this screen.',
+    MEMBER_ROLE_SELF_DEMOTION: 'You cannot remove your own club manager role.',
+    MEMBER_ROLE_TEAM_NOT_IN_CLUB: 'This team does not belong to the club.',
     MESSAGE_TOO_LONG: 'The message is too long.',
     MINOR_DIRECT_CHAT_FORBIDDEN: "Private chat not possible: a minor can only message privately with their parent or their club's staff.",
     MISSING_REQUIRED_FIELD: 'A required field is missing.',
@@ -2403,6 +2411,8 @@ export default {
       owner: 'club manager',
       owners: 'club managers',
       rows: {
+        memberRoles: 'Members and roles',
+        memberRolesValue: 'Assign',
         membershipRequests: 'Membership requests',
         staff: 'Staff',
       },
@@ -3863,6 +3873,69 @@ export default {
       description: 'The visible area is too large to load a reliable list. Zoom in, then reopen the list view.',
       title: 'Zoom in to refine the search',
     },
+  },
+  clubMemberRoles: {
+    a11y: {
+      openMember: 'Manage the roles of {{name}}',
+    },
+    chips: {
+      coachOf: 'Coach of {{team}}',
+      manager: 'Co-manager',
+      playerOf: 'Player of {{team}}',
+    },
+    confirm: {
+      action: 'Confirm',
+      coachAdd: {
+        message: '{{name}} will become coach of {{team}}. Their account will take the Coach role.',
+        title: 'Appoint as coach?',
+      },
+      coachRemove: {
+        message: '{{name}} will no longer coach {{team}}. Their account and history stay.',
+        title: 'Remove the coach?',
+      },
+      managerAdd: {
+        message: '{{name}} will become a club manager: they will be able to manage everything, like you.',
+        title: 'Appoint as co-manager?',
+      },
+      managerRemove: {
+        message: '{{name}} will no longer manage the club. Their account, teams and history stay.',
+        title: 'Remove the co-manager?',
+      },
+      playerRemove: {
+        message: '{{name}} will no longer play for {{team}}. Their account and history stay.',
+        title: 'Remove the player?',
+      },
+    },
+    empty: {
+      members: 'No members in this club yet.',
+      search: 'No member matches this search.',
+      teams: 'This club has no team yet.',
+    },
+    fallbacks: {
+      member: 'This member',
+      team: 'this team',
+    },
+    intro: 'Tap a member to give them a role: player or coach of a team, or co-manager. A member can hold several.',
+    roles: {
+      coachOf: 'Coach · {{teams}}',
+      manager: 'Manager',
+      none: 'No team role',
+      playerOf: 'Player · {{teams}}',
+    },
+    search: 'Search a member',
+    sections: {
+      coach: 'Coach of',
+      manager: 'Club management',
+      player: 'Player of',
+    },
+    self: '{{name}} (you)',
+    state: {
+      missingClub: {
+        description: 'Unable to open the members without a valid club. Go back to the club page.',
+        title: 'Club not found',
+      },
+    },
+    title: 'Members and roles',
   },
   clubMembershipRequestList: {
     actions: {
