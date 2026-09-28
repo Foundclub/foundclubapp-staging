@@ -354,11 +354,48 @@ describe('COMPOMSG · écran 3 — les MÊMES infos que la carte du fil', () => 
   });
 
   test('🥇 une compo modifiée dit sa VERSION ; la première n’affiche rien de technique', () => {
-    expect(texteVisible(rendre())).toContain('Version 2');
+    // FINITIONS : l'espace de la pastille est désormais INSÉCABLE — le lecteur lit
+    // toujours « Version 2 », d'où la normalisation des blancs avant de comparer.
+    expect(texteVisible(rendre()).replace(/\s/g, ' ')).toContain('Version 2');
 
     mockConvocation.branches[0].published = { ...PACK, version: 1 };
     const premiere = texteVisible(rendre());
     expect(premiere).not.toContain('Version');
     expect(premiere).not.toMatch(/\bv1\b/);
+  });
+});
+
+// ==========================================================================
+// FINITIONS (recette émulateur du 2026-09-28, Android 16, tournée 3) — la
+// pastille affichait « Version » au lieu de « Version 2 » (capture
+// T3-B3-zoom-version-coupee). Une pastille épouse la largeur de son texte, et un
+// texte GRAS de plusieurs mots y perd son dernier mot ; un mot seul (« Titulaire »,
+// « Remplaçant ») reste entier. ⇒ Les pastilles de l'écran n'offrent plus aucun
+// point de coupure. Écrit ROUGE.
+// ⚠️ Jest ne calcule aucune mise en page : le témoin tient l'ABSENCE de point de
+// coupure, pas le rendu — seul un Android 16 prouvera « Version 2 » entier.
+// ==========================================================================
+describe('FINITIONS — les pastilles de « Tu es convoqué » ne se coupent plus', () => {
+  const { Text: TexteRN } = jest.requireActual('react-native');
+  const texteDe = (/** @type {any} */ noeud) => noeud.findAllByType(TexteRN)
+    .map((/** @type {any} */ n) => aplatirTexte(n.props.children)).join('');
+
+  test('🥇 « Version 2 » : aucune espace sécable dans la pastille', () => {
+    const arbre = rendre();
+    const pastille = arbre.root.findAllByType(TexteRN)
+      .find((/** @type {any} */ n) => /^Version\s2$/.test(aplatirTexte(n.props.children)));
+
+    expect(pastille).toBeDefined();
+    expect(aplatirTexte(pastille.props.children)).not.toContain(' ');
+  });
+
+  test('🥇 « Sans réponse » sur la ligne d un remplaçant : aucune espace sécable', () => {
+    mockConvocation.branches[0].responses = { byPlayerId: { 'joueur-3': 'pending' } };
+    const arbre = rendre();
+    const [pastille] = arbre.root
+      .findAll((/** @type {any} */ n) => n.props?.testID === 'reponse-banc-joueur-3');
+
+    expect(texteDe(pastille).replace(/\s/g, ' ')).toBe('Sans réponse');
+    expect(texteDe(pastille)).not.toContain(' ');
   });
 });

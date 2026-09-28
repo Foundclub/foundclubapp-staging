@@ -38,6 +38,7 @@ import { getCompositionPlayerInitials } from '@/utils/compositionPlayer';
 import { getAddressText } from '@/utils/facilityAddressLabel';
 import { getImageUrl } from '@/utils/imageUrl';
 import { getLocationCoordinates } from '@/utils/location';
+import texteInsecable from '@/utils/texteInsecable';
 import { getTacticalFieldAspectRatio } from '@/utils/tacticalField';
 
 import {
@@ -427,8 +428,11 @@ function PlayerConvocationScreen() {
             <View
               style={[styles.versionChip, { borderColor: withAlpha(Colors.primary500, 0.45) }]}
             >
+              {/* FINITIONS (recette Android 16 du 28/09) — « Version » sans son
+                  numéro : une pastille épouse son texte, et un texte gras de
+                  plusieurs mots y perdait son dernier mot. Espaces insécables. */}
               <Text style={[Fonts.p4Bold, { color: Colors.primary100 }]}>
-                {t('playerConvocation.version', { version: versionNumber })}
+                {texteInsecable(t('playerConvocation.version', { version: versionNumber }))}
               </Text>
             </View>
           ) : null}
@@ -559,8 +563,9 @@ function PlayerConvocationScreen() {
                         ]}
                         testID={`reponse-banc-${id}`}
                       >
+                        {/* FINITIONS — même pastille, même parade : « Sans réponse ». */}
                         <Text style={[Fonts.p4Bold, { color: reserveTone }]}>
-                          {t(`playerConvocation.responses.${reserveResponse}`)}
+                          {texteInsecable(t(`playerConvocation.responses.${reserveResponse}`))}
                         </Text>
                       </View>
                     ) : null}
