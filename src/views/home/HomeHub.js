@@ -52,6 +52,7 @@ import HomeActionCard from '@/components/molecules/homeActionCard/HomeActionCard
 import HomeHeadBanner from '@/components/molecules/homeHeadBanner/HomeHeadBanner';
 import NotificationBadge from '@/components/molecules/notificationBadge/NotificationBadge';
 import OnboardingWrapper from '@/components/molecules/onboardingWrapper/OnboardingWrapper';
+import PlayerModeBanner from '@/components/molecules/playerModeBanner/PlayerModeBanner';
 import ProfileButton from '@/components/molecules/profileButton/ProfileButton';
 import SubscriptionPaywallSheet
   from '@/components/molecules/subscriptionPaywallSheet/SubscriptionPaywallSheet';
@@ -377,10 +378,13 @@ function HomeHubContent({ auth, navigation, route }) {
   } = useStartupPhase();
   const {
     canPublishGovernedClubContent,
+    canUsePlayerMode,
     freeUsageSummary,
     governedPublishingBlockReason,
+    isPlayerMode,
     logoutMutation,
     nonPartnerCoachPublishingAccess,
+    setPlayerMode,
     subscriptionAccessLevel,
     userData,
   } = auth;
@@ -423,7 +427,10 @@ function HomeHubContent({ auth, navigation, route }) {
   }));
 
   const roleName = userData?.role?.name;
-  const roleKey = getUserRoleKey(roleName);
+  // LOT RÔLES (2026-09-28) — en MODE JOUEUR, l'accueil est celui d'un joueur :
+  // tout ce qui suit (section Gérer, bandeau, cartes) se déduit de `roleKey`.
+  // `userData` n'est pas réécrit, et les droits ne bougent pas (useAuth).
+  const roleKey = isPlayerMode ? 'player' : getUserRoleKey(roleName);
   const isCoach = roleKey === 'coach';
   const isPresident = roleKey === 'president';
   const isSuperAdmin = roleKey === 'superAdmin';
@@ -2599,6 +2606,13 @@ function HomeHubContent({ auth, navigation, route }) {
         ref={scrollRef}
         showsVerticalScrollIndicator={false}
       >
+        {/* LOT RÔLES — l'entrée dans le mode joueur, et SURTOUT le retour. */}
+        <PlayerModeBanner
+          accountRoleKey={getUserRoleKey(roleName)}
+          canUsePlayerMode={canUsePlayerMode === true}
+          isPlayerMode={isPlayerMode === true}
+          onChange={setPlayerMode}
+        />
         {headBanner ? (
           <HomeHeadBanner
             actions={headBanner.actions}

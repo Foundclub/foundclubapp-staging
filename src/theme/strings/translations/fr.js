@@ -4218,6 +4218,8 @@ export default {
       chip: 'Je joue en {{team}}',
       // eslint-disable-next-line max-len
       description: "Mets-toi joueur d'une équipe : tu seras convoqué comme les autres et tu répondras présent ou absent. Tu gardes tous tes droits.",
+      // eslint-disable-next-line max-len
+      modeHint: "Pour voir l'app comme un joueur de ton équipe : Accueil, puis « Voir l'app en joueur ».",
       title: 'Tu joues aussi ?',
     },
     state: {
@@ -12738,6 +12740,23 @@ export default {
     unknownStatsHint: 'On enregistre que tu ne connais pas tes stats individuelles pour ce match. Tu peux quand même laisser ta note et ton ressenti.',
     wholeMatch: 'Tout le match',
     yourMatch: 'Ton match',
+  },
+  // LOT RÔLES (2026-09-28) — le mode joueur d'un dirigeant qui joue (accueil).
+  playerMode: {
+    active: {
+      // eslint-disable-next-line max-len
+      description: "Tu vois l'app comme un joueur de ton équipe. Tes droits de {{staff}} sont intacts.",
+      exit: 'Revenir en mode {{staff}}',
+      title: 'Mode joueur',
+    },
+    offer: {
+      description: 'Tu joues aussi dans une équipe.',
+      enter: "Voir l'app en joueur",
+    },
+    staff: {
+      coach: 'entraîneur',
+      president: 'dirigeant',
+    },
   },
   pollCreationModal: {
     thisOptionIsAlreadyUsed: 'Cette option est déjà utilisée.',

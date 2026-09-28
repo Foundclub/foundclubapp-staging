@@ -401,6 +401,15 @@ function ClubMemberRoles({ route }) {
             testID: `self-player-${team.documentId}`,
           }))}
         </View>
+        {self.playerTeamIds?.length ? (
+          <Text style={[Fonts.p3, Fonts.primary100]} testID="self-player-mode-hint">
+            {t(
+              'clubMemberRoles.selfCard.modeHint',
+              'Pour voir l\'app comme un joueur de ton équipe : Accueil, puis '
+                + '« Voir l\'app en joueur ».',
+            )}
+          </Text>
+        ) : null}
       </View>
     );
   };

@@ -359,6 +359,10 @@ describe('RÔLES — écran 2 : se mettre soi-même joueur d\'une équipe', () =
     const arbre = monter();
 
     expect(parTestId(arbre, 'self-player-team-u15').props.accessibilityState.checked).toBe(true);
+    // ÉCRAN 3 — le pont vers le mode joueur, une fois qu'il joue quelque part.
+    expect(textes(arbre)).toContain(
+      'Pour voir l\'app comme un joueur de ton équipe : Accueil, puis « Voir l\'app en joueur ».',
+    );
     appuyer(arbre, 'self-player-team-u15');
     const [titre, message] = /** @type {any} */ (Alert.alert).mock.calls[0];
     expect(titre).toBe('Ne plus jouer ?');

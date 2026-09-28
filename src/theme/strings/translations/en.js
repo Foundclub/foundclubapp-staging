@@ -3936,6 +3936,7 @@ export default {
     selfCard: {
       chip: 'I play in {{team}}',
       description: 'Add yourself as a player of a team: you will be called up like the others and answer present or absent. You keep all your rights.',
+      modeHint: 'To see the app as a player of your team: Home, then “See the app as a player”.',
       title: 'Do you play too?',
     },
     state: {
@@ -12086,6 +12087,21 @@ export default {
     unknownStatsHint: 'We record that you don’t know your individual stats for this match. You can still leave your rating and how you felt.',
     wholeMatch: 'The whole match',
     yourMatch: 'Your match',
+  },
+  playerMode: {
+    active: {
+      description: 'You see the app as a player of your team. Your {{staff}} rights are intact.',
+      exit: 'Back to {{staff}} mode',
+      title: 'Player mode',
+    },
+    offer: {
+      description: 'You also play in a team.',
+      enter: 'See the app as a player',
+    },
+    staff: {
+      coach: 'coach',
+      president: 'manager',
+    },
   },
   pollCreationModal: {
     thisOptionIsAlreadyUsed: 'This option is already used.',

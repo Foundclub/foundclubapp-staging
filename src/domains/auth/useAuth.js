@@ -42,6 +42,12 @@ import {
   haveSameSanitizedUser,
   sanitizeUser,
 } from '@/domains/auth/authSanitizer';
+import {
+  canUsePlayerMode as canAccountUsePlayerMode,
+  resolveDisplayRoleKey,
+  usePlayerModeRequest,
+  writePlayerModeRequest,
+} from '@/domains/auth/playerMode';
 import { getSubscriptionAccessLevel } from '@/domains/subscription/subscriptionDecision';
 import {
   canUserEditClub,
@@ -577,14 +583,36 @@ const useAuth = () => {
     [userData?.role?.name, userData?.role?.type],
   );
 
+  // LOT RÔLES (2026-09-28) — LE MODE JOUEUR : un rôle d'AFFICHAGE, jamais un droit.
+  //
+  // `userRoleKey` reste le rôle du COMPTE (le sas d'arrivée le lit plus bas).
+  // `displayRoleKey` vaut `player` quand un dirigeant ou un entraîneur qui joue
+  // dans une équipe a demandé à « voir l'app en joueur » : SEULS les jugements
+  // d'affichage ci-dessous le lisent (gérer l'équipe, gérer les événements…).
+  // ⛔ Les portes de droits (`canEditClub`, `hasClubAccess`) et le serveur ne
+  // le voient pas ; `userData.role` n'est jamais réécrit.
+  // Témoin : src/domains/auth/__tests__/useAuth.ROLES.modeJoueur.test.js.
+  const isPlayerModeRequested = usePlayerModeRequest(userData?.documentId);
+  const displayRoleKey = resolveDisplayRoleKey({
+    accountRoleKey: userRoleKey,
+    isPlayerModeRequested,
+    userData,
+  });
+  const isPlayerMode = displayRoleKey !== userRoleKey;
+  const canUsePlayerMode = canAccountUsePlayerMode(userRoleKey, userData);
+  const setPlayerMode = useCallback(
+    (/** @type {boolean} */ enabled) => writePlayerModeRequest(userData?.documentId, enabled),
+    [userData?.documentId],
+  );
+
   const canEditEvent = useCallback(
-    (/** @type {string} */teamId) => (userRoleKey === 'coach' || userRoleKey === 'president')
+    (/** @type {string} */teamId) => (displayRoleKey === 'coach' || displayRoleKey === 'president')
       && userData?.trainedTeams?.map((/** @type {any} */ { documentId }) => documentId)?.includes(teamId),
-    [userData, userRoleKey],
+    [userData, displayRoleKey],
   );
 
   const canManageEvent = useCallback((/** @type {any} */ event) => {
-    if (userRoleKey !== 'coach' && userRoleKey !== 'president') {
+    if (displayRoleKey !== 'coach' && displayRoleKey !== 'president') {
       return false;
     }
 
@@ -610,7 +638,7 @@ const useAuth = () => {
 
     if (organizerTeamId && trainedTeamIds.has(organizerTeamId)) return true;
     return invitedTeamIds.some((/** @type {any} */ teamId) => trainedTeamIds.has(teamId));
-  }, [userData, userRoleKey]);
+  }, [userData, displayRoleKey]);
 
   // TRIO/A2 — « C'EST MON CLUB ! » N'ETAIT OUVERT QU'A L'ENTRAINEUR.
   //
@@ -630,30 +658,30 @@ const useAuth = () => {
   // 🔤 Meme mot que `canContactAdmin` juste en dessous et que `canManageTeam` /
   // `canManageEvents` juste apres : `'president'`.
   const canJoinClub = useMemo(
-    () => userRoleKey === 'coach' || userRoleKey === 'president',
-    [userRoleKey],
+    () => displayRoleKey === 'coach' || displayRoleKey === 'president',
+    [displayRoleKey],
   );
 
   const canContactAdmin = useMemo(
-    () => userRoleKey === 'president',
-    [userRoleKey],
+    () => displayRoleKey === 'president',
+    [displayRoleKey],
   );
 
   const canJoinTeam = useCallback((/** @type {string} */teamId) => {
-    if (userRoleKey === 'player') {
+    if (displayRoleKey === 'player') {
       return !userData?.myTeams?.some((/** @type {any} */ { documentId }) => documentId === teamId);
     }
     return false;
-  }, [userData, userRoleKey]);
+  }, [userData, displayRoleKey]);
 
   const canManageTeam = useMemo(
-    () => userRoleKey === 'coach' || userRoleKey === 'president',
-    [userRoleKey],
+    () => displayRoleKey === 'coach' || displayRoleKey === 'president',
+    [displayRoleKey],
   );
 
   const canManageEvents = useMemo(
-    () => userRoleKey === 'coach' || userRoleKey === 'president',
-    [userRoleKey],
+    () => displayRoleKey === 'coach' || displayRoleKey === 'president',
+    [displayRoleKey],
   );
 
   const nonPartnerCoachPublishingAccess = useMemo(
@@ -819,6 +847,8 @@ const useAuth = () => {
   }, [queryClient]);
 
   return {
+    // LOT RÔLES — le rôle du COMPTE, que le mode joueur ne change pas.
+    accountRoleKey: userRoleKey,
     activeClubId,
     addAccount,
     allMyTeams,
@@ -836,6 +866,7 @@ const useAuth = () => {
     canPublishGovernedClubContent,
     canSendMessageToUser,
     canShowCodeButton: !!confirm,
+    canUsePlayerMode,
     clubIds,
     clubs,
     clubVerificationSummary,
@@ -861,6 +892,7 @@ const useAuth = () => {
     isCurrentClubVerified,
     isLoading: otpMutation.isPending || loginMutation.isPending,
     isNonPartnerCoach,
+    isPlayerMode,
     loginMutation,
     logoutMutation,
     nonPartnerCoachPublishingAccess,
@@ -870,6 +902,7 @@ const useAuth = () => {
     refetchUserData,
     retryBoot,
     setConfirm,
+    setPlayerMode,
     subscriptionAccessLevel,
     subscriptionSummary,
     switchAccount,
