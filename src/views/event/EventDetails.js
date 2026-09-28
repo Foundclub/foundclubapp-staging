@@ -3678,6 +3678,19 @@ function EventDetails({ navigation, route }) {
     },
   );
 
+  // 🔇 FINITIONS (recette émulateur du 28/09) — UNE SEULE PORTE pour « ma réponse de
+  // match ». Le serveur la refuse avant la fin du match (400 « Match statistics are
+  // only available after the match has ended », 6 fois en une tournée). La requête
+  // était bien fermée, mais le rafraîchissement de la fiche appelait `refetch()` à la
+  // main avec une condition RECOPIÉE, sans la fin du match — et `refetch` passe outre
+  // `enabled`. Les deux lisent désormais ce même booléen.
+  const canLoadMyMatchResponse = Boolean(
+    eventId
+      && isMatchEvent
+      && compositionTeamId
+      && isTeamMember
+      && isMatchFinished,
+  );
   const {
     data: myMatchResponsePayload,
     isFetching: isMyMatchResponseFetching,
@@ -3686,14 +3699,7 @@ function EventDetails({ navigation, route }) {
     eventId || '',
     compositionTeamId || undefined,
     {
-      enabled: Boolean(
-        areDeferredQueriesEnabled
-          && eventId
-          && isMatchEvent
-          && compositionTeamId
-          && isTeamMember
-          && isMatchFinished,
-      ),
+      enabled: Boolean(areDeferredQueriesEnabled && canLoadMyMatchResponse),
     },
   );
 
@@ -7701,13 +7707,14 @@ function EventDetails({ navigation, route }) {
     if (supportsEventComposition && canViewPublishedComposition && compositionTeamId) {
       refetchConvocation();
     }
-    if (isMatchEvent && isTeamMember && compositionTeamId) {
+    if (canLoadMyMatchResponse) {
       refetchMyMatchResponse();
     }
   }, [
     areDeferredQueriesEnabled,
     canAccessAttendance,
     canEdit,
+    canLoadMyMatchResponse,
     canManageMatchStats,
     canViewPublishedComposition,
     compositionTeamId,

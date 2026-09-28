@@ -656,3 +656,58 @@ describe('FINITIONS 2 — l onglet Convocation parle comme un dirigeant', () => 
     expect(texte).not.toContain('&#x2F;');
   });
 });
+
+// ===========================================================================
+// 4 · AUCUN APPEL À `my-match-response` AVANT LA FIN DU MATCH
+// ===========================================================================
+describe('FINITIONS 4 — la réponse perso n est plus demandée avant la fin du match', () => {
+  /** @type {any} */
+  let interactions = null;
+
+  beforeEach(() => {
+    mockRefetchMyMatchResponse.mockClear();
+    // `runAfterInteractions` ne rend jamais la main tout seul sous Jest : sans lui, les
+    // requêtes secondaires restent éteintes et le rafraîchissement ne les touche pas.
+    interactions = jest.spyOn(InteractionManager, 'runAfterInteractions')
+      .mockImplementation((/** @type {any} */ rappel) => {
+        if (typeof rappel === 'function') rappel();
+        return /** @type {any} */ ({ cancel: () => {}, done: Promise.resolve(), then: () => {} });
+      });
+  });
+
+  afterEach(() => {
+    if (interactions) interactions.mockRestore();
+    interactions = null;
+  });
+
+  /**
+   * Tire vers le bas : le rafraîchissement de la fiche (le même que celui du retour sur
+   * l'écran).
+   * @param {any} root - La racine.
+   */
+  const tirerPourRafraichir = (root) => {
+    const [defilement] = root.findAllByType(ScrollView)
+      .filter((/** @type {any} */ n) => n.props.refreshControl);
+    if (!defilement) throw new Error('Aucune liste à rafraîchir');
+    act(() => {
+      defilement.props.refreshControl.props.onRefresh();
+    });
+  };
+
+  test('🥇 match à venir : rafraîchir la fiche ne demande PAS la réponse perso', () => {
+    // 🧨 La requête était fermée (`enabled` exige la fin du match), mais le
+    // rafraîchissement appelait `refetch()` à la main — et `refetch` passe outre
+    // `enabled`. D'où les 400 « only available after the match has ended ».
+    const root = monter();
+    tirerPourRafraichir(root);
+
+    expect(mockRefetchMyMatchResponse).not.toHaveBeenCalled();
+  });
+
+  test('🔒 contre-épreuve : match fini, rafraîchir la fiche relit bien la réponse perso', () => {
+    const root = monter({ attendance: HORLOGE_APRES_LE_MATCH, event: MATCH_FINI });
+    tirerPourRafraichir(root);
+
+    expect(mockRefetchMyMatchResponse).toHaveBeenCalledTimes(1);
+  });
+});
