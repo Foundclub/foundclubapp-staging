@@ -1284,6 +1284,100 @@ export const getCoveringEntitlement = ({
 };
 
 /**
+ * L'OFFRE CLUB DU COMPTE COUVRE-T-ELLE LE CLUB QU'IL REGARDE ? — ABOCLUB, 2026-09-28.
+ *
+ * 🧨 Le niveau `CLUB` / `CLUB_UNVERIFIED` est celui du COMPTE, pas du club
+ * actif : le serveur le leve des qu'UN droit Club est actif sur le compte
+ * (`getSubscriptionSummary`, admin subscription-permission.ts,
+ * `requiresClubVerification: hasActiveClubEntitlement && !clubVerified`), meme
+ * si ce droit couvre un AUTRE club. Constat de la recette du 28/09 : un
+ * dirigeant d'AIKI qui paie « Club 100 » pour « FoundClub Demo » lisait « rien
+ * n'est bloque » pendant que le serveur lui refusait, a juste titre, de
+ * publier une convocation dans AIKI.
+ *
+ * La reponse club par club existe deja, et c'est le serveur qui la donne :
+ * `clubVerificationSummary` decrit le club ACTIF (`getClubPlanState(user.club)`)
+ * et son `hasActiveClubEntitlement` ne regarde que lui. Les droits portent leur
+ * `scopeClubDocumentId`. On croise les deux — rien n'est devine.
+ *
+ * ⚖️ SANS PREUVE, PAS D'ACCUSATION : on ne dit « pas couvert » que si le serveur
+ * l'affirme, ou si un droit Club designe nommement un autre club. Un resume
+ * muet garde l'ecran d'avant.
+ *
+ * ⚠️ AFFICHAGE SEULEMENT : cette fonction n'accorde ni ne retire aucun droit,
+ * et ne touche pas au niveau d'acces partage (`getSubscriptionAccessLevel`).
+ * @param {object} [params]
+ * @param {any} [params.clubVerificationSummary] - Le resume du club ACTIF (bootstrap).
+ * @param {any[]} [params.entitlementsSummary] - Les droits actifs du compte (bootstrap).
+ * @param {'FREE' | 'TEAM' | 'CLUB_UNVERIFIED' | 'CLUB'} [params.subscriptionAccessLevel] - Le
+ *   niveau d'acces du compte (`getSubscriptionAccessLevel`).
+ * @param {any} [params.userData] - Le profil (`club` = club actif, `clubs` = ses clubs).
+ * @returns {{
+ *   activeClubDocumentId: string;
+ *   activeClubName: string;
+ *   canSwitchToCoveredClub: boolean;
+ *   coveredClubNames: string[];
+ * } | null} `null` quand il n'y a rien a corriger.
+ */
+export const getActiveClubNotCovered = ({
+  clubVerificationSummary,
+  entitlementsSummary,
+  subscriptionAccessLevel,
+  userData,
+} = {}) => {
+  if (!hasActiveClubOffer(subscriptionAccessLevel)) return null;
+
+  const activeClubDocumentId = String(clubVerificationSummary?.clubDocumentId || '').trim();
+  if (!activeClubDocumentId) return null;
+
+  const clubEntitlements = normalizeDecisionArray(entitlementsSummary)
+    .filter((entry) => entry?.scopeType === 'CLUB');
+  const coveredClubDocumentIds = Array.from(new Set(clubEntitlements
+    .map((entry) => String(entry?.scopeClubDocumentId || '').trim())
+    .filter(Boolean)));
+
+  const serverVerdict = clubVerificationSummary?.hasActiveClubEntitlement;
+  const coversActiveClub = serverVerdict === true
+    || coveredClubDocumentIds.includes(activeClubDocumentId);
+  const pointsElsewhere = serverVerdict === false || coveredClubDocumentIds.length > 0;
+  if (coversActiveClub || !pointsElsewhere) return null;
+
+  // Les clubs que l'app connait deja par leur nom : le club actif et la liste
+  // `clubs` du profil (clubs geres + affiliations, `sanitizeClubSummaries`).
+  const knownClubs = [userData?.club, ...normalizeDecisionArray(userData?.clubs)];
+  /**
+   * Le nom d'un club que l'app connait deja, ou une chaine vide.
+   * @param {string} documentId - L'identifiant du club.
+   * @returns {string} Son nom.
+   */
+  const knownClubName = (documentId) => String(knownClubs.find(
+    (club) => String(club?.documentId || '').trim() === documentId,
+  )?.name || '').trim();
+
+  const coveredClubNames = Array.from(new Set(coveredClubDocumentIds
+    .map((documentId) => String(clubEntitlements.find(
+      (entry) => String(entry?.scopeClubDocumentId || '').trim() === documentId,
+    )?.scopeClubName || '').trim() || knownClubName(documentId))
+    .filter(Boolean)));
+
+  // Le selecteur de club vit sur la fiche du club (ClubDetails) et n'apparait
+  // qu'a partir de deux clubs dans `userData.clubs` : on ne propose la bascule
+  // que s'il existe, et si le club couvert est l'un de ceux qu'il propose.
+  const switchableClubIds = normalizeDecisionArray(userData?.clubs)
+    .map((club) => String(club?.documentId || '').trim())
+    .filter(Boolean);
+  const canSwitchToCoveredClub = switchableClubIds.length > 1
+    && coveredClubDocumentIds.some((documentId) => switchableClubIds.includes(documentId));
+
+  return {
+    activeClubDocumentId,
+    activeClubName: knownClubName(activeClubDocumentId),
+    canSwitchToCoveredClub,
+    coveredClubNames,
+  };
+};
+
+/**
  * @param {any[]} freeUsageSummary
  * @param {'FREE' | 'TEAM' | 'CLUB_UNVERIFIED' | 'CLUB'} [subscriptionAccessLevel]
  * @returns {Array<{ label: string; quotaType: string; remaining: number; total: number; used: number }>}

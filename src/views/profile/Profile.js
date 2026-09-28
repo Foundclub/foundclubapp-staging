@@ -19,7 +19,10 @@ import { ScrollView } from 'react-native-gesture-handler';
 import { getUserRoleKey } from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
 import { navigateToRequestsHub } from '@/domains/requests/requestNavigation';
-import { getSubscriptionQuotaItems } from '@/domains/subscription/subscriptionDecision';
+import {
+  getActiveClubNotCovered,
+  getSubscriptionQuotaItems,
+} from '@/domains/subscription/subscriptionDecision';
 import { TutorialIds } from '@/domains/tutorial/tutorialIds';
 import { useAppContext } from '@/store/appContext';
 import {
@@ -28,6 +31,7 @@ import {
   langueEffective,
   lireChoixDeLangue,
 } from '@/theme/strings/langue';
+import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
 
 import Button from '@/components/atoms/button/Button';
@@ -77,6 +81,8 @@ function Profile({ navigation, route }) {
     authSessions,
     canEditClub,
     canManageTeam,
+    clubVerificationSummary,
+    entitlementsSummary,
     freeUsageSummary,
     logoutMutation,
     refetchUserData,
@@ -129,6 +135,15 @@ function Profile({ navigation, route }) {
     () => getSubscriptionQuotaItems(freeUsageSummary, subscriptionAccessLevel).slice(0, 2),
     [freeUsageSummary, subscriptionAccessLevel],
   );
+  // ABOCLUB (2026-09-28) — la carte « Mon abonnement » disait « Tes droits Club
+  // sont actifs » a un dirigeant dont l'offre Club couvre un AUTRE club que
+  // celui qu'il regarde. Meme juge que l'ecran Abonnement qu'elle ouvre.
+  const uncoveredActiveClub = useMemo(() => getActiveClubNotCovered({
+    clubVerificationSummary,
+    entitlementsSummary,
+    subscriptionAccessLevel,
+    userData,
+  }), [clubVerificationSummary, entitlementsSummary, subscriptionAccessLevel, userData]);
 
   // Check if user is admin of a MultisportClub
   const canManageMultisportClub = useMemo(() => multisportClubs.length > 0, [multisportClubs]);
@@ -433,6 +448,22 @@ function Profile({ navigation, route }) {
     FREE: 'free',
     TEAM: 'team',
   }[subscriptionAccessLevel] || 'free';
+  let subscriptionStatusText = t(`profile.subscription.status.${subscriptionStatusKey}`);
+  if (uncoveredActiveClub) {
+    const [coveredClubName] = uncoveredActiveClub.coveredClubNames;
+    subscriptionStatusText = coveredClubName && uncoveredActiveClub.activeClubName ? t(
+      'profile.subscription.otherClub.named',
+      'Ton offre Club couvre {{coveredClubs}}, pas ton club {{clubName}}.',
+      {
+        clubName: uncoveredActiveClub.activeClubName,
+        coveredClubs: uncoveredActiveClub.coveredClubNames.join(', '),
+        ...SANS_ECHAPPEMENT,
+      },
+    ) : t(
+      'profile.subscription.otherClub.unnamed',
+      'Ton offre Club couvre un autre club que ton club actuel.',
+    );
+  }
 
   const renderQuotaGauge = (item) => {
     const remaining = Number(item.remaining) || 0;
@@ -515,7 +546,7 @@ function Profile({ navigation, route }) {
         </View>
       ) : (
         <Text style={{ color: Colors.neutral200, fontSize: 12.5, lineHeight: 18 }}>
-          {t(`profile.subscription.status.${subscriptionStatusKey}`)}
+          {subscriptionStatusText}
         </Text>
       )}
 

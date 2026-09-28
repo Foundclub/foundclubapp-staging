@@ -13115,6 +13115,10 @@ export default {
       },
       offersHeaderTitle: 'Changer d\'offre',
       onboardingHeaderTitle: 'Choisis ton offre',
+      otherClub: {
+        named: 'Ton offre Club couvre {{coveredClubs}}, pas ton club {{clubName}}.',
+        unnamed: 'Ton offre Club couvre un autre club que ton club actuel.',
+      },
       paywall: {
         recommended: 'Offre recommandee',
         remaining: 'Usages gratuits restants: {{count}}.',
@@ -15712,8 +15716,13 @@ export default {
         title: 'Erreur abonnement',
       },
     },
+    clubSwitch: {
+      label: 'Changer de club actif',
+    },
     coverage: {
       allClubTeams: 'Toutes les équipes de ton club sont couvertes.',
+      otherClubs: 'Couvre : {{clubNames}}',
+      otherClubUnnamed: 'Cette offre couvre un autre club.',
       teams_one: '{{count}} équipe couverte par ton offre.',
       teams_other: '{{count}} équipes couvertes par ton offre.',
     },
@@ -15735,6 +15744,8 @@ export default {
     },
     planCard: {
       description: {
+        activeClubNotCovered: "Ton club {{clubName}} n'est pas couvert par cette offre.",
+        activeClubNotCoveredUnnamed: "Ton club actuel n'est pas couvert par cette offre.",
         // eslint-disable-next-line max-len
         club: 'Les droits Club sont actifs sur ton club certifié : toutes tes équipes sont couvertes.',
         // eslint-disable-next-line max-len
