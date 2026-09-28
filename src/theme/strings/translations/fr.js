@@ -15754,6 +15754,11 @@ export default {
         team: 'Tes équipes couvertes profitent des droits Équipe, sans limite de publication.',
       },
       freeTitle: 'Offre gratuite FoundClub',
+      otherPlan: {
+        covers: '{{plan}} (couvre {{clubNames}})',
+        endsOn: '{{plan}}, se termine le {{date}}',
+        renewsOn: '{{plan}}, renouvelé le {{date}}',
+      },
       otherPlans: 'Autres offres actives : {{plans}}',
     },
     sections: {
@@ -15763,6 +15768,7 @@ export default {
     statusLines: {
       certification: 'Certification',
       coveredTeams: 'Équipes couvertes',
+      endsOn: 'Se termine le',
       renewedOn: 'Renouvelé le',
     },
     teamSlots: {

@@ -1284,6 +1284,28 @@ export const getCoveringEntitlement = ({
 };
 
 /**
+ * Le nom d'un club, sans rien inventer : celui que le serveur pose sur un droit
+ * (`scopeClubName`, ABOCLUB), sinon celui d'un club deja connu du profil (le
+ * club actif et la liste `clubs`, `sanitizeClubSummaries`), sinon ''.
+ * @param {string} documentId - L'identifiant du club.
+ * @param {any[]} entitlements - Des droits qui peuvent porter son nom.
+ * @param {any} userData - Le profil.
+ * @returns {string} Le nom, ou une chaine vide.
+ */
+const getClubDisplayName = (documentId, entitlements, userData) => {
+  const namedEntitlement = normalizeDecisionArray(entitlements).find(
+    (entry) => String(entry?.scopeClubDocumentId || '').trim() === documentId
+      && String(entry?.scopeClubName || '').trim() !== '',
+  );
+  if (namedEntitlement) return String(namedEntitlement.scopeClubName).trim();
+
+  const knownClub = [userData?.club, ...normalizeDecisionArray(userData?.clubs)].find(
+    (club) => String(club?.documentId || '').trim() === documentId,
+  );
+  return String(knownClub?.name || '').trim();
+};
+
+/**
  * L'OFFRE CLUB DU COMPTE COUVRE-T-ELLE LE CLUB QU'IL REGARDE ? — ABOCLUB, 2026-09-28.
  *
  * 🧨 Le niveau `CLUB` / `CLUB_UNVERIFIED` est celui du COMPTE, pas du club
@@ -1342,22 +1364,8 @@ export const getActiveClubNotCovered = ({
   const pointsElsewhere = serverVerdict === false || coveredClubDocumentIds.length > 0;
   if (coversActiveClub || !pointsElsewhere) return null;
 
-  // Les clubs que l'app connait deja par leur nom : le club actif et la liste
-  // `clubs` du profil (clubs geres + affiliations, `sanitizeClubSummaries`).
-  const knownClubs = [userData?.club, ...normalizeDecisionArray(userData?.clubs)];
-  /**
-   * Le nom d'un club que l'app connait deja, ou une chaine vide.
-   * @param {string} documentId - L'identifiant du club.
-   * @returns {string} Son nom.
-   */
-  const knownClubName = (documentId) => String(knownClubs.find(
-    (club) => String(club?.documentId || '').trim() === documentId,
-  )?.name || '').trim();
-
   const coveredClubNames = Array.from(new Set(coveredClubDocumentIds
-    .map((documentId) => String(clubEntitlements.find(
-      (entry) => String(entry?.scopeClubDocumentId || '').trim() === documentId,
-    )?.scopeClubName || '').trim() || knownClubName(documentId))
+    .map((documentId) => getClubDisplayName(documentId, clubEntitlements, userData))
     .filter(Boolean)));
 
   // Le selecteur de club vit sur la fiche du club (ClubDetails) et n'apparait
@@ -1371,10 +1379,112 @@ export const getActiveClubNotCovered = ({
 
   return {
     activeClubDocumentId,
-    activeClubName: knownClubName(activeClubDocumentId),
+    activeClubName: getClubDisplayName(activeClubDocumentId, [], userData),
     canSwitchToCoveredClub,
     coveredClubNames,
   };
+};
+
+const ACTIVE_PAYER_SUBSCRIPTION_STATUSES = ['active', 'grace_period'];
+
+/**
+ * LA DATE D'UNE OFFRE, ET LE BON MOT POUR LA DIRE — ABOCLUB2, 2026-09-28.
+ *
+ * Lue dans l'abonnement que le compte PAIE pour ce plan
+ * (`payerSubscriptionsSummary`), jamais dans un autre : « Renouvele le »
+ * seulement s'il se renouvelle vraiment, « Se termine le » pour un essai ou un
+ * abonnement sans renouvellement, rien sans date. Une offre payee par quelqu'un
+ * d'autre n'est pas dans ce resume : on ignore alors si elle se renouvelle, et
+ * on ne date rien plutot que de deviner.
+ * @param {string} planCode - Le code du plan.
+ * @param {any[]} payerSubscriptions - `subscriptionSummary.payerSubscriptionsSummary`.
+ * @returns {{ kind: 'ends' | 'renews'; value: string } | null} La date, ou `null`.
+ */
+const getOfferDate = (planCode, payerSubscriptions) => {
+  const subscription = payerSubscriptions.find(
+    (entry) => String(entry?.planCode || '').trim() === planCode
+      && ACTIVE_PAYER_SUBSCRIPTION_STATUSES.includes(
+        String(entry?.status || '').trim().toLowerCase(),
+      ),
+  );
+  const value = String(subscription?.currentPeriodEnd || '').trim();
+  if (!value || !Number.isFinite(new Date(value).getTime())) return null;
+
+  const isTrial = subscription?.isTrial === true || planCode.toLowerCase().startsWith('fc_trial_');
+  return { kind: !isTrial && subscription?.autoRenew === true ? 'renews' : 'ends', value };
+};
+
+/**
+ * LES OFFRES ACTIVES, UNE PAR UNE, CHACUNE AVEC SA DATE ET SON CLUB — ABOCLUB2.
+ *
+ * Photo de recette du 28/09 au soir : un essai « Apercu Club » couvre AIKI et se
+ * termine le 31/10 ; « Club 100 / an », posee a la main, couvre « FoundClub
+ * Demo » et n'a pas de date de fin. L'ecran titrait « Club 100 / an » et
+ * affichait dessous « Renouvele le 31 octobre 2026 » : la fin de l'ESSAI,
+ * presentee comme le renouvellement d'une AUTRE offre. La date sortait du
+ * premier droit paye qui en portait une, sans regarder a quelle offre il
+ * appartenait.
+ *
+ * Ici, chaque offre porte SA date (`getOfferDate`) et les clubs que SES droits
+ * Club couvrent. L'offre qui couvre le club ACTIF passe en tete : c'est elle que
+ * la carte decrit (« rien n'est bloque », « toutes les equipes… »), les autres
+ * sont nommees a part, avec leur club. Sans offre couvrant le club actif,
+ * l'ordre du serveur est garde tel quel.
+ *
+ * ⚠️ AFFICHAGE SEULEMENT : aucun droit n'est lu pour decider d'un acces.
+ * ponytail: un plan est decrit par son code — deux abonnements au MEME plan
+ * (deux « Club 100 » pour deux clubs) partagent une ligne et la date du premier.
+ * Sortie : decrire par abonnement quand le resume des droits portera son
+ * identifiant.
+ * @param {object} [params]
+ * @param {string[]} [params.activePlanCodes] - Les plans actifs, dans l'ordre du serveur.
+ * @param {any} [params.clubVerificationSummary] - Le resume du club ACTIF (bootstrap).
+ * @param {any[]} [params.entitlementsSummary] - Les droits actifs du compte (bootstrap).
+ * @param {any} [params.subscriptionSummary] - Le resume d'abonnement (bootstrap).
+ * @param {any} [params.userData] - Le profil.
+ * @returns {Array<{
+ *   coveredClubNames: string[];
+ *   coversActiveClub: boolean;
+ *   date: { kind: 'ends' | 'renews'; value: string } | null;
+ *   planCode: string;
+ * }>} Les offres, celle du club actif d'abord.
+ */
+export const getActiveOfferDetails = ({
+  activePlanCodes,
+  clubVerificationSummary,
+  entitlementsSummary,
+  subscriptionSummary,
+  userData,
+} = {}) => {
+  const activeClubDocumentId = String(clubVerificationSummary?.clubDocumentId || '').trim();
+  const clubEntitlements = normalizeDecisionArray(entitlementsSummary)
+    .filter((entry) => entry?.scopeType === 'CLUB');
+  const payerSubscriptions = normalizeDecisionArray(subscriptionSummary?.payerSubscriptionsSummary);
+
+  const offers = Array.from(new Set(normalizeDecisionArray(activePlanCodes)
+    .map((planCode) => String(planCode || '').trim())
+    .filter(Boolean)))
+    .map((planCode) => {
+      const coveredClubDocumentIds = Array.from(new Set(clubEntitlements
+        .filter((entry) => String(entry?.subscriptionPlanCode || '').trim() === planCode)
+        .map((entry) => String(entry?.scopeClubDocumentId || '').trim())
+        .filter(Boolean)));
+      return {
+        coveredClubNames: Array.from(new Set(coveredClubDocumentIds
+          .map((documentId) => getClubDisplayName(documentId, clubEntitlements, userData))
+          .filter(Boolean))),
+        coversActiveClub: activeClubDocumentId !== ''
+          && coveredClubDocumentIds.includes(activeClubDocumentId),
+        date: getOfferDate(planCode, payerSubscriptions),
+        planCode,
+      };
+    });
+
+  const activeClubOfferIndex = offers.findIndex((offer) => offer.coversActiveClub);
+  if (activeClubOfferIndex > 0) {
+    offers.unshift(...offers.splice(activeClubOfferIndex, 1));
+  }
+  return offers;
 };
 
 /**

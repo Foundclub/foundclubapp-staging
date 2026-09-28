@@ -23,6 +23,7 @@ import {
 import {
   formatSubscriptionPlanLabel,
   getActiveClubNotCovered,
+  getActiveOfferDetails,
   getCoveredTeamCount,
   getCoveringEntitlement,
   getSubscriptionStatusMeta,
@@ -297,11 +298,19 @@ function SubscriptionOverview({ navigation, route }) {
     }
   }, [subscriptionAccessLevel, Colors, t]);
 
+  // ABOCLUB2 (2026-09-28) — les offres UNE PAR UNE, chacune avec sa date et son
+  // club, celle qui couvre le club actif en tete : c'est elle que la carte
+  // decrit. Voir `getActiveOfferDetails` (subscriptionDecision.js).
+  const offerDetails = useMemo(() => getActiveOfferDetails({
+    activePlanCodes,
+    clubVerificationSummary,
+    entitlementsSummary,
+    subscriptionSummary,
+    userData,
+  }), [activePlanCodes, clubVerificationSummary, entitlementsSummary, subscriptionSummary, userData]);
   const planLabels = useMemo(
-    () => activePlanCodes.map(
-      /** @param {string} planCode */ (planCode) => formatSubscriptionPlanLabelWithTrial(planCode),
-    ),
-    [activePlanCodes],
+    () => offerDetails.map((offer) => formatSubscriptionPlanLabelWithTrial(offer.planCode)),
+    [offerDetails],
   );
   const teamSlotSummary = useMemo(
     () => getSubscriptionTeamSlotSummary(subscriptionSummary),
@@ -423,13 +432,53 @@ function SubscriptionOverview({ navigation, route }) {
       ...SANS_ECHAPPEMENT,
     })
     : '';
-  const renewalDateLabel = payerRenewalEntitlement?.subscriptionCurrentPeriodEnd
-    ? formatDate(
-      new Date(payerRenewalEntitlement.subscriptionCurrentPeriodEnd),
-      'd MMMM yyyy',
-      { locale: frLocale },
-    )
-    : '';
+  /**
+   * Une date d'offre, telle que l'ecran l'affiche.
+   * @param {string} value - La date ISO.
+   * @returns {string} Le jour en toutes lettres.
+   */
+  const formatOfferDate = (value) => formatDate(
+    new Date(value),
+    'd MMMM yyyy',
+    { locale: frLocale },
+  );
+  // ABOCLUB2 — la date de la carte est celle de l'offre QUE LA CARTE NOMME, avec
+  // son vrai mot (renouvellement ou fin). Elle affichait la premiere echeance
+  // trouvee parmi les droits payes : la fin d'un essai sous le nom du Club 100.
+  // Repli : un serveur qui ne rend pas `payerSubscriptionsSummary` garde
+  // l'ancienne lecture — il ne dit pas si l'offre se renouvelle.
+  let planCardDate = offerDetails[0]?.date || null;
+  if (!Array.isArray(subscriptionSummary?.payerSubscriptionsSummary)) {
+    planCardDate = payerRenewalEntitlement?.subscriptionCurrentPeriodEnd
+      ? { kind: 'renews', value: String(payerRenewalEntitlement.subscriptionCurrentPeriodEnd) }
+      : null;
+  }
+  // Les AUTRES offres, chacune avec son club et sa date, a cote de SON nom :
+  // aucune date d'une offre ne s'affiche sous une autre.
+  const otherOffersLabel = offerDetails.slice(1).map((offer, index) => {
+    let label = planLabels[index + 1];
+    if (offer.coveredClubNames.length > 0) {
+      label = t(
+        'subscriptionOverview.planCard.otherPlan.covers',
+        '{{plan}} (couvre {{clubNames}})',
+        { clubNames: offer.coveredClubNames.join(', '), plan: label, ...SANS_ECHAPPEMENT },
+      );
+    }
+    if (offer.date?.kind === 'renews') {
+      label = t(
+        'subscriptionOverview.planCard.otherPlan.renewsOn',
+        '{{plan}}, renouvelé le {{date}}',
+        { date: formatOfferDate(offer.date.value), plan: label, ...SANS_ECHAPPEMENT },
+      );
+    } else if (offer.date?.kind === 'ends') {
+      label = t(
+        'subscriptionOverview.planCard.otherPlan.endsOn',
+        '{{plan}}, se termine le {{date}}',
+        { date: formatOfferDate(offer.date.value), plan: label, ...SANS_ECHAPPEMENT },
+      );
+    }
+    return label;
+  }).join(' · ');
 
   /* ================================================================== */
   /* S12-B/D5 — AUGMENTER LE NOMBRE DE LICENCIES COUVERTS                */
@@ -862,7 +911,7 @@ function SubscriptionOverview({ navigation, route }) {
               {t(
                 'subscriptionOverview.planCard.otherPlans',
                 'Autres offres actives : {{plans}}',
-                { plans: planLabels.slice(1).join(' · '), ...SANS_ECHAPPEMENT },
+                { plans: otherOffersLabel, ...SANS_ECHAPPEMENT },
               )}
             </Text>
           ) : null}
@@ -881,10 +930,12 @@ function SubscriptionOverview({ navigation, route }) {
               label: t('subscriptionOverview.statusLines.coveredTeams', 'Équipes couvertes'),
               value: teamSlotLine,
             }) : null}
-            {renewalDateLabel ? renderStatusLine({
+            {planCardDate ? renderStatusLine({
               icon: 'calendar',
-              label: t('subscriptionOverview.statusLines.renewedOn', 'Renouvelé le'),
-              value: renewalDateLabel,
+              label: planCardDate.kind === 'renews'
+                ? t('subscriptionOverview.statusLines.renewedOn', 'Renouvelé le')
+                : t('subscriptionOverview.statusLines.endsOn', 'Se termine le'),
+              value: formatOfferDate(planCardDate.value),
             }) : null}
           </View>
         </View>

@@ -3,6 +3,7 @@ import {
   formatSubscriptionPlanLabel,
   formatSubscriptionRequiredPlanText,
   getActiveClubNotCovered,
+  getActiveOfferDetails,
   getCoveredTeamCount,
   getSubscriptionAccessLevel,
   getSubscriptionEntryPointLock,
@@ -657,5 +658,69 @@ describe('ABOCLUB — getActiveClubNotCovered', () => {
       canSwitchToCoveredClub: false,
       coveredClubNames: ['Demo'],
     });
+  });
+});
+
+// ABOCLUB2 (2026-09-28) — les cas limites des dates d'offre. La photo de recette
+// elle-meme est figee a l'ecran (`SubscriptionOverview.datesOffres.test.js`).
+describe('ABOCLUB2 — getActiveOfferDetails', () => {
+  /**
+   * Un abonnement paye EN COURS, tel que le rend `payerSubscriptionsSummary`.
+   * @param {Record<string, any>} champs - Les champs de l'abonnement.
+   * @returns {any} L'abonnement.
+   */
+  const enCours = (champs) => ({ status: 'active', ...champs });
+
+  test('un essai qui se dit « autoRenew » reste un essai : il se TERMINE', () => {
+    const [offre] = getActiveOfferDetails({
+      activePlanCodes: ['fc_trial_club'],
+      subscriptionSummary: {
+        payerSubscriptionsSummary: [enCours({
+          autoRenew: true, currentPeriodEnd: '2026-10-31T12:00:00.000Z', planCode: 'fc_trial_club',
+        })],
+      },
+    });
+
+    expect(offre.date).toEqual({ kind: 'ends', value: '2026-10-31T12:00:00.000Z' });
+  });
+
+  test('une offre payee par quelqu un d autre n est pas datee', () => {
+    const [offre] = getActiveOfferDetails({
+      activePlanCodes: ['fc_club_tier_1_yearly'],
+      subscriptionSummary: { payerSubscriptionsSummary: [] },
+    });
+
+    expect(offre.date).toBeNull();
+  });
+
+  test('un abonnement expire du meme plan ne prete pas sa date', () => {
+    const [offre] = getActiveOfferDetails({
+      activePlanCodes: ['fc_club_tier_1_yearly'],
+      subscriptionSummary: {
+        payerSubscriptionsSummary: [{
+          autoRenew: true,
+          currentPeriodEnd: '2026-01-01T12:00:00.000Z',
+          planCode: 'fc_club_tier_1_yearly',
+          status: 'expired',
+        }],
+      },
+    });
+
+    expect(offre.date).toBeNull();
+  });
+
+  test('sans offre couvrant le club actif, l ordre du serveur est garde', () => {
+    const offres = getActiveOfferDetails({
+      activePlanCodes: ['fc_team_2_yearly', 'fc_club_tier_1_yearly'],
+      clubVerificationSummary: { clubDocumentId: 'club-aiki' },
+      entitlementsSummary: [{
+        scopeClubDocumentId: 'club-demo',
+        scopeType: 'CLUB',
+        subscriptionPlanCode: 'fc_club_tier_1_yearly',
+      }],
+    });
+
+    expect(offres.map((offre) => offre.planCode))
+      .toEqual(['fc_team_2_yearly', 'fc_club_tier_1_yearly']);
   });
 });
