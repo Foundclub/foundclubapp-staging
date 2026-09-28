@@ -12410,6 +12410,10 @@ export default {
       },
       offersHeaderTitle: 'Change plan',
       onboardingHeaderTitle: 'Choose your plan',
+      otherClub: {
+        named: 'Your Club plan covers {{coveredClubs}}, not your club {{clubName}}.',
+        unnamed: 'Your Club plan covers a club other than your current one.',
+      },
       paywall: {
         recommended: 'Recommended plan',
         remaining: 'Free uses remaining: {{count}}.',
@@ -14971,8 +14975,13 @@ export default {
         title: 'Subscription error',
       },
     },
+    clubSwitch: {
+      label: 'Change active club',
+    },
     coverage: {
       allClubTeams: "All your club's teams are covered.",
+      otherClubs: 'Covers: {{clubNames}}',
+      otherClubUnnamed: 'This plan covers another club.',
       teams_one: '{{count}} team covered by your plan.',
       teams_other: '{{count}} teams covered by your plan.',
     },
@@ -14993,6 +15002,8 @@ export default {
     },
     planCard: {
       description: {
+        activeClubNotCovered: 'Your club {{clubName}} is not covered by this plan.',
+        activeClubNotCoveredUnnamed: 'Your current club is not covered by this plan.',
         club: 'Club rights are active on your verified club: all your teams are covered.',
         clubUnverified: 'Your Club rights are active across your whole club — nothing is blocked. Your club is being certified by the platform.',
         free: 'You publish in limited quantities. Switch to a paid plan to lift the limits.',

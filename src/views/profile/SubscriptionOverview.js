@@ -22,6 +22,7 @@ import {
 } from '@/domains/subscription/subscriptionBilling';
 import {
   formatSubscriptionPlanLabel,
+  getActiveClubNotCovered,
   getCoveredTeamCount,
   getCoveringEntitlement,
   getSubscriptionStatusMeta,
@@ -331,8 +332,30 @@ function SubscriptionOverview({ navigation, route }) {
     'subscriptionOverview.planCard.freeTitle',
     'Offre gratuite FoundClub',
   ) : (planLabels[0] || statusMeta.label);
+  // ABOCLUB (2026-09-28) — L'OFFRE CLUB DU COMPTE COUVRE UN AUTRE CLUB QUE
+  // CELUI QU'IL REGARDE. Le niveau d'acces est celui du COMPTE : sans ce garde,
+  // l'ecran annoncait « rien n'est bloque » pour un club que le serveur refuse
+  // (recette du 28/09). Le titre garde le nom de ce qui est paye ; seules la
+  // description et la couverture disent ou l'offre s'applique.
+  const uncoveredActiveClub = useMemo(() => getActiveClubNotCovered({
+    clubVerificationSummary,
+    entitlementsSummary,
+    subscriptionAccessLevel,
+    userData,
+  }), [clubVerificationSummary, entitlementsSummary, subscriptionAccessLevel, userData]);
+  let uncoveredClubDescription = '';
+  if (uncoveredActiveClub) {
+    uncoveredClubDescription = uncoveredActiveClub.activeClubName ? t(
+      'subscriptionOverview.planCard.description.activeClubNotCovered',
+      "Ton club {{clubName}} n'est pas couvert par cette offre.",
+      { clubName: uncoveredActiveClub.activeClubName, ...SANS_ECHAPPEMENT },
+    ) : t(
+      'subscriptionOverview.planCard.description.activeClubNotCoveredUnnamed',
+      "Ton club actuel n'est pas couvert par cette offre.",
+    );
+  }
   // Description tutoyée par niveau (remplace la copie technique/vouvoyée du backend).
-  const planCardDescription = {
+  const planCardDescription = uncoveredClubDescription || {
     CLUB: t(
       'subscriptionOverview.planCard.description.club',
       'Les droits Club sont actifs sur ton club certifié : toutes tes équipes sont couvertes.',
@@ -357,6 +380,16 @@ function SubscriptionOverview({ navigation, route }) {
   // Résumé de couverture humain (aucune tuile « 0 » : on n'affiche que ce qui a du sens).
   const coverageSummary = (() => {
     if (isFreeLevel) return '';
+    if (uncoveredActiveClub) {
+      return uncoveredActiveClub.coveredClubNames.length > 0 ? t(
+        'subscriptionOverview.coverage.otherClubs',
+        'Couvre : {{clubNames}}',
+        { clubNames: uncoveredActiveClub.coveredClubNames.join(', '), ...SANS_ECHAPPEMENT },
+      ) : t(
+        'subscriptionOverview.coverage.otherClubUnnamed',
+        'Cette offre couvre un autre club.',
+      );
+    }
     if (isClubLevel) {
       return t(
         'subscriptionOverview.coverage.allClubTeams',
@@ -835,7 +868,9 @@ function SubscriptionOverview({ navigation, route }) {
           ) : null}
 
           <View style={Spaces.marginTop[12]}>
-            {isClubLevel ? renderStatusLine({
+            {/* La certification ne regarde que le club actif : elle n'a rien a
+                dire d'une offre qui ne le couvre pas (ABOCLUB). */}
+            {isClubLevel && !uncoveredActiveClub ? renderStatusLine({
               icon: 'check',
               label: t('subscriptionOverview.statusLines.certification', 'Certification'),
               value: verificationLabel,
@@ -909,18 +944,35 @@ function SubscriptionOverview({ navigation, route }) {
           ),
         )}
 
-        {currentClubDocumentId ? renderSection(t(
-          'subscriptionOverview.sections.club',
-          'Club',
-        ), renderActionRow({
-          icon: 'shield',
-          label: t('profile.subscription.actions.viewClub', 'Voir mon club'),
-          onPress: () => navigation.navigate(RouteNames.ClubStack, {
-            params: { clubId: currentClubDocumentId },
-            screen: RouteNames.Club,
-          }),
-          right: t('profile.subscription.actions.viewClubHint', 'Demandes · certification'),
-        })) : null}
+        {currentClubDocumentId ? renderSection(
+          t('subscriptionOverview.sections.club', 'Club'), (
+            <>
+              {renderActionRow({
+                icon: 'shield',
+                label: t('profile.subscription.actions.viewClub', 'Voir mon club'),
+                onPress: () => navigation.navigate(RouteNames.ClubStack, {
+                  params: { clubId: currentClubDocumentId },
+                  screen: RouteNames.Club,
+                }),
+                right: t('profile.subscription.actions.viewClubHint', 'Demandes · certification'),
+              })}
+              {/* ABOCLUB — LA SUITE QUI NE TOUCHE PAS A L'ARGENT : revenir sur
+                  le club que l'offre couvre. Le selecteur vit sur la fiche du
+                  club ACTIF (ClubDetails, des deux clubs) ; l'ouvrir sur le club
+                  couvert l'y montrerait deja « actif », sans rien basculer. */}
+              {uncoveredActiveClub?.canSwitchToCoveredClub ? renderActionRow({
+                icon: 'shield',
+                label: t('subscriptionOverview.clubSwitch.label', 'Changer de club actif'),
+                onPress: () => navigation.navigate(RouteNames.ClubStack, {
+                  params: { clubId: currentClubDocumentId },
+                  screen: RouteNames.Club,
+                }),
+                right: uncoveredActiveClub.coveredClubNames[0] || '',
+                withDivider: true,
+              }) : null}
+            </>
+          ),
+        ) : null}
 
         <LegalFooter restore={false} />
       </ScrollView>

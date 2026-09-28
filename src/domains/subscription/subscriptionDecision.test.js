@@ -2,6 +2,7 @@ import {
   extractSubscriptionDecisionFromError,
   formatSubscriptionPlanLabel,
   formatSubscriptionRequiredPlanText,
+  getActiveClubNotCovered,
   getCoveredTeamCount,
   getSubscriptionAccessLevel,
   getSubscriptionEntryPointLock,
@@ -609,5 +610,52 @@ describe('CLUBEQ — la raison de la couverture', () => {
     expect(getSubscriptionTeamSlotSummary({
       teamSlotSummary: { coveredTeamDocumentIds: ['team-1'], total: 1 },
     }).clubCoveredTeamDocumentIds).toEqual([]);
+  });
+});
+
+// ABOCLUB (2026-09-28) — les cas limites du juge d'affichage « l'offre Club
+// couvre-t-elle le club regarde ? ». Le cas de recette lui-meme est fige a
+// l'ecran (`SubscriptionOverview.clubCouvert.test.js`).
+describe('ABOCLUB — getActiveClubNotCovered', () => {
+  const droitDemo = { scopeClubDocumentId: 'club-demo', scopeClubName: 'Demo', scopeType: 'CLUB' };
+
+  test('ne dit rien a un compte sans offre Club', () => {
+    expect(getActiveClubNotCovered({
+      clubVerificationSummary: { clubDocumentId: 'club-aiki', hasActiveClubEntitlement: false },
+      entitlementsSummary: [droitDemo],
+      subscriptionAccessLevel: 'TEAM',
+    })).toBeNull();
+  });
+
+  test('ne dit rien sans club actif connu', () => {
+    expect(getActiveClubNotCovered({
+      clubVerificationSummary: null,
+      entitlementsSummary: [droitDemo],
+      subscriptionAccessLevel: 'CLUB',
+    })).toBeNull();
+  });
+
+  test('un droit qui designe le club actif l emporte sur un resume contradictoire', () => {
+    // Sans preuve, pas d'accusation : deux lectures qui se contredisent gardent
+    // l'ecran d'avant plutot que d'annoncer a tort « pas couvert ».
+    expect(getActiveClubNotCovered({
+      clubVerificationSummary: { clubDocumentId: 'club-aiki', hasActiveClubEntitlement: false },
+      entitlementsSummary: [droitDemo, { scopeClubDocumentId: 'club-aiki', scopeType: 'CLUB' }],
+      subscriptionAccessLevel: 'CLUB',
+    })).toBeNull();
+  });
+
+  test('un droit EQUIPE du club actif ne vaut pas couverture Club', () => {
+    expect(getActiveClubNotCovered({
+      clubVerificationSummary: { clubDocumentId: 'club-aiki', hasActiveClubEntitlement: false },
+      entitlementsSummary: [droitDemo, { scopeClubDocumentId: 'club-aiki', scopeType: 'TEAM' }],
+      subscriptionAccessLevel: 'CLUB_UNVERIFIED',
+      userData: { club: { documentId: 'club-aiki', name: 'AIKI' } },
+    })).toEqual({
+      activeClubDocumentId: 'club-aiki',
+      activeClubName: 'AIKI',
+      canSwitchToCoveredClub: false,
+      coveredClubNames: ['Demo'],
+    });
   });
 });
