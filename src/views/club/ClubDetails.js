@@ -11,6 +11,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { markOnboardingComplete } from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
+import { countClubTrainers } from '@/domains/club/clubStaff';
 import useMessaging from '@/domains/messaging/useMessaging';
 import { invalidateAfterAction } from '@/domains/refresh/afterAction';
 import { extractSubscriptionDecisionFromError } from '@/domains/subscription/subscriptionDecision';
@@ -1732,11 +1733,14 @@ function ClubDetails({ navigation, route }) {
   // annoncent : un compteur ecrit en dur ment des la premiere modification.
   const clubSportsCount = club?.activites?.length || 0;
   const clubSponsorsCount = club?.sponsor?.length || 0;
+  // ROLES2 — « entraîneurs » = ceux qui ENTRAÎNENT une équipe du club, pas seulement
+  // les comptes Entraîneur : un dirigeant qui entraîne compte (recette du 28/09).
+  const clubTrainerCount = countClubTrainers({ coachs, teams: club?.teams });
   const clubStaffSummary = [
     `${owners.length} ${owners.length > 1
       ? t('clubDetails.hub.owners', 'dirigeants')
       : t('clubDetails.hub.owner', 'dirigeant')}`,
-    `${coachs.length} ${coachs.length > 1
+    `${clubTrainerCount} ${clubTrainerCount > 1
       ? t('clubDetails.hub.coachs', 'entraîneurs')
       : t('clubDetails.hub.coach', 'entraîneur')}`,
   ].join(' · ');
