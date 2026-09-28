@@ -9476,11 +9476,14 @@ export default {
         squad: 'No player in the team.',
       },
       footer: {
+        benchCount: '{{count}} on the bench',
         calledUp_one: '{{count}} called up',
         calledUp_other: '{{count}} called up',
         extras: 'including {{reinforcements}} reinforcements · {{offApp}} off app',
         next: 'Next',
-        split: '{{starters}} starters · {{bench}} on the bench',
+        split: '{{starters}} · {{bench}}',
+        startersCount_one: '{{count}} starter',
+        startersCount_other: '{{count}} starters',
       },
       meta: {
         number: '#{{number}}',

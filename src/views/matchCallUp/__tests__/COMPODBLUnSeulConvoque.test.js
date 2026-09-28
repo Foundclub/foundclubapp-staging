@@ -376,7 +376,8 @@ describe('COMPODBL — une charge abimee ne dessine aucun « ? »', () => {
 
     const texte = texteVisible(arbre);
     expect(texte).toContain('2 convoqués');
-    expect(texte).toContain('1 titulaires · 1 sur le banc');
+    // FINITIONS (28/09) : ce témoin figeait « 1 titulaires » — le vrai singulier.
+    expect(texte).toContain('1 titulaire · 1 sur le banc');
     expect(texte).not.toContain('3 convoqués');
 
     await appuyerSur(arbre, 'Suivant');
@@ -392,7 +393,7 @@ describe('COMPODBL — une charge abimee ne dessine aucun « ? »', () => {
 
     const texte = texteVisible(arbre);
     expect(texte).toContain('2 convoqués');
-    expect(texte).toContain('1 titulaires · 1 sur le banc');
+    expect(texte).toContain('1 titulaire · 1 sur le banc');
   });
 });
 

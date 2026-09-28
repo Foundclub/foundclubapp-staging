@@ -800,9 +800,13 @@ function MatchCallUpSelection() {
           </Text>
           {counters.calledUp > 0 ? (
             <Text style={[Fonts.p3, { color: Colors.neutral300 }]}>
+              {/* FINITIONS (recette du 28/09) — « 1 titulaires » : chaque
+                  compteur est accordé par i18next (`count`), puis assemblé. */}
               {t('matchCallUp.selection.footer.split', {
-                bench: counters.bench,
-                starters: counters.starters,
+                bench: t('matchCallUp.selection.footer.benchCount', { count: counters.bench }),
+                starters: t('matchCallUp.selection.footer.startersCount', {
+                  count: counters.starters,
+                }),
               })}
             </Text>
           ) : null}

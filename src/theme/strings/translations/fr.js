@@ -10064,11 +10064,16 @@ export default {
         squad: "Aucun joueur dans l'équipe.",
       },
       footer: {
+        benchCount: '{{count}} sur le banc',
         calledUp_one: '{{count}} convoqué',
         calledUp_other: '{{count}} convoqués',
         extras: 'dont {{reinforcements}} renforts · {{offApp}} hors app',
         next: 'Suivant',
-        split: '{{starters}} titulaires · {{bench}} sur le banc',
+        // FINITIONS (28/09) — « 1 titulaires » : un seul `count` par clef pour
+        // i18next, donc les deux compteurs sont accordés À PART, puis assemblés.
+        split: '{{starters}} · {{bench}}',
+        startersCount_one: '{{count}} titulaire',
+        startersCount_other: '{{count}} titulaires',
       },
       meta: {
         number: 'N°{{number}}',

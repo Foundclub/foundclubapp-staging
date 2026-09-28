@@ -331,7 +331,10 @@ describe('D77 ecran 1 — selection des convoques', () => {
     const texte = texteVisible(arbre);
     expect(texte).toContain('1 convoqué');
     // 1 coche au football : 1 titulaire, 0 sur le banc. Jamais « 11 titulaires ».
-    expect(texte).toContain('1 titulaires · 0 sur le banc');
+    // FINITIONS (28/09) : ce témoin figeait la faute « 1 titulaires » ; il attend
+    // désormais le vrai singulier.
+    expect(texte).toContain('1 titulaire · 0 sur le banc');
+    expect(texte).not.toContain('1 titulaires');
   });
 
   test('la recherche filtre l effectif sur le nom', async () => {
@@ -755,7 +758,7 @@ describe('D84 — la barre du bas reste atteignable, quel que soit l effectif', 
 
     // Onglet 1 : 1 coche au football = 1 titulaire, JAMAIS 11.
     expect(texteVisible(arbre)).toContain('1 convoqué');
-    expect(texteVisible(arbre)).toContain('1 titulaires · 0 sur le banc');
+    expect(texteVisible(arbre)).toContain('1 titulaire · 0 sur le banc');
 
     await appuyerSur(arbre, 'Autres équipes');
     await act(async () => {
