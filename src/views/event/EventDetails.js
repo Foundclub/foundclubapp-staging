@@ -154,6 +154,7 @@ import {
   isMatchStatsPromptDismissedForSession,
 } from '@/utils/matchStatsPromptSession';
 import { markEventDetailsPerf } from '@/utils/performance/eventDetailsPerformance';
+import texteInsecable from '@/utils/texteInsecable';
 
 import {
   formatTimeInZone,
@@ -4363,7 +4364,7 @@ function EventDetails({ navigation, route }) {
         return {
           backgroundColor: `${Colors.neutral00}14`,
           borderColor: `${Colors.neutral00}24`,
-          label: t('eventDetails.notInvolved', 'Non concerne'),
+          label: t('eventDetails.notInvolved', 'Non concerné'),
           textColor: Colors.neutral00,
         };
       }
@@ -4378,14 +4379,14 @@ function EventDetails({ navigation, route }) {
       return {
         backgroundColor: `${Colors.success500}20`,
         borderColor: `${Colors.success500}45`,
-        label: t('eventDetails.sent', 'Envoye'),
+        label: t('eventDetails.sent', 'Envoyé'),
         textColor: Colors.success500,
       };
     }
     return {
       backgroundColor: `${Colors.primary500}20`,
       borderColor: `${Colors.primary500}45`,
-      label: t('eventDetails.toDo', 'A faire'),
+      label: t('eventDetails.toDo', 'À faire'),
       textColor: Colors.primary500,
     };
   }, [Colors.gold500, Colors.neutral00, Colors.primary500, Colors.success500, myMatchResponse, t]);
@@ -8297,10 +8298,13 @@ function EventDetails({ navigation, route }) {
                           },
                         ]}
                       >
+                        {/* FINITIONS (recette Android 16 du 28/09) — une pastille épouse
+                            son texte : un libellé gras de plusieurs mots y perdait son
+                            dernier mot. Espaces insécables (`texteInsecable`). */}
                         <Text
                           style={[Fonts.p4Bold, { color: myMatchResponseStatusMeta.textColor }]}
                         >
-                          {myMatchResponseStatusMeta.label}
+                          {texteInsecable(myMatchResponseStatusMeta.label)}
                         </Text>
                       </View>
                     </View>
@@ -8392,14 +8396,15 @@ function EventDetails({ navigation, route }) {
                           },
                         ]}
                       >
+                        {/* FINITIONS — même pastille, même parade. */}
                         <Text style={[Fonts.p4Bold, hasMyCoachReview ? Fonts.success500 : Fonts.primary100]}>
-                          {hasMyCoachReview ? t(
+                          {texteInsecable(hasMyCoachReview ? t(
                             'eventDetails.available',
                             'Disponible',
                           ) : t(
                             'eventDetails.notSharedYet',
-                            'Pas encore partage',
-                          )}
+                            'Pas encore partagé',
+                          ))}
                         </Text>
                       </View>
                     </View>
@@ -8483,7 +8488,17 @@ function EventDetails({ navigation, route }) {
                     onPress={openPendingMatchStatsList}
                     style={[Alignments.row, Alignments.alignCenter, Alignments.justifyCenter, Spaces.gap[8]]}
                   >
-                    <Text style={[Fonts.p3Bold, Fonts.primary200]}>
+                    {/* FINITIONS (recette Android 16 du 28/09) — « Voir tous mes
+                        matchs en » : rétréci à sa largeur mesurée, le texte perdait
+                        son dernier mot. Il remplit désormais le lien, centré
+                        (`flexGrow`, jamais `flex: 1`). */}
+                    <Text
+                      style={[
+                        Fonts.p3Bold,
+                        Fonts.primary200,
+                        { flexGrow: 1, textAlign: 'center' },
+                      ]}
+                    >
                       {matchStatsReport?.status === 'draft'
                         ? t(
                           'eventDetails.thisReportIsADraft',
@@ -8692,11 +8707,16 @@ function EventDetails({ navigation, route }) {
                           alors que la reponse est deja chargee, etait le
                           defaut. Le bouton reste, pour le terrain et le detail. */}
                       {renderPublishedRoster()}
+                      {/* FINITIONS (recette Android 16 du 28/09) — EMPILÉS. Côte à
+                          côte, chaque bouton n'avait qu'une demi-largeur : « Voir la
+                          convocation et les réponses » y tombait en police minuscule
+                          et perdait quand même « réponses ». Chacun a désormais toute
+                          la largeur. ⛔ Plus de `flex: 1` : dans une colonne sans
+                          hauteur, il écraserait le bouton à zéro. */}
                       {publishedCompositionTeamCount > 0 ? (
-                        <View style={[Alignments.row, Spaces.gap[8]]}>
+                        <View style={[Spaces.gap[8]]}>
                           <Button
                             onPress={openPublishedConvocation}
-                            style={{ flex: 1 }}
                             title={publishedCompositionCtaTitle}
                             variant={viewerConvocationRole && !canEdit ? 'Primary' : 'Secondary'}
                           />
@@ -8706,9 +8726,7 @@ function EventDetails({ navigation, route }) {
                               a rouvrir. */}
                           {canEdit && publishedBoardTarget ? (
                             <Button
-                              isOption
                               onPress={openCompositionEdit}
-                              style={{ flex: 1 }}
                               title={t('matchComposition.board.edit', 'Modifier')}
                               variant="Primary"
                             />

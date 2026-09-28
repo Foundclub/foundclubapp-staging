@@ -6220,12 +6220,12 @@ export default {
     noTeamIsRegisteredYet: 'Aucune équipe n est encore inscrite.',
     noTeamOpenToRequests: 'Aucune équipe ouverte aux demandes n est disponible pour le moment.',
     nothingReported: 'Aucun signalement',
-    notInvolved: 'Non concerne',
+    notInvolved: 'Non concerné',
     // eslint-disable-next-line max-len
     noTournamentTeamAcceptsNew: 'Aucune équipe tournoi n accepte de nouvelles demandes pour le moment.',
     notSet: 'Non défini',
     notSetFeminine: 'Non définie',
-    notSharedYet: 'Pas encore partage',
+    notSharedYet: 'Pas encore partagé',
     officialScore: 'Score officiel',
     // eslint-disable-next-line max-len
     okToCreateTheTeams: 'OK pour créer les équipes automatiquement ? Clique sur Annuler pour passer en mode manuel.',
@@ -6387,7 +6387,7 @@ export default {
     sending: 'Envoi...',
     sendMyRequest: 'Envoyer ma demande',
     sendTheRequest: 'Envoyer la demande',
-    sent: 'Envoye',
+    sent: 'Envoyé',
     // eslint-disable-next-line max-len
     setHowManyExternalPlayers: 'Définis combien de joueurs externes peuvent rejoindre cet entraînement.',
     share: 'Partager',
@@ -6484,7 +6484,7 @@ export default {
     thisTeamWillOnlyExist: 'Cette équipe n existera que pour ce tournoi. Tu en deviendras automatiquement le capitaine.',
     toCheck: '{{warning}} à vérifier',
     toComplete: 'A compléter',
-    toDo: 'A faire',
+    toDo: 'À faire',
     tournament: 'TOURNOI',
     tournamentMode: 'Mode tournoi',
     tournamentPeople: {
