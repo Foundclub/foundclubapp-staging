@@ -289,7 +289,10 @@ function ClubMemberRoles({ route }) {
   ) => (
     <View style={[Spaces.gap[8]]}>
       <Text style={[Fonts.p3, Fonts.neutral200]}>{title}</Text>
-      <View style={[Alignments.row, Alignments.wrap, Spaces.gap[8]]}>
+      {/* ROLES2 — cases EMPILÉES, chacune sur toute la largeur. Sur Android 16, une
+          case rétrécie à la largeur MESURÉE de son texte perdait le nom de
+          l'équipe (dessiné plus large, il passait sur une ligne invisible). */}
+      <View style={[Spaces.gap[8]]}>
         {teams.map((team) => renderChip({
           checked: hasMemberRole(member, role, team.documentId),
           label: role === 'player'
@@ -307,8 +310,6 @@ function ClubMemberRoles({ route }) {
       </View>
     </View>
   ), [
-    Alignments.row,
-    Alignments.wrap,
     Fonts.neutral200,
     Fonts.p3,
     Spaces.gap,
@@ -340,7 +341,7 @@ function ClubMemberRoles({ route }) {
             <Text style={[Fonts.p3, Fonts.neutral200]}>
               {t('clubMemberRoles.sections.manager', 'Direction du club')}
             </Text>
-            <View style={[Alignments.row]}>
+            <View>
               {renderChip({
                 checked: member.isManager === true,
                 label: t('clubMemberRoles.chips.manager', 'Co-dirigeant'),
@@ -353,7 +354,6 @@ function ClubMemberRoles({ route }) {
       </View>
     );
   }, [
-    Alignments.row,
     Fonts.neutral200,
     Fonts.p2,
     Fonts.p3,
@@ -390,7 +390,8 @@ function ClubMemberRoles({ route }) {
               + 'répondras présent ou absent. Tu gardes tous tes droits.',
           )}
         </Text>
-        <View style={[Alignments.row, Alignments.wrap, Spaces.gap[8]]}>
+        {/* ROLES2 — empilées, comme les cases des membres (voir plus haut). */}
+        <View style={[Spaces.gap[8]]}>
           {teams.map((team) => renderChip({
             checked: hasMemberRole(self, 'player', team.documentId),
             label: t('clubMemberRoles.selfCard.chip', 'Je joue en {{team}}', {

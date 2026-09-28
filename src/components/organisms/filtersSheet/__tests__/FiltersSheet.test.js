@@ -1,4 +1,4 @@
-import { Text } from 'react-native';
+import { StyleSheet, Text } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
 import FiltersSheet from '../FiltersSheet';
@@ -381,5 +381,25 @@ describe('R07 — le dernier filtre respire avant le pied colle', () => {
     rangees.forEach((/** @type {any} */ rangee) => {
       expect(styleAplati(rangee.props.style).marginTop).toBe(8);
     });
+  });
+});
+
+// ROLES2 (recette émulateur du 2026-09-28, Android 16) — le bouton affichait
+// « Voir les » au lieu de « Voir les résultats », alors qu'il occupe toute la
+// largeur : le texte était RÉTRÉCI à sa largeur mesurée (bouton centré), puis
+// dessiné plus large, et le dernier mot passait sur une ligne invisible. Le
+// libellé prend désormais toute la largeur du bouton, centré.
+describe('ROLES2 — « Voir les » : le libellé du bouton prend toute la largeur', () => {
+  it('le texte n est pas rétréci à sa largeur mesurée', async () => {
+    const { tree } = await rendre();
+    const libelle = tree.root.findAll(
+      (/** @type {any} */ node) => (
+        node.type === Text && texteDuNoeud(node).trim() === 'Voir les résultats'
+      ),
+    )[0];
+    const style = StyleSheet.flatten(libelle.props.style);
+
+    expect(style.alignSelf).toBe('stretch');
+    expect(style.textAlign).toBe('center');
   });
 });
