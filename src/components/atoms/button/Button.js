@@ -74,6 +74,8 @@ function Button({
     }
     : null;
   const sizeTextStyle = isSmall ? Fonts.p2Bold : null;
+  /** @type {import('react-native').TextStyle} */
+  const labelFillStyle = { flexGrow: 1, textAlign: 'center' };
   const isDisabled = isLoading || disabled;
 
   /**
@@ -113,10 +115,15 @@ function Button({
     >
       {isLoading ? <Loader color={ApplicationStyle[`buttonText${variant}`]?.color || Colors.primary100} />
         : (
+          // FINITIONS (recette Android 16 du 2026-09-28) — la rangée couvre TOUT le
+          // bouton et centre son contenu : c'est ce qui permet au libellé seul de
+          // s'étirer (voir plus bas) au lieu d'épouser sa largeur mesurée.
           <View
             style={[
               Alignments.row,
               Alignments.alignCenter,
+              Alignments.selfStretch,
+              Alignments.justifyCenter,
               Spaces.gap[12],
               iconPosition === 'before' && Alignments.rowReverse,
             ]}
@@ -131,6 +138,13 @@ function Button({
                 numberOfLines={1}
                 style={[
                   Fonts.p1Bold,
+                  // FINITIONS — sans icône, le libellé REMPLIT le bouton, centré.
+                  // Rétréci à sa largeur mesurée, Android 16 le dessinait plus large
+                  // et son dernier mot passait sur une ligne invisible (« Voir la
+                  // convocation et les », même en police réduite par ROLES2).
+                  // ⛔ `flexGrow`, jamais `flex: 1` : une base nulle ferait tomber
+                  // à zéro un bouton dimensionné par son contenu.
+                  !icon && labelFillStyle,
                   sizeTextStyle,
                   ApplicationStyle[`buttonText${variant}`],
                   textStyle,
