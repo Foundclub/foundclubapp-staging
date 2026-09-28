@@ -7390,6 +7390,7 @@ export default {
       teamPlural: 'simultaneous teams',
       teamSingular: 'simultaneous team',
     },
+    collectiviteOwnerHint: 'Facility of {{ownerName}}: read-only schedule.',
     defaults: {
       addressMissing: 'Address not provided',
       facilityName: 'Facility',
@@ -7439,6 +7440,7 @@ export default {
   facilityService: {
     sections: {
       club: 'Club facilities',
+      collectivite: 'Facilities · {{name}}',
       shared: 'Shared facilities',
     },
   },
@@ -11806,6 +11808,7 @@ export default {
       club: 'Club schedule',
       clubShared: 'Shared schedule',
       cm: 'Multi-sport schedule',
+      facility: 'Facility schedule',
       personal: 'My schedule',
     },
     labels: {

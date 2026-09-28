@@ -7853,6 +7853,7 @@ export default {
       teamPlural: 'équipes simultanées',
       teamSingular: 'équipe simultanée',
     },
+    collectiviteOwnerHint: 'Installation de {{ownerName}} : planning en lecture seule.',
     defaults: {
       addressMissing: 'Adresse non renseignée',
       facilityName: 'Installation',
@@ -7904,6 +7905,7 @@ export default {
   facilityService: {
     sections: {
       club: 'Installations du club',
+      collectivite: 'Installations · {{name}}',
       shared: 'Installations partagées',
     },
   },
@@ -12424,6 +12426,7 @@ export default {
       club: 'Planning club',
       clubShared: 'Planning partagé',
       cm: 'Planning omnisport',
+      facility: 'Planning de l’installation',
       personal: 'Mon planning',
     },
     labels: {
