@@ -103,3 +103,25 @@ export const getCompositionPlayerInitials = (player) => {
 export const getCompositionPlayerAvatarUrl = (player) => (
   typeof player?.avatar === 'string' ? player.avatar : player?.avatar?.url
 );
+
+/**
+ * COMPODBL — cette entree de composition designe-t-elle une PERSONNE ?
+ *
+ * 🔬 Recette du 28/09 : le serveur rangeait un compte une 2e fois sous son
+ * NUMERO, avec un instantane sans identifiant texte ni nom. Dessine, c'etait
+ * un jeton « ? » au poste de gardien ; compte, c'etait un convoque de trop.
+ *
+ * 📏 Une personne a un identifiant texte (compte, ou `manual_…` d'un joueur
+ * hors app) OU un nom. Ce qui n'a ni l'un ni l'autre ne se dessine pas, ne se
+ * compte pas et ne repart pas au serveur.
+ * ⚠️ Un ancien instantane qui n'a qu'un numero mais PORTE UN NOM reste une
+ * personne : on ne cache jamais quelqu'un qu'on sait nommer.
+ * @param {any} player
+ * @returns {boolean}
+ */
+export const isCompositionPerson = (player) => Boolean(
+  sanitizeCompositionText(player?.documentId)
+  || sanitizeCompositionText(player?.firstname)
+  || sanitizeCompositionText(player?.lastname)
+  || sanitizeCompositionText(player?.name),
+);

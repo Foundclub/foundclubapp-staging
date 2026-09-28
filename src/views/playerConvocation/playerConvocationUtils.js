@@ -18,6 +18,7 @@ import {
   getMatchPositionLabels,
 } from '@/views/matchCallUp/matchCompositionUtils';
 
+import { isCompositionPerson } from '@/utils/compositionPlayer';
 import { getTacticalSportKey } from '@/utils/tacticalField';
 
 /** Le joueur est sur le terrain. */
@@ -167,7 +168,9 @@ export const buildConvocationReserveList = (published) => {
       id: toId(playerId),
       player: byId.get(toId(playerId)) || null,
     }))
-    .filter((/** @type {any} */ entry) => Boolean(entry.id && entry.player));
+    // COMPODBL — ni identifiant texte ni nom : pas une personne (voir
+    // `isCompositionPerson`), donc pas de ligne sur le banc.
+    .filter((/** @type {any} */ entry) => Boolean(entry.id && isCompositionPerson(entry.player)));
 };
 
 /**
@@ -299,7 +302,11 @@ export const buildConvocationFieldTokens = ({ placements = [], snapshotPlayers =
       placement,
       player: byId.get(toId(placement?.playerId)) || null,
     }))
-    .filter((/** @type {any} */ entry) => Boolean(entry.player));
+    // COMPODBL — LE JETON « ? » NAIT ICI, et c'est ICI qu'il meurt : tous les
+    // terrains de l'app passent par cet assembleur (fiche, bulle du tchat,
+    // « Tu es convoque », plein ecran, « Modifier »). Un instantane sans
+    // identifiant texte ni nom n'est pas une personne.
+    .filter((/** @type {any} */ entry) => isCompositionPerson(entry.player));
 };
 
 /**

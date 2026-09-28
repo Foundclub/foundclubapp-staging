@@ -23,7 +23,7 @@
  * `__tests__/matchConvocationUtils.test.js`.
  */
 
-import { getCompositionPlayerId } from '@/utils/compositionPlayer';
+import { getCompositionPlayerId, isCompositionPerson } from '@/utils/compositionPlayer';
 
 /** Le joueur est sur le terrain de la compo. */
 export const CONVOCATION_ROLE_STARTER = 'starter';
@@ -125,6 +125,11 @@ export const buildConvocationRoster = ({ published = null, responses = null } = 
   const seen = new Set();
   const rendu = rows
     .filter((/** @type {any} */ row) => {
+      // COMPODBL — une entree que l'instantane connait mais qui n'est pas une
+      // personne (ni identifiant texte, ni nom) : le doublon d'un compte, pas
+      // un convoque de plus.
+      const known = index.get(row.playerId);
+      if (known && !isCompositionPerson(known)) return false;
       if (seen.has(row.playerId)) return false;
       seen.add(row.playerId);
       return true;
