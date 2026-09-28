@@ -122,7 +122,12 @@ function Button({
             ]}
           >
             {title ? (
+              // ROLES2 — une seule ligne (hauteur fixe) : la police rétrécit
+              // jusqu'à 70 % avant que le libellé ne soit coupé d'une ellipse
+              // (« Publier la co… », recette Android 16 du 2026-09-28).
               <Text
+                adjustsFontSizeToFit
+                minimumFontScale={0.7}
                 numberOfLines={1}
                 style={[
                   Fonts.p1Bold,

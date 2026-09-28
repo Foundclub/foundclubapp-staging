@@ -963,3 +963,44 @@ describe('ClubDetails — RÔLES : la rangée « Membres et rôles » du hub', (
     expect(mockNavigation.navigate).toHaveBeenCalledWith('ClubMemberRoles', { clubId: 'club-1' });
   });
 });
+
+// ROLES2 (recette émulateur du 2026-09-28) — « Staff : 1 dirigeant · 0 entraîneur »
+// alors qu'il entraîne les DEUX équipes du club. Le compteur ne comptait comme
+// entraîneurs que les comptes dont le rôle global est Entraîneur. Il compte
+// désormais ceux qui entraînent une équipe du club (sans doublon, sans compte
+// supprimé), plus les comptes Entraîneur.
+describe('ClubDetails — ROLES2 — « Staff » compte ceux qui entraînent vraiment', () => {
+  it('un dirigeant qui entraîne les deux équipes compte comme 1 dirigeant ET 1 entraîneur', () => {
+    mockClubQuery.data = {
+      ...CLUB,
+      members: [{ documentId: 'u-1', role: { name: 'president' } }],
+      teams: CLUB.teams.map((equipe) => ({ ...equipe, trainers: [{ documentId: 'u-1' }] })),
+    };
+
+    expect(pressableAvecTexte(monter(), 'Staff, 1 dirigeant · 1 entraîneur')).toBeDefined();
+  });
+
+  it('un Entraîneur qui entraîne compte une fois ; un compte supprimé jamais', () => {
+    mockClubQuery.data = {
+      ...CLUB,
+      members: [
+        { documentId: 'u-1', role: { name: 'president' } },
+        { documentId: 'u-2', role: { name: 'coach' } },
+      ],
+      teams: [
+        { ...CLUB.teams[0], trainers: [{ documentId: 'u-2' }] },
+        {
+          ...CLUB.teams[1],
+          trainers: [
+            { documentId: 'u-3' },
+            {
+              blocked: true, documentId: 'u-4', email: 'x@deleted.com', username: 'deleted_user_4',
+            },
+          ],
+        },
+      ],
+    };
+
+    expect(pressableAvecTexte(monter(), 'Staff, 1 dirigeant · 2 entraîneurs')).toBeDefined();
+  });
+});

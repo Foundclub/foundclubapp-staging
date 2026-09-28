@@ -15,6 +15,19 @@ import { getClubMemberRoles, updateClubMemberRole } from './clubMemberRolesServi
 export const clubMemberRolesQueryKey = (clubId) => ['clubMemberRoles', clubId];
 
 /**
+ * ROLES2 (recette du 2026-09-28) — le délai de la SECONDE relecture du profil.
+ *
+ * Chaque réplica du serveur garde 5 s en mémoire le numéro de version du profil
+ * (`VERSION_CACHE_TTL_MS`, admin/src/utils/runtime-cache-version-store.js) : une
+ * relecture qui tombe sur un autre réplica dans cette fenêtre rend encore l'ancien
+ * profil. 6 s = la fenêtre, plus une marge.
+ */
+export const PROFILE_RELOAD_AFTER_ROLE_CHANGE_MS = 6000;
+
+/** Les deux sources du profil du lecteur (`useAuth` : `get-me` puis le bootstrap). */
+const PROFILE_QUERY_KEYS = Object.freeze([['app-bootstrap'], ['get-me']]);
+
+/**
  * LOT RÔLES — la liste des membres d'un club et leurs rôles.
  * @param {string} clubId - Le club.
  * @param {object} [options] - Options react-query.
@@ -47,8 +60,17 @@ export const useUpdateClubMemberRole = (clubId) => {
         clubMemberRolesQueryKey(clubId),
         (/** @type {any} */ current) => replaceMemberRow(current, result?.member),
       );
-      if (result?.changed) {
-        invalidateAfterAction(queryClient, 'membershipChanged').catch(() => {});
+      if (!result?.changed) return;
+      invalidateAfterAction(queryClient, 'membershipChanged').catch(() => {});
+      // ROLES2 — c'est MON rôle qui a changé (« Je joue en… ») : le bandeau du mode
+      // joueur dépend de mon `myTeams`. Une seconde relecture du PROFIL, au-delà de
+      // la fenêtre de 5 s entre réplicas ; le `queryClient` survit au démontage.
+      if (result?.member?.isSelf) {
+        setTimeout(() => {
+          PROFILE_QUERY_KEYS.forEach((queryKey) => {
+            queryClient.invalidateQueries({ queryKey }).catch(() => {});
+          });
+        }, PROFILE_RELOAD_AFTER_ROLE_CHANGE_MS);
       }
     },
   });

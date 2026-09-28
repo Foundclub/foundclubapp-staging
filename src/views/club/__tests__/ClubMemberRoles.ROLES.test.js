@@ -1,4 +1,4 @@
-import { Alert, Text } from 'react-native';
+import { Alert, StyleSheet, Text } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
 import ClubMemberRoles from '../ClubMemberRoles';
@@ -380,5 +380,34 @@ describe('RÔLES — écran 2 : se mettre soi-même joueur d\'une équipe', () =
 
     expect(textes(arbre)).not.toContain('Tu joues aussi ?');
     expect(parTestId(arbre, 'self-player-team-u15')).toBeUndefined();
+  });
+});
+
+// ROLES2 (recette émulateur du 2026-09-28, Android 16) — « Je joue en » et
+// « Joueur de » sans le nom de l'équipe. Chaque case était rétrécie à la largeur
+// MESURÉE de son texte (rangée qui enroule), le texte était dessiné plus large, et
+// le nom de l'équipe passait sur une ligne invisible. Les cases sont désormais
+// EMPILÉES, chacune sur toute la largeur : le texte n'est plus jamais rétréci.
+describe('ROLES2 — les noms d équipe ne disparaissent plus des cases', () => {
+  const conteneurDe = (/** @type {any} */ noeud) => {
+    let { parent } = noeud;
+    while (parent && !parent.props?.style) parent = parent.parent;
+    return StyleSheet.flatten(parent?.props?.style) || {};
+  };
+
+  it('toutes les cases sont empilées sur toute la largeur, jamais enroulées sur une rangée', () => {
+    const arbre = monter();
+    ouvrir(arbre, 'p2-doc');
+
+    [
+      'self-player-team-u15',
+      'member-role-p2-doc-player-team-u15',
+      'member-role-p2-doc-coach-team-u15',
+      'member-role-p2-doc-manager',
+    ].forEach((testID) => {
+      const style = conteneurDe(parTestId(arbre, testID));
+      expect({ flexDirection: style.flexDirection, flexWrap: style.flexWrap, testID })
+        .toEqual({ flexDirection: undefined, flexWrap: undefined, testID });
+    });
   });
 });

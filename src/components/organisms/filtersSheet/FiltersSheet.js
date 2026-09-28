@@ -108,7 +108,15 @@ function FiltersSheet({
               },
             ]}
           >
-            <Text style={[Fonts.p1Bold, { color: Colors.primary900 }]}>
+            {/* ROLES2 — le libellé prend TOUTE la largeur du bouton, centré : rétréci
+                à sa largeur mesurée, Android 16 le dessinait plus large et coupait
+                « Voir les résultats » en « Voir les ». */}
+            <Text
+              style={[
+                Fonts.p1Bold,
+                { alignSelf: 'stretch', color: Colors.primary900, textAlign: 'center' },
+              ]}
+            >
               {applyLabel ?? t('filtersSheet.apply', 'Voir les résultats')}
             </Text>
           </TouchableOpacity>
