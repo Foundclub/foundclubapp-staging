@@ -20,6 +20,12 @@
  * quand meme, dans `staff` — l Encadrement de la carte de son equipe, a cote
  * des listes des joueurs et jamais dedans.
  *
+ * 🎽 ROLES3 (decision d Adel du 28/09, « 2- oui ») : l entraineur QUI JOUE dans
+ * l equipe (inscrit a ses deux listes) est un JOUEUR de cette equipe — il compte
+ * dans ses presents, il n est plus repete dans son Encadrement. C est la regle
+ * du serveur (U02, `isStaffOnlyForTeams`). « Encadrant » ci-dessus veut donc
+ * dire : encadrant qui ne joue pas.
+ *
  * Temoins : `eventParticipantSections.test.js` (le calcul) et les temoins
  * d ecran S1, AA02, AD06, AE02, P2, P7 (les props remises a `EventParticipants`).
  */
@@ -105,17 +111,24 @@ export const getTrainerKeySet = (team) => new Set(
 );
 
 /**
- * Les joueurs d une equipe, SANS ses encadrants (l entraineur-joueur compris).
+ * Les joueurs d une equipe — l entraineur qui y joue COMPRIS (ROLES3).
  * @param {any} team - L equipe telle que le serveur la rend.
  * @returns {User[]} - Ses joueurs, dedoublonnes, comptes supprimes ecartes.
  */
-export const getEligibleTeamPlayers = (team) => {
-  const trainerKeys = getTrainerKeySet(team);
-  return uniqueUsers(
-    (team?.players || []).filter((/** @type {User} */ player) => {
-      const playerKey = getUserKey(player);
-      return Boolean(playerKey) && !trainerKeys.has(playerKey);
-    }),
+export const getEligibleTeamPlayers = (team) => uniqueUsers(
+  (team?.players || []).filter((/** @type {User} */ player) => Boolean(getUserKey(player))),
+);
+
+/**
+ * 🎽 ROLES3 — l encadrement d UNE equipe : ses encadrants QUI N Y JOUENT PAS.
+ * Qui est aux deux listes est un joueur (`getEligibleTeamPlayers`).
+ * @param {any} team - L equipe telle que le serveur la rend.
+ * @returns {User[]} - Ses encadrants hors joueurs, dans l ordre recu.
+ */
+export const getStaffOnlyTrainers = (team) => {
+  const playerKeys = new Set((team?.players || []).map(getUserKey).filter(Boolean));
+  return (team?.trainers || []).filter(
+    (/** @type {User} */ trainer) => !playerKeys.has(getUserKey(trainer)),
   );
 };
 
@@ -137,7 +150,7 @@ const getTeamStaff = (team, participatingKeys, missingKeys) => {
     notAnswered: /** @type {User[]} */ ([]),
     participating: /** @type {User[]} */ ([]),
   };
-  uniqueUsers(team?.trainers || []).forEach((trainer) => {
+  uniqueUsers(getStaffOnlyTrainers(team)).forEach((trainer) => {
     const key = getUserKey(trainer);
     if (participatingKeys.has(key)) staff.participating.push(trainer);
     else if (missingKeys.has(key)) staff.missing.push(trainer);
@@ -160,17 +173,23 @@ export const filterUsersByExcludedKeys = (users = [], excludedKeys = new Set()) 
 );
 
 /**
- * Les encadrants de TOUTES les equipes de l evenement (organisatrice et invitees).
+ * Les encadrants de l evenement dont la reponse ne compte PAS chez les joueurs :
+ * encadrants d une de ses equipes (organisatrice ou invitee) qui ne jouent dans
+ * AUCUNE. 🎽 ROLES3 — l entraineur qui joue dans l une d elles est un joueur :
+ * meme regle que le serveur (`isStaffOnlyForTeams`, U02).
  * @param {any} event
  * @returns {Set<string | null>}
  */
 export const getEventTrainerKeys = (event) => {
   const teams = [event?.team, ...(event?.invitedTeams || [])].filter(Boolean);
+  const playerKeys = new Set(
+    teams.flatMap((team) => team?.players || []).map(getUserKey).filter(Boolean),
+  );
   return new Set(
     teams
       .flatMap((team) => team?.trainers || [])
       .map((trainer) => getUserKey(trainer))
-      .filter(Boolean),
+      .filter((key) => Boolean(key) && !playerKeys.has(key)),
   );
 };
 

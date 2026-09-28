@@ -103,10 +103,12 @@ test('PARTWEB/3 — COACH1 : l entraineur qui repond « Present » ne compte dan
   expect(resultat.participantsSummary.participatingCount).toBe(0);
 });
 
-test('PARTWEB/4 — l entraineur-joueur (inscrit aux DEUX listes) est range en entraineur', () => {
+test('PARTWEB/4 — l entraineur-joueur (inscrit aux DEUX listes) est range en JOUEUR', () => {
+  // 🔁 REVU PAR ROLES3 (decision d Adel du 28/09, « 2- oui ») : il etait range
+  // en entraineur. C est ce rangement qui faisait « Presents · 0 » a la recette.
   const team = { documentId: 't', players: [entraineur, joueur(1)], trainers: [entraineur] };
 
-  expect(ids(getEligibleTeamPlayers(team))).toEqual(['joueur-1']);
+  expect(ids(getEligibleTeamPlayers(team))).toEqual(['coach-1', 'joueur-1']);
 });
 
 test('PARTWEB/5 — quelqu un hors equipe qui vient : section « Participants externes »', () => {
@@ -223,9 +225,10 @@ test('ENCADRE/2 — Absent, Sans reponse : chaque encadrant a sa reponse, et UNE
   expect(senior.notAnswered).toHaveLength(14);
 });
 
-test('ENCADRE/3 — l entraineur-joueur : hors des joueurs, dans l Encadrement', () => {
-  // PARTWEB/4 le range en entraineur (`getEligibleTeamPlayers`) : ce lot ne
-  // change pas ce rangement, il donne seulement un endroit ou le voir.
+test('ENCADRE/3 — l entraineur-joueur : chez les joueurs, PAS dans l Encadrement', () => {
+  // 🔁 REVU PAR ROLES3 (decision d Adel du 28/09, « 2- oui ») : ENCADRE le
+  // montrait dans l Encadrement et hors des joueurs. Il est desormais un joueur
+  // de son equipe, et n est plus repete dans l Encadrement de CETTE equipe.
   const event = entrainementSenior({
     participations: [entraineur],
     team: {
@@ -236,10 +239,10 @@ test('ENCADRE/3 — l entraineur-joueur : hors des joueurs, dans l Encadrement',
   const resultat = sections(event);
   const [senior] = resultat.teamParticipationSections;
 
-  expect(staffIds(senior).participating).toEqual(['coach-1']);
-  expect(ids(senior.participating)).toEqual([]);
+  expect(staffIds(senior).participating).toEqual([]);
+  expect(ids(senior.participating)).toEqual(['coach-1']);
   expect(ids(senior.notAnswered)).toEqual(ids(quinzeJoueurs));
-  expect(resultat.participantsSummary.participatingCount).toBe(0);
+  expect(resultat.participantsSummary.participatingCount).toBe(1);
 });
 
 test('ENCADRE/4 — l encadrant d une equipe invitee est dans la carte de SON equipe', () => {
@@ -287,4 +290,122 @@ test('PARTWEB/9 — sans evenement : des listes vides, jamais une exception', ()
     teamParticipationSections: [],
   });
   expect(getEventTrainerKeys(null).size).toBe(0);
+});
+
+// LOT ROLES3 (28/09) — DECISION D ADEL « 2- oui » : L ENTRAINEUR QUI JOUE EST
+// UN JOUEUR DE SON EQUIPE.
+//
+// 📸 LE CONSTAT (recette emulateur du 28/09, defaut 4) : un dirigeant qui
+// entraine SILENCE-Test-U15 et y joue aussi (« Je joue en … ») repond Present.
+// Participants du match : « Presents · 0 », et son nom seulement sous
+// « Staff · Present ». Le serveur, lui, le compte deja comme joueur (U02,
+// `event-composition.ts`, `isStaffOnlyForTeams` = encadrant d une equipe de
+// l evenement ET joueur d AUCUNE).
+//
+// 🎯 La regle, desormais la meme des deux cotes : l encadrement d une equipe,
+// ce sont ses encadrants QUI N Y JOUENT PAS. Qui est aux deux listes est un
+// joueur — il compte dans les presents, il n est plus repete dans
+// l Encadrement de CETTE equipe. Un entraineur qui ne joue pas : inchange
+// (COACH1 « 2-A », ENCADRE « PARTWEB-1 → B »).
+
+const dirigeantJoueur = {
+  documentId: 'dirigeant-joueur',
+  firstname: 'Adel',
+  lastname: 'Dirigeant',
+};
+
+const matchDuDirigeantJoueur = (overrides = {}) => entrainementSenior({
+  team: {
+    documentId: 'team-senior',
+    name: 'Senior',
+    players: [dirigeantJoueur, ...quinzeJoueurs],
+    trainers: [dirigeantJoueur],
+  },
+  ...overrides,
+});
+
+test('ROLES3/1 — dirigeant qui joue, Present : « Presents · 1 », joueur, hors Encadrement', () => {
+  const resultat = sections(matchDuDirigeantJoueur({ participations: [dirigeantJoueur] }));
+  const [senior] = resultat.teamParticipationSections;
+
+  expect(ids(senior.participating)).toEqual(['dirigeant-joueur']);
+  expect(resultat.participantsSummary.participatingCount).toBe(1);
+  expect(staffIds(senior)).toEqual({ missing: [], notAnswered: [], participating: [] });
+  expect(ids(senior.notAnswered)).toEqual(ids(quinzeJoueurs));
+  expect(resultat.externalParticipationSection).toBeNull();
+});
+
+test('ROLES3/2 — Absent ou sans reponse : il reste dans les listes des JOUEURS', () => {
+  const absent = sections(matchDuDirigeantJoueur({ missings: [dirigeantJoueur] }));
+  const [seniorAbsent] = absent.teamParticipationSections;
+  expect(ids(seniorAbsent.missing)).toEqual(['dirigeant-joueur']);
+  expect(staffIds(seniorAbsent).missing).toEqual([]);
+
+  const muet = sections(matchDuDirigeantJoueur());
+  const [seniorMuet] = muet.teamParticipationSections;
+  expect(ids(seniorMuet.notAnswered)).toEqual(['dirigeant-joueur', ...ids(quinzeJoueurs)]);
+  expect(staffIds(seniorMuet).notAnswered).toEqual([]);
+});
+
+test('ROLES3/3 — le simple entraineur qui ne joue pas : INCHANGE, a cote de celui qui joue', () => {
+  const event = matchDuDirigeantJoueur({
+    participations: [entraineur, dirigeantJoueur, joueur(1)],
+    team: {
+      documentId: 'team-senior',
+      name: 'Senior',
+      players: [dirigeantJoueur, ...quinzeJoueurs],
+      trainers: [entraineur, dirigeantJoueur],
+    },
+  });
+  const resultat = sections(event);
+  const [senior] = resultat.teamParticipationSections;
+
+  expect(ids(senior.participating)).toEqual(['dirigeant-joueur', 'joueur-1']);
+  expect(staffIds(senior)).toEqual({ missing: [], notAnswered: [], participating: ['coach-1'] });
+  expect(resultat.participantsSummary.participatingCount).toBe(2);
+  expect(getEventTrainerKeys(event).has('doc:coach-1')).toBe(true);
+  expect(getEventTrainerKeys(event).has('doc:dirigeant-joueur')).toBe(false);
+});
+
+test('ROLES3/4 — l equipe ou il n est QU encadrant : il reste dans SON Encadrement', () => {
+  // Il joue en Senior, il entraine seulement les U17 invites.
+  const u17 = {
+    documentId: 'team-u17',
+    name: 'U17',
+    players: [joueur(40)],
+    trainers: [dirigeantJoueur],
+  };
+  const resultat = sections(matchDuDirigeantJoueur({
+    invitedTeams: [u17],
+    participations: [dirigeantJoueur],
+    team: {
+      documentId: 'team-senior',
+      name: 'Senior',
+      players: [dirigeantJoueur, ...quinzeJoueurs],
+      trainers: [],
+    },
+  }));
+  const [senior, equipeU17] = resultat.teamParticipationSections;
+
+  expect(ids(senior.participating)).toEqual(['dirigeant-joueur']);
+  expect(staffIds(equipeU17).participating).toEqual(['dirigeant-joueur']);
+  expect(ids(equipeU17.participating)).toEqual([]);
+  expect(resultat.participantsSummary.participatingCount).toBe(1);
+});
+
+test('ROLES3/5 — les 3 listes a plat et la compo : il y est, comme un joueur', () => {
+  const event = matchDuDirigeantJoueur({ participations: [dirigeantJoueur] });
+  const aPlat = buildParticipationsByStatus({
+    canEdit: true,
+    event,
+    pendingParticipations: [],
+    trainerKeys: getEventTrainerKeys(event),
+  });
+
+  expect(ids(aPlat.participating)).toEqual(['dirigeant-joueur']);
+  expect(aPlat.notAnswered).toHaveLength(15);
+  // `getEligibleTeamPlayers` est aussi la liste de la compo du telephone
+  // (`getCompositionPlayersForEvent`, EventDetails.js).
+  expect(ids(getEligibleTeamPlayers(event.team)))
+    .toEqual(['dirigeant-joueur', ...ids(quinzeJoueurs)]);
 });

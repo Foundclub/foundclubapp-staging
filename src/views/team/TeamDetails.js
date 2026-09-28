@@ -555,26 +555,19 @@ function TeamDetails({ navigation, route }) {
     return Array.from(byId.values());
   }, [team]);
 
+  // 🎽 ROLES3 (decision d Adel du 28/09, « 2- oui ») — l entraineur qui a dit
+  // « Je joue en … » est un JOUEUR de l equipe : il n est plus retire de cette
+  // liste (la recette affichait « Personne pour l'instant »). Il reste aussi
+  // dans « Entraîneur·e·s », qui dit qui a quel role.
   const filteredPlayers = useMemo(() => {
-    const trainers = team?.trainers || [];
     const players = team?.players || [];
 
     if (team?.isLeague) {
       return players;
     }
 
-    const trainerIds = new Set(
-      trainers
-        .map((/** @type {any} */ trainer) => trainer?.documentId)
-        .filter(Boolean),
-    );
-
-    return players.filter((/** @type {any} */ player) => {
-      const playerId = player?.documentId;
-      if (!playerId) return false;
-      return !trainerIds.has(playerId);
-    });
-  }, [team?.isLeague, team?.players, team?.trainers]);
+    return players.filter((/** @type {any} */ player) => Boolean(player?.documentId));
+  }, [team?.isLeague, team?.players]);
 
   const areTeamMembersHidden = team?.membersAreHidden === true;
 
