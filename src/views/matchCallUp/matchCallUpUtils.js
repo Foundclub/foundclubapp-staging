@@ -200,6 +200,9 @@ export const buildRsvpAnswersByPlayerId = ({ event, players = [] }) => {
  * @param {any[]} [input.reinforcementPlayers] Joueurs venus d'une autre equipe du club.
  * @param {any[]} [input.manualPlayers] Joueurs hors app.
  * @param {string} [input.sport]
+ * @param {number | null} [input.startersOnField] COMPODBL — combien de convoques
+ *   le terrain qu'on va ROUVRIR porte deja. `null` = pas de terrain a rouvrir :
+ *   on garde la projection du sport.
  * @returns {{ bench: number, calledUp: number, offApp: number,
  *   reinforcements: number, starters: number }}
  */
@@ -208,11 +211,19 @@ export const getCallUpCounters = ({
   reinforcementPlayers = [],
   selectedIds = [],
   sport,
+  startersOnField = null,
 }) => {
   const selected = selectedIds instanceof Set ? selectedIds : new Set(selectedIds);
   const calledUp = selected.size;
   const sizes = getMatchSquadSizes(sport);
-  const starters = sizes ? Math.min(calledUp, sizes.starters) : 0;
+  // COMPODBL — « Modifier » annoncait « 3 titulaires · 0 sur le banc » pour une
+  // compo qui en portait 1 sur le terrain et 1 sur le banc : la projection du
+  // sport (« jusqu'a 11 sur le terrain ») ignorait le terrain deja fait. Quand
+  // un terrain va etre rouvert, c'est LUI qui dit combien de titulaires.
+  const projectedStarters = sizes ? Math.min(calledUp, sizes.starters) : 0;
+  const starters = Number.isFinite(startersOnField)
+    ? Math.min(calledUp, Math.max(0, Number(startersOnField)))
+    : projectedStarters;
 
   const countSelected = (/** @type {any[]} */ players) => (Array.isArray(players) ? players : [])
     .filter((player) => selected.has(getCompositionPlayerId(player)))

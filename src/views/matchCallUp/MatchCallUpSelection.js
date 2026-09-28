@@ -40,6 +40,7 @@ import { useGetTeams } from '@/services/team/teamQueries';
 import {
   getCompositionPlayerId,
   getCompositionPlayerLabel,
+  isCompositionPerson,
 } from '@/utils/compositionPlayer';
 
 import {
@@ -250,13 +251,22 @@ function MatchCallUpSelection() {
     const selected = existingComposition?.selectedPlayerIds || EMPTY_LIST;
     /** @type {any[]} */
     const reserve = existingComposition?.reservePlayerIds || EMPTY_LIST;
+    // COMPODBL — les identifiants que l'instantane du pack connait sans qu'ils
+    // designent une personne (le doublon d'un compte range sous son numero) :
+    // ils ne sont pas des convoques, ils ne sont pas comptes.
+    const pasDesPersonnes = new Set(
+      (existingComposition?.snapshotPlayers || EMPTY_LIST)
+        .filter((/** @type {any} */ player) => !isCompositionPerson(player))
+        .map(getCompositionPlayerId)
+        .filter(Boolean),
+    );
     const knownIds = convoquesDuMoment
       ? convoquesDuMoment.map(getCompositionPlayerId).filter(Boolean)
       : [
         ...placements.map((placement) => String(placement?.playerId || '').trim()),
         ...selected.map((value) => String(value || '').trim()),
         ...reserve.map((value) => String(value || '').trim()),
-      ].filter(Boolean);
+      ].filter((playerId) => Boolean(playerId) && !pasDesPersonnes.has(playerId));
 
     // ⚠️ LES JOUEURS HORS APP SE PERDENT EN PREMIER : aucun effectif ne les
     // porte, ils n'existent que dans le pack et dans la liste des convoques. On
@@ -314,13 +324,6 @@ function MatchCallUpSelection() {
     });
   }, []);
 
-  const counters = useMemo(
-    () => getCallUpCounters({
-      manualPlayers, reinforcementPlayers, selectedIds, sport,
-    }),
-    [manualPlayers, reinforcementPlayers, selectedIds, sport],
-  );
-
   // 🧨 COMPOMODIF (M4) — LA 4e SOURCE, ET C'EST ELLE QUI EMPECHE LA PERTE.
   //
   // Un convoque coche doit ressortir d'ici, sinon il est efface EN SILENCE.
@@ -348,6 +351,26 @@ function MatchCallUpSelection() {
     return [...parIdentifiant.values()]
       .filter((player) => selectedIds.has(getCompositionPlayerId(player)));
   }, [convoquesRecus, manualPlayers, reinforcementPlayers, selectedIds, squadPlayers]);
+
+  // COMPODBL — LE TERRAIN QUE « Suivant » VA ROUVRIR, calcule UNE fois : le
+  // bouton s'en sert pour y aller, le compteur du bas pour annoncer combien de
+  // titulaires il porte. Deux calculs finiraient par se contredire.
+  const resumedField = useMemo(() => resumeFieldForSelection({
+    existingComposition,
+    players: selectedPlayers,
+    startPlacements: params.startPlacements ?? null,
+  }), [existingComposition, params.startPlacements, selectedPlayers]);
+
+  const counters = useMemo(
+    () => getCallUpCounters({
+      manualPlayers,
+      reinforcementPlayers,
+      selectedIds,
+      sport,
+      startersOnField: resumedField.shouldResume ? resumedField.placements.length : null,
+    }),
+    [manualPlayers, reinforcementPlayers, resumedField, selectedIds, sport],
+  );
 
   // 👻 LOT COMPO (2026-09-05) — LE 2e JOUEUR HORS APP EFFACAIT LE 1er.
   //
@@ -384,11 +407,7 @@ function MatchCallUpSelection() {
     // 11 jetons, c'est exactement ce qui les effaçait : l'ecran 4 repartait
     // d'une rangee (terrain vide ou compo type) et ecrasait le travail a la
     // main. On rouvre donc le terrain tel qu'il etait, moins les decoches.
-    const { placements, shouldResume } = resumeFieldForSelection({
-      existingComposition,
-      players: selectedPlayers,
-      startPlacements: params.startPlacements ?? null,
-    });
+    const { placements, shouldResume } = resumedField;
 
     // D79 — sans rien de place, « Suivant » mene bien a l'ecran 4
     // (« Partir de… »), qui ouvre ensuite le terrain de l'ecran 5. L'ancien
@@ -404,7 +423,7 @@ function MatchCallUpSelection() {
         ...(shouldResume ? { startPlacements: placements } : {}),
       },
     );
-  }, [existingComposition, navigation, params, selectedPlayers]);
+  }, [navigation, params, resumedField, selectedPlayers]);
 
   // AC09 — LA FENETRE DE PREVENTION, ET LE MOMENT OU ELLE S'OUVRE.
   //
