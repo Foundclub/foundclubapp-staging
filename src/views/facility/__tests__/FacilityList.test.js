@@ -82,8 +82,14 @@ jest.mock('@/theme/themeContext', () => {
   };
 });
 
+// COLL1B : la doublure RETIENT aussi ce que l ecran demande (options du hook).
+/** @type {any[]} */
+const mockFacilityContextCalls = [];
 jest.mock('@/services/facility/facilityQueries', () => ({
-  useClubFacilityContext: () => mockFacilityContext,
+  useClubFacilityContext: (/** @type {any} */ contexte, /** @type {any} */ options) => {
+    mockFacilityContextCalls.push({ contexte, options });
+    return mockFacilityContext;
+  },
 }));
 
 // Le service est double ENTIEREMENT, fonctions pures comprises : le module
@@ -258,6 +264,7 @@ beforeEach(() => {
   mockButtonProps.length = 0;
   mockPaywallProps.length = 0;
   mockEmptyStateProps.length = 0;
+  mockFacilityContextCalls.length = 0;
 
   mockNavigation = { goBack: jest.fn(), navigate: jest.fn() };
   mockRoute = { params: { clubId: 'club-1', cmId: null } };
@@ -490,5 +497,66 @@ describe('FacilityList — refonte D51 ecran 03', () => {
     const arbre = rendre();
 
     expect(textesVisibles(arbre)).toContain('Terrain · 1 équipe simultanée');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// COLL1B (29/09) — lot 1b du chantier Collectivites (SPEC §3) : « l onglet
+// Installations du club montre ses installations ET celles de la collectivite ».
+// ROUGE avant le lot : l ecran ne demandait pas celles de la collectivite, une
+// installation en lecture seule s annoncait « Multisport », et « Voir le planning »
+// renvoyait vers le planning du CLUB (qui ne montre que ses propres evenements).
+// ---------------------------------------------------------------------------
+const INSTALLATION_DE_LA_VILLE = {
+  address: { description: '1 avenue du Stade, Demo' },
+  collectivite: { documentId: 'ville-demo', name: 'Ville de Demo' },
+  documentId: 'gym-ville',
+  isReadOnly: true,
+  isShared: true,
+  maxSlots: 2,
+  name: 'Gymnase de la Ville',
+  ownerName: 'Ville de Demo',
+  ownerType: 'collectivite',
+  type: 'Gymnase',
+};
+
+describe('FacilityList — COLL1B : les installations de la collectivite du club', () => {
+  it('l ecran demande AUSSI les installations de la collectivite du club', () => {
+    rendre();
+
+    expect(mockFacilityContextCalls[mockFacilityContextCalls.length - 1].options).toMatchObject({ includeCollectivite: true });
+  });
+
+  it('le gymnase de la Ville se lit « Ville de Demo », jamais « Multisport »', () => {
+    mockFacilityContext.data = { allFacilities: [INSTALLATION_CLUB, INSTALLATION_DE_LA_VILLE], cmId: null };
+    const arbre = rendre();
+    const textes = textesVisibles(arbre);
+
+    expect(textes).toContain('Gymnase de la Ville');
+    expect(textes).toContain('Ville de Demo');
+    expect(textes.includes('Multisport')).toBe(false);
+  });
+
+  it('« Voir le planning » ouvre le planning de la SEMAINE de cette installation', () => {
+    mockFacilityContext.data = { allFacilities: [INSTALLATION_DE_LA_VILLE], cmId: null };
+    const arbre = rendre();
+
+    act(() => {
+      pressableAvecTexte(arbre, 'Voir le planning').props.onPress();
+    });
+
+    expect(mockNavigation.navigate).toHaveBeenCalledWith('PlanningWeekFullscreen', expect.objectContaining({
+      contextDetailLabel: 'Gymnase de la Ville',
+      facilityId: 'gym-ville',
+      sourceType: 'facility',
+    }));
+  });
+
+  it('ni « Modifier », ni « Supprimer » : l installation est a la mairie', () => {
+    mockFacilityContext.data = { allFacilities: [INSTALLATION_DE_LA_VILLE], cmId: null };
+    const arbre = rendre();
+
+    expect(pressableAvecTexte(arbre, 'Supprimer')).toBeUndefined();
+    expect(pressableAvecTexte(arbre, 'Modifier')).toBeUndefined();
   });
 });

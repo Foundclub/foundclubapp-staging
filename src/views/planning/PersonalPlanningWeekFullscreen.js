@@ -36,6 +36,7 @@ import {
   getClubPlanning,
   getMyPlanning,
 } from '@/services/event/eventService';
+import { getFacilityPlanning } from '@/services/facility/facilityService';
 import {
   getClubSharedPlanning,
   getCMPlanning,
@@ -58,10 +59,14 @@ import {
 
 const PERSONAL_PLANNING_STALE_MS = 60 * 1000;
 
+// COLL1B (29/09) — `facility` : le planning d UNE installation, lu par tout membre d un
+// club qui l utilise (route du lot 1b). Lecture seule : chaque bloc dit « club · equipe »,
+// seuls ceux du club du lecteur s ouvrent (le serveur ne donne l id que de ceux-la).
 const FULLSCREEN_SOURCE_TYPES = {
   club: 'club',
   clubShared: 'clubShared',
   cm: 'cm',
+  facility: 'facility',
   personal: 'personal',
 };
 
@@ -116,6 +121,17 @@ const getPlanningQuery = ({
         }),
         queryKey: ['planning', 'fullscreen', 'cm', cmId, planningRange.from, planningRange.to, facilityId || 'all', sectionId || 'all'],
       };
+    case FULLSCREEN_SOURCE_TYPES.facility:
+      return {
+        enabled: Boolean(facilityId),
+        queryFn: () => getFacilityPlanning(facilityId, {
+          from: planningRange.from,
+          to: planningRange.to,
+        }),
+        queryKey: [
+          'planning', 'fullscreen', 'facility', facilityId, planningRange.from, planningRange.to,
+        ],
+      };
     case FULLSCREEN_SOURCE_TYPES.personal:
     default:
       return {
@@ -148,9 +164,7 @@ function PlanningWeekFullscreen() {
   const clubId = route?.params?.clubId || null;
   const cmId = route?.params?.cmId || null;
   const contextLabel = route?.params?.contextLabel || null;
-  const contextDetailLabel = route?.params?.contextDetailLabel || null;
   const facilityId = route?.params?.facilityId || null;
-  const facilityMeta = route?.params?.facilityMeta || null;
   const sectionId = route?.params?.sectionId || null;
 
   const [currentDate, setCurrentDate] = useState(getInitialDate(route?.params?.date));
@@ -191,6 +205,13 @@ function PlanningWeekFullscreen() {
 
   const events = normalizePlanningItems(data?.data || []);
   const hasEvents = events.length > 0;
+  // COLL1B : ouvert par un lien du site (params reduits a l adresse), l ecran d une
+  // installation retrouve son nom et sa capacite dans la reponse du serveur.
+  const serverFacility = sourceType === FULLSCREEN_SOURCE_TYPES.facility
+    ? data?.meta?.facility || null
+    : null;
+  const facilityMeta = route?.params?.facilityMeta || serverFacility;
+  const contextDetailLabel = route?.params?.contextDetailLabel || serverFacility?.name || null;
   const facilityPlanningSummary = useMemo(() => {
     if (!facilityId || !facilityMeta) return null;
 
@@ -227,6 +248,8 @@ function PlanningWeekFullscreen() {
         return t('planning.fullscreen.clubShared', 'Planning partage');
       case FULLSCREEN_SOURCE_TYPES.cm:
         return t('planning.fullscreen.cm', 'Planning omnisport');
+      case FULLSCREEN_SOURCE_TYPES.facility:
+        return t('planning.fullscreen.facility', 'Planning de l’installation');
       case FULLSCREEN_SOURCE_TYPES.personal:
       default:
         return t('planning.fullscreen.personal', 'Mon planning');

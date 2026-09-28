@@ -85,6 +85,19 @@ const normalizeSharedFacility = (facility) => ({
   source: 'Multisport',
 });
 
+// COLL1B (29/09) — une installation de la COLLECTIVITE a laquelle le club est rattache
+// (SPEC Collectivites §3). Lecture seule, comme celle d un omnisport, mais ce n est pas
+// un omnisport : ni badge « Multisport », ni planning « partage » du club (`sharedFacilities`).
+const normalizeCollectiviteFacility = (facility) => ({
+  ...facility,
+  isReadOnly: true,
+  isShared: true,
+  ownerName: facility?.collectivite?.name || '',
+  ownerType: 'collectivite',
+});
+
+const isCollectiviteFacility = (facility) => facility?.ownerType === 'collectivite';
+
 const getFacilitySections = (facilities, labels = {}) => {
   if (!Array.isArray(facilities) || facilities.length === 0) return [];
 
@@ -97,20 +110,51 @@ const getFacilitySections = (facilities, labels = {}) => {
     'Installations partagées',
   );
   const editableFacilities = facilities.filter((facility) => !facility?.isShared);
-  const sharedFacilities = facilities.filter((facility) => facility?.isShared);
+  const sharedFacilities = facilities.filter(
+    (facility) => facility?.isShared && !isCollectiviteFacility(facility),
+  );
+
+  // COLL1B : les installations d une collectivite, une section par collectivite, APRES
+  // celles du club et de l omnisport. Sans elles, les sections restent celles d avant.
+  const collectiviteSections = [];
+  facilities.filter(isCollectiviteFacility).forEach((facility) => {
+    const name = facility?.ownerName || '';
+    const section = collectiviteSections.find((candidate) => candidate.name === name);
+    if (section) {
+      section.data.push(facility);
+      return;
+    }
+    collectiviteSections.push({
+      data: [facility],
+      name,
+      title: i18next.t(
+        'facilityService.sections.collectivite',
+        'Installations · {{name}}',
+        { name },
+      ),
+    });
+  });
+  const withCollectivites = (sections) => [
+    ...sections,
+    ...collectiviteSections.map(({ data, title }) => ({ data, title })),
+  ];
 
   if (editableFacilities.length > 0 && sharedFacilities.length > 0) {
-    return [
+    return withCollectivites([
       { data: editableFacilities, title: clubTitle },
       { data: sharedFacilities, title: sharedTitle },
-    ];
+    ]);
   }
 
   if (sharedFacilities.length > 0) {
-    return [{ data: sharedFacilities, title: sharedTitle }];
+    return withCollectivites([{ data: sharedFacilities, title: sharedTitle }]);
   }
 
-  return [{ data: editableFacilities, title: clubTitle }];
+  if (editableFacilities.length === 0) {
+    return withCollectivites([]);
+  }
+
+  return withCollectivites([{ data: editableFacilities, title: clubTitle }]);
 };
 
 const resolveParentMultisportId = async (clubId) => {
@@ -133,12 +177,56 @@ const resolveParentMultisportId = async (clubId) => {
   }
 };
 
+/**
+ * COLL1B (29/09) — les installations des collectivites auxquelles ce club est rattache.
+ * Reservees a ses membres : le serveur en juge (policy is-member-of-club).
+ * @param {string} clubId - documentId du club.
+ * @returns {Promise<object>} `{ data: [...] }`, chaque installation portant
+ *   `collectivite: { documentId, name }`.
+ */
+const getClubCollectiviteFacilities = async (clubId) => {
+  const response = await client.get(`/clubs/${clubId}/collectivite-installations`);
+  return response.data;
+};
+
+// Un refus (visiteur, pas membre) ou une panne ne doit pas emporter les installations du
+// club avec lui : la liste de la collectivite est un AJOUT a l onglet, jamais sa condition.
+const getClubCollectiviteFacilitiesOrNone = async (clubId) => {
+  try {
+    return await getClubCollectiviteFacilities(clubId);
+  } catch (error) {
+    const status = error?.status || error?.response?.status || error?.error?.status || null;
+    if (status !== 403 && status !== 401) {
+      console.error('Error fetching collectivite facilities:', error);
+    }
+    return null;
+  }
+};
+
+/**
+ * COLL1B (29/09) — le planning d UNE installation, en lecture seule (route du lot 1b).
+ * Chaque bloc dit « club · equipe » et ses heures ; seuls ceux du club du lecteur
+ * portent un documentId (il peut les ouvrir).
+ * @param {string} facilityId - documentId de l installation.
+ * @param {{ from: string, to: string }} range - La semaine affichee (AAAA-MM-JJ).
+ * @returns {Promise<object>} `{ data: blocs, meta: { facility, from, to, total } }`.
+ */
+const getFacilityPlanning = async (facilityId, { from, to }) => {
+  const response = await client.get(`/facilities/${facilityId}/planning`, {
+    params: { from, to },
+  });
+  return response.data;
+};
+
 const getClubFacilityContext = async (clubId, cmId, options = {}) => {
-  const { resolveCmId = true } = options;
+  const { includeCollectivite = false, resolveCmId = true } = options;
   const resolvedCmId = cmId || (resolveCmId ? await resolveParentMultisportId(clubId) : null);
-  const [clubResponse, cmResponse] = await Promise.all([
+  const [clubResponse, cmResponse, collectiviteResponse] = await Promise.all([
     clubId ? getPlanningFacilities(clubId) : Promise.resolve(null),
     resolvedCmId ? getCMFacilities(resolvedCmId) : Promise.resolve(null),
+    clubId && includeCollectivite
+      ? getClubCollectiviteFacilitiesOrNone(clubId)
+      : Promise.resolve(null),
   ]);
   const clubFacilities = Array.isArray(clubResponse?.data)
     ? clubResponse.data.map(normalizeClubFacility)
@@ -146,7 +234,10 @@ const getClubFacilityContext = async (clubId, cmId, options = {}) => {
   const sharedFacilities = Array.isArray(cmResponse?.data)
     ? cmResponse.data.map(normalizeSharedFacility)
     : [];
-  const allFacilities = [...clubFacilities, ...sharedFacilities];
+  const collectiviteFacilities = Array.isArray(collectiviteResponse?.data)
+    ? collectiviteResponse.data.map(normalizeCollectiviteFacility)
+    : [];
+  const allFacilities = [...clubFacilities, ...sharedFacilities, ...collectiviteFacilities];
 
   return {
     allFacilities,
@@ -335,6 +426,7 @@ export {
   getCMFacilities,
   getFacilities,
   getFacility,
+  getFacilityPlanning,
   getFacilitySections,
   getOccupancy,
   getPendingFacilityOverrideRequests,

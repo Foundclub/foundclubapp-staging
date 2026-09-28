@@ -301,6 +301,10 @@ function ClubDetails({ navigation, route }) {
     { clubId: clubId ?? '', cmId: clubParentMultisportId },
     {
       enabled: canLoadFacilityContext,
+      // COLL1B (29/09) — un MEMBRE voit aussi les installations de la collectivite de son
+      // club (SPEC §3). Le serveur en juge (is-member-of-club) ; ceci evite seulement une
+      // requete refusee a chaque visiteur de la page publique.
+      includeCollectivite: Boolean(isAuthenticated && clubId && isClubMember(clubId)),
       resolveCmId: false,
       retry: 0,
     },
@@ -2801,9 +2805,14 @@ function ClubDetails({ navigation, route }) {
                         const addressLabel = getFacilityAddressLabel(facility?.address);
                         const planningColor = resolveFacilityPlanningColor(facility);
                         const canOpenFacilityEdit = Boolean(canEdit && facilityId && !facility?.isShared);
+                        // COLL1B : l installation de la collectivite se lit par tout MEMBRE du club
+                        // (le serveur tranche) ; celle d un omnisport garde sa regle d encadrant.
+                        const isCollectiviteFacility = facility?.ownerType === 'collectivite';
                         const canOpenPlanning = Boolean(
                           facilityId
-                          && (facility?.isShared ? canAccessSharedPlanning : isMember),
+                          && (facility?.isShared && !isCollectiviteFacility
+                            ? canAccessSharedPlanning
+                            : isMember),
                         );
                         const handleOpenFacilityEdit = () => {
                           navigation.navigate(RouteNames.FacilityForm, {
@@ -2813,6 +2822,17 @@ function ClubDetails({ navigation, route }) {
                           });
                         };
                         const handleOpenPlanning = () => {
+                          // COLL1B : SON planning, tous clubs confondus (« club · equipe »).
+                          // L onglet Planning du club ne montre que ses evenements : « libre »
+                          // a tort.
+                          if (isCollectiviteFacility) {
+                            navigation.navigate(RouteNames.PlanningWeekFullscreen, {
+                              contextDetailLabel: facility?.name || null,
+                              facilityId,
+                              sourceType: 'facility',
+                            });
+                            return;
+                          }
                           handleOpenFacilityPlanning(facility, facility?.isShared ? 'shared' : 'club');
                         };
 
@@ -2928,13 +2948,24 @@ function ClubDetails({ navigation, route }) {
                                     ]}
                                   >
                                     <Text style={[Fonts.p3Bold, { color: Colors.warning500 }]}>
-                                      {t('facilityList.badges.multisport', 'Multisport')}
+                                      {isCollectiviteFacility
+                                        ? facility?.ownerName
+                                        : t('facilityList.badges.multisport', 'Multisport')}
                                     </Text>
                                   </View>
                                 </>
                               ) : null}
                             </View>
-                            {facility?.isShared ? (
+                            {isCollectiviteFacility ? (
+                              <Text style={[Fonts.p3, Fonts.neutral300]}>
+                                {t(
+                                  'facilityList.collectiviteOwnerHint',
+                                  'Installation de {{ownerName}} : planning en lecture seule.',
+                                  { ownerName: facility?.ownerName || '' },
+                                )}
+                              </Text>
+                            ) : null}
+                            {facility?.isShared && !isCollectiviteFacility ? (
                               <Text style={[Fonts.p3, Fonts.neutral300]}>
                                 {t(
                                   'facilityList.sharedOwnerHint',

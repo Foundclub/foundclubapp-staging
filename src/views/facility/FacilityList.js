@@ -96,6 +96,10 @@ function FacilityList() {
   } = useClubFacilityContext({
     clubId: contextClubId,
     cmId: contextCmId,
+  }, {
+    // COLL1B (29/09) — l onglet Installations montre aussi celles de la collectivite du
+    // club (SPEC §3), en lecture seule. Le serveur en juge (is-member-of-club).
+    includeCollectivite: Boolean(contextClubId),
   });
   const facilities = useMemo(() => facilityContext?.allFacilities || [], [facilityContext?.allFacilities]);
   const resolvedCmId = facilityContext?.cmId || contextCmId || null;
@@ -175,6 +179,17 @@ function FacilityList() {
   const handleOpenPlanning = useCallback((facility) => {
     const facilityId = facility?.documentId || facility?.id;
     if (!facilityId) return;
+
+    // COLL1B : l installation de la collectivite a SON planning (tous les clubs qui
+    // l utilisent, « club · equipe ») ; le planning du club ne montre que le sien.
+    if (facility?.ownerType === 'collectivite') {
+      navigation.navigate(RouteNames.PlanningWeekFullscreen, {
+        contextDetailLabel: facility?.name || null,
+        facilityId,
+        sourceType: 'facility',
+      });
+      return;
+    }
 
     // NAVMORTE : l ecran est aussi monte a la RACINE, ou Club n existe pas.
     navigateToStackScreenOrScreen(navigation, {
@@ -310,6 +325,7 @@ function FacilityList() {
       hasAddress ? addressLabel : null,
     ].filter(Boolean).join(' · ');
     const sharedOwnerLabel = item?.ownerName || t('facilityList.badges.multisport', 'Multisport');
+    const isCollectiviteFacility = item?.ownerType === 'collectivite';
     const conflictMode = getFacilityConflictMode(item);
     const accessibilityEditLabel = t(
       'facilityList.accessibility.editCard',
@@ -389,7 +405,12 @@ function FacilityList() {
               'neutral',
             )}
             {item?.isReadOnly ? renderMetaChip(t('facilityList.badges.shared', 'Partagée'), 'neutral') : null}
-            {item?.isReadOnly ? renderMetaChip(t('facilityList.badges.multisport', 'Multisport'), 'warning') : null}
+            {item?.isReadOnly ? renderMetaChip(
+              isCollectiviteFacility
+                ? sharedOwnerLabel
+                : t('facilityList.badges.multisport', 'Multisport'),
+              'warning',
+            ) : null}
           </View>
         </TouchableOpacity>
 
@@ -431,16 +452,31 @@ function FacilityList() {
 
         {item?.isReadOnly ? (
           <View style={[Spaces.gap[4]]}>
-            <Text style={[Fonts.p3, Fonts.neutral300]}>
-              {t(
-                'facilityList.sharedOwnerHint',
-                'Installation partagée du multisport {{ownerName}}. Lecture seule côté club.',
-                { ownerName: sharedOwnerLabel },
-              )}
-            </Text>
-            <Text style={[Fonts.p3, Fonts.neutral300]}>
-              {t('facilityList.readOnlyHint', 'Installation partagée, modification depuis le multisport uniquement.')}
-            </Text>
+            {isCollectiviteFacility ? (
+              <Text style={[Fonts.p3, Fonts.neutral300]}>
+                {t(
+                  'facilityList.collectiviteOwnerHint',
+                  'Installation de {{ownerName}} : planning en lecture seule.',
+                  { ownerName: sharedOwnerLabel },
+                )}
+              </Text>
+            ) : (
+              <>
+                <Text style={[Fonts.p3, Fonts.neutral300]}>
+                  {t(
+                    'facilityList.sharedOwnerHint',
+                    'Installation partagée du multisport {{ownerName}}. Lecture seule côté club.',
+                    { ownerName: sharedOwnerLabel },
+                  )}
+                </Text>
+                <Text style={[Fonts.p3, Fonts.neutral300]}>
+                  {t(
+                    'facilityList.readOnlyHint',
+                    'Installation partagée, modification depuis le multisport uniquement.',
+                  )}
+                </Text>
+              </>
+            )}
           </View>
         ) : (
           <View style={[Alignments.row, Alignments.justifyEnd, Alignments.wrap, Spaces.gap[8]]}>

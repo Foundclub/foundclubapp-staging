@@ -67,16 +67,23 @@ export const useGetFacilities = (clubId, options = {}) => useQuery({
 
 /**
  * Hook to get local + shared facilities for a club context.
+ * COLL1B (29/09) : `includeCollectivite` ajoute les installations de la collectivite du
+ * club (onglet Installations d un MEMBRE) ; sans lui, rien ne change (annonce de recrutement).
  * @param {{ clubId?: string | null, cmId?: string | null }} context
  * @param options
  */
 export const useClubFacilityContext = (context = {}, options = {}) => {
   const { clubId = null, cmId = null } = context;
-  const { resolveCmId = true, ...queryOptions } = options;
+  const { includeCollectivite = false, resolveCmId = true, ...queryOptions } = options;
   return useQuery({
     enabled: Boolean(clubId || cmId),
-    queryFn: () => getClubFacilityContext(clubId, cmId, { resolveCmId }),
-    queryKey: ['club-facility-context', clubId || 'none', cmId || 'auto'],
+    queryFn: () => getClubFacilityContext(clubId, cmId, { includeCollectivite, resolveCmId }),
+    queryKey: [
+      'club-facility-context',
+      clubId || 'none',
+      cmId || 'auto',
+      includeCollectivite ? 'collectivite' : 'club',
+    ],
     staleTime: 1000 * 60 * 5,
     ...queryOptions,
   });
