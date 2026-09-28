@@ -18,7 +18,7 @@ const le = (/** @type {number} */ jour, /** @type {number} */ mois, heure = 18) 
 );
 
 describe('FINITIONS 3 — sous quel jour ranger le prochain événement', () => {
-  it('🥇 le cas de la recette : lundi 28/09, match mercredi 30/09 → « cette semaine », PAS « aujourd hui »', () => {
+  it('🥇 lundi 28/09, match mercredi 30/09 → « cette semaine », PAS « aujourd hui »', () => {
     expect(selectBannerDay(le(30, 9), LUNDI_28_09_9H)).toBe('thisWeek');
   });
 
@@ -33,7 +33,7 @@ describe('FINITIONS 3 — sous quel jour ranger le prochain événement', () => 
     expect(selectBannerDay(startsAt, LUNDI_28_09_9H)).toBe(attendu);
   });
 
-  it('la semaine est celle du calendrier : un samedi, le mardi suivant n est pas « cette semaine »', () => {
+  it('semaine du calendrier : un samedi, le mardi suivant n est pas « cette semaine »', () => {
     const samedi = new Date(2026, 9, 3, 10, 0);
     expect(selectBannerDay(le(6, 10), samedi)).toBe('later');
     expect(selectBannerDay(le(4, 10), samedi)).toBe('tomorrow');

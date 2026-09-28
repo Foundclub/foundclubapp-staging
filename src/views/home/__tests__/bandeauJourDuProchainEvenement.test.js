@@ -23,11 +23,11 @@ const brancheDirigeant = () => {
   if (memo === -1) throw new Error("HomeHub n'a plus de memo « headBanner »");
   const debut = SOURCE.indexOf('if (isPresident) {', memo);
   const fin = SOURCE.indexOf('if (isCoach) {', debut);
-  if (debut === -1 || fin === -1) throw new Error('La branche dirigeant du bandeau est introuvable');
+  if (debut === -1 || fin === -1) throw new Error('Branche dirigeant du bandeau introuvable');
   return SOURCE.slice(debut, fin);
 };
 
-describe('FINITIONS 3 — le bandeau du dirigeant se range sous le JOUR du prochain événement', () => {
+describe('FINITIONS 3 — le bandeau du dirigeant se range sous le JOUR de l événement', () => {
   it('🥇 l étiquette passe par la règle partagée, jamais par « Aujourd hui » en dur', () => {
     const branche = brancheDirigeant();
 

@@ -46,7 +46,11 @@ jest.mock('@/services/teamMembershipRequest/teamMembershipRequestService', () =>
 jest.mock('react-i18next', () => ({
   ...jest.requireActual('react-i18next'),
   useTranslation: () => ({
-    t: (/** @type {string} */ cle, /** @type {any} */ repliOuOptions, /** @type {any} */ options) => {
+    t: (
+      /** @type {string} */ cle,
+      /** @type {any} */ repliOuOptions,
+      /** @type {any} */ options,
+    ) => {
       const i18n = jest.requireActual('i18next');
       if (typeof repliOuOptions === 'string') {
         return i18n.t(cle, { defaultValue: repliOuOptions, ...(options || {}) });
@@ -546,7 +550,7 @@ const boutonNommé = (root, titre) => root.findAll(
 // 1b · LIBELLÉS COUPÉS SUR LA FICHE
 // ===========================================================================
 describe('FINITIONS 1b — les libellés de la fiche ne perdent plus leur dernier mot', () => {
-  test('« Voir la convocation et les réponses » et « Modifier » sont EMPILÉS, chacun sur toute la largeur', () => {
+  test('« Voir la convocation et les réponses » et « Modifier » sont EMPILÉS', () => {
     // 🧨 Côte à côte, chaque bouton n'a qu'une demi-largeur : le libellé long y était
     // réduit à une police minuscule, et perdait quand même « réponses ».
     const root = monter();
@@ -565,7 +569,7 @@ describe('FINITIONS 1b — les libellés de la fiche ne perdent plus leur dernie
     expect(StyleSheet.flatten(modifier.props.style)?.flex).toBeUndefined();
   });
 
-  test('« Voir tous mes matchs en attente » : le texte prend toute la largeur du lien, centré', () => {
+  test('« Voir tous mes matchs en attente » : le texte remplit le lien, centré', () => {
     const root = monter();
     const libelle = texteNommé(root, 'Voir tous mes matchs en attente');
 
@@ -575,7 +579,7 @@ describe('FINITIONS 1b — les libellés de la fiche ne perdent plus leur dernie
       .toEqual({ flexGrow: 1, textAlign: 'center' });
   });
 
-  test('les pastilles « Mes stats » et « Mon retour coach » n offrent aucun point de coupure', () => {
+  test('pastilles « Mes stats » et « Mon retour coach » : aucun point de coupure', () => {
     const root = monter({ attendance: HORLOGE_APRES_LE_MATCH, event: MATCH_FINI });
 
     const aFaire = texteNommé(root, 'À faire');

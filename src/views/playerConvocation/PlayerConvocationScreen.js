@@ -38,8 +38,8 @@ import { getCompositionPlayerInitials } from '@/utils/compositionPlayer';
 import { getAddressText } from '@/utils/facilityAddressLabel';
 import { getImageUrl } from '@/utils/imageUrl';
 import { getLocationCoordinates } from '@/utils/location';
-import texteInsecable from '@/utils/texteInsecable';
 import { getTacticalFieldAspectRatio } from '@/utils/tacticalField';
+import texteInsecable from '@/utils/texteInsecable';
 
 import {
   buildConvocationFieldTokens,

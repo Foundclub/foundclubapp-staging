@@ -40,15 +40,21 @@ const LIBELLE = 'Voir la convocation et les réponses';
 
 /**
  * Monte un bouton et rend son libellé et la boîte qui le porte.
- * @param {object} props - Les props ajoutées au bouton.
+ * @param {{ icon?: any, textStyle?: any }} options - L'icône et le style de libellé.
  * @returns {{ arbre: any, boite: any, libelle: any }} - L'arbre et les deux styles aplatis.
  */
-const monter = (props) => {
+const monter = (options) => {
   /** @type {any} */
   let arbre;
   act(() => {
     arbre = renderer.create(
-      <Button onPress={() => {}} title={LIBELLE} variant="Secondary" {...props} />,
+      <Button
+        icon={options.icon}
+        onPress={() => {}}
+        textStyle={options.textStyle}
+        title={LIBELLE}
+        variant="Secondary"
+      />,
     );
   });
   const libelle = arbre.root.findAllByType(Text)
@@ -79,7 +85,7 @@ describe('FINITIONS — le libellé du bouton partagé n est plus rétréci à s
     act(() => arbre.unmount());
   });
 
-  it('avec icône : texte et icône restent groupés au centre (le texte ne pousse pas l icône au bord)', () => {
+  it('avec icône : texte et icône restent groupés au centre', () => {
     const { arbre, boite, libelle } = monter({ icon: 'check' });
 
     expect(boite.justifyContent).toBe('center');

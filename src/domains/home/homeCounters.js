@@ -137,10 +137,13 @@ export const formatBannerTitle = (startsAt) => {
 const UN_JOUR_MS = 24 * 60 * 60 * 1000;
 
 /**
- * @param {Date} date
- * @returns {number} Minuit (heure locale) du jour de `date`.
+ * Minuit, en heure locale, du jour d'une date.
+ * @param {Date} date - La date.
+ * @returns {number} - L'horodatage de ce minuit.
  */
-const debutDuJour = (date) => new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
+const debutDuJour = (date) => (
+  new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime()
+);
 
 /**
  * 📅 FINITIONS (recette émulateur du 2026-09-28) — SOUS QUEL JOUR RANGER UN ÉVÉNEMENT.
@@ -182,8 +185,9 @@ export const formatBannerShortTime = (startsAt, now) => {
   if (!date) return '';
   const jour = WEEKDAYS_SHORT_FR[date.getDay()];
   if (!now || selectBannerDay(date, now) !== 'later') return `${jour} ${hhmm(date)}`;
-  const jjmm = `${String(date.getDate()).padStart(2, '0')}/${String(date.getMonth() + 1).padStart(2, '0')}`;
-  return `${jour} ${jjmm} ${hhmm(date)}`;
+  const jj = String(date.getDate()).padStart(2, '0');
+  const mm = String(date.getMonth() + 1).padStart(2, '0');
+  return `${jour} ${jj}/${mm} ${hhmm(date)}`;
 };
 
 // Correspondance carte → compteur, telle que le pack la donne (tache 4).
