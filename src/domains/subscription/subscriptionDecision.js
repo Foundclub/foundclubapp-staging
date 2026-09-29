@@ -1228,6 +1228,25 @@ export const hasActiveClubOffer = (subscriptionAccessLevel) => (
 );
 
 /**
+ * LA garde de la composition : l'offre du club NOMME (celui de l'evenement) ouvre-t-elle
+ * la convocation ? Matrice du serveur : `composition.manage: ['TEAM', 'CLUB']`
+ * (admin/src/api/subscription/services/subscription-permission.ts).
+ *
+ * FINITIONS3 (29/09) — sortie telle quelle d'EventDetails (mur d'avance d'une premiere
+ * compo, ABOPARCLUB) pour que la selection des convoques, ou menent TOUTES les portes
+ * « Modifier », la reutilise au lieu d'en ecrire une seconde.
+ * @param {{ getSubscriptionAccessLevelForClub?: (clubId: string) => any,
+ *   subscriptionAccessLevel?: any }} auth - Ce que rend `useAuth()`.
+ * @param {string | null | undefined} clubId - Le club de l'evenement ; vide = club affiche.
+ * @returns {boolean} Vrai si l'offre ouvre la composition.
+ */
+export const canManageCompositionForClub = (auth, clubId) => {
+  const niveau = auth?.getSubscriptionAccessLevelForClub?.(String(clubId || ''))
+    || auth?.subscriptionAccessLevel;
+  return niveau === 'TEAM' || hasActiveClubOffer(niveau);
+};
+
+/**
  * @param {'FREE' | 'TEAM' | 'CLUB_UNVERIFIED' | 'CLUB'} [subscriptionAccessLevel]
  * @returns {{ description: string; label: string }}
  */

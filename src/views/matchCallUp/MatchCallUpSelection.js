@@ -20,6 +20,8 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import useAuth from '@/domains/auth/useAuth';
+import { canManageCompositionForClub } from '@/domains/subscription/subscriptionDecision';
 import { withAlpha } from '@/theme/colors';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
@@ -121,7 +123,10 @@ const normalizePlayer = (/** @type {any} */ player, /** @type {any} */ extra = {
 };
 
 function MatchCallUpSelection() {
-  const { Colors, Fonts } = useTheme();
+  const {
+    ApplicationStyle, Colors, Fonts, Spaces,
+  } = useTheme();
+  const auth = useAuth();
   const { t } = useTranslation();
   const navigation = useNavigation();
   const route = useRoute();
@@ -163,6 +168,26 @@ function MatchCallUpSelection() {
   });
 
   const clubId = clubIdParam || eventFromApi?.team?.club?.documentId || '';
+
+  // ✂️ FINITIONS3 (29/09, recette tournee 5) — LE MUR D'AVANCE, A L'ENTREE.
+  // Toutes les portes « Modifier » menent ici (fiche du match, plateau, ecran des
+  // reponses, menu « Convocation », site). Sans offre pour le club du match, le coach
+  // refaisait toute sa compo et le serveur la refusait en 403 a l'enregistrement.
+  // ♻️ La garde est celle d'EventDetails (`canManageCompositionForClub`), le mur est le
+  // sien (memes phrases, meme destination) ; le refus du serveur ne change pas.
+  // ⛔ Niveau pas encore connu : on se tait (meme garde-fou que le bandeau de la fiche).
+  const isCompositionOutOfOffer = Boolean(auth?.subscriptionAccessLevel)
+    && !canManageCompositionForClub(auth, clubId);
+  const openSubscriptionOffers = useCallback(() => {
+    // @ts-ignore — meme navigation que `openSubscriptionOverview` (EventDetails.js).
+    navigation.navigate(RouteNames.ProfileStack, {
+      params: {
+        resumeRouteName: RouteNames.EventStack,
+        resumeRouteParams: { params: { eventId }, screen: RouteNames.EventDetails },
+      },
+      screen: RouteNames.SubscriptionOffers,
+    });
+  }, [eventId, navigation]);
 
   // Les renforts : les AUTRES equipes du club, avec leurs joueurs. C'est la
   // seule requete neuve de l'ecran, et elle ne part que si le club est connu.
@@ -651,6 +676,51 @@ function MatchCallUpSelection() {
   ];
 
   const visibleSquad = filterBySearch(squadPlayers);
+
+  if (isCompositionOutOfOffer) {
+    return (
+      <ScreenContainer bgImage="bg2" bottomInsetMode="edge-to-edge" style={[styles.screen]}>
+        <View style={styles.header}>
+          <HeaderBackButton onPress={() => navigation.goBack()} />
+          <View style={styles.headerTexts}>
+            <Text style={[Fonts.h4Bold, { color: Colors.neutral00 }]}>
+              {t('matchCallUp.selection.title')}
+            </Text>
+            <Text numberOfLines={1} style={[Fonts.p3, { color: Colors.neutral300 }]}>
+              {subtitle}
+            </Text>
+          </View>
+        </View>
+        <View style={[Spaces.paddingHorizontal[16]]}>
+          <View
+            style={[
+              ApplicationStyle.borderRadius16,
+              ApplicationStyle.borderWidth1,
+              Spaces.padding[12],
+              Spaces.gap[4],
+              {
+                backgroundColor: withAlpha(Colors.primary500, 0.08),
+                borderColor: withAlpha(Colors.primary500, 0.24),
+              },
+            ]}
+            testID="match-callup-offer-wall"
+          >
+            <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
+              {t(
+                'eventDetails.compoReminder.offerTitle',
+                'La convocation est incluse dans l’offre Équipe',
+              )}
+            </Text>
+            <Button
+              onPress={openSubscriptionOffers}
+              title={t('eventDetails.compoReminder.offerAction', 'Voir l’offre Équipe')}
+              variant="Primary"
+            />
+          </View>
+        </View>
+      </ScreenContainer>
+    );
+  }
 
   return (
     <ScreenContainer bgImage="bg2" bottomInsetMode="edge-to-edge" style={[styles.screen]}>
