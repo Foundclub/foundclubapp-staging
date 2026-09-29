@@ -48,6 +48,9 @@ import {
   isValidFacilityPlanningColor,
   resolveFacilityPlanningColor,
 } from '@/utils/facilityPlanningColor';
+// COLL1D (D28) : la liste des types (5 d'avant + 8 des mairies) vit dans utils : les
+// cartes des installations y lisent aussi le libelle.
+import { FACILITY_TYPES } from '@/utils/facilityTypes';
 
 // COLL1C : un horaire d ouverture tel qu un agent le tape (« 08:00 »).
 const HEURE = /^([01]\d|2[0-3]):[0-5]\d$/;
@@ -98,40 +101,6 @@ const buildSchema = () => Joi.object({
     'string.empty': i18next.t('facilityForm.validation.typeRequired', 'Le type est requis'),
   }),
 });
-
-// I18N-4 : la VALEUR reste le contrat serveur ; seul le libelle suit la langue (accesseur).
-const FACILITY_TYPES = [
-  {
-    get label() {
-      return i18next.t('facilityForm.types.pitch', 'Terrain');
-    },
-    value: 'Terrain',
-  },
-  {
-    get label() {
-      return i18next.t('facilityForm.types.gym', 'Gymnase');
-    },
-    value: 'Gymnase',
-  },
-  {
-    get label() {
-      return i18next.t('facilityForm.types.videoRoom', 'Salle vidéo');
-    },
-    value: 'Salle vidéo',
-  },
-  {
-    get label() {
-      return i18next.t('facilityForm.types.changingRoom', 'Vestiaire');
-    },
-    value: 'Vestiaire',
-  },
-  {
-    get label() {
-      return i18next.t('facilityForm.types.clubHouse', 'Club House');
-    },
-    value: 'Club House',
-  },
-];
 
 const getAddressCoordinates = (address) => {
   if (!address || typeof address !== 'object') return null;
