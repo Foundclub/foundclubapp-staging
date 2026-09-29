@@ -809,6 +809,7 @@ function EventDetails({ navigation, route }) {
     canEditEvent,
     canManageEvent,
     freeUsageSummary,
+    getSubscriptionAccessLevelForClub,
     subscriptionAccessLevel,
     userData,
   } = useAuth();
@@ -4263,8 +4264,16 @@ function EventDetails({ navigation, route }) {
   // produit du 2026-07-17, un entitlement Club actif ouvre l'acces meme sans
   // club verifie. Recopier la condition a la main ici reviendrait a revendre
   // l'offre Club a quelqu'un qui l'a deja payee.
-  const canManageComposition = subscriptionAccessLevel === 'TEAM'
-    || hasActiveClubOffer(subscriptionAccessLevel);
+  //
+  // ABOPARCLUB (2026-09-29) — le niveau qui compte est celui du club de
+  // l'EVENEMENT : un match de FoundClub Demo ouvert depuis AIKI reste couvert
+  // par l'offre de Demo (le serveur l'accepte), et un match d'AIKI montre le mur
+  // d'avance (le serveur le refusait en 403 apres coup : recette du 28/09).
+  // Repli sur le club affiche pour les doublures de `useAuth` d'avant ce lot.
+  const compositionAccessLevel = getSubscriptionAccessLevelForClub?.(eventClubId)
+    || subscriptionAccessLevel;
+  const canManageComposition = compositionAccessLevel === 'TEAM'
+    || hasActiveClubOffer(compositionAccessLevel);
 
   // 🚪 Le rappel ne parait QUE la ou il y a quelque chose a preparer, et il se
   // tait partout ailleurs :

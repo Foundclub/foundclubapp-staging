@@ -3,7 +3,7 @@ import i18next from 'i18next';
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  Alert, ScrollView, Text, TouchableOpacity, View,
+  Alert, Linking, Platform, ScrollView, Text, TouchableOpacity, View,
 } from 'react-native';
 
 import useAuth from '@/domains/auth/useAuth';
@@ -17,14 +17,20 @@ import {
   formatSubscriptionYearlyDiscountLabel,
   getBlockingClubCoveragePlanCode,
   getInitialTeamSelection,
+  getPayerSubscriptionsWithClubs,
+  getStoreProviderForPurchase,
+  getStoreSubscriptionConflict,
+  getStoreSubscriptionConflictNotice,
   getSubscriptionBillingErrorMessage,
   isPerLicenseeSubscriptionEntry,
   readSubscriptionRenewalAnnouncement,
 } from '@/domains/subscription/subscriptionBilling';
 import { getSubscriptionTeamSlotSummary } from '@/domains/subscription/subscriptionDecision';
 import {
+  getActiveSubscriptionPurchaseRail,
   isSubscriptionPurchaseAvailable,
   performSubscriptionPurchase,
+  SUBSCRIPTION_PURCHASE_RAILS,
 } from '@/domains/subscription/subscriptionPurchaseRail';
 import { scheduleSubscriptionStateRefresh } from '@/domains/subscription/subscriptionRefresh';
 import { useSubscriptionCatalog } from '@/domains/subscription/useSubscriptionCatalog';
@@ -223,12 +229,15 @@ function GuideOffersRecap({ navigation }) {
   } = useAuth();
   // UPGRADE / U5 — l'offre Club qu'un AUTRE membre paie deja, ou ''. Le serveur
   // ne prend plus que les offres SUPERIEURES a celle-la (`CLUB_ALREADY_COVERED`).
+  const currentClubDocumentId = String(userData?.club?.documentId || '').trim();
+  // ABOPARCLUB : une couverture d'un AUTRE club ne grise rien ici.
   const blockingClubPlanCode = useMemo(
     () => getBlockingClubCoveragePlanCode({
+      clubDocumentId: currentClubDocumentId,
       entitlementsSummary,
       userDocumentId: userData?.documentId,
     }),
-    [entitlementsSummary, userData?.documentId],
+    [currentClubDocumentId, entitlementsSummary, userData?.documentId],
   );
 
   const [selectedOffer, setSelectedOffer] = useState('team');
@@ -296,7 +305,6 @@ function GuideOffersRecap({ navigation }) {
     [clubTier, clubTierEntries, selectableClubTierEntries],
   );
 
-  const currentClubDocumentId = String(userData?.club?.documentId || '').trim();
   const isCatalogLoading = catalogQuery.isLoading;
   const isCatalogError = catalogQuery.isError
     || (!catalogQuery.isLoading && teamTierEntries.length === 0);
@@ -358,6 +366,41 @@ function GuideOffersRecap({ navigation }) {
           "Rattache d'abord ton compte à un club avant de prendre une offre Club.",
         ),
       );
+      return;
+    }
+
+    // ABOPARCLUB (2026-09-29) — LE MAGASIN INTERDIT-IL CET ACHAT ? Sur iPhone,
+    // un seul abonnement par compte Apple dans le groupe FoundClub : acheter ici
+    // REMPLACERAIT l'abonnement Apple qui couvre un autre club. Sur Google, la
+    // meme offre ne s'achete pas deux fois. On le dit, avec la marche a suivre,
+    // et on n'achete rien (decision d'Adel « abo2 A » : on ne contourne pas).
+    const storeConflict = getStoreSubscriptionConflict({
+      catalogEntry: selectedEntry,
+      clubDocumentId: currentClubDocumentId,
+      payerSubscriptions: getPayerSubscriptionsWithClubs({
+        entitlementsSummary,
+        subscriptionSummary,
+        userDocumentId: userData?.documentId,
+      }),
+      storeProvider: getStoreProviderForPurchase({
+        isStoreRail: getActiveSubscriptionPurchaseRail() === SUBSCRIPTION_PURCHASE_RAILS.REVENUECAT,
+        platformOS: Platform.OS,
+      }),
+    });
+    if (storeConflict) {
+      const notice = getStoreSubscriptionConflictNotice({
+        clubDocumentId: currentClubDocumentId,
+        conflict: storeConflict,
+        entitlementsSummary,
+        userData,
+      });
+      Alert.alert(notice.title, notice.message, [
+        { style: 'cancel', text: notice.closeLabel },
+        {
+          onPress: () => { Promise.resolve(Linking.openURL(notice.mailto)).catch(() => {}); },
+          text: notice.contactLabel,
+        },
+      ]);
       return;
     }
 

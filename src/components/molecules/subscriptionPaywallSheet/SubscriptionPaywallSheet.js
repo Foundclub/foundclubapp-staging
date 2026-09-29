@@ -3,7 +3,7 @@ import i18next from 'i18next';
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  Alert, Text, TouchableOpacity, View,
+  Alert, Linking, Platform, Text, TouchableOpacity, View,
 } from 'react-native';
 
 import { getUserRoleKey } from '@/domains/auth/authUseCases';
@@ -21,6 +21,10 @@ import {
   formatSubscriptionYearlyDiscountLabel,
   getBlockingClubCoveragePlanCode,
   getInitialTeamSelection,
+  getPayerSubscriptionsWithClubs,
+  getStoreProviderForPurchase,
+  getStoreSubscriptionConflict,
+  getStoreSubscriptionConflictNotice,
   getSubscriptionBillingErrorMessage,
   getSubscriptionCatalogEntryMeta,
   getSubscriptionEntryUnitPriceEurCents,
@@ -44,8 +48,10 @@ import {
   mapSubscriptionDecisionToPaywall,
 } from '@/domains/subscription/subscriptionDecision';
 import {
+  getActiveSubscriptionPurchaseRail,
   isSubscriptionPurchaseAvailable,
   performSubscriptionPurchase,
+  SUBSCRIPTION_PURCHASE_RAILS,
 } from '@/domains/subscription/subscriptionPurchaseRail';
 import { scheduleSubscriptionStateRefresh } from '@/domains/subscription/subscriptionRefresh';
 import { useSubscriptionCatalog } from '@/domains/subscription/useSubscriptionCatalog';
@@ -241,13 +247,21 @@ function SubscriptionPaywallSheet({
   });
   const catalogEntries = catalogQuery.entries;
   const [billingPeriod, setBillingPeriod] = useState('yearly');
-  // UPGRADE / U5 — l'offre Club qu'un AUTRE membre paie deja, ou ''.
+  // Une offre Club couvre un club : le club du contexte de l'action d'abord (les
+  // installations qu'on voulait gerer), a defaut celui du compte. Le serveur refuse
+  // l'achat sans lui (subscription-billing.ts:427).
+  const purchaseClubDocumentId = String(
+    clubDocumentId || userData?.club?.documentId || '',
+  ).trim();
+  // UPGRADE / U5 — l'offre Club qu'un AUTRE membre paie deja pour CE club, ou ''.
+  // ABOPARCLUB : une couverture d'un autre club ne grise rien ici.
   const blockingClubPlanCode = useMemo(
     () => getBlockingClubCoveragePlanCode({
+      clubDocumentId: purchaseClubDocumentId,
       entitlementsSummary,
       userDocumentId: userData?.documentId,
     }),
-    [entitlementsSummary, userData?.documentId],
+    [entitlementsSummary, purchaseClubDocumentId, userData?.documentId],
   );
   // UPGRADE / U6 — ce qui arrive au cadeau si on achete maintenant, ou ''.
   const trialHandoverNotice = formatSubscriptionTrialHandoverNotice(subscriptionSummary);
@@ -400,13 +414,6 @@ function SubscriptionPaywallSheet({
     navigation.navigate(RouteNames.GuideOffersRecap);
   };
 
-  // Une offre Club couvre un club : le club du contexte de l'action d'abord (les
-  // installations qu'on voulait gerer), a defaut celui du compte. Le serveur refuse
-  // l'achat sans lui (subscription-billing.ts:427).
-  const purchaseClubDocumentId = String(
-    clubDocumentId || userData?.club?.documentId || '',
-  ).trim();
-
   const handleDismissLater = () => {
     trackSubscriptionFunnelEvent('paywall_dismissed', {
       abBucket: funnelAbBucket,
@@ -554,6 +561,41 @@ function SubscriptionPaywallSheet({
           "Rattache d'abord ton compte à un club avant de prendre une offre Club.",
         ),
       );
+      return;
+    }
+
+    // ABOPARCLUB (2026-09-29) — LE MAGASIN INTERDIT-IL CET ACHAT ? Sur iPhone,
+    // un seul abonnement par compte Apple dans le groupe FoundClub : acheter ici
+    // REMPLACERAIT l'abonnement Apple qui couvre un autre club. Sur Google, la
+    // meme offre ne s'achete pas deux fois. On le dit, avec la marche a suivre,
+    // et on n'achete rien (decision d'Adel « abo2 A » : on ne contourne pas).
+    const storeConflict = getStoreSubscriptionConflict({
+      catalogEntry: selectedEntry,
+      clubDocumentId: purchaseClubDocumentId,
+      payerSubscriptions: getPayerSubscriptionsWithClubs({
+        entitlementsSummary,
+        subscriptionSummary,
+        userDocumentId: userData?.documentId,
+      }),
+      storeProvider: getStoreProviderForPurchase({
+        isStoreRail: getActiveSubscriptionPurchaseRail() === SUBSCRIPTION_PURCHASE_RAILS.REVENUECAT,
+        platformOS: Platform.OS,
+      }),
+    });
+    if (storeConflict) {
+      const notice = getStoreSubscriptionConflictNotice({
+        clubDocumentId: purchaseClubDocumentId,
+        conflict: storeConflict,
+        entitlementsSummary,
+        userData,
+      });
+      Alert.alert(notice.title, notice.message, [
+        { style: 'cancel', text: notice.closeLabel },
+        {
+          onPress: () => { Promise.resolve(Linking.openURL(notice.mailto)).catch(() => {}); },
+          text: notice.contactLabel,
+        },
+      ]);
       return;
     }
 

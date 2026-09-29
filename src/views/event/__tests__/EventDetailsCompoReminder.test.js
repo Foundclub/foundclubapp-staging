@@ -1090,3 +1090,35 @@ describe('S5 — la liste des convoques du BROUILLON, avant toute publication', 
     expect(dernier.enabled).toBe(false);
   });
 });
+
+// ABOPARCLUB (2026-09-29) — le niveau qui ouvre la COMPO est celui du club de
+// l'EVENEMENT (`getSubscriptionAccessLevelForClub`), pas celui du club affiche.
+// Decor : le club de ce match (`CLUB_ID`) est couvert par une offre Club ;
+// l'autre club du dirigeant ne l'est pas.
+describe('ABOPARCLUB — la compo se juge au club de l evenement', () => {
+  const niveauParClub = (/** @type {string} */ clubId) => (clubId === CLUB_ID ? 'CLUB_UNVERIFIED' : 'FREE');
+
+  test('match du club couvert, ouvert depuis un club qui ne l est pas : la compo s ouvre (rien a revendre)', () => {
+    const root = mountScreen({
+      auth: asOrganiser({
+        getSubscriptionAccessLevelForClub: niveauParClub,
+        subscriptionAccessLevel: 'FREE',
+      }),
+    });
+
+    expect(hasText(root, TITRE_RAPPEL)).toBe(true);
+    expect(hasText(root, TITRE_OFFRE)).toBe(false);
+  });
+
+  test('match d un club NON couvert, ouvert depuis le club couvert : le mur s affiche d avance', () => {
+    const root = mountScreen({
+      auth: asOrganiser({
+        getSubscriptionAccessLevelForClub: () => 'FREE',
+        subscriptionAccessLevel: 'CLUB_UNVERIFIED',
+      }),
+    });
+
+    expect(hasText(root, TITRE_OFFRE)).toBe(true);
+    expect(hasText(root, TITRE_RAPPEL)).toBe(false);
+  });
+});

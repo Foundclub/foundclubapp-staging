@@ -14528,6 +14528,7 @@ export default {
       generic: 'Unable to update your subscription right now.',
       missingTransactionId: "The store didn't send us your transaction number. Your payment is recorded on its side: your access will open automatically, and “Restore my purchases” unlocks it right away.",
       storeSourceUnknown: "The store doesn't recognise this subscription on your account. Check that you're signed in to the same App Store or Google Play account as when you purchased, then try again.",
+      subscriptionChangeOtherClub: "This subscription covers another club: it can't be changed from this club. To cover this club, take its own plan, or write to us at {{email}}.",
       subscriptionSourceNotFound: "We couldn't find the subscription to change on this account. Your purchase is recorded by the store: open “My subscription” then “Restore my purchases”.",
       teamAlreadyCovered: 'This team is already covered by another active plan. Choose a team that is not covered or free up its current place.',
       teamCoveredByClubPlan: "This team is already covered by its club's Club plan: you already have these rights, no need to pay for a Team plan for it.",
@@ -14944,6 +14945,15 @@ export default {
       available: 'Payment secured by the store. Immediate change, proration handled automatically.',
       testMode: 'Test mode active: plan changes are simulated for acceptance testing.',
       unavailable: "In-app payment isn't available yet on this version. This section stays read-only for now.",
+    },
+    storeConflict: {
+      appleMessage: "Your Apple account already has a FoundClub subscription, for {{coveredClubs}}. Apple only allows one at a time: a new purchase would replace it. To cover {{clubName}} as well, write to us at {{email}} and we'll take care of it.",
+      contactUs: 'Write to us',
+      googleMessage: "Your Google Play account already has this plan, for {{coveredClubs}}. Google doesn't allow the same one twice: choose another plan for {{clubName}}, or write to us at {{email}}.",
+      mailSubject: 'Subscription for another club',
+      otherClub: 'another club',
+      thisClub: 'this club',
+      title: 'Cover {{clubName}}',
     },
     success: {
       letsGo: "Let's go!",

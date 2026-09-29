@@ -52,8 +52,11 @@ jest.mock('@/services/subscription/subscriptionService', () => ({
 }));
 
 jest.mock('@/domains/subscription/subscriptionPurchaseRail', () => ({
+  // ABOPARCLUB : le recapitulatif demande quel rail est actif (rail de test ici).
+  getActiveSubscriptionPurchaseRail: () => 'trusted-test',
   isSubscriptionPurchaseAvailable: (/** @type {any} */ ...args) => mockIsPurchaseAvailable(...args),
   performSubscriptionPurchase: (/** @type {any} */ ...args) => mockPerformPurchase(...args),
+  SUBSCRIPTION_PURCHASE_RAILS: { REVENUECAT: 'revenuecat', TRUSTED_TEST: 'trusted-test' },
 }));
 
 jest.mock('@/domains/subscription/subscriptionRefresh', () => ({

@@ -131,6 +131,7 @@ function TeamDetails({ navigation, route }) {
     entitlementsSummary,
     getNextOnboardingRoute,
     getPostOnboardingHomeRoute,
+    getSubscriptionAccessLevelForClub,
     inviteTeamPlayers,
     refetchUserData,
     subscriptionAccessLevel,
@@ -1901,7 +1902,12 @@ function TeamDetails({ navigation, route }) {
       && (entry?.scopeTeamDocumentId === team?.documentId
         || (String(entry?.scopeType || '').toUpperCase() === 'CLUB'
           && entry?.scopeClubDocumentId === team?.club?.documentId)));
-  const isClubOfferUnlocked = hasActiveClubOffer(subscriptionAccessLevel);
+  // ABOPARCLUB (2026-09-29) — l'offre Club se juge au club de CETTE equipe,
+  // comme `isTeamOfferUnlocked` juste au-dessus. Repli sur le club affiche pour
+  // les doublures de `useAuth` d'avant ce lot.
+  const isClubOfferUnlocked = hasActiveClubOffer(
+    getSubscriptionAccessLevelForClub?.(team?.club?.documentId) || subscriptionAccessLevel,
+  );
   const openTeamOfferUnlockSheet = () => setSubscriptionPaywallDecision(/** @type {any} */ ({
     allowed: false,
     paywall: 'TEAM_OFFER_UNLOCK',

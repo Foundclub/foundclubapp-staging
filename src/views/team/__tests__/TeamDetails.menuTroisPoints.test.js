@@ -215,7 +215,9 @@ jest.mock('@/domains/messaging/useMessaging', () => ({
 
 jest.mock('@/domains/subscription/subscriptionDecision', () => ({
   extractSubscriptionDecisionFromError: () => null,
-  hasActiveClubOffer: () => false,
+  // ABOPARCLUB : le VRAI juge. Les decors d'avant portent un niveau 'none' : il
+  // rend faux, comme la doublure qu'il remplace ; les temoins du lot, eux, en ont besoin.
+  hasActiveClubOffer: jest.requireActual('@/domains/subscription/subscriptionDecision').hasActiveClubOffer,
 }));
 
 jest.mock('@/domains/team/teamMembership', () => ({
@@ -661,5 +663,39 @@ describe("AC01 — les actions d'équipe passent en trois points, en haut à dro
 
     expect(textes[0]).toBe(LIBELLE_ENTETE_MENU);
     expect(textes).toContain("Quitter l'équipe");
+  });
+});
+
+// ABOPARCLUB (2026-09-29) — l'offre Club se juge au club de CETTE equipe
+// (`getSubscriptionAccessLevelForClub`), pas au club affiche. Decor : le club de
+// l'equipe (`club-1`) est couvert par une offre Club, le club affiche ne l'est pas.
+describe('ABOPARCLUB — les verrous violets suivent le club de l equipe', () => {
+  const LIBELLE_VOIR_L_OFFRE_CLUB = "Voir l'offre →";
+
+  test('equipe d un club couvert, vue depuis un club qui ne l est pas : aucun verrou Club', () => {
+    mockAuthCourant = {
+      ...AUTH_DIRIGEANT,
+      getSubscriptionAccessLevelForClub: (/** @type {string} */ clubId) => (
+        clubId === CLUB.documentId ? 'CLUB_UNVERIFIED' : 'FREE'
+      ),
+      subscriptionAccessLevel: 'FREE',
+    };
+    const racine = monterLaFiche();
+    ouvrirLeMenu(racine);
+
+    expect(estDansLaFeuille(racine, "Avec l'offre Club")).toBe(true);
+    expect(estDansLaFeuille(racine, LIBELLE_VOIR_L_OFFRE_CLUB)).toBe(false);
+  });
+
+  test('equipe d un club NON couvert, vue depuis le club couvert : le verrou Club est la', () => {
+    mockAuthCourant = {
+      ...AUTH_DIRIGEANT,
+      getSubscriptionAccessLevelForClub: () => 'FREE',
+      subscriptionAccessLevel: 'CLUB_UNVERIFIED',
+    };
+    const racine = monterLaFiche();
+    ouvrirLeMenu(racine);
+
+    expect(estDansLaFeuille(racine, LIBELLE_VOIR_L_OFFRE_CLUB)).toBe(true);
   });
 });

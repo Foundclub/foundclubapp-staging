@@ -207,12 +207,20 @@ function SubscriptionOverview({ navigation, route }) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const {
+    accountSubscriptionAccessLevel,
     clubVerificationSummary,
     entitlementsSummary,
-    subscriptionAccessLevel,
+    subscriptionAccessLevel: activeClubSubscriptionAccessLevel,
     subscriptionSummary,
     userData,
   } = useAuth();
+  // ABOPARCLUB (2026-09-29) — CET ECRAN DECRIT CE QUE LE COMPTE PAIE. Depuis la
+  // decision « niveau oui », `subscriptionAccessLevel` est le niveau du club
+  // AFFICHE : dans AIKI il vaut « gratuit », et le « Club 100 » paye pour
+  // FoundClub Demo aurait disparu de l'ecran qui le gere (piege a du lot). Le
+  // niveau du COMPTE garde ici tout ce qu'il affichait ; ABOCLUB/ABOCLUB2 disent
+  // deja quel club l'offre couvre, et que le club affiche ne l'est pas.
+  const subscriptionAccessLevel = accountSubscriptionAccessLevel || activeClubSubscriptionAccessLevel;
 
   const roleKey = getUserRoleKey(userData?.role?.type || userData?.role?.name);
   const canShowSubscriptionExperience = roleKey === 'coach'

@@ -229,3 +229,38 @@ describe('ABOCLUB — carte « Mon abonnement » du Profil', () => {
     expect(texte).not.toContain('pas ton club');
   });
 });
+
+// ABOPARCLUB (2026-09-29) — PIEGE A, cote Profil. Le vrai `useAuth` rend
+// desormais DEUX niveaux : GRATUIT pour le club affiche (AIKI), « Club » pour
+// ce que le compte paie. La carte doit montrer les deux : les compteurs gratuits
+// d'AIKI, ET la phrase qui dit ou s'applique l'offre payee.
+describe('ABOPARCLUB — carte « Mon abonnement » quand le club affiche est gratuit', () => {
+  it('garde la puce Club et la phrase « couvre Demo, pas AIKI », et montre les compteurs d AIKI', async () => {
+    mockAuthValue = {
+      ...contexteAuth({ couvreLeClubActif: false }),
+      accountSubscriptionAccessLevel: 'CLUB_UNVERIFIED',
+      freeUsageSummary: [{
+        limit: 1, quotaType: 'EVENT_PUBLISH', remaining: 1, used: 0,
+      }],
+      subscriptionAccessLevel: 'FREE',
+    };
+    /** @type {any} */
+    let arbre;
+    await act(async () => {
+      arbre = renderer.create(
+        <Profile navigation={{ navigate: jest.fn(), setParams: jest.fn() }} route={{ params: {} }} />,
+      );
+    });
+    const texte = arbre.root
+      .findAllByType(Text)
+      .map((/** @type {any} */ noeud) => aplatirTexte(noeud.props.children))
+      .join(' | ');
+    act(() => {
+      arbre.unmount();
+    });
+
+    expect(texte).toContain('Club · actif');
+    expect(texte).toContain(`Ton offre Club couvre ${NOM_DEMO}, pas ton club ${NOM_AIKI}.`);
+    expect(texte).toContain('Événements');
+  });
+});

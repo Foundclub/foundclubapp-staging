@@ -15254,6 +15254,8 @@ export default {
       // eslint-disable-next-line max-len
       storeSourceUnknown: 'Le store ne reconnaît pas cet abonnement sur ton compte. Vérifie que tu es connecté au même compte App Store ou Google Play qu au moment de l achat, puis réessaie.',
       // eslint-disable-next-line max-len
+      subscriptionChangeOtherClub: 'Cet abonnement couvre un autre club : il ne se modifie pas depuis ce club-ci. Pour couvrir ce club, prends-lui sa propre offre, ou écris-nous à {{email}}.',
+      // eslint-disable-next-line max-len
       subscriptionSourceNotFound: 'Nous n avons pas retrouvé l abonnement à changer sur ce compte. Ton achat est bien enregistré par le store : ouvre « Mon abonnement » puis « Restaurer mes achats ».',
       // eslint-disable-next-line max-len
       teamAlreadyCovered: 'Cette équipe est déjà couverte par une autre offre active. Choisis une équipe non couverte ou libere sa place actuelle.',
@@ -15690,6 +15692,17 @@ export default {
       testMode: "Mode test actif : les changements d'offre sont simulés pour la recette.",
       // eslint-disable-next-line max-len
       unavailable: "Le paiement in-app n'est pas encore disponible sur cette version. Cette section reste en lecture pour le moment.",
+    },
+    storeConflict: {
+      // eslint-disable-next-line max-len
+      appleMessage: "Ton compte Apple a déjà un abonnement FoundClub, pour {{coveredClubs}}. Apple n'en autorise qu'un à la fois : un nouvel achat le remplacerait. Pour couvrir aussi {{clubName}}, écris-nous à {{email}}, on s'en occupe.",
+      contactUs: 'Nous écrire',
+      // eslint-disable-next-line max-len
+      googleMessage: "Ton compte Google Play a déjà cette offre, pour {{coveredClubs}}. Google n'autorise pas deux fois la même : choisis une autre offre pour {{clubName}}, ou écris-nous à {{email}}.",
+      mailSubject: 'Abonnement pour un autre club',
+      otherClub: 'un autre club',
+      thisClub: 'ce club',
+      title: 'Couvrir {{clubName}}',
     },
     success: {
       letsGo: "C'est parti !",

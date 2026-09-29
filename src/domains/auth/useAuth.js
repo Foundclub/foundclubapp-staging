@@ -48,7 +48,10 @@ import {
   usePlayerModeRequest,
   writePlayerModeRequest,
 } from '@/domains/auth/playerMode';
-import { getSubscriptionAccessLevel } from '@/domains/subscription/subscriptionDecision';
+import {
+  getAccountSubscriptionAccessLevel,
+  getSubscriptionAccessLevel,
+} from '@/domains/subscription/subscriptionDecision';
 import {
   canUserEditClub,
   formatBirthdateToDisplay,
@@ -726,6 +729,9 @@ const useAuth = () => {
     userData?.club?.clubVerified,
   ]);
 
+  // ABOPARCLUB (2026-09-29, decision d'Adel « niveau oui ») — le niveau d'acces
+  // est celui du club AFFICHE, plus celui du compte. Le calcul vit dans
+  // `getSubscriptionAccessLevel` ; ses ~16 lecteurs suivent sans reecriture.
   const subscriptionAccessLevel = useMemo(() => getSubscriptionAccessLevel({
     clubVerificationSummary,
     entitlementsSummary,
@@ -737,6 +743,37 @@ const useAuth = () => {
     subscriptionSummary,
     userData?.club,
   ]);
+
+  // Ce que le compte PAIE (ou ce qu'on paie pour lui), quel que soit le club
+  // affiche : seuls « Mon abonnement » et la carte du Profil le lisent, pour ne
+  // jamais faire disparaitre une offre payee pour un autre club.
+  const accountSubscriptionAccessLevel = useMemo(() => getAccountSubscriptionAccessLevel({
+    entitlementsSummary,
+    subscriptionSummary,
+  }), [entitlementsSummary, subscriptionSummary]);
+
+  // Le niveau d'un club NOMME — celui d'un evenement ou d'une equipe qu'on
+  // regarde depuis un autre club. Club vide = le club affiche.
+  const getSubscriptionAccessLevelForClub = useCallback(
+    (/** @type {string | null | undefined} */ clubDocumentId) => (
+      String(clubDocumentId || '').trim()
+        ? getSubscriptionAccessLevel({
+          clubDocumentId: String(clubDocumentId).trim(),
+          clubVerificationSummary,
+          entitlementsSummary,
+          subscriptionSummary,
+          userClub: userData?.club,
+        })
+        : subscriptionAccessLevel
+    ),
+    [
+      clubVerificationSummary,
+      entitlementsSummary,
+      subscriptionAccessLevel,
+      subscriptionSummary,
+      userData?.club,
+    ],
+  );
 
   // D89 - DESCENDU ICI, ET LA RAISON EST MECANIQUE, PAS ESTHETIQUE.
   //
@@ -849,6 +886,7 @@ const useAuth = () => {
   return {
     // LOT RÔLES — le rôle du COMPTE, que le mode joueur ne change pas.
     accountRoleKey: userRoleKey,
+    accountSubscriptionAccessLevel,
     activeClubId,
     addAccount,
     allMyTeams,
@@ -878,6 +916,7 @@ const useAuth = () => {
     getAuthTokens,
     getNextOnboardingRoute,
     getPostOnboardingHomeRoute,
+    getSubscriptionAccessLevelForClub,
     governedPublishingBlockReason,
     hasClubAccess,
     inviteTeamPlayers,

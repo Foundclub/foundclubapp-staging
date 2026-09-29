@@ -13,13 +13,27 @@ const normalizeDecisionArray = (value) => (
 export const SUBSCRIPTION_PERMISSION_DENIED_CODE = 'SUBSCRIPTION_PERMISSION_DENIED';
 
 /**
+ * @param {any} value - Un identifiant, peut-etre absent.
+ * @returns {string} L'identifiant sans blanc, ou ''.
+ */
+const trimId = (value) => String(value || '').trim();
+
+/**
+ * CE QUE LE COMPTE PAIE — le niveau d'avant ABOPARCLUB, mot pour mot.
+ *
+ * Le serveur leve `requiresClubVerification` des qu'UN droit Club est actif sur
+ * le COMPTE, quel que soit le club qu'il couvre. Ce niveau-la ne dit donc pas
+ * ce qui est ouvert dans le club affiche ; il dit ce que la personne a paye (ou
+ * ce qu'on paie pour elle). Seuls « Mon abonnement » et la carte du Profil le
+ * lisent : sans lui, le « Club 100 » paye pour un autre club disparaitrait de
+ * l'ecran qui le gere (piege a du lot).
  * @param {{
  *   entitlementsSummary?: any[];
  *   subscriptionSummary?: any;
  * }=} params
  * @returns {'FREE' | 'TEAM' | 'CLUB_UNVERIFIED' | 'CLUB'}
  */
-export const getSubscriptionAccessLevel = ({
+export const getAccountSubscriptionAccessLevel = ({
   entitlementsSummary,
   subscriptionSummary,
 } = {}) => {
@@ -39,6 +53,152 @@ export const getSubscriptionAccessLevel = ({
   }
 
   return 'FREE';
+};
+
+/**
+ * UNE OFFRE CLUB COUVRE-T-ELLE CE CLUB ? — ABOPARCLUB, 2026-09-29.
+ *
+ * Deux sources, toutes deux calculees par le serveur, et rien de devine :
+ *  - un droit Club qui NOMME ce club (`scopeClubDocumentId`) ;
+ *  - le verdict du serveur sur le club ACTIF
+ *    (`clubVerificationSummary.hasActiveClubEntitlement`, `getClubPlanState`),
+ *    qu'on ne lit que s'il parle bien de CE club.
+ * ⚖️ Sans preuve, pas d'accusation : « non couvert » seulement si le serveur le
+ * dit, ou si des droits Club nomment d'AUTRES clubs. Sinon « inconnu », et
+ * l'appelant garde le comportement d'avant.
+ * @param {object} [params]
+ * @param {string} [params.clubDocumentId] - Le club dont on parle.
+ * @param {any} [params.clubVerificationSummary] - Le resume du club ACTIF (bootstrap).
+ * @param {any[]} [params.entitlementsSummary] - Les droits actifs du compte (bootstrap).
+ * @returns {'covered' | 'not-covered' | 'unknown'} Le verdict.
+ */
+export const getClubCoverage = ({
+  clubDocumentId,
+  clubVerificationSummary,
+  entitlementsSummary,
+} = {}) => {
+  const target = trimId(clubDocumentId);
+  if (!target) return 'unknown';
+
+  const clubEntitlements = normalizeDecisionArray(entitlementsSummary)
+    .filter((entry) => entry?.scopeType === 'CLUB');
+  if (clubEntitlements.some((entry) => trimId(entry?.scopeClubDocumentId) === target)) {
+    return 'covered';
+  }
+
+  const serverVerdict = trimId(clubVerificationSummary?.clubDocumentId) === target
+    ? clubVerificationSummary?.hasActiveClubEntitlement
+    : undefined;
+  if (serverVerdict === true) return 'covered';
+  if (serverVerdict === false) return 'not-covered';
+  if (clubEntitlements.some((entry) => trimId(entry?.scopeClubDocumentId))) return 'not-covered';
+  return 'unknown';
+};
+
+/**
+ * LE NIVEAU D'ACCES DU CLUB AFFICHE — ABOPARCLUB, decision d'Adel « niveau oui »
+ * du 2026-09-29.
+ *
+ * 🧨 Avant ce lot, ce niveau etait celui du COMPTE (voir
+ * `getAccountSubscriptionAccessLevel` juste au-dessus) : un dirigeant qui paie
+ * « Club 100 » pour FoundClub Demo et regarde AIKI voyait AIKI traite comme
+ * « Club » partout — accueil, bandeaux de quota, recapitulatifs, compo — alors
+ * que le serveur, lui, refusait a juste titre (403, recette du 28/09). Ses
+ * lecteurs (~16) suivent sans reecriture : c'est la raison pour laquelle la
+ * correction vit ICI, une fois.
+ *
+ * Regle, pour le club demande (le club affiche par defaut) :
+ *  - couvert par une offre Club → `CLUB` si ce club est certifie, sinon
+ *    `CLUB_UNVERIFIED` (memes droits, cf. `hasActiveClubOffer`) ;
+ *  - non couvert → `TEAM` si une offre Equipe couvre une equipe de CE club (ou
+ *    une equipe sans club), sinon `FREE` ;
+ *  - inconnu (resumes muets) → le niveau du compte, comme avant.
+ * @param {{
+ *   clubDocumentId?: string;
+ *   clubVerificationSummary?: any;
+ *   entitlementsSummary?: any[];
+ *   subscriptionSummary?: any;
+ *   userClub?: any;
+ * }=} params - `clubDocumentId` absent = le club affiche (`clubVerificationSummary`,
+ *   puis `userClub`) ; present = un AUTRE club nomme (celui d'un evenement, d'une equipe).
+ * @returns {'FREE' | 'TEAM' | 'CLUB_UNVERIFIED' | 'CLUB'}
+ */
+export const getSubscriptionAccessLevel = ({
+  clubDocumentId,
+  clubVerificationSummary,
+  entitlementsSummary,
+  subscriptionSummary,
+  userClub,
+} = {}) => {
+  const activeClubDocumentId = trimId(clubVerificationSummary?.clubDocumentId || userClub?.documentId);
+  const targetClubDocumentId = trimId(clubDocumentId) || activeClubDocumentId;
+  const coverage = getClubCoverage({
+    clubDocumentId: targetClubDocumentId,
+    clubVerificationSummary,
+    entitlementsSummary,
+  });
+
+  if (coverage === 'unknown') {
+    return getAccountSubscriptionAccessLevel({ entitlementsSummary, subscriptionSummary });
+  }
+
+  if (coverage === 'covered') {
+    // La certification n'est connue que pour le club ACTIF ; ailleurs on dit
+    // « non certifie », qui ouvre exactement les memes droits.
+    const isVerified = targetClubDocumentId === activeClubDocumentId
+      && (clubVerificationSummary?.clubVerified === true
+        || subscriptionSummary?.hasVerifiedClubPlan === true);
+    return isVerified ? 'CLUB' : 'CLUB_UNVERIFIED';
+  }
+
+  const teamEntitlements = normalizeDecisionArray(entitlementsSummary)
+    .filter((entry) => entry?.scopeType === 'TEAM');
+  const hasTeamOfferHere = teamEntitlements.length > 0
+    ? teamEntitlements.some((entry) => {
+      const teamClubDocumentId = trimId(entry?.scopeClubDocumentId);
+      return !teamClubDocumentId || teamClubDocumentId === targetClubDocumentId;
+    })
+    : subscriptionSummary?.hasTeamPlan === true;
+  return hasTeamOfferHere ? 'TEAM' : 'FREE';
+};
+
+/**
+ * L'OFFRE EST-ELLE « TON OFFRE ACTUELLE » POUR CE CLUB ? — ABOPARCLUB, « abo2 A ».
+ *
+ * `activePlanCodes` porte TOUTES les offres actives du compte, y compris celle
+ * qui couvre un AUTRE club : depuis AIKI, le Club 100 paye pour Demo s'affichait
+ * « Ton offre actuelle », bouton eteint. Une offre n'est actuelle que pour le
+ * club qu'elle couvre.
+ * Sans droit Club nommant un club (resumes muets), on garde la lecture d'avant.
+ * @param {object} params
+ * @param {string[]} [params.activePlanCodes] - Les offres actives du compte.
+ * @param {string} [params.clubDocumentId] - Le club affiche.
+ * @param {any} [params.clubVerificationSummary] - Le resume du club ACTIF.
+ * @param {any[]} [params.entitlementsSummary] - Les droits actifs du compte.
+ * @param {string} params.planCode - L'offre Club a juger.
+ * @returns {boolean} Vrai si l'offre couvre CE club.
+ */
+export const isClubOfferCurrentForClub = ({
+  activePlanCodes,
+  clubDocumentId,
+  clubVerificationSummary,
+  entitlementsSummary,
+  planCode,
+}) => {
+  const target = trimId(clubDocumentId);
+  const plan = trimId(planCode);
+  if (!plan) return false;
+  const namedClubEntitlements = normalizeDecisionArray(entitlementsSummary)
+    .filter((entry) => entry?.scopeType === 'CLUB' && trimId(entry?.scopeClubDocumentId));
+  if (target && namedClubEntitlements.length > 0) {
+    return namedClubEntitlements.some((entry) => trimId(entry?.scopeClubDocumentId) === target
+      && trimId(entry?.subscriptionPlanCode) === plan);
+  }
+  if (getClubCoverage({ clubDocumentId: target, clubVerificationSummary, entitlementsSummary })
+    === 'not-covered') {
+    return false;
+  }
+  return normalizeDecisionArray(activePlanCodes).includes(plan);
 };
 
 /** @type {Record<string, string>} */
@@ -1228,7 +1388,13 @@ export const getCoveredTeamCount = (entitlementsSummary, subscriptionSummary) =>
  * (page heros « deja couvert », handoff 7b). Il appartenait a une autre session
  * le 2026-08-10 : le brancher ici est le pas suivant, il ne change rien au
  * comportement.
+ *
+ * ABOPARCLUB (2026-09-29) — `clubDocumentId` (optionnel) restreint les tiers
+ * candidats a ceux qui couvrent CE club (ou une equipe sans club) : depuis AIKI,
+ * nommer le payeur du Club de Demo expliquait une couverture qui n'existe pas
+ * dans le club affiche.
  * @param {object} params
+ * @param {string} [params.clubDocumentId] - Le club affiche.
  * @param {any[]} params.entitlementsSummary
  * @param {string | null | undefined} params.subscriptionAccessLevel
  * @param {any} [params.subscriptionSummary]
@@ -1236,6 +1402,7 @@ export const getCoveredTeamCount = (entitlementsSummary, subscriptionSummary) =>
  * @returns {any | null}
  */
 export const getCoveringEntitlement = ({
+  clubDocumentId,
   entitlementsSummary,
   subscriptionAccessLevel,
   subscriptionSummary,
@@ -1270,12 +1437,16 @@ export const getCoveringEntitlement = ({
     return null;
   }
 
-  // 3. Un entitlement paye par un tiers NOMME.
+  // 3. Un entitlement paye par un tiers NOMME — et, quand le club est donne,
+  //    qui couvre CE club.
+  const club = trimId(clubDocumentId);
   const candidates = entitlements.filter((entry) => {
     const payerDocumentId = String(entry?.paidBy?.documentId || '').trim();
+    const entryClubDocumentId = trimId(entry?.scopeClubDocumentId);
     return payerDocumentId
       && payerDocumentId !== myDocumentId
-      && String(entry?.paidBy?.firstname || '').trim() !== '';
+      && String(entry?.paidBy?.firstname || '').trim() !== ''
+      && (!club || !entryClubDocumentId || entryClubDocumentId === club);
   });
 
   // Une couverture club porte plus loin qu'une couverture d'equipe : si les deux
@@ -1292,7 +1463,7 @@ export const getCoveringEntitlement = ({
  * @param {any} userData - Le profil.
  * @returns {string} Le nom, ou une chaine vide.
  */
-const getClubDisplayName = (documentId, entitlements, userData) => {
+export const getClubDisplayName = (documentId, entitlements, userData) => {
   const namedEntitlement = normalizeDecisionArray(entitlements).find(
     (entry) => String(entry?.scopeClubDocumentId || '').trim() === documentId
       && String(entry?.scopeClubName || '').trim() !== '',

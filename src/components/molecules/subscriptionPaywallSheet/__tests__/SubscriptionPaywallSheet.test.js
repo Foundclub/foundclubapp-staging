@@ -26,6 +26,8 @@ const mockRefetchCatalog = jest.fn();
 
 let mockCatalogQueryState = { data: undefined, isError: false, isLoading: false };
 let mockPurchaseIsPending = false;
+// ABOPARCLUB : le rail actif, pilotable par temoin (rail de test par defaut).
+let mockRail = 'trusted-test';
 
 jest.mock('@tanstack/react-query', () => ({
   useMutation: (/** @type {any} */ options) => ({
@@ -64,8 +66,11 @@ jest.mock('@/services/subscription/subscriptionService', () => ({
 }));
 
 jest.mock('@/domains/subscription/subscriptionPurchaseRail', () => ({
+  // ABOPARCLUB : la feuille demande quel rail est actif (rail de test ici).
+  getActiveSubscriptionPurchaseRail: () => mockRail,
   isSubscriptionPurchaseAvailable: (/** @type {any} */ ...args) => mockIsPurchaseAvailable(...args),
   performSubscriptionPurchase: (/** @type {any} */ ...args) => mockPerformPurchase(...args),
+  SUBSCRIPTION_PURCHASE_RAILS: { REVENUECAT: 'revenuecat', TRUSTED_TEST: 'trusted-test' },
 }));
 
 jest.mock('@/domains/subscription/subscriptionRefresh', () => ({
@@ -803,5 +808,71 @@ describe('R3 — « Restaurer mes achats » est visible sur la feuille de vente'
     const tree = renderSheet({ decision: TEAM_QUOTA_DECISION });
 
     expect(allTexts(tree)).toContain('Restaurer mes achats');
+  });
+});
+
+// ABOPARCLUB (2026-09-29) — la feuille de vente s'ouvre DAVANTAGE depuis ce lot :
+// dans un club non couvert, le mur payant parait d'avance. Son bouton d'achat ne
+// doit pas, sur iPhone, remplacer l'abonnement Apple qui couvre un AUTRE club
+// (un seul abonnement par compte Apple dans le groupe FoundClub).
+describe('ABOPARCLUB — la feuille n achete pas a travers les clubs', () => {
+  const payeurAppleDeDemo = () => baseAuthValue({
+    entitlementsSummary: [{
+      capability: '*',
+      paidBy: { documentId: 'user-1', firstname: 'Adel', lastname: 'F' },
+      scopeClubDocumentId: 'club-demo',
+      scopeClubName: 'FoundClub Démo',
+      scopeType: 'CLUB',
+      status: 'active',
+      subscriptionPlanCode: 'fc_club_tier_1_yearly',
+    }],
+    subscriptionSummary: {
+      payerSubscriptionsSummary: [{
+        documentId: 'sub-demo',
+        planCode: 'fc_club_tier_1_yearly',
+        provider: 'apple',
+        scopeClubDocumentIds: ['club-demo'],
+        status: 'active',
+      }],
+      teamSlotSummary: { assigned: 0, available: 0, total: 0 },
+    },
+    userData: {
+      club: { documentId: 'club-aiki', name: 'AIKI' },
+      clubs: [{ documentId: 'club-aiki', name: 'AIKI' }, { documentId: 'club-demo', name: 'FoundClub Démo' }],
+      documentId: 'user-1',
+      myTeams: [],
+      role: { type: 'president' },
+      trainedTeams: [],
+    },
+  });
+
+  afterEach(() => {
+    mockRail = 'trusted-test';
+  });
+
+  it('iPhone : acheter le Club pour AIKI remplacerait l abonnement Apple de Demo => la feuille le dit, et n achete rien', async () => {
+    mockRail = 'revenuecat';
+    const tree = renderSheet({ auth: payeurAppleDeDemo(), clubDocumentId: 'club-aiki', decision: FACILITY_DECISION });
+
+    await act(async () => {
+      findButtonByText(tree, 'Débloquer Club 100').props.onPress();
+    });
+
+    expect(mockPerformPurchase).not.toHaveBeenCalled();
+    expect(mockAlert).toHaveBeenCalledTimes(1);
+    expect(mockAlert.mock.calls[0][0]).toBe('Couvrir AIKI');
+    expect(mockAlert.mock.calls[0][1]).toContain('contact@foundclubpro.com');
+  });
+
+  it('TEMOIN — sans magasin (rail de test), l achat part bien pour AIKI', async () => {
+    const tree = renderSheet({ auth: payeurAppleDeDemo(), clubDocumentId: 'club-aiki', decision: FACILITY_DECISION });
+
+    await act(async () => {
+      findButtonByText(tree, 'Débloquer Club 100').props.onPress();
+    });
+
+    expect(mockAlert).not.toHaveBeenCalled();
+    expect(mockPerformPurchase).toHaveBeenCalledTimes(1);
+    expect(mockPerformPurchase.mock.calls[0][0].clubDocumentId).toBe('club-aiki');
   });
 });
