@@ -114,6 +114,16 @@ const POINTS_D_ENTREE = [
     fichier: 'views/subscription/CompositionPaywallScreen.js',
     pourquoi: 'elle vient de buter sur le mur payant de la composition',
   },
+  // FINITIONS3 (29/09) — le 12e point d'entree : le MUR D'AVANCE de la selection des
+  // convoques, ou menent toutes les portes « Modifier » d'une compo quand le club du
+  // match n'a pas l'offre. Il reprend le bandeau de la fiche du match (EventDetails,
+  // deja « carrousel ») : il VEND, il vise donc le carrousel. Le hub ne porte aucun
+  // catalogue (L33).
+  {
+    attendu: 'SubscriptionOffers',
+    fichier: 'views/matchCallUp/MatchCallUpSelection.js',
+    pourquoi: 'le mur d avance de « Modifier » vend l offre Equipe',
+  },
   // S12-B/D5 — le 11e point d'entree : LA NOTIFICATION DE QUOTA AU LICENCIE.
   //
   // Elle vise le HUB, et c'est le seul choix juste : elle s'adresse a un
@@ -246,6 +256,9 @@ describe('L40 — une porte dit d ou elle part, ou assume l accueil', () => {
     // C-C — l'ecran 12 interrompt une tache (un enregistrement de compo type
     // refuse) : il transporte donc l'origine, comme la feuille qu'il remplace.
     ['views/subscription/CompositionPaywallScreen.js', true],
+    // FINITIONS3 — le mur d'avance de « Modifier » interrompt une tache : l'achat
+    // ramene sur la fiche du match, comme le bandeau dont il reprend le role.
+    ['views/matchCallUp/MatchCallUpSelection.js', true],
   ])('%s transporte une origine : %s', (fichier, transporteUneOrigine) => {
     expect(lireSource(fichier).includes('resumeRouteName')).toBe(transporteUneOrigine);
   });
