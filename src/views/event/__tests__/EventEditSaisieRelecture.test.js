@@ -1,4 +1,6 @@
 import { CommonActions, StackActions, StackRouter } from '@react-navigation/routers';
+import fs from 'fs';
+import path from 'path';
 import { QueryClient, QueryClientProvider, QueryObserver } from '@tanstack/react-query';
 import { createElement } from 'react';
 import { Alert } from 'react-native';
@@ -6,7 +8,7 @@ import renderer, { act } from 'react-test-renderer';
 
 import { AFTER_ACTION_CACHES } from '@/domains/refresh/afterAction';
 
-import EventEdit from '../EventEdit';
+import EventEdit, { getEventEditHeaderTitle } from '../EventEdit';
 
 // EVENTEDIT-SAISIE — « MODIFIER L'EVENEMENT » NE DOIT JAMAIS EFFACER CE QUE
 // L'ENTRAINEUR EST EN TRAIN DE SAISIR (tournee 6 de recette, 29/09).
@@ -37,6 +39,10 @@ import EventEdit from '../EventEdit';
 // 🔴 D3 — LES FICHES EMPILEES : « Enregistrer » REMPLACAIT l'ecran de
 // modification par une NOUVELLE fiche, posee sur l'ancienne. Apres quatre
 // enregistrements, cinq fiches du meme evenement : cinq retours pour sortir.
+//
+// 🟡 D8 — LE MAUVAIS TITRE : « Creer un evenement » pendant le chargement de
+// « Modifier ». La pile declarait un titre fixe ; le bon n'arrivait qu'apres
+// le premier dessin.
 //
 // ⚠️ CE QUE CE FICHIER NE PROUVE PAS : que le calendrier Android fait bien
 // passer l'app en arriere-plan (c'est constate au relais de l'emulateur, et a
@@ -583,5 +589,39 @@ describe('D3 — une seule fiche apres Enregistrer, avec le VRAI routeur de pile
     expect(arrivee.routes.map((/** @type {any} */ route) => route.name)).toEqual(['EventDetails']);
     expect(arrivee.routes[0].params).toEqual({ eventId: 'event-1' });
     alerte.mockRestore();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// D8 — LE TITRE EST JUSTE DES LA PREMIERE IMAGE
+// ---------------------------------------------------------------------------
+describe('D8 — « Modifier l evenement » des la premiere image, pas « Creer »', () => {
+  const traduire = (/** @type {string} */ cle) => cle;
+
+  test('🎯 ouvert pour MODIFIER (la route porte un evenement) : « Modifier l evenement »', () => {
+    expect(getEventEditHeaderTitle({ params: { eventId: 'event-1' } }, traduire))
+      .toBe('eventEdit.titleEdit');
+  });
+
+  test('ouvert pour CREER (aucun evenement) : « Creer un evenement », comme avant', () => {
+    expect(getEventEditHeaderTitle({ params: {} }, traduire)).toBe('eventEdit.title');
+    expect(getEventEditHeaderTitle(undefined, traduire)).toBe('eventEdit.title');
+  });
+
+  test('🎯 et c est la PILE qui le lit dans ses options, avant que l ecran ne se dessine', () => {
+    // ⚠️ Temoin LU dans le fichier de navigation, comme
+    // `ReservationDetails.gestesMorts.test.js` : monter la vraie pile tirerait
+    // ses 38 ecrans et leurs modules natifs. Il ne regarde QUE le bloc de
+    // l'ecran `EventEdit` — un titre fixe y reviendrait, il rougirait.
+    const source = fs.readFileSync(
+      path.join(__dirname, '..', '..', '..', 'navigation', 'private', 'stacks', 'EventStack.js'),
+      'utf8',
+    );
+    const debut = source.indexOf('component={EventEdit}');
+    const blocDeLEcran = source.slice(debut, source.indexOf('/>', debut));
+
+    expect(debut).toBeGreaterThan(-1);
+    expect(blocDeLEcran).toContain('getEventEditHeaderTitle(route, t)');
+    expect(blocDeLEcran).not.toContain("headerTitle: t('eventEdit.title')");
   });
 });

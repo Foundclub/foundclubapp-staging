@@ -180,6 +180,23 @@ const decrireLesChampsFautifs = (errors, traduire) => {
   );
 };
 
+/**
+ * Le titre de l'ecran, decide d'apres la ROUTE qui l'ouvre.
+ *
+ * 🏷️ EVENTEDIT-SAISIE (D8, tournee 6 du 29/09) — « CREER UN EVENEMENT »
+ * S'AFFICHAIT PENDANT LE CHARGEMENT DE « MODIFIER ». La pile declarait pour cet
+ * ecran un titre FIXE, et le bon n'arrivait qu'apres le premier dessin, pose
+ * par un `useEffect` de l'ecran. La pile lit desormais cette fonction dans ses
+ * options (`navigation/private/stacks/EventStack.js`) : le titre est juste des
+ * la premiere image, avant meme que l'ecran ne se dessine.
+ * @param {any} route - La route qui ouvre l'ecran.
+ * @param {(cle: string) => string} t - La traduction de la pile.
+ * @returns {string} - « Modifier l'evenement », ou « Creer un evenement ».
+ */
+export const getEventEditHeaderTitle = (route, t) => (
+  route?.params?.eventId ? t('eventEdit.titleEdit') : t('eventEdit.title')
+);
+
 const buildOccupancyWindow = (dateValue, startTime, endTime, getDateFromDateInput) => {
   if (!dateValue || !startTime || !endTime || typeof getDateFromDateInput !== 'function') {
     return null;
@@ -812,10 +829,8 @@ function EventEdit({ navigation, route }) {
     }
   }, [event, isDirty, reset, resolveTrainingOpenConfig]);
 
-  // 🏷️ EVENTEDIT-SAISIE (D8) — LE TITRE N'EST PLUS POSE D'ICI. Il l'etait apres
-  // le premier dessin : pendant tout le chargement, la barre disait « Creer un
-  // evenement ». La pile le decide desormais d'apres la route
-  // (`navigation/private/stacks/EventStack.js`), juste des la premiere image.
+  // 🏷️ EVENTEDIT-SAISIE (D8) — LE TITRE N'EST PLUS POSE D'ICI, apres le premier
+  // dessin : c'est la pile qui le lit, d'apres la route (`getEventEditHeaderTitle`).
 
   /**
    * Handle form submit

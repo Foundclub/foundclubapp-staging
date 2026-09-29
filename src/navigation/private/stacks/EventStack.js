@@ -8,7 +8,7 @@ import DetectionTeamsBoard from '@/views/detection/DetectionTeamsBoard';
 import DetectionTeamsManual from '@/views/detection/DetectionTeamsManual';
 import EventAttendanceCall from '@/views/event/attendance/EventAttendanceCall';
 import EventDetails from '@/views/event/EventDetails';
-import EventEdit from '@/views/event/EventEdit';
+import EventEdit, { getEventEditHeaderTitle } from '@/views/event/EventEdit';
 import EventFilters from '@/views/event/EventFilters';
 import EventPublishedShowcase from '@/views/event/EventPublishedShowcase';
 import TournamentManagement from '@/views/event/TournamentManagement';
@@ -67,13 +67,16 @@ function EventStack() {
             headerTitle: '',
           }}
         />
+        {/* EVENTEDIT-SAISIE (D8) — le titre suit la route des la premiere
+            image : « Modifier » quand elle porte un evenement. Un titre fixe
+            affichait « Creer un evenement » pendant tout le chargement. */}
         <Stack.Screen
           component={EventEdit}
           name={RouteNames.EventEdit}
-          options={{
+          options={({ route }) => ({
             ...commonOptions,
-            headerTitle: t('eventEdit.title'),
-          }}
+            headerTitle: getEventEditHeaderTitle(route, t),
+          })}
         />
         <Stack.Screen
           component={EventFilters}
