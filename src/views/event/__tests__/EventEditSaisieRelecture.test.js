@@ -1,6 +1,7 @@
-import { CommonActions, StackActions, StackRouter } from '@react-navigation/routers';
 import fs from 'fs';
 import path from 'path';
+
+import { CommonActions, StackActions, StackRouter } from '@react-navigation/routers';
 import { QueryClient, QueryClientProvider, QueryObserver } from '@tanstack/react-query';
 import { createElement } from 'react';
 import { Alert } from 'react-native';
@@ -432,6 +433,24 @@ describe('D1 — une relecture de l evenement n efface pas la saisie en cours', 
     expect(eventData.startTime.startsWith('09:00')).toBe(true);
     expect(eventData.endTime.startsWith('10:00')).toBe(true);
     alerte.mockRestore();
+  });
+
+  test('🎯 un champ NON touche suit la relecture, meme quand un AUTRE champ a ete modifie', async () => {
+    // Le cas de la copie PERIMEE : ecran rouvert juste apres un enregistrement,
+    // avant que la relecture ne revienne. La personne tape d'abord la
+    // description ; la date fraiche doit arriver quand meme, sinon l'ANCIENNE
+    // repartirait a l'enregistrement.
+    await monter();
+    await saisir(`champ-${LIBELLE_DESCRIPTION}`, 'onChangeText', 'Seance decalee au matin');
+    eventService.getEventByIdForEdit.mockImplementation(() => Promise.resolve(
+      evenementLu({ date: new Date('2030-05-22T18:30:00.000Z') }),
+    ));
+
+    await relireCommeAuRetourAuPremierPlan();
+
+    expect(noeud(`champ-${LIBELLE_DESCRIPTION}`).props.value).toBe('Seance decalee au matin');
+    expect(noeud(`date-${LIBELLE_DATE}`).props.value)
+      .toBe(commeALEcran(new Date('2030-05-22T18:30:00.000Z')));
   });
 
   test('un formulaire INTACT suit la relecture : une date changee ailleurs s affiche', async () => {

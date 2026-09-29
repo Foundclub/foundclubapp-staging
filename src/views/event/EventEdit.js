@@ -4,7 +4,9 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { format, isValid, parse } from 'date-fns';
 import i18next from 'i18next';
 import Joi from 'joi';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import {
+  useEffect, useMemo, useRef, useState,
+} from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import {
@@ -529,7 +531,7 @@ function EventEdit({ navigation, route }) {
 
   const {
     control,
-    formState: { errors: formErrors, isDirty },
+    formState: { errors: formErrors },
     handleSubmit,
     reset,
     setFocus,
@@ -782,19 +784,25 @@ function EventEdit({ navigation, route }) {
   // 18:00/19:00. Et c'est l'ANCIENNE date qui partait a l'enregistrement : un
   // match enregistre au mauvais jour.
   //
-  // ✅ LA REGLE, celle que `ProfileEdit.js` applique deja au profil :
-  //   · la PREMIERE version d'un evenement remplit TOUJOURS le formulaire —
-  //     avant elle, il est pre-rempli A VIDE, et l'enregistrer effacerait
-  //     taches, equipes conviees et lieu (D5) ;
-  //   · ensuite, une relecture ne touche plus un formulaire que la personne a
-  //     modifie. Intact, il suit la version fraiche : on n'enregistre pas
-  //     par-dessus ce que quelqu'un d'autre vient de changer.
+  // ✅ LA REGLE :
+  //   · la PREMIERE version d'un evenement remplit TOUT le formulaire — avant
+  //     elle, il est pre-rempli A VIDE, et l'enregistrer effacerait taches,
+  //     equipes conviees et lieu (D5) ;
+  //   · ensuite, une relecture ne remet a jour QUE les champs que la personne
+  //     n'a pas touches (`keepDirtyValues`, natif de react-hook-form). Ce
+  //     qu'elle a choisi ou tape reste tel quel.
+  // 🎯 POURQUOI CHAMP PAR CHAMP, et pas « formulaire touche = plus rien »
+  // (le choix de `ProfileEdit.js`) : l'ecran peut s'ouvrir sur une copie
+  // PERIMEE — rouvert juste apres un enregistrement, avant que la relecture ne
+  // revienne. Si la personne tape d'abord la description, la date fraiche doit
+  // quand meme arriver ; sinon l'ANCIENNE repartirait a l'enregistrement.
+  // ⚠️ Un champ ecrit par `setValue` ne compte comme touche qu'avec
+  // `shouldDirty` : c'est pourquoi l'installation le porte (plus bas).
   // Temoin : `__tests__/EventEditSaisieRelecture.test.js`.
   const evenementDejaRempliRef = useRef(/** @type {string | null} */ (null));
   useEffect(() => {
     if (event) {
       const premiereVersion = evenementDejaRempliRef.current !== event.documentId;
-      if (!premiereVersion && isDirty) return;
       evenementDejaRempliRef.current = event.documentId;
       reset({
         ...defaultValues,
@@ -825,9 +833,9 @@ function EventEdit({ navigation, route }) {
         totalPlayers: event?.totalPlayers,
         type: event?.type?.documentId || '',
         validationMode: event?.validationMode || 'auto',
-      });
+      }, { keepDirtyValues: !premiereVersion });
     }
-  }, [event, isDirty, reset, resolveTrainingOpenConfig]);
+  }, [event, reset, resolveTrainingOpenConfig]);
 
   // 🏷️ EVENTEDIT-SAISIE (D8) — LE TITRE N'EST PLUS POSE D'ICI, apres le premier
   // dessin : c'est la pile qui le lit, d'apres la route (`getEventEditHeaderTitle`).
@@ -1128,9 +1136,9 @@ function EventEdit({ navigation, route }) {
                     : null}
                   onChange={(/** @type {{ location: string; facilityId?: string }} */ { facilityId: newFacilityId, location: newLocation }) => {
                     onChange(newLocation);
-                    // D1 — choisir une installation EST une saisie : elle doit
-                    // compter pour « formulaire modifie », sinon une relecture
-                    // pourrait la remettre a l'ancienne sous un lieu nouveau.
+                    // D1 — choisir une installation EST une saisie : sans
+                    // `shouldDirty`, une relecture la remettrait a l'ancienne
+                    // sous le lieu nouveau (le lieu, lui, est marque touche).
                     setValue('facility', newFacilityId || '', { shouldDirty: true });
                   }}
                   onOccupancyResolved={setSelectedOccupancy}
