@@ -11479,7 +11479,7 @@ export default {
     presetRequired: 'Preset requis',
     publication: 'Publication',
     publish: 'Publier',
-    publishedOn: 'Publie le {{date}}',
+    publishedOn: 'Publiée le {{date}}',
     publishError: 'Impossible de publier cette composition.',
     removeShort: 'Suppr.',
     save: 'Sauvegarder',
@@ -13545,7 +13545,7 @@ export default {
     info: {
       category: 'Catégorie',
       level: 'Niveau',
-      publishedOn: 'Publie le',
+      publishedOn: 'Publiée le',
     },
     otherSlot: {
       // eslint-disable-next-line max-len

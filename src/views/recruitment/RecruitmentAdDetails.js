@@ -1467,7 +1467,7 @@ function RecruitmentAdDetails() {
         >
           <View style={styles.infoItem}>
             <Text style={[Fonts.caption, { color: Colors.neutral300, marginBottom: 4 }]}>
-              {t('recruitmentAdDetails.info.publishedOn', 'Publie le')}
+              {t('recruitmentAdDetails.info.publishedOn', 'Publiée le')}
             </Text>
             <Text style={[Fonts.p2Bold, { color: Colors.neutral100, textAlign: 'center' }]}>{date}</Text>
           </View>
