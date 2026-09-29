@@ -89,7 +89,18 @@ function PlayerModeBanner(props) {
         ]}
         testID={isPlayerMode ? 'player-mode-exit' : 'player-mode-enter'}
       >
-        <Text style={[Fonts.p2Bold, isPlayerMode ? Fonts.primary900 : Fonts.neutral00]}>
+        {/* FINITIONS3 (29/09) : « Voir l'app en » — sous Android 16, un texte gras de
+            plusieurs mots dans une boite a sa largeur MESUREE perd son dernier mot. La
+            boite s etire sur tout le bouton, le texte y est centre (parade du bouton
+            partage, FINITIONS du 28/09). */}
+        <Text
+          style={[
+            Alignments.selfStretch,
+            Fonts.p2Bold,
+            Fonts.textCenter,
+            isPlayerMode ? Fonts.primary900 : Fonts.neutral00,
+          ]}
+        >
           {actionLabel}
         </Text>
       </TouchableOpacity>

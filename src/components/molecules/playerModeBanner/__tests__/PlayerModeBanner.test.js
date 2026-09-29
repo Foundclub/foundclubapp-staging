@@ -1,4 +1,4 @@
-import { Text } from 'react-native';
+import { StyleSheet, Text } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
 
 import PlayerModeBanner from '../PlayerModeBanner';
@@ -109,5 +109,41 @@ describe('RÔLES — le bandeau du mode joueur', () => {
       accountRoleKey: 'player', canUsePlayerMode: false, isPlayerMode: false, onChange: jest.fn(),
     });
     expect(arbre.toJSON()).toBeNull();
+  });
+});
+
+// ✂️ FINITIONS3 (29/09, tournee 5, defaut 4) — « Voir l'app en » : le mot « joueur »
+// coupe sous Android 16. Le bouton centrait son libelle (`alignItems: 'center'`), donc
+// la boite du texte epousait sa largeur MESUREE : un texte GRAS de plusieurs mots y perd
+// son dernier mot (piege connu, parade du bouton partage : la boite s etire, le texte
+// est centre). Ce temoin tient la STRUCTURE de TOUS les libelles du bandeau, dans ses
+// deux etats : Jest ne calcule aucune mise en page, seul l ecran prouvera le mot entier.
+// ROUGE avant : « Voir l'app en joueur » et « Revenir en mode dirigeant ».
+describe('FINITIONS3 — aucun libellé du bandeau n épouse sa largeur mesurée', () => {
+  /**
+   * La boite du texte s etire-t-elle sur toute la largeur de son parent ?
+   * @param {any} noeud - Un `Text` de l arbre rendu.
+   * @returns {boolean} - Vrai si la boite s etire.
+   */
+  const boiteEtiree = (noeud) => {
+    const style = StyleSheet.flatten(noeud.props.style) || {};
+    if (style.alignSelf && style.alignSelf !== 'auto') return style.alignSelf === 'stretch';
+    const parent = StyleSheet.flatten(noeud.parent.props.style) || {};
+    return !parent.alignItems || parent.alignItems === 'stretch';
+  };
+
+  it.each([
+    ['l offre', false, 'Voir l\'app en joueur'],
+    ['le retour', true, 'Revenir en mode dirigeant'],
+  ])('%s : chaque texte s étire, et le libellé du bouton reste centré', (_, actif, libelle) => {
+    const arbre = monter({
+      accountRoleKey: 'president', canUsePlayerMode: true, isPlayerMode: actif, onChange: jest.fn(),
+    });
+    const noeuds = arbre.root.findAllByType(Text);
+    const texte = (/** @type {any} */ noeud) => [].concat(noeud.props.children).join('');
+
+    expect(noeuds.filter((noeud) => !boiteEtiree(noeud)).map(texte)).toEqual([]);
+    const libelleDuBouton = noeuds.find((noeud) => texte(noeud) === libelle);
+    expect(StyleSheet.flatten(libelleDuBouton.props.style).textAlign).toBe('center');
   });
 });
