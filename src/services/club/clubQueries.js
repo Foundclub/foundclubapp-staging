@@ -7,7 +7,7 @@ import { getPlaceholderDataOption } from '@/services/queryOptions';
 import { buildNormalizedQueryKey } from '@/utils/queryKey';
 
 import {
-  getClubById, getClubs, getMultisportClubs, getPublicClubById,
+  getClubByIdWithAssociation, getClubs, getMultisportClubs, getPublicClubById,
 } from './clubService';
 
 /**
@@ -76,7 +76,8 @@ export const useGetClub = (id, options = {}) => {
 
   return useQuery({
     enabled: !!id,
-    queryFn: () => (hasSession ? getClubById(id) : getPublicClubById(id)),
+    // ANNUAIRE-E1 : la fiche privée reçoit aussi « À propos » (porte publique, texte renettoyé).
+    queryFn: () => (hasSession ? getClubByIdWithAssociation(id) : getPublicClubById(id)),
     // ⚠️ LA PORTE FAIT PARTIE DE LA CLE, et ce n'est pas cosmetique : sans
     // elle, une fiche complete mise en cache AVANT une deconnexion serait
     // reservie au visiteur, telephone compris.

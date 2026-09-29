@@ -2361,6 +2361,13 @@ export default {
       deleteSponsor: 'Supprimer le sponsor {{sponsorName}}',
       emailClub: 'Envoyer un e-mail a {{email}}',
     },
+    about: {
+      createdIn: 'Créée en {{year}}.',
+      dissolved: 'Association dissoute (RNA)',
+      less: 'Réduire',
+      more: 'Lire la suite',
+      title: 'À propos',
+    },
     actions: {
       // S02 — la VALEUR change, la clef reste (aucune clef n'est supprimee de ce
       // fichier). « Me prévenir dès qu’une équipe existe » decrivait ce que fait

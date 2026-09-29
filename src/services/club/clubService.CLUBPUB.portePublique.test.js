@@ -68,7 +68,7 @@ jest.mock('@tanstack/react-query', () => ({
 }));
 
 const { useGetClub } = require('./clubQueries');
-const { getPublicClubById } = require('./clubService');
+const { getClubAssociation, getPublicClubById } = require('./clubService');
 
 /** La forme REELLE rendue par l'annuaire public, relevee en production le 2026-09-07. */
 const REPONSE_PUBLIQUE = {
@@ -213,5 +213,87 @@ describe('CLUBPUB · T4 — le crochet choisit la porte selon la session', () =>
     await optionsRetenues[0].queryFn();
 
     expect(mockGet).toHaveBeenCalledWith('/public-directory/clubs/club-1');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// ANNUAIRE-E1 (29/09) — « À propos » et les installations, pour la fiche de l'app
+// ---------------------------------------------------------------------------
+// Décision d'Adel du 29/09 (« À propos : A ») : le texte officiel de l'association (répertoire
+// national des associations) est AJOUTÉ à la fiche de l'app, donc sur le téléphone ET sur le site.
+// Il vient de la porte publique, qui le RENETTOIE à l'affichage (aucune donnée personnelle sous la
+// mention « source : RNA »). Les installations du club, elles, y sont déjà : un visiteur les voit.
+describe('ANNUAIRE-E1 · T5 — « À propos » et installations traversent la traduction', () => {
+  const REPONSE_AVEC_RNA = {
+    data: {
+      data: {
+        ...REPONSE_PUBLIQUE.data.data,
+        club: {
+          ...REPONSE_PUBLIQUE.data.data.club,
+          association: {
+            createdYear: 1923,
+            dissolved: false,
+            formerNames: [],
+            objectText: 'Organiser la pratique du sport.',
+            sourceNote: 'Objet déclaré au Journal officiel — source : RNA',
+            websiteUrl: null,
+          },
+          facilities: [{
+            addressLabel: '15 avenue du Parc, 13008 Marseille',
+            documentId: 'inst-1',
+            isBookable: false,
+            maxSlots: 2,
+            name: 'Stade Jean Bouin',
+            type: 'Terrain',
+          }],
+        },
+      },
+    },
+  };
+
+  it('le texte de l association arrive tel que la porte publique le rend', async () => {
+    mockGet.mockResolvedValue(REPONSE_AVEC_RNA);
+    const fiche = await getPublicClubById('club-1');
+    expect(fiche.association).toEqual(REPONSE_AVEC_RNA.data.data.club.association);
+  });
+
+  it('les installations arrivent dans la forme que lit l écran', async () => {
+    mockGet.mockResolvedValue(REPONSE_AVEC_RNA);
+    const fiche = await getPublicClubById('club-1');
+    expect(fiche.publicFacilities).toEqual([{
+      address: '15 avenue du Parc, 13008 Marseille',
+      documentId: 'inst-1',
+      isShared: false,
+      maxSlots: 2,
+      name: 'Stade Jean Bouin',
+      ownerType: 'club',
+      type: 'Terrain',
+    }]);
+  });
+
+  it('📌 sans texte ni installation : null et liste vide, jamais undefined', async () => {
+    const fiche = await getPublicClubById('club-1');
+    expect(fiche.association).toBeNull();
+    expect(fiche.publicFacilities).toEqual([]);
+  });
+
+  it('connecté : la fiche privée reçoit AUSSI « À propos », lu à la porte publique', async () => {
+    mockGetAuthTokens.mockReturnValue({ token: 'jeton-valide' });
+    mockGet.mockImplementation((/** @type {string} */ adresse) => (
+      adresse === '/public-directory/clubs/club-1'
+        ? Promise.resolve(REPONSE_AVEC_RNA)
+        : Promise.reject(new Error('fiche privee hors sujet ici'))
+    ));
+
+    await expect(getClubAssociation('club-1'))
+      .resolves.toEqual(REPONSE_AVEC_RNA.data.data.club.association);
+    useGetClub('club-1');
+    await optionsRetenues[0].queryFn().catch(() => null);
+    expect(mockGet).toHaveBeenCalledWith('/public-directory/clubs/club-1');
+  });
+
+  it('📌 la porte publique en panne : pas d « À propos », jamais d erreur', async () => {
+    mockGet.mockRejectedValue(new Error('404'));
+    await expect(getClubAssociation('club-1')).resolves.toBeNull();
   });
 });

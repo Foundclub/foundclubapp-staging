@@ -2204,6 +2204,13 @@ export default {
       deleteSponsor: 'Delete sponsor {{sponsorName}}',
       emailClub: 'Send an email to {{email}}',
     },
+    about: {
+      createdIn: 'Founded in {{year}}.',
+      dissolved: 'Dissolved association (RNA)',
+      less: 'Show less',
+      more: 'Read more',
+      title: 'About',
+    },
     actions: {
       bringClubOver: 'This is my club',
       claimClub: 'This is my club',

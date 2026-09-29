@@ -5,7 +5,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Alert,
-  Image, Linking, Platform, RefreshControl, ScrollView, Text, TouchableOpacity, View,
+  Image, Linking, Platform, RefreshControl, ScrollView, Text, TouchableOpacity, useWindowDimensions, View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -60,6 +60,7 @@ import { resolveClubAffiliationOutcome } from '@/services/requests/clubAffiliati
 import { resolveClubAffiliationRefusal } from '@/services/requests/clubAffiliationRefusal';
 import { createTeamMembershipRequest } from '@/services/teamMembershipRequest/teamMembershipRequestService';
 
+import proprietesDeTitre from '@/utils/accessibilite/proprietesDeTitre';
 import {
   getClubCertificationLabel,
   getClubCertificationPalette,
@@ -182,6 +183,47 @@ const compareTeamsByAgeCategoryDesc = (teamA, teamB) => {
  * @param {import('@react-navigation/stack').StackScreenProps<any>} props - The props
  * @returns {import('react').ReactElement} Club details screen component
  */
+// ANNUAIRE-E1 — sur l'annuaire du site, au-delà de cette largeur, les deux boutons « Je joue » /
+// « Je dirige » quittent le bas de l'écran pour une colonne à droite (planche « ordinateur »).
+const LARGEUR_COLONNE_D_ACTIONS = 1024;
+// « À propos » : au-delà, le texte se replie derrière « Lire la suite ».
+const LONGUEUR_A_PROPOS_REPLIE = 220;
+
+/**
+ * ANNUAIRE-E1 — le cadre de la fiche : l'écran de l'app, ou, sur l'annuaire du site, une simple
+ * boîte (la page du site porte déjà sa barre et son fond). En deux colonnes sur grand écran.
+ * @param {{ annuaire: boolean, children: import('react').ReactNode, deuxColonnes: boolean }} props
+ *   Les props.
+ * @returns {import('react').ReactElement} Le cadre.
+ */
+function CadreDeLaFiche({ annuaire, children, deuxColonnes }) {
+  const { Alignments, Spaces } = useTheme();
+  if (annuaire) {
+    return (
+      <View
+        style={deuxColonnes
+          ? { alignItems: 'flex-start', flexDirection: 'row', gap: 32 }
+          : Alignments.relative}
+      >
+        {children}
+      </View>
+    );
+  }
+  return (
+    <ScreenContainer
+      bgImage="bg2"
+      contentContainerStyle={[
+        Spaces.paddingVertical[24],
+        Alignments.column,
+        Alignments.fill,
+        Alignments.relative,
+      ]}
+    >
+      {children}
+    </ScreenContainer>
+  );
+}
+
 function ClubDetails({ navigation, route }) {
   const { fromOnboardingAffiliation = false } = route?.params ?? {};
 
@@ -205,6 +247,12 @@ function ClubDetails({ navigation, route }) {
     userData,
   } = useAuth();
   const routeClubId = route?.params?.clubId;
+  // ANNUAIRE-E1 (29/09) — posé par l'annuaire du site seulement : la fiche est montée dans la page
+  // publique /annuaire/clubs/<id>/<slug>/. Absent, le téléphone ne change pas.
+  const annuaire = route?.params?.annuaire === true;
+  const { width: largeurEcran } = useWindowDimensions();
+  const actionsEnColonne = annuaire && Platform.OS === 'web' && largeurEcran >= LARGEUR_COLONNE_D_ACTIONS;
+  const [aProposDeplie, setAProposDeplie] = useState(false);
   const clubId = routeClubId || activeClubId || clubs?.[0]?.documentId || clubs?.[0]?.id || null;
   const { startClubChat } = useMessaging();
   const queryClient = useQueryClient();
@@ -792,10 +840,13 @@ function ClubDetails({ navigation, route }) {
 
   const canEdit = useMemo(() => canEditClub(clubId), [clubId, canEditClub]);
   const facilitiesLoading = canLoadFacilityContext && isLoadingFacilities;
-  const facilities = useMemo(
-    () => (Array.isArray(facilityContext?.allFacilities) ? facilityContext.allFacilities : []),
-    [facilityContext?.allFacilities],
-  );
+  const facilities = useMemo(() => {
+    const duContexte = Array.isArray(facilityContext?.allFacilities) ? facilityContext.allFacilities : [];
+    // ANNUAIRE-E1 — un visiteur n'a pas accès au contexte des installations ; la porte publique
+    // les porte déjà (getPublicClubById : `publicFacilities`).
+    if (duContexte.length || isAuthenticated) return duContexte;
+    return Array.isArray(club?.publicFacilities) ? club.publicFacilities : [];
+  }, [club?.publicFacilities, facilityContext?.allFacilities, isAuthenticated]);
   const facilitySections = useMemo(() => getFacilitySections(facilities, {
     clubTitle: t('facilityList.sections.club', 'Installations du club'),
     sharedTitle: t('facilityList.sections.shared', 'Installations partagées'),
@@ -1805,6 +1856,38 @@ function ClubDetails({ navigation, route }) {
   const floatingClubActionsScrollPaddingBottom = hasFloatingClubActions
     ? floatingActionsScrollPadding(floatingClubActionsCount, floatingClubActionsBottomInset)
     : 40;
+  // ANNUAIRE-E1 — sur l'annuaire du site, la fiche n'a plus d'écran à elle : « en bas » veut dire
+  // en bas de la FENÊTRE (fixé), et, sur grand écran, une colonne à droite qui suit la page.
+  let styleDuPiedDesActions = [
+    Alignments.absolute,
+    Spaces.gap[12],
+    {
+      bottom: floatingClubActionsBottomInset,
+      elevation: 24,
+      left: 0,
+      right: 0,
+      zIndex: 24,
+    },
+  ];
+  if (actionsEnColonne) {
+    styleDuPiedDesActions = [
+      Spaces.gap[12],
+      { position: /** @type {any} */ ('sticky'), top: 24, width: 320 },
+    ];
+  } else if (annuaire && Platform.OS === 'web') {
+    styleDuPiedDesActions = [
+      Spaces.gap[12],
+      Spaces.padding[16],
+      {
+        backgroundColor: withAlpha(Colors.primary900, 0.92),
+        bottom: 0,
+        left: 0,
+        position: /** @type {any} */ ('fixed'),
+        right: 0,
+        zIndex: 24,
+      },
+    ];
+  }
   const floatingClubActionButtonStyle = {
     elevation: 18,
     shadowColor: Colors.neutral900,
@@ -2353,6 +2436,9 @@ function ClubDetails({ navigation, route }) {
   const isMissingClubId = !clubId;
   const isInitialClubLoading = isLoading && !club;
   const isRefreshing = isFetching && !isLoading;
+  const aPropos = club?.association && (club.association.objectText || club.association.createdYear
+    || club.association.dissolved) ? club.association : null;
+  const aProposRepliable = String(aPropos?.objectText || '').length > LONGUEUR_A_PROPOS_REPLIE;
   const isClubLoadingError = Boolean(error) && !club;
   const isClubNotFound = Boolean(clubId) && !isLoading && !error && !club;
 
@@ -2475,19 +2561,12 @@ function ClubDetails({ navigation, route }) {
   }
 
   return (
-    <ScreenContainer
-      bgImage="bg2"
-      contentContainerStyle={[
-        Spaces.paddingVertical[24],
-        Alignments.column,
-        Alignments.fill,
-        Alignments.relative,
-      ]}
-    >
-      <ScrollView
+    <CadreDeLaFiche annuaire={annuaire} deuxColonnes={actionsEnColonne}>
+      <DefilementDeLaFiche
+        annuaire={annuaire}
         contentContainerStyle={[
           Spaces.gap[32],
-          { paddingBottom: floatingClubActionsScrollPaddingBottom },
+          { paddingBottom: actionsEnColonne ? 40 : floatingClubActionsScrollPaddingBottom },
         ]}
         refreshControl={(
           <RefreshControl
@@ -2495,7 +2574,6 @@ function ClubDetails({ navigation, route }) {
             refreshing={isRefreshing}
           />
         )}
-        showsVerticalScrollIndicator={false}
       >
         {clubs?.length > 1 ? (
           <ClubSelector
@@ -2567,12 +2645,15 @@ function ClubDetails({ navigation, route }) {
                     C'est une transformation de STYLE : le texte rendu reste le
                     nom tel qu'il est en base, donc rien ne change pour un
                     lecteur d'ecran ni pour une recherche. */}
-                <Text style={[
-                  Fonts.h3Black,
-                  Fonts.neutral00,
-                  Fonts.textCenter,
-                  { textTransform: 'uppercase' },
-                ]}
+                <Text
+                  // eslint-disable-next-line react/jsx-props-no-spreading -- rang du titre (web) / « header » (téléphone)
+                  {...proprietesDeTitre(1)}
+                  style={[
+                    Fonts.h3Black,
+                    Fonts.neutral00,
+                    Fonts.textCenter,
+                    { textTransform: 'uppercase' },
+                  ]}
                 >
                   {club?.name}
                 </Text>
@@ -2644,6 +2725,67 @@ function ClubDetails({ navigation, route }) {
                   </View>
                 ) : null}
               </View>
+            </View>
+          ) : null}
+
+          {/* ANNUAIRE-E1 — « À propos » (décision d'Adel du 29/09 : A) : le texte officiel de
+              l'association, tel que le répertoire national des associations le publie, renettoyé
+              par le serveur (porte publique) ; dans l'app ET sur le site, sous la carte d'identité. */}
+          {!isClubSubPage && aPropos ? (
+            <View
+              style={[
+                ApplicationStyle.borderRadius24,
+                ApplicationStyle.backgroundColor.primary700,
+                Spaces.padding[16],
+                Spaces.gap[8],
+              ]}
+              testID="club-details-a-propos"
+            >
+              <Text
+                // eslint-disable-next-line react/jsx-props-no-spreading -- rang du titre (web) / « header » (téléphone)
+                {...proprietesDeTitre(2)}
+                style={[Fonts.h4Black, Fonts.neutral00]}
+              >
+                {t('clubDetails.about.title', 'À propos')}
+              </Text>
+              {aPropos.dissolved ? (
+                <Text style={[Fonts.p3Bold, { color: Colors.warning500 }]}>
+                  {t('clubDetails.about.dissolved', 'Association dissoute (RNA)')}
+                </Text>
+              ) : null}
+              {aPropos.objectText || aPropos.createdYear ? (
+                <Text
+                  numberOfLines={aProposRepliable && !aProposDeplie ? 5 : undefined}
+                  style={[Fonts.p2, Fonts.neutral100]}
+                >
+                  {aPropos.createdYear ? (
+                    <Text style={[Fonts.p2Bold, Fonts.neutral00]}>
+                      {t('clubDetails.about.createdIn', {
+                        defaultValue: 'Créée en {{year}}.',
+                        year: aPropos.createdYear,
+                      })}
+                    </Text>
+                  ) : null}
+                  {aPropos.createdYear && aPropos.objectText ? ' ' : ''}
+                  {aPropos.objectText ? `« ${aPropos.objectText} »` : ''}
+                </Text>
+              ) : null}
+              {aProposRepliable ? (
+                <TouchableOpacity
+                  accessibilityRole="button"
+                  onPress={() => setAProposDeplie((deplie) => !deplie)}
+                  style={{ alignSelf: 'flex-start', minHeight: 32 }}
+                >
+                  <Text style={[Fonts.p3Bold, { color: Colors.primary300 }]}>
+                    {aProposDeplie
+                      ? t('clubDetails.about.less', 'Réduire')
+                      : t('clubDetails.about.more', 'Lire la suite')}
+                  </Text>
+                </TouchableOpacity>
+              ) : null}
+              {aPropos.sourceNote ? (
+                <Text style={[Fonts.p4, Fonts.neutral300]}>{aPropos.sourceNote}</Text>
+              ) : null}
             </View>
           ) : null}
 
@@ -2760,7 +2902,11 @@ function ClubDetails({ navigation, route }) {
               {showsClubSection('facilities') ? (
                 <View style={[Spaces.gap[16]]}>
                   <View style={[Alignments.row, Alignments.alignCenter, Alignments.scrollSpaceBetween, Spaces.gap[16]]}>
-                    <Text style={[Fonts.h4Black, Fonts.neutral00]}>
+                    <Text
+                      // eslint-disable-next-line react/jsx-props-no-spreading -- rang du titre (web) / « header » (téléphone)
+                      {...proprietesDeTitre(2)}
+                      style={[Fonts.h4Black, Fonts.neutral00]}
+                    >
                       {t('facilityList.title', 'Installations')}
                     </Text>
                     {canEdit ? (
@@ -3054,7 +3200,13 @@ function ClubDetails({ navigation, route }) {
               {showsClubSection('sports') ? (
                 <View style={[Spaces.gap[16]]}>
                   <View style={[Alignments.row, Alignments.alignCenter, Alignments.scrollSpaceBetween, Spaces.gap[16]]}>
-                    <Text style={[Fonts.h4Black, Fonts.neutral00]}>{t('clubDetails.titles.activities')}</Text>
+                    <Text
+                      // eslint-disable-next-line react/jsx-props-no-spreading -- rang du titre (web) / « header » (téléphone)
+                      {...proprietesDeTitre(2)}
+                      style={[Fonts.h4Black, Fonts.neutral00]}
+                    >
+                      {t('clubDetails.titles.activities')}
+                    </Text>
                     {activitiesHeaderActions}
                   </View>
                   {activitiesContent}
@@ -3066,7 +3218,13 @@ function ClubDetails({ navigation, route }) {
                   <View style={[Alignments.row,
                     Alignments.alignCenter, Alignments.scrollSpaceBetween, Spaces.gap[16]]}
                   >
-                    <Text style={[Fonts.h4Black, Fonts.neutral00]}>{t('clubDetails.titles.sponsors')}</Text>
+                    <Text
+                      // eslint-disable-next-line react/jsx-props-no-spreading -- rang du titre (web) / « header » (téléphone)
+                      {...proprietesDeTitre(2)}
+                      style={[Fonts.h4Black, Fonts.neutral00]}
+                    >
+                      {t('clubDetails.titles.sponsors')}
+                    </Text>
                     {canEdit ? (
                       <Button
                         icon="plus"
@@ -3170,7 +3328,13 @@ function ClubDetails({ navigation, route }) {
                   <View style={[Alignments.row,
                     Alignments.alignCenter, Alignments.scrollSpaceBetween, Spaces.gap[16]]}
                   >
-                    <Text style={[Fonts.h4Black, Fonts.neutral00]}>{t('clubDetails.titles.teams')}</Text>
+                    <Text
+                      // eslint-disable-next-line react/jsx-props-no-spreading -- rang du titre (web) / « header » (téléphone)
+                      {...proprietesDeTitre(2)}
+                      style={[Fonts.h4Black, Fonts.neutral00]}
+                    >
+                      {t('clubDetails.titles.teams')}
+                    </Text>
                   </View>
                   <View
                     style={[Spaces.gap[16]]}
@@ -3299,7 +3463,13 @@ function ClubDetails({ navigation, route }) {
                     <View style={[Alignments.row,
                       Alignments.alignCenter, Alignments.scrollSpaceBetween, Spaces.gap[16]]}
                     >
-                      <Text style={[Fonts.h4Black, Fonts.neutral00]}>{t('clubDetails.titles.coachs')}</Text>
+                      <Text
+                        // eslint-disable-next-line react/jsx-props-no-spreading -- rang du titre (web) / « header » (téléphone)
+                        {...proprietesDeTitre(2)}
+                        style={[Fonts.h4Black, Fonts.neutral00]}
+                      >
+                        {t('clubDetails.titles.coachs')}
+                      </Text>
                       {canEdit ? (
                         <Button
                           icon="plus"
@@ -3393,7 +3563,13 @@ function ClubDetails({ navigation, route }) {
                   <View style={[Alignments.row,
                     Alignments.alignCenter, Alignments.scrollSpaceBetween, Spaces.gap[16]]}
                   >
-                    <Text style={[Fonts.h4Black, Fonts.neutral00]}>{t('clubDetails.titles.owners')}</Text>
+                    <Text
+                      // eslint-disable-next-line react/jsx-props-no-spreading -- rang du titre (web) / « header » (téléphone)
+                      {...proprietesDeTitre(2)}
+                      style={[Fonts.h4Black, Fonts.neutral00]}
+                    >
+                      {t('clubDetails.titles.owners')}
+                    </Text>
                     {canEdit ? (
                       <Button
                         icon="plus"
@@ -3486,7 +3662,7 @@ function ClubDetails({ navigation, route }) {
             </>
           )}
         </WithDataWrapper>
-      </ScrollView>
+      </DefilementDeLaFiche>
       {/* Z01 : « C'est mon club ! » et son jumeau du dirigeant ont quitte CE */}
       {/* pied de page — ils vivent desormais dans le pied flottant unique, */}
       {/* plus bas. Ils etaient ici, dans le flux normal, pendant que l'autre */}
@@ -4051,17 +4227,7 @@ function ClubDetails({ navigation, route }) {
       {hasFloatingClubActions ? (
         <View
           pointerEvents="box-none"
-          style={[
-            Alignments.absolute,
-            Spaces.gap[12],
-            {
-              bottom: floatingClubActionsBottomInset,
-              elevation: 24,
-              left: 0,
-              right: 0,
-              zIndex: 24,
-            },
-          ]}
+          style={styleDuPiedDesActions}
           testID="club-details-actions-footer"
         >
           {/* D98 — le joueur passe EN PREMIER et en Primary : c'est le cas
@@ -4315,7 +4481,35 @@ function ClubDetails({ navigation, route }) {
         isVisible={Boolean(subscriptionPaywallDecision)}
         navigation={navigation}
       />
-    </ScreenContainer>
+    </CadreDeLaFiche>
+  );
+}
+
+/**
+ * ANNUAIRE-E1 — le défilement de la fiche : celui de l'écran, ou la page du site (annuaire), qui
+ * défile d'elle-même. Une boîte qui défile DANS la page est ce que la maquette retire.
+ * @param {{
+ *  annuaire: boolean,
+ *  children: import('react').ReactNode,
+ *  contentContainerStyle: any,
+ *  refreshControl: import('react').ReactElement,
+ * }} props Les props.
+ * @returns {import('react').ReactElement} Le défilement.
+ */
+function DefilementDeLaFiche({
+  annuaire, children, contentContainerStyle, refreshControl,
+}) {
+  if (annuaire) {
+    return <View style={[{ flex: 1, minWidth: 0 }, contentContainerStyle]}>{children}</View>;
+  }
+  return (
+    <ScrollView
+      contentContainerStyle={contentContainerStyle}
+      refreshControl={refreshControl}
+      showsVerticalScrollIndicator={false}
+    >
+      {children}
+    </ScrollView>
   );
 }
 
