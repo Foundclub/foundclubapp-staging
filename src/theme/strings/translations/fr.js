@@ -1904,9 +1904,17 @@ export default {
     CLUB_MEMBER_POLICY_ERROR: 'Violation de la politique concernant les membres du club.',
     CLUB_STAFF_CREATE_POLICY_ERROR: 'Violation de la politique de création de personnel du club.',
     CLUB_STAFF_POLICY_ERROR: 'Violation de la politique concernant le personnel du club.',
+    //   COLLECTIVITES 1c — is-gestionnaire-collectivite : ce compte ne gere pas CETTE collectivite
+    COLLECTIVITE_GESTIONNAIRE_REQUIRED: 'Tu ne gères pas cette collectivité.',
     error: 'Erreur',
     EVENT_TRAINER_CREATE_POLICY_ERROR: "Violation de la politique de création d'événements par les entraîneur·e·s.",
     EVENT_TRAINER_POLICY_ERROR: 'Violation de la politique concernant les entraîneur·e·s et les événements.',
+    //   COLLECTIVITES 3a/1c — accepter une demande d installation : la place a ete prise par
+    //   une autre acceptation depuis la demande (409), ou ce compte n est pas le proprietaire.
+    // eslint-disable-next-line max-len
+    FACILITY_OVERRIDE_CAPACITY_CHANGED: 'Plus de place : une autre demande a été acceptée sur ce moment entre-temps. Tu peux refuser celle-ci.',
+    // eslint-disable-next-line max-len
+    FACILITY_OVERRIDE_OWNER_REQUIRED: "Seul le propriétaire de l'installation (club, structure ou collectivité) tranche cette demande.",
     generic: 'Une erreur est survenue. Merci de réessayer plus tard.',
     HAD_PENDING_MEMBERSHIP_REQUEST_POLICY_ERROR: "Tu as déjà une demande d'adhésion en attente.",
     MANAGER_TRAINER_CLUB_POLICY_ERROR: 'Violation de la politique concernant les entraîneur·e·s et dirigeant·e·s du club.',
@@ -4515,6 +4523,47 @@ export default {
       notManaged: 'Tu ne gères pas cette collectivité.',
       // eslint-disable-next-line max-len
       subtitle: 'Ton espace de gestionnaire : les installations de {{name}}, les demandes des clubs et les clubs rattachés.',
+    },
+    requests: {
+      actions: {
+        approve: 'Accepter',
+        refuse: 'Refuser',
+      },
+      conflict: {
+        free: 'Personne n’occupe ce moment : la place est libre.',
+        occupant: 'Déjà là : {{club}} · {{team}} ({{slot}})',
+        remaining: 'Place restante : {{remaining}} sur {{max}}',
+      },
+      decisionReason: 'Ton message : {{message}}',
+      emptyDecided: 'Aucune demande traitée pour l’instant.',
+      emptyPending: 'Aucune demande en attente.',
+      header: 'Demandes de la Ville',
+      modal: {
+        // eslint-disable-next-line max-len
+        approveHint: 'Le club reçoit ta réponse et ton message. S’il y avait un occupant, il est prévenu.',
+        approvePlaceholder: 'Un mot pour le club (facultatif)',
+        approveTitle: 'Accepter la demande',
+        cancel: 'Annuler',
+        reasonRequired: 'Écris le motif : le club le lira.',
+        refuseHint: 'Le club reçoit ton motif ; son entraînement est annulé.',
+        refusePlaceholder: 'Le motif du refus (obligatoire)',
+        refuseTitle: 'Refuser la demande',
+      },
+      once: 'Ponctuel',
+      reason: 'Motif : {{reason}}',
+      requestedBy: 'Demandé par {{name}}',
+      retry: 'Réessayer',
+      status: {
+        approved: 'Acceptée',
+        refused: 'Refusée',
+      },
+      tabs: {
+        decided: 'Traitées',
+        pending: 'En attente ({{nombre}})',
+      },
+      title: 'Demandes de la Ville',
+      unknownClub: 'Club',
+      weekly: 'Chaque semaine',
     },
   },
   comingSoonLeagueScreen: {

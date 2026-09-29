@@ -80,6 +80,7 @@ const WEB_ROUTE_PATTERNS = {
   // ordinateur. Chaque ecran porte la collectivite dans son adresse (le site ne transmet
   // que l adresse et ses parametres texte).
   [RouteNames.CollectiviteHome]: '/collectivite/:collectiviteId',
+  [RouteNames.CollectiviteRequests]: '/collectivite/:collectiviteId/requests',
   [RouteNames.TeamList]: '/teams',
   [RouteNames.MyTeamList]: '/teams/mine',
   [RouteNames.TeamDetails]: '/teams/:teamId',

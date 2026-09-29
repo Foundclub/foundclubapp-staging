@@ -407,6 +407,14 @@ function PrivateNavigator() {
           }}
         />
         <Stack.Screen
+          getComponent={() => require('@/views/collectivite/CollectiviteRequests').default}
+          name={RouteNames.CollectiviteRequests}
+          options={{
+            ...commonOptions,
+            headerTitle: t('collectivite.requests.header', 'Demandes de la Ville'),
+          }}
+        />
+        <Stack.Screen
           getComponent={() => require('@/views/multisportClub/MyClubsScreen').default}
           name={RouteNames.MyClubs}
           options={{

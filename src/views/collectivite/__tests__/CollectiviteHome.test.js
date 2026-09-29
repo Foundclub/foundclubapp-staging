@@ -157,6 +157,16 @@ describe('COLLECTIVITES 1c — écran 2 : l accueil « Ma collectivité »', () 
     expect(textesDeLaCarte(arbre, 'requests')).toContain('0');
   });
 
+  it('la carte des demandes ouvre « Demandes de la Ville » de CETTE collectivité', async () => {
+    const arbre = await monter();
+    const carte = arbre.root.findAll((/** @type {any} */ n) => n.props?.testID
+      === 'collectivite-home-requests'
+      && typeof n.props?.onPress === 'function')[0];
+    await act(async () => { carte.props.onPress(); });
+    expect(mockNavigate)
+      .toHaveBeenCalledWith('CollectiviteRequests', { collectiviteId: 'ville-de-recette' });
+  });
+
   it('une lecture en ÉCHEC affiche « — », jamais un 0 inventé', async () => {
     mockClubs = {
       data: undefined, error: new Error('403'), isLoading: false, refetch: jest.fn(),

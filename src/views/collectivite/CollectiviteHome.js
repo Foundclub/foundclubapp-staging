@@ -17,6 +17,8 @@ import useTheme from '@/theme/themeContext';
 import Loader from '@/components/atoms/loader/Loader';
 import ScreenContainer from '@/components/templates/ScreenContainer';
 
+import { RouteNames } from '@/navigation/routeNames';
+
 import {
   useCollectiviteClubs,
   useCollectiviteInstallations,
@@ -102,7 +104,7 @@ function CollectiviteHome() {
       ),
       icon: Images.envelope,
       key: 'requests',
-      route: null,
+      route: RouteNames.CollectiviteRequests,
       title: t('collectivite.home.cards.requests.title', 'Demandes en attente'),
     },
     {
