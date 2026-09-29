@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { format, isValid, parse } from 'date-fns';
 import i18next from 'i18next';
 import Joi from 'joi';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import {
@@ -462,10 +462,45 @@ function EventEdit({ navigation, route }) {
     onSuccess: invalidateEventQueries,
   });
 
+  /**
+   * Pose sur la fiche, tout de suite, ce que le serveur vient d'enregistrer.
+   *
+   * 🔴 EVENTEDIT-SAISIE (D2, tournee 6 du 29/09) — LA FICHE RESTAIT SUR
+   * L'ANCIENNE VERSION PENDANT PRES D'UNE MINUTE. L'invalidation ci-dessus fait
+   * bien relire la fiche, mais cette relecture-la est la plus lourde de l'app
+   * (equipe, joueurs, avatars, equipes conviees...) : tant qu'elle n'est pas
+   * revenue, la fiche montrait l'ancienne date, les anciennes heures, et la
+   * carte « Faire l'appel » d'un pointage qu'on venait de couper. Pendant ce
+   * temps, la REPONSE de l'enregistrement portait deja la nouvelle version.
+   *
+   * ✅ Ses champs recouvrent ceux de la fiche. Ce qu'elle ne porte pas (les
+   * relations peuplees : equipe, joueurs, lieu) reste en place, et la relecture
+   * complete arrive ensuite, comme avant : l'invalidation n'est PAS retiree.
+   * 📎 Le meme paquet sert deja de fiche a la creation (`EventWizardRecap.js`,
+   * `setQueryData(['event', eventId], ...)`) : la fiche sait l'afficher.
+   *
+   * ⛔ Pas de fiche en cache, pas de fiche fabriquee : un demi-evenement
+   * s'afficherait comme s'il etait complet.
+   * Temoin : `__tests__/EventEditSaisieRelecture.test.js`.
+   * @param {any} reponse - Le corps rendu par `PUT /events/:id`.
+   * @returns {void}
+   */
+  const afficherLaReponseSurLaFiche = (reponse) => {
+    const evenementEnregistre = reponse?.data;
+    if (!eventId || evenementEnregistre?.documentId !== eventId) return;
+    queryClient.setQueryData(
+      ['event', eventId],
+      (/** @type {any} */ fiche) => (fiche ? { ...fiche, ...evenementEnregistre } : fiche),
+    );
+  };
+
   const updateEventMutation = useMutation({
     mutationFn: updateEvent,
     onError: signalerEchecEnregistrement,
-    onSuccess: invalidateEventQueries,
+    onSuccess: (/** @type {any} */ reponse) => {
+      afficherLaReponseSurLaFiche(reponse);
+      invalidateEventQueries();
+    },
   });
 
   let initialDateValue = '';
@@ -477,7 +512,7 @@ function EventEdit({ navigation, route }) {
 
   const {
     control,
-    formState: { errors: formErrors },
+    formState: { errors: formErrors, isDirty },
     handleSubmit,
     reset,
     setFocus,
@@ -717,11 +752,33 @@ function EventEdit({ navigation, route }) {
     [selectedTypeData?.name],
   );
 
-  // Reset form when event data is loaded
+  // 🔴 EVENTEDIT-SAISIE (D1, tournee 6 du 29/09) — UNE RELECTURE N'EFFACE PLUS
+  // CE QUE LA PERSONNE EST EN TRAIN DE SAISIR.
+  //
+  // 🧨 CE `reset` REPARTAIT A CHAQUE NOUVELLE VERSION DE `event` — et il y en
+  // a une a CHAQUE relecture, meme identique : le service change `date` en
+  // objet `Date` (Joi), que react-query ne sait pas comparer, donc chaque
+  // lecture rend un NOUVEL objet. Or ouvrir le calendrier ou l'horloge Android
+  // fait passer l'app en arriere-plan, et au retour `queryRefreshOnReturn.js`
+  // relit `['event']` — la clef de cet ecran comprise. Vu 4 fois en recette :
+  // la date choisie revenait au 02/10, les heures 09:00/10:00 retombaient a
+  // 18:00/19:00. Et c'est l'ANCIENNE date qui partait a l'enregistrement : un
+  // match enregistre au mauvais jour.
+  //
+  // ✅ LA REGLE, celle que `ProfileEdit.js` applique deja au profil :
+  //   · la PREMIERE version d'un evenement remplit TOUJOURS le formulaire —
+  //     avant elle, il est pre-rempli A VIDE, et l'enregistrer effacerait
+  //     taches, equipes conviees et lieu (D5) ;
+  //   · ensuite, une relecture ne touche plus un formulaire que la personne a
+  //     modifie. Intact, il suit la version fraiche : on n'enregistre pas
+  //     par-dessus ce que quelqu'un d'autre vient de changer.
+  // Temoin : `__tests__/EventEditSaisieRelecture.test.js`.
+  const evenementDejaRempliRef = useRef(/** @type {string | null} */ (null));
   useEffect(() => {
     if (event) {
-      console.log('Event data loaded:', event);
-      console.log('Récurrence Group ID:', event.recurrenceGroupId);
+      const premiereVersion = evenementDejaRempliRef.current !== event.documentId;
+      if (!premiereVersion && isDirty) return;
+      evenementDejaRempliRef.current = event.documentId;
       reset({
         ...defaultValues,
         arrivalTrackingEnabled: event?.arrivalTrackingEnabled !== false,
@@ -753,16 +810,12 @@ function EventEdit({ navigation, route }) {
         validationMode: event?.validationMode || 'auto',
       });
     }
-  }, [event, reset, resolveTrainingOpenConfig]);
+  }, [event, isDirty, reset, resolveTrainingOpenConfig]);
 
-  // Set navigation options to change the header title based on whether editing or creating
-  useEffect(() => {
-    navigation.setOptions({
-      headerTitle: eventId
-        ? t('eventEdit.titleEdit')
-        : t('eventEdit.title'),
-    });
-  }, [navigation, eventId, t]);
+  // 🏷️ EVENTEDIT-SAISIE (D8) — LE TITRE N'EST PLUS POSE D'ICI. Il l'etait apres
+  // le premier dessin : pendant tout le chargement, la barre disait « Creer un
+  // evenement ». La pile le decide desormais d'apres la route
+  // (`navigation/private/stacks/EventStack.js`), juste des la premiere image.
 
   /**
    * Handle form submit
@@ -865,7 +918,14 @@ function EventEdit({ navigation, route }) {
             // dire. La personne reste sur son formulaire, avec ses saisies.
             return;
           }
-          navigation.replace(RouteNames.EventDetails, { eventId });
+          // 🔴 EVENTEDIT-SAISIE (D3) — ON REVIENT A LA FICHE, ON N'EN POSE PAS
+          // UNE DE PLUS. `replace` mettait une NOUVELLE fiche a la place de cet
+          // ecran, par-dessus celle d'ou l'on venait : apres quatre
+          // enregistrements, cinq fiches du meme evenement et cinq retours pour
+          // sortir. `popTo` redescend a la fiche existante (ses parametres
+          // gardes) ; s'il n'y en a pas — ecran ouvert par un lien —, il remplace
+          // cet ecran par la fiche, exactement comme avant.
+          navigation.popTo(RouteNames.EventDetails, { eventId }, { merge: true });
         };
 
         if (event?.recurrenceGroupId) {
@@ -1053,7 +1113,10 @@ function EventEdit({ navigation, route }) {
                     : null}
                   onChange={(/** @type {{ location: string; facilityId?: string }} */ { facilityId: newFacilityId, location: newLocation }) => {
                     onChange(newLocation);
-                    setValue('facility', newFacilityId || '');
+                    // D1 — choisir une installation EST une saisie : elle doit
+                    // compter pour « formulaire modifie », sinon une relecture
+                    // pourrait la remettre a l'ancienne sous un lieu nouveau.
+                    setValue('facility', newFacilityId || '', { shouldDirty: true });
                   }}
                   onOccupancyResolved={setSelectedOccupancy}
                 />
