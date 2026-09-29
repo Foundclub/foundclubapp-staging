@@ -56,9 +56,10 @@ const hasSelectionObjects = (params) => Array.isArray(params?.players)
 const hasFieldObjects = (params) => Array.isArray(params?.selectedPlayers);
 
 /**
+ * Les parametres de l'ecran, completes par la relecture du serveur si besoin.
  * @param {any} routeParams Les parametres de la route (adresse + objets gardes en memoire).
  * @param {'field' | 'selection'} need Ce dont l'ecran a besoin.
- * @returns {{ params: any, recovery: { missingCount: number, publicationBlocked: boolean, status: string } }}
+ * @returns {{ params: any, recovery: typeof IDLE }} `recovery` dit si la publication est fermee.
  */
 const useSiteCompositionRecovery = (routeParams, need) => {
   const params = routeParams || EMPTY_PARAMS;

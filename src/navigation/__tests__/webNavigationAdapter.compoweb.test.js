@@ -65,7 +65,8 @@ describe('COMPO-WEB — les objets du parcours de composition voyagent en memoir
 
     adapter.navigate(RouteNames.EventDetails, { eventId: 'e1', objet: { a: 1 } });
 
-    expect(push).toHaveBeenCalledWith(buildWebPath(RouteNames.EventDetails, { eventId: 'e1' }), undefined);
+    const fiche = buildWebPath(RouteNames.EventDetails, { eventId: 'e1' });
+    expect(push).toHaveBeenCalledWith(fiche, undefined);
   });
 
   test('3. sans objet a transporter, aucune cle', () => {
@@ -73,7 +74,8 @@ describe('COMPO-WEB — les objets du parcours de composition voyagent en memoir
 
     adapter.navigate(RouteNames.MatchConvocationPublished, { eventId: 'e1', teamId: 't1' });
 
-    expect(push).toHaveBeenCalledWith('/match/convocation/published?eventId=e1&teamId=t1', undefined);
+    const reponses = '/match/convocation/published?eventId=e1&teamId=t1';
+    expect(push).toHaveBeenCalledWith(reponses, undefined);
   });
 
   test('4. navigation imbriquee (`screen` / `params`) : la cible reelle decide', () => {
@@ -134,14 +136,17 @@ describe('COMPO-WEB — les objets du parcours de composition voyagent en memoir
     adapter.popTo(RouteNames.EventDetails, { eventId: 'e1' });
 
     expect(push).not.toHaveBeenCalled();
-    expect(replace).toHaveBeenCalledWith(buildWebPath(RouteNames.EventDetails, { eventId: 'e1' }), undefined);
+    const fiche = buildWebPath(RouteNames.EventDetails, { eventId: 'e1' });
+    expect(replace).toHaveBeenCalledWith(fiche, undefined);
   });
 
   test('9. la memoire est bornee : les plus anciennes cles s oublient', () => {
     const { adapter, push } = fabriquer();
 
     for (let index = 0; index < 60; index += 1) {
-      adapter.navigate(RouteNames.MatchCompositionBoard, { eventId: `e${index}`, selectedPlayers: JOUEURS });
+      adapter.navigate(RouteNames.MatchCompositionBoard, {
+        eventId: `e${index}`, selectedPlayers: JOUEURS,
+      });
     }
 
     const premiere = push.mock.calls[0][1].carry;

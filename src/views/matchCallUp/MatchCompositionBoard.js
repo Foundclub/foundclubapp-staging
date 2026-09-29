@@ -355,7 +355,9 @@ function MatchCompositionBoard() {
   // seul geste.
   const clavierActif = Platform.OS === 'web' && !isReadOnly;
   const [joueurAuClavier, setJoueurAuClavier] = useState(/** @type {string | null} */ (null));
-  const joueurChoisi = clavierActif && joueurAuClavier ? playerById.get(joueurAuClavier) || null : null;
+  const joueurChoisi = clavierActif && joueurAuClavier
+    ? playerById.get(joueurAuClavier) || null
+    : null;
   const nomDuJoueurChoisi = joueurChoisi
     ? `${joueurChoisi?.firstname || ''} ${joueurChoisi?.lastname || ''}`.trim()
     : '';
@@ -372,7 +374,9 @@ function MatchCompositionBoard() {
     setJoueurAuClavier((current) => (current === playerId ? null : playerId));
   }, []);
 
-  const toucheSurUnJeton = useCallback((/** @type {any} */ player) => (/** @type {any} */ event) => {
+  const toucheSurUnJeton = useCallback((/** @type {any} */ player) => (
+    /** @type {any} */ event,
+  ) => {
     const touche = event?.nativeEvent?.key || event?.key;
     if (touche === 'Escape') {
       setJoueurAuClavier(null);
@@ -383,7 +387,9 @@ function MatchCompositionBoard() {
     choisirAuClavier(player);
   }, [choisirAuClavier]);
 
-  const poserAuClavier = useCallback((/** @type {{ x: number, y: number, surUnPoste: boolean }} */ cible) => {
+  const poserAuClavier = useCallback((
+    /** @type {{ x: number, y: number, surUnPoste: boolean }} */ cible,
+  ) => {
     if (!joueurAuClavier) return;
     setPlacements((current) => placePlayerAt({
       // Un poste NOMME (« au poste GB ») est vise expres : le jeton s'y accroche.
@@ -408,7 +414,9 @@ function MatchCompositionBoard() {
     gardeMessage = t('matchComposition.board.guard.failedMessage');
   } else if (recovery?.status === 'missing') {
     gardeTitre = t('matchComposition.board.guard.missingTitle');
-    gardeMessage = t('matchComposition.board.guard.missingMessage', { count: recovery.missingCount });
+    gardeMessage = t('matchComposition.board.guard.missingMessage', {
+      count: recovery.missingCount,
+    });
   }
 
   // ⌨️ COMPO-WEB — LE FOCUS SE VOIT. Mesure au banc (capture) : le jeton qui
@@ -427,7 +435,9 @@ function MatchCompositionBoard() {
   );
   const perdreLeFocus = (/** @type {string} */ cle) => (
     clavierActif
-      ? () => setFocusClavier((/** @type {string | null} */ actuel) => (actuel === cle ? null : actuel))
+      ? () => setFocusClavier((/** @type {string | null} */ actuel) => (
+        actuel === cle ? null : actuel
+      ))
       : undefined
   );
 
@@ -987,7 +997,9 @@ function MatchCompositionBoard() {
                     ? t('matchComposition.board.keyboard.placeOnSlot', {
                       label: entry.label, name: nomDuJoueurChoisi,
                     })
-                    : t('matchComposition.board.keyboard.placeOnField', { name: nomDuJoueurChoisi })}
+                    : t('matchComposition.board.keyboard.placeOnField', {
+                      name: nomDuJoueurChoisi,
+                    })}
                   accessibilityRole="button"
                   activeOpacity={0.8}
                   key={`cible-${entry ? entry.slotId : 'terrain'}`}
@@ -1110,7 +1122,10 @@ function MatchCompositionBoard() {
                   onFocus={prendreLeFocus(`jeton:${getCompositionPlayerId(player)}`)}
                   // @ts-ignore — `onKeyDown` n'existe que sur le site (react-native-web).
                   onKeyDown={clavierActif ? toucheSurUnJeton(player) : undefined}
-                  style={anneauClavier(`jeton:${getCompositionPlayerId(player)}`, estChoisi) || undefined}
+                  style={anneauClavier(
+                    `jeton:${getCompositionPlayerId(player)}`,
+                    estChoisi,
+                  ) || undefined}
                 >
                   <DraggableToken player={player} />
                 </View>

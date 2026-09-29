@@ -30,7 +30,10 @@ const mockUseComposition = jest.fn(() => mockReponseComposition);
 
 const mockNavigation = { goBack: jest.fn(), navigate: mockNavigate, setParams: jest.fn() };
 
-jest.mock('../useSiteCompositionRecovery', () => jest.requireActual('../useSiteCompositionRecovery.web'));
+jest.mock(
+  '../useSiteCompositionRecovery',
+  () => jest.requireActual('../useSiteCompositionRecovery.web'),
+);
 
 jest.mock('@react-navigation/native', () => ({
   useNavigation: () => mockNavigation,
@@ -105,7 +108,10 @@ jest.mock('@/theme/themeContext', () => {
 
 jest.mock('@/components/templates/ScreenContainer', () => {
   const { View } = jest.requireActual('react-native');
-  return { __esModule: true, default: (/** @type {any} */ { children }) => <View>{children}</View> };
+  return {
+    __esModule: true,
+    default: (/** @type {any} */ { children }) => <View>{children}</View>,
+  };
 });
 
 jest.mock('@/components/atoms/headerBackButton/HeaderBackButton', () => {
@@ -229,13 +235,15 @@ describe('COMPO-WEB — la selection du site, arrivee par l adresse', () => {
 
   test('3. avec ses objets (navigation dans l onglet) : aucune relecture', async () => {
     mockReponseComposition = { data: undefined, isError: false };
-    const arbre = await rendre({ ...PAR_L_ADRESSE, existingComposition: PUBLIEE, players: EFFECTIF });
+    const arbre = await rendre({
+      ...PAR_L_ADRESSE, existingComposition: PUBLIEE, players: EFFECTIF,
+    });
 
     expect(mockUseComposition).toHaveBeenCalledWith('evt_1', 'team_1', { enabled: false });
     expect(texteVisible(arbre)).toContain('2 convoqués');
   });
 
-  test('🔴 4. « Suivant » emmene au terrain les convoques relus et la charge du serveur', async () => {
+  test('🔴 4. « Suivant » emmene au terrain les convoques relus et la charge', async () => {
     const charge = { draft: null, eligiblePlayers: EFFECTIF, published: PUBLIEE };
     mockReponseComposition = { data: charge, isError: false };
     const arbre = await rendre(PAR_L_ADRESSE);
@@ -249,7 +257,8 @@ describe('COMPO-WEB — la selection du site, arrivee par l adresse', () => {
     expect(mockNavigate).toHaveBeenCalledTimes(1);
     const [route, parametres] = mockNavigate.mock.calls[0];
     expect(route).toBe('MatchCompositionBoard');
-    expect(parametres.selectedPlayers.map((/** @type {any} */ p) => p.documentId)).toEqual(['j1', 'j3']);
+    const ids = parametres.selectedPlayers.map((/** @type {any} */ p) => p.documentId);
+    expect(ids).toEqual(['j1', 'j3']);
     expect(parametres.startPlacements).toEqual([
       expect.objectContaining({ playerId: 'j1', positionX: 50, positionY: 88 }),
     ]);

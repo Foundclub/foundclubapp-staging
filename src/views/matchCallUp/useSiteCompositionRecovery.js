@@ -20,7 +20,7 @@ const IDLE = Object.freeze({ missingCount: 0, publicationBlocked: false, status:
 /**
  * Le second argument des appelants (`'field'` / `'selection'`, ce dont l'ecran
  * a besoin) n'est lu que par le site : ici, il est ignore.
- * @type {(routeParams: any, need?: 'field' | 'selection') => { params: any, recovery: typeof IDLE }}
+ * @type {(routeParams: any, need?: string) => { params: any, recovery: typeof IDLE }}
  */
 const useSiteCompositionRecovery = (routeParams) => ({ params: routeParams, recovery: IDLE });
 

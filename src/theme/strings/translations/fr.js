@@ -10491,15 +10491,16 @@ export default {
       // COMPO-WEB (29/09) — le terrain du SITE, arrivé sans ses joueurs : pourquoi
       // « Publier » est fermé.
       guard: {
-        emptyMessage: 'Cette composition n’a pas pu être retrouvée. Reviens à la sélection '
-          + '(« Modifier ») pour choisir tes convoqués : une composition vide ne se publie pas.',
+        emptyMessage: 'Cette composition n’a pas pu être retrouvée. Reviens à la '
+          + 'sélection (« Modifier ») pour choisir tes convoqués : '
+          + 'une composition vide ne se publie pas.',
         emptyTitle: 'Aucun joueur à placer',
-        failedMessage: 'La composition n’a pas pu être relue. Recharge la page ou reviens à la '
-          + 'sélection (« Modifier ») : rien ne part tant qu’elle manque.',
+        failedMessage: 'La composition n’a pas pu être relue. Recharge la page ou '
+          + 'reviens à la sélection (« Modifier ») : rien ne part tant qu’elle manque.',
         failedTitle: 'Composition introuvable',
         loading: 'Chargement de la composition…',
-        missingMessage_one: '{{count}} convoqué n’a pas pu être retrouvé : repasse par « Modifier » '
-          + 'avant de publier, sinon il sortirait de la convocation.',
+        missingMessage_one: '{{count}} convoqué n’a pas pu être retrouvé : repasse par '
+          + '« Modifier » avant de publier, sinon il sortirait de la convocation.',
         missingMessage_other: '{{count}} convoqués n’ont pas pu être retrouvés : repasse par '
           + '« Modifier » avant de publier, sinon ils sortiraient de la convocation.',
         missingTitle: 'Composition incomplète',

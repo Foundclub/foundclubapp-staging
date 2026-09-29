@@ -37,7 +37,10 @@ const mockUseComposition = jest.fn(() => mockReponseComposition);
 const mockNavigation = { goBack: mockGoBack, navigate: mockNavigate, popTo: jest.fn() };
 
 // 🌐 LE SITE : c'est le jumeau `.web.js` que Vite compile qui est branche ici.
-jest.mock('../useSiteCompositionRecovery', () => jest.requireActual('../useSiteCompositionRecovery.web'));
+jest.mock(
+  '../useSiteCompositionRecovery',
+  () => jest.requireActual('../useSiteCompositionRecovery.web'),
+);
 
 jest.mock('@/services/event/eventQueries', () => ({
   useGetEventTeamComposition: (...args) => mockUseComposition(...args),
@@ -150,7 +153,10 @@ jest.mock('@/theme/themeContext', () => {
 
 jest.mock('@/components/templates/ScreenContainer', () => {
   const { View: VueRN } = jest.requireActual('react-native');
-  return { __esModule: true, default: (/** @type {any} */ { children }) => <VueRN>{children}</VueRN> };
+  return {
+    __esModule: true,
+    default: (/** @type {any} */ { children }) => <VueRN>{children}</VueRN>,
+  };
 });
 
 jest.mock('@/components/atoms/headerBackButton/HeaderBackButton', () => {
@@ -267,7 +273,9 @@ const texteVisible = (/** @type {any} */ arbre) => arbre.root
 const parLibelle = (/** @type {any} */ arbre, /** @type {string} */ libelle) => arbre.root
   .findAll((/** @type {any} */ noeud) => noeud.props?.accessibilityLabel === libelle
     && typeof noeud.type === 'string')[0]
-  || arbre.root.findAll((/** @type {any} */ noeud) => noeud.props?.accessibilityLabel === libelle)[0];
+  || arbre.root.findAll(
+    (/** @type {any} */ noeud) => noeud.props?.accessibilityLabel === libelle,
+  )[0];
 
 // Le bouton (le composant qui porte `onPress`) nomme par ce libelle d'accessibilite.
 const cibleAppuyable = (/** @type {any} */ arbre, /** @type {string} */ libelle) => arbre.root
@@ -299,7 +307,7 @@ describe('COMPO-WEB — le terrain du site, arrive sans ses objets', () => {
   });
   afterEach(() => { Platform.OS = osOrigine; });
 
-  test('🔴 1. arrive par l adresse, il RELIT le brouillon : titulaire sur le terrain, banc garni', async () => {
+  test('🔴 1. par l adresse, il RELIT le brouillon : titulaire et banc', async () => {
     mockReponseComposition = { data: chargeAvecBrouillon(), isError: false };
     const arbre = await rendre(MatchCompositionBoard, PAR_L_ADRESSE);
 
@@ -313,7 +321,7 @@ describe('COMPO-WEB — le terrain du site, arrive sans ses objets', () => {
   // 🧷 Le FILET d'URL-BOOLEENS (recolte) tient ce cas-la : un terrain sans aucun
   // joueur s'ouvre en lecture seule — « Publier » et « Enregistrer » n'existent
   // meme pas. Ce que COMPO-WEB y ajoute : le bandeau qui DIT pourquoi.
-  test('🔴 2. sans pack : lecture seule (le filet), le bandeau dit pourquoi, rien ne part', async () => {
+  test('🔴 2. sans pack : lecture seule (le filet), le bandeau dit pourquoi', async () => {
     mockReponseComposition = { data: chargeVide(), isError: false };
     const arbre = await rendre(MatchCompositionBoard, PAR_L_ADRESSE);
 
@@ -325,7 +333,7 @@ describe('COMPO-WEB — le terrain du site, arrive sans ses objets', () => {
     expect(saveEventCompositionDraft).not.toHaveBeenCalled();
   });
 
-  test('🔴 3. relecture en cours, en echec, ou convoque introuvable : ferme, et dit pourquoi', async () => {
+  test('🔴 3. relecture en cours, en echec, joueur introuvable : ferme, dit pourquoi', async () => {
     // En cours, puis en echec : aucun joueur encore — le filet tient, le bandeau parle.
     mockReponseComposition = { data: undefined, isError: false };
     let arbre = await rendre(MatchCompositionBoard, PAR_L_ADRESSE);
@@ -356,7 +364,7 @@ describe('COMPO-WEB — le terrain du site, arrive sans ses objets', () => {
     expect(saveEventCompositionDraft).not.toHaveBeenCalled();
   });
 
-  test('4. des objets deja la (navigation dans l onglet) : AUCUNE relecture, rien de ferme', async () => {
+  test('4. objets deja la (navigation dans l onglet) : aucune relecture', async () => {
     mockReponseComposition = { data: undefined, isError: false };
     const arbre = await rendre(MatchCompositionBoard, {
       ...PAR_L_ADRESSE,
@@ -369,7 +377,7 @@ describe('COMPO-WEB — le terrain du site, arrive sans ses objets', () => {
     expect(boutonTitre(arbre, 'Publier').props.disabled).toBe(false);
   });
 
-  test('🔴 5. AU CLAVIER : Entree sur un jeton, Entree sur un poste, puis retour au banc', async () => {
+  test('🔴 5. AU CLAVIER : un jeton, un poste, puis retour au banc', async () => {
     mockReponseComposition = { data: undefined, isError: false };
     const arbre = await rendre(MatchCompositionBoard, {
       ...PAR_L_ADRESSE,
@@ -387,11 +395,13 @@ describe('COMPO-WEB — le terrain du site, arrive sans ses objets', () => {
     const focalise = parLibelle(arbre, 'Prenom2 Nom2, sur le banc');
     expect(StyleSheet.flatten(focalise.props.style).borderWidth).toBe(2);
     await act(async () => { focalise.props.onBlur(); });
-    expect(StyleSheet.flatten(parLibelle(arbre, 'Prenom2 Nom2, sur le banc').props.style || {}).borderWidth)
+    const apres = parLibelle(arbre, 'Prenom2 Nom2, sur le banc');
+    expect(StyleSheet.flatten(apres.props.style || {}).borderWidth)
       .toBeUndefined();
 
     const preventDefault = jest.fn();
-    await act(async () => { jeton.props.onKeyDown({ nativeEvent: { key: 'Enter' }, preventDefault }); });
+    const entree = { nativeEvent: { key: 'Enter' }, preventDefault };
+    await act(async () => { jeton.props.onKeyDown(entree); });
     expect(preventDefault).toHaveBeenCalled();
     expect(texteVisible(arbre)).toContain('Prenom2 Nom2 est choisi');
 
@@ -404,14 +414,15 @@ describe('COMPO-WEB — le terrain du site, arrive sans ses objets', () => {
 
     // Le poste pris ne s'offre plus ; le joueur place revient au banc au clavier.
     const surLeTerrain = parLibelle(arbre, 'Prenom2 Nom2, sur le terrain');
-    await act(async () => { surLeTerrain.props.onKeyDown({ nativeEvent: { key: ' ' }, preventDefault }); });
+    const espace = { nativeEvent: { key: ' ' }, preventDefault };
+    await act(async () => { surLeTerrain.props.onKeyDown(espace); });
     expect(parLibelle(arbre, 'Placer Prenom2 Nom2 au poste GB')).toBeUndefined();
     await act(async () => { boutonTitre(arbre, 'Remettre Prenom2 Nom2 au banc').props.onPress(); });
     expect(parLibelle(arbre, 'Prenom2 Nom2, sur le banc')).toBeTruthy();
     expect(texteVisible(arbre)).toContain('0/11 placés');
   });
 
-  test('6. sur le telephone, aucune de ces portes n existe (le jeton n est pas un bouton)', async () => {
+  test('6. sur le telephone, aucune de ces portes (le jeton n est pas un bouton)', async () => {
     Platform.OS = 'ios';
     mockReponseComposition = { data: undefined, isError: false };
     const arbre = await rendre(MatchCompositionBoard, {

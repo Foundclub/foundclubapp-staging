@@ -501,7 +501,7 @@ const matchAvecEffectif = () => buildEvent({
 // telephone (`openPublishedConvocation`, `openCompositionEdit`).
 // ==========================================================================
 describe('COMPO-WEB — la porte de l entraineur vers sa convocation publiee', () => {
-  test('🔴 sans titulaire place : « Voir la convocation et les reponses » ouvre les reponses', () => {
+  test('🔴 sans titulaire place : « Voir la convocation… » ouvre les reponses', () => {
     const root = mountScreen({
       convocation: {
         published: { schemaVersion: 3, teams: [{ documentId: 'branch-1', placements: [] }] },
@@ -536,7 +536,7 @@ describe('COMPO-WEB — la porte de l entraineur vers sa convocation publiee', (
     ]);
   });
 
-  test('🔴 « Modifier la composition » rouvre la selection, sur le terrain publie, en ECRITURE', () => {
+  test('🔴 « Modifier la composition » rouvre la selection, en ECRITURE', () => {
     const root = mountScreen({
       convocation: convocationAvecJoueurPlace(),
       event: matchAvecEffectif(),

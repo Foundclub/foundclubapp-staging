@@ -16,7 +16,9 @@ import {
 //   · `buildFieldFromServerComposition` — le terrain a rouvrir.
 // ==========================================================================
 
-const joueur = (id, firstname = `P${id}`, lastname = `N${id}`) => ({ documentId: id, firstname, lastname });
+const joueur = (id, firstname = `P${id}`, lastname = `N${id}`) => ({
+  documentId: id, firstname, lastname,
+});
 
 describe('readCalledUpIdsFromPack — qui est convoque dans un pack', () => {
   test('forme v3 : titulaires, puis retenus, puis banc, sans doublon', () => {
@@ -115,7 +117,7 @@ describe('buildFieldFromServerComposition — le terrain a rouvrir', () => {
     expect(terrain.selectedPlayers.map((p) => p.documentId)).toEqual(['a']);
   });
 
-  test('🔒 sans brouillon ni compo publiee : terrain VIDE (jamais le point de depart propose)', () => {
+  test('🔒 sans brouillon ni compo publiee : terrain VIDE (jamais le depart propose)', () => {
     const terrain = buildFieldFromServerComposition({
       bootstrap: { composition: { selectedPlayerIds: ['a'] } },
       eligiblePlayers: [joueur('a')],
