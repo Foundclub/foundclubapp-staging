@@ -12,9 +12,14 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { markOnboardingComplete } from '@/domains/auth/authUseCases';
 import useAuth from '@/domains/auth/useAuth';
 import { countClubTrainers } from '@/domains/club/clubStaff';
+import { formatOpeningHours } from '@/domains/collectivite/collectiviteDisplay';
 import useMessaging from '@/domains/messaging/useMessaging';
 import { invalidateAfterAction } from '@/domains/refresh/afterAction';
-import { extractSubscriptionDecisionFromError } from '@/domains/subscription/subscriptionDecision';
+import {
+  extractSubscriptionDecisionFromError,
+  formatCollectiviteOfferedBy,
+  getCollectiviteOffer,
+} from '@/domains/subscription/subscriptionDecision';
 import { withAlpha } from '@/theme/colors';
 import SANS_ECHAPPEMENT from '@/theme/strings/sansEchappement';
 import useTheme from '@/theme/themeContext';
@@ -66,6 +71,7 @@ import {
   isPartnerClub,
 } from '@/utils/clubCertification';
 import { resolveFacilityPlanningColor } from '@/utils/facilityPlanningColor';
+import { getFacilityTypeLabel } from '@/utils/facilityTypes';
 import safeJsonParse from '@/utils/safeJsonParse';
 import { buildPublicWebUrl } from '@/utils/shareLinks';
 
@@ -195,6 +201,7 @@ function ClubDetails({ navigation, route }) {
     canEditClub,
     canJoinClub,
     clubs,
+    entitlementsSummary,
     getNextOnboardingRoute,
     getPostOnboardingHomeRoute,
     hasClubAccess,
@@ -1163,6 +1170,14 @@ function ClubDetails({ navigation, route }) {
     // fonction partagee compare desormais en texte.
     return Boolean(clubId) && isClubMember(clubId);
   }, [clubId, isClubMember, userData]);
+
+  // COLL1D (29/09) — « Offert par la Ville de X » (SPEC §3) : la collectivite qui offre
+  // l'offre Club de CE club, nommee par le serveur sur le droit (bootstrap du dirigeant
+  // et de l'entraineur, `entitlementsSummary[].offeredBy`). Rien pour un visiteur.
+  const collectiviteOffer = useMemo(() => getCollectiviteOffer({
+    clubDocumentId: club?.documentId || clubId,
+    entitlementsSummary,
+  }), [club?.documentId, clubId, entitlementsSummary]);
 
   const isPlayerRole = userData?.role?.name === USER_ROLES.player;
   const isCoachRole = userData?.role?.name === USER_ROLES.coach;
@@ -2592,6 +2607,29 @@ function ClubDetails({ navigation, route }) {
                     {clubCertificationLabel}
                   </Text>
                 </View>
+                {/* COLL1D — le bandeau qui valorise la mairie (SPEC §3), sur la carte du
+                    club : une pastille sous celle de la certification, rien de plus. */}
+                {collectiviteOffer ? (
+                  <View
+                    style={[
+                      ApplicationStyle.borderRadius24,
+                      Spaces.paddingVertical[4],
+                      Spaces.paddingHorizontal[12],
+                      {
+                        backgroundColor: withAlpha(Colors.success500, 0.12),
+                        borderColor: withAlpha(Colors.success500, 0.45),
+                        borderWidth: 1,
+                      },
+                    ]}
+                  >
+                    <Text style={[Fonts.p4Bold, Fonts.textCenter, { color: Colors.success200 }]}>
+                      {t('clubDetails.collectiviteOffer.banner', 'Offert par {{who}}', {
+                        who: formatCollectiviteOfferedBy(collectiviteOffer.name),
+                        ...SANS_ECHAPPEMENT,
+                      })}
+                    </Text>
+                  </View>
+                ) : null}
                 <Text style={[Fonts.p2, Fonts.primary100]}>
                   {(() => {
                     const parsedAddress = safeJsonParse(club?.addressDetails, null);
@@ -2801,7 +2839,13 @@ function ClubDetails({ navigation, route }) {
                           facility?.maxSlots,
                           t,
                         );
-                        const typeLabel = facility?.type || t('facilityList.defaults.unknownType', 'Type inconnu');
+                        const typeLabel = getFacilityTypeLabel(facility?.type)
+                          || t('facilityList.defaults.unknownType', 'Type inconnu');
+                        // COLL1D — horaires d'ouverture, recus depuis le lot 1b, jamais affiches.
+                        const openingHoursLabel = formatOpeningHours(
+                          facility?.openingTime,
+                          facility?.closingTime,
+                        );
                         const addressLabel = getFacilityAddressLabel(facility?.address);
                         const planningColor = resolveFacilityPlanningColor(facility);
                         const canOpenFacilityEdit = Boolean(canEdit && facilityId && !facility?.isShared);
@@ -2956,6 +3000,14 @@ function ClubDetails({ navigation, route }) {
                                 </>
                               ) : null}
                             </View>
+                            {openingHoursLabel ? (
+                              <Text style={[Fonts.p3, Fonts.neutral200]}>
+                                {t('facilityList.openingHours', 'Ouvert {{hours}}', {
+                                  hours: openingHoursLabel,
+                                  ...SANS_ECHAPPEMENT,
+                                })}
+                              </Text>
+                            ) : null}
                             {isCollectiviteFacility ? (
                               <Text style={[Fonts.p3, Fonts.neutral300]}>
                                 {t(

@@ -39,6 +39,7 @@ import { deleteFacility, getFacilitySections } from '@/services/facility/facilit
 import { getErrorMessage } from '@/utils/errors/displayError';
 import { FACILITY_CONFLICT_MODES, getFacilityConflictMode } from '@/utils/facilityConflictMode';
 import { resolveFacilityPlanningColor } from '@/utils/facilityPlanningColor';
+import { getFacilityTypeLabel } from '@/utils/facilityTypes';
 
 const getAddressLabel = (address, fallback = i18next.t(
   'facilityList.noAddress',
@@ -360,10 +361,12 @@ function FacilityList() {
     // anciennes n'en portent pas. Le segment disparait alors, au lieu
     // d'afficher un repli qui sonne comme une panne pour un simple champ vide.
     // COLL1C : en mode collectivite, les horaires d ouverture entrent dans la ligne.
+    // COLL1D : cote club aussi (restes du lot 1b : recus, jamais affiches) ; une
+    // installation sans horaires n en montre pas. Le type se lit par son libelle.
     const metaLabel = [
-      item?.type,
+      getFacilityTypeLabel(item?.type),
       capacityLabel,
-      isCollectiviteMode ? formatOpeningHours(item?.openingTime, item?.closingTime) : null,
+      formatOpeningHours(item?.openingTime, item?.closingTime),
       hasAddress ? addressLabel : null,
     ].filter(Boolean).join(' · ');
     const sharedOwnerLabel = item?.ownerName || t('facilityList.badges.multisport', 'Multisport');
