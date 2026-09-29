@@ -1613,7 +1613,11 @@ function HomeHubContent({ auth, navigation, route }) {
     canAnswer: canAnswerMyEvent,
     isAnswering,
     submit: submitMyAnswer,
-  } = useHomeEventAnswer(isPlayerBanner ? homeCounters.prochainEvenement?.id : '');
+  } = useHomeEventAnswer(
+    isPlayerBanner ? homeCounters.prochainEvenement?.id : '',
+    // FINITIONS4 (D4) — l option est connue DES le premier affichage.
+    { rsvpEnabled: homeCounters.prochainEvenement?.rsvpEnabled },
+  );
 
   const headBanner = useMemo(() => {
     const descriptors = selectBannerLines(homeCounters, roleKey);
