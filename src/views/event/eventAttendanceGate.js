@@ -2,6 +2,7 @@
  * Compute attendance access flags for EventDetails.
  * External accepted participants can access attendance and self-arrival.
  * @param {{
+ *  arrivalTrackingEnabled?: boolean;
  *  canEdit: boolean;
  *  isCurrentUserParticipating: boolean;
  *  isTeamMember: boolean;
@@ -9,6 +10,7 @@
  * @returns {{ canAccessAttendance: boolean; canSelfMarkArrival: boolean; }}
  */
 export const resolveEventAttendanceGate = ({
+  arrivalTrackingEnabled = true,
   canEdit,
   isCurrentUserParticipating,
   isTeamMember,
@@ -21,7 +23,11 @@ export const resolveEventAttendanceGate = ({
   const canAccessAttendance = Boolean(canEdit || isTeamMember || isCurrentUserParticipating);
   // 🔒 INCHANGE, et ce n est pas un oubli : celui qui gere pointe les AUTRES,
   // il ne se pointe pas lui-meme comme joueur.
-  const canSelfMarkArrival = Boolean(!canEdit && isCurrentUserParticipating);
+  // POINTAGE (29/09) — « Suivre les arrivees » decochee : rien a signaler.
+  // La lecture ci-dessus, elle, reste : la feuille porte aussi le verdict.
+  const canSelfMarkArrival = Boolean(
+    !canEdit && isCurrentUserParticipating && arrivalTrackingEnabled,
+  );
 
   return {
     canAccessAttendance,

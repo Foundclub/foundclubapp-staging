@@ -163,7 +163,9 @@ const PASTILLE = {
   absent: 'Absent',
   aPointer: 'À pointer',
   arrive: 'Arrivé',
-  nonPointe: 'Non pointé',
+  // POINTAGE (29/09) — `no_show` n est plus qu une absence CONSTATEE A L APPEL
+  // (le robot qui posait « non pointe » est retire) : la pastille le dit.
+  nonPointe: 'Absent à l’appel',
   prevuALHeure: 'Prévu à l’heure',
   retardAnnonce: 'Retard annoncé',
   sansReponse: 'Sans réponse',

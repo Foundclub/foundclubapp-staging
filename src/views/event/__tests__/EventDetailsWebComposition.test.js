@@ -336,13 +336,21 @@ describe('le site ouvre la composition comme le telephone', () => {
 
   // La seconde porte du site. Ne reparer que la premiere laisserait un appelant
   // frere casse — c'est exactement ce que la methode interdit.
+  // 🔄 COMPO-WEB (29/09) — ce bouton n'est plus celui de l'ENTRAINEUR (qui suit
+  // desormais la porte du telephone, voir « COMPO-WEB » plus bas) : il reste la
+  // lecture d'un membre de l'equipe non convoque. C'est donc ce lecteur-la qui
+  // porte la verification de l'etiquette.
   test('« Voir la composition publiee » transmet la meme etiquette', () => {
     const root = mountScreen({
+      auth: {
+        ...authJoueur(),
+        userData: { documentId: 'spectateur-9', role: { name: 'Joueur' } },
+      },
       convocation: {
         published: { schemaVersion: 3, teams: [{ documentId: 'branch-1', placements: [] }] },
         team: { documentId: TEAM_ID, name: 'U15' },
       },
-      event: buildEvent({ type: { name: 'Détection' } }),
+      event: { ...matchAvecEffectif(), type: { name: 'Détection' } },
     });
 
     click(root, 'Voir la composition publiée');
@@ -392,12 +400,24 @@ describe('C-A — depuis le site, la page d un match mene au NOUVEAU terrain', (
     expect(lastCallUpParams()).toBeNull();
   });
 
+  // 🔄 COMPO-WEB (29/09) — CE TEMOIN A CHANGE DE LECTEUR, ET C'EST LA DECISION
+  // D'ADEL (« l'entraineur fait sa compo depuis le site »). Il verrouillait
+  // « l'entraineur qui LIT sa compo publiee part sur l'ancien terrain ». Le
+  // telephone ne le fait plus depuis COMPOLECT : l'entraineur y lit ses
+  // REPONSES (`MatchConvocationPublished`). Ce que ce temoin protegeait
+  // reellement — « la lecture seule d'un non-entraineur reste sur l'ancien
+  // terrain » — est conserve, tel quel, pour ce lecteur-la (voir aussi AC08).
   test('⛔ la LECTURE SEULE reste sur l ancien terrain', () => {
     const root = mountScreen({
+      auth: {
+        ...authJoueur(),
+        userData: { documentId: 'spectateur-9', role: { name: 'Joueur' } },
+      },
       convocation: {
         published: { schemaVersion: 3, teams: [{ documentId: 'branch-1', placements: [] }] },
         team: { documentId: TEAM_ID, name: 'U15' },
       },
+      event: matchAvecEffectif(),
     });
 
     click(root, 'Voir la composition publiée');
@@ -470,6 +490,79 @@ const matchAvecEffectif = () => buildEvent({
     players: [{ documentId: JOUEUR }, { documentId: 'spectateur-9' }],
     trainers: [],
   },
+});
+
+// ==========================================================================
+// COMPO-WEB (29/09) — LA PORTE « CONVOCATION PUBLIEE » DE L'ENTRAINEUR.
+//
+// Decision d'Adel : l'entraineur fait sa compo depuis le site, de bout en bout —
+// donc il y SUIT aussi ses reponses et y MODIFIE sa convocation. Le site ne lui
+// offrait que l'ancien terrain en lecture. Les deux gestes sont ceux du
+// telephone (`openPublishedConvocation`, `openCompositionEdit`).
+// ==========================================================================
+describe('COMPO-WEB — la porte de l entraineur vers sa convocation publiee', () => {
+  test('🔴 sans titulaire place : « Voir la convocation… » ouvre les reponses', () => {
+    const root = mountScreen({
+      convocation: {
+        published: { schemaVersion: 3, teams: [{ documentId: 'branch-1', placements: [] }] },
+        team: { documentId: TEAM_ID, name: 'U15' },
+      },
+    });
+
+    expect(buttonWithText(root, 'Voir la composition publiée')).toBeUndefined();
+    click(root, 'Voir la convocation et les réponses');
+
+    expect(mockNavigate).toHaveBeenCalledWith(
+      'MatchConvocationPublished',
+      expect.objectContaining({ eventId: 'event-1', teamId: TEAM_ID }),
+    );
+  });
+
+  test('🔴 avec un titulaire place : le terrain en consultation, avec ses joueurs', () => {
+    const root = mountScreen({
+      convocation: convocationAvecJoueurPlace(),
+      event: matchAvecEffectif(),
+    });
+
+    click(root, 'Voir la convocation et les réponses');
+
+    const [route, parametres] = mockNavigate.mock.calls[mockNavigate.mock.calls.length - 1];
+    expect(route).toBe('MatchCompositionBoard');
+    expect(parametres).toEqual(expect.objectContaining({
+      canEdit: true, eventId: 'event-1', readOnly: true, teamId: TEAM_ID,
+    }));
+    expect(parametres.startPlacements).toEqual([
+      expect.objectContaining({ playerId: JOUEUR, positionX: 50, positionY: 90 }),
+    ]);
+  });
+
+  test('🔴 « Modifier la composition » rouvre la selection, en ECRITURE', () => {
+    const root = mountScreen({
+      convocation: convocationAvecJoueurPlace(),
+      event: matchAvecEffectif(),
+    });
+
+    click(root, 'Modifier la composition');
+
+    expect(lastRoute()).toBe('MatchCallUpSelection');
+    expect(lastCallUpParams()).toEqual(expect.objectContaining({
+      canEdit: true, eventId: 'event-1', readOnly: false, teamId: TEAM_ID,
+    }));
+    expect(lastCallUpParams().selectedPlayers.map((/** @type {any} */ p) => p.documentId))
+      .toEqual([JOUEUR]);
+  });
+
+  test('🔴 le resume dit « 1 équipe publiée », plus jamais « {{count}} »', () => {
+    const root = mountScreen({
+      convocation: convocationAvecJoueurPlace(),
+      event: matchAvecEffectif(),
+    });
+
+    const texte = root.findAllByType('span').map((/** @type {any} */ n) => textOf(n)).join(' | ');
+    expect(texte).toContain('1 équipe publiée');
+    expect(texte).not.toContain('{{count}}');
+    expect(texte).not.toContain('equipe(s)');
+  });
 });
 
 describe('AC08 — le site mene le convoque a SON ecran', () => {

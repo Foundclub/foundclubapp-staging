@@ -18,6 +18,8 @@ const mockNavigation = { goBack: jest.fn(), navigate: jest.fn(), replace: jest.f
 
 /** @type {any} */
 let mockConvocation;
+/** @type {any} POINTAGE : l evenement tel que `useGetEvent` le rend. */
+let mockEvenement = { documentId: 'evt-1' };
 
 jest.mock('@react-navigation/native', () => ({
   useNavigation: () => mockNavigation,
@@ -46,7 +48,7 @@ jest.mock('@/domains/auth/useAuth', () => ({
 }));
 
 jest.mock('@/services/event/eventQueries', () => ({
-  useGetEvent: () => ({ data: { documentId: 'evt-1' } }),
+  useGetEvent: () => ({ data: mockEvenement }),
   useGetEventConvocation: () => ({ data: mockConvocation, isError: false, isLoading: false }),
 }));
 
@@ -268,5 +270,40 @@ describe('CONVOC — getConvocationPlayerResponse', () => {
     expect(getConvocationPlayerResponse(vue, 'd')).toBeNull();
     expect(getConvocationPlayerResponse(vue, 'inconnu')).toBeNull();
     expect(getConvocationPlayerResponse(null, 'a')).toBeNull();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// POINTAGE (decisions d Adel du 29/09) — « LES PARTICIPANTS REPONDENT » DECOCHEE :
+// la barre Present / Absent de « Tu es convoque » disparait, comme sur la fiche.
+// L ecran relit deja l evenement complet (`useGetEvent`), qui porte l option.
+// Ecrits ROUGES contre app `4c0d8a57`.
+// ---------------------------------------------------------------------------
+describe('POINTAGE — la barre de reponse suit l option « Les participants repondent »', () => {
+  const boutons = (arbre) => arbre.root.findAll(
+    (/** @type {any} */ noeud) => typeof noeud.props?.accessibilityLabel === 'string'
+      && typeof noeud.props?.onPress === 'function',
+  ).map((/** @type {any} */ noeud) => noeud.props.accessibilityLabel);
+
+  afterEach(() => {
+    mockEvenement = { documentId: 'evt-1' };
+  });
+
+  it('option cochee (ou evenement d avant le lot) : Present et Absent sont la', () => {
+    mockConvocation = convocation(REPONSES);
+
+    const arbre = rendre();
+
+    expect(boutons(arbre)).toEqual(expect.arrayContaining(['Présent', 'Absent']));
+  });
+
+  it('🚨 option decochee : ni Present ni Absent', () => {
+    mockConvocation = convocation(REPONSES);
+    mockEvenement = { documentId: 'evt-1', rsvpEnabled: false };
+
+    const arbre = rendre();
+
+    expect(boutons(arbre)).not.toContain('Présent');
+    expect(boutons(arbre)).not.toContain('Absent');
   });
 });

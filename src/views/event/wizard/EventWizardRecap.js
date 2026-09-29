@@ -250,6 +250,9 @@ const buildWizardFormData = (wizardState) => {
     || trainingOpenConfig.externalParticipantLimit !== null;
 
   return {
+    // POINTAGE (29/09) — les deux options de presence partent au serveur ;
+    // `!== false` : un brouillon d avant ce lot part coche.
+    arrivalTrackingEnabled: wizardState.arrivalTrackingEnabled !== false,
     capacity: trainingOpenConfig.isTraining ? null : (wizardState.capacity ?? null),
     club: wizardState.team?.club?.documentId || wizardState.club?.documentId || null,
     date: format(eventDate, 'dd/MM/yyyy'),
@@ -286,6 +289,7 @@ const buildWizardFormData = (wizardState) => {
       ? format(new Date(wizardState.recurrenceStartDate), 'dd/MM/yyyy')
       : '',
     reservationMode: wizardState.reservationMode || 'FULL_GROUP',
+    rsvpEnabled: wizardState.rsvpEnabled !== false,
     // 🔒 AA10 ③ — le repli de la DERNIERE ligne avant le serveur suit le type,
     // il ne rouvre pas l'evenement : un brouillon incomplet part prive.
     sessionStatus: wizardState.sessionStatus
@@ -488,6 +492,16 @@ function EventWizardRecap({ navigation }) {
   const participantPrivacyValue = state.participantIdentityVisibility === 'ANONYMIZED'
     ? t('eventWizard.steps.visibility.participantPrivacyAnonymized', 'Participants anonymisés')
     : t('eventWizard.steps.visibility.participantPrivacyVisible', 'Identités visibles');
+  // POINTAGE (29/09) — les deux options de presence, dites en clair avant de
+  // creer ; « Modifier » ramene a l etape « Acces » qui les porte.
+  const presenceValue = [
+    state.rsvpEnabled !== false
+      ? t('eventWizard.recap.presenceRsvpOn', 'Réponses Présent / Absent')
+      : t('eventWizard.recap.presenceRsvpOff', 'Pas de réponses Présent / Absent'),
+    state.arrivalTrackingEnabled !== false
+      ? t('eventWizard.recap.presenceArrivalsOn', 'Suivi des arrivées')
+      : t('eventWizard.recap.presenceArrivalsOff', 'Pas de suivi des arrivées'),
+  ].join(' · ');
   const effectiveValidationMode = isTournament
     ? (state.tournamentRegistrationMode || 'manual')
     : (state.validationMode || 'auto');
@@ -1564,6 +1578,12 @@ function EventWizardRecap({ navigation }) {
                   {t('eventWizard.recap.sections.participantPrivacy', 'Confidentialité participants')}
                 </Text>
                 <Text style={[Fonts.p2, Fonts.neutral100]}>{participantPrivacyValue}</Text>
+              </View>
+              <View style={[Spaces.gap[4]]}>
+                <Text style={[Fonts.p3, Fonts.neutral200]}>
+                  {t('eventWizard.recap.presenceTitle', 'Présences')}
+                </Text>
+                <Text style={[Fonts.p2, Fonts.neutral100]}>{presenceValue}</Text>
               </View>
             </View>
           </View>

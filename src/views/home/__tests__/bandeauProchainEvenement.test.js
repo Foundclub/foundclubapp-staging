@@ -97,7 +97,11 @@ describe('S06 — le bandeau de l accueil mene a l evenement, jamais au planning
     // « ça doit envoyer la réponse DIRECT »). Restent donc 1 pour le dirigeant et
     // 1 pour le coach — leurs boutons, eux, ouvrent toujours l'evenement, et
     // `reponseDepuisAccueil.test.js` (temoin 5) le verifie nommement.
-    expect(compter(bandeau, 'handleOpenEvent(')).toBe(2);
+    // ➕ POINTAGE (29/09) : 2 -> 3, et c'est voulu. Quand l'organisateur a
+    // decoche « Les participants repondent », le bandeau du JOUEUR n'a plus de
+    // Present / Absent : son bouton ouvre l'evenement, PAR LE MEME CHEMIN
+    // (`reponseDepuisAccueil.test.js`, temoins POINTAGE).
+    expect(compter(bandeau, 'handleOpenEvent(')).toBe(3);
   });
 
   it('temoin 5 ter — « ouvrir un evenement » emprunte le chemin que l app emploie deja', () => {
