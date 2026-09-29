@@ -13,7 +13,11 @@ import { resolveEventDisplayName } from '@/domains/event/eventDisplayName';
 import { buildTeamParticipationSections, getEventTrainerKeys } from '@/domains/event/eventParticipantSections';
 import { isDetectionEventType, resolveTrainingOpenConfig } from '@/domains/event/eventUseCases';
 import { getCurrentUserEventParticipationState } from '@/domains/event/participationState';
-import { canDeclareLatePresence, isArrivalTrackingEnabled, isRsvpEnabled } from '@/domains/event/presenceRule';
+import {
+  canDeclareLatePresence,
+  isArrivalTrackingEnabled,
+  isRsvpEnabled,
+} from '@/domains/event/presenceRule';
 import { resolveClientSourceTeamForUser } from '@/domains/participation/participationFlow';
 import { withoutDeletedAccountEntries, withoutDeletedAccounts } from '@/domains/user/deletedAccount';
 import localeDesFormats from '@/theme/strings/localeDesFormats';
@@ -428,7 +432,9 @@ function EventDetails({ navigation, route }) {
   const isConvenedMember = Boolean(resolveClientSourceTeamForUser(event, userData));
   const monPointage = useMemo(
     () => (attendancePayload?.data?.items || [])
-      .find((item) => item?.user?.documentId && item.user.documentId === userData?.documentId) || null,
+      .find((item) => (
+        item?.user?.documentId && item.user.documentId === userData?.documentId
+      )) || null,
     [attendancePayload?.data?.items, userData?.documentId],
   );
   const peutPasserPresentApresCoup = !isTournamentEvent && canDeclareLatePresence({
@@ -1603,7 +1609,8 @@ function EventDetails({ navigation, route }) {
                       <span style={{ color: mutedTextColor, fontSize: 14 }}>
                         {t(
                           'eventList.info.notReported',
-                          "Tu n'as pas répondu : tu es « pas renseigné ». Tu étais là ? Passe en présent.",
+                          "Tu n'as pas répondu : tu es « pas renseigné ». "
+                            + 'Tu étais là ? Passe en présent.',
                         )}
                       </span>
                       <button

@@ -101,20 +101,20 @@ beforeEach(() => {
   mockUserData.mockReturnValue(player);
 });
 
-test('POINTAGE-A1 — option cochee (ou evenement d avant le lot) : Present / Absent, comme avant', () => {
+test('POINTAGE-A1 — option cochee (ou evenement d avant le lot) : Present / Absent', () => {
   const tree = render({ event: buildEvent(), ...handlers });
 
   expect(titlesOf(tree)).toEqual(['eventList.actions.present', 'eventList.actions.absent']);
 });
 
-test('POINTAGE-A2 — 🚨 « Les participants repondent » DECOCHEE : ni Present ni Absent, ni motif de refus', () => {
+test('POINTAGE-A2 — 🚨 reponses DECOCHEES : ni Present ni Absent, ni motif de refus', () => {
   const tree = render({ event: buildEvent({ rsvpEnabled: false }), ...handlers });
 
   expect(titlesOf(tree)).toEqual([]);
   expect(textsOf(tree)).not.toContain('eventList.info.restrictedEvent');
 });
 
-test('POINTAGE-A3 — 🚨 apres coup, le « pas renseigne » voit « Je passe en present », et l appui part', () => {
+test('POINTAGE-A3 — 🚨 apres coup, le « pas renseigne » voit « Je passe en present »', () => {
   const onDeclareLatePresence = jest.fn();
   const tree = render({
     event: buildEvent({ date: '2026-09-28T18:00:00.000Z' }),
@@ -130,7 +130,7 @@ test('POINTAGE-A3 — 🚨 apres coup, le « pas renseigne » voit « Je passe e
   expect(onDeclareLatePresence).toHaveBeenCalledTimes(1);
 });
 
-test('POINTAGE-A4 — sans la porte (la fiche ne la donne pas), le passe reste ferme comme avant', () => {
+test('POINTAGE-A4 — sans la porte (la fiche ne la donne pas), le passe reste ferme', () => {
   const tree = render({ event: buildEvent({ date: '2026-09-28T18:00:00.000Z' }), ...handlers });
 
   expect(titlesOf(tree)).not.toContain('eventList.actions.declareLatePresence');

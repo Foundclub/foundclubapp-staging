@@ -311,7 +311,9 @@ const resolveAttendanceBadge = ({
   // `present` / `late` / `absent` / `not_reported` (« pas renseigne »), ou
   // `pending` tant que l evenement court. Il est calcule a un seul endroit
   // (`resolveAttendanceSummary`) : cette pastille le lit, elle ne le refait pas.
-  const finalOperationalStatus = String(attendance?.finalOperationalStatus || '').trim().toLowerCase();
+  const finalOperationalStatus = String(attendance?.finalOperationalStatus || '')
+    .trim()
+    .toLowerCase();
   const hasArrived = Boolean(attendance?.arrivedAt);
   const lateMinutes = Math.max(0, Number(attendance?.lateMinutes || 0));
   const declaredLateMinutes = Math.max(0, Number(attendance?.declaredLateMinutes || 0));

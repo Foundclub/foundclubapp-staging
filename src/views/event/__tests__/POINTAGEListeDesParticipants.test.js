@@ -119,7 +119,9 @@ const proprietes = (evenement = {}) => ({
 });
 
 const monter = async (props) => {
-  const queryClient = new QueryClient({ defaultOptions: { mutations: { retry: false }, queries: { retry: false } } });
+  const queryClient = new QueryClient({
+    defaultOptions: { mutations: { retry: false }, queries: { retry: false } },
+  });
   let arbre = null;
   await act(async () => {
     arbre = renderer.create(
@@ -137,28 +139,28 @@ const textes = (arbre) => arbre.root.findAllByType(Text)
   .map((noeud) => noeud.props.children)
   .filter((enfant) => typeof enfant === 'string');
 
-test('POINTAGE-L1 — options cochees (ou evenement d avant le lot) : « Relancer » et « Faire l appel » sont la', async () => {
+test('POINTAGE-L1 — options cochees : « Relancer » et « Faire l appel » sont la', async () => {
   const arbre = await monter(proprietes());
 
   expect(titres(arbre)).toContain('eventDetails.actions.remind');
   expect(titres(arbre)).toContain('eventDetails.nextAction.action');
 });
 
-test('POINTAGE-L2 — 🚨 « Les participants repondent » decochee : plus de « Relancer »', async () => {
+test('POINTAGE-L2 — 🚨 reponses decochees : plus de « Relancer »', async () => {
   const arbre = await monter(proprietes({ rsvpEnabled: false }));
 
   expect(titres(arbre)).not.toContain('eventDetails.actions.remind');
   expect(titres(arbre)).toContain('eventDetails.nextAction.action');
 });
 
-test('POINTAGE-L3 — 🚨 « Suivre les arrivees » decochee : plus de « Faire l appel »', async () => {
+test('POINTAGE-L3 — 🚨 arrivees decochees : plus de « Faire l appel »', async () => {
   const arbre = await monter(proprietes({ arrivalTrackingEnabled: false }));
 
   expect(titres(arbre)).not.toContain('eventDetails.nextAction.action');
   expect(titres(arbre)).toContain('eventDetails.actions.remind');
 });
 
-test('POINTAGE-L4 — 🚨 apres le match, la pastille dit le verdict : pas renseigne, present, absent a l appel', async () => {
+test('POINTAGE-L4 — 🚨 apres le match, la pastille dit le verdict', async () => {
   const arbre = await monter(proprietes());
   const lus = textes(arbre);
 

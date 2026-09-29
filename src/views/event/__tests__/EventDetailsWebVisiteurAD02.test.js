@@ -461,13 +461,16 @@ describe('POINTAGE — le joueur convie sur le site', () => {
       missings: [],
       participations: [],
       team: {
-        club: { documentId: CLUB_ID }, documentId: TEAM_ID, name: 'U15', players: [{ documentId: JOUEUR.documentId }],
+        club: { documentId: CLUB_ID },
+        documentId: TEAM_ID,
+        name: 'U15',
+        players: [{ documentId: JOUEUR.documentId }],
       },
       ...evenement,
     }),
   });
 
-  test('🚨 le lendemain, il voit « Je passe en present » et plus « Participer » ; l appui repond present', async () => {
+  test('🚨 le lendemain : « Je passe en present » remplace « Participer »', async () => {
     const root = monterEnJoueur({ date: '2026-09-28T18:00:00.000Z' });
 
     expect(buttonWithText(root, 'Participer')).toBeUndefined();

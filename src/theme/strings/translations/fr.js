@@ -1837,7 +1837,7 @@ export default {
     EVENT_PARTICIPATION_ALREADY_TREATED: 'La demande de participation a déjà été traitée.',
     EVENT_PARTICIPATION_CREATE_ERROR: 'Erreur lors de la création de la participation.',
     EVENT_PARTICIPATION_REFUSE_ERROR: 'Erreur lors du refus de la participation.',
-    EVENT_RSVP_DISABLED: "L'organisateur a désactivé les réponses Présent / Absent pour cet événement.",
+    EVENT_RSVP_DISABLED: 'Les réponses Présent / Absent sont désactivées pour cet événement.',
     EVENT_SLOT_CONFLICT: 'Un conflit de créneau a été détecté pour ce lieu.',
     EVENT_UPDATE_ERROR: "Erreur lors de la mise à jour de l'événement.",
     EVENT_USER_ALREADY_IN_EVENT_ERROR: "L'utilisateur est déjà inscrit à cet événement.",
@@ -7121,9 +7121,11 @@ export default {
   },
   eventPresenceOptions: {
     arrivals: 'Suivre les arrivées',
-    arrivalsHint: 'Le joueur signale son arrivée ou son retard, l’entraîneur fait l’appel. Décoché : pas de pointage.',
+    arrivalsHint: 'Le joueur signale son arrivée ou son retard, l’entraîneur fait l’appel. '
+      + 'Décoché : pas de pointage.',
     rsvp: 'Les participants répondent Présent / Absent',
-    rsvpHint: 'Chacun dit à l’avance s’il vient. Décoché : ni boutons Présent / Absent, ni relances.',
+    rsvpHint: 'Chacun dit à l’avance s’il vient. '
+      + 'Décoché : ni boutons Présent / Absent, ni relances.',
   },
   eventReservationActions: {
     full: '✅ Complet',

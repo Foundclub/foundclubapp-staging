@@ -30,7 +30,7 @@ const pasRenseigne = (surcharges = {}) => ({
   ...surcharges,
 });
 
-test('POINTAGE-app/1 — un evenement d AVANT le lot (champ absent ou NULL) a les deux options cochees', () => {
+test('POINTAGE-app/1 — evenement d AVANT le lot (champ absent / NULL) : options cochees', () => {
   expect(isRsvpEnabled({})).toBe(true);
   expect(isRsvpEnabled({ rsvpEnabled: null })).toBe(true);
   expect(isRsvpEnabled({ rsvpEnabled: false })).toBe(false);
@@ -50,12 +50,15 @@ test('POINTAGE-app/3 — la porte reste fermee a tous les autres', () => {
   expect(canDeclareLatePresence(pasRenseigne({ hasPendingRequest: true }))).toBe(false);
   expect(canDeclareLatePresence(pasRenseigne({ isConvenedMember: false }))).toBe(false);
   expect(canDeclareLatePresence(pasRenseigne({ myAttendanceStatus: 'no_show' }))).toBe(false);
-  expect(canDeclareLatePresence(pasRenseigne({ event: matchDHier({ rsvpEnabled: false }) }))).toBe(false);
-  expect(canDeclareLatePresence(pasRenseigne({ event: matchDHier({ eventFormat: 'stage_day' }) }))).toBe(false);
-  expect(canDeclareLatePresence(pasRenseigne({ event: matchDHier({ league_match: { id: 1 } }) }))).toBe(false);
+  const surUn = (evenement) => canDeclareLatePresence(
+    pasRenseigne({ event: matchDHier(evenement) }),
+  );
+  expect(surUn({ rsvpEnabled: false })).toBe(false);
+  expect(surUn({ eventFormat: 'stage_day' })).toBe(false);
+  expect(surUn({ league_match: { id: 1 } })).toBe(false);
 });
 
-test('POINTAGE-app/4 — AVANT le debut, ce n est pas « apres coup » : les boutons habituels suffisent', () => {
+test('POINTAGE-app/4 — AVANT le debut, ce n est pas « apres coup »', () => {
   const demain = matchDHier({ date: new Date(MAINTENANT + 20 * HEURE).toISOString() });
 
   expect(canDeclareLatePresence(pasRenseigne({ event: demain }))).toBe(false);

@@ -310,7 +310,9 @@ function EventWizardAccess({ navigation, route }) {
           </GroupLabel>
           <PresenceOptionsFields
             arrivalTrackingEnabled={presenceOptions.arrivalTrackingEnabled}
-            onChange={(changement) => setPresenceOptions((courantes) => ({ ...courantes, ...changement }))}
+            onChange={(changement) => setPresenceOptions(
+              (courantes) => ({ ...courantes, ...changement }),
+            )}
             rsvpEnabled={presenceOptions.rsvpEnabled}
           />
         </View>

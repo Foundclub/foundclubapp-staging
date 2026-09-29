@@ -816,7 +816,7 @@ describe('POINTAGE — les deux options de presence se modifient', () => {
       && typeof noeud.props?.onPress === 'function',
   ).map((/** @type {any} */ noeud) => [noeud.props.accessibilityLabel, noeud]));
 
-  test('un evenement d AVANT le lot s ouvre avec les deux cases cochees, et les renvoie cochees', async () => {
+  test('un evenement d AVANT le lot s ouvre coche, et renvoie coche', async () => {
     const alerte = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
     const racine = await monterSur(evenementRempli());
 
@@ -832,7 +832,7 @@ describe('POINTAGE — les deux options de presence se modifient', () => {
     alerte.mockRestore();
   });
 
-  test('🚨 l option decochee a la creation s ouvre decochee ; en decocher une autre part au serveur', async () => {
+  test('🚨 decochee a la creation, elle s ouvre decochee ; l autre se decoche', async () => {
     const alerte = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
     const racine = await monterSur(evenementRempli({ arrivalTrackingEnabled: false }));
 

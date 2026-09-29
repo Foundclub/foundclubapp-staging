@@ -748,29 +748,43 @@ function EventEdit({ navigation, route }) {
                   {[
                     {
                       champ: 'rsvpEnabled',
+                      coche: formState.rsvpEnabled !== false,
                       phrase: t(
                         'eventPresenceOptions.rsvpHint',
-                        'Chacun dit à l’avance s’il vient. Décoché : ni boutons Présent / Absent, ni relances.',
+                        'Chacun dit à l’avance s’il vient. '
+                          + 'Décoché : ni boutons Présent / Absent, ni relances.',
                       ),
-                      titre: t('eventPresenceOptions.rsvp', 'Les participants répondent Présent / Absent'),
+                      titre: t(
+                        'eventPresenceOptions.rsvp',
+                        'Les participants répondent Présent / Absent',
+                      ),
                     },
                     {
                       champ: 'arrivalTrackingEnabled',
+                      coche: formState.arrivalTrackingEnabled !== false,
                       phrase: t(
                         'eventPresenceOptions.arrivalsHint',
-                        'Le joueur signale son arrivée ou son retard, l’entraîneur fait l’appel. Décoché : pas de pointage.',
+                        'Le joueur signale son arrivée ou son retard, l’entraîneur fait l’appel. '
+                          + 'Décoché : pas de pointage.',
                       ),
                       titre: t('eventPresenceOptions.arrivals', 'Suivre les arrivées'),
                     },
                   ].map((option) => (
-                    <label key={option.champ} style={{ alignItems: 'flex-start', display: 'flex', gap: 10 }}>
+                    <label
+                      key={option.champ}
+                      style={{ alignItems: 'flex-start', display: 'flex', gap: 10 }}
+                    >
                       <input
-                        checked={formState[option.champ] !== false}
-                        onChange={(eventObject) => updateField(option.champ, eventObject.target.checked)}
+                        checked={option.coche}
+                        onChange={(eventObject) => (
+                          updateField(option.champ, eventObject.target.checked)
+                        )}
                         type="checkbox"
                       />
                       <span style={{ display: 'grid', gap: 2 }}>
-                        <span style={{ color: textColor, fontSize: 14, fontWeight: 600 }}>{option.titre}</span>
+                        <span style={{ color: textColor, fontSize: 14, fontWeight: 600 }}>
+                          {option.titre}
+                        </span>
                         <span style={{ color: mutedTextColor, fontSize: 13 }}>{option.phrase}</span>
                       </span>
                     </label>

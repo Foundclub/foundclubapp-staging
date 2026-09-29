@@ -25,7 +25,9 @@ const mockChargesCreees = [];
 jest.mock('react-i18next', () => ({
   initReactI18next: { init: () => {}, type: '3rdParty' },
   useTranslation: () => ({
-    t: (/** @type {string} */ cle, /** @type {any} */ repli) => (typeof repli === 'string' ? repli : cle),
+    t: (/** @type {string} */ cle, /** @type {any} */ repli) => (
+      typeof repli === 'string' ? repli : cle
+    ),
   }),
 }));
 
@@ -92,7 +94,11 @@ jest.mock('@/services/celebrations/celebrationRuntime', () => ({ celebrate: () =
 
 jest.mock('@/services/event/eventService', () => ({
   createEventsWithConcurrency: async () => ({
-    created: [{ documentId: 'ev-1', payload: { name: 'Un evenement' }, response: { data: { documentId: 'ev-1' } } }],
+    created: [{
+      documentId: 'ev-1',
+      payload: { name: 'Un evenement' },
+      response: { data: { documentId: 'ev-1' } },
+    }],
     failed: [],
   }),
   getEventById: () => Promise.resolve(null),
@@ -169,6 +175,10 @@ const cases = (arbre) => Object.fromEntries(arbre.root.findAllByType(TouchableOp
     press: noeud.props.onPress,
   }]));
 
+const monterLAcces = () => monter(
+  createElement(EventWizardAccess, { navigation, route: { params: {} } }),
+);
+
 const REPONSES = 'Les participants répondent Présent / Absent';
 const ARRIVEES = 'Suivre les arrivées';
 
@@ -186,7 +196,7 @@ test('POINTAGE-T1 — 🚨 un tunnel neuf a les deux options COCHEES', () => {
 
 test('POINTAGE-T2 — 🚨 l etape « Acces » montre les deux cases, cochees', () => {
   let arbre = null;
-  act(() => { arbre = renderer.create(monter(createElement(EventWizardAccess, { navigation, route: { params: {} } }))); });
+  act(() => { arbre = renderer.create(monterLAcces()); });
   act(() => mockSonde.dispatch({ payload: ETAT_COMPLET, type: 'SET_META' }));
 
   const lues = cases(arbre);
@@ -194,9 +204,9 @@ test('POINTAGE-T2 — 🚨 l etape « Acces » montre les deux cases, cochees', 
   expect(lues[ARRIVEES]?.checked).toBe(true);
 });
 
-test('POINTAGE-T3 — 🚨 decocher « Suivre les arrivees » puis « Suivant » : le tunnel le retient', () => {
+test('POINTAGE-T3 — 🚨 decocher les arrivees puis « Suivant » : le tunnel le retient', () => {
   let arbre = null;
-  act(() => { arbre = renderer.create(monter(createElement(EventWizardAccess, { navigation, route: { params: {} } }))); });
+  act(() => { arbre = renderer.create(monterLAcces()); });
   act(() => mockSonde.dispatch({ payload: ETAT_COMPLET, type: 'SET_META' }));
 
   act(() => { cases(arbre)[ARRIVEES].press(); });
@@ -217,7 +227,9 @@ const creer = async (surcharges) => {
   let arbre = null;
   act(() => { arbre = renderer.create(monter(null)); });
   act(() => mockSonde.dispatch({ payload: { ...ETAT_COMPLET, ...surcharges }, type: 'SET_META' }));
-  act(() => { arbre.update(monter(createElement(EventWizardRecap, { navigation, route: { params: {} } }))); });
+  act(() => {
+    arbre.update(monter(createElement(EventWizardRecap, { navigation, route: { params: {} } })));
+  });
   const gabarit = mockProprietesDuGabarit[mockProprietesDuGabarit.length - 1];
   // La charge que « Creer » envoie est la derniere construite AVANT l appui :
   // une creation reussie remet le tunnel a zero, et le Recap en reconstruit une.

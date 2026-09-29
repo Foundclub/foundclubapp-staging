@@ -1823,7 +1823,8 @@ function EventDetails({ navigation, route }) {
         // L APPEL : ne pas pointer ne rend jamais absent.
         description: t(
           'eventDetails.theEventIsOverAnd',
-          "Un encadrant t'a marqué absent à l'appel. S'il s'est trompé, il peut corriger ton pointage.",
+          "Un encadrant t'a marqué absent à l'appel. "
+            + "S'il s'est trompé, il peut corriger ton pointage.",
         ),
         hasArrived: false,
         primaryAction: null,
@@ -8332,7 +8333,8 @@ function EventDetails({ navigation, route }) {
                     {t(
                       'eventDetails.arrivalNotConfirmed',
                       "Un encadrant t'a marqué absent à l'appel de ce match. "
-                        + "S'il s'est trompé, il corrige ta présence et ton questionnaire se débloque.",
+                        + "S'il s'est trompé, il corrige ta présence "
+                        + 'et ton questionnaire se débloque.',
                     )}
                   </Text>
                 </View>

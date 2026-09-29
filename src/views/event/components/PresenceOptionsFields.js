@@ -4,6 +4,8 @@ import { Text, TouchableOpacity, View } from 'react-native';
 import { withAlpha } from '@/theme/colors';
 import useTheme from '@/theme/themeContext';
 
+/** @typedef {{ arrivalTrackingEnabled?: boolean, rsvpEnabled?: boolean }} PresenceChange */
+
 /**
  * POINTAGE (decisions d Adel du 29/09) — LES DEUX OPTIONS DE PRESENCE D UN
  * EVENEMENT, EN DEUX CASES.
@@ -19,8 +21,8 @@ import useTheme from '@/theme/themeContext';
  * @param {object} props
  * @param {boolean | null | undefined} props.arrivalTrackingEnabled La valeur
  *   en cours ; `null`/absente = cochee (evenement d avant le lot).
- * @param {(changement: { arrivalTrackingEnabled?: boolean, rsvpEnabled?: boolean }) => void} props.onChange
- *   Rend la seule option qui vient de changer.
+ * @param {(changement: PresenceChange) => void} props.onChange Rend la seule
+ *   option qui vient de changer.
  * @param {boolean | null | undefined} props.rsvpEnabled La valeur en cours.
  * @returns {import('react').ReactElement}
  */
@@ -45,7 +47,8 @@ function PresenceOptionsFields({ arrivalTrackingEnabled, onChange, rsvpEnabled }
       cle: 'arrivalTrackingEnabled',
       phrase: t(
         'eventPresenceOptions.arrivalsHint',
-        'Le joueur signale son arrivée ou son retard, l’entraîneur fait l’appel. Décoché : pas de pointage.',
+        'Le joueur signale son arrivée ou son retard, l’entraîneur fait l’appel. '
+          + 'Décoché : pas de pointage.',
       ),
       titre: t('eventPresenceOptions.arrivals', 'Suivre les arrivées'),
     },

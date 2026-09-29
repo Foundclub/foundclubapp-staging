@@ -25,7 +25,9 @@ export const resolveEventAttendanceGate = ({
   // il ne se pointe pas lui-meme comme joueur.
   // POINTAGE (29/09) — « Suivre les arrivees » decochee : rien a signaler.
   // La lecture ci-dessus, elle, reste : la feuille porte aussi le verdict.
-  const canSelfMarkArrival = Boolean(!canEdit && isCurrentUserParticipating && arrivalTrackingEnabled);
+  const canSelfMarkArrival = Boolean(
+    !canEdit && isCurrentUserParticipating && arrivalTrackingEnabled,
+  );
 
   return {
     canAccessAttendance,

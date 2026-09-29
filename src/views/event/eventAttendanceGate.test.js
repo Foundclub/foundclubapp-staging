@@ -116,7 +116,8 @@ describe('POINTAGE — l option « Suivre les arrivees »', () => {
   test('cochee ou absente (evenement d avant le lot) : rien ne change', () => {
     const input = { canEdit: false, isCurrentUserParticipating: true, isTeamMember: true };
 
-    expect(resolveEventAttendanceGate({ ...input, arrivalTrackingEnabled: true }).canSelfMarkArrival).toBe(true);
+    const cochee = resolveEventAttendanceGate({ ...input, arrivalTrackingEnabled: true });
+    expect(cochee.canSelfMarkArrival).toBe(true);
     expect(resolveEventAttendanceGate(input).canSelfMarkArrival).toBe(true);
   });
 });

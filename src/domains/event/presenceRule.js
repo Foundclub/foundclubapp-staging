@@ -17,12 +17,14 @@
  */
 
 /**
+ * Les participants repondent-ils Present / Absent a cet evenement ?
  * @param {{ rsvpEnabled?: boolean | null } | null | undefined} event
  * @returns {boolean} `false` seulement si l organisateur a decoche l option.
  */
 export const isRsvpEnabled = (event) => event?.rsvpEnabled !== false;
 
 /**
+ * Suit-on les arrivees (pointage du joueur, appel de l entraineur) ?
  * @param {{ arrivalTrackingEnabled?: boolean | null } | null | undefined} event
  * @returns {boolean} `false` seulement si l organisateur a decoche l option.
  */
