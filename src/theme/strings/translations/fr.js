@@ -4496,6 +4496,20 @@ export default {
       label: 'Ma collectivité · {{name}}',
     },
     home: {
+      cards: {
+        clubs: {
+          hint: 'Leur contact, leurs équipes et leurs membres (des nombres).',
+          title: 'Clubs rattachés',
+        },
+        installations: {
+          hint: 'Horaires, capacité, planning de chaque installation.',
+          title: 'Installations',
+        },
+        requests: {
+          hint: 'À trancher : accepter ou refuser, avec un message.',
+          title: 'Demandes en attente',
+        },
+      },
       header: 'Ma collectivité',
       kicker: 'Ma collectivité',
       notManaged: 'Tu ne gères pas cette collectivité.',

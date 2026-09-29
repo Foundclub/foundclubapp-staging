@@ -4209,6 +4209,20 @@ export default {
       label: 'My local authority · {{name}}',
     },
     home: {
+      cards: {
+        clubs: {
+          hint: 'Their contact, their teams and their members (numbers only).',
+          title: 'Attached clubs',
+        },
+        installations: {
+          hint: 'Opening hours, capacity and schedule of each facility.',
+          title: 'Facilities',
+        },
+        requests: {
+          hint: 'To decide: accept or refuse, with a message.',
+          title: 'Pending requests',
+        },
+      },
       header: 'My local authority',
       kicker: 'My local authority',
       notManaged: "You don't manage this local authority.",
