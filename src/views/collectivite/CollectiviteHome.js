@@ -115,7 +115,7 @@ function CollectiviteHome() {
       ),
       icon: Images.stadium,
       key: 'installations',
-      route: null,
+      route: RouteNames.CollectiviteInstallations,
       title: t('collectivite.home.cards.installations.title', 'Installations'),
     },
     {

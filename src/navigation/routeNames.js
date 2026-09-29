@@ -98,6 +98,8 @@ export const RouteNames = /** @type {const} */ ({
   // ⚠️ `CollectiviteRequests` est aussi le `ctaRoute` que le SERVEUR pose sur la notification
   // d une nouvelle demande (admin, facility-override-request) : ne pas le renommer seul.
   CollectiviteHome: 'CollectiviteHome',
+  CollectiviteInstallationForm: 'CollectiviteInstallationForm',
+  CollectiviteInstallations: 'CollectiviteInstallations',
   CollectiviteRequests: 'CollectiviteRequests',
   Conversation: 'Conversation',
   ConversationPublicEventPicker: 'ConversationPublicEventPicker',

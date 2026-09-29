@@ -15,6 +15,7 @@ import {
 } from 'react-native';
 
 import useAuth from '@/domains/auth/useAuth';
+import { formatOpeningHours } from '@/domains/collectivite/collectiviteDisplay';
 import { extractSubscriptionDecisionFromError } from '@/domains/subscription/subscriptionDecision';
 import { withAlpha } from '@/theme/colors';
 import useTheme from '@/theme/themeContext';
@@ -31,6 +32,7 @@ import { navigateToStackScreenOrScreen } from '@/navigation/navigationAvailabili
 import { RouteNames } from '@/navigation/routeNames';
 import useBottomDockLayout from '@/navigation/useBottomDockLayout';
 
+import { useCollectiviteInstallations } from '@/services/collectivite/collectiviteQueries';
 import { useClubFacilityContext } from '@/services/facility/facilityQueries';
 import { deleteFacility, getFacilitySections } from '@/services/facility/facilityService';
 
@@ -84,16 +86,20 @@ function FacilityList() {
   const { userData } = useAuth();
   const { sceneBottomInset } = useBottomDockLayout();
 
-  const contextClubId = route.params?.clubId || userData?.club?.documentId || userData?.club?.id;
-  const contextCmId = route.params?.cmId
-    || (!route.params?.clubId ? userData?.club?.parentMultisport?.documentId || null : null);
-  const {
-    data: facilityContext,
-    error,
-    isLoading: loading,
-    isRefetching: refreshing,
-    refetch: refetchFacilities,
-  } = useClubFacilityContext({
+  // 🏛️ COLLECTIVITES 1c — MODE COLLECTIVITE (route CollectiviteInstallations) : la liste est
+  // celle des installations de LA collectivite (GET /collectivites/:id/installations, juge :
+  // is-gestionnaire-collectivite), jamais celles du club du compte. Sans `collectiviteId`,
+  // l ecran est celui d avant, a l identique.
+  const routeParams = /** @type {any} */ (route.params) || {};
+  const collectiviteId = routeParams.collectiviteId || null;
+  const isCollectiviteMode = Boolean(collectiviteId);
+  const contextClubId = isCollectiviteMode
+    ? null
+    : routeParams.clubId || userData?.club?.documentId || userData?.club?.id;
+  const contextCmId = isCollectiviteMode ? null : routeParams.cmId
+    || (!routeParams.clubId ? userData?.club?.parentMultisport?.documentId || null : null);
+  const collectiviteInstallations = useCollectiviteInstallations(collectiviteId);
+  const clubFacilities = useClubFacilityContext({
     clubId: contextClubId,
     cmId: contextCmId,
   }, {
@@ -101,7 +107,24 @@ function FacilityList() {
     // club (SPEC §3), en lecture seule. Le serveur en juge (is-member-of-club).
     includeCollectivite: Boolean(contextClubId),
   });
-  const facilities = useMemo(() => facilityContext?.allFacilities || [], [facilityContext?.allFacilities]);
+  const {
+    data: facilityContext,
+    error,
+    isLoading: loading,
+    isRefetching: refreshing,
+    refetch: refetchFacilities,
+  } = /** @type {any} */ (isCollectiviteMode ? collectiviteInstallations : clubFacilities);
+  const facilities = useMemo(() => {
+    if (!isCollectiviteMode) return facilityContext?.allFacilities || [];
+    // Les installations de la collectivite, modifiables par SON gestionnaire.
+    const rows = Array.isArray(facilityContext) ? facilityContext : [];
+    return rows.map((/** @type {any} */ row) => ({
+      ...row,
+      isReadOnly: false,
+      isShared: false,
+      ownerType: 'collectivite-gestionnaire',
+    }));
+  }, [facilityContext, isCollectiviteMode]);
   const resolvedCmId = facilityContext?.cmId || contextCmId || null;
   const [subscriptionPaywallDecision, setSubscriptionPaywallDecision] = useState(null);
 
@@ -158,19 +181,33 @@ function FacilityList() {
   }, [refetchFacilities, t]);
 
   const handleEdit = useCallback((facility) => {
+    if (isCollectiviteMode) {
+      /** @type {any} */ (navigation).navigate(RouteNames.CollectiviteInstallationForm, {
+        collectiviteId,
+        facility,
+        facilityId: facility?.documentId,
+      });
+      return;
+    }
     navigation.navigate(RouteNames.FacilityForm, {
       clubId: contextClubId,
       cmId: resolvedCmId,
       facility,
     });
-  }, [contextClubId, navigation, resolvedCmId]);
+  }, [collectiviteId, contextClubId, isCollectiviteMode, navigation, resolvedCmId]);
 
   const handleCreate = useCallback(() => {
+    if (isCollectiviteMode) {
+      /** @type {any} */ (navigation).navigate(RouteNames.CollectiviteInstallationForm, {
+        collectiviteId,
+      });
+      return;
+    }
     navigation.navigate(RouteNames.FacilityForm, {
       clubId: contextClubId,
       cmId: resolvedCmId,
     });
-  }, [contextClubId, navigation, resolvedCmId]);
+  }, [collectiviteId, contextClubId, isCollectiviteMode, navigation, resolvedCmId]);
 
   // D34 ecran 03 : « Voir le planning » n'ouvre PAS un ecran neuf — le planning
   // du club est un onglet de `ClubDetails` (hors lot). On y revient donc en
@@ -182,7 +219,7 @@ function FacilityList() {
 
     // COLL1B : l installation de la collectivite a SON planning (tous les clubs qui
     // l utilisent, « club · equipe ») ; le planning du club ne montre que le sien.
-    if (facility?.ownerType === 'collectivite') {
+    if (facility?.ownerType === 'collectivite' || isCollectiviteMode) {
       navigation.navigate(RouteNames.PlanningWeekFullscreen, {
         contextDetailLabel: facility?.name || null,
         facilityId,
@@ -201,7 +238,7 @@ function FacilityList() {
       screen: RouteNames.Club,
       stack: RouteNames.ClubStack,
     });
-  }, [contextClubId, navigation]);
+  }, [contextClubId, isCollectiviteMode, navigation]);
 
   const handleOpenFacilityMap = useCallback((facility) => {
     const addressLabel = getAddressLabel(facility?.address, '').trim() || facility?.name || '';
@@ -240,12 +277,15 @@ function FacilityList() {
       });
   }, []);
 
-  const sections = useMemo(() => getFacilitySections(facilityContext?.allFacilities || [], {
-    clubTitle: t('facilityList.sections.club', 'Installations du club'),
-    sharedTitle: t('facilityList.sections.shared', 'Installations partagées'),
-  }), [facilityContext?.allFacilities, t]);
+  const sections = useMemo(() => {
+    if (isCollectiviteMode) return facilities.length ? [{ data: facilities, title: '' }] : [];
+    return getFacilitySections(facilityContext?.allFacilities || [], {
+      clubTitle: t('facilityList.sections.club', 'Installations du club'),
+      sharedTitle: t('facilityList.sections.shared', 'Installations partagées'),
+    });
+  }, [facilities, facilityContext, isCollectiviteMode, t]);
   const hasMultipleSections = sections.length > 1;
-  const isMissingContext = !contextClubId && !contextCmId;
+  const isMissingContext = !isCollectiviteMode && !contextClubId && !contextCmId;
 
   const renderMetaChip = useCallback((label, tone = 'primary') => {
     const chipStyleByTone = {
@@ -319,9 +359,11 @@ function FacilityList() {
     // D51 : le type est requis a la creation, mais des installations plus
     // anciennes n'en portent pas. Le segment disparait alors, au lieu
     // d'afficher un repli qui sonne comme une panne pour un simple champ vide.
+    // COLL1C : en mode collectivite, les horaires d ouverture entrent dans la ligne.
     const metaLabel = [
       item?.type,
       capacityLabel,
+      isCollectiviteMode ? formatOpeningHours(item?.openingTime, item?.closingTime) : null,
       hasAddress ? addressLabel : null,
     ].filter(Boolean).join(' · ');
     const sharedOwnerLabel = item?.ownerName || t('facilityList.badges.multisport', 'Multisport');
@@ -480,16 +522,19 @@ function FacilityList() {
           </View>
         ) : (
           <View style={[Alignments.row, Alignments.justifyEnd, Alignments.wrap, Spaces.gap[8]]}>
-            <Button
-              icon="trash"
-              iconColor={Colors.error500}
-              onPress={() => handleDelete(facilityId, item?.name)}
-              size="small"
-              style={{ borderColor: Colors.error500 }}
-              textStyle={{ color: Colors.error500 }}
-              title={t('common.delete', 'Supprimer')}
-              variant="Secondary"
-            />
+            {/* COLL1C : pas de « Supprimer » pour le gestionnaire (le serveur ne le fait pas). */}
+            {isCollectiviteMode ? null : (
+              <Button
+                icon="trash"
+                iconColor={Colors.error500}
+                onPress={() => handleDelete(facilityId, item?.name)}
+                size="small"
+                style={{ borderColor: Colors.error500 }}
+                textStyle={{ color: Colors.error500 }}
+                title={t('common.delete', 'Supprimer')}
+                variant="Secondary"
+              />
+            )}
           </View>
         )}
       </View>
@@ -520,6 +565,7 @@ function FacilityList() {
     handleEdit,
     handleOpenFacilityMap,
     handleOpenPlanning,
+    isCollectiviteMode,
     renderMetaChip,
     t,
   ]);
@@ -544,10 +590,16 @@ function FacilityList() {
       ListEmptyComponent={(
         <EmptyState
           actionLabel={t('facilityList.empty.action', 'Ajouter une installation')}
-          description={t(
-            'facilityList.empty.description',
-            'Ajoute les terrains, gymnases ou salles de ton club.',
-          )}
+          description={isCollectiviteMode
+            ? t(
+              'facilityList.collectiviteEmpty',
+              // eslint-disable-next-line max-len
+              'Ajoute les gymnases, terrains et salles de la Ville : les clubs verront leur planning.',
+            )
+            : t(
+              'facilityList.empty.description',
+              'Ajoute les terrains, gymnases ou salles de ton club.',
+            )}
           onAction={handleCreate}
           title={t('facilityList.empty.title', 'Aucune installation')}
         />
@@ -655,7 +707,9 @@ function FacilityList() {
       >
         <View style={{ flex: 1 }}>
           <Text style={[Fonts.h2Black, Fonts.neutral00]}>
-            {t('facilityList.title', 'Tes installations')}
+            {isCollectiviteMode
+              ? t('facilityList.collectiviteTitle', 'Installations de la Ville')
+              : t('facilityList.title', 'Tes installations')}
           </Text>
           <Text style={[Fonts.p2, Fonts.primary100]}>
             {getListSubtitle(facilities.length)}

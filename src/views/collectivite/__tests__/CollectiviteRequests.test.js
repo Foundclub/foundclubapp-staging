@@ -170,6 +170,16 @@ const appuyer = async (/** @type {any} */ arbre, /** @type {string} */ testID, i
   });
 };
 
+// Les lectures react-query se livrent sur un tour d horloge ; sur un PC charge, UN tour ne
+// suffit pas. On attend donc que l ecran AFFICHE ce qu on attend, borne a 3 s.
+jest.setTimeout(20000);
+const attendre = async (/** @type {() => boolean} */ condition) => {
+  for (let essai = 0; essai < 150 && !condition(); essai += 1) {
+    // eslint-disable-next-line no-await-in-loop
+    await act(async () => { await new Promise((r) => { setTimeout(r, 20); }); });
+  }
+};
+
 const monter = async () => {
   const client = new QueryClient({
     defaultOptions: { mutations: { retry: false }, queries: { retry: false } },
@@ -183,7 +193,7 @@ const monter = async () => {
       </QueryClientProvider>,
     );
   });
-  await act(async () => { await new Promise((r) => { setTimeout(r, 0); }); });
+  await attendre(() => textes(arbre).includes('Test Fc · U15'));
   return arbre;
 };
 
@@ -260,7 +270,7 @@ describe('COLLECTIVITES 1c — écran 3 : « Demandes de la Ville »', () => {
   it('l onglet « Traitées » montre la décision et le message', async () => {
     const arbre = await monter();
     await appuyer(arbre, 'onglet-decided');
-    await act(async () => { await new Promise((r) => { setTimeout(r, 0); }); });
+    await attendre(() => textes(arbre).includes('Acceptée'));
     expect(textes(arbre))
       .toEqual(expect.arrayContaining(['Acceptée', 'Ton message : Partagez le plateau']));
   });

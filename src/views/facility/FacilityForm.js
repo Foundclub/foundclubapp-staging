@@ -16,6 +16,7 @@ import {
 } from 'react-native';
 
 import useAuth from '@/domains/auth/useAuth';
+import { toTimeInput } from '@/domains/collectivite/collectiviteDisplay';
 import { extractSubscriptionDecisionFromError } from '@/domains/subscription/subscriptionDecision';
 import useTheme from '@/theme/themeContext';
 
@@ -30,9 +31,14 @@ import ScreenContainer from '@/components/templates/ScreenContainer';
 
 import { RouteNames } from '@/navigation/routeNames';
 
+import {
+  useCollectiviteInstallations,
+  useSaveCollectiviteInstallation,
+} from '@/services/collectivite/collectiviteQueries';
 import { useGetFacility } from '@/services/facility/facilityQueries';
 import { createFacility, updateFacility } from '@/services/facility/facilityService';
 
+import { getErrorMessage } from '@/utils/errors/displayError';
 import {
   FACILITY_CONFLICT_MODES,
   getFacilityConflictMode,
@@ -42,6 +48,21 @@ import {
   isValidFacilityPlanningColor,
   resolveFacilityPlanningColor,
 } from '@/utils/facilityPlanningColor';
+
+// COLL1C : un horaire d ouverture tel qu un agent le tape (« 08:00 »).
+const HEURE = /^([01]\d|2[0-3]):[0-5]\d$/;
+
+/**
+ * Un horaire facultatif « HH:MM » (COLL1C, mode collectivite).
+ * @returns {import('joi').StringSchema} La regle.
+ */
+const buildTimeRule = () => Joi.string().allow('').pattern(HEURE).optional()
+  .messages({
+    'string.pattern.base': i18next.t(
+      'facilityForm.validation.timeFormat',
+      'Format attendu : HH:MM (ex. 08:00)',
+    ),
+  });
 
 // I18N-4 : le schema est construit a chaque rendu -- ses messages sont lus dans la langue
 // courante (un schema de module les figeait dans celle du demarrage).
@@ -54,6 +75,7 @@ const buildSchema = () => Joi.object({
     FACILITY_CONFLICT_MODES.PENDING_VALIDATION,
     FACILITY_CONFLICT_MODES.ALLOW_AND_NOTIFY,
   ).required(),
+  closingTime: buildTimeRule(),
   maxSlots: Joi.number().min(1).required().messages({
     'any.required': i18next.t(
       'facilityForm.validation.capacityRequired',
@@ -67,6 +89,7 @@ const buildSchema = () => Joi.object({
   name: Joi.string().required().messages({
     'string.empty': i18next.t('facilityForm.validation.nameRequired', 'Le nom est requis'),
   }),
+  openingTime: buildTimeRule(),
   planningColor: Joi.string().valid(...FACILITY_PLANNING_PALETTE).required().messages({
     'any.only': i18next.t('facilityForm.validation.colorInvalid', 'Sélectionne une couleur validé'),
     'string.empty': i18next.t('facilityForm.validation.colorRequired', 'Sélectionne une couleur'),
@@ -249,12 +272,18 @@ const CONFLICT_HINT_STYLE = {
   minHeight: 38,
 };
 
-/** @type {{ address: any, capacityConflictMode: string, maxSlots: number, name: string, planningColor: string, type: string }} */
+/**
+ * @type {{ address: any, capacityConflictMode: string, closingTime: string, maxSlots: number,
+ *   name: string, openingTime: string, planningColor: string, type: string }}
+ */
 const DEFAULT_FORM_VALUES = {
   address: null,
   capacityConflictMode: FACILITY_CONFLICT_MODES.PENDING_VALIDATION,
+  // COLL1C : les horaires d ouverture ne se saisissent qu en mode collectivite.
+  closingTime: '',
   maxSlots: 1,
   name: '',
+  openingTime: '',
   planningColor: FACILITY_PLANNING_PALETTE[0],
   type: 'Terrain',
 };
@@ -273,23 +302,42 @@ function FacilityForm() {
   const { userData } = useAuth();
   const routedFacility = route.params?.facility || null;
   const routedFacilityId = sanitizeRouteParam(route.params?.facilityId);
+  // 🏛️ COLLECTIVITES 1c — MODE COLLECTIVITE (route CollectiviteInstallationForm) : le
+  // gestionnaire cree ou modifie une installation de SA collectivite par la route du
+  // serveur (liste blanche, horaires compris). Sur le site, seul l identifiant voyage :
+  // l installation se relit dans la liste de la collectivite, jamais par GET /facilities.
+  const collectiviteId = sanitizeRouteParam(/** @type {any} */ (route.params)?.collectiviteId);
+  const isCollectiviteMode = Boolean(collectiviteId);
+  const collectiviteInstallations = useCollectiviteInstallations(collectiviteId, {
+    enabled: Boolean(collectiviteId && routedFacilityId && !routedFacility),
+  });
+  const saveCollectiviteInstallation = useSaveCollectiviteInstallation();
+  const facilityQuery = useGetFacility(routedFacilityId, {
+    enabled: Boolean(routedFacilityId && !routedFacility && !isCollectiviteMode),
+  });
+  const collectiviteRows = Array.isArray(collectiviteInstallations.data)
+    ? collectiviteInstallations.data
+    : [];
   const {
     data: fetchedFacility,
     error: facilityError,
     isLoading: facilityLoading,
     refetch: refetchFacility,
-  } = useGetFacility(routedFacilityId, {
-    enabled: Boolean(routedFacilityId && !routedFacility),
-  });
+  } = isCollectiviteMode
+    ? {
+      ...collectiviteInstallations,
+      data: collectiviteRows.find((row) => row?.documentId === routedFacilityId) || null,
+    }
+    : facilityQuery;
   const facility = routedFacility || fetchedFacility || null;
   const isEdit = Boolean(routedFacilityId || facility?.documentId || facility?.id);
-  const contextClubId = route.params?.clubId
+  const contextClubId = isCollectiviteMode ? null : route.params?.clubId
     || facility?.club?.documentId
     || facility?.club?.id
     || userData?.club?.documentId
     || userData?.club?.id
     || null;
-  const contextCmId = route.params?.cmId
+  const contextCmId = isCollectiviteMode ? null : route.params?.cmId
     || facility?.multisportClub?.documentId
     || facility?.multisportClub?.id
     || null;
@@ -308,12 +356,17 @@ function FacilityForm() {
 
   const [loading, setLoading] = useState(false);
   const [subscriptionPaywallDecision, setSubscriptionPaywallDecision] = useState(null);
+  const retourALaListe = () => {
+    const nav = /** @type {any} */ (navigation);
+    if (isCollectiviteMode) nav.navigate(RouteNames.CollectiviteInstallations, { collectiviteId });
+    else nav.navigate(RouteNames.FacilityList);
+  };
 
   // D51 : les 6 `watch()` sont partis avec l'apercu. Chaque reglage affiche
   // desormais son propre etat depuis son Controller — plus rien a observer
   // depuis l'exterieur du formulaire, donc plus de re-rendu global a chaque
   // frappe dans le champ « Nom ».
-  const isMissingCreateContext = !isEdit && !contextClubId && !contextCmId;
+  const isMissingCreateContext = !isEdit && !contextClubId && !contextCmId && !isCollectiviteMode;
   const isFacilityNotFound = isEdit && !facilityLoading && !facilityError && !facility;
 
   useEffect(() => {
@@ -322,8 +375,10 @@ function FacilityForm() {
         ...DEFAULT_FORM_VALUES,
         address: facility?.address || null,
         capacityConflictMode: String(getFacilityConflictMode(facility) || FACILITY_CONFLICT_MODES.PENDING_VALIDATION),
+        closingTime: toTimeInput(facility?.closingTime),
         maxSlots: Number(facility?.maxSlots || 1),
         name: facility?.name || '',
+        openingTime: toTimeInput(facility?.openingTime),
         planningColor: resolveFacilityPlanningColor(facility) || FACILITY_PLANNING_PALETTE[0],
         type: facility?.type || 'Terrain',
       });
@@ -361,7 +416,7 @@ function FacilityForm() {
   const handleSave = async (data) => {
     const facilityDocumentId = facility?.documentId || facility?.id || routedFacilityId;
 
-    if (!isEdit && !contextClubId && !contextCmId) {
+    if (!isEdit && !contextClubId && !contextCmId && !isCollectiviteMode) {
       Alert.alert(
         t('common.error', 'Erreur'),
         t('facilityForm.errors.contextMissing', 'Impossible de récupérer les informations du club.'),
@@ -391,8 +446,21 @@ function FacilityForm() {
     }
     clearErrors('address');
 
+    // COLL1C : les horaires ne partent QUE par la route de la collectivite ; le chemin
+    // club garde exactement le corps d avant.
+    const { closingTime, openingTime, ...clubFields } = data;
+    if (isCollectiviteMode && openingTime && closingTime && openingTime >= closingTime) {
+      setError('closingTime', {
+        message: t(
+          'facilityForm.errors.closingBeforeOpening',
+          'La fermeture doit suivre l’ouverture.',
+        ),
+        type: 'manual',
+      });
+      return;
+    }
     const formattedData = {
-      ...data,
+      ...clubFields,
       address: normalizedAddress,
       allowOverflowRequests: true,
       capacityConflictMode: data.capacityConflictMode || FACILITY_CONFLICT_MODES.PENDING_VALIDATION,
@@ -400,6 +468,24 @@ function FacilityForm() {
 
     setLoading(true);
     try {
+      if (isCollectiviteMode) {
+        await saveCollectiviteInstallation.mutateAsync({
+          collectiviteId,
+          data: {
+            address: normalizedAddress,
+            capacityConflictMode: formattedData.capacityConflictMode,
+            closingTime: closingTime || null,
+            maxSlots: data.maxSlots,
+            name: data.name,
+            openingTime: openingTime || null,
+            planningColor: data.planningColor,
+            type: data.type,
+          },
+          facilityId: isEdit ? facilityDocumentId : null,
+        });
+        navigation.goBack();
+        return;
+      }
       if (isEdit) {
         if (!facilityDocumentId) {
           throw new Error('Missing facility id');
@@ -422,7 +508,12 @@ function FacilityForm() {
 
       Alert.alert(
         t('common.error', 'Erreur'),
-        error?.message || t('facilityForm.errors.saveFailed', 'Une erreur est survenue lors de l\'enregistrement.'),
+        isCollectiviteMode
+          ? getErrorMessage(/** @type {any} */ (error))
+          : error?.message || t(
+            'facilityForm.errors.saveFailed',
+            'Une erreur est survenue lors de l\'enregistrement.',
+          ),
       );
     } finally {
       setLoading(false);
@@ -467,7 +558,7 @@ function FacilityForm() {
             variant="Primary"
           />
           <Button
-            onPress={() => navigation.navigate(RouteNames.FacilityList)}
+            onPress={retourALaListe}
             title={i18next.t('facilityForm.state.backToList', 'Retour aux installations')}
             variant="Secondary"
           />
@@ -500,7 +591,7 @@ function FacilityForm() {
               )}
           </Text>
           <Button
-            onPress={() => navigation.navigate(RouteNames.FacilityList)}
+            onPress={retourALaListe}
             title={i18next.t('facilityForm.state.backToList', 'Retour aux installations')}
             variant="Secondary"
           />
@@ -640,6 +731,44 @@ function FacilityForm() {
                 </View>
               )}
             />
+
+            {/* COLL1C : les horaires d ouverture (SPEC §2 B), en mode collectivite seulement. */}
+            {isCollectiviteMode ? (
+              <View style={[Alignments.row, Spaces.gap[12]]}>
+                <View style={{ flex: 1 }}>
+                  <Controller
+                    control={control}
+                    name="openingTime"
+                    render={({ field: { onChange, value } }) => (
+                      <Input
+                        density="compact"
+                        error={errors.openingTime?.message}
+                        label={t('facilityForm.fields.openingTime', 'Ouverture')}
+                        onChangeText={onChange}
+                        placeholder="08:00"
+                        value={value}
+                      />
+                    )}
+                  />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Controller
+                    control={control}
+                    name="closingTime"
+                    render={({ field: { onChange, value } }) => (
+                      <Input
+                        density="compact"
+                        error={errors.closingTime?.message}
+                        label={t('facilityForm.fields.closingTime', 'Fermeture')}
+                        onChangeText={onChange}
+                        placeholder="22:00"
+                        value={value}
+                      />
+                    )}
+                  />
+                </View>
+              </View>
+            ) : null}
 
             <Controller
               control={control}

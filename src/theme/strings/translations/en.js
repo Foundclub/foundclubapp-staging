@@ -1693,6 +1693,8 @@ export default {
     CLUB_WITHOUT_MANAGER_IS_PARTNER: 'This club already uses FoundClub, but it no longer has a manager. Contact us so we can put you in charge of it.',
     CLUB_WITHOUT_MANAGER_NOT_CLAIMABLE: 'This club has no manager to approve your request. Only a coach or a manager can join it directly: check your role in your profile, then try again.',
     COLLECTIVITE_GESTIONNAIRE_REQUIRED: "You don't manage this local authority.",
+    COLLECTIVITE_INSTALLATION_NOT_FOUND: "This facility isn't one of the local authority's facilities.",
+    COLLECTIVITE_INVALID_PAYLOAD: 'Some information is invalid: check the name, type, opening hours (HH:MM) and capacity.',
     DATABASE_ERROR: 'Database error.',
     DEPARTMENT_IMPORT_ERROR: "Error importing the department's data.",
     DEPARTMENT_REQUIRED: 'The department is required.',
@@ -4230,6 +4232,9 @@ export default {
       kicker: 'My local authority',
       notManaged: "You don't manage this local authority.",
       subtitle: "Your manager space: the facilities of {{name}}, the clubs' requests and the attached clubs.",
+    },
+    installations: {
+      header: 'Local authority facilities',
     },
     requests: {
       actions: {
@@ -7384,6 +7389,7 @@ export default {
     },
     errors: {
       addressGeocodeRequired: 'Select a geolocated address from the list.',
+      closingBeforeOpening: 'Closing time must be after opening time.',
       contextMissing: "Unable to retrieve the club's information.",
       planningColorInvalid: 'Select a valid colour.',
       saveFailed: 'An error occurred while saving.',
@@ -7392,7 +7398,9 @@ export default {
       address: 'Address (exact location)',
       capacity: 'Capacity',
       capacityConflictMode: 'Behaviour in case of conflict',
+      closingTime: 'Closing',
       name: 'Facility name',
+      openingTime: 'Opening',
       planningColor: 'Colour in the planning',
       type: 'Type — required',
     },
@@ -7437,6 +7445,7 @@ export default {
       colorInvalid: 'Select a valid colour',
       colorRequired: 'Select a colour',
       nameRequired: 'Name is required',
+      timeFormat: 'Expected format: HH:MM (e.g. 08:00)',
       typeRequired: 'Type is required',
     },
   },
@@ -7464,7 +7473,9 @@ export default {
       teamPlural: 'simultaneous teams',
       teamSingular: 'simultaneous team',
     },
+    collectiviteEmpty: "Add the local authority's gyms, pitches and halls: clubs will see their schedule.",
     collectiviteOwnerHint: 'Facility of {{ownerName}}: read-only schedule.',
+    collectiviteTitle: 'Local authority facilities',
     defaults: {
       addressMissing: 'Address not provided',
       facilityName: 'Facility',

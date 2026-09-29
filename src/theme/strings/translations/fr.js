@@ -1906,6 +1906,10 @@ export default {
     CLUB_STAFF_POLICY_ERROR: 'Violation de la politique concernant le personnel du club.',
     //   COLLECTIVITES 1c — is-gestionnaire-collectivite : ce compte ne gere pas CETTE collectivite
     COLLECTIVITE_GESTIONNAIRE_REQUIRED: 'Tu ne gères pas cette collectivité.',
+    // eslint-disable-next-line max-len
+    COLLECTIVITE_INSTALLATION_NOT_FOUND: "Cette installation n'est pas l'une de celles de la collectivité.",
+    // eslint-disable-next-line max-len
+    COLLECTIVITE_INVALID_PAYLOAD: 'Une information est invalide : vérifie le nom, le type, les horaires (HH:MM) et la capacité.',
     error: 'Erreur',
     EVENT_TRAINER_CREATE_POLICY_ERROR: "Violation de la politique de création d'événements par les entraîneur·e·s.",
     EVENT_TRAINER_POLICY_ERROR: 'Violation de la politique concernant les entraîneur·e·s et les événements.',
@@ -4523,6 +4527,9 @@ export default {
       notManaged: 'Tu ne gères pas cette collectivité.',
       // eslint-disable-next-line max-len
       subtitle: 'Ton espace de gestionnaire : les installations de {{name}}, les demandes des clubs et les clubs rattachés.',
+    },
+    installations: {
+      header: 'Installations de la Ville',
     },
     requests: {
       actions: {
@@ -7858,6 +7865,7 @@ export default {
     },
     errors: {
       addressGeocodeRequired: 'Sélectionne une adresse géolocalisée dans la liste.',
+      closingBeforeOpening: 'La fermeture doit suivre l’ouverture.',
       contextMissing: 'Impossible de récupérer les informations du club.',
       planningColorInvalid: 'Sélectionne une couleur validé.',
       saveFailed: "Une erreur est survenue lors de l'enregistrement.",
@@ -7866,7 +7874,9 @@ export default {
       address: 'Adresse (lieu exact)',
       capacity: 'Capacité',
       capacityConflictMode: 'Comportement en cas de conflit',
+      closingTime: 'Fermeture',
       name: 'Nom de l\'installation',
+      openingTime: 'Ouverture',
       planningColor: 'Couleur dans le planning',
       type: 'Type — requis',
     },
@@ -7911,6 +7921,7 @@ export default {
       colorInvalid: 'Sélectionne une couleur validé',
       colorRequired: 'Sélectionne une couleur',
       nameRequired: 'Le nom est requis',
+      timeFormat: 'Format attendu : HH:MM (ex. 08:00)',
       typeRequired: 'Le type est requis',
     },
   },
@@ -7938,7 +7949,10 @@ export default {
       teamPlural: 'équipes simultanées',
       teamSingular: 'équipe simultanée',
     },
+    // eslint-disable-next-line max-len
+    collectiviteEmpty: 'Ajoute les gymnases, terrains et salles de la Ville : les clubs verront leur planning.',
     collectiviteOwnerHint: 'Installation de {{ownerName}} : planning en lecture seule.',
+    collectiviteTitle: 'Installations de la Ville',
     defaults: {
       addressMissing: 'Adresse non renseignée',
       facilityName: 'Installation',
